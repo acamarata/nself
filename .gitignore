@@ -1,0 +1,26 @@
+# Environment files
+.env
+.env.dev
+
+backend/.nself/traefik/htpasswd/.htpasswd
+
+# Docker files
+backend/docker-compose.yml
+docker-compose.override.yml
+
+# Docker volumes
+*.data
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (if applicable)
+node_modules/
+
+# Ignore nself directory
+.nself/
