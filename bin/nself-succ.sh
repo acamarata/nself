@@ -50,8 +50,9 @@ success_message() {
     "${FUNCTIONS_ROUTE}"
     "${DASHBOARD_ROUTE}"
     "${TRAEFIK_ROUTE}"
-    "${TOP_DOMAIN}"
-    "${MINIO_ROUTE}"
+    "${MAILHOG_ROUTE}"
+    # "${TOP_DOMAIN}"
+    # "${MINIO_ROUTE}"
   )
 
   for i in "${!predefined_services[@]}"; do

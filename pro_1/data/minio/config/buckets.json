@@ -1,0 +1,14 @@
+{
+  "buckets": [
+    {
+      "name": "public",
+      "policy": "public-read",
+      "versioning": false
+    },
+    {
+      "name": "private",
+      "policy": "private",
+      "versioning": true
+    }
+  ]
+}

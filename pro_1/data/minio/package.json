@@ -1,0 +1,12 @@
+{
+  "name": "nself-minio",
+  "version": "1.0.0",
+  "description": "MinIO configuration for Nself",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "minio": "^7.1.3"
+  }
+}

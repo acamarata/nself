@@ -1,0 +1,209 @@
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik:/etc/traefik
+      - ./data/certificates:/certificates
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.local.nself.org`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/.htpasswd"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - nself_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hasura:
+    image: hasura/graphql-engine:v2.35.0
+    container_name: hasura
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-postgres}
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-admin-secret}
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256", "key":"${HASURA_GRAPHQL_JWT_SECRET:-your-jwt-secret}"}'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hasura-console.rule=Host(`console.local.nself.org`)"
+      - "traefik.http.routers.hasura-console.entrypoints=websecure"
+      - "traefik.http.services.hasura-console.loadbalancer.server.port=8080"
+      - "traefik.http.routers.hasura-api.rule=Host(`api.local.nself.org`)"
+      - "traefik.http.routers.hasura-api.entrypoints=websecure"
+      - "traefik.http.services.hasura-api.loadbalancer.server.port=8080"
+
+  auth:
+    image: nhost/hasura-auth:latest
+    container_name: auth
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-postgres}
+      AUTH_HASURA_GRAPHQL_URL: http://hasura:8080/v1/graphql
+      AUTH_HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-admin-secret}
+      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-smtp.gmail.com}
+      AUTH_SMTP_PORT: ${AUTH_SMTP_PORT:-587}
+      AUTH_SMTP_USER: ${AUTH_SMTP_USER:-}
+      AUTH_SMTP_PASS: ${AUTH_SMTP_PASS:-}
+      AUTH_SMTP_SENDER: ${AUTH_SMTP_SENDER:-}
+      AUTH_SITE_URL: ${AUTH_SITE_URL:-http://localhost:3000}
+      AUTH_ADDITIONAL_REDIRECT_URLS: ${AUTH_ADDITIONAL_REDIRECT_URLS:-}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-your-jwt-secret}
+      AUTH_ANONYMOUS_USERS_ENABLED: ${AUTH_ANONYMOUS_USERS_ENABLED:-true}
+      AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED: ${AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED:-false}
+      AUTH_ACCESS_TOKEN_EXPIRES_IN: ${AUTH_ACCESS_TOKEN_EXPIRES_IN:-3600}
+      AUTH_REFRESH_TOKEN_EXPIRES_IN: ${AUTH_REFRESH_TOKEN_EXPIRES_IN:-2592000}
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`auth.local.nself.org`)"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.services.auth.loadbalancer.server.port=4000"
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./data/minio/data:/data
+      - ./data/minio/config:/root/.mc
+    command: server /data --console-address ":9001"
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`storage.local.nself.org`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.local.nself.org`)"
+      - "traefik.http.routers.minio-console.entrypoints=websecure"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+
+  minio-client:
+    image: minio/mc:latest
+    container_name: minio-client
+    depends_on:
+      - minio
+    volumes:
+      - ./data/minio/config:/root/.mc
+      - ./data/minio/config/init.sh:/init.sh
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["/init.sh"]
+    networks:
+      - nself_network
+
+  functions:
+    image: nhost/functions:latest
+    container_name: functions
+    restart: unless-stopped
+    volumes:
+      - ./functions:/app/functions
+    environment:
+      NHOST_FUNCTIONS_URL: http://functions:3000
+      NHOST_HASURA_URL: http://hasura:8080/v1/graphql
+      NHOST_HASURA_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-admin-secret}
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.functions.rule=Host(`functions.local.nself.org`)"
+      - "traefik.http.routers.functions.entrypoints=websecure"
+      - "traefik.http.services.functions.loadbalancer.server.port=3000"
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailhog.rule=Host(`mailhog.local.nself.org`)"
+      - "traefik.http.routers.mailhog.entrypoints=websecure"
+      - "traefik.http.services.mailhog.loadbalancer.server.port=8025"
+
+  app1:
+    image: nginx:alpine
+    container_name: app1
+    restart: unless-stopped
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app1.rule=Host(`app1.local.nself.org`)"
+      - "traefik.http.routers.app1.entrypoints=websecure"
+      - "traefik.http.services.app1.loadbalancer.server.port=80"
+
+  app2-api:
+    image: nginx:alpine
+    container_name: app2-api
+    restart: unless-stopped
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app2-api.rule=Host(`api.app2.local.nself.org`)"
+      - "traefik.http.routers.app2-api.entrypoints=websecure"
+      - "traefik.http.services.app2-api.loadbalancer.server.port=80"
+
+  app3-api:
+    image: nginx:alpine
+    container_name: app3-api
+    restart: unless-stopped
+    networks:
+      - nself_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app3-api.rule=Host(`api.app3.local.nself.org`)"
+      - "traefik.http.routers.app3-api.entrypoints=websecure"
+      - "traefik.http.services.app3-api.loadbalancer.server.port=80"
+
+networks:
+  nself_network:
+    name: nself_network
+    driver: bridge

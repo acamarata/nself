@@ -109,7 +109,35 @@ check_for_updates() {
 # Function to update nself
 update_nself() {
   echo "disable update, because local version."
+  # echo_info "Checking for updates..."
 
+  # read_local_version
+  # fetch_latest_version
+
+  # if [ -z "$LATEST_VERSION" ]; then
+  #   echo_error "Failed to fetch the latest version information. Please check your network connection."
+  #   exit 1
+  # fi
+
+  # if is_newer_version; then
+  #   echo_info "Updating nself from version $LOCAL_VERSION to $LATEST_VERSION..."
+  #   # Download the latest nself.sh
+  #   if curl -fsSL "$REPO_RAW_URL/nself.sh" -o "$SCRIPT_DIR/nself.sh"; then
+  #     chmod +x "$SCRIPT_DIR/nself.sh"
+  #     # Download the latest VERSION file
+  #     if curl -fsSL "$REPO_RAW_URL/VERSION" -o "$VERSION_FILE"; then
+  #       echo_info "nself updated successfully to version $LATEST_VERSION!"
+  #     else
+  #       echo_error "Failed to download the latest VERSION file."
+  #       exit 1
+  #     fi
+  #   else
+  #     echo_error "Failed to download the latest nself.sh script."
+  #     exit 1
+  #   fi
+  # else
+  #   echo_info "nself is already up to date."
+  # fi
 }
 
 # Function to load environment variables from .env.dev or .env
@@ -159,17 +187,6 @@ init_project() {
     exit 1
   fi
 
-  # Ensure .env is copied from .env.example if not already present
-  if [ ! -f ".env" ]; then
-    if [ -f ".env.example" ]; then
-      echo "[INFO] .env not found. Copying from .env.example..."
-      cp .env.example .env
-    else
-      echo "[ERROR] .env.example not found. Cannot create .env."
-      exit 1
-    fi
-  fi
-
   echo_info "Initializing project..."
 
   bash "$SCRIPT_DIR/nself-unity.sh"
@@ -195,119 +212,9 @@ generate_docker_compose() {
     exit 1
   fi
 
-  echo_info "Generating docker-compose.yml..."
-  
-  # Create docker-compose.yml with basic configuration
-  cat <<EOF > docker-compose.yml
-services:
-  postgres:
-    image: nhost/postgres:16.4-202401126-1
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "${POSTGRES_PORT:-5434}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - postgres_lib:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  hasura:
-    image: nhost/graphql-engine:v2.44.0-ce
-    ports:
-      - "1337:8080"
-    depends_on:
-      - postgres
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
-      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-nhost-admin-secret}
-      HASURA_GRAPHQL_JWT_SECRET: ${HASURA_GRAPHQL_JWT_SECRET:-'{"type":"HS256","key":"myjwtsecretthats32characterslong"}'}
-      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: ${HASURA_GRAPHQL_UNAUTHORIZED_ROLE:-public}
-      HASURA_GRAPHQL_ENABLE_CONSOLE: true
-      HASURA_GRAPHQL_LOG_LEVEL: info
-      HASURA_GRAPHQL_ENABLE_CORS: true
-      HASURA_GRAPHQL_CORS_DOMAIN: "*"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-
-  auth:
-    image: nhost/hasura-auth:0.36.1
-    depends_on:
-      - hasura
-      - postgres
-    ports:
-      - "4000:4000"
-    environment:
-      HASURA_ENDPOINT: http://hasura:8080
-      AUTH_ACCESS_TOKEN_EXPIRES_IN: ${AUTH_ACCESS_TOKEN_EXPIRES_IN:-900}
-      AUTH_REFRESH_TOKEN_EXPIRES_IN: ${AUTH_REFRESH_TOKEN_EXPIRES_IN:-2592000}
-      AUTH_MFA_ENABLED: ${AUTH_MFA_ENABLED:-false}
-      AUTH_MFA_TOTP_ISSUER: ${AUTH_MFA_TOTP_ISSUER:-nproj}
-      AUTH_PASSWORD_MIN_LENGTH: ${AUTH_PASSWORD_MIN_LENGTH:-8}
-      AUTH_PASSWORD_REQUIRE_SPECIAL: ${AUTH_PASSWORD_REQUIRE_SPECIAL:-false}
-      AUTH_EMAIL_VERIFICATION_REQUIRED: ${AUTH_EMAIL_VERIFICATION_REQUIRED:-true}
-      HASURA_GRAPHQL_JWT_SECRET: ${HASURA_GRAPHQL_JWT_SECRET:-'{"type":"HS256","key":"myjwtsecretthats32characterslong"}'}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-
-  storage:
-    image: nhost/hasura-storage:0.6.1
-    depends_on:
-      - hasura
-    ports:
-      - "9000:9000"
-    environment:
-      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME:-nproj-bucket}
-      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-storage_access_key}
-      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-storage_secret_key}
-      STORAGE_MAX_FILE_SIZE: ${STORAGE_MAX_FILE_SIZE:-10485760}
-      STORAGE_PUBLIC_ACCESS: ${STORAGE_PUBLIC_ACCESS:-true}
-      STORAGE_PORT: ${STORAGE_PORT:-9000}
-    command: serve
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-
-  functions:
-    image: nhost/functions:1.2.0
-    depends_on:
-      - auth
-      - postgres
-    ports:
-      - "4001:1337"
-    environment:
-      FUNCTIONS_TIMEOUT: ${FUNCTIONS_TIMEOUT:-30}
-      FUNCTIONS_MEMORY_LIMIT: ${FUNCTIONS_MEMORY_LIMIT:-128}
-      FUNCTIONS_PORT: ${FUNCTIONS_PORT:-1337}
-      FUNCTIONS_API_ROUTE: ${FUNCTIONS_API_ROUTE:-/functions}
-    volumes:
-      - ./functions:/usr/src/app
-    working_dir: /usr/src/app
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-  postgres_lib:
-EOF
-
-  echo_info "docker-compose.yml generated successfully!"
+  bash "$SCRIPT_DIR/nself-unity.sh"
+  # echo_info "Generating docker-compose.yml..."
+  # bash "$NSELF_YAML_SCRIPT"
 }
 
 # Function to start the services
@@ -317,15 +224,10 @@ start_services() {
   fi
 
   echo_info "Starting services with docker-compose..."
+  echo  "docker-compose --env-file $ENV_FILE up -d"
 
-  # Create .htpasswd directory and file if they don't exist
-  mkdir -p .nself/traefik/htpasswd
-  echo_info "Creating .htpasswd file..."
-  # Remove any existing .htpasswd file
   rm -f .nself/traefik/htpasswd/.htpasswd
-  # Create new .htpasswd file with default password
-  printf "admin:$(openssl passwd -apr1 ${METRICS_PASSWORD:-metrics_password})\n" > .nself/traefik/htpasswd/.htpasswd
-  chmod 644 .nself/traefik/htpasswd/.htpasswd
+  printf "admin:$(openssl passwd -apr1 ${METRICS_PASSWORD})\n" >> .nself/traefik/htpasswd/.htpasswd
 
   NETWORK_NAME="unity"
 
@@ -338,7 +240,8 @@ start_services() {
       echo "✅ Docker network '$NETWORK_NAME' already exists."
   fi
 
-  # Create Volume
+
+  #  Create Volume
   VOLUMES=(
     "$FUNCTION_VOLUME"
     "$PROJECT_DATA_VOLUME"
