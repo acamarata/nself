@@ -1,0 +1,482 @@
+import { Worker, Job, Queue } from 'bullmq';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
+import express from 'express';
+import axios from 'axios';
+
+// Redis connection
+const redisConfig = {
+  host: process.env.REDIS_HOST || 'redis',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD || undefined,
+};
+
+// Queue for weather processing
+const weatherQueue = new Queue('weather-processing', { connection: redisConfig });
+
+// Weather processing worker
+const weatherWorker = new Worker(
+  'weather-processing',
+  async (job: Job) => {
+    console.log(`Processing weather job:`, job.id);
+    
+    const { data } = job;
+    
+    try {
+      switch (job.name) {
+        case 'fetch-weather-batch':
+          return await fetchWeatherBatch(data);
+        case 'aggregate-weather-data':
+          return await aggregateWeatherData(data);
+        case 'cleanup-old-weather':
+          return await cleanupOldWeatherData(data);
+        case 'process-weather-alerts':
+          return await processWeatherAlerts(data);
+        default:
+          throw new Error(`Unknown job type: ${job.name}`);
+      }
+    } catch (error) {
+      console.error(`Failed weather job:`, job.id, error);
+      throw error;
+    }
+  },
+  { 
+    connection: redisConfig,
+    concurrency: 3 // Process up to 3 jobs simultaneously
+  }
+);
+
+// Job processing functions
+async function fetchWeatherBatch(data: { cities: Array<{city: string, country: string}> }) {
+  console.log(`Fetching weather for ${data.cities.length} cities`);
+  
+  const results = [];
+  
+  for (const location of data.cities) {
+    try {
+      // Simulate weather API call (in real world, use actual API)
+      const weatherData = generateSimulatedWeather(location.city, location.country);
+      
+      // Store in PostgreSQL via Hasura GraphQL
+      await storeWeatherInDatabase(weatherData);
+      
+      // Cache in Redis
+      await cacheWeatherData(weatherData);
+      
+      results.push({ success: true, location, data: weatherData });
+    } catch (error) {
+      console.error(`Failed to fetch weather for ${location.city}:`, error);
+      results.push({ success: false, location, error: error.message });
+    }
+    
+    // Add delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  return { processedCount: results.length, results };
+}
+
+async function aggregateWeatherData(data: { period: string }) {
+  console.log(`Aggregating weather data for period: ${data.period}`);
+  
+  const query = `
+    query GetWeatherForAggregation($since: timestamptz!) {
+      weather_data(
+        where: { created_at: { _gte: $since } }
+        order_by: { created_at: desc }
+      ) {
+        id
+        city
+        country
+        temperature
+        humidity
+        pressure
+        created_at
+      }
+    }
+  `;
+  
+  const since = new Date();
+  if (data.period === 'hourly') {
+    since.setHours(since.getHours() - 1);
+  } else if (data.period === 'daily') {
+    since.setDate(since.getDate() - 1);
+  }
+  
+  try {
+    const response = await axios.post(
+      process.env.HASURA_ENDPOINT || 'http://hasura:8080/v1/graphql',
+      { query, variables: { since: since.toISOString() } },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Hasura-Admin-Secret': process.env.HASURA_ADMIN_SECRET,
+        },
+      }
+    );
+    
+    const weatherData = response.data.data.weather_data;
+    
+    // Group by city and calculate averages
+    const aggregates = weatherData.reduce((acc: any, record: any) => {
+      const key = `${record.city}-${record.country}`;
+      if (!acc[key]) {
+        acc[key] = {
+          city: record.city,
+          country: record.country,
+          temperatures: [],
+          humidities: [],
+          pressures: [],
+          count: 0
+        };
+      }
+      
+      acc[key].temperatures.push(record.temperature);
+      acc[key].humidities.push(record.humidity);
+      acc[key].pressures.push(record.pressure);
+      acc[key].count++;
+      
+      return acc;
+    }, {});
+    
+    // Calculate and store aggregated data
+    const aggregatedResults = [];
+    for (const [key, data] of Object.entries(aggregates)) {
+      const agg = data as any;
+      const avgTemp = agg.temperatures.reduce((a: number, b: number) => a + b, 0) / agg.count;
+      const avgHumidity = agg.humidities.reduce((a: number, b: number) => a + b, 0) / agg.count;
+      const avgPressure = agg.pressures.reduce((a: number, b: number) => a + b, 0) / agg.count;
+      
+      // Store aggregated data in Redis for quick access
+      const aggregateKey = `weather:aggregate:${data.period}:${key}`;
+      await cacheAggregateData(aggregateKey, {
+        city: agg.city,
+        country: agg.country,
+        period: data.period,
+        avg_temperature: Math.round(avgTemp * 10) / 10,
+        avg_humidity: Math.round(avgHumidity * 10) / 10,
+        avg_pressure: Math.round(avgPressure * 10) / 10,
+        data_points: agg.count,
+        calculated_at: new Date().toISOString(),
+      });
+      
+      aggregatedResults.push({
+        location: key,
+        averages: { avgTemp, avgHumidity, avgPressure },
+        dataPoints: agg.count
+      });
+    }
+    
+    return { period: data.period, aggregated: aggregatedResults.length };
+  } catch (error) {
+    console.error('Failed to aggregate weather data:', error);
+    throw error;
+  }
+}
+
+async function cleanupOldWeatherData(data: { olderThanDays: number }) {
+  console.log(`Cleaning up weather data older than ${data.olderThanDays} days`);
+  
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - data.olderThanDays);
+  
+  const mutation = `
+    mutation DeleteOldWeatherData($cutoff: timestamptz!) {
+      delete_weather_data(where: { created_at: { _lt: $cutoff } }) {
+        affected_rows
+      }
+    }
+  `;
+  
+  try {
+    const response = await axios.post(
+      process.env.HASURA_ENDPOINT || 'http://hasura:8080/v1/graphql',
+      { query: mutation, variables: { cutoff: cutoffDate.toISOString() } },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Hasura-Admin-Secret': process.env.HASURA_ADMIN_SECRET,
+        },
+      }
+    );
+    
+    const deletedRows = response.data.data.delete_weather_data.affected_rows;
+    return { deletedRows, cutoffDate: cutoffDate.toISOString() };
+  } catch (error) {
+    console.error('Failed to cleanup old weather data:', error);
+    throw error;
+  }
+}
+
+async function processWeatherAlerts(data: { thresholds: any }) {
+  console.log('Processing weather alerts');
+  
+  // Check for extreme weather conditions in recent data
+  const query = `
+    query GetRecentWeatherForAlerts($since: timestamptz!) {
+      weather_data(
+        where: { created_at: { _gte: $since } }
+        order_by: { created_at: desc }
+      ) {
+        city
+        country
+        temperature
+        humidity
+        pressure
+        description
+        created_at
+      }
+    }
+  `;
+  
+  const since = new Date();
+  since.setHours(since.getHours() - 1); // Check last hour
+  
+  try {
+    const response = await axios.post(
+      process.env.HASURA_ENDPOINT || 'http://hasura:8080/v1/graphql',
+      { query, variables: { since: since.toISOString() } },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Hasura-Admin-Secret': process.env.HASURA_ADMIN_SECRET,
+        },
+      }
+    );
+    
+    const weatherData = response.data.data.weather_data;
+    const alerts = [];
+    
+    for (const record of weatherData) {
+      // Check temperature alerts
+      if (record.temperature > (data.thresholds.maxTemp || 35)) {
+        alerts.push({
+          type: 'HIGH_TEMPERATURE',
+          location: `${record.city}, ${record.country}`,
+          value: record.temperature,
+          threshold: data.thresholds.maxTemp,
+          timestamp: record.created_at,
+        });
+      }
+      
+      if (record.temperature < (data.thresholds.minTemp || -10)) {
+        alerts.push({
+          type: 'LOW_TEMPERATURE',
+          location: `${record.city}, ${record.country}`,
+          value: record.temperature,
+          threshold: data.thresholds.minTemp,
+          timestamp: record.created_at,
+        });
+      }
+      
+      // Check humidity alerts
+      if (record.humidity > (data.thresholds.maxHumidity || 90)) {
+        alerts.push({
+          type: 'HIGH_HUMIDITY',
+          location: `${record.city}, ${record.country}`,
+          value: record.humidity,
+          threshold: data.thresholds.maxHumidity,
+          timestamp: record.created_at,
+        });
+      }
+    }
+    
+    // Store alerts in Redis for notification system
+    for (const alert of alerts) {
+      const alertKey = `weather:alert:${Date.now()}:${alert.type}`;
+      await cacheAlert(alertKey, alert);
+    }
+    
+    return { alertsGenerated: alerts.length, alerts };
+  } catch (error) {
+    console.error('Failed to process weather alerts:', error);
+    throw error;
+  }
+}
+
+// Helper functions
+function generateSimulatedWeather(city: string, country: string) {
+  const temp = Math.round((Math.random() * 35) + 5); // 5-40°C
+  const humidity = Math.round((Math.random() * 60) + 30); // 30-90%
+  const pressure = Math.round((Math.random() * 100) + 1000); // 1000-1100 hPa
+  
+  const descriptions = ['Clear sky', 'Partly cloudy', 'Cloudy', 'Light rain', 'Sunny'];
+  const description = descriptions[Math.floor(Math.random() * descriptions.length)];
+
+  return {
+    city,
+    country,
+    temperature: temp,
+    humidity,
+    pressure,
+    description,
+    timestamp: new Date(),
+  };
+}
+
+async function storeWeatherInDatabase(data: any) {
+  const mutation = `
+    mutation InsertWeatherData($data: weather_data_insert_input!) {
+      insert_weather_data_one(object: $data) {
+        id
+      }
+    }
+  `;
+
+  const variables = {
+    data: {
+      city: data.city,
+      country: data.country,
+      temperature: data.temperature,
+      humidity: data.humidity,
+      pressure: data.pressure,
+      description: data.description,
+      created_at: data.timestamp.toISOString(),
+    },
+  };
+
+  await axios.post(
+    process.env.HASURA_ENDPOINT || 'http://hasura:8080/v1/graphql',
+    { query: mutation, variables },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Hasura-Admin-Secret': process.env.HASURA_ADMIN_SECRET,
+      },
+    }
+  );
+}
+
+async function cacheWeatherData(data: any) {
+  // Would implement Redis caching here
+  const cacheKey = `weather:current:${data.city}:${data.country}`;
+  console.log(`Would cache weather data with key: ${cacheKey}`);
+}
+
+async function cacheAggregateData(key: string, data: any) {
+  // Would implement Redis caching for aggregates
+  console.log(`Would cache aggregate data with key: ${key}`, data);
+}
+
+async function cacheAlert(key: string, alert: any) {
+  // Would implement Redis caching for alerts
+  console.log(`Would cache alert with key: ${key}`, alert);
+}
+
+// Error handling
+weatherWorker.on('completed', (job) => {
+  console.log(`✅ Weather job ${job.id} completed`);
+});
+
+weatherWorker.on('failed', (job, err) => {
+  console.error(`❌ Weather job ${job?.id} failed:`, err);
+});
+
+// Bull Dashboard (if enabled)
+if (process.env.BULLMQ_DASHBOARD_ENABLED === 'true') {
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath('/admin/queues');
+
+  createBullBoard({
+    queues: [new BullMQAdapter(weatherQueue)],
+    serverAdapter,
+  });
+
+  const app = express();
+  app.use('/admin/queues', serverAdapter.getRouter());
+  
+  const port = process.env.BULLMQ_DASHBOARD_PORT || 3200;
+  app.listen(port, () => {
+    console.log(`📊 BullMQ Dashboard running on port ${port}`);
+    console.log(`🌤️  Weather processing queue dashboard available at http://localhost:${port}/admin/queues`);
+  });
+}
+
+// Schedule recurring jobs
+async function setupRecurringJobs() {
+  // Example cities for demo
+  const cities = [
+    { city: 'New York', country: 'US' },
+    { city: 'London', country: 'UK' },
+    { city: 'Tokyo', country: 'JP' },
+    { city: 'Sydney', country: 'AU' },
+    { city: 'Paris', country: 'FR' },
+  ];
+
+  // Fetch weather every 15 minutes
+  await weatherQueue.add(
+    'fetch-weather-batch',
+    { cities },
+    {
+      repeat: { pattern: '*/15 * * * *' }, // Every 15 minutes
+      removeOnComplete: 10,
+      removeOnFail: 5,
+    }
+  );
+
+  // Aggregate hourly data every hour
+  await weatherQueue.add(
+    'aggregate-weather-data',
+    { period: 'hourly' },
+    {
+      repeat: { pattern: '0 * * * *' }, // Every hour
+      removeOnComplete: 5,
+      removeOnFail: 3,
+    }
+  );
+
+  // Aggregate daily data every day at midnight
+  await weatherQueue.add(
+    'aggregate-weather-data',
+    { period: 'daily' },
+    {
+      repeat: { pattern: '0 0 * * *' }, // Daily at midnight
+      removeOnComplete: 7,
+      removeOnFail: 3,
+    }
+  );
+
+  // Cleanup old data weekly
+  await weatherQueue.add(
+    'cleanup-old-weather',
+    { olderThanDays: 30 },
+    {
+      repeat: { pattern: '0 2 * * 0' }, // Weekly on Sunday at 2 AM
+      removeOnComplete: 1,
+      removeOnFail: 1,
+    }
+  );
+
+  // Process alerts every 5 minutes
+  await weatherQueue.add(
+    'process-weather-alerts',
+    { 
+      thresholds: {
+        maxTemp: 35,
+        minTemp: -10,
+        maxHumidity: 90
+      }
+    },
+    {
+      repeat: { pattern: '*/5 * * * *' }, // Every 5 minutes
+      removeOnComplete: 20,
+      removeOnFail: 5,
+    }
+  );
+
+  console.log('📅 Recurring weather processing jobs scheduled');
+}
+
+// Initialize recurring jobs after a delay
+setTimeout(setupRecurringJobs, 5000);
+
+console.log('🌤️  Weather processing worker started');
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down weather worker...');
+  await weatherWorker.close();
+  await weatherQueue.close();
+  process.exit(0);
+});
