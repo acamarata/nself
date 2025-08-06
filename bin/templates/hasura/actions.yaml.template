@@ -1,0 +1,257 @@
+actions:
+  - name: fetchWeather
+    definition:
+      kind: Action
+      handler: http://nest-actions:3100/actions/fetch-weather
+      forward_client_headers: true
+      headers:
+        - name: X-Request-ID
+          value_from_env: REQUEST_ID
+    type: mutation
+    comment: "Fetch weather data for a specific city and store in database"
+
+  - name: getWeatherStats
+    definition:
+      kind: Action
+      handler: http://nest-actions:3100/actions/get-weather-stats
+      forward_client_headers: true
+    type: query
+    comment: "Get weather statistics for a city over a time period"
+
+  - name: analyzeTrend
+    definition:
+      kind: Action
+      handler: http://data-analyzer:3400/analyze/trend
+      forward_client_headers: true
+      headers:
+        - name: Content-Type
+          value: application/json
+    type: query
+    comment: "Analyze trend in time series data using ML"
+
+  - name: predictValues
+    definition:
+      kind: Action
+      handler: http://data-analyzer:3400/analyze/predict
+      forward_client_headers: true
+    type: query
+    comment: "Predict future values using machine learning models"
+
+  - name: detectAnomalies
+    definition:
+      kind: Action
+      handler: http://data-analyzer:3400/analyze/anomaly
+      forward_client_headers: true
+    type: query
+    comment: "Detect anomalies in time series data"
+
+  - name: fetchCurrencyRates
+    definition:
+      kind: Action
+      handler: http://currency-fetcher:3300/fetch
+      forward_client_headers: true
+    type: mutation
+    comment: "Trigger high-performance currency rate fetching via GoLang service"
+
+custom_types:
+  enums: []
+  input_objects:
+    - name: FetchWeatherInput
+      fields:
+        - name: city
+          type: String!
+        - name: country
+          type: String
+          
+    - name: WeatherStatsInput
+      fields:
+        - name: city
+          type: String!
+        - name: days
+          type: Int
+          
+    - name: TrendAnalysisInput
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: timeframe
+          type: String
+          
+    - name: PredictionInput
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: days_ahead
+          type: Int!
+        - name: model_type
+          type: String
+          
+    - name: AnomalyDetectionInput
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: sensitivity
+          type: Float
+        - name: window_size
+          type: Int
+
+  objects:
+    - name: WeatherData
+      fields:
+        - name: city
+          type: String!
+        - name: country
+          type: String!
+        - name: temperature
+          type: Float!
+        - name: humidity
+          type: Int!
+        - name: pressure
+          type: Float!
+        - name: description
+          type: String!
+        - name: timestamp
+          type: String!
+          
+    - name: FetchWeatherOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: message
+          type: String!
+        - name: data
+          type: WeatherData
+        - name: timestamp
+          type: String!
+          
+    - name: WeatherStats
+      fields:
+        - name: recent_data
+          type: "[WeatherData!]!"
+        - name: statistics
+          type: WeatherStatistics!
+          
+    - name: WeatherStatistics
+      fields:
+        - name: avg
+          type: WeatherAverages
+        - name: max
+          type: WeatherExtremes
+        - name: min
+          type: WeatherExtremes
+        - name: count
+          type: Int!
+          
+    - name: WeatherAverages
+      fields:
+        - name: temperature
+          type: Float
+        - name: humidity
+          type: Float
+        - name: pressure
+          type: Float
+          
+    - name: WeatherExtremes
+      fields:
+        - name: temperature
+          type: Float
+          
+    - name: TrendAnalysisOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: analysis
+          type: TrendResult!
+          
+    - name: TrendResult
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: timeframe
+          type: String!
+        - name: trend_direction
+          type: String!
+        - name: trend_slope
+          type: Float!
+        - name: r_squared
+          type: Float!
+        - name: current_value
+          type: Float!
+        - name: percent_change
+          type: Float!
+        - name: data_points
+          type: Int!
+          
+    - name: PredictionOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: prediction
+          type: PredictionResult!
+          
+    - name: PredictionResult
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: model_type
+          type: String!
+        - name: days_ahead
+          type: Int!
+        - name: predictions
+          type: "[Float!]!"
+        - name: confidence_score
+          type: Float!
+        - name: prediction_timestamps
+          type: "[String!]!"
+          
+    - name: AnomalyDetectionOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: anomaly_detection
+          type: AnomalyResult!
+          
+    - name: AnomalyResult
+      fields:
+        - name: data_type
+          type: String!
+        - name: symbol
+          type: String!
+        - name: total_data_points
+          type: Int!
+        - name: anomalies_detected
+          type: Int!
+        - name: anomaly_rate
+          type: Float!
+        - name: anomalies
+          type: "[AnomalyPoint!]!"
+          
+    - name: AnomalyPoint
+      fields:
+        - name: timestamp
+          type: String!
+        - name: value
+          type: Float!
+        - name: z_score
+          type: Float!
+          
+    - name: CurrencyFetchOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: results
+          type: String! # JSON string containing fetch results
+        - name: fetch_time
+          type: String!
+        - name: total_items
+          type: Int!

@@ -1,0 +1,130 @@
+event_triggers:
+  - name: weather_data_inserted
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+      table:
+        name: weather_data
+        schema: public
+    retry_conf:
+      num_retries: 3
+      interval_sec: 10
+      timeout_sec: 60
+    webhook: http://bullmq-weather:3200/webhook/weather-inserted
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: weather_data_inserted
+    comment: "Trigger BullMQ processing when new weather data is inserted"
+
+  - name: crypto_prices_inserted
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+      table:
+        name: crypto_prices
+        schema: public
+    retry_conf:
+      num_retries: 3
+      interval_sec: 10
+      timeout_sec: 60
+    webhook: http://bullmq-currency:3201/webhook/crypto-inserted
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: crypto_prices_inserted
+    comment: "Trigger processing when new crypto price data is inserted"
+
+  - name: exchange_rates_inserted
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+      table:
+        name: exchange_rates
+        schema: public
+    retry_conf:
+      num_retries: 3
+      interval_sec: 10
+      timeout_sec: 60
+    webhook: http://bullmq-currency:3201/webhook/exchange-rate-inserted
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: exchange_rates_inserted
+    comment: "Trigger processing when new exchange rate data is inserted"
+
+  - name: weather_data_updated
+    definition:
+      enable_manual: false
+      update:
+        columns: ["temperature", "humidity", "pressure"]
+      table:
+        name: weather_data
+        schema: public
+    retry_conf:
+      num_retries: 2
+      interval_sec: 15
+      timeout_sec: 45
+    webhook: http://data-analyzer:3400/webhook/weather-updated
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: weather_data_updated
+    comment: "Trigger ML analysis when weather data is significantly updated"
+
+  - name: anomaly_detection_trigger
+    definition:
+      enable_manual: true
+      insert:
+        columns: "*"
+      table:
+        name: weather_data
+        schema: public
+    retry_conf:
+      num_retries: 1
+      interval_sec: 5
+      timeout_sec: 30
+    webhook: http://data-analyzer:3400/webhook/check-anomalies
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: anomaly_detection
+      - name: X-Analysis-Type
+        value: real-time-anomaly
+    comment: "Trigger real-time anomaly detection on new data points"
+
+  - name: currency_trend_analysis
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+      table:
+        name: exchange_rates
+        schema: public
+    retry_conf:
+      num_retries: 2
+      interval_sec: 20
+      timeout_sec: 60
+    webhook: http://data-analyzer:3400/webhook/trend-analysis
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: currency_trend_analysis
+      - name: X-Analysis-Window
+        value: "1h"
+    comment: "Trigger trend analysis when currency rates change significantly"
+
+  - name: data_cleanup_trigger
+    definition:
+      enable_manual: true
+      insert:
+        columns: "*"
+      table:
+        name: system_events
+        schema: public
+    retry_conf:
+      num_retries: 1
+      interval_sec: 30
+      timeout_sec: 120
+    webhook: http://bullmq-weather:3200/webhook/cleanup-trigger
+    headers:
+      - name: X-Hasura-Event-Trigger
+        value: data_cleanup
+    comment: "Trigger data cleanup jobs via BullMQ workers"

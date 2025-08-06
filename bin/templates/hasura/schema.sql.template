@@ -1,0 +1,350 @@
+-- Database schema for time-series data
+-- This creates the tables for weather, currency, and crypto data with proper indexes
+
+-- Enable TimescaleDB extension if available (for time-series optimization)
+-- CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+
+-- Weather data table
+CREATE TABLE IF NOT EXISTS weather_data (
+    id SERIAL PRIMARY KEY,
+    city VARCHAR(100) NOT NULL,
+    country VARCHAR(10) NOT NULL,
+    temperature DECIMAL(5,2) NOT NULL,
+    humidity INTEGER NOT NULL CHECK (humidity >= 0 AND humidity <= 100),
+    pressure DECIMAL(7,2) NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for weather_data
+CREATE INDEX IF NOT EXISTS idx_weather_data_city_time ON weather_data (city, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_weather_data_country_time ON weather_data (country, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_weather_data_time ON weather_data (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_weather_data_city_country ON weather_data (city, country);
+
+-- Convert to hypertable if TimescaleDB is available
+-- SELECT create_hypertable('weather_data', 'created_at', if_not_exists => TRUE);
+
+-- Exchange rates table
+CREATE TABLE IF NOT EXISTS exchange_rates (
+    id SERIAL PRIMARY KEY,
+    base_currency VARCHAR(10) NOT NULL,
+    target_currency VARCHAR(10) NOT NULL,
+    rate DECIMAL(20,8) NOT NULL,
+    source VARCHAR(50) NOT NULL DEFAULT 'unknown',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for exchange_rates
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_pair_time ON exchange_rates (base_currency, target_currency, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_time ON exchange_rates (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_base ON exchange_rates (base_currency);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_target ON exchange_rates (target_currency);
+
+-- Convert to hypertable if TimescaleDB is available
+-- SELECT create_hypertable('exchange_rates', 'created_at', if_not_exists => TRUE);
+
+-- Cryptocurrency prices table
+CREATE TABLE IF NOT EXISTS crypto_prices (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    vs_currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    price DECIMAL(20,8) NOT NULL,
+    market_cap BIGINT,
+    volume_24h BIGINT,
+    change_24h DECIMAL(10,4),
+    source VARCHAR(50) NOT NULL DEFAULT 'unknown',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for crypto_prices
+CREATE INDEX IF NOT EXISTS idx_crypto_prices_symbol_time ON crypto_prices (symbol, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crypto_prices_time ON crypto_prices (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crypto_prices_symbol_vs ON crypto_prices (symbol, vs_currency);
+CREATE INDEX IF NOT EXISTS idx_crypto_prices_market_cap ON crypto_prices (market_cap DESC) WHERE market_cap IS NOT NULL;
+
+-- Convert to hypertable if TimescaleDB is available
+-- SELECT create_hypertable('crypto_prices', 'created_at', if_not_exists => TRUE);
+
+-- Metal prices table
+CREATE TABLE IF NOT EXISTS metal_prices (
+    id SERIAL PRIMARY KEY,
+    metal VARCHAR(20) NOT NULL,
+    price_per_oz DECIMAL(12,4) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    change_24h DECIMAL(10,4),
+    source VARCHAR(50) NOT NULL DEFAULT 'unknown',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for metal_prices
+CREATE INDEX IF NOT EXISTS idx_metal_prices_metal_time ON metal_prices (metal, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_metal_prices_time ON metal_prices (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_metal_prices_metal ON metal_prices (metal);
+
+-- Convert to hypertable if TimescaleDB is available
+-- SELECT create_hypertable('metal_prices', 'created_at', if_not_exists => TRUE);
+
+-- System events table for tracking operations
+CREATE TABLE IF NOT EXISTS system_events (
+    id SERIAL PRIMARY KEY,
+    event_type VARCHAR(50) NOT NULL,
+    event_data JSONB,
+    source_service VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for system_events
+CREATE INDEX IF NOT EXISTS idx_system_events_type_time ON system_events (event_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_events_time ON system_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_events_source ON system_events (source_service);
+
+-- Analysis results cache table
+CREATE TABLE IF NOT EXISTS analysis_results (
+    id SERIAL PRIMARY KEY,
+    analysis_type VARCHAR(50) NOT NULL,
+    data_type VARCHAR(50) NOT NULL,
+    symbol VARCHAR(50) NOT NULL,
+    timeframe VARCHAR(20),
+    result JSONB NOT NULL,
+    confidence_score DECIMAL(5,4),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create indexes for analysis_results
+CREATE INDEX IF NOT EXISTS idx_analysis_results_lookup ON analysis_results (analysis_type, data_type, symbol, timeframe);
+CREATE INDEX IF NOT EXISTS idx_analysis_results_expires ON analysis_results (expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_analysis_results_time ON analysis_results (created_at DESC);
+
+-- User sessions and preferences (for multi-tenant scenarios)
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    preference_key VARCHAR(100) NOT NULL,
+    preference_value JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, preference_key)
+);
+
+-- Create indexes for user_preferences
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_key ON user_preferences (preference_key);
+
+-- Functions for common queries and operations
+
+-- Function to get latest rates for all currency pairs
+CREATE OR REPLACE FUNCTION get_latest_exchange_rates()
+RETURNS TABLE (
+    base_currency VARCHAR(10),
+    target_currency VARCHAR(10),
+    rate DECIMAL(20,8),
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT ON (er.base_currency, er.target_currency)
+           er.base_currency,
+           er.target_currency,
+           er.rate,
+           er.created_at
+    FROM exchange_rates er
+    ORDER BY er.base_currency, er.target_currency, er.created_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get latest crypto prices
+CREATE OR REPLACE FUNCTION get_latest_crypto_prices()
+RETURNS TABLE (
+    symbol VARCHAR(20),
+    vs_currency VARCHAR(10),
+    price DECIMAL(20,8),
+    market_cap BIGINT,
+    change_24h DECIMAL(10,4),
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT ON (cp.symbol, cp.vs_currency)
+           cp.symbol,
+           cp.vs_currency,
+           cp.price,
+           cp.market_cap,
+           cp.change_24h,
+           cp.created_at
+    FROM crypto_prices cp
+    ORDER BY cp.symbol, cp.vs_currency, cp.created_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get weather averages for a city over time period
+CREATE OR REPLACE FUNCTION get_weather_averages(
+    p_city VARCHAR(100),
+    p_hours INTEGER DEFAULT 24
+)
+RETURNS TABLE (
+    avg_temperature DECIMAL(5,2),
+    avg_humidity DECIMAL(5,2),
+    avg_pressure DECIMAL(7,2),
+    data_points BIGINT,
+    period_start TIMESTAMPTZ,
+    period_end TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        ROUND(AVG(wd.temperature), 2) as avg_temperature,
+        ROUND(AVG(wd.humidity), 2) as avg_humidity,
+        ROUND(AVG(wd.pressure), 2) as avg_pressure,
+        COUNT(*) as data_points,
+        MIN(wd.created_at) as period_start,
+        MAX(wd.created_at) as period_end
+    FROM weather_data wd
+    WHERE wd.city = p_city
+      AND wd.created_at >= NOW() - (p_hours || ' hours')::INTERVAL
+    GROUP BY wd.city;
+End;
+$$ LANGUAGE plpgsql;
+
+-- Function to cleanup old data (called by BullMQ workers)
+CREATE OR REPLACE FUNCTION cleanup_old_data(
+    p_table_name VARCHAR(50),
+    p_days_to_keep INTEGER DEFAULT 90
+)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+    cutoff_date TIMESTAMPTZ;
+BEGIN
+    cutoff_date := NOW() - (p_days_to_keep || ' days')::INTERVAL;
+    
+    CASE p_table_name
+        WHEN 'weather_data' THEN
+            DELETE FROM weather_data WHERE created_at < cutoff_date;
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        WHEN 'exchange_rates' THEN
+            DELETE FROM exchange_rates WHERE created_at < cutoff_date;
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        WHEN 'crypto_prices' THEN
+            DELETE FROM crypto_prices WHERE created_at < cutoff_date;
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        WHEN 'metal_prices' THEN
+            DELETE FROM metal_prices WHERE created_at < cutoff_date;
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        WHEN 'system_events' THEN
+            DELETE FROM system_events WHERE created_at < cutoff_date;
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        WHEN 'analysis_results' THEN
+            DELETE FROM analysis_results WHERE created_at < cutoff_date OR expires_at < NOW();
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+        ELSE
+            RAISE EXCEPTION 'Unknown table name: %', p_table_name;
+    END CASE;
+    
+    -- Log the cleanup event
+    INSERT INTO system_events (event_type, event_data, source_service)
+    VALUES ('data_cleanup', json_build_object(
+        'table', p_table_name,
+        'deleted_count', deleted_count,
+        'cutoff_date', cutoff_date,
+        'days_kept', p_days_to_keep
+    ), 'database_cleanup_function');
+    
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers to automatically update updated_at timestamps
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for all tables with updated_at columns
+CREATE TRIGGER weather_data_updated_at BEFORE UPDATE ON weather_data
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER exchange_rates_updated_at BEFORE UPDATE ON exchange_rates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER crypto_prices_updated_at BEFORE UPDATE ON crypto_prices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER metal_prices_updated_at BEFORE UPDATE ON metal_prices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER user_preferences_updated_at BEFORE UPDATE ON user_preferences
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create views for common data access patterns
+
+-- View for latest weather by city
+CREATE OR REPLACE VIEW latest_weather_by_city AS
+SELECT DISTINCT ON (city, country)
+    city,
+    country,
+    temperature,
+    humidity,
+    pressure,
+    description,
+    created_at
+FROM weather_data
+ORDER BY city, country, created_at DESC;
+
+-- View for current crypto market data
+CREATE OR REPLACE VIEW current_crypto_market AS
+SELECT DISTINCT ON (symbol)
+    symbol,
+    price,
+    market_cap,
+    volume_24h,
+    change_24h,
+    created_at,
+    CASE 
+        WHEN change_24h > 5 THEN 'strong_up'
+        WHEN change_24h > 0 THEN 'up'
+        WHEN change_24h < -5 THEN 'strong_down'
+        WHEN change_24h < 0 THEN 'down'
+        ELSE 'stable'
+    END as trend_indicator
+FROM crypto_prices
+WHERE vs_currency = 'USD'
+ORDER BY symbol, created_at DESC;
+
+-- View for major currency rates
+CREATE OR REPLACE VIEW major_currency_rates AS
+SELECT DISTINCT ON (target_currency)
+    target_currency,
+    rate,
+    created_at,
+    CASE 
+        WHEN rate > LAG(rate) OVER (PARTITION BY target_currency ORDER BY created_at) THEN 'up'
+        WHEN rate < LAG(rate) OVER (PARTITION BY target_currency ORDER BY created_at) THEN 'down'
+        ELSE 'stable'
+    END as direction
+FROM exchange_rates
+WHERE base_currency = 'USD'
+  AND target_currency IN ('EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF')
+ORDER BY target_currency, created_at DESC;
+
+-- Insert some initial system configuration
+INSERT INTO system_events (event_type, event_data, source_service)
+VALUES ('schema_initialization', json_build_object(
+    'version', '1.0.0',
+    'tables_created', ARRAY['weather_data', 'exchange_rates', 'crypto_prices', 'metal_prices', 'system_events', 'analysis_results', 'user_preferences'],
+    'functions_created', ARRAY['get_latest_exchange_rates', 'get_latest_crypto_prices', 'get_weather_averages', 'cleanup_old_data'],
+    'views_created', ARRAY['latest_weather_by_city', 'current_crypto_market', 'major_currency_rates']
+), 'database_schema_setup')
+ON CONFLICT DO NOTHING;
+
+-- Grant permissions for Hasura (adjust schema/role names as needed)
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hasura;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO hasura;

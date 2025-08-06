@@ -1,0 +1,112 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gorilla/mux"
+)
+
+type HealthResponse struct {
+	Status    string    `json:"status"`
+	Service   string    `json:"service"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type StatusResponse struct {
+	Service     string    `json:"service"`
+	Status      string    `json:"status"`
+	Timestamp   time.Time `json:"timestamp"`
+	Environment string    `json:"environment"`
+	Version     string    `json:"version"`
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	response := HealthResponse{
+		Status:    "ok",
+		Service:   "${SERVICE_NAME}",
+		Timestamp: time.Now(),
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	response := StatusResponse{
+		Service:     "${SERVICE_NAME}",
+		Status:      "running",
+		Timestamp:   time.Now(),
+		Environment: getEnv("GO_ENV", "development"),
+		Version:     "1.0.0",
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func helloHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"message":   "Hello from ${SERVICE_NAME}! 🚀",
+		"service":   "${SERVICE_NAME}",
+		"timestamp": time.Now(),
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+// Example function for ${SERVICE_NAME}
+func ${SERVICE_NAME_CAMEL}Handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	
+	// Add your service logic here
+	result := map[string]interface{}{
+		"message": "Processing ${SERVICE_NAME} request",
+		"data":    "Your service logic goes here",
+		"timestamp": time.Now(),
+	}
+	
+	json.NewEncoder(w).Encode(result)
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func main() {
+	r := mux.NewRouter()
+	
+	// Health and status endpoints
+	r.HandleFunc("/health", healthHandler).Methods("GET")
+	r.HandleFunc("/status", statusHandler).Methods("GET")
+	r.HandleFunc("/", helloHandler).Methods("GET")
+	
+	// Service-specific endpoints
+	r.HandleFunc("/${SERVICE_NAME}", ${SERVICE_NAME_CAMEL}Handler).Methods("GET", "POST")
+	
+	// CORS middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			
+			next.ServeHTTP(w, r)
+		})
+	})
+	
+	port := getEnv("PORT", "${SERVICE_PORT}")
+	
+	fmt.Printf("🚀 %s is running on port %s\n", "${SERVICE_NAME}", port)
+	log.Fatal(http.ListenAndServe(":"+port, r))
+}

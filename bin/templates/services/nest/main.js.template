@@ -1,0 +1,28 @@
+const { NestFactory } = require('@nestjs/core');
+const { AppModule } = require('./app.module');
+const { ValidationPipe } = require('@nestjs/common');
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  
+  // Enable CORS for Hasura and frontend
+  app.enableCors({
+    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+  });
+  
+  // Enable validation
+  app.useGlobalPipes(new ValidationPipe());
+  
+  // Health check endpoint
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.json({ status: 'ok', service: '${SERVICE_NAME}', timestamp: new Date().toISOString() });
+  });
+
+  const port = process.env.PORT || ${SERVICE_PORT};
+  await app.listen(port);
+  
+  console.log(`🚀 ${SERVICE_NAME} is running on port ${port}`);
+}
+
+bootstrap();
