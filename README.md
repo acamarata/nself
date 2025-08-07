@@ -340,6 +340,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - [Hasura Documentation](https://hasura.io/docs) - GraphQL engine docs
 - [Report Issues](https://github.com/acamarata/nself/issues) - We'd love your feedback!
 
+## Future Planned Commands
+
+- nself doctor, status, logs, exec, resources
+- nself scale, backup, config, ssl, network
+- nself metrics, health, cleanup, optimize, tenant
+
 ---
 
 Built with ❤️ for the self-hosting community by developers who were tired of complex setups
