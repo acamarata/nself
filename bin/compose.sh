@@ -22,7 +22,8 @@ HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${
 S3_ENDPOINT="http://minio:${MINIO_PORT}"
 
 # Set environment-specific defaults
-if [[ "$ENVIRONMENT" == "production" ]]; then
+# Support both ENV and ENVIRONMENT for backward compatibility
+if [[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]; then
   # Production defaults
   HASURA_GRAPHQL_ENABLE_CONSOLE=${HASURA_GRAPHQL_ENABLE_CONSOLE:-false}
   HASURA_GRAPHQL_DEV_MODE=${HASURA_GRAPHQL_DEV_MODE:-false}

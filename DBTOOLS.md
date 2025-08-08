@@ -26,7 +26,7 @@ The nself database tools provide a complete database management system built on 
 - **Safe Team Workflow**: Lead developers create migrations, team members apply updates
 - **Version Control**: Track all schema changes with Git-friendly text files
 - **Automatic Backups**: Every change is backed up to `bin/dbsyncs/` with timestamps
-- **Environment-Specific Seeding**: Different seed data for dev, staging, and production
+- **Environment-Specific Seeding**: Smart seeding based on ENV (dev/prod) or traditional per-environment
 - **Migration Safety**: No auto-migrations, explicit update commands
 - **Rollback Support**: Revert to any previous state
 - **dbdiagram.io Integration**: Optional visual schema design
@@ -187,18 +187,32 @@ Seed database with sample data.
 nself db seed
 ```
 
-**Seed Structure:**
+**Standards-Compliant Structure (DB_ENV_SEEDS=true - Recommended):**
 ```
 seeds/
-├── common/           # Applied in all environments
-│   ├── 01_users.sql
-│   └── 02_settings.sql
-├── development/      # Dev-only data
-│   └── 01_test_data.sql
-├── staging/          # Staging data
+├── common/           # Shared across all environments
+│   ├── 01_settings.sql  # System settings
+│   └── 02_roles.sql     # Default roles
+├── development/      # Mock/test data for local development
+│   ├── 01_test_users.sql
+│   └── 02_sample_data.sql
+├── staging/          # Staging environment data
 │   └── 01_demo_data.sql
-└── production/       # Production essentials
-    └── 01_admin.sql
+└── production/       # Minimal production essentials
+    └── 01_system_config.sql
+```
+
+This follows Hasura/PostgreSQL conventions. Seeding automatically maps your `ENV` setting:
+- `ENV=dev` → uses `seeds/common/` + `seeds/development/`
+- `ENV=staging` → uses `seeds/common/` + `seeds/staging/`
+- `ENV=prod` → uses `seeds/common/` + `seeds/production/`
+
+**No Environment Branching (DB_ENV_SEEDS=false):**
+```
+seeds/
+└── default/          # Single directory for all environments
+    ├── 01_data.sql
+    └── 02_more_data.sql
 ```
 
 #### `nself db reset`
@@ -564,18 +578,34 @@ EOF
 
 ### Seed File Organization
 
+**Standards-Compliant Approach (DB_ENV_SEEDS=true - Recommended):**
+
 ```
 seeds/
-├── common/              # All environments
+├── common/              # Shared across all environments
 │   ├── 01_settings.sql  # System settings
 │   └── 02_roles.sql     # Default roles
-├── development/         # Dev environment
+├── development/         # Mock/test data for local development
 │   ├── 01_test_users.sql
 │   └── 02_sample_data.sql
-├── staging/            # Staging environment
+├── staging/            # Staging environment data
 │   └── 01_demo_data.sql
-└── production/         # Production environment
-    └── 01_admin_user.sql
+└── production/         # Minimal production essentials
+    └── 01_system_config.sql
+```
+
+This follows Hasura/PostgreSQL conventions where:
+- Common data is shared across all environments
+- Each environment adds its specific data on top
+- Your `ENV` setting maps automatically (dev→development, prod→production)
+
+**No Environment Branching (DB_ENV_SEEDS=false):**
+
+```
+seeds/
+└── default/            # Single directory for all environments
+    ├── 01_data.sql
+    └── 02_more_data.sql
 ```
 
 ### Writing Seed Files
@@ -699,20 +729,21 @@ nself db seed
 Add to `.env.local`:
 
 ```bash
+# Core Settings (at the top of file)
+ENV=dev                            # dev or prod - controls all environment behavior
+PROJECT_NAME=myproject             # Used for container names
+DB_ENV_SEEDS=true                  # Use modern dev/prod seed separation
+
 # Database Configuration
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 POSTGRES_DB=nhost
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=secretpassword
+POSTGRES_PASSWORD=secretpassword   # Auto-generated in prod by 'nself prod'
 
 # Schema Management
 LOCAL_SCHEMA_FILE=schema.dbml      # Path to schema file
 DBDIAGRAM_URL=https://dbdiagram.io/d/your-project  # Optional
-
-# Environment
-ENVIRONMENT=development            # development, staging, production
-PROJECT_NAME=myproject             # Used for container names
 
 # IMPORTANT: Auto-migration has been removed for safety
 # All migrations must be explicitly applied with 'nself db update'
@@ -720,30 +751,37 @@ PROJECT_NAME=myproject             # Used for container names
 
 ### Environment-Specific Settings
 
-#### Development
+#### Development (Default)
 
 ```bash
 # .env.local (development)
-ENVIRONMENT=development
-LOCAL_SCHEMA_FILE=schema.dbml
-```
-
-#### Staging
-
-```bash
-# .env.staging
-ENVIRONMENT=staging
-LOCAL_SCHEMA_FILE=schema.dbml
+ENV=dev                            # Development mode
+DB_ENV_SEEDS=true                  # Uses seeds/development/ for mock data
 ```
 
 #### Production
 
 ```bash
-# .env (production)
-ENVIRONMENT=production
-LOCAL_SCHEMA_FILE=schema.dbml
-# Always use 'nself db update' for migrations
+# .env (production override)
+ENV=prod                           # Production mode - auto-configures security
+DB_ENV_SEEDS=true                  # Uses seeds/production/ for minimal data
+# Other settings inherited from .env.local
 ```
+
+### How ENV Works
+
+- `ENV=dev` (default):
+  - Enables dev tools (Hasura console, debug logging)
+  - Uses `seeds/common/` + `seeds/development/` for seeding
+  - Relaxed security settings
+  
+- `ENV=prod`:
+  - Disables dev tools automatically
+  - Uses `seeds/common/` + `seeds/production/` for seeding
+  - Enforces security requirements
+  - Validates strong passwords
+
+The ENV variable maps to standard directory names internally while keeping your configuration simple.
 
 ## Best Practices
 

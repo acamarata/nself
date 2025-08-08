@@ -195,11 +195,31 @@ load_env() {
   set +o allexport
 
   export PROJECT_NAME=${PROJECT_NAME:-myproject}
-  export ENVIRONMENT=${ENVIRONMENT:-development}
+  
+  # Support both ENV (new) and ENVIRONMENT (legacy) variables
+  # ENV takes precedence if both are set
+  if [[ -n "$ENV" ]]; then
+    # Map ENV to ENVIRONMENT for backward compatibility
+    if [[ "$ENV" == "prod" ]]; then
+      export ENVIRONMENT="production"
+    else
+      export ENVIRONMENT="development"
+    fi
+  else
+    # Use ENVIRONMENT if ENV is not set (backward compatibility)
+    export ENVIRONMENT=${ENVIRONMENT:-development}
+    # Set ENV based on ENVIRONMENT for consistency
+    if [[ "$ENVIRONMENT" == "production" ]]; then
+      export ENV="prod"
+    else
+      export ENV="dev"
+    fi
+  fi
+  
   export BASE_DOMAIN=${BASE_DOMAIN:-local.nself.org}
   
   # Production safety checks
-  if [[ "$ENVIRONMENT" == "production" ]]; then
+  if [[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]; then
     echo_warning "Running in PRODUCTION mode"
     
     # Check for insecure defaults and weak passwords
@@ -539,7 +559,7 @@ cmd_prod() {
 # ============================================
 
 # Set to production mode (enables security checks)
-ENVIRONMENT=production
+ENV=prod
 
 # Your production domain (without https://)
 # Example: api.mycompany.com or backend.myapp.io
