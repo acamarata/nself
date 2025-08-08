@@ -863,7 +863,7 @@ if ! command_exists docker; then
   exit 1
 fi
 
-if ! command_exists docker compose && ! command_exists docker-compose; then
+if ! docker compose version >/dev/null 2>&1 && ! command_exists docker-compose; then
   echo_error "Docker Compose is not installed. Please install Docker Compose first."
   exit 1
 fi
