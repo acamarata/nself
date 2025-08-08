@@ -290,6 +290,9 @@ cmd_build() {
     fi
     echo ""
     echo_info "  Next: Run 'nself up' to start services"
+    echo ""
+    # Show configured service URLs
+    bash "$SCRIPT_DIR/urls.sh"
   else
     echo_error "Build failed. Check /tmp/nself_build.log for details."
     exit 1

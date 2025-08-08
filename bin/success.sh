@@ -4,14 +4,16 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Load environment
-if [ -f ".env.local" ]; then
+if [ -f "$SCRIPT_DIR/../.env.local" ]; then
   set -o allexport
-  source .env.local
+  source "$SCRIPT_DIR/../.env.local"
   set +o allexport
-elif [ -f ".env" ]; then
+elif [ -f "$SCRIPT_DIR/../.env" ]; then
   set -o allexport
-  source .env
+  source "$SCRIPT_DIR/../.env"
   set +o allexport
 fi
 
@@ -20,6 +22,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo
@@ -27,56 +30,10 @@ echo -e "${GREEN}✨ nself services started successfully!${NC}"
 echo
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
-echo -e "${CYAN}🌐 Service URLs:${NC}"
+# Show service URLs
+bash "$SCRIPT_DIR/urls.sh"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
-
-# Determine protocol
-if [[ "$SSL_MODE" == "local" ]] || [[ "$SSL_MODE" == "letsencrypt" ]] || [[ -n "$SSL_CERT_PATH" ]]; then
-  PROTOCOL="https"
-else
-  PROTOCOL="http"
-fi
-
-# Core services
-echo -e "${YELLOW}GraphQL API:${NC}"
-echo -e "  ${PROTOCOL}://${HASURA_ROUTE}"
-echo -e "  Admin Secret: ${HASURA_GRAPHQL_ADMIN_SECRET}"
-echo
-
-echo -e "${YELLOW}Authentication:${NC}"
-echo -e "  ${PROTOCOL}://${AUTH_ROUTE}"
-echo
-
-echo -e "${YELLOW}Storage API:${NC}"
-echo -e "  ${PROTOCOL}://${STORAGE_ROUTE}"
-echo -e "  Console: ${PROTOCOL}://${STORAGE_CONSOLE_ROUTE}"
-echo -e "  Access Key: ${MINIO_ROOT_USER}"
-echo
-
-# Optional services
-if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
-  echo -e "${YELLOW}Functions:${NC}"
-  echo -e "  ${PROTOCOL}://${FUNCTIONS_ROUTE}"
-  echo
-fi
-
-if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  echo -e "${YELLOW}Dashboard:${NC}"
-  echo -e "  ${PROTOCOL}://${DASHBOARD_ROUTE}"
-  echo
-fi
-
-if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
-  echo -e "${YELLOW}Email Testing (MailHog):${NC}"
-  echo -e "  ${PROTOCOL}://${MAILHOG_ROUTE}"
-  echo
-fi
-
-if [[ "$NESTJS_ENABLED" == "true" ]]; then
-  echo -e "${YELLOW}Microservice:${NC}"
-  echo -e "  ${PROTOCOL}://${NESTJS_ROUTE}"
-  echo
-fi
 
 # Database connection
 echo -e "${YELLOW}Database:${NC}"
@@ -93,9 +50,6 @@ if [[ "$REDIS_ENABLED" == "true" ]]; then
   echo -e "  Port: ${REDIS_PORT}"
   echo
 fi
-
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo
 
 # Quick commands
 echo -e "${CYAN}📝 Quick Commands:${NC}"

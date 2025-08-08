@@ -66,13 +66,16 @@ nself init
 
 # 3. Build and launch everything
 nself build && nself up
+# URLs for enabled services will be shown in the output
 ```
 
 **That's it!** Your complete backend is now running at:
 - 🚀 GraphQL API: https://api.local.nself.org
-- 🔐 Auth Service: https://auth.local.nself.org  
+- 🔐 Auth Service: https://auth.local.nself.org
 - 📦 Storage: https://storage.local.nself.org
 - 📊 And more...
+
+*Tip:* These URLs are also printed after `nself build` and `nself up` so they're easy to copy.
 
 ### Want to customize?
 
