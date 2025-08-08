@@ -21,6 +21,10 @@ echo_success() {
   echo -e "\033[1;32m[SUCCESS]\033[0m $1"
 }
 
+echo_warning() {
+  echo -e "\033[1;33m[WARNING]\033[0m $1"
+}
+
 echo_error() {
   echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
 }
@@ -57,6 +61,186 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Check if nself is already installed
+check_existing_installation() {
+  local installed=false
+  local installed_version=""
+  local installed_path=""
+  
+  # Check for nself in PATH
+  if command_exists nself; then
+    installed=true
+    installed_path=$(which nself)
+    # Try to get version
+    installed_version=$(nself version 2>/dev/null || echo "unknown")
+  elif [ -f "$BIN_DIR/nself.sh" ]; then
+    installed=true
+    installed_path="$BIN_DIR/nself.sh"
+    # Try to get version from VERSION file
+    if [ -f "$BIN_DIR/VERSION" ]; then
+      installed_version=$(cat "$BIN_DIR/VERSION" 2>/dev/null || echo "unknown")
+    else
+      installed_version="unknown"
+    fi
+  fi
+  
+  if [ "$installed" = true ]; then
+    echo ""
+    echo_info "🔍 Found existing nself installation"
+    echo_info "   Path: $installed_path"
+    echo_info "   Version: $installed_version"
+    
+    # Check for updates with spinner
+    local latest_version=""
+    (
+      latest_version=$(curl -fsSL "$REPO_RAW_URL/bin/VERSION" 2>/dev/null || echo "")
+      echo "$latest_version" > /tmp/nself_latest_version.tmp
+    ) &
+    show_spinner $! "   Checking for updates"
+    
+    latest_version=$(cat /tmp/nself_latest_version.tmp 2>/dev/null | tr -d '[:space:]')
+    rm -f /tmp/nself_latest_version.tmp
+    
+    if [ -n "$latest_version" ] && [ "$latest_version" != "$installed_version" ]; then
+      echo ""
+      echo_warning "🆕 A newer version is available: $latest_version"
+      echo_info "   Current: $installed_version → Latest: $latest_version"
+      echo ""
+      printf "Would you like to update nself now? [Y/n] "
+      read -r REPLY
+      if [[ -z "$REPLY" || "$REPLY" =~ ^[Yy]$ ]]; then
+        echo_info "🔄 Updating nself..."
+        return 0  # Proceed with installation/update
+      else
+        echo_info "Keeping current version: $installed_version"
+        echo_info "You can update later by running: nself update"
+        exit 0
+      fi
+    elif [ -n "$latest_version" ]; then
+      echo_success "✅ You have the latest version installed!"
+      echo_info "   No updates needed. All good! 🎉"
+      exit 0
+    else
+      echo_warning "⚠️  Could not check for updates (network issue?)"
+      printf "Would you like to reinstall nself? [y/N] "
+      read -r REPLY
+      if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+        return 0  # Proceed with reinstallation
+      else
+        echo_info "Keeping current installation"
+        exit 0
+      fi
+    fi
+  fi
+  
+  return 0  # No existing installation, proceed
+}
+
+# Check system requirements
+check_requirements() {
+  local missing_deps=()
+  local warnings=()
+  
+  echo ""
+  echo_info "📋 Checking system requirements..."
+  echo ""
+  
+  # Check OS
+  OS="$(uname -s)"
+  ARCH="$(uname -m)"
+  
+  echo_info "System: $OS ($ARCH)"
+  
+  if [ "$OS" != "Linux" ] && [ "$OS" != "Darwin" ]; then
+    echo_error "Unsupported operating system: $OS"
+    echo_error "nself requires Linux or macOS"
+    exit 1
+  fi
+  
+  # Check curl
+  if ! command_exists curl; then
+    missing_deps+=("curl")
+  else
+    echo_success "✓ curl is installed"
+  fi
+  
+  # Check Docker
+  if ! command_exists docker; then
+    missing_deps+=("docker")
+    echo_warning "✗ Docker is not installed"
+  else
+    echo_success "✓ Docker is installed ($(docker --version 2>/dev/null | cut -d' ' -f3 | cut -d',' -f1))"
+    
+    # Check if Docker daemon is running
+    if ! docker info >/dev/null 2>&1; then
+      warnings+=("Docker daemon is not running. Please start Docker.")
+    fi
+  fi
+  
+  # Check Docker Compose
+  if docker compose version >/dev/null 2>&1; then
+    echo_success "✓ Docker Compose is installed (plugin)"
+  elif command_exists docker-compose; then
+    echo_success "✓ Docker Compose is installed (standalone)"
+  else
+    missing_deps+=("docker-compose")
+    echo_warning "✗ Docker Compose is not installed"
+  fi
+  
+  # Check git (optional but recommended)
+  if command_exists git; then
+    echo_success "✓ git is installed"
+  else
+    warnings+=("git is not installed (optional but recommended)")
+  fi
+  
+  # Check disk space
+  local available_space
+  if [ "$OS" = "Darwin" ]; then
+    available_space=$(df -h / | awk 'NR==2 {print $4}' | sed 's/Gi//')
+  else
+    available_space=$(df -h / | awk 'NR==2 {print $4}' | sed 's/G//')
+  fi
+  
+  if [ "${available_space%%.*}" -lt 5 ] 2>/dev/null; then
+    warnings+=("Low disk space: ${available_space}GB available (recommend at least 5GB)")
+  else
+    echo_success "✓ Sufficient disk space (${available_space} available)"
+  fi
+  
+  echo ""
+  
+  # Show warnings
+  if [ ${#warnings[@]} -gt 0 ]; then
+    echo_warning "⚠️  Warnings:"
+    for warning in "${warnings[@]}"; do
+      echo_warning "   - $warning"
+    done
+    echo ""
+  fi
+  
+  # Handle missing dependencies
+  if [ ${#missing_deps[@]} -gt 0 ]; then
+    echo_error "❌ Missing required dependencies:"
+    for dep in "${missing_deps[@]}"; do
+      echo_error "   - $dep"
+    done
+    echo ""
+    echo_info "Would you like to install the missing dependencies?"
+    read -p "Install missing dependencies? [Y/n] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+      return 0  # Will install missing deps
+    else
+      echo_error "Cannot proceed without required dependencies."
+      echo_info "Please install the missing dependencies manually and run this script again."
+      exit 1
+    fi
+  fi
+  
+  return 0
+}
+
 # Install curl if not present
 install_curl() {
   echo_info "Installing curl..."
@@ -83,28 +267,46 @@ install_curl() {
 
 # Install Docker
 install_docker() {
-  echo_info "Docker not found. Installing Docker..."
+  echo ""
+  echo_info "📦 Docker Installation Required"
+  echo ""
   
   OS="$(uname -s)"
   
   if [ "$OS" = "Linux" ]; then
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    rm get-docker.sh
+    echo_info "Installing Docker for Linux..."
+    echo ""
+    
+    # Download and install with spinner
+    (
+      curl -fsSL https://get.docker.com -o /tmp/get-docker.sh 2>/dev/null
+      sudo sh /tmp/get-docker.sh >/dev/null 2>&1
+      rm -f /tmp/get-docker.sh
+    ) &
+    show_spinner $! "  Downloading and installing Docker"
     
     # Add current user to docker group
+    echo_info "Adding $USER to docker group..."
     sudo usermod -aG docker "$USER"
-    echo_info "Added $USER to docker group. You may need to log out and back in."
+    
+    echo ""
+    echo_success "✓ Docker installed successfully!"
+    echo_warning "⚠️  You may need to log out and back in for group permissions to take effect"
+    echo ""
   elif [ "$OS" = "Darwin" ]; then
-    echo_error "Please install Docker Desktop from https://www.docker.com/products/docker-desktop"
-    echo_error "Then rerun this installation script."
+    echo_warning "Docker Desktop is required for macOS"
+    echo ""
+    echo_info "📥 Please install Docker Desktop:"
+    echo_info "   1. Visit: https://www.docker.com/products/docker-desktop"
+    echo_info "   2. Download Docker Desktop for Mac"
+    echo_info "   3. Install and start Docker Desktop"
+    echo_info "   4. Run this installer again"
+    echo ""
     exit 1
   else
     echo_error "Unsupported OS: $OS"
     exit 1
   fi
-  
-  echo_success "Docker installed successfully!"
 }
 
 # Install Docker Compose
@@ -143,6 +345,17 @@ download_nself_files() {
   echo_info "📦 Installing nself CLI"
   echo ""
   
+  # Backup existing installation if updating
+  if [ -d "$BIN_DIR" ]; then
+    BACKUP_DIR="$NSELF_DIR/backup_$(date +%Y%m%d_%H%M%S)"
+    echo_info "Creating backup at $BACKUP_DIR"
+    (
+      mkdir -p "$BACKUP_DIR"
+      cp -r "$BIN_DIR" "$BACKUP_DIR/" 2>/dev/null || true
+    ) &
+    show_spinner $! "  Backing up existing installation"
+  fi
+  
   # Create directories
   (
     mkdir -p "$BIN_DIR"
@@ -162,6 +375,7 @@ download_nself_files() {
     "services-compose.sh"
     "services-compose-inline.sh"
     "update.sh"
+    "urls.sh"
     "VERSION"
   )
   
@@ -171,19 +385,45 @@ download_nself_files() {
   
   # Download all files in background
   (
-    # Download checksum file first (if available)
-    CHECKSUM_URL="$REPO_RAW_URL/checksums.sha256"
-    CHECKSUM_FILE="$TMP_DIR/checksums.sha256"
-    curl -fsSL "$CHECKSUM_URL" -o "$CHECKSUM_FILE" 2>/dev/null || true
+    # Download VERSION first to check compatibility
+    VERSION_URL="$REPO_RAW_URL/bin/VERSION"
+    VERSION_FILE="$TMP_DIR/VERSION"
+    if ! curl -fsSL "$VERSION_URL" -o "$VERSION_FILE" 2>/dev/null; then
+      echo "Failed to download VERSION file" >&2
+      exit 1
+    fi
+    
+    NEW_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+    
+    # Version compatibility check (future-proof)
+    if [ -f "$BIN_DIR/VERSION" ]; then
+      OLD_VERSION=$(cat "$BIN_DIR/VERSION" | tr -d '[:space:]')
+      # Add any version-specific migration logic here in future versions
+      # For now, all versions are compatible
+    fi
     
     # Download bin files
     for file in "${BIN_FILES[@]}"; do
       TMP_FILE="$TMP_DIR/$file"
-      if ! curl -fsSL "$REPO_RAW_URL/bin/$file" -o "$TMP_FILE" 2>/dev/null; then
+      if [ "$file" != "VERSION" ]; then  # Already downloaded VERSION
+        if ! curl -fsSL "$REPO_RAW_URL/bin/$file" -o "$TMP_FILE" 2>/dev/null; then
+          echo "Failed to download $file" >&2
+          exit 1
+        fi
+      fi
+    done
+    
+    # Verify all files downloaded successfully before moving
+    for file in "${BIN_FILES[@]}"; do
+      if [ ! -f "$TMP_DIR/$file" ]; then
+        echo "Missing file: $file" >&2
         exit 1
       fi
-      # Move to final location
-      mv "$TMP_FILE" "$BIN_DIR/$file"
+    done
+    
+    # Move all files atomically
+    for file in "${BIN_FILES[@]}"; do
+      mv "$TMP_DIR/$file" "$BIN_DIR/$file"
       chmod +x "$BIN_DIR/$file"
     done
   ) &
@@ -192,17 +432,42 @@ download_nself_files() {
   
   if [ $? -ne 0 ]; then
     echo_error "Failed to download files"
+    
+    # Attempt rollback if backup exists
+    if [ -d "$BACKUP_DIR" ]; then
+      echo_warning "Attempting to restore from backup..."
+      cp -r "$BACKUP_DIR/bin/"* "$BIN_DIR/" 2>/dev/null && \
+        echo_success "Restored from backup" || \
+        echo_error "Rollback failed. Manual intervention required."
+    fi
     exit 1
   fi
   
   # Download template files
   (curl -fsSL "$REPO_RAW_URL/bin/templates/.env.example" -o "$TEMPLATES_DIR/.env.example" 2>/dev/null) &
   show_spinner $! "  Downloading templates"
+  
+  # Clean up old backups (keep last 3)
+  if [ -d "$NSELF_DIR" ]; then
+    ls -dt "$NSELF_DIR"/backup_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
+  fi
 }
 
 # Main installation
 main() {
   echo
+  echo "╔══════════════════════════════════════════════╗"
+  echo "║           NSELF CLI Installer                ║"
+  echo "║      Self-hosted Nhost Stack Manager         ║"
+  echo "╚══════════════════════════════════════════════╝"
+  echo
+  
+  # Check for existing installation
+  check_existing_installation
+  
+  # Check system requirements
+  check_requirements
+  
   echo_info "🚀 Starting NSELF installation..."
   echo
   
@@ -227,6 +492,15 @@ main() {
   
   # Download NSELF files
   download_nself_files
+  
+  # Verify installation
+  if [ -f "$BIN_DIR/nself.sh" ] && [ -f "$BIN_DIR/VERSION" ]; then
+    local installed_version=$(cat "$BIN_DIR/VERSION" 2>/dev/null || echo "unknown")
+    echo_success "✓ nself $installed_version installed successfully!"
+  else
+    echo_error "Installation verification failed"
+    exit 1
+  fi
   
   # Add to PATH
   if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
@@ -261,16 +535,20 @@ main() {
   
   # Display success message
   echo
-  echo_success "✨ NSELF installation complete!"
+  echo "╔══════════════════════════════════════════════╗"
+  echo "║      ✨ NSELF Installation Complete! ✨      ║"
+  echo "╚══════════════════════════════════════════════╝"
   echo
-  echo_info "To get started:"
-  echo_info "  1. Create a new directory for your project"
-  echo_info "  2. Run 'nself init' to initialize"
-  echo_info "  3. Edit .env.local to configure your project"
-  echo_info "  4. Run 'nself build' to generate files"
-  echo_info "  5. Run 'nself up' to start services"
+  echo_info "📚 Quick Start Guide:"
+  echo "   1. Create a new directory for your project"
+  echo "   2. Run 'nself init' to initialize"
+  echo "   3. Edit .env.local to configure your project"
+  echo "   4. Run 'nself build' to generate files"
+  echo "   5. Run 'nself up' to start services"
   echo
-  echo_info "Documentation: $REPO_URL"
+  echo_info "📖 Documentation: $REPO_URL"
+  echo_info "💡 Run 'nself help' for available commands"
+  echo_info "🔄 Run 'nself update' to check for updates"
   echo
   
   # Check if we need to reload shell

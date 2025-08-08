@@ -776,92 +776,126 @@ cmd_restart() {
 
 # Update nself
 cmd_update() {
-  echo_info "Checking for updates..."
+  echo ""
+  echo_info "🔄 nself Update Manager"
+  echo ""
   
+  # Read local version
   read_local_version
-  fetch_latest_version
-
+  echo_info "Current version: $LOCAL_VERSION"
+  
+  # Fetch latest version with spinner
+  (
+    fetch_latest_version
+    echo "$LATEST_VERSION" > /tmp/nself_version_check.tmp
+  ) &
+  show_spinner $! "Checking for updates"
+  
+  LATEST_VERSION=$(cat /tmp/nself_version_check.tmp 2>/dev/null | tr -d '[:space:]')
+  rm -f /tmp/nself_version_check.tmp
+  
   if [ -z "$LATEST_VERSION" ]; then
-    echo_error "Failed to fetch latest version."
+    echo_error "❌ Failed to fetch latest version (network issue?)"
+    echo_info "Please check your internet connection and try again"
     exit 1
   fi
-
+  
+  echo_info "Latest version:  $LATEST_VERSION"
+  echo ""
+  
   if is_newer_version; then
-    echo_info "Updating from $LOCAL_VERSION to $LATEST_VERSION..."
+    echo_success "🆕 New version available!"
+    echo_info "Update details: $LOCAL_VERSION → $LATEST_VERSION"
+    echo ""
     
-    # Download update script and run it
-    if curl -fsSL "$REPO_RAW_URL/install.sh" | bash; then
-      echo_success "Update complete!"
+    printf "Would you like to update now? [Y/n] "
+    read -r REPLY
+    
+    if [[ -z "$REPLY" || "$REPLY" =~ ^[Yy]$ ]]; then
+      echo ""
+      echo_info "📦 Starting update process..."
+      echo ""
+      
+      # Create temp file for install script
+      TMP_INSTALL="/tmp/nself_install_$$.sh"
+      
+      # Download install script with spinner
+      (
+        curl -fsSL "$REPO_RAW_URL/install.sh" -o "$TMP_INSTALL" 2>/dev/null
+      ) &
+      show_spinner $! "  Downloading update"
+      
+      if [ -f "$TMP_INSTALL" ]; then
+        # Run the installer
+        bash "$TMP_INSTALL"
+        rm -f "$TMP_INSTALL"
+        
+        echo ""
+        echo_success "✅ Update complete! You're now running nself $LATEST_VERSION"
+        echo_info "💡 Run 'nself version' to verify"
+      else
+        echo_error "❌ Failed to download update"
+        exit 1
+      fi
     else
-      echo_error "Update failed."
-      exit 1
+      echo ""
+      echo_info "Update cancelled. You can update anytime with: nself update"
     fi
   else
-    echo_info "Already running the latest version ($LOCAL_VERSION)."
+    echo_success "✅ You're already running the latest version!"
+    echo_info "   No updates needed. All good! 🎉"
   fi
 }
 
 # Display help
 cmd_help() {
-  cat << EOF
-
-$(echo_info "nself cli v$(cat "$VERSION_FILE" 2>/dev/null || echo "0.1.0") - The Complete Nhost Self-hosted Stack")
-
-$(echo_info "Usage:") nself [command] [options]
-
-$(echo_info "Commands:")
-  init        Initialize a new project with .env.local
-  build       Build project structure from .env.local  
-  up          Start all services (core + backend services)
-  down        Stop all services
-  restart     Restart all services (down + up)
-  prod        Create production .env from .env.local
-  reset       Reset project (delete all data)
-  update      Update nself to latest version
-  version     Show current version
-  help        Display this help message
+  local version=$(cat "$VERSION_FILE" 2>/dev/null || echo "0.1.0")
   
-  db          Database tools (run 'nself db' for details)
-
-$(echo_info "Options:")
-  -h, --help     Display help
-  -v, --version  Show version
-
-$(echo_info "Quick Start:")
-  $ nself init                    # Create new project
-  $ nano .env.local              # Configure your project
-  $ nself build                  # Generate Docker configs
-  $ nself up                     # Start everything!
-
-$(echo_info "Production Deployment:")
-  $ nself prod                   # Generate secure passwords & config
-  $ nano .env.prod-template      # Edit domain and email
-  $ cp .env.prod-template .env   # Activate production config
-  $ nself up                     # Deploy to production
-
-$(echo_info "Service URLs (local.nself.org):")
-  • GraphQL API:     https://api.local.nself.org
-  • Authentication:  https://auth.local.nself.org  
-  • Storage:         https://storage.local.nself.org
-  • Dashboard:       https://dashboard.local.nself.org
-  
-$(echo_info "Optional Services:")
-  • Redis:           In-memory cache and queues
-  • NestJS:          Microservices for Hasura actions
-  • BullMQ:          Background job processing
-  • GoLang:          High-performance services
-  • Python:          ML/AI and data analysis
-
-$(echo_info "Documentation:") https://nself.org
-$(echo_info "GitHub:") https://github.com/acamarata/nself
-
-EOF
+  echo ""
+  echo "╔══════════════════════════════════════════════╗"
+  echo "║     nself CLI v$version                      ║"
+  echo "║     Self-hosted Nhost Stack Manager          ║"
+  echo "╚══════════════════════════════════════════════╝"
+  echo ""
+  echo "Usage: nself [command] [options]"
+  echo ""
+  echo_info "Core Commands:"
+  echo "  init        Initialize a new project"
+  echo "  build       Build project structure"
+  echo "  up          Start all services"
+  echo "  down        Stop all services"
+  echo "  restart     Restart all services"
+  echo "  reset       Reset project (delete all data)"
+  echo ""
+  echo_info "Management Commands:"
+  echo "  prod        Create production configuration"
+  echo "  update      Update nself to latest version"
+  echo "  version     Show current version"
+  echo "  help        Display this help message"
+  echo "  db          Database tools (see 'nself db')"
+  echo ""
+  echo_info "Quick Start:"
+  echo "  $ nself init                 # Create new project"
+  echo "  $ nano .env.local            # Configure project"
+  echo "  $ nself build                # Generate configs"
+  echo "  $ nself up                   # Start services"
+  echo ""
+  echo_info "Service URLs (local.nself.org):"
+  echo "  • GraphQL:    https://api.local.nself.org"
+  echo "  • Auth:       https://auth.local.nself.org"
+  echo "  • Storage:    https://storage.local.nself.org"
+  echo "  • Dashboard:  https://dashboard.local.nself.org"
+  echo ""
+  echo_info "Resources:"
+  echo "  📚 Docs:   https://github.com/acamarata/nself"
+  echo "  🐛 Issues: https://github.com/acamarata/nself/issues"
+  echo ""
 }
 
 # Display version
 cmd_version() {
   read_local_version
-  echo "nself version $LOCAL_VERSION"
+  echo "nself v$LOCAL_VERSION"
 }
 
 # ----------------------------
