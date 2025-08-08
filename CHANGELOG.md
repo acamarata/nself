@@ -1,6 +1,70 @@
 # Changelog
 
-## [0.2.1] - 2025-08-08
+All notable changes to nself will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.2] - 2025-01-08
+
+### 🚀 Critical Update: Seamless Installation & Updates
+
+This release focuses entirely on making nself installation and updates bulletproof for all future versions. Users can now update seamlessly with visual feedback and automatic version management.
+
+### Added
+- **Revolutionary Update System**
+  - Automatic version detection with compatibility checking
+  - Interactive update prompts with smart defaults (Y/n)
+  - Visual progress indicators with spinner animations
+  - Rollback safety with temporary file management
+  - Network error recovery with helpful suggestions
+  
+- **Enhanced Installation Experience**
+  - Detects existing installations automatically
+  - Shows clear version transitions (e.g., "0.2.1 → 0.2.2")
+  - Intelligent dependency checking with guided installation
+  - Platform-specific guidance (especially for macOS Docker Desktop)
+  - Resumable installation on network failures
+  
+- **Professional CLI Interface**
+  - Loading spinners for all long-running operations
+  - Clean, consistent output formatting
+  - Color-coded messages (info, success, warning, error)
+  - Progress tracking for downloads and installations
+  
+- **Robust Testing Infrastructure**
+  - Unit test suite (`tests/` directory)
+  - Automated syntax validation
+  - Installation flow testing
+  - Update mechanism testing
+  - Fallback testing for environments without bats
+
+### Changed
+- **User Interface Improvements**
+  - Simplified version output: "nself v0.2.2" format
+  - Reorganized help into Core and Management sections
+  - Cleaner command outputs with better spacing
+  - Consistent message formatting across all commands
+  
+- **Installation Script (`install.sh`)**
+  - Complete rewrite of update detection logic
+  - Better handling of PATH configuration
+  - Improved error messages with recovery steps
+  - Silent background downloads with visual feedback
+
+### Fixed
+- Version comparison logic now handles all edge cases
+- Network timeout issues during updates
+- Installation script properly preserves existing configurations
+- Update command correctly handles interrupted downloads
+
+### Technical Improvements
+- All shell scripts pass shellcheck validation
+- Reduced code duplication across scripts
+- Better error handling and exit codes
+- Improved POSIX compliance
+
+## [0.2.1] - 2025-01-08
 
 ### Added
 - **Simplified Environment Management**: New `ENV` variable (dev/prod) for user simplicity
