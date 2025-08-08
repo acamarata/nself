@@ -86,7 +86,8 @@ fi
 HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 
 # Environment-specific security warnings
-if [[ "$ENVIRONMENT" == "production" ]]; then
+# Support both ENV and ENVIRONMENT for backward compatibility
+if [[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]; then
   echo_info "Building for PRODUCTION environment"
   
   # Validate passwords
@@ -486,7 +487,7 @@ server {
 EOF
 
     # Add environment-specific security headers
-    if [[ "$ENVIRONMENT" == "production" ]] && [[ "$SECURITY_HEADERS_ENABLED" == "true" ]]; then
+    if ([[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]) && [[ "$SECURITY_HEADERS_ENABLED" == "true" ]]; then
       cat >> nginx/conf.d/app-route-$i.conf << EOF
     # Production security headers
     add_header Strict-Transport-Security "max-age=${HSTS_MAX_AGE}; includeSubDomains" always;

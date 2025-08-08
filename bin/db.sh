@@ -420,9 +420,9 @@ cmd_revert() {
 # ====================
 
 cmd_seed() {
-  local env="${ENVIRONMENT:-development}"
-  
-  echo_info "Seeding database for environment: $env"
+  # Use ENV if available, otherwise fall back to ENVIRONMENT
+  local env_mode="${ENV:-${ENVIRONMENT:-development}}"
+  local use_env_seeds="${DB_ENV_SEEDS:-true}"  # Default to true for better practices
   
   # Check if postgres is running
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
@@ -430,27 +430,73 @@ cmd_seed() {
     return 1
   fi
   
-  # Apply common seeds
-  if [ -d "seeds/common" ]; then
-    for seed in seeds/common/*.sql; do
-      if [ -f "$seed" ]; then
-        echo_info "Applying seed: $(basename $seed)"
-        docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed" || true
-      fi
-    done
+  # Map ENV to standard environment names
+  local env_name="development"
+  if [[ "$env_mode" == "prod" ]] || [[ "$env_mode" == "production" ]]; then
+    env_name="production"
+  elif [[ "$env_mode" == "staging" ]]; then
+    env_name="staging"
+  elif [[ "$env_mode" == "dev" ]] || [[ "$env_mode" == "development" ]]; then
+    env_name="development"
   fi
   
-  # Apply environment-specific seeds
-  if [ -d "seeds/$env" ]; then
-    for seed in seeds/$env/*.sql; do
-      if [ -f "$seed" ]; then
-        echo_info "Applying seed: $(basename $seed)"
-        docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed" || true
-      fi
-    done
+  # Use environment-based seeding strategy if enabled
+  if [[ "$use_env_seeds" == "true" ]]; then
+    # Standards-compliant approach using Hasura/PostgreSQL conventions
+    echo_info "Seeding database for environment: $env_name"
+    
+    # Apply common seeds first (shared across all environments)
+    if [ -d "seeds/common" ]; then
+      echo_info "Applying common seeds..."
+      for seed in seeds/common/*.sql; do
+        if [ -f "$seed" ]; then
+          echo_info "  • $(basename $seed)"
+          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed"; then
+            echo_warning "  Failed to apply: $(basename $seed)"
+          fi
+        fi
+      done
+    fi
+    
+    # Apply environment-specific seeds
+    if [ -d "seeds/$env_name" ]; then
+      echo_info "Applying $env_name seeds..."
+      for seed in seeds/$env_name/*.sql; do
+        if [ -f "$seed" ]; then
+          echo_info "  • $(basename $seed)"
+          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed"; then
+            echo_warning "  Failed to apply: $(basename $seed)"
+          fi
+        fi
+      done
+    else
+      echo_info "No $env_name seeds found in seeds/$env_name/"
+      echo_info "Directory structure (Hasura/PostgreSQL standard):"
+      echo_info "  seeds/common/       - Shared data for all environments"
+      echo_info "  seeds/development/  - Mock/test data for local development"
+      echo_info "  seeds/staging/      - Staging environment data"
+      echo_info "  seeds/production/   - Minimal production data"
+    fi
+    
+    echo_success "Database seeded for $env_name environment"
+  else
+    # No environment branching - just use default directory
+    echo_info "Seeding database (no environment branching)"
+    
+    if [ -d "seeds/default" ]; then
+      for seed in seeds/default/*.sql; do
+        if [ -f "$seed" ]; then
+          echo_info "Applying seed: $(basename $seed)"
+          docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed" || true
+        fi
+      done
+    else
+      echo_info "No seeds found in seeds/default/"
+      echo_info "Create seed files in seeds/default/ directory"
+    fi
+    
+    echo_success "Database seeded"
   fi
-  
-  echo_success "Database seeded"
 }
 
 # ====================
@@ -507,11 +553,9 @@ cmd_update() {
   # Apply migrations
   cmd_migrate_up
   
-  # Seed if needed
-  if [ "$ENVIRONMENT" == "development" ]; then
-    echo_info "Applying development seeds..."
-    cmd_seed
-  fi
+  # Seed based on environment (dev seeds for non-production, prod seeds for production)
+  echo_info "Applying seeds for ${ENV:-${ENVIRONMENT:-development}} environment..."
+  cmd_seed
   
   echo_success "Database updated successfully!"
 }
@@ -717,8 +761,8 @@ cmd_help() {
   echo "  migrate:down [n]     Rollback n migrations (default: 1)"
   echo ""
   echo_success "Database Operations:"
-  echo "  update               Safely apply pending migrations (for all developers)"
-  echo "  seed                 Seed database with sample data"
+  echo "  update               Safely apply pending migrations and seeds"
+  echo "  seed                 Seed database (dev or prod based on ENVIRONMENT)"
   echo "  reset                Reset database (drop and recreate)"
   echo "  status               Show database status"
   echo "  revert               Revert to previous backup"
@@ -726,12 +770,24 @@ cmd_help() {
   echo_success "Workflow:"
   echo "  1. Edit schema.dbml (or sync from dbdiagram.io)"
   echo "  2. Run 'nself db run' to generate migrations"
-  echo "  3. Run 'nself db update' to safely apply migrations"
+  echo "  3. Run 'nself db update' to apply migrations + seeds"
+  echo ""
+  echo_success "Seeding Strategy:"
+  echo "  DB_ENV_SEEDS=true (recommended - follows Hasura/PostgreSQL standards):"
+  echo "    • seeds/common/      - Shared data for all environments"
+  echo "    • seeds/development/ - Mock/test data (when ENV=dev)"
+  echo "    • seeds/staging/     - Staging data (when ENV=staging)"
+  echo "    • seeds/production/  - Minimal production data (when ENV=prod)"
+  echo "  DB_ENV_SEEDS=false (no environment branching):"
+  echo "    • seeds/default/     - Single seed directory for all environments"
+  echo "  Note: Migrations always handle structure (tables, indexes, constraints)"
   echo ""
   echo_success "Configuration (.env.local):"
+  echo "  ENV                  Environment mode: 'dev' or 'prod' (default: dev)"
+  echo "  DB_ENV_SEEDS         Enable environment-based seeding (default: true)"
   echo "  LOCAL_SCHEMA_FILE    Path to schema file (default: schema.dbml)"
   echo "  DBDIAGRAM_URL        URL to dbdiagram.io project (for sync)"
-  echo "  ENVIRONMENT          Current environment (development/staging/production)"
+  echo "  ENVIRONMENT          Legacy: Use ENV instead (auto-mapped from ENV)"
   echo ""
   echo_success "Backups:"
   echo "  All changes are backed up to bin/dbsyncs/ with timestamps"
