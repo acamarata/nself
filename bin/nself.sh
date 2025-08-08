@@ -857,19 +857,21 @@ case "$1" in
     ;;
 esac
 
-# Check dependencies
-if ! command_exists docker; then
-  echo_error "Docker is not installed. Please install Docker first."
-  exit 1
-fi
-
-if ! command_exists docker compose && ! command_exists docker-compose; then
-  echo_error "Docker Compose is not installed. Please install Docker Compose first."
-  exit 1
-fi
-
 # Process commands
 COMMAND="$1"
+
+# Check dependencies (skip for update)
+if [ "$COMMAND" != "update" ]; then
+  if ! command_exists docker; then
+    echo_error "Docker is not installed. Please install Docker first."
+    exit 1
+  fi
+
+  if ! command_exists docker compose && ! command_exists docker-compose; then
+    echo_error "Docker Compose is not installed. Please install Docker Compose first."
+    exit 1
+  fi
+fi
 
 case "$COMMAND" in
   init)
