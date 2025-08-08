@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.1] - 2025-08-08
+
+### Added
+- **Simplified Environment Management**: New `ENV` variable (dev/prod) for user simplicity
+  - `ENV=dev` for development (default)
+  - `ENV=prod` for production (auto-configures security)
+  - Core project variables now at top of `.env.example`
+  - Maps internally to Hasura/PostgreSQL standards (development/production)
+- **Standards-Compliant Database Seeding**: Enhanced `DB_ENV_SEEDS` option
+  - When `true`: Uses Hasura/PostgreSQL standard structure (common/ + environment-specific)
+  - When `false`: Single default/ directory for all environments
+  - Follows industry best practices while keeping configuration simple
+
+### Changed
+- **Configuration Organization**: Core settings (ENV, PROJECT_NAME, BASE_DOMAIN, DB_ENV_SEEDS) now at top of `.env.example`
+- **Auto-Configuration**: Many settings now automatically adjust based on ENV (Hasura console, dev mode, etc.)
+- **Improved Documentation**: Updated README and DBTOOLS with new ENV and seeding strategies
+
+### Fixed
+- Environment variable consistency across all scripts
+- Backward compatibility maintained with ENVIRONMENT variable
+
 ## [0.2.0] - 2025-08-06
 
 ### Added
