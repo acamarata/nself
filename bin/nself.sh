@@ -54,13 +54,13 @@ show_spinner() {
   
   printf "\033[1;36m%s\033[0m" "$message"
   
-  while kill -0 $pid 2>/dev/null; do
+  while kill -0 "$pid" 2>/dev/null; do
     i=$(( (i+1) %10 ))
     printf "\r\033[1;36m%s %s\033[0m" "$message" "${spin:$i:1}"
     sleep 0.1
   done
   
-  wait $pid
+  wait "$pid"
   local result=$?
   
   if [ $result -eq 0 ]; then
@@ -85,7 +85,7 @@ command_exists() {
 # Function to read local version
 read_local_version() {
   if [ -f "$VERSION_FILE" ]; then
-    LOCAL_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+    LOCAL_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
   else
     echo_error "VERSION file not found."
     exit 1
@@ -138,7 +138,8 @@ check_for_migrations() {
   fi
   
   # Count migration directories
-  local migration_count=$(ls -d hasura/migrations/default/*/ 2>/dev/null | wc -l)
+  local migration_count
+  migration_count=$(find hasura/migrations/default -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
   
   if [ "$migration_count" -eq 0 ]; then
     return 0
