@@ -829,7 +829,7 @@ $(echo_info "Optional Services:")
   • GoLang:          High-performance services
   • Python:          ML/AI and data analysis
 
-$(echo_info "Documentation:") https://nself.com
+$(echo_info "Documentation:") https://nself.org
 $(echo_info "GitHub:") https://github.com/acamarata/nself
 
 EOF
