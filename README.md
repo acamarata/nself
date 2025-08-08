@@ -1,5 +1,8 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/acamarata/nself/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
 
 **Based on [Nhost.io](https://nhost.io) for self-hosting!** and expanded with more features. Copy the below command in Terminal to install and get up and running in seconds!
@@ -7,6 +10,8 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 ```bash
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
+
+> **📦 v0.2.2 Update**: Seamless installation and bulletproof updates! The installer now auto-detects existing installations, offers one-click updates, and provides visual progress for all operations. Update anytime with `nself update`.
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -50,10 +55,26 @@ curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | b
 ```
 
 The installer will:
-- Check and install Docker/Docker Compose if needed
-- Download nself CLI to `~/.nself/bin`
-- Add nself to your PATH
-- Create a global `nself` command
+- ✅ Auto-detect existing installations and offer updates
+- 📊 Show visual progress with loading spinners
+- 🔍 Check and help install Docker/Docker Compose if needed
+- 📦 Download nself CLI to `~/.nself/bin`
+- 🔗 Add nself to your PATH automatically
+- 🚀 Create a global `nself` command
+
+### Updating nself
+
+To update to the latest version:
+
+```bash
+nself update
+```
+
+The updater will:
+- Check for new versions automatically
+- Show version comparison (current → latest)
+- Download and install updates seamlessly
+- Preserve your existing configurations
 
 ## 🏁 Quick Start - 3 Commands to Backend Bliss
 
