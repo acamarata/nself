@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
@@ -11,7 +11,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **📦 v0.2.2 Update**: Seamless installation and bulletproof updates! The installer now auto-detects existing installations, offers one-click updates, and provides visual progress for all operations. Update anytime with `nself update`.
+> **📦 v0.2.4 NEW**: Complete email provider support! Zero-config for development (MailPit), 2-minute setup for production with 16+ providers including SendGrid, AWS SES, Mailgun, and more. Plus automatic SSL trust that eliminates browser warnings!
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -25,17 +25,20 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 ### 🎯 Complete Feature Set
 - **Full Nhost Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
 - **Plus Extras**: Redis, TimescaleDB, PostGIS, pgvector extensions
+- **Email Management**: 16+ providers (SendGrid, AWS SES, Mailgun, etc.) with zero-config dev
 - **Microservices Ready**: Built-in support for NestJS, BullMQ, GoLang, and Python services
-- **Production SSL**: Automatic HTTPS with Let's Encrypt or self-signed certs
+- **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
 - **Single Config File**: One `.env.local` controls everything
-- **Hot Reload**: Changes apply instantly in development
+- **Zero Configuration**: Email, SSL, and services work out of the box
+- **Hot Reload**: Changes apply instantly without rebuild
 - **Multi-Environment**: Same setup works locally, staging, and production
 - **No Lock-in**: Standard Docker Compose under the hood
 
 ### 🔐 Production Ready
-- **Security First**: Automatic secure password generation with `nself prod`
+- **Security First**: Automatic SSL trust + secure password generation
+- **Email Ready**: Production email in 2 minutes with guided setup
 - **Battle Tested**: Based on proven Nhost.io infrastructure
 - **Scale Ready**: From hobby projects to enterprise deployments
 - **Zero Downtime**: Rolling updates and health checks built-in
@@ -98,6 +101,35 @@ nself build && nself up
 
 *Tip:* These URLs are also printed after `nself build` and `nself up` so they're easy to copy.
 
+## 📧 Email Configuration
+
+### Development (Zero Config)
+Email works out of the box with MailPit - all emails are captured locally:
+- 📧 View emails: https://mail.local.nself.org
+- 🔧 No setup required
+- 📨 Perfect for testing auth flows
+
+### Production (2-Minute Setup)
+```bash
+nself email setup
+```
+
+Choose from 16+ providers:
+- **SendGrid** - 100 emails/day free
+- **AWS SES** - $0.10 per 1000 emails  
+- **Mailgun** - First 1000 emails free
+- **Postmark** - Transactional email specialist
+- **Gmail** - Use your personal/workspace account
+- **Postfix** - Full control self-hosted server
+- And 10+ more!
+
+The wizard guides you through everything. Example for SendGrid:
+```bash
+nself email configure sendgrid
+# Add your API key to .env.local
+nself build && nself restart
+```
+
 ### Want to customize?
 
 Edit `.env.local` to enable extras:
@@ -134,19 +166,37 @@ nself build && nself restart
 
 ## 📚 Commands
 
+### Core Commands
 | Command | Description |
 |---------|-------------|
 | `nself init` | Initialize a new project with `.env.local` |
 | `nself build` | Generate project structure from configuration |
-| `nself up` | Start all services (shows migration warnings) |
+| `nself up` | Start all services (--apply-changes, --dry-run) |
 | `nself down` | Stop all services |
 | `nself restart` | Restart all services (down + up) |
-| `nself prod` | Create production .env from .env.local |
+| `nself diff` | Show configuration changes since last build |
 | `nself reset` | Delete all data and return to initial state |
+| `nself trust` | Install SSL certificate (fixes browser warnings) |
+
+### Management Commands
+| Command | Description |
+|---------|-------------|
+| `nself prod` | Create production .env with secure passwords |
 | `nself update` | Update nself to the latest version |
 | `nself db` | Database tools (migrations, schema, backups) |
+| `nself email` | Email provider setup and management |
 | `nself version` | Show current version |
 | `nself help` | Display help information |
+
+### Email Commands
+| Command | Description |
+|---------|-------------|
+| `nself email setup` | Interactive email setup wizard |
+| `nself email list` | Show all 16+ supported email providers |
+| `nself email configure <provider>` | Configure specific email provider |
+| `nself email validate` | Check email configuration |
+| `nself email test [email]` | Send a test email |
+| `nself email docs <provider>` | Show provider setup guide |
 
 ## 🌐 Default Service URLs
 
@@ -157,7 +207,8 @@ When using the default `local.nself.org` domain:
 - **Storage**: https://storage.local.nself.org
 - **Storage Console**: https://storage-console.local.nself.org
 - **Functions** (if enabled): https://functions.local.nself.org
-- **MailHog** (development): https://mailhog.local.nself.org
+- **Email** (development): https://mail.local.nself.org - MailPit email viewer
+- **Dashboard** (if enabled): https://dashboard.local.nself.org
 
 All `*.nself.org` domains resolve to `127.0.0.1` for local development.
 
