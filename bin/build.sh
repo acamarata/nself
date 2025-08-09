@@ -8,6 +8,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="$SCRIPT_DIR/templates"
 
+# Source environment utilities for safe loading
+source "$SCRIPT_DIR/env-utils.sh"
+
 # Helper functions
 echo_info() {
   echo -e "\033[1;34m[INFO]\033[0m $1"
@@ -21,11 +24,22 @@ echo_error() {
   echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
 }
 
-# Load environment
+echo_warning() {
+  echo -e "\033[1;33m[WARNING]\033[0m $1"
+}
+
+# Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  set -o allexport
-  source .env.local
-  set +o allexport
+  load_env_safe ".env.local"
+  
+  # Expand nested variables (e.g., HASURA_ROUTE=api.${BASE_DOMAIN})
+  # This ensures variables like ${BASE_DOMAIN} inside other variables get expanded
+  for var in HASURA_ROUTE AUTH_ROUTE STORAGE_ROUTE STORAGE_CONSOLE_ROUTE FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILPIT_ROUTE MAIL_ROUTE FILES_ROUTE MAILHOG_ROUTE; do
+    if [[ -n "${!var}" ]]; then
+      expanded_value=$(eval echo "${!var}")
+      export "$var=$expanded_value"
+    fi
+  done
 else
   echo_error "No .env.local file found."
   exit 1
@@ -123,6 +137,7 @@ mkdir -p hasura/metadata
 mkdir -p hasura/migrations
 mkdir -p functions/src
 mkdir -p certs
+mkdir -p config-server
 
 # Generate Nginx configuration
 echo_info "Generating Nginx configuration..."
@@ -176,19 +191,51 @@ EOF
 
 # Generate SSL certificates for local development
 if [[ "$SSL_MODE" == "local" ]] && [[ "$BASE_DOMAIN" == *"nself.org"* ]]; then
-  echo_info "Generating local SSL certificates for *.nself.org..."
+  echo_info "Generating trusted SSL certificates..."
   
-  if [ ! -f "$SCRIPT_DIR/certs/nself.org.crt" ]; then
-    # Generate self-signed certificate
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  # Check if mkcert is available
+  MKCERT_PATH="$SCRIPT_DIR/mkcert"
+  
+  if [[ -f "$MKCERT_PATH" ]] && [[ -x "$MKCERT_PATH" ]]; then
+    # Use mkcert for trusted certificates
+    echo_info "Using mkcert for automatic SSL trust..."
+    
+    # Install root CA if not already installed
+    "$MKCERT_PATH" -install 2>/dev/null || true
+    
+    # Generate certificates for all domains
+    "$MKCERT_PATH" -cert-file nginx/ssl/nself.org.crt \
+                   -key-file nginx/ssl/nself.org.key \
+                   "*.nself.org" "*.local.nself.org" "local.nself.org" 2>/dev/null || {
+      echo_warning "mkcert certificate generation failed, falling back to self-signed"
+      # Fallback to self-signed
+      openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout nginx/ssl/nself.org.key \
+        -out nginx/ssl/nself.org.crt \
+        -subj "/C=US/ST=State/L=City/O=NSELF/CN=*.nself.org" \
+        -addext "subjectAltName=DNS:*.nself.org,DNS:*.local.nself.org,DNS:local.nself.org"
+    }
+    
+    echo_success "✅ SSL certificates generated and automatically trusted!"
+    echo_info "   No browser warnings - certificates are already trusted."
+  elif [ ! -f "$SCRIPT_DIR/certs/nself.org.crt" ]; then
+    # Generate self-signed certificate as fallback
+    echo_warning "mkcert not found, generating self-signed certificate..."
+    echo_warning "Run 'nself trust' after build to trust the certificate"
+    
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
       -keyout nginx/ssl/nself.org.key \
       -out nginx/ssl/nself.org.crt \
-      -subj "/C=US/ST=State/L=City/O=nself/CN=*.nself.org" \
-      -addext "subjectAltName=DNS:*.nself.org,DNS:*.local.nself.org"
+      -subj "/C=US/ST=State/L=City/O=NSELF/CN=*.nself.org" \
+      -addext "subjectAltName=DNS:*.nself.org,DNS:*.local.nself.org,DNS:local.nself.org"
+    
+    echo_warning "⚠️  Self-signed certificate generated."
+    echo_warning "   Run 'nself trust' to avoid browser security warnings."
   else
     # Copy pre-made certificates
     cp "$SCRIPT_DIR/certs/nself.org.crt" nginx/ssl/
     cp "$SCRIPT_DIR/certs/nself.org.key" nginx/ssl/
+    echo_warning "Using existing certificates. Run 'nself trust' if you see browser warnings."
   fi
 fi
 
@@ -233,7 +280,7 @@ EOF
 # Auth configuration
 cat > nginx/conf.d/auth.conf << EOF
 upstream auth {
-    server auth:4000;
+    server auth:${AUTH_PORT:-4000};
 }
 
 server {
@@ -263,8 +310,42 @@ server {
 }
 EOF
 
-# Storage configuration
-cat > nginx/conf.d/storage.conf << EOF
+# Storage API configuration (hasura-storage)
+cat > nginx/conf.d/files.conf << EOF
+upstream storage-api {
+    server storage:5000;
+}
+
+server {
+    listen 80;
+    server_name files.${BASE_DOMAIN};
+    location / {
+        return 301 https://\$server_name\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name files.${BASE_DOMAIN};
+    
+    ssl_certificate /etc/nginx/ssl/nself.org.crt;
+    ssl_certificate_key /etc/nginx/ssl/nself.org.key;
+    
+    client_max_body_size 1000m;
+    
+    location / {
+        proxy_pass http://storage-api;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+# S3 Storage configuration (MinIO)
+cat > nginx/conf.d/s3.conf << EOF
 upstream minio {
     server minio:9000;
 }
@@ -402,16 +483,25 @@ server {
 EOF
 fi
 
-# Mailhog configuration for development
-if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
-  cat > nginx/conf.d/mailhog.conf << EOF
-upstream mailhog {
-    server mailhog:8025;
+# Email UI configuration for development
+if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+  # Determine the service name and route
+  if [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+    MAIL_SERVICE="mailpit"
+    MAIL_ROUTE="${MAILPIT_ROUTE:-mail.${BASE_DOMAIN}}"
+  else
+    MAIL_SERVICE="mailhog"
+    MAIL_ROUTE="${MAILHOG_ROUTE:-mailhog.${BASE_DOMAIN}}"
+  fi
+  
+  cat > nginx/conf.d/mail.conf << EOF
+upstream mail {
+    server ${MAIL_SERVICE}:8025;
 }
 
 server {
     listen 80;
-    server_name ${MAILHOG_ROUTE};
+    server_name ${MAIL_ROUTE};
 
     location / {
         return 301 https://\$server_name\$request_uri;
@@ -420,13 +510,13 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name ${MAILHOG_ROUTE};
+    server_name ${MAIL_ROUTE};
 
     ssl_certificate /etc/nginx/ssl/nself.org.crt;
     ssl_certificate_key /etc/nginx/ssl/nself.org.key;
 
     location / {
-        proxy_pass http://mailhog;
+        proxy_pass http://mail;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -443,11 +533,20 @@ fi
 echo_info "Configuring frontend app routes..."
 
 # Process APP_ROUTE_* environment variables
-for i in {1..20}; do
+for i in {0..20}; do
   route_var="APP_ROUTE_$i"
   route_value="${!route_var}"
   
+  # Also check for alternative naming convention APP_N_ROUTE
+  if [[ -z "$route_value" ]]; then
+    route_var="APP_${i}_ROUTE"
+    route_value="${!route_var}"
+  fi
+  
   if [[ -n "$route_value" ]]; then
+    # Expand variables in route_value (e.g., ${BASE_DOMAIN})
+    route_value=$(eval echo "$route_value")
+    
     # Parse port:domain format
     IFS=':' read -r port domain <<< "$route_value"
     
@@ -462,10 +561,13 @@ for i in {1..20}; do
       continue
     fi
     
-    echo_info "Adding route: localhost:$port -> $domain"
+    # Extract subdomain from domain
+    subdomain="${domain%%.*}"
     
-    cat > nginx/conf.d/app-route-$i.conf << EOF
-# Frontend App Route $i
+    echo_info "Adding route: $subdomain (localhost:$port -> $domain)"
+    
+    cat > nginx/conf.d/${subdomain}.conf << EOF
+# Frontend App Route $i: $subdomain
 # localhost:$port -> $domain
 
 server {
@@ -488,7 +590,7 @@ EOF
 
     # Add environment-specific security headers
     if ([[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]) && [[ "$SECURITY_HEADERS_ENABLED" == "true" ]]; then
-      cat >> nginx/conf.d/app-route-$i.conf << EOF
+      cat >> nginx/conf.d/${subdomain}.conf << EOF
     # Production security headers
     add_header Strict-Transport-Security "max-age=${HSTS_MAX_AGE}; includeSubDomains" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -502,7 +604,7 @@ EOF
 
     # Add rate limiting if enabled
     if [[ "$RATE_LIMIT_ENABLED" == "true" ]]; then
-      cat >> nginx/conf.d/app-route-$i.conf << EOF
+      cat >> nginx/conf.d/${subdomain}.conf << EOF
     # Rate limiting
     limit_req_zone \$binary_remote_addr zone=app${i}_limit:10m rate=${RATE_LIMIT_REQUESTS_PER_MINUTE}r/m;
     limit_req zone=app${i}_limit burst=${RATE_LIMIT_BURST} nodelay;
@@ -520,7 +622,7 @@ EOF
       PROXY_HOST="host.docker.internal"
     fi
     
-    cat >> nginx/conf.d/app-route-$i.conf << EOF
+    cat >> nginx/conf.d/${subdomain}.conf << EOF
     location / {
         proxy_pass http://$PROXY_HOST:$port;
         
@@ -561,7 +663,22 @@ EOF
 if [[ -n "$POSTGRES_EXTENSIONS" ]]; then
   IFS=',' read -ra EXTENSIONS <<< "$POSTGRES_EXTENSIONS"
   for ext in "${EXTENSIONS[@]}"; do
-    echo "CREATE EXTENSION IF NOT EXISTS $ext;" >> postgres/init/00-init.sql
+    # Trim whitespace
+    ext=$(echo "$ext" | xargs)
+    
+    # Handle special cases for extension names
+    if [[ "$ext" == "uuid-ossp" ]]; then
+      echo "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" >> postgres/init/00-init.sql
+    elif [[ "$ext" == "timescaledb" ]]; then
+      # TimescaleDB needs special handling
+      echo "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" >> postgres/init/00-init.sql
+    elif [[ "$ext" == "postgis" ]]; then
+      echo "CREATE EXTENSION IF NOT EXISTS postgis CASCADE;" >> postgres/init/00-init.sql
+    elif [[ "$ext" == "pgvector" ]]; then
+      echo "CREATE EXTENSION IF NOT EXISTS vector;" >> postgres/init/00-init.sql
+    else
+      echo "CREATE EXTENSION IF NOT EXISTS $ext;" >> postgres/init/00-init.sql
+    fi
   done
 fi
 
@@ -708,7 +825,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --only=production
 
 COPY . .
 
@@ -716,33 +833,151 @@ EXPOSE 3000
 
 CMD ["npm", "start"]
 EOF
+
+  # Generate package-lock.json for functions
+  echo_info "Generating package-lock.json for functions..."
+  (cd functions && npm install --package-lock-only 2>/dev/null) || {
+    # If npm install fails, create a basic package-lock.json
+    cat > functions/package-lock.json << EOF
+{
+  "name": "nself-functions",
+  "version": "1.0.0",
+  "lockfileVersion": 2,
+  "requires": true,
+  "packages": {}
+}
+EOF
+  }
 fi
 
-# Create NestJS microservice structure if enabled
-if [[ "$NESTJS_ENABLED" == "true" ]]; then
-  echo_info "Creating NestJS microservice template..."
+# Create config server for Dashboard if enabled
+if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
+  echo_info "Setting up config server for Dashboard..."
   
-  mkdir -p microservices/weather-service
+  # Copy config server files from templates
+  cp "$SCRIPT_DIR/templates/config-server/package.json" config-server/package.json 2>/dev/null || {
+    # If template doesn't exist, create it
+    cat > config-server/package.json << 'EOF'
+{
+  "name": "nself-config-server",
+  "version": "1.0.0",
+  "description": "Mock config server for Nhost Dashboard local development",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
+EOF
+  }
   
-  cat > microservices/weather-service/README.md << EOF
-# Weather Service Microservice
+  cp "$SCRIPT_DIR/templates/config-server/Dockerfile" config-server/Dockerfile 2>/dev/null || {
+    cat > config-server/Dockerfile << 'EOF'
+FROM node:18-alpine
 
-This is an example NestJS microservice that integrates with Hasura.
+WORKDIR /app
 
-## Setup
+COPY package*.json ./
+RUN npm install --production
 
-1. Install dependencies: \`npm install\`
-2. Configure environment variables
-3. Run development: \`npm run start:dev\`
+COPY . .
 
-## Features
+EXPOSE 4001
 
-- Fetches weather data from external API
-- Stores data in PostgreSQL via Hasura
-- Caches results in Redis (if enabled)
-- Exposes REST endpoints for Hasura actions
+CMD ["npm", "start"]
+EOF
+  }
+  
+  cp "$SCRIPT_DIR/templates/config-server/server.js" config-server/server.js 2>/dev/null || {
+    # Create inline if template missing
+    echo_warning "Config server template not found, creating basic version..."
+    cat > config-server/server.js << 'EOF'
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// Mock project configuration
+const projectConfig = {
+  project: {
+    id: 'local-dev',
+    name: process.env.PROJECT_NAME || 'nself-project',
+    subdomain: 'local',
+    region: 'local'
+  },
+  config: {
+    hasura: {
+      adminSecret: process.env.HASURA_GRAPHQL_ADMIN_SECRET,
+      url: `https://api.${process.env.BASE_DOMAIN}`
+    },
+    auth: {
+      url: `https://auth.${process.env.BASE_DOMAIN}`
+    },
+    storage: {
+      url: `https://storage.${process.env.BASE_DOMAIN}`
+    },
+    functions: {
+      url: `https://functions.${process.env.BASE_DOMAIN}`
+    }
+  }
+};
+
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+app.get('/v1/config', (req, res) => {
+  res.json(projectConfig);
+});
+
+const PORT = process.env.PORT || 4001;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Config server running on port ${PORT}`);
+});
+EOF
+  }
+  
+  # Create nginx config for config server
+  cat > nginx/conf.d/config.conf << EOF
+upstream config-server {
+    server config-server:4001;
+}
+
+server {
+    listen 80;
+    server_name config.${BASE_DOMAIN};
+    
+    location / {
+        return 301 https://\$server_name\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name config.${BASE_DOMAIN};
+    
+    ssl_certificate /etc/nginx/ssl/nself.org.crt;
+    ssl_certificate_key /etc/nginx/ssl/nself.org.key;
+    
+    location / {
+        proxy_pass http://config-server;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
 EOF
 fi
+
+# Note: NestJS services are now generated in services/ directory by services.sh
+# The old microservices/ folder is deprecated
 
 # Create services directory structure if enabled
 if [[ "$SERVICES_ENABLED" == "true" ]]; then
@@ -762,7 +997,35 @@ fi
 
 echo_success "Project structure created successfully!"
 
+# SSL certificate reminder
+if [[ "$SSL_MODE" == "local" ]]; then
+  echo ""
+  echo_warning "🔐 SSL Certificate Notice:"
+  echo_info "   To avoid browser security warnings, trust the certificate:"
+  echo_info "   Run: nself trust"
+  echo_info "   This will install the certificate to your system trust store"
+  echo ""
+fi
+
+# Email provider detection
+source "$SCRIPT_DIR/email-providers.sh" 2>/dev/null || true
+if command -v detect_provider >/dev/null 2>&1; then
+  email_provider=$(detect_provider)
+  echo ""
+  echo_info "📧 Email Configuration:"
+  if [[ "$email_provider" == "development" ]]; then
+    echo_success "   Using MailPit for local email testing"
+    echo_info "   View emails at: https://mail.${BASE_DOMAIN}"
+  elif [[ "$email_provider" == "not-configured" ]]; then
+    echo_warning "   Email not configured. Run: nself email setup"
+  else
+    echo_success "   Provider: $email_provider"
+    echo_info "   Run 'nself email validate' to verify configuration"
+  fi
+fi
+
 # Display next steps
+echo ""
 echo_info "Next steps:"
 echo_info "1. Review and customize the generated files:"
 echo_info "   - postgres/init/00-init.sql - Add your database schema"
