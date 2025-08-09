@@ -1,0 +1,73 @@
+// Sample Database Schema
+// Edit this file to define your database structure
+// Then run 'nself db run' to generate migrations
+
+Project MyApp {
+  database_type: 'PostgreSQL'
+  Note: 'Application database schema'
+}
+
+// Users table
+Table users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  email varchar(255) [unique, not null]
+  username varchar(100) [unique]
+  full_name varchar(255)
+  avatar_url text
+  role varchar(50) [default: 'user']
+  email_verified boolean [default: false]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  Indexes {
+    email
+    username
+    created_at
+  }
+}
+
+// User profiles
+Table profiles {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [ref: - users.id, not null]
+  bio text
+  website varchar(255)
+  location varchar(255)
+  preferences jsonb [default: '{}']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  Indexes {
+    user_id
+  }
+}
+
+// Organizations for multi-tenancy
+Table organizations {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar(255) [not null]
+  slug varchar(100) [unique, not null]
+  owner_id uuid [ref: > users.id, not null]
+  settings jsonb [default: '{}']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  Indexes {
+    slug
+    owner_id
+  }
+}
+
+// Organization members
+Table organization_members {
+  organization_id uuid [ref: > organizations.id]
+  user_id uuid [ref: > users.id]
+  role varchar(50) [default: 'member']
+  joined_at timestamptz [default: `now()`]
+  
+  Indexes {
+    (organization_id, user_id) [pk]
+  }
+}
+
+// Add more tables as needed...
