@@ -7,18 +7,19 @@ set -e
 # Get script directory
 SCRIPT_DIR="$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")"
 
-# Load environment
+# Source environment utilities for safe loading
+source "$SCRIPT_DIR/env-utils.sh"
+
+# Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  set -o allexport
-  source .env.local
-  set +o allexport
+  load_env_safe ".env.local"
 else
   echo "Error: No .env.local file found."
   exit 1
 fi
 
 # Compose database URLs from individual variables
-HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 S3_ENDPOINT="http://minio:${MINIO_PORT}"
 
 # Set environment-specific defaults
@@ -48,8 +49,6 @@ fi
 
 # Start docker-compose.yml
 cat > docker-compose.yml << EOF
-version: '3.8'
-
 services:
   # Nginx Reverse Proxy
   nginx:
@@ -77,6 +76,7 @@ fi
 
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
   echo "      - dashboard" >> docker-compose.yml
+  echo "      - config-server" >> docker-compose.yml
 fi
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
@@ -121,7 +121,8 @@ cat >> docker-compose.yml << EOF
     environment:
       HASURA_GRAPHQL_DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
-      HASURA_GRAPHQL_JWT_SECRET: '${HASURA_GRAPHQL_JWT_SECRET}'
+      HASURA_GRAPHQL_JWT_SECRET: |
+        ${HASURA_GRAPHQL_JWT_SECRET}
       HASURA_GRAPHQL_ENABLE_CONSOLE: ${HASURA_GRAPHQL_ENABLE_CONSOLE}
       HASURA_GRAPHQL_DEV_MODE: ${HASURA_GRAPHQL_DEV_MODE}
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: "startup,http-log,webhook-log,websocket-log"
@@ -154,11 +155,14 @@ cat >> docker-compose.yml << EOF
       AUTH_PORT: ${AUTH_PORT}
       HASURA_GRAPHQL_DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
-      HASURA_GRAPHQL_JWT_SECRET: '${HASURA_GRAPHQL_JWT_SECRET}'
+      HASURA_GRAPHQL_JWT_SECRET: |
+        ${HASURA_GRAPHQL_JWT_SECRET}
+      HASURA_GRAPHQL_GRAPHQL_URL: http://hasura:8080/v1/graphql
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       AUTH_CLIENT_URL: ${AUTH_CLIENT_URL}
       AUTH_SERVER_URL: https://${AUTH_ROUTE}
-      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST}
-      AUTH_SMTP_PORT: ${AUTH_SMTP_PORT}
+      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-${EMAIL_PROVIDER:-mailpit}}
+      AUTH_SMTP_PORT: ${AUTH_SMTP_PORT:-1025}
       AUTH_SMTP_USER: "${AUTH_SMTP_USER}"
       AUTH_SMTP_PASS: "${AUTH_SMTP_PASS}"
       AUTH_SMTP_SECURE: ${AUTH_SMTP_SECURE}
@@ -201,6 +205,8 @@ cat >> docker-compose.yml << EOF
     container_name: ${PROJECT_NAME}_storage
     restart: unless-stopped
     command: serve
+    ports:
+      - "5000:5000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,16 +215,17 @@ cat >> docker-compose.yml << EOF
       minio:
         condition: service_healthy
     environment:
+      BIND: 0.0.0.0:5000
       HASURA_METADATA: 1
       HASURA_ENDPOINT: http://hasura:8080/v1
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ENDPOINT: http://minio:9000
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION}
       POSTGRES_MIGRATIONS: 1
-      POSTGRES_MIGRATIONS_SOURCE: ${HASURA_GRAPHQL_DATABASE_URL}?sslmode=disable
+      POSTGRES_MIGRATIONS_SOURCE: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     networks:
       - ${DOCKER_NETWORK}
 EOF
@@ -235,15 +242,15 @@ if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
     container_name: ${PROJECT_NAME}_functions
     restart: unless-stopped
     environment:
-      PORT: ${FUNCTIONS_PORT}
-      HASURA_GRAPHQL_ENDPOINT: ${HASURA_GRAPHQL_ENDPOINT}
+      PORT: 3000
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
     volumes:
       - ./functions/src:/app/src:ro
     networks:
       - ${DOCKER_NETWORK}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${FUNCTIONS_PORT}/"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -252,13 +259,52 @@ fi
 
 # Dashboard service
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
+  # First add config server
   cat >> docker-compose.yml << EOF
+
+  # Config Server for Dashboard
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}_config-server
+    restart: unless-stopped
+    environment:
+      - PORT=4001
+      - PROJECT_NAME=${PROJECT_NAME}
+      - BASE_DOMAIN=${BASE_DOMAIN}
+      - HASURA_GRAPHQL_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
+      - HASURA_VERSION=${HASURA_VERSION}
+      - AUTH_VERSION=${AUTH_VERSION}
+      - STORAGE_VERSION=${STORAGE_VERSION}
+      - POSTGRES_VERSION=${POSTGRES_VERSION}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - AUTH_CLIENT_URL=${AUTH_CLIENT_URL}
+      - AUTH_JWT_ACCESS_TOKEN_EXPIRES_IN=${AUTH_JWT_ACCESS_TOKEN_EXPIRES_IN}
+      - AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN=${AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN}
+      - AUTH_SMTP_HOST=${AUTH_SMTP_HOST}
+      - AUTH_SMTP_PORT=${AUTH_SMTP_PORT}
+      - AUTH_SMTP_SENDER=${AUTH_SMTP_SENDER}
+      - JWT_KEY=${JWT_KEY}
+    networks:
+      - ${DOCKER_NETWORK}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4001/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Nhost Dashboard
   dashboard:
     image: nhost/dashboard:${DASHBOARD_VERSION}
     container_name: ${PROJECT_NAME}_dashboard
     restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
     environment:
       - NEXT_PUBLIC_NHOST_PLATFORM=false
       - NEXT_PUBLIC_ENV=dev
@@ -267,6 +313,9 @@ if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
       - NEXT_PUBLIC_NHOST_STORAGE_URL=https://${STORAGE_ROUTE}
       - NEXT_PUBLIC_NHOST_FUNCTIONS_URL=https://${FUNCTIONS_ROUTE}
       - NEXT_PUBLIC_NHOST_HASURA_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
+      - NEXT_PUBLIC_NHOST_CONFIGSERVER_URL=https://config.${BASE_DOMAIN}
+      - NEXT_PUBLIC_NHOST_REGION=local
+      - NEXT_PUBLIC_NHOST_SUBDOMAIN=local
     networks:
       - ${DOCKER_NETWORK}
     healthcheck:
@@ -301,23 +350,47 @@ if [[ "$REDIS_ENABLED" == "true" ]]; then
 EOF
 fi
 
-# Mailhog for development
-if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
+# Email service for development
+if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+  # Use MailPit (modern replacement for MailHog)
   cat >> docker-compose.yml << EOF
 
-  # MailHog (Development Email)
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: ${PROJECT_NAME}_mailhog
+  # MailPit (Development Email - Modern replacement for MailHog)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ${PROJECT_NAME}_mailpit
     restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"  # SMTP
+      - "${MAILPIT_UI_PORT:-8025}:8025"    # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_UI_AUTH_FILE: ""  # No auth for development
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_data:/data
     networks:
       - ${DOCKER_NETWORK}
     healthcheck:
-      test: ["CMD", "echo", "|", "telnet", "localhost", "1025"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8025/api/v1/info"]
       interval: 30s
       timeout: 10s
       retries: 5
 EOF
+  
+  # Create alias for backward compatibility
+  if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
+    cat >> docker-compose.yml << EOF
+
+  # Alias for backward compatibility
+  mailhog:
+    extends:
+      service: mailpit
+    container_name: ${PROJECT_NAME}_mailhog
+EOF
+  fi
 fi
 
 # NestJS Run Service (Constantly Running Microservices)
@@ -388,6 +461,11 @@ EOF
 if [[ "$REDIS_ENABLED" == "true" ]]; then
   echo "  redis_data:" >> docker-compose.yml
   echo "    name: ${PROJECT_NAME}_redis_data" >> docker-compose.yml
+fi
+
+if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+  echo "  mailpit_data:" >> docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_mailpit_data" >> docker-compose.yml
 fi
 
 # Add networks section

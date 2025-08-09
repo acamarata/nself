@@ -5,10 +5,11 @@
 # Source utility functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/nself.sh"
+source "$SCRIPT_DIR/env-utils.sh"
 
-# Load environment
+# Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  source .env.local
+  load_env_safe ".env.local"
 else
   echo_error "No .env.local file found."
   exit 1
@@ -133,6 +134,21 @@ EOF
     sed -i.bak "s/\${START_COMMAND}/$START_COMMAND/g" "services/nest/$service/Dockerfile"
     rm -f "services/nest/$service/Dockerfile.bak"
     
+    # Generate package-lock.json
+    echo_info "  Generating package-lock.json for $service..."
+    (cd "services/nest/$service" && npm install --package-lock-only 2>/dev/null) || {
+      # If npm install fails, create a basic package-lock.json
+      cat > "services/nest/$service/package-lock.json" << EOF
+{
+  "name": "${PROJECT_NAME}-${service}",
+  "version": "1.0.0",
+  "lockfileVersion": 2,
+  "requires": true,
+  "packages": {}
+}
+EOF
+    }
+    
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
   
@@ -218,6 +234,21 @@ if [[ "$BULLMQ_ENABLED" == "true" ]]; then
   "exclude": ["node_modules", "dist"]
 }
 EOF
+    
+    # Generate package-lock.json
+    echo_info "  Generating package-lock.json for $worker..."
+    (cd "services/bullmq/$worker" && npm install --package-lock-only 2>/dev/null) || {
+      # If npm install fails, create a basic package-lock.json
+      cat > "services/bullmq/$worker/package-lock.json" << EOF
+{
+  "name": "${PROJECT_NAME}-${worker}",
+  "version": "1.0.0",
+  "lockfileVersion": 2,
+  "requires": true,
+  "packages": {}
+}
+EOF
+    }
   done
 fi
 
