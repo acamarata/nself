@@ -5,6 +5,117 @@ All notable changes to nself will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2024-08-09
+
+### 🎉 Comprehensive Email Provider Support
+
+This release adds a complete email management system with zero-configuration for development and simplified setup for production, supporting 16+ email providers.
+
+#### 📧 New Email Management System (`nself email`)
+A complete email configuration system that maintains simplicity while offering flexibility.
+
+**Zero-Configuration Development:**
+- MailPit pre-configured and working out of the box
+- All emails captured locally with web UI
+- No setup required for development
+
+**Production Email Providers (16+ supported):**
+- **API-based**: SendGrid, AWS SES, Mailgun, Postmark, Resend, Brevo (Sendinblue), SparkPost, Mailchimp Transactional, Elastic Email, SMTP2GO, MailerSend
+- **Self-hosted**: Postfix (full control mail server)
+- **SMTP**: Gmail, Outlook/Office 365, Custom SMTP
+
+**New Email Commands:**
+```bash
+nself email setup             # Interactive wizard (recommended)
+nself email list              # View all 16+ providers
+nself email configure <name>  # Configure specific provider
+nself email validate          # Check configuration
+nself email test [email]      # Send test email
+nself email docs <provider>   # Provider-specific guides
+nself email detect            # Show current provider
+```
+
+#### ✨ Key Features
+- **Interactive Setup Wizard** - Guides users with recommendations
+- **Provider Auto-Detection** - Identifies current configuration
+- **Smart Defaults** - Development works immediately, production simplified
+- **Configuration Validation** - Checks setup before use
+- **Secure Handling** - Passwords hidden in output
+- **Automatic Backups** - .env.local backed up before changes
+
+#### 📝 Configuration Philosophy
+- **Development**: Zero touches - MailPit just works
+- **Production**: 2-minute setup via wizard
+- **Advanced**: Full control when needed
+
+### 🔄 Upgrade Instructions
+```bash
+nself update
+nself email setup  # Only needed for production
+```
+
+## [0.2.3] - 2024-08-09
+
+### 🎉 Critical Improvements & Bug Fixes
+
+This release focuses on making nself work "out of the box" based on extensive user feedback. The primary goal was to eliminate manual configuration steps and fix critical bugs that prevented smooth operation.
+
+#### 🔐 Automatic SSL Certificate Trust
+- **mkcert Integration** - Automatically downloads and installs mkcert for your platform
+- **Zero-configuration SSL** - Certificates are automatically trusted on first run
+- **No more browser warnings** - Eliminates the #1 user complaint about SSL warnings
+- **Fallback Support** - Gracefully falls back to self-signed certificates if needed
+
+#### 🚀 Nhost Dashboard Support
+- **Config Server** - Added configuration server required for Dashboard functionality
+- **Dashboard Integration** - Dashboard now works properly with local development
+- **API Endpoints** - Provides `/v1/config` endpoint that Dashboard requires
+
+#### 🔧 Critical Bug Fixes
+- **JWT Secret Parsing** - Fixed critical bug where JSON JWT secrets caused shell execution errors
+- **Environment Variables** - Fixed parsing of .env files with inline comments
+- **Variable Expansion** - Fixed nested variables like `${BASE_DOMAIN}` not expanding
+- **Auth Service** - Now correctly uses AUTH_PORT instead of hardcoded port
+- **Functions Service** - Corrected port to 3000 (was incorrectly set to 3001)
+- **APP Routes** - Fixed custom frontend routing (APP_N_ROUTE variables now work)
+- **Database URL** - HASURA_GRAPHQL_DATABASE_URL now properly exported for microservices
+- **MailPit** - Replaced MailHog with MailPit for ARM Mac compatibility
+
+#### 🔄 Hot Reload (Experimental)
+- **Configuration Changes** - Detect and apply config changes without full rebuild
+- **New Commands**: 
+  - `nself diff` - Show what changed in configuration
+  - `nself up --apply-changes` - Apply changes incrementally
+
+### 📝 New Commands
+- `nself trust` - Manually trust SSL certificates (rarely needed with mkcert)
+
+### 🏗️ Infrastructure
+- `bin/env-utils.sh` - Safe environment variable handling without shell execution
+- `bin/hot-reload.sh` - Configuration change detection
+- `bin/templates/config-server/` - Dashboard configuration server
+- `bin/mkcert` - Auto-downloaded based on platform
+
+### 🔄 Upgrade Instructions
+```bash
+# Update to v0.2.3
+nself update
+
+# Rebuild to get all fixes and trusted certificates
+nself build
+
+# Start services - certificates will be automatically trusted!
+nself up
+```
+
+### 💡 Key Improvements
+✅ SSL certificates automatically trusted - no manual steps  
+✅ Dashboard now fully functional  
+✅ Environment files support inline comments  
+✅ All services use correct configured ports  
+✅ JWT secrets handled safely  
+✅ Custom frontend routing works properly
+
 ## [0.2.2] - 2025-01-08
 
 ### 🚀 Critical Update: Seamless Installation & Updates
