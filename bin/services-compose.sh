@@ -2,9 +2,15 @@
 
 # services-compose.sh - Generate docker-compose.yml for services
 
-# Load environment
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source environment utilities for safe loading
+source "$SCRIPT_DIR/env-utils.sh"
+
+# Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  source .env.local
+  load_env_safe ".env.local"
 else
   echo "Error: No .env.local file found."
   exit 1

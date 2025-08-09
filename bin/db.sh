@@ -8,6 +8,9 @@ set -e
 # Get script directory
 SCRIPT_DIR="$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")"
 
+# Source environment utilities for safe loading
+source "$SCRIPT_DIR/env-utils.sh"
+
 # Color output functions
 echo_info() { echo -e "\033[1;34m[INFO]\033[0m $1"; }
 echo_success() { echo -e "\033[1;32m[SUCCESS]\033[0m $1"; }
@@ -18,16 +21,12 @@ echo_error() { echo -e "\033[1;31m[ERROR]\033[0m $1"; }
 load_env() {
   # Load .env.local first (base configuration)
   if [ -f ".env.local" ]; then
-    set -o allexport
-    source .env.local
-    set +o allexport
+    load_env_safe ".env.local"
   fi
   
   # Then load .env for overrides (production settings)
   if [ -f ".env" ]; then
-    set -o allexport
-    source .env
-    set +o allexport
+    load_env_safe ".env"
   fi
 }
 
