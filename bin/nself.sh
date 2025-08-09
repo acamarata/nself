@@ -23,6 +23,8 @@ VERSION_FILE="$SCRIPT_DIR/VERSION"
 REPO_RAW_URL="https://raw.githubusercontent.com/acamarata/nself/main"
 LOCAL_VERSION=""
 LATEST_VERSION=""
+NSELF_BIN_DIR="$SCRIPT_DIR"
+PROJECT_DIR="${PROJECT_DIR:-.}"
 
 # ----------------------------
 # Helper Functions
@@ -168,6 +170,9 @@ check_for_migrations() {
 
 # Function to load environment variables
 load_env() {
+  # Source environment utilities for safe loading
+  source "$SCRIPT_DIR/env-utils.sh"
+  
   # Check for .env override (production)
   if [ -f ".env" ] && [ -f ".env.local" ]; then
     echo_info "Found both .env and .env.local - .env will override .env.local settings"
@@ -184,15 +189,11 @@ load_env() {
 
   # Load .env.local first if both exist
   if [ -f ".env.local" ] && [ "$ENV_FILE" = ".env" ]; then
-    set -o allexport
-    source ".env.local"
-    set +o allexport
+    load_env_safe ".env.local"
   fi
   
   # Load primary env file
-  set -o allexport
-  source "$ENV_FILE"
-  set +o allexport
+  load_env_safe "$ENV_FILE"
 
   export PROJECT_NAME=${PROJECT_NAME:-myproject}
   
@@ -250,6 +251,51 @@ load_env() {
   fi
 }
 
+# Install mkcert if not present
+install_mkcert() {
+    local mkcert_path="$NSELF_BIN_DIR/mkcert"
+    
+    if [[ ! -f "$mkcert_path" ]]; then
+        echo_info "Installing mkcert for automatic SSL trust..."
+        
+        local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+        local arch=$(uname -m)
+        
+        # Map architecture names
+        case "$arch" in
+            x86_64) arch="amd64" ;;
+            aarch64|arm64) arch="arm64" ;;
+            *) echo_error "Unsupported architecture: $arch"; return 1 ;;
+        esac
+        
+        # Download URL based on OS and architecture
+        local mkcert_version="v1.4.4"
+        local download_url="https://github.com/FiloSottile/mkcert/releases/download/${mkcert_version}/mkcert-${mkcert_version}-${os}-${arch}"
+        
+        # Download mkcert
+        if command -v curl >/dev/null 2>&1; then
+            curl -L -o "$mkcert_path" "$download_url" || return 1
+        elif command -v wget >/dev/null 2>&1; then
+            wget -O "$mkcert_path" "$download_url" || return 1
+        else
+            echo_error "Neither curl nor wget found. Cannot download mkcert."
+            return 1
+        fi
+        
+        chmod +x "$mkcert_path"
+        echo_success "mkcert installed successfully"
+    fi
+    
+    # Install root CA if not already installed
+    if ! "$mkcert_path" -install 2>/dev/null; then
+        echo_info "Root CA already installed or installation skipped"
+    else
+        echo_success "Root CA installed and trusted"
+    fi
+    
+    return 0
+}
+
 # ----------------------------
 # Command Functions
 # ----------------------------
@@ -267,6 +313,9 @@ cmd_init() {
   fi
 
   echo_info "Initializing nself project..."
+  
+  # Install mkcert first
+  install_mkcert || echo_warning "Could not install mkcert, falling back to self-signed certificates"
   
   # Copy env template
   cp "$TEMPLATES_DIR/.env.example" ".env.local"
@@ -313,6 +362,10 @@ cmd_build() {
     echo ""
     # Show configured service URLs
     bash "$SCRIPT_DIR/urls.sh"
+    
+    # Save build state for hot reload
+    source "$SCRIPT_DIR/hot-reload.sh"
+    hot_reload save-state
   else
     echo_error "Build failed. Check /tmp/nself_build.log for details."
     exit 1
@@ -328,12 +381,59 @@ cmd_up() {
 
   load_env
   
+  # Check for configuration changes
+  local apply_changes=false
+  local dry_run=false
+  
+  # Parse options
+  for arg in "$@"; do
+    case $arg in
+      --apply-changes)
+        apply_changes=true
+        ;;
+      --dry-run)
+        dry_run=true
+        ;;
+      --rebuild)
+        echo_info "Forcing full rebuild..."
+        cmd_build
+        ;;
+    esac
+  done
+  
+  # Source hot reload functionality
+  source "$SCRIPT_DIR/hot-reload.sh"
+  
+  # Check for changes if docker-compose.yml exists
+  if [ -f "docker-compose.yml" ]; then
+    if [ "$dry_run" = true ]; then
+      hot_reload dry-run
+      exit 0
+    elif [ "$apply_changes" = true ]; then
+      hot_reload apply
+    else
+      # Check for changes and notify user
+      detect_changes
+      local status=$?
+      
+      if [ $status -eq 3 ]; then
+        echo_info "Configuration changes detected. Use 'nself up --apply-changes' to apply them."
+        echo_info "Or run 'nself up --dry-run' to see what would change."
+      elif [ $status -eq 2 ]; then
+        echo_warning "Major changes detected. Running full rebuild..."
+        cmd_build
+      fi
+    fi
+  fi
+  
   # nself up only applies existing migrations, no DBML sync here
   # Use 'nself dbsync' to sync schema and generate migrations
 
   if [ ! -f "docker-compose.yml" ]; then
     echo_info "docker-compose.yml not found. Running build first..."
     cmd_build
+    # Save initial state for hot reload
+    hot_reload save-state
   fi
 
   echo ""
@@ -862,10 +962,12 @@ cmd_help() {
   echo_info "Core Commands:"
   echo "  init        Initialize a new project"
   echo "  build       Build project structure"
-  echo "  up          Start all services"
+  echo "  up          Start all services (--apply-changes, --dry-run)"
   echo "  down        Stop all services"
   echo "  restart     Restart all services"
+  echo "  diff        Show configuration changes"
   echo "  reset       Reset project (delete all data)"
+  echo "  trust       Install SSL certificate (fixes browser warnings)"
   echo ""
   echo_info "Management Commands:"
   echo "  prod        Create production configuration"
@@ -873,6 +975,7 @@ cmd_help() {
   echo "  version     Show current version"
   echo "  help        Display this help message"
   echo "  db          Database tools (see 'nself db')"
+  echo "  email       Email provider setup (see 'nself email')"
   echo ""
   echo_info "Quick Start:"
   echo "  $ nself init                 # Create new project"
@@ -898,6 +1001,84 @@ cmd_version() {
   echo "nself v$LOCAL_VERSION"
 }
 
+# Trust SSL certificate
+cmd_trust() {
+  echo ""
+  echo_info "🔐 Installing nself SSL certificate as trusted..."
+  echo ""
+  
+  # Find certificate location
+  local cert_file=""
+  if [ -f "nginx/ssl/nself.org.crt" ]; then
+    cert_file="nginx/ssl/nself.org.crt"
+  elif [ -f "$SCRIPT_DIR/certs/nself.org.crt" ]; then
+    cert_file="$SCRIPT_DIR/certs/nself.org.crt"
+  else
+    echo_error "SSL certificate not found. Run 'nself build' first."
+    exit 1
+  fi
+  
+  # Detect OS and install certificate
+  case "$(uname -s)" in
+    Darwin)
+      # macOS
+      echo_info "Detected macOS. Installing certificate to System Keychain..."
+      echo_info "You will be prompted for your password."
+      
+      sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$cert_file" && {
+        echo_success "✅ Certificate trusted successfully!"
+        echo_info "Restart your browser for changes to take effect."
+      } || {
+        echo_error "Failed to trust certificate. You may need to run as administrator."
+        exit 1
+      }
+      ;;
+      
+    Linux)
+      # Linux
+      echo_info "Detected Linux. Installing certificate to system store..."
+      echo_info "You will be prompted for your password."
+      
+      # Try different locations based on distro
+      if [ -d "/usr/local/share/ca-certificates" ]; then
+        # Debian/Ubuntu
+        sudo cp "$cert_file" /usr/local/share/ca-certificates/nself.org.crt
+        sudo update-ca-certificates && {
+          echo_success "✅ Certificate trusted successfully!"
+          echo_info "Restart your browser for changes to take effect."
+        }
+      elif [ -d "/etc/pki/ca-trust/source/anchors" ]; then
+        # RHEL/CentOS/Fedora
+        sudo cp "$cert_file" /etc/pki/ca-trust/source/anchors/nself.org.crt
+        sudo update-ca-trust && {
+          echo_success "✅ Certificate trusted successfully!"
+          echo_info "Restart your browser for changes to take effect."
+        }
+      else
+        echo_error "Unsupported Linux distribution. Please manually trust the certificate at:"
+        echo_info "$cert_file"
+        exit 1
+      fi
+      ;;
+      
+    MINGW*|CYGWIN*|MSYS*)
+      # Windows
+      echo_info "Detected Windows. Installing certificate to Root store..."
+      echo_warning "Run this command in PowerShell as Administrator:"
+      echo ""
+      echo "  Import-Certificate -FilePath \"$(pwd)/$cert_file\" -CertStoreLocation Cert:\\LocalMachine\\Root"
+      echo ""
+      echo_info "Or double-click the certificate file and install to 'Trusted Root Certification Authorities'"
+      ;;
+      
+    *)
+      echo_error "Unsupported operating system: $(uname -s)"
+      echo_info "Please manually trust the certificate at: $cert_file"
+      exit 1
+      ;;
+  esac
+}
+
 # ----------------------------
 # Main Logic
 # ----------------------------
@@ -911,6 +1092,9 @@ case "$1" in
   -h|--help|help)
     cmd_help
     exit 0
+    ;;
+  trust)
+    cmd_trust
     ;;
 esac
 
@@ -941,13 +1125,19 @@ case "$COMMAND" in
     ;;
   up)
     check_for_updates
-    cmd_up
+    shift # Remove 'up' from arguments
+    cmd_up "$@"
     ;;
   down)
     cmd_down
     ;;
   restart)
     cmd_restart
+    ;;
+  diff)
+    # Show configuration differences
+    source "$SCRIPT_DIR/hot-reload.sh"
+    hot_reload check
     ;;
   reset)
     cmd_reset
@@ -958,10 +1148,18 @@ case "$COMMAND" in
   update)
     cmd_update
     ;;
+  trust)
+    cmd_trust
+    ;;
   db)
     # Database tools - migrations, seeding, and schema management
     shift
     "$SCRIPT_DIR/db.sh" "$@"
+    ;;
+  email)
+    # Email provider configuration and management
+    shift
+    "$SCRIPT_DIR/email-providers.sh" "$@"
     ;;
   "")
     cmd_help
