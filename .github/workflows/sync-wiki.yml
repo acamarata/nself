@@ -5,25 +5,34 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - '.github/workflows/sync-wiki.yml'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
   sync-wiki:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         
-      - name: Checkout wiki
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ github.repository }}.wiki
-          path: wiki
+      - name: Setup Wiki
+        run: |
+          # Clone or initialize wiki
+          git clone https://github.com/${{ github.repository }}.wiki.git wiki 2>/dev/null || {
+            echo "Wiki doesn't exist or is empty, initializing..."
+            mkdir wiki
+            cd wiki
+            git init
+            git remote add origin https://github.com/${{ github.repository }}.wiki.git
+            cd ..
+          }
           
       - name: Sync documentation
         run: |
           # Copy docs to wiki, converting filenames for wiki format
-          cp -r docs/* wiki/
+          cp -r docs/* wiki/ 2>/dev/null || true
           
           # Wiki uses dashes instead of underscores in URLs
           cd wiki
@@ -46,20 +55,28 @@ jobs:
           ## Quick Links
           
           ### Getting Started
-          - [[API Reference|API]] - Complete command reference
-          - [[Contributing|CONTRIBUTING]] - How to contribute
-          - [[Architecture|ARCHITECTURE]] - System design
-
-          ### Development
-          - [[Code Style|CODE-STYLE]] - Coding standards
-          - [[Directory Structure|DIRECTORY-STRUCTURE]] - Project organization
-          - [[Testing Strategy|TESTING-STRATEGY]] - Testing approach
-          - [[Decisions|DECISIONS]] - Architectural decisions
+          - [[Troubleshooting|TROUBLESHOOTING]] - Common issues and solutions
+          - [[Examples|EXAMPLES]] - Usage examples
+          - [[Migration Guide|MIGRATION-0.2.x-to-0.3.0]] - Upgrading from v0.2.x
 
           ### Reference
+          - [[API Reference|API]] - Complete command reference
+          - [[Architecture|ARCHITECTURE]] - System design
+          - [[Directory Structure|DIRECTORY-STRUCTURE]] - Project organization
+          - [[Release Notes|RELEASES]] - Version history
+          - [[Changelog|CHANGELOG]] - Recent changes
+
+          ### Development
+          - [[Contributing|CONTRIBUTING]] - How to contribute
+          - [[Code Style|CODE-STYLE]] - Coding standards
+          - [[Testing Strategy|TESTING-STRATEGY]] - Testing approach
+          - [[Decisions|DECISIONS]] - Architectural decisions
           - [[Output Formatting|OUTPUT-FORMATTING]] - UI standards
           - [[Refactoring Roadmap|REFACTORING-ROADMAP]] - Future plans
-          - [[Changelog|CHANGELOG]] - Version history
+
+          ## Latest Release
+
+          **v0.3.0** - Major architectural refactor with modular src-centric design. [See release notes](https://github.com/acamarata/nself/releases/latest)
 
           ## For Contributors
 
@@ -71,7 +88,8 @@ jobs:
           ## Support
 
           - [GitHub Issues](https://github.com/acamarata/nself/issues)
-          - [Patreon](https://patreon.com/acamarata)
+          - [Website](https://nself.org)
+          - [Commercial Licensing](https://nself.org/commercial)
           EOF
           
       - name: Push to wiki
@@ -79,6 +97,18 @@ jobs:
           cd wiki
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          
+          # Configure authentication
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git
+          
           git add .
-          git diff --staged --quiet || git commit -m "Sync documentation from main repo"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "Sync documentation from main repo"
+            git push origin master 2>/dev/null || git push origin main || {
+              echo "Creating initial wiki commit"
+              git branch -M master
+              git push -u origin master
+            }
+          else
+            echo "No changes to sync"
+          fi
