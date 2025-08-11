@@ -19,15 +19,12 @@ jobs:
         
       - name: Setup Wiki
         run: |
-          # Clone or initialize wiki
-          git clone https://github.com/${{ github.repository }}.wiki.git wiki 2>/dev/null || {
-            echo "Wiki doesn't exist or is empty, initializing..."
-            mkdir wiki
-            cd wiki
-            git init
-            git remote add origin https://github.com/${{ github.repository }}.wiki.git
-            cd ..
-          }
+          # Try to clone wiki, exit gracefully if it doesn't exist
+          if ! git clone https://github.com/${{ github.repository }}.wiki.git wiki 2>/dev/null; then
+            echo "::warning::Wiki not enabled or accessible. Please enable the wiki in repository settings."
+            echo "To enable: Settings → Features → Check 'Wikis'"
+            exit 0
+          fi
           
       - name: Sync documentation
         run: |
