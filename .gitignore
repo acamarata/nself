@@ -5,12 +5,7 @@
 *.swo
 *~
 .DS_Store
-claude/
 .claude/
-claude.md
-roadmap*
-.notes.txt
-
 
 # Environment files
 .env
@@ -87,5 +82,24 @@ backend/docker-compose.yml
 # Ignore nself directory  
 .nself/
 
-# Test directory
+# Test directories
 /test/
+/test-fresh/
+
+# Project directories that shouldn't be in nself repo
+# These are created by nself commands when run in wrong directory
+/hasura/
+/seeds/
+/nginx/
+/postgres/
+/minio/
+/redis/
+/auth/
+/storage/
+/functions/
+/services/
+!/bin/services/
+/migrations/
+/metadata/
+/config/
+!/bin/shared/config/
