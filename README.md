@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
@@ -11,7 +11,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **📦 v0.2.4 NEW**: Complete email provider support! Zero-config for development (MailPit), 2-minute setup for production with 16+ providers including SendGrid, AWS SES, Mailgun, and more. Plus automatic SSL trust that eliminates browser warnings!
+> **🚀 v0.3.0 NEW**: Complete architectural refactor! Modular src-centric design, comprehensive error handling with auto-fix, intelligent build recovery, enhanced doctor command, and full macOS bash 3.2 compatibility. [See full release notes](docs/RELEASES.md#v030---january-11-2025)
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -35,6 +35,7 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Hot Reload**: Changes apply instantly without rebuild
 - **Multi-Environment**: Same setup works locally, staging, and production
 - **No Lock-in**: Standard Docker Compose under the hood
+- **Debugging Tools**: `doctor`, `status`, `logs` commands for troubleshooting
 
 ### 🔐 Production Ready
 - **Security First**: Automatic SSL trust + secure password generation

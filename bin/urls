@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# urls - Show service URLs (shim)
+NSELF_ROOT="${NSELF_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+exec "$NSELF_ROOT/src/cli/urls.sh" "$@"

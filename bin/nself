@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Thin shim to call the actual nself implementation
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NSELF_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Execute the actual nself implementation
+exec "$NSELF_ROOT/src/cli/nself.sh" "$@"

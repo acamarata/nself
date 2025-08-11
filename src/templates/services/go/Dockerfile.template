@@ -1,0 +1,36 @@
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Ensure module files are up to date and download dependencies
+RUN go mod tidy && go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application (explicitly use modules)
+ENV GO111MODULE=on
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -o main .
+
+# Final stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates curl
+
+WORKDIR /root/
+
+# Copy the binary from builder stage
+COPY --from=builder /app/main .
+
+# Expose port
+EXPOSE ${SERVICE_PORT}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${SERVICE_PORT}/health || exit 1
+
+# Run the binary
+CMD ["./main"]
