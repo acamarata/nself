@@ -1,6 +1,6 @@
 # NSELF Releases
 
-## [v0.3.0] - January 11, 2025
+## [v0.3.0] - August 11, 2025
 
 ### 🚀 Major Architecture Refactor
 
@@ -55,7 +55,7 @@ This is a major version with breaking changes. The entire directory structure ha
 
 ---
 
-## [v0.2.4] - January 10, 2025
+## [v0.2.4] - August 9, 2025
 
 ### 📧 Comprehensive Email Provider Support
 
@@ -78,7 +78,7 @@ This release adds extensive email provider support with automatic configuration 
 
 ---
 
-## [v0.2.3] - January 9, 2025
+## [v0.2.3] - August 9, 2025
 
 ### 🔒 Critical Fixes and SSL Improvements
 
@@ -105,7 +105,7 @@ Security and reliability improvements with automatic SSL certificate trust.
 
 ---
 
-## [v0.2.2] - January 8, 2025
+## [v0.2.2] - August 8, 2025
 
 ### 🎨 UI Improvements and Fixes
 
@@ -132,7 +132,7 @@ Focus on user interface enhancements and bug fixes.
 
 ---
 
-## [v0.2.1] - January 7, 2025
+## [v0.2.1] - August 7, 2025
 
 ### 🗄️ Database Tools Enhancement
 
@@ -159,7 +159,7 @@ Enhanced database management tools for different environments.
 
 ---
 
-## [v0.2.0] - January 6, 2025
+## [v0.2.0] - August 6, 2025
 
 ### 🏗️ Initial Modular Refactoring
 
@@ -187,7 +187,7 @@ First step towards modular architecture with basic error handling.
 
 ---
 
-## [v0.1.0] - January 1, 2025
+## [v0.1.0] - August 6, 2025
 
 ### 🎉 Initial Release
 
@@ -236,12 +236,12 @@ Developers building modern web applications who want a production-like developme
 
 ## Version History Summary
 
-| Version | Date | Type | Focus |
-|---------|------|------|-------|
-| v0.3.0 | 2025-01-11 | Major | Complete architectural refactor |
-| v0.2.4 | 2025-01-10 | Minor | Email provider support |
-| v0.2.3 | 2025-01-09 | Patch | SSL and installation fixes |
-| v0.2.2 | 2025-01-08 | Patch | UI improvements |
-| v0.2.1 | 2025-01-07 | Patch | Database tools |
-| v0.2.0 | 2025-01-06 | Minor | Initial modularization |
-| v0.1.0 | 2025-01-01 | Major | Initial release |
+| Version | Date         | Type  | Focus                            |
+|---------|--------------|-------|----------------------------------|
+| v0.3.0  | 2025-08-11   | Major | Complete architectural refactor |
+| v0.2.4  | 2025-08-09   | Minor | Email provider support           |
+| v0.2.3  | 2025-08-09   | Patch | SSL and installation fixes      |
+| v0.2.2  | 2025-08-08   | Patch | UI improvements                  |
+| v0.2.1  | 2025-08-07   | Patch | Database tools                   |
+| v0.2.0  | 2025-08-06   | Minor | Initial modularization           |
+| v0.1.0  | 2025-08-06   | Major | Initial release                  |
