@@ -1,0 +1,164 @@
+// Comprehensive health endpoint for Node.js services
+// Add this to your Express/Fastify app
+
+const checkDatabaseConnection = async () => {
+  try {
+    // Example for PostgreSQL with pg library
+    const result = await pool.query('SELECT 1');
+    return { status: 'healthy', responseTime: result.duration || 0 };
+  } catch (error) {
+    return { status: 'unhealthy', error: error.message };
+  }
+};
+
+const checkRedisConnection = async () => {
+  try {
+    // Example for Redis
+    await redisClient.ping();
+    return { status: 'healthy' };
+  } catch (error) {
+    return { status: 'unhealthy', error: error.message };
+  }
+};
+
+const checkHasuraConnection = async () => {
+  try {
+    // Check Hasura GraphQL endpoint
+    const response = await fetch(process.env.HASURA_GRAPHQL_ENDPOINT + '/healthz');
+    if (response.ok) {
+      return { status: 'healthy' };
+    }
+    return { status: 'unhealthy', statusCode: response.status };
+  } catch (error) {
+    return { status: 'unhealthy', error: error.message };
+  }
+};
+
+// Level 1: Basic health check (just responds)
+app.get('/health', async (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    service: process.env.SERVICE_NAME || 'unknown',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Level 2: Check dependencies
+app.get('/health/live', async (req, res) => {
+  const health = {
+    status: 'healthy',
+    service: process.env.SERVICE_NAME || 'unknown',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks: {}
+  };
+
+  // Check various dependencies
+  if (process.env.DATABASE_URL) {
+    health.checks.database = await checkDatabaseConnection();
+  }
+  
+  if (process.env.REDIS_URL) {
+    health.checks.redis = await checkRedisConnection();
+  }
+  
+  if (process.env.HASURA_GRAPHQL_ENDPOINT) {
+    health.checks.hasura = await checkHasuraConnection();
+  }
+
+  // Determine overall health
+  const hasUnhealthy = Object.values(health.checks).some(check => check.status === 'unhealthy');
+  if (hasUnhealthy) {
+    health.status = 'degraded';
+    res.status(503);
+  } else {
+    res.status(200);
+  }
+  
+  res.json(health);
+});
+
+// Level 3: Comprehensive health with metrics
+app.get('/health/ready', async (req, res) => {
+  const memoryUsage = process.memoryUsage();
+  
+  const health = {
+    status: 'healthy',
+    service: process.env.SERVICE_NAME || 'unknown',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    pid: process.pid,
+    environment: process.env.NODE_ENV || 'development',
+    
+    // System metrics
+    metrics: {
+      memory: {
+        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+        heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+        external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+      },
+      cpu: process.cpuUsage(),
+      eventLoop: {
+        // Requires additional monitoring library
+        // delay: eventLoopDelay()
+      }
+    },
+    
+    // Dependency checks
+    dependencies: {}
+  };
+
+  // Check all dependencies
+  const checks = [];
+  
+  if (process.env.DATABASE_URL) {
+    checks.push(checkDatabaseConnection().then(result => {
+      health.dependencies.database = result;
+    }));
+  }
+  
+  if (process.env.REDIS_URL) {
+    checks.push(checkRedisConnection().then(result => {
+      health.dependencies.redis = result;
+    }));
+  }
+  
+  if (process.env.HASURA_GRAPHQL_ENDPOINT) {
+    checks.push(checkHasuraConnection().then(result => {
+      health.dependencies.hasura = result;
+    }));
+  }
+
+  // Wait for all checks
+  await Promise.all(checks);
+
+  // Determine overall health
+  const hasUnhealthy = Object.values(health.dependencies).some(dep => dep.status === 'unhealthy');
+  if (hasUnhealthy) {
+    health.status = 'unhealthy';
+    res.status(503);
+  } else {
+    res.status(200);
+  }
+  
+  res.json(health);
+});
+
+// Kubernetes-style liveness probe (is the service alive?)
+app.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
+});
+
+// Kubernetes-style readiness probe (is the service ready to accept traffic?)
+app.get('/readyz', async (req, res) => {
+  // Quick check of critical dependencies
+  try {
+    if (process.env.DATABASE_URL) {
+      await pool.query('SELECT 1');
+    }
+    res.status(200).send('ok');
+  } catch (error) {
+    res.status(503).send('not ready');
+  }
+});

@@ -1,0 +1,84 @@
+name: Sync docs to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Checkout wiki
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+          
+      - name: Sync documentation
+        run: |
+          # Copy docs to wiki, converting filenames for wiki format
+          cp -r docs/* wiki/
+          
+          # Wiki uses dashes instead of underscores in URLs
+          cd wiki
+          for file in *.MD *.md; do
+            if [[ -f "$file" ]]; then
+              # Convert underscores to dashes for better wiki URLs
+              newname=$(echo "$file" | sed 's/_/-/g')
+              if [[ "$file" != "$newname" ]]; then
+                mv "$file" "$newname"
+              fi
+            fi
+          done
+          
+          # Create/update Home page with index
+          cat > Home.md << 'EOF'
+          # nself Documentation Wiki
+
+          Welcome to the nself wiki! This documentation is automatically synced from the `/docs` folder.
+
+          ## Quick Links
+          
+          ### Getting Started
+          - [[API Reference|API]] - Complete command reference
+          - [[Contributing|CONTRIBUTING]] - How to contribute
+          - [[Architecture|ARCHITECTURE]] - System design
+
+          ### Development
+          - [[Code Style|CODE-STYLE]] - Coding standards
+          - [[Directory Structure|DIRECTORY-STRUCTURE]] - Project organization
+          - [[Testing Strategy|TESTING-STRATEGY]] - Testing approach
+          - [[Decisions|DECISIONS]] - Architectural decisions
+
+          ### Reference
+          - [[Output Formatting|OUTPUT-FORMATTING]] - UI standards
+          - [[Refactoring Roadmap|REFACTORING-ROADMAP]] - Future plans
+          - [[Changelog|CHANGELOG]] - Version history
+
+          ## For Contributors
+
+          This wiki is automatically generated from `/docs`. To make changes:
+          1. Edit files in the `/docs` folder
+          2. Submit a PR to the main repository
+          3. Wiki updates automatically on merge
+
+          ## Support
+
+          - [GitHub Issues](https://github.com/acamarata/nself/issues)
+          - [Patreon](https://patreon.com/acamarata)
+          EOF
+          
+      - name: Push to wiki
+        run: |
+          cd wiki
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Sync documentation from main repo"
+          git push

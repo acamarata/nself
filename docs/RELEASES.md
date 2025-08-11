@@ -1,0 +1,247 @@
+# NSELF Releases
+
+## [v0.3.0] - January 11, 2025
+
+### 🚀 Major Architecture Refactor
+
+This release represents a complete architectural overhaul, moving from a monolithic structure to a clean, modular src-centric design. This is a breaking change that requires updating existing installations.
+
+### ✨ What's New
+
+#### Complete Architectural Redesign
+- **Modular Structure**: All implementation code now lives in `/src` with organized subdirectories
+- **Thin Shims**: `/bin` contains only lightweight delegation scripts pointing to `/src/cli`
+- **Clean Separation**: Templates, certificates, and libraries properly organized under `/src`
+- **Maintainable Code**: 1078-line monolithic build.sh broken into focused, manageable modules
+
+#### Comprehensive Error Handling System
+- **Smart Detection**: Modular error detection and reporting system
+- **Auto-Fix Capabilities**: Automatic resolution for common issues
+- **Interactive Recovery**: User-friendly prompts for complex fixes
+- **Port Management**: Automatic alternative port configuration when conflicts detected
+- **Build Recovery**: Intelligent analysis and recovery from Docker build errors
+- **Dependency Resolution**: Automatic Go module and Node.js dependency fixes
+
+#### Enhanced Developer Experience
+- **Doctor Command**: Comprehensive system health checks with auto-fix suggestions
+- **Improved Status**: Real-time health monitoring with color-coded indicators
+- **Better Logging**: Enhanced log filtering and progress indicators
+- **Performance**: Optimized quick checks for faster operations
+
+### 🔧 Technical Improvements
+
+- Bash 3.2 compatibility for macOS (removed associative arrays)
+- Proper port conflict detection using configured values
+- Robust Go module build error handling
+- Docker Desktop auto-start on macOS
+- Standardized shebangs (`#!/usr/bin/env bash`)
+- Absolute path usage in auto-fix subsystem
+
+### 📦 Installation
+
+For new installations:
+```bash
+curl -sSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
+```
+
+For upgrading from v0.2.x:
+```bash
+nself update
+```
+
+### ⚠️ Breaking Changes
+
+This is a major version with breaking changes. The entire directory structure has been reorganized. Existing installations will be automatically updated when running `nself update`.
+
+---
+
+## [v0.2.4] - January 10, 2025
+
+### 📧 Comprehensive Email Provider Support
+
+This release adds extensive email provider support with automatic configuration for multiple services.
+
+### ✨ Features
+
+- **Multiple Email Providers**: Support for SendGrid, Mailgun, AWS SES, Postmark, and more
+- **Automatic Configuration**: Smart detection and setup based on provider selection
+- **Development Tools**: Enhanced MailPit integration replacing deprecated MailHog
+- **Provider Templates**: Pre-configured templates for each email service
+- **Environment Detection**: Different configurations for development vs production
+
+### 🔧 Improvements
+
+- Simplified email configuration in `.env.local`
+- Better error messages for email configuration issues
+- Automatic SMTP settings based on provider
+- Backward compatibility with MailHog installations
+
+---
+
+## [v0.2.3] - January 9, 2025
+
+### 🔒 Critical Fixes and SSL Improvements
+
+Security and reliability improvements with automatic SSL certificate trust.
+
+### ✨ Features
+
+- **Automatic SSL Trust**: Self-signed certificates automatically trusted on macOS
+- **Installation Improvements**: More robust installation process
+- **Error Recovery**: Better handling of installation failures
+
+### 🐛 Bug Fixes
+
+- Fixed certificate generation on fresh installations
+- Resolved permission issues during installation
+- Fixed Docker network creation race conditions
+- Improved error messages for common issues
+
+### 🔧 Improvements
+
+- Faster installation process
+- Better detection of existing installations
+- Cleaner upgrade path from older versions
+
+---
+
+## [v0.2.2] - January 8, 2025
+
+### 🎨 UI Improvements and Fixes
+
+Focus on user interface enhancements and bug fixes.
+
+### ✨ Features
+
+- **Better Output Formatting**: Improved command output with better colors and formatting
+- **Progress Indicators**: Visual feedback for long-running operations
+- **Status Command**: Enhanced status display with service health indicators
+
+### 🐛 Bug Fixes
+
+- Fixed output alignment issues in status command
+- Resolved color display problems on certain terminals
+- Fixed progress bar display during builds
+- Corrected service health check timing
+
+### 🔧 Improvements
+
+- Cleaner console output
+- Better error message formatting
+- Improved command response times
+
+---
+
+## [v0.2.1] - January 7, 2025
+
+### 🗄️ Database Tools Enhancement
+
+Enhanced database management tools for different environments.
+
+### ✨ Features
+
+- **DB Sync Tools**: New `nself db sync` command for database synchronization
+- **Environment Support**: Separate handling for development, staging, and production
+- **DBML Integration**: Database schema management with DBML support
+- **Migration Tools**: Improved Hasura migration handling
+
+### 🐛 Bug Fixes
+
+- Fixed database connection string generation
+- Resolved migration ordering issues
+- Fixed schema initialization problems
+
+### 🔧 Improvements
+
+- Better database error messages
+- Faster schema synchronization
+- Improved migration rollback support
+
+---
+
+## [v0.2.0] - January 6, 2025
+
+### 🏗️ Initial Modular Refactoring
+
+First step towards modular architecture with basic error handling.
+
+### ✨ Features
+
+- **Modular Commands**: Separated commands into individual files
+- **Basic Error Handling**: Initial error detection and reporting
+- **Docker Compose Generation**: Dynamic docker-compose.yml generation
+- **Service Management**: Improved service start/stop operations
+
+### 🔧 Improvements
+
+- Better code organization
+- Reduced code duplication
+- Improved maintainability
+- Basic auto-fix for common issues
+
+### 🐛 Bug Fixes
+
+- Fixed service dependency ordering
+- Resolved environment variable expansion issues
+- Fixed Docker network creation problems
+
+---
+
+## [v0.1.0] - January 1, 2025
+
+### 🎉 Initial Release
+
+The first public release of NSELF - a comprehensive local development environment for modern web applications.
+
+### ✨ Core Features
+
+- **One-Command Setup**: Initialize a complete development stack with `nself init`
+- **Service Integration**: PostgreSQL, Hasura, Auth, Storage, and Nginx pre-configured
+- **SSL Support**: Automatic SSL certificate generation for local development
+- **Docker-Based**: Fully containerized for consistency across environments
+- **Multi-Service Support**: Built-in support for NestJS, Go, Python, and BullMQ workers
+
+### 📦 Included Services
+
+- **PostgreSQL**: Database with automatic initialization
+- **Hasura**: GraphQL engine with migrations and metadata
+- **Authentication**: Hasura Auth with JWT support
+- **Storage**: MinIO for S3-compatible object storage
+- **Nginx**: Reverse proxy with automatic routing
+- **Redis**: Optional caching and queue support
+- **Email**: Development email with MailHog
+
+### 🛠️ Commands
+
+- `nself init` - Initialize a new project
+- `nself build` - Build the project infrastructure
+- `nself up` - Start all services
+- `nself down` - Stop all services
+- `nself status` - Check service status
+- `nself logs` - View service logs
+- `nself reset` - Reset the project
+
+### 📚 Documentation
+
+- Complete installation guide
+- Service configuration documentation
+- Troubleshooting guide
+- Example projects
+
+### 🎯 Target Audience
+
+Developers building modern web applications who want a production-like development environment without the complexity of manual setup.
+
+---
+
+## Version History Summary
+
+| Version | Date | Type | Focus |
+|---------|------|------|-------|
+| v0.3.0 | 2025-01-11 | Major | Complete architectural refactor |
+| v0.2.4 | 2025-01-10 | Minor | Email provider support |
+| v0.2.3 | 2025-01-09 | Patch | SSL and installation fixes |
+| v0.2.2 | 2025-01-08 | Patch | UI improvements |
+| v0.2.1 | 2025-01-07 | Patch | Database tools |
+| v0.2.0 | 2025-01-06 | Minor | Initial modularization |
+| v0.1.0 | 2025-01-01 | Major | Initial release |
