@@ -10,7 +10,7 @@ analyze_build_failure() {
     log_info "Analyzing build errors..."
     
     # Check for Go module errors
-    if echo "$error_output" | grep -q "missing go.sum entry\|to add:\\n\\s*go get"; then
+    if echo "$error_output" | grep -q "missing go.sum entry\|go get\|go mod download"; then
         handle_go_module_error "$error_output"
         return
     fi
@@ -96,23 +96,51 @@ fix_go_modules() {
         # Find the service directory
         local service_dir=""
         
+        # Extract service base name (unity-go-go1 -> go1)
+        local base_service=$(echo "$service" | sed 's/^unity-[^-]*-//')
+        
         # Check common locations
-        if [[ -d "services/$service" ]]; then
-            service_dir="services/$service"
+        if [[ -d "services/go/$base_service" ]]; then
+            service_dir="services/go/$base_service"
+        elif [[ -d "services/$base_service" ]]; then
+            service_dir="services/$base_service"
         elif [[ -d "$service" ]]; then
             service_dir="$service"
         else
             # Try to extract from docker-compose.yml
-            service_dir=$(grep -A5 "$service:" docker-compose.yml | grep "build:" | sed 's/.*build: //')
+            service_dir=$(grep -A5 "$service:" docker-compose.yml | grep "build:" | sed 's/.*build: //' | tr -d '"' | tr -d "'")
         fi
         
         if [[ -n "$service_dir" ]] && [[ -d "$service_dir" ]]; then
             log_info "Fixing $service in $service_dir..."
             
-            # If no go.mod exists, initialize a minimal one
-            if [[ ! -f "$service_dir/go.mod" ]]; then
-                (cd "$service_dir" && go mod init "$service" 2>/dev/null || true)
+            # Check if go is installed
+            if ! command -v go &> /dev/null; then
+                log_warning "Go is not installed. Cannot auto-fix Go modules."
+                log_info "Install Go from https://golang.org/dl/ and try again"
+                return 1
             fi
+            
+            # If no go.mod exists, initialize with proper module name
+            if [[ ! -f "$service_dir/go.mod" ]]; then
+                log_info "Initializing go.mod for $base_service..."
+                (cd "$service_dir" && go mod init "$base_service" 2>/dev/null || true)
+            fi
+            
+            # Analyze main.go for imports and add them
+            if [[ -f "$service_dir/main.go" ]]; then
+                local imports=$(grep -E '^\s*"github\.com/[^"]+"|^\s*"golang\.org/x/[^"]+"' "$service_dir/main.go" | sed 's/.*"\(.*\)".*/\1/' | sort -u)
+                if [[ -n "$imports" ]]; then
+                    log_info "Detected imports, adding dependencies..."
+                    (
+                        cd "$service_dir"
+                        for import in $imports; do
+                            go get "$import" 2>/dev/null || true
+                        done
+                    )
+                fi
+            fi
+            
             # Tidy and download dependencies
             (cd "$service_dir" && go mod tidy && go mod download)
             log_success "Fixed $service dependencies with 'go mod tidy'"
