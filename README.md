@@ -1,7 +1,7 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
 [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/acamarata/nself/releases)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
 
@@ -427,9 +427,21 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Side Projects**: Production-grade infrastructure without the complexity
 - **Learning**: See how modern backends work under the hood
 
+## 📄 License
+
+NSELF is **free for personal use**. Commercial use requires a license.
+
+- ✅ **Personal Projects**: Free forever
+- ✅ **Learning & Education**: Free forever  
+- ✅ **Open Source Projects**: Free forever
+- 💼 **Commercial Use**: [Contact us for licensing](https://nself.org/commercial)
+
+See [LICENSE](LICENSE) for full terms.
+
 ## 🔗 Links
 
 - [nself.org](https://nself.org) - Official Website
+- [Commercial Licensing](https://nself.org/commercial) - For business use
 - [Nhost Documentation](https://docs.nhost.io) - Learn more about Nhost
 - [Hasura Documentation](https://hasura.io/docs) - GraphQL engine docs
 - [Report Issues](https://github.com/acamarata/nself/issues) - We'd love your feedback!
