@@ -296,10 +296,30 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
     # Generate Dockerfile
     cp "$TEMPLATES_DIR/go/Dockerfile.template" "services/go/$service/Dockerfile"
     sed -i.bak "s/\${SERVICE_PORT}/$SERVICE_PORT/g" "services/go/$service/Dockerfile"
+    sed -i.bak "s/\${SERVICE_NAME}/$service/g" "services/go/$service/Dockerfile"
     rm -f "services/go/$service/Dockerfile.bak"
     
-    # Create go.sum (empty initially)
-    touch "services/go/$service/go.sum"
+    # Generate go.sum with proper dependencies
+    if command -v go &> /dev/null; then
+        echo_info "  Generating go.sum for $service..."
+        (cd "services/go/$service" && go mod download && go mod tidy 2>/dev/null) || {
+            # If go mod tidy fails, use template go.sum
+            if [[ -f "$TEMPLATES_DIR/go/go.sum.template" ]]; then
+                cp "$TEMPLATES_DIR/go/go.sum.template" "services/go/$service/go.sum"
+            else
+                touch "services/go/$service/go.sum"
+            fi
+        }
+    else
+        # Use template go.sum if go is not installed
+        if [[ -f "$TEMPLATES_DIR/go/go.sum.template" ]]; then
+            cp "$TEMPLATES_DIR/go/go.sum.template" "services/go/$service/go.sum"
+            echo_info "  Using template go.sum for $service"
+        else
+            touch "services/go/$service/go.sum"
+            echo_warning "  Go not installed - go.sum will be empty (will be generated during Docker build)"
+        fi
+    fi
     
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
