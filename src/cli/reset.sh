@@ -1,56 +1,102 @@
 #!/usr/bin/env bash
 # reset.sh - Reset project to clean state
 
-# Source shared utilities
+# Source utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
-source "$SCRIPT_DIR/../lib/utils/progress.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Command function
 cmd_reset() {
-    local force=false
-    local keep_env=false
+    show_header "NSELF PROJECT RESET"
     
-    # Parse options
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --force|-f)
-                force=true
-                shift
-                ;;
-            --keep-env)
-                keep_env=true
-                shift
-                ;;
-            --help|-h)
-                show_reset_help
-                return 0
-                ;;
-            *)
-                log_error "Unknown option: $1"
-                show_reset_help
-                return 1
-                ;;
-        esac
-    done
+    log_warning "This will:"
+    echo "  • Stop and remove all containers"
+    echo "  • Delete all Docker volumes"
+    echo "  • Remove all generated files"
+    echo "  • Backup env files with .old suffix"
+    echo ""
     
-    show_header "Reset Project"
+    read -p "Are you sure you want to reset everything? [y/N]: " -n 1 -r
+    echo
     
-    log_warning "This will remove all containers, volumes, and generated files!"
-    
-    if [[ "$force" != true ]]; then
-        if ! confirm_with_timeout "Are you sure you want to reset?" 10 "n"; then
-            log_info "Reset cancelled"
-            return 0
-        fi
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "Reset cancelled"
+        return 1
     fi
     
-    # Stop and remove all containers and volumes
-    log_info "Stopping all services..."
-    source "$SCRIPT_DIR/down.sh"
+    
+    echo ""
+    log_info "Stopping services..."
+    
+    # Stop all containers
+    if [[ -f "docker-compose.yml" ]]; then
+        docker compose down -v 2>/dev/null || true
+        log_success "Stopped and removed containers"
+    fi
+    
+    # Remove all volumes for this project
+    if [[ -f ".env.local" ]]; then
+        set -a
+        source .env.local 2>/dev/null || true
+        set +a
+        local project="${PROJECT_NAME:-myproject}"
+        
+        log_info "Removing volumes for project: $project"
+        docker volume ls -q | grep "^${project}_" | xargs -r docker volume rm 2>/dev/null || true
+        log_success "Removed Docker volumes"
+    fi
+    
+    # Backup environment files
+    log_info "Backing up environment files..."
+    [[ -f ".env" ]] && mv .env .env.old && log_success "Backed up .env → .env.old"
+    [[ -f ".env.local" ]] && mv .env.local .env.local.old && log_success "Backed up .env.local → .env.local.old"
+    [[ -f ".env.dev" ]] && mv .env.dev .env.dev.old && log_success "Backed up .env.dev → .env.dev.old"
+    [[ -f ".env.prod" ]] && mv .env.prod .env.prod.old && log_success "Backed up .env.prod → .env.prod.old"
+    
+    # Remove generated files and directories
+    log_info "Removing generated files..."
+    local items_to_remove=(
+        "docker-compose.yml"
+        "docker-compose.yml.backup"
+        ".env.example"
+        "nginx"
+        "postgres"
+        "hasura"
+        "functions"
+        "services"
+        "config-server"
+        "nestjs-run"
+        "schema.dbml"
+        "seeds"
+    )
+    
+    for item in "${items_to_remove[@]}"; do
+        if [[ -e "$item" ]]; then
+            rm -rf "$item"
+            log_success "Removed $item"
+        fi
+    done
+    
+    # Clean up Docker system (optional)
+    log_info "Cleaning Docker system..."
+    docker system prune -f 2>/dev/null || true
+    
+    echo ""
+    log_success "Project reset complete!"
+    echo ""
+    echo "📝 Your old configuration is saved with .old suffix"
+    echo ""
+    echo "🚀 To start fresh:"
+    echo "   nself init    (creates new env files)"
+    echo "   nself build   (generates project)"
+    echo "   nself up      (starts services)"
+    echo ""
+    echo "♻️  To restore previous configuration:"
+    echo "   mv .env.local.old .env.local"
+    echo "   nself build"
+    echo "   nself up"
+    
+    return 0
     cmd_down --volumes
     
     # Remove generated files
