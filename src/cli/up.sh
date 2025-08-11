@@ -113,11 +113,11 @@ analyze_startup_error() {
         offer_port_solutions
         
     # Build errors
-    elif echo "$output" | grep -q "failed to solve\|exit code:"; then
+    elif echo "$output" | grep -q "failed to solve\|exit code:\|missing go.sum entry"; then
         analyze_build_failure "$output"
         # If the build error was go module-related and we attempted a fix,
         # offer to rebuild without cache to avoid stale layers.
-        if echo "$output" | grep -q "missing go.sum entry"; then
+        if echo "$output" | grep -q "missing go.sum entry\|go get\|go mod"; then
             echo ""
             read -p "Rebuild images without cache now? [Y/n]: " -n 1 -r
             echo ""

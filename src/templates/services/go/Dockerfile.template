@@ -2,14 +2,20 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy go mod files (go.sum might not exist yet)
+COPY go.mod* go.sum* ./
 
-# Ensure module files are up to date and download dependencies
-RUN go mod tidy && go mod download
-
-# Copy source code
+# Copy source code first to analyze dependencies if needed
 COPY . .
+
+# Ensure go.mod exists and is properly initialized
+RUN if [ ! -f go.mod ]; then \
+        go mod init ${SERVICE_NAME} && \
+        go mod tidy; \
+    else \
+        go mod tidy; \
+    fi && \
+    go mod download
 
 # Build the application (explicitly use modules)
 ENV GO111MODULE=on
