@@ -12,6 +12,10 @@ source "$SCRIPT_DIR/../lib/errors/handlers/ports.sh"
 source "$SCRIPT_DIR/../lib/errors/handlers/build.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
+
+# Load environment with smart defaults
+load_env_with_defaults
 
 # Command function
 cmd_up() {
