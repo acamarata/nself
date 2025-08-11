@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
+      pages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -20,13 +22,14 @@ jobs:
       - name: Check if Wiki is enabled
         id: wiki-check
         run: |
-          # Try to clone wiki, set output based on result
-          if git clone https://github.com/${{ github.repository }}.wiki.git wiki 2>/dev/null; then
+          # Try to clone wiki with authentication
+          WIKI_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git"
+          if git clone "$WIKI_URL" wiki 2>/dev/null; then
             echo "wiki_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Wiki is enabled and accessible"
           else
             echo "wiki_exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Wiki not enabled. To sync docs to wiki, enable it in Settings → Features → Wikis"
+            echo "::notice::Wiki not enabled or not accessible. To sync docs to wiki, enable it in Settings → Features → Wikis"
             echo "ℹ️ Skipping wiki sync (this is not an error)"
           fi
           
@@ -101,17 +104,14 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           
-          # Configure authentication
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git
+          # Check current branch
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch: $BRANCH"
           
           git add .
           if ! git diff --staged --quiet; then
             git commit -m "Sync documentation from main repo"
-            git push origin master 2>/dev/null || git push origin main || {
-              echo "Creating initial wiki commit"
-              git branch -M master
-              git push -u origin master
-            }
+            git push origin "$BRANCH"
           else
             echo "No changes to sync"
           fi
