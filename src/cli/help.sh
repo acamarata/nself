@@ -23,9 +23,14 @@ cmd_help() {
 
 # Show general help
 show_general_help() {
-    show_header "NSELF - Self-Hosted Infrastructure Manager"
+    show_header "Nself - Self-Hosted Infrastructure Manager"
     
-    echo "Version: ${NSELF_VERSION:-0.3.0}"
+    # Get version from VERSION file
+    local version="unknown"
+    if [[ -f "$SCRIPT_DIR/../VERSION" ]]; then
+        version=$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
+    fi
+    echo "Version: ${NSELF_VERSION:-$version}"
     echo
     echo "Usage: nself <command> [options]"
     echo

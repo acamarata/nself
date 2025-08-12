@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/display.sh"
+OUTPUT_FORMATTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${OUTPUT_FORMATTER_DIR}/display.sh"
 
 OUTPUT_BUFFER=""
 CAPTURE_MODE=false
