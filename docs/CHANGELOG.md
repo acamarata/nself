@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-08-12
+
+### Fixed
+- **Command Resolution Bug**: Fixed critical SCRIPT_DIR variable corruption during sourcing
+  - Commands like `nself --version` and `nself help` now work correctly
+  - Resolved issue where sourced utility files overwrote CLI script directory path
+  - Improved command routing reliability across all nself commands
+
+### Improved  
+- **Install Script Enhancements**
+  - Fixed banner alignment and formatting in installation output
+  - Corrected version display (removed duplicate "v" prefix)
+  - Shortened "Prerequisites Check" header to fit standard terminal widths
+  - Enhanced installation script robustness and professional appearance
+
 ## [0.3.1] - 2025-01-12
 
 ### Added

@@ -112,7 +112,7 @@ fi
 
 echo_header() {
   local title="$1"
-  local width=72
+  local width=58
   local title_len=${#title}
   local padding=$(( (width - title_len - 2) / 2 ))
   local right_padding=$(( width - title_len - 2 - padding ))
@@ -446,7 +446,7 @@ EOF
 # ========================================================================
 
 check_prerequisites() {
-  echo_header "Checking Prerequisites"
+  echo_header "Prerequisites Check"
   
   local errors=0
   
@@ -904,10 +904,10 @@ print_banner() {
   echo ""
   echo "${BOLD}${CYAN}╔════════════════════════════════════════════════════════════════╗${RESET}"
   echo "${BOLD}${CYAN}║                                                                ║${RESET}"
-  echo "${BOLD}${CYAN}║${RESET}  ${BOLD}${GREEN}  _  _   ___  ___  _     ___${RESET}   ${CYAN}Self-Hosted Infrastructure${RESET}   ${BOLD}${CYAN}║${RESET}"
-  echo "${BOLD}${CYAN}║${RESET}  ${BOLD}${GREEN} | \\| | / __|| __|| |   | __|${RESET}  ${CYAN}Made Simple${RESET}                 ${BOLD}${CYAN}║${RESET}"
-  echo "${BOLD}${CYAN}║${RESET}  ${BOLD}${GREEN} | .  | \\__ \\| _| | |__ | _|${RESET}                                ${BOLD}${CYAN}║${RESET}"
-  echo "${BOLD}${CYAN}║${RESET}  ${BOLD}${GREEN} |_|\\_| |___/|___||____||_|${RESET}   ${CYAN}v$(get_latest_version)${RESET}                      ${BOLD}${CYAN}║${RESET}"
+  echo "${BOLD}${CYAN}║${RESET}    ${BOLD}${GREEN}_  _   ___  ___  _     ___${RESET}   ${CYAN}Self-Hosted Infrastructure${RESET}   ${BOLD}${CYAN}║${RESET}"
+  echo "${BOLD}${CYAN}║${RESET}   ${BOLD}${GREEN}| \\| | / __|| __|| |   | __|${RESET}  ${CYAN}Made Simple${RESET}                 ${BOLD}${CYAN}║${RESET}"
+  echo "${BOLD}${CYAN}║${RESET}   ${BOLD}${GREEN}| .  | \\__ \\| _| | |__ | _|${RESET}                                ${BOLD}${CYAN}║${RESET}"
+  echo "${BOLD}${CYAN}║${RESET}   ${BOLD}${GREEN}|_|\\_| |___/|___||____||_|${RESET}   ${CYAN}${INSTALL_VERSION}${RESET}                       ${BOLD}${CYAN}║${RESET}"
   echo "${BOLD}${CYAN}║                                                                ║${RESET}"
   echo "${BOLD}${CYAN}╚════════════════════════════════════════════════════════════════╝${RESET}"
   echo ""
