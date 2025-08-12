@@ -9,21 +9,23 @@ on:
       - '.github/workflows/sync-docs-to-wiki.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   sync-wiki:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: main
 
       - name: Checkout wiki repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}.wiki
           path: wiki
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync documentation to wiki
         run: |
@@ -33,42 +35,17 @@ jobs:
           # Copy all markdown files from docs to wiki
           cp -r main/docs/* wiki/
           
-          # Rename README.md to Home.md for wiki homepage
+          # Rename README.md to Home.md for wiki homepage if needed
           if [ -f "wiki/README.md" ]; then
             mv wiki/README.md wiki/Home.md
           fi
           
-          # Create navigation sidebar from docs structure
-          cat > wiki/_Sidebar.md << 'EOF'
-          # Nself Documentation
-
-          ## 🏠 Overview
-          * [[Home|Home]]
-          * [[API Reference|API]]
-          * [[Examples|EXAMPLES]]
-          * [[Troubleshooting|TROUBLESHOOTING]]
-
-          ## 🚀 Getting Started
-          * [[Installation|INSTALLATION]]
-          * [[Configuration|ENVIRONMENT_CONFIGURATION]]
-          * [[Contributing|CONTRIBUTING]]
-
-          ## 🏗️ Architecture
-          * [[Architecture|ARCHITECTURE]]
-          * [[Directory Structure|DIRECTORY_STRUCTURE]]
-          * [[Code Style|CODE_STYLE]]
-          * [[Output Formatting|OUTPUT_FORMATTING]]
-
-          ## 📚 Development
-          * [[Testing Strategy|TESTING_STRATEGY]]
-          * [[Refactoring Roadmap|REFACTORING_ROADMAP]]
-          * [[Decisions|DECISIONS]]
-
-          ## 📋 Reference
-          * [[Changelog|CHANGELOG]]
-          * [[Releases|RELEASES]]
-          * [[Migration Guide|MIGRATION_0.2.x_to_0.3.0]]
-          EOF
+          # Ensure Home.md exists (use docs/Home.md if available)
+          if [ ! -f "wiki/Home.md" ] && [ -f "main/docs/Home.md" ]; then
+            cp main/docs/Home.md wiki/Home.md
+          fi
+          
+          # The _Sidebar.md is already copied from docs/
 
       - name: Configure Git
         working-directory: wiki
