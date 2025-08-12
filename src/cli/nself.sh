@@ -7,19 +7,25 @@ set -eo pipefail
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Preserve the CLI script directory before sourcing other files
+CLI_SCRIPT_DIR="$SCRIPT_DIR"
+
 # Source configuration and utilities with error handling
 # Path adjusted for new structure: src/cli -> src/lib
 for file in \
-    "$SCRIPT_DIR/../lib/config/defaults.sh" \
-    "$SCRIPT_DIR/../lib/config/constants.sh" \
-    "$SCRIPT_DIR/../lib/utils/display.sh" \
-    "$SCRIPT_DIR/../lib/utils/output-formatter.sh" \
-    "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
-    "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
+    "$CLI_SCRIPT_DIR/../lib/config/defaults.sh" \
+    "$CLI_SCRIPT_DIR/../lib/config/constants.sh" \
+    "$CLI_SCRIPT_DIR/../lib/utils/display.sh" \
+    "$CLI_SCRIPT_DIR/../lib/utils/output-formatter.sh" \
+    "$CLI_SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
+    "$CLI_SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
     if [[ -f "$file" ]]; then
         source "$file"
     fi
 done
+
+# Restore the CLI script directory after sourcing
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
 
 # Simple fallback if display.sh didn't load
 if ! declare -f log_error >/dev/null; then
