@@ -5,8 +5,8 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")"
+# Get script directory (macOS compatible)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source environment utilities for safe loading
 source "$SCRIPT_DIR/../lib/utils/env.sh"

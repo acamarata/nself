@@ -55,7 +55,9 @@ nself_update() {
 	tar -xzf "$ARCHIVE_FILE" -C "$EXTRACT_DIR" --strip-components=1
 
 	echo "Updating..."
-	rsync -a --delete "$EXTRACT_DIR/bin" "$SCRIPT_DIR/"
+	# Get the parent directory to update the entire nself installation
+	INSTALL_DIR="$(dirname "$SCRIPT_DIR")"
+	rsync -a --delete "$EXTRACT_DIR/src/" "$INSTALL_DIR/"
 
 	echo "$LATEST_VERSION" > "$VERSION_FILE"
 

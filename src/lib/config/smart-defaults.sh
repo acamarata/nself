@@ -24,7 +24,15 @@ apply_smart_defaults() {
     # Hasura
     : ${HASURA_VERSION:=v2.44.0}
     : ${HASURA_GRAPHQL_ADMIN_SECRET:=hasura-admin-secret-dev}
-    : ${HASURA_GRAPHQL_JWT_SECRET:='{"type":"HS256","key":"development-secret-key-minimum-32-characters-long"}'}
+    
+    # JWT Configuration - Support both new simple format and legacy JSON format
+    : ${HASURA_JWT_KEY:=development-secret-key-minimum-32-characters-long}
+    : ${HASURA_JWT_TYPE:=HS256}
+    
+    # If HASURA_GRAPHQL_JWT_SECRET is not set, construct it from the simple variables
+    if [[ -z "${HASURA_GRAPHQL_JWT_SECRET:-}" ]]; then
+        HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"${HASURA_JWT_TYPE}\",\"key\":\"${HASURA_JWT_KEY}\"}"
+    fi
     
     # Set console/dev mode based on ENV
     if [[ "$ENV" == "prod" ]]; then
@@ -133,6 +141,7 @@ apply_smart_defaults() {
     export ENV PROJECT_NAME BASE_DOMAIN DB_ENV_SEEDS
     export POSTGRES_VERSION POSTGRES_HOST POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_EXTENSIONS
     export HASURA_VERSION HASURA_GRAPHQL_ADMIN_SECRET HASURA_GRAPHQL_JWT_SECRET
+    export HASURA_JWT_KEY HASURA_JWT_TYPE
     export HASURA_GRAPHQL_ENABLE_CONSOLE HASURA_GRAPHQL_DEV_MODE HASURA_GRAPHQL_ENABLE_TELEMETRY
     export HASURA_GRAPHQL_CORS_DOMAIN HASURA_ROUTE
     export AUTH_VERSION AUTH_HOST AUTH_PORT AUTH_CLIENT_URL
@@ -161,21 +170,48 @@ apply_smart_defaults() {
 
 # Load environment files with proper priority
 load_env_with_defaults() {
-    # Apply defaults first
-    apply_smart_defaults
+    # IMPORTANT: Strict priority order - only ONE env file is used!
+    # Priority: .env > .env.local > .env.dev > defaults
     
-    # Load .env.local if it exists (overrides defaults)
-    if [[ -f ".env.local" ]]; then
-        set -a
-        source .env.local
-        set +a
-    fi
-    
-    # Load .env if it exists (highest priority)
+    # Check for .env first (production - highest priority)
     if [[ -f ".env" ]]; then
         set -a
         source .env
         set +a
+        # Apply defaults for missing values
+        apply_smart_defaults
+        # STOP - ignore all other env files
+        return
+    fi
+    
+    # Check for .env.local (development)
+    if [[ -f ".env.local" ]]; then
+        set -a
+        source .env.local
+        set +a
+        # Apply defaults for missing values
+        apply_smart_defaults
+        # STOP - ignore .env.dev
+        return
+    fi
+    
+    # Check for .env.dev (team defaults)
+    if [[ -f ".env.dev" ]]; then
+        set -a
+        source .env.dev
+        set +a
+        # Apply defaults for missing values
+        apply_smart_defaults
+        return
+    fi
+    
+    # No env files found - use only defaults
+    apply_smart_defaults
+    
+    # Re-construct JWT secret if using simple format
+    if [[ -z "${HASURA_GRAPHQL_JWT_SECRET:-}" ]] && [[ -n "${HASURA_JWT_KEY:-}" ]]; then
+        : ${HASURA_JWT_TYPE:=HS256}
+        HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"${HASURA_JWT_TYPE}\",\"key\":\"${HASURA_JWT_KEY}\"}"
     fi
     
     # Re-apply computed values that depend on other vars
@@ -200,6 +236,7 @@ load_env_with_defaults() {
     export FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILPIT_ROUTE BULLMQ_DASHBOARD_ROUTE
     export AUTH_SMTP_SENDER EMAIL_FROM FILES_ROUTE MAIL_ROUTE
     export DOCKER_NETWORK HASURA_METADATA_DATABASE_URL S3_ENDPOINT
+    export HASURA_GRAPHQL_JWT_SECRET HASURA_JWT_KEY HASURA_JWT_TYPE
 }
 
 export -f apply_smart_defaults

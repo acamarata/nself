@@ -58,10 +58,10 @@ check_not_in_nself_repo() {
         return 0
     fi
     
-    # Check for telltale signs we're in the nself repo
-    if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "docs" ]]; then
-        log_warning "You appear to be in the nself repository itself!"
-        log_error "nself commands should be run in your project directory, not the nself source."
+    # Check for telltale signs we're in the nself repo root (not subdirectories)
+    if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "docs" ]] && [[ -f "install.sh" ]]; then
+        log_warning "You appear to be in the nself repository root!"
+        log_error "nself commands should be run in your project directory, not the nself source root."
         echo ""
         log_info "To use nself:"
         log_info "  1. Create a project directory: mkdir ~/myproject && cd ~/myproject"

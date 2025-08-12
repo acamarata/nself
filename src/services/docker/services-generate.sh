@@ -32,7 +32,7 @@ to_pascal_case() {
 
 # Generate NestJS services
 if [[ "$NESTJS_ENABLED" == "true" ]]; then
-  echo_info "Generating NestJS services..."
+  log_info "Generating NestJS services..."
   
   mkdir -p services/nest
   
@@ -45,7 +45,7 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
     SERVICE_PORT=$((NESTJS_PORT_START + PORT_COUNTER))
     SERVICE_NAME_CAMEL=$(to_camel_case "$service")
     
-    echo_info "Creating NestJS service: $service"
+    log_info "Creating NestJS service: $service"
     
     # Create service directory
     mkdir -p "services/nest/$service"
@@ -127,16 +127,16 @@ EOF
       START_COMMAND="node src/main.js"
     fi
     
-    # Generate Dockerfile
+    # Generate Dockerfile (use | as delimiter to avoid issues with /)
     cp "$TEMPLATES_DIR/nest/Dockerfile.template" "services/nest/$service/Dockerfile"
-    sed -i.bak "s/\${SERVICE_PORT}/$SERVICE_PORT/g" "services/nest/$service/Dockerfile"
-    sed -i.bak "s/\${BUILD_STEP}/$BUILD_STEP/g" "services/nest/$service/Dockerfile"
-    sed -i.bak "s/\${START_COMMAND}/$START_COMMAND/g" "services/nest/$service/Dockerfile"
+    sed -i.bak "s|\${SERVICE_PORT}|$SERVICE_PORT|g" "services/nest/$service/Dockerfile"
+    sed -i.bak "s|\${BUILD_STEP}|$BUILD_STEP|g" "services/nest/$service/Dockerfile"
+    sed -i.bak "s|\${START_COMMAND}|$START_COMMAND|g" "services/nest/$service/Dockerfile"
     rm -f "services/nest/$service/Dockerfile.bak"
     
     # Generate package-lock.json
-    echo_info "  Generating package-lock.json for $service..."
-    (cd "services/nest/$service" && npm install --package-lock-only 2>/dev/null) || {
+    log_info "  Generating package-lock.json for $service..."
+    (cd "services/nest/$service" && npm install --package-lock-only > /dev/null 2>&1) || {
       # If npm install fails, create a basic package-lock.json
       cat > "services/nest/$service/package-lock.json" << EOF
 {
@@ -176,7 +176,7 @@ fi
 
 # Generate BullMQ workers
 if [[ "$BULLMQ_ENABLED" == "true" ]]; then
-  echo_info "Generating BullMQ workers..."
+  log_info "Generating BullMQ workers..."
   
   mkdir -p services/bullmq
   
@@ -187,7 +187,7 @@ if [[ "$BULLMQ_ENABLED" == "true" ]]; then
     worker=$(echo "$worker" | xargs) # Trim whitespace
     WORKER_NAME_CAMEL=$(to_camel_case "$worker")
     
-    echo_info "Creating BullMQ worker: $worker"
+    log_info "Creating BullMQ worker: $worker"
     
     # Create worker directory
     mkdir -p "services/bullmq/$worker"
@@ -236,8 +236,8 @@ if [[ "$BULLMQ_ENABLED" == "true" ]]; then
 EOF
     
     # Generate package-lock.json
-    echo_info "  Generating package-lock.json for $worker..."
-    (cd "services/bullmq/$worker" && npm install --package-lock-only 2>/dev/null) || {
+    log_info "  Generating package-lock.json for $worker..."
+    (cd "services/bullmq/$worker" && npm install --package-lock-only > /dev/null 2>&1) || {
       # If npm install fails, create a basic package-lock.json
       cat > "services/bullmq/$worker/package-lock.json" << EOF
 {
@@ -254,7 +254,7 @@ fi
 
 # Generate GoLang services
 if [[ "$GOLANG_ENABLED" == "true" ]]; then
-  echo_info "Generating GoLang services..."
+  log_info "Generating GoLang services..."
   
   mkdir -p services/go
   
@@ -267,7 +267,7 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
     SERVICE_PORT=$((GOLANG_PORT_START + PORT_COUNTER))
     SERVICE_NAME_CAMEL=$(to_camel_case "$service")
     
-    echo_info "Creating GoLang service: $service"
+    log_info "Creating GoLang service: $service"
     
     # Create service directory
     mkdir -p "services/go/$service"
@@ -301,7 +301,7 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
     
     # Generate go.sum with proper dependencies
     if command -v go &> /dev/null; then
-        echo_info "  Generating go.sum for $service..."
+        log_info "  Generating go.sum for $service..."
         (cd "services/go/$service" && go mod download && go mod tidy 2>/dev/null) || {
             # If go mod tidy fails, use template go.sum
             if [[ -f "$TEMPLATES_DIR/go/go.sum.template" ]]; then
@@ -314,7 +314,7 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
         # Use template go.sum if go is not installed
         if [[ -f "$TEMPLATES_DIR/go/go.sum.template" ]]; then
             cp "$TEMPLATES_DIR/go/go.sum.template" "services/go/$service/go.sum"
-            echo_info "  Using template go.sum for $service"
+            log_info "  Using template go.sum for $service"
         else
             touch "services/go/$service/go.sum"
             echo_warning "  Go not installed - go.sum will be empty (will be generated during Docker build)"
@@ -348,7 +348,7 @@ fi
 
 # Generate Python services
 if [[ "$PYTHON_ENABLED" == "true" ]]; then
-  echo_info "Generating Python services..."
+  log_info "Generating Python services..."
   
   mkdir -p services/py
   
@@ -360,7 +360,7 @@ if [[ "$PYTHON_ENABLED" == "true" ]]; then
     service=$(echo "$service" | xargs) # Trim whitespace
     SERVICE_PORT=$((PYTHON_PORT_START + PORT_COUNTER))
     
-    echo_info "Creating Python service: $service"
+    log_info "Creating Python service: $service"
     
     # Create service directory
     mkdir -p "services/py/$service"
@@ -428,7 +428,7 @@ EOF
 fi
 
 # Generate shared environment file
-echo_info "Creating shared environment configuration..."
+log_info "Creating shared environment configuration..."
 cp "$TEMPLATES_DIR/shared/.env.template" "services/.env"
 
 # Replace template variables
@@ -449,22 +449,22 @@ sed -i.bak "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g" services/.env
 rm -f services/.env.bak
 
 # Note: Services are now integrated into main docker-compose.yml
-echo_success "Services directory structure created successfully!"
+log_success "Services directory structure created successfully!"
 
 # Display service information
-echo_info "Created services:"
+log_info "Created services:"
 if [[ "$NESTJS_ENABLED" == "true" ]]; then
-  echo_info "  NestJS services in services/nest/"
+  log_info "  NestJS services in services/nest/"
 fi
 if [[ "$BULLMQ_ENABLED" == "true" ]]; then
-  echo_info "  BullMQ workers in services/bullmq/"
+  log_info "  BullMQ workers in services/bullmq/"
 fi
 if [[ "$GOLANG_ENABLED" == "true" ]]; then
-  echo_info "  GoLang services in services/go/"
+  log_info "  GoLang services in services/go/"
 fi
 if [[ "$PYTHON_ENABLED" == "true" ]]; then
-  echo_info "  Python services in services/py/"
+  log_info "  Python services in services/py/"
 fi
 
-echo_info "To start services:"
-echo_info "  cd services && docker compose up -d"
+log_info "To start services:"
+log_info "  cd services && docker compose up -d"

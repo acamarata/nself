@@ -294,7 +294,14 @@ fix_port_conflicts() {
         # Backup current .env.local
         cp .env.local .env.local.backup.$(date +%Y%m%d_%H%M%S)
         
-        # Append port overrides
+        # Append port overrides (ensure proper newlines)
+        # Ensure file ends with a newline
+        if [[ -f .env.local ]]; then
+            # Add newline if file doesn't end with one
+            if [[ -n "$(tail -c 1 .env.local 2>/dev/null)" ]]; then
+                echo "" >> .env.local
+            fi
+        fi
         echo "" >> .env.local
         echo "# Port overrides due to conflicts (added $(date))" >> .env.local
         echo -e "$env_updates" >> .env.local
