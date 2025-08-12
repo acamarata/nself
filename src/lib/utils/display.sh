@@ -78,8 +78,7 @@ log_header() {
 show_section() {
     local title="$1"
     echo
-    echo -e "${COLOR_BOLD}▶ $title${COLOR_RESET}"
-    echo "$(printf '─%.0s' {1..500} | head -c ${#title})"
+    echo -e "${COLOR_CYAN}▶ $title${COLOR_RESET}"
 }
 
 # Table formatting
