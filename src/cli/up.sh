@@ -4,12 +4,15 @@
 # Source utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/output-formatter.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/utils/progress.sh"
 source "$SCRIPT_DIR/../lib/errors/base.sh"
 source "$SCRIPT_DIR/../lib/errors/quick-check.sh"
 source "$SCRIPT_DIR/../lib/errors/handlers/ports.sh"
 source "$SCRIPT_DIR/../lib/errors/handlers/build.sh"
+source "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh"
+source "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
@@ -45,53 +48,57 @@ cmd_up() {
         esac
     done
     
-    show_header "Starting Services"
-    
-    # Quick essential checks only (fast)
-    if [[ "$skip_checks" != "true" ]]; then
-        log_info "Running quick checks..."
-        
-        if ! run_essential_checks; then
-            log_error "Essential checks failed"
-            return 1
-        fi
+    # Run comprehensive pre-flight checks
+    if ! source "$SCRIPT_DIR/../lib/utils/preflight.sh"; then
+        log_error "Failed to load pre-flight checks"
+        return 1
     fi
     
-    # Check if we need to build
-    if [[ ! -f "docker-compose.yml" ]]; then
-        log_info "No docker-compose.yml found"
-        log_info "Running 'nself build' first..."
+    if ! preflight_up; then
+        return 1
+    fi
+    
+    format_section "Starting Services" 50
+    
+    # Additional port checks if not skipped
+    if [[ "$skip_checks" != "true" ]]; then
+        format_step 1 3 "Checking port availability"
         
-        if ! bash "$SCRIPT_DIR/build.sh"; then
-            log_error "Build failed"
+        if ! run_essential_checks; then
+            format_error "Port checks failed" "Stop conflicting services or change ports in .env.local"
             return 1
         fi
+        format_success "Ports available"
     fi
     
     # Start services
-    log_info "Starting containers..."
+    format_step 2 3 "Starting Docker containers"
     
     local output
     local result
     
     if [[ "$verbose" == "true" ]]; then
-        compose up -d --build
-        result=$?
+        compose up -d --build 2>&1 | filter_output docker
+        result=${PIPESTATUS[0]}
     else
-        output=$(compose up -d --build 2>&1)
-        result=$?
+        # Run compose and filter output
+        compose up -d --build 2>&1 | filter_output docker &
+        local compose_pid=$!
         
-        # Show progress for long operations
-        if echo "$output" | grep -q "Building"; then
-            echo "$output" | grep "Building\|=>"
-        fi
+        # Show spinner while waiting
+        show_spinner "Starting services" $compose_pid
+        wait $compose_pid
+        result=$?
     fi
     
     if [[ $result -eq 0 ]]; then
-        log_success "All containers started successfully!"
+        format_step 3 3 "Verifying services"
+        sleep 2  # Give services a moment to fully start
+        
+        format_success "All services started successfully!"
         show_service_urls
     else
-        log_error "Failed to start services"
+        format_error "Failed to start services"
         
         # Analyze the specific error
         if [[ "$verbose" != "true" ]]; then

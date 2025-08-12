@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 # display.sh - Centralized display utilities for consistent output
 
-# Mark as sourced to prevent double-sourcing
+# Prevent double-sourcing
+[[ "${DISPLAY_SOURCED:-}" == "1" ]] && return 0
 export DISPLAY_SOURCED=1
 
-# Color definitions
-COLOR_RESET='\033[0m'
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
-COLOR_BLUE='\033[0;34m'
-COLOR_MAGENTA='\033[0;35m'
-COLOR_CYAN='\033[0;36m'
-COLOR_WHITE='\033[0;37m'
-COLOR_BOLD='\033[1m'
-COLOR_DIM='\033[2m'
+# Color definitions (using printf for portability)
+COLOR_RESET=$'\033[0m'
+COLOR_RED=$'\033[0;31m'
+COLOR_GREEN=$'\033[0;32m'
+COLOR_YELLOW=$'\033[0;33m'
+COLOR_BLUE=$'\033[0;34m'
+COLOR_MAGENTA=$'\033[0;35m'
+COLOR_CYAN=$'\033[0;36m'
+COLOR_WHITE=$'\033[0;37m'
+COLOR_BOLD=$'\033[1m'
+COLOR_DIM=$'\033[2m'
 
 # Icons
 ICON_SUCCESS="✓"
@@ -41,37 +42,33 @@ fi
 
 # Logging functions - All commands must use these
 log_info() {
-    echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} $1"
+    printf "%b[INFO]%b %s\n" "${COLOR_BLUE}" "${COLOR_RESET}" "$1"
 }
 
 log_success() {
-    echo -e "${COLOR_GREEN}[SUCCESS]${COLOR_RESET} $1"
+    printf "%b[SUCCESS]%b %s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "$1"
 }
 
 log_warning() {
-    echo -e "${COLOR_YELLOW}[WARNING]${COLOR_RESET} $1" >&2
+    printf "%b[WARNING]%b %s\n" "${COLOR_YELLOW}" "${COLOR_RESET}" "$1" >&2
 }
 
 log_error() {
-    echo -e "${COLOR_RED}[ERROR]${COLOR_RESET} $1" >&2
+    printf "%b[ERROR]%b %s\n" "${COLOR_RED}" "${COLOR_RESET}" "$1" >&2
 }
 
 log_debug() {
-    [[ "${DEBUG:-false}" == "true" ]] && echo -e "${COLOR_MAGENTA}[DEBUG]${COLOR_RESET} $1"
+    [[ "${DEBUG:-false}" == "true" ]] && printf "%b[DEBUG]%b %s\n" "${COLOR_MAGENTA}" "${COLOR_RESET}" "$1"
 }
 
-# Header and section formatting
-show_header() {
-    local title="$1"
-    local width=60
-    local padding=$(( (width - ${#title}) / 2 ))
-    
-    echo
-    echo "╔$(printf '═%.0s' $(seq 1 $width))╗"
-    printf "║%*s%s%*s║\n" $padding "" "$title" $((width - padding - ${#title})) ""
-    echo "╚$(printf '═%.0s' $(seq 1 $width))╝"
-    echo
-}
+# Source the standardized header utilities
+UTILS_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [[ -f "$UTILS_DIR/header.sh" ]]; then
+    . "$UTILS_DIR/header.sh"
+fi
+
+# Header is now provided by header.sh but we keep this for backward compatibility
+# It delegates to the standardized function
 
 # Alias for compatibility
 log_header() {
@@ -82,7 +79,7 @@ show_section() {
     local title="$1"
     echo
     echo -e "${COLOR_BOLD}▶ $title${COLOR_RESET}"
-    echo "$(printf '─%.0s' $(seq 1 ${#title}))"
+    echo "$(printf '─%.0s' {1..500} | head -c ${#title})"
 }
 
 # Table formatting

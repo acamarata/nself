@@ -4,18 +4,51 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")"
+# Error handler with more details
+trap 'echo "Error at line $LINENO in compose-generate.sh: $BASH_COMMAND" >&2' ERR
+
+# Enable debugging if DEBUG is set
+[[ "${DEBUG:-}" == "true" ]] && set -x
+
+# Get script directory (macOS compatible)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source display utilities first (for logging functions)
+source "$SCRIPT_DIR/../../lib/utils/display.sh" || {
+    echo "Error: Cannot load display.sh" >&2
+    exit 1
+}
 
 # Source environment utilities for safe loading
-source "$SCRIPT_DIR/../../lib/utils/env.sh"
+source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
+    log_error "Cannot load env.sh"
+    exit 1
+}
 
 # Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  load_env_safe ".env.local"
+  load_env_safe ".env.local" || {
+      log_error "Failed to load .env.local"
+      exit 1
+  }
 else
-  echo "Error: No .env.local file found."
+  log_error "No .env.local file found."
   exit 1
+fi
+
+log_info "Generating docker-compose.yml..."
+
+# Source smart defaults to handle JWT construction
+if ! declare -f load_env_with_defaults >/dev/null 2>&1; then
+    if [[ ! -f "$SCRIPT_DIR/../../lib/config/smart-defaults.sh" ]]; then
+        log_error "Cannot find smart-defaults.sh"
+        exit 1
+    fi
+    source "$SCRIPT_DIR/../../lib/config/smart-defaults.sh"
+fi
+if ! load_env_with_defaults; then
+    log_error "Failed to load environment with defaults"
+    exit 1
 fi
 
 # Compose database URLs from individual variables
@@ -48,7 +81,7 @@ fi
 # Backup existing docker-compose.yml if it exists
 if [ -f "docker-compose.yml" ]; then
   cp docker-compose.yml docker-compose.yml.backup
-  echo "Backed up existing docker-compose.yml to docker-compose.yml.backup"
+  [[ "${VERBOSE:-}" == "true" ]] && log_info "Backed up existing docker-compose.yml"
 fi
 
 # Start docker-compose.yml
@@ -482,5 +515,5 @@ networks:
 EOF
 
 # Note: Docker Compose validation temporarily disabled during development
-echo "docker-compose.yml generated successfully!"
-echo "Note: Run 'docker compose config' to validate the generated file"
+log_success "docker-compose.yml generated successfully!"
+log_info "Run 'docker compose config' to validate the generated file"

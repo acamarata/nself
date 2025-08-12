@@ -53,12 +53,24 @@ cmd_reset() {
     [[ -f ".env.dev" ]] && mv .env.dev .env.dev.old && log_success "Backed up .env.dev → .env.dev.old"
     [[ -f ".env.prod" ]] && mv .env.prod .env.prod.old && log_success "Backed up .env.prod → .env.prod.old"
     
-    # Remove generated files and directories
-    log_info "Removing generated files..."
+    # Remove ALL generated files and directories
+    log_info "Removing all generated files and directories..."
     local items_to_remove=(
+        # Docker files
         "docker-compose.yml"
         "docker-compose.yml.backup"
+        "docker-compose.override.yml"
+        ".dockerignore"
+        
+        # Environment files (except .old backups)
         ".env.example"
+        ".env"
+        ".env.dev"
+        ".env.prod"
+        ".env.prod-template"
+        ".env.prod-secrets"
+        
+        # Service directories
         "nginx"
         "postgres"
         "hasura"
@@ -66,8 +78,45 @@ cmd_reset() {
         "services"
         "config-server"
         "nestjs-run"
+        "backend"
+        "storage"
+        "auth"
+        "minio"
+        
+        # Certificates and binaries
+        "certs"
+        "bin"
+        
+        # Data directories
+        "data"
+        "volumes"
+        "postgres-data"
+        "minio-data"
+        "redis-data"
+        
+        # Database files
         "schema.dbml"
         "seeds"
+        "migrations"
+        "metadata"
+        
+        # Log files
+        "logs"
+        
+        # Temporary files
+        ".needs-rebuild"
+        ".last-build-hash"
+        ".port-overrides"
+        
+        # Other generated files
+        "node_modules"
+        "package-lock.json"
+        "yarn.lock"
+        "go.mod"
+        "go.sum"
+        "requirements.txt"
+        "Pipfile"
+        "Pipfile.lock"
     )
     
     for item in "${items_to_remove[@]}"; do
@@ -75,6 +124,16 @@ cmd_reset() {
             rm -rf "$item"
             log_success "Removed $item"
         fi
+    done
+    
+    # Remove files matching patterns
+    for pattern in *.log *.pid *.lock .DS_Store; do
+        for file in $pattern; do
+            if [[ -f "$file" ]]; then
+                rm -f "$file"
+                log_success "Removed $file"
+            fi
+        done
     done
     
     # Clean up Docker system (optional)
@@ -95,46 +154,6 @@ cmd_reset() {
     echo "   mv .env.local.old .env.local"
     echo "   nself build"
     echo "   nself up"
-    
-    return 0
-    cmd_down --volumes
-    
-    # Remove generated files
-    log_info "Removing generated files..."
-    rm -f docker-compose.yml
-    rm -f docker compose.override.yml
-    rm -rf backend/docker-compose.yml
-    
-    # Clean Docker resources
-    log_info "Cleaning Docker resources..."
-    docker system prune -f >/dev/null 2>&1
-    
-    # Remove data directories
-    log_info "Removing data directories..."
-    rm -rf data/ volumes/ postgres-data/ minio-data/ redis-data/
-    rm -rf hasura/migrations/* hasura/metadata/*
-    
-    # Optionally keep environment file
-    if [[ "$keep_env" != true ]]; then
-        if [[ -f ".env.local" ]]; then
-            mv .env.local .env.local.backup
-            log_info "Environment file backed up to .env.local.backup"
-        fi
-    else
-        log_info "Keeping environment file"
-    fi
-    
-    # Clean logs
-    rm -rf logs/*.log
-    
-    log_success "Project reset complete"
-    echo
-    echo "Next steps:"
-    if [[ "$keep_env" != true ]]; then
-        echo "  1. Run: nself init"
-    fi
-    echo "  2. Run: nself build"
-    echo "  3. Run: nself up"
     
     return 0
 }

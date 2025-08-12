@@ -2,23 +2,33 @@
 # init.sh - Initialize a new nself project with environment files only
 
 # Source utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source files with error handling
+for file in \
+    "$SCRIPT_DIR/../lib/utils/display.sh" \
+    "$SCRIPT_DIR/../lib/utils/output-formatter.sh" \
+    "$SCRIPT_DIR/../lib/utils/platform.sh" \
+    "$SCRIPT_DIR/../lib/utils/error-templates.sh" \
+    "$SCRIPT_DIR/../lib/utils/preflight.sh" \
+    "$SCRIPT_DIR/../lib/config/smart-defaults.sh" \
+    "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
+    "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
+    if [[ -f "$file" ]]; then
+        source "$file"
+    else
+        echo "Warning: Missing file $file" >&2
+    fi
+done
 
 # Command function
 cmd_init() {
-    show_header "NSELF PROJECT INITIALIZATION"
-    
-    # Safety check: Don't run in nself repository
-    if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "docs" ]]; then
-        log_error "Cannot initialize in the nself repository!"
-        echo ""
-        log_info "Please create a separate project directory:"
-        log_info "  mkdir ~/myproject && cd ~/myproject"
-        log_info "  nself init"
+    # Run pre-flight checks
+    if ! preflight_init; then
         return 1
     fi
+    
+    show_welcome_message
     
     # Check if already initialized
     if [[ -f ".env.local" ]]; then
@@ -57,50 +67,95 @@ cmd_init() {
     else
         # Create a minimal .env.local if template doesn't exist
         cat > .env.local << 'EOF'
-#####################################
-# nself Project Configuration
-# 
-# Add ONLY the values you want to override here.
-# nself uses smart defaults for everything else.
-# 
-# See .env.example for all available options and their defaults.
-# Full docs: https://nself.org/docs/configuration
-#####################################
+# ╔══════════════════════════════════════════════════════════╗
+# ║               NSELF PROJECT CONFIGURATION                ║
+# ║                                                          ║
+# ║   Minimal config - nself uses smart defaults for rest.  ║
+# ║   See .env.example for ALL available options.           ║
+# ╚══════════════════════════════════════════════════════════╝
 
-# Uncomment and modify only what you need:
+# Project name (lowercase, no spaces)
+PROJECT_NAME=myproject
 
-# PROJECT_NAME=myproject
-# BASE_DOMAIN=local.nself.org
+# Optional: Uncomment and modify these for production
+# ─────────────────────────────────────────────────────
 
-# Enable optional services:
-# REDIS_ENABLED=true
-# DASHBOARD_ENABLED=true
-# FUNCTIONS_ENABLED=true
+# ENV=prod                              # Switch to production mode
+# BASE_DOMAIN=yourdomain.com           # Your custom domain
 
-# Enable microservices:
+# Security (generate with: openssl rand -base64 32)
+# POSTGRES_PASSWORD=changeme
+# HASURA_GRAPHQL_ADMIN_SECRET=changeme
+# HASURA_JWT_KEY=changeme-minimum-32-characters-long
+# HASURA_JWT_TYPE=HS256
+
+# Optional Services (uncomment to enable)
+# ────────────────────────────────────────
+# REDIS_ENABLED=true                    # Redis caching
+# FUNCTIONS_ENABLED=true                # Serverless functions
+# DASHBOARD_ENABLED=true                # Admin dashboard
+
+# Microservices (uncomment to enable)
+# ────────────────────────────────────
 # SERVICES_ENABLED=true
 # NESTJS_ENABLED=true
-# NESTJS_SERVICES=api,worker
+# NESTJS_SERVICES=api,webhooks
+# BULLMQ_ENABLED=true
+# BULLMQ_WORKERS=email-worker,payment-processor
+# BULLMQ_DASHBOARD_ENABLED=true
+# GOLANG_ENABLED=true
+# GOLANG_SERVICES=gateway
+# PYTHON_ENABLED=true
+# PYTHON_SERVICES=ml-model
+
+# For more options, see .env.example or run: nself help config
 EOF
         log_success "Created .env.local with defaults"
     fi
     
+    # Validate the created configuration
+    format_info "Validating initial configuration..."
+    VALIDATION_ERRORS=()
+    VALIDATION_WARNINGS=()
+    AUTO_FIXES=()
+    
+    run_validation .env.local
+    
+    # Apply auto-fixes if needed
+    if [[ ${#AUTO_FIXES[@]} -gt 0 ]]; then
+        format_info "Applying automatic fixes..."
+        apply_all_fixes .env.local "${AUTO_FIXES[@]}"
+    fi
+    
+    # Show platform-specific information
+    format_section "System Information" 40
+    echo "Platform: ${BOLD}$PLATFORM${RESET}"
+    echo "Architecture: ${BOLD}$ARCH${RESET}"
+    echo "Docker: ${BOLD}$(docker --version 2>/dev/null | cut -d' ' -f3 | cut -d',' -f1 || echo 'Not installed')${RESET}"
+    echo "Memory: ${BOLD}$(get_available_memory_gb)GB available${RESET}"
+    echo "Disk: ${BOLD}$(get_available_disk_gb)GB available${RESET}"
+    
+    show_success_banner "Project initialized successfully!"
+    
+    format_section "Configuration Files Created" 40
+    echo "${GREEN}✓${RESET} ${BOLD}.env.local${RESET}   - Your project configuration"
+    echo "${GREEN}✓${RESET} ${BOLD}.env.example${RESET} - Reference documentation"
+    
+    format_section "Next Steps" 40
+    echo "${BLUE}1.${RESET} ${BOLD}Edit .env.local${RESET} to customize (optional)"
+    echo "   ${DIM}Only add what you want to change - defaults handle the rest${RESET}"
     echo ""
-    log_success "Project initialized successfully!"
+    echo "${BLUE}2.${RESET} ${BOLD}nself build${RESET} - Generate all project files"
+    echo "   ${DIM}Creates Docker configs, service templates, and more${RESET}"
     echo ""
-    echo "📝 Configuration files created:"
-    echo "   .env.local   - Your project configuration (edit this)"
-    echo "   .env.example - Reference for all available options"
-    echo ""
-    echo "🚀 Next steps:"
-    echo "   1. Edit .env.local to customize your project (optional)"
-    echo "   2. Run: nself build  (generates all project files)"
-    echo "   3. Run: nself up     (starts your backend)"
-    echo ""
-    echo "💡 Tips:"
-    echo "   - You can run 'nself build' immediately - it works with defaults"
-    echo "   - Only add to .env.local what you want to change"
-    echo "   - Run 'nself prod' to generate production passwords"
+    echo "${BLUE}3.${RESET} ${BOLD}nself up${RESET} - Start your backend"
+    echo "   ${DIM}Launches PostgreSQL, Hasura, and all configured services${RESET}"
+    
+    format_section "Quick Tips" 40
+    echo "${YELLOW}⚡${RESET} Run ${BOLD}nself build${RESET} immediately - it works with defaults!"
+    echo "${YELLOW}⚡${RESET} Use ${BOLD}nself prod${RESET} to generate secure production passwords"
+    echo "${YELLOW}⚡${RESET} Check ${BOLD}.env.example${RESET} for all available options"
+    echo "${YELLOW}⚡${RESET} Run ${BOLD}nself help${RESET} for complete command documentation"
     
     return 0
 }
