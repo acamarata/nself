@@ -15,33 +15,16 @@ TEMPLATES_DIR="$SCRIPT_DIR/../templates"
 # Source environment utilities for safe loading
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/preflight.sh"
+source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
 
-# Safety check: Don't run in nself repository
-if [[ -f "bin/nself.sh" ]] && [[ -f "install.sh" ]] && [[ -d "bin/shared" ]]; then
-    log_error "Cannot build in the nself repository!"
-    echo ""
-    log_info "Please run from your project directory:"
-    log_info "  cd ~/myproject"
-    log_info "  nself build"
+# Run pre-flight checks
+if ! preflight_build; then
     exit 1
 fi
 
-# Load environment safely (without executing JSON values)
-if [ -f ".env.local" ]; then
-  load_env_safe ".env.local"
-  
-  # Expand nested variables (e.g., HASURA_ROUTE=api.${BASE_DOMAIN})
-  # This ensures variables like ${BASE_DOMAIN} inside other variables get expanded
-  for var in HASURA_ROUTE AUTH_ROUTE STORAGE_ROUTE STORAGE_CONSOLE_ROUTE FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILPIT_ROUTE MAIL_ROUTE FILES_ROUTE MAILHOG_ROUTE; do
-    if [[ -n "${!var}" ]]; then
-      expanded_value=$(eval echo "${!var}")
-      export "$var=$expanded_value"
-    fi
-  done
-else
-  log_error "No .env.local file found."
-  exit 1
-fi
+# Load environment with smart defaults
+load_env_with_defaults || exit 1
 
 # Input validation functions
 validate_domain() {
@@ -689,9 +672,20 @@ CREATE SCHEMA IF NOT EXISTS auth;
 EOF
 
 # Generate docker-compose.yml
-# Generating docker-compose.yml
+if ! bash "$SCRIPT_DIR/../services/docker/compose-generate.sh"; then
+    log_error "Failed to generate docker-compose.yml"
+    exit 1
+fi
 
-bash "$SCRIPT_DIR/services/docker/compose-generate.sh"
+# Auto-fix PostgreSQL extensions if needed
+if [[ -f "$SCRIPT_DIR/../lib/auto-fix/extensions.sh" ]]; then
+    # Save original SCRIPT_DIR
+    local ORIG_SCRIPT_DIR="$SCRIPT_DIR"
+    source "$SCRIPT_DIR/../lib/auto-fix/extensions.sh"
+    fix_postgres_extensions
+    # Restore SCRIPT_DIR
+    SCRIPT_DIR="$ORIG_SCRIPT_DIR"
+fi
 
 # Generate Hasura metadata
 log_info "Creating Hasura metadata..."
@@ -833,8 +827,7 @@ CMD ["npm", "start"]
 EOF
 
   # Generate package-lock.json for functions
-  # Generating package-lock.json for functions
-  (cd functions && npm install --package-lock-only 2>/dev/null) || {
+  (cd functions && npm install --package-lock-only > /dev/null 2>&1) || {
     # If npm install fails, create a basic package-lock.json
     cat > functions/package-lock.json << EOF
 {
@@ -983,8 +976,11 @@ fi
 
 # Create services directory structure if enabled
 if [[ "$SERVICES_ENABLED" == "true" ]]; then
-  # Creating services directory structure
-  bash "$SCRIPT_DIR/services.sh"
+  log_info "Creating services directory structure..."
+  if ! bash "$SCRIPT_DIR/../services/docker/services-generate.sh"; then
+    log_error "Failed to generate services"
+    exit 1
+  fi
 fi
 
 # Create NestJS run directory if enabled
@@ -1078,5 +1074,16 @@ elif [ ! -f "schema.dbml" ] && [ -z "$DBML_URL" ] && [ -z "$DBML_SCHEMA_URL" ] &
   # Creating sample database schema: schema.dbml
   bash "$SCRIPT_DIR/db.sh" sample > /dev/null 2>&1
 fi
+
+# Final validation
+if [[ ! -f "docker-compose.yml" ]]; then
+    log_error "Build failed: docker-compose.yml was not created"
+    log_error "This usually means there was an error in the configuration"
+    log_info "Run with DEBUG=true for more details: DEBUG=true nself build"
+    exit 1
+fi
+
+log_success "Build completed successfully!"
+log_info "All project files have been generated"
 
 # All done - output is handled by nself.sh

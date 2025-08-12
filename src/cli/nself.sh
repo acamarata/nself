@@ -12,7 +12,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for file in \
     "$SCRIPT_DIR/../lib/config/defaults.sh" \
     "$SCRIPT_DIR/../lib/config/constants.sh" \
-    "$SCRIPT_DIR/../lib/utils/display.sh"; do
+    "$SCRIPT_DIR/../lib/utils/display.sh" \
+    "$SCRIPT_DIR/../lib/utils/output-formatter.sh" \
+    "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
+    "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
     if [[ -f "$file" ]]; then
         source "$file"
     fi
@@ -28,6 +31,30 @@ fi
 main() {
     local command="${1:-help}"
     shift || true
+    
+    # CRITICAL: Prevent running nself in its own repository
+    # Check multiple indicators to ensure we're not in nself source
+    if [[ -f "bin/nself" ]] && [[ -d "src/cli" ]] && [[ -d "src/lib" ]] && [[ -f "install.sh" ]]; then
+        log_error "FATAL: Cannot run nself commands in the nself source repository!"
+        echo ""
+        log_info "nself must be run in a separate project directory."
+        log_info "To create a test project:"
+        echo ""
+        echo "  mkdir -p ~/test-project && cd ~/test-project"
+        echo "  nself init"
+        echo ""
+        log_info "Or use the test directory:"
+        echo "  mkdir -p ~/.nself/test && cd ~/.nself/test"
+        echo "  nself init"
+        exit 1
+    fi
+    
+    # Additional safety check - look for nself source markers
+    if [[ -f "src/cli/nself.sh" ]] || [[ -f "src/VERSION" && -d "src/templates" ]]; then
+        log_error "FATAL: This appears to be the nself source directory!"
+        log_error "Please run nself commands in a separate project directory."
+        exit 1
+    fi
     
     # Handle special flags
     case "$command" in

@@ -4,6 +4,26 @@
 
 This guide defines standards for all user-facing output from the NSELF tool, ensuring consistent, professional, and accessible communication.
 
+## Standardized Header Format (60 Characters)
+
+As of v0.3.0, nself uses a standardized 60-character wide format for all headers and structured output to ensure consistency across terminal displays, configuration files, and documentation.
+
+### Header Specifications
+- **Total Width**: 60 characters
+- **Content Width**: 56 characters (60 - 2 borders - 2 spaces)
+- **Border Style**: Unicode box-drawing characters
+- **Implementation**: `src/lib/utils/header.sh`
+
+### Example Header
+```
+╔══════════════════════════════════════════════════════════╗
+║                    NSELF BUILD SYSTEM                    ║
+║                                                          ║
+║  Content is left-aligned with automatic word wrapping    ║
+║  to ensure proper display within 60 characters.          ║
+╚══════════════════════════════════════════════════════════╝
+```
+
 ## Color Scheme
 
 ### Standard Colors
@@ -189,29 +209,30 @@ Step 2/5: Building Docker images
 
 ## Headers and Sections
 
-### Main Headers
+### Main Headers (Standardized)
 ```bash
-show_header() {
-    local title="$1"
-    local width=60
-    local padding=$(( (width - ${#title}) / 2 ))
-    
-    echo
-    echo "╔$(printf '═%.0s' $(seq 1 $width))╗"
-    printf "║%*s%s%*s║\n" $padding "" "$title" $((width - padding - ${#title})) ""
-    echo "╚$(printf '═%.0s' $(seq 1 $width))╝"
-    echo
-}
+# Source the standardized header utilities
+source "$SCRIPT_DIR/../lib/utils/header.sh"
 
-# Usage
+# Simple header
 show_header "NSELF INITIALIZATION"
+
+# Header with content
+show_header "BUILD COMPLETE" "All services have been configured and are ready to start."
 ```
 
 Output:
 ```
-╔════════════════════════════════════════════════════════════╗
-║                    NSELF INITIALIZATION                    ║
-╚════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════╗
+║                  NSELF INITIALIZATION                    ║
+╚══════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════╗
+║                     BUILD COMPLETE                       ║
+║                                                          ║
+║  All services have been configured and are ready to      ║
+║  start.                                                  ║
+╚══════════════════════════════════════════════════════════╝
 ```
 
 ### Section Headers

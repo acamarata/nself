@@ -29,6 +29,50 @@ load_env_safe() {
     return 0
 }
 
+# Load environment with proper priority
+# Priority: .env > .env.local > .env.dev
+load_env_with_priority() {
+    local loaded=false
+    
+    # Check for .env first (highest priority - production)
+    if [[ -f ".env" ]]; then
+        log_debug "Loading .env (production mode)"
+        set -a
+        source ".env"
+        set +a
+        loaded=true
+        # STOP HERE - ignore all other env files
+        return 0
+    fi
+    
+    # Check for .env.local next (development)
+    if [[ -f ".env.local" ]]; then
+        log_debug "Loading .env.local (development mode)"
+        set -a
+        source ".env.local"
+        set +a
+        loaded=true
+        # STOP HERE - ignore .env.dev
+        return 0
+    fi
+    
+    # Check for .env.dev last (team defaults)
+    if [[ -f ".env.dev" ]]; then
+        log_debug "Loading .env.dev (team defaults)"
+        set -a
+        source ".env.dev"
+        set +a
+        loaded=true
+        return 0
+    fi
+    
+    if [[ "$loaded" == false ]]; then
+        log_debug "No environment files found, using defaults only"
+    fi
+    
+    return 0
+}
+
 # Get environment variable with default
 get_env_var() {
     local var_name="$1"
