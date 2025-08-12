@@ -68,10 +68,10 @@ cmd_init() {
         # Create a minimal .env.local if template doesn't exist
         cat > .env.local << 'EOF'
 # ╔══════════════════════════════════════════════════════════╗
-# ║               NSELF PROJECT CONFIGURATION                ║
+# ║               Nself PROJECT CONFIGURATION                ║
 # ║                                                          ║
-# ║   Minimal config - nself uses smart defaults for rest.  ║
-# ║   See .env.example for ALL available options.           ║
+# ║   Minimal config - Nself uses smart defaults for rest.   ║
+# ║   See .env.example for ALL available options.            ║
 # ╚══════════════════════════════════════════════════════════╝
 
 # Project name (lowercase, no spaces)

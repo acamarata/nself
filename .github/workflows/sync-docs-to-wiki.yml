@@ -1,0 +1,92 @@
+name: Sync Docs to Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/sync-docs-to-wiki.yml'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v3
+        with:
+          path: main
+
+      - name: Checkout wiki repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync documentation to wiki
+        run: |
+          # Remove old wiki content (except .git)
+          find wiki -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          
+          # Copy all markdown files from docs to wiki
+          cp -r main/docs/* wiki/
+          
+          # Rename README.md to Home.md for wiki homepage
+          if [ -f "wiki/README.md" ]; then
+            mv wiki/README.md wiki/Home.md
+          fi
+          
+          # Create navigation sidebar from docs structure
+          cat > wiki/_Sidebar.md << 'EOF'
+          # Nself Documentation
+
+          ## 🏠 Overview
+          * [[Home|Home]]
+          * [[API Reference|API]]
+          * [[Examples|EXAMPLES]]
+          * [[Troubleshooting|TROUBLESHOOTING]]
+
+          ## 🚀 Getting Started
+          * [[Installation|INSTALLATION]]
+          * [[Configuration|ENVIRONMENT_CONFIGURATION]]
+          * [[Contributing|CONTRIBUTING]]
+
+          ## 🏗️ Architecture
+          * [[Architecture|ARCHITECTURE]]
+          * [[Directory Structure|DIRECTORY_STRUCTURE]]
+          * [[Code Style|CODE_STYLE]]
+          * [[Output Formatting|OUTPUT_FORMATTING]]
+
+          ## 📚 Development
+          * [[Testing Strategy|TESTING_STRATEGY]]
+          * [[Refactoring Roadmap|REFACTORING_ROADMAP]]
+          * [[Decisions|DECISIONS]]
+
+          ## 📋 Reference
+          * [[Changelog|CHANGELOG]]
+          * [[Releases|RELEASES]]
+          * [[Migration Guide|MIGRATION_0.2.x_to_0.3.0]]
+          EOF
+
+      - name: Configure Git
+        working-directory: wiki
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Commit and push changes
+        working-directory: wiki
+        run: |
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to sync"
+          else
+            git commit -m "Sync documentation from main repository
+
+            Source commit: ${{ github.sha }}
+            Triggered by: ${{ github.event_name }}
+            Repository: ${{ github.repository }}"
+            git push
+          fi
