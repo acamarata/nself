@@ -58,13 +58,13 @@ nself build [--no-cache] [--parallel]
 Start all services.
 
 ```bash
-nself up [--detach] [--force-recreate] [--no-deps]
+nself up [--verbose] [--skip-checks]
 ```
 
 **Options:**
-- `--detach`, `-d` - Run in background
-- `--force-recreate` - Recreate containers
-- `--no-deps` - Don't start dependencies
+- `--verbose`, `-v` - Show detailed output
+- `--skip-checks` - Skip pre-flight checks
+- `--help`, `-h` - Show help
 
 **Starts:**
 - PostgreSQL database
@@ -80,12 +80,13 @@ nself up [--detach] [--force-recreate] [--no-deps]
 Stop all services.
 
 ```bash
-nself down [--volumes] [--remove-orphans]
+nself down [--volumes] [--rmi]
 ```
 
 **Options:**
-- `--volumes`, `-v` - Remove volumes
-- `--remove-orphans` - Remove orphaned containers
+- `--volumes`, `-v` - Remove volumes (WARNING: deletes data)
+- `--rmi` - Remove images
+- `--help`, `-h` - Show help
 
 ---
 

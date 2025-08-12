@@ -1,8 +1,8 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../utils/display.sh"
-source "${SCRIPT_DIR}/../utils/output-formatter.sh"
+CONFIG_VALIDATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${CONFIG_VALIDATOR_DIR}/../utils/display.sh"
+source "${CONFIG_VALIDATOR_DIR}/../utils/output-formatter.sh"
 
 VALIDATION_ERRORS=()
 VALIDATION_WARNINGS=()

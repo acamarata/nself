@@ -101,17 +101,16 @@ main() {
         return 1
     fi
     
-    # Execute command - prefer cmd_ function if exists
+    # Execute command - check if it uses cmd_ function pattern or direct execution
     local cmd_function="cmd_${command//-/_}"
     
-    # Source the command file
-    source "$command_file"
-    
-    # Execute the command
-    if declare -f "$cmd_function" >/dev/null 2>&1; then
+    # Check if the file uses cmd_ function pattern
+    if grep -q "^$cmd_function()" "$command_file"; then
+        # Source the file and call the function
+        source "$command_file"
         "$cmd_function" "$@"
     else
-        # Fallback: execute the file directly
+        # File executes directly - just run it with bash
         bash "$command_file" "$@"
     fi
 }
