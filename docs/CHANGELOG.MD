@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 - **Output Formatting**
-  - Lowercase headers following Nself theme standards
+  - Lowercase headers following nself theme standards
   - Compact status indicators (✓, ⚡, ⠋, ✗) in auto-fix mode
   - Cleaner spacing and alignment in all outputs
   - Reduced verbosity for automated deployments
