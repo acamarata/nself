@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_framework.sh - Core testing utilities for NSELF
+# test_framework.sh - Core testing utilities for nself
 #
 # This framework enables modular testing where each function can be
 # tested in isolation. Once a function passes its tests, we can rely
