@@ -2,15 +2,32 @@
 
 # status.sh - Detailed service status with resource usage
 
-set -e
+# Temporarily disable set -e to avoid grep issues
+# set -e
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source utilities
 source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
+
+# Source display.sh and force colors to be set
+source "$SCRIPT_DIR/../lib/utils/display.sh"
+
+# Always ensure colors are defined (they'll work in real terminal)
+COLOR_RESET=${COLOR_RESET:-$'\033[0m'}
+COLOR_BLUE=${COLOR_BLUE:-$'\033[0;34m'}
+COLOR_BOLD=${COLOR_BOLD:-$'\033[1m'}
+COLOR_DIM=${COLOR_DIM:-$'\033[2m'}
+COLOR_CYAN=${COLOR_CYAN:-$'\033[0;36m'}
+COLOR_GREEN=${COLOR_GREEN:-$'\033[0;32m'}
+COLOR_RED=${COLOR_RED:-$'\033[0;31m'}
+COLOR_YELLOW=${COLOR_YELLOW:-$'\033[0;33m'}
+
+export COLOR_RESET COLOR_BLUE COLOR_BOLD COLOR_DIM COLOR_CYAN COLOR_GREEN COLOR_RED COLOR_YELLOW
+
+# Note: header.sh is sourced by display.sh, no need to source it again
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Color output functions (consistent with main nself.sh)
@@ -108,7 +125,7 @@ get_database_stats() {
             pg_size_pretty(pg_database_size('$db_name')) as size,
             (SELECT count(*) FROM pg_stat_activity WHERE datname = '$db_name') as connections,
             (SELECT count(*) FROM pg_stat_activity WHERE datname = '$db_name' AND state = 'active') as active_connections
-    " 2>/dev/null | tr -d '\n' | sed 's/|/ /g' | xargs)
+    " 2>/dev/null | sed 's/[\n\r]//g; s/|/ /g' | xargs)
     
     if [[ -n "$stats" && "$stats" != *"Unable"* ]]; then
         echo "$stats"
@@ -216,18 +233,13 @@ show_service_overview() {
     # Get all container info in one call
     local all_containers=$(compose ps --format "{{.Service}}\t{{.Status}}\t{{.State}}" 2>/dev/null)
     
-    # Categorize services
-    local app_services=()
-    local core_services=()
-    local db_services=()
-    local infra_services=()
-    local stopped_services=()
+    # Build service list
+    local service_list=()
+    local stopped_count=0
     
     for service in "${services[@]}"; do
         local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
         local health=$(check_service_health "$service")
-        local category=$(categorize_service "$service")
-        local desc=$(get_service_status_desc "$service" "$health")
         
         if [[ -n "$info" ]]; then
             local status=$(echo "$info" | cut -f2)
@@ -235,10 +247,8 @@ show_service_overview() {
                 running=$((running + 1))
                 local indicator=""
                 
-                # Choose indicator based on health and category
-                if [[ "$category" == "infrastructure" ]]; then
-                    indicator="\033[1;36m●\033[0m"  # Cyan for infrastructure
-                elif [[ "$health" == "healthy" ]]; then
+                # Choose indicator based on health
+                if [[ "$health" == "healthy" ]]; then
                     indicator="\033[1;32m✓\033[0m"  # Green check for healthy
                 elif [[ "$health" == "unhealthy" ]]; then
                     indicator="\033[1;31m✗\033[0m"  # Red X for unhealthy
@@ -248,77 +258,32 @@ show_service_overview() {
                     indicator="\033[1;36m●\033[0m"  # Cyan for no health check
                 fi
                 
-                local entry="$indicator $(printf '%-15s' $service) $desc"
-                
-                case "$category" in
-                    application)
-                        app_services+=("$entry")
-                        ;;
-                    core)
-                        core_services+=("$entry")
-                        ;;
-                    database)
-                        db_services+=("$entry")
-                        ;;
-                    infrastructure)
-                        infra_services+=("$entry")
-                        ;;
-                esac
+                service_list+=("$indicator $service")
             else
-                stopped_services+=("\033[1;37m○\033[0m $(printf '%-15s' $service) Stopped")
+                stopped_count=$((stopped_count + 1))
+                if [[ $stopped_count -le 5 ]]; then
+                    service_list+=("\033[1;37m○\033[0m $service")
+                fi
             fi
         else
-            stopped_services+=("\033[1;37m○\033[0m $(printf '%-15s' $service) Not found")
+            stopped_count=$((stopped_count + 1))
+            if [[ $stopped_count -le 5 ]]; then
+                service_list+=("\033[1;37m○\033[0m $service")
+            fi
         fi
     done
     
-    # Status summary
-    echo -e "\033[1;34m[INFO]\033[0m Services: $running/$total running"
+    # Show services header with count
+    echo -e "\033[1;36m→\033[0m Services ($running/$total running)"
     echo ""
     
-    # Show categorized services
-    if [[ ${#core_services[@]} -gt 0 ]]; then
-        show_header "Core Services"
-        for service in "${core_services[@]}"; do
-            echo -e "$service"
-        done
-        echo ""
-    fi
+    # Show all services
+    for service_entry in "${service_list[@]}"; do
+        echo -e "$service_entry"
+    done
     
-    if [[ ${#db_services[@]} -gt 0 ]]; then
-        show_header "Database Services"
-        for service in "${db_services[@]}"; do
-            echo -e "$service"
-        done
-        echo ""
-    fi
-    
-    if [[ ${#app_services[@]} -gt 0 ]]; then
-        show_header "Application Services"
-        for service in "${app_services[@]}"; do
-            echo -e "$service"
-        done
-        echo ""
-    fi
-    
-    if [[ ${#infra_services[@]} -gt 0 ]]; then
-        show_header "Infrastructure Services (no health checks)"
-        for service in "${infra_services[@]}"; do
-            echo -e "$service"
-        done
-        echo ""
-    fi
-    
-    # Show stopped services (only if not too many)
-    if [[ ${#stopped_services[@]} -gt 0 ]] && [[ ${#stopped_services[@]} -le 10 ]]; then
-        show_header "Stopped Services"
-        for service in "${stopped_services[@]}"; do
-            echo -e "$service"
-        done
-        echo ""
-    elif [[ ${#stopped_services[@]} -gt 10 ]]; then
-        log_info "$(( ${#stopped_services[@]} )) services stopped"
-        echo ""
+    if [[ $stopped_count -gt 5 ]]; then
+        echo -e "\033[1;37m...\033[0m +$(($stopped_count - 5)) more stopped"
     fi
 }
 
@@ -373,8 +338,12 @@ show_database_info() {
     show_header "Database"
     local db_stats=$(get_database_stats)
     if [[ "$db_stats" != *"Unable"* && "$db_stats" != *"not running"* && -n "$db_stats" ]]; then
-        local size=$(echo "$db_stats" | awk '{print $1}' | tr -d '|')
-        local connections=$(echo "$db_stats" | awk '{print $2}' | tr -d '|')
+        local size=$(echo "$db_stats" | awk '{print $1}' 2>/dev/null)
+        local connections=$(echo "$db_stats" | awk '{print $2}' 2>/dev/null)
+        
+        # Remove pipe characters if present
+        size="${size//|/}"
+        connections="${connections//|/}"
         
         if [[ -n "$size" && -n "$connections" ]]; then
             echo "Size: $size • Connections: $connections"
@@ -397,55 +366,68 @@ show_urls() {
     load_env_safe ".env.local"
     local base_domain="${BASE_DOMAIN:-local.nself.org}"
     
-    show_header "Service URLs"
+    echo ""
+    echo -e "\033[1;36m→\033[0m Service URLs"
+    echo ""
     
-    # Core services (always available)
-    echo "GraphQL API:     https://api.$base_domain"
-    echo "Auth:            https://auth.$base_domain"
-    echo "Storage:         https://storage.$base_domain"
-    echo "Admin Console:   https://api.$base_domain/console"
+    # GraphQL API with sub-items
+    echo "GraphQL API:    https://api.$base_domain"
+    echo " - Console:     https://api.$base_domain/console"
     
-    # Optional services
+    # Check for remote schemas
+    local remote_schema_count=0
+    for i in {1..10}; do
+        local schema_name_var="REMOTE_SCHEMA_${i}_NAME"
+        local schema_name="${!schema_name_var}"
+        if [[ -n "$schema_name" ]]; then
+            remote_schema_count=$((remote_schema_count + 1))
+            local schema_url_var="REMOTE_SCHEMA_${i}_URL"
+            local schema_url="${!schema_url_var}"
+            echo " - Schema $remote_schema_count: $schema_url"
+        fi
+    done
+    
+    # Auth service
+    echo "Auth:           https://auth.$base_domain"
+    
+    # Storage service
+    echo "Storage:        https://storage.$base_domain"
+    
+    # Functions if enabled
     if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
-        echo "Functions:       https://functions.$base_domain"
+        echo "Functions:      https://functions.$base_domain"
     fi
     
+    # Dashboard if enabled
     if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-        echo "Dashboard:       https://dashboard.$base_domain"
+        echo "Dashboard:      https://dashboard.$base_domain"
     fi
     
+    # Custom APIs
     if [[ "$NESTJS_ENABLED" == "true" ]]; then
-        echo "NestJS API:      https://nestjs.$base_domain"
+        echo "NestJS API:     https://nestjs.$base_domain"
     fi
     
     if [[ "$GOLANG_ENABLED" == "true" ]]; then
-        echo "Golang API:      https://golang.$base_domain"
+        echo "Golang API:     https://golang.$base_domain"
     fi
     
     if [[ "$PYTHON_ENABLED" == "true" ]]; then
-        echo "Python API:      https://python.$base_domain"
+        echo "Python API:     https://python.$base_domain"
     fi
     
-    # Development services
-    if [[ "$ENV" == "dev" ]]; then
-        if [[ "$MAILHOG_ENABLED" != "false" ]]; then
-            echo "MailHog:         https://mailhog.$base_domain"
+    # Development tools
+    if [[ "$ENV" == "dev" ]] || [[ -z "$ENV" ]]; then
+        if [[ "$MAILHOG_ENABLED" != "false" ]] && [[ -n "$(docker ps -q -f name=mailpit)" ]]; then
+            echo "Mail UI:        http://localhost:8025"
         fi
         
         if [[ "$ADMINER_ENABLED" == "true" ]]; then
-            echo "Adminer:         https://adminer.$base_domain"
+            echo "Adminer:        https://adminer.$base_domain"
         fi
+        
+        echo "MinIO Console:  http://localhost:9001"
     fi
-    
-    # Direct access for development
-    echo ""
-    show_header "Direct Access (localhost)"
-    echo "PostgreSQL:      localhost:5432"
-    if [[ "$REDIS_ENABLED" == "true" ]]; then
-        echo "Redis:           localhost:6379"
-    fi
-    echo "MinIO Console:   http://localhost:9001"
-    echo ""
 }
 
 # Function for watch mode with improved performance
@@ -485,7 +467,7 @@ show_service_detail() {
     # Check if container exists
     if ! docker ps -a --filter "name=$container_name" --format "{{.Names}}" | grep -q "$container_name"; then
         log_error "Service '$service_name' not found"
-        log_info "Available services: $(compose config --services 2>/dev/null | tr '\n' ' ')"
+        log_info "Available services: $(compose config --services 2>/dev/null | xargs)"
         return 1
     fi
     
@@ -620,22 +602,18 @@ main() {
     fi
     
     # Default compact overview mode
-    echo ""
-    echo -e "\033[1;36mnself Status\033[0m"
-    echo "═══════════════════════════════════════════════"
+    show_command_header "nself status" "Service health and resource monitoring" ""
     
     show_service_overview
-    show_resource_usage
-    show_database_info
+    
+    # Show legend right after services
+    echo ""
+    echo -e "\033[1;32m✓\033[0m Healthy  \033[1;31m✗\033[0m Unhealthy  \033[1;36m●\033[0m Running  \033[1;33m⟳\033[0m Starting  \033[1;37m○\033[0m Stopped"
+    
     show_urls
     
-    # Show legend
-    show_header "Status Indicators"
-    echo -e "\033[1;32m✓\033[0m Healthy (health check passing)  \033[1;31m✗\033[0m Unhealthy (health check failing)"
-    echo -e "\033[1;36m●\033[0m Running (no health check)      \033[1;33m⟳\033[0m Starting up"  
-    echo -e "\033[1;37m○\033[0m Stopped"
     echo ""
-    log_info "nself status <service> | nself status --watch | nself logs <service> | nself doctor"
+    echo "nself status <service> | nself status --watch | nself logs <service> | nself doctor"
 }
 
 # Run main function

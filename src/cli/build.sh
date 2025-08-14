@@ -51,12 +51,7 @@ cmd_build() {
     fi
     
     # Show welcome header with proper formatting
-    echo
-    echo -e "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${BOLD}nself build${RESET}                                             ${COLOR_BLUE}║${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${COLOR_DIM}Generating project infrastructure, files, and folders${COLOR_RESET}   ${COLOR_BLUE}║${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
-    echo
+    show_command_header "nself build" "Generate project infrastructure and configuration"
     
     # Determine environment first
     if [[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]; then

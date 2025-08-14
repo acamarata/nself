@@ -26,8 +26,8 @@ ICON_ARROW="→"
 ICON_BULLET="•"
 
 # Check for NO_COLOR environment variable
-if [[ -n "${NO_COLOR:-}" ]] || [[ ! -t 1 ]]; then
-    # Can't unset readonly variables, so redefine them as empty
+if [[ -n "${NO_COLOR:-}" ]]; then
+    # User explicitly requested no colors
     COLOR_RESET=""
     COLOR_RED=""
     COLOR_GREEN=""
@@ -38,6 +38,10 @@ if [[ -n "${NO_COLOR:-}" ]] || [[ ! -t 1 ]]; then
     COLOR_WHITE=""
     COLOR_BOLD=""
     COLOR_DIM=""
+elif [[ ! -t 1 ]]; then
+    # Not a terminal, but preserve colors for when they're needed
+    # The individual commands can check [[ -t 1 ]] if they want to disable colors
+    :  # Do nothing, keep colors defined
 fi
 
 # Logging functions - All commands must use these
@@ -73,6 +77,30 @@ fi
 
 # Header is now provided by header.sh but we keep this for backward compatibility
 # It delegates to the standardized function
+
+# Standardized command header with box
+# Args: $1 = title (e.g., "nself build"), $2 = subtitle (description)
+show_command_header() {
+    local title="$1"
+    local subtitle="$2"
+    local box_width=60
+    local content_width=$((box_width - 2))  # Account for borders only
+    
+    # Calculate padding for title
+    local title_len=${#title}
+    local title_padding=$((content_width - title_len - 1))  # -1 for the leading space
+    
+    # Calculate padding for subtitle
+    local subtitle_len=${#subtitle}
+    local subtitle_padding=$((content_width - subtitle_len - 1))  # -1 for the leading space
+    
+    echo
+    echo -e "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}"
+    printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_BOLD}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$title" $title_padding " "
+    printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_DIM}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$subtitle" $subtitle_padding " "
+    echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
+    echo
+}
 
 # Alias for compatibility
 log_header() {
@@ -153,6 +181,6 @@ strip_colors() {
 
 # Export all functions
 export -f log_info log_success log_secondary log_warning log_error log_debug log_header
-export -f show_header show_section
+export -f show_command_header show_header show_section
 export -f show_table_header show_table_row show_table_footer
 export -f draw_box strip_colors

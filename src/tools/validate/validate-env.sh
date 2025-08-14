@@ -86,23 +86,23 @@ validate_env_syntax() {
   # If we found inline comments, offer to fix them
   if [ "$has_inline_comments" = true ]; then
     echo ""
-    echo_warning "⚠️  Inline comments detected in $env_file"
-    echo_warning "Docker Compose cannot parse inline comments correctly."
+    log_warning "⚠️  Inline comments detected in $env_file"
+    log_warning "Docker Compose cannot parse inline comments correctly."
     echo ""
-    echo_info "Would you like to automatically fix this? (Y/n)"
+    log_info "Would you like to automatically fix this? (Y/n)"
     read -r response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY]|)$ ]]; then
-      echo_info "Creating backup: ${env_file}.backup"
+      log_info "Creating backup: ${env_file}.backup"
       cp "$env_file" "${env_file}.backup"
       
-      echo_info "Removing inline comments..."
+      log_info "Removing inline comments..."
       # Use the clean_env_file function to fix the file
       source "$SCRIPT_DIR/../../lib/utils/env.sh"
       clean_env_file "$env_file" "$env_file.tmp"
       mv "$env_file.tmp" "$env_file"
       
-      echo_success "✅ Inline comments removed. Original saved as ${env_file}.backup"
-      echo_info "Please review the changes and run 'nself up' again."
+      log_success "✅ Inline comments removed. Original saved as ${env_file}.backup"
+      log_info "Please review the changes and run 'nself up' again."
       return 2  # Special return code to indicate file was fixed
     else
       add_error "Inline comments must be removed for Docker Compose compatibility"
@@ -376,7 +376,7 @@ validate_routing() {
   fi
   
   echo ""
-  echo_info "Expected service routes:"
+  log_info "Expected service routes:"
   for route in "${expected_routes[@]}"; do
     echo "  • ${route%%:*} → ${route#*:}"
   done
@@ -384,7 +384,7 @@ validate_routing() {
   # Check custom app routing
   if [[ -n "$APP_DOMAINS" ]]; then
     echo ""
-    echo_info "Custom app domains configured:"
+    log_info "Custom app domains configured:"
     IFS=',' read -ra domains <<< "$APP_DOMAINS"
     for domain in "${domains[@]}"; do
       domain=$(echo "$domain" | xargs)
@@ -403,12 +403,12 @@ validate_env() {
   local env_file="${1:-.env.local}"
   
   if [ ! -f "$env_file" ]; then
-    echo_error "Environment file not found: $env_file"
-    echo_info "Run 'nself init' to create one"
+    log_error "Environment file not found: $env_file"
+    log_info "Run 'nself init' to create one"
     return 1
   fi
   
-  echo_info "Validating environment configuration..."
+  log_info "Validating environment configuration..."
   echo ""
   
   # Run all validations
@@ -422,32 +422,32 @@ validate_env() {
   # Display results
   echo ""
   if [ ${#VALIDATION_ERRORS[@]} -gt 0 ]; then
-    echo_error "❌ Validation failed with ${#VALIDATION_ERRORS[@]} error(s):"
+    log_error "❌ Validation failed with ${#VALIDATION_ERRORS[@]} error(s):"
     echo ""
     for error in "${VALIDATION_ERRORS[@]}"; do
-      echo_error "$error"
+      log_error "$error"
     done
     echo ""
   fi
   
   if [ ${#VALIDATION_WARNINGS[@]} -gt 0 ]; then
-    echo_warning "⚠️  ${#VALIDATION_WARNINGS[@]} warning(s):"
+    log_warning "⚠️  ${#VALIDATION_WARNINGS[@]} warning(s):"
     echo ""
     for warning in "${VALIDATION_WARNINGS[@]}"; do
-      echo_warning "$warning"
+      log_warning "$warning"
     done
     echo ""
   fi
   
   if [ ${#VALIDATION_ERRORS[@]} -eq 0 ]; then
     if [ ${#VALIDATION_WARNINGS[@]} -eq 0 ]; then
-      echo_success "✅ Environment validation passed!"
+      log_success "✅ Environment validation passed!"
     else
-      echo_success "✅ Environment validation passed with warnings"
+      log_success "✅ Environment validation passed with warnings"
     fi
     return 0
   else
-    echo_error "Fix the errors above before running 'nself up'"
+    log_error "Fix the errors above before running 'nself up'"
     return 1
   fi
 }
@@ -463,5 +463,38 @@ export -f validate_routing
 
 # Run validation if called directly
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-  validate_env "$@"
+  # Parse arguments
+  env_file=".env.local"
+  apply_fixes=false
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --apply-fixes)
+        apply_fixes=true
+        shift
+        ;;
+      -*)
+        log_error "Unknown option: $1"
+        echo "Usage: nself validate-env [env-file] [--apply-fixes]"
+        exit 1
+        ;;
+      *)
+        env_file="$1"
+        shift
+        ;;
+    esac
+  done
+  
+  # Run validation
+  validate_env "$env_file"
+  result=$?
+  
+  # If there were errors and apply-fixes was requested, try to fix them
+  if [[ $result -ne 0 ]] && [[ "$apply_fixes" == "true" ]]; then
+    log_info "Attempting to apply fixes..."
+    # TODO: Implement auto-fixes for common issues
+    log_warning "Auto-fix not yet implemented for all issues"
+  fi
+  
+  exit $result
 fi

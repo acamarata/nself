@@ -33,9 +33,9 @@ DIM="${COLOR_DIM:-}"
 
 # Command function
 cmd_init() {
-    # Check not in nself source directory
+    # Check not in nself source directory first (before showing header)
     if [[ -f "bin/nself" ]] && [[ -d "src/cli" ]] && [[ -f "install.sh" ]]; then
-        echo ""
+        show_command_header "nself init" "Initialize a new full-stack application"
         log_error "Cannot run nself commands in the nself source repository!"
         echo ""
         echo "Please run from a separate project directory:"
@@ -44,26 +44,18 @@ cmd_init() {
         return 1
     fi
     
+    # Show welcome banner
+    show_command_header "nself init" "Initialize a new full-stack application"
+    
     # Check if project already exists (docker-compose.yml indicates built project)
     if [[ -f "docker-compose.yml" ]]; then
-        echo ""
         log_error "Existing project detected (docker-compose.yml found)"
         echo ""
         log_info "This project has already been built."
-        echo "Use 'nself status' to check services"
-        echo "Use 'nself reset' if you want to start fresh"
+        echo ""
+        echo "nself status | nself reset"
         return 1
     fi
-    
-    # Show welcome banner
-    echo ""
-    echo "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
-    echo "${BLUE}║                                                          ║${RESET}"
-    echo "${BLUE}║   Welcome to ${CYAN}nself${BLUE} - Modern Full-Stack Platform          ║${RESET}"
-    echo "${BLUE}║   Build production ready applications with ease          ║${RESET}"
-    echo "${BLUE}║                                                          ║${RESET}"
-    echo "${BLUE}╚══════════════════════════════════════════════════════════╝${RESET}"
-    echo ""
     
     # Check if already initialized and backup if needed
     if [[ -f ".env.local" ]] || [[ -f ".env.example" ]]; then

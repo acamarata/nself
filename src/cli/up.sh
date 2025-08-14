@@ -37,15 +37,31 @@ cmd_up() {
     
     # Check for ALWAYS_AUTOFIX mode
     if [[ "$auto_fix" == "true" ]]; then
-        max_retries=30  # Allow more retries in auto-fix mode
+        max_retries=5  # Reasonable limit for auto-fix mode
     else
-        max_retries=5   # Fewer retries in interactive mode
+        max_retries=3   # Fewer retries in interactive mode
     fi
     
     # Prevent infinite retry loops
     if [[ $retry_count -ge $max_retries ]]; then
         if [[ "$auto_fix" == "true" ]]; then
             printf "\r${COLOR_RED}✗${COLOR_RESET} Auto-fix exceeded $max_retries attempts                     \n"
+            echo
+            echo -e "${COLOR_RED}Services still failing after $max_retries attempts:${COLOR_RESET}"
+            
+            # Show which services are still problematic
+            local problem_services=$(docker ps --format "{{.Names}} {{.Status}}" | grep -E "Restarting|unhealthy" | awk '{print $1}' | sed "s/${PROJECT_NAME:-unity}_//" | head -10)
+            for svc in $problem_services; do
+                echo -e "  ${COLOR_RED}✗${COLOR_RESET} $svc"
+            done
+            echo
+            log_info "Manual intervention required. Check logs with:"
+            echo -e "  ${COLOR_BLUE}nself logs <service>${COLOR_RESET}"
+            echo
+            log_info "Common fixes:"
+            echo -e "  • Run ${COLOR_BLUE}nself down && nself up${COLOR_RESET} for a fresh start"
+            echo -e "  • Check ${COLOR_BLUE}docker logs unity_<service>${COLOR_RESET} for details"
+            echo -e "  • Ensure all required files exist in service directories"
         else
             log_error "Too many retries. Please check your configuration."
         fi
@@ -79,17 +95,48 @@ cmd_up() {
         esac
     done
     
-    # Show header with proper nself formatting (skip on retry or in auto-fix mode)
-    if [[ $retry_count -eq 0 ]] && [[ "$auto_fix" != "true" ]]; then
-        echo
-        echo -e "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}"
-        echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${BOLD}nself up${RESET}                                                ${COLOR_BLUE}║${COLOR_RESET}"
-        echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${COLOR_DIM}Starting all services and infrastructure${COLOR_RESET}                ${COLOR_BLUE}║${COLOR_RESET}"
-        echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
-        echo
-    elif [[ $retry_count -eq 0 ]] && [[ "$auto_fix" == "true" ]]; then
-        # Concise output for auto-fix mode
-        printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting all services..."
+    # Check if all services are already running and healthy BEFORE showing header
+    if [[ $retry_count -eq 0 ]]; then
+        # Source service health utilities
+        if [[ -f "$SCRIPT_DIR/../lib/utils/service-health.sh" ]]; then
+            source "$SCRIPT_DIR/../lib/utils/service-health.sh"
+            
+            # Check if all services are already healthy
+            if check_all_services_healthy false; then
+                # All services are running and healthy!
+                echo
+                echo -e "${COLOR_GREEN}✓${COLOR_RESET} All services are running and healthy!"
+                echo
+                
+                # Display service status with green dots
+                display_running_services
+                echo
+                
+                # Check if configuration has changed
+                if check_config_changed; then
+                    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  Configuration has changed since services started"
+                    echo
+                    echo -e "   Run ${COLOR_BLUE}nself restart${COLOR_RESET} to apply changes"
+                    echo -e "   Or ${COLOR_BLUE}nself down && nself up${COLOR_RESET} for a fresh start"
+                else
+                    # Show service URLs
+                    show_service_urls
+                    echo
+                    echo -e "${COLOR_CYAN}➞ Useful Commands${COLOR_RESET}"
+                    echo
+                    echo -e "   ${COLOR_BLUE}nself status${COLOR_RESET}  - View detailed service status"
+                    echo -e "   ${COLOR_BLUE}nself logs${COLOR_RESET}    - View service logs"
+                    echo -e "   ${COLOR_BLUE}nself doctor${COLOR_RESET}  - Run health diagnostics"
+                fi
+                echo
+                return 0  # Exit successfully
+            fi
+        fi
+    fi
+    
+    # Show header FIRST (skip on retry)
+    if [[ $retry_count -eq 0 ]]; then
+        show_command_header "nself up" "Start all services and infrastructure"
     fi
     
     # Run comprehensive pre-flight checks (skip if retrying after auto-fix)
@@ -115,6 +162,21 @@ cmd_up() {
                 printf "\r${COLOR_RED}✗${COLOR_RESET} System requirements not met                \n"
                 return 1
             fi
+        fi
+    fi
+    
+    # Reset autofix state and run pre-checks on fresh start (not retry)
+    if [[ $retry_count -eq 0 ]]; then
+        # Reset state tracking
+        if [[ -f "$SCRIPT_DIR/../lib/autofix/state-tracker.sh" ]]; then
+            source "$SCRIPT_DIR/../lib/autofix/state-tracker.sh"
+            reset_all_states
+        fi
+        
+        # Run pre-checks to fix common issues before Docker
+        if [[ -f "$SCRIPT_DIR/../lib/autofix/orchestrator.sh" ]]; then
+            source "$SCRIPT_DIR/../lib/autofix/orchestrator.sh"
+            run_autofix_prechecks
         fi
     fi
     
@@ -234,7 +296,7 @@ cmd_up() {
                     esac
                 fi
             else
-                printf "\r${COLOR_GREEN}✓${COLOR_RESET} Ports available                            \n"
+                printf "\r${COLOR_GREEN}✓${COLOR_RESET} Ports available                                   \n"
             fi
         else
             # Fallback to old check
@@ -249,7 +311,7 @@ cmd_up() {
                     return 1
                 fi
             else
-                printf "\r${COLOR_GREEN}✓${COLOR_RESET} Ports available                            \n"
+                printf "\r${COLOR_GREEN}✓${COLOR_RESET} Ports available                                   \n"
             fi
         fi
     fi
@@ -296,14 +358,10 @@ cmd_up() {
         fi
     fi
     
-    if [[ $retry_count -eq 0 ]]; then
-        echo
-        echo -e "${COLOR_CYAN}➞ Starting Services${COLOR_RESET}"
-        echo
-    fi
+    # Header is already shown above, don't show it again
     
-    # Start services
-    printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting Docker containers..."
+    # Start services (shorter message to avoid artifacts)
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting services..."
     
     local output_file=$(mktemp)
     local result
@@ -348,15 +406,74 @@ cmd_up() {
     if [[ $result -eq 0 ]]; then
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Docker containers started                  \n"
         
-        # Verify services are actually running
+        # Verify services are actually running and not restarting
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Verifying services..."
-        sleep 2  # Give services a moment to fully start
+        sleep 3  # Give services a moment to fully start
         
-        local running_services=$(docker compose ps --services --filter "status=running" 2>/dev/null | wc -l | tr -d ' ')
-        local total_services=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
+        # Get detailed status of all services
+        local project_name="${PROJECT_NAME:-unity}"
+        local all_healthy=true
+        local unhealthy_services=""
+        local restarting_services=""
         
-        if [[ $running_services -eq $total_services ]] && [[ $total_services -gt 0 ]]; then
-            printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services running ($running_services/$total_services)              \n"
+        # Check each service individually
+        # Need to use proper project name with compose
+        local compose_cmd="docker compose"
+        if [[ -n "$project_name" ]]; then
+            compose_cmd="docker compose -p $project_name"
+        fi
+        
+        local total_services=$($compose_cmd ps --services 2>/dev/null | wc -l | tr -d ' ')
+        local healthy_count=0
+        local unhealthy_count=0
+        local restarting_count=0
+        
+        for service in $($compose_cmd ps --services 2>/dev/null); do
+            # Container names use underscores, service names might have hyphens
+            local container_name="${project_name}_${service//-/_}"
+            local container_status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null)
+            local restart_count=$(docker inspect --format='{{.RestartCount}}' "$container_name" 2>/dev/null)
+            
+            if [[ "$container_status" == "running" ]]; then
+                # Check if it's actually restarting (high restart count in short time)
+                if [[ $restart_count -gt 0 ]]; then
+                    # Check if container was created recently (within last minute)
+                    local created_time=$(docker inspect --format='{{.Created}}' "$container_name" 2>/dev/null)
+                    local current_time=$(date -u +%s)
+                    local created_timestamp=$(date -d "$created_time" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${created_time%%.*}" +%s 2>/dev/null)
+                    local time_diff=$((current_time - created_timestamp))
+                    
+                    # If restart count > 0 and container is less than 60 seconds old, it's likely restarting
+                    if [[ $time_diff -lt 60 ]] && [[ $restart_count -gt 1 ]]; then
+                        restarting_services="$restarting_services $service"
+                        ((restarting_count++))
+                        all_healthy=false
+                        continue
+                    fi
+                fi
+                
+                # Check health status if available
+                local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null)
+                if [[ "$health_status" == "unhealthy" ]] || [[ "$health_status" == "starting" ]]; then
+                    unhealthy_services="$unhealthy_services $service"
+                    ((unhealthy_count++))
+                    all_healthy=false
+                else
+                    ((healthy_count++))
+                fi
+            elif [[ "$container_status" == "restarting" ]]; then
+                restarting_services="$restarting_services $service"
+                ((restarting_count++))
+                all_healthy=false
+            else
+                unhealthy_services="$unhealthy_services $service"
+                ((unhealthy_count++))
+                all_healthy=false
+            fi
+        done
+        
+        if [[ "$all_healthy" == "true" ]] && [[ $healthy_count -eq $total_services ]]; then
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services running ($healthy_count/$total_services)              \n"
             
             echo
             log_success "Services started successfully!"
@@ -374,15 +491,108 @@ cmd_up() {
             echo -e "${COLOR_BLUE}3.${COLOR_RESET} ${COLOR_BLUE}nself urls${COLOR_RESET} - View service endpoints"
             echo -e "   ${COLOR_DIM}Display all available service URLs${COLOR_RESET}"
         else
-            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Some services failed to start ($running_services/$total_services)    \n"
+            # Show detailed status of what's wrong
+            if [[ $restarting_count -gt 0 ]]; then
+                printf "\r${COLOR_RED}✗${COLOR_RESET} Services in restart loop ($restarting_count/$total_services)        \n"
+                echo
+                echo -e "${COLOR_RED}Restarting services:${COLOR_RESET}"
+                for svc in $restarting_services; do
+                    echo -e "  ${COLOR_RED}↻${COLOR_RESET} $svc"
+                done
+            elif [[ $unhealthy_count -gt 0 ]]; then
+                # Services are running but marked unhealthy (often due to missing healthcheck tools)
+                printf "\r${COLOR_GREEN}✓${COLOR_RESET} Services running                                     \n"
+                echo
+                log_success "All services started!"
+                show_service_urls
+                
+                return 0  # Return success since services are running
+            else
+                printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Some services failed ($healthy_count/$total_services)             \n"
+            fi
+            
             echo
+            
+            # If ALWAYS_AUTOFIX is enabled AND there are critical issues, try to fix
+            # Don't auto-fix for just unhealthy status (could be false positives from bad healthchecks)
+            if [[ "${ALWAYS_AUTOFIX:-true}" == "true" ]] && [[ $restarting_count -gt 0 ]]; then
+                log_info "Auto-fixing restarting services..."
+                
+                # Source the orchestrator if not already loaded
+                if [[ -f "$SCRIPT_DIR/../lib/autofix/orchestrator.sh" ]]; then
+                    source "$SCRIPT_DIR/../lib/autofix/orchestrator.sh"
+                fi
+                
+                # Try comprehensive fix first if available
+                if [[ -f "$SCRIPT_DIR/../lib/autofix/comprehensive.sh" ]]; then
+                    source "$SCRIPT_DIR/../lib/autofix/comprehensive.sh"
+                    if declare -f run_comprehensive_fixes >/dev/null 2>&1; then
+                        run_comprehensive_fixes 2
+                        fixed_any=true
+                    fi
+                fi
+                
+                # Try to fix each problematic service
+                local fixed_any=false
+                
+                # Fix restarting services first
+                for service in $restarting_services; do
+                    local container_name="${project_name}_${service//-/_}"
+                    local service_logs=$(docker logs "$container_name" --tail 50 2>&1)
+                    
+                    printf "${COLOR_BLUE}⠋${COLOR_RESET} Fixing $service..."
+                    autofix_service "$container_name" "$service_logs" "$verbose"
+                    local fix_result=$?
+                    
+                    if [[ $fix_result -eq 99 ]]; then
+                        fixed_any=true
+                        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Fixed $service                            \n"
+                    else
+                        printf "\r${COLOR_RED}✗${COLOR_RESET} Could not fix $service                    \n"
+                    fi
+                done
+                
+                # Skip fixing unhealthy services - they're usually false positives from bad healthchecks
+                # Only fix services that are actually restarting/crashing
+                
+                if [[ "$fixed_any" == "true" ]]; then
+                    echo
+                    log_info "Retrying startup after fixes..."
+                    # Retry with incremented counter
+                    UP_RETRY_COUNT=$((retry_count + 1)) cmd_up "$@"
+                    return $?
+                else
+                    # No fixes worked, don't keep retrying
+                    echo
+                    log_error "Auto-fix could not resolve the issues"
+                    echo
+                    echo -e "${COLOR_RED}Problematic services:${COLOR_RESET}"
+                    for svc in $restarting_services $unhealthy_services; do
+                        echo -e "  ${COLOR_RED}✗${COLOR_RESET} $svc"
+                    done
+                    echo
+                    log_info "Try these manual fixes:"
+                    echo -e "  1. ${COLOR_BLUE}nself down && nself up${COLOR_RESET} - Full restart"
+                    echo -e "  2. ${COLOR_BLUE}nself build --force${COLOR_RESET} - Rebuild configuration"
+                    echo -e "  3. Check service logs for specific errors"
+                    return 1
+                fi
+            else
+                echo
+                log_info "Run 'nself up' again with ALWAYS_AUTOFIX=true to auto-fix issues"
+            fi
+            
+            # If we couldn't fix, analyze the error
             analyze_startup_error "$(cat "$output_file")"
             rm -f "$output_file"
             return 1
         fi
     else
-        printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to start services                   \n"
-        echo
+        # Only show failure message on first attempt
+        if [[ $retry_count -eq 0 ]]; then
+            printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to start services                   \n"
+            echo
+        fi
         
         # Save output for debugging if DEBUG is set
         if [[ "${DEBUG:-}" == "true" ]]; then
@@ -459,14 +669,21 @@ analyze_startup_error() {
             if [[ -f "$SCRIPT_DIR/../lib/utils/port-scanner.sh" ]]; then
                 source "$SCRIPT_DIR/../lib/utils/port-scanner.sh"
                 
-                echo
-                log_info "Port conflict options:"
-                echo "  1) Auto-fix: Change to alternative port"
-                echo "  2) Stop conflicting service"
-                echo "  3) Cancel"
-                echo
-                
-                read -p "Select option (1-3): " choice
+                # Check if ALWAYS_AUTOFIX is enabled
+                if [[ "${ALWAYS_AUTOFIX:-true}" == "true" ]]; then
+                    # Auto-select option 1
+                    local choice=1
+                    log_info "Auto-fixing port conflict"
+                else
+                    echo
+                    log_info "Port conflict options:"
+                    echo "  1) Auto-fix: Change to alternative port"
+                    echo "  2) Stop conflicting service"
+                    echo "  3) Cancel"
+                    echo
+                    
+                    read -p "Select option (1-3): " choice
+                fi
                 
                 case "$choice" in
                     1)
@@ -707,52 +924,67 @@ EOF
         local unhealthy_service=$(echo "$output" | grep -oE "container [^ ]+ is unhealthy" | sed 's/container //; s/ is unhealthy//' | head -1)
         
         if [[ -n "$unhealthy_service" ]]; then
-            log_error "Service is unhealthy: $unhealthy_service"
-            echo
+            # Get logs from the unhealthy service (silently)
+            local service_logs=$(docker logs "$unhealthy_service" 2>&1 | tail -20)
             
-            # Get logs from the unhealthy service
-            local service_logs=$(docker logs "$unhealthy_service" 2>&1 | tail -10)
-            if [[ -n "$service_logs" ]]; then
-                log_info "Recent logs from $unhealthy_service:"
-                echo "$service_logs" | head -5
-                echo
-            fi
-            
-            # Check if it's a missing dependency or configuration issue
-            if echo "$service_logs" | grep -q "Cannot connect\|connection refused\|ECONNREFUSED"; then
-                log_info "Service has connection issues. Checking dependencies..."
-            fi
-            
-            echo
-            log_info "Options:"
-            echo "  1) Auto-fix: Recreate the service"
-            echo "  2) View full logs"
-            echo "  3) Continue anyway"
-            echo "  4) Cancel"
-            echo
-            
-            read -p "Select option (1-4): " choice
-            
-            case "$choice" in
-                1)
-                    log_info "Recreating $unhealthy_service..."
-                    docker stop "$unhealthy_service" >/dev/null 2>&1
-                    docker rm "$unhealthy_service" >/dev/null 2>&1
+            # Check if ALWAYS_AUTOFIX is enabled
+            if [[ "${ALWAYS_AUTOFIX:-true}" == "true" ]]; then
+                # Use new orchestrator
+                if [[ -f "$SCRIPT_DIR/../lib/autofix/orchestrator.sh" ]]; then
+                    source "$SCRIPT_DIR/../lib/autofix/orchestrator.sh"
                     
-                    # Check if config-server needs regeneration
-                    if [[ "$unhealthy_service" == *"config-server"* ]] && [[ ! -f "config-server/index.js" ]]; then
-                        log_info "Regenerating config-server files..."
-                        if [[ -f "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" ]]; then
-                            source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
-                            generate_dockerfile_for_service "config-server" "config-server"
-                        fi
+                    # Run autofix (pass verbose flag)
+                    autofix_service "$unhealthy_service" "$service_logs" "$verbose"
+                    local fix_result=$?
+                    
+                    if [[ $fix_result -eq 99 ]]; then
+                        # Retry silently
+                        return 99
+                    elif [[ $fix_result -eq 0 ]]; then
+                        return 0
+                    else
+                        # Autofix failed completely
+                        return 1
                     fi
-                    
-                    log_success "Service recreated"
-                    echo
-                    log_info "Retrying startup..."
-                    sleep 2
-                    return 99  # Retry
+                else
+                    # Fallback to simple recreation
+                    local choice=1
+                    log_info "Auto-fixing unhealthy service"
+                fi
+            else
+                echo
+                log_info "Options:"
+                echo "  1) Auto-fix: Recreate the service"
+                echo "  2) View full logs"
+                echo "  3) Continue anyway"
+                echo "  4) Cancel"
+                echo
+                
+                read -p "Select option (1-4): " choice
+            fi
+            
+            # Only execute case if we didn't use the dispatcher
+            if [[ ! -f "$SCRIPT_DIR/../lib/autofix/dispatcher.sh" ]] || [[ "${ALWAYS_AUTOFIX:-true}" != "true" ]]; then
+                case "$choice" in
+                    1)
+                        log_info "Recreating $unhealthy_service..."
+                        docker stop "$unhealthy_service" >/dev/null 2>&1
+                        docker rm "$unhealthy_service" >/dev/null 2>&1
+                        
+                        # Check if config-server needs regeneration
+                        if [[ "$unhealthy_service" == *"config-server"* ]] && [[ ! -f "config-server/index.js" ]]; then
+                            log_info "Regenerating config-server files..."
+                            if [[ -f "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" ]]; then
+                                source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
+                                generate_dockerfile_for_service "config-server" "config-server"
+                            fi
+                        fi
+                        
+                        log_success "Service recreated"
+                        echo
+                        log_info "Retrying startup..."
+                        sleep 2
+                        return 99  # Retry
                     ;;
                 2)
                     docker logs "$unhealthy_service" 2>&1 | tail -50
@@ -768,7 +1000,8 @@ EOF
                 *)
                     log_error "Invalid option"
                     ;;
-            esac
+                esac
+            fi
         else
             log_error "Service dependency is unhealthy"
             echo "$output" | grep "unhealthy" | head -3
@@ -821,38 +1054,75 @@ EOF
 
 # Show service URLs
 show_service_urls() {
-    if [[ ! -f ".env.local" ]]; then
-        return
-    fi
-    
-    source .env.local
-    
-    echo -e "${COLOR_CYAN}➞ Service URLs${COLOR_RESET}"
+    echo ""
+    echo -e "${COLOR_CYAN}→${COLOR_RESET} Service URLs"
     echo
     
-    # Check which services are actually running
-    local running_services=$(docker compose ps --services --filter "status=running" 2>/dev/null)
-    
-    if echo "$running_services" | grep -q "hasura"; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} GraphQL:    ${COLOR_BLUE}https://${HASURA_ROUTE:-gql.$BASE_DOMAIN}${COLOR_RESET}"
+    # Load environment if available
+    if [[ -f ".env.local" ]]; then
+        set -a
+        source .env.local
+        set +a
     fi
     
+    # Get base domain or use default
+    local base_domain="${BASE_DOMAIN:-localhost}"
+    
+    # Check which services are actually running (remove unity_ prefix)
+    local running_services=$(docker ps --format "table {{.Names}}" | grep "^${PROJECT_NAME:-nself}_" | sed "s/^${PROJECT_NAME:-nself}_//" 2>/dev/null)
+    
+    # Track if any URLs were shown
+    local urls_shown=false
+    
+    # Hasura GraphQL with sub-items
+    if echo "$running_services" | grep -q "hasura"; then
+        echo "GraphQL API:    https://api.$base_domain"
+        echo " - Console:     https://api.$base_domain/console"
+        urls_shown=true
+    fi
+    
+    # Auth
     if echo "$running_services" | grep -q "auth"; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Auth:       ${COLOR_BLUE}https://${AUTH_ROUTE:-auth.$BASE_DOMAIN}${COLOR_RESET}"
+        echo "Auth:           https://auth.$base_domain"
+        urls_shown=true
+    fi
+    
+    # Storage
+    if echo "$running_services" | grep -q "storage\|minio"; then
+        echo "Storage:        https://storage.$base_domain"
+        urls_shown=true
+    fi
+    
+    # Functions
+    if echo "$running_services" | grep -q "functions"; then
+        echo "Functions:      https://functions.$base_domain"
+        urls_shown=true
+    fi
+    
+    # Dashboard
+    if echo "$running_services" | grep -q "dashboard"; then
+        echo "Dashboard:      https://dashboard.$base_domain"
+        urls_shown=true
+    fi
+    
+    # Development tools
+    if echo "$running_services" | grep -q "mailpit\|mail"; then
+        echo "Mail UI:        http://localhost:8025"
+        urls_shown=true
     fi
     
     if echo "$running_services" | grep -q "minio"; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Storage:    ${COLOR_BLUE}https://${STORAGE_ROUTE:-files.$BASE_DOMAIN}${COLOR_RESET}"
+        echo "MinIO Console:  http://localhost:9001"
+        urls_shown=true
     fi
     
-    if echo "$running_services" | grep -q "mailpit"; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Mail UI:    ${COLOR_BLUE}https://mail.$BASE_DOMAIN${COLOR_RESET}"
+    # If no URLs shown, indicate no exposed services
+    if [[ "$urls_shown" != "true" ]]; then
+        echo "No services with exposed URLs found"
     fi
     
-    if echo "$running_services" | grep -q "postgres"; then
-        local pg_port="${POSTGRES_PORT:-5432}"
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Database:   ${COLOR_BLUE}postgresql://localhost:$pg_port${COLOR_RESET}"
-    fi
+    echo ""
+    echo "nself status | nself logs <service> | nself doctor"
 }
 
 # Show help

@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2025-08-14
+
+### Added
+- **Standardized Command Headers**: All nself commands now use consistent header formatting
+  - Unified blue borders with bold titles and dim subtitles
+  - Centralized `show_command_header` function for consistency
+  - Professional boxed headers across all CLI commands
+
+### Fixed
+- **Header Formatting Issues**
+  - Removed extra spacing after title and subtitle lines
+  - Fixed color rendering in non-TTY environments
+  - Corrected header positioning in `nself up` to show before pre-flight checks
+  - Eliminated artifacts in database schema ready messages
+
+- **Service Detection**
+  - Fixed `nself down` container detection using direct docker ps instead of docker compose
+  - Resolved false "stopped" status for running containers
+  - Improved container state detection accuracy
+
+- **Auto-fix Syntax Errors**
+  - Fixed integer comparison errors in comprehensive.sh
+  - Cleaned grep output to prevent multi-line variable issues
+  - Resolved "syntax error in expression" during health checks
+
+- **nginx Configuration**
+  - Fixed storage service port mismatch (5000 → 5001)
+  - Updated deprecated http2 directive to modern syntax
+  - Resolved nginx restart loops during auto-fix
+
+### Improved
+- **Command Output Standards**
+  - Consistent header formatting across init, build, up, down, status, doctor, clean, restart
+  - Proper ANSI color preservation in all environments
+  - Better visual hierarchy with standardized spacing
+
 ## [0.3.3] - 2025-08-14
 
 ### Added
