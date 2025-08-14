@@ -1,13 +1,13 @@
-# Welcome to Nself
+# Welcome to nself
 
 > **The modern self-hosted backend infrastructure platform**
 
-Nself provides a complete, production-ready backend infrastructure that you can deploy on your own servers in minutes. Built on proven technologies like PostgreSQL, Hasura GraphQL, Redis, and Docker, Nself simplifies complex deployments while maintaining full control and flexibility.
+nself provides a complete, production-ready backend infrastructure that you can deploy on your own servers in minutes. Built on proven technologies like PostgreSQL, Hasura GraphQL, Redis, and Docker, nself simplifies complex deployments while maintaining full control and flexibility.
 
 ## 🚀 Quick Start
 
 ```bash
-# Install Nself CLI
+# Install nself CLI
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 
 # Initialize your project
@@ -25,19 +25,18 @@ Your complete backend is now running! 🎉
 ## 📖 Documentation Overview
 
 ### Getting Started
-- **[[Installation|INSTALLATION]]** - Install Nself on your system
 - **[[Examples|EXAMPLES]]** - Complete command examples with real outputs
 - **[[API Reference|API]]** - Comprehensive command reference
 - **[[Troubleshooting|TROUBLESHOOTING]]** - Solve common issues
 
 ### Configuration & Setup
 - **[[Environment Configuration|ENVIRONMENT_CONFIGURATION]]** - Configure your deployment
-- **[[Output Formatting|OUTPUT_FORMATTING]]** - UI and output standards
+- **[[Output Standards|OUTPUT_STANDARDS]]** - UI and output standards
 
 ### Architecture & Development
 - **[[Architecture|ARCHITECTURE]]** - System design and patterns
 - **[[Directory Structure|DIRECTORY_STRUCTURE]]** - Project organization
-- **[[Contributing|CONTRIBUTING]]** - Contribute to Nself
+- **[[Contributing|CONTRIBUTING]]** - Contribute to nself
 
 ### Reference
 - **[[Changelog|CHANGELOG]]** - Version history
@@ -117,7 +116,7 @@ nself scaffold python ml-service
 
 ## 📄 License
 
-Nself is dual-licensed:
+nself is dual-licensed:
 - **Personal/Open Source**: Free forever under MIT license
 - **Commercial**: Requires license for commercial use
 
@@ -125,4 +124,4 @@ See [LICENSE](https://github.com/acamarata/nself/blob/main/LICENSE) for details.
 
 ---
 
-**Current Version**: v0.3.2 | **Last Updated**: August 2025
+**Current Version**: v0.3.2-alpha | **Last Updated**: August 2025

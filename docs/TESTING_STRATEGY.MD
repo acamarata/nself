@@ -1,8 +1,8 @@
-# NSELF Testing Strategy
+# nself Testing Strategy
 
 ## Overview
 
-This document defines the comprehensive testing strategy for NSELF, enabling modular development where tested functions can be relied upon while developing new features.
+This document defines the comprehensive testing strategy for nself, enabling modular development where tested functions can be relied upon while developing new features.
 
 ## Testing Philosophy
 
@@ -544,9 +544,9 @@ bin/tests/run_single_test.sh test_is_valid_domain
 # Create reproducible test environment
 setup_test_environment() {
     export TEST_MODE=true
-    export NSELF_CONFIG_DIR="/tmp/nself_test_$$"
-    mkdir -p "$NSELF_CONFIG_DIR"
-    trap "rm -rf $NSELF_CONFIG_DIR" EXIT
+    export nself_CONFIG_DIR="/tmp/nself_test_$$"
+    mkdir -p "$nself_CONFIG_DIR"
+    trap "rm -rf $nself_CONFIG_DIR" EXIT
 }
 ```
 
@@ -559,4 +559,4 @@ This testing strategy enables:
 - **Better Code Quality**: Tests enforce good design
 - **Documentation**: Tests show how to use functions
 
-By following this strategy, we can refactor and extend NSELF with confidence, knowing that our foundation is solid and tested.
+By following this strategy, we can refactor and extend nself with confidence, knowing that our foundation is solid and tested.

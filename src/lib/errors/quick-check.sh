@@ -83,6 +83,7 @@ quick_docker_check() {
 # Run essential checks only
 run_essential_checks() {
     local failed=0
+    local interactive="${1:-true}"  # Default to interactive mode
     
     # Docker must be running
     if ! quick_docker_check; then
@@ -96,7 +97,12 @@ run_essential_checks() {
     
     # Check ports (non-critical)
     if ! quick_port_check; then
-        offer_port_solutions
+        if [[ "$interactive" == "true" ]]; then
+            offer_port_solutions
+        else
+            # In non-interactive mode, just return failure
+            return 1
+        fi
     fi
     
     return $failed
@@ -213,15 +219,41 @@ configure_alternative_ports() {
         log_success "Port configuration updated"
         
         # Auto rebuild so new ports take effect immediately
-        if [[ -n "${NSELF_ROOT:-}" ]] && [[ -x "$NSELF_ROOT/src/cli/build.sh" ]]; then
-            log_info "Rebuilding configuration to apply new ports..."
-            bash "$NSELF_ROOT/src/cli/build.sh" || {
-                log_warning "Rebuild failed; you can run 'nself build' manually"
-                return 0
-            }
-            log_success "Rebuild complete"
+        log_info "Rebuilding configuration with new ports..."
+        
+        # Try multiple ways to find and run build
+        local build_success=false
+        
+        # Method 1: Use nself command directly
+        if command -v nself >/dev/null 2>&1; then
+            if nself build >/dev/null 2>&1; then
+                build_success=true
+            fi
+        fi
+        
+        # Method 2: Find build.sh relative to this script
+        if [[ "$build_success" == "false" ]]; then
+            local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+            if [[ -f "$script_dir/../../cli/build.sh" ]]; then
+                if bash "$script_dir/../../cli/build.sh" >/dev/null 2>&1; then
+                    build_success=true
+                fi
+            fi
+        fi
+        
+        # Method 3: Check NSELF_ROOT
+        if [[ "$build_success" == "false" ]] && [[ -n "${NSELF_ROOT:-}" ]]; then
+            if [[ -x "$NSELF_ROOT/src/cli/build.sh" ]]; then
+                if bash "$NSELF_ROOT/src/cli/build.sh" >/dev/null 2>&1; then
+                    build_success=true
+                fi
+            fi
+        fi
+        
+        if [[ "$build_success" == "true" ]]; then
+            log_success "Configuration rebuilt with new ports"
         else
-            log_info "Note: Run 'nself build' for changes to take effect"
+            log_warning "Could not auto-rebuild; run 'nself build' manually"
         fi
     fi
 }

@@ -7,22 +7,22 @@ This directory contains complete documentation for developers, contributors, and
 ## 📚 Documentation Index
 
 ### Getting Started
-- **[EXAMPLES.md](EXAMPLES.md)** - 🎯 Complete command examples with actual outputs
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 🔧 Diagnose and fix common issues
-- **[API.md](API.md)** - 📖 Complete command reference and usage
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - 🤝 Guidelines for contributing to the project
+- **[EXAMPLES.MD](EXAMPLES.MD)** - 🎯 Complete command examples with actual outputs
+- **[TROUBLESHOOTING.MD](TROUBLESHOOTING.MD)** - 🔧 Diagnose and fix common issues
+- **[API.MD](API.MD)** - 📖 Complete command reference and usage
+- **[CONTRIBUTING.MD](CONTRIBUTING.MD)** - 🤝 Guidelines for contributing to the project
 
 ### Architecture & Design
 - **[ARCHITECTURE.MD](ARCHITECTURE.MD)** - 🏗️ System design, principles, and patterns
 - **[DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD)** - 📁 Complete file organization map
 - **[CODE_STYLE.MD](CODE_STYLE.MD)** - ✨ Coding standards and best practices
-- **[DECISIONS.md](DECISIONS.md)** - 🎯 Architectural decision records
-- **[OUTPUT_FORMATTING.MD](OUTPUT_FORMATTING.MD)** - 🖥️ User interface and output standards
+- **[DECISIONS.MD](DECISIONS.MD)** - 🎯 Architectural decision records
+- **[OUTPUT_STANDARDS.MD](OUTPUT_STANDARDS.MD)** - 🖥️ User interface and output standards
 
 ### Development & Testing
 - **[TESTING_STRATEGY.MD](TESTING_STRATEGY.MD)** - 🧪 Testing approaches and guidelines
 - **[REFACTORING_ROADMAP.MD](REFACTORING_ROADMAP.MD)** - 🚀 Future improvements and technical debt
-- **[CHANGELOG.md](CHANGELOG.md)** - 📝 Version history and release notes
+- **[CHANGELOG.MD](CHANGELOG.MD)** - 📝 Version history and release notes
 
 ## 🎯 Quick Navigation
 
@@ -30,13 +30,13 @@ This directory contains complete documentation for developers, contributors, and
 
 #### For New Users
 Start here to get nself running:
-1. [EXAMPLES.md](EXAMPLES.md) - See what nself can do
-2. [API.md](API.md) - Learn the commands
-3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Fix any issues
+1. [EXAMPLES.MD](EXAMPLES.MD) - See what nself can do
+2. [API.MD](API.MD) - Learn the commands
+3. [TROUBLESHOOTING.MD](TROUBLESHOOTING.MD) - Fix any issues
 
 #### For Contributors
 Want to contribute? Read these:
-1. [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+1. [CONTRIBUTING.MD](CONTRIBUTING.MD) - Contribution guidelines
 2. [ARCHITECTURE.MD](ARCHITECTURE.MD) - Understand the system
 3. [CODE_STYLE.MD](CODE_STYLE.MD) - Follow coding standards
 4. [TESTING_STRATEGY.MD](TESTING_STRATEGY.MD) - Test your changes
@@ -45,8 +45,8 @@ Want to contribute? Read these:
 Documentation designed for programmatic access:
 1. [ARCHITECTURE.MD](ARCHITECTURE.MD) - System design patterns
 2. [DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD) - File locations
-3. [API.md](API.md) - Command specifications
-4. [OUTPUT_FORMATTING.MD](OUTPUT_FORMATTING.MD) - Output parsing
+3. [API.MD](API.MD) - Command specifications
+4. [OUTPUT_STANDARDS.MD](OUTPUT_STANDARDS.MD) - Output parsing
 
 ## 📖 Documentation Highlights
 
@@ -54,9 +54,12 @@ Documentation designed for programmatic access:
 Every single nself command documented with real output:
 ```bash
 $ nself init
-╔════════════════════════════════════════════════════════════════╗
-║                NSELF PROJECT INITIALIZATION                    ║
-╚════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║   Welcome to nself - Modern Full-Stack Platform          ║
+║   Build production-ready applications with ease          ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
 [INFO] Initializing project: myproject
 [SUCCESS] Created .env.local
 ```

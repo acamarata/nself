@@ -1,4 +1,4 @@
-# NSELF Releases
+# nself Releases
 
 ## [v0.3.0] - August 11, 2025
 
@@ -191,7 +191,7 @@ First step towards modular architecture with basic error handling.
 
 ### 🎉 Initial Release
 
-The first public release of NSELF - a comprehensive local development environment for modern web applications.
+The first public release of nself - a comprehensive local development environment for modern web applications.
 
 ### ✨ Core Features
 

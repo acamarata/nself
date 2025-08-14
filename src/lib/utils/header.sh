@@ -138,7 +138,7 @@ show_header() {
     local title="$1"
     local content="$2"
     echo
-    generate_header "$title" "$content"
+    echo -e "${COLOR_CYAN}$(generate_header "$title" "$content")${COLOR_RESET}"
     echo
 }
 
