@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# nself.sh - Main wrapper for NSELF commands
+# nself.sh - Main wrapper for nself commands
 
-# Don't use strict mode until after sourcing
-set -eo pipefail
+# Use error handling but allow sourcing to fail gracefully
+set -o pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -105,9 +105,14 @@ main() {
     local cmd_function="cmd_${command//-/_}"
     
     # Check if the file uses cmd_ function pattern
-    if grep -q "^$cmd_function()" "$command_file"; then
+    if grep -q "^$cmd_function()" "$command_file" 2>/dev/null; then
         # Source the file and call the function
         source "$command_file"
+        local result=$?
+        if [[ $result -ne 0 ]]; then
+            # Source failed
+            return $result
+        fi
         "$cmd_function" "$@"
     else
         # File executes directly - just run it with bash

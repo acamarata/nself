@@ -206,7 +206,6 @@ Be respectful, inclusive, and professional. We're building infrastructure tools 
 
 ### Test Directory Structure
 ```
-.claude/test/          # AI agent testing
 ~/test-nself/         # Manual testing
 /tmp/nself-test-*/    # Automated test runs
 ```
@@ -290,7 +289,7 @@ Special documentation in `/docs/` helps AI agents understand the codebase:
 - **ARCHITECTURE.MD** - System design and principles
 - **CODE_STYLE.MD** - Detailed coding patterns
 - **DIRECTORY_STRUCTURE.MD** - File organization
-- **OUTPUT_FORMATTING.MD** - User interface standards
+- **OUTPUT_STANDARDS.MD** - User interface and output standards
 
 AI agents should reference these when making changes.
 

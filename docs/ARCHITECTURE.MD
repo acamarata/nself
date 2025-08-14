@@ -1,52 +1,67 @@
-# NSELF Architecture Documentation
+# nself Architecture Documentation
 
 ## Overview
 
-NSELF is a comprehensive CLI tool for managing self-hosted infrastructure stacks. This document outlines the target architecture for maintainability, scalability, and professional code organization.
+nself is a comprehensive CLI tool for managing self-hosted infrastructure stacks. This document outlines the current architecture, design patterns, and system organization.
 
-## Current Issues
+## Current Architecture
 
-### 1. Monolithic Script Problem
-- **Main script size**: 2,800+ lines in single file
-- **Mixed concerns**: Business logic, UI, error handling all intertwined
-- **Difficult debugging**: Hard to isolate issues
-- **Testing challenges**: Cannot test components independently
-
-### 2. Code Duplication
-- Multiple definitions of same functions across files
-- Inconsistent utility usage
-- Repeated error handling patterns
-- No centralized configuration
-
-### 3. Complex Auto-Fix Logic
-- 500+ lines of nested if-else chains in `cmd_up()`
-- Silent failures without user notification
-- Difficult to understand failure causes
-- Unmaintainable error recovery
-
-## Target Architecture
-
-### Modular Design Principles
+### Directory Structure
 
 ```
-bin/
-├── nself.sh                     # Thin wrapper (50-100 lines)
-├── core/                        # Core functionality
-│   ├── commands/                # Individual command implementations
-│   ├── services/                # Service management
-│   └── utils/                   # Shared utilities
-├── shared/                      # Shared resources
-│   ├── constants.sh             # Global constants
-│   ├── hooks/                   # Pre/post command hooks
+src/
+├── cli/                         # Command implementations
+│   ├── nself.sh                 # Main entry point and command router
+│   ├── init.sh                  # Project initialization
+│   ├── build.sh                 # Infrastructure building
+│   ├── up.sh                    # Service startup with auto-fix
+│   ├── down.sh                  # Service shutdown
+│   ├── status.sh                # Service health checks
+│   ├── logs.sh                  # Log viewing
+│   ├── doctor.sh                # System diagnostics
+│   ├── db.sh                    # Database management
+│   ├── email.sh                 # Email configuration
+│   ├── scaffold.sh              # Service scaffolding
+│   └── ...                      # Other commands
+├── lib/                         # Core libraries
+│   ├── auto-fix/                # Auto-fix and validation
+│   │   ├── auto-fixer-v2.sh    # Enhanced auto-fix logic
+│   │   ├── config-validator-v2.sh # Configuration validation
+│   │   ├── postgres-extensions.sh # PostgreSQL extension management
+│   │   └── ...                  # Other auto-fix modules
+│   ├── config/                  # Configuration management
+│   │   ├── constants.sh         # Global constants
+│   │   ├── defaults.sh          # Default values
+│   │   └── smart-defaults.sh    # Intelligent default detection
+│   ├── errors/                  # Error handling
+│   │   ├── base.sh              # Base error definitions
+│   │   ├── handlers/            # Specific error handlers
+│   │   └── scanner.sh           # Error detection
+│   ├── hooks/                   # Command hooks
+│   │   ├── pre-command.sh       # Pre-execution hooks
+│   │   └── post-command.sh      # Post-execution hooks
 │   └── utils/                   # Utility functions
-├── config/                      # Configuration management
-│   ├── defaults.sh              # Default values
-│   ├── validation.sh            # Validation logic
-│   └── environment.sh           # Environment loading
-└── tools/                       # Specialized tools
-    ├── db/                      # Database operations
-    ├── email/                   # Email configuration
-    └── security/                # Security utilities
+│       ├── display.sh           # UI and formatting
+│       ├── docker.sh            # Docker operations
+│       ├── env.sh               # Environment management
+│       ├── header.sh            # Banner display
+│       ├── output-formatter-v2.sh # Enhanced output formatting
+│       └── validation.sh        # Input validation
+├── services/                    # Service management
+│   └── docker/                  # Docker compose generation
+│       ├── compose-generate.sh  # Main compose file generator
+│       └── services-generate.sh # Service-specific generation
+├── templates/                   # Service templates
+│   ├── .env.example             # Environment template
+│   ├── hasura/                  # Hasura templates
+│   └── services/                # Microservice templates
+│       ├── nest/                # NestJS templates
+│       ├── bullmq/              # BullMQ worker templates
+│       ├── go/                  # Go service templates
+│       └── py/                  # Python service templates
+└── tests/                       # Test suite
+    ├── nself_tests.bats         # Main test suite
+    └── test_framework.sh        # Test utilities
 ```
 
 ### Component Responsibilities

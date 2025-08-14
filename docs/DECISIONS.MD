@@ -288,7 +288,7 @@ Focus on manual testing with clear test procedures.
 - **Documentation**: Test procedures serve as documentation
 
 ### Approach
-1. Clear test directories (`.claude/test/`)
+1. Clear test directories
 2. Documented test procedures
 3. End-to-end testing focus
 4. Real Docker/system testing
