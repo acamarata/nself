@@ -503,10 +503,7 @@ show_recommendations() {
 
 # Main function
 main() {
-    echo ""
-    echo "nself Doctor v0.3.0"
-    echo "System Diagnostics & Health Check"
-    echo "══════════════════════════════════════════════════════════════════"
+    show_command_header "nself doctor" "System diagnostics and health checks"
     
     show_system_info
     
