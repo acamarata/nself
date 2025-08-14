@@ -1,8 +1,8 @@
-# NSELF Refactoring Roadmap
+# nself Refactoring Roadmap
 
 ## Executive Summary
 
-This roadmap outlines the systematic refactoring of NSELF from a monolithic 2,800+ line script to a modular, maintainable architecture. The refactoring will be done in phases to minimize disruption while improving code quality.
+This roadmap outlines the systematic refactoring of nself from a monolithic 2,800+ line script to a modular, maintainable architecture. The refactoring will be done in phases to minimize disruption while improving code quality.
 
 ## Current State Analysis
 
@@ -388,7 +388,7 @@ check_service_health() {
 
 ## Conclusion
 
-This refactoring roadmap transforms NSELF from a monolithic script to a modular, maintainable, and extensible tool. The phased approach minimizes risk while delivering incremental improvements. Success depends on:
+This refactoring roadmap transforms nself from a monolithic script to a modular, maintainable, and extensible tool. The phased approach minimizes risk while delivering incremental improvements. Success depends on:
 
 1. **Systematic execution** of each phase
 2. **Comprehensive testing** at every step

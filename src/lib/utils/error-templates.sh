@@ -150,7 +150,7 @@ show_disk_space_error() {
     echo -e "     ${BOLD}docker system prune -a --volumes${RESET}"
     echo -e "     ${DIM}This will remove all unused containers, images, and volumes${RESET}"
     
-    echo -e "\n  ${BLUE}2.${RESET} Remove old NSelf builds:"
+    echo -e "\n  ${BLUE}2.${RESET} Remove old nself builds:"
     echo -e "     ${BOLD}rm -rf ./generated ./node_modules ./services/*/node_modules${RESET}"
     
     case "$PLATFORM" in
@@ -278,7 +278,7 @@ show_welcome_message() {
     echo
     echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
-    echo -e "${BLUE}║${RESET}   ${BOLD}Welcome to NSelf${RESET} - Modern Full-Stack Platform       ${BLUE}║${RESET}"
+    echo -e "${BLUE}║${RESET}   ${BOLD}Welcome to nself${RESET} - Modern Full-Stack Platform       ${BLUE}║${RESET}"
     echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
     echo -e "${BLUE}║${RESET}   ${DIM}Build production-ready applications with ease${RESET}       ${BLUE}║${RESET}"
     echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"

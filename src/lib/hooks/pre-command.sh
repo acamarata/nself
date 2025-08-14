@@ -67,8 +67,6 @@ check_not_in_nself_repo() {
         log_info "  1. Create a project directory: mkdir ~/myproject && cd ~/myproject"
         log_info "  2. Initialize the project: nself init"
         log_info "  3. Build and run: nself build && nself up"
-        echo ""
-        log_info "For testing, use: cd .claude/test/mytest && nself init"
         return 1
     fi
     

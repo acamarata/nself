@@ -25,7 +25,7 @@ cmd_version() {
     local version=$(get_version)
     
     if [[ "$verbose" == "--verbose" ]] || [[ "$verbose" == "-v" ]]; then
-        show_header "Nself Version Information"
+        show_header "nself Version Information"
         echo "Version:     $version"
         echo "Location:    $SCRIPT_DIR"
         echo "Config:      ${ENV_FILE:-.env.local}"

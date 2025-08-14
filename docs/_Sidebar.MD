@@ -1,4 +1,4 @@
-# Nself Documentation
+# nself Documentation
 
 ## 🏠 Overview
 * [[Home|Home]]
@@ -7,7 +7,6 @@
 * [[Troubleshooting|TROUBLESHOOTING]]
 
 ## 🚀 Getting Started
-* [[Installation|INSTALLATION]]
 * [[Environment Config|ENVIRONMENT_CONFIGURATION]]
 * [[Contributing|CONTRIBUTING]]
 
@@ -15,7 +14,7 @@
 * [[Architecture|ARCHITECTURE]]
 * [[Directory Structure|DIRECTORY_STRUCTURE]]
 * [[Code Style|CODE_STYLE]]
-* [[Output Formatting|OUTPUT_FORMATTING]]
+* [[Output Standards|OUTPUT_STANDARDS]]
 * [[Decisions|DECISIONS]]
 
 ## 📚 Development
@@ -28,11 +27,6 @@
 * [[Releases|RELEASES]]
 * [[Migration 0.2.x→0.3.0|MIGRATION_0.2.x_to_0.3.0]]
 
-## 🔧 Advanced
-* [[Development Guide|DEVELOPMENT_GUIDE]]
-* [[Error Handling|ERROR_HANDLING_GUIDE]]
-* [[Email Providers|EMAIL_PROVIDERS]]
-
 ---
 
-**v0.3.2** | [GitHub](https://github.com/acamarata/nself)
+**v0.3.3** | [GitHub](https://github.com/acamarata/nself)

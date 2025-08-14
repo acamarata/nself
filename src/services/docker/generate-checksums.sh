@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# generate-checksums.sh - Generate SHA256 checksums for NSELF files
+# generate-checksums.sh - Generate SHA256 checksums for nself files
 
 set -e
 
-echo "Generating checksums for NSELF files..."
+echo "Generating checksums for nself files..."
 
 # Change to script directory
 cd "$(dirname "$0")"

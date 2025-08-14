@@ -1,4 +1,4 @@
-# NSELF Code Style Guide
+# nself Code Style Guide
 
 ## Shell Script Standards
 
@@ -51,8 +51,8 @@ local is_valid=false
 local retry_count=0
 
 # Environment variables (uppercase with underscores)
-export NSELF_DEBUG="${NSELF_DEBUG:-false}"
-export NSELF_CONFIG_DIR="${NSELF_CONFIG_DIR:-$HOME/.nself}"
+export nself_DEBUG="${nself_DEBUG:-false}"
+export nself_CONFIG_DIR="${nself_CONFIG_DIR:-$HOME/.nself}"
 ```
 
 #### Functions

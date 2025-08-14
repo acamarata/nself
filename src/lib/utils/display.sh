@@ -42,19 +42,23 @@ fi
 
 # Logging functions - All commands must use these
 log_info() {
-    printf "%b[INFO]%b %s\n" "${COLOR_BLUE}" "${COLOR_RESET}" "$1"
+    printf "%bℹ%b %s\n" "${COLOR_BLUE}" "${COLOR_RESET}" "$1"
 }
 
 log_success() {
-    printf "%b[SUCCESS]%b %s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "$1"
+    printf "%b✓%b %s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "$1"
+}
+
+log_secondary() {
+    printf "%b✓%b %s\n" "${COLOR_BLUE}" "${COLOR_RESET}" "$1"
 }
 
 log_warning() {
-    printf "%b[WARNING]%b %s\n" "${COLOR_YELLOW}" "${COLOR_RESET}" "$1" >&2
+    printf "%b✱%b %s\n" "${COLOR_YELLOW}" "${COLOR_RESET}" "$1" >&2
 }
 
 log_error() {
-    printf "%b[ERROR]%b %s\n" "${COLOR_RED}" "${COLOR_RESET}" "$1" >&2
+    printf "%b✗%b %s\n" "${COLOR_RED}" "${COLOR_RESET}" "$1" >&2
 }
 
 log_debug() {
@@ -148,7 +152,7 @@ strip_colors() {
 }
 
 # Export all functions
-export -f log_info log_success log_warning log_error log_debug log_header
+export -f log_info log_success log_secondary log_warning log_error log_debug log_header
 export -f show_header show_section
 export -f show_table_header show_table_row show_table_footer
 export -f draw_box strip_colors

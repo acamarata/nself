@@ -1,8 +1,8 @@
-# NSELF Directory Structure Guide
+# nself Directory Structure Guide
 
 ## Overview
 
-This document defines the standard directory structure for the NSELF tool, organizing code for maintainability, scalability, and clarity.
+This document defines the standard directory structure for the nself tool, organizing code for maintainability, scalability, and clarity.
 
 ## Root Directory Structure
 
@@ -13,7 +13,6 @@ nself/
 ├── LICENSE                      # License information  
 ├── install.sh                   # Installation script
 ├── .gitignore                   # Git ignore patterns
-├── .claude/                     # AI assistant workspace (gitignored)
 └── bin/                         # Main tool directory
 ```
 

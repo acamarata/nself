@@ -44,7 +44,7 @@ $ nself init
 **Output:**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║                NSELF PROJECT INITIALIZATION                    ║
+║   Welcome to nself - Modern Full-Stack Platform                ║
 ╚════════════════════════════════════════════════════════════════╝
 
 [INFO] Initializing project: myproject
@@ -83,7 +83,7 @@ $ nself init myapp api.example.com
 **Output:**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║                NSELF PROJECT INITIALIZATION                    ║
+║   Welcome to nself - Modern Full-Stack Platform                ║
 ╚════════════════════════════════════════════════════════════════╝
 
 [INFO] Initializing project: myapp
@@ -105,7 +105,7 @@ $ nself init
 **Output (when .env.local exists):**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║                NSELF PROJECT INITIALIZATION                    ║
+║   Welcome to nself - Modern Full-Stack Platform                ║
 ╚════════════════════════════════════════════════════════════════╝
 
 [WARNING] Project already initialized (.env.local exists)
@@ -1565,7 +1565,7 @@ $ nself update
 **Output:**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║                      NSELF UPDATE                              ║
+║                    nself Update Check                          ║
 ╚════════════════════════════════════════════════════════════════╝
 
 [INFO] Current version: 0.3.0
@@ -1651,7 +1651,7 @@ $ nself version --verbose
 **Output:**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║                   NSELF VERSION INFORMATION                    ║
+║                  nself Version Information                     ║
 ╚════════════════════════════════════════════════════════════════╝
 
 Version:     0.3.0
@@ -1691,7 +1691,7 @@ $ nself help
 **Output:**
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║          NSELF - Self-Hosted Infrastructure Manager            ║
+║               nself - Modern Full-Stack Platform               ║
 ╚════════════════════════════════════════════════════════════════╝
 
 Version: 0.3.0

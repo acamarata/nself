@@ -1,8 +1,8 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../utils/display.sh"
-source "${SCRIPT_DIR}/../utils/output-formatter.sh"
+AUTO_FIXER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${AUTO_FIXER_DIR}/../utils/display.sh"
+source "${AUTO_FIXER_DIR}/../utils/output-formatter.sh"
 
 # Apply a single auto-fix
 apply_auto_fix() {
@@ -18,7 +18,7 @@ apply_auto_fix() {
         create_minimal_config)
             format_info "Creating minimal configuration..."
             cat > "$env_file" << 'EOF'
-# NSelf Minimal Configuration
+# nself Minimal Configuration
 PROJECT_NAME=myproject
 
 # Uncomment to enable optional services:

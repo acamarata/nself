@@ -178,7 +178,7 @@ generate_env_template() {
     local template_file="${1:-.env.example}"
     
     cat > "$template_file" << 'EOF'
-# NSELF Environment Configuration
+# nself Environment Configuration
 
 # Project Settings
 PROJECT_NAME=myproject

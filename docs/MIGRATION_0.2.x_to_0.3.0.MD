@@ -167,7 +167,7 @@ export PATH="$HOME/.nself/bin:$PATH"
 ## Support
 
 For issues or questions:
-- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- Check [TROUBLESHOOTING.MD](TROUBLESHOOTING.MD)
 - Run `nself doctor` for diagnostics
 - Report issues at https://github.com/acamarata/nself/issues
 

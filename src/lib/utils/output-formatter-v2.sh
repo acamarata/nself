@@ -341,7 +341,7 @@ show_welcome_banner() {
     echo
     echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
     echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${BOLD}${ICON_ROCKET} Welcome to NSelf ${ICON_ROCKET}${RESET}                              ${BLUE}${BOX_VERTICAL}${RESET}"
+    echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${BOLD}${ICON_ROCKET} Welcome to nself ${ICON_ROCKET}${RESET}                              ${BLUE}${BOX_VERTICAL}${RESET}"
     echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Modern Full-Stack Platform${RESET}                           ${BLUE}${BOX_VERTICAL}${RESET}"
     echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
     echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Build production-ready applications with ease${RESET}         ${BLUE}${BOX_VERTICAL}${RESET}"

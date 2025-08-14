@@ -1,8 +1,8 @@
-# NSelf v0.3.1 Release Notes
+# nself v0.3.1 Release Notes
 
 ## Enhanced Configuration Validation & Auto-Fix System
 
-This release significantly improves NSelf's robustness by addressing 22+ configuration validation issues identified through comprehensive testing. Users will now experience automatic fixes for common configuration mistakes and professional-quality output formatting.
+This release significantly improves nself's robustness by addressing 22+ configuration validation issues identified through comprehensive testing. Users will now experience automatic fixes for common configuration mistakes and professional-quality output formatting.
 
 ### 🎯 Key Improvements
 
@@ -64,7 +64,6 @@ This release significantly improves NSelf's robustness by addressing 22+ configu
 - `src/lib/auto-fix/auto-fixer-v2.sh` - Comprehensive auto-fix system
 - `src/lib/utils/header.sh` - Professional header formatting
 - `src/lib/utils/preflight.sh` - Pre-command validation checks
-- `.claude/test/test-all-validations.sh` - Comprehensive test suite
 
 #### **Files Enhanced**
 - `src/lib/utils/error-templates.sh` - Perfect text alignment

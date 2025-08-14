@@ -62,21 +62,33 @@ EOF
   done
 fi
 
-# BullMQ Workers
-if [[ "$BULLMQ_ENABLED" == "true" ]]; then
-  IFS=',' read -ra BULLMQ_WORKER_LIST <<< "$BULLMQ_WORKERS"
+# BullMQ Workers - Support both BULL_SERVICES and BULLMQ_WORKERS variables
+if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
+  # Use BULL_SERVICES if set, otherwise use BULLMQ_WORKERS
+  WORKER_LIST="${BULL_SERVICES:-$BULLMQ_WORKERS}"
+  IFS=',' read -ra BULLMQ_WORKER_LIST <<< "$WORKER_LIST"
   
   for worker in "${BULLMQ_WORKER_LIST[@]}"; do
     worker=$(echo "$worker" | xargs)
     
+    # Check which directory exists - support both bull and bullmq paths
+    if [[ -d "./services/bull/$worker" ]]; then
+      BULL_PATH="./services/bull/$worker"
+    elif [[ -d "./services/bullmq/$worker" ]]; then
+      BULL_PATH="./services/bullmq/$worker"
+    else
+      # Default to bull if neither exists
+      BULL_PATH="./services/bull/$worker"
+    fi
+    
     cat >> docker-compose.yml << EOF
 
   # BullMQ Worker: $worker
-  ${PROJECT_NAME}-bullmq-$worker:
+  ${PROJECT_NAME}-bull-$worker:
     build:
-      context: ./services/bullmq/$worker
+      context: $BULL_PATH
       dockerfile: Dockerfile
-    container_name: ${PROJECT_NAME}_bullmq_$worker
+    container_name: ${PROJECT_NAME}_bull_$worker
     restart: unless-stopped
     environment:
       - NODE_ENV=${ENVIRONMENT}
@@ -107,7 +119,7 @@ EOF
     networks:
       - default
     volumes:
-      - ./services/bullmq/$worker:/app:ro
+      - $BULL_PATH:/app:ro
     healthcheck:
       test: ["CMD", "node", "-e", "const redis = require('ioredis'); const client = new redis('redis', 6379); client.ping().then(() => process.exit(0)).catch(() => process.exit(1))"]
       interval: 30s

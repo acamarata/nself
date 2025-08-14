@@ -1,161 +1,132 @@
 #!/usr/bin/env bash
-# init.sh - Initialize a new nself project with environment files only
+# init.sh - Initialize a new nself project with environment files
 
-# Source utilities
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source files with error handling
+# Source minimal display utilities for colors and formatting
 for file in \
     "$SCRIPT_DIR/../lib/utils/display.sh" \
-    "$SCRIPT_DIR/../lib/utils/output-formatter.sh" \
-    "$SCRIPT_DIR/../lib/utils/platform.sh" \
-    "$SCRIPT_DIR/../lib/utils/error-templates.sh" \
-    "$SCRIPT_DIR/../lib/utils/preflight.sh" \
-    "$SCRIPT_DIR/../lib/config/smart-defaults.sh" \
-    "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
-    "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
+    "$SCRIPT_DIR/../lib/utils/output-formatter.sh"; do
     if [[ -f "$file" ]]; then
-        source "$file"
-    else
-        echo "Warning: Missing file $file" >&2
+        source "$file" 2>/dev/null || true
     fi
 done
 
+# Fallback colors and functions if display utilities not loaded
+if ! type -t log_error >/dev/null 2>&1; then
+    log_error() { echo "${RED}✗${RESET} $*" >&2; }
+    log_info() { echo "${BLUE}ℹ${RESET} $*" >&2; }
+    log_success() { echo "${GREEN}✓${RESET} $*" >&2; }
+    log_secondary() { echo "${BLUE}✓${RESET} $*" >&2; }
+fi
+
+# Define colors - use if available, otherwise empty
+GREEN="${COLOR_GREEN:-}"
+RED="${COLOR_RED:-}"
+YELLOW="${COLOR_YELLOW:-}"
+BLUE="${COLOR_BLUE:-}"
+CYAN="${COLOR_CYAN:-}"
+RESET="${COLOR_RESET:-}"
+BOLD="${COLOR_BOLD:-}"
+DIM="${COLOR_DIM:-}"
+
 # Command function
 cmd_init() {
-    # Run pre-flight checks
-    if ! preflight_init; then
+    # Check not in nself source directory
+    if [[ -f "bin/nself" ]] && [[ -d "src/cli" ]] && [[ -f "install.sh" ]]; then
+        echo ""
+        log_error "Cannot run nself commands in the nself source repository!"
+        echo ""
+        echo "Please run from a separate project directory:"
+        echo "  mkdir ~/myproject && cd ~/myproject"
+        echo "  nself init"
         return 1
     fi
     
-    show_welcome_message
+    # Check if project already exists (docker-compose.yml indicates built project)
+    if [[ -f "docker-compose.yml" ]]; then
+        echo ""
+        log_error "Existing project detected (docker-compose.yml found)"
+        echo ""
+        log_info "This project has already been built."
+        echo "Use 'nself status' to check services"
+        echo "Use 'nself reset' if you want to start fresh"
+        return 1
+    fi
     
-    # Check if already initialized
-    if [[ -f ".env.local" ]]; then
-        log_warning "Project already initialized (.env.local exists)"
-        read -p "Overwrite existing configuration? [y/N]: " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Initialization cancelled"
-            return 1
+    # Show welcome banner
+    echo ""
+    echo "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
+    echo "${BLUE}║                                                          ║${RESET}"
+    echo "${BLUE}║   Welcome to ${CYAN}nself${BLUE} - Modern Full-Stack Platform          ║${RESET}"
+    echo "${BLUE}║   Build production ready applications with ease          ║${RESET}"
+    echo "${BLUE}║                                                          ║${RESET}"
+    echo "${BLUE}╚══════════════════════════════════════════════════════════╝${RESET}"
+    echo ""
+    
+    # Check if already initialized and backup if needed
+    if [[ -f ".env.local" ]] || [[ -f ".env.example" ]]; then
+        if [[ -f ".env.local" ]]; then
+            mv .env.local .env.local.backup
         fi
-        # Backup existing files
-        [[ -f ".env.local" ]] && mv .env.local .env.local.old
-        [[ -f ".env" ]] && mv .env .env.old
-        [[ -f ".env.example" ]] && mv .env.example .env.example.old
-        log_info "Existing files backed up with .old suffix"
+        if [[ -f ".env.example" ]]; then
+            mv .env.example .env.example.backup
+        fi
+        log_secondary "Existing env files backed up with .backup suffix"
     fi
     
-    # Get templates directory
-    local TEMPLATES_DIR="$SCRIPT_DIR/../../bin/templates"
+    # Get templates directory - check multiple possible locations
+    local TEMPLATES_DIR=""
     
-    # Fallback to src/templates if bin/templates doesn't exist
-    if [[ ! -d "$TEMPLATES_DIR" ]]; then
+    # Check if we're running from installed location (bin/nself)
+    if [[ -d "$SCRIPT_DIR/../../bin/templates" ]]; then
+        TEMPLATES_DIR="$SCRIPT_DIR/../../bin/templates"
+    # Check if we're running from source (src/cli/init.sh)
+    elif [[ -d "$SCRIPT_DIR/../templates" ]]; then
         TEMPLATES_DIR="$SCRIPT_DIR/../templates"
-    fi
-    
-    # Copy .env.example (reference file)
-    if [[ -f "$TEMPLATES_DIR/.env.example" ]]; then
-        cp "$TEMPLATES_DIR/.env.example" .env.example
-        log_success "Created .env.example (reference documentation)"
-    fi
-    
-    # Copy minimal .env.local template
-    if [[ -f "$TEMPLATES_DIR/.env.local" ]]; then
-        cp "$TEMPLATES_DIR/.env.local" .env.local
-        log_success "Created .env.local (your configuration file)"
     else
-        # Create a minimal .env.local if template doesn't exist
-        cat > .env.local << 'EOF'
-# ╔══════════════════════════════════════════════════════════╗
-# ║               Nself PROJECT CONFIGURATION                ║
-# ║                                                          ║
-# ║   Minimal config - Nself uses smart defaults for rest.   ║
-# ║   See .env.example for ALL available options.            ║
-# ╚══════════════════════════════════════════════════════════╝
-
-# Project name (lowercase, no spaces)
-PROJECT_NAME=myproject
-
-# Optional: Uncomment and modify these for production
-# ─────────────────────────────────────────────────────
-
-# ENV=prod                              # Switch to production mode
-# BASE_DOMAIN=yourdomain.com           # Your custom domain
-
-# Security (generate with: openssl rand -base64 32)
-# POSTGRES_PASSWORD=changeme
-# HASURA_GRAPHQL_ADMIN_SECRET=changeme
-# HASURA_JWT_KEY=changeme-minimum-32-characters-long
-# HASURA_JWT_TYPE=HS256
-
-# Optional Services (uncomment to enable)
-# ────────────────────────────────────────
-# REDIS_ENABLED=true                    # Redis caching
-# FUNCTIONS_ENABLED=true                # Serverless functions
-# DASHBOARD_ENABLED=true                # Admin dashboard
-
-# Microservices (uncomment to enable)
-# ────────────────────────────────────
-# SERVICES_ENABLED=true
-# NESTJS_ENABLED=true
-# NESTJS_SERVICES=api,webhooks
-# BULLMQ_ENABLED=true
-# BULLMQ_WORKERS=email-worker,payment-processor
-# BULLMQ_DASHBOARD_ENABLED=true
-# GOLANG_ENABLED=true
-# GOLANG_SERVICES=gateway
-# PYTHON_ENABLED=true
-# PYTHON_SERVICES=ml-model
-
-# For more options, see .env.example or run: nself help config
-EOF
-        log_success "Created .env.local with defaults"
+        log_error "Cannot find templates directory"
+        echo "Please ensure nself is properly installed"
+        return 1
     fi
     
-    # Validate the created configuration
-    format_info "Validating initial configuration..."
-    VALIDATION_ERRORS=()
-    VALIDATION_WARNINGS=()
-    AUTO_FIXES=()
-    
-    run_validation .env.local
-    
-    # Apply auto-fixes if needed
-    if [[ ${#AUTO_FIXES[@]} -gt 0 ]]; then
-        format_info "Applying automatic fixes..."
-        apply_all_fixes .env.local "${AUTO_FIXES[@]}"
+    # Verify template files exist
+    if [[ ! -f "$TEMPLATES_DIR/.env.example" ]] || [[ ! -f "$TEMPLATES_DIR/.env.local" ]]; then
+        log_error "Template files not found in $TEMPLATES_DIR"
+        echo "Please ensure nself is properly installed"
+        return 1
     fi
     
-    # Show platform-specific information
-    format_section "System Information" 40
-    echo "Platform: ${BOLD}$PLATFORM${RESET}"
-    echo "Architecture: ${BOLD}$ARCH${RESET}"
-    echo "Docker: ${BOLD}$(docker --version 2>/dev/null | cut -d' ' -f3 | cut -d',' -f1 || echo 'Not installed')${RESET}"
-    echo "Memory: ${BOLD}$(get_available_memory_gb)GB available${RESET}"
-    echo "Disk: ${BOLD}$(get_available_disk_gb)GB available${RESET}"
+    # Copy template files
+    cp "$TEMPLATES_DIR/.env.example" .env.example
+    echo "${GREEN}✓${RESET} Created .env.example (reference documentation)"
     
-    show_success_banner "Project initialized successfully!"
+    cp "$TEMPLATES_DIR/.env.local" .env.local
+    echo "${GREEN}✓${RESET} Created .env.local (your configuration file)"
+    echo ""
     
-    format_section "Configuration Files Created" 40
-    echo "${GREEN}✓${RESET} ${BOLD}.env.local${RESET}   - Your project configuration"
-    echo "${GREEN}✓${RESET} ${BOLD}.env.example${RESET} - Reference documentation"
+    # Quick Tips section
+    echo "${CYAN}➞ Quick Tips${RESET}"
+    echo ""
+    echo "${YELLOW}⚡${RESET} Run ${BLUE}nself build${RESET} immediately - it works with defaults!"
+    echo "${YELLOW}⚡${RESET} Use ${BLUE}nself prod${RESET} to generate secure production passwords"
+    echo "${YELLOW}⚡${RESET} Check ${DIM}.env.example${RESET} for all available options"
+    echo "${YELLOW}⚡${RESET} Run ${BLUE}nself help${RESET} for complete command documentation"
+    echo ""
     
-    format_section "Next Steps" 40
-    echo "${BLUE}1.${RESET} ${BOLD}Edit .env.local${RESET} to customize (optional)"
+    # Next Steps section
+    echo "${CYAN}➞ Next Steps${RESET}"
+    echo ""
+    echo "${BLUE}1.${RESET} Edit .env.local to customize (optional)"
     echo "   ${DIM}Only add what you want to change - defaults handle the rest${RESET}"
     echo ""
-    echo "${BLUE}2.${RESET} ${BOLD}nself build${RESET} - Generate all project files"
+    echo "${BLUE}2.${RESET} nself build - Generate all project files"
     echo "   ${DIM}Creates Docker configs, service templates, and more${RESET}"
     echo ""
-    echo "${BLUE}3.${RESET} ${BOLD}nself up${RESET} - Start your backend"
+    echo "${BLUE}3.${RESET} nself up - Start your backend"
     echo "   ${DIM}Launches PostgreSQL, Hasura, and all configured services${RESET}"
-    
-    format_section "Quick Tips" 40
-    echo "${YELLOW}⚡${RESET} Run ${BOLD}nself build${RESET} immediately - it works with defaults!"
-    echo "${YELLOW}⚡${RESET} Use ${BOLD}nself prod${RESET} to generate secure production passwords"
-    echo "${YELLOW}⚡${RESET} Check ${BOLD}.env.example${RESET} for all available options"
-    echo "${YELLOW}⚡${RESET} Run ${BOLD}nself help${RESET} for complete command documentation"
+    echo ""
     
     return 0
 }

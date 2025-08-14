@@ -243,7 +243,7 @@ cat >> docker-compose.yml << EOF
     restart: unless-stopped
     command: serve
     ports:
-      - "5000:5000"
+      - "${STORAGE_PORT:-5001}:${STORAGE_PORT:-5001}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -252,7 +252,7 @@ cat >> docker-compose.yml << EOF
       minio:
         condition: service_healthy
     environment:
-      BIND: 0.0.0.0:5000
+      BIND: 0.0.0.0:${STORAGE_PORT:-5001}
       HASURA_METADATA: 1
       HASURA_ENDPOINT: http://hasura:8080/v1
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}

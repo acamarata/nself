@@ -1,12 +1,12 @@
-# NSelf Environment Configuration Guide
+# nself Environment Configuration Guide
 
 ## Overview
 
-NSelf uses a strict priority system for environment configuration files. This ensures predictable behavior across development, staging, and production environments.
+nself uses a strict priority system for environment configuration files. This ensures predictable behavior across development, staging, and production environments.
 
 ## File Priority Order
 
-NSelf loads environment variables from **ONLY ONE** file, in this strict priority order:
+nself loads environment variables from **ONLY ONE** file, in this strict priority order:
 
 1. **`.env`** - Production configuration (highest priority)
 2. **`.env.local`** - Development configuration (medium priority)
@@ -125,7 +125,7 @@ SENDGRID_API_KEY=<your-api-key>
 
 ## Smart Defaults
 
-NSelf provides sensible defaults for all configuration options. These defaults are:
+nself provides sensible defaults for all configuration options. These defaults are:
 
 - **Security-conscious**: Different defaults for dev vs prod
 - **Platform-aware**: Adjusts for your OS and available resources
@@ -193,7 +193,7 @@ git rm --cached .env  # If already committed
 
 ## Migration from Old Versions
 
-If upgrading from an older version of NSelf:
+If upgrading from an older version of nself:
 
 1. Your existing `.env.local` will continue to work
 2. The new priority system is backward compatible

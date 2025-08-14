@@ -1,4 +1,4 @@
-# Nself - Nhost self-hosted stack and more, in seconds!
+# nself - Nhost self-hosted stack and more, in seconds!
 
 [![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
@@ -11,11 +11,11 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.2 NEW**: Fixed critical command resolution bug and enhanced install script! All Nself commands now work correctly, improved installation formatting, and better CLI reliability. [See full release notes](docs/CHANGELOG.md#032---2025-08-12)
+> **🚀 v0.3.2 NEW**: Fixed critical command resolution bug and enhanced install script! All nself commands now work correctly, improved installation formatting, and better CLI reliability. [See full release notes](docs/CHANGELOG.md#032---2025-08-12)
 
-Nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
+nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
-## 🚀 Why Nself?
+## 🚀 Why nself?
 
 ### ⚡ Lightning Fast Setup
 - **Under 5 minutes** from zero to running backend
@@ -429,7 +429,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📄 License
 
-NSELF is **free for personal use**. Commercial use requires a license.
+nself is **free for personal use**. Commercial use requires a license.
 
 - ✅ **Personal Projects**: Free forever
 - ✅ **Learning & Education**: Free forever  

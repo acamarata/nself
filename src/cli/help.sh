@@ -23,7 +23,7 @@ cmd_help() {
 
 # Show general help
 show_general_help() {
-    show_header "Nself - Self-Hosted Infrastructure Manager"
+    show_header "nself - Self-Hosted Infrastructure Manager"
     # Get version from VERSION file
     local version="unknown"
     if [[ -f "$SCRIPT_DIR/../VERSION" ]]; then
