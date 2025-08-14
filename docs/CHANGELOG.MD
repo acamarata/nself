@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-08-14
+
+### Added
+- **ALWAYS_AUTOFIX Mode**: Automatic fixing is now the default behavior
+  - System defaults to `ALWAYS_AUTOFIX=true` unless explicitly set to `false`
+  - Concise output mode with inline status updates when auto-fix is enabled
+  - Up to 30 retry attempts in auto-fix mode for comprehensive resolution
+  - Interactive mode still available by setting `ALWAYS_AUTOFIX=false`
+
+- **Docker Resource Management**
+  - New `nself clean` command for Docker cleanup operations
+  - Proper image tagging with project name and environment
+  - Support for cleaning containers, images, volumes, and networks
+  - Prevents duplicate image buildup with consistent naming conventions
+
+- **Comprehensive Service Auto-Generation**
+  - Automatic generation of missing NestJS, BullMQ, Go, and Python services
+  - Smart detection of service types from directory structure
+  - Complete hello-world implementations with proper Dockerfiles
+  - Seamless continuation after service generation without manual intervention
+
+- **Advanced Port Conflict Resolution**
+  - Upfront port checking before Docker startup
+  - Interactive numbered options for conflict resolution
+  - Automatic port reassignment in ALWAYS_AUTOFIX mode
+  - Intelligent port mapping for Redis, Mailpit, and other services
+
+### Fixed
+- **Build System Robustness**
+  - Silent build failures now properly report errors
+  - Build command is fully idempotent and handles partial builds
+  - Validation runs in subshell to prevent script exits
+  - Proper handling of existing infrastructure
+
+- **Service Startup Reliability**
+  - Automatic recovery from unhealthy services
+  - Missing Dockerfile detection and generation
+  - Go module dependency resolution
+  - Continuous retry mechanism for transient failures
+
+### Improved
+- **Output Formatting**
+  - Lowercase headers following Nself theme standards
+  - Compact status indicators (✓, ⚡, ⠋, ✗) in auto-fix mode
+  - Cleaner spacing and alignment in all outputs
+  - Reduced verbosity for automated deployments
+
+### Changed
+- **Default Behavior**
+  - ALWAYS_AUTOFIX is now `true` by default
+  - System auto-fixes issues unless explicitly disabled
+  - More automation-friendly for CI/CD environments
+
 ## [0.3.2] - 2025-08-12
 
 ### Fixed

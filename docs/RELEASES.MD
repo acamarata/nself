@@ -1,5 +1,83 @@
 # nself Releases
 
+## [v0.3.3] - August 14, 2025
+
+### 🎯 Intelligent Auto-Fix System
+
+This release introduces automatic fixing as the default behavior, making Nself more intelligent and user-friendly. The system now automatically resolves configuration issues, port conflicts, and missing services without manual intervention.
+
+### ✨ What's New
+
+#### Default Auto-Fix Behavior
+- **ALWAYS_AUTOFIX=true** is now the default setting
+- System automatically resolves issues during startup
+- Up to 30 retry attempts for comprehensive problem resolution
+- Concise output mode with inline status updates
+- Interactive mode still available with `ALWAYS_AUTOFIX=false`
+
+#### Docker Resource Management
+- **New `nself clean` command** for resource cleanup
+- Proper image tagging prevents duplicate buildup
+- Clean containers, images, volumes, and networks
+- Project-specific cleanup with safety checks
+
+#### Comprehensive Service Generation
+- Automatic creation of missing services during startup
+- Support for NestJS, BullMQ, Go, and Python services
+- Complete hello-world implementations with Dockerfiles
+- Seamless continuation without manual intervention
+
+#### Advanced Port Management
+- Upfront port checking before Docker startup
+- Interactive numbered options for conflict resolution
+- Automatic port reassignment in auto-fix mode
+- Intelligent mapping for all service types
+
+### 🔧 Improvements
+
+- Silent build failures now properly report errors
+- Fully idempotent build command
+- Automatic recovery from unhealthy services
+- Missing Dockerfile detection and generation
+- Go module dependency resolution
+- Lowercase headers following Nself standards
+- Compact status indicators in auto-fix mode
+
+### 📦 Installation
+
+```bash
+curl -fsSL https://get.nself.org | bash
+```
+
+### 💡 Usage
+
+```bash
+# Default behavior - auto-fixes everything
+nself up
+
+# Use interactive mode
+ALWAYS_AUTOFIX=false nself up
+
+# Clean Docker resources
+nself clean
+```
+
+---
+
+## [v0.3.2] - August 12, 2025
+
+### 🐛 Critical Command Resolution Fix
+
+Fixed a critical bug where the SCRIPT_DIR variable was being corrupted during utility sourcing, causing commands like `nself --version` and `nself help` to fail.
+
+### ✨ Improvements
+
+- Fixed command resolution reliability
+- Enhanced install script formatting
+- Improved banner alignment
+
+---
+
 ## [v0.3.0] - August 11, 2025
 
 ### 🚀 Major Architecture Refactor
