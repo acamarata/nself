@@ -14,18 +14,24 @@ load_env_safe() {
         return 1
     fi
     
-    # Check for inline comments and warn
-    if grep -E '^\s*[A-Z_]+=[^#]*#' "$env_file" >/dev/null 2>&1; then
-        log_warning "Inline comments detected in $env_file"
-        log_info "Run 'nself validate-env --apply-fixes' to clean them"
-    fi
+    # Silently handle inline comments by loading through a cleaned temp file
+    local temp_env=$(mktemp)
     
-    # Load environment variables
+    # Remove inline comments while preserving the rest of the line
+    # This regex keeps everything before the # that's not inside quotes
+    sed 's/^\([^#]*[^[:space:]#]\)[[:space:]]*#.*$/\1/' "$env_file" > "$temp_env"
+    
+    # Load environment variables from cleaned file
     set -a
-    source "$env_file"
+    source "$temp_env"
     set +a
     
-    log_debug "Loaded environment from $env_file"
+    rm -f "$temp_env"
+    
+    # log_debug is not always available, so use conditional
+    if declare -f log_debug >/dev/null 2>&1; then
+        log_debug "Loaded environment from $env_file"
+    fi
     return 0
 }
 

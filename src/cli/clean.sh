@@ -59,12 +59,7 @@ cmd_clean() {
     fi
     
     # Show header
-    echo
-    echo -e "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${BOLD}nself clean${RESET}                                             ${COLOR_BLUE}║${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}║${COLOR_RESET}  ${COLOR_DIM}Cleaning up Docker resources${COLOR_RESET}                           ${COLOR_BLUE}║${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
-    echo
+    show_command_header "nself clean" "Clean up Docker resources"
     
     local project_name="${PROJECT_NAME:-myproject}"
     
