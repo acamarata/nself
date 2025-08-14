@@ -4,7 +4,7 @@
 
 ### 🎯 Intelligent Auto-Fix System
 
-This release introduces automatic fixing as the default behavior, making Nself more intelligent and user-friendly. The system now automatically resolves configuration issues, port conflicts, and missing services without manual intervention.
+This release introduces automatic fixing as the default behavior, making nself more intelligent and user-friendly. The system now automatically resolves configuration issues, port conflicts, and missing services without manual intervention.
 
 ### ✨ What's New
 
@@ -40,7 +40,7 @@ This release introduces automatic fixing as the default behavior, making Nself m
 - Automatic recovery from unhealthy services
 - Missing Dockerfile detection and generation
 - Go module dependency resolution
-- Lowercase headers following Nself standards
+- Lowercase headers following nself standards
 - Compact status indicators in auto-fix mode
 
 ### 📦 Installation
