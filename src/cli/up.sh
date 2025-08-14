@@ -25,7 +25,14 @@ cmd_up() {
     local skip_checks=false
     local detached=true
     local retry_count="${UP_RETRY_COUNT:-0}"
-    local auto_fix="${ALWAYS_AUTOFIX:-false}"
+    # Default to true for ALWAYS_AUTOFIX unless explicitly set to false
+    local auto_fix="${ALWAYS_AUTOFIX:-true}"
+    if [[ "$auto_fix" == "false" ]]; then
+        auto_fix="false"
+    else
+        # Any value other than "false" means true (including empty/unset)
+        auto_fix="true"
+    fi
     local max_retries=30
     
     # Check for ALWAYS_AUTOFIX mode

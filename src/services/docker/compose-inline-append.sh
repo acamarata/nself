@@ -20,9 +20,13 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
 
   # NestJS Service: $service
   ${PROJECT_NAME}-nest-$service:
+    image: ${PROJECT_NAME}/nest-${service}:latest
     build:
       context: ./services/nest/$service
       dockerfile: Dockerfile
+      tags:
+        - ${PROJECT_NAME}/nest-${service}:latest
+        - ${PROJECT_NAME}/nest-${service}:${ENV:-dev}
     container_name: ${PROJECT_NAME}_nest_$service
     restart: unless-stopped
     environment:
@@ -85,9 +89,13 @@ if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
 
   # BullMQ Worker: $worker
   ${PROJECT_NAME}-bull-$worker:
+    image: ${PROJECT_NAME}/bull-${worker}:latest
     build:
       context: $BULL_PATH
       dockerfile: Dockerfile
+      tags:
+        - ${PROJECT_NAME}/bull-${worker}:latest
+        - ${PROJECT_NAME}/bull-${worker}:${ENV:-dev}
     container_name: ${PROJECT_NAME}_bull_$worker
     restart: unless-stopped
     environment:
@@ -142,9 +150,13 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
 
   # GoLang Service: $service
   ${PROJECT_NAME}-go-$service:
+    image: ${PROJECT_NAME}/go-${service}:latest
     build:
       context: ./services/go/$service
       dockerfile: Dockerfile
+      tags:
+        - ${PROJECT_NAME}/go-${service}:latest
+        - ${PROJECT_NAME}/go-${service}:${ENV:-dev}
     container_name: ${PROJECT_NAME}_go_$service
     restart: unless-stopped
     environment:
@@ -194,9 +206,13 @@ if [[ "$PYTHON_ENABLED" == "true" ]]; then
 
   # Python Service: $service
   ${PROJECT_NAME}-py-$service:
+    image: ${PROJECT_NAME}/py-${service}:latest
     build:
       context: ./services/py/$service
       dockerfile: Dockerfile
+      tags:
+        - ${PROJECT_NAME}/py-${service}:latest
+        - ${PROJECT_NAME}/py-${service}:${ENV:-dev}
     container_name: ${PROJECT_NAME}_py_$service
     restart: unless-stopped
     environment:
