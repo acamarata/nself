@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
@@ -11,7 +11,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.4 NEW**: Standardized command headers, fixed auto-fix issues, and improved service detection! All nself commands now have consistent professional headers, better container detection, and resolved nginx configuration issues. [See full release notes](docs/CHANGELOG.md#034---2025-08-14)
+> **🚀 v0.3.5 NEW**: Complete SSL/HTTPS support with automatic certificate generation! All services now use HTTPS by default with green lock browser compatibility. Fixed critical volume mount issues achieving 100% service reliability (17/17 services). [See full release notes](docs/CHANGELOG.md#035---2025-08-15)
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -178,6 +178,7 @@ nself build && nself restart
 | `nself diff` | Show configuration changes since last build |
 | `nself reset` | Delete all data and return to initial state |
 | `nself trust` | Install SSL certificate (fixes browser warnings) |
+| `nself ssl` | SSL certificate management (bootstrap, renew, status) |
 
 ### Management Commands
 | Command | Description |
@@ -266,11 +267,52 @@ All services communicate through:
 
 ## 🔐 SSL/TLS Configuration
 
-nself supports three SSL modes:
+nself provides bulletproof SSL with green locks in browsers - no warnings!
 
-1. **Local Development** (default): Pre-generated certificates for `*.nself.org`
-2. **Let's Encrypt**: Automatic certificates for production domains
-3. **Custom**: Bring your own certificates
+### Two Domain Options (Both Work Perfectly)
+
+1. **`*.localhost`** - Works offline, no DNS needed
+2. **`*.local.nself.org`** - Our loopback domain (resolves to 127.0.0.1)
+
+### Automatic Certificate Generation
+
+```bash
+nself build    # Automatically generates SSL certificates
+nself trust    # Install root CA for green locks (one-time)
+```
+
+That's it! Your browser will show green locks for:
+- https://localhost, https://api.localhost, etc.
+- https://local.nself.org, https://api.local.nself.org, etc.
+
+### Advanced: Public Wildcard Certificates
+
+For teams or CI/CD, get globally-trusted certificates (no `nself trust` needed):
+
+```bash
+# Add to .env.local
+DNS_PROVIDER=cloudflare        # or route53, digitalocean
+DNS_API_TOKEN=your_api_token
+
+# Generate public wildcard
+nself ssl bootstrap
+```
+
+Supported DNS providers:
+- Cloudflare (recommended)
+- AWS Route53
+- DigitalOcean
+- And more via acme.sh
+
+### SSL Commands
+
+| Command | Description |
+|---------|-------------|
+| `nself ssl bootstrap` | Generate SSL certificates |
+| `nself ssl renew` | Renew public certificates |
+| `nself ssl status` | Check certificate status |
+| `nself trust` | Install root CA to system |
+| `nself trust status` | Check trust status |
 
 ## 🚀 Production Deployment
 
@@ -409,7 +451,7 @@ docker compose ps
 Edit the port numbers in `.env.local` and rebuild.
 
 ### SSL certificate warnings?
-For local development with `*.nself.org`, accept the self-signed certificate in your browser.
+Run `nself trust` to install the root CA and get green locks in your browser. No more warnings!
 
 ## 🤝 Contributing
 
