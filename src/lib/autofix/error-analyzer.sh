@@ -64,6 +64,12 @@ analyze_error() {
         return
     fi
     
+    # OCI runtime exec failed - container has no shell
+    if echo "$service_logs" | grep -q "OCI runtime exec failed\|exec: 'sh': executable file not found"; then
+        echo "NO_SHELL_IN_CONTAINER"
+        return
+    fi
+    
     # Missing healthcheck tools (curl, wget)
     if echo "$service_logs" | grep -q "curl.*not found\|wget.*not found\|executable file not found"; then
         echo "MISSING_HEALTHCHECK_TOOLS"
@@ -201,6 +207,9 @@ get_error_message() {
             ;;
         MISSING_HEALTHCHECK_TOOLS)
             echo "Healthcheck tools missing in container"
+            ;;
+        NO_SHELL_IN_CONTAINER)
+            echo "Container has no shell (minimal image)"
             ;;
         *)
             echo "Service startup failed"

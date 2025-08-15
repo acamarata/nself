@@ -49,11 +49,12 @@ cmd_init() {
     
     # Check if project already exists (docker-compose.yml indicates built project)
     if [[ -f "docker-compose.yml" ]]; then
+        echo
         log_error "Existing project detected (docker-compose.yml found)"
-        echo ""
         log_info "This project has already been built."
-        echo ""
-        echo "nself status | nself reset"
+        echo
+        echo "Try: nself status | nself reset"
+        echo
         return 1
     fi
     
@@ -116,7 +117,7 @@ cmd_init() {
     echo "${BLUE}2.${RESET} nself build - Generate all project files"
     echo "   ${DIM}Creates Docker configs, service templates, and more${RESET}"
     echo ""
-    echo "${BLUE}3.${RESET} nself up - Start your backend"
+    echo "${BLUE}3.${RESET} nself start - Start your backend"
     echo "   ${DIM}Launches PostgreSQL, Hasura, and all configured services${RESET}"
     echo ""
     

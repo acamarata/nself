@@ -97,8 +97,8 @@ cmd_restart() {
             # No services running, just start them
             show_command_header "nself restart" "No services running, starting all"
             
-            source "$SCRIPT_DIR/up.sh"
-            cmd_up
+            source "$SCRIPT_DIR/start.sh"
+            cmd_start
             return $?
         fi
         
@@ -226,8 +226,8 @@ cmd_restart() {
         
         # Start services
         echo
-        source "$SCRIPT_DIR/up.sh"
-        cmd_up
+        source "$SCRIPT_DIR/start.sh"
+        cmd_start
         return $?
     fi
     
@@ -259,7 +259,7 @@ cmd_restart() {
     return 0
 }
 
-# Show service URLs (same as in up.sh)
+# Show service URLs (same as in start.sh)
 show_service_urls() {
     echo -e "${COLOR_CYAN}➞ Service URLs${COLOR_RESET}"
     echo
@@ -323,7 +323,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -s, --smart        Smart mode - only restart changed services (default)"
-    echo "  -a, --all          Force full restart (down + up)"
+    echo "  -a, --all          Force full restart (stop + start)"
     echo "  -v, --verbose      Show detailed output"
     echo "  -h, --help         Show this help message"
     echo ""

@@ -173,6 +173,14 @@ autofix_service() {
             fix_result=$?
             fix_description=$(get_last_fix_description)
             ;;
+        NO_SHELL_IN_CONTAINER)
+            # Container has no shell - just recreate it
+            docker compose stop "$service_name" >/dev/null 2>&1
+            docker compose rm -f "$service_name" >/dev/null 2>&1
+            docker compose up -d "$service_name" >/dev/null 2>&1
+            fix_result=$?
+            fix_description="Recreated $service_name container"
+            ;;
         MISSING_HEALTHCHECK_TOOLS)
             if declare -f fix_service_healthcheck >/dev/null 2>&1; then
                 fix_service_healthcheck "$service_name"

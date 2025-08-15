@@ -102,7 +102,7 @@ show_error_help() {
         
         port_conflict_self)
             echo "Port conflict detected with our own containers."
-            echo "Try: nself down && nself up"
+            echo "Try: nself stop && nself start"
             ;;
         
         port_conflict_external)

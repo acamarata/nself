@@ -311,7 +311,7 @@ cmd_migrate_up() {
     
     # Check if postgres container is running
     if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
-      log_error "PostgreSQL container is not running. Run 'nself up' first."
+      log_error "PostgreSQL container is not running. Run 'nself start' first."
       return 1
     fi
     
@@ -410,7 +410,7 @@ cmd_seed() {
   
   # Check if postgres is running
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
-    log_error "PostgreSQL container is not running. Run 'nself up' first."
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
     return 1
   fi
   
@@ -492,7 +492,7 @@ cmd_update() {
   
   # Check if postgres is running
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
-    log_error "PostgreSQL container is not running. Run 'nself up' first."
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
     return 1
   fi
   
