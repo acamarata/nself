@@ -383,7 +383,7 @@ show_urls() {
             remote_schema_count=$((remote_schema_count + 1))
             local schema_url_var="REMOTE_SCHEMA_${i}_URL"
             local schema_url="${!schema_url_var}"
-            echo " - Schema $remote_schema_count: $schema_url"
+            echo " - Schema $remote_schema_count:    $schema_url"
         fi
     done
     
@@ -603,6 +603,7 @@ main() {
     
     # Default compact overview mode
     show_command_header "nself status" "Service health and resource monitoring" ""
+    echo
     
     show_service_overview
     
@@ -614,6 +615,7 @@ main() {
     
     echo ""
     echo "nself status <service> | nself status --watch | nself logs <service> | nself doctor"
+    echo
 }
 
 # Run main function

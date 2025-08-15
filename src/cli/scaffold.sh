@@ -201,14 +201,14 @@ cmd_scaffold() {
     echo "1. Review the generated service in: $target_dir"
     echo "2. Customize the service configuration as needed"
     echo "3. Run: nself build    # Regenerate docker-compose.yml"
-    echo "4. Run: nself up       # Start all services"
+    echo "4. Run: nself start       # Start all services"
     
     # Start service if requested
     if [[ "$start_service" == "true" ]]; then
         echo
         log_info "Rebuilding and starting services..."
         "$SCRIPT_DIR/build.sh" || return 1
-        "$SCRIPT_DIR/up.sh" || return 1
+        "$SCRIPT_DIR/start.sh" || return 1
     fi
 }
 

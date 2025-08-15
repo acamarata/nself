@@ -234,13 +234,13 @@ cmd_reset() {
     echo -e "${COLOR_BLUE}Start Fresh:${COLOR_RESET}"
     echo -e "  ${COLOR_BLUE}nself init${COLOR_RESET}     ${COLOR_DIM}# Create new configuration${COLOR_RESET}"
     echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure${COLOR_RESET}"
-    echo -e "  ${COLOR_BLUE}nself up${COLOR_RESET}       ${COLOR_DIM}# Start services${COLOR_RESET}"
+    echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}       ${COLOR_DIM}# Start services${COLOR_RESET}"
     echo
     
     echo -e "${COLOR_BLUE}Restore Previous:${COLOR_RESET}"
     echo -e "  ${COLOR_BLUE}mv .env.local.old .env.local${COLOR_RESET}"
     echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}"
-    echo -e "  ${COLOR_BLUE}nself up${COLOR_RESET}"
+    echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}"
     echo
     
     log_info "Configuration backed up with .old suffix"
