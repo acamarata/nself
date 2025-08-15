@@ -77,7 +77,7 @@ cmd_prod() {
     echo "     - For Let's Encrypt: Ensure ports 80/443 are accessible"
     echo "     - For custom certs: Place in nginx/ssl/"
     echo "  3. Run: nself build"
-    echo "  4. Run: nself up"
+    echo "  4. Run: nself start"
     echo
     log_warning "Remember to:"
     echo "  - Configure DNS to point to your server"

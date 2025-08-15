@@ -7,11 +7,18 @@ set -e
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source utilities
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source utilities - check if already sourced (from nself.sh)
+if [[ -z "${DISPLAY_UTILS_SOURCED:-}" ]]; then
+    source "$SCRIPT_DIR/../lib/utils/env.sh"
+    source "$SCRIPT_DIR/../lib/utils/display.sh"
+    source "$SCRIPT_DIR/../lib/utils/header.sh"
+fi
+
+# Only source hooks if running standalone
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
+    source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+fi
 # Helper functions
 
 
@@ -269,10 +276,9 @@ detect_provider() {
 
 # Function to list all providers
 list_providers() {
-    echo ""
-    log_info "📧 Available Email Providers:"
-    echo ""
-    echo "  Production Providers (API-based):"
+    show_command_header "nself email list" "Available email providers"
+    echo
+    printf "${COLOR_CYAN}➞ Production Providers${COLOR_RESET} ${COLOR_DIM}(API-based)${COLOR_RESET}\n"
     echo "  ├── sendgrid      - SendGrid (Popular, reliable)"
     echo "  ├── aws-ses       - Amazon SES (Cost-effective, scalable)"
     echo "  ├── mailgun       - Mailgun (Developer-friendly)"
@@ -284,16 +290,16 @@ list_providers() {
     echo "  ├── elastic       - Elastic Email (Budget-friendly)"
     echo "  ├── smtp2go       - SMTP2GO (Global infrastructure)"
     echo "  └── mailersend    - MailerSend (Email automation)"
-    echo ""
-    echo "  Self-hosted/SMTP:"
+    echo
+    printf "${COLOR_CYAN}➞ Self-hosted/SMTP${COLOR_RESET}\n"
     echo "  ├── postfix       - Postfix (Self-hosted mail server)"
     echo "  ├── gmail         - Gmail/Google Workspace"
     echo "  ├── outlook       - Outlook/Office 365"
     echo "  └── custom        - Custom SMTP server"
-    echo ""
-    echo "  Development:"
+    echo
+    printf "${COLOR_CYAN}➞ Development${COLOR_RESET}\n"
     echo "  └── development   - MailPit (local testing)"
-    echo ""
+    echo
 }
 
 # Function to configure a provider
@@ -301,15 +307,32 @@ configure_provider() {
     local provider="$1"
     local template
     
+    if [[ -z "$provider" ]]; then
+        show_command_header "nself email configure" "Configure email provider"
+        echo
+        log_error "No provider specified"
+        echo
+        echo "Usage: nself email configure <provider>"
+        echo
+        echo "Examples:"
+        echo "  ${COLOR_BLUE}nself email configure sendgrid${COLOR_RESET}"
+        echo "  ${COLOR_BLUE}nself email configure gmail${COLOR_RESET}"
+        echo
+        echo "Run '${COLOR_BLUE}nself email list${COLOR_RESET}' to see all available providers"
+        return 1
+    fi
+    
     template=$(get_provider_template "$provider") || {
+        show_command_header "nself email configure" "Configure email provider"
+        echo
         log_error "Unknown provider: $provider"
+        echo
         list_providers
         return 1
     }
     
-    echo ""
-    log_info "Configuring $provider email provider..."
-    echo ""
+    show_command_header "nself email configure" "Configure $provider"
+    echo
     
     # Show the template
     echo "Add these settings to your .env.local file:"
@@ -335,13 +358,12 @@ configure_provider() {
         echo "$template" >> .env.local
         
         log_success "Configuration added to .env.local"
-        log_info "Previous configuration backed up to .env.local.backup"
-        echo ""
-        log_warning "⚠️  Remember to:"
-        echo "  1. Replace placeholder values with your actual credentials"
-        echo "  2. Update AUTH_SMTP_SENDER with your verified sender address"
-        echo "  3. Run 'nself build' to apply changes"
-        echo "  4. Run 'nself email test' to verify configuration"
+        log_info "Backup saved: .env.local.backup"
+        echo
+        echo "Next steps:"
+        echo "  1. Update placeholder values with actual credentials"
+        echo "  2. Run: nself build"
+        echo "  3. Run: nself email test"
     fi
 }
 
@@ -349,81 +371,75 @@ configure_provider() {
 validate_config() {
     local errors=0
     
-    echo ""
-    log_info "Validating email configuration..."
-    echo ""
+    show_command_header "nself email validate" "Check email configuration"
+    echo
+    
+    # Detect provider first
+    local provider=$(detect_provider)
+    
+    if [[ "$provider" == "not-configured" ]]; then
+        log_error "Email not configured"
+        log_info "Run: nself email setup"
+        echo
+        return 1
+    fi
+    
+    printf "${COLOR_CYAN}Provider:${COLOR_RESET} %s\n" "$provider"
+    echo
     
     # Check required variables
-    if [[ -z "$AUTH_SMTP_HOST" ]]; then
-        log_error "❌ AUTH_SMTP_HOST is not set"
-        errors=$((errors + 1))
-    else
-        log_success "✅ AUTH_SMTP_HOST: $AUTH_SMTP_HOST"
-    fi
-    
-    if [[ -z "$AUTH_SMTP_PORT" ]]; then
-        log_error "❌ AUTH_SMTP_PORT is not set"
-        errors=$((errors + 1))
-    else
-        log_success "✅ AUTH_SMTP_PORT: $AUTH_SMTP_PORT"
-    fi
-    
-    if [[ -z "$AUTH_SMTP_SENDER" ]]; then
-        log_error "❌ AUTH_SMTP_SENDER is not set"
-        errors=$((errors + 1))
-    else
-        log_success "✅ AUTH_SMTP_SENDER: $AUTH_SMTP_SENDER"
-    fi
+    [[ -z "$AUTH_SMTP_HOST" ]] && { log_error "Missing: AUTH_SMTP_HOST"; errors=$((errors + 1)); } || echo "✓ Host: $AUTH_SMTP_HOST"
+    [[ -z "$AUTH_SMTP_PORT" ]] && { log_error "Missing: AUTH_SMTP_PORT"; errors=$((errors + 1)); } || echo "✓ Port: $AUTH_SMTP_PORT"
+    [[ -z "$AUTH_SMTP_SENDER" ]] && { log_error "Missing: AUTH_SMTP_SENDER"; errors=$((errors + 1)); } || echo "✓ Sender: $AUTH_SMTP_SENDER"
     
     # Check authentication (not required for development)
     if [[ "$AUTH_SMTP_HOST" != "mailpit" ]] && [[ "$AUTH_SMTP_HOST" != "mailhog" ]]; then
-        if [[ -z "$AUTH_SMTP_USER" ]]; then
-            log_warning "⚠️  AUTH_SMTP_USER is not set (may be required)"
-        else
-            log_success "✅ AUTH_SMTP_USER: $AUTH_SMTP_USER"
-        fi
-        
-        if [[ -z "$AUTH_SMTP_PASS" ]]; then
-            log_warning "⚠️  AUTH_SMTP_PASS is not set (may be required)"
-        else
-            log_success "✅ AUTH_SMTP_PASS: [HIDDEN]"
-        fi
+        [[ -z "$AUTH_SMTP_USER" ]] && echo "⚠ User: not set" || echo "✓ User: $AUTH_SMTP_USER"
+        [[ -z "$AUTH_SMTP_PASS" ]] && echo "⚠ Pass: not set" || echo "✓ Pass: [SET]"
     fi
     
-    # Detect provider
-    local provider=$(detect_provider)
-    echo ""
-    log_info "Detected provider: $provider"
-    
+    echo
     if [[ $errors -gt 0 ]]; then
-        echo ""
-        log_error "❌ Configuration has $errors error(s)"
-        log_info "Run 'nself email setup' to configure a provider"
-        return 1
+        log_error "Configuration incomplete ($errors errors)"
+        log_info "Run: nself email setup"
     else
-        echo ""
-        log_success "✅ Email configuration appears valid"
-        log_info "Run 'nself email test' to send a test email"
-        return 0
+        log_success "Configuration valid"
+        log_info "Test with: nself email test"
     fi
+    echo
+    
+    return $errors
 }
 
 # Function to test email sending
 test_email() {
     local recipient="${1:-}"
     
+    show_command_header "nself email test" "Send test email"
+    
     if [[ -z "$recipient" ]]; then
-        read -p "Enter recipient email address: " recipient
+        echo
+        printf "Enter recipient email address: "
+        read recipient
     fi
     
     if [[ ! "$recipient" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        echo
         log_error "Invalid email address format"
+        echo
         return 1
     fi
     
-    echo ""
-    log_info "Sending test email to: $recipient"
-    echo ""
+    # Check if services are running
+    local auth_running=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -c "auth" | tr -d '\n' || echo 0)
+    
+    if [[ $auth_running -eq 0 ]]; then
+        echo
+        log_error "Unable to send test email, auth service not running!"
+        log_warning "Note: Email requires services running, use: nself start"
+        echo
+        return 1
+    fi
     
     # Create a test email using curl
     local subject="nself Email Test - $(date)"
@@ -440,29 +456,28 @@ test_email() {
                 \"subject\": \"$subject\",
                 \"text\": \"$body\"
             }" 2>/dev/null && {
-            log_success "✅ Test email sent!"
+            echo
+            log_success "Test email sent to $recipient"
             log_info "View at: http://localhost:8025"
         } || {
-            log_error "❌ Failed to send test email"
-            log_info "Make sure MailPit is running: docker ps | grep mailpit"
+            echo
+            log_error "Failed to send test email"
+            log_warning "Check: nself status mailpit"
         }
     else
-        # For production providers, we need to use the auth service
-        log_info "Test email will be sent via the Auth service"
-        log_info "Make sure services are running: nself up"
-        echo ""
-        log_warning "Note: Actual email sending requires the Auth service to be configured and running"
-        log_info "You can verify your configuration with: nself email validate"
+        # For production providers
+        echo
+        log_info "Sending via ${AUTH_SMTP_HOST}..."
+        # TODO: Implement actual SMTP sending
+        log_warning "Production email sending not yet implemented"
     fi
+    echo
 }
 
 # Function to show email setup wizard
 setup_wizard() {
-    echo ""
-    echo "╔══════════════════════════════════════════════╗"
-    echo "║     📧 nself Email Setup Wizard              ║"
-    echo "╚══════════════════════════════════════════════╝"
-    echo ""
+    show_command_header "nself email setup" "Interactive email configuration wizard"
+    echo
     
     # Show current configuration
     local current_provider=$(detect_provider)
@@ -522,84 +537,79 @@ setup_wizard() {
 show_docs() {
     local provider="${1:-$(detect_provider)}"
     
+    show_command_header "nself email docs" "Setup guide for $provider"
+    echo
+    
     case "$provider" in
         sendgrid)
-            echo ""
-            log_info "📚 SendGrid Setup Guide:"
-            echo ""
+            printf "${COLOR_CYAN}➞ Setup Steps${COLOR_RESET}\n"
             echo "  1. Sign up at: https://signup.sendgrid.com/"
             echo "  2. Verify your sender domain or email address"
             echo "  3. Go to Settings → API Keys"
             echo "  4. Create a new API key with 'Mail Send' permission"
             echo "  5. Copy the API key to AUTH_SMTP_PASS"
-            echo ""
-            echo "  Pricing: Free tier includes 100 emails/day"
-            echo "  Documentation: https://docs.sendgrid.com/for-developers/sending-email/smtp"
+            echo
+            printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
+            echo "  • Pricing: Free tier includes 100 emails/day"
+            echo "  • Documentation: https://docs.sendgrid.com/for-developers/sending-email/smtp"
             ;;
             
         aws-ses)
-            echo ""
-            log_info "📚 AWS SES Setup Guide:"
-            echo ""
+            printf "${COLOR_CYAN}➞ Setup Steps${COLOR_RESET}\n"
             echo "  1. Sign in to AWS Console: https://console.aws.amazon.com/ses/"
             echo "  2. Verify your domain or email address"
             echo "  3. Move out of sandbox mode (for production)"
             echo "  4. Go to SMTP Settings → Create SMTP Credentials"
             echo "  5. Save the SMTP username and password"
-            echo ""
-            echo "  Pricing: $0.10 per 1000 emails"
-            echo "  Documentation: https://docs.aws.amazon.com/ses/latest/dg/send-email-smtp.html"
+            echo
+            printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
+            echo "  • Pricing: $0.10 per 1000 emails"
+            echo "  • Documentation: https://docs.aws.amazon.com/ses/latest/dg/send-email-smtp.html"
             ;;
             
         mailgun)
-            echo ""
-            log_info "📚 Mailgun Setup Guide:"
-            echo ""
+            printf "${COLOR_CYAN}➞ Setup Steps${COLOR_RESET}\n"
             echo "  1. Sign up at: https://signup.mailgun.com/new/signup"
             echo "  2. Add and verify your domain"
             echo "  3. Go to Sending → Domain settings"
             echo "  4. Find SMTP credentials section"
             echo "  5. Use 'postmaster@mg.yourdomain.com' as username"
-            echo ""
-            echo "  Pricing: Pay-as-you-go, first 1000 emails free"
-            echo "  Documentation: https://documentation.mailgun.com/en/latest/user_manual.html#sending-via-smtp"
+            echo
+            printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
+            echo "  • Pricing: Pay-as-you-go, first 1000 emails free"
+            echo "  • Documentation: https://documentation.mailgun.com/en/latest/user_manual.html#sending-via-smtp"
             ;;
             
         postmark)
-            echo ""
-            log_info "📚 Postmark Setup Guide:"
-            echo ""
+            printf "${COLOR_CYAN}➞ Setup Steps${COLOR_RESET}\n"
             echo "  1. Sign up at: https://account.postmarkapp.com/sign_up"
             echo "  2. Create a server for your application"
             echo "  3. Verify your sender signature"
             echo "  4. Go to Servers → [Your Server] → API Tokens"
             echo "  5. Copy the Server API Token"
             echo "  6. Use the same token for both USER and PASS"
-            echo ""
-            echo "  Pricing: 100 test emails free, then $15/mo for 10k emails"
-            echo "  Documentation: https://postmarkapp.com/developer/user-guide/sending-email/sending-with-smtp"
+            echo
+            printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
+            echo "  • Pricing: 100 test emails free, then $15/mo for 10k emails"
+            echo "  • Documentation: https://postmarkapp.com/developer/user-guide/sending-email/sending-with-smtp"
             ;;
             
         gmail)
-            echo ""
-            log_info "📚 Gmail Setup Guide:"
-            echo ""
+            printf "${COLOR_CYAN}➞ Setup Steps${COLOR_RESET}\n"
             echo "  1. Enable 2-Factor Authentication on your Google account"
             echo "  2. Go to: https://myaccount.google.com/apppasswords"
             echo "  3. Select 'Mail' and your device"
             echo "  4. Generate an app password"
             echo "  5. Use this app password for AUTH_SMTP_PASS"
-            echo ""
-            echo "  ⚠️  Note: Regular passwords won't work, you must use app passwords"
-            echo "  Limits: 500 recipients per day"
-            echo "  Documentation: https://support.google.com/mail/answer/185833"
+            echo
+            printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
+            echo "  ${COLOR_YELLOW}⚠${COLOR_RESET}  Regular passwords won't work, you must use app passwords"
+            echo "  • Limits: 500 recipients per day"
+            echo "  • Documentation: https://support.google.com/mail/answer/185833"
             ;;
             
         *)
-            echo ""
-            log_info "📚 Email Provider Documentation"
-            echo ""
-            echo "  General SMTP configuration guide:"
+            printf "${COLOR_CYAN}➞ General SMTP Configuration${COLOR_RESET}\n"
             echo "  1. Obtain SMTP server details from your provider"
             echo "  2. Get authentication credentials (username/password or API key)"
             echo "  3. Verify your sender domain or email address"
@@ -610,13 +620,13 @@ show_docs() {
 }
 
 # Main command handler
-main() {
+email_main() {
     local command="${1:-help}"
     shift || true
     
     # Load environment if available
     if [[ -f ".env.local" ]]; then
-        load_env_safe ".env.local"
+        load_env_safe ".env.local" || true
     fi
     
     case "$command" in
@@ -639,45 +649,80 @@ main() {
             show_docs "${1:-}"
             ;;
         detect)
-            echo "Detected provider: $(detect_provider)"
+            show_command_header "nself email detect" "Detect current email provider"
+            echo
+            local provider=$(detect_provider)
+            printf "${COLOR_CYAN}➞ Current Configuration${COLOR_RESET}\n"
+            echo "  Provider: ${COLOR_BLUE}$provider${COLOR_RESET}"
+            
+            if [[ "$provider" != "not-configured" ]]; then
+                echo "  Host: $AUTH_SMTP_HOST"
+                echo "  Port: $AUTH_SMTP_PORT"
+                echo "  Sender: ${AUTH_SMTP_SENDER:-not set}"
+            else
+                echo
+                log_warning "Email is not configured"
+                echo
+                echo "Run '${COLOR_BLUE}nself email setup${COLOR_RESET}' to configure email"
+            fi
+            echo
             ;;
         help|*)
-            echo ""
-            echo "📧 nself Email Configuration"
-            echo ""
-            log_info "DEVELOPMENT (Default - Zero Config):"
+            show_command_header "nself email" "Email configuration and management"
+            echo
+            
+            printf "${COLOR_CYAN}➞ Development Mode${COLOR_RESET} ${COLOR_DIM}(Default - Zero Config)${COLOR_RESET}\n"
             echo "  MailPit is pre-configured and works out of the box!"
             echo "  • All emails captured locally"
             echo "  • View at: https://mail.<your-domain>"
             echo "  • No setup required"
-            echo ""
-            log_info "PRODUCTION (Quick Setup):"
-            echo "  Run: nself email setup"
+            echo
+            
+            printf "${COLOR_CYAN}➞ Production Setup${COLOR_RESET} ${COLOR_DIM}(Quick Setup)${COLOR_RESET}\n"
+            echo "  Run: ${COLOR_BLUE}nself email setup${COLOR_RESET}"
             echo "  • Interactive wizard guides you"
             echo "  • Choose from 16+ providers"
             echo "  • Auto-configures everything"
-            echo ""
-            log_info "Available Commands:"
-            echo "  setup             Interactive setup wizard (recommended)"
-            echo "  list              See all email providers"
-            echo "  configure <name>  Configure specific provider"
-            echo "  validate          Check your configuration"
-            echo "  test [email]      Send a test email"
-            echo "  docs [provider]   Get setup instructions"
-            echo "  detect            Show current provider"
-            echo ""
-            log_info "Quick Examples:"
-            echo "  nself email setup                    # Start here for production"
-            echo "  nself email configure sendgrid       # Use SendGrid specifically"
-            echo "  nself email test admin@example.com   # Test your setup"
-            echo ""
-            log_success "💡 Tip: Development email works immediately. Production setup takes < 2 minutes!"
-            echo ""
+            echo
+            
+            printf "${COLOR_CYAN}➞ Available Commands${COLOR_RESET}\n"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "setup" "Interactive setup wizard (recommended)"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "list" "See all email providers"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "configure <name>" "Configure specific provider"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "validate" "Check your configuration"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "test [email]" "Send a test email"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "docs [provider]" "Get setup instructions"
+            printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "detect" "Show current provider"
+            echo
+            
+            printf "${COLOR_CYAN}➞ Quick Examples${COLOR_RESET}\n"
+            echo "  ${COLOR_DIM}# Start here for production${COLOR_RESET}"
+            echo "  ${COLOR_BLUE}nself email setup${COLOR_RESET}"
+            echo
+            echo "  ${COLOR_DIM}# Use SendGrid specifically${COLOR_RESET}"
+            echo "  ${COLOR_BLUE}nself email configure sendgrid${COLOR_RESET}"
+            echo
+            echo "  ${COLOR_DIM}# Test your setup${COLOR_RESET}"
+            echo "  ${COLOR_BLUE}nself email test admin@example.com${COLOR_RESET}"
+            echo
             ;;
     esac
 }
 
+# Export command for nself integration
+cmd_email() {
+    email_main "$@"
+}
+
+# Export for use as library
+export -f cmd_email
+export -f email_main
+
 # Run main function if script is executed directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+    pre_command "email" || exit $?
+    email_main "$@"
+    exit_code=$?
+    post_command "email" $exit_code
+    exit $exit_code
 fi

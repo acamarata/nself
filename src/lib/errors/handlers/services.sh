@@ -159,7 +159,7 @@ fix_hasura_health() {
     if echo "$hasura_logs" | grep -q "admin secret"; then
         log_error "Hasura admin secret mismatch"
         log_info "The HASURA_ADMIN_SECRET in .env.local doesn't match the running container"
-        log_info "Solution: nself down && nself up"
+        log_info "Solution: nself stop && nself start"
         return 1
     fi
     

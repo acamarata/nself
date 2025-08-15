@@ -376,7 +376,7 @@ hot_reload() {
                 log_warning "Full rebuild required. Run 'nself build' to apply changes."
             elif [ $status -eq 3 ]; then
                 log_info "Incremental changes can be applied."
-                log_info "Run 'nself up --apply-changes' to apply them."
+                log_info "Run 'nself start --apply-changes' to apply them."
             fi
             ;;
             

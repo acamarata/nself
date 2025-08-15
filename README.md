@@ -90,7 +90,7 @@ mkdir my-awesome-backend && cd my-awesome-backend
 nself init
 
 # 3. Build and launch everything
-nself build && nself up
+nself build && nself start
 # URLs for enabled services will be shown in the output
 ```
 
@@ -100,7 +100,7 @@ nself build && nself up
 - 📦 Storage: https://storage.local.nself.org
 - 📊 And more...
 
-*Tip:* These URLs are also printed after `nself build` and `nself up` so they're easy to copy.
+*Tip:* These URLs are also printed after `nself build` and `nself start` so they're easy to copy.
 
 ## 📧 Email Configuration
 
@@ -172,8 +172,8 @@ nself build && nself restart
 |---------|-------------|
 | `nself init` | Initialize a new project with `.env.local` |
 | `nself build` | Generate project structure from configuration |
-| `nself up` | Start all services (--apply-changes, --dry-run) |
-| `nself down` | Stop all services |
+| `nself start` | Start all services (--apply-changes, --dry-run) |
+| `nself stop` | Stop all services |
 | `nself restart` | Restart all services (down + up) |
 | `nself diff` | Show configuration changes since last build |
 | `nself reset` | Delete all data and return to initial state |
@@ -332,7 +332,7 @@ nself prod
 
 # 3. Deploy to production
 cp .env.prod-template .env
-nself up
+nself start
 ```
 
 The system prioritizes `.env` over `.env.local` when both exist:
@@ -400,7 +400,7 @@ git push
 git pull
 
 # Start services
-nself up
+nself start
 
 # If you see "DATABASE MIGRATIONS PENDING" warning:
 nself db update  # Safely apply migrations with confirmation
@@ -434,7 +434,7 @@ To update service configurations:
 
 1. Edit `.env.local`
 2. Run `nself build` to regenerate configurations
-3. Run `nself up` to apply changes
+3. Run `nself start` to apply changes
 
 ## 🐛 Troubleshooting
 

@@ -123,7 +123,7 @@ scaffold_service() {
     echo "Next steps:"
     echo "  1. Review the generated code in $target_dir"
     echo "  2. Update the service configuration as needed"
-    echo "  3. Run: nself up"
+    echo "  3. Run: nself start"
     
     return 0
 }

@@ -66,7 +66,7 @@ check_not_in_nself_repo() {
         log_info "To use nself:"
         log_info "  1. Create a project directory: mkdir ~/myproject && cd ~/myproject"
         log_info "  2. Initialize the project: nself init"
-        log_info "  3. Build and run: nself build && nself up"
+        log_info "  3. Build and run: nself build && nself start"
         return 1
     fi
     

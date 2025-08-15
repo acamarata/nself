@@ -278,7 +278,7 @@ check_services() {
             stop_spinner "success" "$running_services/$total_services services are running"
         else
             stop_spinner "success" "No services are currently running"
-            log_info "Run 'nself up' to start services"
+            log_info "Run 'nself start' to start services"
         fi
         
         # Check for truly problematic containers (stopped when they should be running)
@@ -474,7 +474,7 @@ show_recommendations() {
     
     if [[ $ISSUES_FOUND -eq 0 ]] && [[ $WARNINGS_FOUND -eq 0 ]]; then
         log_success "Your nself installation looks great!"
-        log_info "Ready for development. Run 'nself up' to start services."
+        log_info "Ready for development. Run 'nself start' to start services."
         return
     fi
     
@@ -497,7 +497,7 @@ show_recommendations() {
     log_info "  nself init          - Create initial configuration"
     log_info "  nself build         - Generate project structure"
     log_info "  nself prod          - Generate secure passwords"
-    log_info "  nself update        - Update to latest version"
+    log_info "  nself startdate        - Update to latest version"
     log_info "  nself status        - Check service details"
 }
 

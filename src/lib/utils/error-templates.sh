@@ -136,7 +136,7 @@ show_memory_warning() {
     esac
     
     echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} You can run with reduced services for development:"
-    echo -e "  ${BOLD}REDIS_ENABLED=false BULLMQ_ENABLED=false nself up${RESET}"
+    echo -e "  ${BOLD}REDIS_ENABLED=false BULLMQ_ENABLED=false nself start${RESET}"
 }
 
 show_disk_space_error() {

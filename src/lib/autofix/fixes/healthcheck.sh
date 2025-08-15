@@ -8,6 +8,19 @@ fix_healthcheck_commands() {
     local project_name="${PROJECT_NAME:-nself}"
     local container_name="${project_name}_${service_name}"
     
+    # First check if container has a shell
+    local has_shell=false
+    if docker exec "$container_name" /bin/sh -c "exit 0" 2>/dev/null || 
+       docker exec "$container_name" /bin/bash -c "exit 0" 2>/dev/null; then
+        has_shell=true
+    fi
+    
+    if [[ "$has_shell" == "false" ]]; then
+        # Container has no shell, can't check for tools or install them
+        log_warning "$service_name container has no shell, skipping healthcheck fix"
+        return 1
+    fi
+    
     # Check which HTTP client is available in the container (without using 'which')
     local has_curl=$(docker exec "$container_name" sh -c "command -v curl || test -x /usr/bin/curl && echo /usr/bin/curl" 2>/dev/null || echo "")
     local has_wget=$(docker exec "$container_name" sh -c "command -v wget || test -x /usr/bin/wget && echo /usr/bin/wget" 2>/dev/null || echo "")

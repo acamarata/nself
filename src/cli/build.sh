@@ -688,7 +688,7 @@ EOF
     echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
     echo -e "   ${COLOR_DIM}Trust the root CA for green locks in browsers${COLOR_RESET}"
     echo
-    echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself up${COLOR_RESET} - Start all services"
+    echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself start${COLOR_RESET} - Start all services"
     echo -e "   ${COLOR_DIM}Launches PostgreSQL, Hasura, and configured services${COLOR_RESET}"
     echo
     echo -e "${COLOR_BLUE}3.${COLOR_RESET} ${COLOR_BLUE}nself status${COLOR_RESET} - Check service health"
@@ -699,6 +699,7 @@ EOF
         echo -e "${COLOR_YELLOW}⚡${COLOR_RESET} Use ${COLOR_BLUE}nself build --force${COLOR_RESET} to rebuild everything"
     fi
     
+    echo
     return 0
 }
 
