@@ -102,7 +102,7 @@ validate_env_syntax() {
       mv "$env_file.tmp" "$env_file"
       
       log_success "✅ Inline comments removed. Original saved as ${env_file}.backup"
-      log_info "Please review the changes and run 'nself up' again."
+      log_info "Please review the changes and run 'nself start' again."
       return 2  # Special return code to indicate file was fixed
     else
       add_error "Inline comments must be removed for Docker Compose compatibility"
@@ -243,7 +243,7 @@ validate_ports() {
       else
         # External process using the port - let startup handle this with user choices
         add_warning "Port $port ($service) is busy (used by: $process_info)"
-        add_warning "  nself up will offer options to resolve this automatically"
+        add_warning "  nself start will offer options to resolve this automatically"
       fi
     fi
   done
@@ -447,7 +447,7 @@ validate_env() {
     fi
     return 0
   else
-    log_error "Fix the errors above before running 'nself up'"
+    log_error "Fix the errors above before running 'nself start'"
     return 1
   fi
 }

@@ -185,7 +185,7 @@ get_all_logs() {
     
     if [[ ${#running_services[@]} -eq 0 ]]; then
         log_warning "No services are currently running"
-        log_info "Run 'nself up' to start services"
+        log_info "Run 'nself start' to start services"
         return 1
     fi
     

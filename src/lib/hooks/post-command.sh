@@ -84,7 +84,7 @@ post_command_success() {
             echo "Next steps:"
             echo "  1. Review and edit .env.local"
             echo "  2. Run: nself build"
-            echo "  3. Run: nself up"
+            echo "  3. Run: nself start"
             ;;
         
         build)

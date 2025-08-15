@@ -33,19 +33,48 @@ fix_service_comprehensive() {
         # Check if it's a false positive (service is actually running)
         local container_state=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null)
         if [[ "$container_state" == "running" ]]; then
-            # Check if curl/wget is the issue (without using 'which')
-            if docker exec "$container_name" sh -c "command -v curl || test -x /usr/bin/curl" 2>/dev/null; then
-                log_debug "$service_name has curl, health check should work"
-            elif docker exec "$container_name" sh -c "command -v wget || test -x /usr/bin/wget" 2>/dev/null; then
-                log_info "Fixing health check for $service_name (using wget)..."
-                if [[ -f "$AUTOFIX_DIR/fixes/healthcheck.sh" ]]; then
-                    source "$AUTOFIX_DIR/fixes/healthcheck.sh"
-                    fix_service_healthcheck "$service_name"
+            # Special handling for nginx and auth services
+            if [[ "$service_name" == "nginx" ]] || [[ "$service_name" == "auth" ]]; then
+                log_info "Fixing $service_name service..."
+                # For nginx, just recreate the container
+                if [[ "$service_name" == "nginx" ]]; then
+                    docker compose stop nginx >/dev/null 2>&1
+                    docker compose rm -f nginx >/dev/null 2>&1
+                    docker compose up -d nginx >/dev/null 2>&1
+                    log_info "Recreated nginx container"
+                elif [[ "$service_name" == "auth" ]]; then
+                    # Auth service might need environment variables
+                    docker compose stop auth >/dev/null 2>&1
+                    docker compose rm -f auth >/dev/null 2>&1
+                    docker compose up -d auth >/dev/null 2>&1
+                    log_info "Recreated auth container"
                 fi
             else
-                log_warning "$service_name missing health check tools, installing..."
-                # Try to install wget
-                docker exec "$container_name" sh -c "apk add --no-cache wget 2>/dev/null || apt-get update && apt-get install -y wget 2>/dev/null || yum install -y wget 2>/dev/null" >/dev/null 2>&1
+                # For other containers, try to check for shell first
+                # Test if container has sh available before trying to exec into it
+                if docker exec "$container_name" /bin/sh -c "exit 0" 2>/dev/null || 
+                   docker exec "$container_name" /bin/bash -c "exit 0" 2>/dev/null; then
+                    # Container has a shell, check for curl/wget
+                    if docker exec "$container_name" sh -c "command -v curl || test -x /usr/bin/curl" 2>/dev/null; then
+                        log_debug "$service_name has curl, health check should work"
+                    elif docker exec "$container_name" sh -c "command -v wget || test -x /usr/bin/wget" 2>/dev/null; then
+                        log_info "Fixing health check for $service_name (using wget)..."
+                        if [[ -f "$AUTOFIX_DIR/fixes/healthcheck.sh" ]]; then
+                            source "$AUTOFIX_DIR/fixes/healthcheck.sh"
+                            fix_service_healthcheck "$service_name"
+                        fi
+                    else
+                        log_warning "$service_name missing health check tools, installing..."
+                        # Try to install wget
+                        docker exec "$container_name" sh -c "apk add --no-cache wget 2>/dev/null || apt-get update && apt-get install -y wget 2>/dev/null || yum install -y wget 2>/dev/null" >/dev/null 2>&1
+                    fi
+                else
+                    # No shell available, just recreate the container
+                    log_warning "$service_name container has no shell, recreating..."
+                    docker compose stop "$service_name" >/dev/null 2>&1
+                    docker compose rm -f "$service_name" >/dev/null 2>&1
+                    docker compose up -d "$service_name" >/dev/null 2>&1
+                fi
             fi
         fi
     fi
