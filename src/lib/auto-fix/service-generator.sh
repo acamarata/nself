@@ -2,16 +2,16 @@
 
 # service-generator.sh - Auto-generate missing service templates
 
-# Source utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
+# Source utilities - don't override parent SCRIPT_DIR
+SERVICE_GEN_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$SERVICE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
 
 # Generate a NestJS hello world service
 generate_nest_service() {
     local service_name="$1"
     local service_path="services/nest/${service_name}"
     
-    log_info "Generating NestJS service: $service_name"
+    # Silent generation, no log output
     
     # Create directory structure
     mkdir -p "$service_path/src"
@@ -51,7 +51,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Service is running on port ${port}`);
 }
 bootstrap();
@@ -88,6 +88,18 @@ export class AppController {
 EOF
     sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/app.controller.ts" && rm -f "$service_path/src/app.controller.ts.bak"
     
+    # Create nest-cli.json
+    cat > "$service_path/nest-cli.json" << 'EOF'
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+EOF
+    
     # Create tsconfig.json
     cat > "$service_path/tsconfig.json" << 'EOF'
 {
@@ -122,15 +134,18 @@ COPY . .
 RUN npm run build
 
 FROM node:18-alpine AS production
+# Install health check tools
+RUN apk add --no-cache curl wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 COPY --from=development /app/dist ./dist
-EXPOSE 3000
+# Use PORT from build arg and environment
+ARG PORT=3000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
 CMD ["node", "dist/main"]
 EOF
-    
-    log_success "Generated NestJS service: $service_name"
 }
 
 # Generate a Bull queue worker service
@@ -138,7 +153,6 @@ generate_bull_service() {
     local service_name="$1"
     local service_path="services/bull/${service_name}"
     
-    log_info "Generating Bull worker service: $service_name"
     
     # Create directory structure
     mkdir -p "$service_path/src"
@@ -210,14 +224,19 @@ EOF
     # Create Dockerfile
     cat > "$service_path/Dockerfile" << 'EOF'
 FROM node:18-alpine
+# Install health check tools
+RUN apk add --no-cache curl wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 COPY . .
+# BullMQ dashboard port (dynamically set via environment)
+ARG DASHBOARD_PORT=4200
+ENV DASHBOARD_PORT=${DASHBOARD_PORT}
+EXPOSE ${DASHBOARD_PORT}
 CMD ["node", "src/index.js"]
 EOF
     
-    log_success "Generated Bull worker service: $service_name"
 }
 
 # Generate a Go service
@@ -225,7 +244,6 @@ generate_go_service() {
     local service_name="$1"
     local service_path="services/go/${service_name}"
     
-    log_info "Generating Go service: $service_name"
     
     # Create directory structure
     mkdir -p "$service_path"
@@ -303,14 +321,16 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates curl wget
 WORKDIR /root/
 COPY --from=builder /app/main .
-EXPOSE 8080
+# Use PORT from build arg and environment
+ARG PORT=8080
+ENV PORT=${PORT}
+EXPOSE ${PORT}
 CMD ["./main"]
 EOF
     
-    log_success "Generated Go service: $service_name"
 }
 
 # Generate a Python service
@@ -318,7 +338,6 @@ generate_python_service() {
     local service_name="$1"
     local service_path="services/py/${service_name}"
     
-    log_info "Generating Python service: $service_name"
     
     # Create directory structure
     mkdir -p "$service_path"
@@ -356,20 +375,25 @@ EOF
     # Create Dockerfile
     cat > "$service_path/Dockerfile" << 'EOF'
 FROM python:3.11-slim
+# Install health check tools
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use PORT from build arg and environment
+ARG PORT=8000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}
 EOF
     
-    log_success "Generated Python service: $service_name"
 }
 
 # Auto-detect and generate missing services
 auto_generate_services() {
     local generated_count=0
+    local silent="${1:-false}"
     
     # Check environment for enabled services
     if [[ -f ".env.local" ]]; then
@@ -381,11 +405,12 @@ auto_generate_services() {
         return 0
     fi
     
-    log_info "Checking for missing services..."
+    [[ "$silent" != "true" ]] && log_info "Checking for missing services..."
     
-    # Parse NEST_SERVICES
-    if [[ -n "${NEST_SERVICES:-}" ]]; then
-        IFS=',' read -ra services <<< "$NEST_SERVICES"
+    # Parse NEST_SERVICES or NESTJS_SERVICES (support both)
+    local nest_list="${NEST_SERVICES:-${NESTJS_SERVICES:-}}"
+    if [[ -n "$nest_list" ]]; then
+        IFS=',' read -ra services <<< "$nest_list"
         for service in "${services[@]}"; do
             service=$(echo "$service" | xargs)  # Trim whitespace
             if [[ ! -d "services/nest/$service" ]]; then
@@ -395,9 +420,10 @@ auto_generate_services() {
         done
     fi
     
-    # Parse BULL_SERVICES
-    if [[ -n "${BULL_SERVICES:-}" ]]; then
-        IFS=',' read -ra services <<< "$BULL_SERVICES"
+    # Parse BULL_SERVICES or BULLMQ_WORKERS (support both)
+    local bull_list="${BULL_SERVICES:-${BULLMQ_WORKERS:-}}"
+    if [[ -n "$bull_list" ]]; then
+        IFS=',' read -ra services <<< "$bull_list"
         for service in "${services[@]}"; do
             service=$(echo "$service" | xargs)
             if [[ ! -d "services/bull/$service" ]]; then
@@ -431,12 +457,8 @@ auto_generate_services() {
         done
     fi
     
-    if [[ $generated_count -gt 0 ]]; then
-        log_success "Generated $generated_count missing services"
-        return 0
-    else
-        return 0
-    fi
+    # Silent - let caller handle reporting
+    return 0
 }
 
 # Check if a specific service directory is missing
@@ -449,7 +471,6 @@ check_missing_service() {
         local service_name="${BASH_REMATCH[2]}"
         local actual_dir=""
         
-        log_info "Generating missing $service_type service: $service_name"
         
         # Create in the exact directory that Docker Compose expects
         actual_dir="services/${service_type}/${service_name}"
@@ -472,7 +493,7 @@ check_missing_service() {
             *)
                 # If we don't recognize the type, still try to generate something reasonable
                 # Default to a basic Node.js service
-                log_warning "Unknown service type '$service_type', generating basic Node.js service"
+                # Unknown service type, generating basic Node.js service
                 generate_basic_node_service_at "$service_name" "$actual_dir"
                 ;;
         esac
@@ -527,7 +548,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Service is running on port ${port}`);
 }
 bootstrap();
@@ -602,7 +623,7 @@ EXPOSE 3000
 CMD ["node", "dist/main"]
 EOF
     
-    log_success "Generated NestJS service at: $service_path"
+    # Successfully generated
 }
 
 generate_bull_service_at() {
@@ -684,7 +705,7 @@ COPY . .
 CMD ["node", "src/index.js"]
 EOF
     
-    log_success "Generated Bull/BullMQ service at: $service_path"
+    # Successfully generated
 }
 
 generate_go_service_at() {
@@ -768,7 +789,7 @@ EXPOSE 8080
 CMD ["./main"]
 EOF
     
-    log_success "Generated Go service at: $service_path"
+    # Successfully generated
 }
 
 generate_basic_node_service_at() {
@@ -820,7 +841,7 @@ EXPOSE 3000
 CMD ["node", "index.js"]
 EOF
     
-    log_success "Generated basic Node.js service at: $service_path"
+    # Successfully generated
 }
 
 generate_python_service_at() {
@@ -865,7 +886,7 @@ EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 EOF
     
-    log_success "Generated Python service at: $service_path"
+    # Successfully generated
 }
 
 # Export functions

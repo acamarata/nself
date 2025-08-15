@@ -27,6 +27,7 @@ apply_smart_defaults() {
     
     # JWT Configuration - Support both new simple format and legacy JSON format
     : ${HASURA_JWT_KEY:=development-secret-key-minimum-32-characters-long}
+    : ${JWT_KEY:=$HASURA_JWT_KEY}
     : ${HASURA_JWT_TYPE:=HS256}
     
     # If HASURA_GRAPHQL_JWT_SECRET is not set, construct it from the simple variables
@@ -113,26 +114,27 @@ apply_smart_defaults() {
     : ${BULLMQ_ENABLED:=false}
     : ${BULLMQ_WORKERS:=""}
     : ${BULLMQ_DASHBOARD_ENABLED:=false}
-    : ${BULLMQ_DASHBOARD_PORT:=3200}
+    : ${BULLMQ_DASHBOARD_PORT:=4200}
     : ${BULLMQ_DASHBOARD_ROUTE:=queues.${BASE_DOMAIN}}
     : ${GOLANG_ENABLED:=false}
     : ${GOLANG_SERVICES:=""}
-    : ${GOLANG_PORT_START:=3300}
+    : ${GOLANG_PORT_START:=3200}
     : ${PYTHON_ENABLED:=false}
     : ${PYTHON_SERVICES:=""}
     : ${PYTHON_FRAMEWORK:=fastapi}
-    : ${PYTHON_PORT_START:=3400}
+    : ${PYTHON_PORT_START:=3300}
     : ${NESTJS_RUN_ENABLED:=false}
-    : ${NESTJS_RUN_PORT:=3500}
+    : ${NESTJS_RUN_PORT:=3400}
     
     # Advanced/Internal
     : ${HASURA_METADATA_DATABASE_URL:=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}}
     : ${DOCKER_NETWORK:=${PROJECT_NAME}_network}
     : ${HASURA_PORT:=8080}
     : ${HASURA_CONSOLE_PORT:=9695}
-    : ${FUNCTIONS_PORT:=3000}
-    : ${DASHBOARD_PORT:=3000}
+    : ${FUNCTIONS_PORT:=4300}
+    : ${DASHBOARD_PORT:=4500}
     : ${CONFIG_SERVER_PORT:=4001}
+    : ${STORAGE_PORT:=5001}
     : ${S3_ENDPOINT:=http://minio:${MINIO_PORT}}
     : ${FILES_ROUTE:=files.${BASE_DOMAIN}}
     : ${MAIL_ROUTE:=mail.${BASE_DOMAIN}}
@@ -164,7 +166,7 @@ apply_smart_defaults() {
     export PYTHON_ENABLED PYTHON_SERVICES PYTHON_FRAMEWORK PYTHON_PORT_START
     export NESTJS_RUN_ENABLED NESTJS_RUN_PORT
     export HASURA_METADATA_DATABASE_URL DOCKER_NETWORK
-    export HASURA_PORT HASURA_CONSOLE_PORT FUNCTIONS_PORT DASHBOARD_PORT CONFIG_SERVER_PORT
+    export HASURA_PORT HASURA_CONSOLE_PORT FUNCTIONS_PORT DASHBOARD_PORT CONFIG_SERVER_PORT STORAGE_PORT
     export S3_ENDPOINT FILES_ROUTE MAIL_ROUTE
 }
 

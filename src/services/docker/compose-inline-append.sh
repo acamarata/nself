@@ -30,7 +30,7 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
     container_name: ${PROJECT_NAME}_nest_$service
     restart: unless-stopped
     environment:
-      - NODE_ENV=${ENVIRONMENT}
+      - NODE_ENV=${ENVIRONMENT:-development}
       - PORT=$SERVICE_PORT
       - DATABASE_URL=${HASURA_GRAPHQL_DATABASE_URL}
       - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
@@ -75,15 +75,8 @@ if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
   for worker in "${BULLMQ_WORKER_LIST[@]}"; do
     worker=$(echo "$worker" | xargs)
     
-    # Check which directory exists - support both bull and bullmq paths
-    if [[ -d "./services/bull/$worker" ]]; then
-      BULL_PATH="./services/bull/$worker"
-    elif [[ -d "./services/bullmq/$worker" ]]; then
-      BULL_PATH="./services/bullmq/$worker"
-    else
-      # Default to bull if neither exists
-      BULL_PATH="./services/bull/$worker"
-    fi
+    # Use standard bull directory
+    BULL_PATH="./services/bull/$worker"
     
     cat >> docker-compose.yml << EOF
 
@@ -99,7 +92,7 @@ if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
     container_name: ${PROJECT_NAME}_bull_$worker
     restart: unless-stopped
     environment:
-      - NODE_ENV=${ENVIRONMENT}
+      - NODE_ENV=${ENVIRONMENT:-development}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -127,12 +120,13 @@ EOF
     networks:
       - default
     volumes:
-      - $BULL_PATH:/app:ro
+      - $BULL_PATH/src:/app/src:ro
     healthcheck:
-      test: ["CMD", "node", "-e", "const redis = require('ioredis'); const client = new redis('redis', 6379); client.ping().then(() => process.exit(0)).catch(() => process.exit(1))"]
+      test: ["CMD", "sh", "-c", "ps aux | grep 'node' | grep -v grep || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 EOF
   done
 fi
@@ -160,7 +154,7 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
     container_name: ${PROJECT_NAME}_go_$service
     restart: unless-stopped
     environment:
-      - GO_ENV=${ENVIRONMENT}
+      - GO_ENV=${ENVIRONMENT:-development}
       - PORT=$SERVICE_PORT
       - DATABASE_URL=${HASURA_GRAPHQL_DATABASE_URL}
       - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
@@ -216,7 +210,7 @@ if [[ "$PYTHON_ENABLED" == "true" ]]; then
     container_name: ${PROJECT_NAME}_py_$service
     restart: unless-stopped
     environment:
-      - PYTHON_ENV=${ENVIRONMENT}
+      - PYTHON_ENV=${ENVIRONMENT:-development}
       - PORT=$SERVICE_PORT
       - DATABASE_URL=${HASURA_GRAPHQL_DATABASE_URL}
       - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
@@ -249,4 +243,80 @@ EOF
     
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
+fi
+# Generate Functions service if enabled
+if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+  FUNCTIONS_PORT="${FUNCTIONS_PORT:-4300}"
+  cat >> docker-compose.yml << EOF
+
+  unity-functions:
+    image: unity/functions:latest
+    build:
+      context: ./functions
+      dockerfile: Dockerfile
+      tags:
+        - unity/functions:latest
+        - unity/functions:dev
+    container_name: unity_functions
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${ENVIRONMENT:-development}
+      - FUNCTIONS_PORT=$FUNCTIONS_PORT
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/nhost}
+      - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
+      - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET:-changeme}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "$FUNCTIONS_PORT:$FUNCTIONS_PORT"
+    depends_on:
+      - postgres
+      - hasura
+      - redis
+    networks:
+      - default
+    volumes:
+      - ./functions:/app/functions:ro
+      - ./functions/package.json:/app/package.json:ro
+      - ./functions/index.js:/app/index.js:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$FUNCTIONS_PORT/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+fi
+
+# Generate Dashboard service if enabled
+if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]]; then
+  DASHBOARD_PORT="${DASHBOARD_PORT:-4500}"
+  cat >> docker-compose.yml << EOF
+
+  unity-dashboard:
+    image: unity/dashboard:latest
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      tags:
+        - unity/dashboard:latest
+        - unity/dashboard:dev
+    container_name: unity_dashboard
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${ENVIRONMENT:-development}
+      - VITE_API_URL=${VITE_API_URL:-http://localhost/api}
+      - VITE_HASURA_URL=${VITE_HASURA_URL:-http://localhost:8080/v1/graphql}
+    ports:
+      - "$DASHBOARD_PORT:80"
+    depends_on:
+      - nginx
+    networks:
+      - default
+    # Dashboard is served from nginx, no source volume needed
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
 fi

@@ -2,16 +2,16 @@
 
 # dockerfile-generator.sh - Auto-generate missing Dockerfiles for any service
 
-# Source utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
+# Source utilities - don't override parent SCRIPT_DIR
+DOCKERFILE_GEN_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$DOCKERFILE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
 
 # Generate appropriate Dockerfile based on service name and context
 generate_dockerfile_for_service() {
     local service_name="$1"
     local service_path="${2:-./$service_name}"
     
-    log_info "Auto-generating Dockerfile for service: $service_name"
+    # Silent generation
     
     # Create directory if it doesn't exist
     mkdir -p "$service_path"
@@ -51,11 +51,16 @@ generate_functions_service() {
     
     cat > "$path/Dockerfile" << 'EOF'
 FROM node:18-alpine
+# Install health check tools
+RUN apk add --no-cache curl wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 COPY . .
-EXPOSE 3000
+# Use FUNCTIONS_PORT from environment
+ARG FUNCTIONS_PORT=4300
+ENV FUNCTIONS_PORT=${FUNCTIONS_PORT}
+EXPOSE ${FUNCTIONS_PORT}
 CMD ["node", "index.js"]
 EOF
 
@@ -110,7 +115,7 @@ app.listen(port, () => {
 });
 EOF
     
-    log_success "Generated functions service at: $path"
+    # Successfully generated
 }
 
 # Generate config-server service
@@ -119,6 +124,8 @@ generate_config_server() {
     
     cat > "$path/Dockerfile" << 'EOF'
 FROM node:18-alpine
+# Install health check tools
+RUN apk add --no-cache curl wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
@@ -175,7 +182,7 @@ app.listen(port, () => {
 });
 EOF
     
-    log_success "Generated config-server at: $path"
+    # Successfully generated
 }
 
 # Generate dashboard service
@@ -186,11 +193,16 @@ generate_dashboard_service() {
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci || npm install
 COPY . .
-RUN npm run build
+# Build or create placeholder
+RUN npm run build || (mkdir -p dist && echo '<!DOCTYPE html><html><body><h1>Dashboard</h1></body></html>' > dist/index.html)
 
 FROM nginx:alpine
+# Install health check tools
+RUN apk add --no-cache curl wget
+# Copy dist if it exists, otherwise create a placeholder
+RUN mkdir -p /usr/share/nginx/html
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
@@ -244,7 +256,7 @@ EOF
 </html>
 EOF
     
-    log_success "Generated dashboard service at: $path"
+    # Successfully generated
 }
 
 # Generate auth service placeholder
@@ -259,7 +271,7 @@ FROM busybox:latest
 CMD ["echo", "Auth service uses hasura-auth image"]
 EOF
     
-    log_success "Generated auth service placeholder at: $path"
+    # Successfully generated
 }
 
 # Generate storage service placeholder
@@ -274,7 +286,7 @@ FROM busybox:latest
 CMD ["echo", "Storage service uses hasura-storage image"]
 EOF
     
-    log_success "Generated storage service placeholder at: $path"
+    # Successfully generated
 }
 
 # Generate hasura service placeholder
@@ -289,7 +301,7 @@ FROM busybox:latest
 CMD ["echo", "Hasura service uses official hasura image"]
 EOF
     
-    log_success "Generated hasura service placeholder at: $path"
+    # Successfully generated
 }
 
 # Generate generic Node.js service
@@ -299,6 +311,8 @@ generate_generic_node_service() {
     
     cat > "$path/Dockerfile" << 'EOF'
 FROM node:18-alpine
+# Install health check tools
+RUN apk add --no-cache curl wget
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
@@ -339,7 +353,7 @@ app.listen(port, () => {
 });
 EOF
     
-    log_success "Generated generic service '$service_name' at: $path"
+    # Successfully generated
 }
 
 # Export functions

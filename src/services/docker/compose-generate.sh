@@ -98,6 +98,8 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl/localhost:/etc/nginx/ssl/localhost:ro
+      - ./nginx/ssl/nself-org:/etc/nginx/ssl/nself-org:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -107,14 +109,11 @@ services:
       - minio
 EOF
 
-if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
-  echo "      - functions" >> docker-compose.yml
-fi
-
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  echo "      - dashboard" >> docker-compose.yml
   echo "      - config-server" >> docker-compose.yml
 fi
+
+# Note: unity-functions and unity-dashboard are added by compose-inline-append.sh
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
   echo "      - mailhog" >> docker-compose.yml
@@ -269,8 +268,8 @@ EOF
 
 # Add optional services
 
-# Functions service
-if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
+# Functions service - Skipped since compose-inline-append.sh adds unity-functions
+if false; then  # Disabled - using unity-functions from compose-inline-append.sh instead
   cat >> docker-compose.yml << EOF
 
   # Functions Service
@@ -294,9 +293,8 @@ if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
 EOF
 fi
 
-# Dashboard service
+# Config Server (needed for dashboard)
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  # First add config server
   cat >> docker-compose.yml << EOF
 
   # Config Server for Dashboard
@@ -333,8 +331,13 @@ if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
       interval: 10s
       timeout: 5s
       retries: 5
+EOF
+fi
 
-  # Nhost Dashboard
+# Nhost Dashboard - Skipped, using unity-dashboard from compose-inline-append.sh
+if false; then  # Disabled
+  cat >> docker-compose.yml << EOF
+
   dashboard:
     image: nhost/dashboard:${DASHBOARD_VERSION}
     container_name: ${PROJECT_NAME}_dashboard
