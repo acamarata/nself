@@ -8,9 +8,9 @@ fix_healthcheck_commands() {
     local project_name="${PROJECT_NAME:-nself}"
     local container_name="${project_name}_${service_name}"
     
-    # Check which HTTP client is available in the container
-    local has_curl=$(docker exec "$container_name" which curl 2>/dev/null || echo "")
-    local has_wget=$(docker exec "$container_name" which wget 2>/dev/null || echo "")
+    # Check which HTTP client is available in the container (without using 'which')
+    local has_curl=$(docker exec "$container_name" sh -c "command -v curl || test -x /usr/bin/curl && echo /usr/bin/curl" 2>/dev/null || echo "")
+    local has_wget=$(docker exec "$container_name" sh -c "command -v wget || test -x /usr/bin/wget && echo /usr/bin/wget" 2>/dev/null || echo "")
     
     if [[ -z "$has_curl" ]] && [[ -n "$has_wget" ]]; then
         # Container has wget but not curl - need to update docker-compose.yml
@@ -87,17 +87,17 @@ fix_healthcheck_commands() {
         # Container has neither curl nor wget - need to install one
         log_info "Installing wget in $service_name container"
         
-        # Try to install wget based on the container's OS
-        if docker exec "$container_name" which apk >/dev/null 2>&1; then
+        # Try to install wget based on the container's OS (without using 'which')
+        if docker exec "$container_name" sh -c "command -v apk || test -x /sbin/apk" >/dev/null 2>&1; then
             # Alpine Linux
-            docker exec "$container_name" apk add --no-cache wget >/dev/null 2>&1
-        elif docker exec "$container_name" which apt-get >/dev/null 2>&1; then
+            docker exec "$container_name" apk add --no-cache wget curl >/dev/null 2>&1
+        elif docker exec "$container_name" sh -c "command -v apt-get || test -x /usr/bin/apt-get" >/dev/null 2>&1; then
             # Debian/Ubuntu
             docker exec "$container_name" apt-get update >/dev/null 2>&1
-            docker exec "$container_name" apt-get install -y wget >/dev/null 2>&1
-        elif docker exec "$container_name" which yum >/dev/null 2>&1; then
+            docker exec "$container_name" apt-get install -y wget curl >/dev/null 2>&1
+        elif docker exec "$container_name" sh -c "command -v yum || test -x /usr/bin/yum" >/dev/null 2>&1; then
             # RHEL/CentOS
-            docker exec "$container_name" yum install -y wget >/dev/null 2>&1
+            docker exec "$container_name" yum install -y wget curl >/dev/null 2>&1
         fi
         
         LAST_FIX_DESCRIPTION="Installed wget in $service_name container"
