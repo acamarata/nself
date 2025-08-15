@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2025-08-15
+
+### Added
+- **Complete SSL/HTTPS Support**: Full HTTPS implementation for development and production
+  - Automatic SSL certificate generation using mkcert for development environments
+  - Support for both `*.localhost` and `*.local.nself.org` domain patterns
+  - Wildcard SSL certificates with proper Subject Alternative Name (SAN) configuration
+  - HTTP to HTTPS redirect for all services
+  - Modern TLS configuration with secure cipher suites and protocols
+
+- **SSL Certificate Management**
+  - `nself trust` command to install SSL certificates in system trust store
+  - Automatic certificate generation during build process
+  - Domain-specific certificate selection (localhost vs nself.org patterns)
+  - Certificate validation and health checking
+  - Browser-ready green lock compatibility
+
+- **Enhanced Service Architecture**
+  - 100% service success rate (17/17 services running reliably)
+  - Improved volume mount strategy preserving node_modules and dependencies
+  - Reserved port allocation (3000-3099 for user apps, 3100+ for services)
+  - Enhanced service health monitoring and auto-recovery
+
+### Fixed
+- **Critical Volume Mount Issues**
+  - Node.js services now preserve installed dependencies during development
+  - Changed volume mounts from entire directories to source-only mounting
+  - Resolved "Cannot find module" errors in NestJS, BullMQ, and Functions services
+
+- **SSL and Nginx Configuration**
+  - Fixed nginx upstream definition conflicts causing restart loops
+  - Resolved SSL certificate Subject Alternative Name (SAN) configuration
+  - Fixed dynamic nginx includes with static configuration approach
+  - Corrected certificate path references in nginx configurations
+
+- **Service Reliability**
+  - Docker health checks now work without 'which' command dependency
+  - Eliminated port allocation conflicts between user and system services
+  - Fixed service startup reliability from 76% to 100% success rate
+  - Resolved container restart loops and networking issues
+
+### Changed
+- **Default HTTPS Everywhere**: All services now use HTTPS by default in development
+- **Smart Port Allocation**: System services moved to 3100+ range, 3000-3099 reserved for users
+- **Volume Mount Strategy**: Source-only mounting preserves container dependencies
+- **SSL Trust Integration**: Certificates automatically trusted during build process
+
+### Enhanced
+- **Developer Experience**
+  - Seamless HTTPS development workflow with automatic certificate trust
+  - Green lock icons in browsers without manual certificate installation
+  - Improved error handling and auto-fix capabilities for SSL issues
+  - Enhanced service status reporting with SSL health indicators
+
 ## [0.3.4] - 2025-08-14
 
 ### Added

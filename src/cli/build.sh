@@ -140,7 +140,7 @@ cmd_build() {
     
     # Check if this is an existing project
     local is_existing_project=false
-    if [[ -f "docker-compose.yml" ]] || [[ -d "nginx" ]] || [[ -f "init.sql" ]]; then
+    if [[ -f "docker-compose.yml" ]] || [[ -d "nginx" ]] || [[ -f "postgres/init/01-init.sql" ]]; then
         is_existing_project=true
     fi
     
@@ -189,7 +189,7 @@ cmd_build() {
     
     # Check database initialization
     local needs_db=false
-    if [[ ! -f "init.sql" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "init.sql" ]]; then
+    if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "postgres/init/01-init.sql" ]]; then
         needs_db=true
         needs_work=true
     fi
@@ -278,6 +278,12 @@ cmd_build() {
             
             local nginx_updated=false
             
+            # Create nginx directory if it doesn't exist
+            mkdir -p nginx
+            
+            # Create hasura directories if they don't exist
+            mkdir -p hasura/metadata hasura/migrations
+            
             # Check if nginx.conf needs updating
             if [[ ! -f "nginx/nginx.conf" ]] || [[ "$force_rebuild" == "true" ]]; then
                 # Main nginx.conf
@@ -341,8 +347,8 @@ server {
     listen 443 ssl http2;
     server_name ${HASURA_ROUTE};
     
-    ssl_certificate /etc/nginx/ssl/nself.org.crt;
-    ssl_certificate_key /etc/nginx/ssl/nself.org.key;
+    ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;
     
     location / {
         proxy_pass http://hasura;
@@ -397,8 +403,8 @@ server {
     listen 443 ssl http2;
     server_name ${app_route};
     
-    ssl_certificate /etc/nginx/ssl/nself.org.crt;
-    ssl_certificate_key /etc/nginx/ssl/nself.org.key;
+    ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;
     
     location / {
         proxy_pass http://host.docker.internal:${app_port};
@@ -424,11 +430,71 @@ EOF
             fi
         fi
         
+        # Configure backend service routes
+        if [[ "${SERVICES_ENABLED:-false}" == "true" ]]; then
+            printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring backend service routes..."
+            
+            # Create routes directory if it doesn't exist
+            mkdir -p nginx/conf.d/routes
+            
+            # Generate routes for NestJS services
+            if [[ -n "${NESTJS_SERVICES:-}" ]]; then
+                IFS=',' read -ra services <<< "$NESTJS_SERVICES"
+                for service in "${services[@]}"; do
+                    service=$(echo "$service" | xargs)
+                    cat > "nginx/conf.d/routes/nest-${service}.conf" << EOF
+# Route for NestJS $service service
+location /api/nest/$service/ {
+    proxy_pass http://unity-nest-${service}:${NESTJS_PORT_START:-3100}/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+EOF
+                done
+            fi
+            
+            # Generate routes for Go services
+            if [[ -n "${GO_SERVICES:-${GOLANG_SERVICES:-}}" ]]; then
+                IFS=',' read -ra services <<< "${GO_SERVICES:-${GOLANG_SERVICES:-}}"
+                for service in "${services[@]}"; do
+                    service=$(echo "$service" | xargs)
+                    cat > "nginx/conf.d/routes/go-${service}.conf" << EOF
+# Route for Go $service service
+location /api/go/$service/ {
+    proxy_pass http://unity-go-${service}:${GOLANG_PORT_START:-3300}/;
+    proxy_http_version 1.1;
+}
+EOF
+                done
+            fi
+            
+            # Generate routes for Python services
+            if [[ -n "${PYTHON_SERVICES:-}" ]]; then
+                IFS=',' read -ra services <<< "$PYTHON_SERVICES"
+                for service in "${services[@]}"; do
+                    service=$(echo "$service" | xargs)
+                    cat > "nginx/conf.d/routes/py-${service}.conf" << EOF
+# Route for Python $service service
+location /api/python/$service/ {
+    proxy_pass http://unity-py-${service}:${PYTHON_PORT_START:-3400}/;
+    proxy_http_version 1.1;
+}
+EOF
+                done
+            fi
+            
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backend service routes configured              \n"
+        fi
+        
         # Generate database initialization script if needed
         if [[ "$needs_db" == "true" ]]; then
             printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating database initialization..."
             
-            cat > init.sql << 'EOF'
+            # Create postgres/init directory if it doesn't exist
+            mkdir -p postgres/init
+            
+            cat > postgres/init/01-init.sql << 'EOF'
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -450,46 +516,146 @@ EOF
                 IFS=',' read -ra EXTENSIONS <<< "$POSTGRES_EXTENSIONS"
                 for ext in "${EXTENSIONS[@]}"; do
                     ext=$(echo "$ext" | xargs)  # Trim whitespace
-                    echo "CREATE EXTENSION IF NOT EXISTS \"$ext\";" >> init.sql
+                    echo "CREATE EXTENSION IF NOT EXISTS \"$ext\";" >> postgres/init/01-init.sql
                 done
             fi
             
             printf "\r${COLOR_GREEN}✓${COLOR_RESET} Database initialization created            \n"
-            CREATED_FILES+=("init.sql")
+            CREATED_FILES+=("postgres/init/01-init.sql")
         fi
     fi
     
     # Generate ALL services based on env file (env is king!)
-    # Source service generator
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating services...\r"
+    
+    # Reload environment to ensure we have latest values
+    if [[ -f ".env.local" ]]; then
+        set -a
+        source .env.local
+        set +a
+    fi
+    
+    # Source generators once at the beginning
+    local service_gen_loaded=false
+    local dockerfile_gen_loaded=false
+    
     if [[ -f "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh" ]]; then
+        # Override log functions to be silent
+        log_info() { :; }
+        log_success() { :; }
+        log_warning() { :; }
         source "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh"
+        service_gen_loaded=true
+    fi
+    
+    if [[ -f "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" ]]; then
+        # Override log functions to be silent for this too
+        log_info() { :; }
+        log_success() { :; }
+        log_warning() { :; }
+        source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
+        dockerfile_gen_loaded=true
+    fi
+    
+    # Track what we generate
+    local total_services_generated=0
+    local system_services_generated=0
+    
+    # Generate microservices if enabled
+    if [[ "$service_gen_loaded" == "true" ]] && [[ "${SERVICES_ENABLED:-false}" == "true" ]]; then
+        # Count services before generation
+        local before_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
         
-        # Always check and generate services based on env
-        if [[ "${SERVICES_ENABLED:-false}" == "true" ]]; then
-            auto_generate_services
-        fi
+        # Generate services silently
+        auto_generate_services "true" >/dev/null 2>&1
         
-        # Generate system services if enabled
+        # Count services after generation
+        local after_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
+        total_services_generated=$((after_count - before_count))
+    fi
+    
+    # Generate system services if enabled
+    if [[ "$dockerfile_gen_loaded" == "true" ]]; then
+        local gen_script="$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
+        
+        # Functions service
         if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] && [[ ! -d "functions" ]]; then
-            log_info "Generating functions service..."
-            source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
-            generate_dockerfile_for_service "functions" "functions"
-        fi
-        
-        if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
-            log_info "Generating dashboard service..."
-            source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
-            generate_dockerfile_for_service "dashboard" "dashboard"
-        fi
-        
-        # Config server is often needed internally
-        if [[ ! -d "config-server" ]] && [[ -f "docker-compose.yml" ]]; then
-            # Check if config-server is referenced in docker-compose
-            if grep -q "config-server:" docker-compose.yml 2>/dev/null; then
-                log_info "Generating config-server service..."
-                source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
-                generate_dockerfile_for_service "config-server" "config-server"
+            # Use bash -c to ensure proper execution context for heredocs
+            bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
+            if [[ -d "functions" ]]; then
+                ((system_services_generated++))
             fi
+        fi
+        
+        # Dashboard service
+        if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
+            bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
+            if [[ -d "dashboard" ]]; then
+                ((system_services_generated++))
+            fi
+        fi
+        
+        # Config server (often needed internally)
+        if [[ ! -d "config-server" ]] && [[ -f "docker-compose.yml" ]]; then
+            if grep -q "config-server:" docker-compose.yml 2>/dev/null; then
+                bash -c "source '${gen_script}' && generate_dockerfile_for_service 'config-server' 'config-server'" >/dev/null 2>&1
+                if [[ -d "config-server" ]]; then
+                    ((system_services_generated++))
+                fi
+            fi
+        fi
+    fi
+    
+    # Report results
+    if [[ $total_services_generated -gt 0 ]] || [[ $system_services_generated -gt 0 ]]; then
+        local total=$((total_services_generated + system_services_generated))
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Generated $total services                              \n"
+    else
+        # Clear the "Generating services..." line
+        printf "\r                                                            \r"
+    fi
+    
+    # Restore log functions
+    source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+    
+    # Generate SSL certificates (silently)
+    if [[ -f "$SCRIPT_DIR/../lib/ssl/ssl.sh" ]]; then
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
+        
+        # Source SSL library
+        source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null
+        
+        # Ensure tools and generate certificates silently
+        if ssl::ensure_tools >/dev/null 2>&1; then
+            local ssl_success=true
+            
+            # Try to generate certificates based on configuration
+            if [[ -n "${DNS_PROVIDER:-}" ]]; then
+                # Try public wildcard
+                if ! ssl::issue_public_wildcard >/dev/null 2>&1; then
+                    # Fall back to internal
+                    ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
+                fi
+            else
+                # Generate internal certificates
+                ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
+            fi
+            
+            # Generate localhost certificates
+            if [[ "${SSL_FALLBACK_LOCALHOST:-true}" == "true" ]]; then
+                ssl::issue_localhost_bundle >/dev/null 2>&1 || ssl_success=false
+            fi
+            
+            # Copy to project and generate nginx configs
+            if [[ "$ssl_success" == "true" ]]; then
+                ssl::copy_into_project "." >/dev/null 2>&1
+                ssl::render_nginx_snippets "." >/dev/null 2>&1
+                printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated                  \n"
+            else
+                printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL generation incomplete                  \n"
+            fi
+        else
+            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL tools not available                    \n"
         fi
     fi
     
@@ -519,14 +685,14 @@ EOF
     echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
     echo
     
-    echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself up${COLOR_RESET} - Start all services"
+    echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
+    echo -e "   ${COLOR_DIM}Trust the root CA for green locks in browsers${COLOR_RESET}"
+    echo
+    echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself up${COLOR_RESET} - Start all services"
     echo -e "   ${COLOR_DIM}Launches PostgreSQL, Hasura, and configured services${COLOR_RESET}"
     echo
-    echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself status${COLOR_RESET} - Check service health"
+    echo -e "${COLOR_BLUE}3.${COLOR_RESET} ${COLOR_BLUE}nself status${COLOR_RESET} - Check service health"
     echo -e "   ${COLOR_DIM}View the status of all running services${COLOR_RESET}"
-    echo
-    echo -e "${COLOR_BLUE}3.${COLOR_RESET} ${COLOR_BLUE}nself urls${COLOR_RESET} - View service endpoints"
-    echo -e "   ${COLOR_DIM}Display all available service URLs${COLOR_RESET}"
     
     if [[ "$is_existing_project" == "true" ]] && [[ "$needs_work" == "false" ]]; then
         echo

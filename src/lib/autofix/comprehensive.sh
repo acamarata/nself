@@ -33,10 +33,10 @@ fix_service_comprehensive() {
         # Check if it's a false positive (service is actually running)
         local container_state=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null)
         if [[ "$container_state" == "running" ]]; then
-            # Check if curl/wget is the issue
-            if docker exec "$container_name" which curl 2>/dev/null; then
+            # Check if curl/wget is the issue (without using 'which')
+            if docker exec "$container_name" sh -c "command -v curl || test -x /usr/bin/curl" 2>/dev/null; then
                 log_debug "$service_name has curl, health check should work"
-            elif docker exec "$container_name" which wget 2>/dev/null; then
+            elif docker exec "$container_name" sh -c "command -v wget || test -x /usr/bin/wget" 2>/dev/null; then
                 log_info "Fixing health check for $service_name (using wget)..."
                 if [[ -f "$AUTOFIX_DIR/fixes/healthcheck.sh" ]]; then
                     source "$AUTOFIX_DIR/fixes/healthcheck.sh"

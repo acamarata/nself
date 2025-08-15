@@ -255,8 +255,8 @@ fix_auth_healthcheck() {
         }
     }' "$compose_file" 2>/dev/null || true
     
-    # The nhost/hasura-auth image should have wget, but let's ensure it
-    docker exec "${project_name}_auth" which wget >/dev/null 2>&1 || {
+    # The nhost/hasura-auth image should have wget, but let's ensure it (without using 'which')
+    docker exec "${project_name}_auth" sh -c "command -v wget || test -x /usr/bin/wget" >/dev/null 2>&1 || {
         # Try to install wget
         docker exec "${project_name}_auth" sh -c "apk add --no-cache wget 2>/dev/null || apt-get update && apt-get install -y wget 2>/dev/null" >/dev/null 2>&1
     }
