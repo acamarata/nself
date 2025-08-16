@@ -3,7 +3,7 @@
 # db.sh - Database management tools for nself
 # Handles migrations, seeding, schema sync, and backups
 
-set +e  # Don't exit on error for db commands
+set +e # Don't exit on error for db commands
 
 # Get script directory (macOS compatible)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,7 +34,7 @@ ensure_directories() {
 
 # Check if DBML CLI is installed
 check_dbml_cli() {
-  if ! command -v dbml2sql &> /dev/null; then
+  if ! command -v dbml2sql &>/dev/null; then
     log_warning "DBML CLI not installed. Installing..."
     npm install -g @dbml/cli
   fi
@@ -44,9 +44,9 @@ check_dbml_cli() {
 dbml_to_sql() {
   local dbml_file="$1"
   local sql_file="$2"
-  
+
   check_dbml_cli
-  
+
   if dbml2sql "$dbml_file" --postgres -o "$sql_file" 2>/dev/null; then
     return 0
   else
@@ -62,12 +62,12 @@ calculate_hash() {
     echo "file_not_found"
     return 1
   fi
-  
-  if command -v shasum &> /dev/null; then
+
+  if command -v shasum &>/dev/null; then
     shasum -a 256 "$file" | cut -d' ' -f1
-  elif command -v sha256sum &> /dev/null; then
+  elif command -v sha256sum &>/dev/null; then
     sha256sum "$file" | cut -d' ' -f1
-  elif command -v md5 &> /dev/null; then
+  elif command -v md5 &>/dev/null; then
     md5 -q "$file"
   else
     md5sum "$file" | cut -d' ' -f1
@@ -77,27 +77,27 @@ calculate_hash() {
 # Backup current state before changes
 backup_current_state() {
   local backup_dir="bin/dbsyncs/$(date +%Y-%m-%d_%H-%M-%S)"
-  
+
   log_info "Backing up current database state to $backup_dir"
   mkdir -p "$backup_dir"
-  
+
   # Backup schema
   if [ -f "schema.dbml" ]; then
     cp schema.dbml "$backup_dir/"
   fi
-  
+
   # Backup migrations
   if [ -d "hasura/migrations" ]; then
     cp -r hasura/migrations "$backup_dir/"
   fi
-  
+
   # Backup seeds
   if [ -d "seeds" ]; then
     cp -r seeds "$backup_dir/"
   fi
-  
+
   # Save metadata
-  cat > "$backup_dir/metadata.json" << EOF
+  cat >"$backup_dir/metadata.json" <<EOF
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "environment": "${ENVIRONMENT:-development}",
@@ -105,7 +105,7 @@ backup_current_state() {
   "description": "$1"
 }
 EOF
-  
+
   log_success "Backup saved to $backup_dir"
   return 0
 }
@@ -117,26 +117,26 @@ EOF
 # Main run command - analyze schema and generate migrations
 cmd_run() {
   local schema_file="${LOCAL_SCHEMA_FILE:-schema.dbml}"
-  
+
   # Check if schema file exists
   if [ ! -f "$schema_file" ]; then
     log_error "Schema file not found: $schema_file"
     log_info "Create a schema.dbml file or run 'nself db sample' to generate one"
     return 1
   fi
-  
+
   log_info "Analyzing schema: $schema_file"
-  
+
   # Backup current state
   backup_current_state "Before schema sync"
-  
+
   # Check if schema has changed
   local hash_file=".nself/schema.hash"
   mkdir -p .nself
-  
+
   local new_hash=$(calculate_hash "$schema_file")
   local has_changes=false
-  
+
   if [ -f "$hash_file" ]; then
     local old_hash=$(cat "$hash_file")
     if [ "$new_hash" != "$old_hash" ]; then
@@ -145,56 +145,56 @@ cmd_run() {
   else
     has_changes=true
   fi
-  
+
   if [ "$has_changes" = true ]; then
     log_success "Schema changes detected!"
-    
+
     # Generate migration
     local timestamp=$(date +%Y%m%d%H%M%S)
     local migration_name="schema_update"
     local migration_dir="hasura/migrations/default/${timestamp}_${migration_name}"
-    
+
     log_info "Generating migration: ${timestamp}_${migration_name}"
-    
+
     # Create migration directory
     mkdir -p "$migration_dir"
-    
+
     # Generate SQL from DBML
     local temp_sql="/tmp/dbml_${timestamp}.sql"
     if ! dbml_to_sql "$schema_file" "$temp_sql"; then
       return 1
     fi
-    
+
     # Create up migration
-    cat > "$migration_dir/up.sql" << EOF
+    cat >"$migration_dir/up.sql" <<EOF
 -- Auto-generated migration from schema.dbml
 -- Generated: $(date)
 
 EOF
-    
+
     # Add the generated SQL with IF NOT EXISTS clauses
-    sed 's/CREATE TABLE/CREATE TABLE IF NOT EXISTS/g' "$temp_sql" | \
-    sed 's/CREATE TYPE/CREATE TYPE IF NOT EXISTS/g' | \
-    sed 's/CREATE INDEX/CREATE INDEX IF NOT EXISTS/g' >> "$migration_dir/up.sql"
-    
+    sed 's/CREATE TABLE/CREATE TABLE IF NOT EXISTS/g' "$temp_sql" |
+      sed 's/CREATE TYPE/CREATE TYPE IF NOT EXISTS/g' |
+      sed 's/CREATE INDEX/CREATE INDEX IF NOT EXISTS/g' >>"$migration_dir/up.sql"
+
     # Create down migration
-    cat > "$migration_dir/down.sql" << 'EOF'
+    cat >"$migration_dir/down.sql" <<'EOF'
 -- Rollback migration
 -- WARNING: Review and modify as needed before using in production
 
 EOF
-    
+
     # Extract table names for down migration
-    grep -E "^CREATE TABLE" "$temp_sql" | \
-      sed 's/CREATE TABLE IF NOT EXISTS/DROP TABLE IF EXISTS/' | \
-      sed 's/CREATE TABLE/DROP TABLE IF EXISTS/' | \
-      sed 's/ (.*/ CASCADE;/' >> "$migration_dir/down.sql"
-    
+    grep -E "^CREATE TABLE" "$temp_sql" |
+      sed 's/CREATE TABLE IF NOT EXISTS/DROP TABLE IF EXISTS/' |
+      sed 's/CREATE TABLE/DROP TABLE IF EXISTS/' |
+      sed 's/ (.*/ CASCADE;/' >>"$migration_dir/down.sql"
+
     rm -f "$temp_sql"
-    
+
     # Update hash
-    echo "$new_hash" > "$hash_file"
-    
+    echo "$new_hash" >"$hash_file"
+
     log_success "Migration created: $migration_dir"
     log_info "Review the migration files before applying:"
     log_info "  - $migration_dir/up.sql"
@@ -215,14 +215,14 @@ EOF
 
 cmd_sync() {
   local dbdiagram_url="${DBDIAGRAM_URL}"
-  
+
   if [ -z "$dbdiagram_url" ]; then
     log_error "No DBDIAGRAM_URL configured in .env.local"
     log_info "Add to .env.local:"
     log_info "  DBDIAGRAM_URL=https://dbdiagram.io/d/your-project-id"
     return 1
   fi
-  
+
   log_info "Syncing from dbdiagram.io: $dbdiagram_url"
   echo ""
   log_warning "dbdiagram.io does not provide a public API."
@@ -237,16 +237,16 @@ cmd_sync() {
   echo ""
   log_info "4. Paste below (press Ctrl+D when done):"
   echo "----------------------------------------"
-  
+
   # Backup existing schema
   if [ -f "schema.dbml" ]; then
     cp schema.dbml schema.dbml.backup
     log_info "Backed up existing schema to schema.dbml.backup"
   fi
-  
+
   # Read new schema
-  cat > schema.dbml.tmp
-  
+  cat >schema.dbml.tmp
+
   if [ -s "schema.dbml.tmp" ]; then
     mv schema.dbml.tmp schema.dbml
     echo "----------------------------------------"
@@ -266,93 +266,93 @@ cmd_sync() {
 
 cmd_migrate_create() {
   local name="$1"
-  
+
   if [ -z "$name" ]; then
     log_error "Please provide a migration name"
     log_info "Usage: nself db migrate:create <name>"
     return 1
   fi
-  
+
   # Create timestamped migration
   local timestamp=$(date +%Y%m%d%H%M%S)
   local migration_dir="hasura/migrations/default/${timestamp}_${name}"
-  
+
   mkdir -p "$migration_dir"
-  
+
   # Create empty migration files
-  cat > "$migration_dir/up.sql" << EOF
+  cat >"$migration_dir/up.sql" <<EOF
 -- Migration: $name
 -- Created: $(date)
 
 -- Add your forward migration SQL here
 
 EOF
-  
-  cat > "$migration_dir/down.sql" << EOF
+
+  cat >"$migration_dir/down.sql" <<EOF
 -- Rollback for: $name
 -- Created: $(date)
 
 -- Add your rollback SQL here
 
 EOF
-  
+
   log_success "Created migration: $migration_dir"
 }
 
 cmd_migrate_up() {
   log_info "Running migrations (up)..."
-  
+
   # Check if Hasura CLI is available
-  if command -v hasura &> /dev/null; then
+  if command -v hasura &>/dev/null; then
     cd hasura 2>/dev/null && hasura migrate apply --database-name default || true
-    cd - > /dev/null
+    cd - >/dev/null
   else
     # Fallback to direct SQL execution
     log_info "Hasura CLI not found, using direct SQL execution..."
-    
+
     # Check if postgres container is running
     if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
       log_error "PostgreSQL container is not running. Run 'nself start' first."
       return 1
     fi
-    
+
     # Apply migrations in order
     for migration in hasura/migrations/default/*/up.sql; do
       if [ -f "$migration" ]; then
         local migration_name=$(basename $(dirname "$migration"))
         log_info "Applying migration: $migration_name"
-        docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$migration" || true
+        docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" <"$migration" || true
       fi
     done
   fi
-  
+
   log_success "Migrations completed"
 }
 
 cmd_migrate_down() {
   local steps="${1:-1}"
-  
+
   log_info "Rolling back $steps migration(s)..."
-  
+
   # Get list of migrations in reverse order
   local migrations=($(ls -r hasura/migrations/default/*/down.sql 2>/dev/null | head -n "$steps"))
-  
+
   if [ ${#migrations[@]} -eq 0 ]; then
     log_warning "No migrations to rollback"
     return 0
   fi
-  
+
   # Backup before rollback
   backup_current_state "Before rollback"
-  
+
   for migration in "${migrations[@]}"; do
     if [ -f "$migration" ]; then
       local migration_name=$(basename $(dirname "$migration"))
       log_info "Rolling back: $migration_name"
-      docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$migration" || true
+      docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" <"$migration" || true
     fi
   done
-  
+
   log_success "Rollback completed"
 }
 
@@ -362,40 +362,40 @@ cmd_migrate_down() {
 
 cmd_revert() {
   log_info "Reverting to previous database state..."
-  
+
   # Find latest backup
   local latest_backup=$(ls -d bin/dbsyncs/*/ 2>/dev/null | tail -1)
-  
+
   if [ -z "$latest_backup" ] || [ ! -d "$latest_backup" ]; then
     log_error "No backups found"
     return 1
   fi
-  
+
   log_info "Reverting to: $latest_backup"
-  
+
   # Backup current state first
   backup_current_state "Before revert"
-  
+
   # Restore schema
   if [ -f "$latest_backup/schema.dbml" ]; then
     cp "$latest_backup/schema.dbml" schema.dbml
     log_success "Restored schema.dbml"
   fi
-  
+
   # Restore migrations
   if [ -d "$latest_backup/migrations" ]; then
     rm -rf hasura/migrations
     cp -r "$latest_backup/migrations" hasura/
     log_success "Restored migrations"
   fi
-  
+
   # Restore seeds
   if [ -d "$latest_backup/seeds" ]; then
     rm -rf seeds
     cp -r "$latest_backup/seeds" .
     log_success "Restored seeds"
   fi
-  
+
   log_success "Revert completed"
   log_info "Run 'nself db migrate:up' to apply the restored state"
 }
@@ -407,14 +407,14 @@ cmd_revert() {
 cmd_seed() {
   # Use ENV if available, otherwise fall back to ENVIRONMENT
   local env_mode="${ENV:-${ENVIRONMENT:-development}}"
-  local use_env_seeds="${DB_ENV_SEEDS:-true}"  # Default to true for better practices
-  
+  local use_env_seeds="${DB_ENV_SEEDS:-true}" # Default to true for better practices
+
   # Check if postgres is running
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
     log_error "PostgreSQL container is not running. Run 'nself start' first."
     return 1
   fi
-  
+
   # Map ENV to standard environment names
   local env_name="development"
   if [[ "$env_mode" == "prod" ]] || [[ "$env_mode" == "production" ]]; then
@@ -424,32 +424,32 @@ cmd_seed() {
   elif [[ "$env_mode" == "dev" ]] || [[ "$env_mode" == "development" ]]; then
     env_name="development"
   fi
-  
+
   # Use environment-based seeding strategy if enabled
   if [[ "$use_env_seeds" == "true" ]]; then
     # Standards-compliant approach using Hasura/PostgreSQL conventions
     log_info "Seeding database for environment: $env_name"
-    
+
     # Apply common seeds first (shared across all environments)
     if [ -d "seeds/common" ]; then
       log_info "Applying common seeds..."
       for seed in seeds/common/*.sql; do
         if [ -f "$seed" ]; then
           log_info "  • $(basename $seed)"
-          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed"; then
+          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" <"$seed"; then
             log_warning "  Failed to apply: $(basename $seed)"
           fi
         fi
       done
     fi
-    
+
     # Apply environment-specific seeds
     if [ -d "seeds/$env_name" ]; then
       log_info "Applying $env_name seeds..."
       for seed in seeds/$env_name/*.sql; do
         if [ -f "$seed" ]; then
           log_info "  • $(basename $seed)"
-          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed"; then
+          if ! docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" <"$seed"; then
             log_warning "  Failed to apply: $(basename $seed)"
           fi
         fi
@@ -462,24 +462,24 @@ cmd_seed() {
       log_info "  seeds/staging/      - Staging environment data"
       log_info "  seeds/production/   - Minimal production data"
     fi
-    
+
     log_success "Database seeded for $env_name environment"
   else
     # No environment branching - just use default directory
     log_info "Seeding database (no environment branching)"
-    
+
     if [ -d "seeds/default" ]; then
       for seed in seeds/default/*.sql; do
         if [ -f "$seed" ]; then
           log_info "Applying seed: $(basename $seed)"
-          docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" < "$seed" || true
+          docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" <"$seed" || true
         fi
       done
     else
       log_info "No seeds found in seeds/default/"
       log_info "Create seed files in seeds/default/ directory"
     fi
-    
+
     log_success "Database seeded"
   fi
 }
@@ -490,84 +490,84 @@ cmd_seed() {
 
 cmd_update() {
   log_info "Checking for database updates..."
-  
+
   # Check if postgres is running
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
     log_error "PostgreSQL container is not running. Run 'nself start' first."
     return 1
   fi
-  
+
   # Check for pending migrations
   check_pending_migrations
   local pending_count=$?
-  
+
   if [ "$pending_count" -eq 0 ]; then
     log_success "Database is up to date!"
     return 0
   fi
-  
+
   log_warning "Found $pending_count pending migration(s)"
   echo ""
-  
+
   # Show pending migrations
   log_info "Pending migrations:"
   for migration in hasura/migrations/default/*/up.sql; do
     if [ -f "$migration" ]; then
       local migration_name=$(basename $(dirname "$migration"))
       # Check if this migration is already applied (basic check)
-      if ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "\dt" 2>/dev/null | grep -q "schema_migrations" || \
-         ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "SELECT version FROM schema_migrations WHERE version = '$migration_name'" 2>/dev/null | grep -q "$migration_name"; then
+      if ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "\dt" 2>/dev/null | grep -q "schema_migrations" ||
+        ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "SELECT version FROM schema_migrations WHERE version = '$migration_name'" 2>/dev/null | grep -q "$migration_name"; then
         echo "  - $migration_name"
       fi
     fi
   done
-  
+
   echo ""
   log_info "This will apply all pending migrations to bring your database up to date."
   read -p "Continue? (y/N): " -r
   echo
-  
+
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     log_info "Update cancelled"
     return 0
   fi
-  
+
   # Backup before applying
   backup_current_state "Before update"
-  
+
   # Apply migrations
   cmd_migrate_up
-  
+
   # Seed based on environment (dev seeds for non-production, prod seeds for production)
   log_info "Applying seeds for ${ENV:-${ENVIRONMENT:-development}} environment..."
   cmd_seed
-  
+
   log_success "Database updated successfully!"
 }
 
 # Check for pending migrations (returns count)
 check_pending_migrations() {
   local migration_count=0
-  
+
   # Count migration directories
   if [ -d "hasura/migrations/default" ]; then
     migration_count=$(ls -d hasura/migrations/default/*/ 2>/dev/null | wc -l)
   fi
-  
+
   # If can't connect to database, assume all migrations are pending
   if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres" 2>/dev/null; then
     return $migration_count
   fi
-  
+
   # Check if tables exist (basic check for applied migrations)
   local table_count=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" 2>/dev/null || echo "0")
   table_count=$(echo "$table_count" | tr -d ' ')
-  
+
   # If we have migrations but very few tables, migrations are likely pending
   if [ "$migration_count" -gt 0 ] && [ "$table_count" -lt 5 ]; then
     return $migration_count
   fi
-  
+
   return 0
 }
 
@@ -579,34 +579,34 @@ cmd_reset() {
   log_warning "This will delete all data and reset the database!"
   read -p "Are you sure? Type 'yes' to confirm: " -r
   echo
-  
+
   if [[ ! $REPLY == "yes" ]]; then
     log_info "Reset cancelled"
     return 0
   fi
-  
+
   # Backup before reset
   backup_current_state "Before reset"
-  
+
   log_info "Resetting database..."
-  
+
   # Drop and recreate database
   docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "DROP DATABASE IF EXISTS ${POSTGRES_DB:-nhost};"
   docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "CREATE DATABASE ${POSTGRES_DB:-nhost};"
-  
+
   # Re-run migrations
   cmd_migrate_up
-  
+
   # Re-seed
   cmd_seed
-  
+
   log_success "Database reset completed"
 }
 
 cmd_status() {
   log_info "Database Status"
   echo ""
-  
+
   # Check schema
   if [ -f "schema.dbml" ]; then
     log_success "Schema file: schema.dbml"
@@ -615,26 +615,26 @@ cmd_status() {
   else
     log_warning "No schema.dbml file found"
   fi
-  
+
   # Check migrations
   local migration_count=$(ls -d hasura/migrations/default/*/ 2>/dev/null | wc -l)
   log_info "Migrations: $migration_count"
-  
+
   if [ "$migration_count" -gt 0 ]; then
     log_info "Latest migrations:"
     ls -d hasura/migrations/default/*/ 2>/dev/null | tail -3 | while read dir; do
       echo "  - $(basename $dir)"
     done
   fi
-  
+
   # Check backups
   local backup_count=$(ls -d bin/dbsyncs/*/ 2>/dev/null | wc -l)
   log_info "Backups: $backup_count"
-  
+
   if [ "$backup_count" -gt 0 ]; then
     log_info "Latest backup: $(ls -d bin/dbsyncs/*/ 2>/dev/null | tail -1)"
   fi
-  
+
   # Check if database is running
   if docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
     log_success "PostgreSQL: Running"
@@ -645,8 +645,8 @@ cmd_status() {
 
 cmd_sample() {
   log_info "Creating sample schema.dbml..."
-  
-  cat > schema.dbml << 'EOF'
+
+  cat >schema.dbml <<'EOF'
 // Sample Database Schema
 // Edit this file to define your database structure
 // Then run 'nself db run' to generate migrations
@@ -721,7 +721,7 @@ Table organization_members {
 
 // Add more tables as needed...
 EOF
-  
+
   log_success "Created sample schema.dbml"
   log_info "Edit this file to match your application needs"
   log_info "Then run 'nself db run' to generate migrations"
@@ -788,58 +788,58 @@ main() {
     load_env_safe ".env.local"
   fi
   ensure_directories
-  
+
   local command="${1:-help}"
   shift || true
-  
+
   # Show command header (except for help command)
   if [[ "$command" != "help" ]] && [[ "$command" != "--help" ]] && [[ "$command" != "-h" ]] && [[ -n "$command" ]]; then
     show_command_header "nself db" "Database operations and management"
   fi
-  
+
   case "$command" in
-    run)
-      cmd_run "$@"
-      ;;
-    sync)
-      cmd_sync "$@"
-      ;;
-    migrate:create)
-      cmd_migrate_create "$@"
-      ;;
-    migrate:up)
-      cmd_migrate_up "$@"
-      ;;
-    migrate:down)
-      cmd_migrate_down "$@"
-      ;;
-    update)
-      cmd_update "$@"
-      ;;
-    seed)
-      cmd_seed "$@"
-      ;;
-    reset)
-      cmd_reset "$@"
-      ;;
-    status)
-      cmd_status "$@"
-      ;;
-    revert)
-      cmd_revert "$@"
-      ;;
-    sample)
-      cmd_sample "$@"
-      ;;
-    help|--help|-h|"")
-      cmd_help
-      ;;
-    *)
-      log_error "Unknown command: $command"
-      echo ""
-      cmd_help
-      exit 1
-      ;;
+  run)
+    cmd_run "$@"
+    ;;
+  sync)
+    cmd_sync "$@"
+    ;;
+  migrate:create)
+    cmd_migrate_create "$@"
+    ;;
+  migrate:up)
+    cmd_migrate_up "$@"
+    ;;
+  migrate:down)
+    cmd_migrate_down "$@"
+    ;;
+  update)
+    cmd_update "$@"
+    ;;
+  seed)
+    cmd_seed "$@"
+    ;;
+  reset)
+    cmd_reset "$@"
+    ;;
+  status)
+    cmd_status "$@"
+    ;;
+  revert)
+    cmd_revert "$@"
+    ;;
+  sample)
+    cmd_sample "$@"
+    ;;
+  help | --help | -h | "")
+    cmd_help
+    ;;
+  *)
+    log_error "Unknown command: $command"
+    echo ""
+    cmd_help
+    exit 1
+    ;;
   esac
 }
 

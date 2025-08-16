@@ -8,48 +8,48 @@ source "$DOCKERFILE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
 
 # Generate appropriate Dockerfile based on service name and context
 generate_dockerfile_for_service() {
-    local service_name="$1"
-    local service_path="${2:-./$service_name}"
-    
-    # Silent generation
-    
-    # Create directory if it doesn't exist
-    mkdir -p "$service_path"
-    
-    # Determine service type based on name and generate appropriate files
-    case "$service_name" in
-        functions)
-            generate_functions_service "$service_path"
-            ;;
-        config-server)
-            generate_config_server "$service_path"
-            ;;
-        dashboard)
-            generate_dashboard_service "$service_path"
-            ;;
-        auth)
-            generate_auth_service "$service_path"
-            ;;
-        storage)
-            generate_storage_service "$service_path"
-            ;;
-        hasura)
-            generate_hasura_service "$service_path"
-            ;;
-        *)
-            # Default to a basic Node.js service
-            generate_generic_node_service "$service_name" "$service_path"
-            ;;
-    esac
-    
-    return 0
+  local service_name="$1"
+  local service_path="${2:-./$service_name}"
+
+  # Silent generation
+
+  # Create directory if it doesn't exist
+  mkdir -p "$service_path"
+
+  # Determine service type based on name and generate appropriate files
+  case "$service_name" in
+  functions)
+    generate_functions_service "$service_path"
+    ;;
+  config-server)
+    generate_config_server "$service_path"
+    ;;
+  dashboard)
+    generate_dashboard_service "$service_path"
+    ;;
+  auth)
+    generate_auth_service "$service_path"
+    ;;
+  storage)
+    generate_storage_service "$service_path"
+    ;;
+  hasura)
+    generate_hasura_service "$service_path"
+    ;;
+  *)
+    # Default to a basic Node.js service
+    generate_generic_node_service "$service_name" "$service_path"
+    ;;
+  esac
+
+  return 0
 }
 
 # Generate functions service
 generate_functions_service() {
-    local path="$1"
-    
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  cat >"$path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 # Install health check tools
 RUN apk add --no-cache curl wget
@@ -64,7 +64,7 @@ EXPOSE ${FUNCTIONS_PORT}
 CMD ["node", "index.js"]
 EOF
 
-    cat > "$path/package.json" << 'EOF'
+  cat >"$path/package.json" <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -83,7 +83,7 @@ EOF
 }
 EOF
 
-    cat > "$path/index.js" << 'EOF'
+  cat >"$path/index.js" <<'EOF'
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -114,15 +114,15 @@ app.listen(port, () => {
   console.log(`Functions service listening on port ${port}`);
 });
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate config-server service
 generate_config_server() {
-    local path="$1"
-    
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  cat >"$path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 # Install health check tools
 RUN apk add --no-cache curl wget
@@ -134,7 +134,7 @@ EXPOSE 4001
 CMD ["node", "index.js"]
 EOF
 
-    cat > "$path/package.json" << 'EOF'
+  cat >"$path/package.json" <<'EOF'
 {
   "name": "config-server",
   "version": "1.0.0",
@@ -149,7 +149,7 @@ EOF
 }
 EOF
 
-    cat > "$path/index.js" << 'EOF'
+  cat >"$path/index.js" <<'EOF'
 const express = require('express');
 const app = express();
 const port = process.env.CONFIG_SERVER_PORT || 4001;
@@ -181,15 +181,15 @@ app.listen(port, () => {
   console.log(`Config server listening on port ${port}`);
 });
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate dashboard service
 generate_dashboard_service() {
-    local path="$1"
-    
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  cat >"$path/Dockerfile" <<'EOF'
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -209,7 +209,7 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 EOF
 
-    cat > "$path/package.json" << 'EOF'
+  cat >"$path/package.json" <<'EOF'
 {
   "name": "dashboard",
   "version": "1.0.0",
@@ -230,7 +230,7 @@ EOF
 }
 EOF
 
-    cat > "$path/nginx.conf" << 'EOF'
+  cat >"$path/nginx.conf" <<'EOF'
 server {
     listen 80;
     location / {
@@ -241,9 +241,9 @@ server {
 }
 EOF
 
-    # Create a simple index.html
-    mkdir -p "$path/dist"
-    cat > "$path/dist/index.html" << 'EOF'
+  # Create a simple index.html
+  mkdir -p "$path/dist"
+  cat >"$path/dist/index.html" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -255,61 +255,61 @@ EOF
 </body>
 </html>
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate auth service placeholder
 generate_auth_service() {
-    local path="$1"
-    
-    # Auth is usually hasura-auth, just create a marker
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  # Auth is usually hasura-auth, just create a marker
+  cat >"$path/Dockerfile" <<'EOF'
 # Auth service is provided by hasura-auth image
 # This is a placeholder for docker-compose compatibility
 FROM busybox:latest
 CMD ["echo", "Auth service uses hasura-auth image"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate storage service placeholder
 generate_storage_service() {
-    local path="$1"
-    
-    # Storage is usually hasura-storage, just create a marker
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  # Storage is usually hasura-storage, just create a marker
+  cat >"$path/Dockerfile" <<'EOF'
 # Storage service is provided by hasura-storage image
 # This is a placeholder for docker-compose compatibility
 FROM busybox:latest
 CMD ["echo", "Storage service uses hasura-storage image"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate hasura service placeholder
 generate_hasura_service() {
-    local path="$1"
-    
-    # Hasura uses official image, just create a marker
-    cat > "$path/Dockerfile" << 'EOF'
+  local path="$1"
+
+  # Hasura uses official image, just create a marker
+  cat >"$path/Dockerfile" <<'EOF'
 # Hasura service is provided by hasura/graphql-engine image
 # This is a placeholder for docker-compose compatibility
 FROM busybox:latest
 CMD ["echo", "Hasura service uses official hasura image"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Generate generic Node.js service
 generate_generic_node_service() {
-    local service_name="$1"
-    local path="$2"
-    
-    cat > "$path/Dockerfile" << 'EOF'
+  local service_name="$1"
+  local path="$2"
+
+  cat >"$path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 # Install health check tools
 RUN apk add --no-cache curl wget
@@ -321,7 +321,7 @@ EXPOSE 3000
 CMD ["node", "index.js"]
 EOF
 
-    cat > "$path/package.json" << EOF
+  cat >"$path/package.json" <<EOF
 {
   "name": "$service_name",
   "version": "1.0.0",
@@ -335,7 +335,7 @@ EOF
 }
 EOF
 
-    cat > "$path/index.js" << EOF
+  cat >"$path/index.js" <<EOF
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -352,8 +352,8 @@ app.listen(port, () => {
   console.log('${service_name} service listening on port ' + port);
 });
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Export functions

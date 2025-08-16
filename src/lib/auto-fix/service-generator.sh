@@ -8,16 +8,16 @@ source "$SERVICE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
 
 # Generate a NestJS hello world service
 generate_nest_service() {
-    local service_name="$1"
-    local service_path="services/nest/${service_name}"
-    
-    # Silent generation, no log output
-    
-    # Create directory structure
-    mkdir -p "$service_path/src"
-    
-    # Create package.json
-    cat > "$service_path/package.json" << 'EOF'
+  local service_name="$1"
+  local service_path="services/nest/${service_name}"
+
+  # Silent generation, no log output
+
+  # Create directory structure
+  mkdir -p "$service_path/src"
+
+  # Create package.json
+  cat >"$service_path/package.json" <<'EOF'
 {
   "name": "SERVICE_NAME",
   "version": "1.0.0",
@@ -41,10 +41,10 @@ generate_nest_service() {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
-    
-    # Create main.ts
-    cat > "$service_path/src/main.ts" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
+
+  # Create main.ts
+  cat >"$service_path/src/main.ts" <<'EOF'
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
@@ -56,9 +56,9 @@ async function bootstrap() {
 }
 bootstrap();
 EOF
-    
-    # Create app.module.ts
-    cat > "$service_path/src/app.module.ts" << 'EOF'
+
+  # Create app.module.ts
+  cat >"$service_path/src/app.module.ts" <<'EOF'
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 
@@ -68,9 +68,9 @@ import { AppController } from './app.controller';
 })
 export class AppModule {}
 EOF
-    
-    # Create app.controller.ts
-    cat > "$service_path/src/app.controller.ts" << 'EOF'
+
+  # Create app.controller.ts
+  cat >"$service_path/src/app.controller.ts" <<'EOF'
 import { Controller, Get } from '@nestjs/common';
 
 @Controller()
@@ -86,10 +86,10 @@ export class AppController {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/app.controller.ts" && rm -f "$service_path/src/app.controller.ts.bak"
-    
-    # Create nest-cli.json
-    cat > "$service_path/nest-cli.json" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/app.controller.ts" && rm -f "$service_path/src/app.controller.ts.bak"
+
+  # Create nest-cli.json
+  cat >"$service_path/nest-cli.json" <<'EOF'
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
@@ -99,9 +99,9 @@ EOF
   }
 }
 EOF
-    
-    # Create tsconfig.json
-    cat > "$service_path/tsconfig.json" << 'EOF'
+
+  # Create tsconfig.json
+  cat >"$service_path/tsconfig.json" <<'EOF'
 {
   "compilerOptions": {
     "module": "commonjs",
@@ -123,9 +123,9 @@ EOF
   }
 }
 EOF
-    
-    # Create Dockerfile
-    cat > "$service_path/Dockerfile" << 'EOF'
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM node:18-alpine AS development
 WORKDIR /app
 COPY package*.json ./
@@ -150,15 +150,14 @@ EOF
 
 # Generate a Bull queue worker service
 generate_bull_service() {
-    local service_name="$1"
-    local service_path="services/bull/${service_name}"
-    
-    
-    # Create directory structure
-    mkdir -p "$service_path/src"
-    
-    # Create package.json
-    cat > "$service_path/package.json" << 'EOF'
+  local service_name="$1"
+  local service_path="services/bull/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path/src"
+
+  # Create package.json
+  cat >"$service_path/package.json" <<'EOF'
 {
   "name": "SERVICE_NAME",
   "version": "1.0.0",
@@ -176,10 +175,10 @@ generate_bull_service() {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
-    
-    # Create index.js
-    cat > "$service_path/src/index.js" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
+
+  # Create index.js
+  cat >"$service_path/src/index.js" <<'EOF'
 const { Queue, Worker } = require('bullmq');
 
 const queueName = 'SERVICE_NAME';
@@ -219,10 +218,10 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/index.js" && rm -f "$service_path/src/index.js.bak"
-    
-    # Create Dockerfile
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/index.js" && rm -f "$service_path/src/index.js.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 # Install health check tools
 RUN apk add --no-cache curl wget
@@ -236,35 +235,34 @@ ENV DASHBOARD_PORT=${DASHBOARD_PORT}
 EXPOSE ${DASHBOARD_PORT}
 CMD ["node", "src/index.js"]
 EOF
-    
+
 }
 
 # Generate a Go service
 generate_go_service() {
-    local service_name="$1"
-    local service_path="services/go/${service_name}"
-    
-    
-    # Create directory structure
-    mkdir -p "$service_path"
-    
-    # Create go.mod
-    cat > "$service_path/go.mod" << EOF
+  local service_name="$1"
+  local service_path="services/go/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path"
+
+  # Create go.mod
+  cat >"$service_path/go.mod" <<EOF
 module ${service_name}
 
 go 1.21
 
 require github.com/gorilla/mux v1.8.0
 EOF
-    
-    # Create go.sum with the mux dependency
-    cat > "$service_path/go.sum" << 'EOF'
+
+  # Create go.sum with the mux dependency
+  cat >"$service_path/go.sum" <<'EOF'
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 EOF
-    
-    # Create main.go
-    cat > "$service_path/main.go" << 'EOF'
+
+  # Create main.go
+  cat >"$service_path/main.go" <<'EOF'
 package main
 
 import (
@@ -308,10 +306,10 @@ func main() {
     }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.go" && rm -f "$service_path/main.go.bak"
-    
-    # Create Dockerfile
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.go" && rm -f "$service_path/main.go.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
@@ -330,27 +328,26 @@ ENV PORT=${PORT}
 EXPOSE ${PORT}
 CMD ["./main"]
 EOF
-    
+
 }
 
 # Generate a Python service
 generate_python_service() {
-    local service_name="$1"
-    local service_path="services/py/${service_name}"
-    
-    
-    # Create directory structure
-    mkdir -p "$service_path"
-    
-    # Create requirements.txt
-    cat > "$service_path/requirements.txt" << 'EOF'
+  local service_name="$1"
+  local service_path="services/py/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path"
+
+  # Create requirements.txt
+  cat >"$service_path/requirements.txt" <<'EOF'
 fastapi==0.104.0
 uvicorn==0.24.0
 python-dotenv==1.0.0
 EOF
-    
-    # Create main.py
-    cat > "$service_path/main.py" << 'EOF'
+
+  # Create main.py
+  cat >"$service_path/main.py" <<'EOF'
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import os
@@ -370,10 +367,10 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.py" && rm -f "$service_path/main.py.bak"
-    
-    # Create Dockerfile
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.py" && rm -f "$service_path/main.py.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM python:3.11-slim
 # Install health check tools
 RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
@@ -387,134 +384,133 @@ ENV PORT=${PORT}
 EXPOSE ${PORT}
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}
 EOF
-    
+
 }
 
 # Auto-detect and generate missing services
 auto_generate_services() {
-    local generated_count=0
-    local silent="${1:-false}"
-    
-    # Check environment for enabled services
-    if [[ -f ".env.local" ]]; then
-        source .env.local
-    fi
-    
-    # Check if services are enabled
-    if [[ "${SERVICES_ENABLED:-false}" != "true" ]]; then
-        return 0
-    fi
-    
-    [[ "$silent" != "true" ]] && log_info "Checking for missing services..."
-    
-    # Parse NEST_SERVICES or NESTJS_SERVICES (support both)
-    local nest_list="${NEST_SERVICES:-${NESTJS_SERVICES:-}}"
-    if [[ -n "$nest_list" ]]; then
-        IFS=',' read -ra services <<< "$nest_list"
-        for service in "${services[@]}"; do
-            service=$(echo "$service" | xargs)  # Trim whitespace
-            if [[ ! -d "services/nest/$service" ]]; then
-                generate_nest_service "$service"
-                ((generated_count++))
-            fi
-        done
-    fi
-    
-    # Parse BULL_SERVICES or BULLMQ_WORKERS (support both)
-    local bull_list="${BULL_SERVICES:-${BULLMQ_WORKERS:-}}"
-    if [[ -n "$bull_list" ]]; then
-        IFS=',' read -ra services <<< "$bull_list"
-        for service in "${services[@]}"; do
-            service=$(echo "$service" | xargs)
-            if [[ ! -d "services/bull/$service" ]]; then
-                generate_bull_service "$service"
-                ((generated_count++))
-            fi
-        done
-    fi
-    
-    # Parse GO_SERVICES
-    if [[ -n "${GO_SERVICES:-}" ]]; then
-        IFS=',' read -ra services <<< "$GO_SERVICES"
-        for service in "${services[@]}"; do
-            service=$(echo "$service" | xargs)
-            if [[ ! -d "services/go/$service" ]]; then
-                generate_go_service "$service"
-                ((generated_count++))
-            fi
-        done
-    fi
-    
-    # Parse PYTHON_SERVICES
-    if [[ -n "${PYTHON_SERVICES:-}" ]]; then
-        IFS=',' read -ra services <<< "$PYTHON_SERVICES"
-        for service in "${services[@]}"; do
-            service=$(echo "$service" | xargs)
-            if [[ ! -d "services/py/$service" ]]; then
-                generate_python_service "$service"
-                ((generated_count++))
-            fi
-        done
-    fi
-    
-    # Silent - let caller handle reporting
+  local generated_count=0
+  local silent="${1:-false}"
+
+  # Check environment for enabled services
+  if [[ -f ".env.local" ]]; then
+    source .env.local
+  fi
+
+  # Check if services are enabled
+  if [[ "${SERVICES_ENABLED:-false}" != "true" ]]; then
     return 0
+  fi
+
+  [[ "$silent" != "true" ]] && log_info "Checking for missing services..."
+
+  # Parse NEST_SERVICES or NESTJS_SERVICES (support both)
+  local nest_list="${NEST_SERVICES:-${NESTJS_SERVICES:-}}"
+  if [[ -n "$nest_list" ]]; then
+    IFS=',' read -ra services <<<"$nest_list"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs) # Trim whitespace
+      if [[ ! -d "services/nest/$service" ]]; then
+        generate_nest_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse BULL_SERVICES or BULLMQ_WORKERS (support both)
+  local bull_list="${BULL_SERVICES:-${BULLMQ_WORKERS:-}}"
+  if [[ -n "$bull_list" ]]; then
+    IFS=',' read -ra services <<<"$bull_list"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/bull/$service" ]]; then
+        generate_bull_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse GO_SERVICES
+  if [[ -n "${GO_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$GO_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/go/$service" ]]; then
+        generate_go_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse PYTHON_SERVICES
+  if [[ -n "${PYTHON_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$PYTHON_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/py/$service" ]]; then
+        generate_python_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Silent - let caller handle reporting
+  return 0
 }
 
 # Check if a specific service directory is missing
 check_missing_service() {
-    local missing_path="$1"
-    
-    # Extract service type and name from path - handle ALL naming conventions
-    if [[ "$missing_path" =~ services/([^/]+)/([^/]+) ]]; then
-        local service_type="${BASH_REMATCH[1]}"
-        local service_name="${BASH_REMATCH[2]}"
-        local actual_dir=""
-        
-        
-        # Create in the exact directory that Docker Compose expects
-        actual_dir="services/${service_type}/${service_name}"
-        mkdir -p "$actual_dir"
-        
-        # Map various names to our standard generator functions
-        case "$service_type" in
-            nest|nestjs)
-                generate_nest_service_at "$service_name" "$actual_dir"
-                ;;
-            bull|bullmq)
-                generate_bull_service_at "$service_name" "$actual_dir"
-                ;;
-            go|golang)
-                generate_go_service_at "$service_name" "$actual_dir"
-                ;;
-            py|python)
-                generate_python_service_at "$service_name" "$actual_dir"
-                ;;
-            *)
-                # If we don't recognize the type, still try to generate something reasonable
-                # Default to a basic Node.js service
-                # Unknown service type, generating basic Node.js service
-                generate_basic_node_service_at "$service_name" "$actual_dir"
-                ;;
-        esac
-        
-        return 0
-    fi
-    
-    return 1
+  local missing_path="$1"
+
+  # Extract service type and name from path - handle ALL naming conventions
+  if [[ "$missing_path" =~ services/([^/]+)/([^/]+) ]]; then
+    local service_type="${BASH_REMATCH[1]}"
+    local service_name="${BASH_REMATCH[2]}"
+    local actual_dir=""
+
+    # Create in the exact directory that Docker Compose expects
+    actual_dir="services/${service_type}/${service_name}"
+    mkdir -p "$actual_dir"
+
+    # Map various names to our standard generator functions
+    case "$service_type" in
+    nest | nestjs)
+      generate_nest_service_at "$service_name" "$actual_dir"
+      ;;
+    bull | bullmq)
+      generate_bull_service_at "$service_name" "$actual_dir"
+      ;;
+    go | golang)
+      generate_go_service_at "$service_name" "$actual_dir"
+      ;;
+    py | python)
+      generate_python_service_at "$service_name" "$actual_dir"
+      ;;
+    *)
+      # If we don't recognize the type, still try to generate something reasonable
+      # Default to a basic Node.js service
+      # Unknown service type, generating basic Node.js service
+      generate_basic_node_service_at "$service_name" "$actual_dir"
+      ;;
+    esac
+
+    return 0
+  fi
+
+  return 1
 }
 
 # Generate services at specific paths (for flexibility)
 generate_nest_service_at() {
-    local service_name="$1"
-    local service_path="$2"
-    
-    # Create directory structure
-    mkdir -p "$service_path/src"
-    
-    # Use the same generation logic but with custom path
-    # Create package.json
-    cat > "$service_path/package.json" << 'EOF'
+  local service_name="$1"
+  local service_path="$2"
+
+  # Create directory structure
+  mkdir -p "$service_path/src"
+
+  # Use the same generation logic but with custom path
+  # Create package.json
+  cat >"$service_path/package.json" <<'EOF'
 {
   "name": "SERVICE_NAME",
   "version": "1.0.0",
@@ -538,10 +534,10 @@ generate_nest_service_at() {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
-    
-    # Rest of the files...
-    cat > "$service_path/src/main.ts" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
+
+  # Rest of the files...
+  cat >"$service_path/src/main.ts" <<'EOF'
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
@@ -553,8 +549,8 @@ async function bootstrap() {
 }
 bootstrap();
 EOF
-    
-    cat > "$service_path/src/app.module.ts" << 'EOF'
+
+  cat >"$service_path/src/app.module.ts" <<'EOF'
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 
@@ -564,8 +560,8 @@ import { AppController } from './app.controller';
 })
 export class AppModule {}
 EOF
-    
-    cat > "$service_path/src/app.controller.ts" << 'EOF'
+
+  cat >"$service_path/src/app.controller.ts" <<'EOF'
 import { Controller, Get } from '@nestjs/common';
 
 @Controller()
@@ -581,9 +577,9 @@ export class AppController {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/app.controller.ts" && rm -f "$service_path/src/app.controller.ts.bak"
-    
-    cat > "$service_path/tsconfig.json" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/app.controller.ts" && rm -f "$service_path/src/app.controller.ts.bak"
+
+  cat >"$service_path/tsconfig.json" <<'EOF'
 {
   "compilerOptions": {
     "module": "commonjs",
@@ -605,8 +601,8 @@ EOF
   }
 }
 EOF
-    
-    cat > "$service_path/Dockerfile" << 'EOF'
+
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM node:18-alpine AS development
 WORKDIR /app
 COPY package*.json ./
@@ -622,18 +618,18 @@ COPY --from=development /app/dist ./dist
 EXPOSE 3000
 CMD ["node", "dist/main"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 generate_bull_service_at() {
-    local service_name="$1"
-    local service_path="$2"
-    
-    # Create directory structure
-    mkdir -p "$service_path/src"
-    
-    cat > "$service_path/package.json" << 'EOF'
+  local service_name="$1"
+  local service_path="$2"
+
+  # Create directory structure
+  mkdir -p "$service_path/src"
+
+  cat >"$service_path/package.json" <<'EOF'
 {
   "name": "SERVICE_NAME",
   "version": "1.0.0",
@@ -652,9 +648,9 @@ generate_bull_service_at() {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
-    
-    cat > "$service_path/src/index.js" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
+
+  cat >"$service_path/src/index.js" <<'EOF'
 const { Queue, Worker } = require('bullmq');
 
 const queueName = 'SERVICE_NAME';
@@ -694,9 +690,9 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/index.js" && rm -f "$service_path/src/index.js.bak"
-    
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/index.js" && rm -f "$service_path/src/index.js.bak"
+
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -704,29 +700,29 @@ RUN npm install --production
 COPY . .
 CMD ["node", "src/index.js"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 generate_go_service_at() {
-    local service_name="$1"
-    local service_path="$2"
-    
-    cat > "$service_path/go.mod" << EOF
+  local service_name="$1"
+  local service_path="$2"
+
+  cat >"$service_path/go.mod" <<EOF
 module ${service_name}
 
 go 1.21
 
 require github.com/gorilla/mux v1.8.0
 EOF
-    
-    # Create go.sum with the mux dependency
-    cat > "$service_path/go.sum" << 'EOF'
+
+  # Create go.sum with the mux dependency
+  cat >"$service_path/go.sum" <<'EOF'
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 EOF
-    
-    cat > "$service_path/main.go" << 'EOF'
+
+  cat >"$service_path/main.go" <<'EOF'
 package main
 
 import (
@@ -770,9 +766,9 @@ func main() {
     }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.go" && rm -f "$service_path/main.go.bak"
-    
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.go" && rm -f "$service_path/main.go.bak"
+
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
@@ -788,16 +784,16 @@ COPY --from=builder /app/main .
 EXPOSE 8080
 CMD ["./main"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 generate_basic_node_service_at() {
-    local service_name="$1"
-    local service_path="$2"
-    
-    # Create a basic Node.js service
-    cat > "$service_path/package.json" << 'EOF'
+  local service_name="$1"
+  local service_path="$2"
+
+  # Create a basic Node.js service
+  cat >"$service_path/package.json" <<'EOF'
 {
   "name": "SERVICE_NAME",
   "version": "1.0.0",
@@ -810,9 +806,9 @@ generate_basic_node_service_at() {
   }
 }
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
-    
-    cat > "$service_path/index.js" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/package.json" && rm -f "$service_path/package.json.bak"
+
+  cat >"$service_path/index.js" <<'EOF'
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -829,9 +825,9 @@ app.listen(port, () => {
   console.log(`SERVICE_NAME service listening on port ${port}`);
 });
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/index.js" && rm -f "$service_path/index.js.bak"
-    
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/index.js" && rm -f "$service_path/index.js.bak"
+
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -840,21 +836,21 @@ COPY . .
 EXPOSE 3000
 CMD ["node", "index.js"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 generate_python_service_at() {
-    local service_name="$1"
-    local service_path="$2"
-    
-    cat > "$service_path/requirements.txt" << 'EOF'
+  local service_name="$1"
+  local service_path="$2"
+
+  cat >"$service_path/requirements.txt" <<'EOF'
 fastapi==0.104.0
 uvicorn==0.24.0
 python-dotenv==1.0.0
 EOF
-    
-    cat > "$service_path/main.py" << 'EOF'
+
+  cat >"$service_path/main.py" <<'EOF'
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import os
@@ -874,9 +870,9 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 EOF
-    sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.py" && rm -f "$service_path/main.py.bak"
-    
-    cat > "$service_path/Dockerfile" << 'EOF'
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/main.py" && rm -f "$service_path/main.py.bak"
+
+  cat >"$service_path/Dockerfile" <<'EOF'
 FROM python:3.11-slim
 WORKDIR /app
 COPY requirements.txt .
@@ -885,8 +881,8 @@ COPY . .
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 EOF
-    
-    # Successfully generated
+
+  # Successfully generated
 }
 
 # Export functions
