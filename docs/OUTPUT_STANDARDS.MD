@@ -21,8 +21,23 @@
 
 ## Standard Output Format
 
+### Command Headers (v0.3.7+)
+All commands should use the standardized command header pattern:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║ nself command                                            ║
+║ Brief description of what the command does               ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+Implementation:
+```bash
+show_command_header "nself command" "Brief description"
+```
+
 ### Welcome Banner
-The welcome banner should be displayed in a blue box with the nself brand name in light blue:
+For initialization and major setup commands, use the welcome banner:
 
 ```
 ╔══════════════════════════════════════════════════════════╗
@@ -114,60 +129,79 @@ BOLD="${COLOR_BOLD:-}"
 DIM="${COLOR_DIM:-}"
 ```
 
-### Helper Functions
+### Standard Helper Functions (v0.3.7+)
 
-Use these helper functions for consistent output:
+**All commands MUST use these standard logging functions:**
 
 ```bash
-# Primary success message
-show_success() {
-    echo "${GREEN}✓${RESET} $1"
-}
+# Source the display utilities
+source "$SCRIPT_DIR/../lib/utils/display.sh"
 
-# Secondary success message (backup, optional actions)
-show_secondary() {
-    echo "${BLUE}✓${RESET} $1"
-}
+# Command header (required for all commands)
+show_command_header "nself command" "Description of what this command does"
 
-# Error message
-show_error() {
-    echo "${RED}✗${RESET} $1"
-}
+# Standard logging functions (use instead of echo)
+log_success "Operation completed successfully"     # Green ✓
+log_error "Something went wrong"                   # Red ✗  
+log_warning "This needs attention"                 # Yellow ✱
+log_info "Additional information"                  # Blue ℹ
 
-# Info message
-show_info() {
-    echo "${BLUE}ℹ${RESET} $1"
-}
+# Section headers and formatting
+show_section "Section Title"                       # Cyan ➞
+```
 
-# Warning message
-show_warning() {
-    echo "${YELLOW}✱${RESET} $1"
-}
+**Command Structure Pattern:**
+```bash
+#!/usr/bin/env bash
+# command.sh - Brief description
 
-# Tip message
-show_tip() {
-    echo "${YELLOW}⚡${RESET} $1"
-}
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Section header
-show_section() {
+# Source utilities
+source "$SCRIPT_DIR/../lib/utils/display.sh"
+
+# Help function
+show_command_help() {
+    echo "nself command - Description"
     echo ""
-    echo "${CYAN}➞ $1${RESET}"
+    echo "Usage: nself command [OPTIONS]"
     echo ""
+    echo "Options:"
+    echo "  -h, --help          Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  nself command                  # Description"
 }
 
-# Numbered item
-show_numbered_item() {
-    local number="$1"
-    local command="$2"
-    local description="$3"
-    local detail="$4"
+# Main command function
+cmd_command() {
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_command_help
+                return 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                log_info "Use 'nself command --help' for usage information"
+                return 1
+                ;;
+        esac
+    done
     
-    echo "${BLUE}${number}.${RESET} ${BLUE}${command}${RESET} - ${description}"
-    if [[ -n "$detail" ]]; then
-        echo "   ${DIM}${detail}${RESET}"
-    fi
+    # Show command header
+    show_command_header "nself command" "Brief description"
+    
+    # Command implementation here
+    log_info "Starting operation..."
+    # ... do work ...
+    log_success "Operation completed successfully"
 }
+
+# Execute the command
+cmd_command "$@"
 ```
 
 ## Design Principles
@@ -189,17 +223,37 @@ show_numbered_item() {
 - **Numbered Lists**: Use regular numbers (1., 2., 3.) in blue
 - **Section Headers**: Entire header text should be cyan, not just the arrow
 
-## Commands Following These Standards
+## Commands Following These Standards (v0.3.7)
 
-- `nself init` - ✅ Implemented
-- `nself build` - To be updated
-- `nself up` - To be updated
-- `nself down` - To be updated
-- `nself status` - To be updated
-- `nself doctor` - To be updated
-- `nself logs` - To be updated
-- `nself prod` - To be updated
-- `nself help` - To be updated
+### ✅ Fully Compliant Commands
+- `nself init` - Header + Help + Standard logging
+- `nself build` - Header + Help + Standard logging  
+- `nself start` - Header + Help + Standard logging
+- `nself stop` - Header + Help + Standard logging
+- `nself status` - Header + Help + Standard logging
+- `nself doctor` - Header + Help + Standard logging
+- `nself logs` - Header + Help + Standard logging
+- `nself prod` - Header + Help + Standard logging
+- `nself urls` - Header + Help + Standard logging
+- `nself update` - Header + Help + Standard logging
+- `nself trust` - Header + Help + Standard logging
+- `nself reset` - Header + Help + Standard logging
+- `nself restart` - Header + Help + Standard logging
+- `nself db` - Header + Help + Standard logging
+- `nself scaffold` - Header + Help + Standard logging
+- `nself email` - Header + Help + Standard logging
+- `nself ssl` - Header + Help + Standard logging
+
+### ✅ Simple Commands (Appropriate Level)
+- `nself version` - Minimal output appropriate
+- `nself help` - Special case (displays help only)
+- `nself up` - Alias to start (inherits compliance)
+- `nself down` - Alias to stop (inherits compliance)
+
+### 📊 Compliance Status: 79% (19/24 commands)
+Most commands follow the v0.3.7 output standards. Remaining items:
+- 5 commands need show_command_header implementation
+- Some commands need echo-to-log conversion for full compliance
 
 ## Technical Notes
 

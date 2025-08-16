@@ -8,12 +8,55 @@ source "$SCRIPT_DIR/../lib/utils/env.sh"
 
 # Command function
 cmd_prod() {
-    local domain="${1:-}"
-    local email="${2:-}"
+    local domain=""
+    local email=""
+    local level="basic"
     
-    if [[ -z "$domain" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-        show_prod_help
-        return 0
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --help|-h)
+                show_prod_help
+                return 0
+                ;;
+            --level)
+                level="$2"
+                shift 2
+                ;;
+            --email)
+                email="$2"
+                shift 2
+                ;;
+            *)
+                if [[ -z "$domain" ]]; then
+                    domain="$1"
+                elif [[ -z "$email" ]]; then
+                    email="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    # Show command header
+    show_command_header "nself prod" "Configure for production deployment"
+    
+    # If no domain provided, use default based on level
+    if [[ -z "$domain" ]]; then
+        case "$level" in
+            basic)
+                domain="example.com"
+                ;;
+            standard)
+                domain="yourcompany.com"
+                ;;
+            enterprise)
+                domain="enterprise.com"
+                ;;
+            *)
+                domain="localhost"
+                ;;
+        esac
     fi
     
     show_header "Production Configuration"
@@ -89,9 +132,7 @@ cmd_prod() {
 
 # Create production compose override
 create_prod_compose() {
-    cat > docker compose.prod.yml << 'EOF'
-version: '3.8'
-
+    cat > docker-compose.prod.yml << 'EOF'
 services:
   nginx:
     restart: always
@@ -123,7 +164,7 @@ volumes:
   minio_data:
 EOF
     
-    log_info "Created docker compose.prod.yml"
+    log_info "Created docker-compose.prod.yml"
 }
 
 # Show help

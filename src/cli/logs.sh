@@ -2,7 +2,7 @@
 
 # logs.sh - Clean and readable logging for nself services
 
-set -e
+set +e  # Don't exit on error for logging
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,9 +11,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
+source "$SCRIPT_DIR/../lib/utils/header.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Color output functions
+
+# Function to format service names
+format_service_name() {
+    local name="$1"
+    # Remove project prefix and clean up
+    name="${name#${PROJECT_NAME}_}"
+    name="${name#${PROJECT_NAME}-}"
+    # Truncate long names
+    if [[ ${#name} -gt 10 ]]; then
+        echo "${name:0:10}"
+    else
+        printf "%-10s" "$name"
+    fi
+}
 
 # Function to clean up timestamps
 format_timestamp() {
@@ -334,6 +349,16 @@ main() {
     local show_summary=false
     local show_top=false
     
+    # Initialize variables
+    FOLLOW_MODE=false
+    TAIL_LINES=10
+    SEARCH_PATTERN=""
+    FILTER_LEVEL=""
+    SHOW_ERRORS_ONLY=false
+    COMPACT_MODE=false
+    QUIET_MODE=false
+    SERVICE_NAME=""
+    
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -408,6 +433,11 @@ main() {
     # Load environment
     if [[ -f ".env.local" ]]; then
         load_env_safe ".env.local"
+    fi
+    
+    # Show command header (not for help mode)
+    if [[ "$show_status" != "true" && "$show_summary" != "true" && "$show_top" != "true" ]]; then
+        show_command_header "nself logs" "View and monitor service logs"
     fi
     
     # Handle special modes

@@ -559,7 +559,7 @@ cmd_start() {
                     echo
                     log_info "Retrying startup after fixes..."
                     # Retry with incremented counter
-                    UP_RETRY_COUNT=$((retry_count + 1)) cmd_up "$@"
+                    UP_RETRY_COUNT=$((retry_count + 1)) cmd_start "$@"
                     return $?
                 else
                     # No fixes worked, don't keep retrying
@@ -608,7 +608,7 @@ cmd_start() {
         # Check if auto-fix requested a retry
         if [[ $analyze_result -eq 99 ]]; then
             # Retry the up command after auto-fix with incremented counter
-            UP_RETRY_COUNT=$((retry_count + 1)) cmd_up "$@"
+            UP_RETRY_COUNT=$((retry_count + 1)) cmd_start "$@"
             return $?
         fi
         
