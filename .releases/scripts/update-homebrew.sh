@@ -43,6 +43,7 @@ fi
 # Create Formula directory if it doesn't exist
 mkdir -p Formula
 
+# Note: The actual formula template is in .releases/homebrew/
 # Generate formula
 echo "📝 Generating formula..."
 cat > "Formula/${FORMULA_NAME}.rb" << EOF

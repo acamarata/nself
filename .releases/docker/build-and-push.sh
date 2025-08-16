@@ -8,7 +8,7 @@ IMAGE_NAME="nself"
 echo "Building Docker image for nself v${VERSION}..."
 
 # Build the image
-docker build -t ${DOCKER_USER}/${IMAGE_NAME}:${VERSION} -t ${DOCKER_USER}/${IMAGE_NAME}:latest -f docker/Dockerfile .
+docker build -t ${DOCKER_USER}/${IMAGE_NAME}:${VERSION} -t ${DOCKER_USER}/${IMAGE_NAME}:latest -f .releases/docker/Dockerfile .
 
 echo ""
 echo "To push to Docker Hub:"

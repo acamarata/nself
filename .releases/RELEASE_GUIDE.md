@@ -23,13 +23,13 @@ All package files have been prepared for the v0.3.7 release across multiple plat
 
 ## 2. Docker Hub
 
-**Status**: Dockerfile and scripts ready in `docker/`
+**Status**: Dockerfile and scripts ready in `.releases/docker/`
 
 ### To publish:
 ```bash
 # Build the image
 cd /Users/admin/Sites/nself
-./docker/build-and-push.sh 0.3.7
+./.releases/docker/build-and-push.sh 0.3.7
 
 # Login to Docker Hub
 docker login -u acamarata
@@ -46,7 +46,7 @@ docker pull acamarata/nself:latest
 
 ## 3. Ubuntu PPA
 
-**Status**: Debian package files ready in `debian/`
+**Status**: Debian package files ready in `.releases/debian/`
 
 ### To publish:
 1. Install build tools:
@@ -74,14 +74,14 @@ sudo apt install nself
 
 ## 4. Fedora COPR
 
-**Status**: RPM spec file ready in `rpm/`
+**Status**: RPM spec file ready in `.releases/rpm/`
 
 ### To publish:
 1. Create SRPM:
    ```bash
    cd /Users/admin/Sites/nself
    tar czf ~/rpmbuild/SOURCES/nself-0.3.7.tar.gz --transform 's,^,nself-0.3.7/,' *
-   rpmbuild -bs rpm/nself.spec
+   rpmbuild -bs .releases/rpm/nself.spec
    ```
 
 2. Upload to COPR:
@@ -97,7 +97,7 @@ sudo dnf install nself
 
 ## 5. Arch Linux AUR
 
-**Status**: PKGBUILD ready in `aur/`
+**Status**: PKGBUILD ready in `.releases/aur/`
 
 ### To publish:
 1. Clone AUR repository:
@@ -107,7 +107,7 @@ sudo dnf install nself
 
 2. Copy files and push:
    ```bash
-   cp /Users/admin/Sites/nself/aur/* ~/aur-nself/
+   cp /Users/admin/Sites/nself/.releases/aur/* ~/aur-nself/
    cd ~/aur-nself
    git add .
    git commit -m "Release v0.3.7"
