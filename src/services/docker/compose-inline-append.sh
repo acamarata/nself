@@ -9,14 +9,14 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # NestJS Services
 if [[ "$NESTJS_ENABLED" == "true" ]]; then
-  IFS=',' read -ra NEST_SERVICES <<< "$NESTJS_SERVICES"
+  IFS=',' read -ra NEST_SERVICES <<<"$NESTJS_SERVICES"
   PORT_COUNTER=0
-  
+
   for service in "${NEST_SERVICES[@]}"; do
     service=$(echo "$service" | xargs)
     SERVICE_PORT=$((NESTJS_PORT_START + PORT_COUNTER))
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
 
   # NestJS Service: $service
   ${PROJECT_NAME}-nest-$service:
@@ -45,12 +45,12 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
       - postgres
       - hasura
 EOF
-    
+
     if [[ "$REDIS_ENABLED" == "true" ]]; then
-      echo "      - redis" >> docker-compose.yml
+      echo "      - redis" >>docker-compose.yml
     fi
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
     networks:
       - default
     volumes:
@@ -61,7 +61,7 @@ EOF
       timeout: 10s
       retries: 3
 EOF
-    
+
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
 fi
@@ -70,15 +70,15 @@ fi
 if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
   # Use BULL_SERVICES if set, otherwise use BULLMQ_WORKERS
   WORKER_LIST="${BULL_SERVICES:-$BULLMQ_WORKERS}"
-  IFS=',' read -ra BULLMQ_WORKER_LIST <<< "$WORKER_LIST"
-  
+  IFS=',' read -ra BULLMQ_WORKER_LIST <<<"$WORKER_LIST"
+
   for worker in "${BULLMQ_WORKER_LIST[@]}"; do
     worker=$(echo "$worker" | xargs)
-    
+
     # Use standard bull directory
     BULL_PATH="./services/bull/$worker"
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
 
   # BullMQ Worker: $worker
   ${PROJECT_NAME}-bull-$worker:
@@ -102,17 +102,17 @@ if [[ -n "$BULL_SERVICES" ]] || [[ "$BULLMQ_ENABLED" == "true" ]]; then
       - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
       - HASURA_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
 EOF
-    
+
     if [[ "$BULLMQ_DASHBOARD_ENABLED" == "true" ]]; then
-      cat >> docker-compose.yml << EOF
+      cat >>docker-compose.yml <<EOF
     ports:
       - "${BULLMQ_DASHBOARD_PORT}:${BULLMQ_DASHBOARD_PORT}"
 EOF
       # Increment port for next worker
       BULLMQ_DASHBOARD_PORT=$((BULLMQ_DASHBOARD_PORT + 1))
     fi
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
     depends_on:
       - redis
       - postgres
@@ -133,14 +133,14 @@ fi
 
 # GoLang Services
 if [[ "$GOLANG_ENABLED" == "true" ]]; then
-  IFS=',' read -ra GO_SERVICES <<< "$GOLANG_SERVICES"
+  IFS=',' read -ra GO_SERVICES <<<"$GOLANG_SERVICES"
   PORT_COUNTER=0
-  
+
   for service in "${GO_SERVICES[@]}"; do
     service=$(echo "$service" | xargs)
     SERVICE_PORT=$((GOLANG_PORT_START + PORT_COUNTER))
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
 
   # GoLang Service: $service
   ${PROJECT_NAME}-go-$service:
@@ -168,12 +168,12 @@ if [[ "$GOLANG_ENABLED" == "true" ]]; then
       - postgres
       - hasura
 EOF
-    
+
     if [[ "$REDIS_ENABLED" == "true" ]]; then
-      echo "      - redis" >> docker-compose.yml
+      echo "      - redis" >>docker-compose.yml
     fi
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
     networks:
       - default
     healthcheck:
@@ -182,21 +182,21 @@ EOF
       timeout: 10s
       retries: 3
 EOF
-    
+
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
 fi
 
 # Python Services
 if [[ "$PYTHON_ENABLED" == "true" ]]; then
-  IFS=',' read -ra PY_SERVICES <<< "$PYTHON_SERVICES"
+  IFS=',' read -ra PY_SERVICES <<<"$PYTHON_SERVICES"
   PORT_COUNTER=0
-  
+
   for service in "${PY_SERVICES[@]}"; do
     service=$(echo "$service" | xargs)
     SERVICE_PORT=$((PYTHON_PORT_START + PORT_COUNTER))
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
 
   # Python Service: $service
   ${PROJECT_NAME}-py-$service:
@@ -224,12 +224,12 @@ if [[ "$PYTHON_ENABLED" == "true" ]]; then
       - postgres
       - hasura
 EOF
-    
+
     if [[ "$REDIS_ENABLED" == "true" ]]; then
-      echo "      - redis" >> docker-compose.yml
+      echo "      - redis" >>docker-compose.yml
     fi
-    
-    cat >> docker-compose.yml << EOF
+
+    cat >>docker-compose.yml <<EOF
     networks:
       - default
     volumes:
@@ -240,14 +240,14 @@ EOF
       timeout: 10s
       retries: 3
 EOF
-    
+
     PORT_COUNTER=$((PORT_COUNTER + 1))
   done
 fi
 # Generate Functions service if enabled
 if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
   FUNCTIONS_PORT="${FUNCTIONS_PORT:-4300}"
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   unity-functions:
     image: unity/functions:latest
@@ -290,7 +290,7 @@ fi
 # Generate Dashboard service if enabled
 if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]]; then
   DASHBOARD_PORT="${DASHBOARD_PORT:-4500}"
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   unity-dashboard:
     image: unity/dashboard:latest

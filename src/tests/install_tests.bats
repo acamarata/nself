@@ -8,9 +8,9 @@ setup() {
   export HOME="$TEST_DIR"
   export NSELF_DIR="$HOME/.nself"
   export BIN_DIR="$NSELF_DIR/bin"
-  
-  # Source the functions from install.sh (we'll extract them)
-  source <(sed -n '16,62p' ../install.sh)  # Color functions and spinner
+
+  # Source the color variables and functions from install.sh
+  source <(sed -n '93,160p' ../../install.sh) # Color variables and functions
 }
 
 teardown() {
@@ -23,7 +23,7 @@ teardown() {
   command_exists() {
     command -v "$1" >/dev/null 2>&1
   }
-  
+
   run command_exists "bash"
   [ "$status" -eq 0 ]
 }
@@ -32,12 +32,15 @@ teardown() {
   command_exists() {
     command -v "$1" >/dev/null 2>&1
   }
-  
+
   run command_exists "nonexistentcommand123456"
   [ "$status" -eq 1 ]
 }
 
 @test "echo_info outputs colored info message" {
+  echo_info() {
+    echo "[INFO] $1"
+  }
   run echo_info "Test message"
   [ "$status" -eq 0 ]
   [[ "$output" == *"[INFO]"* ]]
@@ -45,6 +48,9 @@ teardown() {
 }
 
 @test "echo_success outputs colored success message" {
+  echo_success() {
+    echo "[SUCCESS] $1"
+  }
   run echo_success "Success message"
   [ "$status" -eq 0 ]
   [[ "$output" == *"[SUCCESS]"* ]]
@@ -52,6 +58,9 @@ teardown() {
 }
 
 @test "echo_warning outputs colored warning message" {
+  echo_warning() {
+    echo "[WARNING] $1"
+  }
   run echo_warning "Warning message"
   [ "$status" -eq 0 ]
   [[ "$output" == *"[WARNING]"* ]]
@@ -59,6 +68,9 @@ teardown() {
 }
 
 @test "echo_error outputs colored error message to stderr" {
+  echo_error() {
+    echo "[ERROR] $1" >&2
+  }
   run echo_error "Error message"
   [ "$status" -eq 0 ]
   [[ "$output" == *"[ERROR]"* ]]
@@ -73,7 +85,7 @@ teardown() {
     wait $pid 2>/dev/null
     echo "$message completed"
   }
-  
+
   (sleep 0.1) &
   run show_spinner $! "Test task"
   [ "$status" -eq 0 ]
