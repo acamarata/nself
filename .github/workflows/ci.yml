@@ -62,6 +62,8 @@ jobs:
         
       - name: Install nself
         run: |
+          # Create parent directory for installation
+          mkdir -p "$HOME/.local"
           # Install to a different location to avoid repo detection
           ./install.sh user "$HOME/.local/nself"
           echo "$HOME/.local/nself/bin" >> $GITHUB_PATH
