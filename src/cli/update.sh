@@ -55,12 +55,15 @@ check_for_updates() {
         local current_version="0.0.0"
     fi
     
+    echo ""
     log_info "Current version: $current_version"
     
-    # Get latest version from GitHub
-    log_info "Checking for updates..."
+    # Get latest version from GitHub with loading spinner
+    LOADING_PID=$(start_loading "Checking for updates...")
+    
     local latest_json
     if ! latest_json=$(curl -sL "$github_api" 2>/dev/null); then
+        stop_loading $LOADING_PID ""
         log_error "Failed to check for updates"
         log_info "Please check your internet connection"
         return 1
@@ -71,19 +74,23 @@ check_for_updates() {
     latest_version=$(echo "$latest_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     
     if [[ -z "$latest_version" ]]; then
+        stop_loading $LOADING_PID ""
         log_error "Could not determine latest version"
         return 1
     fi
     
-    log_info "Latest version: $latest_version"
+    # Stop loading and show latest version
+    stop_loading $LOADING_PID "$(printf "%bℹ%b Latest version:  %s" "${COLOR_BLUE}" "${COLOR_RESET}" "$latest_version")"
     
     # Compare versions
     if [[ "$current_version" == "$latest_version" ]]; then
         log_success "Already up to date!"
+        echo ""
         return 2  # Special return code for "already up to date"
     fi
     
     log_info "Update available: $current_version → $latest_version"
+    echo ""
     return 0
 }
 

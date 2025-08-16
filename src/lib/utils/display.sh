@@ -178,8 +178,49 @@ strip_colors() {
     sed 's/\x1b\[[0-9;]*m//g'
 }
 
+# Loading spinner that can be replaced with a message
+# Usage: LOADING_PID=$(start_loading "message")
+#        stop_loading $LOADING_PID "replacement message"
+start_loading() {
+    local message="$1"
+    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+    
+    # Only show spinner in terminal
+    if [[ -t 1 ]]; then
+        (
+            while true; do
+                i=$(( (i+1) %10 ))
+                printf "\r%b%s%b %s" "${COLOR_BLUE}" "${spin:$i:1}" "${COLOR_RESET}" "$message"
+                sleep 0.1
+            done
+        ) &
+        echo $!
+    else
+        echo 0  # Return dummy PID when not in terminal
+    fi
+}
+
+stop_loading() {
+    local pid="$1"
+    local message="$2"
+    
+    # Kill the spinner process if it's running
+    if [[ "$pid" != "0" ]]; then
+        kill $pid 2>/dev/null
+        wait $pid 2>/dev/null
+    fi
+    
+    # Clear the line and show the final message
+    if [[ -t 1 ]]; then
+        printf "\r\033[K%s\n" "$message"
+    else
+        echo "$message"
+    fi
+}
+
 # Export all functions
 export -f log_info log_success log_secondary log_warning log_error log_debug log_header
 export -f show_command_header show_header show_section
 export -f show_table_header show_table_row show_table_footer
-export -f draw_box strip_colors
+export -f draw_box strip_colors start_loading stop_loading
