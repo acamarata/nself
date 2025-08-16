@@ -1,0 +1,14 @@
+pkgbase = nself
+	pkgdesc = Deploy feature-complete backend infrastructure in seconds
+	pkgver = 0.3.7
+	pkgrel = 1
+	url = https://nself.org
+	arch = any
+	license = custom:Source-Available
+	depends = bash
+	depends = docker
+	depends = docker-compose
+	source = nself-0.3.7.tar.gz::https://github.com/acamarata/nself/archive/refs/tags/v0.3.7.tar.gz
+	sha256sums = 842e571cba1c5d0bdd7a50f066e560a53cde99fd6225f87438b71d1c112bc3c4
+
+pkgname = nself
