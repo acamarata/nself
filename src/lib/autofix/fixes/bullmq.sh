@@ -4,29 +4,29 @@
 
 # Fix missing node modules for BullMQ workers
 fix_bullmq_dependencies() {
-    local service_name="$1"
-    local project_name="${PROJECT_NAME:-nself}"
-    
-    # Find the service directory
-    local service_dir=""
-    for dir in "services/bullmq/${service_name#*bull-}" "services/bullmq/$service_name" "workers/$service_name"; do
-        if [[ -d "$dir" ]]; then
-            service_dir="$dir"
-            break
-        fi
-    done
-    
-    if [[ -z "$service_dir" ]]; then
-        # Create the service directory if it doesn't exist
-        service_dir="services/bullmq/${service_name#*bull-}"
-        mkdir -p "$service_dir/src"
+  local service_name="$1"
+  local project_name="${PROJECT_NAME:-nself}"
+
+  # Find the service directory
+  local service_dir=""
+  for dir in "services/bullmq/${service_name#*bull-}" "services/bullmq/$service_name" "workers/$service_name"; do
+    if [[ -d "$dir" ]]; then
+      service_dir="$dir"
+      break
     fi
-    
-    log_info "Fixing BullMQ worker: $service_name in $service_dir"
-    
-    # Ensure package.json exists with correct dependencies
-    if [[ ! -f "$service_dir/package.json" ]]; then
-        cat > "$service_dir/package.json" << 'EOF'
+  done
+
+  if [[ -z "$service_dir" ]]; then
+    # Create the service directory if it doesn't exist
+    service_dir="services/bullmq/${service_name#*bull-}"
+    mkdir -p "$service_dir/src"
+  fi
+
+  log_info "Fixing BullMQ worker: $service_name in $service_dir"
+
+  # Ensure package.json exists with correct dependencies
+  if [[ ! -f "$service_dir/package.json" ]]; then
+    cat >"$service_dir/package.json" <<'EOF'
 {
   "name": "bullmq-worker",
   "version": "1.0.0",
@@ -46,14 +46,14 @@ fix_bullmq_dependencies() {
   }
 }
 EOF
-    fi
-    
-    # Create a basic worker implementation if missing
-    if [[ ! -f "$service_dir/src/index.js" ]]; then
-        local queue_name="${service_name#*bull-}"
-        queue_name="${queue_name//-/_}"
-        
-        cat > "$service_dir/src/index.js" << EOF
+  fi
+
+  # Create a basic worker implementation if missing
+  if [[ ! -f "$service_dir/src/index.js" ]]; then
+    local queue_name="${service_name#*bull-}"
+    queue_name="${queue_name//-/_}"
+
+    cat >"$service_dir/src/index.js" <<EOF
 const { Worker, Queue, QueueEvents } = require('bullmq');
 const Redis = require('ioredis');
 
@@ -127,11 +127,11 @@ console.log(\`Worker started and listening for jobs on queue: \${queueName}\`);
 // Keep the process alive
 process.stdin.resume();
 EOF
-    fi
-    
-    # Ensure Dockerfile exists and is correct
-    if [[ ! -f "$service_dir/Dockerfile" ]]; then
-        cat > "$service_dir/Dockerfile" << 'EOF'
+  fi
+
+  # Ensure Dockerfile exists and is correct
+  if [[ ! -f "$service_dir/Dockerfile" ]]; then
+    cat >"$service_dir/Dockerfile" <<'EOF'
 FROM node:18-alpine
 
 WORKDIR /app
@@ -152,63 +152,63 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Start the worker
 CMD ["node", "src/index.js"]
 EOF
-    fi
-    
-    # Generate package-lock.json
-    (cd "$service_dir" && npm install >/dev/null 2>&1)
-    
-    # Rebuild the Docker image
-    log_info "Rebuilding $service_name Docker image..."
-    docker compose build "$service_name" >/dev/null 2>&1
-    
-    # Start the service
-    docker compose up -d "$service_name" >/dev/null 2>&1
-    
-    LAST_FIX_DESCRIPTION="Fixed BullMQ worker dependencies and configuration for $service_name"
-    return 0
+  fi
+
+  # Generate package-lock.json
+  (cd "$service_dir" && npm install >/dev/null 2>&1)
+
+  # Rebuild the Docker image
+  log_info "Rebuilding $service_name Docker image..."
+  docker compose build "$service_name" >/dev/null 2>&1
+
+  # Start the service
+  docker compose up -d "$service_name" >/dev/null 2>&1
+
+  LAST_FIX_DESCRIPTION="Fixed BullMQ worker dependencies and configuration for $service_name"
+  return 0
 }
 
 # Fix Redis connection issues for BullMQ
 fix_bullmq_redis_connection() {
-    local service_name="$1"
-    local project_name="${PROJECT_NAME:-nself}"
-    
-    # Ensure Redis is running
-    if ! docker ps | grep -q "${project_name}_redis"; then
-        log_info "Starting Redis for BullMQ workers..."
-        docker compose up -d redis >/dev/null 2>&1
-        sleep 3
-    fi
-    
-    # Check Redis connectivity
-    if ! docker exec "${project_name}_redis" redis-cli ping >/dev/null 2>&1; then
-        log_error "Redis is not responding"
-        return 1
-    fi
-    
-    # Restart the BullMQ worker with correct Redis connection
-    docker compose restart "$service_name" >/dev/null 2>&1
-    
-    LAST_FIX_DESCRIPTION="Fixed Redis connection for $service_name"
-    return 0
+  local service_name="$1"
+  local project_name="${PROJECT_NAME:-nself}"
+
+  # Ensure Redis is running
+  if ! docker ps | grep -q "${project_name}_redis"; then
+    log_info "Starting Redis for BullMQ workers..."
+    docker compose up -d redis >/dev/null 2>&1
+    sleep 3
+  fi
+
+  # Check Redis connectivity
+  if ! docker exec "${project_name}_redis" redis-cli ping >/dev/null 2>&1; then
+    log_error "Redis is not responding"
+    return 1
+  fi
+
+  # Restart the BullMQ worker with correct Redis connection
+  docker compose restart "$service_name" >/dev/null 2>&1
+
+  LAST_FIX_DESCRIPTION="Fixed Redis connection for $service_name"
+  return 0
 }
 
 # Main BullMQ fix function
 fix_bullmq_worker() {
-    local service_name="$1"
-    local error_type="${2:-MISSING_NODE_MODULES}"
-    
-    case "$error_type" in
-        MISSING_NODE_MODULES|MODULE_NOT_FOUND)
-            fix_bullmq_dependencies "$service_name"
-            ;;
-        REDIS_CONNECTION)
-            fix_bullmq_redis_connection "$service_name"
-            ;;
-        *)
-            fix_bullmq_dependencies "$service_name"
-            ;;
-    esac
-    
-    return $?
+  local service_name="$1"
+  local error_type="${2:-MISSING_NODE_MODULES}"
+
+  case "$error_type" in
+  MISSING_NODE_MODULES | MODULE_NOT_FOUND)
+    fix_bullmq_dependencies "$service_name"
+    ;;
+  REDIS_CONNECTION)
+    fix_bullmq_redis_connection "$service_name"
+    ;;
+  *)
+    fix_bullmq_dependencies "$service_name"
+    ;;
+  esac
+
+  return $?
 }

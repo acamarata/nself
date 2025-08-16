@@ -15,7 +15,7 @@ cd "$(dirname "$0")"
   sha256sum nself.sh build.sh compose.sh success.sh VERSION
   cd templates
   sha256sum .env.example | sed 's|^|templates/|'
-} > checksums.sha256
+} >checksums.sha256
 
 echo "Checksums generated in checksums.sha256"
 echo

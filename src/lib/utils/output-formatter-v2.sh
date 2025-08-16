@@ -46,325 +46,325 @@ PROGRESS_FRAMES=("░" "▒" "▓" "█")
 
 # Enhanced section formatting
 format_section() {
-    local title="$1"
-    local width="${2:-60}"
-    
-    echo
-    echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-    
-    # Center the title
-    local title_len=${#title}
-    local padding=$(( (width - title_len - 4) / 2 ))
-    local left_pad=$(printf '%*s' $padding)
-    local right_pad=$(printf '%*s' $((width - title_len - padding - 4)))
-    
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET} ${left_pad}${BOLD}${title}${RESET}${right_pad} ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    echo
+  local title="$1"
+  local width="${2:-60}"
+
+  echo
+  echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+
+  # Center the title
+  local title_len=${#title}
+  local padding=$(((width - title_len - 4) / 2))
+  local left_pad=$(printf '%*s' $padding)
+  local right_pad=$(printf '%*s' $((width - title_len - padding - 4)))
+
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET} ${left_pad}${BOLD}${title}${RESET}${right_pad} ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  echo
 }
 
 # Professional step indicator
 format_step() {
-    local current="$1"
-    local total="$2"
-    local message="$3"
-    
-    echo
-    echo -e "${BLUE}${ICON_GEAR}${RESET} ${BOLD}Step ${current}/${total}${RESET} ${BOX_HORIZONTAL} ${message}"
+  local current="$1"
+  local total="$2"
+  local message="$3"
+
+  echo
+  echo -e "${BLUE}${ICON_GEAR}${RESET} ${BOLD}Step ${current}/${total}${RESET} ${BOX_HORIZONTAL} ${message}"
 }
 
 # Enhanced success message
 format_success() {
-    local message="$1"
-    echo -e "${GREEN}${ICON_CHECK}${RESET} ${GREEN}${message}${RESET}"
+  local message="$1"
+  echo -e "${GREEN}${ICON_CHECK}${RESET} ${GREEN}${message}${RESET}"
 }
 
 # Enhanced error message
 format_error() {
-    local error="$1"
-    local suggestion="${2:-}"
-    
-    echo
-    echo -e "${RED}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-    echo -e "${RED}${BOX_VERTICAL}${RESET} ${RED}${ICON_CROSS} ERROR${RESET}$(printf '%*s' 50)${RED}${BOX_VERTICAL}${RESET}"
+  local error="$1"
+  local suggestion="${2:-}"
+
+  echo
+  echo -e "${RED}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+  echo -e "${RED}${BOX_VERTICAL}${RESET} ${RED}${ICON_CROSS} ERROR${RESET}$(printf '%*s' 50)${RED}${BOX_VERTICAL}${RESET}"
+  echo -e "${RED}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
+  echo -e "${RED}${BOX_VERTICAL}${RESET} ${error}$(printf '%*s' $((57 - ${#error})))${RED}${BOX_VERTICAL}${RESET}"
+
+  if [[ -n "$suggestion" ]]; then
     echo -e "${RED}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-    echo -e "${RED}${BOX_VERTICAL}${RESET} ${error}$(printf '%*s' $((57 - ${#error})))${RED}${BOX_VERTICAL}${RESET}"
-    
-    if [[ -n "$suggestion" ]]; then
-        echo -e "${RED}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-        echo -e "${RED}${BOX_VERTICAL}${RESET} ${YELLOW}${ICON_LIGHTBULB}${RESET} ${DIM}${suggestion}${RESET}$(printf '%*s' $((53 - ${#suggestion})))${RED}${BOX_VERTICAL}${RESET}"
-    fi
-    
-    echo -e "${RED}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    echo
+    echo -e "${RED}${BOX_VERTICAL}${RESET} ${YELLOW}${ICON_LIGHTBULB}${RESET} ${DIM}${suggestion}${RESET}$(printf '%*s' $((53 - ${#suggestion})))${RED}${BOX_VERTICAL}${RESET}"
+  fi
+
+  echo -e "${RED}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  echo
 }
 
 # Enhanced warning message
 format_warning() {
-    local warning="$1"
-    local suggestion="${2:-}"
-    
-    echo
-    echo -e "${YELLOW}${ICON_WARNING} WARNING${RESET}"
-    echo -e "${YELLOW}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${RESET}"
-    echo -e "${warning}"
-    
-    if [[ -n "$suggestion" ]]; then
-        echo -e "${DIM}${ICON_ARROW} ${suggestion}${RESET}"
-    fi
+  local warning="$1"
+  local suggestion="${2:-}"
+
+  echo
+  echo -e "${YELLOW}${ICON_WARNING} WARNING${RESET}"
+  echo -e "${YELLOW}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${BOX_HORIZONTAL}${RESET}"
+  echo -e "${warning}"
+
+  if [[ -n "$suggestion" ]]; then
+    echo -e "${DIM}${ICON_ARROW} ${suggestion}${RESET}"
+  fi
 }
 
 # Enhanced info message
 format_info() {
-    local message="$1"
-    echo -e "${BLUE}${ICON_INFO}${RESET} ${message}"
+  local message="$1"
+  echo -e "${BLUE}${ICON_INFO}${RESET} ${message}"
 }
 
 # Beautiful progress bar
 show_progress() {
-    local current=$1
-    local total=$2
-    local message="${3:-Processing}"
-    local width=40
-    
-    local percent=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-    
-    printf "\r${BLUE}${ICON_LOADING}${RESET} ${message} ["
-    
-    # Filled portion with gradient effect
-    for ((i=0; i<filled; i++)); do
-        if [[ $i -lt $((filled - 1)) ]]; then
-            printf "${GREEN}█${RESET}"
-        else
-            printf "${GREEN}▓${RESET}"
-        fi
-    done
-    
-    # Empty portion
-    printf "%${empty}s" | tr ' ' '░'
-    
-    printf "] ${BOLD}%3d%%${RESET}" "$percent"
-    
-    if [[ $current -eq $total ]]; then
-        printf " ${GREEN}${ICON_CHECK}${RESET}\n"
+  local current=$1
+  local total=$2
+  local message="${3:-Processing}"
+  local width=40
+
+  local percent=$((current * 100 / total))
+  local filled=$((current * width / total))
+  local empty=$((width - filled))
+
+  printf "\r${BLUE}${ICON_LOADING}${RESET} ${message} ["
+
+  # Filled portion with gradient effect
+  for ((i = 0; i < filled; i++)); do
+    if [[ $i -lt $((filled - 1)) ]]; then
+      printf "${GREEN}█${RESET}"
+    else
+      printf "${GREEN}▓${RESET}"
     fi
+  done
+
+  # Empty portion
+  printf "%${empty}s" | tr ' ' '░'
+
+  printf "] ${BOLD}%3d%%${RESET}" "$percent"
+
+  if [[ $current -eq $total ]]; then
+    printf " ${GREEN}${ICON_CHECK}${RESET}\n"
+  fi
 }
 
 # Animated spinner with message
 show_spinner() {
-    local message="$1"
-    local pid=$2
-    local frame=0
-    
-    while kill -0 $pid 2>/dev/null; do
-        printf "\r${BLUE}${SPINNER_FRAMES[frame]}${RESET} ${message}"
-        frame=$(( (frame + 1) % ${#SPINNER_FRAMES[@]} ))
-        sleep 0.1
-    done
-    
-    printf "\r${GREEN}${ICON_CHECK}${RESET} ${message}\n"
+  local message="$1"
+  local pid=$2
+  local frame=0
+
+  while kill -0 $pid 2>/dev/null; do
+    printf "\r${BLUE}${SPINNER_FRAMES[frame]}${RESET} ${message}"
+    frame=$(((frame + 1) % ${#SPINNER_FRAMES[@]}))
+    sleep 0.1
+  done
+
+  printf "\r${GREEN}${ICON_CHECK}${RESET} ${message}\n"
 }
 
 # Enhanced summary box
 format_summary() {
-    local title="$1"
-    shift
-    local items=("$@")
-    local width=60
-    
-    echo
-    echo -e "${GREEN}${BOX_TOP_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-    
-    # Title
-    local title_with_icon="${ICON_STAR} ${title} ${ICON_STAR}"
-    local title_len=${#title_with_icon}
-    local padding=$(( (width - title_len - 2) / 2 ))
-    printf "${GREEN}${BOX_VERTICAL}${RESET}%*s${BOLD}%s${RESET}%*s${GREEN}${BOX_VERTICAL}${RESET}\n" \
-        $padding "" "$title_with_icon" $((width - title_len - padding - 2)) ""
-    
-    echo -e "${GREEN}${BOX_T_RIGHT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-    
-    # Items
-    for item in "${items[@]}"; do
-        printf "${GREEN}${BOX_VERTICAL}${RESET}  ${ICON_BULLET} %-*s${GREEN}${BOX_VERTICAL}${RESET}\n" $((width-6)) "$item"
-    done
-    
-    echo -e "${GREEN}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    echo
+  local title="$1"
+  shift
+  local items=("$@")
+  local width=60
+
+  echo
+  echo -e "${GREEN}${BOX_TOP_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+
+  # Title
+  local title_with_icon="${ICON_STAR} ${title} ${ICON_STAR}"
+  local title_len=${#title_with_icon}
+  local padding=$(((width - title_len - 2) / 2))
+  printf "${GREEN}${BOX_VERTICAL}${RESET}%*s${BOLD}%s${RESET}%*s${GREEN}${BOX_VERTICAL}${RESET}\n" \
+    $padding "" "$title_with_icon" $((width - title_len - padding - 2)) ""
+
+  echo -e "${GREEN}${BOX_T_RIGHT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
+
+  # Items
+  for item in "${items[@]}"; do
+    printf "${GREEN}${BOX_VERTICAL}${RESET}  ${ICON_BULLET} %-*s${GREEN}${BOX_VERTICAL}${RESET}\n" $((width - 6)) "$item"
+  done
+
+  echo -e "${GREEN}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  echo
 }
 
 # Validation output formatter
 format_validation_results() {
-    local errors=("$@")
-    local warnings=()
-    local fixes=()
-    
-    # Separate arrays based on markers
-    local mode="errors"
-    for item in "$@"; do
-        case "$item" in
-            "WARNINGS:")
-                mode="warnings"
-                continue
-                ;;
-            "FIXES:")
-                mode="fixes"
-                continue
-                ;;
-        esac
-        
-        case "$mode" in
-            errors) [[ "$item" != "WARNINGS:" ]] && [[ "$item" != "FIXES:" ]] && errors+=("$item") ;;
-            warnings) [[ "$item" != "FIXES:" ]] && warnings+=("$item") ;;
-            fixes) fixes+=("$item") ;;
-        esac
+  local errors=("$@")
+  local warnings=()
+  local fixes=()
+
+  # Separate arrays based on markers
+  local mode="errors"
+  for item in "$@"; do
+    case "$item" in
+    "WARNINGS:")
+      mode="warnings"
+      continue
+      ;;
+    "FIXES:")
+      mode="fixes"
+      continue
+      ;;
+    esac
+
+    case "$mode" in
+    errors) [[ "$item" != "WARNINGS:" ]] && [[ "$item" != "FIXES:" ]] && errors+=("$item") ;;
+    warnings) [[ "$item" != "FIXES:" ]] && warnings+=("$item") ;;
+    fixes) fixes+=("$item") ;;
+    esac
+  done
+
+  # Display errors if any
+  if [[ ${#errors[@]} -gt 0 ]]; then
+    echo
+    echo -e "${RED}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+    echo -e "${RED}${BOX_VERTICAL}${RESET} ${RED}${ICON_CROSS} Validation Errors${RESET}$(printf '%*s' 38)${RED}${BOX_VERTICAL}${RESET}"
+    echo -e "${RED}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
+
+    for error in "${errors[@]}"; do
+      [[ -n "$error" ]] && [[ "$error" != "WARNINGS:" ]] && [[ "$error" != "FIXES:" ]] &&
+        printf "${RED}${BOX_VERTICAL}${RESET}  ${RED}${ICON_CROSS}${RESET} %-*s${RED}${BOX_VERTICAL}${RESET}\n" 54 "$error"
     done
-    
-    # Display errors if any
-    if [[ ${#errors[@]} -gt 0 ]]; then
-        echo
-        echo -e "${RED}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-        echo -e "${RED}${BOX_VERTICAL}${RESET} ${RED}${ICON_CROSS} Validation Errors${RESET}$(printf '%*s' 38)${RED}${BOX_VERTICAL}${RESET}"
-        echo -e "${RED}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-        
-        for error in "${errors[@]}"; do
-            [[ -n "$error" ]] && [[ "$error" != "WARNINGS:" ]] && [[ "$error" != "FIXES:" ]] && \
-                printf "${RED}${BOX_VERTICAL}${RESET}  ${RED}${ICON_CROSS}${RESET} %-*s${RED}${BOX_VERTICAL}${RESET}\n" 54 "$error"
-        done
-        
-        echo -e "${RED}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    fi
-    
-    # Display warnings if any
-    if [[ ${#warnings[@]} -gt 0 ]]; then
-        echo
-        echo -e "${YELLOW}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-        echo -e "${YELLOW}${BOX_VERTICAL}${RESET} ${YELLOW}${ICON_WARNING} Warnings${RESET}$(printf '%*s' 46)${YELLOW}${BOX_VERTICAL}${RESET}"
-        echo -e "${YELLOW}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-        
-        for warning in "${warnings[@]}"; do
-            [[ -n "$warning" ]] && [[ "$warning" != "FIXES:" ]] && \
-                printf "${YELLOW}${BOX_VERTICAL}${RESET}  ${YELLOW}${ICON_WARNING}${RESET} %-*s${YELLOW}${BOX_VERTICAL}${RESET}\n" 54 "$warning"
-        done
-        
-        echo -e "${YELLOW}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    fi
-    
-    # Display available fixes if any
-    if [[ ${#fixes[@]} -gt 0 ]]; then
-        echo
-        echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-        echo -e "${BLUE}${BOX_VERTICAL}${RESET} ${BLUE}${ICON_GEAR} Auto-Fixes Available${RESET}$(printf '%*s' 35)${BLUE}${BOX_VERTICAL}${RESET}"
-        echo -e "${BLUE}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
-        
-        for fix in "${fixes[@]}"; do
-            [[ -n "$fix" ]] && \
-                printf "${BLUE}${BOX_VERTICAL}${RESET}  ${BLUE}${ICON_ARROW}${RESET} %-*s${BLUE}${BOX_VERTICAL}${RESET}\n" 54 "$fix"
-        done
-        
-        echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    fi
+
+    echo -e "${RED}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  fi
+
+  # Display warnings if any
+  if [[ ${#warnings[@]} -gt 0 ]]; then
+    echo
+    echo -e "${YELLOW}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+    echo -e "${YELLOW}${BOX_VERTICAL}${RESET} ${YELLOW}${ICON_WARNING} Warnings${RESET}$(printf '%*s' 46)${YELLOW}${BOX_VERTICAL}${RESET}"
+    echo -e "${YELLOW}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
+
+    for warning in "${warnings[@]}"; do
+      [[ -n "$warning" ]] && [[ "$warning" != "FIXES:" ]] &&
+        printf "${YELLOW}${BOX_VERTICAL}${RESET}  ${YELLOW}${ICON_WARNING}${RESET} %-*s${YELLOW}${BOX_VERTICAL}${RESET}\n" 54 "$warning"
+    done
+
+    echo -e "${YELLOW}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  fi
+
+  # Display available fixes if any
+  if [[ ${#fixes[@]} -gt 0 ]]; then
+    echo
+    echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+    echo -e "${BLUE}${BOX_VERTICAL}${RESET} ${BLUE}${ICON_GEAR} Auto-Fixes Available${RESET}$(printf '%*s' 35)${BLUE}${BOX_VERTICAL}${RESET}"
+    echo -e "${BLUE}${BOX_T_RIGHT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_T_LEFT}${RESET}"
+
+    for fix in "${fixes[@]}"; do
+      [[ -n "$fix" ]] &&
+        printf "${BLUE}${BOX_VERTICAL}${RESET}  ${BLUE}${ICON_ARROW}${RESET} %-*s${BLUE}${BOX_VERTICAL}${RESET}\n" 54 "$fix"
+    done
+
+    echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  fi
 }
 
 # Docker output formatter
 format_docker_output() {
-    local line="$1"
-    
-    case "$line" in
-        *"Pulling from"*)
-            echo -e "${BLUE}${ICON_PACKAGE}${RESET} Downloading Docker images..."
-            ;;
-        *"Pull complete"*|*"Already exists"*)
-            printf "${GREEN}.${RESET}"
-            ;;
-        *"Downloaded newer image"*|*"Image is up to date"*)
-            echo -e " ${GREEN}${ICON_CHECK}${RESET}"
-            ;;
-        *"Creating"*)
-            local container=$(echo "$line" | sed 's/.*Creating //' | sed 's/ .*//')
-            echo -e "${BLUE}${ICON_GEAR}${RESET} Creating: ${BOLD}$container${RESET}"
-            ;;
-        *"Started"*)
-            local container=$(echo "$line" | sed 's/.*Started //' | sed 's/ .*//')
-            echo -e "${GREEN}${ICON_CHECK}${RESET} Started: ${BOLD}$container${RESET}"
-            ;;
-        *"Error"*|*"ERROR"*)
-            echo -e "${RED}${ICON_CROSS}${RESET} ${RED}$line${RESET}"
-            ;;
-        *"Warning"*|*"WARNING"*)
-            echo -e "${YELLOW}${ICON_WARNING}${RESET} ${YELLOW}$line${RESET}"
-            ;;
-    esac
+  local line="$1"
+
+  case "$line" in
+  *"Pulling from"*)
+    echo -e "${BLUE}${ICON_PACKAGE}${RESET} Downloading Docker images..."
+    ;;
+  *"Pull complete"* | *"Already exists"*)
+    printf "${GREEN}.${RESET}"
+    ;;
+  *"Downloaded newer image"* | *"Image is up to date"*)
+    echo -e " ${GREEN}${ICON_CHECK}${RESET}"
+    ;;
+  *"Creating"*)
+    local container=$(echo "$line" | sed 's/.*Creating //' | sed 's/ .*//')
+    echo -e "${BLUE}${ICON_GEAR}${RESET} Creating: ${BOLD}$container${RESET}"
+    ;;
+  *"Started"*)
+    local container=$(echo "$line" | sed 's/.*Started //' | sed 's/ .*//')
+    echo -e "${GREEN}${ICON_CHECK}${RESET} Started: ${BOLD}$container${RESET}"
+    ;;
+  *"Error"* | *"ERROR"*)
+    echo -e "${RED}${ICON_CROSS}${RESET} ${RED}$line${RESET}"
+    ;;
+  *"Warning"* | *"WARNING"*)
+    echo -e "${YELLOW}${ICON_WARNING}${RESET} ${YELLOW}$line${RESET}"
+    ;;
+  esac
 }
 
 # Service status formatter
 format_service_status() {
-    local service="$1"
-    local status="$2"
-    local health="${3:-}"
-    
-    local status_icon=""
-    local status_color=""
-    
-    case "$status" in
-        "running")
-            status_icon="${ICON_CHECK}"
-            status_color="${GREEN}"
-            ;;
-        "stopped")
-            status_icon="${ICON_CROSS}"
-            status_color="${RED}"
-            ;;
-        "starting")
-            status_icon="${ICON_LOADING}"
-            status_color="${YELLOW}"
-            ;;
-        *)
-            status_icon="${ICON_WARNING}"
-            status_color="${YELLOW}"
-            ;;
-    esac
-    
-    printf "${status_color}%s${RESET} %-20s %s" "$status_icon" "$service" "$status"
-    
-    if [[ -n "$health" ]]; then
-        printf " (Health: %s)" "$health"
-    fi
-    
-    echo
+  local service="$1"
+  local status="$2"
+  local health="${3:-}"
+
+  local status_icon=""
+  local status_color=""
+
+  case "$status" in
+  "running")
+    status_icon="${ICON_CHECK}"
+    status_color="${GREEN}"
+    ;;
+  "stopped")
+    status_icon="${ICON_CROSS}"
+    status_color="${RED}"
+    ;;
+  "starting")
+    status_icon="${ICON_LOADING}"
+    status_color="${YELLOW}"
+    ;;
+  *)
+    status_icon="${ICON_WARNING}"
+    status_color="${YELLOW}"
+    ;;
+  esac
+
+  printf "${status_color}%s${RESET} %-20s %s" "$status_icon" "$service" "$status"
+
+  if [[ -n "$health" ]]; then
+    printf " (Health: %s)" "$health"
+  fi
+
+  echo
 }
 
 # Welcome banner
 show_welcome_banner() {
-    echo
-    echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${BOLD}${ICON_ROCKET} Welcome to nself ${ICON_ROCKET}${RESET}                              ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Modern Full-Stack Platform${RESET}                           ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Build production-ready applications with ease${RESET}         ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
-    echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    echo
+  echo
+  echo -e "${BLUE}${BOX_TOP_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${BOLD}${ICON_ROCKET} Welcome to nself ${ICON_ROCKET}${RESET}                              ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Modern Full-Stack Platform${RESET}                           ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}  ${DIM}Build production-ready applications with ease${RESET}         ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_VERTICAL}${RESET}                                                          ${BLUE}${BOX_VERTICAL}${RESET}"
+  echo -e "${BLUE}${BOX_BOTTOM_LEFT}$(printf '%*s' 58 | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  echo
 }
 
 # Success banner
 show_success_banner() {
-    local message="$1"
-    local width=60
-    local msg_len=${#message}
-    local padding=$(( (width - msg_len - 4) / 2 ))
-    
-    echo
-    echo -e "${GREEN}${BOX_TOP_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
-    echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $((width-2)))${GREEN}${BOX_VERTICAL}${RESET}"
-    echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $padding)${GREEN}${ICON_SPARKLES} SUCCESS ${ICON_SPARKLES}${RESET}$(printf '%*s' $((width - padding - 14)))${GREEN}${BOX_VERTICAL}${RESET}"
-    echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $padding)${message}$(printf '%*s' $((width - padding - msg_len - 2)))${GREEN}${BOX_VERTICAL}${RESET}"
-    echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $((width-2)))${GREEN}${BOX_VERTICAL}${RESET}"
-    echo -e "${GREEN}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width-2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
-    echo
+  local message="$1"
+  local width=60
+  local msg_len=${#message}
+  local padding=$(((width - msg_len - 4) / 2))
+
+  echo
+  echo -e "${GREEN}${BOX_TOP_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_TOP_RIGHT}${RESET}"
+  echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $((width - 2)))${GREEN}${BOX_VERTICAL}${RESET}"
+  echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $padding)${GREEN}${ICON_SPARKLES} SUCCESS ${ICON_SPARKLES}${RESET}$(printf '%*s' $((width - padding - 14)))${GREEN}${BOX_VERTICAL}${RESET}"
+  echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $padding)${message}$(printf '%*s' $((width - padding - msg_len - 2)))${GREEN}${BOX_VERTICAL}${RESET}"
+  echo -e "${GREEN}${BOX_VERTICAL}${RESET}$(printf '%*s' $((width - 2)))${GREEN}${BOX_VERTICAL}${RESET}"
+  echo -e "${GREEN}${BOX_BOTTOM_LEFT}$(printf '%*s' $((width - 2)) | tr ' ' "$BOX_HORIZONTAL")${BOX_BOTTOM_RIGHT}${RESET}"
+  echo
 }
 
 # Export all functions

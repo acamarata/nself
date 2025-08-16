@@ -15,21 +15,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source display utilities first (for logging functions)
 source "$SCRIPT_DIR/../../lib/utils/display.sh" || {
-    echo "Error: Cannot load display.sh" >&2
-    exit 1
+  echo "Error: Cannot load display.sh" >&2
+  exit 1
 }
 
 # Source environment utilities for safe loading
 source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
-    log_error "Cannot load env.sh"
-    exit 1
+  log_error "Cannot load env.sh"
+  exit 1
 }
 
 # Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
   load_env_safe ".env.local" || {
-      log_error "Failed to load .env.local"
-      exit 1
+    log_error "Failed to load .env.local"
+    exit 1
   }
 else
   log_error "No .env.local file found."
@@ -40,15 +40,15 @@ log_info "Generating docker-compose.yml..."
 
 # Source smart defaults to handle JWT construction
 if ! declare -f load_env_with_defaults >/dev/null 2>&1; then
-    if [[ ! -f "$SCRIPT_DIR/../../lib/config/smart-defaults.sh" ]]; then
-        log_error "Cannot find smart-defaults.sh"
-        exit 1
-    fi
-    source "$SCRIPT_DIR/../../lib/config/smart-defaults.sh"
+  if [[ ! -f "$SCRIPT_DIR/../../lib/config/smart-defaults.sh" ]]; then
+    log_error "Cannot find smart-defaults.sh"
+    exit 1
+  fi
+  source "$SCRIPT_DIR/../../lib/config/smart-defaults.sh"
 fi
 if ! load_env_with_defaults; then
-    log_error "Failed to load environment with defaults"
-    exit 1
+  log_error "Failed to load environment with defaults"
+  exit 1
 fi
 
 # Compose database URLs from individual variables
@@ -85,7 +85,7 @@ if [ -f "docker-compose.yml" ]; then
 fi
 
 # Start docker-compose.yml
-cat > docker-compose.yml << EOF
+cat >docker-compose.yml <<EOF
 services:
   # Nginx Reverse Proxy
   nginx:
@@ -110,17 +110,17 @@ services:
 EOF
 
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  echo "      - config-server" >> docker-compose.yml
+  echo "      - config-server" >>docker-compose.yml
 fi
 
 # Note: unity-functions and unity-dashboard are added by compose-inline-append.sh
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
-  echo "      - mailhog" >> docker-compose.yml
+  echo "      - mailhog" >>docker-compose.yml
 fi
 # Note: Services are managed in a separate docker-compose.yml in services/ directory
 
-cat >> docker-compose.yml << EOF
+cat >>docker-compose.yml <<EOF
     networks:
       - default
 
@@ -269,8 +269,8 @@ EOF
 # Add optional services
 
 # Functions service - Skipped since compose-inline-append.sh adds unity-functions
-if false; then  # Disabled - using unity-functions from compose-inline-append.sh instead
-  cat >> docker-compose.yml << EOF
+if false; then # Disabled - using unity-functions from compose-inline-append.sh instead
+  cat >>docker-compose.yml <<EOF
 
   # Functions Service
   functions:
@@ -295,7 +295,7 @@ fi
 
 # Config Server (needed for dashboard)
 if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   # Config Server for Dashboard
   config-server:
@@ -335,8 +335,8 @@ EOF
 fi
 
 # Nhost Dashboard - Skipped, using unity-dashboard from compose-inline-append.sh
-if false; then  # Disabled
-  cat >> docker-compose.yml << EOF
+if false; then # Disabled
+  cat >>docker-compose.yml <<EOF
 
   dashboard:
     image: nhost/dashboard:${DASHBOARD_VERSION}
@@ -368,7 +368,7 @@ fi
 
 # Redis service
 if [[ "$REDIS_ENABLED" == "true" ]]; then
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   # Redis Cache
   redis:
@@ -393,7 +393,7 @@ fi
 # Email service for development
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
   # Use MailPit (modern replacement for MailHog)
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   # MailPit (Development Email - Modern replacement for MailHog)
   mailpit:
@@ -419,10 +419,10 @@ if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]];
       timeout: 10s
       retries: 5
 EOF
-  
+
   # Create alias for backward compatibility
   if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
-    cat >> docker-compose.yml << EOF
+    cat >>docker-compose.yml <<EOF
 
   # Alias for backward compatibility
   mailhog:
@@ -435,7 +435,7 @@ fi
 
 # NestJS Run Service (Constantly Running Microservices)
 if [[ "$NESTJS_RUN_ENABLED" == "true" ]]; then
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
 
   # NestJS Run Service
   nestjs-run:
@@ -450,11 +450,11 @@ if [[ "$NESTJS_RUN_ENABLED" == "true" ]]; then
 EOF
 
   if [[ "$REDIS_ENABLED" == "true" ]]; then
-    echo "      redis:" >> docker-compose.yml
-    echo "        condition: service_healthy" >> docker-compose.yml
+    echo "      redis:" >>docker-compose.yml
+    echo "        condition: service_healthy" >>docker-compose.yml
   fi
 
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
     environment:
       NODE_ENV: ${ENVIRONMENT}
       PORT: ${NESTJS_RUN_PORT}
@@ -464,12 +464,12 @@ EOF
 EOF
 
   if [[ "$REDIS_ENABLED" == "true" ]]; then
-    echo "      REDIS_HOST: redis" >> docker-compose.yml
-    echo "      REDIS_PORT: 6379" >> docker-compose.yml
-    echo "      REDIS_PASSWORD: ${REDIS_PASSWORD}" >> docker-compose.yml
+    echo "      REDIS_HOST: redis" >>docker-compose.yml
+    echo "      REDIS_PORT: 6379" >>docker-compose.yml
+    echo "      REDIS_PASSWORD: ${REDIS_PASSWORD}" >>docker-compose.yml
   fi
 
-  cat >> docker-compose.yml << EOF
+  cat >>docker-compose.yml <<EOF
     volumes:
       - ./nestjs-run:/app:ro
     networks:
@@ -479,17 +479,17 @@ fi
 
 # Add backend services if enabled
 if [[ "$SERVICES_ENABLED" == "true" ]]; then
-  echo "" >> docker-compose.yml
-  echo "  # ============================================" >> docker-compose.yml
-  echo "  # Backend Services (NestJS, BullMQ, Go, Python)" >> docker-compose.yml
-  echo "  # ============================================" >> docker-compose.yml
-  
+  echo "" >>docker-compose.yml
+  echo "  # ============================================" >>docker-compose.yml
+  echo "  # Backend Services (NestJS, BullMQ, Go, Python)" >>docker-compose.yml
+  echo "  # ============================================" >>docker-compose.yml
+
   # Include the services directly in main compose
   bash "$SCRIPT_DIR/compose-inline-append.sh"
 fi
 
 # Add volumes section
-cat >> docker-compose.yml << EOF
+cat >>docker-compose.yml <<EOF
 
 volumes:
   postgres_data:
@@ -499,17 +499,17 @@ volumes:
 EOF
 
 if [[ "$REDIS_ENABLED" == "true" ]]; then
-  echo "  redis_data:" >> docker-compose.yml
-  echo "    name: ${PROJECT_NAME}_redis_data" >> docker-compose.yml
+  echo "  redis_data:" >>docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_redis_data" >>docker-compose.yml
 fi
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
-  echo "  mailpit_data:" >> docker-compose.yml
-  echo "    name: ${PROJECT_NAME}_mailpit_data" >> docker-compose.yml
+  echo "  mailpit_data:" >>docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_mailpit_data" >>docker-compose.yml
 fi
 
 # Add networks section
-cat >> docker-compose.yml << EOF
+cat >>docker-compose.yml <<EOF
 
 networks:
   default:
