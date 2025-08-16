@@ -3,7 +3,7 @@
 # db.sh - Database management tools for nself
 # Handles migrations, seeding, schema sync, and backups
 
-set -e
+set +e  # Don't exit on error for db commands
 
 # Get script directory (macOS compatible)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source environment utilities for safe loading
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/header.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Color output functions
@@ -790,6 +791,11 @@ main() {
   
   local command="${1:-help}"
   shift || true
+  
+  # Show command header (except for help command)
+  if [[ "$command" != "help" ]] && [[ "$command" != "--help" ]] && [[ "$command" != "-h" ]] && [[ -n "$command" ]]; then
+    show_command_header "nself db" "Database operations and management"
+  fi
   
   case "$command" in
     run)

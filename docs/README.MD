@@ -7,10 +7,11 @@ This directory contains complete documentation for developers, contributors, and
 ## 📚 Documentation Index
 
 ### Getting Started
+- **[Home.MD](Home.MD)** - 🏠 Project overview and quick start
 - **[EXAMPLES.MD](EXAMPLES.MD)** - 🎯 Complete command examples with actual outputs
 - **[TROUBLESHOOTING.MD](TROUBLESHOOTING.MD)** - 🔧 Diagnose and fix common issues
 - **[API.MD](API.MD)** - 📖 Complete command reference and usage
-- **[CONTRIBUTING.MD](CONTRIBUTING.MD)** - 🤝 Guidelines for contributing to the project
+- **[ENVIRONMENT_CONFIGURATION.MD](ENVIRONMENT_CONFIGURATION.MD)** - ⚙️ Configuration guide
 
 ### Architecture & Design
 - **[ARCHITECTURE.MD](ARCHITECTURE.MD)** - 🏗️ System design, principles, and patterns
@@ -20,9 +21,22 @@ This directory contains complete documentation for developers, contributors, and
 - **[OUTPUT_STANDARDS.MD](OUTPUT_STANDARDS.MD)** - 🖥️ User interface and output standards
 
 ### Development & Testing
+- **[CONTRIBUTING.MD](CONTRIBUTING.MD)** - 🤝 Guidelines for contributing to the project
 - **[TESTING_STRATEGY.MD](TESTING_STRATEGY.MD)** - 🧪 Testing approaches and guidelines
 - **[REFACTORING_ROADMAP.MD](REFACTORING_ROADMAP.MD)** - 🚀 Future improvements and technical debt
-- **[CHANGELOG.MD](CHANGELOG.MD)** - 📝 Version history and release notes
+
+### Release Management
+- **[RELEASE_PROCESS.MD](RELEASE_PROCESS.MD)** - 📋 Complete release process documentation
+- **[RELEASE_GUIDE.MD](RELEASE_GUIDE.MD)** - 📦 Distribution channel guide
+- **[RELEASE_CHECKLIST_TEMPLATE.MD](RELEASE_CHECKLIST_TEMPLATE.MD)** - ✅ Release checklist template
+- **[RELEASE_CHECKLIST_v0.3.7.MD](RELEASE_CHECKLIST_v0.3.7.MD)** - 🎯 v0.3.7 specific checklist
+- **[RELEASE_CHECKLIST.MD](RELEASE_CHECKLIST.MD)** - 📝 Legacy v0.3.0 checklist
+
+### Version History
+- **[CHANGELOG.MD](CHANGELOG.MD)** - 📝 User-facing changelog
+- **[RELEASES.MD](RELEASES.MD)** - 📜 Detailed release history
+- **[CHANGELOG-0.3.1.MD](CHANGELOG-0.3.1.MD)** - 📄 v0.3.1 specific changes
+- **[MIGRATION_0.2.x_to_0.3.0.MD](MIGRATION_0.2.x_to_0.3.0.MD)** - 🔄 v0.2 to v0.3 migration guide
 
 ## 🎯 Quick Navigation
 
@@ -40,6 +54,13 @@ Want to contribute? Read these:
 2. [ARCHITECTURE.MD](ARCHITECTURE.MD) - Understand the system
 3. [CODE_STYLE.MD](CODE_STYLE.MD) - Follow coding standards
 4. [TESTING_STRATEGY.MD](TESTING_STRATEGY.MD) - Test your changes
+
+#### For Release Managers
+Managing nself releases:
+1. [RELEASE_PROCESS.MD](RELEASE_PROCESS.MD) - Complete release workflow
+2. [RELEASE_GUIDE.MD](RELEASE_GUIDE.MD) - Distribution channels
+3. [RELEASE_CHECKLIST_TEMPLATE.MD](RELEASE_CHECKLIST_TEMPLATE.MD) - Checklist template
+4. Scripts in `/scripts/` - Automation tools
 
 #### For Automated Tools
 Documentation designed for programmatic access:
@@ -156,17 +177,17 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#docker-issues)
 ```bash
 nself init          # Initialize project
 nself build         # Build infrastructure
-nself up            # Start services
+nself start         # Start services
 nself status        # Check status
 nself logs          # View logs
-nself down          # Stop services
+nself stop          # Stop services
 nself doctor        # Run diagnostics
 ```
 
 ### Common Workflows
 ```bash
 # Development
-nself init && nself build && nself up
+nself init && nself build && nself start
 nself hot-reload
 nself logs -f
 

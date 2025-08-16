@@ -497,7 +497,7 @@ show_recommendations() {
     log_info "  nself init          - Create initial configuration"
     log_info "  nself build         - Generate project structure"
     log_info "  nself prod          - Generate secure passwords"
-    log_info "  nself startdate        - Update to latest version"
+    log_info "  nself update           - Update to latest version"
     log_info "  nself status        - Check service details"
 }
 

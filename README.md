@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.7-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations.
@@ -11,7 +11,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.5 NEW**: Complete SSL/HTTPS support with automatic certificate generation! All services now use HTTPS by default with green lock browser compatibility. Fixed critical volume mount issues achieving 100% service reliability (17/17 services). [See full release notes](docs/CHANGELOG.md#035---2025-08-15)
+> **🚀 v0.3.7 NEW**: Enterprise-ready with backup/restore, CI/CD pipeline, Homebrew/apt/rpm packages, enhanced doctor diagnostics, and production-grade logging! [See full release notes](docs/CHANGELOG.md#037---2025-08-15)
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -52,10 +52,30 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 
 ## 🔧 Installation
 
-Install nself with a single command:
+### Quick Install (Recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
+```
+
+### Package Managers
+
+#### macOS (Homebrew)
+```bash
+brew tap acamarata/nself
+brew install nself
+```
+
+#### Debian/Ubuntu (.deb)
+```bash
+wget https://github.com/acamarata/nself/releases/download/v0.3.7/nself_0.3.7_all.deb
+sudo dpkg -i nself_0.3.7_all.deb
+```
+
+#### RHEL/CentOS/Fedora (.rpm)
+```bash
+wget https://github.com/acamarata/nself/releases/download/v0.3.7/nself-0.3.7-1.noarch.rpm
+sudo rpm -i nself-0.3.7-1.noarch.rpm
 ```
 
 The installer will:
@@ -177,6 +197,7 @@ nself build && nself restart
 | `nself restart` | Restart all services (down + up) |
 | `nself diff` | Show configuration changes since last build |
 | `nself reset` | Delete all data and return to initial state |
+| `nself backup` | Create and manage backups (local/S3) |
 | `nself trust` | Install SSL certificate (fixes browser warnings) |
 | `nself ssl` | SSL certificate management (bootstrap, renew, status) |
 
@@ -187,6 +208,9 @@ nself build && nself restart
 | `nself update` | Update nself to the latest version |
 | `nself db` | Database tools (migrations, schema, backups) |
 | `nself email` | Email provider setup and management |
+| `nself doctor` | Run system diagnostics and health checks |
+| `nself logs` | View and follow service logs with filtering |
+| `nself status` | Show service status and health |
 | `nself version` | Show current version |
 | `nself help` | Display help information |
 
@@ -459,7 +483,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Source Available License - see [LICENSE](LICENSE) file for details.
 
 ## 🎯 Perfect For
 

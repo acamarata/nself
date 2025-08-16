@@ -34,6 +34,9 @@ cmd_scaffold() {
         esac
     done
     
+    # Show command header
+    show_command_header "nself scaffold" "Create new service from template"
+    
     # Validate inputs
     if [[ -z "$service_type" ]] || [[ -z "$service_name" ]]; then
         log_error "Service type and name are required"

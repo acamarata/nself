@@ -31,8 +31,56 @@ RESET="${COLOR_RESET:-}"
 BOLD="${COLOR_BOLD:-}"
 DIM="${COLOR_DIM:-}"
 
+# Show help for init command
+show_init_help() {
+    echo "nself init - Initialize a new full-stack application"
+    echo ""
+    echo "Usage: nself init [OPTIONS]"
+    echo ""
+    echo "Description:"
+    echo "  Creates a new nself project with .env.local configuration file"
+    echo "  and .env.example reference documentation. Sets up the foundation"
+    echo "  for a full-stack application with smart defaults."
+    echo ""
+    echo "Options:"
+    echo "  -h, --help          Show this help message"
+    echo ""
+    echo "Example:"
+    echo "  mkdir myproject && cd myproject"
+    echo "  nself init                     # Initialize project"
+    echo ""
+    echo "Files Created:"
+    echo "  • .env.local                   # Your configuration file"
+    echo "  • .env.example                 # Reference documentation"
+    echo ""
+    echo "Next Steps:"
+    echo "  1. Edit .env.local (optional - defaults work!)"
+    echo "  2. nself build                 # Generate infrastructure"
+    echo "  3. nself start                 # Start services"
+    echo ""
+    echo "Notes:"
+    echo "  • Safe to run multiple times"
+    echo "  • Won't overwrite existing configuration"
+    echo "  • Works with smart defaults out of the box"
+}
+
 # Command function
 cmd_init() {
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_init_help
+                return 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                log_info "Use 'nself init --help' for usage information"
+                return 1
+                ;;
+        esac
+    done
+    
     # Check not in nself source directory first (before showing header)
     if [[ -f "bin/nself" ]] && [[ -d "src/cli" ]] && [[ -f "install.sh" ]]; then
         show_command_header "nself init" "Initialize a new full-stack application"

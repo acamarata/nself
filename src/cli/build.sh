@@ -40,15 +40,59 @@ format_section() {
     :  # No-op command that always succeeds
 }
 
+# Show help for build command
+show_build_help() {
+    echo "nself build - Generate project infrastructure and configuration"
+    echo ""
+    echo "Usage: nself build [OPTIONS]"
+    echo ""
+    echo "Description:"
+    echo "  Generates Docker Compose files, SSL certificates, nginx configuration,"
+    echo "  and all necessary infrastructure based on your .env.local settings."
+    echo ""
+    echo "Options:"
+    echo "  -f, --force         Force rebuild of all components"
+    echo "  -h, --help          Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  nself build                    # Build with current configuration"
+    echo "  nself build --force            # Force rebuild everything"
+    echo ""
+    echo "Files Generated:"
+    echo "  • docker-compose.yml           • nginx/ configuration"
+    echo "  • SSL certificates             • Database initialization"
+    echo "  • Service templates            • Environment validation"
+    echo ""
+    echo "Notes:"
+    echo "  • Automatically detects configuration changes"
+    echo "  • Only rebuilds what's necessary (unless --force)"
+    echo "  • Validates configuration before building"
+    echo "  • Creates trusted SSL certificates for HTTPS"
+}
+
 # Main build command function
 cmd_build() {
     local exit_code=0
     local force_rebuild="${1:-false}"
     
-    # Check for --force flag
-    if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
-        force_rebuild=true
-    fi
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -f|--force)
+                force_rebuild=true
+                shift
+                ;;
+            -h|--help)
+                show_build_help
+                return 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                log_info "Use 'nself build --help' for usage information"
+                return 1
+                ;;
+        esac
+    done
     
     # Show welcome header with proper formatting
     show_command_header "nself build" "Generate project infrastructure and configuration"
@@ -344,7 +388,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${HASURA_ROUTE};
     
     ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;
@@ -400,7 +445,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${app_route};
     
     ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;

@@ -29,7 +29,7 @@ show_general_help() {
     if [[ -f "$SCRIPT_DIR/../VERSION" ]]; then
         version=$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
     fi
-    echo "Version: ${NSELF_VERSION:-$version}"
+    echo "Version: $version"
     echo "Usage: nself <command> [options]"
     
     show_section "Core Commands"

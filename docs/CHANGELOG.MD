@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2025-08-15
+
+### Added
+- **Enterprise-Ready Features**: Major improvements for production deployments
+  - Comprehensive backup and restore system with local and S3 support
+  - Full disaster recovery capabilities with point-in-time backups
+  - Automated backup pruning and scheduled backup support
+  
+- **CI/CD Pipeline**: Complete GitHub Actions workflow
+  - ShellCheck linting for all shell scripts
+  - Bats unit testing framework integration
+  - Integration tests across Ubuntu and macOS
+  - Security scanning with Trivy
+  - Automated testing on push and pull requests
+  
+- **Multiple Installation Methods**: Expanded platform support
+  - Homebrew formula for macOS users
+  - .deb packages for Debian/Ubuntu
+  - .rpm packages for RHEL/CentOS/Fedora
+  - Package build automation scripts
+  
+- **Enhanced CLI Commands**:
+  - `nself backup` - Create, restore, list, and prune backups
+  - `nself doctor` - Comprehensive system diagnostics with actionable fixes
+  - `nself logs` - Advanced log viewing with filtering, grep, and follow mode
+  - Enhanced status command with service health visualization
+  
+- **Production Improvements**:
+  - System health diagnostics with remediation suggestions
+  - Memory and disk space checks
+  - Port conflict detection with process identification
+  - DNS resolution verification
+  - SSL certificate validation
+
+### Fixed
+- **License Clarity**: Resolved inconsistency between README and LICENSE file
+  - Changed from conflicting "MIT License" reference to clear "Source Available License"
+  - Aligned all license documentation for legal compliance
+  
+### Changed
+- **Documentation**: Clarified licensing terms as Source Available
+- **Commands**: Enhanced existing commands with better error handling and output
+- **Testing**: Improved test coverage and CI/CD reliability
+
+### Security
+- Added Trivy security scanning in CI pipeline
+- Improved secret handling in backup/restore operations
+- Enhanced SSL certificate management and validation
+
+## [0.3.6] - 2025-08-15
+
+### Added
+- **Major Refactoring**: Complete overhaul of core systems for improved reliability
+- **Critical Bug Fixes**: Resolved multiple stability issues affecting production deployments
+
 ## [0.3.5] - 2025-08-15
 
 ### Added

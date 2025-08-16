@@ -1023,7 +1023,7 @@ main() {
   echo "Quick start:"
   echo "  ${CYAN}mkdir myproject && cd myproject${RESET}"
   echo "  ${CYAN}nself init${RESET}"
-  echo "  ${CYAN}nself up${RESET}"
+  echo "  ${CYAN}nself start${RESET}"
   echo ""
   echo "Documentation: ${BLUE}https://github.com/${DEFAULT_REPO}/wiki${RESET}"
   echo "Support: ${BLUE}https://github.com/${DEFAULT_REPO}/issues${RESET}"
