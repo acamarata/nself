@@ -149,9 +149,9 @@ cmd_build() {
             run_validation .env.local 2>&1 || true
             
             # Export arrays for parent shell
-            echo "VALIDATION_ERRORS=(${VALIDATION_ERRORS[@]@Q})"
-            echo "VALIDATION_WARNINGS=(${VALIDATION_WARNINGS[@]@Q})"
-            echo "AUTO_FIXES=(${AUTO_FIXES[@]@Q})"
+            echo "VALIDATION_ERRORS=(${VALIDATION_ERRORS[*]@Q})"
+            echo "VALIDATION_WARNINGS=(${VALIDATION_WARNINGS[*]@Q})"
+            echo "AUTO_FIXES=(${AUTO_FIXES[*]@Q})"
         ) > "$validation_output" 2>&1
         
         # Source the output to get the arrays
