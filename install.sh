@@ -117,18 +117,34 @@ echo_header() {
   local padding=$(( (width - title_len - 2) / 2 ))
   local right_padding=$(( width - title_len - 2 - padding ))
   
+  # Create border string without using seq or C-style for loop
+  local border=""
+  local i=0
+  while [ $i -lt $width ]; do
+    border="${border}═"
+    i=$((i + 1))
+  done
+  
   echo ""
-  echo "${BOLD}╔$(printf '═%.0s' $(seq 1 $width))╗${RESET}"
+  echo "${BOLD}╔${border}╗${RESET}"
   printf "${BOLD}║%*s%s%*s║${RESET}\n" $padding "" "$title" $right_padding ""
-  echo "${BOLD}╚$(printf '═%.0s' $(seq 1 $width))╝${RESET}"
+  echo "${BOLD}╚${border}╝${RESET}"
   echo ""
 }
 
 echo_section() {
   local title="$1"
+  local underline=""
+  local i=0
+  local title_len=${#title}
+  while [ $i -lt $title_len ]; do
+    underline="${underline}─"
+    i=$((i + 1))
+  done
+  
   echo ""
   echo "${BOLD}${title}${RESET}"
-  echo "$(printf '─%.0s' $(seq 1 ${#title}))"
+  echo "$underline"
 }
 
 echo_info() {
@@ -148,7 +164,10 @@ echo_error() {
 }
 
 echo_debug() {
-  [[ "$VERBOSE" == "true" ]] && echo "${MAGENTA}[DEBUG]${RESET} $1"
+  if [[ "$VERBOSE" == "true" ]]; then
+    echo "${MAGENTA}[DEBUG]${RESET} $1"
+  fi
+  return 0  # Always return success to avoid set -e issues
 }
 
 # Progress spinner (follows OUTPUT_FORMATTING.MD standard)
