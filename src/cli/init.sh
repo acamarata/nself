@@ -120,14 +120,30 @@ cmd_init() {
   # Get templates directory - check multiple possible locations
   local TEMPLATES_DIR=""
 
-  # Check if we're running from installed location (bin/nself)
-  if [[ -d "$SCRIPT_DIR/../../bin/templates" ]]; then
-    TEMPLATES_DIR="$SCRIPT_DIR/../../bin/templates"
-  # Check if we're running from source (src/cli/init.sh)
-  elif [[ -d "$SCRIPT_DIR/../templates" ]]; then
+  # Check various possible template locations
+  # 1. When installed via install.sh (src/templates is copied alongside src/cli)
+  if [[ -d "$SCRIPT_DIR/../templates" ]]; then
     TEMPLATES_DIR="$SCRIPT_DIR/../templates"
+  # 2. Development/source location
+  elif [[ -d "$SCRIPT_DIR/../../src/templates" ]]; then
+    TEMPLATES_DIR="$SCRIPT_DIR/../../src/templates"
+  # 3. System installation
+  elif [[ -d "/usr/share/nself/src/templates" ]]; then
+    TEMPLATES_DIR="/usr/share/nself/src/templates"
+  # 4. Local user installation
+  elif [[ -d "$HOME/.nself/src/templates" ]]; then
+    TEMPLATES_DIR="$HOME/.nself/src/templates"
+  # 5. Custom installation path
+  elif [[ -d "$HOME/.local/nself/src/templates" ]]; then
+    TEMPLATES_DIR="$HOME/.local/nself/src/templates"
   else
     log_error "Cannot find templates directory"
+    echo "Searched in:"
+    echo "  - $SCRIPT_DIR/../templates"
+    echo "  - $SCRIPT_DIR/../../src/templates"
+    echo "  - /usr/share/nself/src/templates"
+    echo "  - $HOME/.nself/src/templates"
+    echo "  - $HOME/.local/nself/src/templates"
     echo "Please ensure nself is properly installed"
     return 1
   fi
