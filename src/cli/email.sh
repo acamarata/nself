@@ -590,7 +590,7 @@ show_docs() {
             echo "  6. Use the same token for both USER and PASS"
             echo
             printf "${COLOR_CYAN}➞ Details${COLOR_RESET}\n"
-            echo "  • Pricing: 100 test emails free, then $15/mo for 10k emails"
+            echo "  • Pricing: 100 test emails free, then \$15/mo for 10k emails"
             echo "  • Documentation: https://postmarkapp.com/developer/user-guide/sending-email/sending-with-smtp"
             ;;
             
