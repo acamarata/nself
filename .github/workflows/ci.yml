@@ -63,7 +63,7 @@ jobs:
       - name: Install nself
         run: |
           # Install to a different location to avoid repo detection
-          INSTALL_DIR="$HOME/.local/nself" ./install.sh
+          ./install.sh user "$HOME/.local/nself"
           echo "$HOME/.local/nself/bin" >> $GITHUB_PATH
           export PATH="$HOME/.local/nself/bin:$PATH"
           
