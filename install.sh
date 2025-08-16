@@ -592,11 +592,10 @@ install_files() {
     fi
     
     # Copy VERSION file from its new location
-    for version_file in "$source_dir/src/config/VERSION" "$source_dir/VERSION"; do
+    for version_file in "$source_dir/src/VERSION" "$source_dir/src/config/VERSION" "$source_dir/VERSION"; do
       if [[ -f "$version_file" ]]; then
-        # Keep VERSION in src/config where it belongs
-        run_cmd mkdir -p "$INSTALL_DIR/src/config"
-        run_cmd cp "$version_file" "$INSTALL_DIR/src/config/VERSION"
+        # Keep VERSION in src where it belongs
+        run_cmd cp "$version_file" "$INSTALL_DIR/src/VERSION"
         break
       fi
     done
