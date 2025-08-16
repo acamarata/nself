@@ -88,6 +88,8 @@ jobs:
           
       - name: Test nself commands
         run: |
+          # Run commands from temp directory to avoid repo detection
+          cd /tmp
           $HOME/.local/nself/bin/nself version
           $HOME/.local/nself/bin/nself help
           $HOME/.local/nself/bin/nself email list
