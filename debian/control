@@ -1,0 +1,17 @@
+Source: nself
+Section: admin
+Priority: optional
+Maintainer: Aric Camarata <aric.camarata@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://nself.org
+Vcs-Browser: https://github.com/acamarata/nself
+Vcs-Git: https://github.com/acamarata/nself.git
+
+Package: nself
+Architecture: all
+Depends: ${misc:Depends}, bash (>= 4.0), docker.io | docker-ce, docker-compose
+Description: Deploy feature-complete backend infrastructure in seconds
+ nself is a self-hosted infrastructure manager that helps developers
+ deploy production-ready backend services including PostgreSQL, Hasura,
+ authentication, email services, and more with a single command.

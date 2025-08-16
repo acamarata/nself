@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Create installation directories
+	mkdir -p $(CURDIR)/debian/nself/usr/share/nself
+	mkdir -p $(CURDIR)/debian/nself/usr/bin
+	
+	# Copy source files
+	cp -r src $(CURDIR)/debian/nself/usr/share/nself/
+	cp -r bin $(CURDIR)/debian/nself/usr/share/nself/
+	
+	# Create wrapper script
+	echo '#!/bin/bash' > $(CURDIR)/debian/nself/usr/bin/nself
+	echo 'exec /usr/share/nself/bin/nself "$$@"' >> $(CURDIR)/debian/nself/usr/bin/nself
+	chmod 755 $(CURDIR)/debian/nself/usr/bin/nself
+	
+	# Set permissions
+	find $(CURDIR)/debian/nself/usr/share/nself -type f -name "*.sh" -exec chmod 755 {} \;

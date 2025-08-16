@@ -1,0 +1,37 @@
+# Maintainer: Aric Camarata <aric.camarata@gmail.com>
+pkgname=nself
+pkgver=0.3.7
+pkgrel=1
+pkgdesc="Deploy feature-complete backend infrastructure in seconds"
+arch=('any')
+url="https://nself.org"
+license=('custom:Source-Available')
+depends=('bash' 'docker' 'docker-compose')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/acamarata/nself/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('842e571cba1c5d0bdd7a50f066e560a53cde99fd6225f87438b71d1c112bc3c4')
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    
+    # Create directories
+    install -dm755 "$pkgdir/usr/share/$pkgname"
+    install -dm755 "$pkgdir/usr/bin"
+    
+    # Copy source files
+    cp -r src "$pkgdir/usr/share/$pkgname/"
+    cp -r bin "$pkgdir/usr/share/$pkgname/"
+    
+    # Create wrapper script
+    cat > "$pkgdir/usr/bin/$pkgname" << 'EOF'
+#!/bin/bash
+exec /usr/share/nself/bin/nself "$@"
+EOF
+    chmod 755 "$pkgdir/usr/bin/$pkgname"
+    
+    # Set permissions
+    find "$pkgdir/usr/share/$pkgname" -type f -name "*.sh" -exec chmod 755 {} \;
+    
+    # Install documentation
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
