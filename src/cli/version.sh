@@ -7,6 +7,24 @@ source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 
+# Show help for version command
+show_version_help() {
+    echo "Usage: nself version [OPTIONS]"
+    echo "       nself -v | --version"
+    echo ""
+    echo "Display nself version information"
+    echo ""
+    echo "Options:"
+    echo "  --verbose       Show detailed version and system information"
+    echo "  -h, --help      Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  nself version           # Show version"
+    echo "  nself -v                # Show version (shorthand)"
+    echo "  nself --version         # Show version (longhand)"
+    echo "  nself version --verbose # Show detailed information"
+}
+
 # Read version from VERSION file
 get_version() {
     # Check src/VERSION file (new location)
@@ -21,10 +39,16 @@ get_version() {
 
 # Command function
 cmd_version() {
-    local verbose="${1:-}"
+    local arg="${1:-}"
     local version=$(get_version)
     
-    if [[ "$verbose" == "--verbose" ]] || [[ "$verbose" == "-v" ]]; then
+    # Handle help flag
+    if [[ "$arg" == "-h" ]] || [[ "$arg" == "--help" ]]; then
+        show_version_help
+        return 0
+    fi
+    
+    if [[ "$arg" == "--verbose" ]]; then
         show_header "nself Version Information"
         echo "Version:     $version"
         echo "Location:    $SCRIPT_DIR"
@@ -46,7 +70,8 @@ cmd_version() {
         fi
         echo
     else
-        echo "nself version $version"
+        # Simple standard format matching common CLI tools
+        echo "nself $version"
     fi
 }
 
