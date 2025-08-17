@@ -60,7 +60,15 @@ nself
 │   │   ├── export    Export metrics data
 │   │   └── configure Configure metrics providers
 │   │
-│   └── clean         Clean Docker resources
+│   ├── clean         Clean Docker resources
+│   └── admin         Admin UI management
+│       ├── enable    Enable admin web interface
+│       ├── disable   Disable admin web interface
+│       ├── status    Show admin UI status
+│       ├── password  Set admin password
+│       ├── reset     Reset admin to defaults
+│       ├── logs      View admin logs
+│       └── open      Open admin in browser
 │
 ├── 🛠️ Development Commands
 │   ├── diff          Show configuration differences
@@ -539,6 +547,72 @@ Clean Docker resources including containers, images, volumes, and networks.
 **Usage:** `nself clean [--containers] [--images] [--volumes] [--networks] [--all]`
 
 Cleanup unused Docker resources to free disk space and reset environment.
+
+## admin
+
+Admin UI management for visual administration interface.
+
+The admin UI provides a web-based interface for managing your nself stack, including service control, configuration editing, database management, and real-time monitoring.
+
+### admin enable
+
+Enable the admin web interface by adding it to your Docker Compose stack.
+
+**Usage:** `nself admin enable`
+
+This command will:
+- Pull the nself/admin:latest Docker image
+- Add admin service to docker-compose.yml
+- Mount your current project directory for direct file access
+- Start the admin UI at https://admin.local.nself.org
+
+### admin disable
+
+Disable and remove the admin web interface.
+
+**Usage:** `nself admin disable`
+
+Stops and removes the admin container while preserving your configuration.
+
+### admin status
+
+Show current admin UI status and access information.
+
+**Usage:** `nself admin status`
+
+Displays whether admin is enabled, running status, and access URL.
+
+### admin password
+
+Set or update the admin interface password.
+
+**Usage:** `nself admin password [password]`
+
+Interactive password prompt if no password provided. Passwords are hashed and stored securely.
+
+### admin reset
+
+Reset admin interface to default settings.
+
+**Usage:** `nself admin reset`
+
+Clears admin configuration and restores defaults while preserving project settings.
+
+### admin logs
+
+View admin service logs for debugging.
+
+**Usage:** `nself admin logs [--follow] [--tail]`
+
+Shows logs from the admin container with options for live following and tail count.
+
+### admin open
+
+Open admin interface in default browser.
+
+**Usage:** `nself admin open`
+
+Launches browser to https://admin.local.nself.org for immediate access.
 
 ---
 
