@@ -230,7 +230,7 @@ nself
 │   │   ├── bootstrap Generate SSL certificates
 │   │   ├── renew     Renew public wildcard certificate
 │   │   ├── status    Show certificate status and expiry
-│   │   ├── auto-renew Check and renew if needed (7-day safety margin)
+│   │   ├── auto-renew Check and renew if needed (30-day industry standard)
 │   │   ├── schedule  Schedule automatic renewal checks
 │   │   └── unschedule Remove automatic renewal
 │   │
