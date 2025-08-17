@@ -1,0 +1,29 @@
+# Maintainer: acamarata <contact@acamarata.com>
+pkgname=nself
+pkgver=0.3.8
+pkgrel=1
+pkgdesc="Self-hosted infrastructure manager for developers"
+arch=('any')
+url="https://github.com/acamarata/nself"
+license=('MIT')
+depends=('bash' 'docker' 'docker-compose' 'curl' 'git')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/acamarata/nself/archive/v$pkgver.tar.gz")
+sha256sums=('bf6ee149699bddda77f72ceed9c0491eef8ba04431239eadb8b6b77616d260de')
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  
+  # Install to /opt
+  install -dm755 "$pkgdir/opt/$pkgname"
+  cp -r * "$pkgdir/opt/$pkgname/"
+  
+  # Create symlink
+  install -dm755 "$pkgdir/usr/bin"
+  ln -s "/opt/$pkgname/bin/nself" "$pkgdir/usr/bin/nself"
+  
+  # Install license
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  
+  # Install documentation
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
