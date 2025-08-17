@@ -664,45 +664,58 @@ EOF
   # Restore log functions
   source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 
-  # Generate SSL certificates (silently)
-  if [[ -f "$SCRIPT_DIR/../lib/ssl/ssl.sh" ]]; then
-    printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
-
-    # Source SSL library
-    source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null
-
-    # Ensure tools and generate certificates silently
-    if ssl::ensure_tools >/dev/null 2>&1; then
-      local ssl_success=true
-
-      # Try to generate certificates based on configuration
-      if [[ -n "${DNS_PROVIDER:-}" ]]; then
-        # Try public wildcard
-        if ! ssl::issue_public_wildcard >/dev/null 2>&1; then
-          # Fall back to internal
-          ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
+  # Automatic SSL management (fully automatic - no manual commands needed)
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Setting up automatic SSL..."
+  
+  # Source auto-SSL libraries
+  if [[ -f "$SCRIPT_DIR/../lib/ssl/auto-ssl.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/ssl/auto-ssl.sh" 2>/dev/null || true
+    source "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" 2>/dev/null || true
+    
+    # Auto-detect all domains and setup SSL
+    if declare -f auto_setup_ssl >/dev/null 2>&1; then
+      if auto_setup_ssl >/dev/null 2>&1; then
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Automatic SSL configured (7-day renewal)   \n"
+        
+        # Setup daily renewal check
+        if declare -f ssl::schedule_daily_renewal >/dev/null 2>&1; then
+          ssl::schedule_daily_renewal >/dev/null 2>&1 || true
         fi
       else
-        # Generate internal certificates
-        ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
-      fi
-
-      # Generate localhost certificates
-      if [[ "${SSL_FALLBACK_LOCALHOST:-true}" == "true" ]]; then
-        ssl::issue_localhost_bundle >/dev/null 2>&1 || ssl_success=false
-      fi
-
-      # Copy to project and generate nginx configs
-      if [[ "$ssl_success" == "true" ]]; then
-        ssl::copy_into_project "." >/dev/null 2>&1
-        ssl::render_nginx_snippets "." >/dev/null 2>&1
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated                  \n"
-      else
-        printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL generation incomplete                  \n"
+        printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Auto-SSL setup incomplete                   \n"
       fi
     else
-      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL tools not available                    \n"
+      # Fallback to manual SSL generation
+      if [[ -f "$SCRIPT_DIR/../lib/ssl/ssl.sh" ]]; then
+        source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null
+        
+        if ssl::ensure_tools >/dev/null 2>&1; then
+          local ssl_success=true
+          
+          if [[ -n "${DNS_PROVIDER:-}" ]]; then
+            ssl::issue_public_wildcard >/dev/null 2>&1 || ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
+          else
+            ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
+          fi
+          
+          if [[ "${SSL_FALLBACK_LOCALHOST:-true}" == "true" ]]; then
+            ssl::issue_localhost_bundle >/dev/null 2>&1 || ssl_success=false
+          fi
+          
+          if [[ "$ssl_success" == "true" ]]; then
+            ssl::copy_into_project "." >/dev/null 2>&1
+            ssl::render_nginx_snippets "." >/dev/null 2>&1
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated                  \n"
+          else
+            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL generation incomplete                   \n"
+          fi
+        else
+          printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL tools not available                     \n"
+        fi
+      fi
     fi
+  else
+    printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Auto-SSL library not found                 \n"
   fi
 
   # Build summary
