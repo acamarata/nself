@@ -412,6 +412,202 @@ restore_certificates() {
   fi
 }
 
+# Verify backup integrity
+cmd_backup_verify() {
+  local backup_name="${1:-}"
+  
+  if [[ -z "$backup_name" ]]; then
+    echo "Usage: nself backup verify <backup_name>"
+    return 1
+  fi
+  
+  show_command_header "nself backup verify" "Verify backup integrity"
+  
+  local backup_path="$BACKUP_DIR/$backup_name"
+  
+  if [[ ! -f "$backup_path" ]]; then
+    log_error "Backup not found: $backup_name"
+    return 1
+  fi
+  
+  echo ""
+  log_info "Verifying backup: $backup_name"
+  
+  # Test tar integrity
+  if tar -tzf "$backup_path" >/dev/null 2>&1; then
+    log_success "✓ Archive integrity: OK"
+  else
+    log_error "✗ Archive corrupted"
+    return 1
+  fi
+  
+  # Test contents
+  local temp_dir=$(mktemp -d)
+  if tar -xzf "$backup_path" -C "$temp_dir" >/dev/null 2>&1; then
+    log_success "✓ Archive extraction: OK"
+    
+    # Check for essential files
+    if [[ -f "$temp_dir/.env.local" ]]; then
+      log_success "✓ Configuration: Found"
+    else
+      log_warning "! Configuration: Missing"
+    fi
+    
+    if [[ -f "$temp_dir/database.sql" ]]; then
+      log_success "✓ Database dump: Found"
+    else
+      log_warning "! Database dump: Missing"
+    fi
+    
+    rm -rf "$temp_dir"
+    echo ""
+    log_success "Backup verification completed"
+  else
+    log_error "✗ Failed to extract backup"
+    rm -rf "$temp_dir"
+    return 1
+  fi
+}
+
+# Schedule automated backups
+cmd_backup_schedule() {
+  local frequency="${1:-daily}"
+  
+  show_command_header "nself backup schedule" "Schedule automated backups"
+  
+  case "$frequency" in
+    daily|hourly|weekly)
+      ;;
+    *)
+      echo "Usage: nself backup schedule <frequency>"
+      echo "Frequencies: daily, hourly, weekly"
+      return 1
+      ;;
+  esac
+  
+  echo ""
+  log_info "Setting up $frequency backup schedule..."
+  
+  # Create backup script
+  local script_path="$HOME/.nself/backup-cron.sh"
+  mkdir -p "$(dirname "$script_path")"
+  
+  cat > "$script_path" << EOF
+#!/bin/bash
+cd "$(pwd)"
+nself backup create --auto 2>&1 | logger -t nself-backup
+EOF
+  
+  chmod +x "$script_path"
+  
+  # Setup cron job
+  local cron_entry=""
+  case "$frequency" in
+    hourly)
+      cron_entry="0 * * * * $script_path"
+      ;;
+    daily)
+      cron_entry="0 2 * * * $script_path"
+      ;;
+    weekly)
+      cron_entry="0 2 * * 0 $script_path"
+      ;;
+  esac
+  
+  # Add to crontab
+  (crontab -l 2>/dev/null | grep -v "$script_path"; echo "$cron_entry") | crontab -
+  
+  log_success "Scheduled $frequency backups"
+  echo ""
+  log_info "Backups will run automatically"
+  log_info "View logs with: grep nself-backup /var/log/system.log"
+}
+
+# Export backup to external location
+cmd_backup_export() {
+  local backup_name="${1:-}"
+  local export_path="${2:-}"
+  
+  if [[ -z "$backup_name" ]] || [[ -z "$export_path" ]]; then
+    echo "Usage: nself backup export <backup_name> <path>"
+    return 1
+  fi
+  
+  show_command_header "nself backup export" "Export backup to external location"
+  
+  local backup_path="$BACKUP_DIR/$backup_name"
+  
+  if [[ ! -f "$backup_path" ]]; then
+    log_error "Backup not found: $backup_name"
+    return 1
+  fi
+  
+  echo ""
+  log_info "Exporting backup to: $export_path"
+  
+  if cp "$backup_path" "$export_path"; then
+    log_success "Backup exported successfully"
+  else
+    log_error "Failed to export backup"
+    return 1
+  fi
+}
+
+# Import backup from external location
+cmd_backup_import() {
+  local import_path="${1:-}"
+  
+  if [[ -z "$import_path" ]]; then
+    echo "Usage: nself backup import <path>"
+    return 1
+  fi
+  
+  show_command_header "nself backup import" "Import backup from external location"
+  
+  if [[ ! -f "$import_path" ]]; then
+    log_error "Import file not found: $import_path"
+    return 1
+  fi
+  
+  echo ""
+  log_info "Importing backup from: $import_path"
+  
+  local backup_name="imported_$(basename "$import_path")"
+  local backup_path="$BACKUP_DIR/$backup_name"
+  
+  mkdir -p "$BACKUP_DIR"
+  
+  if cp "$import_path" "$backup_path"; then
+    log_success "Backup imported as: $backup_name"
+    echo ""
+    log_info "Verify with: nself backup verify $backup_name"
+    log_info "Restore with: nself backup restore $backup_name"
+  else
+    log_error "Failed to import backup"
+    return 1
+  fi
+}
+
+# Create point-in-time snapshot
+cmd_backup_snapshot() {
+  local label="${1:-snapshot}"
+  
+  show_command_header "nself backup snapshot" "Create point-in-time snapshot"
+  
+  echo ""
+  log_info "Creating snapshot with label: $label"
+  
+  # Create backup with snapshot naming
+  local timestamp=$(date '+%Y%m%d_%H%M%S')
+  local snapshot_name="snapshot_${label}_${timestamp}"
+  
+  cmd_backup_create "full" "$snapshot_name"
+  
+  echo ""
+  log_success "Snapshot created: $snapshot_name"
+  log_info "This snapshot can be used for point-in-time recovery"
+}
+
 # Prune old backups
 cmd_backup_prune() {
   local days="${1:-$BACKUP_RETENTION_DAYS}"
@@ -488,6 +684,12 @@ show_backup_help() {
   echo "  list                   List available backups"
   echo "  restore <name> [type]  Restore from backup"
   echo "  prune [days]           Remove backups older than N days (default: 30)"
+  echo "  verify <name>          Verify backup integrity"
+  echo "  schedule <frequency>   Schedule automated backups (daily, hourly, weekly)"
+  echo "  export <name> <path>   Export backup to external location"
+  echo "  import <path>          Import backup from external location"
+  echo "  snapshot [label]       Create point-in-time snapshot"
+  echo "  rollback [backup_id]   Rollback to specific backup"
   echo ""
   echo "Environment Variables:"
   echo "  BACKUP_DIR             Directory for backups (default: ./backups)"
@@ -520,6 +722,31 @@ cmd_backup() {
       ;;
     prune|clean)
       cmd_backup_prune "$@"
+      ;;
+    verify)
+      cmd_backup_verify "$@"
+      ;;
+    schedule)
+      cmd_backup_schedule "$@"
+      ;;
+    export)
+      cmd_backup_export "$@"
+      ;;
+    import)
+      cmd_backup_import "$@"
+      ;;
+    snapshot)
+      cmd_backup_snapshot "$@"
+      ;;
+    rollback)
+      # Use the rollback command for backup-specific rollback
+      if [[ -f "$SCRIPT_DIR/rollback.sh" ]]; then
+        source "$SCRIPT_DIR/rollback.sh"
+        cmd_rollback backup "$@"
+      else
+        log_error "Rollback command not available"
+        return 1
+      fi
       ;;
     help|-h|--help)
       show_backup_help

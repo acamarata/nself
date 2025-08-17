@@ -10,7 +10,7 @@ source "$SSL_LIB_DIR/../utils/display.sh" 2>/dev/null || true
 # Check if certificate needs renewal
 ssl::needs_renewal() {
   local cert_path="${1:-nginx/ssl/cert.pem}"
-  local days_before_expiry="${2:-7}"   # Renew 7 days before expiry (safety margin)
+  local days_before_expiry="${2:-30}"  # Renew 30 days before expiry (industry standard)
   
   # Check if certificate exists
   if [[ ! -f "$cert_path" ]]; then
