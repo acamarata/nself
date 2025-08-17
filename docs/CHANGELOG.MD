@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2025-08-17
+
+### Added
+- **Enterprise Monitoring & Management**:
+  - `nself validate` - Configuration validation with auto-fix capabilities
+  - `nself exec` - Execute commands in containers with full Docker exec support
+  - `nself metrics` - Metrics collection and observability with provider support
+  - `nself monitor` - Real-time monitoring dashboard with interactive terminal UI
+  - `nself rollback` - Comprehensive rollback system for migrations, deployments, and configs
+  - `nself scale` - Resource scaling and management with auto-scaling capabilities
+  
+- **Enhanced Backup System**:
+  - 10 backup subcommands (create, list, restore, prune, verify, schedule, export, import, snapshot, rollback)
+  - S3 backup support with multiple providers
+  - Incremental and differential backups
+  - Point-in-time recovery
+  - Backup integrity verification
+  
+- **Automatic SSL System**:
+  - Fully automatic SSL certificate generation
+  - Auto-detection of all domains from nginx configs and microservices
+  - Support for wildcard certificates
+  - Let's Encrypt production support with DNS providers
+  - Zero-configuration trusted certificates
+
+### Changed
+- **Commands**: Complete refactoring of command structure for consistency
+- **Documentation**: Updated all documentation to reflect new features
+- **Error Handling**: Improved error messages and recovery options
+
+### Fixed
+- **SSL**: Fixed certificate generation for complex domain setups
+- **Backup**: Fixed S3 backup compatibility issues
+- **Monitor**: Fixed terminal UI rendering on different terminals
+
 ## [0.3.7] - 2025-08-15
 
 ### Added
