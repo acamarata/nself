@@ -361,7 +361,7 @@ cmd_start() {
   # Header is already shown above, don't show it again
 
   # Start services (shorter message to avoid artifacts)
-  # Auto-check SSL certificates before starting (daily check with 7-day safety margin)
+  # Auto-check SSL certificates before starting (daily check with 30-day industry standard)
   if [[ -f "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" ]]; then
     source "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" 2>/dev/null || true
     
