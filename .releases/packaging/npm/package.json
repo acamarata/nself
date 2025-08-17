@@ -1,0 +1,46 @@
+{
+  "name": "nself-cli",
+  "version": "0.3.8",
+  "description": "Self-hosted infrastructure manager for developers",
+  "main": "bin/nself.js",
+  "bin": {
+    "nself": "./bin/nself.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "preuninstall": "node scripts/uninstall.js"
+  },
+  "keywords": [
+    "infrastructure",
+    "docker",
+    "self-hosted",
+    "devops",
+    "cli",
+    "backend"
+  ],
+  "author": "acamarata <contact@acamarata.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/acamarata/nself",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acamarata/nself.git"
+  },
+  "bugs": {
+    "url": "https://github.com/acamarata/nself/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "preferGlobal": true,
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ]
+}
