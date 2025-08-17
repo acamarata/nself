@@ -16,6 +16,8 @@ curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | b
 
 > **🚀 v0.3.8 NEW**: Complete enterprise features with validate, exec, metrics, monitor, rollback, scale commands, comprehensive backup system (10 subcommands), and fully automatic SSL with domain auto-detection! [See full release notes](docs/CHANGELOG.md#038---2025-08-17)
 
+📋 **[View Roadmap](docs/ROADMAP.md)** - See what's coming in v0.3.9 (Admin UI, Deploy, Search) and beyond!
+
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
 ## 🚀 Why nself?
@@ -263,7 +265,13 @@ nself
 │       └── alerts    Alert management
 ```
 
-For detailed command documentation, see [docs/COMMANDS.md](docs/COMMANDS.md).
+## 📚 Documentation
+
+- **[Commands Reference](docs/COMMANDS.md)** - All available commands
+- **[Roadmap](docs/ROADMAP.md)** - Development roadmap and upcoming features
+- **[v0.3.9 Plans](docs/v0.3.9.md)** - Next release details (Admin UI, Deploy, Search)
+- **[v0.4.0 Plans](docs/v0.4.0.md)** - Public release plans
+- **[Changelog](docs/CHANGELOG.md)** - Version history
 
 ### Quick Reference
 

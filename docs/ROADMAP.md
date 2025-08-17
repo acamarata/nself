@@ -1,126 +1,183 @@
 # nself Development Roadmap
 
+## Quick Navigation
+[Current (v0.3.8)](#current-v038) | [Developing (v0.3.9)](#developing-v039) | [Pending (v0.4.0)](#pending-v040) | [Beyond](#beyond-future)
+
+---
+
 ## Vision
 Transform nself from a powerful CLI tool into a complete self-hosted backend platform that rivals commercial BaaS offerings (Supabase, Nhost, Firebase) while maintaining simplicity, control, and the ability to run anywhere.
 
 ---
 
-## 📍 Current Release (v0.3.8)
-**Status**: Stable and production-ready for core features
+## Current (v0.3.8)
+**Status**: ✅ Released and Stable
 
-Complete self-hosted backend featuring:
-- **Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage (MinIO)
-- **Services**: 17+ optional services including Redis, email, monitoring
-- **Backup**: Comprehensive system with S3 support and scheduling
-- **SSL**: Automatic certificates with mkcert (dev) and Let's Encrypt (prod)
-- **Smart Features**: Auto-fix capabilities, drift detection, validation
-- **Commands**: 30+ commands including init, build, start, backup, ssl, monitor, doctor
+### Features Available Now
+- **PostgreSQL** - Full database with 60+ extensions
+- **Hasura GraphQL** - Instant GraphQL API
+- **Auth Service** - JWT authentication
+- **Storage** - S3-compatible MinIO
+- **Backup System** - S3 support, scheduling, incremental
+- **SSL** - Automatic certificates (mkcert + Let's Encrypt)
+- **Email** - 16+ providers with MailPit for dev
+- **Monitoring** - Prometheus, Grafana, Loki ready
+- **Auto-Fix** - Smart defaults and problem resolution
+- **Docker Compose** - Simple container orchestration
 
-[Full changelog →](./CHANGELOG.md)
+### Available Commands
+init, build, start, stop, restart, status, logs, backup (10 subcommands), db, email, ssl, doctor, validate, exec, scale, metrics, clean, diff, reset, rollback, monitor, scaffold, hot_reload, update, version, help, urls, prod, trust
 
----
-
-## 🚧 In Development (v0.3.9)
-**Target**: 5 weeks | **Focus**: Platform completion
-
-### Core Features
-- **[Admin UI](./v0.3.9.md#1-admin-ui)** - Web-based administration interface
-- **[Deploy Command](./v0.3.9.md#2-deploy-command)** - VPS deployment with SSH
-- **[Init Wizard](./v0.3.9.md#3-init-wizard)** - Interactive project setup
-- **[Search](./v0.3.9.md#4-search-command)** - PostgreSQL FTS and MeiliSearch
-- **[Environment Management](./v0.3.9.md#5-environment-management)** - Multi-environment configs
-
-[Full v0.3.9 plan →](./v0.3.9.md)
+[View Changelog →](./CHANGELOG.md)
 
 ---
 
-## 📦 Next Release (v0.4.0)
-**Target**: Public release | **Focus**: Polish and perfect
+## Developing (v0.3.9)
+**Status**: 🚧 In Active Development | **Timeline**: 5 weeks
 
-### Enhancements
-- **[Apps](./v0.4.0.md#1-apps-enhancement)** - Multi-app with database isolation
-- **[Codegen](./v0.4.0.md#2-codegen-command)** - TypeScript, React, GraphQL generation
-- **[Functions](./v0.4.0.md#3-functions-polish)** - Edge functions with triggers
-- **[Monitor](./v0.4.0.md#4-monitor-polish)** - Full observability stack
-- **[Database](./v0.4.0.md#5-database-polish)** - Performance and migration tools
-- **[Backup](./v0.4.0.md#6-backup-polish)** - Multi-cloud destinations
-- **[SSL](./v0.4.0.md#7-ssl-polish)** - Production automation
-- **[Environment](./v0.4.0.md#8-environment-polish)** - Enhanced management
+### New Features
+- **Admin UI** - Web-based administration interface
+- **Deploy** - SSH deployment to VPS servers
+- **Init Wizard** - Interactive setup for new projects
+- **Search** - PostgreSQL FTS and MeiliSearch integration
+- **Environment Management** - Multi-environment configuration
 
-[Full v0.4.0 plan →](./v0.4.0.md)
+### Admin UI Details
+- Separate Docker container with host mount
+- Next.js + TypeScript + Tailwind (Protocol template)
+- Real-time service monitoring
+- Configuration editor
+- Log streaming
+- Backup management
+
+### Deploy Command Details
+- SSH key authentication
+- Automatic Docker installation
+- Git repository setup
+- Environment compilation (.env.prod + .env.secrets)
+- Let's Encrypt SSL automation
+- GitHub webhook support
+- Supports: DigitalOcean, Linode, Vultr, Hetzner, any Ubuntu/Debian VPS
+
+### Init Wizard Details
+- Project type detection (SaaS, E-commerce, Blog, API)
+- Service recommendations
+- Database setup with owner user
+- Framework detection
+- Sample data generation
+
+### Search Options
+- **PostgreSQL FTS** (Default) - No extra container, built-in
+- **MeiliSearch** - Best search UX, typo-tolerant
+- **Typesense** - Fast instant search
+- **Elasticsearch** - Enterprise standard
+- **OpenSearch** - AWS maintained
+- **Sonic** - Lightweight option
+
+[Full v0.3.9 Documentation →](./v0.3.9.md)
 
 ---
 
-## 🚀 Future Releases (Beyond)
-**Priority-ordered features for future development**
+## Pending (v0.4.0)
+**Status**: 📋 Planned | **Focus**: Polish for Public Release
+
+### Enhancements to Existing Features
+- **Apps** - Expand routing to full multi-app with DB isolation
+- **Codegen** - Generate TypeScript, React, GraphQL clients
+- **Functions** - Complete edge functions with triggers
+- **Monitor** - Full observability with dashboards
+- **Database** - Performance tools and optimization
+- **Backup** - Multi-cloud destinations (B2, GCS, Azure)
+- **SSL** - Production Let's Encrypt automation
+- **Environment** - Enhanced configuration management
+
+### Apps Enhancement Details
+- Database table prefixing (app1_users, app2_products)
+- Per-app Hasura metadata
+- Isolated GraphQL schemas
+- Cross-app data sharing options
+
+### Codegen Details
+- TypeScript interfaces from schema
+- React hooks with SWR/React Query
+- GraphQL client with full typing
+- OpenAPI 3.0 specifications
+- Watch mode for development
+
+### Functions Enhancement Details
+- Node.js runtime (Python/Deno coming)
+- Hot reload in development
+- Database event triggers
+- Scheduled functions (cron)
+- Webhook endpoints
+
+[Full v0.4.0 Documentation →](./v0.4.0.md)
+
+---
+
+## Beyond (Future)
+**Status**: 🔮 Future Plans | **Priority Ordered**
 
 ### Cloud & Infrastructure
-- **Cloud Providers** - AWS, GCP, Azure, DigitalOcean native integration
-- **Kubernetes** - Manifest generation, Helm charts, GitOps
-- **Container Registry** - DockerHub, GitHub, ECR, GCR push support
-- **CI/CD Workflows** - GitHub Actions, GitLab CI templates
+- **Cloud Providers** - AWS, GCP, Azure, DigitalOcean integration
+- **Kubernetes** - Manifests, Helm charts, GitOps
+- **Container Registry** - Push to DockerHub, GitHub, ECR
+- **CI/CD** - GitHub Actions, GitLab CI templates
 
 ### Enterprise Features
-- **Database Visualizer** - Visual schema designer and query builder
-- **Email Templates** - HTML email templates with MJML support
-- **Enterprise Security** - SSO/SAML, RBAC, audit logging, compliance
-- **Advanced Monitoring** - APM integration, SLO monitoring, distributed tracing
+- **Database Visualizer** - Schema designer and query builder
+- **Email Templates** - HTML templates with MJML
+- **Security** - SSO/SAML, RBAC, audit logging
+- **Advanced Monitoring** - APM, SLO, distributed tracing
+- **Compliance** - HIPAA, SOC2, GDPR templates
 
 ### Scale & Innovation
-- **Global Scale** - Multi-region, edge computing, geo-replication
-- **AI/ML Integration** - Vector databases, LLM support, model serving
-- **Template System** - Reusable starters (SaaS, E-commerce, Blog)
-- **Plugin Architecture** - Extensibility for community contributions
-
-### Platform Ecosystem
-- **nself Cloud** - Optional managed hosting service
-- **Marketplace** - Community templates and extensions
+- **Global Scale** - Multi-region, edge computing
+- **AI/ML** - Vector databases, LLM support
+- **Templates** - SaaS, E-commerce, Blog starters
+- **Plugins** - Community extensions
+- **nself Cloud** - Optional managed hosting
+- **Marketplace** - Templates and plugins
 
 ---
 
 ## Development Principles
 
-1. **Simplicity First** - Every feature must work with smart defaults
-2. **No Lock-in** - Standard Docker/PostgreSQL/GraphQL under the hood
-3. **Progressive Disclosure** - Basic users never see advanced features
-4. **Auto-Fix Everything** - Detect and resolve issues automatically
-5. **Offline-First** - Everything works locally without internet
-6. **Type-Safe** - Generated code with full TypeScript support
-7. **Secure by Default** - Production-ready security out of the box
+1. **Simplicity First** - Smart defaults for everything
+2. **No Lock-in** - Standard Docker/PostgreSQL/GraphQL
+3. **Progressive Disclosure** - Advanced features hidden
+4. **Auto-Fix** - Detect and resolve automatically
+5. **Offline-First** - Works without internet
+6. **Type-Safe** - Full TypeScript support
+7. **Secure by Default** - Production-ready security
 
 ---
 
-## Release Schedule
+## Release Timeline
 
 | Version | Status | Focus | Timeline |
 |---------|--------|-------|----------|
-| v0.3.8 | ✅ Released | Core platform | Current |
-| v0.3.9 | 🚧 Development | Feature complete | 5 weeks |
-| v0.4.0 | 📋 Planned | Public release | Q2 2025 |
-| Beyond | 🔮 Future | Enterprise & scale | 2025+ |
+| [v0.3.8](#current-v038) | ✅ Released | Core Platform | Available Now |
+| [v0.3.9](#developing-v039) | 🚧 Development | New Features | 5 weeks |
+| [v0.4.0](#pending-v040) | 📋 Planned | Polish & Perfect | Q2 2025 |
+| [Beyond](#beyond-future) | 🔮 Future | Enterprise & Scale | 2025+ |
 
 ---
 
-## Getting Involved
+## Contributing
 
-### For Users
-- **Try it**: `npm install -g @acamarata/nself`
-- **Report issues**: [GitHub Issues](https://github.com/acamarata/nself/issues)
-- **Join community**: [Discord](https://discord.gg/nself)
-
-### For Contributors
-Priority areas for contribution:
+### Priority Areas
 1. Testing v0.3.9 features
 2. Documentation improvements
 3. Cloud provider integrations
-4. Language-specific code generators
+4. Code generators for more languages
 5. Example applications
 
 ### Resources
 - **GitHub**: [github.com/acamarata/nself](https://github.com/acamarata/nself)
-- **Documentation**: [Getting Started](../README.md)
-- **Admin UI Spec**: [admin.md](../admin.md)
+- **Discord**: [Join Community](https://discord.gg/nself)
+- **Issues**: [Report Bugs](https://github.com/acamarata/nself/issues)
 
 ---
 
-*This roadmap is updated regularly based on community feedback and development progress. Features may be reprioritized based on user needs.*
+*This roadmap is updated regularly based on community feedback. Features may be reprioritized based on user needs.*
