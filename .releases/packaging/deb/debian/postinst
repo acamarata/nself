@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+# Make nself executable
+chmod +x /opt/nself/bin/nself
+
+# Create symlink if it doesn't exist
+if [ ! -L /usr/bin/nself ]; then
+    ln -s /opt/nself/bin/nself /usr/bin/nself
+fi
+
+echo "nself v0.3.8 installed successfully!"
+echo "Run 'nself help' to get started."
