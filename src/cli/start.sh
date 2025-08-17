@@ -361,6 +361,16 @@ cmd_start() {
   # Header is already shown above, don't show it again
 
   # Start services (shorter message to avoid artifacts)
+  # Auto-check SSL certificates before starting (daily check with 7-day safety margin)
+  if [[ -f "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" 2>/dev/null || true
+    
+    # Check if renewal is needed (silently)
+    if declare -f ssl::auto_renew >/dev/null 2>&1; then
+      ssl::auto_renew "." >/dev/null 2>&1 || true
+    fi
+  fi
+
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting services..."
 
   local output_file=$(mktemp)

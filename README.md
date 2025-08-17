@@ -190,32 +190,82 @@ nself build && nself restart
 
 ## 📚 Commands
 
-### Core Commands
-| Command | Description |
-|---------|-------------|
-| `nself init` | Initialize a new project with `.env.local` |
-| `nself build` | Generate project structure from configuration |
-| `nself start` | Start all services (--apply-changes, --dry-run) |
-| `nself stop` | Stop all services |
-| `nself restart` | Restart all services (down + up) |
-| `nself diff` | Show configuration changes since last build |
-| `nself reset` | Delete all data and return to initial state |
-| `nself backup` | Create and manage backups (local/S3) |
-| `nself trust` | Install SSL certificate (fixes browser warnings) |
-| `nself ssl` | SSL certificate management (bootstrap, renew, status) |
+### Complete Command Tree
 
-### Management Commands
-| Command | Description |
-|---------|-------------|
-| `nself prod` | Create production .env with secure passwords |
-| `nself update` | Update nself to the latest version |
-| `nself db` | Database tools (migrations, schema, backups) |
-| `nself email` | Email provider setup and management |
-| `nself doctor` | Run system diagnostics and health checks |
-| `nself logs` | View and follow service logs with filtering |
-| `nself status` | Show service status and health |
-| `nself version` | Show current version |
-| `nself help` | Display help information |
+```
+nself
+├── 🚀 Core Commands
+│   ├── init          Initialize a new project
+│   ├── build         Build project structure and Docker images (with automatic SSL)
+│   ├── start         Start all services (with SSL auto-renewal checks)
+│   ├── stop          Stop all services
+│   ├── restart       Restart all services
+│   ├── status        Show service status with health monitoring
+│   └── logs          View service logs
+│
+├── ⚙️ Management Commands
+│   ├── doctor        Run enterprise system diagnostics
+│   ├── backup        Backup and restore with S3 support
+│   │   ├── create    Create backups (full, database, config, incremental)
+│   │   ├── list      List available backups
+│   │   ├── restore   Restore from backup with point-in-time recovery
+│   │   ├── prune     Remove old backups
+│   │   ├── verify    Verify backup integrity
+│   │   ├── schedule  Schedule automated backups
+│   │   ├── export    Export backup to external location
+│   │   ├── import    Import backup from external location
+│   │   ├── snapshot  Create point-in-time snapshot
+│   │   └── rollback  Rollback to specific point in time
+│   │
+│   ├── db            Database operations
+│   ├── email         Email service configuration
+│   │   ├── setup     Interactive email setup wizard
+│   │   ├── list      Show all supported providers
+│   │   ├── configure Configure specific provider
+│   │   ├── validate  Check email configuration
+│   │   ├── test      Send test email
+│   │   └── docs      Show provider setup guide
+│   │
+│   ├── ssl           SSL certificate management (fully automatic)
+│   │   ├── bootstrap Generate SSL certificates
+│   │   ├── renew     Renew public wildcard certificate
+│   │   ├── status    Show certificate status and expiry
+│   │   ├── auto-renew Check and renew if needed (7-day safety margin)
+│   │   ├── schedule  Schedule automatic renewal checks
+│   │   └── unschedule Remove automatic renewal
+│   │
+│   ├── urls          Show service URLs
+│   ├── prod          Configure for production deployment
+│   ├── validate      Validate configuration files
+│   ├── exec          Execute commands in containers
+│   ├── scale         Resource scaling management
+│   ├── metrics       Metrics and observability
+│   │   ├── enable    Enable metrics collection
+│   │   ├── disable   Disable metrics collection
+│   │   ├── status    Show metrics status
+│   │   ├── dashboard Open metrics dashboard
+│   │   ├── export    Export metrics data
+│   │   └── configure Configure metrics providers
+│   │
+│   ├── diff          Show configuration changes since last build
+│   ├── reset         Delete all data and return to initial state
+│   ├── trust         Install SSL certificate (fixes browser warnings)
+│   ├── clean         Clean up Docker resources
+│   ├── update        Update nself to the latest version
+│   ├── rollback      Rollback to previous version
+│   ├── version       Show current version
+│   ├── help          Display help information
+│   └── monitor       Real-time monitoring dashboard
+│       ├── dashboard Full monitoring dashboard
+│       ├── services  Service health monitoring
+│       ├── resources Resource usage monitoring
+│       ├── logs      Live log monitoring
+│       └── alerts    Alert management
+```
+
+For detailed command documentation, see [docs/COMMANDS.md](docs/COMMANDS.md).
+
+### Quick Reference
 
 ### Email Commands
 | Command | Description |
