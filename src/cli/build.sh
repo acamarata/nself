@@ -675,7 +675,7 @@ EOF
     # Auto-detect all domains and setup SSL
     if declare -f auto_setup_ssl >/dev/null 2>&1; then
       if auto_setup_ssl >/dev/null 2>&1; then
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Automatic SSL configured (7-day renewal)   \n"
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Automatic SSL configured (30-day renewal)  \n"
         
         # Setup daily renewal check
         if declare -f ssl::schedule_daily_renewal >/dev/null 2>&1; then
