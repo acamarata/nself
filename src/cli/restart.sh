@@ -4,6 +4,7 @@
 # Source shared utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
@@ -64,7 +65,7 @@ cmd_restart() {
   # Load environment
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 
@@ -267,7 +268,7 @@ show_service_urls() {
   # Load environment if available
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 

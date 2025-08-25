@@ -2,8 +2,7 @@
 
 # status.sh - Detailed service status with resource usage
 
-# Temporarily disable set -e to avoid grep issues
-# set -e
+set -e
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -157,7 +156,7 @@ categorize_service() {
 
   # Infrastructure services (no health checks needed)
   case "$service" in
-  nginx | storage | config-server | minio | mailhog | adminer)
+  nginx | storage | config-server | minio | mailhog | mailpit | adminer)
     echo "infrastructure"
     ;;
   postgres | redis)
@@ -167,6 +166,32 @@ categorize_service() {
     echo "core"
     ;;
   *)
+    # Check if it's a CS_N custom service
+    local n=1
+    while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
+      local cs_def=$(eval echo "\${CS_${n}:-}")
+      IFS=',' read -r cs_name cs_framework <<< "$cs_def"
+      cs_name=$(echo "$cs_name" | xargs)
+      if [[ "$service" == "$cs_name" ]]; then
+        echo "custom"
+        return
+      fi
+      ((n++))
+    done
+    
+    # Check legacy CUSTOM_SERVICES
+    if [[ -n "${CUSTOM_SERVICES:-}" ]]; then
+      IFS=',' read -ra services <<< "${CUSTOM_SERVICES}"
+      for svc in "${services[@]}"; do
+        IFS=':' read -r svc_name rest <<< "$svc"
+        svc_name=$(echo "$svc_name" | xargs)
+        if [[ "$service" == "$svc_name" ]]; then
+          echo "custom"
+          return
+        fi
+      done
+    fi
+    
     echo "application"
     ;;
   esac
@@ -203,6 +228,27 @@ get_service_status_desc() {
     [[ "$health" == "healthy" ]] && echo "Functions available" || echo "No health endpoint"
     ;;
   *)
+    # Check if it's a CS_N custom service
+    local n=1
+    while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
+      local cs_def=$(eval echo "\${CS_${n}:-}")
+      IFS=',' read -r cs_name cs_framework <<< "$cs_def"
+      cs_name=$(echo "$cs_name" | xargs)
+      cs_framework=$(echo "$cs_framework" | xargs)
+      if [[ "$service" == "$cs_name" ]]; then
+        if [[ "$health" == "healthy" ]]; then
+          echo "Custom ${cs_framework} service"
+        elif [[ "$health" == "unhealthy" ]]; then
+          echo "${cs_framework} service down"
+        else
+          echo "${cs_framework} running"
+        fi
+        return
+      fi
+      ((n++))
+    done
+    
+    # Default behavior for unknown services
     if [[ "$health" == "healthy" ]]; then
       echo "Service healthy"
     elif [[ "$health" == "unhealthy" ]]; then
@@ -223,7 +269,7 @@ show_service_overview() {
 
   # Load environment
   if [[ -f ".env.local" ]]; then
-    load_env_safe ".env.local"
+    load_env_with_priority
   fi
 
   local services=($(compose config --services 2>/dev/null))
@@ -363,7 +409,7 @@ show_urls() {
     return
   fi
 
-  load_env_safe ".env.local"
+  load_env_with_priority
   local base_domain="${BASE_DOMAIN:-local.nself.org}"
 
   echo ""
@@ -586,7 +632,7 @@ main() {
 
   # Load environment
   if [[ -f ".env.local" ]]; then
-    load_env_safe ".env.local"
+    load_env_with_priority
   fi
 
   # Handle specific service detail view

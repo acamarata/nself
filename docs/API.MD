@@ -1,6 +1,6 @@
-# nself Command Reference
+# nself v0.3.9 Command Reference
 
-Complete reference for all nself commands and their options.
+Complete reference for all nself commands and their options in v0.3.9.
 
 ## Command Overview
 

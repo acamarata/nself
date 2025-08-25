@@ -1,4 +1,4 @@
-# Contributing to nself
+# Contributing to nself v0.3.9
 
 Thank you for your interest in contributing to nself! This document provides guidelines and standards for contributing to the project.
 

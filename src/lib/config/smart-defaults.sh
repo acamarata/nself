@@ -97,6 +97,17 @@ apply_smart_defaults() {
   : ${REDIS_VERSION:=7-alpine}
   : ${REDIS_PORT:=6379}
   : ${REDIS_PASSWORD:=""}
+  
+  # MLflow - ML Experiment Tracking
+  : ${MLFLOW_ENABLED:=false}
+  : ${MLFLOW_VERSION:=2.9.2}
+  : ${MLFLOW_PORT:=5000}
+  : ${MLFLOW_ROUTE:=mlflow.${BASE_DOMAIN}}
+  : ${MLFLOW_DB_NAME:=mlflow}
+  : ${MLFLOW_ARTIFACTS_BUCKET:=mlflow-artifacts}
+  : ${MLFLOW_AUTH_ENABLED:=false}
+  : ${MLFLOW_AUTH_USERNAME:=admin}
+  : ${MLFLOW_AUTH_PASSWORD:=mlflow-admin-password}
 
   # Email Provider
   : ${EMAIL_PROVIDER:=mailpit}
@@ -158,6 +169,9 @@ apply_smart_defaults() {
   export FUNCTIONS_ENABLED FUNCTIONS_ROUTE
   export DASHBOARD_ENABLED DASHBOARD_VERSION DASHBOARD_ROUTE
   export REDIS_ENABLED REDIS_VERSION REDIS_PORT REDIS_PASSWORD
+  export MLFLOW_ENABLED MLFLOW_VERSION MLFLOW_PORT MLFLOW_ROUTE
+  export MLFLOW_DB_NAME MLFLOW_ARTIFACTS_BUCKET MLFLOW_AUTH_ENABLED
+  export MLFLOW_AUTH_USERNAME MLFLOW_AUTH_PASSWORD
   export EMAIL_PROVIDER MAILPIT_SMTP_PORT MAILPIT_UI_PORT MAILPIT_ROUTE EMAIL_FROM
   export SERVICES_ENABLED
   export NESTJS_ENABLED NESTJS_SERVICES NESTJS_USE_TYPESCRIPT NESTJS_PORT_START
@@ -188,9 +202,15 @@ load_env_with_defaults() {
 
   # Check for .env.local (development)
   if [[ -f ".env.local" ]]; then
-    set -a
-    source .env.local
-    set +a
+    # Use env.sh utility if available for proper loading
+    if [[ -f "$SCRIPT_DIR/../utils/env.sh" ]]; then
+      source "$SCRIPT_DIR/../utils/env.sh"
+      load_env_with_priority
+    else
+      set -a
+      source .env.local
+      set +a
+    fi
     # Apply defaults for missing values
     apply_smart_defaults
     # STOP - ignore .env.dev
@@ -225,6 +245,7 @@ load_env_with_defaults() {
   : ${DASHBOARD_ROUTE:=dashboard.${BASE_DOMAIN}}
   : ${MAILPIT_ROUTE:=mail.${BASE_DOMAIN}}
   : ${BULLMQ_DASHBOARD_ROUTE:=queues.${BASE_DOMAIN}}
+  : ${MLFLOW_ROUTE:=mlflow.${BASE_DOMAIN}}
   : ${AUTH_SMTP_SENDER:=noreply@${BASE_DOMAIN}}
   : ${EMAIL_FROM:=noreply@${BASE_DOMAIN}}
   : ${FILES_ROUTE:=files.${BASE_DOMAIN}}
@@ -235,7 +256,7 @@ load_env_with_defaults() {
 
   # Export computed values
   export HASURA_ROUTE AUTH_ROUTE STORAGE_ROUTE STORAGE_CONSOLE_ROUTE
-  export FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILPIT_ROUTE BULLMQ_DASHBOARD_ROUTE
+  export FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILPIT_ROUTE BULLMQ_DASHBOARD_ROUTE MLFLOW_ROUTE
   export AUTH_SMTP_SENDER EMAIL_FROM FILES_ROUTE MAIL_ROUTE
   export DOCKER_NETWORK HASURA_METADATA_DATABASE_URL S3_ENDPOINT
   export HASURA_GRAPHQL_JWT_SECRET HASURA_JWT_KEY HASURA_JWT_TYPE

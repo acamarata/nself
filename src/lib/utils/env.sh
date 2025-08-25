@@ -36,46 +36,103 @@ load_env_safe() {
 }
 
 # Load environment with proper priority
-# Priority: .env > .env.local > .env.dev
+# New precedence system:
+# 1. .env.secrets (always loaded if exists - for secrets only)
+# 2. .env (if exists, skips all others except secrets)
+# 3. .env.local (personal overrides)
+# 4. .env.{ENV} (environment-specific: dev/staging/prod)
+# 5. .env.dev (team defaults - baseline)
 load_env_with_priority() {
   local loaded=false
-
-  # Check for .env first (highest priority - production)
+  local current_env="${ENV:-dev}"
+  
+  # Always load secrets first if they exist (regardless of other files)
+  if [[ -f ".env.secrets" ]]; then
+    # Check file permissions for security
+    local perms=$(stat -f "%OLp" ".env.secrets" 2>/dev/null || stat -c "%a" ".env.secrets" 2>/dev/null)
+    if [[ -n "$perms" ]] && [[ "$perms" != "600" ]] && [[ "$perms" != "400" ]]; then
+      if declare -f log_warning >/dev/null 2>&1; then
+        log_warning ".env.secrets has permissions $perms (should be 600 or 400)"
+        log_warning "Fix with: chmod 600 .env.secrets"
+      fi
+    fi
+    
+    # Use conditional logging
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "Loading .env.secrets (sensitive data)"
+    fi
+    set -a
+    source ".env.secrets" 2>/dev/null
+    set +a
+  fi
+  
+  # Check for .env override (highest priority - usually production)
   if [[ -f ".env" ]]; then
-    log_debug "Loading .env (production mode)"
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "Loading .env (override mode - ignoring other env files)"
+    fi
     set -a
     source ".env"
     set +a
-    loaded=true
-    # STOP HERE - ignore all other env files
-    return 0
+    return 0  # Stop here - .env overrides everything
   fi
-
-  # Check for .env.local next (development)
-  if [[ -f ".env.local" ]]; then
-    log_debug "Loading .env.local (development mode)"
-    set -a
-    source ".env.local"
-    set +a
-    loaded=true
-    # STOP HERE - ignore .env.dev
-    return 0
-  fi
-
-  # Check for .env.dev last (team defaults)
+  
+  # Load in reverse order of precedence (so higher priority overrides)
+  # Start with team defaults
   if [[ -f ".env.dev" ]]; then
-    log_debug "Loading .env.dev (team defaults)"
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "Loading .env.dev (team defaults)"
+    fi
     set -a
-    source ".env.dev"
+    source ".env.dev" 2>/dev/null
     set +a
     loaded=true
-    return 0
   fi
-
+  
+  # Load environment-specific file based on ENV variable
+  local env_file=""
+  case "$current_env" in
+    dev|development)
+      env_file=".env.dev"  # Already loaded above
+      ;;
+    staging|stage)
+      env_file=".env.staging"
+      ;;
+    prod|production)
+      env_file=".env.prod"
+      ;;
+    *)
+      env_file=".env.${current_env}"  # Support custom environments
+      ;;
+  esac
+  
+  if [[ -n "$env_file" ]] && [[ -f "$env_file" ]] && [[ "$env_file" != ".env.dev" ]]; then
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "Loading $env_file (environment-specific)"
+    fi
+    set -a
+    source "$env_file" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
+  # Load personal overrides last (highest priority after .env)
+  if [[ -f ".env.local" ]]; then
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "Loading .env.local (personal overrides)"
+    fi
+    set -a
+    source ".env.local" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
   if [[ "$loaded" == false ]]; then
-    log_debug "No environment files found, using defaults only"
+    if declare -f log_debug >/dev/null 2>&1; then
+      log_debug "No environment files found, using defaults only"
+    fi
   fi
-
+  
   return 0
 }
 

@@ -1,6 +1,101 @@
 # nself Releases
 
-## [v0.3.3] - August 14, 2025
+## [v0.3.9] - August 17, 2024
+
+### 🚀 Platform Evolution Release
+
+nself v0.3.9 transforms nself from a CLI tool into a comprehensive backend platform with visual administration, enterprise search, and automated deployment capabilities.
+
+### ✨ What's New
+
+#### Admin UI Integration
+- **Web-based Administration Interface** for complete visual stack management
+- Real-time service monitoring and control through browser
+- Configuration file editing via web interface
+- Password-protected access with secure authentication
+- Seamless integration with existing nself projects
+
+#### Enterprise Search Capabilities
+- **Multi-engine search support** with 6 different options
+- PostgreSQL FTS, MeiliSearch, Typesense, Elasticsearch, OpenSearch, and Sonic
+- Interactive setup wizard for optimal engine selection
+- Built-in testing and configuration validation
+- Zero-config setup for most use cases
+
+#### VPS Deployment System
+- **SSH-based deployment** to any Ubuntu/Debian server
+- Support for major VPS providers (DigitalOcean, Linode, Vultr, Hetzner)
+- Automated Docker installation and service setup
+- GitHub webhook integration for continuous deployment
+- Built-in rollback and monitoring capabilities
+
+#### Interactive Project Setup
+- **Init Wizard** for guided project configuration
+- Automatic framework and language detection (JavaScript, Python, Go, Ruby, PHP, Java, .NET)
+- Smart service recommendations based on project type
+- 6 pre-configured templates: SaaS, E-commerce, Blog/CMS, API, Mobile, Custom
+- Multi-environment support (development, staging, production)
+
+#### Enhanced Environment Management
+- **Multi-environment configuration system**
+- Environment-specific files (.env.local, .env.staging, .env.prod)
+- Secure secrets management with .env.secrets
+- Environment compilation and validation
+- Production security checks and warnings
+
+### 🛠️ New Commands
+
+```bash
+# Admin UI Management
+nself admin enable          # Enable admin web interface
+nself admin status          # Check admin status
+nself admin password        # Set admin password
+nself admin open            # Open admin in browser
+
+# Enterprise Search
+nself search enable         # Enable search with engine selection
+nself search setup          # Interactive search configuration
+nself search test           # Test search functionality
+nself search docs           # View search documentation
+
+# VPS Deployment  
+nself deploy init           # Setup deployment configuration
+nself deploy ssh            # Deploy to VPS server
+nself deploy status         # Check deployment status
+nself deploy webhook        # Setup continuous deployment
+
+# Interactive Setup
+nself init --wizard         # Launch interactive project setup
+```
+
+### 🔄 Migration from v0.3.8
+
+nself v0.3.9 is **fully backward compatible**:
+- All existing functionality unchanged
+- New features are opt-in and disabled by default
+- Existing `.env.local` files continue to work
+- No configuration changes required
+
+**To upgrade:**
+```bash
+nself update
+```
+
+### 📦 Installation
+
+```bash
+curl -fsSL https://get.nself.org | bash
+```
+
+### 🔗 Documentation
+
+- [Complete Commands Reference](./COMMANDS.md)
+- [v0.3.9 Release Notes](./v0.3.9.md)
+- [Environment Configuration Guide](./ENVIRONMENT_CONFIGURATION.md)
+
+---
+
+## [v0.3.8] - August 17, 2024
 
 ### 🎯 Intelligent Auto-Fix System
 

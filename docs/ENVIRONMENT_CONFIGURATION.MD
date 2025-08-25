@@ -2,7 +2,7 @@
 
 ## Overview
 
-nself uses a strict priority system for environment configuration files. This ensures predictable behavior across development, staging, and production environments.
+nself v0.3.9 uses a strict priority system for environment configuration files with enhanced multi-environment support. This ensures predictable behavior across development, staging, and production environments.
 
 ## File Priority Order
 
@@ -98,10 +98,48 @@ PROJECT_NAME=myapp
 REDIS_ENABLED=true
 FUNCTIONS_ENABLED=true
 DASHBOARD_ENABLED=true
+ADMIN_ENABLED=true
+SEARCH_ENABLED=true
+```
 
-# Add microservices
-NESTJS_ENABLED=true
-NESTJS_SERVICES=api,webhooks
+### Custom Services (CS_N Pattern)
+
+```bash
+# Define backend services with CS_N=name,framework[,port]
+
+# Simple Express API
+CS_1=api,js
+CS_1_PORT=3000
+CS_1_ROUTE=api
+
+# Python FastAPI service
+CS_2=metals,py
+CS_2_PORT=8001
+CS_2_ROUTE=metals.api
+CS_2_MEMORY=1G
+
+# Background worker (not publicly exposed)
+CS_3=worker,bull
+CS_3_PUBLIC=false
+CS_3_QUEUES=email,notifications
+```
+
+### Frontend Applications
+
+```bash
+# Configure frontend SPAs
+FRONTEND_APPS="dashboard:dash:dsh_:3000,store:shop:shp_:3001"
+
+# Dashboard configuration
+DASHBOARD_BUILD_COMMAND="npm run build"
+DASHBOARD_START_COMMAND="npm run dev"
+DASHBOARD_DEPLOY_PROVIDER="vercel"
+DASHBOARD_PROD_ROUTE="dashboard.myapp.com"
+
+# Store configuration  
+STORE_BUILD_COMMAND="npm run build"
+STORE_DEPLOY_PROVIDER="netlify"
+STORE_PROD_ROUTE="shop.myapp.com"
 ```
 
 ### Production Configuration

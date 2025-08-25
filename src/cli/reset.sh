@@ -4,6 +4,7 @@
 # Source utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/header.sh"
 
 # Command function
@@ -55,7 +56,7 @@ cmd_reset() {
   local project="${PROJECT_NAME:-myproject}"
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local 2>/dev/null || true
+    load_env_with_priority 2>/dev/null || true
     set +a
     project="${PROJECT_NAME:-myproject}"
   fi

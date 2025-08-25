@@ -1,101 +1,58 @@
 # nself Commands Reference
 
-Complete reference for all nself commands and subcommands.
+Complete reference for all nself commands in v0.3.9.
 
 ## Command Tree
+
+Based on actual implemented commands:
 
 ```
 nself
 ├── 🚀 Core Commands
 │   ├── init          Initialize a new project
+│   │   └── --wizard  Interactive setup wizard (basic implementation)
 │   ├── build         Build project structure and Docker images
 │   ├── start         Start all services
 │   ├── stop          Stop all services
 │   ├── restart       Restart all services
-│   ├── status        Show service status with health monitoring
+│   ├── status        Show service status
 │   └── logs          View service logs
 │
 ├── ⚙️ Management Commands
-│   ├── doctor        Run enterprise system diagnostics
-│   ├── backup        Backup and restore with S3 support
-│   │   ├── create    Create backups (full, database, config, incremental)
-│   │   ├── list      List available backups
-│   │   ├── restore   Restore from backup with point-in-time recovery
-│   │   ├── prune     Remove old backups
-│   │   ├── verify    Verify backup integrity
-│   │   ├── schedule  Schedule automated backups
-│   │   ├── export    Export backup to external location
-│   │   ├── import    Import backup from external location
-│   │   ├── snapshot  Create point-in-time snapshot
-│   │   └── rollback  Rollback to specific point in time
-│   │
+│   ├── doctor        Run system diagnostics
+│   ├── backup        Backup and restore system
 │   ├── db            Database operations
 │   ├── email         Email service configuration
-│   │   ├── setup     Interactive email setup wizard
-│   │   ├── list      Show all supported providers
-│   │   ├── configure Configure specific provider
-│   │   ├── validate  Check email configuration
-│   │   ├── test      Send test email
-│   │   └── docs      Show provider setup guide
-│   │
-│   ├── ssl           SSL certificate management (fully automatic)
-│   │   ├── bootstrap Generate SSL certificates
-│   │   ├── renew     Renew public wildcard certificate
-│   │   ├── status    Show certificate status and expiry
-│   │   ├── auto-renew Check and renew if needed
-│   │   ├── schedule  Schedule automatic renewal checks
-│   │   └── unschedule Remove automatic renewal
-│   │
+│   ├── admin         Admin UI management (planned for v0.4.0)
+│   ├── search        Search service management (planned for v0.4.0)
+│   ├── deploy        SSH deployment (planned for v0.4.0)
+│   ├── ssl           SSL certificate management
 │   ├── urls          Show service URLs
-│   ├── prod          Configure for production deployment
-│   ├── trust         Install SSL root certificate
-│   ├── validate      Validate configuration files
+│   ├── prod          Configure for production
+│   ├── trust         Install SSL certificates
+│   ├── validate      Validate configuration
 │   ├── exec          Execute commands in containers
-│   ├── scale         Resource scaling management
-│   ├── metrics       Metrics and observability
-│   │   ├── enable    Enable metrics collection
-│   │   ├── disable   Disable metrics collection
-│   │   ├── status    Show metrics status
-│   │   ├── dashboard Open metrics dashboard
-│   │   ├── export    Export metrics data
-│   │   └── configure Configure metrics providers
-│   │
-│   ├── clean         Clean Docker resources
-│   └── admin         Admin UI management
-│       ├── enable    Enable admin web interface
-│       ├── disable   Disable admin web interface
-│       ├── status    Show admin UI status
-│       ├── password  Set admin password
-│       ├── reset     Reset admin to defaults
-│       ├── logs      View admin logs
-│       └── open      Open admin in browser
+│   ├── scale         Resource scaling
+│   ├── metrics       Metrics and monitoring
+│   └── clean         Clean Docker resources
 │
 ├── 🛠️ Development Commands
 │   ├── diff          Show configuration differences
-│   │   └── --drift   Configuration drift detection
 │   ├── reset         Reset project to clean state
 │   ├── rollback      Rollback to previous version
-│   │   ├── latest    Rollback to latest backup
-│   │   ├── backup    Rollback to specific backup
-│   │   ├── migration Rollback database migrations
-│   │   ├── deployment Rollback to previous deployment
-│   │   └── config    Rollback configuration changes
-│   │
-│   └── monitor       Real-time monitoring dashboard
-│       ├── dashboard Full monitoring dashboard
-│       ├── services  Monitor service health
-│       ├── resources Monitor resource usage
-│       ├── logs      Monitor logs in real-time
-│       └── alerts    Monitor active alerts
+│   ├── monitor       Real-time monitoring
+│   └── scaffold      Create new service from template
 │
 ├── 🔧 Tool Commands
-│   ├── scaffold      Create new service from template
-│   └── hot_reload    Enable hot reload for development
+│   ├── hot_reload    Enable hot reload for development
+│   └── validate-env  Validate environment configuration
 │
 └── 📋 Other Commands
+    ├── up            Alias for start (backward compatibility)
+    ├── down          Alias for stop (backward compatibility)
     ├── update        Update nself to latest version
     ├── version       Show version information
-    └── help          Show this help message
+    └── help          Show help information
 ```
 
 ---
@@ -104,96 +61,63 @@ nself
 
 ## init
 
-Initialize a new nself project with smart defaults and configuration files.
+Initialize a new nself project with smart defaults.
 
-Creates `.env.local` with sensible defaults, `.env.example` for reference, and sets up the basic project structure. This is always the first command to run in a new project directory.
+**Usage:** `nself init [--wizard]`
 
-**Usage:** `nself init`
+**Options:**
+- `--wizard` - Launch interactive setup wizard (NEW in v0.3.9)
 
 **What it creates:**
 - `.env.local` - Your main configuration file
 - `.env.example` - Reference documentation for all options
-- Backup of existing files with `.backup` suffix if they exist
+
+**Example:**
+```bash
+nself init              # Quick setup with defaults
+nself init --wizard     # Interactive guided setup (v0.3.9)
+```
 
 ## build
 
-Generate all project infrastructure and configuration files from your `.env.local` settings.
-
-Creates Docker Compose files, nginx configurations, SSL certificates, database initialization scripts, and service templates. This command is idempotent - it only rebuilds what's changed unless forced.
+Generate project infrastructure from your `.env.local` settings.
 
 **Usage:** `nself build [--force]`
 
 **What it generates:**
 - `docker-compose.yml` - Main service orchestration
 - `nginx/` - Web server configuration with SSL
-- SSL certificates (automatic, fully managed)
+- SSL certificates (automatic)
 - Database initialization scripts
-- Service templates for enabled microservices
-- Environment validation and auto-fix
 
-## start
+## start / stop / restart
 
-Start all services with comprehensive error handling and auto-fix capabilities.
+**Usage:**
+```bash
+nself start [--verbose] [--skip-checks]
+nself stop
+nself restart
+```
 
-Runs pre-flight checks, validates configuration, auto-maintains SSL certificates, and starts all Docker containers. Includes intelligent retry logic and automatic problem resolution.
+- `start` - Start all services with health checks
+- `stop` - Stop all services gracefully  
+- `restart` - Restart all services (stop + start)
 
-**Usage:** `nself start [--verbose] [--skip-checks] [--attach]`
-
-**Features:**
-- Pre-flight system checks
-- Automatic SSL certificate validation and renewal
-- Port conflict resolution
-- Service health monitoring
-- Auto-fix for common issues
-- Intelligent retry with backoff
-
-## stop
-
-Stop all running services gracefully.
-
-Stops all Docker containers associated with the project while preserving data volumes and networks for quick restart.
-
-**Usage:** `nself stop`
-
-## restart
-
-Restart all services (equivalent to stop + start).
-
-Performs a clean restart of all services, useful when configuration has changed or services need a fresh start.
-
-**Usage:** `nself restart`
+**Aliases:**
+- `nself up` - Same as `nself start`
+- `nself down` - Same as `nself stop`
 
 ## status
 
-Show comprehensive service status with health monitoring, resource usage, and dependency visualization.
-
-Provides real-time information about all services including health status, resource consumption, uptime, and service dependencies.
+Show comprehensive service status with health monitoring.
 
 **Usage:** `nself status [--watch] [--json]`
 
-**Information shown:**
-- Service health and status indicators
-- Resource usage (CPU, memory)
-- Container restart counts
-- Service dependencies
-- Port mappings and URLs
-- Health check results
-
 ## logs
 
-View and follow service logs with advanced filtering and search capabilities.
+View and follow service logs with filtering.
 
-Stream logs from one or all services with timestamps, filtering, and search functionality for debugging and monitoring.
-
-**Usage:** `nself logs [service] [--follow] [--tail] [--grep] [--since]`
-
-**Features:**
-- Real-time log streaming
-- Service-specific or aggregate logs
-- Search and filtering with grep patterns
-- Timestamp formatting
-- Tail recent entries
-- Follow mode for live monitoring
+**Usage:** `nself logs [service] [--follow] [--tail N] [--grep PATTERN]`
 
 ---
 
@@ -201,418 +125,128 @@ Stream logs from one or all services with timestamps, filtering, and search func
 
 ## doctor
 
-Run comprehensive enterprise-grade system diagnostics and health checks.
-
-Performs deep system analysis including SSL certificate validation, DNS configuration, kernel parameters, network diagnostics, security compliance scanning, and resource predictions.
+Run comprehensive system diagnostics.
 
 **Usage:** `nself doctor [--quick] [--fix] [--verbose]`
 
-**Checks performed:**
-- SSL certificate health and expiry
-- DNS resolution and configuration
-- Kernel parameter validation for production
-- Network connectivity and latency
-- Security compliance (HIPAA, SOC2 ready)
-- Resource usage predictions
-- Service dependency analysis
-- Database performance metrics
+Performs health checks on SSL certificates, DNS, network, and system resources.
 
 ## backup
 
-Enterprise-grade backup and restore system with S3 support, point-in-time recovery, and automated scheduling.
+Enterprise-grade backup and restore system with cloud storage support.
 
-Comprehensive backup solution supporting local and remote storage, incremental backups, integrity verification, and automated scheduling.
+**Usage:** `nself backup <subcommand> [options]`
 
-### backup create
+**Subcommands:**
+- `create [type] [name]` - Create backups (full, database, config)
+- `list` - List available backups (local and cloud)
+- `restore <name> [type]` - Restore from backup
+- `prune [policy] [days]` - Remove old backups
+  - Policies: `age` (default), `gfs` (Grandfather-Father-Son), `smart`, `cloud`
+- `cloud [action]` - Manage cloud backups
+  - Actions: `setup`, `status`, `test`
+- `schedule [frequency]` - Schedule automatic backups
+  - Frequencies: `hourly`, `daily`, `weekly`, `monthly`
 
-Create various types of backups with optional compression and encryption.
+**Cloud Providers Supported:**
+- Amazon S3 / MinIO
+- Dropbox
+- Google Drive
+- OneDrive
+- 40+ providers via rclone (Box, MEGA, pCloud, etc.)
 
-**Usage:** `nself backup create [type] [name]`
+**Examples:**
+```bash
+# Create full backup
+nself backup create
 
-**Types:** `full`, `database`, `config`, `incremental`
+# Create database backup with custom name
+nself backup create database pre-migration
 
-Creates timestamped backups with integrity checksums. Supports automatic compression and encryption for sensitive data.
+# Setup cloud backups
+nself backup cloud setup
 
-### backup list
+# Apply smart retention policy
+nself backup prune smart
 
-List all available backups with details including size, type, and integrity status.
+# Schedule daily backups
+nself backup schedule daily
+```
 
-**Usage:** `nself backup list [--remote] [--format json]`
-
-Shows local and S3 backups with metadata, creation dates, and verification status.
-
-### backup restore
-
-Restore from backup with point-in-time recovery capabilities.
-
-**Usage:** `nself backup restore <name> [type] [--point-in-time]`
-
-Supports selective restoration of databases, configurations, or full system state with timestamp-based recovery.
-
-### backup prune
-
-Remove old backups based on retention policies.
-
-**Usage:** `nself backup prune [days] [--dry-run]`
-
-Automatically cleans up old backups while preserving important milestones and maintaining backup integrity.
-
-### backup verify
-
-Verify backup integrity and completeness.
-
-**Usage:** `nself backup verify <name>`
-
-Validates backup checksums, tests restoration capability, and ensures data integrity.
-
-### backup schedule
-
-Schedule automated backups with flexible frequency options.
-
-**Usage:** `nself backup schedule <frequency>`
-
-**Frequencies:** `hourly`, `daily`, `weekly`, `monthly`, or custom cron expressions
-
-Sets up automated backup routines with proper logging and error notification.
-
-### backup export
-
-Export backups to external locations for disaster recovery.
-
-**Usage:** `nself backup export <name> <path>`
-
-Facilitates backup migration and off-site storage for compliance and disaster recovery.
-
-### backup import
-
-Import backups from external sources.
-
-**Usage:** `nself backup import <path>`
-
-Enables backup restoration from external storage or migration between environments.
-
-### backup snapshot
-
-Create lightweight point-in-time snapshots.
-
-**Usage:** `nself backup snapshot [label]`
-
-Quick snapshots for testing and development, useful before major changes.
-
-### backup rollback
-
-Rollback to specific point in time using backup data.
-
-**Usage:** `nself backup rollback <timestamp>`
-
-Time-based recovery with automatic service restart and health verification.
+**Environment Variables:**
+- `BACKUP_DIR` - Backup directory (default: ./backups)
+- `BACKUP_RETENTION_DAYS` - Days to keep backups (default: 30)
+- `BACKUP_RETENTION_MIN` - Minimum backups to keep (default: 3)
+- `BACKUP_CLOUD_PROVIDER` - Cloud provider (s3, dropbox, gdrive, onedrive, rclone)
 
 ## db
 
-Database operations including migrations, schema management, and team collaboration tools.
-
-Comprehensive database management with support for migrations, seeding, schema generation from DBML, and team synchronization.
+Database operations and management.
 
 **Usage:** `nself db <command>`
 
-**Commands include:**
-- `run` - Generate migrations from schema.dbml
-- `update` - Apply pending migrations safely
-- `seed` - Apply environment-specific seed data
-- `status` - Check database state and pending migrations
-- `revert` - Restore from backup
-- `sync` - Pull schema from dbdiagram.io
+Supports migrations, schema management, seeding, and team collaboration.
 
 ## email
 
-Email service configuration supporting 16+ providers with zero-config development.
+Email service configuration.
 
-Complete email setup and management system with support for major email providers, testing, and validation.
+**Usage:** `nself email <subcommand>`
 
-### email setup
+**Subcommands:**
+- `setup` - Interactive email setup wizard
+- `list` - Show supported providers
+- `configure <provider>` - Configure specific provider
+- `validate` - Check email configuration
+- `test [email]` - Send test email
+- `docs <provider>` - Show provider setup guide
 
-Interactive email setup wizard that guides you through provider selection and configuration.
+Supports 16+ email providers including SendGrid, AWS SES, Mailgun, and SMTP.
 
-**Usage:** `nself email setup`
+## admin *(planned for v0.4.0)*
 
-Walks through provider selection, API key configuration, and testing to ensure email is working correctly.
+Admin UI management will provide visual administration in a future release.
 
-### email list
+**Status:** Not yet implemented. Planned for v0.4.0.
 
-Show all 16+ supported email providers with their features and requirements.
+## search *(planned for v0.4.0)*
 
-**Usage:** `nself email list`
+Enterprise search service management will be available in a future release.
 
-**Supported providers:**
-- SendGrid, AWS SES, Mailgun, Postmark
-- Gmail, Outlook, Yahoo, SMTP
-- Postfix, Sendmail, and more
+**Status:** Not yet implemented. Planned for v0.4.0.
 
-### email configure
+## deploy *(planned for v0.4.0)*
 
-Configure specific email provider with guided setup.
+SSH deployment to VPS servers will be available in a future release.
 
-**Usage:** `nself email configure <provider>`
-
-Provider-specific configuration with validation and testing.
-
-### email validate
-
-Check current email configuration and test connectivity.
-
-**Usage:** `nself email validate`
-
-Validates API keys, SMTP settings, and tests actual email delivery.
-
-### email test
-
-Send test email to verify configuration.
-
-**Usage:** `nself email test [email]`
-
-Sends test message to verify email delivery is working correctly.
-
-### email docs
-
-Show detailed setup guide for specific provider.
-
-**Usage:** `nself email docs <provider>`
-
-Provider-specific documentation with step-by-step setup instructions.
+**Status:** Not yet implemented. Planned for v0.4.0.
 
 ## ssl
 
-Fully automatic SSL certificate management with zero-configuration required.
-
-SSL is completely automated - certificates are generated, renewed, and trusted automatically. These commands provide manual control for advanced users.
-
-### ssl bootstrap
-
-Generate SSL certificates for all detected domains and microservices.
-
-**Usage:** `nself ssl bootstrap`
-
-Auto-detects all domains from nginx configs, microservices, and environment variables. Generates certificates for everything found.
-
-### ssl renew
-
-Manually renew public wildcard certificates.
-
-**Usage:** `nself ssl renew`
-
-Forces renewal of Let's Encrypt certificates when DNS provider is configured.
-
-### ssl status
-
-Show detailed certificate status, expiry dates, and configuration.
-
-**Usage:** `nself ssl status`
-
-Displays certificate information, expiry dates, trust status, and renewal schedules.
-
-### ssl auto-renew
-
-Check certificate health and renew if expiring soon (7+ day threshold).
-
-**Usage:** `nself ssl auto-renew [--force]`
-
-Automated renewal with safer 7-day margin, used by cron for daily checks.
-
-### ssl schedule
-
-Schedule automatic certificate renewal checks.
-
-**Usage:** `nself ssl schedule [frequency]`
-
-Sets up daily monitoring and renewal automation via cron.
-
-### ssl unschedule
-
-Remove automatic renewal schedule.
-
-**Usage:** `nself ssl unschedule`
-
-Disables automated certificate monitoring and renewal.
-
-## urls
-
-Show all service URLs and endpoints.
-
-**Usage:** `nself urls`
-
-Displays URLs for all running services including API endpoints, dashboards, and management interfaces.
-
-## prod
-
-Configure production deployment with secure password generation.
-
-**Usage:** `nself prod`
-
-Generates production-ready configuration with secure passwords and production-optimized settings.
-
-## trust
-
-Install SSL root certificate for trusted HTTPS in browsers.
-
-**Usage:** `nself trust`
-
-One-time installation of root CA to enable green lock icons in browsers without warnings.
-
-## validate
-
-Validate configuration files with auto-fix capabilities.
-
-**Usage:** `nself validate [--profile] [--strict] [--fix] [--quiet]`
-
-Comprehensive configuration validation with automatic problem resolution and environment-specific checks.
-
-## exec
-
-Execute commands in running containers with full Docker exec capabilities.
-
-**Usage:** `nself exec [options] <service> [command]`
-
-**Features:**
-- Interactive terminal support (-it)
-- User and working directory options
-- Environment variable injection
-- Smart command defaults per service
-
-## scale
-
-Resource scaling and management with auto-scaling capabilities.
-
-**Usage:** `nself scale <service> [--cpu] [--memory] [--replicas] [--auto]`
-
-Configure CPU limits, memory constraints, replica counts, and auto-scaling parameters for optimal resource utilization.
-
-## metrics
-
-Metrics collection and observability with multiple provider support.
-
-Comprehensive monitoring system supporting Prometheus, Datadog, New Relic, and custom metrics providers.
-
-### metrics enable
-
-Enable metrics collection with provider selection.
-
-**Usage:** `nself metrics enable [--provider] [--port]`
-
-Starts metrics collection with configurable providers and endpoints.
-
-### metrics disable
-
-Disable metrics collection.
-
-**Usage:** `nself metrics disable`
-
-Stops metrics collection and cleanup monitoring resources.
-
-### metrics status
-
-Show current metrics collection status and configuration.
-
-**Usage:** `nself metrics status`
-
-Displays active metrics providers, collection status, and dashboard URLs.
-
-### metrics dashboard
-
-Open metrics dashboard in browser.
-
-**Usage:** `nself metrics dashboard`
-
-Launches web-based metrics dashboard for real-time monitoring.
-
-### metrics export
-
-Export metrics data in various formats.
-
-**Usage:** `nself metrics export [--format] [--output]`
-
-Export historical metrics data for analysis or migration.
-
-### metrics configure
-
-Configure metrics providers and collection parameters.
-
-**Usage:** `nself metrics configure <provider>`
-
-Provider-specific configuration for Prometheus, Datadog, New Relic, etc.
-
-## clean
-
-Clean Docker resources including containers, images, volumes, and networks.
-
-**Usage:** `nself clean [--containers] [--images] [--volumes] [--networks] [--all]`
-
-Cleanup unused Docker resources to free disk space and reset environment.
-
-## admin
-
-Admin UI management for visual administration interface.
-
-The admin UI provides a web-based interface for managing your nself stack, including service control, configuration editing, database management, and real-time monitoring.
-
-### admin enable
-
-Enable the admin web interface by adding it to your Docker Compose stack.
-
-**Usage:** `nself admin enable`
-
-This command will:
-- Pull the nself/admin:latest Docker image
-- Add admin service to docker-compose.yml
-- Mount your current project directory for direct file access
-- Start the admin UI at https://admin.local.nself.org
-
-### admin disable
-
-Disable and remove the admin web interface.
-
-**Usage:** `nself admin disable`
-
-Stops and removes the admin container while preserving your configuration.
-
-### admin status
-
-Show current admin UI status and access information.
-
-**Usage:** `nself admin status`
-
-Displays whether admin is enabled, running status, and access URL.
-
-### admin password
-
-Set or update the admin interface password.
-
-**Usage:** `nself admin password [password]`
-
-Interactive password prompt if no password provided. Passwords are hashed and stored securely.
-
-### admin reset
-
-Reset admin interface to default settings.
-
-**Usage:** `nself admin reset`
-
-Clears admin configuration and restores defaults while preserving project settings.
-
-### admin logs
-
-View admin service logs for debugging.
-
-**Usage:** `nself admin logs [--follow] [--tail]`
-
-Shows logs from the admin container with options for live following and tail count.
-
-### admin open
-
-Open admin interface in default browser.
-
-**Usage:** `nself admin open`
-
-Launches browser to https://admin.local.nself.org for immediate access.
+Fully automatic SSL certificate management.
+
+**Usage:** `nself ssl <subcommand>`
+
+**Subcommands:**
+- `bootstrap` - Generate certificates for all domains
+- `status` - Show certificate status and expiry
+- `renew` - Manually renew certificates
+- `auto-renew` - Check and renew if needed
+- `schedule` - Schedule automatic renewal
+- `unschedule` - Remove automatic renewal
+
+SSL is completely automated by default.
+
+## Other Management Commands
+
+- **urls** - Show all service URLs and endpoints
+- **prod** - Configure production deployment with secure passwords
+- **trust** - Install SSL root certificate for browsers
+- **validate** - Validate configuration files with auto-fix
+- **exec** - Execute commands in running containers
+- **scale** - Resource scaling and management
+- **metrics** - Metrics collection and observability
+- **clean** - Clean Docker resources
 
 ---
 
@@ -620,146 +254,63 @@ Launches browser to https://admin.local.nself.org for immediate access.
 
 ## diff
 
-Show configuration differences with drift detection capabilities.
+Show configuration differences with drift detection.
 
-**Usage:** `nself diff [file1] [file2] [--drift] [--apply-changes]`
-
-### diff --drift
-
-Advanced configuration drift detection that identifies services not running that should be, modified files, and configuration inconsistencies.
-
-**Features:**
-- Service state drift detection
-- File modification tracking via checksums
-- Automatic reconciliation options
-- Integration with build system
+**Usage:** `nself diff [--drift]`
 
 ## reset
 
-Reset project to clean state by removing all data and containers.
+Reset project to clean state.
 
 **Usage:** `nself reset [--confirm]`
 
-Complete project reset while preserving configuration files. Useful for fresh starts and testing.
-
 ## rollback
 
-Rollback to previous versions, deployments, or configurations with comprehensive recovery options.
+Rollback to previous versions or deployments.
 
-### rollback latest
+**Usage:** `nself rollback <type>`
 
-Rollback to the most recent backup automatically.
-
-**Usage:** `nself rollback latest`
-
-Quick recovery to last known good state with automatic service restart.
-
-### rollback backup
-
-Rollback to specific backup by ID or timestamp.
-
-**Usage:** `nself rollback backup [id]`
-
-Selective backup restoration with data integrity verification.
-
-### rollback migration
-
-Rollback database migrations by specified number of steps.
-
-**Usage:** `nself rollback migration [steps]`
-
-Database-specific rollback using Hasura CLI integration.
-
-### rollback deployment
-
-Rollback to previous deployment configuration.
-
-**Usage:** `nself rollback deployment`
-
-Restore previous deployment state including Docker configs and environment settings.
-
-### rollback config
-
-Rollback configuration file changes.
-
-**Usage:** `nself rollback config`
-
-Restore previous configuration from automatic backups.
+**Types:**
+- `latest` - Rollback to latest backup
+- `backup [id]` - Rollback to specific backup
+- `migration [steps]` - Rollback database migrations
 
 ## monitor
 
-Real-time monitoring dashboard with interactive terminal interface.
+Real-time monitoring dashboard.
 
-Comprehensive monitoring system providing live service health, resource usage, logs, and alerts in an interactive terminal interface.
+**Usage:** `nself monitor [view]`
 
-### monitor dashboard
-
-Full-featured monitoring dashboard with all views and controls.
-
-**Usage:** `nself monitor dashboard`
-
-**Keyboard controls:**
-- `q/Q` - Quit
-- `r/R` - Refresh immediately  
-- `s` - Switch to services view
-- `c` - Switch to resources view
-- `l` - Switch to logs view
-- `a` - Switch to alerts view
-- `Space` - Pause/resume auto-refresh
-
-### monitor services
-
-Monitor service health with detailed status information.
-
-**Usage:** `nself monitor services`
-
-Real-time service health monitoring with restart counts, health checks, and dependency status.
-
-### monitor resources
-
-Monitor resource usage including CPU, memory, and disk utilization.
-
-**Usage:** `nself monitor resources`
-
-System and container resource monitoring with usage graphs and alerts.
-
-### monitor logs
-
-Monitor logs in real-time with scrolling and filtering.
-
-**Usage:** `nself monitor logs`
-
-Live log streaming from all services with search and filtering capabilities.
-
-### monitor alerts
-
-Monitor active alerts and system notifications.
-
-**Usage:** `nself monitor alerts`
-
-Alert dashboard showing unhealthy services, resource warnings, and system notifications.
-
----
-
-# 🔧 Tool Commands
+**Views:**
+- `dashboard` - Full monitoring dashboard
+- `services` - Monitor service health
+- `resources` - Monitor resource usage
+- `logs` - Monitor logs in real-time
+- `alerts` - Monitor active alerts
 
 ## scaffold
 
-Create new service from template with automatic integration.
+Create new service from template.
 
 **Usage:** `nself scaffold <type> <name>`
 
 **Types:** `nestjs`, `golang`, `python`, `react`, `vue`, `angular`
 
-Generates complete service templates with Docker integration, configuration, and example code.
+---
+
+# 🔧 Tool Commands
 
 ## hot_reload
 
-Enable hot reload for development with automatic file watching.
+Enable hot reload for development.
 
 **Usage:** `nself hot_reload [service]`
 
-Configures volume mounts and file watching for rapid development iteration.
+## validate-env
+
+Validate environment configuration.
+
+**Usage:** `nself validate-env [--profile] [--strict] [--fix]`
 
 ---
 
@@ -767,11 +318,9 @@ Configures volume mounts and file watching for rapid development iteration.
 
 ## update
 
-Update nself to the latest version with automatic migration.
+Update nself to the latest version.
 
 **Usage:** `nself update`
-
-Downloads latest version from GitHub releases with configuration preservation and migration support.
 
 ## version
 
@@ -779,15 +328,11 @@ Show current nself version and build information.
 
 **Usage:** `nself version`
 
-Displays version number, build date, and system information.
-
 ## help
 
-Show help information for commands.
+Show help information.
 
 **Usage:** `nself help [command]`
-
-Displays general help or command-specific documentation with examples and options.
 
 ---
 
@@ -795,23 +340,37 @@ Displays general help or command-specific documentation with examples and option
 
 **Getting Started:**
 ```bash
-nself init     # Initialize project
-nself build    # Generate infrastructure  
-nself start    # Start all services
+nself init --wizard  # Interactive setup (v0.3.9)
+nself build          # Generate infrastructure  
+nself start          # Start all services
 ```
 
 **Development:**
 ```bash
-nself status   # Check service health
-nself logs     # View logs
-nself monitor  # Real-time dashboard
+nself status         # Check service health
+nself logs           # View logs
+nself monitor        # Real-time dashboard
 ```
 
 **Production:**
 ```bash
-nself prod     # Generate production config
-nself backup   # Create backups
-nself doctor   # Health diagnostics
+nself prod           # Generate production config
+nself deploy init    # Setup deployment (v0.3.9)
+nself deploy ssh     # Deploy to VPS (v0.3.9)
+```
+
+**v0.3.9 New Features:**
+```bash
+# Custom Services (CS_N pattern)
+CS_1=api,js,3000     # Define in .env.local
+nself build          # Generates custom services
+
+# Frontend Applications
+FRONTEND_APPS="app:short:prefix:port"  # Define in .env.local
+nself build          # Generates frontend routing
+
+# Multi-environment support
+nself init           # Creates .env.local, .env.dev, .env.staging, .env.prod
 ```
 
 **For help with any command:**

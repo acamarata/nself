@@ -1,0 +1,25 @@
+{
+    "name": "${PROJECT_NAME}/${SERVICE_NAME}",
+    "description": "PHP Slim service for ${PROJECT_NAME}",
+    "type": "project",
+    "require": {
+        "php": "^8.1",
+        "slim/slim": "^4.12",
+        "slim/psr7": "^1.6",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-redis": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "scripts": {
+        "start": "php -S 0.0.0.0:${PORT:-8080} -t ."
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

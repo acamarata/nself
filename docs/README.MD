@@ -1,42 +1,33 @@
-# nself Documentation
+# nself v0.3.9 Documentation
 
-> **Comprehensive documentation for nself - Self-Hosted Infrastructure Manager**
+> **Comprehensive documentation for nself v0.3.9 - Self-Hosted Infrastructure Manager**
 
-This directory contains complete documentation for developers, contributors, and automated tools working with nself.
+This directory contains complete documentation for developers, contributors, and automated tools working with nself v0.3.9.
 
 ## 📚 Documentation Index
 
 ### Getting Started
-- **[Home.MD](Home.MD)** - 🏠 Project overview and quick start
-- **[EXAMPLES.MD](EXAMPLES.MD)** - 🎯 Complete command examples with actual outputs
-- **[TROUBLESHOOTING.MD](TROUBLESHOOTING.MD)** - 🔧 Diagnose and fix common issues
-- **[API.MD](API.MD)** - 📖 Complete command reference and usage
-- **[ENVIRONMENT_CONFIGURATION.MD](ENVIRONMENT_CONFIGURATION.MD)** - ⚙️ Configuration guide
+- **[EXAMPLES.md](EXAMPLES.md)** - 🎯 Complete command examples with actual outputs
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 🔧 Diagnose and fix common issues
+- **[API.md](API.md)** - 📖 Complete command reference and usage
+- **[ENVIRONMENT_CONFIGURATION.md](ENVIRONMENT_CONFIGURATION.md)** - ⚙️ Configuration guide
 
 ### Architecture & Design
 - **[ARCHITECTURE.MD](ARCHITECTURE.MD)** - 🏗️ System design, principles, and patterns
 - **[DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD)** - 📁 Complete file organization map
-- **[CODE_STYLE.MD](CODE_STYLE.MD)** - ✨ Coding standards and best practices
-- **[DECISIONS.MD](DECISIONS.MD)** - 🎯 Architectural decision records
-- **[OUTPUT_STANDARDS.MD](OUTPUT_STANDARDS.MD)** - 🖥️ User interface and output standards
 
-### Development & Testing
+### Development & Operations
 - **[CONTRIBUTING.MD](CONTRIBUTING.MD)** - 🤝 Guidelines for contributing to the project
-- **[TESTING_STRATEGY.MD](TESTING_STRATEGY.MD)** - 🧪 Testing approaches and guidelines
-- **[REFACTORING_ROADMAP.MD](REFACTORING_ROADMAP.MD)** - 🚀 Future improvements and technical debt
+- **[BACKUP_GUIDE.md](BACKUP_GUIDE.md)** - 💾 Comprehensive backup and restore guide
+- **[ROADMAP.md](ROADMAP.md)** - 🚀 Future development plans
 
 ### Release Management
-- **[RELEASE_PROCESS.MD](RELEASE_PROCESS.MD)** - 📋 Complete release process documentation
-- **[RELEASE_GUIDE.MD](RELEASE_GUIDE.MD)** - 📦 Distribution channel guide
-- **[RELEASE_CHECKLIST_TEMPLATE.MD](RELEASE_CHECKLIST_TEMPLATE.MD)** - ✅ Release checklist template
-- **[RELEASE_CHECKLIST_v0.3.7.MD](RELEASE_CHECKLIST_v0.3.7.MD)** - 🎯 v0.3.7 specific checklist
-- **[RELEASE_CHECKLIST.MD](RELEASE_CHECKLIST.MD)** - 📝 Legacy v0.3.0 checklist
+- **[RELEASES.MD](RELEASES.MD)** - 📜 Detailed release history
+- **[v0.3.9.md](v0.3.9.md)** - 🎯 Latest release notes (v0.3.9)
+- **[v0.4.0.md](v0.4.0.md)** - 📋 Next major release planning
 
 ### Version History
 - **[CHANGELOG.MD](CHANGELOG.MD)** - 📝 User-facing changelog
-- **[RELEASES.MD](RELEASES.MD)** - 📜 Detailed release history
-- **[CHANGELOG-0.3.1.MD](CHANGELOG-0.3.1.MD)** - 📄 v0.3.1 specific changes
-- **[MIGRATION_0.2.x_to_0.3.0.MD](MIGRATION_0.2.x_to_0.3.0.MD)** - 🔄 v0.2 to v0.3 migration guide
 
 ## 🎯 Quick Navigation
 
@@ -52,22 +43,21 @@ Start here to get nself running:
 Want to contribute? Read these:
 1. [CONTRIBUTING.MD](CONTRIBUTING.MD) - Contribution guidelines
 2. [ARCHITECTURE.MD](ARCHITECTURE.MD) - Understand the system
-3. [CODE_STYLE.MD](CODE_STYLE.MD) - Follow coding standards
-4. [TESTING_STRATEGY.MD](TESTING_STRATEGY.MD) - Test your changes
+3. [DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD) - File organization
+4. [ROADMAP.md](ROADMAP.md) - Future development plans
 
-#### For Release Managers
-Managing nself releases:
-1. [RELEASE_PROCESS.MD](RELEASE_PROCESS.MD) - Complete release workflow
-2. [RELEASE_GUIDE.MD](RELEASE_GUIDE.MD) - Distribution channels
-3. [RELEASE_CHECKLIST_TEMPLATE.MD](RELEASE_CHECKLIST_TEMPLATE.MD) - Checklist template
-4. Scripts in `/scripts/` - Automation tools
+#### For System Administrators
+Managing nself deployments:
+1. [BACKUP_GUIDE.md](BACKUP_GUIDE.md) - Backup and restore procedures
+2. [ENVIRONMENT_CONFIGURATION.md](ENVIRONMENT_CONFIGURATION.md) - Configuration management
+3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Problem resolution
 
 #### For Automated Tools
 Documentation designed for programmatic access:
 1. [ARCHITECTURE.MD](ARCHITECTURE.MD) - System design patterns
 2. [DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD) - File locations
 3. [API.MD](API.MD) - Command specifications
-4. [OUTPUT_STANDARDS.MD](OUTPUT_STANDARDS.MD) - Output parsing
+4. [COMMANDS.md](COMMANDS.md) - Complete command reference
 
 ## 📖 Documentation Highlights
 

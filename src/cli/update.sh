@@ -230,5 +230,10 @@ cmd_update() {
   esac
 }
 
-# Execute the command
-cmd_update "$@"
+# Export for use as library
+export -f cmd_update
+
+# Execute if run directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  cmd_update "$@"
+fi

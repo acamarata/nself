@@ -4,6 +4,7 @@
 # Source utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/utils/progress.sh"
 source "$SCRIPT_DIR/../lib/errors/base.sh"
@@ -329,7 +330,7 @@ cmd_start() {
     # Load environment for validation
     if [[ -f ".env.local" ]]; then
       set -a
-      source .env.local
+      load_env_with_priority
       set +a
     fi
 
@@ -353,7 +354,7 @@ cmd_start() {
     # On retry, still need to load environment
     if [[ -f ".env.local" ]]; then
       set -a
-      source .env.local
+      load_env_with_priority
       set +a
     fi
   fi
@@ -361,16 +362,6 @@ cmd_start() {
   # Header is already shown above, don't show it again
 
   # Start services (shorter message to avoid artifacts)
-  # Auto-check SSL certificates before starting (daily check with 30-day industry standard)
-  if [[ -f "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/ssl/auto-renew.sh" 2>/dev/null || true
-    
-    # Check if renewal is needed (silently)
-    if declare -f ssl::auto_renew >/dev/null 2>&1; then
-      ssl::auto_renew "." >/dev/null 2>&1 || true
-    fi
-  fi
-
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting services..."
 
   local output_file=$(mktemp)
@@ -379,7 +370,7 @@ cmd_start() {
   # Ensure environment is loaded for compose wrapper
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 
@@ -1071,7 +1062,7 @@ show_service_urls() {
   # Load environment if available
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 
