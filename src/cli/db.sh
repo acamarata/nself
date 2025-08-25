@@ -514,11 +514,13 @@ cmd_update() {
   for migration in hasura/migrations/default/*/up.sql; do
     if [ -f "$migration" ]; then
       local migration_name=$(basename $(dirname "$migration"))
-      # Check if this migration is already applied (basic check)
-      if ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "\dt" 2>/dev/null | grep -q "schema_migrations" ||
-        ! docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -d "${POSTGRES_DB:-nhost}" -c "SELECT version FROM schema_migrations WHERE version = '$migration_name'" 2>/dev/null | grep -q "$migration_name"; then
-        echo "  - $migration_name"
+      # Validate migration name (alphanumeric, underscore, dash only)
+      if [[ ! "$migration_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        log_warning "Skipping invalid migration name: $migration_name"
+        continue
       fi
+      # For now, just list all migrations (tracking not implemented)
+      echo "  - $migration_name"
     fi
   done
 
@@ -590,9 +592,17 @@ cmd_reset() {
 
   log_info "Resetting database..."
 
-  # Drop and recreate database
-  docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "DROP DATABASE IF EXISTS ${POSTGRES_DB:-nhost};"
-  docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "CREATE DATABASE ${POSTGRES_DB:-nhost};"
+  # Validate database name (alphanumeric, underscore, dash only)
+  local db_name="${POSTGRES_DB:-nhost}"
+  if [[ ! "$db_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    log_error "Invalid database name: $db_name"
+    log_info "Database names must contain only letters, numbers, underscores, and dashes"
+    return 1
+  fi
+  
+  # Drop and recreate database (using validated name)
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "DROP DATABASE IF EXISTS \"$db_name\";"
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U postgres -c "CREATE DATABASE \"$db_name\";"
 
   # Re-run migrations
   cmd_migrate_up
@@ -785,7 +795,7 @@ cmd_help() {
 
 main() {
   if [[ -f ".env.local" ]]; then
-    load_env_safe ".env.local"
+    load_env_with_priority
   fi
   ensure_directories
 

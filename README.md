@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.8-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -14,9 +14,9 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.8 NEW**: Complete enterprise features with validate, exec, metrics, monitor, rollback, scale commands, comprehensive backup system (10 subcommands), and fully automatic SSL with domain auto-detection! [See full release notes](docs/CHANGELOG.md#038---2025-08-17)
+> **🚀 v0.3.9 NEW**: Platform evolution release with Admin UI web interface, enterprise search (6 engines), SSH deployment to VPS, interactive project wizard, and multi-environment management! [See full release notes](docs/CHANGELOG.md#039---2024-08-17)
 
-📋 **[View Roadmap](docs/ROADMAP.md)** - See what's coming in v0.3.9 (Admin UI, Deploy, Search) and beyond!
+📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and what's coming in v0.4.0!
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
@@ -111,8 +111,9 @@ The updater will:
 # 1. Create and enter project directory
 mkdir my-awesome-backend && cd my-awesome-backend
 
-# 2. Initialize with smart defaults
-nself init
+# 2. Initialize with smart defaults (or use wizard)
+nself init --wizard  # Interactive setup (NEW in v0.3.9)
+# or: nself init     # Quick setup with defaults
 
 # 3. Build and launch everything
 nself build && nself start
@@ -207,6 +208,9 @@ nself
 │
 ├── ⚙️ Management Commands
 │   ├── doctor        Run enterprise system diagnostics
+│   ├── admin         Admin UI management (v0.3.9)
+│   ├── search        Search service management (v0.3.9)
+│   ├── deploy        SSH deployment to VPS (v0.3.9)
 │   ├── backup        Backup and restore with S3 support
 │   │   ├── create    Create backups (full, database, config, incremental)
 │   │   ├── list      List available backups
@@ -269,8 +273,8 @@ nself
 
 - **[Commands Reference](docs/COMMANDS.md)** - All available commands
 - **[Roadmap](docs/ROADMAP.md)** - Development roadmap and upcoming features
-- **[v0.3.9 Plans](docs/v0.3.9.md)** - Next release details (Admin UI, Deploy, Search)
-- **[v0.4.0 Plans](docs/v0.4.0.md)** - Public release plans
+- **[v0.3.9 Features](docs/v0.3.9.md)** - Current release features (Admin UI, Deploy, Search)
+- **[v0.4.0 Plans](docs/v0.4.0.md)** - Next release plans
 - **[Changelog](docs/CHANGELOG.md)** - Version history
 
 ### Quick Reference
@@ -398,6 +402,111 @@ Supported DNS providers:
 | `nself ssl status` | Check certificate status |
 | `nself trust` | Install root CA to system |
 | `nself trust status` | Check trust status |
+
+## 💾 Backup & Restore
+
+### Comprehensive Backup System
+
+nself includes enterprise-grade backup capabilities with cloud storage support:
+
+```bash
+# Create backups
+nself backup create              # Full backup (database, config, volumes)
+nself backup create database     # Database only
+nself backup create config       # Configuration only
+
+# Restore from backup
+nself backup restore backup_20240115_143022.tar.gz
+
+# List all backups
+nself backup list
+```
+
+### Cloud Storage Support
+
+Configure automatic cloud uploads for offsite backup:
+
+```bash
+# Interactive cloud setup wizard
+nself backup cloud setup
+
+# Supported providers:
+# - Amazon S3 / MinIO
+# - Dropbox
+# - Google Drive
+# - OneDrive
+# - 40+ providers via rclone (Box, MEGA, pCloud, etc.)
+
+# Test cloud connection
+nself backup cloud test
+
+# View cloud configuration
+nself backup cloud status
+```
+
+### Advanced Retention Policies
+
+Intelligently manage backup storage with multiple retention strategies:
+
+```bash
+# Simple age-based cleanup (default)
+nself backup prune age 30        # Remove backups older than 30 days
+
+# Grandfather-Father-Son policy
+nself backup prune gfs           # Keep 7 daily, 4 weekly, 12 monthly
+
+# Smart retention (recommended)
+nself backup prune smart         # Intelligent retention based on age
+
+# Cloud backup cleanup
+nself backup prune cloud 30      # Prune cloud backups
+```
+
+### Automated Backups
+
+Schedule automatic backups with built-in cron integration:
+
+```bash
+# Schedule options
+nself backup schedule hourly
+nself backup schedule daily      # Recommended for production
+nself backup schedule weekly
+nself backup schedule monthly
+
+# View schedule
+crontab -l
+```
+
+### Backup Configuration
+
+Environment variables for backup customization:
+
+```bash
+# Local storage
+BACKUP_DIR=./backups             # Backup directory
+BACKUP_RETENTION_DAYS=30         # Default retention
+BACKUP_RETENTION_MIN=3           # Minimum backups to keep
+
+# Cloud provider selection
+BACKUP_CLOUD_PROVIDER=s3         # s3, dropbox, gdrive, onedrive, rclone
+
+# Provider-specific settings
+S3_BUCKET=my-backups
+DROPBOX_TOKEN=xxx
+GDRIVE_FOLDER_ID=xxx
+RCLONE_REMOTE=myremote
+```
+
+### What Gets Backed Up
+
+**Full Backup includes:**
+- PostgreSQL databases (complete dump)
+- All environment files (.env, .env.local, .env.production)
+- Docker-compose configurations
+- Docker volumes (all project data)
+- SSL certificates
+- Hasura metadata
+- Nginx configurations
 
 ## 🚀 Production Deployment
 
@@ -573,11 +682,49 @@ See [LICENSE](LICENSE) for full terms.
 - [Hasura Documentation](https://hasura.io/docs) - GraphQL engine docs
 - [Report Issues](https://github.com/acamarata/nself/issues) - We'd love your feedback!
 
-## Future Planned Commands
+## v0.3.9 Admin UI
 
-- nself doctor, status, logs, exec, resources
-- nself scale, backup, config, ssl, network
-- nself metrics, health, cleanup, optimize, tenant
+Enable the web-based administration interface:
+
+```bash
+nself admin enable     # Enable admin web interface
+nself admin password   # Set admin password
+nself admin open       # Open admin in browser
+```
+
+The admin UI provides:
+- Real-time service monitoring
+- Configuration file editing
+- Log streaming and management
+- Backup management interface
+- Resource usage monitoring
+
+## v0.3.9 Enterprise Search
+
+Choose from 6 different search engines:
+
+```bash
+nself search enable    # Interactive engine selection
+nself search setup     # Configure search settings
+nself search test      # Test search functionality
+```
+
+**Available Engines:**
+- PostgreSQL FTS (built-in)
+- MeiliSearch (recommended)
+- Typesense, Elasticsearch, OpenSearch, Sonic
+
+## v0.3.9 SSH Deployment
+
+Deploy to any VPS with one command:
+
+```bash
+nself deploy init      # Setup deployment config
+nself deploy ssh       # Deploy to VPS server
+nself deploy status    # Check deployment status
+```
+
+Supports DigitalOcean, Linode, Vultr, Hetzner, and any Ubuntu/Debian VPS.
 
 ---
 

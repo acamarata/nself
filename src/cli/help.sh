@@ -45,9 +45,17 @@ show_general_help() {
   echo -e "  ${COLOR_BLUE}doctor${COLOR_RESET}        Run system diagnostics"
   echo -e "  ${COLOR_BLUE}db${COLOR_RESET}            Database operations"
   echo -e "  ${COLOR_BLUE}email${COLOR_RESET}         Email service configuration"
+  echo -e "  ${COLOR_BLUE}admin${COLOR_RESET}         Admin UI management (v0.3.9)"
+  echo -e "  ${COLOR_BLUE}search${COLOR_RESET}        Search service management (v0.3.9)"
+  echo -e "  ${COLOR_BLUE}mlflow${COLOR_RESET}        MLflow ML experiment tracking (v0.3.9)"
+  echo -e "  ${COLOR_BLUE}deploy${COLOR_RESET}        SSH deployment (v0.3.9)"
   echo -e "  ${COLOR_BLUE}urls${COLOR_RESET}          Show service URLs"
   echo -e "  ${COLOR_BLUE}prod${COLOR_RESET}          Configure for production deployment"
   echo -e "  ${COLOR_BLUE}trust${COLOR_RESET}         Manage SSL certificates"
+  
+  show_section "Monitoring & Observability"
+  echo -e "  ${COLOR_BLUE}metrics${COLOR_RESET}       Complete monitoring stack management"
+  echo -e "  ${COLOR_BLUE}monitor${COLOR_RESET}       Access monitoring dashboards"
 
   show_section "Development Commands"
   echo -e "  ${COLOR_BLUE}diff${COLOR_RESET}          Show configuration differences"

@@ -1,6 +1,6 @@
-# nself Command Examples with Outputs
+# nself v0.3.9 Command Examples with Outputs
 
-This document provides comprehensive examples of every nself command with actual output formatting.
+This document provides comprehensive examples of every nself v0.3.9 command with actual output formatting.
 
 ## Table of Contents
 

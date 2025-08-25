@@ -19,11 +19,25 @@ ensure_docker_running() {
 compose() {
   local env_file="${COMPOSE_ENV_FILE:-.env.local}"
   local project="${PROJECT_NAME:-nself}"
+  local compose_files=""
+  
+  # Always use main docker-compose.yml
+  compose_files="-f docker-compose.yml"
+  
+  # Add custom services if exists
+  if [[ -f "docker-compose.custom.yml" ]]; then
+    compose_files="$compose_files -f docker-compose.custom.yml"
+  fi
+  
+  # Add override if exists
+  if [[ -f "docker-compose.override.yml" ]]; then
+    compose_files="$compose_files -f docker-compose.override.yml"
+  fi
 
   if [[ -f "$env_file" ]]; then
-    docker compose --project-name "$project" --env-file "$env_file" "$@"
+    docker compose $compose_files --project-name "$project" --env-file "$env_file" "$@"
   else
-    docker compose --project-name "$project" "$@"
+    docker compose $compose_files --project-name "$project" "$@"
   fi
 }
 

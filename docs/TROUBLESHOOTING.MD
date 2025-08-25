@@ -1,6 +1,6 @@
-# nself Troubleshooting Guide
+# nself v0.3.9 Troubleshooting Guide
 
-Comprehensive guide to diagnosing and fixing common issues with nself.
+Comprehensive guide to diagnosing and fixing common issues with nself v0.3.9.
 
 ## Table of Contents
 

@@ -1,7 +1,7 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Current (v0.3.8)](#current-v038) | [Developing (v0.3.9)](#developing-v039) | [Pending (v0.4.0)](#pending-v040) | [Beyond](#beyond-future)
+[Previous (v0.3.8)](#previous-v038) | [Current (v0.3.9)](#current-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-future)
 
 ---
 
@@ -10,7 +10,7 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 
 ---
 
-## Current (v0.3.8)
+## Previous (v0.3.8)
 **Status**: ✅ Released and Stable
 
 ### Features Available Now
@@ -32,15 +32,15 @@ init, build, start, stop, restart, status, logs, backup (10 subcommands), db, em
 
 ---
 
-## Developing (v0.3.9)
-**Status**: 🚧 In Active Development | **Timeline**: 5 weeks
+## Current (v0.3.9)
+**Status**: ✅ Released | **Release Date**: August 2024
 
 ### New Features
 - **Admin UI** - Web-based administration interface
-- **Deploy** - SSH deployment to VPS servers
+- **Deploy** - SSH deployment to VPS servers  
 - **Init Wizard** - Interactive setup for new projects
-- **Search** - PostgreSQL FTS and MeiliSearch integration
-- **Environment Management** - Multi-environment configuration
+- **Search** - Enterprise search with 6 engine options
+- **Environment Management** - Multi-environment configuration system
 
 ### Admin UI Details
 - Separate Docker container with host mount
@@ -78,7 +78,7 @@ init, build, start, stop, restart, status, logs, backup (10 subcommands), db, em
 
 ---
 
-## Pending (v0.4.0)
+## Next (v0.4.0)
 **Status**: 📋 Planned | **Focus**: Polish for Public Release
 
 ### Enhancements to Existing Features

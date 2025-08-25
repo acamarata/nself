@@ -70,9 +70,9 @@ cmd_urls() {
 
   # Load environment safely from current directory
   if [ -f ".env.local" ]; then
-    load_env_safe ".env.local"
+    load_env_with_priority
   elif [ -f ".env" ]; then
-    load_env_safe ".env"
+    load_env_with_priority
   elif [ -f "$ROOT_DIR/.env.local" ]; then
     load_env_safe "$ROOT_DIR/.env.local"
   elif [ -f "$ROOT_DIR/.env" ]; then

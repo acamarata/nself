@@ -5,7 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.8] - 2025-08-17
+## [0.3.9] - 2024-08-17
+
+### Added
+- **Admin UI Integration**: Web-based administration interface
+  - `nself admin` - Complete admin UI management system
+  - Visual service monitoring and control
+  - Configuration editing through web interface
+  - Real-time status dashboard
+  - Password management and authentication
+
+- **Enterprise Search**: Multi-engine search capabilities
+  - `nself search` - Search service management with 6 engine options
+  - PostgreSQL FTS, MeiliSearch, Typesense, Elasticsearch, OpenSearch, Sonic support
+  - Interactive setup wizard for optimal engine selection
+  - Built-in testing and configuration validation
+
+- **VPS Deployment**: SSH-based deployment system
+  - `nself deploy` - Complete deployment management
+  - Support for DigitalOcean, Linode, Vultr, Hetzner, and Ubuntu/Debian VPS
+  - Automated Docker installation and service setup
+  - GitHub webhook integration for continuous deployment
+  - Built-in rollback and monitoring capabilities
+
+- **Interactive Project Setup**: Enhanced initialization experience
+  - `nself init --wizard` - Interactive setup wizard
+  - Automatic framework and language detection
+  - Smart service recommendations based on project type
+  - 6 pre-configured templates: SaaS, E-commerce, Blog/CMS, API, Mobile, Custom
+  - Project-specific environment configuration
+
+- **Custom Services Framework (CS_N Pattern)**: Simplified service creation
+  - CS_N=name,framework pattern for defining services
+  - 20+ supported frameworks (js, py, go, rb, php, java, rust, lua, etc.)
+  - Popular framework support (nest, django, flask, rails, laravel, fastify)
+  - Queue worker support (bull, celery, sidekiq)
+  - Complete hello-world templates for all frameworks
+  - Auto-generated docker-compose.custom.yml
+
+- **Frontend Applications Support**: SPA and frontend project configuration
+  - FRONTEND_APPS configuration for multiple frontend applications
+  - Independent routing and deployment per app
+  - Database isolation with table prefixes
+  - Production deployment to Vercel, Netlify, Cloudflare
+  - Remote schema integration with Hasura
+  - Environment-specific routing
+
+- **Enhanced Environment Management**: Multi-environment support
+  - Environment-specific files (.env.local, .env.staging, .env.prod)
+  - Secure secrets management with .env.secrets
+  - Environment compilation and validation
+  - Production security checks and warnings
+  - Hierarchical configuration system
+
+### Changed
+- **File Structure**: Added wizard directory with interactive components
+- **Environment Variables**: Extended .env.example with 150+ new configuration options
+- **Help System**: Updated to include all v0.3.9 commands
+- **Command Router**: Enhanced nself.sh to support new command structure
+
+### Security
+- **Password Management**: Secure password generation for production environments
+- **Environment Secrets**: Separate .env.secrets file for sensitive data
+- **Admin Authentication**: Password hashing and session management
+- **Production Validation**: Security checks for production deployments
+
+## [0.3.8] - 2024-08-17
 
 ### Added
 - **Enterprise Monitoring & Management**:

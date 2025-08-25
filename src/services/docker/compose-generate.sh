@@ -390,6 +390,86 @@ if [[ "$REDIS_ENABLED" == "true" ]]; then
 EOF
 fi
 
+# MLflow service
+if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
+  # Set defaults
+  MLFLOW_VERSION="${MLFLOW_VERSION:-2.9.2}"
+  MLFLOW_PORT="${MLFLOW_PORT:-5000}"
+  MLFLOW_DB_NAME="${MLFLOW_DB_NAME:-mlflow}"
+  MLFLOW_ARTIFACTS_BUCKET="${MLFLOW_ARTIFACTS_BUCKET:-mlflow-artifacts}"
+  MLFLOW_MEMORY_LIMIT="${MLFLOW_MEMORY_LIMIT:-2Gi}"
+  MLFLOW_CPU_LIMIT="${MLFLOW_CPU_LIMIT:-1000m}"
+  MLFLOW_WORKERS="${MLFLOW_WORKERS:-4}"
+  
+  cat >>docker-compose.yml <<EOF
+
+  # MLflow - ML Experiment Tracking & Model Registry
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v${MLFLOW_VERSION}
+    container_name: ${PROJECT_NAME}_mlflow
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - default
+    ports:
+      - "${MLFLOW_PORT}:5000"
+    environment:
+      # Backend store (PostgreSQL)
+      MLFLOW_BACKEND_STORE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MLFLOW_DB_NAME}
+      # Artifact store (MinIO S3)
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: s3://${MLFLOW_ARTIFACTS_BUCKET}/
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      MLFLOW_S3_IGNORE_TLS: "true"
+      # Server configuration
+      MLFLOW_SERVE_ARTIFACTS: ${MLFLOW_SERVE_ARTIFACTS:-true}
+      MLFLOW_WORKERS: ${MLFLOW_WORKERS}
+EOF
+
+  # Add authentication if enabled
+  if [[ "${MLFLOW_AUTH_ENABLED:-false}" == "true" ]]; then
+    cat >>docker-compose.yml <<EOF
+      MLFLOW_AUTH_CONFIG_PATH: /app/auth.ini
+      MLFLOW_AUTH_ENABLED: "true"
+      MLFLOW_ADMIN_USERNAME: ${MLFLOW_ADMIN_USERNAME:-admin}
+      MLFLOW_ADMIN_PASSWORD: ${MLFLOW_ADMIN_PASSWORD}
+EOF
+  fi
+
+  cat >>docker-compose.yml <<EOF
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      sh -c "
+        pip install psycopg2-binary boto3 &&
+        mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MLFLOW_DB_NAME} &&
+        mlflow server
+          --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MLFLOW_DB_NAME}
+          --default-artifact-root s3://${MLFLOW_ARTIFACTS_BUCKET}/
+          --host 0.0.0.0
+          --port 5000
+          --serve-artifacts
+          --workers ${MLFLOW_WORKERS}
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${MLFLOW_MEMORY_LIMIT}
+          cpus: "${MLFLOW_CPU_LIMIT}"
+EOF
+fi
+
 # Email service for development
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
   # Use MailPit (modern replacement for MailHog)
@@ -501,6 +581,11 @@ EOF
 if [[ "$REDIS_ENABLED" == "true" ]]; then
   echo "  redis_data:" >>docker-compose.yml
   echo "    name: ${PROJECT_NAME}_redis_data" >>docker-compose.yml
+fi
+
+if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
+  echo "  mlflow_data:" >>docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_mlflow_data" >>docker-compose.yml
 fi
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]] || [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then

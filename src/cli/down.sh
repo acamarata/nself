@@ -7,5 +7,10 @@ SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 # Source and call stop command
 source "$SCRIPT_DIR/stop.sh"
 
-# Call the stop function with all arguments
-cmd_stop "$@"
+# Export for use as library
+export -f cmd_stop
+
+# Execute if run directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  cmd_stop "$@"
+fi

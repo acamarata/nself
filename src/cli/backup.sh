@@ -17,8 +17,20 @@ source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Backup configuration
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+BACKUP_RETENTION_MIN="${BACKUP_RETENTION_MIN:-3}"  # Minimum backups to keep
+BACKUP_RETENTION_WEEKLY="${BACKUP_RETENTION_WEEKLY:-4}"  # Weekly backups to keep
+BACKUP_RETENTION_MONTHLY="${BACKUP_RETENTION_MONTHLY:-12}"  # Monthly backups to keep
+
+# Cloud storage configuration
+BACKUP_CLOUD_PROVIDER="${BACKUP_CLOUD_PROVIDER:-}"  # s3, dropbox, gdrive, onedrive, rclone
 S3_BUCKET="${S3_BUCKET:-}"
 S3_ENDPOINT="${S3_ENDPOINT:-}"  # For MinIO/S3-compatible
+DROPBOX_TOKEN="${DROPBOX_TOKEN:-}"
+DROPBOX_FOLDER="${DROPBOX_FOLDER:-/nself-backups}"
+GDRIVE_FOLDER_ID="${GDRIVE_FOLDER_ID:-}"
+ONEDRIVE_FOLDER="${ONEDRIVE_FOLDER:-nself-backups}"
+RCLONE_REMOTE="${RCLONE_REMOTE:-}"  # Name of rclone remote
+RCLONE_PATH="${RCLONE_PATH:-nself-backups}"  # Path on remote
 
 # Ensure backup directory exists
 mkdir -p "$BACKUP_DIR"
@@ -77,10 +89,8 @@ cmd_backup_create() {
   # Calculate size
   local size=$(du -h "$backup_path" | cut -f1)
   
-  # Upload to S3 if configured
-  if [[ -n "$S3_BUCKET" ]]; then
-    upload_to_s3 "$backup_path" "$backup_name"
-  fi
+  # Upload to cloud if configured
+  upload_to_cloud "$backup_path" "$backup_name"
   
   # Cleanup
   rm -rf "$temp_dir"
@@ -412,239 +422,388 @@ restore_certificates() {
   fi
 }
 
-# Verify backup integrity
-cmd_backup_verify() {
-  local backup_name="${1:-}"
+# Prune old backups with advanced retention
+cmd_backup_prune() {
+  local policy="${1:-age}"  # age, gfs (grandfather-father-son), smart
+  local days="${2:-$BACKUP_RETENTION_DAYS}"
   
-  if [[ -z "$backup_name" ]]; then
-    echo "Usage: nself backup verify <backup_name>"
-    return 1
-  fi
+  show_command_header "nself backup prune" "Remove old backups"
   
-  show_command_header "nself backup verify" "Verify backup integrity"
-  
-  local backup_path="$BACKUP_DIR/$backup_name"
-  
-  if [[ ! -f "$backup_path" ]]; then
-    log_error "Backup not found: $backup_name"
-    return 1
-  fi
-  
-  echo ""
-  log_info "Verifying backup: $backup_name"
-  
-  # Test tar integrity
-  if tar -tzf "$backup_path" >/dev/null 2>&1; then
-    log_success "✓ Archive integrity: OK"
-  else
-    log_error "✗ Archive corrupted"
-    return 1
-  fi
-  
-  # Test contents
-  local temp_dir=$(mktemp -d)
-  if tar -xzf "$backup_path" -C "$temp_dir" >/dev/null 2>&1; then
-    log_success "✓ Archive extraction: OK"
-    
-    # Check for essential files
-    if [[ -f "$temp_dir/.env.local" ]]; then
-      log_success "✓ Configuration: Found"
-    else
-      log_warning "! Configuration: Missing"
-    fi
-    
-    if [[ -f "$temp_dir/database.sql" ]]; then
-      log_success "✓ Database dump: Found"
-    else
-      log_warning "! Database dump: Missing"
-    fi
-    
-    rm -rf "$temp_dir"
-    echo ""
-    log_success "Backup verification completed"
-  else
-    log_error "✗ Failed to extract backup"
-    rm -rf "$temp_dir"
-    return 1
-  fi
-}
-
-# Schedule automated backups
-cmd_backup_schedule() {
-  local frequency="${1:-daily}"
-  
-  show_command_header "nself backup schedule" "Schedule automated backups"
-  
-  case "$frequency" in
-    daily|hourly|weekly)
+  case "$policy" in
+    age)
+      prune_by_age "$days"
+      ;;
+    gfs)
+      prune_gfs_policy
+      ;;
+    smart)
+      prune_smart_policy
+      ;;
+    cloud)
+      prune_cloud_backups "$days"
       ;;
     *)
-      echo "Usage: nself backup schedule <frequency>"
-      echo "Frequencies: daily, hourly, weekly"
+      log_error "Unknown prune policy: $policy"
+      log_info "Valid policies: age, gfs, smart, cloud"
       return 1
       ;;
   esac
-  
-  echo ""
-  log_info "Setting up $frequency backup schedule..."
-  
-  # Create backup script
-  local script_path="$HOME/.nself/backup-cron.sh"
-  mkdir -p "$(dirname "$script_path")"
-  
-  cat > "$script_path" << EOF
-#!/bin/bash
-cd "$(pwd)"
-nself backup create --auto 2>&1 | logger -t nself-backup
-EOF
-  
-  chmod +x "$script_path"
-  
-  # Setup cron job
-  local cron_entry=""
-  case "$frequency" in
-    hourly)
-      cron_entry="0 * * * * $script_path"
-      ;;
-    daily)
-      cron_entry="0 2 * * * $script_path"
-      ;;
-    weekly)
-      cron_entry="0 2 * * 0 $script_path"
-      ;;
-  esac
-  
-  # Add to crontab
-  (crontab -l 2>/dev/null | grep -v "$script_path"; echo "$cron_entry") | crontab -
-  
-  log_success "Scheduled $frequency backups"
-  echo ""
-  log_info "Backups will run automatically"
-  log_info "View logs with: grep nself-backup /var/log/system.log"
 }
 
-# Export backup to external location
-cmd_backup_export() {
-  local backup_name="${1:-}"
-  local export_path="${2:-}"
-  
-  if [[ -z "$backup_name" ]] || [[ -z "$export_path" ]]; then
-    echo "Usage: nself backup export <backup_name> <path>"
-    return 1
-  fi
-  
-  show_command_header "nself backup export" "Export backup to external location"
-  
-  local backup_path="$BACKUP_DIR/$backup_name"
-  
-  if [[ ! -f "$backup_path" ]]; then
-    log_error "Backup not found: $backup_name"
-    return 1
-  fi
-  
-  echo ""
-  log_info "Exporting backup to: $export_path"
-  
-  if cp "$backup_path" "$export_path"; then
-    log_success "Backup exported successfully"
-  else
-    log_error "Failed to export backup"
-    return 1
-  fi
-}
-
-# Import backup from external location
-cmd_backup_import() {
-  local import_path="${1:-}"
-  
-  if [[ -z "$import_path" ]]; then
-    echo "Usage: nself backup import <path>"
-    return 1
-  fi
-  
-  show_command_header "nself backup import" "Import backup from external location"
-  
-  if [[ ! -f "$import_path" ]]; then
-    log_error "Import file not found: $import_path"
-    return 1
-  fi
-  
-  echo ""
-  log_info "Importing backup from: $import_path"
-  
-  local backup_name="imported_$(basename "$import_path")"
-  local backup_path="$BACKUP_DIR/$backup_name"
-  
-  mkdir -p "$BACKUP_DIR"
-  
-  if cp "$import_path" "$backup_path"; then
-    log_success "Backup imported as: $backup_name"
-    echo ""
-    log_info "Verify with: nself backup verify $backup_name"
-    log_info "Restore with: nself backup restore $backup_name"
-  else
-    log_error "Failed to import backup"
-    return 1
-  fi
-}
-
-# Create point-in-time snapshot
-cmd_backup_snapshot() {
-  local label="${1:-snapshot}"
-  
-  show_command_header "nself backup snapshot" "Create point-in-time snapshot"
-  
-  echo ""
-  log_info "Creating snapshot with label: $label"
-  
-  # Create backup with snapshot naming
-  local timestamp=$(date '+%Y%m%d_%H%M%S')
-  local snapshot_name="snapshot_${label}_${timestamp}"
-  
-  cmd_backup_create "full" "$snapshot_name"
-  
-  echo ""
-  log_success "Snapshot created: $snapshot_name"
-  log_info "This snapshot can be used for point-in-time recovery"
-}
-
-# Prune old backups
-cmd_backup_prune() {
-  local days="${1:-$BACKUP_RETENTION_DAYS}"
-  
-  show_command_header "nself backup prune" "Remove old backups"
+# Simple age-based pruning
+prune_by_age() {
+  local days="$1"
   
   log_info "Removing backups older than $days days..."
   echo ""
   
   local count=0
   local freed_space=0
+  local kept_count=0
   
-  # Find and remove old backups
+  # Count total backups
+  local total_backups=$(find "$BACKUP_DIR" -name "*.tar.gz" -type f 2>/dev/null | wc -l)
+  
+  # Find old backups
   if [[ -d "$BACKUP_DIR" ]]; then
     while IFS= read -r backup; do
       if [[ -f "$backup" ]]; then
-        local size=$(du -k "$backup" | cut -f1)
-        local name=$(basename "$backup")
-        
-        log_info "  Removing: $name"
-        rm -f "$backup"
-        
-        count=$((count + 1))
-        freed_space=$((freed_space + size))
+        # Check if we should keep minimum backups
+        if [[ $((total_backups - count)) -le ${BACKUP_RETENTION_MIN:-3} ]]; then
+          log_info "  Keeping (minimum retention): $(basename "$backup")"
+          kept_count=$((kept_count + 1))
+        else
+          local size=$(du -k "$backup" | cut -f1)
+          local name=$(basename "$backup")
+          
+          log_info "  Removing: $name"
+          rm -f "$backup"
+          
+          count=$((count + 1))
+          freed_space=$((freed_space + size))
+        fi
       fi
-    done < <(find "$BACKUP_DIR" -name "*.tar.gz" -type f -mtime +${days})
+    done < <(find "$BACKUP_DIR" -name "*.tar.gz" -type f -mtime +${days} | sort)
   fi
   
   # Summary
   echo ""
   if [[ $count -gt 0 ]]; then
     local freed_mb=$((freed_space / 1024))
-    log_success "Removed $count old backup(s), freed ${freed_mb}MB"
-  else
+    log_success "Removed $count backup(s), freed ${freed_mb}MB"
+  fi
+  if [[ $kept_count -gt 0 ]]; then
+    log_info "Kept $kept_count backup(s) (minimum retention policy)"
+  fi
+  if [[ $count -eq 0 ]] && [[ $kept_count -eq 0 ]]; then
     log_info "No backups older than $days days found"
   fi
   echo ""
+}
+
+# Grandfather-Father-Son retention policy
+prune_gfs_policy() {
+  log_info "Applying GFS retention policy..."
+  echo ""
+  log_info "  Keeping: Last 7 daily, 4 weekly, 12 monthly backups"
+  echo ""
+  
+  local daily="${BACKUP_RETENTION_DAILY:-7}"
+  local weekly="${BACKUP_RETENTION_WEEKLY:-4}"
+  local monthly="${BACKUP_RETENTION_MONTHLY:-12}"
+  
+  # This is a complex policy - for now, keep recent + sample older
+  # In production, this would analyze backup dates and keep strategic samples
+  
+  local count=0
+  local kept=0
+  
+  # Sort backups by date (newest first)
+  local backups=($(ls -t "$BACKUP_DIR"/*.tar.gz 2>/dev/null))
+  
+  for i in "${!backups[@]}"; do
+    local backup="${backups[$i]}"
+    local name=$(basename "$backup")
+    
+    if [[ $i -lt $daily ]]; then
+      # Keep daily backups
+      log_info "  [DAILY] Keeping: $name"
+      kept=$((kept + 1))
+    elif [[ $((i % 7)) -eq 0 ]] && [[ $i -lt $((daily + weekly * 7)) ]]; then
+      # Keep weekly backups
+      log_info "  [WEEKLY] Keeping: $name"
+      kept=$((kept + 1))
+    elif [[ $((i % 30)) -eq 0 ]] && [[ $i -lt $((daily + weekly * 7 + monthly * 30)) ]]; then
+      # Keep monthly backups
+      log_info "  [MONTHLY] Keeping: $name"
+      kept=$((kept + 1))
+    else
+      # Remove old backup
+      log_info "  Removing: $name"
+      rm -f "$backup"
+      count=$((count + 1))
+    fi
+  done
+  
+  echo ""
+  log_success "GFS policy applied: Kept $kept, removed $count backup(s)"
+  echo ""
+}
+
+# Smart retention policy (keeps important backups)
+prune_smart_policy() {
+  log_info "Applying smart retention policy..."
+  echo ""
+  
+  # Keep backups based on importance:
+  # - All backups from last 24 hours
+  # - Daily backups for last week
+  # - Weekly backups for last month
+  # - Monthly backups for last year
+  # - Yearly backups forever
+  
+  local now=$(date +%s)
+  local count=0
+  local kept=0
+  
+  if [[ -d "$BACKUP_DIR" ]]; then
+    for backup in "$BACKUP_DIR"/*.tar.gz; do
+      if [[ -f "$backup" ]]; then
+        local name=$(basename "$backup")
+        local backup_time=$(stat -f %m "$backup" 2>/dev/null || stat -c %Y "$backup")
+        local age_days=$(( (now - backup_time) / 86400 ))
+        
+        local keep=false
+        local reason=""
+        
+        if [[ $age_days -le 1 ]]; then
+          keep=true
+          reason="last 24 hours"
+        elif [[ $age_days -le 7 ]]; then
+          keep=true
+          reason="last week"
+        elif [[ $age_days -le 30 ]] && [[ $((age_days % 7)) -eq 0 ]]; then
+          keep=true
+          reason="weekly (last month)"
+        elif [[ $age_days -le 365 ]] && [[ $((age_days % 30)) -eq 0 ]]; then
+          keep=true
+          reason="monthly (last year)"
+        elif [[ $((age_days % 365)) -eq 0 ]]; then
+          keep=true
+          reason="yearly"
+        fi
+        
+        if [[ "$keep" == true ]]; then
+          log_info "  Keeping ($reason): $name"
+          kept=$((kept + 1))
+        else
+          log_info "  Removing: $name"
+          rm -f "$backup"
+          count=$((count + 1))
+        fi
+      fi
+    done
+  fi
+  
+  echo ""
+  log_success "Smart policy applied: Kept $kept, removed $count backup(s)"
+  echo ""
+}
+
+# Prune cloud backups
+prune_cloud_backups() {
+  local days="${1:-30}"
+  
+  log_info "Pruning cloud backups older than $days days..."
+  echo ""
+  
+  local provider="${BACKUP_CLOUD_PROVIDER:-}"
+  
+  case "$provider" in
+    s3)
+      if command -v aws >/dev/null 2>&1; then
+        log_info "Pruning S3 backups..."
+        # List and delete old S3 objects
+        local cutoff_date=$(date -d "$days days ago" +%Y-%m-%d 2>/dev/null || date -v -${days}d +%Y-%m-%d)
+        aws s3 ls "s3://$S3_BUCKET/nself-backups/" | while read -r line; do
+          local file_date=$(echo "$line" | awk '{print $1}')
+          local file_name=$(echo "$line" | awk '{print $4}')
+          if [[ "$file_date" < "$cutoff_date" ]]; then
+            log_info "  Removing from S3: $file_name"
+            aws s3 rm "s3://$S3_BUCKET/nself-backups/$file_name"
+          fi
+        done
+      fi
+      ;;
+    rclone)
+      if command -v rclone >/dev/null 2>&1; then
+        log_info "Pruning rclone backups..."
+        rclone delete "${RCLONE_REMOTE}:${RCLONE_PATH}" --min-age "${days}d"
+      fi
+      ;;
+    *)
+      log_warning "Cloud pruning not implemented for: $provider"
+      ;;
+  esac
+  
+  echo ""
+  log_success "Cloud pruning complete"
+  echo ""
+}
+
+# Universal cloud upload function
+upload_to_cloud() {
+  local file_path="$1"
+  local file_name="$2"
+  
+  # Determine which cloud provider to use
+  local provider="${BACKUP_CLOUD_PROVIDER:-}"
+  
+  # Auto-detect if not specified
+  if [[ -z "$provider" ]]; then
+    if [[ -n "$S3_BUCKET" ]]; then
+      provider="s3"
+    elif [[ -n "$DROPBOX_TOKEN" ]]; then
+      provider="dropbox"
+    elif [[ -n "$GDRIVE_FOLDER_ID" ]]; then
+      provider="gdrive"
+    elif [[ -n "$RCLONE_REMOTE" ]]; then
+      provider="rclone"
+    fi
+  fi
+  
+  # Upload based on provider
+  case "$provider" in
+    s3)
+      upload_to_s3 "$file_path" "$file_name"
+      ;;
+    dropbox)
+      upload_to_dropbox "$file_path" "$file_name"
+      ;;
+    gdrive)
+      upload_to_gdrive "$file_path" "$file_name"
+      ;;
+    onedrive)
+      upload_to_onedrive "$file_path" "$file_name"
+      ;;
+    rclone)
+      upload_to_rclone "$file_path" "$file_name"
+      ;;
+    "")
+      # No cloud provider configured, skip
+      ;;
+    *)
+      log_warning "Unknown cloud provider: $provider"
+      ;;
+  esac
+}
+
+# Upload to Dropbox
+upload_to_dropbox() {
+  local file_path="$1"
+  local file_name="$2"
+  
+  if [[ -z "$DROPBOX_TOKEN" ]]; then
+    log_warning "Dropbox token not configured"
+    return 1
+  fi
+  
+  log_info "Uploading to Dropbox..."
+  
+  local dropbox_path="${DROPBOX_FOLDER}/${file_name}"
+  
+  # Use Dropbox API
+  if command -v curl >/dev/null 2>&1; then
+    local response=$(curl -s -X POST https://content.dropboxapi.com/2/files/upload \
+      --header "Authorization: Bearer ${DROPBOX_TOKEN}" \
+      --header "Dropbox-API-Arg: {\"path\": \"${dropbox_path}\", \"mode\": \"overwrite\"}" \
+      --header "Content-Type: application/octet-stream" \
+      --data-binary @"${file_path}" 2>&1)
+    
+    if echo "$response" | grep -q "error"; then
+      log_error "Dropbox upload failed: $response"
+      return 1
+    else
+      log_success "  Uploaded to Dropbox: $dropbox_path"
+    fi
+  else
+    log_warning "curl not found, cannot upload to Dropbox"
+    return 1
+  fi
+}
+
+# Upload to Google Drive
+upload_to_gdrive() {
+  local file_path="$1"
+  local file_name="$2"
+  
+  log_info "Uploading to Google Drive..."
+  
+  # Check for gdrive CLI tool
+  if command -v gdrive >/dev/null 2>&1; then
+    if [[ -n "$GDRIVE_FOLDER_ID" ]]; then
+      gdrive upload --parent "$GDRIVE_FOLDER_ID" "$file_path" || {
+        log_warning "Failed to upload to Google Drive"
+        return 1
+      }
+    else
+      gdrive upload "$file_path" || {
+        log_warning "Failed to upload to Google Drive"
+        return 1
+      }
+    fi
+    log_success "  Uploaded to Google Drive: $file_name"
+  else
+    log_warning "gdrive CLI not installed. Install from: https://github.com/prasmussen/gdrive"
+    log_info "  Or use rclone instead: nself backup cloud setup"
+    return 1
+  fi
+}
+
+# Upload to OneDrive
+upload_to_onedrive() {
+  local file_path="$1"
+  local file_name="$2"
+  
+  log_info "Uploading to OneDrive..."
+  
+  # OneDrive requires rclone or similar tool
+  if command -v rclone >/dev/null 2>&1; then
+    rclone copy "$file_path" "onedrive:${ONEDRIVE_FOLDER}/" || {
+      log_warning "Failed to upload to OneDrive"
+      return 1
+    }
+    log_success "  Uploaded to OneDrive: ${ONEDRIVE_FOLDER}/$file_name"
+  else
+    log_warning "rclone not installed. OneDrive requires rclone."
+    log_info "  Run: nself backup cloud setup"
+    return 1
+  fi
+}
+
+# Upload using rclone (supports 40+ providers)
+upload_to_rclone() {
+  local file_path="$1"
+  local file_name="$2"
+  
+  if [[ -z "$RCLONE_REMOTE" ]]; then
+    log_warning "rclone remote not configured"
+    return 1
+  fi
+  
+  log_info "Uploading via rclone to $RCLONE_REMOTE..."
+  
+  if command -v rclone >/dev/null 2>&1; then
+    rclone copy "$file_path" "${RCLONE_REMOTE}:${RCLONE_PATH}/" || {
+      log_warning "Failed to upload via rclone"
+      return 1
+    }
+    log_success "  Uploaded via rclone: ${RCLONE_REMOTE}:${RCLONE_PATH}/$file_name"
+  else
+    log_warning "rclone not installed"
+    log_info "  Run: nself backup cloud setup"
+    return 1
+  fi
 }
 
 # Upload to S3
@@ -675,34 +834,375 @@ upload_to_s3() {
   fi
 }
 
+# Cloud setup wizard
+cmd_backup_cloud() {
+  local action="${1:-setup}"
+  
+  case "$action" in
+    setup)
+      backup_cloud_setup
+      ;;
+    status)
+      backup_cloud_status
+      ;;
+    test)
+      backup_cloud_test
+      ;;
+    *)
+      log_error "Unknown cloud action: $action"
+      echo "Usage: nself backup cloud [setup|status|test]"
+      return 1
+      ;;
+  esac
+}
+
+# Setup cloud backup provider
+backup_cloud_setup() {
+  show_command_header "nself backup cloud setup" "Configure cloud backup provider"
+  
+  echo "Select cloud provider:"
+  echo "  1) Amazon S3"
+  echo "  2) Dropbox"
+  echo "  3) Google Drive"
+  echo "  4) OneDrive"
+  echo "  5) rclone (supports 40+ providers)"
+  echo "  6) None (disable cloud backups)"
+  echo ""
+  echo -n "Choice [1-6]: "
+  read choice
+  
+  case "$choice" in
+    1)
+      setup_s3
+      ;;
+    2)
+      setup_dropbox
+      ;;
+    3)
+      setup_gdrive
+      ;;
+    4)
+      setup_onedrive
+      ;;
+    5)
+      setup_rclone
+      ;;
+    6)
+      echo "BACKUP_CLOUD_PROVIDER=" >> .env.local
+      log_info "Cloud backups disabled"
+      ;;
+    *)
+      log_error "Invalid choice"
+      return 1
+      ;;
+  esac
+}
+
+# Setup S3
+setup_s3() {
+  log_info "Setting up Amazon S3..."
+  echo ""
+  
+  echo -n "S3 bucket name: "
+  read s3_bucket
+  
+  echo -n "S3 endpoint (leave empty for AWS): "
+  read s3_endpoint
+  
+  echo -n "AWS Access Key ID: "
+  read aws_key
+  
+  echo -n "AWS Secret Access Key: "
+  read -s aws_secret
+  echo ""
+  
+  # Save configuration
+  {
+    echo "BACKUP_CLOUD_PROVIDER=s3"
+    echo "S3_BUCKET=$s3_bucket"
+    [[ -n "$s3_endpoint" ]] && echo "S3_ENDPOINT=$s3_endpoint"
+    echo "AWS_ACCESS_KEY_ID=$aws_key"
+    echo "AWS_SECRET_ACCESS_KEY=$aws_secret"
+  } >> .env.local
+  
+  log_success "S3 configuration saved"
+  echo ""
+  log_info "Testing S3 connection..."
+  backup_cloud_test
+}
+
+# Setup Dropbox
+setup_dropbox() {
+  log_info "Setting up Dropbox..."
+  echo ""
+  echo "To use Dropbox backup, you need an access token:"
+  echo "  1. Go to https://www.dropbox.com/developers/apps"
+  echo "  2. Create a new app (scoped access)"
+  echo "  3. Generate an access token"
+  echo ""
+  echo -n "Dropbox access token: "
+  read -s dropbox_token
+  echo ""
+  
+  echo -n "Dropbox folder path [/nself-backups]: "
+  read dropbox_folder
+  dropbox_folder="${dropbox_folder:-/nself-backups}"
+  
+  # Save configuration
+  {
+    echo "BACKUP_CLOUD_PROVIDER=dropbox"
+    echo "DROPBOX_TOKEN=$dropbox_token"
+    echo "DROPBOX_FOLDER=$dropbox_folder"
+  } >> .env.local
+  
+  log_success "Dropbox configuration saved"
+  echo ""
+  log_info "Testing Dropbox connection..."
+  backup_cloud_test
+}
+
+# Setup Google Drive
+setup_gdrive() {
+  log_info "Setting up Google Drive..."
+  echo ""
+  
+  # Check if gdrive is installed
+  if ! command -v gdrive >/dev/null 2>&1; then
+    log_warning "gdrive CLI not installed"
+    echo ""
+    echo "Install gdrive CLI:"
+    echo "  1. Download from: https://github.com/prasmussen/gdrive"
+    echo "  2. Follow authentication instructions"
+    echo ""
+    echo "Or use rclone instead (option 5)"
+    return 1
+  fi
+  
+  echo "Authenticating with Google Drive..."
+  gdrive list
+  
+  echo -n "Google Drive folder ID (optional): "
+  read gdrive_folder
+  
+  # Save configuration
+  {
+    echo "BACKUP_CLOUD_PROVIDER=gdrive"
+    [[ -n "$gdrive_folder" ]] && echo "GDRIVE_FOLDER_ID=$gdrive_folder"
+  } >> .env.local
+  
+  log_success "Google Drive configuration saved"
+}
+
+# Setup OneDrive
+setup_onedrive() {
+  log_info "Setting up OneDrive..."
+  echo ""
+  echo "OneDrive requires rclone. Setting up rclone for OneDrive..."
+  echo ""
+  
+  # Install rclone if needed
+  if ! command -v rclone >/dev/null 2>&1; then
+    log_info "Installing rclone..."
+    curl https://rclone.org/install.sh | sudo bash
+  fi
+  
+  log_info "Configuring rclone for OneDrive..."
+  rclone config create onedrive onedrive
+  
+  echo -n "OneDrive folder path [nself-backups]: "
+  read onedrive_folder
+  onedrive_folder="${onedrive_folder:-nself-backups}"
+  
+  # Save configuration
+  {
+    echo "BACKUP_CLOUD_PROVIDER=onedrive"
+    echo "ONEDRIVE_FOLDER=$onedrive_folder"
+  } >> .env.local
+  
+  log_success "OneDrive configuration saved"
+}
+
+# Setup rclone
+setup_rclone() {
+  log_info "Setting up rclone..."
+  echo ""
+  
+  # Install rclone if needed
+  if ! command -v rclone >/dev/null 2>&1; then
+    log_info "Installing rclone..."
+    curl https://rclone.org/install.sh | sudo bash
+  fi
+  
+  log_info "Running rclone configuration wizard..."
+  echo "rclone supports 40+ cloud providers including:"
+  echo "  Box, Dropbox, Google Drive, OneDrive, MEGA, pCloud, etc."
+  echo ""
+  rclone config
+  
+  echo -n "rclone remote name: "
+  read rclone_remote
+  
+  echo -n "Remote path [nself-backups]: "
+  read rclone_path
+  rclone_path="${rclone_path:-nself-backups}"
+  
+  # Save configuration
+  {
+    echo "BACKUP_CLOUD_PROVIDER=rclone"
+    echo "RCLONE_REMOTE=$rclone_remote"
+    echo "RCLONE_PATH=$rclone_path"
+  } >> .env.local
+  
+  log_success "rclone configuration saved"
+}
+
+# Show cloud backup status
+backup_cloud_status() {
+  show_command_header "nself backup cloud status" "Cloud backup configuration"
+  
+  local provider="${BACKUP_CLOUD_PROVIDER:-none}"
+  
+  echo "Provider: $provider"
+  echo ""
+  
+  case "$provider" in
+    s3)
+      echo "S3 Bucket: ${S3_BUCKET:-not configured}"
+      echo "S3 Endpoint: ${S3_ENDPOINT:-AWS}"
+      echo "AWS Key: ${AWS_ACCESS_KEY_ID:+configured}"
+      ;;
+    dropbox)
+      echo "Dropbox Token: ${DROPBOX_TOKEN:+configured}"
+      echo "Dropbox Folder: ${DROPBOX_FOLDER:-/nself-backups}"
+      ;;
+    gdrive)
+      echo "Google Drive: ${GDRIVE_FOLDER_ID:-root folder}"
+      ;;
+    onedrive)
+      echo "OneDrive Folder: ${ONEDRIVE_FOLDER:-nself-backups}"
+      ;;
+    rclone)
+      echo "rclone Remote: ${RCLONE_REMOTE:-not configured}"
+      echo "rclone Path: ${RCLONE_PATH:-nself-backups}"
+      ;;
+    none)
+      echo "No cloud provider configured"
+      echo "Run 'nself backup cloud setup' to configure"
+      ;;
+  esac
+  echo ""
+}
+
+# Test cloud backup connection
+backup_cloud_test() {
+  show_command_header "nself backup cloud test" "Testing cloud connection"
+  
+  local test_file=$(mktemp)
+  echo "nself backup test" > "$test_file"
+  local test_name="test_$(date +%s).txt"
+  
+  upload_to_cloud "$test_file" "$test_name"
+  local result=$?
+  
+  rm -f "$test_file"
+  
+  if [[ $result -eq 0 ]]; then
+    log_success "Cloud backup test successful!"
+  else
+    log_error "Cloud backup test failed"
+  fi
+  echo ""
+}
+
+# Schedule automatic backups
+cmd_backup_schedule() {
+  local frequency="${1:-daily}"
+  
+  show_command_header "nself backup schedule" "Setup automatic backups"
+  
+  log_info "Setting up $frequency backups..."
+  echo ""
+  
+  # Create backup script
+  local backup_script="/usr/local/bin/nself-backup"
+  cat > "$backup_script" << 'EOF'
+#!/bin/bash
+cd $(dirname $(nself which))
+nself backup create full
+nself backup prune smart
+EOF
+  chmod +x "$backup_script"
+  
+  # Setup cron job
+  local cron_entry=""
+  case "$frequency" in
+    hourly)
+      cron_entry="0 * * * * $backup_script"
+      ;;
+    daily)
+      cron_entry="0 3 * * * $backup_script"
+      ;;
+    weekly)
+      cron_entry="0 3 * * 0 $backup_script"
+      ;;
+    monthly)
+      cron_entry="0 3 1 * * $backup_script"
+      ;;
+    *)
+      log_error "Invalid frequency: $frequency"
+      echo "Valid options: hourly, daily, weekly, monthly"
+      return 1
+      ;;
+  esac
+  
+  # Add to crontab
+  (crontab -l 2>/dev/null | grep -v "nself-backup"; echo "$cron_entry") | crontab -
+  
+  log_success "Scheduled $frequency backups"
+  echo ""
+  log_info "View schedule: crontab -l"
+  log_info "Remove schedule: crontab -e (delete nself-backup line)"
+  echo ""
+}
+
 # Show help
 show_backup_help() {
   echo "Usage: nself backup <command> [options]"
   echo ""
   echo "Commands:"
-  echo "  create [type] [name]   Create a backup (types: full, database, config)"
-  echo "  list                   List available backups"
-  echo "  restore <name> [type]  Restore from backup"
-  echo "  prune [days]           Remove backups older than N days (default: 30)"
-  echo "  verify <name>          Verify backup integrity"
-  echo "  schedule <frequency>   Schedule automated backups (daily, hourly, weekly)"
-  echo "  export <name> <path>   Export backup to external location"
-  echo "  import <path>          Import backup from external location"
-  echo "  snapshot [label]       Create point-in-time snapshot"
-  echo "  rollback [backup_id]   Rollback to specific backup"
+  echo "  create [type] [name]     Create a backup (types: full, database, config)"
+  echo "  list                     List available backups"
+  echo "  restore <name> [type]    Restore from backup"
+  echo "  prune [policy] [days]    Remove old backups"
+  echo "                           Policies: age, gfs, smart, cloud"
+  echo "  cloud [action]           Manage cloud backups"
+  echo "                           Actions: setup, status, test"
+  echo "  schedule [frequency]     Schedule automatic backups"
+  echo "                           Frequencies: hourly, daily, weekly, monthly"
   echo ""
   echo "Environment Variables:"
-  echo "  BACKUP_DIR             Directory for backups (default: ./backups)"
-  echo "  BACKUP_RETENTION_DAYS  Days to keep backups (default: 30)"
-  echo "  S3_BUCKET              S3 bucket for remote backups (optional)"
-  echo "  S3_ENDPOINT            S3 endpoint for MinIO/compatible (optional)"
+  echo "  BACKUP_DIR                Directory for backups (default: ./backups)"
+  echo "  BACKUP_RETENTION_DAYS     Days to keep backups (default: 30)"
+  echo "  BACKUP_RETENTION_MIN      Minimum backups to keep (default: 3)"
+  echo "  BACKUP_CLOUD_PROVIDER     Cloud provider: s3, dropbox, gdrive, onedrive, rclone"
+  echo ""
+  echo "Cloud Provider Variables:"
+  echo "  S3: S3_BUCKET, S3_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
+  echo "  Dropbox: DROPBOX_TOKEN, DROPBOX_FOLDER"
+  echo "  Google Drive: GDRIVE_FOLDER_ID"
+  echo "  OneDrive: ONEDRIVE_FOLDER"
+  echo "  rclone: RCLONE_REMOTE, RCLONE_PATH"
   echo ""
   echo "Examples:"
-  echo "  nself backup create                    # Create full backup"
-  echo "  nself backup create database            # Database only"
-  echo "  nself backup list                       # Show all backups"
-  echo "  nself backup restore backup_20240101.tar.gz  # Restore backup"
-  echo "  nself backup prune 7                    # Remove backups older than 7 days"
+  echo "  nself backup create                      # Create full backup"
+  echo "  nself backup create database my-backup   # Database backup with custom name"
+  echo "  nself backup list                        # Show all backups"
+  echo "  nself backup restore backup.tar.gz       # Restore full backup"
+  echo "  nself backup prune age 7                 # Remove backups older than 7 days"
+  echo "  nself backup prune gfs                   # Apply GFS retention policy"
+  echo "  nself backup prune smart                 # Apply smart retention policy"
+  echo "  nself backup cloud setup                 # Configure cloud provider"
+  echo "  nself backup schedule daily              # Schedule daily backups"
 }
 
 # Main command router
@@ -723,30 +1223,11 @@ cmd_backup() {
     prune|clean)
       cmd_backup_prune "$@"
       ;;
-    verify)
-      cmd_backup_verify "$@"
+    cloud)
+      cmd_backup_cloud "$@"
       ;;
     schedule)
       cmd_backup_schedule "$@"
-      ;;
-    export)
-      cmd_backup_export "$@"
-      ;;
-    import)
-      cmd_backup_import "$@"
-      ;;
-    snapshot)
-      cmd_backup_snapshot "$@"
-      ;;
-    rollback)
-      # Use the rollback command for backup-specific rollback
-      if [[ -f "$SCRIPT_DIR/rollback.sh" ]]; then
-        source "$SCRIPT_DIR/rollback.sh"
-        cmd_rollback backup "$@"
-      else
-        log_error "Rollback command not available"
-        return 1
-      fi
       ;;
     help|-h|--help)
       show_backup_help

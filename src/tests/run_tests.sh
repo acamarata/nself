@@ -32,7 +32,7 @@ if ! command -v bats >/dev/null 2>&1; then
 
   # Test 1: Check if install.sh exists
   echo -n "Testing install.sh existence... "
-  if [ -f "../install.sh" ]; then
+  if [ -f "../../install.sh" ]; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else
@@ -40,9 +40,9 @@ if ! command -v bats >/dev/null 2>&1; then
     ((TESTS_FAILED++))
   fi
 
-  # Test 2: Check if nself.sh exists
-  echo -n "Testing nself.sh existence... "
-  if [ -f "../bin/nself.sh" ]; then
+  # Test 2: Check if nself binary exists
+  echo -n "Testing nself binary existence... "
+  if [ -f "../../bin/nself" ]; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else
@@ -52,8 +52,8 @@ if ! command -v bats >/dev/null 2>&1; then
 
   # Test 3: Check VERSION file
   echo -n "Testing VERSION file... "
-  if [ -f "../bin/VERSION" ]; then
-    VERSION=$(cat ../bin/VERSION)
+  if [ -f "../VERSION" ]; then
+    VERSION=$(cat ../VERSION)
     echo -e "${GREEN}✓${NC} (v$VERSION)"
     ((TESTS_PASSED++))
   else
@@ -63,7 +63,7 @@ if ! command -v bats >/dev/null 2>&1; then
 
   # Test 4: Check shell script syntax
   echo -n "Testing install.sh syntax... "
-  if bash -n ../install.sh 2>/dev/null; then
+  if bash -n ../../install.sh 2>/dev/null; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else
@@ -72,7 +72,7 @@ if ! command -v bats >/dev/null 2>&1; then
   fi
 
   echo -n "Testing nself.sh syntax... "
-  if bash -n ../bin/nself.sh 2>/dev/null; then
+  if bash -n ../cli/nself.sh 2>/dev/null; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else
@@ -82,9 +82,9 @@ if ! command -v bats >/dev/null 2>&1; then
 
   # Test 5: Check for required functions in install.sh
   echo -n "Testing install.sh functions... "
-  if grep -q "check_existing_installation" ../install.sh &&
-    grep -q "check_requirements" ../install.sh &&
-    grep -q "show_spinner" ../install.sh; then
+  if grep -q "check_existing_installation" ../../install.sh &&
+    grep -q "check_requirements" ../../install.sh &&
+    grep -q "show_spinner" ../../install.sh; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else
@@ -94,9 +94,9 @@ if ! command -v bats >/dev/null 2>&1; then
 
   # Test 6: Check for required functions in nself.sh
   echo -n "Testing nself.sh functions... "
-  if grep -q "cmd_update" ../bin/nself.sh &&
-    grep -q "cmd_init" ../bin/nself.sh &&
-    grep -q "show_spinner" ../bin/nself.sh; then
+  if grep -q "cmd_update" ../cli/nself.sh &&
+    grep -q "cmd_init" ../cli/nself.sh &&
+    grep -q "show_spinner" ../cli/nself.sh; then
     echo -e "${GREEN}✓${NC}"
     ((TESTS_PASSED++))
   else

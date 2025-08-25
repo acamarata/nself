@@ -66,7 +66,7 @@ cmd_prod() {
 
   # Load current environment
   if [[ -f ".env.local" ]]; then
-    source .env.local
+    load_env_with_priority
   else
     log_error "No .env.local found. Run 'nself init' first"
     return 1

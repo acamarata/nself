@@ -431,7 +431,7 @@ main() {
 
   # Load environment
   if [[ -f ".env.local" ]]; then
-    load_env_safe ".env.local"
+    load_env_with_priority
   fi
 
   # Show command header (not for help mode)
