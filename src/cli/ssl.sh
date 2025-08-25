@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source utilities
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/ssl/ssl.sh"
 source "$SCRIPT_DIR/../lib/ssl/trust.sh"
 
@@ -42,7 +43,7 @@ ssl_bootstrap() {
   # Load environment variables if .env.local exists
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 
@@ -121,7 +122,7 @@ ssl_renew() {
   # Load environment variables if .env.local exists
   if [[ -f ".env.local" ]]; then
     set -a
-    source .env.local
+    load_env_with_priority
     set +a
   fi
 

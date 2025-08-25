@@ -1,667 +1,1369 @@
 #!/usr/bin/env bash
+# metrics.sh - Complete monitoring stack management
 
-# metrics.sh - Metrics and observability management
-
-set -e
+set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source utilities
-source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/header.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
+source "$SCRIPT_DIR/../lib/config/defaults.sh"
+source "$SCRIPT_DIR/../lib/monitoring/profiles.sh"
+
+# Load environment configuration
+if [[ -f .env.local ]]; then
+  set -a
+  load_env_with_priority
+  set +a
+elif [[ -f .env ]]; then
+  set -a
+  load_env_with_priority
+  set +a
+fi
+
+# Command function
+cmd_metrics() {
+  local action="${1:-status}"
+  shift || true
+  
+  case "$action" in
+    enable)
+      enable_monitoring "$@"
+      ;;
+    disable)
+      disable_monitoring "$@"
+      ;;
+    status)
+      show_monitoring_status "$@"
+      ;;
+    profile)
+      manage_monitoring_profile "$@"
+      ;;
+    config)
+      configure_monitoring "$@"
+      ;;
+    dashboard|dashboards)
+      open_dashboards "$@"
+      ;;
+    --help|-h|help)
+      show_metrics_help
+      ;;
+    *)
+      log_error "Unknown action: $action"
+      show_metrics_help
+      return 1
+      ;;
+  esac
+}
 
 # Show help
 show_metrics_help() {
-  echo "nself metrics - Metrics and observability management"
+  echo "nself metrics - Complete monitoring stack management"
   echo ""
-  echo "Usage: nself metrics <command> [options]"
+  echo "Usage: nself metrics [action] [options]"
   echo ""
-  echo "Commands:"
-  echo "  enable             Enable metrics collection"
-  echo "  disable            Disable metrics collection"
-  echo "  status             Show metrics status"
-  echo "  dashboard          Open metrics dashboard"
-  echo "  export             Export metrics data"
-  echo "  configure          Configure metrics providers"
+  echo "Actions:"
+  echo "  enable [profile]    Enable monitoring with optional profile"
+  echo "  disable             Disable monitoring stack"
+  echo "  status              Show monitoring status and components"
+  echo "  profile [name]      View or change monitoring profile"
+  echo "  config              Configure monitoring settings"
+  echo "  dashboard           Open Grafana dashboard"
+  echo ""
+  echo "Profiles:"
+  echo "  minimal   Metrics only (Prometheus + Grafana, ~1GB RAM)"
+  echo "  standard  Metrics + Logs (adds Loki, ~2GB RAM)"
+  echo "  full      Complete observability (adds Tempo + Alertmanager, ~3-4GB RAM)"
+  echo "  custom    Use individual component settings from .env"
+  echo "  auto      Smart defaults based on ENV (dev→minimal, staging→standard, prod→full)"
   echo ""
   echo "Options:"
-  echo "  --provider <name>  Metrics provider (prometheus, datadog, newrelic)"
-  echo "  --port <port>      Metrics endpoint port (default: 9090)"
-  echo "  --interval <sec>   Collection interval in seconds (default: 30)"
-  echo "  --retention <days> Data retention in days (default: 30)"
-  echo "  -h, --help         Show this help message"
+  echo "  --profile <name>    Specify monitoring profile"
+  echo "  --force             Force enable/disable without prompts"
+  echo "  --no-restart        Don't restart services after changes"
   echo ""
   echo "Examples:"
-  echo "  nself metrics enable"
-  echo "  nself metrics enable --provider prometheus"
-  echo "  nself metrics status"
-  echo "  nself metrics dashboard"
-  echo "  nself metrics export --format json --output metrics.json"
+  echo "  nself metrics enable              # Enable with smart defaults"
+  echo "  nself metrics enable full         # Enable full monitoring"
+  echo "  nself metrics status              # Show current monitoring setup"
+  echo "  nself metrics profile standard    # Switch to standard profile"
+  echo "  nself metrics dashboard           # Open Grafana"
+  echo ""
+  echo "Environment Variables:"
+  echo "  MONITORING_ENABLED     Enable/disable monitoring (true/false)"
+  echo "  MONITORING_PROFILE     Set profile (minimal/standard/full/custom/auto)"
+  echo "  ENV                    Environment (dev/staging/prod) - affects auto profile"
+  echo ""
+  echo "Note: Monitoring is disabled by default for simplicity."
+  echo "      Enable it explicitly when you need observability."
 }
 
-# Check metrics status
-check_metrics_status() {
-  local enabled=false
-  local provider="none"
-  local endpoint=""
+# Enable monitoring
+enable_monitoring() {
+  local profile=""
+  local force=false
+  local no_restart=false
   
-  # Check if metrics are enabled in .env.local
-  if [[ -f ".env.local" ]]; then
-    set -a
-    source .env.local
-    set +a
-    
-    if [[ "${METRICS_ENABLED:-false}" == "true" ]]; then
-      enabled=true
-      provider="${METRICS_PROVIDER:-prometheus}"
-      endpoint="${METRICS_ENDPOINT:-http://localhost:9090}"
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --profile)
+        profile="$2"
+        shift 2
+        ;;
+      --force)
+        force=true
+        shift
+        ;;
+      --no-restart)
+        no_restart=true
+        shift
+        ;;
+      -*)
+        # Unknown option
+        shift
+        ;;
+      *)
+        if [[ -z "$profile" ]]; then
+          profile="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+  
+  # Set profile if specified
+  if [[ -n "$profile" ]]; then
+    export MONITORING_PROFILE="$profile"
+  fi
+  
+  # Get effective profile
+  local effective_profile="$(get_monitoring_profile)"
+  
+  log_info "Enabling monitoring with profile: $effective_profile"
+  echo ""
+  get_profile_description "$effective_profile"
+  echo ""
+  
+  # Confirm unless forced
+  if [[ "$force" != "true" ]]; then
+    echo -n "Continue? [Y/n] "
+    read -r response
+    if [[ "$response" =~ ^[Nn] ]]; then
+      log_info "Cancelled"
+      return 0
     fi
   fi
-  
-  # Check if metrics config exists
-  if [[ -f ".nself/metrics.conf" ]]; then
-    set -a
-    source .nself/metrics.conf
-    set +a
-    enabled="${METRICS_ENABLED:-false}"
-    provider="${METRICS_PROVIDER:-prometheus}"
-  fi
-  
-  echo "$enabled|$provider|$endpoint"
-}
-
-# Enable metrics
-enable_metrics() {
-  local provider="${1:-prometheus}"
-  local port="${2:-9090}"
-  local interval="${3:-30}"
-  local retention="${4:-30}"
-  
-  show_command_header "nself metrics enable" "Enabling metrics collection"
-  echo ""
-  
-  printf "${COLOR_CYAN}➞ Configuration${COLOR_RESET}\n"
-  echo "  Provider: $provider"
-  echo "  Port: $port"
-  echo "  Collection interval: ${interval}s"
-  echo "  Data retention: ${retention} days"
-  echo ""
   
   # Update .env.local
-  if [[ -f ".env.local" ]]; then
-    # Add or update metrics configuration
-    if grep -q "^METRICS_ENABLED=" .env.local; then
-      if ! sed -i.bak "s/^METRICS_ENABLED=.*/METRICS_ENABLED=true/" .env.local; then
-        log_error "Failed to update METRICS_ENABLED"
-        return 1
-      fi
-    else
-      echo "" >> .env.local
-      echo "# Metrics configuration" >> .env.local
-      echo "METRICS_ENABLED=true" >> .env.local
-    fi
-    
-    if grep -q "^METRICS_PROVIDER=" .env.local; then
-      sed -i.bak "s/^METRICS_PROVIDER=.*/METRICS_PROVIDER=$provider/" .env.local
-    else
-      echo "METRICS_PROVIDER=$provider" >> .env.local
-    fi
-    
-    if grep -q "^METRICS_PORT=" .env.local; then
-      sed -i.bak "s/^METRICS_PORT=.*/METRICS_PORT=$port/" .env.local
-    else
-      echo "METRICS_PORT=$port" >> .env.local
-    fi
-    
-    if grep -q "^METRICS_INTERVAL=" .env.local; then
-      sed -i.bak "s/^METRICS_INTERVAL=.*/METRICS_INTERVAL=$interval/" .env.local
-    else
-      echo "METRICS_INTERVAL=$interval" >> .env.local
-    fi
-    
-    if grep -q "^METRICS_RETENTION=" .env.local; then
-      sed -i.bak "s/^METRICS_RETENTION=.*/METRICS_RETENTION=$retention/" .env.local
-    else
-      echo "METRICS_RETENTION=$retention" >> .env.local
-    fi
-    
-    rm -f .env.local.bak
+  update_env_file "MONITORING_ENABLED" "true"
+  if [[ -n "$profile" ]]; then
+    update_env_file "MONITORING_PROFILE" "$profile"
   fi
   
-  # Create metrics config
-  mkdir -p .nself
-  cat > .nself/metrics.conf <<EOF
-METRICS_ENABLED=true
-METRICS_PROVIDER=$provider
-METRICS_PORT=$port
-METRICS_INTERVAL=$interval
-METRICS_RETENTION=$retention
-METRICS_ENDPOINT=http://localhost:$port
-EOF
+  # Apply profile settings
+  apply_monitoring_profile "$effective_profile"
   
-  # Add provider-specific configuration
-  case "$provider" in
-    prometheus)
-      cat > .nself/prometheus.yml <<EOF
-global:
-  scrape_interval: ${interval}s
-  evaluation_interval: ${interval}s
+  # Create monitoring configurations
+  create_monitoring_configs
+  
+  # Generate docker-compose overrides
+  generate_monitoring_compose
+  
+  # Restart services unless disabled
+  if [[ "$no_restart" != "true" ]]; then
+    log_info "Restarting services with monitoring enabled..."
+    "$SCRIPT_DIR/build.sh"
+    "$SCRIPT_DIR/up.sh"
+  fi
+  
+  log_success "Monitoring enabled successfully!"
+  echo ""
+  echo "Access your monitoring stack:"
+  echo "  • Grafana:    https://grafana.${BASE_DOMAIN:-local.nself.org}"
+  
+  if [[ "${MONITORING_METRICS:-}" == "true" ]]; then
+    echo "  • Prometheus: https://prometheus.${BASE_DOMAIN:-local.nself.org}"
+  fi
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    echo "  • Loki:       https://loki.${BASE_DOMAIN:-local.nself.org}"
+  fi
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    echo "  • Tempo:      https://tempo.${BASE_DOMAIN:-local.nself.org}"
+  fi
+  if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+    echo "  • Alerts:     https://alerts.${BASE_DOMAIN:-local.nself.org}"
+  fi
+  
+  echo ""
+  echo "Default Grafana credentials:"
+  echo "  Username: ${GRAFANA_ADMIN_USER:-admin}"
+  echo "  Password: ${GRAFANA_ADMIN_PASSWORD:-admin-password-change-me}"
+}
 
-scrape_configs:
-  - job_name: 'nself'
-    static_configs:
-      - targets: ['localhost:9090']
-    
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres:9187']
-    
-  - job_name: 'nginx'
-    static_configs:
-      - targets: ['nginx:9113']
-    
-  - job_name: 'hasura'
-    static_configs:
-      - targets: ['hasura:8080']
-    
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:9121']
-EOF
-      
-      log_info "Prometheus configuration created"
+# Disable monitoring
+disable_monitoring() {
+  local force=false
+  local no_restart=false
+  
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force)
+        force=true
+        shift
+        ;;
+      --no-restart)
+        no_restart=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+  
+  log_info "Disabling monitoring stack..."
+  
+  # Confirm unless forced
+  if [[ "$force" != "true" ]]; then
+    echo -n "This will stop all monitoring services. Continue? [Y/n] "
+    read -r response
+    if [[ "$response" =~ ^[Nn] ]]; then
+      log_info "Cancelled"
+      return 0
+    fi
+  fi
+  
+  # Update .env.local
+  update_env_file "MONITORING_ENABLED" "false"
+  
+  # Stop monitoring containers
+  if [[ "$no_restart" != "true" ]]; then
+    log_info "Stopping monitoring services..."
+    docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml down || true
+  fi
+  
+  log_success "Monitoring disabled"
+}
+
+# Show monitoring status
+show_monitoring_status() {
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║                    MONITORING STATUS                         ║"
+  echo "╚══════════════════════════════════════════════════════════════╝"
+  echo ""
+  
+  # Check if enabled
+  if [[ "${MONITORING_ENABLED:-false}" != "true" ]]; then
+    echo "Status: $(color_text "DISABLED" "yellow")"
+    echo ""
+    echo "To enable monitoring, run:"
+    echo "  nself metrics enable"
+    return 0
+  fi
+  
+  echo "Status: $(color_text "ENABLED" "green")"
+  
+  # Get current profile
+  local profile="$(get_monitoring_profile)"
+  echo "Profile: $(color_text "$profile" "cyan")"
+  echo ""
+  
+  # Show profile details
+  get_profile_description "$profile"
+  echo ""
+  
+  # Check running services
+  echo "Service Status:"
+  
+  # Always check core services
+  check_service_status "prometheus" "Prometheus"
+  check_service_status "grafana" "Grafana"
+  check_service_status "cadvisor" "cAdvisor"
+  
+  # Check profile-specific services
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    check_service_status "loki" "Loki"
+    check_service_status "promtail" "Promtail"
+  fi
+  
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    check_service_status "tempo" "Tempo"
+  fi
+  
+  if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+    check_service_status "alertmanager" "Alertmanager"
+  fi
+  
+  # Check exporters
+  if [[ "${MONITORING_EXPORTERS:-}" == "true" ]]; then
+    echo ""
+    echo "Exporters:"
+    [[ "${NODE_EXPORTER_ENABLED:-}" == "true" ]] && check_service_status "node-exporter" "Node Exporter"
+    [[ "${POSTGRES_EXPORTER_ENABLED:-}" == "true" ]] && check_service_status "postgres-exporter" "PostgreSQL Exporter"
+    [[ "${REDIS_EXPORTER_ENABLED:-}" == "true" ]] && check_service_status "redis-exporter" "Redis Exporter"
+    [[ "${BLACKBOX_EXPORTER_ENABLED:-}" == "true" ]] && check_service_status "blackbox-exporter" "Blackbox Exporter"
+  fi
+  
+  echo ""
+  echo "Resource Usage:"
+  show_monitoring_resources
+  
+  echo ""
+  echo "Access Points:"
+  echo "  • Grafana:    https://grafana.${BASE_DOMAIN:-local.nself.org}"
+  [[ "${PROMETHEUS_WEB_ENABLE:-true}" == "true" ]] && echo "  • Prometheus: https://prometheus.${BASE_DOMAIN:-local.nself.org}"
+}
+
+# Check service status
+check_service_status() {
+  local service="$1"
+  local display_name="$2"
+  local container_name="${PROJECT_NAME:-nself}_${service}"
+  
+  if docker ps --format "table {{.Names}}" | grep -q "^${container_name}$"; then
+    echo "  • $display_name: $(color_text "Running" "green")"
+  else
+    echo "  • $display_name: $(color_text "Stopped" "red")"
+  fi
+}
+
+# Show monitoring resource usage
+show_monitoring_resources() {
+  local total_cpu=0
+  local total_memory=0
+  
+  # Get stats for monitoring containers
+  local containers=(prometheus grafana loki tempo alertmanager cadvisor node-exporter promtail)
+  
+  for container in "${containers[@]}"; do
+    local container_name="${PROJECT_NAME:-nself}_${container}"
+    if docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+      local stats=$(docker stats --no-stream --format "{{.CPUPerc}} {{.MemUsage}}" "$container_name" 2>/dev/null || echo "0% 0MiB")
+      if [[ -n "$stats" ]]; then
+        local cpu=$(echo "$stats" | awk '{print $1}' | sed 's/%//')
+        local mem=$(echo "$stats" | awk '{print $2}' | sed 's/MiB.*//')
+        
+        # Add to totals (simplified calculation)
+        total_cpu=$(echo "$total_cpu + $cpu" | bc 2>/dev/null || echo "$total_cpu")
+        total_memory=$(echo "$total_memory + $mem" | bc 2>/dev/null || echo "$total_memory")
+      fi
+    fi
+  done
+  
+  echo "  • Total CPU:    ~${total_cpu}%"
+  echo "  • Total Memory: ~${total_memory}MiB"
+  echo "  • Disk Usage:   $(du -sh .nself/monitoring 2>/dev/null | awk '{print $1}' || echo "N/A")"
+}
+
+# Manage monitoring profile
+manage_monitoring_profile() {
+  local new_profile="${1:-}"
+  
+  if [[ -z "$new_profile" ]]; then
+    # Show current profile
+    local current_profile="$(get_monitoring_profile)"
+    echo "Current monitoring profile: $(color_text "$current_profile" "cyan")"
+    echo ""
+    get_profile_description "$current_profile"
+    echo ""
+    echo "Available profiles:"
+    echo "  • minimal  - Metrics only (~1GB RAM)"
+    echo "  • standard - Metrics + Logs (~2GB RAM)"
+    echo "  • full     - Complete observability (~3-4GB RAM)"
+    echo "  • custom   - Use individual settings"
+    echo "  • auto     - Smart defaults based on ENV"
+    return 0
+  fi
+  
+  # Validate profile
+  case "$new_profile" in
+    minimal|standard|full|custom|auto)
       ;;
-    
-    datadog)
-      cat > .nself/datadog.yaml <<EOF
-api_key: YOUR_DATADOG_API_KEY
-site: datadoghq.com
-hostname: nself-local
-tags:
-  - env:development
-  - project:${PROJECT_NAME:-nself}
-
-logs_enabled: true
-process_config:
-  enabled: true
-
-apm_config:
-  enabled: true
-  env: development
-EOF
-      
-      log_warning "Update .nself/datadog.yaml with your API key"
-      ;;
-    
-    newrelic)
-      cat > .nself/newrelic.yml <<EOF
-license_key: YOUR_NEW_RELIC_LICENSE_KEY
-app_name: ${PROJECT_NAME:-nself}
-monitor_mode: true
-developer_mode: false
-log_level: info
-
-distributed_tracing:
-  enabled: true
-
-slow_sql:
-  enabled: true
-  record_sql: obfuscated
-  explain_threshold: 500
-EOF
-      
-      log_warning "Update .nself/newrelic.yml with your license key"
+    *)
+      log_error "Invalid profile: $new_profile"
+      echo "Valid profiles: minimal, standard, full, custom, auto"
+      return 1
       ;;
   esac
   
-  echo ""
-  log_success "Metrics collection enabled"
+  log_info "Switching to profile: $new_profile"
   
-  # Add metrics service to docker-compose.override.yml
-  if [[ "$provider" == "prometheus" ]]; then
-    local override_file="docker-compose.override.yml"
+  # Update configuration
+  update_env_file "MONITORING_PROFILE" "$new_profile"
+  
+  # Apply profile
+  apply_monitoring_profile "$new_profile"
+  
+  # Regenerate configs
+  create_monitoring_configs
+  generate_monitoring_compose
+  
+  log_success "Profile updated to: $new_profile"
+  echo ""
+  echo "Run 'nself build && nself up' to apply changes"
+}
+
+# Configure monitoring
+configure_monitoring() {
+  local setting="${1:-}"
+  local value="${2:-}"
+  
+  if [[ -z "$setting" ]]; then
+    echo "Monitoring Configuration:"
+    echo ""
+    echo "Core Settings:"
+    echo "  MONITORING_ENABLED:     ${MONITORING_ENABLED:-false}"
+    echo "  MONITORING_PROFILE:     ${MONITORING_PROFILE:-auto}"
+    echo ""
+    echo "Components:"
+    echo "  MONITORING_METRICS:     ${MONITORING_METRICS:-true}"
+    echo "  MONITORING_LOGS:        ${MONITORING_LOGS:-false}"
+    echo "  MONITORING_TRACING:     ${MONITORING_TRACING:-false}"
+    echo "  MONITORING_ALERTS:      ${MONITORING_ALERTS:-false}"
+    echo "  MONITORING_EXPORTERS:   ${MONITORING_EXPORTERS:-false}"
+    echo ""
+    echo "Grafana:"
+    echo "  GRAFANA_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}"
+    echo "  GRAFANA_ROUTE:          ${GRAFANA_ROUTE:-grafana.\$BASE_DOMAIN}"
+    echo ""
+    echo "Resource Limits:"
+    echo "  MONITORING_CPU_LIMIT:    ${MONITORING_CPU_LIMIT:-2000m}"
+    echo "  MONITORING_MEMORY_LIMIT: ${MONITORING_MEMORY_LIMIT:-4Gi}"
+    echo ""
+    echo "To change a setting:"
+    echo "  nself metrics config <setting> <value>"
+    return 0
+  fi
+  
+  # Update setting
+  update_env_file "$setting" "$value"
+  log_success "Updated $setting = $value"
+  echo "Run 'nself build && nself up' to apply changes"
+}
+
+# Open dashboards
+open_dashboards() {
+  local dashboard="${1:-grafana}"
+  
+  case "$dashboard" in
+    grafana)
+      local url="https://grafana.${BASE_DOMAIN:-local.nself.org}"
+      ;;
+    prometheus)
+      local url="https://prometheus.${BASE_DOMAIN:-local.nself.org}"
+      ;;
+    loki)
+      local url="https://loki.${BASE_DOMAIN:-local.nself.org}"
+      ;;
+    alerts|alertmanager)
+      local url="https://alerts.${BASE_DOMAIN:-local.nself.org}"
+      ;;
+    *)
+      log_error "Unknown dashboard: $dashboard"
+      return 1
+      ;;
+  esac
+  
+  log_info "Opening $dashboard dashboard..."
+  echo "URL: $url"
+  
+  # Try to open in browser
+  if command -v open &>/dev/null; then
+    open "$url"
+  elif command -v xdg-open &>/dev/null; then
+    xdg-open "$url"
+  else
+    echo "Please open manually: $url"
+  fi
+}
+
+# Create monitoring configuration files
+create_monitoring_configs() {
+  local config_dir=".nself/monitoring"
+  mkdir -p "$config_dir"
+  
+  # Create Prometheus config
+  create_prometheus_config "$config_dir/prometheus.yml"
+  
+  # Create Grafana provisioning
+  create_grafana_provisioning "$config_dir"
+  
+  # Create Loki config if enabled
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    create_loki_config "$config_dir/loki.yml"
+    create_promtail_config "$config_dir/promtail.yml"
+  fi
+  
+  # Create Alertmanager config if enabled
+  if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+    create_alertmanager_config "$config_dir/alertmanager.yml"
+    create_alert_rules "$config_dir/alerts.yml"
+  fi
+  
+  # Create Tempo config if enabled
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    create_tempo_config "$config_dir/tempo.yml"
+  fi
+}
+
+# Create Prometheus configuration
+create_prometheus_config() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+global:
+  scrape_interval: ${PROMETHEUS_SCRAPE_INTERVAL:-15s}
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'nself-monitor'
+    environment: '${ENV:-dev}'
+
+# Alert manager configuration
+EOF
+
+  if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:${ALERTMANAGER_PORT:-9093}
+
+# Load alert rules
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+EOF
+  fi
+
+  cat >> "$config_file" <<EOF
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:${GRAFANA_PORT:-3000}']
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metric_relabel_configs:
+      - source_labels: [name]
+        regex: '${PROJECT_NAME:-nself}_(.*)'
+        target_label: container_name
+        replacement: '\${1}'
+EOF
+
+  # Add Node Exporter if enabled
+  if [[ "${NODE_EXPORTER_ENABLED:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # Node Exporter for host metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+EOF
+  fi
+
+  # Add PostgreSQL Exporter if enabled
+  if [[ "${POSTGRES_EXPORTER_ENABLED:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # PostgreSQL metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+EOF
+  fi
+
+  # Add Redis Exporter if enabled
+  if [[ "${REDIS_EXPORTER_ENABLED:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+EOF
+  fi
+
+  # Add Blackbox Exporter if enabled
+  if [[ "${BLACKBOX_EXPORTER_ENABLED:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # Blackbox Exporter for endpoint monitoring
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://api.${BASE_DOMAIN:-local.nself.org}
+          - https://auth.${BASE_DOMAIN:-local.nself.org}
+          - https://storage.${BASE_DOMAIN:-local.nself.org}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+EOF
+  fi
+
+  # Add Docker metrics
+  cat >> "$config_file" <<EOF
+
+  # Docker daemon metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+EOF
+
+  # Add Loki if enabled
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # Loki metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:${LOKI_PORT:-3100}']
+EOF
+  fi
+
+  # Add Tempo if enabled
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+
+  # Tempo metrics
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:${TEMPO_PORT:-3200}']
+EOF
+  fi
+}
+
+# Create Grafana provisioning
+create_grafana_provisioning() {
+  local config_dir="$1"
+  
+  # Create provisioning directories
+  mkdir -p "$config_dir/grafana/provisioning/datasources"
+  mkdir -p "$config_dir/grafana/provisioning/dashboards"
+  mkdir -p "$config_dir/grafana/dashboards"
+  
+  # Create datasources config
+  cat > "$config_dir/grafana/provisioning/datasources/datasources.yml" <<EOF
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:${PROMETHEUS_PORT:-9090}
+    isDefault: true
+    editable: true
+EOF
+
+  # Add Loki datasource if enabled
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    cat >> "$config_dir/grafana/provisioning/datasources/datasources.yml" <<EOF
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:${LOKI_PORT:-3100}
+    editable: true
+EOF
+  fi
+
+  # Add Tempo datasource if enabled
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    cat >> "$config_dir/grafana/provisioning/datasources/datasources.yml" <<EOF
+
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:${TEMPO_PORT:-3200}
+    editable: true
+EOF
+  fi
+
+  # Create dashboard provisioning config
+  cat > "$config_dir/grafana/provisioning/dashboards/dashboards.yml" <<EOF
+apiVersion: 1
+
+providers:
+  - name: 'nself'
+    orgId: 1
+    folder: 'nself'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+EOF
+
+  # Create default dashboards
+  create_grafana_dashboards "$config_dir/grafana/dashboards"
+}
+
+# Create Grafana dashboards
+create_grafana_dashboards() {
+  local dashboard_dir="$1"
+  
+  # Create Container Overview Dashboard
+  cat > "$dashboard_dir/container-overview.json" <<'EOF'
+{
+  "dashboard": {
+    "title": "nself Container Overview",
+    "panels": [
+      {
+        "title": "Container CPU Usage",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"${PROJECT_NAME}\"}[5m]) * 100"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "title": "Container Memory Usage",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{container_label_com_docker_compose_project=\"${PROJECT_NAME}\"}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      }
+    ]
+  }
+}
+EOF
+}
+
+# Create Loki configuration
+create_loki_config() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+auth_enabled: false
+
+server:
+  http_listen_port: ${LOKI_PORT:-3100}
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://alertmanager:${ALERTMANAGER_PORT:-9093}
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: ${LOKI_RETENTION:-7d}
+  max_entries_limit_per_query: 5000
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+  max_line_size: ${LOKI_MAX_LINE_SIZE:-256kb}
+EOF
+}
+
+# Create Promtail configuration
+create_promtail_config() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:${LOKI_PORT:-3100}/loki/api/v1/push
+
+scrape_configs:
+  - job_name: containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: containerlogs
+          __path__: /var/lib/docker/containers/*/*log
     
-    if [[ ! -f "$override_file" ]]; then
-      cat > "$override_file" <<EOF
+    pipeline_stages:
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            time: time
+      - json:
+          expressions:
+            tag: attrs.tag
+          source: stream
+      - regex:
+          expression: '^(?P<container_name>/${PROJECT_NAME:-nself}_[^/]+)'
+          source: tag
+      - labels:
+          container_name:
+      - output:
+          source: output
+EOF
+}
+
+# Create Alertmanager configuration
+create_alertmanager_config() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default'
+  
+receivers:
+  - name: 'default'
+EOF
+
+  # Add webhook if configured
+  if [[ -n "${ALERTMANAGER_WEBHOOK_URL:-}" ]]; then
+    cat >> "$config_file" <<EOF
+    webhook_configs:
+      - url: '${ALERTMANAGER_WEBHOOK_URL}'
+        send_resolved: true
+EOF
+  fi
+
+  # Add email if configured
+  if [[ -n "${ALERTMANAGER_EMAIL_TO:-}" ]]; then
+    cat >> "$config_file" <<EOF
+    email_configs:
+      - to: '${ALERTMANAGER_EMAIL_TO}'
+        from: '${ALERTMANAGER_EMAIL_FROM:-alerts@local.nself.org}'
+        smarthost: '${AUTH_SMTP_HOST:-mailpit}:${AUTH_SMTP_PORT:-1025}'
+        auth_username: '${AUTH_SMTP_USER:-}'
+        auth_password: '${AUTH_SMTP_PASS:-}'
+        send_resolved: true
+EOF
+  fi
+
+  # Add PagerDuty if configured
+  if [[ -n "${ALERTMANAGER_PAGERDUTY_KEY:-}" ]]; then
+    cat >> "$config_file" <<EOF
+    pagerduty_configs:
+      - service_key: '${ALERTMANAGER_PAGERDUTY_KEY}'
+        send_resolved: true
+EOF
+  fi
+
+cat >> "$config_file" <<EOF
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+EOF
+}
+
+# Create alert rules
+create_alert_rules() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+groups:
+  - name: nself_alerts
+    interval: 30s
+    rules:
+EOF
+
+  # High CPU alert
+  if [[ "${ALERTS_HIGH_CPU:-true}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "Container {{ \$labels.name }} CPU usage is above 80% (current: {{ \$value }}%)"
+
+EOF
+  fi
+
+  # High Memory alert
+  if [[ "${ALERTS_HIGH_MEMORY:-true}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Container {{ \$labels.name }} memory usage is above 80% (current: {{ \$value }}%)"
+
+EOF
+  fi
+
+  # Service down alert
+  if [[ "${ALERTS_SERVICE_DOWN:-true}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ \$labels.job }} service {{ \$labels.instance }} is down"
+
+EOF
+  fi
+
+  # Disk space alert
+  if [[ "${ALERTS_DISK_SPACE:-true}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space is running low"
+          description: "Less than 10% disk space remaining ({{ \$value }}% free)"
+
+EOF
+  fi
+
+  # High error rate alert
+  if [[ "${ALERTS_HIGH_ERROR_RATE:-true}" == "true" ]]; then
+    cat >> "$config_file" <<EOF
+      - alert: HighErrorRate
+        expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% (current: {{ \$value }})"
+EOF
+  fi
+}
+
+# Create Tempo configuration
+create_tempo_config() {
+  local config_file="$1"
+  
+  cat > "$config_file" <<EOF
+server:
+  http_listen_port: ${TEMPO_PORT:-3200}
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+        grpc:
+
+ingester:
+  trace_idle_period: 10s
+  max_block_bytes: 1_000_000
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    max_block_bytes: 100_000_000
+    block_retention: ${TEMPO_RETENTION:-72h}
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/blocks
+    wal:
+      path: /tmp/tempo/wal
+
+overrides:
+  defaults:
+    metrics:
+      enable_exemplars: true
+    ingestion:
+      rate_limit_bytes: 15000000
+      burst_size_bytes: 20000000
+      max_traces_per_user: 10000
+EOF
+}
+
+# Generate monitoring Docker Compose override
+generate_monitoring_compose() {
+  local compose_file="docker-compose.monitoring.yml"
+  
+  cat > "$compose_file" <<EOF
 version: '3.8'
+
 services:
 EOF
-    fi
-    
-    # Check if prometheus already exists
-    if ! grep -q "^  prometheus:" "$override_file"; then
-      cat >> "$override_file" <<EOF
+
+  # Always add core monitoring services
+  if [[ "${MONITORING_ENABLED:-}" == "true" ]]; then
+    # Prometheus
+    cat >> "$compose_file" <<EOF
   prometheus:
     image: prom/prometheus:latest
-    container_name: \${PROJECT_NAME:-nself}-prometheus
+    container_name: \${PROJECT_NAME:-nself}_prometheus
     volumes:
-      - ./.nself/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./.nself/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./.nself/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=${retention}d'
+      - '--storage.tsdb.retention.time=\${PROMETHEUS_RETENTION:-15d}'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
     ports:
-      - "${port}:9090"
-    restart: unless-stopped
+      - "\${PROMETHEUS_PORT:-9090}:9090"
     networks:
-      - default
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: \${PROMETHEUS_MEMORY_LIMIT:-1Gi}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(\`prometheus.\${BASE_DOMAIN:-local.nself.org}\`)"
+      - "traefik.http.routers.prometheus.tls=true"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: \${PROJECT_NAME:-nself}_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=\${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin-password-change-me}
+      - GF_AUTH_ANONYMOUS_ENABLED=\${GRAFANA_ANONYMOUS_ENABLED:-false}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_USERS_DEFAULT_THEME=\${GRAFANA_DEFAULT_THEME:-dark}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./.nself/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./.nself/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "\${GRAFANA_PORT:-3000}:3000"
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: \${GRAFANA_MEMORY_LIMIT:-512Mi}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(\`grafana.\${BASE_DOMAIN:-local.nself.org}\`)"
+      - "traefik.http.routers.grafana.tls=true"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: \${PROJECT_NAME:-nself}_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 200Mi
+
+EOF
+
+    # Add Loki and Promtail if logs enabled
+    if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  loki:
+    image: grafana/loki:latest
+    container_name: \${PROJECT_NAME:-nself}_loki
+    ports:
+      - "\${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./.nself/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: \${LOKI_MEMORY_LIMIT:-512Mi}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(\`loki.\${BASE_DOMAIN:-local.nself.org}\`)"
+      - "traefik.http.routers.loki.tls=true"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: \${PROJECT_NAME:-nself}_promtail
+    volumes:
+      - ./.nself/monitoring/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 100Mi
+
+EOF
+    fi
+
+    # Add Tempo if tracing enabled
+    if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  tempo:
+    image: grafana/tempo:latest
+    container_name: \${PROJECT_NAME:-nself}_tempo
+    command: [ "-config.file=/etc/tempo.yml" ]
+    volumes:
+      - ./.nself/monitoring/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/tmp/tempo
+    ports:
+      - "\${TEMPO_PORT:-3200}:3200"
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: \${TEMPO_MEMORY_LIMIT:-512Mi}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tempo.rule=Host(\`tempo.\${BASE_DOMAIN:-local.nself.org}\`)"
+      - "traefik.http.routers.tempo.tls=true"
+
+EOF
+    fi
+
+    # Add Alertmanager if alerts enabled
+    if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: \${PROJECT_NAME:-nself}_alertmanager
+    volumes:
+      - ./.nself/monitoring/alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "\${ALERTMANAGER_PORT:-9093}:9093"
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 100Mi
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(\`alerts.\${BASE_DOMAIN:-local.nself.org}\`)"
+      - "traefik.http.routers.alertmanager.tls=true"
+
+EOF
+    fi
+
+    # Add exporters
+    if [[ "${NODE_EXPORTER_ENABLED:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: \${PROJECT_NAME:-nself}_node_exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)(\$\$|/)'
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 50Mi
+
+EOF
+    fi
+
+    if [[ "${POSTGRES_EXPORTER_ENABLED:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: \${PROJECT_NAME:-nself}_postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:\${POSTGRES_PORT:-5432}/\${POSTGRES_DB:-nhost}?sslmode=disable"
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 50Mi
+
+EOF
+    fi
+
+    if [[ "${REDIS_EXPORTER_ENABLED:-}" == "true" ]] && [[ "${REDIS_ENABLED:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: \${PROJECT_NAME:-nself}_redis_exporter
+    environment:
+      REDIS_ADDR: "redis:\${REDIS_PORT:-6379}"
+      REDIS_PASSWORD: "\${REDIS_PASSWORD:-}"
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 30Mi
+
+EOF
+    fi
+
+    if [[ "${BLACKBOX_EXPORTER_ENABLED:-}" == "true" ]]; then
+      cat >> "$compose_file" <<EOF
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: \${PROJECT_NAME:-nself}_blackbox_exporter
+    volumes:
+      - ./.nself/monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - \${DOCKER_NETWORK:-nself_network}
+    restart: unless-stopped
+    mem_limit: 50Mi
+
+EOF
+    fi
+  fi
+
+  # Add volumes
+  cat >> "$compose_file" <<EOF
 
 volumes:
   prometheus_data:
+  grafana_data:
 EOF
-      
-      log_info "Prometheus service added to docker-compose.override.yml"
-    fi
-    
-    echo ""
-    log_info "Run 'nself build && nself restart' to apply changes"
+
+  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    cat >> "$compose_file" <<EOF
+  loki_data:
+EOF
   fi
-  
-  return 0
+
+  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    cat >> "$compose_file" <<EOF
+  tempo_data:
+EOF
+  fi
+
+  if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
+    cat >> "$compose_file" <<EOF
+  alertmanager_data:
+EOF
+  fi
+
+  cat >> "$compose_file" <<EOF
+
+networks:
+  \${DOCKER_NETWORK:-nself_network}:
+    external: true
+EOF
+
+  log_success "Generated docker-compose.monitoring.yml"
 }
 
-# Disable metrics
-disable_metrics() {
-  show_command_header "nself metrics disable" "Disabling metrics collection"
-  echo ""
+# Update env file helper
+update_env_file() {
+  local key="$1"
+  local value="$2"
+  local env_file=".env.local"
   
-  # Update .env.local
-  if [[ -f ".env.local" ]]; then
-    if grep -q "^METRICS_ENABLED=" .env.local; then
-      sed -i.bak "s/^METRICS_ENABLED=.*/METRICS_ENABLED=false/" .env.local
-      rm -f .env.local.bak
-    fi
+  # Create .env.local if it doesn't exist
+  if [[ ! -f "$env_file" ]]; then
+    touch "$env_file"
   fi
   
-  # Update metrics config
-  if [[ -f ".nself/metrics.conf" ]]; then
-    sed -i.bak "s/^METRICS_ENABLED=.*/METRICS_ENABLED=false/" .nself/metrics.conf
-    rm -f .nself/metrics.conf.bak
-  fi
-  
-  # Stop metrics container if running
-  if docker compose ps 2>/dev/null | grep -q prometheus; then
-    log_info "Stopping prometheus container..."
-    docker compose stop prometheus 2>/dev/null || true
-  fi
-  
-  log_success "Metrics collection disabled"
-  echo ""
-  log_info "Metrics configuration preserved in .nself/"
-  log_info "Run 'nself metrics enable' to re-enable"
-  
-  return 0
-}
-
-# Show metrics status
-show_metrics_status() {
-  show_command_header "nself metrics status" "Metrics collection status"
-  echo ""
-  
-  local status_info
-  status_info=$(check_metrics_status)
-  
-  IFS='|' read -r enabled provider endpoint <<< "$status_info"
-  
-  printf "${COLOR_CYAN}➞ Status${COLOR_RESET}\n"
-  echo ""
-  
-  if [[ "$enabled" == "true" ]]; then
-    printf "  ${COLOR_GREEN}●${COLOR_RESET} Metrics: Enabled\n"
-    echo "  Provider: $provider"
-    echo "  Endpoint: $endpoint"
-    
-    # Check if provider container is running
-    case "$provider" in
-      prometheus)
-        if docker compose ps 2>/dev/null | grep -q prometheus; then
-          printf "  Container: ${COLOR_GREEN}Running${COLOR_RESET}\n"
-        else
-          printf "  Container: ${COLOR_RED}Not running${COLOR_RESET}\n"
-          echo ""
-          log_info "Run 'nself restart' to start metrics collection"
-        fi
-        ;;
-    esac
-    
-    echo ""
-    
-    # Show collected metrics summary
-    printf "${COLOR_CYAN}➞ Collected Metrics${COLOR_RESET}\n"
-    echo ""
-    
-    # List services being monitored
-    local services=(postgres nginx hasura redis)
-    for service in "${services[@]}"; do
-      if docker compose ps 2>/dev/null | grep -q "$service"; then
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} %s\n" "$service"
-      else
-        printf "  ${COLOR_DIM}○${COLOR_RESET} %s\n" "$service"
-      fi
-    done
-    
+  # Update or add the setting
+  if grep -q "^${key}=" "$env_file"; then
+    # Update existing
+    sed -i.bak "s/^${key}=.*/${key}=${value}/" "$env_file"
+    rm -f "${env_file}.bak"
   else
-    printf "  ${COLOR_RED}●${COLOR_RESET} Metrics: Disabled\n"
-    echo ""
-    log_info "Run 'nself metrics enable' to start collecting metrics"
+    # Add new
+    echo "${key}=${value}" >> "$env_file"
   fi
-  
-  return 0
 }
 
-# Open metrics dashboard
-open_dashboard() {
-  local status_info
-  status_info=$(check_metrics_status)
+# Color text helper
+color_text() {
+  local text="$1"
+  local color="$2"
   
-  IFS='|' read -r enabled provider endpoint <<< "$status_info"
-  
-  if [[ "$enabled" != "true" ]]; then
-    log_error "Metrics collection is not enabled"
-    echo ""
-    log_info "Run 'nself metrics enable' first"
-    return 1
-  fi
-  
-  show_command_header "nself metrics dashboard" "Opening metrics dashboard"
-  echo ""
-  
-  case "$provider" in
-    prometheus)
-      local url="http://localhost:${METRICS_PORT:-9090}"
-      printf "${COLOR_CYAN}➞ Dashboard URL:${COLOR_RESET} %s\n" "$url"
-      echo ""
-      
-      # Try to open in browser
-      if command -v open >/dev/null 2>&1; then
-        open "$url"
-        log_success "Opening dashboard in browser..."
-      elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "$url"
-        log_success "Opening dashboard in browser..."
-      else
-        log_info "Open this URL in your browser: $url"
-      fi
+  case "$color" in
+    red)
+      echo -e "\033[0;31m${text}\033[0m"
       ;;
-    
-    datadog|newrelic)
-      log_info "Dashboard available in $provider web console"
+    green)
+      echo -e "\033[0;32m${text}\033[0m"
       ;;
-    
+    yellow)
+      echo -e "\033[0;33m${text}\033[0m"
+      ;;
+    blue)
+      echo -e "\033[0;34m${text}\033[0m"
+      ;;
+    cyan)
+      echo -e "\033[0;36m${text}\033[0m"
+      ;;
     *)
-      log_error "Unknown provider: $provider"
-      return 1
-      ;;
-  esac
-  
-  return 0
-}
-
-# Export metrics
-export_metrics() {
-  local format="${1:-json}"
-  local output="${2:-metrics.json}"
-  
-  show_command_header "nself metrics export" "Exporting metrics data"
-  echo ""
-  
-  local status_info
-  status_info=$(check_metrics_status)
-  
-  IFS='|' read -r enabled provider endpoint <<< "$status_info"
-  
-  if [[ "$enabled" != "true" ]]; then
-    log_error "Metrics collection is not enabled"
-    return 1
-  fi
-  
-  printf "${COLOR_CYAN}➞ Export Configuration${COLOR_RESET}\n"
-  echo "  Format: $format"
-  echo "  Output: $output"
-  echo ""
-  
-  case "$provider" in
-    prometheus)
-      # Query prometheus API for metrics
-      local api_url="http://localhost:${METRICS_PORT:-9090}/api/v1"
-      
-      log_info "Querying metrics from Prometheus..."
-      
-      # Check if curl is available
-      if ! command -v curl >/dev/null 2>&1; then
-        log_error "curl is required for exporting metrics"
-        return 1
-      fi
-      
-      # Get current metrics
-      if curl -s "${api_url}/query?query=up" > "$output" 2>/dev/null; then
-        log_success "Metrics exported to $output"
-      else
-        log_error "Failed to export metrics"
-        return 1
-      fi
-      ;;
-    
-    *)
-      log_error "Export not supported for provider: $provider"
-      return 1
-      ;;
-  esac
-  
-  return 0
-}
-
-# Configure metrics provider
-configure_metrics() {
-  local provider="${1:-prometheus}"
-  
-  show_command_header "nself metrics configure" "Configure metrics provider"
-  echo ""
-  
-  case "$provider" in
-    prometheus)
-      log_info "Editing Prometheus configuration..."
-      
-      if [[ -f ".nself/prometheus.yml" ]]; then
-        # Try to find an available editor
-        local editor="${EDITOR:-}"
-        
-        if [[ -z "$editor" ]]; then
-          if command -v nano >/dev/null 2>&1; then
-            editor="nano"
-          elif command -v vim >/dev/null 2>&1; then
-            editor="vim"
-          elif command -v vi >/dev/null 2>&1; then
-            editor="vi"
-          else
-            log_error "No text editor found. Set EDITOR environment variable."
-            return 1
-          fi
-        fi
-        
-        "$editor" .nself/prometheus.yml
-      else
-        log_error "Prometheus configuration not found"
-        log_info "Run 'nself metrics enable --provider prometheus' first"
-        return 1
-      fi
-      ;;
-    
-    datadog)
-      log_info "Editing Datadog configuration..."
-      
-      if [[ -f ".nself/datadog.yaml" ]]; then
-        # Try to find an available editor
-        local editor="${EDITOR:-}"
-        
-        if [[ -z "$editor" ]]; then
-          if command -v nano >/dev/null 2>&1; then
-            editor="nano"
-          elif command -v vim >/dev/null 2>&1; then
-            editor="vim"
-          elif command -v vi >/dev/null 2>&1; then
-            editor="vi"
-          else
-            log_error "No text editor found. Set EDITOR environment variable."
-            return 1
-          fi
-        fi
-        
-        "$editor" .nself/datadog.yaml
-      else
-        log_error "Datadog configuration not found"
-        log_info "Run 'nself metrics enable --provider datadog' first"
-        return 1
-      fi
-      ;;
-    
-    newrelic)
-      log_info "Editing New Relic configuration..."
-      
-      if [[ -f ".nself/newrelic.yml" ]]; then
-        # Try to find an available editor
-        local editor="${EDITOR:-}"
-        
-        if [[ -z "$editor" ]]; then
-          if command -v nano >/dev/null 2>&1; then
-            editor="nano"
-          elif command -v vim >/dev/null 2>&1; then
-            editor="vim"
-          elif command -v vi >/dev/null 2>&1; then
-            editor="vi"
-          else
-            log_error "No text editor found. Set EDITOR environment variable."
-            return 1
-          fi
-        fi
-        
-        "$editor" .nself/newrelic.yml
-      else
-        log_error "New Relic configuration not found"
-        log_info "Run 'nself metrics enable --provider newrelic' first"
-        return 1
-      fi
-      ;;
-    
-    *)
-      log_error "Unknown provider: $provider"
-      return 1
-      ;;
-  esac
-  
-  log_success "Configuration updated"
-  log_info "Restart services to apply changes: nself restart"
-  
-  return 0
-}
-
-# Main metrics command
-cmd_metrics() {
-  local subcommand="${1:-status}"
-  shift || true
-  
-  case "$subcommand" in
-    enable)
-      local provider=""
-      local port=""
-      local interval=""
-      local retention=""
-      
-      while [[ $# -gt 0 ]]; do
-        case "$1" in
-          --provider)
-            provider="$2"
-            shift 2
-            ;;
-          --port)
-            port="$2"
-            shift 2
-            ;;
-          --interval)
-            interval="$2"
-            shift 2
-            ;;
-          --retention)
-            retention="$2"
-            shift 2
-            ;;
-          *)
-            shift
-            ;;
-        esac
-      done
-      
-      enable_metrics "$provider" "$port" "$interval" "$retention"
-      ;;
-    
-    disable)
-      disable_metrics
-      ;;
-    
-    status)
-      show_metrics_status
-      ;;
-    
-    dashboard)
-      open_dashboard
-      ;;
-    
-    export)
-      local format="json"
-      local output="metrics.json"
-      
-      while [[ $# -gt 0 ]]; do
-        case "$1" in
-          --format)
-            format="$2"
-            shift 2
-            ;;
-          --output)
-            output="$2"
-            shift 2
-            ;;
-          *)
-            shift
-            ;;
-        esac
-      done
-      
-      export_metrics "$format" "$output"
-      ;;
-    
-    configure)
-      local provider="${1:-prometheus}"
-      configure_metrics "$provider"
-      ;;
-    
-    -h|--help|help)
-      show_metrics_help
-      ;;
-    
-    *)
-      log_error "Unknown command: $subcommand"
-      echo ""
-      show_metrics_help
-      return 1
+      echo "$text"
       ;;
   esac
 }
 
-# Export for use as library
-export -f cmd_metrics
-
-# Execute if run directly
+# Run if executed directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  pre_command "metrics" || exit $?
   cmd_metrics "$@"
-  exit_code=$?
-  post_command "metrics" $exit_code
-  exit $exit_code
 fi

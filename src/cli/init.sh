@@ -43,15 +43,23 @@ show_init_help() {
   echo "  for a full-stack application with smart defaults."
   echo ""
   echo "Options:"
+  echo "  --wizard            Launch interactive setup wizard"
+  echo "  --admin             Setup minimal admin UI only"
   echo "  -h, --help          Show this help message"
   echo ""
-  echo "Example:"
+  echo "Examples:"
   echo "  mkdir myproject && cd myproject"
-  echo "  nself init                     # Initialize project"
+  echo "  nself init                     # Initialize project with defaults"
+  echo "  nself init --wizard            # Interactive setup wizard"
+  echo "  nself init --admin             # Minimal admin UI setup"
   echo ""
   echo "Files Created:"
-  echo "  • .env.local                   # Your configuration file"
-  echo "  • .env.example                 # Reference documentation"
+  echo "  • .env.local                   # Your personal dev configuration"
+  echo "  • .env.dev                     # Team-shared dev defaults"
+  echo "  • .env.staging                 # Staging environment config"
+  echo "  • .env.prod                    # Production config (public)"
+  echo "  • .env.secrets                 # Sensitive data (git-ignored)"
+  echo "  • .env.example                 # Complete reference docs"
   echo ""
   echo "Next Steps:"
   echo "  1. Edit .env.local (optional - defaults work!)"
@@ -69,6 +77,24 @@ cmd_init() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
+    --wizard)
+      # Source and run the practical configuration wizard
+      if [[ -f "$SCRIPT_DIR/wizard/init-wizard-v2.sh" ]]; then
+        source "$SCRIPT_DIR/wizard/init-wizard-v2.sh"
+        run_config_wizard
+      else
+        # Fallback to old wizard if v2 not found
+        source "$SCRIPT_DIR/wizard/init-wizard.sh"
+        run_init_wizard
+      fi
+      return $?
+      ;;
+    --admin)
+      # Setup minimal admin environment
+      source "$SCRIPT_DIR/admin.sh"
+      admin_minimal_setup
+      return $?
+      ;;
     -h | --help)
       show_init_help
       return 0
@@ -107,13 +133,17 @@ cmd_init() {
   fi
 
   # Check if already initialized and backup if needed
-  if [[ -f ".env.local" ]] || [[ -f ".env.example" ]]; then
-    if [[ -f ".env.local" ]]; then
-      mv .env.local .env.local.backup
+  local files_to_backup=(".env.local" ".env.example" ".env.dev" ".env.staging" ".env.prod" ".env.secrets")
+  local backed_up=false
+  
+  for file in "${files_to_backup[@]}"; do
+    if [[ -f "$file" ]]; then
+      mv "$file" "${file}.backup"
+      backed_up=true
     fi
-    if [[ -f ".env.example" ]]; then
-      mv .env.example .env.example.backup
-    fi
+  done
+  
+  if [[ "$backed_up" == "true" ]]; then
     log_secondary "Existing env files backed up with .backup suffix"
   fi
 
@@ -155,12 +185,35 @@ cmd_init() {
     return 1
   fi
 
-  # Copy template files
+  # Copy all environment template files
   cp "$TEMPLATES_DIR/.env.example" .env.example
-  echo "${GREEN}✓${RESET} Created .env.example (reference documentation)"
-
+  echo "${GREEN}✓${RESET} Created .env.example (exhaustive reference documentation)"
+  
   cp "$TEMPLATES_DIR/.env.local" .env.local
-  echo "${GREEN}✓${RESET} Created .env.local (your configuration file)"
+  echo "${GREEN}✓${RESET} Created .env.local (your personal development config)"
+  
+  cp "$TEMPLATES_DIR/.env.dev" .env.dev
+  echo "${GREEN}✓${RESET} Created .env.dev (team-shared development defaults)"
+  
+  cp "$TEMPLATES_DIR/.env.staging" .env.staging
+  echo "${GREEN}✓${RESET} Created .env.staging (staging environment config)"
+  
+  cp "$TEMPLATES_DIR/.env.prod" .env.prod
+  echo "${GREEN}✓${RESET} Created .env.prod (production config - non-secrets)"
+  
+  cp "$TEMPLATES_DIR/.env.secrets" .env.secrets
+  echo "${GREEN}✓${RESET} Created .env.secrets (sensitive data template)"
+  
+  # Add .env.secrets to .gitignore if not already there
+  if [[ -f ".gitignore" ]]; then
+    if ! grep -q "^.env.secrets" .gitignore; then
+      echo ".env.secrets" >> .gitignore
+      echo "${YELLOW}⚡${RESET} Added .env.secrets to .gitignore"
+    fi
+  else
+    echo -e ".env.secrets\n.env.local\n.env" > .gitignore
+    echo "${YELLOW}⚡${RESET} Created .gitignore with security rules"
+  fi
   echo ""
 
   # Quick Tips section

@@ -475,7 +475,14 @@ test_email() {
     echo
     log_info "Sending via ${AUTH_SMTP_HOST}..."
     # TODO: Implement actual SMTP sending
-    log_warning "Production email sending not yet implemented"
+    # Status: Email configuration is stored but actual SMTP sending
+    # requires integration with auth service or direct SMTP library
+    # Options:
+    # 1. Use Node.js nodemailer in auth service
+    # 2. Use curl with SMTP protocol
+    # 3. Use docker swaks container for testing
+    log_warning "Production email sending not yet implemented (v0.3.9)"
+    log_info "Email configuration is saved and will be used by auth service"
   fi
   echo
 }
@@ -632,7 +639,7 @@ email_main() {
 
   # Load environment if available
   if [[ -f ".env.local" ]]; then
-    load_env_safe ".env.local" || true
+    load_env_with_priority || true
   fi
 
   case "$command" in
