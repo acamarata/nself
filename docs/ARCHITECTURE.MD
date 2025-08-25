@@ -2,7 +2,7 @@
 
 ## Overview
 
-nself is a comprehensive CLI tool for managing self-hosted infrastructure stacks. This document outlines the current architecture, design patterns, and system organization.
+nself v0.3.9 is a comprehensive CLI tool for managing self-hosted infrastructure stacks with admin UI, enterprise search, and VPS deployment capabilities. This document outlines the current architecture, design patterns, and system organization.
 
 ## Current Architecture
 

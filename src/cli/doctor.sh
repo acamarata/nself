@@ -216,7 +216,7 @@ check_nself_config() {
 
     # Load environment safely
     start_spinner "Loading configuration"
-    load_env_safe ".env.local" || {
+    load_env_with_priority || {
       stop_spinner "error" "Failed to load .env.local - syntax error in configuration"
       issue_found
       return
@@ -385,7 +385,7 @@ check_service_urls() {
     return
   fi
 
-  load_env_safe ".env.local"
+  load_env_with_priority
   local base_domain="${BASE_DOMAIN:-local.nself.org}"
 
   # Core services (always available)

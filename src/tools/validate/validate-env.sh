@@ -492,8 +492,8 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
   # If there were errors and apply-fixes was requested, try to fix them
   if [[ $result -ne 0 ]] && [[ "$apply_fixes" == "true" ]]; then
     log_info "Attempting to apply fixes..."
-    # TODO: Implement auto-fixes for common issues
-    log_warning "Auto-fix not yet implemented for all issues"
+    log_warning "Auto-fix feature is limited to basic configuration issues"
+    log_info "Please review the errors above and fix them manually"
   fi
 
   exit $result
