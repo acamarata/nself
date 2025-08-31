@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # clean.sh - Clean up Docker resources for the project
 
 # Source utilities

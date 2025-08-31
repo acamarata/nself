@@ -765,11 +765,11 @@ server:
   grpc_listen_port: 9096
 
 common:
-  path_prefix: /tmp/loki
+  path_prefix: ${LOKI_DATA_PATH:-/tmp/loki}
   storage:
     filesystem:
-      chunks_directory: /tmp/loki/chunks
-      rules_directory: /tmp/loki/rules
+      chunks_directory: ${LOKI_DATA_PATH:-/tmp/loki}/chunks
+      rules_directory: ${LOKI_DATA_PATH:-/tmp/loki}/rules
   replication_factor: 1
   ring:
     instance_addr: 127.0.0.1
@@ -810,7 +810,7 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /tmp/positions.yaml
+  filename: ${PROMTAIL_POS_FILE:-/tmp/positions.yaml}
 
 clients:
   - url: http://loki:${LOKI_PORT:-3100}/loki/api/v1/push
@@ -1021,9 +1021,9 @@ storage:
   trace:
     backend: local
     local:
-      path: /tmp/tempo/blocks
+      path: ${TEMPO_DATA_PATH:-/tmp/tempo}/blocks
     wal:
-      path: /tmp/tempo/wal
+      path: ${TEMPO_DATA_PATH:-/tmp/tempo}/wal
 
 overrides:
   defaults:
@@ -1165,7 +1165,7 @@ EOF
     command: [ "-config.file=/etc/tempo.yml" ]
     volumes:
       - ./.nself/monitoring/tempo.yml:/etc/tempo.yml:ro
-      - tempo_data:/tmp/tempo
+      - tempo_data:${TEMPO_DATA_PATH:-/tmp/tempo}
     ports:
       - "\${TEMPO_PORT:-3200}:3200"
       - "4317:4317"  # OTLP gRPC

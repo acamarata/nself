@@ -474,15 +474,48 @@ test_email() {
     # For production providers
     echo
     log_info "Sending via ${AUTH_SMTP_HOST}..."
-    # TODO: Implement actual SMTP sending
-    # Status: Email configuration is stored but actual SMTP sending
-    # requires integration with auth service or direct SMTP library
-    # Options:
-    # 1. Use Node.js nodemailer in auth service
-    # 2. Use curl with SMTP protocol
-    # 3. Use docker swaks container for testing
-    log_warning "Production email sending not yet implemented (v0.3.9)"
-    log_info "Email configuration is saved and will be used by auth service"
+    
+    # Test SMTP connection and send test email
+    local smtp_host="${AUTH_SMTP_HOST:-}"
+    local smtp_port="${AUTH_SMTP_PORT:-587}"
+    local smtp_user="${AUTH_SMTP_USER:-}"
+    local smtp_pass="${AUTH_SMTP_PASS:-}"
+    local smtp_sender="${AUTH_SMTP_SENDER:-noreply@${BASE_DOMAIN}}"
+    local test_recipient="${1:-$smtp_sender}"
+    
+    if [[ -z "$smtp_host" ]]; then
+      log_error "SMTP host not configured"
+      return 1
+    fi
+    
+    # Use swaks in Docker for SMTP testing
+    log_info "Testing SMTP connection to $smtp_host:$smtp_port..."
+    
+    local auth_opts=""
+    if [[ -n "$smtp_user" ]] && [[ -n "$smtp_pass" ]]; then
+      auth_opts="--auth-user '$smtp_user' --auth-password '$smtp_pass'"
+    fi
+    
+    # Run swaks in Docker container for SMTP test
+    docker run --rm \
+      --network host \
+      boky/swaks \
+      --to "$test_recipient" \
+      --from "$smtp_sender" \
+      --server "$smtp_host:$smtp_port" \
+      --tls \
+      $auth_opts \
+      --header "Subject: nself Email Test" \
+      --body "This is a test email from nself to verify SMTP configuration." \
+      --timeout 10 2>&1 | {
+        if grep -q "250 .*Message accepted"; then
+          log_success "✅ Test email sent successfully to $test_recipient"
+          log_info "Email configuration is working correctly"
+        else
+          log_warning "Could not verify email delivery"
+          log_info "Check your SMTP settings and credentials"
+        fi
+      }
   fi
   echo
 }

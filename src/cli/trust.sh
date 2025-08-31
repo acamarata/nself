@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # trust.sh - Trust and install SSL certificates
 
 # Source shared utilities

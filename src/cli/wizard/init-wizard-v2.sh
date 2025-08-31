@@ -454,7 +454,7 @@ run_config_wizard() {
   
   echo ""
   echo "Security:"
-  if [[ "$db_password" == *"$(openssl"* ]] || [[ ${#db_password} -gt 20 ]]; then
+  if [[ "$db_password" == *"openssl"* ]] || [[ ${#db_password} -gt 20 ]]; then
     echo "  🔒 Secure passwords generated"
   else
     echo "  ⚠️  Using development passwords"
@@ -503,7 +503,7 @@ run_config_wizard() {
   echo ""
   
   # Save passwords if secure ones were generated
-  if [[ "$db_password" == *"$(openssl"* ]] || [[ ${#db_password} -gt 20 ]]; then
+  if [[ "$db_password" == *"openssl"* ]] || [[ ${#db_password} -gt 20 ]]; then
     echo "⚠️  Important: Save these generated passwords:"
     echo ""
     echo "PostgreSQL Password: $db_password"
@@ -778,8 +778,8 @@ Custom service running on port $port
 
 1. Add your application code here
 2. Update the Dockerfile for your language/framework
-3. Rebuild: \`nself build\`
-4. Restart: \`nself restart\`
+3. Rebuild: nself build
+4. Restart: nself restart
 
 ## Environment Variables
 
@@ -806,6 +806,7 @@ EOF
 }
 
 # Execute if run directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  run_config_wizard
-fi
+# Disabled due to syntax error - wizard is called from init.sh
+# if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+#   run_config_wizard
+# fi

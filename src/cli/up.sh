@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # up.sh - Alias for start.sh (backward compatibility)
 
 # Get script directory

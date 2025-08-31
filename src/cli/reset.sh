@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # reset.sh - Reset project to clean state
 
 # Source utilities

@@ -557,16 +557,13 @@ EOF
 EOF
 fi
 
-# Add backend services if enabled
-if [[ "$SERVICES_ENABLED" == "true" ]]; then
-  echo "" >>docker-compose.yml
-  echo "  # ============================================" >>docker-compose.yml
-  echo "  # Backend Services (NestJS, BullMQ, Go, Python)" >>docker-compose.yml
-  echo "  # ============================================" >>docker-compose.yml
-
-  # Include the services directly in main compose
-  bash "$SCRIPT_DIR/compose-inline-append.sh"
-fi
+# Include additional services (admin, microservices, etc)
+# This runs before volumes/networks to keep services together
+# Export all environment variables for the subshell
+set -a
+source .env.local 2>/dev/null || true
+set +a
+bash "$SCRIPT_DIR/compose-inline-append.sh"
 
 # Add volumes section
 cat >>docker-compose.yml <<EOF
@@ -576,6 +573,8 @@ volumes:
     name: ${PROJECT_NAME}_postgres_data
   minio_data:
     name: ${PROJECT_NAME}_minio_data
+  nself-admin-data:
+    name: ${PROJECT_NAME}_admin_data
 EOF
 
 if [[ "$REDIS_ENABLED" == "true" ]]; then

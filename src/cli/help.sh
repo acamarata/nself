@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # help.sh - Show help information
 
 # Source shared utilities (only if not already sourced by wrapper)
