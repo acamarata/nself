@@ -136,7 +136,7 @@ generate_env_header() {
 # Terminal output header (no prefix)
 show_header() {
   local title="$1"
-  local content="$2"
+  local content="${2:-}"
   echo
   echo -e "${COLOR_CYAN}$(generate_header "$title" "$content")${COLOR_RESET}"
   echo

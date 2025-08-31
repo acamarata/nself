@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # mlflow.sh - Manage MLflow ML experiment tracking service
 
 # Source shared utilities (only if not already sourced by wrapper)

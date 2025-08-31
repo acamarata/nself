@@ -373,6 +373,122 @@ show_system_info() {
   fi
 }
 
+# Function to check database health
+check_database() {
+  echo ""
+  echo "Database Health"
+  echo "──────────────────────────────────────────────"
+
+  # Check if PostgreSQL is running
+  if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_success "PostgreSQL: Running"
+    
+    # Check connection
+    if docker exec "${PROJECT_NAME:-myproject}_postgres" pg_isready -U "${POSTGRES_USER:-postgres}" >/dev/null 2>&1; then
+      log_success "Connection: OK"
+    else
+      log_error "Connection: Failed"
+      issue_found
+      return 1
+    fi
+    
+    # Check database size
+    local db_size=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+      "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB:-nhost}'));" 2>/dev/null | xargs)
+    log_info "Database size: $db_size"
+    
+    # Check connection count
+    local conn_count=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+      "SELECT count(*) FROM pg_stat_activity WHERE state != 'idle';" 2>/dev/null | xargs)
+    local max_conn="${DB_MAX_CONNECTIONS:-100}"
+    local conn_percent=$((conn_count * 100 / max_conn))
+    
+    if [[ $conn_percent -lt 80 ]]; then
+      log_success "Connections: $conn_count/$max_conn ($conn_percent%)"
+    else
+      log_warning "High connections: $conn_count/$max_conn ($conn_percent%)"
+      warning_found
+    fi
+    
+    # Check cache hit ratio
+    local cache_ratio=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+      "SELECT ROUND(sum(heap_blks_hit) * 100.0 / nullif(sum(heap_blks_hit) + sum(heap_blks_read), 0), 1) 
+       FROM pg_statio_user_tables;" 2>/dev/null | xargs)
+    
+    if [[ -n "$cache_ratio" ]] && [[ "${cache_ratio%.*}" -ge 90 ]]; then
+      log_success "Cache hit ratio: ${cache_ratio}%"
+    elif [[ -n "$cache_ratio" ]]; then
+      log_warning "Low cache hit ratio: ${cache_ratio}%"
+      warning_found
+    fi
+    
+    # Check for table bloat
+    local bloat_count=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+      "SELECT COUNT(*) FROM pg_stat_user_tables 
+       WHERE n_dead_tup > n_live_tup * 0.2 AND n_live_tup > 1000;" 2>/dev/null | xargs)
+    
+    if [[ "$bloat_count" == "0" ]]; then
+      log_success "Table bloat: None detected"
+    else
+      log_warning "Table bloat: $bloat_count tables need VACUUM"
+      warning_found
+    fi
+    
+    # Check backup status
+    if [[ -d "backups" ]]; then
+      local latest_backup=$(ls -t backups/*.tar.gz 2>/dev/null | head -1)
+      if [[ -n "$latest_backup" ]]; then
+        local backup_time=$(stat -f %m "$latest_backup" 2>/dev/null || stat -c %Y "$latest_backup" 2>/dev/null)
+        local current_time=$(date +%s)
+        local backup_age_hours=$(( (current_time - backup_time) / 3600 ))
+        
+        if [[ $backup_age_hours -lt 48 ]]; then
+          log_success "Latest backup: ${backup_age_hours}h old"
+        else
+          log_warning "Latest backup: ${backup_age_hours}h old (run: nself backup create)"
+          warning_found
+        fi
+      else
+        log_warning "No backups found (run: nself backup create)"
+        warning_found
+      fi
+    fi
+    
+    # Check WAL archiving if PITR enabled
+    if [[ "${DB_PITR_ENABLED:-false}" == "true" ]] || [[ "${ENV:-dev}" == "prod" ]]; then
+      local wal_status=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+        "SELECT archive_mode FROM pg_settings WHERE name='archive_mode';" 2>/dev/null | xargs)
+      
+      if [[ "$wal_status" == "on" ]]; then
+        log_success "WAL archiving: Enabled"
+      else
+        log_warning "WAL archiving: Disabled (PITR not available)"
+        warning_found
+      fi
+    fi
+    
+    # Check replication if configured
+    if [[ -n "${DB_REPLICA_HOST:-}" ]]; then
+      local rep_lag=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+        "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::int;" 2>/dev/null || echo "")
+      
+      if [[ -n "$rep_lag" ]] && [[ "$rep_lag" -lt 10 ]]; then
+        log_success "Replication lag: ${rep_lag}s"
+      elif [[ -n "$rep_lag" ]]; then
+        log_warning "High replication lag: ${rep_lag}s"
+        warning_found
+      fi
+    fi
+    
+  else
+    log_error "PostgreSQL: Not running"
+    issue_found
+    return 1
+  fi
+  
+  return 0
+}
+
 # Function to check all service URLs
 check_service_urls() {
   echo ""
@@ -532,6 +648,11 @@ main() {
   check_nself_config
   check_services
   check_ssl
+  
+  # Check database health if PostgreSQL is configured
+  if [[ -n "${POSTGRES_DB:-}" ]] || [[ -f ".env.local" ]]; then
+    check_database
+  fi
 
   check_service_urls
   show_recommendations

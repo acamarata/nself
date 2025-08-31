@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # urls.sh - Display service URLs for nself stack
 
 # Determine root directory

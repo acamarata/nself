@@ -57,10 +57,8 @@ load_env_with_priority() {
       fi
     fi
     
-    # Use conditional logging
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "Loading .env.secrets (sensitive data)"
-    fi
+    # Use conditional logging (skip log_debug to avoid potential issues)
+    # log_debug "Loading .env.secrets (sensitive data)"
     set -a
     source ".env.secrets" 2>/dev/null
     set +a
@@ -68,9 +66,7 @@ load_env_with_priority() {
   
   # Check for .env override (highest priority - usually production)
   if [[ -f ".env" ]]; then
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "Loading .env (override mode - ignoring other env files)"
-    fi
+    # log_debug "Loading .env (override mode - ignoring other env files)"
     set -a
     source ".env"
     set +a
@@ -80,9 +76,7 @@ load_env_with_priority() {
   # Load in reverse order of precedence (so higher priority overrides)
   # Start with team defaults
   if [[ -f ".env.dev" ]]; then
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "Loading .env.dev (team defaults)"
-    fi
+    # log_debug "Loading .env.dev (team defaults)"
     set -a
     source ".env.dev" 2>/dev/null
     set +a
@@ -107,9 +101,7 @@ load_env_with_priority() {
   esac
   
   if [[ -n "$env_file" ]] && [[ -f "$env_file" ]] && [[ "$env_file" != ".env.dev" ]]; then
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "Loading $env_file (environment-specific)"
-    fi
+    # log_debug "Loading $env_file (environment-specific)"
     set -a
     source "$env_file" 2>/dev/null
     set +a
@@ -118,20 +110,16 @@ load_env_with_priority() {
   
   # Load personal overrides last (highest priority after .env)
   if [[ -f ".env.local" ]]; then
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "Loading .env.local (personal overrides)"
-    fi
+    # log_debug "Loading .env.local (personal overrides)"
     set -a
     source ".env.local" 2>/dev/null
     set +a
     loaded=true
   fi
   
-  if [[ "$loaded" == false ]]; then
-    if declare -f log_debug >/dev/null 2>&1; then
-      log_debug "No environment files found, using defaults only"
-    fi
-  fi
+  # if [[ "$loaded" == false ]]; then
+  #   log_debug "No environment files found, using defaults only"
+  # fi
   
   return 0
 }

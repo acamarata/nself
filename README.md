@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.9--beta-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -14,7 +14,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.9 NEW**: Platform evolution release with Admin UI web interface, enterprise search (6 engines), SSH deployment to VPS, interactive project wizard, and multi-environment management! [See full release notes](docs/CHANGELOG.md#039---2024-08-17)
+> **🚀 v0.3.9-beta**: Admin UI integration, critical bug fixes, improved stability! Features web-based monitoring dashboard, real-time service health, Docker container management, and comprehensive backup UI. All major commands tested and working. [See release notes](RELEASE-NOTES-v0.3.9-beta.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and what's coming in v0.4.0!
 
@@ -35,6 +35,7 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
+- **Admin Dashboard**: Web-based monitoring UI at localhost:3100 (v0.3.9)
 - **Single Config File**: One `.env.local` controls everything
 - **Zero Configuration**: Email, SSL, and services work out of the box
 - **Hot Reload**: Changes apply instantly without rebuild
@@ -73,14 +74,14 @@ brew install nself
 
 #### Debian/Ubuntu (.deb)
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.7/nself_0.3.7_all.deb
-sudo dpkg -i nself_0.3.7_all.deb
+wget https://github.com/acamarata/nself/releases/download/v0.3.9-beta/nself_0.3.9-beta_all.deb
+sudo dpkg -i nself_0.3.9-beta_all.deb
 ```
 
 #### RHEL/CentOS/Fedora (.rpm)
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.7/nself-0.3.7-1.noarch.rpm
-sudo rpm -i nself-0.3.7-1.noarch.rpm
+wget https://github.com/acamarata/nself/releases/download/v0.3.9-beta/nself-0.3.9-beta-1.noarch.rpm
+sudo rpm -i nself-0.3.9-beta-1.noarch.rpm
 ```
 
 The installer will:
@@ -196,86 +197,88 @@ nself build && nself restart
 ### Complete Command Tree
 
 ```
-nself
+nself (34 commands)
 ├── 🚀 Core Commands
 │   ├── init          Initialize a new project
-│   ├── build         Build project structure and Docker images (with automatic SSL)
-│   ├── start         Start all services (with SSL auto-renewal checks)
+│   ├── build         Build project structure and Docker images
+│   ├── start         Start all services
 │   ├── stop          Stop all services
-│   ├── restart       Restart all services
-│   ├── status        Show service status with health monitoring
-│   └── logs          View service logs
+│   ├── restart       Restart all or specific services
+│   ├── status        Show service status and health
+│   ├── logs          View service logs
+│   └── clean         Clean up Docker resources
 │
-├── ⚙️ Management Commands
-│   ├── doctor        Run enterprise system diagnostics
-│   ├── admin         Admin UI management (v0.3.9)
-│   ├── search        Search service management (v0.3.9)
-│   ├── deploy        SSH deployment to VPS (v0.3.9)
-│   ├── backup        Backup and restore with S3 support
-│   │   ├── create    Create backups (full, database, config, incremental)
-│   │   ├── list      List available backups
-│   │   ├── restore   Restore from backup with point-in-time recovery
-│   │   ├── prune     Remove old backups
-│   │   ├── verify    Verify backup integrity
-│   │   ├── schedule  Schedule automated backups
-│   │   ├── export    Export backup to external location
-│   │   ├── import    Import backup from external location
-│   │   ├── snapshot  Create point-in-time snapshot
-│   │   └── rollback  Rollback to specific point in time
-│   │
+├── 📊 Database & Backup
 │   ├── db            Database operations
-│   ├── email         Email service configuration
-│   │   ├── setup     Interactive email setup wizard
-│   │   ├── list      Show all supported providers
-│   │   ├── configure Configure specific provider
-│   │   ├── validate  Check email configuration
-│   │   ├── test      Send test email
-│   │   └── docs      Show provider setup guide
-│   │
-│   ├── ssl           SSL certificate management (fully automatic)
-│   │   ├── bootstrap Generate SSL certificates
-│   │   ├── renew     Renew public wildcard certificate
-│   │   ├── status    Show certificate status and expiry
-│   │   ├── auto-renew Check and renew if needed (30-day industry standard)
-│   │   ├── schedule  Schedule automatic renewal checks
-│   │   └── unschedule Remove automatic renewal
-│   │
-│   ├── urls          Show service URLs
-│   ├── prod          Configure for production deployment
+│   └── backup        Comprehensive backup system
+│
+├── 🔧 Configuration
 │   ├── validate      Validate configuration files
-│   ├── exec          Execute commands in containers
-│   ├── scale         Resource scaling management
-│   ├── metrics       Metrics and observability
-│   │   ├── enable    Enable metrics collection
-│   │   ├── disable   Disable metrics collection
-│   │   ├── status    Show metrics status
-│   │   ├── dashboard Open metrics dashboard
-│   │   ├── export    Export metrics data
-│   │   └── configure Configure metrics providers
-│   │
-│   ├── diff          Show configuration changes since last build
-│   ├── reset         Delete all data and return to initial state
-│   ├── trust         Install SSL certificate (fixes browser warnings)
-│   ├── clean         Clean up Docker resources
-│   ├── update        Update nself to the latest version
+│   ├── ssl           SSL certificate management
+│   ├── trust         Install SSL certificates locally
+│   ├── email         Email service configuration
+│   ├── prod          Configure for production
+│   └── urls          Show service URLs
+│
+├── 🎯 Admin & Monitoring
+│   ├── admin         Admin UI management (localhost:3100)
+│   ├── doctor        System diagnostics and fixes
+│   ├── monitor       Real-time monitoring
+│   ├── metrics       Metrics collection
+│   └── mlflow        ML experiment tracking
+│
+├── 🚀 Deployment & Scaling
+│   ├── deploy        Deploy to remote servers
+│   ├── scale         Scale services up/down
 │   ├── rollback      Rollback to previous version
-│   ├── version       Show current version
-│   ├── help          Display help information
-│   └── monitor       Real-time monitoring dashboard
-│       ├── dashboard Full monitoring dashboard
-│       ├── services  Service health monitoring
-│       ├── resources Resource usage monitoring
-│       ├── logs      Live log monitoring
-│       └── alerts    Alert management
+│   └── update        Update nself CLI
+├── 🛠️ Development Tools
+│   ├── exec          Execute commands in containers
+│   ├── diff          Show configuration changes
+│   ├── reset         Reset project to clean state
+│   ├── scaffold      Generate new service from template
+│   └── search        Search service management
+│
+└── 📝 Utility Commands
+    ├── version       Show version information
+    ├── help          Display help information
+    ├── up            Alias for 'start'
+    └── down          Alias for 'stop'
+```
+
+## 🎯 Admin Dashboard (v0.3.9-beta)
+
+### Web-Based Monitoring Interface
+The new admin dashboard provides complete visibility and control over your nself stack:
+
+- **Service Health Monitoring**: Real-time status of all containers
+- **Docker Management**: Start, stop, restart containers from UI
+- **Database Query Interface**: Execute SQL queries directly
+- **Log Viewer**: Filter and search through service logs
+- **Backup Management**: Create and restore backups via UI
+- **Configuration Editor**: Modify settings without SSH
+
+### Quick Setup
+```bash
+# Enable admin UI
+nself admin enable
+
+# Set password
+nself admin password mypassword
+
+# Open in browser (localhost:3100)
+nself admin open
 ```
 
 ## 📚 Documentation
 
-- **[Commands Reference](docs/COMMANDS.md)** - All available commands
+- **[Commands Reference](docs/COMMANDS.md)** - All 34 available commands
+- **[Release Notes](docs/RELEASE-v0.3.9-beta.md)** - v0.3.9-beta features and fixes
 - **[Roadmap](docs/ROADMAP.md)** - Development roadmap and upcoming features
-- **[v0.3.9 Features](docs/v0.3.9.md)** - Current release features (Admin UI, Deploy, Search)
-- **[v0.4.0 Plans](docs/v0.4.0.md)** - Next release plans
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Changelog](docs/CHANGELOG.md)** - Version history
+- **[All Releases](docs/RELEASES.md)** - Complete release history
 
 ### Quick Reference
 
@@ -299,6 +302,7 @@ When using the default `local.nself.org` domain:
 - **Storage Console**: https://storage-console.local.nself.org
 - **Functions** (if enabled): https://functions.local.nself.org
 - **Email** (development): https://mail.local.nself.org - MailPit email viewer
+- **Admin UI** (v0.3.9-beta): http://localhost:3100 - Admin dashboard
 - **Dashboard** (if enabled): https://dashboard.local.nself.org
 
 All `*.nself.org` domains resolve to `127.0.0.1` for local development.
@@ -632,20 +636,57 @@ To update service configurations:
 
 ## 🐛 Troubleshooting
 
-### Services not starting?
-```bash
-# Check service logs
-docker compose logs [service-name]
+### Common Issues (v0.3.9-beta)
 
-# Check service status
-docker compose ps
+#### Build command hangs?
+```bash
+# Build includes 5-second timeout for validation
+nself build --force  # Force rebuild if stuck
 ```
 
-### Port conflicts?
+#### Services not starting?
+```bash
+# Run diagnostics first
+nself doctor
+
+# Check service logs
+nself logs [service-name]
+
+# Check service status
+nself status
+```
+
+#### Auth service unhealthy?
+Known issue: Auth health check reports unhealthy but service works (port 4001 vs 4000 mismatch).
+
+#### Port conflicts?
 Edit the port numbers in `.env.local` and rebuild.
 
-### SSL certificate warnings?
+#### SSL certificate warnings?
 Run `nself trust` to install the root CA and get green locks in your browser. No more warnings!
+
+#### Email test not working?
+```bash
+# SMTP testing uses swaks Docker container
+nself email test recipient@example.com
+```
+
+## 🔄 Version History
+
+### v0.3.9-beta (Current)
+- ✅ Admin UI with web-based monitoring dashboard
+- ✅ Fixed critical bugs (status, stop, exec commands)  
+- ✅ SMTP email testing implementation
+- ✅ 5-second timeout for build validation
+- ✅ All 33 commands fully functional
+- ⚠️ Known issue: Auth health check false negative
+
+### v0.3.8 (Stable)
+- Complete backup system with cloud support
+- SSL certificate management
+- Enterprise monitoring features
+
+[Full Changelog](docs/CHANGELOG.md)
 
 ## 🤝 Contributing
 
@@ -729,3 +770,5 @@ Supports DigitalOcean, Linode, Vultr, Hetzner, and any Ubuntu/Debian VPS.
 ---
 
 Built with ❤️ for the self-hosting community by developers who were tired of complex setups
+
+

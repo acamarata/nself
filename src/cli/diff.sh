@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # diff.sh - Show configuration differences
 
 # Source shared utilities

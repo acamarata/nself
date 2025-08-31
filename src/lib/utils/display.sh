@@ -6,16 +6,16 @@
 export DISPLAY_SOURCED=1
 
 # Color definitions (using printf for portability)
-COLOR_RESET=$'\033[0m'
-COLOR_RED=$'\033[0;31m'
-COLOR_GREEN=$'\033[0;32m'
-COLOR_YELLOW=$'\033[0;33m'
-COLOR_BLUE=$'\033[0;34m'
-COLOR_MAGENTA=$'\033[0;35m'
-COLOR_CYAN=$'\033[0;36m'
-COLOR_WHITE=$'\033[0;37m'
-COLOR_BOLD=$'\033[1m'
-COLOR_DIM=$'\033[2m'
+export COLOR_RESET=$'\033[0m'
+export COLOR_RED=$'\033[0;31m'
+export COLOR_GREEN=$'\033[0;32m'
+export COLOR_YELLOW=$'\033[0;33m'
+export COLOR_BLUE=$'\033[0;34m'
+export COLOR_MAGENTA=$'\033[0;35m'
+export COLOR_CYAN=$'\033[0;36m'
+export COLOR_WHITE=$'\033[0;37m'
+export COLOR_BOLD=$'\033[1m'
+export COLOR_DIM=$'\033[2m'
 
 # Icons
 ICON_SUCCESS="✓"
@@ -69,6 +69,13 @@ log_debug() {
   [[ "${DEBUG:-false}" == "true" ]] && printf "%b[DEBUG]%b %s\n" "${COLOR_MAGENTA}" "${COLOR_RESET}" "$1"
 }
 
+# Export logging functions
+export -f log_info
+export -f log_success
+export -f log_warning
+export -f log_error
+export -f log_debug
+
 # Source the standardized header utilities
 UTILS_DIR="$(dirname "${BASH_SOURCE[0]}")"
 if [[ -f "$UTILS_DIR/header.sh" ]]; then
@@ -103,7 +110,12 @@ show_command_header() {
 
 # Alias for compatibility
 log_header() {
-  show_header "$@"
+  show_command_header "$@"
+}
+
+# Another alias for backward compatibility
+show_header() {
+  show_command_header "$@"
 }
 
 show_section() {
@@ -221,6 +233,6 @@ stop_loading() {
 
 # Export all functions
 export -f log_info log_success log_secondary log_warning log_error log_debug log_header
-export -f show_command_header show_header show_section
+export -f show_command_header show_header show_section log_header
 export -f show_table_header show_table_row show_table_footer
 export -f draw_box strip_colors start_loading stop_loading
