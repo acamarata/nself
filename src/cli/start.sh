@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # start.sh - Start services with streamlined error handling
 
 # Source utilities
@@ -406,6 +408,21 @@ cmd_start() {
 
   if [[ $result -eq 0 ]]; then
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} Docker containers started                  \n"
+
+    # Apply database auto-configuration if PostgreSQL is running
+    if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+      if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
+        source "$SCRIPT_DIR/../lib/database/auto-config.sh" 2>/dev/null || true
+        if command -v configure_postgres &>/dev/null; then
+          printf "${COLOR_BLUE}⠋${COLOR_RESET} Optimizing database configuration..."
+          configure_postgres "${PROJECT_NAME:-myproject}_postgres" >/dev/null 2>&1 && {
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} Database optimized for ${ENV:-dev} environment    \n"
+          } || {
+            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Database running with default settings         \n"
+          }
+        fi
+      fi
+    fi
 
     # Verify services are actually running and not restarting
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Verifying services..."

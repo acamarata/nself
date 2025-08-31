@@ -492,8 +492,9 @@ show_dashboard_view() {
   
   # Recent alerts
   echo -e "[0;36m▶ Recent Alerts[0m"
-  if [[ -f "/tmp/nself-alerts.log" ]]; then
-    tail -3 /tmp/nself-alerts.log | while read -r line; do
+  local alert_log="${TMPDIR:-/tmp}/nself-alerts.log"
+  if [[ -f "$alert_log" ]]; then
+    tail -3 "$alert_log" | while read -r line; do
       echo "  $line"
     done
   else
@@ -610,7 +611,8 @@ show_alerts_view() {
   fi
   
   # Show alert log
-  if [[ -f "/tmp/nself-alerts.log" ]]; then
+  local alert_log="${TMPDIR:-/tmp}/nself-alerts.log"
+  if [[ -f "$alert_log" ]]; then
     echo -e "  [0;36mRecent Alert History:[0m"
     tail -10 /tmp/nself-alerts.log | while read -r line; do
       echo "    $line"

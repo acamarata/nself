@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # scaffold.sh - Create new service from template
 
 # Source utilities
