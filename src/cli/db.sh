@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # db.sh - Database management tools for nself
 # Handles migrations, seeding, schema sync, and backups
@@ -14,6 +16,10 @@ source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/header.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source auto-config only if it exists
+if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
+  source "$SCRIPT_DIR/../lib/database/auto-config.sh"
+fi
 # Color output functions
 
 # Ensure required directories exist
@@ -117,6 +123,13 @@ EOF
 # Main run command - analyze schema and generate migrations
 cmd_run() {
   local schema_file="${LOCAL_SCHEMA_FILE:-schema.dbml}"
+  local force_regenerate=false
+  
+  # Check for --force flag
+  if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
+    force_regenerate=true
+    log_info "Force regeneration enabled"
+  fi
 
   # Check if schema file exists
   if [ ! -f "$schema_file" ]; then
@@ -137,7 +150,10 @@ cmd_run() {
   local new_hash=$(calculate_hash "$schema_file")
   local has_changes=false
 
-  if [ -f "$hash_file" ]; then
+  if [ "$force_regenerate" = true ]; then
+    has_changes=true
+    log_info "Forcing migration regeneration"
+  elif [ -f "$hash_file" ]; then
     local old_hash=$(cat "$hash_file")
     if [ "$new_hash" != "$old_hash" ]; then
       has_changes=true
@@ -738,6 +754,497 @@ EOF
 }
 
 # ====================
+# New Production Commands
+# ====================
+
+# Interactive PostgreSQL console
+cmd_console() {
+  log_info "Opening PostgreSQL console..."
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Connect to database
+  docker exec -it "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}"
+}
+
+# Export database or table
+cmd_export() {
+  local target="${1:-}"
+  local format="${2:-sql}"  # sql, csv, json
+  local output="${3:-}"
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Generate output filename
+  if [[ -z "$output" ]]; then
+    output="${target:-database}_$(date +%Y%m%d_%H%M%S).${format}"
+  fi
+  
+  log_info "Exporting to $output (format: $format)..."
+  
+  case "$format" in
+    sql)
+      if [[ -z "$target" ]]; then
+        # Export entire database
+        docker exec "${PROJECT_NAME:-myproject}_postgres" pg_dump \
+          -U "${POSTGRES_USER:-postgres}" \
+          -d "${POSTGRES_DB:-nhost}" \
+          --no-owner --no-acl > "$output"
+      else
+        # Export specific table
+        docker exec "${PROJECT_NAME:-myproject}_postgres" pg_dump \
+          -U "${POSTGRES_USER:-postgres}" \
+          -d "${POSTGRES_DB:-nhost}" \
+          -t "$target" --no-owner --no-acl > "$output"
+      fi
+      ;;
+    csv)
+      if [[ -z "$target" ]]; then
+        log_error "Table name required for CSV export"
+        return 1
+      fi
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "COPY $target TO STDOUT WITH CSV HEADER" > "$output"
+      ;;
+    json)
+      if [[ -z "$target" ]]; then
+        log_error "Table name required for JSON export"
+        return 1
+      fi
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -t -c "SELECT json_agg(t) FROM $target t" > "$output"
+      ;;
+    *)
+      log_error "Unknown format: $format (use sql, csv, or json)"
+      return 1
+      ;;
+  esac
+  
+  log_success "Export completed: $output"
+}
+
+# Import data from file
+cmd_import() {
+  local file="$1"
+  local table="${2:-}"
+  
+  if [[ ! -f "$file" ]]; then
+    log_error "File not found: $file"
+    return 1
+  fi
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Detect format from extension
+  local ext="${file##*.}"
+  
+  log_info "Importing from $file..."
+  
+  case "$ext" in
+    sql)
+      docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" < "$file"
+      ;;
+    csv)
+      if [[ -z "$table" ]]; then
+        log_error "Table name required for CSV import"
+        log_info "Usage: nself db import file.csv table_name"
+        return 1
+      fi
+      docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "COPY $table FROM STDIN WITH CSV HEADER" < "$file"
+      ;;
+    json)
+      if [[ -z "$table" ]]; then
+        log_error "Table name required for JSON import"
+        log_info "Usage: nself db import file.json table_name"
+        return 1
+      fi
+      # Create temp table and import JSON
+      docker exec -i "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" <<EOF
+CREATE TEMP TABLE json_import (data jsonb);
+\COPY json_import FROM STDIN;
+$(cat "$file")
+\.
+INSERT INTO $table 
+SELECT * FROM json_populate_recordset(NULL::$table, 
+  (SELECT json_agg(data) FROM json_import)::json);
+EOF
+      ;;
+    *)
+      log_error "Unknown format: $ext (use .sql, .csv, or .json)"
+      return 1
+      ;;
+  esac
+  
+  log_success "Import completed"
+}
+
+# Analyze database for query optimization
+cmd_analyze() {
+  log_info "Analyzing database tables..."
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Run ANALYZE on all tables
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "ANALYZE VERBOSE;" 2>&1 | while read line; do
+    echo "  $line"
+  done
+  
+  log_success "Database analysis completed"
+  
+  # Show table statistics
+  log_info "Table statistics:"
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT schemaname, tablename, n_live_tup as rows, 
+        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+        FROM pg_stat_user_tables 
+        ORDER BY n_live_tup DESC;" 2>/dev/null || true
+}
+
+# Vacuum database to reclaim space
+cmd_vacuum() {
+  local mode="${1:-standard}"  # standard, full, analyze
+  
+  log_info "Running VACUUM ($mode)..."
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  case "$mode" in
+    standard)
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "VACUUM VERBOSE;" 2>&1 | while read line; do
+        echo "  $line"
+      done
+      ;;
+    full)
+      log_warning "Full VACUUM will lock tables and may take a while..."
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "VACUUM FULL VERBOSE;" 2>&1 | while read line; do
+        echo "  $line"
+      done
+      ;;
+    analyze)
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "VACUUM ANALYZE VERBOSE;" 2>&1 | while read line; do
+        echo "  $line"
+      done
+      ;;
+    *)
+      log_error "Unknown mode: $mode (use standard, full, or analyze)"
+      return 1
+      ;;
+  esac
+  
+  log_success "VACUUM completed"
+}
+
+# Reindex database for performance
+cmd_reindex() {
+  local target="${1:-database}"  # database, table, index
+  local name="${2:-}"
+  
+  log_info "Reindexing $target..."
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  case "$target" in
+    database)
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "REINDEX DATABASE \"${POSTGRES_DB:-nhost}\";"
+      ;;
+    table)
+      if [[ -z "$name" ]]; then
+        log_error "Table name required"
+        return 1
+      fi
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "REINDEX TABLE $name;"
+      ;;
+    index)
+      if [[ -z "$name" ]]; then
+        log_error "Index name required"
+        return 1
+      fi
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -d "${POSTGRES_DB:-nhost}" \
+        -c "REINDEX INDEX $name;"
+      ;;
+    *)
+      log_error "Unknown target: $target (use database, table, or index)"
+      return 1
+      ;;
+  esac
+  
+  log_success "Reindex completed"
+}
+
+# Optimize database (VACUUM + ANALYZE + REINDEX)
+cmd_optimize() {
+  log_info "Optimizing database performance..."
+  echo ""
+  
+  # Run VACUUM ANALYZE
+  log_info "Step 1/3: Running VACUUM ANALYZE..."
+  cmd_vacuum analyze
+  echo ""
+  
+  # Run REINDEX
+  log_info "Step 2/3: Reindexing database..."
+  cmd_reindex database
+  echo ""
+  
+  # Update table statistics
+  log_info "Step 3/3: Updating statistics..."
+  cmd_analyze
+  echo ""
+  
+  log_success "Database optimization completed!"
+  
+  # Show cache hit ratio
+  log_info "Cache hit ratio:"
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT 
+      sum(heap_blks_hit) / nullif(sum(heap_blks_hit) + sum(heap_blks_read), 0) * 100 as cache_hit_ratio
+      FROM pg_statio_user_tables;" 2>/dev/null || true
+}
+
+# Show current locks
+cmd_locks() {
+  log_info "Current database locks:"
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT 
+      pid,
+      usename,
+      application_name,
+      client_addr,
+      query_start,
+      state,
+      wait_event_type,
+      wait_event,
+      substring(query, 1, 50) as query
+    FROM pg_stat_activity
+    WHERE pid != pg_backend_pid()
+    AND query != '<IDLE>'
+    ORDER BY query_start;" 2>/dev/null || {
+    log_info "No active locks found"
+  }
+}
+
+# Show active connections
+cmd_connections() {
+  log_info "Active database connections:"
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Show connection summary
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT 
+      count(*) as total,
+      count(*) FILTER (WHERE state = 'active') as active,
+      count(*) FILTER (WHERE state = 'idle') as idle,
+      count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction
+    FROM pg_stat_activity
+    WHERE pid != pg_backend_pid();" 2>/dev/null || true
+  
+  echo ""
+  log_info "Connections by application:"
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT 
+      application_name,
+      count(*) as connections,
+      max(query_start) as last_activity
+    FROM pg_stat_activity
+    WHERE pid != pg_backend_pid()
+    GROUP BY application_name
+    ORDER BY connections DESC;" 2>/dev/null || true
+}
+
+# Kill a database connection
+cmd_kill() {
+  local pid="$1"
+  
+  if [[ -z "$pid" ]]; then
+    log_error "PID required"
+    log_info "Usage: nself db kill <pid>"
+    log_info "Get PIDs with: nself db connections"
+    return 1
+  fi
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  log_info "Terminating connection $pid..."
+  
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT pg_terminate_backend($pid);" 2>/dev/null && {
+    log_success "Connection terminated"
+  } || {
+    log_error "Failed to terminate connection"
+    return 1
+  }
+}
+
+# Clone database for testing
+cmd_clone() {
+  local target="${1:-${POSTGRES_DB:-nhost}_clone}"
+  local template="${POSTGRES_DB:-nhost}"
+  
+  log_info "Cloning database '$template' to '$target'..."
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Check if target already exists
+  local exists=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -t -c "SELECT 1 FROM pg_database WHERE datname='$target'" 2>/dev/null | xargs)
+  
+  if [[ "$exists" == "1" ]]; then
+    log_warning "Database '$target' already exists"
+    read -p "Drop and recreate? (y/N): " -r
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+        -U "${POSTGRES_USER:-postgres}" \
+        -c "DROP DATABASE \"$target\";" 2>/dev/null || true
+    else
+      return 0
+    fi
+  fi
+  
+  # Terminate connections to template database
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
+        WHERE datname='$template' AND pid != pg_backend_pid();" 2>/dev/null || true
+  
+  # Create clone
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -c "CREATE DATABASE \"$target\" WITH TEMPLATE \"$template\";" && {
+    log_success "Database cloned successfully!"
+    log_info "Connect with: docker exec -it ${PROJECT_NAME:-myproject}_postgres psql -U ${POSTGRES_USER:-postgres} -d $target"
+  } || {
+    log_error "Failed to clone database"
+    return 1
+  }
+}
+
+# Show database and table sizes
+cmd_size() {
+  log_info "Database sizes:"
+  
+  # Check if postgres is running
+  if ! docker ps | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
+    log_error "PostgreSQL container is not running. Run 'nself start' first."
+    return 1
+  fi
+  
+  # Show database size
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -c "SELECT 
+      datname as database,
+      pg_size_pretty(pg_database_size(datname)) as size
+    FROM pg_database
+    WHERE datname NOT IN ('template0', 'template1', 'postgres')
+    ORDER BY pg_database_size(datname) DESC;" 2>/dev/null || true
+  
+  echo ""
+  log_info "Top 10 tables by size:"
+  docker exec "${PROJECT_NAME:-myproject}_postgres" psql \
+    -U "${POSTGRES_USER:-postgres}" \
+    -d "${POSTGRES_DB:-nhost}" \
+    -c "SELECT 
+      schemaname || '.' || tablename as table,
+      pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+      pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+      pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) as indexes_size
+    FROM pg_tables
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+    ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+    LIMIT 10;" 2>/dev/null || true
+}
+
+# ====================
 # Help Command
 # ====================
 
@@ -756,37 +1263,48 @@ cmd_help() {
   echo "  migrate:down [n]     Rollback n migrations (default: 1)"
   echo ""
   log_success "Database Operations:"
+  echo "  console              Interactive PostgreSQL console"
+  echo "  export [table] [fmt] Export data (fmt: sql, csv, json)"
+  echo "  import <file> [tbl]  Import data from file"
+  echo "  clone [name]         Clone database for testing"
   echo "  update               Safely apply pending migrations and seeds"
-  echo "  seed                 Seed database (dev or prod based on ENVIRONMENT)"
+  echo "  seed                 Seed database (dev or prod based on ENV)"
   echo "  reset                Reset database (drop and recreate)"
   echo "  status               Show database status"
   echo "  revert               Revert to previous backup"
+  echo "  size                 Show database and table sizes"
+  echo ""
+  log_success "Performance & Maintenance:"
+  echo "  optimize             Run VACUUM, ANALYZE, and REINDEX"
+  echo "  analyze              Update table statistics"
+  echo "  vacuum [mode]        Reclaim space (mode: standard, full, analyze)"
+  echo "  reindex [target]     Rebuild indexes (target: database, table, index)"
+  echo ""
+  log_success "Monitoring & Debugging:"
+  echo "  connections          Show active connections"
+  echo "  locks                Show current locks"
+  echo "  kill <pid>           Terminate a connection"
   echo ""
   log_success "Workflow:"
   echo "  1. Edit schema.dbml (or sync from dbdiagram.io)"
   echo "  2. Run 'nself db run' to generate migrations"
   echo "  3. Run 'nself db update' to apply migrations + seeds"
   echo ""
-  log_success "Seeding Strategy:"
-  echo "  DB_ENV_SEEDS=true (recommended - follows Hasura/PostgreSQL standards):"
-  echo "    • seeds/common/      - Shared data for all environments"
-  echo "    • seeds/development/ - Mock/test data (when ENV=dev)"
-  echo "    • seeds/staging/     - Staging data (when ENV=staging)"
-  echo "    • seeds/production/  - Minimal production data (when ENV=prod)"
-  echo "  DB_ENV_SEEDS=false (no environment branching):"
-  echo "    • seeds/default/     - Single seed directory for all environments"
-  echo "  Note: Migrations always handle structure (tables, indexes, constraints)"
+  log_success "Production Features:"
+  echo "  • Auto-configuration based on available resources"
+  echo "  • Smart defaults for security (SSL, encryption in prod)"
+  echo "  • Connection pooling (auto-enabled when needed)"
+  echo "  • Point-in-time recovery (auto-enabled in prod)"
+  echo "  • Monitoring integration (with nself monitor)"
   echo ""
   log_success "Configuration (.env.local):"
-  echo "  ENV                  Environment mode: 'dev' or 'prod' (default: dev)"
-  echo "  DB_ENV_SEEDS         Enable environment-based seeding (default: true)"
-  echo "  LOCAL_SCHEMA_FILE    Path to schema file (default: schema.dbml)"
-  echo "  DBDIAGRAM_URL        URL to dbdiagram.io project (for sync)"
-  echo "  ENVIRONMENT          Legacy: Use ENV instead (auto-mapped from ENV)"
+  echo "  ENV                  Environment: 'dev' or 'prod' (default: dev)"
+  echo "  DB_*                 Database settings (see .env.example)"
+  echo "  All settings use smart defaults - override only if needed"
   echo ""
   log_success "Backups:"
-  echo "  All changes are backed up to bin/dbsyncs/ with timestamps"
-  echo "  Use 'nself db revert' to restore the previous state"
+  echo "  Use 'nself backup' for comprehensive backup management"
+  echo "  All schema changes are backed up to bin/dbsyncs/"
 }
 
 # ====================
@@ -808,12 +1326,18 @@ main() {
   fi
 
   case "$command" in
+  # Schema Management
   run)
     cmd_run "$@"
     ;;
   sync)
     cmd_sync "$@"
     ;;
+  sample)
+    cmd_sample "$@"
+    ;;
+    
+  # Migration Commands
   migrate:create)
     cmd_migrate_create "$@"
     ;;
@@ -822,6 +1346,20 @@ main() {
     ;;
   migrate:down)
     cmd_migrate_down "$@"
+    ;;
+    
+  # Database Operations
+  console)
+    cmd_console "$@"
+    ;;
+  export)
+    cmd_export "$@"
+    ;;
+  import)
+    cmd_import "$@"
+    ;;
+  clone)
+    cmd_clone "$@"
     ;;
   update)
     cmd_update "$@"
@@ -838,9 +1376,36 @@ main() {
   revert)
     cmd_revert "$@"
     ;;
-  sample)
-    cmd_sample "$@"
+  size)
+    cmd_size "$@"
     ;;
+    
+  # Performance & Maintenance
+  optimize)
+    cmd_optimize "$@"
+    ;;
+  analyze)
+    cmd_analyze "$@"
+    ;;
+  vacuum)
+    cmd_vacuum "$@"
+    ;;
+  reindex)
+    cmd_reindex "$@"
+    ;;
+    
+  # Monitoring & Debugging
+  connections)
+    cmd_connections "$@"
+    ;;
+  locks)
+    cmd_locks "$@"
+    ;;
+  kill)
+    cmd_kill "$@"
+    ;;
+    
+  # Help
   help | --help | -h | "")
     cmd_help
     ;;

@@ -237,6 +237,6 @@ autofix_service() {
 
 # Run pre-checks and fix common issues before Docker
 run_autofix_prechecks() {
-  run_pre_checks "$1"
+  run_pre_checks "${1:-}"
   return $?
 }

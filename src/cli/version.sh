@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # version.sh - Show version information
 
 # Source shared utilities

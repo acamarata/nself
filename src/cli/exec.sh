@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source utilities
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/utils/header.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
@@ -135,6 +136,11 @@ cmd_exec() {
     return 1
   fi
   
+  # Load environment
+  if [[ -f ".env.local" ]]; then
+    load_env_with_priority
+  fi
+  
   # Check if service exists
   if ! grep -q "^  ${service}:" docker-compose.yml 2>/dev/null; then
     log_error "Service '$service' not found in docker-compose.yml"
@@ -145,7 +151,7 @@ cmd_exec() {
   fi
   
   # Check if service is running
-  if ! docker compose ps --services --status running 2>/dev/null | grep -q "^${service}$"; then
+  if ! compose ps --status running --services 2>/dev/null | grep -q "^${service}$"; then
     log_warning "Service '$service' is not running"
     echo ""
     echo "Start the service with: nself start"
@@ -214,17 +220,17 @@ cmd_exec() {
   # Get container name - try different methods
   local container_name
   
-  # Try docker compose ps with simpler format first
-  container_name=$(docker compose ps --format "table {{.Name}}" "$service" 2>/dev/null | tail -n +2 | head -1)
+  # Try compose ps with simpler format first
+  container_name=$(compose ps --format "table {{.Name}}" "$service" 2>/dev/null | tail -n +2 | head -1)
   
   # If that fails, try with JSON parsing
   if [[ -z "$container_name" ]]; then
     if command -v jq >/dev/null 2>&1; then
       # Use jq if available
-      container_name=$(docker compose ps --format json "$service" 2>/dev/null | jq -r '.Name' 2>/dev/null | head -1)
+      container_name=$(compose ps --format json "$service" 2>/dev/null | jq -r '.Name' 2>/dev/null | head -1)
     else
       # Fallback to grep
-      container_name=$(docker compose ps --format json "$service" 2>/dev/null | grep -o '"Name":"[^"]*"' | cut -d'"' -f4 | head -1)
+      container_name=$(compose ps --format json "$service" 2>/dev/null | grep -o '"Name":"[^"]*"' | cut -d'"' -f4 | head -1)
     fi
   fi
   

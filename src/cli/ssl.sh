@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # ssl.sh - SSL certificate management commands
 
 # Get script directory

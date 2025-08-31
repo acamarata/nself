@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # search.sh - Search service management commands
 
 # Determine root directory

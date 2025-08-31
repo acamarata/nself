@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # build.sh - nself Build System
 # Generates Docker infrastructure and configuration files
@@ -98,7 +100,7 @@ cmd_build() {
   show_command_header "nself build" "Generate project infrastructure and configuration"
 
   # Determine environment first
-  if [[ "$ENV" == "prod" ]] || [[ "$ENVIRONMENT" == "production" ]]; then
+  if [[ "${ENV:-}" == "prod" ]] || [[ "${ENVIRONMENT:-}" == "production" ]]; then
     log_info "Building for PRODUCTION environment"
   else
     log_info "Building for DEVELOPMENT environment"
@@ -120,6 +122,24 @@ cmd_build() {
     return 1
   fi
 
+  # Apply database auto-configuration
+  if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/database/auto-config.sh" 2>/dev/null || true
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring database for optimal performance..."
+    if command -v get_system_resources &>/dev/null && command -v apply_smart_defaults &>/dev/null; then
+      get_system_resources >/dev/null 2>&1
+      apply_smart_defaults >/dev/null 2>&1
+      auto_tune_memory >/dev/null 2>&1
+      auto_tune_cpu >/dev/null 2>&1
+      auto_tune_disk >/dev/null 2>&1
+      auto_detect_compression >/dev/null 2>&1
+      check_pooling_needed >/dev/null 2>&1
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Database configuration optimized                    \n"
+    else
+      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Database auto-config not available                 \n"
+    fi
+  fi
+
   # Check if validation function exists
   if ! declare -f run_validation >/dev/null 2>&1; then
     log_warning "Validation system not available, skipping"
@@ -136,11 +156,11 @@ cmd_build() {
     local validation_output=$(mktemp)
     local validation_status=0
 
-    # Capture validation output and prevent script exit
-    (
+    # Capture validation output and prevent script exit with timeout
+    timeout 5 bash -c "
       # Source validation again in subshell to ensure it's available
-      source "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" 2>/dev/null || true
-      source "$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh" 2>/dev/null || true
+      source '$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh' 2>/dev/null || true
+      source '$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh' 2>/dev/null || true
 
       # Override format_section in subshell too
       format_section() { :; }
@@ -149,10 +169,16 @@ cmd_build() {
       run_validation .env.local 2>&1 || true
 
       # Export arrays for parent shell
-      echo "VALIDATION_ERRORS=(${VALIDATION_ERRORS[*]@Q})"
-      echo "VALIDATION_WARNINGS=(${VALIDATION_WARNINGS[*]@Q})"
-      echo "AUTO_FIXES=(${AUTO_FIXES[*]@Q})"
-    ) >"$validation_output" 2>&1
+      echo \"VALIDATION_ERRORS=(\${VALIDATION_ERRORS[*]@Q})\"
+      echo \"VALIDATION_WARNINGS=(\${VALIDATION_WARNINGS[*]@Q})\"
+      echo \"AUTO_FIXES=(\${AUTO_FIXES[*]@Q})\"
+    " >"$validation_output" 2>&1 || {
+      # If timeout occurs, just continue with build
+      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Validation timeout - continuing              \n"
+      echo "VALIDATION_ERRORS=()" >"$validation_output"
+      echo "VALIDATION_WARNINGS=()" >>"$validation_output"
+      echo "AUTO_FIXES=()" >>"$validation_output"
+    }
 
     # Source the output to get the arrays
     if [[ -s "$validation_output" ]]; then

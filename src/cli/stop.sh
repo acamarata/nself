@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # stop.sh - Stop all services with enhanced feedback
 
 # Source shared utilities
@@ -131,7 +133,7 @@ cmd_stop() {
 
       if [[ "$remove_volumes" == true ]] || [[ "$remove_images" == true ]]; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning up..."
-        docker compose down $(if [[ "$remove_volumes" == true ]]; then echo "-v"; fi) $(if [[ "$remove_images" == true ]]; then echo "--rmi all"; fi) >/dev/null 2>&1
+        compose down $(if [[ "$remove_volumes" == true ]]; then echo "-v"; fi) $(if [[ "$remove_images" == true ]]; then echo "--rmi all"; fi) >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Cleanup completed                      \n"
       else
         echo -e "   Run ${COLOR_BLUE}nself stop --volumes${COLOR_RESET} to remove all data"
@@ -159,19 +161,19 @@ cmd_stop() {
     return 1
   fi
 
-  # Build the compose down command
-  local compose_cmd="compose down"
+  # Build the compose down command arguments
+  local compose_args="down"
 
   if [[ "$remove_volumes" == true ]]; then
-    compose_cmd="$compose_cmd -v"
+    compose_args="$compose_args -v"
   fi
 
   if [[ "$remove_images" == true ]]; then
-    compose_cmd="$compose_cmd --rmi all"
+    compose_args="$compose_args --rmi all"
   fi
 
   if [[ "$remove_orphans" == true ]]; then
-    compose_cmd="$compose_cmd --remove-orphans"
+    compose_args="$compose_args --remove-orphans"
   fi
 
   # Execute the shutdown
@@ -182,11 +184,11 @@ cmd_stop() {
   if [[ "$verbose" == true ]]; then
     # Show full output in verbose mode
     printf "\n"
-    eval "$compose_cmd" 2>&1 | tee "$output_file"
+    compose $compose_args 2>&1 | tee "$output_file"
     result=${PIPESTATUS[0]}
   else
     # Run silently with spinner
-    (eval "$compose_cmd" 2>&1) >"$output_file" &
+    (compose $compose_args 2>&1) >"$output_file" &
     local compose_pid=$!
 
     # Show spinner while waiting
@@ -209,8 +211,8 @@ cmd_stop() {
     if [[ "$remove_volumes" == true ]]; then
       echo
       # Count what was removed
-      local removed_volumes=$(grep -c "Volume.*removed" "$output_file" 2>/dev/null || echo "0")
-      local removed_networks=$(grep -c "Network.*removed" "$output_file" 2>/dev/null || echo "0")
+      local removed_volumes=$(grep -c "Volume.*removed" "$output_file" 2>/dev/null | tr -d '\n' || echo "0")
+      local removed_networks=$(grep -c "Network.*removed" "$output_file" 2>/dev/null | tr -d '\n' || echo "0")
 
       if [[ $removed_volumes -gt 0 ]]; then
         echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_volumes volumes"

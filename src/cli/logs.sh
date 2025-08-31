@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # logs.sh - Clean and readable logging for nself services
 
@@ -278,7 +280,7 @@ show_top_talkers() {
   echo ""
 
   local services=($(compose config --services 2>/dev/null))
-  declare -A service_lines
+  local service_data=""
 
   for service in "${services[@]}"; do
     local container_name="${PROJECT_NAME:-nself}_${service}"
@@ -286,17 +288,18 @@ show_top_talkers() {
 
     if compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
       local line_count=$(docker logs --tail 100 "$container_name" 2>&1 | wc -l | tr -d ' ')
-      service_lines["$clean_name"]=$line_count
+      service_data="${service_data}${line_count}:${clean_name}\n"
     fi
   done
 
   # Sort by line count and show top 5
-  for service in $(printf '%s\n' "${!service_lines[@]}" | head -5); do
-    local count=${service_lines[$service]}
-    if [[ $count -gt 20 ]]; then
-      printf "\033[1;33m● %-15s\033[0m %s lines\n" "$service" "$count"
-    else
-      printf "\033[1;32m● %-15s\033[0m %s lines\n" "$service" "$count"
+  echo -e "$service_data" | sort -rn | head -5 | while IFS=: read -r count service; do
+    if [[ -n "$service" ]]; then
+      if [[ $count -gt 20 ]]; then
+        printf "\033[1;33m● %-15s\033[0m %s lines\n" "$service" "$count"
+      else
+        printf "\033[1;32m● %-15s\033[0m %s lines\n" "$service" "$count"
+      fi
     fi
   done
 }

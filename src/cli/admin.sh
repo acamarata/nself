@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # admin.sh - Admin UI management commands
 
 # Determine root directory
@@ -25,10 +27,10 @@ BASE_DOMAIN=localhost
 ENV=dev
 
 # Admin UI Configuration
-ADMIN_ENABLED=true
-ADMIN_PORT=3100
-ADMIN_USERNAME=admin
-ADMIN_ROUTE=localhost:3100
+NSELF_ADMIN_ENABLED=true
+NSELF_ADMIN_PORT=3100
+NSELF_ADMIN_AUTH_PROVIDER=basic
+NSELF_ADMIN_ROUTE=localhost:3100
 
 # SSL Configuration (disabled for minimal setup)
 SSL_ENABLED=false
@@ -54,18 +56,16 @@ EOF
     log_info "Found existing .env.local, enabling admin UI..."
     
     # Just enable admin in existing config
-    if grep -q "^ADMIN_ENABLED=" .env.local; then
-      sed -i.bak 's/^ADMIN_ENABLED=.*/ADMIN_ENABLED=true/' .env.local
+    if grep -q "^NSELF_ADMIN_ENABLED=" .env.local; then
+      sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env.local
     else
-      echo "ADMIN_ENABLED=true" >> .env.local
+      echo "NSELF_ADMIN_ENABLED=true" >> .env.local
     fi
   fi
   
-  # Note about admin UI status
-  log_warning "Admin UI Docker image is currently in development"
-  log_info "The admin service configuration has been prepared but is commented out"
-  log_info "Once nself/admin:latest image is available, uncomment the service in docker-compose"
-  echo ""
+  # Pull the admin image
+  log_info "Pulling nself-admin Docker image..."
+  docker pull acamarata/nself-admin:latest
   
   # Set admin password
   log_info "Setting up admin access..."
@@ -127,23 +127,32 @@ services:
       timeout: 5s
       retries: 5
 
-  # Admin UI service - uncomment when nself/admin image is available
-  # nself-admin:
-  #   image: nself/admin:latest
-  #   ports:
-  #     - "3100:3100"
-  #   environment:
-  #     - DATABASE_URL=postgresql://nself:nself_admin_temp@postgres:5432/nself_admin
-  #     - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
-  #     - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./:/app/project:ro
+  # Admin UI service
+  nself-admin:
+    image: acamarata/nself-admin:latest
+    container_name: ${PROJECT_NAME}_admin
+    ports:
+      - "3100:3021"
+    environment:
+      - PROJECT_DIR=/workspace
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/workspace:rw
+      - nself-admin-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   postgres_data:
+  nself-admin-data:
 EOF
   
   log_success "Created minimal docker-compose.yml"
@@ -229,30 +238,67 @@ show_admin_help() {
 admin_enable() {
   show_command_header "nself admin enable" "Enable admin web interface"
   
+  # Check if .env.local exists
+  if [[ ! -f ".env.local" ]]; then
+    log_error "No .env.local file found. Run 'nself init' first."
+    return 1
+  fi
+  
   # Load environment
-  load_env_with_priority
+  load_env_with_priority 2>/dev/null || true
   
   # Set admin enabled
   log_info "Enabling admin UI..."
   
   # Update .env.local
-  if grep -q "^ADMIN_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^ADMIN_ENABLED=.*/ADMIN_ENABLED=true/' .env.local
+  if grep -q "^NSELF_ADMIN_ENABLED=" .env.local 2>/dev/null; then
+    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env.local
   else
-    echo "ADMIN_ENABLED=true" >> .env.local
+    echo "NSELF_ADMIN_ENABLED=true" >> .env.local
   fi
   
   # Set default values if not present
-  if ! grep -q "^ADMIN_PORT=" .env.local 2>/dev/null; then
-    echo "ADMIN_PORT=3100" >> .env.local
+  if ! grep -q "^NSELF_ADMIN_PORT=" .env.local 2>/dev/null; then
+    # Ensure we're on a new line before appending
+    echo "" >> .env.local
+    echo "NSELF_ADMIN_PORT=3100" >> .env.local
   fi
   
-  if ! grep -q "^ADMIN_USERNAME=" .env.local 2>/dev/null; then
-    echo "ADMIN_USERNAME=admin" >> .env.local
+  if ! grep -q "^NSELF_ADMIN_AUTH_PROVIDER=" .env.local 2>/dev/null; then
+    echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env.local
   fi
   
-  if ! grep -q "^ADMIN_ROUTE=" .env.local 2>/dev/null; then
-    echo "ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  if ! grep -q "^NSELF_ADMIN_ROUTE=" .env.local 2>/dev/null; then
+    echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  fi
+  
+  # Ensure admin password hash and secret key are set
+  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env.local 2>/dev/null; then
+    log_warning "No admin password set. Generating temporary password..."
+    local temp_password="admin$(date +%s | sha256sum | head -c 8)"
+    
+    # Generate password hash
+    local password_hash
+    if command -v python3 >/dev/null 2>&1; then
+      password_hash=$(python3 -c "
+import hashlib, os, base64
+salt = os.urandom(32)
+pwd_hash = hashlib.pbkdf2_hmac('sha256', '$temp_password'.encode('utf-8'), salt, 100000)
+combined = salt + pwd_hash
+print(base64.b64encode(combined).decode('ascii'))
+")
+    else
+      password_hash=$(echo -n "$temp_password" | sha256sum | cut -d' ' -f1)
+    fi
+    
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local
+    log_info "Temporary admin password: $temp_password"
+    log_info "Change this after first login with 'nself admin password'"
+  fi
+  
+  if ! grep -q "^ADMIN_SECRET_KEY=" .env.local 2>/dev/null; then
+    local secret_key=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | head -c 64)
+    echo "ADMIN_SECRET_KEY=$secret_key" >> .env.local
   fi
   
   log_success "Admin UI enabled"
@@ -261,11 +307,12 @@ admin_enable() {
   
   # Show access URL
   local protocol="http"
-  if [[ "$SSL_MODE" == "local" ]] || [[ "$SSL_MODE" == "letsencrypt" ]]; then
+  local ssl_mode="${SSL_MODE:-none}"
+  if [[ "$ssl_mode" == "local" ]] || [[ "$ssl_mode" == "letsencrypt" ]]; then
     protocol="https"
   fi
   
-  local admin_route="${ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
+  local admin_route="${NSELF_ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
   admin_route=$(echo "$admin_route" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
   
   echo ""
@@ -283,23 +330,33 @@ admin_enable() {
 admin_disable() {
   show_command_header "nself admin disable" "Disable admin web interface"
   
+  # Check if .env.local exists
+  if [[ ! -f ".env.local" ]]; then
+    log_error "No .env.local file found. Run 'nself init' first."
+    return 1
+  fi
+  
   # Load environment
-  load_env_with_priority
+  load_env_with_priority 2>/dev/null || true
   
   log_info "Disabling admin UI..."
   
   # Update .env.local
-  if grep -q "^ADMIN_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^ADMIN_ENABLED=.*/ADMIN_ENABLED=false/' .env.local
+  if grep -q "^NSELF_ADMIN_ENABLED=" .env.local 2>/dev/null; then
+    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=false/' .env.local
   else
-    echo "ADMIN_ENABLED=false" >> .env.local
+    echo "NSELF_ADMIN_ENABLED=false" >> .env.local
   fi
   
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
+  
   # Stop admin container if running
-  if docker ps --format "{{.Names}}" | grep -q "nself-admin"; then
+  if docker ps --format "{{.Names}}" | grep -q "$container_name"; then
     log_info "Stopping admin container..."
-    docker stop nself-admin >/dev/null 2>&1
-    docker rm nself-admin >/dev/null 2>&1
+    docker stop "$container_name" >/dev/null 2>&1
+    docker rm "$container_name" >/dev/null 2>&1
   fi
   
   log_success "Admin UI disabled"
@@ -310,13 +367,19 @@ admin_disable() {
 admin_status() {
   show_command_header "nself admin status" "Admin UI status"
   
-  # Load environment
-  load_env_with_priority
+  # Check if .env.local exists
+  if [[ ! -f ".env.local" ]]; then
+    log_error "No .env.local file found. Run 'nself init' first."
+    return 1
+  fi
   
-  local admin_enabled="${ADMIN_ENABLED:-false}"
-  local admin_port="${ADMIN_PORT:-3100}"
+  # Load environment
+  load_env_with_priority 2>/dev/null || true
+  
+  local admin_enabled="${NSELF_ADMIN_ENABLED:-false}"
+  local admin_port="${NSELF_ADMIN_PORT:-3022}"
   local admin_username="${ADMIN_USERNAME:-admin}"
-  local admin_route="${ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
+  local admin_route="${NSELF_ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
   admin_route=$(echo "$admin_route" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
   
   echo "Configuration:"
@@ -340,16 +403,21 @@ admin_status() {
   echo ""
   echo "Container Status:"
   
-  if docker ps --format "{{.Names}}" | grep -q "nself-admin"; then
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
+  
+  if docker ps --format "{{.Names}}" | grep -q "$container_name"; then
     log_success "Admin container is running"
     
     # Show container info
-    local container_info=$(docker ps --filter "name=nself-admin" --format "table {{.Status}}\t{{.Ports}}" | tail -n 1)
+    local container_info=$(docker ps --filter "name=$container_name" --format "table {{.Status}}\t{{.Ports}}" | tail -n 1)
     echo "  $container_info"
     
     # Show access URL
     local protocol="http"
-    if [[ "$SSL_MODE" == "local" ]] || [[ "$SSL_MODE" == "letsencrypt" ]]; then
+    local ssl_mode="${SSL_MODE:-none}"
+    if [[ "$ssl_mode" == "local" ]] || [[ "$ssl_mode" == "letsencrypt" ]]; then
       protocol="https"
     fi
     
@@ -413,9 +481,13 @@ print(base64.b64encode(combined).decode('ascii'))
     password_hash=$(echo -n "$password" | sha256sum | cut -d' ' -f1)
   fi
   
-  # Update .env.local
+  # Update .env.local - escape special characters in hash
   if grep -q "^ADMIN_PASSWORD_HASH=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^ADMIN_PASSWORD_HASH=.*/ADMIN_PASSWORD_HASH=$password_hash/" .env.local
+    # Use a different delimiter to avoid issues with special characters
+    # First, create a temp file with the new value
+    grep -v "^ADMIN_PASSWORD_HASH=" .env.local > .env.local.tmp
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local.tmp
+    mv .env.local.tmp .env.local
   else
     echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local
   fi
@@ -428,10 +500,14 @@ print(base64.b64encode(combined).decode('ascii'))
   
   log_success "Admin password set successfully"
   
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
+  
   # Restart admin if running
-  if docker ps --format "{{.Names}}" | grep -q "nself-admin"; then
+  if docker ps --format "{{.Names}}" | grep -q "$container_name"; then
     log_info "Restarting admin container..."
-    docker restart nself-admin >/dev/null 2>&1
+    docker restart "$container_name" >/dev/null 2>&1
   fi
 }
 
@@ -455,16 +531,20 @@ admin_reset() {
   sed -i.bak '/^ADMIN_/d' .env.local
   
   # Set defaults
-  echo "ADMIN_ENABLED=false" >> .env.local
-  echo "ADMIN_PORT=3100" >> .env.local
-  echo "ADMIN_USERNAME=admin" >> .env.local
-  echo "ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  echo "NSELF_ADMIN_ENABLED=false" >> .env.local
+  echo "NSELF_ADMIN_PORT=3100" >> .env.local
+  echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env.local
+  echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
   
   # Stop admin container if running
-  if docker ps --format "{{.Names}}" | grep -q "nself-admin"; then
+  if docker ps --format "{{.Names}}" | grep -q "$container_name"; then
     log_info "Stopping admin container..."
-    docker stop nself-admin >/dev/null 2>&1
-    docker rm nself-admin >/dev/null 2>&1
+    docker stop "$container_name" >/dev/null 2>&1
+    docker rm "$container_name" >/dev/null 2>&1
   fi
   
   log_success "Admin configuration reset to defaults"
@@ -494,18 +574,25 @@ admin_logs() {
     esac
   done
   
+  # Load environment to get project name
+  load_env_with_priority 2>/dev/null || true
+  
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
+  
   # Check if admin container exists
-  if ! docker ps -a --format "{{.Names}}" | grep -q "nself-admin"; then
-    log_error "Admin container not found"
+  if ! docker ps -a --format "{{.Names}}" | grep -q "$container_name"; then
+    log_error "Admin container not found ($container_name)"
     log_info "Run 'nself admin enable' and 'nself start' first"
     return 1
   fi
   
   # Show logs
   if [[ "$follow" == "true" ]]; then
-    docker logs -f --tail "$tail_lines" nself-admin
+    docker logs -f --tail "$tail_lines" "$container_name"
   else
-    docker logs --tail "$tail_lines" nself-admin
+    docker logs --tail "$tail_lines" "$container_name"
   fi
 }
 
@@ -513,36 +600,39 @@ admin_logs() {
 admin_open() {
   show_command_header "nself admin open" "Open admin in browser"
   
+  # Check if .env.local exists
+  if [[ ! -f ".env.local" ]]; then
+    log_error "No .env.local file found. Run 'nself init' first."
+    return 1
+  fi
+  
   # Load environment
-  load_env_with_priority
+  load_env_with_priority 2>/dev/null || true
+  
+  # Get project name for container
+  local project_name="${PROJECT_NAME:-myproject}"
+  local container_name="${project_name}_admin"
   
   # Check if admin is running
-  if ! docker ps --format "{{.Names}}" | grep -q "nself-admin"; then
+  if ! docker ps --format "{{.Names}}" | grep -q "$container_name"; then
     log_error "Admin container is not running"
     log_info "Run 'nself admin enable' and 'nself start' first"
     return 1
   fi
   
-  # Determine URL
-  local protocol="http"
-  if [[ "$SSL_MODE" == "local" ]] || [[ "$SSL_MODE" == "letsencrypt" ]]; then
-    protocol="https"
-  fi
-  
-  local admin_route="${ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
-  admin_route=$(echo "$admin_route" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
-  
-  local url="${protocol}://${admin_route}"
+  # Determine URL - use localhost for simplicity
+  local admin_port="${NSELF_ADMIN_PORT:-3100}"
+  local url="http://localhost:${admin_port}"
   
   log_info "Opening admin UI at: $url"
   
   # Open in browser (cross-platform)
-  if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$url" 2>/dev/null
-  elif command -v open >/dev/null 2>&1; then
-    open "$url" 2>/dev/null
+  if command -v open >/dev/null 2>&1; then
+    open "$url" 2>/dev/null &
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" 2>/dev/null &
   elif command -v start >/dev/null 2>&1; then
-    start "$url" 2>/dev/null
+    start "$url" 2>/dev/null &
   else
     log_warning "Could not open browser automatically"
     log_info "Please navigate to: $url"

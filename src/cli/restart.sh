@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # restart.sh - Smart restart for services
 
 # Source shared utilities

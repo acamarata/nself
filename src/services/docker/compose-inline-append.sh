@@ -320,3 +320,43 @@ if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]]; then
       retries: 3
 EOF
 fi
+
+# nself-admin service
+if [[ "$NSELF_ADMIN_ENABLED" == "true" ]]; then
+  cat >>docker-compose.yml <<EOF
+
+  # nself Admin UI
+  # Note: Requires Docker socket access for container management
+  nself-admin:
+    image: acamarata/nself-admin:latest
+    container_name: \${PROJECT_NAME}_admin
+    restart: unless-stopped
+    ports:
+      - "\${NSELF_ADMIN_PORT:-3100}:3021"
+    environment:
+      - PROJECT_DIR=/workspace
+      - PROJECT_NAME=\${PROJECT_NAME}
+      - BASE_DOMAIN=\${BASE_DOMAIN}
+      - ENV=\${ENV}
+      - ADMIN_SECRET_KEY=\${ADMIN_SECRET_KEY}
+      - ADMIN_PASSWORD_HASH=\${ADMIN_PASSWORD_HASH}
+      - DATABASE_URL=\${HASURA_GRAPHQL_DATABASE_URL}
+      - HASURA_ENDPOINT=http://hasura:8080
+      - HASURA_ADMIN_SECRET=\${HASURA_GRAPHQL_ADMIN_SECRET}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./:/workspace:rw
+      - nself-admin-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - postgres
+      - hasura
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+EOF
+fi

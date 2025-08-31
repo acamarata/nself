@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # init.sh - Initialize a new nself project with environment files
 
 # Get script directory

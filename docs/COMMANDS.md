@@ -1,380 +1,789 @@
 # nself Commands Reference
 
-Complete reference for all nself commands in v0.3.9.
+Complete command reference for nself v0.3.9-beta.
 
-## Command Tree
-
-Based on actual implemented commands:
-
-```
-nself
-├── 🚀 Core Commands
-│   ├── init          Initialize a new project
-│   │   └── --wizard  Interactive setup wizard (basic implementation)
-│   ├── build         Build project structure and Docker images
-│   ├── start         Start all services
-│   ├── stop          Stop all services
-│   ├── restart       Restart all services
-│   ├── status        Show service status
-│   └── logs          View service logs
-│
-├── ⚙️ Management Commands
-│   ├── doctor        Run system diagnostics
-│   ├── backup        Backup and restore system
-│   ├── db            Database operations
-│   ├── email         Email service configuration
-│   ├── admin         Admin UI management (planned for v0.4.0)
-│   ├── search        Search service management (planned for v0.4.0)
-│   ├── deploy        SSH deployment (planned for v0.4.0)
-│   ├── ssl           SSL certificate management
-│   ├── urls          Show service URLs
-│   ├── prod          Configure for production
-│   ├── trust         Install SSL certificates
-│   ├── validate      Validate configuration
-│   ├── exec          Execute commands in containers
-│   ├── scale         Resource scaling
-│   ├── metrics       Metrics and monitoring
-│   └── clean         Clean Docker resources
-│
-├── 🛠️ Development Commands
-│   ├── diff          Show configuration differences
-│   ├── reset         Reset project to clean state
-│   ├── rollback      Rollback to previous version
-│   ├── monitor       Real-time monitoring
-│   └── scaffold      Create new service from template
-│
-├── 🔧 Tool Commands
-│   ├── hot_reload    Enable hot reload for development
-│   └── validate-env  Validate environment configuration
-│
-└── 📋 Other Commands
-    ├── up            Alias for start (backward compatibility)
-    ├── down          Alias for stop (backward compatibility)
-    ├── update        Update nself to latest version
-    ├── version       Show version information
-    └── help          Show help information
-```
-
----
-
-# 🚀 Core Commands
-
-## init
-
-Initialize a new nself project with smart defaults.
-
-**Usage:** `nself init [--wizard]`
-
-**Options:**
-- `--wizard` - Launch interactive setup wizard (NEW in v0.3.9)
-
-**What it creates:**
-- `.env.local` - Your main configuration file
-- `.env.example` - Reference documentation for all options
-
-**Example:**
-```bash
-nself init              # Quick setup with defaults
-nself init --wizard     # Interactive guided setup (v0.3.9)
-```
-
-## build
-
-Generate project infrastructure from your `.env.local` settings.
-
-**Usage:** `nself build [--force]`
-
-**What it generates:**
-- `docker-compose.yml` - Main service orchestration
-- `nginx/` - Web server configuration with SSL
-- SSL certificates (automatic)
-- Database initialization scripts
-
-## start / stop / restart
-
-**Usage:**
-```bash
-nself start [--verbose] [--skip-checks]
-nself stop
-nself restart
-```
-
-- `start` - Start all services with health checks
-- `stop` - Stop all services gracefully  
-- `restart` - Restart all services (stop + start)
-
-**Aliases:**
-- `nself up` - Same as `nself start`
-- `nself down` - Same as `nself stop`
-
-## status
-
-Show comprehensive service status with health monitoring.
-
-**Usage:** `nself status [--watch] [--json]`
-
-## logs
-
-View and follow service logs with filtering.
-
-**Usage:** `nself logs [service] [--follow] [--tail N] [--grep PATTERN]`
-
----
-
-# ⚙️ Management Commands
-
-## doctor
-
-Run comprehensive system diagnostics.
-
-**Usage:** `nself doctor [--quick] [--fix] [--verbose]`
-
-Performs health checks on SSL certificates, DNS, network, and system resources.
-
-## backup
-
-Enterprise-grade backup and restore system with cloud storage support.
-
-**Usage:** `nself backup <subcommand> [options]`
-
-**Subcommands:**
-- `create [type] [name]` - Create backups (full, database, config)
-- `list` - List available backups (local and cloud)
-- `restore <name> [type]` - Restore from backup
-- `prune [policy] [days]` - Remove old backups
-  - Policies: `age` (default), `gfs` (Grandfather-Father-Son), `smart`, `cloud`
-- `cloud [action]` - Manage cloud backups
-  - Actions: `setup`, `status`, `test`
-- `schedule [frequency]` - Schedule automatic backups
-  - Frequencies: `hourly`, `daily`, `weekly`, `monthly`
-
-**Cloud Providers Supported:**
-- Amazon S3 / MinIO
-- Dropbox
-- Google Drive
-- OneDrive
-- 40+ providers via rclone (Box, MEGA, pCloud, etc.)
-
-**Examples:**
-```bash
-# Create full backup
-nself backup create
-
-# Create database backup with custom name
-nself backup create database pre-migration
-
-# Setup cloud backups
-nself backup cloud setup
-
-# Apply smart retention policy
-nself backup prune smart
-
-# Schedule daily backups
-nself backup schedule daily
-```
-
-**Environment Variables:**
-- `BACKUP_DIR` - Backup directory (default: ./backups)
-- `BACKUP_RETENTION_DAYS` - Days to keep backups (default: 30)
-- `BACKUP_RETENTION_MIN` - Minimum backups to keep (default: 3)
-- `BACKUP_CLOUD_PROVIDER` - Cloud provider (s3, dropbox, gdrive, onedrive, rclone)
-
-## db
-
-Database operations and management.
-
-**Usage:** `nself db <command>`
-
-Supports migrations, schema management, seeding, and team collaboration.
-
-## email
-
-Email service configuration.
-
-**Usage:** `nself email <subcommand>`
-
-**Subcommands:**
-- `setup` - Interactive email setup wizard
-- `list` - Show supported providers
-- `configure <provider>` - Configure specific provider
-- `validate` - Check email configuration
-- `test [email]` - Send test email
-- `docs <provider>` - Show provider setup guide
-
-Supports 16+ email providers including SendGrid, AWS SES, Mailgun, and SMTP.
-
-## admin *(planned for v0.4.0)*
-
-Admin UI management will provide visual administration in a future release.
-
-**Status:** Not yet implemented. Planned for v0.4.0.
-
-## search *(planned for v0.4.0)*
-
-Enterprise search service management will be available in a future release.
-
-**Status:** Not yet implemented. Planned for v0.4.0.
-
-## deploy *(planned for v0.4.0)*
-
-SSH deployment to VPS servers will be available in a future release.
-
-**Status:** Not yet implemented. Planned for v0.4.0.
-
-## ssl
-
-Fully automatic SSL certificate management.
-
-**Usage:** `nself ssl <subcommand>`
-
-**Subcommands:**
-- `bootstrap` - Generate certificates for all domains
-- `status` - Show certificate status and expiry
-- `renew` - Manually renew certificates
-- `auto-renew` - Check and renew if needed
-- `schedule` - Schedule automatic renewal
-- `unschedule` - Remove automatic renewal
-
-SSL is completely automated by default.
-
-## Other Management Commands
-
-- **urls** - Show all service URLs and endpoints
-- **prod** - Configure production deployment with secure passwords
-- **trust** - Install SSL root certificate for browsers
-- **validate** - Validate configuration files with auto-fix
-- **exec** - Execute commands in running containers
-- **scale** - Resource scaling and management
-- **metrics** - Metrics collection and observability
-- **clean** - Clean Docker resources
-
----
-
-# 🛠️ Development Commands
-
-## diff
-
-Show configuration differences with drift detection.
-
-**Usage:** `nself diff [--drift]`
-
-## reset
-
-Reset project to clean state.
-
-**Usage:** `nself reset [--confirm]`
-
-## rollback
-
-Rollback to previous versions or deployments.
-
-**Usage:** `nself rollback <type>`
-
-**Types:**
-- `latest` - Rollback to latest backup
-- `backup [id]` - Rollback to specific backup
-- `migration [steps]` - Rollback database migrations
-
-## monitor
-
-Real-time monitoring dashboard.
-
-**Usage:** `nself monitor [view]`
-
-**Views:**
-- `dashboard` - Full monitoring dashboard
-- `services` - Monitor service health
-- `resources` - Monitor resource usage
-- `logs` - Monitor logs in real-time
-- `alerts` - Monitor active alerts
-
-## scaffold
-
-Create new service from template.
-
-**Usage:** `nself scaffold <type> <name>`
-
-**Types:** `nestjs`, `golang`, `python`, `react`, `vue`, `angular`
-
----
-
-# 🔧 Tool Commands
-
-## hot_reload
-
-Enable hot reload for development.
-
-**Usage:** `nself hot_reload [service]`
-
-## validate-env
-
-Validate environment configuration.
-
-**Usage:** `nself validate-env [--profile] [--strict] [--fix]`
-
----
-
-# 📋 Other Commands
-
-## update
-
-Update nself to the latest version.
-
-**Usage:** `nself update`
-
-## version
-
-Show current nself version and build information.
-
-**Usage:** `nself version`
-
-## help
-
-Show help information.
-
-**Usage:** `nself help [command]`
-
----
+**Total Commands**: 34 (including 2 aliases)
 
 ## Quick Reference
 
-**Getting Started:**
 ```bash
-nself init --wizard  # Interactive setup (v0.3.9)
-nself build          # Generate infrastructure  
-nself start          # Start all services
+# Initialize a new project
+nself init
+
+# Build and start services
+nself build
+nself start
+
+# Check status
+nself status
+
+# View logs
+nself logs [service]
+
+# Stop services
+nself stop
 ```
 
-**Development:**
+## Core Commands
+
+### nself init
+Initialize a new nself project with environment configuration.
+
 ```bash
-nself status         # Check service health
-nself logs           # View logs
-nself monitor        # Real-time dashboard
+nself init [options]
 ```
 
-**Production:**
+**Options:**
+- `--wizard` - Interactive setup wizard
+- `--force` - Overwrite existing configuration
+- `--admin` - Include admin UI setup
+
+**Creates:**
+- `.env.local` - Development configuration
+- `.env.secrets` - Sensitive data (git-ignored)
+- `.gitignore` - Ignore sensitive files
+
+### nself build
+Generate Docker Compose configuration and build services.
+
 ```bash
-nself prod           # Generate production config
-nself deploy init    # Setup deployment (v0.3.9)
-nself deploy ssh     # Deploy to VPS (v0.3.9)
+nself build [options]
 ```
 
-**v0.3.9 New Features:**
+**Options:**
+- `--force` - Force rebuild all services
+- `--verbose` - Show detailed output
+- `--no-cache` - Build without Docker cache
+
+**Generates:**
+- `docker-compose.yml` - Main services configuration
+- `docker-compose.override.yml` - Development overrides
+- `nginx/` - Nginx configuration
+- `ssl/` - SSL certificates
+
+### nself start
+Start all enabled services.
+
 ```bash
-# Custom Services (CS_N pattern)
-CS_1=api,js,3000     # Define in .env.local
-nself build          # Generates custom services
-
-# Frontend Applications
-FRONTEND_APPS="app:short:prefix:port"  # Define in .env.local
-nself build          # Generates frontend routing
-
-# Multi-environment support
-nself init           # Creates .env.local, .env.dev, .env.staging, .env.prod
+nself start [options]
 ```
 
-**For help with any command:**
+**Options:**
+- `--verbose` - Show detailed startup logs
+- `--skip-checks` - Skip port availability checks
+- `--attach` - Run in foreground (Ctrl+C to stop)
+- `--no-deps` - Don't start linked services
+
+### nself stop
+Stop running services.
+
 ```bash
-nself help <command>
-nself <command> --help
+nself stop [options] [services...]
 ```
+
+**Options:**
+- `-v, --volumes` - Remove volumes (WARNING: deletes all data)
+- `--rmi` - Remove Docker images
+- `--remove-orphans` - Remove containers for services not in compose file
+- `--verbose` - Show detailed output
+
+**Examples:**
+```bash
+nself stop              # Stop all services, keep data
+nself stop postgres     # Stop only postgres
+nself stop --volumes    # Stop and remove all data
+```
+
+### nself restart
+Restart services.
+
+```bash
+nself restart [service]
+```
+
+**Examples:**
+```bash
+nself restart           # Restart all services
+nself restart postgres  # Restart only postgres
+nself restart hasura    # Restart only hasura
+```
+
+### nself status
+Show service health and resource usage.
+
+```bash
+nself status [options] [service]
+```
+
+**Options:**
+- `-w, --watch` - Watch mode (refresh every 5s)
+- `-i, --interval N` - Set refresh interval for watch mode
+- `--no-resources` - Hide resource usage information
+- `--show-ports` - Show detailed port information
+- `--format FORMAT` - Output format: table, json
+
+**Shows:**
+- Service status (running/stopped/unhealthy)
+- Resource usage (CPU, memory)
+- Service URLs
+- Health check status
+
+### nself logs
+View service logs.
+
+```bash
+nself logs [options] [service]
+```
+
+**Options:**
+- `-f, --follow` - Follow log output
+- `-t, --timestamps` - Show timestamps
+- `--since TIME` - Show logs since timestamp
+- `--tail N` - Number of lines to show (default: 50)
+- `--no-color` - Disable colored output
+
+**Examples:**
+```bash
+nself logs              # Show all service logs
+nself logs postgres     # Show postgres logs
+nself logs -f hasura    # Follow hasura logs
+```
+
+## Database Commands
+
+### nself db
+Database management interface.
+
+```bash
+nself db [subcommand]
+```
+
+**Subcommands:**
+
+#### Schema Management
+- `run` - Analyze schema.dbml and generate migrations
+- `sync` - Pull schema from dbdiagram.io
+- `sample` - Create sample schema
+
+#### Migrations
+- `migrate:create NAME` - Create new migration
+- `migrate:up [N]` - Apply N migrations (default: all)
+- `migrate:down [N]` - Rollback N migrations (default: 1)
+- `migrate:status` - Show migration status
+
+#### Data Operations
+- `console` - Open PostgreSQL console
+- `export [--format=sql|csv|json]` - Export database
+- `import FILE` - Import data from file
+- `clone SOURCE DEST` - Clone database
+
+#### Maintenance
+- `optimize` - Run full optimization (VACUUM, ANALYZE, REINDEX)
+- `vacuum [--full]` - Reclaim storage space
+- `analyze` - Update query planner statistics
+- `reindex` - Rebuild all indexes
+
+#### Monitoring
+- `connections` - Show active connections
+- `locks` - Show current locks
+- `kill PID` - Terminate connection by PID
+- `size` - Show database sizes
+
+#### Lifecycle
+- `seed` - Seed database with initial data
+- `reset` - Drop and recreate database
+- `update` - Apply migrations and seeds
+- `status` - Show database status
+
+## Backup Commands
+
+### nself backup
+Comprehensive backup system with local and cloud support.
+
+```bash
+nself backup [subcommand] [options]
+```
+
+**Subcommands:**
+
+#### Creating Backups
+- `create [--type=full|database|config]` - Create backup
+- `create --name NAME` - Create named backup
+- `create --compress` - Compress backup
+
+#### Managing Backups
+- `list` - List all backups
+- `restore BACKUP_ID` - Restore from backup
+- `verify BACKUP_ID` - Verify backup integrity
+- `delete BACKUP_ID` - Delete specific backup
+
+#### Backup Pruning
+- `prune --age DAYS` - Remove backups older than N days
+- `prune --gfs` - Apply Grandfather-Father-Son retention
+- `prune --smart` - Smart retention (keeps important backups)
+- `prune --dry-run` - Preview what would be deleted
+
+#### Cloud Backups
+- `cloud setup` - Configure cloud provider (S3, GCS, Azure)
+- `cloud sync` - Sync local backups to cloud
+- `cloud list` - List cloud backups
+- `cloud restore` - Restore from cloud
+
+#### Scheduling
+- `schedule daily HH:MM` - Daily backups
+- `schedule weekly DAY HH:MM` - Weekly backups
+- `schedule monthly DD HH:MM` - Monthly backups
+- `schedule list` - Show scheduled backups
+- `schedule remove ID` - Remove schedule
+
+## Admin UI Commands
+
+### nself admin
+Admin UI management for monitoring and configuration.
+
+```bash
+nself admin [subcommand]
+```
+
+**Subcommands:**
+- `enable` - Enable admin UI (generates temporary password)
+- `disable` - Disable admin UI
+- `status` - Show admin UI status and configuration
+- `password [PASSWORD]` - Set admin password
+- `reset` - Reset admin to defaults
+- `logs` - Show admin container logs
+- `open` - Open admin UI in browser
+
+**Admin UI Features:**
+- Real-time service monitoring
+- Docker container management
+- Database query interface
+- Log viewer
+- Configuration editor
+- Backup management
+
+**Access:**
+- Default URL: http://localhost:3100
+- Default username: admin
+- Password: Set with `nself admin password` or use temporary
+
+## Configuration Commands
+
+### nself validate
+Validate configuration files and environment.
+
+```bash
+nself validate [options]
+```
+
+**Checks:**
+- Environment variables
+- Docker Compose syntax
+- Service dependencies
+- Port conflicts
+- SSL certificates
+- Database connections
+
+### nself ssl
+SSL certificate management.
+
+```bash
+nself ssl [options]
+```
+
+**Options:**
+- `--generate` - Generate self-signed certificates
+- `--import CERT KEY` - Import existing certificates
+- `--renew` - Renew certificates
+- `--verify` - Verify certificate configuration
+
+**Generates certificates for:**
+- localhost
+- *.local.nself.org
+- Custom domains
+
+### nself trust
+Install SSL certificates in system trust store.
+
+```bash
+nself trust
+```
+
+**Supports:**
+- macOS Keychain
+- Linux ca-certificates
+- Windows Certificate Store
+- Firefox/Chrome certificate stores
+
+### nself email
+Configure email service provider.
+
+```bash
+nself email [provider]
+```
+
+**Supported Providers:**
+- Development: mailpit, mailhog
+- Production: sendgrid, mailgun, ses, smtp
+- Transactional: postmark, sparkpost, mandrill
+
+### nself prod
+Generate production configuration.
+
+```bash
+nself prod [options]
+```
+
+**Features:**
+- Generates secure passwords
+- Creates .env.prod file
+- Configures SSL for production
+- Sets resource limits
+- Enables security features
+
+## Monitoring Commands
+
+### nself metrics
+View service metrics and performance data.
+
+```bash
+nself metrics [service] [options]
+```
+
+**Options:**
+- `--interval SECONDS` - Refresh interval
+- `--export FORMAT` - Export metrics (json, csv)
+- `--since TIME` - Show metrics since time
+
+### nself monitor
+Real-time monitoring dashboard.
+
+```bash
+nself monitor [options]
+```
+
+**Features:**
+- Service health monitoring
+- Resource usage graphs
+- Log streaming
+- Alert notifications
+
+### nself doctor
+System diagnostics and health checks.
+
+```bash
+nself doctor [options]
+```
+
+**Checks:**
+- Docker installation and version
+- System resources (CPU, memory, disk)
+- Network connectivity
+- Port availability
+- Service health
+- Configuration issues
+
+**Options:**
+- `--fix` - Attempt to fix issues automatically
+- `--verbose` - Show detailed diagnostics
+
+## Development Commands
+
+### nself exec
+Execute commands in service containers.
+
+```bash
+nself exec [options] <service> [command]
+```
+
+**Options:**
+- `-it` - Interactive terminal
+- `-T` - Disable pseudo-TTY
+- `-u USER` - Run as specific user
+- `-w DIR` - Working directory
+
+**Examples:**
+```bash
+nself exec postgres psql -U postgres
+nself exec hasura hasura-cli console
+nself exec -it nginx /bin/bash
+```
+
+### nself diff
+Show configuration differences.
+
+```bash
+nself diff [env1] [env2]
+```
+
+**Examples:**
+```bash
+nself diff              # Compare .env.local with defaults
+nself diff dev prod     # Compare dev and prod configs
+```
+
+### nself reset
+Reset project to clean state.
+
+```bash
+nself reset [options]
+```
+
+**Options:**
+- `--hard` - Remove all data and configurations
+- `--soft` - Keep configurations, reset data
+- `--confirm` - Skip confirmation prompt
+
+### nself clean
+Clean up Docker resources.
+
+```bash
+nself clean [options]
+```
+
+**Options:**
+- `--all` - Remove all nself containers and volumes
+- `--images` - Remove Docker images
+- `--orphans` - Remove orphaned containers
+- `--system` - Run Docker system prune
+
+## Deployment Commands
+
+### nself deploy
+Deploy to remote servers via SSH.
+
+```bash
+nself deploy [target] [options]
+```
+
+**Options:**
+- `--host HOST` - Target host
+- `--user USER` - SSH user
+- `--key PATH` - SSH key path
+- `--dry-run` - Preview deployment
+
+### nself scale
+Scale service resources.
+
+```bash
+nself scale [service] [replicas]
+```
+
+**Examples:**
+```bash
+nself scale hasura 3    # Scale hasura to 3 replicas
+nself scale postgres 2  # Scale postgres to 2 replicas
+```
+
+### nself rollback
+Rollback to previous version.
+
+```bash
+nself rollback [options]
+```
+
+**Options:**
+- `--version VERSION` - Specific version to rollback to
+- `--list` - List available versions
+- `--dry-run` - Preview rollback
+
+## Utility Commands
+
+### nself urls
+Show all service URLs.
+
+```bash
+nself urls
+```
+
+**Shows:**
+- GraphQL API endpoints
+- Admin interfaces
+- Storage URLs
+- Custom service endpoints
+
+### nself version
+Show nself version information.
+
+```bash
+nself version [options]
+```
+
+**Options:**
+- `--check` - Check for updates
+- `--verbose` - Show detailed version info
+
+### nself update
+Update nself CLI to latest version.
+
+```bash
+nself update [options]
+```
+
+**Options:**
+- `--check` - Check for updates only
+- `--force` - Force update even if current
+- `--beta` - Update to beta version
+
+### nself help
+Show help information.
+
+```bash
+nself help [command]
+```
+
+**Examples:**
+```bash
+nself help          # Show general help
+nself help db       # Show database command help
+nself help backup   # Show backup command help
+```
+
+### nself scaffold
+Generate new service from template.
+
+```bash
+nself scaffold <type> <name> [options]
+```
+
+**Types:**
+- `api` - REST API service
+- `worker` - Background worker service
+- `cron` - Scheduled job service
+- `websocket` - WebSocket service
+
+**Options:**
+- `--language <lang>` - Language (js, ts, python, go)
+- `--framework <fw>` - Framework to use
+- `--port <port>` - Service port
+
+**Examples:**
+```bash
+nself scaffold api user-service --language ts
+nself scaffold worker email-processor --language python
+```
+
+### nself search
+Manage search service (MeiliSearch, Elasticsearch, etc.).
+
+```bash
+nself search <subcommand>
+```
+
+**Subcommands:**
+- `enable` - Enable search service
+- `disable` - Disable search service
+- `status` - Show search status
+- `configure` - Configure search engine
+- `reindex` - Rebuild search index
+
+### nself mlflow
+Manage MLflow ML experiment tracking.
+
+```bash
+nself mlflow <subcommand>
+```
+
+**Subcommands:**
+- `enable` - Enable MLflow service
+- `disable` - Disable MLflow service  
+- `status` - Show MLflow status
+- `open` - Open MLflow UI
+- `configure` - Configure MLflow settings
+
+**Examples:**
+```bash
+nself mlflow enable
+nself mlflow open    # Opens localhost:5000
+```
+
+### nself up
+Alias for `nself start` (Docker Compose compatibility).
+
+```bash
+nself up [options]
+```
+
+Same options as `nself start`.
+
+### nself down
+Alias for `nself stop` (Docker Compose compatibility).
+
+```bash
+nself down [options]
+```
+
+Same options as `nself stop`.
+
+## Environment Variables
+
+### Core Settings
+```bash
+# Project configuration
+PROJECT_NAME=myproject
+BASE_DOMAIN=local.nself.org
+ENV=dev                     # dev, staging, prod
+
+# Database
+POSTGRES_DB=nhost
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secure-password
+
+# Hasura
+HASURA_GRAPHQL_ADMIN_SECRET=admin-secret
+HASURA_JWT_KEY=jwt-secret-minimum-32-chars
+```
+
+### Service Toggles
+```bash
+# Enable/disable services
+POSTGRES_ENABLED=true
+HASURA_ENABLED=true
+AUTH_ENABLED=true
+STORAGE_ENABLED=true
+REDIS_ENABLED=false
+FUNCTIONS_ENABLED=false
+DASHBOARD_ENABLED=false
+NSELF_ADMIN_ENABLED=true
+```
+
+### Advanced Configuration
+```bash
+# Resource limits
+POSTGRES_MAX_CONNECTIONS=100
+POSTGRES_SHARED_BUFFERS=256MB
+HASURA_MAX_CONNECTIONS=50
+
+# Monitoring
+PROMETHEUS_ENABLED=false
+GRAFANA_ENABLED=false
+LOKI_ENABLED=false
+
+# Custom services
+SERVICES_ENABLED=true
+NESTJS_SERVICES=api,workers
+GOLANG_SERVICES=analytics
+PYTHON_SERVICES=ml,data
+```
+
+## File Structure
+
+```
+project/
+├── .env.local              # Development configuration
+├── .env.secrets            # Sensitive data (git-ignored)
+├── .env                    # Production override
+├── .gitignore              # Git ignore rules
+├── docker-compose.yml      # Generated services
+├── docker-compose.override.yml  # Dev overrides
+├── nginx/
+│   ├── default.conf        # Nginx configuration
+│   └── ssl/                # SSL configurations
+├── ssl/
+│   └── certificates/       # SSL certificates
+├── backups/                # Local backups
+├── migrations/             # Database migrations
+├── seeds/                  # Database seeds
+└── schemas/                # Database schemas
+```
+
+## Common Workflows
+
+### Development Setup
+```bash
+# 1. Initialize project
+nself init
+
+# 2. Configure admin UI
+nself admin enable
+nself admin password mypassword
+
+# 3. Build and start
+nself build
+nself start
+
+# 4. Check status
+nself status
+nself admin open
+```
+
+### Production Deployment
+```bash
+# 1. Generate production config
+nself prod
+
+# 2. Set up SSL
+nself ssl --generate
+nself trust
+
+# 3. Configure backups
+nself backup schedule daily 02:00
+nself backup cloud setup
+
+# 4. Deploy
+nself deploy production
+```
+
+### Database Management
+```bash
+# Create and apply migrations
+nself db migrate:create add_users_table
+nself db migrate:up
+
+# Backup before changes
+nself backup create --name pre-migration
+
+# Seed data
+nself db seed
+
+# Monitor
+nself db connections
+nself db size
+```
+
+### Troubleshooting
+```bash
+# Run diagnostics
+nself doctor
+
+# Check logs
+nself logs --tail 100
+nself logs postgres -f
+
+# Reset if needed
+nself stop --volumes
+nself reset --hard
+nself build --force
+```
+
+## Exit Codes
+
+- `0` - Success
+- `1` - General error
+- `2` - Misuse of command
+- `126` - Command cannot execute
+- `127` - Command not found
+- `130` - Terminated by Ctrl+C
+
+## Getting Help
+
+```bash
+# Command help
+nself help
+nself [command] --help
+
+# Documentation
+cat docs/COMMANDS.md
+cat docs/TROUBLESHOOTING.md
+
+# Version info
+nself version
+```
+
+## See Also
+
+- [Architecture Guide](ARCHITECTURE.md)
+- [Backup Guide](BACKUP_GUIDE.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [Environment Configuration](ENVIRONMENT_CONFIGURATION.md)
+- [Contributing](CONTRIBUTING.md)

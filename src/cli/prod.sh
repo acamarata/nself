@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # prod.sh - Configure for production deployment
 
 # Source shared utilities
