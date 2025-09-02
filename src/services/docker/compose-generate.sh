@@ -27,7 +27,7 @@ source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
 
 # Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  load_env_safe ".env.local" || {
+  load_env_with_priority || {
     log_error "Failed to load .env.local"
     exit 1
   }
@@ -109,9 +109,6 @@ services:
       - minio
 EOF
 
-if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  echo "      - config-server" >>docker-compose.yml
-fi
 
 # Note: unity-functions and unity-dashboard are added by compose-inline-append.sh
 
@@ -294,45 +291,6 @@ EOF
 fi
 
 # Config Server (needed for dashboard)
-if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
-  cat >>docker-compose.yml <<EOF
-
-  # Config Server for Dashboard
-  config-server:
-    build:
-      context: ./config-server
-      dockerfile: Dockerfile
-    container_name: ${PROJECT_NAME}_config-server
-    restart: unless-stopped
-    environment:
-      - PORT=4001
-      - PROJECT_NAME=${PROJECT_NAME}
-      - BASE_DOMAIN=${BASE_DOMAIN}
-      - HASURA_GRAPHQL_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
-      - HASURA_VERSION=${HASURA_VERSION}
-      - AUTH_VERSION=${AUTH_VERSION}
-      - STORAGE_VERSION=${STORAGE_VERSION}
-      - POSTGRES_VERSION=${POSTGRES_VERSION}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - AUTH_CLIENT_URL=${AUTH_CLIENT_URL}
-      - AUTH_JWT_ACCESS_TOKEN_EXPIRES_IN=${AUTH_JWT_ACCESS_TOKEN_EXPIRES_IN}
-      - AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN=${AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN}
-      - AUTH_SMTP_HOST=${AUTH_SMTP_HOST}
-      - AUTH_SMTP_PORT=${AUTH_SMTP_PORT}
-      - AUTH_SMTP_SENDER=${AUTH_SMTP_SENDER}
-      - JWT_KEY=${JWT_KEY}
-    networks:
-      - default
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4001/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-EOF
-fi
 
 # Nhost Dashboard - Skipped, using unity-dashboard from compose-inline-append.sh
 if false; then # Disabled
@@ -342,9 +300,6 @@ if false; then # Disabled
     image: nhost/dashboard:${DASHBOARD_VERSION}
     container_name: ${PROJECT_NAME}_dashboard
     restart: unless-stopped
-    depends_on:
-      config-server:
-        condition: service_healthy
     environment:
       - NEXT_PUBLIC_NHOST_PLATFORM=false
       - NEXT_PUBLIC_ENV=dev

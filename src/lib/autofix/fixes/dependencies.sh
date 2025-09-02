@@ -119,7 +119,6 @@ start_services_ordered() {
     "redis"
     "minio"
     "mailpit"
-    "config-server"
     "hasura"
     "auth"
     "storage"

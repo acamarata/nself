@@ -304,9 +304,6 @@ run_config_wizard() {
       *Functions*)
         config+=("FUNCTIONS_ENABLED=true")
         ;;
-      *Config*)
-        config+=("CONFIG_SERVER_ENABLED=true")
-        ;;
       *Dashboard*)
         config+=("DASHBOARD_ENABLED=true")
         ;;

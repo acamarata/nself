@@ -1,0 +1,38 @@
+const http = require('http');
+
+const port = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  
+  if (req.url === '/health') {
+    res.statusCode = 200;
+    res.end(JSON.stringify({
+      status: 'healthy',
+      service: '{{SERVICE_NAME}}',
+      timestamp: new Date().toISOString()
+    }));
+  } else if (req.url === '/api/info') {
+    res.statusCode = 200;
+    res.end(JSON.stringify({
+      service: '{{SERVICE_NAME}}',
+      project: '{{PROJECT_NAME}}',
+      runtime: 'Node.js',
+      version: process.version,
+      domain: '{{BASE_DOMAIN}}'
+    }));
+  } else {
+    res.statusCode = 200;
+    res.end(JSON.stringify({
+      message: `Hello from {{SERVICE_NAME}}!`,
+      project: '{{PROJECT_NAME}}',
+      runtime: 'Node.js',
+      path: req.url
+    }));
+  }
+});
+
+server.listen(port, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on http://localhost:${port}`);
+  console.log(`📍 Health check: http://localhost:${port}/health`);
+});

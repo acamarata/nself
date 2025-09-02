@@ -1,0 +1,125 @@
+const express = require('express');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+const port = process.env.PORT || 3000;
+
+// Express routes
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+    connections: io.engine.clientsCount
+  });
+});
+
+app.get('/api/info', (req, res) => {
+  res.json({
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Socket.io',
+    runtime: 'Node.js',
+    domain: '{{BASE_DOMAIN}}',
+    features: ['WebSocket', 'Fallback polling', 'Rooms', 'Namespaces']
+  });
+});
+
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>{{SERVICE_NAME}} - Socket.io</title>
+    </head>
+    <body>
+      <h1>{{SERVICE_NAME}} WebSocket Service</h1>
+      <p>Connect using Socket.io client to ws://localhost:${port}</p>
+      <div id="messages"></div>
+      <script src="/socket.io/socket.io.js"></script>
+      <script>
+        const socket = io();
+        socket.on('connect', () => {
+          console.log('Connected:', socket.id);
+          document.getElementById('messages').innerHTML += '<p>Connected: ' + socket.id + '</p>';
+        });
+        socket.on('message', (msg) => {
+          console.log('Message:', msg);
+          document.getElementById('messages').innerHTML += '<p>Message: ' + JSON.stringify(msg) + '</p>';
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Socket.io events
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`);
+  
+  // Send welcome message
+  socket.emit('message', {
+    type: 'welcome',
+    message: `Welcome to {{SERVICE_NAME}}!`,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Handle echo
+  socket.on('echo', (data) => {
+    socket.emit('message', {
+      type: 'echo',
+      original: data,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle broadcast
+  socket.on('broadcast', (data) => {
+    io.emit('message', {
+      type: 'broadcast',
+      from: socket.id,
+      data: data,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle room join
+  socket.on('join-room', (room) => {
+    socket.join(room);
+    socket.emit('message', {
+      type: 'room-joined',
+      room: room,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle room message
+  socket.on('room-message', ({ room, message }) => {
+    io.to(room).emit('message', {
+      type: 'room-message',
+      room: room,
+      from: socket.id,
+      message: message,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  socket.on('disconnect', () => {
+    console.log(`Client disconnected: ${socket.id}`);
+  });
+});
+
+httpServer.listen(port, () => {
+  console.log(`🚀 {{SERVICE_NAME}} Socket.io server is running on http://localhost:${port}`);
+  console.log(`📍 Health check: http://localhost:${port}/health`);
+  console.log(`🔌 WebSocket endpoint: ws://localhost:${port}`);
+});

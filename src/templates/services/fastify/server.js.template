@@ -1,0 +1,59 @@
+const fastify = require('fastify')({ logger: true });
+
+// Register plugins
+fastify.register(require('@fastify/cors'));
+fastify.register(require('@fastify/helmet'));
+
+// Health check route
+fastify.get('/health', async (request, reply) => {
+  return { 
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString()
+  };
+});
+
+// Hello world route
+fastify.get('/', async (request, reply) => {
+  return { 
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Fastify',
+    version: '4.24.3'
+  };
+});
+
+// API info route
+fastify.get('/api/info', async (request, reply) => {
+  return {
+    service: '{{SERVICE_NAME}}',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    domain: '{{BASE_DOMAIN}}'
+  };
+});
+
+// Echo POST route
+fastify.post('/api/echo', async (request, reply) => {
+  return {
+    received: request.body,
+    timestamp: new Date().toISOString()
+  };
+});
+
+// Start server
+const start = async () => {
+  try {
+    const PORT = process.env.PORT || 3000;
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    console.log(`🚀 {{SERVICE_NAME}} is running on port ${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`🌐 API endpoint: http://localhost:${PORT}/api/info`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();
