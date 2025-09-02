@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 # Thin shim to call the actual nself implementation
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlinks to get the actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -h "$SCRIPT_PATH" ]; do
+  DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ $SCRIPT_PATH != /* ]] && SCRIPT_PATH="$DIR/$SCRIPT_PATH"
+done
+
+# Get the directory where this script is actually located
+SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
 NSELF_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Execute the actual nself implementation

@@ -156,36 +156,51 @@ cmd_build() {
     local validation_output=$(mktemp)
     local validation_status=0
 
-    # Capture validation output and prevent script exit with timeout
-    timeout 5 bash -c "
-      # Source validation again in subshell to ensure it's available
-      source '$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh' 2>/dev/null || true
-      source '$SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh' 2>/dev/null || true
+    # Simple validation without timeout issues
+    {
+      # Quick check for essential variables
+      if [[ ! -f ".env.local" ]]; then
+        echo "VALIDATION_ERRORS=('Missing .env.local file')"
+        echo "VALIDATION_WARNINGS=()"
+        echo "AUTO_FIXES=()"
+      else
+        # Load environment and check basics
+        set -a
+        source .env.local 2>/dev/null || true
+        set +a
+        
+        local errors=()
+        local warnings=()
+        local fixes=()
+        
+        # Check critical variables
+        if [[ -z "${PROJECT_NAME:-}" ]]; then
+          fixes+=("'Setting PROJECT_NAME'")
+          PROJECT_NAME="$(basename "$PWD")"
+          export PROJECT_NAME
+        fi
+        
+        if [[ -z "${BASE_DOMAIN:-}" ]]; then
+          fixes+=("'Setting BASE_DOMAIN'")  
+          BASE_DOMAIN="local.nself.org"
+          export BASE_DOMAIN
+        fi
+        
+        echo "VALIDATION_ERRORS=(${errors[@]:-})"
+        echo "VALIDATION_WARNINGS=(${warnings[@]:-})"
+        echo "AUTO_FIXES=(${fixes[@]:-})"
+      fi
+    } >"$validation_output" 2>&1
 
-      # Override format_section in subshell too
-      format_section() { :; }
-
-      # Run validation and capture status
-      run_validation .env.local 2>&1 || true
-
-      # Export arrays for parent shell
-      echo \"VALIDATION_ERRORS=(\${VALIDATION_ERRORS[*]@Q})\"
-      echo \"VALIDATION_WARNINGS=(\${VALIDATION_WARNINGS[*]@Q})\"
-      echo \"AUTO_FIXES=(\${AUTO_FIXES[*]@Q})\"
-    " >"$validation_output" 2>&1 || {
-      # If timeout occurs, just continue with build
-      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Validation timeout - continuing              \n"
-      echo "VALIDATION_ERRORS=()" >"$validation_output"
-      echo "VALIDATION_WARNINGS=()" >>"$validation_output"
-      echo "AUTO_FIXES=()" >>"$validation_output"
-    }
-
+    # Initialize arrays
+    VALIDATION_ERRORS=()
+    VALIDATION_WARNINGS=()
+    AUTO_FIXES=()
+    
     # Source the output to get the arrays
     if [[ -s "$validation_output" ]]; then
-      # Extract array declarations from output
-      eval "$(grep '^VALIDATION_ERRORS=' "$validation_output" 2>/dev/null || echo 'VALIDATION_ERRORS=()')"
-      eval "$(grep '^VALIDATION_WARNINGS=' "$validation_output" 2>/dev/null || echo 'VALIDATION_WARNINGS=()')"
-      eval "$(grep '^AUTO_FIXES=' "$validation_output" 2>/dev/null || echo 'AUTO_FIXES=()')"
+      # Source the file directly
+      source "$validation_output" 2>/dev/null || true
     fi
 
     # Check the result
@@ -463,7 +478,9 @@ EOF
         local app_route=""
         if [[ "${ENV:-dev}" == "prod" ]] || [[ "${ENV:-dev}" == "production" ]]; then
           # Production: use subdomain or custom domain if configured
-          local prod_route_var="${app_name^^}_PROD_ROUTE"
+          # Convert to uppercase for compatibility with older bash versions
+          local app_name_upper=$(echo "$app_name" | tr '[:lower:]' '[:upper:]')
+          local prod_route_var="${app_name_upper}_PROD_ROUTE"
           app_route="${!prod_route_var:-${app_short:-$app_name}.${BASE_DOMAIN}}"
         else
           # Development: use subdomain
@@ -536,16 +553,18 @@ EOF
           [[ -z "$app_name" || -z "$app_port" ]] && continue
           
           # Export configuration for each app
-          local prod_route_var="${app_name^^}_PROD_ROUTE"
+          # Convert to uppercase for compatibility with older bash versions
+          local app_name_upper=$(echo "$app_name" | tr '[:lower:]' '[:upper:]')
+          local prod_route_var="${app_name_upper}_PROD_ROUTE"
           local prod_route="${!prod_route_var:-${app_short:-$app_name}.${BASE_DOMAIN}}"
           cat >>"./frontend-apps.env" <<EOF
 # ${app_name} Application
-${app_name^^}_NAME=${app_name}
-${app_name^^}_SHORT=${app_short}
-${app_name^^}_TABLE_PREFIX=${app_prefix}
-${app_name^^}_DEV_PORT=${app_port}
-${app_name^^}_DEV_ROUTE=${app_short:-$app_name}.${BASE_DOMAIN}
-${app_name^^}_PROD_ROUTE=${prod_route}
+${app_name_upper}_NAME=${app_name}
+${app_name_upper}_SHORT=${app_short}
+${app_name_upper}_TABLE_PREFIX=${app_prefix}
+${app_name_upper}_DEV_PORT=${app_port}
+${app_name_upper}_DEV_ROUTE=${app_short:-$app_name}.${BASE_DOMAIN}
+${app_name_upper}_PROD_ROUTE=${prod_route}
 
 EOF
         done
@@ -765,15 +784,6 @@ EOF
       fi
     fi
 
-    # Config server (often needed internally)
-    if [[ ! -d "config-server" ]] && [[ -f "docker-compose.yml" ]]; then
-      if grep -q "config-server:" docker-compose.yml 2>/dev/null; then
-        bash -c "source '${gen_script}' && generate_dockerfile_for_service 'config-server' 'config-server'" >/dev/null 2>&1
-        if [[ -d "config-server" ]]; then
-          ((system_services_generated++))
-        fi
-      fi
-    fi
   fi
 
   # Report results

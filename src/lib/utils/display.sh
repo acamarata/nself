@@ -88,8 +88,8 @@ fi
 # Standardized command header with box
 # Args: $1 = title (e.g., "nself build"), $2 = subtitle (description)
 show_command_header() {
-  local title="$1"
-  local subtitle="$2"
+  local title="${1:-}"
+  local subtitle="${2:-}"
   local box_width=60
   local content_width=$((box_width - 2)) # Account for borders only
 

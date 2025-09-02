@@ -118,7 +118,7 @@ validate_required_vars() {
 
   # Load environment safely
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
-  load_env_safe "$env_file"
+  export_env_from_file "$env_file"
 
   # Required variables
   local required_vars=(
@@ -195,7 +195,7 @@ validate_ports() {
 
   # Load environment
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
-  load_env_safe "$env_file"
+  export_env_from_file "$env_file"
 
   # List of ports to check
   local ports=(
@@ -288,7 +288,7 @@ validate_service_configs() {
 
   # Load environment
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
-  load_env_safe "$env_file"
+  export_env_from_file "$env_file"
 
   # Check NestJS services
   if [[ "$NESTJS_ENABLED" == "true" ]]; then
@@ -347,7 +347,7 @@ validate_routing() {
 
   # Load environment
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
-  load_env_safe "$env_file"
+  export_env_from_file "$env_file"
 
   # Check BASE_DOMAIN format
   if [[ "$BASE_DOMAIN" =~ ^https?:// ]]; then

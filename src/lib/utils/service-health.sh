@@ -130,10 +130,6 @@ display_running_services() {
           local port=$(docker port "$container_name" 4000 2>/dev/null | cut -d: -f2)
           [[ -n "$port" ]] && port_info=":$port"
           ;;
-        config-server | config_server)
-          local port=$(docker port "$container_name" 4001 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
         minio | storage)
           local port=$(docker port "$container_name" 9000 2>/dev/null | cut -d: -f2)
           [[ -n "$port" ]] && port_info=":$port"

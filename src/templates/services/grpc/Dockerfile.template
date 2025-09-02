@@ -1,0 +1,50 @@
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+
+# Install protoc and dependencies
+RUN apk add --no-cache protobuf protobuf-dev make
+
+# Copy proto file
+COPY service.proto .
+
+# Initialize module
+RUN go mod init {{SERVICE_NAME}} && \
+    go get google.golang.org/grpc@latest && \
+    go get google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Generate Go code from proto
+RUN protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    service.proto
+
+# Copy server code
+COPY server.go .
+
+# Build the binary
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server .
+
+# Final stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the binary from builder
+COPY --from=builder /app/server .
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S appuser -u 1001 && \
+    chown -R appuser:appuser /root
+
+USER appuser
+
+EXPOSE 50051
+
+CMD ["./server"]
