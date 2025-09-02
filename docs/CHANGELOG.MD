@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2025-09-02
+
+### Added
+- **Admin UI Integration**: Full integration with nself-admin Docker image
+  - Web-based monitoring at localhost:3100
+  - Real-time service health checks
+  - Docker container management interface
+  - Database query interface
+  - Log viewer with filtering
+  - Backup management UI
+- **Enhanced Init Command**:
+  - Minimal default setup (just .env.example + .env.local)
+  - `--full` flag for complete environment setup
+  - `--wizard` flag for interactive configuration
+  - `--admin` flag for minimal admin UI setup
+  - Automatic .gitignore management
+- **Database Schema Template**: Added schema.dbml with example tables
+- **Service Templates**: Added 25+ service template stubs for various languages
+- **Improved Reset Command**: Timestamp-based backup folders (_backup/YYYYMMDD_HHMMSS/)
+
+### Changed
+- **Environment Loading Priority**: Fixed to match documentation (dev → staging/prod → local → .env → secrets)
+- **Environment Templates**: All templates updated with clean 60-char headers and smart defaults
+- **Build Command**: Simplified validation to prevent timeout issues
+- **Init Command**: Default behavior now creates minimal setup (breaking change)
+- **Reset Command**: Now uses organized timestamp subfolders in _backup/
+
+### Removed
+- **Config-Server**: Completely removed obsolete Nhost dashboard integration
+- Old JavaScript service templates (replaced with stubs)
+- All config-server related code and references
+
+### Fixed
+- Status command hanging issue
+- Stop command compose wrapper calls
+- Exec command container detection
+- Build command validation timeout
+- Doctor command function references
+- SSL certificate generation for nginx
+- Container name resolution issues
+- Environment loading priority bugs
+- Display.sh unbound variable errors
+- Diff.sh unbound variable error
+
+### Known Issues
+- Auth service health check reports unhealthy (service works correctly on port 4001)
+- Some commands may require PROJECT_NAME environment variable
+
 ## [0.3.9-beta] - 2025-08-31
 
 ### Added

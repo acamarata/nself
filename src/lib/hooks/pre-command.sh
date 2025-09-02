@@ -27,7 +27,7 @@ pre_command() {
     fi
 
     # Load environment
-    load_env_safe ".env.local" || return 1
+    load_env_with_priority ".env.local" || return 1
   fi
 
   # Commands that need Docker

@@ -1,0 +1,14 @@
+{
+  "name": "{{SERVICE_NAME}}",
+  "version": "1.0.0",
+  "description": "Socket.io service for {{PROJECT_NAME}}",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.0"
+  }
+}

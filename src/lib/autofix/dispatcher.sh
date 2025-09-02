@@ -62,31 +62,6 @@ analyze_and_fix_service() {
     return $?
   fi
 
-  # Config server health check issues
-  if [[ "$clean_name" == "config-server" ]] || [[ "$clean_name" == "config_server" ]]; then
-    log_info "Detected config-server health issue"
-
-    # Progressive fix strategies
-    local strategy=""
-
-    # Check if files exist first
-    if [[ ! -f "config-server/index.js" ]] && [[ $attempts -eq 0 ]]; then
-      # Files don't exist, skip straight to regeneration
-      strategy="regenerate_files"
-    elif [[ $attempts -eq 0 ]]; then
-      strategy="wait_for_health"
-    elif [[ $attempts -eq 1 ]] && [[ "$same_error" == "true" ]]; then
-      strategy="regenerate_files"
-    elif [[ $attempts -eq 2 ]] && [[ "$same_error" == "true" ]]; then
-      strategy="remove_health_check"
-    else
-      strategy="recreate_service"
-    fi
-
-    record_fix_attempt "$service_name" "$strategy"
-    fix_config_server "$service_name" "$service_logs" "$strategy"
-    return $?
-  fi
 
   # Redis connection issues
   if echo "$service_logs" | grep -q "redis.*connection\|connection.*redis\|port 637[0-9]"; then
@@ -123,15 +98,6 @@ analyze_and_fix_service() {
 
   # For certain services, regenerate files
   case "$clean_name" in
-  config-server | config_server)
-    if [[ ! -f "config-server/index.js" ]]; then
-      log_info "Regenerating config-server files"
-      if [[ -f "$AUTOFIX_DIR/../auto-fix/dockerfile-generator.sh" ]]; then
-        source "$AUTOFIX_DIR/../auto-fix/dockerfile-generator.sh"
-        generate_dockerfile_for_service "config-server" "config-server"
-      fi
-    fi
-    ;;
   esac
 
   return 99 # Retry
@@ -213,13 +179,6 @@ fix_missing_files() {
 
   # Service-specific file generation
   case "$clean_name" in
-  config-server | config_server)
-    mkdir -p config-server
-    if [[ -f "$AUTOFIX_DIR/../auto-fix/dockerfile-generator.sh" ]]; then
-      source "$AUTOFIX_DIR/../auto-fix/dockerfile-generator.sh"
-      generate_dockerfile_for_service "config-server" "config-server"
-    fi
-    ;;
   esac
 
   # Rebuild configuration

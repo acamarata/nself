@@ -25,7 +25,6 @@ HASURA_JWT_KEY=changeme-minimum-32-characters-long
 POSTGRES_ENABLED=true
 HASURA_ENABLED=true
 NGINX_ENABLED=true
-CONFIG_SERVER_ENABLED=true
 MINIO_ENABLED=true
 
 # Optional services (disabled by default)
@@ -57,7 +56,7 @@ cmd_diff() {
   local file2=""
 
   # Parse arguments
-  if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+  if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     show_diff_help
     return 0
   fi

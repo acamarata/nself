@@ -1,0 +1,19 @@
+{
+  "name": "{{SERVICE_NAME}}",
+  "version": "1.0.0",
+  "description": "Fastify service for {{PROJECT_NAME}}",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.24.3",
+    "@fastify/cors": "^8.4.2",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/env": "^4.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

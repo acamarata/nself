@@ -1,8 +1,8 @@
 # nself Commands Reference
 
-Complete command reference for nself v0.3.9-beta.
+Complete command reference for nself v0.3.9.
 
-**Total Commands**: 34 (including 2 aliases)
+**Total Commands**: 35+ (including aliases)
 
 ## Quick Reference
 
@@ -34,14 +34,23 @@ nself init [options]
 ```
 
 **Options:**
+- `--full` - Create all environment files and schema.dbml
 - `--wizard` - Interactive setup wizard
-- `--force` - Overwrite existing configuration
-- `--admin` - Include admin UI setup
+- `--admin` - Minimal admin UI setup only
+- `-h, --help` - Show help message
 
-**Creates:**
-- `.env.local` - Development configuration
-- `.env.secrets` - Sensitive data (git-ignored)
-- `.gitignore` - Ignore sensitive files
+**Creates (Basic):**
+- `.env.example` - Complete reference documentation
+- `.env.local` - Personal development configuration
+- `.gitignore` - Security ignore rules
+
+**Creates (--full):**
+All basic files plus:
+- `.env.dev` - Team-shared development defaults
+- `.env.staging` - Staging environment config
+- `.env.prod` - Production config (non-secrets)
+- `.env.secrets` - Sensitive data template
+- `schema.dbml` - Example database schema
 
 ### nself build
 Generate Docker Compose configuration and build services.

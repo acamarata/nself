@@ -1,0 +1,85 @@
+import { initTRPC } from '@trpc/server';
+import { createHTTPServer } from '@trpc/server/adapters/standalone';
+import { z } from 'zod';
+
+// Initialize tRPC
+const t = initTRPC.create();
+
+// Create router
+const appRouter = t.router({
+  // Health check
+  health: t.procedure.query(() => ({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+  })),
+
+  // Service info
+  info: t.procedure.query(() => ({
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'tRPC',
+    runtime: 'TypeScript',
+    domain: '{{BASE_DOMAIN}}',
+    features: ['Type-safe', 'Auto-completion', 'No code generation'],
+  })),
+
+  // Echo with input validation
+  echo: t.procedure
+    .input(z.object({
+      message: z.string(),
+    }))
+    .query(({ input }) => ({
+      message: `Echo from {{SERVICE_NAME}}: ${input.message}`,
+      timestamp: new Date().toISOString(),
+    })),
+
+  // Mutation example
+  create: t.procedure
+    .input(z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      name: input.name,
+      description: input.description,
+      createdAt: new Date().toISOString(),
+    })),
+
+  // List with pagination
+  list: t.procedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(10),
+      offset: z.number().min(0).default(0),
+    }))
+    .query(({ input }) => ({
+      items: Array.from({ length: input.limit }, (_, i) => ({
+        id: i + input.offset,
+        name: `Item ${i + input.offset}`,
+      })),
+      total: 100,
+      limit: input.limit,
+      offset: input.offset,
+    })),
+});
+
+// Export type for client
+export type AppRouter = typeof appRouter;
+
+// Create HTTP server
+const port = parseInt(process.env.PORT || '3000');
+
+const server = createHTTPServer({
+  router: appRouter,
+  createContext() {
+    return {};
+  },
+});
+
+server.listen(port);
+
+console.log(`🚀 {{SERVICE_NAME}} tRPC server is running on http://localhost:${port}`);
+console.log(`📍 Health check: http://localhost:${port}/health`);
+console.log(`🔧 Type-safe API with automatic client generation`);
+console.log(`📚 Connect with tRPC client for full type safety`);
