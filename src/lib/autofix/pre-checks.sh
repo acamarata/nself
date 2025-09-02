@@ -7,20 +7,7 @@ run_pre_checks() {
   local silent="${1:-false}"
   local issues_fixed=0
 
-  # Check 1: Ensure config-server files exist
-  if [[ ! -f "config-server/index.js" ]]; then
-    [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating config-server files..."
-
-    mkdir -p config-server
-    if [[ -f "/Users/admin/Sites/nself/src/lib/auto-fix/dockerfile-generator.sh" ]]; then
-      source "/Users/admin/Sites/nself/src/lib/auto-fix/dockerfile-generator.sh"
-      generate_config_server "config-server" >/dev/null 2>&1
-      ((issues_fixed++))
-      [[ "$silent" != "true" ]] && printf "\r${COLOR_GREEN}✓${COLOR_RESET} Generated config-server files        \n"
-    fi
-  fi
-
-  # Check 2: Verify Postgres port configuration
+  # Check 1: Verify Postgres port configuration
   local expected_port="${POSTGRES_PORT:-5432}"
   if grep -q "POSTGRES_PORT=5433" .env.local 2>/dev/null && [[ "$expected_port" == "5432" ]]; then
     [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Fixing Postgres port configuration..."

@@ -40,8 +40,7 @@ ensure_all_services_exist() {
           if check_missing_service "$context"; then
             ((generated_count++))
           fi
-        elif [[ "$context" == "functions" ]] || [[ "$context" == "config-server" ]] ||
-          [[ "$context" == "dashboard" ]]; then
+        elif [[ "$context" == "functions" ]] || [[ "$context" == "dashboard" ]]; then
           # It's a system service, use the dockerfile generator
           if generate_dockerfile_for_service "$(basename "$context")" "$context"; then
             ((generated_count++))

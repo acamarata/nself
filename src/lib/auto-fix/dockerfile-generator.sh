@@ -21,9 +21,6 @@ generate_dockerfile_for_service() {
   functions)
     generate_functions_service "$service_path"
     ;;
-  config-server)
-    generate_config_server "$service_path"
-    ;;
   dashboard)
     generate_dashboard_service "$service_path"
     ;;
@@ -112,73 +109,6 @@ app.post('/functions/:name', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Functions service listening on port ${port}`);
-});
-EOF
-
-  # Successfully generated
-}
-
-# Generate config-server service
-generate_config_server() {
-  local path="$1"
-
-  cat >"$path/Dockerfile" <<'EOF'
-FROM node:18-alpine
-# Install health check tools
-RUN apk add --no-cache curl wget
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 4001
-CMD ["node", "index.js"]
-EOF
-
-  cat >"$path/package.json" <<'EOF'
-{
-  "name": "config-server",
-  "version": "1.0.0",
-  "description": "Configuration server",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "express": "^4.18.0",
-    "dotenv": "^16.0.0"
-  }
-}
-EOF
-
-  cat >"$path/index.js" <<'EOF'
-const express = require('express');
-const app = express();
-const port = process.env.CONFIG_SERVER_PORT || 4001;
-
-app.use(express.json());
-
-// Configuration endpoint
-app.get('/config', (req, res) => {
-  res.json({
-    environment: process.env.NODE_ENV || 'development',
-    services: {
-      hasura: process.env.HASURA_ENDPOINT,
-      auth: process.env.AUTH_ENDPOINT,
-      storage: process.env.STORAGE_ENDPOINT
-    }
-  });
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'config-server' });
-});
-
-// Also support /healthz endpoint (common k8s convention)
-app.get('/healthz', (req, res) => {
-  res.json({ status: 'ok', service: 'config-server' });
-});
-
-app.listen(port, () => {
-  console.log(`Config server listening on port ${port}`);
 });
 EOF
 

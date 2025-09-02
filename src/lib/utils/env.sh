@@ -1,80 +1,35 @@
 #!/usr/bin/env bash
-# env.sh - Environment loading and management utilities
 
-# Source display utilities
-UTILS_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$UTILS_DIR/display.sh" 2>/dev/null || true
+# Environment loading and management utilities
 
-# Load environment file safely
-load_env_safe() {
-  local env_file="${1:-.env.local}"
+# Export colors for consistency
+export COLOR_RESET='\033[0m'
+export COLOR_BOLD='\033[1m'
+export COLOR_RED='\033[0;31m'
+export COLOR_GREEN='\033[0;32m'
+export COLOR_YELLOW='\033[0;33m'
+export COLOR_BLUE='\033[0;34m'
+export COLOR_MAGENTA='\033[0;35m'
+export COLOR_CYAN='\033[0;36m'
+export COLOR_DIM='\033[2m'
 
-  if [[ ! -f "$env_file" ]]; then
-    log_error "Environment file not found: $env_file"
-    return 1
-  fi
-
-  # Silently handle inline comments by loading through a cleaned temp file
-  local temp_env=$(mktemp)
-
-  # Remove inline comments while preserving the rest of the line
-  # This regex keeps everything before the # that's not inside quotes
-  sed 's/^\([^#]*[^[:space:]#]\)[[:space:]]*#.*$/\1/' "$env_file" >"$temp_env"
-
-  # Load environment variables from cleaned file
-  set -a
-  source "$temp_env"
-  set +a
-
-  rm -f "$temp_env"
-
-  # log_debug is not always available, so use conditional
-  if declare -f log_debug >/dev/null 2>&1; then
-    log_debug "Loaded environment from $env_file"
-  fi
-  return 0
-}
-
-# Load environment with proper priority
-# New precedence system:
-# 1. .env.secrets (always loaded if exists - for secrets only)
-# 2. .env (if exists, skips all others except secrets)
-# 3. .env.local (personal overrides)
-# 4. .env.{ENV} (environment-specific: dev/staging/prod)
-# 5. .env.dev (team defaults - baseline)
+# Load environment files with correct priority order
+# Priority (lowest to highest - later files override earlier):
+#   1. .env.dev     (team defaults, SHARED) - LOWEST
+#   2. .env.staging/.env.prod (environment specific, SHARED)  
+#   3. .env.local   (personal overrides, not shared)
+#   4. .env         (LOCAL ONLY priority overrides)
+#   5. .env.secrets (production ONLY secrets/keys) - HIGHEST
 load_env_with_priority() {
+  local silent="${1:-false}"
   local loaded=false
+  
+  # Determine current environment (default to dev)
   local current_env="${ENV:-dev}"
   
-  # Always load secrets first if they exist (regardless of other files)
-  if [[ -f ".env.secrets" ]]; then
-    # Check file permissions for security
-    local perms=$(stat -f "%OLp" ".env.secrets" 2>/dev/null || stat -c "%a" ".env.secrets" 2>/dev/null)
-    if [[ -n "$perms" ]] && [[ "$perms" != "600" ]] && [[ "$perms" != "400" ]]; then
-      if declare -f log_warning >/dev/null 2>&1; then
-        log_warning ".env.secrets has permissions $perms (should be 600 or 400)"
-        log_warning "Fix with: chmod 600 .env.secrets"
-      fi
-    fi
-    
-    # Use conditional logging (skip log_debug to avoid potential issues)
-    # log_debug "Loading .env.secrets (sensitive data)"
-    set -a
-    source ".env.secrets" 2>/dev/null
-    set +a
-  fi
+  # Load files in order from LOWEST to HIGHEST priority
   
-  # Check for .env override (highest priority - usually production)
-  if [[ -f ".env" ]]; then
-    # log_debug "Loading .env (override mode - ignoring other env files)"
-    set -a
-    source ".env"
-    set +a
-    return 0  # Stop here - .env overrides everything
-  fi
-  
-  # Load in reverse order of precedence (so higher priority overrides)
-  # Start with team defaults
+  # 1. Team defaults (LOWEST priority)
   if [[ -f ".env.dev" ]]; then
     # log_debug "Loading .env.dev (team defaults)"
     set -a
@@ -83,24 +38,25 @@ load_env_with_priority() {
     loaded=true
   fi
   
-  # Load environment-specific file based on ENV variable
+  # 2. Environment-specific file (staging/prod)
   local env_file=""
   case "$current_env" in
-    dev|development)
-      env_file=".env.dev"  # Already loaded above
-      ;;
     staging|stage)
       env_file=".env.staging"
       ;;
     prod|production)
       env_file=".env.prod"
       ;;
+    dev|development)
+      # Already loaded .env.dev above
+      ;;
     *)
-      env_file=".env.${current_env}"  # Support custom environments
+      # Support custom environments
+      env_file=".env.${current_env}"
       ;;
   esac
   
-  if [[ -n "$env_file" ]] && [[ -f "$env_file" ]] && [[ "$env_file" != ".env.dev" ]]; then
+  if [[ -n "$env_file" ]] && [[ -f "$env_file" ]]; then
     # log_debug "Loading $env_file (environment-specific)"
     set -a
     source "$env_file" 2>/dev/null
@@ -108,11 +64,29 @@ load_env_with_priority() {
     loaded=true
   fi
   
-  # Load personal overrides last (highest priority after .env)
+  # 3. Personal overrides
   if [[ -f ".env.local" ]]; then
     # log_debug "Loading .env.local (personal overrides)"
     set -a
     source ".env.local" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
+  # 4. Local priority overrides (.env file)
+  if [[ -f ".env" ]]; then
+    # log_debug "Loading .env (local priority overrides)"
+    set -a
+    source ".env" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
+  # 5. Secrets (HIGHEST priority - overwrites everything)
+  if [[ -f ".env.secrets" ]]; then
+    # log_debug "Loading .env.secrets (sensitive data - highest priority)"
+    set -a
+    source ".env.secrets" 2>/dev/null
     set +a
     loaded=true
   fi
@@ -137,141 +111,137 @@ get_env_var() {
 set_env_var() {
   local var_name="$1"
   local value="$2"
-  local env_file="${3:-.env.local}"
+  local file="${3:-.env.local}"
 
-  if grep -q "^${var_name}=" "$env_file" 2>/dev/null; then
+  # Check if variable already exists
+  if grep -q "^${var_name}=" "$file" 2>/dev/null; then
     # Update existing variable
-    sed -i.bak "s|^${var_name}=.*|${var_name}=${value}|" "$env_file"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "s|^${var_name}=.*|${var_name}=${value}|" "$file"
+    else
+      sed -i "s|^${var_name}=.*|${var_name}=${value}|" "$file"
+    fi
   else
-    # Add new variable
-    echo "${var_name}=${value}" >>"$env_file"
+    # Add new variable (ensure newline before if needed)
+    # Check if file ends with newline
+    if [[ -f "$file" ]] && [[ -s "$file" ]] && [[ $(tail -c 1 "$file" | wc -l) -eq 0 ]]; then
+      echo "" >> "$file"
+    fi
+    echo "${var_name}=${value}" >> "$file"
   fi
 }
 
-# Expand variables safely
-expand_vars_safe() {
-  local template="$1"
-  local expanded
-
-  # Use envsubst if available
-  if command -v envsubst >/dev/null 2>&1; then
-    expanded=$(echo "$template" | envsubst)
-  else
-    # Fallback to simple expansion
-    expanded="$template"
-    while [[ "$expanded" =~ \$\{([^}]+)\} ]]; do
-      local var="${BASH_REMATCH[1]}"
-      local val="${!var:-}"
-      expanded="${expanded//\${$var\}/$val}"
-    done
-  fi
-
-  echo "$expanded"
+# Check if environment variable is set
+is_env_set() {
+  local var_name="$1"
+  [[ -n "${!var_name}" ]]
 }
 
-# Escape value for config files
-escape_for_config() {
-  local value="$1"
-  # Escape special characters for safe inclusion in config files
-  value="${value//\\/\\\\}" # Escape backslashes
-  value="${value//\"/\\\"}" # Escape quotes
-  value="${value//\$/\\\$}" # Escape dollar signs
-  echo "$value"
+# Get environment type (dev/staging/prod)
+get_environment() {
+  local env="${ENV:-dev}"
+  
+  case "$env" in
+    dev|development)
+      echo "dev"
+      ;;
+    staging|stage)
+      echo "staging"
+      ;;
+    prod|production)
+      echo "prod"
+      ;;
+    *)
+      echo "$env"
+      ;;
+  esac
 }
 
-# Clean environment file (remove inline comments)
-clean_env_file() {
-  local env_file="${1:-.env.local}"
-  local backup_file="${2:-${env_file}.backup}"
+# Check if running in production
+is_production() {
+  local env=$(get_environment)
+  [[ "$env" == "prod" ]] || [[ "$env" == "production" ]]
+}
 
-  if [[ ! -f "$env_file" ]]; then
-    log_error "Environment file not found: $env_file"
+# Check if running in development
+is_development() {
+  local env=$(get_environment)
+  [[ "$env" == "dev" ]] || [[ "$env" == "development" ]]
+}
+
+# Export environment from file
+export_env_from_file() {
+  local file="$1"
+  
+  if [[ ! -f "$file" ]]; then
     return 1
   fi
-
-  # Create backup
-  cp "$env_file" "$backup_file"
-  log_info "Backup created: $backup_file"
-
-  # Remove inline comments
-  sed -i.tmp 's/\([^#]*\)#.*/\1/' "$env_file"
-  sed -i.tmp 's/[[:space:]]*$//' "$env_file" # Remove trailing whitespace
-  rm -f "${env_file}.tmp"
-
-  log_success "Cleaned inline comments from $env_file"
+  
+  set -a
+  source "$file"
+  set +a
+  
   return 0
 }
 
 # Validate required environment variables
 validate_required_env() {
-  local -a required_vars=("$@")
+  local required_vars=("$@")
   local missing=()
-
+  
   for var in "${required_vars[@]}"; do
-    if [[ -z "${!var:-}" ]]; then
+    if ! is_env_set "$var"; then
       missing+=("$var")
     fi
   done
-
+  
   if [[ ${#missing[@]} -gt 0 ]]; then
-    log_error "Missing required environment variables:"
-    for var in "${missing[@]}"; do
-      echo "  - $var"
-    done
+    echo "Missing required environment variables:"
+    printf '  - %s\n' "${missing[@]}"
     return 1
   fi
-
+  
   return 0
 }
 
-# Generate environment template
-generate_env_template() {
-  local template_file="${1:-.env.example}"
-
-  cat >"$template_file" <<'EOF'
-# nself Environment Configuration
-
-# Project Settings
-PROJECT_NAME=myproject
-BASE_DOMAIN=localhost
-
-# Database Configuration
-POSTGRES_PASSWORD=changeme
-POSTGRES_DB=myproject
-
-# Hasura Configuration
-HASURA_GRAPHQL_ADMIN_SECRET=changeme
-HASURA_GRAPHQL_JWT_SECRET='{"type":"HS256","key":"changeme-32-character-secret-key"}'
-
-# Authentication
-JWT_SECRET=changeme-32-character-secret-key
-COOKIE_SECRET=changeme-32-character-secret-key
-
-# Storage Configuration
-S3_ACCESS_KEY=minioaccesskey
-S3_SECRET_KEY=miniosecretkey
-S3_BUCKET=myproject
-
-# Email Configuration (optional)
-EMAIL_PROVIDER=development
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
-
-# Redis Configuration (optional)
-REDIS_ENABLED=false
-REDIS_PASSWORD=
-
-# SSL Configuration
-SSL_ENABLED=false
-EOF
-
-  log_success "Generated environment template: $template_file"
+# Get all env vars with prefix
+get_env_vars_with_prefix() {
+  local prefix="$1"
+  env | grep "^${prefix}" | cut -d= -f1
 }
 
-# Export all functions
-export -f load_env_safe get_env_var set_env_var expand_vars_safe
-export -f escape_for_config clean_env_file validate_required_env
-export -f generate_env_template
+# Clear env vars with prefix
+clear_env_vars_with_prefix() {
+  local prefix="$1"
+  
+  for var in $(get_env_vars_with_prefix "$prefix"); do
+    unset "$var"
+  done
+}
+
+# Load environment for specific service
+load_service_env() {
+  local service="$1"
+  local env_file=".env.${service}"
+  
+  if [[ -f "$env_file" ]]; then
+    export_env_from_file "$env_file"
+    return 0
+  fi
+  
+  return 1
+}
+
+# Export functions
+export -f load_env_with_priority
+export -f get_env_var
+export -f set_env_var
+export -f is_env_set
+export -f get_environment
+export -f is_production
+export -f is_development
+export -f export_env_from_file
+export -f validate_required_env
+export -f get_env_vars_with_prefix
+export -f clear_env_vars_with_prefix
+export -f load_service_env

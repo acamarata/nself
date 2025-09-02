@@ -41,7 +41,7 @@ detect_changes() {
   fi
 
   # Load current and previous environments
-  load_env_safe ".env.local"
+  load_env_with_priority ".env.local"
   local current_checksum=$(generate_env_checksum ".env.local")
 
   # Compare checksums
@@ -179,7 +179,7 @@ apply_changes() {
 
     if [ "$dry_run" = false ]; then
       # Regenerate nginx configs for app routes
-      load_env_safe ".env.local"
+      load_env_with_priority ".env.local"
 
       # Process APP routes
       for i in {0..20}; do

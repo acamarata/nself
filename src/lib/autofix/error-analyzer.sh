@@ -76,11 +76,6 @@ analyze_error() {
     return
   fi
 
-  # Config server running but health check failing
-  if echo "$service_logs" | grep -q "Config server listening on port"; then
-    echo "CONFIG_SERVER_HEALTH"
-    return
-  fi
 
   # Redis connection issues
   if echo "$service_logs" | grep -q "redis.*connection\|connection.*redis\|ECONNREFUSED.*6379"; then
@@ -159,9 +154,6 @@ get_error_message() {
     ;;
   DATABASE_NOT_FOUND)
     echo "Database does not exist"
-    ;;
-  CONFIG_SERVER_HEALTH)
-    echo "Config server health check failing"
     ;;
   REDIS_CONNECTION)
     echo "Cannot connect to Redis"

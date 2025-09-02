@@ -1,0 +1,67 @@
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.time.Instant;
+import java.util.concurrent.Executors;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "3000"));
+        
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        
+        // Health check endpoint
+        server.createContext("/health", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                String response = String.format(
+                    "{\"status\":\"healthy\",\"service\":\"{{SERVICE_NAME}}\",\"timestamp\":\"%s\"}",
+                    Instant.now().toString()
+                );
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
+        });
+        
+        // Info endpoint
+        server.createContext("/api/info", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                String response = String.format(
+                    "{\"service\":\"{{SERVICE_NAME}}\",\"project\":\"{{PROJECT_NAME}}\",\"runtime\":\"Java %s\",\"domain\":\"{{BASE_DOMAIN}}\"}",
+                    System.getProperty("java.version")
+                );
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
+        });
+        
+        // Root endpoint
+        server.createContext("/", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                String response = "{\"message\":\"Hello from {{SERVICE_NAME}}!\",\"project\":\"{{PROJECT_NAME}}\",\"runtime\":\"Java\"}";
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
+        });
+        
+        server.setExecutor(Executors.newCachedThreadPool());
+        server.start();
+        
+        System.out.println("🚀 {{SERVICE_NAME}} is running on http://localhost:" + port);
+        System.out.println("📍 Health check: http://localhost:" + port + "/health");
+    }
+}

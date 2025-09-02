@@ -989,14 +989,6 @@ EOF
           docker stop "$unhealthy_service" >/dev/null 2>&1
           docker rm "$unhealthy_service" >/dev/null 2>&1
 
-          # Check if config-server needs regeneration
-          if [[ "$unhealthy_service" == *"config-server"* ]] && [[ ! -f "config-server/index.js" ]]; then
-            log_info "Regenerating config-server files..."
-            if [[ -f "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" ]]; then
-              source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
-              generate_dockerfile_for_service "config-server" "config-server"
-            fi
-          fi
 
           log_success "Service recreated"
           echo

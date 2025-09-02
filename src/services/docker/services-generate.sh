@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../../lib/utils/display.sh"
 
 # Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
-  load_env_safe ".env.local"
+  load_env_with_priority ".env.local"
 else
   log_error "No .env.local file found."
   exit 1

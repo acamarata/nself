@@ -102,17 +102,57 @@ cmd_reset() {
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No network to remove                            \n"
   fi
 
-  # Backup environment files and schema
+  # Backup environment files and schema to _backup folder
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Backing up configuration files..."
+  
+  # Create backup folder with timestamp subfolder
+  local timestamp=$(date +%Y%m%d_%H%M%S)
+  local backup_dir="_backup/${timestamp}"
+  
+  # Create backup directory structure
+  mkdir -p "$backup_dir"
+  
+  # Clean up any loose files in _backup root (move to archive folder)
+  if [[ -d "_backup" ]]; then
+    local loose_files=false
+    for item in _backup/*; do
+      if [[ -f "$item" ]]; then
+        loose_files=true
+        break
+      fi
+    done
+    
+    if [[ "$loose_files" == true ]]; then
+      local archive_dir="_backup/archive_${timestamp}"
+      mkdir -p "$archive_dir"
+      for item in _backup/*; do
+        if [[ -f "$item" ]]; then
+          mv "$item" "$archive_dir/" 2>/dev/null || true
+        fi
+      done
+    fi
+  fi
+  
+  # Move files to backup
   local backed_up=0
-  [[ -f ".env" ]] && mv .env .env.old && ((backed_up++))
-  [[ -f ".env.local" ]] && mv .env.local .env.local.old && ((backed_up++))
-  [[ -f ".env.dev" ]] && mv .env.dev .env.dev.old && ((backed_up++))
-  [[ -f ".env.prod" ]] && mv .env.prod .env.prod.old && ((backed_up++))
-  [[ -f "schema.dbml" ]] && mv schema.dbml schema.dbml.old && ((backed_up++))
+  [[ -f ".env" ]] && mv .env "$backup_dir/.env" && ((backed_up++))
+  [[ -f ".env.local" ]] && mv .env.local "$backup_dir/.env.local" && ((backed_up++))
+  [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
+  [[ -f ".env.staging" ]] && mv .env.staging "$backup_dir/.env.staging" && ((backed_up++))
+  [[ -f ".env.prod" ]] && mv .env.prod "$backup_dir/.env.prod" && ((backed_up++))
+  [[ -f ".env.secrets" ]] && mv .env.secrets "$backup_dir/.env.secrets" && ((backed_up++))
+  [[ -f "schema.dbml" ]] && mv schema.dbml "$backup_dir/schema.dbml" && ((backed_up++))
+  [[ -f ".gitignore" ]] && cp .gitignore "$backup_dir/.gitignore" && ((backed_up++))
+  
+  # Also move any old .env.*.old files to backup
+  for oldfile in .env*.old schema.dbml.old; do
+    if [[ -f "$oldfile" ]]; then
+      mv "$oldfile" "$backup_dir/$oldfile" 2>/dev/null && ((backed_up++))
+    fi
+  done
 
   if [[ $backed_up -gt 0 ]]; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backed up $backed_up configuration files              \n"
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backed up $backed_up files to $backup_dir/              \n"
   else
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No configuration files to backup                \n"
   fi
@@ -126,13 +166,13 @@ cmd_reset() {
     "docker-compose.override.yml"
     ".dockerignore"
 
-    # Environment files (except .old backups)
+    # Template and example files
     ".env.example"
-    ".env"
-    ".env.dev"
-    ".env.prod"
     ".env.prod-template"
     ".env.prod-secrets"
+    ".gitignore"
+    
+    # Any leftover backup files (removed after backing up)
 
     # Service directories
     "nginx"
@@ -141,7 +181,6 @@ cmd_reset() {
     "hasura"
     "functions"
     "services"
-    "config-server"
     "nestjs-run"
     "backend"
     "storage"
@@ -208,6 +247,28 @@ cmd_reset() {
       fi
     done
   done
+  
+  # Remove any .backup and .old files
+  for backup_file in .env.*.backup *.old .*.old; do
+    if [[ -f "$backup_file" ]]; then
+      rm -f "$backup_file"
+      ((removed_count++))
+    fi
+  done
+  
+  # Clean up old backup folders (consolidating into _backup)
+  for old_backup in _backup_*; do
+    if [[ -d "$old_backup" ]]; then
+      # Move contents to new timestamp folder in _backup
+      if [[ "$(ls -A $old_backup)" ]]; then
+        local old_timestamp="${old_backup#_backup_}_migrated"
+        mkdir -p "_backup/${old_timestamp}"
+        mv "$old_backup"/* "_backup/${old_timestamp}/" 2>/dev/null || true
+      fi
+      rm -rf "$old_backup"
+      ((removed_count++))
+    fi
+  done
 
   # Remove any unity-* or project-prefixed directories (leftover from previous runs)
   for dir in ${project}-* unity-*; do
@@ -218,6 +279,19 @@ cmd_reset() {
   done
 
   printf "\r${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_count files and directories           \n"
+  
+  # Update .gitignore to exclude backup folders
+  if [[ -f ".gitignore" ]]; then
+    # Check if _backup* is already in .gitignore
+    if ! grep -q "^_backup" .gitignore; then
+      echo -e "\n# Backup folders from nself reset\n_backup*" >> .gitignore
+      printf "${COLOR_GREEN}✓${COLOR_RESET} Added _backup* to .gitignore\n"
+    fi
+  else
+    # Don't create .gitignore - leave directory completely clean except _backup
+    # User can run 'nself init' to get a fresh start with proper .gitignore
+    :
+  fi
 
   # Clean up Docker system (optional)
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning Docker system..."

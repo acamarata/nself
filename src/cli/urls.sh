@@ -76,15 +76,15 @@ cmd_urls() {
   elif [ -f ".env" ]; then
     load_env_with_priority
   elif [ -f "$ROOT_DIR/.env.local" ]; then
-    load_env_safe "$ROOT_DIR/.env.local"
+    load_env_with_priority "$ROOT_DIR/.env.local"
   elif [ -f "$ROOT_DIR/.env" ]; then
-    load_env_safe "$ROOT_DIR/.env"
+    load_env_with_priority "$ROOT_DIR/.env"
   fi
 
   # Expand variables that contain references to other variables
   # Use eval safely to expand ${BASE_DOMAIN} references
   for var in HASURA_ROUTE AUTH_ROUTE STORAGE_ROUTE STORAGE_CONSOLE_ROUTE FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILHOG_ROUTE MAILPIT_ROUTE MAIL_ROUTE; do
-    value="${!var}"
+    value="${!var:-}"
     if [[ "$value" == *'${BASE_DOMAIN}'* ]]; then
       # Expand the variable reference
       expanded=$(echo "$value" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
@@ -104,7 +104,7 @@ cmd_urls() {
   MAIL_ROUTE="${MAIL_ROUTE:-mail.${BASE_DOMAIN}}"
 
   # Determine protocol
-  if [[ "$SSL_MODE" == "local" ]] || [[ "$SSL_MODE" == "letsencrypt" ]] || [[ -n "$SSL_CERT_PATH" ]]; then
+  if [[ "${SSL_MODE:-}" == "local" ]] || [[ "${SSL_MODE:-}" == "letsencrypt" ]] || [[ -n "${SSL_CERT_PATH:-}" ]]; then
     PROTOCOL="https"
   else
     PROTOCOL="http"
@@ -120,17 +120,17 @@ cmd_urls() {
     echo "  Storage:         ${PROTOCOL}://${STORAGE_ROUTE}"
     echo "  Storage Console: ${PROTOCOL}://${STORAGE_CONSOLE_ROUTE}"
 
-    if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
+    if [[ "${FUNCTIONS_ENABLED:-}" == "true" ]]; then
       echo "  Functions:       ${PROTOCOL}://${FUNCTIONS_ROUTE}"
     fi
 
-    if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
+    if [[ "${DASHBOARD_ENABLED:-}" == "true" ]]; then
       echo "  Dashboard:       ${PROTOCOL}://${DASHBOARD_ROUTE}"
     fi
 
-    if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
+    if [[ "${EMAIL_PROVIDER:-}" == "mailhog" ]]; then
       echo "  MailHog:         ${PROTOCOL}://${MAILHOG_ROUTE}"
-    elif [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+    elif [[ "${EMAIL_PROVIDER:-}" == "mailpit" ]]; then
       echo "  MailPit:         ${PROTOCOL}://${MAIL_ROUTE}"
     fi
 
@@ -160,20 +160,20 @@ cmd_urls() {
     echo "      Access Key: ${MINIO_ROOT_USER}"
     echo
 
-    if [[ "$FUNCTIONS_ENABLED" == "true" ]]; then
+    if [[ "${FUNCTIONS_ENABLED:-}" == "true" ]]; then
       echo "  Functions: ${PROTOCOL}://${FUNCTIONS_ROUTE}"
       echo
     fi
 
-    if [[ "$DASHBOARD_ENABLED" == "true" ]]; then
+    if [[ "${DASHBOARD_ENABLED:-}" == "true" ]]; then
       echo "  Dashboard: ${PROTOCOL}://${DASHBOARD_ROUTE}"
       echo
     fi
 
-    if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
+    if [[ "${EMAIL_PROVIDER:-}" == "mailhog" ]]; then
       echo "  MailHog: ${PROTOCOL}://${MAILHOG_ROUTE}"
       echo
-    elif [[ "$EMAIL_PROVIDER" == "mailpit" ]]; then
+    elif [[ "${EMAIL_PROVIDER:-}" == "mailpit" ]]; then
       echo "  MailPit: ${PROTOCOL}://${MAIL_ROUTE}"
       echo
     fi

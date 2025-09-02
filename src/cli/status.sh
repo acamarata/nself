@@ -156,7 +156,7 @@ categorize_service() {
 
   # Infrastructure services (no health checks needed)
   case "$service" in
-  nginx | storage | config-server | minio | mailhog | mailpit | adminer)
+  nginx | storage | minio | mailhog | mailpit | adminer)
     echo "infrastructure"
     ;;
   postgres | redis)
@@ -220,9 +220,6 @@ get_service_status_desc() {
     ;;
   storage | minio)
     echo "S3 compatible storage"
-    ;;
-  config-server)
-    echo "Serving config"
     ;;
   functions)
     [[ "$health" == "healthy" ]] && echo "Functions available" || echo "No health endpoint"

@@ -1,0 +1,48 @@
+require 'sinatra'
+require 'json'
+require 'time'
+
+set :port, ENV['PORT'] || 3000
+set :bind, '0.0.0.0'
+
+get '/health' do
+  content_type :json
+  {
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: Time.now.iso8601
+  }.to_json
+end
+
+get '/api/info' do
+  content_type :json
+  {
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Sinatra',
+    runtime: 'Ruby',
+    domain: '{{BASE_DOMAIN}}'
+  }.to_json
+end
+
+get '/' do
+  content_type :json
+  {
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Sinatra - Minimal Ruby web framework',
+    features: ['lightweight', 'DSL-based', 'flexible']
+  }.to_json
+end
+
+get '/*' do
+  content_type :json
+  {
+    message: 'Hello from {{SERVICE_NAME}}!',
+    path: request.path_info,
+    method: request.request_method
+  }.to_json
+end
+
+puts "🚀 {{SERVICE_NAME}} is running on http://localhost:#{settings.port}"
+puts "📍 Health check: http://localhost:#{settings.port}/health"

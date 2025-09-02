@@ -1,0 +1,17 @@
+FROM denoland/deno:alpine-1.39.1
+
+WORKDIR /app
+
+# Copy the main server file
+COPY server.ts .
+
+# Create user and set permissions
+RUN addgroup -g 1001 -S deno && \
+    adduser -S deno -u 1001 && \
+    chown -R deno:deno /app
+
+USER deno
+
+EXPOSE 3000
+
+CMD ["run", "--allow-net", "--allow-env", "server.ts"]

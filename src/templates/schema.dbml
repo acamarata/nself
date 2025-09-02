@@ -1,0 +1,134 @@
+// DBML (Database Markup Language) Schema
+// Documentation: https://dbml.dbdiagram.io/docs
+// 
+// This is an example schema to get you started.
+// Edit this file and run 'nself db run' to generate migrations.
+
+Project myproject {
+  database_type: 'PostgreSQL'
+  Note: 'Example backend database schema'
+}
+
+// Users table - Core authentication
+Table users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  email varchar(255) [unique, not null]
+  display_name varchar(100)
+  avatar_url text
+  metadata jsonb [default: '{}']
+  created_at timestamptz [default: `now()`, not null]
+  updated_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    email
+    created_at
+  }
+  
+  Note: 'Managed by Hasura Auth - do not modify auth fields directly'
+}
+
+// User profiles - Extended user information
+Table profiles {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [unique, not null, ref: > users.id]
+  bio text
+  location varchar(100)
+  website varchar(255)
+  preferences jsonb [default: '{}']
+  created_at timestamptz [default: `now()`, not null]
+  updated_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    user_id
+  }
+}
+
+// Posts table - Example content
+Table posts {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  title varchar(255) [not null]
+  slug varchar(255) [unique, not null]
+  content text
+  status post_status [default: 'draft', not null]
+  published_at timestamptz
+  metadata jsonb [default: '{}']
+  created_at timestamptz [default: `now()`, not null]
+  updated_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    user_id
+    slug
+    status
+    published_at
+    created_at
+  }
+}
+
+// Comments table - Example relationships
+Table comments {
+  id uuid [pk, default: `gen_random_uuid()`]
+  post_id uuid [not null, ref: > posts.id]
+  user_id uuid [not null, ref: > users.id]
+  parent_id uuid [ref: > comments.id]
+  content text [not null]
+  is_deleted boolean [default: false, not null]
+  created_at timestamptz [default: `now()`, not null]
+  updated_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    post_id
+    user_id
+    parent_id
+    created_at
+  }
+}
+
+// Categories table - Example taxonomy
+Table categories {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar(100) [unique, not null]
+  slug varchar(100) [unique, not null]
+  description text
+  parent_id uuid [ref: > categories.id]
+  sort_order integer [default: 0]
+  created_at timestamptz [default: `now()`, not null]
+  updated_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    slug
+    parent_id
+    sort_order
+  }
+}
+
+// Post categories - Many-to-many relationship
+Table post_categories {
+  post_id uuid [not null, ref: > posts.id]
+  category_id uuid [not null, ref: > categories.id]
+  created_at timestamptz [default: `now()`, not null]
+  
+  indexes {
+    (post_id, category_id) [pk]
+  }
+}
+
+// Enum for post status
+Enum post_status {
+  draft
+  published
+  archived
+}
+
+// Table groups for documentation
+TableGroup content {
+  posts
+  comments
+  categories
+  post_categories
+}
+
+TableGroup users {
+  users
+  profiles
+}

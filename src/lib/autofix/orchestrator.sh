@@ -105,11 +105,6 @@ autofix_service() {
     fix_result=$?
     fix_description=$(get_last_fix_description)
     ;;
-  CONFIG_SERVER_HEALTH)
-    fix_config_server_health
-    fix_result=$?
-    fix_description="Regenerated config-server with health endpoint"
-    ;;
   REDIS_CONNECTION)
     fix_redis_connection
     fix_result=$?

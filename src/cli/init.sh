@@ -45,23 +45,29 @@ show_init_help() {
   echo "  for a full-stack application with smart defaults."
   echo ""
   echo "Options:"
+  echo "  --full              Create all environment files and starter schema"
   echo "  --wizard            Launch interactive setup wizard"
   echo "  --admin             Setup minimal admin UI only"
   echo "  -h, --help          Show this help message"
   echo ""
   echo "Examples:"
   echo "  mkdir myproject && cd myproject"
-  echo "  nself init                     # Initialize project with defaults"
+  echo "  nself init                     # Basic setup (.env.local + .env.example)"
+  echo "  nself init --full              # Complete setup with all env files"
   echo "  nself init --wizard            # Interactive setup wizard"
-  echo "  nself init --admin             # Minimal admin UI setup"
   echo ""
-  echo "Files Created:"
+  echo "Files Created (Basic):"
   echo "  • .env.local                   # Your personal dev configuration"
+  echo "  • .env.example                 # Complete reference docs"
+  echo "  • .gitignore                   # Security rules"
+  echo ""
+  echo "Files Created (--full):"
+  echo "  • All basic files plus:"
   echo "  • .env.dev                     # Team-shared dev defaults"
   echo "  • .env.staging                 # Staging environment config"
   echo "  • .env.prod                    # Production config (public)"
   echo "  • .env.secrets                 # Sensitive data (git-ignored)"
-  echo "  • .env.example                 # Complete reference docs"
+  echo "  • schema.dbml                  # Example database schema"
   echo ""
   echo "Next Steps:"
   echo "  1. Edit .env.local (optional - defaults work!)"
@@ -74,11 +80,87 @@ show_init_help() {
   echo "  • Works with smart defaults out of the box"
 }
 
+# Ensure .gitignore has required entries
+ensure_gitignore() {
+  local required_entries=(
+    ".env"
+    ".env.local" 
+    ".env.secrets"
+    "_backup*"
+    ".volumes/"
+    "logs/"
+    "*.log"
+    "node_modules/"
+    ".DS_Store"
+  )
+  
+  # Create .gitignore if it doesn't exist
+  if [[ ! -f ".gitignore" ]]; then
+    cat > .gitignore <<EOF
+# Environment files (sensitive)
+.env
+.env.local
+.env.secrets
+
+# Backup folders from nself reset
+_backup*
+
+# Docker volumes
+.volumes/
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+
+# System files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+build/
+*.pid
+EOF
+    echo "${YELLOW}⚡${RESET} Created .gitignore with security rules"
+  else
+    # Check and add missing entries
+    local added=false
+    for entry in "${required_entries[@]}"; do
+      # Check if entry already exists (exact match or as part of a pattern)
+      if ! grep -q "^${entry}\$\|^${entry}\s*#" .gitignore 2>/dev/null; then
+        # Special handling for first required entries
+        if [[ "$entry" == ".env" ]] && ! $added; then
+          echo -e "\n# Environment files (sensitive)" >> .gitignore
+          added=true
+        fi
+        echo "$entry" >> .gitignore
+      fi
+    done
+    
+    if $added; then
+      echo "${YELLOW}⚡${RESET} Updated .gitignore with required security rules"
+    fi
+  fi
+}
+
 # Command function
 cmd_init() {
+  local full_setup=false
+  
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
+    --full)
+      full_setup=true
+      shift
+      ;;
     --wizard)
       # Source and run the practical configuration wizard
       if [[ -f "$SCRIPT_DIR/wizard/init-wizard-v2.sh" ]]; then
@@ -103,50 +185,20 @@ cmd_init() {
       ;;
     *)
       log_error "Unknown option: $1"
-      log_info "Use 'nself init --help' for usage information"
+      echo "Use 'nself init --help' for usage information"
       return 1
       ;;
     esac
   done
 
-  # Check not in nself source directory first (before showing header)
-  if [[ -f "bin/nself" ]] && [[ -d "src/cli" ]] && [[ -f "install.sh" ]]; then
-    show_command_header "nself init" "Initialize a new full-stack application"
-    log_error "Cannot run nself commands in the nself source repository!"
-    echo ""
-    echo "Please run from a separate project directory:"
-    echo "  mkdir ~/myproject && cd ~/myproject"
-    echo "  nself init"
-    return 1
-  fi
-
-  # Show welcome banner
+  # Show header
   show_command_header "nself init" "Initialize a new full-stack application"
 
-  # Check if project already exists (docker-compose.yml indicates built project)
-  if [[ -f "docker-compose.yml" ]]; then
-    echo
-    log_error "Existing project detected (docker-compose.yml found)"
-    log_info "This project has already been built."
-    echo
-    echo "Try: nself status | nself reset"
-    echo
-    return 1
-  fi
-
-  # Check if already initialized and backup if needed
-  local files_to_backup=(".env.local" ".env.example" ".env.dev" ".env.staging" ".env.prod" ".env.secrets")
-  local backed_up=false
-  
-  for file in "${files_to_backup[@]}"; do
-    if [[ -f "$file" ]]; then
-      mv "$file" "${file}.backup"
-      backed_up=true
-    fi
-  done
-  
-  if [[ "$backed_up" == "true" ]]; then
-    log_secondary "Existing env files backed up with .backup suffix"
+  # Check if environment files already exist
+  if [[ -f ".env.local" ]]; then
+    log_warning "Project already initialized (.env.local exists)"
+    echo "Use 'nself reset' to start fresh or edit existing files"
+    return 0
   fi
 
   # Get templates directory - check multiple possible locations
@@ -187,35 +239,37 @@ cmd_init() {
     return 1
   fi
 
-  # Copy all environment template files
+  # Basic setup - always copy these
   cp "$TEMPLATES_DIR/.env.example" .env.example
   echo "${GREEN}✓${RESET} Created .env.example (exhaustive reference documentation)"
   
   cp "$TEMPLATES_DIR/.env.local" .env.local
   echo "${GREEN}✓${RESET} Created .env.local (your personal development config)"
   
-  cp "$TEMPLATES_DIR/.env.dev" .env.dev
-  echo "${GREEN}✓${RESET} Created .env.dev (team-shared development defaults)"
-  
-  cp "$TEMPLATES_DIR/.env.staging" .env.staging
-  echo "${GREEN}✓${RESET} Created .env.staging (staging environment config)"
-  
-  cp "$TEMPLATES_DIR/.env.prod" .env.prod
-  echo "${GREEN}✓${RESET} Created .env.prod (production config - non-secrets)"
-  
-  cp "$TEMPLATES_DIR/.env.secrets" .env.secrets
-  echo "${GREEN}✓${RESET} Created .env.secrets (sensitive data template)"
-  
-  # Add .env.secrets to .gitignore if not already there
-  if [[ -f ".gitignore" ]]; then
-    if ! grep -q "^.env.secrets" .gitignore; then
-      echo ".env.secrets" >> .gitignore
-      echo "${YELLOW}⚡${RESET} Added .env.secrets to .gitignore"
+  # Full setup - copy additional files
+  if [[ "$full_setup" == true ]]; then
+    cp "$TEMPLATES_DIR/.env.dev" .env.dev
+    echo "${GREEN}✓${RESET} Created .env.dev (team-shared development defaults)"
+    
+    cp "$TEMPLATES_DIR/.env.staging" .env.staging
+    echo "${GREEN}✓${RESET} Created .env.staging (staging environment config)"
+    
+    cp "$TEMPLATES_DIR/.env.prod" .env.prod
+    echo "${GREEN}✓${RESET} Created .env.prod (production config - non-secrets)"
+    
+    cp "$TEMPLATES_DIR/.env.secrets" .env.secrets
+    echo "${GREEN}✓${RESET} Created .env.secrets (sensitive data template)"
+    
+    # Copy schema.dbml if it exists
+    if [[ -f "$TEMPLATES_DIR/schema.dbml" ]]; then
+      cp "$TEMPLATES_DIR/schema.dbml" schema.dbml
+      echo "${GREEN}✓${RESET} Created schema.dbml (example database schema)"
     fi
-  else
-    echo -e ".env.secrets\n.env.local\n.env" > .gitignore
-    echo "${YELLOW}⚡${RESET} Created .gitignore with security rules"
   fi
+  
+  # Always ensure .gitignore is properly configured
+  ensure_gitignore
+  
   echo ""
 
   # Quick Tips section
@@ -225,6 +279,11 @@ cmd_init() {
   echo "${YELLOW}⚡${RESET} Use ${BLUE}nself prod${RESET} to generate secure production passwords"
   echo "${YELLOW}⚡${RESET} Check ${DIM}.env.example${RESET} for all available options"
   echo "${YELLOW}⚡${RESET} Run ${BLUE}nself help${RESET} for complete command documentation"
+  if [[ "$full_setup" == true ]]; then
+    echo "${YELLOW}⚡${RESET} Edit ${DIM}schema.dbml${RESET} and run ${BLUE}nself db run${RESET} to generate migrations"
+  else
+    echo "${YELLOW}⚡${RESET} Run ${BLUE}nself init --full${RESET} for all environment files and starter schema"
+  fi
   echo ""
 
   # Next Steps section

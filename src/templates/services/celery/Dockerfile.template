@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY tasks.py .
+
+# Create non-root user
+RUN useradd -m -u 1001 celery && \
+    chown -R celery:celery /app
+
+USER celery
+
+# Run Celery worker
+CMD ["celery", "-A", "tasks", "worker", "--loglevel=info", "--concurrency=4"]
