@@ -1,0 +1,102 @@
+const { Hono } = require('hono');
+const { serve } = require('@hono/node-server');
+
+const app = new Hono();
+
+// Middleware for CORS
+app.use('*', async (c, next) => {
+  c.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  c.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (c.req.method === 'OPTIONS') {
+    return c.text('', 204);
+  }
+  
+  await next();
+});
+
+// Health check endpoint
+app.get('/health', (c) => {
+  return c.json({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Hono',
+    version: '3.9.0'
+  });
+});
+
+// API info endpoint
+app.get('/api/info', (c) => {
+  return c.json({
+    service: '{{SERVICE_NAME}}',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    domain: '{{BASE_DOMAIN}}'
+  });
+});
+
+// Echo endpoint
+app.post('/api/echo', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  return c.json({
+    received: body,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({
+    error: 'Not Found',
+    path: c.req.path
+  }, 404);
+});
+
+// Error handler
+app.onError((err, c) => {
+  console.error(err);
+  return c.json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!'
+  }, 500);
+});
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Graceful shutdown
+const gracefulShutdown = (server) => {
+  return () => {
+    console.log('🛑 Shutting down gracefully...');
+    server.close(() => {
+      console.log('✅ HTTP server closed');
+      process.exit(0);
+    });
+  };
+};
+
+// Start server
+const server = serve({
+  fetch: app.fetch,
+  port: PORT
+}, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API endpoint: http://localhost:${PORT}/api/info`);
+  console.log(`💬 Echo endpoint: POST http://localhost:${PORT}/api/echo`);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown(server));
+process.on('SIGINT', gracefulShutdown(server));
