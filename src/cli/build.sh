@@ -679,9 +679,7 @@ EOF
 
   # Reload environment to ensure we have latest values
   if [[ -f ".env.local" ]]; then
-    set -a
-    load_env_with_priority
-    set +a
+    load_env_with_priority >/dev/null 2>&1 || true
   fi
 
   # Source generators once at the beginning
@@ -710,10 +708,10 @@ EOF
   # Source custom service builder
   # Try v2 builder first (CS_N pattern), fall back to v1
   if [[ -f "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh"
+    source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
     custom_service_loaded=true
   elif [[ -f "$SCRIPT_DIR/../lib/services/service-builder.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/services/service-builder.sh"
+    source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
     custom_service_loaded=true
   fi
 
@@ -762,7 +760,6 @@ EOF
     local after_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
     total_services_generated=$((after_count - before_count))
   fi
-
   # Generate system services if enabled
   if [[ "$dockerfile_gen_loaded" == "true" ]]; then
     local gen_script="$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
@@ -786,7 +783,7 @@ EOF
 
   fi
 
-  # Report results
+  # Report results and clear the line
   if [[ $total_services_generated -gt 0 ]] || [[ $system_services_generated -gt 0 ]] || [[ $custom_services_generated -gt 0 ]]; then
     local total=$((total_services_generated + system_services_generated + custom_services_generated))
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} Generated $total services"
@@ -795,55 +792,17 @@ EOF
     fi
     printf "                              \n"
   else
-    # Clear the "Generating services..." line
+    # Clear the "Generating services..." line - but since nothing was generated, just clear it
     printf "\r                                                            \r"
   fi
 
   # Restore log functions
   source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 
-  # Generate SSL certificates (silently)
-  if [[ -f "$SCRIPT_DIR/../lib/ssl/ssl.sh" ]]; then
-    printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
+  # SSL certificates were already generated earlier in the build process
+  # No need to regenerate them here
 
-    # Source SSL library
-    source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null
-
-    # Ensure tools and generate certificates silently
-    if ssl::ensure_tools >/dev/null 2>&1; then
-      local ssl_success=true
-
-      # Try to generate certificates based on configuration
-      if [[ -n "${DNS_PROVIDER:-}" ]]; then
-        # Try public wildcard
-        if ! ssl::issue_public_wildcard >/dev/null 2>&1; then
-          # Fall back to internal
-          ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
-        fi
-      else
-        # Generate internal certificates
-        ssl::issue_internal_nself_org >/dev/null 2>&1 || ssl_success=false
-      fi
-
-      # Generate localhost certificates
-      if [[ "${SSL_FALLBACK_LOCALHOST:-true}" == "true" ]]; then
-        ssl::issue_localhost_bundle >/dev/null 2>&1 || ssl_success=false
-      fi
-
-      # Copy to project and generate nginx configs
-      if [[ "$ssl_success" == "true" ]]; then
-        ssl::copy_into_project "." >/dev/null 2>&1
-        ssl::render_nginx_snippets "." >/dev/null 2>&1
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated                  \n"
-      else
-        printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL generation incomplete                  \n"
-      fi
-    else
-      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} SSL tools not available                    \n"
-    fi
-  fi
-
-  # Build summary
+  # Build summary - ensure we're on a new line
   echo
   if [[ "$is_existing_project" == "true" ]]; then
     if [[ "$needs_work" == "false" ]]; then
