@@ -1,0 +1,190 @@
+const express = require('express');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+
+const app = express();
+const server = createServer(app);
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Socket.IO configuration
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+    connections: io.engine.clientsCount
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Socket.IO',
+    version: '4.7.2',
+    connections: io.engine.clientsCount
+  });
+});
+
+// API info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    service: '{{SERVICE_NAME}}',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    domain: '{{BASE_DOMAIN}}',
+    connections: io.engine.clientsCount
+  });
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log(`👤 User connected: ${socket.id}`);
+
+  // Welcome message
+  socket.emit('welcome', {
+    message: 'Welcome to {{SERVICE_NAME}}!',
+    socketId: socket.id,
+    timestamp: new Date().toISOString()
+  });
+
+  // Broadcast user count
+  io.emit('user_count', io.engine.clientsCount);
+
+  // Handle custom events
+  socket.on('message', (data) => {
+    console.log('📨 Received message:', data);
+    
+    // Echo message back with metadata
+    socket.emit('message_response', {
+      original: data,
+      timestamp: new Date().toISOString(),
+      socketId: socket.id
+    });
+
+    // Broadcast to all other clients
+    socket.broadcast.emit('broadcast_message', {
+      message: data,
+      from: socket.id,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle room joining
+  socket.on('join_room', (room) => {
+    socket.join(room);
+    console.log(`🏠 User ${socket.id} joined room: ${room}`);
+    
+    socket.emit('joined_room', {
+      room: room,
+      timestamp: new Date().toISOString()
+    });
+
+    // Notify others in the room
+    socket.to(room).emit('user_joined', {
+      socketId: socket.id,
+      room: room,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle room leaving
+  socket.on('leave_room', (room) => {
+    socket.leave(room);
+    console.log(`🚪 User ${socket.id} left room: ${room}`);
+    
+    socket.emit('left_room', {
+      room: room,
+      timestamp: new Date().toISOString()
+    });
+
+    // Notify others in the room
+    socket.to(room).emit('user_left', {
+      socketId: socket.id,
+      room: room,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`👋 User disconnected: ${socket.id}`);
+    
+    // Broadcast updated user count
+    io.emit('user_count', io.engine.clientsCount);
+  });
+
+  // Error handling
+  socket.on('error', (error) => {
+    console.error(`❌ Socket error for ${socket.id}:`, error);
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    path: req.originalUrl
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!'
+  });
+});
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log('🛑 Shutting down gracefully...');
+  
+  // Close Socket.IO connections
+  io.close(() => {
+    console.log('🔌 Socket.IO connections closed');
+  });
+  
+  // Close HTTP server
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
+};
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API endpoint: http://localhost:${PORT}/api/info`);
+  console.log(`🔌 Socket.IO endpoint: ws://localhost:${PORT}`);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

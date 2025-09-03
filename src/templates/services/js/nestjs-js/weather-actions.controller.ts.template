@@ -1,0 +1,67 @@
+import { Controller, Post, Body, Logger } from '@nestjs/common';
+import { WeatherService } from './weather.service';
+
+interface HasuraActionPayload {
+  action: {
+    name: string;
+  };
+  input: any;
+  session_variables: Record<string, any>;
+}
+
+@Controller('actions')
+export class WeatherActionsController {
+  private readonly logger = new Logger(WeatherActionsController.name);
+
+  constructor(private readonly weatherService: WeatherService) {}
+
+  @Post('fetch-weather')
+  async fetchWeather(@Body() payload: HasuraActionPayload) {
+    const { input, session_variables } = payload;
+    const { city, country = 'US' } = input;
+
+    this.logger.log(`Fetching weather for ${city}, ${country}`);
+
+    try {
+      // Fetch weather data and store in database
+      const weatherData = await this.weatherService.fetchAndStoreWeather(city, country);
+      
+      return {
+        success: true,
+        message: `Weather data fetched for ${city}`,
+        data: weatherData,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to fetch weather: ${error.message}`);
+      return {
+        success: false,
+        message: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  @Post('get-weather-stats')
+  async getWeatherStats(@Body() payload: HasuraActionPayload) {
+    const { input } = payload;
+    const { city, days = 7 } = input;
+
+    try {
+      const stats = await this.weatherService.getWeatherStats(city, days);
+      
+      return {
+        success: true,
+        data: stats,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get weather stats: ${error.message}`);
+      return {
+        success: false,
+        message: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+}

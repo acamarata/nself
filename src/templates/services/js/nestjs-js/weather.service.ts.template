@@ -1,0 +1,212 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+
+interface WeatherData {
+  city: string;
+  country: string;
+  temperature: number;
+  humidity: number;
+  pressure: number;
+  description: string;
+  timestamp: Date;
+}
+
+@Injectable()
+export class WeatherService {
+  private readonly logger = new Logger(WeatherService.name);
+  private readonly hasuraEndpoint: string;
+  private readonly hasuraSecret: string;
+  private readonly redisClient: any; // Add Redis client if enabled
+
+  constructor(private configService: ConfigService) {
+    this.hasuraEndpoint = this.configService.get('HASURA_ENDPOINT');
+    this.hasuraSecret = this.configService.get('HASURA_ADMIN_SECRET');
+    
+    // Initialize Redis client if available
+    if (this.configService.get('REDIS_HOST')) {
+      // Redis client initialization would go here
+    }
+  }
+
+  async fetchAndStoreWeather(city: string, country: string): Promise<WeatherData> {
+    // Using OpenWeatherMap free API (no key required for current weather)
+    const url = `http://api.openweathermap.org/data/2.5/weather?q=${city},${country}&units=metric&appid=demo`;
+    
+    try {
+      // For demo purposes, we'll simulate weather data since the real API requires a key
+      const simulatedData = this.generateSimulatedWeather(city, country);
+      
+      // Store in PostgreSQL via Hasura
+      await this.storeWeatherInDatabase(simulatedData);
+      
+      // Cache in Redis for fast access
+      await this.cacheWeatherData(simulatedData);
+      
+      return simulatedData;
+    } catch (error) {
+      this.logger.error(`Failed to fetch weather data: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private generateSimulatedWeather(city: string, country: string): WeatherData {
+    // Generate realistic weather data for demo
+    const temp = Math.round((Math.random() * 35) + 5); // 5-40°C
+    const humidity = Math.round((Math.random() * 60) + 30); // 30-90%
+    const pressure = Math.round((Math.random() * 100) + 1000); // 1000-1100 hPa
+    
+    const descriptions = ['Clear sky', 'Partly cloudy', 'Cloudy', 'Light rain', 'Sunny'];
+    const description = descriptions[Math.floor(Math.random() * descriptions.length)];
+
+    return {
+      city,
+      country,
+      temperature: temp,
+      humidity,
+      pressure,
+      description,
+      timestamp: new Date(),
+    };
+  }
+
+  private async storeWeatherInDatabase(data: WeatherData): Promise<void> {
+    const mutation = `
+      mutation InsertWeatherData($data: weather_data_insert_input!) {
+        insert_weather_data_one(object: $data) {
+          id
+          city
+          country
+          temperature
+          created_at
+        }
+      }
+    `;
+
+    const variables = {
+      data: {
+        city: data.city,
+        country: data.country,
+        temperature: data.temperature,
+        humidity: data.humidity,
+        pressure: data.pressure,
+        description: data.description,
+        created_at: data.timestamp.toISOString(),
+      },
+    };
+
+    try {
+      const response = await axios.post(
+        this.hasuraEndpoint,
+        { query: mutation, variables },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Hasura-Admin-Secret': this.hasuraSecret,
+          },
+        }
+      );
+
+      if (response.data.errors) {
+        throw new Error(`Hasura error: ${JSON.stringify(response.data.errors)}`);
+      }
+
+      this.logger.log(`Weather data stored for ${data.city}`);
+    } catch (error) {
+      this.logger.error(`Failed to store weather data: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async cacheWeatherData(data: WeatherData): Promise<void> {
+    if (!this.redisClient) return;
+
+    const cacheKey = `weather:${data.city}:${data.country}`;
+    const cacheData = {
+      ...data,
+      cached_at: new Date().toISOString(),
+    };
+
+    try {
+      // Cache for 10 minutes
+      await this.redisClient.setex(cacheKey, 600, JSON.stringify(cacheData));
+      this.logger.log(`Weather data cached for ${data.city}`);
+    } catch (error) {
+      this.logger.error(`Failed to cache weather data: ${error.message}`);
+    }
+  }
+
+  async getWeatherStats(city: string, days: number): Promise<any> {
+    const query = `
+      query GetWeatherStats($city: String!, $since: timestamptz!) {
+        weather_data(
+          where: {
+            city: { _eq: $city }
+            created_at: { _gte: $since }
+          }
+          order_by: { created_at: desc }
+        ) {
+          temperature
+          humidity
+          pressure
+          description
+          created_at
+        }
+        weather_data_aggregate(
+          where: {
+            city: { _eq: $city }
+            created_at: { _gte: $since }
+          }
+        ) {
+          aggregate {
+            avg {
+              temperature
+              humidity
+              pressure
+            }
+            max {
+              temperature
+            }
+            min {
+              temperature
+            }
+            count
+          }
+        }
+      }
+    `;
+
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const variables = {
+      city,
+      since: since.toISOString(),
+    };
+
+    try {
+      const response = await axios.post(
+        this.hasuraEndpoint,
+        { query, variables },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Hasura-Admin-Secret': this.hasuraSecret,
+          },
+        }
+      );
+
+      if (response.data.errors) {
+        throw new Error(`Hasura error: ${JSON.stringify(response.data.errors)}`);
+      }
+
+      return {
+        recent_data: response.data.data.weather_data,
+        statistics: response.data.data.weather_data_aggregate.aggregate,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get weather stats: ${error.message}`);
+      throw error;
+    }
+  }
+}
