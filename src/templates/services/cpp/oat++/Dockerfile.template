@@ -1,0 +1,19 @@
+FROM gcc:latest
+
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Create non-root user (adjust for the specific runtime)
+RUN groupadd -r appuser && useradd -r -g appuser appuser || \
+    addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["echo", "Configure the start command for oat++"]

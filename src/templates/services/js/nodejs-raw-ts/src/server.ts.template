@@ -1,0 +1,155 @@
+import * as http from 'http';
+import * as url from 'url';
+import * as cors from 'cors';
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+interface ApiResponse {
+  [key: string]: any;
+}
+
+// Simple CORS middleware for raw Node.js
+const corsHandler = cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+});
+
+// Simple JSON parser
+const parseJSON = (req: http.IncomingMessage): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (error) {
+        reject(new Error('Invalid JSON'));
+      }
+    });
+  });
+};
+
+// Response helper
+const sendJSON = (res: http.ServerResponse, statusCode: number, data: ApiResponse): void => {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(data));
+};
+
+// Route handler type
+type RouteHandler = (req: http.IncomingMessage, res: http.ServerResponse) => void;
+
+// Route handlers
+const routes: Record<string, RouteHandler> = {
+  '/health': (req, res) => {
+    sendJSON(res, 200, {
+      status: 'healthy',
+      service: '{{SERVICE_NAME}}',
+      timestamp: new Date().toISOString()
+    });
+  },
+
+  '/': (req, res) => {
+    sendJSON(res, 200, {
+      message: 'Hello from {{SERVICE_NAME}}!',
+      project: '{{PROJECT_NAME}}',
+      framework: 'Node.js Raw TypeScript',
+      version: process.version
+    });
+  },
+
+  '/api/info': (req, res) => {
+    sendJSON(res, 200, {
+      service: '{{SERVICE_NAME}}',
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      domain: '{{BASE_DOMAIN}}'
+    });
+  }
+};
+
+// POST route for echo
+const handleEcho = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
+  try {
+    const body = await parseJSON(req);
+    sendJSON(res, 200, {
+      received: body,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    sendJSON(res, 400, {
+      error: 'Bad Request',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// Main request handler
+const requestHandler = (req: http.IncomingMessage, res: http.ServerResponse): void => {
+  const parsedUrl = url.parse(req.url || '', true);
+  const pathname = parsedUrl.pathname || '';
+  
+  // Apply CORS
+  corsHandler(req, res, () => {
+    // Handle OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
+    // Handle specific routes
+    if (req.method === 'GET' && routes[pathname]) {
+      routes[pathname](req, res);
+      return;
+    }
+
+    // Handle POST /api/echo
+    if (req.method === 'POST' && pathname === '/api/echo') {
+      handleEcho(req, res);
+      return;
+    }
+
+    // 404 handler
+    sendJSON(res, 404, {
+      error: 'Not Found',
+      path: pathname
+    });
+  });
+};
+
+// Error handlers
+process.on('uncaughtException', (err: Error) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Graceful shutdown
+const gracefulShutdown = (): void => {
+  console.log('🛑 Shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+// Create and start server
+const server = http.createServer(requestHandler);
+
+server.listen(PORT, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API endpoint: http://localhost:${PORT}/api/info`);
+  console.log(`💬 Echo endpoint: POST http://localhost:${PORT}/api/echo`);
+});

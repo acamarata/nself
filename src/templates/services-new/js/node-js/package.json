@@ -1,0 +1,16 @@
+{
+  "name": "node-js-service",
+  "version": "1.0.0",
+  "description": "Raw Node.js HTTP server service template",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["nodejs", "http", "server", "nself"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
