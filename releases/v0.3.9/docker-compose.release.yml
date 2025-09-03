@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  nself:
+    image: ghcr.io/acamarata/nself:0.3.9
+    container_name: nself-cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/workspace
+    environment:
+      - NSELF_VERSION=0.3.9
+    networks:
+      - nself_network
+    working_dir: /workspace
+    command: help
+
+networks:
+  nself_network:
+    driver: bridge
+    name: nself_network

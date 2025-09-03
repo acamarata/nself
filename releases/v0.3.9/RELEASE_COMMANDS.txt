@@ -1,0 +1,102 @@
+============================================
+nself v0.3.9 - RELEASE COMMANDS TO EXECUTE
+============================================
+
+Step 1: Authenticate GitHub CLI
+--------------------------------
+gh auth login
+# Choose: GitHub.com > HTTPS > Authenticate with browser
+
+Step 2: Create GitHub Release
+-----------------------------
+cd /Users/admin/Sites/nself/releases/v0.3.9
+
+# Create the release
+gh release create v0.3.9 \
+  --repo acamarata/nself \
+  --title "nself v0.3.9 - Production Ready Release" \
+  --notes-file RELEASE_NOTES.md \
+  --verify-tag
+
+# Upload all assets
+gh release upload v0.3.9 \
+  nself-v0.3.9.tar.gz \
+  install.sh \
+  install-debian.sh \
+  install-rhel.sh \
+  nself.rb \
+  Dockerfile \
+  docker-compose.release.yml \
+  RELEASE_MANIFEST.md \
+  --repo acamarata/nself
+
+Step 3: Update Homebrew Tap
+---------------------------
+# Create tap repository if not exists:
+# Go to: https://github.com/new
+# Name: homebrew-nself
+# Make it public
+
+# Clone and setup
+git clone git@github.com:acamarata/homebrew-nself.git ~/Sites/homebrew-nself || true
+mkdir -p ~/Sites/homebrew-nself/Formula
+
+# Copy formula with correct SHA256
+cp nself.rb ~/Sites/homebrew-nself/Formula/
+cd ~/Sites/homebrew-nself
+git add Formula/nself.rb
+git commit -m "Release nself v0.3.9"
+git push origin main
+
+Step 4: Build & Push Docker Images
+-----------------------------------
+cd /Users/admin/Sites/nself/releases/v0.3.9
+
+# Build the image
+docker build -t ghcr.io/acamarata/nself:0.3.9 \
+             -t ghcr.io/acamarata/nself:latest \
+             -t ghcr.io/acamarata/nself:0.3 .
+
+# Login to GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u acamarata --password-stdin
+
+# Push all tags
+docker push ghcr.io/acamarata/nself:0.3.9
+docker push ghcr.io/acamarata/nself:latest  
+docker push ghcr.io/acamarata/nself:0.3
+
+Step 5: Deploy Web Installer (Optional)
+---------------------------------------
+# Upload install.nself.org.sh to your web server
+# Make it accessible at https://install.nself.org
+
+Step 6: Verify Installation Methods
+------------------------------------
+# Test GitHub release download
+curl -L https://github.com/acamarata/nself/archive/v0.3.9.tar.gz -o test.tar.gz
+
+# Test Homebrew (after tap is pushed)
+brew tap acamarata/nself
+brew install nself
+nself version
+
+# Test Docker
+docker pull ghcr.io/acamarata/nself:0.3.9
+docker run --rm ghcr.io/acamarata/nself:0.3.9 version
+
+Step 7: Announce Release
+------------------------
+# Post the Telegram announcement you already have
+# Update GitHub README if needed
+# Tweet from @nself_org if applicable
+
+============================================
+QUICK COPY-PASTE COMMANDS
+============================================
+
+# All in one (after gh auth):
+cd /Users/admin/Sites/nself/releases/v0.3.9 && \
+gh release create v0.3.9 --repo acamarata/nself --title "nself v0.3.9 - Production Ready Release" --notes-file RELEASE_NOTES.md --verify-tag && \
+gh release upload v0.3.9 nself-v0.3.9.tar.gz install.sh install-debian.sh install-rhel.sh nself.rb Dockerfile docker-compose.release.yml RELEASE_MANIFEST.md --repo acamarata/nself && \
+docker build -t ghcr.io/acamarata/nself:0.3.9 -t ghcr.io/acamarata/nself:latest . && \
+echo "✅ Release v0.3.9 published!"
