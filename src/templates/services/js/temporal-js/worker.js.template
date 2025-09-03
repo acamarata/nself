@@ -1,0 +1,405 @@
+const { Worker } = require('@temporalio/worker');
+const { Client } = require('@temporalio/client');
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Temporal configuration
+const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'temporal:7233';
+const TASK_QUEUE = process.env.TASK_QUEUE || '{{SERVICE_NAME}}-queue';
+
+// Sample activities
+const activities = {
+  greet: async (name) => {
+    console.log(`👋 Greeting activity called for: ${name}`);
+    return `Hello, ${name}!`;
+  },
+
+  processData: async (data) => {
+    console.log(`🔄 Processing data:`, data);
+    
+    // Simulate data processing
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return {
+      processed: true,
+      timestamp: new Date().toISOString(),
+      originalData: data,
+      result: `Processed ${JSON.stringify(data)}`
+    };
+  },
+
+  sendEmail: async ({ to, subject, body }) => {
+    console.log(`📧 Sending email to: ${to}`);
+    console.log(`   Subject: ${subject}`);
+    
+    // Simulate email sending
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (Math.random() > 0.1) { // 90% success rate
+      console.log(`✅ Email sent successfully`);
+      return { success: true, messageId: `msg_${Date.now()}` };
+    } else {
+      throw new Error('Email service temporarily unavailable');
+    }
+  },
+
+  fetchExternalData: async (url) => {
+    console.log(`🌐 Fetching data from: ${url}`);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    return {
+      url,
+      data: { message: 'Sample data', timestamp: new Date().toISOString() },
+      status: 'success'
+    };
+  }
+};
+
+// Sample workflows (these would typically be in separate files)
+const workflows = `
+const { defineQuery, defineSignal, setHandler, condition, sleep } = require('@temporalio/workflow');
+
+// Simple greeting workflow
+async function greetingWorkflow(name) {
+  const greet = proxyActivities({
+    startToCloseTimeout: '1 minute',
+  });
+
+  const greeting = await greet.greet(name);
+  return greeting;
+}
+
+// Data processing workflow
+async function dataProcessingWorkflow(inputData) {
+  const activities = proxyActivities({
+    startToCloseTimeout: '5 minutes',
+    retry: {
+      maximumAttempts: 3,
+    },
+  });
+
+  console.log('📋 Starting data processing workflow');
+  
+  // Process the data
+  const result = await activities.processData(inputData);
+  
+  // Send notification email
+  await activities.sendEmail({
+    to: 'admin@example.com',
+    subject: 'Data Processing Complete',
+    body: \`Processing completed: \${JSON.stringify(result)}\`
+  });
+
+  return result;
+}
+
+// Long-running workflow with signals
+const approvalSignal = defineSignal('approval');
+const statusQuery = defineQuery('status');
+
+async function approvalWorkflow(data) {
+  let approved = false;
+  let status = 'waiting_for_approval';
+
+  setHandler(approvalSignal, (approval) => {
+    approved = approval;
+    status = approved ? 'approved' : 'rejected';
+  });
+
+  setHandler(statusQuery, () => status);
+
+  // Wait for approval (up to 1 hour)
+  const timeout = '1 hour';
+  const approved_within_timeout = await condition(() => approved !== false, timeout);
+
+  if (!approved_within_timeout) {
+    status = 'timeout';
+    return { status: 'timeout', message: 'Approval not received within timeout' };
+  }
+
+  if (approved) {
+    status = 'processing';
+    const activities = proxyActivities({
+      startToCloseTimeout: '5 minutes',
+    });
+
+    const result = await activities.processData(data);
+    status = 'completed';
+    return { status: 'completed', result };
+  } else {
+    return { status: 'rejected', message: 'Request was rejected' };
+  }
+}
+
+module.exports = {
+  greetingWorkflow,
+  dataProcessingWorkflow,
+  approvalWorkflow
+};
+`;
+
+// Write workflows to a temporary file (in production, these would be separate files)
+const fs = require('fs');
+const workflowsPath = path.join(__dirname, 'workflows.js');
+fs.writeFileSync(workflowsPath, workflows);
+
+let worker = null;
+let client = null;
+
+// Initialize Temporal worker
+async function startWorker() {
+  try {
+    console.log(`🔄 Connecting to Temporal at ${TEMPORAL_ADDRESS}...`);
+    
+    client = new Client({ serverOptions: { address: TEMPORAL_ADDRESS } });
+    
+    worker = await Worker.create({
+      workflowsPath: path.resolve('./workflows.js'),
+      activities,
+      taskQueue: TASK_QUEUE,
+    });
+
+    console.log(`🚀 Temporal worker started on task queue: ${TASK_QUEUE}`);
+    await worker.run();
+  } catch (error) {
+    console.error('❌ Failed to start Temporal worker:', error);
+    throw error;
+  }
+}
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Check if worker is running
+    const isHealthy = worker && !worker.getState().includes('STOPPED');
+    
+    res.json({
+      status: isHealthy ? 'healthy' : 'unhealthy',
+      service: '{{SERVICE_NAME}}',
+      timestamp: new Date().toISOString(),
+      temporal: {
+        address: TEMPORAL_ADDRESS,
+        taskQueue: TASK_QUEUE,
+        worker: isHealthy ? 'running' : 'stopped'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Temporal',
+    version: '1.8.0'
+  });
+});
+
+// API info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    service: '{{SERVICE_NAME}}',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    domain: '{{BASE_DOMAIN}}',
+    temporal: {
+      address: TEMPORAL_ADDRESS,
+      taskQueue: TASK_QUEUE
+    }
+  });
+});
+
+// Workflow execution endpoints
+app.post('/api/workflows/greeting', async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Missing required field: name' });
+    }
+
+    const workflowId = \`greeting-\${Date.now()}\`;
+    const handle = await client.workflow.start('greetingWorkflow', {
+      args: [name],
+      taskQueue: TASK_QUEUE,
+      workflowId,
+    });
+
+    const result = await handle.result();
+    
+    res.json({ 
+      workflowId, 
+      result,
+      message: 'Greeting workflow completed'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/workflows/data-processing', async (req, res) => {
+  try {
+    const { data } = req.body;
+    
+    if (!data) {
+      return res.status(400).json({ error: 'Missing required field: data' });
+    }
+
+    const workflowId = \`data-processing-\${Date.now()}\`;
+    const handle = await client.workflow.start('dataProcessingWorkflow', {
+      args: [data],
+      taskQueue: TASK_QUEUE,
+      workflowId,
+    });
+
+    // Return immediately without waiting for completion
+    res.json({ 
+      workflowId,
+      status: 'started',
+      message: 'Data processing workflow started'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/workflows/approval', async (req, res) => {
+  try {
+    const { data } = req.body;
+    
+    if (!data) {
+      return res.status(400).json({ error: 'Missing required field: data' });
+    }
+
+    const workflowId = \`approval-\${Date.now()}\`;
+    const handle = await client.workflow.start('approvalWorkflow', {
+      args: [data],
+      taskQueue: TASK_QUEUE,
+      workflowId,
+    });
+
+    res.json({ 
+      workflowId,
+      status: 'waiting_for_approval',
+      message: 'Approval workflow started',
+      approveUrl: \`/api/workflows/\${workflowId}/approve\`,
+      rejectUrl: \`/api/workflows/\${workflowId}/reject\`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Workflow control endpoints
+app.post('/api/workflows/:workflowId/approve', async (req, res) => {
+  try {
+    const { workflowId } = req.params;
+    const handle = client.workflow.getHandle(workflowId);
+    
+    await handle.signal('approval', true);
+    
+    res.json({ message: 'Workflow approved', workflowId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/workflows/:workflowId/reject', async (req, res) => {
+  try {
+    const { workflowId } = req.params;
+    const handle = client.workflow.getHandle(workflowId);
+    
+    await handle.signal('approval', false);
+    
+    res.json({ message: 'Workflow rejected', workflowId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/workflows/:workflowId/status', async (req, res) => {
+  try {
+    const { workflowId } = req.params;
+    const handle = client.workflow.getHandle(workflowId);
+    
+    const status = await handle.query('status');
+    
+    res.json({ workflowId, status });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    path: req.originalUrl
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!'
+  });
+});
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Graceful shutdown
+const gracefulShutdown = async () => {
+  console.log('🛑 Shutting down gracefully...');
+  
+  try {
+    if (worker) {
+      await worker.shutdown();
+      console.log('🔄 Temporal worker shutdown');
+    }
+
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Start HTTP server
+app.listen(PORT, () => {
+  console.log(\`🚀 {{SERVICE_NAME}} is running on port \${PORT}\`);
+  console.log(\`📍 Health check: http://localhost:\${PORT}/health\`);
+  console.log(\`🌐 API endpoint: http://localhost:\${PORT}/api/info\`);
+  console.log(\`⚡ Temporal worker starting...\`);
+  
+  // Start Temporal worker
+  startWorker().catch(console.error);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
