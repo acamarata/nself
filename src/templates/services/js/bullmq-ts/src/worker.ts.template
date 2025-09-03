@@ -1,0 +1,362 @@
+import { Worker, Queue, Job } from 'bullmq';
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import Redis from 'ioredis';
+
+const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Redis connection configuration
+const redisConfig = {
+  host: process.env.REDIS_HOST || 'redis',
+  port: parseInt(process.env.REDIS_PORT || '6379', 10),
+  password: process.env.REDIS_PASSWORD || undefined,
+  db: parseInt(process.env.REDIS_DB || '0', 10),
+  maxRetriesPerRequest: 3,
+  retryDelayOnFailover: 100,
+  lazyConnect: true
+};
+
+// Create Redis connection for BullMQ
+const connection = new Redis(redisConfig);
+
+// Create queues
+const emailQueue = new Queue('email', { connection });
+const dataProcessingQueue = new Queue('data-processing', { connection });
+const notificationQueue = new Queue('notifications', { connection });
+
+// Job interfaces
+interface EmailJobData {
+  to: string;
+  subject: string;
+  body?: string;
+  template?: string;
+}
+
+interface DataJobData {
+  data: any;
+  operation: string;
+}
+
+interface NotificationJobData {
+  userId: string;
+  message: string;
+  type: string;
+}
+
+// Job processors
+const processEmailJob = async (job: Job<EmailJobData>) => {
+  const { to, subject, body, template } = job.data;
+  console.log(`📧 Processing email job: ${job.id}`);
+  console.log(`   To: ${to}`);
+  console.log(`   Subject: ${subject}`);
+  
+  // Simulate email processing
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  if (Math.random() > 0.1) { // 90% success rate
+    console.log(`✅ Email sent successfully: ${job.id}`);
+    return { success: true, messageId: `msg_${Date.now()}` };
+  } else {
+    throw new Error('Email service temporarily unavailable');
+  }
+};
+
+const processDataJob = async (job: Job<DataJobData>) => {
+  const { data, operation } = job.data;
+  console.log(`🔄 Processing data job: ${job.id}`);
+  console.log(`   Operation: ${operation}`);
+  console.log(`   Data size: ${JSON.stringify(data).length} bytes`);
+  
+  // Simulate data processing
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  const result = {
+    processed: true,
+    operation,
+    timestamp: new Date().toISOString(),
+    recordCount: Array.isArray(data) ? data.length : 1
+  };
+  
+  console.log(`✅ Data processing completed: ${job.id}`);
+  return result;
+};
+
+const processNotificationJob = async (job: Job<NotificationJobData>) => {
+  const { userId, message, type } = job.data;
+  console.log(`🔔 Processing notification job: ${job.id}`);
+  console.log(`   User: ${userId}`);
+  console.log(`   Type: ${type}`);
+  
+  // Simulate notification processing
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  console.log(`✅ Notification sent: ${job.id}`);
+  return { sent: true, userId, type };
+};
+
+// Create workers
+const emailWorker = new Worker('email', processEmailJob, {
+  connection,
+  concurrency: 5,
+  removeOnComplete: 100,
+  removeOnFail: 50
+});
+
+const dataWorker = new Worker('data-processing', processDataJob, {
+  connection,
+  concurrency: 3,
+  removeOnComplete: 100,
+  removeOnFail: 50
+});
+
+const notificationWorker = new Worker('notifications', processNotificationJob, {
+  connection,
+  concurrency: 10,
+  removeOnComplete: 100,
+  removeOnFail: 50
+});
+
+// Worker event handlers
+[emailWorker, dataWorker, notificationWorker].forEach(worker => {
+  worker.on('completed', (job, result) => {
+    console.log(`✅ Job ${job.id} completed in queue ${job.queueName}`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`❌ Job ${job?.id} failed in queue ${job?.queueName}:`, err.message);
+  });
+
+  worker.on('error', (err) => {
+    console.error('❌ Worker error:', err);
+  });
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    await connection.ping();
+    
+    const [emailWaiting, dataWaiting, notificationWaiting] = await Promise.all([
+      emailQueue.getWaiting(),
+      dataProcessingQueue.getWaiting(),
+      notificationQueue.getWaiting()
+    ]);
+
+    res.json({
+      status: 'healthy',
+      service: '{{SERVICE_NAME}}',
+      timestamp: new Date().toISOString(),
+      redis: 'connected',
+      queues: {
+        email: { waiting: emailWaiting.length },
+        dataProcessing: { waiting: dataWaiting.length },
+        notifications: { waiting: notificationWaiting.length }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'BullMQ',
+    version: '4.15.0'
+  });
+});
+
+// API info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    service: '{{SERVICE_NAME}}',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    domain: '{{BASE_DOMAIN}}'
+  });
+});
+
+// Job creation endpoints
+app.post('/api/jobs/email', async (req, res) => {
+  try {
+    const { to, subject, body, template, priority = 0, delay = 0 } = req.body;
+    
+    if (!to || !subject) {
+      return res.status(400).json({ error: 'Missing required fields: to, subject' });
+    }
+
+    const job = await emailQueue.add('send-email', {
+      to,
+      subject,
+      body,
+      template
+    }, {
+      priority,
+      delay,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000
+      }
+    });
+
+    res.json({ jobId: job.id, message: 'Email job queued' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/jobs/data', async (req, res) => {
+  try {
+    const { data, operation = 'process', priority = 0 } = req.body;
+    
+    if (!data) {
+      return res.status(400).json({ error: 'Missing required field: data' });
+    }
+
+    const job = await dataProcessingQueue.add('process-data', {
+      data,
+      operation
+    }, {
+      priority,
+      attempts: 2,
+      backoff: {
+        type: 'fixed',
+        delay: 5000
+      }
+    });
+
+    res.json({ jobId: job.id, message: 'Data processing job queued' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/jobs/notification', async (req, res) => {
+  try {
+    const { userId, message, type = 'info' } = req.body;
+    
+    if (!userId || !message) {
+      return res.status(400).json({ error: 'Missing required fields: userId, message' });
+    }
+
+    const job = await notificationQueue.add('send-notification', {
+      userId,
+      message,
+      type
+    }, {
+      attempts: 2,
+      removeOnComplete: 10,
+      removeOnFail: 5
+    });
+
+    res.json({ jobId: job.id, message: 'Notification job queued' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Queue status endpoints
+app.get('/api/queues/status', async (req, res) => {
+  try {
+    const [
+      emailStats,
+      dataStats,
+      notificationStats
+    ] = await Promise.all([
+      emailQueue.getJobCounts(),
+      dataProcessingQueue.getJobCounts(),
+      notificationQueue.getJobCounts()
+    ]);
+
+    res.json({
+      email: emailStats,
+      dataProcessing: dataStats,
+      notifications: notificationStats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    path: req.originalUrl
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!'
+  });
+});
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Graceful shutdown
+const gracefulShutdown = async () => {
+  console.log('🛑 Shutting down gracefully...');
+  
+  try {
+    // Close workers
+    await Promise.all([
+      emailWorker.close(),
+      dataWorker.close(),
+      notificationWorker.close()
+    ]);
+    console.log('🔄 Workers closed');
+
+    // Close queues
+    await Promise.all([
+      emailQueue.close(),
+      dataProcessingQueue.close(),
+      notificationQueue.close()
+    ]);
+    console.log('📋 Queues closed');
+
+    // Close Redis connection
+    await connection.disconnect();
+    console.log('📡 Redis connection closed');
+
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Start HTTP server
+app.listen(PORT, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API endpoint: http://localhost:${PORT}/api/info`);
+  console.log(`📋 Queue status: http://localhost:${PORT}/api/queues/status`);
+  console.log(`🔄 Workers running for: email, data-processing, notifications`);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
