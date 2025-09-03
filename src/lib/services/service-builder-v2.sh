@@ -21,8 +21,8 @@ parse_cs_services() {
       break
     fi
     
-    # Parse CS_N=name,framework[,port][,route]
-    IFS=',' read -r name framework port route <<< "$service_def"
+    # Parse CS_N=name:framework[:port][:route]
+    IFS=':' read -r name framework port route <<< "$service_def"
     
     # Trim whitespace
     name=$(echo "$name" | xargs)
@@ -336,14 +336,23 @@ create_service_from_template() {
   esac
   
   local service_dir="./services/${name}"
+  
+  # Framework may be a path like js/node-js or just js
+  # Use it directly as the template path
   local template_dir="$SCRIPT_DIR/../../templates/services/${framework}"
   
   # Check if template exists
   if [[ ! -d "$template_dir" ]]; then
-    log_warning "No template found for framework: ${framework}"
-    log_info "Creating generic service directory for ${name}"
-    mkdir -p "$service_dir"
-    return 1
+    # Try without subdirectory (for backward compatibility)
+    local base_framework="${framework%%/*}"
+    template_dir="$SCRIPT_DIR/../../templates/services/${base_framework}"
+    
+    if [[ ! -d "$template_dir" ]]; then
+      log_warning "No template found for framework: ${framework}"
+      log_info "Creating generic service directory for ${name}"
+      mkdir -p "$service_dir"
+      return 1
+    fi
   fi
   
   # Create service directory

@@ -1,0 +1,127 @@
+import os
+import time
+from datetime import datetime
+from typing import Any, Dict
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from pydantic import BaseModel
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="FastAPI service for {{PROJECT_NAME}}",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Trusted host middleware (security)
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=["*"]  # Configure appropriately for production
+)
+
+# Pydantic models
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+
+class InfoResponse(BaseModel):
+    service: str
+    environment: str
+    domain: str
+    uptime: float
+
+class EchoRequest(BaseModel):
+    message: str
+    data: Dict[str, Any] = {}
+
+class EchoResponse(BaseModel):
+    received: EchoRequest
+    timestamp: str
+
+# Store start time for uptime calculation
+start_time = time.time()
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat()
+    )
+
+@app.get("/", response_model=Dict[str, Any])
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "FastAPI",
+        "version": "0.104.1"
+    }
+
+@app.get("/api/info", response_model=InfoResponse)
+async def get_info():
+    """Get service information"""
+    return InfoResponse(
+        service="{{SERVICE_NAME}}",
+        environment=os.getenv("ENVIRONMENT", "development"),
+        domain="{{BASE_DOMAIN}}",
+        uptime=time.time() - start_time
+    )
+
+@app.post("/api/echo", response_model=EchoResponse)
+async def echo_endpoint(request: EchoRequest):
+    """Echo endpoint for testing"""
+    return EchoResponse(
+        received=request,
+        timestamp=datetime.utcnow().isoformat()
+    )
+
+@app.exception_handler(404)
+async def not_found_handler(request, exc):
+    return HTTPException(
+        status_code=404,
+        detail={
+            "error": "Not Found",
+            "path": str(request.url.path)
+        }
+    )
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request, exc):
+    return HTTPException(
+        status_code=500,
+        detail={
+            "error": "Internal Server Error",
+            "message": "Something went wrong!"
+        }
+    )
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"💬 Echo endpoint: POST http://localhost:{port}/api/echo")
+    print(f"📖 API docs: http://localhost:{port}/docs")
+    
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=os.getenv("ENVIRONMENT") == "development"
+    )
