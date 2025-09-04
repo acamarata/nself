@@ -42,8 +42,8 @@ cmd_ssl() {
 ssl_bootstrap() {
   show_command_header "nself ssl bootstrap" "Generate SSL certificates for development"
 
-  # Load environment variables if .env.local exists
-  if [[ -f ".env.local" ]]; then
+  # Load environment variables if .env exists
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     set -a
     load_env_with_priority
     set +a
@@ -121,8 +121,8 @@ ssl_bootstrap() {
 ssl_renew() {
   show_command_header "nself ssl renew" "Renew SSL certificates"
 
-  # Load environment variables if .env.local exists
-  if [[ -f ".env.local" ]]; then
+  # Load environment variables if .env exists
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     set -a
     load_env_with_priority
     set +a

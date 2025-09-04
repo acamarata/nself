@@ -1,0 +1,34 @@
+import Vapor
+import Dispatch
+import Logging
+
+var env = try Environment.detect()
+try LoggingSystem.bootstrap(from: &env)
+
+let app = Application(env)
+
+// Print startup information
+let port = Environment.get("PORT") ?? "{{PORT}}"
+print("🚀 {{SERVICE_NAME}} is starting on port \(port)")
+print("📍 Health check: http://localhost:\(port)/health")
+print("🌐 API endpoint: http://localhost:\(port)/api/info")
+print("💬 Echo endpoint: POST http://localhost:\(port)/api/echo")
+
+defer { app.shutdown() }
+
+// Configure the application
+try configure(app)
+
+// Graceful shutdown handling
+let signalQueue = DispatchQueue(label: "signals", qos: .background)
+let signalSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: signalQueue)
+
+signalSource.setEventHandler {
+    print("\n🛑 Received SIGTERM signal. Shutting down gracefully...")
+    app.shutdown()
+}
+
+signal(SIGTERM, SIG_IGN)
+signalSource.resume()
+
+try app.run()

@@ -1,0 +1,180 @@
+#!/usr/bin/env ruby
+
+require 'sinatra'
+require 'sinatra/cross_origin'
+require 'json'
+require 'logger'
+require 'dotenv/load'
+
+# Configuration
+set :port, ENV.fetch('PORT', '{{PORT}}').to_i
+set :bind, '0.0.0.0'
+set :server, 'puma'
+set :logging, true
+
+# CORS configuration
+configure do
+  enable :cross_origin
+end
+
+before do
+  response.headers['Access-Control-Allow-Origin'] = '*'
+  response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+  response.headers['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
+  response.headers['X-Service'] = '{{SERVICE_NAME}}'
+  response.headers['X-Framework'] = 'Sinatra'
+  
+  content_type :json
+end
+
+# Handle preflight requests
+options '*' do
+  response.headers['Access-Control-Allow-Origin'] = '*'
+  response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+  response.headers['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
+  200
+end
+
+# Store start time for uptime calculation
+START_TIME = Time.now
+
+# Helper methods
+def json_response(data, status = 200)
+  status status
+  JSON.pretty_generate(data)
+end
+
+def current_timestamp
+  Time.now.utc.iso8601
+end
+
+def uptime_seconds
+  (Time.now - START_TIME).to_i
+end
+
+# Routes
+get '/' do
+  json_response({
+    message: "Hello from {{SERVICE_NAME}}!",
+    project: "{{PROJECT_NAME}}",
+    framework: "Sinatra",
+    version: Sinatra::VERSION,
+    timestamp: current_timestamp
+  })
+end
+
+get '/health' do
+  # Basic health checks
+  checks = {}
+  healthy = true
+  
+  # Memory check
+  begin
+    memory_info = `ps -o pid,vsz,rss -p #{Process.pid}`.split("\n").last.split
+    rss_mb = memory_info[2].to_i / 1024
+    checks[:memory] = {
+      status: rss_mb < 512 ? 'healthy' : 'warning',
+      usage_mb: rss_mb
+    }
+  rescue => e
+    checks[:memory] = { status: 'unknown', message: e.message }
+  end
+  
+  # Application check
+  checks[:application] = {
+    status: 'healthy',
+    uptime_seconds: uptime_seconds,
+    environment: ENV.fetch('RACK_ENV', 'development')
+  }
+  
+  status_code = healthy ? 200 : 503
+  json_response({
+    status: healthy ? 'healthy' : 'unhealthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: current_timestamp,
+    checks: checks
+  }, status_code)
+end
+
+get '/api/info' do
+  json_response({
+    service: '{{SERVICE_NAME}}',
+    environment: ENV.fetch('RACK_ENV', 'development'),
+    domain: '{{BASE_DOMAIN}}',
+    uptime: uptime_seconds,
+    version: '0.1.0',
+    ruby_version: RUBY_VERSION,
+    sinatra_version: Sinatra::VERSION
+  })
+end
+
+post '/api/echo' do
+  begin
+    request_data = JSON.parse(request.body.read)
+    request_id = SecureRandom.uuid
+    
+    json_response({
+      received: {
+        message: request_data['message'],
+        data: request_data['data'] || {}
+      },
+      timestamp: current_timestamp,
+      request_id: request_id
+    })
+  rescue JSON::ParserError => e
+    status 400
+    json_response({
+      error: 'Bad Request',
+      message: 'Invalid JSON in request body',
+      timestamp: current_timestamp
+    })
+  rescue => e
+    logger.error "Echo endpoint error: #{e.message}"
+    status 500
+    json_response({
+      error: 'Internal Server Error',
+      message: 'Something went wrong',
+      timestamp: current_timestamp
+    })
+  end
+end
+
+# 404 handler
+not_found do
+  json_response({
+    error: 'Not Found',
+    path: request.path_info,
+    method: request.request_method,
+    timestamp: current_timestamp
+  }, 404)
+end
+
+# Error handler
+error do
+  err = env['sinatra.error']
+  logger.error "#{err.class}: #{err.message}"
+  logger.error err.backtrace.join("\n")
+  
+  json_response({
+    error: 'Internal Server Error',
+    message: settings.development? ? err.message : 'Something went wrong',
+    timestamp: current_timestamp
+  }, 500)
+end
+
+# Graceful shutdown
+trap('INT') do
+  puts "\n🛑 Received interrupt signal. Shutting down gracefully..."
+  exit(0)
+end
+
+trap('TERM') do
+  puts "\n🛑 Received termination signal. Shutting down gracefully..."
+  exit(0)
+end
+
+# Start message
+puts "🚀 {{SERVICE_NAME}} is starting on port #{settings.port}"
+puts "📍 Health check: http://localhost:#{settings.port}/health"
+puts "🌐 API endpoint: http://localhost:#{settings.port}/api/info"
+puts "💬 Echo endpoint: POST http://localhost:#{settings.port}/api/echo"

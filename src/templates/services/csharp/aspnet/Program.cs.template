@@ -1,0 +1,220 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Serilog;
+using System.Text.Json;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .WriteTo.Console()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy("Service is running"))
+    .AddCheck<MemoryHealthCheck>("memory");
+
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// Store start time for uptime calculation
+var startTime = DateTime.UtcNow;
+builder.Services.AddSingleton(startTime);
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseCors("AllowAll");
+
+// Custom headers middleware
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("X-Service", "{{SERVICE_NAME}}");
+    context.Response.Headers.Add("X-Framework", "ASP.NET Core");
+    await next.Invoke();
+});
+
+// Root endpoint
+app.MapGet("/", () =>
+{
+    return Results.Json(new
+    {
+        message = "Hello from {{SERVICE_NAME}}!",
+        project = "{{PROJECT_NAME}}",
+        framework = "ASP.NET Core",
+        version = "8.0",
+        timestamp = DateTime.UtcNow.ToString("O")
+    });
+});
+
+// API info endpoint
+app.MapGet("/api/info", (DateTime startTime) =>
+{
+    var uptime = (DateTime.UtcNow - startTime).TotalSeconds;
+    
+    return Results.Json(new
+    {
+        service = "{{SERVICE_NAME}}",
+        environment = app.Environment.EnvironmentName,
+        domain = "{{BASE_DOMAIN}}",
+        uptime = (int)uptime,
+        version = "0.1.0",
+        dotnet_version = Environment.Version.ToString(),
+        aspnet_version = "8.0"
+    });
+});
+
+// Echo endpoint
+app.MapPost("/api/echo", async (HttpContext context) =>
+{
+    try
+    {
+        var requestBody = await context.Request.ReadFromJsonAsync<EchoRequest>();
+        
+        if (requestBody?.Message == null)
+        {
+            return Results.BadRequest(new
+            {
+                error = "Bad Request",
+                message = "Message field is required",
+                timestamp = DateTime.UtcNow.ToString("O")
+            });
+        }
+
+        var requestId = Guid.NewGuid().ToString();
+        
+        return Results.Json(new
+        {
+            received = new
+            {
+                message = requestBody.Message,
+                data = requestBody.Data ?? new Dictionary<string, object>()
+            },
+            timestamp = DateTime.UtcNow.ToString("O"),
+            request_id = requestId
+        });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Echo endpoint error");
+        
+        return Results.Problem(
+            detail: app.Environment.IsDevelopment() ? ex.Message : "Something went wrong",
+            title: "Internal Server Error",
+            statusCode: 500,
+            extensions: new Dictionary<string, object?>
+            {
+                ["timestamp"] = DateTime.UtcNow.ToString("O")
+            }
+        );
+    }
+});
+
+// Health check endpoint
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        
+        var response = new
+        {
+            status = report.Status == HealthStatus.Healthy ? "healthy" : "unhealthy",
+            service = "{{SERVICE_NAME}}",
+            timestamp = DateTime.UtcNow.ToString("O"),
+            checks = report.Entries.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new
+                {
+                    status = kvp.Value.Status.ToString().ToLower(),
+                    description = kvp.Value.Description,
+                    data = kvp.Value.Data
+                }
+            )
+        };
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
+    }
+});
+
+// 404 handler
+app.MapFallback(() =>
+{
+    return Results.NotFound(new
+    {
+        error = "Not Found",
+        message = "The requested resource was not found",
+        timestamp = DateTime.UtcNow.ToString("O")
+    });
+});
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "{{PORT}}";
+
+Console.WriteLine($"🚀 {{SERVICE_NAME}} is starting on port {port}");
+Console.WriteLine($"📍 Health check: http://localhost:{port}/health");
+Console.WriteLine($"🌐 API endpoint: http://localhost:{port}/api/info");
+Console.WriteLine($"💬 Echo endpoint: POST http://localhost:{port}/api/echo");
+Console.WriteLine($"📖 API docs: http://localhost:{port}/swagger");
+
+app.Run($"http://0.0.0.0:{port}");
+
+// Request models
+public class EchoRequest
+{
+    public string? Message { get; set; }
+    public Dictionary<string, object>? Data { get; set; }
+}
+
+// Custom health check for memory usage
+public class MemoryHealthCheck : IHealthCheck
+{
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        var allocatedBytes = GC.GetTotalMemory(false);
+        var data = new Dictionary<string, object>
+        {
+            ["allocated_bytes"] = allocatedBytes,
+            ["allocated_mb"] = allocatedBytes / 1024 / 1024,
+            ["gen0_collections"] = GC.CollectionCount(0),
+            ["gen1_collections"] = GC.CollectionCount(1),
+            ["gen2_collections"] = GC.CollectionCount(2)
+        };
+
+        // Consider unhealthy if using more than 500MB
+        var status = allocatedBytes > 500 * 1024 * 1024 ? HealthStatus.Degraded : HealthStatus.Healthy;
+        
+        return Task.FromResult(new HealthCheckResult(
+            status,
+            description: $"Memory usage: {allocatedBytes / 1024 / 1024:F2} MB",
+            data: data));
+    }
+}

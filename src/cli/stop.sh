@@ -74,7 +74,7 @@ cmd_stop() {
   fi
 
   # Load environment
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     set -a
     load_env_with_priority
     set +a

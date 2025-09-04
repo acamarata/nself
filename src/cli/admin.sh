@@ -16,11 +16,11 @@ source "$SCRIPT_DIR/../lib/utils/docker.sh"
 admin_minimal_setup() {
   show_command_header "nself admin" "Setting up minimal admin environment"
   
-  # Create minimal .env.local for admin-only mode
-  if [[ ! -f ".env.local" ]]; then
+  # Create minimal .env for admin-only mode
+  if [[ ! -f ".env" ]]; then
     log_info "Creating minimal admin configuration..."
     
-    cat > .env.local << 'EOF'
+    cat > .env << 'EOF'
 # Minimal nself configuration for admin UI only
 PROJECT_NAME=admin-setup
 BASE_DOMAIN=localhost
@@ -51,15 +51,15 @@ NESTJS_ENABLED=false
 FUNCTIONS_ENABLED=false
 EOF
     
-    log_success "Created minimal .env.local configuration"
+    log_success "Created minimal .env configuration"
   else
-    log_info "Found existing .env.local, enabling admin UI..."
+    log_info "Found existing .env, enabling admin UI..."
     
     # Just enable admin in existing config
-    if grep -q "^NSELF_ADMIN_ENABLED=" .env.local; then
-      sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env.local
+    if grep -q "^NSELF_ADMIN_ENABLED=" .env; then
+      sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env
     else
-      echo "NSELF_ADMIN_ENABLED=true" >> .env.local
+      echo "NSELF_ADMIN_ENABLED=true" >> .env
     fi
   fi
   
@@ -71,7 +71,7 @@ EOF
   log_info "Setting up admin access..."
   
   # Generate a temporary password if none set
-  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env.local 2>/dev/null; then
+  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
     local temp_password="admin123"
     
     # Generate password hash with salt
@@ -91,16 +91,16 @@ print(base64.b64encode(combined).decode('ascii'))
       password_hash=$(echo -n "$temp_password" | sha256sum | cut -d' ' -f1)
     fi
     
-    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env
     
     log_warning "Temporary password set: $temp_password"
     log_info "Change this password after first login!"
   fi
   
   # Generate secret key
-  if ! grep -q "^ADMIN_SECRET_KEY=" .env.local 2>/dev/null; then
+  if ! grep -q "^ADMIN_SECRET_KEY=" .env 2>/dev/null; then
     local secret_key=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | head -c 64)
-    echo "ADMIN_SECRET_KEY=$secret_key" >> .env.local
+    echo "ADMIN_SECRET_KEY=$secret_key" >> .env
   fi
   
   # Start minimal admin environment
@@ -238,9 +238,9 @@ show_admin_help() {
 admin_enable() {
   show_command_header "nself admin enable" "Enable admin web interface"
   
-  # Check if .env.local exists
-  if [[ ! -f ".env.local" ]]; then
-    log_error "No .env.local file found. Run 'nself init' first."
+  # Check if .env exists
+  if [[ ! -f ".env" ]]; then
+    log_error "No .env file found. Run 'nself init' first."
     return 1
   fi
   
@@ -250,30 +250,30 @@ admin_enable() {
   # Set admin enabled
   log_info "Enabling admin UI..."
   
-  # Update .env.local
-  if grep -q "^NSELF_ADMIN_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env.local
+  # Update .env
+  if grep -q "^NSELF_ADMIN_ENABLED=" .env 2>/dev/null; then
+    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env
   else
-    echo "NSELF_ADMIN_ENABLED=true" >> .env.local
+    echo "NSELF_ADMIN_ENABLED=true" >> .env
   fi
   
   # Set default values if not present
-  if ! grep -q "^NSELF_ADMIN_PORT=" .env.local 2>/dev/null; then
+  if ! grep -q "^NSELF_ADMIN_PORT=" .env 2>/dev/null; then
     # Ensure we're on a new line before appending
-    echo "" >> .env.local
-    echo "NSELF_ADMIN_PORT=3100" >> .env.local
+    echo "" >> .env
+    echo "NSELF_ADMIN_PORT=3100" >> .env
   fi
   
-  if ! grep -q "^NSELF_ADMIN_AUTH_PROVIDER=" .env.local 2>/dev/null; then
-    echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env.local
+  if ! grep -q "^NSELF_ADMIN_AUTH_PROVIDER=" .env 2>/dev/null; then
+    echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env
   fi
   
-  if ! grep -q "^NSELF_ADMIN_ROUTE=" .env.local 2>/dev/null; then
-    echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  if ! grep -q "^NSELF_ADMIN_ROUTE=" .env 2>/dev/null; then
+    echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env
   fi
   
   # Ensure admin password hash and secret key are set
-  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env.local 2>/dev/null; then
+  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
     log_warning "No admin password set. Generating temporary password..."
     local temp_password="admin$(date +%s | sha256sum | head -c 8)"
     
@@ -291,14 +291,14 @@ print(base64.b64encode(combined).decode('ascii'))
       password_hash=$(echo -n "$temp_password" | sha256sum | cut -d' ' -f1)
     fi
     
-    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env
     log_info "Temporary admin password: $temp_password"
     log_info "Change this after first login with 'nself admin password'"
   fi
   
-  if ! grep -q "^ADMIN_SECRET_KEY=" .env.local 2>/dev/null; then
+  if ! grep -q "^ADMIN_SECRET_KEY=" .env 2>/dev/null; then
     local secret_key=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | head -c 64)
-    echo "ADMIN_SECRET_KEY=$secret_key" >> .env.local
+    echo "ADMIN_SECRET_KEY=$secret_key" >> .env
   fi
   
   log_success "Admin UI enabled"
@@ -330,9 +330,9 @@ print(base64.b64encode(combined).decode('ascii'))
 admin_disable() {
   show_command_header "nself admin disable" "Disable admin web interface"
   
-  # Check if .env.local exists
-  if [[ ! -f ".env.local" ]]; then
-    log_error "No .env.local file found. Run 'nself init' first."
+  # Check if .env exists
+  if [[ ! -f ".env" ]]; then
+    log_error "No .env file found. Run 'nself init' first."
     return 1
   fi
   
@@ -341,11 +341,11 @@ admin_disable() {
   
   log_info "Disabling admin UI..."
   
-  # Update .env.local
-  if grep -q "^NSELF_ADMIN_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=false/' .env.local
+  # Update .env
+  if grep -q "^NSELF_ADMIN_ENABLED=" .env 2>/dev/null; then
+    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=false/' .env
   else
-    echo "NSELF_ADMIN_ENABLED=false" >> .env.local
+    echo "NSELF_ADMIN_ENABLED=false" >> .env
   fi
   
   # Get project name for container
@@ -367,9 +367,9 @@ admin_disable() {
 admin_status() {
   show_command_header "nself admin status" "Admin UI status"
   
-  # Check if .env.local exists
-  if [[ ! -f ".env.local" ]]; then
-    log_error "No .env.local file found. Run 'nself init' first."
+  # Check if .env exists
+  if [[ ! -f ".env" ]]; then
+    log_error "No .env file found. Run 'nself init' first."
     return 1
   fi
   
@@ -481,21 +481,21 @@ print(base64.b64encode(combined).decode('ascii'))
     password_hash=$(echo -n "$password" | sha256sum | cut -d' ' -f1)
   fi
   
-  # Update .env.local - escape special characters in hash
-  if grep -q "^ADMIN_PASSWORD_HASH=" .env.local 2>/dev/null; then
+  # Update .env - escape special characters in hash
+  if grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
     # Use a different delimiter to avoid issues with special characters
     # First, create a temp file with the new value
-    grep -v "^ADMIN_PASSWORD_HASH=" .env.local > .env.local.tmp
-    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local.tmp
-    mv .env.local.tmp .env.local
+    grep -v "^ADMIN_PASSWORD_HASH=" .env > .env.tmp
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.tmp
+    mv .env.tmp .env
   else
-    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env.local
+    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env
   fi
   
   # Generate secret key if not present
-  if ! grep -q "^ADMIN_SECRET_KEY=" .env.local 2>/dev/null; then
+  if ! grep -q "^ADMIN_SECRET_KEY=" .env 2>/dev/null; then
     local secret_key=$(openssl rand -hex 32)
-    echo "ADMIN_SECRET_KEY=$secret_key" >> .env.local
+    echo "ADMIN_SECRET_KEY=$secret_key" >> .env
   fi
   
   log_success "Admin password set successfully"
@@ -527,14 +527,14 @@ admin_reset() {
   
   log_info "Resetting admin configuration..."
   
-  # Remove admin settings from .env.local
-  sed -i.bak '/^ADMIN_/d' .env.local
+  # Remove admin settings from .env
+  sed -i.bak '/^ADMIN_/d' .env
   
   # Set defaults
-  echo "NSELF_ADMIN_ENABLED=false" >> .env.local
-  echo "NSELF_ADMIN_PORT=3100" >> .env.local
-  echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env.local
-  echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env.local
+  echo "NSELF_ADMIN_ENABLED=false" >> .env
+  echo "NSELF_ADMIN_PORT=3100" >> .env
+  echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env
+  echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env
   
   # Get project name for container
   local project_name="${PROJECT_NAME:-myproject}"
@@ -600,9 +600,9 @@ admin_logs() {
 admin_open() {
   show_command_header "nself admin open" "Open admin in browser"
   
-  # Check if .env.local exists
-  if [[ ! -f ".env.local" ]]; then
-    log_error "No .env.local file found. Run 'nself init' first."
+  # Check if .env exists
+  if [[ ! -f ".env" ]]; then
+    log_error "No .env file found. Run 'nself init' first."
     return 1
   fi
   
@@ -670,11 +670,11 @@ cmd_admin() {
     show_admin_help
     ;;
   "")
-    # If no subcommand and no .env.local, setup minimal admin
-    if [[ ! -f ".env.local" ]]; then
+    # If no subcommand and no .env, setup minimal admin
+    if [[ ! -f ".env" ]]; then
       admin_minimal_setup
     else
-      # If .env.local exists, show status
+      # If .env exists, show status
       admin_status
     fi
     ;;

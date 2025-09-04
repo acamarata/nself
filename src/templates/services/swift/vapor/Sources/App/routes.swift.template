@@ -1,0 +1,213 @@
+import Vapor
+import Foundation
+
+func routes(_ app: Application) throws {
+    
+    // Store start time for uptime calculation
+    let startTime = Date()
+    
+    // Root endpoint
+    app.get { req async throws -> RootResponse in
+        return RootResponse(
+            message: "Hello from {{SERVICE_NAME}}!",
+            project: "{{PROJECT_NAME}}",
+            framework: "Vapor",
+            version: "4.89.0",
+            timestamp: ISO8601DateFormatter().string(from: Date())
+        )
+    }
+    
+    // Health check endpoint
+    app.get("health") { req async throws -> Response in
+        let checks = await performHealthChecks(app: req.application)
+        let healthy = checks.values.allSatisfy { $0.status == "healthy" }
+        
+        let response = HealthResponse(
+            status: healthy ? "healthy" : "unhealthy",
+            service: "{{SERVICE_NAME}}",
+            timestamp: ISO8601DateFormatter().string(from: Date()),
+            checks: checks
+        )
+        
+        let status: HTTPStatus = healthy ? .ok : .serviceUnavailable
+        return try await response.encodeResponse(status: status, for: req)
+    }
+    
+    // API routes group
+    let api = app.grouped("api")
+    
+    // API info endpoint
+    api.get("info") { req async throws -> InfoResponse in
+        let uptime = Int(Date().timeIntervalSince(startTime))
+        
+        return InfoResponse(
+            service: "{{SERVICE_NAME}}",
+            environment: Environment.get("ENVIRONMENT") ?? "development",
+            domain: "{{BASE_DOMAIN}}",
+            uptime: uptime,
+            version: "0.1.0",
+            swift_version: "5.9",
+            vapor_version: "4.89.0"
+        )
+    }
+    
+    // Echo endpoint
+    api.post("echo") { req async throws -> EchoResponse in
+        let echoRequest = try req.content.decode(EchoRequest.self)
+        let requestId = UUID().uuidString
+        
+        return EchoResponse(
+            received: ReceivedData(
+                message: echoRequest.message,
+                data: echoRequest.data ?? [:]
+            ),
+            timestamp: ISO8601DateFormatter().string(from: Date()),
+            requestId: requestId
+        )
+    }
+    
+    // 404 handler for unmatched routes
+    app.get("**") { req -> ErrorResponse in
+        throw Abort(.notFound, reason: "Resource not found")
+    }
+    
+    app.post("**") { req -> ErrorResponse in
+        throw Abort(.notFound, reason: "Resource not found")
+    }
+    
+    app.put("**") { req -> ErrorResponse in
+        throw Abort(.notFound, reason: "Resource not found")
+    }
+    
+    app.delete("**") { req -> ErrorResponse in
+        throw Abort(.notFound, reason: "Resource not found")
+    }
+}
+
+// Response models
+struct RootResponse: Content {
+    let message: String
+    let project: String
+    let framework: String
+    let version: String
+    let timestamp: String
+}
+
+struct HealthResponse: Content {
+    let status: String
+    let service: String
+    let timestamp: String
+    let checks: [String: HealthCheck]
+}
+
+struct HealthCheck: Content {
+    let status: String
+    let message: String?
+    let data: [String: String]?
+    
+    init(status: String, message: String? = nil, data: [String: String]? = nil) {
+        self.status = status
+        self.message = message
+        self.data = data
+    }
+}
+
+struct InfoResponse: Content {
+    let service: String
+    let environment: String
+    let domain: String
+    let uptime: Int
+    let version: String
+    let swift_version: String
+    let vapor_version: String
+}
+
+struct EchoRequest: Content {
+    let message: String
+    let data: [String: String]?
+}
+
+struct EchoResponse: Content {
+    let received: ReceivedData
+    let timestamp: String
+    let requestId: String
+    
+    enum CodingKeys: String, CodingKey {
+        case received, timestamp
+        case requestId = "request_id"
+    }
+}
+
+struct ReceivedData: Content {
+    let message: String
+    let data: [String: String]
+}
+
+struct ErrorResponse: Content {
+    let error: String
+    let message: String
+    let timestamp: String
+    let path: String?
+    let method: String?
+    
+    init(error: String, message: String, path: String? = nil, method: String? = nil) {
+        self.error = error
+        self.message = message
+        self.timestamp = ISO8601DateFormatter().string(from: Date())
+        self.path = path
+        self.method = method
+    }
+}
+
+// Health check functions
+func performHealthChecks(app: Application) async -> [String: HealthCheck] {
+    var checks: [String: HealthCheck] = [:]
+    
+    // Memory check
+    let memoryInfo = getMemoryInfo()
+    checks["memory"] = HealthCheck(
+        status: memoryInfo.usedMB < 400 ? "healthy" : "warning",
+        message: "Memory usage: \(memoryInfo.usedMB)MB",
+        data: [
+            "used_mb": "\(memoryInfo.usedMB)",
+            "resident_mb": "\(memoryInfo.residentMB)"
+        ]
+    )
+    
+    // Application check
+    checks["application"] = HealthCheck(
+        status: "healthy",
+        message: "Application running",
+        data: [
+            "swift_version": "5.9",
+            "vapor_version": "4.89.0",
+            "environment": app.environment.name
+        ]
+    )
+    
+    return checks
+}
+
+struct MemoryInfo {
+    let usedMB: Int
+    let residentMB: Int
+}
+
+func getMemoryInfo() -> MemoryInfo {
+    var info = mach_task_basic_info()
+    var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+    
+    let result = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+            task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+        }
+    }
+    
+    if result == KERN_SUCCESS {
+        let usedMB = Int(info.virtual_size) / 1024 / 1024
+        let residentMB = Int(info.resident_size) / 1024 / 1024
+        return MemoryInfo(usedMB: usedMB, residentMB: residentMB)
+    } else {
+        return MemoryInfo(usedMB: 0, residentMB: 0)
+    }
+}

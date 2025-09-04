@@ -1,0 +1,147 @@
+import os
+import ray
+from ray import serve
+from fastapi import FastAPI
+from datetime import datetime
+import numpy as np
+
+# Initialize Ray
+ray.init(address="auto", ignore_reinit_error=True)
+
+# Create FastAPI app
+app = FastAPI(title="{{SERVICE_NAME}}", version="1.0.0")
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "{{SERVICE_NAME}}",
+        "timestamp": datetime.utcnow().isoformat(),
+        "ray_initialized": ray.is_initialized()
+    }
+
+@app.get("/api/info")
+async def info():
+    """Service information"""
+    cluster_resources = ray.cluster_resources()
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Ray",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "cluster": {
+            "nodes": len(ray.nodes()),
+            "cpus": cluster_resources.get("CPU", 0),
+            "memory": cluster_resources.get("memory", 0),
+            "gpus": cluster_resources.get("GPU", 0)
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Ray - Distributed computing framework",
+        "features": ["Distributed training", "Hyperparameter tuning", "Reinforcement learning", "Serving"]
+    }
+
+# Ray remote functions
+@ray.remote
+def compute_task(n):
+    """Example distributed computation task"""
+    import time
+    time.sleep(1)  # Simulate work
+    return np.random.randn(n).sum()
+
+@ray.remote
+class Counter:
+    """Example Ray actor"""
+    def __init__(self):
+        self.count = 0
+    
+    def increment(self):
+        self.count += 1
+        return self.count
+    
+    def get_count(self):
+        return self.count
+
+# Serve deployment
+@serve.deployment(
+    name="ml_model",
+    num_replicas=1,
+    ray_actor_options={"num_cpus": 1}
+)
+class MLModel:
+    """Example ML model deployment"""
+    
+    def __init__(self):
+        # Initialize model here
+        self.model_name = "{{SERVICE_NAME}}-model"
+    
+    async def __call__(self, request):
+        """Handle prediction requests"""
+        data = await request.json()
+        
+        # Simulate prediction
+        result = {
+            "model": self.model_name,
+            "prediction": np.random.random(),
+            "input": data,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        return result
+
+# API endpoints for Ray operations
+@app.post("/api/compute")
+async def compute(size: int = 100):
+    """Run distributed computation"""
+    # Submit Ray task
+    future = compute_task.remote(size)
+    result = ray.get(future)
+    
+    return {
+        "result": float(result),
+        "size": size,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.post("/api/counter/increment")
+async def increment_counter():
+    """Increment distributed counter"""
+    if not hasattr(app, "counter"):
+        app.counter = Counter.remote()
+    
+    count = ray.get(app.counter.increment.remote())
+    return {"count": count}
+
+@app.get("/api/counter")
+async def get_counter():
+    """Get current counter value"""
+    if not hasattr(app, "counter"):
+        app.counter = Counter.remote()
+    
+    count = ray.get(app.counter.get_count.remote())
+    return {"count": count}
+
+# Initialize Ray Serve
+serve.start(detached=True)
+
+# Deploy ML model
+MLModel.deploy()
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"🧮 Compute endpoint: POST http://localhost:{port}/api/compute")
+    print(f"🤖 ML model endpoint: POST http://localhost:{port}/ml_model")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

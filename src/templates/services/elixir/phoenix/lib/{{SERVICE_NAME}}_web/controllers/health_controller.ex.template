@@ -1,0 +1,83 @@
+defmodule {{SERVICE_NAME|title}}Web.HealthController do
+  use {{SERVICE_NAME|title}}Web, :controller
+
+  def show(conn, _params) do
+    checks = perform_health_checks()
+    healthy = Enum.all?(checks, fn {_, check} -> check.status == "healthy" end)
+
+    status_code = if healthy, do: 200, else: 503
+
+    response = %{
+      status: if(healthy, do: "healthy", else: "unhealthy"),
+      service: "{{SERVICE_NAME}}",
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+      checks: checks
+    }
+
+    conn
+    |> put_status(status_code)
+    |> json(response)
+  end
+
+  defp perform_health_checks do
+    %{
+      application: check_application(),
+      memory: check_memory(),
+      database: check_database()
+    }
+  end
+
+  defp check_application do
+    uptime = :erlang.statistics(:wall_clock) |> elem(0) |> div(1000)
+
+    %{
+      status: "healthy",
+      uptime_seconds: uptime,
+      node: Node.self(),
+      otp_version: :erlang.system_info(:otp_release) |> List.to_string(),
+      elixir_version: System.version()
+    }
+  end
+
+  defp check_memory do
+    memory_info = :erlang.memory()
+    total_mb = memory_info[:total] / 1024 / 1024
+    
+    status = if total_mb > 512, do: "warning", else: "healthy"
+
+    %{
+      status: status,
+      total_bytes: memory_info[:total],
+      total_mb: Float.round(total_mb, 2),
+      processes: memory_info[:processes],
+      system: memory_info[:system],
+      atom: memory_info[:atom],
+      binary: memory_info[:binary],
+      ets: memory_info[:ets]
+    }
+  end
+
+  defp check_database do
+    try do
+      # Attempt to get database connection
+      case {{SERVICE_NAME|title}}.Repo.query("SELECT 1") do
+        {:ok, _} ->
+          %{
+            status: "healthy",
+            message: "Connected"
+          }
+        {:error, error} ->
+          %{
+            status: "unhealthy",
+            message: inspect(error)
+          }
+      end
+    rescue
+      error ->
+        %{
+          status: "unhealthy",
+          message: inspect(error)
+        }
+    end
+  end
+end

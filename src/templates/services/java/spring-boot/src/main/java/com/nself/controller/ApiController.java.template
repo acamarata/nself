@@ -1,0 +1,117 @@
+package com.nself.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@CrossOrigin(origins = "*")
+@Validated
+public class ApiController {
+    
+    private final Instant startTime = Instant.now();
+    
+    @GetMapping("/")
+    public ResponseEntity<Map<String, Object>> root() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Hello from {{SERVICE_NAME}}!");
+        response.put("project", "{{PROJECT_NAME}}");
+        response.put("framework", "Spring Boot");
+        response.put("version", "3.3.0");
+        response.put("timestamp", Instant.now().toString());
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/api/info")
+    public ResponseEntity<Map<String, Object>> info() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("service", "{{SERVICE_NAME}}");
+        response.put("environment", System.getProperty("spring.profiles.active", "development"));
+        response.put("domain", "{{BASE_DOMAIN}}");
+        response.put("uptime", Instant.now().getEpochSecond() - startTime.getEpochSecond());
+        response.put("version", "0.1.0");
+        response.put("java_version", System.getProperty("java.version"));
+        response.put("spring_boot_version", "3.3.0");
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/api/echo")
+    public ResponseEntity<Map<String, Object>> echo(@Valid @RequestBody EchoRequest request) {
+        try {
+            String requestId = UUID.randomUUID().toString();
+            
+            Map<String, Object> received = new HashMap<>();
+            received.put("message", request.getMessage());
+            received.put("data", request.getData() != null ? request.getData() : new HashMap<>());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("received", received);
+            response.put("timestamp", Instant.now().toString());
+            response.put("request_id", requestId);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal Server Error");
+            errorResponse.put("message", "Something went wrong");
+            errorResponse.put("timestamp", Instant.now().toString());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
+    public ResponseEntity<Map<String, Object>> handleNotFound() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "Not Found");
+        response.put("message", "The requested resource was not found");
+        response.put("timestamp", Instant.now().toString());
+        
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGlobalException(Exception e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "Internal Server Error");
+        response.put("message", e.getMessage());
+        response.put("timestamp", Instant.now().toString());
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+    
+    // Request DTO
+    public static class EchoRequest {
+        @NotBlank(message = "Message is required")
+        private String message;
+        private Map<String, Object> data;
+        
+        public String getMessage() {
+            return message;
+        }
+        
+        public void setMessage(String message) {
+            this.message = message;
+        }
+        
+        public Map<String, Object> getData() {
+            return data;
+        }
+        
+        public void setData(Map<String, Object> data) {
+            this.data = data;
+        }
+    }
+}

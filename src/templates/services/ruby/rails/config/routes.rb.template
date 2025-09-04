@@ -1,0 +1,22 @@
+Rails.application.routes.draw do
+  # Health check endpoint
+  get '/health', to: 'health#show'
+  
+  # Root endpoint
+  root 'application#root'
+  
+  # API namespace
+  namespace :api do
+    get '/info', to: 'application#info'
+    post '/echo', to: 'application#echo'
+    
+    # Define your API routes here
+    # Example:
+    # resources :users, only: [:index, :show, :create, :update, :destroy]
+  end
+  
+  # Catch all unmatched routes
+  match '*path', to: 'application#not_found', via: :all, constraints: lambda { |req|
+    !req.path.starts_with?('/rails/') && !req.path.starts_with?('/assets/')
+  }
+end

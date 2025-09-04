@@ -1,0 +1,45 @@
+import { Elysia } from 'elysia';
+import { cors } from '@elysiajs/cors';
+
+const app = new Elysia()
+  .use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true
+  }))
+  .get('/health', () => ({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString()
+  }))
+  .get('/api/info', () => ({
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Elysia (Bun)',
+    runtime: 'Bun',
+    domain: '{{BASE_DOMAIN}}'
+  }))
+  .get('/', () => ({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Elysia - Fast and friendly Bun web framework',
+    features: ['TypeScript support', 'Schema validation', 'Fast performance']
+  }))
+  .all('/*', ({ request }) => ({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    path: new URL(request.url).pathname,
+    method: request.method
+  }))
+  .listen(process.env.PORT || 3000);
+
+console.log(`🚀 {{SERVICE_NAME}} is running on ${app.server?.hostname}:${app.server?.port}`);
+console.log(`📍 Health check: http://localhost:${app.server?.port}/health`);
+console.log(`🌐 API endpoint: http://localhost:${app.server?.port}/api/info`);
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log('🛑 Shutting down gracefully...');
+  process.exit(0);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

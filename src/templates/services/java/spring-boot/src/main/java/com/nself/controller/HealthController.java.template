@@ -1,0 +1,100 @@
+package com.nself.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.sql.DataSource;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.sql.Connection;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@CrossOrigin(origins = "*")
+public class HealthController {
+
+    @Autowired(required = false)
+    private DataSource dataSource;
+    
+    private final Instant startTime = Instant.now();
+    
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> response = new HashMap<>();
+        Map<String, Object> checks = performHealthChecks();
+        
+        boolean isHealthy = checks.values().stream()
+            .allMatch(check -> {
+                if (check instanceof Map) {
+                    Map<?, ?> checkMap = (Map<?, ?>) check;
+                    return "healthy".equals(checkMap.get("status"));
+                }
+                return true;
+            });
+        
+        response.put("status", isHealthy ? "healthy" : "unhealthy");
+        response.put("service", "{{SERVICE_NAME}}");
+        response.put("timestamp", Instant.now().toString());
+        response.put("checks", checks);
+        
+        return ResponseEntity.status(isHealthy ? 200 : 503).body(response);
+    }
+    
+    private Map<String, Object> performHealthChecks() {
+        Map<String, Object> checks = new HashMap<>();
+        
+        // Database connectivity check
+        if (dataSource != null) {
+            try {
+                try (Connection connection = dataSource.getConnection()) {
+                    connection.isValid(5); // 5 second timeout
+                    Map<String, String> dbCheck = new HashMap<>();
+                    dbCheck.put("status", "healthy");
+                    dbCheck.put("message", "Connected");
+                    checks.put("database", dbCheck);
+                }
+            } catch (Exception e) {
+                Map<String, String> dbCheck = new HashMap<>();
+                dbCheck.put("status", "unhealthy");
+                dbCheck.put("message", e.getMessage());
+                checks.put("database", dbCheck);
+            }
+        }
+        
+        // Memory usage check
+        try {
+            MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+            long usedMemory = memoryBean.getHeapMemoryUsage().getUsed();
+            long maxMemory = memoryBean.getHeapMemoryUsage().getMax();
+            double usagePercent = (double) usedMemory / maxMemory * 100;
+            
+            Map<String, Object> memCheck = new HashMap<>();
+            memCheck.put("status", usagePercent < 80 ? "healthy" : "warning");
+            memCheck.put("used_bytes", usedMemory);
+            memCheck.put("used_mb", usedMemory / 1024 / 1024);
+            memCheck.put("max_bytes", maxMemory);
+            memCheck.put("usage_percent", Math.round(usagePercent * 100.0) / 100.0);
+            checks.put("memory", memCheck);
+        } catch (Exception e) {
+            Map<String, String> memCheck = new HashMap<>();
+            memCheck.put("status", "unknown");
+            memCheck.put("message", e.getMessage());
+            checks.put("memory", memCheck);
+        }
+        
+        // Application check
+        Map<String, Object> appCheck = new HashMap<>();
+        appCheck.put("status", "healthy");
+        appCheck.put("uptime_seconds", Instant.now().getEpochSecond() - startTime.getEpochSecond());
+        appCheck.put("java_version", System.getProperty("java.version"));
+        appCheck.put("spring_profile", System.getProperty("spring.profiles.active", "default"));
+        checks.put("application", appCheck);
+        
+        return checks;
+    }
+}

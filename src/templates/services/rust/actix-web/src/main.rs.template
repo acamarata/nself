@@ -1,0 +1,181 @@
+use actix_cors::Cors;
+use actix_web::{
+    middleware::Logger, web, App, HttpResponse, HttpServer, Result, middleware::DefaultHeaders
+};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    service: String,
+    timestamp: DateTime<Utc>,
+}
+
+#[derive(Serialize)]
+struct InfoResponse {
+    service: String,
+    environment: String,
+    domain: String,
+    uptime: u64,
+    version: String,
+}
+
+#[derive(Serialize)]
+struct RootResponse {
+    message: String,
+    project: String,
+    framework: String,
+    version: String,
+}
+
+#[derive(Deserialize)]
+struct EchoRequest {
+    message: String,
+    #[serde(default)]
+    data: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Serialize)]
+struct EchoResponse {
+    received: EchoRequest,
+    timestamp: DateTime<Utc>,
+    request_id: String,
+}
+
+#[derive(Clone)]
+struct AppState {
+    start_time: Arc<AtomicU64>,
+}
+
+impl AppState {
+    fn new() -> Self {
+        let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        
+        Self {
+            start_time: Arc::new(AtomicU64::new(start_time)),
+        }
+    }
+
+    fn uptime(&self) -> u64 {
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let start_time = self.start_time.load(Ordering::Relaxed);
+        current_time - start_time
+    }
+}
+
+async fn health_check() -> Result<HttpResponse> {
+    let response = HealthResponse {
+        status: "healthy".to_string(),
+        service: "{{SERVICE_NAME}}".to_string(),
+        timestamp: Utc::now(),
+    };
+    
+    Ok(HttpResponse::Ok().json(response))
+}
+
+async fn root() -> Result<HttpResponse> {
+    let response = RootResponse {
+        message: "Hello from {{SERVICE_NAME}}!".to_string(),
+        project: "{{PROJECT_NAME}}".to_string(),
+        framework: "Actix-Web".to_string(),
+        version: "4.4".to_string(),
+    };
+    
+    Ok(HttpResponse::Ok().json(response))
+}
+
+async fn get_info(data: web::Data<AppState>) -> Result<HttpResponse> {
+    let response = InfoResponse {
+        service: "{{SERVICE_NAME}}".to_string(),
+        environment: env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
+        domain: "{{BASE_DOMAIN}}".to_string(),
+        uptime: data.uptime(),
+        version: "0.1.0".to_string(),
+    };
+    
+    Ok(HttpResponse::Ok().json(response))
+}
+
+async fn echo_endpoint(request: web::Json<EchoRequest>) -> Result<HttpResponse> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    
+    let response = EchoResponse {
+        received: request.into_inner(),
+        timestamp: Utc::now(),
+        request_id,
+    };
+    
+    Ok(HttpResponse::Ok().json(response))
+}
+
+async fn not_found() -> Result<HttpResponse> {
+    Ok(HttpResponse::NotFound().json(serde_json::json!({
+        "error": "Not Found",
+        "message": "The requested resource was not found"
+    })))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    // Initialize logging
+    env_logger::init();
+
+    let port: u16 = env::var("PORT")
+        .unwrap_or_else(|_| "{{PORT}}".to_string())
+        .parse()
+        .unwrap_or(3000);
+
+    let app_state = AppState::new();
+
+    println!("🦀 {{SERVICE_NAME}} is starting on port {}", port);
+    println!("📍 Health check: http://localhost:{}/health", port);
+    println!("🌐 API endpoint: http://localhost:{}/api/info", port);
+    println!("💬 Echo endpoint: POST http://localhost:{}/api/echo", port);
+
+    // Graceful shutdown setup
+    let server = HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
+
+        App::new()
+            .app_data(web::Data::new(app_state.clone()))
+            .wrap(Logger::default())
+            .wrap(cors)
+            .wrap(DefaultHeaders::new()
+                .add(("X-Service", "{{SERVICE_NAME}}"))
+                .add(("X-Framework", "Actix-Web")))
+            .route("/", web::get().to(root))
+            .route("/health", web::get().to(health_check))
+            .route("/api/info", web::get().to(get_info))
+            .route("/api/echo", web::post().to(echo_endpoint))
+            .default_service(web::route().to(not_found))
+    })
+    .bind(("0.0.0.0", port))?
+    .run();
+
+    // Handle graceful shutdown
+    let server_handle = server.handle();
+    
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+        log::info!("Received Ctrl+C, shutting down gracefully...");
+        server_handle.stop(true).await;
+    });
+
+    server.await
+}

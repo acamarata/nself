@@ -1,0 +1,80 @@
+# Custom Service Dockerfile Template for {{SERVICE_NAME}}
+# 
+# This is a minimal template for creating your own custom service.
+# Replace this with your actual Dockerfile implementation.
+#
+# TEMPLATE VARIABLES AVAILABLE:
+# {{SERVICE_NAME}} - The name of your service (e.g., my-api)
+# {{PROJECT_NAME}} - Your project name
+# {{BASE_DOMAIN}} - Your base domain (e.g., local.nself.org)
+# {{PORT}} - The port your service should listen on (default: 3000)
+
+# Example 1: Node.js service
+# FROM node:20-alpine
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci --only=production
+# COPY . .
+# EXPOSE {{PORT}}
+# CMD ["node", "server.js"]
+
+# Example 2: Python service
+# FROM python:3.11-slim
+# WORKDIR /app
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
+# COPY . .
+# EXPOSE {{PORT}}
+# CMD ["python", "app.py"]
+
+# Example 3: Static files with nginx
+# FROM nginx:alpine
+# COPY ./public /usr/share/nginx/html
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# EXPOSE {{PORT}}
+
+# Example 4: Multi-stage build (Go)
+# FROM golang:1.21 AS builder
+# WORKDIR /app
+# COPY go.* ./
+# RUN go mod download
+# COPY . .
+# RUN go build -o main .
+#
+# FROM alpine:latest
+# RUN apk --no-cache add ca-certificates
+# WORKDIR /root/
+# COPY --from=builder /app/main .
+# EXPOSE {{PORT}}
+# CMD ["./main"]
+
+# Default: Ubuntu with bash (for testing)
+FROM ubuntu:22.04
+
+# Install basic tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    vim \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy your application files
+# COPY . .
+
+# Set environment variables
+ENV SERVICE_NAME={{SERVICE_NAME}}
+ENV PROJECT_NAME={{PROJECT_NAME}}
+ENV BASE_DOMAIN={{BASE_DOMAIN}}
+ENV PORT={{PORT}}
+
+# Expose the service port
+EXPOSE {{PORT}}
+
+# Default command - replace with your actual command
+CMD echo "Custom service {{SERVICE_NAME}} is running on port {{PORT}}..." && \
+    echo "Edit the Dockerfile to add your application logic" && \
+    tail -f /dev/null

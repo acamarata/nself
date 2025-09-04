@@ -1,0 +1,114 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+)
+
+type HealthResponse struct {
+	Status    string `json:"status"`
+	Service   string `json:"service"`
+	Timestamp string `json:"timestamp"`
+}
+
+type InfoResponse struct {
+	Service   string `json:"service"`
+	Project   string `json:"project"`
+	Framework string `json:"framework"`
+	Runtime   string `json:"runtime"`
+	Domain    string `json:"domain"`
+}
+
+func main() {
+	// Create Fiber app
+	app := fiber.New(fiber.Config{
+		AppName: "{{SERVICE_NAME}}",
+	})
+
+	// Middleware
+	app.Use(logger.New())
+	app.Use(recover.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+	}))
+
+	// Health check endpoint
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(HealthResponse{
+			Status:    "healthy",
+			Service:   "{{SERVICE_NAME}}",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+	})
+
+	// Info endpoint
+	app.Get("/api/info", func(c *fiber.Ctx) error {
+		return c.JSON(InfoResponse{
+			Service:   "{{SERVICE_NAME}}",
+			Project:   "{{PROJECT_NAME}}",
+			Framework: "Fiber",
+			Runtime:   "Go",
+			Domain:    "{{BASE_DOMAIN}}",
+		})
+	})
+
+	// Root endpoint
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message":   "Hello from {{SERVICE_NAME}}!",
+			"project":   "{{PROJECT_NAME}}",
+			"framework": "Fiber - Express inspired web framework",
+			"features":  []string{"fast", "zero allocation", "middleware support"},
+		})
+	})
+
+	// Catch all
+	app.Use(func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "Hello from {{SERVICE_NAME}}!",
+			"path":    c.Path(),
+			"method":  c.Method(),
+		})
+	})
+
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	// Setup graceful shutdown
+	go func() {
+		fmt.Printf("🚀 {{SERVICE_NAME}} is running on http://localhost:%s\n", port)
+		fmt.Printf("📍 Health check: http://localhost:%s/health\n", port)
+		
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("🛑 Shutting down gracefully...")
+	
+	// Shutdown with timeout
+	if err := app.ShutdownWithTimeout(10 * time.Second); err != nil {
+		log.Fatal(err)
+	}
+	
+	fmt.Println("✅ Server shut down")
+}

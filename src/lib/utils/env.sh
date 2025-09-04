@@ -14,12 +14,17 @@ export COLOR_CYAN='\033[0;36m'
 export COLOR_DIM='\033[2m'
 
 # Load environment files with correct priority order
-# Priority (lowest to highest - later files override earlier):
-#   1. .env.dev     (team defaults, SHARED) - LOWEST
-#   2. .env.staging/.env.prod (environment specific, SHARED)  
-#   3. .env.local   (personal overrides, not shared)
-#   4. .env         (LOCAL ONLY priority overrides)
-#   5. .env.secrets (production ONLY secrets/keys) - HIGHEST
+# CONFIGURATION PHILOSOPHY:
+#   • Smart Defaults: Everything works without changes
+#   • Auto-Configuration: System adapts based on ENV
+#   • Full Control: Power users can override ANY setting
+#
+# File Loading Order (later overrides earlier):
+#   1) .env.dev     (team defaults, SHARED)
+#   2) .env.staging (staging only config, SHARED) - if ENV=staging
+#   3) .env.prod    (production only config, SHARED) - if ENV=prod
+#   4) .env.secrets (production secrets, not shared) - if ENV=prod
+#   5) .env         (LOCAL ONLY priority overrides) - HIGHEST PRIORITY
 load_env_with_priority() {
   local silent="${1:-false}"
   local loaded=false
@@ -27,66 +32,68 @@ load_env_with_priority() {
   # Determine current environment (default to dev)
   local current_env="${ENV:-dev}"
   
-  # Load files in order from LOWEST to HIGHEST priority
-  
-  # 1. Team defaults (LOWEST priority)
+  # STEP 1: Always load .env.dev as the base (team defaults)
   if [[ -f ".env.dev" ]]; then
-    # log_debug "Loading .env.dev (team defaults)"
+    # log_debug "Loading .env.dev (team defaults - base layer)"
     set -a
     source ".env.dev" 2>/dev/null
     set +a
     loaded=true
+    # Update current_env in case it was set in .env.dev
+    current_env="${ENV:-dev}"
   fi
   
-  # 2. Environment-specific file (staging/prod)
-  local env_file=""
+  # STEP 2: Load environment-specific overrides based on ENV
   case "$current_env" in
     staging|stage)
-      env_file=".env.staging"
+      # For staging: .env.dev -> .env.staging
+      if [[ -f ".env.staging" ]]; then
+        # log_debug "Loading .env.staging (staging overrides)"
+        set -a
+        source ".env.staging" 2>/dev/null
+        set +a
+        loaded=true
+      fi
       ;;
+    
     prod|production)
-      env_file=".env.prod"
+      # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
+      if [[ -f ".env.staging" ]]; then
+        # log_debug "Loading .env.staging (staging layer for prod)"
+        set -a
+        source ".env.staging" 2>/dev/null
+        set +a
+        loaded=true
+      fi
+      
+      if [[ -f ".env.prod" ]]; then
+        # log_debug "Loading .env.prod (production overrides)"
+        set -a
+        source ".env.prod" 2>/dev/null
+        set +a
+        loaded=true
+      fi
+      
+      if [[ -f ".env.secrets" ]]; then
+        # log_debug "Loading .env.secrets (production secrets)"
+        set -a
+        source ".env.secrets" 2>/dev/null
+        set +a
+        loaded=true
+      fi
       ;;
-    dev|development)
-      # Already loaded .env.dev above
-      ;;
-    *)
-      # Support custom environments
-      env_file=".env.${current_env}"
+    
+    dev|development|*)
+      # For dev or any other env: just .env.dev (already loaded)
       ;;
   esac
   
-  if [[ -n "$env_file" ]] && [[ -f "$env_file" ]]; then
-    # log_debug "Loading $env_file (environment-specific)"
-    set -a
-    source "$env_file" 2>/dev/null
-    set +a
-    loaded=true
-  fi
-  
-  # 3. Personal overrides
-  if [[ -f ".env.local" ]]; then
-    # log_debug "Loading .env.local (personal overrides)"
-    set -a
-    source ".env.local" 2>/dev/null
-    set +a
-    loaded=true
-  fi
-  
-  # 4. Local priority overrides (.env file)
+  # STEP 3: Load .env as the FINAL override (HIGHEST PRIORITY)
+  # This allows local overrides of ANY setting regardless of environment
   if [[ -f ".env" ]]; then
-    # log_debug "Loading .env (local priority overrides)"
+    # log_debug "Loading .env (LOCAL ONLY priority overrides - highest priority)"
     set -a
     source ".env" 2>/dev/null
-    set +a
-    loaded=true
-  fi
-  
-  # 5. Secrets (HIGHEST priority - overwrites everything)
-  if [[ -f ".env.secrets" ]]; then
-    # log_debug "Loading .env.secrets (sensitive data - highest priority)"
-    set -a
-    source ".env.secrets" 2>/dev/null
     set +a
     loaded=true
   fi
@@ -111,7 +118,7 @@ get_env_var() {
 set_env_var() {
   local var_name="$1"
   local value="$2"
-  local file="${3:-.env.local}"
+  local file="${3:-.env}"
 
   # Check if variable already exists
   if grep -q "^${var_name}=" "$file" 2>/dev/null; then

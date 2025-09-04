@@ -1,19 +1,63 @@
-FROM elixir:1.14-alpine
+# Multi-stage build for Elixir Phoenix API
+FROM elixir:1.16-alpine AS build
 
 WORKDIR /app
 
-# Copy application code
+# Install build dependencies
+RUN apk add --no-cache \
+    build-base \
+    npm \
+    git \
+    curl
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Copy mix files
+COPY mix.exs mix.lock ./
+
+# Set build environment
+ENV MIX_ENV=prod
+
+# Install dependencies
+RUN mix deps.get --only prod && \
+    mix deps.compile
+
+# Copy source code
 COPY . .
 
-# Create non-root user (adjust for the specific runtime)
-RUN groupadd -r appuser && useradd -r -g appuser appuser || \
-    addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+# Compile the application
+RUN mix compile
 
-# Change ownership
-RUN chown -R appuser:appuser /app
+# Build release
+RUN mix release
+
+# Runtime stage
+FROM alpine:3.19
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    openssl \
+    ncurses-libs \
+    curl
+
+# Copy release from build stage
+COPY --from=build /app/_build/prod/rel/{{SERVICE_NAME}} ./
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -u 1001 -S appuser -G appuser && \
+    chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 4000
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
 
-CMD ["echo", "Configure the start command for phoenix"]
+EXPOSE {{PORT}}
+
+CMD ["./bin/{{SERVICE_NAME}}", "start"]

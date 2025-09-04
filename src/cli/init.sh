@@ -289,7 +289,7 @@ cmd_init() {
   # Next Steps section
   echo "${CYAN}➞ Next Steps${RESET}"
   echo ""
-  echo "${BLUE}1.${RESET} Edit .env.local to customize (optional)"
+  echo "${BLUE}1.${RESET} Edit .env to customize (optional)"
   echo "   ${DIM}Only add what you want to change - defaults handle the rest${RESET}"
   echo ""
   echo "${BLUE}2.${RESET} nself build - Generate all project files"

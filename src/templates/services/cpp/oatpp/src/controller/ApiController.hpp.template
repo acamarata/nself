@@ -1,0 +1,89 @@
+#ifndef ApiController_hpp
+#define ApiController_hpp
+
+#include "../dto/DTOs.hpp"
+
+#include "oatpp/web/server/api/ApiController.hpp"
+#include "oatpp/parser/json/mapping/ObjectMapper.hpp"
+#include "oatpp/core/macro/codegen.hpp"
+#include "oatpp/core/macro/component.hpp"
+
+#include OATPP_CODEGEN_BEGIN(ApiController)
+
+/**
+ * API Controller
+ */
+class ApiController : public oatpp::web::server::api::ApiController {
+public:
+    ApiController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
+        : oatpp::web::server::api::ApiController(objectMapper)
+    {}
+
+public:
+    
+    static std::shared_ptr<ApiController> createShared(
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)
+    ) {
+        return std::make_shared<ApiController>(objectMapper);
+    }
+    
+    /**
+     * Root endpoint
+     */
+    ENDPOINT("GET", "/", root,
+             HEADER(String, origin, "Origin") = nullptr) {
+        return root(request);
+    }
+    
+    /**
+     * Info endpoint
+     */
+    ENDPOINT("GET", "/api/info", getInfo) {
+        return getInfo(request);
+    }
+    
+    /**
+     * Echo endpoint
+     */
+    ENDPOINT("POST", "/api/echo", echoPost,
+             BODY_DTO(Object<EchoRequestDto>, body)) {
+        return echoPost(request, body);
+    }
+    
+    /**
+     * Catch-all for unmatched routes
+     */
+    ENDPOINT("GET", "/*", notFoundGet) {
+        return notFound(request);
+    }
+    
+    ENDPOINT("POST", "/*", notFoundPost) {
+        return notFound(request);
+    }
+    
+    ENDPOINT("PUT", "/*", notFoundPut) {
+        return notFound(request);
+    }
+    
+    ENDPOINT("DELETE", "/*", notFoundDelete) {
+        return notFound(request);
+    }
+
+private:
+    
+    std::shared_ptr<OutgoingResponse> root(const std::shared_ptr<IncomingRequest>& request);
+    std::shared_ptr<OutgoingResponse> getInfo(const std::shared_ptr<IncomingRequest>& request);
+    std::shared_ptr<OutgoingResponse> echoPost(const std::shared_ptr<IncomingRequest>& request,
+                                               const Object<EchoRequestDto>& body);
+    std::shared_ptr<OutgoingResponse> notFound(const std::shared_ptr<IncomingRequest>& request);
+    
+    // Utility methods
+    std::string getCurrentTimestamp();
+    v_int64 getUptimeSeconds();
+    std::string getEnvironmentVariable(const std::string& name, const std::string& defaultValue);
+    std::string generateUUID();
+};
+
+#include OATPP_CODEGEN_END(ApiController)
+
+#endif /* ApiController_hpp */

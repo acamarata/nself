@@ -1,0 +1,47 @@
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.utils import timezone
+import os
+
+@api_view(['GET'])
+def health(request):
+    """Health check endpoint"""
+    return Response({
+        'status': 'healthy',
+        'service': '{{SERVICE_NAME}}',
+        'timestamp': timezone.now().isoformat()
+    })
+
+@api_view(['GET'])
+def info(request):
+    """Service information endpoint"""
+    return Response({
+        'service': '{{SERVICE_NAME}}',
+        'project': '{{PROJECT_NAME}}',
+        'framework': 'Django REST Framework',
+        'runtime': 'Python',
+        'domain': '{{BASE_DOMAIN}}'
+    })
+
+@api_view(['GET'])
+def root(request):
+    """Root endpoint"""
+    return Response({
+        'message': 'Hello from {{SERVICE_NAME}}!',
+        'project': '{{PROJECT_NAME}}',
+        'framework': 'Django REST Framework - Web APIs for Django',
+        'endpoints': {
+            'health': '/health',
+            'info': '/api/info',
+            'admin': '/admin'
+        }
+    })
+
+@api_view(['POST'])
+def echo(request):
+    """Echo endpoint for testing"""
+    return Response({
+        'received': request.data,
+        'timestamp': timezone.now().isoformat()
+    })

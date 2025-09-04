@@ -1,0 +1,34 @@
+package com.nself;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        System.out.println("🚀 {{SERVICE_NAME}} is starting...");
+        System.out.println("📍 Health check: http://localhost:{{PORT}}/health");
+        System.out.println("🌐 API endpoint: http://localhost:{{PORT}}/api/info");
+        System.out.println("💬 Echo endpoint: POST http://localhost:{{PORT}}/api/echo");
+        
+        SpringApplication.run(Application.class, args);
+    }
+
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                    .allowedOrigins("*")
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
+                    .maxAge(3600);
+            }
+        };
+    }
+}

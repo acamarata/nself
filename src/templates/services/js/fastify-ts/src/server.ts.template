@@ -1,0 +1,86 @@
+import fastify from 'fastify';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import type { FastifyRequest, FastifyReply } from 'fastify';
+
+const app = fastify({ logger: true });
+
+// Register plugins
+app.register(cors, {
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+});
+
+app.register(helmet, {
+  contentSecurityPolicy: false
+});
+
+// Health check endpoint
+app.get('/health', async (request: FastifyRequest, reply: FastifyReply) => {
+  return {
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString()
+  };
+});
+
+// Info endpoint
+app.get('/api/info', async (request: FastifyRequest, reply: FastifyReply) => {
+  return {
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Fastify',
+    runtime: 'TypeScript',
+    domain: '{{BASE_DOMAIN}}'
+  };
+});
+
+// Root endpoint
+app.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+  return {
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'Fastify - Fast and low overhead web framework'
+  };
+});
+
+// Catch all
+app.all('/*', async (request: FastifyRequest, reply: FastifyReply) => {
+  return {
+    message: 'Hello from {{SERVICE_NAME}}!',
+    path: request.url,
+    method: request.method
+  };
+});
+
+// Graceful shutdown
+const gracefulShutdown = async () => {
+  console.log('🛑 Shutting down gracefully...');
+  try {
+    await app.close();
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Error during shutdown:', err);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+// Start server
+const start = async () => {
+  try {
+    const port = parseInt(process.env.PORT || '3000', 10);
+    await app.listen({ port, host: '0.0.0.0' });
+    console.log(`🚀 {{SERVICE_NAME}} is running on port ${port}`);
+    console.log(`📍 Health check: http://localhost:${port}/health`);
+    console.log(`🌐 API endpoint: http://localhost:${port}/api/info`);
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

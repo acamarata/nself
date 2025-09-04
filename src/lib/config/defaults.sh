@@ -4,7 +4,7 @@
 # Project defaults
 export PROJECT_NAME="${PROJECT_NAME:-nself}"
 export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
-export ENV_FILE="${ENV_FILE:-.env.local}"
+export ENV_FILE="${ENV_FILE:-.env}"
 
 # Directory paths
 export NSELF_ROOT="${NSELF_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"

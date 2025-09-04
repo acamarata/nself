@@ -1,0 +1,128 @@
+#include "HealthController.hpp"
+#include "../App.hpp"
+
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <fstream>
+#include <unistd.h>
+
+std::shared_ptr<OutgoingResponse> HealthController::getHealth(const std::shared_ptr<IncomingRequest>& request) {
+    
+    auto checks = performHealthChecks();
+    
+    // Determine overall health status
+    bool healthy = true;
+    for (auto& pair : *checks) {
+        if (pair.second && pair.second->status != "healthy") {
+            healthy = false;
+            break;
+        }
+    }
+    
+    auto responseDto = HealthResponseDto::createShared();
+    responseDto->status = healthy ? "healthy" : "unhealthy";
+    responseDto->service = SERVICE_NAME;
+    responseDto->timestamp = getCurrentTimestamp();
+    responseDto->checks = checks;
+    
+    auto status = healthy ? Status::CODE_200 : Status::CODE_503;
+    
+    return createDtoResponse(status, responseDto);
+}
+
+Object<oatpp::Fields<Object<HealthCheckDto>>> HealthController::performHealthChecks() {
+    
+    auto checks = oatpp::Fields<Object<HealthCheckDto>>::createShared();
+    
+    // Memory check
+    checks->put("memory", checkMemory());
+    
+    // Application check
+    checks->put("application", checkApplication());
+    
+    return checks;
+}
+
+Object<HealthCheckDto> HealthController::checkMemory() {
+    
+    auto checkDto = HealthCheckDto::createShared();
+    auto data = oatpp::Fields<String>::createShared();
+    
+    try {
+        // Read memory info from /proc/self/status
+        std::ifstream statusFile("/proc/self/status");
+        std::string line;
+        long vmRSS = 0;
+        long vmSize = 0;
+        
+        while (std::getline(statusFile, line)) {
+            if (line.substr(0, 6) == "VmRSS:") {
+                vmRSS = std::stol(line.substr(7));
+            } else if (line.substr(0, 7) == "VmSize:") {
+                vmSize = std::stol(line.substr(8));
+            }
+        }
+        
+        long rssMemoryMB = vmRSS / 1024;  // Convert from KB to MB
+        long virtualMemoryMB = vmSize / 1024;
+        
+        checkDto->status = rssMemoryMB < 400 ? "healthy" : "warning";
+        checkDto->message = "Memory usage: " + std::to_string(rssMemoryMB) + "MB";
+        
+        data->put("rss_mb", std::to_string(rssMemoryMB));
+        data->put("virtual_mb", std::to_string(virtualMemoryMB));
+        data->put("rss_kb", std::to_string(vmRSS));
+        data->put("virtual_kb", std::to_string(vmSize));
+        
+    } catch (const std::exception& e) {
+        checkDto->status = "unknown";
+        checkDto->message = "Failed to read memory info: " + std::string(e.what());
+    }
+    
+    checkDto->data = data;
+    return checkDto;
+}
+
+Object<HealthCheckDto> HealthController::checkApplication() {
+    
+    auto checkDto = HealthCheckDto::createShared();
+    auto data = oatpp::Fields<String>::createShared();
+    
+    checkDto->status = "healthy";
+    checkDto->message = "Application running";
+    
+    data->put("uptime_seconds", std::to_string(getUptimeSeconds()));
+    data->put("cpp_version", std::to_string(__cplusplus));
+    data->put("oatpp_version", "1.3.0");
+    data->put("environment", getEnvironmentVariable("ENVIRONMENT", "development"));
+    data->put("pid", std::to_string(getpid()));
+    
+    checkDto->data = data;
+    return checkDto;
+}
+
+std::string HealthController::getCurrentTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()) % 1000;
+    
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%S");
+    ss << '.' << std::setfill('0') << std::setw(3) << milliseconds.count() << 'Z';
+    
+    return ss.str();
+}
+
+v_int64 HealthController::getUptimeSeconds() {
+    auto now = std::chrono::steady_clock::now();
+    auto startTime = App::getStartTime();
+    auto uptime = std::chrono::duration_cast<std::chrono::seconds>(now - startTime);
+    return uptime.count();
+}
+
+std::string HealthController::getEnvironmentVariable(const std::string& name, const std::string& defaultValue) {
+    const char* value = std::getenv(name.c_str());
+    return value ? std::string(value) : defaultValue;
+}
