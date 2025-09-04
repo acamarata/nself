@@ -1,0 +1,133 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+// Server implements the service
+type server struct {
+	UnimplementedServiceServer
+}
+
+// Health implements health check
+func (s *server) Health(ctx context.Context, req *emptypb.Empty) (*HealthResponse, error) {
+	return &HealthResponse{
+		Status:    "healthy",
+		Service:   "{{SERVICE_NAME}}",
+		Timestamp: timestamppb.Now().AsTime().Format(time.RFC3339),
+	}, nil
+}
+
+// GetInfo returns service information
+func (s *server) GetInfo(ctx context.Context, req *emptypb.Empty) (*InfoResponse, error) {
+	return &InfoResponse{
+		Service:   "{{SERVICE_NAME}}",
+		Project:   "{{PROJECT_NAME}}",
+		Framework: "gRPC",
+		Runtime:   "Go",
+		Domain:    "{{BASE_DOMAIN}}",
+	}, nil
+}
+
+// Echo echoes the request
+func (s *server) Echo(ctx context.Context, req *EchoRequest) (*EchoResponse, error) {
+	return &EchoResponse{
+		Message:   req.Message,
+		Metadata:  req.Metadata,
+		Timestamp: timestamppb.Now().AsTime().Format(time.RFC3339),
+	}, nil
+}
+
+func main() {
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	// Create listener
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
+	// Create gRPC server
+	grpcServer := grpc.NewServer()
+
+	// Register service
+	RegisterServiceServer(grpcServer, &server{})
+
+	// Register health check
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("{{SERVICE_NAME}}", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	// Register reflection for debugging
+	reflection.Register(grpcServer)
+
+	// Start server in goroutine
+	go func() {
+		fmt.Printf("🚀 {{SERVICE_NAME}} gRPC server is running on port %s\n", port)
+		fmt.Printf("📍 Health check available via gRPC health protocol\n")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("🛑 Shutting down gracefully...")
+	grpcServer.GracefulStop()
+	fmt.Println("✅ Server shut down")
+}
+
+// Note: The following types would normally be generated from the .proto file
+// These are simplified representations for the template
+
+type UnimplementedServiceServer struct{}
+
+type HealthResponse struct {
+	Status    string
+	Service   string
+	Timestamp string
+}
+
+type InfoResponse struct {
+	Service   string
+	Project   string
+	Framework string
+	Runtime   string
+	Domain    string
+}
+
+type EchoRequest struct {
+	Message  string
+	Metadata map[string]string
+}
+
+type EchoResponse struct {
+	Message   string
+	Metadata  map[string]string
+	Timestamp string
+}
+
+func RegisterServiceServer(s *grpc.Server, srv *server) {
+	// This would normally be generated
+}

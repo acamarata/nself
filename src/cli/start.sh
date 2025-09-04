@@ -269,7 +269,7 @@ cmd_start() {
                 fi
               done
 
-              log_success "Ports updated in .env.local"
+              log_success "Ports updated in .env"
               log_info "Rebuilding configuration..."
 
               # Rebuild with new ports
@@ -330,7 +330,7 @@ cmd_start() {
     fi
 
     # Load environment for validation
-    if [[ -f ".env.local" ]]; then
+    if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
       set -a
       load_env_with_priority
       set +a
@@ -354,7 +354,7 @@ cmd_start() {
     fi
   else
     # On retry, still need to load environment
-    if [[ -f ".env.local" ]]; then
+    if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
       set -a
       load_env_with_priority
       set +a
@@ -651,7 +651,7 @@ analyze_startup_error() {
       log_info "Solutions:"
       echo "  1. Stop the other project: ${COLOR_BLUE}docker stop $container${COLOR_RESET}"
       echo "  2. Remove old containers: ${COLOR_BLUE}docker rm $container${COLOR_RESET}"
-      echo "  3. Change PROJECT_NAME in .env.local"
+      echo "  3. Change PROJECT_NAME in .env"
       echo "  4. Use a different project: ${COLOR_BLUE}nself stop && nself init --project new-name${COLOR_RESET}"
     else
       log_error "Container name conflict detected"
@@ -707,7 +707,7 @@ analyze_startup_error() {
         1)
           local new_port=$(suggest_alternative_port "$port")
           if [[ -n "$new_port" ]]; then
-            log_info "Changing port $port to $new_port in .env.local"
+            log_info "Changing port $port to $new_port in .env"
             fix_port_in_env "" "$port" "$new_port"
             log_success "Port updated"
             echo
@@ -739,7 +739,7 @@ analyze_startup_error() {
         echo
         log_info "Solutions:"
         echo "  1. Stop the conflicting service"
-        echo "  2. Change the port in .env.local"
+        echo "  2. Change the port in .env"
         echo "  3. Run: ${COLOR_BLUE}nself stop && nself start${COLOR_RESET}"
       fi
     else
@@ -756,7 +756,7 @@ analyze_startup_error() {
     echo
     log_info "Solutions:"
     echo "  1. Remove the old network: ${COLOR_BLUE}docker network rm $network${COLOR_RESET}"
-    echo "  2. Change PROJECT_NAME in .env.local"
+    echo "  2. Change PROJECT_NAME in .env"
     echo "  3. Run: ${COLOR_BLUE}nself build --force && nself start${COLOR_RESET}"
 
   # Volume conflicts
@@ -768,7 +768,7 @@ analyze_startup_error() {
     echo
     log_info "Solutions:"
     echo "  1. Remove old volumes: ${COLOR_BLUE}docker volume rm $volume${COLOR_RESET}"
-    echo "  2. Change PROJECT_NAME in .env.local"
+    echo "  2. Change PROJECT_NAME in .env"
     echo "  3. Use different volumes for this project"
 
   # Build context errors (missing directories)

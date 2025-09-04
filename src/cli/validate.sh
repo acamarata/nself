@@ -51,7 +51,7 @@ show_validate_help() {
   echo "  -h, --help         Show this help message"
   echo ""
   echo "Examples:"
-  echo "  nself validate                    # Validate .env.local"
+  echo "  nself validate                    # Validate .env"
   echo "  nself validate --profile prod     # Validate for production"
   echo "  nself validate --fix              # Fix issues automatically"
 }
@@ -322,7 +322,7 @@ fix_issues() {
 
 # Main validation function
 cmd_validate() {
-  local file=".env.local"
+  local file=".env"
   local profile=""
   local strict=false
   local fix=false

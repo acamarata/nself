@@ -1,0 +1,119 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
+
+class HealthController extends Controller
+{
+    private static $startTime;
+    
+    public function __construct()
+    {
+        if (!self::$startTime) {
+            self::$startTime = now();
+        }
+    }
+    
+    public function show(): JsonResponse
+    {
+        $checks = $this->performHealthChecks();
+        $isHealthy = collect($checks)->every(fn($check) => $check['status'] === 'healthy');
+        
+        return response()->json([
+            'status' => $isHealthy ? 'healthy' : 'unhealthy',
+            'service' => '{{SERVICE_NAME}}',
+            'timestamp' => now()->toISOString(),
+            'checks' => $checks
+        ], $isHealthy ? 200 : 503);
+    }
+    
+    private function performHealthChecks(): array
+    {
+        $checks = [];
+        
+        // Database connection check
+        try {
+            DB::connection()->getPdo();
+            $checks['database'] = [
+                'status' => 'healthy',
+                'message' => 'Connected'
+            ];
+        } catch (\Exception $e) {
+            $checks['database'] = [
+                'status' => 'unhealthy',
+                'message' => $e->getMessage()
+            ];
+        }
+        
+        // Cache connection check (if configured)
+        try {
+            if (config('cache.default') !== 'file') {
+                Cache::put('health_check', 'test', 1);
+                Cache::get('health_check');
+                $checks['cache'] = [
+                    'status' => 'healthy',
+                    'message' => 'Connected'
+                ];
+            }
+        } catch (\Exception $e) {
+            $checks['cache'] = [
+                'status' => 'unhealthy',
+                'message' => $e->getMessage()
+            ];
+        }
+        
+        // Memory usage check
+        try {
+            $memoryUsage = memory_get_usage(true);
+            $memoryLimit = $this->parseSize(ini_get('memory_limit'));
+            $memoryPercent = ($memoryUsage / $memoryLimit) * 100;
+            
+            $checks['memory'] = [
+                'status' => $memoryPercent < 80 ? 'healthy' : 'warning',
+                'usage_bytes' => $memoryUsage,
+                'usage_mb' => round($memoryUsage / 1024 / 1024, 2),
+                'usage_percent' => round($memoryPercent, 2)
+            ];
+        } catch (\Exception $e) {
+            $checks['memory'] = [
+                'status' => 'unknown',
+                'message' => $e->getMessage()
+            ];
+        }
+        
+        // Application check
+        $checks['application'] = [
+            'status' => 'healthy',
+            'uptime_seconds' => now()->diffInSeconds(self::$startTime),
+            'environment' => app()->environment(),
+            'laravel_version' => app()->version(),
+            'php_version' => PHP_VERSION
+        ];
+        
+        return $checks;
+    }
+    
+    private function parseSize(string $size): int
+    {
+        $unit = strtolower(substr($size, -1, 1));
+        $size = (int) $size;
+        
+        switch ($unit) {
+            case 'g':
+                $size *= 1024 * 1024 * 1024;
+                break;
+            case 'm':
+                $size *= 1024 * 1024;
+                break;
+            case 'k':
+                $size *= 1024;
+                break;
+        }
+        
+        return $size;
+    }
+}

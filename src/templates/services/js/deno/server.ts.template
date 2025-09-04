@@ -1,0 +1,89 @@
+import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
+
+const app = new Application();
+const router = new Router();
+
+// Health check endpoint
+router.get("/health", (ctx) => {
+  ctx.response.body = {
+    status: "healthy",
+    service: "{{SERVICE_NAME}}",
+    timestamp: new Date().toISOString(),
+  };
+});
+
+// Info endpoint
+router.get("/api/info", (ctx) => {
+  ctx.response.body = {
+    service: "{{SERVICE_NAME}}",
+    project: "{{PROJECT_NAME}}",
+    framework: "Oak (Deno)",
+    runtime: "Deno",
+    domain: "{{BASE_DOMAIN}}",
+  };
+});
+
+// Root endpoint
+router.get("/", (ctx) => {
+  ctx.response.body = {
+    message: "Hello from {{SERVICE_NAME}}!",
+    project: "{{PROJECT_NAME}}",
+    framework: "Oak - Middleware framework for Deno",
+    features: ["TypeScript native", "Secure by default", "Modern runtime"],
+  };
+});
+
+// Catch all
+router.all("/(.*)", (ctx) => {
+  ctx.response.body = {
+    message: "Hello from {{SERVICE_NAME}}!",
+    path: ctx.request.url.pathname,
+    method: ctx.request.method,
+  };
+});
+
+// Apply CORS middleware
+app.use(oakCors({
+  origin: Deno.env.get("CORS_ORIGIN") || "*",
+  credentials: true,
+}));
+
+// Error handler
+app.use(async (ctx, next) => {
+  try {
+    await next();
+  } catch (err) {
+    console.error(err);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      error: "Internal Server Error",
+      message: "Something went wrong!",
+    };
+  }
+});
+
+// Use routes
+app.use(router.routes());
+app.use(router.allowedMethods());
+
+const port = parseInt(Deno.env.get("PORT") || "3000");
+
+console.log(`🚀 {{SERVICE_NAME}} is running on port ${port}`);
+console.log(`📍 Health check: http://localhost:${port}/health`);
+console.log(`🌐 API endpoint: http://localhost:${port}/api/info`);
+
+// Handle shutdown signals
+const abortController = new AbortController();
+
+const gracefulShutdown = () => {
+  console.log("🛑 Shutting down gracefully...");
+  abortController.abort();
+  Deno.exit(0);
+};
+
+Deno.addSignalListener("SIGTERM", gracefulShutdown);
+Deno.addSignalListener("SIGINT", gracefulShutdown);
+
+// Start server
+await app.listen({ port, signal: abortController.signal });

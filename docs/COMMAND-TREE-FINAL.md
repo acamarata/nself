@@ -1,4 +1,4 @@
-# nself Command Tree (v0.3.9-beta)
+# nself Command Tree (v0.3.9)
 
 ## Complete Command List (34 Commands)
 

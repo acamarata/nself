@@ -1,0 +1,21 @@
+source 'https://rubygems.org'
+
+ruby '3.2.0'
+
+gem 'sinatra', '~> 4.0'
+gem 'sinatra-contrib', '~> 4.0'
+gem 'puma', '~> 6.4'
+gem 'json', '~> 2.7'
+gem 'rack-cors', '~> 2.0'
+gem 'dotenv', '~> 3.0'
+gem 'faraday', '~> 2.8'
+gem 'logger', '~> 1.6'
+
+group :development do
+  gem 'rerun'
+end
+
+group :test do
+  gem 'rspec'
+  gem 'rack-test'
+end

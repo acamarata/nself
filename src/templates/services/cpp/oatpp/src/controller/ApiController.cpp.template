@@ -1,0 +1,127 @@
+#include "ApiController.hpp"
+#include "../App.hpp"
+
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <random>
+#include <cstdlib>
+
+std::shared_ptr<OutgoingResponse> ApiController::root(const std::shared_ptr<IncomingRequest>& request) {
+    
+    auto dto = RootDto::createShared();
+    dto->message = SERVICE_NAME " says hello!";
+    dto->project = PROJECT_NAME;
+    dto->framework = "Oat++";
+    dto->version = "1.3.0";
+    dto->timestamp = getCurrentTimestamp();
+    
+    return createDtoResponse(Status::CODE_200, dto);
+}
+
+std::shared_ptr<OutgoingResponse> ApiController::getInfo(const std::shared_ptr<IncomingRequest>& request) {
+    
+    auto dto = InfoDto::createShared();
+    dto->service = SERVICE_NAME;
+    dto->environment = getEnvironmentVariable("ENVIRONMENT", "development");
+    dto->domain = BASE_DOMAIN;
+    dto->uptime = getUptimeSeconds();
+    dto->version = "0.1.0";
+    dto->cpp_version = std::to_string(__cplusplus);
+    dto->oatpp_version = "1.3.0";
+    
+    return createDtoResponse(Status::CODE_200, dto);
+}
+
+std::shared_ptr<OutgoingResponse> ApiController::echoPost(const std::shared_ptr<IncomingRequest>& request,
+                                                          const Object<EchoRequestDto>& body) {
+    
+    if (!body || !body->message) {
+        auto errorDto = ErrorResponseDto::createShared();
+        errorDto->error = "Bad Request";
+        errorDto->message = "Message field is required";
+        errorDto->timestamp = getCurrentTimestamp();
+        
+        return createDtoResponse(Status::CODE_400, errorDto);
+    }
+    
+    auto receivedDto = ReceivedDataDto::createShared();
+    receivedDto->message = body->message;
+    receivedDto->data = body->data ? body->data : oatpp::Fields<String>::createShared();
+    
+    auto responseDto = EchoResponseDto::createShared();
+    responseDto->received = receivedDto;
+    responseDto->timestamp = getCurrentTimestamp();
+    responseDto->request_id = generateUUID();
+    
+    return createDtoResponse(Status::CODE_200, responseDto);
+}
+
+std::shared_ptr<OutgoingResponse> ApiController::notFound(const std::shared_ptr<IncomingRequest>& request) {
+    
+    auto errorDto = ErrorResponseDto::createShared();
+    errorDto->error = "Not Found";
+    errorDto->message = "The requested resource was not found";
+    errorDto->timestamp = getCurrentTimestamp();
+    errorDto->path = request->getStartingLine().path;
+    errorDto->method = request->getStartingLine().method;
+    
+    return createDtoResponse(Status::CODE_404, errorDto);
+}
+
+std::string ApiController::getCurrentTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()) % 1000;
+    
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%S");
+    ss << '.' << std::setfill('0') << std::setw(3) << milliseconds.count() << 'Z';
+    
+    return ss.str();
+}
+
+v_int64 ApiController::getUptimeSeconds() {
+    auto now = std::chrono::steady_clock::now();
+    auto startTime = App::getStartTime();
+    auto uptime = std::chrono::duration_cast<std::chrono::seconds>(now - startTime);
+    return uptime.count();
+}
+
+std::string ApiController::getEnvironmentVariable(const std::string& name, const std::string& defaultValue) {
+    const char* value = std::getenv(name.c_str());
+    return value ? std::string(value) : defaultValue;
+}
+
+std::string ApiController::generateUUID() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+    std::uniform_int_distribution<> dis2(8, 11);
+    
+    std::stringstream ss;
+    int i;
+    ss << std::hex;
+    for (i = 0; i < 8; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    for (i = 0; i < 4; i++) {
+        ss << dis(gen);
+    }
+    ss << "-4";
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    ss << dis2(gen);
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    for (i = 0; i < 12; i++) {
+        ss << dis(gen);
+    };
+    return ss.str();
+}

@@ -1,0 +1,28 @@
+defmodule {{SERVICE_NAME|title}}Web.PageController do
+  use {{SERVICE_NAME|title}}Web, :controller
+
+  def index(conn, _params) do
+    response = %{
+      message: "Hello from {{SERVICE_NAME}}!",
+      project: "{{PROJECT_NAME}}",
+      framework: "Phoenix",
+      version: Application.spec(:phoenix, :vsn) |> List.to_string(),
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+    }
+
+    json(conn, response)
+  end
+
+  def not_found(conn, %{"path" => path}) do
+    response = %{
+      error: "Not Found",
+      path: "/" <> Enum.join(path, "/"),
+      method: conn.method,
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+    }
+
+    conn
+    |> put_status(404)
+    |> json(response)
+  end
+end

@@ -1,0 +1,31 @@
+#include "App.hpp"
+
+void App::configureComponents() {
+    // Components are configured via macros in header file
+    // This method can be used for additional component configuration if needed
+}
+
+void App::configureRoutes(const std::shared_ptr<oatpp::web::server::HttpRouter>& router) {
+    
+    /* Enable CORS for all routes */
+    router->addRequestInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowCorsGlobal>());
+    
+    /* Create controllers */
+    auto apiController = ApiController::createShared();
+    auto healthController = HealthController::createShared();
+    
+    /* Add API routes */
+    router->addController(apiController);
+    router->addController(healthController);
+    
+    /* Add custom headers interceptor */
+    router->addResponseInterceptor([](const std::shared_ptr<IncomingRequest>& request,
+                                     const std::shared_ptr<OutgoingResponse>& response) {
+        response->putHeader("X-Service", SERVICE_NAME);
+        response->putHeader("X-Framework", "Oat++");
+        response->putHeader("Access-Control-Allow-Origin", "*");
+        response->putHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        response->putHeader("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization");
+        return response;
+    });
+}

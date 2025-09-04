@@ -1,0 +1,127 @@
+import express from 'express';
+import cors from 'cors';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { initTRPC } from '@trpc/server';
+import { z } from 'zod';
+
+// Initialize tRPC
+const t = initTRPC.create();
+
+// Define router and procedure helpers
+const router = t.router;
+const publicProcedure = t.procedure;
+
+// Define the app router
+const appRouter = router({
+  health: publicProcedure.query(() => ({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+  })),
+  
+  info: publicProcedure.query(() => ({
+    service: '{{SERVICE_NAME}}',
+    project: '{{PROJECT_NAME}}',
+    framework: 'tRPC',
+    runtime: 'TypeScript',
+    domain: '{{BASE_DOMAIN}}',
+  })),
+  
+  hello: publicProcedure
+    .input(z.object({
+      name: z.string().optional(),
+    }))
+    .query(({ input }) => ({
+      message: `Hello ${input.name || 'from {{SERVICE_NAME}}'}!`,
+      project: '{{PROJECT_NAME}}',
+      framework: 'tRPC - End-to-end typesafe APIs',
+    })),
+  
+  echo: publicProcedure
+    .input(z.object({
+      message: z.string(),
+      data: z.record(z.any()).optional(),
+    }))
+    .mutation(({ input }) => ({
+      received: input,
+      timestamp: new Date().toISOString(),
+    })),
+});
+
+// Export type for client
+export type AppRouter = typeof appRouter;
+
+// Create Express app
+const app = express();
+
+// Apply CORS
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+}));
+
+// Health check endpoint (non-tRPC)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from {{SERVICE_NAME}}!',
+    project: '{{PROJECT_NAME}}',
+    framework: 'tRPC - Type-safe API framework',
+    endpoints: {
+      trpc: '/trpc',
+      health: '/health',
+    },
+  });
+});
+
+// tRPC middleware
+app.use(
+  '/trpc',
+  createExpressMiddleware({
+    router: appRouter,
+    createContext: () => ({}),
+  })
+);
+
+// Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!',
+  });
+});
+
+const port = parseInt(process.env.PORT || '3000', 10);
+
+// Start server
+const server = app.listen(port, () => {
+  console.log(`🚀 {{SERVICE_NAME}} is running on port ${port}`);
+  console.log(`📍 Health check: http://localhost:${port}/health`);
+  console.log(`🌐 tRPC endpoint: http://localhost:${port}/trpc`);
+  console.log(`📖 Available procedures:`);
+  console.log(`   - GET /trpc/health`);
+  console.log(`   - GET /trpc/info`);
+  console.log(`   - GET /trpc/hello?input={"name":"World"}`);
+  console.log(`   - POST /trpc/echo`);
+});
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log('🛑 Shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

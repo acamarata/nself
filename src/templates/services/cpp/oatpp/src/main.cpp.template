@@ -1,0 +1,87 @@
+#include "App.hpp"
+
+#include "oatpp/web/server/HttpConnectionHandler.hpp"
+#include "oatpp/web/server/HttpRouter.hpp"
+#include "oatpp/network/Server.hpp"
+#include "oatpp/network/tcp/server/ConnectionProvider.hpp"
+
+#include <iostream>
+#include <csignal>
+#include <atomic>
+
+std::atomic<bool> serverShouldStop(false);
+
+void signalHandler(int signal) {
+    std::cout << "\n🛑 Received signal " << signal << ". Shutting down gracefully..." << std::endl;
+    serverShouldStop = true;
+}
+
+void run() {
+    
+    /* Initialize oatpp Environment */
+    oatpp::base::Environment::init();
+    
+    /* Set up signal handlers for graceful shutdown */
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
+    
+    /* Get port from environment or use default */
+    auto portStr = std::getenv("PORT");
+    v_uint16 port = portStr ? static_cast<v_uint16>(std::atoi(portStr)) : SERVICE_PORT;
+    
+    /* Create Router for HTTP requests routing */
+    auto router = oatpp::web::server::HttpRouter::createShared();
+    
+    /* Create App components and configure routes */
+    App app;
+    app.configureComponents();
+    app.configureRoutes(router);
+    
+    /* Create HTTP connection handler with router */
+    auto connectionHandler = oatpp::web::server::HttpConnectionHandler::createShared(router);
+    
+    /* Create server connection provider */
+    auto connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared(
+        {"0.0.0.0", port, oatpp::network::Address::IP_4}
+    );
+    
+    /* Create server */
+    oatpp::network::Server server(connectionProvider, connectionHandler);
+    
+    std::cout << "🚀 " << SERVICE_NAME << " is starting on port " << port << std::endl;
+    std::cout << "📍 Health check: http://localhost:" << port << "/health" << std::endl;
+    std::cout << "🌐 API endpoint: http://localhost:" << port << "/api/info" << std::endl;
+    std::cout << "💬 Echo endpoint: POST http://localhost:" << port << "/api/echo" << std::endl;
+    
+    /* Run server in separate thread */
+    std::thread serverThread([&server]() {
+        server.run();
+    });
+    
+    /* Wait for shutdown signal */
+    while (!serverShouldStop) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    
+    /* Stop server */
+    std::cout << "Stopping server..." << std::endl;
+    server.stop();
+    
+    /* Wait for server thread to finish */
+    if (serverThread.joinable()) {
+        serverThread.join();
+    }
+    
+    /* Destroy oatpp Environment */
+    oatpp::base::Environment::destroy();
+    
+    std::cout << "Server stopped gracefully." << std::endl;
+}
+
+/**
+ *  main
+ */
+int main() {
+    run();
+    return 0;
+}

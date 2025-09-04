@@ -1,0 +1,269 @@
+package com.nself
+
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.calllogging.*
+import io.ktor.server.plugins.defaultheaders.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.slf4j.event.Level
+import java.time.Instant
+import java.util.*
+import kotlin.time.measureTime
+
+@Serializable
+data class HealthResponse(
+    val status: String,
+    val service: String,
+    val timestamp: String,
+    val checks: Map<String, HealthCheck>
+)
+
+@Serializable
+data class HealthCheck(
+    val status: String,
+    val message: String? = null,
+    val data: Map<String, String>? = null
+)
+
+@Serializable
+data class RootResponse(
+    val message: String,
+    val project: String,
+    val framework: String,
+    val version: String,
+    val timestamp: String
+)
+
+@Serializable
+data class InfoResponse(
+    val service: String,
+    val environment: String,
+    val domain: String,
+    val uptime: Long,
+    val version: String,
+    val kotlin_version: String,
+    val ktor_version: String
+)
+
+@Serializable
+data class EchoRequest(
+    val message: String,
+    val data: Map<String, String>? = null
+)
+
+@Serializable
+data class EchoResponse(
+    val received: ReceivedData,
+    val timestamp: String,
+    val request_id: String
+)
+
+@Serializable
+data class ReceivedData(
+    val message: String,
+    val data: Map<String, String>
+)
+
+@Serializable
+data class ErrorResponse(
+    val error: String,
+    val message: String,
+    val timestamp: String,
+    val path: String? = null,
+    val method: String? = null
+)
+
+// Store start time for uptime calculation
+val startTime = Instant.now()
+
+fun main() {
+    val port = System.getenv("PORT")?.toIntOrNull() ?: {{PORT}}
+    
+    println("🚀 {{SERVICE_NAME}} is starting on port $port")
+    println("📍 Health check: http://localhost:$port/health")
+    println("🌐 API endpoint: http://localhost:$port/api/info")
+    println("💬 Echo endpoint: POST http://localhost:$port/api/echo")
+    
+    embeddedServer(Netty, port = port, host = "0.0.0.0", module = Application::module)
+        .start(wait = true)
+}
+
+fun Application.module() {
+    install(ContentNegotiation) {
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+        })
+    }
+    
+    install(CORS) {
+        anyHost()
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Options)
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
+        allowCredentials = true
+    }
+    
+    install(CallLogging) {
+        level = Level.INFO
+    }
+    
+    install(DefaultHeaders) {
+        header("X-Service", "{{SERVICE_NAME}}")
+        header("X-Framework", "Ktor")
+    }
+    
+    install(StatusPages) {
+        exception<Throwable> { call, cause ->
+            call.application.log.error("Unhandled exception", cause)
+            
+            val response = ErrorResponse(
+                error = "Internal Server Error",
+                message = if (call.application.developmentMode) cause.message ?: "Unknown error" else "Something went wrong",
+                timestamp = Instant.now().toString()
+            )
+            
+            call.respond(HttpStatusCode.InternalServerError, response)
+        }
+        
+        status(HttpStatusCode.NotFound) { call, _ ->
+            val response = ErrorResponse(
+                error = "Not Found",
+                message = "The requested resource was not found",
+                timestamp = Instant.now().toString(),
+                path = call.request.path(),
+                method = call.request.httpMethod.value
+            )
+            
+            call.respond(HttpStatusCode.NotFound, response)
+        }
+    }
+    
+    routing {
+        // Root endpoint
+        get("/") {
+            val response = RootResponse(
+                message = "Hello from {{SERVICE_NAME}}!",
+                project = "{{PROJECT_NAME}}",
+                framework = "Ktor",
+                version = "2.3.7",
+                timestamp = Instant.now().toString()
+            )
+            
+            call.respond(response)
+        }
+        
+        // Health check endpoint
+        get("/health") {
+            val checks = performHealthChecks()
+            val healthy = checks.values.all { it.status == "healthy" }
+            
+            val response = HealthResponse(
+                status = if (healthy) "healthy" else "unhealthy",
+                service = "{{SERVICE_NAME}}",
+                timestamp = Instant.now().toString(),
+                checks = checks
+            )
+            
+            val statusCode = if (healthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable
+            call.respond(statusCode, response)
+        }
+        
+        // API routes
+        route("/api") {
+            get("/info") {
+                val uptime = java.time.Duration.between(startTime, Instant.now()).seconds
+                
+                val response = InfoResponse(
+                    service = "{{SERVICE_NAME}}",
+                    environment = System.getenv("ENVIRONMENT") ?: "development",
+                    domain = "{{BASE_DOMAIN}}",
+                    uptime = uptime,
+                    version = "0.1.0",
+                    kotlin_version = "1.9.22",
+                    ktor_version = "2.3.7"
+                )
+                
+                call.respond(response)
+            }
+            
+            post("/echo") {
+                try {
+                    val request = call.receive<EchoRequest>()
+                    val requestId = UUID.randomUUID().toString()
+                    
+                    val response = EchoResponse(
+                        received = ReceivedData(
+                            message = request.message,
+                            data = request.data ?: emptyMap()
+                        ),
+                        timestamp = Instant.now().toString(),
+                        request_id = requestId
+                    )
+                    
+                    call.respond(response)
+                    
+                } catch (e: Exception) {
+                    call.application.log.error("Echo endpoint error", e)
+                    
+                    val response = ErrorResponse(
+                        error = "Bad Request",
+                        message = "Invalid request format",
+                        timestamp = Instant.now().toString()
+                    )
+                    
+                    call.respond(HttpStatusCode.BadRequest, response)
+                }
+            }
+        }
+    }
+}
+
+private fun performHealthChecks(): Map<String, HealthCheck> {
+    val checks = mutableMapOf<String, HealthCheck>()
+    
+    // Memory check
+    val runtime = Runtime.getRuntime()
+    val totalMemory = runtime.totalMemory()
+    val freeMemory = runtime.freeMemory()
+    val usedMemory = totalMemory - freeMemory
+    val usedMemoryMb = usedMemory / 1024 / 1024
+    
+    checks["memory"] = HealthCheck(
+        status = if (usedMemoryMb < 400) "healthy" else "warning",
+        message = "Memory usage: ${usedMemoryMb}MB",
+        data = mapOf(
+            "used_mb" to usedMemoryMb.toString(),
+            "total_mb" to (totalMemory / 1024 / 1024).toString(),
+            "free_mb" to (freeMemory / 1024 / 1024).toString()
+        )
+    )
+    
+    // Application check
+    val uptime = java.time.Duration.between(startTime, Instant.now()).seconds
+    checks["application"] = HealthCheck(
+        status = "healthy",
+        message = "Application running",
+        data = mapOf(
+            "uptime_seconds" to uptime.toString(),
+            "kotlin_version" to "1.9.22",
+            "ktor_version" to "2.3.7"
+        )
+    )
+    
+    return checks
+}

@@ -1,0 +1,95 @@
+class ApplicationController < ActionController::API
+  include ActionController::MimeResponds
+  
+  # CORS and security headers
+  before_action :set_cors_headers
+  before_action :set_security_headers
+  
+  # Store application start time for uptime calculation
+  @@start_time = Time.current
+  
+  def root
+    render json: {
+      message: "Hello from {{SERVICE_NAME}}!",
+      project: "{{PROJECT_NAME}}",
+      framework: "Ruby on Rails",
+      version: Rails.version,
+      timestamp: Time.current.iso8601
+    }
+  end
+  
+  def info
+    render json: {
+      service: "{{SERVICE_NAME}}",
+      environment: Rails.env,
+      domain: "{{BASE_DOMAIN}}",
+      uptime: (Time.current - @@start_time).to_i,
+      version: "0.1.0",
+      ruby_version: RUBY_VERSION,
+      rails_version: Rails.version
+    }
+  end
+  
+  def echo
+    request_id = SecureRandom.uuid
+    
+    render json: {
+      received: {
+        message: params[:message],
+        data: params[:data] || {}
+      },
+      timestamp: Time.current.iso8601,
+      request_id: request_id
+    }
+  end
+  
+  def not_found
+    render json: {
+      error: "Not Found",
+      path: request.path,
+      method: request.method,
+      timestamp: Time.current.iso8601
+    }, status: :not_found
+  end
+  
+  private
+  
+  def set_cors_headers
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    
+    if request.method == 'OPTIONS'
+      render json: {}, status: :ok
+    end
+  end
+  
+  def set_security_headers
+    response.headers['X-Service'] = '{{SERVICE_NAME}}'
+    response.headers['X-Framework'] = 'Ruby on Rails'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+  end
+  
+  # Global error handling
+  rescue_from StandardError do |e|
+    Rails.logger.error "#{e.class}: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    
+    render json: {
+      error: "Internal Server Error",
+      message: Rails.env.development? ? e.message : "Something went wrong",
+      timestamp: Time.current.iso8601
+    }, status: :internal_server_error
+  end
+  
+  rescue_from ActionController::ParameterMissing do |e|
+    render json: {
+      error: "Bad Request",
+      message: e.message,
+      timestamp: Time.current.iso8601
+    }, status: :bad_request
+  end
+end

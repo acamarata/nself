@@ -1,0 +1,232 @@
+# Custom Service: {{SERVICE_NAME}}
+
+This is a custom service template for {{PROJECT_NAME}}.
+
+## Quick Start
+
+This template provides a minimal starting point for creating your own Docker service. You need to:
+
+1. **Edit the Dockerfile** in your service directory to add your application
+2. **Add your application code** to the service directory
+3. **Configure environment variables** as needed
+4. **Implement health check endpoint** at `/health` (recommended)
+
+## Template Variables
+
+The following variables are automatically replaced when the service is generated:
+
+- `{{SERVICE_NAME}}` - Your service name (e.g., my-api)
+- `{{PROJECT_NAME}}` - Your project name
+- `{{BASE_DOMAIN}}` - Your base domain
+- `{{PORT}}` - The port your service listens on (default: 3000)
+
+## Required Implementation
+
+### 1. Health Check Endpoint (Recommended)
+
+Implement a `/health` endpoint that returns HTTP 200:
+
+```json
+{
+  "status": "healthy",
+  "service": "{{SERVICE_NAME}}",
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+### 2. Service Communication
+
+Your service can communicate with other nself services:
+
+- **PostgreSQL**: `postgres:5432` (internal Docker network)
+- **Redis**: `redis:6379` (if enabled)
+- **Hasura GraphQL**: `hasura:8080`
+- **MinIO (S3)**: `minio:9000`
+
+### 3. Environment Variables
+
+Your service will have access to these environment variables:
+
+```bash
+# Core
+SERVICE_NAME={{SERVICE_NAME}}
+PROJECT_NAME={{PROJECT_NAME}}
+BASE_DOMAIN={{BASE_DOMAIN}}
+PORT={{PORT}}
+
+# Database (if needed)
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB={{PROJECT_NAME}}
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=<from-env>
+
+# Redis (if enabled)
+REDIS_URL=redis://redis:6379
+
+# Hasura
+HASURA_GRAPHQL_URL=http://hasura:8080/v1/graphql
+HASURA_GRAPHQL_ADMIN_SECRET=<from-env>
+
+# S3/MinIO
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=<from-env>
+S3_SECRET_KEY=<from-env>
+```
+
+## Dockerfile Examples
+
+### Node.js Application
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE {{PORT}}
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:{{PORT}}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+CMD ["node", "server.js"]
+```
+
+### Python Flask/FastAPI
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE {{PORT}}
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{PORT}}/health').read()"
+CMD ["python", "app.py"]
+```
+
+### Go Application
+
+```dockerfile
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY go.* ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/main .
+EXPOSE {{PORT}}
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:{{PORT}}/health || exit 1
+CMD ["./main"]
+```
+
+### Static Website with Nginx
+
+```dockerfile
+FROM nginx:alpine
+COPY ./public /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE {{PORT}}
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:{{PORT}}/ || exit 1
+```
+
+## Directory Structure
+
+Your service directory will be created at:
+```
+services/
+└── {{SERVICE_NAME}}/
+    ├── Dockerfile
+    ├── README.md
+    └── [your application files]
+```
+
+## Networking
+
+Your service will be part of the `{{PROJECT_NAME}}_default` Docker network and can:
+
+- Access all other services by their container names
+- Be accessed internally at `{{SERVICE_NAME}}:{{PORT}}`
+- Be exposed externally through nginx if configured
+
+## Volumes (Optional)
+
+If your service needs persistent storage, you can mount volumes:
+
+```yaml
+# This would be added to docker-compose.yml
+volumes:
+  - ./services/{{SERVICE_NAME}}/data:/app/data
+  - {{SERVICE_NAME}}_storage:/app/storage
+
+volumes:
+  {{SERVICE_NAME}}_storage:
+```
+
+## Logging
+
+Your service logs will be available via:
+```bash
+nself logs {{SERVICE_NAME}}
+```
+
+## Development Tips
+
+1. **Hot Reload**: Mount your code as a volume for development
+2. **Debugging**: Add debugging tools to your Dockerfile for development
+3. **Testing**: Include test dependencies in a development Dockerfile
+4. **Security**: Run as non-root user in production
+5. **Size**: Use multi-stage builds to minimize image size
+
+## Example Service Implementation
+
+Here's a minimal Node.js service example:
+
+```javascript
+// server.js
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: process.env.SERVICE_NAME,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    service: process.env.SERVICE_NAME,
+    project: process.env.PROJECT_NAME,
+    domain: process.env.BASE_DOMAIN,
+    version: '1.0.0'
+  });
+});
+
+// Your custom endpoints
+app.get('/', (req, res) => {
+  res.json({ message: `Hello from ${process.env.SERVICE_NAME}!` });
+});
+
+app.listen(port, () => {
+  console.log(`Service ${process.env.SERVICE_NAME} running on port ${port}`);
+});
+```
+
+## Need Help?
+
+- Check the nself documentation: `/docs/`
+- View other service examples in `/src/templates/services/`
+- Run `nself help` for CLI commands
+- Run `nself status` to check service health

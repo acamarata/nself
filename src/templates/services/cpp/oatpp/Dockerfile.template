@@ -1,19 +1,55 @@
-FROM gcc:latest
+# Multi-stage build for C++ Oat++ API
+FROM gcc:13 AS build
 
 WORKDIR /app
 
-# Copy application code
-COPY . .
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    cmake \
+    make \
+    git \
+    curl \
+    libssl-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user (adjust for the specific runtime)
-RUN groupadd -r appuser && useradd -r -g appuser appuser || \
-    addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+# Copy CMakeLists.txt first for dependency caching
+COPY CMakeLists.txt ./
 
-# Change ownership
-RUN chown -R appuser:appuser /app
+# Create build directory and run cmake
+RUN mkdir build
 
+# Copy source code
+COPY src ./src
+
+# Build the application
+WORKDIR /app/build
+RUN cmake .. && make -j$(nproc)
+
+# Runtime stage
+FROM ubuntu:22.04
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built executable from build stage
+COPY --from=build /app/build/{{SERVICE_NAME}} ./{{SERVICE_NAME}}
+
+# Create non-root user
+RUN useradd -r -s /bin/false appuser && \
+    chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8000
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
 
-CMD ["echo", "Configure the start command for oat++"]
+EXPOSE {{PORT}}
+
+CMD ["./{{SERVICE_NAME}}"]

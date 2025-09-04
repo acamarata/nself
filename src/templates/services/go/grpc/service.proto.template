@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package service;
+
+option go_package = "./pb";
+
+// Service definition
+service {{SERVICE_NAME}}Service {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc GetInfo(InfoRequest) returns (InfoResponse);
+  rpc Echo(EchoRequest) returns (EchoResponse);
+}
+
+// Health check
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  string timestamp = 3;
+}
+
+// Info
+message InfoRequest {}
+
+message InfoResponse {
+  string service = 1;
+  string project = 2;
+  string framework = 3;
+  string runtime = 4;
+  string domain = 5;
+}
+
+// Echo
+message EchoRequest {
+  string message = 1;
+  map<string, string> metadata = 2;
+}
+
+message EchoResponse {
+  string message = 1;
+  map<string, string> metadata = 2;
+  string timestamp = 3;
+}

@@ -68,12 +68,19 @@ parse_cs_services() {
     
     # Default domain if not specified
     if [[ -z "$domain" ]]; then
-      if [[ "$route" == *"."* ]]; then
-        # Multi-level subdomain (e.g., api.metals)
+      # Check if route is a full domain (contains a dot and TLD)
+      if [[ "$route" =~ \.[a-zA-Z]{2,}$ ]]; then
+        # Full domain provided (e.g., api.example.com)
+        domain="$route"
+      elif [[ "$route" == *"."* ]]; then
+        # Multi-level subdomain (e.g., api.v2)
         domain="${route}.${BASE_DOMAIN}"
-      else
+      elif [[ -n "$route" ]]; then
         # Simple subdomain
         domain="${route}.${BASE_DOMAIN}"
+      else
+        # Default to service name as subdomain
+        domain="${name}.${BASE_DOMAIN}"
       fi
     fi
     

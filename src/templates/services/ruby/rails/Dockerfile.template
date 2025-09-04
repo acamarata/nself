@@ -1,0 +1,50 @@
+# Multi-stage build for Ruby Rails API
+FROM ruby:3.2-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    libssl-dev \
+    pkg-config \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Gemfile and install gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local deployment true && \
+    bundle config set --local without development test && \
+    bundle install
+
+# Runtime stage
+FROM ruby:3.2-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy gems from builder
+COPY --from=builder /usr/local/bundle /usr/local/bundle
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN useradd -r -s /bin/false appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
+EXPOSE {{PORT}}
+
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "{{PORT}}"]

@@ -67,10 +67,10 @@ cmd_prod() {
   log_info "Domain: $domain"
 
   # Load current environment
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     load_env_with_priority
   else
-    log_error "No .env.local found. Run 'nself init' first"
+    log_error "No .env or .env.dev found. Run 'nself init' first"
     return 1
   fi
 
@@ -78,24 +78,26 @@ cmd_prod() {
   log_info "Updating configuration..."
 
   # Set production domain
-  set_env_var "BASE_DOMAIN" "$domain" ".env.local"
+  local env_file=".env"
+  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+  set_env_var "BASE_DOMAIN" "$domain" "$env_file"
 
   # Enable SSL
-  set_env_var "SSL_ENABLED" "true" ".env.local"
+  set_env_var "SSL_ENABLED" "true" "$env_file"
 
   # Set SSL email if provided
   if [[ -n "$email" ]]; then
-    set_env_var "SSL_EMAIL" "$email" ".env.local"
+    set_env_var "SSL_EMAIL" "$email" "$env_file"
   fi
 
   # Set production mode
-  set_env_var "NODE_ENV" "production" ".env.local"
-  set_env_var "GO_ENV" "production" ".env.local"
-  set_env_var "DEBUG" "false" ".env.local"
-  set_env_var "VERBOSE" "false" ".env.local"
+  set_env_var "NODE_ENV" "production" "$env_file"
+  set_env_var "GO_ENV" "production" "$env_file"
+  set_env_var "DEBUG" "false" "$env_file"
+  set_env_var "VERBOSE" "false" "$env_file"
 
   # Generate strong secrets if still using defaults
-  if grep -q "changeme\|password123" .env.local 2>/dev/null; then
+  if grep -q "changeme\|password123" "$env_file" 2>/dev/null; then
     log_warning "Weak passwords detected, generating secure ones..."
 
     # Generate secure passwords
@@ -103,10 +105,10 @@ cmd_prod() {
     local new_hasura_secret=$(openssl rand -hex 32)
     local new_jwt_secret=$(openssl rand -hex 32)
 
-    set_env_var "POSTGRES_PASSWORD" "$new_postgres_pass" ".env.local"
-    set_env_var "HASURA_GRAPHQL_ADMIN_SECRET" "$new_hasura_secret" ".env.local"
-    set_env_var "JWT_SECRET" "$new_jwt_secret" ".env.local"
-    set_env_var "COOKIE_SECRET" "$(openssl rand -hex 32)" ".env.local"
+    set_env_var "POSTGRES_PASSWORD" "$new_postgres_pass" "$env_file"
+    set_env_var "HASURA_GRAPHQL_ADMIN_SECRET" "$new_hasura_secret" "$env_file"
+    set_env_var "JWT_SECRET" "$new_jwt_secret" "$env_file"
+    set_env_var "COOKIE_SECRET" "$(openssl rand -hex 32)" "$env_file"
 
     log_success "Generated secure secrets"
   fi
@@ -117,7 +119,7 @@ cmd_prod() {
   log_success "Production configuration complete"
   echo
   echo "Next steps:"
-  echo "  1. Review .env.local for production settings"
+  echo "  1. Review .env for production settings"
   echo "  2. Set up SSL certificates:"
   echo "     - For Let's Encrypt: Ensure ports 80/443 are accessible"
   echo "     - For custom certs: Place in nginx/ssl/"
