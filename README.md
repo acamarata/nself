@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.9--beta-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -14,7 +14,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.9-beta**: Admin UI integration, critical bug fixes, improved stability! Features web-based monitoring dashboard, real-time service health, Docker container management, and comprehensive backup UI. All major commands tested and working. [See release notes](RELEASE-NOTES-v0.3.9-beta.md)
+> **🚀 v0.3.9**: Admin UI integration, critical bug fixes, improved stability! Features web-based monitoring dashboard, real-time service health, Docker container management, and comprehensive backup UI. All major commands tested and working. [See release notes](docs/RELEASES.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and what's coming in v0.4.0!
 
@@ -35,8 +35,8 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
-- **Admin Dashboard**: Web-based monitoring UI at localhost:3100 (v0.3.9)
-- **Single Config File**: One `.env.local` controls everything
+- **Admin Dashboard**: Web-based monitoring UI at localhost:3100
+- **Single Config File**: One `.env` controls everything
 - **Zero Configuration**: Email, SSL, and services work out of the box
 - **Hot Reload**: Changes apply instantly without rebuild
 - **Multi-Environment**: Same setup works locally, staging, and production
@@ -74,14 +74,14 @@ brew install nself
 
 #### Debian/Ubuntu (.deb)
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.9-beta/nself_0.3.9-beta_all.deb
-sudo dpkg -i nself_0.3.9-beta_all.deb
+wget https://github.com/acamarata/nself/releases/download/v0.3.9/nself_0.3.9_all.deb
+sudo dpkg -i nself_0.3.9_all.deb
 ```
 
 #### RHEL/CentOS/Fedora (.rpm)
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.9-beta/nself-0.3.9-beta-1.noarch.rpm
-sudo rpm -i nself-0.3.9-beta-1.noarch.rpm
+wget https://github.com/acamarata/nself/releases/download/v0.3.9/nself-0.3.9-1.noarch.rpm
+sudo rpm -i nself-0.3.9-1.noarch.rpm
 ```
 
 The installer will:
@@ -154,13 +154,13 @@ Choose from 16+ providers:
 The wizard guides you through everything. Example for SendGrid:
 ```bash
 nself email configure sendgrid
-# Add your API key to .env.local
+# Add your API key to .env
 nself build && nself restart
 ```
 
 ### Want to customize?
 
-Edit `.env.local` to enable extras:
+Edit `.env` to enable extras:
 ```bash
 # Core settings at the top
 ENV=dev                         # or 'prod' for production
@@ -185,7 +185,7 @@ nself build && nself restart
 | Manual Nhost Self-hosting | With nself |
 |--------------------------|------------|
 | Hours of configuration | 5 minutes total |
-| Multiple config files | Single `.env.local` |
+| Multiple config files | Single `.env` |
 | Complex networking setup | Automatic service discovery |
 | Manual SSL certificates | Automatic HTTPS everywhere |
 | Separate service installs | One command, all services |
@@ -246,7 +246,7 @@ nself (34 commands)
     └── down          Alias for 'stop'
 ```
 
-## 🎯 Admin Dashboard (v0.3.9-beta)
+## 🎯 Admin Dashboard
 
 ### Web-Based Monitoring Interface
 The new admin dashboard provides complete visibility and control over your nself stack:
@@ -273,7 +273,7 @@ nself admin open
 ## 📚 Documentation
 
 - **[Commands Reference](docs/COMMANDS.md)** - All 34 available commands
-- **[Release Notes](docs/RELEASE-v0.3.9-beta.md)** - v0.3.9-beta features and fixes
+- **[Release Notes](docs/RELEASES.md)** - Latest features and fixes
 - **[Roadmap](docs/ROADMAP.md)** - Development roadmap and upcoming features
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
@@ -302,7 +302,7 @@ When using the default `local.nself.org` domain:
 - **Storage Console**: https://storage-console.local.nself.org
 - **Functions** (if enabled): https://functions.local.nself.org
 - **Email** (development): https://mail.local.nself.org - MailPit email viewer
-- **Admin UI** (v0.3.9-beta): http://localhost:3100 - Admin dashboard
+- **Admin UI**: http://localhost:3100 - Admin dashboard
 - **Dashboard** (if enabled): https://dashboard.local.nself.org
 
 All `*.nself.org` domains resolve to `127.0.0.1` for local development.
@@ -312,7 +312,7 @@ All `*.nself.org` domains resolve to `127.0.0.1` for local development.
 The included hello world example shows all services working together:
 
 ```bash
-# Enable all services in .env.local
+# Enable all services in .env
 SERVICES_ENABLED=true
 REDIS_ENABLED=true
 NESTJS_ENABLED=true
@@ -383,7 +383,7 @@ That's it! Your browser will show green locks for:
 For teams or CI/CD, get globally-trusted certificates (no `nself trust` needed):
 
 ```bash
-# Add to .env.local
+# Add to .env
 DNS_PROVIDER=cloudflare        # or route53, digitalocean
 DNS_API_TOKEN=your_api_token
 
@@ -505,7 +505,7 @@ RCLONE_REMOTE=myremote
 
 **Full Backup includes:**
 - PostgreSQL databases (complete dump)
-- All environment files (.env, .env.local, .env.production)
+- All environment files (.env.dev, .env.staging, .env.prod, .env.secrets, .env)
 - Docker-compose configurations
 - Docker volumes (all project data)
 - SSL certificates
@@ -533,9 +533,12 @@ cp .env.prod-template .env
 nself start
 ```
 
-The system prioritizes `.env` over `.env.local` when both exist:
-- `.env.local` - Base configuration (development defaults)
-- `.env` - Production overrides (only changed values)
+Environment files are loaded in priority order (highest priority last):
+- `.env.dev` - Team defaults (always loaded)
+- `.env.staging` - Staging environment (if ENV=staging)
+- `.env.prod` - Production environment (if ENV=prod)
+- `.env.secrets` - Production secrets (if ENV=prod)
+- `.env` - Local overrides (highest priority)
 
 ### Production Checklist
 1. Set `ENV=prod` (automatically configures security settings)
@@ -551,8 +554,11 @@ After running `nself build`:
 
 ```
 my-backend/
-├── .env.local              # Your configuration
-├── .env                   # Production overrides (optional)
+├── .env.dev               # Team defaults
+├── .env.staging           # Staging environment (optional)
+├── .env.prod              # Production environment (optional)
+├── .env.secrets           # Production secrets (optional)
+├── .env                   # Local configuration (highest priority)
 ├── docker-compose.yml      # Generated Docker Compose file
 ├── nginx/                  # Nginx configuration
 │   ├── nginx.conf
@@ -630,13 +636,13 @@ See [DBTOOLS.md](DBTOOLS.md) for complete database documentation.
 
 To update service configurations:
 
-1. Edit `.env.local`
+1. Edit `.env`
 2. Run `nself build` to regenerate configurations
 3. Run `nself start` to apply changes
 
 ## 🐛 Troubleshooting
 
-### Common Issues (v0.3.9-beta)
+### Common Issues
 
 #### Build command hangs?
 ```bash
@@ -660,7 +666,7 @@ nself status
 Known issue: Auth health check reports unhealthy but service works (port 4001 vs 4000 mismatch).
 
 #### Port conflicts?
-Edit the port numbers in `.env.local` and rebuild.
+Edit the port numbers in `.env` and rebuild.
 
 #### SSL certificate warnings?
 Run `nself trust` to install the root CA and get green locks in your browser. No more warnings!
@@ -673,7 +679,7 @@ nself email test recipient@example.com
 
 ## 🔄 Version History
 
-### v0.3.9-beta (Current)
+### v0.3.9 (Current - Stable Release)
 - ✅ Admin UI with web-based monitoring dashboard
 - ✅ Fixed critical bugs (status, stop, exec commands)  
 - ✅ SMTP email testing implementation

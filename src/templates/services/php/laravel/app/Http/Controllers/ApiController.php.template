@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+
+class ApiController extends Controller
+{
+    private static $startTime;
+    
+    public function __construct()
+    {
+        if (!self::$startTime) {
+            self::$startTime = now();
+        }
+        
+        // Add CORS headers
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization');
+        header('X-Service: {{SERVICE_NAME}}');
+        header('X-Framework: Laravel');
+    }
+    
+    public function root(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Hello from {{SERVICE_NAME}}!',
+            'project' => '{{PROJECT_NAME}}',
+            'framework' => 'Laravel',
+            'version' => app()->version(),
+            'timestamp' => now()->toISOString()
+        ]);
+    }
+    
+    public function info(): JsonResponse
+    {
+        return response()->json([
+            'service' => '{{SERVICE_NAME}}',
+            'environment' => app()->environment(),
+            'domain' => '{{BASE_DOMAIN}}',
+            'uptime' => now()->diffInSeconds(self::$startTime),
+            'version' => '0.1.0',
+            'laravel_version' => app()->version(),
+            'php_version' => PHP_VERSION
+        ]);
+    }
+    
+    public function echo(Request $request): JsonResponse
+    {
+        try {
+            $requestId = Str::uuid();
+            
+            // Validate basic request structure
+            $validated = $request->validate([
+                'message' => 'required|string',
+                'data' => 'sometimes|array'
+            ]);
+            
+            return response()->json([
+                'received' => [
+                    'message' => $validated['message'],
+                    'data' => $validated['data'] ?? []
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $requestId
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Bad Request',
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+                'timestamp' => now()->toISOString()
+            ], 400);
+            
+        } catch (\Exception $e) {
+            \Log::error('Echo endpoint error: ' . $e->getMessage());
+            
+            return response()->json([
+                'error' => 'Internal Server Error',
+                'message' => app()->environment('production') ? 'Something went wrong' : $e->getMessage(),
+                'timestamp' => now()->toISOString()
+            ], 500);
+        }
+    }
+    
+    public function notFound(): JsonResponse
+    {
+        return response()->json([
+            'error' => 'Not Found',
+            'path' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString()
+        ], 404);
+    }
+}

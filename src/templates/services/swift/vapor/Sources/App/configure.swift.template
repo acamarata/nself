@@ -1,0 +1,41 @@
+import Fluent
+import FluentPostgresDriver
+import Vapor
+
+// configures your application
+public func configure(_ app: Application) async throws {
+    
+    // CORS configuration
+    let corsConfiguration = CORSMiddleware.Configuration(
+        allowedOrigin: .all,
+        allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
+        allowedHeaders: [.accept, .authorization, .contentType, .origin, .xRequestedWith, .userAgent]
+    )
+    let cors = CORSMiddleware(configuration: corsConfiguration)
+    app.middleware.use(cors, at: .beginning)
+    
+    // Custom headers middleware
+    app.middleware.use(CustomHeadersMiddleware())
+    
+    // Error handling middleware
+    app.middleware.use(ErrorMiddleware.default(environment: app.environment))
+    
+    // Configure PostgreSQL database (if needed)
+    if let dbURL = Environment.get("DATABASE_URL") {
+        try app.databases.use(.postgres(url: dbURL), as: .psql)
+    }
+    
+    // Register routes
+    try routes(app)
+}
+
+// Custom middleware to add service headers
+struct CustomHeadersMiddleware: Middleware {
+    func respond(to request: Request, chainingTo next: Responder) -> EventLoopFuture<Response> {
+        return next.respond(to: request).map { response in
+            response.headers.add(name: "X-Service", value: "{{SERVICE_NAME}}")
+            response.headers.add(name: "X-Framework", value: "Vapor")
+            return response
+        }
+    }
+}

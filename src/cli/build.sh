@@ -50,7 +50,7 @@ show_build_help() {
   echo ""
   echo "Description:"
   echo "  Generates Docker Compose files, SSL certificates, nginx configuration,"
-  echo "  and all necessary infrastructure based on your .env.local settings."
+  echo "  and all necessary infrastructure based on your .env settings."
   echo ""
   echo "Options:"
   echo "  -f, --force         Force rebuild of all components"
@@ -159,14 +159,18 @@ cmd_build() {
     # Simple validation without timeout issues
     {
       # Quick check for essential variables
-      if [[ ! -f ".env.local" ]]; then
-        echo "VALIDATION_ERRORS=('Missing .env.local file')"
+      if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
+        echo "VALIDATION_ERRORS=('Missing .env or .env.dev file')"
         echo "VALIDATION_WARNINGS=()"
         echo "AUTO_FIXES=()"
       else
         # Load environment and check basics
         set -a
-        source .env.local 2>/dev/null || true
+        if [[ -f ".env" ]]; then
+          source .env 2>/dev/null || true
+        elif [[ -f ".env.dev" ]]; then
+          source .env.dev 2>/dev/null || true
+        fi
         set +a
         
         local errors=()
@@ -210,7 +214,9 @@ cmd_build() {
       # Apply auto-fixes if available
       if [[ ${#AUTO_FIXES[@]} -gt 0 ]] && declare -f apply_all_fixes >/dev/null 2>&1; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Applying auto-fixes..."
-        if apply_all_fixes .env.local "${AUTO_FIXES[@]}" >/dev/null 2>&1; then
+        local env_file=".env"
+        [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+        if apply_all_fixes "$env_file" "${AUTO_FIXES[@]}" >/dev/null 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Applied ${#AUTO_FIXES[@]} auto-fixes                   \n"
         else
           printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Some auto-fixes failed                    \n"
@@ -260,21 +266,27 @@ cmd_build() {
 
   # Check docker-compose.yml
   local needs_compose=false
-  if [[ ! -f "docker-compose.yml" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "docker-compose.yml" ]]; then
+  local env_file=".env"
+  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+  if [[ ! -f "docker-compose.yml" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "docker-compose.yml" ]]; then
     needs_compose=true
     needs_work=true
   fi
 
   # Check nginx configuration
   local needs_nginx=false
-  if [[ ! -f "nginx/nginx.conf" ]] || [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "nginx/conf.d/hasura.conf" ]]; then
+  local env_file=".env"
+  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+  if [[ ! -f "nginx/nginx.conf" ]] || [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]; then
     needs_nginx=true
     needs_work=true
   fi
 
   # Check database initialization
   local needs_db=false
-  if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "postgres/init/01-init.sql" ]]; then
+  local env_file=".env"
+  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+  if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "postgres/init/01-init.sql" ]]; then
     needs_db=true
     needs_work=true
   fi
@@ -416,7 +428,9 @@ EOF
       fi
 
       # Generate Hasura proxy config
-      if [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ ".env.local" -nt "nginx/conf.d/hasura.conf" ]]; then
+      local env_file=".env"
+      [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+      if [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]; then
         cat >nginx/conf.d/hasura.conf <<EOF
 upstream hasura {
     server hasura:8080;
@@ -678,7 +692,7 @@ EOF
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating services...\r"
 
   # Reload environment to ensure we have latest values
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     load_env_with_priority >/dev/null 2>&1 || true
   fi
 

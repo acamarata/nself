@@ -66,30 +66,26 @@ cmd_diff() {
     # No arguments - try to auto-detect files to compare
 
     # Priority 1: Check for .old versions (after reset/backup)
-    if [[ -f ".env.local" ]] && [[ -f ".env.local.old" ]]; then
-      file1=".env.local.old"
-      file2=".env.local"
+    if [[ -f ".env" ]] && [[ -f ".env.old" ]]; then
+      file1=".env.old"
+      file2=".env"
     elif [[ -f ".env" ]] && [[ -f ".env.old" ]]; then
       file1=".env.old"
       file2=".env"
     # Priority 2: Compare different env files
-    elif [[ -f ".env.local" ]] && [[ -f ".env.prod" ]]; then
-      file1=".env.local"
-      file2=".env.prod"
-    elif [[ -f ".env.local" ]] && [[ -f ".env.dev" ]]; then
-      file1=".env.local"
-      file2=".env.dev"
-    elif [[ -f ".env.local" ]] && [[ -f ".env" ]]; then
+    elif [[ -f ".env" ]] && [[ -f ".env.prod" ]]; then
       file1=".env"
-      file2=".env.local"
+      file2=".env.prod"
+    elif [[ -f ".env" ]] && [[ -f ".env.dev" ]]; then
+      file1=".env.dev"
+      file2=".env"
     elif [[ -f ".env.dev" ]] && [[ -f ".env.prod" ]]; then
       file1=".env.dev"
       file2=".env.prod"
     # Priority 3: Compare against defaults if only one env exists
-    elif [[ -f ".env.local" ]] || [[ -f ".env" ]] || [[ -f ".env.dev" ]] || [[ -f ".env.prod" ]]; then
+    elif [[ -f ".env" ]] || [[ -f ".env.dev" ]] || [[ -f ".env.prod" ]]; then
       # Find which env file exists
       local env_file=""
-      [[ -f ".env.local" ]] && env_file=".env.local"
       [[ -f ".env" ]] && env_file=".env"
       [[ -f ".env.dev" ]] && env_file=".env.dev"
       [[ -f ".env.prod" ]] && env_file=".env.prod"
@@ -132,7 +128,7 @@ cmd_diff() {
       log_error "No .old version found for: $file1"
       echo
       echo "Usage:"
-      echo "  ${COLOR_BLUE}nself diff${COLOR_RESET}                    # Auto-detect .env.local vs .env.local.old"
+      echo "  ${COLOR_BLUE}nself diff${COLOR_RESET}                    # Auto-detect .env vs .env.old"
       echo "  ${COLOR_BLUE}nself diff file1 file2${COLOR_RESET}        # Compare two specific files"
       echo
       return 1
@@ -324,15 +320,15 @@ show_diff_help() {
   echo "  file2    Second file to compare (optional)"
   echo
   echo "Automatic detection (when no arguments):"
-  echo "  1. Compares .env.local vs .env.local.old (after reset/backup)"
-  echo "  2. Compares different env files (.env.local vs .env.prod, etc.)"
+  echo "  1. Compares .env vs .env.old (after reset/backup)"
+  echo "  2. Compares different env files (.env vs .env.prod, etc.)"
   echo "  3. Compares single env against defaults if only one exists"
   echo "  4. Shows error if no configuration files found"
   echo
   echo "Examples:"
   echo "  nself diff                          # Auto-detect files to compare"
-  echo "  nself diff .env.local               # Compare with .env.local.old"
-  echo "  nself diff .env.local .env.prod     # Compare local vs production"
+  echo "  nself diff .env               # Compare with .env.old"
+  echo "  nself diff .env .env.prod     # Compare local vs production"
   echo "  nself diff .env.dev .env            # Compare specific files"
   echo
   echo "Features:"

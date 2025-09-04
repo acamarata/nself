@@ -1,0 +1,36 @@
+// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "{{SERVICE_NAME}}",
+    platforms: [
+       .macOS(.v13)
+    ],
+    products: [
+        .executable(name: "App", targets: ["App"]),
+    ],
+    dependencies: [
+        // Vapor framework
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.89.0"),
+        
+        // PostgreSQL driver for Fluent
+        .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.8.0"),
+        
+        // JSON API support
+        .package(url: "https://github.com/vapor/fluent.git", from: "4.8.0"),
+    ],
+    targets: [
+        .executableTarget(
+            name: "App",
+            dependencies: [
+                .product(name: "Fluent", package: "fluent"),
+                .product(name: "FluentPostgresDriver", package: "fluent-postgres-driver"),
+                .product(name: "Vapor", package: "vapor")
+            ]
+        ),
+        .testTarget(name: "AppTests", dependencies: [
+            .target(name: "App"),
+            .product(name: "XCTVapor", package: "vapor"),
+        ])
+    ]
+)

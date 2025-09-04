@@ -1,0 +1,40 @@
+# Multi-stage build for .NET ASP.NET API
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+
+WORKDIR /app
+
+# Copy project file and restore dependencies
+COPY *.csproj ./
+RUN dotnet restore
+
+# Copy source code
+COPY . .
+
+# Build and publish
+RUN dotnet publish -c Release -o out --no-restore
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy published app
+COPY --from=build /app/out .
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -u 1001 -S appuser -G appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
+EXPOSE {{PORT}}
+
+ENTRYPOINT ["dotnet", "{{SERVICE_NAME}}.dll"]

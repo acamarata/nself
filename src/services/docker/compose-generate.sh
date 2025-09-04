@@ -26,13 +26,13 @@ source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
 }
 
 # Load environment safely (without executing JSON values)
-if [ -f ".env.local" ]; then
+if [ -f ".env" ] || [ -f ".env.dev" ]; then
   load_env_with_priority || {
-    log_error "Failed to load .env.local"
+    log_error "Failed to load environment"
     exit 1
   }
 else
-  log_error "No .env.local file found."
+  log_error "No environment file found (.env or .env.dev)."
   exit 1
 fi
 

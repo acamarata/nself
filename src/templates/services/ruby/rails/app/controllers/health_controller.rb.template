@@ -1,0 +1,71 @@
+class HealthController < ApplicationController
+  def show
+    # Perform basic health checks
+    health_status = check_health
+    
+    if health_status[:healthy]
+      render json: {
+        status: "healthy",
+        service: "{{SERVICE_NAME}}",
+        timestamp: Time.current.iso8601,
+        checks: health_status[:checks]
+      }
+    else
+      render json: {
+        status: "unhealthy",
+        service: "{{SERVICE_NAME}}",
+        timestamp: Time.current.iso8601,
+        checks: health_status[:checks]
+      }, status: :service_unavailable
+    end
+  end
+  
+  private
+  
+  def check_health
+    checks = {}
+    healthy = true
+    
+    # Database connectivity check
+    begin
+      ActiveRecord::Base.connection.execute('SELECT 1')
+      checks[:database] = { status: 'healthy', message: 'Connected' }
+    rescue => e
+      checks[:database] = { status: 'unhealthy', message: e.message }
+      healthy = false
+    end
+    
+    # Redis connectivity check (if configured)
+    if defined?(Redis) && ENV['REDIS_URL'].present?
+      begin
+        redis = Redis.new(url: ENV['REDIS_URL'])
+        redis.ping
+        checks[:redis] = { status: 'healthy', message: 'Connected' }
+      rescue => e
+        checks[:redis] = { status: 'unhealthy', message: e.message }
+        healthy = false
+      end
+    end
+    
+    # Memory usage check
+    begin
+      memory_usage = `ps -o pid,vsz,rss -p #{Process.pid}`.split("\n").last.split
+      rss_mb = memory_usage[2].to_i / 1024
+      checks[:memory] = { 
+        status: rss_mb < 1024 ? 'healthy' : 'warning',
+        usage_mb: rss_mb
+      }
+    rescue => e
+      checks[:memory] = { status: 'unknown', message: e.message }
+    end
+    
+    # Application-specific checks can be added here
+    checks[:application] = {
+      status: 'healthy',
+      uptime_seconds: (Time.current - ApplicationController.class_variable_get(:@@start_time)).to_i,
+      rails_env: Rails.env
+    }
+    
+    { healthy: healthy, checks: checks }
+  end
+end

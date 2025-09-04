@@ -1,0 +1,106 @@
+package main
+
+import (
+	"net/http"
+	"os"
+	"time"
+	"context"
+	"os/signal"
+	"syscall"
+	"fmt"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+)
+
+type HealthResponse struct {
+	Status    string `json:"status"`
+	Service   string `json:"service"`
+	Timestamp string `json:"timestamp"`
+}
+
+type InfoResponse struct {
+	Service   string `json:"service"`
+	Project   string `json:"project"`
+	Framework string `json:"framework"`
+	Runtime   string `json:"runtime"`
+	Domain    string `json:"domain"`
+}
+
+func main() {
+	// Create Echo instance
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
+
+	// Health check endpoint
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, HealthResponse{
+			Status:    "healthy",
+			Service:   "{{SERVICE_NAME}}",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+	})
+
+	// Info endpoint
+	e.GET("/api/info", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, InfoResponse{
+			Service:   "{{SERVICE_NAME}}",
+			Project:   "{{PROJECT_NAME}}",
+			Framework: "Echo",
+			Runtime:   "Go",
+			Domain:    "{{BASE_DOMAIN}}",
+		})
+	})
+
+	// Root endpoint
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message":   "Hello from {{SERVICE_NAME}}!",
+			"project":   "{{PROJECT_NAME}}",
+			"framework": "Echo - High performance, minimalist Go web framework",
+			"features":  []string{"fast", "lightweight", "middleware support"},
+		})
+	})
+
+	// Catch all
+	e.Any("/*", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Hello from {{SERVICE_NAME}}!",
+			"path":    c.Request().URL.Path,
+			"method":  c.Request().Method,
+		})
+	})
+
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	// Start server with graceful shutdown
+	go func() {
+		fmt.Printf("🚀 {{SERVICE_NAME}} is running on http://localhost:%s\n", port)
+		fmt.Printf("📍 Health check: http://localhost:%s/health\n", port)
+		if err := e.Start(":" + port); err != nil && err != http.ErrServerClosed {
+			e.Logger.Fatal("shutting down the server")
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	
+	fmt.Println("🛑 Shutting down gracefully...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	}
+	fmt.Println("✅ Server shut down")
+}

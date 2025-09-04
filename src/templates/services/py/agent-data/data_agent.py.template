@@ -1,0 +1,287 @@
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+import pandas as pd
+import numpy as np
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlalchemy import create_engine, text
+import json
+import uvicorn
+
+# Initialize FastAPI
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="Data Analysis Agent service for {{PROJECT_NAME}}",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Database connection (optional)
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@postgres:5432/{{PROJECT_NAME}}"
+)
+
+# Pydantic models
+class QueryRequest(BaseModel):
+    query: str
+    table: Optional[str] = None
+    limit: Optional[int] = 100
+
+class AnalysisRequest(BaseModel):
+    data: List[Dict[str, Any]]
+    operation: str
+    columns: Optional[List[str]] = None
+    group_by: Optional[str] = None
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+    database_connected: bool
+
+# In-memory data store (for demo)
+data_store = {}
+
+def get_db_engine():
+    """Get database engine"""
+    try:
+        engine = create_engine(DATABASE_URL)
+        return engine
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    engine = get_db_engine()
+    db_connected = False
+    
+    if engine:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                db_connected = True
+        except:
+            pass
+    
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat(),
+        database_connected=db_connected
+    )
+
+@app.get("/api/info")
+async def get_info():
+    """Service information endpoint"""
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Pandas + NumPy + SciKit-Learn",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "capabilities": {
+            "data_analysis": True,
+            "sql_queries": True,
+            "file_processing": True,
+            "statistics": True,
+            "machine_learning": True
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Data Analysis Agent - Pandas, NumPy, ML",
+        "endpoints": {
+            "health": "/health",
+            "info": "/api/info",
+            "query": "/api/query",
+            "analyze": "/api/analyze",
+            "upload": "/api/upload"
+        }
+    }
+
+@app.post("/api/query")
+async def execute_query(request: QueryRequest):
+    """Execute SQL query on database"""
+    engine = get_db_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    try:
+        # Read data using pandas
+        df = pd.read_sql_query(request.query, engine)
+        
+        # Limit results
+        if request.limit:
+            df = df.head(request.limit)
+        
+        # Convert to dict
+        result = {
+            "data": df.to_dict(orient="records"),
+            "columns": df.columns.tolist(),
+            "rows": len(df),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Query error: {str(e)}")
+
+@app.post("/api/analyze")
+async def analyze_data(request: AnalysisRequest):
+    """Perform data analysis operations"""
+    try:
+        # Create DataFrame from input data
+        df = pd.DataFrame(request.data)
+        
+        # Select columns if specified
+        if request.columns:
+            df = df[request.columns]
+        
+        result = {}
+        
+        # Perform requested operation
+        if request.operation == "describe":
+            result = df.describe().to_dict()
+        
+        elif request.operation == "correlation":
+            numeric_df = df.select_dtypes(include=[np.number])
+            result = numeric_df.corr().to_dict()
+        
+        elif request.operation == "aggregate":
+            if request.group_by and request.group_by in df.columns:
+                result = df.groupby(request.group_by).agg({
+                    col: ['mean', 'sum', 'count'] 
+                    for col in df.select_dtypes(include=[np.number]).columns
+                }).to_dict()
+            else:
+                result = df.agg({
+                    col: ['mean', 'sum', 'count'] 
+                    for col in df.select_dtypes(include=[np.number]).columns
+                }).to_dict()
+        
+        elif request.operation == "pivot":
+            if len(df.columns) >= 3:
+                result = pd.pivot_table(
+                    df, 
+                    index=df.columns[0], 
+                    columns=df.columns[1], 
+                    values=df.columns[2]
+                ).to_dict()
+            else:
+                result = {"error": "Need at least 3 columns for pivot"}
+        
+        elif request.operation == "outliers":
+            numeric_df = df.select_dtypes(include=[np.number])
+            Q1 = numeric_df.quantile(0.25)
+            Q3 = numeric_df.quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((numeric_df < (Q1 - 1.5 * IQR)) | (numeric_df > (Q3 + 1.5 * IQR)))
+            result = {
+                "outlier_counts": outliers.sum().to_dict(),
+                "outlier_indices": {col: df[outliers[col]].index.tolist() 
+                                   for col in outliers.columns}
+            }
+        
+        else:
+            result = {"error": f"Unknown operation: {request.operation}"}
+        
+        return {
+            "result": result,
+            "operation": request.operation,
+            "rows_processed": len(df),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Analysis error: {str(e)}")
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload and process data file (CSV, JSON, Excel)"""
+    try:
+        # Read file based on extension
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(file.file)
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(file.file)
+        elif file.filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file.file)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format")
+        
+        # Store in memory (use database in production)
+        file_id = f"file_{datetime.utcnow().timestamp()}"
+        data_store[file_id] = df
+        
+        # Basic statistics
+        stats = {
+            "rows": len(df),
+            "columns": len(df.columns),
+            "column_names": df.columns.tolist(),
+            "dtypes": df.dtypes.astype(str).to_dict(),
+            "missing_values": df.isnull().sum().to_dict(),
+            "memory_usage": df.memory_usage().sum()
+        }
+        
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "stats": stats,
+            "preview": df.head(5).to_dict(orient="records"),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Upload error: {str(e)}")
+
+@app.get("/api/data/{file_id}")
+async def get_data(file_id: str, limit: int = 100):
+    """Retrieve uploaded data"""
+    if file_id not in data_store:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    df = data_store[file_id]
+    return {
+        "data": df.head(limit).to_dict(orient="records"),
+        "total_rows": len(df),
+        "returned_rows": min(limit, len(df))
+    }
+
+@app.delete("/api/data/{file_id}")
+async def delete_data(file_id: str):
+    """Delete uploaded data"""
+    if file_id not in data_store:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    del data_store[file_id]
+    return {"status": "deleted", "file_id": file_id}
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"📊 Analysis endpoint: POST http://localhost:{port}/api/analyze")
+    print(f"📁 Upload endpoint: POST http://localhost:{port}/api/upload")
+    print(f"🔍 Query endpoint: POST http://localhost:{port}/api/query")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

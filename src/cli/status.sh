@@ -265,7 +265,7 @@ show_service_overview() {
   fi
 
   # Load environment
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     load_env_with_priority
   fi
 
@@ -402,7 +402,7 @@ show_database_info() {
 
 # Function to show all available service URLs
 show_urls() {
-  if [[ ! -f ".env.local" ]]; then
+  if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
     return
   fi
 
@@ -628,7 +628,7 @@ main() {
   fi
 
   # Load environment
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     load_env_with_priority
   fi
 

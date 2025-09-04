@@ -1,0 +1,85 @@
+# Multi-stage build for PHP Laravel API
+FROM php:8.3-fpm-alpine as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    unzip \
+    libzip-dev \
+    oniguruma-dev \
+    postgresql-dev \
+    && docker-php-ext-install \
+        pdo \
+        pdo_pgsql \
+        zip \
+        mbstring
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Runtime stage
+FROM php:8.3-fpm-alpine
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    nginx \
+    curl \
+    libzip \
+    oniguruma \
+    postgresql-libs \
+    && docker-php-ext-install \
+        pdo \
+        pdo_pgsql \
+        zip \
+        mbstring
+
+# Copy composer and dependencies
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=builder /app/vendor ./vendor
+
+# Copy application code
+COPY . .
+
+# Set proper permissions
+RUN chown -R www-data:www-data /app && \
+    chmod -R 755 /app/storage /app/bootstrap/cache
+
+# Create nginx config
+RUN echo 'server { \
+    listen {{PORT}}; \
+    root /app/public; \
+    index index.php; \
+    location / { \
+        try_files $uri $uri/ /index.php?$query_string; \
+    } \
+    location ~ \.php$ { \
+        fastcgi_pass 127.0.0.1:9000; \
+        fastcgi_index index.php; \
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \
+        include fastcgi_params; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
+EXPOSE {{PORT}}
+
+# Start script
+RUN echo '#!/bin/sh\nphp-fpm -D\nnginx -g "daemon off;"' > /start.sh && \
+    chmod +x /start.sh
+
+CMD ["/start.sh"]
