@@ -11,23 +11,24 @@ This directory contains complete documentation for developers, contributors, and
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 🔧 Diagnose and fix common issues
 - **[API.md](API.md)** - 📖 Complete command reference and usage
 - **[ENVIRONMENT_CONFIGURATION.md](ENVIRONMENT_CONFIGURATION.md)** - ⚙️ Configuration guide
+- **[SERVICE_TEMPLATES.md](SERVICE_TEMPLATES.md)** - 🚀 40+ service templates reference (JS/TS, Python, Go, Rust, Java, etc.)
 
 ### Architecture & Design
-- **[ARCHITECTURE.MD](ARCHITECTURE.MD)** - 🏗️ System design, principles, and patterns
-- **[DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD)** - 📁 Complete file organization map
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - 🏗️ System design, principles, and patterns
+- **[DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md)** - 📁 Complete file organization map
 
 ### Development & Operations
-- **[CONTRIBUTING.MD](CONTRIBUTING.MD)** - 🤝 Guidelines for contributing to the project
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - 🤝 Guidelines for contributing to the project
 - **[BACKUP_GUIDE.md](BACKUP_GUIDE.md)** - 💾 Comprehensive backup and restore guide
 - **[ROADMAP.md](ROADMAP.md)** - 🚀 Future development plans
 
 ### Release Management
-- **[RELEASES.MD](RELEASES.MD)** - 📜 Detailed release history
+- **[RELEASES.md](RELEASES.md)** - 📜 Detailed release history
 - **[v0.3.9.md](v0.3.9.md)** - 🎯 Latest release notes (v0.3.9)
 - **[v0.4.0.md](v0.4.0.md)** - 📋 Next major release planning
 
 ### Version History
-- **[CHANGELOG.MD](CHANGELOG.MD)** - 📝 User-facing changelog
+- **[CHANGELOG.md](CHANGELOG.md)** - 📝 User-facing changelog
 
 ## 🎯 Quick Navigation
 

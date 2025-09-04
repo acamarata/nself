@@ -40,7 +40,7 @@ show_init_help() {
   echo "Usage: nself init [OPTIONS]"
   echo ""
   echo "Description:"
-  echo "  Creates a new nself project with .env.local configuration file"
+  echo "  Creates a new nself project with .env configuration file"
   echo "  and .env.example reference documentation. Sets up the foundation"
   echo "  for a full-stack application with smart defaults."
   echo ""
@@ -52,12 +52,12 @@ show_init_help() {
   echo ""
   echo "Examples:"
   echo "  mkdir myproject && cd myproject"
-  echo "  nself init                     # Basic setup (.env.local + .env.example)"
+  echo "  nself init                     # Basic setup (.env + .env.example)"
   echo "  nself init --full              # Complete setup with all env files"
   echo "  nself init --wizard            # Interactive setup wizard"
   echo ""
   echo "Files Created (Basic):"
-  echo "  • .env.local                   # Your personal dev configuration"
+  echo "  • .env                         # Your personal dev configuration"
   echo "  • .env.example                 # Complete reference docs"
   echo "  • .gitignore                   # Security rules"
   echo ""
@@ -70,7 +70,7 @@ show_init_help() {
   echo "  • schema.dbml                  # Example database schema"
   echo ""
   echo "Next Steps:"
-  echo "  1. Edit .env.local (optional - defaults work!)"
+  echo "  1. Edit .env (optional - defaults work!)"
   echo "  2. nself build                 # Generate infrastructure"
   echo "  3. nself start                 # Start services"
   echo ""
@@ -84,7 +84,6 @@ show_init_help() {
 ensure_gitignore() {
   local required_entries=(
     ".env"
-    ".env.local" 
     ".env.secrets"
     "_backup*"
     ".volumes/"
@@ -99,7 +98,7 @@ ensure_gitignore() {
     cat > .gitignore <<EOF
 # Environment files (sensitive)
 .env
-.env.local
+.env
 .env.secrets
 
 # Backup folders from nself reset
@@ -195,8 +194,8 @@ cmd_init() {
   show_command_header "nself init" "Initialize a new full-stack application"
 
   # Check if environment files already exist
-  if [[ -f ".env.local" ]]; then
-    log_warning "Project already initialized (.env.local exists)"
+  if [[ -f ".env" ]]; then
+    log_warning "Project already initialized (.env exists)"
     echo "Use 'nself reset' to start fresh or edit existing files"
     return 0
   fi
@@ -233,7 +232,7 @@ cmd_init() {
   fi
 
   # Verify template files exist
-  if [[ ! -f "$TEMPLATES_DIR/.env.example" ]] || [[ ! -f "$TEMPLATES_DIR/.env.local" ]]; then
+  if [[ ! -f "$TEMPLATES_DIR/.env.example" ]] || [[ ! -f "$TEMPLATES_DIR/.env" ]]; then
     log_error "Template files not found in $TEMPLATES_DIR"
     echo "Please ensure nself is properly installed"
     return 1
@@ -243,8 +242,8 @@ cmd_init() {
   cp "$TEMPLATES_DIR/.env.example" .env.example
   echo "${GREEN}✓${RESET} Created .env.example (exhaustive reference documentation)"
   
-  cp "$TEMPLATES_DIR/.env.local" .env.local
-  echo "${GREEN}✓${RESET} Created .env.local (your personal development config)"
+  cp "$TEMPLATES_DIR/.env" .env
+  echo "${GREEN}✓${RESET} Created .env (your personal development config)"
   
   # Full setup - copy additional files
   if [[ "$full_setup" == true ]]; then
