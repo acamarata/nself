@@ -1,7 +1,7 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Previous (v0.3.8)](#previous-v038) | [Current (v0.3.9)](#current-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-future)
+[Released (v0.3.9)](#released-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-future)
 
 ---
 
@@ -10,146 +10,156 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 
 ---
 
-## Previous (v0.3.8)
-**Status**: ✅ Released and Stable
+## Released (v0.3.9)
+**Status**: ✅ Released | **Release Date**: September 3, 2024
 
-### Features Available Now
-- **PostgreSQL** - Full database with 60+ extensions
-- **Hasura GraphQL** - Instant GraphQL API
-- **Auth Service** - JWT authentication
-- **Storage** - S3-compatible MinIO
-- **Backup System** - S3 support, scheduling, incremental
-- **SSL** - Automatic certificates (mkcert + Let's Encrypt)
-- **Email** - 16+ providers with MailPit for dev
-- **Monitoring** - Prometheus, Grafana, Loki ready
-- **Auto-Fix** - Smart defaults and problem resolution
+### Core Features Available Now
+- **Full Nhost Stack** - PostgreSQL with 60+ extensions, Hasura GraphQL, Auth, Storage
+- **Admin UI** - Web-based monitoring dashboard at localhost:3100
+- **40+ Service Templates** - Production-ready microservice templates across 10 languages
+- **Email System** - 16+ providers with MailPit for dev, SMTP testing
+- **SSL Management** - Automatic certificates with mkcert and Let's Encrypt ready
+- **Backup System** - S3 support, scheduling, incremental backups
+- **Environment Cascade** - Multi-environment configuration (.env, .env.dev, .env.staging, .env.prod)
+- **Auto-Fix System** - Smart defaults and automatic problem resolution
 - **Docker Compose** - Simple container orchestration
+- **Custom Services (CS_N)** - Easy microservice configuration pattern
 
-### Available Commands
-init, build, start, stop, restart, status, logs, backup (10 subcommands), db, email, ssl, doctor, validate, exec, scale, metrics, clean, diff, reset, rollback, monitor, scaffold, hot_reload, update, version, help, urls, prod, trust
+### Service Templates (40 Total)
+- **JavaScript/TypeScript (19)**: Node.js, Express, Fastify, NestJS, Hono, Socket.IO, BullMQ, Temporal, Bun, Deno, tRPC
+- **Python (7)**: Flask, FastAPI, Django REST, Celery, Ray, AI Agents
+- **Go (4)**: Gin, Echo, Fiber, gRPC  
+- **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
 
-[View Changelog →](./CHANGELOG.md)
+### Available Commands (39 Total)
+admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help, init, logs, metrics, mlflow, monitor, prod, reset, restart, rollback, scale, scaffold, search, ssl, start, status, stop, trust, update, urls, validate, version, wizard, up, down
 
----
+### Bug Fixes in v0.3.9
+- Fixed status command hanging issue
+- Fixed stop command compose wrapper
+- Fixed exec command container detection
+- Fixed build command timeout (5 seconds)
+- Fixed email SMTP testing
+- Fixed doctor command function names
+- Fixed init command .env creation
+- Fixed environment loading cascade
+- Fixed display library aliases
 
-## Current (v0.3.9)
-**Status**: ✅ Released | **Release Date**: August 2024
-
-### New Features
-- **Admin UI** - Web-based administration interface
-- **Deploy** - SSH deployment to VPS servers  
-- **Init Wizard** - Interactive setup for new projects
-- **Search** - Enterprise search with 6 engine options
-- **Environment Management** - Multi-environment configuration system
-
-### Admin UI Details
-- Separate Docker container with host mount
-- Next.js + TypeScript + Tailwind (Protocol template)
-- Real-time service monitoring
-- Configuration editor
-- Log streaming
-- Backup management
-
-### Deploy Command Details
-- SSH key authentication
-- Automatic Docker installation
-- Git repository setup
-- Environment compilation (.env.prod + .env.secrets)
-- Let's Encrypt SSL automation
-- GitHub webhook support
-- Supports: DigitalOcean, Linode, Vultr, Hetzner, any Ubuntu/Debian VPS
-
-### Init Wizard Details
-- Project type detection (SaaS, E-commerce, Blog, API)
-- Service recommendations
-- Database setup with owner user
-- Framework detection
-- Sample data generation
-
-### Search Options
-- **PostgreSQL FTS** (Default) - No extra container, built-in
-- **MeiliSearch** - Best search UX, typo-tolerant
-- **Typesense** - Fast instant search
-- **Elasticsearch** - Enterprise standard
-- **OpenSearch** - AWS maintained
-- **Sonic** - Lightweight option
-
-[Full v0.3.9 Documentation →](./v0.3.9.md)
+[View Full Release Notes →](./RELEASES.md)
 
 ---
 
 ## Next (v0.4.0)
-**Status**: 📋 Planned | **Focus**: Polish for Public Release
+**Status**: 📋 Planned | **Target**: Q1 2025  
+**Focus**: Refinement and Polish
 
-### Enhancements to Existing Features
-- **Apps** - Expand routing to full multi-app with DB isolation
-- **Codegen** - Generate TypeScript, React, GraphQL clients
-- **Functions** - Complete edge functions with triggers
-- **Monitor** - Full observability with dashboards
-- **Database** - Performance tools and optimization
-- **Backup** - Multi-cloud destinations (B2, GCS, Azure)
-- **SSL** - Production Let's Encrypt automation
-- **Environment** - Enhanced configuration management
+### Goals
+- **Perfect existing features** - Make everything rock solid
+- **Complete partial implementations** - Finish deploy, search, mlflow commands
+- **Enhanced stability** - More comprehensive testing
+- **Better developer experience** - Improved error messages and documentation
 
-### Apps Enhancement Details
-- Database table prefixing (app1_users, app2_products)
-- Per-app Hasura metadata
-- Isolated GraphQL schemas
-- Cross-app data sharing options
+### Planned Improvements
+- **Deploy Command** - Complete SSH deployment implementation
+  - Automated VPS setup
+  - GitHub webhook integration
+  - Zero-downtime deployments
+  
+- **Search Command** - Finish enterprise search integration
+  - MeiliSearch, Typesense, Elasticsearch support
+  - Auto-indexing from PostgreSQL
+  - Search UI components
+  
+- **MLflow Integration** - ML experiment tracking
+  - Model versioning
+  - Metrics visualization
+  - Integration with Ray
 
-### Codegen Details
-- TypeScript interfaces from schema
-- React hooks with SWR/React Query
-- GraphQL client with full typing
-- OpenAPI 3.0 specifications
-- Watch mode for development
+- **Enhanced Monitoring** - Complete observability
+  - Prometheus + Grafana dashboards
+  - Log aggregation with Loki
+  - Performance metrics
 
-### Functions Enhancement Details
-- Node.js runtime (Python/Deno coming)
-- Hot reload in development
-- Database event triggers
-- Scheduled functions (cron)
-- Webhook endpoints
-
-[Full v0.4.0 Documentation →](./v0.4.0.md)
+- **Production Hardening**
+  - Kubernetes manifests generation
+  - Multi-node PostgreSQL support
+  - Advanced backup strategies
+  - Security scanning
 
 ---
 
 ## Beyond (Future)
-**Status**: 🔮 Future Plans | **Priority Ordered**
+**Status**: 🔮 Future Plans | **Timeline**: 2025+  
+**Focus**: Cloud Management & Enterprise Features
 
-### Cloud & Infrastructure
-- **Cloud Providers** - AWS, GCP, Azure, DigitalOcean integration
-- **Kubernetes** - Manifests, Helm charts, GitOps
-- **Container Registry** - Push to DockerHub, GitHub, ECR
-- **CI/CD** - GitHub Actions, GitLab CI templates
+### Cloud & Deployment
+- **nself deploy** - Complete deployment automation
+  - Multi-environment sync (dev → staging → prod)
+  - Automated rollbacks
+  - Blue-green deployments
+  - GitOps integration
+  
+- **Cloud Providers** - Native integrations
+  - AWS (ECS, RDS, S3)
+  - Google Cloud (GKE, Cloud SQL)
+  - Azure (AKS, PostgreSQL)
+  - DigitalOcean Apps Platform
+  
+- **Container Orchestration**
+  - Kubernetes operators
+  - Helm charts
+  - Docker Swarm mode
+  - Nomad support
 
 ### Enterprise Features
-- **Database Visualizer** - Schema designer and query builder
-- **Email Templates** - HTML templates with MJML
-- **Security** - SSO/SAML, RBAC, audit logging
-- **Advanced Monitoring** - APM, SLO, distributed tracing
-- **Compliance** - HIPAA, SOC2, GDPR templates
+- **Security & Compliance**
+  - SSO/SAML integration
+  - RBAC with fine-grained permissions
+  - Audit logging
+  - HIPAA/SOC2/GDPR compliance templates
+  
+- **Advanced Database**
+  - Multi-region replication
+  - Read replicas
+  - Connection pooling with PgBouncer
+  - Automatic failover
+  
+- **Developer Tools**
+  - Code generation (TypeScript, GraphQL, OpenAPI)
+  - Database migration tools
+  - API testing framework
+  - CI/CD templates
 
-### Scale & Innovation
-- **Global Scale** - Multi-region, edge computing
-- **AI/ML** - Vector databases, LLM support
-- **Templates** - SaaS, E-commerce, Blog starters
-- **Plugins** - Community extensions
-- **nself Cloud** - Optional managed hosting
-- **Marketplace** - Templates and plugins
+### Innovation
+- **AI/ML Platform**
+  - Vector database support (pgvector)
+  - LLM integration helpers
+  - ML model serving
+  - Data pipeline tools
+  
+- **Edge Computing**
+  - Edge function runtime
+  - CDN integration
+  - Global database sync
+  - Offline-first capabilities
+  
+- **nself Cloud** (Optional)
+  - Managed hosting option
+  - One-click deployments
+  - Automatic updates
+  - Enterprise support
 
 ---
 
 ## Development Principles
 
-1. **Simplicity First** - Smart defaults for everything
-2. **No Lock-in** - Standard Docker/PostgreSQL/GraphQL
-3. **Progressive Disclosure** - Advanced features hidden
-4. **Auto-Fix** - Detect and resolve automatically
-5. **Offline-First** - Works without internet
-6. **Type-Safe** - Full TypeScript support
-7. **Secure by Default** - Production-ready security
+1. **Stability First** - Never break existing features
+2. **Smart Defaults** - Everything works out of the box
+3. **No Lock-in** - Standard Docker/PostgreSQL/GraphQL
+4. **Progressive Disclosure** - Advanced features stay hidden
+5. **Auto-Fix** - Detect and resolve problems automatically
+6. **Offline-First** - Works without internet
+7. **Security by Default** - Production-ready security
 
 ---
 
@@ -157,27 +167,26 @@ init, build, start, stop, restart, status, logs, backup (10 subcommands), db, em
 
 | Version | Status | Focus | Timeline |
 |---------|--------|-------|----------|
-| [v0.3.8](#current-v038) | ✅ Released | Core Platform | Available Now |
-| [v0.3.9](#developing-v039) | 🚧 Development | New Features | 5 weeks |
-| [v0.4.0](#pending-v040) | 📋 Planned | Polish & Perfect | Q2 2025 |
-| [Beyond](#beyond-future) | 🔮 Future | Enterprise & Scale | 2025+ |
+| [v0.3.9](#released-v039) | ✅ Released | Service Templates & Admin UI | Available Now |
+| [v0.4.0](#next-v040) | 📋 Planned | Polish & Refinement | Q1 2025 |
+| [Beyond](#beyond-future) | 🔮 Future | Cloud & Enterprise | 2025+ |
 
 ---
 
 ## Contributing
 
-### Priority Areas
-1. Testing v0.3.9 features
-2. Documentation improvements
-3. Cloud provider integrations
-4. Code generators for more languages
-5. Example applications
+### Priority Areas for v0.4.0
+1. Complete partial command implementations (deploy, search, mlflow)
+2. Improve test coverage
+3. Documentation improvements
+4. Bug fixes and stability
+5. Performance optimizations
 
-### Resources
+### How to Contribute
 - **GitHub**: [github.com/acamarata/nself](https://github.com/acamarata/nself)
-- **Discord**: [Join Community](https://discord.gg/nself)
 - **Issues**: [Report Bugs](https://github.com/acamarata/nself/issues)
+- **Testing**: Help test v0.4.0 features in development
 
 ---
 
-*This roadmap is updated regularly based on community feedback. Features may be reprioritized based on user needs.*
+*This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
