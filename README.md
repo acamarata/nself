@@ -31,7 +31,8 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Full Nhost Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
 - **Plus Extras**: Redis, TimescaleDB, PostGIS, pgvector extensions
 - **Email Management**: 16+ providers (SendGrid, AWS SES, Mailgun, etc.) with zero-config dev
-- **Microservices Ready**: Built-in support for NestJS, BullMQ, GoLang, and Python services
+- **40+ Service Templates**: Express, FastAPI, Flask, Gin, Rust, NestJS, Socket.IO, Celery, Ray, and more
+- **Microservices Ready**: Production-ready templates for JS/TS, Python, Go, Rust, Java, C#, Ruby, Elixir, PHP
 - **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
@@ -179,6 +180,38 @@ Then rebuild and restart:
 ```bash
 nself build && nself restart
 ```
+
+## 🚀 Service Templates - 40+ Ready-to-Use Microservices
+
+Add custom backend services with one line:
+
+```bash
+# Enable custom services
+SERVICES_ENABLED=true
+
+# Add microservices (examples)
+CS_1=api:fastapi:3001:/api        # Python FastAPI
+CS_2=auth:nest-ts:3002:/auth      # TypeScript NestJS
+CS_3=jobs:bullmq-ts:3003          # Background jobs
+CS_4=ml:ray:3004:/models          # ML model serving
+CS_5=chat:socketio-ts:3005        # Real-time WebSocket
+```
+
+### Available Templates by Language
+
+- **JavaScript/TypeScript (19)**: Node.js, Express, Fastify, NestJS, Hono, Socket.IO, BullMQ, Temporal, Bun, Deno, tRPC
+- **Python (7)**: Flask, FastAPI, Django REST, Celery, Ray, AI Agents (LLM & Data)
+- **Go (4)**: Gin, Echo, Fiber, gRPC
+- **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
+
+**📖 [View Complete Service Templates Documentation](docs/SERVICE_TEMPLATES.md)**
+
+Every template includes:
+- 🐳 Production Docker setup with multi-stage builds
+- 🛡️ Security headers and CORS configuration  
+- 📊 Health checks and graceful shutdown
+- ⚡ Language-specific optimizations
+- 🔧 Template variables for customization
 
 ## 💪 What You Get vs Manual Setup
 
@@ -772,6 +805,33 @@ nself deploy status    # Check deployment status
 ```
 
 Supports DigitalOcean, Linode, Vultr, Hetzner, and any Ubuntu/Debian VPS.
+
+## 📚 Documentation
+
+### Getting Started
+- **[Installation Guide](docs/EXAMPLES.md#installation)** - Step-by-step installation
+- **[Quick Start Tutorial](docs/EXAMPLES.md#basic-usage)** - Zero to running in 5 minutes
+- **[Configuration Reference](docs/ENVIRONMENT_CONFIGURATION.md)** - Complete `.env` settings guide
+- **[Command Reference](docs/API.md)** - All 35+ CLI commands
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
+
+### Features & Services
+- **[Service Templates](docs/SERVICE_TEMPLATES.md)** - 40+ microservice templates (JS/TS, Python, Go, Rust, Java, etc.)
+- **[Admin Dashboard](docs/EXAMPLES.md#admin-ui)** - Web-based monitoring and management
+- **[Email Setup](docs/EXAMPLES.md#email-configuration)** - 16+ provider configuration
+- **[SSL Certificates](docs/EXAMPLES.md#ssl-setup)** - Automatic HTTPS setup
+- **[Backup System](docs/BACKUP_GUIDE.md)** - Comprehensive backup and restore
+
+### Advanced Topics
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
+- **[Environment Cascade](docs/CONFIG.md)** - Multi-environment configuration
+- **[Directory Structure](docs/DIRECTORY_STRUCTURE.md)** - Complete file organization
+- **[Contributing](docs/CONTRIBUTING.md)** - Development guidelines
+
+### Release Information
+- **[Release Notes](docs/RELEASES.md)** - Complete version history
+- **[Changelog](docs/CHANGELOG.md)** - User-facing changes
+- **[Roadmap](docs/ROADMAP.md)** - Future development plans
 
 ---
 
