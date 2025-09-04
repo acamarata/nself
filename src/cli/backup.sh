@@ -150,7 +150,7 @@ backup_config() {
   log_info "  • Backing up configuration files..."
   
   # Backup environment files
-  for env_file in .env .env.local .env.production; do
+  for env_file in .env .env.dev .env.production; do
     if [[ -f "$env_file" ]]; then
       cp "$env_file" "$config_backup_dir/"
     fi
@@ -363,7 +363,7 @@ restore_config() {
     log_info "  • Restoring configuration files..."
     
     # Backup existing config first
-    for file in .env .env.local .env.production; do
+    for file in .env .env.dev .env.production; do
       if [[ -f "$file" ]]; then
         cp "$file" "${file}.backup-$(date +%Y%m%d_%H%M%S)"
       fi
@@ -888,7 +888,7 @@ backup_cloud_setup() {
       setup_rclone
       ;;
     6)
-      echo "BACKUP_CLOUD_PROVIDER=" >> .env.local
+      echo "BACKUP_CLOUD_PROVIDER=" >> .env
       log_info "Cloud backups disabled"
       ;;
     *)
@@ -923,7 +923,7 @@ setup_s3() {
     [[ -n "$s3_endpoint" ]] && echo "S3_ENDPOINT=$s3_endpoint"
     echo "AWS_ACCESS_KEY_ID=$aws_key"
     echo "AWS_SECRET_ACCESS_KEY=$aws_secret"
-  } >> .env.local
+  } >> .env
   
   log_success "S3 configuration saved"
   echo ""
@@ -953,7 +953,7 @@ setup_dropbox() {
     echo "BACKUP_CLOUD_PROVIDER=dropbox"
     echo "DROPBOX_TOKEN=$dropbox_token"
     echo "DROPBOX_FOLDER=$dropbox_folder"
-  } >> .env.local
+  } >> .env
   
   log_success "Dropbox configuration saved"
   echo ""
@@ -988,7 +988,7 @@ setup_gdrive() {
   {
     echo "BACKUP_CLOUD_PROVIDER=gdrive"
     [[ -n "$gdrive_folder" ]] && echo "GDRIVE_FOLDER_ID=$gdrive_folder"
-  } >> .env.local
+  } >> .env
   
   log_success "Google Drive configuration saved"
 }
@@ -1017,7 +1017,7 @@ setup_onedrive() {
   {
     echo "BACKUP_CLOUD_PROVIDER=onedrive"
     echo "ONEDRIVE_FOLDER=$onedrive_folder"
-  } >> .env.local
+  } >> .env
   
   log_success "OneDrive configuration saved"
 }
@@ -1051,7 +1051,7 @@ setup_rclone() {
     echo "BACKUP_CLOUD_PROVIDER=rclone"
     echo "RCLONE_REMOTE=$rclone_remote"
     echo "RCLONE_PATH=$rclone_path"
-  } >> .env.local
+  } >> .env
   
   log_success "rclone configuration saved"
 }

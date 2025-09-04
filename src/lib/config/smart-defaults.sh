@@ -185,48 +185,73 @@ apply_smart_defaults() {
 
 # Load environment files with proper priority
 load_env_with_defaults() {
-  # IMPORTANT: Strict priority order - only ONE env file is used!
-  # Priority: .env > .env.local > .env.dev > defaults
-
-  # Check for .env first (production - highest priority)
-  if [[ -f ".env" ]]; then
-    set -a
-    source .env
-    set +a
-    # Apply defaults for missing values
-    apply_smart_defaults
-    # STOP - ignore all other env files
-    return
-  fi
-
-  # Check for .env.local (development)
-  if [[ -f ".env.local" ]]; then
-    # Use env.sh utility if available for proper loading
-    if [[ -f "$SCRIPT_DIR/../utils/env.sh" ]]; then
-      source "$SCRIPT_DIR/../utils/env.sh"
-      load_env_with_priority
-    else
+  # Use the proper loading cascade from env.sh if available
+  local script_dir="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+  
+  if [[ -f "$script_dir/../utils/env.sh" ]]; then
+    # Use the canonical env loading function
+    source "$script_dir/../utils/env.sh"
+    load_env_with_priority
+  else
+    # Fallback: implement the same cascade here
+    # Determine current environment (default to dev)
+    local current_env="${ENV:-dev}"
+    
+    # STEP 1: Always load .env.dev as the base (team defaults)
+    if [[ -f ".env.dev" ]]; then
       set -a
-      source .env.local
+      source ".env.dev" 2>/dev/null
+      set +a
+      # Update current_env in case it was set in .env.dev
+      current_env="${ENV:-dev}"
+    fi
+    
+    # STEP 2: Load environment-specific overrides based on ENV
+    case "$current_env" in
+      staging|stage)
+        # For staging: .env.dev -> .env.staging
+        if [[ -f ".env.staging" ]]; then
+          set -a
+          source ".env.staging" 2>/dev/null
+          set +a
+        fi
+        ;;
+      
+      prod|production)
+        # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
+        if [[ -f ".env.staging" ]]; then
+          set -a
+          source ".env.staging" 2>/dev/null
+          set +a
+        fi
+        
+        if [[ -f ".env.prod" ]]; then
+          set -a
+          source ".env.prod" 2>/dev/null
+          set +a
+        fi
+        
+        if [[ -f ".env.secrets" ]]; then
+          set -a
+          source ".env.secrets" 2>/dev/null
+          set +a
+        fi
+        ;;
+      
+      dev|development|*)
+        # For dev or any other env: just .env.dev (already loaded)
+        ;;
+    esac
+    
+    # STEP 3: Load .env as the FINAL override (HIGHEST PRIORITY)
+    if [[ -f ".env" ]]; then
+      set -a
+      source ".env" 2>/dev/null
       set +a
     fi
-    # Apply defaults for missing values
-    apply_smart_defaults
-    # STOP - ignore .env.dev
-    return
   fi
-
-  # Check for .env.dev (team defaults)
-  if [[ -f ".env.dev" ]]; then
-    set -a
-    source .env.dev
-    set +a
-    # Apply defaults for missing values
-    apply_smart_defaults
-    return
-  fi
-
-  # No env files found - use only defaults
+  
+  # Apply smart defaults for any missing values
   apply_smart_defaults
 
   # Re-construct JWT secret if using simple format

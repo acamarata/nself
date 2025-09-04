@@ -1,0 +1,71 @@
+defmodule {{SERVICE_NAME|title}}Web.ApiController do
+  use {{SERVICE_NAME|title}}Web, :controller
+
+  def info(conn, _params) do
+    uptime = :erlang.statistics(:wall_clock) |> elem(0) |> div(1000)
+
+    response = %{
+      service: "{{SERVICE_NAME}}",
+      environment: Application.get_env(:{{SERVICE_NAME}}, :environment, "development"),
+      domain: "{{BASE_DOMAIN}}",
+      uptime: uptime,
+      version: "0.1.0",
+      elixir_version: System.version(),
+      phoenix_version: Application.spec(:phoenix, :vsn) |> List.to_string(),
+      otp_version: :erlang.system_info(:otp_release) |> List.to_string()
+    }
+
+    json(conn, response)
+  end
+
+  def echo(conn, params) do
+    case validate_echo_params(params) do
+      {:ok, validated_params} ->
+        request_id = UUID.uuid4()
+
+        response = %{
+          received: %{
+            message: validated_params["message"],
+            data: Map.get(validated_params, "data", %{})
+          },
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+          request_id: request_id
+        }
+
+        json(conn, response)
+
+      {:error, errors} ->
+        response = %{
+          error: "Bad Request",
+          message: "Validation failed",
+          errors: errors,
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        conn
+        |> put_status(400)
+        |> json(response)
+    end
+  rescue
+    error ->
+      Logger.error("Echo endpoint error: #{inspect(error)}")
+
+      response = %{
+        error: "Internal Server Error",
+        message: "Something went wrong",
+        timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+      }
+
+      conn
+      |> put_status(500)
+      |> json(response)
+  end
+
+  defp validate_echo_params(%{"message" => message} = params) when is_binary(message) do
+    {:ok, params}
+  end
+
+  defp validate_echo_params(_params) do
+    {:error, %{message: ["is required and must be a string"]}}
+  end
+end

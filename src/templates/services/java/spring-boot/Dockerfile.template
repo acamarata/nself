@@ -1,19 +1,45 @@
-FROM openjdk:17-jdk-slim
+# Multi-stage build for Java Spring Boot
+FROM eclipse-temurin:21-jdk-alpine as builder
 
 WORKDIR /app
 
-# Copy application code
-COPY . .
+# Copy Maven files
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
 
-# Create non-root user (adjust for the specific runtime)
-RUN groupadd -r appuser && useradd -r -g appuser appuser || \
-    addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+# Download dependencies (cached layer)
+RUN ./mvnw dependency:go-offline -B
 
-# Change ownership
-RUN chown -R appuser:appuser /app
+# Copy source code
+COPY src ./src
 
+# Build application
+RUN ./mvnw clean package -DskipTests
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy jar from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -u 1001 -S appuser -G appuser
 USER appuser
 
-EXPOSE 8080
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
 
-CMD ["echo", "Configure the start command for spring-boot"]
+EXPOSE {{PORT}}
+
+# JVM options for production
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:+UseStringDeduplication"
+
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

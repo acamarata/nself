@@ -468,9 +468,9 @@ run_config_wizard() {
     return 1
   fi
   
-  # Generate .env.local
+  # Generate .env
   echo ""
-  log_info "Generating .env.local..."
+  log_info "Generating .env..."
   
   {
     echo "# nself Configuration"
@@ -480,7 +480,7 @@ run_config_wizard() {
     for item in "${config[@]}"; do
       echo "$item"
     done
-  } > .env.local
+  } > .env
   
   log_success "Configuration generated successfully!"
   
@@ -508,7 +508,7 @@ run_config_wizard() {
       echo "Hasura Admin Secret: $hasura_secret"
     fi
     echo ""
-    echo "These are saved in .env.local but you may want to store them securely."
+    echo "These are saved in .env but you may want to store them securely."
   fi
 }
 

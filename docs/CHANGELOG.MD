@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.9] - 2025-09-02
+## [0.3.9] - 2025-09-03
 
 ### Added
 - **Admin UI Integration**: Full integration with nself-admin Docker image
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--admin` flag for minimal admin UI setup
   - Automatic .gitignore management
 - **Database Schema Template**: Added schema.dbml with example tables
-- **Service Templates**: Added 25+ service template stubs for various languages
+- **Service Templates**: Added 40 production-ready service templates for various languages and frameworks
 - **Improved Reset Command**: Timestamp-based backup folders (_backup/YYYYMMDD_HHMMSS/)
 
 ### Changed
@@ -53,41 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auth service health check reports unhealthy (service works correctly on port 4001)
 - Some commands may require PROJECT_NAME environment variable
 
-## [0.3.9-beta] - 2025-08-31
-
-### Added
-- **Admin UI Integration**: Full integration with nself-admin Docker image v0.0.3
-  - Web-based monitoring at localhost:3100
-  - Real-time service health checks
-  - Docker container management interface
-  - Database query interface
-  - Log viewer with filtering
-  - Backup management UI
-
-### Fixed
-- **Status Command**: Fixed hanging issue caused by log_debug syntax errors in env.sh
-- **Stop Command**: Fixed compose wrapper function calls replacing eval
-- **Exec Command**: Fixed container detection by adding docker.sh import and environment loading
-- **Build Command**: Added 5-second timeout to prevent validation hangs
-- **Email Command**: Implemented SMTP testing functionality with swaks Docker container
-- **SSL Certificate Generation**: Fixed nginx startup failures due to missing certificates
-- **Container Name Resolution**: Fixed dynamic container naming with PROJECT_NAME variable
-- **Environment Loading**: Removed problematic log_debug calls that caused infinite loops
-
-### Changed
-- Updated all service versions to latest stable releases
-  - PostgreSQL 16 Alpine
-  - Hasura v2.44.0
-  - Nhost Auth v0.36.0
-  - Hasura Storage v0.6.1
-- Improved error handling in multiple commands
-- Enhanced compose wrapper function usage consistency
-
-### Known Issues
-- Auth service health check reports unhealthy (service runs on port 4001, health check expects 4000)
-- Some commands may require PROJECT_NAME environment variable to be set
-
-## [0.3.9] - 2024-08-17
+## [0.3.8] - 2024-08-17
 
 ### Added
 - **Admin UI Integration**: Web-based administration interface

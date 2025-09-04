@@ -1,0 +1,58 @@
+# Multi-stage build for Swift Vapor API
+FROM swift:5.9-jammy as build
+
+WORKDIR /app
+
+# Install system dependencies
+RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true && \
+    apt-get -q update && \
+    apt-get -q dist-upgrade -y && \
+    apt-get -q install -y \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy manifest files
+COPY Package.swift Package.resolved ./
+
+# Fetch dependencies (cached layer)
+RUN swift package resolve --skip-update
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN swift build -c release --static-swift-stdlib
+
+# Runtime stage
+FROM ubuntu:jammy-20231004
+
+# Install runtime dependencies
+RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true && \
+    apt-get -q update && \
+    apt-get -q dist-upgrade -y && \
+    apt-get -q install -y \
+    ca-certificates \
+    tzdata \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built app from builder stage
+COPY --from=build /app/.build/release/App /app/App
+
+# Create non-root user
+RUN useradd --user-group --create-home --system --skel /dev/null --home-dir /app appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+WORKDIR /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
+EXPOSE {{PORT}}
+
+ENTRYPOINT ["./App"]
+CMD ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "{{PORT}}"]

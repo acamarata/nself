@@ -6,10 +6,10 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
-## [v0.3.9-beta] - August 31, 2024
+## [v0.3.9] - September 3, 2024
 
-**Status**: Beta Release  
-**[Full Release Notes](./RELEASE-v0.3.9-beta.md)**
+**Status**: Stable Release  
+**[Full Release Notes](./RELEASE-v0.3.9-final.md)**
 
 ### Highlights
 - 🎯 **Admin UI Integration** - Web-based monitoring dashboard at localhost:3100
@@ -17,10 +17,12 @@ This document provides an index of all nself releases with links to detailed rel
 - 📧 **SMTP Testing** - Email test functionality with swaks
 - ⏱️ **Build Timeout** - 5-second validation timeout prevents hangs
 - 📦 **34 Commands** - All fully functional and tested
+- 🚀 **40+ Service Templates** - Production-ready templates for all major languages
 
 ### Quick Stats
 - 9 bugs fixed
 - 34 commands working
+- 40 service templates
 - 76 library files
 - ~58,000 lines of code
 - Quality score: 9.8/10

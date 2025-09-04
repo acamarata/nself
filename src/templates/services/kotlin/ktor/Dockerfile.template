@@ -1,19 +1,46 @@
-FROM openjdk:17-jdk-slim
+# Multi-stage build for Kotlin Ktor API
+FROM gradle:8.5-jdk21-alpine AS build
 
 WORKDIR /app
 
-# Copy application code
-COPY . .
+# Copy build files
+COPY build.gradle.kts gradle.properties settings.gradle.kts ./
+COPY gradle ./gradle
 
-# Create non-root user (adjust for the specific runtime)
-RUN groupadd -r appuser && useradd -r -g appuser appuser || \
-    addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+# Download dependencies (cached layer)
+RUN gradle dependencies --no-daemon
 
-# Change ownership
-RUN chown -R appuser:appuser /app
+# Copy source code
+COPY src ./src
+
+# Build application
+RUN gradle buildFatJar --no-daemon
+
+# Runtime stage
+FROM openjdk:21-jre-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy JAR from build stage
+COPY --from=build /app/build/libs/*-all.jar app.jar
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -u 1001 -S appuser -G appuser && \
+    chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8080
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:{{PORT}}/health || exit 1
 
-CMD ["echo", "Configure the start command for ktor"]
+EXPOSE {{PORT}}
+
+# JVM options for production
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC"
+
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -1,0 +1,94 @@
+# Docker Compose Override for {{SERVICE_NAME}}
+# 
+# This file shows how your service integrates with nself.
+# It's automatically included in the main docker-compose.yml
+#
+version: '3.8'
+
+services:
+  {{SERVICE_NAME}}:
+    build:
+      context: ./services/{{SERVICE_NAME}}
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}_{{SERVICE_NAME}}
+    restart: unless-stopped
+    environment:
+      # Core environment
+      SERVICE_NAME: {{SERVICE_NAME}}
+      PROJECT_NAME: ${PROJECT_NAME}
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      PORT: {{PORT}}
+      NODE_ENV: ${ENV:-development}
+      
+      # Database connection (if needed)
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
+      # Redis connection (if enabled)
+      REDIS_URL: redis://redis:6379
+      
+      # Hasura connection
+      HASURA_GRAPHQL_URL: http://hasura:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+      
+      # S3/MinIO connection
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${PROJECT_NAME}-storage
+      
+      # Add your custom environment variables here
+      # CUSTOM_VAR: ${CUSTOM_VAR}
+      
+    ports:
+      - "{{PORT}}:{{PORT}}"
+    
+    volumes:
+      # Mount source code for development (optional)
+      # - ./services/{{SERVICE_NAME}}:/app
+      # - /app/node_modules  # Exclude node_modules if using Node.js
+      
+      # Persistent data (optional)
+      # - {{SERVICE_NAME}}_data:/app/data
+    
+    networks:
+      - default
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{PORT}}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Dependencies - wait for these services to be ready
+    depends_on:
+      - postgres
+      # - redis  # Uncomment if using Redis
+      # - hasura  # Uncomment if using Hasura
+      # - minio   # Uncomment if using S3/MinIO
+    
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+# Volumes for persistent data (optional)
+# volumes:
+#   {{SERVICE_NAME}}_data:
+
+# Custom networks (optional - default network is already configured)
+# networks:
+#   default:
+#     external:
+#       name: ${PROJECT_NAME}_default

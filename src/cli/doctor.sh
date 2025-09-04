@@ -211,13 +211,13 @@ check_network() {
 check_nself_config() {
   start_spinner "Checking nself configuration"
 
-  if [[ -f ".env.local" ]]; then
-    stop_spinner "success" ".env.local configuration file found"
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
+    stop_spinner "success" "Configuration file found"
 
     # Load environment safely
     start_spinner "Loading configuration"
     load_env_with_priority || {
-      stop_spinner "error" "Failed to load .env.local - syntax error in configuration"
+      stop_spinner "error" "Failed to load configuration - syntax error"
       issue_found
       return
     }
@@ -256,7 +256,7 @@ check_nself_config() {
     fi
 
   else
-    stop_spinner "error" ".env.local configuration file not found"
+    stop_spinner "error" "Configuration file not found (.env or .env.dev)"
     issue_found
     log_info "Run 'nself init' to create initial configuration"
   fi
@@ -495,8 +495,8 @@ check_service_urls() {
   echo "Service URLs"
   echo "──────────────────────────────────────────────"
 
-  if [[ ! -f ".env.local" ]]; then
-    log_warning "No .env.local found - cannot determine service URLs"
+  if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
+    log_warning "No configuration found - cannot determine service URLs"
     warning_found
     return
   fi
@@ -650,7 +650,7 @@ main() {
   check_ssl
   
   # Check database health if PostgreSQL is configured
-  if [[ -n "${POSTGRES_DB:-}" ]] || [[ -f ".env.local" ]]; then
+  if [[ -n "${POSTGRES_DB:-}" ]] || [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     check_database
   fi
 
@@ -667,7 +667,7 @@ main() {
       log_info "  Start Docker: 'sudo systemctl start docker' (Linux) or start Docker Desktop"
     fi
 
-    if [[ ! -f ".env.local" ]]; then
+    if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
       log_info "  Create config: 'nself init'"
     fi
 

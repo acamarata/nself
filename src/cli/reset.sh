@@ -56,7 +56,7 @@ cmd_reset() {
 
   # Get project name first
   local project="${PROJECT_NAME:-myproject}"
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
     set -a
     load_env_with_priority 2>/dev/null || true
     set +a
@@ -136,7 +136,7 @@ cmd_reset() {
   # Move files to backup
   local backed_up=0
   [[ -f ".env" ]] && mv .env "$backup_dir/.env" && ((backed_up++))
-  [[ -f ".env.local" ]] && mv .env.local "$backup_dir/.env.local" && ((backed_up++))
+  [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
   [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
   [[ -f ".env.staging" ]] && mv .env.staging "$backup_dir/.env.staging" && ((backed_up++))
   [[ -f ".env.prod" ]] && mv .env.prod "$backup_dir/.env.prod" && ((backed_up++))
@@ -315,7 +315,7 @@ cmd_reset() {
   echo
 
   echo -e "${COLOR_BLUE}Restore Previous:${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}mv .env.local.old .env.local${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}mv .env.old .env${COLOR_RESET}"
   echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}"
   echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}"
   echo
