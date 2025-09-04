@@ -79,7 +79,7 @@ jobs:
           test -f .env
           test -f .env.example
           test -f .gitignore
-          grep -q "PROJECT_NAME" .env || echo "PROJECT_NAME not found in .env"
+          grep -q "PROJECT_NAME" .env || echo "Note: PROJECT_NAME is commented in .env (expected)"
           
       - name: Test nself build
         run: |
