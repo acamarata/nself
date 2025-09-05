@@ -4,12 +4,20 @@
 # Provides default values for all configuration options
 # Priority: .env > .env.local > defaults
 
+# Generate a secure random password
+generate_password() {
+  local length="${1:-16}"
+  openssl rand -base64 "$length" | tr -d "=+/" | cut -c1-"$length"
+}
+
 # Apply smart defaults for any missing environment variables
 apply_smart_defaults() {
   # Core Settings
   : ${ENV:=dev}
   : ${PROJECT_NAME:=myproject}
+  : ${PROJECT_DESCRIPTION:=""}
   : ${BASE_DOMAIN:=local.nself.org}
+  : ${ADMIN_EMAIL:=""}
   : ${DB_ENV_SEEDS:=true}
 
   # PostgreSQL
@@ -83,13 +91,38 @@ apply_smart_defaults() {
   : ${NGINX_VERSION:=alpine}
   : ${NGINX_HTTP_PORT:=80}
   : ${NGINX_HTTPS_PORT:=443}
+  : ${NGINX_CLIENT_MAX_BODY_SIZE:=100M}
+  : ${NGINX_GZIP_ENABLED:=true}
+  : ${NGINX_RATE_LIMIT:=""}
 
   # SSL
   : ${SSL_MODE:=local}
 
+  # Service Enable Flags (core services default to true for backward compatibility)
+  : ${POSTGRES_ENABLED:=true}
+  : ${HASURA_ENABLED:=true}
+  : ${AUTH_ENABLED:=true}
+  : ${STORAGE_ENABLED:=true}
+  : ${NSELF_ADMIN_ENABLED:=false}
+  
+  # Map deprecated variable names for backward compatibility
+  if [[ "${NADMIN_ENABLED:-}" == "true" ]]; then
+    NSELF_ADMIN_ENABLED=true
+  fi
+  
+  # Map STORAGE_ENABLED to MINIO for backward compatibility
+  if [[ "$STORAGE_ENABLED" == "true" ]]; then
+    MINIO_ENABLED=true
+  elif [[ "${MINIO_ENABLED:-}" == "true" ]]; then
+    STORAGE_ENABLED=true
+  fi
+  
   # Optional Services (all disabled by default)
   : ${FUNCTIONS_ENABLED:=false}
   : ${FUNCTIONS_ROUTE:=functions.${BASE_DOMAIN}}
+  : ${MLFLOW_ENABLED:=false}
+  : ${MLFLOW_USERNAME:=admin}
+  : ${MLFLOW_PASSWORD:=${ADMIN_PASSWORD:-$(generate_password 16)}}
   : ${DASHBOARD_ENABLED:=false}
   : ${DASHBOARD_VERSION:=latest}
   : ${DASHBOARD_ROUTE:=dashboard.${BASE_DOMAIN}}
@@ -108,6 +141,50 @@ apply_smart_defaults() {
   : ${MLFLOW_AUTH_ENABLED:=false}
   : ${MLFLOW_AUTH_USERNAME:=admin}
   : ${MLFLOW_AUTH_PASSWORD:=mlflow-admin-password}
+  
+  # Search Services Configuration
+  : ${SEARCH_ENABLED:=false}
+  : ${SEARCH_ENGINE:=meilisearch}  # meilisearch, typesense, elasticsearch, opensearch, zinc, sonic
+  
+  # Meilisearch (Default - Best for most use cases)
+  : ${MEILISEARCH_VERSION:=v1.6}
+  : ${MEILISEARCH_PORT:=7700}
+  : ${MEILISEARCH_MASTER_KEY:=meilisearch-master-key-minimum-16-chars}
+  : ${MEILISEARCH_ROUTE:=search.${BASE_DOMAIN}}
+  : ${MEILISEARCH_ENV:=development}
+  
+  # Typesense (High-performance alternative)
+  : ${TYPESENSE_VERSION:=26.0}
+  : ${TYPESENSE_PORT:=8108}
+  : ${TYPESENSE_API_KEY:=typesense-api-key-minimum-32-chars}
+  : ${TYPESENSE_ROUTE:=search.${BASE_DOMAIN}}
+  
+  # Elasticsearch (Industry standard, resource heavy)
+  : ${ELASTICSEARCH_VERSION:=8.11.3}
+  : ${ELASTICSEARCH_PORT:=9200}
+  : ${ELASTICSEARCH_PASSWORD:=elasticsearch-password}
+  : ${ELASTICSEARCH_ROUTE:=search.${BASE_DOMAIN}}
+  : ${ELASTICSEARCH_MEMORY:=1Gi}
+  
+  # OpenSearch (AWS fork of Elasticsearch)
+  : ${OPENSEARCH_VERSION:=2.11.1}
+  : ${OPENSEARCH_PORT:=9200}
+  : ${OPENSEARCH_PASSWORD:=opensearch-password}
+  : ${OPENSEARCH_ROUTE:=search.${BASE_DOMAIN}}
+  : ${OPENSEARCH_MEMORY:=1Gi}
+  
+  # Zinc (Lightweight Elasticsearch alternative in Go)
+  : ${ZINC_VERSION:=0.4.9}
+  : ${ZINC_PORT:=4080}
+  : ${ZINC_ADMIN_USER:=admin}
+  : ${ZINC_ADMIN_PASSWORD:=zinc-admin-password}
+  : ${ZINC_ROUTE:=search.${BASE_DOMAIN}}
+  
+  # Sonic (Ultra-lightweight, schema-less)
+  : ${SONIC_VERSION:=1.4.8}
+  : ${SONIC_PORT:=1491}
+  : ${SONIC_PASSWORD:=sonic-password}
+  : ${SONIC_ROUTE:=search.${BASE_DOMAIN}}
 
   # Email Provider
   : ${EMAIL_PROVIDER:=mailpit}
@@ -143,6 +220,7 @@ apply_smart_defaults() {
   : ${HASURA_PORT:=8080}
   : ${HASURA_CONSOLE_PORT:=9695}
   : ${FUNCTIONS_PORT:=4300}
+  : ${MLFLOW_PORT:=5000}
   : ${DASHBOARD_PORT:=4500}
   : ${STORAGE_PORT:=5001}
   : ${S3_ENDPOINT:=http://minio:${MINIO_PORT}}
@@ -150,7 +228,8 @@ apply_smart_defaults() {
   : ${MAIL_ROUTE:=mail.${BASE_DOMAIN}}
 
   # Export all variables
-  export ENV PROJECT_NAME BASE_DOMAIN DB_ENV_SEEDS
+  export ENV PROJECT_NAME PROJECT_DESCRIPTION BASE_DOMAIN ADMIN_EMAIL DB_ENV_SEEDS
+  export POSTGRES_ENABLED HASURA_ENABLED AUTH_ENABLED STORAGE_ENABLED NSELF_ADMIN_ENABLED MINIO_ENABLED
   export POSTGRES_VERSION POSTGRES_HOST POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_EXTENSIONS
   export HASURA_VERSION HASURA_GRAPHQL_ADMIN_SECRET HASURA_GRAPHQL_JWT_SECRET
   export HASURA_JWT_KEY HASURA_JWT_TYPE
@@ -163,7 +242,7 @@ apply_smart_defaults() {
   export STORAGE_VERSION STORAGE_ROUTE STORAGE_CONSOLE_ROUTE
   export MINIO_VERSION MINIO_PORT MINIO_ROOT_USER MINIO_ROOT_PASSWORD
   export S3_ACCESS_KEY S3_SECRET_KEY S3_BUCKET S3_REGION
-  export NGINX_VERSION NGINX_HTTP_PORT NGINX_HTTPS_PORT
+  export NGINX_VERSION NGINX_HTTP_PORT NGINX_HTTPS_PORT NGINX_CLIENT_MAX_BODY_SIZE NGINX_GZIP_ENABLED NGINX_RATE_LIMIT
   export SSL_MODE
   export FUNCTIONS_ENABLED FUNCTIONS_ROUTE
   export DASHBOARD_ENABLED DASHBOARD_VERSION DASHBOARD_ROUTE
@@ -171,6 +250,13 @@ apply_smart_defaults() {
   export MLFLOW_ENABLED MLFLOW_VERSION MLFLOW_PORT MLFLOW_ROUTE
   export MLFLOW_DB_NAME MLFLOW_ARTIFACTS_BUCKET MLFLOW_AUTH_ENABLED
   export MLFLOW_AUTH_USERNAME MLFLOW_AUTH_PASSWORD
+  export SEARCH_ENABLED SEARCH_ENGINE
+  export MEILISEARCH_VERSION MEILISEARCH_PORT MEILISEARCH_MASTER_KEY MEILISEARCH_ROUTE MEILISEARCH_ENV
+  export TYPESENSE_VERSION TYPESENSE_PORT TYPESENSE_API_KEY TYPESENSE_ROUTE
+  export ELASTICSEARCH_VERSION ELASTICSEARCH_PORT ELASTICSEARCH_PASSWORD ELASTICSEARCH_ROUTE ELASTICSEARCH_MEMORY
+  export OPENSEARCH_VERSION OPENSEARCH_PORT OPENSEARCH_PASSWORD OPENSEARCH_ROUTE OPENSEARCH_MEMORY
+  export ZINC_VERSION ZINC_PORT ZINC_ADMIN_USER ZINC_ADMIN_PASSWORD ZINC_ROUTE
+  export SONIC_VERSION SONIC_PORT SONIC_PASSWORD SONIC_ROUTE
   export EMAIL_PROVIDER MAILPIT_SMTP_PORT MAILPIT_UI_PORT MAILPIT_ROUTE EMAIL_FROM
   export SERVICES_ENABLED
   export NESTJS_ENABLED NESTJS_SERVICES NESTJS_USE_TYPESCRIPT NESTJS_PORT_START
