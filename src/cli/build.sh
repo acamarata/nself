@@ -472,7 +472,39 @@ EOF
     fi
 
     # Configure frontend routes if enabled
-    # FRONTEND_APPS format: "name:short:prefix:port,..."
+    # Support both individual FRONTEND_APP_N_* variables and compact FRONTEND_APPS format
+    
+    # First, check for FRONTEND_APP_COUNT and build FRONTEND_APPS from individual variables
+    if [[ -n "${FRONTEND_APP_COUNT:-}" ]] && [[ "${FRONTEND_APP_COUNT}" -gt 0 ]]; then
+      local apps_config=""
+      for ((i=1; i<=FRONTEND_APP_COUNT; i++)); do
+        local display_name=$(eval echo "\${FRONTEND_APP_${i}_DISPLAY_NAME:-}")
+        local system_name=$(eval echo "\${FRONTEND_APP_${i}_SYSTEM_NAME:-}")
+        local table_prefix=$(eval echo "\${FRONTEND_APP_${i}_TABLE_PREFIX:-}")
+        local port=$(eval echo "\${FRONTEND_APP_${i}_PORT:-}")
+        local route=$(eval echo "\${FRONTEND_APP_${i}_ROUTE:-}")
+        
+        # Skip if no port defined (required for routing)
+        [[ -z "$port" ]] && continue
+        
+        # Build compact format for existing parser
+        # Use system_name or display_name as the name (convert spaces to underscores)
+        local app_name="${system_name:-${display_name// /_}}"
+        [[ -z "$app_name" ]] && app_name="app${i}"
+        
+        # Use route as the short name, or derive from app_name
+        local app_short="${route:-$app_name}"
+        
+        apps_config+="${app_name}:${app_short}:${table_prefix}:${port},"
+      done
+      
+      # Remove trailing comma and set FRONTEND_APPS if we built any config
+      if [[ -n "$apps_config" ]]; then
+        FRONTEND_APPS="${apps_config%,}"
+      fi
+    fi
+    
+    # Now process FRONTEND_APPS (either from individual vars or direct setting)
     if [[ -n "${FRONTEND_APPS:-}" ]]; then
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring frontend routes..."
 
@@ -549,6 +581,40 @@ EOF
           ((apps_updated++))
           CREATED_FILES+=("nginx/conf.d/${app_name}.conf")
         fi
+        
+        # Check if this app has Hasura remote schema configuration
+        # We need to check the original FRONTEND_APP_N variables since they're not in compact format
+        if [[ -n "${FRONTEND_APP_COUNT:-}" ]]; then
+          for ((i=1; i<=FRONTEND_APP_COUNT; i++)); do
+            local check_name=$(eval echo "\${FRONTEND_APP_${i}_SYSTEM_NAME:-}")
+            local check_display=$(eval echo "\${FRONTEND_APP_${i}_DISPLAY_NAME:-}")
+            local check_port=$(eval echo "\${FRONTEND_APP_${i}_PORT:-}")
+            
+            # Match by port since it's unique and required
+            if [[ "$check_port" == "$app_port" ]]; then
+              local remote_schema_name=$(eval echo "\${FRONTEND_APP_${i}_REMOTE_SCHEMA_NAME:-}")
+              local remote_schema_url=$(eval echo "\${FRONTEND_APP_${i}_REMOTE_SCHEMA_URL:-}")
+              
+              if [[ -n "$remote_schema_name" ]] && [[ -n "$remote_schema_url" ]]; then
+                # Create Hasura metadata directory if it doesn't exist
+                mkdir -p hasura/metadata/remote_schemas
+                
+                # Generate remote schema metadata file
+                cat >hasura/metadata/remote_schemas/${remote_schema_name}.yaml <<EOF
+name: ${remote_schema_name}
+definition:
+  url: ${remote_schema_url}
+  timeout_seconds: 60
+  forward_client_headers: true
+EOF
+                echo "    - Added Hasura remote schema: ${remote_schema_name}"
+                CREATED_FILES+=("hasura/metadata/remote_schemas/${remote_schema_name}.yaml")
+              fi
+              break
+            fi
+          done
+        fi
+        
         ((app_count++))
       done
 
@@ -691,10 +757,7 @@ EOF
   # Generate ALL services based on env file (env is king!)
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating services...\r"
 
-  # Reload environment to ensure we have latest values
-  if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
-    load_env_with_priority >/dev/null 2>&1 || true
-  fi
+  # Environment already loaded at start of build process
 
   # Source generators once at the beginning
   local service_gen_loaded=false
@@ -706,7 +769,7 @@ EOF
     log_info() { :; }
     log_success() { :; }
     log_warning() { :; }
-    source "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh"
+    timeout 10 source "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh" || true
     service_gen_loaded=true
   fi
 
@@ -715,20 +778,20 @@ EOF
     log_info() { :; }
     log_success() { :; }
     log_warning() { :; }
-    source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh"
+    timeout 10 source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" || true
     dockerfile_gen_loaded=true
   fi
 
   # Source custom service builder
   # Try v2 builder first (CS_N pattern), fall back to v1
   if [[ -f "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
+    timeout 10 source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
     custom_service_loaded=true
   elif [[ -f "$SCRIPT_DIR/../lib/services/service-builder.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
+    timeout 10 source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
     custom_service_loaded=true
   fi
-
+  
   # Track what we generate
   local total_services_generated=0
   local system_services_generated=0
@@ -745,7 +808,7 @@ EOF
   # Generate custom services if configured
   if [[ "$custom_service_loaded" == "true" ]] && [[ "$has_custom_services" == "true" ]]; then
     # Build custom services and their configurations
-    if build_custom_services >/dev/null 2>&1; then
+    if timeout 15 build_custom_services >/dev/null 2>&1; then
       # Count generated custom services
       if [[ -n "${CS_1:-}" ]]; then
         # Count CS_N services
@@ -768,7 +831,7 @@ EOF
     local before_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
 
     # Generate services silently
-    auto_generate_services "true" >/dev/null 2>&1
+    timeout 15 auto_generate_services "true" >/dev/null 2>&1
 
     # Count services after generation
     local after_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
@@ -781,7 +844,7 @@ EOF
     # Functions service
     if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] && [[ ! -d "functions" ]]; then
       # Use bash -c to ensure proper execution context for heredocs
-      bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
+      timeout 10 bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
       if [[ -d "functions" ]]; then
         ((system_services_generated++))
       fi
@@ -789,7 +852,7 @@ EOF
 
     # Dashboard service
     if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
-      bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
+      timeout 10 bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
       if [[ -d "dashboard" ]]; then
         ((system_services_generated++))
       fi
