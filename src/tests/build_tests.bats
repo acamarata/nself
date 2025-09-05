@@ -8,6 +8,9 @@ setup() {
     # Copy nself to test location
     NSELF_PATH="/Users/admin/Sites/nself"
     export PATH="$NSELF_PATH/bin:$PATH"
+    
+    # Source portable timeout for tests
+    source "$NSELF_PATH/src/lib/utils/timeout.sh"
 }
 
 teardown() {
@@ -21,7 +24,7 @@ teardown() {
     nself init
     
     # Build should complete within 60 seconds (was hanging before)
-    timeout 60 nself build
+    portable_timeout 60 nself build
     
     # Check that key files were created
     [ -f docker-compose.yml ]
@@ -37,7 +40,7 @@ teardown() {
     echo "NSELF_ADMIN_ENABLED=true" >> .env
     
     # Build should not fail with "generate_password: command not found"
-    timeout 60 nself build
+    portable_timeout 60 nself build
     
     # Should create docker-compose without errors
     [ -f docker-compose.yml ]
@@ -49,7 +52,7 @@ teardown() {
     nself init
     
     # Generate compose file should work without hanging
-    timeout 30 nself build
+    portable_timeout 30 nself build
     
     # Check compose file was generated properly
     [ -f docker-compose.yml ]
@@ -66,7 +69,7 @@ teardown() {
     echo "FUNCTIONS_ENABLED=true" >> .env
     
     # Should complete even with service generation enabled
-    timeout 60 nself build
+    portable_timeout 60 nself build
     
     [ -f docker-compose.yml ]
 }
