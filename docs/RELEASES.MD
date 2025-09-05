@@ -6,6 +6,28 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
+## [v0.3.10] - September 5, 2024
+
+**Status**: Current Stable Release  
+**[Full Release Notes](./RELEASE-v0.3.10.md)**
+
+### Highlights
+- 🔍 **Search Services** - 6 self-hosted search engines (Meilisearch, Typesense, Zinc, Elasticsearch, OpenSearch, Sonic)
+- 🎛️ **nself-admin Integration** - Full compatibility with initialization wizard
+- 📚 **Complete Documentation** - Exhaustive environment variable reference
+- 🔧 **Service Enable Flags** - Explicit enable/disable for all services
+- 🌐 **Frontend App Support** - Configure multiple frontend applications
+- 🔄 **Variable Compatibility** - Backward compatibility for renamed variables
+
+### Quick Stats
+- 6 search engines integrated
+- 200+ environment variables documented
+- Full nself-admin compatibility
+- Complete backward compatibility
+- Zero breaking changes
+
+---
+
 ## [v0.3.9] - September 3, 2024
 
 **Status**: Stable Release  

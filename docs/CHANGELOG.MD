@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2025-09-05 (Patch Updates)
+
+### Fixed (Patch)
+- **Build Command**: Fixed docker-compose generation hanging issue
+  - Added timeout protections for service generation scripts
+  - Fixed .env.local sourcing error in compose-generate.sh
+  - Resolved infinite loops in service builder scripts
+- **Smart Defaults**: Added missing `generate_password()` function
+- **Environment Loading**: Fixed recursive environment loading in build process
+- **Service Generation**: Restored functionality with proper timeout handling
+
 ## [0.3.9] - 2025-09-03
 
 ### Added
