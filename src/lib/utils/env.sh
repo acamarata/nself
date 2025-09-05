@@ -102,6 +102,9 @@ load_env_with_priority() {
   #   log_debug "No environment files found, using defaults only"
   # fi
   
+  # Ensure PROJECT_NAME is always set after loading
+  ensure_project_context
+  
   return 0
 }
 
@@ -224,6 +227,41 @@ clear_env_vars_with_prefix() {
   for var in $(get_env_vars_with_prefix "$prefix"); do
     unset "$var"
   done
+}
+
+# Ensure PROJECT_NAME is set with auto-generation if needed
+ensure_project_name() {
+  if [[ -z "${PROJECT_NAME:-}" ]]; then
+    # Try to get from current directory name
+    local dir_name=$(basename "$(pwd)")
+    # Clean it up to be valid (alphanumeric and hyphens only)
+    local clean_name=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//' | sed 's/-*$//')
+    
+    if [[ -z "$clean_name" ]] || [[ "$clean_name" == "." ]] || [[ "$clean_name" == "-" ]]; then
+      clean_name="my-project"
+    fi
+    
+    export PROJECT_NAME="$clean_name"
+    
+    # If we have a .env file, add it there too
+    if [[ -f ".env" ]] && ! grep -q "^PROJECT_NAME=" ".env"; then
+      echo "PROJECT_NAME=$clean_name" >> ".env"
+    fi
+  fi
+}
+
+# Ensure we have a valid project context
+ensure_project_context() {
+  # Ensure PROJECT_NAME is set
+  ensure_project_name
+  
+  # Validate PROJECT_NAME format
+  if [[ ! "$PROJECT_NAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "Warning: PROJECT_NAME '$PROJECT_NAME' contains invalid characters. Using 'my-project' instead."
+    export PROJECT_NAME="my-project"
+  fi
+  
+  return 0
 }
 
 # Load environment for specific service

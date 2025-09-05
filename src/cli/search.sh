@@ -43,7 +43,7 @@ show_search_help() {
 
 # Get search engine info
 get_search_engine_info() {
-  local engine="${1:-postgres}"
+  local engine="${1:-meilisearch}"
   
   case "$engine" in
   postgres)
@@ -54,19 +54,21 @@ get_search_engine_info() {
     echo "  - Resource efficient"
     ;;
   meilisearch)
-    echo "MeiliSearch"
+    echo "Meilisearch"
     echo "  - Lightning fast, typo-tolerant search"
     echo "  - Best developer experience"
     echo "  - Instant search optimized"
     echo "  - Faceted search and filtering"
     echo "  - Recommended for most use cases"
+    echo "  - Port: ${MEILISEARCH_PORT:-7700}"
     ;;
   typesense)
     echo "Typesense"
     echo "  - Fast, typo-tolerant search"
-    echo "  - Similar to MeiliSearch"
-    echo "  - Good alternative option"
+    echo "  - High performance alternative"
+    echo "  - Good for production workloads"
     echo "  - Faceted search support"
+    echo "  - Port: ${TYPESENSE_PORT:-8108}"
     ;;
   elasticsearch)
     echo "Elasticsearch"
@@ -75,21 +77,33 @@ get_search_engine_info() {
     echo "  - Aggregations and analytics"
     echo "  - Resource intensive (2GB+ RAM)"
     echo "  - Best for large-scale applications"
+    echo "  - Port: ${ELASTICSEARCH_PORT:-9200}"
     ;;
   opensearch)
     echo "OpenSearch"
     echo "  - Open source Elasticsearch fork by AWS"
     echo "  - Elasticsearch compatible"
     echo "  - Security features included"
+    echo "  - Includes OpenSearch Dashboards"
     echo "  - Good for AWS deployments"
+    echo "  - Port: ${OPENSEARCH_PORT:-9200}"
+    ;;
+  zinc)
+    echo "Zinc"
+    echo "  - Lightweight Elasticsearch alternative"
+    echo "  - Written in Go, minimal resources"
+    echo "  - Simple REST API"
+    echo "  - Good for logs and metrics"
+    echo "  - Port: ${ZINC_PORT:-4080}"
     ;;
   sonic)
     echo "Sonic"
-    echo "  - Lightweight and fast"
-    echo "  - Minimal resource usage"
+    echo "  - Ultra-lightweight and fast"
+    echo "  - Minimal resource usage (<100MB RAM)"
     echo "  - Best for autocomplete"
-    echo "  - Simple API"
+    echo "  - Simple protocol"
     echo "  - Limited features"
+    echo "  - Port: ${SONIC_PORT:-1491}"
     ;;
   *)
     echo "Unknown search engine: $engine"
@@ -100,15 +114,16 @@ get_search_engine_info() {
 
 # Get default port for search engine
 get_search_engine_port() {
-  local engine="${1:-postgres}"
+  local engine="${1:-meilisearch}"
   
   case "$engine" in
-  postgres) echo "5432" ;;
-  meilisearch) echo "7700" ;;
-  typesense) echo "8108" ;;
-  elasticsearch) echo "9200" ;;
-  opensearch) echo "9200" ;;
-  sonic) echo "1491" ;;
+  postgres) echo "${POSTGRES_PORT:-5432}" ;;
+  meilisearch) echo "${MEILISEARCH_PORT:-7700}" ;;
+  typesense) echo "${TYPESENSE_PORT:-8108}" ;;
+  elasticsearch) echo "${ELASTICSEARCH_PORT:-9200}" ;;
+  opensearch) echo "${OPENSEARCH_PORT:-9200}" ;;
+  zinc) echo "${ZINC_PORT:-4080}" ;;
+  sonic) echo "${SONIC_PORT:-1491}" ;;
   *) echo "7700" ;;
   esac
 }
@@ -125,24 +140,26 @@ search_enable() {
   # If no engine specified, prompt
   if [[ -z "$engine" ]]; then
     echo "Available search engines:"
-    echo "  1) postgres     - PostgreSQL FTS (no extra container)"
-    echo "  2) meilisearch  - Fast, typo-tolerant (recommended)"
-    echo "  3) typesense    - Alternative to MeiliSearch"
+    echo "  1) meilisearch  - Fast, typo-tolerant (RECOMMENDED)"
+    echo "  2) typesense    - High-performance alternative"
+    echo "  3) zinc         - Lightweight Elasticsearch alternative"
     echo "  4) elasticsearch - Most powerful (2GB+ RAM)"
-    echo "  5) opensearch   - Open source Elasticsearch"
-    echo "  6) sonic        - Lightweight autocomplete"
+    echo "  5) opensearch   - Open source Elasticsearch fork"
+    echo "  6) sonic        - Ultra-lightweight autocomplete"
+    echo "  7) postgres     - PostgreSQL FTS (no extra container)"
     echo ""
-    echo -n "Select engine (1-6) [2]: "
+    echo -n "Select engine (1-7) [1]: "
     local choice
     read choice
     
-    case "${choice:-2}" in
-    1) engine="postgres" ;;
-    2) engine="meilisearch" ;;
-    3) engine="typesense" ;;
+    case "${choice:-1}" in
+    1) engine="meilisearch" ;;
+    2) engine="typesense" ;;
+    3) engine="zinc" ;;
     4) engine="elasticsearch" ;;
     5) engine="opensearch" ;;
     6) engine="sonic" ;;
+    7) engine="postgres" ;;
     *)
       log_error "Invalid choice"
       return 1
@@ -152,12 +169,12 @@ search_enable() {
   
   # Validate engine
   case "$engine" in
-  postgres|meilisearch|typesense|elasticsearch|opensearch|sonic)
+  postgres|meilisearch|typesense|elasticsearch|opensearch|zinc|sonic)
     log_info "Enabling search with $engine..."
     ;;
   *)
     log_error "Invalid search engine: $engine"
-    echo "Valid options: postgres, meilisearch, typesense, elasticsearch, opensearch, sonic"
+    echo "Valid options: meilisearch, typesense, zinc, elasticsearch, opensearch, sonic, postgres"
     return 1
     ;;
   esac
@@ -675,6 +692,246 @@ search_config() {
 }
 
 # Show search documentation
+search_configure() {
+  local engine="${1:-}"
+  
+  if [[ -z "$engine" ]]; then
+    log_error "Search engine required"
+    echo "Usage: nself search configure <engine>"
+    echo "Engines: meilisearch, typesense, zinc, elasticsearch, opensearch, sonic"
+    return 1
+  fi
+  
+  show_command_header "Search" "Configuring search engine: $engine"
+  
+  load_env_with_priority
+  
+  # Update .env
+  sed -i.bak "s/^SEARCH_ENGINE=.*/SEARCH_ENGINE=$engine/" .env 2>/dev/null || echo "SEARCH_ENGINE=$engine" >> .env
+  
+  log_success "Search engine configured: $engine"
+  log_info "Rebuild and restart to apply changes:"
+  log_info "  nself build"
+  log_info "  nself restart"
+}
+
+search_clear() {
+  local index="${1:-}"
+  
+  show_command_header "Search" "Clearing search index"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  local port=$(get_search_engine_port "$engine")
+  
+  case "$engine" in
+    meilisearch)
+      if [[ -z "$index" ]]; then
+        curl -X DELETE "http://localhost:$port/indexes" \
+          -H "Authorization: Bearer ${MEILISEARCH_MASTER_KEY}"
+        log_success "All indexes cleared"
+      else
+        curl -X DELETE "http://localhost:$port/indexes/$index" \
+          -H "Authorization: Bearer ${MEILISEARCH_MASTER_KEY}"
+        log_success "Index '$index' cleared"
+      fi
+      ;;
+    *)
+      log_warning "Clear not implemented for $engine"
+      ;;
+  esac
+}
+
+search_import() {
+  local file="${1:-}"
+  
+  if [[ -z "$file" ]] || [[ ! -f "$file" ]]; then
+    log_error "File required: nself search import <file>"
+    return 1
+  fi
+  
+  show_command_header "Search" "Importing data from $file"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  local port=$(get_search_engine_port "$engine")
+  
+  case "$engine" in
+    meilisearch)
+      local index="${2:-documents}"
+      curl -X POST "http://localhost:$port/indexes/$index/documents" \
+        -H "Authorization: Bearer ${MEILISEARCH_MASTER_KEY}" \
+        -H "Content-Type: application/json" \
+        --data-binary "@$file"
+      log_success "Data imported to index '$index'"
+      ;;
+    *)
+      log_warning "Import not implemented for $engine"
+      ;;
+  esac
+}
+
+search_export() {
+  local output="${1:-search-export.json}"
+  
+  show_command_header "Search" "Exporting search data to $output"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  local port=$(get_search_engine_port "$engine")
+  
+  case "$engine" in
+    meilisearch)
+      local indexes=$(curl -s "http://localhost:$port/indexes" \
+        -H "Authorization: Bearer ${MEILISEARCH_MASTER_KEY}" | jq -r '.results[].uid')
+      
+      echo "{" > "$output"
+      local first=true
+      for index in $indexes; do
+        if [[ "$first" != "true" ]]; then echo "," >> "$output"; fi
+        first=false
+        echo "  \"$index\": " >> "$output"
+        curl -s "http://localhost:$port/indexes/$index/documents" \
+          -H "Authorization: Bearer ${MEILISEARCH_MASTER_KEY}" >> "$output"
+      done
+      echo "}" >> "$output"
+      log_success "Data exported to $output"
+      ;;
+    *)
+      log_warning "Export not implemented for $engine"
+      ;;
+  esac
+}
+
+search_dashboard() {
+  show_command_header "Search" "Opening search dashboard"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  local port=$(get_search_engine_port "$engine")
+  local url=""
+  
+  case "$engine" in
+    meilisearch)
+      url="http://localhost:$port"
+      ;;
+    zinc)
+      url="http://localhost:$port"
+      ;;
+    opensearch)
+      url="http://localhost:5601"  # OpenSearch Dashboards
+      ;;
+    *)
+      log_warning "No dashboard available for $engine"
+      return 1
+      ;;
+  esac
+  
+  if [[ -n "$url" ]]; then
+    log_info "Opening dashboard: $url"
+    if command -v open >/dev/null 2>&1; then
+      open "$url"
+    elif command -v xdg-open >/dev/null 2>&1; then
+      xdg-open "$url"
+    else
+      log_info "Please open in browser: $url"
+    fi
+  fi
+}
+
+search_health() {
+  show_command_header "Search" "Checking search service health"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  local port=$(get_search_engine_port "$engine")
+  
+  case "$engine" in
+    meilisearch)
+      if curl -s "http://localhost:$port/health" | grep -q "available"; then
+        log_success "Meilisearch is healthy"
+      else
+        log_error "Meilisearch is unhealthy"
+      fi
+      ;;
+    elasticsearch|opensearch)
+      if curl -s "http://localhost:$port/_cluster/health" | grep -q "green\|yellow"; then
+        log_success "$engine cluster is healthy"
+      else
+        log_error "$engine cluster is unhealthy"
+      fi
+      ;;
+    *)
+      if curl -s "http://localhost:$port" >/dev/null 2>&1; then
+        log_success "$engine is responding"
+      else
+        log_error "$engine is not responding"
+      fi
+      ;;
+  esac
+}
+
+search_logs() {
+  show_command_header "Search" "Viewing search service logs"
+  
+  load_env_with_priority
+  
+  if [[ "${SEARCH_ENABLED:-false}" != "true" ]]; then
+    log_error "Search is not enabled"
+    return 1
+  fi
+  
+  local follow="${1:-}"
+  local engine="${SEARCH_ENGINE:-meilisearch}"
+  
+  # Map engine to container name
+  local container_name="search"
+  case "$engine" in
+    meilisearch) container_name="meilisearch" ;;
+    typesense) container_name="typesense" ;;
+    elasticsearch) container_name="elasticsearch" ;;
+    opensearch) container_name="opensearch" ;;
+    zinc) container_name="zinc" ;;
+    sonic) container_name="sonic" ;;
+  esac
+  
+  if [[ "$follow" == "-f" ]] || [[ "$follow" == "--follow" ]]; then
+    compose logs -f "$container_name"
+  else
+    compose logs --tail=50 "$container_name"
+  fi
+}
+
 search_docs() {
   local engine="${1:-}"
   
@@ -812,6 +1069,9 @@ cmd_search() {
   status)
     search_status "$@"
     ;;
+  configure)
+    search_configure "$@"
+    ;;
   list)
     search_list "$@"
     ;;
@@ -823,6 +1083,24 @@ cmd_search() {
     ;;
   reindex)
     search_reindex "$@"
+    ;;
+  clear)
+    search_clear "$@"
+    ;;
+  import)
+    search_import "$@"
+    ;;
+  export)
+    search_export "$@"
+    ;;
+  dashboard)
+    search_dashboard "$@"
+    ;;
+  health)
+    search_health "$@"
+    ;;
+  logs)
+    search_logs "$@"
     ;;
   config)
     search_config "$@"

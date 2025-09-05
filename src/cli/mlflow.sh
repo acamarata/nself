@@ -1,275 +1,357 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-# mlflow.sh - Manage MLflow ML experiment tracking service
+# mlflow.sh - MLflow ML experiment tracking management
 
-# Source shared utilities (only if not already sourced by wrapper)
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-[[ -z "${ENV_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/utils/env.sh"
-[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/utils/display.sh"
-[[ -z "${DOCKER_UTILS_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/utils/docker.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+set -e
 
-# Load environment with priority
-load_env_with_priority
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Command function
+# Source utilities
+source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/env.sh"
+source "$SCRIPT_DIR/../lib/utils/docker.sh"
+
+# MLflow command
 cmd_mlflow() {
   local subcommand="${1:-status}"
-  shift
-  
+  shift || true
+
   case "$subcommand" in
+    status)
+      mlflow_status
+      ;;
     enable)
-      enable_mlflow "$@"
+      mlflow_enable
       ;;
     disable)
-      disable_mlflow "$@"
+      mlflow_disable
       ;;
-    status)
-      show_mlflow_status "$@"
+    open|ui|dashboard)
+      mlflow_open
       ;;
-    init)
-      init_mlflow "$@"
-      ;;
-    url|urls)
-      show_mlflow_urls "$@"
+    configure)
+      mlflow_configure "$@"
       ;;
     logs)
-      show_mlflow_logs "$@"
+      mlflow_logs "$@"
       ;;
-    restart)
-      restart_mlflow "$@"
+    test)
+      mlflow_test
       ;;
     help|--help|-h)
-      show_mlflow_help
+      mlflow_help
       ;;
     *)
-      echo_error "Unknown mlflow subcommand: $subcommand"
-      show_mlflow_help
-      return 1
+      log_error "Unknown mlflow command: $subcommand"
+      mlflow_help
+      exit 1
       ;;
   esac
 }
 
-# Enable MLflow service
-enable_mlflow() {
-  show_header "Enabling MLflow"
-  
-  # Update .env or .env.local
-  local env_file=".env.local"
-  [[ -f ".env" ]] && env_file=".env"
-  
-  echo_info "Updating $env_file to enable MLflow..."
-  
-  # Check if MLFLOW_ENABLED exists
-  if grep -q "^MLFLOW_ENABLED=" "$env_file" 2>/dev/null; then
-    sed -i.bak 's/^MLFLOW_ENABLED=.*/MLFLOW_ENABLED=true/' "$env_file"
-  else
-    echo "MLFLOW_ENABLED=true" >> "$env_file"
-  fi
-  
-  # Set default auth if not present
-  if ! grep -q "^MLFLOW_AUTH_ENABLED=" "$env_file" 2>/dev/null; then
-    echo "MLFLOW_AUTH_ENABLED=false" >> "$env_file"
-  fi
-  
-  if ! grep -q "^MLFLOW_VERSION=" "$env_file" 2>/dev/null; then
-    echo "MLFLOW_VERSION=2.9.2" >> "$env_file"
-  fi
-  
-  echo_success "MLflow enabled in $env_file"
-  
-  # Rebuild and start
-  echo_info "Rebuilding with MLflow enabled..."
-  "$SCRIPT_DIR/build.sh" || return 1
-  
-  # Initialize MLflow (database and storage)
-  echo_info "Initializing MLflow..."
-  "$SCRIPT_DIR/../services/mlflow/init-mlflow.sh" || return 1
-  
-  # Start services
-  echo_info "Starting services..."
-  "$SCRIPT_DIR/start.sh" || return 1
-  
-  echo_success "MLflow enabled successfully!"
-  show_mlflow_urls
-}
-
-# Disable MLflow service
-disable_mlflow() {
-  show_header "Disabling MLflow"
-  
-  # Update .env or .env.local
-  local env_file=".env.local"
-  [[ -f ".env" ]] && env_file=".env"
-  
-  echo_info "Updating $env_file to disable MLflow..."
-  
-  if grep -q "^MLFLOW_ENABLED=" "$env_file" 2>/dev/null; then
-    sed -i.bak 's/^MLFLOW_ENABLED=.*/MLFLOW_ENABLED=false/' "$env_file"
-  else
-    echo "MLFLOW_ENABLED=false" >> "$env_file"
-  fi
-  
-  echo_success "MLflow disabled in $env_file"
-  
-  # Stop MLflow container if running
-  if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME}-mlflow"; then
-    echo_info "Stopping MLflow container..."
-    docker stop "${PROJECT_NAME}-mlflow-1" 2>/dev/null || true
-    docker rm "${PROJECT_NAME}-mlflow-1" 2>/dev/null || true
-  fi
-  
-  # Rebuild without MLflow
-  echo_info "Rebuilding without MLflow..."
-  "$SCRIPT_DIR/build.sh" || return 1
-  
-  echo_success "MLflow disabled successfully!"
-}
-
 # Show MLflow status
-show_mlflow_status() {
-  show_header "MLflow Status"
+mlflow_status() {
+  show_command_header "MLflow" "Checking MLflow status"
   
-  # Check if enabled
-  local enabled="${MLFLOW_ENABLED:-false}"
-  if [[ "$enabled" == "true" ]]; then
-    echo_success "MLflow is ENABLED"
+  load_env_with_priority
+  ensure_project_context
+  
+  if [[ "${MLFLOW_ENABLED:-false}" != "true" ]]; then
+    log_info "MLflow is disabled"
+    log_info "Enable with: nself mlflow enable"
+    return 0
+  fi
+  
+  if is_service_running "mlflow"; then
+    log_success "MLflow is running"
+    log_info "URL: http://localhost:${MLFLOW_PORT:-5000}"
+    log_info "Username: ${MLFLOW_USERNAME:-admin}"
     
-    # Check container status
-    if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME}-mlflow"; then
-      echo_success "MLflow container is RUNNING"
-      
-      # Show container details
-      echo
-      echo "Container Details:"
-      docker ps --filter "name=${PROJECT_NAME}-mlflow" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-      
-      # Check health
-      echo
-      echo -n "Health Check: "
-      if curl -s -o /dev/null -w "%{http_code}" "http://localhost:${MLFLOW_PORT}/health" | grep -q "200"; then
-        echo_success "HEALTHY"
-      else
-        echo_warning "NOT RESPONDING"
-      fi
-      
-      # Show URLs
-      echo
-      show_mlflow_urls
-      
+    # Check health
+    if curl -s "http://localhost:${MLFLOW_PORT:-5000}/health" >/dev/null 2>&1; then
+      log_success "MLflow is healthy"
     else
-      echo_warning "MLflow container is NOT RUNNING"
-      echo_info "Run 'nself mlflow init' to initialize MLflow"
+      log_warning "MLflow is not responding"
     fi
   else
-    echo_info "MLflow is DISABLED"
-    echo_info "Run 'nself mlflow enable' to enable MLflow"
+    log_warning "MLflow is not running"
+    log_info "Start with: nself start"
   fi
-  
-  # Show configuration
-  echo
-  echo "Configuration:"
-  echo "  Version: ${MLFLOW_VERSION:-2.9.2}"
-  echo "  Port: ${MLFLOW_PORT:-5000}"
-  echo "  Route: ${MLFLOW_ROUTE:-mlflow.${BASE_DOMAIN}}"
-  echo "  Database: ${MLFLOW_DB_NAME:-mlflow}"
-  echo "  Artifacts Bucket: ${MLFLOW_ARTIFACTS_BUCKET:-mlflow-artifacts}"
-  echo "  Authentication: ${MLFLOW_AUTH_ENABLED:-false}"
 }
 
-# Initialize MLflow
-init_mlflow() {
+# Enable MLflow
+mlflow_enable() {
+  show_command_header "MLflow" "Enabling MLflow ML tracking"
+  
+  load_env_with_priority
+  ensure_project_context
+  
+  # Update .env file
+  if grep -q "^MLFLOW_ENABLED=" .env 2>/dev/null; then
+    sed -i.bak 's/^MLFLOW_ENABLED=.*/MLFLOW_ENABLED=true/' .env
+  else
+    echo "MLFLOW_ENABLED=true" >> .env
+  fi
+  
+  # Set credentials if not already set
+  if ! grep -q "^MLFLOW_USERNAME=" .env 2>/dev/null; then
+    echo "MLFLOW_USERNAME=admin" >> .env
+  fi
+  
+  if ! grep -q "^MLFLOW_PASSWORD=" .env 2>/dev/null; then
+    local password=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-16)
+    echo "MLFLOW_PASSWORD=$password" >> .env
+    log_info "Generated MLflow password: $password"
+  fi
+  
+  log_success "MLflow enabled"
+  log_info "Storage and PostgreSQL must be enabled for MLflow to work properly"
+  log_info "Rebuild and restart to apply changes:"
+  log_info "  nself build"
+  log_info "  nself restart"
+}
+
+# Disable MLflow
+mlflow_disable() {
+  show_command_header "MLflow" "Disabling MLflow"
+  
+  load_env_with_priority
+  ensure_project_context
+  
+  # Update .env file
+  if grep -q "^MLFLOW_ENABLED=" .env 2>/dev/null; then
+    sed -i.bak 's/^MLFLOW_ENABLED=.*/MLFLOW_ENABLED=false/' .env
+  else
+    echo "MLFLOW_ENABLED=false" >> .env
+  fi
+  
+  log_success "MLflow disabled"
+  log_info "Rebuild and restart to apply changes:"
+  log_info "  nself build"
+  log_info "  nself restart"
+}
+
+# Open MLflow UI
+mlflow_open() {
+  show_command_header "MLflow" "Opening MLflow UI"
+  
+  load_env_with_priority
+  ensure_project_context
+  
   if [[ "${MLFLOW_ENABLED:-false}" != "true" ]]; then
-    echo_error "MLflow is not enabled. Run 'nself mlflow enable' first."
-    return 1
+    log_error "MLflow is not enabled"
+    exit 1
   fi
   
-  show_header "Initializing MLflow"
-  "$SCRIPT_DIR/../services/mlflow/init-mlflow.sh"
+  if ! is_service_running "mlflow"; then
+    log_error "MLflow is not running"
+    log_info "Start with: nself start"
+    exit 1
+  fi
+  
+  local url="http://localhost:${MLFLOW_PORT:-5000}"
+  log_info "Opening MLflow UI: $url"
+  log_info "Username: ${MLFLOW_USERNAME:-admin}"
+  log_info "Password: ${MLFLOW_PASSWORD:-[check .env file]}"
+  
+  if command -v open >/dev/null 2>&1; then
+    open "$url"
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url"
+  else
+    log_info "Please open in browser: $url"
+  fi
 }
 
-# Show MLflow URLs
-show_mlflow_urls() {
-  echo "MLflow URLs:"
-  echo "  Web UI: https://${MLFLOW_ROUTE:-mlflow.${BASE_DOMAIN}}"
-  echo "  API Endpoint: http://localhost:${MLFLOW_PORT:-5000}"
-  echo "  Tracking URI: postgresql://${POSTGRES_USER}@postgres:5432/${MLFLOW_DB_NAME:-mlflow}"
-  echo "  Artifact Store: s3://${MLFLOW_ARTIFACTS_BUCKET:-mlflow-artifacts}/"
+# Configure MLflow
+mlflow_configure() {
+  local setting="${1:-}"
+  local value="${2:-}"
+  
+  if [[ -z "$setting" ]]; then
+    log_error "Setting required"
+    log_info "Usage: nself mlflow configure <setting> <value>"
+    log_info "Settings: username, password, port"
+    exit 1
+  fi
+  
+  show_command_header "MLflow" "Configuring MLflow: $setting"
+  
+  load_env_with_priority
+  ensure_project_context
+  
+  case "$setting" in
+    username)
+      if [[ -z "$value" ]]; then
+        log_error "Username required"
+        exit 1
+      fi
+      sed -i.bak "s/^MLFLOW_USERNAME=.*/MLFLOW_USERNAME=$value/" .env 2>/dev/null || echo "MLFLOW_USERNAME=$value" >> .env
+      log_success "MLflow username set to: $value"
+      ;;
+    password)
+      if [[ -z "$value" ]]; then
+        value=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-16)
+        log_info "Generated password: $value"
+      fi
+      sed -i.bak "s/^MLFLOW_PASSWORD=.*/MLFLOW_PASSWORD=$value/" .env 2>/dev/null || echo "MLFLOW_PASSWORD=$value" >> .env
+      log_success "MLflow password updated"
+      ;;
+    port)
+      if [[ -z "$value" ]]; then
+        log_error "Port required"
+        exit 1
+      fi
+      sed -i.bak "s/^MLFLOW_PORT=.*/MLFLOW_PORT=$value/" .env 2>/dev/null || echo "MLFLOW_PORT=$value" >> .env
+      log_success "MLflow port set to: $value"
+      ;;
+    *)
+      log_error "Unknown setting: $setting"
+      log_info "Valid settings: username, password, port"
+      exit 1
+      ;;
+  esac
+  
+  log_info "Restart MLflow to apply changes:"
+  log_info "  nself restart mlflow"
 }
 
-# Show MLflow logs
-show_mlflow_logs() {
+# View MLflow logs
+mlflow_logs() {
   local follow="${1:-}"
   
-  if ! docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME}-mlflow"; then
-    echo_error "MLflow container is not running"
-    return 1
-  fi
+  show_command_header "MLflow" "Viewing MLflow logs"
+  
+  load_env_with_priority
+  ensure_project_context
   
   if [[ "$follow" == "-f" ]] || [[ "$follow" == "--follow" ]]; then
-    docker logs -f "${PROJECT_NAME}-mlflow-1"
+    compose logs -f mlflow
   else
-    docker logs --tail 50 "${PROJECT_NAME}-mlflow-1"
+    compose logs --tail=50 mlflow
   fi
 }
 
-# Restart MLflow
-restart_mlflow() {
+# Test MLflow connection
+mlflow_test() {
+  show_command_header "MLflow" "Testing MLflow connection"
+  
+  load_env_with_priority
+  ensure_project_context
+  
   if [[ "${MLFLOW_ENABLED:-false}" != "true" ]]; then
-    echo_error "MLflow is not enabled"
-    return 1
+    log_error "MLflow is not enabled"
+    exit 1
   fi
   
-  show_header "Restarting MLflow"
+  if ! is_service_running "mlflow"; then
+    log_error "MLflow is not running"
+    exit 1
+  fi
   
-  if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME}-mlflow"; then
-    echo_info "Stopping MLflow container..."
-    docker restart "${PROJECT_NAME}-mlflow-1"
-    echo_success "MLflow restarted successfully"
+  log_info "Testing MLflow API..."
+  
+  # Test health endpoint
+  if curl -s "http://localhost:${MLFLOW_PORT:-5000}/health" | grep -q "OK"; then
+    log_success "MLflow health check passed"
   else
-    echo_warning "MLflow container not found. Starting services..."
-    "$SCRIPT_DIR/start.sh"
+    log_error "MLflow health check failed"
+    exit 1
   fi
+  
+  # Test with Python if available
+  if command -v python3 >/dev/null 2>&1; then
+    log_info "Testing Python MLflow client..."
+    python3 -c "
+import sys
+try:
+    import mlflow
+    mlflow.set_tracking_uri('http://localhost:${MLFLOW_PORT:-5000}')
+    # Try to list experiments
+    experiments = mlflow.search_experiments()
+    print(f'Successfully connected. Found {len(experiments)} experiments.')
+    sys.exit(0)
+except ImportError:
+    print('MLflow Python package not installed. Install with: pip install mlflow')
+    sys.exit(1)
+except Exception as e:
+    print(f'Failed to connect: {e}')
+    sys.exit(1)
+" && log_success "Python client test passed" || log_warning "Python client test failed (install mlflow: pip install mlflow)"
+  else
+    log_info "Python not available, skipping client test"
+  fi
+  
+  log_info ""
+  log_info "To use MLflow in your code:"
+  log_info "  Python: mlflow.set_tracking_uri('http://localhost:${MLFLOW_PORT:-5000}')"
+  log_info "  R: mlflow_set_tracking_uri('http://localhost:${MLFLOW_PORT:-5000}')"
+  log_info "  Environment: export MLFLOW_TRACKING_URI=http://localhost:${MLFLOW_PORT:-5000}"
 }
 
-# Show MLflow help
-show_mlflow_help() {
-  show_header "nself mlflow - MLflow ML Experiment Tracking"
-  echo "Usage: nself mlflow <subcommand> [options]"
-  echo
-  echo "Subcommands:"
-  echo "  enable     Enable MLflow service"
-  echo "  disable    Disable MLflow service"
-  echo "  status     Show MLflow status (default)"
-  echo "  init       Initialize MLflow database and storage"
-  echo "  urls       Show MLflow URLs"
-  echo "  logs       Show MLflow container logs"
-  echo "  restart    Restart MLflow container"
-  echo "  help       Show this help message"
-  echo
-  echo "Examples:"
-  echo "  nself mlflow enable        # Enable and start MLflow"
-  echo "  nself mlflow status        # Check MLflow status"
-  echo "  nself mlflow urls          # Show MLflow access URLs"
-  echo "  nself mlflow logs -f       # Follow MLflow logs"
-  echo
-  echo "MLflow provides:"
-  echo "  • Experiment tracking and comparison"
-  echo "  • Model versioning and registry"
-  echo "  • Model deployment and serving"
-  echo "  • Integration with popular ML frameworks"
-  echo
-  echo "Configuration (in .env or .env.local):"
-  echo "  MLFLOW_ENABLED=true                    # Enable MLflow"
-  echo "  MLFLOW_VERSION=2.9.2                    # MLflow version"
-  echo "  MLFLOW_AUTH_ENABLED=true                # Enable authentication"
-  echo "  MLFLOW_AUTH_USERNAME=admin              # Auth username"
-  echo "  MLFLOW_AUTH_PASSWORD=secure-password    # Auth password"
+# Show help
+mlflow_help() {
+  cat <<EOF
+${COLOR_BLUE}nself mlflow${COLOR_RESET} - Manage MLflow ML experiment tracking
+
+${COLOR_YELLOW}Usage:${COLOR_RESET}
+  nself mlflow <command> [options]
+
+${COLOR_YELLOW}Commands:${COLOR_RESET}
+  status              Show MLflow status
+  enable              Enable MLflow service
+  disable             Disable MLflow service
+  open                Open MLflow UI in browser
+  configure <s> <v>   Configure MLflow settings
+  logs [-f]           View MLflow logs
+  test                Test MLflow connection
+  help                Show this help message
+
+${COLOR_YELLOW}Configuration:${COLOR_RESET}
+  nself mlflow configure username <name>   Set username
+  nself mlflow configure password [pass]   Set password
+  nself mlflow configure port <port>       Set port
+
+${COLOR_YELLOW}Examples:${COLOR_RESET}
+  nself mlflow enable                  # Enable MLflow
+  nself mlflow open                    # Open UI
+  nself mlflow configure username ml   # Set username
+  nself mlflow test                    # Test connection
+  nself mlflow logs -f                 # Follow logs
+
+${COLOR_YELLOW}MLflow Features:${COLOR_RESET}
+  - Experiment tracking
+  - Model registry
+  - Model deployment
+  - Artifact storage (MinIO)
+  - Metrics visualization
+  - Parameter tracking
+  - Model versioning
+
+${COLOR_YELLOW}Python Usage:${COLOR_RESET}
+  import mlflow
+  mlflow.set_tracking_uri('http://localhost:5000')
+  
+  with mlflow.start_run():
+      mlflow.log_param("param1", value1)
+      mlflow.log_metric("metric1", value1)
+      mlflow.log_model(model, "model")
+
+${COLOR_YELLOW}Requirements:${COLOR_RESET}
+  - PostgreSQL (for backend store)
+  - MinIO/S3 (for artifact storage)
+  - Python with mlflow package (pip install mlflow)
+
+${COLOR_YELLOW}Default Credentials:${COLOR_RESET}
+  Username: admin
+  Password: [auto-generated, check .env]
+  Port: 5000
+
+EOF
 }
 
-# Run command if executed directly
+# Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   cmd_mlflow "$@"
 fi
