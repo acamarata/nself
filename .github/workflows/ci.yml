@@ -33,8 +33,21 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            bash-version: default
+          - os: macos-latest  
+            bash-version: 3.2
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Check Bash version compatibility
+        run: |
+          echo "Bash version: $(bash --version | head -1)"
+          # Verify we have Bash 3.2+ for compatibility
+          bash -c 'echo "Testing Bash compatibility features..."'
+          bash -c '[[ "test" == "test" ]] && echo "✓ [[ ]] syntax works"'
+          bash -c 'echo $BASH_VERSION | grep -E "^[3-9]\.[2-9]|^[4-9]" && echo "✓ Bash version acceptable"'
       
       - name: Setup Bats
         run: |
