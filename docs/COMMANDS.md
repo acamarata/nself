@@ -573,37 +573,52 @@ nself scaffold worker email-processor --language python
 ```
 
 ### nself search
-Manage search service (MeiliSearch, Elasticsearch, etc.).
+Manage search services with 6 different engine options.
 
 ```bash
-nself search <subcommand>
+nself search <subcommand> [options]
 ```
 
 **Subcommands:**
+- `status` - Show search service status
 - `enable` - Enable search service
 - `disable` - Disable search service
-- `status` - Show search status
-- `configure` - Configure search engine
-- `reindex` - Rebuild search index
+- `configure <engine>` - Configure search engine (meilisearch, typesense, zinc, elasticsearch, opensearch, sonic)
+- `reindex [index]` - Rebuild search index
+- `clear [index]` - Clear search index
+- `import` - Import data into search
+- `export` - Export search data
+- `dashboard` - Open search dashboard (if available)
+- `health` - Check search service health
+- `logs` - View search service logs
 
-### nself mlflow
-Manage MLflow ML experiment tracking.
-
-```bash
-nself mlflow <subcommand>
-```
-
-**Subcommands:**
-- `enable` - Enable MLflow service
-- `disable` - Disable MLflow service  
-- `status` - Show MLflow status
-- `open` - Open MLflow UI
-- `configure` - Configure MLflow settings
+**Supported Engines:**
+- `meilisearch` - Fast, typo-tolerant search (default)
+- `typesense` - Lightning-fast, typo-tolerant search
+- `zinc` - Lightweight Elasticsearch alternative
+- `elasticsearch` - Industry standard search & analytics
+- `opensearch` - Open-source Elasticsearch fork
+- `sonic` - Ultra-lightweight search
 
 **Examples:**
 ```bash
-nself mlflow enable
-nself mlflow open    # Opens localhost:5000
+nself search status                         # Check current search status
+nself search configure meilisearch          # Switch to Meilisearch
+nself search configure elasticsearch        # Switch to Elasticsearch
+nself search reindex products               # Reindex products
+nself search import --file=data.json        # Import data
+nself search dashboard                      # Open dashboard
+```
+
+**Configuration:**
+Set in `.env`:
+```bash
+SEARCH_ENABLED=true
+SEARCH_ENGINE=meilisearch  # or typesense, zinc, elasticsearch, opensearch, sonic
+```
+
+See [SEARCH.md](./SEARCH.md) for complete search documentation.
+
 ```
 
 ### nself up

@@ -14,9 +14,15 @@ source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 
-# Backup configuration
+# Backup configuration - Support both old and new naming for backward compatibility
+BACKUP_ENABLED="${BACKUP_ENABLED:-${DB_BACKUP_ENABLED:-false}}"
+BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-${DB_BACKUP_SCHEDULE:-}}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-${DB_BACKUP_RETENTION_DAYS:-30}}"
+BACKUP_STORAGE="${BACKUP_STORAGE:-${DB_BACKUP_STORAGE:-local}}"
+BACKUP_TYPES="${BACKUP_TYPES:-${DB_BACKUP_TYPES:-database}}"
+BACKUP_COMPRESSION="${BACKUP_COMPRESSION:-${DB_BACKUP_COMPRESSION:-true}}"
+BACKUP_ENCRYPTION="${BACKUP_ENCRYPTION:-${DB_BACKUP_ENCRYPTION:-false}}"
 BACKUP_RETENTION_MIN="${BACKUP_RETENTION_MIN:-3}"  # Minimum backups to keep
 BACKUP_RETENTION_WEEKLY="${BACKUP_RETENTION_WEEKLY:-4}"  # Weekly backups to keep
 BACKUP_RETENTION_MONTHLY="${BACKUP_RETENTION_MONTHLY:-12}"  # Monthly backups to keep
