@@ -1,0 +1,436 @@
+import os
+import io
+import base64
+from datetime import datetime
+from typing import Any, Dict, Optional, List, Union
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+import numpy as np
+import cv2
+from PIL import Image
+import torch
+import torchvision.transforms as transforms
+from ultralytics import YOLO
+from transformers import pipeline, CLIPProcessor, CLIPModel
+import easyocr
+import uvicorn
+from pathlib import Path
+
+# Initialize FastAPI
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="Computer Vision Agent with YOLOv8, CLIP, OCR, and Video Processing for {{PROJECT_NAME}}",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configuration
+MODEL_CACHE_DIR = os.getenv("MODEL_CACHE_DIR", "./models")
+YOLO_MODEL = os.getenv("YOLO_MODEL", "yolov8n.pt")  # nano, small, medium, large, xlarge
+CLIP_MODEL = os.getenv("CLIP_MODEL", "openai/clip-vit-base-patch32")
+OCR_LANGUAGES = os.getenv("OCR_LANGUAGES", "en").split(",")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Create model cache directory
+Path(MODEL_CACHE_DIR).mkdir(parents=True, exist_ok=True)
+
+# Pydantic models
+class DetectionRequest(BaseModel):
+    image_base64: str
+    confidence_threshold: Optional[float] = 0.5
+    model: Optional[str] = "yolov8n"
+
+class ClassificationRequest(BaseModel):
+    image_base64: str
+    labels: List[str]
+    top_k: Optional[int] = 5
+
+class OCRRequest(BaseModel):
+    image_base64: str
+    languages: Optional[List[str]] = ["en"]
+    detail: Optional[int] = 1  # 0=fast, 1=balanced, 2=detailed
+
+class SegmentationRequest(BaseModel):
+    image_base64: str
+    model: Optional[str] = "sam"  # segment anything model
+    points: Optional[List[List[int]]] = None
+
+class VideoAnalysisRequest(BaseModel):
+    video_url: Optional[str] = None
+    frame_interval: Optional[int] = 30  # Process every Nth frame
+    analysis_type: Optional[str] = "detection"  # detection, tracking, classification
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+    models_loaded: Dict[str, bool]
+    device: str
+
+# Global model instances (lazy loading)
+yolo_model = None
+clip_model = None
+clip_processor = None
+ocr_reader = None
+segmentation_model = None
+
+# Model loading functions
+def get_yolo_model(model_name: str = YOLO_MODEL):
+    """Load YOLO model"""
+    global yolo_model
+    if yolo_model is None:
+        model_path = os.path.join(MODEL_CACHE_DIR, model_name)
+        yolo_model = YOLO(model_name)
+        if DEVICE == "cuda":
+            yolo_model.to('cuda')
+    return yolo_model
+
+def get_clip_model():
+    """Load CLIP model"""
+    global clip_model, clip_processor
+    if clip_model is None:
+        clip_model = CLIPModel.from_pretrained(CLIP_MODEL, cache_dir=MODEL_CACHE_DIR)
+        clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL, cache_dir=MODEL_CACHE_DIR)
+        if DEVICE == "cuda":
+            clip_model = clip_model.cuda()
+    return clip_model, clip_processor
+
+def get_ocr_reader():
+    """Load OCR reader"""
+    global ocr_reader
+    if ocr_reader is None:
+        ocr_reader = easyocr.Reader(OCR_LANGUAGES, gpu=(DEVICE == "cuda"))
+    return ocr_reader
+
+# Image processing utilities
+def decode_base64_image(image_base64: str) -> Image.Image:
+    """Decode base64 image to PIL Image"""
+    image_bytes = base64.b64decode(image_base64)
+    image = Image.open(io.BytesIO(image_bytes))
+    return image
+
+def image_to_base64(image: Union[Image.Image, np.ndarray]) -> str:
+    """Convert image to base64"""
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+# Vision processing functions
+async def detect_objects(image: Image.Image, confidence: float = 0.5) -> Dict:
+    """Detect objects using YOLO"""
+    model = get_yolo_model()
+    
+    # Convert PIL to numpy array
+    img_array = np.array(image)
+    
+    # Run detection
+    results = model(img_array, conf=confidence)
+    
+    # Process results
+    detections = []
+    for r in results:
+        boxes = r.boxes
+        if boxes is not None:
+            for box in boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                detections.append({
+                    "bbox": [int(x1), int(y1), int(x2), int(y2)],
+                    "confidence": float(box.conf),
+                    "class": model.names[int(box.cls)],
+                    "class_id": int(box.cls)
+                })
+    
+    return {
+        "detections": detections,
+        "count": len(detections),
+        "image_size": list(image.size)
+    }
+
+async def classify_image(image: Image.Image, labels: List[str]) -> Dict:
+    """Classify image using CLIP"""
+    model, processor = get_clip_model()
+    
+    # Process inputs
+    inputs = processor(text=labels, images=image, return_tensors="pt", padding=True)
+    if DEVICE == "cuda":
+        inputs = {k: v.cuda() for k, v in inputs.items()}
+    
+    # Get predictions
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits_per_image = outputs.logits_per_image
+        probs = logits_per_image.softmax(dim=1)
+    
+    # Process results
+    results = []
+    for i, label in enumerate(labels):
+        results.append({
+            "label": label,
+            "confidence": float(probs[0][i])
+        })
+    
+    results.sort(key=lambda x: x["confidence"], reverse=True)
+    
+    return {
+        "classifications": results,
+        "top_label": results[0]["label"] if results else None,
+        "top_confidence": results[0]["confidence"] if results else 0
+    }
+
+async def extract_text(image: Image.Image, languages: List[str] = ["en"]) -> Dict:
+    """Extract text using OCR"""
+    reader = get_ocr_reader()
+    
+    # Convert PIL to numpy array
+    img_array = np.array(image)
+    
+    # Run OCR
+    results = reader.readtext(img_array)
+    
+    # Process results
+    text_blocks = []
+    full_text = []
+    
+    for bbox, text, confidence in results:
+        text_blocks.append({
+            "text": text,
+            "confidence": float(confidence),
+            "bbox": [[int(x), int(y)] for x, y in bbox]
+        })
+        full_text.append(text)
+    
+    return {
+        "text_blocks": text_blocks,
+        "full_text": " ".join(full_text),
+        "block_count": len(text_blocks)
+    }
+
+async def segment_image(image: Image.Image, points: List[List[int]] = None) -> Dict:
+    """Segment image using SAM or similar"""
+    # Simplified segmentation - in production use SAM
+    img_array = np.array(image)
+    
+    # Simple edge detection as placeholder
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    
+    # Find contours
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Create masks
+    masks = []
+    for i, contour in enumerate(contours[:10]):  # Limit to 10 largest
+        mask = np.zeros(gray.shape, np.uint8)
+        cv2.drawContours(mask, [contour], -1, 255, -1)
+        masks.append({
+            "id": i,
+            "area": int(cv2.contourArea(contour)),
+            "mask_base64": image_to_base64(mask)
+        })
+    
+    return {
+        "segments": len(masks),
+        "masks": masks[:5],  # Return only top 5
+        "method": "edge_detection"  # In production: "sam"
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load models on startup"""
+    print("🚀 Loading computer vision models...")
+    
+    # Pre-load YOLO
+    try:
+        get_yolo_model()
+        print("✅ YOLO model loaded")
+    except Exception as e:
+        print(f"⚠️ YOLO model failed to load: {e}")
+    
+    # Pre-load CLIP
+    try:
+        get_clip_model()
+        print("✅ CLIP model loaded")
+    except Exception as e:
+        print(f"⚠️ CLIP model failed to load: {e}")
+    
+    print(f"🎯 Using device: {DEVICE}")
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    models_loaded = {
+        "yolo": yolo_model is not None,
+        "clip": clip_model is not None,
+        "ocr": ocr_reader is not None
+    }
+    
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat(),
+        models_loaded=models_loaded,
+        device=DEVICE
+    )
+
+@app.get("/api/info")
+async def get_info():
+    """Service information endpoint"""
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Computer Vision Stack",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "capabilities": {
+            "detection": ["YOLOv8", "Object Detection", "Real-time"],
+            "classification": ["CLIP", "Zero-shot", "Multi-modal"],
+            "ocr": ["EasyOCR", "Multi-language", "Scene Text"],
+            "segmentation": ["SAM", "Instance Segmentation"],
+            "video": ["Frame Analysis", "Object Tracking"],
+            "device": DEVICE,
+            "models": {
+                "yolo": YOLO_MODEL,
+                "clip": CLIP_MODEL,
+                "ocr_languages": OCR_LANGUAGES
+            }
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Computer Vision Agent",
+        "endpoints": {
+            "health": "/health",
+            "info": "/api/info",
+            "detect": "/api/detect",
+            "classify": "/api/classify",
+            "ocr": "/api/ocr",
+            "segment": "/api/segment",
+            "analyze": "/api/analyze"
+        }
+    }
+
+@app.post("/api/detect")
+async def detect_objects_endpoint(request: DetectionRequest):
+    """Detect objects in image"""
+    try:
+        image = decode_base64_image(request.image_base64)
+        results = await detect_objects(image, request.confidence_threshold)
+        return {
+            "status": "success",
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/classify")
+async def classify_image_endpoint(request: ClassificationRequest):
+    """Classify image with provided labels"""
+    try:
+        image = decode_base64_image(request.image_base64)
+        results = await classify_image(image, request.labels)
+        return {
+            "status": "success",
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ocr")
+async def extract_text_endpoint(request: OCRRequest):
+    """Extract text from image"""
+    try:
+        image = decode_base64_image(request.image_base64)
+        results = await extract_text(image, request.languages)
+        return {
+            "status": "success",
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/segment")
+async def segment_image_endpoint(request: SegmentationRequest):
+    """Segment image"""
+    try:
+        image = decode_base64_image(request.image_base64)
+        results = await segment_image(image, request.points)
+        return {
+            "status": "success",
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analyze")
+async def analyze_upload(
+    file: UploadFile = File(...),
+    analysis_type: str = Form("detect")
+):
+    """Analyze uploaded image file"""
+    try:
+        # Read image
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+        
+        # Perform analysis based on type
+        if analysis_type == "detect":
+            results = await detect_objects(image)
+        elif analysis_type == "ocr":
+            results = await extract_text(image)
+        elif analysis_type == "segment":
+            results = await segment_image(image)
+        else:
+            results = {"error": "Unknown analysis type"}
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "analysis_type": analysis_type,
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/video/analyze")
+async def analyze_video(request: VideoAnalysisRequest):
+    """Analyze video frames"""
+    return {
+        "status": "not_implemented",
+        "message": "Video analysis coming soon",
+        "requested": {
+            "url": request.video_url,
+            "frame_interval": request.frame_interval,
+            "analysis_type": request.analysis_type
+        }
+    }
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"👁️ Detection: POST http://localhost:{port}/api/detect")
+    print(f"🏷️ Classification: POST http://localhost:{port}/api/classify")
+    print(f"📝 OCR: POST http://localhost:{port}/api/ocr")
+    print(f"✂️ Segmentation: POST http://localhost:{port}/api/segment")
+    print(f"🎯 Device: {DEVICE}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

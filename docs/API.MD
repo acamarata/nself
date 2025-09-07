@@ -1,6 +1,6 @@
 # nself v0.3.9 Command Reference
 
-Complete reference for all nself commands and their options in v0.3.9.
+Complete reference for all 36 nself commands and their options in v0.3.9.
 
 ## Command Overview
 
@@ -8,30 +8,43 @@ Complete reference for all nself commands and their options in v0.3.9.
 nself <command> [options] [arguments]
 ```
 
+**Total Commands:** 36 (including aliases)
+
 ## Core Commands
 
 ### init
 Initialize a new nself project.
 
 ```bash
-nself init [project_name] [domain]
+nself init [options]
 ```
 
-**Arguments:**
-- `project_name` - Project name (default: myproject)
-- `domain` - Base domain (default: localhost)
+**Options:**
+- `--wizard` - Launch interactive setup wizard
+- `--full` - Create all environment files (.env.dev, .env.staging, .env.prod, schema.dbml)
+- `--admin` - Minimal admin UI setup only
+- `-h, --help` - Show help message
 
 **Examples:**
 ```bash
-nself init                    # Initialize with defaults
-nself init myapp              # Custom project name
-nself init myapp example.com  # Custom domain
+nself init                    # Minimal setup with defaults
+nself init --wizard           # Interactive configuration wizard
+nself init --full             # Complete environment setup
+nself init --admin            # Admin UI only setup
 ```
 
-**Creates:**
-- `.env.local` - Environment configuration
-- Project directory structure
-- Default database schema
+**Creates (Default):**
+- `.env.example` - Complete reference documentation
+- `.env.local` - Personal development configuration
+- `.gitignore` - Security ignore rules
+
+**Creates (--full):**
+All default files plus:
+- `.env.dev` - Team-shared development defaults
+- `.env.staging` - Staging environment config
+- `.env.prod` - Production config (non-secrets)
+- `.env.secrets` - Sensitive data template
+- `schema.dbml` - Example database schema
 
 ---
 
@@ -263,22 +276,251 @@ nself prod [--domain] [--ssl] [--passwords]
 ---
 
 ### trust
-Manage SSL certificates.
+Install SSL certificates locally for browser trust.
 
 ```bash
-nself trust [--cert FILE] [--key FILE] [--ca FILE]
+nself trust [options]
 ```
 
 **Options:**
-- `--cert` - Certificate file
-- `--key` - Private key file
-- `--ca` - CA certificate
+- `status` - Check trust status
+- `--force` - Force reinstall
 
 **Features:**
 - Install local CA
-- Generate certificates
-- Trust certificates
-- Verify SSL setup
+- Browser trust configuration
+- Green locks in browsers
+- No certificate warnings
+
+---
+
+### ssl
+SSL certificate management.
+
+```bash
+nself ssl <subcommand> [options]
+```
+
+**Subcommands:**
+- `bootstrap` - Generate SSL certificates
+- `renew` - Renew certificates
+- `status` - Check certificate status
+
+**Options:**
+- `--domain DOMAIN` - Custom domain
+- `--wildcard` - Generate wildcard certificate
+- `--force` - Force regeneration
+
+---
+
+### email
+Email service configuration.
+
+```bash
+nself email <subcommand> [options]
+```
+
+**Subcommands:**
+- `setup` - Interactive email setup wizard
+- `list` - Show 16+ supported providers
+- `configure <provider>` - Configure specific provider
+- `validate` - Check configuration
+- `test [email]` - Send test email
+- `docs <provider>` - Show provider documentation
+
+**Supported Providers:**
+- SendGrid, AWS SES, Mailgun, Postmark
+- Gmail, Office365, Yahoo
+- Postfix, SMTP, MailPit (dev)
+- And 7+ more providers
+
+---
+
+### urls
+Show all service URLs.
+
+```bash
+nself urls [--format FORMAT]
+```
+
+**Options:**
+- `--format` - Output format (text, json, table)
+
+**Shows:**
+- GraphQL API: https://api.local.nself.org
+- Authentication: https://auth.local.nself.org
+- Storage: https://storage.local.nself.org
+- Admin UI: http://localhost:3100
+- All custom service endpoints
+
+---
+
+### exec
+Execute commands in containers.
+
+```bash
+nself exec <service> <command> [args...]
+```
+
+**Arguments:**
+- `service` - Target service
+- `command` - Command to execute
+- `args` - Command arguments
+
+**Examples:**
+```bash
+nself exec postgres psql -U postgres
+nself exec hasura hasura-cli console
+nself exec redis redis-cli
+```
+
+---
+
+### clean
+Clean up Docker resources.
+
+```bash
+nself clean [options]
+```
+
+**Options:**
+- `--all` - Remove all nself containers and volumes
+- `--images` - Remove Docker images
+- `--orphans` - Remove orphaned containers
+- `--system` - Run Docker system prune
+- `--force` - Skip confirmation
+
+## Admin & Monitoring Commands
+
+### admin
+Manage the admin UI dashboard.
+
+```bash
+nself admin <subcommand>
+```
+
+**Subcommands:**
+- `enable` - Enable admin UI (localhost:3100)
+- `disable` - Disable admin UI
+- `password [password]` - Set admin password
+- `open` - Open admin UI in browser
+- `status` - Check admin UI status
+
+**Features:**
+- Real-time service monitoring
+- Docker container management
+- Database query interface
+- Log viewer
+- Configuration editor
+- Backup management
+
+---
+
+### functions
+Manage serverless functions.
+
+```bash
+nself functions <subcommand> [options]
+```
+
+**Subcommands:**
+- `status` - Show functions service status
+- `enable` - Enable serverless functions
+- `disable` - Disable serverless functions
+- `list` - List all deployed functions
+- `create <name>` - Create a new function
+- `delete <name>` - Delete a function
+- `test <name>` - Test a function locally
+- `logs <name>` - View function logs
+- `deploy [name]` - Deploy function(s) to production
+
+**Configuration:**
+- `FUNCTIONS_ENABLED=true` - Enable functions
+- `FUNCTIONS_PORT=3030` - Functions port
+
+---
+
+### mlflow
+Manage MLflow for ML experiment tracking.
+
+```bash
+nself mlflow <subcommand>
+```
+
+**Subcommands:**
+- `status` - Show MLflow service status
+- `enable` - Enable MLflow tracking server
+- `disable` - Disable MLflow tracking server
+- `open` / `ui` / `dashboard` - Open MLflow UI (localhost:5000)
+- `configure` - Configure MLflow settings
+- `logs` - View MLflow service logs
+- `test` - Test MLflow connectivity
+
+**Features:**
+- Experiment tracking
+- Model versioning
+- Model registry
+- Artifact storage
+- Metrics visualization
+- Parameter tracking
+- Integration with Ray
+
+---
+
+### monitor
+Real-time monitoring dashboard.
+
+```bash
+nself monitor [service]
+```
+
+**Arguments:**
+- `service` - Specific service to monitor (optional)
+
+**Shows:**
+- CPU usage
+- Memory usage
+- Network I/O
+- Disk usage
+- Container health
+
+---
+
+### metrics
+Collect and display metrics.
+
+```bash
+nself metrics [--export] [--format FORMAT]
+```
+
+**Options:**
+- `--export` - Export metrics to file
+- `--format` - Output format (json, csv)
+
+---
+
+### search
+Manage search services.
+
+```bash
+nself search <subcommand>
+```
+
+**Subcommands:**
+- `status` - Show search service status
+- `enable` - Enable search service
+- `disable` - Disable search service
+- `configure <engine>` - Configure search engine
+- `reindex [index]` - Rebuild search index
+- `clear [index]` - Clear search index
+
+**Supported Engines:**
+- `meilisearch` - Fast, typo-tolerant search
+- `typesense` - Lightning-fast search
+- `elasticsearch` - Industry standard
+- `opensearch` - Open-source Elasticsearch fork
+- `zinc` - Lightweight alternative
+- `sonic` - Ultra-lightweight search
 
 ## Development Commands
 
@@ -342,6 +584,90 @@ nself reset [--hard] [--keep-data]
 - Removes containers
 - Optionally removes volumes
 - Optionally removes configuration
+- Creates timestamped backup in `_backup/` directory
+
+---
+
+### backup
+Comprehensive backup and restore system.
+
+```bash
+nself backup <subcommand> [options]
+```
+
+**Subcommands:**
+- `create [type]` - Create backup (full, database, config)
+- `restore <file>` - Restore from backup
+- `list` - List all backups
+- `delete <file>` - Delete backup
+- `prune <days>` - Remove old backups
+- `cloud setup` - Configure cloud storage
+- `cloud test` - Test cloud connection
+- `schedule <frequency>` - Schedule automatic backups
+
+**Cloud Providers:**
+- Amazon S3 / MinIO
+- Dropbox
+- Google Drive
+- OneDrive
+- 40+ providers via rclone
+
+---
+
+### deploy
+Deploy to remote servers. *(Partial implementation - full features in v0.4.0)*
+
+```bash
+nself deploy <subcommand> [options]
+```
+
+**Subcommands:**
+- `init` - Initialize deployment configuration
+- `ssh` - Deploy to VPS server via SSH
+- `status` - Check deployment status
+
+**Options:**
+- `--host HOST` - Target host
+- `--user USER` - SSH user
+- `--key PATH` - SSH key path
+- `--dry-run` - Preview deployment
+
+---
+
+### scale
+Scale services up or down.
+
+```bash
+nself scale <service> <replicas>
+```
+
+**Arguments:**
+- `service` - Service to scale
+- `replicas` - Number of replicas
+
+**Examples:**
+```bash
+nself scale hasura 3    # Scale hasura to 3 replicas
+nself scale auth 2      # Scale auth to 2 replicas
+```
+
+---
+
+### rollback
+Rollback to previous version.
+
+```bash
+nself rollback [version]
+```
+
+**Arguments:**
+- `version` - Version to rollback to (optional, defaults to previous)
+
+**Features:**
+- Database rollback
+- Configuration rollback
+- Service rollback
+- Automatic backup before rollback
 
 ## Tool Commands
 

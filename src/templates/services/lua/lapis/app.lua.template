@@ -1,0 +1,124 @@
+local lapis = require("lapis")
+local json = require("cjson")
+local app = lapis.Application()
+
+-- Enable JSON responses
+app:before_filter(function(self)
+  self.res.headers["Content-Type"] = "application/json"
+end)
+
+-- Root endpoint
+app:match("/", function(self)
+  return {
+    json = {
+      message = "Hello from {{SERVICE_NAME}}!",
+      project = "{{PROJECT_NAME}}",
+      framework = "Lapis - OpenResty/nginx Lua Framework",
+      domain = "{{BASE_DOMAIN}}",
+      endpoints = {
+        health = "/health",
+        api = "/api",
+        info = "/api/info",
+        data = "/api/data"
+      }
+    }
+  }
+end)
+
+-- Health check
+app:match("/health", function(self)
+  return {
+    json = {
+      status = "healthy",
+      service = "{{SERVICE_NAME}}",
+      timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+      nginx_version = ngx.var.nginx_version,
+      lua_version = _VERSION
+    }
+  }
+end)
+
+-- Service info
+app:match("/api/info", function(self)
+  return {
+    json = {
+      service = "{{SERVICE_NAME}}",
+      project = "{{PROJECT_NAME}}",
+      runtime = "OpenResty/LuaJIT",
+      framework = "Lapis",
+      capabilities = {
+        performance = "High-performance nginx + LuaJIT",
+        database = "PostgreSQL, MySQL, Redis support",
+        caching = "Built-in nginx caching",
+        websockets = "Native WebSocket support"
+      }
+    }
+  }
+end)
+
+-- Sample data endpoint
+app:match("/api/data", function(self)
+  -- In production, this would query a database
+  local sample_data = {
+    {id = 1, name = "Item 1", value = 100},
+    {id = 2, name = "Item 2", value = 200},
+    {id = 3, name = "Item 3", value = 300}
+  }
+  
+  return {
+    json = {
+      data = sample_data,
+      count = #sample_data,
+      timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }
+  }
+end)
+
+-- POST endpoint example
+app:match("/api/echo", function(self)
+  if self.req.method == "POST" then
+    local body = self.req.params_post or {}
+    return {
+      json = {
+        echo = body,
+        method = self.req.method,
+        headers = self.req.headers
+      }
+    }
+  else
+    self.res.status = 405
+    return {
+      json = {
+        error = "Method not allowed",
+        allowed = {"POST"}
+      }
+    }
+  end
+end)
+
+-- Database example (requires configuration)
+app:match("/api/users", function(self)
+  -- Example with PostgreSQL (requires pg module)
+  -- local pg = require("lapis.db.postgres")
+  -- local users = pg.query("SELECT * FROM users LIMIT 10")
+  
+  return {
+    json = {
+      message = "Database endpoint ready",
+      note = "Configure database in config.lua for production"
+    }
+  }
+end)
+
+-- Error handling
+app:handle_error(function(self, err, trace)
+  return {
+    json = {
+      error = err,
+      trace = trace,
+      status = "error"
+    }
+  }
+end)
+
+return app

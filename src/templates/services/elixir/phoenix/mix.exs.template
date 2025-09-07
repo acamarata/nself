@@ -17,7 +17,7 @@ defmodule {{SERVICE_NAME|title}}.MixProject do
   # Configuration for the OTP application.
   def application do
     [
-      mod: {{{SERVICE_NAME|title}}.Application, []},
+      mod: {{SERVICE_NAME|title}}.Application, []},
       extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end

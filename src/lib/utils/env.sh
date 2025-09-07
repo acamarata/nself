@@ -32,6 +32,22 @@ load_env_with_priority() {
   # Determine current environment (default to dev)
   local current_env="${ENV:-dev}"
   
+  # Normalize environment names
+  case "$current_env" in
+    development|develop|devel)
+      current_env="dev"
+      export ENV="dev"
+      ;;
+    production|prod)
+      current_env="prod"
+      export ENV="prod"
+      ;;
+    staging|stage)
+      current_env="staging"
+      export ENV="staging"
+      ;;
+  esac
+  
   # STEP 1: Always load .env.dev as the base (team defaults)
   if [[ -f ".env.dev" ]]; then
     # log_debug "Loading .env.dev (team defaults - base layer)"
@@ -41,6 +57,22 @@ load_env_with_priority() {
     loaded=true
     # Update current_env in case it was set in .env.dev
     current_env="${ENV:-dev}"
+    
+    # Re-normalize after loading .env.dev
+    case "$current_env" in
+      development|develop|devel)
+        current_env="dev"
+        export ENV="dev"
+        ;;
+      production|prod)
+        current_env="prod"
+        export ENV="prod"
+        ;;
+      staging|stage)
+        current_env="staging"
+        export ENV="staging"
+        ;;
+    esac
   fi
   
   # STEP 2: Load environment-specific overrides based on ENV

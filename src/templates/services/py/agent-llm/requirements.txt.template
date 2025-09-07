@@ -2,9 +2,15 @@ langchain==0.1.0
 langchain-community==0.0.10
 openai==1.9.0
 anthropic==0.8.1
+ollama==0.1.7
 fastapi==0.109.0
 uvicorn==0.27.0
 pydantic==2.5.3
 python-dotenv==1.0.0
 chromadb==0.4.22
+meilisearch==0.31.0
 tiktoken==0.5.2
+pypdf==3.17.4
+httpx==0.26.0
+instructor==0.4.5
+guidance==0.1.10

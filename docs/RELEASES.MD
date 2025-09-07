@@ -6,44 +6,27 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
-## [v0.3.10] - September 5, 2024
+## [v0.3.9] - September 3, 2024 (Patched September 7, 2024)
 
 **Status**: Current Stable Release  
-**[Full Release Notes](./RELEASE-v0.3.10.md)**
-
-### Highlights
-- 🔍 **Search Services** - 6 self-hosted search engines (Meilisearch, Typesense, Zinc, Elasticsearch, OpenSearch, Sonic)
-- 🎛️ **nself-admin Integration** - Full compatibility with initialization wizard
-- 📚 **Complete Documentation** - Exhaustive environment variable reference
-- 🔧 **Service Enable Flags** - Explicit enable/disable for all services
-- 🌐 **Frontend App Support** - Configure multiple frontend applications
-- 🔄 **Variable Compatibility** - Backward compatibility for renamed variables
-
-### Quick Stats
-- 6 search engines integrated
-- 200+ environment variables documented
-- Full nself-admin compatibility
-- Complete backward compatibility
-- Zero breaking changes
-
----
-
-## [v0.3.9] - September 3, 2024
-
-**Status**: Stable Release  
-**[Full Release Notes](./RELEASE-v0.3.9-final.md)**
+**[Full Release Notes](./RELEASE-v0.3.9-final.md)**  
+**[Installation Optimization Patch](./RELEASE-v0.3.9-patch2.md)**
 
 ### Highlights
 - 🎯 **Admin UI Integration** - Web-based monitoring dashboard at localhost:3100
 - 🐛 **Critical Bug Fixes** - Fixed status, stop, exec, build commands
 - 📧 **SMTP Testing** - Email test functionality with swaks
 - ⏱️ **Build Timeout** - 5-second validation timeout prevents hangs
-- 📦 **34 Commands** - All fully functional and tested
+- 📦 **36 Commands** - 34 fully functional + 2 partial (deploy, search)
 - 🚀 **40+ Service Templates** - Production-ready templates for all major languages
+- 🧪 **Serverless Functions** - Built-in functions runtime
+- 🤖 **MLflow Integration** - ML experiment tracking and model registry
+- 📦 **87% Smaller Releases** - Minimal tarballs (432KB vs 3.3MB) for faster installs
+- 🚀 **Smart Installation** - Auto-detects version type for optimal downloads
 
 ### Quick Stats
 - 9 bugs fixed
-- 34 commands working
+- 36 total commands (34 full + 2 partial)
 - 40 service templates
 - 76 library files
 - ~58,000 lines of code

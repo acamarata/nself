@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a complete reference for all environment variables supported by nself v0.3.10+.
+This document provides a complete reference for all environment variables supported by nself v0.3.9+.
 
 ## Environment File Loading Order
 
