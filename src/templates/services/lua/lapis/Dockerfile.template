@@ -1,0 +1,28 @@
+FROM openresty/openresty:alpine
+
+# Install Lapis and dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    luarocks5.1 \
+    lua5.1-dev
+
+# Install Lua dependencies
+RUN luarocks install lapis
+RUN luarocks install lua-cjson
+RUN luarocks install luasocket
+
+WORKDIR /app
+
+# Copy application files
+COPY app.lua config.lua nginx.conf ./
+
+# Create logs directory
+RUN mkdir -p logs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+CMD ["lapis", "server", "production"]

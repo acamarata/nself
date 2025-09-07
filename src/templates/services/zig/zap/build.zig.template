@@ -1,0 +1,29 @@
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+    
+    const exe = b.addExecutable(.{
+        .name = "{{SERVICE_NAME}}",
+        .root_source_file = .{ .path = "main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    
+    // Add zap dependency
+    const zap = b.dependency("zap", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.addModule("zap", zap.module("zap"));
+    exe.linkLibrary(zap.artifact("facil.io"));
+    
+    b.installArtifact(exe);
+    
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&run_cmd.step);
+}

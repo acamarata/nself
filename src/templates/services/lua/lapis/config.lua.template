@@ -1,0 +1,39 @@
+local config = require("lapis.config")
+
+config("development", {
+  port = 3000,
+  num_workers = 1,
+  code_cache = false,
+  
+  -- Database configuration (optional)
+  postgres = {
+    host = "postgres",
+    user = "postgres",
+    password = "postgres",
+    database = "{{PROJECT_NAME}}"
+  },
+  
+  -- Redis configuration (optional)
+  redis = {
+    host = "redis",
+    port = 6379
+  }
+})
+
+config("production", {
+  port = 3000,
+  num_workers = 4,
+  code_cache = true,
+  
+  postgres = {
+    host = os.getenv("DB_HOST") or "postgres",
+    user = os.getenv("DB_USER") or "postgres",
+    password = os.getenv("DB_PASSWORD") or "postgres",
+    database = os.getenv("DB_NAME") or "{{PROJECT_NAME}}"
+  },
+  
+  redis = {
+    host = os.getenv("REDIS_HOST") or "redis",
+    port = tonumber(os.getenv("REDIS_PORT")) or 6379
+  }
+})

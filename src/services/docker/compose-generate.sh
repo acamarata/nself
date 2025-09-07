@@ -1664,7 +1664,15 @@ fi
 set -a
 [[ -f ".env" ]] && source .env 2>/dev/null || true
 set +a
-bash "$SCRIPT_DIR/compose-inline-append.sh"
+# Add timeout protection for the append script
+if command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 5 bash "$SCRIPT_DIR/compose-inline-append.sh" 2>/dev/null || true
+elif command -v timeout >/dev/null 2>&1; then
+    timeout 5 bash "$SCRIPT_DIR/compose-inline-append.sh" 2>/dev/null || true
+else
+    # Run without timeout if not available
+    bash "$SCRIPT_DIR/compose-inline-append.sh" 2>/dev/null || true
+fi
 
 # Add volumes section
 cat >>docker-compose.yml <<EOF

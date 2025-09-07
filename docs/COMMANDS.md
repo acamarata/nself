@@ -2,7 +2,12 @@
 
 Complete command reference for nself v0.3.9.
 
-**Total Commands**: 35+ (including aliases)
+**Total Commands**: 36 (including aliases)
+
+## Version Availability
+- **✅ v0.3.9 (Current)**: 34 fully functional commands + 2 partial
+- **🚧 v0.4.0 (Q1 2025)**: Complete `deploy` and `search` implementations  
+- **🔮 Beyond (2025+)**: Advanced cloud features, Kubernetes, multi-region
 
 ## Quick Reference
 
@@ -459,17 +464,24 @@ nself clean [options]
 ## Deployment Commands
 
 ### nself deploy
-Deploy to remote servers via SSH.
+Deploy to remote servers via SSH. *(Partial implementation - full features coming in v0.4.0)*
 
 ```bash
 nself deploy [target] [options]
 ```
+
+**Subcommands:**
+- `init` - Initialize deployment configuration
+- `ssh` - Deploy to VPS server via SSH
+- `status` - Check deployment status
 
 **Options:**
 - `--host HOST` - Target host
 - `--user USER` - SSH user
 - `--key PATH` - SSH key path
 - `--dry-run` - Preview deployment
+
+**Note:** Full deployment automation with zero-downtime deployments, GitHub webhooks, and multi-environment sync planned for v0.4.0.
 
 ### nself scale
 Scale service resources.
@@ -573,7 +585,7 @@ nself scaffold worker email-processor --language python
 ```
 
 ### nself search
-Manage search services with 6 different engine options.
+Manage search services with 6 different engine options. *(Partial implementation - full features coming in v0.4.0)*
 
 ```bash
 nself search <subcommand> [options]
@@ -619,7 +631,83 @@ SEARCH_ENGINE=meilisearch  # or typesense, zinc, elasticsearch, opensearch, soni
 
 See [SEARCH.md](./SEARCH.md) for complete search documentation.
 
+### nself functions
+Manage serverless functions for your application.
+
+```bash
+nself functions <subcommand> [options]
 ```
+
+**Subcommands:**
+- `status` - Show functions service status
+- `enable` - Enable serverless functions
+- `disable` - Disable serverless functions
+- `list` - List all deployed functions
+- `create <name>` - Create a new function
+- `delete <name>` - Delete a function
+- `test <name>` - Test a function locally
+- `logs <name>` - View function logs
+- `deploy [name]` - Deploy function(s) to production
+
+**Examples:**
+```bash
+nself functions status              # Check functions service status
+nself functions enable              # Enable serverless functions
+nself functions create my-function  # Create new function
+nself functions test my-function    # Test function locally
+nself functions deploy              # Deploy all functions
+nself functions logs my-function    # View function logs
+```
+
+**Configuration:**
+Set in `.env`:
+```bash
+FUNCTIONS_ENABLED=true
+FUNCTIONS_PORT=3030
+```
+
+### nself mlflow
+Manage MLflow for machine learning experiment tracking and model registry.
+
+```bash
+nself mlflow <subcommand> [options]
+```
+
+**Subcommands:**
+- `status` - Show MLflow service status
+- `enable` - Enable MLflow tracking server
+- `disable` - Disable MLflow tracking server
+- `open` / `ui` / `dashboard` - Open MLflow UI in browser
+- `configure` - Configure MLflow settings
+- `logs` - View MLflow service logs
+- `test` - Test MLflow connectivity
+
+**Examples:**
+```bash
+nself mlflow status                 # Check MLflow status
+nself mlflow enable                 # Enable MLflow tracking
+nself mlflow open                   # Open MLflow UI (localhost:5000)
+nself mlflow configure              # Configure MLflow settings
+nself mlflow logs                   # View MLflow logs
+```
+
+**Configuration:**
+Set in `.env`:
+```bash
+MLFLOW_ENABLED=true
+MLFLOW_PORT=5000
+MLFLOW_ARTIFACT_ROOT=./mlruns
+MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+```
+
+**Features:**
+- Experiment tracking
+- Model versioning
+- Model registry
+- Artifact storage
+- Metrics visualization
+- Parameter tracking
+- Integration with Ray for distributed training
 
 ### nself up
 Alias for `nself start` (Docker Compose compatibility).

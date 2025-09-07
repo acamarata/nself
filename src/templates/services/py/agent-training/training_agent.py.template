@@ -1,0 +1,566 @@
+import os
+import json
+import asyncio
+from datetime import datetime
+from typing import Any, Dict, Optional, List, Union
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import pytorch_lightning as pl
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.loggers import MLFlowLogger, TensorBoardLogger
+import mlflow
+import mlflow.pytorch
+import optuna
+from ray import tune
+from ray.tune.integration.pytorch_lightning import TuneReportCallback
+import onnx
+import onnxruntime
+import uvicorn
+from pathlib import Path
+
+# Initialize FastAPI
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="ML Training Infrastructure with PyTorch Lightning, MLFlow, Ray, and ONNX for {{PROJECT_NAME}}",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configuration
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+MODEL_REGISTRY_PATH = os.getenv("MODEL_REGISTRY_PATH", "./models")
+CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", "./checkpoints")
+DATA_PATH = os.getenv("DATA_PATH", "./data")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MAX_EPOCHS = int(os.getenv("MAX_EPOCHS", "100"))
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))
+
+# Create directories
+for path in [MODEL_REGISTRY_PATH, CHECKPOINT_PATH, DATA_PATH]:
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+# Pydantic models
+class TrainingRequest(BaseModel):
+    dataset_name: str
+    model_type: str  # "classification", "regression", "autoencoder", "custom"
+    architecture: Optional[str] = "resnet18"  # Model architecture
+    hyperparameters: Optional[Dict[str, Any]] = {}
+    experiment_name: Optional[str] = "default"
+    run_name: Optional[str] = None
+    max_epochs: Optional[int] = 100
+    early_stopping: Optional[bool] = True
+
+class HyperparameterSearchRequest(BaseModel):
+    dataset_name: str
+    model_type: str
+    search_space: Dict[str, Any]
+    n_trials: Optional[int] = 20
+    optimization_metric: Optional[str] = "val_loss"
+    direction: Optional[str] = "minimize"
+
+class ExportRequest(BaseModel):
+    model_id: str
+    export_format: str  # "onnx", "torchscript", "tensorflow", "coreml"
+    quantize: Optional[bool] = False
+    optimize: Optional[bool] = True
+
+class PredictionRequest(BaseModel):
+    model_id: str
+    input_data: Union[List[float], List[List[float]]]
+    preprocessing: Optional[Dict[str, Any]] = {}
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+    mlflow_connected: bool
+    device: str
+    active_experiments: int
+
+# Training status tracking
+training_jobs = {}
+
+# Example PyTorch Lightning Module
+class ExampleLightningModule(pl.LightningModule):
+    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128, lr: float = 0.001):
+        super().__init__()
+        self.save_hyperparameters()
+        
+        # Simple neural network
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, output_dim)
+        )
+        
+        self.criterion = nn.CrossEntropyLoss()
+        self.lr = lr
+    
+    def forward(self, x):
+        return self.model(x)
+    
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        self.log('train_loss', loss)
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        
+        # Calculate accuracy
+        _, predicted = torch.max(y_hat, 1)
+        acc = (predicted == y).float().mean()
+        
+        self.log('val_loss', loss)
+        self.log('val_acc', acc)
+        return loss
+    
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
+
+# Training functions
+async def train_model(request: TrainingRequest) -> Dict:
+    """Train a model with PyTorch Lightning and MLFlow"""
+    
+    # Initialize MLFlow
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(request.experiment_name)
+    
+    with mlflow.start_run(run_name=request.run_name) as run:
+        # Log parameters
+        mlflow.log_params({
+            "model_type": request.model_type,
+            "architecture": request.architecture,
+            "max_epochs": request.max_epochs,
+            "batch_size": BATCH_SIZE,
+            **request.hyperparameters
+        })
+        
+        # Create model (simplified example)
+        model = ExampleLightningModule(
+            input_dim=request.hyperparameters.get("input_dim", 784),
+            output_dim=request.hyperparameters.get("output_dim", 10),
+            hidden_dim=request.hyperparameters.get("hidden_dim", 128),
+            lr=request.hyperparameters.get("lr", 0.001)
+        )
+        
+        # Setup callbacks
+        callbacks = [
+            ModelCheckpoint(
+                dirpath=CHECKPOINT_PATH,
+                filename=f"{request.experiment_name}-{{epoch:02d}}-{{val_loss:.2f}}",
+                monitor="val_loss",
+                mode="min",
+                save_top_k=3
+            )
+        ]
+        
+        if request.early_stopping:
+            callbacks.append(
+                EarlyStopping(
+                    monitor="val_loss",
+                    patience=10,
+                    mode="min"
+                )
+            )
+        
+        # Setup logger
+        logger = MLFlowLogger(
+            experiment_name=request.experiment_name,
+            tracking_uri=MLFLOW_TRACKING_URI,
+            run_id=run.info.run_id
+        )
+        
+        # Create trainer
+        trainer = Trainer(
+            max_epochs=request.max_epochs,
+            callbacks=callbacks,
+            logger=logger,
+            accelerator="gpu" if DEVICE == "cuda" else "cpu",
+            devices=1,
+            enable_progress_bar=True,
+            enable_model_summary=True
+        )
+        
+        # Create dummy data loader for example
+        # In production, load actual dataset
+        from torch.utils.data import DataLoader, TensorDataset
+        
+        # Dummy data
+        X_train = torch.randn(1000, request.hyperparameters.get("input_dim", 784))
+        y_train = torch.randint(0, request.hyperparameters.get("output_dim", 10), (1000,))
+        X_val = torch.randn(200, request.hyperparameters.get("input_dim", 784))
+        y_val = torch.randint(0, request.hyperparameters.get("output_dim", 10), (200,))
+        
+        train_dataset = TensorDataset(X_train, y_train)
+        val_dataset = TensorDataset(X_val, y_val)
+        
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
+        
+        # Train model
+        trainer.fit(model, train_loader, val_loader)
+        
+        # Log model
+        mlflow.pytorch.log_model(model, "model")
+        
+        # Get metrics
+        metrics = {
+            "run_id": run.info.run_id,
+            "experiment_id": run.info.experiment_id,
+            "status": "completed",
+            "final_train_loss": float(trainer.callback_metrics.get("train_loss", 0)),
+            "final_val_loss": float(trainer.callback_metrics.get("val_loss", 0)),
+            "final_val_acc": float(trainer.callback_metrics.get("val_acc", 0)),
+            "epochs_trained": trainer.current_epoch
+        }
+        
+        return metrics
+
+async def hyperparameter_search(request: HyperparameterSearchRequest) -> Dict:
+    """Perform hyperparameter optimization with Optuna"""
+    
+    def objective(trial):
+        # Sample hyperparameters
+        hp = {}
+        for param, config in request.search_space.items():
+            if config["type"] == "float":
+                hp[param] = trial.suggest_float(param, config["low"], config["high"])
+            elif config["type"] == "int":
+                hp[param] = trial.suggest_int(param, config["low"], config["high"])
+            elif config["type"] == "categorical":
+                hp[param] = trial.suggest_categorical(param, config["choices"])
+        
+        # Train model with sampled hyperparameters
+        model = ExampleLightningModule(
+            input_dim=hp.get("input_dim", 784),
+            output_dim=hp.get("output_dim", 10),
+            hidden_dim=hp.get("hidden_dim", 128),
+            lr=hp.get("lr", 0.001)
+        )
+        
+        # Simplified training for search
+        trainer = Trainer(
+            max_epochs=20,  # Fewer epochs for search
+            enable_progress_bar=False,
+            enable_model_summary=False,
+            logger=False
+        )
+        
+        # Create dummy data
+        X = torch.randn(100, hp.get("input_dim", 784))
+        y = torch.randint(0, hp.get("output_dim", 10), (100,))
+        dataset = TensorDataset(X, y)
+        loader = DataLoader(dataset, batch_size=32)
+        
+        trainer.fit(model, loader, loader)
+        
+        # Return optimization metric
+        return trainer.callback_metrics.get(request.optimization_metric, 0)
+    
+    # Create study
+    study = optuna.create_study(
+        direction=request.direction,
+        study_name=f"hyperopt_{request.dataset_name}"
+    )
+    
+    # Optimize
+    study.optimize(objective, n_trials=request.n_trials)
+    
+    return {
+        "best_params": study.best_params,
+        "best_value": study.best_value,
+        "n_trials": len(study.trials),
+        "optimization_metric": request.optimization_metric
+    }
+
+async def export_model(request: ExportRequest) -> Dict:
+    """Export model to different formats"""
+    
+    # Load model from MLFlow
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    model_uri = f"runs:/{request.model_id}/model"
+    model = mlflow.pytorch.load_model(model_uri)
+    
+    export_path = os.path.join(MODEL_REGISTRY_PATH, request.model_id)
+    Path(export_path).mkdir(parents=True, exist_ok=True)
+    
+    if request.export_format == "onnx":
+        # Export to ONNX
+        dummy_input = torch.randn(1, 784)  # Adjust based on model
+        onnx_path = os.path.join(export_path, "model.onnx")
+        
+        torch.onnx.export(
+            model,
+            dummy_input,
+            onnx_path,
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+        )
+        
+        # Verify ONNX model
+        onnx_model = onnx.load(onnx_path)
+        onnx.checker.check_model(onnx_model)
+        
+        return {
+            "status": "success",
+            "format": "onnx",
+            "path": onnx_path,
+            "size_mb": os.path.getsize(onnx_path) / (1024 * 1024)
+        }
+    
+    elif request.export_format == "torchscript":
+        # Export to TorchScript
+        script_path = os.path.join(export_path, "model.pt")
+        scripted = torch.jit.script(model)
+        scripted.save(script_path)
+        
+        return {
+            "status": "success",
+            "format": "torchscript",
+            "path": script_path,
+            "size_mb": os.path.getsize(script_path) / (1024 * 1024)
+        }
+    
+    else:
+        return {"status": "error", "message": f"Unsupported format: {request.export_format}"}
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize MLFlow connection"""
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        # Test connection
+        experiments = mlflow.search_experiments()
+        print(f"✅ MLFlow connected: {len(experiments)} experiments found")
+    except Exception as e:
+        print(f"⚠️ MLFlow connection failed: {e}")
+    
+    print(f"🎯 Using device: {DEVICE}")
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    mlflow_connected = False
+    active_experiments = 0
+    
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        experiments = mlflow.search_experiments()
+        mlflow_connected = True
+        active_experiments = len(experiments)
+    except:
+        pass
+    
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat(),
+        mlflow_connected=mlflow_connected,
+        device=DEVICE,
+        active_experiments=active_experiments
+    )
+
+@app.get("/api/info")
+async def get_info():
+    """Service information endpoint"""
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "ML Training Infrastructure",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "capabilities": {
+            "training": ["PyTorch Lightning", "Distributed Training", "Mixed Precision"],
+            "tracking": ["MLFlow", "TensorBoard", "Weights & Biases"],
+            "optimization": ["Optuna", "Ray Tune", "Hyperband"],
+            "deployment": ["ONNX", "TorchScript", "TensorFlow", "CoreML"],
+            "device": DEVICE,
+            "config": {
+                "mlflow_uri": MLFLOW_TRACKING_URI,
+                "max_epochs": MAX_EPOCHS,
+                "batch_size": BATCH_SIZE
+            }
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "ML Training Infrastructure",
+        "endpoints": {
+            "health": "/health",
+            "info": "/api/info",
+            "train": "/api/train",
+            "hyperparameter_search": "/api/hyperparameter_search",
+            "export": "/api/export",
+            "predict": "/api/predict",
+            "experiments": "/api/experiments",
+            "models": "/api/models"
+        }
+    }
+
+@app.post("/api/train")
+async def train_endpoint(request: TrainingRequest, background_tasks: BackgroundTasks):
+    """Start model training"""
+    try:
+        # Start training in background
+        job_id = f"train_{datetime.utcnow().timestamp()}"
+        training_jobs[job_id] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
+        
+        # Run training asynchronously
+        background_tasks.add_task(train_model, request)
+        
+        return {
+            "status": "started",
+            "job_id": job_id,
+            "message": "Training started in background"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/hyperparameter_search")
+async def hyperparameter_search_endpoint(request: HyperparameterSearchRequest):
+    """Perform hyperparameter optimization"""
+    try:
+        results = await hyperparameter_search(request)
+        return {
+            "status": "success",
+            **results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/export")
+async def export_endpoint(request: ExportRequest):
+    """Export trained model"""
+    try:
+        results = await export_model(request)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/predict")
+async def predict_endpoint(request: PredictionRequest):
+    """Make predictions with trained model"""
+    try:
+        # Load model
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        model_uri = f"runs:/{request.model_id}/model"
+        model = mlflow.pytorch.load_model(model_uri)
+        
+        # Prepare input
+        input_tensor = torch.tensor(request.input_data, dtype=torch.float32)
+        if len(input_tensor.shape) == 1:
+            input_tensor = input_tensor.unsqueeze(0)
+        
+        # Make prediction
+        model.eval()
+        with torch.no_grad():
+            output = model(input_tensor)
+            
+        # Process output
+        if output.shape[-1] > 1:  # Classification
+            probabilities = torch.softmax(output, dim=-1)
+            predictions = torch.argmax(output, dim=-1)
+            return {
+                "predictions": predictions.tolist(),
+                "probabilities": probabilities.tolist(),
+                "model_id": request.model_id
+            }
+        else:  # Regression
+            return {
+                "predictions": output.tolist(),
+                "model_id": request.model_id
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/experiments")
+async def list_experiments():
+    """List all MLFlow experiments"""
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        experiments = mlflow.search_experiments()
+        return {
+            "experiments": [
+                {
+                    "id": exp.experiment_id,
+                    "name": exp.name,
+                    "artifact_location": exp.artifact_location,
+                    "lifecycle_stage": exp.lifecycle_stage
+                }
+                for exp in experiments
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/models")
+async def list_models():
+    """List registered models"""
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        client = mlflow.tracking.MlflowClient()
+        models = client.search_registered_models()
+        return {
+            "models": [
+                {
+                    "name": model.name,
+                    "latest_version": model.latest_versions[0].version if model.latest_versions else None,
+                    "description": model.description
+                }
+                for model in models
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/jobs")
+async def list_training_jobs():
+    """List training jobs"""
+    return {"jobs": training_jobs}
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"🏋️ Training: POST http://localhost:{port}/api/train")
+    print(f"🔍 Hyperparameter Search: POST http://localhost:{port}/api/hyperparameter_search")
+    print(f"📦 Export: POST http://localhost:{port}/api/export")
+    print(f"🎯 Predict: POST http://localhost:{port}/api/predict")
+    print(f"📊 MLFlow UI: {MLFLOW_TRACKING_URI}")
+    print(f"🎯 Device: {DEVICE}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

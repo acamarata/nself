@@ -1,7 +1,12 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released (v0.3.9)](#released-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-future)
+[Released (v0.3.9)](#released-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-v050-and-later)
+
+## Current Status Summary
+- **✅ v0.3.9 (Now)**: 36 commands, Admin UI, 40+ templates, functions, MLflow
+- **🚧 v0.4.0 (Q1 2025)**: Complete partial features (deploy, search), polish  
+- **🔮 v0.5.0+ (2025+)**: Kubernetes, multi-cloud, enterprise features
 
 ---
 
@@ -51,29 +56,25 @@ admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help
 
 ## Next (v0.4.0)
 **Status**: 📋 Planned | **Target**: Q1 2025  
-**Focus**: Refinement and Polish
+**Focus**: Complete Partial Features & Polish
 
-### Goals
-- **Perfect existing features** - Make everything rock solid
-- **Complete partial implementations** - Finish deploy, search, mlflow commands
-- **Enhanced stability** - More comprehensive testing
-- **Better developer experience** - Improved error messages and documentation
+### Primary Goals - Finish What's Started
+1. **Complete `deploy` command** (currently partial in v0.3.9)
+   - Full SSH deployment automation
+   - VPS setup scripts
+   - GitHub webhook integration
+   - Zero-downtime deployments
+   
+2. **Complete `search` command** (currently partial in v0.3.9)
+   - Full MeiliSearch, Typesense, Elasticsearch integration
+   - Auto-indexing from PostgreSQL
+   - Search UI components
+   - All 6 engines fully functional
 
-### Planned Improvements
-- **Deploy Command** - Complete SSH deployment implementation
-  - Automated VPS setup
-  - GitHub webhook integration
-  - Zero-downtime deployments
-  
-- **Search Command** - Finish enterprise search integration
-  - MeiliSearch, Typesense, Elasticsearch support
-  - Auto-indexing from PostgreSQL
-  - Search UI components
-  
-- **MLflow Integration** - ML experiment tracking
-  - Model versioning
-  - Metrics visualization
-  - Integration with Ray
+3. **Polish existing features**
+   - Better error messages
+   - Enhanced documentation
+   - More comprehensive testing
 
 - **Enhanced Monitoring** - Complete observability
   - Prometheus + Grafana dashboards
@@ -88,12 +89,12 @@ admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help
 
 ---
 
-## Beyond (Future)
+## Beyond (v0.5.0 and later)
 **Status**: 🔮 Future Plans | **Timeline**: 2025+  
 **Focus**: Cloud Management & Enterprise Features
 
 ### Cloud & Deployment
-- **nself deploy** - Complete deployment automation
+- **Advanced deployment features** - Beyond basic SSH
   - Multi-environment sync (dev → staging → prod)
   - Automated rollbacks
   - Blue-green deployments

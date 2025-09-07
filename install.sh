@@ -545,35 +545,48 @@ check_prerequisites() {
 download_nself() {
   echo_header "Downloading nself"
   
-  echo_info "Source: $REPO_URL"
+  echo_info "Version: $INSTALL_VERSION"
   echo_info "Target: $TEMP_DIR"
   
-  # Try git first (preserves history and is faster)
-  if command_exists git; then
-    (
-      git clone --depth 1 --branch "$INSTALL_VERSION" "$REPO_URL.git" "$TEMP_DIR/nself" 2>/dev/null
-    ) &
-    
-    if show_spinner $! "Downloading via git"; then
-      echo_success "Downloaded successfully"
-      return 0
-    else
-      echo_warning "Git clone failed, trying alternative method..."
-    fi
+  local tar_url=""
+  
+  # Determine download URL based on version
+  if [[ "$INSTALL_VERSION" == "main" ]] || [[ "$INSTALL_VERSION" == "latest" ]]; then
+    # Development version - full source from GitHub
+    tar_url="$REPO_URL/archive/refs/heads/main.tar.gz"
+    echo_info "Installing development version (full source)"
+  elif [[ "$INSTALL_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    # Release version - use minimal release tarball
+    local version="${INSTALL_VERSION#v}"  # Remove 'v' prefix if present
+    tar_url="${REPO_URL}/releases/download/v${version}/nself-v${version}.tar.gz"
+    echo_info "Installing release version (minimal runtime files)"
+  else
+    # Try as branch/tag - full source
+    tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
+    echo_info "Installing from tag/branch (full source)"
   fi
   
-  # Fallback to tar download
-  local tar_url="$REPO_URL/archive/refs/heads/${DEFAULT_BRANCH}.tar.gz"
-  
+  # Download tarball
   (
-    curl -fsSL "$tar_url" | tar -xz -C "$TEMP_DIR" --strip-components=1
+    if curl -fsSL "$tar_url" | tar -xz -C "$TEMP_DIR" --strip-components=1; then
+      true
+    else
+      # Fallback for release versions if release tarball doesn't exist
+      if [[ "$INSTALL_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo_warning "Release tarball not found, falling back to source archive..."
+        tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
+        curl -fsSL "$tar_url" | tar -xz -C "$TEMP_DIR" --strip-components=1
+      else
+        false
+      fi
+    fi
   ) &
   
-  if show_spinner $! "Downloading via curl"; then
+  if show_spinner $! "Downloading nself"; then
     echo_success "Downloaded successfully"
     return 0
   else
-    echo_error "Failed to download nself"
+    echo_error "Failed to download nself from $tar_url"
     exit 1
   fi
 }

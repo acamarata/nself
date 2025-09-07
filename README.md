@@ -33,6 +33,9 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Email Management**: 16+ providers (SendGrid, AWS SES, Mailgun, etc.) with zero-config dev
 - **40+ Service Templates**: Express, FastAPI, Flask, Gin, Rust, NestJS, Socket.IO, Celery, Ray, and more
 - **Microservices Ready**: Production-ready templates for JS/TS, Python, Go, Rust, Java, C#, Ruby, Elixir, PHP
+- **Serverless Functions**: Built-in functions runtime with hot reload and deployment
+- **ML Platform**: MLflow integration for experiment tracking and model registry
+- **Enterprise Search**: 6 search engines (MeiliSearch, Typesense, Elasticsearch, OpenSearch, Zinc, Sonic)
 - **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
@@ -227,12 +230,17 @@ Every template includes:
 
 ## 📚 Commands
 
+### Version Status
+- **✅ v0.3.9 (Current)**: All 36 commands functional
+- **🚧 v0.4.0 (Next Q1 2025)**: Complete `deploy` and `search` implementations
+- **🔮 Beyond (2025+)**: Kubernetes, multi-cloud, enterprise features
+
 ### Complete Command Tree
 
 ```
-nself (34 commands)
+nself (36 commands)
 ├── 🚀 Core Commands
-│   ├── init          Initialize a new project
+│   ├── init          Initialize a new project (with --wizard, --full, --admin options)
 │   ├── build         Build project structure and Docker images
 │   ├── start         Start all services
 │   ├── stop          Stop all services
@@ -242,35 +250,39 @@ nself (34 commands)
 │   └── clean         Clean up Docker resources
 │
 ├── 📊 Database & Backup
-│   ├── db            Database operations
-│   └── backup        Comprehensive backup system
+│   ├── db            Interactive database operations menu (25+ operations)
+│   └── backup        Comprehensive backup system with cloud support
 │
 ├── 🔧 Configuration
 │   ├── validate      Validate configuration files
-│   ├── ssl           SSL certificate management
-│   ├── trust         Install SSL certificates locally
-│   ├── email         Email service configuration
-│   ├── prod          Configure for production
-│   └── urls          Show service URLs
+│   ├── ssl           SSL certificate management (bootstrap, renew, status)
+│   ├── trust         Install SSL certificates locally for browser trust
+│   ├── email         Email service configuration (16+ providers)
+│   ├── prod          Generate production configuration with secure passwords
+│   └── urls          Show all service URLs
 │
 ├── 🎯 Admin & Monitoring
 │   ├── admin         Admin UI management (localhost:3100)
-│   ├── doctor        System diagnostics and fixes
-│   ├── monitor       Real-time monitoring
-│   ├── metrics       Metrics collection
-│   └── mlflow        ML experiment tracking
+│   ├── doctor        System diagnostics and auto-fixes
+│   ├── monitor       Real-time monitoring dashboard
+│   └── metrics       Metrics collection and reporting
+│
+├── 🚀 Serverless & ML
+│   ├── functions     Serverless functions management
+│   └── mlflow        ML experiment tracking and model registry
 │
 ├── 🚀 Deployment & Scaling
-│   ├── deploy        Deploy to remote servers
+│   ├── deploy        Deploy to remote servers (partial - full in v0.4.0)
 │   ├── scale         Scale services up/down
 │   ├── rollback      Rollback to previous version
-│   └── update        Update nself CLI
+│   └── update        Update nself CLI to latest version
+│
 ├── 🛠️ Development Tools
 │   ├── exec          Execute commands in containers
 │   ├── diff          Show configuration changes
-│   ├── reset         Reset project to clean state
-│   ├── scaffold      Generate new service from template
-│   └── search        Search service management
+│   ├── reset         Reset project to clean state (with timestamped backups)
+│   ├── scaffold      Generate new service from 40+ templates
+│   └── search        Enterprise search service management (partial - full in v0.4.0)
 │
 └── 📝 Utility Commands
     ├── version       Show version information
@@ -717,7 +729,9 @@ nself email test recipient@example.com
 - ✅ Fixed critical bugs (status, stop, exec commands)  
 - ✅ SMTP email testing implementation
 - ✅ 5-second timeout for build validation
-- ✅ All 33 commands fully functional
+- ✅ All 36 commands fully functional
+- ✅ Serverless functions support
+- ✅ MLflow ML experiment tracking
 - ⚠️ Known issue: Auth health check false negative
 
 ### v0.3.8 (Stable)

@@ -1,0 +1,429 @@
+import os
+import asyncio
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, List
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import pandas as pd
+import numpy as np
+from prophet import Prophet
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
+from pyod.models.iforest import IForest
+from river import anomaly, preprocessing, metrics
+import psycopg2
+from sqlalchemy import create_engine, text
+import plotly.express as px
+import plotly.graph_objects as go
+import uvicorn
+
+# Initialize FastAPI
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="Time Series Analysis Agent with TimescaleDB for {{PROJECT_NAME}}",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configuration
+TIMESCALE_URL = os.getenv("TIMESCALE_URL", "postgresql://postgres:postgres@timescaledb:5432/{{PROJECT_NAME}}")
+FORECAST_HORIZON = int(os.getenv("FORECAST_HORIZON", "30"))
+ANOMALY_THRESHOLD = float(os.getenv("ANOMALY_THRESHOLD", "0.95"))
+
+# Pydantic models
+class TimeSeriesRequest(BaseModel):
+    table: str
+    time_column: str
+    value_column: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    aggregation: Optional[str] = "1h"  # 1m, 5m, 1h, 1d, etc.
+
+class ForecastRequest(BaseModel):
+    data: List[Dict[str, Any]]
+    time_column: str
+    value_column: str
+    periods: Optional[int] = 30
+    method: Optional[str] = "prophet"  # prophet, arima, exponential
+
+class AnomalyRequest(BaseModel):
+    data: List[Dict[str, Any]]
+    time_column: str
+    value_column: str
+    method: Optional[str] = "iforest"  # iforest, streaming, statistical
+    sensitivity: Optional[float] = 0.95
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+    timescale_connected: bool
+    hypertables: int
+
+# Database connection
+def get_timescale_engine():
+    """Get TimescaleDB connection"""
+    try:
+        return create_engine(TIMESCALE_URL)
+    except:
+        return None
+
+# Time series functions
+async def create_hypertable(table_name: str, time_column: str):
+    """Create TimescaleDB hypertable"""
+    engine = get_timescale_engine()
+    if engine:
+        with engine.connect() as conn:
+            # Create hypertable
+            conn.execute(text(f"""
+                SELECT create_hypertable('{table_name}', '{time_column}', 
+                                        if_not_exists => TRUE,
+                                        chunk_time_interval => INTERVAL '1 day')
+            """))
+            
+            # Add retention policy (optional)
+            conn.execute(text(f"""
+                SELECT add_retention_policy('{table_name}', 
+                                           INTERVAL '90 days',
+                                           if_not_exists => TRUE)
+            """))
+            conn.commit()
+
+async def aggregate_timeseries(table: str, time_col: str, value_col: str, 
+                              interval: str, start: str = None, end: str = None) -> pd.DataFrame:
+    """Aggregate time series data"""
+    engine = get_timescale_engine()
+    if not engine:
+        raise HTTPException(status_code=500, detail="TimescaleDB not connected")
+    
+    where_clause = ""
+    if start and end:
+        where_clause = f"WHERE {time_col} BETWEEN '{start}' AND '{end}'"
+    elif start:
+        where_clause = f"WHERE {time_col} >= '{start}'"
+    elif end:
+        where_clause = f"WHERE {time_col} <= '{end}'"
+    
+    query = f"""
+        SELECT 
+            time_bucket('{interval}', {time_col}) AS time,
+            AVG({value_col}) as avg_value,
+            MIN({value_col}) as min_value,
+            MAX({value_col}) as max_value,
+            COUNT(*) as count,
+            STDDEV({value_col}) as std_dev
+        FROM {table}
+        {where_clause}
+        GROUP BY time
+        ORDER BY time DESC
+        LIMIT 10000
+    """
+    
+    return pd.read_sql(query, engine)
+
+async def forecast_prophet(df: pd.DataFrame, periods: int) -> Dict:
+    """Forecast using Prophet"""
+    # Prepare data for Prophet
+    prophet_df = df.rename(columns={
+        df.columns[0]: 'ds',  # timestamp column
+        df.columns[1]: 'y'     # value column
+    })
+    
+    # Train model
+    model = Prophet(daily_seasonality=True, weekly_seasonality=True)
+    model.fit(prophet_df)
+    
+    # Make forecast
+    future = model.make_future_dataframe(periods=periods)
+    forecast = model.predict(future)
+    
+    return {
+        "forecast": forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(periods).to_dict('records'),
+        "components": {
+            "trend": forecast['trend'].tail(periods).tolist(),
+            "weekly": forecast['weekly'].tail(periods).tolist() if 'weekly' in forecast else [],
+            "daily": forecast['daily'].tail(periods).tolist() if 'daily' in forecast else []
+        }
+    }
+
+async def forecast_arima(df: pd.DataFrame, periods: int) -> Dict:
+    """Forecast using ARIMA"""
+    # Prepare data
+    ts = df.set_index(df.columns[0])[df.columns[1]]
+    
+    # Fit ARIMA model
+    model = ARIMA(ts, order=(1, 1, 1))
+    model_fit = model.fit()
+    
+    # Make forecast
+    forecast = model_fit.forecast(steps=periods)
+    
+    # Generate forecast dates
+    last_date = df[df.columns[0]].max()
+    forecast_dates = pd.date_range(start=last_date, periods=periods+1, freq='D')[1:]
+    
+    return {
+        "forecast": [
+            {"ds": date.isoformat(), "yhat": value}
+            for date, value in zip(forecast_dates, forecast)
+        ],
+        "aic": model_fit.aic,
+        "bic": model_fit.bic
+    }
+
+async def detect_anomalies_iforest(df: pd.DataFrame, contamination: float = 0.1) -> Dict:
+    """Detect anomalies using Isolation Forest"""
+    # Prepare data
+    X = df.iloc[:, 1:].values.reshape(-1, 1)
+    
+    # Train model
+    clf = IForest(contamination=contamination)
+    clf.fit(X)
+    
+    # Predict anomalies
+    anomaly_labels = clf.predict(X)
+    anomaly_scores = clf.decision_function(X)
+    
+    # Get anomaly indices
+    anomaly_indices = np.where(anomaly_labels == 1)[0]
+    
+    return {
+        "anomalies": df.iloc[anomaly_indices].to_dict('records'),
+        "scores": anomaly_scores.tolist(),
+        "threshold": clf.threshold_,
+        "contamination": contamination
+    }
+
+async def detect_anomalies_streaming(data_stream: List[Dict]) -> Dict:
+    """Detect anomalies in streaming data"""
+    # Initialize streaming anomaly detector
+    anom_detector = anomaly.HalfSpaceTrees(n_trees=10, height=8)
+    scaler = preprocessing.StandardScaler()
+    
+    anomalies = []
+    scores = []
+    
+    for i, point in enumerate(data_stream):
+        value = point.get('value', 0)
+        
+        # Scale the value
+        scaled_value = scaler.learn_one({'value': value}).transform_one({'value': value})['value']
+        
+        # Get anomaly score
+        score = anom_detector.score_one({'value': scaled_value})
+        scores.append(score)
+        
+        # Update model
+        anom_detector.learn_one({'value': scaled_value})
+        
+        # Check if anomaly
+        if score > ANOMALY_THRESHOLD:
+            anomalies.append({**point, 'index': i, 'score': score})
+    
+    return {
+        "anomalies": anomalies,
+        "scores": scores,
+        "threshold": ANOMALY_THRESHOLD
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize TimescaleDB connection"""
+    try:
+        engine = get_timescale_engine()
+        if engine:
+            with engine.connect() as conn:
+                # Check TimescaleDB extension
+                result = conn.execute(text("SELECT extversion FROM pg_extension WHERE extname='timescaledb'"))
+                version = result.fetchone()
+                if version:
+                    print(f"✅ TimescaleDB {version[0]} connected")
+                else:
+                    print("⚠️ TimescaleDB extension not found")
+    except Exception as e:
+        print(f"⚠️ TimescaleDB connection failed: {e}")
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    timescale_connected = False
+    hypertables = 0
+    
+    try:
+        engine = get_timescale_engine()
+        if engine:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                timescale_connected = True
+                
+                # Count hypertables
+                result = conn.execute(text("""
+                    SELECT COUNT(*) FROM timescaledb_information.hypertables
+                """))
+                hypertables = result.fetchone()[0]
+    except:
+        pass
+    
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat(),
+        timescale_connected=timescale_connected,
+        hypertables=hypertables
+    )
+
+@app.get("/api/info")
+async def get_info():
+    """Service information endpoint"""
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Time Series Analysis",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "capabilities": {
+            "database": "TimescaleDB",
+            "forecasting": ["Prophet", "ARIMA", "Exponential Smoothing"],
+            "anomaly_detection": ["Isolation Forest", "Streaming", "Statistical"],
+            "aggregations": ["time_bucket", "continuous aggregates"],
+            "features": ["Hypertables", "Retention Policies", "Compression"]
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Time Series Analysis with TimescaleDB",
+        "endpoints": {
+            "health": "/health",
+            "info": "/api/info",
+            "aggregate": "/api/aggregate",
+            "forecast": "/api/forecast",
+            "anomalies": "/api/anomalies",
+            "hypertable": "/api/hypertable"
+        }
+    }
+
+@app.post("/api/aggregate")
+async def aggregate_data(request: TimeSeriesRequest):
+    """Aggregate time series data"""
+    try:
+        df = await aggregate_timeseries(
+            request.table,
+            request.time_column,
+            request.value_column,
+            request.aggregation,
+            request.start_date,
+            request.end_date
+        )
+        
+        return {
+            "data": df.to_dict('records'),
+            "rows": len(df),
+            "aggregation": request.aggregation,
+            "statistics": {
+                "mean": df['avg_value'].mean() if 'avg_value' in df else None,
+                "min": df['min_value'].min() if 'min_value' in df else None,
+                "max": df['max_value'].max() if 'max_value' in df else None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/forecast")
+async def forecast_timeseries(request: ForecastRequest):
+    """Generate time series forecast"""
+    try:
+        df = pd.DataFrame(request.data)
+        
+        if request.method == "prophet":
+            result = await forecast_prophet(df[[request.time_column, request.value_column]], request.periods)
+        elif request.method == "arima":
+            result = await forecast_arima(df[[request.time_column, request.value_column]], request.periods)
+        else:
+            raise ValueError(f"Unknown method: {request.method}")
+        
+        return {
+            "method": request.method,
+            "periods": request.periods,
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/anomalies")
+async def detect_anomalies(request: AnomalyRequest):
+    """Detect anomalies in time series"""
+    try:
+        if request.method == "iforest":
+            df = pd.DataFrame(request.data)
+            result = await detect_anomalies_iforest(
+                df[[request.time_column, request.value_column]], 
+                1 - request.sensitivity
+            )
+        elif request.method == "streaming":
+            result = await detect_anomalies_streaming(request.data)
+        else:
+            raise ValueError(f"Unknown method: {request.method}")
+        
+        return {
+            "method": request.method,
+            "sensitivity": request.sensitivity,
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/hypertable")
+async def create_hypertable_endpoint(table_name: str, time_column: str):
+    """Create TimescaleDB hypertable"""
+    try:
+        await create_hypertable(table_name, time_column)
+        return {
+            "status": "success",
+            "table": table_name,
+            "time_column": time_column,
+            "message": f"Hypertable {table_name} created successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/continuous_aggregates")
+async def list_continuous_aggregates():
+    """List continuous aggregates"""
+    try:
+        engine = get_timescale_engine()
+        if engine:
+            query = """
+                SELECT view_name, hypertable_name, refresh_interval
+                FROM timescaledb_information.continuous_aggregates
+            """
+            df = pd.read_sql(query, engine)
+            return {"aggregates": df.to_dict('records')}
+        return {"aggregates": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"⏰ TimescaleDB URL: {TIMESCALE_URL}")
+    print(f"📈 Forecast horizon: {FORECAST_HORIZON} periods")
+    print(f"🚨 Anomaly threshold: {ANOMALY_THRESHOLD}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)
