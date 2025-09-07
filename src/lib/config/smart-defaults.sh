@@ -27,6 +27,9 @@ apply_smart_defaults() {
   : ${POSTGRES_DB:=nhost}
   : ${POSTGRES_USER:=postgres}
   : ${POSTGRES_PASSWORD:=postgres-dev-password}
+  
+  # Construct database URL early for services that need it
+  : ${HASURA_GRAPHQL_DATABASE_URL:=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
   : ${POSTGRES_EXTENSIONS:=uuid-ossp}
 
   # Hasura
@@ -271,14 +274,46 @@ apply_smart_defaults() {
 
 # Load environment files with proper priority
 load_env_with_defaults() {
-  # Use the proper loading cascade from env.sh if available
-  local script_dir="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+  # Simplified direct loading to avoid hanging
+  # Load .env.dev first (team defaults)
+  if [[ -f ".env.dev" ]]; then
+    set -a
+    source ".env.dev" 2>/dev/null
+    set +a
+  fi
   
-  if [[ -f "$script_dir/../utils/env.sh" ]]; then
-    # Use the canonical env loading function
-    source "$script_dir/../utils/env.sh"
-    load_env_with_priority
-  else
+  # Normalize ENV after loading
+  case "${ENV:-dev}" in
+    development|develop|devel)
+      export ENV="dev"
+      ;;
+    production|prod)
+      export ENV="prod"
+      ;;
+    staging|stage)
+      export ENV="staging"
+      ;;
+  esac
+  
+  # Load environment-specific files
+  if [[ "$ENV" == "staging" ]] && [[ -f ".env.staging" ]]; then
+    set -a
+    source ".env.staging" 2>/dev/null
+    set +a
+  elif [[ "$ENV" == "prod" ]]; then
+    [[ -f ".env.prod" ]] && source ".env.prod" 2>/dev/null
+    [[ -f ".env.secrets" ]] && source ".env.secrets" 2>/dev/null
+  fi
+  
+  # Load local overrides last
+  if [[ -f ".env" ]]; then
+    set -a
+    source ".env" 2>/dev/null
+    set +a
+  fi
+  
+  # Skip the problematic env.sh loading
+  if false; then
     # Fallback: implement the same cascade here
     # Determine current environment (default to dev)
     local current_env="${ENV:-dev}"

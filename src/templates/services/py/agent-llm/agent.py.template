@@ -1,22 +1,32 @@
 import os
+import asyncio
 from datetime import datetime
-from typing import Any, Dict, Optional
-from fastapi import FastAPI, HTTPException
+from typing import Any, Dict, Optional, List
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.memory import ConversationBufferMemory
-from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
-from langchain.chains import LLMChain
+from langchain.llms import Ollama
+from langchain.callbacks.manager import CallbackManager
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.embeddings import OpenAIEmbeddings, OllamaEmbeddings
+from langchain.vectorstores import Chroma, Meilisearch
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain.chains import RetrievalQA, ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
+from langchain.schema import Document
 import uvicorn
+import httpx
+from pathlib import Path
 
 # Initialize FastAPI
 app = FastAPI(
     title="{{SERVICE_NAME}}",
-    description="LLM Agent service for {{PROJECT_NAME}}",
-    version="1.0.0"
+    description="Advanced LLM Agent with RAG and Local Model Support for {{PROJECT_NAME}}",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -33,32 +43,118 @@ class QueryRequest(BaseModel):
     query: str
     context: Optional[Dict[str, Any]] = {}
     session_id: Optional[str] = None
+    use_rag: Optional[bool] = False
+    model_type: Optional[str] = "openai"  # "openai", "ollama", "local"
+
+class DocumentRequest(BaseModel):
+    text: str
+    metadata: Optional[Dict[str, Any]] = {}
+    collection: Optional[str] = "default"
 
 class QueryResponse(BaseModel):
     response: str
     session_id: str
     timestamp: str
+    sources: Optional[List[str]] = []
+    model_used: str
 
 class HealthResponse(BaseModel):
     status: str
     service: str
     timestamp: str
     llm_configured: bool
+    rag_enabled: bool
+    available_models: List[str]
+
+# Configuration
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")  # "openai", "ollama", "anthropic"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama2")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://meilisearch:7700")
+MEILISEARCH_KEY = os.getenv("MEILISEARCH_MASTER_KEY", "")
+VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", "./vector_db")
 
 # Memory storage (in production, use Redis or database)
 memory_store = {}
+vector_store = None
+embeddings = None
 
-# Initialize LLM (configure with your API key)
-def get_llm():
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        return ChatOpenAI(
-            api_key=api_key,
-            model="gpt-3.5-turbo",
-            temperature=0.7
+# Initialize embeddings
+def get_embeddings(provider="openai"):
+    """Get embeddings based on provider"""
+    if provider == "ollama":
+        return OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL,
+            model="llama2"
         )
-    # Fallback to mock LLM for demo
-    return None
+    elif provider == "openai" and os.getenv("OPENAI_API_KEY"):
+        return OpenAIEmbeddings()
+    else:
+        # Fallback to Ollama
+        return OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL,
+            model="llama2"
+        )
+
+# Initialize vector store
+def get_vector_store():
+    """Get or create vector store"""
+    global vector_store, embeddings
+    
+    if vector_store is None:
+        embeddings = get_embeddings(LLM_PROVIDER)
+        
+        # Try Meilisearch first if configured
+        if MEILISEARCH_URL and MEILISEARCH_KEY:
+            try:
+                vector_store = Meilisearch(
+                    embedding=embeddings,
+                    api_key=MEILISEARCH_KEY,
+                    index_name="{{PROJECT_NAME}}_vectors",
+                    meilisearch_url=MEILISEARCH_URL
+                )
+            except:
+                pass
+        
+        # Fallback to local Chroma
+        if vector_store is None:
+            Path(VECTOR_DB_PATH).mkdir(parents=True, exist_ok=True)
+            vector_store = Chroma(
+                embedding_function=embeddings,
+                persist_directory=VECTOR_DB_PATH
+            )
+    
+    return vector_store
+
+# Initialize LLM
+def get_llm(provider=None):
+    """Get LLM based on provider"""
+    provider = provider or LLM_PROVIDER
+    
+    if provider == "openai" and os.getenv("OPENAI_API_KEY"):
+        return ChatOpenAI(
+            model=OPENAI_MODEL,
+            temperature=0.7,
+            streaming=True,
+            callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
+        )
+    elif provider == "ollama":
+        return Ollama(
+            base_url=OLLAMA_BASE_URL,
+            model=OLLAMA_MODEL,
+            callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
+        )
+    else:
+        # Try Ollama as fallback
+        try:
+            return Ollama(
+                base_url=OLLAMA_BASE_URL,
+                model=OLLAMA_MODEL,
+                callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
+            )
+        except:
+            return None
 
 # Custom tools for the agent
 def get_current_time(query: str) -> str:
@@ -68,11 +164,36 @@ def get_current_time(query: str) -> str:
 def calculate(query: str) -> str:
     """Perform simple calculations"""
     try:
-        # Simple eval for demo - use proper parser in production
-        result = eval(query, {"__builtins__": {}}, {})
+        # Safe eval for math operations
+        import ast
+        import operator as op
+        
+        ops = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
+               ast.Div: op.truediv, ast.Pow: op.pow, ast.USub: op.neg}
+        
+        def eval_expr(expr):
+            if isinstance(expr, ast.Num):
+                return expr.n
+            elif isinstance(expr, ast.BinOp):
+                return ops[type(expr.op)](eval_expr(expr.left), eval_expr(expr.right))
+            elif isinstance(expr, ast.UnaryOp):
+                return ops[type(expr.op)](eval_expr(expr.operand))
+            else:
+                raise TypeError(expr)
+        
+        result = eval_expr(ast.parse(query, mode='eval').body)
         return str(result)
     except:
         return "Unable to calculate"
+
+async def search_knowledge_base(query: str) -> str:
+    """Search the RAG knowledge base"""
+    store = get_vector_store()
+    if store:
+        docs = store.similarity_search(query, k=3)
+        if docs:
+            return "\n\n".join([f"Source: {doc.metadata}\n{doc.page_content}" for doc in docs])
+    return "No relevant information found in knowledge base"
 
 # Initialize tools
 tools = [
@@ -84,13 +205,19 @@ tools = [
     Tool(
         name="Calculator",
         func=calculate,
-        description="Perform simple mathematical calculations"
+        description="Perform mathematical calculations"
+    ),
+    Tool(
+        name="Knowledge Base",
+        func=lambda q: asyncio.run(search_knowledge_base(q)),
+        description="Search the knowledge base for relevant information"
     ),
 ]
 
-# Initialize agent
-def get_agent(session_id: str):
-    llm = get_llm()
+# Initialize agent with RAG
+def get_agent(session_id: str, use_rag: bool = False, provider: str = None):
+    """Get or create agent for session"""
+    llm = get_llm(provider)
     if not llm:
         return None
     
@@ -98,30 +225,77 @@ def get_agent(session_id: str):
     if session_id not in memory_store:
         memory_store[session_id] = ConversationBufferMemory(
             memory_key="chat_history",
-            return_messages=True
+            return_messages=True,
+            output_key="answer"
         )
     
     memory = memory_store[session_id]
     
+    if use_rag:
+        # Use RAG chain
+        store = get_vector_store()
+        if store:
+            return ConversationalRetrievalChain.from_llm(
+                llm=llm,
+                retriever=store.as_retriever(search_kwargs={"k": 3}),
+                memory=memory,
+                return_source_documents=True
+            )
+    
+    # Regular agent with tools
     agent = initialize_agent(
         tools=tools,
         llm=llm,
         agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
         memory=memory,
-        verbose=True
+        verbose=True,
+        handle_parsing_errors=True
     )
     
     return agent
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    # Pre-load vector store
+    get_vector_store()
+    
+    # Test Ollama connection
+    if LLM_PROVIDER == "ollama":
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+                if response.status_code == 200:
+                    models = response.json().get("models", [])
+                    print(f"✅ Ollama connected with {len(models)} models available")
+        except:
+            print("⚠️ Ollama not available, will use fallback")
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    llm_configured = os.getenv("OPENAI_API_KEY") is not None
+    available_models = []
+    
+    # Check OpenAI
+    if os.getenv("OPENAI_API_KEY"):
+        available_models.append("openai")
+    
+    # Check Ollama
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2.0)
+            if response.status_code == 200:
+                available_models.append("ollama")
+    except:
+        pass
+    
     return HealthResponse(
         status="healthy",
         service="{{SERVICE_NAME}}",
         timestamp=datetime.utcnow().isoformat(),
-        llm_configured=llm_configured
+        llm_configured=len(available_models) > 0,
+        rag_enabled=vector_store is not None,
+        available_models=available_models
     )
 
 @app.get("/api/info")
@@ -134,10 +308,13 @@ async def get_info():
         "runtime": "Python",
         "domain": "{{BASE_DOMAIN}}",
         "capabilities": {
-            "llm": "OpenAI GPT-3.5/4",
+            "llm_providers": ["OpenAI", "Ollama", "Local Models"],
+            "rag": True,
             "agents": True,
             "memory": True,
-            "tools": [tool.name for tool in tools]
+            "tools": [tool.name for tool in tools],
+            "vector_stores": ["Chroma", "Meilisearch"],
+            "document_formats": ["text", "pdf", "markdown"]
         }
     }
 
@@ -147,35 +324,127 @@ async def root():
     return {
         "message": "Hello from {{SERVICE_NAME}}!",
         "project": "{{PROJECT_NAME}}",
-        "framework": "LangChain - Building applications with LLMs",
+        "framework": "Advanced LangChain with RAG & Local LLMs",
         "endpoints": {
             "health": "/health",
             "info": "/api/info",
-            "query": "/api/query"
+            "query": "/api/query",
+            "ingest": "/api/ingest",
+            "upload": "/api/upload"
         }
     }
 
 @app.post("/api/query", response_model=QueryResponse)
 async def query_agent(request: QueryRequest):
-    """Query the LLM agent"""
+    """Query the LLM agent with optional RAG"""
     session_id = request.session_id or f"session_{datetime.utcnow().timestamp()}"
     
-    agent = get_agent(session_id)
+    agent = get_agent(session_id, request.use_rag, request.model_type)
+    sources = []
+    
     if not agent:
-        # Fallback response when LLM not configured
-        response = f"Echo: {request.query} (LLM not configured - set OPENAI_API_KEY)"
+        response = f"Echo: {request.query} (No LLM available)"
+        model_used = "none"
     else:
         try:
-            # Run agent with the query
-            response = agent.run(request.query)
+            if request.use_rag and hasattr(agent, '__call__'):
+                # RAG chain
+                result = agent({"question": request.query})
+                response = result.get("answer", "")
+                if "source_documents" in result:
+                    sources = [doc.metadata.get("source", "unknown") for doc in result["source_documents"]]
+            else:
+                # Regular agent
+                response = agent.run(request.query)
+            
+            model_used = request.model_type or LLM_PROVIDER
         except Exception as e:
             response = f"Error processing query: {str(e)}"
+            model_used = "error"
     
     return QueryResponse(
         response=response,
         session_id=session_id,
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=datetime.utcnow().isoformat(),
+        sources=sources,
+        model_used=model_used
     )
+
+@app.post("/api/ingest")
+async def ingest_document(request: DocumentRequest):
+    """Ingest document into vector store"""
+    try:
+        store = get_vector_store()
+        
+        # Create document
+        doc = Document(
+            page_content=request.text,
+            metadata=request.metadata
+        )
+        
+        # Split text
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
+        chunks = text_splitter.split_documents([doc])
+        
+        # Add to vector store
+        store.add_documents(chunks)
+        
+        if hasattr(store, 'persist'):
+            store.persist()
+        
+        return {
+            "status": "success",
+            "chunks_created": len(chunks),
+            "collection": request.collection
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload and ingest file into vector store"""
+    try:
+        store = get_vector_store()
+        
+        # Save uploaded file temporarily
+        temp_path = Path(f"/tmp/{file.filename}")
+        content = await file.read()
+        temp_path.write_bytes(content)
+        
+        # Load document based on type
+        if file.filename.endswith('.pdf'):
+            loader = PyPDFLoader(str(temp_path))
+        else:
+            loader = TextLoader(str(temp_path))
+        
+        documents = loader.load()
+        
+        # Split documents
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
+        chunks = text_splitter.split_documents(documents)
+        
+        # Add to vector store
+        store.add_documents(chunks)
+        
+        if hasattr(store, 'persist'):
+            store.persist()
+        
+        # Clean up
+        temp_path.unlink()
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "chunks_created": len(chunks)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/reset/{session_id}")
 async def reset_session(session_id: str):
@@ -193,6 +462,33 @@ async def list_sessions():
         "count": len(memory_store)
     }
 
+@app.get("/api/models")
+async def list_models():
+    """List available models"""
+    models = []
+    
+    # Check OpenAI
+    if os.getenv("OPENAI_API_KEY"):
+        models.append({
+            "provider": "openai",
+            "models": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
+        })
+    
+    # Check Ollama
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2.0)
+            if response.status_code == 200:
+                ollama_models = response.json().get("models", [])
+                models.append({
+                    "provider": "ollama",
+                    "models": [m["name"] for m in ollama_models]
+                })
+    except:
+        pass
+    
+    return {"available_models": models}
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 3000))
     
@@ -200,6 +496,10 @@ if __name__ == "__main__":
     print(f"📍 Health check: http://localhost:{port}/health")
     print(f"🌐 API endpoint: http://localhost:{port}/api/info")
     print(f"🤖 Query endpoint: POST http://localhost:{port}/api/query")
-    print(f"💡 Set OPENAI_API_KEY environment variable to enable LLM")
+    print(f"📚 RAG Ingest: POST http://localhost:{port}/api/ingest")
+    print(f"📁 File Upload: POST http://localhost:{port}/api/upload")
+    print(f"🧠 LLM Provider: {LLM_PROVIDER}")
+    print(f"💡 Set OPENAI_API_KEY for OpenAI models")
+    print(f"🦙 Ollama URL: {OLLAMA_BASE_URL}")
     
     uvicorn.run(app, host="0.0.0.0", port=port)

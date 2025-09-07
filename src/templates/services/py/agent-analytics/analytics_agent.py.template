@@ -1,0 +1,516 @@
+import os
+import asyncio
+import json
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, List, Union
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, FileResponse
+from pydantic import BaseModel
+import pandas as pd
+import numpy as np
+import polars as pl
+import duckdb
+from sqlalchemy import create_engine, text
+import psycopg2
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+import streamlit as st
+import uvicorn
+from pathlib import Path
+import io
+
+# Initialize FastAPI
+app = FastAPI(
+    title="{{SERVICE_NAME}}",
+    description="Advanced Analytics Agent with Database Integration for {{PROJECT_NAME}}",
+    version="2.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configuration
+POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/{{PROJECT_NAME}}")
+TIMESCALE_URL = os.getenv("TIMESCALE_URL", POSTGRES_URL)
+CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "")
+DUCKDB_PATH = os.getenv("DUCKDB_PATH", "./analytics.duckdb")
+CACHE_DIR = Path("./cache")
+CACHE_DIR.mkdir(exist_ok=True)
+
+# Pydantic models
+class QueryRequest(BaseModel):
+    query: str
+    database: Optional[str] = "postgres"  # postgres, timescale, duckdb, clickhouse
+    format: Optional[str] = "json"  # json, csv, parquet, excel
+    cache: Optional[bool] = True
+
+class AnalyticsRequest(BaseModel):
+    data_source: str  # table name or query
+    analysis_type: str  # describe, correlate, cluster, forecast, anomaly
+    columns: Optional[List[str]] = None
+    parameters: Optional[Dict[str, Any]] = {}
+
+class VisualizationRequest(BaseModel):
+    data: Union[Dict, List]
+    chart_type: str  # line, bar, scatter, heatmap, 3d, sankey, treemap
+    x: Optional[str] = None
+    y: Optional[str] = None
+    color: Optional[str] = None
+    title: Optional[str] = "Analytics Visualization"
+
+class ETLRequest(BaseModel):
+    source: str  # source table/query
+    target: str  # target table
+    transform: Optional[str] = None  # Python code for transformation
+    schedule: Optional[str] = None  # cron expression
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    timestamp: str
+    databases_connected: Dict[str, bool]
+    cache_size_mb: float
+
+# Database connections
+def get_postgres_engine():
+    """Get PostgreSQL/TimescaleDB connection"""
+    try:
+        return create_engine(POSTGRES_URL)
+    except:
+        return None
+
+def get_duckdb_conn():
+    """Get DuckDB connection"""
+    return duckdb.connect(DUCKDB_PATH)
+
+# Analytics functions
+async def run_sql_query(query: str, database: str = "postgres") -> pd.DataFrame:
+    """Execute SQL query on specified database"""
+    if database in ["postgres", "timescale"]:
+        engine = get_postgres_engine()
+        if engine:
+            return pd.read_sql(query, engine)
+    elif database == "duckdb":
+        conn = get_duckdb_conn()
+        return conn.execute(query).fetchdf()
+    else:
+        raise ValueError(f"Unsupported database: {database}")
+
+async def analyze_dataframe(df: pd.DataFrame, analysis_type: str, params: Dict = {}) -> Dict:
+    """Perform various analyses on dataframe"""
+    results = {}
+    
+    if analysis_type == "describe":
+        # Statistical description
+        results["summary"] = df.describe().to_dict()
+        results["dtypes"] = df.dtypes.astype(str).to_dict()
+        results["missing"] = df.isnull().sum().to_dict()
+        results["shape"] = {"rows": len(df), "columns": len(df.columns)}
+        
+    elif analysis_type == "correlate":
+        # Correlation analysis
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            corr_matrix = df[numeric_cols].corr()
+            results["correlation"] = corr_matrix.to_dict()
+            
+            # Find strong correlations
+            strong_corr = []
+            for i in range(len(corr_matrix.columns)):
+                for j in range(i+1, len(corr_matrix.columns)):
+                    if abs(corr_matrix.iloc[i, j]) > 0.7:
+                        strong_corr.append({
+                            "var1": corr_matrix.columns[i],
+                            "var2": corr_matrix.columns[j],
+                            "correlation": corr_matrix.iloc[i, j]
+                        })
+            results["strong_correlations"] = strong_corr
+            
+    elif analysis_type == "cluster":
+        # Clustering analysis
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            X = df[numeric_cols].fillna(0)
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            
+            # Determine optimal clusters
+            n_clusters = min(params.get("n_clusters", 3), len(df) - 1)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+            clusters = kmeans.fit_predict(X_scaled)
+            
+            results["clusters"] = clusters.tolist()
+            results["cluster_centers"] = kmeans.cluster_centers_.tolist()
+            results["inertia"] = kmeans.inertia_
+            
+            # PCA for visualization
+            if X_scaled.shape[1] > 2:
+                pca = PCA(n_components=2)
+                X_pca = pca.fit_transform(X_scaled)
+                results["pca_points"] = X_pca.tolist()
+                results["pca_variance_ratio"] = pca.explained_variance_ratio_.tolist()
+                
+    elif analysis_type == "anomaly":
+        # Anomaly detection using IQR method
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        anomalies = {}
+        
+        for col in numeric_cols:
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
+            if len(outliers) > 0:
+                anomalies[col] = {
+                    "count": len(outliers),
+                    "indices": outliers.index.tolist(),
+                    "values": outliers[col].tolist(),
+                    "bounds": {"lower": lower_bound, "upper": upper_bound}
+                }
+        
+        results["anomalies"] = anomalies
+        
+    elif analysis_type == "forecast":
+        # Simple time series forecast (if datetime column exists)
+        date_cols = df.select_dtypes(include=['datetime64']).columns
+        if len(date_cols) > 0 and len(df.select_dtypes(include=[np.number]).columns) > 0:
+            # Simplified forecast logic - would use Prophet or ARIMA in production
+            results["forecast"] = "Time series analysis available - implement with Prophet/ARIMA"
+    
+    return results
+
+def create_visualization(data: Union[Dict, List, pd.DataFrame], viz_request: VisualizationRequest) -> go.Figure:
+    """Create Plotly visualization"""
+    if isinstance(data, dict):
+        df = pd.DataFrame(data)
+    elif isinstance(data, list):
+        df = pd.DataFrame(data)
+    else:
+        df = data
+    
+    chart_type = viz_request.chart_type
+    
+    if chart_type == "line":
+        fig = px.line(df, x=viz_request.x, y=viz_request.y, 
+                     color=viz_request.color, title=viz_request.title)
+    elif chart_type == "bar":
+        fig = px.bar(df, x=viz_request.x, y=viz_request.y,
+                    color=viz_request.color, title=viz_request.title)
+    elif chart_type == "scatter":
+        fig = px.scatter(df, x=viz_request.x, y=viz_request.y,
+                        color=viz_request.color, title=viz_request.title)
+    elif chart_type == "heatmap":
+        fig = px.imshow(df.corr() if df.select_dtypes(include=[np.number]).shape[1] > 1 else df,
+                       title=viz_request.title)
+    elif chart_type == "3d":
+        numeric_cols = df.select_dtypes(include=[np.number]).columns[:3]
+        if len(numeric_cols) >= 3:
+            fig = px.scatter_3d(df, x=numeric_cols[0], y=numeric_cols[1], z=numeric_cols[2],
+                              color=viz_request.color, title=viz_request.title)
+        else:
+            fig = go.Figure()
+    elif chart_type == "sankey":
+        # Simplified Sankey - would need proper source/target/value columns
+        fig = go.Figure()
+    elif chart_type == "treemap":
+        # Simplified treemap - would need proper hierarchy columns
+        fig = go.Figure()
+    else:
+        fig = go.Figure()
+    
+    return fig
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize connections on startup"""
+    # Test database connections
+    try:
+        engine = get_postgres_engine()
+        if engine:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print("✅ PostgreSQL/TimescaleDB connected")
+    except:
+        print("⚠️ PostgreSQL/TimescaleDB not available")
+    
+    try:
+        conn = get_duckdb_conn()
+        conn.execute("SELECT 1").fetchall()
+        print("✅ DuckDB initialized")
+    except:
+        print("⚠️ DuckDB initialization failed")
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    databases = {}
+    
+    # Check PostgreSQL
+    try:
+        engine = get_postgres_engine()
+        if engine:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            databases["postgres"] = True
+    except:
+        databases["postgres"] = False
+    
+    # Check DuckDB
+    try:
+        conn = get_duckdb_conn()
+        conn.execute("SELECT 1").fetchall()
+        databases["duckdb"] = True
+    except:
+        databases["duckdb"] = False
+    
+    # Calculate cache size
+    cache_size = sum(f.stat().st_size for f in CACHE_DIR.glob("*") if f.is_file()) / (1024 * 1024)
+    
+    return HealthResponse(
+        status="healthy",
+        service="{{SERVICE_NAME}}",
+        timestamp=datetime.utcnow().isoformat(),
+        databases_connected=databases,
+        cache_size_mb=round(cache_size, 2)
+    )
+
+@app.get("/api/info")
+async def get_info():
+    """Service information endpoint"""
+    return {
+        "service": "{{SERVICE_NAME}}",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Analytics Stack",
+        "runtime": "Python",
+        "domain": "{{BASE_DOMAIN}}",
+        "capabilities": {
+            "databases": ["PostgreSQL", "TimescaleDB", "DuckDB"],
+            "analytics": ["Statistical Analysis", "Clustering", "Anomaly Detection", "Correlation"],
+            "visualizations": ["Line", "Bar", "Scatter", "Heatmap", "3D"],
+            "formats": ["JSON", "CSV", "Parquet", "Excel"],
+            "libraries": ["Pandas", "Polars", "DuckDB", "Plotly", "Scikit-learn"]
+        }
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Hello from {{SERVICE_NAME}}!",
+        "project": "{{PROJECT_NAME}}",
+        "framework": "Advanced Analytics Platform",
+        "endpoints": {
+            "health": "/health",
+            "info": "/api/info",
+            "query": "/api/query",
+            "analyze": "/api/analyze",
+            "visualize": "/api/visualize",
+            "dashboard": "/dashboard"
+        }
+    }
+
+@app.post("/api/query")
+async def execute_query(request: QueryRequest):
+    """Execute SQL query on specified database"""
+    try:
+        # Check cache
+        cache_key = f"{request.database}_{hash(request.query)}"
+        cache_file = CACHE_DIR / f"{cache_key}.parquet"
+        
+        if request.cache and cache_file.exists():
+            df = pd.read_parquet(cache_file)
+        else:
+            df = await run_sql_query(request.query, request.database)
+            
+            # Cache result
+            if request.cache and len(df) > 0:
+                df.to_parquet(cache_file)
+        
+        # Format response
+        if request.format == "json":
+            return {"data": df.to_dict(orient="records"), "rows": len(df), "columns": list(df.columns)}
+        elif request.format == "csv":
+            stream = io.StringIO()
+            df.to_csv(stream, index=False)
+            return StreamingResponse(io.BytesIO(stream.getvalue().encode()), 
+                                   media_type="text/csv",
+                                   headers={"Content-Disposition": "attachment; filename=query_result.csv"})
+        elif request.format == "parquet":
+            stream = io.BytesIO()
+            df.to_parquet(stream)
+            stream.seek(0)
+            return StreamingResponse(stream, 
+                                   media_type="application/octet-stream",
+                                   headers={"Content-Disposition": "attachment; filename=query_result.parquet"})
+        elif request.format == "excel":
+            stream = io.BytesIO()
+            df.to_excel(stream, index=False)
+            stream.seek(0)
+            return StreamingResponse(stream,
+                                   media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                   headers={"Content-Disposition": "attachment; filename=query_result.xlsx"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analyze")
+async def analyze_data(request: AnalyticsRequest):
+    """Perform analytics on data"""
+    try:
+        # Get data
+        if request.data_source.upper().startswith("SELECT"):
+            df = await run_sql_query(request.data_source)
+        else:
+            # Assume it's a table name
+            df = await run_sql_query(f"SELECT * FROM {request.data_source} LIMIT 10000")
+        
+        # Filter columns if specified
+        if request.columns:
+            df = df[request.columns]
+        
+        # Perform analysis
+        results = await analyze_dataframe(df, request.analysis_type, request.parameters)
+        
+        return {
+            "analysis_type": request.analysis_type,
+            "results": results,
+            "data_shape": {"rows": len(df), "columns": len(df.columns)}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/visualize")
+async def visualize_data(request: VisualizationRequest):
+    """Create visualization from data"""
+    try:
+        fig = create_visualization(request.data, request)
+        
+        # Return as HTML
+        html = fig.to_html(include_plotlyjs='cdn')
+        return {"html": html, "chart_type": request.chart_type}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/etl")
+async def run_etl(request: ETLRequest):
+    """Run ETL pipeline"""
+    try:
+        # Get source data
+        if request.source.upper().startswith("SELECT"):
+            df = await run_sql_query(request.source)
+        else:
+            df = await run_sql_query(f"SELECT * FROM {request.source}")
+        
+        # Apply transformation if provided
+        if request.transform:
+            # CAUTION: exec is dangerous - in production use sandboxed execution
+            local_vars = {"df": df, "pd": pd, "np": np}
+            exec(request.transform, {}, local_vars)
+            df = local_vars.get("df", df)
+        
+        # Save to target
+        engine = get_postgres_engine()
+        if engine:
+            df.to_sql(request.target, engine, if_exists="replace", index=False)
+        
+        return {
+            "status": "success",
+            "source": request.source,
+            "target": request.target,
+            "rows_processed": len(df),
+            "schedule": request.schedule or "manual"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload")
+async def upload_data(file: UploadFile = File(...), table_name: str = Query(...)):
+    """Upload CSV/Excel file to database"""
+    try:
+        content = await file.read()
+        
+        # Read file based on extension
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(content))
+        elif file.filename.endswith('.xlsx') or file.filename.endswith('.xls'):
+            df = pd.read_excel(io.BytesIO(content))
+        elif file.filename.endswith('.parquet'):
+            df = pd.read_parquet(io.BytesIO(content))
+        else:
+            raise ValueError("Unsupported file format")
+        
+        # Save to database
+        engine = get_postgres_engine()
+        if engine:
+            df.to_sql(table_name, engine, if_exists="replace", index=False)
+        
+        # Also save to DuckDB for fast analytics
+        conn = get_duckdb_conn()
+        conn.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
+        
+        return {
+            "status": "success",
+            "table_name": table_name,
+            "rows": len(df),
+            "columns": list(df.columns)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/tables")
+async def list_tables(database: str = Query("postgres")):
+    """List available tables"""
+    try:
+        if database == "postgres":
+            engine = get_postgres_engine()
+            if engine:
+                query = """
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                """
+                df = pd.read_sql(query, engine)
+                return {"tables": df["table_name"].tolist()}
+        elif database == "duckdb":
+            conn = get_duckdb_conn()
+            tables = conn.execute("SHOW TABLES").fetchall()
+            return {"tables": [t[0] for t in tables]}
+        else:
+            return {"tables": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/dashboard")
+async def dashboard():
+    """Streamlit dashboard endpoint info"""
+    return {
+        "message": "Dashboard available via Streamlit",
+        "command": "streamlit run dashboard.py",
+        "note": "Run the Streamlit app separately for interactive dashboard"
+    }
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 3000))
+    
+    print(f"🚀 {{SERVICE_NAME}} is starting on port {port}")
+    print(f"📍 Health check: http://localhost:{port}/health")
+    print(f"🌐 API endpoint: http://localhost:{port}/api/info")
+    print(f"📊 Query endpoint: POST http://localhost:{port}/api/query")
+    print(f"🔬 Analyze endpoint: POST http://localhost:{port}/api/analyze")
+    print(f"📈 Visualize endpoint: POST http://localhost:{port}/api/visualize")
+    print(f"🗄️ PostgreSQL: {POSTGRES_URL}")
+    print(f"🦆 DuckDB: {DUCKDB_PATH}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

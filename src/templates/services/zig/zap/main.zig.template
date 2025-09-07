@@ -1,0 +1,90 @@
+const std = @import("std");
+const zap = @import("zap");
+
+fn on_request(r: zap.SimpleRequest) void {
+    const path = r.path orelse "/";
+    
+    if (r.method != null and r.method.? == .GET) {
+        if (std.mem.eql(u8, path, "/")) {
+            r.sendJson(
+                \\{
+                \\  "message": "Hello from {{SERVICE_NAME}}!",
+                \\  "project": "{{PROJECT_NAME}}",
+                \\  "framework": "Zap - Ultra-fast Zig Web Framework",
+                \\  "domain": "{{BASE_DOMAIN}}",
+                \\  "endpoints": {
+                \\    "health": "/health",
+                \\    "api": "/api",
+                \\    "info": "/api/info"
+                \\  }
+                \\}
+            ) catch return;
+        } else if (std.mem.eql(u8, path, "/health")) {
+            r.sendJson(
+                \\{
+                \\  "status": "healthy",
+                \\  "service": "{{SERVICE_NAME}}",
+                \\  "timestamp": "2024-01-01T00:00:00Z"
+                \\}
+            ) catch return;
+        } else if (std.mem.eql(u8, path, "/api/info")) {
+            r.sendJson(
+                \\{
+                \\  "service": "{{SERVICE_NAME}}",
+                \\  "project": "{{PROJECT_NAME}}",
+                \\  "runtime": "Zig",
+                \\  "framework": "Zap",
+                \\  "capabilities": {
+                \\    "performance": "Ultra-fast",
+                \\    "memory": "Minimal footprint",
+                \\    "concurrency": "Async I/O"
+                \\  }
+                \\}
+            ) catch return;
+        } else {
+            r.setStatus(.not_found);
+            r.sendBody("Not Found") catch return;
+        }
+    } else if (r.method != null and r.method.? == .POST) {
+        if (std.mem.eql(u8, path, "/api/echo")) {
+            // Echo back the request body
+            if (r.body) |body| {
+                r.sendBody(body) catch return;
+            } else {
+                r.sendJson("{ \"error\": \"No body provided\" }") catch return;
+            }
+        } else {
+            r.setStatus(.not_found);
+            r.sendBody("Not Found") catch return;
+        }
+    } else {
+        r.setStatus(.method_not_allowed);
+        r.sendBody("Method Not Allowed") catch return;
+    }
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    
+    // Setup listener
+    var listener = zap.SimpleHttpListener.init(.{
+        .port = 3000,
+        .on_request = on_request,
+        .log = true,
+        .max_clients = 100000,
+    });
+    
+    try listener.listen();
+    
+    std.debug.print("🚀 {{SERVICE_NAME}} is starting on port 3000\n", .{});
+    std.debug.print("📍 Health check: http://localhost:3000/health\n", .{});
+    std.debug.print("🌐 API endpoint: http://localhost:3000/api/info\n", .{});
+    std.debug.print("⚡ Powered by Zig and Zap framework\n", .{});
+    
+    // Start the server
+    zap.start(.{
+        .threads = 2,
+        .workers = 2,
+    });
+}

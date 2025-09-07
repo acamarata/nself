@@ -1,0 +1,33 @@
+FROM alpine:latest AS builder
+
+# Install Zig
+RUN apk add --no-cache wget xz
+RUN wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz && \
+    tar -xf zig-linux-x86_64-0.11.0.tar.xz && \
+    mv zig-linux-x86_64-0.11.0 /usr/local/zig
+
+ENV PATH="/usr/local/zig:${PATH}"
+
+WORKDIR /app
+
+# Copy source files
+COPY build.zig build.zig.zon main.zig ./
+
+# Build the application
+RUN zig build -Doptimize=ReleaseFast
+
+# Runtime stage
+FROM alpine:latest
+
+RUN apk add --no-cache libc6-compat wget
+
+WORKDIR /app
+
+COPY --from=builder /app/zig-out/bin/{{SERVICE_NAME}} ./
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+CMD ["./{{SERVICE_NAME}}"]
