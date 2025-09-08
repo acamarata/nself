@@ -118,7 +118,7 @@ cmd_build() {
   fi
 
   # Load environment with smart defaults (silently)
-  if ! load_env_with_defaults >/dev/null 2>&1; then
+  if ! load_env_with_defaults; then
     printf "${COLOR_RED}✗${COLOR_RESET} Failed to load environment                \n"
     return 1
   fi
@@ -770,7 +770,7 @@ EOF
     log_info() { :; }
     log_success() { :; }
     log_warning() { :; }
-    portable_timeout 10 source "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh" || true
+    source "$SCRIPT_DIR/../lib/auto-fix/service-generator.sh" || true
     service_gen_loaded=true
   fi
 
@@ -779,17 +779,17 @@ EOF
     log_info() { :; }
     log_success() { :; }
     log_warning() { :; }
-    portable_timeout 10 source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" || true
+    source "$SCRIPT_DIR/../lib/auto-fix/dockerfile-generator.sh" || true
     dockerfile_gen_loaded=true
   fi
 
   # Source custom service builder
   # Try v2 builder first (CS_N pattern), fall back to v1
   if [[ -f "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" ]]; then
-    portable_timeout 10 source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
+    source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
     custom_service_loaded=true
   elif [[ -f "$SCRIPT_DIR/../lib/services/service-builder.sh" ]]; then
-    portable_timeout 10 source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
+    source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
     custom_service_loaded=true
   fi
   
@@ -809,7 +809,7 @@ EOF
   # Generate custom services if configured
   if [[ "$custom_service_loaded" == "true" ]] && [[ "$has_custom_services" == "true" ]]; then
     # Build custom services and their configurations
-    if portable_timeout 15 build_custom_services >/dev/null 2>&1; then
+    if build_custom_services >/dev/null 2>&1; then
       # Count generated custom services
       if [[ -n "${CS_1:-}" ]]; then
         # Count CS_N services
@@ -832,7 +832,7 @@ EOF
     local before_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
 
     # Generate services silently
-    portable_timeout 15 auto_generate_services "true" >/dev/null 2>&1
+    auto_generate_services "true" >/dev/null 2>&1
 
     # Count services after generation
     local after_count=$(find services -type d -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
@@ -845,7 +845,7 @@ EOF
     # Functions service
     if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] && [[ ! -d "functions" ]]; then
       # Use bash -c to ensure proper execution context for heredocs
-      portable_timeout 10 bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
+      bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
       if [[ -d "functions" ]]; then
         ((system_services_generated++))
       fi
@@ -853,7 +853,7 @@ EOF
 
     # Dashboard service
     if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
-      portable_timeout 10 bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
+      bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
       if [[ -d "dashboard" ]]; then
         ((system_services_generated++))
       fi
@@ -875,7 +875,7 @@ EOF
   fi
 
   # Restore log functions
-  source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+  ( source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null ) >/dev/null || true
 
   # SSL certificates were already generated earlier in the build process
   # No need to regenerate them here
