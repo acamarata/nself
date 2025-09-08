@@ -296,11 +296,11 @@ load_env_with_defaults() {
   esac
   
   # Load environment-specific files
-  if [[ "$ENV" == "staging" ]] && [[ -f ".env.staging" ]]; then
+  if [[ "${ENV:-}" == "staging" ]] && [[ -f ".env.staging" ]]; then
     set -a
     source ".env.staging" 2>/dev/null
     set +a
-  elif [[ "$ENV" == "prod" ]]; then
+  elif [[ "${ENV:-}" == "prod" ]]; then
     [[ -f ".env.prod" ]] && source ".env.prod" 2>/dev/null
     [[ -f ".env.secrets" ]] && source ".env.secrets" 2>/dev/null
   fi
