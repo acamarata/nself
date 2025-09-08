@@ -46,16 +46,51 @@ check_docker() {
   if ! command -v docker &>/dev/null; then
     log_error "Docker is not installed"
     echo ""
-    log_info "Please install Docker Desktop from:"
-    echo "  https://www.docker.com/products/docker-desktop"
+    log_info "Please install Docker from:"
+    echo "  https://www.docker.com/products/docker-desktop (macOS/Windows)"
+    echo "  https://docs.docker.com/engine/install/ (Linux)"
     return 1
   fi
 
-  # Check if Docker daemon is running
-  if ! docker info &>/dev/null; then
-    log_error "Docker daemon is not running"
-    echo ""
-    log_info "Please start Docker Desktop"
+  # More robust Docker daemon check (works better in LXC/container environments)
+  # Try multiple methods to detect if Docker is available
+  local docker_available=false
+  
+  # Method 1: Try docker version (more reliable than docker info in containers)
+  if docker version --format '{{.Server.Version}}' &>/dev/null; then
+    docker_available=true
+  # Method 2: Check if we can list containers (works in some restricted environments)
+  elif docker ps --format '{{.ID}}' &>/dev/null; then
+    docker_available=true
+  # Method 3: Original docker info check as fallback
+  elif docker info &>/dev/null; then
+    docker_available=true
+  fi
+  
+  if [[ "$docker_available" == "false" ]]; then
+    # Provide more specific error messages based on the environment
+    if [[ -S /var/run/docker.sock ]]; then
+      if [[ ! -r /var/run/docker.sock ]] || [[ ! -w /var/run/docker.sock ]]; then
+        log_error "Docker socket exists but is not accessible"
+        echo ""
+        log_info "You may need to add your user to the docker group:"
+        echo "  sudo usermod -aG docker \$USER"
+        echo "  Then log out and back in"
+      else
+        log_error "Docker daemon is not responding"
+        echo ""
+        log_info "Please ensure Docker service is running:"
+        echo "  sudo systemctl start docker  # For systemd"
+        echo "  sudo service docker start    # For init.d"
+      fi
+    else
+      log_error "Docker daemon is not running"
+      echo ""
+      log_info "Please start Docker service:"
+      echo "  sudo systemctl start docker  # For systemd (most Linux distros)"
+      echo "  sudo service docker start    # For init.d"
+      echo "  Or start Docker Desktop if on macOS/Windows"
+    fi
     return 1
   fi
 
