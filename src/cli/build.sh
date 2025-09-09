@@ -270,7 +270,7 @@ cmd_build() {
 
   # Check SSL certificates
   local needs_ssl=false
-  if [[ ! -f "nginx/ssl/nself.org.crt" ]] || [[ ! -f "nginx/ssl/nself.org.key" ]] || [[ "$force_rebuild" == "true" ]]; then
+  if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]] || [[ "$force_rebuild" == "true" ]]; then
     needs_ssl=true
     needs_work=true
   fi
@@ -324,23 +324,24 @@ cmd_build() {
     if [[ "$needs_ssl" == "true" ]]; then
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
 
+      # Create the expected directory structure
+      mkdir -p ssl/certificates/nself-org >/dev/null 2>&1
+      
       # Check for mkcert
       if command -v mkcert >/dev/null 2>&1; then
         # Generate trusted certificates with mkcert
-        (
-          cd nginx/ssl
-          mkcert -cert-file nself.org.crt -key-file nself.org.key \
-            "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" \
-            "${HASURA_ROUTE}" "${AUTH_ROUTE}" "${STORAGE_ROUTE}" \
-            localhost 127.0.0.1 ::1 >/dev/null 2>&1
-        )
+        mkcert -cert-file ssl/certificates/nself-org/fullchain.pem \
+               -key-file ssl/certificates/nself-org/privkey.pem \
+               "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" \
+               "${HASURA_ROUTE}" "${AUTH_ROUTE}" "${STORAGE_ROUTE}" \
+               localhost 127.0.0.1 ::1 >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (trusted)       \n"
         CREATED_FILES+=("SSL certificates")
       else
         # Generate self-signed certificate as fallback
         openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-          -keyout nginx/ssl/nself.org.key \
-          -out nginx/ssl/nself.org.crt \
+          -keyout ssl/certificates/nself-org/privkey.pem \
+          -out ssl/certificates/nself-org/fullchain.pem \
           -subj "/C=US/ST=State/L=City/O=nself/CN=*.${BASE_DOMAIN}" \
           -addext "subjectAltName=DNS:*.${BASE_DOMAIN},DNS:${BASE_DOMAIN}" >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (self-signed)   \n"

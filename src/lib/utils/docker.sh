@@ -17,7 +17,12 @@ ensure_docker_running() {
 
 # Docker Compose wrapper - enforces v2 and consistent options
 compose() {
+  # Try .env.local first, then .env
   local env_file="${COMPOSE_ENV_FILE:-.env.local}"
+  if [[ ! -f "$env_file" ]] && [[ -f ".env" ]]; then
+    env_file=".env"
+  fi
+  
   local project="${PROJECT_NAME:-nself}"
   local compose_files=""
   
