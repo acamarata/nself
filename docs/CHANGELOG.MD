@@ -5,9 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.9] - 2025-09-05 (Patch Updates)
+## [0.3.9] - 2025-09-09 (Patch Updates)
 
-### Fixed (Patch)
+### Fixed (Latest Patch)
+- **Backup Strategy**: Unified backup approach across all commands
+  - All backups now use `_backup/timestamp/` convention consistently
+  - Only creates backups when files are actually being overwritten
+  - Removed redundant `.backup` files in favor of timestamped directories
+- **Build Cleanup**: Removed unnecessary frontend-apps.env generation
+  - File was being created but never used by any service
+  - Removed generation code from build.sh
+  - Added to reset cleanup list
+- **Rollback Command**: Updated to use new backup directory structure
+
+### Fixed (September 5, 2025)
 - **Build Command**: Fixed docker-compose generation hanging issue
   - Added timeout protections for service generation scripts
   - Fixed .env.local sourcing error in compose-generate.sh

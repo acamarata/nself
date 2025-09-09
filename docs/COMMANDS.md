@@ -7,7 +7,7 @@ Complete command reference for nself v0.3.9.
 ## Version Availability
 - **✅ v0.3.9 (Current)**: 34 fully functional commands + 2 partial
 - **🚧 v0.4.0 (Q1 2025)**: Complete `deploy` and `search` implementations  
-- **🔮 Beyond (2025+)**: Advanced cloud features, Kubernetes, multi-region
+- **🔮 Beyond**: Advanced cloud features, Kubernetes, multi-region
 
 ## Quick Reference
 

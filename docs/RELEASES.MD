@@ -100,19 +100,19 @@ nself follows semantic versioning:
 
 ## Upcoming Releases
 
-### v0.4.0 (Q4 2024)
+### v0.4.0 (Q1 2025)
+- Complete `deploy` command implementation
+- Complete `search` command implementation
+- Polish and refinement
+- End-to-end testing
+- Bug fixes and stability
+
+### Beyond (After v0.4.0)
 - Kubernetes deployment support
 - Multi-node clustering
-- Advanced monitoring with alerts
-- GraphQL subscriptions
-- WebSocket support
-
-### v0.5.0 (Q1 2025)
 - Plugin system
-- Custom service templates
-- CI/CD integrations
 - Cloud provider abstractions
-- Terraform modules
+- CI/CD integrations
 
 ## Archives
 

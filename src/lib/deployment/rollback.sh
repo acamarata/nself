@@ -115,12 +115,18 @@ safe_rollback() {
       ;;
       
     config)
-      # Just restore configuration files
-      if [[ -f ".env.local.backup" ]]; then
-        cp .env.local.backup .env.local
-      fi
-      if [[ -f "docker-compose.yml.backup" ]]; then
-        cp docker-compose.yml.backup docker-compose.yml
+      # Restore configuration files from latest backup
+      latest_backup=$(ls -d _backup/*/ 2>/dev/null | sort -r | head -1)
+      if [[ -n "$latest_backup" ]]; then
+        if [[ -f "$latest_backup/.env.local" ]]; then
+          cp "$latest_backup/.env.local" .env.local
+        fi
+        if [[ -f "$latest_backup/docker-compose.yml" ]]; then
+          cp "$latest_backup/docker-compose.yml" docker-compose.yml
+          log_info "Restored docker-compose.yml from $latest_backup"
+        fi
+      else
+        log_warning "No backup found in _backup/ directory"
       fi
       ;;
   esac

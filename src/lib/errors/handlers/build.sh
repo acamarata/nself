@@ -180,8 +180,11 @@ disable_go_services() {
 
   log_info "Disabling Go services in docker-compose.yml..."
 
-  # Backup docker-compose.yml
-  cp docker-compose.yml docker-compose.yml.backup
+  # Backup docker-compose.yml using _backup/timestamp convention
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  backup_dir="_backup/${timestamp}"
+  mkdir -p "$backup_dir"
+  cp docker-compose.yml "$backup_dir/docker-compose.yml"
 
   # Comment out the services
   for service in $services; do
@@ -191,7 +194,7 @@ disable_go_services() {
   done
 
   log_success "Go services disabled"
-  log_info "Backup saved as docker-compose.yml.backup"
+  log_info "Backup saved to $backup_dir/docker-compose.yml"
   log_info "You can re-enable them later by uncommenting in docker-compose.yml"
 }
 

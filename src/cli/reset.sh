@@ -171,6 +171,7 @@ cmd_reset() {
     ".env.prod-template"
     ".env.prod-secrets"
     ".gitignore"
+    "frontend-apps.env"
     
     # Any leftover backup files (removed after backing up)
 
