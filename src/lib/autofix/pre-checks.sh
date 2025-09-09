@@ -35,7 +35,8 @@ run_pre_checks() {
 
   # Check 5: Ensure critical services have resources
   local project_name="${PROJECT_NAME:-unity}"
-  if docker ps -q -f name="${project_name}_postgres" >/dev/null 2>&1; then
+  # Check if postgres container actually exists (non-empty output)
+  if [[ -n "$(docker ps -q -f name="${project_name}_postgres" 2>/dev/null)" ]]; then
     # Postgres is running, check if it's actually ready
     if ! docker exec "${project_name}_postgres" pg_isready -U postgres >/dev/null 2>&1; then
       [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Restarting Postgres..."

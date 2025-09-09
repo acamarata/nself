@@ -370,14 +370,21 @@ cmd_start() {
   local result
 
   # Ensure environment is loaded for compose wrapper
-  if [[ -f ".env.local" ]]; then
+  if [[ -f ".env.local" ]] || [[ -f ".env" ]]; then
     set -a
     load_env_with_priority
     set +a
   fi
 
-  # Build the compose command
-  local compose_cmd="compose up"
+  # Build the compose command using the full docker compose
+  # Get the proper compose command with project name and env file
+  local env_file=".env.local"
+  if [[ ! -f "$env_file" ]] && [[ -f ".env" ]]; then
+    env_file=".env"
+  fi
+  
+  local project="${PROJECT_NAME:-nself}"
+  local compose_cmd="docker compose --project-name \"$project\" --env-file \"$env_file\" up"
   if [[ "$detached" == "true" ]]; then
     compose_cmd="$compose_cmd -d"
   fi
@@ -386,21 +393,39 @@ cmd_start() {
   if [[ "$verbose" == "true" ]]; then
     # Show full output in verbose mode
     printf "\n"
-    eval "$compose_cmd" 2>&1 | tee "$output_file"
+    bash -c "$compose_cmd" 2>&1 | tee "$output_file"
     result=${PIPESTATUS[0]}
   else
     # Run silently with spinner
-    (eval "$compose_cmd" 2>&1) >"$output_file" &
+    (bash -c "$compose_cmd" 2>&1) >"$output_file" &
     local compose_pid=$!
 
-    # Show spinner while waiting
+    # Show spinner while waiting with timeout
     local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     local i=0
+    local timeout=120  # 2 minute timeout
+    local elapsed=0
+    
     while kill -0 $compose_pid 2>/dev/null; do
+      if [[ $elapsed -ge $timeout ]]; then
+        printf "\r${COLOR_RED}✗${COLOR_RESET} Docker compose timeout after ${timeout}s                  \n"
+        kill $compose_pid 2>/dev/null
+        
+        # Show last error from output
+        if [[ -f "$output_file" ]]; then
+          echo
+          log_error "Docker compose failed. Last output:"
+          tail -20 "$output_file" | sed 's/^/  /'
+        fi
+        
+        return 1
+      fi
+      
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
       printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...          " "$char"
       ((i++))
-      sleep 0.1
+      ((elapsed++))
+      sleep 1
     done
     wait $compose_pid
     result=$?
