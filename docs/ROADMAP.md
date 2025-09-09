@@ -1,12 +1,12 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released (v0.3.9)](#released-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond-v050-and-later)
+[Released (v0.3.9)](#released-v039) | [Next (v0.4.0)](#next-v040) | [Beyond](#beyond)
 
 ## Current Status Summary
 - **✅ v0.3.9 (Now)**: 36 commands, Admin UI, 40+ templates, functions, MLflow
 - **🚧 v0.4.0 (Q1 2025)**: Complete partial features (deploy, search), polish  
-- **🔮 v0.5.0+ (2025+)**: Kubernetes, multi-cloud, enterprise features
+- **🔮 Beyond**: Kubernetes, multi-cloud, enterprise features
 
 ---
 
@@ -89,8 +89,8 @@ admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help
 
 ---
 
-## Beyond (v0.5.0 and later)
-**Status**: 🔮 Future Plans | **Timeline**: 2025+  
+## Beyond
+**Status**: 🔮 Future Plans | **Timeline**: After v0.4.0  
 **Focus**: Cloud Management & Enterprise Features
 
 ### Cloud & Deployment
@@ -170,7 +170,7 @@ admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help
 |---------|--------|-------|----------|
 | [v0.3.9](#released-v039) | ✅ Released | Service Templates & Admin UI | Available Now |
 | [v0.4.0](#next-v040) | 📋 Planned | Polish & Refinement | Q1 2025 |
-| [Beyond](#beyond-future) | 🔮 Future | Cloud & Enterprise | 2025+ |
+| [Beyond](#beyond) | 🔮 Future | Cloud & Enterprise | After v0.4.0 |
 
 ---
 

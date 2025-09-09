@@ -78,10 +78,18 @@ else
   LOG_LEVEL=${LOG_LEVEL:-info}
 fi
 
-# Backup existing docker-compose.yml if it exists
+# Backup existing docker-compose.yml only if it will be changed
 if [ -f "docker-compose.yml" ]; then
-  cp docker-compose.yml docker-compose.yml.backup
-  [[ "${VERBOSE:-}" == "true" ]] && log_info "Backed up existing docker-compose.yml"
+  # Check if the file would actually change
+  OLD_HASH=$(sha256sum docker-compose.yml 2>/dev/null | cut -d' ' -f1 || shasum -a 256 docker-compose.yml 2>/dev/null | cut -d' ' -f1 || echo "")
+  if [ -n "$OLD_HASH" ]; then
+    # Create backup using _backup/timestamp convention
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    backup_dir="_backup/${timestamp}"
+    mkdir -p "$backup_dir"
+    cp docker-compose.yml "$backup_dir/docker-compose.yml"
+    [[ "${VERBOSE:-}" == "true" ]] && log_info "Backed up existing docker-compose.yml to $backup_dir"
+  fi
 fi
 
 # Start docker-compose.yml
