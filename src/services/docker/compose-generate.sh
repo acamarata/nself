@@ -111,9 +111,9 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl/localhost:/etc/nginx/ssl/localhost:ro
-      - ./nginx/ssl/nself-org:/etc/nginx/ssl/nself-org:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./ssl/certificates/localhost:/etc/nginx/ssl/localhost:ro
+      - ./ssl/certificates/nself-org:/etc/nginx/ssl/nself-org:ro
+      - ./ssl/certificates:/etc/nginx/ssl:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
