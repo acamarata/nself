@@ -233,7 +233,7 @@ Every template includes:
 ### Version Status
 - **✅ v0.3.9 (Current)**: All 36 commands functional
 - **🚧 v0.4.0 (Next Q1 2025)**: Complete `deploy` and `search` implementations
-- **🔮 Beyond (2025+)**: Kubernetes, multi-cloud, enterprise features
+- **🔮 Beyond**: Kubernetes, multi-cloud, enterprise features
 
 ### Complete Command Tree
 
@@ -605,6 +605,9 @@ my-backend/
 ├── .env.secrets           # Production secrets (optional)
 ├── .env                   # Local configuration (highest priority)
 ├── docker-compose.yml      # Generated Docker Compose file
+├── docker-compose.custom.yml # Custom services (if CS_N variables defined)
+├── _backup/               # Timestamped backups from build/reset
+│   └── YYYYMMDD_HHMMSS/  # Each backup in its own timestamp folder
 ├── nginx/                  # Nginx configuration
 │   ├── nginx.conf
 │   ├── conf.d/            # Service routing
