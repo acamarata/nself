@@ -186,7 +186,7 @@ cmd_stop() {
   fi
 
   # Execute the shutdown
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Shutting down services..."
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Shutting down services...                    "
 
   local output_file=$(mktemp)
 
@@ -205,7 +205,7 @@ cmd_stop() {
     local i=0
     while kill -0 $compose_pid 2>/dev/null; do
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
-      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Shutting down services..." "$char"
+      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Shutting down services...                    " "$char"
       ((i++))
       sleep 0.1
     done
