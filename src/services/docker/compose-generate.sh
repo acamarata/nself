@@ -29,13 +29,20 @@ source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
 if [ -f ".env" ] || [ -f ".env.dev" ]; then
   load_env_with_priority || {
     log_error "Failed to load environment"
+    log_error "Working directory: $(pwd)"
+    log_error "Available files: $(ls -la .env* 2>/dev/null || echo 'none')"
     exit 1
   }
 else
   log_error "No environment file found (.env or .env.dev)."
+  log_error "Working directory: $(pwd)"
+  log_error "Please run 'nself init' first to create environment files"
+  log_info "Available files in current directory:"
+  ls -la | head -10
   exit 1
 fi
 
+[[ "${DEBUG:-}" == "true" ]] && log_info "Environment loaded successfully"
 log_info "Generating docker-compose.yml..."
 
 # Source smart defaults to handle JWT construction
@@ -48,12 +55,21 @@ if ! declare -f load_env_with_defaults >/dev/null 2>&1; then
 fi
 if ! load_env_with_defaults; then
   log_error "Failed to load environment with defaults"
+  log_error "Check that environment variables are properly set"
   exit 1
 fi
+
+[[ "${DEBUG:-}" == "true" ]] && log_info "Smart defaults loaded"
 
 # Compose database URLs from individual variables
 # CRITICAL: Always use port 5432 for internal container-to-container communication
 # The POSTGRES_PORT variable is for external host access only
+if [[ "${DEBUG:-}" == "true" ]]; then
+  log_info "Building database URL with:"
+  log_info "  POSTGRES_USER: ${POSTGRES_USER:-not set}"
+  log_info "  POSTGRES_HOST: ${POSTGRES_HOST:-not set}"
+  log_info "  POSTGRES_DB: ${POSTGRES_DB:-not set}"
+fi
 export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
 S3_ENDPOINT="http://minio:${MINIO_PORT}"
 

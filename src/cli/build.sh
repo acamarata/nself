@@ -100,6 +100,23 @@ cmd_build() {
   # Show welcome header with proper formatting
   show_command_header "nself build" "Generate project infrastructure and configuration"
 
+  # Check for WSL environment
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    log_warning "WSL environment detected"
+    log_info "Ensure Docker Desktop is running with WSL2 backend"
+    log_info "If build fails, check: https://docs.docker.com/desktop/wsl/"
+    
+    # Check if Docker is accessible
+    if ! docker info >/dev/null 2>&1; then
+      log_error "Docker is not accessible from WSL"
+      log_info "Please ensure:"
+      log_info "  1. Docker Desktop is running"
+      log_info "  2. WSL2 integration is enabled in Docker Desktop settings"
+      log_info "  3. Current WSL distro is enabled in Docker Desktop resources"
+      return 1
+    fi
+  fi
+
   # Determine environment first
   if [[ "${ENV:-}" == "prod" ]] || [[ "${ENVIRONMENT:-}" == "production" ]]; then
     log_info "Building for PRODUCTION environment"
@@ -329,13 +346,23 @@ cmd_build() {
     # Create directory structure if needed
     if [[ $dirs_to_create -gt 0 ]]; then
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating directory structure..."
+      local dir_creation_failed=false
       for dir in nginx/conf.d nginx/ssl services logs .volumes/postgres .volumes/redis .volumes/minio; do
         if [[ ! -d "$dir" ]]; then
-          mkdir -p "$dir" 2>/dev/null
+          if ! mkdir -p "$dir" 2>&1; then
+            dir_creation_failed=true
+            printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to create directory: $dir              \n"
+            log_error "Check permissions and disk space. Try: sudo chown -R $(whoami) ."
+            break
+          fi
         fi
       done
-      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Directory structure ready ($dirs_to_create new)     \n"
-      CREATED_FILES+=("$dirs_to_create directories")
+      if [[ "$dir_creation_failed" == "false" ]]; then
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Directory structure ready ($dirs_to_create new)     \n"
+        CREATED_FILES+=("$dirs_to_create directories")
+      else
+        return 1
+      fi
     fi
 
     # Generate SSL certificates if needed
@@ -383,7 +410,8 @@ cmd_build() {
       # Use the compose generation script
       local compose_script="$SCRIPT_DIR/../services/docker/compose-generate.sh"
       if [[ -f "$compose_script" ]]; then
-        if bash "$SCRIPT_DIR/../services/docker/compose-generate.sh" >/dev/null 2>&1; then
+        local error_output=$(mktemp)
+        if bash "$compose_script" >"$error_output" 2>&1; then
           # Apply health check fixes
           if [[ -f "$SCRIPT_DIR/../lib/auto-fix/healthcheck-fix.sh" ]]; then
             source "$SCRIPT_DIR/../lib/auto-fix/healthcheck-fix.sh"
@@ -396,8 +424,17 @@ cmd_build() {
           else
             UPDATED_FILES+=("docker-compose.yml")
           fi
+          rm -f "$error_output"
         else
           printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to generate docker-compose.yml     \n"
+          log_error "Docker compose generation failed:"
+          # Show the actual error
+          if [[ -s "$error_output" ]]; then
+            cat "$error_output" | head -10 >&2
+          fi
+          log_info "Check environment variables and .env file"
+          log_info "Run with DEBUG=true for more details"
+          rm -f "$error_output"
           return 1
         fi
       else
