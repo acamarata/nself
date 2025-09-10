@@ -187,10 +187,10 @@ enable_monitoring() {
   if [[ "${MONITORING_METRICS:-}" == "true" ]]; then
     echo "  • Prometheus: https://prometheus.${BASE_DOMAIN:-local.nself.org}"
   fi
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     echo "  • Loki:       https://loki.${BASE_DOMAIN:-local.nself.org}"
   fi
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     echo "  • Tempo:      https://tempo.${BASE_DOMAIN:-local.nself.org}"
   fi
   if [[ "${MONITORING_ALERTS:-}" == "true" ]]; then
@@ -285,12 +285,12 @@ show_monitoring_status() {
   check_service_status "cadvisor" "cAdvisor"
   
   # Check profile-specific services
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     check_service_status "loki" "Loki"
     check_service_status "promtail" "Promtail"
   fi
   
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     check_service_status "tempo" "Tempo"
   fi
   
@@ -493,7 +493,7 @@ create_monitoring_configs() {
   create_grafana_provisioning "$config_dir"
   
   # Create Loki config if enabled
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     create_loki_config "$config_dir/loki.yml"
     create_promtail_config "$config_dir/promtail.yml"
   fi
@@ -505,7 +505,7 @@ create_monitoring_configs() {
   fi
   
   # Create Tempo config if enabled
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     create_tempo_config "$config_dir/tempo.yml"
   fi
 }
@@ -631,7 +631,7 @@ EOF
 EOF
 
   # Add Loki if enabled
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     cat >> "$config_file" <<EOF
 
   # Loki metrics
@@ -642,7 +642,7 @@ EOF
   fi
 
   # Add Tempo if enabled
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     cat >> "$config_file" <<EOF
 
   # Tempo metrics
@@ -676,7 +676,7 @@ datasources:
 EOF
 
   # Add Loki datasource if enabled
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     cat >> "$config_dir/grafana/provisioning/datasources/datasources.yml" <<EOF
 
   - name: Loki
@@ -688,7 +688,7 @@ EOF
   fi
 
   # Add Tempo datasource if enabled
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     cat >> "$config_dir/grafana/provisioning/datasources/datasources.yml" <<EOF
 
   - name: Tempo
@@ -1119,8 +1119,8 @@ EOF
 
 EOF
 
-    # Add Loki and Promtail if logs enabled
-    if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+    # Add Loki and Promtail if logs enabled (either by profile or individual flag)
+    if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
       cat >> "$compose_file" <<EOF
   loki:
     image: grafana/loki:latest
@@ -1156,8 +1156,8 @@ EOF
 EOF
     fi
 
-    # Add Tempo if tracing enabled
-    if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+    # Add Tempo if tracing enabled (either by profile or individual flag)
+    if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
       cat >> "$compose_file" <<EOF
   tempo:
     image: grafana/tempo:latest
@@ -1286,13 +1286,13 @@ volumes:
   grafana_data:
 EOF
 
-  if [[ "${MONITORING_LOGS:-}" == "true" ]]; then
+  if [[ "${MONITORING_LOGS:-}" == "true" || "${LOKI_ENABLED:-}" == "true" ]]; then
     cat >> "$compose_file" <<EOF
   loki_data:
 EOF
   fi
 
-  if [[ "${MONITORING_TRACING:-}" == "true" ]]; then
+  if [[ "${MONITORING_TRACING:-}" == "true" || "${TEMPO_ENABLED:-}" == "true" ]]; then
     cat >> "$compose_file" <<EOF
   tempo_data:
 EOF

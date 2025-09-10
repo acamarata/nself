@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Auto-fix health check issues in docker-compose.yml
+
+fix_healthchecks() {
+  local compose_file="${1:-docker-compose.yml}"
+  local fixed=false
+  
+  if [[ ! -f "$compose_file" ]]; then
+    return 0
+  fi
+  
+  # Create backup
+  cp "$compose_file" "${compose_file}.healthcheck-backup"
+  
+  # Fix auth service health check (port 4000 -> 4001, curl -> wget)
+  if grep -q 'container_name:.*_auth' "$compose_file"; then
+    # Fix port number
+    if grep -q 'http://localhost:4000/version' "$compose_file"; then
+      sed -i '' 's|http://localhost:4000/version|http://localhost:4001/healthz|g' "$compose_file"
+      fixed=true
+    fi
+    
+    # Fix curl command for auth (nhost/hasura-auth has wget)
+    if grep -A 5 'container_name:.*_auth' "$compose_file" | grep -q '"CMD", "curl"'; then
+      # Find auth service block and fix its health check
+      awk '
+        /container_name:.*_auth/ { in_auth=1 }
+        in_auth && /healthcheck:/ { in_healthcheck=1 }
+        in_healthcheck && /"CMD", "curl"/ {
+          gsub(/"CMD", "curl", "-f"/, "\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\"")
+        }
+        in_healthcheck && /retries:/ { in_healthcheck=0 }
+        { print }
+      ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+      fixed=true
+    fi
+  fi
+  
+  # Fix MLflow health check (curl -> python urllib)
+  if grep -q 'container_name:.*_mlflow' "$compose_file"; then
+    if grep -A 5 'container_name:.*_mlflow' "$compose_file" | grep -q '"CMD", "curl"'; then
+      # Replace curl with python for MLflow
+      awk '
+        /container_name:.*_mlflow/ { in_mlflow=1 }
+        in_mlflow && /healthcheck:/ { in_healthcheck=1 }
+        in_healthcheck && /test:.*curl.*http:\/\/localhost:5000/ {
+          print "      test: [\"CMD\", \"python\", \"-c\", \"import urllib.request; urllib.request.urlopen('"'"'http://localhost:5000/health'"'"').read()\"]"
+          next
+        }
+        in_healthcheck && /retries:/ { in_healthcheck=0; in_mlflow=0 }
+        { print }
+      ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+      fixed=true
+    fi
+  fi
+  
+  # Fix custom service health checks (curl -> wget for Node Alpine)
+  # This handles service_12, service_23, and any other custom services
+  if grep -q 'container_name:.*_service_' "$compose_file"; then
+    # Replace curl with wget for all custom services
+    awk '
+      /container_name:.*_service_[0-9]+/ { in_service=1 }
+      in_service && /healthcheck:/ { in_healthcheck=1 }
+      in_healthcheck && /"CMD", "curl", "-f"/ {
+        gsub(/"CMD", "curl", "-f"/, "\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\"")
+      }
+      in_healthcheck && /retries:/ { in_healthcheck=0; in_service=0 }
+      { print }
+    ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+    fixed=true
+  fi
+  
+  # Fix any remaining Node.js services using curl
+  # Look for Node images and fix their health checks
+  awk '
+    /image:.*node.*alpine/ { in_node=1; service_found=1 }
+    /image:.*node:/ { in_node=1; service_found=1 }
+    service_found && /container_name:/ { container=$0 }
+    in_node && /healthcheck:/ { in_healthcheck=1 }
+    in_healthcheck && /"CMD", "curl"/ {
+      gsub(/"CMD", "curl", "-f"/, "\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\"")
+    }
+    in_healthcheck && /retries:/ { in_healthcheck=0; in_node=0; service_found=0 }
+    /^  [a-z_]+:$/ && !/^    / { in_node=0; service_found=0; in_healthcheck=0 }
+    { print }
+  ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+  
+  # Add start_period if missing for services with health checks
+  awk '
+    /healthcheck:/ { in_healthcheck=1 }
+    in_healthcheck && /retries:/ {
+      print
+      if (!has_start_period) {
+        print "      start_period: 30s"
+      }
+      in_healthcheck=0
+      has_start_period=0
+      next
+    }
+    in_healthcheck && /start_period:/ { has_start_period=1 }
+    /^  [a-z_]+:$/ && !/^    / { in_healthcheck=0; has_start_period=0 }
+    { print }
+  ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+  
+  if [[ "$fixed" == "true" ]]; then
+    echo "Fixed health check configurations in docker-compose.yml"
+    return 0
+  fi
+  
+  return 0
+}
+
+# Export function for use in other scripts
+export -f fix_healthchecks
+
+# Run if executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  fix_healthchecks "$@"
+fi
