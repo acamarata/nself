@@ -2,10 +2,10 @@
 
 [![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-beta-orange.svg)](#-important-note)
-[![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
+[![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
 > **⚠️ IMPORTANT NOTE**: While the CLI is functional and actively used in production, nself is under heavy development until v0.4 and v0.5 (see [roadmap](docs/ROADMAP.md)). Bugs are expected as we refine features and add capabilities. We recommend production use only for experienced users comfortable with Docker, self-hosting, and troubleshooting. 
 > 
