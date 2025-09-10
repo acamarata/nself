@@ -23,12 +23,15 @@ apply_smart_defaults() {
   # PostgreSQL
   : ${POSTGRES_VERSION:=16-alpine}
   : ${POSTGRES_HOST:=postgres}
-  : ${POSTGRES_PORT:=5432}
+  # CRITICAL: Internal port must always be 5432 for container-to-container communication
+  # External port can be different for host access
+  : ${POSTGRES_INTERNAL_PORT:=5432}
+  : ${POSTGRES_PORT:=${POSTGRES_EXTERNAL_PORT:-5432}}  # External port for host access
   : ${POSTGRES_DB:=nhost}
   : ${POSTGRES_USER:=postgres}
   : ${POSTGRES_PASSWORD:=postgres-dev-password}
   
-  # Construct database URL early for services that need it
+  # Construct database URL - ALWAYS use internal port 5432 for service-to-service communication
   : ${HASURA_GRAPHQL_DATABASE_URL:=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
   : ${POSTGRES_EXTENSIONS:=uuid-ossp}
 

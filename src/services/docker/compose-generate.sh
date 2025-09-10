@@ -52,7 +52,9 @@ if ! load_env_with_defaults; then
 fi
 
 # Compose database URLs from individual variables
-export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+# CRITICAL: Always use port 5432 for internal container-to-container communication
+# The POSTGRES_PORT variable is for external host access only
+export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
 S3_ENDPOINT="http://minio:${MINIO_PORT}"
 
 # Ensure DOCKER_NETWORK is expanded for Docker Compose
@@ -267,10 +269,11 @@ EOF
     networks:
       - default
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/version"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4001/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 40s
 EOF
 fi
 
@@ -439,8 +442,8 @@ if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
   MLFLOW_PORT="${MLFLOW_PORT:-5000}"
   MLFLOW_DB_NAME="${MLFLOW_DB_NAME:-mlflow}"
   MLFLOW_ARTIFACTS_BUCKET="${MLFLOW_ARTIFACTS_BUCKET:-mlflow-artifacts}"
-  MLFLOW_MEMORY_LIMIT="${MLFLOW_MEMORY_LIMIT:-2Gi}"
-  MLFLOW_CPU_LIMIT="${MLFLOW_CPU_LIMIT:-1000m}"
+  MLFLOW_MEMORY_LIMIT="${MLFLOW_MEMORY_LIMIT:-2g}"
+  MLFLOW_CPU_LIMIT="${MLFLOW_CPU_LIMIT:-1.0}"
   MLFLOW_WORKERS="${MLFLOW_WORKERS:-4}"
   
   cat >>docker-compose.yml <<EOF
@@ -499,7 +502,7 @@ EOF
           --workers ${MLFLOW_WORKERS}
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -507,8 +510,8 @@ EOF
     deploy:
       resources:
         limits:
-          memory: ${MLFLOW_MEMORY_LIMIT}
-          cpus: "${MLFLOW_CPU_LIMIT}"
+          memory: ${MLFLOW_MEMORY_LIMIT:-2g}
+          cpus: "${MLFLOW_CPU_LIMIT:-1.0}"
 EOF
 fi
 
@@ -1108,7 +1111,8 @@ FUNCEOF
 fi
 
 # MLflow Service (Machine Learning experiment tracking)
-if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
+# DUPLICATE - Already added above at line 436-540
+if false && [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
   cat >>docker-compose.yml <<EOF
 
   # MLflow - ML Experiment Tracking
@@ -1671,6 +1675,146 @@ GRAFEOF
   fi
 fi
 
+# Loki - Log Aggregation (part of monitoring bundle)
+if [[ "${LOKI_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+  cat >>docker-compose.yml <<EOF
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: ${PROJECT_NAME}_loki
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+
+  # Create Loki config if missing
+  mkdir -p monitoring/loki
+  if [[ ! -f "monitoring/loki/local-config.yaml" ]]; then
+    cat >monitoring/loki/local-config.yaml <<'LOKIEOF'
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+LOKIEOF
+  fi
+fi
+
+# Tempo - Distributed Tracing (part of monitoring bundle)
+if [[ "${TEMPO_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+  cat >>docker-compose.yml <<EOF
+
+  # Tempo - Distributed Tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: ${PROJECT_NAME}_tempo
+    restart: unless-stopped
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"     # tempo
+      - "${TEMPO_OTLP_GRPC:-4317}:4317"  # otlp grpc
+      - "${TEMPO_OTLP_HTTP:-4318}:4318"  # otlp http
+      - "${TEMPO_ZIPKIN:-9411}:9411"     # zipkin
+    volumes:
+      - ./monitoring/tempo:/etc/tempo:ro
+      - tempo_data:/tmp/tempo
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3200/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+
+  # Create Tempo config if missing
+  mkdir -p monitoring/tempo
+  if [[ ! -f "monitoring/tempo/tempo.yaml" ]]; then
+    cat >monitoring/tempo/tempo.yaml <<'TEMPOEOF'
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+        http:
+    zipkin:
+
+ingester:
+  trace_idle_period: 10s
+  max_block_bytes: 1_000_000
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    max_block_bytes: 100_000_000
+    block_retention: 1h
+    compacted_block_retention: 10m
+
+storage:
+  trace:
+    backend: local
+    block:
+      bloom_filter_false_positive: .05
+      index_downsample_bytes: 1000
+      encoding: zstd
+    wal:
+      path: /tmp/tempo/wal
+      encoding: none
+    local:
+      path: /tmp/tempo/blocks
+    pool:
+      max_workers: 100
+      queue_depth: 10000
+TEMPOEOF
+  fi
+fi
+
 # Include additional services (admin, microservices, etc)
 # This runs before volumes/networks to keep services together
 # Export all environment variables for the subshell
@@ -1758,6 +1902,16 @@ fi
 if [[ "${GRAFANA_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
   echo "  grafana_data:" >>docker-compose.yml
   echo "    name: ${PROJECT_NAME}_grafana_data" >>docker-compose.yml
+fi
+
+if [[ "${LOKI_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+  echo "  loki_data:" >>docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_loki_data" >>docker-compose.yml
+fi
+
+if [[ "${TEMPO_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+  echo "  tempo_data:" >>docker-compose.yml
+  echo "    name: ${PROJECT_NAME}_tempo_data" >>docker-compose.yml
 fi
 
 # Add networks section

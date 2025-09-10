@@ -34,9 +34,10 @@ apply_monitoring_profile() {
     minimal)
       # Minimal: Just metrics (~1GB RAM)
       export MONITORING_METRICS=true
-      export MONITORING_LOGS=false
-      export MONITORING_TRACING=false
-      export MONITORING_ALERTS=false
+      # Only set profile defaults if individual service flags aren't already set
+      export MONITORING_LOGS="${LOKI_ENABLED:-false}"
+      export MONITORING_TRACING="${TEMPO_ENABLED:-false}"
+      export MONITORING_ALERTS="${ALERTMANAGER_ENABLED:-false}"
       export MONITORING_EXPORTERS=false
       
       # Resource limits
@@ -52,9 +53,10 @@ apply_monitoring_profile() {
     standard)
       # Standard: Metrics + Logs (~2GB RAM)
       export MONITORING_METRICS=true
-      export MONITORING_LOGS=true
-      export MONITORING_TRACING=false
-      export MONITORING_ALERTS=false
+      # Only set profile defaults if individual service flags aren't already set
+      export MONITORING_LOGS="${LOKI_ENABLED:-true}"
+      export MONITORING_TRACING="${TEMPO_ENABLED:-false}"
+      export MONITORING_ALERTS="${ALERTMANAGER_ENABLED:-false}"
       export MONITORING_EXPORTERS=true
       
       # Resource limits
@@ -72,9 +74,10 @@ apply_monitoring_profile() {
     full)
       # Full: Complete observability (~3-4GB RAM)
       export MONITORING_METRICS=true
-      export MONITORING_LOGS=true
-      export MONITORING_TRACING=true
-      export MONITORING_ALERTS=true
+      # Only set profile defaults if individual service flags aren't already set
+      export MONITORING_LOGS="${LOKI_ENABLED:-true}"
+      export MONITORING_TRACING="${TEMPO_ENABLED:-true}"
+      export MONITORING_ALERTS="${ALERTMANAGER_ENABLED:-true}"
       export MONITORING_EXPORTERS=true
       
       # Resource limits

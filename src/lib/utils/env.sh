@@ -29,7 +29,25 @@ load_env_with_priority() {
   local silent="${1:-false}"
   local loaded=false
   
-  # Determine current environment (default to dev)
+  # STEP 1: Always load .env.dev as the base (team defaults)
+  if [[ -f ".env.dev" ]]; then
+    # log_debug "Loading .env.dev (team defaults - base layer)"
+    set -a
+    source ".env.dev" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
+  # STEP 2: Load .env EARLY to determine the target environment
+  if [[ -f ".env" ]]; then
+    # log_debug "Pre-loading .env to determine environment"
+    set -a
+    source ".env" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+  
+  # STEP 3: Determine current environment after loading .env
   local current_env="${ENV:-dev}"
   
   # Normalize environment names
@@ -48,34 +66,7 @@ load_env_with_priority() {
       ;;
   esac
   
-  # STEP 1: Always load .env.dev as the base (team defaults)
-  if [[ -f ".env.dev" ]]; then
-    # log_debug "Loading .env.dev (team defaults - base layer)"
-    set -a
-    source ".env.dev" 2>/dev/null
-    set +a
-    loaded=true
-    # Update current_env in case it was set in .env.dev
-    current_env="${ENV:-dev}"
-    
-    # Re-normalize after loading .env.dev
-    case "$current_env" in
-      development|develop|devel)
-        current_env="dev"
-        export ENV="dev"
-        ;;
-      production|prod)
-        current_env="prod"
-        export ENV="prod"
-        ;;
-      staging|stage)
-        current_env="staging"
-        export ENV="staging"
-        ;;
-    esac
-  fi
-  
-  # STEP 2: Load environment-specific overrides based on ENV
+  # STEP 4: Load environment-specific overrides based on ENV
   case "$current_env" in
     staging|stage)
       # For staging: .env.dev -> .env.staging
@@ -120,10 +111,10 @@ load_env_with_priority() {
       ;;
   esac
   
-  # STEP 3: Load .env as the FINAL override (HIGHEST PRIORITY)
+  # STEP 5: Re-load .env as the FINAL override (HIGHEST PRIORITY)
   # This allows local overrides of ANY setting regardless of environment
   if [[ -f ".env" ]]; then
-    # log_debug "Loading .env (LOCAL ONLY priority overrides - highest priority)"
+    # log_debug "Re-loading .env (LOCAL ONLY priority overrides - highest priority)"
     set -a
     source ".env" 2>/dev/null
     set +a

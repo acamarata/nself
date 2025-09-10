@@ -56,10 +56,11 @@ EOF
     volumes:
       - ./services/nest/$service/src:/app/src:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$SERVICE_PORT/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:$SERVICE_PORT/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 EOF
 
     PORT_COUNTER=$((PORT_COUNTER + 1))
@@ -177,10 +178,11 @@ EOF
     networks:
       - default
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$SERVICE_PORT/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:$SERVICE_PORT/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 EOF
 
     PORT_COUNTER=$((PORT_COUNTER + 1))
@@ -235,10 +237,11 @@ EOF
     volumes:
       - ./services/py/$service:/app:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$SERVICE_PORT/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:$SERVICE_PORT/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 EOF
 
     PORT_COUNTER=$((PORT_COUNTER + 1))
@@ -360,3 +363,68 @@ if [[ "$NSELF_ADMIN_ENABLED" == "true" ]]; then
       retries: 5
 EOF
 fi
+
+# Handle CS_ custom services
+# Format: CS_1=service_name:type:port:options
+for var in $(env | grep "^CS_[0-9]*=" | sort); do
+  # Extract the key and value
+  CS_KEY="${var%%=*}"
+  CS_VALUE="${var#*=}"
+  
+  # Parse the CS value format: name:type:port:options
+  IFS=':' read -r SERVICE_NAME SERVICE_TYPE SERVICE_PORT SERVICE_OPTIONS <<< "$CS_VALUE"
+  
+  # Skip if service name is empty
+  if [[ -z "$SERVICE_NAME" ]]; then
+    continue
+  fi
+  
+  # Default port if not specified
+  if [[ -z "$SERVICE_PORT" ]]; then
+    SERVICE_PORT=$((4000 + ${CS_KEY#CS_}))
+  fi
+  
+  # Check if the service directory exists
+  if [[ -d "./services/${SERVICE_NAME}" ]]; then
+    cat >>docker-compose.yml <<EOF
+
+  # Custom Service: ${SERVICE_NAME}
+  ${SERVICE_NAME}:
+    build:
+      context: ./services/${SERVICE_NAME}
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}_${SERVICE_NAME}
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${ENVIRONMENT:-development}
+      - PORT=${SERVICE_PORT}
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-nhost}
+      - HASURA_ENDPOINT=http://hasura:8080/v1/graphql
+      - HASURA_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BASE_DOMAIN=${BASE_DOMAIN}
+    ports:
+      - "${SERVICE_PORT}:${SERVICE_PORT}"
+    depends_on:
+      - postgres
+      - hasura
+EOF
+    
+    # Add Redis dependency if enabled
+    if [[ "$REDIS_ENABLED" == "true" ]]; then
+      echo "      - redis" >>docker-compose.yml
+    fi
+    
+    # Complete the service definition
+    cat >>docker-compose.yml <<EOF
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVICE_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+  fi
+done

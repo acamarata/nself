@@ -362,6 +362,26 @@ cmd_start() {
   fi
 
   # Header is already shown above, don't show it again
+  
+  # Pre-initialize MLflow database if MLflow is enabled
+  if [[ "${MLFLOW_ENABLED:-false}" == "true" ]] || grep -q "^\s*mlflow:" docker-compose.yml 2>/dev/null; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Initializing MLflow database..."
+    
+    # Ensure mlflow database exists
+    if compose ps postgres 2>/dev/null | grep -q "running\|Up"; then
+      docker exec "${project}_postgres" psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
+        docker exec "${project}_postgres" psql -U postgres -c "CREATE DATABASE mlflow;" 2>/dev/null
+      
+      # Run MLflow migrations using a temporary container if database exists but schema doesn't
+      if docker exec "${project}_postgres" psql -U postgres -d mlflow -c "SELECT 1 FROM information_schema.tables WHERE table_name='metrics'" 2>&1 | grep -q "0 rows"; then
+        docker run --rm \
+          --network "${project}_default" \
+          ghcr.io/mlflow/mlflow:v2.9.2 \
+          sh -c "pip install -q psycopg2-binary && mlflow db upgrade postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/mlflow" 2>/dev/null
+      fi
+    fi
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} MLflow database ready                      \n"
+  fi
 
   # Start services (shorter message to avoid artifacts)
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting services..."
@@ -384,11 +404,10 @@ cmd_start() {
   fi
   
   local project="${PROJECT_NAME:-nself}"
-  local compose_cmd="docker compose --project-name \"$project\" --env-file \"$env_file\" up"
+  local compose_cmd="docker compose --project-name \"$project\" --env-file \"$env_file\" up --build"
   if [[ "$detached" == "true" ]]; then
     compose_cmd="$compose_cmd -d"
   fi
-  compose_cmd="$compose_cmd --build"
 
   if [[ "$verbose" == "true" ]]; then
     # Show full output in verbose mode
@@ -396,15 +415,21 @@ cmd_start() {
     bash -c "$compose_cmd" 2>&1 | tee "$output_file"
     result=${PIPESTATUS[0]}
   else
-    # Run silently with spinner
+    # Check existing services for better progress display
+    local services_to_start=$(docker compose --project-name "$project" config --services 2>/dev/null | wc -l | tr -d ' ')
+    local running_services=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+    
+    # Run silently with enhanced progress
     (bash -c "$compose_cmd" 2>&1) >"$output_file" &
     local compose_pid=$!
 
-    # Show spinner while waiting with timeout
+    # Enhanced progress monitoring
     local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     local i=0
-    local timeout=120  # 2 minute timeout
+    local timeout=180  # 3 minute timeout
     local elapsed=0
+    local last_count=$running_services
+    local last_message=""
     
     while kill -0 $compose_pid 2>/dev/null; do
       if [[ $elapsed -ge $timeout ]]; then
@@ -421,8 +446,36 @@ cmd_start() {
         return 1
       fi
       
+      # Check running services count for progress
+      local current_count=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+      
+      # Check for building status in output
+      local building_msg=""
+      if [[ -f "$output_file" ]] && [[ $elapsed -gt 2 ]]; then
+        local last_line=$(tail -1 "$output_file" 2>/dev/null | grep -oE "(Building|Pulling|Creating|Starting) [a-zA-Z0-9_-]+" | head -1)
+        if [[ -n "$last_line" ]]; then
+          building_msg=" - $last_line"
+        fi
+      fi
+      
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
-      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...          " "$char"
+      
+      # Always show progress with count when available
+      if [[ "$services_to_start" -gt 0 ]] && [[ "$current_count" -gt 0 ]]; then
+        if [[ -n "$building_msg" ]]; then
+          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers... (%d/%d)%s          " "$char" "$current_count" "$services_to_start" "$building_msg"
+        else
+          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers... (%d/%d)          " "$char" "$current_count" "$services_to_start"
+        fi
+      elif [[ -n "$building_msg" ]]; then
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...%s          " "$char" "$building_msg"
+      else
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...          " "$char"
+      fi
+      
+      last_count=$current_count
+      last_message="$building_msg"
+      
       ((i++))
       ((elapsed++))
       sleep 1
@@ -520,6 +573,16 @@ cmd_start() {
 
       echo
       log_success "Services started successfully!"
+      
+      # Start health monitoring daemon if enabled
+      if [[ "${ENABLE_HEALTH_MONITORING:-true}" == "true" ]]; then
+        if [[ -f "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh" ]]; then
+          source "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh"
+          start_health_daemon >/dev/null 2>&1
+          log_info "Health monitoring active (checks every ${HEALTH_CHECK_INTERVAL:-60}s)"
+        fi
+      fi
+      
       show_service_urls
 
       echo
@@ -542,6 +605,32 @@ cmd_start() {
         for svc in $restarting_services; do
           echo -e "  ${COLOR_RED}↻${COLOR_RESET} $svc"
         done
+        
+        # Attempt to fix restart loops automatically
+        if [[ -f "$SCRIPT_DIR/../lib/auto-fix/restart-loop-fix.sh" ]]; then
+          echo
+          printf "${COLOR_BLUE}⠋${COLOR_RESET} Attempting to fix restart loops..."
+          
+          # Source the restart loop fix script
+          source "$SCRIPT_DIR/../lib/auto-fix/restart-loop-fix.sh"
+          
+          # Run the fix
+          if fix_restart_loops >/dev/null 2>&1; then
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} Restart loop fixes applied                 \n"
+            echo
+            log_info "Retrying service startup..."
+            sleep 2
+            # Restart the affected services
+            for svc in $restarting_services; do
+              docker restart "$svc" >/dev/null 2>&1 &
+            done
+            # Wait and recheck
+            sleep 5
+            continue
+          else
+            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Unable to fix all restart loops            \n"
+          fi
+        fi
       elif [[ $unhealthy_count -gt 0 ]]; then
         # Services are running but marked unhealthy (often due to missing healthcheck tools)
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Services running                                     \n"
@@ -565,8 +654,18 @@ cmd_start() {
         if [[ -f "$SCRIPT_DIR/../lib/autofix/orchestrator.sh" ]]; then
           source "$SCRIPT_DIR/../lib/autofix/orchestrator.sh"
         fi
+        
+        # Try restart loop fix first
+        if [[ -f "$SCRIPT_DIR/../lib/auto-fix/restart-loop-fix.sh" ]]; then
+          source "$SCRIPT_DIR/../lib/auto-fix/restart-loop-fix.sh"
+          if declare -f fix_restart_loops >/dev/null 2>&1; then
+            log_info "Running comprehensive fixes..."
+            fix_restart_loops >/dev/null 2>&1
+            fixed_any=true
+          fi
+        fi
 
-        # Try comprehensive fix first if available
+        # Try comprehensive fix if available
         if [[ -f "$SCRIPT_DIR/../lib/autofix/comprehensive.sh" ]]; then
           source "$SCRIPT_DIR/../lib/autofix/comprehensive.sh"
           if declare -f run_comprehensive_fixes >/dev/null 2>&1; then

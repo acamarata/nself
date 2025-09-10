@@ -110,6 +110,15 @@ cmd_stop() {
 
   # Show header first (no extra echo before it)
   show_command_header "nself stop" "Stop services and containers"
+  
+  # Stop health monitoring daemon if running
+  if [[ -f "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh"
+    if is_daemon_running 2>/dev/null; then
+      stop_health_daemon >/dev/null 2>&1
+      log_info "Stopped health monitoring daemon"
+    fi
+  fi
 
   # Check what's currently running using docker ps directly
   local running_containers=$(docker ps --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null)

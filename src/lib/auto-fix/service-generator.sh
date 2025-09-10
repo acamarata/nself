@@ -6,6 +6,78 @@
 SERVICE_GEN_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SERVICE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
 
+# Generate a basic Node.js Express service
+generate_basic_node_service() {
+  local service_name="$1"
+  local service_path="services/node/${service_name}"
+  
+  mkdir -p "$service_path/src"
+  
+  # package.json
+  cat > "$service_path/package.json" <<EOF
+{
+  "name": "${service_name}",
+  "version": "1.0.0",
+  "description": "Node.js microservice",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}
+EOF
+
+  # Main application file
+  cat > "$service_path/src/index.js" <<'EOF'
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({ message: `Hello from ${process.env.SERVICE_NAME || 'service'}!` });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    service: process.env.SERVICE_NAME || 'service',
+    uptime: process.uptime()
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Service running on port ${PORT}`);
+});
+EOF
+
+  # Dockerfile
+  cat > "$service_path/Dockerfile" <<'EOF'
+FROM node:18-alpine
+RUN apk add --no-cache curl wget
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+COPY . .
+ARG PORT=3000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+CMD ["node", "src/index.js"]
+EOF
+}
+
 # Generate a NestJS hello world service
 generate_nest_service() {
   local service_name="$1"
@@ -387,6 +459,394 @@ EOF
 
 }
 
+# Generate a Rust service
+generate_rust_service() {
+  local service_name="$1"
+  local service_path="services/rust/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path/src"
+
+  # Create Cargo.toml
+  cat >"$service_path/Cargo.toml" <<EOF
+[package]
+name = "${service_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+env_logger = "0.10"
+EOF
+
+  # Create main.rs
+  cat >"$service_path/src/main.rs" <<'EOF'
+use actix_web::{web, App, HttpResponse, HttpServer, Result};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    service: String,
+}
+
+async fn index() -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(&serde_json::json!({
+        "message": format!("Hello from SERVICE_NAME service!")
+    })))
+}
+
+async fn health() -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(&HealthResponse {
+        status: "ok".to_string(),
+        service: "SERVICE_NAME".to_string(),
+    }))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+
+    println!("Starting SERVICE_NAME service on {}", addr);
+
+    HttpServer::new(|| {
+        App::new()
+            .route("/", web::get().to(index))
+            .route("/health", web::get().to(health))
+    })
+    .bind(&addr)?
+    .run()
+    .await
+}
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/main.rs" && rm -f "$service_path/src/main.rs.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
+FROM rust:1.75 as builder
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release
+RUN rm -rf src
+COPY src ./src
+RUN touch src/main.rs
+RUN cargo build --release
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates curl wget && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/target/release/SERVICE_NAME /app/
+ARG PORT=8000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+CMD ["./SERVICE_NAME"]
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/Dockerfile" && rm -f "$service_path/Dockerfile.bak"
+}
+
+# Generate a Java service
+generate_java_service() {
+  local service_name="$1"
+  local service_path="services/java/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path/src/main/java/com/nself/${service_name}"
+
+  # Create pom.xml
+  cat >"$service_path/pom.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.nself</groupId>
+    <artifactId>${service_name}</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+    </parent>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+EOF
+
+  # Create Application.java
+  cat >"$service_path/src/main/java/com/nself/${service_name}/Application.java" <<'EOF'
+package com.nself.SERVICE_NAME;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.HashMap;
+import java.util.Map;
+
+@SpringBootApplication
+@RestController
+public class Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+
+    @GetMapping("/")
+    public Map<String, String> index() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Hello from SERVICE_NAME service!");
+        return response;
+    }
+
+    @GetMapping("/health")
+    public Map<String, String> health() {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "ok");
+        response.put("service", "SERVICE_NAME");
+        return response;
+    }
+}
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/src/main/java/com/nself/${service_name}/Application.java" && rm -f "$service_path/src/main/java/com/nself/${service_name}/Application.java.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
+FROM maven:3.9-eclipse-temurin-17 as builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
+RUN mvn package -DskipTests
+
+FROM eclipse-temurin:17-jre
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+ARG PORT=8000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+CMD ["java", "-jar", "app.jar", "--server.port=${PORT}"]
+EOF
+}
+
+# Generate a .NET service
+generate_dotnet_service() {
+  local service_name="$1"
+  local service_path="services/dotnet/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path"
+
+  # Create .csproj file
+  cat >"$service_path/${service_name}.csproj" <<'EOF'
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
+EOF
+
+  # Create Program.cs
+  cat >"$service_path/Program.cs" <<'EOF'
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet("/", () => new { message = "Hello from SERVICE_NAME service!" });
+app.MapGet("/health", () => new { status = "ok", service = "SERVICE_NAME" });
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8000";
+app.Urls.Add($"http://0.0.0.0:{port}");
+
+app.Run();
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/Program.cs" && rm -f "$service_path/Program.cs.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+WORKDIR /app
+COPY *.csproj ./
+RUN dotnet restore
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/out .
+ARG PORT=8000
+ENV PORT=${PORT}
+ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
+EXPOSE ${PORT}
+CMD ["dotnet", "SERVICE_NAME.dll"]
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/Dockerfile" && rm -f "$service_path/Dockerfile.bak"
+}
+
+# Generate a Ruby service
+generate_ruby_service() {
+  local service_name="$1"
+  local service_path="services/ruby/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path"
+
+  # Create Gemfile
+  cat >"$service_path/Gemfile" <<'EOF'
+source 'https://rubygems.org'
+
+gem 'sinatra', '~> 3.0'
+gem 'puma', '~> 6.0'
+gem 'json', '~> 2.6'
+EOF
+
+  # Create app.rb
+  cat >"$service_path/app.rb" <<'EOF'
+require 'sinatra'
+require 'json'
+
+set :bind, '0.0.0.0'
+set :port, ENV['PORT'] || 8000
+
+get '/' do
+  content_type :json
+  { message: 'Hello from SERVICE_NAME service!' }.to_json
+end
+
+get '/health' do
+  content_type :json
+  { status: 'ok', service: 'SERVICE_NAME' }.to_json
+end
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/app.rb" && rm -f "$service_path/app.rb.bak"
+
+  # Create config.ru
+  cat >"$service_path/config.ru" <<'EOF'
+require './app'
+run Sinatra::Application
+EOF
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
+FROM ruby:3.2-slim
+RUN apt-get update && apt-get install -y build-essential curl wget && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY Gemfile Gemfile.lock* ./
+RUN bundle install
+COPY . .
+ARG PORT=8000
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+CMD ["ruby", "app.rb"]
+EOF
+}
+
+# Generate a PHP service
+generate_php_service() {
+  local service_name="$1"
+  local service_path="services/php/${service_name}"
+
+  # Create directory structure
+  mkdir -p "$service_path/public"
+
+  # Create composer.json
+  cat >"$service_path/composer.json" <<EOF
+{
+    "name": "nself/${service_name}",
+    "type": "project",
+    "require": {
+        "slim/slim": "^4.12",
+        "slim/psr7": "^1.6"
+    }
+}
+EOF
+
+  # Create index.php
+  cat >"$service_path/public/index.php" <<'EOF'
+<?php
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Factory\AppFactory;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$app = AppFactory::create();
+
+$app->get('/', function (Request $request, Response $response, $args) {
+    $data = ['message' => 'Hello from SERVICE_NAME service!'];
+    $response->getBody()->write(json_encode($data));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+$app->get('/health', function (Request $request, Response $response, $args) {
+    $data = ['status' => 'ok', 'service' => 'SERVICE_NAME'];
+    $response->getBody()->write(json_encode($data));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+$app->run();
+EOF
+  sed -i.bak "s/SERVICE_NAME/${service_name}/g" "$service_path/public/index.php" && rm -f "$service_path/public/index.php.bak"
+
+  # Create Dockerfile
+  cat >"$service_path/Dockerfile" <<'EOF'
+FROM composer:2 as builder
+WORKDIR /app
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader
+
+FROM php:8.2-apache
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
+RUN a2enmod rewrite
+WORKDIR /var/www
+COPY --from=builder /app/vendor ./vendor
+COPY . .
+RUN chown -R www-data:www-data /var/www
+ENV APACHE_DOCUMENT_ROOT /var/www/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+ARG PORT=8000
+ENV PORT=${PORT}
+RUN sed -i "s/80/${PORT}/g" /etc/apache2/ports.conf /etc/apache2/sites-available/*.conf
+EXPOSE ${PORT}
+EOF
+}
+
 # Auto-detect and generate missing services
 auto_generate_services() {
   local generated_count=0
@@ -403,6 +863,19 @@ auto_generate_services() {
   fi
 
   [[ "$silent" != "true" ]] && log_info "Checking for missing services..."
+
+  # Parse NODEJS_SERVICES for basic Node.js services
+  local nodejs_list="${NODEJS_SERVICES:-}"
+  if [[ -n "$nodejs_list" ]]; then
+    IFS=',' read -ra services <<<"$nodejs_list"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs) # Trim whitespace
+      if [[ ! -d "services/node/$service" ]]; then
+        generate_basic_node_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
 
   # Parse NEST_SERVICES or NESTJS_SERVICES (support both)
   local nest_list="${NEST_SERVICES:-${NESTJS_SERVICES:-}}"
@@ -430,9 +903,10 @@ auto_generate_services() {
     done
   fi
 
-  # Parse GO_SERVICES
-  if [[ -n "${GO_SERVICES:-}" ]]; then
-    IFS=',' read -ra services <<<"$GO_SERVICES"
+  # Parse GO_SERVICES or GOLANG_SERVICES
+  local go_list="${GO_SERVICES:-${GOLANG_SERVICES:-}}"
+  if [[ -n "$go_list" ]]; then
+    IFS=',' read -ra services <<<"$go_list"
     for service in "${services[@]}"; do
       service=$(echo "$service" | xargs)
       if [[ ! -d "services/go/$service" ]]; then
@@ -449,6 +923,66 @@ auto_generate_services() {
       service=$(echo "$service" | xargs)
       if [[ ! -d "services/py/$service" ]]; then
         generate_python_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse RUST_SERVICES
+  if [[ -n "${RUST_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$RUST_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/rust/$service" ]]; then
+        generate_rust_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse JAVA_SERVICES
+  if [[ -n "${JAVA_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$JAVA_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/java/$service" ]]; then
+        generate_java_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse DOTNET_SERVICES
+  if [[ -n "${DOTNET_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$DOTNET_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/dotnet/$service" ]]; then
+        generate_dotnet_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse RUBY_SERVICES
+  if [[ -n "${RUBY_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$RUBY_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/ruby/$service" ]]; then
+        generate_ruby_service "$service"
+        ((generated_count++))
+      fi
+    done
+  fi
+
+  # Parse PHP_SERVICES
+  if [[ -n "${PHP_SERVICES:-}" ]]; then
+    IFS=',' read -ra services <<<"$PHP_SERVICES"
+    for service in "${services[@]}"; do
+      service=$(echo "$service" | xargs)
+      if [[ ! -d "services/php/$service" ]]; then
+        generate_php_service "$service"
         ((generated_count++))
       fi
     done

@@ -127,8 +127,26 @@ cmd_build() {
     fi
   fi
 
-  # Load environment with smart defaults (silently)
-  if ! load_env_with_defaults; then
+  # Validate and auto-fix environment variables
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating configuration..."
+  if [[ -f "$SCRIPT_DIR/../lib/auto-fix/env-validation.sh" ]]; then
+    # Save original SCRIPT_DIR before sourcing other scripts
+    local BUILD_SCRIPT_DIR="$SCRIPT_DIR"
+    source "$SCRIPT_DIR/../lib/auto-fix/env-validation.sh"
+    SCRIPT_DIR="$BUILD_SCRIPT_DIR"  # Restore original SCRIPT_DIR
+    if validate_all_env >/dev/null 2>&1; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
+    else
+      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Fixed configuration issues                    \n"
+      # Reload environment after fixes
+      load_env_with_priority
+    fi
+  else
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
+  fi
+
+  # Load environment with proper cascading (silently)  
+  if ! load_env_with_priority true; then
     printf "${COLOR_RED}✗${COLOR_RESET} Failed to load environment                \n"
     return 1
   fi
@@ -363,8 +381,15 @@ cmd_build() {
       fi
 
       # Use the compose generation script
-      if [[ -f "$SCRIPT_DIR/../services/docker/compose-generate.sh" ]]; then
+      local compose_script="$SCRIPT_DIR/../services/docker/compose-generate.sh"
+      if [[ -f "$compose_script" ]]; then
         if bash "$SCRIPT_DIR/../services/docker/compose-generate.sh" >/dev/null 2>&1; then
+          # Apply health check fixes
+          if [[ -f "$SCRIPT_DIR/../lib/auto-fix/healthcheck-fix.sh" ]]; then
+            source "$SCRIPT_DIR/../lib/auto-fix/healthcheck-fix.sh"
+            fix_healthchecks "docker-compose.yml" >/dev/null 2>&1
+          fi
+          
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} docker-compose.yml ${compose_action}              \n"
           if [[ "$compose_action" == "created" ]]; then
             CREATED_FILES+=("docker-compose.yml")
@@ -438,6 +463,11 @@ EOF
         nginx_updated=true
         CREATED_FILES+=("nginx/nginx.conf")
       fi
+
+      # Set route defaults if not already set
+      : ${HASURA_ROUTE:=api.${BASE_DOMAIN}}
+      : ${AUTH_ROUTE:=auth.${BASE_DOMAIN}}
+      : ${STORAGE_ROUTE:=storage.${BASE_DOMAIN}}
 
       # Generate Hasura proxy config
       local env_file=".env"
@@ -880,6 +910,21 @@ EOF
     log_success "Project infrastructure generated"
     if [[ ${#CREATED_FILES[@]} -gt 0 ]]; then
       log_info "Created ${#CREATED_FILES[@]} resources"
+    fi
+  fi
+
+  # Run comprehensive fixes for any remaining issues
+  if [[ -f "$SCRIPT_DIR/../lib/auto-fix/comprehensive-fix.sh" ]]; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Running comprehensive fixes..."
+    
+    # Source the comprehensive fix script
+    source "$SCRIPT_DIR/../lib/auto-fix/comprehensive-fix.sh"
+    
+    # Run the fix with output suppression
+    if comprehensive_fix >/dev/null 2>&1; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Comprehensive fixes applied                \n"
+    else
+      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Some fixes may have failed                 \n"
     fi
   fi
 
