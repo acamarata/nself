@@ -5,7 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.9] - 2025-09-09 (Patch Updates)
+## [0.3.9] - 2025-09-10 (Latest Patches)
+
+### Fixed (September 10, 2025)
+- **Critical Installation Issues** (Fixes #11, #12, #13)
+  - Directory creation now shows actual errors instead of silently failing
+  - Docker-compose generation displays real error messages for debugging
+  - Fixed db.sh unbound variable error on line 129
+  - Added verbose debug output with DEBUG=true for troubleshooting
+  - Added WSL-specific detection and Docker Desktop guidance
+- **Stop Command Display**: Fixed spinner animation overflow issue
+  - Added padding to prevent character accumulation
+  - Ensures clean terminal output during service shutdown
+- **Error Handling Improvements**
+  - Removed silent error suppression (2>/dev/null) from critical paths
+  - Added proper error messages with actionable remediation steps
+  - Capture and display actual error output instead of hiding it
+- **WSL/Ubuntu Support**
+  - Detect WSL environment and provide specific guidance
+  - Check Docker accessibility from WSL
+  - Provide clear instructions for Docker Desktop WSL2 integration
+  - Show helpful error messages for permission issues
+
+### Fixed (September 9, 2025)
 
 ### Fixed (Latest Patch)
 - **Backup Strategy**: Unified backup approach across all commands
