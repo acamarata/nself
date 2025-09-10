@@ -126,7 +126,7 @@ cmd_run() {
   local force_regenerate=false
   
   # Check for --force flag
-  if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
+  if [[ "${1:-}" == "--force" ]] || [[ "${1:-}" == "-f" ]]; then
     force_regenerate=true
     log_info "Force regeneration enabled"
   fi
