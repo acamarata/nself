@@ -3,8 +3,15 @@
 
 # Source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../utils/display.sh"
-source "$SCRIPT_DIR/../utils/env.sh"
+
+# Only source if not already loaded (avoid re-sourcing in nested calls)
+if [[ -z "${DISPLAY_SOURCED:-}" ]]; then
+  source "$SCRIPT_DIR/../utils/display.sh"
+fi
+if [[ -z "${ENV_UTILS_SOURCED:-}" ]]; then
+  source "$SCRIPT_DIR/../utils/env.sh"
+  export ENV_UTILS_SOURCED=1
+fi
 
 # Parse CS_N services
 parse_cs_services() {
@@ -343,23 +350,66 @@ create_service_from_template() {
   esac
   
   local service_dir="./services/${name}"
+  local template_dir=""
   
-  # Framework may be a path like js/node-js or just js
-  # Use it directly as the template path
-  local template_dir="$SCRIPT_DIR/../../templates/services/${framework}"
+  # Determine language directory based on framework suffix
+  local lang_dir=""
+  case "$framework" in
+    *-ts|*-js|trpc|bun|deno|node-js|node-ts)
+      lang_dir="js"
+      ;;
+    fastapi|flask|django-rest|celery|ray|agent-*)
+      lang_dir="py"
+      ;;
+    gin|echo|fiber|grpc)
+      lang_dir="go"
+      ;;
+    rails|sinatra)
+      lang_dir="ruby"
+      ;;
+    actix-web)
+      lang_dir="rust"
+      ;;
+    spring-boot)
+      lang_dir="java"
+      ;;
+    aspnet)
+      lang_dir="csharp"
+      ;;
+    laravel)
+      lang_dir="php"
+      ;;
+    phoenix)
+      lang_dir="elixir"
+      ;;
+    ktor)
+      lang_dir="kotlin"
+      ;;
+    vapor)
+      lang_dir="swift"
+      ;;
+    *)
+      # Try to find in any language directory
+      for dir in js py go ruby rust java csharp php elixir kotlin swift cpp lua zig; do
+        if [[ -d "$SCRIPT_DIR/../../templates/services/$dir/$framework" ]]; then
+          lang_dir="$dir"
+          break
+        fi
+      done
+      ;;
+  esac
+  
+  # Set template directory
+  if [[ -n "$lang_dir" ]]; then
+    template_dir="$SCRIPT_DIR/../../templates/services/${lang_dir}/${framework}"
+  fi
   
   # Check if template exists
   if [[ ! -d "$template_dir" ]]; then
-    # Try without subdirectory (for backward compatibility)
-    local base_framework="${framework%%/*}"
-    template_dir="$SCRIPT_DIR/../../templates/services/${base_framework}"
-    
-    if [[ ! -d "$template_dir" ]]; then
-      log_warning "No template found for framework: ${framework}"
-      log_info "Creating generic service directory for ${name}"
-      mkdir -p "$service_dir"
-      return 1
-    fi
+    log_warning "No template found for framework: ${framework}"
+    log_info "Creating generic service directory for ${name}"
+    mkdir -p "$service_dir"
+    return 1
   fi
   
   # Create service directory
@@ -371,8 +421,27 @@ create_service_from_template() {
     cp -r "$template_dir"/* "$service_dir/" 2>/dev/null || true
     cp "$template_dir"/.* "$service_dir/" 2>/dev/null || true
     
-    # Replace placeholders in all files
-    find "$service_dir" -type f -exec sed -i.bak \
+    # Process .template files
+    for template_file in "$service_dir"/*.template "$service_dir"/**/*.template; do
+      if [[ -f "$template_file" ]]; then
+        # Remove .template extension
+        output_file="${template_file%.template}"
+        
+        # Replace placeholders and save to final file
+        sed \
+          -e "s/\${SERVICE_NAME}/${name}/g" \
+          -e "s/\${PROJECT_NAME}/${PROJECT_NAME}/g" \
+          -e "s/\${PORT}/${port}/g" \
+          -e "s/\${BASE_DOMAIN}/${BASE_DOMAIN}/g" \
+          "$template_file" > "$output_file"
+        
+        # Remove template file
+        rm "$template_file"
+      fi
+    done
+    
+    # Replace placeholders in non-template files
+    find "$service_dir" -type f ! -name "*.template" -exec sed -i.bak \
       -e "s/\${SERVICE_NAME}/${name}/g" \
       -e "s/\${PROJECT_NAME}/${PROJECT_NAME}/g" \
       -e "s/\${PORT}/${port}/g" \
