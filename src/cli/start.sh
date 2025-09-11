@@ -187,7 +187,9 @@ cmd_start() {
     # Run pre-checks to fix common issues before Docker
     if [[ -f "$SCRIPT_DIR/../lib/autofix/orchestrator.sh" ]]; then
       source "$SCRIPT_DIR/../lib/autofix/orchestrator.sh"
-      run_autofix_prechecks
+      # run_autofix_prechecks returns the number of fixes applied (not an error code)
+      # so we ignore its return value to prevent script exit
+      run_autofix_prechecks || true
     fi
   fi
 
@@ -377,13 +379,13 @@ cmd_start() {
     
     # Ensure mlflow database exists
     if compose ps postgres 2>/dev/null | grep -q "running\|Up"; then
-      docker exec "${project}_postgres" psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
-        docker exec "${project}_postgres" psql -U postgres -c "CREATE DATABASE mlflow;" 2>/dev/null
+      docker exec "${PROJECT_NAME}_postgres" psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
+        docker exec "${PROJECT_NAME}_postgres" psql -U postgres -c "CREATE DATABASE mlflow;" 2>/dev/null
       
       # Run MLflow migrations using a temporary container if database exists but schema doesn't
-      if docker exec "${project}_postgres" psql -U postgres -d mlflow -c "SELECT 1 FROM information_schema.tables WHERE table_name='metrics'" 2>&1 | grep -q "0 rows"; then
+      if docker exec "${PROJECT_NAME}_postgres" psql -U postgres -d mlflow -c "SELECT 1 FROM information_schema.tables WHERE table_name='metrics'" 2>&1 | grep -q "0 rows"; then
         docker run --rm \
-          --network "${project}_default" \
+          --network "${PROJECT_NAME}_default" \
           ghcr.io/mlflow/mlflow:v2.9.2 \
           sh -c "pip install -q psycopg2-binary && mlflow db upgrade postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/mlflow" 2>/dev/null
       fi
