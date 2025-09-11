@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+# at top of build.sh
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
 
 # build.sh - nself Build System
 # Generates Docker infrastructure and configuration files
@@ -164,7 +165,11 @@ cmd_build() {
     printf "${COLOR_RED}✗${COLOR_RESET} Failed to load environment                \n"
     return 1
   fi
-
+  #call docker-compose.yml generator
+ # source the definitions
+source "$SCRIPT_DIR/../wizard/templates.sh"
+# call the function
+generate_docker_compose
   # Apply database auto-configuration
   if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
     source "$SCRIPT_DIR/../lib/database/auto-config.sh" 2>/dev/null || true
