@@ -49,8 +49,8 @@ parse_cs_services() {
       port=$((8000 + service_num))
     fi
     
-    # Default route to service name if not provided
-    route="${route:-$name}"
+    # Don't default route - leave empty if not specified
+    # Empty route means internal-only service
     
     # Get all CS_N_* configuration
     local memory=$(eval echo "\${CS_${service_num}_MEMORY:-256M}")
@@ -58,7 +58,15 @@ parse_cs_services() {
     local replicas=$(eval echo "\${CS_${service_num}_REPLICAS:-1}")
     local table_prefix=$(eval echo "\${CS_${service_num}_TABLE_PREFIX:-}")
     local redis_prefix=$(eval echo "\${CS_${service_num}_REDIS_PREFIX:-}")
-    local public=$(eval echo "\${CS_${service_num}_PUBLIC:-true}")
+    
+    # Auto-determine public based on route presence
+    # If route is specified, default to public=true, otherwise false
+    local public_default="false"
+    if [[ -n "$route" ]]; then
+      public_default="true"
+    fi
+    local public=$(eval echo "\${CS_${service_num}_PUBLIC:-$public_default}")
+    
     local healthcheck=$(eval echo "\${CS_${service_num}_HEALTHCHECK:-/health}")
     local env_vars=$(eval echo "\${CS_${service_num}_ENV:-}")
     local rate_limit=$(eval echo "\${CS_${service_num}_RATE_LIMIT:-}")
@@ -67,27 +75,28 @@ parse_cs_services() {
     local current_env="${ENV:-dev}"
     local domain=""
     
-    if [[ "$current_env" == "prod" ]] || [[ "$current_env" == "production" ]]; then
-      domain=$(eval echo "\${CS_${service_num}_PROD_DOMAIN:-}")
-    else
-      domain=$(eval echo "\${CS_${service_num}_DEV_DOMAIN:-}")
-    fi
-    
-    # Default domain if not specified
-    if [[ -z "$domain" ]]; then
-      # Check if route is a full domain (contains a dot and TLD)
-      if [[ "$route" =~ \.[a-zA-Z]{2,}$ ]]; then
-        # Full domain provided (e.g., api.example.com)
-        domain="$route"
-      elif [[ "$route" == *"."* ]]; then
-        # Multi-level subdomain (e.g., api.v2)
-        domain="${route}.${BASE_DOMAIN}"
-      elif [[ -n "$route" ]]; then
-        # Simple subdomain
-        domain="${route}.${BASE_DOMAIN}"
+    # Only process domain if route is specified
+    if [[ -n "$route" ]]; then
+      # Check for environment-specific domain override
+      if [[ "$current_env" == "prod" ]] || [[ "$current_env" == "production" ]]; then
+        domain=$(eval echo "\${CS_${service_num}_PROD_DOMAIN:-}")
       else
-        # Default to service name as subdomain
-        domain="${name}.${BASE_DOMAIN}"
+        domain=$(eval echo "\${CS_${service_num}_DEV_DOMAIN:-}")
+      fi
+      
+      # Process route to determine final domain
+      if [[ -z "$domain" ]]; then
+        # Check if route is a full domain (contains at least one dot and ends with TLD)
+        if [[ "$route" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+          # Full domain provided (e.g., api.example.com or myapi.some.domain.com)
+          domain="$route"
+        elif [[ "$route" =~ ^[a-zA-Z0-9-]+$ ]]; then
+          # Single word - make it a subdomain of BASE_DOMAIN
+          domain="${route}.${BASE_DOMAIN}"
+        else
+          # Anything else, use as-is (could be multi-level like api.v2)
+          domain="${route}.${BASE_DOMAIN}"
+        fi
       fi
     fi
     
@@ -170,8 +179,17 @@ generate_service_compose() {
     restart: unless-stopped
     networks:
       - nself
+EOF
+  
+  # Only expose ports if service is public or explicitly configured
+  if [[ "$public" == "true" ]] || [[ -n "$domain" ]]; then
+    cat << EOF
     ports:
       - "${port}:${port}"
+EOF
+  fi
+  
+  cat << EOF
     environment:
       - SERVICE_NAME=${name}
       - PROJECT_NAME=\${PROJECT_NAME}
@@ -187,8 +205,14 @@ generate_service_compose() {
       - REDIS_ENABLED=\${REDIS_ENABLED:-false}
       - REDIS_HOST=redis
       - REDIS_URL=redis://redis:6379
-      - BASE_URL=https://${domain}
 EOF
+  
+  # Add BASE_URL only if domain is specified
+  if [[ -n "$domain" ]]; then
+    echo "      - BASE_URL=https://${domain}"
+  fi
+  
+  cat << EOF
   
   # Add table prefix if specified
   if [[ -n "$table_prefix" ]]; then
@@ -247,8 +271,8 @@ generate_service_nginx() {
   local service_info="$1"
   IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
   
-  # Skip if not public
-  if [[ "$public" != "true" ]]; then
+  # Skip if not public or no domain specified
+  if [[ "$public" != "true" ]] || [[ -z "$domain" ]]; then
     return
   fi
   
