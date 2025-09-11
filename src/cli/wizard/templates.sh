@@ -236,7 +236,30 @@ NGINX_WORKER_CONNECTIONS=1024
 
 EOF
 }
+# Generate docker-compose.yml from environment variables
+generate_docker_compose() {
+  cat > docker-compose.yml <<EOF
+version: "3.9"
+services:
+  postgres:
+    image: postgres:\${POSTGRES_VERSION:-15-alpine}
+    restart: always
+    environment:
+      POSTGRES_USER: \${POSTGRES_USER}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+      POSTGRES_DB: \${POSTGRES_DB}
+    ports:
+      - "\${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:\${REDIS_VERSION:-7-alpine}
+    restart: always
+    ports:
+      - "\${REDIS_PORT:-6379}:6379"
+EOF
+}
 # Create environment-specific files
 create_environment_file() {
   local env="$1"
@@ -374,5 +397,6 @@ generate_production_secrets() {
 export -f get_template_name
 export -f get_template_services
 export -f generate_env_from_template
+export -f generate_docker_compose
 export -f create_environment_file
 export -f generate_production_secrets
