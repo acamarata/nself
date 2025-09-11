@@ -85,20 +85,44 @@ fix_healthchecks() {
     { print }
   ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
   
-  # Add start_period if missing for services with health checks
+  # Remove duplicate start_period entries and ensure only one exists
   awk '
-    /healthcheck:/ { in_healthcheck=1 }
-    in_healthcheck && /retries:/ {
-      print
-      if (!has_start_period) {
-        print "      start_period: 30s"
-      }
+    BEGIN { in_service=0; in_healthcheck=0; seen_start_period=0 }
+    /^  [a-z_]+:$/ && !/^    / { 
+      in_service=1
       in_healthcheck=0
-      has_start_period=0
+      seen_start_period=0
+      print
       next
     }
-    in_healthcheck && /start_period:/ { has_start_period=1 }
-    /^  [a-z_]+:$/ && !/^    / { in_healthcheck=0; has_start_period=0 }
+    in_service && /healthcheck:/ { 
+      in_healthcheck=1
+      seen_start_period=0
+      print
+      next
+    }
+    in_healthcheck && /start_period:/ {
+      if (!seen_start_period) {
+        seen_start_period=1
+        print
+      }
+      # Skip duplicate start_period lines
+      next
+    }
+    in_healthcheck && /^  [a-z_]+:$/ && !/^    / {
+      # New service block, reset state
+      in_service=1
+      in_healthcheck=0
+      seen_start_period=0
+      print
+      next
+    }
+    in_healthcheck && !/^      / && !/^        / {
+      # Exiting healthcheck block
+      in_healthcheck=0
+      print
+      next
+    }
     { print }
   ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
   
