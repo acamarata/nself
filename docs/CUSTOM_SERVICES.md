@@ -3,33 +3,37 @@
 ## Overview
 nself supports 40+ service templates across multiple languages and frameworks. You can define custom backend services that are automatically containerized and integrated into your stack.
 
-## Service Definition Format
+## Service Definition Format (CS_N)
 
-### New Enhanced Format (Recommended)
-Define services with specific frameworks using the format: `name:framework[:port]`
+Define custom services using the CS_N pattern where N is an incremental number (1, 2, 3, etc.).
 
+### Format
 ```bash
-# In your .env file:
-SERVICES_ENABLED=true
-
-# Define services with framework selection
-SERVICES="api:express-ts:3000,worker:bullmq-ts,ml:fastapi:8000,analytics:go:fiber"
-
-# Or use individual language sections with framework specs
-JS_SERVICES="api:express-ts:3000,worker:bullmq-ts,websocket:socketio-ts"
-PY_SERVICES="ml:fastapi:8000,nlp:agent-llm,vision:agent-vision"
-GO_SERVICES="metrics:fiber:3200,grpc-api:grpc:50051"
+CS_N=name:framework[:port][:route]
 ```
 
-### Current Format (Still Supported)
+### Examples
 ```bash
-SERVICES_ENABLED=true
-NESTJS_ENABLED=true
-NESTJS_SERVICES=api,worker
-GOLANG_ENABLED=true
-GOLANG_SERVICES=analytics
-PYTHON_ENABLED=true
-PYTHON_SERVICES=ml,data
+# Basic services
+CS_1=api:express-ts              # API service using Express + TypeScript
+CS_2=worker:bullmq-ts            # Background worker using BullMQ
+
+# With port specified
+CS_3=ml:fastapi:8000             # ML service on port 8000
+CS_4=analytics:fiber:8001        # Analytics service on port 8001
+
+# With port and route
+CS_5=chat:socketio-ts:3001:ws    # WebSocket service at ws.domain.com
+CS_6=api:express-ts:3000:api     # API service at api.domain.com
+
+# Additional configuration for each service
+CS_1_MEMORY=512M                 # Memory limit
+CS_1_CPU=0.5                    # CPU cores
+CS_1_PUBLIC=true                # Expose via nginx
+CS_1_HEALTHCHECK=/health        # Health endpoint
+CS_1_TABLE_PREFIX=api_          # Database table prefix
+CS_1_REDIS_PREFIX=api:          # Redis key prefix
+CS_1_RATE_LIMIT=100             # Requests per minute
 ```
 
 ## Available Templates
@@ -92,38 +96,64 @@ PYTHON_SERVICES=ml,data
 
 ### Example 1: Multi-Language Microservices
 ```bash
-SERVICES_ENABLED=true
-SERVICES="api:nest-ts:3000,auth:express-ts:3001,ml:fastapi:8000,metrics:fiber:3200"
+# API and worker services in different languages
+CS_1=api:nest-ts:3000:api
+CS_2=auth:express-ts:3001:auth
+CS_3=ml:fastapi:8000:ml
+CS_4=metrics:fiber:3200:metrics
 ```
 
 ### Example 2: AI-Powered Application
 ```bash
-SERVICES_ENABLED=true
-PY_SERVICES="llm:agent-llm:8001,vision:agent-vision:8002,analytics:agent-analytics:8003"
-JS_SERVICES="frontend-api:trpc:3000,realtime:socketio-ts:3001"
+# AI services with Python, frontend with TypeScript
+CS_1=llm:agent-llm:8001
+CS_2=vision:agent-vision:8002
+CS_3=analytics:agent-analytics:8003
+CS_4=frontend-api:trpc:3000
+CS_5=realtime:socketio-ts:3001:ws
 ```
 
 ### Example 3: Event-Driven Architecture
 ```bash
-SERVICES_ENABLED=true
-SERVICES="api:fastify-ts:3000,worker:bullmq-ts,events:temporal-ts:3002,analytics:ray"
+# Event-driven services with queues and workers
+CS_1=api:fastify-ts:3000
+CS_2=worker:bullmq-ts
+CS_3=events:temporal-ts:3002
+CS_4=analytics:ray:8000
+
+# Configure the worker
+CS_2_PUBLIC=false
+CS_2_MEMORY=1G
 ```
 
-### Example 4: Traditional Microservices
+### Example 4: Production Configuration
 ```bash
-SERVICES_ENABLED=true
-JS_SERVICES="api:express-ts:3000,admin:express-ts:3001"
-GO_SERVICES="auth:gin:3100,billing:echo:3101"
-PY_SERVICES="reports:django-rest:8000"
+# Production-ready configuration with all settings
+CS_1=api:express-ts:3000:api
+CS_1_MEMORY=2G
+CS_1_CPU=1.0
+CS_1_REPLICAS=3
+CS_1_PUBLIC=true
+CS_1_HEALTHCHECK=/health
+CS_1_TABLE_PREFIX=api_
+CS_1_REDIS_PREFIX=api:
+CS_1_RATE_LIMIT=1000
+CS_1_DEV_DOMAIN=api.local.nself.org
+CS_1_PROD_DOMAIN=api.production.com
+
+CS_2=worker:bullmq-ts
+CS_2_PUBLIC=false
+CS_2_MEMORY=1G
+CS_2_REDIS_PREFIX=queue:
 ```
 
 ## Port Assignment
-- Automatic: Ports are assigned starting from language defaults
-  - JavaScript/TypeScript: 3000+
-  - Python: 8000+
-  - Go: 3100+
-  - Others: 4000+
-- Manual: Specify port in definition `service:framework:port`
+- Automatic: If not specified, ports are assigned as 8000 + service number
+  - CS_1: port 8001
+  - CS_2: port 8002
+  - CS_3: port 8003
+- Manual: Specify port in definition `CS_N=name:framework:port`
+- Best practice: Always specify ports explicitly for production
 
 ## Generated Structure
 Each service gets:
@@ -155,17 +185,26 @@ All services are:
 - Configured with health checks
 - Exposed through Nginx reverse proxy (if PUBLIC=true)
 
-## Migration from Old Format
+## Migration from Legacy Formats
+
+If you were using older formats, migrate to CS_N:
+
 ```bash
 # Old format:
 NESTJS_ENABLED=true
 NESTJS_SERVICES=api,worker
+GOLANG_ENABLED=true
+GOLANG_SERVICES=analytics
 
-# New format (automatic framework selection):
-SERVICES="api:nest-ts,worker:bullmq-ts"
+# New CS_N format:
+CS_1=api:nest-ts:3000
+CS_2=worker:nest-ts:3001
+CS_3=analytics:fiber:3100
 
-# Or specify exactly what you want:
-SERVICES="api:express-ts:3000,worker:temporal-ts:3001"
+# Or with different frameworks:
+CS_1=api:express-ts:3000
+CS_2=worker:bullmq-ts
+CS_3=analytics:gin:3100
 ```
 
 ## Tips
