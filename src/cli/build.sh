@@ -134,14 +134,11 @@ cmd_build() {
     return 1
   fi
 
-  # Auto-fix unquoted environment values with spaces
+  # Auto-fix unquoted environment values with spaces (always enabled)
   if [[ -f "$SCRIPT_DIR/../lib/auto-fix/env-quotes-fix.sh" ]]; then
     source "$SCRIPT_DIR/../lib/auto-fix/env-quotes-fix.sh"
-    if ! auto_fix_env_quotes; then
-      printf "${COLOR_RED}✗${COLOR_RESET} Environment file issues detected                \n"
-      printf "${COLOR_YELLOW}✱${COLOR_RESET} Set AUTO_FIX=true to fix automatically         \n"
-      return 1
-    fi
+    # Force AUTO_FIX=true for this specific fix since it's safe and necessary
+    AUTO_FIX=true auto_fix_env_quotes
   fi
 
   # Validate and auto-fix environment variables

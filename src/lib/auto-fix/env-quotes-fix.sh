@@ -12,7 +12,10 @@ needs_quotes() {
   fi
   
   # Check if contains spaces or special characters that need quoting
-  if [[ "$value" =~ [[:space:]] ]] || [[ "$value" =~ [\*\?\[\]\{\}\(\)\!\|] ]]; then
+  # Extended list to catch more problematic cases
+  if [[ "$value" =~ [[:space:]] ]] || \
+     [[ "$value" =~ [\*\?\[\]\{\}\(\)\!\|\&\;\<\>\`\$] ]] || \
+     [[ "$value" =~ ^[0-9]+[[:space:]] ]]; then
     return 0
   fi
   
@@ -47,6 +50,10 @@ fix_env_file_quotes() {
         # Add quotes around the value
         echo "${var_name}=\"${var_value}\"" >> "$temp_file"
         ((fixed_count++))
+        # Log the fix if verbose
+        if [[ "${VERBOSE:-false}" == "true" ]] || [[ "${DEBUG:-false}" == "true" ]]; then
+          echo "  Fixed: ${var_name}=${var_value} → ${var_name}=\"${var_value}\"" >&2
+        fi
       else
         echo "$line" >> "$temp_file"
       fi
