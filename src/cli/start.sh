@@ -19,8 +19,16 @@ source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
 
+# Auto-fix unquoted environment values before loading (always enabled)
+if [[ -f "$SCRIPT_DIR/../lib/auto-fix/env-quotes-fix.sh" ]]; then
+  source "$SCRIPT_DIR/../lib/auto-fix/env-quotes-fix.sh"
+  # Force AUTO_FIX=true for this specific fix since it's safe and necessary
+  AUTO_FIX=true auto_fix_env_quotes >/dev/null 2>&1
+fi
+
 # Load environment with smart defaults
-load_env_with_defaults >/dev/null 2>&1
+# Call without output redirection - the function handles its own output
+load_env_with_defaults
 
 # Command function
 cmd_start() {
