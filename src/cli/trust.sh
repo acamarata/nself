@@ -24,6 +24,23 @@ cmd_trust() {
   case "$action" in
   install)
     show_command_header "nself trust" "Install SSL certificates to system trust store"
+    
+    # Auto-generate certificates if they don't exist
+    if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
+      # Load environment to get BASE_DOMAIN
+      set -a
+      load_env_with_priority
+      set +a
+      
+      # Check if we're in a project directory
+      if [[ -f "docker-compose.yml" ]] || [[ -f ".env" ]]; then
+        # Generate certificates if needed
+        if ! ssl::generate_for_project "." "${BASE_DOMAIN:-localhost}" 2>/dev/null; then
+          log_warning "Could not auto-generate certificates"
+        fi
+      fi
+    fi
+    
     trust::install
     ;;
   uninstall | remove)
