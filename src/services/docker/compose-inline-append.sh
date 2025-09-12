@@ -127,5 +127,5 @@ if [[ "$NSELF_ADMIN_ENABLED" == "true" ]]; then
 EOF
 fi
 
-# Note: CS_N custom services are handled by service-builder-v2.sh
+# Note: CS_N custom services are handled by service-builder.sh
 # which generates docker-compose.custom.yml

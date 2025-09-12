@@ -830,10 +830,7 @@ EOF
 
   # Source custom service builder
   # Try v2 builder first (CS_N pattern), fall back to v1
-  if [[ -f "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/services/service-builder-v2.sh" 2>/dev/null || true
-    custom_service_loaded=true
-  elif [[ -f "$SCRIPT_DIR/../lib/services/service-builder.sh" ]]; then
+  if [[ -f "$SCRIPT_DIR/../lib/services/service-builder.sh" ]]; then
     source "$SCRIPT_DIR/../lib/services/service-builder.sh" 2>/dev/null || true
     custom_service_loaded=true
   fi
