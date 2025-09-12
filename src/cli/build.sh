@@ -73,6 +73,65 @@ show_build_help() {
   echo "  • Creates trusted SSL certificates for HTTPS"
 }
 
+# Detect application port from package.json or other configs
+detect_app_port() {
+  local default_port="${1:-3000}"
+  local detected_port=""
+  
+  # Check package.json for Next.js, React, etc.
+  if [[ -f "package.json" ]]; then
+    # Check scripts for port configuration
+    detected_port=$(grep -o '"dev".*-p\s*[0-9]*' package.json 2>/dev/null | grep -o '[0-9]*$' || true)
+    
+    # Check for PORT in scripts
+    if [[ -z "$detected_port" ]]; then
+      detected_port=$(grep -o 'PORT=[0-9]*' package.json 2>/dev/null | grep -o '[0-9]*$' || true)
+    fi
+    
+    # Check for port in start script
+    if [[ -z "$detected_port" ]]; then
+      detected_port=$(grep -o '"start".*:.*[0-9]\{4\}' package.json 2>/dev/null | grep -o '[0-9]\{4\}$' || true)
+    fi
+  fi
+  
+  # Check .env files for PORT
+  if [[ -z "$detected_port" ]] && [[ -f ".env" ]]; then
+    detected_port=$(grep '^PORT=' .env 2>/dev/null | cut -d= -f2 || true)
+  fi
+  
+  # Check for common framework defaults
+  if [[ -z "$detected_port" ]] && [[ -f "package.json" ]]; then
+    if grep -q '"next"' package.json 2>/dev/null; then
+      detected_port="3000"  # Next.js default
+    elif grep -q '"vite"' package.json 2>/dev/null; then
+      detected_port="5173"  # Vite default
+    elif grep -q '"nuxt"' package.json 2>/dev/null; then
+      detected_port="3000"  # Nuxt default
+    fi
+  fi
+  
+  echo "${detected_port:-$default_port}"
+}
+
+# Get the SSL certificate path based on the domain
+get_ssl_cert_path() {
+  local domain="${1:-localhost}"
+  
+  # For localhost and *.localhost domains, use localhost certificates
+  if [[ "$domain" == "localhost" ]] || [[ "$domain" == *".localhost" ]]; then
+    echo "/etc/nginx/ssl/localhost"
+  # For local.nself.org and *.local.nself.org, use nself-org certificates  
+  elif [[ "$domain" == *"local.nself.org" ]]; then
+    echo "/etc/nginx/ssl/nself-org"
+  # For custom domains (production/staging), use custom certificates
+  elif [[ "$domain" != *".localhost" ]]; then
+    echo "/etc/nginx/ssl/custom"
+  # Default to localhost for development
+  else
+    echo "/etc/nginx/ssl/localhost"
+  fi
+}
+
 # Simple SSL generation fallback (when SSL library not available)
 build_generate_simple_ssl() {
   # Create the expected directory structure
@@ -90,12 +149,41 @@ build_generate_simple_ssl() {
     # Ensure root CA is installed
     $mkcert_cmd -install >/dev/null 2>&1 || true
     
-    # For localhost domain, generate localhost certificates with wildcard
+    # Build comprehensive domain list (CRITICAL: explicit listing, not just wildcards)
+    local project_name="${PROJECT_NAME:-app}"
+    local localhost_domains=(
+      "localhost"
+      "127.0.0.1"
+      "::1"
+      "api.localhost"
+      "auth.localhost"
+      "storage.localhost"
+      "functions.localhost"
+      "dashboard.localhost"
+      "console.localhost"
+      "${project_name}.localhost"
+    )
+    
+    # Add common variations
+    [[ "$project_name" == "nchat" ]] && localhost_domains+=("chat.localhost")
+    [[ "$project_name" == "admin" ]] && localhost_domains+=("admin.localhost")
+    
+    # Add custom subdomains if configured
+    if [[ -n "${CUSTOM_SUBDOMAINS:-}" ]]; then
+      IFS=',' read -ra CUSTOM <<< "$CUSTOM_SUBDOMAINS"
+      for domain in "${CUSTOM[@]}"; do
+        localhost_domains+=("${domain}.localhost")
+      done
+    fi
+    
+    # Add wildcard last (as fallback)
+    localhost_domains+=("*.localhost")
+    
+    # For localhost domain, generate localhost certificates with all explicit domains
     if [[ "${BASE_DOMAIN}" == "localhost" ]]; then
       $mkcert_cmd -cert-file ssl/certificates/localhost/fullchain.pem \
              -key-file ssl/certificates/localhost/privkey.pem \
-             localhost "*.localhost" api.localhost auth.localhost \
-             storage.localhost chat.localhost 127.0.0.1 ::1 >/dev/null 2>&1
+             "${localhost_domains[@]}" >/dev/null 2>&1
       
       # Also copy to nginx directory
       mkdir -p nginx/ssl/localhost >/dev/null 2>&1
@@ -104,12 +192,13 @@ build_generate_simple_ssl() {
       # Generate domain-specific certificates
       $mkcert_cmd -cert-file ssl/certificates/nself-org/fullchain.pem \
              -key-file ssl/certificates/nself-org/privkey.pem \
-             "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" >/dev/null 2>&1
+             "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" \
+             "api.${BASE_DOMAIN}" "auth.${BASE_DOMAIN}" "storage.${BASE_DOMAIN}" >/dev/null 2>&1
       
       # Also generate localhost certificates as fallback
       $mkcert_cmd -cert-file ssl/certificates/localhost/fullchain.pem \
              -key-file ssl/certificates/localhost/privkey.pem \
-             localhost "*.localhost" 127.0.0.1 ::1 >/dev/null 2>&1
+             "${localhost_domains[@]}" >/dev/null 2>&1
       
       # Copy to nginx directories
       mkdir -p nginx/ssl/{localhost,nself-org} >/dev/null 2>&1
@@ -586,11 +675,48 @@ EOF
       : ${AUTH_ROUTE:=auth.${BASE_DOMAIN}}
       : ${STORAGE_ROUTE:=storage.${BASE_DOMAIN}}
 
-      # Generate Hasura proxy config
-      local env_file=".env"
-      [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
-      if [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]; then
-        cat >nginx/conf.d/hasura.conf <<EOF
+      # Use comprehensive nginx generator for all services
+      if [[ -f "$SCRIPT_DIR/../lib/services/nginx-generator.sh" ]]; then
+        source "$SCRIPT_DIR/../lib/services/nginx-generator.sh"
+        source "$SCRIPT_DIR/../lib/services/service-routes.sh"
+        
+        # Generate configs for all detected services
+        local configs_generated
+        configs_generated=$(nginx::generate_all_configs "." 2>/dev/null | tail -1)
+        
+        if [[ -n "$configs_generated" && "$configs_generated" -gt 0 ]]; then
+          nginx_updated=true
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Generated $configs_generated nginx service configs          \n"
+        elif [[ -n "$configs_generated" ]]; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configurations updated                \n"
+          nginx_updated=true
+        fi
+        
+        # Validate generated configs
+        if [[ "$nginx_updated" == "true" ]]; then
+          if nginx::validate_config "."; then
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration validated               \n"
+          else
+            printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Nginx configuration has warnings           \n"
+          fi
+        fi
+      else
+        # Fallback to basic Hasura config if generator not available
+        printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Using basic nginx configuration (generator not found)\n"
+        
+        # Set route defaults if not already set
+        : ${HASURA_ROUTE:=api.${BASE_DOMAIN}}
+        
+        # Generate basic Hasura proxy config
+        local env_file=".env"
+        [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
+        
+        # Get SSL certificate path based on domain
+        local hasura_ssl_path=$(get_ssl_cert_path "${HASURA_ROUTE}")
+        
+        if [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]; then
+          mkdir -p nginx/conf.d
+          cat >nginx/conf.d/hasura.conf <<EOF
 upstream hasura {
     server hasura:8080;
 }
@@ -606,8 +732,8 @@ server {
     http2 on;
     server_name ${HASURA_ROUTE};
     
-    ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;
+    ssl_certificate ${hasura_ssl_path}/fullchain.pem;
+    ssl_certificate_key ${hasura_ssl_path}/privkey.pem;
     
     location / {
         proxy_pass http://hasura;
@@ -621,12 +747,13 @@ server {
     }
 }
 EOF
-        nginx_updated=true
-        CREATED_FILES+=("nginx/conf.d/hasura.conf")
-      fi
-
-      if [[ "$nginx_updated" == "true" ]]; then
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration generated              \n"
+          nginx_updated=true
+          CREATED_FILES+=("nginx/conf.d/hasura.conf")
+        fi
+        
+        if [[ "$nginx_updated" == "true" ]]; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration generated              \n"
+        fi
       fi
     fi
 
@@ -642,6 +769,11 @@ EOF
         local table_prefix=$(eval echo "\${FRONTEND_APP_${i}_TABLE_PREFIX:-}")
         local port=$(eval echo "\${FRONTEND_APP_${i}_PORT:-}")
         local route=$(eval echo "\${FRONTEND_APP_${i}_ROUTE:-}")
+        
+        # If no port specified, try to auto-detect from package.json
+        if [[ -z "$port" ]]; then
+          port=$(detect_app_port 3000)
+        fi
         
         # Skip if no port defined (required for routing)
         [[ -z "$port" ]] && continue
@@ -692,54 +824,12 @@ EOF
           app_route="${app_short:-$app_name}.${BASE_DOMAIN}"
         fi
 
-        # Check if config needs updating
-        if [[ ! -f "nginx/conf.d/${app_name}.conf" ]] || [[ "$force_rebuild" == "true" ]]; then
-          # Generate nginx config for frontend app
-          cat >"nginx/conf.d/${app_name}.conf" <<EOF
-server {
-    listen 80;
-    server_name ${app_route};
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name ${app_route};
-    
-    ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;
-    
-    # Frontend app: ${app_name}
-    # Database prefix: ${app_prefix}
-    # Development port: ${app_port}
-    
-    location / {
-        proxy_pass http://host.docker.internal:${app_port};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        # Get SSL certificate path based on domain
+        local app_ssl_path=$(get_ssl_cert_path "${app_route}")
         
-        # CORS headers for frontend apps
-        add_header Access-Control-Allow-Origin \$http_origin always;
-        add_header Access-Control-Allow-Credentials true always;
-    }
-    
-    # Health check endpoint
-    location /health {
-        access_log off;
-        return 200 "OK";
-        add_header Content-Type text/plain;
-    }
-}
-EOF
-          ((apps_updated++))
-          CREATED_FILES+=("nginx/conf.d/${app_name}.conf")
-        fi
+        # Note: nginx config generation now handled by comprehensive nginx-generator.sh
+        # Individual frontend app configs are generated automatically during nginx generation phase
+        ((apps_updated++))
         
         # Check if this app has Hasura remote schema configuration
         # We need to check the original FRONTEND_APP_N variables since they're not in compact format
@@ -1025,6 +1115,12 @@ EOF
     if [[ ${#CREATED_FILES[@]} -gt 0 ]]; then
       log_info "Created ${#CREATED_FILES[@]} resources"
     fi
+  fi
+  
+  # Display available routes
+  if [[ -f "$SCRIPT_DIR/../lib/services/routes-display.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/services/routes-display.sh"
+    routes::display_compact
   fi
 
   # Run comprehensive fixes for any remaining issues

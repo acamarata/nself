@@ -265,8 +265,8 @@ ssl::copy_into_project() {
   log_info "Copying certificates to project..."
 
   # Create target directories for both nginx and project ssl
-  mkdir -p "$nginx_ssl_dir"/{localhost,nself-org}
-  mkdir -p "$ssl_dir"/{localhost,nself-org}
+  mkdir -p "$nginx_ssl_dir"/{localhost,nself-org,custom}
+  mkdir -p "$ssl_dir"/{localhost,nself-org,custom}
 
   # Copy localhost certificates if they exist
   if [[ -f "$CERTS_DIR/localhost/fullchain.pem" ]]; then
@@ -302,6 +302,21 @@ ssl::copy_into_project() {
     fi
 
     log_success "Copied *.local.nself.org certificates"
+  fi
+
+  # Copy custom certificates if they exist
+  if [[ -f "$CERTS_DIR/custom/fullchain.pem" ]]; then
+    # Copy to nginx directory
+    cp "$CERTS_DIR/custom/fullchain.pem" "$nginx_ssl_dir/custom/"
+    cp "$CERTS_DIR/custom/privkey.pem" "$nginx_ssl_dir/custom/"
+    chmod 600 "$nginx_ssl_dir/custom/privkey.pem"
+    
+    # Copy to project ssl directory
+    cp "$CERTS_DIR/custom/fullchain.pem" "$ssl_dir/custom/"
+    cp "$CERTS_DIR/custom/privkey.pem" "$ssl_dir/custom/"
+    chmod 600 "$ssl_dir/custom/privkey.pem"
+    
+    log_success "Copied custom domain certificates"
   fi
 }
 
@@ -598,6 +613,7 @@ ssl::generate_for_project() {
 ssl::issue_with_mkcert() {
   local base_domain="${1}"
   local project_dir="${2}"
+  local project_name="${PROJECT_NAME:-app}"
   
   local mkcert_cmd
   if ! mkcert_cmd="$(ssl::get_mkcert)"; then
@@ -608,21 +624,87 @@ ssl::issue_with_mkcert() {
   # Install root CA if needed
   $mkcert_cmd -install 2>/dev/null || true
   
-  # Determine certificate directory
-  local cert_dir="$CERTS_DIR/localhost"
-  if [[ "$base_domain" != "localhost" ]]; then
+  # Determine certificate directory based on domain type
+  local cert_dir
+  if [[ "$base_domain" == "localhost" ]]; then
+    cert_dir="$CERTS_DIR/localhost"
+  elif [[ "$base_domain" == *"local.nself.org" ]]; then
+    cert_dir="$CERTS_DIR/nself-org"
+  else
+    # Custom domain (production, staging, or custom dev domain)
     cert_dir="$CERTS_DIR/custom"
   fi
   
   mkdir -p "$cert_dir"
   
-  # Generate certificate with all necessary SANs
-  local sans=("$base_domain" "*.$base_domain")
+  # Use dynamic service discovery to collect ALL domains
+  local sans=()
   
-  # Add common subdomains for localhost
-  if [[ "$base_domain" == "localhost" ]]; then
-    sans+=("api.localhost" "auth.localhost" "storage.localhost" "chat.localhost" "127.0.0.1" "::1")
+  # Source service discovery if available
+  if [[ -f "$SCRIPT_DIR/../lib/services/service-routes.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/services/service-routes.sh"
+    
+    # Collect all domains dynamically
+    while IFS= read -r domain; do
+      [[ -n "$domain" ]] && sans+=("$domain")
+    done < <(routes::get_ssl_domains)
+  else
+    # Fallback to static domain list (backward compatibility)
+    if [[ "$base_domain" == "localhost" ]]; then
+      # Core localhost domains
+      sans+=(
+        "localhost"
+        "127.0.0.1"
+        "::1"
+      )
+      
+      # Common service subdomains (explicitly listed)
+      sans+=(
+        "api.localhost"       # Hasura GraphQL
+        "auth.localhost"      # Authentication service
+        "storage.localhost"   # File storage
+        "functions.localhost" # Serverless functions
+        "dashboard.localhost" # Admin dashboard
+        "console.localhost"   # Hasura console
+        "mail.localhost"      # Mailpit
+        "search.localhost"    # MeiliSearch
+        "db.localhost"        # Adminer
+        "queues.localhost"    # BullMQ Dashboard
+      )
+      
+      # Project-specific subdomains
+      if [[ -n "$project_name" ]]; then
+        sans+=("${project_name}.localhost")  # Main app domain
+        
+        # Common variations (chat app, admin, etc)
+        [[ "$project_name" == "nchat" ]] && sans+=("chat.localhost")
+        [[ "$project_name" == "admin" ]] && sans+=("admin.localhost")
+      fi
+      
+      # Add wildcard as last resort
+      sans+=("*.localhost")
+    else
+      # For custom domains
+      sans+=(
+        "$base_domain"
+        "*.$base_domain"
+        "api.$base_domain"
+        "auth.$base_domain"
+        "storage.$base_domain"
+        "mail.$base_domain"
+        "search.$base_domain"
+        "db.$base_domain"
+        "queues.$base_domain"
+      )
+      
+      if [[ -n "$project_name" ]]; then
+        sans+=("${project_name}.$base_domain")
+      fi
+    fi
   fi
+  
+  log_info "Generating certificate for ${#sans[@]} domains"
+  log_info "Domains: ${sans[*]:0:10}$(( ${#sans[@]} > 10 ? "..." : "" ))"
   
   if $mkcert_cmd \
     -cert-file "$cert_dir/fullchain.pem" \
@@ -632,6 +714,11 @@ ssl::issue_with_mkcert() {
     # Copy cert as fullchain for compatibility
     cp "$cert_dir/fullchain.pem" "$cert_dir/cert.pem" 2>/dev/null || true
     
+    # Set proper permissions
+    chmod 644 "$cert_dir/fullchain.pem" "$cert_dir/cert.pem"
+    chmod 600 "$cert_dir/privkey.pem"
+    
+    log_success "Certificate generated with ${#sans[@]} domains"
     return 0
   fi
   

@@ -175,6 +175,64 @@ trust::status() {
   fi
 }
 
+# Update /etc/hosts if needed
+trust::update_hosts() {
+  local project_name="${PROJECT_NAME:-app}"
+  local needs_update=false
+  local hosts_entries=()
+  
+  # Build list of required hosts entries
+  hosts_entries+=(
+    "127.0.0.1       api.localhost"
+    "127.0.0.1       auth.localhost"
+    "127.0.0.1       storage.localhost"
+    "127.0.0.1       functions.localhost"
+    "127.0.0.1       dashboard.localhost"
+    "127.0.0.1       console.localhost"
+  )
+  
+  # Add project-specific entries
+  if [[ -n "$project_name" ]]; then
+    hosts_entries+=("127.0.0.1       ${project_name}.localhost")
+    [[ "$project_name" == "nchat" ]] && hosts_entries+=("127.0.0.1       chat.localhost")
+    [[ "$project_name" == "admin" ]] && hosts_entries+=("127.0.0.1       admin.localhost")
+  fi
+  
+  # Check which entries are missing
+  local missing_entries=()
+  for entry in "${hosts_entries[@]}"; do
+    local domain=$(echo "$entry" | awk '{print $2}')
+    if ! grep -q "$domain" /etc/hosts 2>/dev/null; then
+      missing_entries+=("$entry")
+      needs_update=true
+    fi
+  done
+  
+  if [[ "$needs_update" == "true" ]]; then
+    log_info "Some domains need to be added to /etc/hosts for proper resolution"
+    echo
+    echo "The following entries are missing:"
+    for entry in "${missing_entries[@]}"; do
+      echo "  $entry"
+    done
+    echo
+    
+    # Ask for permission
+    read -p "Add these entries to /etc/hosts? (requires sudo) [y/N]: " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      for entry in "${missing_entries[@]}"; do
+        echo "$entry" | sudo tee -a /etc/hosts >/dev/null
+      done
+      log_success "Added ${#missing_entries[@]} entries to /etc/hosts"
+    else
+      log_warning "Skipped /etc/hosts update. Some domains may not resolve correctly."
+    fi
+  else
+    log_info "All required domains are already in /etc/hosts"
+  fi
+}
+
 # Main trust installation function
 trust::install() {
   log_info "Setting up certificate trust..."
@@ -182,6 +240,11 @@ trust::install() {
   # Install mkcert root CA
   if ! trust::install_root_ca; then
     return 1
+  fi
+
+  # Update /etc/hosts if needed (for localhost subdomains)
+  if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
+    trust::update_hosts
   fi
 
   # Check for Windows and PFX
@@ -200,7 +263,16 @@ trust::install() {
   # Show what domains are trusted
   echo
   echo "Trusted domains:"
-  echo "  • localhost, *.localhost"
+  
+  if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
+    echo "  • localhost"
+    echo "  • api.localhost, auth.localhost, storage.localhost"
+    [[ -n "${PROJECT_NAME:-}" ]] && echo "  • ${PROJECT_NAME}.localhost"
+    [[ "${PROJECT_NAME:-}" == "nchat" ]] && echo "  • chat.localhost"
+  else
+    echo "  • ${BASE_DOMAIN}, *.${BASE_DOMAIN}"
+  fi
+  
   echo "  • 127.0.0.1, ::1"
 
   if [[ -f "$NSELF_ROOT/templates/certs/nself-org/fullchain.pem" ]]; then
