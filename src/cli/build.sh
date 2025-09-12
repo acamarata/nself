@@ -73,6 +73,84 @@ show_build_help() {
   echo "  • Creates trusted SSL certificates for HTTPS"
 }
 
+# Simple SSL generation fallback (when SSL library not available)
+build_generate_simple_ssl() {
+  # Create the expected directory structure
+  mkdir -p ssl/certificates/{localhost,nself-org} >/dev/null 2>&1
+  
+  # Check for mkcert (either in PATH or nself bin)
+  local mkcert_cmd=""
+  if command -v mkcert >/dev/null 2>&1; then
+    mkcert_cmd="mkcert"
+  elif [[ -f "$HOME/.nself/bin/mkcert" ]]; then
+    mkcert_cmd="$HOME/.nself/bin/mkcert"
+  fi
+  
+  if [[ -n "$mkcert_cmd" ]]; then
+    # Ensure root CA is installed
+    $mkcert_cmd -install >/dev/null 2>&1 || true
+    
+    # For localhost domain, generate localhost certificates with wildcard
+    if [[ "${BASE_DOMAIN}" == "localhost" ]]; then
+      $mkcert_cmd -cert-file ssl/certificates/localhost/fullchain.pem \
+             -key-file ssl/certificates/localhost/privkey.pem \
+             localhost "*.localhost" api.localhost auth.localhost \
+             storage.localhost chat.localhost 127.0.0.1 ::1 >/dev/null 2>&1
+      
+      # Also copy to nginx directory
+      mkdir -p nginx/ssl/localhost >/dev/null 2>&1
+      cp ssl/certificates/localhost/*.pem nginx/ssl/localhost/ 2>/dev/null || true
+    else
+      # Generate domain-specific certificates
+      $mkcert_cmd -cert-file ssl/certificates/nself-org/fullchain.pem \
+             -key-file ssl/certificates/nself-org/privkey.pem \
+             "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" >/dev/null 2>&1
+      
+      # Also generate localhost certificates as fallback
+      $mkcert_cmd -cert-file ssl/certificates/localhost/fullchain.pem \
+             -key-file ssl/certificates/localhost/privkey.pem \
+             localhost "*.localhost" 127.0.0.1 ::1 >/dev/null 2>&1
+      
+      # Copy to nginx directories
+      mkdir -p nginx/ssl/{localhost,nself-org} >/dev/null 2>&1
+      cp ssl/certificates/localhost/*.pem nginx/ssl/localhost/ 2>/dev/null || true
+      cp ssl/certificates/nself-org/*.pem nginx/ssl/nself-org/ 2>/dev/null || true
+    fi
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (trusted)       \n"
+    CREATED_FILES+=("SSL certificates")
+  else
+    # Generate self-signed certificates as fallback
+    if [[ "${BASE_DOMAIN}" == "localhost" ]]; then
+      openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout ssl/certificates/localhost/privkey.pem \
+        -out ssl/certificates/localhost/fullchain.pem \
+        -subj "/C=US/ST=State/L=City/O=nself/CN=localhost" \
+        -addext "subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1" >/dev/null 2>&1
+    else
+      openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout ssl/certificates/nself-org/privkey.pem \
+        -out ssl/certificates/nself-org/fullchain.pem \
+        -subj "/C=US/ST=State/L=City/O=nself/CN=*.${BASE_DOMAIN}" \
+        -addext "subjectAltName=DNS:*.${BASE_DOMAIN},DNS:${BASE_DOMAIN}" >/dev/null 2>&1
+      
+      # Also generate localhost certificates
+      openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout ssl/certificates/localhost/privkey.pem \
+        -out ssl/certificates/localhost/fullchain.pem \
+        -subj "/C=US/ST=State/L=City/O=nself/CN=localhost" \
+        -addext "subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1" >/dev/null 2>&1
+    fi
+    
+    # Copy to nginx directories
+    mkdir -p nginx/ssl/{localhost,nself-org} >/dev/null 2>&1
+    cp ssl/certificates/localhost/*.pem nginx/ssl/localhost/ 2>/dev/null || true
+    [[ -d ssl/certificates/nself-org ]] && cp ssl/certificates/nself-org/*.pem nginx/ssl/nself-org/ 2>/dev/null || true
+    
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (self-signed)   \n"
+    CREATED_FILES+=("SSL certificates")
+  fi
+}
+
 # Main build command function
 cmd_build() {
   local exit_code=0
@@ -302,9 +380,17 @@ cmd_build() {
 
   # Check SSL certificates
   local needs_ssl=false
-  if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]] || [[ "$force_rebuild" == "true" ]]; then
-    needs_ssl=true
-    needs_work=true
+  # Check both localhost and domain certificates
+  if [[ "${BASE_DOMAIN}" == "localhost" ]]; then
+    if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]] || [[ "$force_rebuild" == "true" ]]; then
+      needs_ssl=true
+      needs_work=true
+    fi
+  else
+    if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]] || [[ "$force_rebuild" == "true" ]]; then
+      needs_ssl=true
+      needs_work=true
+    fi
   fi
 
   # Check docker-compose.yml
@@ -366,28 +452,25 @@ cmd_build() {
     if [[ "$needs_ssl" == "true" ]]; then
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
 
-      # Create the expected directory structure
-      mkdir -p ssl/certificates/nself-org >/dev/null 2>&1
-      
-      # Check for mkcert
-      if command -v mkcert >/dev/null 2>&1; then
-        # Generate trusted certificates with mkcert
-        mkcert -cert-file ssl/certificates/nself-org/fullchain.pem \
-               -key-file ssl/certificates/nself-org/privkey.pem \
-               "${BASE_DOMAIN}" "*.${BASE_DOMAIN}" \
-               "${HASURA_ROUTE}" "${AUTH_ROUTE}" "${STORAGE_ROUTE}" \
-               localhost 127.0.0.1 ::1 >/dev/null 2>&1
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (trusted)       \n"
-        CREATED_FILES+=("SSL certificates")
+      # Try to use the SSL library for intelligent certificate generation
+      if source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null; then
+        # Use the enhanced SSL generation that handles dev/staging/prod
+        if ssl::generate_for_project "." "${BASE_DOMAIN:-localhost}" >/dev/null 2>&1; then
+          local cert_type="trusted"
+          if [[ "${ENV}" == "prod" ]] && [[ -n "${DNS_PROVIDER:-}" ]]; then
+            cert_type="Let's Encrypt"
+          elif [[ "${ENV}" == "prod" ]]; then
+            cert_type="self-signed"
+          fi
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated ($cert_type)       \n"
+          CREATED_FILES+=("SSL certificates")
+        else
+          # Fallback to simpler generation if library fails
+          build_generate_simple_ssl
+        fi
       else
-        # Generate self-signed certificate as fallback
-        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-          -keyout ssl/certificates/nself-org/privkey.pem \
-          -out ssl/certificates/nself-org/fullchain.pem \
-          -subj "/C=US/ST=State/L=City/O=nself/CN=*.${BASE_DOMAIN}" \
-          -addext "subjectAltName=DNS:*.${BASE_DOMAIN},DNS:${BASE_DOMAIN}" >/dev/null 2>&1
-        printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated (self-signed)   \n"
-        CREATED_FILES+=("SSL certificates")
+        # Fallback if SSL library is not available
+        build_generate_simple_ssl
       fi
     fi
 
@@ -963,9 +1046,12 @@ EOF
   echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
   echo
 
-  echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
-  echo -e "   ${COLOR_DIM}Trust the root CA for green locks in browsers${COLOR_RESET}"
-  echo
+  # Only suggest trust command for dev environments
+  if [[ "${ENV:-dev}" == "dev" ]]; then
+    echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
+    echo -e "   ${COLOR_DIM}Trust the root CA for green locks in browsers${COLOR_RESET}"
+    echo
+  fi
   echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself start${COLOR_RESET} - Start all services"
   echo -e "   ${COLOR_DIM}Launches PostgreSQL, Hasura, and configured services${COLOR_RESET}"
   echo
