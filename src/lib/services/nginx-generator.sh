@@ -121,7 +121,7 @@ nginx::generate_frontend_config() {
   local route="$2"
   local port="$3"
   local output_dir="$4"
-  
+
   # Determine SSL certificate path
   local ssl_path
   ssl_path=$(get_ssl_cert_path "$route")
@@ -178,6 +178,70 @@ server {
 EOF
 
   log_info "Generated nginx config for frontend app $app_name at $route"
+  return 0
+}
+
+# Generate nginx config for frontend app GraphQL API endpoints
+nginx::generate_frontend_api_config() {
+  local app_name="$1"
+  local api_route="$2"
+  local port="$3"
+  local output_dir="$4"
+
+  # Determine SSL certificate path
+  local ssl_path
+  ssl_path=$(get_ssl_cert_path "$api_route")
+
+  # Generate the nginx configuration for API endpoint
+  cat > "$output_dir/${app_name}-api.conf" << EOF
+# Frontend API endpoint: ${app_name}
+server {
+    listen 80;
+    server_name ${api_route};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${api_route};
+
+    ssl_certificate ${ssl_path}/fullchain.pem;
+    ssl_certificate_key ${ssl_path}/privkey.pem;
+
+    # GraphQL API endpoint for: ${app_name}
+    # Proxying to frontend app port: ${port}
+
+    location /graphql {
+        proxy_pass http://host.docker.internal:${port}/graphql;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        # CORS headers for GraphQL
+        add_header Access-Control-Allow-Origin \$http_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization" always;
+        add_header Access-Control-Allow-Credentials true always;
+
+        # Handle preflight requests
+        if (\$request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "OK - API for ${app_name}";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
+
+  log_info "Generated nginx API config for $app_name at $api_route"
   return 0
 }
 
@@ -297,21 +361,32 @@ nginx::generate_all_configs() {
   
   # Generate configs for frontend applications
   local current_app=""
+  local api_route=""
   while IFS= read -r line; do
     if [[ "$line" == "---" ]]; then
       current_app=""
+      api_route=""
       continue
     fi
-    
+
     IFS='=' read -r key value <<< "$line"
     case "$key" in
       app_name) current_app="$value" ;;
       route) app_route="$value" ;;
-      port) 
+      api_route) api_route="$value" ;;
+      port)
         app_port="$value"
         if [[ -n "$current_app" ]]; then
+          # Generate main frontend config
           if nginx::generate_frontend_config "$current_app" "$app_route" "$app_port" "$conf_dir"; then
             ((configs_generated++))
+          fi
+
+          # Generate API config if remote schema URL is defined
+          if [[ -n "$api_route" ]]; then
+            if nginx::generate_frontend_api_config "$current_app" "$api_route" "$app_port" "$conf_dir"; then
+              ((configs_generated++))
+            fi
           fi
         fi
         ;;
@@ -385,6 +460,7 @@ nginx::validate_config() {
 # Export functions
 export -f nginx::generate_service_config
 export -f nginx::generate_frontend_config
+export -f nginx::generate_frontend_api_config
 export -f nginx::generate_custom_service_config
 export -f nginx::remove_wildcard_conflicts
 export -f nginx::generate_all_configs

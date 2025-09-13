@@ -87,8 +87,10 @@ routes::collect_all() {
   if [[ "$app_count" -gt 0 ]]; then
     for ((i=1; i<=app_count; i++)); do
       local route_var="FRONTEND_APP_${i}_ROUTE"
+      local remote_url_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_URL"
       local route="${!route_var:-}"
-      
+      local remote_url="${!remote_url_var:-}"
+
       if [[ -n "$route" ]]; then
         # Handle both full domain and subdomain formats
         if [[ "$route" == *".${base_domain}" ]]; then
@@ -96,6 +98,23 @@ routes::collect_all() {
         else
           routes+=("${route}.${base_domain}")
         fi
+      fi
+
+      # Add API route if remote schema URL is defined
+      if [[ -n "$remote_url" ]]; then
+        local api_route=""
+        # Handle different formats
+        if [[ "$remote_url" =~ ^https?:// ]]; then
+          # Extract domain from full URL
+          api_route=$(echo "$remote_url" | sed -E 's|https?://([^/]+).*|\1|')
+        elif [[ "$remote_url" == *'${BASE_DOMAIN}'* ]]; then
+          # Expand BASE_DOMAIN variable
+          api_route=$(eval echo "$remote_url")
+        else
+          # Simple format like "api.app1"
+          api_route="${remote_url}.${base_domain}"
+        fi
+        [[ -n "$api_route" ]] && routes+=("$api_route")
       fi
     done
   fi
@@ -289,29 +308,49 @@ routes::get_frontend_apps() {
       local display_var="FRONTEND_APP_${i}_DISPLAY_NAME"
       local route_var="FRONTEND_APP_${i}_ROUTE"
       local port_var="FRONTEND_APP_${i}_PORT"
-      
+      local remote_url_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_URL"
+
       local app_name="${!name_var:-${!display_var:-}}"
       local route="${!route_var:-}"
       local port="${!port_var:-}"
-      
+      local remote_url="${!remote_url_var:-}"
+
       if [[ -n "$app_name" ]]; then
         # Ensure route has proper domain
         if [[ -z "$route" ]]; then
           route="$app_name"
         fi
-        
+
         if [[ "$route" != *".${base_domain}" ]]; then
           route="${route}.${base_domain}"
         fi
-        
+
         # Auto-detect port if not specified
         if [[ -z "$port" ]]; then
           port=$(detect_app_port 3000)
         fi
-        
+
         echo "app_name=${app_name}"
         echo "route=${route}"
         echo "port=${port}"
+
+        # If remote schema URL is defined, generate API route
+        if [[ -n "$remote_url" ]]; then
+          local api_route=""
+          # Handle different formats
+          if [[ "$remote_url" =~ ^https?:// ]]; then
+            # Extract domain from full URL
+            api_route=$(echo "$remote_url" | sed -E 's|https?://([^/]+).*|\1|')
+          elif [[ "$remote_url" == *'${BASE_DOMAIN}'* ]]; then
+            # Expand BASE_DOMAIN variable
+            api_route=$(eval echo "$remote_url")
+          else
+            # Simple format like "api.app1"
+            api_route="${remote_url}.${base_domain}"
+          fi
+          echo "api_route=${api_route}"
+        fi
+
         echo "---"
       fi
     done

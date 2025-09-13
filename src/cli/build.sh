@@ -842,12 +842,34 @@ EOF
             # Match by port since it's unique and required
             if [[ "$check_port" == "$app_port" ]]; then
               local remote_schema_name=$(eval echo "\${FRONTEND_APP_${i}_REMOTE_SCHEMA_NAME:-}")
-              local remote_schema_url=$(eval echo "\${FRONTEND_APP_${i}_REMOTE_SCHEMA_URL:-}")
-              
-              if [[ -n "$remote_schema_name" ]] && [[ -n "$remote_schema_url" ]]; then
+              local remote_schema_input=$(eval echo "\${FRONTEND_APP_${i}_REMOTE_SCHEMA_URL:-}")
+
+              if [[ -n "$remote_schema_name" ]] && [[ -n "$remote_schema_input" ]]; then
+                local remote_schema_url=""
+                local protocol="http"
+
+                # Determine protocol based on environment
+                if [[ "${ENV:-dev}" == "prod" ]] || [[ "${SSL_MODE:-}" == "letsencrypt" ]]; then
+                  protocol="https"
+                elif [[ "${SSL_MODE:-}" == "local" ]] || [[ "${BASE_DOMAIN}" == *"local.nself.org"* ]]; then
+                  protocol="https"
+                fi
+
+                # Handle different input formats
+                if [[ "$remote_schema_input" =~ ^https?:// ]]; then
+                  # Full URL provided - use as-is
+                  remote_schema_url="$remote_schema_input"
+                elif [[ "$remote_schema_input" == *'${BASE_DOMAIN}'* ]]; then
+                  # Contains BASE_DOMAIN variable - expand and add protocol
+                  remote_schema_url="${protocol}://$(eval echo "$remote_schema_input")/graphql"
+                else
+                  # Shorthand like "api.app1" - construct full URL
+                  remote_schema_url="${protocol}://${remote_schema_input}.${BASE_DOMAIN}/graphql"
+                fi
+
                 # Create Hasura metadata directory if it doesn't exist
                 mkdir -p hasura/metadata/remote_schemas
-                
+
                 # Generate remote schema metadata file
                 cat >hasura/metadata/remote_schemas/${remote_schema_name}.yaml <<EOF
 name: ${remote_schema_name}
@@ -856,7 +878,7 @@ definition:
   timeout_seconds: 60
   forward_client_headers: true
 EOF
-                echo "    - Added Hasura remote schema: ${remote_schema_name}"
+                echo "    - Added Hasura remote schema: ${remote_schema_name} -> ${remote_schema_url}"
                 CREATED_FILES+=("hasura/metadata/remote_schemas/${remote_schema_name}.yaml")
               fi
               break
