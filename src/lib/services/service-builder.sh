@@ -224,7 +224,6 @@ EOF
   
   # Add custom environment variables
   if [[ -n "$env_vars" ]]; then
-    echo "      # Custom environment variables"
     IFS=',' read -ra ENVS <<< "$env_vars"
     for env in "${ENVS[@]}"; do
       echo "      - $env"

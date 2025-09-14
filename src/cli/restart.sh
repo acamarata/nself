@@ -79,7 +79,7 @@ cmd_restart() {
 
     for service in $services_to_restart; do
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Restarting $service..."
-      if docker compose restart "$service" >/dev/null 2>&1; then
+      if compose restart "$service" >/dev/null 2>&1; then
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Restarted $service                     \n"
       else
         printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to restart $service             \n"
@@ -94,7 +94,7 @@ cmd_restart() {
   # Smart mode: Check what has changed
   if [[ "$smart_mode" == "true" ]] && [[ "$force_all" != "true" ]]; then
     # Check if any services are running
-    local running_services=$(docker compose ps --services --filter "status=running" 2>/dev/null)
+    local running_services=$(compose ps --services --filter "status=running" 2>/dev/null)
 
     if [[ -z "$running_services" ]]; then
       # No services running, just start them
@@ -165,7 +165,7 @@ cmd_restart() {
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Applying changes with minimal downtime..."
 
       local output_file=$(mktemp)
-      if docker compose up -d --build --remove-orphans 2>&1 >"$output_file"; then
+      if compose up -d --build --remove-orphans 2>&1 >"$output_file"; then
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Services updated successfully                        \n"
 
         # Show what was recreated
@@ -199,12 +199,12 @@ cmd_restart() {
       echo
 
       # Get all running services
-      local services=$(docker compose ps --services --filter "status=running" 2>/dev/null)
+      local services=$(compose ps --services --filter "status=running" 2>/dev/null)
       local service_count=$(echo "$services" | wc -l | tr -d ' ')
 
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Restarting $service_count services..."
 
-      if docker compose restart >/dev/null 2>&1; then
+      if compose restart >/dev/null 2>&1; then
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Restarted $service_count services                         \n"
       else
         printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to restart services                              \n"
@@ -218,7 +218,7 @@ cmd_restart() {
 
     # Stop services
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Stopping services..."
-    if docker compose down >/dev/null 2>&1; then
+    if compose down >/dev/null 2>&1; then
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Services stopped                           \n"
     else
       printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to stop services                    \n"

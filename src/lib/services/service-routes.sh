@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # service-routes.sh - Dynamic service discovery and route collection
 
-set -euo pipefail
+# Don't use strict mode for library files that get sourced
+# set -euo pipefail
 
 # Get the directory where this script is located
-SERVICE_ROUTES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NSELF_ROOT="$(cd "$SERVICE_ROUTES_DIR/../.." && pwd)"
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  SERVICE_ROUTES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  NSELF_ROOT="$(cd "$SERVICE_ROUTES_DIR/../.." && pwd)"
+else
+  # Fallback if sourced in a different way
+  SERVICE_ROUTES_DIR="/Users/admin/Sites/nself/src/lib/services"
+  NSELF_ROOT="/Users/admin/Sites/nself/src"
+fi
 
 # Source utilities
 source "$SERVICE_ROUTES_DIR/../utils/display.sh" 2>/dev/null || true
@@ -136,9 +143,11 @@ routes::collect_all() {
   # CS_N services (Custom Services)
   for i in {1..20}; do
     local cs_var="CS_${i}"
-    if [[ -n "${!cs_var:-}" ]]; then
+    local cs_value
+    eval "cs_value=\"\${${cs_var}:-}\""
+    if [[ -n "$cs_value" ]]; then
       # Parse CS_N format: type:name:port[:route[:internal]]
-      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"${!cs_var}"
+      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
       
       # Only add if it has an external route (not internal-only)
       if [[ -n "$cs_route" && "$cs_internal" != "true" ]]; then
@@ -327,7 +336,8 @@ routes::get_frontend_apps() {
 
         # Auto-detect port if not specified
         if [[ -z "$port" ]]; then
-          port=$(detect_app_port 3000)
+          # Default to 3000 if not specified
+          port=3000
         fi
 
         echo "app_name=${app_name}"
@@ -380,9 +390,11 @@ routes::get_custom_services() {
   
   for i in {1..20}; do
     local cs_var="CS_${i}"
-    if [[ -n "${!cs_var:-}" ]]; then
+    local cs_value
+    eval "cs_value=\"\${${cs_var}:-}\""
+    if [[ -n "$cs_value" ]]; then
       # Parse CS_N format: type:name:port[:route[:internal]]
-      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"${!cs_var}"
+      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
       
       # Only include services with external routes
       if [[ -n "$cs_route" && "$cs_internal" != "true" ]]; then
@@ -392,7 +404,8 @@ routes::get_custom_services() {
         echo "service_type=${cs_type}"
         echo "route=${full_route}"
         echo "internal_port=${cs_port}"
-        echo "container_name=${PROJECT_NAME:-app}_${cs_name}"
+        local project_name="${PROJECT_NAME:-app}"
+        echo "container_name=${project_name}_${cs_name}"
         echo "---"
       fi
     fi

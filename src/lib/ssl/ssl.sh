@@ -641,6 +641,11 @@ ssl::issue_with_mkcert() {
   local sans=()
   
   # Source service discovery if available
+  # Set SCRIPT_DIR if not already set
+  if [[ -z "${SCRIPT_DIR:-}" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/src/cli"
+  fi
+
   if [[ -f "$SCRIPT_DIR/../lib/services/service-routes.sh" ]]; then
     source "$SCRIPT_DIR/../lib/services/service-routes.sh"
     

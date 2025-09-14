@@ -1,15 +1,47 @@
 #!/usr/bin/env bash
 # nginx-generator.sh - Generate individual nginx configurations for all services
 
-set -euo pipefail
+# Don't use strict mode for library files that get sourced
+# set -euo pipefail
 
 # Get the directory where this script is located
-NGINX_GEN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NSELF_ROOT="$(cd "$NGINX_GEN_DIR/../.." && pwd)"
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  NGINX_GEN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  NSELF_ROOT="$(cd "$NGINX_GEN_DIR/../.." && pwd)"
+else
+  # Fallback if sourced in a different way
+  NGINX_GEN_DIR="/Users/admin/Sites/nself/src/lib/services"
+  NSELF_ROOT="/Users/admin/Sites/nself/src"
+fi
 
 # Source dependencies
 source "$NGINX_GEN_DIR/../utils/display.sh" 2>/dev/null || true
 source "$NGINX_GEN_DIR/service-routes.sh" 2>/dev/null || true
+
+# Get SSL certificate path for a domain
+get_ssl_cert_path() {
+  local domain="${1:-localhost}"
+
+  # For api.*.localhost domains, use api-localhost certificates if they exist
+  if [[ "$domain" == "api."*".localhost" ]] && [[ -d "ssl/certificates/api-localhost" ]]; then
+    echo "/etc/nginx/ssl/api-localhost"
+  # For api.localhost, use api-localhost certificates if they exist
+  elif [[ "$domain" == "api.localhost" ]] && [[ -d "ssl/certificates/api-localhost" ]]; then
+    echo "/etc/nginx/ssl/api-localhost"
+  # For localhost and *.localhost domains, use localhost certificates
+  elif [[ "$domain" == "localhost" ]] || [[ "$domain" == *".localhost" ]]; then
+    echo "/etc/nginx/ssl/localhost"
+  # For local.nself.org and *.local.nself.org, use nself-org certificates
+  elif [[ "$domain" == *"local.nself.org" ]]; then
+    echo "/etc/nginx/ssl/nself-org"
+  # For custom domains (production/staging), use custom certificates
+  elif [[ "$domain" != *".localhost" ]]; then
+    echo "/etc/nginx/ssl/custom"
+  # Default to localhost for development
+  else
+    echo "/etc/nginx/ssl/localhost"
+  fi
+}
 
 # Generate nginx config for a backend service
 nginx::generate_service_config() {
@@ -213,12 +245,16 @@ server {
     # Proxying to frontend app port: ${port}
 
     location /graphql {
-        proxy_pass http://host.docker.internal:${port}/graphql;
+        # For remote schema URLs, proxy to Hasura instead of frontend
+        proxy_pass http://hasura/v1/graphql;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+
+        # Add Hasura admin secret for remote schema access
+        proxy_set_header x-hasura-admin-secret "${HASURA_GRAPHQL_ADMIN_SECRET:-hasura-admin-secret-dev}";
 
         # CORS headers for GraphQL
         add_header Access-Control-Allow-Origin \$http_origin always;
@@ -235,8 +271,7 @@ server {
     # Health check endpoint
     location /health {
         access_log off;
-        return 200 "OK - API for ${app_name}";
-        add_header Content-Type text/plain;
+        proxy_pass http://hasura/healthz;
     }
 }
 EOF
