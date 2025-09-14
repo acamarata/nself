@@ -52,6 +52,14 @@ cmd_restart() {
     esac
   done
 
+  # Load environment FIRST - before any docker compose operations
+  # This ensures PROJECT_NAME is set for compose commands
+  if [[ -f ".env" ]] || [[ -f ".env.local" ]] || [[ -f ".env.dev" ]]; then
+    set -a
+    load_env_with_priority
+    set +a
+  fi
+
   # Load service health utilities
   if [[ -f "$SCRIPT_DIR/../lib/utils/service-health.sh" ]]; then
     source "$SCRIPT_DIR/../lib/utils/service-health.sh"
@@ -62,13 +70,6 @@ cmd_restart() {
     log_error "docker-compose.yml not found"
     log_info "Run 'nself build' first to generate infrastructure"
     return 1
-  fi
-
-  # Load environment
-  if [[ -f ".env.local" ]]; then
-    set -a
-    load_env_with_priority
-    set +a
   fi
 
   echo
@@ -95,11 +96,34 @@ cmd_restart() {
   if [[ "$smart_mode" == "true" ]] && [[ "$force_all" != "true" ]]; then
     # Check if any services are running
     local running_services=$(compose ps --services --filter "status=running" 2>/dev/null)
+    local all_services=$(compose ps --services 2>/dev/null)
 
     if [[ -z "$running_services" ]]; then
-      # No services running, just start them
-      show_command_header "nself restart" "No services running, starting all"
+      # No services running, check if any containers exist
+      if [[ -z "$all_services" ]]; then
+        # No containers at all - do a fresh build and start
+        show_command_header "nself restart" "No containers found - building and starting"
 
+        echo -e "${COLOR_CYAN}➞ Building Configuration${COLOR_RESET}"
+        echo
+
+        # Build configuration
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Building configuration..."
+        local build_output=$(mktemp)
+        if timeout 30 "$SCRIPT_DIR/../bin/nself" build >"$build_output" 2>&1; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration built                     \n"
+        else
+          printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Build had issues, continuing anyway       \n"
+        fi
+        rm -f "$build_output"
+
+        echo
+      else
+        # Containers exist but not running
+        show_command_header "nself restart" "Starting stopped services"
+      fi
+
+      # Now start services
       source "$SCRIPT_DIR/start.sh"
       cmd_start
       return $?
@@ -113,20 +137,28 @@ cmd_restart() {
       echo -e "${COLOR_CYAN}➞ Analyzing Changes${COLOR_RESET}"
       echo
 
-      # For now, check if docker-compose.yml or .env.local changed
-      # In the future, we can be smarter about which specific services changed
+      # Check if docker-compose.yml or any .env file changed
       local compose_changed=false
       local env_changed=false
 
       # Get modification times
       local compose_modified=$(stat -f %m "docker-compose.yml" 2>/dev/null || stat -c %Y "docker-compose.yml" 2>/dev/null)
+
+      # Check all env files for changes
       local env_modified=0
-      if [[ -f ".env.local" ]]; then
-        env_modified=$(stat -f %m ".env.local" 2>/dev/null || stat -c %Y ".env.local" 2>/dev/null)
-      fi
+      local newest_env_modified=0
+      for env_file in .env .env.local .env.dev; do
+        if [[ -f "$env_file" ]]; then
+          local this_modified=$(stat -f %m "$env_file" 2>/dev/null || stat -c %Y "$env_file" 2>/dev/null)
+          if [[ $this_modified -gt $newest_env_modified ]]; then
+            newest_env_modified=$this_modified
+          fi
+        fi
+      done
+      env_modified=$newest_env_modified
 
       # Get oldest container start time
-      local project_name="${PROJECT_NAME:-unity}"
+      local project_name="${PROJECT_NAME:-nself}"
       local oldest_container_start=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^${project_name}_" | head -1 | xargs docker inspect --format='{{.State.StartedAt}}' 2>/dev/null)
 
       if [[ -n "$oldest_container_start" ]]; then
@@ -139,7 +171,15 @@ cmd_restart() {
 
         if [[ $env_modified -gt $container_timestamp ]]; then
           env_changed=true
-          echo -e "  ${COLOR_YELLOW}●${COLOR_RESET} .env.local changed"
+          # Identify which env file(s) changed
+          for env_file in .env .env.local .env.dev; do
+            if [[ -f "$env_file" ]]; then
+              local this_modified=$(stat -f %m "$env_file" 2>/dev/null || stat -c %Y "$env_file" 2>/dev/null)
+              if [[ $this_modified -gt $container_timestamp ]]; then
+                echo -e "  ${COLOR_YELLOW}●${COLOR_RESET} $env_file changed"
+              fi
+            fi
+          done
         fi
       fi
 
@@ -148,12 +188,29 @@ cmd_restart() {
       # Rebuild if needed
       if [[ "$compose_changed" == "true" ]] || [[ "$env_changed" == "true" ]]; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Rebuilding configuration..."
-        if nself build --force >/dev/null 2>&1; then
+
+        # Create temp file for build output
+        local build_output=$(mktemp)
+
+        # Run build with timeout to prevent hanging
+        if timeout 30 "$SCRIPT_DIR/../bin/nself" build --force >"$build_output" 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration rebuilt                     \n"
         else
-          printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to rebuild configuration           \n"
-          return 1
+          printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Build had issues, continuing anyway       \n"
+
+          # Show build errors if verbose
+          if [[ "$verbose" == "true" ]]; then
+            echo
+            echo -e "${COLOR_YELLOW}Build output:${COLOR_RESET}"
+            cat "$build_output"
+            echo
+          fi
         fi
+
+        rm -f "$build_output"
+
+        # Even if build had issues, we'll try to proceed with restart
+        # docker compose up will use whatever configuration exists
       fi
 
       # Smart restart with minimal downtime
@@ -277,15 +334,16 @@ show_service_urls() {
   # Get base domain or use default
   local base_domain="${BASE_DOMAIN:-localhost}"
 
-  # Check which services are actually running (remove unity_ prefix)
-  local running_services=$(docker ps --format "table {{.Names}}" | grep "^unity_" | sed 's/^unity_//' 2>/dev/null)
+  # Check which services are actually running (remove project prefix)
+  local project_name="${PROJECT_NAME:-nself}"
+  local running_services=$(docker ps --format "table {{.Names}}" | grep "^${project_name}_" | sed "s/^${project_name}_//" 2>/dev/null)
 
   # Track if any URLs were shown
   local urls_shown=false
 
   # Hasura GraphQL
   if echo "$running_services" | grep -q "hasura"; then
-    local hasura_port=$(docker port unity_hasura 8080 2>/dev/null | cut -d: -f2)
+    local hasura_port=$(docker port "${project_name}_hasura" 8080 2>/dev/null | cut -d: -f2)
     if [[ -n "$hasura_port" ]]; then
       echo -e "${COLOR_GREEN}✓${COLOR_RESET} GraphQL:    ${COLOR_BLUE}http://localhost:$hasura_port/console${COLOR_RESET}"
       urls_shown=true
@@ -294,7 +352,7 @@ show_service_urls() {
 
   # PostgreSQL Database
   if echo "$running_services" | grep -q "postgres"; then
-    local pg_port=$(docker port unity_postgres 5432 2>/dev/null | cut -d: -f2)
+    local pg_port=$(docker port "${project_name}_postgres" 5432 2>/dev/null | cut -d: -f2)
     if [[ -z "$pg_port" ]]; then
       pg_port="${POSTGRES_PORT:-5432}"
     fi
@@ -304,7 +362,7 @@ show_service_urls() {
 
   # Redis
   if echo "$running_services" | grep -q "redis"; then
-    local redis_port=$(docker port unity_redis 6379 2>/dev/null | cut -d: -f2)
+    local redis_port=$(docker port "${project_name}_redis" 6379 2>/dev/null | cut -d: -f2)
     if [[ -z "$redis_port" ]]; then
       redis_port="${REDIS_PORT:-6379}"
     fi
@@ -337,10 +395,16 @@ show_help() {
   echo "  nself restart --all             # Full restart all services"
   echo ""
   echo "Smart restart will:"
-  echo "  • Detect configuration changes"
-  echo "  • Rebuild if needed"
+  echo "  • Detect changes to .env, .env.local, or docker-compose.yml"
+  echo "  • Automatically rebuild configuration if needed"
   echo "  • Apply changes with minimal downtime"
   echo "  • Only restart affected services"
+  echo "  • Handle new projects gracefully (build + start)"
+  echo ""
+  echo "Perfect workflow:"
+  echo "  1. Edit your .env file"
+  echo "  2. Run 'nself restart'"
+  echo "  3. Changes are automatically detected and applied"
 }
 
 # Export for use as library
