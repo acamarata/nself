@@ -21,6 +21,9 @@ done
 # Explicitly source schema fixes if it exists
 [[ -f "$AUTOFIX_DIR/fixes/schema.sh" ]] && source "$AUTOFIX_DIR/fixes/schema.sh"
 
+# Source nginx-specific fixes
+[[ -f "$AUTOFIX_DIR/../auto-fix/nginx-fix.sh" ]] && source "$AUTOFIX_DIR/../auto-fix/nginx-fix.sh"
+
 # Main entry point for autofix
 autofix_service() {
   local service_name="$1"
@@ -163,10 +166,18 @@ autofix_service() {
     fix_result=$?
     fix_description=$(get_last_fix_description)
     ;;
-  NGINX_UPSTREAM_NOT_FOUND)
-    fix_nginx_upstream
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
+  NGINX_UPSTREAM_NOT_FOUND|NGINX_*)
+    # Use comprehensive nginx fix function if available
+    if declare -f fix_nginx_restart_loop >/dev/null 2>&1; then
+      fix_nginx_restart_loop "$service_name" "$verbose"
+      fix_result=$?
+      fix_description="Fixed nginx configuration issues"
+    else
+      # Fallback to basic fix
+      fix_nginx_upstream
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+    fi
     ;;
   NO_SHELL_IN_CONTAINER)
     # Container has no shell - just recreate it

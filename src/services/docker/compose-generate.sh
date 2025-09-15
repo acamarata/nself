@@ -147,6 +147,7 @@ if [[ "$AUTH_ENABLED" == "true" ]]; then
 fi
 if [[ "$STORAGE_ENABLED" == "true" ]]; then
   echo "      - minio" >>docker-compose.yml
+  echo "      - storage" >>docker-compose.yml
 fi
 
 

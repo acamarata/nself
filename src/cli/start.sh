@@ -362,6 +362,39 @@ cmd_start() {
       log_info "Run 'nself build' to regenerate configuration"
       return 1
     fi
+
+    # Validate nginx configuration if nginx directory exists
+    if [[ -d "nginx/conf.d" ]]; then
+      printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating nginx configuration..."
+
+      # Source nginx validator if available
+      if [[ -f "$SCRIPT_DIR/../lib/utils/nginx-validator.sh" ]]; then
+        source "$SCRIPT_DIR/../lib/utils/nginx-validator.sh"
+
+        # Run validation and auto-fix
+        if nginx::validate_config "nginx/conf.d" >/dev/null 2>&1; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration valid                  \n"
+        else
+          # Try auto-fix
+          if [[ "${AUTO_FIX:-true}" == "true" ]]; then
+            printf "\r${COLOR_YELLOW}⚡${COLOR_RESET} Auto-fixing nginx configuration...        \n"
+            nginx::auto_fix "nginx/conf.d" >/dev/null 2>&1
+
+            # Re-validate after fix
+            if nginx::validate_config "nginx/conf.d" >/dev/null 2>&1; then
+              printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration fixed                  \n"
+            else
+              printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Nginx may have configuration issues       \n"
+              # Continue anyway - nginx might still work
+            fi
+          else
+            printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Nginx configuration has warnings          \n"
+          fi
+        fi
+      else
+        printf "\r${COLOR_DIM}○${COLOR_RESET} Nginx validation skipped                   \n"
+      fi
+    fi
   else
     # On retry, still need to load environment
     if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
@@ -614,6 +647,32 @@ cmd_start() {
         echo -e "${COLOR_RED}Restarting services:${COLOR_RESET}"
         for svc in $restarting_services; do
           echo -e "  ${COLOR_RED}↻${COLOR_RESET} $svc"
+
+          # Special handling for nginx
+          if [[ "$svc" == "nginx" ]]; then
+            echo
+            echo -e "${COLOR_YELLOW}  Nginx configuration error detected${COLOR_RESET}"
+
+            # Get nginx error details
+            local nginx_container="${project_name}_nginx"
+            local nginx_error=$(docker logs "$nginx_container" 2>&1 | grep -E "emerg|error" | tail -3)
+
+            if [[ -n "$nginx_error" ]]; then
+              echo -e "${COLOR_DIM}  Error: $nginx_error${COLOR_RESET}"
+            fi
+
+            # Check for common issues
+            if echo "$nginx_error" | grep -q "limit_req_zone"; then
+              echo -e "${COLOR_CYAN}  ➜ Rate limiting directives must be in http context${COLOR_RESET}"
+              echo -e "${COLOR_CYAN}    Auto-fix will remove these from server blocks${COLOR_RESET}"
+            elif echo "$nginx_error" | grep -q "host not found in upstream"; then
+              echo -e "${COLOR_CYAN}  ➜ Referenced service not found${COLOR_RESET}"
+              echo -e "${COLOR_CYAN}    Auto-fix will disable problematic config${COLOR_RESET}"
+            elif echo "$nginx_error" | grep -q "no such file or directory"; then
+              echo -e "${COLOR_CYAN}  ➜ SSL certificate or config file missing${COLOR_RESET}"
+              echo -e "${COLOR_CYAN}    Run 'nself build' to regenerate${COLOR_RESET}"
+            fi
+          fi
         done
         
         # Attempt to fix restart loops automatically

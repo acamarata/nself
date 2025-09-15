@@ -58,6 +58,37 @@ analyze_error() {
     return
   fi
 
+  # Nginx configuration errors
+  if echo "$service_logs" | grep -q "nginx.*emerg\|nginx.*error"; then
+    # Rate limiting directive in wrong context
+    if echo "$service_logs" | grep -q "limit_req_zone.*directive is not allowed here"; then
+      echo "NGINX_RATE_LIMIT_ERROR"
+      return
+    fi
+
+    # Upstream host not found
+    if echo "$service_logs" | grep -q "host not found in upstream"; then
+      echo "NGINX_UPSTREAM_NOT_FOUND"
+      return
+    fi
+
+    # SSL certificate missing
+    if echo "$service_logs" | grep -q "cannot load certificate.*No such file"; then
+      echo "NGINX_SSL_MISSING"
+      return
+    fi
+
+    # Deprecated directives
+    if echo "$service_logs" | grep -q 'the "listen ... http2" directive is deprecated'; then
+      echo "NGINX_DEPRECATED_SYNTAX"
+      return
+    fi
+
+    # Generic nginx config error
+    echo "NGINX_CONFIG_ERROR"
+    return
+  fi
+
   # Nginx upstream host not found
   if echo "$service_logs" | grep -q "host not found in upstream"; then
     echo "NGINX_UPSTREAM_NOT_FOUND"

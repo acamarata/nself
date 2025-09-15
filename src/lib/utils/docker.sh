@@ -17,12 +17,28 @@ ensure_docker_running() {
 
 # Docker Compose wrapper - enforces v2 and consistent options
 compose() {
-  # Try .env.local first, then .env
+  # Load environment if not already loaded
+  if [[ -z "${PROJECT_NAME:-}" ]]; then
+    if [[ -f ".env.dev" ]]; then
+      source ".env.dev" 2>/dev/null || true
+    fi
+    if [[ -f ".env" ]]; then
+      source ".env" 2>/dev/null || true
+    fi
+    if [[ -f ".env.local" ]]; then
+      source ".env.local" 2>/dev/null || true
+    fi
+  fi
+
+  # Try .env.local first, then .env, then .env.dev
   local env_file="${COMPOSE_ENV_FILE:-.env.local}"
   if [[ ! -f "$env_file" ]] && [[ -f ".env" ]]; then
     env_file=".env"
   fi
-  
+  if [[ ! -f "$env_file" ]] && [[ -f ".env.dev" ]]; then
+    env_file=".env.dev"
+  fi
+
   local project="${PROJECT_NAME:-nself}"
   local compose_files=""
   
