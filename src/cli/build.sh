@@ -507,29 +507,33 @@ cmd_build() {
     fi
   fi
 
+  # Determine which env file to use (check all possible env files)
+  local env_file=""
+  if [[ -f ".env" ]]; then
+    env_file=".env"
+  elif [[ -f ".env.local" ]]; then
+    env_file=".env.local"
+  elif [[ -f ".env.dev" ]]; then
+    env_file=".env.dev"
+  fi
+
   # Check docker-compose.yml
   local needs_compose=false
-  local env_file=".env"
-  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
-  if [[ ! -f "docker-compose.yml" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "docker-compose.yml" ]]; then
+  if [[ ! -f "docker-compose.yml" ]] || [[ "$force_rebuild" == "true" ]] || ([[ -n "$env_file" ]] && [[ "$env_file" -nt "docker-compose.yml" ]]); then
     needs_compose=true
     needs_work=true
   fi
 
   # Check nginx configuration
   local needs_nginx=false
-  local env_file=".env"
-  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
-  if [[ ! -f "nginx/nginx.conf" ]] || [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]; then
+  if [[ ! -f "nginx/nginx.conf" ]] || [[ ! -f "nginx/conf.d/hasura.conf" ]] || [[ "$force_rebuild" == "true" ]] || ([[ -n "$env_file" ]] && [[ "$env_file" -nt "nginx/conf.d/hasura.conf" ]]); then
     needs_nginx=true
     needs_work=true
   fi
 
   # Check database initialization
   local needs_db=false
-  local env_file=".env"
-  [[ ! -f ".env" ]] && [[ -f ".env.dev" ]] && env_file=".env.dev"
-  if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || [[ "$env_file" -nt "postgres/init/01-init.sql" ]]; then
+  if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || ([[ -n "$env_file" ]] && [[ "$env_file" -nt "postgres/init/01-init.sql" ]]); then
     needs_db=true
     needs_work=true
   fi

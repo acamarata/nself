@@ -26,7 +26,7 @@ source "$SCRIPT_DIR/../../lib/utils/env.sh" || {
 }
 
 # Load environment safely (without executing JSON values)
-if [ -f ".env" ] || [ -f ".env.dev" ]; then
+if [ -f ".env" ] || [ -f ".env.local" ] || [ -f ".env.dev" ]; then
   load_env_with_priority || {
     log_error "Failed to load environment"
     log_error "Working directory: $(pwd)"
@@ -34,7 +34,7 @@ if [ -f ".env" ] || [ -f ".env.dev" ]; then
     exit 1
   }
 else
-  log_error "No environment file found (.env or .env.dev)."
+  log_error "No environment file found (.env, .env.local, or .env.dev)."
   log_error "Working directory: $(pwd)"
   log_error "Please run 'nself init' first to create environment files"
   log_info "Available files in current directory:"

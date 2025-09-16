@@ -37,7 +37,16 @@ load_env_with_priority() {
     set +a
     loaded=true
   fi
-  
+
+  # STEP 1.5: Load .env.local if it exists (legacy/alternative to .env)
+  if [[ -f ".env.local" ]]; then
+    # log_debug "Loading .env.local (alternative local config)"
+    set -a
+    source ".env.local" 2>/dev/null
+    set +a
+    loaded=true
+  fi
+
   # STEP 2: Load .env EARLY to determine the target environment
   if [[ -f ".env" ]]; then
     # log_debug "Pre-loading .env to determine environment"
