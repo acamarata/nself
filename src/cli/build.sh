@@ -188,7 +188,7 @@ build_generate_simple_ssl() {
         localhost_domains+=("${!var}.localhost")
         localhost_domains+=("${!var}.${project_name}.localhost")
       fi
-      ((i++))
+      i=$((i + 1))
     done
 
     # Add common variations
@@ -515,7 +515,7 @@ cmd_build() {
   # Check directories
   for dir in nginx/conf.d nginx/ssl services logs .volumes/postgres .volumes/redis .volumes/minio; do
     if [[ ! -d "$dir" ]]; then
-      ((dirs_to_create++))
+      dirs_to_create=$((dirs_to_create + 1))
       needs_work=true
     fi
   done
@@ -893,7 +893,7 @@ EOF
         
         # Note: nginx config generation now handled by comprehensive nginx-generator.sh
         # Individual frontend app configs are generated automatically during nginx generation phase
-        ((apps_updated++))
+        apps_updated=$((apps_updated + 1))
         
         # Check if this app has Hasura remote schema configuration
         # We need to check the original FRONTEND_APP_N variables since they're not in compact format
@@ -968,7 +968,7 @@ EOF
           done
         fi
         
-        ((app_count++))
+        app_count=$((app_count + 1))
       done
 
       if [[ $app_count -gt 0 ]]; then
@@ -1147,8 +1147,8 @@ EOF
         # Count CS_N services
         local n=1
         while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
-          ((custom_services_generated++))
-          ((n++))
+          custom_services_generated=$((custom_services_generated + 1))
+          n=$((n + 1))
         done
       elif [[ -n "${CUSTOM_SERVICES:-}" ]]; then
         # Count legacy services
@@ -1179,7 +1179,7 @@ EOF
       # Use bash -c to ensure proper execution context for heredocs
       bash -c "source '${gen_script}' && generate_dockerfile_for_service 'functions' 'functions'" >/dev/null 2>&1
       if [[ -d "functions" ]]; then
-        ((system_services_generated++))
+        system_services_generated=$((system_services_generated + 1))
       fi
     fi
 
@@ -1187,7 +1187,7 @@ EOF
     if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
       bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
       if [[ -d "dashboard" ]]; then
-        ((system_services_generated++))
+        system_services_generated=$((system_services_generated + 1))
       fi
     fi
 
