@@ -286,13 +286,14 @@ ensure_project_name() {
 ensure_project_context() {
   # Ensure PROJECT_NAME is set
   ensure_project_name
-  
+
   # Validate PROJECT_NAME format (Docker allows lowercase, numbers, underscore, hyphen)
   if [[ ! "$PROJECT_NAME" =~ ^[a-z][a-z0-9_-]*$ ]]; then
-    echo "Warning: PROJECT_NAME '$PROJECT_NAME' contains invalid characters. Using 'my-project' instead."
+    # Use stderr to avoid breaking pipes/subshells
+    echo "Warning: PROJECT_NAME '$PROJECT_NAME' contains invalid characters. Using 'my-project' instead." >&2
     export PROJECT_NAME="my-project"
   fi
-  
+
   return 0
 }
 

@@ -353,33 +353,43 @@ cmd_build() {
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
   fi
 
-  # Load environment with proper cascading (silently)  
+  # Load environment with proper cascading (silently)
   if ! load_env_with_priority true; then
     printf "${COLOR_RED}✗${COLOR_RESET} Failed to load environment                \n"
     return 1
   fi
+
+  # Debug: Show we made it past environment loading
+  [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: Environment loaded successfully" >&2
 
   # Apply database auto-configuration
   if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
     source "$SCRIPT_DIR/../lib/database/auto-config.sh" 2>/dev/null || true
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring database for optimal performance..."
     if command -v get_system_resources &>/dev/null && command -v apply_smart_defaults &>/dev/null; then
-      get_system_resources >/dev/null 2>&1
-      apply_smart_defaults >/dev/null 2>&1
-      auto_tune_memory >/dev/null 2>&1
-      auto_tune_cpu >/dev/null 2>&1
-      auto_tune_disk >/dev/null 2>&1
-      auto_detect_compression >/dev/null 2>&1
-      check_pooling_needed >/dev/null 2>&1
+      get_system_resources >/dev/null 2>&1 || true
+      apply_smart_defaults >/dev/null 2>&1 || true
+      auto_tune_memory >/dev/null 2>&1 || true
+      auto_tune_cpu >/dev/null 2>&1 || true
+      auto_tune_disk >/dev/null 2>&1 || true
+      auto_detect_compression >/dev/null 2>&1 || true
+      check_pooling_needed >/dev/null 2>&1 || true
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Database configuration optimized                    \n"
     else
       printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Database auto-config not available                 \n"
     fi
   fi
 
+  # Debug: Show we made it past database config
+  [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: Database config complete" >&2
+
+  # Debug: Show we made it to validation section
+  [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: Starting validation section" >&2
+
   # Check if validation function exists
   if ! declare -f run_validation >/dev/null 2>&1; then
-    log_warning "Validation system not available, skipping"
+    [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: Validation function not found, skipping" >&2
+    log_warning "Validation system not available, skipping" 2>/dev/null || true
   else
     # Validate configuration
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating configuration..."
@@ -440,8 +450,21 @@ cmd_build() {
     
     # Source the output to get the arrays
     if [[ -s "$validation_output" ]]; then
-      # Source the file directly
-      source "$validation_output" 2>/dev/null || true
+      # Source the file directly - use a subshell to prevent exits
+      (
+        set +e  # Don't exit on error
+        source "$validation_output" 2>/dev/null || true
+        # Export the arrays to parent shell
+        echo "VALIDATION_ERRORS=(${VALIDATION_ERRORS[@]:-})"
+        echo "VALIDATION_WARNINGS=(${VALIDATION_WARNINGS[@]:-})"
+        echo "AUTO_FIXES=(${AUTO_FIXES[@]:-})"
+      ) > "${validation_output}.parsed" 2>/dev/null || true
+
+      # Now source the parsed output safely
+      if [[ -s "${validation_output}.parsed" ]]; then
+        source "${validation_output}.parsed" 2>/dev/null || true
+      fi
+      rm -f "${validation_output}.parsed"
     fi
 
     # Check the result
@@ -465,6 +488,9 @@ cmd_build() {
 
     rm -f "$validation_output"
   fi
+
+  # Debug: Show we made it past validation
+  [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: Validation complete, continuing build" >&2
 
   # Check if this is an existing project
   local is_existing_project=false
@@ -522,6 +548,7 @@ cmd_build() {
   # Check docker-compose.yml
   local needs_compose=false
   if [[ ! -f "docker-compose.yml" ]]; then
+    [[ "${DEBUG:-}" == "true" ]] && echo "DEBUG: docker-compose.yml missing, will create" >&2
     needs_compose=true
     needs_work=true
   elif [[ "$force_rebuild" == "true" ]]; then
