@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Trap errors for better debugging
+trap 'echo "Error in build.sh at line $LINENO: Command failed: $BASH_COMMAND" >&2' ERR
 
 # build.sh - nself Build System
 # Generates Docker infrastructure and configuration files
@@ -494,8 +496,8 @@ cmd_build() {
 
   # Check SSL certificates
   local needs_ssl=false
-  # Check both localhost and domain certificates
-  if [[ "${BASE_DOMAIN}" == "localhost" ]]; then
+  # Check both localhost and domain certificates (with default)
+  if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
     if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]] || [[ "$force_rebuild" == "true" ]]; then
       needs_ssl=true
       needs_work=true
@@ -555,10 +557,11 @@ cmd_build() {
     echo "DEBUG: docker-compose.yml exists: $([ -f "docker-compose.yml" ] && echo yes || echo no)"
   fi
 
-  # Force build if this is a fresh project (no docker-compose.yml)
-  if [[ ! -f "docker-compose.yml" ]] && [[ "$needs_work" != "true" ]]; then
+  # CRITICAL: Always ensure docker-compose.yml exists
+  # This is the absolute minimum requirement for nself to function
+  if [[ ! -f "docker-compose.yml" ]]; then
     echo
-    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  Fresh project detected - forcing build"
+    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  No docker-compose.yml found - must build"
     needs_work=true
     needs_compose=true
     needs_nginx=true
@@ -1059,11 +1062,13 @@ EOF
   fi
 
   # Generate ALL services based on env file (env is king!)
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating services...\r"
+  # Only process services if we're actually building
+  if [[ "$needs_work" == "true" ]]; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating services...\r"
 
-  # Environment already loaded at start of build process
+    # Environment already loaded at start of build process
 
-  # Source generators once at the beginning
+    # Source generators once at the beginning
   local service_gen_loaded=false
   local dockerfile_gen_loaded=false
   local custom_service_loaded=false
@@ -1201,7 +1206,9 @@ EOF
       log_info "Created ${#CREATED_FILES[@]} resources"
     fi
   fi
-  
+
+  fi  # End of if needs_work == true for service generation
+
   # Display available routes
   if [[ -f "$SCRIPT_DIR/../lib/services/routes-display.sh" ]]; then
     source "$SCRIPT_DIR/../lib/services/routes-display.sh"

@@ -16,8 +16,8 @@ check_not_in_source() {
 
 # Check for environment configuration file
 check_env_file() {
-  if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
-    log_error "No environment file found (.env or .env.dev)"
+  if [[ ! -f ".env" ]] && [[ ! -f ".env.local" ]] && [[ ! -f ".env.dev" ]]; then
+    log_error "No environment file found (.env, .env.local, or .env.dev)"
     echo ""
     log_info "Please run: nself init"
     echo ""
