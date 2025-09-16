@@ -264,8 +264,17 @@ clear_env_vars_with_prefix() {
 # Ensure PROJECT_NAME is set with auto-generation if needed
 ensure_project_name() {
   if [[ -z "${PROJECT_NAME:-}" ]]; then
-    # Try to get from current directory name
-    local dir_name=$(basename "$(pwd)")
+    # Try to get from current directory name (with error handling)
+    local dir_name=""
+    if command -v pwd >/dev/null 2>&1; then
+      dir_name=$(basename "$(pwd 2>/dev/null)" 2>/dev/null) || dir_name=""
+    fi
+
+    # If we couldn't get directory name, use a default
+    if [[ -z "$dir_name" ]]; then
+      dir_name="my-project"
+    fi
+
     # Clean it up to be valid (alphanumeric and hyphens only)
     local clean_name=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//' | sed 's/-*$//')
     
