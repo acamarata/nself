@@ -214,6 +214,85 @@ EOF
 }
 
 # Generate nginx config for frontend app GraphQL API endpoints
+nginx::generate_frontend_auth_config() {
+  local app_name="$1"
+  local auth_route="$2"
+  local output_dir="$3"
+
+  # Determine SSL certificate path
+  local ssl_path
+  ssl_path=$(get_ssl_cert_path "$auth_route")
+
+  # Default to localhost cert if not found
+  if [[ -z "$ssl_path" ]] || [[ ! -f "$ssl_path/fullchain.pem" ]]; then
+    ssl_path="/etc/nginx/ssl/localhost"
+  fi
+
+  # Generate the nginx configuration for per-app auth endpoint
+  # Use app prefix to avoid conflicts
+  local config_name="${app_name}-auth"
+  cat > "$output_dir/${config_name}.conf" << EOF
+# Per-app auth endpoint for ${app_name}
+server {
+    listen 80;
+    server_name ${auth_route};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${auth_route};
+
+    ssl_certificate ${ssl_path}/fullchain.pem;
+    ssl_certificate_key ${ssl_path}/privkey.pem;
+
+    # Auth proxy for app: ${app_name}
+    # Routes to shared auth service but preserves Host header
+
+    location / {
+        proxy_pass http://auth:4000;
+        proxy_http_version 1.1;
+
+        # Critical: preserve Host header for per-app behavior
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+
+        # WebSocket support for auth
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # CORS headers for auth service
+        # In development, allow all origins with credentials for flexibility
+        # In production, this should be restricted to specific origins
+        if (\$http_origin ~* "^https?://(localhost|127\.0\.0\.1|.*\.localhost|.*\.${BASE_DOMAIN})(:[0-9]+)?$") {
+            add_header Access-Control-Allow-Origin \$http_origin always;
+            add_header Access-Control-Allow-Credentials true always;
+        }
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With" always;
+        add_header Access-Control-Max-Age 86400 always;
+
+        # Handle preflight requests
+        if (\$request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        proxy_pass http://auth:4000/healthz;
+    }
+}
+EOF
+
+  return 0
+}
+
 nginx::generate_frontend_api_config() {
   local app_name="$1"
   local api_route="$2"
@@ -242,24 +321,32 @@ server {
     ssl_certificate_key ${ssl_path}/privkey.pem;
 
     # GraphQL API endpoint for: ${app_name}
-    # Proxying to frontend app port: ${port}
+    # Proxies to shared Hasura instance with app context
 
-    location /graphql {
-        # For remote schema URLs, proxy to Hasura instead of frontend
-        proxy_pass http://hasura/v1/graphql;
+    location / {
+        # Proxy to shared Hasura instance
+        proxy_pass http://hasura:8080;
         proxy_http_version 1.1;
+
+        # Preserve Host header for per-app context
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
 
-        # Add Hasura admin secret for remote schema access
-        proxy_set_header x-hasura-admin-secret "${HASURA_GRAPHQL_ADMIN_SECRET:-hasura-admin-secret-dev}";
+        # WebSocket support for subscriptions
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Add app context header for multi-tenant support
+        proxy_set_header X-App-Name "${app_name}";
+        proxy_set_header X-App-Route "${api_route}";
 
         # CORS headers for GraphQL
         add_header Access-Control-Allow-Origin \$http_origin always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
-        add_header Access-Control-Allow-Headers "Content-Type, Authorization" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, x-hasura-admin-secret" always;
         add_header Access-Control-Allow-Credentials true always;
 
         # Handle preflight requests
@@ -422,6 +509,19 @@ nginx::generate_all_configs() {
             if nginx::generate_frontend_api_config "$current_app" "$api_route" "$app_port" "$conf_dir"; then
               ((configs_generated++))
             fi
+
+            # Generate per-app auth config ONLY if this app has a remote schema
+            # Extract base domain from app route (e.g., app1.localhost -> auth.app1.localhost)
+            local app_domain="${app_route#*.}" # Get everything after first dot
+            local app_prefix="${app_route%%.*}" # Get everything before first dot
+            local auth_route="auth.${app_prefix}.${app_domain}"
+
+            # Ensure we don't duplicate if it's already the main auth route
+            if [[ "$auth_route" != "${AUTH_ROUTE:-auth.localhost}" ]]; then
+              if nginx::generate_frontend_auth_config "$current_app" "$auth_route" "$conf_dir"; then
+                ((configs_generated++))
+              fi
+            fi
           fi
         fi
         ;;
@@ -495,6 +595,7 @@ nginx::validate_config() {
 # Export functions
 export -f nginx::generate_service_config
 export -f nginx::generate_frontend_config
+export -f nginx::generate_frontend_auth_config
 export -f nginx::generate_frontend_api_config
 export -f nginx::generate_custom_service_config
 export -f nginx::remove_wildcard_conflicts

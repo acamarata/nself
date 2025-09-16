@@ -167,11 +167,11 @@ EOF
       auth)
         # Fix auth service issues
         if echo "$last_error" | grep -q "connection refused.*4000\|4001"; then
-          # Auth service port mismatch - update health check
+          # Auth service port mismatch - ensure health check uses correct port
           if [[ -f "docker-compose.yml" ]]; then
-            # The service runs on 4001 but health check might be on 4000
-            sed -i '' 's|http://localhost:4000/|http://localhost:4001/|g' docker-compose.yml 2>/dev/null || \
-            sed -i 's|http://localhost:4000/|http://localhost:4001/|g' docker-compose.yml 2>/dev/null
+            # The service runs on 4000, ensure health check uses same port
+            sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null || \
+            sed -i 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null
             fixed_any=true
             echo "  - Fixed auth service port"
           fi

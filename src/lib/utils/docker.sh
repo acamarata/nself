@@ -20,13 +20,19 @@ compose() {
   # Load environment if not already loaded
   if [[ -z "${PROJECT_NAME:-}" ]]; then
     if [[ -f ".env.dev" ]]; then
+      set -a
       source ".env.dev" 2>/dev/null || true
+      set +a
     fi
     if [[ -f ".env" ]]; then
+      set -a
       source ".env" 2>/dev/null || true
+      set +a
     fi
     if [[ -f ".env.local" ]]; then
+      set -a
       source ".env.local" 2>/dev/null || true
+      set +a
     fi
   fi
 

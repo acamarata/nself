@@ -566,26 +566,9 @@ cmd_build() {
     if [[ "$needs_ssl" == "true" ]]; then
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
 
-      # Try to use the SSL library for intelligent certificate generation
-      if source "$SCRIPT_DIR/../lib/ssl/ssl.sh" 2>/dev/null; then
-        # Use the enhanced SSL generation that handles dev/staging/prod
-        if ssl::generate_for_project "." "${BASE_DOMAIN:-localhost}" >/dev/null 2>&1; then
-          local cert_type="trusted"
-          if [[ "${ENV}" == "prod" ]] && [[ -n "${DNS_PROVIDER:-}" ]]; then
-            cert_type="Let's Encrypt"
-          elif [[ "${ENV}" == "prod" ]]; then
-            cert_type="self-signed"
-          fi
-          printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated ($cert_type)       \n"
-          CREATED_FILES+=("SSL certificates")
-        else
-          # Fallback to simpler generation if library fails
-          build_generate_simple_ssl
-        fi
-      else
-        # Fallback if SSL library is not available
-        build_generate_simple_ssl
-      fi
+      # Always use the simple SSL generation for now to avoid library issues
+      # The SSL library has logging function dependencies that can cause hangs
+      build_generate_simple_ssl
     fi
 
     # Generate docker-compose.yml if needed
@@ -1001,15 +984,21 @@ EOF
       # Create postgres/init directory if it doesn't exist
       mkdir -p postgres/init
 
+      # Source hasura metadata helper if available
+      if [[ -f "$SCRIPT_DIR/../lib/services/hasura-metadata.sh" ]]; then
+        source "$SCRIPT_DIR/../lib/services/hasura-metadata.sh"
+      fi
+
       cat >postgres/init/01-init.sql <<'EOF'
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "citext";
 
--- Create schemas
+-- Create core schemas
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS storage;
+CREATE SCHEMA IF NOT EXISTS public;
 
 -- Setup permissions for Hasura
 GRANT USAGE ON SCHEMA public TO postgres;
@@ -1017,6 +1006,11 @@ GRANT CREATE ON SCHEMA public TO postgres;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
 EOF
+
+      # Add app-specific schemas if metadata generation is available
+      if declare -f hasura::generate_schema_sql >/dev/null 2>&1; then
+        hasura::generate_schema_sql >> postgres/init/01-init.sql
+      fi
 
       # Add PostgreSQL extensions if configured
       if [[ -n "${POSTGRES_EXTENSIONS:-}" ]]; then

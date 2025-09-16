@@ -110,7 +110,11 @@ cmd_restart() {
         # Build configuration
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Building configuration..."
         local build_output=$(mktemp)
-        if timeout 30 "$SCRIPT_DIR/../bin/nself" build >"$build_output" 2>&1; then
+        local nself_bin="${SCRIPT_DIR}/../bin/nself"
+        if [[ ! -x "$nself_bin" ]]; then
+          nself_bin="nself"  # Fallback to PATH
+        fi
+        if timeout 30 "$nself_bin" build >"$build_output" 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration built                     \n"
         else
           printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Build had issues, continuing anyway       \n"

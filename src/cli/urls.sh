@@ -82,13 +82,14 @@ cmd_urls() {
   fi
 
   # Expand variables that contain references to other variables
-  # Use eval safely to expand ${BASE_DOMAIN} references
+  # Safely expand ${BASE_DOMAIN} references without eval
   for var in HASURA_ROUTE AUTH_ROUTE STORAGE_ROUTE STORAGE_CONSOLE_ROUTE FUNCTIONS_ROUTE DASHBOARD_ROUTE MAILHOG_ROUTE MAILPIT_ROUTE MAIL_ROUTE; do
     value="${!var:-}"
     if [[ "$value" == *'${BASE_DOMAIN}'* ]]; then
-      # Expand the variable reference
-      expanded=$(echo "$value" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
-      eval "export $var='$expanded'"
+      # Expand the variable reference safely
+      expanded="${value//\${BASE_DOMAIN}/${BASE_DOMAIN}}"
+      declare -g "$var=$expanded"
+      export "$var"
     fi
   done
 

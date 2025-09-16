@@ -107,7 +107,7 @@ routes::collect_all() {
         fi
       fi
 
-      # Add API route if remote schema URL is defined
+      # Add API and auth routes if remote schema URL is defined
       if [[ -n "$remote_url" ]]; then
         local api_route=""
         # Handle different formats
@@ -115,13 +115,40 @@ routes::collect_all() {
           # Extract domain from full URL
           api_route=$(echo "$remote_url" | sed -E 's|https?://([^/]+).*|\1|')
         elif [[ "$remote_url" == *'${BASE_DOMAIN}'* ]]; then
-          # Expand BASE_DOMAIN variable
-          api_route=$(eval echo "$remote_url")
+          # Safely expand BASE_DOMAIN variable
+          api_route="${remote_url//\${BASE_DOMAIN}/${base_domain}}"
         else
           # Simple format like "api.app1"
           api_route="${remote_url}.${base_domain}"
         fi
-        [[ -n "$api_route" ]] && routes+=("$api_route")
+        if [[ -n "$api_route" ]]; then
+          routes+=("$api_route")
+          # Also add auth route for the app if it has an API
+          if [[ "$api_route" =~ ^api\. ]]; then
+            local auth_route="${api_route/api./auth.}"
+            routes+=("$auth_route")
+          fi
+        fi
+
+        # Add per-app auth route based on main app route
+        if [[ -n "$route" ]]; then
+          if [[ "$route" == *".${base_domain}" ]]; then
+            # Route already includes base domain
+            local app_prefix="${route%%.*}"
+            if [[ -n "$app_prefix" ]]; then
+              local app_domain="${route#*.}"
+              if [[ -n "$app_domain" ]]; then
+                routes+=("auth.${app_prefix}.${app_domain}")
+              fi
+            fi
+          elif [[ "$route" != *"."* ]]; then
+            # Simple route without dots
+            routes+=("auth.${route}.${base_domain}")
+          else
+            # Route with dots but not base domain
+            routes+=("auth.${route}.${base_domain}")
+          fi
+        fi
       fi
     done
   fi
@@ -144,7 +171,7 @@ routes::collect_all() {
   for i in {1..20}; do
     local cs_var="CS_${i}"
     local cs_value
-    eval "cs_value=\"\${${cs_var}:-}\""
+    cs_value="${!cs_var:-}"
     if [[ -n "$cs_value" ]]; then
       # Parse CS_N format: type:name:port[:route[:internal]]
       IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
@@ -391,7 +418,7 @@ routes::get_custom_services() {
   for i in {1..20}; do
     local cs_var="CS_${i}"
     local cs_value
-    eval "cs_value=\"\${${cs_var}:-}\""
+    cs_value="${!cs_var:-}"
     if [[ -n "$cs_value" ]]; then
       # Parse CS_N format: type:name:port[:route[:internal]]
       IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"

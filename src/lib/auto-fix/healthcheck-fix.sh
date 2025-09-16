@@ -12,11 +12,16 @@ fix_healthchecks() {
   # Create backup
   cp "$compose_file" "${compose_file}.healthcheck-backup"
   
-  # Fix auth service health check (port 4000 -> 4001, curl -> wget)
+  # Fix auth service health check (ensure correct endpoint and port)
   if grep -q 'container_name:.*_auth' "$compose_file"; then
-    # Fix port number
+    # Fix endpoint - auth uses /healthz not /version
     if grep -q 'http://localhost:4000/version' "$compose_file"; then
-      sed -i '' 's|http://localhost:4000/version|http://localhost:4001/healthz|g' "$compose_file"
+      sed -i '' 's|http://localhost:4000/version|http://localhost:4000/healthz|g' "$compose_file"
+      fixed=true
+    fi
+    # Fix if wrong port is used
+    if grep -q 'http://localhost:4001/' "$compose_file"; then
+      sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' "$compose_file"
       fixed=true
     fi
     

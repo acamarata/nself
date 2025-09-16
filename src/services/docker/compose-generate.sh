@@ -42,8 +42,7 @@ else
   exit 1
 fi
 
-[[ "${DEBUG:-}" == "true" ]] && log_info "Environment loaded successfully"
-log_info "Generating docker-compose.yml..."
+[[ "${DEBUG:-}" == "true" ]] && echo "Environment loaded successfully" >&2
 
 # Source smart defaults to handle JWT construction
 if ! declare -f load_env_with_defaults >/dev/null 2>&1; then
@@ -53,24 +52,48 @@ if ! declare -f load_env_with_defaults >/dev/null 2>&1; then
   fi
   source "$SCRIPT_DIR/../../lib/config/smart-defaults.sh"
 fi
+
+# Source auth config for multi-app support
+if [[ -f "$SCRIPT_DIR/../../lib/services/auth-config.sh" ]]; then
+  source "$SCRIPT_DIR/../../lib/services/auth-config.sh"
+fi
 if ! load_env_with_defaults; then
   log_error "Failed to load environment with defaults"
   log_error "Check that environment variables are properly set"
   exit 1
 fi
 
-[[ "${DEBUG:-}" == "true" ]] && log_info "Smart defaults loaded"
+[[ "${DEBUG:-}" == "true" ]] && echo "Smart defaults loaded" >&2
 
 # Compose database URLs from individual variables
 # CRITICAL: Always use port 5432 for internal container-to-container communication
 # The POSTGRES_PORT variable is for external host access only
 if [[ "${DEBUG:-}" == "true" ]]; then
-  log_info "Building database URL with:"
-  log_info "  POSTGRES_USER: ${POSTGRES_USER:-not set}"
-  log_info "  POSTGRES_HOST: ${POSTGRES_HOST:-not set}"
-  log_info "  POSTGRES_DB: ${POSTGRES_DB:-not set}"
+  echo "Building database URL with:" >&2
+  echo "  POSTGRES_USER: ${POSTGRES_USER:-not set}" >&2
+  echo "  POSTGRES_HOST: ${POSTGRES_HOST:-not set}" >&2
+  echo "  POSTGRES_DB: ${POSTGRES_DB:-not set}" >&2
 fi
-export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
+# URL encode password to handle special characters
+url_encode() {
+  local string="${1}"
+  local strlen=${#string}
+  local encoded=""
+  local pos c o
+
+  for (( pos=0 ; pos<strlen ; pos++ )); do
+    c=${string:$pos:1}
+    case "$c" in
+      [-_.~a-zA-Z0-9] ) o="${c}" ;;
+      * ) printf -v o '%%%02x' "'$c" ;;
+    esac
+    encoded+="${o}"
+  done
+  echo "${encoded}"
+}
+
+ENCODED_PASSWORD=$(url_encode "${POSTGRES_PASSWORD}")
+export HASURA_GRAPHQL_DATABASE_URL="postgres://${POSTGRES_USER}:${ENCODED_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
 S3_ENDPOINT="http://minio:${MINIO_PORT}"
 
 # Ensure DOCKER_NETWORK is expanded for Docker Compose
@@ -106,7 +129,7 @@ if [ -f "docker-compose.yml" ]; then
     backup_dir="_backup/${timestamp}"
     mkdir -p "$backup_dir"
     cp docker-compose.yml "$backup_dir/docker-compose.yml"
-    [[ "${VERBOSE:-}" == "true" ]] && log_info "Backed up existing docker-compose.yml to $backup_dir"
+    [[ "${VERBOSE:-}" == "true" ]] && echo "Backed up existing docker-compose.yml to $backup_dir" >&2
   fi
 fi
 
@@ -273,7 +296,6 @@ EOF
       HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       AUTH_CLIENT_URL: ${AUTH_CLIENT_URL}
       AUTH_SERVER_URL: https://${AUTH_ROUTE}
-      AUTH_SMTP_HOST: ${AUTH_SMTP_HOST:-${EMAIL_PROVIDER:-mailpit}}
       AUTH_SMTP_PORT: ${AUTH_SMTP_PORT:-1025}
       AUTH_SMTP_USER: "${AUTH_SMTP_USER}"
       AUTH_SMTP_PASS: "${AUTH_SMTP_PASS}"
@@ -284,10 +306,24 @@ EOF
       AUTH_WEBAUTHN_ENABLED: ${AUTH_WEBAUTHN_ENABLED}
       AUTH_WEBAUTHN_RP_NAME: ${PROJECT_NAME}
       AUTH_WEBAUTHN_RP_ORIGINS: https://${AUTH_ROUTE}
+EOF
+
+  # Add dynamic redirect URLs for multi-app support
+  if declare -f auth::get_allowed_redirect_urls >/dev/null 2>&1; then
+    redirect_urls=$(auth::get_allowed_redirect_urls)
+    if [[ -n "$redirect_urls" ]]; then
+      cat >>docker-compose.yml <<EOF
+      AUTH_ALLOWED_REDIRECT_URLS: "${redirect_urls}"
+      AUTH_ALLOWED_EMAIL_REDIRECT_URLS: "${redirect_urls}"
+EOF
+    fi
+  fi
+
+  cat >>docker-compose.yml <<EOF
     networks:
       - default
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4001/healthz"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -1943,4 +1979,4 @@ EOF
 
 # Note: Docker Compose validation temporarily disabled during development
 log_success "docker-compose.yml generated successfully!"
-log_info "Run 'docker compose config' to validate the generated file"
+echo "Run 'docker compose config' to validate the generated file" >&2

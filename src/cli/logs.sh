@@ -170,16 +170,16 @@ get_service_logs() {
   fi
 
   # Build docker logs command
-  local docker_cmd="docker logs"
+  local docker_args=("logs")
 
   if [[ "$FOLLOW_MODE" == "true" ]]; then
-    docker_cmd="$docker_cmd --follow"
+    docker_args+=("--follow")
   fi
 
-  docker_cmd="$docker_cmd --tail $TAIL_LINES --timestamps $container_name"
+  docker_args+=("--tail" "$TAIL_LINES" "--timestamps" "$container_name")
 
-  # Execute and process logs
-  eval "$docker_cmd" 2>&1 | clean_and_colorize
+  # Execute and process logs safely without eval
+  docker "${docker_args[@]}" 2>&1 | clean_and_colorize
 }
 
 # Function to get logs from all services
@@ -215,17 +215,18 @@ get_all_logs() {
     echo ""
   fi
 
-  # Build compose logs command
-  local compose_cmd="compose logs"
+  # Build compose logs command safely
+  local compose_args=("logs")
 
   if [[ "$FOLLOW_MODE" == "true" ]]; then
-    compose_cmd="$compose_cmd --follow"
+    compose_args+=("--follow")
   fi
 
-  compose_cmd="$compose_cmd --tail=$TAIL_LINES --timestamps ${running_services[*]}"
+  compose_args+=("--tail=$TAIL_LINES" "--timestamps")
+  compose_args+=("${running_services[@]}")
 
-  # Execute and process logs
-  eval "$compose_cmd" 2>&1 | clean_and_colorize
+  # Execute and process logs safely without eval
+  compose "${compose_args[@]}" 2>&1 | clean_and_colorize
 }
 
 # Function to show service status with log info

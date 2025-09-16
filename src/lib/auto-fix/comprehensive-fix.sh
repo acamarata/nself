@@ -177,8 +177,11 @@ EOF
       fi
       
       # Fix incorrect ports in health checks
-      sed -i '' 's|http://localhost:4000/version|http://localhost:4001/healthz|g' docker-compose.yml 2>/dev/null || \
-      sed -i 's|http://localhost:4000/version|http://localhost:4001/healthz|g' docker-compose.yml 2>/dev/null
+      sed -i '' 's|http://localhost:4000/version|http://localhost:4000/healthz|g' docker-compose.yml 2>/dev/null || \
+      sed -i 's|http://localhost:4000/version|http://localhost:4000/healthz|g' docker-compose.yml 2>/dev/null
+      # Also fix if using wrong port
+      sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null || \
+      sed -i 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null
       
       if [[ "$healthcheck_fixed" == "true" ]]; then
         log_success "Fixed health check configurations"
