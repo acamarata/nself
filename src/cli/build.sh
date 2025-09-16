@@ -519,7 +519,13 @@ cmd_build() {
 
   # Check docker-compose.yml
   local needs_compose=false
-  if [[ ! -f "docker-compose.yml" ]] || [[ "$force_rebuild" == "true" ]] || ([[ -n "$env_file" ]] && [[ "$env_file" -nt "docker-compose.yml" ]]); then
+  if [[ ! -f "docker-compose.yml" ]]; then
+    needs_compose=true
+    needs_work=true
+  elif [[ "$force_rebuild" == "true" ]]; then
+    needs_compose=true
+    needs_work=true
+  elif [[ -n "$env_file" ]] && [[ "$env_file" -nt "docker-compose.yml" ]]; then
     needs_compose=true
     needs_work=true
   fi
@@ -536,6 +542,28 @@ cmd_build() {
   if [[ ! -f "postgres/init/01-init.sql" ]] || [[ "$force_rebuild" == "true" ]] || ([[ -n "$env_file" ]] && [[ "$env_file" -nt "postgres/init/01-init.sql" ]]); then
     needs_db=true
     needs_work=true
+  fi
+
+  # Debug output if enabled
+  if [[ "${DEBUG:-}" == "true" ]]; then
+    echo "DEBUG: needs_work=$needs_work"
+    echo "DEBUG: needs_compose=$needs_compose"
+    echo "DEBUG: needs_ssl=$needs_ssl"
+    echo "DEBUG: needs_nginx=$needs_nginx"
+    echo "DEBUG: needs_db=$needs_db"
+    echo "DEBUG: dirs_to_create=$dirs_to_create"
+    echo "DEBUG: docker-compose.yml exists: $([ -f "docker-compose.yml" ] && echo yes || echo no)"
+  fi
+
+  # Force build if this is a fresh project (no docker-compose.yml)
+  if [[ ! -f "docker-compose.yml" ]] && [[ "$needs_work" != "true" ]]; then
+    echo
+    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  Fresh project detected - forcing build"
+    needs_work=true
+    needs_compose=true
+    needs_nginx=true
+    needs_db=true
+    needs_ssl=true
   fi
 
   # Only show build process if we have work to do
