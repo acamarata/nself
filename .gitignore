@@ -5,5 +5,5 @@
 *.swo
 *~
 .DS_Store
-.claude/
 /test-*/
+.claude/
