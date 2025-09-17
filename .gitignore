@@ -1,9 +1,33 @@
-# IDE and editor directories
-.vscode/
+# Environment files (sensitive)
+.env
+.env.local
+.env.*.local
+.env.secrets
+
+# Backup folders from nself reset
+_backup*
+
+# Docker volumes
+.volumes/
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+
+# System files
+.DS_Store
 .idea/
+.vscode/
+.claude
 *.swp
 *.swo
 *~
-.DS_Store
-/test-*/
+
+# Build artifacts
+dist/
+build/
+*.pid
 .claude/

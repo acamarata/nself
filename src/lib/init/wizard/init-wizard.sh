@@ -3,8 +3,8 @@
 
 # Determine directories
 WIZARD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$(dirname "$WIZARD_DIR")"
-ROOT_DIR="$(dirname "$(dirname "$(dirname "$WIZARD_DIR")")")"
+INIT_LIB_DIR="$(dirname "$WIZARD_DIR")"
+ROOT_DIR="$(dirname "$(dirname "$(dirname "$INIT_LIB_DIR")")")"
 
 # Source required modules with existence checks
 for module in "$WIZARD_DIR/prompts.sh" "$WIZARD_DIR/detection.sh" "$WIZARD_DIR/templates.sh"; do
@@ -15,7 +15,8 @@ for module in "$WIZARD_DIR/prompts.sh" "$WIZARD_DIR/detection.sh" "$WIZARD_DIR/t
   source "$module"
 done
 
-for lib in "$CLI_DIR/../lib/utils/display.sh" "$CLI_DIR/../lib/utils/env.sh" "$CLI_DIR/../lib/wizard/environment-manager.sh"; do
+# Source from lib/utils and lib/wizard
+for lib in "$INIT_LIB_DIR/../utils/display.sh" "$INIT_LIB_DIR/../utils/env.sh" "$INIT_LIB_DIR/../wizard/environment-manager.sh"; do
   if [[ ! -f "$lib" ]]; then
     echo "Error: Required library not found: $lib" >&2
     exit 1

@@ -5,7 +5,7 @@
 PROMPTS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source display utilities for standard headers
-source "$PROMPTS_SCRIPT_DIR/../../lib/utils/display.sh"
+source "$PROMPTS_SCRIPT_DIR/../../utils/display.sh"
 
 # Show wizard header using standard command header
 show_wizard_header() {
@@ -99,8 +99,12 @@ multi_select() {
     done
   fi
   
-  # Assign back to the variable
-  eval "${selected_var}=(\"\${selected_items[@]}\")"
+  # Assign back to the variable (handle empty array safely)
+  if [[ ${#selected_items[@]} -gt 0 ]]; then
+    eval "${selected_var}=(\"\${selected_items[@]}\")"
+  else
+    eval "${selected_var}=()"
+  fi
 }
 
 # Input prompt with validation

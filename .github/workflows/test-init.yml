@@ -1,0 +1,225 @@
+name: Test Init Command
+
+on:
+  push:
+    paths:
+      - 'src/cli/init.sh'
+      - 'src/lib/init/**'
+      - '.github/workflows/test-init.yml'
+  pull_request:
+    paths:
+      - 'src/cli/init.sh'
+      - 'src/lib/init/**'
+      - '.github/workflows/test-init.yml'
+  workflow_dispatch:
+
+jobs:
+  test-init-unit:
+    name: Unit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        bash-version: ['3.2', 'latest']
+        exclude:
+          # macOS comes with Bash 3.2 by default
+          - os: macos-latest
+            bash-version: '3.2'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bash 3.2 (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.bash-version == '3.2'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash=3.2* || {
+            # If 3.2 not available, compile from source
+            wget https://ftp.gnu.org/gnu/bash/bash-3.2.tar.gz
+            tar xzf bash-3.2.tar.gz
+            cd bash-3.2
+            ./configure --prefix=/usr/local/bash32
+            make
+            sudo make install
+            sudo ln -sf /usr/local/bash32/bin/bash /usr/local/bin/bash32
+          }
+
+      - name: Run Unit Tests
+        run: |
+          if [[ "${{ matrix.bash-version }}" == "3.2" ]] && [[ -f /usr/local/bin/bash32 ]]; then
+            /usr/local/bin/bash32 src/tests/unit/test-init.sh
+          else
+            bash src/tests/unit/test-init.sh
+          fi
+
+  test-init-integration:
+    name: Integration Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        mode: [basic, wizard, force]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup test environment
+        run: |
+          # Create temporary test directory
+          export TEST_DIR="/tmp/nself-init-test-${{ matrix.mode }}"
+          mkdir -p "$TEST_DIR"
+          cd "$TEST_DIR"
+
+      - name: Test init (${{ matrix.mode }} mode)
+        run: |
+          cd "/tmp/nself-init-test-${{ matrix.mode }}"
+          
+          case "${{ matrix.mode }}" in
+            basic)
+              # Test basic init
+              bash "${{ github.workspace }}/src/cli/init.sh"
+              # Verify files created
+              test -f .env
+              test -f .env.example
+              test -f .gitignore
+              ;;
+            wizard)
+              # Test wizard mode (with automated inputs)
+              echo -e "TestProject\ndev\ny\ny\nn\nn\ny" | bash "${{ github.workspace }}/src/cli/init.sh" --wizard
+              # Verify .env contains expected values
+              grep -q "PROJECT_NAME=TestProject" .env
+              ;;
+            force)
+              # Test force reinit
+              bash "${{ github.workspace }}/src/cli/init.sh"
+              # Modify .env
+              echo "TEST_VAR=123" >> .env
+              # Force reinit
+              bash "${{ github.workspace }}/src/cli/init.sh" --force
+              # Verify .env was recreated
+              test -f .env
+              ! grep -q "TEST_VAR=123" .env
+              ;;
+          esac
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf "/tmp/nself-init-test-${{ matrix.mode }}"
+
+  test-init-shellcheck:
+    name: ShellCheck Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './src/lib/init'
+          additional_files: 'src/cli/init.sh'
+          severity: warning
+
+  test-init-portability:
+    name: Portability Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for Bash 4+ features
+        run: |
+          # Check for Bash 4+ specific features we should avoid
+          echo "Checking for Bash 4+ features..."
+          
+          # Check for associative arrays (declare -A)
+          if grep -r "declare -A" src/lib/init/ src/cli/init.sh 2>/dev/null; then
+            echo "ERROR: Found associative arrays (Bash 4+)"
+            exit 1
+          fi
+          
+          # Check for ${parameter^^} uppercase (Bash 4+)
+          if grep -r '\${[^}]*\^\^[^}]*}' src/lib/init/ src/cli/init.sh 2>/dev/null; then
+            echo "ERROR: Found uppercase expansion (Bash 4+)"
+            exit 1
+          fi
+          
+          # Check for ${parameter,,} lowercase (Bash 4+)
+          if grep -r '\${[^}]*,,[^}]*}' src/lib/init/ src/cli/init.sh 2>/dev/null; then
+            echo "ERROR: Found lowercase expansion (Bash 4+)"
+            exit 1
+          fi
+          
+          # Check for mapfile/readarray (Bash 4+)
+          if grep -rE '\b(mapfile|readarray)\b' src/lib/init/ src/cli/init.sh 2>/dev/null; then
+            echo "ERROR: Found mapfile/readarray (Bash 4+)"
+            exit 1
+          fi
+          
+          # Check for coproc (Bash 4+)
+          if grep -r '\bcoproc\b' src/lib/init/ src/cli/init.sh 2>/dev/null; then
+            echo "ERROR: Found coproc (Bash 4+)"
+            exit 1
+          fi
+          
+          echo "✓ No Bash 4+ features found"
+
+      - name: Check POSIX compliance
+        run: |
+          # Check for non-POSIX constructs we should be careful with
+          echo "Checking POSIX compliance..."
+          
+          # Check for [[ ]] vs [ ] (we use [[ ]] which is fine for Bash 3.2+)
+          # Just informational, not an error
+          
+          # Check for function keyword (not POSIX but works in Bash 3.2)
+          # Just informational, not an error
+          
+          # Check for arrays (not POSIX but works in Bash 3.2)
+          # Just informational, not an error
+          
+          # Check for echo -e usage (should use printf or safe_echo)
+          if grep -r 'echo -e' src/lib/init/*.sh src/cli/init.sh 2>/dev/null | grep -v safe_echo | grep -v '#'; then
+            echo "WARNING: Found echo -e usage (use safe_echo or printf instead)"
+          fi
+          
+          echo "✓ POSIX compliance check complete"
+
+  test-init-permissions:
+    name: File Permissions Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test file permissions
+        run: |
+          # Create test directory
+          TEST_DIR="/tmp/nself-perm-test"
+          mkdir -p "$TEST_DIR"
+          cd "$TEST_DIR"
+          
+          # Run init
+          bash "${{ github.workspace }}/src/cli/init.sh" --quiet
+          
+          # Check .env permissions (should be 600)
+          perms=$(stat -c "%a" .env)
+          if [[ "$perms" != "600" ]]; then
+            echo "ERROR: .env has wrong permissions: $perms (expected 600)"
+            exit 1
+          fi
+          
+          # Check .env.example permissions (should be 644)
+          perms=$(stat -c "%a" .env.example)
+          if [[ "$perms" != "644" ]]; then
+            echo "ERROR: .env.example has wrong permissions: $perms (expected 644)"
+            exit 1
+          fi
+          
+          echo "✓ File permissions are correct"
+          
+          # Cleanup
+          cd /
+          rm -rf "$TEST_DIR"

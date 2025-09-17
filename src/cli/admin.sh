@@ -15,11 +15,10 @@ source "$SCRIPT_DIR/../lib/utils/docker.sh"
 # Setup minimal admin-only environment in blank directory
 admin_minimal_setup() {
   show_command_header "nself admin" "Setting up minimal admin environment"
-  
+  echo ""  # Add blank line after header
+
   # Create minimal .env for admin-only mode
   if [[ ! -f ".env" ]]; then
-    log_info "Creating minimal admin configuration..."
-    
     cat > .env << 'EOF'
 # Minimal nself configuration for admin UI only
 PROJECT_NAME=admin-setup
@@ -28,30 +27,20 @@ ENV=dev
 
 # Admin UI Configuration
 NSELF_ADMIN_ENABLED=true
-NSELF_ADMIN_PORT=3100
-NSELF_ADMIN_AUTH_PROVIDER=basic
-NSELF_ADMIN_ROUTE=localhost:3100
+NSELF_ADMIN_PORT=3021
 
-# SSL Configuration (disabled for minimal setup)
-SSL_ENABLED=false
-
-# Database (minimal for admin operations)
-POSTGRES_ENABLED=true
-POSTGRES_PORT=5432
-POSTGRES_DB=nself_admin
-POSTGRES_USER=nself
-POSTGRES_PASSWORD=nself_admin_temp
-
-# Disable other services for minimal setup
+# All services disabled for initial admin setup
+POSTGRES_ENABLED=false
 HASURA_ENABLED=false
 AUTH_ENABLED=false
 STORAGE_ENABLED=false
 REDIS_ENABLED=false
 NESTJS_ENABLED=false
 FUNCTIONS_ENABLED=false
+SSL_ENABLED=false
 EOF
-    
-    log_success "Created minimal .env configuration"
+
+    log_success "Created minimal configuration"
   else
     log_info "Found existing .env, enabling admin UI..."
     
@@ -63,83 +52,67 @@ EOF
     fi
   fi
   
-  # Pull the admin image
-  log_info "Pulling nself-admin Docker image..."
-  docker pull acamarata/nself-admin:latest
-  
-  # Set admin password
-  log_info "Setting up admin access..."
-  
-  # Generate a temporary password if none set
-  if ! grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
-    local temp_password="admin123"
-    
-    # Generate password hash with salt
-    local password_hash
-    if command -v python3 >/dev/null 2>&1; then
-      password_hash=$(python3 -c "
-import hashlib, os, base64
-salt = os.urandom(32)
-pwd_hash = hashlib.pbkdf2_hmac('sha256', '$temp_password'.encode('utf-8'), salt, 100000)
-combined = salt + pwd_hash
-print(base64.b64encode(combined).decode('ascii'))
-")
-    elif command -v openssl >/dev/null 2>&1; then
-      local salt=$(openssl rand -hex 16)
-      password_hash="${salt}:$(echo -n "${salt}${temp_password}" | openssl dgst -sha256 -binary | base64)"
-    else
-      password_hash=$(echo -n "$temp_password" | sha256sum | cut -d' ' -f1)
+  # Pull the admin image (always get latest, suppress output unless there's an update)
+  local pull_output
+  pull_output=$(docker pull acamarata/nself-admin:latest 2>&1)
+  if echo "$pull_output" | grep -q "Downloaded newer image"; then
+    log_success "Updated nself-admin image"
+  elif echo "$pull_output" | grep -q "Image is up to date"; then
+    log_success "nself-admin image ready"
+  else
+    # Only show full output if there's an error
+    if ! echo "$pull_output" | grep -q "up to date\|Downloaded"; then
+      echo "$pull_output"
     fi
-    
-    echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env
-    
-    log_warning "Temporary password set: $temp_password"
-    log_info "Change this password after first login!"
   fi
   
-  # Generate secret key
+  # Find an available port starting from 3021
+  local admin_port=3021
+  local max_port=3030
+  local port_found=false
+
+  while [ $admin_port -le $max_port ]; do
+    if ! lsof -Pi :$admin_port -t >/dev/null 2>&1; then
+      port_found=true
+      break
+    fi
+    ((admin_port++))
+  done
+
+  if [ "$port_found" = false ]; then
+    log_error "No available ports found between 3021-3030"
+    log_info "Please free up a port or specify a custom port"
+    return 1
+  fi
+
+  # Update port in .env if different from default
+  if [ $admin_port -ne 3021 ]; then
+    sed -i.bak "s/NSELF_ADMIN_PORT=3021/NSELF_ADMIN_PORT=$admin_port/" .env
+    rm -f .env.bak
+    log_info "Using port $admin_port (3021 was in use)"
+  fi
+
+  # Generate secret key for admin session
   if ! grep -q "^ADMIN_SECRET_KEY=" .env 2>/dev/null; then
     local secret_key=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | head -c 64)
     echo "ADMIN_SECRET_KEY=$secret_key" >> .env
   fi
   
-  # Start minimal admin environment
-  log_info "Starting minimal admin environment..."
-  
   # Create minimal docker-compose for admin only
-  cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
+  cat > docker-compose.yml << EOF
+# Docker Compose v2 format (no version attribute needed)
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: nself_admin
-      POSTGRES_USER: nself
-      POSTGRES_PASSWORD: nself_admin_temp
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nself"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # Admin UI service
+  # Admin UI service (standalone - no dependencies)
   nself-admin:
     image: acamarata/nself-admin:latest
-    container_name: ${PROJECT_NAME}_admin
+    pull_policy: always
+    container_name: \${PROJECT_NAME}_admin
     ports:
-      - "3100:3021"
+      - "$admin_port:3021"
     environment:
-      - PROJECT_DIR=/workspace
-      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
-      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - NSELF_PROJECT_PATH=/workspace
+      - PROJECT_PATH=/workspace  # Legacy fallback
+      - ADMIN_SECRET_KEY=\${ADMIN_SECRET_KEY}
     volumes:
       - ./:/workspace:rw
       - nself-admin-data:/app/data
@@ -151,54 +124,61 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
   nself-admin-data:
 EOF
-  
-  log_success "Created minimal docker-compose.yml"
-  
-  # Start services
-  log_info "Starting admin UI..."
-  
+
+  # Start services (suppress verbose output)
+
+  local compose_output
   if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose up -d
+    compose_output=$(docker-compose up -d 2>&1)
   elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    docker compose up -d
+    compose_output=$(docker compose up -d 2>&1)
   else
     log_error "Docker Compose not found!"
     log_info "Please install Docker Compose to continue"
     return 1
   fi
+
+  # Only show errors, not the verbose output
+  if echo "$compose_output" | grep -q "error\|Error\|failed"; then
+    echo "$compose_output"
+    return 1
+  fi
   
-  # Wait for services to be ready
-  log_info "Waiting for services to start..."
-  sleep 5
-  
+  # Wait for services to be ready (check health instead of fixed sleep)
+  local max_attempts=30
+  local attempt=0
+  local project_name="${PROJECT_NAME:-admin-setup}"
+
+  while [ $attempt -lt $max_attempts ]; do
+    if docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null | grep -q "${project_name}_admin.*healthy\|${project_name}_admin.*running"; then
+      break
+    fi
+    sleep 1
+    ((attempt++))
+  done
+
+  log_success "Started nself-admin container"
+
   # Show access information
   echo ""
   log_success "Admin UI is now running!"
   echo ""
   echo "📋 Access Information:"
-  echo "  URL:      http://localhost:3100"
-  echo "  Username: admin"
-  echo "  Password: admin123"
-  echo ""
-  log_warning "Change the default password after first login!"
+  echo "  URL:      http://localhost:$admin_port"
   echo ""
   echo "📝 Next Steps:"
-  echo "  1. Open http://localhost:3100 in your browser"
-  echo "  2. Login with the credentials above"
+  echo "  1. Open http://localhost:$admin_port in your browser"
+  echo "  2. Set up your admin credentials on first login"
   echo "  3. Use the admin UI to configure your full nself project"
-  echo "  4. The admin UI will guide you through project setup"
   echo ""
   
-  # Try to open browser
+  # Try to open browser (silently)
   if command -v open >/dev/null 2>&1; then
-    log_info "Opening browser..."
-    open "http://localhost:3100" 2>/dev/null &
+    open "http://localhost:$admin_port" 2>/dev/null &
   elif command -v xdg-open >/dev/null 2>&1; then
-    log_info "Opening browser..."
-    xdg-open "http://localhost:3100" 2>/dev/null &
+    xdg-open "http://localhost:$admin_port" 2>/dev/null &
   fi
 }
 
@@ -261,7 +241,7 @@ admin_enable() {
   if ! grep -q "^NSELF_ADMIN_PORT=" .env 2>/dev/null; then
     # Ensure we're on a new line before appending
     echo "" >> .env
-    echo "NSELF_ADMIN_PORT=3100" >> .env
+    echo "NSELF_ADMIN_PORT=3021" >> .env
   fi
   
   if ! grep -q "^NSELF_ADMIN_AUTH_PROVIDER=" .env 2>/dev/null; then
@@ -377,7 +357,7 @@ admin_status() {
   load_env_with_priority 2>/dev/null || true
   
   local admin_enabled="${NSELF_ADMIN_ENABLED:-false}"
-  local admin_port="${NSELF_ADMIN_PORT:-3022}"
+  local admin_port="${NSELF_ADMIN_PORT:-3021}"
   local admin_username="${ADMIN_USERNAME:-admin}"
   local admin_route="${NSELF_ADMIN_ROUTE:-admin.${BASE_DOMAIN}}"
   admin_route=$(echo "$admin_route" | sed "s/\${BASE_DOMAIN}/$BASE_DOMAIN/g")
@@ -532,7 +512,7 @@ admin_reset() {
   
   # Set defaults
   echo "NSELF_ADMIN_ENABLED=false" >> .env
-  echo "NSELF_ADMIN_PORT=3100" >> .env
+  echo "NSELF_ADMIN_PORT=3021" >> .env
   echo "NSELF_ADMIN_AUTH_PROVIDER=basic" >> .env
   echo "NSELF_ADMIN_ROUTE=admin.\${BASE_DOMAIN}" >> .env
   
@@ -621,7 +601,7 @@ admin_open() {
   fi
   
   # Determine URL - use localhost for simplicity
-  local admin_port="${NSELF_ADMIN_PORT:-3100}"
+  local admin_port="${NSELF_ADMIN_PORT:-3021}"
   local url="http://localhost:${admin_port}"
   
   log_info "Opening admin UI at: $url"

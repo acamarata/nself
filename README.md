@@ -51,13 +51,16 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 - **Admin Dashboard**: Web-based monitoring UI at localhost:3100
 - **Single Config File**: One `.env` controls everything
 - **Zero Configuration**: Email, SSL, and services work out of the box
+- **Automated SSL**: Certificates generated automatically (one-time sudo for trust)
+- **Smart Domains**: Use local.nself.org (zero config) or localhost with auto-SSL
 - **Hot Reload**: Changes apply instantly without rebuild
 - **Multi-Environment**: Same setup works locally, staging, and production
 - **No Lock-in**: Standard Docker Compose under the hood
 - **Debugging Tools**: `doctor`, `status`, `logs` commands for troubleshooting
 
 ### 🔐 Production Ready
-- **Security First**: Automatic SSL trust + secure password generation
+- **Security First**: Automatic SSL setup with mkcert (handled during build)
+- **Zero SSL Hassle**: Certificates generated and trusted automatically
 - **Email Ready**: Production email in 2 minutes with guided setup
 - **Battle Tested**: Based on proven Nhost.io infrastructure
 - **Scale Ready**: From hobby projects to enterprise deployments
