@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/../lib/utils/header.sh"
 source "$SCRIPT_DIR/../lib/utils/preflight.sh"
 source "$SCRIPT_DIR/../lib/utils/timeout.sh"
 source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
+source "$SCRIPT_DIR/../lib/utils/hosts.sh"
 
 # Source validation scripts with error checking
 if [[ -f "$SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" ]]; then
@@ -1255,6 +1256,14 @@ EOF
     else
       printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Some fixes may have failed                 \n"
     fi
+  fi
+
+  # Check and update /etc/hosts if needed
+  if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
+    ensure_hosts_entries "localhost" "${PROJECT_NAME:-nself}"
+  elif [[ -n "${BASE_DOMAIN:-}" ]] && [[ "${BASE_DOMAIN}" != "local.nself.org" ]]; then
+    # For custom domains, check if they need hosts entries
+    ensure_hosts_entries "${BASE_DOMAIN}" "${PROJECT_NAME:-nself}"
   fi
 
   echo

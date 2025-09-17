@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
 source "$SCRIPT_DIR/../lib/utils/progress.sh"
+source "$SCRIPT_DIR/../lib/utils/hosts.sh"
 source "$SCRIPT_DIR/../lib/errors/base.sh"
 source "$SCRIPT_DIR/../lib/errors/quick-check.sh"
 source "$SCRIPT_DIR/../lib/errors/handlers/ports.sh"
@@ -174,6 +175,13 @@ cmd_start() {
         return 1
       fi
     fi
+  fi
+
+  # Check /etc/hosts entries if using localhost domain
+  if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
+    ensure_hosts_entries "localhost" "${PROJECT_NAME:-nself}" || true
+  elif [[ -n "${BASE_DOMAIN:-}" ]] && [[ "${BASE_DOMAIN}" != "local.nself.org" ]]; then
+    ensure_hosts_entries "${BASE_DOMAIN}" "${PROJECT_NAME:-nself}" || true
   fi
 
   # Reset autofix state and run pre-checks on fresh start (not retry)
