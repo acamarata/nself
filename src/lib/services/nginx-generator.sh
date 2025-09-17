@@ -529,7 +529,8 @@ nginx::generate_all_configs() {
   done < <(routes::get_frontend_apps)
   
   # Generate configs for custom services
-  current_app=""
+  local current_app=""
+  local cs_name="" cs_type="" cs_route="" cs_port="" cs_container=""
   while IFS= read -r line; do
     if [[ "$line" == "---" ]]; then
       if [[ -n "$cs_name" && -n "$cs_type" && -n "$cs_route" && -n "$cs_port" && -n "$cs_container" ]]; then

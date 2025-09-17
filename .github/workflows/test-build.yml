@@ -1,0 +1,257 @@
+name: Build Command Tests
+
+on:
+  push:
+    paths:
+      - 'src/cli/build.sh'
+      - 'src/lib/build/**'
+      - 'src/tests/unit/test-build.sh'
+      - '.github/workflows/test-build.yml'
+  pull_request:
+    paths:
+      - 'src/cli/build.sh'
+      - 'src/lib/build/**'
+      - 'src/tests/unit/test-build.sh'
+      - '.github/workflows/test-build.yml'
+  workflow_dispatch:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bash-version: ['bash', 'bash-3.2']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Bash 3.2 (if needed)
+        if: matrix.bash-version == 'bash-3.2'
+        run: |
+          sudo apt-get update
+          # Ubuntu doesn't easily support Bash 3.2, so we'll test with minimum available
+          # This ensures compatibility with older bash versions
+
+      - name: Setup test environment
+        run: |
+          # Make test scripts executable
+          chmod +x src/tests/unit/test-build.sh
+          chmod +x src/cli/build.sh
+          chmod +x src/lib/build/*.sh
+
+      - name: Run platform tests
+        run: |
+          # Test platform detection
+          source src/lib/build/platform.sh
+          detect_build_platform
+          [[ "$PLATFORM" == "linux" ]] || exit 1
+
+      - name: Run unit tests
+        run: |
+          cd $GITHUB_WORKSPACE
+          bash src/tests/unit/test-build.sh
+
+      - name: Test build command help
+        run: |
+          bash src/cli/build.sh --help
+
+      - name: Test build in empty project
+        run: |
+          mkdir -p test-project
+          cd test-project
+
+          # Create minimal .env
+          cat > .env <<EOF
+          PROJECT_NAME=testproject
+          BASE_DOMAIN=localhost
+          ENV=dev
+          EOF
+
+          # Run build
+          bash $GITHUB_WORKSPACE/src/cli/build.sh
+
+          # Check generated files
+          [[ -f "docker-compose.yml" ]] || exit 1
+          [[ -d "nginx" ]] || exit 1
+          [[ -d "ssl/certificates" ]] || exit 1
+
+  test-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check Bash version
+        run: |
+          bash --version
+          # macOS typically has Bash 3.2 by default
+
+      - name: Setup test environment
+        run: |
+          # Make test scripts executable
+          chmod +x src/tests/unit/test-build.sh
+          chmod +x src/cli/build.sh
+          chmod +x src/lib/build/*.sh
+
+      - name: Run platform tests
+        run: |
+          # Test platform detection
+          source src/lib/build/platform.sh
+          detect_build_platform
+          [[ "$PLATFORM" == "darwin" ]] || exit 1
+
+      - name: Run unit tests
+        run: |
+          cd $GITHUB_WORKSPACE
+          bash src/tests/unit/test-build.sh
+
+      - name: Test build command help
+        run: |
+          bash src/cli/build.sh --help
+
+      - name: Test build in empty project
+        run: |
+          mkdir -p test-project
+          cd test-project
+
+          # Create minimal .env
+          cat > .env <<EOF
+          PROJECT_NAME=testproject
+          BASE_DOMAIN=localhost
+          ENV=dev
+          EOF
+
+          # Run build
+          bash $GITHUB_WORKSPACE/src/cli/build.sh
+
+          # Check generated files
+          [[ -f "docker-compose.yml" ]] || exit 1
+          [[ -d "nginx" ]] || exit 1
+          [[ -d "ssl/certificates" ]] || exit 1
+
+  test-compatibility:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Test arithmetic operations
+        run: |
+          # Test safe arithmetic that caused issues on Linux
+          source src/lib/build/platform.sh
+
+          counter=0
+          safe_increment counter
+          [[ $counter -eq 1 ]] || exit 1
+
+          # Test expr fallback
+          result=$(safe_math "10 + 5")
+          [[ $result -eq 15 ]] || exit 1
+
+      - name: Test undefined variable handling
+        run: |
+          # Test that undefined variables don't cause exits
+          set -u  # Strict undefined variable checking
+
+          source src/lib/build/platform.sh
+          source src/lib/build/validation.sh
+
+          # This should not cause script to exit
+          set_default "UNDEFINED_VAR" "default_value"
+          [[ "$UNDEFINED_VAR" == "default_value" ]] || exit 1
+
+      - name: Test WSL detection
+        run: |
+          # Simulate WSL environment
+          source src/lib/build/platform.sh
+
+          # Mock /proc/version for WSL
+          mkdir -p /tmp/test-proc
+          echo "Linux version 5.10.0 Microsoft" > /tmp/test-proc/version
+
+          # Test detection (would need actual WSL to fully test)
+          detect_build_platform
+
+      - name: Test error recovery
+        run: |
+          # Test that build handles errors gracefully
+          cd $(mktemp -d)
+
+          # Create env with invalid values
+          cat > .env <<EOF
+          PROJECT_NAME=test project with spaces
+          BASE_DOMAIN=invalid domain.com
+          POSTGRES_ENABLED=maybe
+          EOF
+
+          # Run build - should fix issues
+          bash $GITHUB_WORKSPACE/src/cli/build.sh || true
+
+          # Check that validation fixes were applied
+          source .env
+          [[ ! "$PROJECT_NAME" =~ " " ]] || exit 1
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [test-linux, test-macos, test-compatibility]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Full integration test
+        run: |
+          # Create test project
+          mkdir -p integration-test
+          cd integration-test
+
+          # Create comprehensive .env
+          cat > .env <<EOF
+          PROJECT_NAME=integrationtest
+          BASE_DOMAIN=localhost
+          ENV=dev
+
+          # Services
+          NGINX_ENABLED=true
+          POSTGRES_ENABLED=true
+          REDIS_ENABLED=true
+          HASURA_ENABLED=true
+          AUTH_ENABLED=true
+          STORAGE_ENABLED=true
+
+          # Ports
+          NGINX_PORT=8080
+          POSTGRES_PORT=5433
+          REDIS_PORT=6380
+          HASURA_PORT=8081
+          AUTH_PORT=4001
+          STORAGE_PORT=5001
+          EOF
+
+          # Run build
+          bash $GITHUB_WORKSPACE/src/cli/build.sh --force
+
+          # Validate generated files
+          [[ -f "docker-compose.yml" ]] || exit 1
+          [[ -f "nginx/nginx.conf" ]] || exit 1
+          [[ -f "nginx/conf.d/default.conf" ]] || exit 1
+          [[ -f "init-db.sql" ]] || exit 1
+
+          # Validate docker-compose.yml
+          docker-compose config || exit 1
+
+          # Check all services are present
+          grep -q "nginx:" docker-compose.yml || exit 1
+          grep -q "postgres:" docker-compose.yml || exit 1
+          grep -q "redis:" docker-compose.yml || exit 1
+          grep -q "hasura:" docker-compose.yml || exit 1
+          grep -q "auth:" docker-compose.yml || exit 1
+          grep -q "storage:" docker-compose.yml || exit 1

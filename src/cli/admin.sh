@@ -14,42 +14,14 @@ source "$SCRIPT_DIR/../lib/utils/docker.sh"
 
 # Setup minimal admin-only environment in blank directory
 admin_minimal_setup() {
-  show_command_header "nself admin" "Setting up minimal admin environment"
+  show_command_header "nself admin" "Launching nself admin UI"
   echo ""  # Add blank line after header
 
-  # Create minimal .env for admin-only mode
-  if [[ ! -f ".env" ]]; then
-    cat > .env << 'EOF'
-# Minimal nself configuration for admin UI only
-PROJECT_NAME=admin-setup
-BASE_DOMAIN=localhost
-ENV=dev
-
-# Admin UI Configuration
-NSELF_ADMIN_ENABLED=true
-NSELF_ADMIN_PORT=3021
-
-# All services disabled for initial admin setup
-POSTGRES_ENABLED=false
-HASURA_ENABLED=false
-AUTH_ENABLED=false
-STORAGE_ENABLED=false
-REDIS_ENABLED=false
-NESTJS_ENABLED=false
-FUNCTIONS_ENABLED=false
-SSL_ENABLED=false
-EOF
-
-    log_success "Created minimal configuration"
-  else
-    log_info "Found existing .env, enabling admin UI..."
-    
-    # Just enable admin in existing config
-    if grep -q "^NSELF_ADMIN_ENABLED=" .env; then
-      sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env
-    else
-      echo "NSELF_ADMIN_ENABLED=true" >> .env
-    fi
+  # Check if directory has existing nself project
+  if [[ -f ".env" ]] || [[ -f ".env.dev" ]] || [[ -f "docker-compose.yml" ]]; then
+    log_warning "Existing project files detected"
+    log_info "For a clean admin setup, run in an empty directory"
+    echo ""
   fi
   
   # Pull the admin image (always get latest, suppress output unless there's an update)
@@ -85,81 +57,56 @@ EOF
     return 1
   fi
 
-  # Update port in .env if different from default
+  # Show which port we're using if not default
   if [ $admin_port -ne 3021 ]; then
-    sed -i.bak "s/NSELF_ADMIN_PORT=3021/NSELF_ADMIN_PORT=$admin_port/" .env
-    rm -f .env.bak
     log_info "Using port $admin_port (3021 was in use)"
   fi
 
-  # Generate secret key for admin session
-  if ! grep -q "^ADMIN_SECRET_KEY=" .env 2>/dev/null; then
-    local secret_key=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | head -c 64)
-    echo "ADMIN_SECRET_KEY=$secret_key" >> .env
-  fi
-  
-  # Create minimal docker-compose for admin only
-  cat > docker-compose.yml << EOF
-# Docker Compose v2 format (no version attribute needed)
-services:
-  # Admin UI service (standalone - no dependencies)
-  nself-admin:
-    image: acamarata/nself-admin:latest
-    pull_policy: always
-    container_name: \${PROJECT_NAME}_admin
-    ports:
-      - "$admin_port:3021"
-    environment:
-      - NSELF_PROJECT_PATH=/workspace
-      - PROJECT_PATH=/workspace  # Legacy fallback
-      - ADMIN_SECRET_KEY=\${ADMIN_SECRET_KEY}
-    volumes:
-      - ./:/workspace:rw
-      - nself-admin-data:/app/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  # Get current directory for mounting
+  local current_dir="$(pwd)"
 
-volumes:
-  nself-admin-data:
-EOF
+  # Stop any existing nself-admin container
+  docker stop nself-admin 2>/dev/null || true
+  docker rm nself-admin 2>/dev/null || true
 
-  # Start services (suppress verbose output)
+  # Run the admin container directly without creating any files
+  log_info "Starting nself-admin container..."
 
-  local compose_output
-  if command -v docker-compose >/dev/null 2>&1; then
-    compose_output=$(docker-compose up -d 2>&1)
-  elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    compose_output=$(docker compose up -d 2>&1)
-  else
-    log_error "Docker Compose not found!"
-    log_info "Please install Docker Compose to continue"
+  # Start the container with docker run
+  local container_id
+  container_id=$(docker run -d \
+    --name nself-admin \
+    -p "$admin_port:3021" \
+    -v "$current_dir:/workspace:rw" \
+    -e "NSELF_PROJECT_PATH=/workspace" \
+    -e "PROJECT_PATH=/workspace" \
+    --restart unless-stopped \
+    acamarata/nself-admin:latest 2>&1)
+
+  if [[ $? -ne 0 ]]; then
+    log_error "Failed to start nself-admin container"
+    echo "$container_id"
     return 1
   fi
 
-  # Only show errors, not the verbose output
-  if echo "$compose_output" | grep -q "error\|Error\|failed"; then
-    echo "$compose_output"
-    return 1
-  fi
-  
-  # Wait for services to be ready (check health instead of fixed sleep)
+  # Wait for container to be ready
   local max_attempts=30
   local attempt=0
-  local project_name="${PROJECT_NAME:-admin-setup}"
 
   while [ $attempt -lt $max_attempts ]; do
-    if docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null | grep -q "${project_name}_admin.*healthy\|${project_name}_admin.*running"; then
+    if docker ps | grep -q "nself-admin.*Up"; then
+      log_success "nself-admin is running"
       break
     fi
     sleep 1
     ((attempt++))
   done
 
-  log_success "Started nself-admin container"
+  if [ $attempt -eq $max_attempts ]; then
+    log_error "nself-admin failed to start"
+    docker logs nself-admin 2>&1 | tail -10
+    return 1
+  fi
 
   # Show access information
   echo ""
