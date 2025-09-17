@@ -308,6 +308,13 @@ load_env_with_defaults() {
     [[ -f ".env.secrets" ]] && source ".env.secrets" 2>/dev/null
   fi
   
+  # Load .env.local if it exists (alternative to .env)
+  if [[ -f ".env.local" ]]; then
+    set -a
+    source ".env.local" 2>/dev/null
+    set +a
+  fi
+
   # Load local overrides last
   if [[ -f ".env" ]]; then
     set -a
