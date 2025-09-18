@@ -190,7 +190,17 @@ test_wrapper() {
     test_result "pass" "Build wrapper is executable"
 
     # Test help option
-    if timeout 10 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1; then
+    local help_test_result=false
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+    elif command -v gtimeout >/dev/null 2>&1; then
+      gtimeout 10 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+    else
+      # No timeout available, just run the test
+      bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+    fi
+
+    if [[ "$help_test_result" == "true" ]]; then
       test_result "pass" "Build wrapper help works"
     else
       test_result "fail" "Build wrapper help failed or hung"
