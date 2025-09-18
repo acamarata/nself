@@ -814,7 +814,7 @@ if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
       HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
       JWT_SECRET: ${AUTH_JWT_SECRET}
-      FUNCTIONS_PATH: /app/functions
+      FUNCTIONS_PATH: /app
       MAX_EXECUTION_TIME: 30000
       MEMORY_LIMIT: 512
 EOF
@@ -831,8 +831,7 @@ EOF
 
   cat >>docker-compose.yml <<EOF
     volumes:
-      - ./functions:/app/functions:ro
-      - ./functions-runtime:/app:ro
+      - ./functions:/app:ro
     networks:
       - default
     healthcheck:
@@ -843,9 +842,9 @@ EOF
 EOF
 
   # Generate the functions runtime if it doesn't exist
-  if [[ ! -f "./functions-runtime/server.js" ]]; then
-    mkdir -p ./functions-runtime
-    cat >./functions-runtime/server.js <<'FUNCEOF'
+  if [[ ! -f "./functions/server.js" ]]; then
+    mkdir -p ./functions
+    cat >./functions/server.js <<'FUNCEOF'
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -861,6 +860,11 @@ const functionCache = new Map();
 
 // Load function from file
 async function loadFunction(name) {
+  // Don't load runtime files
+  if (name === 'server') {
+    throw new Error('Cannot load runtime files as functions');
+  }
+
   if (functionCache.has(name)) {
     return functionCache.get(name);
   }
@@ -987,7 +991,9 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/functions') {
     try {
       const files = await fs.promises.readdir(FUNCTIONS_PATH);
-      const functions = files.filter(f => f.endsWith('.js')).map(f => f.slice(0, -3));
+      const functions = files
+        .filter(f => f.endsWith('.js') && f !== 'server.js')
+        .map(f => f.slice(0, -3));
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ functions }));
     } catch (error) {
@@ -1042,7 +1048,7 @@ process.on('SIGTERM', () => {
 });
 FUNCEOF
 
-    cat >./functions-runtime/package.json <<'FUNCEOF'
+    cat >./functions/package.json <<'FUNCEOF'
 {
   "name": "nself-functions",
   "version": "1.0.0",
@@ -1058,8 +1064,35 @@ FUNCEOF
 }
 FUNCEOF
 
+    # Create .gitignore for functions
+    cat >./functions/.gitignore <<'FUNCEOF'
+# Ignore runtime files
+server.js
+package.json
+node_modules/
+*.log
+.env
+FUNCEOF
+
+    # Create README for functions
+    cat >./functions/README.md <<'FUNCEOF'
+# Serverless Functions
+
+Place your serverless functions in this directory. Each .js or .ts file becomes an API endpoint.
+
+## Structure
+- Each file should export a handler function
+- File name becomes the endpoint path (e.g., hello.js → /functions/hello)
+- The runtime (server.js) is auto-generated - do not edit
+
+## Example Function
+See hello.js for a simple example.
+
+## Usage
+Functions are accessible at: https://api.${BASE_DOMAIN}/functions/{filename}
+FUNCEOF
+
     # Create example function
-    mkdir -p ./functions
     cat >./functions/hello.js <<'FUNCEOF'
 // Example serverless function
 async function handler(event, context) {
