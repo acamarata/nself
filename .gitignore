@@ -37,3 +37,4 @@ dist/
 .env.*
 *.env
 .env.backup.*
+# Git config fixed
