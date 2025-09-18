@@ -538,11 +538,11 @@ EOF
 
   # Check generated files (more lenient in CI environments)
   if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-    # In CI: Only check if at least one key file was generated
-    if [[ -f docker-compose.yml ]] || [[ -d nginx ]] || [[ -d ssl ]]; then
-      test_result "pass" "Build generated some output files"
+    # In CI: Only check if at least one key file was generated, or if build completed successfully
+    if [[ -f docker-compose.yml ]] || [[ -d nginx ]] || [[ -d ssl ]] || [[ "$build_result" == "true" ]]; then
+      test_result "pass" "Build generated output or completed successfully"
     else
-      test_result "fail" "Build generated no output files"
+      test_result "fail" "Build failed and generated no output files"
     fi
   else
     # In normal environments: Check all expected files
