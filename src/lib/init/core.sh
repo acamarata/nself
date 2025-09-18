@@ -42,6 +42,7 @@ source "$INIT_MODULE_DIR/help.sh" || {
   echo "Error: Failed to load help module" >&2
   exit 78
 }
+source "$INIT_MODULE_DIR/demo.sh" 2>/dev/null || true
 
 # State tracking
 INIT_STATE="$INIT_STATE_IDLE"
@@ -91,26 +92,17 @@ init_full() {
 # Outputs: Runs interactive wizard
 # Returns: Exit code from wizard
 run_wizard() {
-  local wizard_v2="$INIT_MODULE_DIR/wizard/init-wizard-v2.sh"
-  local wizard_v1="$INIT_MODULE_DIR/wizard/init-wizard.sh"
+  local wizard_script="$INIT_MODULE_DIR/wizard/init-wizard.sh"
 
-  # Try v2 wizard first, fall back to v1
-  if [[ -f "$wizard_v2" ]]; then
-    source "$wizard_v2" || {
+  if [[ -f "$wizard_script" ]]; then
+    source "$wizard_script" || {
       log_error "Failed to load wizard"
       return $INIT_E_CONFIG
     }
     run_config_wizard
     return $?
-  elif [[ -f "$wizard_v1" ]]; then
-    source "$wizard_v1" || {
-      log_error "Failed to load wizard"
-      return $INIT_E_CONFIG
-    }
-    run_init_wizard
-    return $?
   else
-    log_error "Wizard not found"
+    log_error "Wizard not found at $wizard_script"
     return $INIT_E_CONFIG
   fi
 }
@@ -194,6 +186,13 @@ cmd_init() {
       local wizard_result=$?
       INIT_STATE="$INIT_STATE_COMPLETED"
       return $wizard_result
+      ;;
+    --demo)
+      INIT_STATE="$INIT_STATE_IN_PROGRESS"
+      setup_demo "$script_dir"
+      local demo_result=$?
+      INIT_STATE="$INIT_STATE_COMPLETED"
+      return $demo_result
       ;;
     --admin)
       INIT_STATE="$INIT_STATE_IN_PROGRESS"

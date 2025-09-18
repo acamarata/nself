@@ -387,8 +387,6 @@ orchestrate_build() {
   # CRITICAL: Always ensure docker-compose.yml exists
   # This is the absolute minimum requirement for nself to function
   if [[ ! -f "docker-compose.yml" ]]; then
-    echo
-    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  No docker-compose.yml found - must build"
     needs_work=true
     needs_compose=true
     needs_nginx=true

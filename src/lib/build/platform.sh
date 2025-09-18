@@ -37,14 +37,15 @@ detect_build_platform() {
 # Safe arithmetic increment that works on all platforms
 safe_increment() {
   local var_name="$1"
-  local current_val="${!var_name:-0}"
+  # More portable way to get variable value
+  eval "local current_val=\${$var_name:-0}"
 
   # Use expr for maximum compatibility
   if command -v expr >/dev/null 2>&1; then
     eval "$var_name=\$(expr \$current_val + 1)"
   else
-    # Fallback to let
-    let "$var_name=current_val+1" 2>/dev/null || eval "$var_name=\$((current_val + 1))"
+    # Fallback to arithmetic expansion
+    eval "$var_name=\$((current_val + 1))"
   fi
 }
 
@@ -112,8 +113,9 @@ set_default() {
   local var_name="$1"
   local default_value="$2"
 
-  # Check if variable is unset or empty
-  if [[ -z "${!var_name:-}" ]]; then
+  # Check if variable is unset or empty (more portable)
+  eval "local current_val=\${$var_name:-}"
+  if [[ -z "$current_val" ]]; then
     eval "$var_name=\$default_value"
   fi
 }

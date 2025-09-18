@@ -27,8 +27,9 @@ ensure_hosts_entries() {
   local needs_update=false
   local missing_domains=()
 
-  # Domains we need based on the base domain
-  local required_domains=()
+  # Domains we need based on the base domain - initialize as array
+  local required_domains
+  required_domains=()
 
   if [[ "$base_domain" == "localhost" ]]; then
     # For localhost, we need these subdomains
@@ -62,12 +63,14 @@ ensure_hosts_entries() {
   fi
 
   # Check which domains are missing
-  for domain in "${required_domains[@]}"; do
-    if ! hosts_entry_exists "$domain"; then
-      missing_domains+=("$domain")
-      needs_update=true
-    fi
-  done
+  if [[ ${#required_domains[@]} -gt 0 ]]; then
+    for domain in "${required_domains[@]}"; do
+      if ! hosts_entry_exists "$domain"; then
+        missing_domains+=("$domain")
+        needs_update=true
+      fi
+    done
+  fi
 
   if [[ "$needs_update" == "false" ]]; then
     return 0
@@ -76,9 +79,11 @@ ensure_hosts_entries() {
   # Inform user about missing entries
   echo ""
   echo "⚠️  Some domains need to be added to /etc/hosts for local development:"
-  for domain in "${missing_domains[@]}"; do
-    echo "   - $domain"
-  done
+  if [[ ${#missing_domains[@]} -gt 0 ]]; then
+    for domain in "${missing_domains[@]}"; do
+      echo "   - $domain"
+    done
+  fi
   echo ""
 
   # Ask for permission to update
@@ -92,9 +97,11 @@ ensure_hosts_entries() {
 
     # Build the entries string
     local entries=""
-    for domain in "${missing_domains[@]}"; do
-      entries+="127.0.0.1 $domain\n"
-    done
+    if [[ ${#missing_domains[@]} -gt 0 ]]; then
+      for domain in "${missing_domains[@]}"; do
+        entries+="127.0.0.1 $domain\n"
+      done
+    fi
 
     # Add all entries at once to minimize sudo prompts
     if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null; then
@@ -104,17 +111,21 @@ ensure_hosts_entries() {
       echo "❌ Failed to update /etc/hosts"
       echo ""
       echo "You can manually add these lines to /etc/hosts:"
-      for domain in "${missing_domains[@]}"; do
-        echo "127.0.0.1 $domain"
-      done
+      if [[ ${#missing_domains[@]} -gt 0 ]]; then
+        for domain in "${missing_domains[@]}"; do
+          echo "127.0.0.1 $domain"
+        done
+      fi
       return 1
     fi
   else
     echo ""
     echo "ℹ️  Skipped /etc/hosts update. You can manually add these lines:"
-    for domain in "${missing_domains[@]}"; do
-      echo "127.0.0.1 $domain"
-    done
+    if [[ ${#missing_domains[@]} -gt 0 ]]; then
+      for domain in "${missing_domains[@]}"; do
+        echo "127.0.0.1 $domain"
+      done
+    fi
     echo ""
     echo "Or use BASE_DOMAIN=local.nself.org which doesn't require /etc/hosts changes."
   fi

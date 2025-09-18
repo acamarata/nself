@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Quick test runner for build modules with better error handling
 
+# Determine the nself root directory
+if [[ -n "$GITHUB_WORKSPACE" ]]; then
+  NSELF_ROOT="$GITHUB_WORKSPACE"
+else
+  # Local development - find the root by going up from test directory
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  NSELF_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+fi
+
 # Test framework
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -37,7 +46,7 @@ test_result() {
 test_platform() {
   echo "Testing Platform Detection..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/platform.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/platform.sh" 2>/dev/null; then
     detect_build_platform
     if [[ -n "$PLATFORM" ]]; then
       test_result "pass" "Platform detection works ($PLATFORM)"
@@ -72,7 +81,7 @@ test_validation() {
   echo ""
   echo "Testing Validation Module..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/validation.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/validation.sh" 2>/dev/null; then
     test_result "pass" "Validation module loads"
 
     # Test set_default function
@@ -94,7 +103,7 @@ test_ssl() {
   echo ""
   echo "Testing SSL Module..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/ssl.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/ssl.sh" 2>/dev/null; then
     test_result "pass" "SSL module loads"
 
     # Test certificate path function
@@ -114,7 +123,7 @@ test_nginx() {
   echo ""
   echo "Testing Nginx Module..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/nginx.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/nginx.sh" 2>/dev/null; then
     test_result "pass" "Nginx module loads"
 
     if declare -f generate_nginx_config >/dev/null 2>&1; then
@@ -133,7 +142,7 @@ test_docker_compose() {
   echo ""
   echo "Testing Docker Compose Module..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/docker-compose.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/docker-compose.sh" 2>/dev/null; then
     test_result "pass" "Docker Compose module loads"
 
     if declare -f generate_docker_compose >/dev/null 2>&1; then
@@ -152,7 +161,7 @@ test_core() {
   echo ""
   echo "Testing Core Module..."
 
-  if source /Users/admin/Sites/nself/src/lib/build/core.sh 2>/dev/null; then
+  if source "$NSELF_ROOT/src/lib/build/core.sh" 2>/dev/null; then
     test_result "pass" "Core module loads"
 
     if declare -f orchestrate_build >/dev/null 2>&1; then
@@ -177,11 +186,11 @@ test_wrapper() {
   echo ""
   echo "Testing Build Wrapper..."
 
-  if [[ -x "/Users/admin/Sites/nself/src/cli/build.sh" ]]; then
+  if [[ -x "$NSELF_ROOT/src/cli/build.sh" ]]; then
     test_result "pass" "Build wrapper is executable"
 
     # Test help option
-    if timeout 10 bash /Users/admin/Sites/nself/src/cli/build.sh --help >/dev/null 2>&1; then
+    if timeout 10 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1; then
       test_result "pass" "Build wrapper help works"
     else
       test_result "fail" "Build wrapper help failed or hung"

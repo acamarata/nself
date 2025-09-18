@@ -22,27 +22,27 @@ routes::collect_all() {
   local base_domain="${BASE_DOMAIN:-localhost}"
   local project_name="${PROJECT_NAME:-app}"
   local routes=()
-  
+
   # Core domains
   routes+=("$base_domain")
   [[ "$base_domain" != "localhost" ]] && routes+=("localhost")
-  routes+=("127.0.0.1" "::1")
   
   # Core nself services with their routes
-  if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
+  # Check both env vars AND nginx configs (more reliable during build)
+  if [[ "${HASURA_ENABLED:-false}" == "true" ]] || [[ -f "nginx/conf.d/hasura.conf" ]]; then
     local hasura_route="${HASURA_ROUTE:-api.${base_domain}}"
     routes+=("$hasura_route")
   fi
-  
-  if [[ "${AUTH_ENABLED:-false}" == "true" ]]; then
+
+  if [[ "${AUTH_ENABLED:-false}" == "true" ]] || [[ -f "nginx/conf.d/auth.conf" ]]; then
     local auth_route="${AUTH_ROUTE:-auth.${base_domain}}"
     routes+=("$auth_route")
   fi
-  
-  if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
+
+  if [[ "${STORAGE_ENABLED:-false}" == "true" ]] || [[ -f "nginx/conf.d/storage.conf" ]]; then
     local storage_route="${STORAGE_ROUTE:-storage.${base_domain}}"
     routes+=("$storage_route")
-    
+
     # Storage console if configured
     local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console.${base_domain}}"
     routes+=("$storage_console_route")
@@ -54,7 +54,8 @@ routes::collect_all() {
     routes+=("$meilisearch_route")
   fi
   
-  if [[ "${MAILPIT_ENABLED:-true}" == "true" ]]; then
+  # Mailpit - check config file exists since env var defaults to true
+  if [[ -f "nginx/conf.d/mailpit.conf" ]]; then
     local mailpit_route="${MAILPIT_ROUTE:-mail.${base_domain}}"
     routes+=("$mailpit_route")
   fi
@@ -167,17 +168,17 @@ routes::collect_all() {
     done
   fi
   
-  # CS_N services (Custom Services)
+  # CS_N services (Custom Services) - check both env vars and nginx configs
   for i in {1..20}; do
-    local cs_var="CS_${i}"
-    local cs_value
-    cs_value="${!cs_var:-}"
-    if [[ -n "$cs_value" ]]; then
-      # Parse CS_N format: type:name:port[:route[:internal]]
-      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
-      
-      # Only add if it has an external route (not internal-only)
-      if [[ -n "$cs_route" && "$cs_internal" != "true" ]]; then
+    local cs_route_var="CS_${i}_ROUTE"
+    local cs_route="${!cs_route_var:-}"
+
+    # Add custom service route if defined
+    if [[ -n "$cs_route" ]]; then
+      # Check if it's already a full domain or needs base_domain appended
+      if [[ "$cs_route" == *.* ]]; then
+        routes+=("$cs_route")
+      else
         routes+=("${cs_route}.${base_domain}")
       fi
     fi
