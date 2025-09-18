@@ -31,3 +31,9 @@ dist/
 /build/
 *.pid
 .claude/
+
+# Environment files should not be in CLI
+.env
+.env.*
+*.env
+.env.backup.*

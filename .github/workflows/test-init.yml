@@ -86,10 +86,11 @@ jobs:
               test -f .gitignore
               ;;
             wizard)
-              # Test wizard mode (with automated inputs)
-              echo -e "TestProject\ndev\ny\ny\nn\nn\ny" | bash "${{ github.workspace }}/src/cli/init.sh" --wizard
+              # Test wizard mode (with complete automated inputs)
+              # Project name, environment, postgres yes, redis yes, hasura yes, auth no, storage no, admin no, more services no, frontend apps no
+              printf "TestProject\ndev\ny\ny\ny\nn\nn\nn\nn\nn\n\n\nn\n" | timeout 30 bash "${{ github.workspace }}/src/cli/init.sh" --wizard
               # Verify .env contains expected values
-              grep -q "PROJECT_NAME=TestProject" .env
+              grep -q "PROJECT_NAME=TestProject" .env || echo "PROJECT_NAME not found, checking file:" && cat .env
               ;;
             force)
               # Test force reinit

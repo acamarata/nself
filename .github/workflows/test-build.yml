@@ -159,7 +159,13 @@ jobs:
 
           # Test expr fallback
           result=$(safe_math "10 + 5")
-          [[ $result -eq 15 ]] || exit 1
+          echo "Addition result: $result"
+          [[ $result -eq 15 ]] || { echo "Expected 15, got $result"; exit 1; }
+
+          # Test multiplication
+          mult_result=$(safe_math "5 * 3")
+          echo "Multiplication result: $mult_result"
+          [[ $mult_result -eq 15 ]] || { echo "Expected 15, got $mult_result"; exit 1; }
 
       - name: Test undefined variable handling
         run: |
