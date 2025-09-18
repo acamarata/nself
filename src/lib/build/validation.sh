@@ -85,7 +85,8 @@ check_port_conflicts() {
   for port_var in "${ports_to_check[@]}"; do
     local var_name="${port_var%:*}"
     local default_port="${port_var#*:}"
-    local port="${!var_name:-$default_port}"
+    # Use eval for Bash 3.2 compatibility
+    eval "local port=\${$var_name:-$default_port}"
 
     # Check if port is in use
     if command -v lsof >/dev/null 2>&1; then
@@ -112,10 +113,12 @@ validate_boolean_vars() {
   )
 
   for var in "${bool_vars[@]}"; do
-    local value="${!var:-}"
+    # Use eval for Bash 3.2 compatibility
+    eval "local value=\${$var:-}"
     if [[ -n "$value" ]] && [[ "$value" != "true" ]] && [[ "$value" != "false" ]]; then
       # Convert common boolean representations
-      case "${value,,}" in
+      local value_lower=$(echo "$value" | tr '[:upper:]' '[:lower:]')
+      case "$value_lower" in
         1|yes|y|on|enabled)
           eval "$var=true"
           fixes+=("Fixed $var to 'true'")
@@ -164,8 +167,10 @@ apply_validation_fixes() {
       local value="${BASH_REMATCH[2]}"
 
       # Check if we have a new value for this key
-      if [[ -n "${!key:-}" ]]; then
-        echo "${key}=${!key}" >> "$temp_file"
+      # Use eval for Bash 3.2 compatibility
+      eval "local new_value=\${$key:-}"
+      if [[ -n "$new_value" ]]; then
+        echo "${key}=${new_value}" >> "$temp_file"
       else
         echo "$line" >> "$temp_file"
       fi
@@ -179,7 +184,8 @@ apply_validation_fixes() {
     if [[ "$fix" =~ Set[[:space:]]([A-Z_]+)[[:space:]]to ]]; then
       local key="${BASH_REMATCH[1]}"
       if ! grep -q "^${key}=" "$temp_file"; then
-        echo "${key}=${!key}" >> "$temp_file"
+        eval "local new_val=\${$key:-}"
+        echo "${key}=${new_val}" >> "$temp_file"
       fi
     fi
   done
@@ -190,6 +196,7 @@ apply_validation_fixes() {
 
 # Validate service dependencies
 validate_service_dependencies() {
+  # Use eval for Bash 3.2 compatibility with indirect variable references
   # Check Hasura dependencies
   if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
     if [[ "${POSTGRES_ENABLED:-false}" != "true" ]]; then

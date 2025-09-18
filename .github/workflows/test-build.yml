@@ -47,10 +47,15 @@ jobs:
           detect_build_platform
           [[ "$PLATFORM" == "linux" ]] || exit 1
 
-      - name: Run unit tests
+      - name: Run quick unit tests
         run: |
           cd $GITHUB_WORKSPACE
           timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+
+      - name: Run comprehensive unit tests
+        run: |
+          cd $GITHUB_WORKSPACE
+          timeout 120 bash src/tests/unit/test-build-comprehensive.sh
 
       - name: Test build command help
         run: |
@@ -102,10 +107,15 @@ jobs:
           detect_build_platform
           [[ "$PLATFORM" == "darwin" ]] || exit 1
 
-      - name: Run unit tests
+      - name: Run quick unit tests
         run: |
           cd $GITHUB_WORKSPACE
           timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+
+      - name: Run comprehensive unit tests
+        run: |
+          cd $GITHUB_WORKSPACE
+          timeout 120 bash src/tests/unit/test-build-comprehensive.sh
 
       - name: Test build command help
         run: |

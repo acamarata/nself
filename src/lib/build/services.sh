@@ -21,6 +21,86 @@ generate_all_services() {
   return 0
 }
 
+# Generate services (compatibility alias)
+generate_services() {
+  generate_all_services "$@"
+}
+
+# Generate frontend service
+generate_frontend_service() {
+  local service_name="${1:-frontend}"
+  local port="${2:-3000}"
+  local force="${3:-false}"
+
+  local service_file="services/${service_name}.yml"
+
+  if [[ "$force" != "true" ]] && [[ -f "$service_file" ]]; then
+    return 0
+  fi
+
+  mkdir -p services 2>/dev/null || true
+
+  cat > "$service_file" <<EOF
+  ${service_name}:
+    build:
+      context: ./${service_name}
+      dockerfile: Dockerfile
+    container_name: \${PROJECT_NAME}_${service_name}
+    restart: unless-stopped
+    ports:
+      - "${port}:${port}"
+    environment:
+      - NODE_ENV=\${ENV:-development}
+      - PORT=${port}
+    volumes:
+      - ./${service_name}:/app
+      - /app/node_modules
+    networks:
+      - nself_network
+EOF
+
+  CREATED_FILES+=("Service: ${service_name}")
+}
+
+# Generate backend service
+generate_backend_service() {
+  local service_name="${1:-backend}"
+  local port="${2:-4000}"
+  local force="${3:-false}"
+
+  local service_file="services/${service_name}.yml"
+
+  if [[ "$force" != "true" ]] && [[ -f "$service_file" ]]; then
+    return 0
+  fi
+
+  mkdir -p services 2>/dev/null || true
+
+  cat > "$service_file" <<EOF
+  ${service_name}:
+    build:
+      context: ./${service_name}
+      dockerfile: Dockerfile
+    container_name: \${PROJECT_NAME}_${service_name}
+    restart: unless-stopped
+    ports:
+      - "${port}:${port}"
+    environment:
+      - NODE_ENV=\${ENV:-development}
+      - PORT=${port}
+      - DATABASE_URL=postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
+    volumes:
+      - ./${service_name}:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+    networks:
+      - nself_network
+EOF
+
+  CREATED_FILES+=("Service: ${service_name}")
+}
+
 # Generate template services
 generate_template_services() {
   local force="${1:-false}"
@@ -46,10 +126,12 @@ process_service_template() {
   local output_file="services/${service_name}"
 
   # Check if service should be generated
-  local service_var="${service_name^^}_ENABLED"
+  local service_var=$(echo "${service_name}_ENABLED" | tr '[:lower:]' '[:upper:]')
   service_var="${service_var//-/_}"
 
-  if [[ "${!service_var:-false}" != "true" ]]; then
+  # Use eval for Bash 3.2 compatibility
+  eval "local enabled=\${$service_var:-false}"
+  if [[ "$enabled" != "true" ]]; then
     return 0
   fi
 
@@ -79,7 +161,8 @@ process_template() {
     # Replace ${VAR} with actual values
     while [[ "$line" =~ \$\{([A-Z_][A-Z0-9_]*)\} ]]; do
       local var_name="${BASH_REMATCH[1]}"
-      local var_value="${!var_name:-}"
+      # Use eval for Bash 3.2 compatibility
+      eval "local var_value=\${$var_name:-}"
       line="${line//\$\{${var_name}\}/$var_value}"
     done
     echo "$line"
@@ -391,7 +474,8 @@ generate_microservice() {
 
   local service_upper=$(echo "$service_name" | tr '[:lower:]' '[:upper:]')
   local port_var="${service_upper}_PORT"
-  local port="${!port_var:-3000}"
+  # Use eval for Bash 3.2 compatibility
+  eval "local port=\${$port_var:-3000}"
 
   cat > "$service_file" <<EOF
   ${service_name}:
@@ -412,6 +496,11 @@ EOF
 
 # Export functions
 export -f generate_all_services
+export -f generate_template_services
+export -f generate_all_services
+export -f generate_services
+export -f generate_frontend_service
+export -f generate_backend_service
 export -f generate_template_services
 export -f process_service_template
 export -f process_template

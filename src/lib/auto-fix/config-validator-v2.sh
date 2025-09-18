@@ -251,8 +251,9 @@ validate_password_enhanced() {
 
   # Check for common weak passwords
   local weak_passwords=("password" "123456" "admin" "secret" "changeme" "default" "test" "demo")
+  local password_lower=$(echo "$password" | tr '[:upper:]' '[:lower:]')
   for weak in "${weak_passwords[@]}"; do
-    if [[ "${password,,}" == "$weak" ]]; then
+    if [[ "$password_lower" == "$weak" ]]; then
       VALIDATION_ERRORS+=("$var_name uses a weak/common password")
       AUTO_FIXES+=("replace_weak_password:$var_name")
       return 1

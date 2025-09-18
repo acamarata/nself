@@ -221,6 +221,22 @@ get_certificate_info() {
   openssl x509 -noout -text -in "$cert_file" 2>/dev/null | grep -E "(Subject|DNS|Not After)" || echo "Invalid certificate"
 }
 
+# Helper function for self-signed certs (compatibility alias)
+create_self_signed_cert() {
+  generate_self_signed_certificates "$@"
+}
+
+# Get SSL certificate path
+get_ssl_cert_path() {
+  local base_domain="${BASE_DOMAIN:-localhost}"
+
+  if [[ "$base_domain" == "localhost" ]]; then
+    echo "ssl/certificates/localhost/fullchain.pem"
+  else
+    echo "ssl/certificates/nself-org/fullchain.pem"
+  fi
+}
+
 # Export functions
 export -f generate_ssl_certificates
 export -f generate_mkcert_certificates
@@ -229,3 +245,5 @@ export -f copy_certificates_to_nginx
 export -f trust_certificates
 export -f check_certificate_validity
 export -f get_certificate_info
+export -f create_self_signed_cert
+export -f get_ssl_cert_path

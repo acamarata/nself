@@ -295,6 +295,11 @@ EOF
   chmod +x backup-db.sh
 }
 
+# Create database initialization (compatibility alias)
+create_database_initialization() {
+  generate_database_init "$@"
+}
+
 # Export functions
 export -f generate_database_init
 export -f generate_init_sql
@@ -306,3 +311,4 @@ export -f add_timescale_setup
 export -f add_vector_extensions
 export -f add_financial_extensions
 export -f generate_database_backup_script
+export -f create_database_initialization

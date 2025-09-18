@@ -2,6 +2,14 @@
 
 # Comprehensive Postgres extension validation and information
 
+# Check if associative arrays are supported (Bash 4+)
+if ! declare -A test_array 2>/dev/null; then
+  echo "Warning: This script requires Bash 4+ for full functionality" >&2
+  # Provide fallback or exit gracefully
+  POSTGRES_EXTENSIONS_INFO=""
+  return 0 2>/dev/null || exit 0
+fi
+
 declare -A POSTGRES_EXTENSIONS_INFO=(
   ["uuid-ossp"]="UUID generation functions|Core|true"
   ["pgcrypto"]="Cryptographic functions|Core|true"

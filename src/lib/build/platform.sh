@@ -55,9 +55,34 @@ safe_math() {
 
   # Use expr for compatibility
   if command -v expr >/dev/null 2>&1; then
-    expr $operation 2>/dev/null || echo "0"
+    # Split operation into parts
+    if echo "$operation" | grep -q '\*'; then
+      # Handle multiplication - expr needs \*
+      local left=$(echo "$operation" | cut -d'*' -f1 | tr -d ' ')
+      local right=$(echo "$operation" | cut -d'*' -f2 | tr -d ' ')
+      expr "$left" \* "$right" 2>/dev/null || echo "0"
+    elif echo "$operation" | grep -q '/'; then
+      # Handle division
+      local left=$(echo "$operation" | cut -d'/' -f1 | tr -d ' ')
+      local right=$(echo "$operation" | cut -d'/' -f2 | tr -d ' ')
+      expr "$left" / "$right" 2>/dev/null || echo "0"
+    elif echo "$operation" | grep -q '+'; then
+      # Handle addition
+      local left=$(echo "$operation" | cut -d'+' -f1 | tr -d ' ')
+      local right=$(echo "$operation" | cut -d'+' -f2 | tr -d ' ')
+      expr "$left" + "$right" 2>/dev/null || echo "0"
+    elif echo "$operation" | grep -q '-'; then
+      # Handle subtraction
+      local left=$(echo "$operation" | cut -d'-' -f1 | tr -d ' ')
+      local right=$(echo "$operation" | cut -d'-' -f2 | tr -d ' ')
+      expr "$left" - "$right" 2>/dev/null || echo "0"
+    else
+      # Single number or unsupported operation
+      echo "$operation"
+    fi
   else
-    echo "$((operation))" 2>/dev/null || echo "0"
+    # Try arithmetic expansion
+    eval "echo \$(($operation))" 2>/dev/null || echo "0"
   fi
 }
 

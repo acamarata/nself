@@ -337,6 +337,39 @@ location /api/${service}/ {
 EOF
 }
 
+# Generate nginx upstream configuration
+generate_nginx_upstream() {
+  local service_name="$1"
+  local service_port="$2"
+
+  cat <<EOF
+upstream ${service_name}_upstream {
+    server ${service_name}:${service_port};
+    keepalive 32;
+}
+EOF
+}
+
+# Generate nginx location block
+generate_nginx_location() {
+  local path="$1"
+  local upstream="$2"
+  local extra_config="${3:-}"
+
+  cat <<EOF
+location ${path} {
+    proxy_pass http://${upstream};
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Connection "";
+    ${extra_config}
+}
+EOF
+}
+
 # Export functions
 export -f generate_nginx_config
 export -f generate_main_nginx_conf
@@ -348,3 +381,5 @@ export -f generate_auth_route
 export -f generate_storage_route
 export -f generate_api_routes
 export -f generate_custom_api_route
+export -f generate_nginx_upstream
+export -f generate_nginx_location

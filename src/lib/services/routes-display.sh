@@ -95,8 +95,9 @@ routes::display_all() {
       local display_var="FRONTEND_APP_${i}_DISPLAY_NAME"
       local route_var="FRONTEND_APP_${i}_ROUTE"
       
-      local app_name="${!name_var:-${!display_var:-}}"
-      local route="${!route_var:-}"
+      # Use eval for Bash 3.2 compatibility
+      eval "local app_name=\${$name_var:-\${$display_var:-}}"
+      eval "local route=\${$route_var:-}"
       
       if [[ -n "$app_name" ]]; then
         if [[ -z "$route" ]]; then
@@ -107,7 +108,9 @@ routes::display_all() {
           route="${route}.${base_domain}"
         fi
         
-        echo "  📱 ${app_name^}:           https://$route"
+        # Use sed for Bash 3.2 compatible capitalization
+        local app_name_cap=$(echo "$app_name" | sed 's/^./\u&/')
+        echo "  📱 ${app_name_cap}:           https://$route"
         has_apps=true
       fi
     done
@@ -121,7 +124,9 @@ routes::display_all() {
       
       if [[ -n "$app_name" ]]; then
         local route="${app_short:-$app_name}.${base_domain}"
-        echo "  📱 ${app_name^}:           https://$route"
+        # Use sed for Bash 3.2 compatible capitalization
+        local app_name_cap=$(echo "$app_name" | sed 's/^./\u&/')
+        echo "  📱 ${app_name_cap}:           https://$route"
         has_apps=true
       fi
     done
@@ -137,12 +142,16 @@ routes::display_all() {
   local has_custom=false
   for i in {1..20}; do
     local cs_var="CS_${i}"
-    if [[ -n "${!cs_var:-}" ]]; then
-      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"${!cs_var}"
+    # Use eval for Bash 3.2 compatibility
+    eval "local cs_value=\${$cs_var:-}"
+    if [[ -n "$cs_value" ]]; then
+      IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
       
       if [[ -n "$cs_route" && "$cs_internal" != "true" ]]; then
         local full_route="${cs_route}.${base_domain}"
-        echo "  🔧 ${cs_name^} (${cs_type}): https://$full_route"
+        # Use sed for Bash 3.2 compatible capitalization
+        local cs_name_cap=$(echo "$cs_name" | sed 's/^./\u&/')
+        echo "  🔧 ${cs_name_cap} (${cs_type}): https://$full_route"
         has_custom=true
       fi
     fi
