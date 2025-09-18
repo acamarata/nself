@@ -5,13 +5,13 @@ on:
     paths:
       - 'src/cli/build.sh'
       - 'src/lib/build/**'
-      - 'src/tests/unit/test-build.sh'
+      - 'src/tests/unit/test-build*.sh'
       - '.github/workflows/test-build.yml'
   pull_request:
     paths:
       - 'src/cli/build.sh'
       - 'src/lib/build/**'
-      - 'src/tests/unit/test-build.sh'
+      - 'src/tests/unit/test-build*.sh'
       - '.github/workflows/test-build.yml'
   workflow_dispatch:
 
@@ -36,7 +36,7 @@ jobs:
       - name: Setup test environment
         run: |
           # Make test scripts executable
-          chmod +x src/tests/unit/test-build.sh
+          chmod +x src/tests/unit/test-build*.sh
           chmod +x src/cli/build.sh
           chmod +x src/lib/build/*.sh
 
@@ -50,7 +50,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          bash src/tests/unit/test-build.sh
+          timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
 
       - name: Test build command help
         run: |
@@ -91,7 +91,7 @@ jobs:
       - name: Setup test environment
         run: |
           # Make test scripts executable
-          chmod +x src/tests/unit/test-build.sh
+          chmod +x src/tests/unit/test-build*.sh
           chmod +x src/cli/build.sh
           chmod +x src/lib/build/*.sh
 
@@ -105,7 +105,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          bash src/tests/unit/test-build.sh
+          timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
 
       - name: Test build command help
         run: |

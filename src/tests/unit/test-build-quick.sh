@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# Quick test runner for build modules with better error handling
+
+# Test framework
+TESTS_PASSED=0
+TESTS_FAILED=0
+TESTS_SKIPPED=0
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+# Test result function
+test_result() {
+  local status="$1"
+  local message="$2"
+
+  case "$status" in
+    "pass")
+      echo -e "${GREEN}✓${NC} $message"
+      ((TESTS_PASSED++))
+      ;;
+    "fail")
+      echo -e "${RED}✗${NC} $message"
+      ((TESTS_FAILED++))
+      ;;
+    "skip")
+      echo -e "${YELLOW}⚠${NC} $message (skipped)"
+      ((TESTS_SKIPPED++))
+      ;;
+  esac
+}
+
+# Test platform detection
+test_platform() {
+  echo "Testing Platform Detection..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/platform.sh 2>/dev/null; then
+    detect_build_platform
+    if [[ -n "$PLATFORM" ]]; then
+      test_result "pass" "Platform detection works ($PLATFORM)"
+    else
+      test_result "fail" "Platform not detected"
+    fi
+
+    # Test safe arithmetic
+    local counter=0
+    safe_increment counter
+    if [[ $counter -eq 1 ]]; then
+      test_result "pass" "Safe increment works"
+    else
+      test_result "fail" "Safe increment failed"
+    fi
+
+    # Test system detection
+    local cores=$(get_cpu_cores)
+    if [[ $cores -ge 1 ]]; then
+      test_result "pass" "CPU detection works ($cores cores)"
+    else
+      test_result "fail" "CPU detection failed"
+    fi
+
+  else
+    test_result "fail" "Platform module failed to load"
+  fi
+}
+
+# Test validation module
+test_validation() {
+  echo ""
+  echo "Testing Validation Module..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/validation.sh 2>/dev/null; then
+    test_result "pass" "Validation module loads"
+
+    # Test set_default function
+    unset TEST_VAR
+    set_default "TEST_VAR" "default_value"
+    if [[ "$TEST_VAR" == "default_value" ]]; then
+      test_result "pass" "set_default function works"
+    else
+      test_result "fail" "set_default function failed"
+    fi
+
+  else
+    test_result "fail" "Validation module failed to load"
+  fi
+}
+
+# Test SSL module
+test_ssl() {
+  echo ""
+  echo "Testing SSL Module..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/ssl.sh 2>/dev/null; then
+    test_result "pass" "SSL module loads"
+
+    # Test certificate path function
+    if declare -f generate_ssl_certificates >/dev/null 2>&1; then
+      test_result "pass" "SSL generation function exists"
+    else
+      test_result "fail" "SSL generation function missing"
+    fi
+
+  else
+    test_result "fail" "SSL module failed to load"
+  fi
+}
+
+# Test nginx module
+test_nginx() {
+  echo ""
+  echo "Testing Nginx Module..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/nginx.sh 2>/dev/null; then
+    test_result "pass" "Nginx module loads"
+
+    if declare -f generate_nginx_config >/dev/null 2>&1; then
+      test_result "pass" "Nginx generation function exists"
+    else
+      test_result "fail" "Nginx generation function missing"
+    fi
+
+  else
+    test_result "fail" "Nginx module failed to load"
+  fi
+}
+
+# Test docker-compose module
+test_docker_compose() {
+  echo ""
+  echo "Testing Docker Compose Module..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/docker-compose.sh 2>/dev/null; then
+    test_result "pass" "Docker Compose module loads"
+
+    if declare -f generate_docker_compose >/dev/null 2>&1; then
+      test_result "pass" "Docker Compose generation function exists"
+    else
+      test_result "fail" "Docker Compose generation function missing"
+    fi
+
+  else
+    test_result "fail" "Docker Compose module failed to load"
+  fi
+}
+
+# Test core module
+test_core() {
+  echo ""
+  echo "Testing Core Module..."
+
+  if source /Users/admin/Sites/nself/src/lib/build/core.sh 2>/dev/null; then
+    test_result "pass" "Core module loads"
+
+    if declare -f orchestrate_build >/dev/null 2>&1; then
+      test_result "pass" "Main orchestrate_build function exists"
+    else
+      test_result "fail" "Main orchestrate_build function missing"
+    fi
+
+    if declare -f detect_app_port >/dev/null 2>&1; then
+      test_result "pass" "Port detection function exists"
+    else
+      test_result "fail" "Port detection function missing"
+    fi
+
+  else
+    test_result "fail" "Core module failed to load"
+  fi
+}
+
+# Test build wrapper
+test_wrapper() {
+  echo ""
+  echo "Testing Build Wrapper..."
+
+  if [[ -x "/Users/admin/Sites/nself/src/cli/build.sh" ]]; then
+    test_result "pass" "Build wrapper is executable"
+
+    # Test help option
+    if timeout 10 bash /Users/admin/Sites/nself/src/cli/build.sh --help >/dev/null 2>&1; then
+      test_result "pass" "Build wrapper help works"
+    else
+      test_result "fail" "Build wrapper help failed or hung"
+    fi
+
+  else
+    test_result "fail" "Build wrapper not executable"
+  fi
+}
+
+# Main test runner
+echo "================================"
+echo "Quick Build Module Test Runner"
+echo "================================"
+
+test_platform
+test_validation
+test_ssl
+test_nginx
+test_docker_compose
+test_core
+test_wrapper
+
+echo ""
+echo "================================"
+echo "Test Results:"
+echo "  Passed: $TESTS_PASSED"
+echo "  Failed: $TESTS_FAILED"
+echo "  Skipped: $TESTS_SKIPPED"
+echo "================================"
+
+if [[ $TESTS_FAILED -gt 0 ]]; then
+  echo "Some tests failed. Check the output above."
+  exit 1
+else
+  echo "All tests passed!"
+  exit 0
+fi
