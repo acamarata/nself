@@ -54,12 +54,12 @@ setup_demo() {
 
   echo "This will create a complete demo configuration for:"
   echo ""
-  echo "  ✅ All core services (PostgreSQL, Hasura, Auth, Nginx)"
-  echo "  ✅ All optional services enabled"
-  echo "  ✅ 2 Custom backend services"
-  echo "  ✅ 2 Frontend applications"
-  echo "  ✅ Remote schemas configured for GraphQL federation"
-  echo "  ✅ Demo data and seed content for database"
+  echo "  ✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
+  echo "  ✓ All optional services enabled"
+  echo "  ✓ 2 Custom backend services"
+  echo "  ✓ 2 Frontend applications"
+  echo "  ✓ Remote schemas configured for GraphQL federation"
+  echo "  ✓ Demo data and seed content for database"
   echo ""
 
   # Check templates exist

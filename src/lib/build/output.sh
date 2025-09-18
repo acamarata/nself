@@ -109,27 +109,51 @@ show_next_steps() {
   echo "${COLOR_BOLD}Next Steps:${COLOR_RESET}"
 
   local has_errors=false
+  # Initialize BUILD_ERRORS if not set
+  if [[ -z "${BUILD_ERRORS+x}" ]]; then
+    BUILD_ERRORS=()
+  fi
   if [[ ${#BUILD_ERRORS[@]} -gt 0 ]]; then
     has_errors=true
     echo "  1. Fix the errors listed above"
     echo "  2. Run 'nself build' again"
   else
-    echo "  1. Review the generated configuration"
-    echo "  2. Run 'nself start' to launch services"
-    echo "  3. Access your application at:"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+    local needs_trust=false
+
+    # Check if we need to run trust command
+    if [[ "$base_domain" == "localhost" ]] || [[ "$base_domain" == *".localhost" ]]; then
+      # Check if mkcert CA is trusted
+      if command -v mkcert >/dev/null 2>&1; then
+        if ! mkcert -install -check 2>/dev/null; then
+          needs_trust=true
+        fi
+      fi
+    fi
+
+    if [[ "$needs_trust" == "true" ]]; then
+      echo "  1. Run 'nself trust' to install SSL certificates"
+      echo "     Trust the root CA for green locks in browsers"
+      echo "  2. Run 'nself start' to launch services"
+      echo "  3. Access your application at:"
+    else
+      echo "  1. Review the generated configuration"
+      echo "  2. Run 'nself start' to launch services"
+      echo "  3. Access your application at:"
+    fi
 
     if [[ "${SSL_ENABLED:-true}" == "true" ]]; then
-      echo "     • https://${BASE_DOMAIN:-localhost}"
+      echo "     • https://${base_domain}"
     else
-      echo "     • http://${BASE_DOMAIN:-localhost}"
+      echo "     • http://${base_domain}"
     fi
 
     if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
-      echo "     • GraphQL: http://${BASE_DOMAIN:-localhost}:${HASURA_PORT:-8080}/console"
+      echo "     • GraphQL: https://${HASURA_ROUTE:-api.${base_domain}}/console"
     fi
 
     if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
-      echo "     • Admin: http://${BASE_DOMAIN:-localhost}:${NSELF_ADMIN_PORT:-3021}"
+      echo "     • Admin: https://${NSELF_ADMIN_ROUTE:-admin.${base_domain}}"
     fi
   fi
 

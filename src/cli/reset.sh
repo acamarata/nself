@@ -163,6 +163,7 @@ cmd_reset() {
     # Docker files
     "docker-compose.yml"
     "docker-compose.yml.backup"
+    "docker-compose.yml.healthcheck-backup"
     "docker-compose.override.yml"
     ".dockerignore"
 
@@ -181,6 +182,8 @@ cmd_reset() {
     "postgres"
     "hasura"
     "functions"
+    "functions-runtime"
+    "monitoring"
     "services"
     "nestjs-run"
     "backend"
@@ -188,6 +191,7 @@ cmd_reset() {
     "auth"
     "minio"
     "dashboard"
+    "ssl"
 
     # Certificates and binaries
     "certs"
@@ -240,7 +244,7 @@ cmd_reset() {
   done
 
   # Remove files matching patterns
-  for pattern in *.log *.pid *.lock .DS_Store; do
+  for pattern in *.log *.pid *.lock .DS_Store docker-compose.*.yml docker-compose.yml.*; do
     for file in $pattern; do
       if [[ -f "$file" ]]; then
         rm -f "$file"

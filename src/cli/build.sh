@@ -102,11 +102,27 @@ cmd_build() {
   done
 
   # Run the orchestrated build
+  local build_result
   if [[ "$force_rebuild" == "true" ]]; then
     orchestrate_build --force
+    build_result=$?
   else
     orchestrate_build
+    build_result=$?
   fi
+
+  # Show build summary and next steps
+  if declare -f show_build_summary >/dev/null 2>&1; then
+    show_build_summary
+  else
+    # Fallback to just showing next steps
+    if declare -f show_next_steps >/dev/null 2>&1; then
+      echo ""
+      show_next_steps
+    fi
+  fi
+
+  return $build_result
 }
 
 # Export the main command
