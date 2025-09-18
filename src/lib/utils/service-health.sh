@@ -21,7 +21,7 @@ check_all_services_healthy() {
   local expected_count=$(echo "$expected_services" | wc -l | tr -d ' ')
 
   # Get list of running services (remove project prefix)
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
   local running_services=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^${project_name}_" | sed "s/^${project_name}_//" | sort)
 
   # Count running services
@@ -83,7 +83,7 @@ check_all_services_healthy() {
 
 # Display running services in a concise format
 display_running_services() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # Get list of expected services from docker-compose.yml
   local expected_services=$(docker compose config --services 2>/dev/null | sort)
@@ -172,7 +172,7 @@ check_config_changed() {
   fi
 
   # Get the oldest running container's start time
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
   local oldest_container_start=$(docker ps --format "{{.Names}} {{.CreatedAt}}" 2>/dev/null | grep "^${project_name}_" | while read name created; do
     docker inspect --format='{{.State.StartedAt}}' "$name" 2>/dev/null
   done | sort | head -1)

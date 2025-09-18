@@ -853,7 +853,7 @@ EOF
           cat >"nginx/conf.d/routes/nest-${service}.conf" <<EOF
 # Route for NestJS $service service
 location /api/nest/$service/ {
-    proxy_pass http://unity-nest-${service}:${NESTJS_PORT_START:-3100}/;
+    proxy_pass http://${PROJECT_NAME:-nself}-nest-${service}:${NESTJS_PORT_START:-3100}/;
     proxy_http_version 1.1;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -870,7 +870,7 @@ EOF
           cat >"nginx/conf.d/routes/go-${service}.conf" <<EOF
 # Route for Go $service service
 location /api/go/$service/ {
-    proxy_pass http://unity-go-${service}:${GOLANG_PORT_START:-3300}/;
+    proxy_pass http://${PROJECT_NAME:-nself}-go-${service}:${GOLANG_PORT_START:-3300}/;
     proxy_http_version 1.1;
 }
 EOF
@@ -885,7 +885,7 @@ EOF
           cat >"nginx/conf.d/routes/py-${service}.conf" <<EOF
 # Route for Python $service service
 location /api/python/$service/ {
-    proxy_pass http://unity-py-${service}:${PYTHON_PORT_START:-3400}/;
+    proxy_pass http://${PROJECT_NAME:-nself}-py-${service}:${PYTHON_PORT_START:-3400}/;
     proxy_http_version 1.1;
 }
 EOF

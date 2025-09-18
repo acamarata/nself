@@ -62,7 +62,7 @@ cmd_start() {
       echo -e "${COLOR_RED}Services still failing after $max_retries attempts:${COLOR_RESET}"
 
       # Show which services are still problematic
-      local problem_services=$(docker ps --format "{{.Names}} {{.Status}}" | grep -E "Restarting|unhealthy" | awk '{print $1}' | sed "s/${PROJECT_NAME:-unity}_//" | head -10)
+      local problem_services=$(docker ps --format "{{.Names}} {{.Status}}" | grep -E "Restarting|unhealthy" | awk '{print $1}' | sed "s/${PROJECT_NAME:-nself}_//" | head -10)
       for svc in $problem_services; do
         echo -e "  ${COLOR_RED}✗${COLOR_RESET} $svc"
       done
@@ -72,7 +72,7 @@ cmd_start() {
       echo
       log_info "Common fixes:"
       echo -e "  • Run ${COLOR_BLUE}nself stop && nself start${COLOR_RESET} for a fresh start"
-      echo -e "  • Check ${COLOR_BLUE}docker logs unity_<service>${COLOR_RESET} for details"
+      echo -e "  • Check ${COLOR_BLUE}docker logs ${PROJECT_NAME:-nself}_<service>${COLOR_RESET} for details"
       echo -e "  • Ensure all required files exist in service directories"
     else
       log_error "Too many retries. Please check your configuration."
@@ -558,7 +558,7 @@ cmd_start() {
     sleep 3 # Give services a moment to fully start
 
     # Get detailed status of all services
-    local project_name="${PROJECT_NAME:-unity}"
+    local project_name="${PROJECT_NAME:-nself}"
     local all_healthy=true
     local unhealthy_services=""
     local restarting_services=""
@@ -1279,7 +1279,7 @@ show_service_urls() {
   # Get base domain or use default
   local base_domain="${BASE_DOMAIN:-localhost}"
 
-  # Check which services are actually running (remove unity_ prefix)
+  # Check which services are actually running (remove project prefix)
   local running_services=$(docker ps --format "table {{.Names}}" | grep "^${PROJECT_NAME:-nself}_" | sed "s/^${PROJECT_NAME:-nself}_//" 2>/dev/null)
 
   # Track if any URLs were shown

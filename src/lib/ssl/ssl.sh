@@ -452,13 +452,13 @@ client_max_body_size 1000m;
 EOF
     ;;
   functions)
-    cat >"$routes_dir/functions.conf" <<'EOF'
-proxy_pass http://unity-functions:4300;
+    cat >"$routes_dir/functions.conf" <<EOF
+proxy_pass http://\${PROJECT_NAME:-nself}-functions:4300;
 EOF
     ;;
   dashboard)
-    cat >"$routes_dir/dashboard.conf" <<'EOF'
-proxy_pass http://unity-dashboard:80;
+    cat >"$routes_dir/dashboard.conf" <<EOF
+proxy_pass http://\${PROJECT_NAME:-nself}-dashboard:80;
 EOF
     ;;
   esac

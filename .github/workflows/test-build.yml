@@ -110,12 +110,26 @@ jobs:
       - name: Run quick unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+          # macOS doesn't have timeout command, use gtimeout if available or skip timeout
+          if command -v timeout >/dev/null 2>&1; then
+            timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+          elif command -v gtimeout >/dev/null 2>&1; then
+            gtimeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+          else
+            bash src/tests/unit/test-build-quick.sh
+          fi
 
       - name: Run comprehensive unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          timeout 120 bash src/tests/unit/test-build-comprehensive.sh
+          # macOS doesn't have timeout command, use gtimeout if available or skip timeout
+          if command -v timeout >/dev/null 2>&1; then
+            timeout 120 bash src/tests/unit/test-build-comprehensive.sh
+          elif command -v gtimeout >/dev/null 2>&1; then
+            gtimeout 120 bash src/tests/unit/test-build-comprehensive.sh
+          else
+            bash src/tests/unit/test-build-comprehensive.sh
+          fi
 
       - name: Test build command help
         run: |
@@ -198,8 +212,8 @@ jobs:
 
           # Create env with invalid values
           cat > .env <<EOF
-          PROJECT_NAME=test project with spaces
-          BASE_DOMAIN=invalid domain.com
+          PROJECT_NAME="test project with spaces"
+          BASE_DOMAIN="invalid domain.com"
           POSTGRES_ENABLED=maybe
           EOF
 

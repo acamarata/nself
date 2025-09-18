@@ -70,7 +70,7 @@ get_container_health() {
 
 # Check all services in a project
 check_project_health() {
-  local project_name="${1:-unity}"
+  local project_name="${1:-nself}"
   local verbose="${2:-false}"
 
   local all_healthy=true

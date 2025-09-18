@@ -15,15 +15,15 @@ if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
   FUNCTIONS_PORT="${FUNCTIONS_PORT:-4300}"
   cat >>docker-compose.yml <<EOF
 
-  unity-functions:
-    image: unity/functions:latest
+  ${PROJECT_NAME:-nself}-functions:
+    image: ${PROJECT_NAME:-nself}/functions:latest
     build:
       context: ./functions
       dockerfile: Dockerfile
       tags:
-        - unity/functions:latest
-        - unity/functions:dev
-    container_name: unity_functions
+        - ${PROJECT_NAME:-nself}/functions:latest
+        - ${PROJECT_NAME:-nself}/functions:dev
+    container_name: ${PROJECT_NAME:-nself}_functions
     restart: unless-stopped
     environment:
       - NODE_ENV=${ENVIRONMENT:-development}
@@ -58,15 +58,15 @@ if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]]; then
   DASHBOARD_PORT="${DASHBOARD_PORT:-4500}"
   cat >>docker-compose.yml <<EOF
 
-  unity-dashboard:
-    image: unity/dashboard:latest
+  ${PROJECT_NAME:-nself}-dashboard:
+    image: ${PROJECT_NAME:-nself}/dashboard:latest
     build:
       context: ./dashboard
       dockerfile: Dockerfile
       tags:
-        - unity/dashboard:latest
-        - unity/dashboard:dev
-    container_name: unity_dashboard
+        - ${PROJECT_NAME:-nself}/dashboard:latest
+        - ${PROJECT_NAME:-nself}/dashboard:dev
+    container_name: ${PROJECT_NAME:-nself}_dashboard
     restart: unless-stopped
     environment:
       - NODE_ENV=${ENVIRONMENT:-development}

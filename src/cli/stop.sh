@@ -81,7 +81,7 @@ cmd_stop() {
   fi
 
   # Get project name
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # If specific services requested, stop only those
   if [[ -n "$services_to_stop" ]]; then
