@@ -413,7 +413,17 @@ test_build_wrapper() {
   fi
 
   # Test help option
-  if timeout 5 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1; then
+  local help_test_result=false
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 5 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 5 bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+  else
+    # No timeout available, just run the test
+    bash "$NSELF_ROOT/src/cli/build.sh" --help >/dev/null 2>&1 && help_test_result=true
+  fi
+
+  if [[ "$help_test_result" == "true" ]]; then
     test_result "pass" "Build wrapper help works"
   else
     test_result "fail" "Build wrapper help failed"
@@ -490,7 +500,17 @@ EOF
   test_result "pass" "Created test environment"
 
   # Test that build can run without errors
-  if timeout 30 bash "$NSELF_ROOT/src/cli/build.sh" --force >/dev/null 2>&1; then
+  local build_test_result=false
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 30 bash "$NSELF_ROOT/src/cli/build.sh" --force >/dev/null 2>&1 && build_test_result=true
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 30 bash "$NSELF_ROOT/src/cli/build.sh" --force >/dev/null 2>&1 && build_test_result=true
+  else
+    # No timeout available, just run the test
+    bash "$NSELF_ROOT/src/cli/build.sh" --force >/dev/null 2>&1 && build_test_result=true
+  fi
+
+  if [[ "$build_test_result" == "true" ]]; then
     test_result "pass" "Build completes successfully"
   else
     test_result "fail" "Build failed to complete"
