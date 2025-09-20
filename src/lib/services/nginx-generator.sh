@@ -72,6 +72,9 @@ nginx::generate_service_config() {
   
   # Skip if essential info is missing
   [[ -z "$route" || -z "$container_name" || -z "$internal_port" ]] && return 1
+
+  # Set default upstream_name if not provided
+  [[ -z "$upstream_name" ]] && upstream_name="${container_name//-/_}"
   
   # Determine SSL certificate path based on domain
   local ssl_path

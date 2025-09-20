@@ -2,7 +2,9 @@
 # service-builder.sh - Build custom services from CS_N pattern
 
 # Source utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Use BASH_SOURCE[0] to get the actual file location, not where it's sourced from
+SERVICE_BUILDER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$SERVICE_BUILDER_DIR"
 
 # Only source if not already loaded (avoid re-sourcing in nested calls)
 if [[ -z "${DISPLAY_SOURCED:-}" ]]; then
@@ -178,7 +180,7 @@ generate_service_compose() {
     container_name: \${PROJECT_NAME}_${name}
     restart: unless-stopped
     networks:
-      - nself
+      - default
 EOF
   
   # Only expose ports if service is public or explicitly configured
@@ -340,7 +342,13 @@ EOF
 # Create service from template
 create_service_from_template() {
   local service_info="$1"
-  IFS='|' read -r name framework domain port <<< "$service_info"
+
+  # Debug output
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    echo "DEBUG: create_service_from_template called with: $service_info" >&2
+  fi
+
+  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
   
   # Map framework aliases to actual template directories
   case "$framework" in
@@ -412,7 +420,7 @@ create_service_from_template() {
     *)
       # Try to find in any language directory
       for dir in js py go ruby rust java csharp php elixir kotlin swift cpp lua zig; do
-        if [[ -d "$SCRIPT_DIR/../../templates/services/$dir/$framework" ]]; then
+        if [[ -d "$SERVICE_BUILDER_DIR/../../templates/services/$dir/$framework" ]]; then
           lang_dir="$dir"
           break
         fi
@@ -422,9 +430,18 @@ create_service_from_template() {
   
   # Set template directory
   if [[ -n "$lang_dir" ]]; then
-    template_dir="$SCRIPT_DIR/../../templates/services/${lang_dir}/${framework}"
+    template_dir="$SERVICE_BUILDER_DIR/../../templates/services/${lang_dir}/${framework}"
   fi
-  
+
+  # Debug output
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    echo "DEBUG: SERVICE_BUILDER_DIR=$SERVICE_BUILDER_DIR" >&2
+    echo "DEBUG: lang_dir=$lang_dir, framework=$framework" >&2
+    echo "DEBUG: template_dir=$template_dir" >&2
+    echo "DEBUG: Checking if template exists: $template_dir" >&2
+    ls -la "$template_dir" 2>&1 >&2 || echo "DEBUG: Template dir does not exist" >&2
+  fi
+
   # Check if template exists
   if [[ ! -d "$template_dir" ]]; then
     log_warning "No template found for framework: ${framework}"
@@ -437,41 +454,87 @@ create_service_from_template() {
   if [[ ! -d "$service_dir" ]]; then
     mkdir -p "$service_dir"
     log_info "Creating ${framework} service: ${name}"
-    
+
+    # Debug output
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      echo "DEBUG: Copying from $template_dir to $service_dir" >&2
+      echo "DEBUG: Template contents:" >&2
+      ls -la "$template_dir" >&2
+    fi
+
     # Copy template files
-    cp -r "$template_dir"/* "$service_dir/" 2>/dev/null || true
+    cp -r "$template_dir"/* "$service_dir/" 2>&1 | while read line; do
+      [[ "${DEBUG:-false}" == "true" ]] && echo "DEBUG: cp output: $line" >&2
+    done
     cp "$template_dir"/.* "$service_dir/" 2>/dev/null || true
-    
+
+    # Debug: Check what was copied
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      echo "DEBUG: After copy, service_dir contents:" >&2
+      ls -la "$service_dir" >&2
+    fi
+
     # Process .template files
     for template_file in "$service_dir"/*.template "$service_dir"/**/*.template; do
       if [[ -f "$template_file" ]]; then
+        # Debug output
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          echo "DEBUG: Processing template: $template_file" >&2
+        fi
+
         # Remove .template extension
         output_file="${template_file%.template}"
-        
+
+        # Debug: Check variables
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          echo "DEBUG: name=$name, PROJECT_NAME=$PROJECT_NAME, port=$port, BASE_DOMAIN=$BASE_DOMAIN" >&2
+        fi
+
         # Replace placeholders and save to final file
+        # Support both ${VAR} and {{VAR}} syntax
         sed \
           -e "s/\${SERVICE_NAME}/${name}/g" \
+          -e "s/{{SERVICE_NAME}}/${name}/g" \
           -e "s/\${PROJECT_NAME}/${PROJECT_NAME}/g" \
+          -e "s/{{PROJECT_NAME}}/${PROJECT_NAME}/g" \
           -e "s/\${PORT}/${port}/g" \
+          -e "s/{{PORT}}/${port}/g" \
           -e "s/\${BASE_DOMAIN}/${BASE_DOMAIN}/g" \
+          -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN}/g" \
           "$template_file" > "$output_file"
-        
+
+        # Debug: Check output file
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          echo "DEBUG: Created $output_file with size: $(wc -c < "$output_file") bytes" >&2
+        fi
+
         # Remove template file
         rm "$template_file"
       fi
     done
     
     # Replace placeholders in non-template files
+    # Support both ${VAR} and {{VAR}} syntax
     find "$service_dir" -type f ! -name "*.template" -exec sed -i.bak \
       -e "s/\${SERVICE_NAME}/${name}/g" \
+      -e "s/{{SERVICE_NAME}}/${name}/g" \
       -e "s/\${PROJECT_NAME}/${PROJECT_NAME}/g" \
+      -e "s/{{PROJECT_NAME}}/${PROJECT_NAME}/g" \
       -e "s/\${PORT}/${port}/g" \
+      -e "s/{{PORT}}/${port}/g" \
       -e "s/\${BASE_DOMAIN}/${BASE_DOMAIN}/g" \
+      -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN}/g" \
       {} \; 2>/dev/null || true
     
     # Remove backup files
     find "$service_dir" -name "*.bak" -delete 2>/dev/null || true
-    
+
+    # Validate that template variables were replaced
+    if grep -r "{{SERVICE_NAME}}\|{{PROJECT_NAME}}\|{{PORT}}\|{{BASE_DOMAIN}}" "$service_dir" --exclude="*.bak" >/dev/null 2>&1; then
+      log_warning "Unreplaced template variables found in ${name} service:"
+      grep -r "{{SERVICE_NAME}}\|{{PROJECT_NAME}}\|{{PORT}}\|{{BASE_DOMAIN}}" "$service_dir" --exclude="*.bak" | head -5 >&2
+    fi
+
     log_success "Created ${framework} service template for ${name}"
   else
     log_info "Service directory already exists: ${service_dir}"
@@ -480,6 +543,11 @@ create_service_from_template() {
 
 # Build all custom services
 build_custom_services() {
+  # Debug output
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    echo "DEBUG: build_custom_services called" >&2
+  fi
+
   # Parse CS_N services
   parse_cs_services
   
@@ -494,8 +562,6 @@ build_custom_services() {
     echo "# Custom Services Configuration"
     echo "# Auto-generated by nself from CS_N variables"
     echo ""
-    echo "version: '3.8'"
-    echo ""
     echo "services:"
     
     for service_info in "${PARSED_SERVICES[@]}"; do
@@ -504,8 +570,9 @@ build_custom_services() {
     
     echo ""
     echo "networks:"
-    echo "  nself:"
+    echo "  default:"
     echo "    external: true"
+    echo "    name: \${PROJECT_NAME}_network"
   } > docker-compose.custom.yml
   
   # Generate nginx configurations
@@ -533,8 +600,13 @@ build_custom_services() {
   echo "Custom Services Summary:"
   echo "========================"
   for service_info in "${PARSED_SERVICES[@]}"; do
-    IFS='|' read -r name framework domain port <<< "$service_info"
-    echo "  • ${name} (${framework}) → https://${domain}:${port}"
+    IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
+    if [[ -n "$domain" ]]; then
+      echo "  • ${name} (${framework}) → https://${domain}"
+    else
+      # Worker services without public routes
+      echo "  • ${name} (${framework}) → Internal service on port ${port}"
+    fi
   done
   echo ""
   

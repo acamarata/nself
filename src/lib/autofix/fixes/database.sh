@@ -31,7 +31,7 @@ fix_database_not_found() {
   local db_name="${DATABASE_NAME:-postgres}"
 
   # Create the database
-  docker exec unity_postgres createdb -U postgres "$db_name" 2>/dev/null
+  docker exec ${PROJECT_NAME:-nself}_postgres createdb -U postgres "$db_name" 2>/dev/null
 
   if [[ $? -eq 0 ]]; then
     LAST_FIX_DESCRIPTION="Created database '$db_name'"
@@ -41,7 +41,7 @@ fix_database_not_found() {
   # If that fails, recreate postgres with fresh data
   docker compose stop postgres >/dev/null 2>&1
   docker compose rm -f postgres >/dev/null 2>&1
-  docker volume rm unity_postgres_data 2>/dev/null
+  docker volume rm ${PROJECT_NAME:-nself}_postgres_data 2>/dev/null
   docker compose up -d postgres >/dev/null 2>&1
   sleep 5
 

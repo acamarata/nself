@@ -32,9 +32,12 @@ dist/
 *.pid
 .claude/
 
-# Environment files should not be in CLI
+# Environment files should not be in CLI (except templates)
 .env
 .env.*
 *.env
 .env.backup.*
+# But DO include env templates
+!src/templates/envs/.env*
+!src/templates/demo/.env*
 # Git config fixed

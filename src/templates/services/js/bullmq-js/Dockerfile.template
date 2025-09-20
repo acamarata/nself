@@ -2,8 +2,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling and curl for health checks
+RUN apk add --no-cache dumb-init curl
 
 # Copy package files
 COPY package*.json ./
@@ -23,10 +23,12 @@ RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 3000
+# Use PORT from environment or template
+EXPOSE {{PORT}}
 
-
+# Health check using the correct port
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server.js"]
+CMD ["node", "worker.js"]

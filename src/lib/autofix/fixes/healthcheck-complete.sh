@@ -240,7 +240,7 @@ update_dockerfile_with_healthtools() {
 
 # Fix auth service (nhost/hasura-auth)
 fix_auth_healthcheck() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   log_info "Fixing auth service healthcheck..."
 
@@ -266,7 +266,7 @@ fix_auth_healthcheck() {
 
 # Fix dashboard healthcheck (nhost/dashboard)
 fix_dashboard_healthcheck() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   log_info "Fixing dashboard healthcheck..."
 
@@ -287,7 +287,7 @@ fix_dashboard_healthcheck() {
 
 # Fix functions service healthcheck
 fix_functions_healthcheck() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
   local functions_dir="functions"
 
   log_info "Fixing functions service healthcheck..."
@@ -312,7 +312,7 @@ fix_functions_healthcheck() {
 
 # Main function to fix all healthchecks
 fix_all_healthchecks() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   log_info "Fixing all service healthchecks..."
 
@@ -329,11 +329,11 @@ fix_all_healthchecks() {
   for worker_dir in services/bullmq/*; do
     if [[ -d "$worker_dir" ]]; then
       local worker_name=$(basename "$worker_dir")
-      add_nodejs_health_endpoint "unity-bull-$worker_name" "$worker_dir" 3200
+      add_nodejs_health_endpoint "${PROJECT_NAME:-nself}-bull-$worker_name" "$worker_dir" 3200
       update_dockerfile_with_healthtools "$worker_dir"
 
       # Update docker-compose.yml for this worker
-      sed -i "/^  unity-bull-$worker_name:/,/^  [a-z_-]*:/{
+      sed -i "/^  ${PROJECT_NAME:-nself}-bull-$worker_name:/,/^  [a-z_-]*:/{
                 /healthcheck:/,/test:/ {
                     s|test:.*|test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:3200/health\"]|
                 }
@@ -342,7 +342,7 @@ fix_all_healthchecks() {
   done
 
   # Fix NestJS services
-  for nest_dir in services/nestjs/* services/node/unity-nest-*; do
+  for nest_dir in services/nestjs/* services/node/${PROJECT_NAME:-nself}-nest-*; do
     if [[ -d "$nest_dir" ]]; then
       local service_name=$(basename "$nest_dir")
       add_nodejs_health_endpoint "$service_name" "$nest_dir"

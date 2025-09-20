@@ -192,37 +192,11 @@ routes::display_compact() {
   done < <(routes::collect_all)
 
   if [[ ${#routes[@]} -gt 0 ]]; then
+    echo
     echo "Available Routes:"
     printf '  %s\n' "${routes[@]}" | head -10
     [[ ${#routes[@]} -gt 10 ]] && echo "  ... and $((${#routes[@]} - 10)) more"
   fi
-
-  # Show Next Steps directly here
-  echo ""
-  echo "Next Steps:"
-
-  local needs_trust=false
-  # Check if we need to run trust command
-  if [[ "$base_domain" == "localhost" ]] || [[ "$base_domain" == *".localhost" ]]; then
-    # Check if mkcert CA is trusted
-    if command -v mkcert >/dev/null 2>&1; then
-      if ! mkcert -install -check 2>/dev/null; then
-        needs_trust=true
-      fi
-    fi
-  fi
-
-  if [[ "$needs_trust" == "true" ]]; then
-    echo "  1. Run 'nself trust' to install SSL certificates"
-    echo "     Trust the root CA for green locks in browsers"
-    echo "  2. Run 'nself start' to launch services"
-  else
-    echo "  1. Run 'nself start' to launch services"
-    echo "  2. Access your application at the routes above"
-  fi
-
-  echo ""
-  echo "For help, run: nself help"
 }
 
 # Check route accessibility

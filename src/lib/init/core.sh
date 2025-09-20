@@ -47,6 +47,106 @@ source "$INIT_MODULE_DIR/demo.sh" 2>/dev/null || true
 # State tracking
 INIT_STATE="$INIT_STATE_IDLE"
 
+# Validate created environment file has required variables
+# Inputs: $1 - env file path (defaults to .env)
+# Outputs: Error messages if validation fails
+# Returns: 0 on success, 1 on failure
+validate_env_config() {
+  local env_file="${1:-.env}"
+  local missing_critical=()
+  local validation_passed=true
+
+  # Only validate if file exists
+  [[ -f "$env_file" ]] || return 0
+
+  # Check Tier 1 critical variables (absolutely required)
+  local critical_vars=(
+    "PROJECT_NAME"
+    "BASE_DOMAIN"
+    "ENV"
+  )
+
+  for var in "${critical_vars[@]}"; do
+    if ! grep -q "^${var}=" "$env_file" 2>/dev/null; then
+      missing_critical+=("$var")
+      validation_passed=false
+    fi
+  done
+
+  # Report validation results
+  if [[ "$validation_passed" == false ]]; then
+    if [[ "${QUIET_MODE:-false}" != "true" ]]; then
+      log_warning "Configuration needs these variables set in $env_file:"
+      for var in "${missing_critical[@]}"; do
+        echo "  - $var"
+      done
+      echo ""
+      echo "Edit $env_file and uncomment/set these values before running 'nself build'"
+    fi
+    return 1
+  fi
+
+  return 0
+}
+
+# Ensure env file has working defaults
+# Inputs: $1 - env file path
+# Outputs: Updates file with critical defaults if missing
+# Returns: 0 on success
+ensure_working_defaults() {
+  local env_file="${1:-.env}"
+
+  # Only process if file exists
+  [[ -f "$env_file" ]] || return 0
+
+  # Check and add critical defaults if completely missing
+  local needs_update=false
+
+  # Check if PROJECT_NAME is set
+  if ! grep -q "^PROJECT_NAME=" "$env_file" 2>/dev/null; then
+    if grep -q "^# PROJECT_NAME=" "$env_file" 2>/dev/null; then
+      # Uncomment existing commented line
+      sed -i.bak 's/^# PROJECT_NAME=.*/PROJECT_NAME=myproject/' "$env_file"
+      needs_update=true
+    else
+      # Add new line
+      echo "PROJECT_NAME=myproject" >> "$env_file"
+      needs_update=true
+    fi
+  fi
+
+  # Check if BASE_DOMAIN is set
+  if ! grep -q "^BASE_DOMAIN=" "$env_file" 2>/dev/null; then
+    if grep -q "^# BASE_DOMAIN=" "$env_file" 2>/dev/null; then
+      sed -i.bak 's/^# BASE_DOMAIN=.*/BASE_DOMAIN=local.nself.org/' "$env_file"
+      needs_update=true
+    else
+      echo "BASE_DOMAIN=local.nself.org" >> "$env_file"
+      needs_update=true
+    fi
+  fi
+
+  # Check if ENV is set
+  if ! grep -q "^ENV=" "$env_file" 2>/dev/null; then
+    if grep -q "^# ENV=" "$env_file" 2>/dev/null; then
+      sed -i.bak 's/^# ENV=.*/ENV=dev/' "$env_file"
+      needs_update=true
+    else
+      echo "ENV=dev" >> "$env_file"
+      needs_update=true
+    fi
+  fi
+
+  # Clean up backup files
+  rm -f "${env_file}.bak" 2>/dev/null || true
+
+  if [[ "$needs_update" == true ]] && [[ "${QUIET_MODE:-false}" != "true" ]]; then
+    log_info "Added critical defaults to $env_file"
+  fi
+
+  return 0
+}
+
 # Initialize project with basic setup
 # Inputs: $1 - script directory
 # Outputs: Creates basic project files
@@ -63,6 +163,12 @@ init_basic() {
 
   # Ensure gitignore is properly configured
   ensure_gitignore || return $?
+
+  # Ensure working defaults are present
+  ensure_working_defaults ".env"
+
+  # Validate configuration
+  validate_env_config ".env"
 
   return $INIT_E_SUCCESS
 }
@@ -83,6 +189,13 @@ init_full() {
 
   # Ensure gitignore is properly configured
   ensure_gitignore || return $?
+
+  # Ensure working defaults are present
+  ensure_working_defaults ".env"
+  ensure_working_defaults ".env.dev"
+
+  # Validate configuration
+  validate_env_config ".env"
 
   return $INIT_E_SUCCESS
 }

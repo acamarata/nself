@@ -45,16 +45,16 @@ readonly -a INIT_GITIGNORE_REQUIRED=(
 # ========================================================================
 # Basic template files (always copied)
 readonly -a INIT_TEMPLATES_BASIC=(
-  ".env.example"
-  ".env"
+  "envs/.env.example"
+  "envs/.env"
 )
 
 # Full setup template files (with --full flag)
 readonly -a INIT_TEMPLATES_FULL=(
-  ".env.dev"
-  ".env.staging"
-  ".env.prod"
-  ".env.secrets"
+  "envs/.env.dev"
+  "envs/.env.staging"
+  "envs/.env.prod"
+  "envs/.env.secrets"
   "schema.dbml"
 )
 

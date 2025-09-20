@@ -174,7 +174,7 @@ if [[ "$STORAGE_ENABLED" == "true" ]]; then
 fi
 
 
-# Note: unity-functions and unity-dashboard are added by compose-inline-append.sh
+# Note: functions and dashboard services are added by compose-inline-append.sh
 
 if [[ "$EMAIL_PROVIDER" == "mailhog" ]]; then
   echo "      - mailhog" >>docker-compose.yml
@@ -409,8 +409,8 @@ fi  # End of STORAGE_ENABLED block
 
 # Add optional services
 
-# Functions service - Skipped since compose-inline-append.sh adds unity-functions
-if false; then # Disabled - using unity-functions from compose-inline-append.sh instead
+# Functions service - Skipped since compose-inline-append.sh adds functions service
+if false; then # Disabled - using functions service from compose-inline-append.sh instead
   cat >>docker-compose.yml <<EOF
 
   # Functions Service
@@ -436,7 +436,7 @@ fi
 
 # Config Server (needed for dashboard)
 
-# Nhost Dashboard - Skipped, using unity-dashboard from compose-inline-append.sh
+# Nhost Dashboard - Skipped, using dashboard service from compose-inline-append.sh
 if false; then # Disabled
   cat >>docker-compose.yml <<EOF
 
@@ -474,7 +474,7 @@ if [[ "$REDIS_ENABLED" == "true" ]]; then
     image: redis:${REDIS_VERSION}
     container_name: ${PROJECT_NAME}_redis
     restart: unless-stopped
-    command: ${REDIS_PASSWORD:+redis-server --requirepass ${REDIS_PASSWORD}}${REDIS_PASSWORD:-redis-server}
+    command: redis-server${REDIS_PASSWORD:+ --requirepass ${REDIS_PASSWORD}}
     volumes:
       - redis_data:/data
     ports:
@@ -797,7 +797,8 @@ EOF
 fi
 
 # Functions Service (Serverless functions runtime)
-if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+# Skipped - handled by compose-inline-append.sh
+if false; then # Disabled - functions service is added by compose-inline-append.sh
   cat >>docker-compose.yml <<EOF
 
   # Functions Service (Node.js serverless runtime)
@@ -1822,7 +1823,6 @@ ruler:
   alertmanager_url: http://localhost:9093
 
 limits_config:
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
 LOKIEOF
@@ -1838,7 +1838,7 @@ if [[ "${TEMPO_ENABLED:-false}" == "true" ]] || [[ "${MONITORING_ENABLED:-false}
     image: grafana/tempo:latest
     container_name: ${PROJECT_NAME}_tempo
     restart: unless-stopped
-    command: [ "-config.file=/etc/tempo.yaml" ]
+    command: [ "-config.file=/etc/tempo/tempo.yaml" ]
     ports:
       - "${TEMPO_PORT:-3200}:3200"     # tempo
       - "${TEMPO_OTLP_GRPC:-4317}:4317"  # otlp grpc
@@ -1888,11 +1888,8 @@ storage:
     backend: local
     block:
       bloom_filter_false_positive: .05
-      index_downsample_bytes: 1000
-      encoding: zstd
     wal:
       path: /tmp/tempo/wal
-      encoding: none
     local:
       path: /tmp/tempo/blocks
     pool:
@@ -1909,6 +1906,12 @@ set -a
 [[ -f ".env" ]] && source .env 2>/dev/null || true
 set +a
 # Add timeout protection for the append script
+# Export variables explicitly for subshell
+export PROJECT_NAME POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB ENV BASE_DOMAIN
+export FUNCTIONS_ENABLED NSELF_ADMIN_ENABLED HASURA_GRAPHQL_ADMIN_SECRET
+export NESTJS_SERVICES PYTHON_SERVICES GOLANG_SERVICES RUST_SERVICES JAVA_SERVICES
+export NEXTJS_APPS REACT_APPS VUE_APPS ANGULAR_APPS SVELTE_APPS
+
 if command -v gtimeout >/dev/null 2>&1; then
     gtimeout 5 bash "$SCRIPT_DIR/compose-inline-append.sh" 2>/dev/null || true
 elif command -v timeout >/dev/null 2>&1; then

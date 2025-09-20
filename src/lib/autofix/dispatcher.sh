@@ -18,8 +18,8 @@ analyze_and_fix_service() {
   local service_name="$1"
   local service_logs="$2"
 
-  # Remove unity_ prefix for cleaner display
-  local clean_name="${service_name#unity_}"
+  # Remove ${PROJECT_NAME:-nself}_ prefix for cleaner display
+  local clean_name="${service_name#${PROJECT_NAME:-nself}_}"
 
   # Get attempt count and last strategy
   local attempts=$(get_service_attempts "$service_name")
@@ -118,7 +118,7 @@ fix_redis_connection() {
   local max_wait=15
   local waited=0
   while [[ $waited -lt $max_wait ]]; do
-    if docker exec unity_redis redis-cli ping >/dev/null 2>&1; then
+    if docker exec ${PROJECT_NAME:-nself}_redis redis-cli ping >/dev/null 2>&1; then
       log_success "Redis is ready"
 
       # Restart the dependent service
@@ -141,7 +141,7 @@ fix_network_issue() {
   log_info "Fixing network/DNS issues"
 
   # Recreate the Docker network
-  local network_name="unity_default"
+  local network_name="${PROJECT_NAME:-nself}_default"
   docker network inspect $network_name >/dev/null 2>&1 || {
     log_info "Recreating Docker network"
     docker network create $network_name >/dev/null 2>&1
@@ -173,7 +173,7 @@ fix_permission_issue() {
 fix_missing_files() {
   local service_name="$1"
   local service_logs="$2"
-  local clean_name="${service_name#unity_}"
+  local clean_name="${service_name#${PROJECT_NAME:-nself}_}"
 
   log_info "Fixing missing files for $clean_name"
 

@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Copy package files
 COPY package*.json ./
 
@@ -20,9 +23,11 @@ RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 
-EXPOSE 3000
+# Use PORT from environment or template
+EXPOSE {{PORT}}
 
-
+# Health check using the correct port
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:{{PORT}}/health || exit 1
+
 CMD ["node", "index.js"]

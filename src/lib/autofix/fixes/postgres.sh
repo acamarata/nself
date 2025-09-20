@@ -8,14 +8,14 @@ get_last_fix_description() {
 }
 
 fix_postgres_port_5433() {
-  local service_name="${1:-unity_hasura}"
+  local service_name="${1:-${PROJECT_NAME:-nself}_hasura}"
   local attempt="${2:-0}"
 
   # Different strategy for each attempt
   case $attempt in
   0)
     # First attempt: Start Postgres if not running
-    if ! docker ps -q -f name=unity_postgres | grep -q .; then
+    if ! docker ps -q -f name=${PROJECT_NAME:-nself}_postgres | grep -q .; then
       docker compose up -d postgres >/dev/null 2>&1
       sleep 3
       LAST_FIX_DESCRIPTION="Started Postgres on port 5433"
@@ -65,7 +65,7 @@ fix_postgres_port_5433() {
     echo "POSTGRES_PORT=5432" >>.env.local
 
     # Clear any cached volumes
-    docker volume rm unity_postgres_data 2>/dev/null
+    docker volume rm ${PROJECT_NAME:-nself}_postgres_data 2>/dev/null
 
     # Rebuild everything
     nself build --force >/dev/null 2>&1
@@ -91,7 +91,7 @@ fix_postgres_not_running() {
   local max_wait=15
   local waited=0
   while [[ $waited -lt $max_wait ]]; do
-    if docker exec unity_postgres pg_isready -U postgres >/dev/null 2>&1; then
+    if docker exec ${PROJECT_NAME:-nself}_postgres pg_isready -U postgres >/dev/null 2>&1; then
       LAST_FIX_DESCRIPTION="Started Postgres database"
       return 0
     fi
@@ -106,7 +106,7 @@ fix_postgres_connection() {
   # Full restart with fresh state
   docker compose stop postgres >/dev/null 2>&1
   docker compose rm -f postgres >/dev/null 2>&1
-  docker volume rm unity_postgres_data 2>/dev/null
+  docker volume rm ${PROJECT_NAME:-nself}_postgres_data 2>/dev/null
   docker compose up -d postgres >/dev/null 2>&1
   sleep 5
 

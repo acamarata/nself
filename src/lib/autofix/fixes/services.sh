@@ -10,7 +10,7 @@ get_last_fix_description() {
 
 fix_redis_connection() {
   # Start Redis if not running
-  if ! docker ps -q -f name=unity_redis | grep -q .; then
+  if ! docker ps -q -f name=${PROJECT_NAME:-nself}_redis | grep -q .; then
     docker compose up -d redis >/dev/null 2>&1
     sleep 3
     LAST_FIX_DESCRIPTION="Started Redis service"
@@ -26,8 +26,8 @@ fix_redis_connection() {
 
 fix_elasticsearch_connection() {
   # Start Elasticsearch/OpenSearch if not running
-  if ! docker ps -q -f name=unity_elasticsearch | grep -q .; then
-    if ! docker ps -q -f name=unity_opensearch | grep -q .; then
+  if ! docker ps -q -f name=${PROJECT_NAME:-nself}_elasticsearch | grep -q .; then
+    if ! docker ps -q -f name=${PROJECT_NAME:-nself}_opensearch | grep -q .; then
       docker compose up -d elasticsearch opensearch 2>/dev/null
       sleep 10 # ES takes longer to start
       LAST_FIX_DESCRIPTION="Started Elasticsearch/OpenSearch"

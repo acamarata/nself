@@ -104,18 +104,21 @@ copy_basic_templates() {
 
   # Copy each basic template
   for template in "${INIT_TEMPLATES_BASIC[@]}"; do
+    # Get target filename (remove envs/ prefix if present)
+    local target_file="${template#envs/}"
+
     # Determine permissions based on file
     local perms="$INIT_PERM_PUBLIC"
-    if [[ "$template" == ".env" ]] || [[ "$template" == ".env.secrets" ]]; then
+    if [[ "$target_file" == ".env" ]] || [[ "$target_file" == ".env.secrets" ]]; then
       perms="$INIT_PERM_PRIVATE"
     fi
 
     # Copy atomically
-    atomic_copy "$templates_dir/$template" "$template" "$perms" || return $?
+    atomic_copy "$templates_dir/$template" "$target_file" "$perms" || return $?
 
     # Show success message unless quiet
     if [[ "$quiet_mode" != true ]]; then
-      case "$template" in
+      case "$target_file" in
         .env)
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env (your dev config)"
           ;;
@@ -123,7 +126,7 @@ copy_basic_templates() {
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env.example (reference docs)"
           ;;
         *)
-          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created $template"
+          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created $target_file"
           ;;
       esac
     fi
@@ -153,18 +156,21 @@ copy_full_templates() {
       continue
     fi
 
+    # Get target filename (remove envs/ prefix if present)
+    local target_file="${template#envs/}"
+
     # Determine permissions based on file
     local perms="$INIT_PERM_PUBLIC"
-    if [[ "$template" == ".env.secrets" ]]; then
+    if [[ "$target_file" == ".env.secrets" ]]; then
       perms="$INIT_PERM_PRIVATE"
     fi
 
     # Copy atomically
-    atomic_copy "$templates_dir/$template" "$template" "$perms" || return $?
+    atomic_copy "$templates_dir/$template" "$target_file" "$perms" || return $?
 
     # Show success message unless quiet
     if [[ "$quiet_mode" != true ]]; then
-      case "$template" in
+      case "$target_file" in
         .env.dev)
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env.dev (team dev defaults)"
           ;;
@@ -181,7 +187,7 @@ copy_full_templates() {
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created schema.dbml (database schema)"
           ;;
         *)
-          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created $template"
+          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created $target_file"
           ;;
       esac
     fi

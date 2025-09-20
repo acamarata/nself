@@ -190,7 +190,7 @@ show_spinner() {
 
 # Verbose output (for debugging)
 verbose_output() {
-  if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+  if [[ "${VERBOSE:-false}" == "true" ]]; then
     echo "DEBUG: $*" >&2
   fi
 }

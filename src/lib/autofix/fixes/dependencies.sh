@@ -11,7 +11,7 @@ get_last_fix_description() {
 # Fix service dependency order issues
 fix_service_dependencies() {
   local service_name="$1"
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   case "$service_name" in
   *nginx*)
@@ -111,7 +111,7 @@ fix_service_dependencies() {
 
 # Start services in correct order
 start_services_ordered() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # Order: databases -> core services -> application services -> gateways
   local order=(

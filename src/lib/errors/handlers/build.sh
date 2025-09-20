@@ -45,7 +45,7 @@ handle_go_module_error() {
   log_error "Go module dependencies are missing"
 
   # Extract affected services
-  local services=$(echo "$error_output" | grep -oE "unity-[a-z0-9-]+" | sort -u)
+  local services=$(echo "$error_output" | grep -oE "${PROJECT_NAME:-nself}-[a-z0-9-]+" | sort -u)
 
   echo ""
   log_info "Affected services:"
@@ -96,8 +96,8 @@ fix_go_modules() {
     # Find the service directory
     local service_dir=""
 
-    # Extract service base name (unity-go-go1 -> go1)
-    local base_service=$(echo "$service" | sed 's/^unity-[^-]*-//')
+    # Extract service base name (${PROJECT_NAME}-go-go1 -> go1)
+    local base_service=$(echo "$service" | sed "s/^${PROJECT_NAME:-nself}-[^-]*-//")
 
     # Check common locations
     if [[ -d "services/go/$base_service" ]]; then

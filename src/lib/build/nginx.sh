@@ -228,6 +228,9 @@ generate_service_routes() {
 
   # API routes for custom services
   generate_api_routes
+
+  # Frontend app routes
+  generate_frontend_routes
 }
 
 # Generate Hasura route
@@ -370,6 +373,183 @@ location ${path} {
 EOF
 }
 
+# Generate frontend app routes
+generate_frontend_routes() {
+  local port_counter=3000
+
+  # Process Next.js apps
+  if [[ -n "${NEXTJS_APPS:-}" ]]; then
+    IFS=',' read -ra apps <<< "$NEXTJS_APPS"
+    for app in "${apps[@]}"; do
+      app=$(echo "$app" | xargs)
+      local app_port=$((port_counter++))
+      generate_frontend_app_route "$app" "$app_port" "nextjs"
+    done
+  fi
+
+  # Process React apps
+  if [[ -n "${REACT_APPS:-}" ]]; then
+    IFS=',' read -ra apps <<< "$REACT_APPS"
+    for app in "${apps[@]}"; do
+      app=$(echo "$app" | xargs)
+      local app_port=$((port_counter++))
+      generate_frontend_app_route "$app" "$app_port" "react"
+    done
+  fi
+
+  # Process Vue apps
+  if [[ -n "${VUE_APPS:-}" ]]; then
+    IFS=',' read -ra apps <<< "$VUE_APPS"
+    for app in "${apps[@]}"; do
+      app=$(echo "$app" | xargs)
+      local app_port=$((port_counter++))
+      generate_frontend_app_route "$app" "$app_port" "vue"
+    done
+  fi
+
+  # Process Angular apps
+  if [[ -n "${ANGULAR_APPS:-}" ]]; then
+    IFS=',' read -ra apps <<< "$ANGULAR_APPS"
+    for app in "${apps[@]}"; do
+      app=$(echo "$app" | xargs)
+      local app_port=$((port_counter++))
+      generate_frontend_app_route "$app" "$app_port" "angular"
+    done
+  fi
+
+  # Process Svelte apps
+  if [[ -n "${SVELTE_APPS:-}" ]]; then
+    IFS=',' read -ra apps <<< "$SVELTE_APPS"
+    for app in "${apps[@]}"; do
+      app=$(echo "$app" | xargs)
+      local app_port=$((port_counter++))
+      generate_frontend_app_route "$app" "$app_port" "svelte"
+    done
+  fi
+}
+
+# Generate individual frontend app route
+generate_frontend_app_route() {
+  local app_name="$1"
+  local app_port="$2"
+  local app_type="$3"
+
+  cat > "nginx/conf.d/${app_name}.conf" <<EOF
+# Frontend app: ${app_name} (${app_type})
+# Running locally on port ${app_port}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    server_name ${app_name}.${BASE_DOMAIN:-localhost};
+    return 301 https://\$server_name\$request_uri;
+}
+
+# Main app server
+server {
+    listen 443 ssl http2;
+    server_name ${app_name}.${BASE_DOMAIN:-localhost};
+
+    # SSL configuration
+    ssl_certificate /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/privkey.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Proxy to local development server
+    location / {
+        proxy_pass http://host.docker.internal:${app_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+
+        # WebSocket support for hot reload
+        proxy_read_timeout 86400;
+    }
+}
+
+# API subdomain for this app (proxies to main Hasura)
+server {
+    listen 80;
+    server_name api.${app_name}.${BASE_DOMAIN:-localhost};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.${app_name}.${BASE_DOMAIN:-localhost};
+
+    ssl_certificate /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/privkey.pem;
+
+    # Proxy to Hasura with app-specific headers
+    location / {
+        proxy_pass http://hasura:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-App-Name "${app_name}";
+        proxy_set_header X-Hasura-Role "user";
+
+        # Add CORS headers for frontend
+        add_header 'Access-Control-Allow-Origin' 'https://${app_name}.${BASE_DOMAIN:-localhost}' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+
+        if (\$request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+}
+
+# Auth subdomain for this app (proxies to main auth service)
+server {
+    listen 80;
+    server_name auth.${app_name}.${BASE_DOMAIN:-localhost};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name auth.${app_name}.${BASE_DOMAIN:-localhost};
+
+    ssl_certificate /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/privkey.pem;
+
+    # Proxy to Auth service
+    location / {
+        proxy_pass http://auth:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-App-Name "${app_name}";
+
+        # Add CORS headers
+        add_header 'Access-Control-Allow-Origin' 'https://${app_name}.${BASE_DOMAIN:-localhost}' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+        if (\$request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+}
+EOF
+}
+
 # Export functions
 export -f generate_nginx_config
 export -f generate_main_nginx_conf
@@ -383,3 +563,5 @@ export -f generate_api_routes
 export -f generate_custom_api_route
 export -f generate_nginx_upstream
 export -f generate_nginx_location
+export -f generate_frontend_routes
+export -f generate_frontend_app_route

@@ -56,10 +56,10 @@ setup_demo() {
   echo ""
   echo "  ✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
   echo "  ✓ All optional services enabled"
-  echo "  ✓ 2 Custom backend services"
-  echo "  ✓ 2 Frontend applications"
-  echo "  ✓ Remote schemas configured for GraphQL federation"
-  echo "  ✓ Demo data and seed content for database"
+  echo "  ✓ 2 Custom backend services (Express API & BullMQ worker)"
+  echo "  ✓ 2 Frontend applications (app1 & app2)"
+  echo "  ✓ Remote schemas for each app (api.app1, api.app2)"
+  echo "  ✓ Full nginx routing with SSL/TLS"
   echo ""
 
   # Check templates exist

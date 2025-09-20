@@ -988,6 +988,8 @@ auto_generate_services() {
     done
   fi
 
+  # Frontend apps don't need file generation - only nginx routes
+
   # Silent - let caller handle reporting
   return 0
 }

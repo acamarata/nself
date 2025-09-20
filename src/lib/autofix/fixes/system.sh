@@ -14,7 +14,7 @@ fix_out_of_memory() {
   docker volume prune -f >/dev/null 2>&1
 
   # Stop all other containers to free memory
-  docker ps -q | grep -v unity_ | xargs -r docker stop >/dev/null 2>&1
+  docker ps -q | grep -v ${PROJECT_NAME:-nself}_ | xargs -r docker stop >/dev/null 2>&1
 
   LAST_FIX_DESCRIPTION="Freed memory by pruning Docker resources"
   return 0
@@ -22,8 +22,8 @@ fix_out_of_memory() {
 
 fix_network_dns() {
   # Recreate Docker network
-  docker network rm unity_default 2>/dev/null
-  docker network create unity_default >/dev/null 2>&1
+  docker network rm ${PROJECT_NAME:-nself}_default 2>/dev/null
+  docker network create ${PROJECT_NAME:-nself}_default >/dev/null 2>&1
 
   # Restart Docker daemon if possible
   if command -v systemctl >/dev/null 2>&1; then

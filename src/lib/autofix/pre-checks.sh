@@ -17,24 +17,24 @@ run_pre_checks() {
   fi
 
   # Check 3: Ensure Docker network exists
-  if ! docker network inspect unity_default >/dev/null 2>&1; then
+  if ! docker network inspect ${PROJECT_NAME:-nself}_default >/dev/null 2>&1; then
     [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating Docker network..."
-    docker network create unity_default >/dev/null 2>&1
+    docker network create ${PROJECT_NAME:-nself}_default >/dev/null 2>&1
     ((issues_fixed++))
     [[ "$silent" != "true" ]] && printf "\r${COLOR_GREEN}✓${COLOR_RESET} Created Docker network               \n"
   fi
 
   # Check 4: Clean up zombie containers
-  local zombies=$(docker ps -aq -f status=exited -f name=unity_ 2>/dev/null | wc -l)
+  local zombies=$(docker ps -aq -f status=exited -f name=${PROJECT_NAME:-nself}_ 2>/dev/null | wc -l)
   if [[ $zombies -gt 0 ]]; then
     [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning up stopped containers..."
-    docker ps -aq -f status=exited -f name=unity_ | xargs docker rm >/dev/null 2>&1
+    docker ps -aq -f status=exited -f name=${PROJECT_NAME:-nself}_ | xargs docker rm >/dev/null 2>&1
     ((issues_fixed++))
     [[ "$silent" != "true" ]] && printf "\r${COLOR_GREEN}✓${COLOR_RESET} Cleaned up stopped containers        \n"
   fi
 
   # Check 5: Ensure critical services have resources
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
   # Check if postgres container actually exists AND is running (not just created)
   # Using timeout to prevent hanging
   if timeout 2 docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${project_name}_postgres$\|^${project_name}-postgres-1$"; then

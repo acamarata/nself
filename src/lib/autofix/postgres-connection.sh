@@ -17,7 +17,7 @@ fix_postgres_connection() {
     local max_wait=15
     local waited=0
     while [[ $waited -lt $max_wait ]]; do
-      if docker exec unity_postgres pg_isready -U postgres >/dev/null 2>&1; then
+      if docker exec ${PROJECT_NAME:-nself}_postgres pg_isready -U postgres >/dev/null 2>&1; then
         log_success "Postgres is ready"
         # Restart the dependent service
         docker compose stop "$service_name" >/dev/null 2>&1
@@ -39,7 +39,7 @@ fix_postgres_connection() {
     # Check if it's a port 5433 vs 5432 issue
     if echo "$service_logs" | grep -q "port 5433"; then
       # Check actual postgres port
-      local postgres_port=$(docker port unity_postgres 5432 2>/dev/null | cut -d: -f2)
+      local postgres_port=$(docker port ${PROJECT_NAME:-nself}_postgres 5432 2>/dev/null | cut -d: -f2)
 
       if [[ "$postgres_port" == "5432" ]]; then
         log_info "Port mismatch detected: Postgres on 5432, app expects 5433"
@@ -84,7 +84,7 @@ fix_postgres_connection() {
     docker compose down >/dev/null 2>&1
 
     # Remove and recreate the network
-    local network_name="unity_default"
+    local network_name="${PROJECT_NAME:-nself}_default"
     docker network rm $network_name 2>/dev/null
     docker network create $network_name >/dev/null 2>&1
 
@@ -104,7 +104,7 @@ fix_postgres_connection() {
     docker compose down -v >/dev/null 2>&1
 
     # Remove postgres data volume
-    docker volume rm unity_postgres_data 2>/dev/null
+    docker volume rm ${PROJECT_NAME:-nself}_postgres_data 2>/dev/null
 
     # Rebuild everything
     nself build --force >/dev/null 2>&1
@@ -117,7 +117,7 @@ fix_postgres_connection() {
     sleep 10
 
     # Check if ready
-    if docker exec unity_postgres pg_isready -U postgres >/dev/null 2>&1; then
+    if docker exec ${PROJECT_NAME:-nself}_postgres pg_isready -U postgres >/dev/null 2>&1; then
       log_success "Fresh Postgres is ready"
       return 99 # Retry
     fi

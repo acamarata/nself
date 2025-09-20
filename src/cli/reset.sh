@@ -184,6 +184,7 @@ cmd_reset() {
     "functions"
     "functions-runtime"
     "monitoring"
+    "prometheus"
     "services"
     "nestjs-run"
     "backend"
@@ -275,8 +276,8 @@ cmd_reset() {
     fi
   done
 
-  # Remove any unity-* or project-prefixed directories (leftover from previous runs)
-  for dir in ${project}-* unity-*; do
+  # Remove any project-prefixed directories (leftover from previous runs)
+  for dir in ${project}-*; do
     if [[ -d "$dir" ]]; then
       rm -rf "$dir"
       ((removed_count++))

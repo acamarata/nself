@@ -31,7 +31,7 @@ autofix_service() {
   local verbose="${3:-false}"
 
   # Get clean service name
-  local clean_name="${service_name#unity_}"
+  local clean_name="${service_name#${PROJECT_NAME:-nself}_}"
 
   # Check attempt count
   local attempts=$(get_service_attempts "$service_name")

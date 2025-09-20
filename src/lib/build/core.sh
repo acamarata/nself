@@ -37,6 +37,44 @@ source "$CORE_SCRIPT_DIR/database.sh"
 source "$CORE_SCRIPT_DIR/services.sh"
 source "$CORE_SCRIPT_DIR/output.sh"
 
+# Convert frontend app definitions from compact to expanded format
+convert_frontend_apps_to_expanded() {
+  local port_base=3000
+  local app_counter=0
+
+  # Process each frontend framework type
+  for framework in NEXTJS REACT VUE ANGULAR SVELTE; do
+    local apps_var="${framework}_APPS"
+    local apps_value="${!apps_var:-}"
+
+    if [[ -n "$apps_value" ]]; then
+      IFS=',' read -ra APPS <<< "$apps_value"
+      for app_name in "${APPS[@]}"; do
+        app_name="${app_name// /}"  # Trim spaces
+        if [[ -n "$app_name" ]]; then
+          ((app_counter++))
+
+          # Set the expanded variables
+          export "FRONTEND_APP_${app_counter}_SYSTEM_NAME=${app_name}"
+          export "FRONTEND_APP_${app_counter}_DISPLAY_NAME=${app_name}"
+          export "FRONTEND_APP_${app_counter}_ROUTE=${app_name//_/-}"
+          export "FRONTEND_APP_${app_counter}_PORT=$((port_base + app_counter - 1))"
+          local framework_lower=$(echo "$framework" | tr '[:upper:]' '[:lower:]')
+          export "FRONTEND_APP_${app_counter}_FRAMEWORK=${framework_lower}"
+          # Just set to api subdomain, not full URL
+          export "FRONTEND_APP_${app_counter}_REMOTE_SCHEMA_URL=api.${app_name//_/-}"
+        fi
+      done
+    fi
+  done
+
+  # Export the count
+  if [[ $app_counter -gt 0 ]]; then
+    export FRONTEND_APP_COUNT=$app_counter
+    log_info "Converted $app_counter frontend apps to expanded format"
+  fi
+}
+
 # Initialize build environment
 init_build_environment() {
   # Detect platform first
@@ -156,6 +194,9 @@ orchestrate_build() {
 
   # Debug: Show we made it past environment loading
   verbose_output "Environment loaded successfully"
+
+  # Convert frontend apps to expanded format AFTER environment is loaded
+  convert_frontend_apps_to_expanded
 
   # Initialize tracking arrays
   CREATED_FILES=()
@@ -556,7 +597,6 @@ EOF
         fi
 
         if [[ $configs_generated -gt 0 ]]; then
-          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Generated $configs_generated nginx service configs       \n"
           nginx_updated=true
         else
           printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No nginx configs generated (no services enabled)    \n"
@@ -995,10 +1035,18 @@ EOF
       has_custom_services=true
     fi
 
+    # Debug output
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      echo "DEBUG: custom_service_loaded=$custom_service_loaded" >&2
+      echo "DEBUG: has_custom_services=$has_custom_services" >&2
+      echo "DEBUG: CS_1=${CS_1:-not set}" >&2
+      echo "DEBUG: CS_2=${CS_2:-not set}" >&2
+    fi
+
     # Generate custom services if configured
     if [[ "$custom_service_loaded" == "true" ]] && [[ "$has_custom_services" == "true" ]]; then
       # Build custom services and their configurations
-      if build_custom_services >/dev/null 2>&1; then
+      if build_custom_services; then
         # Count generated custom services
         if [[ -n "${CS_1:-}" ]]; then
           # Count CS_N services
@@ -1041,13 +1089,6 @@ EOF
         fi
       fi
 
-      # Dashboard service
-      if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && [[ ! -d "dashboard" ]]; then
-        bash -c "source '${gen_script}' && generate_dockerfile_for_service 'dashboard' 'dashboard'" >/dev/null 2>&1
-        if [[ -d "dashboard" ]]; then
-          system_services_generated=$((system_services_generated + 1))
-        fi
-      fi
     fi
 
     # Report results and clear the line
@@ -1071,12 +1112,6 @@ EOF
 
   fi  # End of if needs_work == true for service generation
 
-  # Display available routes
-  if [[ -f "$LIB_ROOT/../lib/services/routes-display.sh" ]]; then
-    source "$LIB_ROOT/../lib/services/routes-display.sh"
-    routes::display_compact
-  fi
-
   # Run comprehensive fixes for any remaining issues
   if [[ -f "$LIB_ROOT/../lib/auto-fix/comprehensive-fix.sh" ]]; then
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Running comprehensive fixes..."
@@ -1092,11 +1127,17 @@ EOF
     fi
   fi
 
+  # Display available routes
+  if [[ -f "$LIB_ROOT/../lib/services/routes-display.sh" ]]; then
+    source "$LIB_ROOT/../lib/services/routes-display.sh"
+    routes::display_compact
+  fi
+
   # Check and update /etc/hosts if needed (disabled during build to avoid prompts)
   # Users should run 'nself trust' to set up hosts entries and SSL certificates
   verbose_output "Skipping /etc/hosts check during build (run 'nself trust' to configure)"
 
-    # Build summary - ensure we're on a new line
+  # Build summary - ensure we're on a new line
   echo
   if [[ "$is_existing_project" == "true" ]]; then
     if [[ "$needs_work" == "false" ]]; then
@@ -1118,20 +1159,104 @@ EOF
     fi
   fi
 
+  # Validation Summary
+  echo
+  echo -e "${COLOR_CYAN}➞ Build Validation${COLOR_RESET}"
+  echo
+
+  local validation_errors=0
+  local validation_warnings=0
+
+  # Check for critical files
+  if [[ -f "docker-compose.yml" ]]; then
+    echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} Docker compose generated"
+  else
+    echo -e "  ${COLOR_RED}✗${COLOR_RESET} Docker compose missing"
+    ((validation_errors++))
+  fi
+
+  if [[ -d "nginx/conf.d" ]]; then
+    echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration ready"
+  else
+    echo -e "  ${COLOR_RED}✗${COLOR_RESET} Nginx configuration missing"
+    ((validation_errors++))
+  fi
+
+  if [[ -f "postgres/init/01-init.sql" ]]; then
+    echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} Database initialization ready"
+  else
+    echo -e "  ${COLOR_YELLOW}⚠${COLOR_RESET} Database initialization missing"
+    ((validation_warnings++))
+  fi
+
+  # Check for SSL certificates
+  if [[ -d "ssl/certificates" ]] && ls ssl/certificates/*.pem >/dev/null 2>&1; then
+    echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated"
+  else
+    echo -e "  ${COLOR_YELLOW}⚠${COLOR_RESET} SSL certificates not found"
+    ((validation_warnings++))
+  fi
+
+  # Check for unreplaced template variables in services
+  if [[ -d "services" ]]; then
+    if grep -r "{{.*}}" services/ --include="*.js" --include="*.json" --include="Dockerfile" >/dev/null 2>&1; then
+      echo -e "  ${COLOR_YELLOW}⚠${COLOR_RESET} Template variables found in services"
+      ((validation_warnings++))
+    else
+      echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} Service templates processed"
+    fi
+  fi
+
+  # Check custom services if present
+  if [[ -f "docker-compose.custom.yml" ]]; then
+    local service_count=$(grep -c "container_name:" docker-compose.custom.yml 2>/dev/null || echo "0")
+    if [[ $service_count -gt 0 ]]; then
+      echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} Custom services configured ($service_count)"
+    fi
+  fi
+
+  echo
+  if [[ $validation_errors -eq 0 ]] && [[ $validation_warnings -eq 0 ]]; then
+    echo -e "  ${COLOR_GREEN}✓ All checks passed${COLOR_RESET}"
+  elif [[ $validation_errors -gt 0 ]]; then
+    echo -e "  ${COLOR_RED}✗ Build has $validation_errors error(s) and $validation_warnings warning(s)${COLOR_RESET}"
+  else
+    echo -e "  ${COLOR_YELLOW}⚠ Build has $validation_warnings warning(s)${COLOR_RESET}"
+  fi
+
   echo
   echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
   echo
 
-  # Only suggest trust command for dev environments
-  if [[ "${ENV:-dev}" == "dev" ]]; then
-    echo -e "${COLOR_BLUE}1.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
+  # Check if trust is needed
+  local step_number=1
+  local needs_trust=false
+  local base_domain="${BASE_DOMAIN:-localhost}"
+
+  # Only check trust for localhost domains in dev environments
+  if [[ "${ENV:-dev}" == "dev" ]] && { [[ "$base_domain" == "localhost" ]] || [[ "$base_domain" == *".localhost" ]]; }; then
+    # Check if mkcert is installed and CA is not trusted
+    if command -v mkcert >/dev/null 2>&1; then
+      if ! mkcert -install -check 2>/dev/null; then
+        needs_trust=true
+      fi
+    fi
+  fi
+
+  # Show trust step only if needed
+  if [[ "$needs_trust" == "true" ]]; then
+    echo -e "${COLOR_BLUE}${step_number}.${COLOR_RESET} ${COLOR_BLUE}nself trust${COLOR_RESET} - Install SSL certificates"
     echo -e "   ${COLOR_DIM}Trust the root CA for green locks in browsers${COLOR_RESET}"
     echo
+    ((step_number++))
   fi
-  echo -e "${COLOR_BLUE}2.${COLOR_RESET} ${COLOR_BLUE}nself start${COLOR_RESET} - Start all services"
+
+  echo -e "${COLOR_BLUE}${step_number}.${COLOR_RESET} ${COLOR_BLUE}nself start${COLOR_RESET} - Start all services"
   echo -e "   ${COLOR_DIM}Launches PostgreSQL, Hasura, and configured services${COLOR_RESET}"
   echo
-  echo -e "${COLOR_BLUE}3.${COLOR_RESET} ${COLOR_BLUE}nself status${COLOR_RESET} - Check service health"
+  ((step_number++))
+
+  echo -e "${COLOR_BLUE}${step_number}.${COLOR_RESET} ${COLOR_BLUE}nself status${COLOR_RESET} - Check service health"
   echo -e "   ${COLOR_DIM}View the status of all running services${COLOR_RESET}"
 
   if [[ "$is_existing_project" == "true" ]] && [[ "$needs_work" == "false" ]]; then
@@ -1140,11 +1265,8 @@ EOF
   fi
 
   echo
-
-  # Show next steps at the very end
-  if declare -f show_next_steps >/dev/null 2>&1; then
-    show_next_steps
-  fi
+  echo "For help, run: nself help"
+  echo
 
   return 0
 }
@@ -1391,7 +1513,6 @@ build_generate_simple_ssl() {
       "auth.localhost"
       "storage.localhost"
       "functions.localhost"
-      "dashboard.localhost"
       "console.localhost"
       "${project_name}.localhost"
     )

@@ -21,9 +21,6 @@ generate_dockerfile_for_service() {
   functions)
     generate_functions_service "$service_path"
     ;;
-  dashboard)
-    generate_dashboard_service "$service_path"
-    ;;
   auth)
     generate_auth_service "$service_path"
     ;;
@@ -115,79 +112,6 @@ EOF
   # Successfully generated
 }
 
-# Generate dashboard service
-generate_dashboard_service() {
-  local path="$1"
-
-  cat >"$path/Dockerfile" <<'EOF'
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci || npm install
-COPY . .
-# Build or create placeholder
-RUN npm run build || (mkdir -p dist && echo '<!DOCTYPE html><html><body><h1>Dashboard</h1></body></html>' > dist/index.html)
-
-FROM nginx:alpine
-# Install health check tools
-RUN apk add --no-cache curl wget
-# Copy dist if it exists, otherwise create a placeholder
-RUN mkdir -p /usr/share/nginx/html
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-EOF
-
-  cat >"$path/package.json" <<'EOF'
-{
-  "name": "dashboard",
-  "version": "1.0.0",
-  "description": "Admin dashboard",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "vite": "^4.0.0",
-    "@vitejs/plugin-react": "^3.0.0"
-  }
-}
-EOF
-
-  cat >"$path/nginx.conf" <<'EOF'
-server {
-    listen 80;
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-}
-EOF
-
-  # Create a simple index.html
-  mkdir -p "$path/dist"
-  cat >"$path/dist/index.html" <<'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-</head>
-<body>
-    <h1>Dashboard</h1>
-    <p>Dashboard service is running</p>
-</body>
-</html>
-EOF
-
-  # Successfully generated
-}
 
 # Generate auth service placeholder
 generate_auth_service() {

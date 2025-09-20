@@ -456,11 +456,6 @@ EOF
 proxy_pass http://\${PROJECT_NAME:-nself}-functions:4300;
 EOF
     ;;
-  dashboard)
-    cat >"$routes_dir/dashboard.conf" <<EOF
-proxy_pass http://\${PROJECT_NAME:-nself}-dashboard:80;
-EOF
-    ;;
   esac
 }
 

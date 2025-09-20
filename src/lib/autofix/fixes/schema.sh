@@ -10,7 +10,7 @@ get_last_fix_description() {
 
 # Fix missing database schemas
 fix_missing_schemas() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
   local service_name="${1:-}"
 
   # Ensure postgres is running first
@@ -78,7 +78,7 @@ fix_missing_schemas() {
 # Fix for missing node modules in bullmq workers
 fix_missing_node_modules() {
   local service_name="$1"
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # Check if it's a bullmq worker
   if [[ "$service_name" == *"bull"* ]] || [[ "$service_name" == *"worker"* ]]; then
@@ -171,7 +171,7 @@ EOF
 
 # Fix nginx upstream issues
 fix_nginx_upstream() {
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # Nginx depends on other services being up
   # Start dependent services first
@@ -193,7 +193,7 @@ fix_nginx_upstream() {
 # Fix missing healthcheck tools
 fix_missing_healthcheck_tools() {
   local service_name="$1"
-  local project_name="${PROJECT_NAME:-unity}"
+  local project_name="${PROJECT_NAME:-nself}"
 
   # For services missing curl/wget, we need to rebuild with healthcheck tools
   # or change the healthcheck method

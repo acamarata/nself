@@ -9,10 +9,8 @@ hasura::generate_app_schemas() {
   # Collect all app schemas
   local schemas=()
 
-  # Always include core schemas
-  schemas+=("auth")     # Shared auth schema for all apps
-  schemas+=("storage")  # Shared storage schema
-  schemas+=("public")   # Default public schema
+  # Core schemas (auth, storage, public) are already created in core.sh
+  # We only need to add app-specific schemas here
 
   # Add per-app schemas based on table prefixes
   if [[ "$app_count" -gt 0 ]]; then

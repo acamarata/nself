@@ -9,8 +9,10 @@ fix_healthchecks() {
     return 0
   fi
   
-  # Create backup
-  cp "$compose_file" "${compose_file}.healthcheck-backup"
+  # Only create backup in debug mode
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    cp "$compose_file" "${compose_file}.healthcheck-backup"
+  fi
   
   # Fix auth service health check (ensure correct endpoint and port)
   if grep -q 'container_name:.*_auth' "$compose_file"; then
