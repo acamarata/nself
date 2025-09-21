@@ -86,14 +86,22 @@ ensure_hosts_entries() {
   fi
   echo ""
 
-  # Ask for permission to update
-  echo "Would you like nself to add these entries automatically? (requires sudo)"
-  echo -n "Add entries to /etc/hosts? [Y/n]: "
-  read -r response
+  # Check if we can use sudo without password
+  local can_sudo_nopass=false
+  if sudo -n true 2>/dev/null; then
+    can_sudo_nopass=true
+  fi
 
-  if [[ -z "$response" ]] || [[ "$response" =~ ^[Yy] ]]; then
-    echo ""
-    echo "Adding entries to /etc/hosts (you may be prompted for your password)..."
+  # Check if we're in an interactive terminal
+  local is_interactive=false
+  if [[ -t 0 ]]; then
+    is_interactive=true
+  fi
+
+  # Determine the best approach
+  if [[ "$can_sudo_nopass" == "true" ]]; then
+    # Can sudo without password, just do it
+    echo "Adding entries to /etc/hosts..."
 
     # Build the entries string
     local entries=""
@@ -103,30 +111,58 @@ ensure_hosts_entries() {
       done
     fi
 
-    # Add all entries at once to minimize sudo prompts
+    # Add all entries at once
     if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null; then
       echo "✅ Successfully added ${#missing_domains[@]} entries to /etc/hosts"
       return 0
     else
       echo "❌ Failed to update /etc/hosts"
+    fi
+  elif [[ "$is_interactive" == "true" ]]; then
+    # Interactive terminal, ask for permission
+    echo "Would you like nself to add these entries automatically? (requires sudo)"
+    echo -n "Add entries to /etc/hosts? [Y/n]: "
+    read -r response
+
+    if [[ -z "$response" ]] || [[ "$response" =~ ^[Yy] ]]; then
       echo ""
-      echo "You can manually add these lines to /etc/hosts:"
+      echo "Adding entries to /etc/hosts (you may be prompted for your password)..."
+
+      # Build the entries string
+      local entries=""
       if [[ ${#missing_domains[@]} -gt 0 ]]; then
         for domain in "${missing_domains[@]}"; do
-          echo "127.0.0.1 $domain"
+          entries+="127.0.0.1 $domain\n"
         done
       fi
-      return 1
+
+      # Try to add entries with sudo
+      if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
+        echo "✅ Successfully added ${#missing_domains[@]} entries to /etc/hosts"
+        return 0
+      else
+        echo "❌ Failed to update /etc/hosts"
+      fi
+    else
+      echo ""
+      echo "ℹ️  Skipped /etc/hosts update."
     fi
   else
+    # Non-interactive or can't sudo
+    echo "⚠️  Cannot automatically update /etc/hosts (non-interactive terminal)"
+  fi
+
+  # Show manual instructions if we couldn't update
+  if [[ "$can_sudo_nopass" != "true" ]] || [[ "$is_interactive" != "true" ]]; then
     echo ""
-    echo "ℹ️  Skipped /etc/hosts update. You can manually add these lines:"
+    echo "You can manually add these lines to /etc/hosts:"
     if [[ ${#missing_domains[@]} -gt 0 ]]; then
       for domain in "${missing_domains[@]}"; do
         echo "127.0.0.1 $domain"
       done
     fi
     echo ""
+    echo "Or run with sudo: sudo nself start"
     echo "Or use BASE_DOMAIN=local.nself.org which doesn't require /etc/hosts changes."
   fi
 

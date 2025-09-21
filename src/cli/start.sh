@@ -469,51 +469,96 @@ cmd_start() {
     # Enhanced progress monitoring
     local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     local i=0
-    local timeout=180  # 3 minute timeout
+
+    # Adaptive timeout: longer for initial pulls
+    local existing_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>" | wc -l | tr -d ' ')
+    local timeout=180  # Default 3 minute timeout
+    if [[ $existing_images -lt 5 ]]; then
+      timeout=600  # 10 minutes for initial image pulls
+    fi
+
     local elapsed=0
     local last_count=$running_services
     local last_message=""
-    
+    local pull_count=0
+    local last_pull_msg=""
+
     while kill -0 $compose_pid 2>/dev/null; do
       if [[ $elapsed -ge $timeout ]]; then
         printf "\r${COLOR_RED}✗${COLOR_RESET} Docker compose timeout after ${timeout}s                  \n"
         kill $compose_pid 2>/dev/null
-        
+
         # Show last error from output
         if [[ -f "$output_file" ]]; then
           echo
           log_error "Docker compose failed. Last output:"
           tail -20 "$output_file" | sed 's/^/  /'
         fi
-        
+
         return 1
       fi
-      
+
       # Check running services count for progress
       local current_count=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
-      
-      # Check for building status in output
+
+      # Check for building/pulling status in output
       local building_msg=""
-      if [[ -f "$output_file" ]] && [[ $elapsed -gt 2 ]]; then
-        local last_line=$(tail -1 "$output_file" 2>/dev/null | grep -oE "(Building|Pulling|Creating|Starting) [a-zA-Z0-9_-]+" | head -1)
-        if [[ -n "$last_line" ]]; then
-          building_msg=" - $last_line"
+      if [[ -f "$output_file" ]] && [[ $elapsed -gt 1 ]]; then
+        # Check for image pulling (more specific)
+        local pulling_lines=$(tail -20 "$output_file" 2>/dev/null | grep -E "Pulling|Pull complete|Downloading|Download complete|Extracting" | tail -3)
+        if [[ -n "$pulling_lines" ]]; then
+          local image_name=$(echo "$pulling_lines" | grep -oE "^[a-zA-Z0-9_-]+" | head -1)
+          local pull_status=$(echo "$pulling_lines" | grep -oE "(Pulling|Downloading|Extracting|Pull complete)" | head -1)
+
+          if [[ -n "$image_name" ]]; then
+            if [[ "$pull_status" == "Pull complete" ]]; then
+              building_msg=" - ✓ $image_name"
+              ((pull_count++))
+            elif [[ "$pull_status" == "Downloading" ]]; then
+              # Try to extract download progress
+              local progress=$(echo "$pulling_lines" | grep -oE "\[[=>-]+\]" | head -1)
+              if [[ -n "$progress" ]]; then
+                building_msg=" - ⬇ $image_name $progress"
+              else
+                building_msg=" - ⬇ $image_name"
+              fi
+            elif [[ "$pull_status" == "Extracting" ]]; then
+              building_msg=" - 📦 $image_name (extracting)"
+            else
+              building_msg=" - 🔄 $image_name"
+            fi
+          fi
+        else
+          # Fallback to generic status
+          local last_line=$(tail -1 "$output_file" 2>/dev/null | grep -oE "(Building|Creating|Starting) [a-zA-Z0-9_-]+" | head -1)
+          if [[ -n "$last_line" ]]; then
+            building_msg=" - $last_line"
+          fi
         fi
       fi
       
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
-      
-      # Always show progress with count when available
-      if [[ "$services_to_start" -gt 0 ]] && [[ "$current_count" -gt 0 ]]; then
+
+      # Show appropriate message based on what's happening
+      if [[ "$building_msg" =~ "⬇" ]] || [[ "$building_msg" =~ "📦" ]]; then
+        # Pulling/extracting images - show this prominently
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Pulling Docker images...%s                    " "$char" "$building_msg"
+      elif [[ "$pull_count" -gt 0 ]] && [[ "$current_count" -eq 0 ]]; then
+        # Images pulled, now creating containers
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Creating containers... (pulled %d images)          " "$char" "$pull_count"
+      elif [[ "$services_to_start" -gt 0 ]] && [[ "$current_count" -gt 0 ]]; then
+        # Containers starting
         if [[ -n "$building_msg" ]]; then
-          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers... (%d/%d)%s          " "$char" "$current_count" "$services_to_start" "$building_msg"
+          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting services... (%d/%d)%s          " "$char" "$current_count" "$services_to_start" "$building_msg"
         else
-          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers... (%d/%d)          " "$char" "$current_count" "$services_to_start"
+          printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting services... (%d/%d)          " "$char" "$current_count" "$services_to_start"
         fi
       elif [[ -n "$building_msg" ]]; then
-        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...%s          " "$char" "$building_msg"
+        # Generic status with message
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Initializing...%s          " "$char" "$building_msg"
       else
-        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Starting Docker containers...          " "$char"
+        # Generic waiting message
+        printf "\r${COLOR_BLUE}%s${COLOR_RESET} Preparing Docker containers...          " "$char"
       fi
       
       last_count=$current_count
