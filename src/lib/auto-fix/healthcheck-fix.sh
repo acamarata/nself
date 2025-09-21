@@ -9,9 +9,12 @@ fix_healthchecks() {
     return 0
   fi
   
-  # Only create backup in debug mode
+  # Create backup in _backup/timestamp structure (only in debug mode)
   if [[ "${DEBUG:-false}" == "true" ]]; then
-    cp "$compose_file" "${compose_file}.healthcheck-backup"
+    local timestamp="$(date +%Y%m%d_%H%M%S)"
+    local backup_dir="_backup/${timestamp}"
+    mkdir -p "$backup_dir"
+    cp "$compose_file" "${backup_dir}/$(basename "$compose_file").healthcheck-backup"
   fi
   
   # Fix auth service health check (ensure correct endpoint and port)

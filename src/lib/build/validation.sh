@@ -147,8 +147,11 @@ apply_validation_fixes() {
     env_file=".env.${ENV:-dev}"
   fi
 
-  # Backup the file
-  cp "$env_file" "${env_file}.backup.$(date +%s)" 2>/dev/null || true
+  # Backup the file to _backup/timestamp structure
+  local timestamp="$(date +%Y%m%d_%H%M%S)"
+  local backup_dir="_backup/${timestamp}"
+  mkdir -p "$backup_dir"
+  cp "$env_file" "${backup_dir}/$(basename "$env_file")" 2>/dev/null || true
 
   # Apply fixes (carefully)
   local temp_file=$(mktemp)

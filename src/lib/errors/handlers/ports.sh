@@ -291,8 +291,11 @@ fix_port_conflicts() {
   if [[ -n "$env_updates" ]] && [[ -f ".env.local" ]]; then
     log_info "Updating .env.local with new port configurations..."
 
-    # Backup current .env.local
-    cp .env.local .env.local.backup.$(date +%Y%m%d_%H%M%S)
+    # Backup current .env.local to _backup/timestamp structure
+    local timestamp="$(date +%Y%m%d_%H%M%S)"
+    local backup_dir="_backup/${timestamp}"
+    mkdir -p "$backup_dir"
+    cp .env.local "${backup_dir}/$(basename .env.local)"
 
     # Append port overrides (ensure proper newlines)
     # Ensure file ends with a newline

@@ -183,16 +183,19 @@ validate_username() {
 # Auto-fix environment file
 auto_fix_env_file() {
   local env_file="${1:-.env}"
-  local backup_file="${env_file}.backup.$(date +%Y%m%d_%H%M%S)"
+  local timestamp="$(date +%Y%m%d_%H%M%S)"
+  local backup_dir="_backup/${timestamp}"
   local temp_file="${env_file}.tmp"
   local changes_made=0
-  
+
   if [[ ! -f "$env_file" ]]; then
     log_error "Environment file not found: $env_file"
     return 1
   fi
-  
-  # Create backup
+
+  # Create backup directory and backup file
+  mkdir -p "$backup_dir"
+  local backup_file="${backup_dir}/$(basename "$env_file")"
   cp "$env_file" "$backup_file"
   log_info "Created backup: $backup_file"
   
