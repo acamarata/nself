@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Test results
 TESTS_PASSED=0
 TESTS_FAILED=0
-ISSUES_FOUND=()
+ISSUES_FOUND=""
 
 # Test function
 run_test() {
@@ -29,7 +29,12 @@ run_test() {
   else
     echo -e "${RED}✗${NC} $test_name failed"
     TESTS_FAILED=$((TESTS_FAILED + 1))
-    ISSUES_FOUND+=("$test_name")
+    # Bash 3.2 compatible array append
+    if [ -n "$ISSUES_FOUND" ]; then
+      ISSUES_FOUND="${ISSUES_FOUND}|${test_name}"
+    else
+      ISSUES_FOUND="$test_name"
+    fi
   fi
 }
 
@@ -56,7 +61,11 @@ echo "----------------------------------------"
 if grep -r "/Users/admin/Sites/nself" src --include="*.sh" | grep -v "test" | grep -v ".backup" > /dev/null; then
   echo -e "${RED}✗${NC} Found hardcoded paths"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  ISSUES_FOUND+=("Hardcoded paths found")
+  if [ -n "$ISSUES_FOUND" ]; then
+    ISSUES_FOUND="${ISSUES_FOUND}|Hardcoded paths found"
+  else
+    ISSUES_FOUND="Hardcoded paths found"
+  fi
 else
   echo -e "${GREEN}✓${NC} No hardcoded paths"
   TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -88,7 +97,11 @@ if [[ $LARGE_FILES -eq 0 ]]; then
 else
   echo -e "${RED}✗${NC} Found $LARGE_FILES oversized modules"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  ISSUES_FOUND+=("Oversized modules")
+  if [ -n "$ISSUES_FOUND" ]; then
+    ISSUES_FOUND="${ISSUES_FOUND}|Oversized modules"
+  else
+    ISSUES_FOUND="Oversized modules"
+  fi
 fi
 
 echo ""
@@ -101,7 +114,11 @@ echo "----------------------------------------"
 if grep -r "declare -A" src --include="*.sh" > /dev/null; then
   echo -e "${RED}✗${NC} Found associative arrays (Bash 4+ feature)"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  ISSUES_FOUND+=("Associative arrays found")
+  if [ -n "$ISSUES_FOUND" ]; then
+    ISSUES_FOUND="${ISSUES_FOUND}|Associative arrays found"
+  else
+    ISSUES_FOUND="Associative arrays found"
+  fi
 else
   echo -e "${GREEN}✓${NC} No associative arrays"
   TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -111,7 +128,11 @@ fi
 if grep -rE "mapfile|readarray" src --include="*.sh" > /dev/null; then
   echo -e "${RED}✗${NC} Found mapfile/readarray (Bash 4+ feature)"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  ISSUES_FOUND+=("mapfile/readarray found")
+  if [ -n "$ISSUES_FOUND" ]; then
+    ISSUES_FOUND="${ISSUES_FOUND}|mapfile/readarray found"
+  else
+    ISSUES_FOUND="mapfile/readarray found"
+  fi
 else
   echo -e "${GREEN}✓${NC} No mapfile/readarray"
   TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -121,7 +142,11 @@ fi
 if grep -rE '\$\{[^}]+,,[^}]*\}|\$\{[^}]+\^\^[^}]*\}' src --include="*.sh" > /dev/null; then
   echo -e "${RED}✗${NC} Found case conversion (Bash 4+ feature)"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  ISSUES_FOUND+=("Bash 4+ case conversion found")
+  if [ -n "$ISSUES_FOUND" ]; then
+    ISSUES_FOUND="${ISSUES_FOUND}|Bash 4+ case conversion found"
+  else
+    ISSUES_FOUND="Bash 4+ case conversion found"
+  fi
 else
   echo -e "${GREEN}✓${NC} No Bash 4+ case conversion"
   TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -249,9 +274,12 @@ if [[ $TESTS_FAILED -eq 0 ]]; then
 else
   echo ""
   echo -e "${RED}Issues found:${NC}"
-  for issue in "${ISSUES_FOUND[@]}"; do
-    echo "  - $issue"
-  done
+  # Bash 3.2 compatible loop over pipe-delimited string
+  if [ -n "$ISSUES_FOUND" ]; then
+    echo "$ISSUES_FOUND" | tr '|' '\n' | while read -r issue; do
+      echo "  - $issue"
+    done
+  fi
   echo ""
   echo "Please fix the above issues for full compliance."
   exit 1

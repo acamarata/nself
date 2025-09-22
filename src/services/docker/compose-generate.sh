@@ -153,6 +153,9 @@ backup_existing_compose() {
 
 # Generate the complete docker-compose.yml
 generate_docker_compose() {
+  # Set default DOCKER_NETWORK if not set
+  : ${DOCKER_NETWORK:="${PROJECT_NAME}_network"}
+
   # Construct database URLs
   construct_database_urls
 
@@ -249,6 +252,12 @@ EOF
 
 # Main execution
 main() {
+  # Sanitize and set defaults for critical variables
+  if [[ -z "$PROJECT_NAME" ]] || [[ "$PROJECT_NAME" =~ [[:space:]] ]]; then
+    PROJECT_NAME=$(echo "${PROJECT_NAME:-myproject}" | tr -d ' ' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g')
+    [[ -z "$PROJECT_NAME" ]] && PROJECT_NAME="myproject"
+  fi
+
   echo "Generating docker-compose.yml for project: ${PROJECT_NAME}"
 
   # Generate the compose file

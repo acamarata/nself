@@ -495,6 +495,10 @@ BASE_DOMAIN=localhost
 ENV=dev
 POSTGRES_ENABLED=true
 NGINX_ENABLED=true
+POSTGRES_PASSWORD=testpass123
+POSTGRES_USER=postgres
+POSTGRES_DB=testdb
+DOCKER_NETWORK=testproject_network
 EOF
 
   test_result "pass" "Created test environment"

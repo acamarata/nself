@@ -44,6 +44,46 @@ if [[ -d "$MODULE_DIR" ]]; then
   done
 fi
 
+# Port detection function for compatibility with tests
+detect_app_port() {
+  local start_port="${1:-3000}"
+  local port="$start_port"
+
+  # Simple port availability check compatible with Bash 3.2
+  while true; do
+    if ! lsof -i:$port >/dev/null 2>&1; then
+      echo "$port"
+      return 0
+    fi
+    port=$((port + 1))
+    if [[ $port -gt 65535 ]]; then
+      echo "$start_port"
+      return 1
+    fi
+  done
+}
+
+# Initialize build environment - compatibility function
+init_build_environment() {
+  # Set build directory
+  export BUILD_DIR="${BUILD_DIR:-$(pwd)}"
+
+  # Ensure required directories exist
+  mkdir -p "$BUILD_DIR"
+
+  # Load environment if exists
+  if [[ -f "$BUILD_DIR/.env" ]]; then
+    export_env_from_file "$BUILD_DIR/.env"
+  fi
+
+  # Set defaults for critical variables
+  : ${PROJECT_NAME:="myproject"}
+  : ${DOCKER_NETWORK:="${PROJECT_NAME}_network"}
+  : ${BASE_DOMAIN:="localhost"}
+
+  return 0
+}
+
 # Convert frontend app definitions from compact to expanded format
 convert_frontend_apps_to_expanded() {
   local port_base=3000
