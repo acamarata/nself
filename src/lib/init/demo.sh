@@ -52,14 +52,12 @@ setup_demo() {
   show_command_header "nself init --demo" "Create a complete demo application"
   echo ""  # Add blank line after header
 
-  echo "This will create a complete demo configuration for:"
-  echo ""
-  echo "  ✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
-  echo "  ✓ All optional services enabled"
-  echo "  ✓ 2 Custom backend services (Express API & BullMQ worker)"
-  echo "  ✓ 2 Frontend applications (app1 & app2)"
-  echo "  ✓ Remote schemas for each app (api.app1, api.app2)"
-  echo "  ✓ Full nginx routing with SSL/TLS"
+  echo "✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
+  echo "✓ All optional services enabled"
+  echo "✓ 2 Custom backend services (Express API & BullMQ worker)"
+  echo "✓ 2 Frontend applications (app1 & app2)"
+  echo "✓ Remote schemas for each app (api.app1, api.app2)"
+  echo "✓ Full nginx routing with SSL/TLS"
   echo ""
 
   # Check templates exist
