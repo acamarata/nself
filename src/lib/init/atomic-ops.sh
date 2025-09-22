@@ -4,9 +4,12 @@
 # This module provides atomic file operations with rollback capability
 # to ensure safe file creation and modification.
 
-# Source configuration if not already loaded
+# Source dependencies if not already loaded
 if [[ -z "${INIT_E_SUCCESS:-}" ]]; then
   source "$(dirname "${BASH_SOURCE[0]}")/config.sh"
+fi
+if [[ -z "${SUPPORTS_COLOR:-}" ]]; then
+  source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
 fi
 
 # Global variables for state tracking
@@ -66,7 +69,8 @@ atomic_copy() {
   init_temp_dir || return $?
 
   # Create temp file
-  local temp_file="$TEMP_DIR/$(basename "$dest").tmp"
+  local temp_file
+  temp_file="$TEMP_DIR/$(basename "$dest").tmp"
 
   # Copy to temp file
   if cp "$src" "$temp_file" 2>/dev/null; then
@@ -158,7 +162,10 @@ rollback_changes() {
   fi
 
   if [[ "$rolled_back" == true ]]; then
-    log_info "Changes rolled back successfully"
+    # Log rollback success if log_info is available
+    if type -t log_info >/dev/null 2>&1; then
+      log_info "Changes rolled back successfully"
+    fi
   fi
 
   # Clean up temp directory
@@ -201,7 +208,8 @@ atomic_write() {
   init_temp_dir || return $?
 
   # Create temp file
-  local temp_file="$TEMP_DIR/$(basename "$dest").tmp"
+  local temp_file
+  temp_file="$TEMP_DIR/$(basename "$dest").tmp"
 
   # Write content to temp file
   if echo "$content" > "$temp_file" 2>/dev/null; then

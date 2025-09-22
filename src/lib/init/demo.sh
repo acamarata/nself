@@ -45,8 +45,8 @@ source "$DEMO_DIR/gitignore.sh" 2>/dev/null || true
 setup_demo() {
   local script_dir="${1:-$DEMO_DIR}"
   # Find the templates directory relative to the init module
-  local templates_dir="$(cd "$DEMO_DIR" && cd ../../templates/demo && pwd)"
-  local current_dir="$(pwd)"
+  local templates_dir
+  templates_dir="$(cd "$DEMO_DIR" && cd ../../templates/demo && pwd)"
 
   # Show standard header with demo subtitle
   show_command_header "nself init --demo" "Create a complete demo application"

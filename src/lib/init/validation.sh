@@ -97,9 +97,8 @@ validate_project_dir() {
   # Check if in git repo root (silent check)
   if command -v git >/dev/null 2>&1; then
     if git rev-parse --git-dir >/dev/null 2>&1; then
-      local git_root
-      git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-      # Silent - no message
+      # Silent - no message about being in git repo
+      true
     else
       # Silent - no message about not being in git repo
       true
