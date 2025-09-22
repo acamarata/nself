@@ -50,7 +50,6 @@ setup_demo() {
 
   # Show standard header with demo subtitle
   show_command_header "nself init --demo" "Create a complete demo application"
-  echo ""  # Add blank line after header
 
   echo "✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
   echo "✓ All optional services enabled"
