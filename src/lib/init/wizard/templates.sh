@@ -94,7 +94,15 @@ POSTGRES_VERSION=15-alpine
 EOF
 
   # Add Redis if selected
-  if [[ " ${services[@]} " =~ " Redis " ]]; then
+  # Check if Redis is in services array
+  local has_redis=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "Redis" ]]; then
+      has_redis=true
+      break
+    fi
+  done
+  if [[ "$has_redis" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # REDIS CONFIGURATION
@@ -109,7 +117,15 @@ EOF
   fi
 
   # Add MinIO if selected
-  if [[ " ${services[@]} " =~ " MinIO Storage " ]]; then
+  # Check if MinIO Storage is in services array
+  local has_minio=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "MinIO Storage" ]]; then
+      has_minio=true
+      break
+    fi
+  done
+  if [[ "$has_minio" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # STORAGE CONFIGURATION
@@ -126,7 +142,15 @@ EOF
   fi
 
   # Add Search if selected
-  if [[ " ${services[@]} " =~ " Search " ]]; then
+  # Check if Search is in services array
+  local has_search=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "Search" ]]; then
+      has_search=true
+      break
+    fi
+  done
+  if [[ "$has_search" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # SEARCH CONFIGURATION
@@ -142,7 +166,15 @@ EOF
   fi
 
   # Add Email if selected
-  if [[ " ${services[@]} " =~ " Email Service " ]]; then
+  # Check if Email Service is in services array
+  local has_email=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "Email Service" ]]; then
+      has_email=true
+      break
+    fi
+  done
+  if [[ "$has_email" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # EMAIL CONFIGURATION
@@ -158,7 +190,15 @@ EOF
   fi
 
   # Add RabbitMQ if selected
-  if [[ " ${services[@]} " =~ " RabbitMQ " ]]; then
+  # Check if RabbitMQ is in services array
+  local has_rabbitmq=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "RabbitMQ" ]]; then
+      has_rabbitmq=true
+      break
+    fi
+  done
+  if [[ "$has_rabbitmq" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # MESSAGE QUEUE CONFIGURATION
@@ -175,7 +215,15 @@ EOF
   fi
 
   # Add Admin UI if selected
-  if [[ " ${services[@]} " =~ " Admin UI " ]]; then
+  # Check if Admin UI is in services array
+  local has_admin=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "Admin UI" ]]; then
+      has_admin=true
+      break
+    fi
+  done
+  if [[ "$has_admin" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # ADMIN UI CONFIGURATION
@@ -190,7 +238,15 @@ EOF
   fi
 
   # Add Authentication (Hasura) if selected
-  if [[ " ${services[@]} " =~ " Authentication " ]]; then
+  # Check if Authentication is in services array
+  local has_auth=false
+  for service in "${services[@]}"; do
+    if [[ "$service" == "Authentication" ]]; then
+      has_auth=true
+      break
+    fi
+  done
+  if [[ "$has_auth" == "true" ]]; then
     cat >> .env.local << EOF
 # ====================================================================
 # HASURA CONFIGURATION

@@ -3,14 +3,22 @@
 
 # Generate docker-compose.yml
 generate_docker_compose() {
-  # Use the new modular compose generation script
-  local compose_script="${LIB_DIR}/../../services/docker/compose-generate.sh"
+  # Determine the correct path to compose-generate.sh
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local compose_script="${script_dir}/../../services/docker/compose-generate.sh"
+
+  # Fallback if first path doesn't work
+  if [[ ! -f "$compose_script" ]]; then
+    compose_script="${LIB_DIR}/../../services/docker/compose-generate.sh"
+  fi
 
   if [[ -f "$compose_script" ]]; then
     bash "$compose_script"
     return $?
   else
-    echo "Error: compose-generate.sh not found at $compose_script" >&2
+    echo "Error: compose-generate.sh not found" >&2
+    echo "  Tried: ${script_dir}/../../services/docker/compose-generate.sh" >&2
+    echo "  Tried: ${LIB_DIR}/../../services/docker/compose-generate.sh" >&2
     return 1
   fi
 }

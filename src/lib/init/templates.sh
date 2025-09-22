@@ -80,7 +80,12 @@ verify_template_files() {
   done
 
   if [[ ${#missing_files[@]} -gt 0 ]]; then
-    log_error "Template files not found in $templates_dir:"
+    # Use echo to stderr if log_error is not available
+    if declare -f log_error >/dev/null 2>&1; then
+      log_error "Template files not found in $templates_dir:"
+    else
+      echo "Error: Template files not found in $templates_dir:" >&2
+    fi
     for file in "${missing_files[@]}"; do
       echo "  - $file" >&2
     done

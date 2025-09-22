@@ -61,6 +61,8 @@ detect_terminal() {
 
     # Additional check using tput if available
     if command -v tput >/dev/null 2>&1; then
+      # Set TERM if not set (needed in CI environments)
+      : ${TERM:=xterm}
       if [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
         SUPPORTS_COLOR=true
       fi

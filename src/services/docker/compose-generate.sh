@@ -74,7 +74,7 @@ fi
 # The POSTGRES_PORT variable is for external host access only
 construct_database_urls() {
   local db_user="${POSTGRES_USER:-postgres}"
-  local db_pass="${POSTGRES_PASSWORD}"
+  local db_pass="${POSTGRES_PASSWORD:-postgres}"
   local db_host="postgres"  # Container name for internal networking
   local db_port="5432"      # Always use 5432 internally
   local db_name="${POSTGRES_DB:-${PROJECT_NAME}}"

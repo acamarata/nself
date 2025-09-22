@@ -7,6 +7,11 @@ if [[ -f "$VALIDATION_DIR/../auto-fix/env-quotes-fix.sh" ]]; then
   source "$VALIDATION_DIR/../auto-fix/env-quotes-fix.sh"
 fi
 
+# Source display utilities for show_warning, show_error, show_info
+if [[ -f "$VALIDATION_DIR/../utils/display.sh" ]]; then
+  source "$VALIDATION_DIR/../utils/display.sh"
+fi
+
 # Validate environment configuration
 validate_environment() {
   local validation_passed=true

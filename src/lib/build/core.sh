@@ -238,7 +238,26 @@ orchestrate_build() {
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating configuration..."
 
   if [[ -f "$env_file" ]]; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
+    # Actually validate and fix the environment
+    if validate_environment; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
+    else
+      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Configuration validated with fixes          \n"
+    fi
+    # Reload env file to pick up fixes (recheck which file exists)
+    if [[ -f ".env.local" ]]; then
+      set -a
+      source ".env.local" 2>/dev/null || true
+      set +a
+    elif [[ -f ".env.${env}" ]]; then
+      set -a
+      source ".env.${env}" 2>/dev/null || true
+      set +a
+    elif [[ -f ".env" ]]; then
+      set -a
+      source ".env" 2>/dev/null || true
+      set +a
+    fi
   else
     printf "\r${COLOR_YELLOW}✱${COLOR_RESET} No environment file found                  \n"
   fi

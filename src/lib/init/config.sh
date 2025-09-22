@@ -4,24 +4,36 @@
 # This module defines all configuration constants used by the init command.
 # It centralizes all configuration to make maintenance easier.
 
+# Guard against multiple sourcing
+if [[ -n "${INIT_CONFIG_SOURCED:-}" ]]; then
+  return 0
+fi
+INIT_CONFIG_SOURCED=1
+
 # ========================================================================
 # ERROR CODES
 # ========================================================================
-readonly INIT_E_SUCCESS=0
-readonly INIT_E_GENERAL=1
-readonly INIT_E_MISUSE=2
-readonly INIT_E_CANTCREAT=73
-readonly INIT_E_IOERR=74
-readonly INIT_E_TEMPFAIL=75
-readonly INIT_E_NOPERM=77
-readonly INIT_E_CONFIG=78
+# Only set if not already set (for test compatibility)
+: ${INIT_E_SUCCESS:=0}
+: ${INIT_E_GENERAL:=1}
+: ${INIT_E_MISUSE:=2}
+: ${INIT_E_CANTCREAT:=73}
+: ${INIT_E_IOERR:=74}
+: ${INIT_E_TEMPFAIL:=75}
+: ${INIT_E_NOPERM:=77}
+: ${INIT_E_CONFIG:=78}
+
+readonly INIT_E_SUCCESS INIT_E_GENERAL INIT_E_MISUSE INIT_E_CANTCREAT
+readonly INIT_E_IOERR INIT_E_TEMPFAIL INIT_E_NOPERM INIT_E_CONFIG
 
 # ========================================================================
 # FILE PERMISSIONS
 # ========================================================================
-readonly INIT_PERM_PUBLIC=644
-readonly INIT_PERM_PRIVATE=600
-readonly INIT_PERM_EXEC=755
+: ${INIT_PERM_PUBLIC:=644}
+: ${INIT_PERM_PRIVATE:=600}
+: ${INIT_PERM_EXEC:=755}
+
+readonly INIT_PERM_PUBLIC INIT_PERM_PRIVATE INIT_PERM_EXEC
 
 # ========================================================================
 # GITIGNORE ENTRIES
