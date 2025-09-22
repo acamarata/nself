@@ -2,6 +2,20 @@
 # env-quotes-fix.sh - Auto-fix unquoted environment values with spaces
 # This prevents silent failures when sourcing env files with 'set -a'
 
+# Define logging functions if not already defined
+if ! command -v log_warning >/dev/null 2>&1; then
+  log_warning() { echo "⚠ $1" >&2; }
+fi
+if ! command -v log_info >/dev/null 2>&1; then
+  log_info() { echo "ℹ $1" >&2; }
+fi
+if ! command -v log_success >/dev/null 2>&1; then
+  log_success() { echo "✓ $1" >&2; }
+fi
+if ! command -v log_error >/dev/null 2>&1; then
+  log_error() { echo "✗ $1" >&2; }
+fi
+
 # Function to check if a value needs quotes
 needs_quotes() {
   local value="$1"
@@ -93,22 +107,32 @@ validate_env_file() {
     
     # Check for variable assignments with unquoted spaces
     if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
+      local var_name="${BASH_REMATCH[1]}"
       local var_value="${BASH_REMATCH[2]}"
-      
+
       if needs_quotes "$var_value"; then
         if [[ "$has_issues" == "false" ]]; then
-          log_warning "Found unquoted values with spaces in $env_file:"
+          if [[ "${AUTO_FIX:-true}" == "true" ]]; then
+            log_info "Auto-fixing unquoted values in $env_file:"
+          else
+            log_warning "Found unquoted values with spaces in $env_file:"
+          fi
           has_issues=true
         fi
-        log_info "  Line $line_num: $line"
+        if [[ "${AUTO_FIX:-true}" == "true" ]]; then
+          log_success "  Fixed line $line_num: ${var_name}=\"${var_value}\""
+        else
+          log_info "  Line $line_num: $line"
+        fi
       fi
     fi
   done < "$env_file"
   
   if [[ "$has_issues" == "true" ]]; then
+    # Return 1 to indicate issues were found (will be auto-fixed)
     return 1
   fi
-  
+
   return 0
 }
 
@@ -116,32 +140,29 @@ validate_env_file() {
 auto_fix_env_quotes() {
   local auto_fix="${AUTO_FIX:-true}"
   local fixed_total=0
-  
+
+  # Set AUTO_FIX for validate_env_file to use
+  export AUTO_FIX="$auto_fix"
+
   # Check all env files
   for env_file in .env .env.dev .env.staging .env.prod .env.local; do
     if [[ -f "$env_file" ]]; then
+      # Validate will show the appropriate messages
       if ! validate_env_file "$env_file"; then
         if [[ "$auto_fix" == "true" ]]; then
+          # Silently fix without duplicate messages
           local fixed_count
-          fix_env_file_quotes "$env_file"
+          fix_env_file_quotes "$env_file" >/dev/null 2>&1
           fixed_count=$?
-          if [[ $fixed_count -gt 0 ]]; then
-            log_success "Auto-fixed $fixed_count unquoted values in $env_file"
-            ((fixed_total += fixed_count))
-          fi
+          ((fixed_total += fixed_count))
         else
-          log_error "Unquoted values with spaces found in $env_file"
           log_info "Run with AUTO_FIX=true to fix automatically"
           return 1
         fi
       fi
     fi
   done
-  
-  if [[ $fixed_total -gt 0 ]]; then
-    log_info "Total fixes applied: $fixed_total"
-  fi
-  
+
   return 0
 }
 

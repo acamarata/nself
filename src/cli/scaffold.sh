@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+
+# Source platform compatibility for safe_sed_inline
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || {
+  # Fallback definition
+  safe_sed_inline() {
+    local file="$1"; shift
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i "" "$@" "$file"
+    else
+      sed -i "$@" "$file"
+    fi
+  }
+}
+
 set -euo pipefail
 
 # scaffold.sh - Create new service from template
@@ -113,12 +128,12 @@ cmd_scaffold() {
   case "$service_type" in
   nest | bullmq)
     if [[ -f "$target_dir/package.json" ]]; then
-      sed -i '' "s/\"name\": \".*\"/\"name\": \"$service_name\"/" "$target_dir/package.json"
+      safe_sed_inline "s/\"name\": \".*\"/\"name\": \"$service_name\"/" "$target_dir/package.json"
     fi
     ;;
   go)
     if [[ -f "$target_dir/go.mod" ]]; then
-      sed -i '' "s|module .*|module $service_name|" "$target_dir/go.mod"
+      safe_sed_inline "s|module .*|module $service_name|" "$target_dir/go.mod"
     fi
     ;;
   py)
@@ -138,14 +153,14 @@ cmd_scaffold() {
       if grep -q "^NESTJS_SERVICES=" ".env.local"; then
         current_services=$(grep "^NESTJS_SERVICES=" ".env.local" | cut -d= -f2)
         if [[ -n "$current_services" ]]; then
-          sed -i '' "s/^NESTJS_SERVICES=.*/NESTJS_SERVICES=$current_services,$service_name/" ".env.local"
+          safe_sed_inline "s/^NESTJS_SERVICES=.*/NESTJS_SERVICES=$current_services,$service_name/" ".env.local"
         else
-          sed -i '' "s/^NESTJS_SERVICES=.*/NESTJS_SERVICES=$service_name/" ".env.local"
+          safe_sed_inline "s/^NESTJS_SERVICES=.*/NESTJS_SERVICES=$service_name/" ".env.local"
         fi
       else
         echo "NESTJS_SERVICES=$service_name" >>".env.local"
       fi
-      sed -i '' "s/^NESTJS_ENABLED=.*/NESTJS_ENABLED=true/" ".env.local"
+      safe_sed_inline "s/^NESTJS_ENABLED=.*/NESTJS_ENABLED=true/" ".env.local"
     fi
     ;;
   bullmq)
@@ -154,14 +169,14 @@ cmd_scaffold() {
       if grep -q "^BULLMQ_WORKERS=" ".env.local"; then
         current_workers=$(grep "^BULLMQ_WORKERS=" ".env.local" | cut -d= -f2)
         if [[ -n "$current_workers" ]]; then
-          sed -i '' "s/^BULLMQ_WORKERS=.*/BULLMQ_WORKERS=$current_workers,$service_name/" ".env.local"
+          safe_sed_inline "s/^BULLMQ_WORKERS=.*/BULLMQ_WORKERS=$current_workers,$service_name/" ".env.local"
         else
-          sed -i '' "s/^BULLMQ_WORKERS=.*/BULLMQ_WORKERS=$service_name/" ".env.local"
+          safe_sed_inline "s/^BULLMQ_WORKERS=.*/BULLMQ_WORKERS=$service_name/" ".env.local"
         fi
       else
         echo "BULLMQ_WORKERS=$service_name" >>".env.local"
       fi
-      sed -i '' "s/^BULLMQ_ENABLED=.*/BULLMQ_ENABLED=true/" ".env.local"
+      safe_sed_inline "s/^BULLMQ_ENABLED=.*/BULLMQ_ENABLED=true/" ".env.local"
     fi
     ;;
   go)
@@ -170,14 +185,14 @@ cmd_scaffold() {
       if grep -q "^GOLANG_SERVICES=" ".env.local"; then
         current_services=$(grep "^GOLANG_SERVICES=" ".env.local" | cut -d= -f2)
         if [[ -n "$current_services" ]]; then
-          sed -i '' "s/^GOLANG_SERVICES=.*/GOLANG_SERVICES=$current_services,$service_name/" ".env.local"
+          safe_sed_inline "s/^GOLANG_SERVICES=.*/GOLANG_SERVICES=$current_services,$service_name/" ".env.local"
         else
-          sed -i '' "s/^GOLANG_SERVICES=.*/GOLANG_SERVICES=$service_name/" ".env.local"
+          safe_sed_inline "s/^GOLANG_SERVICES=.*/GOLANG_SERVICES=$service_name/" ".env.local"
         fi
       else
         echo "GOLANG_SERVICES=$service_name" >>".env.local"
       fi
-      sed -i '' "s/^GOLANG_ENABLED=.*/GOLANG_ENABLED=true/" ".env.local"
+      safe_sed_inline "s/^GOLANG_ENABLED=.*/GOLANG_ENABLED=true/" ".env.local"
     fi
     ;;
   py)
@@ -186,14 +201,14 @@ cmd_scaffold() {
       if grep -q "^PYTHON_SERVICES=" ".env.local"; then
         current_services=$(grep "^PYTHON_SERVICES=" ".env.local" | cut -d= -f2)
         if [[ -n "$current_services" ]]; then
-          sed -i '' "s/^PYTHON_SERVICES=.*/PYTHON_SERVICES=$current_services,$service_name/" ".env.local"
+          safe_sed_inline "s/^PYTHON_SERVICES=.*/PYTHON_SERVICES=$current_services,$service_name/" ".env.local"
         else
-          sed -i '' "s/^PYTHON_SERVICES=.*/PYTHON_SERVICES=$service_name/" ".env.local"
+          safe_sed_inline "s/^PYTHON_SERVICES=.*/PYTHON_SERVICES=$service_name/" ".env.local"
         fi
       else
         echo "PYTHON_SERVICES=$service_name" >>".env.local"
       fi
-      sed -i '' "s/^PYTHON_ENABLED=.*/PYTHON_ENABLED=true/" ".env.local"
+      safe_sed_inline "s/^PYTHON_ENABLED=.*/PYTHON_ENABLED=true/" ".env.local"
     fi
     ;;
   esac

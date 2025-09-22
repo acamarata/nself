@@ -22,7 +22,7 @@ mkdir -p services
 
 # Helper function to convert kebab-case to camelCase
 to_camel_case() {
-  echo "$1" | sed -r 's/-([a-z])/\U\1/g'
+  echo "$1" | sed -E 's/-([a-z])/\U\1/g'
 }
 
 # Helper function to convert kebab-case to PascalCase

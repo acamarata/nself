@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# service-generator-refactored.sh - Refactored service generator using modules
+# POSIX-compliant, no Bash 4+ features
+
+# Source utilities - don't override parent SCRIPT_DIR
+SERVICE_GEN_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$SERVICE_GEN_SCRIPT_DIR/../utils/display.sh" 2>/dev/null || true
+
+# Source the core service generator module
+GENERATORS_DIR="$SERVICE_GEN_SCRIPT_DIR/../service-generators"
+if [[ -f "$GENERATORS_DIR/core.sh" ]]; then
+  source "$GENERATORS_DIR/core.sh"
+
+  # Load all generator modules
+  source_generator_modules "$GENERATORS_DIR"
+fi
+
+# Generate missing services based on configuration
+generate_configured_services() {
+  local services_generated=0
+  local services_failed=0
+
+  # Check for Hasura
+  if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
+    echo "Hasura GraphQL Engine enabled"
+  fi
+
+  # Check for Auth service
+  if [[ "${AUTH_ENABLED:-false}" == "true" ]]; then
+    if [[ "${AUTH_PROVIDER:-}" == "custom" ]]; then
+      if ! service_exists "auth"; then
+        echo "Generating custom auth service..."
+        if generate_service "auth" "express-js" "4000"; then
+          services_generated=$((services_generated + 1))
+        else
+          services_failed=$((services_failed + 1))
+        fi
+      fi
+    fi
+  fi
+
+  # Check for Storage service
+  if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
+    if [[ "${STORAGE_PROVIDER:-}" == "custom" ]]; then
+      if ! service_exists "storage"; then
+        echo "Generating custom storage service..."
+        if generate_service "storage" "express-js" "5000"; then
+          services_generated=$((services_generated + 1))
+        else
+          services_failed=$((services_failed + 1))
+        fi
+      fi
+    fi
+  fi
+
+  # Check for Functions service
+  if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+    if ! service_exists "functions"; then
+      echo "Generating serverless functions service..."
+      if generate_service "functions" "express-js" "9000"; then
+        services_generated=$((services_generated + 1))
+      else
+        services_failed=$((services_failed + 1))
+      fi
+    fi
+  fi
+
+  # Check for NestJS API
+  if [[ "${NESTJS_ENABLED:-false}" == "true" ]]; then
+    if ! service_exists "api"; then
+      echo "Generating NestJS API service..."
+      if generate_service "api" "nestjs-js" "3333"; then
+        services_generated=$((services_generated + 1))
+      else
+        services_failed=$((services_failed + 1))
+      fi
+    fi
+  fi
+
+  # Generate custom services
+  if command -v build_custom_services >/dev/null 2>&1; then
+    build_custom_services
+  fi
+
+  # Return status
+  if [[ $services_failed -gt 0 ]]; then
+    return 1
+  fi
+
+  return 0
+}
+
+# Auto-fix missing services
+auto_fix_missing_services() {
+  local fixed_count=0
+
+  # Check and generate configured services
+  if generate_configured_services; then
+    echo "All required services are ready"
+  else
+    echo "Some services could not be generated" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+# Generate specific service type
+generate_service_template() {
+  local service_name="$1"
+  local service_type="${2:-express-js}"
+  local service_port="${3:-8000}"
+
+  if [[ -z "$service_name" ]]; then
+    echo "Service name is required" >&2
+    return 1
+  fi
+
+  # Use the modular generator
+  if command -v generate_service >/dev/null 2>&1; then
+    generate_service "$service_name" "$service_type" "$service_port"
+  else
+    echo "Service generator not available" >&2
+    return 1
+  fi
+}
+
+# List available templates
+list_available_templates() {
+  if command -v list_service_types >/dev/null 2>&1; then
+    list_service_types
+  else
+    echo "Service types:"
+    echo "  - express-js"
+    echo "  - nestjs-js"
+    echo "  - bullmq-js"
+    echo "  - python"
+    echo "  - go"
+    echo "  - rust"
+  fi
+}
+
+# Main function for backward compatibility
+generate_basic_node_service() {
+  local service_name="$1"
+  if command -v generate_basic_node_service >/dev/null 2>&1; then
+    generate_basic_node_service "$service_name"
+  else
+    generate_service_template "$service_name" "node"
+  fi
+}
+
+# Export functions
+export -f generate_configured_services
+export -f auto_fix_missing_services
+export -f generate_service_template
+export -f list_available_templates

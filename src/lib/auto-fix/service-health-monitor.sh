@@ -305,7 +305,7 @@ fix_nginx() {
       echo "# SSL configuration placeholder" > nginx/conf.d/ssl.conf
       # Fix include paths in all conf files
       for conf in nginx/conf.d/*.conf; do
-        sed -i 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null || \
+        sed -i.bak 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null && rm "$conf.bak" 2>/dev/null || \
         sed -i '' 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null
       done
       docker restart "$container" 2>/dev/null

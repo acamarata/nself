@@ -22,17 +22,8 @@ if [[ -f "$SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
 fi
 
-# Load environment safely (prioritize .env.dev over .env)
-env_file=""
-if [[ -f .env.dev ]]; then
-  env_file=".env.dev"
-elif [[ -f .env.local ]]; then
-  env_file=".env.local"
-elif [[ -f .env ]]; then
-  env_file=".env"
-fi
-
-if [[ -n "$env_file" ]]; then
+# Load environment safely (without executing JSON values)
+if [[ -f .env ]]; then
   set -a
   while IFS='=' read -r key value; do
     # Skip comments and empty lines
@@ -41,8 +32,10 @@ if [[ -n "$env_file" ]]; then
     if [[ ! "$value" =~ [\{\}\$\`] ]]; then
       export "$key=$value"
     fi
-  done < "$env_file"
+  done < .env
   set +a
+elif [[ -f .env.dev ]]; then
+  source .env.dev
 else
   echo "Warning: No .env file found" >&2
 fi
@@ -252,10 +245,7 @@ main() {
   echo "Generating docker-compose.yml for project: ${PROJECT_NAME}"
 
   # Generate the compose file
-  if ! generate_docker_compose; then
-    echo "Error: Failed to generate docker-compose.yml" >&2
-    return 1
-  fi
+  generate_docker_compose
 
   echo "✓ docker-compose.yml generated successfully"
 

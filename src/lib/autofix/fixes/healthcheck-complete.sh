@@ -32,10 +32,10 @@ EOF
         # Check if HealthController is already imported
         if ! grep -q "HealthController" "$service_dir/src/app.module.ts"; then
           # Add import at the top
-          sed -i "1s/^/import { HealthController } from '.\/health.controller';\n/" "$service_dir/src/app.module.ts"
+          sed -i.bak "1s/^/import { HealthController } from '.\/health.controller';\n/" "$service_dir/src/app.module.ts" && rm "$service_dir/src/app.module.ts.bak"
 
           # Add to controllers array
-          sed -i '/controllers:/s/\[/[HealthController, /' "$service_dir/src/app.module.ts"
+          sed -i.bak '/controllers:/s/\[/[HealthController, /' "$service_dir/src/app.module.ts" && rm "$service_dir/src/app.module.ts.bak"
         fi
       fi
     fi
@@ -55,13 +55,13 @@ EOF
         # Add health endpoint based on framework
         if grep -q "express" "$main_file"; then
           # Express app - add before app.listen
-          sed -i "/app\.listen/i\
+          sed -i.bak "/app\.listen/i\
 app.get('/health', (req, res) => {\
   res.json({ status: 'ok', timestamp: new Date().toISOString() });\
 });" "$main_file"
         elif grep -q "fastify" "$main_file"; then
           # Fastify app
-          sed -i "/fastify\.listen/i\
+          sed -i.bak "/fastify\.listen/i\
 fastify.get('/health', async (request, reply) => {\
   return { status: 'ok', timestamp: new Date().toISOString() };\
 });" "$main_file"
@@ -121,7 +121,7 @@ EOF
       # Add route to main.go
       if grep -q "mux.HandleFunc\|http.HandleFunc" "$main_file"; then
         # Add health route
-        sed -i '/HandleFunc/a\    http.HandleFunc("/health", healthHandler)' "$main_file"
+        sed -i.bak '/HandleFunc/a\    http.HandleFunc("/health", healthHandler)' "$main_file" && rm "${main_file}.bak"
       fi
     fi
   fi
@@ -160,7 +160,7 @@ async def health():
 EOF
         # Add datetime import if needed
         if ! grep -q "from datetime import" "$main_file"; then
-          sed -i "1s/^/from datetime import datetime\n/" "$main_file"
+          sed -i.bak "1s/^/from datetime import datetime\n/" "$main_file" && rm "${main_file}.bak"
         fi
       fi
     elif grep -q "Flask\|flask" "$main_file"; then
@@ -175,7 +175,7 @@ def health():
 EOF
         # Add datetime import if needed
         if ! grep -q "from datetime import" "$main_file"; then
-          sed -i "1s/^/from datetime import datetime\n/" "$main_file"
+          sed -i.bak "1s/^/from datetime import datetime\n/" "$main_file" && rm "${main_file}.bak"
         fi
       fi
     fi

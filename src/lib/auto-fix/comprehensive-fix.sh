@@ -46,11 +46,11 @@ EOF
             if [[ -f "$conf_file" ]]; then
               # Fix SSL include path
               sed -i '' 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf_file" 2>/dev/null || \
-              sed -i 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf_file" 2>/dev/null
+              sed -i.bak 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf_file" 2>/dev/null && rm "$conf_file.bak" 2>/dev/null
               
               # Fix deprecated http2 directive
               sed -i '' 's|listen 443 ssl http2;|listen 443 ssl;\n    http2 on;|g' "$conf_file" 2>/dev/null || \
-              sed -i 's|listen 443 ssl http2;|listen 443 ssl;\n    http2 on;|g' "$conf_file" 2>/dev/null
+              sed -i.bak 's|listen 443 ssl http2;|listen 443 ssl;\n    http2 on;|g' "$conf_file" 2>/dev/null && rm "${conf_file}.bak"
               
               # Standardize SSL certificate paths
               # Check what certificates actually exist
@@ -58,10 +58,10 @@ EOF
                 # Use localhost certificates for localhost domains
                 if grep -q "server_name.*localhost" "$conf_file"; then
                   sed -i '' 's|ssl_certificate /etc/nginx/ssl/certs/\${BASE_DOMAIN}/.*|ssl_certificate /etc/nginx/ssl/localhost/cert.pem;|g' "$conf_file" 2>/dev/null || \
-                  sed -i 's|ssl_certificate /etc/nginx/ssl/certs/${BASE_DOMAIN}/.*|ssl_certificate /etc/nginx/ssl/localhost/cert.pem;|g' "$conf_file" 2>/dev/null
+                  sed -i.bak 's|ssl_certificate /etc/nginx/ssl/certs/${BASE_DOMAIN}/.*|ssl_certificate /etc/nginx/ssl/localhost/cert.pem;|g' "$conf_file" 2>/dev/null && rm "${conf_file}.bak"
                   
                   sed -i '' 's|ssl_certificate_key /etc/nginx/ssl/certs/\${BASE_DOMAIN}/.*|ssl_certificate_key /etc/nginx/ssl/localhost/key.pem;|g' "$conf_file" 2>/dev/null || \
-                  sed -i 's|ssl_certificate_key /etc/nginx/ssl/certs/${BASE_DOMAIN}/.*|ssl_certificate_key /etc/nginx/ssl/localhost/key.pem;|g' "$conf_file" 2>/dev/null
+                  sed -i.bak 's|ssl_certificate_key /etc/nginx/ssl/certs/${BASE_DOMAIN}/.*|ssl_certificate_key /etc/nginx/ssl/localhost/key.pem;|g' "$conf_file" 2>/dev/null && rm "${conf_file}.bak"
                 fi
               fi
               
@@ -69,10 +69,10 @@ EOF
                 # Use nself-org certificates for API endpoints
                 if grep -q "server_name.*api\|hasura\|auth\|storage" "$conf_file"; then
                   sed -i '' 's|ssl_certificate .*\.pem;|ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;|g' "$conf_file" 2>/dev/null || \
-                  sed -i 's|ssl_certificate .*\.pem;|ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;|g' "$conf_file" 2>/dev/null
+                  sed -i.bak 's|ssl_certificate .*\.pem;|ssl_certificate /etc/nginx/ssl/nself-org/fullchain.pem;|g' "$conf_file" 2>/dev/null && rm "${conf_file}.bak"
                   
                   sed -i '' 's|ssl_certificate_key .*\.pem;|ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;|g' "$conf_file" 2>/dev/null || \
-                  sed -i 's|ssl_certificate_key .*\.pem;|ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;|g' "$conf_file" 2>/dev/null
+                  sed -i.bak 's|ssl_certificate_key .*\.pem;|ssl_certificate_key /etc/nginx/ssl/nself-org/privkey.pem;|g' "$conf_file" 2>/dev/null && rm "${conf_file}.bak"
                 fi
               fi
               
@@ -153,7 +153,7 @@ EOF
       # Fix duplicate start_period entries
       if grep -q "start_period:.*start_period:" docker-compose.yml; then
         sed -i '' '/^      start_period: [0-9]*s$/d' docker-compose.yml 2>/dev/null || \
-        sed -i '/^      start_period: [0-9]*s$/d' docker-compose.yml 2>/dev/null
+        sed -i.bak '/^      start_period: [0-9]*s$/d' docker-compose.yml 2>/dev/null && rm docker-compose.yml.bak
         
         # Re-add single start_period where needed
         awk '
@@ -178,10 +178,10 @@ EOF
       
       # Fix incorrect ports in health checks
       sed -i '' 's|http://localhost:4000/version|http://localhost:4000/healthz|g' docker-compose.yml 2>/dev/null || \
-      sed -i 's|http://localhost:4000/version|http://localhost:4000/healthz|g' docker-compose.yml 2>/dev/null
+      sed -i.bak 's|http://localhost:4000/version|http://localhost:4000/healthz|g' docker-compose.yml 2>/dev/null && rm docker-compose.yml.bak
       # Also fix if using wrong port
       sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null || \
-      sed -i 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null
+      sed -i.bak 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null && rm docker-compose.yml.bak
       
       if [[ "$healthcheck_fixed" == "true" ]]; then
         log_success "Fixed health check configurations"

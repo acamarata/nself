@@ -7,7 +7,15 @@
 # Format: language:framework or just framework
 get_service_template() {
   local service_def="$1"
-  local template_base="/Users/admin/Sites/nself/src/templates/services"
+  # Get template base dynamically
+  local template_base=""
+  if [[ -n "${NSELF_ROOT:-}" ]]; then
+    template_base="$NSELF_ROOT/src/templates/services"
+  elif [[ -d "$(dirname "${BASH_SOURCE[0]}")/../../../src/templates/services" ]]; then
+    template_base="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../src/templates/services" && pwd)"
+  else
+    template_base="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/templates/services"
+  fi
   
   case "$service_def" in
     # JavaScript/TypeScript frameworks

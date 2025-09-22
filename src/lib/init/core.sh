@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+
+# Source platform compatibility for safe_sed_inline
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || {
+  # Fallback definition
+  safe_sed_inline() {
+    local file="$1"; shift
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i "" "$@" "$file"
+    else
+      sed -i "$@" "$file"
+    fi
+  }
+}
+
 # core.sh - Core orchestration logic for nself init command
 #
 # This module contains the main initialization logic that coordinates
@@ -106,7 +121,12 @@ ensure_working_defaults() {
   if ! grep -q "^PROJECT_NAME=" "$env_file" 2>/dev/null; then
     if grep -q "^# PROJECT_NAME=" "$env_file" 2>/dev/null; then
       # Uncomment existing commented line
-      sed -i.bak 's/^# PROJECT_NAME=.*/PROJECT_NAME=myproject/' "$env_file"
+      # Use platform-safe sed
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        safe_sed_inline 's/^# PROJECT_NAME=.*/PROJECT_NAME=myproject/' "$env_file"
+      else
+        safe_sed_inline 's/^# PROJECT_NAME=.*/PROJECT_NAME=myproject/' "$env_file"
+      fi
       needs_update=true
     else
       # Add new line
@@ -118,7 +138,12 @@ ensure_working_defaults() {
   # Check if BASE_DOMAIN is set
   if ! grep -q "^BASE_DOMAIN=" "$env_file" 2>/dev/null; then
     if grep -q "^# BASE_DOMAIN=" "$env_file" 2>/dev/null; then
-      sed -i.bak 's/^# BASE_DOMAIN=.*/BASE_DOMAIN=local.nself.org/' "$env_file"
+      # Use platform-safe sed
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        safe_sed_inline 's/^# BASE_DOMAIN=.*/BASE_DOMAIN=local.nself.org/' "$env_file"
+      else
+        safe_sed_inline 's/^# BASE_DOMAIN=.*/BASE_DOMAIN=local.nself.org/' "$env_file"
+      fi
       needs_update=true
     else
       echo "BASE_DOMAIN=local.nself.org" >> "$env_file"
@@ -129,7 +154,12 @@ ensure_working_defaults() {
   # Check if ENV is set
   if ! grep -q "^ENV=" "$env_file" 2>/dev/null; then
     if grep -q "^# ENV=" "$env_file" 2>/dev/null; then
-      sed -i.bak 's/^# ENV=.*/ENV=dev/' "$env_file"
+      # Use platform-safe sed
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        safe_sed_inline 's/^# ENV=.*/ENV=dev/' "$env_file"
+      else
+        safe_sed_inline 's/^# ENV=.*/ENV=dev/' "$env_file"
+      fi
       needs_update=true
     else
       echo "ENV=dev" >> "$env_file"

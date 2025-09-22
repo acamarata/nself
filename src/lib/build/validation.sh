@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 # validation.sh - Environment validation for build
 
+# Source auto-fix utilities
+VALIDATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$VALIDATION_DIR/../auto-fix/env-quotes-fix.sh" ]]; then
+  source "$VALIDATION_DIR/../auto-fix/env-quotes-fix.sh"
+fi
+
 # Validate environment configuration
 validate_environment() {
   local validation_passed=true
   local errors=()
   local warnings=()
   local fixes=()
+
+  # Fix unquoted values with spaces first (before loading)
+  if command -v auto_fix_env_quotes >/dev/null 2>&1; then
+    auto_fix_env_quotes
+  fi
 
   # Check required variables
   if [[ -z "${PROJECT_NAME:-}" ]]; then

@@ -144,8 +144,8 @@ kill_port_if_ours() {
 
   if [[ -n "$containers" ]]; then
     log_info "Stopping our containers using port $port"
-    echo "$containers" | xargs -r docker stop >/dev/null 2>&1 || true
-    echo "$containers" | xargs -r docker rm >/dev/null 2>&1 || true
+    if [ -n "$containers" ]; then echo "$containers" | xargs docker stop >/dev/null 2>&1 || true; fi
+    if [ -n "$containers" ]; then echo "$containers" | xargs docker rm >/dev/null 2>&1 || true; fi
     return 0
   fi
 
@@ -183,7 +183,7 @@ cleanup_stopped_containers() {
 
   if [[ -n "$containers" ]]; then
     log_info "Cleaning up stopped containers"
-    echo "$containers" | xargs -r docker rm >/dev/null 2>&1 || true
+    if [ -n "$containers" ]; then echo "$containers" | xargs docker rm >/dev/null 2>&1 || true; fi
   fi
 }
 

@@ -14,7 +14,10 @@ fix_out_of_memory() {
   docker volume prune -f >/dev/null 2>&1
 
   # Stop all other containers to free memory
-  docker ps -q | grep -v ${PROJECT_NAME:-nself}_ | xargs -r docker stop >/dev/null 2>&1
+  local other_containers=$(docker ps -q | grep -v ${PROJECT_NAME:-nself}_)
+  if [ -n "$other_containers" ]; then
+    echo "$other_containers" | xargs docker stop >/dev/null 2>&1
+  fi
 
   LAST_FIX_DESCRIPTION="Freed memory by pruning Docker resources"
   return 0

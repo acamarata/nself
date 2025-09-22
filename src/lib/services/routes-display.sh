@@ -7,6 +7,39 @@ set -euo pipefail
 ROUTES_DISPLAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NSELF_ROOT="$(cd "$ROUTES_DISPLAY_DIR/../.." && pwd)"
 
+# Collect all configured routes
+routes::collect_all() {
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local project_name="${PROJECT_NAME:-app}"
+
+  # Always include base routes
+  echo "api.${base_domain}"
+  echo "${base_domain}"
+
+  # Add mail route if enabled
+  if [[ "${MAILPIT_ENABLED:-true}" == "true" ]]; then
+    echo "mail.${base_domain}"
+  fi
+
+  # Add project route
+  echo "${project_name}.${base_domain}"
+
+  # Add other service routes
+  [[ "${HASURA_ENABLED:-false}" == "true" ]] && echo "${HASURA_ROUTE:-api.${base_domain}}"
+  [[ "${AUTH_ENABLED:-false}" == "true" ]] && echo "${AUTH_ROUTE:-auth.${base_domain}}"
+  [[ "${STORAGE_ENABLED:-false}" == "true" ]] && echo "${STORAGE_ROUTE:-storage.${base_domain}}"
+
+  # Add frontend app routes
+  local app_count="${FRONTEND_APP_COUNT:-0}"
+  if [[ "$app_count" -gt 0 ]]; then
+    for ((i=1; i<=app_count; i++)); do
+      local subdomain_var="FRONTEND_APP_${i}_SUBDOMAIN"
+      local subdomain="${!subdomain_var:-}"
+      [[ -n "$subdomain" ]] && echo "${subdomain}.${base_domain}"
+    done
+  fi
+}
+
 # Source dependencies
 source "$ROUTES_DISPLAY_DIR/../utils/display.sh" 2>/dev/null || true
 source "$ROUTES_DISPLAY_DIR/service-routes.sh" 2>/dev/null || true

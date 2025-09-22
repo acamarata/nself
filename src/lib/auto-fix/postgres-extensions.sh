@@ -1,104 +1,99 @@
 #!/bin/bash
 
 # Comprehensive Postgres extension validation and information
+# Uses delimited lists for compatibility with Bash 3.2+
 
-# Check if associative arrays are supported (Bash 4+)
-if ! declare -A test_array 2>/dev/null; then
-  echo "Warning: This script requires Bash 4+ for full functionality" >&2
-  # Provide fallback or exit gracefully
-  POSTGRES_EXTENSIONS_INFO=""
-  return 0 2>/dev/null || exit 0
-fi
+# Extension information as delimited string (name|description|category|safe)
+POSTGRES_EXTENSIONS_INFO="
+uuid-ossp|UUID generation functions|Core|true
+pgcrypto|Cryptographic functions|Core|true
+citext|Case-insensitive text type|Core|true
+hstore|Key-value store|Core|true
+pg_trgm|Trigram text search|Core|true
+btree_gin|GIN index support for common types|Core|true
+btree_gist|GiST index support for common types|Core|true
+postgres_fdw|Foreign data wrapper for PostgreSQL|Core|true
+file_fdw|Foreign data wrapper for files|Core|true
+pg_stat_statements|Query performance statistics|Core|true
+tablefunc|Cross tabulation functions|Core|true
+unaccent|Text search dictionary for unaccented matching|Core|true
+intarray|Functions for 1-D arrays of integers|Core|true
+ltree|Hierarchical tree-like structures|Core|true
+xml2|XPath querying and XSLT|Core|true
+fuzzystrmatch|Fuzzy string matching|Core|true
+cube|Multi-dimensional cubes|Core|true
+earthdistance|Great circle distance calculations|Core|true
+isn|International product numbering standards|Core|true
+lo|Large object maintenance|Core|true
+pg_buffercache|Examine shared buffer cache|Core|true
+pg_prewarm|Prewarm buffer cache|Core|true
+pg_visibility|Visibility map examination|Core|true
+pgrowlocks|Row locking information|Core|true
+pgstattuple|Tuple-level statistics|Core|true
+sslinfo|SSL certificate information|Core|true
+tsm_system_rows|TABLESAMPLE method SYSTEM_ROWS|Core|true
+tsm_system_time|TABLESAMPLE method SYSTEM_TIME|Core|true
+adminpack|Administrative functions|Core|true
+amcheck|Verify index integrity|Core|true
+bloom|Bloom filter index|Core|true
+dblink|Connect to other PostgreSQL databases|Core|true
+dict_int|Dictionary for integers|Core|true
+dict_xsyn|Dictionary of synonyms|Core|true
+pageinspect|Inspect database pages|Core|true
+pg_freespacemap|Free space map|Core|true
+pg_surgery|Perform surgery on relation data|Core|true
+pg_walinspect|Inspect WAL|Core|true
+pgaudit|Session and object audit logging|Contrib|true
+timescaledb|Time-series database|Third-party|true
+postgis|Geographic information system|Third-party|true
+postgis_topology|PostGIS topology support|Third-party|true
+postgis_raster|PostGIS raster support|Third-party|true
+postgis_tiger_geocoder|PostGIS TIGER geocoder|Third-party|true
+address_standardizer|Address standardizer|Third-party|true
+address_standardizer_data_us|US address data|Third-party|true
+pgrouting|Routing functionality|Third-party|true
+pgvector|Vector similarity search|Third-party|true
+pg_cron|Job scheduler|Third-party|true
+pg_partman|Partition management|Third-party|true
+pg_repack|Online table reorganization|Third-party|true
+pglogical|Logical replication|Third-party|true
+wal2json|WAL to JSON output|Third-party|true
+pg_jsonschema|JSON Schema validation|Third-party|true
+pg_graphql|GraphQL support|Third-party|true
+pg_net|HTTP client|Third-party|true
+plv8|JavaScript language|Third-party|false
+plpython3u|Python 3 language|Core|false
+plperlu|Perl language (untrusted)|Core|false
+pltclu|Tcl language (untrusted)|Core|false
+plr|R language|Third-party|false
+pljava|Java language|Third-party|false
+plsh|Shell language|Third-party|false
+multicorn|Foreign data wrapper framework|Third-party|false
+citus|Distributed PostgreSQL|Third-party|false
+age|Graph database|Third-party|false
+orioledb|Table storage engine|Third-party|false
+pg_lakehouse|Data lakehouse|Third-party|false
+"
 
-declare -A POSTGRES_EXTENSIONS_INFO=(
-  ["uuid-ossp"]="UUID generation functions|Core|true"
-  ["pgcrypto"]="Cryptographic functions|Core|true"
-  ["citext"]="Case-insensitive text type|Core|true"
-  ["hstore"]="Key-value store|Core|true"
-  ["pg_trgm"]="Trigram text search|Core|true"
-  ["btree_gin"]="GIN index support for common types|Core|true"
-  ["btree_gist"]="GiST index support for common types|Core|true"
-  ["postgres_fdw"]="Foreign data wrapper for PostgreSQL|Core|true"
-  ["file_fdw"]="Foreign data wrapper for files|Core|true"
-  ["pg_stat_statements"]="Query performance statistics|Core|true"
-  ["tablefunc"]="Cross tabulation functions|Core|true"
-  ["unaccent"]="Text search dictionary for unaccented matching|Core|true"
-  ["intarray"]="Functions for 1-D arrays of integers|Core|true"
-  ["ltree"]="Hierarchical tree-like structures|Core|true"
-  ["xml2"]="XPath querying and XSLT|Core|true"
-  ["fuzzystrmatch"]="Fuzzy string matching|Core|true"
-  ["cube"]="Multi-dimensional cubes|Core|true"
-  ["earthdistance"]="Great circle distance calculations|Core|true"
-  ["isn"]="International product numbering standards|Core|true"
-  ["lo"]="Large object maintenance|Core|true"
-  ["pg_buffercache"]="Examine shared buffer cache|Core|true"
-  ["pg_prewarm"]="Prewarm buffer cache|Core|true"
-  ["pg_visibility"]="Visibility map examination|Core|true"
-  ["pgrowlocks"]="Row locking information|Core|true"
-  ["pgstattuple"]="Tuple-level statistics|Core|true"
-  ["sslinfo"]="SSL certificate information|Core|true"
-  ["tsm_system_rows"]="TABLESAMPLE method SYSTEM_ROWS|Core|true"
-  ["tsm_system_time"]="TABLESAMPLE method SYSTEM_TIME|Core|true"
-  ["adminpack"]="Administrative functions|Core|true"
-  ["amcheck"]="Verify index integrity|Core|true"
-  ["bloom"]="Bloom filter index|Core|true"
-  ["dblink"]="Connect to other PostgreSQL databases|Core|true"
-  ["dict_int"]="Dictionary for integers|Core|true"
-  ["dict_xsyn"]="Dictionary of synonyms|Core|true"
-  ["pageinspect"]="Inspect database pages|Core|true"
-  ["pg_freespacemap"]="Free space map|Core|true"
-  ["pg_surgery"]="Perform surgery on relation data|Core|true"
-  ["pg_walinspect"]="Inspect WAL|Core|true"
-  ["pgaudit"]="Session and object audit logging|Contrib|true"
-  ["timescaledb"]="Time-series database|Third-party|true"
-  ["postgis"]="Geographic information system|Third-party|true"
-  ["postgis_topology"]="PostGIS topology support|Third-party|true"
-  ["postgis_raster"]="PostGIS raster support|Third-party|true"
-  ["postgis_tiger_geocoder"]="PostGIS TIGER geocoder|Third-party|true"
-  ["address_standardizer"]="Address standardizer|Third-party|true"
-  ["address_standardizer_data_us"]="US address data|Third-party|true"
-  ["pgrouting"]="Routing functionality|Third-party|true"
-  ["pgvector"]="Vector similarity search|Third-party|true"
-  ["pg_cron"]="Job scheduler|Third-party|true"
-  ["pg_partman"]="Partition management|Third-party|true"
-  ["pg_repack"]="Online table reorganization|Third-party|true"
-  ["pglogical"]="Logical replication|Third-party|true"
-  ["wal2json"]="WAL to JSON output|Third-party|true"
-  ["pg_jsonschema"]="JSON Schema validation|Third-party|true"
-  ["pg_graphql"]="GraphQL support|Third-party|true"
-  ["pg_net"]="HTTP client|Third-party|true"
-  ["plv8"]="JavaScript language|Third-party|false"
-  ["plpython3u"]="Python 3 language|Core|false"
-  ["plperlu"]="Perl language (untrusted)|Core|false"
-  ["pltclu"]="Tcl language (untrusted)|Core|false"
-  ["plr"]="R language|Third-party|false"
-  ["pljava"]="Java language|Third-party|false"
-  ["plsh"]="Shell language|Third-party|false"
-  ["multicorn"]="Foreign data wrapper framework|Third-party|false"
-  ["citus"]="Distributed PostgreSQL|Third-party|false"
-  ["age"]="Graph database|Third-party|false"
-  ["orioledb"]="Table storage engine|Third-party|false"
-  ["pg_lakehouse"]="Data lakehouse|Third-party|false"
-)
-
-# Extensions commonly needed together
-declare -A EXTENSION_GROUPS=(
-  ["spatial"]="postgis,postgis_topology,postgis_raster,address_standardizer"
-  ["search"]="pg_trgm,unaccent,fuzzystrmatch"
-  ["monitoring"]="pg_stat_statements,pg_buffercache,pgstattuple"
-  ["crypto"]="pgcrypto,uuid-ossp"
-  ["timeseries"]="timescaledb,pg_partman"
-  ["ml"]="pgvector,plpython3u"
-  ["replication"]="pglogical,wal2json"
-)
+# Extension groups as delimited string (group_name|extensions)
+EXTENSION_GROUPS="
+spatial|postgis,postgis_topology,postgis_raster,address_standardizer
+search|pg_trgm,unaccent,fuzzystrmatch
+monitoring|pg_stat_statements,pg_buffercache,pgstattuple
+crypto|pgcrypto,uuid-ossp
+timeseries|timescaledb,pg_partman
+ml|pgvector,plpython3u
+replication|pglogical,wal2json
+"
 
 validate_postgres_extension() {
   local ext="$1"
   local ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 
   # Check if extension exists in our database
-  if [[ -n "${POSTGRES_EXTENSIONS_INFO[$ext_lower]}" ]]; then
-    IFS='|' read -r description category available <<<"${POSTGRES_EXTENSIONS_INFO[$ext_lower]}"
+  local ext_info=$(echo "$POSTGRES_EXTENSIONS_INFO" | grep "^$ext_lower|" | head -1)
+  if [[ -n "$ext_info" ]]; then
+    IFS='|' read -r name description category available <<<"$ext_info"
 
     if [[ "$available" == "false" ]]; then
       return 2 # Extension exists but not available in standard image
@@ -138,8 +133,9 @@ get_extension_info() {
   local ext="$1"
   local ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 
-  if [[ -n "${POSTGRES_EXTENSIONS_INFO[$ext_lower]}" ]]; then
-    IFS='|' read -r description category available <<<"${POSTGRES_EXTENSIONS_INFO[$ext_lower]}"
+  local ext_info=$(echo "$POSTGRES_EXTENSIONS_INFO" | grep "^$ext_lower|" | head -1)
+  if [[ -n "$ext_info" ]]; then
+    IFS='|' read -r name description category available <<<"$ext_info"
     echo "$description"
   else
     echo "Unknown extension"

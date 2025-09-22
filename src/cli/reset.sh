@@ -75,9 +75,15 @@ cmd_reset() {
   local container_count=$(docker ps -aq --filter "name=${project}" | wc -l | tr -d ' ')
   if [[ $container_count -gt 0 ]]; then
     # Stop all project containers
-    docker ps -q --filter "name=${project}" | xargs -r docker stop >/dev/null 2>&1 || true
+    local running=$(docker ps -q --filter "name=${project}")
+    if [ -n "$running" ]; then
+      echo "$running" | xargs docker stop >/dev/null 2>&1 || true
+    fi
     # Remove all project containers
-    docker ps -aq --filter "name=${project}" | xargs -r docker rm -f >/dev/null 2>&1 || true
+    local containers=$(docker ps -aq --filter "name=${project}")
+    if [ -n "$containers" ]; then
+      echo "$containers" | xargs docker rm -f >/dev/null 2>&1 || true
+    fi
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} Stopped and removed $container_count containers         \n"
   else
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No containers to stop                           \n"
@@ -87,7 +93,10 @@ cmd_reset() {
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Removing Docker volumes..."
   local volume_count=$(docker volume ls -q | grep "^${project}_" | wc -l | tr -d ' ')
   if [[ $volume_count -gt 0 ]]; then
-    docker volume ls -q | grep "^${project}_" | xargs -r docker volume rm -f >/dev/null 2>&1 || true
+    local volumes=$(docker volume ls -q | grep "^${project}_")
+    if [ -n "$volumes" ]; then
+      echo "$volumes" | xargs docker volume rm -f >/dev/null 2>&1 || true
+    fi
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} Removed $volume_count Docker volumes                     \n"
   else
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No volumes to remove                            \n"

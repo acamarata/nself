@@ -9,9 +9,19 @@ if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
   SERVICE_ROUTES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   NSELF_ROOT="$(cd "$SERVICE_ROUTES_DIR/../.." && pwd)"
 else
-  # Fallback if sourced in a different way
-  SERVICE_ROUTES_DIR="/Users/admin/Sites/nself/src/lib/services"
-  NSELF_ROOT="/Users/admin/Sites/nself/src"
+  # Fallback - try to find nself root dynamically
+  if command -v nself >/dev/null 2>&1; then
+    NSELF_BIN="$(which nself)"
+    if [[ -L "$NSELF_BIN" ]]; then
+      NSELF_BIN="$(readlink -f "$NSELF_BIN" 2>/dev/null || readlink "$NSELF_BIN")"
+    fi
+    NSELF_ROOT="$(cd "$(dirname "$NSELF_BIN")/.." && pwd)"
+    SERVICE_ROUTES_DIR="$NSELF_ROOT/src/lib/services"
+  else
+    # Last resort - use pwd
+    SERVICE_ROUTES_DIR="$(pwd)/src/lib/services"
+    NSELF_ROOT="$(pwd)"
+  fi
 fi
 
 # Source utilities

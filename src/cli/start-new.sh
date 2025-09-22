@@ -16,7 +16,6 @@ source "$SCRIPT_DIR/../lib/utils/hosts.sh"
 source "$SCRIPT_DIR/../lib/start/pre-checks.sh"
 source "$SCRIPT_DIR/../lib/start/docker-compose.sh"
 source "$SCRIPT_DIR/../lib/start/port-manager.sh"
-source "$SCRIPT_DIR/../lib/start/auto-fix.sh" 2>/dev/null || true
 
 # Parse command line options
 parse_options() {
@@ -91,7 +90,7 @@ main() {
   parse_options "$@"
 
   # Show header
-  show_command_header "nself start" "Start all services and infrastructure"
+  display_header "nself start" "Start all services and infrastructure"
 
   # 1. Pre-flight checks
   if [ "$SKIP_CHECKS" = "false" ]; then
@@ -101,31 +100,17 @@ main() {
     fi
   fi
 
-  # 2. Load environment - base .env first, then overlay with specific env
-  # Always load base .env if it exists
-  if [ -f ".env" ]; then
-    set -a
-    source ".env"
-    set +a
-    [ "$VERBOSE" = "true" ] && log_info "Loaded base environment from .env"
-  fi
-
-  # Then overlay with specific environment file
+  # 2. Load environment
   local env_file=$(check_env_files)
-  if [ -f "$env_file" ] && [ "$env_file" != ".env" ]; then
+  if [ -f "$env_file" ]; then
     set -a
     source "$env_file"
     set +a
-    [ "$VERBOSE" = "true" ] && log_info "Loaded environment overrides from $env_file"
+    [ "$VERBOSE" = "true" ] && log_info "Loaded environment from $env_file"
   fi
 
   # 3. Check and update hosts file
   ensure_hosts_entries "${BASE_DOMAIN:-localhost}" "${PROJECT_NAME:-nself}"
-
-  # 3.5. Apply auto-fixes for common issues
-  if command -v apply_start_auto_fixes >/dev/null 2>&1; then
-    apply_start_auto_fixes "${PROJECT_NAME:-nself}" "$env_file" "$VERBOSE"
-  fi
 
   # 4. Handle port conflicts
   if [ "$AUTO_FIX" = "true" ]; then
@@ -156,17 +141,13 @@ main() {
     exit 0
   fi
 
-  # 6. Docker network will be created by docker-compose
-  # Remove any existing network that might conflict
+  # 6. Create docker network
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating Docker network..."
   local network_name="${PROJECT_NAME:-nself}_network"
-  if docker network ls --format "{{.Name}}" | grep -q "^${network_name}$"; then
-    # Check if network is in use
-    if ! docker network inspect "$network_name" --format '{{len .Containers}}' | grep -q "^0$" 2>/dev/null; then
-      printf "${COLOR_YELLOW}⚠${COLOR_RESET}  Network $network_name in use by other containers\n"
-    else
-      # Remove unused network to let docker-compose recreate it
-      docker network rm "$network_name" >/dev/null 2>&1 || true
-    fi
+  if docker network create "$network_name" >/dev/null 2>&1; then
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Created Docker network          \n"
+  else
+    printf "\r${COLOR_DIM}○${COLOR_RESET} Docker network exists           \n"
   fi
 
   # 7. Build and start services
@@ -178,15 +159,8 @@ main() {
     build_opt="true"
   fi
 
-  # Build compose command - use .env as primary file since it has critical vars
-  # Docker compose will use .env by default, but we explicitly set it
-  local compose_env_file=".env"
-  if [ -f ".env" ]; then
-    compose_env_file=".env"
-  elif [ -f "$env_file" ]; then
-    compose_env_file="$env_file"
-  fi
-  local compose_cmd=$(build_compose_command "$compose_env_file" "${PROJECT_NAME:-nself}" "$DETACHED" "$build_opt")
+  # Build compose command
+  local compose_cmd=$(build_compose_command "$env_file" "${PROJECT_NAME:-nself}" "$DETACHED" "$build_opt")
 
   # Execute with progress
   if execute_compose_with_progress "$compose_cmd" "${PROJECT_NAME:-nself}" 600 "$VERBOSE"; then
@@ -204,11 +178,6 @@ main() {
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services healthy            \n"
   else
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Some services may be unhealthy \n"
-  fi
-
-  # 8.5. Run init containers (like minio bucket creation)
-  if docker compose --project-name "${PROJECT_NAME:-nself}" --env-file "$env_file" --profile init run --rm minio-client >/dev/null 2>&1; then
-    [ "$VERBOSE" = "true" ] && log_info "Init containers completed"
   fi
 
   # 9. Show service URLs

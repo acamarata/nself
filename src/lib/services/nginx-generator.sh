@@ -9,9 +9,19 @@ if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
   NGINX_GEN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   NSELF_ROOT="$(cd "$NGINX_GEN_DIR/../.." && pwd)"
 else
-  # Fallback if sourced in a different way
-  NGINX_GEN_DIR="/Users/admin/Sites/nself/src/lib/services"
-  NSELF_ROOT="/Users/admin/Sites/nself/src"
+  # Fallback - try to find nself root dynamically
+  if command -v nself >/dev/null 2>&1; then
+    NSELF_BIN="$(which nself)"
+    if [[ -L "$NSELF_BIN" ]]; then
+      NSELF_BIN="$(readlink -f "$NSELF_BIN" 2>/dev/null || readlink "$NSELF_BIN")"
+    fi
+    NSELF_ROOT="$(cd "$(dirname "$NSELF_BIN")/.." && pwd)"
+    NGINX_GEN_DIR="$NSELF_ROOT/src/lib/services"
+  else
+    # Last resort - use pwd
+    NGINX_GEN_DIR="$(pwd)/src/lib/services"
+    NSELF_ROOT="$(pwd)"
+  fi
 fi
 
 # Source dependencies

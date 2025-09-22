@@ -72,15 +72,37 @@ setup_demo() {
   # Copy demo environment file
   cp "$templates_dir/.env.demo" .env.dev
 
-  # Create local .env for overrides
+  # Create local .env for overrides with essential variables from demo
   cat > .env << 'EOF'
 # Local Configuration Overrides for Demo
-# Add any personal overrides here
+# Essential variables are pre-filled from demo configuration
 
-# Uncomment to change the default domain
-# BASE_DOMAIN=localhost
+# Project identification
+PROJECT_NAME=demo-app
+ENV=dev
 
-# Uncomment to change default ports
+# Core domain configuration
+BASE_DOMAIN=localhost
+
+# Database configuration
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=demo-app_db
+
+# Network configuration
+DOCKER_NETWORK=demo-app_network
+
+# Auth configuration
+AUTH_JWT_SECRET=demo-jwt-secret-key-minimum-32-characters-long
+AUTH_SMTP_USER=
+AUTH_SMTP_PASS=
+
+# Hasura configuration
+HASURA_GRAPHQL_ADMIN_SECRET=demo-admin-secret
+HASURA_GRAPHQL_JWT_SECRET='{"type":"HS256","key":"demo-jwt-secret-key-minimum-32-characters-long"}'
+DATABASE_URL=postgres://postgres:postgres@postgres:5432/demo-app_db
+
+# Add any personal overrides below:
 # POSTGRES_PORT=5433
 # REDIS_PORT=6380
 EOF

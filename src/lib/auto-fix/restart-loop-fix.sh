@@ -39,7 +39,7 @@ EOF
           # Fix deprecated http2 directive in custom-services.conf
           if [[ -f "nginx/conf.d/custom-services.conf" ]]; then
             sed -i '' 's/listen 443 ssl http2;/listen 443 ssl;\n    http2 on;/g' nginx/conf.d/custom-services.conf 2>/dev/null || \
-            sed -i 's/listen 443 ssl http2;/listen 443 ssl;\n    http2 on;/g' nginx/conf.d/custom-services.conf 2>/dev/null
+            sed -i.bak 's/listen 443 ssl http2;/listen 443 ssl;\n    http2 on;/g' nginx/conf.d/custom-services.conf 2>/dev/null && rm nginx/conf.d/custom-services.conf.bak
             fixed_any=true
             echo "  - Fixed deprecated http2 directive"
           fi
@@ -62,7 +62,7 @@ EOF
           # Fix certificate paths with environment variables
           if [[ -f "nginx/conf.d/custom-services.conf" ]]; then
             sed -i '' 's|/etc/nginx/ssl/certs/${BASE_DOMAIN}/|/etc/nginx/ssl/localhost/|g' nginx/conf.d/custom-services.conf 2>/dev/null || \
-            sed -i 's|/etc/nginx/ssl/certs/${BASE_DOMAIN}/|/etc/nginx/ssl/localhost/|g' nginx/conf.d/custom-services.conf 2>/dev/null
+            sed -i.bak 's|/etc/nginx/ssl/certs/${BASE_DOMAIN}/|/etc/nginx/ssl/localhost/|g' nginx/conf.d/custom-services.conf 2>/dev/null && rm nginx/conf.d/custom-services.conf.bak
             fixed_any=true
             echo "  - Fixed SSL certificate paths"
           fi
@@ -146,10 +146,10 @@ EOF
             
             # Update schema version and store type
             sed -i '' 's/schema: v11/schema: v13/g' monitoring/loki/local-config.yaml 2>/dev/null || \
-            sed -i 's/schema: v11/schema: v13/g' monitoring/loki/local-config.yaml 2>/dev/null
+            sed -i.bak 's/schema: v11/schema: v13/g' monitoring/loki/local-config.yaml 2>/dev/null && rm monitoring/loki/local-config.yaml.bak
             
             sed -i '' 's/store: boltdb-shipper/store: tsdb/g' monitoring/loki/local-config.yaml 2>/dev/null || \
-            sed -i 's/store: boltdb-shipper/store: tsdb/g' monitoring/loki/local-config.yaml 2>/dev/null
+            sed -i.bak 's/store: boltdb-shipper/store: tsdb/g' monitoring/loki/local-config.yaml 2>/dev/null && rm monitoring/loki/local-config.yaml.bak
             
             # Add limits config if missing
             if ! grep -q "limits_config:" monitoring/loki/local-config.yaml; then
@@ -171,7 +171,7 @@ EOF
           if [[ -f "docker-compose.yml" ]]; then
             # The service runs on 4000, ensure health check uses same port
             sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null || \
-            sed -i 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null
+            sed -i.bak 's|http://localhost:4001/|http://localhost:4000/|g' docker-compose.yml 2>/dev/null && rm docker-compose.yml.bak
             fixed_any=true
             echo "  - Fixed auth service port"
           fi

@@ -4,6 +4,19 @@ AUTO_FIXER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${AUTO_FIXER_DIR}/../utils/display.sh"
 source "${AUTO_FIXER_DIR}/../utils/output-formatter.sh"
 
+# Source platform compatibility for safe_sed_inline
+source "${AUTO_FIXER_DIR}/../utils/platform-compat.sh" 2>/dev/null || {
+  # Fallback definition
+  safe_sed_inline() {
+    local file="$1"; shift
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "$@" "$file"
+    else
+      sed -i "$@" "$file"
+    fi
+  }
+}
+
 # Apply a single auto-fix
 apply_auto_fix() {
   local fix_command="$1"
@@ -37,13 +50,13 @@ EOF
     # Get current value and trim it
     local current_value=$(grep "^$key=" "$env_file" | cut -d'=' -f2-)
     local trimmed_value=$(echo "$current_value" | xargs)
-    sed -i.bak "s|^$key=.*|$key=$trimmed_value|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$key=.*|$key=$trimmed_value|"
     format_success "Trimmed whitespace from $key"
     ;;
 
   replace_tabs)
     format_info "Replacing tabs with spaces..."
-    sed -i.bak $'s/\t/    /g' "$env_file"
+    safe_sed_inline "$env_file" $'s/\t/    /g'
     format_success "Replaced tabs with spaces"
     ;;
 
@@ -62,7 +75,7 @@ EOF
       local fixed_value=$(echo "$current_value" | sed 's/"//g')
     fi
 
-    sed -i.bak "s|^$key=.*|$key=$fixed_value|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$key=.*|$key=$fixed_value|"
     format_success "Fixed quote mismatch in $key"
     ;;
 
@@ -72,7 +85,7 @@ EOF
     local current_value=$(grep "^$key=" "$env_file" | cut -d'=' -f2-)
     # Remove all quotes
     local fixed_value=$(echo "$current_value" | sed "s/['\"]//g")
-    sed -i.bak "s|^$key=.*|$key=$fixed_value|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$key=.*|$key=$fixed_value|"
     format_success "Fixed mixed quotes in $key"
     ;;
 
@@ -97,7 +110,7 @@ EOF
     # Extract numeric part if possible
     local numeric_port=$(echo "$bad_port" | grep -o '[0-9]*' | head -1)
     if [[ -n "$numeric_port" ]] && [[ $numeric_port -ge 1 ]] && [[ $numeric_port -le 65535 ]]; then
-      sed -i.bak "s|^$var_name=.*|$var_name=$numeric_port|" "$env_file"
+      safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$numeric_port|"
     else
       # Use a sensible default based on service
       case "$var_name" in
@@ -107,7 +120,7 @@ EOF
       AUTH_PORT) local new_port=4000 ;;
       *) local new_port=3000 ;;
       esac
-      sed -i.bak "s|^$var_name=.*|$var_name=$new_port|" "$env_file"
+      safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_port|"
     fi
     format_success "Fixed port number for $var_name"
     ;;
@@ -131,7 +144,7 @@ EOF
       esac
     fi
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$new_port|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_port|"
     format_success "Fixed port range for $var_name to $new_port"
     ;;
 
@@ -147,7 +160,7 @@ EOF
       [[ $new_port -gt 65535 ]] && new_port=1024
     done
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$new_port|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_port|"
     format_success "Changed $var_name from $current_port to $new_port"
     ;;
 
@@ -156,9 +169,9 @@ EOF
     local key="${fix_parts[2]}"
     format_info "Removing inline comment from $key..."
     # Remove everything after # (but not if # is in quotes)
-    sed -i.bak "/^$key=/s/\([^#]*\)#.*/\1/" "$env_file"
+    safe_sed_inline "$env_file" "/^$key=/s/\([^#]*\)#.*/\1/"
     # Remove trailing whitespace
-    sed -i.bak "/^$key=/s/[[:space:]]*$//" "$env_file"
+    safe_sed_inline "$env_file" "/^$key=/s/[[:space:]]*$//"
     format_success "Removed inline comment from $key"
     ;;
 
@@ -169,7 +182,7 @@ EOF
     format_info "Escaping special characters in $var_name..."
     # Replace problematic characters with safe alternatives
     local safe_password=$(echo "$password" | tr -d '\"'\''`$!&*(){}[];><|\\ ' | tr ' ' '_')
-    sed -i.bak "s|^$var_name=.*|$var_name=$safe_password|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$safe_password|"
     format_success "Escaped special characters in $var_name"
     ;;
 
@@ -178,7 +191,7 @@ EOF
     local password="${fix_parts[2]}"
     format_info "Removing spaces from $var_name..."
     local fixed_password=$(echo "$password" | tr -d ' ')
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed_password|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed_password|"
     format_success "Removed spaces from $var_name"
     ;;
 
@@ -189,7 +202,7 @@ EOF
     local new_password=$(openssl rand -base64 32 | tr -d '/+=\n' | head -c "$min_length")
 
     if grep -q "^$var_name=" "$env_file"; then
-      sed -i.bak "s|^$var_name=.*|$var_name=$new_password|" "$env_file"
+      safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_password|"
     else
       echo "$var_name=$new_password" >>"$env_file"
     fi
@@ -203,7 +216,7 @@ EOF
     format_info "Extending password for $var_name..."
     local extension=$(openssl rand -base64 20 | tr -d '/+=\n' | head -c $((min_length - ${#current})))
     local new_password="${current}${extension}"
-    sed -i.bak "s|^$var_name=.*|$var_name=$new_password|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_password|"
     format_success "Extended password for $var_name"
     ;;
 
@@ -211,7 +224,7 @@ EOF
     local var_name="${fix_parts[1]}"
     format_info "Replacing weak password for $var_name..."
     local new_password=$(openssl rand -base64 24 | tr -d '/+=\n' | head -c 20)
-    sed -i.bak "s|^$var_name=.*|$var_name=$new_password|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_password|"
     format_success "Replaced weak password for $var_name"
     ;;
 
@@ -236,7 +249,7 @@ EOF
       new_ip="${fixed_octets[0]}.${fixed_octets[1]}.${fixed_octets[2]}.${fixed_octets[3]}"
     fi
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$new_ip|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$new_ip|"
     format_success "Fixed IP address for $var_name to $new_ip"
     ;;
 
@@ -260,7 +273,7 @@ EOF
       local fixed_memory="${gb}G"
     fi
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed_memory|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed_memory|"
     format_success "Fixed memory format for $var_name to $fixed_memory"
     ;;
 
@@ -275,7 +288,7 @@ EOF
     # Ensure it starts with alphanumeric
     [[ "$fixed_name" =~ ^[^a-z0-9] ]] && fixed_name="n${fixed_name}"
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed_name|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed_name|"
     format_success "Fixed Docker naming for $var_name to $fixed_name"
     ;;
 
@@ -285,7 +298,7 @@ EOF
     format_info "Truncating Docker name for $var_name..."
 
     local truncated="${long_name:0:63}"
-    sed -i.bak "s|^$var_name=.*|$var_name=$truncated|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$truncated|"
     format_success "Truncated $var_name to 63 characters"
     ;;
 
@@ -293,7 +306,7 @@ EOF
   set_default_project_name)
     format_info "Setting default project name..."
     if grep -q "^PROJECT_NAME=" "$env_file"; then
-      sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=myproject|" "$env_file"
+      safe_sed_inline "$env_file" "s|^PROJECT_NAME=.*|PROJECT_NAME=myproject|"
     else
       echo "PROJECT_NAME=myproject" >>"$env_file"
     fi
@@ -304,7 +317,7 @@ EOF
     local name="${fix_parts[1]}"
     format_info "Fixing spaces in project name..."
     local fixed_name=$(echo "$name" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
-    sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|" "$env_file"
+    safe_sed_inline "$env_file" "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|"
     format_success "Fixed PROJECT_NAME to '$fixed_name'"
     ;;
 
@@ -312,7 +325,7 @@ EOF
     local name="${fix_parts[1]}"
     format_info "Fixing invalid characters in project name..."
     local fixed_name=$(echo "$name" | sed 's/[^a-zA-Z0-9-_]/-/g' | tr '[:upper:]' '[:lower:]')
-    sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|" "$env_file"
+    safe_sed_inline "$env_file" "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|"
     format_success "Fixed PROJECT_NAME to '$fixed_name'"
     ;;
 
@@ -320,7 +333,7 @@ EOF
     local name="${fix_parts[1]}"
     format_info "Fixing project name starting with number..."
     local fixed_name="project-$name"
-    sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|" "$env_file"
+    safe_sed_inline "$env_file" "s|^PROJECT_NAME=.*|PROJECT_NAME=$fixed_name|"
     format_success "Fixed PROJECT_NAME to '$fixed_name'"
     ;;
 
@@ -328,7 +341,7 @@ EOF
     local name="${fix_parts[1]}"
     format_info "Truncating project name..."
     local truncated="${name:0:50}"
-    sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=$truncated|" "$env_file"
+    safe_sed_inline "$env_file" "s|^PROJECT_NAME=.*|PROJECT_NAME=$truncated|"
     format_success "Truncated PROJECT_NAME to '$truncated'"
     ;;
 
@@ -346,7 +359,7 @@ EOF
     *) local fixed_value="false" ;; # Default to false for safety
     esac
 
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed_value|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed_value|"
     format_success "Fixed $var_name to '$fixed_value'"
     ;;
 
@@ -355,7 +368,7 @@ EOF
     local value="${fix_parts[2]}"
     format_info "Normalizing boolean for $var_name..."
     local normalized=$(echo "$value" | tr '[:upper:]' '[:lower:]')
-    sed -i.bak "s|^$var_name=.*|$var_name=$normalized|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$normalized|"
     format_success "Normalized $var_name to '$normalized'"
     ;;
 
@@ -366,7 +379,7 @@ EOF
     format_info "Fixing service list commas for $var_name..."
     # Remove leading/trailing commas
     local fixed=$(echo "$services" | sed 's/^,*//' | sed 's/,*$//')
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed|"
     format_success "Fixed service list commas for $var_name"
     ;;
 
@@ -376,7 +389,7 @@ EOF
     format_info "Removing empty service entries for $var_name..."
     # Remove consecutive commas
     local fixed=$(echo "$services" | sed 's/,,*/,/g' | sed 's/^,*//' | sed 's/,*$//')
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed|"
     format_success "Removed empty service entries for $var_name"
     ;;
 
@@ -385,7 +398,7 @@ EOF
     local services="${fix_parts[2]}"
     format_info "Removing spaces from service list for $var_name..."
     local fixed=$(echo "$services" | tr -d ' ')
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed|"
     format_success "Removed spaces from $var_name"
     ;;
 
@@ -395,7 +408,7 @@ EOF
     format_info "Replacing hyphens with underscores in $var_name..."
     local current=$(grep "^$var_name=" "$env_file" | cut -d'=' -f2-)
     local fixed=$(echo "$current" | sed "s/$service/$(echo $service | tr '-' '_')/g")
-    sed -i.bak "s|^$var_name=.*|$var_name=$fixed|" "$env_file"
+    safe_sed_inline "$env_file" "s|^$var_name=.*|$var_name=$fixed|"
     format_success "Fixed service name hyphens in $var_name"
     ;;
 
@@ -404,7 +417,7 @@ EOF
     format_info "Generating JWT key..."
     local jwt_key=$(openssl rand -base64 48 | tr -d '/+=\n' | head -c 32)
     if grep -q "^HASURA_JWT_KEY=" "$env_file"; then
-      sed -i.bak "s|^HASURA_JWT_KEY=.*|HASURA_JWT_KEY=$jwt_key|" "$env_file"
+      safe_sed_inline "$env_file" "s|^HASURA_JWT_KEY=.*|HASURA_JWT_KEY=$jwt_key|"
     else
       echo "HASURA_JWT_KEY=$jwt_key" >>"$env_file"
     fi
@@ -416,7 +429,7 @@ EOF
     format_info "Extending JWT key..."
     local extension=$(openssl rand -base64 20 | tr -d '/+=\n' | head -c $((32 - ${#current})))
     local new_key="${current}${extension}"
-    sed -i.bak "s|^HASURA_JWT_KEY=.*|HASURA_JWT_KEY=$new_key|" "$env_file"
+    safe_sed_inline "$env_file" "s|^HASURA_JWT_KEY=.*|HASURA_JWT_KEY=$new_key|"
     format_success "Extended JWT key to 32+ characters"
     ;;
 

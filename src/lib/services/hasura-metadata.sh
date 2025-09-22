@@ -32,7 +32,9 @@ hasura::generate_app_schemas() {
   fi
 
   # Return unique schemas
-  printf '%s\n' "${schemas[@]}" | sort -u
+  if [ ${#schemas[@]} -gt 0 ]; then
+    printf '%s\n' "${schemas[@]}" | sort -u
+  fi
 }
 
 # Generate remote schema configuration for per-app APIs
@@ -80,6 +82,7 @@ hasura::generate_remote_schemas() {
 # Generate SQL for creating app-specific schemas
 hasura::generate_schema_sql() {
   local schemas=()
+  local schema
 
   # Get all schemas
   while IFS= read -r schema; do
@@ -87,7 +90,8 @@ hasura::generate_schema_sql() {
   done < <(hasura::generate_app_schemas)
 
   # Generate SQL
-  for schema in "${schemas[@]}"; do
+  if [ ${#schemas[@]} -gt 0 ]; then
+    for schema in "${schemas[@]}"; do
     cat <<EOF
 -- Create schema for $schema
 CREATE SCHEMA IF NOT EXISTS "$schema";
@@ -107,7 +111,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "$schema"
   GRANT ALL ON FUNCTIONS TO postgres;
 
 EOF
-  done
+    done
+  fi
 }
 
 # Check if an app needs per-app auth tables

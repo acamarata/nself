@@ -5,6 +5,19 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/display.sh"
 
+# Source platform compatibility for safe_sed_inline
+source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || {
+  # Fallback definition
+  safe_sed_inline() {
+    local file="$1"; shift
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "$@" "$file"
+    else
+      sed -i "$@" "$file"
+    fi
+  }
+}
+
 # Check and fix PostgreSQL extensions
 fix_postgres_extensions() {
   local extensions="${POSTGRES_EXTENSIONS:-uuid-ossp}"
@@ -37,8 +50,7 @@ fix_postgres_extensions() {
 
     if [[ "$current_image" != "$postgres_image" ]]; then
       log_info "Updating PostgreSQL image to support requested extensions"
-      sed -i.bak "s|image: postgres:.*|image: $postgres_image|" docker-compose.yml
-      rm -f docker-compose.yml.bak
+      safe_sed_inline docker-compose.yml "s|image: postgres:.*|image: $postgres_image|"
       log_success "PostgreSQL image updated to: $postgres_image"
       return 0
     fi
