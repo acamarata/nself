@@ -129,7 +129,11 @@ safe_sed_inline() {
   local pattern="$2"
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "$pattern" "$file"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "$pattern" "$file"
+    else
+      sed -i "$pattern" "$file"
+    fi
   else
     sed -i "$pattern" "$file"
   fi

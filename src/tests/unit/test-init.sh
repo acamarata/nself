@@ -157,12 +157,14 @@ test_config_arrays() {
 
   # Test gitignore required array
   local found_env=false
-  for entry in "${INIT_GITIGNORE_REQUIRED[@]}"; do
-    if [[ "$entry" == ".env" ]]; then
-      found_env=true
-      break
-    fi
-  done
+  if [[ -n "${INIT_GITIGNORE_REQUIRED+x}" ]]; then
+    for entry in "${INIT_GITIGNORE_REQUIRED[@]}"; do
+      if [[ "$entry" == ".env" ]]; then
+        found_env=true
+        break
+      fi
+    done
+  fi
 
   assert_equals "true" "$found_env" ".env should be in required gitignore entries"
 }

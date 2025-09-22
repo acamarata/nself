@@ -11,7 +11,11 @@ source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || {
   safe_sed_inline() {
     local file="$1"; shift
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      sed -i '' "$@" "$file"
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "$@" "$file"
+      else
+        sed -i "$@" "$file"
+      fi
     else
       sed -i "$@" "$file"
     fi

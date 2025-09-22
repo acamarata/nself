@@ -28,6 +28,9 @@ detect_platform() {
 # Outputs: Sets TERMINAL, SUPPORTS_UNICODE, SUPPORTS_COLOR variables
 # Returns: 0
 detect_terminal() {
+  # Ensure TERM is set (required for tput and other terminal operations)
+  : ${TERM:=xterm}
+
   # Detect terminal type
   TERMINAL="${TERM:-dumb}"
 
@@ -218,7 +221,8 @@ get_terminal_width() {
   local width=80  # Default
 
   if command -v tput >/dev/null 2>&1; then
-    width=$(tput cols 2>/dev/null) || width=80
+    # Ensure TERM is set for tput
+    TERM="${TERM:-xterm}" width=$(tput cols 2>/dev/null) || width=80
   elif [[ -n "${COLUMNS:-}" ]]; then
     width="$COLUMNS"
   fi
