@@ -316,7 +316,6 @@ cmd_reset() {
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Docker cleanup skipped                          \n"
   fi
 
-  echo
   log_success "Project reset complete!"
   echo
 
@@ -330,12 +329,9 @@ cmd_reset() {
   echo
 
   echo -e "${COLOR_BLUE}Restore Previous:${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}mv .env.old .env${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}  ${COLOR_DIM}# Restore latest backup${COLOR_RESET}"
   echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}"
   echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}"
-  echo
-
-  log_info "Configuration backed up with .old suffix"
 
   return 0
 }

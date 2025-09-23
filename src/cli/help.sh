@@ -62,6 +62,7 @@ show_general_help() {
   show_section "Development Commands"
   echo -e "  ${COLOR_BLUE}diff${COLOR_RESET}          Show configuration differences"
   echo -e "  ${COLOR_BLUE}reset${COLOR_RESET}         Reset project to clean state"
+  echo -e "  ${COLOR_BLUE}restore${COLOR_RESET}       Restore configuration from backup"
 
   show_section "Tool Commands"
   echo -e "  ${COLOR_BLUE}scaffold${COLOR_RESET}      Create new service from template"
