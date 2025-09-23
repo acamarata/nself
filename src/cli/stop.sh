@@ -186,8 +186,6 @@ cmd_stop() {
   fi
 
   # Execute the shutdown
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Shutting down services...                    "
-
   local output_file=$(mktemp)
 
   if [[ "$verbose" == true ]]; then
@@ -196,16 +194,22 @@ cmd_stop() {
     compose $compose_args 2>&1 | tee "$output_file"
     result=${PIPESTATUS[0]}
   else
-    # Run silently with spinner
+    # Run silently with spinner and progress
     (compose $compose_args 2>&1) >"$output_file" &
     local compose_pid=$!
 
-    # Show spinner while waiting
+    # Show spinner with progress tracking
     local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     local i=0
+    local stopped_count=0
+
     while kill -0 $compose_pid 2>/dev/null; do
+      # Count how many have stopped so far
+      local still_running=$(docker ps --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+      stopped_count=$((running_count - still_running))
+
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
-      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Shutting down services...                    " "$char"
+      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Shutting down services... (%d/%d)                    " "$char" "$stopped_count" "$running_count"
       ((i++))
       sleep 0.1
     done
@@ -251,12 +255,15 @@ cmd_stop() {
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Orphaned containers removed                    \n"
     fi
 
+    # Show next steps (consistent with other commands)
     echo
-    log_success "All services stopped"
-
-    # Show next steps
+    echo "Next steps:"
     echo
-    echo "nself start | nself status | nself clean"
+    echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}   - Start services again"
+    echo -e "  ${COLOR_BLUE}nself status${COLOR_RESET}  - Check service status"
+    echo -e "  ${COLOR_BLUE}nself clean${COLOR_RESET}   - Remove all project files"
+    echo
+    echo "For more help, use: nself help or nself help stop"
   else
     printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to stop services                           \n"
 
