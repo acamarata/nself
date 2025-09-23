@@ -221,6 +221,11 @@ orchestrate_build() {
   export VERBOSE="$verbose"
   export AUTO_FIX="${AUTO_FIX:-true}"
 
+  # Show header FIRST (before any validation output)
+  if command -v show_command_header >/dev/null 2>&1; then
+    show_command_header "nself build" "Generate project infrastructure and configuration"
+  fi
+
   # Apply database auto-configuration
   if [[ -f "$LIB_ROOT/database/auto-config.sh" ]]; then
     source "$LIB_ROOT/database/auto-config.sh" 2>/dev/null || true
@@ -234,15 +239,23 @@ orchestrate_build() {
     fi
   fi
 
-  # Run validation
+  # Run validation (suppress warnings output, we'll show them after)
   printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating configuration..."
 
   if [[ -f "$env_file" ]]; then
-    # Actually validate and fix the environment
-    if validate_environment; then
+    # Actually validate and fix the environment (capture warnings)
+    local validation_output=$(validate_environment 2>&1)
+    local validation_result=$?
+
+    if [[ $validation_result -eq 0 ]]; then
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
     else
       printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Configuration validated with fixes          \n"
+    fi
+
+    # Show any warnings/errors after header
+    if [[ -n "$validation_output" ]]; then
+      echo "$validation_output"
     fi
     # Reload env file to pick up fixes (recheck which file exists)
     if [[ -f ".env.local" ]]; then
@@ -273,12 +286,6 @@ orchestrate_build() {
 
   # Use modular orchestration if available
   if command -v orchestrate_modular_build >/dev/null 2>&1; then
-    # Show header like init command
-    if command -v show_command_header >/dev/null 2>&1; then
-      show_command_header "nself build" "Generate project infrastructure and configuration"
-    fi
-    echo
-
     # Load core modules
     load_core_modules 2>/dev/null || true
 
@@ -328,16 +335,23 @@ orchestrate_build() {
       # Setup monitoring configs if monitoring is enabled
       if [[ "${GRAFANA_ENABLED:-false}" == "true" ]] || [[ "${LOKI_ENABLED:-false}" == "true" ]] || [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]]; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Setting up monitoring configs..."
+
+        local monitoring_result=0
         if command -v setup_monitoring_configs >/dev/null 2>&1; then
           # Load env vars for the function
           set -a
           source "$env_file" 2>/dev/null || true
           set +a
-          setup_monitoring_configs >/dev/null 2>&1
-          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Monitoring configs ready                     \n"
-          CREATED_FILES+=("monitoring/*")
+
+          # Run with timeout to prevent hanging
+          if timeout 5 bash -c "$(declare -f setup_monitoring_configs); setup_monitoring_configs" >/dev/null 2>&1; then
+            printf "\r${COLOR_GREEN}✓${COLOR_RESET} Monitoring configs ready                     \n"
+            CREATED_FILES+=("monitoring/*")
+          else
+            printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Monitoring setup incomplete                  \n"
+          fi
         else
-          printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Monitoring configs skipped                   \n"
+          printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Monitoring module not available             \n"
         fi
       fi
 
@@ -367,16 +381,28 @@ orchestrate_build() {
     return 1
   fi
 
-  # Show next steps directly
-  echo
-  echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
-  echo
-  echo "  1. Start the stack: nself start"
-  echo "  2. View status: nself status"
-  echo "  3. View logs: nself logs"
-  echo
+  # Show next steps with improved formatting
+  echo ""
+  echo "Next steps:"
+  echo ""
+
+  # Define dim color for descriptions
+  local COLOR_DIM=""
+  if [[ -t 1 ]]; then
+    COLOR_DIM='\033[2m'
+  fi
+
+  echo -e "${COLOR_BLUE:-}1.${COLOR_RESET:-} nself start - Launch your services"
+  echo -e "   ${COLOR_DIM}Starts all configured Docker containers${COLOR_RESET:-}"
+  echo ""
+  echo -e "${COLOR_BLUE:-}2.${COLOR_RESET:-} nself status - Check service health"
+  echo -e "   ${COLOR_DIM}View running containers and their status${COLOR_RESET:-}"
+  echo ""
+  echo -e "${COLOR_BLUE:-}3.${COLOR_RESET:-} nself logs - View service logs"
+  echo -e "   ${COLOR_DIM}Monitor real-time logs from all services${COLOR_RESET:-}"
+  echo ""
   echo "For more help, use: nself help or nself help build"
-  echo
+  echo ""
 
   return 0
 }

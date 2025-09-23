@@ -366,14 +366,23 @@ cmd_init() {
     esac
   done
 
-  # Show header unless quiet
-  if [[ "$quiet_mode" != true ]]; then
+  # Perform validations first (checking existing config, etc)
+  # This needs to happen before showing the header to avoid showing it on error
+  # We'll do a quick check for existing config here
+  if [[ -f ".env" ]] && [[ "$force_init" != true ]] && [[ "$quiet_mode" != true ]]; then
+    # Show header for context
     show_command_header "nself init" "Initialize a new full-stack application"
-    echo ""  # Add blank line after header
+    # The validation will show the error message
+    perform_all_validations "$force_init" "$quiet_mode" || return $?
+  else
+    # Show header unless quiet (normal flow)
+    if [[ "$quiet_mode" != true ]]; then
+      show_command_header "nself init" "Initialize a new full-stack application"
+      echo ""  # Add blank line after header
+    fi
+    # Perform validations (will show single line unless quiet)
+    perform_all_validations "$force_init" "$quiet_mode" || return $?
   fi
-
-  # Perform validations (will show single line unless quiet)
-  perform_all_validations "$force_init" "$quiet_mode" || return $?
 
   # Set init state
   INIT_STATE="$INIT_STATE_IN_PROGRESS"

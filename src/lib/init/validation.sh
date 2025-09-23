@@ -50,8 +50,26 @@ check_existing_config() {
   local force="${1:-false}"
 
   if [[ -f ".env" ]] && [[ "$force" != true ]]; then
-    log_warning "Project already initialized (.env exists)"
-    echo "Use 'nself reset' to start fresh or --force to reinitialize" >&2
+    echo ""
+    log_warning "Project already initialized"
+    echo ""
+    echo "Found existing configuration files:"
+    [[ -f ".env" ]] && echo "  ✓ .env"
+    [[ -f ".env.example" ]] && echo "  ✓ .env.example"
+    [[ -f ".gitignore" ]] && echo "  ✓ .gitignore"
+    [[ -f "docker-compose.yml" ]] && echo "  ✓ docker-compose.yml (project already built)"
+    echo ""
+    echo "Options:"
+    if [[ -f "docker-compose.yml" ]]; then
+      echo "  • nself start           - Start your existing services"
+      echo "  • nself build           - Rebuild with current configuration"
+    else
+      echo "  • nself build           - Build with current configuration"
+      echo "  • nself start           - Start services after building"
+    fi
+    echo "  • nself init --force    - Reinitialize (overwrites config)"
+    echo "  • nself reset           - Remove all project files and start fresh"
+    echo ""
     return $INIT_E_CONFIG
   fi
 
