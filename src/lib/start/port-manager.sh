@@ -115,8 +115,9 @@ auto_resolve_ports() {
   done
 
   if [ "$changes_made" = "true" ]; then
+    # Store the updates for display later
+    export PORT_UPDATES="$port_updates"
     echo "ports_updated"
-    printf "Updated ports:\n$port_updates" >&2
     return 0
   else
     echo "no_conflicts"

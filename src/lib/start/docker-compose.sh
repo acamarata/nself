@@ -146,17 +146,33 @@ check_services_health() {
   local project="${1:-nself}"
   local max_wait="${2:-60}"
   local elapsed=0
+  local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+  local i=0
 
   while [ $elapsed -lt $max_wait ]; do
-    local unhealthy=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}} {{.Status}}" | grep -c "unhealthy" 2>/dev/null || echo "0")
-    unhealthy=$(echo "$unhealthy" | tr -d ' \n\r')
+    # Get service status counts
+    local total=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}" | wc -l | tr -d ' ')
+    local healthy=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Status}}" | grep -c "(healthy)" 2>/dev/null || echo "0")
+    local unhealthy=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Status}}" | grep -c "(unhealthy)" 2>/dev/null || echo "0")
+    local starting=$(docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Status}}" | grep -c "starting" 2>/dev/null || echo "0")
 
-    if [ "$unhealthy" -eq 0 ]; then
+    # Clean up counts
+    healthy=$(echo "$healthy" | tr -d ' \n\r')
+    unhealthy=$(echo "$unhealthy" | tr -d ' \n\r')
+    starting=$(echo "$starting" | tr -d ' \n\r')
+
+    # Show progress
+    local char="${spin_chars:$((i % ${#spin_chars})):1}"
+    printf "\r${COLOR_BLUE}%s${COLOR_RESET} Waiting for services... (healthy: %d/%d)          " "$char" "$healthy" "$total"
+
+    # If all are healthy or none are unhealthy and none are starting, we're good
+    if [ "$unhealthy" -eq 0 ] && [ "$starting" -eq 0 ]; then
       return 0
     fi
 
     sleep 2
     elapsed=$((elapsed + 2))
+    i=$((i + 1))
   done
 
   return 1

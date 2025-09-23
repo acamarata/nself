@@ -94,7 +94,8 @@ check_all_ports() {
 
   if [ "$has_conflicts" = "true" ]; then
     echo "port_conflicts"
-    printf "The following ports are in use:\n$conflict_list" >&2
+    # Store conflicts for later display if needed
+    export PORT_CONFLICTS="$conflict_list"
     return 1
   fi
 

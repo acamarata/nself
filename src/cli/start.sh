@@ -133,13 +133,20 @@ main() {
 
     local port_result=$(auto_resolve_ports "$env_file")
     if [ "$port_result" = "ports_updated" ]; then
-      printf "\r${COLOR_YELLOW}⚡${COLOR_RESET} Resolved port conflicts         \n"
+      printf "\r${COLOR_YELLOW}⚡${COLOR_RESET} Resolved port conflicts                      \n"
+      # Show the updated ports if available
+      if [ -n "${PORT_UPDATES:-}" ]; then
+        echo ""
+        echo "Updated ports:"
+        printf "${PORT_UPDATES}"
+        echo ""
+      fi
       # Reload environment with new ports
       set -a
       source "$env_file"
       set +a
     else
-      printf "\r${COLOR_GREEN}✓${COLOR_RESET} No port conflicts               \n"
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} No port conflicts                            \n"
     fi
   fi
 
@@ -190,20 +197,19 @@ main() {
 
   # Execute with progress
   if execute_compose_with_progress "$compose_cmd" "${PROJECT_NAME:-nself}" 600 "$VERBOSE"; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services started            \n"
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services started                                    \n"
   else
-    printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to start services        \n"
+    printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to start services                                \n"
     echo ""
     log_error "Check logs with: nself logs"
     exit 1
   fi
 
   # 8. Wait for services to be healthy
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Waiting for services to be healthy..."
   if check_services_health "${PROJECT_NAME:-nself}" 60; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services healthy            \n"
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services healthy                                    \n"
   else
-    printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Some services may be unhealthy \n"
+    printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Some services may be unhealthy                         \n"
   fi
 
   # 8.5. Run init containers (like minio bucket creation)
