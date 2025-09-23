@@ -334,10 +334,12 @@ fix_mlflow() {
         mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null || \
       if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' '/mlflow server$/,/--workers.*$/c\
+        mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null
       else
         sed -i '/mlflow server$/,/--workers.*$/c\
         mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null
-      
+      fi
+
       # Recreate the container
       docker stop "$container" 2>/dev/null
       docker rm "$container" 2>/dev/null
