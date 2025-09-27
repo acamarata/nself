@@ -37,8 +37,9 @@ validate_environment() {
     export BASE_DOMAIN
   fi
 
-  # Validate PROJECT_NAME format
-  if [[ ! "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9-]*[a-z0-9]$ ]]; then
+  # Validate PROJECT_NAME format (Bash 3.2 compatible)
+  # Use grep instead of =~ for compatibility
+  if ! echo "$PROJECT_NAME" | grep -q '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
     local fixed_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-//;s/-$//' | sed 's/--*/-/g')
     if [[ "$fixed_name" != "$PROJECT_NAME" ]]; then
       PROJECT_NAME="$fixed_name"
@@ -54,11 +55,14 @@ validate_environment() {
     export BASE_DOMAIN
   fi
 
-  # Check for port conflicts
-  check_port_conflicts
+  # Skip port conflicts check during build (runtime concern)
+  # Port availability can change between build and start
 
   # Validate boolean values
   validate_boolean_vars
+
+  # Validate custom services
+  validate_custom_services
 
   # Apply fixes to .env if needed
   if [[ ${#fixes[@]} -gt 0 ]]; then
@@ -109,6 +113,81 @@ check_port_conflicts() {
       if lsof -Pi :"$port" -t >/dev/null 2>&1; then
         warnings+=("Port $port (${var_name}) is already in use")
       fi
+    fi
+  done
+}
+
+# Validate CS_N custom service format
+validate_custom_services() {
+  local used_ports=()
+  local service_names=()
+
+  # Collect ports from core services
+  used_ports+=("${NGINX_PORT:-80}")
+  used_ports+=("${NGINX_SSL_PORT:-443}")
+  used_ports+=("${POSTGRES_PORT:-5432}")
+  used_ports+=("${HASURA_PORT:-8080}")
+  used_ports+=("${AUTH_PORT:-4000}")
+  used_ports+=("${REDIS_PORT:-6379}")
+  used_ports+=("${MINIO_PORT:-9000}")
+  used_ports+=("${MINIO_CONSOLE_PORT:-9001}")
+
+  # Validate CS_N variables
+  for i in {1..20}; do
+    local cs_var="CS_${i}"
+    local cs_value="${!cs_var:-}"
+
+    [[ -z "$cs_value" ]] && continue
+
+    # Parse CS format: service_name:template_type:port
+    IFS=':' read -r service_name template_type port <<< "$cs_value"
+
+    # Validate format
+    if [[ -z "$service_name" || -z "$template_type" ]]; then
+      errors+=("CS_${i} has invalid format. Expected: service_name:template_type:port")
+      continue
+    fi
+
+    # Validate service name format (lowercase, alphanumeric with underscores)
+    if ! echo "$service_name" | grep -q '^[a-z][a-z0-9_]*$'; then
+      errors+=("CS_${i} service name '$service_name' must start with lowercase letter and contain only lowercase letters, numbers, and underscores")
+    fi
+
+    # Check for duplicate service names
+    if [[ " ${service_names[@]} " =~ " ${service_name} " ]]; then
+      errors+=("CS_${i} duplicate service name: $service_name")
+    else
+      service_names+=("$service_name")
+    fi
+
+    # Validate port if specified
+    if [[ -n "$port" && "$port" != "0" ]]; then
+      # Check if port is a valid number
+      if ! [[ "$port" =~ ^[0-9]+$ ]] || [[ "$port" -lt 1 || "$port" -gt 65535 ]]; then
+        errors+=("CS_${i} invalid port: $port (must be 1-65535)")
+      fi
+
+      # Check for port conflicts
+      if [[ " ${used_ports[@]} " =~ " ${port} " ]]; then
+        warnings+=("CS_${i} port $port is already in use by another service")
+      else
+        used_ports+=("$port")
+      fi
+    fi
+
+    # Validate template type exists
+    local template_base="/Users/admin/Sites/nself/src/templates/services"
+    local template_found=false
+
+    for lang_dir in "$template_base"/*; do
+      if [[ -d "$lang_dir/$template_type" ]]; then
+        template_found=true
+        break
+      fi
+    done
+
+    if [[ "$template_found" != "true" ]]; then
+      warnings+=("CS_${i} template '$template_type' not found in service templates")
     fi
   done
 }
@@ -174,16 +253,16 @@ apply_validation_fixes() {
 
   # Read the original file and apply fixes
   while IFS= read -r line || [[ -n "$line" ]]; do
-    # Skip empty lines and comments
-    if [[ -z "$line" ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+    # Skip empty lines and comments (Bash 3.2 compatible)
+    if [[ -z "$line" ]] || echo "$line" | grep -q '^[[:space:]]*#'; then
       echo "$line" >> "$temp_file"
       continue
     fi
 
-    # Parse key=value pairs
-    if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]]; then
-      local key="${BASH_REMATCH[1]}"
-      local value="${BASH_REMATCH[2]}"
+    # Parse key=value pairs (Bash 3.2 compatible)
+    if echo "$line" | grep -q '^[A-Z_][A-Z_]*='; then
+      local key=$(echo "$line" | cut -d'=' -f1)
+      local value=$(echo "$line" | cut -d'=' -f2-)
 
       # Check if we have a new value for this key
       # Use eval for Bash 3.2 compatibility
@@ -198,10 +277,10 @@ apply_validation_fixes() {
     fi
   done < "$env_file"
 
-  # Add any new variables that weren't in the file
+  # Add any new variables that weren't in the file (Bash 3.2 compatible)
   for fix in "${fixes[@]}"; do
-    if [[ "$fix" =~ Set[[:space:]]([A-Z_]+)[[:space:]]to ]]; then
-      local key="${BASH_REMATCH[1]}"
+    if echo "$fix" | grep -q 'Set [A-Z_][A-Z_]* to'; then
+      local key=$(echo "$fix" | sed 's/Set \([A-Z_][A-Z_]*\) to.*/\1/')
       if ! grep -q "^${key}=" "$temp_file"; then
         eval "local new_val=\${$key:-}"
         echo "${key}=${new_val}" >> "$temp_file"
@@ -232,18 +311,14 @@ validate_service_dependencies() {
     fi
   fi
 
-  # Check Storage dependencies
-  if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
-    if [[ "${POSTGRES_ENABLED:-false}" != "true" ]]; then
-      POSTGRES_ENABLED=true
-      fixes+=("Enabled PostgreSQL (required by Storage)")
-    fi
-  fi
+  # MinIO is self-contained and doesn't require other services
+  # No dependency checks needed
 }
 
 # Export functions
 export -f validate_environment
 export -f check_port_conflicts
 export -f validate_boolean_vars
+export -f validate_custom_services
 export -f apply_validation_fixes
 export -f validate_service_dependencies

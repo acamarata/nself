@@ -50,7 +50,7 @@ admin, backup, build, clean, config, db, deploy, diff, doctor, email, exec, help
 - Fixed environment loading cascade
 - Fixed display library aliases
 
-[View Full Release Notes →](./RELEASES.md)
+[View Full Release Notes →](\1)
 
 ---
 

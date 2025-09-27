@@ -81,38 +81,9 @@ EOF
 
 # Generate all custom services based on configuration
 generate_all_custom_services() {
-  local service_count="${CUSTOM_SERVICE_COUNT:-0}"
-
-  [[ "$service_count" -le 0 ]] && return 0
-
-  echo ""
-  echo "  # ============================================"
-  echo "  # Custom Services"
-  echo "  # ============================================"
-
-  for ((i=1; i<=service_count; i++)); do
-    # Get service configuration
-    local name_var="CUSTOM_SERVICE_${i}_NAME"
-    local image_var="CUSTOM_SERVICE_${i}_IMAGE"
-    local port_var="CUSTOM_SERVICE_${i}_PORT"
-    local env_var="CUSTOM_SERVICE_${i}_ENV"
-    local volumes_var="CUSTOM_SERVICE_${i}_VOLUMES"
-    local command_var="CUSTOM_SERVICE_${i}_COMMAND"
-    local depends_var="CUSTOM_SERVICE_${i}_DEPENDS_ON"
-
-    local service_name="${!name_var:-custom${i}}"
-    local service_image="${!image_var:-alpine:latest}"
-    local service_port="${!port_var:-}"
-    local service_env="${!env_var:-}"
-    local service_volumes="${!volumes_var:-}"
-    local service_command="${!command_var:-}"
-
-    # Skip if no image specified
-    [[ -z "$service_image" ]] && continue
-
-    generate_custom_service "$i" "$service_name" "$service_image" \
-      "$service_port" "$service_env" "$service_volumes" "$service_command"
-  done
+  # DISABLED: Legacy custom service generation
+  # This is now handled by generate_template_custom_services in custom-services-templates.sh
+  return 0
 }
 
 # Generate custom services from legacy CS_ variables
@@ -143,6 +114,12 @@ generate_legacy_custom_services() {
 
 # Main function to generate all custom services
 generate_custom_services() {
+  # DEPRECATED: This is now handled by generate_template_custom_services
+  # Return immediately to prevent duplicate services
+  return 0
+}
+
+generate_custom_services_OLD() {
   # Try new format first
   if [[ "${CUSTOM_SERVICE_COUNT:-0}" -gt 0 ]]; then
     generate_all_custom_services
@@ -159,7 +136,8 @@ generate_custom_services() {
 }
 
 # Export functions
-export -f generate_custom_service
-export -f generate_all_custom_services
-export -f generate_legacy_custom_services
-export -f generate_custom_services
+# DISABLED: These are deprecated, use custom-services-templates.sh instead
+# export -f generate_custom_service
+# export -f generate_all_custom_services
+# export -f generate_legacy_custom_services
+# export -f generate_custom_services

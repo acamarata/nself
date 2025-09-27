@@ -1,259 +1,161 @@
-# nself v0.3.9 Documentation
+# nself Documentation
 
-> **Comprehensive documentation for nself v0.3.9 - Self-Hosted Infrastructure Manager**
+> **Complete documentation for the nself Backend-as-a-Service platform**
 
-This directory contains complete documentation for developers, contributors, and automated tools working with nself v0.3.9.
+This documentation is organized for both local browsing and GitHub Wiki integration. All documentation is maintained in Markdown format for maximum compatibility.
 
-## 📚 Documentation Index
+## 📚 Documentation Structure
 
-### Getting Started
-- **[EXAMPLES.md](EXAMPLES.md)** - 🎯 Complete command examples with actual outputs
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 🔧 Diagnose and fix common issues
-- **[API.md](API.md)** - 📖 Complete command reference and usage
-- **[ENVIRONMENT_CONFIGURATION.md](ENVIRONMENT_CONFIGURATION.md)** - ⚙️ Configuration guide
-- **[SERVICE_TEMPLATES.md](SERVICE_TEMPLATES.md)** - 🚀 40+ service templates reference (JS/TS, Python, Go, Rust, Java, etc.)
+```
+/docs/
+├── Home.md                    # Main documentation homepage
+├── README.md                  # This file - documentation index
+├── services/                  # Service documentation
+│   ├── SERVICES.md           # Overview of all services
+│   ├── SERVICES_REQUIRED.md  # Core required services
+│   ├── SERVICES_OPTIONAL.md  # Optional services
+│   ├── SERVICES_CUSTOM.md    # Custom service templates
+│   ├── MONITORING_BUNDLE.md  # Monitoring stack (10 services)
+│   ├── NSELF_ADMIN.md        # Admin UI documentation
+│   └── DEMO_SETUP.md         # Complete demo walkthrough
+├── configuration/            # Configuration guides
+│   ├── ENVIRONMENT-VARIABLES.md
+│   ├── ENV-COMPLETE-REFERENCE.md
+│   └── ENVIRONMENT_CONFIGURATION.md
+├── commands/                 # CLI command reference
+│   ├── COMMANDS.md
+│   └── COMMAND-TREE-FINAL.md
+├── architecture/             # System design documentation
+│   ├── ARCHITECTURE.md
+│   ├── PROJECT_STRUCTURE.md
+│   └── BUILD_ARCHITECTURE.md
+├── guides/                   # How-to guides and tutorials
+│   ├── Quick-Start.md
+│   ├── TROUBLESHOOTING.md
+│   ├── FAQ.md
+│   ├── EXAMPLES.md
+│   └── BACKUP_GUIDE.md
+└── releases/                 # Release notes and changelogs
+    ├── CHANGELOG.md
+    ├── RELEASES.md
+    └── v0.4.0.md
+```
 
-### Architecture & Design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - 🏗️ System design, principles, and patterns
-- **[DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md)** - 📁 Complete file organization map
+## 🎯 Quick Start
 
-### Development & Operations
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - 🤝 Guidelines for contributing to the project
-- **[BACKUP_GUIDE.md](BACKUP_GUIDE.md)** - 💾 Comprehensive backup and restore guide
-- **[ROADMAP.md](ROADMAP.md)** - 🚀 Future development plans
+New to nself? Start here:
 
-### Release Management
-- **[RELEASES.md](RELEASES.md)** - 📜 Detailed release history
-- **[v0.3.9.md](v0.3.9.md)** - 🎯 Latest release notes (v0.3.9)
-- **[v0.4.0.md](v0.4.0.md)** - 📋 Next major release planning
+1. **[Quick Start Guide](guides/Quick-Start)** - Get running in 5 minutes
+2. **[Demo Setup](services/DEMO_SETUP)** - Try the complete demo with 24 services
+3. **[Services Overview](services/SERVICES)** - Understand available services
+4. **[Commands Reference](commands/COMMANDS)** - Learn the CLI
 
-### Version History
-- **[CHANGELOG.md](CHANGELOG.md)** - 📝 User-facing changelog
+## 📖 Documentation by Category
 
-## 🎯 Quick Navigation
+### Services & Components
+- **[All Services](services/SERVICES)** - Complete service catalog
+- **[Required Services](services/SERVICES_REQUIRED)** - Core infrastructure (4 services)
+- **[Optional Services](services/SERVICES_OPTIONAL)** - Additional capabilities (16+ services)
+- **[Custom Services](services/SERVICES_CUSTOM)** - Build your own with 40+ templates
+- **[Monitoring Bundle](services/MONITORING_BUNDLE)** - Full observability stack (10 services)
+- **[nself Admin](services/NSELF_ADMIN)** - Web-based management interface
 
-### By User Type
+### Configuration
+- **[Environment Variables](configuration/ENVIRONMENT-VARIABLES)** - All configuration options
+- **[Complete ENV Reference](configuration/ENV-COMPLETE-REFERENCE)** - Every variable documented
+- **[Configuration Guide](configuration/ENVIRONMENT_CONFIGURATION)** - Setup walkthrough
 
-#### For New Users
-Start here to get nself running:
-1. [EXAMPLES.MD](EXAMPLES.MD) - See what nself can do
-2. [API.MD](API.MD) - Learn the commands
-3. [TROUBLESHOOTING.MD](TROUBLESHOOTING.MD) - Fix any issues
+### Commands & CLI
+- **[Commands Reference](commands/COMMANDS)** - All CLI commands
+- **[Command Tree](commands/COMMAND-TREE-FINAL)** - Visual command structure
 
-#### For Contributors
-Want to contribute? Read these:
-1. [CONTRIBUTING.MD](CONTRIBUTING.MD) - Contribution guidelines
-2. [ARCHITECTURE.MD](ARCHITECTURE.MD) - Understand the system
-3. [DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD) - File organization
-4. [ROADMAP.md](ROADMAP.md) - Future development plans
+### Architecture
+- **[System Architecture](architecture/ARCHITECTURE)** - Design principles and patterns
+- **[Project Structure](architecture/PROJECT_STRUCTURE)** - File organization
+- **[Build System](architecture/BUILD_ARCHITECTURE)** - How nself build works
 
-#### For System Administrators
-Managing nself deployments:
-1. [BACKUP_GUIDE.md](BACKUP_GUIDE.md) - Backup and restore procedures
-2. [ENVIRONMENT_CONFIGURATION.md](ENVIRONMENT_CONFIGURATION.md) - Configuration management
-3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Problem resolution
+### Guides & Tutorials
+- **[Quick Start](guides/Quick-Start)** - Get started fast
+- **[Troubleshooting](guides/TROUBLESHOOTING)** - Fix common issues
+- **[FAQ](guides/FAQ)** - Frequently asked questions
+- **[Examples](guides/EXAMPLES)** - Code examples and patterns
+- **[Backup Guide](guides/BACKUP_GUIDE)** - Backup and recovery
 
-#### For Automated Tools
-Documentation designed for programmatic access:
-1. [ARCHITECTURE.MD](ARCHITECTURE.MD) - System design patterns
-2. [DIRECTORY_STRUCTURE.MD](DIRECTORY_STRUCTURE.MD) - File locations
-3. [API.MD](API.MD) - Command specifications
-4. [COMMANDS.md](COMMANDS.md) - Complete command reference
+### Releases
+- **[Changelog](releases/CHANGELOG)** - Version history
+- **[Current Release](releases/RELEASES)** - Latest version details
+- **[v0.4.0](releases/v0.4.0)** - Current stable release
 
-## 📖 Documentation Highlights
+## 🎆 Demo Project
 
-### Command Examples
-Every single nself command documented with real output:
+Experience the full power of nself with our demo:
+
 ```bash
-$ nself init
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║   Welcome to nself - Modern Full-Stack Platform          ║
-║   Build production-ready applications with ease          ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-[INFO] Initializing project: myproject
-[SUCCESS] Created .env.local
-```
-See [EXAMPLES.md](EXAMPLES.md) for all commands.
-
-### Troubleshooting Guide
-Comprehensive solutions for common issues:
-- Docker problems
-- Network issues
-- Service failures
-- Configuration errors
-- Performance problems
-
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions.
-
-### Architecture Overview
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         NGINX Proxy                         │
-└─────────────┬───────────┬───────────┬───────────┬──────────┘
-              │           │           │           │
-     ┌────────▼────┐ ┌────▼────┐ ┌───▼────┐ ┌───▼────┐
-     │   Hasura    │ │  Auth   │ │ MinIO  │ │Custom  │
-     │  GraphQL    │ │Service  │ │Storage │ │Services│
-     └────────┬────┘ └────┬────┘ └───┬────┘ └───┬────┘
-              │           │           │           │
-     ┌────────▼───────────▼───────────▼───────────▼────┐
-     │              PostgreSQL Database                 │
-     └──────────────────────────────────────────────────┘
-```
-See [ARCHITECTURE.MD](ARCHITECTURE.MD) for details.
-
-## 🔍 Key Principles for Development
-
-### 1. Never Run in nself Repository
-```bash
-# WRONG - Don't do this
-cd /path/to/nself && nself init
-
-# RIGHT - Use a project directory
-cd ~/myproject && nself init
+nself init --demo   # Initialize with all services
+nself build         # Generate custom services
+nself start         # Launch 24 services
 ```
 
-### 2. Always Use the Compose Wrapper
-```bash
-# WRONG
-docker compose up
+The demo includes:
+- ✅ All 4 required services
+- ✅ 16 optional services (including 10 monitoring)
+- ✅ 4 custom services from templates
+- ✅ Full monitoring and observability
+- ✅ Web-based admin interface
 
-# RIGHT
-compose up
-```
+**[→ Complete Demo Documentation](services/DEMO_SETUP)**
 
-### 3. Follow the Hooks Pattern
-```bash
-pre_command "commandname" || exit $?
-# command logic
-post_command "commandname" $?
-```
+## 📊 Service Counts
 
-### 4. Use Standardized Logging
-```bash
-log_info "Message"    # Not echo
-log_error "Error"     # Goes to stderr
-log_success "Done"    # Green success
-log_warning "Warning" # Yellow warning
-```
+### Minimal Setup
+- 4 services (required only)
 
-## 📊 Documentation Standards
+### Typical Development
+- 8-12 services (required + Redis + Mail + Search)
 
-### File Naming
-- Use UPPERCASE with underscores: `ARCHITECTURE.MD`
-- Exception: `README.md`, `CHANGELOG.md` (conventions)
+### Full Demo
+- 24 services (everything enabled)
 
-### Content Structure
-1. **Title and description**
-2. **Table of contents** (for long docs)
-3. **Main content** with examples
-4. **References** to related docs
+### Maximum Configuration
+- 40+ services (all optional + 10 custom)
 
-### Code Examples
-- Show actual command output
-- Include error cases
-- Provide solutions
+## 🔧 Key Concepts
 
-### Cross-References
-Use relative links between documents:
-```markdown
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#docker-issues)
-```
+### Service Types
+1. **Required** - Essential infrastructure
+2. **Optional** - Enable as needed
+3. **Custom** - Your microservices
 
-## 🚀 Quick Reference
+### Environments
+- `dev` - Local development
+- `staging` - Pre-production testing
+- `production` - Live deployment
 
-### Essential Commands
-```bash
-nself init          # Initialize project
-nself build         # Build infrastructure
-nself start         # Start services
-nself status        # Check status
-nself logs          # View logs
-nself stop          # Stop services
-nself doctor        # Run diagnostics
-```
+### Templates
+40+ service templates in multiple languages:
+- **JavaScript/TypeScript**: Express, Fastify, NestJS, BullMQ
+- **Python**: FastAPI, Flask, Django, Celery
+- **Go**: Gin, Fiber, Echo, gRPC
+- **Others**: Rust, Ruby, PHP, Java, C#, Elixir
 
-### Common Workflows
-```bash
-# Development
-nself init && nself build && nself start
-nself hot-reload
-nself logs -f
+## 🤝 Contributing
 
-# Production
-nself prod --domain api.example.com
-nself validate-env
-ENV=production nself up -d
+Want to contribute? Check out:
+- [Contributing Guide](guides/CONTRIBUTING)
+- [Development Roadmap](guides/ROADMAP)
+- [GitHub Issues](https://github.com/nself/nself/issues)
 
-# Maintenance
-nself doctor
-nself db backup
-nself update
-```
+## 📝 License
 
-## 🔄 Keeping Documentation Updated
+nself is open-source software licensed under the MIT License.
 
-### For Contributors
-1. **Update docs with code changes** - Documentation is part of the PR
-2. **Test examples** - Ensure command outputs are accurate
-3. **Add to CHANGELOG.md** - Document your changes
-4. **Update TROUBLESHOOTING.md** - Add solutions for new issues
+## 🔗 Links
 
-### For Maintainers
-1. **Review documentation** in PRs
-2. **Keep examples current** with new releases
-3. **Update version numbers** in documentation
-4. **Sync wiki** after merges
-
-## 🌐 GitHub Wiki
-
-This documentation is automatically synchronized to the GitHub Wiki:
-- **Wiki URL**: https://github.com/acamarata/nself/wiki
-- **Sync Script**: `.github/scripts/init-wiki.sh`
-- **GitHub Action**: `.github/workflows/sync-wiki.yml`
-
-To manually sync to wiki:
-```bash
-.github/scripts/init-wiki.sh
-```
-
-## 📝 Documentation TODO
-
-- [ ] Add video tutorials
-- [ ] Create interactive examples
-- [ ] Add performance benchmarks
-- [ ] Document cloud deployments
-- [ ] Add security audit guide
-
-## 💡 Tips for Reading Documentation
-
-1. **Start with EXAMPLES.md** - See nself in action
-2. **Use TROUBLESHOOTING.md** - When things go wrong
-3. **Reference API.md** - For command details
-4. **Study ARCHITECTURE.MD** - To understand the system
-5. **Follow CONTRIBUTING.md** - To contribute back
-
-## 🆘 Getting Help
-
-- **GitHub Issues**: [Report bugs](https://github.com/acamarata/nself/issues)
-- **GitHub Discussions**: [Ask questions](https://github.com/acamarata/nself/discussions)
-- **Documentation**: You're here!
-- **Wiki**: [GitHub Wiki](https://github.com/acamarata/nself/wiki)
-
-## 📄 License
-
-Documentation is part of the nself project and covered under the same [MIT License](../LICENSE).
-
-## 🙏 Support Development
-
-If you find nself and its documentation useful:
-- ⭐ [Star on GitHub](https://github.com/acamarata/nself)
-- 💰 [Support on Patreon](https://patreon.com/acamarata)
-- 🐛 [Report Issues](https://github.com/acamarata/nself/issues)
-- 📝 [Contribute Documentation](CONTRIBUTING.md)
+- **GitHub**: [github.com/nself/nself](https://github.com/nself/nself)
+- **Wiki**: [github.com/nself/nself/wiki](https://github.com/nself/nself/wiki)
+- **Issues**: [github.com/nself/nself/issues](https://github.com/nself/nself/issues)
+- **Discussions**: [github.com/nself/nself/discussions](https://github.com/nself/nself/discussions)
 
 ---
 
-*This documentation is the source of truth for nself. The GitHub Wiki is automatically generated from these files.*
+**Version**: 0.4.0 | **Last Updated**: September 2024

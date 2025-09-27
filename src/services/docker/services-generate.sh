@@ -6,6 +6,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/utils/env.sh"
 source "$SCRIPT_DIR/../../lib/utils/display.sh"
+source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || true
 
 # Load environment safely (without executing JSON values)
 if [ -f ".env.local" ]; then
@@ -58,8 +59,15 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
     fi
 
     # Replace template variables
-    sed -i.bak "s/\${SERVICE_NAME}/$service/g" "services/nest/$service/package.json"
-    sed -i.bak "s/\${PROJECT_NAME}/$PROJECT_NAME/g" "services/nest/$service/package.json"
+    # Use platform-safe sed
+    if command -v safe_sed_inline >/dev/null 2>&1; then
+      safe_sed_inline "services/nest/$service/package.json" "s/\${SERVICE_NAME}/$service/g"
+      safe_sed_inline "services/nest/$service/package.json" "s/\${PROJECT_NAME}/$PROJECT_NAME/g"
+    else
+      sed -i.bak "s/\${SERVICE_NAME}/$service/g" "services/nest/$service/package.json"
+      sed -i.bak "s/\${PROJECT_NAME}/$PROJECT_NAME/g" "services/nest/$service/package.json"
+      rm -f "services/nest/$service/package.json.bak"
+    fi
     rm -f "services/nest/$service/package.json.bak"
 
     # Generate source files
@@ -72,9 +80,17 @@ if [[ "$NESTJS_ENABLED" == "true" ]]; then
         for template in main.ts app.module.ts app.controller.ts app.service.ts weather-actions.controller.ts weather.service.ts; do
           if [[ -f "$TEMPLATES_DIR/nest/$template.template" ]]; then
             cp "$TEMPLATES_DIR/nest/$template.template" "services/nest/$service/src/$template"
-            sed -i.bak "s/\${SERVICE_NAME}/$service/g" "services/nest/$service/src/$template"
-            sed -i.bak "s/\${SERVICE_PORT}/$SERVICE_PORT/g" "services/nest/$service/src/$template"
-            sed -i.bak "s/\${PROJECT_NAME}/$PROJECT_NAME/g" "services/nest/$service/src/$template"
+            # Use platform-safe sed
+            if command -v safe_sed_inline >/dev/null 2>&1; then
+              safe_sed_inline "services/nest/$service/src/$template" "s/\${SERVICE_NAME}/$service/g"
+              safe_sed_inline "services/nest/$service/src/$template" "s/\${SERVICE_PORT}/$SERVICE_PORT/g"
+              safe_sed_inline "services/nest/$service/src/$template" "s/\${PROJECT_NAME}/$PROJECT_NAME/g"
+            else
+              sed -i.bak "s/\${SERVICE_NAME}/$service/g" "services/nest/$service/src/$template"
+              sed -i.bak "s/\${SERVICE_PORT}/$SERVICE_PORT/g" "services/nest/$service/src/$template"
+              sed -i.bak "s/\${PROJECT_NAME}/$PROJECT_NAME/g" "services/nest/$service/src/$template"
+              rm -f "services/nest/$service/src/$template.bak"
+            fi
             rm -f "services/nest/$service/src/$template.bak"
           fi
         done

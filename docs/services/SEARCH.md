@@ -644,7 +644,7 @@ query SearchProducts {
 
 ## Related Documentation
 
-- [COMMANDS.md](./COMMANDS.md) - Search command reference
-- [CONFIGURATION.md](./CONFIG.md) - Configuration options
-- [API.md](./API.md) - API integration guide
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Common issues and solutions
+- [COMMANDS.md](\1) - Search command reference
+- [CONFIGURATION.md](\1) - Configuration options
+- [API.md](\1) - API integration guide
+- [TROUBLESHOOTING.md](\1) - Common issues and solutions

@@ -106,7 +106,6 @@ show_command_header() {
   printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_BOLD}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$title" $title_padding " "
   printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_DIM}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$subtitle" $subtitle_padding " "
   echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
-  echo
 }
 
 # Alias for compatibility

@@ -343,10 +343,10 @@ nself status
 
 ## Related Documentation
 
-- **[Configuration Reference](config/USER-SERVICES.md)** - Detailed service configuration
-- **[Examples](EXAMPLES.md)** - Real-world usage examples
-- **[Architecture](ARCHITECTURE.md)** - How services fit into nself
-- **[Template Validation](SERVICE_TEMPLATES_VALIDATION.md)** - Quality assurance report
+- **[Configuration Reference](\1)** - Detailed service configuration
+- **[Examples](\1)** - Real-world usage examples
+- **[Architecture](\1)** - How services fit into nself
+- **[Template Validation](\1)** - Quality assurance report
 
 ---
 

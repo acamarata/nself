@@ -5,129 +5,100 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Server implements the service
-type server struct {
-	UnimplementedServiceServer
-}
-
-// Health implements health check
-func (s *server) Health(ctx context.Context, req *emptypb.Empty) (*HealthResponse, error) {
-	return &HealthResponse{
-		Status:    "healthy",
-		Service:   "{{SERVICE_NAME}}",
-		Timestamp: timestamppb.Now().AsTime().Format(time.RFC3339),
-	}, nil
-}
-
-// GetInfo returns service information
-func (s *server) GetInfo(ctx context.Context, req *emptypb.Empty) (*InfoResponse, error) {
-	return &InfoResponse{
-		Service:   "{{SERVICE_NAME}}",
-		Project:   "{{PROJECT_NAME}}",
-		Framework: "gRPC",
-		Runtime:   "Go",
-		Domain:    "{{BASE_DOMAIN}}",
-	}, nil
-}
-
-// Echo echoes the request
-func (s *server) Echo(ctx context.Context, req *EchoRequest) (*EchoResponse, error) {
-	return &EchoResponse{
-		Message:   req.Message,
-		Metadata:  req.Metadata,
-		Timestamp: timestamppb.Now().AsTime().Format(time.RFC3339),
-	}, nil
-}
+// Server implements a simple gRPC service
+type server struct{}
 
 func main() {
 	// Get port from environment
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "3000"
+		port = "{{PORT}}"
 	}
 
-	// Create listener
+	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// Create gRPC server
-	grpcServer := grpc.NewServer()
+	// Create a gRPC server
+	s := grpc.NewServer()
 
-	// Register service
-	RegisterServiceServer(grpcServer, &server{})
-
-	// Register health check
+	// Register health service
 	healthServer := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	grpc_health_v1.RegisterHealthServer(s, healthServer)
 	healthServer.SetServingStatus("{{SERVICE_NAME}}", grpc_health_v1.HealthCheckResponse_SERVING)
 
-	// Register reflection for debugging
-	reflection.Register(grpcServer)
+	// Register reflection service on gRPC server
+	reflection.Register(s)
 
-	// Start server in goroutine
+	// Start HTTP health endpoint for Docker healthcheck
+	go startHTTPHealth(port)
+
+	// Handle shutdown gracefully
 	go func() {
-		fmt.Printf("🚀 {{SERVICE_NAME}} gRPC server is running on port %s\n", port)
-		fmt.Printf("📍 Health check available via gRPC health protocol\n")
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
-		}
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+
+		log.Println("Shutting down gRPC server...")
+		s.GracefulStop()
 	}()
 
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	// Start server
+	log.Printf("gRPC server starting on port %s", port)
+	log.Printf("Project: {{PROJECT_NAME}}")
+	log.Printf("Service: {{SERVICE_NAME}}")
+	log.Printf("Domain: {{BASE_DOMAIN}}")
 
-	fmt.Println("🛑 Shutting down gracefully...")
-	grpcServer.GracefulStop()
-	fmt.Println("✅ Server shut down")
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
 
-// Note: The following types would normally be generated from the .proto file
-// These are simplified representations for the template
+// startHTTPHealth starts a simple HTTP health endpoint for Docker
+func startHTTPHealth(grpcPort string) {
+	httpPort := "8081" // Different port for HTTP health
 
-type UnimplementedServiceServer struct{}
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		// Check gRPC health
+		conn, err := grpc.Dial("localhost:"+grpcPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, "unhealthy: %v", err)
+			return
+		}
+		defer conn.Close()
 
-type HealthResponse struct {
-	Status    string
-	Service   string
-	Timestamp string
-}
+		client := grpc_health_v1.NewHealthClient(conn)
+		resp, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{
+			Service: "{{SERVICE_NAME}}",
+		})
 
-type InfoResponse struct {
-	Service   string
-	Project   string
-	Framework string
-	Runtime   string
-	Domain    string
-}
+		if err != nil || resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, "unhealthy")
+			return
+		}
 
-type EchoRequest struct {
-	Message  string
-	Metadata map[string]string
-}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "healthy")
+	})
 
-type EchoResponse struct {
-	Message   string
-	Metadata  map[string]string
-	Timestamp string
-}
-
-func RegisterServiceServer(s *grpc.Server, srv *server) {
-	// This would normally be generated
+	log.Printf("HTTP health endpoint available at :%s/health", httpPort)
+	if err := http.ListenAndServe(":"+httpPort, nil); err != nil {
+		log.Printf("HTTP health server error: %v", err)
+	}
 }

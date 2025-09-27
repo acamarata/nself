@@ -13,6 +13,12 @@ export COLOR_MAGENTA='\033[0;35m'
 export COLOR_CYAN='\033[0;36m'
 export COLOR_DIM='\033[2m'
 
+# Source the new environment detection module if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/env-detection.sh" ]]; then
+  source "$SCRIPT_DIR/env-detection.sh"
+fi
+
 # Load environment files with correct priority order
 # CONFIGURATION PHILOSOPHY:
 #   • Smart Defaults: Everything works without changes
@@ -27,11 +33,20 @@ export COLOR_DIM='\033[2m'
 #   5) .env         (LOCAL ONLY priority overrides) - HIGHEST PRIORITY
 load_env_with_priority() {
   local silent="${1:-false}"
+
+  # Use the new cascading function if available
+  if command -v cascade_env_vars >/dev/null 2>&1; then
+    # Detect environment using NSELF_ENV or ENV
+    local target_env=$(detect_environment)
+    cascade_env_vars "$target_env"
+    return 0
+  fi
+
+  # Fallback to original implementation if new module not available
   local loaded=false
-  
+
   # STEP 1: Always load .env.dev as the base (team defaults)
   if [[ -f ".env.dev" ]]; then
-    # log_debug "Loading .env.dev (team defaults - base layer)"
     set -a
     source ".env.dev" 2>/dev/null
     set +a
@@ -40,25 +55,15 @@ load_env_with_priority() {
 
   # STEP 1.5: Load .env.local if it exists (legacy/alternative to .env)
   if [[ -f ".env.local" ]]; then
-    # log_debug "Loading .env.local (alternative local config)"
     set -a
     source ".env.local" 2>/dev/null
     set +a
     loaded=true
   fi
 
-  # STEP 2: Load .env EARLY to determine the target environment
-  if [[ -f ".env" ]]; then
-    # log_debug "Pre-loading .env to determine environment"
-    set -a
-    source ".env" 2>/dev/null
-    set +a
-    loaded=true
-  fi
-  
-  # STEP 3: Determine current environment after loading .env
-  local current_env="${ENV:-dev}"
-  
+  # STEP 2: Detect environment using NSELF_ENV first, then ENV
+  local current_env="${NSELF_ENV:-${ENV:-dev}}"
+
   # Normalize environment names
   case "$current_env" in
     development|develop|devel)
@@ -74,69 +79,60 @@ load_env_with_priority() {
       export ENV="staging"
       ;;
   esac
-  
-  # STEP 4: Load environment-specific overrides based on ENV
+
+  # STEP 3: Load environment-specific overrides based on ENV
   case "$current_env" in
     staging|stage)
       # For staging: .env.dev -> .env.staging
       if [[ -f ".env.staging" ]]; then
-        # log_debug "Loading .env.staging (staging overrides)"
         set -a
         source ".env.staging" 2>/dev/null
         set +a
         loaded=true
       fi
       ;;
-    
+
     prod|production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
       if [[ -f ".env.staging" ]]; then
-        # log_debug "Loading .env.staging (staging layer for prod)"
         set -a
         source ".env.staging" 2>/dev/null
         set +a
         loaded=true
       fi
-      
+
       if [[ -f ".env.prod" ]]; then
-        # log_debug "Loading .env.prod (production overrides)"
         set -a
         source ".env.prod" 2>/dev/null
         set +a
         loaded=true
       fi
-      
+
       if [[ -f ".env.secrets" ]]; then
-        # log_debug "Loading .env.secrets (production secrets)"
         set -a
         source ".env.secrets" 2>/dev/null
         set +a
         loaded=true
       fi
       ;;
-    
+
     dev|development|*)
       # For dev or any other env: just .env.dev (already loaded)
       ;;
   esac
-  
-  # STEP 5: Re-load .env as the FINAL override (HIGHEST PRIORITY)
+
+  # STEP 4: Load .env as the FINAL override (HIGHEST PRIORITY)
   # This allows local overrides of ANY setting regardless of environment
   if [[ -f ".env" ]]; then
-    # log_debug "Re-loading .env (LOCAL ONLY priority overrides - highest priority)"
     set -a
     source ".env" 2>/dev/null
     set +a
     loaded=true
   fi
-  
-  # if [[ "$loaded" == false ]]; then
-  #   log_debug "No environment files found, using defaults only"
-  # fi
-  
+
   # Ensure PROJECT_NAME is always set after loading
   ensure_project_context
-  
+
   return 0
 }
 
@@ -319,6 +315,128 @@ load_service_env() {
   return 1
 }
 
+# Get cascaded environment variables for a specific environment
+# Usage: get_cascaded_vars [environment]
+# Returns: Exports all cascaded environment variables
+# Example: get_cascaded_vars dev
+#          get_cascaded_vars prod
+get_cascaded_vars() {
+  local target_env="${1:-${ENV:-dev}}"
+
+  # Normalize environment names
+  case "$target_env" in
+    development|develop|devel)
+      target_env="dev"
+      ;;
+    production|prod)
+      target_env="prod"
+      ;;
+    staging|stage)
+      target_env="staging"
+      ;;
+  esac
+
+  # Always start with .env.dev as base (team defaults)
+  if [[ -f ".env.dev" ]]; then
+    set -a
+    source ".env.dev" 2>/dev/null || true
+    set +a
+  fi
+
+  # Load environment-specific files based on target_env
+  case "$target_env" in
+    staging)
+      # For staging: .env.dev -> .env.staging -> .env
+      if [[ -f ".env.staging" ]]; then
+        set -a
+        source ".env.staging" 2>/dev/null || true
+        set +a
+      fi
+      ;;
+
+    prod|production)
+      # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets -> .env
+      if [[ -f ".env.staging" ]]; then
+        set -a
+        source ".env.staging" 2>/dev/null || true
+        set +a
+      fi
+
+      if [[ -f ".env.prod" ]]; then
+        set -a
+        source ".env.prod" 2>/dev/null || true
+        set +a
+      fi
+
+      if [[ -f ".env.secrets" ]]; then
+        set -a
+        source ".env.secrets" 2>/dev/null || true
+        set +a
+      fi
+      ;;
+
+    dev|development|*)
+      # For dev: just .env.dev -> .env
+      ;;
+  esac
+
+  # Always load .env last as highest priority override
+  if [[ -f ".env" ]]; then
+    set -a
+    source ".env" 2>/dev/null || true
+    set +a
+  fi
+
+  # Export the determined environment
+  export ENV="$target_env"
+
+  return 0
+}
+
+# Print cascaded environment variables (for debugging)
+# Usage: print_cascaded_vars [environment]
+print_cascaded_vars() {
+  local target_env="${1:-${ENV:-dev}}"
+
+  # Save current environment
+  local temp_env_file="/tmp/nself_env_before_$$"
+  env > "$temp_env_file"
+
+  # Load cascaded vars
+  get_cascaded_vars "$target_env"
+
+  # Show only the vars that were set/changed
+  local temp_env_after="/tmp/nself_env_after_$$"
+  env > "$temp_env_after"
+
+  echo "# Cascaded environment for: $target_env"
+  echo "# Cascade order:"
+  echo "#   - .env.dev (base defaults)"
+  case "$target_env" in
+    staging)
+      echo "#   - .env.staging"
+      ;;
+    prod|production)
+      echo "#   - .env.staging"
+      echo "#   - .env.prod"
+      echo "#   - .env.secrets"
+      ;;
+  esac
+  echo "#   - .env (local overrides)"
+  echo ""
+
+  # Show the differences
+  comm -13 <(sort "$temp_env_file") <(sort "$temp_env_after") 2>/dev/null || {
+    # Fallback if comm is not available
+    diff "$temp_env_file" "$temp_env_after" | grep "^>" | sed 's/^> //'
+  }
+
+  # Cleanup
+  rm -f "$temp_env_file" "$temp_env_after"
+
+  return 0
+}
+
 # Export functions
 export -f load_env_with_priority
 export -f get_env_var
@@ -332,3 +450,5 @@ export -f validate_required_env
 export -f get_env_vars_with_prefix
 export -f clear_env_vars_with_prefix
 export -f load_service_env
+export -f get_cascaded_vars
+export -f print_cascaded_vars

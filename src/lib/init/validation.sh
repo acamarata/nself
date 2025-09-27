@@ -86,9 +86,11 @@ security_checks() {
     log_warning "Running as root is not recommended for development."
     echo -n "Continue anyway? (y/N) " >&2
     read -r response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-      return $INIT_E_NOPERM
-    fi
+    # Bash 3.2 compatible check for yes/no
+    case "$response" in
+      [Yy]) ;;
+      *) return $INIT_E_NOPERM ;;
+    esac
   fi
 
   # Check umask for reasonable permissions

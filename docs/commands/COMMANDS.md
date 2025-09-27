@@ -629,7 +629,7 @@ SEARCH_ENABLED=true
 SEARCH_ENGINE=meilisearch  # or typesense, zinc, elasticsearch, opensearch, sonic
 ```
 
-See [SEARCH.md](./SEARCH.md) for complete search documentation.
+See [SEARCH.md](\1) for complete search documentation.
 
 ### nself functions
 Manage serverless functions for your application.
@@ -894,8 +894,8 @@ nself version
 
 ## See Also
 
-- [Architecture Guide](ARCHITECTURE.md)
-- [Backup Guide](BACKUP_GUIDE.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Environment Configuration](ENVIRONMENT_CONFIGURATION.md)
-- [Contributing](CONTRIBUTING.md)
+- [Architecture Guide](\1)
+- [Backup Guide](\1)
+- [Troubleshooting](\1)
+- [Environment Configuration](\1)
+- [Contributing](\1)

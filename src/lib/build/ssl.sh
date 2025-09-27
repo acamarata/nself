@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # ssl.sh - SSL certificate generation for build
 
+# Source platform compatibility functions
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/platform-compat.sh" 2>/dev/null || true
+
 # Generate SSL certificates
 generate_ssl_certificates() {
   local force="${1:-false}"
+  local ssl_was_new=false
 
   # Check if certificates already exist
   if [[ "$force" != "true" ]]; then
@@ -11,7 +15,13 @@ generate_ssl_certificates() {
       show_info "SSL certificates already exist (use --force to regenerate)"
       return 0
     fi
+  else
+    # Force regeneration requested
+    export SSL_REGENERATED="true"
   fi
+
+  # Mark as new if no SSL directory exists
+  [[ ! -d "ssl" ]] && ssl_was_new=true && export SSL_REGENERATED="true"
 
   # Create certificate directories
   mkdir -p ssl/certificates/{localhost,nself-org} 2>/dev/null || true
@@ -151,15 +161,17 @@ EOF
       -extensions v3_req >/dev/null 2>&1
 
     # Also generate localhost certificates
-    sed -i.bak "s/CN=${base_domain}/CN=localhost/" "$ssl_config"
+    # Create a copy of config for localhost
+    cp "$ssl_config" "${ssl_config}.localhost"
+    safe_sed_inline "${ssl_config}.localhost" "s/CN=${base_domain}/CN=localhost/"
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
       -keyout ssl/certificates/localhost/privkey.pem \
       -out ssl/certificates/localhost/fullchain.pem \
-      -config "$ssl_config" \
+      -config "${ssl_config}.localhost" \
       -extensions v3_req >/dev/null 2>&1
   fi
 
-  rm -f "$ssl_config" "${ssl_config}.bak"
+  rm -f "$ssl_config" "${ssl_config}.localhost"
   show_info "Generated self-signed SSL certificates"
 }
 

@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # services.sh - Service generation for build
 
+# Source platform compatibility functions
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/platform-compat.sh" 2>/dev/null || true
+
 # Generate all services
 generate_all_services() {
   local force="${1:-false}"
 
-  # Generate template services if enabled
-  if [[ "${TEMPLATES_ENABLED:-true}" == "true" ]]; then
+  # Legacy template services - disabled by default
+  # Only enable if explicitly set (for backward compatibility)
+  if [[ "${TEMPLATES_ENABLED:-false}" == "true" ]]; then
     generate_template_services "$force"
   fi
 
@@ -172,17 +176,151 @@ process_template() {
   mv "$temp_file" "$output"
 }
 
+# Generate a single custom service from template
+generate_custom_service() {
+  local service_name="$1"
+  local force="${2:-false}"
+
+  # Look for CS_N environment variables
+  local cs_num=1
+  while true; do
+    local cs_var="CS_${cs_num}"
+    local cs_value="${!cs_var:-}"
+
+    if [[ -z "$cs_value" ]]; then
+      break
+    fi
+
+    # Parse CS_N format: service_name:template_type:port
+    IFS=':' read -r configured_name template_type port <<< "$cs_value"
+
+    # Match by name or by CS number
+    if [[ "$configured_name" == "$service_name" ]]; then
+      # Copy template to services directory if it doesn't exist
+      local service_dir="services/$configured_name"
+
+      if [[ "$force" != "true" ]] && [[ -d "$service_dir" ]] && [[ -n "$(ls -A "$service_dir" 2>/dev/null)" ]]; then
+        # Skip if directory exists and has files (user may have customized)
+        echo "Service '$configured_name' already exists, skipping template copy"
+        return 0
+      fi
+
+      # Find the template
+      local template_root="${NSELF_ROOT:-/Users/admin/Sites/nself}"
+      local template_dir="$template_root/src/templates/services"
+      local template_found=false
+
+      # Look for template in language directories
+      for lang_dir in js python go rust; do
+        if [[ -d "$template_dir/$lang_dir/$template_type" ]]; then
+          # Found the template, copy it
+          echo "Copying template '$template_type' to services/$configured_name"
+          mkdir -p "$service_dir"
+          cp -r "$template_dir/$lang_dir/$template_type"/* "$service_dir/" 2>/dev/null || true
+
+          # Replace placeholders in copied files
+          find "$service_dir" -type f \( -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.go" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "Dockerfile" \) | while read file; do
+            safe_sed_inline "$file" \
+              -e "s/{{SERVICE_NAME}}/$configured_name/g" \
+              -e "s/{{SERVICE_PORT}}/$port/g" \
+              -e "s/{{PROJECT_NAME}}/${PROJECT_NAME}/g"
+          done
+
+          template_found=true
+          echo "Created service '$configured_name' from template '$template_type'"
+          break
+        fi
+      done
+
+      if [[ "$template_found" != "true" ]]; then
+        echo "Warning: Template '$template_type' not found for service '$configured_name'"
+      fi
+
+      return 0
+    fi
+
+    cs_num=$((cs_num + 1))
+  done
+}
+
+# Generate custom service from template
+generate_custom_service_from_template() {
+  local service_name="$1"
+  local template_type="$2"
+  local port="$3"
+  local force="${4:-false}"
+
+  # Skip if directory exists and has files (user may have customized)
+  local service_dir="services/$service_name"
+  if [[ "$force" != "true" ]] && [[ -d "$service_dir" ]] && [[ -n "$(ls -A "$service_dir" 2>/dev/null)" ]]; then
+    [[ "${VERBOSE:-false}" == "true" ]] && echo "Service '$service_name' already exists, skipping template copy"
+    return 0
+  fi
+
+  # Find the template
+  local template_root="${NSELF_ROOT:-/Users/admin/Sites/nself}"
+  local template_dir="$template_root/src/templates/services"
+  local template_found=false
+
+  # Look for template in language directories
+  for lang_dir in js py go rust; do
+    if [[ -d "$template_dir/$lang_dir/$template_type" ]]; then
+      # Found the template, copy it
+      [[ "${VERBOSE:-false}" == "true" ]] && echo "Copying template '$template_type' to services/$service_name"
+      mkdir -p "$service_dir"
+      cp -r "$template_dir/$lang_dir/$template_type"/* "$service_dir/" 2>/dev/null || true
+
+      # Replace placeholders in all template files
+      find "$service_dir" -type f -name "*.template" | while read template_file; do
+        # Replace placeholders
+        safe_sed_inline "$template_file" \
+          -e "s/{{SERVICE_NAME}}/$service_name/g" \
+          -e "s/{{SERVICE_PORT}}/$port/g" \
+          -e "s/{{PORT}}/$port/g" \
+          -e "s/{{PROJECT_NAME}}/${PROJECT_NAME}/g" \
+          -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN:-localhost}/g"
+
+        # Rename file to remove .template extension
+        base_name="${template_file%.template}"
+        mv "$template_file" "$base_name"
+      done
+
+      template_found=true
+      [[ "${VERBOSE:-false}" == "true" ]] && echo "Created service '$service_name' from template '$template_type'"
+      break
+    fi
+  done
+
+  if [[ "$template_found" != "true" ]]; then
+    echo "Warning: Template '$template_type' not found"
+    return 1
+  fi
+
+  return 0
+}
+
 # Generate custom services
 generate_custom_services() {
   local force="${1:-false}"
 
-  # Check for custom service configurations
-  if [[ -n "${CUSTOM_SERVICES:-}" ]]; then
-    IFS=',' read -ra SERVICES <<< "$CUSTOM_SERVICES"
-    for service in "${SERVICES[@]}"; do
-      generate_custom_service "$service" "$force"
-    done
-  fi
+  # Check for CS_N environment variables
+  local cs_num=1
+  while true; do
+    local cs_var="CS_${cs_num}"
+    local cs_value="${!cs_var:-}"
+
+    if [[ -z "$cs_value" ]]; then
+      break
+    fi
+
+    # Parse CS_N format: service_name:template_type:port
+    IFS=':' read -r service_name template_type port <<< "$cs_value"
+
+    # Generate the service from template
+    generate_custom_service_from_template "$service_name" "$template_type" "$port" "$force"
+
+    cs_num=$((cs_num + 1))
+  done
 
   # Check for Next.js app
   if [[ -f "package.json" ]] && grep -q "next" package.json 2>/dev/null; then
@@ -504,6 +642,7 @@ export -f generate_backend_service
 export -f generate_template_services
 export -f process_service_template
 export -f process_template
+export -f generate_custom_service
 export -f generate_custom_services
 export -f generate_nextjs_service
 export -f generate_react_service

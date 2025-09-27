@@ -247,9 +247,9 @@ wizard_custom_services() {
       echo "Service type:"
       local type_options=(
         "express-js - Express.js REST API"
-        "nestjs-js - NestJS framework"
         "fastapi - Python FastAPI"
         "bullmq-js - BullMQ job processor"
+        "grpc - gRPC service"
         "Custom Docker image"
       )
       local selected_type
@@ -257,9 +257,9 @@ wizard_custom_services() {
 
       case $selected_type in
         0) service_type="express-js" ;;
-        1) service_type="nestjs-js" ;;
-        2) service_type="fastapi" ;;
-        3) service_type="bullmq-js" ;;
+        1) service_type="fastapi" ;;
+        2) service_type="bullmq-js" ;;
+        3) service_type="grpc" ;;
         4)
           echo ""
           prompt_input "Docker image" "node:18" service_type
@@ -336,7 +336,7 @@ wizard_frontend_apps() {
       eval "$config_array_name+=('FRONTEND_APP_${app_count}_NAME=$app_name')"
       eval "$config_array_name+=('FRONTEND_APP_${app_count}_FRAMEWORK=$app_framework')"
       eval "$config_array_name+=('FRONTEND_APP_${app_count}_PORT=$app_port')"
-      eval "$config_array_name+=('FRONTEND_APP_${app_count}_DIR=frontend/$app_name')"
+      # Frontend apps are external - no DIR needed
 
       echo ""
       if ! confirm_action "Add another frontend app?"; then

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # docker-compose.sh - Docker Compose generation for build
 
+# Source platform compatibility functions
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/platform-compat.sh" 2>/dev/null || true
+
 # Generate docker-compose.yml
 generate_docker_compose() {
   # Determine the correct path to compose-generate.sh
@@ -55,7 +58,7 @@ EOF
   local deps=()
   [[ "${HASURA_ENABLED:-false}" == "true" ]] && deps+=("hasura")
   [[ "${AUTH_ENABLED:-false}" == "true" ]] && deps+=("auth")
-  [[ "${STORAGE_ENABLED:-false}" == "true" ]] && deps+=("storage")
+  [[ "${MINIO_ENABLED:-false}" == "true" ]] && deps+=("minio")
 
   if [[ ${#deps[@]} -gt 0 ]]; then
     echo "    depends_on:" >> "$file"
@@ -119,8 +122,10 @@ EOF
 
   # Add Redis password if configured
   if [[ -n "${REDIS_PASSWORD:-}" ]]; then
-    sed -i.bak '/container_name:.*_redis/a\    command: redis-server --requirepass ${REDIS_PASSWORD}' "$file"
-    rm -f "${file}.bak"
+    # Create temp file with added command
+    local temp_file=$(mktemp)
+    awk '/container_name:.*_redis/ {print; print "    command: redis-server --requirepass ${REDIS_PASSWORD}"; next} 1' "$file" > "$temp_file"
+    mv "$temp_file" "$file"
   fi
 }
 
@@ -249,7 +254,7 @@ add_volumes_section() {
 
   [[ "${POSTGRES_ENABLED:-true}" == "true" ]] && echo "  postgres_data:" >> "$file"
   [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "  redis_data:" >> "$file"
-  [[ "${STORAGE_ENABLED:-false}" == "true" ]] && echo "  storage_data:" >> "$file"
+  [[ "${MINIO_ENABLED:-false}" == "true" ]] && echo "  minio_data:" >> "$file"
   [[ "${NGINX_ENABLED:-true}" == "true" ]] && echo "  nginx_cache:" >> "$file"
 }
 

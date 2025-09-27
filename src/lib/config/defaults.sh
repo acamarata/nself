@@ -2,7 +2,8 @@
 # defaults.sh - Default configuration values
 
 # Project defaults
-export PROJECT_NAME="${PROJECT_NAME:-nself}"
+# Don't set a default PROJECT_NAME - let each command handle it
+# export PROJECT_NAME="${PROJECT_NAME:-nself}"
 export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
 export ENV_FILE="${ENV_FILE:-.env}"
 

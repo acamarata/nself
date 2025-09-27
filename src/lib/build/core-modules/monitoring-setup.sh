@@ -4,12 +4,13 @@
 
 # Setup monitoring configuration files
 setup_monitoring_configs() {
-  local monitoring_enabled="${GRAFANA_ENABLED:-false}"
-  local loki_enabled="${LOKI_ENABLED:-false}"
-  local prometheus_enabled="${PROMETHEUS_ENABLED:-false}"
+  local monitoring_enabled="${MONITORING_ENABLED:-false}"
+  local grafana_enabled="${GRAFANA_ENABLED:-$monitoring_enabled}"
+  local loki_enabled="${LOKI_ENABLED:-$monitoring_enabled}"
+  local prometheus_enabled="${PROMETHEUS_ENABLED:-$monitoring_enabled}"
 
   # Skip if no monitoring services are enabled
-  if [[ "$monitoring_enabled" != "true" ]] && [[ "$loki_enabled" != "true" ]] && [[ "$prometheus_enabled" != "true" ]]; then
+  if [[ "$monitoring_enabled" != "true" ]] && [[ "$grafana_enabled" != "true" ]] && [[ "$loki_enabled" != "true" ]] && [[ "$prometheus_enabled" != "true" ]]; then
     return 0
   fi
 
@@ -49,7 +50,7 @@ schema_config:
         period: 24h
 
 ruler:
-  alertmanager_url: http://localhost:9093
+  alertmanager_url: http://alertmanager:9093
 
 limits_config:
   allow_structured_metadata: false
@@ -69,28 +70,50 @@ global:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
 
   - job_name: 'node'
     static_configs:
-      - targets: ['host.docker.internal:9100']
+      - targets: ['node-exporter:9100']
 
-  - job_name: 'docker'
+  - job_name: 'cadvisor'
     static_configs:
-      - targets: ['host.docker.internal:9323']
+      - targets: ['cadvisor:8080']
 
   - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres:5432']
+      - targets: ['postgres-exporter:9187']
 
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis:6379']
+      - targets: ['redis-exporter:9121']
 
   - job_name: 'hasura'
     static_configs:
       - targets: ['hasura:8080']
 EOF
+
+      # Add custom services monitoring
+      for i in {1..20}; do
+        local cs_var="CS_${i}"
+        local cs_value="${!cs_var:-}"
+
+        [[ -z "$cs_value" ]] && continue
+
+        # Parse CS format: service_name:template_type:port
+        IFS=':' read -r service_name template_type port <<< "$cs_value"
+
+        # Skip if no port or port is 0
+        [[ -z "$port" || "$port" == "0" ]] && continue
+
+        cat >> monitoring/prometheus/prometheus.yml <<EOF
+
+  - job_name: 'custom_${service_name}'
+    static_configs:
+      - targets: ['${service_name}:${port}']
+    metrics_path: /metrics
+EOF
+      done
     fi
   fi
 
@@ -204,14 +227,43 @@ storage:
   trace:
     backend: local
     local:
-      path: /tmp/tempo/blocks
+      path: /var/tempo/blocks
 
 metrics_generator:
   registry:
     external_labels:
       source: tempo
   storage:
-    path: /tmp/tempo/generator/wal
+    path: /var/tempo/generator/wal
+EOF
+    fi
+  fi
+
+  # Create AlertManager config if enabled
+  if [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] || [[ "$monitoring_enabled" == "true" ]]; then
+    if [[ ! -f "monitoring/alertmanager/alertmanager.yml" ]]; then
+      mkdir -p monitoring/alertmanager
+      cat > monitoring/alertmanager/alertmanager.yml <<'EOF'
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default'
+
+receivers:
+  - name: 'default'
+    # Configure webhook, email, or other alert receivers here
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
 EOF
     fi
   fi

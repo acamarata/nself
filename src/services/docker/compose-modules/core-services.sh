@@ -37,6 +37,19 @@ generate_postgres_service() {
       timeout: 5s
       retries: 5
 EOF
+
+  # Add resource limits if specified
+  if [[ -n "${POSTGRES_MEMORY:-}" ]] || [[ -n "${POSTGRES_CPU:-}" ]]; then
+    cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${POSTGRES_MEMORY:-2G}
+          cpus: '\${POSTGRES_CPU:-1.0}'
+EOF
+  fi
+
+  echo ""  # Close the service block
 }
 
 # Generate Hasura GraphQL Engine service
@@ -89,6 +102,17 @@ EOF
       timeout: 10s
       retries: 5
 EOF
+
+  # Add resource limits if specified
+  if [[ -n "${HASURA_MEMORY:-}" ]] || [[ -n "${HASURA_CPU:-}" ]]; then
+    cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${HASURA_MEMORY:-1G}
+          cpus: '\${HASURA_CPU:-0.5}'
+EOF
+  fi
 }
 
 # Generate Auth service configuration
@@ -96,10 +120,35 @@ generate_auth_service() {
   local enabled="${AUTH_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
-  # Determine which auth image to use
+  # Check if we should use fallback auth service
+  local use_fallback="${AUTH_USE_FALLBACK:-false}"
   local auth_image="${AUTH_IMAGE:-nhost/hasura-auth:latest}"
 
-  cat <<EOF
+  # If fallback is enabled or ENV is demo, use the fallback service
+  if [[ "$use_fallback" == "true" ]] || [[ "${ENV:-}" == "demo" ]] || [[ "${DEMO_CONTENT:-false}" == "true" ]]; then
+    # Generate fallback auth service
+    cat <<EOF
+  # Hasura Auth Service (Fallback)
+  auth:
+    build:
+      context: ./fallback-services
+      dockerfile: Dockerfile.auth
+    container_name: \${PROJECT_NAME}_auth
+    restart: unless-stopped
+    networks:
+      - \${DOCKER_NETWORK}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_PORT: 4000
+      NODE_ENV: \${ENV:-development}
+    ports:
+      - "\${AUTH_PORT:-4000}:4000"
+EOF
+  else
+    # Use original nhost/hasura-auth with fixes
+    cat <<EOF
 
   # Hasura Auth Service
   auth:
@@ -121,10 +170,27 @@ EOF
       AUTH_HOST: "0.0.0.0"
       AUTH_PORT: "4000"
       AUTH_LOG_LEVEL: \${AUTH_LOG_LEVEL:-info}
-      DATABASE_URL: \${DATABASE_URL}
+      DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
+      AUTH_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
+      HASURA_GRAPHQL_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: \${POSTGRES_USER:-postgres}
+      PGPASSWORD: \${POSTGRES_PASSWORD:-postgres}
+      PGDATABASE: \${POSTGRES_DB:-nself_db}
+      POSTGRES_USER: \${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DATABASE: \${POSTGRES_DB:-nself_db}
       AUTH_SERVER_URL: \${AUTH_SERVER_URL:-http://localhost:4000}
       AUTH_CLIENT_URL: \${AUTH_CLIENT_URL:-http://localhost:3000}
       AUTH_JWT_SECRET: \${AUTH_JWT_SECRET}
+      AUTH_JWT_TYPE: \${AUTH_JWT_TYPE:-HS256}
+      AUTH_JWT_KEY: \${AUTH_JWT_KEY:-\${AUTH_JWT_SECRET}}
+      HASURA_GRAPHQL_JWT_SECRET: \${HASURA_GRAPHQL_JWT_SECRET}
+      HASURA_GRAPHQL_GRAPHQL_URL: \${HASURA_GRAPHQL_GRAPHQL_URL:-http://hasura:8080/v1/graphql}
+      HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
       AUTH_ACCESS_TOKEN_EXPIRES_IN: \${AUTH_ACCESS_TOKEN_EXPIRES_IN:-900}
       AUTH_REFRESH_TOKEN_EXPIRES_IN: \${AUTH_REFRESH_TOKEN_EXPIRES_IN:-2592000}
       AUTH_SMTP_HOST: \${AUTH_SMTP_HOST:-mailpit}
@@ -162,6 +228,18 @@ EOF
       timeout: 10s
       retries: 5
 EOF
+
+  # Add resource limits if specified
+  if [[ -n "${AUTH_MEMORY:-}" ]] || [[ -n "${AUTH_CPU:-}" ]]; then
+    cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${AUTH_MEMORY:-512M}
+          cpus: '\${AUTH_CPU:-0.5}'
+EOF
+  fi
+  fi  # Close the use_fallback if statement
 }
 
 # Generate MinIO service configuration
@@ -196,16 +274,25 @@ generate_minio_service() {
       retries: 3
 EOF
 
-  # Add bucket initialization if configured
-  if [[ -n "${MINIO_DEFAULT_BUCKETS:-}" ]]; then
+  # Add resource limits if specified
+  if [[ -n "${MINIO_MEMORY:-}" ]] || [[ -n "${MINIO_CPU:-}" ]]; then
     cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${MINIO_MEMORY:-1G}
+          cpus: '\${MINIO_CPU:-0.5}'
+EOF
+  fi
+
+  # Always add MinIO client for bucket initialization
+  cat <<EOF
 
   # MinIO Client for bucket initialization
   minio-client:
     image: minio/mc:latest
     container_name: \${PROJECT_NAME}_minio_client
     restart: "no"
-    profiles: ["init"]
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -214,12 +301,11 @@ EOF
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc config host add myminio http://minio:9000 \${MINIO_ROOT_USER:-minioadmin} \${MINIO_ROOT_PASSWORD:-minioadmin};
-      /usr/bin/mc mb -p myminio/\${MINIO_DEFAULT_BUCKETS:-uploads};
-      /usr/bin/mc anonymous set download myminio/\${MINIO_DEFAULT_BUCKETS:-uploads};
+      /usr/bin/mc mb -p myminio/\${MINIO_DEFAULT_BUCKETS:-uploads} || true;
+      /usr/bin/mc anonymous set download myminio/\${MINIO_DEFAULT_BUCKETS:-uploads} || true;
       exit 0;
       "
 EOF
-  fi
 }
 
 # Generate Redis service configuration
@@ -247,6 +333,17 @@ generate_redis_service() {
       timeout: 5s
       retries: 5
 EOF
+
+  # Add resource limits if specified
+  if [[ -n "${REDIS_MEMORY:-}" ]] || [[ -n "${REDIS_CPU:-}" ]]; then
+    cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${REDIS_MEMORY:-512M}
+          cpus: '\${REDIS_CPU:-0.5}'
+EOF
+  fi
 }
 
 # Export functions

@@ -55,71 +55,32 @@ wizard_core_services() {
 
   echo ""
 
-  # Storage Service
-  echo "📁 Storage Service"
-  echo "  File uploads, image processing, S3-compatible API"
-  if confirm_action "Enable Storage service?"; then
-    eval "$config_array_name+=('STORAGE_ENABLED=true')"
-    eval "$config_array_name+=('STORAGE_PORT=5000')"
+  # MinIO Storage
+  echo "📁 MinIO Object Storage"
+  echo "  S3-compatible object storage for file uploads"
+  if confirm_action "Enable MinIO storage?"; then
+    eval "$config_array_name+=('MINIO_ENABLED=true')"
+    eval "$config_array_name+=('MINIO_PORT=9000')"
+    eval "$config_array_name+=('MINIO_CONSOLE_PORT=9001')"
 
     echo ""
-    echo "Storage provider:"
-    local storage_options=(
-      "MinIO - S3-compatible, self-hosted"
-      "Local filesystem - Simple file storage"
-      "Custom S3 - Use AWS S3 or compatible"
-    )
-    local selected_storage
-    select_option "Select storage provider" storage_options selected_storage
-
-    case $selected_storage in
-      0)
-        eval "$config_array_name+=('STORAGE_PROVIDER=minio')"
-        eval "$config_array_name+=('MINIO_ENABLED=true')"
-        ;;
-      1)
-        eval "$config_array_name+=('STORAGE_PROVIDER=local')"
-        ;;
-      2)
-        eval "$config_array_name+=('STORAGE_PROVIDER=s3')"
-        echo ""
-        local s3_bucket s3_region
-        prompt_input "S3 bucket name" "my-bucket" s3_bucket
-        prompt_input "S3 region" "us-east-1" s3_region
-        eval "$config_array_name+=('S3_BUCKET=$s3_bucket')"
-        eval "$config_array_name+=('S3_REGION=$s3_region')"
-        ;;
-    esac
+    local minio_user minio_pass
+    prompt_input "MinIO root user" "minioadmin" minio_user
+    prompt_input "MinIO root password" "minioadmin" minio_pass
+    eval "$config_array_name+=('MINIO_ROOT_USER=$minio_user')"
+    eval "$config_array_name+=('MINIO_ROOT_PASSWORD=$minio_pass')"
   else
-    eval "$config_array_name+=('STORAGE_ENABLED=false')"
+    eval "$config_array_name+=('MINIO_ENABLED=false')"
   fi
 
   echo ""
 
-  # Functions/Serverless
-  echo "⚡ Serverless Functions"
-  echo "  Custom business logic, webhooks, scheduled tasks"
+  # Functions (Serverless runtime)
+  echo "⚡ Functions Runtime"
+  echo "  Serverless functions for custom business logic"
   if confirm_action "Enable Functions service?"; then
     eval "$config_array_name+=('FUNCTIONS_ENABLED=true')"
-    eval "$config_array_name+=('FUNCTIONS_PORT=9000')"
-
-    echo ""
-    echo "Functions runtime:"
-    local runtime_options=(
-      "Node.js - JavaScript/TypeScript"
-      "Python - Python functions"
-      "Go - High-performance Go"
-      "Multi-runtime - Support multiple languages"
-    )
-    local selected_runtime
-    select_option "Select runtime" runtime_options selected_runtime
-
-    case $selected_runtime in
-      0) eval "$config_array_name+=('FUNCTIONS_RUNTIME=node')" ;;
-      1) eval "$config_array_name+=('FUNCTIONS_RUNTIME=python')" ;;
-      2) eval "$config_array_name+=('FUNCTIONS_RUNTIME=go')" ;;
-      3) eval "$config_array_name+=('FUNCTIONS_RUNTIME=multi')" ;;
-    esac
+    eval "$config_array_name+=('FUNCTIONS_PORT=3008')"
   else
     eval "$config_array_name+=('FUNCTIONS_ENABLED=false')"
   fi

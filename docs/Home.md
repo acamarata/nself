@@ -1,219 +1,150 @@
-# nself Documentation Wiki
+# nself - Backend-as-a-Service Platform
 
 <div align="center">
 
-![nself Logo](https://raw.githubusercontent.com/acamarata/nself/main/docs/assets/logo.png)
+**The Complete Backend-as-a-Service Platform**
 
-**The Complete Self-Hosted Backend Stack**
-
-[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
-[![License](https://img.shields.io/badge/license-Source%20Available-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](RELEASES)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20v2-blue.svg)](https://docs.docker.com/compose/)
-[![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/acamarata/nself)
+[![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/nself/nself)
 
 </div>
 
 ---
 
-## 📚 Table of Contents
+## 🚀 Quick Start
 
-### 🚀 Getting Started
-- **[Installation Guide](Installation)** - System requirements and setup
-- **[Quick Start](Quick-Start)** - Get running in 5 minutes
-- **[Basic Configuration](Basic-Configuration)** - Essential settings
-- **[First Project](First-Project)** - Create your first nself project
+```bash
+# Install nself
+curl -fsSL https://raw.githubusercontent.com/nself/nself/main/install.sh | bash
 
-### 📖 Core Documentation
-- **[Commands Reference](Commands)** - Complete CLI command reference
-- **[Configuration Guide](Configuration)** - Environment variables and settings
-- **[Architecture Overview](Architecture)** - System design and components
-- **[Service Templates](Service-Templates)** - Available microservice templates
+# Initialize a demo project with all services
+nself init --demo
 
-### 🛠️ Features & Services
-- **[Admin UI](Admin-UI)** - Web-based administration interface
-- **[Database Management](Database)** - PostgreSQL with 60+ extensions
-- **[Authentication](Authentication)** - JWT-based auth system
-- **[Storage System](Storage)** - MinIO S3-compatible storage
-- **[GraphQL API](GraphQL)** - Hasura GraphQL engine
-- **[Email Service](Email)** - Multi-provider email configuration
-- **[SSL/TLS Management](SSL)** - Certificate management
+# Build services from templates
+nself build
 
-### 🚢 Deployment & Operations
-- **[Production Deployment](Deployment)** - Deploy to production
-- **[Backup & Recovery](Backup-Guide)** - Backup strategies
-- **[Monitoring & Metrics](Monitoring)** - Prometheus, Grafana, Loki
-- **[Scaling Guide](Scaling)** - Horizontal and vertical scaling
-- **[Security Best Practices](Security)** - Hardening your deployment
+# Start everything
+nself start
+```
 
-### 🔧 Advanced Topics
-- **[Microservices](Microservices)** - Adding custom services
-- **[Docker Compose](Docker-Compose)** - Understanding the orchestration
-- **[Environment Management](Environment-Management)** - Multi-environment setup
-- **[Hooks & Automation](Hooks)** - Pre/post command hooks
-- **[Custom Templates](Custom-Templates)** - Creating service templates
+→ **[View Complete Demo Setup](DEMO_SETUP)** - 24 services showcasing all capabilities
 
-### 🐛 Troubleshooting & Support
-- **[Troubleshooting Guide](Troubleshooting)** - Common issues and solutions
+## 📚 Documentation
+
+### Getting Started
+- **[Quick Start Guide](Quick-Start)** - Get up and running in 5 minutes
+- **[Demo Setup](DEMO_SETUP)** - Complete demo with all 24 services
 - **[FAQ](FAQ)** - Frequently asked questions
-- **[Known Issues](Known-Issues)** - Current limitations
-- **[Support](Support)** - Getting help
+- **[Examples](EXAMPLES)** - Code examples and patterns
 
-### 👥 Development
-- **[Contributing Guide](Contributing)** - How to contribute
-- **[Development Setup](Development)** - Setting up dev environment
-- **[Testing](Testing)** - Running tests
-- **[API Reference](API)** - Internal APIs
+### Services Documentation
+- **[Services Overview](SERVICES)** - All available services
+- **[Required Services](SERVICES_REQUIRED)** - Core infrastructure (4 services)
+- **[Optional Services](SERVICES_OPTIONAL)** - Additional capabilities (16+ services)
+- **[Custom Services](SERVICES_CUSTOM)** - Build your own microservices
+- **[Monitoring Bundle](MONITORING_BUNDLE)** - Complete observability (10 services)
+- **[nself Admin](NSELF_ADMIN)** - Web-based management interface
 
-### 📋 Resources
-- **[Changelog](Changelog)** - Version history
-- **[Roadmap](Roadmap)** - Future plans
-- **[Release Notes](Releases)** - Latest releases
-- **[Examples](Examples)** - Code examples and recipes
-- **[Directory Structure](Directory-Structure)** - Project layout
+### Configuration & Commands
+- **[Commands Reference](COMMANDS)** - Complete CLI reference
+- **[Command Tree](COMMAND-TREE-FINAL)** - Visual command structure
+- **[Environment Variables](ENVIRONMENT-VARIABLES)** - Configuration reference
+- **[Complete ENV Reference](ENV-COMPLETE-REFERENCE)** - All variables
+- **[Environment Setup](ENVIRONMENT_CONFIGURATION)** - Configuration guide
 
----
+### Architecture & Guides
+- **[Architecture Overview](ARCHITECTURE)** - System design
+- **[Project Structure](PROJECT_STRUCTURE)** - File organization
+- **[Troubleshooting](TROUBLESHOOTING)** - Common issues and solutions
+- **[Backup Guide](BACKUP_GUIDE)** - Backup and recovery
+- **[Domain Selection](domain-selection-guide)** - Choosing your domain
 
-## 🎯 Quick Navigation
+### Releases & Updates
+- **[Changelog](CHANGELOG)** - Version history
+- **[Latest Release Notes](RELEASES)** - Current version details
+- **[v0.3.9 Release](RELEASE-v0.3.9)** - Previous stable release
 
-<table>
-<tr>
-<td width="33%" valign="top">
+## 🎯 Service Overview
 
-### 📦 Core Services
-- [PostgreSQL 16](Services#postgresql)
-- [Hasura GraphQL](Services#hasura)
-- [Nhost Auth](Services#authentication)
-- [MinIO Storage](Services#storage)
-- [Redis Cache](Services#redis)
-- [Nginx Proxy](Services#nginx)
+### Core Services (Required - 4)
+- **PostgreSQL** - Primary database with 60+ extensions
+- **Hasura** - Instant GraphQL APIs
+- **Auth** - JWT-based authentication
+- **Nginx** - Reverse proxy and SSL
 
-</td>
-<td width="33%" valign="top">
+### Optional Services (16 in demo)
+- **Monitoring Bundle (10)** - Prometheus, Grafana, Loki, Promtail, Tempo, Alertmanager, exporters
+- **Redis** - Caching and sessions
+- **MinIO** - S3-compatible storage
+- **nself Admin** - Web management UI
+- **MailPit** - Email testing
+- **MeiliSearch** - Full-text search
+- **Storage API** - File management
 
-### 🔌 Optional Services
-- [Prometheus](Services#prometheus)
-- [Grafana](Services#grafana)
-- [Loki Logging](Services#loki)
-- [Jaeger Tracing](Services#jaeger)
-- [Temporal Workflow](Services#temporal)
-- [RabbitMQ](Services#rabbitmq)
+### Custom Services (Your code)
+- Build from 40+ templates
+- Express, FastAPI, Go, Rust, and more
+- Automatic Docker integration
+- Full monitoring and logging
 
-</td>
-<td width="33%" valign="top">
+## 🎆 Demo Project
 
-### 🎨 Templates
-- [Node.js](Templates#nodejs)
-- [Python](Templates#python)
-- [Go](Templates#golang)
-- [Rust](Templates#rust)
-- [.NET](Templates#dotnet)
-- [Java](Templates#java)
+The demo setup showcases all capabilities with **24 running services**:
 
-</td>
-</tr>
-</table>
+```bash
+nself init --demo  # Creates complete demo environment
+nself build        # Generates 4 custom services from templates
+nself start        # Launches all 24 services
+```
 
----
-
-## 🚦 Current Status
-
-| Component | Status | Version | Health |
-|-----------|--------|---------|--------|
-| **nself CLI** | ✅ Stable | v0.3.9 | ![100%](https://img.shields.io/badge/health-100%25-brightgreen) |
-| **PostgreSQL** | ✅ Stable | 16-alpine | ![100%](https://img.shields.io/badge/health-100%25-brightgreen) |
-| **Hasura** | ✅ Stable | v2.44.0 | ![100%](https://img.shields.io/badge/health-100%25-brightgreen) |
-| **Auth Service** | ⚠️ Works* | v0.36.0 | ![95%](https://img.shields.io/badge/health-95%25-yellow) |
-| **Storage** | ✅ Stable | v0.6.1 | ![100%](https://img.shields.io/badge/health-100%25-brightgreen) |
-| **Admin UI** | ✅ Stable | v0.0.3 | ![100%](https://img.shields.io/badge/health-100%25-brightgreen) |
-
-*Auth service health check reports unhealthy but service works correctly on port 4001
-
----
+**Demo includes:**
+- Express.js REST API
+- BullMQ job worker
+- Go gRPC service
+- Python FastAPI
+- Full monitoring stack
+- All optional services
 
 ## 🌟 Key Features
 
-<div align="center">
+- **🔧 Zero DevOps** - Focus on code, not infrastructure
+- **🚀 One Command** - `nself init && nself build && nself start`
+- **🎛️ Admin Dashboard** - Complete web-based management
+- **🔐 Authentication** - JWT with social providers
+- **📦 S3 Storage** - MinIO with CDN support
+- **🔄 Auto-SSL** - Let's Encrypt integration
+- **📊 Full Monitoring** - Metrics, logs, traces
+- **🎯 Multi-Environment** - Dev, staging, production
+- **🔌 60+ Extensions** - PostgreSQL fully loaded
+- **📧 Email Service** - Multiple providers
 
-| Feature | Description |
-|---------|-------------|
-| **🔧 Smart Defaults** | Auto-configuration with intelligent defaults |
-| **🚀 One-Command Deploy** | `nself init && nself build && nself start` |
-| **🎛️ Admin Dashboard** | Web-based management interface |
-| **🔐 Built-in Auth** | JWT authentication with 20+ providers |
-| **📦 S3 Storage** | MinIO with Hasura Storage integration |
-| **🔄 Auto-SSL** | Automatic certificate generation |
-| **📊 Monitoring** | Prometheus, Grafana, Loki integration |
-| **🎯 Multi-Environment** | Dev, staging, production configs |
-| **🔌 60+ Extensions** | PostgreSQL with all extensions |
-| **📧 Email Service** | 16+ email provider integrations |
+## 📊 Common Use Cases
 
-</div>
+### SaaS Applications
+Complete backend with auth, billing, multi-tenancy
 
----
+### API Platforms
+RESTful and GraphQL APIs with documentation
 
-## 📊 Latest Release: v0.3.9
+### Microservices
+Service mesh with discovery and monitoring
 
-### What's New
-- ✨ **Admin UI Integration** - Full web-based administration
-- 🐛 **Major Bug Fixes** - Build, status, stop commands fixed
-- 📦 **40+ Service Templates** - Expanded template library
-- 🔧 **Auto-Fix System** - Intelligent error recovery
-- 📚 **Enhanced Documentation** - Comprehensive guides
-
-[View Full Changelog →](Changelog#v039)
-
----
-
-## 🎓 Learning Path
-
-### Beginner
-1. Start with [Installation](Installation)
-2. Follow the [Quick Start](Quick-Start)
-3. Read [Basic Configuration](Basic-Configuration)
-4. Try [Your First Project](First-Project)
-
-### Intermediate
-1. Explore [Commands Reference](Commands)
-2. Understand [Architecture](Architecture)
-3. Configure [Services](Services)
-4. Setup [Admin UI](Admin-UI)
-
-### Advanced
-1. Deploy to [Production](Deployment)
-2. Implement [Microservices](Microservices)
-3. Configure [Monitoring](Monitoring)
-4. Customize with [Templates](Custom-Templates)
-
----
+### ML Platforms
+MLflow integration for model training and serving
 
 ## 🤝 Community & Support
 
-<div align="center">
-
-| Channel | Purpose | Link |
-|---------|---------|------|
-| **GitHub Issues** | Bug reports & features | [Create Issue](https://github.com/acamarata/nself/issues) |
-| **Discussions** | Questions & help | [Join Discussion](https://github.com/acamarata/nself/discussions) |
-| **Discord** | Real-time chat | Coming Soon |
-| **Email** | Direct support | support@nself.org |
-
-</div>
-
----
+- **GitHub Issues** - [Report bugs and request features](https://github.com/nself/nself/issues)
+- **Discussions** - [Ask questions and share ideas](https://github.com/nself/nself/discussions)
+- **Discord** - [Join our community](https://discord.gg/nself)
+- **Twitter** - [@nself](https://twitter.com/nself)
 
 ## 📝 License
 
-nself is **Source Available** software:
-- ✅ **Free** for personal and non-commercial use
-- 💰 **Paid license** required for commercial use
-- 📖 See [LICENSE](https://github.com/acamarata/nself/blob/main/LICENSE) for details
+nself is open-source software licensed under the MIT License.
 
 ---
 
-<div align="center">
-
-**[Get Started](Quick-Start)** | **[Commands](Commands)** | **[Configuration](Configuration)** | **[Support](Support)**
-
-Made with ❤️ by the nself team
-
-</div>
+**Current Version:** v0.4.0 | **Last Updated:** September 2024 | **Status:** Production Ready

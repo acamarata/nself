@@ -7,7 +7,7 @@
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
-> **⚠️ IMPORTANT NOTE**: While the CLI is functional and actively used in production, nself is under heavy development until v0.4 and v0.5 (see [roadmap](docs/ROADMAP.md)). Bugs are expected as we refine features and add capabilities. We recommend production use only for experienced users comfortable with Docker, self-hosting, and troubleshooting. 
+> **⚠️ IMPORTANT NOTE**: While the CLI is functional and actively used in production, nself is under heavy development until v0.5 (see [roadmap](docs/ROADMAP.md)). Bugs are expected as we refine features and add capabilities. We recommend production use only for experienced users comfortable with Docker, self-hosting, and troubleshooting. 
 > 
 > That said, nself is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
 > 

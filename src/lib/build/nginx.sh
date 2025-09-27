@@ -91,8 +91,15 @@ EOF
 
 # Generate default server configuration
 generate_default_server_conf() {
+  # Use smart defaults that work for any environment
   local base_domain="${BASE_DOMAIN:-localhost}"
   local ssl_enabled="${SSL_ENABLED:-true}"
+
+  # Detect environment for route generation
+  local current_env="${ENV:-dev}"
+  if command -v detect_environment >/dev/null 2>&1; then
+    current_env="$(detect_environment)"
+  fi
 
   cat > nginx/conf.d/default.conf <<EOF
 # Default server configuration
@@ -221,9 +228,9 @@ generate_service_routes() {
     generate_auth_route
   fi
 
-  # Storage route
-  if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
-    generate_storage_route
+  # MinIO route
+  if [[ "${MINIO_ENABLED:-false}" == "true" ]]; then
+    generate_minio_route
   fi
 
   # API routes for custom services
@@ -287,12 +294,12 @@ location /auth/ {
 EOF
 }
 
-# Generate Storage route
-generate_storage_route() {
-  cat > nginx/routes/storage.conf <<'EOF'
-# Storage Service
-location /storage/ {
-    proxy_pass http://storage:5000/;
+# Generate MinIO route
+generate_minio_route() {
+  cat > nginx/routes/minio.conf <<'EOF'
+# MinIO Object Storage
+location /minio/ {
+    proxy_pass http://minio:9000/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -302,6 +309,16 @@ location /storage/ {
     # File upload settings
     client_max_body_size 500M;
     proxy_request_buffering off;
+}
+
+# MinIO Console
+location /minio-console/ {
+    proxy_pass http://minio:9001/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 EOF
 }
@@ -558,7 +575,7 @@ export -f generate_ssl_config
 export -f generate_service_routes
 export -f generate_hasura_route
 export -f generate_auth_route
-export -f generate_storage_route
+export -f generate_minio_route
 export -f generate_api_routes
 export -f generate_custom_api_route
 export -f generate_nginx_upstream

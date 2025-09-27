@@ -528,8 +528,8 @@ MONITORING_ENABLED=true
 
 ## Related Documentation
 
-- [CONFIG.md](./CONFIG.md) - Configuration guide
-- [SEARCH.md](./SEARCH.md) - Search services configuration
-- [BACKUP_GUIDE.md](./BACKUP_GUIDE.md) - Backup configuration
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Common issues
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
+- [CONFIG.md](\1) - Configuration guide
+- [SEARCH.md](\1) - Search services configuration
+- [BACKUP_GUIDE.md](\1) - Backup configuration
+- [TROUBLESHOOTING.md](\1) - Common issues
+- [ARCHITECTURE.md](\1) - System architecture

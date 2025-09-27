@@ -62,7 +62,18 @@ generate_default_conf() {
 server {
     listen 80 default_server;
     server_name _;
-    return 301 https://\$host\$request_uri;
+
+    # Health check endpoint (available on HTTP)
+    location /health {
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Redirect everything else to HTTPS
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
 }
 
 server {
@@ -78,9 +89,11 @@ server {
         index index.html;
     }
 
+    # Health check also available on HTTPS
     location /health {
         access_log off;
-        return 200 "healthy";
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
     }
 }
 EOF
@@ -94,7 +107,7 @@ generate_service_configs() {
   local hasura_enabled="${HASURA_ENABLED:-false}"
   local auth_enabled="${AUTH_ENABLED:-false}"
   local storage_enabled="${STORAGE_ENABLED:-false}"
-  local mailpit_enabled="${MAILPIT_ENABLED:-true}"
+  local mailpit_enabled="${MAILPIT_ENABLED:-false}"
 
   mkdir -p nginx/conf.d
 

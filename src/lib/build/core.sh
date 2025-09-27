@@ -24,6 +24,11 @@ if [[ -f "$LIB_ROOT/auto-fix/auto-fixer-v2.sh" ]]; then
   source "$LIB_ROOT/auto-fix/auto-fixer-v2.sh"
 fi
 
+# Source comprehensive config validator
+if [[ -f "$CORE_SCRIPT_DIR/config-validator.sh" ]]; then
+  source "$CORE_SCRIPT_DIR/config-validator.sh"
+fi
+
 # Source our modular components
 source "$CORE_SCRIPT_DIR/platform.sh"
 source "$CORE_SCRIPT_DIR/validation.sh"
@@ -105,9 +110,8 @@ convert_frontend_apps_to_expanded() {
         if [[ -n "$app" ]]; then
           app_counter=$((app_counter + 1))
 
-          # Set frontend app variables
+          # Set frontend app variables (no DIR - frontends are external)
           export "FRONTEND_APP_${app_counter}_NAME=$app"
-          export "FRONTEND_APP_${app_counter}_DIR=frontend/$app"
           export "FRONTEND_APP_${app_counter}_PORT=$((port_base + app_counter - 1))"
           export "FRONTEND_APP_${app_counter}_DISPLAY_NAME=$app"
 
@@ -201,25 +205,174 @@ orchestrate_build() {
   UPDATED_FILES=()
   SKIPPED_FILES=()
 
-  # Load environment FIRST to get PROJECT_NAME from config
-  local env_file=".env"
-  if [[ -f ".env.local" ]]; then
-    env_file=".env.local"
-  elif [[ -f ".env.${env}" ]]; then
-    env_file=".env.${env}"
+  # IMPORTANT: Build loads env to detect WHAT to provision
+  # But outputs use runtime vars for HOW they're configured
+  # This makes the build output work with any environment
+
+  # Load environment files for service detection
+  # This tells us WHAT services to build, not HOW to configure them
+  load_env_for_detection() {
+    local env="${ENV:-dev}"
+
+    # Load files in cascade order for proper detection
+    if [[ -f ".env.dev" ]]; then
+      set -a
+      source ".env.dev" 2>/dev/null || true
+      set +a
+    fi
+
+    # Load environment-specific file
+    case "$env" in
+      staging)
+        if [[ -f ".env.staging" ]]; then
+          set -a
+          source ".env.staging" 2>/dev/null || true
+          set +a
+        fi
+        ;;
+      prod|production)
+        if [[ -f ".env.prod" ]]; then
+          set -a
+          source ".env.prod" 2>/dev/null || true
+          set +a
+        fi
+        ;;
+    esac
+
+    # Load local overrides last
+    if [[ -f ".env" ]]; then
+      set -a
+      source ".env" 2>/dev/null || true
+      set +a
+    fi
+  }
+
+  # Load env for detection
+  load_env_for_detection
+
+  # Detect environment from loaded vars
+  if command -v detect_environment >/dev/null 2>&1; then
+    env="$(detect_environment)"
+  else
+    env="${ENV:-$env}"
   fi
 
-  if [[ -f "$env_file" ]]; then
-    set -a
-    source "$env_file" 2>/dev/null || true
-    set +a
-  fi
+  # Detect all services that need to be built
+  detect_all_services() {
+    # Core services detection
+    export POSTGRES_ENABLED="${POSTGRES_ENABLED:-true}"
+    export HASURA_ENABLED="${HASURA_ENABLED:-true}"
+    export AUTH_ENABLED="${AUTH_ENABLED:-true}"
+    export NGINX_ENABLED="${NGINX_ENABLED:-true}"
 
-  # Now export, using env file value if available, otherwise use parameter/default
+    # Optional services
+    export NSELF_ADMIN_ENABLED="${NSELF_ADMIN_ENABLED:-false}"
+    export MINIO_ENABLED="${MINIO_ENABLED:-${STORAGE_ENABLED:-false}}"
+    export REDIS_ENABLED="${REDIS_ENABLED:-false}"
+    export MEILISEARCH_ENABLED="${MEILISEARCH_ENABLED:-false}"
+    export MAILPIT_ENABLED="${MAILPIT_ENABLED:-false}"
+    export MLFLOW_ENABLED="${MLFLOW_ENABLED:-false}"
+    export FUNCTIONS_ENABLED="${FUNCTIONS_ENABLED:-false}"
+
+    # Monitoring bundle
+    if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+      export PROMETHEUS_ENABLED="true"
+      export GRAFANA_ENABLED="true"
+      export LOKI_ENABLED="true"
+      export PROMTAIL_ENABLED="true"
+      export TEMPO_ENABLED="true"
+      export ALERTMANAGER_ENABLED="true"
+      export CADVISOR_ENABLED="true"
+      export NODE_EXPORTER_ENABLED="true"
+      export POSTGRES_EXPORTER_ENABLED="true"
+      # Redis exporter only if Redis is also enabled
+      if [[ "${REDIS_ENABLED:-false}" == "true" ]]; then
+        export REDIS_EXPORTER_ENABLED="true"
+      fi
+    fi
+
+    # Detect custom services (CS_N)
+    detect_custom_services
+
+    # Detect frontend apps
+    detect_frontend_apps
+  }
+
+  # Detect custom services
+  detect_custom_services() {
+    export CUSTOM_SERVICES=""
+    export CUSTOM_SERVICE_COUNT=0
+
+    for i in {1..20}; do
+      local cs_var="CS_${i}"
+      local cs_value="${!cs_var:-}"
+
+      if [[ -n "$cs_value" ]]; then
+        CUSTOM_SERVICE_COUNT=$((CUSTOM_SERVICE_COUNT + 1))
+
+        # Parse service definition
+        IFS=':' read -r name template port <<< "$cs_value"
+
+        # Export service details for build
+        export "CS_${i}_NAME=$name"
+        export "CS_${i}_TEMPLATE=$template"
+        export "CS_${i}_PORT=${port:-$((8000 + i))}"
+
+        # Add to list
+        CUSTOM_SERVICES="$CUSTOM_SERVICES $name"
+      fi
+    done
+  }
+
+  # Detect frontend applications
+  detect_frontend_apps() {
+    export FRONTEND_APPS=""
+    export FRONTEND_APP_COUNT=0
+
+    for i in {1..10}; do
+      # Support both NAME and SYSTEM_NAME
+      local app_name_var="FRONTEND_APP_${i}_NAME"
+      local app_system_var="FRONTEND_APP_${i}_SYSTEM_NAME"
+      local app_name="${!app_name_var:-${!app_system_var:-}}"
+
+      if [[ -n "$app_name" ]]; then
+        FRONTEND_APP_COUNT=$((FRONTEND_APP_COUNT + 1))
+
+        # Export app details for build
+        export "FRONTEND_APP_${i}_NAME=$app_name"
+        local port_var="FRONTEND_APP_${i}_PORT"
+        export "FRONTEND_APP_${i}_PORT=${!port_var:-$((3000 + i - 1))}"
+
+        # Check for remote schema configuration
+        local schema_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_NAME"
+        if [[ -n "${!schema_var:-}" ]]; then
+          export "$schema_var=${!schema_var}"
+        fi
+
+        # Add to list
+        FRONTEND_APPS="$FRONTEND_APPS $app_name"
+      fi
+    done
+  }
+
+  # Run service detection
+  detect_all_services
+
+  # Export with smart defaults - these can be overridden by env vars if explicitly set
   export PROJECT_NAME="${PROJECT_NAME:-$project_name}"
   export ENV="$env"
   export VERBOSE="$verbose"
   export AUTO_FIX="${AUTO_FIX:-true}"
+
+  # Set smart defaults for all common ports and domains
+  export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
+  export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+  export HASURA_PORT="${HASURA_PORT:-8080}"
+  export AUTH_PORT="${AUTH_PORT:-4000}"
+  export STORAGE_PORT="${STORAGE_PORT:-5000}"
+  export REDIS_PORT="${REDIS_PORT:-6379}"
+  export MINIO_PORT="${MINIO_PORT:-9000}"
+  export MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9001}"
 
   # Show header FIRST (before any validation output)
   if command -v show_command_header >/dev/null 2>&1; then
@@ -230,7 +383,7 @@ orchestrate_build() {
   if [[ -f "$LIB_ROOT/database/auto-config.sh" ]]; then
     source "$LIB_ROOT/database/auto-config.sh" 2>/dev/null || true
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring database for optimal performance..."
-    if command -v get_system_resources &>/dev/null && command -v apply_smart_defaults &>/dev/null; then
+    if command -v get_system_resources >/dev/null 2>&1 && command -v apply_smart_defaults >/dev/null 2>&1; then
       get_system_resources >/dev/null 2>&1 || true
       apply_smart_defaults >/dev/null 2>&1 || true
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Database configuration optimized                    \n"
@@ -239,37 +392,34 @@ orchestrate_build() {
     fi
   fi
 
-  # Run validation (suppress warnings output, we'll show them after)
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating configuration..."
+  # Run validation using smart defaults only
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Validating build requirements..."
 
-  if [[ -f "$env_file" ]]; then
-    # Actually validate and fix the environment (capture warnings)
-    local validation_output=$(validate_environment 2>&1)
-    local validation_result=$?
+  # Check if at least one env file exists for reference
+  local has_config=false
+  local env_file=".env"  # Default to .env for compatibility checks
+  for file in .env .env.dev .env.local .env.staging .env.prod; do
+    if [[ -f "$file" ]]; then
+      has_config=true
+      env_file="$file"  # Use first found for timestamp checks
+      break
+    fi
+  done
 
-    if [[ $validation_result -eq 0 ]]; then
-      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration validated                    \n"
+  if [[ "$has_config" == "true" ]]; then
+    # Run validation with smart defaults
+    if command -v validate_build_config >/dev/null 2>&1; then
+      # Validation will use smart defaults, not loaded env
+      local validation_output=$(validate_build_config 2>&1)
+      local validation_result=$?
+
+      if [[ $validation_result -eq 0 ]]; then
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Build requirements validated                \n"
+      else
+        printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Build proceeding with defaults              \n"
+      fi
     else
-      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Configuration validated with fixes          \n"
-    fi
-
-    # Show any warnings/errors after header
-    if [[ -n "$validation_output" ]]; then
-      echo "$validation_output"
-    fi
-    # Reload env file to pick up fixes (recheck which file exists)
-    if [[ -f ".env.local" ]]; then
-      set -a
-      source ".env.local" 2>/dev/null || true
-      set +a
-    elif [[ -f ".env.${env}" ]]; then
-      set -a
-      source ".env.${env}" 2>/dev/null || true
-      set +a
-    elif [[ -f ".env" ]]; then
-      set -a
-      source ".env" 2>/dev/null || true
-      set +a
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Build requirements checked                  \n"
     fi
   else
     printf "\r${COLOR_YELLOW}✱${COLOR_RESET} No environment file found                  \n"
@@ -278,11 +428,65 @@ orchestrate_build() {
   # Convert frontend apps if needed
   convert_frontend_apps_to_expanded
 
+  # Check for route conflicts (skip if urls script not available or errors)
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Checking for route conflicts..."
+
+  # Use nself urls command to check conflicts
+  local conflict_check_output
+  local urls_script="$LIB_ROOT/../cli/urls.sh"
+  if [[ -f "$urls_script" ]]; then
+    # Try to check conflicts, but don't fail build if script has issues
+    conflict_check_output=$(cd "$PWD" && "$urls_script" --check-conflicts 2>&1 || true)
+    local conflict_result=$?
+
+    if [[ $conflict_result -eq 0 ]] || [[ -z "$conflict_check_output" ]]; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Route validation complete                      \n"
+    elif [[ "$conflict_check_output" == *"conflict"* ]]; then
+      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Potential route conflicts detected             \n"
+      echo "$conflict_check_output" | head -5
+
+      # If AUTO_FIX is enabled, try to fix conflicts
+      if [[ "${AUTO_FIX:-true}" == "true" ]]; then
+        echo
+        echo "${COLOR_YELLOW}Attempting to auto-fix route conflicts...${COLOR_RESET}"
+
+        # Extract suggested fixes and apply them
+        while IFS= read -r line; do
+          if [[ "$line" =~ CS_([0-9]+)_ROUTE=([a-z-]+) ]]; then
+            local cs_num="${BASH_REMATCH[1]}"
+            local new_route="${BASH_REMATCH[2]}"
+
+            # Add the route fix to the env file
+            echo "CS_${cs_num}_ROUTE=${new_route}" >> "$env_file"
+            echo "  Applied: CS_${cs_num}_ROUTE=${new_route}"
+          fi
+        done <<< "$conflict_check_output"
+
+        # Reload environment with fixes
+        set -a
+        source "$env_file" 2>/dev/null || true
+        set +a
+
+        echo "${COLOR_GREEN}✓ Route conflicts auto-fixed${COLOR_RESET}"
+        echo
+      else
+        echo "${COLOR_YELLOW}Please fix the conflicts manually before continuing.${COLOR_RESET}"
+        return 1
+      fi
+    fi
+  else
+    printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Route conflict detection not available         \n"
+  fi
+
   # Check if this is an existing project
   local is_existing_project=false
   if [[ -f "docker-compose.yml" ]] || [[ -d "nginx" ]] || [[ -f "postgres/init/00-init.sql" ]]; then
     is_existing_project=true
   fi
+
+  # Track what will be built/updated
+  local BUILD_ACTIONS=()
+  local SKIP_ACTIONS=()
 
   # Use modular orchestration if available
   if command -v orchestrate_modular_build >/dev/null 2>&1; then
@@ -313,7 +517,18 @@ orchestrate_build() {
       # Generate nginx configuration if needed
       if [[ "$NEEDS_NGINX" == "true" ]]; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating nginx configuration..."
-        if setup_nginx; then
+
+        # Create nginx directories
+        mkdir -p nginx/{sites,conf.d,includes,routes} 2>/dev/null || true
+
+        # Use nginx-generator if available, otherwise fallback to setup_nginx
+        if command -v generate_nginx_config >/dev/null 2>&1; then
+          generate_nginx_config "$force_rebuild"
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration generated                \n"
+          UPDATED_FILES+=("nginx/nginx.conf")
+          UPDATED_FILES+=("nginx/sites/*.conf")
+        elif command -v setup_nginx >/dev/null 2>&1; then
+          setup_nginx
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Nginx configuration generated                \n"
           UPDATED_FILES+=("nginx/nginx.conf")
         else
@@ -329,6 +544,37 @@ orchestrate_build() {
           CREATED_FILES+=("postgres/init/*.sql")
         else
           printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Database initialization skipped             \n"
+        fi
+      fi
+
+      # Generate custom services from templates
+      if [[ -n "${CUSTOM_SERVICES:-}" ]]; then
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating custom services..."
+        if generate_custom_services; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Custom services generated                    \n"
+          CREATED_FILES+=("services/*")
+        else
+          printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Custom services generation skipped          \n"
+        fi
+      fi
+
+      # Generate fallback services for auth and functions (for demo/problematic scenarios)
+      if [[ "${ENV:-}" == "demo" ]] || [[ "${DEMO_CONTENT:-false}" == "true" ]] || [[ "${GENERATE_FALLBACKS:-false}" == "true" ]]; then
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating fallback services..."
+
+        # Source the fallback services module
+        if [[ -f "$CORE_SCRIPT_DIR/fallback-services.sh" ]]; then
+          source "$CORE_SCRIPT_DIR/fallback-services.sh"
+          if command -v generate_fallback_services >/dev/null 2>&1; then
+            if generate_fallback_services "$PWD"; then
+              printf "\r${COLOR_GREEN}✓${COLOR_RESET} Fallback services generated                  \n"
+              CREATED_FILES+=("fallback-services/*")
+            else
+              printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Fallback services generation failed         \n"
+            fi
+          fi
+        else
+          printf "\r${COLOR_YELLOW}✱${COLOR_RESET} Fallback services module not found          \n"
         fi
       fi
 
@@ -370,6 +616,9 @@ orchestrate_build() {
         fi
       fi
 
+      # Skip runtime variables documentation generation
+      # Documentation should be in the wiki/docs, not generated in project
+
       # Run post-build tasks
       run_post_build_tasks 2>/dev/null || true
     else
@@ -380,6 +629,108 @@ orchestrate_build() {
     echo "Warning: Modular build not available, using legacy build" >&2
     return 1
   fi
+
+  # Show build summary (dynamic and concise)
+  show_build_summary() {
+    echo ""
+
+    # Determine build context
+    local is_first_build=false
+    local has_changes=false
+    local changes_made=()
+
+    # Check if this is first build by looking for key infrastructure files
+    if [[ ! -f "docker-compose.yml" ]] || [[ ! -d "nginx" ]] || [[ ! -d "postgres" ]]; then
+      is_first_build=true
+    elif [[ -d ".volumes/backups/compose" ]]; then
+      # Has backups, so this is an update
+      is_first_build=false
+
+      # Detect what changed (these would be set by various build modules)
+      if [[ "${DOCKER_COMPOSE_CHANGED:-false}" == "true" ]]; then
+        has_changes=true
+        changes_made+=("Docker Compose")
+      fi
+      if [[ "${NGINX_CONFIG_CHANGED:-false}" == "true" ]]; then
+        has_changes=true
+        changes_made+=("Nginx routes")
+      fi
+      if [[ "${SSL_REGENERATED:-false}" == "true" ]]; then
+        has_changes=true
+        changes_made+=("SSL certificates")
+      fi
+      if [[ "${CUSTOM_SERVICES_GENERATED:-false}" == "true" ]]; then
+        has_changes=true
+        changes_made+=("Custom services")
+      fi
+    fi
+
+    # Count services
+    local required_count=4  # Always 4 required services
+    local optional_count=0
+    local monitoring_count=0
+    local custom_count="${CUSTOM_SERVICE_COUNT:-0}"
+    local frontend_count="${FRONTEND_APP_COUNT:-0}"
+
+    # Count optional services
+    [[ "${REDIS_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${MINIO_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${MAILPIT_ENABLED:-true}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+    [[ "${MLFLOW_ENABLED:-false}" == "true" ]] && optional_count=$((optional_count + 1))
+
+    # Count monitoring services
+    if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+      monitoring_count=10  # Full monitoring bundle
+    fi
+
+    local total_containers=$((required_count + optional_count + monitoring_count + custom_count))
+
+    # Mode/Build status FIRST
+    if [[ "$is_first_build" == "true" ]]; then
+      printf "✓ Mode: First time build, generated from scratch\n"
+    elif [[ "${force_rebuild:-false}" == "true" ]]; then
+      printf "✓ Mode: Force rebuild - all configurations regenerated\n"
+    elif [[ "$has_changes" == "true" ]] && [[ ${#changes_made[@]} -gt 0 ]]; then
+      printf "✓ Mode: Changes detected - "
+      # List changes inline
+      local first=true
+      for change in "${changes_made[@]}"; do
+        if [[ "$first" == "true" ]]; then
+          printf "%s" "$change"
+          first=false
+        else
+          printf ", %s" "$change"
+        fi
+      done
+      printf " updated\n"
+    else
+      printf "✓ Mode: No changes - everything up to date\n"
+    fi
+
+    # Project info with BD: for base domain
+    printf "✓ Project: \033[0;34m%s\033[0m (%s) / BD: \033[0;33m%s\033[0m\n" "${PROJECT_NAME}" "${ENV}" "${BASE_DOMAIN}"
+
+    # Services with total count in blue
+    printf "✓ Services (\033[0;34m%d\033[0m): %d core, %d optional, %d monitoring, %d custom\n" \
+      "$total_containers" "$required_count" "$optional_count" "$monitoring_count" "$custom_count"
+
+    # Show file stats if changes were made
+    if [[ ${#CREATED_FILES[@]} -gt 0 ]] || [[ ${#UPDATED_FILES[@]} -gt 0 ]]; then
+      local file_summary="✓ Files: "
+      [[ ${#CREATED_FILES[@]} -gt 0 ]] && file_summary+="${#CREATED_FILES[@]} created"
+      [[ ${#CREATED_FILES[@]} -gt 0 ]] && [[ ${#UPDATED_FILES[@]} -gt 0 ]] && file_summary+=", "
+      [[ ${#UPDATED_FILES[@]} -gt 0 ]] && file_summary+="${#UPDATED_FILES[@]} updated"
+      echo "$file_summary"
+    fi
+
+    echo ""
+  }
+
+  # Show build summary
+  show_build_summary
 
   # Show next steps with improved formatting
   echo ""
@@ -450,8 +801,8 @@ apply_build_defaults() {
   set_default "POSTGRES_ENABLED" "true"
   set_default "HASURA_ENABLED" "false"
   set_default "AUTH_ENABLED" "false"
-  set_default "STORAGE_ENABLED" "false"
   set_default "REDIS_ENABLED" "false"
+  set_default "MINIO_ENABLED" "false"
 
   # Port defaults
   set_default "NGINX_PORT" "80"

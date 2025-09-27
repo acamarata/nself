@@ -32,26 +32,50 @@ ensure_hosts_entries() {
   required_domains=()
 
   if [[ "$base_domain" == "localhost" ]]; then
-    # For localhost, we need these subdomains
+    # Core subdomains
     required_domains=(
       "api.localhost"
       "auth.localhost"
-      "storage.localhost"
-      "console.localhost"
-      "functions.localhost"
-      "${project_name}.localhost"
     )
 
-    # Add frontend app domains if configured
-    if [[ -n "${FRONTEND_APP_COUNT:-}" ]] && [[ "${FRONTEND_APP_COUNT}" -gt 0 ]]; then
-      for ((i=1; i<=FRONTEND_APP_COUNT; i++)); do
-        local app_domain_var="FRONTEND_APP_${i}_DOMAIN"
-        local app_domain="${!app_domain_var:-}"
-        if [[ -n "$app_domain" ]] && [[ "$app_domain" == *".localhost" ]]; then
-          required_domains+=("$app_domain")
-        fi
-      done
-    fi
+    # Optional service domains if enabled
+    [[ "${STORAGE_ENABLED:-false}" == "true" ]] && required_domains+=("storage.localhost")
+    [[ "${HASURA_ENABLED:-true}" == "true" ]] && required_domains+=("console.localhost")
+    [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] && required_domains+=("functions.localhost")
+    [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && required_domains+=("admin.localhost")
+    [[ "${MINIO_ENABLED:-false}" == "true" ]] && required_domains+=("minio.localhost")
+    [[ "${MAILPIT_ENABLED:-false}" == "true" ]] && required_domains+=("mail.localhost")
+    [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] && required_domains+=("search.localhost")
+    [[ "${MLFLOW_ENABLED:-false}" == "true" ]] && required_domains+=("mlflow.localhost")
+
+    # Monitoring domains
+    [[ "${GRAFANA_ENABLED:-false}" == "true" ]] && required_domains+=("grafana.localhost")
+    [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]] && required_domains+=("prometheus.localhost")
+    [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] && required_domains+=("alertmanager.localhost")
+
+    # Custom service domains
+    for i in {1..10}; do
+      local cs_var="CS_${i}"
+      local cs_route_var="CS_${i}_ROUTE"
+      local cs_public_var="CS_${i}_PUBLIC"
+
+      if [[ -n "${!cs_var:-}" ]] && [[ "${!cs_public_var:-true}" == "true" ]] && [[ -n "${!cs_route_var:-}" ]]; then
+        required_domains+=("${!cs_route_var}.localhost")
+      fi
+    done
+
+    # Frontend app domains
+    for i in {1..10}; do
+      local app_route_var="FRONTEND_APP_${i}_ROUTE"
+      local app_name_var="FRONTEND_APP_${i}_NAME"
+
+      if [[ -n "${!app_name_var:-}" ]] && [[ -n "${!app_route_var:-}" ]]; then
+        required_domains+=("${!app_route_var}.localhost")
+        # Also add API and auth subdomains for frontend apps if needed
+        required_domains+=("api.${!app_route_var}.localhost")
+        required_domains+=("auth.${!app_route_var}.localhost")
+      fi
+    done
   elif [[ "$base_domain" == "local.nself.org" ]]; then
     # local.nself.org uses wildcard DNS, no hosts entries needed
     return 0
@@ -76,15 +100,8 @@ ensure_hosts_entries() {
     return 0
   fi
 
-  # Inform user about missing entries
-  echo ""
-  echo "⚠️  Some domains need to be added to /etc/hosts for local development:"
-  if [[ ${#missing_domains[@]} -gt 0 ]]; then
-    for domain in "${missing_domains[@]}"; do
-      echo "   - $domain"
-    done
-  fi
-  echo ""
+  # Inform user about missing entries more concisely
+  printf "\n✓ %d entries need to be added to /etc/hosts for routing (requires sudo)\n" "${#missing_domains[@]}"
 
   # Check if we can use sudo without password
   local can_sudo_nopass=false
@@ -119,33 +136,20 @@ ensure_hosts_entries() {
       echo "❌ Failed to update /etc/hosts"
     fi
   elif [[ "$is_interactive" == "true" ]]; then
-    # Interactive terminal, ask for permission
-    echo "Would you like nself to add these entries automatically? (requires sudo)"
-    echo -n "Add entries to /etc/hosts? [Y/n]: "
-    read -r response
+    # Build the entries string
+    local entries=""
+    if [[ ${#missing_domains[@]} -gt 0 ]]; then
+      for domain in "${missing_domains[@]}"; do
+        entries+="127.0.0.1 $domain\n"
+      done
+    fi
 
-    if [[ -z "$response" ]] || [[ "$response" =~ ^[Yy] ]]; then
-      echo ""
-      echo "Adding entries to /etc/hosts (you may be prompted for your password)..."
-
-      # Build the entries string
-      local entries=""
-      if [[ ${#missing_domains[@]} -gt 0 ]]; then
-        for domain in "${missing_domains[@]}"; do
-          entries+="127.0.0.1 $domain\n"
-        done
-      fi
-
-      # Try to add entries with sudo
-      if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
-        echo "✅ Successfully added ${#missing_domains[@]} entries to /etc/hosts"
-        return 0
-      else
-        echo "❌ Failed to update /etc/hosts"
-      fi
+    # Try to add entries with sudo
+    if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
+      printf "\n✓ Successfully added %d entries to /etc/hosts\n" "${#missing_domains[@]}"
+      return 0
     else
-      echo ""
-      echo "ℹ️  Skipped /etc/hosts update."
+      echo "✗ Failed to update /etc/hosts"
     fi
   else
     # Non-interactive or can't sudo

@@ -25,8 +25,9 @@ generate_postgres_init() {
     generate_hasura_init_sql
   fi
 
-  # Generate auth tables if enabled
-  if [[ "${AUTH_ENABLED:-false}" == "true" ]]; then
+  # Generate auth tables if enabled AND not using nHost auth
+  # nHost auth manages its own schema, so skip if using the default image
+  if [[ "${AUTH_ENABLED:-false}" == "true" ]] && [[ "${AUTH_USE_FALLBACK:-false}" == "true" ]]; then
     generate_auth_init_sql
   fi
 
@@ -50,6 +51,21 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${safe_db_name}')\\ge
 
 -- Grant all privileges
 GRANT ALL PRIVILEGES ON DATABASE "${safe_db_name}" TO ${postgres_user};
+
+-- Create MLflow database if MLflow is enabled
+EOF
+
+  if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
+    cat >> postgres/init/00-init.sql <<EOF
+
+-- Create MLflow database if not exists
+SELECT 'CREATE DATABASE mlflow'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mlflow')\\gexec
+GRANT ALL PRIVILEGES ON DATABASE mlflow TO ${postgres_user};
+EOF
+  fi
+
+  cat >> postgres/init/00-init.sql <<EOF
 
 -- Connect to the database
 \\c "${safe_db_name}"
@@ -83,8 +99,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Enable cryptographic functions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Enable JSONB operators
-CREATE EXTENSION IF NOT EXISTS "jsonb_plpython3u" CASCADE;
+-- Enable JSONB operators (commented out - requires Python runtime)
+-- CREATE EXTENSION IF NOT EXISTS "jsonb_plpython3u" CASCADE;
 EOF
 
   # Add custom extensions if specified
@@ -267,12 +283,12 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role ON auth.user_roles(role);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION auth.set_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS \$\$
 BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+\$\$ LANGUAGE plpgsql;
 
 -- Create trigger
 DROP TRIGGER IF EXISTS set_users_updated_at ON auth.users;

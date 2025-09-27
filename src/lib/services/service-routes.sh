@@ -166,10 +166,13 @@ routes::collect_all() {
   
   # Handle direct FRONTEND_APPS if no individual variables
   if [[ "$app_count" -eq 0 && -n "${FRONTEND_APPS:-}" ]]; then
-    IFS=',' read -ra APPS <<<"$FRONTEND_APPS"
-    for app_config in "${APPS[@]}"; do
+    # Bash 3.2 compatible: use echo with pipe
+    echo "$FRONTEND_APPS" | tr ',' '\n' | while read app_config; do
       # Parse the format: name:short:prefix:port
-      IFS=':' read -r app_name app_short app_prefix app_port <<<"$app_config"
+      app_name=$(echo "$app_config" | cut -d':' -f1)
+      app_short=$(echo "$app_config" | cut -d':' -f2)
+      app_prefix=$(echo "$app_config" | cut -d':' -f3)
+      app_port=$(echo "$app_config" | cut -d':' -f4)
       if [[ -n "$app_short" ]]; then
         routes+=("${app_short}.${base_domain}")
       elif [[ -n "$app_name" ]]; then

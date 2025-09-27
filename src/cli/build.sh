@@ -29,9 +29,7 @@ else
   exit 1
 fi
 
-# Source display utilities for help
-source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
-source "$SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
+# Display utilities are already sourced via core.sh
 
 # Show help for build command
 show_build_help() {
@@ -101,15 +99,14 @@ cmd_build() {
     esac
   done
 
+  # Get project name from env or use basename
+  local project_name="${PROJECT_NAME:-$(basename "$PWD")}"
+  local env="${ENV:-dev}"
+
   # Run the orchestrated build
   local build_result
-  if [[ "$force_rebuild" == "true" ]]; then
-    orchestrate_build --force
-    build_result=$?
-  else
-    orchestrate_build
-    build_result=$?
-  fi
+  orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"
+  build_result=$?
 
   return $build_result
 }

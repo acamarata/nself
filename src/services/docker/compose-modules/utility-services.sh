@@ -32,161 +32,117 @@ generate_mailpit_service() {
 EOF
 }
 
-# Generate Adminer database management tool
-generate_adminer_service() {
-  local enabled="${ADMINER_ENABLED:-false}"
+
+
+# Generate nself Admin dashboard
+generate_nself_admin_service() {
+  local enabled="${NSELF_ADMIN_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
   cat <<EOF
 
-  # Adminer - Database Management
-  adminer:
-    image: adminer:${ADMINER_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_adminer
+  # nself Admin - Project Management Dashboard
+  nself-admin:
+    image: acamarata/nself-admin:${NSELF_ADMIN_VERSION:-latest}
+    container_name: \${PROJECT_NAME}_nself_admin
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      ADMINER_DEFAULT_SERVER: postgres
-      ADMINER_DESIGN: \${ADMINER_DESIGN:-pepa-linha}
-    ports:
-      - "\${ADMINER_PORT:-8090}:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-EOF
-}
-
-# Generate BullMQ Dashboard for queue monitoring
-generate_bullmq_dashboard() {
-  local enabled="${BULLMQ_DASHBOARD_ENABLED:-false}"
-  [[ "$enabled" != "true" ]] && return 0
-
-  cat <<EOF
-
-  # BullMQ Dashboard - Queue Monitoring
-  bullmq-dashboard:
-    image: taskforcesh/bullmq-dashboard:${BULLMQ_DASHBOARD_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_bullmq_dashboard
-    restart: unless-stopped
-    networks:
-      - \${DOCKER_NETWORK}
-    depends_on:
-      redis:
+      hasura:
         condition: service_healthy
     environment:
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: \${REDIS_PASSWORD:-}
+      DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
+      PORT: 3100
     ports:
-      - "\${BULLMQ_DASHBOARD_PORT:-3010}:3000"
+      - "\${NSELF_ADMIN_PORT:-3101}:3100"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
       interval: 30s
       timeout: 10s
       retries: 5
 EOF
 }
 
-# Generate pgAdmin for PostgreSQL management
-generate_pgadmin_service() {
-  local enabled="${PGADMIN_ENABLED:-false}"
+# Generate Functions service (serverless functions runtime)
+generate_functions_service() {
+  local enabled="${FUNCTIONS_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
-  cat <<EOF
+  # Check if we should use fallback functions service
+  local use_fallback="${FUNCTIONS_USE_FALLBACK:-false}"
 
-  # pgAdmin - PostgreSQL Management
-  pgadmin:
-    image: dpage/pgadmin4:${PGADMIN_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_pgadmin
+  # If fallback is enabled or ENV is demo, use the fallback service
+  if [[ "$use_fallback" == "true" ]] || [[ "${ENV:-}" == "demo" ]] || [[ "${DEMO_CONTENT:-false}" == "true" ]]; then
+    # Generate fallback functions service
+    cat <<EOF
+
+  # Functions - Serverless Functions Runtime (Fallback)
+  functions:
+    build:
+      context: ./fallback-services
+      dockerfile: Dockerfile.functions
+    container_name: \${PROJECT_NAME}_functions
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
       postgres:
         condition: service_healthy
+      hasura:
+        condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: \${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: \${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PORT: 3000
+      NODE_ENV: \${ENV:-development}
+      DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - ./functions:/opt/project
     ports:
-      - "\${PGADMIN_PORT:-5050}:80"
-    healthcheck:
-      test: ["CMD", "wget", "-O", "-", "http://localhost:80/misc/ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - "\${FUNCTIONS_PORT:-3008}:3000"
 EOF
-}
+  else
+    # Use original nhost/functions
+    cat <<EOF
 
-# Generate Swagger UI for API documentation
-generate_swagger_ui() {
-  local enabled="${SWAGGER_UI_ENABLED:-false}"
-  [[ "$enabled" != "true" ]] && return 0
-
-  cat <<EOF
-
-  # Swagger UI - API Documentation
-  swagger-ui:
-    image: swaggerapi/swagger-ui:${SWAGGER_UI_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_swagger_ui
+  # Functions - Serverless Functions Runtime
+  functions:
+    image: nhost/functions:\${FUNCTIONS_VERSION:-latest}
+    container_name: \${PROJECT_NAME}_functions
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
     environment:
-      SWAGGER_JSON: \${SWAGGER_JSON:-/swagger/swagger.json}
-      BASE_URL: \${SWAGGER_BASE_URL:-/swagger}
-      DEEP_LINKING: "true"
-      PERSIST_AUTHORIZATION: "true"
+      DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
+      NODE_ENV: \${ENV:-development}
+      PORT: 3008
     volumes:
-      - ./swagger:/swagger:ro
+      - ./functions:/opt/project
     ports:
-      - "\${SWAGGER_UI_PORT:-8091}:8080"
+      - "\${FUNCTIONS_PORT:-3008}:3008"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "curl", "-f", "http://localhost:3008/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
 EOF
+  fi
 }
 
-# Generate Portainer for Docker management
-generate_portainer_service() {
-  local enabled="${PORTAINER_ENABLED:-false}"
-  [[ "$enabled" != "true" ]] && return 0
 
-  cat <<EOF
 
-  # Portainer - Docker Management
-  portainer:
-    image: portainer/portainer-ce:${PORTAINER_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_portainer
-    restart: unless-stopped
-    networks:
-      - \${DOCKER_NETWORK}
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
-    ports:
-      - "\${PORTAINER_PORT:-9000}:9000"
-      - "\${PORTAINER_EDGE_PORT:-8000}:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-EOF
-}
 
 # Generate backup service
 generate_backup_service() {
@@ -224,23 +180,108 @@ generate_backup_service() {
 EOF
 }
 
+# Generate MLflow service
+generate_mlflow_service() {
+  local enabled="${MLFLOW_ENABLED:-false}"
+  [[ "$enabled" != "true" ]] && return 0
+
+  # Ensure MLflow directory and Dockerfile exist
+  mkdir -p mlflow
+  cat > mlflow/Dockerfile <<'DOCKERFILE'
+FROM ghcr.io/mlflow/mlflow:latest
+
+# Install PostgreSQL adapter
+RUN pip install --no-cache-dir psycopg2-binary
+
+# Ensure artifacts directory exists
+RUN mkdir -p /mlflow/artifacts
+
+# Set working directory
+WORKDIR /mlflow
+DOCKERFILE
+
+  cat <<EOF
+
+  # MLflow - Machine Learning Lifecycle Platform
+  mlflow:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile
+    container_name: \${PROJECT_NAME}_mlflow
+    restart: unless-stopped
+    networks:
+      - \${DOCKER_NETWORK}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD}@postgres:5432/mlflow
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    command: [
+      "mlflow", "server",
+      "--backend-store-uri", "postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD}@postgres:5432/mlflow",
+      "--default-artifact-root", "/mlflow/artifacts",
+      "--host", "0.0.0.0",
+      "--port", "\${MLFLOW_PORT:-5005}",
+      "--serve-artifacts"
+    ]
+    volumes:
+      - mlflow_data:/mlflow/artifacts
+    ports:
+      - "\${MLFLOW_PORT:-5005}:\${MLFLOW_PORT:-5005}"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:\${MLFLOW_PORT:-5005}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+EOF
+}
+
+# Generate search services (Meilisearch by default)
+generate_search_services() {
+  # Meilisearch
+  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
+    cat <<EOF
+
+  # Meilisearch - Lightning Fast Search
+  meilisearch:
+    image: getmeili/meilisearch:\${MEILISEARCH_VERSION:-v1.5}
+    container_name: \${PROJECT_NAME}_meilisearch
+    restart: unless-stopped
+    networks:
+      - \${DOCKER_NETWORK}
+    environment:
+      MEILI_MASTER_KEY: \${MEILISEARCH_MASTER_KEY:-changeme}
+      MEILI_ENV: \${MEILI_ENV:-development}
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      MEILI_NO_ANALYTICS: true
+    volumes:
+      - meilisearch_data:/meili_data
+    ports:
+      - "\${MEILISEARCH_PORT:-7700}:7700"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+EOF
+  fi
+}
+
 # Main function to generate all utility services
 generate_utility_services() {
   generate_mailpit_service
-  generate_adminer_service
-  generate_bullmq_dashboard
-  generate_pgadmin_service
-  generate_swagger_ui
-  generate_portainer_service
-  generate_backup_service
+  generate_nself_admin_service
+  generate_functions_service
+  generate_mlflow_service
+  generate_search_services
 }
 
 # Export functions
 export -f generate_mailpit_service
-export -f generate_adminer_service
-export -f generate_bullmq_dashboard
-export -f generate_pgadmin_service
-export -f generate_swagger_ui
-export -f generate_portainer_service
-export -f generate_backup_service
+export -f generate_nself_admin_service
+export -f generate_functions_service
+export -f generate_mlflow_service
+export -f generate_search_services
 export -f generate_utility_services

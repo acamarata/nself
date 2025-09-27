@@ -23,7 +23,7 @@ detect_project_framework() {
       local allDeps="$deps $devDeps"
     else
       # Fallback to grep
-      local allDeps=$(grep -E '"(next|react|vue|angular|express|fastify|nestjs|gatsby|nuxt)"' package.json)
+      local allDeps=$(grep -E '"(next|react|vue|angular|express|fastify|gatsby|nuxt)"' package.json)
     fi
     
     # Check for specific frameworks
@@ -45,8 +45,6 @@ detect_project_framework() {
       DETECTED_FRAMEWORK="Express.js"
     elif echo "$allDeps" | grep -q "fastify"; then
       DETECTED_FRAMEWORK="Fastify"
-    elif echo "$allDeps" | grep -q "@nestjs"; then
-      DETECTED_FRAMEWORK="NestJS"
     fi
   fi
   
@@ -252,7 +250,7 @@ recommend_services() {
   "Next.js"|"Nuxt.js"|"Gatsby")
     recommendations+=("PostgreSQL" "Redis" "MinIO")
     ;;
-  "Express.js"|"Fastify"|"NestJS")
+  "Express.js"|"Fastify")
     recommendations+=("PostgreSQL" "Redis" "RabbitMQ")
     ;;
   "Django"|"Rails"|"Laravel")

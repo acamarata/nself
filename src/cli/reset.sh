@@ -4,10 +4,12 @@ set -euo pipefail
 # reset.sh - Reset project to clean state
 
 # Source utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/header.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
+
+source "$LIB_DIR/utils/display.sh"
+source "$LIB_DIR/utils/env.sh"
+source "$LIB_DIR/utils/header.sh"
 
 # Command function
 cmd_reset() {
@@ -39,7 +41,7 @@ cmd_reset() {
   echo "  • Stop and remove all containers"
   echo "  • Delete all Docker volumes"
   echo "  • Remove all generated files"
-  echo "  • Backup env files with .old suffix"
+  echo "  • Backup env files to _backup folder"
   echo
 
   if [[ "$force_reset" != "true" ]]; then
@@ -146,7 +148,6 @@ cmd_reset() {
   local backed_up=0
   [[ -f ".env" ]] && mv .env "$backup_dir/.env" && ((backed_up++))
   [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
-  [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
   [[ -f ".env.staging" ]] && mv .env.staging "$backup_dir/.env.staging" && ((backed_up++))
   [[ -f ".env.prod" ]] && mv .env.prod "$backup_dir/.env.prod" && ((backed_up++))
   [[ -f ".env.secrets" ]] && mv .env.secrets "$backup_dir/.env.secrets" && ((backed_up++))
@@ -176,13 +177,14 @@ cmd_reset() {
     "docker-compose.override.yml"
     ".dockerignore"
 
-    # Template and example files
+    # Runtime and environment files
+    ".env.runtime"
     ".env.example"
     ".env.prod-template"
     ".env.prod-secrets"
     ".gitignore"
     "frontend-apps.env"
-    
+
     # Any leftover backup files (removed after backing up)
 
     # Service directories
@@ -200,6 +202,7 @@ cmd_reset() {
     "storage"
     "auth"
     "minio"
+    "mlflow"
     "dashboard"
     "ssl"
 
@@ -322,16 +325,11 @@ cmd_reset() {
   echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
   echo
 
-  echo -e "${COLOR_BLUE}Start Fresh:${COLOR_RESET}"
   echo -e "  ${COLOR_BLUE}nself init${COLOR_RESET}     ${COLOR_DIM}# Create new configuration${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}       ${COLOR_DIM}# Start services${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}  ${COLOR_DIM}# ..or restore latest backup${COLOR_RESET}"
   echo
-
-  echo -e "${COLOR_BLUE}Restore Previous:${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}  ${COLOR_DIM}# Restore latest backup${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}"
 
   return 0
 }

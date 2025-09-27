@@ -2,21 +2,18 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-
-# Download dependencies
-RUN go mod download
-
-# Copy source code
+# Copy all source files
 COPY . .
+
+# Download dependencies and generate go.sum if needed
+RUN go mod download && go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Final stage
 FROM alpine:latest
-RUN apk add --no-cache wget
+RUN apk add --no-cache curl
 
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
@@ -30,9 +27,8 @@ RUN addgroup -g 1001 -S appuser && \
 
 USER appuser
 
-EXPOSE 50051
-
+EXPOSE {{PORT}} 8081
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:8081/health || exit 1
 CMD ["./main"]

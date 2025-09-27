@@ -7,9 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# source "$SCRIPT_DIR/../lib/utils/docker.sh"  # File doesn't exist yet
+# source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"  # File doesn't exist yet
+# source "$SCRIPT_DIR/../lib/hooks/post-command.sh"  # File doesn't exist yet
 
 # Load environment with smart defaults
 if [[ -f "$SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then

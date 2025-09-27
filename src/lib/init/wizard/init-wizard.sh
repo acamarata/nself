@@ -109,30 +109,7 @@ confirm_action() {
   esac
 }
 
-select_option() {
-  local prompt="$1"
-  local -n options=$2
-  local var_name="$3"
-
-  echo "$prompt:"
-  local i=0
-  for option in "${options[@]}"; do
-    echo "  $((i+1)). $option"
-    i=$((i+1))
-  done
-
-  while true; do
-    echo -n "Select [1-${#options[@]}]: "
-    read -r selection
-
-    if [[ "$selection" =~ ^[0-9]+$ ]] && [[ $selection -ge 1 ]] && [[ $selection -le ${#options[@]} ]]; then
-      eval "$var_name=$((selection-1))"
-      break
-    else
-      echo "Invalid selection. Please try again."
-    fi
-  done
-}
+# select_option is defined in prompts.sh
 
 log_info() {
   echo "ℹ $1"
@@ -140,12 +117,22 @@ log_info() {
 
 # Main wizard function
 run_config_wizard() {
-  # Use the modular wizard if available
-  if command -v run_modular_wizard >/dev/null 2>&1; then
-    run_modular_wizard "$@"
+  # Use simplified wizard by default, or full wizard if requested
+  if [[ "${WIZARD_MODE:-simple}" == "simple" ]]; then
+    if command -v run_simple_wizard >/dev/null 2>&1; then
+      run_simple_wizard "$@"
+    else
+      # Fallback to modular wizard
+      run_modular_wizard "$@"
+    fi
   else
-    echo "Error: Modular wizard not available" >&2
-    exit 1
+    # Use the full modular wizard for advanced users
+    if command -v run_modular_wizard >/dev/null 2>&1; then
+      run_modular_wizard "$@"
+    else
+      echo "Error: Modular wizard not available" >&2
+      exit 1
+    fi
   fi
 }
 
@@ -240,7 +227,7 @@ export -f press_any_key
 export -f prompt_input
 export -f prompt_password
 export -f confirm_action
-export -f select_option
+# select_option is exported from prompts.sh
 export -f log_info
 export -f run_config_wizard
 export -f apply_template

@@ -9,8 +9,8 @@ This document provides an index of all nself releases with links to detailed rel
 ## [v0.3.9] - September 3, 2024 (Patched September 16, 2024)
 
 **Status**: Current Stable Release
-**[Full Release Notes](./RELEASE-v0.3.9-final.md)**
-**[Installation Optimization Patch](./RELEASE-v0.3.9-patch2.md)**
+**[Full Release Notes](\1)**
+**[Installation Optimization Patch](\1)**
 **Latest Patch**: Critical build hang fix (September 16, 2024)
 
 ### Highlights

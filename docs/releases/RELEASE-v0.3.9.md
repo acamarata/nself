@@ -247,5 +247,5 @@ When reporting issues, please include:
 
 **Thank you for using nself!** 🚀
 
-*For the complete changelog, see [CHANGELOG.md](./CHANGELOG.md)*  
-*For future plans, see [ROADMAP.md](../ROADMAP.md)*
+*For the complete changelog, see [CHANGELOG.md](\1)*  
+*For future plans, see [ROADMAP.md](\1)*

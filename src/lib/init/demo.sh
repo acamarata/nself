@@ -52,25 +52,50 @@ setup_demo() {
   show_command_header "nself init --demo" "Create a complete demo application"
 
   echo "✓ All core services (PostgreSQL, Hasura, Auth, Nginx)"
-  echo "✓ All optional services enabled"
-  echo "✓ 2 Custom backend services (Express API & BullMQ worker)"
+  echo "✓ All optional services enabled (17 services)"
+  echo "✓ Full monitoring bundle (10 services)"
+  echo "✓ 4 Custom backend services (Express, BullMQ, Go gRPC, Python)"
   echo "✓ 2 Frontend applications (app1 & app2)"
-  echo "✓ Remote schemas for each app (api.app1, api.app2)"
   echo "✓ Full nginx routing with SSL/TLS"
   echo ""
 
   # Check templates exist
-  if [[ ! -f "$templates_dir/.env.demo" ]]; then
+  if [[ ! -d "$templates_dir" ]] || [[ ! -f "$templates_dir/.env.dev" ]]; then
     log_error "Demo templates not found at $templates_dir"
     log_info "Please ensure nself is properly installed"
     return 1
   fi
 
-  # Copy demo environment file
-  cp "$templates_dir/.env.demo" .env.dev
+  # Copy all demo environment files
+  # .env - Local overrides (git-ignored)
+  if [[ -f "$templates_dir/.env" ]]; then
+    cp "$templates_dir/.env" .env
+  fi
 
-  # Create local .env for overrides with essential variables from demo
-  cat > .env << 'EOF'
+  # .env.dev - Development environment (default)
+  if [[ -f "$templates_dir/.env.dev" ]]; then
+    cp "$templates_dir/.env.dev" .env.dev
+  fi
+
+  # .env.staging - Staging environment
+  if [[ -f "$templates_dir/.env.staging" ]]; then
+    cp "$templates_dir/.env.staging" .env.staging
+  fi
+
+  # .env.prod - Production environment
+  if [[ -f "$templates_dir/.env.prod" ]]; then
+    cp "$templates_dir/.env.prod" .env.prod
+  fi
+
+  # .env.example - Complete reference (from envs template)
+  local envs_template_dir="$(cd "$DEMO_DIR" && cd ../../templates/envs && pwd)"
+  if [[ -f "$envs_template_dir/.env.example" ]]; then
+    cp "$envs_template_dir/.env.example" .env.example
+  fi
+
+  # Create .env if it doesn't exist from template
+  if [[ ! -f ".env" ]]; then
+    cat > .env << 'EOF'
 # Local Configuration Overrides for Demo
 # Essential variables are pre-filled from demo configuration
 
@@ -103,9 +128,7 @@ DATABASE_URL=postgres://postgres:postgres@postgres:5432/demo-app_db
 # POSTGRES_PORT=5433
 # REDIS_PORT=6380
 EOF
-
-  # Create .env.example from demo
-  cp "$templates_dir/.env.demo" .env.example
+  fi
 
   # Ensure gitignore
   if [[ -f "$script_dir/gitignore.sh" ]]; then

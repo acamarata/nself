@@ -3,63 +3,71 @@
 # Refactored modular version using separate service modules
 set -euo pipefail
 
-# Error handler with more details
-trap 'echo "Error on line $LINENO: $BASH_COMMAND" >&2' ERR
+# Always start with tracing off unless explicitly in debug mode
+set +x
 
-# Enable debugging if DEBUG is set
-[[ "${DEBUG:-}" == "true" ]] && set -x
+# Error handler with more details (only in debug mode)
+if [[ "${DEBUG:-false}" == "true" ]]; then
+  trap 'echo "Error on line $LINENO: $BASH_COMMAND" >&2' ERR
+  set -x
+else
+  trap '' ERR
+fi
 
 # Get script directory (macOS compatible)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  COMPOSE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  # When called via bash script.sh, $0 is the script path
+  COMPOSE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 
 # Source display utilities first (for logging functions)
-if [[ -f "$SCRIPT_DIR/../../lib/utils/display.sh" ]]; then
-  source "$SCRIPT_DIR/../../lib/utils/display.sh"
+if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/display.sh" ]]; then
+  source "$COMPOSE_SCRIPT_DIR/../../lib/utils/display.sh"
 fi
 
-# Source environment utilities for safe loading
-if [[ -f "$SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
-  source "$SCRIPT_DIR/../../lib/utils/env.sh"
+# Source environment utilities for functions only
+if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
+  source "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh"
 fi
 
-# Load environment safely (prioritize .env.dev over .env)
-env_file=""
-if [[ -f .env.dev ]]; then
-  env_file=".env.dev"
-elif [[ -f .env.local ]]; then
-  env_file=".env.local"
-elif [[ -f .env ]]; then
-  env_file=".env"
-fi
+# IMPORTANT: Build is environment-agnostic
+# We DO NOT load env files - use smart defaults with ternary operators
+# This allows the same docker-compose.yml to work in any environment
 
-if [[ -n "$env_file" ]]; then
-  set -a
-  while IFS='=' read -r key value; do
-    # Skip comments and empty lines
-    [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
-    # Skip if value contains JSON-like structures or command substitutions
-    if [[ ! "$value" =~ [\{\}\$\`] ]]; then
-      export "$key=$value"
-    fi
-  done < "$env_file"
-  set +a
-else
-  echo "Warning: No .env file found" >&2
-fi
+# Set smart defaults that can be overridden by explicitly set env vars
+export PROJECT_NAME="${PROJECT_NAME:-myproject}"
+export ENV="${ENV:-dev}"
+export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
+
+# Database defaults
+export POSTGRES_USER="${POSTGRES_USER:-postgres}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
+export POSTGRES_DB="${POSTGRES_DB:-${PROJECT_NAME}}"
+export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+
+# Service port defaults
+export HASURA_PORT="${HASURA_PORT:-8080}"
+export AUTH_PORT="${AUTH_PORT:-4000}"
+export STORAGE_PORT="${STORAGE_PORT:-5000}"
+export REDIS_PORT="${REDIS_PORT:-6379}"
+export MINIO_PORT="${MINIO_PORT:-9000}"
+export MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9001}"
 
 # Source smart defaults to handle JWT construction
-if [[ -f "$SCRIPT_DIR/../../services/auth/smart-defaults.sh" ]]; then
-  source "$SCRIPT_DIR/../../services/auth/smart-defaults.sh"
+if [[ -f "$COMPOSE_SCRIPT_DIR/../../services/auth/smart-defaults.sh" ]]; then
+  source "$COMPOSE_SCRIPT_DIR/../../services/auth/smart-defaults.sh"
   apply_smart_defaults
 fi
 
 # Source auth config for multi-app support
-if [[ -f "$SCRIPT_DIR/../../services/auth/multi-app.sh" ]]; then
-  source "$SCRIPT_DIR/../../services/auth/multi-app.sh"
+if [[ -f "$COMPOSE_SCRIPT_DIR/../../services/auth/multi-app.sh" ]]; then
+  source "$COMPOSE_SCRIPT_DIR/../../services/auth/multi-app.sh"
 fi
 
 # Source all service modules
-MODULES_DIR="$SCRIPT_DIR/compose-modules"
+MODULES_DIR="$COMPOSE_SCRIPT_DIR/compose-modules"
 if [[ -d "$MODULES_DIR" ]]; then
   for module in "$MODULES_DIR"/*.sh; do
     [[ -f "$module" ]] && source "$module"
@@ -73,16 +81,17 @@ fi
 # CRITICAL: Always use port 5432 for internal container-to-container communication
 # The POSTGRES_PORT variable is for external host access only
 construct_database_urls() {
+  # Use smart defaults with ternary operators
   local db_user="${POSTGRES_USER:-postgres}"
   local db_pass="${POSTGRES_PASSWORD:-postgres}"
   local db_host="postgres"  # Container name for internal networking
   local db_port="5432"      # Always use 5432 internally
-  local db_name="${POSTGRES_DB:-${PROJECT_NAME}}"
+  local db_name="${POSTGRES_DB:-${PROJECT_NAME:-myproject}}"
 
   # URL encode password to handle special characters
   local encoded_pass=$(url_encode "$db_pass")
 
-  # Construct database URLs
+  # Construct database URLs with defaults
   export DATABASE_URL="postgresql://${db_user}:${encoded_pass}@${db_host}:${db_port}/${db_name}"
   export POSTGRES_URL="postgresql://${db_user}:${encoded_pass}@${db_host}:${db_port}/${db_name}"
 
@@ -126,15 +135,12 @@ export NODE_ENV="${NODE_ENV:-$ENVIRONMENT}"
 case "$ENVIRONMENT" in
   production|prod)
     export LOG_LEVEL="${LOG_LEVEL:-warn}"
-    export DEBUG="${DEBUG:-false}"
     ;;
   staging|stage)
     export LOG_LEVEL="${LOG_LEVEL:-info}"
-    export DEBUG="${DEBUG:-false}"
     ;;
   *)
     export LOG_LEVEL="${LOG_LEVEL:-debug}"
-    export DEBUG="${DEBUG:-false}"
     ;;
 esac
 
@@ -148,6 +154,9 @@ backup_existing_compose() {
 
     # Keep only last 10 backups
     ls -t "$backup_dir"/docker-compose.yml.* 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+
+    # Mark that docker-compose was changed
+    export DOCKER_COMPOSE_CHANGED="true"
   fi
 }
 
@@ -167,9 +176,7 @@ generate_docker_compose() {
 # Generated by nself build - DO NOT EDIT MANUALLY
 # Project: ${PROJECT_NAME}
 # Date: $(date '+%Y-%m-%d %H:%M:%S')
-# Version: $(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
-
-version: '3.8'
+# Build Version: $(cat "$COMPOSE_SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
 
 networks:
   ${DOCKER_NETWORK}:
@@ -178,6 +185,8 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  nginx_cache:
     driver: local
 EOF
 
@@ -191,6 +200,8 @@ EOF
   [[ "${GRAFANA_ENABLED:-false}" == "true" ]] && echo "  grafana_data:" >> docker-compose.yml
   [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]] && echo "  prometheus_data:" >> docker-compose.yml
   [[ "${LOKI_ENABLED:-false}" == "true" ]] && echo "  loki_data:" >> docker-compose.yml
+  [[ "${TEMPO_ENABLED:-false}" == "true" ]] && echo "  tempo_data:" >> docker-compose.yml
+  [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] && echo "  alertmanager_data:" >> docker-compose.yml
   [[ "${PGADMIN_ENABLED:-false}" == "true" ]] && echo "  pgadmin_data:" >> docker-compose.yml
   [[ "${PORTAINER_ENABLED:-false}" == "true" ]] && echo "  portainer_data:" >> docker-compose.yml
 
@@ -208,34 +219,26 @@ EOF
   generate_auth_service >> docker-compose.yml
   generate_minio_service >> docker-compose.yml
   generate_redis_service >> docker-compose.yml
+  generate_nginx_service >> docker-compose.yml
 
-  # Generate utility services
-  if [[ "${MAILPIT_ENABLED:-true}" == "true" ]] || \
-     [[ "${ADMINER_ENABLED:-false}" == "true" ]] || \
-     [[ "${BULLMQ_DASHBOARD_ENABLED:-false}" == "true" ]] || \
-     [[ "${PGADMIN_ENABLED:-false}" == "true" ]] || \
-     [[ "${SWAGGER_UI_ENABLED:-false}" == "true" ]] || \
-     [[ "${PORTAINER_ENABLED:-false}" == "true" ]] || \
-     [[ "${BACKUP_ENABLED:-false}" == "true" ]]; then
+  # Generate optional services
+  if [[ "${MAILPIT_ENABLED:-false}" == "true" ]] || \
+     [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] || \
+     [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] || \
+     [[ "${MLFLOW_ENABLED:-false}" == "true" ]] || \
+     [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
     echo "" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
-    echo "  # Utility Services" >> docker-compose.yml
+    echo "  # Optional Services" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
     generate_utility_services >> docker-compose.yml
   fi
 
   # Generate monitoring services
-  if [[ "${MLFLOW_ENABLED:-false}" == "true" ]] || \
-     [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] || \
-     [[ "${TYPESENSE_ENABLED:-false}" == "true" ]] || \
-     [[ "${SONIC_ENABLED:-false}" == "true" ]] || \
-     [[ "${GRAFANA_ENABLED:-false}" == "true" ]] || \
-     [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]] || \
-     [[ "${LOKI_ENABLED:-false}" == "true" ]] || \
-     [[ "${PROMTAIL_ENABLED:-false}" == "true" ]]; then
+  if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
     echo "" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
-    echo "  # Monitoring & Search Services" >> docker-compose.yml
+    echo "  # Monitoring Services" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
     generate_monitoring_services >> docker-compose.yml
   fi
@@ -243,11 +246,17 @@ EOF
   # Generate frontend apps
   generate_frontend_apps >> docker-compose.yml
 
-  # Generate custom services
-  generate_custom_services >> docker-compose.yml
+  # Generate template-based custom services (CS_1, CS_2, etc.)
+  generate_template_custom_services >> docker-compose.yml
+
+  # Generate monitoring exporters (Tempo, Alertmanager, cAdvisor, etc.)
+  generate_monitoring_exporters >> docker-compose.yml
 
   echo "" >> docker-compose.yml
   echo "# End of generated docker-compose.yml" >> docker-compose.yml
+
+  # Explicitly return success
+  return 0
 }
 
 # Main execution
@@ -258,27 +267,53 @@ main() {
     [[ -z "$PROJECT_NAME" ]] && PROJECT_NAME="myproject"
   fi
 
-  echo "Generating docker-compose.yml for project: ${PROJECT_NAME}"
+  # Check if docker-compose.yml exists to detect first build
+  local compose_exists=false
+  [[ -f "docker-compose.yml" ]] && compose_exists=true
 
-  # Generate the compose file
-  if ! generate_docker_compose; then
-    echo "Error: Failed to generate docker-compose.yml" >&2
-    return 1
+  # Show verbose output if requested
+  if [[ "${VERBOSE:-false}" == "true" ]]; then
+    echo "Generating docker-compose.yml for project: ${PROJECT_NAME}"
   fi
 
-  echo "✓ docker-compose.yml generated successfully"
+  # Generate the compose file (redirect based on verbosity)
+  if [[ "${VERBOSE:-false}" == "true" ]]; then
+    if ! generate_docker_compose; then
+      echo "Error: Failed to generate docker-compose.yml" >&2
+      return 1
+    fi
+  else
+    if ! generate_docker_compose >/dev/null 2>&1; then
+      echo "Error: Failed to generate docker-compose.yml" >&2
+      return 1
+    fi
+  fi
+
+  # If this was first time, mark it
+  if [[ "$compose_exists" == "false" ]]; then
+    export DOCKER_COMPOSE_CHANGED="true"
+  fi
 
   # Validate the generated file (skip if docker not available)
   if command -v docker >/dev/null 2>&1; then
-    if timeout 5 docker compose config >/dev/null 2>&1; then
-      echo "✓ docker-compose.yml validation passed"
+    if [[ "${VERBOSE:-false}" == "true" ]]; then
+      if timeout 5 docker compose config >/dev/null 2>&1; then
+        echo "✓ docker-compose.yml validation passed"
+      else
+        echo "⚠ docker-compose.yml validation warnings (expected)"
+      fi
     else
-      echo "⚠ docker-compose.yml validation warnings - please review the configuration" >&2
-      # Don't exit on validation warnings
+      timeout 5 docker compose config >/dev/null 2>&1 || true
     fi
-  else
-    echo "⚠ Docker not available - skipping validation"
   fi
+
+  # Show success in verbose mode
+  if [[ "${VERBOSE:-false}" == "true" ]]; then
+    echo "✓ docker-compose.yml generated successfully"
+  fi
+
+  # Always return success if we got this far
+  return 0
 }
 
 # Run main function

@@ -4,17 +4,25 @@
 
 # Define standard project directory structure
 get_project_directories() {
+  # Always needed directories
   cat <<EOF
 nginx/conf.d
 nginx/ssl
 services
 logs
-.volumes/postgres
-.volumes/redis
-.volumes/minio
 postgres/init
 ssl/certificates
+.volumes/postgres
 EOF
+
+  # Conditional volume directories based on enabled services
+  if [[ "${REDIS_ENABLED:-false}" == "true" ]]; then
+    echo ".volumes/redis"
+  fi
+
+  if [[ "${MINIO_ENABLED:-false}" == "true" ]]; then
+    echo ".volumes/minio"
+  fi
 }
 
 # Create directory structure for the project
@@ -92,9 +100,8 @@ create_service_directories() {
     services="${services} functions/src functions/dist"
   fi
 
-  if [[ "${NESTJS_ENABLED:-false}" == "true" ]]; then
-    services="${services} api/src api/dist"
-  fi
+  # NestJS should be a custom service, not a special folder
+  # Remove this legacy pattern
 
   # Create service directories
   for dir in $services; do
@@ -102,29 +109,47 @@ create_service_directories() {
       mkdir -p "$dir" 2>/dev/null
     fi
   done
+
+  # NOW create functions package files after directories exist
+  if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+    if [[ ! -f "functions/package.json" ]]; then
+      cat > functions/package.json <<'EOF'
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "description": "Serverless functions",
+  "main": "index.js",
+  "dependencies": {}
+}
+EOF
+    fi
+
+    if [[ ! -f "functions/package-lock.json" ]]; then
+      cat > functions/package-lock.json <<'EOF'
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "lockfileVersion": 2,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "functions",
+      "version": "1.0.0",
+      "dependencies": {}
+    }
+  },
+  "dependencies": {}
+}
+EOF
+    fi
+  fi
 }
 
 # Create frontend app directories
 create_frontend_directories() {
-  local app_count="${FRONTEND_APP_COUNT:-0}"
-
-  if [[ "$app_count" -eq 0 ]]; then
-    return 0
-  fi
-
-  local i=1
-  while [[ $i -le $app_count ]]; do
-    local app_dir_var="FRONTEND_APP_${i}_DIR"
-    local app_dir="${!app_dir_var:-frontend/app${i}}"
-
-    if [[ ! -d "$app_dir" ]]; then
-      mkdir -p "$app_dir/src" 2>/dev/null
-      mkdir -p "$app_dir/public" 2>/dev/null
-      mkdir -p "$app_dir/components" 2>/dev/null
-    fi
-
-    i=$((i + 1))
-  done
+  # Frontend apps are external to nself - no directories needed
+  # This function is kept for compatibility but does nothing
+  return 0
 }
 
 # Set proper permissions for directories

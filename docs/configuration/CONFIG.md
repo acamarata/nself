@@ -4,13 +4,13 @@ This is the complete configuration reference for nself - a comprehensive self-ho
 
 ## Table of Contents
 
-1. [Basic Settings](./config/BASIC-SETTINGS.md) - Project configuration and core settings
-2. [Required Services](./config/REQUIRED-SERVICES.md) - PostgreSQL, Hasura, Auth, Nginx
-3. [Optional Services](./config/OPTIONAL-SERVICES.md) - Admin UI, MinIO, Redis, MLflow, etc.
-4. [User Services](./config/USER-SERVICES.md) - Custom backend services (CS_N configuration)
-5. [Frontend Apps](./config/FRONTEND-APPS.md) - Frontend application configuration (FA_N)
-6. [Environment Variables](./config/ENV-REFERENCE.md) - Complete environment variable reference
-7. [How-To Guides](./config/HOW-TO.md) - Common configuration scenarios
+1. [Basic Settings](\1) - Project configuration and core settings
+2. [Required Services](\1) - PostgreSQL, Hasura, Auth, Nginx
+3. [Optional Services](\1) - Admin UI, MinIO, Redis, MLflow, etc.
+4. [User Services](\1) - Custom backend services (CS_N configuration)
+5. [Frontend Apps](\1) - Frontend application configuration (FA_N)
+6. [Environment Variables](\1) - Complete environment variable reference
+7. [How-To Guides](\1) - Common configuration scenarios
 
 ## Quick Start
 
@@ -145,9 +145,9 @@ Variables are loaded in this priority (highest to lowest):
 
 ## Next Steps
 
-- [Basic Settings](./config/BASIC-SETTINGS.md) - Configure your project
-- [Required Services](./config/REQUIRED-SERVICES.md) - Customize core services
-- [Optional Services](./config/OPTIONAL-SERVICES.md) - Enable additional features
-- [User Services](./config/USER-SERVICES.md) - Add custom backend services
-- [Frontend Apps](./config/FRONTEND-APPS.md) - Configure frontend applications
-- [How-To Guides](./config/HOW-TO.md) - Common scenarios and examples
+- [Basic Settings](\1) - Configure your project
+- [Required Services](\1) - Customize core services
+- [Optional Services](\1) - Enable additional features
+- [User Services](\1) - Add custom backend services
+- [Frontend Apps](\1) - Configure frontend applications
+- [How-To Guides](\1) - Common scenarios and examples

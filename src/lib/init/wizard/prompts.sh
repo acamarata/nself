@@ -56,8 +56,8 @@ select_option() {
   read choice
   choice="${choice:-1}"
   
-  # Validate choice
-  if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+  # Validate choice (Bash 3.2 compatible)
+  if echo "$choice" | grep -q '^[0-9][0-9]*$' && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
     eval "${result_var}=$((choice - 1))"
   else
     eval "${result_var}=0"
@@ -93,7 +93,7 @@ multi_select() {
     selected_items=("${options[@]}")
   elif [[ "$choices" != "none" ]]; then
     for choice in $choices; do
-      if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+      if echo "$choice" | grep -q '^[0-9][0-9]*$' && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
         selected_items+=("${options[$((choice - 1))]}")
       fi
     done
@@ -125,8 +125,8 @@ prompt_input() {
     read input
     input="${input:-$default}"
     
-    # Validate input
-    if [[ "$input" =~ $pattern ]]; then
+    # Validate input (Bash 3.2 compatible)
+    if echo "$input" | grep -q "$pattern"; then
       eval "${result_var}=\"\$input\""
       break
     else
