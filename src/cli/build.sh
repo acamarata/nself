@@ -99,9 +99,29 @@ cmd_build() {
     esac
   done
 
+  # Check Docker availability
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Error: Docker is not installed" >&2
+    echo "Install Docker from https://docker.com" >&2
+    return 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "Error: Docker daemon is not running" >&2
+    echo "Start Docker Desktop or run: sudo systemctl start docker" >&2
+    return 1
+  fi
+
   # Get project name from env or use basename
   local project_name="${PROJECT_NAME:-$(basename "$PWD")}"
   local env="${ENV:-dev}"
+
+  # Verify build system is properly initialized
+  if ! command -v orchestrate_build >/dev/null 2>&1; then
+    echo "Error: Build system not properly initialized" >&2
+    echo "Missing orchestrate_build function from core.sh" >&2
+    return 1
+  fi
 
   # Run the orchestrated build
   local build_result

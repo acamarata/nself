@@ -24,6 +24,7 @@ cmd_stop() {
   local remove_orphans=false
   local verbose=false
   local services_to_stop=""
+  local graceful_timeout="${NSELF_STOP_TIMEOUT:-30}"
 
   # Parse options
   while [[ $# -gt 0 ]]; do
@@ -39,6 +40,15 @@ cmd_stop() {
     --remove-orphans)
       remove_orphans=true
       shift
+      ;;
+    --graceful)
+      if [[ -n "$2" ]] && [[ "$2" =~ ^[0-9]+$ ]]; then
+        graceful_timeout="$2"
+        shift 2
+      else
+        graceful_timeout=30
+        shift
+      fi
       ;;
     --verbose)
       verbose=true
@@ -142,7 +152,10 @@ cmd_stop() {
 
       if [[ "$remove_volumes" == true ]] || [[ "$remove_images" == true ]]; then
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning up..."
-        compose down $(if [[ "$remove_volumes" == true ]]; then echo "-v"; fi) $(if [[ "$remove_images" == true ]]; then echo "--rmi all"; fi) >/dev/null 2>&1
+        local cleanup_args=("down")
+        [[ "$remove_volumes" == true ]] && cleanup_args+=("-v")
+        [[ "$remove_images" == true ]] && cleanup_args+=("--rmi" "all")
+        docker compose "${cleanup_args[@]}" >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Cleanup completed                      \n"
       else
         echo -e "   Run ${COLOR_BLUE}nself stop --volumes${COLOR_RESET} to remove all data"
@@ -171,31 +184,41 @@ cmd_stop() {
   fi
 
   # Build the compose down command arguments
-  local compose_args="down"
+  local compose_args=("down")
 
   if [[ "$remove_volumes" == true ]]; then
-    compose_args="$compose_args -v"
+    compose_args+=("-v")
   fi
 
   if [[ "$remove_images" == true ]]; then
-    compose_args="$compose_args --rmi all"
+    compose_args+=("--rmi" "all")
   fi
 
   if [[ "$remove_orphans" == true ]]; then
-    compose_args="$compose_args --remove-orphans"
+    compose_args+=("--remove-orphans")
   fi
 
-  # Execute the shutdown
+  # Execute the shutdown with optional graceful stop first
   local output_file=$(mktemp)
+
+  # If not forcing immediate removal, do graceful stop first
+  if [[ "$remove_volumes" != true ]] && [[ "$remove_images" != true ]]; then
+    if [[ "$verbose" == true ]]; then
+      echo "Gracefully stopping services (timeout: ${graceful_timeout}s)..."
+      docker compose stop --timeout "$graceful_timeout" 2>&1 | tee -a "$output_file"
+    else
+      docker compose stop --timeout "$graceful_timeout" >/dev/null 2>&1
+    fi
+  fi
 
   if [[ "$verbose" == true ]]; then
     # Show full output in verbose mode
     printf "\n"
-    compose $compose_args 2>&1 | tee "$output_file"
+    docker compose "${compose_args[@]}" 2>&1 | tee -a "$output_file"
     result=${PIPESTATUS[0]}
   else
     # Run silently with spinner and progress
-    (compose $compose_args 2>&1) >"$output_file" &
+    (docker compose "${compose_args[@]}" 2>&1) >>"$output_file" &
     local compose_pid=$!
 
     # Show spinner with progress tracking
@@ -219,6 +242,14 @@ cmd_stop() {
 
   if [[ $result -eq 0 ]]; then
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services stopped                              \n"
+
+    # Clean up runtime environment file (so changes to .env files take effect on restart)
+    if [[ -f ".env.runtime" ]]; then
+      rm -f .env.runtime
+      if [[ "$verbose" == true ]]; then
+        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed runtime environment file"
+      fi
+    fi
 
     # Show additional cleanup info
     if [[ "$remove_volumes" == true ]]; then
@@ -296,6 +327,7 @@ show_down_help() {
   echo "  -v, --volumes        Remove volumes (WARNING: deletes all data)"
   echo "  --rmi                Remove images"
   echo "  --remove-orphans     Remove containers for services not in compose file"
+  echo "  --graceful [N]       Graceful shutdown timeout in seconds (default: 30)"
   echo "  --verbose            Show detailed output"
   echo "  -h, --help           Show this help message"
   echo ""

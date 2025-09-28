@@ -14,12 +14,22 @@ source "$LIB_DIR/utils/header.sh"
 # Command function
 cmd_reset() {
   local force_reset=false
+  local create_backup=true
+  local keep_env=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --force | -f)
       force_reset=true
+      shift
+      ;;
+    --no-backup)
+      create_backup=false
+      shift
+      ;;
+    --keep-env)
+      keep_env=true
       shift
       ;;
     --help | -h)
@@ -55,6 +65,30 @@ cmd_reset() {
   fi
 
   echo
+
+  # Create backup if requested
+  if [[ "$create_backup" == "true" ]]; then
+    local backup_name="nself-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating backup..."
+
+    # Create backup of important files
+    tar czf "$backup_name" \
+      .env* \
+      docker-compose.yml \
+      docker-compose.override.yml \
+      services/ \
+      nginx/ \
+      monitoring/ \
+      postgres/ \
+      2>/dev/null || true
+
+    if [[ -f "$backup_name" ]]; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backup created: $backup_name              \n"
+    else
+      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No files to backup                        \n"
+    fi
+    echo
+  fi
 
   # Get project name first
   local project="${PROJECT_NAME:-myproject}"
@@ -184,6 +218,14 @@ cmd_reset() {
     ".env.prod-secrets"
     ".gitignore"
     "frontend-apps.env"
+
+    # Log files
+    "*.log"
+    "logs"
+
+    # Cache directories
+    ".nself"
+    ".cache"
 
     # Any leftover backup files (removed after backing up)
 
@@ -341,20 +383,25 @@ show_reset_help() {
   echo "Reset the project to a clean state"
   echo
   echo "Options:"
-  echo "  -f, --force    Skip confirmation prompt"
-  echo "  -h, --help     Show this help message"
+  echo "  -f, --force       Skip confirmation prompt"
+  echo "  --no-backup       Don't create backup before reset"
+  echo "  --keep-env        Preserve environment files"
+  echo "  -h, --help        Show this help message"
   echo
   echo "Actions:"
   echo "  • Stop and remove all containers"
   echo "  • Delete all Docker volumes"
   echo "  • Remove all generated files"
-  echo "  • Backup env files with .old suffix"
+  echo "  • Create backup archive (unless --no-backup)"
+  echo "  • Clean .env.runtime, logs, and cache"
   echo
   echo "Examples:"
-  echo "  nself reset              # Interactive reset"
+  echo "  nself reset              # Interactive reset with backup"
   echo "  nself reset --force      # Skip confirmation"
+  echo "  nself reset --no-backup  # Reset without backup"
+  echo "  nself reset --keep-env   # Reset but keep .env files"
   echo
-  echo "WARNING: This will remove all data and cannot be undone!"
+  echo "Backup files are saved as: nself-backup-YYYYMMDD-HHMMSS.tar.gz"
 }
 
 # Export for use as library

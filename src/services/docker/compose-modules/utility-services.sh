@@ -133,10 +133,11 @@ EOF
     ports:
       - "\${FUNCTIONS_PORT:-3008}:3008"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3008/healthz"]
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:3000/healthz\", (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))' || curl -f http://localhost:3000/healthz || wget -q --spider http://localhost:3000/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 40s
 EOF
   fi
 }
@@ -230,7 +231,7 @@ DOCKERFILE
     ports:
       - "\${MLFLOW_PORT:-5005}:\${MLFLOW_PORT:-5005}"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:\${MLFLOW_PORT:-5005}/health"]
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:\${MLFLOW_PORT:-5005}/health\")' || wget --spider -q http://localhost:\${MLFLOW_PORT:-5005}/health || curl -f http://localhost:\${MLFLOW_PORT:-5005}/health"]
       interval: 30s
       timeout: 10s
       retries: 5

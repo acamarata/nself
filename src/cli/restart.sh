@@ -7,9 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+
+# Source optional utilities if they exist
+[[ -f "$SCRIPT_DIR/../lib/utils/docker.sh" ]] && source "$SCRIPT_DIR/../lib/utils/docker.sh"
+[[ -f "$SCRIPT_DIR/../lib/hooks/pre-command.sh" ]] && source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
+[[ -f "$SCRIPT_DIR/../lib/hooks/post-command.sh" ]] && source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Load environment with smart defaults
 if [[ -f "$SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
@@ -58,6 +60,11 @@ cmd_restart() {
     set -a
     load_env_with_priority
     set +a
+  fi
+
+  # Clean up runtime environment to ensure fresh config
+  if [[ -f ".env.runtime" ]]; then
+    rm -f .env.runtime
   fi
 
   # Load service health utilities
@@ -239,6 +246,20 @@ cmd_restart() {
             local service="${container#${project_name}_}"
             echo -e "  ${COLOR_GREEN}↻${COLOR_RESET} $service"
           done
+        fi
+
+        # Verify health after restart
+        echo
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Verifying service health..."
+        sleep 5  # Give services time to initialize
+
+        local healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy" || echo "0")
+        local running_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+
+        if [[ $healthy_count -gt 0 ]]; then
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} Health check: $healthy_count/$running_count services healthy   \n"
+        else
+          printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Services restarted, health checks pending         \n"
         fi
       else
         printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to update services                           \n"

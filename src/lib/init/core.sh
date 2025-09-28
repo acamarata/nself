@@ -57,7 +57,12 @@ source "$INIT_MODULE_DIR/help.sh" || {
   echo "Error: Failed to load help module" >&2
   exit 78
 }
-source "$INIT_MODULE_DIR/demo.sh" 2>/dev/null || true
+
+# Demo module is optional - set flag based on availability
+DEMO_MODE_AVAILABLE=false
+if [[ -f "$INIT_MODULE_DIR/demo.sh" ]]; then
+  source "$INIT_MODULE_DIR/demo.sh" && DEMO_MODE_AVAILABLE=true
+fi
 
 # State tracking
 INIT_STATE="$INIT_STATE_IDLE"
