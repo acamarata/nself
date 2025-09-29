@@ -158,7 +158,10 @@ test_config_arrays() {
   source "$INIT_LIB_DIR/config.sh"
 
   # Test gitignore required array - check if it's properly defined
-  local array_size=${#INIT_GITIGNORE_REQUIRED[@]:-0}
+  local array_size=0
+  if [[ -n "${INIT_GITIGNORE_REQUIRED+x}" ]]; then
+    array_size=${#INIT_GITIGNORE_REQUIRED[@]}
+  fi
 
   if [[ $array_size -eq 0 ]]; then
     set -u
