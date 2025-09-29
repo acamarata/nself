@@ -68,19 +68,35 @@ cmd_reset() {
 
   # Create backup if requested
   if [[ "$create_backup" == "true" ]]; then
-    local backup_name="nself-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+    # Create backup directory with timestamp
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local backup_dir="_backup/${timestamp}"
+    mkdir -p "$backup_dir"
+
+    local backup_name="_backup/nself-backup-${timestamp}.tar.gz"
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating backup..."
 
-    # Create backup of important files
-    tar czf "$backup_name" \
-      .env* \
-      docker-compose.yml \
-      docker-compose.override.yml \
-      services/ \
-      nginx/ \
-      monitoring/ \
-      postgres/ \
-      2>/dev/null || true
+    # Build list of files to backup
+    local backup_files=""
+
+    # Add all env files that exist
+    for env_file in .env .env.* ; do
+      [[ -f "$env_file" ]] && backup_files="$backup_files $env_file"
+    done
+
+    # Add other important files and directories if they exist
+    [[ -f "docker-compose.yml" ]] && backup_files="$backup_files docker-compose.yml"
+    [[ -f "docker-compose.override.yml" ]] && backup_files="$backup_files docker-compose.override.yml"
+    [[ -d "services" ]] && backup_files="$backup_files services/"
+    [[ -d "nginx" ]] && backup_files="$backup_files nginx/"
+    [[ -d "monitoring" ]] && backup_files="$backup_files monitoring/"
+    [[ -d "postgres" ]] && backup_files="$backup_files postgres/"
+    [[ -f "schema.dbml" ]] && backup_files="$backup_files schema.dbml"
+
+    # Create the backup if we have files to backup
+    if [[ -n "$backup_files" ]]; then
+      tar czf "$backup_name" $backup_files 2>/dev/null || true
+    fi
 
     if [[ -f "$backup_name" ]]; then
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backup created: $backup_name              \n"
@@ -401,7 +417,7 @@ show_reset_help() {
   echo "  nself reset --no-backup  # Reset without backup"
   echo "  nself reset --keep-env   # Reset but keep .env files"
   echo
-  echo "Backup files are saved as: nself-backup-YYYYMMDD-HHMMSS.tar.gz"
+  echo "Backup files are saved in: _backup/nself-backup-YYYYMMDD-HHMMSS.tar.gz"
 }
 
 # Export for use as library
