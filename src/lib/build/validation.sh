@@ -12,6 +12,11 @@ if [[ -f "$VALIDATION_DIR/../utils/display.sh" ]]; then
   source "$VALIDATION_DIR/../utils/display.sh"
 fi
 
+# Source platform utilities for set_default and other functions
+if [[ -f "$VALIDATION_DIR/platform.sh" ]]; then
+  source "$VALIDATION_DIR/platform.sh"
+fi
+
 # Validate environment configuration
 validate_environment() {
   local validation_passed=true
