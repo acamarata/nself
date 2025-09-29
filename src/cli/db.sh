@@ -7,18 +7,17 @@ set -euo pipefail
 
 set +e # Don't exit on error for db commands
 
-# Get script directory (macOS compatible)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source environment utilities for safe loading
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/header.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Source auto-config only if it exists
-if [[ -f "$SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
-  source "$SCRIPT_DIR/../lib/database/auto-config.sh"
+if [[ -f "$CLI_SCRIPT_DIR/../lib/database/auto-config.sh" ]]; then
+  source "$CLI_SCRIPT_DIR/../lib/database/auto-config.sh"
 fi
 # Color output functions
 

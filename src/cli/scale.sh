@@ -4,15 +4,14 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source utilities
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/header.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help
 show_scale_help() {

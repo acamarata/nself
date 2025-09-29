@@ -4,13 +4,14 @@ set -euo pipefail
 # admin.sh - Admin UI management commands
 
 # Determine root directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+ROOT_DIR="$(dirname "$(dirname "$CLI_SCRIPT_DIR")")"
 
 # Source required utilities
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 
 # Setup minimal admin-only environment in blank directory
 admin_minimal_setup() {

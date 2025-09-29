@@ -4,18 +4,19 @@ set -euo pipefail
 # restart.sh - Smart restart for services
 
 # Source shared utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
 
 # Source optional utilities if they exist
-[[ -f "$SCRIPT_DIR/../lib/utils/docker.sh" ]] && source "$SCRIPT_DIR/../lib/utils/docker.sh"
-[[ -f "$SCRIPT_DIR/../lib/hooks/pre-command.sh" ]] && source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-[[ -f "$SCRIPT_DIR/../lib/hooks/post-command.sh" ]] && source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+[[ -f "$CLI_SCRIPT_DIR/../lib/utils/docker.sh" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+[[ -f "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh" ]] && source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+[[ -f "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh" ]] && source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Load environment with smart defaults
-if [[ -f "$SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
-  source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
+if [[ -f "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
+  source "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh"
   load_env_with_defaults >/dev/null 2>&1
 fi
 

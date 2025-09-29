@@ -4,11 +4,12 @@ set -euo pipefail
 # diff.sh - Show configuration differences
 
 # Source shared utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/header.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Create a file with default values for comparison
 create_defaults_file() {

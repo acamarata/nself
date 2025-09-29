@@ -4,16 +4,15 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source utilities
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/progress.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/progress.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Initialize counters
 ISSUES_FOUND=0

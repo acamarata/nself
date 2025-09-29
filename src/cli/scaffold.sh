@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+
 # Source platform compatibility for safe_sed_inline
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || {
+source "$CLI_SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || source "$CLI_SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || {
   # Fallback definition
   safe_sed_inline() {
     local file="$1"; shift
@@ -19,11 +22,10 @@ set -euo pipefail
 # scaffold.sh - Create new service from template
 
 # Source utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Command function
 cmd_scaffold() {

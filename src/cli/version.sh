@@ -4,10 +4,11 @@ set -euo pipefail
 # version.sh - Show version information
 
 # Source shared utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help for version command
 show_version_help() {
@@ -30,10 +31,10 @@ show_version_help() {
 # Read version from VERSION file
 get_version() {
   # Check src/VERSION file (new location)
-  if [[ -f "$SCRIPT_DIR/../VERSION" ]]; then
-    cat "$SCRIPT_DIR/../VERSION"
-  elif [[ -f "$SCRIPT_DIR/../../src/VERSION" ]]; then
-    cat "$SCRIPT_DIR/../../src/VERSION"
+  if [[ -f "$CLI_SCRIPT_DIR/../VERSION" ]]; then
+    cat "$CLI_SCRIPT_DIR/../VERSION"
+  elif [[ -f "$CLI_SCRIPT_DIR/../../src/VERSION" ]]; then
+    cat "$CLI_SCRIPT_DIR/../../src/VERSION"
   else
     echo "0.3.0"
   fi
@@ -53,7 +54,7 @@ cmd_version() {
   if [[ "$arg" == "--verbose" ]]; then
     show_header "nself Version Information"
     echo "Version:     $version"
-    echo "Location:    $SCRIPT_DIR"
+    echo "Location:    $CLI_SCRIPT_DIR"
     echo "Config:      ${ENV_FILE:-.env.local}"
     echo
     echo "System Information:"

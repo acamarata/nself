@@ -4,15 +4,14 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source utilities
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/docker.sh"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 
 # Source display.sh and force colors to be set
-source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 
 # Always ensure colors are defined (they'll work in real terminal)
 COLOR_RESET=${COLOR_RESET:-$'\033[0m'}
@@ -27,8 +26,8 @@ COLOR_YELLOW=${COLOR_YELLOW:-$'\033[0;33m'}
 export COLOR_RESET COLOR_BLUE COLOR_BOLD COLOR_DIM COLOR_CYAN COLOR_GREEN COLOR_RED COLOR_YELLOW
 
 # Note: header.sh is sourced by display.sh, no need to source it again
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Color output functions (consistent with main nself.sh)
 
 # Function to format duration

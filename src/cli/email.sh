@@ -4,20 +4,21 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
 
 # Source utilities - check if already sourced (from nself.sh)
 if [[ -z "${DISPLAY_UTILS_SOURCED:-}" ]]; then
-  source "$SCRIPT_DIR/../lib/utils/env.sh"
-  source "$SCRIPT_DIR/../lib/utils/display.sh"
-  source "$SCRIPT_DIR/../lib/utils/header.sh"
+  source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+  source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+  source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
 fi
 
 # Only source hooks if running standalone
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-  source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+  source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+  source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 fi
 # Helper functions
 

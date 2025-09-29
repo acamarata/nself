@@ -4,16 +4,17 @@ set -euo pipefail
 # stop.sh - Stop all services with enhanced feedback
 
 # Source shared utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-# source "$SCRIPT_DIR/../lib/utils/docker.sh"  # File doesn't exist yet
-# source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"  # File doesn't exist yet
-# source "$SCRIPT_DIR/../lib/hooks/post-command.sh"  # File doesn't exist yet
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Load environment with smart defaults
-if [[ -f "$SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
-  source "$SCRIPT_DIR/../lib/config/smart-defaults.sh"
+if [[ -f "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
+  source "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh"
   load_env_with_defaults >/dev/null 2>&1
 fi
 

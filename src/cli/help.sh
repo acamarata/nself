@@ -3,12 +3,13 @@ set -euo pipefail
 
 # help.sh - Show help information
 
-# Source shared utilities (only if not already sourced by wrapper)
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
-[[ -z "${CONSTANTS_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/config/constants.sh"
+# Source shared utilities
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
+[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+[[ -z "${CONSTANTS_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/config/constants.sh"
 
 # Command function
 cmd_help() {

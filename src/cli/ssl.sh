@@ -4,13 +4,14 @@ set -euo pipefail
 # ssl.sh - SSL certificate management commands
 
 # Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$CLI_SCRIPT_DIR"
 
 # Source utilities
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/ssl/ssl.sh"
-source "$SCRIPT_DIR/../lib/ssl/trust.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/ssl/ssl.sh"
+source "$CLI_SCRIPT_DIR/../lib/ssl/trust.sh"
 
 # Command function
 cmd_ssl() {
