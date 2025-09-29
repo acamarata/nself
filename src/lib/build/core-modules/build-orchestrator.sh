@@ -18,6 +18,11 @@ orchestrate_build() {
   # This tells us WHAT to provision, not HOW to configure it
   load_env_for_detection
 
+  # Validate and fix environment variables (including PROJECT_NAME)
+  if command -v validate_environment >/dev/null 2>&1; then
+    validate_environment || true
+  fi
+
   # Detect all services and apps
   detect_all_services
 

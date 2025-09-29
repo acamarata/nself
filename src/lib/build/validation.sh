@@ -43,15 +43,48 @@ validate_environment() {
   fi
 
   # Validate PROJECT_NAME format (Bash 3.2 compatible)
-  # Use grep instead of =~ for compatibility
-  if ! echo "$PROJECT_NAME" | grep -q '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
-    local fixed_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-//;s/-$//' | sed 's/--*/-/g')
-    if [[ "$fixed_name" != "$PROJECT_NAME" ]]; then
-      PROJECT_NAME="$fixed_name"
-      fixes+=("Fixed PROJECT_NAME to '$PROJECT_NAME'")
-      export PROJECT_NAME
-    fi
+  # Docker and DNS require lowercase alphanumeric with hyphens only
+  # Must start and end with alphanumeric, can contain hyphens in the middle
+  local original_project_name="$PROJECT_NAME"
+
+  # First, convert to lowercase and replace invalid characters
+  PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+
+  # Remove leading/trailing hyphens and collapse multiple hyphens
+  PROJECT_NAME=$(echo "$PROJECT_NAME" | sed 's/^-*//;s/-*$//' | sed 's/--*/-/g')
+
+  # Ensure it starts with a letter or number (prepend 'app' if needed)
+  if ! echo "$PROJECT_NAME" | grep -q '^[a-z0-9]'; then
+    PROJECT_NAME="app-$PROJECT_NAME"
   fi
+
+  # Ensure it ends with a letter or number (append '1' if needed)
+  if ! echo "$PROJECT_NAME" | grep -q '[a-z0-9]$'; then
+    PROJECT_NAME="${PROJECT_NAME}1"
+  fi
+
+  # Ensure minimum length (Docker requires at least 2 chars)
+  if [ ${#PROJECT_NAME} -lt 2 ]; then
+    PROJECT_NAME="app-${PROJECT_NAME}"
+  fi
+
+  # Truncate if too long (Docker has a 63 char limit for container names)
+  if [ ${#PROJECT_NAME} -gt 30 ]; then
+    PROJECT_NAME="${PROJECT_NAME:0:30}"
+    # Ensure it still ends with alphanumeric after truncation
+    PROJECT_NAME=$(echo "$PROJECT_NAME" | sed 's/-*$//')
+  fi
+
+  # Final validation
+  if ! echo "$PROJECT_NAME" | grep -q '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
+    # Fallback to a safe default
+    PROJECT_NAME="myproject"
+    warnings+=("PROJECT_NAME '$original_project_name' was invalid, using default 'myproject'")
+  elif [[ "$PROJECT_NAME" != "$original_project_name" ]]; then
+    fixes+=("Fixed PROJECT_NAME from '$original_project_name' to '$PROJECT_NAME'")
+  fi
+
+  export PROJECT_NAME
 
   # Validate domain format
   if [[ "$BASE_DOMAIN" == *" "* ]]; then

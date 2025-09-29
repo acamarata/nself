@@ -250,6 +250,11 @@ orchestrate_build() {
   # Load env for detection
   load_env_for_detection
 
+  # Validate and sanitize environment variables (including PROJECT_NAME)
+  if command -v validate_environment >/dev/null 2>&1; then
+    validate_environment || true
+  fi
+
   # Detect environment from loaded vars
   if command -v detect_environment >/dev/null 2>&1; then
     env="$(detect_environment)"
@@ -488,13 +493,41 @@ orchestrate_build() {
   local BUILD_ACTIONS=()
   local SKIP_ACTIONS=()
 
+  # Debug output for troubleshooting
+  if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+    echo "Debug: Checking for orchestrate_modular_build function..." >&2
+    if command -v orchestrate_modular_build >/dev/null 2>&1; then
+      echo "Debug: Found orchestrate_modular_build" >&2
+    else
+      echo "Debug: orchestrate_modular_build not found, will use fallback" >&2
+    fi
+  fi
+
   # Use modular orchestration if available
   if command -v orchestrate_modular_build >/dev/null 2>&1; then
     # Load core modules
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      echo "Debug: Loading core modules..." >&2
+    fi
     load_core_modules 2>/dev/null || true
 
     # Check what needs to be done
-    if check_build_requirements "$force_rebuild" "$env_file"; then
+    # Special case: If this is a completely fresh project, force build everything
+    local needs_initial_build=false
+    if [[ ! -f "docker-compose.yml" ]] && [[ ! -d "nginx" ]] && [[ ! -d "postgres" ]]; then
+      needs_initial_build=true
+      if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+        echo "Debug: Fresh project detected, forcing initial build" >&2
+      fi
+      # Force all flags to true for initial build
+      export NEEDS_DIRECTORIES=true
+      export NEEDS_SSL=true
+      export NEEDS_NGINX=true
+      export NEEDS_DATABASE=true
+      export NEEDS_COMPOSE=true
+    fi
+
+    if check_build_requirements "$force_rebuild" "$env_file" || [[ "$needs_initial_build" == "true" ]]; then
       # Execute build steps with proper output
 
       # Create directories if needed
@@ -625,9 +658,31 @@ orchestrate_build() {
       echo -e "${COLOR_GREEN}✓${COLOR_RESET} Everything is up to date"
     fi
   else
-    # Fallback to original orchestrate_build logic
-    echo "Warning: Modular build not available, using legacy build" >&2
-    return 1
+    # Fallback to direct orchestrate_build if modular version not available
+    # This can happen if modules weren't sourced properly
+    if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+      echo "Info: Using fallback build orchestration" >&2
+    fi
+
+    # Check if orchestrate_build function exists
+    if command -v orchestrate_build >/dev/null 2>&1; then
+      if [[ "${DEBUG:-false}" == "true" ]]; then
+        echo "Debug: Calling orchestrate_build with project_name=$project_name env=$env" >&2
+      fi
+      orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"
+      return $?
+    else
+      # Critical error - no build orchestration available
+      echo "Error: Build orchestration functions not found!" >&2
+      echo "This may indicate an installation problem." >&2
+      echo "" >&2
+      echo "Try running with debug mode for more information:" >&2
+      echo "  nself build --debug" >&2
+      echo "" >&2
+      echo "Or reinstall nself:" >&2
+      echo "  curl -sSL https://raw.githubusercontent.com/nself-project/nself/main/install.sh | bash" >&2
+      return 1
+    fi
   fi
 
   # Show build summary (dynamic and concise)

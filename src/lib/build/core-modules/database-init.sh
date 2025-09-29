@@ -76,6 +76,20 @@ GRANT ALL ON SCHEMA public TO ${postgres_user};
 GRANT ALL ON ALL TABLES IN SCHEMA public TO ${postgres_user};
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${postgres_user};
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${postgres_user};
+
+-- Always create auth schema (required for auth service)
+CREATE SCHEMA IF NOT EXISTS auth;
+GRANT ALL ON SCHEMA auth TO ${postgres_user};
+GRANT ALL ON ALL TABLES IN SCHEMA auth TO ${postgres_user};
+GRANT ALL ON ALL SEQUENCES IN SCHEMA auth TO ${postgres_user};
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA auth TO ${postgres_user};
+
+-- Always create storage schema (may be needed later)
+CREATE SCHEMA IF NOT EXISTS storage;
+GRANT ALL ON SCHEMA storage TO ${postgres_user};
+GRANT ALL ON ALL TABLES IN SCHEMA storage TO ${postgres_user};
+GRANT ALL ON ALL SEQUENCES IN SCHEMA storage TO ${postgres_user};
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA storage TO ${postgres_user};
 EOF
 
   return 0

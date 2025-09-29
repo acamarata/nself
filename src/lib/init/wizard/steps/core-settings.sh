@@ -15,9 +15,16 @@ wizard_core_settings() {
   # Project Name
   echo "  Used for: Docker containers, database names, resource prefixes"
   echo "  Format: lowercase letters, numbers, hyphens (e.g., my-project)"
+  echo "  Requirements: Must start and end with letter/number"
   echo ""
   local project_name
-  prompt_input "Project name" "myproject" project_name "^[a-z][a-z0-9-]*$"
+  local default_name="myproject"
+  # Try to use current directory name as default if valid
+  local dir_name=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//;s/-*$//' | sed 's/--*/-/g')
+  if echo "$dir_name" | grep -q '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
+    default_name="$dir_name"
+  fi
+  prompt_input "Project name" "$default_name" project_name "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
 
   # Add to config using eval for Bash 3.2 compatibility
   eval "$config_array_name+=('PROJECT_NAME=$project_name')"

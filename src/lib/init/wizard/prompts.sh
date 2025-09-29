@@ -130,7 +130,16 @@ prompt_input() {
       eval "${result_var}=\"\$input\""
       break
     else
-      echo "Invalid input. Please try again."
+      # Provide specific error message for project name
+      if [[ "$prompt" == *"Project name"* ]]; then
+        echo "Invalid project name. Must:"
+        echo "  • Start with a letter or number"
+        echo "  • End with a letter or number"
+        echo "  • Contain only lowercase letters, numbers, and hyphens"
+        echo "  • Examples: myapp, web-app, project1"
+      else
+        echo "Invalid input. Please try again."
+      fi
     fi
   done
 }

@@ -123,9 +123,9 @@ EOF
 cmd_run() {
   local schema_file="${LOCAL_SCHEMA_FILE:-schema.dbml}"
   local force_regenerate=false
-  
-  # Check for --force flag
-  if [[ "${1:-}" == "--force" ]] || [[ "${1:-}" == "-f" ]]; then
+
+  # Check for --force flag (protect against unbound variable)
+  if [[ $# -gt 0 ]] && { [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; }; then
     force_regenerate=true
     log_info "Force regeneration enabled"
   fi

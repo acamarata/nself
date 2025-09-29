@@ -12,9 +12,14 @@ prompt_project_info_simple() {
   echo "Let's set up your project with smart defaults."
   echo ""
 
-  # Project name
+  # Project name - must be valid for Docker and DNS
   local project_name
-  prompt_input "Project name" "$(basename "$PWD")" project_name "^[a-z][a-z0-9-]*$"
+  local default_name=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//;s/-*$//' | sed 's/--*/-/g')
+  # Ensure default is valid
+  if ! echo "$default_name" | grep -q '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
+    default_name="myproject"
+  fi
+  prompt_input "Project name (lowercase, alphanumeric, hyphens only)" "$default_name" project_name "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
   eval "$config_array_name+=('PROJECT_NAME=$project_name')"
 
   # Environment - use smart default
