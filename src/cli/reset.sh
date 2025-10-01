@@ -66,46 +66,6 @@ cmd_reset() {
 
   echo
 
-  # Create backup if requested
-  if [[ "$create_backup" == "true" ]]; then
-    # Create backup directory with timestamp
-    local timestamp=$(date +%Y%m%d-%H%M%S)
-    local backup_dir="_backup/${timestamp}"
-    mkdir -p "$backup_dir"
-
-    local backup_name="_backup/nself-backup-${timestamp}.tar.gz"
-    printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating backup..."
-
-    # Build list of files to backup
-    local backup_files=""
-
-    # Add all env files that exist
-    for env_file in .env .env.* ; do
-      [[ -f "$env_file" ]] && backup_files="$backup_files $env_file"
-    done
-
-    # Add other important files and directories if they exist
-    [[ -f "docker-compose.yml" ]] && backup_files="$backup_files docker-compose.yml"
-    [[ -f "docker-compose.override.yml" ]] && backup_files="$backup_files docker-compose.override.yml"
-    [[ -d "services" ]] && backup_files="$backup_files services/"
-    [[ -d "nginx" ]] && backup_files="$backup_files nginx/"
-    [[ -d "monitoring" ]] && backup_files="$backup_files monitoring/"
-    [[ -d "postgres" ]] && backup_files="$backup_files postgres/"
-    [[ -f "schema.dbml" ]] && backup_files="$backup_files schema.dbml"
-
-    # Create the backup if we have files to backup
-    if [[ -n "$backup_files" ]]; then
-      tar czf "$backup_name" $backup_files 2>/dev/null || true
-    fi
-
-    if [[ -f "$backup_name" ]]; then
-      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backup created: $backup_name              \n"
-    else
-      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No files to backup                        \n"
-    fi
-    echo
-  fi
-
   # Get project name first
   local project="${PROJECT_NAME:-myproject}"
   if [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
@@ -163,58 +123,47 @@ cmd_reset() {
     printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No network to remove                            \n"
   fi
 
-  # Backup environment files and schema to _backup folder
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Backing up configuration files..."
-  
-  # Create backup folder with timestamp subfolder
-  local timestamp=$(date +%Y%m%d_%H%M%S)
-  local backup_dir="_backup/${timestamp}"
-  
-  # Create backup directory structure
-  mkdir -p "$backup_dir"
-  
-  # Clean up any loose files in _backup root (move to archive folder)
-  if [[ -d "_backup" ]]; then
-    local loose_files=false
-    for item in _backup/*; do
-      if [[ -f "$item" ]]; then
-        loose_files=true
-        break
-      fi
-    done
-    
-    if [[ "$loose_files" == true ]]; then
-      local archive_dir="_backup/archive_${timestamp}"
-      mkdir -p "$archive_dir"
-      for item in _backup/*; do
-        if [[ -f "$item" ]]; then
-          mv "$item" "$archive_dir/" 2>/dev/null || true
-        fi
-      done
-    fi
-  fi
-  
-  # Move files to backup
-  local backed_up=0
-  [[ -f ".env" ]] && mv .env "$backup_dir/.env" && ((backed_up++))
-  [[ -f ".env.dev" ]] && mv .env.dev "$backup_dir/.env.dev" && ((backed_up++))
-  [[ -f ".env.staging" ]] && mv .env.staging "$backup_dir/.env.staging" && ((backed_up++))
-  [[ -f ".env.prod" ]] && mv .env.prod "$backup_dir/.env.prod" && ((backed_up++))
-  [[ -f ".env.secrets" ]] && mv .env.secrets "$backup_dir/.env.secrets" && ((backed_up++))
-  [[ -f "schema.dbml" ]] && mv schema.dbml "$backup_dir/schema.dbml" && ((backed_up++))
-  [[ -f ".gitignore" ]] && cp .gitignore "$backup_dir/.gitignore" && ((backed_up++))
-  
-  # Also move any old .env.*.old files to backup
-  for oldfile in .env*.old schema.dbml.old; do
-    if [[ -f "$oldfile" ]]; then
-      mv "$oldfile" "$backup_dir/$oldfile" 2>/dev/null && ((backed_up++))
-    fi
-  done
+  # Create backup archive in _backup folder
+  if [[ "$create_backup" == "true" ]]; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating backup..."
 
-  if [[ $backed_up -gt 0 ]]; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backed up $backed_up files to $backup_dir/              \n"
-  else
-    printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No configuration files to backup                \n"
+    # Create _backup directory if it doesn't exist
+    mkdir -p "_backup"
+
+    # Use consistent timestamp format: projectname_YYYYMMDD_HHMMSS.tar.gz
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_name="_backup/${project}_${timestamp}.tar.gz"
+
+    # Build list of files to backup
+    local backup_files=""
+
+    # Add all env files that exist
+    for env_file in .env .env.*; do
+      [[ -f "$env_file" ]] && backup_files="$backup_files $env_file"
+    done
+
+    # Add other important files and directories if they exist
+    [[ -f "docker-compose.yml" ]] && backup_files="$backup_files docker-compose.yml"
+    [[ -f "docker-compose.override.yml" ]] && backup_files="$backup_files docker-compose.override.yml"
+    [[ -d "services" ]] && backup_files="$backup_files services/"
+    [[ -d "nginx" ]] && backup_files="$backup_files nginx/"
+    [[ -d "monitoring" ]] && backup_files="$backup_files monitoring/"
+    [[ -d "postgres" ]] && backup_files="$backup_files postgres/"
+    [[ -f "schema.dbml" ]] && backup_files="$backup_files schema.dbml"
+
+    # Create the backup if we have files to backup
+    if [[ -n "$backup_files" ]]; then
+      tar czf "$backup_name" $backup_files 2>/dev/null || true
+
+      if [[ -f "$backup_name" ]]; then
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backup created: $backup_name              \n"
+      else
+        printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Backup failed                               \n"
+      fi
+    else
+      printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} No files to backup                        \n"
+    fi
+    echo
   fi
 
   # Remove ALL generated files and directories
@@ -331,20 +280,6 @@ cmd_reset() {
       ((removed_count++))
     fi
   done
-  
-  # Clean up old backup folders (consolidating into _backup)
-  for old_backup in _backup_*; do
-    if [[ -d "$old_backup" ]]; then
-      # Move contents to new timestamp folder in _backup
-      if [[ "$(ls -A $old_backup)" ]]; then
-        local old_timestamp="${old_backup#_backup_}_migrated"
-        mkdir -p "_backup/${old_timestamp}"
-        mv "$old_backup"/* "_backup/${old_timestamp}/" 2>/dev/null || true
-      fi
-      rm -rf "$old_backup"
-      ((removed_count++))
-    fi
-  done
 
   # Remove any project-prefixed directories (leftover from previous runs)
   for dir in ${project}-*; do
@@ -417,7 +352,7 @@ show_reset_help() {
   echo "  nself reset --no-backup  # Reset without backup"
   echo "  nself reset --keep-env   # Reset but keep .env files"
   echo
-  echo "Backup files are saved in: _backup/nself-backup-YYYYMMDD-HHMMSS.tar.gz"
+  echo "Backup files are saved in: _backup/projectname_YYYYMMDD_HHMMSS.tar.gz"
 }
 
 # Export for use as library
