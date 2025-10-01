@@ -493,8 +493,9 @@ orchestrate_build() {
   local BUILD_ACTIONS=()
   local SKIP_ACTIONS=()
 
-  # Debug output for troubleshooting
-  if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+  # Debug output for troubleshooting (only if --debug flag explicitly passed to build command)
+  # Note: Uses BUILD_DEBUG (set by --debug flag) not DEBUG (application debug flag)
+  if [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
     echo "Debug: Checking for orchestrate_modular_build function..." >&2
     if command -v orchestrate_modular_build >/dev/null 2>&1; then
       echo "Debug: Found orchestrate_modular_build" >&2
@@ -506,7 +507,7 @@ orchestrate_build() {
   # Use modular orchestration if available
   if command -v orchestrate_modular_build >/dev/null 2>&1; then
     # Load core modules
-    if [[ "${DEBUG:-false}" == "true" ]]; then
+    if [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
       echo "Debug: Loading core modules..." >&2
     fi
     load_core_modules 2>/dev/null || true
@@ -516,7 +517,7 @@ orchestrate_build() {
     local needs_initial_build=false
     if [[ ! -f "docker-compose.yml" ]] && [[ ! -d "nginx" ]] && [[ ! -d "postgres" ]]; then
       needs_initial_build=true
-      if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+      if [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
         echo "Debug: Fresh project detected, forcing initial build" >&2
       fi
       # Force all flags to true for initial build
@@ -660,13 +661,13 @@ orchestrate_build() {
   else
     # Fallback to direct orchestrate_build if modular version not available
     # This can happen if modules weren't sourced properly
-    if [[ "${DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
+    if [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
       echo "Info: Using fallback build orchestration" >&2
     fi
 
     # Check if orchestrate_build function exists
     if command -v orchestrate_build >/dev/null 2>&1; then
-      if [[ "${DEBUG:-false}" == "true" ]]; then
+      if [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
         echo "Debug: Calling orchestrate_build with project_name=$project_name env=$env" >&2
       fi
       orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"

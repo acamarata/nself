@@ -285,27 +285,37 @@ EOF
 EOF
   fi
 
-  # Always add MinIO client for bucket initialization
-  cat <<EOF
+  # MinIO client runs once to initialize buckets, then removes itself
+  # Uses Docker profiles to exclude from normal operations
+  cat <<'MINIO_CLIENT_EOF'
 
-  # MinIO Client for bucket initialization
+  # MinIO Client - One-time bucket initialization (run with --profile init-containers)
   minio-client:
     image: minio/mc:latest
-    container_name: \${PROJECT_NAME}_minio_client
+    container_name: ${PROJECT_NAME}_minio_client
     restart: "no"
+    profiles:
+      - init-containers
     networks:
-      - \${DOCKER_NETWORK}
+      - ${DOCKER_NETWORK}
     depends_on:
       minio:
         condition: service_healthy
+    labels:
+      - "nself.type=init-container"
+      - "nself.auto-remove=true"
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add myminio http://minio:9000 \${MINIO_ROOT_USER:-minioadmin} \${MINIO_ROOT_PASSWORD:-minioadmin};
-      /usr/bin/mc mb -p myminio/\${MINIO_DEFAULT_BUCKETS:-uploads} || true;
-      /usr/bin/mc anonymous set download myminio/\${MINIO_DEFAULT_BUCKETS:-uploads} || true;
-      exit 0;
+      set -e;
+      echo '→ Initializing MinIO buckets...';
+      /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      for bucket in $(echo ${MINIO_DEFAULT_BUCKETS:-uploads} | tr ',' ' '); do
+        /usr/bin/mc mb -p myminio/$$bucket 2>/dev/null || echo \"  Bucket $$bucket exists\";
+        /usr/bin/mc anonymous set download myminio/$$bucket 2>/dev/null || true;
+      done;
+      echo '✓ MinIO initialization complete';
       "
-EOF
+MINIO_CLIENT_EOF
 }
 
 # Generate Redis service configuration

@@ -92,45 +92,45 @@ validate_env_file() {
   local env_file="${1:-.env}"
   local has_issues=false
   local line_num=0
-  
+  local issue_count=0
+
   if [[ ! -f "$env_file" ]]; then
     return 0
   fi
-  
+
   while IFS= read -r line || [[ -n "$line" ]]; do
     ((line_num++))
-    
+
     # Skip comments and empty lines
     if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
       continue
     fi
-    
+
     # Check for variable assignments with unquoted spaces
     if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
       local var_name="${BASH_REMATCH[1]}"
       local var_value="${BASH_REMATCH[2]}"
 
       if needs_quotes "$var_value"; then
+        ((issue_count++))
         if [[ "$has_issues" == "false" ]]; then
-          if [[ "${AUTO_FIX:-true}" == "true" ]]; then
-            log_info "Auto-fixing unquoted values in $env_file:"
-          else
-            log_warning "Found unquoted values with spaces in $env_file:"
-          fi
           has_issues=true
         fi
-        if [[ "${AUTO_FIX:-true}" == "true" ]]; then
-          log_success "  Fixed line $line_num: ${var_name}=\"${var_value}\""
-        else
-          log_info "  Line $line_num: $line"
+        # Only show detailed output in verbose mode
+        if [[ "${VERBOSE:-false}" == "true" ]] || [[ "${DEBUG:-false}" == "true" ]]; then
+          if [[ "${AUTO_FIX:-true}" == "true" ]]; then
+            log_success "  Fixed line $line_num: ${var_name}=\"${var_value}\""
+          else
+            log_info "  Line $line_num: $line"
+          fi
         fi
       fi
     fi
   done < "$env_file"
-  
+
   if [[ "$has_issues" == "true" ]]; then
-    # Return 1 to indicate issues were found (will be auto-fixed)
-    return 1
+    # Return the issue count
+    return $issue_count
   fi
 
   return 0
@@ -140,6 +140,7 @@ validate_env_file() {
 auto_fix_env_quotes() {
   local auto_fix="${AUTO_FIX:-true}"
   local fixed_total=0
+  local files_with_issues=()
 
   # Set AUTO_FIX for validate_env_file to use
   export AUTO_FIX="$auto_fix"
@@ -147,8 +148,13 @@ auto_fix_env_quotes() {
   # Check all env files
   for env_file in .env .env.dev .env.staging .env.prod .env.local; do
     if [[ -f "$env_file" ]]; then
-      # Validate will show the appropriate messages
-      if ! validate_env_file "$env_file"; then
+      # Validate will return issue count if there are issues
+      local issue_count
+      validate_env_file "$env_file" >/dev/null 2>&1
+      issue_count=$?
+
+      if [[ $issue_count -gt 0 ]]; then
+        files_with_issues+=("$env_file")
         if [[ "$auto_fix" == "true" ]]; then
           # Silently fix without duplicate messages
           local fixed_count
@@ -162,6 +168,15 @@ auto_fix_env_quotes() {
       fi
     fi
   done
+
+  # Show compact summary unless verbose mode
+  if [[ $fixed_total -gt 0 ]]; then
+    if [[ "${VERBOSE:-false}" == "true" ]] || [[ "${DEBUG:-false}" == "true" ]]; then
+      log_success "Fixed $fixed_total unquoted value(s) across ${#files_with_issues[@]} file(s)"
+    else
+      log_info "Auto-fixing unquoted values in ${files_with_issues[*]}..."
+    fi
+  fi
 
   return 0
 }

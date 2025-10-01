@@ -15,8 +15,8 @@ if [[ ! -d "$LIB_DIR" ]]; then
   exit 1
 fi
 
-# Debug output
-if [[ "${DEBUG:-}" == "true" ]]; then
+# Debug output (only for build debugging, not application DEBUG)
+if [[ "${BUILD_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: LIB_DIR=$LIB_DIR" >&2
   echo "DEBUG: Loading core.sh..." >&2
 fi
@@ -86,7 +86,7 @@ cmd_build() {
         shift
         ;;
       --debug)
-        export DEBUG=true
+        export BUILD_DEBUG=true
         export VERBOSE=true
         verbose=true
         shift
