@@ -134,7 +134,7 @@ EOF
 # Generate Postgres Exporter service
 generate_postgres_exporter_service() {
   [[ "${POSTGRES_EXPORTER_ENABLED:-false}" != "true" ]] && return 0
-  [[ "${POSTGRES_ENABLED:-false}" != "true" ]] && return 0
+  # Note: PostgreSQL is always required in nself, so no need to check POSTGRES_ENABLED
 
   cat <<EOF
 
