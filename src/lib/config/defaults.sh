@@ -5,7 +5,13 @@
 # Don't set a default PROJECT_NAME - let each command handle it
 # export PROJECT_NAME="${PROJECT_NAME:-nself}"
 export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
-export ENV_FILE="${ENV_FILE:-.env}"
+
+# Prefer .env.runtime (merged runtime config) if it exists, otherwise use ENV_FILE or default to .env
+if [[ -f ".env.runtime" ]]; then
+  export ENV_FILE=".env.runtime"
+elif [[ -z "${ENV_FILE:-}" ]]; then
+  export ENV_FILE=".env"
+fi
 
 # Directory paths
 export NSELF_ROOT="${NSELF_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"

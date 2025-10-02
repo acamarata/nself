@@ -270,13 +270,15 @@ EOF
   fi
 }
 
-# Main function to generate all utility services
+# Main function to generate all utility services in display order
 generate_utility_services() {
-  generate_mailpit_service
   generate_nself_admin_service
+  generate_minio_service
+  generate_redis_service
   generate_functions_service
-  generate_mlflow_service
+  generate_mailpit_service
   generate_search_services
+  generate_mlflow_service
 }
 
 # Export functions

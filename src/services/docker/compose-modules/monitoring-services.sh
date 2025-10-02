@@ -119,12 +119,12 @@ generate_promtail_service() {
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
-    # Health check disabled - promtail container lacks wget
-    # healthcheck:
-    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9080/ready"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 EOF
 }
 
@@ -132,9 +132,9 @@ EOF
 generate_monitoring_services() {
   [[ "${MONITORING_ENABLED:-false}" != "true" ]] && return 0
 
-  # Generate core monitoring services (4 of 10)
-  generate_grafana_service
+  # Generate core monitoring services in display order (4 of 10)
   generate_prometheus_service
+  generate_grafana_service
   generate_loki_service
   generate_promtail_service
   # Note: Tempo, Alertmanager, and exporters are in monitoring-exporters.sh

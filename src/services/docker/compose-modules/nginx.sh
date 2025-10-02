@@ -53,13 +53,12 @@ EOF
   done
 
   cat <<EOF
-    # Health check disabled - nginx works but internal wget has connection issues
-    # healthcheck:
-    #   test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 EOF
 }
 

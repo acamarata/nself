@@ -209,7 +209,12 @@ EOF
   echo "" >> docker-compose.yml
   echo "services:" >> docker-compose.yml
 
-  # Generate core services
+  # Generate services in sorted order (matches nself status display)
+  # Order: Core → Optional → Monitoring → Custom
+
+  # ============================================
+  # Core Services (in display order)
+  # ============================================
   echo "  # ============================================" >> docker-compose.yml
   echo "  # Core Services" >> docker-compose.yml
   echo "  # ============================================" >> docker-compose.yml
@@ -217,16 +222,18 @@ EOF
   generate_postgres_service >> docker-compose.yml
   generate_hasura_service >> docker-compose.yml
   generate_auth_service >> docker-compose.yml
-  generate_minio_service >> docker-compose.yml
-  generate_redis_service >> docker-compose.yml
   generate_nginx_service >> docker-compose.yml
 
-  # Generate optional services
-  if [[ "${MAILPIT_ENABLED:-false}" == "true" ]] || \
-     [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] || \
+  # ============================================
+  # Optional Services (in display order)
+  # ============================================
+  if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] || \
+     [[ "${MINIO_ENABLED:-false}" == "true" ]] || \
+     [[ "${REDIS_ENABLED:-false}" == "true" ]] || \
      [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] || \
-     [[ "${MLFLOW_ENABLED:-false}" == "true" ]] || \
-     [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
+     [[ "${MAILPIT_ENABLED:-false}" == "true" ]] || \
+     [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] || \
+     [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
     echo "" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
     echo "  # Optional Services" >> docker-compose.yml
@@ -234,23 +241,25 @@ EOF
     generate_utility_services >> docker-compose.yml
   fi
 
-  # Generate monitoring services
+  # ============================================
+  # Monitoring Services (in priority order)
+  # ============================================
   if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
     echo "" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
     echo "  # Monitoring Services" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
     generate_monitoring_services >> docker-compose.yml
+    generate_monitoring_exporters >> docker-compose.yml
   fi
 
-  # Generate frontend apps
-  generate_frontend_apps >> docker-compose.yml
-
-  # Generate template-based custom services (CS_1, CS_2, etc.)
+  # ============================================
+  # Custom Services (alphabetical)
+  # ============================================
   generate_template_custom_services >> docker-compose.yml
 
-  # Generate monitoring exporters (Tempo, Alertmanager, cAdvisor, etc.)
-  generate_monitoring_exporters >> docker-compose.yml
+  # Frontend apps are not Docker containers, skip from compose file
+  generate_frontend_apps >> docker-compose.yml
 
   echo "" >> docker-compose.yml
   echo "# End of generated docker-compose.yml" >> docker-compose.yml

@@ -36,12 +36,18 @@ compose() {
     fi
   fi
 
-  # Try .env.local first, then .env, then .env.dev
-  local env_file="${COMPOSE_ENV_FILE:-.env.local}"
-  if [[ ! -f "$env_file" ]] && [[ -f ".env" ]]; then
+  # Try .env.runtime first (merged runtime config), then .env.local, then .env, then .env.dev
+  local env_file="${COMPOSE_ENV_FILE:-}"
+  if [[ -z "$env_file" ]] && [[ -f ".env.runtime" ]]; then
+    env_file=".env.runtime"
+  fi
+  if [[ -z "$env_file" ]] && [[ -f ".env.local" ]]; then
+    env_file=".env.local"
+  fi
+  if [[ -z "$env_file" ]] && [[ -f ".env" ]]; then
     env_file=".env"
   fi
-  if [[ ! -f "$env_file" ]] && [[ -f ".env.dev" ]]; then
+  if [[ -z "$env_file" ]] && [[ -f ".env.dev" ]]; then
     env_file=".env.dev"
   fi
 
@@ -71,6 +77,67 @@ compose() {
 # Get project name
 project_name() {
   echo "${PROJECT_NAME:-nself}"
+}
+
+# Sort services in display order
+# Priority: Core → Optional → Monitoring → Custom
+sort_services() {
+  local services=("$@")
+
+  # Define priority order
+  local -a core=(postgres hasura auth nginx)
+  local -a optional=(nself-admin minio storage redis functions mailpit mailhog meilisearch typesense sonic mlflow)
+  local -a monitoring_priority=(prometheus grafana loki promtail tempo alertmanager)
+  local -a monitoring_exporters=(cadvisor node-exporter postgres-exporter redis-exporter)
+
+  local -a sorted=()
+
+  # 1. Core services (in order)
+  for svc in "${core[@]}"; do
+    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+      sorted+=("$svc")
+    fi
+  done
+
+  # 2. Optional services (in order)
+  for svc in "${optional[@]}"; do
+    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+      sorted+=("$svc")
+    fi
+  done
+
+  # 3. Monitoring services (by priority)
+  for svc in "${monitoring_priority[@]}"; do
+    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+      sorted+=("$svc")
+    fi
+  done
+
+  # 4. Monitoring exporters (alphabetically)
+  for svc in "${monitoring_exporters[@]}"; do
+    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+      sorted+=("$svc")
+    fi
+  done
+
+  # 5. Custom services (CS_*) - alphabetically
+  local -a custom=()
+  for svc in "${services[@]}"; do
+    # Check if it's a custom service (not in any predefined list)
+    if [[ ! " ${sorted[@]} " =~ " ${svc} " ]]; then
+      custom+=("$svc")
+    fi
+  done
+
+  # Sort custom services alphabetically
+  if [[ ${#custom[@]} -gt 0 ]]; then
+    IFS=$'\n' custom=($(sort <<<"${custom[*]}"))
+    unset IFS
+    sorted+=("${custom[@]}")
+  fi
+
+  # Output sorted services
+  printf "%s\n" "${sorted[@]}"
 }
 
 # Get container name for a service

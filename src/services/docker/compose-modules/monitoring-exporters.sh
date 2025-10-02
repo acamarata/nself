@@ -128,6 +128,12 @@ generate_node_exporter_service() {
       - "\${NODE_EXPORTER_PORT:-9100}:9100"
     networks:
       - \${DOCKER_NETWORK}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 EOF
 }
 
@@ -151,6 +157,12 @@ generate_postgres_exporter_service() {
       - \${DOCKER_NETWORK}
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 EOF
 }
 
@@ -178,6 +190,12 @@ generate_redis_exporter_service() {
       - \${DOCKER_NETWORK}
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD", "/redis_exporter", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 EOF
 }
 

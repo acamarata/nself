@@ -72,7 +72,8 @@ get_container_info() {
 # Function to check service health efficiently
 check_service_health() {
   local service=$1
-  local container_name="${PROJECT_NAME:-nself}_${service}"
+  # Replace hyphens with underscores in container name (Docker naming convention)
+  local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
   # Check if container exists and get state + health in one call
   local container_info=$(docker inspect "$container_name" --format='{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null)
@@ -272,6 +273,9 @@ show_service_overview() {
   local running=0
   local total=${#services[@]}
 
+  # Sort services in display order
+  local sorted_services=($(sort_services "${services[@]}"))
+
   # Get all container info in one call
   local all_containers=$(compose ps --format "{{.Service}}\t{{.Status}}\t{{.State}}" 2>/dev/null)
 
@@ -279,7 +283,7 @@ show_service_overview() {
   local service_list=()
   local stopped_count=0
 
-  for service in "${services[@]}"; do
+  for service in "${sorted_services[@]}"; do
     local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
     local health=$(check_service_health "$service")
 
@@ -653,10 +657,9 @@ main() {
   echo ""
   echo -e "\033[1;32m✓\033[0m Healthy  \033[1;31m✗\033[0m Unhealthy  \033[1;36m●\033[0m Running  \033[1;33m⟳\033[0m Starting  \033[1;37m○\033[0m Stopped"
 
-  show_urls
-
   echo ""
-  echo "nself status <service> | nself status --watch | nself logs <service> | nself doctor"
+  echo "nself status <service> | nself status --watch"
+  echo "nself urls | nself logs <service> | nself doctor"
   echo
 }
 
