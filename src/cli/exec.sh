@@ -175,39 +175,29 @@ cmd_exec() {
     docker_opts_array+=("-w" "$workdir")
   fi
   
-  # Default commands for services
+  # Default commands for services (always interactive when no command specified)
   if [[ ${#command[@]} -eq 0 ]]; then
+    # Default commands are interactive shells, so ensure -it is set
+    if [[ "$no_tty" != "true" ]] && [[ "$interactive" != "true" ]]; then
+      docker_opts_array+=("-it")
+    fi
+
     case "$service" in
       postgres)
         command=("psql" "-U" "postgres")
-        if [[ "$interactive" != "true" ]]; then
-          docker_opts_array+=("-it")
-        fi
         ;;
       redis)
         command=("redis-cli")
-        if [[ "$interactive" != "true" ]]; then
-          docker_opts_array+=("-it")
-        fi
         ;;
       nginx)
         command=("/bin/bash")
-        if [[ "$interactive" != "true" ]]; then
-          docker_opts_array+=("-it")
-        fi
         ;;
       hasura|auth|minio)
         command=("/bin/sh")
-        if [[ "$interactive" != "true" ]]; then
-          docker_opts_array+=("-it")
-        fi
         ;;
       *)
-        # Try bash first, then sh
+        # Default to bash for other services
         command=("/bin/bash")
-        if [[ "$interactive" != "true" ]]; then
-          docker_opts_array+=("-it")
-        fi
         ;;
     esac
   fi
