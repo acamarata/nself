@@ -23,11 +23,11 @@ format_service_name() {
   # Remove project prefix and clean up
   name="${name#${PROJECT_NAME}_}"
   name="${name#${PROJECT_NAME}-}"
-  # Truncate long names
-  if [[ ${#name} -gt 10 ]]; then
-    echo "${name:0:10}"
+  # Truncate long names to 12 chars (better for longer service names)
+  if [[ ${#name} -gt 12 ]]; then
+    echo "${name:0:12}"
   else
-    printf "%-10s" "$name"
+    printf "%-12s" "$name"
   fi
 }
 
@@ -103,7 +103,7 @@ clean_and_colorize() {
       colored_message=$(echo "$colored_message" | sed -E 's/(WARN|warn|WARNING|warning)/\x1b[1;33m\1\x1b[0m/g')
       colored_message=$(echo "$colored_message" | sed -E 's/(INFO|info)/\x1b[1;32m\1\x1b[0m/g')
 
-      printf "\033[1;90m%s\033[0m \033[1;36m[%-10s]\033[0m %s\n" \
+      printf "\033[1;90m%s\033[0m \033[1;36m[%-12s]\033[0m %s\n" \
         "$timestamp" "$service" "$colored_message"
     fi
   done
@@ -120,10 +120,13 @@ show_error_summary() {
   echo ""
 
   local services=($(compose config --services 2>/dev/null))
+  # Sort services in display order
+  local sorted_services=($(sort_services "${services[@]}"))
   local error_found=false
 
-  for service in "${services[@]}"; do
-    local container_name="${PROJECT_NAME:-nself}_${service}"
+  for service in "${sorted_services[@]}"; do
+    # Replace hyphens with underscores in container name (Docker naming convention)
+    local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
     if ! compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
       continue
@@ -153,7 +156,8 @@ show_error_summary() {
 # Function to get logs from specific service
 get_service_logs() {
   local service="$1"
-  local container_name="${PROJECT_NAME:-nself}_${service}"
+  # Replace hyphens with underscores in container name (Docker naming convention)
+  local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
   # Check if service exists
   if ! compose ps "$service" >/dev/null 2>&1; then
@@ -190,10 +194,13 @@ get_all_logs() {
   fi
 
   local services=($(compose config --services 2>/dev/null))
+
+  # Sort services in display order (Core → Optional → Monitoring → Custom)
+  local sorted_services=($(sort_services "${services[@]}"))
   local running_services=()
 
   # Filter to only running services
-  for service in "${services[@]}"; do
+  for service in "${sorted_services[@]}"; do
     if compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
       running_services+=("$service")
     fi
@@ -239,25 +246,33 @@ show_service_status() {
   echo ""
 
   local services=($(compose config --services 2>/dev/null))
+  # Sort services in display order
+  local sorted_services=($(sort_services "${services[@]}"))
   local running=0
   local with_errors=0
 
-  for service in "${services[@]}"; do
-    local container_name="${PROJECT_NAME:-nself}_${service}"
+  for service in "${sorted_services[@]}"; do
+    # Replace hyphens with underscores in container name (Docker naming convention)
+    local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
     local clean_name=$(format_service_name "${PROJECT_NAME:-nself}_${service}")
 
     if compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
       running=$((running + 1))
-      local recent_errors=$(docker logs --tail 50 "$container_name" 2>&1 | grep -i -c -E "(error|fatal)" || echo "0")
+      # Count errors but exclude deprecation warnings
+      local recent_errors=$(docker logs --tail 50 "$container_name" 2>&1 | \
+        grep -i -E "(error|fatal)" | \
+        grep -v -i -E "(deprecat|deprecated)" | \
+        wc -l | tr -d ' ')
+      recent_errors=$(echo "$recent_errors" | tr -d '\n\r ' )
 
       if [[ $recent_errors -gt 0 ]]; then
         with_errors=$((with_errors + 1))
-        printf "\033[1;31m● %-15s\033[0m running (%s recent errors)\n" "$clean_name" "$recent_errors"
+        printf "\033[1;31m● %-12s\033[0m running (%s recent errors)\n" "$clean_name" "$recent_errors"
       else
-        printf "\033[1;32m● %-15s\033[0m running\n" "$clean_name"
+        printf "\033[1;32m● %-12s\033[0m running\n" "$clean_name"
       fi
     else
-      printf "\033[1;37m○ %-15s\033[0m stopped\n" "$clean_name"
+      printf "\033[1;37m○ %-12s\033[0m stopped\n" "$clean_name"
     fi
   done
 
@@ -283,7 +298,8 @@ show_top_talkers() {
   local service_data=""
 
   for service in "${services[@]}"; do
-    local container_name="${PROJECT_NAME:-nself}_${service}"
+    # Replace hyphens with underscores in container name (Docker naming convention)
+    local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
     local clean_name=$(format_service_name "${PROJECT_NAME:-nself}_${service}")
 
     if compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
@@ -296,9 +312,9 @@ show_top_talkers() {
   echo -e "$service_data" | sort -rn | head -5 | while IFS=: read -r count service; do
     if [[ -n "$service" ]]; then
       if [[ $count -gt 20 ]]; then
-        printf "\033[1;33m● %-15s\033[0m %s lines\n" "$service" "$count"
+        printf "\033[1;33m● %-12s\033[0m %s lines\n" "$service" "$count"
       else
-        printf "\033[1;32m● %-15s\033[0m %s lines\n" "$service" "$count"
+        printf "\033[1;32m● %-12s\033[0m %s lines\n" "$service" "$count"
       fi
     fi
   done
@@ -433,9 +449,7 @@ main() {
   done
 
   # Load environment
-  if [[ -f ".env.local" ]]; then
-    load_env_with_priority
-  fi
+  load_env_with_priority
 
   # Show command header (not for help mode)
   if [[ "$show_status" != "true" && "$show_summary" != "true" && "$show_top" != "true" ]]; then
