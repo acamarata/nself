@@ -4,12 +4,13 @@
 set -euo pipefail
 
 # Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$CLI_SCRIPT_DIR/../.." && pwd)"
 
 # Source required utilities
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
 
 # Define colors - always set them to avoid unbound variable errors
 export COLOR_GREEN="${COLOR_GREEN:-\033[0;32m}"
@@ -58,22 +59,10 @@ main() {
     done
 
     # Load environment
-    if [[ -f ".env.local" ]]; then
-        set -a
-        source ".env.local" 2>/dev/null || true
-        set +a
-    elif [[ -f ".env.${ENV:-dev}" ]]; then
-        set -a
-        source ".env.${ENV:-dev}" 2>/dev/null || true
-        set +a
-    elif [[ -f ".env" ]]; then
-        set -a
-        source ".env" 2>/dev/null || true
-        set +a
-    fi
+    load_env_with_priority
 
     # Get base domain
-    local domain="${BASE_DOMAIN:-local.nself.org}"
+    local domain="${BASE_DOMAIN:-localhost}"
     local protocol="https"
 
     # Check if SSL is disabled
@@ -322,11 +311,7 @@ output_table() {
     local domain="$2"
     local show_all="$3"
 
-    echo
-    echo
-    echo -e "${BOLD}${COLOR_CYAN}═══════════════════════════════════════════════════${COLOR_RESET}"
-    echo -e "${BOLD}${COLOR_CYAN}                  Service URLs                     ${COLOR_RESET}"
-    echo -e "${BOLD}${COLOR_CYAN}═══════════════════════════════════════════════════${COLOR_RESET}"
+    show_command_header "nself urls" "Service URLs and routes"
     echo
 
     # Show base application URL
@@ -337,14 +322,14 @@ output_table() {
     echo -e "${BOLD}${COLOR_BLUE}➞ Required Services${COLOR_RESET}"
 
     if [[ "${HASURA_ENABLED:-true}" == "true" ]]; then
-        local hasura_route="${HASURA_ROUTE:-api.${domain}}"
-        echo -e "  GraphQL API:    ${COLOR_GREEN}${protocol}://${hasura_route}${COLOR_RESET}"
-        echo -e "   - Console:     ${COLOR_GRAY}${protocol}://${hasura_route}/console${COLOR_RESET}"
+        local hasura_route="${HASURA_ROUTE:-api}"
+        echo -e "  GraphQL API:    ${COLOR_GREEN}${protocol}://${hasura_route}.${domain}${COLOR_RESET}"
+        echo -e "   - Console:     ${COLOR_GRAY}${protocol}://${hasura_route}.${domain}/console${COLOR_RESET}"
     fi
 
     if [[ "${AUTH_ENABLED:-true}" == "true" ]]; then
-        local auth_route="${AUTH_ROUTE:-auth.${domain}}"
-        echo -e "  Auth:           ${COLOR_GREEN}${protocol}://${auth_route}${COLOR_RESET}"
+        local auth_route="${AUTH_ROUTE:-auth}"
+        echo -e "  Auth:           ${COLOR_GREEN}${protocol}://${auth_route}.${domain}${COLOR_RESET}"
     fi
 
     # Note: PostgreSQL and Nginx don't have public URLs
@@ -358,86 +343,86 @@ output_table() {
 
     # Storage
     if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
-        local storage_route="${STORAGE_ROUTE:-storage.${domain}}"
-        echo -e "  Storage:        ${COLOR_GREEN}${protocol}://${storage_route}${COLOR_RESET}"
+        local storage_route="${STORAGE_ROUTE:-storage}"
+        echo -e "  Storage:        ${COLOR_GREEN}${protocol}://${storage_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${MINIO_ENABLED:-false}" == "true" ]]; then
-        local minio_console="${STORAGE_CONSOLE_ROUTE:-storage-console.${domain}}"
-        echo -e "  MinIO Console:  ${COLOR_GREEN}${protocol}://${minio_console}${COLOR_RESET}"
+        local minio_console="${STORAGE_CONSOLE_ROUTE:-storage-console}"
+        echo -e "  MinIO Console:  ${COLOR_GREEN}${protocol}://${minio_console}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # Mail
     if [[ "${MAILPIT_ENABLED:-false}" == "true" ]]; then
-        local mail_route="${MAILPIT_ROUTE:-mail.${domain}}"
-        echo -e "  Mail UI:        ${COLOR_GREEN}${protocol}://${mail_route}${COLOR_RESET}"
+        local mail_route="${MAILPIT_ROUTE:-mail}"
+        echo -e "  Mail UI:        ${COLOR_GREEN}${protocol}://${mail_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # Search
     if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
-        local search_route="${MEILISEARCH_ROUTE:-search.${domain}}"
-        echo -e "  MeiliSearch:    ${COLOR_GREEN}${protocol}://${search_route}${COLOR_RESET}"
+        local search_route="${MEILISEARCH_ROUTE:-search}"
+        echo -e "  MeiliSearch:    ${COLOR_GREEN}${protocol}://${search_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # Monitoring
     if [[ "${GRAFANA_ENABLED:-false}" == "true" ]]; then
-        local grafana_route="${GRAFANA_ROUTE:-grafana.${domain}}"
-        echo -e "  Grafana:        ${COLOR_GREEN}${protocol}://${grafana_route}${COLOR_RESET}"
+        local grafana_route="${GRAFANA_ROUTE:-grafana}"
+        echo -e "  Grafana:        ${COLOR_GREEN}${protocol}://${grafana_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]]; then
-        local prom_route="${PROMETHEUS_ROUTE:-prometheus.${domain}}"
-        echo -e "  Prometheus:     ${COLOR_GREEN}${protocol}://${prom_route}${COLOR_RESET}"
+        local prom_route="${PROMETHEUS_ROUTE:-prometheus}"
+        echo -e "  Prometheus:     ${COLOR_GREEN}${protocol}://${prom_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]]; then
-        local alert_route="${ALERTMANAGER_ROUTE:-alertmanager.${domain}}"
-        echo -e "  Alertmanager:   ${COLOR_GREEN}${protocol}://${alert_route}${COLOR_RESET}"
+        local alert_route="${ALERTMANAGER_ROUTE:-alertmanager}"
+        echo -e "  Alertmanager:   ${COLOR_GREEN}${protocol}://${alert_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # Admin
     if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
-        local admin_route="${NSELF_ADMIN_ROUTE:-admin.${domain}}"
-        echo -e "  nself Admin:    ${COLOR_GREEN}${protocol}://${admin_route}${COLOR_RESET}"
+        local admin_route="${NSELF_ADMIN_ROUTE:-admin}"
+        echo -e "  nself Admin:    ${COLOR_GREEN}${protocol}://${admin_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${BULLMQ_UI_ENABLED:-false}" == "true" ]]; then
-        local bullmq_route="${BULLMQ_UI_ROUTE:-bullmq.${domain}}"
-        echo -e "  BullMQ UI:      ${COLOR_GREEN}${protocol}://${bullmq_route}${COLOR_RESET}"
+        local bullmq_route="${BULLMQ_UI_ROUTE:-bullmq}"
+        echo -e "  BullMQ UI:      ${COLOR_GREEN}${protocol}://${bullmq_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # ML
     if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
-        local mlflow_route="${MLFLOW_ROUTE:-mlflow.${domain}}"
-        echo -e "  MLflow:         ${COLOR_GREEN}${protocol}://${mlflow_route}${COLOR_RESET}"
+        local mlflow_route="${MLFLOW_ROUTE:-mlflow}"
+        echo -e "  MLflow:         ${COLOR_GREEN}${protocol}://${mlflow_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     # Other
     if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
-        local functions_route="${FUNCTIONS_ROUTE:-functions.${domain}}"
-        echo -e "  Functions:      ${COLOR_GREEN}${protocol}://${functions_route}${COLOR_RESET}"
+        local functions_route="${FUNCTIONS_ROUTE:-functions}"
+        echo -e "  Functions:      ${COLOR_GREEN}${protocol}://${functions_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${WEBHOOK_SERVICE_ENABLED:-false}" == "true" ]]; then
-        local webhook_route="${WEBHOOK_SERVICE_ROUTE:-webhooks.${domain}}"
-        echo -e "  Webhooks:       ${COLOR_GREEN}${protocol}://${webhook_route}${COLOR_RESET}"
+        local webhook_route="${WEBHOOK_SERVICE_ROUTE:-webhooks}"
+        echo -e "  Webhooks:       ${COLOR_GREEN}${protocol}://${webhook_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
     if [[ "${NESTJS_ENABLED:-false}" == "true" ]]; then
-        local nestjs_route="${NESTJS_ROUTE:-nestjs-api.${domain}}"
-        echo -e "  NestJS API:     ${COLOR_GREEN}${protocol}://${nestjs_route}${COLOR_RESET}"
+        local nestjs_route="${NESTJS_ROUTE:-nestjs-api}"
+        echo -e "  NestJS API:     ${COLOR_GREEN}${protocol}://${nestjs_route}.${domain}${COLOR_RESET}"
         has_optional=true
     fi
 
