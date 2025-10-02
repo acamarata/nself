@@ -32,10 +32,10 @@ show_exec_help() {
   echo "Services:"
   echo "  postgres       PostgreSQL database"
   echo "  hasura         Hasura GraphQL engine"
-  echo "  hasura-auth    Authentication service"
-  echo "  hasura-storage Storage service"
+  echo "  auth           nHost authentication service"
   echo "  nginx          Web server"
   echo "  redis          Redis cache (if enabled)"
+  echo "  minio          S3-compatible storage (if enabled)"
   echo "  functions      Serverless functions (if enabled)"
   echo "  <service>      Any other service in docker-compose.yml"
   echo ""
@@ -136,9 +136,7 @@ cmd_exec() {
   fi
   
   # Load environment
-  if [[ -f ".env.local" ]]; then
-    load_env_with_priority
-  fi
+  load_env_with_priority
   
   # Check if service exists
   if ! grep -q "^  ${service}:" docker-compose.yml 2>/dev/null; then
@@ -159,15 +157,13 @@ cmd_exec() {
   
   # Build docker exec options as array for safety
   local docker_opts_array=()
-  
+
   if [[ "$interactive" == "true" ]] && [[ "$no_tty" != "true" ]]; then
     docker_opts_array+=("-it")
   elif [[ "$interactive" == "true" ]]; then
     docker_opts_array+=("-i")
-  elif [[ "$no_tty" != "true" ]] && [[ -t 1 ]]; then
-    # Default to TTY if stdout is a terminal
-    docker_opts_array+=("-t")
   fi
+  # Don't auto-add -t for non-interactive commands - let docker handle it
   
   # Add user option
   if [[ -n "$user" ]]; then
@@ -200,7 +196,7 @@ cmd_exec() {
           docker_opts_array+=("-it")
         fi
         ;;
-      hasura|hasura-auth|hasura-storage)
+      hasura|auth|minio)
         command=("/bin/sh")
         if [[ "$interactive" != "true" ]]; then
           docker_opts_array+=("-it")
