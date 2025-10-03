@@ -157,7 +157,7 @@ EOF
     }
 
     # Include service routes
-    include /etc/nginx/routes/*.conf;
+    include /etc/nginx/sites/*.conf;
 }
 EOF
   else
@@ -178,7 +178,7 @@ EOF
     }
 
     # Include service routes
-    include /etc/nginx/routes/*.conf;
+    include /etc/nginx/sites/*.conf;
 }
 EOF
   fi
@@ -242,7 +242,7 @@ generate_service_routes() {
 
 # Generate Hasura route
 generate_hasura_route() {
-  cat > nginx/routes/hasura.conf <<'EOF'
+  cat > nginx/sites/hasura.conf <<'EOF'
 # Hasura GraphQL Engine
 location /v1/graphql {
     proxy_pass http://hasura:8080/v1/graphql;
@@ -278,7 +278,7 @@ EOF
 
 # Generate Auth route
 generate_auth_route() {
-  cat > nginx/routes/auth.conf <<'EOF'
+  cat > nginx/sites/auth.conf <<'EOF'
 # Auth Service
 location /auth/ {
     proxy_pass http://auth:4000/;
@@ -296,7 +296,7 @@ EOF
 
 # Generate MinIO route
 generate_minio_route() {
-  cat > nginx/routes/minio.conf <<'EOF'
+  cat > nginx/sites/minio.conf <<'EOF'
 # MinIO Object Storage
 location /minio/ {
     proxy_pass http://minio:9000/;
@@ -341,7 +341,7 @@ generate_custom_api_route() {
   local service_port_var="${service_upper}_PORT"
   local service_port="${!service_port_var:-3000}"
 
-  cat > "nginx/routes/${service}.conf" <<EOF
+  cat > "nginx/sites/${service}.conf" <<EOF
 # ${service} API Service
 location /api/${service}/ {
     proxy_pass http://${service}:${service_port}/;

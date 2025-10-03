@@ -45,6 +45,7 @@ http {
     tcp_nodelay on;
     keepalive_timeout 65;
     types_hash_max_size 2048;
+    server_names_hash_bucket_size 128;
     server_tokens off;
     client_max_body_size 100M;
 
@@ -138,11 +139,14 @@ EOF
 generate_service_routes() {
   # Hasura GraphQL API route
   if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
-    cat > nginx/sites/hasura.conf <<'EOF'
+    local hasura_route="${HASURA_ROUTE:-api}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
+    cat > nginx/sites/hasura.conf <<EOF
 # Hasura GraphQL Engine
 server {
     listen 443 ssl http2;
-    server_name ${HASURA_ROUTE:-api}.${BASE_DOMAIN:-localhost};
+    server_name ${hasura_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -150,13 +154,13 @@ server {
     location / {
         proxy_pass http://hasura:8080;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
 
         # WebSocket support
         proxy_read_timeout 86400;
@@ -172,11 +176,14 @@ EOF
 
   # Auth service route
   if [[ "${AUTH_ENABLED:-false}" == "true" ]]; then
-    cat > nginx/sites/auth.conf <<'EOF'
+    local auth_route="${AUTH_ROUTE:-auth}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
+    cat > nginx/sites/auth.conf <<EOF
 # Authentication Service
 server {
     listen 443 ssl http2;
-    server_name ${AUTH_ROUTE:-auth}.${BASE_DOMAIN:-localhost};
+    server_name ${auth_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -184,22 +191,26 @@ server {
     location / {
         proxy_pass http://auth:4000;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
   fi
 
   # Storage/MinIO route
+    local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console}"
+    local storage_route="${STORAGE_ROUTE:-storage}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
   if [[ "${MINIO_ENABLED:-true}" == "true" ]]; then
-    cat > nginx/sites/storage.conf <<'EOF'
+    cat > nginx/sites/storage.conf <<EOF
 # MinIO Storage Console
 server {
     listen 443 ssl http2;
-    server_name ${STORAGE_CONSOLE_ROUTE:-storage-console}.${BASE_DOMAIN:-localhost};
+    server_name ${storage_console_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -207,17 +218,17 @@ server {
     location / {
         proxy_pass http://minio:9001;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 
 # MinIO S3 API
 server {
     listen 443 ssl http2;
-    server_name ${STORAGE_ROUTE:-storage}.${BASE_DOMAIN:-localhost};
+    server_name ${storage_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -227,10 +238,10 @@ server {
     location / {
         proxy_pass http://minio:9000;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
@@ -243,11 +254,14 @@ EOF
 # Generate optional service routes
 generate_optional_service_routes() {
   # Admin dashboard
+    local admin_route="${ADMIN_ROUTE:-admin}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
-    cat > nginx/sites/admin.conf <<'EOF'
+    cat > nginx/sites/admin.conf <<EOF
 server {
     listen 443 ssl http2;
-    server_name ${ADMIN_ROUTE:-admin}.${BASE_DOMAIN:-localhost};
+    server_name ${admin_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -255,10 +269,10 @@ server {
     location / {
         proxy_pass http://nself-admin:3100;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
@@ -267,10 +281,13 @@ EOF
   # Monitoring routes
   if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
     # Grafana
-    cat > nginx/sites/grafana.conf <<'EOF'
+    local grafana_route="${GRAFANA_ROUTE:-grafana}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
+    cat > nginx/sites/grafana.conf <<EOF
 server {
     listen 443 ssl http2;
-    server_name ${GRAFANA_ROUTE:-grafana}.${BASE_DOMAIN:-localhost};
+    server_name ${grafana_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -278,19 +295,22 @@ server {
     location / {
         proxy_pass http://grafana:3000;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
 
     # Prometheus
-    cat > nginx/sites/prometheus.conf <<'EOF'
+    local prometheus_route="${PROMETHEUS_ROUTE:-prometheus}"
+    local base_domain="${BASE_DOMAIN:-localhost}"
+
+    cat > nginx/sites/prometheus.conf <<EOF
 server {
     listen 443 ssl http2;
-    server_name ${PROMETHEUS_ROUTE:-prometheus}.${BASE_DOMAIN:-localhost};
+    server_name ${prometheus_route}.${base_domain};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
@@ -298,10 +318,10 @@ server {
     location / {
         proxy_pass http://prometheus:9090;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
@@ -315,19 +335,24 @@ generate_frontend_routes() {
     local app_name="${!app_name_var:-}"
 
     if [[ -n "$app_name" ]]; then
+      # Get route and port from environment (substitute at build time)
+      local app_route_var="FRONTEND_APP_${i}_ROUTE"
+      local app_route="${!app_route_var:-${app_name}}"
+      local app_port_var="FRONTEND_APP_${i}_PORT"
+      local app_port="${!app_port_var:-$((3000 + i - 1))}"
+
       cat > "nginx/sites/frontend-${app_name}.conf" <<EOF
 # Frontend Application: $app_name
 server {
     listen 443 ssl http2;
-    # Runtime route resolution based on environment
-    server_name \${FRONTEND_APP_${i}_ROUTE:-${app_name}}.\${BASE_DOMAIN:-localhost};
+    server_name ${app_route}.\${BASE_DOMAIN:-localhost};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
 
     location / {
         # Proxy to external frontend app running on host
-        proxy_pass http://host.docker.internal:\${FRONTEND_APP_${i}_PORT:-$((3000 + i - 1))};
+        proxy_pass http://host.docker.internal:${app_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -348,18 +373,22 @@ EOF
       # Check if remote schema is configured
       local schema_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_NAME"
       if [[ -n "${!schema_var:-}" ]]; then
+        local api_route_var="FRONTEND_APP_${i}_API_ROUTE"
+        local api_route="${!api_route_var:-api.${app_name}}"
+        local api_port_var="FRONTEND_APP_${i}_API_PORT"
+        local api_port="${!api_port_var:-$((4000 + i))}"
+
         cat >> "nginx/sites/frontend-${app_name}.conf" <<EOF
 server {
     listen 443 ssl http2;
-    # Remote schema API route
-    server_name \${FRONTEND_APP_${i}_API_ROUTE:-api.${app_name}}.\${BASE_DOMAIN:-localhost};
+    server_name ${api_route}.\${BASE_DOMAIN:-localhost};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
 
     location / {
         # Proxy to frontend's API endpoint
-        proxy_pass http://host.docker.internal:\${FRONTEND_APP_${i}_API_PORT:-$((4000 + i))};
+        proxy_pass http://host.docker.internal:${api_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -385,18 +414,23 @@ generate_custom_routes() {
       local cs_public="${!cs_public_var:-true}"
 
       if [[ "$cs_public" == "true" ]]; then
+        # Get route and port from environment (substitute at build time)
+        local cs_route_var="CS_${i}_ROUTE"
+        local cs_route="${!cs_route_var:-${cs_name}}"
+        local cs_port_var="CS_${i}_PORT"
+        local cs_port="${!cs_port_var:-$((8000 + i))}"
+
         cat > "nginx/sites/custom-${cs_name}.conf" <<EOF
 # Custom Service: $cs_name
 server {
     listen 443 ssl http2;
-    # Runtime route - can be overridden per environment
-    server_name \${CS_${i}_ROUTE:-${cs_name}}.\${BASE_DOMAIN:-localhost};
+    server_name ${cs_route}.\${BASE_DOMAIN:-localhost};
 
     ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
 
     location / {
-        proxy_pass http://${cs_name}:\${CS_${i}_PORT:-$((8000 + i))};
+        proxy_pass http://${cs_name}:${cs_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -411,7 +445,7 @@ server {
 
     # Health check endpoint
     location /health {
-        proxy_pass http://${cs_name}:\${CS_${i}_PORT:-$((8000 + i))}/health;
+        proxy_pass http://${cs_name}:${cs_port}/health;
         access_log off;
     }
 }

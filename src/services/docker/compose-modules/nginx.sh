@@ -19,7 +19,7 @@ generate_nginx_service() {
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/routes:/etc/nginx/routes:ro
+      - ./nginx/sites:/etc/nginx/sites:ro
       - ./nginx/includes:/etc/nginx/includes:ro
       - ./ssl/certificates:/etc/nginx/ssl:ro
       - nginx_cache:/var/cache/nginx

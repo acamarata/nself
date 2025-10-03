@@ -42,8 +42,8 @@ add_nginx_service() {
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/routes:/etc/nginx/routes:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/sites:/etc/nginx/sites:ro
+      - ./ssl/certificates:/etc/nginx/ssl:ro
       - nginx_cache:/var/cache/nginx
     networks:
       - nself_network
