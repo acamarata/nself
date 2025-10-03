@@ -318,6 +318,38 @@ ssl::copy_into_project() {
     
     log_success "Copied custom domain certificates"
   fi
+
+  # Reload nginx if it's running to pick up new certificates
+  ssl::reload_nginx "$project_dir" 2>/dev/null || true
+}
+
+# Reload nginx to pick up new SSL certificates
+ssl::reload_nginx() {
+  local project_dir="${1:-.}"
+
+  # Try to get project name from .env file
+  local project_name=""
+  if [[ -f "$project_dir/.env" ]]; then
+    project_name=$(grep -E "^PROJECT_NAME=" "$project_dir/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+  fi
+
+  # Fallback to directory basename
+  if [[ -z "$project_name" ]]; then
+    project_name=$(basename "$(cd "$project_dir" && pwd)")
+  fi
+
+  local nginx_container="${project_name}_nginx"
+
+  # Check if nginx container is running
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${nginx_container}$"; then
+    # Reload nginx configuration
+    if docker exec "$nginx_container" nginx -s reload >/dev/null 2>&1; then
+      log_info "Reloaded nginx to pick up new SSL certificates"
+      return 0
+    fi
+  fi
+
+  return 1
 }
 
 # Render nginx SSL configuration snippets

@@ -62,16 +62,25 @@ generate_mkcert_certificates() {
   local domains=()
 
   if [[ "$base_domain" == "localhost" ]]; then
-    # For localhost, add common subdomains
+    # For localhost, add explicit subdomains (no wildcard - RFC 6761 issue)
     domains+=(
       "localhost"
-      "*.localhost"
       "${project_name}.localhost"
       "api.localhost"
       "auth.localhost"
       "storage.localhost"
       "hasura.localhost"
       "admin.localhost"
+      "functions.localhost"
+      "mail.localhost"
+      "minio.localhost"
+      "search.localhost"
+      "mlflow.localhost"
+      "grafana.localhost"
+      "prometheus.localhost"
+      "alertmanager.localhost"
+      "tempo.localhost"
+      "loki.localhost"
     )
 
     # Add custom subdomains if configured
@@ -103,10 +112,10 @@ generate_mkcert_certificates() {
            -key-file ssl/certificates/nself-org/privkey.pem \
            "${domains[@]}" >/dev/null 2>&1
 
-    # Also generate localhost as fallback
+    # Also generate localhost as fallback (no wildcard for .localhost TLD)
     mkcert -cert-file ssl/certificates/localhost/fullchain.pem \
            -key-file ssl/certificates/localhost/privkey.pem \
-           "localhost" "*.localhost" >/dev/null 2>&1
+           "localhost" "api.localhost" "auth.localhost" "storage.localhost" >/dev/null 2>&1
   fi
 
   show_info "Generated trusted SSL certificates with mkcert"
