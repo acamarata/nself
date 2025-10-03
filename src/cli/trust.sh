@@ -4,11 +4,11 @@ set -euo pipefail
 # trust.sh - Trust and install SSL certificates
 
 # Source shared utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/ssl/trust.sh"
-source "$SCRIPT_DIR/../lib/ssl/ssl.sh"
+CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh"
+source "$CLI_SCRIPT_DIR/../lib/ssl/trust.sh"
+source "$CLI_SCRIPT_DIR/../lib/ssl/ssl.sh"
 
 # Helper functions
 

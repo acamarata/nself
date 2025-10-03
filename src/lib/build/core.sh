@@ -143,37 +143,21 @@ build_generate_simple_ssl() {
   mkdir -p nginx/ssl/localhost 2>/dev/null
   mkdir -p nginx/ssl/nself-org 2>/dev/null
 
-  # Generate localhost certificates
+  # Generate localhost certificates with SANs for *.localhost
   if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]] || [[ ! -f "ssl/certificates/localhost/privkey.pem" ]]; then
     if command -v openssl >/dev/null 2>&1; then
-      # Generate private key
-      openssl genrsa -out ssl/certificates/localhost/privkey.pem 2048 2>/dev/null
-
-      # Generate certificate
-      openssl req -new -x509 \
-        -key ssl/certificates/localhost/privkey.pem \
-        -out ssl/certificates/localhost/fullchain.pem \
-        -days 365 \
-        -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost" 2>/dev/null
-
+      # Use the proper function that includes Subject Alternative Names
+      generate_localhost_ssl "ssl/certificates/localhost"
       ssl_created=true
     fi
   fi
 
-  # Generate nself.org certificates if needed
+  # Generate nself.org certificates with SANs if needed
   if [[ "$base_domain" != "localhost" ]]; then
     if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]]; then
       if command -v openssl >/dev/null 2>&1; then
-        # Generate private key
-        openssl genrsa -out ssl/certificates/nself-org/privkey.pem 2048 2>/dev/null
-
-        # Generate certificate
-        openssl req -new -x509 \
-          -key ssl/certificates/nself-org/privkey.pem \
-          -out ssl/certificates/nself-org/fullchain.pem \
-          -days 365 \
-          -subj "/C=US/ST=State/L=City/O=Organization/CN=*.nself.org" 2>/dev/null
-
+        # Use the proper function that includes Subject Alternative Names
+        generate_nself_org_ssl "ssl/certificates/nself-org"
         ssl_created=true
       fi
     fi
