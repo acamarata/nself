@@ -175,6 +175,35 @@ build_generate_simple_ssl() {
   else
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates exist                        \n"
   fi
+
+  # Check if certificates need to be trusted
+  check_ssl_trust_status
+}
+
+# Check if SSL certificates are trusted and prompt if needed
+check_ssl_trust_status() {
+  # Only check for mkcert-based certificates (localhost)
+  if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]]; then
+    return 0
+  fi
+
+  # Check if mkcert is available and if root CA is installed
+  local mkcert_cmd=""
+  if command -v mkcert >/dev/null 2>&1; then
+    mkcert_cmd="mkcert"
+  elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
+    mkcert_cmd="${HOME}/.nself/bin/mkcert"
+  else
+    return 0  # No mkcert, can't check trust
+  fi
+
+  # Check if root CA is installed
+  if ! $mkcert_cmd -install -check 2>/dev/null; then
+    echo
+    printf "\033[33m⚠\033[0m  SSL certificates generated but not trusted by your system\n"
+    printf "   \033[2mRun \033[36mnself trust\033[2m to install root CA and remove browser warnings\033[0m\n"
+    printf "   \033[2m(You only need to do this once per machine)\033[0m\n"
+  fi
 }
 
 # New streamlined orchestrate_build function using modules
