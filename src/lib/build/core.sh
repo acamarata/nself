@@ -7,6 +7,7 @@ CORE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_ROOT="$(dirname "$CORE_SCRIPT_DIR")"
 
 # Source the original utilities that build.sh needs
+source "$LIB_ROOT/utils/platform-compat.sh"
 source "$LIB_ROOT/utils/env.sh"
 source "$LIB_ROOT/utils/display.sh"
 source "$LIB_ROOT/utils/header.sh"
@@ -14,6 +15,16 @@ source "$LIB_ROOT/utils/preflight.sh"
 source "$LIB_ROOT/utils/timeout.sh"
 source "$LIB_ROOT/config/smart-defaults.sh"
 source "$LIB_ROOT/utils/hosts.sh"
+
+# Source unified SSL API
+if [[ -f "$LIB_ROOT/ssl/api.sh" ]]; then
+  source "$LIB_ROOT/ssl/api.sh" 2>/dev/null || true
+fi
+
+# Source build-specific SSL module
+if [[ -f "$CORE_SCRIPT_DIR/modules/ssl.sh" ]]; then
+  source "$CORE_SCRIPT_DIR/modules/ssl.sh" 2>/dev/null || true
+fi
 
 # Source validation scripts with error checking
 if [[ -f "$LIB_ROOT/auto-fix/config-validator-v2.sh" ]]; then
@@ -55,8 +66,9 @@ detect_app_port() {
   local port="$start_port"
 
   # Simple port availability check compatible with Bash 3.2
+  # Uses safe_check_port from platform-compat.sh for cross-platform compatibility
   while true; do
-    if ! lsof -i:$port >/dev/null 2>&1; then
+    if ! safe_check_port "$port" >/dev/null 2>&1; then
       echo "$port"
       return 0
     fi
@@ -136,6 +148,7 @@ convert_frontend_apps_to_expanded() {
 build_generate_simple_ssl() {
   local base_domain="${BASE_DOMAIN:-localhost}"
   local ssl_created=false
+  local trust_installed=false
 
   # Create SSL directories
   mkdir -p ssl/certificates/localhost 2>/dev/null
@@ -143,41 +156,117 @@ build_generate_simple_ssl() {
   mkdir -p nginx/ssl/localhost 2>/dev/null
   mkdir -p nginx/ssl/nself-org 2>/dev/null
 
-  # Generate localhost certificates with SANs for *.localhost
-  if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]] || [[ ! -f "ssl/certificates/localhost/privkey.pem" ]]; then
-    if command -v openssl >/dev/null 2>&1; then
-      # Use the proper function that includes Subject Alternative Names
-      generate_localhost_ssl "ssl/certificates/localhost"
-      ssl_created=true
-    fi
-  fi
+  # Check if certificates already exist and trust is installed
+  if [[ -f "ssl/certificates/localhost/fullchain.pem" ]] && [[ -f "ssl/certificates/localhost/privkey.pem" ]]; then
+    # Verify if they're from mkcert
+    if openssl x509 -in "ssl/certificates/localhost/fullchain.pem" -text -noout 2>/dev/null | grep -q "mkcert development CA"; then
+      # Check if trust is already installed
+      local mkcert_cmd=""
+      if command -v mkcert >/dev/null 2>&1; then
+        mkcert_cmd="mkcert"
+      elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
+        mkcert_cmd="${HOME}/.nself/bin/mkcert"
+      fi
 
-  # Generate nself.org certificates with SANs if needed
-  if [[ "$base_domain" != "localhost" ]]; then
-    if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]]; then
-      if command -v openssl >/dev/null 2>&1; then
-        # Use the proper function that includes Subject Alternative Names
-        generate_nself_org_ssl "ssl/certificates/nself-org"
-        ssl_created=true
+      if [[ -n "$mkcert_cmd" ]]; then
+        # Check if root CA is installed by checking CAROOT
+        local caroot=$($mkcert_cmd -CAROOT 2>/dev/null)
+        if [[ -n "$caroot" ]] && [[ -f "$caroot/rootCA.pem" ]]; then
+          # Certificates exist and trust setup is complete
+          printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL successfully configured                    \n"
+          return 0
+        fi
       fi
     fi
   fi
 
-  # Copy to nginx directory
-  cp -f ssl/certificates/localhost/* nginx/ssl/localhost/ 2>/dev/null || true
-  if [[ "$base_domain" != "localhost" ]]; then
-    cp -f ssl/certificates/nself-org/* nginx/ssl/nself-org/ 2>/dev/null || true
+  # Generate mkcert certificates using nself ssl bootstrap
+  local nself_bin=$(command -v nself 2>/dev/null)
+  if [[ -n "$nself_bin" ]] && [[ -x "$nself_bin" ]]; then
+    # Run ssl bootstrap silently
+    "$nself_bin" ssl bootstrap >/dev/null 2>&1 || true
+
+    # Check if successful
+    if [[ -f "ssl/certificates/localhost/fullchain.pem" ]]; then
+      ssl_created=true
+    fi
   fi
+
+  # Fallback to self-signed if mkcert failed
+  if [[ "$ssl_created" != "true" ]]; then
+    # Generate localhost certificates with SANs
+    if [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]] || [[ ! -f "ssl/certificates/localhost/privkey.pem" ]]; then
+      if command -v generate_localhost_ssl >/dev/null 2>&1; then
+        generate_localhost_ssl "ssl/certificates/localhost"
+        ssl_created=true
+      fi
+    fi
+
+    # Generate nself.org certificates with SANs if needed
+    if [[ "$base_domain" != "localhost" ]]; then
+      if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]] || [[ ! -f "ssl/certificates/nself-org/privkey.pem" ]]; then
+        if command -v generate_nself_org_ssl >/dev/null 2>&1; then
+          generate_nself_org_ssl "ssl/certificates/nself-org"
+          ssl_created=true
+        fi
+      fi
+    fi
+
+    # Copy to nginx directory
+    cp -f ssl/certificates/localhost/* nginx/ssl/localhost/ 2>/dev/null || true
+    if [[ "$base_domain" != "localhost" ]]; then
+      cp -f ssl/certificates/nself-org/* nginx/ssl/nself-org/ 2>/dev/null || true
+    fi
+
+    # Reload nginx if running to pick up new certificates
+    if command -v reload_nginx_ssl >/dev/null 2>&1; then
+      reload_nginx_ssl 2>/dev/null || true
+    fi
+  fi
+
+  # Auto-install trust if certificates are from mkcert
+  if [[ -f "ssl/certificates/localhost/fullchain.pem" ]]; then
+    if openssl x509 -in "ssl/certificates/localhost/fullchain.pem" -text -noout 2>/dev/null | grep -q "mkcert development CA"; then
+      # Check if trust needs to be installed
+      local mkcert_cmd=""
+      if command -v mkcert >/dev/null 2>&1; then
+        mkcert_cmd="mkcert"
+      elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
+        mkcert_cmd="${HOME}/.nself/bin/mkcert"
+      fi
+
+      if [[ -n "$mkcert_cmd" ]]; then
+        # Check if trust needs to be installed
+        local caroot=$($mkcert_cmd -CAROOT 2>/dev/null)
+        local needs_install=false
+
+        # Check if CAROOT exists and has been installed to system
+        if [[ -z "$caroot" ]] || [[ ! -f "$caroot/rootCA.pem" ]]; then
+          needs_install=true
+        else
+          # On macOS, check if it's in the keychain
+          if [[ "$(uname)" == "Darwin" ]]; then
+            if ! security find-certificate -c "mkcert" -a 2>/dev/null | grep -q "mkcert"; then
+              needs_install=true
+            fi
+          fi
+        fi
+
+        if [[ "$needs_install" == "true" ]]; then
+          # Auto-install trust (will prompt for password if needed)
+          $mkcert_cmd -install 2>&1 || true
+          trust_installed=true
+        fi
+      fi
+    fi
+  fi
+
+  # Show final success message
+  printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL successfully configured                    \n"
 
   if [[ "$ssl_created" == "true" ]]; then
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated                    \n"
     CREATED_FILES+=("SSL certificates")
-  else
-    printf "\r${COLOR_GREEN}✓${COLOR_RESET} SSL certificates exist                        \n"
   fi
-
-  # Check if certificates need to be trusted
-  check_ssl_trust_status
 }
 
 # Check if SSL certificates are trusted and prompt if needed
@@ -187,22 +276,30 @@ check_ssl_trust_status() {
     return 0
   fi
 
-  # Check if mkcert is available and if root CA is installed
-  local mkcert_cmd=""
-  if command -v mkcert >/dev/null 2>&1; then
-    mkcert_cmd="mkcert"
-  elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
-    mkcert_cmd="${HOME}/.nself/bin/mkcert"
-  else
-    return 0  # No mkcert, can't check trust
-  fi
+  # Check if certs are from mkcert
+  if openssl x509 -in "ssl/certificates/localhost/fullchain.pem" -text -noout 2>/dev/null | grep -q "mkcert development CA"; then
+    # Check if mkcert is available and if root CA is installed
+    local mkcert_cmd=""
+    if command -v mkcert >/dev/null 2>&1; then
+      mkcert_cmd="mkcert"
+    elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
+      mkcert_cmd="${HOME}/.nself/bin/mkcert"
+    else
+      return 0  # No mkcert, can't check trust
+    fi
 
-  # Check if root CA is installed
-  if ! $mkcert_cmd -install -check 2>/dev/null; then
+    # Check if root CA is installed
+    if ! $mkcert_cmd -install -check 2>/dev/null; then
+      echo
+      printf "\033[33m⚠\033[0m  SSL certificates not trusted - browsers will show warnings\n"
+      printf "   \033[2mRun \033[36mnself trust\033[2m to install root CA\033[0m\n"
+    fi
+  else
+    # Self-signed certificates - recommend upgrade to mkcert
     echo
-    printf "\033[33m⚠\033[0m  SSL certificates generated but not trusted by your system\n"
-    printf "   \033[2mRun \033[36mnself trust\033[2m to install root CA and remove browser warnings\033[0m\n"
-    printf "   \033[2m(You only need to do this once per machine)\033[0m\n"
+    printf "\033[33m⚠\033[0m  Using self-signed SSL certificates - browsers will show warnings\n"
+    printf "   \033[2mRun \033[36mnself ssl bootstrap\033[2m to generate trusted certificates\033[0m\n"
+    printf "   \033[2mThen run \033[36mnself trust\033[2m to install root CA\033[0m\n"
   fi
 }
 
@@ -217,6 +314,11 @@ orchestrate_build() {
   CREATED_FILES=()
   UPDATED_FILES=()
   SKIPPED_FILES=()
+
+  # Initialize change tracking
+  if command -v init_change_tracking >/dev/null 2>&1; then
+    init_change_tracking
+  fi
 
   # IMPORTANT: Build loads env to detect WHAT to provision
   # But outputs use runtime vars for HOW they're configured
@@ -557,7 +659,7 @@ orchestrate_build() {
 
       # Generate SSL certificates if needed
       if [[ "$NEEDS_SSL" == "true" ]]; then
-        printf "${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates..."
+        printf "${COLOR_BLUE}⠋${COLOR_RESET} Setting up SSL..."
         build_generate_simple_ssl
       fi
 
@@ -637,7 +739,8 @@ orchestrate_build() {
           set +a
 
           # Run with timeout to prevent hanging
-          if timeout 5 bash -c "$(declare -f setup_monitoring_configs); setup_monitoring_configs" >/dev/null 2>&1; then
+          # Uses safe_timeout from platform-compat.sh for cross-platform compatibility
+          if safe_timeout 5 bash -c "$(declare -f setup_monitoring_configs); setup_monitoring_configs" >/dev/null 2>&1; then
             printf "\r${COLOR_GREEN}✓${COLOR_RESET} Monitoring configs ready                     \n"
             CREATED_FILES+=("monitoring/*")
           else
@@ -800,6 +903,36 @@ orchestrate_build() {
 
   # Show build summary
   show_build_summary
+
+  # Detect what changed since last build
+  if command -v detect_changes >/dev/null 2>&1; then
+    detect_changes "$force_rebuild"
+  fi
+
+  # Check SSL trust status
+  if command -v check_ssl_status >/dev/null 2>&1; then
+    check_ssl_status
+  fi
+
+  # Save current build state for next run
+  if command -v save_build_state >/dev/null 2>&1; then
+    save_build_state
+  fi
+
+  # Display change summary
+  if command -v display_changes >/dev/null 2>&1; then
+    display_changes
+  fi
+
+  # Display SSL trust recommendation
+  if command -v display_ssl_trust_recommendation >/dev/null 2>&1; then
+    display_ssl_trust_recommendation
+  fi
+
+  # Display restart recommendation based on changes
+  if command -v display_restart_recommendation >/dev/null 2>&1; then
+    display_restart_recommendation
+  fi
 
   # Show next steps with improved formatting
   echo ""

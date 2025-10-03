@@ -212,6 +212,49 @@ compat_get() {
   return 1
 }
 
+# Platform-safe timeout command
+safe_timeout() {
+  local timeout_seconds="$1"
+  shift
+
+  # Check for native timeout command
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$timeout_seconds" "$@"
+    return $?
+  elif command -v gtimeout >/dev/null 2>&1; then
+    # macOS with coreutils installed
+    gtimeout "$timeout_seconds" "$@"
+    return $?
+  else
+    # Fallback: run without timeout on systems that don't have it
+    # This ensures compatibility but loses timeout functionality
+    "$@"
+    return $?
+  fi
+}
+
+# Platform-safe lsof check for port usage
+safe_check_port() {
+  local port="$1"
+
+  if command -v lsof >/dev/null 2>&1; then
+    # Use lsof if available
+    lsof -ti ":$port" 2>/dev/null
+    return $?
+  elif command -v netstat >/dev/null 2>&1; then
+    # Fallback to netstat (more universal)
+    netstat -an 2>/dev/null | grep -E "[:.]${port}[[:space:]]" | grep -q LISTEN
+    return $?
+  elif command -v ss >/dev/null 2>&1; then
+    # Modern Linux alternative to netstat
+    ss -ltn 2>/dev/null | grep -q ":${port} "
+    return $?
+  else
+    # No tool available - can't check
+    return 1
+  fi
+}
+
 # Export all functions
 export -f safe_sed_inline
 export -f safe_readlink
@@ -228,3 +271,5 @@ export -f is_linux
 export -f get_platform
 export -f compat_set
 export -f compat_get
+export -f safe_timeout
+export -f safe_check_port
