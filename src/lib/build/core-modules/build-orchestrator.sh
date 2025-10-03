@@ -2,6 +2,12 @@
 # build-orchestrator.sh - Main build orchestration with proper env handling
 # Loads env to detect WHAT to build, but outputs use runtime vars for HOW
 
+# Source change detection module
+ORCHESTRATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$ORCHESTRATOR_DIR/change-detection.sh" ]]; then
+  source "$ORCHESTRATOR_DIR/change-detection.sh"
+fi
+
 # Main orchestration function
 orchestrate_build() {
   local project_name="${1:-$(basename "$PWD")}"
@@ -13,6 +19,11 @@ orchestrate_build() {
   export PROJECT_NAME="${PROJECT_NAME:-$project_name}"
   export ENV="${ENV:-$env}"
   export VERBOSE="$verbose"
+
+  # Initialize change tracking
+  if command -v init_change_tracking >/dev/null 2>&1; then
+    init_change_tracking
+  fi
 
   # Load environment files to detect what services to build
   # This tells us WHAT to provision, not HOW to configure it
@@ -26,8 +37,33 @@ orchestrate_build() {
   # Detect all services and apps
   detect_all_services
 
+  # Detect what changed since last build
+  if command -v detect_changes >/dev/null 2>&1; then
+    detect_changes "$force"
+    display_changes
+  fi
+
   # Now build everything with runtime variables
   build_all_components "$force"
+
+  # Check SSL trust status
+  if command -v check_ssl_status >/dev/null 2>&1; then
+    check_ssl_status
+  fi
+
+  # Save current build state for next run
+  if command -v save_build_state >/dev/null 2>&1; then
+    save_build_state
+  fi
+
+  # Display recommendations
+  if command -v display_restart_recommendation >/dev/null 2>&1; then
+    display_restart_recommendation
+  fi
+
+  if command -v display_ssl_trust_recommendation >/dev/null 2>&1; then
+    display_ssl_trust_recommendation
+  fi
 
   return 0
 }
@@ -169,7 +205,21 @@ detect_frontend_apps() {
 build_all_components() {
   local force="${1:-false}"
 
-  echo "Building components for:"
+  # Check if this is a no-op build (no changes detected)
+  local skip_build=false
+  if [[ ${#CHANGES_DETECTED[@]} -eq 0 ]] && [[ "$force" != "true" ]]; then
+    skip_build=true
+  fi
+
+  # Always show what we're building (or would build)
+  if [[ "$skip_build" == "true" ]]; then
+    echo ""
+    echo "Project configuration (up to date):"
+  else
+    echo ""
+    echo "Building components for:"
+  fi
+
   echo "  • Core services: 4"
   echo "  • Optional services: $(count_enabled_optional)"
   echo "  • Custom services: $CUSTOM_SERVICE_COUNT"
@@ -177,13 +227,20 @@ build_all_components() {
   [[ "$MONITORING_ENABLED" == "true" ]] && echo "  • Monitoring: 10 services"
   echo ""
 
+  # If no changes and not forcing, we can skip most work
+  if [[ "$skip_build" == "true" ]]; then
+    # Still ensure directories exist
+    setup_directories >/dev/null 2>&1
+    return 0
+  fi
+
   # Create directory structure
   setup_directories
 
-  # Generate SSL certificates
+  # Generate SSL certificates (checks if needed internally)
   generate_ssl_certificates "$force"
 
-  # Copy custom service templates
+  # Copy custom service templates (only if new or forced)
   copy_custom_service_templates "$force"
 
   # Generate nginx configuration with runtime vars
