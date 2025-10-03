@@ -314,8 +314,8 @@ output_table() {
     show_command_header "nself urls" "Service URLs and routes"
     echo
 
-    # Show base application URL
-    echo -e "  ${BOLD}Application:${COLOR_RESET}    ${COLOR_GREEN}${protocol}://${domain}${COLOR_RESET}"
+    # Show base application URL (nginx default page)
+    echo -e "  ${BOLD}Base URL:${COLOR_RESET}       ${COLOR_GREEN}${protocol}://${domain}${COLOR_RESET} ${COLOR_GRAY}(nginx default page)${COLOR_RESET}"
     echo
 
     # Required Services
@@ -469,23 +469,25 @@ output_table() {
     [[ $custom_count -eq 0 ]] && echo -e "${BOLD}${COLOR_BLUE}➞ Custom Services${COLOR_RESET}" && echo -e "  ${COLOR_GRAY}None configured${COLOR_RESET}"
     echo
 
-    # Frontend Applications
-    local frontend_count="${FRONTEND_APP_COUNT:-0}"
+    # Frontend Applications - detect dynamically
     echo -e "${BOLD}${COLOR_BLUE}➞ Frontend Routes${COLOR_RESET}"
-    if [[ $frontend_count -gt 0 ]]; then
-        for i in $(seq 1 $frontend_count); do
-            local route_var="FRONTEND_APP_${i}_ROUTE"
-            local name_var="FRONTEND_APP_${i}_DISPLAY_NAME"
-            local route="${!route_var:-}"
-            local name="${!name_var:-Frontend App $i}"
+    local has_frontend=false
 
-            if [[ -n "$route" ]]; then
-                route="${route%%.*}"
-                local padded_name=$(printf "%-15s" "${name}:")
-                echo -e "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET}"
-            fi
-        done
-    else
+    # Check for frontend apps (FRONTEND_APP_1, FRONTEND_APP_2, etc.)
+    for i in {1..10}; do
+        local route_var="FRONTEND_APP_${i}_ROUTE"
+        local name_var="FRONTEND_APP_${i}_NAME"
+        local route="${!route_var:-}"
+        local name="${!name_var:-}"
+
+        if [[ -n "$route" ]]; then
+            has_frontend=true
+            local padded_name=$(printf "%-15s" "${name}:")
+            echo -e "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}"
+        fi
+    done
+
+    if [[ "$has_frontend" == "false" ]]; then
         echo -e "  ${COLOR_GRAY}None configured${COLOR_RESET}"
     fi
     echo
@@ -494,6 +496,17 @@ output_table() {
     echo -e "${BOLD}${COLOR_GRAY}────────────────────────────────────────${COLOR_RESET}"
     local active_count=$(count_active_routes)
     echo -e "  ${COLOR_GRAY}Total routes: ${active_count} | Domain: ${domain} | Protocol: ${protocol}${COLOR_RESET}"
+
+    # SSL/Trust Status
+    if [[ "${protocol}" == "https" ]]; then
+        local cert_path="ssl/certificates/${domain}"
+        if [[ -f "${cert_path}/fullchain.pem" ]]; then
+            echo -e "  ${COLOR_GRAY}✓ SSL: Self-signed certificate installed & trusted via /etc/hosts${COLOR_RESET}"
+        else
+            echo -e "  ${COLOR_GRAY}⚠ SSL: Certificate not found at ${cert_path}${COLOR_RESET}"
+        fi
+    fi
+
     echo -e "  ${COLOR_GRAY}Use 'nself urls --all' to see internal services${COLOR_RESET}"
     echo
 }
