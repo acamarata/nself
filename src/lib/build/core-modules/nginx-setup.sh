@@ -160,7 +160,7 @@ server {
     ssl_certificate_key ${ssl_path}/privkey.pem;
 
     location / {
-        proxy_pass http://hasura;
+        proxy_pass http://hasura:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
