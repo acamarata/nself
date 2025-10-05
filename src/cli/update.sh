@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # update.sh - Update nself to the latest version
 
-set -e
+# Don't use set -e - we handle all errors explicitly
+set -uo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -62,20 +63,24 @@ check_for_updates() {
   LOADING_PID=$(start_loading "Checking for updates...")
 
   local latest_json
-  if ! latest_json=$(curl -sL "$github_api" 2>/dev/null); then
+  if ! latest_json=$(curl -sL --max-time 30 --connect-timeout 10 --retry 2 "$github_api" 2>/dev/null); then
     stop_loading $LOADING_PID ""
     log_error "Failed to check for updates"
     log_info "Please check your internet connection"
     return 1
   fi
 
-  # Parse version from JSON response
+  # Parse version from JSON response with robust extraction
   local latest_version
-  latest_version=$(echo "$latest_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  latest_version=$(echo "$latest_json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
 
-  if [[ -z "$latest_version" ]]; then
+  # Remove 'v' prefix if present
+  latest_version="${latest_version#v}"
+
+  # Validate version format
+  if [[ -z "$latest_version" ]] || [[ ! "$latest_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     stop_loading $LOADING_PID ""
-    log_error "Could not determine latest version"
+    log_error "Could not determine valid version from GitHub"
     return 1
   fi
 
@@ -101,36 +106,77 @@ perform_update() {
   local version_file="$SCRIPT_DIR/../VERSION"
   local github_api="https://api.github.com/repos/$repo_owner/$repo_name/releases/latest"
 
-  # Get latest release info
+  # Check required commands
+  local missing_deps=()
+  for cmd in curl tar rsync; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing_deps+=("$cmd")
+    fi
+  done
+
+  if [[ ${#missing_deps[@]} -gt 0 ]]; then
+    log_error "Missing required commands: ${missing_deps[*]}"
+    log_info "Install missing dependencies:"
+    [[ " ${missing_deps[*]} " =~ " curl " ]] && log_info "  macOS: brew install curl"
+    [[ " ${missing_deps[*]} " =~ " rsync " ]] && log_info "  macOS: brew install rsync | Linux: apt/yum install rsync"
+    [[ " ${missing_deps[*]} " =~ " tar " ]] && log_info "  tar is usually pre-installed"
+    return 1
+  fi
+
+  # Get latest release info with timeout
   local latest_json
-  if ! latest_json=$(curl -sL "$github_api" 2>/dev/null); then
+  if ! latest_json=$(curl -sL --max-time 30 --connect-timeout 10 --retry 2 --retry-delay 1 "$github_api" 2>/dev/null); then
     log_error "Failed to fetch release information"
+    log_info "Please check your internet connection"
     return 1
   fi
 
   # Get download URL
   local asset_url
-  asset_url=$(echo "$latest_json" | sed -n 's/.*"tarball_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  asset_url=$(echo "$latest_json" | grep -o '"tarball_url"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
 
-  if [[ -z "$asset_url" ]]; then
-    log_error "No download URL found in latest release"
+  if [[ -z "$asset_url" ]] || [[ ! "$asset_url" =~ ^https:// ]]; then
+    log_error "No valid download URL found in latest release"
     return 1
   fi
 
-  # Get latest version
+  # Get latest version with validation
   local latest_version
-  latest_version=$(echo "$latest_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  latest_version=$(echo "$latest_json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
 
-  # Create temporary directory
+  # Remove 'v' prefix if present
+  latest_version="${latest_version#v}"
+
+  # Validate version format
+  if [[ -z "$latest_version" ]] || [[ ! "$latest_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    log_error "Invalid version format from GitHub: '$latest_version'"
+    return 1
+  fi
+
+  # Create temporary directory with secure permissions
   local tmp_dir
-  tmp_dir=$(mktemp -d)
+  tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t nself_update.XXXXXX)
   local archive_file="$tmp_dir/nself_latest.tar.gz"
   local extract_dir="$tmp_dir/extracted"
 
-  # Download
+  # Download with timeout and retries
   log_info "Downloading nself $latest_version..."
-  if ! curl -L "$asset_url" -o "$archive_file" 2>/dev/null; then
+  if ! curl -L --max-time 300 --connect-timeout 10 --retry 3 --retry-delay 2 --progress-bar "$asset_url" -o "$archive_file" 2>&1; then
     log_error "Failed to download update"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  # Verify downloaded file
+  if [[ ! -f "$archive_file" ]]; then
+    log_error "Download failed - file not found"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  # Verify it's a valid gzip file
+  if ! gzip -t "$archive_file" 2>/dev/null; then
+    log_error "Downloaded file is corrupted or invalid"
     rm -rf "$tmp_dir"
     return 1
   fi
@@ -138,8 +184,19 @@ perform_update() {
   # Extract
   log_info "Extracting update..."
   mkdir -p "$extract_dir"
-  if ! tar -xzf "$archive_file" -C "$extract_dir" --strip-components=1 2>/dev/null; then
+  if ! tar -xzf "$archive_file" -C "$extract_dir" 2>/dev/null; then
     log_error "Failed to extract update"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  # GitHub tarballs extract to a subdirectory like "owner-repo-hash/"
+  # Find it and use it as source
+  local extracted_dir
+  extracted_dir=$(find "$extract_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
+
+  if [[ ! -d "$extracted_dir" ]]; then
+    log_error "Could not find extracted directory"
     rm -rf "$tmp_dir"
     return 1
   fi
@@ -154,7 +211,14 @@ perform_update() {
   fi
 
   # Update files (preserve bin directory wrapper)
-  if ! rsync -a --delete "$extract_dir/src/" "$install_dir/"; then
+  # Use the extracted directory's src/ folder
+  if [[ ! -d "$extracted_dir/src" ]]; then
+    log_error "Invalid archive structure - missing src directory"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  if ! rsync -a --delete "$extracted_dir/src/" "$install_dir/"; then
     log_error "Failed to install update"
     # Restore backup if available
     if [[ -f "$version_file.backup" ]]; then
