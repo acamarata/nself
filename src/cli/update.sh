@@ -203,23 +203,76 @@ perform_update() {
 
   # Update installation
   log_info "Installing update..."
-  local install_dir="$(dirname "$SCRIPT_DIR")"
+  # Get root installation directory (up two levels from src/cli/)
+  local install_dir="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
   # Backup current version file
   if [[ -f "$version_file" ]]; then
     cp "$version_file" "$version_file.backup"
   fi
 
-  # Update files (preserve bin directory wrapper)
-  # Use the extracted directory's src/ folder
+  # Validate extracted structure
   if [[ ! -d "$extracted_dir/src" ]]; then
     log_error "Invalid archive structure - missing src directory"
     rm -rf "$tmp_dir"
     return 1
   fi
 
-  if ! rsync -a --delete "$extracted_dir/src/" "$install_dir/"; then
-    log_error "Failed to install update"
+  # Update all directories that install.sh installs (mirrors install.sh behavior)
+  log_info "Updating installation files..."
+
+  # Update directories
+  for dir in bin src docs; do
+    if [[ -d "$extracted_dir/$dir" ]]; then
+      log_info "Updating $dir/..."
+      if ! rsync -a --delete "$extracted_dir/$dir/" "$install_dir/$dir/"; then
+        log_error "Failed to update $dir/"
+        # Restore backup if available
+        if [[ -f "$version_file.backup" ]]; then
+          mv "$version_file.backup" "$version_file"
+        fi
+        rm -rf "$tmp_dir"
+        return 1
+      fi
+    fi
+  done
+
+  # Update root files
+  for file in LICENSE README.md; do
+    if [[ -f "$extracted_dir/$file" ]]; then
+      cp "$extracted_dir/$file" "$install_dir/" 2>/dev/null || true
+    fi
+  done
+
+  log_success "All files updated successfully"
+
+  # Update version file
+  echo "$latest_version" >"$version_file"
+
+  # Verify critical files were updated
+  log_info "Verifying update..."
+  local verification_failed=false
+
+  # Check bin/nself exists and is executable
+  if [[ ! -x "$install_dir/bin/nself" ]]; then
+    log_error "Verification failed: bin/nself not executable"
+    verification_failed=true
+  fi
+
+  # Check VERSION file updated
+  if [[ -f "$version_file" ]]; then
+    local updated_version=$(cat "$version_file")
+    if [[ "$updated_version" != "$latest_version" ]]; then
+      log_error "Verification failed: VERSION mismatch"
+      verification_failed=true
+    fi
+  else
+    log_error "Verification failed: VERSION file missing"
+    verification_failed=true
+  fi
+
+  if [[ "$verification_failed" == "true" ]]; then
+    log_error "Update verification failed"
     # Restore backup if available
     if [[ -f "$version_file.backup" ]]; then
       mv "$version_file.backup" "$version_file"
@@ -228,8 +281,7 @@ perform_update() {
     return 1
   fi
 
-  # Update version file
-  echo "$latest_version" >"$version_file"
+  log_success "Update verified successfully"
 
   # Clean up
   rm -rf "$tmp_dir"
