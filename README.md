@@ -266,7 +266,6 @@ nself (36 commands)
 │   └── backup        Comprehensive backup system with cloud support
 │
 ├── 🔧 Configuration
-│   ├── validate      Validate configuration files
 │   ├── ssl           SSL certificate management (bootstrap, renew, status)
 │   ├── trust         Install SSL certificates locally for browser trust
 │   ├── email         Email service configuration (16+ providers)
@@ -291,9 +290,7 @@ nself (36 commands)
 │
 ├── 🛠️ Development Tools
 │   ├── exec          Execute commands in containers
-│   ├── diff          Show configuration changes
 │   ├── reset         Reset project to clean state (with timestamped backups)
-│   ├── scaffold      Generate new service from 40+ templates
 │   └── search        Enterprise search service management (partial - full in v0.4.0)
 │
 └── 📝 Utility Commands

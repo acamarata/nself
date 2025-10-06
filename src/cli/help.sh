@@ -61,14 +61,8 @@ show_general_help() {
   echo -e "  ${COLOR_BLUE}monitor${COLOR_RESET}       Access monitoring dashboards"
 
   show_section "Development Commands"
-  echo -e "  ${COLOR_BLUE}diff${COLOR_RESET}          Show configuration differences"
   echo -e "  ${COLOR_BLUE}reset${COLOR_RESET}         Reset project to clean state"
   echo -e "  ${COLOR_BLUE}restore${COLOR_RESET}       Restore configuration from backup"
-
-  show_section "Tool Commands"
-  echo -e "  ${COLOR_BLUE}scaffold${COLOR_RESET}      Create new service from template"
-  echo -e "  ${COLOR_BLUE}validate-env${COLOR_RESET}  Validate environment configuration"
-  echo -e "  ${COLOR_BLUE}hot_reload${COLOR_RESET}    Enable hot reload for development"
 
   show_section "Other Commands"
   echo -e "  ${COLOR_BLUE}update${COLOR_RESET}        Update nself to latest version"
@@ -89,16 +83,6 @@ show_command_help() {
     command_file="$SCRIPT_DIR/${command}.sh"
   elif [[ -f "$SCRIPT_DIR/../tools/dev/${command}.sh" ]]; then
     command_file="$SCRIPT_DIR/../tools/dev/${command}.sh"
-  elif [[ -f "$SCRIPT_DIR/../tools/scaffold/${command}.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/scaffold/${command}.sh"
-  elif [[ -f "$SCRIPT_DIR/../tools/validate/${command}.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/validate/${command}.sh"
-  elif [[ "$command" == "hot-reload" ]] && [[ -f "$SCRIPT_DIR/../tools/dev/hot_reload.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/dev/hot_reload.sh"
-  elif [[ "$command" == "hot_reload" ]] && [[ -f "$SCRIPT_DIR/../tools/dev/hot_reload.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/dev/hot_reload.sh"
-  elif [[ "$command" == "validate-env" ]] && [[ -f "$SCRIPT_DIR/../tools/validate/validate-env.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/validate/validate-env.sh"
   fi
 
   # Check if command exists
