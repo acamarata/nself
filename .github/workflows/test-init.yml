@@ -123,7 +123,7 @@ jobs:
         with:
           scandir: './src/lib/init'
           additional_files: 'src/cli/init.sh'
-          severity: warning
+          severity: error
 
   test-init-portability:
     name: Portability Check
