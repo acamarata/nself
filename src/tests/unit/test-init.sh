@@ -60,7 +60,7 @@ assert_equals() {
   if [[ "$expected" == "$actual" ]]; then
     return 0
   else
-    echo -e "${RED}✗ $message${RESET}"
+    printf "${RED}✗ %s${RESET}\n" "$message"
     echo "  Expected: $expected"
     echo "  Actual: $actual"
     return 1
@@ -74,7 +74,7 @@ assert_file_exists() {
   if [[ -f "$file" ]]; then
     return 0
   else
-    echo -e "${RED}✗ $message${RESET}"
+    printf "${RED}✗ %s${RESET}\n" "$message"
     return 1
   fi
 }
@@ -97,7 +97,7 @@ assert_file_permissions() {
     fi
   fi
 
-  echo -e "${RED}✗ $message${RESET}"
+  printf "${RED}✗ %s${RESET}\n" "$message"
   echo "  File: $file"
   echo "  Expected permissions: $expected_perms"
   echo "  Actual permissions: ${actual_perms:-file not found}"
@@ -112,7 +112,7 @@ assert_contains() {
   if [[ "$haystack" == *"$needle"* ]]; then
     return 0
   else
-    echo -e "${RED}✗ $message${RESET}"
+    printf "${RED}✗ %s${RESET}\n" "$message"
     echo "  Looking for: $needle"
     echo "  In: ${haystack:0:100}..."
     return 1
@@ -131,10 +131,10 @@ run_test() {
 
   # Run the test
   if $test_function; then
-    echo -e "${GREEN}PASSED${RESET}"
+    printf "${GREEN}PASSED${RESET}\n"
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
-    echo -e "${RED}FAILED${RESET}"
+    printf "${RED}FAILED${RESET}\n"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
@@ -147,7 +147,7 @@ skip_test() {
   local reason="${2:-No reason given}"
 
   TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
-  echo -e "${YELLOW}SKIPPING${RESET} $test_name: $reason"
+  printf "${YELLOW}SKIPPING${RESET} %s: %s\n" "$test_name" "$reason"
 }
 
 # ============================================================================
@@ -485,38 +485,38 @@ echo "╚═══════════════════════�
 echo ""
 
 # Config tests
-echo -e "${BLUE}Testing config.sh...${RESET}"
+printf "${BLUE}Testing config.sh...${RESET}\n"
 run_test "config constants" test_config_constants
 run_test "config arrays" test_config_arrays
 
 # Platform tests
-echo -e "\n${BLUE}Testing platform.sh...${RESET}"
+printf "\n${BLUE}Testing platform.sh...${RESET}\n"
 run_test "platform detection" test_platform_detection
 run_test "safe_echo function" test_safe_echo
 run_test "terminal capabilities" test_terminal_capabilities
 
 # Atomic ops tests
-echo -e "\n${BLUE}Testing atomic-ops.sh...${RESET}"
+printf "\n${BLUE}Testing atomic-ops.sh...${RESET}\n"
 run_test "atomic copy" test_atomic_copy
 run_test "rollback changes" test_rollback
 
 # Templates tests
-echo -e "\n${BLUE}Testing templates.sh...${RESET}"
+printf "\n${BLUE}Testing templates.sh...${RESET}\n"
 run_test "find templates directory" test_find_templates_dir
 run_test "verify template files" test_verify_template_files
 
 # Gitignore tests
-echo -e "\n${BLUE}Testing gitignore.sh...${RESET}"
+printf "\n${BLUE}Testing gitignore.sh...${RESET}\n"
 run_test "gitignore has entry" test_gitignore_has_entry
 run_test "create gitignore" test_create_gitignore
 
 # Validation tests
-echo -e "\n${BLUE}Testing validation.sh...${RESET}"
+printf "\n${BLUE}Testing validation.sh...${RESET}\n"
 run_test "check dependencies" test_check_dependencies
 run_test "validate env mode" test_validate_env_mode
 
 # Integration tests
-echo -e "\n${BLUE}Testing integration...${RESET}"
+printf "\n${BLUE}Testing integration...${RESET}\n"
 run_test "init integration" test_init_integration
 
 # Summary
@@ -524,19 +524,19 @@ echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║                    Test Summary                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
-echo -e "Tests run: $TESTS_RUN"
-echo -e "Tests passed: ${GREEN}$TESTS_PASSED${RESET}"
+printf "Tests run: %d\n" "$TESTS_RUN"
+printf "Tests passed: ${GREEN}%d${RESET}\n" "$TESTS_PASSED"
 if [[ $TESTS_FAILED -gt 0 ]]; then
-  echo -e "Tests failed: ${RED}$TESTS_FAILED${RESET}"
+  printf "Tests failed: ${RED}%d${RESET}\n" "$TESTS_FAILED"
 fi
 if [[ $TESTS_SKIPPED -gt 0 ]]; then
-  echo -e "Tests skipped: ${YELLOW}$TESTS_SKIPPED${RESET}"
+  printf "Tests skipped: ${YELLOW}%d${RESET}\n" "$TESTS_SKIPPED"
 fi
 
 # Exit code
 if [[ $TESTS_FAILED -gt 0 ]]; then
   exit 1
 else
-  echo -e "\n${GREEN}All tests passed!${RESET}"
+  printf "\n${GREEN}All tests passed!${RESET}\n"
   exit 0
 fi
