@@ -3,10 +3,12 @@ set -euo pipefail
 
 # version.sh - Show version information
 
-# Source shared utilities
-CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+# Get script directory with absolute path
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$CLI_SCRIPT_DIR"
-source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+
+# Source shared utilities
+[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/display.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
@@ -18,14 +20,14 @@ show_version_help() {
   echo "Display nself version information"
   echo ""
   echo "Options:"
-  echo "  --verbose       Show detailed version and system information"
+  echo "  --short         Show version number only"
   echo "  -h, --help      Show this help message"
   echo ""
   echo "Examples:"
-  echo "  nself version           # Show version"
-  echo "  nself -v                # Show version (shorthand)"
-  echo "  nself --version         # Show version (longhand)"
-  echo "  nself version --verbose # Show detailed information"
+  echo "  nself -v                # Show version number only (0.3.9)"
+  echo "  nself --version         # Show detailed information"
+  echo "  nself version           # Show detailed information (default)"
+  echo "  nself version --short   # Show version number only"
 }
 
 # Read version from VERSION file
@@ -51,31 +53,36 @@ cmd_version() {
     return 0
   fi
 
-  if [[ "$arg" == "--verbose" ]]; then
-    show_header "nself Version Information"
-    echo "Version:     $version"
-    echo "Location:    $CLI_SCRIPT_DIR"
-    echo "Config:      ${ENV_FILE:-.env.local}"
-    echo
-    echo "System Information:"
-    echo "  OS:        $(uname -s)"
-    echo "  Arch:      $(uname -m)"
-    echo "  Shell:     $BASH_VERSION"
-
-    # Check Docker version
-    if command -v docker >/dev/null 2>&1; then
-      echo "  Docker:    $(docker --version | cut -d' ' -f3 | tr -d ',')"
-    fi
-
-    # Check Docker Compose version
-    if docker compose version >/dev/null 2>&1; then
-      echo "  Compose:   $(docker compose version --short)"
-    fi
-    echo
-  else
-    # Simple standard format matching common CLI tools
-    echo "nself $version"
+  # Check if called with --short flag for minimal output
+  if [[ "$arg" == "--short" ]]; then
+    echo "$version"
+    return 0
   fi
+
+  # Default behavior: show verbose output
+  # "nself version" shows full info
+  # "nself -v" needs to be handled by detecting how we were called
+  show_command_header "nself v${version}" "Version Information"
+  echo
+  echo "Installation:"
+  echo "  Location:    $CLI_SCRIPT_DIR"
+  echo "  Config:      ${ENV_FILE:-.env.local}"
+  echo
+  echo "System:"
+  echo "  OS:          $(uname -s)"
+  echo "  Arch:        $(uname -m)"
+  echo "  Shell:       $BASH_VERSION"
+
+  # Check Docker version
+  if command -v docker >/dev/null 2>&1; then
+    echo "  Docker:      $(docker --version | cut -d' ' -f3 | tr -d ',')"
+  fi
+
+  # Check Docker Compose version
+  if docker compose version >/dev/null 2>&1; then
+    echo "  Compose:     $(docker compose version --short)"
+  fi
+  echo
 }
 
 # Export for use as library

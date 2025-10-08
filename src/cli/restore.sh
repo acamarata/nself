@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# restore.sh - Restore backed up configuration files
+# restore.sh - Restore backed up configuration files from tar.gz archives
 
 # Source display utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
-source "$SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/header.sh"
 
 # Main restore function
 cmd_restore() {
@@ -14,6 +14,7 @@ cmd_restore() {
   local specific_backup=""
   local list_only=false
   local verbose=false
+  local force=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -26,12 +27,16 @@ cmd_restore() {
         verbose=true
         shift
         ;;
+      --force|-f)
+        force=true
+        shift
+        ;;
       --help|-h)
         show_restore_help
         return 0
         ;;
       *)
-        # Assume it's a backup timestamp
+        # Assume it's a backup file or timestamp
         specific_backup="$1"
         shift
         ;;
@@ -48,8 +53,8 @@ cmd_restore() {
     return 1
   fi
 
-  # Get list of available backups
-  local backups=($(ls -1d "$backup_dir"/*/ 2>/dev/null | sort -r))
+  # Get list of available tar.gz backups (sorted by newest first)
+  local backups=($(ls -1t "$backup_dir"/*.tar.gz 2>/dev/null || true))
 
   if [[ ${#backups[@]} -eq 0 ]]; then
     log_error "No backups found"
@@ -62,126 +67,167 @@ cmd_restore() {
     echo "Available backups:"
     echo
     for backup in "${backups[@]}"; do
-      local timestamp=$(basename "$backup")
-      local date_formatted="${timestamp:0:4}-${timestamp:4:2}-${timestamp:6:2} ${timestamp:9:2}:${timestamp:11:2}:${timestamp:13:2}"
-      local file_count=$(ls -1 "$backup" 2>/dev/null | wc -l | tr -d ' ')
-      echo -e "  ${COLOR_BLUE}$timestamp${COLOR_RESET}  ($date_formatted)  - $file_count files"
+      local filename=$(basename "$backup")
+      local filesize=$(ls -lh "$backup" | awk '{print $5}')
+
+      # Extract timestamp from filename (assumes format: projectname_YYYYMMDD_HHMMSS.tar.gz)
+      local timestamp=$(echo "$filename" | grep -oE '[0-9]{8}_[0-9]{6}' || echo "unknown")
+
+      if [[ "$timestamp" != "unknown" ]]; then
+        local date_formatted="${timestamp:0:4}-${timestamp:4:2}-${timestamp:6:2} ${timestamp:9:2}:${timestamp:11:2}:${timestamp:13:2}"
+        echo -e "  ${COLOR_BLUE}$filename${COLOR_RESET}"
+        echo -e "    Date: $date_formatted"
+        echo -e "    Size: $filesize"
+      else
+        echo -e "  ${COLOR_BLUE}$filename${COLOR_RESET} (${filesize})"
+      fi
+      echo
     done
-    echo
     echo "To restore a specific backup:"
-    echo -e "  ${COLOR_BLUE}nself restore $timestamp${COLOR_RESET}"
+    echo -e "  ${COLOR_BLUE}nself restore $filename${COLOR_RESET}"
+    echo
+    echo "To restore the most recent backup:"
+    echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}"
     return 0
   fi
 
   # Determine which backup to restore
   local backup_to_restore=""
   if [[ -n "$specific_backup" ]]; then
-    # Check if specific backup exists
-    backup_to_restore="$backup_dir/$specific_backup"
-    if [[ ! -d "$backup_to_restore" ]]; then
+    # Check if it's a full filename
+    if [[ -f "$backup_dir/$specific_backup" ]]; then
+      backup_to_restore="$backup_dir/$specific_backup"
+    # Check if it's a timestamp pattern that matches a file
+    elif compgen -G "$backup_dir/*${specific_backup}*.tar.gz" > /dev/null; then
+      backup_to_restore=$(ls -1t "$backup_dir"/*${specific_backup}*.tar.gz 2>/dev/null | head -1)
+    else
       log_error "Backup not found: $specific_backup"
+      echo
       echo "Run 'nself restore --list' to see available backups"
       return 1
     fi
   else
     # Use most recent backup
     backup_to_restore="${backups[0]}"
-    specific_backup=$(basename "$backup_to_restore")
   fi
 
+  local backup_filename=$(basename "$backup_to_restore")
+
   # Show what we're restoring
-  echo "Restoring from: ${COLOR_BLUE}$specific_backup${COLOR_RESET}"
+  echo "Restoring from: ${COLOR_BLUE}$backup_filename${COLOR_RESET}"
   echo
 
-  # List files to restore
-  local files_to_restore=($(ls -1 "$backup_to_restore" 2>/dev/null))
+  # Show contents of the archive
+  if [[ "$verbose" == true ]] || [[ "$force" != true ]]; then
+    echo "Contents of backup:"
+    tar -tzf "$backup_to_restore" | sed 's/^/  • /'
+    echo
+  fi
 
-  if [[ ${#files_to_restore[@]} -eq 0 ]]; then
-    log_error "No files found in backup"
+  # Ask for confirmation unless force flag is used
+  if [[ "$force" != true ]]; then
+    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  This will overwrite existing files"
+    echo -n "Continue? [y/N]: "
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      echo "Restore cancelled"
+      return 0
+    fi
+    echo
+  fi
+
+  # Create backup of current state before restoring
+  local pre_restore_backup="_backup/before-restore_$(date +%Y%m%d_%H%M%S)"
+  local files_to_backup=""
+
+  # Check what files exist that would be overwritten
+  for file in $(tar -tzf "$backup_to_restore"); do
+    # Skip directories
+    [[ "$file" =~ /$ ]] && continue
+
+    if [[ -f "$file" ]] || [[ -d "$file" ]]; then
+      files_to_backup="$files_to_backup $file"
+    fi
+  done
+
+  if [[ -n "$files_to_backup" ]]; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Creating backup of current files..."
+    mkdir -p "$pre_restore_backup"
+
+    for item in $files_to_backup; do
+      if [[ -f "$item" ]]; then
+        mkdir -p "$pre_restore_backup/$(dirname "$item")"
+        cp "$item" "$pre_restore_backup/$item" 2>/dev/null || true
+      elif [[ -d "$item" ]]; then
+        mkdir -p "$pre_restore_backup/$(dirname "$item")"
+        cp -r "$item" "$pre_restore_backup/$item" 2>/dev/null || true
+      fi
+    done
+
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Backed up current files to: $pre_restore_backup\n"
+    echo
+  fi
+
+  # Extract the archive
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Extracting backup..."
+
+  if tar -xzf "$backup_to_restore" 2>/dev/null; then
+    printf "\r${COLOR_GREEN}✓${COLOR_RESET} Extracted backup successfully                    \n"
+  else
+    printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to extract backup                         \n"
     return 1
   fi
 
-  echo "Files to restore:"
-  for file in "${files_to_restore[@]}"; do
-    echo "  • $file"
-  done
-  echo
-
-  # Ask for confirmation
-  echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  This will overwrite existing files"
-  echo -n "Continue? [y/N]: "
-  read -r response
-  if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    echo "Restore cancelled"
-    return 0
-  fi
-  echo
-
-  # Perform restoration
-  local restored_count=0
-  local failed_count=0
-
-  for file in "${files_to_restore[@]}"; do
-    printf "${COLOR_BLUE}⠋${COLOR_RESET} Restoring $file..."
-
-    # Backup current file if it exists
-    if [[ -f "$file" ]]; then
-      cp "$file" "$file.before-restore" 2>/dev/null || true
-    fi
-
-    # Restore the file
-    if cp "$backup_to_restore/$file" "$file" 2>/dev/null; then
-      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Restored $file                              \n"
-      ((restored_count++))
-    else
-      printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to restore $file                     \n"
-      ((failed_count++))
-    fi
-  done
+  # Count restored files
+  local file_count=$(tar -tzf "$backup_to_restore" | grep -v '/$' | wc -l | tr -d ' ')
 
   echo
-  if [[ $failed_count -eq 0 ]]; then
-    log_success "Restored $restored_count files successfully"
-  else
-    log_warning "Restored $restored_count files, $failed_count failed"
-  fi
+  log_success "Restored $file_count files from backup"
 
   # Show next steps
   echo
-  echo "Next steps:"
+  echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
   echo
-  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}  - Generate infrastructure"
-  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}  - Start services"
+  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure from restored config${COLOR_RESET}"
+  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}"
   echo
-  echo "For more help, use: nself help or nself help restore"
+
+  if [[ -n "$files_to_backup" ]]; then
+    echo -e "${COLOR_DIM}Previous files backed up to: $pre_restore_backup${COLOR_RESET}"
+    echo
+  fi
 
   return 0
 }
 
 # Show help
 show_restore_help() {
-  echo "Usage: nself restore [options] [timestamp]"
+  echo "Usage: nself restore [options] [backup]"
   echo
   echo "Restore configuration from a previous backup"
   echo
   echo "Options:"
-  echo "  -l, --list     List available backups"
+  echo "  -l, --list     List available backups with details"
+  echo "  -f, --force    Skip confirmation prompt"
   echo "  -v, --verbose  Show detailed output"
   echo "  -h, --help     Show this help message"
   echo
   echo "Arguments:"
-  echo "  timestamp      Specific backup to restore (YYYYMMDD_HHMMSS format)"
+  echo "  backup         Backup filename or timestamp pattern"
   echo "                 If not specified, restores the most recent backup"
   echo
   echo "Examples:"
-  echo "  nself restore                    # Restore most recent backup"
-  echo "  nself restore --list             # List available backups"
-  echo "  nself restore 20250923_120000    # Restore specific backup"
+  echo "  nself restore                          # Restore most recent backup"
+  echo "  nself restore --list                   # List all available backups"
+  echo "  nself restore demo-app_20250923_120000.tar.gz"
+  echo "  nself restore 20250923_120000          # Match by timestamp"
+  echo "  nself restore --force                  # Skip confirmation"
   echo
   echo "Notes:"
-  echo "  • Backups are created when running 'nself reset'"
-  echo "  • Current files are backed up with .before-restore suffix"
-  echo "  • Only .env files are restored by default"
+  echo "  • Backups are created automatically when running 'nself reset'"
+  echo "  • Current files are backed up to _backup/before-restore_* before restoring"
+  echo "  • Backup format: projectname_YYYYMMDD_HHMMSS.tar.gz"
+  echo "  • Backups include: .env files, docker-compose.yml, services/, nginx/, etc."
 }
 
 # Export command

@@ -261,36 +261,99 @@ check_nself_config() {
   fi
 }
 
-# Function to check services status
+# Function to check if project has running containers
+has_running_containers() {
+  if [[ -f ".env" ]] || [[ -f ".env.local" ]] || [[ -f ".env.dev" ]]; then
+    load_env_with_priority 2>/dev/null || true
+  fi
+
+  local project_name="${PROJECT_NAME:-nself}"
+  local running_count=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+
+  [[ "${running_count}" -gt 0 ]]
+}
+
+# Function to check running containers health
+check_running_containers() {
+  echo ""
+  echo "Container Health Check"
+  echo "──────────────────────────────────────────────"
+
+  local project_name="${PROJECT_NAME:-nself}"
+  local containers=($(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | sort))
+  local total=${#containers[@]}
+  local healthy=0
+  local unhealthy=0
+  local no_health_check=0
+
+  for container in "${containers[@]}"; do
+    local service_name=$(echo "$container" | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//')
+    local health_status=$(docker inspect "$container" --format='{{.State.Health.Status}}' 2>/dev/null || echo "none")
+    local state=$(docker inspect "$container" --format='{{.State.Status}}' 2>/dev/null || echo "unknown")
+
+    if [[ "$health_status" == "healthy" ]]; then
+      log_success "$service_name: Healthy"
+      ((healthy++))
+    elif [[ "$health_status" == "unhealthy" ]]; then
+      log_error "$service_name: Unhealthy"
+      issue_found
+      ((unhealthy++))
+      # Show last few log lines for unhealthy containers
+      log_info "  Recent logs:"
+      docker logs --tail 5 "$container" 2>&1 | sed 's/^/    /'
+    elif [[ "$health_status" == "starting" ]]; then
+      log_info "$service_name: Starting..."
+    elif [[ "$state" == "running" && "$health_status" == "none" ]]; then
+      log_success "$service_name: Running (no health check)"
+      ((no_health_check++))
+    elif [[ "$state" == "restarting" ]]; then
+      log_warning "$service_name: Restarting (check logs for errors)"
+      warning_found
+    else
+      log_warning "$service_name: $state"
+      warning_found
+    fi
+  done
+
+  echo ""
+  if [[ $unhealthy -eq 0 ]]; then
+    log_success "All $total containers are healthy"
+  else
+    log_warning "$healthy healthy, $unhealthy unhealthy (total: $total containers)"
+  fi
+
+  if [[ $unhealthy -gt 0 ]]; then
+    echo ""
+    log_info "Troubleshooting unhealthy containers:"
+    log_info "  • Check logs: nself logs <service>"
+    log_info "  • Restart service: nself restart <service>"
+    log_info "  • Check resources: docker stats"
+  fi
+}
+
+# Function to check services status (fallback when no containers running)
 check_services() {
   start_spinner "Checking docker-compose.yml"
 
   if [[ -f "docker-compose.yml" ]]; then
     stop_spinner "success" "docker-compose.yml found"
 
-    # Check if any services are running
+    # Check if any services are running using direct Docker query
     start_spinner "Checking running services"
-    local running_services=$(compose ps --services --filter "status=running" 2>/dev/null | wc -l)
-    local total_services=$(compose config --services 2>/dev/null | wc -l)
+    local project_name="${PROJECT_NAME:-nself}"
+    local running_count=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
 
-    if [[ $running_services -gt 0 ]]; then
-      stop_spinner "success" "$running_services/$total_services services are running"
-    else
-      stop_spinner "success" "No services are currently running"
-      log_info "Run 'nself start' to start services"
+    # Try to get total from compose config, fallback to counting from docker-compose.yml
+    local total_services=$(compose config --services 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$total_services" == "0" && -f "docker-compose.yml" ]]; then
+      total_services=$(grep -c "^  [a-z].*:" docker-compose.yml 2>/dev/null || echo "?")
     fi
 
-    # Check for truly problematic containers (stopped when they should be running)
-    start_spinner "Checking service health"
-    local running_services=($(compose ps --services --filter "status=running" 2>/dev/null))
-    local stopped_services=($(compose ps --services --filter "status=exited" 2>/dev/null))
-
-    if [[ ${#stopped_services[@]} -gt 0 ]]; then
-      stop_spinner "warning" "${#stopped_services[@]} services are stopped"
-      warning_found
-      log_info "Run 'nself status' for detailed service information"
+    if [[ "$running_count" -gt 0 ]]; then
+      stop_spinner "success" "$running_count/$total_services services are running"
     else
-      stop_spinner "success" "All configured services are running"
+      stop_spinner "info" "No services are currently running"
+      log_info "Run 'nself start' to start services"
     fi
 
   else
@@ -381,7 +444,7 @@ check_database() {
   # Check if PostgreSQL is running
   if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME:-myproject}_postgres"; then
     log_success "PostgreSQL: Running"
-    
+
     # Check connection
     if docker exec "${PROJECT_NAME:-myproject}_postgres" pg_isready -U "${POSTGRES_USER:-postgres}" >/dev/null 2>&1; then
       log_success "Connection: OK"
@@ -390,48 +453,37 @@ check_database() {
       issue_found
       return 1
     fi
-    
-    # Check database size
-    local db_size=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
-      "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB:-nhost}'));" 2>/dev/null | xargs)
-    log_info "Database size: $db_size"
-    
+
     # Check connection count
     local conn_count=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
       "SELECT count(*) FROM pg_stat_activity WHERE state != 'idle';" 2>/dev/null | xargs)
     local max_conn="${DB_MAX_CONNECTIONS:-100}"
     local conn_percent=$((conn_count * 100 / max_conn))
-    
+
+
     if [[ $conn_percent -lt 80 ]]; then
       log_success "Connections: $conn_count/$max_conn ($conn_percent%)"
     else
       log_warning "High connections: $conn_count/$max_conn ($conn_percent%)"
       warning_found
     fi
-    
-    # Check cache hit ratio
-    local cache_ratio=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
-      "SELECT ROUND(sum(heap_blks_hit) * 100.0 / nullif(sum(heap_blks_hit) + sum(heap_blks_read), 0), 1) 
-       FROM pg_statio_user_tables;" 2>/dev/null | xargs)
-    
-    if [[ -n "$cache_ratio" ]] && [[ "${cache_ratio%.*}" -ge 90 ]]; then
-      log_success "Cache hit ratio: ${cache_ratio}%"
-    elif [[ -n "$cache_ratio" ]]; then
-      log_warning "Low cache hit ratio: ${cache_ratio}%"
-      warning_found
-    fi
-    
+
     # Check for table bloat
     local bloat_count=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
-      "SELECT COUNT(*) FROM pg_stat_user_tables 
+      "SELECT COUNT(*) FROM pg_stat_user_tables
        WHERE n_dead_tup > n_live_tup * 0.2 AND n_live_tup > 1000;" 2>/dev/null | xargs)
-    
+
     if [[ "$bloat_count" == "0" ]]; then
       log_success "Table bloat: None detected"
     else
       log_warning "Table bloat: $bloat_count tables need VACUUM"
       warning_found
     fi
+
+    # Check database size (last item)
+    local db_size=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
+      "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB:-nhost}'));" 2>/dev/null | xargs)
+    log_info "Database size: $db_size"
     
     # Check backup status
     if [[ -d "backups" ]]; then
@@ -583,37 +635,58 @@ check_service_urls() {
 
 # Function to show recommendations
 show_recommendations() {
+  local containers_running="${1:-false}"
+
   echo ""
   echo "Recommendations"
   echo "──────────────────────────────────────────────"
 
   if [[ $ISSUES_FOUND -eq 0 ]] && [[ $WARNINGS_FOUND -eq 0 ]]; then
     log_success "Your nself installation looks great!"
-    log_info "Ready for development. Run 'nself start' to start services."
+    if [[ "$containers_running" == "true" ]]; then
+      log_info "All containers are healthy and running properly."
+    else
+      log_info "Ready for development. Run 'nself start' to start services."
+    fi
     return
   fi
 
-  if [[ $ISSUES_FOUND -gt 0 ]]; then
-    log_error "Found $ISSUES_FOUND critical issue(s) that need attention:"
-    log_info "• Fix critical issues before running nself"
-    log_info "• Check installation documentation"
-    log_info "• Verify system requirements"
-  fi
+  if [[ "$containers_running" == "true" ]]; then
+    # Different messaging for running containers
+    if [[ $ISSUES_FOUND -gt 0 ]]; then
+      log_warning "Found $ISSUES_FOUND unhealthy container(s)"
+      log_info "• Check container logs for errors"
+      log_info "• Restart unhealthy services"
+      log_info "• Check resource usage (CPU/memory)"
+    fi
 
-  if [[ $WARNINGS_FOUND -gt 0 ]]; then
-    log_warning "Found $WARNINGS_FOUND warning(s):"
-    log_info "• Warnings won't prevent nself from running"
-    log_info "• Consider addressing for optimal performance"
-    log_info "• Some may become issues in production"
-  fi
+    if [[ $WARNINGS_FOUND -gt 0 ]]; then
+      log_info "Found $WARNINGS_FOUND warning(s) - containers are functional"
+    fi
+  else
+    # System/configuration issues
+    if [[ $ISSUES_FOUND -gt 0 ]]; then
+      log_error "Found $ISSUES_FOUND critical issue(s) that need attention:"
+      log_info "• Fix critical issues before running nself"
+      log_info "• Check installation documentation"
+      log_info "• Verify system requirements"
+    fi
 
-  echo ""
-  log_info "Common fixes:"
-  log_info "  nself init          - Create initial configuration"
-  log_info "  nself build         - Generate project structure"
-  log_info "  nself prod          - Generate secure passwords"
-  log_info "  nself update           - Update to latest version"
-  log_info "  nself status        - Check service details"
+    if [[ $WARNINGS_FOUND -gt 0 ]]; then
+      log_warning "Found $WARNINGS_FOUND warning(s):"
+      log_info "• Warnings won't prevent nself from running"
+      log_info "• Consider addressing for optimal performance"
+      log_info "• Some may become issues in production"
+    fi
+
+    echo ""
+    log_info "Common fixes:"
+    log_info "  nself init          - Create initial configuration"
+    log_info "  nself build         - Generate project structure"
+    log_info "  nself prod          - Generate secure passwords"
+    log_info "  nself update        - Update to latest version"
+    log_info "  nself status        - Check service details"
+  fi
 }
 
 # Main function
@@ -622,42 +695,126 @@ main() {
 
   show_system_info
 
+  # Check if containers are running - this determines which checks to run
+  local containers_running=false
+  if has_running_containers; then
+    containers_running=true
+  fi
+
+  # Show brief system requirements check (always shown)
   echo ""
   echo "System Requirements"
   echo "──────────────────────────────────────────────"
 
-  check_command "curl" "curl"
-  check_command "git" "Git"
-  check_docker
-  check_docker_compose
-  check_memory
-  check_disk_space "." 5
-
-  echo ""
-  echo "Network & Connectivity"
-  echo "──────────────────────────────────────────────"
-
-  check_network
-  check_ports
-
-  echo ""
-  echo "nself Configuration"
-  echo "──────────────────────────────────────────────"
-
-  check_nself_config
-  check_services
-  check_ssl
-  
-  # Check database health if PostgreSQL is configured
-  if [[ -n "${POSTGRES_DB:-}" ]] || [[ -f ".env" ]] || [[ -f ".env.dev" ]]; then
-    check_database
+  # Check Docker
+  start_spinner "Checking Docker"
+  if docker info >/dev/null 2>&1; then
+    local docker_version=$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',')
+    stop_spinner "success" "Docker ${docker_version} ${COLOR_DIM}(min v20.10)${COLOR_RESET}"
+  else
+    stop_spinner "error" "Docker is not running ${COLOR_DIM}(required)${COLOR_RESET}"
+    issue_found
   fi
 
-  check_service_urls
-  show_recommendations
+  # Check Docker Compose
+  start_spinner "Checking Docker Compose"
+  if docker compose version >/dev/null 2>&1; then
+    local compose_version=$(docker compose version --short 2>/dev/null)
+    stop_spinner "success" "Docker Compose ${compose_version} ${COLOR_DIM}(min v2.0)${COLOR_RESET}"
+  else
+    stop_spinner "error" "Docker Compose not available ${COLOR_DIM}(required)${COLOR_RESET}"
+    issue_found
+  fi
 
-  # Show quick fix commands if issues found
-  if [[ $ISSUES_FOUND -gt 0 ]]; then
+  # Check memory
+  start_spinner "Checking memory"
+  if [[ "$(uname)" == "Darwin" ]]; then
+    local total_mb=$(($(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 / 1024))
+    local total_gb=$((total_mb / 1024))
+    stop_spinner "success" "Memory ${total_gb}GB ${COLOR_DIM}(min 2GB)${COLOR_RESET}"
+  elif command -v free >/dev/null 2>&1; then
+    local total_mb=$(free -m | grep '^Mem:' | awk '{print $2}' 2>/dev/null || echo "0")
+    if [[ "$total_mb" -ge 2048 ]]; then
+      local total_gb=$((total_mb / 1024))
+      stop_spinner "success" "Memory ${total_gb}GB ${COLOR_DIM}(min 2GB)${COLOR_RESET}"
+    else
+      local total_gb_display=$(awk "BEGIN {printf \"%.1f\", $total_mb/1024}")
+      stop_spinner "warning" "Memory ${total_gb_display}GB - Low ${COLOR_DIM}(min 2GB recommended)${COLOR_RESET}"
+      warning_found
+    fi
+  else
+    stop_spinner "success" "Memory available ${COLOR_DIM}(unable to determine exact amount)${COLOR_RESET}"
+  fi
+
+  # Check disk space with minimum shown
+  start_spinner "Checking disk space"
+  local available_gb
+  if command -v df >/dev/null 2>&1; then
+    available_gb=$(df -h "." 2>/dev/null | tail -1 | awk '{print $4}' | sed 's/G.*//' 2>/dev/null || echo "unknown")
+
+    if [[ "$available_gb" == "unknown" ]] || ! [[ "$available_gb" =~ ^[0-9]+$ ]]; then
+      stop_spinner "warning" "Disk space available ${COLOR_DIM}(unable to determine exact amount)${COLOR_RESET}"
+      warning_found
+    elif [[ "$available_gb" -ge 5 ]]; then
+      stop_spinner "success" "Disk space ${available_gb}GB ${COLOR_DIM}(min 5GB)${COLOR_RESET}"
+    else
+      stop_spinner "error" "Disk space ${available_gb}GB - Insufficient ${COLOR_DIM}(min 5GB required)${COLOR_RESET}"
+      issue_found
+    fi
+  else
+    stop_spinner "warning" "Disk space check unavailable"
+    warning_found
+  fi
+
+  if [[ "$containers_running" == "true" ]]; then
+    # Containers are running - show health diagnostics
+    echo ""
+    log_success "Found running containers - performing health diagnostics"
+
+    # Check running container health
+    check_running_containers
+
+    # Check database health if PostgreSQL is running
+    if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME:-nself}_postgres"; then
+      check_database 2>/dev/null || true
+    fi
+
+  else
+    # No containers running - perform full system requirements check
+    echo ""
+    log_info "No containers running - checking system requirements"
+    echo ""
+
+    echo "System Requirements"
+    echo "──────────────────────────────────────────────"
+
+    check_command "curl" "curl"
+    check_command "git" "Git"
+    check_docker
+    check_docker_compose
+    check_memory
+    check_disk_space "." 5
+
+    echo ""
+    echo "Network & Connectivity"
+    echo "──────────────────────────────────────────────"
+
+    check_network
+    check_ports
+
+    echo ""
+    echo "nself Configuration"
+    echo "──────────────────────────────────────────────"
+
+    check_nself_config
+    check_services
+    check_ssl
+  fi
+
+  show_recommendations "$containers_running"
+
+  # Show quick fix commands only for system issues (not container issues)
+  if [[ $ISSUES_FOUND -gt 0 && "$containers_running" == "false" ]]; then
     echo ""
     echo "Quick Fixes"
     echo "──────────────────────────────────────────────"
@@ -678,13 +835,11 @@ main() {
   fi
 
   echo ""
-  echo "──────────────────────────────────────────────"
 
+  # Exit with appropriate code
   if [[ $ISSUES_FOUND -eq 0 ]]; then
-    log_success "Health check completed - No critical issues found!"
     exit 0
   else
-    log_error "Health check completed - $ISSUES_FOUND critical issue(s) found"
     exit 1
   fi
 }

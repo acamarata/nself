@@ -104,7 +104,7 @@ generate_service_server_blocks() {
 
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
     local admin_route="${NSELF_ADMIN_ROUTE:-admin.$domain}"
-    generate_upstream_server_block "nself-admin" "$admin_route" "3030"
+    generate_upstream_server_block "nself-admin" "$admin_route" "3021"
   fi
 
   # Custom services

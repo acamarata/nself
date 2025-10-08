@@ -91,18 +91,14 @@ check_service_health() {
   elif [[ "$health_status" == "starting" ]]; then
     echo "starting"
   elif [[ "$health_status" == "unhealthy" ]]; then
-    # If unhealthy but running, it might be a missing health endpoint
-    # Consider it healthy if the container is actually running
-    if [[ "$state" == "running" ]]; then
-      echo "healthy" # Treat running as healthy when health check fails
-    else
-      echo "unhealthy"
-    fi
+    # Container has a health check and it's failing
+    echo "unhealthy"
   elif [[ "$health_status" == "<no value>" ]] && [[ "$state" == "running" ]]; then
-    # No health check defined, but container is running
+    # No health check defined, but container is running - treat as healthy
     echo "healthy"
   elif [[ "$state" == "running" ]]; then
-    echo "healthy" # Default to healthy if running
+    # Running without health check - default to healthy
+    echo "healthy"
   else
     echo "$state"
   fi
@@ -269,48 +265,73 @@ show_service_overview() {
     load_env_with_priority
   fi
 
+  # Get services from compose config, fallback to Docker if config fails
   local services=($(compose config --services 2>/dev/null))
+
+  # If compose config fails, get running containers directly from Docker
+  if [[ ${#services[@]} -eq 0 ]]; then
+    local project_name="${PROJECT_NAME:-nself}"
+    services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//' | sort -u))
+  fi
+
   local running=0
   local total=${#services[@]}
 
   # Sort services in display order
   local sorted_services=($(sort_services "${services[@]}"))
 
-  # Get all container info in one call
+  # Get all container info in one call - fallback to docker ps if compose ps fails
   local all_containers=$(compose ps --format "{{.Service}}\t{{.Status}}\t{{.State}}" 2>/dev/null)
+
+  # If compose ps failed, query docker directly
+  local use_docker_fallback=false
+  if [[ -z "$all_containers" ]]; then
+    use_docker_fallback=true
+    local project_name="${PROJECT_NAME:-nself}"
+  fi
 
   # Build service list
   local service_list=()
   local stopped_count=0
 
   for service in "${sorted_services[@]}"; do
-    local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
     local health=$(check_service_health "$service")
+    local is_running=false
 
-    if [[ -n "$info" ]]; then
-      local status=$(echo "$info" | cut -f2)
-      if [[ "$status" == *"Up"* ]]; then
-        running=$((running + 1))
-        local indicator=""
-
-        # Choose indicator based on health
-        if [[ "$health" == "healthy" ]]; then
-          indicator="\033[1;32m✓\033[0m" # Green check for healthy
-        elif [[ "$health" == "unhealthy" ]]; then
-          indicator="\033[1;31m✗\033[0m" # Red X for unhealthy
-        elif [[ "$health" == "starting" ]]; then
-          indicator="\033[1;33m⟳\033[0m" # Yellow spinner for starting
-        else
-          indicator="\033[1;36m●\033[0m" # Cyan for no health check
-        fi
-
-        service_list+=("$indicator $service")
-      else
-        stopped_count=$((stopped_count + 1))
-        if [[ $stopped_count -le 5 ]]; then
-          service_list+=("\033[1;37m○\033[0m $service")
+    if [[ "$use_docker_fallback" == "true" ]]; then
+      # Query docker directly for container status
+      local container_name="${project_name}_${service}"
+      local container_status=$(docker ps --filter "name=${container_name}" --format "{{.Status}}" 2>/dev/null)
+      if [[ -n "$container_status" ]]; then
+        is_running=true
+      fi
+    else
+      # Use compose ps output
+      local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
+      if [[ -n "$info" ]]; then
+        local status=$(echo "$info" | cut -f2)
+        if [[ "$status" == *"Up"* ]]; then
+          is_running=true
         fi
       fi
+    fi
+
+    if [[ "$is_running" == "true" ]]; then
+      running=$((running + 1))
+      local indicator=""
+
+      # Choose indicator based on health
+      if [[ "$health" == "healthy" ]]; then
+        indicator="\033[1;32m✓\033[0m" # Green check for healthy
+      elif [[ "$health" == "unhealthy" ]]; then
+        indicator="\033[1;31m✗\033[0m" # Red X for unhealthy
+      elif [[ "$health" == "starting" ]]; then
+        indicator="\033[1;33m⟳\033[0m" # Yellow spinner for starting
+      else
+        indicator="\033[1;36m●\033[0m" # Cyan for no health check
+      fi
+
+      service_list+=("$indicator $service")
     else
       stopped_count=$((stopped_count + 1))
       if [[ $stopped_count -le 5 ]]; then

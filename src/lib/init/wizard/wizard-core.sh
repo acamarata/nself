@@ -181,7 +181,7 @@ wizard_admin_dashboard() {
 
   if confirm_action "Enable nself admin dashboard?"; then
     eval "$config_array_name+=('NSELF_ADMIN_ENABLED=true')"
-    eval "$config_array_name+=('NSELF_ADMIN_PORT=3456')"
+    eval "$config_array_name+=('NSELF_ADMIN_PORT=3021')"
 
     echo ""
     echo "Dashboard authentication:"

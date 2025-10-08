@@ -191,6 +191,7 @@ volumes:
 EOF
 
   # Add conditional volumes based on enabled services
+  [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && echo "  nself_admin_data:" >> docker-compose.yml
   [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "  redis_data:" >> docker-compose.yml
   [[ "${MINIO_ENABLED:-false}" == "true" ]] && echo "  minio_data:" >> docker-compose.yml
   [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] && echo "  meilisearch_data:" >> docker-compose.yml

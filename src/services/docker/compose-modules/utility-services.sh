@@ -44,7 +44,7 @@ generate_nself_admin_service() {
   # nself Admin - Project Management Dashboard
   nself-admin:
     image: acamarata/nself-admin:${NSELF_ADMIN_VERSION:-latest}
-    container_name: \${PROJECT_NAME}_nself_admin
+    container_name: \${PROJECT_NAME}_admin
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
@@ -54,14 +54,25 @@ generate_nself_admin_service() {
       hasura:
         condition: service_healthy
     environment:
+      PROJECT_PATH: /workspace
+      NSELF_PROJECT_PATH: /workspace
+      PROJECT_NAME: \${PROJECT_NAME}
+      BASE_DOMAIN: \${BASE_DOMAIN}
+      ENV: \${ENV}
       DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
       HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
-      PORT: 3100
+      ADMIN_SECRET_KEY: \${ADMIN_SECRET_KEY:-admin-secret-key-change-me}
+      ADMIN_PASSWORD_HASH: \${ADMIN_PASSWORD_HASH}
+      DOCKER_HOST: unix:///var/run/docker.sock
     ports:
-      - "\${NSELF_ADMIN_PORT:-3101}:3100"
+      - "\${NSELF_ADMIN_PORT:-3021}:3021"
+    volumes:
+      - ./:/workspace:rw
+      - nself_admin_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
       interval: 30s
       timeout: 10s
       retries: 5

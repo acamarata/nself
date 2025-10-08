@@ -402,19 +402,19 @@ fix_port_conflicts() {
   local env_file="${1:-.env.runtime}"
   local verbose="${2:-false}"
 
-  # Check for Loki/nself-admin port conflict (both default to 3100)
+  # Check for Loki/nself-admin port conflict (Loki defaults to 3100, admin to 3021)
   local loki_port="${LOKI_PORT:-3100}"
-  local nself_admin_port="${NSELF_ADMIN_PORT:-3100}"
+  local nself_admin_port="${NSELF_ADMIN_PORT:-3021}"
 
   if [[ "$loki_port" == "$nself_admin_port" ]] && [[ "${LOKI_ENABLED:-false}" == "true" ]] && [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
     [ "$verbose" = "true" ] && echo "  Resolving port conflict between Loki and nself-admin (both on $loki_port)"
 
-    # Move nself-admin to 3101
+    # Move nself-admin to alternate port
     if ! grep -q "^NSELF_ADMIN_PORT=" "$env_file" 2>/dev/null; then
-      echo "NSELF_ADMIN_PORT=3101" >> "$env_file"
-      [ "$verbose" = "true" ] && echo "    Moving nself-admin to port 3101"
+      echo "NSELF_ADMIN_PORT=3022" >> "$env_file"
+      [ "$verbose" = "true" ] && echo "    Moving nself-admin to port 3022"
     else
-      safe_sed_inline "$env_file" "s/^NSELF_ADMIN_PORT=.*/NSELF_ADMIN_PORT=3101/"
+      safe_sed_inline "$env_file" "s/^NSELF_ADMIN_PORT=.*/NSELF_ADMIN_PORT=3022/"
     fi
   fi
 

@@ -14,9 +14,9 @@ export COLOR_CYAN='\033[0;36m'
 export COLOR_DIM='\033[2m'
 
 # Source the new environment detection module if available
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/env-detection.sh" ]]; then
-  source "$SCRIPT_DIR/env-detection.sh"
+ENV_UTILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$ENV_UTILS_DIR/env-detection.sh" ]]; then
+  source "$ENV_UTILS_DIR/env-detection.sh"
 fi
 
 # Load environment files with correct priority order

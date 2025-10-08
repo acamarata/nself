@@ -18,12 +18,12 @@ export COLOR_BOLD=$'\033[1m'
 export COLOR_DIM=$'\033[2m'
 
 # Icons
-ICON_SUCCESS="✓"
-ICON_FAILURE="✗"
-ICON_WARNING="⚠"
-ICON_INFO="ℹ"
-ICON_ARROW="→"
-ICON_BULLET="•"
+export ICON_SUCCESS="✓"
+export ICON_FAILURE="✗"
+export ICON_WARNING="⚠"
+export ICON_INFO="ℹ"
+export ICON_ARROW="→"
+export ICON_BULLET="•"
 
 # Check for NO_COLOR environment variable
 if [[ -n "${NO_COLOR:-}" ]]; then

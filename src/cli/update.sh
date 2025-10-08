@@ -4,11 +4,14 @@
 # Don't use set -e - we handle all errors explicitly
 set -uo pipefail
 
-# Get script directory
+# Get script directory with absolute path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_SCRIPT_DIR="$SCRIPT_DIR"
 
 # Source utilities
-source "$SCRIPT_DIR/../lib/utils/display.sh"
+[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
+source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help for update command
 show_update_help() {
@@ -351,5 +354,9 @@ export -f cmd_update
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  pre_command "update" || exit $?
   cmd_update "$@"
+  exit_code=$?
+  post_command "update" $exit_code
+  exit $exit_code
 fi

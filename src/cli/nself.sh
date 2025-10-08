@@ -64,7 +64,13 @@ main() {
 
   # Handle special flags
   case "$command" in
-  --version | -v)
+  -v)
+    # -v flag should show just version number
+    command="version"
+    set -- "--short" "$@"
+    ;;
+  --version)
+    # --version shows full verbose output
     command="version"
     ;;
   --help | -h)
@@ -72,26 +78,12 @@ main() {
     ;;
   esac
 
-  # Map command to file (check multiple locations)
+  # Map command to file
   local command_file=""
 
-  # First check for direct command file in cli directory
+  # Check for command file in cli directory
   if [[ -f "$SCRIPT_DIR/${command}.sh" ]]; then
     command_file="$SCRIPT_DIR/${command}.sh"
-  # Then check tools subdirectories (now in src/tools)
-  elif [[ -f "$SCRIPT_DIR/../tools/dev/${command}.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/dev/${command}.sh"
-  elif [[ -f "$SCRIPT_DIR/../tools/scaffold/${command}.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/scaffold/${command}.sh"
-  elif [[ -f "$SCRIPT_DIR/../tools/validate/${command}.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/validate/${command}.sh"
-  # Handle special naming cases
-  elif [[ "$command" == "hot-reload" ]] && [[ -f "$SCRIPT_DIR/../tools/dev/hot_reload.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/dev/hot_reload.sh"
-  elif [[ "$command" == "hot_reload" ]] && [[ -f "$SCRIPT_DIR/../tools/dev/hot_reload.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/dev/hot_reload.sh"
-  elif [[ "$command" == "validate-env" ]] && [[ -f "$SCRIPT_DIR/../tools/validate/validate-env.sh" ]]; then
-    command_file="$SCRIPT_DIR/../tools/validate/validate-env.sh"
   fi
 
   # Check if command exists

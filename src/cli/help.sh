@@ -3,10 +3,12 @@ set -euo pipefail
 
 # help.sh - Show help information
 
-# Source shared utilities
-CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+# Get script directory with absolute path
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$CLI_SCRIPT_DIR"
-[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+
+# Source shared utilities
+[[ -z "${DISPLAY_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/display.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 [[ -z "${CONSTANTS_SOURCED:-}" ]] && source "$CLI_SCRIPT_DIR/../lib/config/constants.sh"
@@ -26,13 +28,14 @@ cmd_help() {
 
 # Show general help
 show_general_help() {
-  show_header "nself - Self-Hosted Infrastructure Manager"
   # Get version from VERSION file
   local version="unknown"
   if [[ -f "$SCRIPT_DIR/../VERSION" ]]; then
     version=$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
   fi
-  echo "Version: $version"
+
+  show_command_header "nself v${version}" "Self-Hosted Infrastructure Manager"
+  echo
   echo "Usage: nself <command> [options]"
 
   show_section "Core Commands"
@@ -41,33 +44,42 @@ show_general_help() {
   echo -e "  ${COLOR_BLUE}start${COLOR_RESET}         Start all services"
   echo -e "  ${COLOR_BLUE}stop${COLOR_RESET}          Stop all services"
   echo -e "  ${COLOR_BLUE}restart${COLOR_RESET}       Restart all services"
-  echo -e "  ${COLOR_BLUE}status${COLOR_RESET}        Show service status"
-  echo -e "  ${COLOR_BLUE}logs${COLOR_RESET}          View service logs"
-
-  show_section "Management Commands"
-  echo -e "  ${COLOR_BLUE}doctor${COLOR_RESET}        Run system diagnostics"
-  echo -e "  ${COLOR_BLUE}db${COLOR_RESET}            Database operations"
-  echo -e "  ${COLOR_BLUE}email${COLOR_RESET}         Email service configuration"
-  echo -e "  ${COLOR_BLUE}admin${COLOR_RESET}         Admin UI management (v0.3.9)"
-  echo -e "  ${COLOR_BLUE}search${COLOR_RESET}        Search service management (v0.3.9)"
-  echo -e "  ${COLOR_BLUE}mlflow${COLOR_RESET}        MLflow ML experiment tracking (v0.3.9)"
-  echo -e "  ${COLOR_BLUE}deploy${COLOR_RESET}        SSH deployment (v0.3.9)"
-  echo -e "  ${COLOR_BLUE}urls${COLOR_RESET}          Show service URLs"
-  echo -e "  ${COLOR_BLUE}prod${COLOR_RESET}          Configure for production deployment"
-  echo -e "  ${COLOR_BLUE}trust${COLOR_RESET}         Manage SSL certificates"
-  
-  show_section "Monitoring & Observability"
-  echo -e "  ${COLOR_BLUE}metrics${COLOR_RESET}       Complete monitoring stack management"
-  echo -e "  ${COLOR_BLUE}monitor${COLOR_RESET}       Access monitoring dashboards"
-
-  show_section "Development Commands"
+  echo
   echo -e "  ${COLOR_BLUE}reset${COLOR_RESET}         Reset project to clean state"
+  echo -e "  ${COLOR_BLUE}clean${COLOR_RESET}         Clean up Docker resources"
   echo -e "  ${COLOR_BLUE}restore${COLOR_RESET}       Restore configuration from backup"
 
-  show_section "Other Commands"
-  echo -e "  ${COLOR_BLUE}update${COLOR_RESET}        Update nself to latest version"
+  show_section "Status Commands"
+  echo -e "  ${COLOR_BLUE}status${COLOR_RESET}        Show service status"
+  echo -e "  ${COLOR_BLUE}logs${COLOR_RESET}          View service logs"
+  echo -e "  ${COLOR_BLUE}exec${COLOR_RESET}          Execute commands in containers"
+  echo -e "  ${COLOR_BLUE}urls${COLOR_RESET}          Show service URLs"
+  echo
+  echo -e "  ${COLOR_BLUE}doctor${COLOR_RESET}        Run system diagnostics"
   echo -e "  ${COLOR_BLUE}version${COLOR_RESET}       Show version information"
+  echo -e "  ${COLOR_BLUE}update${COLOR_RESET}        Update nself to latest version"
   echo -e "  ${COLOR_BLUE}help${COLOR_RESET}          Show this help message"
+
+  show_section "Management Commands"
+  echo -e "  ${COLOR_BLUE}ssl${COLOR_RESET}           Manage SSL certificates"
+  echo -e "  ${COLOR_BLUE}trust${COLOR_RESET}         Trust local SSL certificates"
+  echo
+  echo -e "  ${COLOR_BLUE}admin${COLOR_RESET}         Admin UI management"
+  echo -e "  ${COLOR_DIM}email${COLOR_RESET}         ${COLOR_DIM}Email service configuration (» 0.4.1)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}search${COLOR_RESET}        ${COLOR_DIM}Search service management (» 0.4.1)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}functions${COLOR_RESET}     ${COLOR_DIM}Serverless functions setup (» 0.4.1)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}mlflow${COLOR_RESET}        ${COLOR_DIM}MLflow ML experiment tracking (» 0.4.1)${COLOR_RESET}"
+  echo
+  echo -e "  ${COLOR_DIM}metrics${COLOR_RESET}       ${COLOR_DIM}Complete monitoring stack (» 0.4.2)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}monitor${COLOR_RESET}       ${COLOR_DIM}Access monitoring dashboards (» 0.4.2)${COLOR_RESET}"
+  echo
+  echo -e "  ${COLOR_DIM}db${COLOR_RESET}            ${COLOR_DIM}Database operations (» 0.4.3)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}backup${COLOR_RESET}        ${COLOR_DIM}Create or manage backups (» 0.4.4)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}rollback${COLOR_RESET}      ${COLOR_DIM}Rollback to a backup (» 0.4.4)${COLOR_RESET}"
+  echo
+  echo -e "  ${COLOR_DIM}prod${COLOR_RESET}          ${COLOR_DIM}Configure for production (» 0.4.5)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}deploy${COLOR_RESET}        ${COLOR_DIM}SSH deployment (» 0.4.5)${COLOR_RESET}"
+  echo -e "  ${COLOR_DIM}scale${COLOR_RESET}         ${COLOR_DIM}Scaling management (» 0.4.6)${COLOR_RESET}"
   echo
   echo "For command-specific help: nself help <command>"
   echo "                      or: nself <command> --help"

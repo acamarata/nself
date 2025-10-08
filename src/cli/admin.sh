@@ -204,7 +204,7 @@ admin_enable() {
   if ! grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
     log_warning "No admin password set. Generating temporary password..."
     local temp_password="admin$(date +%s | sha256sum | head -c 8)"
-    
+
     # Generate password hash
     local password_hash
     if command -v python3 >/dev/null 2>&1; then
@@ -215,10 +215,16 @@ pwd_hash = hashlib.pbkdf2_hmac('sha256', '$temp_password'.encode('utf-8'), salt,
 combined = salt + pwd_hash
 print(base64.b64encode(combined).decode('ascii'))
 ")
+    elif command -v openssl >/dev/null 2>&1; then
+      # Fallback to OpenSSL with salt
+      local salt=$(openssl rand -hex 16)
+      password_hash="${salt}:$(echo -n "${salt}${temp_password}" | openssl dgst -sha256 -binary | base64)"
     else
-      password_hash=$(echo -n "$temp_password" | sha256sum | cut -d' ' -f1)
+      log_error "Cannot generate secure password hash"
+      log_error "Please install either Python 3 or OpenSSL"
+      return 1
     fi
-    
+
     echo "ADMIN_PASSWORD_HASH=$password_hash" >> .env
     log_info "Temporary admin password: $temp_password"
     log_info "Change this after first login with 'nself admin password'"
@@ -389,7 +395,7 @@ admin_password() {
     return 1
   fi
   
-  # Generate password hash with salt using Python (more secure than plain SHA256)
+  # Generate password hash with salt using Python (most secure)
   local password_hash
   if command -v python3 >/dev/null 2>&1; then
     password_hash=$(python3 -c "
@@ -400,13 +406,14 @@ combined = salt + pwd_hash
 print(base64.b64encode(combined).decode('ascii'))
 ")
   elif command -v openssl >/dev/null 2>&1; then
-    # Fallback to OpenSSL with salt
+    # Fallback to OpenSSL with salt (still secure)
     local salt=$(openssl rand -hex 16)
     password_hash="${salt}:$(echo -n "${salt}${password}" | openssl dgst -sha256 -binary | base64)"
   else
-    # Last resort: SHA256 with warning
-    log_warning "Using weak password hashing (no Python or OpenSSL available)"
-    password_hash=$(echo -n "$password" | sha256sum | cut -d' ' -f1)
+    # No secure hashing available - abort
+    log_error "Cannot generate secure password hash"
+    log_error "Please install either Python 3 or OpenSSL"
+    return 1
   fi
   
   # Update .env - escape special characters in hash
@@ -602,8 +609,37 @@ cmd_admin() {
     if [[ ! -f ".env" ]]; then
       admin_minimal_setup
     else
-      # If .env exists, show status
-      admin_status
+      # If .env exists, check if admin is enabled
+      load_env_with_priority 2>/dev/null || true
+
+      local project_name="${PROJECT_NAME:-myproject}"
+      local container_name="${project_name}_admin"
+
+      # If admin container is running, open it
+      if docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+        admin_open
+      # If admin is enabled but not running, show status
+      elif [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
+        admin_status
+      # If admin is not enabled, enable and start it
+      else
+        log_info "Admin UI not enabled. Enabling and starting..."
+        admin_enable
+        echo ""
+        log_info "Building project configuration..."
+        "$CLI_SCRIPT_DIR/build.sh" || {
+          log_error "Build failed"
+          return 1
+        }
+        echo ""
+        log_info "Starting services..."
+        "$CLI_SCRIPT_DIR/start.sh" || {
+          log_error "Start failed"
+          return 1
+        }
+        echo ""
+        admin_open
+      fi
     fi
     ;;
   *)
