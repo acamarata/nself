@@ -14,7 +14,7 @@ else
   # Fallback definitions if display.sh not available
   show_command_header() {
     echo ""
-    echo -e "\033[1;34m$1\033[0m"
+    printf "\033[1;34m%s\033[0m\n" "$1"
     echo "$2"
     echo ""
   }
@@ -22,16 +22,16 @@ else
     echo "$@"
   }
   log_success() {
-    echo -e "\033[32m✓\033[0m $1"
+    printf "\033[32m✓\033[0m %s\n" "$1"
   }
   log_info() {
-    echo -e "\033[34mℹ\033[0m $1"
+    printf "\033[34mℹ\033[0m %s\n" "$1"
   }
   log_warning() {
-    echo -e "\033[33m⚠\033[0m $1"
+    printf "\033[33m⚠\033[0m %s\n" "$1"
   }
   log_error() {
-    echo -e "\033[31m✗\033[0m $1"
+    printf "\033[31m✗\033[0m %s\n" "$1"
   }
 fi
 

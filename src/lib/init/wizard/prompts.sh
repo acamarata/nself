@@ -26,9 +26,9 @@ show_wizard_step() {
   local padding_needed=$((56 - ${#step_text})) # 56 = content width
   
   echo
-  echo -e "${COLOR_CYAN}┌──────────────────────────────────────────────────────────┐${COLOR_RESET}"
+  printf "%s┌──────────────────────────────────────────────────────────┐%s\n" "${COLOR_CYAN}" "${COLOR_RESET}"
   printf "${COLOR_CYAN}│${COLOR_RESET} %s%*s ${COLOR_CYAN}│${COLOR_RESET}\n" "$step_text" $padding_needed ""
-  echo -e "${COLOR_CYAN}└──────────────────────────────────────────────────────────┘${COLOR_RESET}"
+  printf "%s└──────────────────────────────────────────────────────────┘%s\n" "${COLOR_CYAN}" "${COLOR_RESET}"
   echo
 }
 
@@ -206,19 +206,19 @@ press_any_key() {
 
 # Color output helpers
 print_success() {
-  echo -e "\033[32m✓\033[0m $1"
+  printf "\033[32m✓\033[0m %s\n" "$1"
 }
 
 print_error() {
-  echo -e "\033[31m✗\033[0m $1"
+  printf "\033[31m✗\033[0m %s\n" "$1"
 }
 
 print_warning() {
-  echo -e "\033[33m⚠\033[0m $1"
+  printf "\033[33m⚠\033[0m %s\n" "$1"
 }
 
 print_info() {
-  echo -e "\033[34mℹ\033[0m $1"
+  printf "\033[34mℹ\033[0m %s\n" "$1"
 }
 
 # Export all functions

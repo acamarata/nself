@@ -14,6 +14,12 @@ if ! type -t safe_echo >/dev/null 2>&1; then
   source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
 fi
 
+# Source platform compatibility utilities
+VALIDATION_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [[ -f "$VALIDATION_DIR/../utils/platform-compat.sh" ]]; then
+  source "$VALIDATION_DIR/../utils/platform-compat.sh"
+fi
+
 # Check for required command dependencies
 # Inputs: None (uses INIT_REQUIRED_COMMANDS array)
 # Outputs: Error messages for missing commands
@@ -208,8 +214,10 @@ validate_file_permissions() {
   # Get current permissions (portable way)
   local current_perms
 
-  # Try different stat commands based on what's available
-  if command -v stat >/dev/null 2>&1; then
+  # Try safe function if available, fallback to manual detection
+  if type -t safe_stat_perms >/dev/null 2>&1; then
+    current_perms=$(safe_stat_perms "$file" 2>/dev/null)
+  elif command -v stat >/dev/null 2>&1; then
     # Try GNU stat first (Linux)
     current_perms=$(stat -c "%a" "$file" 2>/dev/null) || {
       # Fall back to BSD stat (macOS/FreeBSD)

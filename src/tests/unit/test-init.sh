@@ -23,6 +23,12 @@ TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INIT_LIB_DIR="$TEST_DIR/../../lib/init"
 TEMP_TEST_DIR=""
 
+# Source platform compatibility utilities
+PLATFORM_COMPAT_DIR="$TEST_DIR/../../lib/utils"
+if [[ -f "$PLATFORM_COMPAT_DIR/platform-compat.sh" ]]; then
+  source "$PLATFORM_COMPAT_DIR/platform-compat.sh"
+fi
+
 # ============================================================================
 # Test Framework Functions
 # ============================================================================
@@ -80,7 +86,12 @@ assert_file_permissions() {
 
   local actual_perms
   if [[ -f "$file" ]]; then
-    actual_perms=$(stat -c "%a" "$file" 2>/dev/null || stat -f "%OLp" "$file" 2>/dev/null)
+    if type -t safe_stat_perms >/dev/null 2>&1; then
+      actual_perms=$(safe_stat_perms "$file" 2>/dev/null || echo "unknown")
+    else
+      # Fallback
+      actual_perms=$(stat -c "%a" "$file" 2>/dev/null || stat -f "%OLp" "$file" 2>/dev/null || echo "unknown")
+    fi
     if [[ "$actual_perms" == "$expected_perms" ]]; then
       return 0
     fi

@@ -82,6 +82,19 @@ safe_stat_mtime() {
   fi
 }
 
+# Platform-safe stat for file permissions (octal)
+safe_stat_perms() {
+  local file="$1"
+
+  if stat --version 2>/dev/null | grep -q GNU; then
+    # GNU stat (Linux) - permissions in octal
+    stat -c "%a" "$file"
+  else
+    # BSD stat (macOS) - permissions in octal
+    stat -f "%OLp" "$file"
+  fi
+}
+
 # Platform-safe grep with extended regex
 safe_grep_extended() {
   if grep --version 2>/dev/null | grep -q GNU; then
@@ -261,6 +274,7 @@ export -f safe_readlink
 export -f safe_mktemp
 export -f safe_date
 export -f safe_stat_mtime
+export -f safe_stat_perms
 export -f safe_grep_extended
 export -f safe_find
 export -f get_cpu_cores
