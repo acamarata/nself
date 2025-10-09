@@ -49,7 +49,7 @@
 - [Required Services](services/SERVICES_REQUIRED) (4)
 - [Optional Services](services/SERVICES_OPTIONAL) (7)
 - [Custom Services](services/SERVICES_CUSTOM) (40+ templates)
-- [Monitoring Bundle](MONITORING-BUNDLE) (10)
+- [Monitoring Bundle](services/MONITORING-BUNDLE) (10)
 
 ### Individual Services
 - [nself Admin](services/NSELF_ADMIN)
@@ -81,7 +81,8 @@
 
 ## 🤝 Contributing
 
-- [Development Guide](contributing/DEVELOPMENT)
+- [Contributing Guide](contributing/README)
+- [Development Setup](contributing/DEVELOPMENT)
 - [Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY)
 - [Code of Conduct](contributing/CODE_OF_CONDUCT)
 
@@ -89,8 +90,8 @@
 
 ## 📦 Releases
 
-- [Changelog](CHANGELOG)
-- [Roadmap](ROADMAP)
+- [Changelog](releases/CHANGELOG)
+- [Roadmap](releases/ROADMAP)
 - [v0.3.9 (Current)](releases/RELEASE-v0.3.9)
 - [All Releases](releases/)
 

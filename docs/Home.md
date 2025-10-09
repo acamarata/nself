@@ -68,7 +68,7 @@ All available services and how to use them.
 - **[Required Services](services/SERVICES_REQUIRED)** - Core infrastructure (4 services)
 - **[Optional Services](services/SERVICES_OPTIONAL)** - Additional capabilities (7+ services)
 - **[Custom Services](services/SERVICES_CUSTOM)** - Build your own microservices (40+ templates)
-- **[Monitoring Bundle](MONITORING-BUNDLE)** - Complete observability (10 services)
+- **[Monitoring Bundle](services/MONITORING-BUNDLE)** - Complete observability (10 services)
 - **[nself Admin](services/NSELF_ADMIN)** - Web-based management interface
 
 ### 📖 Guides
@@ -83,15 +83,16 @@ Step-by-step instructions for common tasks.
 ### 🤝 Contributing
 Help make nself better!
 
-- **[Contributing Guide](contributing/DEVELOPMENT)** - Development setup and standards
+- **[Contributing Guide](contributing/README)** - Start here for contribution guidelines
+- **[Development Setup](contributing/DEVELOPMENT)** - Development environment and standards
 - **[Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY)** - Bash 3.2+, POSIX compliance
 - **[Code of Conduct](contributing/CODE_OF_CONDUCT)** - Community guidelines
-- **[Roadmap](ROADMAP)** - Planned features and improvements
 
 ### 📦 Releases & Updates
 Stay up to date with nself development.
 
-- **[Changelog](CHANGELOG)** - Complete version history
+- **[Changelog](releases/CHANGELOG)** - Complete version history
+- **[Roadmap](releases/ROADMAP)** - Planned features and improvements
 - **[Latest Release (v0.3.9)](releases/RELEASE-v0.3.9)** - Current stable release
 - **[All Releases](releases/)** - View all releases
 
