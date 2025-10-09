@@ -275,7 +275,9 @@ confirm_action() {
   read -r response
   response=${response:-$default}
 
-  [[ "${response,,}" == "y" ]] || [[ "${response,,}" == "yes" ]]
+  # Convert to lowercase (Bash 3.2 compatible)
+  response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
+  [[ "$response" == "y" ]] || [[ "$response" == "yes" ]]
 }
 
 # Export functions
