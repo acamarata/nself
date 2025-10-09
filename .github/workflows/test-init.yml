@@ -5,11 +5,13 @@ on:
     paths:
       - 'src/cli/init.sh'
       - 'src/lib/init/**'
+      - 'src/tests/unit/test-init.sh'
       - '.github/workflows/test-init.yml'
   pull_request:
     paths:
       - 'src/cli/init.sh'
       - 'src/lib/init/**'
+      - 'src/tests/unit/test-init.sh'
       - '.github/workflows/test-init.yml'
   workflow_dispatch:
 
