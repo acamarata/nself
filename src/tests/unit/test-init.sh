@@ -404,12 +404,28 @@ test_check_dependencies() {
   source "$INIT_LIB_DIR/validation.sh"
 
   # Test with all commands available (should pass on most systems)
-  # Run with timeout to avoid hanging
+  # Run with timeout if available, otherwise skip timeout
   local result
-  if timeout 2 bash -c "source '$INIT_LIB_DIR/config.sh' && source '$INIT_LIB_DIR/platform.sh' && source '$INIT_LIB_DIR/validation.sh' && check_dependencies" >/dev/null 2>&1; then
-    result=0
+  if command -v timeout >/dev/null 2>&1; then
+    if timeout 2 bash -c "source '$INIT_LIB_DIR/config.sh' && source '$INIT_LIB_DIR/platform.sh' && source '$INIT_LIB_DIR/validation.sh' && check_dependencies" >/dev/null 2>&1; then
+      result=0
+    else
+      result=$?
+    fi
+  elif command -v gtimeout >/dev/null 2>&1; then
+    # macOS with coreutils
+    if gtimeout 2 bash -c "source '$INIT_LIB_DIR/config.sh' && source '$INIT_LIB_DIR/platform.sh' && source '$INIT_LIB_DIR/validation.sh' && check_dependencies" >/dev/null 2>&1; then
+      result=0
+    else
+      result=$?
+    fi
   else
-    result=$?
+    # No timeout available - just run the test directly (might hang but unlikely)
+    if bash -c "source '$INIT_LIB_DIR/config.sh' && source '$INIT_LIB_DIR/platform.sh' && source '$INIT_LIB_DIR/validation.sh' && check_dependencies" >/dev/null 2>&1; then
+      result=0
+    else
+      result=$?
+    fi
   fi
 
   # We expect this to pass on CI systems
@@ -456,17 +472,20 @@ test_init_integration() {
   CREATED_FILES=()
   MODIFIED_FILES=()
 
-  # Test basic template copy with timeout to prevent hanging
-  if timeout 2 bash -c "
-    source '$INIT_LIB_DIR/config.sh' &&
-    source '$INIT_LIB_DIR/platform.sh' &&
-    source '$INIT_LIB_DIR/atomic-ops.sh' &&
-    source '$INIT_LIB_DIR/templates.sh' &&
-    cd '$TEMP_TEST_DIR' &&
-    CREATED_FILES=() &&
-    MODIFIED_FILES=() &&
-    copy_basic_templates '$TEMP_TEST_DIR/templates' true
-  " >/dev/null 2>&1; then
+  # Test basic template copy with timeout to prevent hanging (if timeout available)
+  local test_cmd="source '$INIT_LIB_DIR/config.sh' && source '$INIT_LIB_DIR/platform.sh' && source '$INIT_LIB_DIR/atomic-ops.sh' && source '$INIT_LIB_DIR/templates.sh' && cd '$TEMP_TEST_DIR' && CREATED_FILES=() && MODIFIED_FILES=() && copy_basic_templates '$TEMP_TEST_DIR/templates' true"
+
+  local test_result=1
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 2 bash -c "$test_cmd" >/dev/null 2>&1 && test_result=0
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 2 bash -c "$test_cmd" >/dev/null 2>&1 && test_result=0
+  else
+    # No timeout - run directly
+    bash -c "$test_cmd" >/dev/null 2>&1 && test_result=0
+  fi
+
+  if [[ $test_result -eq 0 ]]; then
     assert_file_exists ".env" "Should create .env"
     assert_file_exists ".env.example" "Should create .env.example"
   else
