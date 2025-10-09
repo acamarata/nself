@@ -1,13 +1,15 @@
-# nself - Backend-as-a-Service Platform
+# nself - Self-Hosted Infrastructure Manager
 
 <div align="center">
 
-**The Complete Backend-as-a-Service Platform**
+**Complete Backend-as-a-Service Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](RELEASES)
+[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](releases/RELEASE-v0.3.9)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20v2-blue.svg)](https://docs.docker.com/compose/)
-[![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/nself/nself)
+[![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/acamarata/nself)
+
+*Current: v0.3.9 | Next: v0.4.0+ (In Development)*
 
 </div>
 
@@ -17,7 +19,7 @@
 
 ```bash
 # Install nself
-curl -fsSL https://raw.githubusercontent.com/nself/nself/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 
 # Initialize a demo project with all services
 nself init --demo
@@ -29,117 +31,198 @@ nself build
 nself start
 ```
 
-→ **[View Complete Demo Setup](DEMO_SETUP)** - 24 services showcasing all capabilities
+→ **[View Complete Demo Setup](services/DEMO_SETUP)** - 25 services showcasing all capabilities
+
+---
 
 ## 📚 Documentation
 
-### Getting Started
-- **[Quick Start Guide](Quick-Start)** - Get up and running in 5 minutes
-- **[Demo Setup](DEMO_SETUP)** - Complete demo with all 24 services
-- **[FAQ](FAQ)** - Frequently asked questions
-- **[Examples](EXAMPLES)** - Code examples and patterns
+### 🎯 Getting Started
+Start here if you're new to nself.
 
-### Services Documentation
-- **[Services Overview](SERVICES)** - All available services
-- **[Required Services](SERVICES_REQUIRED)** - Core infrastructure (4 services)
-- **[Optional Services](SERVICES_OPTIONAL)** - Additional capabilities (16+ services)
-- **[Custom Services](SERVICES_CUSTOM)** - Build your own microservices
-- **[Monitoring Bundle](MONITORING_BUNDLE)** - Complete observability (10 services)
-- **[nself Admin](NSELF_ADMIN)** - Web-based management interface
+- **[Quick Start Guide](guides/Quick-Start)** - Get up and running in 5 minutes
+- **[Installation Guide](guides/Installation)** - Detailed installation instructions
+- **[Demo Setup](services/DEMO_SETUP)** - Complete demo with all services
+- **[FAQ](guides/FAQ)** - Frequently asked questions
+- **[Troubleshooting](guides/TROUBLESHOOTING)** - Common issues and solutions
 
-### Configuration & Commands
-- **[Commands Reference](COMMANDS)** - Complete CLI reference
-- **[Command Tree](COMMAND-TREE-FINAL)** - Visual command structure
-- **[Environment Variables](ENVIRONMENT-VARIABLES)** - Configuration reference
-- **[Complete ENV Reference](ENV-COMPLETE-REFERENCE)** - All variables
-- **[Environment Setup](ENVIRONMENT_CONFIGURATION)** - Configuration guide
+### 🔧 Core Documentation
+Essential information for using nself.
 
-### Architecture & Guides
-- **[Architecture Overview](ARCHITECTURE)** - System design
-- **[Project Structure](PROJECT_STRUCTURE)** - File organization
-- **[Troubleshooting](TROUBLESHOOTING)** - Common issues and solutions
-- **[Backup Guide](BACKUP_GUIDE)** - Backup and recovery
-- **[Domain Selection](domain-selection-guide)** - Choosing your domain
+- **[Commands Reference](commands/COMMANDS)** - Complete CLI reference (v0.3.9)
+- **[Command Tree](commands/COMMAND-TREE-FINAL)** - Visual command structure
+- **[Environment Variables](configuration/ENVIRONMENT-VARIABLES)** - Configuration reference
+- **[Environment Setup](configuration/ENVIRONMENT_CONFIGURATION)** - Configuration guide
 
-### Releases & Updates
-- **[Changelog](CHANGELOG)** - Version history
-- **[Latest Release Notes](RELEASES)** - Current version details
-- **[v0.3.9 Release](RELEASE-v0.3.9)** - Previous stable release
+### 🏗️ Architecture
+Understand how nself works.
+
+- **[Architecture Overview](architecture/ARCHITECTURE)** - System design and principles
+- **[Project Structure](architecture/PROJECT_STRUCTURE)** - File organization
+- **[Service System](architecture/SERVICE_ARCHITECTURE)** - How services work
+
+### 🎛️ Services
+All available services and how to use them.
+
+- **[Services Overview](services/SERVICES)** - All available services
+- **[Required Services](services/SERVICES_REQUIRED)** - Core infrastructure (4 services)
+- **[Optional Services](services/SERVICES_OPTIONAL)** - Additional capabilities (7+ services)
+- **[Custom Services](services/SERVICES_CUSTOM)** - Build your own microservices (40+ templates)
+- **[Monitoring Bundle](MONITORING-BUNDLE)** - Complete observability (10 services)
+- **[nself Admin](services/NSELF_ADMIN)** - Web-based management interface
+
+### 📖 Guides
+Step-by-step instructions for common tasks.
+
+- **[Backup Guide](guides/BACKUP_GUIDE)** - Backup and recovery strategies
+- **[Domain Selection](guides/domain-selection-guide)** - Choosing your domain strategy
+- **[SSL Certificates](guides/SSL-Guide)** - SSL setup and management
+- **[Multi-Environment](guides/MULTI-ENVIRONMENT)** - Dev, staging, production
+- **[Examples](guides/EXAMPLES)** - Code examples and patterns
+
+### 🤝 Contributing
+Help make nself better!
+
+- **[Contributing Guide](contributing/DEVELOPMENT)** - Development setup and standards
+- **[Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY)** - Bash 3.2+, POSIX compliance
+- **[Code of Conduct](contributing/CODE_OF_CONDUCT)** - Community guidelines
+- **[Roadmap](ROADMAP)** - Planned features and improvements
+
+### 📦 Releases & Updates
+Stay up to date with nself development.
+
+- **[Changelog](CHANGELOG)** - Complete version history
+- **[Latest Release (v0.3.9)](releases/RELEASE-v0.3.9)** - Current stable release
+- **[All Releases](releases/)** - View all releases
+
+---
 
 ## 🎯 Service Overview
 
 ### Core Services (Required - 4)
-- **PostgreSQL** - Primary database with 60+ extensions
-- **Hasura** - Instant GraphQL APIs
-- **Auth** - JWT-based authentication
-- **Nginx** - Reverse proxy and SSL
+Always enabled, form the foundation of your infrastructure.
 
-### Optional Services (16 in demo)
-- **Monitoring Bundle (10)** - Prometheus, Grafana, Loki, Promtail, Tempo, Alertmanager, exporters
-- **Redis** - Caching and sessions
-- **MinIO** - S3-compatible storage
-- **nself Admin** - Web management UI
-- **MailPit** - Email testing
-- **MeiliSearch** - Full-text search
-- **Storage API** - File management
+- **PostgreSQL** - Primary database with 60+ extensions
+- **Hasura** - Instant GraphQL APIs with real-time subscriptions
+- **Auth** - JWT-based authentication with social providers
+- **Nginx** - Reverse proxy, SSL termination, routing
+
+### Optional Services (7 types)
+Enable what you need with `*_ENABLED=true`.
+
+- **nself Admin** - Web-based management interface
+- **Redis** - Caching, sessions, pub/sub
+- **MinIO** - S3-compatible object storage
+- **Functions** - Serverless functions runtime
+- **MLflow** - ML experiment tracking and model registry
+- **Mail** - Email service (MailPit for dev, SMTP for prod)
+- **Search** - Full-text search (MeiliSearch, Typesense, Sonic)
+
+### Monitoring Bundle (10 services)
+Complete observability stack, enabled with `MONITORING_ENABLED=true`.
+
+- **Prometheus** - Metrics collection and storage
+- **Grafana** - Visualization and dashboards
+- **Loki** - Log aggregation
+- **Promtail** - Log shipping (required for Loki)
+- **Tempo** - Distributed tracing
+- **Alertmanager** - Alert routing and management
+- **cAdvisor** - Container metrics
+- **Node Exporter** - System metrics
+- **Postgres Exporter** - Database metrics
+- **Redis Exporter** - Cache metrics
 
 ### Custom Services (Your code)
-- Build from 40+ templates
-- Express, FastAPI, Go, Rust, and more
-- Automatic Docker integration
-- Full monitoring and logging
+Build from 40+ templates with automatic Docker integration.
+
+**Languages:** JavaScript/TypeScript, Python, Go, Rust, Java, PHP
+**Frameworks:** Express, FastAPI, gRPC, BullMQ, GraphQL, REST
+**Templates:** API servers, workers, queues, microservices, and more
+
+---
 
 ## 🎆 Demo Project
 
-The demo setup showcases all capabilities with **24 running services**:
+The demo setup showcases all capabilities with **25 running services**:
 
 ```bash
 nself init --demo  # Creates complete demo environment
 nself build        # Generates 4 custom services from templates
-nself start        # Launches all 24 services
+nself start        # Launches all 25 services
 ```
 
 **Demo includes:**
-- Express.js REST API
-- BullMQ job worker
-- Go gRPC service
-- Python FastAPI
-- Full monitoring stack
-- All optional services
+- 4 Required Services (PostgreSQL, Hasura, Auth, Nginx)
+- 7 Optional Services (Redis, MinIO, Admin, Mail, Search, MLflow, Functions)
+- 10 Monitoring Services (complete observability stack)
+- 4 Custom Services (Express API, BullMQ worker, Go gRPC, Python FastAPI)
+
+**Access everything at:** `*.local.nself.org` (21 routes configured)
+
+---
 
 ## 🌟 Key Features
 
 - **🔧 Zero DevOps** - Focus on code, not infrastructure
 - **🚀 One Command** - `nself init && nself build && nself start`
 - **🎛️ Admin Dashboard** - Complete web-based management
-- **🔐 Authentication** - JWT with social providers
+- **🔐 Authentication** - JWT with social login providers
 - **📦 S3 Storage** - MinIO with CDN support
-- **🔄 Auto-SSL** - Let's Encrypt integration
-- **📊 Full Monitoring** - Metrics, logs, traces
-- **🎯 Multi-Environment** - Dev, staging, production
+- **🔄 Auto-SSL** - Self-signed for local, Let's Encrypt for production
+- **📊 Full Monitoring** - Metrics, logs, traces, alerts
+- **🎯 Multi-Environment** - Dev, staging, production configurations
 - **🔌 60+ Extensions** - PostgreSQL fully loaded
-- **📧 Email Service** - Multiple providers
+- **📧 Email Service** - Multiple provider support
+- **🔍 Search Engine** - Multiple providers (MeiliSearch, Typesense, Sonic)
+- **🤖 Functions** - Serverless runtime for Node.js/Python
+- **📈 ML Tracking** - MLflow for experiment tracking
+
+---
 
 ## 📊 Common Use Cases
 
 ### SaaS Applications
-Complete backend with auth, billing, multi-tenancy
+Complete backend with auth, storage, billing integration, multi-tenancy support.
 
 ### API Platforms
-RESTful and GraphQL APIs with documentation
+RESTful and GraphQL APIs with automatic documentation, rate limiting, monitoring.
 
-### Microservices
-Service mesh with discovery and monitoring
+### Microservices Architecture
+Service mesh with discovery, load balancing, distributed tracing, centralized logging.
 
-### ML Platforms
-MLflow integration for model training and serving
+### ML/AI Platforms
+MLflow integration for model training, experiment tracking, model serving, A/B testing.
+
+### Real-Time Applications
+WebSocket support, real-time GraphQL subscriptions, Redis pub/sub, event streaming.
+
+---
+
+## 🔍 Command Reference (v0.3.9)
+
+### Core Commands
+`init` `build` `start` `stop` `restart` `reset` `clean` `restore`
+
+### Status Commands
+`status` `logs` `exec` `urls` `doctor` `version` `update` `help`
+
+### Management Commands
+`ssl` `trust` `admin`
+
+### Planned Commands (v0.4.1+)
+`email` `search` `functions` `mlflow` `metrics` `monitor` `db` `backup` `rollback` `prod` `deploy` `scale`
+
+→ **[View Complete Command Reference](commands/COMMANDS)** for detailed usage
+
+---
 
 ## 🤝 Community & Support
 
-- **GitHub Issues** - [Report bugs and request features](https://github.com/nself/nself/issues)
-- **Discussions** - [Ask questions and share ideas](https://github.com/nself/nself/discussions)
-- **Discord** - [Join our community](https://discord.gg/nself)
-- **Twitter** - [@nself](https://twitter.com/nself)
+- **GitHub Issues** - [Report bugs and request features](https://github.com/acamarata/nself/issues)
+- **GitHub Discussions** - [Ask questions and share ideas](https://github.com/acamarata/nself/discussions)
+- **Support Development** - [Patreon](https://patreon.com/acamarata)
+
+---
 
 ## 📝 License
 
@@ -147,4 +230,6 @@ nself is open-source software licensed under the MIT License.
 
 ---
 
-**Current Version:** v0.4.0 | **Last Updated:** September 2024 | **Status:** Production Ready
+**Current Version:** v0.3.9 | **Next Release:** v0.4.0+ | **Status:** Production Ready
+
+→ **[View Roadmap](ROADMAP)** to see what's coming next
