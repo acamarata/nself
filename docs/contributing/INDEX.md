@@ -460,4 +460,4 @@ Your contributions make nself better for everyone. Whether you're fixing a typo,
 
 ---
 
-**Version:** 1.0 | **Last Updated:** October 2024 | **Current Version:** v0.3.9
+**Version:** 1.0 | **Last Updated:** October 2025 | **Current Version:** v0.4.0

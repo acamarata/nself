@@ -59,7 +59,8 @@ detect_custom_services() {
 
       # Set route using ternary pattern (env-specific or default)
       local route_var="CS_${i}_ROUTE"
-      local env_route_var="CS_${i}_${ENV^^}_ROUTE"
+      local env_upper="$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
+      local env_route_var="CS_${i}_${env_upper}_ROUTE"
 
       # Check for environment-specific route first
       if [[ -n "${!env_route_var:-}" ]]; then
@@ -103,7 +104,8 @@ detect_frontend_apps() {
       export "$port_var=${!port_var:-$((3000 + i - 1))}"
 
       # Route with environment awareness
-      local env_route_var="FRONTEND_APP_${i}_${ENV^^}_ROUTE"
+      local env_upper="$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
+      local env_route_var="FRONTEND_APP_${i}_${env_upper}_ROUTE"
       if [[ -n "${!env_route_var:-}" ]]; then
         export "$route_var=${!env_route_var}"
       elif [[ -n "${!route_var:-}" ]]; then

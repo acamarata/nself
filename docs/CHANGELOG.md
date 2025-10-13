@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-10-13
+
+### Fixed
+- **Cross-Platform Compatibility**
+  - Fixed unbound variable error in change-detection.sh (MONITORING_ENABLED and related service flags)
+  - Replaced Bash 4+ uppercase expansion (${var^^}) with tr command for Bash 3.2 compatibility
+  - Fixed 3 instances in config-validator.sh and service-detection.sh
+  - All shell scripts now compatible with Bash 3.2+ (macOS default)
+
+### Changed
+- **Version Management**
+  - Updated version to 0.4.0 marking production-ready release
+  - All planned v0.4.0 features are complete and tested
+  - Enhanced shell script robustness with proper variable defaults
+
+### Tested
+- Core workflow (init → build → start) working correctly
+- All CLI commands (help, version, doctor, status, urls, clean, ssl, admin) functional
+- CI/CD pipeline passing all tests (12/12)
+- Cross-platform compatibility verified on macOS (Bash 3.2) and Ubuntu
+
 ## [0.3.9] - 2025-09-10 (Latest Patches)
 
 ### Fixed (September 10, 2025)

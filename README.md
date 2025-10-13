@@ -1,7 +1,7 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/acamarata/nself/releases)
-[![Status](https://img.shields.io/badge/status-beta-orange.svg)](#-important-note)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
@@ -23,9 +23,9 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-> **🚀 v0.3.9**: Admin UI integration, critical bug fixes, improved stability! Features web-based monitoring dashboard, real-time service health, Docker container management, and comprehensive backup UI. All major commands tested and working. [See release notes](docs/RELEASES.md)
+> **🚀 v0.4.0**: Production-ready release! All core features complete and tested. Enhanced cross-platform compatibility (Bash 3.2+), fixed critical bugs, improved stability. Admin UI, comprehensive CLI commands, automated SSL, and full monitoring stack. [See changelog](docs/CHANGELOG.md)
 
-📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and what's coming in v0.4.0!
+📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
 nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 

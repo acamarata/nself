@@ -156,7 +156,7 @@ validate_compose_consistency() {
   local compose_services=$(grep "^  [a-z_-]*:" "$compose_file" 2>/dev/null | sed 's/^  //;s/://' | sort -u)
 
   for service in $compose_services; do
-    local var_name="${service^^}_ENABLED"
+    local var_name="$(echo "$service" | tr '[:lower:]' '[:upper:]')_ENABLED"
     var_name="${var_name//-/_}"
 
     # Skip core services that don't have enable flags

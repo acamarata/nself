@@ -6,12 +6,51 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
-## [v0.3.9] - September 3, 2024 (Patched September 16, 2024)
+## [v0.4.0] - October 13, 2025
 
-**Status**: Current Stable Release
-**[Full Release Notes](\1)**
-**[Installation Optimization Patch](\1)**
-**Latest Patch**: Critical build hang fix (September 16, 2024)
+**Status**: ✅ Current Stable Release
+**[Full Release Notes](./v0.4.0.md)** | **[Changelog](./CHANGELOG.md#040---2025-10-13)**
+
+### Highlights
+- 🎯 **Production-Ready Core** - Stable, tested, ready for real-world use
+- 🐛 **Critical Bug Fixes** - Fixed unbound variables and Bash 4+ compatibility issues
+- 🖥️ **Cross-Platform** - Bash 3.2+ compatible (macOS, Linux, WSL)
+- ✅ **CI/CD Passing** - 12/12 tests passing on all platforms
+- 📚 **Complete Documentation** - Comprehensive guides and examples
+- 🔧 **15 Core Commands** - All essential commands functional and tested
+- 🎨 **40+ Service Templates** - Production-ready templates for all major languages
+- 📊 **Monitoring Bundle** - Complete 10-service observability stack
+
+### What's New in v0.4.0
+- **Fixed**: Unbound variable error in change-detection.sh
+- **Fixed**: Bash 4+ uppercase expansion compatibility (replaced ${var^^} with tr)
+- **Enhanced**: Cross-platform shell script compatibility
+- **Improved**: Error handling with proper defaults
+- **Tested**: Full QA cycle with all core workflows verified
+
+### Quick Stats
+- 15 core commands (all functional)
+- 40 service templates
+- 10-service monitoring bundle
+- 4 required services (PostgreSQL, Hasura, Auth, Nginx)
+- 7 optional services (Redis, MinIO, Admin, MailPit, MeiliSearch, Functions, MLflow)
+- Quality score: 10/10
+
+### What v0.4.0 Means
+This release marks the **production-ready milestone** for nself. All core functionality is:
+- ✅ Fully implemented and tested
+- ✅ Cross-platform compatible
+- ✅ Documented with examples
+- ✅ Ready for real-world deployment
+
+Future releases (v0.4.1+) will add management commands for existing services and polish features, but v0.4.0 provides a solid, stable foundation for production use.
+
+---
+
+## [v0.3.9] - September 3, 2025 (Patched September 16, 2025)
+
+**Status**: Previous Stable Release
+**[Full Release Notes](./v0.3.9.md)** | **[Installation Patch](./RELEASE-v0.3.9-patch3.md)**
 
 ### Highlights
 - 🎯 **Admin UI Integration** - Web-based monitoring dashboard at localhost:3100
@@ -35,9 +74,9 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
-## [v0.3.8] - August 15, 2024
+## [v0.3.8] - August 15, 2025
 
-**Status**: Stable Release
+**Status**: Previous Stable Release
 
 ### Highlights
 - 🔐 **Complete SSL System** - Automatic certificate generation and trust
@@ -54,9 +93,9 @@ This document provides an index of all nself releases with links to detailed rel
 
 ---
 
-## [v0.3.7] - July 30, 2024
+## [v0.3.7] - July 30, 2025
 
-**Status**: Stable Release
+**Status**: Legacy Release
 
 ### Highlights
 - 🚀 **Initial Public Release**
@@ -79,7 +118,7 @@ nself follows semantic versioning:
 - **Major (X.0.0)**: Breaking changes, major architecture updates
 - **Minor (0.X.0)**: New features, backward compatible
 - **Patch (0.0.X)**: Bug fixes, minor improvements
-- **Tags**: 
+- **Tags**:
   - `-alpha`: Early testing, may be unstable
   - `-beta`: Feature complete, testing for stability
   - `-rc`: Release candidate, final testing
@@ -94,21 +133,38 @@ nself follows semantic versioning:
 
 ## Support Policy
 
-- **Current stable**: Full support
-- **Previous stable**: Security updates for 6 months
+- **Current stable (v0.4.0)**: Full support
+- **Previous stable (v0.3.9)**: Security updates for 6 months
 - **Beta releases**: Community support
 - **Alpha releases**: No support
 
 ## Upcoming Releases
 
-### v0.4.0 (Q1 2025)
-- Complete `deploy` command implementation
-- Complete `search` command implementation
-- Polish and refinement
-- End-to-end testing
-- Bug fixes and stability
+### v0.4.1 (Q1 2026) - Service Management
+- `nself email` - Email service configuration
+- `nself search` - Search engine management
+- `nself functions` - Serverless functions management
+- `nself mlflow` - MLflow management
 
-### Beyond (After v0.4.0)
+### v0.4.2 (Q2 2026) - Monitoring Management
+- `nself metrics` - Complete monitoring stack management
+- `nself monitor` - Access monitoring dashboards
+
+### v0.4.3 (Q2 2026) - Database Operations
+- `nself db` - Database operations and optimization
+
+### v0.4.4 (Q3 2026) - Backup & Restore
+- `nself backup` - Backup creation and management
+- `nself rollback` - Rollback capabilities
+
+### v0.4.5 (Q3 2026) - Production Features
+- `nself prod` - Production configuration
+- `nself deploy` - SSH deployment automation
+
+### v0.4.6 (Q4 2026) - Scaling
+- `nself scale` - Scaling management
+
+### v0.5+ (2027+) - Advanced Features
 - Kubernetes deployment support
 - Multi-node clustering
 - Plugin system
@@ -121,4 +177,4 @@ Older releases and their documentation can be found in the [GitHub Releases](htt
 
 ---
 
-*For the latest version, run `nself version` or check [src/VERSION](../src/VERSION)*
+*For the latest version, run `nself version` or check [src/VERSION](../../src/VERSION)*

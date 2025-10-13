@@ -4,12 +4,12 @@
 
 **Complete Backend-as-a-Service Platform**
 
-[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](releases/RELEASE-v0.3.9)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](releases/v0.4.0)
+[![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20v2-blue.svg)](https://docs.docker.com/compose/)
-[![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/acamarata/nself)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/acamarata/nself)
 
-*Current: v0.3.9 | Next: v0.4.0+ (In Development)*
+*Current: v0.4.0 (Production-Ready) | Next: v0.4.x Series*
 
 </div>
 
@@ -231,6 +231,6 @@ nself is open-source software licensed under the MIT License.
 
 ---
 
-**Current Version:** v0.3.9 | **Next Release:** v0.4.0+ | **Status:** Production Ready
+**Current Version:** v0.4.0 | **Next Release:** v0.4.1+ | **Status:** Stable Production-Ready
 
 → **[View Roadmap](ROADMAP)** to see what's coming next
