@@ -1,156 +1,94 @@
-# nself v0.3.7 Release Guide
+# nself v0.4.0 Release Guide
 
-All package files have been prepared for the v0.3.7 release across multiple platforms.
+All package files have been prepared for the v0.4.0 release across multiple platforms.
 
-## 1. Homebrew (macOS/Linux)
+## Release Workflow
 
-**Status**: Repository prepared at `~/homebrew-nself`
+### Step 1: Create GitHub Release (Required)
 
-### To publish:
-1. Create GitHub repository: https://github.com/new
-   - Name: `homebrew-nself`
-   - Public repository
-2. Push the tap:
-   ```bash
-   cd ~/homebrew-nself
-   git push -u origin main
-   ```
-3. Users install with:
-   ```bash
-   brew tap acamarata/nself
-   brew install nself
-   ```
+1. Go to: https://github.com/acamarata/nself/releases/new
+2. Tag: `v0.4.0` (already created and pushed)
+3. Title: `nself v0.4.0 - Production-Ready Release`
+4. Description: Use the release notes provided
+5. Mark as "Set as latest release"
+6. Publish release
 
-## 2. Docker Hub
+After publishing, GitHub will automatically create the source tarball at:
+`https://github.com/acamarata/nself/archive/refs/tags/v0.4.0.tar.gz`
 
-**Status**: Dockerfile and scripts ready in `.releases/docker/`
+### Step 2: Calculate SHA256 for Homebrew
 
-### To publish:
+Once the GitHub release is published, calculate the SHA256:
+
 ```bash
-# Build the image
+curl -sL "https://github.com/acamarata/nself/archive/refs/tags/v0.4.0.tar.gz" | shasum -a 256
+```
+
+Then update `.releases/homebrew/nself.rb` with the actual SHA256 (currently shows PLACEHOLDER).
+
+### Step 3: Update Homebrew (macOS/Linux)
+
+**Repository**: https://github.com/acamarata/homebrew-nself
+
+#### Option A: Automated Script
+```bash
 cd /Users/admin/Sites/nself
-./.releases/docker/build-and-push.sh 0.3.7
+./.releases/scripts/update-homebrew.sh v0.4.0
+```
 
-# Login to Docker Hub
-docker login -u acamarata
+This will:
+- Download the release tarball
+- Calculate SHA256
+- Update the formula
+- Push to homebrew-nself repository
 
-# Push images
-docker push acamarata/nself:0.3.7
-docker push acamarata/nself:latest
+#### Option B: Manual Update
+```bash
+# Clone or update tap repository
+cd ~/homebrew-nself || git clone https://github.com/acamarata/homebrew-nself.git ~/homebrew-nself
+cd ~/homebrew-nself
+
+# Update Formula/nself.rb
+git add Formula/nself.rb
+git commit -m "Update nself to v0.4.0"
+git push
 ```
 
 Users install with:
 ```bash
-docker pull acamarata/nself:latest
-```
-
-## 3. Ubuntu PPA
-
-**Status**: Debian package files ready in `.releases/debian/`
-
-### To publish:
-1. Install build tools:
-   ```bash
-   sudo apt-get install devscripts debhelper dput
-   ```
-
-2. Build source package:
-   ```bash
-   cd /Users/admin/Sites/nself
-   debuild -S -sa
-   ```
-
-3. Upload to Launchpad PPA:
-   ```bash
-   dput ppa:acamarata/nself ../nself_0.3.7-1_source.changes
-   ```
-
-Users install with:
-```bash
-sudo add-apt-repository ppa:acamarata/nself
-sudo apt update
-sudo apt install nself
-```
-
-## 4. Fedora COPR
-
-**Status**: RPM spec file ready in `.releases/rpm/`
-
-### To publish:
-1. Create SRPM:
-   ```bash
-   cd /Users/admin/Sites/nself
-   tar czf ~/rpmbuild/SOURCES/nself-0.3.7.tar.gz --transform 's,^,nself-0.3.7/,' *
-   rpmbuild -bs .releases/rpm/nself.spec
-   ```
-
-2. Upload to COPR:
-   - Go to: https://copr.fedorainfracloud.org/
-   - Create new project: `nself`
-   - Upload SRPM from `~/rpmbuild/SRPMS/`
-
-Users install with:
-```bash
-sudo dnf copr enable acamarata/nself
-sudo dnf install nself
-```
-
-## 5. Arch Linux AUR
-
-**Status**: PKGBUILD ready in `.releases/aur/`
-
-### To publish:
-1. Clone AUR repository:
-   ```bash
-   git clone ssh://aur@aur.archlinux.org/nself.git ~/aur-nself
-   ```
-
-2. Copy files and push:
-   ```bash
-   cp /Users/admin/Sites/nself/.releases/aur/* ~/aur-nself/
-   cd ~/aur-nself
-   git add .
-   git commit -m "Release v0.3.7"
-   git push
-   ```
-
-Users install with:
-```bash
-yay -S nself
-# or
-git clone https://aur.archlinux.org/nself.git
-cd nself
-makepkg -si
+brew tap acamarata/nself
+brew install nself
 ```
 
 ## Version Information
 
-- **Version**: 0.3.7
-- **SHA256**: 842e571cba1c5d0bdd7a50f066e560a53cde99fd6225f87438b71d1c112bc3c4
-- **Source**: https://github.com/acamarata/nself/archive/refs/tags/v0.3.7.tar.gz
+- **Version**: 0.4.0
+- **Tag**: v0.4.0
+- **Status**: Production-Ready
+- **Source**: https://github.com/acamarata/nself/archive/refs/tags/v0.4.0.tar.gz
+- **Release Notes**: See `/docs/releases/v0.4.0.md`
 
-## Testing Commands
+## Post-Release Checklist
 
-After publishing, test each platform:
+- [ ] GitHub Release published with release notes
+- [ ] Homebrew formula updated with correct SHA256
+- [ ] Test installation on macOS
+- [ ] Test installation on Linux
+- [ ] Verify `nself version` returns `0.4.0`
 
-```bash
-# Homebrew
-brew install nself && nself version
+## Priority Release Channels
 
-# Docker
-docker run acamarata/nself:latest version
+For v0.4.0, focus on:
 
-# Ubuntu/Debian
-sudo apt install nself && nself version
-
-# Fedora
-sudo dnf install nself && nself version
-
-# Arch
-yay -S nself && nself version
-```
+1. ✅ **GitHub Release** (Required)
+2. ✅ **install.nself.org** (Already deployed)
+3. 🔄 **Homebrew** (Update after GitHub release)
 
 ## Support
 
-- GitHub: https://github.com/acamarata/nself
-- Email: aric.camarata@gmail.com
+- **GitHub**: https://github.com/acamarata/nself
+- **Issues**: https://github.com/acamarata/nself/issues
+
+---
+
+*Last Updated: October 13, 2025 for v0.4.0 release*

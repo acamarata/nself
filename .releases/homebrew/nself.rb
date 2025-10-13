@@ -1,10 +1,10 @@
 class Nself < Formula
-  desc "Deploy a feature-complete backend infrastructure in seconds"
+  desc "Production-ready self-hosted backend infrastructure"
   homepage "https://nself.org"
-  url "https://github.com/acamarata/nself/archive/refs/tags/v0.3.7.tar.gz"
-  sha256 "842e571cba1c5d0bdd7a50f066e560a53cde99fd6225f87438b71d1c112bc3c4"
+  url "https://github.com/acamarata/nself/archive/refs/tags/v0.4.0.tar.gz"
+  sha256 "PLACEHOLDER_SHA256_UPDATE_AFTER_GITHUB_RELEASE"
   license "Source-Available"
-  version "0.3.7"
+  version "0.4.0"
 
   depends_on "docker"
   depends_on "docker-compose"
