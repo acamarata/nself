@@ -1,14 +1,14 @@
 # Maintainer: Aric Camarata <aric.camarata@gmail.com>
 pkgname=nself
-pkgver=0.3.7
+pkgver=0.4.0
 pkgrel=1
-pkgdesc="Deploy feature-complete backend infrastructure in seconds"
+pkgdesc="Production-ready self-hosted backend infrastructure"
 arch=('any')
 url="https://nself.org"
 license=('custom:Source-Available')
 depends=('bash' 'docker' 'docker-compose')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/acamarata/nself/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('842e571cba1c5d0bdd7a50f066e560a53cde99fd6225f87438b71d1c112bc3c4')
+sha256sums=('19623692feeaa3411bba55577131b44101b0e2b17e42e7345c7903b2abdcbf06')
 
 package() {
     cd "$srcdir/$pkgname-$pkgver"

@@ -27,7 +27,7 @@ LABEL org.opencontainers.image.title="nself" \
       org.opencontainers.image.description="Deploy feature-complete backend infrastructure in seconds" \
       org.opencontainers.image.url="https://nself.org" \
       org.opencontainers.image.source="https://github.com/acamarata/nself" \
-      org.opencontainers.image.version="0.3.7" \
+      org.opencontainers.image.version="0.4.0" \
       org.opencontainers.image.vendor="nself" \
       org.opencontainers.image.licenses="Source-Available"
 

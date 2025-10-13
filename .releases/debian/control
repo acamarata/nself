@@ -11,7 +11,8 @@ Vcs-Git: https://github.com/acamarata/nself.git
 Package: nself
 Architecture: all
 Depends: ${misc:Depends}, bash (>= 4.0), docker.io | docker-ce, docker-compose
-Description: Deploy feature-complete backend infrastructure in seconds
- nself is a self-hosted infrastructure manager that helps developers
- deploy production-ready backend services including PostgreSQL, Hasura,
- authentication, email services, and more with a single command.
+Description: Production-ready self-hosted backend infrastructure
+ nself is a production-ready infrastructure manager that helps developers
+ deploy backend services including PostgreSQL, Hasura GraphQL, authentication,
+ storage, email services, monitoring, and more with a single command. Includes
+ 40+ service templates, automated SSL, and comprehensive monitoring stack.

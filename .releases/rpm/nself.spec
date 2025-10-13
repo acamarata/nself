@@ -1,21 +1,22 @@
 Name:           nself
-Version:        0.3.7
+Version:        0.4.0
 Release:        1%{?dist}
-Summary:        Deploy feature-complete backend infrastructure in seconds
+Summary:        Production-ready self-hosted backend infrastructure
 
 License:        Source-Available
 URL:            https://nself.org
 Source0:        https://github.com/acamarata/nself/archive/refs/tags/v%{version}.tar.gz
 
 BuildArch:      noarch
-Requires:       bash >= 4.0
+Requires:       bash >= 3.2
 Requires:       docker
 Requires:       docker-compose
 
 %description
-nself is a self-hosted infrastructure manager that helps developers
-deploy production-ready backend services including PostgreSQL, Hasura,
-authentication, email services, and more with a single command.
+nself is a production-ready infrastructure manager that helps developers
+deploy backend services including PostgreSQL, Hasura GraphQL, authentication,
+storage, email services, monitoring, and more with a single command. Includes
+40+ service templates, automated SSL, and comprehensive monitoring stack.
 
 %prep
 %autosetup -n %{name}-%{version}
@@ -49,9 +50,10 @@ find %{buildroot}%{_datadir}/%{name} -type f -name "*.sh" -exec chmod 755 {} \;
 %{_datadir}/%{name}
 
 %changelog
-* Fri Aug 16 2024 Aric Camarata <aric.camarata@gmail.com> - 0.3.7-1
-- Release v0.3.7
-- Improved update command with loading spinner
-- Enhanced version command with standard flags
-- Fixed CI integration tests
-- Updated installation process
+* Sun Oct 13 2025 Aric Camarata <aric.camarata@gmail.com> - 0.4.0-1
+- Production-ready release v0.4.0
+- Fixed critical bugs (unbound variables, Bash 4+ compatibility)
+- Enhanced cross-platform support (Bash 3.2+)
+- All core features complete and tested
+- 12/12 CI tests passing across all platforms
+- Improved stability and error handling

@@ -20,7 +20,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 **Based on [Nhost.io](https://nhost.io) for self-hosting!** and expanded with more features. Copy the below command in Terminal to install and get up and running in seconds!
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
+curl -sSL https://install.nself.org | bash
 ```
 
 > **🚀 v0.4.0**: Production-ready release! All core features complete and tested. Enhanced cross-platform compatibility (Bash 3.2+), fixed critical bugs, improved stability. Admin UI, comprehensive CLI commands, automated SSL, and full monitoring stack. [See changelog](docs/CHANGELOG.md)
@@ -77,27 +77,28 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 ### Quick Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
+curl -sSL https://install.nself.org | bash
 ```
 
-### Package Managers
+### Alternative Methods
 
-#### macOS (Homebrew)
+#### Package Managers
+
+**macOS/Linux (Homebrew)**
 ```bash
 brew tap acamarata/nself
 brew install nself
 ```
 
-#### Debian/Ubuntu (.deb)
+**Direct from GitHub**
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.9/nself_0.3.9_all.deb
-sudo dpkg -i nself_0.3.9_all.deb
+curl -fsSL https://raw.githubusercontent.com/acamarata/nself/main/install.sh | bash
 ```
 
-#### RHEL/CentOS/Fedora (.rpm)
+**Docker**
 ```bash
-wget https://github.com/acamarata/nself/releases/download/v0.3.9/nself-0.3.9-1.noarch.rpm
-sudo rpm -i nself-0.3.9-1.noarch.rpm
+docker pull acamarata/nself:latest
+docker run -it acamarata/nself:latest version
 ```
 
 The installer will:
