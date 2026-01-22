@@ -41,3 +41,6 @@ dist/
 !src/templates/envs/.env*
 !src/templates/demo/.env*
 # Git config fixed
+
+# Release planning (local only)
+next.md

@@ -1,11 +1,12 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.2)](#next-v042) | [Future (v0.5+)](#future-v05)
+[Released](#released) | [Next (v0.4.2)](#next-v042) | [Planned (v0.4.x)](#planned-v04x-series) | [Future (v0.5+)](#future-v05)
 
 ## Current Status Summary
 - **✅ v0.4.1 (Current)**: Platform compatibility fixes - stable release
 - **📋 v0.4.2 (Next)**: Service & Monitoring management commands
+- **📋 v0.4.3**: Database, Backup & Production features
 - **🔮 v0.5+**: Advanced features (Kubernetes, multi-cloud, enterprise)
 
 ---
@@ -66,27 +67,32 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ## Next (v0.4.2)
 **Status**: 📋 Planned | **Target**: Q1-Q2 2026
-**Focus**: Service Management & Monitoring Commands
+**Focus**: Service & Monitoring Management Commands
+
+This release adds **6 new commands** for managing optional services and monitoring.
 
 ### New Commands
 
 #### Service Management
-- `nself email` - Email service configuration and testing
-- `nself search` - Search engine management (MeiliSearch, Typesense, etc.)
-- `nself functions` - Serverless functions management
-- `nself mlflow` - MLflow ML experiment tracking management
+| Command | Purpose |
+|---------|---------|
+| `nself email` | Email service configuration, testing, provider switching |
+| `nself search` | Search engine management (MeiliSearch, Typesense, Sonic) |
+| `nself functions` | Serverless functions deployment, logs, testing |
+| `nself mlflow` | MLflow experiment tracking, model management |
 
 #### Monitoring Management
-- `nself metrics` - Complete monitoring stack management
-- `nself monitor` - Access monitoring dashboards (Grafana, Prometheus, etc.)
+| Command | Purpose |
+|---------|---------|
+| `nself metrics` | Prometheus/metrics configuration and management |
+| `nself monitor` | Dashboard access (Grafana, Prometheus, Alertmanager) |
 
 ### Enhancements
-- Enhanced email provider configuration
-- Search engine setup wizards
-- Functions deployment and testing
-- MLflow integration improvements
-- Monitoring stack configuration wizards
-- Dashboard management
+- Email provider setup wizards (MailPit, SMTP, SendGrid, Postmark)
+- Search engine indexing and testing tools
+- Functions hot-reload and live logs
+- MLflow experiment browser CLI
+- Grafana dashboard management
 - Alert rule templates
 - Metrics export and analysis
 
@@ -94,55 +100,61 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ## Planned (v0.4.x Series)
 
-### v0.4.3 - Database Operations
-**Target**: Q2 2026
+### v0.4.3 - Database, Backup & Production
+**Target**: Q2-Q3 2026
 
-**New Commands**:
-- `nself db` - Database operations (migrations, backups, optimization)
+This consolidated release combines database operations, backup/restore, and production features.
 
-**Enhancements**:
-- Schema migration tools
-- Database performance analysis
-- Query optimization recommendations
-- Connection pooling management
+#### New Commands
+| Command | Purpose |
+|---------|---------|
+| `nself db` | Database migrations, backups, optimization, queries |
+| `nself backup` | Create, schedule, and manage backups |
+| `nself restore` | Restore from backups, point-in-time recovery |
+| `nself prod` | Production environment configuration |
+| `nself deploy` | SSH-based deployment to VPS/servers |
 
-### v0.4.4 - Backup & Restore
-**Target**: Q3 2026
+#### Enhancements
+- **Database**
+  - Schema migration tools
+  - Performance analysis and query optimization
+  - Connection pooling management
+  - Database cloning for dev/staging
 
-**New Commands**:
-- `nself backup` - Create and manage backups
-- `nself rollback` - Rollback to previous state
+- **Backup & Restore**
+  - S3-compatible backup storage (MinIO, AWS S3)
+  - Automated backup scheduling (cron)
+  - Point-in-time recovery
+  - Backup encryption and verification
 
-**Enhancements**:
-- S3-compatible backup storage
-- Automated backup scheduling
-- Point-in-time recovery
-- Backup encryption
+- **Production**
+  - Security hardening wizard
+  - Environment-specific configurations
+  - GitHub webhook integration
+  - Zero-downtime deployments
+  - Health check endpoints
 
-### v0.4.5 - Production Features
-**Target**: Q3 2026
+---
 
-**New Commands**:
-- `nself prod` - Configure for production environments
-- `nself deploy` - SSH-based deployment automation
+### v0.4.4 - Scaling & Advanced Features
+**Target**: Q3-Q4 2026
 
-**Enhancements**:
-- Production security hardening
-- VPS deployment automation
-- GitHub webhook integration
-- Zero-downtime deployments
+Final release in the 0.4.x series before major 0.5 features.
 
-### v0.4.6 - Scaling & Performance
-**Target**: Q4 2026
+#### New Commands
+| Command | Purpose |
+|---------|---------|
+| `nself scale` | Horizontal/vertical scaling management |
+| `nself perf` | Performance profiling and optimization |
+| `nself migrate` | Cross-environment migration tools |
 
-**New Commands**:
-- `nself scale` - Horizontal and vertical scaling management
-
-**Enhancements**:
+#### Enhancements
 - Auto-scaling configuration
-- Load balancing setup
-- Resource optimization
-- Performance monitoring
+- Load balancing setup (nginx upstream)
+- Resource optimization recommendations
+- Performance benchmarking
+- Multi-environment sync
+- Configuration drift detection
 
 ---
 
@@ -155,18 +167,21 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 - **Container Orchestration** - Docker Swarm, Nomad support
 - **Cloud Providers** - Native integrations (AWS, GCP, Azure, DigitalOcean)
 - **Multi-Region** - Geographic distribution and failover
+- **Terraform Integration** - Infrastructure as code exports
 
 ### Enterprise Features (v0.6)
 - **Security & Compliance** - SSO/SAML, RBAC, audit logging, compliance templates
 - **Advanced Database** - Multi-region replication, read replicas, automatic failover
-- **High Availability** - Multi-node clustering, load balancing
+- **High Availability** - Multi-node clustering, load balancing, circuit breakers
 - **Developer Tools** - Code generation, API testing, CI/CD templates
+- **Team Management** - Multi-user access, permissions, activity logs
 
 ### Innovation (v0.7+)
-- **AI/ML Platform** - Vector database, LLM integration, model serving
-- **Edge Computing** - Edge functions, CDN integration, offline-first
+- **AI/ML Platform** - Vector database (pgvector), LLM integration, model serving
+- **Edge Computing** - Edge functions, CDN integration, offline-first sync
 - **Multi-Tenancy** - True multi-tenant architecture with isolation
-- **Plugin System** - Community-contributed extensions
+- **Plugin System** - Community-contributed extensions and integrations
+- **GUI Application** - Desktop app for visual management
 
 ---
 
@@ -175,32 +190,59 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 1. **Stability First** - Never break existing features
 2. **Smart Defaults** - Everything works out of the box
 3. **No Lock-in** - Standard Docker/PostgreSQL/GraphQL
-4. **Progressive Disclosure** - Advanced features stay hidden
+4. **Progressive Disclosure** - Advanced features stay hidden until needed
 5. **Auto-Fix** - Detect and resolve problems automatically
-6. **Offline-First** - Works without internet
-7. **Security by Default** - Production-ready security
-8. **Cross-Platform** - Works on macOS, Linux, WSL
+6. **Offline-First** - Works without internet connection
+7. **Security by Default** - Production-ready security out of the box
+8. **Cross-Platform** - Works on macOS, Linux, WSL (Bash 3.2+)
 
 ---
 
 ## Release Timeline
 
-| Version | Status | Focus | Timeline |
-|---------|--------|-------|----------|
-| [v0.4.0](#v040---production-ready-core) | ✅ Released | Production-Ready Core | Oct 2025 |
-| [v0.4.1](#v041---platform-compatibility-fixes) | ✅ Released | Platform Compatibility | Jan 2026 |
-| [v0.4.2](#next-v042) | 📋 Planned | Service & Monitoring | Q1-Q2 2026 |
-| [v0.4.3](#v043---database-operations) | 📋 Planned | Database Tools | Q2 2026 |
-| [v0.4.4](#v044---backup--restore) | 📋 Planned | Backup & Restore | Q3 2026 |
-| [v0.4.5](#v045---production-features) | 📋 Planned | Production & Deploy | Q3 2026 |
-| [v0.4.6](#v046---scaling--performance) | 📋 Planned | Scaling | Q4 2026 |
-| [v0.5+](#future-v05) | 🔮 Future | Advanced Features | 2027+ |
+| Version | Status | Focus | Target |
+|---------|--------|-------|--------|
+| v0.4.0 | ✅ Released | Production-Ready Core | Oct 2025 |
+| v0.4.1 | ✅ Released | Platform Compatibility | Jan 2026 |
+| **v0.4.2** | 📋 **Next** | Service & Monitoring | Q1-Q2 2026 |
+| v0.4.3 | 📋 Planned | Database, Backup, Production | Q2-Q3 2026 |
+| v0.4.4 | 📋 Planned | Scaling & Advanced | Q3-Q4 2026 |
+| v0.5.0 | 🔮 Future | Kubernetes & Cloud | 2027 |
+| v0.6.0 | 🔮 Future | Enterprise Features | 2027+ |
+
+---
+
+## Command Summary by Release
+
+### Currently Available (v0.4.1)
+```
+init, build, start, stop, restart, reset, clean, restore
+status, logs, exec, urls, doctor, version, update, help
+ssl, trust, admin
+```
+
+### Coming in v0.4.2
+```
+email, search, functions, mlflow, metrics, monitor
+```
+
+### Coming in v0.4.3
+```
+db, backup, restore, prod, deploy
+```
+
+### Coming in v0.4.4
+```
+scale, perf, migrate
+```
+
+**Total Commands After v0.4.4**: 30+
 
 ---
 
 ## Contributing
 
-### Priority Areas for v0.4.x
+### Priority Areas
 1. Test v0.4.1 in production environments
 2. Report bugs and edge cases
 3. Documentation improvements
@@ -211,7 +253,7 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 - **GitHub**: [github.com/acamarata/nself](https://github.com/acamarata/nself)
 - **Issues**: [Report Bugs](https://github.com/acamarata/nself/issues)
 - **Discussions**: [Feature Requests & Ideas](https://github.com/acamarata/nself/discussions)
-- **Testing**: Help test v0.4.x features in development
+- **Testing**: Help test new features in development
 
 ---
 
