@@ -11,6 +11,6 @@ pkgbase = nself
 	depends = curl
 	depends = git
 	source = nself-0.4.1.tar.gz::https://github.com/acamarata/nself/archive/v0.4.1.tar.gz
-	sha256sums = PLACEHOLDER_SHA256
+	sha256sums = 0d832e8dbbb368511241eab7973afa5d6ed8af69615e137c679064c903d3c7b2
 
 pkgname = nself
