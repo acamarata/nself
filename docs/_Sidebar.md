@@ -1,4 +1,4 @@
-# nself v0.4.1
+# nself v0.4.4
 
 ### [Home](Home)
 
@@ -8,90 +8,81 @@
 
 - [Quick Start](guides/Quick-Start)
 - [Installation](guides/Installation)
+- [Database Workflow](guides/DATABASE-WORKFLOW)
 - [Demo Setup](services/DEMO_SETUP)
 - [FAQ](guides/FAQ)
-- [Troubleshooting](guides/TROUBLESHOOTING)
 
 ---
 
 ## Commands
 
-- [Commands Reference](commands/COMMANDS)
-- [Command Tree](commands/COMMAND-TREE-FINAL)
-- [Complete Reference](commands/COMMANDS-COMPLETE)
+- [Commands Overview](commands/COMMANDS)
+- [db](commands/DB) - Database tools
+- [deploy](commands/DEPLOY) - Deployment
+- [env](commands/ENV) - Environments
+- [prod](commands/PROD) - Production
+- [staging](commands/STAGING) - Staging
+
+### Service Commands
+- [email](commands/EMAIL)
+- [search](commands/SEARCH)
+- [functions](commands/FUNCTIONS)
+- [mlflow](commands/MLFLOW)
+- [metrics](commands/METRICS)
+- [monitor](commands/MONITOR)
 
 ---
 
 ## Configuration
 
 - [Environment Variables](configuration/ENVIRONMENT-VARIABLES)
-- [Complete ENV Reference](configuration/ENV-COMPLETE-REFERENCE)
-- [Environment Setup](configuration/ENVIRONMENT_CONFIGURATION)
-- [Start Command Options](configuration/START-COMMAND-OPTIONS)
+- [ENV Reference](configuration/ENV-COMPLETE-REFERENCE)
+- [Start Options](configuration/START-COMMAND-OPTIONS)
 - [Admin UI](configuration/Admin-UI)
-
----
-
-## Architecture
-
-- [Architecture Overview](architecture/ARCHITECTURE)
-- [Project Structure](architecture/PROJECT_STRUCTURE)
-- [Build Architecture](architecture/BUILD_ARCHITECTURE)
-- [Directory Structure](architecture/DIRECTORY_STRUCTURE)
-- [API Reference](architecture/API)
 
 ---
 
 ## Services
 
-### Overview
-- [All Services](services/SERVICES)
-- [Service Reference](services/SERVICE_REFERENCE)
-
-### Service Types
-- [Required Services](services/SERVICES_REQUIRED) (4)
-- [Optional Services](services/SERVICES_OPTIONAL) (7)
-- [Custom Services](services/SERVICES_CUSTOM) (40+ templates)
-- [Monitoring Bundle](services/MONITORING-BUNDLE) (10)
-
-### Service Guides
-- [nself Admin](services/NSELF_ADMIN)
-- [Service Templates](services/SERVICE_TEMPLATES)
-- [Search Service](services/SEARCH)
+- [Services Overview](services/SERVICES)
+- [Required (4)](services/SERVICES_REQUIRED)
+- [Optional (7)](services/SERVICES_OPTIONAL)
+- [Monitoring (10)](services/MONITORING-BUNDLE)
+- [Custom Services](services/SERVICES_CUSTOM)
+- [Templates](services/SERVICE_TEMPLATES)
 
 ---
 
 ## Guides
 
-- [Backup Guide](guides/BACKUP_GUIDE)
-- [Domain Selection](guides/domain-selection-guide)
+- [Database Workflow](guides/DATABASE-WORKFLOW)
 - [Deployment](guides/Deployment)
+- [Backup Guide](guides/BACKUP_GUIDE)
 - [Multi-App Setup](guides/MULTI_APP_SETUP)
-- [Examples](guides/EXAMPLES)
+- [Troubleshooting](guides/TROUBLESHOOTING)
 
 ---
 
-## Contributing
+## Architecture
 
-- [Contributing Guide](CONTRIBUTING)
-- [Development Setup](contributing/DEVELOPMENT)
-- [Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY)
-- [Code of Conduct](contributing/CODE_OF_CONDUCT)
+- [Overview](architecture/ARCHITECTURE)
+- [Project Structure](architecture/PROJECT_STRUCTURE)
+- [Build System](architecture/BUILD_ARCHITECTURE)
+- [API](architecture/API)
 
 ---
 
 ## Releases
 
-- [Changelog](CHANGELOG)
 - [Roadmap](releases/ROADMAP)
-- [v0.4.1 (Current)](releases/v0.4.1)
-- [v0.4.0](releases/v0.4.0)
+- [v0.4.4](releases/v0.4.4) (Current)
+- [Changelog](releases/CHANGELOG)
 - [All Releases](releases/INDEX)
 
 ---
 
-## Resources
+## Contributing
 
-- [GitHub](https://github.com/acamarata/nself)
-- [Issues](https://github.com/acamarata/nself/issues)
-- [Discussions](https://github.com/acamarata/nself/discussions)
+- [Contributing](CONTRIBUTING)
+- [Development](contributing/DEVELOPMENT)
+- [Cross-Platform](contributing/CROSS-PLATFORM-COMPATIBILITY)

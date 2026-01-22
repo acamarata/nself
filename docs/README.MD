@@ -1,161 +1,194 @@
 # nself Documentation
 
-> **Complete documentation for the nself Backend-as-a-Service platform**
+> **The complete self-hosted Backend-as-a-Service platform**
 
-This documentation is organized for both local browsing and GitHub Wiki integration. All documentation is maintained in Markdown format for maximum compatibility.
-
-## 📚 Documentation Structure
-
-```
-/docs/
-├── Home.md                    # Main documentation homepage
-├── README.md                  # This file - documentation index
-├── services/                  # Service documentation
-│   ├── SERVICES.md           # Overview of all services
-│   ├── SERVICES_REQUIRED.md  # Core required services
-│   ├── SERVICES_OPTIONAL.md  # Optional services
-│   ├── SERVICES_CUSTOM.md    # Custom service templates
-│   ├── MONITORING_BUNDLE.md  # Monitoring stack (10 services)
-│   ├── NSELF_ADMIN.md        # Admin UI documentation
-│   └── DEMO_SETUP.md         # Complete demo walkthrough
-├── configuration/            # Configuration guides
-│   ├── ENVIRONMENT-VARIABLES.md
-│   ├── ENV-COMPLETE-REFERENCE.md
-│   └── ENVIRONMENT_CONFIGURATION.md
-├── commands/                 # CLI command reference
-│   ├── COMMANDS.md
-│   └── COMMAND-TREE-FINAL.md
-├── architecture/             # System design documentation
-│   ├── ARCHITECTURE.md
-│   ├── PROJECT_STRUCTURE.md
-│   └── BUILD_ARCHITECTURE.md
-├── guides/                   # How-to guides and tutorials
-│   ├── Quick-Start.md
-│   ├── TROUBLESHOOTING.md
-│   ├── FAQ.md
-│   ├── EXAMPLES.md
-│   └── BACKUP_GUIDE.md
-└── releases/                 # Release notes and changelogs
-    ├── CHANGELOG.md
-    ├── RELEASES.md
-    └── v0.4.0.md
-```
-
-## 🎯 Quick Start
-
-New to nself? Start here:
-
-1. **[Quick Start Guide](guides/Quick-Start)** - Get running in 5 minutes
-2. **[Demo Setup](services/DEMO_SETUP)** - Try the complete demo with 24 services
-3. **[Services Overview](services/SERVICES)** - Understand available services
-4. **[Commands Reference](commands/COMMANDS)** - Learn the CLI
-
-## 📖 Documentation by Category
-
-### Services & Components
-- **[All Services](services/SERVICES)** - Complete service catalog
-- **[Required Services](services/SERVICES_REQUIRED)** - Core infrastructure (4 services)
-- **[Optional Services](services/SERVICES_OPTIONAL)** - Additional capabilities (16+ services)
-- **[Custom Services](services/SERVICES_CUSTOM)** - Build your own with 40+ templates
-- **[Monitoring Bundle](services/MONITORING_BUNDLE)** - Full observability stack (10 services)
-- **[nself Admin](services/NSELF_ADMIN)** - Web-based management interface
-
-### Configuration
-- **[Environment Variables](configuration/ENVIRONMENT-VARIABLES)** - All configuration options
-- **[Complete ENV Reference](configuration/ENV-COMPLETE-REFERENCE)** - Every variable documented
-- **[Configuration Guide](configuration/ENVIRONMENT_CONFIGURATION)** - Setup walkthrough
-
-### Commands & CLI
-- **[Commands Reference](commands/COMMANDS)** - All CLI commands
-- **[Command Tree](commands/COMMAND-TREE-FINAL)** - Visual command structure
-
-### Architecture
-- **[System Architecture](architecture/ARCHITECTURE)** - Design principles and patterns
-- **[Project Structure](architecture/PROJECT_STRUCTURE)** - File organization
-- **[Build System](architecture/BUILD_ARCHITECTURE)** - How nself build works
-
-### Guides & Tutorials
-- **[Quick Start](guides/Quick-Start)** - Get started fast
-- **[Troubleshooting](guides/TROUBLESHOOTING)** - Fix common issues
-- **[FAQ](guides/FAQ)** - Frequently asked questions
-- **[Examples](guides/EXAMPLES)** - Code examples and patterns
-- **[Backup Guide](guides/BACKUP_GUIDE)** - Backup and recovery
-
-### Releases
-- **[Changelog](releases/CHANGELOG)** - Version history
-- **[Current Release](releases/RELEASES)** - Latest version details
-- **[v0.4.0](releases/v0.4.0)** - Current stable release
-
-## 🎆 Demo Project
-
-Experience the full power of nself with our demo:
-
-```bash
-nself init --demo   # Initialize with all services
-nself build         # Generate custom services
-nself start         # Launch 24 services
-```
-
-The demo includes:
-- ✅ All 4 required services
-- ✅ 16 optional services (including 10 monitoring)
-- ✅ 4 custom services from templates
-- ✅ Full monitoring and observability
-- ✅ Web-based admin interface
-
-**[→ Complete Demo Documentation](services/DEMO_SETUP)**
-
-## 📊 Service Counts
-
-### Minimal Setup
-- 4 services (required only)
-
-### Typical Development
-- 8-12 services (required + Redis + Mail + Search)
-
-### Full Demo
-- 24 services (everything enabled)
-
-### Maximum Configuration
-- 40+ services (all optional + 10 custom)
-
-## 🔧 Key Concepts
-
-### Service Types
-1. **Required** - Essential infrastructure
-2. **Optional** - Enable as needed
-3. **Custom** - Your microservices
-
-### Environments
-- `dev` - Local development
-- `staging` - Pre-production testing
-- `production` - Live deployment
-
-### Templates
-40+ service templates in multiple languages:
-- **JavaScript/TypeScript**: Express, Fastify, NestJS, BullMQ
-- **Python**: FastAPI, Flask, Django, Celery
-- **Go**: Gin, Fiber, Echo, gRPC
-- **Others**: Rust, Ruby, PHP, Java, C#, Elixir
-
-## 🤝 Contributing
-
-Want to contribute? Check out:
-- [Contributing Guide](guides/CONTRIBUTING)
-- [Development Roadmap](guides/ROADMAP)
-- [GitHub Issues](https://github.com/nself/nself/issues)
-
-## 📝 License
-
-nself is open-source software licensed under the MIT License.
-
-## 🔗 Links
-
-- **GitHub**: [github.com/nself/nself](https://github.com/nself/nself)
-- **Wiki**: [github.com/nself/nself/wiki](https://github.com/nself/nself/wiki)
-- **Issues**: [github.com/nself/nself/issues](https://github.com/nself/nself/issues)
-- **Discussions**: [github.com/nself/nself/discussions](https://github.com/nself/nself/discussions)
+[![Version](https://img.shields.io/badge/version-0.4.4-blue.svg)](releases/v0.4.4.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
 ---
 
-**Version**: 0.4.0 | **Last Updated**: September 2024
+## Quick Start
+
+```bash
+# Install
+curl -sSL https://install.nself.org | bash
+
+# Create project
+mkdir myapp && cd myapp
+nself init && nself build && nself start
+
+# Design database (optional)
+nself db schema scaffold basic
+nself db schema apply schema.dbml
+```
+
+**That's it.** Your backend is running with GraphQL API, authentication, and database.
+
+---
+
+## Documentation Index
+
+### Getting Started
+
+| Document | Description |
+|----------|-------------|
+| [Quick Start](guides/Quick-Start.md) | Get running in 5 minutes |
+| [Installation](guides/Installation.md) | Detailed installation guide |
+| [Database Workflow](guides/DATABASE-WORKFLOW.md) | Schema design to production |
+| [Demo Setup](services/DEMO_SETUP.md) | Full demo with 25 services |
+| [FAQ](guides/FAQ.md) | Frequently asked questions |
+
+### Commands Reference
+
+| Document | Description |
+|----------|-------------|
+| [Commands Overview](commands/COMMANDS.md) | All 29 commands |
+| [db](commands/DB.md) | Database tools (migrate, seed, mock, backup, schema, types) |
+| [deploy](commands/DEPLOY.md) | SSH deployment with zero-downtime |
+| [env](commands/ENV.md) | Environment management |
+| [prod](commands/PROD.md) | Production configuration |
+| [staging](commands/STAGING.md) | Staging environment |
+
+### Configuration
+
+| Document | Description |
+|----------|-------------|
+| [Environment Variables](configuration/ENVIRONMENT-VARIABLES.md) | Complete variable reference |
+| [Start Command Options](configuration/START-COMMAND-OPTIONS.md) | Startup configuration |
+| [Admin UI](configuration/Admin-UI.md) | Web dashboard setup |
+
+### Services
+
+| Document | Description |
+|----------|-------------|
+| [Services Overview](services/SERVICES.md) | All available services |
+| [Required Services](services/SERVICES_REQUIRED.md) | Core 4: PostgreSQL, Hasura, Auth, Nginx |
+| [Optional Services](services/SERVICES_OPTIONAL.md) | 7 additional services |
+| [Monitoring Bundle](services/MONITORING-BUNDLE.md) | 10-service observability stack |
+| [Custom Services](services/SERVICES_CUSTOM.md) | 40+ templates |
+| [Service Templates](services/SERVICE_TEMPLATES.md) | Template reference |
+
+### Architecture
+
+| Document | Description |
+|----------|-------------|
+| [Architecture Overview](architecture/ARCHITECTURE.md) | System design |
+| [Project Structure](architecture/PROJECT_STRUCTURE.md) | File organization |
+| [Build Architecture](architecture/BUILD_ARCHITECTURE.md) | How build works |
+| [API Reference](architecture/API.md) | GraphQL and REST APIs |
+
+### Guides
+
+| Document | Description |
+|----------|-------------|
+| [Database Workflow](guides/DATABASE-WORKFLOW.md) | DBML to production |
+| [Deployment](guides/Deployment.md) | Production deployment |
+| [Backup Guide](guides/BACKUP_GUIDE.md) | Backup and recovery |
+| [Multi-App Setup](guides/MULTI_APP_SETUP.md) | Multiple applications |
+| [Troubleshooting](guides/TROUBLESHOOTING.md) | Common issues |
+| [Examples](guides/EXAMPLES.md) | Code examples |
+
+### Releases
+
+| Document | Description |
+|----------|-------------|
+| [Roadmap](releases/ROADMAP.md) | Future plans |
+| [v0.4.4](releases/v0.4.4.md) | Current release - Database Tools |
+| [v0.4.3](releases/v0.4.3.md) | Deployment Pipeline |
+| [v0.4.2](releases/v0.4.2.md) | Service & Monitoring |
+| [Changelog](releases/CHANGELOG.md) | Full version history |
+
+### Contributing
+
+| Document | Description |
+|----------|-------------|
+| [Contributing Guide](CONTRIBUTING.md) | How to contribute |
+| [Development Setup](contributing/DEVELOPMENT.md) | Dev environment |
+| [Cross-Platform](contributing/CROSS-PLATFORM-COMPATIBILITY.md) | Bash 3.2+ compatibility |
+
+---
+
+## What is nself?
+
+nself is a complete backend platform you can run anywhere:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         YOUR APP                                │
+├─────────────────────────────────────────────────────────────────┤
+│  Frontend (React, Next.js, Vue, etc.)                           │
+│  ↓ GraphQL/REST                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                         nself                                   │
+│  ┌─────────────┬─────────────┬─────────────┬─────────────┐     │
+│  │  Hasura     │  Auth       │  Storage    │  Functions  │     │
+│  │  GraphQL    │  JWT/OAuth  │  S3/MinIO   │  Serverless │     │
+│  └─────────────┴─────────────┴─────────────┴─────────────┘     │
+│  ┌─────────────┬─────────────┬─────────────┬─────────────┐     │
+│  │  PostgreSQL │  Redis      │  Search     │  Mail       │     │
+│  │  Database   │  Cache      │  Meili      │  SMTP       │     │
+│  └─────────────┴─────────────┴─────────────┴─────────────┘     │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Monitoring: Prometheus, Grafana, Loki, Tempo           │   │
+│  └─────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│  Docker Compose │ Any Cloud │ Any Server │ Local Machine       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Zero DevOps** - One command to run a complete backend
+- **Database-First** - Design in DBML, generate everything
+- **Environment-Aware** - Safe defaults for local/staging/production
+- **40+ Templates** - Custom services in any language
+- **Full Observability** - Metrics, logs, traces, alerts
+- **Production-Ready** - SSL, security, backups, deployment
+
+---
+
+## Service Counts
+
+| Configuration | Services | Use Case |
+|---------------|----------|----------|
+| Minimal | 4 | Just the essentials |
+| Typical Dev | 8-12 | Development with extras |
+| Full Demo | 25 | Everything enabled |
+| Maximum | 50+ | All optional + 10 custom |
+
+### Required Services (4)
+Always running: **PostgreSQL**, **Hasura**, **Auth**, **Nginx**
+
+### Optional Services (7)
+Enable with `*_ENABLED=true`: **Admin**, **Redis**, **MinIO**, **Functions**, **MLflow**, **Mail**, **Search**
+
+### Monitoring Bundle (10)
+Enable with `MONITORING_ENABLED=true`: **Prometheus**, **Grafana**, **Loki**, **Promtail**, **Tempo**, **Alertmanager**, **cAdvisor**, **Node Exporter**, **Postgres Exporter**, **Redis Exporter**
+
+### Custom Services (Unlimited)
+Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and more
+
+---
+
+## Version History
+
+| Version | Date | Focus |
+|---------|------|-------|
+| **v0.4.4** | Jan 2026 | Database Tools (current) |
+| v0.4.3 | Jan 2026 | Deployment Pipeline |
+| v0.4.2 | Jan 2026 | Service & Monitoring |
+| v0.4.1 | Jan 2026 | Platform Compatibility |
+| v0.4.0 | Oct 2025 | Production-Ready Core |
+
+---
+
+## Links
+
+- **GitHub**: [github.com/acamarata/nself](https://github.com/acamarata/nself)
+- **Issues**: [Report bugs](https://github.com/acamarata/nself/issues)
+- **Discussions**: [Ask questions](https://github.com/acamarata/nself/discussions)
+
+---
+
+*Last Updated: January 22, 2026 | Version: 0.4.4*

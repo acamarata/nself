@@ -73,13 +73,16 @@ show_general_help() {
   echo -e "  ${COLOR_DIM}metrics${COLOR_RESET}       ${COLOR_DIM}Complete monitoring stack (» 0.4.2)${COLOR_RESET}"
   echo -e "  ${COLOR_DIM}monitor${COLOR_RESET}       ${COLOR_DIM}Access monitoring dashboards (» 0.4.2)${COLOR_RESET}"
   echo
-  echo -e "  ${COLOR_DIM}db${COLOR_RESET}            ${COLOR_DIM}Database operations (» 0.4.3)${COLOR_RESET}"
-  echo -e "  ${COLOR_DIM}backup${COLOR_RESET}        ${COLOR_DIM}Create or manage backups (» 0.4.4)${COLOR_RESET}"
-  echo -e "  ${COLOR_DIM}rollback${COLOR_RESET}      ${COLOR_DIM}Rollback to a backup (» 0.4.4)${COLOR_RESET}"
+  show_section "Database Commands"
+  printf "  ${COLOR_BLUE}db${COLOR_RESET}            Database tools (migrate, seed, mock, backup, restore, schema, types)\n"
+
+  show_section "Deployment Commands"
+  printf "  ${COLOR_BLUE}env${COLOR_RESET}           Environment management (local/staging/prod)\n"
+  printf "  ${COLOR_BLUE}deploy${COLOR_RESET}        Deploy to staging or production\n"
+  printf "  ${COLOR_BLUE}prod${COLOR_RESET}          Production configuration and hardening\n"
+  printf "  ${COLOR_BLUE}staging${COLOR_RESET}       Staging environment management\n"
   echo
-  echo -e "  ${COLOR_DIM}prod${COLOR_RESET}          ${COLOR_DIM}Configure for production (» 0.4.5)${COLOR_RESET}"
-  echo -e "  ${COLOR_DIM}deploy${COLOR_RESET}        ${COLOR_DIM}SSH deployment (» 0.4.5)${COLOR_RESET}"
-  echo -e "  ${COLOR_DIM}scale${COLOR_RESET}         ${COLOR_DIM}Scaling management (» 0.4.6)${COLOR_RESET}"
+  printf "  ${COLOR_DIM}scale${COLOR_RESET}         ${COLOR_DIM}Scaling management (» 0.4.6)${COLOR_RESET}\n"
   echo
   echo "For command-specific help: nself help <command>"
   echo "                      or: nself <command> --help"

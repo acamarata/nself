@@ -1,12 +1,11 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.4)](#next-v044) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
+[Released](#released) | [Next (v0.4.5)](#next-v045) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
-- **v0.4.3 (Current)**: Deployment Pipeline - stable release
-- **v0.4.4 (Next)**: Database Tools (migrations, backup, restore, mock data, seeding)
-- **v0.4.5**: Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.)
+- **v0.4.4 (Current)**: Database Tools - stable release
+- **v0.4.5 (Next)**: Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.)
 - **v0.4.6**: Scaling & Performance
 - **v0.4.7**: Kubernetes Support
 - **v0.4.8**: Plugin System (nself-stripe first)
@@ -21,6 +20,25 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 ---
 
 ## Released
+
+### v0.4.4 - Database Tools
+**Status**: Released | **Release Date**: January 22, 2026
+
+Comprehensive database management release adding the unified `nself db` command with all database operations:
+
+- **Migrations** - Full migration lifecycle with rollback support (up, down, create, status, fresh, repair)
+- **Seeding** - Environment-aware seeding with special user handling (mock users for dev, real admins for prod)
+- **Mock Data** - Deterministic, shareable mock data generation with configurable seeds
+- **Backup/Restore** - Complete backup management with scheduling and cross-environment restore
+- **Schema Tools** - Schema diffing, DBML diagram generation, index advisor
+- **Type Generation** - Generate TypeScript, Go, Python types from database schema
+- **Inspection** - Database analysis (like Supabase inspect db) for sizes, cache, indexes, bloat, slow queries
+- **Data Operations** - Export, import, anonymize data with PII detection
+
+All commands consolidated under `nself db` with smart defaults and environment-aware safety guards.
+Full details: [DB.md](../commands/DB.md)
+
+---
 
 ### v0.4.3 - Deployment Pipeline
 **Status**: Released | **Release Date**: January 22, 2026
@@ -86,263 +104,11 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ---
 
-## Next (v0.4.4)
-
-### v0.4.4 - Database Tools
-**Status**: Next | **Target**: Q1-Q2 2026
-**Focus**: Everything for database management, migrations, backup, restore, mock data, seeding
-
-Full planning document: [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md)
-
-#### New Commands (4)
-
-| Command | Purpose |
-|---------|---------|
-| `nself env` | Environment management (local/staging/prod) |
-| `nself deploy` | Deploy to any environment |
-| `nself prod` | Production configuration & hardening |
-| `nself staging` | Staging environment setup |
-
-#### `nself env` - Environment Management
-```bash
-nself env create <name>      # Create environment (staging, prod, custom)
-nself env list               # List all environments with status
-nself env switch <name>      # Switch active environment
-nself env delete <name>      # Remove environment (with confirmation)
-nself env status             # Show current environment details
-nself env diff <a> <b>       # Compare two environments
-nself env export <name>      # Export environment config
-nself env import <file>      # Import environment config
-```
-
-#### `nself deploy` - Deployment
-```bash
-nself deploy <env>           # Deploy to environment
-nself deploy staging         # Deploy to staging
-nself deploy prod            # Deploy to production
-nself deploy prod --dry-run  # Preview deployment changes
-nself deploy --rollback      # Rollback to previous deployment
-nself deploy --status        # Show deployment status
-nself deploy --logs          # Show deployment logs
-```
-
-#### `nself prod` - Production Hardening
-```bash
-nself prod init              # Interactive production setup wizard
-nself prod check             # Security audit / checklist
-nself prod secrets           # Secrets management
-nself prod secrets list      # List all secrets (masked)
-nself prod secrets set KEY=value
-nself prod secrets generate  # Generate secure secrets
-nself prod secrets rotate    # Rotate all secrets
-nself prod ssl               # SSL/TLS configuration
-nself prod firewall          # Firewall configuration helpers
-nself prod harden            # Apply security hardening
-```
-
-#### `nself staging` - Staging Management
-```bash
-nself staging init           # Initialize staging environment
-nself staging sync           # Sync from production (anonymized)
-nself staging reset          # Reset to clean state
-nself staging url            # Show staging URLs
-```
-
-#### Key Features
-- **SSH Key Auto-Detection**: Automatically detects available SSH keys for deployment
-- **Access Control**: Not everyone has access to staging/prod - supports credential checks
-- **Credential Options**: SSH keys, username/password, environment variables, system keychain
-- **Direct IP Support**: Deploy to VPS with IP address (no domain required)
-- **Zero-Downtime**: Rolling deployments with health checks
-- **Environment Inheritance**: prod inherits from staging inherits from local
-- **Let's Encrypt**: Automatic SSL certificate generation for production
-
----
-
-## Planned (v0.4.x Series)
-
-### v0.4.4 - Database Tools
-**Target**: Q1-Q2 2026
-**Focus**: Complete database lifecycle - migrations, backup, restore, mock data, seeding
-
-Full planning document: [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md)
-
-#### New Commands (6)
-
-| Command | Purpose |
-|---------|---------|
-| `nself db` | Database operations & migrations |
-| `nself backup` | Create and manage backups |
-| `nself restore` | Restore from backups |
-| `nself seed` | Seed database with data |
-| `nself mock` | Generate mock/fake data |
-| `nself data` | Data management utilities |
-
-#### `nself db` - Database Operations
-```bash
-# Migrations
-nself db migrate             # Run pending migrations
-nself db migrate:create <name>  # Create new migration file
-nself db migrate:rollback    # Rollback last migration
-nself db migrate:rollback --all # Rollback all migrations
-nself db migrate:status      # Show migration status
-nself db migrate:fresh       # Drop all tables and re-run migrations
-
-# Operations
-nself db shell               # Interactive psql session
-nself db query "<sql>"       # Run SQL query
-nself db dump                # Dump database to file
-nself db load <file>         # Load dump into database
-
-# Analysis
-nself db status              # Database health status
-nself db size                # Table sizes and disk usage
-nself db optimize            # Analyze and vacuum
-nself db slow-queries        # Show slow query log
-
-# Cloning
-nself db clone staging       # Clone current DB to staging
-nself db clone --from prod   # Clone from production (anonymized)
-```
-
-#### `nself backup` - Backup System
-```bash
-# Creation
-nself backup create          # Full backup
-nself backup create --name weekly-backup
-nself backup create --incremental
-nself backup create --schema-only
-nself backup create --data-only
-
-# Management
-nself backup list            # List all backups
-nself backup list --remote   # List remote backups (S3)
-nself backup info <backup-id>  # Show backup details
-nself backup delete <backup-id>
-nself backup verify <backup-id>  # Verify backup integrity
-
-# Scheduling
-nself backup schedule        # Configure backup schedule
-nself backup schedule --show
-nself backup schedule --disable
-nself backup schedule --preset daily   # Daily at 2 AM
-nself backup schedule --preset weekly  # Weekly Sunday 2 AM
-nself backup schedule --cron "0 */6 * * *"  # Custom cron
-
-# Storage
-nself backup storage         # Configure storage backends
-nself backup storage set s3 --endpoint ... --bucket ...
-nself backup upload <backup-id>
-nself backup download <backup-id>
-```
-
-#### `nself restore` - Restore System
-```bash
-nself restore latest         # Restore most recent backup
-nself restore <backup-id>    # Restore specific backup
-nself restore --list         # List available backups
-nself restore --point-in-time "2026-01-15 14:30:00"  # PITR
-nself restore <backup-id> --to staging  # Restore to different environment
-nself restore --dry-run      # Preview restore
-nself restore --no-backup    # Skip pre-restore backup
-nself restore --schema-only
-nself restore --data-only
-nself restore --table users  # Single table
-```
-
-#### `nself mock` - Mock Data Generation
-```bash
-# Generation
-nself mock generate          # Generate mock data for all tables
-nself mock generate users    # Generate for specific table
-nself mock generate --count 1000  # Specify row count
-
-# Presets
-nself mock generate --preset minimal   # 10 rows per table
-nself mock generate --preset small     # 100 rows per table
-nself mock generate --preset medium    # 1,000 rows per table
-nself mock generate --preset large     # 10,000 rows per table
-nself mock generate --preset realistic # Varies by table type
-
-# Configuration
-nself mock init              # Create mock configuration file
-nself mock config            # Edit mock configuration
-nself mock preview           # Preview generated data
-
-# Management
-nself mock status            # Show mock data status
-nself mock clear             # Remove all mock data
-nself mock refresh           # Clear and regenerate
-```
-
-#### `nself seed` - Seeding System
-```bash
-nself seed                   # Run all seed files
-nself seed run               # Same as above
-nself seed run users         # Run specific seed
-nself seed run --fresh       # Clear and re-seed
-
-# Built-in seeds
-nself seed users             # Seed initial users
-nself seed roles             # Seed roles and permissions
-nself seed config            # Seed app configuration
-
-# Management
-nself seed init              # Create seed directory and templates
-nself seed create <name>     # Create new seed file
-nself seed list              # List available seeds
-nself seed status            # Show which seeds have run
-```
-
-#### `nself data` - Data Utilities
-```bash
-# Export/Import
-nself data export            # Export all data as JSON
-nself data export users      # Export specific table
-nself data export --format csv
-nself data export --output ./dump
-nself data import <file>     # Import from JSON/CSV
-
-# Anonymization
-nself data anonymize         # Anonymize PII in current DB
-nself data anonymize --preview
-nself data anonymize --config anonymize.yaml
-
-# Reset
-nself data reset             # Reset to clean state
-nself data reset --keep-schema
-nself data reset --keep-seeds
-```
-
-#### Environment-Aware Behavior (AUTOMATIC)
-
-| Environment | Mock Data | Seeding | Real Data |
-|-------------|-----------|---------|-----------|
-| **Local** | ✓ Full mock data | ✓ Test users | ✗ Never |
-| **Staging** | ✓ Realistic volumes | ✓ Test users | ✗ Never |
-| **Production** | ✗ Never (blocked) | ✓ Admin users only | ✓ Yes |
-
-**No configuration needed** - detected automatically from ENV variable.
-
-#### Key Features
-- **S3-Compatible Storage**: MinIO, AWS S3, Backblaze B2
-- **Backup Encryption**: AES-256 encryption at rest
-- **Point-in-Time Recovery**: Restore to exact timestamp (WAL-based)
-- **Automatic Pre-Restore Backup**: Safety backup before any restore
-- **Cross-Environment Restore**: Restore prod to staging with anonymization
-- **Schema-Aware Generation**: Reads DB schema, generates appropriate data types
-- **Foreign Key Handling**: Respects relationships, generates parent data first
-- **Realistic Fake Data**: Names, emails, addresses, phones, etc.
-- **Idempotent Seeding**: Safe to run multiple times (ON CONFLICT handling)
-- **PII Anonymization**: Mask/fake/hash methods for data anonymization
-
----
+## Next (v0.4.5)
 
 ### v0.4.5 - Provider Support
-**Target**: Q2 2026
+**Status**: Next | **Target**: Q2 2026
 **Focus**: Deploy anywhere - AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
-
-Full planning document: [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md)
 
 #### New Commands (2)
 
@@ -450,8 +216,6 @@ nself provision export cloudformation
 ### v0.4.6 - Scaling & Performance
 **Target**: Q2-Q3 2026
 **Focus**: Everything for scale, perf, migrate
-
-Full planning document: [v0.4.6-PLAN.md](../planning/v0.4.6-PLAN.md)
 
 #### New Commands (4)
 
@@ -587,8 +351,6 @@ nself bench baseline save    # Save current as baseline
 **Target**: Q3 2026
 **Focus**: Full support for Kubernetes and container orchestration
 
-Full planning document: [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md)
-
 #### New Commands (2)
 
 | Command | Purpose |
@@ -690,8 +452,6 @@ nself helm push              # Push to registry
 ### v0.4.8 - Plugin System
 **Target**: Q3-Q4 2026
 **Focus**: Extensible plugin architecture for third-party integrations
-
-Full planning document: [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md)
 
 #### Overview
 
@@ -866,8 +626,6 @@ These are ideas for future data sync plugins - not currently planned:
 **Target**: Q4 2026
 **Focus**: Comprehensive testing, bug fixes, and nself-admin integration
 
-Full planning document: [v0.4.9-PLAN.md](../planning/v0.4.9-PLAN.md)
-
 #### Focus Areas
 
 ##### Bug Fixes & Stability
@@ -919,8 +677,6 @@ nself help deploy  # Works offline
 ### v0.5.0 - Full Production Release
 **Target**: Q4 2026 / Q1 2027
 **Focus**: Production-ready platform release with nself-admin v0.1
-
-Full planning document: [v0.5.0-PLAN.md](../planning/v0.5.0-PLAN.md)
 
 This is the **1.0-equivalent release** for nself - the complete, production-ready self-hosted backend platform.
 
@@ -1010,8 +766,8 @@ Utility Commands (4) - v0.4.9:
 | v0.4.1 | Released | Platform Compatibility | Jan 2026 |
 | v0.4.2 | Released | Service & Monitoring | Jan 2026 |
 | v0.4.3 | Released | Deployment Pipeline | Jan 2026 |
-| **v0.4.4** | **Next** | Database Tools | Q1-Q2 2026 |
-| v0.4.5 | Planned | Provider Support | Q2 2026 |
+| v0.4.4 | Released | Database Tools | Jan 2026 |
+| **v0.4.5** | **Next** | Provider Support | Q2 2026 |
 | v0.4.6 | Planned | Scaling & Performance | Q2-Q3 2026 |
 | v0.4.7 | Planned | Kubernetes Support | Q3 2026 |
 | v0.4.8 | Planned | Plugin System (nself-stripe) | Q3-Q4 2026 |
@@ -1022,23 +778,17 @@ Utility Commands (4) - v0.4.9:
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.2) - 24 commands
+### Currently Available (v0.4.4) - 29 commands
 ```
 Core: init, build, start, stop, restart, reset, clean, version
 Status: status, logs, exec, urls, doctor, help
 Management: update, ssl, trust, admin
 Services: email, search, functions, mlflow, metrics, monitor
+Deployment: env, deploy, prod, staging
+Database: db (migrate, seed, mock, backup, restore, schema, types, shell, inspect, data)
 ```
 
-### Coming in v0.4.3 - +4 commands
-```
-env, deploy, prod, staging
-```
-
-### Coming in v0.4.4 - +6 commands
-```
-db, backup, restore, seed, mock, data
-```
+Note: Database operations are consolidated under `nself db` with subcommands.
 
 ### Coming in v0.4.5 - +2 commands
 ```
@@ -1065,31 +815,14 @@ plugin, stripe
 completion, interactive, docs, config
 ```
 
-**Total Commands at v0.5.0**: 48
-
----
-
-## Planning Documents
-
-Detailed planning documents for each version:
-
-| Version | Planning Document |
-|---------|-------------------|
-| v0.4.3 | [v0.4.3-PLAN.md](../planning/v0.4.3-PLAN.md) |
-| v0.4.4 | [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md) |
-| v0.4.5 | [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md) |
-| v0.4.6 | [v0.4.6-PLAN.md](../planning/v0.4.6-PLAN.md) |
-| v0.4.7 | [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md) |
-| v0.4.8 | [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md) |
-| v0.4.9 | [v0.4.9-PLAN.md](../planning/v0.4.9-PLAN.md) |
-| v0.5.0 | [v0.5.0-PLAN.md](../planning/v0.5.0-PLAN.md) |
+**Total Commands at v0.5.0**: 50
 
 ---
 
 ## Contributing
 
 ### Priority Areas
-1. Test v0.4.2 in production environments
+1. Test v0.4.4 database tools in development and staging environments
 2. Report bugs and edge cases
 3. Documentation improvements
 4. Community feedback on roadmap priorities
