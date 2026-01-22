@@ -2,7 +2,7 @@ class Nself < Formula
   desc "Self-hosted infrastructure manager for developers"
   homepage "https://github.com/acamarata/nself"
   url "https://github.com/acamarata/nself/archive/refs/tags/v0.4.1.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"
+  sha256 "0d832e8dbbb368511241eab7973afa5d6ed8af69615e137c679064c903d3c7b2"
   license "MIT"
   head "https://github.com/acamarata/nself.git", branch: "main"
 
