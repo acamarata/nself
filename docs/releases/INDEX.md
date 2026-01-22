@@ -105,7 +105,7 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements.
 
 ## Complete Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for complete version history with all changes.
+See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 ### All Releases
 
@@ -116,7 +116,23 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete version history with all change
 | [v0.4.2](v0.4.2.md) | Jan 2026 | Stable | Service & monitoring commands |
 | [v0.4.1](v0.4.1.md) | Jan 2026 | Stable | Platform compatibility fixes |
 | [v0.4.0](v0.4.0.md) | Oct 2025 | Stable | Production-ready release |
-| [v0.3.9](v0.3.9.md) | Sep 2025 | Stable | Admin UI, 36 commands |
+| [v0.3.10](v0.3.10.md) | Sep 2025 | Stable | Critical bug fixes, WSL support |
+| [v0.3.9](v0.3.9.md) | Sep 2025 | Stable | Admin UI, enhanced init |
+| [v0.3.8](v0.3.8.md) | Aug 2024 | Stable | Admin UI, search, VPS deployment |
+| [v0.3.7](v0.3.7.md) | Aug 2025 | Stable | CI/CD, backup system |
+| [v0.3.6](v0.3.6.md) | Aug 2025 | Stable | Major refactoring |
+| [v0.3.5](v0.3.5.md) | Aug 2025 | Stable | Complete SSL/HTTPS support |
+| [v0.3.4](v0.3.4.md) | Aug 2025 | Stable | Command headers, service detection |
+| [v0.3.3](v0.3.3.md) | Aug 2025 | Stable | Auto-fix default, Docker cleanup |
+| [v0.3.2](v0.3.2.md) | Aug 2025 | Stable | Command resolution fix |
+| [v0.3.1](v0.3.1.md) | Jan 2025 | Stable | Config validation, auto-fix |
+| [v0.3.0](v0.3.0.md) | Jan 2025 | Stable | **Breaking:** Architecture refactor |
+| [v0.2.4](v0.2.4.md) | Jan 2025 | Legacy | Email provider support |
+| [v0.2.3](v0.2.3.md) | Jan 2025 | Legacy | SSL trust, installation fixes |
+| [v0.2.2](v0.2.2.md) | Jan 2025 | Legacy | UI improvements |
+| [v0.2.1](v0.2.1.md) | Jan 2025 | Legacy | Database tools |
+| [v0.2.0](v0.2.0.md) | Jan 2025 | Legacy | Modular architecture |
+| [v0.1.0](v0.1.0.md) | Jan 2025 | Legacy | Initial release |
 
 ---
 
