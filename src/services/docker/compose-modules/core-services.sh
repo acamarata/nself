@@ -170,19 +170,19 @@ EOF
       AUTH_HOST: "0.0.0.0"
       AUTH_PORT: "4000"
       AUTH_LOG_LEVEL: \${AUTH_LOG_LEVEL:-info}
-      DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
-      AUTH_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
-      HASURA_GRAPHQL_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-nself_db}
+      DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
+      AUTH_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
+      HASURA_GRAPHQL_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       PGHOST: postgres
       PGPORT: 5432
       PGUSER: \${POSTGRES_USER:-postgres}
       PGPASSWORD: \${POSTGRES_PASSWORD:-postgres}
-      PGDATABASE: \${POSTGRES_DB:-nself_db}
+      PGDATABASE: \${POSTGRES_DB:-\${PROJECT_NAME}}
       POSTGRES_USER: \${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DATABASE: \${POSTGRES_DB:-nself_db}
+      POSTGRES_DATABASE: \${POSTGRES_DB:-\${PROJECT_NAME}}
       AUTH_SERVER_URL: \${AUTH_SERVER_URL:-http://localhost:4000}
       AUTH_CLIENT_URL: \${AUTH_CLIENT_URL:-http://localhost:3000}
       AUTH_JWT_SECRET: \${AUTH_JWT_SECRET}

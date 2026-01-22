@@ -264,7 +264,7 @@ generate_database_backup_script() {
 
 PROJECT_NAME="${PROJECT_NAME:-myproject}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-${PROJECT_NAME}_db}"
+POSTGRES_DB="${POSTGRES_DB:-${PROJECT_NAME}}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 
 # Create backup directory

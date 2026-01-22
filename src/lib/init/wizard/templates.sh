@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # templates.sh - Project templates for wizard
 
+# Source platform compatibility utilities
+TEMPLATES_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$TEMPLATES_DIR/../../utils/platform-compat.sh" 2>/dev/null || true
+
 # Get template name
 get_template_name() {
   local template="$1"
@@ -402,25 +406,22 @@ generate_production_secrets() {
   
   # Update .env.secrets with real passwords
   # Each password type needs its own replacement
-  sed -i.bak "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$postgres_pass/" .env.secrets
-  sed -i.bak "s/AUTH_DATABASE_PASSWORD=.*/AUTH_DATABASE_PASSWORD=$auth_pass/" .env.secrets
-  sed -i.bak "s/STORAGE_DATABASE_PASSWORD=.*/STORAGE_DATABASE_PASSWORD=$storage_pass/" .env.secrets
-  sed -i.bak "s/HASURA_ADMIN_SECRET=.*/HASURA_ADMIN_SECRET=$hasura_secret/" .env.secrets
-  sed -i.bak "s/JWT_KEY=.*/JWT_KEY=$jwt_key/" .env.secrets
-  sed -i.bak "s/SEARCH_API_KEY=.*/SEARCH_API_KEY=$search_key/" .env.secrets
-  sed -i.bak "s/ADMIN_PASSWORD_HASH=.*/ADMIN_PASSWORD_HASH=$admin_pass/" .env.secrets
-  sed -i.bak "s/ADMIN_SECRET_KEY=.*/ADMIN_SECRET_KEY=$admin_key/" .env.secrets
-  
+  safe_sed_inline ".env.secrets" "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$postgres_pass/"
+  safe_sed_inline ".env.secrets" "s/AUTH_DATABASE_PASSWORD=.*/AUTH_DATABASE_PASSWORD=$auth_pass/"
+  safe_sed_inline ".env.secrets" "s/STORAGE_DATABASE_PASSWORD=.*/STORAGE_DATABASE_PASSWORD=$storage_pass/"
+  safe_sed_inline ".env.secrets" "s/HASURA_ADMIN_SECRET=.*/HASURA_ADMIN_SECRET=$hasura_secret/"
+  safe_sed_inline ".env.secrets" "s/JWT_KEY=.*/JWT_KEY=$jwt_key/"
+  safe_sed_inline ".env.secrets" "s/SEARCH_API_KEY=.*/SEARCH_API_KEY=$search_key/"
+  safe_sed_inline ".env.secrets" "s/ADMIN_PASSWORD_HASH=.*/ADMIN_PASSWORD_HASH=$admin_pass/"
+  safe_sed_inline ".env.secrets" "s/ADMIN_SECRET_KEY=.*/ADMIN_SECRET_KEY=$admin_key/"
+
   # Handle other common secrets
   if grep -q "REDIS_PASSWORD=" .env.secrets; then
-    sed -i.bak "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$redis_pass/" .env.secrets
+    safe_sed_inline ".env.secrets" "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$redis_pass/"
   fi
   if grep -q "RABBITMQ_PASSWORD=" .env.secrets; then
-    sed -i.bak "s/RABBITMQ_PASSWORD=.*/RABBITMQ_PASSWORD=$rabbitmq_pass/" .env.secrets
+    safe_sed_inline ".env.secrets" "s/RABBITMQ_PASSWORD=.*/RABBITMQ_PASSWORD=$rabbitmq_pass/"
   fi
-  
-  # Clean up backup files
-  rm -f .env.secrets.bak
   
   log_success "Generated secure passwords in .env.secrets"
   log_warning "Keep .env.secrets secure and never commit to git!"

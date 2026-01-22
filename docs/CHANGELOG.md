@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-01-21
+
+### Fixed
+- **Bash 3.2 Compatibility**
+  - Fixed `declare -a PROGRESS_STEPS=()` in start.sh (line 119) - Bash 4+ syntax
+  - Changed to Bash 3.2 compatible `PROGRESS_STEPS=()`
+
+- **Cross-Platform sed -i**
+  - Fixed in-place sed editing in admin.sh, deploy.sh, templates.sh, pre-checks.sh
+  - Now uses `safe_sed_inline()` wrapper from platform-compat.sh
+  - Works correctly on both macOS (BSD sed) and Linux (GNU sed)
+
+- **Cross-Platform stat Command**
+  - Fixed stat command usage in alerting.sh
+  - Added platform detection for BSD vs GNU stat syntax
+
+- **Portable timeout Command**
+  - Fixed unguarded `timeout` usage in restart.sh, status.sh, compose-generate.sh
+  - Now uses `safe_timeout()` wrapper which falls back gracefully on macOS
+
+- **Portable Output**
+  - Converted all `echo -e` to `printf` in stop.sh for POSIX compliance
+  - Ensures consistent output formatting across all shells
+
+### Changed
+- Updated docs/contributing/CROSS-PLATFORM-COMPATIBILITY.md with macOS Tahoe note
+- Added platform-compat.sh sourcing to multiple files for wrapper availability
+
+### Documentation
+- Created docs/releases/v0.4.1.md with detailed fix descriptions
+- Updated last modified date in compatibility docs
+
 ## [0.4.0] - 2025-10-13
 
 ### Fixed

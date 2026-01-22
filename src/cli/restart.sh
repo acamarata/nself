@@ -8,6 +8,7 @@ CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$CLI_SCRIPT_DIR"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 
 # Source optional utilities if they exist
 [[ -f "$CLI_SCRIPT_DIR/../lib/utils/docker.sh" ]] && source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
@@ -122,7 +123,7 @@ cmd_restart() {
         if [[ ! -x "$nself_bin" ]]; then
           nself_bin="nself"  # Fallback to PATH
         fi
-        if timeout 30 "$nself_bin" build >"$build_output" 2>&1; then
+        if safe_timeout 30 "$nself_bin" build >"$build_output" 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration built                     \n"
         else
           printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Build had issues, continuing anyway       \n"
@@ -205,7 +206,7 @@ cmd_restart() {
         local build_output=$(mktemp)
 
         # Run build with timeout to prevent hanging
-        if timeout 30 "$SCRIPT_DIR/../bin/nself" build --force >"$build_output" 2>&1; then
+        if safe_timeout 30 "$SCRIPT_DIR/../bin/nself" build --force >"$build_output" 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration rebuilt                     \n"
         else
           printf "\r${COLOR_YELLOW}⚠${COLOR_RESET} Build had issues, continuing anyway       \n"

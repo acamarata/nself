@@ -8,6 +8,7 @@ ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 # Source required utilities
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
+source "$SCRIPT_DIR/../lib/utils/platform-compat.sh"
 
 # Show help for deploy command
 show_deploy_help() {
@@ -100,37 +101,37 @@ deploy_init() {
   log_info "Saving deployment configuration..."
   
   if grep -q "^DEPLOY_HOST=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^DEPLOY_HOST=.*/DEPLOY_HOST=$host/" .env.local
+    safe_sed_inline ".env.local" "s/^DEPLOY_HOST=.*/DEPLOY_HOST=$host/"
   else
     echo "DEPLOY_HOST=$host" >> .env.local
   fi
-  
+
   if grep -q "^DEPLOY_USER=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^DEPLOY_USER=.*/DEPLOY_USER=$user/" .env.local
+    safe_sed_inline ".env.local" "s/^DEPLOY_USER=.*/DEPLOY_USER=$user/"
   else
     echo "DEPLOY_USER=$user" >> .env.local
   fi
-  
+
   if grep -q "^DEPLOY_KEY_PATH=" .env.local 2>/dev/null; then
-    sed -i.bak "s|^DEPLOY_KEY_PATH=.*|DEPLOY_KEY_PATH=$key_path|" .env.local
+    safe_sed_inline ".env.local" "s|^DEPLOY_KEY_PATH=.*|DEPLOY_KEY_PATH=$key_path|"
   else
     echo "DEPLOY_KEY_PATH=$key_path" >> .env.local
   fi
-  
+
   if grep -q "^DEPLOY_TARGET_DIR=" .env.local 2>/dev/null; then
-    sed -i.bak "s|^DEPLOY_TARGET_DIR=.*|DEPLOY_TARGET_DIR=$target_dir|" .env.local
+    safe_sed_inline ".env.local" "s|^DEPLOY_TARGET_DIR=.*|DEPLOY_TARGET_DIR=$target_dir|"
   else
     echo "DEPLOY_TARGET_DIR=$target_dir" >> .env.local
   fi
-  
+
   if grep -q "^DEPLOY_REPO_URL=" .env.local 2>/dev/null; then
-    sed -i.bak "s|^DEPLOY_REPO_URL=.*|DEPLOY_REPO_URL=$repo_url|" .env.local
+    safe_sed_inline ".env.local" "s|^DEPLOY_REPO_URL=.*|DEPLOY_REPO_URL=$repo_url|"
   else
     echo "DEPLOY_REPO_URL=$repo_url" >> .env.local
   fi
-  
+
   if grep -q "^DEPLOY_BRANCH=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^DEPLOY_BRANCH=.*/DEPLOY_BRANCH=$branch/" .env.local
+    safe_sed_inline ".env.local" "s/^DEPLOY_BRANCH=.*/DEPLOY_BRANCH=$branch/"
   else
     echo "DEPLOY_BRANCH=$branch" >> .env.local
   fi
@@ -474,9 +475,9 @@ deploy_webhook() {
   # Generate webhook secret if not present
   if [[ -z "${DEPLOY_WEBHOOK_SECRET:-}" ]]; then
     local secret=$(openssl rand -hex 16)
-    
+
     if grep -q "^DEPLOY_WEBHOOK_SECRET=" .env.local 2>/dev/null; then
-      sed -i.bak "s/^DEPLOY_WEBHOOK_SECRET=.*/DEPLOY_WEBHOOK_SECRET=$secret/" .env.local
+      safe_sed_inline ".env.local" "s/^DEPLOY_WEBHOOK_SECRET=.*/DEPLOY_WEBHOOK_SECRET=$secret/"
     else
       echo "DEPLOY_WEBHOOK_SECRET=$secret" >> .env.local
     fi

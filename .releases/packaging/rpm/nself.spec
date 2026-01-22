@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.3.8
+Version:        0.4.1
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 
@@ -12,9 +12,9 @@ Requires:       bash, docker, docker-compose, curl, git
 
 %description
 nself is a comprehensive CLI tool for deploying and managing
-self-hosted backend infrastructure. It provides 33 commands
+self-hosted backend infrastructure. It provides 36 commands
 for managing Docker-based services, SSL certificates, monitoring,
-and more.
+and more. Works on macOS, Linux, and WSL.
 
 %prep
 %setup -q
@@ -46,13 +46,24 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.3.8 installed successfully!"
+echo "nself v0.4.1 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
 # Nothing to do
 
 %changelog
+* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.1-1
+- Release v0.4.1: Platform compatibility fixes
+- Fixed Bash 3.2 compatibility for macOS
+- Fixed cross-platform sed, stat, and timeout commands
+- 36 CLI commands for comprehensive infrastructure management
+
+* Sun Oct 13 2025 acamarata <contact@acamarata.com> - 0.4.0-1
+- Release v0.4.0: Production-ready release
+- All core features complete and tested
+- Enhanced cross-platform compatibility
+
 * Sat Aug 17 2024 acamarata <contact@acamarata.com> - 0.3.8-1
 - Release v0.3.8: Enterprise features and critical fixes
 - Added backup systems, monitoring, and SSL management

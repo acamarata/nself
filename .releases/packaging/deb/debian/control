@@ -1,5 +1,5 @@
 Package: nself
-Version: 0.3.8
+Version: 0.4.1
 Section: utils
 Priority: optional
 Architecture: all
@@ -7,7 +7,7 @@ Depends: bash, docker.io, docker-compose, curl, git
 Maintainer: acamarata <contact@acamarata.com>
 Description: Self-hosted infrastructure manager for developers
  nself is a comprehensive CLI tool for deploying and managing
- self-hosted backend infrastructure. It provides 33 commands
+ self-hosted backend infrastructure. It provides 36 commands
  for managing Docker-based services, SSL certificates, monitoring,
- and more.
+ and more. Works on macOS, Linux, and WSL.
 Homepage: https://github.com/acamarata/nself

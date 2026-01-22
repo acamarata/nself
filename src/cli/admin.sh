@@ -12,6 +12,7 @@ ROOT_DIR="$(dirname "$(dirname "$CLI_SCRIPT_DIR")")"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh"
 
 # Setup minimal admin-only environment in blank directory
 admin_minimal_setup() {
@@ -180,7 +181,7 @@ admin_enable() {
   
   # Update .env
   if grep -q "^NSELF_ADMIN_ENABLED=" .env 2>/dev/null; then
-    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/' .env
+    safe_sed_inline ".env" 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=true/'
   else
     echo "NSELF_ADMIN_ENABLED=true" >> .env
   fi
@@ -277,7 +278,7 @@ admin_disable() {
   
   # Update .env
   if grep -q "^NSELF_ADMIN_ENABLED=" .env 2>/dev/null; then
-    sed -i.bak 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=false/' .env
+    safe_sed_inline ".env" 's/^NSELF_ADMIN_ENABLED=.*/NSELF_ADMIN_ENABLED=false/'
   else
     echo "NSELF_ADMIN_ENABLED=false" >> .env
   fi
@@ -461,9 +462,9 @@ admin_reset() {
   fi
   
   log_info "Resetting admin configuration..."
-  
+
   # Remove admin settings from .env
-  sed -i.bak '/^ADMIN_/d' .env
+  safe_sed_inline ".env" '/^ADMIN_/d'
   
   # Set defaults
   echo "NSELF_ADMIN_ENABLED=false" >> .env

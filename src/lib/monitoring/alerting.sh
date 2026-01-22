@@ -2,6 +2,10 @@
 
 # alerting.sh - Automated alerting system for nself
 
+# Source platform compatibility utilities
+ALERTING_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$ALERTING_DIR/../utils/platform-compat.sh" 2>/dev/null || true
+
 # Alert configuration
 ALERT_CONFIG_FILE="${ALERT_CONFIG_FILE:-./alerts.conf}"
 ALERT_LOG="${ALERT_LOG:-./logs/alerts.log}"
@@ -306,8 +310,13 @@ monitor_services() {
 
 # Monitor backups
 monitor_backups() {
-  # Check last backup time
-  local last_backup=$(find ./backups -name "*.tar.gz" -type f -exec stat -f %m {} \; 2>/dev/null | sort -n | tail -1)
+  # Check last backup time (cross-platform: try BSD stat, fallback to GNU stat)
+  local last_backup
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    last_backup=$(find ./backups -name "*.tar.gz" -type f -exec stat -f %m {} \; 2>/dev/null | sort -n | tail -1)
+  else
+    last_backup=$(find ./backups -name "*.tar.gz" -type f -exec stat -c %Y {} \; 2>/dev/null | sort -n | tail -1)
+  fi
   
   if [[ -n "$last_backup" ]]; then
     local now=$(date +%s)

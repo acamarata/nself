@@ -7,6 +7,9 @@ set -euo pipefail
 ROUTES_DISPLAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NSELF_ROOT="$(cd "$ROUTES_DISPLAY_DIR/../.." && pwd)"
 
+# Source platform compatibility utilities
+source "$ROUTES_DISPLAY_DIR/../utils/platform-compat.sh" 2>/dev/null || true
+
 # Collect all configured routes
 routes::collect_all() {
   local base_domain="${BASE_DOMAIN:-localhost}"
@@ -250,7 +253,7 @@ routes::health_check() {
     ((total++))
     local url="https://$route/health"
     
-    if timeout 5 curl -k -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null | grep -q "200\|404"; then
+    if safe_timeout 5 curl -k -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null | grep -q "200\|404"; then
       echo "  ✅ $route"
       ((accessible++))
     else

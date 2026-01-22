@@ -1,8 +1,10 @@
 # Cross-Platform Compatibility Guide
 
-**Last Updated**: October 9, 2025
+**Last Updated**: January 2026
 **CI Status**: ✅ All 12 tests passing
-**Platforms Supported**: Ubuntu, Debian, RHEL, Alpine, macOS, WSL
+**Platforms Supported**: Ubuntu, Debian, RHEL, Alpine, macOS (Sonoma/Sequoia/Tahoe), WSL
+
+> **Note**: macOS continues to ship Bash 3.2 (last GPLv2 version from 2007) even in macOS Tahoe 26. Apple avoids GPLv3 software due to licensing concerns. We must continue targeting Bash 3.2 for macOS compatibility.
 
 ---
 

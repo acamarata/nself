@@ -372,7 +372,7 @@ generate_nextjs_service() {
       - "\${NEXTJS_PORT:-3000}:3000"
     environment:
       NODE_ENV: \${NODE_ENV:-development}
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
     volumes:
       - ./:/app
       - /app/node_modules
@@ -502,7 +502,7 @@ generate_nodejs_service() {
       - "\${NODE_PORT:-3000}:3000"
     environment:
       NODE_ENV: \${NODE_ENV:-development}
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
     volumes:
       - ./:/app
       - /app/node_modules
@@ -547,7 +547,7 @@ generate_python_service() {
     ports:
       - "\${PYTHON_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
     volumes:
       - ./:/app
     networks:
@@ -578,7 +578,7 @@ generate_go_service() {
     ports:
       - "\${GO_PORT:-8080}:8080"
     environment:
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
     networks:
       - nself_network
 EOF
@@ -624,7 +624,7 @@ generate_microservice() {
       - "\${${service_upper}_PORT:-${port}}:${port}"
     environment:
       NODE_ENV: \${NODE_ENV:-development}
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
     networks:
       - nself_network
 EOF

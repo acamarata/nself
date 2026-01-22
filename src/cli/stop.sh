@@ -97,7 +97,7 @@ cmd_stop() {
   # If specific services requested, stop only those
   if [[ -n "$services_to_stop" ]]; then
     show_command_header "nself stop" "Stop services and containers"
-    echo -e "${COLOR_CYAN}→${COLOR_RESET} Stopping specific services"
+    printf "${COLOR_CYAN}→${COLOR_RESET} Stopping specific services\n"
     echo
 
     for service in $services_to_stop; do
@@ -140,7 +140,7 @@ cmd_stop() {
   fi
 
   if [[ $running_count -eq 0 ]]; then
-    echo -e "${COLOR_GREEN}✓${COLOR_RESET} No services are currently running"
+    printf "${COLOR_GREEN}✓${COLOR_RESET} No services are currently running\n"
     echo
 
     # Check for stopped containers
@@ -148,7 +148,7 @@ cmd_stop() {
 
     if [[ -n "$stopped_containers" ]]; then
       local stopped_count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
-      echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  Found $stopped_count stopped containers"
+      printf "${COLOR_YELLOW}⚠${COLOR_RESET}  Found %s stopped containers\n" "$stopped_count"
       echo
 
       if [[ "$remove_volumes" == true ]] || [[ "$remove_images" == true ]]; then
@@ -159,8 +159,8 @@ cmd_stop() {
         docker compose "${cleanup_args[@]}" >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Cleanup completed                      \n"
       else
-        echo -e "   Run ${COLOR_BLUE}nself stop --volumes${COLOR_RESET} to remove all data"
-        echo -e "   Run ${COLOR_BLUE}docker system prune${COLOR_RESET} to clean up Docker"
+        printf "   Run ${COLOR_BLUE}nself stop --volumes${COLOR_RESET} to remove all data\n"
+        printf "   Run ${COLOR_BLUE}docker system prune${COLOR_RESET} to clean up Docker\n"
       fi
     fi
 
@@ -170,13 +170,12 @@ cmd_stop() {
 
   # Show operation type
   if [[ "$remove_volumes" == true ]]; then
-    echo -e "${COLOR_CYAN}→${COLOR_RESET} Stopping services and removing data ($running_count running)"
+    printf "${COLOR_CYAN}→${COLOR_RESET} Stopping services and removing data (%s running)\n" "$running_count"
   elif [[ "$remove_images" == true ]]; then
-    echo -e "${COLOR_CYAN}→${COLOR_RESET} Stopping services and removing images ($running_count running)"
+    printf "${COLOR_CYAN}→${COLOR_RESET} Stopping services and removing images (%s running)\n" "$running_count"
   else
-    echo -e "${COLOR_CYAN}→${COLOR_RESET} Stopping all services ($running_count running)"
+    printf "${COLOR_CYAN}→${COLOR_RESET} Stopping all services (%s running)\n" "$running_count"
   fi
-  echo
 
   # Ensure Docker is running
   if ! docker info >/dev/null 2>&1; then
@@ -248,7 +247,7 @@ cmd_stop() {
     if [[ -f ".env.runtime" ]]; then
       rm -f .env.runtime
       if [[ "$verbose" == true ]]; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed runtime environment file"
+        printf "${COLOR_GREEN}✓${COLOR_RESET} Removed runtime environment file\n"
       fi
     fi
 
@@ -260,21 +259,21 @@ cmd_stop() {
       local removed_networks=$(grep -c "Network.*removed" "$output_file" 2>/dev/null | tr -d '\n' || echo "0")
 
       if [[ $removed_volumes -gt 0 ]]; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_volumes volumes"
+        printf "${COLOR_GREEN}✓${COLOR_RESET} Removed %s volumes\n" "$removed_volumes"
       fi
 
       if [[ $removed_networks -gt 0 ]]; then
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_networks networks"
+        printf "${COLOR_GREEN}✓${COLOR_RESET} Removed %s networks\n" "$removed_networks"
       fi
 
-      echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  All persistent data has been removed"
+      printf "${COLOR_YELLOW}⚠${COLOR_RESET}  All persistent data has been removed\n"
     fi
 
     if [[ "$remove_images" == true ]]; then
       local removed_images=$(grep -c "Image.*deleted" "$output_file" 2>/dev/null || echo "0")
       if [[ $removed_images -gt 0 ]]; then
         echo
-        echo -e "${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_images images"
+        printf "${COLOR_GREEN}✓${COLOR_RESET} Removed %s images\n" "$removed_images"
       fi
     fi
 
@@ -291,9 +290,9 @@ cmd_stop() {
     echo
     echo "Next steps:"
     echo
-    echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}   - Start services again"
-    echo -e "  ${COLOR_BLUE}nself status${COLOR_RESET}  - Check service status"
-    echo -e "  ${COLOR_BLUE}nself clean${COLOR_RESET}   - Remove all project files"
+    printf "  ${COLOR_BLUE}nself start${COLOR_RESET}   - Start services again\n"
+    printf "  ${COLOR_BLUE}nself status${COLOR_RESET}  - Check service status\n"
+    printf "  ${COLOR_BLUE}nself clean${COLOR_RESET}   - Remove all project files\n"
     echo
     echo "For more help, use: nself help or nself help stop"
   else

@@ -1,7 +1,7 @@
 FROM alpine:latest
 
 LABEL maintainer="acamarata <contact@acamarata.com>"
-LABEL version="0.3.8"
+LABEL version="0.4.1"
 LABEL description="Self-hosted infrastructure manager for developers"
 
 # Install dependencies

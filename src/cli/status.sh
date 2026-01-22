@@ -9,6 +9,7 @@ CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$CLI_SCRIPT_DIR"
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 
 # Source display.sh and force colors to be set
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
@@ -115,7 +116,7 @@ get_database_stats() {
   local db_user="${POSTGRES_USER:-postgres}"
 
   # Get database size and connection count with timeout
-  local stats=$(timeout 5 compose exec -T postgres psql -U "$db_user" -d "$db_name" -t -c "
+  local stats=$(safe_timeout 5 compose exec -T postgres psql -U "$db_user" -d "$db_name" -t -c "
         SELECT 
             pg_size_pretty(pg_database_size('$db_name')) as size,
             (SELECT count(*) FROM pg_stat_activity WHERE datname = '$db_name') as connections,
@@ -417,7 +418,7 @@ show_database_info() {
     fi
   fi
 
-  local migration_status=$(timeout 2 bash -c 'get_migration_status' 2>/dev/null || echo "Unknown")
+  local migration_status=$(safe_timeout 2 bash -c 'get_migration_status' 2>/dev/null || echo "Unknown")
   if [[ "$migration_status" != "Unknown" ]]; then
     echo "Migrations: $migration_status"
   fi

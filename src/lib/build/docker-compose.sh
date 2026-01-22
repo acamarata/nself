@@ -81,7 +81,7 @@ add_postgres_service() {
     ports:
       - "\${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: \${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      POSTGRES_DB: \${POSTGRES_DB:-\${PROJECT_NAME}}
       POSTGRES_USER: \${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -142,7 +142,7 @@ add_hasura_service() {
     ports:
       - "\${HASURA_PORT:-8080}:8080"
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      HASURA_GRAPHQL_DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "\${HASURA_CONSOLE:-true}"
       HASURA_GRAPHQL_DEV_MODE: "\${HASURA_DEV_MODE:-true}"
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_ADMIN_SECRET:-myadminsecret}
@@ -174,7 +174,7 @@ add_auth_service() {
     ports:
       - "\${AUTH_PORT:-4000}:4000"
     environment:
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_ADMIN_SECRET:-myadminsecret}
       HASURA_GRAPHQL_URL: http://hasura:8080/v1/graphql
       JWT_SECRET: \${AUTH_JWT_SECRET:-\${HASURA_JWT_SECRET:-}}
@@ -206,7 +206,7 @@ add_storage_service() {
     ports:
       - "\${STORAGE_PORT:-5000}:5000"
     environment:
-      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+      DATABASE_URL: postgres://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
       HASURA_METADATA: "1"
       HASURA_GRAPHQL_URL: http://hasura:8080/v1
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_ADMIN_SECRET:-myadminsecret}

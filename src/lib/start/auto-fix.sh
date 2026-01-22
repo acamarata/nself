@@ -316,7 +316,7 @@ apply_start_auto_fixes() {
 
   # Fix 3: Ensure DATABASE_URL is set if missing
   if ! grep -q "^DATABASE_URL=" "$env_file" 2>/dev/null; then
-    local db_name="${POSTGRES_DB:-${PROJECT_NAME}_db}"
+    local db_name="${POSTGRES_DB:-${PROJECT_NAME}}"
     # Sanitize database name (replace hyphens with underscores)
     local safe_db_name=$(echo "$db_name" | tr '-' '_')
     local db_user="${POSTGRES_USER:-postgres}"

@@ -1,10 +1,10 @@
-# nself v0.3.9
+# nself v0.4.1
 
-### 🏠 [Home](Home)
+### [Home](Home)
 
 ---
 
-## 🎯 Getting Started
+## Getting Started
 
 - [Quick Start](guides/Quick-Start)
 - [Installation](guides/Installation)
@@ -14,36 +14,39 @@
 
 ---
 
-## 🔧 Core Documentation
+## Commands
 
-### Commands
 - [Commands Reference](commands/COMMANDS)
 - [Command Tree](commands/COMMAND-TREE-FINAL)
-- [Command Aliases](commands/COMMAND-ALIASES)
+- [Complete Reference](commands/COMMANDS-COMPLETE)
 
-### Configuration
+---
+
+## Configuration
+
 - [Environment Variables](configuration/ENVIRONMENT-VARIABLES)
 - [Complete ENV Reference](configuration/ENV-COMPLETE-REFERENCE)
 - [Environment Setup](configuration/ENVIRONMENT_CONFIGURATION)
-- [Multi-Environment](guides/MULTI-ENVIRONMENT)
+- [Start Command Options](configuration/START-COMMAND-OPTIONS)
+- [Admin UI](configuration/Admin-UI)
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 - [Architecture Overview](architecture/ARCHITECTURE)
 - [Project Structure](architecture/PROJECT_STRUCTURE)
-- [Service Architecture](architecture/SERVICE_ARCHITECTURE)
-- [Build System](architecture/BUILD-SYSTEM)
-- [Init System](architecture/INIT-SYSTEM)
+- [Build Architecture](architecture/BUILD_ARCHITECTURE)
+- [Directory Structure](architecture/DIRECTORY_STRUCTURE)
+- [API Reference](architecture/API)
 
 ---
 
-## 🎛️ Services
+## Services
 
 ### Overview
 - [All Services](services/SERVICES)
-- [Service Categories](services/SERVICE-CATEGORIES)
+- [Service Reference](services/SERVICE_REFERENCE)
 
 ### Service Types
 - [Required Services](services/SERVICES_REQUIRED) (4)
@@ -51,55 +54,44 @@
 - [Custom Services](services/SERVICES_CUSTOM) (40+ templates)
 - [Monitoring Bundle](services/MONITORING-BUNDLE) (10)
 
-### Individual Services
+### Service Guides
 - [nself Admin](services/NSELF_ADMIN)
-- [PostgreSQL](services/POSTGRES)
-- [Hasura](services/HASURA)
-- [Auth](services/AUTH)
-- [Redis](services/REDIS)
-- [MinIO Storage](services/MINIO)
-- [Functions](services/FUNCTIONS)
-- [MLflow](services/MLFLOW)
-- [Mail Service](services/MAIL)
+- [Service Templates](services/SERVICE_TEMPLATES)
 - [Search Service](services/SEARCH)
 
 ---
 
-## 📖 Guides
+## Guides
 
-### Setup & Configuration
-- [SSL Certificates](guides/SSL-Guide)
-- [Domain Selection](guides/domain-selection-guide)
 - [Backup Guide](guides/BACKUP_GUIDE)
-
-### Development
+- [Domain Selection](guides/domain-selection-guide)
+- [Deployment](guides/Deployment)
+- [Multi-App Setup](guides/MULTI_APP_SETUP)
 - [Examples](guides/EXAMPLES)
-- [Best Practices](guides/BEST-PRACTICES)
-- [Testing](guides/TESTING)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-- [Contributing Guide](contributing/README)
+- [Contributing Guide](CONTRIBUTING)
 - [Development Setup](contributing/DEVELOPMENT)
 - [Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY)
 - [Code of Conduct](contributing/CODE_OF_CONDUCT)
 
 ---
 
-## 📦 Releases
+## Releases
 
-- [Changelog](releases/CHANGELOG)
+- [Changelog](CHANGELOG)
 - [Roadmap](releases/ROADMAP)
-- [v0.3.9 (Current)](releases/RELEASE-v0.3.9)
-- [All Releases](releases/)
+- [v0.4.1 (Current)](releases/v0.4.1)
+- [v0.4.0](releases/v0.4.0)
+- [All Releases](releases/INDEX)
 
 ---
 
-## 🔗 Resources
+## Resources
 
 - [GitHub](https://github.com/acamarata/nself)
 - [Issues](https://github.com/acamarata/nself/issues)
 - [Discussions](https://github.com/acamarata/nself/discussions)
-- [Patreon](https://patreon.com/acamarata)

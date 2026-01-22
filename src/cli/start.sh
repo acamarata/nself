@@ -116,8 +116,8 @@ if [[ "$SHOW_HELP" == "true" ]]; then
 fi
 
 # Progress tracking functions
-declare -a PROGRESS_STEPS=()
-declare -a PROGRESS_STATUS=()
+PROGRESS_STEPS=()
+PROGRESS_STATUS=()
 CURRENT_STEP=0
 
 add_progress() {
@@ -343,7 +343,8 @@ start_services() {
       # Check what's happening based on output patterns with more detail
       if echo "$last_line" | grep -q "Building\|Step\|RUN\|COPY\|FROM"; then
         # Building custom images - count steps
-        local build_steps=$(grep -c "Step [0-9]" "$start_output" 2>/dev/null || echo "0")
+        local build_steps
+        build_steps=$(grep -c "Step [0-9]" "$start_output" 2>/dev/null) || build_steps=0
         local image_name=$(echo "$last_line" | grep -oE "Building [a-z_-]+" | sed 's/Building //' || echo "image")
         current_action="Building custom Docker images"
         if [[ -n "$image_name" ]] && [[ "$image_name" != "image" ]]; then
@@ -354,8 +355,10 @@ start_services() {
 
       elif echo "$last_line" | grep -q "Pulling\|Pull complete\|Already exists\|Downloading\|Extracting\|Waiting"; then
         # Count unique images being pulled - better tracking
-        local pulling_count=$(grep -c "Pulling from" "$start_output" 2>/dev/null || echo "0")
-        local pulled_count=$(grep -c "Pull complete\|Already exists" "$start_output" 2>/dev/null || echo "0")
+        local pulling_count
+        pulling_count=$(grep -c "Pulling from" "$start_output" 2>/dev/null) || pulling_count=0
+        local pulled_count
+        pulled_count=$(grep -c "Pull complete\|Already exists" "$start_output" 2>/dev/null) || pulled_count=0
 
         # Try to estimate total images needed
         if [[ $images_to_pull -eq 0 ]]; then
@@ -375,7 +378,8 @@ start_services() {
 
       elif grep -q "Network.*Creating\|Network.*Created" "$start_output" 2>/dev/null; then
         # Network creation
-        local network_count=$(grep -c "Network.*Created" "$start_output" 2>/dev/null || echo "0")
+        local network_count
+        network_count=$(grep -c "Network.*Created" "$start_output" 2>/dev/null) || network_count=0
         current_action="Creating Docker network"
         printf "\r${COLOR_BLUE}%s${COLOR_RESET} %s..." "${spinner[$spin_index]}" "$current_action"
 
@@ -386,7 +390,8 @@ start_services() {
 
       elif grep -q "Volume.*Creating\|Volume.*Created" "$start_output" 2>/dev/null; then
         # Volume creation
-        local volume_count=$(grep -c "Volume.*Created" "$start_output" 2>/dev/null || echo "0")
+        local volume_count
+        volume_count=$(grep -c "Volume.*Created" "$start_output" 2>/dev/null) || volume_count=0
         current_action="Creating Docker volumes"
         if [[ "$volume_count" -gt 0 ]]; then
           printf "\r${COLOR_BLUE}%s${COLOR_RESET} %s... (%d created)" "${spinner[$spin_index]}" "$current_action" "$volume_count"
@@ -401,8 +406,10 @@ start_services() {
 
       elif echo "$last_line" | grep -q "Container.*Creating\|Container.*Created"; then
         # Count containers being created with more detail
-        local created_count=$(grep -c "Container.*Created" "$start_output" 2>/dev/null || echo "0")
-        local creating_count=$(grep -c "Container.*Creating" "$start_output" 2>/dev/null || echo "0")
+        local created_count
+        created_count=$(grep -c "Container.*Created" "$start_output" 2>/dev/null) || created_count=0
+        local creating_count
+        creating_count=$(grep -c "Container.*Creating" "$start_output" 2>/dev/null) || creating_count=0
         local total_creating=$((created_count + creating_count))
 
         # Get the name of container being created
@@ -422,8 +429,9 @@ start_services() {
 
       elif echo "$last_line" | grep -q "Container.*Starting\|Container.*Started\|Container.*Running"; then
         # Count containers being started with more detail
-        containers_started=$(grep -c "Container.*Started" "$start_output" 2>/dev/null || echo "0")
-        local starting_count=$(grep -c "Container.*Starting" "$start_output" 2>/dev/null || echo "0")
+        containers_started=$(grep -c "Container.*Started" "$start_output" 2>/dev/null) || containers_started=0
+        local starting_count
+        starting_count=$(grep -c "Container.*Starting" "$start_output" 2>/dev/null) || starting_count=0
 
         # Get the name of container being started
         local container_name=$(echo "$last_line" | grep -oE "Container ${project_name}_[a-z0-9_-]+" | sed "s/Container ${project_name}_//" || echo "")
@@ -518,8 +526,10 @@ start_services() {
 
         # Count health status
         local running_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
-        local healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy" || echo "0")
-        local total_with_health=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -cE "(healthy|unhealthy|starting)" || echo "0")
+        local healthy_count
+        healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy") || healthy_count=0
+        local total_with_health
+        total_with_health=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -cE "(healthy|unhealthy|starting)") || total_with_health=0
 
         # Calculate percentage
         if [[ $total_with_health -gt 0 ]]; then
@@ -548,17 +558,21 @@ start_services() {
 
     # Get final counts for summary
     local running_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
-    local healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy" || echo "0")
-    local total_with_health=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -cE "(healthy|unhealthy|starting)" || echo "0")
+    local healthy_count
+    healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy") || healthy_count=0
+    local total_with_health
+    total_with_health=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -cE "(healthy|unhealthy|starting)") || total_with_health=0
 
     # Count service types
     local core_count=4
-    local optional_count=$(grep -c "_ENABLED=true" "$env_file" 2>/dev/null || echo "0")
+    local optional_count
+    optional_count=$(grep -c "_ENABLED=true" "$env_file" 2>/dev/null) || optional_count=0
     local monitoring_count=0
     if grep -q "MONITORING_ENABLED=true" "$env_file" 2>/dev/null; then
       monitoring_count=10
     fi
-    local custom_count=$(grep -c "^CS_[0-9]=" "$env_file" 2>/dev/null || echo "0")
+    local custom_count
+    custom_count=$(grep -c "^CS_[0-9]=" "$env_file" 2>/dev/null) || custom_count=0
 
     # Final summary (like build command)
     printf "\n"

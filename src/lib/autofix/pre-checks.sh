@@ -3,6 +3,10 @@
 # Pre-flight checks before starting Docker
 # Fixes common issues before they cause Docker failures
 
+# Source platform compatibility utilities
+PRECHECKS_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "$PRECHECKS_DIR/../utils/platform-compat.sh" 2>/dev/null || true
+
 run_pre_checks() {
   local silent="${1:-false}"
   local issues_fixed=0
@@ -11,7 +15,7 @@ run_pre_checks() {
   local expected_port="${POSTGRES_PORT:-5432}"
   if grep -q "POSTGRES_PORT=5433" .env.local 2>/dev/null && [[ "$expected_port" == "5432" ]]; then
     [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Fixing Postgres port configuration..."
-    sed -i '' 's/POSTGRES_PORT=5433/POSTGRES_PORT=5432/' .env.local
+    safe_sed_inline ".env.local" 's/POSTGRES_PORT=5433/POSTGRES_PORT=5432/'
     ((issues_fixed++))
     [[ "$silent" != "true" ]] && printf "\r${COLOR_GREEN}✓${COLOR_RESET} Fixed Postgres port configuration    \n"
   fi
@@ -37,11 +41,11 @@ run_pre_checks() {
   local project_name="${PROJECT_NAME:-nself}"
   # Check if postgres container actually exists AND is running (not just created)
   # Using timeout to prevent hanging
-  if timeout 2 docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${project_name}_postgres$\|^${project_name}-postgres-1$"; then
+  if safe_timeout 2 docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${project_name}_postgres$\|^${project_name}-postgres-1$"; then
     # Postgres container exists and is running, check if it's actually ready
-    if ! timeout 5 docker exec "${project_name}_postgres" pg_isready -U postgres >/dev/null 2>&1; then
+    if ! safe_timeout 5 docker exec "${project_name}_postgres" pg_isready -U postgres >/dev/null 2>&1; then
       [[ "$silent" != "true" ]] && printf "${COLOR_BLUE}⠋${COLOR_RESET} Restarting Postgres..."
-      timeout 10 docker restart "${project_name}_postgres" >/dev/null 2>&1
+      safe_timeout 10 docker restart "${project_name}_postgres" >/dev/null 2>&1
       sleep 3
       ((issues_fixed++))
       [[ "$silent" != "true" ]] && printf "\r${COLOR_GREEN}✓${COLOR_RESET} Restarted Postgres                   \n"

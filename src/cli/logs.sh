@@ -39,16 +39,26 @@ format_timestamp() {
 }
 
 # Function to colorize and clean log output
+# Args: [service_name] - optional, used for single-service logs where service isn't in output
 clean_and_colorize() {
+  local fixed_service="$1"  # If provided, use this instead of extracting from line
+
   while IFS= read -r line; do
     if [[ -z "$line" ]]; then continue; fi
 
-    # Extract service name and clean it
-    local service_raw=$(echo "$line" | sed 's/ .*//')
-    local service=$(format_service_name "$service_raw")
+    local service
+    local rest
 
-    # Extract timestamp and message
-    local rest=$(echo "$line" | sed 's/^[^ ]* //')
+    if [[ -n "$fixed_service" ]]; then
+      # Single-service mode: service name provided, line is just "timestamp message"
+      service=$(format_service_name "$fixed_service")
+      rest="$line"
+    else
+      # Multi-service mode: extract service name from first field
+      local service_raw=$(echo "$line" | sed 's/ .*//')
+      service=$(format_service_name "$service_raw")
+      rest=$(echo "$line" | sed 's/^[^ ]* //')
+    fi
     local timestamp=$(echo "$rest" | grep -o '^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}[^ ]*' || echo "")
     local message
 
@@ -59,6 +69,12 @@ clean_and_colorize() {
       message="$rest"
       timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     fi
+
+    # Strip common service-embedded timestamps from message start
+    # Matches: ISO timestamps, syslog-style, and bracketed timestamps
+    message=$(echo "$message" | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}[^ ]* ?//')
+    message=$(echo "$message" | sed -E 's/^\[[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}[^\]]*\] ?//')
+    message=$(echo "$message" | sed -E 's/^[A-Z][a-z]{2} [0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} ?//')
 
     # Skip noisy/repeated log entries
     if [[ "$QUIET_MODE" == "true" ]]; then
@@ -182,7 +198,8 @@ get_service_logs() {
   docker_args+=("--tail" "$TAIL_LINES" "--timestamps" "$container_name")
 
   # Execute and process logs safely without eval
-  docker "${docker_args[@]}" 2>&1 | clean_and_colorize
+  # Pass service name for single-service mode
+  docker "${docker_args[@]}" 2>&1 | clean_and_colorize "$service"
 }
 
 # Function to get logs from all services

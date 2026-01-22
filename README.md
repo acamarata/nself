@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -23,7 +23,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🚀 v0.4.0**: Production-ready release! All core features complete and tested. Enhanced cross-platform compatibility (Bash 3.2+), fixed critical bugs, improved stability. Admin UI, comprehensive CLI commands, automated SSL, and full monitoring stack. [See changelog](docs/CHANGELOG.md)
+> **🚀 v0.4.1**: Bug fixes and platform compatibility improvements. Fixed Bash 3.2 array syntax, cross-platform sed/stat/timeout commands, and portable output formatting. Works flawlessly on macOS, Linux, and WSL. [See changelog](docs/CHANGELOG.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
@@ -737,20 +737,24 @@ nself email test recipient@example.com
 
 ## 🔄 Version History
 
-### v0.3.9 (Current - Stable Release)
-- ✅ Admin UI with web-based monitoring dashboard
-- ✅ Fixed critical bugs (status, stop, exec commands)  
-- ✅ SMTP email testing implementation
-- ✅ 5-second timeout for build validation
-- ✅ All 36 commands fully functional
-- ✅ Serverless functions support
-- ✅ MLflow ML experiment tracking
-- ⚠️ Known issue: Auth health check false negative
+### v0.4.1 (Current - Stable Release)
+- ✅ Fixed Bash 3.2 compatibility (macOS default shell)
+- ✅ Fixed cross-platform sed -i (macOS/Linux)
+- ✅ Fixed cross-platform stat command
+- ✅ Fixed portable timeout command
+- ✅ Fixed portable output (echo -e to printf)
+- ✅ All 36 commands fully functional on all platforms
 
-### v0.3.8 (Stable)
-- Complete backup system with cloud support
-- SSL certificate management
-- Enterprise monitoring features
+### v0.4.0 (Stable)
+- Production-ready release
+- Enhanced cross-platform compatibility
+- All core features complete and tested
+
+### v0.3.9 (Stable)
+- Admin UI with web-based monitoring dashboard
+- Fixed critical bugs (status, stop, exec commands)
+- SMTP email testing implementation
+- Serverless functions and MLflow support
 
 [Full Changelog](docs/CHANGELOG.md)
 

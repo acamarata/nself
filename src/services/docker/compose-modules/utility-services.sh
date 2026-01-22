@@ -39,11 +39,29 @@ generate_nself_admin_service() {
   local enabled="${NSELF_ADMIN_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
+  # Check if using local development path
+  local admin_local_path="${NSELF_ADMIN_LOCAL_PATH:-}"
+
   cat <<EOF
 
   # nself Admin - Project Management Dashboard
   nself-admin:
-    image: acamarata/nself-admin:${NSELF_ADMIN_VERSION:-latest}
+EOF
+
+  # Use build context if local path is set, otherwise use Docker image
+  if [[ -n "$admin_local_path" ]] && [[ -d "$admin_local_path" ]]; then
+    cat <<EOF
+    build:
+      context: ${admin_local_path}
+      dockerfile: Dockerfile
+EOF
+  else
+    cat <<EOF
+    image: acamarata/nself-admin:\${NSELF_ADMIN_VERSION:-latest}
+EOF
+  fi
+
+  cat <<EOF
     container_name: \${PROJECT_NAME}_admin
     restart: unless-stopped
     networks:
@@ -71,6 +89,16 @@ generate_nself_admin_service() {
       - ./:/workspace:rw
       - nself_admin_data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
+EOF
+
+  # Add source mount for hot reload in dev with local path
+  if [[ -n "$admin_local_path" ]] && [[ -d "$admin_local_path" ]] && [[ "${ENV:-}" == "dev" ]]; then
+    cat <<EOF
+      - ${admin_local_path}/src:/app/src:ro
+EOF
+  fi
+
+  cat <<EOF
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
       interval: 30s

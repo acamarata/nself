@@ -283,7 +283,7 @@ version_compare() {
   fi
   
   # Sort versions and check which is higher
-  local sorted=$(echo -e "$v1\n$v2" | sort -V | head -n1)
+  local sorted=$(printf '%s\n%s\n' "$v1" "$v2" | sort -V | head -n1)
   
   if [[ "$sorted" == "$v1" ]]; then
     return 2  # v1 < v2

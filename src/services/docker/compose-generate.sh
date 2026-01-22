@@ -27,6 +27,11 @@ if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/display.sh" ]]; then
   source "$COMPOSE_SCRIPT_DIR/../../lib/utils/display.sh"
 fi
 
+# Source platform compatibility utilities
+if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/platform-compat.sh" ]]; then
+  source "$COMPOSE_SCRIPT_DIR/../../lib/utils/platform-compat.sh"
+fi
+
 # Source environment utilities for functions only
 if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
   source "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh"
@@ -307,13 +312,13 @@ main() {
   # Validate the generated file (skip if docker not available)
   if command -v docker >/dev/null 2>&1; then
     if [[ "${VERBOSE:-false}" == "true" ]]; then
-      if timeout 5 docker compose config >/dev/null 2>&1; then
+      if safe_timeout 5 docker compose config >/dev/null 2>&1; then
         echo "✓ docker-compose.yml validation passed"
       else
         echo "⚠ docker-compose.yml validation warnings (expected)"
       fi
     else
-      timeout 5 docker compose config >/dev/null 2>&1 || true
+      safe_timeout 5 docker compose config >/dev/null 2>&1 || true
     fi
   fi
 

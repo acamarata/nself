@@ -22,6 +22,11 @@ if [[ -f "$SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
   source "$SCRIPT_DIR/../../lib/utils/env.sh"
 fi
 
+# Source platform compatibility utilities
+if [[ -f "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" ]]; then
+  source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh"
+fi
+
 # Load environment safely (without executing JSON values)
 if [[ -f .env ]]; then
   set -a
@@ -251,7 +256,7 @@ main() {
 
   # Validate the generated file (skip if docker not available)
   if command -v docker >/dev/null 2>&1; then
-    if timeout 5 docker compose config >/dev/null 2>&1; then
+    if safe_timeout 5 docker compose config >/dev/null 2>&1; then
       echo "✓ docker-compose.yml validation passed"
     else
       echo "⚠ docker-compose.yml validation warnings - please review the configuration" >&2
