@@ -1,12 +1,11 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.3)](#next-v043) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
+[Released](#released) | [Next (v0.4.4)](#next-v044) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
-- **v0.4.2 (Current)**: Service & Monitoring management commands - stable release
-- **v0.4.3 (Next)**: Deployment Pipeline (local → staging → prod)
-- **v0.4.4**: Database Tools (migrations, backup, restore, mock data, seeding)
+- **v0.4.3 (Current)**: Deployment Pipeline - stable release
+- **v0.4.4 (Next)**: Database Tools (migrations, backup, restore, mock data, seeding)
 - **v0.4.5**: Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.)
 - **v0.4.6**: Scaling & Performance
 - **v0.4.7**: Kubernetes Support
@@ -22,6 +21,21 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 ---
 
 ## Released
+
+### v0.4.3 - Deployment Pipeline
+**Status**: Released | **Release Date**: January 22, 2026
+
+Feature release adding comprehensive deployment pipeline commands:
+
+- **Environment Command** - Create, switch, diff, validate environments
+- **Deploy Command** - Enhanced SSH deployment with zero-downtime support
+- **Prod Command** - Production deployment shortcut
+- **Staging Command** - Staging deployment shortcut
+
+**New library modules**: env/, deploy/, security/. **Bug fixes**: nginx variable substitution, 16 Dockerfile templates.
+Full details: [v0.4.3 Release Notes](./v0.4.3.md)
+
+---
 
 ### v0.4.2 - Service & Monitoring Management
 **Status**: Released | **Release Date**: January 22, 2026
@@ -72,13 +86,13 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ---
 
-## Next (v0.4.3)
+## Next (v0.4.4)
 
-### v0.4.3 - Deployment Pipeline
-**Status**: Next | **Target**: Q1 2026
-**Focus**: Everything to deploy local → staging → prod
+### v0.4.4 - Database Tools
+**Status**: Next | **Target**: Q1-Q2 2026
+**Focus**: Everything for database management, migrations, backup, restore, mock data, seeding
 
-Full planning document: [v0.4.3-PLAN.md](../planning/v0.4.3-PLAN.md)
+Full planning document: [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md)
 
 #### New Commands (4)
 
@@ -995,8 +1009,8 @@ Utility Commands (4) - v0.4.9:
 | v0.4.0 | Released | Production-Ready Core | Oct 2025 |
 | v0.4.1 | Released | Platform Compatibility | Jan 2026 |
 | v0.4.2 | Released | Service & Monitoring | Jan 2026 |
-| **v0.4.3** | **Next** | Deployment Pipeline | Q1 2026 |
-| v0.4.4 | Planned | Database Tools | Q1-Q2 2026 |
+| v0.4.3 | Released | Deployment Pipeline | Jan 2026 |
+| **v0.4.4** | **Next** | Database Tools | Q1-Q2 2026 |
 | v0.4.5 | Planned | Provider Support | Q2 2026 |
 | v0.4.6 | Planned | Scaling & Performance | Q2-Q3 2026 |
 | v0.4.7 | Planned | Kubernetes Support | Q3 2026 |
