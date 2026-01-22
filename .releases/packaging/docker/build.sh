@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.3.8"
+VERSION="0.4.2"
 IMAGE_NAME="acamarata/nself"
 
 echo "Building Docker image for nself v${VERSION}"
