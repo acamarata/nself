@@ -1,11 +1,11 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released (v0.4.0)](#released-v040) | [Next (v0.4.x)](#next-v04x-series) | [Future (v0.5+)](#future-v05)
+[Released](#released) | [Next (v0.4.2)](#next-v042) | [Future (v0.5+)](#future-v05)
 
 ## Current Status Summary
-- **✅ v0.4.0 (Now)**: Production-ready core features - stable and tested
-- **📋 v0.4.x Series**: Polish and minor enhancements (email, search, metrics management)
+- **✅ v0.4.1 (Current)**: Platform compatibility fixes - stable release
+- **📋 v0.4.2 (Next)**: Service & Monitoring management commands
 - **🔮 v0.5+**: Advanced features (Kubernetes, multi-cloud, enterprise)
 
 ---
@@ -15,12 +15,27 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 
 ---
 
-## Released (v0.4.0)
+## Released
+
+### v0.4.1 - Platform Compatibility Fixes
+**Status**: ✅ Released | **Release Date**: January 22, 2026
+
+Bug fix release addressing 5 critical platform compatibility issues:
+
+- ✅ **Bash 3.2 Compatibility** - Fixed array declaration syntax
+- ✅ **Cross-Platform sed** - Fixed in-place editing for macOS/Linux
+- ✅ **Cross-Platform stat** - Fixed file stat commands
+- ✅ **Portable timeout** - Added guards for timeout command
+- ✅ **Portable output** - Converted echo -e to printf
+
+**22 files fixed** across the codebase. Full details: [v0.4.1 Release Notes](./v0.4.1.md)
+
+---
+
+### v0.4.0 - Production-Ready Core
 **Status**: ✅ Released | **Release Date**: October 13, 2025
 
-### What's in v0.4.0: Production-Ready Core
-
-v0.4.0 represents the **stable, production-ready release** of nself with all core features complete, tested, and ready for real-world use. This version focuses on reliability and cross-platform compatibility.
+v0.4.0 represents the **stable, production-ready release** of nself with all core features complete, tested, and ready for real-world use.
 
 ### Core Features (Fully Functional)
 - **✅ Full Nhost Stack** - PostgreSQL with 60+ extensions, Hasura GraphQL, Auth, Storage
@@ -45,49 +60,39 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 - **Go (4)**: Gin, Echo, Fiber, gRPC
 - **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
 
-### What Makes v0.4.0 Production-Ready
-- ✅ **Cross-Platform**: Bash 3.2+ compatible (works on macOS, Linux, WSL)
-- ✅ **CI/CD**: 12/12 tests passing (unit, integration, portability)
-- ✅ **Stability**: All core commands functional and tested
-- ✅ **Documentation**: Comprehensive guides and examples
-- ✅ **Error Handling**: Robust with helpful error messages
-- ✅ **Smart Defaults**: Works out of the box with minimal configuration
-
-[View Full Release Notes](./CHANGELOG.md#040---2025-10-13)
+[View Full Release Notes](./v0.4.0.md)
 
 ---
 
-## Next (v0.4.x Series)
-**Status**: 📋 Planned | **Timeline**: Incremental releases
-**Focus**: Polish Existing Features & Add Management Commands
+## Next (v0.4.2)
+**Status**: 📋 Planned | **Target**: Q1-Q2 2026
+**Focus**: Service Management & Monitoring Commands
 
-### v0.4.1 - Service Management Commands
-**Target**: Q1 2026
+### New Commands
 
-**New Commands**:
+#### Service Management
 - `nself email` - Email service configuration and testing
 - `nself search` - Search engine management (MeiliSearch, Typesense, etc.)
 - `nself functions` - Serverless functions management
 - `nself mlflow` - MLflow ML experiment tracking management
 
-**Enhancements**:
+#### Monitoring Management
+- `nself metrics` - Complete monitoring stack management
+- `nself monitor` - Access monitoring dashboards (Grafana, Prometheus, etc.)
+
+### Enhancements
 - Enhanced email provider configuration
 - Search engine setup wizards
 - Functions deployment and testing
 - MLflow integration improvements
-
-### v0.4.2 - Monitoring Management
-**Target**: Q2 2026
-
-**New Commands**:
-- `nself metrics` - Complete monitoring stack management
-- `nself monitor` - Access monitoring dashboards (Grafana, Prometheus, etc.)
-
-**Enhancements**:
 - Monitoring stack configuration wizards
 - Dashboard management
 - Alert rule templates
 - Metrics export and analysis
+
+---
+
+## Planned (v0.4.x Series)
 
 ### v0.4.3 - Database Operations
 **Target**: Q2 2026
@@ -182,9 +187,9 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 | Version | Status | Focus | Timeline |
 |---------|--------|-------|----------|
-| [v0.4.0](#released-v040) | ✅ Released | Production-Ready Core | Oct 2025 |
-| [v0.4.1](#v041---service-management-commands) | 📋 Planned | Service Management | Q1 2026 |
-| [v0.4.2](#v042---monitoring-management) | 📋 Planned | Monitoring | Q2 2026 |
+| [v0.4.0](#v040---production-ready-core) | ✅ Released | Production-Ready Core | Oct 2025 |
+| [v0.4.1](#v041---platform-compatibility-fixes) | ✅ Released | Platform Compatibility | Jan 2026 |
+| [v0.4.2](#next-v042) | 📋 Planned | Service & Monitoring | Q1-Q2 2026 |
 | [v0.4.3](#v043---database-operations) | 📋 Planned | Database Tools | Q2 2026 |
 | [v0.4.4](#v044---backup--restore) | 📋 Planned | Backup & Restore | Q3 2026 |
 | [v0.4.5](#v045---production-features) | 📋 Planned | Production & Deploy | Q3 2026 |
@@ -196,7 +201,7 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 ## Contributing
 
 ### Priority Areas for v0.4.x
-1. Test v0.4.0 in production environments
+1. Test v0.4.1 in production environments
 2. Report bugs and edge cases
 3. Documentation improvements
 4. Community feedback on roadmap priorities
@@ -210,4 +215,6 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ---
 
-*This roadmap reflects actual implemented features in v0.4.0 and realistic future plans for the v0.4.x series. Updated regularly based on development progress and community feedback.*
+*This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
+
+*Last Updated: January 22, 2026*
