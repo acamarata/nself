@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-01-22
+
+### Added
+- **Email Command** (`nself email`): Complete email service management
+  - 16+ email provider support (SendGrid, Mailgun, Postmark, AWS SES, etc.)
+  - Interactive setup wizard for provider configuration
+  - SMTP pre-flight check for connection validation
+  - Test email functionality with all providers
+  - Provider-specific documentation
+
+- **Search Command** (`nself search`): Multi-engine search management
+  - 6 search engines supported: PostgreSQL FTS, MeiliSearch, Typesense, Elasticsearch, OpenSearch, Sonic
+  - Engine-specific testing for all backends
+  - Index management commands
+  - Smart defaults with zero-config PostgreSQL FTS
+
+- **Functions Command** (`nself functions`): Serverless function deployment
+  - Create functions with 4 templates: basic, webhook, api, scheduled
+  - Full TypeScript support with `--ts` flag
+  - Deploy to local or production with validation
+  - Function logs and testing commands
+
+- **MLflow Command** (`nself mlflow`): ML experiment tracking
+  - Enable/disable MLflow integration
+  - Experiments management (list, create, delete)
+  - Runs listing by experiment
+  - API connectivity testing
+
+- **Metrics Command** (`nself metrics`): Monitoring configuration
+  - 3 monitoring profiles: minimal, standard, full (+ auto)
+  - Profile-based service management
+  - Interactive configuration wizard
+  - Cross-platform colored output with printf
+
+- **Monitor Command** (`nself monitor`): Dashboard access
+  - Quick access to Grafana, Prometheus, Alertmanager, Loki
+  - CLI service status view with colored indicators
+  - CLI resource usage display
+  - Real-time log tailing
+
+- **Unit Test Suite**: 92 tests for all 6 service commands
+  - Function existence verification
+  - Provider/engine support validation
+  - Cross-platform compatibility checks
+
+- **Documentation**: Complete docs for all 6 commands in `docs/commands/`
+
+### Fixed
+- **Cross-Platform Compatibility**: All 6 commands now work on macOS/Linux
+  - Replaced all `echo -e` with `printf` for portable output
+  - Replaced all `sed -i.bak` with `safe_sed_inline()` wrapper
+  - Added platform-compat.sh sourcing to metrics.sh, monitor.sh, search.sh, functions.sh, mlflow.sh
+
+### Changed
+- **Monitoring Profiles**: Now use smart "auto" profile by default
+- **Email Provider**: MailPit is default for development (zero config)
+- **Search Engine**: PostgreSQL FTS is default (no extra services needed)
+
+## [0.4.1] - 2026-01-21
+
+### Fixed
+- **Bash 3.2 Compatibility**: Fixed array declaration syntax in start.sh
+- **Cross-Platform sed**: Fixed 22 occurrences of `sed -i` across 4 files
+- **Cross-Platform stat**: Added platform detection for file stat commands
+- **Portable timeout**: Added `safe_timeout()` wrapper (11 occurrences fixed)
+- **Portable output**: Converted `echo -e` to `printf` in stop.sh
+
+## [0.4.0] - 2025-10-13
+
+### Added
+- Production-ready core with all essential features
+- Full Nhost stack: PostgreSQL (60+ extensions), Hasura GraphQL, Auth, Storage
+- Admin UI web-based monitoring dashboard
+- 40+ production-ready service templates (10 languages)
+- SSL management with mkcert and Let's Encrypt support
+- Multi-environment configuration with smart defaults
+- Auto-fix system for common issues
+- Custom Services (CS_N) pattern
+- Optional services: Redis, MinIO, MailPit, MeiliSearch, MLflow, Functions
+- Complete 10-service monitoring bundle
+
 ## [0.3.9] - 2025-09-10 (Latest Patches)
 
 ### Fixed (September 10, 2025)

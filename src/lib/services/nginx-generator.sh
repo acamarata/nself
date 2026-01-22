@@ -139,7 +139,9 @@ EOF
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+        proxy_set_header User-Agent $http_user_agent;
+        proxy_pass_request_headers on;
+
         # Security headers
         proxy_set_header X-Forwarded-Host $server_name;
         proxy_set_header X-Forwarded-Port $server_port;
@@ -200,7 +202,9 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        
+        proxy_set_header User-Agent \$http_user_agent;
+        proxy_pass_request_headers on;
+
         # CORS headers for frontend apps
         add_header Access-Control-Allow-Origin \$http_origin always;
         add_header Access-Control-Allow-Credentials true always;

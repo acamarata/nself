@@ -308,7 +308,7 @@ routes::get_service_config() {
         echo "service_name=nself-admin"
         echo "route=${NSELF_ADMIN_ROUTE:-admin.${base_domain}}"
         echo "container_name=nself-admin"
-        echo "internal_port=3100"
+        echo "internal_port=3021"
         echo "needs_websocket=false"
         echo "upstream_name=nself_admin"
       fi

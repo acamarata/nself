@@ -234,7 +234,7 @@ EOF
 # ====================================================================
 
 ADMIN_ENABLED=true
-ADMIN_PORT=3100
+ADMIN_PORT=3021
 ADMIN_ROUTE=admin.\${BASE_DOMAIN}
 ADMIN_USERNAME=admin
 

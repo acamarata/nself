@@ -253,6 +253,8 @@ location /v1/graphql {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header User-Agent $http_user_agent;
+    proxy_pass_request_headers on;
 
     # WebSocket support
     proxy_read_timeout 86400;
@@ -264,6 +266,7 @@ location /v1/version {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header User-Agent $http_user_agent;
 }
 
 location /console {
@@ -272,6 +275,7 @@ location /console {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header User-Agent $http_user_agent;
 }
 EOF
 }

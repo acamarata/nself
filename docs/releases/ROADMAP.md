@@ -1,13 +1,18 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.2)](#next-v042) | [Planned (v0.4.x)](#planned-v04x-series) | [Future (v0.5+)](#future-v05)
+[Released](#released) | [Next (v0.4.3)](#next-v043) | [Planned (v0.4.x)](#planned-v04x-series) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
-- **✅ v0.4.1 (Current)**: Platform compatibility fixes - stable release
-- **📋 v0.4.2 (Next)**: Service & Monitoring management commands
-- **📋 v0.4.3**: Database, Backup & Production features
-- **🔮 v0.5+**: Advanced features (Kubernetes, multi-cloud, enterprise)
+- **v0.4.2 (Current)**: Service & Monitoring management commands - stable release
+- **v0.4.3 (Next)**: Deployment Pipeline (local → staging → prod)
+- **v0.4.4**: Database, Backup & Restore
+- **v0.4.5**: Mock Data & Seeding System
+- **v0.4.6**: Scaling & Performance
+- **v0.4.7**: Multi-Cloud Providers
+- **v0.4.8**: Kubernetes Support
+- **v0.4.9**: Polish & nself-admin Integration
+- **v0.5.0**: Full Production Release + nself-admin v0.1
 
 ---
 
@@ -18,170 +23,783 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 
 ## Released
 
+### v0.4.2 - Service & Monitoring Management
+**Status**: Released | **Release Date**: January 22, 2026
+
+Feature release adding 6 new service management commands:
+
+- **Email Command** - Email provider configuration, SMTP pre-flight checks, testing
+- **Search Command** - 6-engine search management (PostgreSQL, MeiliSearch, Typesense, etc.)
+- **Functions Command** - Serverless deployment with TypeScript support
+- **MLflow Command** - ML experiment tracking, runs management
+- **Metrics Command** - Monitoring profiles (minimal/standard/full/auto)
+- **Monitor Command** - Dashboard access and CLI monitoring views
+
+**Also includes**: 92 unit tests, complete documentation, cross-platform fixes.
+Full details: [v0.4.2 Release Notes](./v0.4.2.md)
+
+---
+
 ### v0.4.1 - Platform Compatibility Fixes
-**Status**: ✅ Released | **Release Date**: January 22, 2026
+**Status**: Released | **Release Date**: January 21, 2026
 
 Bug fix release addressing 5 critical platform compatibility issues:
 
-- ✅ **Bash 3.2 Compatibility** - Fixed array declaration syntax
-- ✅ **Cross-Platform sed** - Fixed in-place editing for macOS/Linux
-- ✅ **Cross-Platform stat** - Fixed file stat commands
-- ✅ **Portable timeout** - Added guards for timeout command
-- ✅ **Portable output** - Converted echo -e to printf
+- **Bash 3.2 Compatibility** - Fixed array declaration syntax
+- **Cross-Platform sed** - Fixed in-place editing for macOS/Linux
+- **Cross-Platform stat** - Fixed file stat commands
+- **Portable timeout** - Added guards for timeout command
+- **Portable output** - Converted echo -e to printf
 
 **22 files fixed** across the codebase. Full details: [v0.4.1 Release Notes](./v0.4.1.md)
 
 ---
 
 ### v0.4.0 - Production-Ready Core
-**Status**: ✅ Released | **Release Date**: October 13, 2025
+**Status**: Released | **Release Date**: October 13, 2025
 
-v0.4.0 represents the **stable, production-ready release** of nself with all core features complete, tested, and ready for real-world use.
+v0.4.0 represents the **stable, production-ready release** of nself with all core features complete.
 
-### Core Features (Fully Functional)
-- **✅ Full Nhost Stack** - PostgreSQL with 60+ extensions, Hasura GraphQL, Auth, Storage
-- **✅ Admin UI** - Web-based monitoring dashboard at localhost:3100
-- **✅ 40+ Service Templates** - Production-ready microservice templates across 10 languages
-- **✅ SSL Management** - Automatic certificates with mkcert (Let's Encrypt ready)
-- **✅ Environment Management** - Multi-environment configuration with smart defaults
-- **✅ Auto-Fix System** - Smart defaults and automatic problem resolution
-- **✅ Docker Compose** - Battle-tested container orchestration
-- **✅ Custom Services (CS_N)** - Easy microservice configuration pattern
-- **✅ Optional Services** - Redis, MinIO, MailPit, MeiliSearch, MLflow, Functions
-- **✅ Monitoring Bundle** - Complete 10-service monitoring stack (Prometheus, Grafana, Loki, etc.)
-
-### Available Commands (15 Core)
-**Core**: init, build, start, stop, restart, reset, clean, restore
-**Status**: status, logs, exec, urls, doctor, version, update, help
-**Management**: ssl, trust, admin
-
-### Service Templates (40 Total)
-- **JavaScript/TypeScript (19)**: Node.js, Express, Fastify, NestJS, Hono, Socket.IO, BullMQ, Temporal, Bun, Deno, tRPC
-- **Python (7)**: Flask, FastAPI, Django REST, Celery, Ray, AI Agents
-- **Go (4)**: Gin, Echo, Fiber, gRPC
-- **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
+- **Full Nhost Stack** - PostgreSQL with 60+ extensions, Hasura GraphQL, Auth, Storage
+- **Admin UI** - Web-based monitoring dashboard
+- **40+ Service Templates** - Production-ready microservice templates across 10 languages
+- **SSL Management** - Automatic certificates with mkcert (Let's Encrypt ready)
+- **Environment Management** - Multi-environment configuration with smart defaults
+- **Docker Compose** - Battle-tested container orchestration
+- **Monitoring Bundle** - Complete 10-service monitoring stack
 
 [View Full Release Notes](./v0.4.0.md)
 
 ---
 
-## Next (v0.4.2)
-**Status**: 📋 Planned | **Target**: Q1-Q2 2026
-**Focus**: Service & Monitoring Management Commands
+## Next (v0.4.3)
 
-This release adds **6 new commands** for managing optional services and monitoring.
+### v0.4.3 - Deployment Pipeline
+**Status**: Next | **Target**: Q1 2026
+**Focus**: Everything to deploy local → staging → prod
 
-### New Commands
+Full planning document: [v0.4.3-PLAN.md](../planning/v0.4.3-PLAN.md)
 
-#### Service Management
+#### New Commands (4)
+
 | Command | Purpose |
 |---------|---------|
-| `nself email` | Email service configuration, testing, provider switching |
-| `nself search` | Search engine management (MeiliSearch, Typesense, Sonic) |
-| `nself functions` | Serverless functions deployment, logs, testing |
-| `nself mlflow` | MLflow experiment tracking, model management |
+| `nself env` | Environment management (local/staging/prod) |
+| `nself deploy` | Deploy to any environment |
+| `nself prod` | Production configuration & hardening |
+| `nself staging` | Staging environment setup |
 
-#### Monitoring Management
-| Command | Purpose |
-|---------|---------|
-| `nself metrics` | Prometheus/metrics configuration and management |
-| `nself monitor` | Dashboard access (Grafana, Prometheus, Alertmanager) |
+#### `nself env` - Environment Management
+```bash
+nself env create <name>      # Create environment (staging, prod, custom)
+nself env list               # List all environments with status
+nself env switch <name>      # Switch active environment
+nself env delete <name>      # Remove environment (with confirmation)
+nself env status             # Show current environment details
+nself env diff <a> <b>       # Compare two environments
+nself env export <name>      # Export environment config
+nself env import <file>      # Import environment config
+```
 
-### Enhancements
-- Email provider setup wizards (MailPit, SMTP, SendGrid, Postmark)
-- Search engine indexing and testing tools
-- Functions hot-reload and live logs
-- MLflow experiment browser CLI
-- Grafana dashboard management
-- Alert rule templates
-- Metrics export and analysis
+#### `nself deploy` - Deployment
+```bash
+nself deploy <env>           # Deploy to environment
+nself deploy staging         # Deploy to staging
+nself deploy prod            # Deploy to production
+nself deploy prod --dry-run  # Preview deployment changes
+nself deploy --rollback      # Rollback to previous deployment
+nself deploy --status        # Show deployment status
+nself deploy --logs          # Show deployment logs
+```
+
+#### `nself prod` - Production Hardening
+```bash
+nself prod init              # Interactive production setup wizard
+nself prod check             # Security audit / checklist
+nself prod secrets           # Secrets management
+nself prod secrets list      # List all secrets (masked)
+nself prod secrets set KEY=value
+nself prod secrets generate  # Generate secure secrets
+nself prod secrets rotate    # Rotate all secrets
+nself prod ssl               # SSL/TLS configuration
+nself prod firewall          # Firewall configuration helpers
+nself prod harden            # Apply security hardening
+```
+
+#### `nself staging` - Staging Management
+```bash
+nself staging init           # Initialize staging environment
+nself staging sync           # Sync from production (anonymized)
+nself staging reset          # Reset to clean state
+nself staging url            # Show staging URLs
+```
+
+#### Key Features
+- **SSH Key Auto-Detection**: Automatically detects available SSH keys for deployment
+- **Access Control**: Not everyone has access to staging/prod - supports credential checks
+- **Credential Options**: SSH keys, username/password, environment variables, system keychain
+- **Direct IP Support**: Deploy to VPS with IP address (no domain required)
+- **Zero-Downtime**: Rolling deployments with health checks
+- **Environment Inheritance**: prod inherits from staging inherits from local
+- **Let's Encrypt**: Automatic SSL certificate generation for production
 
 ---
 
 ## Planned (v0.4.x Series)
 
-### v0.4.3 - Database, Backup & Production
+### v0.4.4 - Database, Backup & Restore
+**Target**: Q1-Q2 2026
+**Focus**: Everything for database lifecycle management
+
+Full planning document: [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md)
+
+#### New Commands (3)
+
+| Command | Purpose |
+|---------|---------|
+| `nself db` | Database operations & migrations |
+| `nself backup` | Create and manage backups |
+| `nself restore` | Restore from backups |
+
+#### `nself db` - Database Operations
+```bash
+# Migrations
+nself db migrate             # Run pending migrations
+nself db migrate:create <name>  # Create new migration file
+nself db migrate:rollback    # Rollback last migration
+nself db migrate:rollback --all # Rollback all migrations
+nself db migrate:status      # Show migration status
+nself db migrate:fresh       # Drop all tables and re-run migrations
+
+# Operations
+nself db shell               # Interactive psql session
+nself db query "<sql>"       # Run SQL query
+nself db dump                # Dump database to file
+nself db load <file>         # Load dump into database
+
+# Analysis
+nself db status              # Database health status
+nself db size                # Table sizes and disk usage
+nself db optimize            # Analyze and vacuum
+nself db slow-queries        # Show slow query log
+
+# Cloning
+nself db clone staging       # Clone current DB to staging
+nself db clone --from prod   # Clone from production (anonymized)
+```
+
+#### `nself backup` - Backup System
+```bash
+# Creation
+nself backup create          # Full backup
+nself backup create --name weekly-backup
+nself backup create --incremental
+nself backup create --schema-only
+nself backup create --data-only
+
+# Management
+nself backup list            # List all backups
+nself backup list --remote   # List remote backups (S3)
+nself backup info <backup-id>  # Show backup details
+nself backup delete <backup-id>
+nself backup verify <backup-id>  # Verify backup integrity
+
+# Scheduling
+nself backup schedule        # Configure backup schedule
+nself backup schedule --show
+nself backup schedule --disable
+nself backup schedule --preset daily   # Daily at 2 AM
+nself backup schedule --preset weekly  # Weekly Sunday 2 AM
+nself backup schedule --cron "0 */6 * * *"  # Custom cron
+
+# Storage
+nself backup storage         # Configure storage backends
+nself backup storage set s3 --endpoint ... --bucket ...
+nself backup upload <backup-id>
+nself backup download <backup-id>
+```
+
+#### `nself restore` - Restore System
+```bash
+nself restore latest         # Restore most recent backup
+nself restore <backup-id>    # Restore specific backup
+nself restore --list         # List available backups
+nself restore --point-in-time "2026-01-15 14:30:00"  # PITR
+nself restore <backup-id> --to staging  # Restore to different environment
+nself restore --dry-run      # Preview restore
+nself restore --no-backup    # Skip pre-restore backup
+nself restore --schema-only
+nself restore --data-only
+nself restore --table users  # Single table
+```
+
+#### Key Features
+- **S3-Compatible Storage**: MinIO, AWS S3, Backblaze B2
+- **Backup Encryption**: AES-256 encryption at rest
+- **Point-in-Time Recovery**: Restore to exact timestamp (WAL-based)
+- **Automatic Pre-Restore Backup**: Safety backup before any restore
+- **Cross-Environment Restore**: Restore prod to staging with anonymization
+
+---
+
+### v0.4.5 - Mock Data & Seeding System
+**Target**: Q2 2026
+**Focus**: Everything for automated mock data on local/staging, real data in prod
+
+Full planning document: [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md)
+
+#### New Commands (3)
+
+| Command | Purpose |
+|---------|---------|
+| `nself seed` | Seed database with data |
+| `nself mock` | Generate mock/fake data |
+| `nself data` | Data management utilities |
+
+#### `nself mock` - Mock Data Generation
+```bash
+# Generation
+nself mock generate          # Generate mock data for all tables
+nself mock generate users    # Generate for specific table
+nself mock generate --count 1000  # Specify row count
+
+# Presets
+nself mock generate --preset minimal   # 10 rows per table
+nself mock generate --preset small     # 100 rows per table
+nself mock generate --preset medium    # 1,000 rows per table
+nself mock generate --preset large     # 10,000 rows per table
+nself mock generate --preset realistic # Varies by table type
+
+# Configuration
+nself mock init              # Create mock configuration file
+nself mock config            # Edit mock configuration
+nself mock preview           # Preview generated data
+
+# Management
+nself mock status            # Show mock data status
+nself mock clear             # Remove all mock data
+nself mock refresh           # Clear and regenerate
+```
+
+#### `nself seed` - Seeding System
+```bash
+nself seed                   # Run all seed files
+nself seed run               # Same as above
+nself seed run users         # Run specific seed
+nself seed run --fresh       # Clear and re-seed
+
+# Built-in seeds
+nself seed users             # Seed initial users
+nself seed roles             # Seed roles and permissions
+nself seed config            # Seed app configuration
+
+# Management
+nself seed init              # Create seed directory and templates
+nself seed create <name>     # Create new seed file
+nself seed list              # List available seeds
+nself seed status            # Show which seeds have run
+```
+
+#### `nself data` - Data Utilities
+```bash
+# Export/Import
+nself data export            # Export all data as JSON
+nself data export users      # Export specific table
+nself data export --format csv
+nself data export --output ./dump
+nself data import <file>     # Import from JSON/CSV
+
+# Anonymization
+nself data anonymize         # Anonymize PII in current DB
+nself data anonymize --preview
+nself data anonymize --config anonymize.yaml
+
+# Reset
+nself data reset             # Reset to clean state
+nself data reset --keep-schema
+nself data reset --keep-seeds
+```
+
+#### Environment-Aware Behavior (AUTOMATIC)
+
+| Environment | Mock Data | Seeding | Real Data |
+|-------------|-----------|---------|-----------|
+| **Local** | ✓ Full mock data | ✓ Test users | ✗ Never |
+| **Staging** | ✓ Realistic volumes | ✓ Test users | ✗ Never |
+| **Production** | ✗ Never (blocked) | ✓ Admin users only | ✓ Yes |
+
+**No configuration needed** - detected automatically from ENV variable.
+
+#### Key Features
+- **Schema-Aware Generation**: Reads DB schema, generates appropriate data types
+- **Foreign Key Handling**: Respects relationships, generates parent data first
+- **Realistic Fake Data**: Names, emails, addresses, phones, etc.
+- **Idempotent Seeding**: Safe to run multiple times (ON CONFLICT handling)
+- **PII Anonymization**: Mask/fake/hash methods for data anonymization
+- **Direct VPS/IP Support**: Deploy to VPS with IP address (no domain required)
+- **Self-Signed SSL for IP**: Generate certs for IP-based access
+
+---
+
+### v0.4.6 - Scaling & Performance
 **Target**: Q2-Q3 2026
+**Focus**: Everything for scale, perf, migrate
 
-This consolidated release combines database operations, backup/restore, and production features.
+Full planning document: [v0.4.6-PLAN.md](../planning/v0.4.6-PLAN.md)
 
-#### New Commands
+#### New Commands (4)
+
 | Command | Purpose |
 |---------|---------|
-| `nself db` | Database migrations, backups, optimization, queries |
-| `nself backup` | Create, schedule, and manage backups |
-| `nself restore` | Restore from backups, point-in-time recovery |
-| `nself prod` | Production environment configuration |
-| `nself deploy` | SSH-based deployment to VPS/servers |
+| `nself scale` | Horizontal/vertical scaling |
+| `nself perf` | Performance profiling |
+| `nself migrate` | Cross-environment migration |
+| `nself bench` | Benchmarking tools |
 
-#### Enhancements
-- **Database**
-  - Schema migration tools
-  - Performance analysis and query optimization
-  - Connection pooling management
-  - Database cloning for dev/staging
+#### `nself scale` - Scaling
+```bash
+# Vertical scaling (resources)
+nself scale up <service>     # Increase resources
+nself scale up postgres --memory 4G
+nself scale up hasura --cpu 2
+nself scale down <service>   # Decrease resources
 
-- **Backup & Restore**
-  - S3-compatible backup storage (MinIO, AWS S3)
-  - Automated backup scheduling (cron)
-  - Point-in-time recovery
-  - Backup encryption and verification
+# Horizontal scaling (replicas)
+nself scale out <service>    # Add replica
+nself scale out api --replicas 3
+nself scale in <service>     # Remove replica
 
-- **Production**
-  - Security hardening wizard
-  - Environment-specific configurations
-  - GitHub webhook integration
-  - Zero-downtime deployments
-  - Health check endpoints
+# Auto-scaling
+nself scale auto <service>   # Enable auto-scaling
+nself scale auto api --min 2 --max 10
+nself scale auto api --cpu-threshold 70
+nself scale auto --disable <service>
+
+# Connection pooling
+nself scale pooler enable    # Enable PgBouncer
+nself scale pooler config --pool-size 100
+nself scale pooler status
+
+# Redis cluster
+nself scale redis cluster --nodes 6
+nself scale redis add-node
+nself scale redis status
+
+# Status
+nself scale status           # Show scaling status
+nself scale status <service>
+```
+
+#### `nself perf` - Performance Profiling
+```bash
+# Profiling
+nself perf profile           # Full system profile
+nself perf profile <service> # Service-specific
+nself perf profile --duration 60
+
+# Analysis
+nself perf analyze           # Analyze current performance
+nself perf analyze --slow-queries
+nself perf analyze --memory
+nself perf analyze --cpu
+nself perf slow-queries      # Detailed slow query analysis
+
+# Reports
+nself perf report            # Generate performance report
+nself perf report --format html
+nself perf report --compare last
+
+# Dashboard
+nself perf dashboard         # Real-time terminal dashboard
+
+# Recommendations
+nself perf suggest           # Get optimization suggestions
+```
+
+#### `nself migrate` - Cross-Environment Migration
+```bash
+# Full migration
+nself migrate staging prod   # Migrate staging to prod
+nself migrate local staging  # Migrate local to staging
+nself migrate --dry-run      # Preview migration
+
+# Selective migration
+nself migrate --schema-only
+nself migrate --data-only
+nself migrate --config-only
+
+# Sync
+nself migrate sync staging prod  # Keep environments in sync
+nself migrate sync --watch   # Continuous sync
+
+# Drift detection
+nself migrate diff staging prod  # Show differences
+nself migrate diff --schema
+nself migrate diff --config
+
+# Rollback
+nself migrate rollback       # Rollback last migration
+nself migrate rollback --to checkpoint-2026-01-22
+```
+
+#### `nself bench` - Benchmarking
+```bash
+# API benchmarking
+nself bench api              # Benchmark all endpoints
+nself bench api /users       # Specific endpoint
+nself bench api --concurrent 100
+nself bench api --duration 60
+
+# Database benchmarking
+nself bench db               # Overall database performance
+nself bench db --read
+nself bench db --write
+nself bench db --mixed
+
+# Load testing
+nself bench load             # Simulate production load
+nself bench load --users 1000
+nself bench load --scenario checkout
+
+# Comparison
+nself bench compare          # Compare to baseline
+nself bench compare --with last
+nself bench baseline save    # Save current as baseline
+```
+
+#### Key Features
+- **Load Balancer Config**: Automatic nginx upstream for replicas
+- **PgBouncer Integration**: Connection pooling for better DB performance
+- **Redis Cluster**: Scale Redis horizontally
+- **Slow Query Detection**: Identify and suggest fixes for slow queries
+- **Configuration Drift**: Detect differences between environments
+- **Benchmark Scenarios**: Define custom user flow scenarios
 
 ---
 
-### v0.4.4 - Scaling & Advanced Features
+### v0.4.7 - Multi-Cloud Providers
+**Target**: Q3 2026
+**Focus**: Support for all deploy paths - AWS, GCP, Azure, DO, Linode, Vultr, Hetzner
+
+Full planning document: [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md)
+
+#### New Commands (2)
+
+| Command | Purpose |
+|---------|---------|
+| `nself cloud` | Cloud provider management |
+| `nself provision` | Infrastructure provisioning |
+
+#### `nself cloud` - Cloud Provider Management
+```bash
+# Provider setup
+nself cloud init <provider>  # Configure provider credentials
+nself cloud init aws         # Setup AWS
+nself cloud init gcp         # Setup Google Cloud
+nself cloud init azure       # Setup Azure
+nself cloud init do          # Setup DigitalOcean
+nself cloud init linode      # Setup Linode
+nself cloud init vultr       # Setup Vultr
+nself cloud init hetzner     # Setup Hetzner
+
+# Provider management
+nself cloud list             # List configured providers
+nself cloud status           # Show resource status
+nself cloud status aws       # Provider-specific status
+nself cloud remove <provider>
+
+# Cost management
+nself cloud costs            # Show current costs
+nself cloud costs --forecast # Forecast monthly costs
+nself cloud costs --compare  # Compare providers
+nself cloud budget           # Set budget alerts
+
+# Resources
+nself cloud resources        # List all cloud resources
+nself cloud resources --provider aws
+nself cloud destroy          # Tear down all resources
+nself cloud destroy --provider aws
+```
+
+#### `nself provision` - Infrastructure Provisioning
+```bash
+# Basic provisioning
+nself provision <provider>   # Provision on provider
+nself provision aws          # Provision on AWS
+nself provision do           # Provision on DigitalOcean
+nself provision hetzner      # Provision on Hetzner
+
+# Size options (cross-provider equivalents)
+nself provision --size small    # t3.small / s-1vcpu-2gb / cx11
+nself provision --size medium   # t3.medium / s-2vcpu-4gb / cx21
+nself provision --size large    # t3.large / s-4vcpu-8gb / cx31
+nself provision aws --size t3.2xlarge  # Provider-specific
+
+# Options
+nself provision aws --region us-west-2
+nself provision do --region sfo3
+nself provision --dry-run    # Preview resources
+nself provision --estimate   # Cost estimate only
+
+# Configuration-based
+nself provision --config infra.yaml
+nself provision --env staging
+
+# Export
+nself provision export terraform
+nself provision export pulumi
+nself provision export cloudformation
+```
+
+#### Supported Providers (7)
+
+| Provider | Compute | Database | Storage | Kubernetes |
+|----------|---------|----------|---------|------------|
+| **AWS** | EC2 | RDS | S3 | EKS |
+| **Google Cloud** | Compute Engine | Cloud SQL | Cloud Storage | GKE |
+| **Azure** | Virtual Machines | Azure Database | Blob Storage | AKS |
+| **DigitalOcean** | Droplets | Managed Databases | Spaces | DOKS |
+| **Linode** | Linodes | Managed Databases | Object Storage | LKE |
+| **Vultr** | Cloud Compute | Managed Databases | Object Storage | VKE |
+| **Hetzner** | Cloud Servers | - | Volumes | - |
+
+#### Key Features
+- **One-Command Provisioning**: `nself provision aws` creates full infrastructure
+- **Cost Estimation**: See costs before provisioning
+- **Cost Comparison**: Compare same setup across providers
+- **Terraform Export**: Export for custom infrastructure management
+- **Interactive Wizard**: Step-by-step provisioning with previews
+
+---
+
+### v0.4.8 - Kubernetes Support
 **Target**: Q3-Q4 2026
+**Focus**: Full support for Kubernetes and container orchestration
 
-Final release in the 0.4.x series before major 0.5 features.
+Full planning document: [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md)
 
-#### New Commands
+#### New Commands (2)
+
 | Command | Purpose |
 |---------|---------|
-| `nself scale` | Horizontal/vertical scaling management |
-| `nself perf` | Performance profiling and optimization |
-| `nself migrate` | Cross-environment migration tools |
+| `nself k8s` | Kubernetes operations |
+| `nself helm` | Helm chart management |
 
-#### Enhancements
-- Auto-scaling configuration
-- Load balancing setup (nginx upstream)
-- Resource optimization recommendations
-- Performance benchmarking
-- Multi-environment sync
-- Configuration drift detection
+#### `nself k8s` - Kubernetes Operations
+```bash
+# Generation
+nself k8s generate           # Generate K8s manifests from compose
+nself k8s generate --output ./k8s
+nself k8s generate --namespace myapp
+
+# Deployment
+nself k8s apply              # Apply manifests to cluster
+nself k8s apply --env staging
+nself k8s apply --dry-run
+
+# Status
+nself k8s status             # Cluster status
+nself k8s status <service>   # Service status
+nself k8s pods               # List all pods
+nself k8s events             # Recent events
+
+# Operations
+nself k8s logs <service>     # Pod logs
+nself k8s logs <service> -f  # Follow logs
+nself k8s exec <service>     # Exec into pod
+nself k8s shell <service>    # Interactive shell
+
+# Rollout
+nself k8s rollout <service>  # Rolling update
+nself k8s rollout status
+nself k8s rollback <service>
+nself k8s rollback --to v1.2.3
+
+# Scaling
+nself k8s scale <service> 3  # Scale to 3 replicas
+nself k8s autoscale <service>  # Enable HPA
+
+# Context
+nself k8s context            # Show current context
+nself k8s context use <name> # Switch context
+nself k8s contexts           # List all contexts
+```
+
+#### `nself helm` - Helm Chart Management
+```bash
+# Chart creation
+nself helm init              # Initialize Helm chart
+nself helm init --from-compose
+
+# Packaging
+nself helm package           # Package chart
+nself helm lint              # Lint chart
+nself helm template          # Render templates locally
+
+# Installation
+nself helm install           # Install to cluster
+nself helm install --env staging
+nself helm upgrade           # Upgrade release
+nself helm rollback          # Rollback release
+
+# Management
+nself helm list              # List releases
+nself helm status            # Release status
+nself helm history           # Release history
+nself helm uninstall         # Remove release
+
+# Repository
+nself helm repo add <url>    # Add chart repo
+nself helm push              # Push to registry
+```
+
+#### Supported Platforms
+
+| Platform | Provider | Status |
+|----------|----------|--------|
+| **EKS** | AWS | Full |
+| **GKE** | Google Cloud | Full |
+| **AKS** | Azure | Full |
+| **DOKS** | DigitalOcean | Full |
+| **LKE** | Linode | Full |
+| **Self-Hosted** | Any | Full |
+| **k3s** | Edge/IoT | Full |
+| **minikube** | Local Dev | Full |
+
+#### Key Features
+- **Automatic Conversion**: docker-compose.yml → K8s manifests
+- **Kustomize Support**: Environment-specific overlays
+- **Helm Charts**: Generate, package, and deploy Helm charts
+- **Service Mesh**: Istio and Linkerd integration
+- **Rolling Deployments**: Zero-downtime updates
+- **HPA Integration**: Horizontal Pod Autoscaler support
 
 ---
 
-## Future (v0.5+)
-**Status**: 🔮 Long-term Vision | **Timeline**: 2027+
-**Focus**: Advanced Features & Enterprise Capabilities
+### v0.4.9 - Polish & nself-admin Integration
+**Target**: Q4 2026
+**Focus**: Wrap up all bugs, everything nself-admin needs for monitoring
 
-### Cloud & Orchestration (v0.5)
-- **Kubernetes Support** - Generate K8s manifests, Helm charts
-- **Container Orchestration** - Docker Swarm, Nomad support
-- **Cloud Providers** - Native integrations (AWS, GCP, Azure, DigitalOcean)
-- **Multi-Region** - Geographic distribution and failover
-- **Terraform Integration** - Infrastructure as code exports
+Full planning document: [v0.4.9-PLAN.md](../planning/v0.4.9-PLAN.md)
 
-### Enterprise Features (v0.6)
-- **Security & Compliance** - SSO/SAML, RBAC, audit logging, compliance templates
-- **Advanced Database** - Multi-region replication, read replicas, automatic failover
-- **High Availability** - Multi-node clustering, load balancing, circuit breakers
-- **Developer Tools** - Code generation, API testing, CI/CD templates
-- **Team Management** - Multi-user access, permissions, activity logs
+#### Focus Areas
 
-### Innovation (v0.7+)
-- **AI/ML Platform** - Vector database (pgvector), LLM integration, model serving
-- **Edge Computing** - Edge functions, CDN integration, offline-first sync
-- **Multi-Tenancy** - True multi-tenant architecture with isolation
-- **Plugin System** - Community-contributed extensions and integrations
-- **GUI Application** - Desktop app for visual management
+##### Bug Fixes & Stability
+- Address all reported GitHub issues
+- Edge case handling
+- Error message improvements (actionable suggestions)
+- Recovery mechanisms for common failures
+
+##### nself-admin Integration
+- Real-time monitoring dashboard
+- Service health visualization
+- Log viewer with search and filtering
+- Metrics graphs and charts
+- Alert configuration UI
+- User management UI
+- Database management UI
+- Backup/restore UI
+- Configuration editor
+- Web-based CLI terminal
+
+##### CLI Improvements
+```bash
+# Shell completions
+nself completion bash >> ~/.bashrc
+nself completion zsh >> ~/.zshrc
+nself completion fish >> ~/.config/fish/completions/nself.fish
+
+# Interactive mode
+nself interactive
+nself -i
+
+# Offline documentation
+nself docs
+nself docs deploy
+nself help deploy  # Works offline
+```
+
+##### Testing & Quality
+- Unit test coverage > 90%
+- Integration test coverage > 80%
+- E2E test coverage > 70%
+- Cross-platform verification (Ubuntu, macOS, WSL)
+- Performance benchmarks
+
+---
+
+## v0.5.0 - Production Release
+
+### v0.5.0 - Full Production Release
+**Target**: Q4 2026 / Q1 2027
+**Focus**: Production-ready platform release with nself-admin v0.1
+
+Full planning document: [v0.5.0-PLAN.md](../planning/v0.5.0-PLAN.md)
+
+This is the **1.0-equivalent release** for nself - the complete, production-ready self-hosted backend platform.
+
+#### Includes
+- **nself CLI v0.5.0** - All features from v0.4.x series stable and polished
+- **nself-admin v0.1.0** - First official release of the web admin UI
+
+#### nself CLI v0.5.0 - Complete Command List (46 commands)
+
+```
+Core Commands (8):
+  init, build, start, stop, restart, reset, clean, version
+
+Status Commands (6):
+  status, logs, exec, urls, doctor, help
+
+Management Commands (4):
+  update, ssl, trust, admin
+
+Service Commands (6) - v0.4.2:
+  email, search, functions, mlflow, metrics, monitor
+
+Environment Commands (4) - v0.4.3:
+  env, deploy, prod, staging
+
+Database Commands (3) - v0.4.4:
+  db, backup, restore
+
+Data Commands (3) - v0.4.5:
+  seed, mock, data
+
+Scaling Commands (4) - v0.4.6:
+  scale, perf, migrate, bench
+
+Cloud Commands (2) - v0.4.7:
+  cloud, provision
+
+Kubernetes Commands (2) - v0.4.8:
+  k8s, helm
+
+Utility Commands (4):
+  completion, interactive, docs, config
+```
+
+#### nself-admin v0.1.0 Features
+
+| Feature | Description |
+|---------|-------------|
+| **Dashboard** | System overview, health, resource usage |
+| **Services** | Service management with start/stop/restart |
+| **Logs** | Real-time log streaming with search |
+| **Metrics** | Grafana-like visualization |
+| **Alerts** | Alert configuration and history |
+| **Database** | Table browser, query runner |
+| **Backups** | Backup/restore interface |
+| **Users** | User and role management |
+| **Config** | Environment configuration editor |
+| **Terminal** | Web-based CLI access |
+
+#### Quality Standards
+- 100% documented commands
+- Cross-platform tested (macOS, Linux, WSL)
+- Security audited
+- Performance benchmarked
+- Production-proven
 
 ---
 
@@ -202,48 +820,90 @@ Final release in the 0.4.x series before major 0.5 features.
 
 | Version | Status | Focus | Target |
 |---------|--------|-------|--------|
-| v0.4.0 | ✅ Released | Production-Ready Core | Oct 2025 |
-| v0.4.1 | ✅ Released | Platform Compatibility | Jan 2026 |
-| **v0.4.2** | 📋 **Next** | Service & Monitoring | Q1-Q2 2026 |
-| v0.4.3 | 📋 Planned | Database, Backup, Production | Q2-Q3 2026 |
-| v0.4.4 | 📋 Planned | Scaling & Advanced | Q3-Q4 2026 |
-| v0.5.0 | 🔮 Future | Kubernetes & Cloud | 2027 |
-| v0.6.0 | 🔮 Future | Enterprise Features | 2027+ |
+| v0.4.0 | Released | Production-Ready Core | Oct 2025 |
+| v0.4.1 | Released | Platform Compatibility | Jan 2026 |
+| v0.4.2 | Released | Service & Monitoring | Jan 2026 |
+| **v0.4.3** | **Next** | Deployment Pipeline | Q1 2026 |
+| v0.4.4 | Planned | Database, Backup, Restore | Q1-Q2 2026 |
+| v0.4.5 | Planned | Mock Data & Seeding | Q2 2026 |
+| v0.4.6 | Planned | Scaling & Performance | Q2-Q3 2026 |
+| v0.4.7 | Planned | Multi-Cloud Providers | Q3 2026 |
+| v0.4.8 | Planned | Kubernetes Support | Q3-Q4 2026 |
+| v0.4.9 | Planned | Polish & Admin Integration | Q4 2026 |
+| **v0.5.0** | **Target** | Production Release + nself-admin v0.1 | Q4 2026 / Q1 2027 |
 
 ---
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.1)
+### Currently Available (v0.4.2) - 24 commands
 ```
-init, build, start, stop, restart, reset, clean, restore
-status, logs, exec, urls, doctor, version, update, help
-ssl, trust, admin
-```
-
-### Coming in v0.4.2
-```
-email, search, functions, mlflow, metrics, monitor
+Core: init, build, start, stop, restart, reset, clean, version
+Status: status, logs, exec, urls, doctor, help
+Management: update, ssl, trust, admin
+Services: email, search, functions, mlflow, metrics, monitor
 ```
 
-### Coming in v0.4.3
+### Coming in v0.4.3 - +4 commands
 ```
-db, backup, restore, prod, deploy
-```
-
-### Coming in v0.4.4
-```
-scale, perf, migrate
+env, deploy, prod, staging
 ```
 
-**Total Commands After v0.4.4**: 30+
+### Coming in v0.4.4 - +3 commands
+```
+db, backup, restore
+```
+
+### Coming in v0.4.5 - +3 commands
+```
+seed, mock, data
+```
+
+### Coming in v0.4.6 - +4 commands
+```
+scale, perf, migrate, bench
+```
+
+### Coming in v0.4.7 - +2 commands
+```
+cloud, provision
+```
+
+### Coming in v0.4.8 - +2 commands
+```
+k8s, helm
+```
+
+### Coming in v0.4.9/v0.5.0 - +4 commands
+```
+completion, interactive, docs, config
+```
+
+**Total Commands at v0.5.0**: 46
+
+---
+
+## Planning Documents
+
+Detailed planning documents for each version:
+
+| Version | Planning Document |
+|---------|-------------------|
+| v0.4.3 | [v0.4.3-PLAN.md](../planning/v0.4.3-PLAN.md) |
+| v0.4.4 | [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md) |
+| v0.4.5 | [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md) |
+| v0.4.6 | [v0.4.6-PLAN.md](../planning/v0.4.6-PLAN.md) |
+| v0.4.7 | [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md) |
+| v0.4.8 | [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md) |
+| v0.4.9 | [v0.4.9-PLAN.md](../planning/v0.4.9-PLAN.md) |
+| v0.5.0 | [v0.5.0-PLAN.md](../planning/v0.5.0-PLAN.md) |
 
 ---
 
 ## Contributing
 
 ### Priority Areas
-1. Test v0.4.1 in production environments
+1. Test v0.4.2 in production environments
 2. Report bugs and edge cases
 3. Documentation improvements
 4. Community feedback on roadmap priorities

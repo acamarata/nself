@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source utilities
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
+source "$SCRIPT_DIR/../lib/utils/platform-compat.sh"
 source "$SCRIPT_DIR/../lib/config/defaults.sh"
 source "$SCRIPT_DIR/../lib/monitoring/profiles.sh"
 
@@ -1328,7 +1329,7 @@ update_env_file() {
   # Update or add the setting
   if grep -q "^${key}=" "$env_file"; then
     # Update existing
-    sed -i.bak "s/^${key}=.*/${key}=${value}/" "$env_file"
+    safe_sed_inline "$env_file" "s/^${key}=.*/${key}=${value}/"
     rm -f "${env_file}.bak"
   else
     # Add new
@@ -1336,29 +1337,29 @@ update_env_file() {
   fi
 }
 
-# Color text helper
+# Color text helper (cross-platform compatible)
 color_text() {
   local text="$1"
   local color="$2"
-  
+
   case "$color" in
     red)
-      echo -e "\033[0;31m${text}\033[0m"
+      printf "\033[0;31m%s\033[0m" "$text"
       ;;
     green)
-      echo -e "\033[0;32m${text}\033[0m"
+      printf "\033[0;32m%s\033[0m" "$text"
       ;;
     yellow)
-      echo -e "\033[0;33m${text}\033[0m"
+      printf "\033[0;33m%s\033[0m" "$text"
       ;;
     blue)
-      echo -e "\033[0;34m${text}\033[0m"
+      printf "\033[0;34m%s\033[0m" "$text"
       ;;
     cyan)
-      echo -e "\033[0;36m${text}\033[0m"
+      printf "\033[0;36m%s\033[0m" "$text"
       ;;
     *)
-      echo "$text"
+      printf "%s" "$text"
       ;;
   esac
 }

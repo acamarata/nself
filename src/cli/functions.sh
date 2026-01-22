@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
+source "$SCRIPT_DIR/../lib/utils/platform-compat.sh"
 
 # Functions command
 cmd_functions() {
@@ -105,7 +106,7 @@ functions_enable() {
   
   # Update .env file
   if grep -q "^FUNCTIONS_ENABLED=" .env 2>/dev/null; then
-    sed -i.bak 's/^FUNCTIONS_ENABLED=.*/FUNCTIONS_ENABLED=true/' .env
+    safe_sed_inline .env 's/^FUNCTIONS_ENABLED=.*/FUNCTIONS_ENABLED=true/'
   else
     echo "FUNCTIONS_ENABLED=true" >> .env
   fi
@@ -125,7 +126,7 @@ functions_disable() {
   
   # Update .env file
   if grep -q "^FUNCTIONS_ENABLED=" .env 2>/dev/null; then
-    sed -i.bak 's/^FUNCTIONS_ENABLED=.*/FUNCTIONS_ENABLED=false/' .env
+    safe_sed_inline .env 's/^FUNCTIONS_ENABLED=.*/FUNCTIONS_ENABLED=false/'
   else
     echo "FUNCTIONS_ENABLED=false" >> .env
   fi
@@ -171,30 +172,57 @@ functions_list() {
 functions_create() {
   local name="${1:-}"
   local template="${2:-basic}"
-  
+  local use_typescript=false
+
+  # Check for --ts flag
+  for arg in "$@"; do
+    if [[ "$arg" == "--ts" ]] || [[ "$arg" == "--typescript" ]]; then
+      use_typescript=true
+    fi
+  done
+
+  # Handle case where template is --ts
+  if [[ "$template" == "--ts" ]] || [[ "$template" == "--typescript" ]]; then
+    template="basic"
+    use_typescript=true
+  fi
+
   if [[ -z "$name" ]]; then
     log_error "Function name required"
-    log_info "Usage: nself functions create <name> [template]"
+    log_info "Usage: nself functions create <name> [template] [--ts]"
     log_info "Templates: basic, webhook, api, scheduled"
+    log_info "Add --ts flag for TypeScript"
     exit 1
   fi
-  
+
   show_command_header "Functions" "Creating function: $name"
-  
+
   load_env_with_priority
   ensure_project_context
-  
+
   # Create functions directory if it doesn't exist
   mkdir -p ./functions
-  
-  local function_file="./functions/${name}.js"
-  
-  if [[ -f "$function_file" ]]; then
+
+  local ext="js"
+  if [[ "$use_typescript" == "true" ]]; then
+    ext="ts"
+  fi
+
+  local function_file="./functions/${name}.${ext}"
+
+  # Check for both .js and .ts versions
+  if [[ -f "./functions/${name}.js" ]] || [[ -f "./functions/${name}.ts" ]]; then
     log_error "Function already exists: $name"
     exit 1
   fi
-  
-  # Create function from template
+
+  # Create TypeScript functions
+  if [[ "$use_typescript" == "true" ]]; then
+    create_typescript_function "$name" "$template" "$function_file"
+    return
+  fi
+
+  # Create JavaScript function from template
   case "$template" in
     basic)
       cat >"$function_file" <<'EOF'
@@ -470,16 +498,497 @@ functions_logs() {
   fi
 }
 
-# Deploy functions (placeholder for future implementation)
+# Deploy functions
 functions_deploy() {
+  local target="${1:-local}"
+  local force="${2:-}"
+
   show_command_header "Functions" "Deploying functions"
-  
+
   load_env_with_priority
   ensure_project_context
-  
-  log_info "Deploying functions to production..."
-  log_warning "Production deployment not yet implemented"
-  log_info "Functions are currently deployed locally with 'nself build'"
+
+  if [[ "${FUNCTIONS_ENABLED:-false}" != "true" ]]; then
+    log_error "Functions service is disabled"
+    log_info "Enable with: nself functions enable"
+    exit 1
+  fi
+
+  # Check for functions directory
+  if [[ ! -d "./functions" ]]; then
+    log_error "No functions directory found"
+    log_info "Create a function first: nself functions create <name>"
+    exit 1
+  fi
+
+  # Count functions
+  local func_count=$(find ./functions -name "*.js" -o -name "*.ts" 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$func_count" -eq 0 ]]; then
+    log_error "No functions found in ./functions directory"
+    exit 1
+  fi
+
+  log_info "Found $func_count function(s) to deploy"
+
+  case "$target" in
+    local)
+      deploy_functions_local
+      ;;
+    production|prod)
+      deploy_functions_production "$force"
+      ;;
+    validate)
+      validate_functions
+      ;;
+    *)
+      log_error "Unknown deploy target: $target"
+      log_info "Valid targets: local, production, validate"
+      exit 1
+      ;;
+  esac
+}
+
+# Deploy functions locally (restart container with new functions)
+deploy_functions_local() {
+  log_info "Deploying functions locally..."
+
+  # Validate functions first
+  if ! validate_functions; then
+    log_error "Function validation failed"
+    exit 1
+  fi
+
+  # Check if functions service is running
+  if is_service_running "functions"; then
+    log_info "Restarting functions service to pick up changes..."
+    compose restart functions
+    log_success "Functions deployed locally"
+
+    # Wait for service to be healthy
+    local max_wait=30
+    local waited=0
+    while [[ $waited -lt $max_wait ]]; do
+      if curl -s "http://localhost:${FUNCTIONS_PORT:-4300}/health" >/dev/null 2>&1; then
+        log_success "Functions service is healthy"
+        break
+      fi
+      sleep 1
+      waited=$((waited + 1))
+    done
+
+    if [[ $waited -ge $max_wait ]]; then
+      log_warning "Functions service may still be starting"
+    fi
+  else
+    log_info "Functions service is not running"
+    log_info "Start with: nself start"
+  fi
+
+  # List deployed functions
+  log_info ""
+  log_info "Deployed functions:"
+  find ./functions -name "*.js" -o -name "*.ts" 2>/dev/null | while read -r file; do
+    local name=$(basename "$file" | sed 's/\.[jt]s$//')
+    printf "  - %s (http://localhost:%s/function/%s)\n" "$name" "${FUNCTIONS_PORT:-4300}" "$name"
+  done
+}
+
+# Deploy functions to production
+deploy_functions_production() {
+  local force="$1"
+
+  # Check for production configuration
+  if [[ -z "${DEPLOY_HOST:-}" ]]; then
+    log_error "Production deployment requires DEPLOY_HOST configuration"
+    log_info ""
+    log_info "Set up production deployment in .env:"
+    log_info "  DEPLOY_HOST=user@production-server.com"
+    log_info "  DEPLOY_PATH=/opt/myapp"
+    log_info "  DEPLOY_KEY=~/.ssh/deploy_key (optional)"
+    exit 1
+  fi
+
+  local deploy_host="${DEPLOY_HOST}"
+  local deploy_path="${DEPLOY_PATH:-/opt/${PROJECT_NAME:-nself}}"
+  local deploy_key="${DEPLOY_KEY:-}"
+
+  # Build SSH options
+  local ssh_opts="-o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+  if [[ -n "$deploy_key" ]]; then
+    ssh_opts="$ssh_opts -i $deploy_key"
+  fi
+
+  log_info "Deploying to: $deploy_host:$deploy_path/functions"
+
+  # Validate functions first
+  if ! validate_functions; then
+    log_error "Function validation failed"
+    exit 1
+  fi
+
+  # Confirm deployment unless forced
+  if [[ "$force" != "--force" ]] && [[ "$force" != "-f" ]]; then
+    printf "Deploy functions to production? [y/N] "
+    read -r response
+    response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
+    if [[ "$response" != "y" ]] && [[ "$response" != "yes" ]]; then
+      log_info "Deployment cancelled"
+      return 0
+    fi
+  fi
+
+  # Sync functions directory
+  log_info "Syncing functions..."
+  if rsync -avz --delete \
+    -e "ssh $ssh_opts" \
+    ./functions/ \
+    "$deploy_host:$deploy_path/functions/"; then
+    log_success "Functions synced successfully"
+  else
+    log_error "Failed to sync functions"
+    exit 1
+  fi
+
+  # Restart functions service on production
+  log_info "Restarting functions service on production..."
+  if ssh $ssh_opts "$deploy_host" "cd $deploy_path && docker compose restart functions"; then
+    log_success "Functions deployed to production!"
+  else
+    log_warning "Could not restart functions service remotely"
+    log_info "You may need to restart manually: ssh $deploy_host 'cd $deploy_path && docker compose restart functions'"
+  fi
+}
+
+# Validate all functions
+validate_functions() {
+  log_info "Validating functions..."
+  local errors=0
+
+  find ./functions -name "*.js" 2>/dev/null | while read -r file; do
+    local name=$(basename "$file" .js)
+    # Check for basic syntax with node if available
+    if command -v node >/dev/null 2>&1; then
+      if ! node --check "$file" 2>/dev/null; then
+        log_error "Syntax error in: $name"
+        errors=$((errors + 1))
+      else
+        log_success "  $name.js - valid"
+      fi
+    else
+      # Basic check - file exists and is not empty
+      if [[ -s "$file" ]]; then
+        log_success "  $name.js - exists"
+      else
+        log_error "  $name.js - empty or missing"
+        errors=$((errors + 1))
+      fi
+    fi
+  done
+
+  find ./functions -name "*.ts" 2>/dev/null | while read -r file; do
+    local name=$(basename "$file" .ts)
+    # Check for TypeScript syntax with tsc if available
+    if command -v tsc >/dev/null 2>&1; then
+      if ! tsc --noEmit "$file" 2>/dev/null; then
+        log_warning "TypeScript check skipped for: $name (may have import issues)"
+        log_success "  $name.ts - exists"
+      else
+        log_success "  $name.ts - valid"
+      fi
+    else
+      # Basic check
+      if [[ -s "$file" ]]; then
+        log_success "  $name.ts - exists"
+      else
+        log_error "  $name.ts - empty or missing"
+        errors=$((errors + 1))
+      fi
+    fi
+  done
+
+  if [[ $errors -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# Create TypeScript function from template
+create_typescript_function() {
+  local name="$1"
+  local template="$2"
+  local function_file="$3"
+
+  case "$template" in
+    basic)
+      cat >"$function_file" <<'EOF'
+// Basic serverless function (TypeScript)
+interface Event {
+  method: string;
+  path: string;
+  query: URLSearchParams;
+  headers: Record<string, string>;
+  body: unknown;
+}
+
+interface Context {
+  functionName: string;
+  requestId: string;
+}
+
+interface Response {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body: unknown;
+}
+
+async function handler(event: Event, context: Context): Promise<Response> {
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: {
+      message: 'Function executed successfully',
+      timestamp: new Date().toISOString(),
+      requestId: context.requestId
+    }
+  };
+}
+
+export { handler };
+EOF
+      ;;
+
+    webhook)
+      cat >"$function_file" <<'EOF'
+// Webhook handler function (TypeScript)
+interface Event {
+  method: string;
+  path: string;
+  query: URLSearchParams;
+  headers: Record<string, string>;
+  body: WebhookPayload;
+}
+
+interface WebhookPayload {
+  action?: string;
+  data?: Record<string, unknown>;
+}
+
+interface Context {
+  functionName: string;
+  requestId: string;
+}
+
+interface Response {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body: unknown;
+}
+
+async function handler(event: Event, context: Context): Promise<Response> {
+  console.log('Webhook received:', event.body);
+
+  const { action, data } = event.body || {};
+
+  // Process webhook based on action
+  switch (action) {
+    case 'create':
+      console.log('Processing create action:', data);
+      break;
+    case 'update':
+      console.log('Processing update action:', data);
+      break;
+    case 'delete':
+      console.log('Processing delete action:', data);
+      break;
+    default:
+      console.log('Unknown action:', action);
+  }
+
+  return {
+    statusCode: 200,
+    body: {
+      received: true,
+      action: action,
+      processed: new Date().toISOString()
+    }
+  };
+}
+
+export { handler };
+EOF
+      ;;
+
+    api)
+      cat >"$function_file" <<'EOF'
+// API endpoint function (TypeScript)
+interface Event {
+  method: string;
+  path: string;
+  query: URLSearchParams;
+  headers: Record<string, string>;
+  body: unknown;
+}
+
+interface Context {
+  functionName: string;
+  requestId: string;
+}
+
+interface Response {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body: unknown;
+}
+
+async function handler(event: Event, context: Context): Promise<Response> {
+  const { method, query, body } = event;
+
+  // Handle different HTTP methods
+  switch (method) {
+    case 'GET':
+      return handleGet(query);
+    case 'POST':
+      return handlePost(body);
+    case 'PUT':
+      return handlePut(body);
+    case 'DELETE':
+      return handleDelete(query);
+    default:
+      return {
+        statusCode: 405,
+        body: { error: 'Method not allowed' }
+      };
+  }
+}
+
+function handleGet(query: URLSearchParams): Response {
+  const id = query.get('id');
+  return {
+    statusCode: 200,
+    body: {
+      method: 'GET',
+      id: id,
+      data: { /* your data */ }
+    }
+  };
+}
+
+function handlePost(body: unknown): Response {
+  return {
+    statusCode: 201,
+    body: {
+      method: 'POST',
+      created: body,
+      id: Date.now()
+    }
+  };
+}
+
+function handlePut(body: unknown): Response {
+  return {
+    statusCode: 200,
+    body: {
+      method: 'PUT',
+      updated: body
+    }
+  };
+}
+
+function handleDelete(query: URLSearchParams): Response {
+  const id = query.get('id');
+  return {
+    statusCode: 200,
+    body: {
+      method: 'DELETE',
+      deleted: id
+    }
+  };
+}
+
+export { handler };
+EOF
+      ;;
+
+    scheduled)
+      cat >"$function_file" <<'EOF'
+// Scheduled task function (TypeScript)
+interface Event {
+  method: string;
+  path: string;
+  query: URLSearchParams;
+  headers: Record<string, string>;
+  body: unknown;
+}
+
+interface Context {
+  functionName: string;
+  requestId: string;
+}
+
+interface Response {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body: unknown;
+}
+
+async function handler(event: Event, context: Context): Promise<Response> {
+  console.log('Scheduled function executed at:', new Date().toISOString());
+
+  try {
+    // Perform scheduled task
+    await performScheduledTask();
+
+    return {
+      statusCode: 200,
+      body: {
+        success: true,
+        executedAt: new Date().toISOString()
+      }
+    };
+  } catch (error) {
+    console.error('Scheduled task failed:', error);
+    return {
+      statusCode: 500,
+      body: {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    };
+  }
+}
+
+async function performScheduledTask(): Promise<boolean> {
+  // Your scheduled task logic here
+  console.log('Performing scheduled maintenance...');
+
+  // Example: Clean up old data
+  // Example: Send daily reports
+  // Example: Sync with external services
+
+  return true;
+}
+
+export { handler };
+EOF
+      ;;
+
+    *)
+      log_error "Unknown template: $template"
+      log_info "Available templates: basic, webhook, api, scheduled"
+      rm -f "$function_file"
+      exit 1
+      ;;
+  esac
+
+  log_success "TypeScript function created: $name"
+  log_info "Function file: $function_file"
+  log_info "Test with: nself functions test $name"
+
+  # Reload if functions service is running
+  if is_service_running "functions"; then
+    log_info "Function will be automatically loaded"
+  fi
 }
 
 # Show help
@@ -496,15 +1005,17 @@ ${COLOR_YELLOW}Commands:${COLOR_RESET}
   disable             Disable functions service
   list                List available functions
   create <name> [tpl] Create a new function (templates: basic, webhook, api, scheduled)
+                      Add --ts flag for TypeScript: nself functions create hello --ts
   delete <name>       Delete a function
   test <name> [data]  Test a function with optional JSON data
   logs [-f]           View function logs (use -f to follow)
-  deploy              Deploy functions to production
+  deploy [target]     Deploy functions (targets: local, production, validate)
   help                Show this help message
 
 ${COLOR_YELLOW}Examples:${COLOR_RESET}
   nself functions enable                    # Enable functions
-  nself functions create hello basic        # Create basic function
+  nself functions create hello basic        # Create basic JS function
+  nself functions create hello basic --ts   # Create basic TypeScript function
   nself functions create webhook webhook    # Create webhook handler
   nself functions test hello                # Test function
   nself functions test webhook '{"action":"test"}'

@@ -11,6 +11,7 @@ ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/docker.sh"
+source "$SCRIPT_DIR/../lib/utils/platform-compat.sh"
 
 # Show help for search command
 show_search_help() {
@@ -181,13 +182,13 @@ search_enable() {
   
   # Update .env.local
   if grep -q "^SEARCH_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^SEARCH_ENABLED=.*/SEARCH_ENABLED=true/' .env.local
+    safe_sed_inline .env.local 's/^SEARCH_ENABLED=.*/SEARCH_ENABLED=true/'
   else
     echo "SEARCH_ENABLED=true" >> .env.local
   fi
   
   if grep -q "^SEARCH_ENGINE=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^SEARCH_ENGINE=.*/SEARCH_ENGINE=$engine/" .env.local
+    safe_sed_inline .env.local "s/^SEARCH_ENGINE=.*/SEARCH_ENGINE=$engine/"
   else
     echo "SEARCH_ENGINE=$engine" >> .env.local
   fi
@@ -212,7 +213,7 @@ search_enable() {
     if ! grep -q "^SEARCH_API_KEY=" .env.local 2>/dev/null || [[ -z "${SEARCH_API_KEY:-}" ]]; then
       local api_key=$(openssl rand -hex 32)
       if grep -q "^SEARCH_API_KEY=" .env.local 2>/dev/null; then
-        sed -i.bak "s/^SEARCH_API_KEY=.*/SEARCH_API_KEY=$api_key/" .env.local
+        safe_sed_inline .env.local "s/^SEARCH_API_KEY=.*/SEARCH_API_KEY=$api_key/"
       else
         echo "SEARCH_API_KEY=$api_key" >> .env.local
       fi
@@ -239,7 +240,7 @@ search_disable() {
   
   # Update .env.local
   if grep -q "^SEARCH_ENABLED=" .env.local 2>/dev/null; then
-    sed -i.bak 's/^SEARCH_ENABLED=.*/SEARCH_ENABLED=false/' .env.local
+    safe_sed_inline .env.local 's/^SEARCH_ENABLED=.*/SEARCH_ENABLED=false/'
   else
     echo "SEARCH_ENABLED=false" >> .env.local
   fi
@@ -443,7 +444,7 @@ search_setup() {
   
   if [[ -n "$index_prefix" ]]; then
     if grep -q "^SEARCH_INDEX_PREFIX=" .env.local 2>/dev/null; then
-      sed -i.bak "s/^SEARCH_INDEX_PREFIX=.*/SEARCH_INDEX_PREFIX=$index_prefix/" .env.local
+      safe_sed_inline .env.local "s/^SEARCH_INDEX_PREFIX=.*/SEARCH_INDEX_PREFIX=$index_prefix/"
     else
       echo "SEARCH_INDEX_PREFIX=$index_prefix" >> .env.local
     fi
@@ -457,7 +458,7 @@ search_setup() {
   language="${language:-en}"
   
   if grep -q "^SEARCH_LANGUAGE=" .env.local 2>/dev/null; then
-    sed -i.bak "s/^SEARCH_LANGUAGE=.*/SEARCH_LANGUAGE=$language/" .env.local
+    safe_sed_inline .env.local "s/^SEARCH_LANGUAGE=.*/SEARCH_LANGUAGE=$language/"
   else
     echo "SEARCH_LANGUAGE=$language" >> .env.local
   fi
@@ -575,16 +576,121 @@ search_test() {
     fi
     ;;
     
+  typesense)
+    log_info "Testing Typesense..."
+    local url="http://${SEARCH_HOST:-search}:${SEARCH_PORT:-8108}/health"
+
+    if command -v curl >/dev/null 2>&1; then
+      local api_key="${SEARCH_API_KEY:-}"
+      local health_response
+
+      if [[ -n "$api_key" ]]; then
+        health_response=$(curl -s -H "X-TYPESENSE-API-KEY: $api_key" "$url" 2>/dev/null)
+      else
+        health_response=$(curl -s "$url" 2>/dev/null)
+      fi
+
+      if echo "$health_response" | grep -q "ok"; then
+        log_success "Typesense is responding and healthy"
+
+        # Get cluster info
+        local info_url="http://${SEARCH_HOST:-search}:${SEARCH_PORT:-8108}/debug"
+        if [[ -n "$api_key" ]]; then
+          curl -s -H "X-TYPESENSE-API-KEY: $api_key" "$info_url" 2>/dev/null | head -5
+        fi
+      else
+        log_error "Typesense is not responding"
+        log_info "Check if the container is running with 'nself search status'"
+      fi
+    else
+      log_warning "curl not found, cannot test connectivity"
+    fi
+    ;;
+
+  elasticsearch)
+    log_info "Testing Elasticsearch..."
+    local url="http://${SEARCH_HOST:-search}:${SEARCH_PORT:-9200}"
+
+    if command -v curl >/dev/null 2>&1; then
+      local health_response=$(curl -s "$url/_cluster/health" 2>/dev/null)
+
+      if echo "$health_response" | grep -q "status"; then
+        local status=$(echo "$health_response" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+        if [[ "$status" == "green" ]]; then
+          log_success "Elasticsearch cluster is healthy (green)"
+        elif [[ "$status" == "yellow" ]]; then
+          log_warning "Elasticsearch cluster status is yellow (some replicas unavailable)"
+        else
+          log_error "Elasticsearch cluster status is $status"
+        fi
+
+        # Show cluster info
+        curl -s "$url" 2>/dev/null | grep -E '"name"|"cluster_name"|"version"' | head -5
+      else
+        log_error "Elasticsearch is not responding"
+      fi
+    else
+      log_warning "curl not found, cannot test connectivity"
+    fi
+    ;;
+
+  opensearch)
+    log_info "Testing OpenSearch..."
+    local url="http://${SEARCH_HOST:-search}:${SEARCH_PORT:-9200}"
+
+    if command -v curl >/dev/null 2>&1; then
+      local health_response=$(curl -s "$url/_cluster/health" 2>/dev/null)
+
+      if echo "$health_response" | grep -q "status"; then
+        local status=$(echo "$health_response" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+        if [[ "$status" == "green" ]]; then
+          log_success "OpenSearch cluster is healthy (green)"
+        elif [[ "$status" == "yellow" ]]; then
+          log_warning "OpenSearch cluster status is yellow (some replicas unavailable)"
+        else
+          log_error "OpenSearch cluster status is $status"
+        fi
+
+        # Show cluster info
+        curl -s "$url" 2>/dev/null | grep -E '"name"|"cluster_name"|"version"' | head -5
+      else
+        log_error "OpenSearch is not responding"
+      fi
+    else
+      log_warning "curl not found, cannot test connectivity"
+    fi
+    ;;
+
+  sonic)
+    log_info "Testing Sonic..."
+    local host="${SEARCH_HOST:-search}"
+    local port="${SEARCH_PORT:-1491}"
+
+    # Sonic uses a TCP protocol, not HTTP
+    if command -v nc >/dev/null 2>&1; then
+      if nc -z "$host" "$port" 2>/dev/null; then
+        log_success "Sonic is responding on port $port"
+        log_info "Sonic uses a custom TCP protocol"
+        log_info "Use the Sonic client library to interact with it"
+      else
+        log_error "Cannot connect to Sonic at $host:$port"
+      fi
+    else
+      log_warning "nc not found, cannot test TCP connectivity"
+      log_info "Try: nc -z $host $port"
+    fi
+    ;;
+
   *)
     log_info "Testing $search_engine..."
     log_warning "Automated test not implemented for $search_engine"
     log_info "Please test manually using the engine's API or client library"
     ;;
   esac
-  
+
   echo ""
   log_info "Integration example for your application:"
-  
+
   case "$search_engine" in
   postgres)
     echo "  // PostgreSQL full-text search"
@@ -592,7 +698,7 @@ search_test() {
     echo "  WHERE to_tsvector('english', title || ' ' || description)"
     echo "  @@ plainto_tsquery('english', '$query');"
     ;;
-    
+
   meilisearch)
     echo "  // MeiliSearch JavaScript SDK"
     echo "  const { MeiliSearch } = require('meilisearch');"
@@ -602,7 +708,38 @@ search_test() {
     echo "  });"
     echo "  const results = await client.index('products').search('$query');"
     ;;
-    
+
+  typesense)
+    echo "  // Typesense JavaScript SDK"
+    echo "  const Typesense = require('typesense');"
+    echo "  const client = new Typesense.Client({"
+    echo "    nodes: [{ host: '${SEARCH_HOST:-search}', port: ${SEARCH_PORT:-8108}, protocol: 'http' }],"
+    echo "    apiKey: '${SEARCH_API_KEY:-YOUR_API_KEY}'"
+    echo "  });"
+    echo "  const results = await client.collections('products').documents().search({ q: '$query' });"
+    ;;
+
+  elasticsearch|opensearch)
+    echo "  // Elasticsearch/OpenSearch JavaScript SDK"
+    echo "  const { Client } = require('@elastic/elasticsearch');"
+    echo "  const client = new Client({ node: 'http://${SEARCH_HOST:-search}:${SEARCH_PORT:-9200}' });"
+    echo "  const results = await client.search({"
+    echo "    index: 'products',"
+    echo "    body: { query: { match: { title: '$query' } } }"
+    echo "  });"
+    ;;
+
+  sonic)
+    echo "  // Sonic Node.js client"
+    echo "  const Sonic = require('sonic-channel');"
+    echo "  const search = new Sonic.Search({"
+    echo "    host: '${SEARCH_HOST:-search}',"
+    echo "    port: ${SEARCH_PORT:-1491},"
+    echo "    auth: '${SEARCH_API_KEY:-SecretPassword}'"
+    echo "  });"
+    echo "  const results = await search.query('collection', 'bucket', '$query');"
+    ;;
+
   *)
     echo "  // Check documentation for $search_engine integration"
     echo "  // Host: ${SEARCH_HOST:-search}"
@@ -707,7 +844,7 @@ search_configure() {
   load_env_with_priority
   
   # Update .env
-  sed -i.bak "s/^SEARCH_ENGINE=.*/SEARCH_ENGINE=$engine/" .env 2>/dev/null || echo "SEARCH_ENGINE=$engine" >> .env
+  safe_sed_inline .env "s/^SEARCH_ENGINE=.*/SEARCH_ENGINE=$engine/" 2>/dev/null || echo "SEARCH_ENGINE=$engine" >> .env
   
   log_success "Search engine configured: $engine"
   log_info "Rebuild and restart to apply changes:"

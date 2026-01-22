@@ -331,32 +331,32 @@ tail_service_logs() {
   docker logs -f "$container_name" --tail 50
 }
 
-# Color text helper
+# Color text helper (cross-platform compatible)
 color_text() {
   local text="$1"
   local color="$2"
-  
+
   case "$color" in
     red)
-      echo -e "\033[0;31m${text}\033[0m"
+      printf "\033[0;31m%s\033[0m" "$text"
       ;;
     green)
-      echo -e "\033[0;32m${text}\033[0m"
+      printf "\033[0;32m%s\033[0m" "$text"
       ;;
     yellow)
-      echo -e "\033[0;33m${text}\033[0m"
+      printf "\033[0;33m%s\033[0m" "$text"
       ;;
     blue)
-      echo -e "\033[0;34m${text}\033[0m"
+      printf "\033[0;34m%s\033[0m" "$text"
       ;;
     cyan)
-      echo -e "\033[0;36m${text}\033[0m"
+      printf "\033[0;36m%s\033[0m" "$text"
       ;;
     gray)
-      echo -e "\033[0;90m${text}\033[0m"
+      printf "\033[0;90m%s\033[0m" "$text"
       ;;
     *)
-      echo "$text"
+      printf "%s" "$text"
       ;;
   esac
 }
@@ -441,57 +441,57 @@ run_monitoring_dashboard() {
 show_dashboard_header() {
   local view="$1"
   local paused="$2"
-  
-  local status_indicator="[0;32m●[0m"
+
+  local status_indicator="\033[0;32m●\033[0m"
   if [[ "$paused" == "true" ]]; then
-    status_indicator="[0;33m⏸[0m"
+    status_indicator="\033[0;33m⏸\033[0m"
   fi
-  
-  echo -e "[0;36m╔══════════════════════════════════════════════════════════════════════════════╗[0m"
-  echo -e "[0;36m║[0m  [1mnself monitor[0m - $view view  $status_indicator $(date '+%Y-%m-%d %H:%M:%S')                    [0;36m║[0m"
-  echo -e "[0;36m╚══════════════════════════════════════════════════════════════════════════════╝[0m"
+
+  printf "\033[0;36m╔══════════════════════════════════════════════════════════════════════════════╗\033[0m\n"
+  printf "\033[0;36m║\033[0m  \033[1mnself monitor\033[0m - %s view  %b %s                    \033[0;36m║\033[0m\n" "$view" "$status_indicator" "$(date '+%Y-%m-%d %H:%M:%S')"
+  printf "\033[0;36m╚══════════════════════════════════════════════════════════════════════════════╝\033[0m\n"
   echo
 }
 
 # Show dashboard view
 show_dashboard_view() {
   # Services summary
-  echo -e "[0;36m▶ Services[0m"
+  printf "\033[0;36m▶ Services\033[0m\n"
   local services=$(docker compose ps --format "table {{.Service}}\t{{.Status}}" 2>/dev/null | tail -n +2)
   local running=$(echo "$services" | grep -c "Up" || echo "0")
   local total=$(echo "$services" | wc -l | xargs)
   echo "  Status: $running/$total services running"
-  
+
   # Quick service list
   echo "$services" | head -5 | while IFS=$'\t' read -r service status; do
-    local indicator="[0;31m✗[0m"
+    local indicator="\033[0;31m✗\033[0m"
     if [[ "$status" == *"Up"* ]]; then
-      indicator="[0;32m✓[0m"
+      indicator="\033[0;32m✓\033[0m"
     fi
-    printf "  $indicator %-20s %s\n" "$service" "$status"
+    printf "  %b %-20s %s\n" "$indicator" "$service" "$status"
   done
-  
+
   echo
-  
+
   # Resources summary
-  echo -e "[0;36m▶ Resources[0m"
+  printf "\033[0;36m▶ Resources\033[0m\n"
   local cpu_usage=$(docker stats --no-stream --format "{{.CPUPerc}}" 2>/dev/null | sed 's/%//' | awk '{sum+=$1} END {printf "%.1f", sum}')
   local mem_usage=$(docker stats --no-stream --format "{{.MemUsage}}" 2>/dev/null | head -1)
   echo "  CPU Total: ${cpu_usage}%"
   echo "  Memory: $mem_usage"
-  
+
   echo
-  
+
   # Top consumers
-  echo -e "[0;36m▶ Top Consumers[0m"
+  printf "\033[0;36m▶ Top Consumers\033[0m\n"
   docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemPerc}}" 2>/dev/null | head -6 | tail -n +2 | while IFS=$'\t' read -r name cpu mem; do
     printf "  %-30s CPU: %6s  MEM: %6s\n" "$name" "$cpu" "$mem"
   done
-  
+
   echo
-  
+
   # Recent alerts
-  echo -e "[0;36m▶ Recent Alerts[0m"
+  printf "\033[0;36m▶ Recent Alerts\033[0m\n"
   local alert_log="${TMPDIR:-/tmp}/nself-alerts.log"
   if [[ -f "$alert_log" ]]; then
     tail -3 "$alert_log" | while read -r line; do
@@ -504,31 +504,31 @@ show_dashboard_view() {
 
 # Show services view
 show_services_view() {
-  echo -e "[0;36m▶ Service Health[0m"
+  printf "\033[0;36m▶ Service Health\033[0m\n"
   echo
-  
+
   docker compose ps --format "table {{.Service}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | while IFS=$'\t' read -r service status ports; do
     if [[ "$service" == "Service" ]]; then
       printf "  %-20s %-30s %s\n" "SERVICE" "STATUS" "PORTS"
       printf "  %-20s %-30s %s\n" "-------" "------" "-----"
     else
-      local indicator="[0;31m✗[0m"
+      local indicator="\033[0;31m✗\033[0m"
       local health=""
       if [[ "$status" == *"Up"* ]]; then
-        indicator="[0;32m✓[0m"
+        indicator="\033[0;32m✓\033[0m"
         if [[ "$status" == *"healthy"* ]]; then
-          health="[0;32m[healthy][0m"
+          health="\033[0;32m[healthy]\033[0m"
         elif [[ "$status" == *"unhealthy"* ]]; then
-          health="[0;31m[unhealthy][0m"
-          indicator="[0;33m⚠[0m"
+          health="\033[0;31m[unhealthy]\033[0m"
+          indicator="\033[0;33m⚠\033[0m"
         fi
       fi
-      printf "  $indicator %-18s %-30s %s\n" "$service" "$status $health" "$ports"
+      printf "  %b %-18s %-30s %s\n" "$indicator" "$service" "$status $health" "$ports"
     fi
   done
-  
+
   echo
-  echo -e "[0;36m▶ Container Restart Count[0m"
+  printf "\033[0;36m▶ Container Restart Count\033[0m\n"
   docker compose ps --format "{{.Service}}" 2>/dev/null | while read -r service; do
     local restarts=$(docker inspect "$(docker compose ps -q "$service" 2>/dev/null)" --format='{{.RestartCount}}' 2>/dev/null || echo "0")
     if [[ "$restarts" -gt 0 ]]; then
@@ -539,13 +539,13 @@ show_services_view() {
 
 # Show resources view
 show_resources_view() {
-  echo -e "[0;36m▶ Resource Usage[0m"
+  printf "\033[0;36m▶ Resource Usage\033[0m\n"
   echo
-  
+
   docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}" 2>/dev/null
-  
+
   echo
-  echo -e "[0;36m▶ System Resources[0m"
+  printf "\033[0;36m▶ System Resources\033[0m\n"
   
   # CPU info
   if [[ "$(uname)" == "Darwin" ]]; then
@@ -572,48 +572,48 @@ show_resources_view() {
 
 # Show logs view
 show_logs_view() {
-  echo -e "[0;36m▶ Recent Logs[0m"
+  printf "\033[0;36m▶ Recent Logs\033[0m\n"
   echo
-  
+
   # Show last 20 lines from all services
   docker compose logs --tail=20 --timestamps 2>/dev/null | tail -20
 }
 
 # Show alerts view
 show_alerts_view() {
-  echo -e "[0;36m▶ Active Alerts[0m"
+  printf "\033[0;36m▶ Active Alerts\033[0m\n"
   echo
-  
+
   # Check for unhealthy services
   local unhealthy=$(docker compose ps --format "{{.Service}}\t{{.Status}}" 2>/dev/null | grep -E "unhealthy|Exit|Restarting" || true)
   if [[ -n "$unhealthy" ]]; then
-    echo -e "  [0;31m⚠ Unhealthy Services:[0m"
+    printf "  \033[0;31m⚠ Unhealthy Services:\033[0m\n"
     echo "$unhealthy" | while IFS=$'\t' read -r service status; do
       echo "    - $service: $status"
     done
     echo
   fi
-  
+
   # Check disk space
   local disk_usage=$(df -h . | tail -1 | awk '{print $5}' | sed 's/%//')
   if [[ "$disk_usage" -gt 80 ]]; then
-    echo -e "  [0;33m⚠ High Disk Usage: ${disk_usage}%[0m"
+    printf "  \033[0;33m⚠ High Disk Usage: %s%%\033[0m\n" "$disk_usage"
     echo
   fi
-  
+
   # Check memory
   if [[ "$(uname)" != "Darwin" ]]; then
     local mem_usage=$(free | grep "^Mem" | awk '{printf "%.0f", $3/$2 * 100}')
     if [[ "$mem_usage" -gt 80 ]]; then
-      echo -e "  [0;33m⚠ High Memory Usage: ${mem_usage}%[0m"
+      printf "  \033[0;33m⚠ High Memory Usage: %s%%\033[0m\n" "$mem_usage"
       echo
     fi
   fi
-  
+
   # Show alert log
   local alert_log="${TMPDIR:-/tmp}/nself-alerts.log"
   if [[ -f "$alert_log" ]]; then
-    echo -e "  [0;36mRecent Alert History:[0m"
+    printf "  \033[0;36mRecent Alert History:\033[0m\n"
     tail -10 /tmp/nself-alerts.log | while read -r line; do
       echo "    $line"
     done
@@ -625,8 +625,8 @@ show_alerts_view() {
 # Show dashboard footer
 show_dashboard_footer() {
   echo
-  echo -e "[0;36m────────────────────────────────────────────────────────────────────────────────[0m"
-  echo -e "Controls: [q]uit | [r]efresh | [s]ervices | [c]pu/resources | [l]ogs | [a]lerts | [space] pause"
+  printf "\033[0;36m────────────────────────────────────────────────────────────────────────────────\033[0m\n"
+  echo "Controls: [q]uit | [r]efresh | [s]ervices | [c]pu/resources | [l]ogs | [a]lerts | [space] pause"
 }
 
 # Monitor services live (standalone)

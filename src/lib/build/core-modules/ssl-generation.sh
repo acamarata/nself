@@ -38,12 +38,28 @@ generate_ssl_certificates() {
   return 0
 }
 
-# Build list of all localhost subdomains from environment
-build_localhost_subdomains() {
+# Build list of all SSL domains from environment
+# Returns space-separated list of domains to include in SSL certificate
+build_ssl_domains() {
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local domains=()
   local subdomains=()
 
-  # Core required subdomains
-  subdomains+=(localhost api auth storage)
+  # Always include localhost and 127.0.0.1
+  domains+=(localhost 127.0.0.1 ::1)
+
+  # Include BASE_DOMAIN and its wildcard
+  if [[ "$base_domain" != "localhost" ]]; then
+    domains+=("$base_domain" "*.$base_domain")
+  fi
+
+  # Also include local.nself.org for default development
+  if [[ "$base_domain" != "local.nself.org" ]]; then
+    domains+=(local.nself.org "*.local.nself.org")
+  fi
+
+  # Core service subdomains
+  subdomains+=(api auth storage)
 
   # Optional services
   [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && subdomains+=(admin)
@@ -85,20 +101,29 @@ build_localhost_subdomains() {
     fi
   done
 
-  # Return unique subdomains as localhost format (e.g., "api.localhost")
-  # Note: Don't add .localhost to entries that already have it
+  # Add subdomains with BASE_DOMAIN suffix (e.g., "api.local.nself.org")
   for subdomain in $(printf "%s\n" "${subdomains[@]}" | sort -u); do
-    if [[ "$subdomain" == "localhost" ]] || [[ "$subdomain" == *.localhost ]]; then
-      echo -n "$subdomain "
+    # Skip if subdomain already contains a domain
+    if [[ "$subdomain" != *.* ]]; then
+      domains+=("${subdomain}.${base_domain}")
     else
-      echo -n "${subdomain}.localhost "
+      domains+=("$subdomain")
     fi
   done
+
+  # Return unique domains
+  printf "%s\n" "${domains[@]}" | sort -u | tr '\n' ' '
 }
 
-# Generate localhost certificates with SAN
+# Legacy function for backwards compatibility
+build_localhost_subdomains() {
+  build_ssl_domains
+}
+
+# Generate SSL certificates with SAN for all configured domains
 generate_localhost_ssl() {
   local output_dir="${1:-ssl/certificates/localhost}"
+  local base_domain="${BASE_DOMAIN:-localhost}"
 
   mkdir -p "$output_dir"
 
@@ -107,17 +132,21 @@ generate_localhost_ssl() {
     return 0
   fi
 
+  # Build dynamic list of all domains based on BASE_DOMAIN and enabled services
+  local all_domains
+  all_domains=$(build_ssl_domains)
+
   # Try mkcert first if available
   if command -v mkcert >/dev/null 2>&1; then
-    # NOTE: We use explicit subdomain names instead of *.localhost wildcard
-    # because wildcard certificates don't work properly with .localhost TLD (RFC 6761)
-
-    # Build dynamic list of subdomains based on enabled services
-    local domains=(localhost $(build_localhost_subdomains) 127.0.0.1 ::1)
+    # Convert space-separated string to array
+    local domains_array=()
+    for domain in $all_domains; do
+      domains_array+=("$domain")
+    done
 
     mkcert -cert-file "$output_dir/fullchain.pem" \
            -key-file "$output_dir/privkey.pem" \
-           "${domains[@]}" >/dev/null 2>&1
+           "${domains_array[@]}" >/dev/null 2>&1
 
     if [[ -f "$output_dir/fullchain.pem" ]] && [[ -f "$output_dir/privkey.pem" ]]; then
       chmod 644 "$output_dir/fullchain.pem" 2>/dev/null
@@ -127,9 +156,11 @@ generate_localhost_ssl() {
   fi
 
   # Fallback to OpenSSL self-signed if mkcert not available or failed
-  # Create OpenSSL config for localhost with SAN
+  # Build dynamic OpenSSL config with SAN entries
   local temp_config=$(mktemp)
-  cat > "$temp_config" <<'EOF'
+
+  # Write config header
+  cat > "$temp_config" << EOF
 [req]
 default_bits = 2048
 prompt = no
@@ -142,26 +173,28 @@ C = US
 ST = State
 L = City
 O = Local Development
-CN = localhost
+CN = ${base_domain}
 
 [v3_req]
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = localhost
-DNS.2 = *.localhost
-DNS.3 = api.localhost
-DNS.4 = auth.localhost
-DNS.5 = storage.localhost
-DNS.6 = admin.localhost
-DNS.7 = functions.localhost
-DNS.8 = mail.localhost
-DNS.9 = minio.localhost
-DNS.10 = local.nself.org
-DNS.11 = *.local.nself.org
-IP.1 = 127.0.0.1
-IP.2 = ::1
 EOF
+
+  # Add all domains as DNS entries
+  local dns_index=1
+  local ip_index=1
+  for domain in $all_domains; do
+    if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$domain" == "::1" ]]; then
+      # IP address
+      printf "IP.%d = %s\n" "$ip_index" "$domain" >> "$temp_config"
+      ip_index=$((ip_index + 1))
+    else
+      # DNS name
+      printf "DNS.%d = %s\n" "$dns_index" "$domain" >> "$temp_config"
+      dns_index=$((dns_index + 1))
+    fi
+  done
 
   # Generate key and certificate
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -353,6 +386,7 @@ setup_ssl_certificates() {
 }
 
 # Export functions
+export -f build_ssl_domains
 export -f build_localhost_subdomains
 export -f generate_ssl_certificates
 export -f generate_localhost_ssl

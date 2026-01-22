@@ -212,7 +212,7 @@ show_environment_info() {
   
   if [[ "${ADMIN_ENABLED:-false}" == "true" ]]; then
     echo "Admin UI:"
-    echo "  Port:  ${ADMIN_PORT:-3100}"
+    echo "  Port:  ${ADMIN_PORT:-3021}"
     echo "  Route: ${ADMIN_ROUTE:-admin.\${BASE_DOMAIN}}"
     echo ""
   fi

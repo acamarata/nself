@@ -418,6 +418,123 @@ validate_config() {
   return $errors
 }
 
+# SMTP pre-flight connection check
+smtp_preflight_check() {
+  local host="${AUTH_SMTP_HOST:-}"
+  local port="${AUTH_SMTP_PORT:-587}"
+  local timeout="${SMTP_TIMEOUT:-10}"
+
+  show_command_header "nself email check" "SMTP Connection Pre-flight Check"
+  echo
+
+  if [[ -z "$host" ]]; then
+    log_error "SMTP host not configured"
+    log_info "Run: nself email setup"
+    return 1
+  fi
+
+  log_info "Checking SMTP connection to $host:$port..."
+  echo
+
+  # Step 1: DNS resolution
+  printf "  DNS resolution... "
+  if command -v nslookup >/dev/null 2>&1; then
+    if nslookup "$host" >/dev/null 2>&1; then
+      printf "\033[0;32m✓\033[0m\n"
+    else
+      printf "\033[0;31m✗\033[0m (DNS lookup failed)\n"
+      log_error "Cannot resolve hostname: $host"
+      return 1
+    fi
+  elif command -v host >/dev/null 2>&1; then
+    if host "$host" >/dev/null 2>&1; then
+      printf "\033[0;32m✓\033[0m\n"
+    else
+      printf "\033[0;31m✗\033[0m (DNS lookup failed)\n"
+      log_error "Cannot resolve hostname: $host"
+      return 1
+    fi
+  else
+    printf "\033[0;33m?\033[0m (skipped - no DNS tools)\n"
+  fi
+
+  # Step 2: TCP connection
+  printf "  TCP connection... "
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z -w "$timeout" "$host" "$port" 2>/dev/null; then
+      printf "\033[0;32m✓\033[0m\n"
+    else
+      printf "\033[0;31m✗\033[0m (connection failed)\n"
+      log_error "Cannot connect to $host:$port"
+      log_info "Check firewall settings and port availability"
+      return 1
+    fi
+  elif command -v timeout >/dev/null 2>&1; then
+    if timeout "$timeout" bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null; then
+      printf "\033[0;32m✓\033[0m\n"
+    else
+      printf "\033[0;31m✗\033[0m (connection failed)\n"
+      log_error "Cannot connect to $host:$port"
+      return 1
+    fi
+  else
+    printf "\033[0;33m?\033[0m (skipped - no connection tools)\n"
+  fi
+
+  # Step 3: SMTP banner check (if openssl available)
+  printf "  SMTP banner... "
+  if command -v openssl >/dev/null 2>&1; then
+    local banner
+    if [[ "$port" == "465" ]]; then
+      # SSL/TLS port - connect with SSL directly
+      banner=$(echo "QUIT" | timeout "$timeout" openssl s_client -connect "$host:$port" -quiet 2>/dev/null | head -1)
+    else
+      # STARTTLS port - plain connection first
+      banner=$(echo "QUIT" | timeout "$timeout" openssl s_client -connect "$host:$port" -starttls smtp -quiet 2>/dev/null | head -1)
+      if [[ -z "$banner" ]]; then
+        # Try plain connection without STARTTLS
+        banner=$(echo "QUIT" | timeout "$timeout" nc "$host" "$port" 2>/dev/null | head -1)
+      fi
+    fi
+
+    if [[ -n "$banner" ]] && echo "$banner" | grep -qE "^220"; then
+      printf "\033[0;32m✓\033[0m (%s)\n" "$(echo "$banner" | cut -c1-50)"
+    elif [[ -n "$banner" ]]; then
+      printf "\033[0;33m?\033[0m (unexpected: %s)\n" "$(echo "$banner" | cut -c1-40)"
+    else
+      printf "\033[0;33m?\033[0m (no banner received)\n"
+    fi
+  else
+    printf "\033[0;33m?\033[0m (skipped - openssl not available)\n"
+  fi
+
+  # Step 4: TLS support check
+  printf "  TLS support... "
+  if command -v openssl >/dev/null 2>&1; then
+    local tls_result
+    if [[ "$port" == "465" ]]; then
+      tls_result=$(echo "QUIT" | timeout "$timeout" openssl s_client -connect "$host:$port" 2>&1 | grep -c "Verify return code: 0")
+    else
+      tls_result=$(echo "QUIT" | timeout "$timeout" openssl s_client -connect "$host:$port" -starttls smtp 2>&1 | grep -c "Verify return code: 0")
+    fi
+
+    if [[ "$tls_result" -gt 0 ]]; then
+      printf "\033[0;32m✓\033[0m (certificate valid)\n"
+    else
+      printf "\033[0;33m?\033[0m (certificate may have issues)\n"
+    fi
+  else
+    printf "\033[0;33m?\033[0m (skipped)\n"
+  fi
+
+  echo
+  log_success "SMTP pre-flight check passed"
+  log_info "Ready to send test email: nself email test"
+  echo
+
+  return 0
+}
+
 # Function to test email sending
 test_email() {
   local recipient="${1:-}"
@@ -689,6 +806,9 @@ email_main() {
   validate)
     validate_config
     ;;
+  check|preflight)
+    smtp_preflight_check
+    ;;
   test)
     test_email "${1:-}"
     ;;
@@ -737,6 +857,7 @@ email_main() {
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "list" "See all email providers"
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "configure <name>" "Configure specific provider"
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "validate" "Check your configuration"
+    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "check" "SMTP connection pre-flight check"
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "test [email]" "Send a test email"
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "docs [provider]" "Get setup instructions"
     printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "detect" "Show current provider"
