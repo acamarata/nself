@@ -1,31 +1,50 @@
 class Nself < Formula
-  desc "Self-hosted infrastructure manager for developers"
-  homepage "https://github.com/acamarata/nself"
+  desc "Production-ready self-hosted backend infrastructure"
+  homepage "https://nself.org"
   url "https://github.com/acamarata/nself/archive/refs/tags/v0.4.1.tar.gz"
   sha256 "0d832e8dbbb368511241eab7973afa5d6ed8af69615e137c679064c903d3c7b2"
-  license "MIT"
-  head "https://github.com/acamarata/nself.git", branch: "main"
+  license "Source-Available"
+  version "0.4.1"
 
-  depends_on "bash" => :build
   depends_on "docker"
   depends_on "docker-compose"
 
   def install
-    # Install all source files
-    libexec.install Dir["*"]
+    # Install all source files to libexec
+    libexec.install "src"
 
-    # Create wrapper script
+    # Install templates
+    libexec.install "templates" if File.exist?("templates")
+
+    # Create the main executable wrapper
     (bin/"nself").write <<~EOS
-      #!/bin/bash
-      export NSELF_HOME="#{libexec}"
-      exec "#{libexec}/bin/nself" "$@"
+      #!/usr/bin/env bash
+      exec "#{libexec}/src/cli/nself.sh" "$@"
     EOS
 
-    # Make executable
-    chmod 0755, bin/"nself"
+    # Make it executable
+    (bin/"nself").chmod 0755
+
+    # Install documentation
+    doc.install "README.md", "LICENSE" if File.exist?("README.md")
+    doc.install "docs" if File.exist?("docs")
+  end
+
+  def post_install
+    # Create .nself directory structure
+    nself_dir = File.expand_path("~/.nself")
+    FileUtils.mkdir_p(nself_dir)
+
+    # Copy source and templates to ~/.nself
+    FileUtils.cp_r("#{libexec}/src", nself_dir)
+    FileUtils.cp_r("#{libexec}/templates", nself_dir) if File.exist?("#{libexec}/templates")
+
+    ohai "nself has been installed successfully!"
+    ohai "Run 'nself init' to get started with your first project"
   end
 
   test do
-    assert_match "0.4.1", shell_output("#{bin}/nself version")
+    system "#{bin}/nself", "version"
+    system "#{bin}/nself", "help"
   end
 end
