@@ -5,7 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.3] - 2026-01-22
+## [0.4.4] - 2026-01-22
+
+### Added
+- **Database Command** (`nself db`): Comprehensive database management
+  - Migrations (up, down, create, status, fresh, repair)
+  - Environment-aware seeding (local/staging/production)
+  - Mock data generation with configurable seeds
+  - Backup/restore with compression
+  - Schema tools (diff, diagram, export, indexes)
+  - Type generation (TypeScript, Go, Python)
+  - Database inspection (sizes, cache, indexes, bloat, slow queries)
+  - Data operations (export, import, anonymize)
+
+- **DBML Schema Workflow**: Design database visually
+  - Schema templates: basic, ecommerce, saas, blog
+  - Import from DBML to SQL migration
+  - One-command apply: import → migrate → mock → seed
+  - Sample users created for local/staging environments
+
+- **New Library Module**:
+  - `src/lib/database/` - Database utilities (core.sh)
+
+## [0.4.3] - 2026-01-21
 
 ### Added
 - **Environment Command** (`nself env`): Complete environment management
@@ -38,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker Compose Modules**: Fixed custom service template generation
 - **Monitoring Exporters**: Fixed exporter service definitions
 
-## [0.4.2] - 2026-01-22
+## [0.4.2] - 2026-01-20
 
 ### Added
 - **Email Command** (`nself email`): Complete email service management
@@ -96,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Email Provider**: MailPit is default for development (zero config)
 - **Search Engine**: PostgreSQL FTS is default (no extra services needed)
 
-## [0.4.1] - 2026-01-21
+## [0.4.1] - 2026-01-19
 
 ### Fixed
 - **Bash 3.2 Compatibility**: Fixed array declaration syntax in start.sh
