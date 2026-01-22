@@ -11,6 +11,13 @@ generate_template_based_service() {
   # Skip if service directory doesn't exist (template not copied)
   [[ ! -d "services/$service_name" ]] && return 0
 
+  # Check if replicas are specified (can't use container_name with replicas > 1)
+  local replicas_var="CS_${index}_REPLICAS"
+  local has_replicas=false
+  if [[ -n "${!replicas_var:-}" ]] && [[ "${!replicas_var}" != "1" ]]; then
+    has_replicas=true
+  fi
+
   cat <<EOF
 
   # Custom Service ${index}: ${service_name}
@@ -18,7 +25,14 @@ generate_template_based_service() {
     build:
       context: ./services/${service_name}
       dockerfile: Dockerfile
-    container_name: \${PROJECT_NAME}_${service_name}
+EOF
+
+  # Only add container_name if not using replicas (container_name conflicts with replicas > 1)
+  if [[ "$has_replicas" != "true" ]]; then
+    echo "    container_name: \${PROJECT_NAME}_${service_name}"
+  fi
+
+  cat <<EOF
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
@@ -41,6 +55,7 @@ EOF
       - ENVIRONMENT=\${ENV:-dev}
       - PROJECT_NAME=\${PROJECT_NAME}
       - BASE_DOMAIN=\${BASE_DOMAIN:-localhost}
+      - DOCKER_NETWORK=\${DOCKER_NETWORK:-\${PROJECT_NAME}_network}
       - SERVICE_NAME=${service_name}
       - SERVICE_PORT=${service_port}
       - PORT=${service_port}
@@ -49,46 +64,53 @@ EOF
       - POSTGRES_DB=\${POSTGRES_DB}
       - POSTGRES_USER=\${POSTGRES_USER}
       - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
+      - DATABASE_URL=postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=\${REDIS_PASSWORD:-}
+      - REDIS_URL=redis://:\${REDIS_PASSWORD:-}@redis:6379
       - HASURA_GRAPHQL_ENDPOINT=http://hasura:8080/v1/graphql
       - HASURA_ADMIN_SECRET=\${HASURA_GRAPHQL_ADMIN_SECRET}
 EOF
 
-  # Add volumes for development (language-specific exclusions)
-  cat <<EOF
+  # Add volumes ONLY for development (not staging/production)
+  # Volume mounts overwrite the built dist/ folder, breaking compiled services
+  local current_env="${ENV:-dev}"
+  if [[ "$current_env" == "dev" || "$current_env" == "development" || "$current_env" == "local" ]]; then
+    cat <<EOF
     volumes:
       - ./services/${service_name}:/app
 EOF
 
-  # Add language-specific volume exclusions based on template type
-  case "$template_type" in
-    *js|*ts|node*|express*|nest*|fastify*|hono*|bullmq*|bun|deno)
-      echo "      - /app/node_modules"
-      ;;
-    py*|fastapi|django*|flask|celery)
-      echo "      - /app/.venv"
-      echo "      - /app/__pycache__"
-      ;;
-    go|grpc|gin|echo|fiber)
-      echo "      - /app/vendor"
-      ;;
-    java*|spring*|kotlin*|ktor)
-      echo "      - /app/target"
-      echo "      - /app/.gradle"
-      ;;
-    rust*|actix*)
-      echo "      - /app/target"
-      echo "      - /app/Cargo.lock"
-      ;;
-    php*|laravel)
-      echo "      - /app/vendor"
-      ;;
-    ruby*|rails|sinatra)
-      echo "      - /app/vendor"
-      ;;
-  esac
+    # Add language-specific volume exclusions based on template type
+    case "$template_type" in
+      *js|*ts|node*|express*|nest*|fastify*|hono*|bullmq*|bun|deno)
+        echo "      - /app/node_modules"
+        echo "      - /app/dist"
+        ;;
+      py*|fastapi|django*|flask|celery)
+        echo "      - /app/.venv"
+        echo "      - /app/__pycache__"
+        ;;
+      go|grpc|gin|echo|fiber)
+        echo "      - /app/vendor"
+        ;;
+      java*|spring*|kotlin*|ktor)
+        echo "      - /app/target"
+        echo "      - /app/.gradle"
+        ;;
+      rust*|actix*)
+        echo "      - /app/target"
+        echo "      - /app/Cargo.lock"
+        ;;
+      php*|laravel)
+        echo "      - /app/vendor"
+        ;;
+      ruby*|rails|sinatra)
+        echo "      - /app/vendor"
+        ;;
+    esac
+  fi
 
   # Add resource limits if specified (smart defaults)
   local memory_var="CS_${index}_MEMORY"

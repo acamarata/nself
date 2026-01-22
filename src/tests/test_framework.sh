@@ -408,3 +408,205 @@ export -f teardown_test
 # Export runner
 export -f run_tests
 export -f show_test_summary
+
+# ============================================
+# Additional Functions (v0.4.3 compatibility)
+# ============================================
+
+# run_test - Run a single test function with description
+run_test() {
+  local test_func="$1"
+  local description="${2:-$test_func}"
+
+  CURRENT_TEST="$test_func"
+
+  # Run test in subshell
+  (
+    set +e
+    $test_func
+  )
+  local result=$?
+
+  if [[ $result -ne 0 ]]; then
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+}
+
+# Alias functions for backward compatibility
+pass_test() {
+  local message="${1:-Test passed}"
+  TESTS_PASSED=$((TESTS_PASSED + 1))
+  TESTS_RUN=$((TESTS_RUN + 1))
+  printf "  \033[32m✓\033[0m %s\n" "$message"
+}
+
+fail_test() {
+  local message="${1:-Test failed}"
+  TESTS_FAILED=$((TESTS_FAILED + 1))
+  TESTS_RUN=$((TESTS_RUN + 1))
+  printf "  \033[31m✗\033[0m %s\n" "$message"
+  return 1
+}
+
+skip_test() {
+  local message="${1:-Test skipped}"
+  TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  TESTS_RUN=$((TESTS_RUN + 1))
+  printf "  \033[33m⊘\033[0m %s (skipped)\n" "$message"
+}
+
+print_test_summary() {
+  printf "\n"
+  printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+  printf "Test Summary:\n"
+  printf "  \033[32mPassed:\033[0m  %d\n" "$TESTS_PASSED"
+
+  if [[ $TESTS_FAILED -gt 0 ]]; then
+    printf "  \033[31mFailed:\033[0m  %d\n" "$TESTS_FAILED"
+  else
+    printf "  Failed:  %d\n" "$TESTS_FAILED"
+  fi
+
+  if [[ $TESTS_SKIPPED -gt 0 ]]; then
+    printf "  \033[33mSkipped:\033[0m %d\n" "$TESTS_SKIPPED"
+  fi
+
+  printf "  Total:   %d\n" "$TESTS_RUN"
+  printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+  if [[ $TESTS_FAILED -eq 0 ]]; then
+    printf "\033[32m✓ All tests passed!\033[0m\n"
+    return 0
+  else
+    printf "\033[31m✗ Some tests failed\033[0m\n"
+    return 1
+  fi
+}
+
+# Additional file assertions
+assert_file_contains() {
+  local file="$1"
+  local pattern="$2"
+  local message="${3:-File should contain pattern}"
+
+  TESTS_RUN=$((TESTS_RUN + 1))
+
+  if [[ -f "$file" ]] && grep -q "$pattern" "$file" 2>/dev/null; then
+    pass "$message"
+    return 0
+  else
+    fail "$message: '$pattern' not found in $file"
+    return 1
+  fi
+}
+
+assert_dir_exists() {
+  assert_directory_exists "$@"
+}
+
+# print_test_header - Print a section header for tests
+print_test_header() {
+  local title="$1"
+  printf "\n"
+  printf "╔════════════════════════════════════════════════════════════╗\n"
+  printf "║ %s\n" "$title"
+  printf "╚════════════════════════════════════════════════════════════╝\n"
+  printf "\n"
+}
+
+# ============================================
+# BDD-Style Functions for Integration Tests
+# ============================================
+
+# describe - Print a description of the current test
+describe() {
+  local description="$1"
+  printf "\n  \033[34m→\033[0m %s\n" "$description"
+}
+
+# run - Run a command and capture output
+run() {
+  TEST_OUTPUT=$("$@" 2>&1) || true
+  TEST_EXIT_CODE=$?
+  return $TEST_EXIT_CODE
+}
+
+# run_expect_fail - Run a command expecting it to fail
+run_expect_fail() {
+  TEST_OUTPUT=$("$@" 2>&1) || true
+  TEST_EXIT_CODE=$?
+  if [[ $TEST_EXIT_CODE -eq 0 ]]; then
+    fail "Command should have failed but succeeded: $*"
+    return 1
+  fi
+  return 0
+}
+
+# assert_file_permissions - Check file permissions (cross-platform)
+assert_file_permissions() {
+  local file="$1"
+  local expected="$2"
+  local message="${3:-File should have correct permissions}"
+
+  TESTS_RUN=$((TESTS_RUN + 1))
+
+  if [[ ! -f "$file" ]]; then
+    fail "$message: file '$file' does not exist"
+    return 1
+  fi
+
+  local actual
+  # Cross-platform permission check
+  if stat --version 2>/dev/null | grep -q GNU; then
+    actual=$(stat -c "%a" "$file" 2>/dev/null)
+  else
+    actual=$(stat -f "%OLp" "$file" 2>/dev/null)
+  fi
+
+  if [[ "$actual" == "$expected" ]]; then
+    pass "$message"
+    return 0
+  else
+    fail "$message: expected '$expected', got '$actual'"
+    return 1
+  fi
+}
+
+# assert_file_not_contains - Check if file does not contain pattern
+assert_file_not_contains() {
+  local file="$1"
+  local pattern="$2"
+  local message="${3:-File should not contain pattern}"
+
+  TESTS_RUN=$((TESTS_RUN + 1))
+
+  if [[ ! -f "$file" ]]; then
+    fail "$message: file '$file' does not exist"
+    return 1
+  fi
+
+  if ! grep -q "$pattern" "$file" 2>/dev/null; then
+    pass "$message"
+    return 0
+  else
+    fail "$message: '$pattern' found in $file"
+    return 1
+  fi
+}
+
+# Export new functions
+export -f run_test
+export -f pass_test
+export -f fail_test
+export -f skip_test
+export -f print_test_summary
+export -f print_test_header
+export -f assert_file_contains
+export -f assert_dir_exists
+
+# Export BDD-style functions
+export -f describe
+export -f run
+export -f run_expect_fail
+export -f assert_file_permissions
+export -f assert_file_not_contains

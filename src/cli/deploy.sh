@@ -1,43 +1,94 @@
 #!/usr/bin/env bash
 # deploy.sh - SSH deployment commands for VPS
+# POSIX-compliant, no Bash 4+ features
 
 # Determine root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+LIB_DIR="$SCRIPT_DIR/../lib"
 
 # Source required utilities
-source "$SCRIPT_DIR/../lib/utils/display.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/utils/platform-compat.sh"
+source "$LIB_DIR/utils/display.sh"
+source "$LIB_DIR/utils/env.sh"
+source "$LIB_DIR/utils/platform-compat.sh"
+source "$LIB_DIR/utils/header.sh" 2>/dev/null || true
+
+# Source new deployment modules (v0.4.3)
+source "$LIB_DIR/deploy/ssh.sh" 2>/dev/null || true
+source "$LIB_DIR/deploy/credentials.sh" 2>/dev/null || true
+source "$LIB_DIR/deploy/health-check.sh" 2>/dev/null || true
+source "$LIB_DIR/deploy/zero-downtime.sh" 2>/dev/null || true
+
+# Source environment modules
+source "$LIB_DIR/env/create.sh" 2>/dev/null || true
+source "$LIB_DIR/env/switch.sh" 2>/dev/null || true
 
 # Show help for deploy command
 show_deploy_help() {
-  echo "nself deploy - SSH deployment to VPS"
-  echo ""
-  echo "Usage: nself deploy <subcommand> [OPTIONS]"
-  echo ""
-  echo "Subcommands:"
-  echo "  init       Initialize deployment configuration"
-  echo "  ssh        Deploy to VPS via SSH"
-  echo "  status     Show deployment status"
-  echo "  rollback   Rollback deployment"
-  echo "  logs       View deployment logs"
-  echo "  webhook    Setup GitHub webhook"
-  echo ""
-  echo "Description:"
-  echo "  Deploys your nself application to a VPS server via SSH."
-  echo "  Supports automated setup, SSL configuration, and continuous"
-  echo "  deployment through GitHub webhooks."
-  echo ""
-  echo "Supported VPS Providers:"
-  echo "  - DigitalOcean, Linode, Vultr, Hetzner, OVH"
-  echo "  - Any Ubuntu/Debian VPS with SSH access"
-  echo ""
-  echo "Examples:"
-  echo "  nself deploy init              # Setup deployment config"
-  echo "  nself deploy ssh               # Deploy to server"
-  echo "  nself deploy status            # Check deployment"
-  echo "  nself deploy webhook           # Setup auto-deploy"
+  cat <<EOF
+nself deploy - SSH deployment to VPS
+
+Usage: nself deploy [environment] [OPTIONS]
+       nself deploy <subcommand> [OPTIONS]
+
+Environment Deployment:
+  nself deploy staging              Deploy to staging environment
+  nself deploy prod                 Deploy to production environment
+  nself deploy <env-name>           Deploy to custom environment
+
+Subcommands:
+  init          Initialize deployment configuration
+  ssh           Deploy to VPS via SSH (legacy)
+  status        Show deployment status
+  rollback      Rollback deployment
+  logs          View deployment logs
+  webhook       Setup GitHub webhook
+  health        Check deployment health
+  check-access  Verify SSH access to environments
+
+Options:
+  --dry-run           Preview deployment without executing
+  --check-access      Verify SSH connectivity before deploy
+  --force             Skip confirmation prompts
+  --rolling           Use rolling deployment (zero-downtime)
+  --skip-health       Skip health checks after deployment
+  --include-frontends Include frontend apps (default for staging)
+  --exclude-frontends Exclude frontend apps (default for production)
+  --backend-only      Alias for --exclude-frontends
+
+Service Architecture:
+  • Core Services (4):     PostgreSQL, Hasura, Auth, Nginx (always deployed)
+  • Optional Services (7): nself-admin, MinIO, Redis, Functions, etc.
+  • Monitoring Bundle (10): Prometheus, Grafana, Loki, etc.
+  • Remote Schemas:        Multi-app Hasura endpoints (same DB, different APIs)
+  • Custom Services (CS_N): Independent backend apps (NestJS, Express, Python)
+  • Frontend Apps:         React/Next/Vue apps (staging only by default)
+
+Default Behavior:
+  • Staging:    Deploy EVERYTHING including frontend apps
+  • Production: Deploy backend only (frontends on Vercel/CDN/mobile)
+
+Supported VPS Providers:
+  - DigitalOcean, Linode, Vultr, Hetzner, OVH
+  - Any Ubuntu/Debian VPS with SSH access
+
+Examples:
+  nself deploy staging              # Deploy to staging
+  nself deploy prod --dry-run       # Preview production deploy
+  nself deploy --check-access       # Check SSH access to all envs
+  nself deploy init                 # Setup deployment config
+  nself deploy status               # Check deployment
+  nself deploy webhook              # Setup auto-deploy
+
+Environment Configuration:
+  Environments are configured in .environments/<name>/
+  Each environment can have:
+    - .env           Configuration variables
+    - .env.secrets   Sensitive credentials (chmod 600)
+    - server.json    SSH connection details
+
+  Create environments with: nself env create <name> <template>
+EOF
 }
 
 # Initialize deployment configuration
@@ -511,12 +562,617 @@ deploy_webhook() {
   log_info "After setup, pushes to GitHub will auto-deploy"
 }
 
+# ============================================================
+# NEW v0.4.3 FUNCTIONS: Environment-based deployment
+# ============================================================
+
+# Deploy to a specific environment
+deploy_to_env() {
+  local env_name="$1"
+  shift
+  local dry_run=false
+  local check_access=false
+  local force=false
+  local rolling=false
+  local skip_health=false
+  local include_frontends=""
+  local exclude_frontends=""
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      --check-access)
+        check_access=true
+        shift
+        ;;
+      --force|-f)
+        force=true
+        shift
+        ;;
+      --rolling)
+        rolling=true
+        shift
+        ;;
+      --skip-health)
+        skip_health=true
+        shift
+        ;;
+      --include-frontends)
+        include_frontends=true
+        shift
+        ;;
+      --exclude-frontends|--backend-only)
+        exclude_frontends=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # ═══════════════════════════════════════════════════════════════
+  # DEPLOYMENT SERVICE SCOPE
+  # ═══════════════════════════════════════════════════════════════
+  #
+  # nself Services Architecture:
+  #   - Core Services (4):     PostgreSQL, Hasura, Auth, Nginx
+  #   - Optional Services (7): nself-admin, MinIO, Redis, Functions, MLflow, Mail, Search
+  #   - Monitoring Bundle (10): Prometheus, Grafana, Loki, etc.
+  #   - Custom Services (CS_N): User APIs, workers, remote schemas for Hasura
+  #   - Frontend Apps:         External React/Next/Vue apps
+  #
+  # Default Deployment Behavior:
+  #   - STAGING:    Deploy ALL including Frontend Apps (complete replica)
+  #   - PRODUCTION: Deploy backend only (frontends are on Vercel/CDN/mobile)
+  #
+  # Frontend apps in staging are served by Nginx on subdomains.
+  # In production, frontends are hosted externally (Vercel, Cloudflare, mobile).
+  # ═══════════════════════════════════════════════════════════════
+
+  # Determine frontend deployment based on environment type
+  local deploy_frontends="false"
+  local env_type=""
+
+  # Check environment type from config
+  local env_type_file=".environments/$env_name/.env"
+  if [[ -f "$env_type_file" ]]; then
+    env_type=$(grep "^ENV=" "$env_type_file" 2>/dev/null | cut -d'=' -f2)
+  fi
+
+  # Default: staging includes frontends, production excludes
+  case "$env_type" in
+    staging|stage|development|dev|local)
+      deploy_frontends="true"
+      ;;
+    production|prod)
+      deploy_frontends="false"
+      ;;
+    *)
+      # For custom environments, check name
+      case "$env_name" in
+        staging|stage|dev|local)
+          deploy_frontends="true"
+          ;;
+        prod|production)
+          deploy_frontends="false"
+          ;;
+        *)
+          deploy_frontends="true"  # Default to including frontends
+          ;;
+      esac
+      ;;
+  esac
+
+  # Override with explicit flags
+  if [[ "$include_frontends" == "true" ]]; then
+    deploy_frontends="true"
+  elif [[ "$exclude_frontends" == "true" ]]; then
+    deploy_frontends="false"
+  fi
+
+  local env_dir=".environments/$env_name"
+
+  # Check if environment exists
+  if [[ ! -d "$env_dir" ]]; then
+    log_error "Environment '$env_name' not found"
+    log_info "Create it with: nself env create $env_name"
+    return 1
+  fi
+
+  # Load environment configuration
+  if [[ -f "$env_dir/server.json" ]]; then
+    local host port user key_file deploy_path
+
+    host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+    user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+    port="${port:-22}"
+    user="${user:-root}"
+    deploy_path="${deploy_path:-/opt/nself}"
+
+    # Auto-detect SSH key if not specified
+    if [[ -z "$key_file" ]]; then
+      if command -v creds::find_key_for_host >/dev/null 2>&1; then
+        key_file=$(creds::find_key_for_host "$host" "$env_name")
+      else
+        key_file="$HOME/.ssh/id_ed25519"
+        [[ ! -f "$key_file" ]] && key_file="$HOME/.ssh/id_rsa"
+      fi
+    fi
+
+    # Expand tilde
+    key_file="${key_file/#\~/$HOME}"
+  else
+    log_error "No server.json found in $env_dir"
+    log_info "Configure server connection details in: $env_dir/server.json"
+    return 1
+  fi
+
+  # Validate we have minimum required info
+  if [[ -z "$host" ]]; then
+    log_error "No host configured for environment '$env_name'"
+    log_info "Edit $env_dir/server.json and set 'host' field"
+    return 1
+  fi
+
+  show_command_header "nself deploy $env_name" "Deploy to $env_name environment"
+
+  printf "Environment: ${COLOR_CYAN}%s${COLOR_RESET}\n" "$env_name"
+  printf "Server:      %s@%s:%s\n" "$user" "$host" "$port"
+  printf "Deploy path: %s\n" "$deploy_path"
+  printf "SSH key:     %s\n" "$key_file"
+  printf "\n"
+
+  # Show deployment scope
+  printf "${COLOR_CYAN}Deployment Scope:${COLOR_RESET}\n"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} Core Services      (PostgreSQL, Hasura, Auth, Nginx)\n"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} Optional Services  (based on *_ENABLED vars)\n"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} Monitoring Bundle  (if MONITORING_ENABLED=true)\n"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} Remote Schemas     (multi-app Hasura GraphQL endpoints)\n"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} Custom Services    (CS_N - NestJS, Express, Python APIs)\n"
+  if [[ "$deploy_frontends" == "true" ]]; then
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} Frontend Apps      (FRONTEND_APP_N - served by Nginx)\n"
+  else
+    printf "  ${COLOR_YELLOW}○${COLOR_RESET} Frontend Apps      (excluded - deploy externally: Vercel, CDN)\n"
+    if [[ "$env_type" == "production" || "$env_type" == "prod" ]]; then
+      printf "                     ${COLOR_DIM}(use --include-frontends to override)${COLOR_RESET}\n"
+    fi
+  fi
+  printf "\n"
+
+  # Check SSH access first if requested
+  if [[ "$check_access" == "true" ]]; then
+    printf "Checking SSH access... "
+    if command -v ssh::test_connection >/dev/null 2>&1; then
+      if ssh::test_connection "$host" "$user" "$port" "$key_file"; then
+        printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+      else
+        printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+        log_error "Cannot connect to $host"
+        return 1
+      fi
+    else
+      # Fallback to basic SSH test
+      if ssh -i "$key_file" -o ConnectTimeout=10 -o BatchMode=yes -p "$port" \
+         "$user@$host" "echo ok" 2>/dev/null | grep -q "ok"; then
+        printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+      else
+        printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+        return 1
+      fi
+    fi
+  fi
+
+  # Dry run - show what would happen
+  if [[ "$dry_run" == "true" ]]; then
+    printf "\n${COLOR_YELLOW}=== DRY RUN ===${COLOR_RESET}\n\n"
+    printf "Would deploy to:\n"
+    printf "  • Server: %s@%s\n" "$user" "$host"
+    printf "  • Path:   %s\n" "$deploy_path"
+    printf "\n"
+    printf "Files that would be synced:\n"
+    printf "  • docker-compose.yml     (service definitions)\n"
+    printf "  • nginx/                 (nginx configs, SSL certs)\n"
+    printf "  • postgres/              (database init scripts)\n"
+    [[ -d "services" ]] && printf "  • services/              (custom service code)\n"
+    [[ -d "monitoring" ]] && printf "  • monitoring/            (prometheus, grafana configs)\n"
+    [[ -d "ssl/certificates" ]] && printf "  • ssl/certificates/      (SSL certificates)\n"
+    printf "  • .env                   (environment config)\n"
+    [[ -f "$env_dir/.env.secrets" ]] && printf "  • .env.secrets           (sensitive credentials)\n"
+    printf "\n"
+    printf "Steps that would be executed:\n"
+    printf "  1. Run 'nself build' locally (ensure configs up-to-date)\n"
+    printf "  2. Create remote directory structure\n"
+    printf "  3. Sync project files via rsync/scp\n"
+    printf "  4. Sync environment configuration\n"
+    printf "  5. Pull Docker images on server\n"
+    if [[ "$rolling" == "true" ]]; then
+      printf "  6. Rolling update (zero-downtime)\n"
+    else
+      printf "  6. Start/restart services with docker compose\n"
+    fi
+    if [[ "$skip_health" != "true" ]]; then
+      printf "  7. Run health checks\n"
+    fi
+    printf "\n"
+    printf "${COLOR_GREEN}No changes made (dry run)${COLOR_RESET}\n"
+    return 0
+  fi
+
+  # Confirm deployment
+  if [[ "$force" != "true" ]]; then
+    printf "Deploy to %s? [y/N] " "$env_name"
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+    if [[ "$confirm" != "y" && "$confirm" != "yes" ]]; then
+      log_info "Deployment cancelled"
+      return 0
+    fi
+  fi
+
+  printf "\n"
+
+  # Execute deployment
+  if [[ "$rolling" == "true" ]] && command -v rolling::deploy >/dev/null 2>&1; then
+    # Use rolling deployment
+    log_info "Starting rolling deployment..."
+    rolling::deploy "$host" "$deploy_path" "$user" "$port" "$key_file"
+  else
+    # Use standard deployment
+    log_info "Starting deployment..."
+
+    # Step 1: Ensure build is up to date
+    printf "  Running local build... "
+    if bash "$LIB_DIR/../cli/build.sh" --quiet 2>/dev/null; then
+      printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+    else
+      printf "${COLOR_YELLOW}SKIP${COLOR_RESET} (build manually with 'nself build')\n"
+    fi
+
+    # Step 2: Create remote directory structure
+    printf "  Creating remote directories... "
+    ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      mkdir -p '$deploy_path'/{nginx/sites,nginx/conf.d,nginx/ssl,postgres/init,services,monitoring}
+    " 2>/dev/null
+    printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+
+    # Step 3: Sync ALL project files (not just env)
+    printf "  Syncing project files... "
+
+    # Build list of files to sync
+    local sync_items=(
+      "docker-compose.yml"
+      "nginx/"
+      "postgres/"
+      "monitoring/"
+    )
+
+    # Add services directory if custom services exist
+    if [[ -d "services" ]]; then
+      sync_items+=("services/")
+    fi
+
+    # Add ssl certificates
+    if [[ -d "ssl/certificates" ]]; then
+      sync_items+=("ssl/")
+    fi
+
+    # Use rsync for efficient sync (excludes .git, node_modules, etc.)
+    local rsync_result
+    rsync_result=$(rsync -avz --delete \
+      --exclude '.git' \
+      --exclude 'node_modules' \
+      --exclude '.env.secrets' \
+      --exclude '.env.local' \
+      --exclude '*.log' \
+      --exclude '.DS_Store' \
+      -e "ssh -i '$key_file' -p '$port' -o BatchMode=yes" \
+      docker-compose.yml nginx/ postgres/ monitoring/ \
+      $([ -d "services" ] && echo "services/") \
+      $([ -d "ssl/certificates" ] && echo "ssl/") \
+      "$user@$host:$deploy_path/" 2>&1) || true
+
+    if [[ $? -eq 0 ]]; then
+      printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+    else
+      # Fallback to individual scp if rsync fails
+      printf "${COLOR_YELLOW}RETRY${COLOR_RESET}\n"
+      printf "  Syncing via scp (fallback)... "
+      scp -i "$key_file" -P "$port" -r docker-compose.yml "$user@$host:$deploy_path/" 2>/dev/null || true
+      scp -i "$key_file" -P "$port" -r nginx "$user@$host:$deploy_path/" 2>/dev/null || true
+      scp -i "$key_file" -P "$port" -r postgres "$user@$host:$deploy_path/" 2>/dev/null || true
+      [[ -d "services" ]] && scp -i "$key_file" -P "$port" -r services "$user@$host:$deploy_path/" 2>/dev/null || true
+      [[ -d "monitoring" ]] && scp -i "$key_file" -P "$port" -r monitoring "$user@$host:$deploy_path/" 2>/dev/null || true
+      printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+    fi
+
+    # Step 4: Sync environment files (with secrets handling)
+    printf "  Syncing environment config... "
+    if [[ -f "$env_dir/.env" ]]; then
+      scp -i "$key_file" -P "$port" "$env_dir/.env" "$user@$host:$deploy_path/.env" 2>/dev/null || true
+    fi
+    if [[ -f "$env_dir/.env.secrets" ]]; then
+      scp -i "$key_file" -P "$port" "$env_dir/.env.secrets" "$user@$host:$deploy_path/.env.secrets" 2>/dev/null || true
+      # Set proper permissions on secrets file
+      ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "chmod 600 '$deploy_path/.env.secrets'" 2>/dev/null || true
+    fi
+    if [[ -f "$env_dir/server.json" ]]; then
+      scp -i "$key_file" -P "$port" "$env_dir/server.json" "$user@$host:$deploy_path/server.json" 2>/dev/null || true
+    fi
+    printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+
+    # Step 5: Merge env files and start services on remote
+    printf "  Starting services... "
+    local deploy_result
+    deploy_result=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      cd '$deploy_path' || exit 1
+
+      # Merge .env and .env.secrets if both exist
+      if [ -f '.env' ] && [ -f '.env.secrets' ]; then
+        cat .env > .env.combined
+        echo '' >> .env.combined
+        cat .env.secrets >> .env.combined
+        mv .env.combined .env
+        rm -f .env.secrets
+        chmod 600 .env
+      fi
+
+      # Pull Docker images
+      docker compose pull 2>/dev/null || true
+
+      # Start services (recreate to pick up config changes)
+      docker compose up -d --remove-orphans --force-recreate 2>/dev/null
+
+      echo 'deploy_ok'
+    " 2>/dev/null)
+
+    if echo "$deploy_result" | grep -q "deploy_ok"; then
+      printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+    else
+      printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+      log_error "Deployment failed. Check server logs."
+      return 1
+    fi
+  fi
+
+  # Health checks
+  if [[ "$skip_health" != "true" ]]; then
+    printf "\n"
+    log_info "Waiting for services to start..."
+
+    # Give services time to start up
+    sleep 5
+
+    if command -v health::check_deployment >/dev/null 2>&1; then
+      health::check_deployment "$host" "$deploy_path" "$user" "$port" "$key_file"
+    else
+      # Basic health check fallback
+      printf "  Checking Docker services... "
+      local container_count
+      container_count=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+        cd '$deploy_path' && docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'Up' || echo '0'
+      " 2>/dev/null)
+
+      if [[ "$container_count" -gt 0 ]]; then
+        printf "${COLOR_GREEN}%s container(s) running${COLOR_RESET}\n" "$container_count"
+      else
+        printf "${COLOR_YELLOW}Containers starting...${COLOR_RESET}\n"
+        log_info "Services may take a moment to fully start"
+        log_info "Check status with: nself deploy status"
+      fi
+
+      # Check nginx specifically
+      printf "  Checking nginx... "
+      local nginx_status
+      nginx_status=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+        docker compose ps nginx --format '{{.Status}}' 2>/dev/null | head -1
+      " 2>/dev/null)
+
+      if echo "$nginx_status" | grep -qi "up"; then
+        printf "${COLOR_GREEN}Running${COLOR_RESET}\n"
+      elif [[ -n "$nginx_status" ]]; then
+        printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$nginx_status"
+      else
+        printf "${COLOR_YELLOW}Starting...${COLOR_RESET}\n"
+      fi
+    fi
+  fi
+
+  printf "\n"
+  log_success "Deployment to '$env_name' complete"
+
+  # Show helpful next steps
+  printf "\n${COLOR_DIM}Next steps:${COLOR_RESET}\n"
+  printf "  • View service status:  ${COLOR_CYAN}nself deploy status${COLOR_RESET}\n"
+  printf "  • View logs:            ${COLOR_CYAN}nself deploy logs${COLOR_RESET}\n"
+  printf "  • Check health:         ${COLOR_CYAN}nself deploy health %s${COLOR_RESET}\n" "$env_name"
+}
+
+# Check SSH access to all configured environments
+deploy_check_access() {
+  show_command_header "nself deploy check-access" "Verify SSH connectivity"
+
+  local env_dir=".environments"
+
+  if [[ ! -d "$env_dir" ]]; then
+    log_warning "No environments configured"
+    log_info "Create one with: nself env create <name>"
+    return 0
+  fi
+
+  printf "Checking SSH access to all environments:\n\n"
+
+  local all_ok=true
+
+  for dir in "$env_dir"/*/; do
+    if [[ -d "$dir" ]]; then
+      local env_name
+      env_name=$(basename "$dir")
+
+      if [[ -f "$dir/server.json" ]]; then
+        local host port user key_file
+
+        host=$(grep '"host"' "$dir/server.json" 2>/dev/null | cut -d'"' -f4)
+        port=$(grep '"port"' "$dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+        user=$(grep '"user"' "$dir/server.json" 2>/dev/null | cut -d'"' -f4)
+        key_file=$(grep '"key"' "$dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+        port="${port:-22}"
+        user="${user:-root}"
+
+        if [[ -z "$host" ]]; then
+          printf "  ${COLOR_YELLOW}%-15s${COLOR_RESET} No host configured\n" "$env_name"
+          continue
+        fi
+
+        # Auto-detect key if not specified
+        if [[ -z "$key_file" ]]; then
+          if command -v creds::find_key_for_host >/dev/null 2>&1; then
+            key_file=$(creds::find_key_for_host "$host" "$env_name")
+          else
+            key_file="$HOME/.ssh/id_ed25519"
+            [[ ! -f "$key_file" ]] && key_file="$HOME/.ssh/id_rsa"
+          fi
+        fi
+        key_file="${key_file/#\~/$HOME}"
+
+        printf "  %-15s %s@%s:%s ... " "$env_name" "$user" "$host" "$port"
+
+        if command -v ssh::test_connection >/dev/null 2>&1; then
+          if ssh::test_connection "$host" "$user" "$port" "$key_file" 5; then
+            printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+          else
+            printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+            all_ok=false
+          fi
+        else
+          # Fallback
+          if ssh -i "$key_file" -o ConnectTimeout=5 -o BatchMode=yes -p "$port" \
+             "$user@$host" "echo ok" 2>/dev/null | grep -q "ok"; then
+            printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+          else
+            printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+            all_ok=false
+          fi
+        fi
+      else
+        printf "  ${COLOR_YELLOW}%-15s${COLOR_RESET} No server.json (local only)\n" "$env_name"
+      fi
+    fi
+  done
+
+  printf "\n"
+  if [[ "$all_ok" == "true" ]]; then
+    log_success "All remote environments accessible"
+  else
+    log_warning "Some environments are not accessible"
+  fi
+}
+
+# Health check for current deployment
+deploy_health() {
+  local env_name="${1:-}"
+
+  if [[ -z "$env_name" ]]; then
+    # Use current environment or default deploy config
+    load_env_with_priority
+
+    local host="${DEPLOY_HOST:-}"
+    local user="${DEPLOY_USER:-root}"
+    local key_path="${DEPLOY_KEY_PATH:-~/.ssh/id_rsa}"
+    local target_dir="${DEPLOY_TARGET_DIR:-/opt/nself}"
+
+    key_path="${key_path/#\~/$HOME}"
+
+    if [[ -z "$host" ]]; then
+      log_error "No deployment configured"
+      log_info "Run 'nself deploy init' or specify environment: nself deploy health staging"
+      return 1
+    fi
+
+    show_command_header "nself deploy health" "Deployment health check"
+
+    if command -v health::full_report >/dev/null 2>&1; then
+      health::full_report "$host" "$target_dir" "$user" "22" "$key_path"
+    else
+      log_error "Health check module not available"
+      return 1
+    fi
+  else
+    # Environment-specific health check
+    local env_dir=".environments/$env_name"
+
+    if [[ ! -d "$env_dir" ]]; then
+      log_error "Environment '$env_name' not found"
+      return 1
+    fi
+
+    local host port user key_file deploy_path
+
+    host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+    user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+    port="${port:-22}"
+    user="${user:-root}"
+    deploy_path="${deploy_path:-/opt/nself}"
+    key_file="${key_file/#\~/$HOME}"
+
+    show_command_header "nself deploy health $env_name" "Deployment health check"
+
+    if command -v health::full_report >/dev/null 2>&1; then
+      health::full_report "$host" "$deploy_path" "$user" "$port" "$key_file"
+    else
+      log_error "Health check module not available"
+      return 1
+    fi
+  fi
+}
+
+# ============================================================
 # Main command function
+# ============================================================
+
 cmd_deploy() {
   local subcommand="${1:-}"
   shift || true
-  
+
+  # Check if subcommand is actually an environment name
+  if [[ -d ".environments/$subcommand" ]]; then
+    deploy_to_env "$subcommand" "$@"
+    return $?
+  fi
+
+  # Also handle common environment shortcuts
   case "$subcommand" in
+  staging|stage)
+    if [[ -d ".environments/staging" ]]; then
+      deploy_to_env "staging" "$@"
+    else
+      log_error "Staging environment not configured"
+      log_info "Create it with: nself env create staging staging"
+    fi
+    return $?
+    ;;
+  prod|production)
+    if [[ -d ".environments/prod" ]]; then
+      deploy_to_env "prod" "$@"
+    else
+      log_error "Production environment not configured"
+      log_info "Create it with: nself env create prod prod"
+    fi
+    return $?
+    ;;
   init)
     deploy_init "$@"
     ;;
@@ -535,11 +1191,25 @@ cmd_deploy() {
   webhook)
     deploy_webhook "$@"
     ;;
+  health)
+    deploy_health "$@"
+    ;;
+  check-access|access)
+    deploy_check_access "$@"
+    ;;
   -h | --help | help | "")
     show_deploy_help
     ;;
+  --check-access)
+    deploy_check_access
+    ;;
+  --dry-run)
+    log_error "Specify an environment for dry-run"
+    log_info "Example: nself deploy staging --dry-run"
+    return 1
+    ;;
   *)
-    log_error "Unknown subcommand: $subcommand"
+    log_error "Unknown subcommand or environment: $subcommand"
     echo ""
     show_deploy_help
     return 1

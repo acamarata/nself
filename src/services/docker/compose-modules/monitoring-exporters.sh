@@ -22,10 +22,11 @@ generate_tempo_service() {
     networks:
       - \${DOCKER_NETWORK}
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3200/ready"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3200/ready || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 15s
 EOF
 }
 

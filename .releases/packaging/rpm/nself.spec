@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.4.2
+Version:        0.4.3
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 
@@ -46,13 +46,20 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.4.2 installed successfully!"
+echo "nself v0.4.3 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
 # Nothing to do
 
 %changelog
+* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.3-1
+- Release v0.4.3: Deployment Pipeline
+- New env command for environment management
+- Enhanced deploy command with zero-downtime support
+- New prod and staging shortcut commands
+- Fixed nginx variable substitution and 16 Dockerfile templates
+
 * Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.2-1
 - Release v0.4.2: Service & Monitoring Management
 - 6 new commands: email, search, functions, mlflow, metrics, monitor

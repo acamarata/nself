@@ -10,12 +10,15 @@ set -euo pipefail
 # Mock Command Framework
 # ============================================================================
 
-# Store original commands
-DECLARE -a MOCKED_COMMANDS=()
-DECLARE -A ORIGINAL_COMMANDS 2>/dev/null || {
-  # Fallback for Bash 3.2 (no associative arrays)
-  ORIGINAL_COMMANDS_LIST=""
-}
+# Store original commands (initialize as empty arrays/strings)
+MOCKED_COMMANDS=()
+ORIGINAL_COMMANDS_LIST=""
+
+# Try to use associative array if available (Bash 4+)
+if declare -A _test_assoc 2>/dev/null; then
+  declare -A ORIGINAL_COMMANDS
+  unset _test_assoc
+fi
 
 # Mock a command with a custom function
 # Usage: mock_command "git" 'echo "mock git $@"'
@@ -42,9 +45,11 @@ mock_command() {
 
 # Restore all mocked commands
 restore_mocks() {
-  for cmd in "${MOCKED_COMMANDS[@]}"; do
-    unset -f "$cmd" 2>/dev/null || true
-  done
+  if [[ ${#MOCKED_COMMANDS[@]} -gt 0 ]]; then
+    for cmd in "${MOCKED_COMMANDS[@]}"; do
+      unset -f "$cmd" 2>/dev/null || true
+    done
+  fi
   MOCKED_COMMANDS=()
 }
 
@@ -175,7 +180,7 @@ mock_ci_env() {
 # ============================================================================
 
 # Track function calls
-DECLARE -a FUNCTION_CALLS=()
+FUNCTION_CALLS=()
 
 # Create a spy for a function
 # Usage: spy_function "my_func"
@@ -202,7 +207,11 @@ spy_function() {
 was_called() {
   local func_name="$1"
   local args="${2:-}"
-  
+
+  if [[ ${#FUNCTION_CALLS[@]} -eq 0 ]]; then
+    return 1
+  fi
+
   for call in "${FUNCTION_CALLS[@]}"; do
     if [[ "$args" ]]; then
       if [[ "$call" == "$func_name:$args" ]]; then
@@ -214,7 +223,7 @@ was_called() {
       fi
     fi
   done
-  
+
   return 1
 }
 
@@ -222,13 +231,15 @@ was_called() {
 get_call_count() {
   local func_name="$1"
   local count=0
-  
-  for call in "${FUNCTION_CALLS[@]}"; do
-    if [[ "$call" == "$func_name:"* ]]; then
-      ((count++))
-    fi
-  done
-  
+
+  if [[ ${#FUNCTION_CALLS[@]} -gt 0 ]]; then
+    for call in "${FUNCTION_CALLS[@]}"; do
+      if [[ "$call" == "$func_name:"* ]]; then
+        ((count++))
+      fi
+    done
+  fi
+
   echo "$count"
 }
 

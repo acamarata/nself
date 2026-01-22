@@ -1,0 +1,10 @@
+{
+  "name": "{{ENV_NAME}}",
+  "type": "staging",
+  "host": "",
+  "port": 22,
+  "user": "",
+  "key": "",
+  "deploy_path": "/opt/nself",
+  "description": "Staging environment - configure SSH settings"
+}

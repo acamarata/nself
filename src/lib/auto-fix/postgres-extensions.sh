@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Comprehensive Postgres extension validation and information
 # Uses delimited lists for compatibility with Bash 3.2+
@@ -264,10 +264,8 @@ generate_extension_sql() {
 
   for ext in "${ext_array[@]}"; do
     ext=$(echo "$ext" | tr -d ' ')
-    output+="CREATE EXTENSION IF NOT EXISTS \"$ext\";\n"
+    printf "CREATE EXTENSION IF NOT EXISTS \"%s\";\n" "$ext"
   done
-
-  echo -e "$output"
 }
 
 export -f validate_postgres_extension

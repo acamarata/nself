@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Complete healthcheck fixes - adds tools and endpoints
 

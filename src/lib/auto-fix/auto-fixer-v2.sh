@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 AUTO_FIXER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${AUTO_FIXER_DIR}/../utils/display.sh"
@@ -511,7 +511,7 @@ interactive_fixes() {
     IFS=':' read -r -a fix_parts <<<"$fix"
     local fix_type="${fix_parts[0]}"
 
-    echo -e "${YELLOW}→${RESET} Fix available: ${BOLD}$fix_type${RESET}"
+    printf "${YELLOW}→${RESET} Fix available: ${BOLD}%s${RESET}\n" "$fix_type"
     read -p "Apply this fix? [y/N]: " -n 1 -r
     echo
 

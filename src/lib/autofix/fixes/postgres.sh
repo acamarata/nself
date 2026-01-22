@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Track what fix was applied
 LAST_FIX_DESCRIPTION=""

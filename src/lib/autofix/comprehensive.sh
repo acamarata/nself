@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Comprehensive auto-fix module for nself
 # Handles all common Docker, PostgreSQL, and service issues

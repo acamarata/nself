@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../utils/display.sh"
@@ -251,7 +251,7 @@ apply_all_fixes() {
   fi
 
   format_section "Applying Auto-Fixes" 60
-  echo -e "${BLUE}ℹ️${RESET} Found ${BOLD}${#fixes[@]}${RESET} issues that can be automatically fixed"
+  printf "${BLUE}ℹ️${RESET} Found ${BOLD}%d${RESET} issues that can be automatically fixed\n" "${#fixes[@]}"
   echo
 
   local fix_count=0
@@ -290,7 +290,7 @@ apply_all_fixes() {
       ;;
     esac
 
-    echo -e "${BLUE}[${fix_count}/${total}]${RESET} $fix_desc"
+    printf "${BLUE}[%d/%d]${RESET} %s\n" "$fix_count" "$total" "$fix_desc"
     apply_auto_fix "$fix" "$env_file"
     applied_fixes+=("$fix_desc")
 
@@ -304,9 +304,9 @@ apply_all_fixes() {
   # Show summary of what was fixed
   if [[ ${#applied_fixes[@]} -gt 0 ]]; then
     echo
-    echo -e "${GREEN}✅ Fixes Applied:${RESET}"
+    printf "${GREEN}✅ Fixes Applied:${RESET}\n"
     for desc in "${applied_fixes[@]}"; do
-      echo -e "   ${GREEN}•${RESET} $desc"
+      printf "   ${GREEN}•${RESET} %s\n" "$desc"
     done
   fi
 

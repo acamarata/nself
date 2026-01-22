@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Pre-flight checks before starting Docker
 # Fixes common issues before they cause Docker failures

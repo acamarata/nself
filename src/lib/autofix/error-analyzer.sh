@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Error pattern analyzer - identifies root causes from error logs
 # Returns error codes that map to specific fix strategies

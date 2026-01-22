@@ -1,0 +1,15 @@
+{
+  "name": "{{ENV_NAME}}",
+  "type": "production",
+  "host": "",
+  "port": 22,
+  "user": "",
+  "key": "",
+  "deploy_path": "/opt/nself",
+  "description": "Production environment - configure SSH settings",
+  "backup": {
+    "enabled": true,
+    "retention_days": 30,
+    "schedule": "0 2 * * *"
+  }
+}

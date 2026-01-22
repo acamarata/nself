@@ -5,6 +5,102 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-01-22
+
+### Added
+
+#### Environment Management (`nself env`)
+- **New Command**: `nself env` for comprehensive environment management
+  - `nself env create <name> [template]` - Create new environments from templates
+  - `nself env list` - List all available environments
+  - `nself env switch <name>` - Switch between environments
+  - `nself env diff <env1> <env2>` - Compare environments
+  - `nself env validate` - Validate environment configuration
+  - `nself env export/import` - Export and import environments
+
+- **Environment Library** (`src/lib/env/`)
+  - `create.sh` - Environment creation with templates (local, staging, production)
+  - `switch.sh` - Environment switching with automatic backup
+  - `diff.sh` - Environment comparison and preview
+  - `validate.sh` - Configuration validation
+
+#### Production Management (`nself prod`)
+- **Enhanced Subcommands**:
+  - `nself prod status` - Show production environment status
+  - `nself prod init <domain>` - Initialize production configuration
+  - `nself prod check` - Run comprehensive security audit
+  - `nself prod secrets generate/rotate/validate` - Secrets management
+  - `nself prod ssl status/request/renew` - SSL certificate management
+  - `nself prod firewall status/configure/allow/block` - Firewall management
+  - `nself prod harden` - Apply all hardening measures at once
+
+#### Staging Environment (`nself staging`)
+- **New Command**: `nself staging` for staging-specific operations
+  - `nself staging init <domain>` - Initialize staging environment
+  - `nself staging deploy` - Deploy to staging server
+  - `nself staging reset [--data]` - Reset staging environment
+  - `nself staging seed [file]` - Seed staging with test data
+  - `nself staging sync` - Sync from production
+  - `nself staging logs [service]` - View staging logs
+  - `nself staging shell [service]` - SSH into staging
+
+#### Security Library (`src/lib/security/`)
+- `checklist.sh` - Production security audit with comprehensive checks
+- `secrets.sh` - Secure secrets generation and management
+- `ssl-letsencrypt.sh` - Let's Encrypt SSL certificate automation
+- `firewall.sh` - Cross-platform firewall configuration (UFW, firewalld, iptables)
+
+#### Deployment Library (`src/lib/deploy/`)
+- `ssh.sh` - SSH connection management and remote execution
+- `credentials.sh` - SSH key auto-detection and credential management
+- `health-check.sh` - Deployment health validation
+- `zero-downtime.sh` - Rolling deployment strategies with rollback support
+
+#### Enhanced Deploy Command
+- Environment targeting: `nself deploy staging`, `nself deploy prod`
+- `--dry-run` - Preview deployment without execution
+- `--check-access` - Verify SSH access before deploying
+- `--rolling` - Use rolling deployment strategy
+- Server configuration from `server.json`
+
+#### Environment Templates
+- Local development template with sensible defaults
+- Staging template with monitoring enabled
+- Production template with security hardening
+- Secrets file templates (`.env.secrets`)
+- Server configuration templates (`server.json`)
+
+### Fixed
+- **Nginx Variable Substitution**: Fixed `${BASE_DOMAIN:-localhost}` not expanding in nginx configs
+  - Custom services (CS_N) now correctly resolve domain variables
+  - Frontend applications (FRONTEND_APP_N) now correctly resolve domain variables
+  - Default server configuration now properly expands variables
+  - Root cause: heredoc quoting (`<<'EOF'`) prevented variable expansion
+
+### Documentation
+- Added `docs/commands/ENV.md` - Environment command reference
+- Added `docs/commands/STAGING.md` - Staging command reference
+- Added `docs/commands/PROD.md` - Production command reference
+
+### Tests
+- Added `src/tests/unit/test-env.sh` - Environment module tests
+- Added `src/tests/unit/test-security.sh` - Security module tests
+
+## [0.4.2] - 2026-01-21
+
+### Added
+- **Service Management Commands**
+  - `nself services` - Manage optional services
+  - Enhanced service enable/disable functionality
+
+- **Monitoring Management**
+  - `nself monitor` - Monitoring bundle management
+  - Individual monitoring service control
+
+### Changed
+- Improved service detection and validation
+- Enhanced Docker Compose generation for services
+
 ## [0.4.1] - 2026-01-21
 
 ### Fixed

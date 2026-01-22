@@ -1,0 +1,6 @@
+{
+  "name": "{{ENV_NAME}}",
+  "type": "local",
+  "host": "localhost",
+  "description": "Local development environment"
+}

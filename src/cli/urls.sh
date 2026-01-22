@@ -499,11 +499,28 @@ output_table() {
 
     # SSL/Trust Status
     if [[ "${protocol}" == "https" ]]; then
-        local cert_path="ssl/certificates/${domain}"
-        if [[ -f "${cert_path}/fullchain.pem" ]]; then
-            echo -e "  ${COLOR_GRAY}✓ SSL: Self-signed certificate installed & trusted via /etc/hosts${COLOR_RESET}"
+        # Determine correct SSL certificate path based on domain
+        local cert_path=""
+        if [[ "${domain}" == "localhost" ]] || [[ "${domain}" == *".localhost" ]]; then
+            cert_path="ssl/certificates/localhost"
+        elif [[ "${domain}" == *".nself.org" ]] || [[ "${domain}" == "nself.org" ]]; then
+            cert_path="ssl/certificates/nself-org"
         else
-            echo -e "  ${COLOR_GRAY}⚠ SSL: Certificate not found at ${cert_path}${COLOR_RESET}"
+            cert_path="ssl/certificates/${domain}"
+        fi
+
+        # Also check nginx/ssl directory as alternative location
+        local nginx_cert_path="nginx/ssl/localhost"
+        if [[ "${domain}" == *".nself.org" ]] || [[ "${domain}" == "nself.org" ]]; then
+            nginx_cert_path="nginx/ssl/nself-org"
+        fi
+
+        if [[ -f "${cert_path}/fullchain.pem" ]]; then
+            printf "  %s✓ SSL: Self-signed certificate installed & trusted via /etc/hosts%s\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+        elif [[ -f "${nginx_cert_path}/fullchain.pem" ]]; then
+            printf "  %s✓ SSL: Self-signed certificate installed & trusted via /etc/hosts%s\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+        else
+            printf "  %s⚠ SSL: Certificate not found (run 'nself build' to generate)%s\n" "${COLOR_GRAY}" "${COLOR_RESET}"
         fi
     fi
 

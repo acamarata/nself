@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Main autofix orchestrator - coordinates error analysis and fixes
 # Designed for minimal output and maximum effectiveness

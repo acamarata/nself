@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 CONFIG_VALIDATOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${CONFIG_VALIDATOR_DIR}/../utils/display.sh"
@@ -762,14 +762,14 @@ run_validation() {
   if [[ ${#VALIDATION_ERRORS[@]} -gt 0 ]]; then
     format_section "Validation Errors" 40
     for error in "${VALIDATION_ERRORS[@]}"; do
-      echo -e "${RED}✗${RESET} $error"
+      printf "${RED}✗${RESET} %s\n" "$error"
     done
   fi
 
   if [[ ${#VALIDATION_WARNINGS[@]} -gt 0 ]]; then
     format_section "Validation Warnings" 40
     for warning in "${VALIDATION_WARNINGS[@]}"; do
-      echo -e "${YELLOW}⚠${RESET} $warning"
+      printf "${YELLOW}⚠${RESET} %s\n" "$warning"
     done
   fi
 

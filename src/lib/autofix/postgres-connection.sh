@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 fix_postgres_connection() {
   local service_name="$1"

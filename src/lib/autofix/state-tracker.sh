@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # State tracking for autofix attempts
 # Tracks what fixes have been tried for each service to avoid repeating the same fix

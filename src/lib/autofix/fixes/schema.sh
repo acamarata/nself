@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Schema-related fixes for auth, storage, and other services
 

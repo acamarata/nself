@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-01-22
+
+### Added
+- **Environment Command** (`nself env`): Complete environment management
+  - Create, list, switch, and delete environments
+  - Environment comparison with `nself env diff`
+  - Configuration validation and export/import
+  - Templates for local, staging, and production
+
+- **Enhanced Deploy Command** (`nself deploy`): Improved SSH deployment
+  - New modular architecture with 4 library modules
+  - Zero-downtime deployment support
+  - Health check verification post-deployment
+  - Secure credential management
+  - `--dry-run` and `--force` options
+
+- **Shortcut Commands**: `nself prod` and `nself staging` for quick deployments
+
+- **New Library Modules**:
+  - `src/lib/env/` - Environment management (create, switch, diff, validate)
+  - `src/lib/deploy/` - Deployment (ssh, credentials, health-check, zero-downtime)
+  - `src/lib/security/` - Security (checklist, secrets, ssl-letsencrypt, firewall)
+
+### Fixed
+- **nginx-generator.sh**: Fixed variable substitution in nginx config generation
+- **Dockerfile Templates**: Fixed 16 JavaScript service templates
+  - Corrected volume mount paths for node_modules
+  - Fixed WORKDIR and COPY instructions
+  - Improved build layer caching
+- **Auto-fix System**: Enhanced error detection and recovery
+- **Docker Compose Modules**: Fixed custom service template generation
+- **Monitoring Exporters**: Fixed exporter service definitions
+
 ## [0.4.2] - 2026-01-22
 
 ### Added

@@ -1,17 +1,17 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.3)](#next-v043) | [Planned (v0.4.x)](#planned-v04x-series) | [v0.5.0 Release](#v050---production-release)
+[Released](#released) | [Next (v0.4.3)](#next-v043) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
 - **v0.4.2 (Current)**: Service & Monitoring management commands - stable release
 - **v0.4.3 (Next)**: Deployment Pipeline (local → staging → prod)
-- **v0.4.4**: Database, Backup & Restore
-- **v0.4.5**: Mock Data & Seeding System
+- **v0.4.4**: Database Tools (migrations, backup, restore, mock data, seeding)
+- **v0.4.5**: Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.)
 - **v0.4.6**: Scaling & Performance
-- **v0.4.7**: Multi-Cloud Providers
-- **v0.4.8**: Kubernetes Support
-- **v0.4.9**: Polish & nself-admin Integration
+- **v0.4.7**: Kubernetes Support
+- **v0.4.8**: Plugin System (nself-stripe first)
+- **v0.4.9**: Extensive QA & Polish
 - **v0.5.0**: Full Production Release + nself-admin v0.1
 
 ---
@@ -147,19 +147,22 @@ nself staging url            # Show staging URLs
 
 ## Planned (v0.4.x Series)
 
-### v0.4.4 - Database, Backup & Restore
+### v0.4.4 - Database Tools
 **Target**: Q1-Q2 2026
-**Focus**: Everything for database lifecycle management
+**Focus**: Complete database lifecycle - migrations, backup, restore, mock data, seeding
 
 Full planning document: [v0.4.4-PLAN.md](../planning/v0.4.4-PLAN.md)
 
-#### New Commands (3)
+#### New Commands (6)
 
 | Command | Purpose |
 |---------|---------|
 | `nself db` | Database operations & migrations |
 | `nself backup` | Create and manage backups |
 | `nself restore` | Restore from backups |
+| `nself seed` | Seed database with data |
+| `nself mock` | Generate mock/fake data |
+| `nself data` | Data management utilities |
 
 #### `nself db` - Database Operations
 ```bash
@@ -232,29 +235,6 @@ nself restore --schema-only
 nself restore --data-only
 nself restore --table users  # Single table
 ```
-
-#### Key Features
-- **S3-Compatible Storage**: MinIO, AWS S3, Backblaze B2
-- **Backup Encryption**: AES-256 encryption at rest
-- **Point-in-Time Recovery**: Restore to exact timestamp (WAL-based)
-- **Automatic Pre-Restore Backup**: Safety backup before any restore
-- **Cross-Environment Restore**: Restore prod to staging with anonymization
-
----
-
-### v0.4.5 - Mock Data & Seeding System
-**Target**: Q2 2026
-**Focus**: Everything for automated mock data on local/staging, real data in prod
-
-Full planning document: [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md)
-
-#### New Commands (3)
-
-| Command | Purpose |
-|---------|---------|
-| `nself seed` | Seed database with data |
-| `nself mock` | Generate mock/fake data |
-| `nself data` | Data management utilities |
 
 #### `nself mock` - Mock Data Generation
 ```bash
@@ -331,13 +311,125 @@ nself data reset --keep-seeds
 **No configuration needed** - detected automatically from ENV variable.
 
 #### Key Features
+- **S3-Compatible Storage**: MinIO, AWS S3, Backblaze B2
+- **Backup Encryption**: AES-256 encryption at rest
+- **Point-in-Time Recovery**: Restore to exact timestamp (WAL-based)
+- **Automatic Pre-Restore Backup**: Safety backup before any restore
+- **Cross-Environment Restore**: Restore prod to staging with anonymization
 - **Schema-Aware Generation**: Reads DB schema, generates appropriate data types
 - **Foreign Key Handling**: Respects relationships, generates parent data first
 - **Realistic Fake Data**: Names, emails, addresses, phones, etc.
 - **Idempotent Seeding**: Safe to run multiple times (ON CONFLICT handling)
 - **PII Anonymization**: Mask/fake/hash methods for data anonymization
-- **Direct VPS/IP Support**: Deploy to VPS with IP address (no domain required)
-- **Self-Signed SSL for IP**: Generate certs for IP-based access
+
+---
+
+### v0.4.5 - Provider Support
+**Target**: Q2 2026
+**Focus**: Deploy anywhere - AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
+
+Full planning document: [v0.4.5-PLAN.md](../planning/v0.4.5-PLAN.md)
+
+#### New Commands (2)
+
+| Command | Purpose |
+|---------|---------|
+| `nself cloud` | Cloud provider management |
+| `nself provision` | Infrastructure provisioning |
+
+#### `nself cloud` - Provider Management
+```bash
+# Provider setup
+nself cloud init <provider>  # Configure provider credentials
+nself cloud init aws         # Setup AWS
+nself cloud init gcp         # Setup Google Cloud
+nself cloud init azure       # Setup Azure
+nself cloud init do          # Setup DigitalOcean
+nself cloud init hetzner     # Setup Hetzner
+nself cloud init linode      # Setup Linode
+nself cloud init vultr       # Setup Vultr
+nself cloud init ionos       # Setup IONOS
+nself cloud init ovh         # Setup OVH
+nself cloud init scaleway    # Setup Scaleway
+
+# Provider management
+nself cloud list             # List configured providers
+nself cloud status           # Show resource status
+nself cloud status aws       # Provider-specific status
+nself cloud remove <provider>
+
+# Cost management
+nself cloud costs            # Show current costs
+nself cloud costs --forecast # Forecast monthly costs
+nself cloud costs --compare  # Compare providers
+nself cloud budget           # Set budget alerts
+
+# Resources
+nself cloud resources        # List all resources
+nself cloud resources --provider aws
+nself cloud destroy          # Tear down all resources
+nself cloud destroy --provider aws
+```
+
+#### `nself provision` - Infrastructure Provisioning
+```bash
+# Basic provisioning
+nself provision <provider>   # Provision on provider
+nself provision aws          # Provision on AWS
+nself provision gcp          # Provision on Google Cloud
+nself provision azure        # Provision on Azure
+nself provision do           # Provision on DigitalOcean
+nself provision hetzner      # Provision on Hetzner
+nself provision linode       # Provision on Linode
+nself provision ionos        # Provision on IONOS
+nself provision ovh          # Provision on OVH
+nself provision scaleway     # Provision on Scaleway
+
+# Size options (cross-provider equivalents)
+nself provision --size small    # t3.small / s-1vcpu-2gb / cx11 / etc.
+nself provision --size medium   # t3.medium / s-2vcpu-4gb / cx21 / etc.
+nself provision --size large    # t3.large / s-4vcpu-8gb / cx31 / etc.
+nself provision aws --size t3.2xlarge  # Provider-specific
+
+# Options
+nself provision aws --region us-west-2
+nself provision do --region sfo3
+nself provision hetzner --region fsn1
+nself provision --dry-run    # Preview resources
+nself provision --estimate   # Cost estimate only
+
+# Configuration-based
+nself provision --config infra.yaml
+nself provision --env staging
+
+# Export
+nself provision export terraform
+nself provision export pulumi
+nself provision export cloudformation
+```
+
+#### Supported Providers (10)
+
+| Provider | Compute | Database | Storage | Kubernetes |
+|----------|---------|----------|---------|------------|
+| **AWS** | EC2 | RDS | S3 | EKS |
+| **Google Cloud** | Compute Engine | Cloud SQL | Cloud Storage | GKE |
+| **Azure** | Virtual Machines | Azure Database | Blob Storage | AKS |
+| **DigitalOcean** | Droplets | Managed Databases | Spaces | DOKS |
+| **Hetzner** | Cloud Servers | - | Volumes | - |
+| **Linode** | Linodes | Managed Databases | Object Storage | LKE |
+| **Vultr** | Cloud Compute | Managed Databases | Object Storage | VKE |
+| **IONOS** | Cloud Servers | Managed DBaaS | S3 Object Storage | Managed K8s |
+| **OVH** | Public Cloud | Managed Databases | Object Storage | Managed K8s |
+| **Scaleway** | Instances | Managed Databases | Object Storage | Kapsule |
+
+#### Key Features
+- **One-Command Provisioning**: `nself provision hetzner` creates full infrastructure
+- **10+ Providers**: AWS, GCP, Azure, DO, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
+- **Cost Estimation**: See costs before provisioning
+- **Cost Comparison**: Compare same setup across providers
+- **Terraform Export**: Export for custom infrastructure management
+- **Interactive Wizard**: Step-by-step provisioning with previews
 
 ---
 
@@ -477,106 +569,11 @@ nself bench baseline save    # Save current as baseline
 
 ---
 
-### v0.4.7 - Multi-Cloud Providers
+### v0.4.7 - Kubernetes Support
 **Target**: Q3 2026
-**Focus**: Support for all deploy paths - AWS, GCP, Azure, DO, Linode, Vultr, Hetzner
-
-Full planning document: [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md)
-
-#### New Commands (2)
-
-| Command | Purpose |
-|---------|---------|
-| `nself cloud` | Cloud provider management |
-| `nself provision` | Infrastructure provisioning |
-
-#### `nself cloud` - Cloud Provider Management
-```bash
-# Provider setup
-nself cloud init <provider>  # Configure provider credentials
-nself cloud init aws         # Setup AWS
-nself cloud init gcp         # Setup Google Cloud
-nself cloud init azure       # Setup Azure
-nself cloud init do          # Setup DigitalOcean
-nself cloud init linode      # Setup Linode
-nself cloud init vultr       # Setup Vultr
-nself cloud init hetzner     # Setup Hetzner
-
-# Provider management
-nself cloud list             # List configured providers
-nself cloud status           # Show resource status
-nself cloud status aws       # Provider-specific status
-nself cloud remove <provider>
-
-# Cost management
-nself cloud costs            # Show current costs
-nself cloud costs --forecast # Forecast monthly costs
-nself cloud costs --compare  # Compare providers
-nself cloud budget           # Set budget alerts
-
-# Resources
-nself cloud resources        # List all cloud resources
-nself cloud resources --provider aws
-nself cloud destroy          # Tear down all resources
-nself cloud destroy --provider aws
-```
-
-#### `nself provision` - Infrastructure Provisioning
-```bash
-# Basic provisioning
-nself provision <provider>   # Provision on provider
-nself provision aws          # Provision on AWS
-nself provision do           # Provision on DigitalOcean
-nself provision hetzner      # Provision on Hetzner
-
-# Size options (cross-provider equivalents)
-nself provision --size small    # t3.small / s-1vcpu-2gb / cx11
-nself provision --size medium   # t3.medium / s-2vcpu-4gb / cx21
-nself provision --size large    # t3.large / s-4vcpu-8gb / cx31
-nself provision aws --size t3.2xlarge  # Provider-specific
-
-# Options
-nself provision aws --region us-west-2
-nself provision do --region sfo3
-nself provision --dry-run    # Preview resources
-nself provision --estimate   # Cost estimate only
-
-# Configuration-based
-nself provision --config infra.yaml
-nself provision --env staging
-
-# Export
-nself provision export terraform
-nself provision export pulumi
-nself provision export cloudformation
-```
-
-#### Supported Providers (7)
-
-| Provider | Compute | Database | Storage | Kubernetes |
-|----------|---------|----------|---------|------------|
-| **AWS** | EC2 | RDS | S3 | EKS |
-| **Google Cloud** | Compute Engine | Cloud SQL | Cloud Storage | GKE |
-| **Azure** | Virtual Machines | Azure Database | Blob Storage | AKS |
-| **DigitalOcean** | Droplets | Managed Databases | Spaces | DOKS |
-| **Linode** | Linodes | Managed Databases | Object Storage | LKE |
-| **Vultr** | Cloud Compute | Managed Databases | Object Storage | VKE |
-| **Hetzner** | Cloud Servers | - | Volumes | - |
-
-#### Key Features
-- **One-Command Provisioning**: `nself provision aws` creates full infrastructure
-- **Cost Estimation**: See costs before provisioning
-- **Cost Comparison**: Compare same setup across providers
-- **Terraform Export**: Export for custom infrastructure management
-- **Interactive Wizard**: Step-by-step provisioning with previews
-
----
-
-### v0.4.8 - Kubernetes Support
-**Target**: Q3-Q4 2026
 **Focus**: Full support for Kubernetes and container orchestration
 
-Full planning document: [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md)
+Full planning document: [v0.4.7-PLAN.md](../planning/v0.4.7-PLAN.md)
 
 #### New Commands (2)
 
@@ -676,9 +673,184 @@ nself helm push              # Push to registry
 
 ---
 
-### v0.4.9 - Polish & nself-admin Integration
+### v0.4.8 - Plugin System
+**Target**: Q3-Q4 2026
+**Focus**: Extensible plugin architecture for third-party integrations
+
+Full planning document: [v0.4.8-PLAN.md](../planning/v0.4.8-PLAN.md)
+
+#### Overview
+
+**Data Sync Plugins** extend nself with deep integrations that keep your PostgreSQL database in sync with external services.
+
+> **Note**: This is different from service commands like `nself email` which configure how nself uses services. Plugins are specifically for **syncing external data** into your database.
+
+Unlike Custom Services (CS_N) which are independent backend apps, **Plugins** provide:
+
+- **Schema Sync**: Mirror external service data in your PostgreSQL database
+- **Webhook Handling**: Automatic webhook endpoints for real-time updates
+- **Sanity Checks**: Verify your DB matches the external service
+- **Historical Downloads**: Backfill historical data from the service
+- **CLI Commands**: Plugin-specific management commands
+
+#### New Commands (2)
+
+| Command | Purpose |
+|---------|---------|
+| `nself plugin` | Plugin management |
+| `nself stripe` | Stripe-specific commands (first plugin) |
+
+#### `nself plugin` - Plugin Management
+```bash
+# Discovery
+nself plugin list               # List available plugins
+nself plugin search <query>     # Search plugin registry
+nself plugin info <name>        # Show plugin details
+
+# Installation
+nself plugin install <name>     # Install a plugin
+nself plugin install nself-stripe
+nself plugin install nself-stripe@1.2.0  # Specific version
+nself plugin uninstall <name>   # Remove a plugin
+
+# Management
+nself plugin status             # Show installed plugins status
+nself plugin update             # Update all plugins
+nself plugin update <name>      # Update specific plugin
+nself plugin config <name>      # Configure plugin settings
+
+# Development
+nself plugin init               # Create new plugin template
+nself plugin validate           # Validate plugin structure
+nself plugin publish            # Publish to registry
+```
+
+#### First Plugin: nself-stripe
+
+**nself-stripe** syncs your Stripe account to your PostgreSQL database and keeps it in sync via webhooks.
+
+```bash
+# Installation
+nself plugin install nself-stripe
+
+# Configuration
+nself stripe init               # Interactive setup wizard
+nself stripe config             # Edit configuration
+nself stripe config set api_key sk_live_xxx
+nself stripe config set webhook_secret whsec_xxx
+
+# Schema & Sync
+nself stripe schema             # Show Stripe tables that will be created
+nself stripe schema apply       # Create/update Stripe tables in DB
+nself stripe sync               # Full sync from Stripe API
+nself stripe sync --since 2024-01-01  # Sync from date
+nself stripe sync customers     # Sync specific resource
+nself stripe sync --incremental # Only sync changes
+
+# Webhook Management
+nself stripe webhook status     # Show webhook endpoint status
+nself stripe webhook register   # Register webhook with Stripe
+nself stripe webhook test       # Send test webhook
+nself stripe webhook logs       # View webhook event logs
+
+# Sanity Checks
+nself stripe check              # Verify DB matches Stripe
+nself stripe check customers    # Check specific resource
+nself stripe check --fix        # Auto-fix discrepancies
+nself stripe diff               # Show differences
+
+# Historical Data
+nself stripe backfill           # Download all historical data
+nself stripe backfill --from 2020-01-01
+nself stripe backfill invoices  # Backfill specific resource
+
+# Status
+nself stripe status             # Overall sync status
+nself stripe status customers   # Resource-specific status
+```
+
+#### Stripe Resources Synced
+
+| Resource | Table | Webhook Events |
+|----------|-------|----------------|
+| **Customers** | `stripe_customers` | customer.created, customer.updated, customer.deleted |
+| **Subscriptions** | `stripe_subscriptions` | subscription.* |
+| **Invoices** | `stripe_invoices` | invoice.* |
+| **Payments** | `stripe_payment_intents` | payment_intent.* |
+| **Products** | `stripe_products` | product.* |
+| **Prices** | `stripe_prices` | price.* |
+| **Charges** | `stripe_charges` | charge.* |
+| **Refunds** | `stripe_refunds` | refund.* |
+| **Disputes** | `stripe_disputes` | dispute.* |
+| **Payouts** | `stripe_payouts` | payout.* |
+| **Events** | `stripe_events` | All events (audit log) |
+
+#### Webhook Endpoint Configuration
+
+The plugin creates a webhook endpoint at your choice:
+- `api.domain.com/webhooks/stripe` (default)
+- `api.stripe.domain.com` (dedicated subdomain)
+- Custom path configurable
+
+```bash
+# Configure webhook endpoint
+nself stripe config set webhook_path /webhooks/stripe
+nself stripe config set webhook_subdomain stripe  # api.stripe.domain.com
+```
+
+#### Plugin Architecture
+
+```
+plugins/
+├── nself-stripe/
+│   ├── plugin.json           # Plugin manifest
+│   ├── schema/
+│   │   └── stripe.sql        # Database schema
+│   ├── sync/
+│   │   ├── customers.ts      # Resource sync logic
+│   │   ├── subscriptions.ts
+│   │   └── ...
+│   ├── webhooks/
+│   │   └── handler.ts        # Webhook processing
+│   ├── commands/
+│   │   └── stripe.sh         # CLI commands
+│   └── docker/
+│       └── Dockerfile        # Plugin service container
+```
+
+#### Key Features
+
+- **1:1 Database Sync**: Your PostgreSQL always matches Stripe exactly
+- **Real-Time Updates**: Webhooks keep data current within seconds
+- **Sanity Checks**: Detect and fix drift between DB and Stripe
+- **Historical Backfill**: Download years of data on first setup
+- **Audit Log**: All Stripe events stored for compliance
+- **Multi-Account**: Support multiple Stripe accounts per nself instance
+- **Test Mode**: Separate sync for Stripe test vs live mode
+
+#### Planned Plugins
+
+| Plugin | Purpose | Status |
+|--------|---------|--------|
+| **nself-stripe** | Stripe billing/payments data sync | **Planned** (first plugin) |
+
+#### Potential Future Plugin Ideas
+
+These are ideas for future data sync plugins - not currently planned:
+
+- **nself-shopify** - Shopify store/order sync
+- **nself-github** - GitHub repo/issue/PR sync
+- **nself-linear** - Linear issue tracking sync
+- **nself-twilio** - Twilio SMS/voice call logs
+- **nself-sendgrid** - SendGrid email event tracking
+
+> The plugin architecture will be designed with nself-stripe first, then expanded based on community needs.
+
+---
+
+### v0.4.9 - Extensive QA & Polish
 **Target**: Q4 2026
-**Focus**: Wrap up all bugs, everything nself-admin needs for monitoring
+**Focus**: Comprehensive testing, bug fixes, and nself-admin integration
 
 Full planning document: [v0.4.9-PLAN.md](../planning/v0.4.9-PLAN.md)
 
@@ -742,7 +914,7 @@ This is the **1.0-equivalent release** for nself - the complete, production-read
 - **nself CLI v0.5.0** - All features from v0.4.x series stable and polished
 - **nself-admin v0.1.0** - First official release of the web admin UI
 
-#### nself CLI v0.5.0 - Complete Command List (46 commands)
+#### nself CLI v0.5.0 - Complete Command List (48 commands)
 
 ```
 Core Commands (8):
@@ -760,22 +932,22 @@ Service Commands (6) - v0.4.2:
 Environment Commands (4) - v0.4.3:
   env, deploy, prod, staging
 
-Database Commands (3) - v0.4.4:
-  db, backup, restore
+Database Commands (6) - v0.4.4:
+  db, backup, restore, seed, mock, data
 
-Data Commands (3) - v0.4.5:
-  seed, mock, data
+Cloud Commands (2) - v0.4.5:
+  cloud, provision
 
 Scaling Commands (4) - v0.4.6:
   scale, perf, migrate, bench
 
-Cloud Commands (2) - v0.4.7:
-  cloud, provision
-
-Kubernetes Commands (2) - v0.4.8:
+Kubernetes Commands (2) - v0.4.7:
   k8s, helm
 
-Utility Commands (4):
+Plugin Commands (2) - v0.4.8:
+  plugin, stripe
+
+Utility Commands (4) - v0.4.9:
   completion, interactive, docs, config
 ```
 
@@ -824,12 +996,12 @@ Utility Commands (4):
 | v0.4.1 | Released | Platform Compatibility | Jan 2026 |
 | v0.4.2 | Released | Service & Monitoring | Jan 2026 |
 | **v0.4.3** | **Next** | Deployment Pipeline | Q1 2026 |
-| v0.4.4 | Planned | Database, Backup, Restore | Q1-Q2 2026 |
-| v0.4.5 | Planned | Mock Data & Seeding | Q2 2026 |
+| v0.4.4 | Planned | Database Tools | Q1-Q2 2026 |
+| v0.4.5 | Planned | Provider Support | Q2 2026 |
 | v0.4.6 | Planned | Scaling & Performance | Q2-Q3 2026 |
-| v0.4.7 | Planned | Multi-Cloud Providers | Q3 2026 |
-| v0.4.8 | Planned | Kubernetes Support | Q3-Q4 2026 |
-| v0.4.9 | Planned | Polish & Admin Integration | Q4 2026 |
+| v0.4.7 | Planned | Kubernetes Support | Q3 2026 |
+| v0.4.8 | Planned | Plugin System (nself-stripe) | Q3-Q4 2026 |
+| v0.4.9 | Planned | Extensive QA & Polish | Q4 2026 |
 | **v0.5.0** | **Target** | Production Release + nself-admin v0.1 | Q4 2026 / Q1 2027 |
 
 ---
@@ -849,14 +1021,14 @@ Services: email, search, functions, mlflow, metrics, monitor
 env, deploy, prod, staging
 ```
 
-### Coming in v0.4.4 - +3 commands
+### Coming in v0.4.4 - +6 commands
 ```
-db, backup, restore
+db, backup, restore, seed, mock, data
 ```
 
-### Coming in v0.4.5 - +3 commands
+### Coming in v0.4.5 - +2 commands
 ```
-seed, mock, data
+cloud, provision
 ```
 
 ### Coming in v0.4.6 - +4 commands
@@ -866,20 +1038,20 @@ scale, perf, migrate, bench
 
 ### Coming in v0.4.7 - +2 commands
 ```
-cloud, provision
+k8s, helm
 ```
 
 ### Coming in v0.4.8 - +2 commands
 ```
-k8s, helm
+plugin, stripe
 ```
 
-### Coming in v0.4.9/v0.5.0 - +4 commands
+### Coming in v0.4.9 - +4 commands
 ```
 completion, interactive, docs, config
 ```
 
-**Total Commands at v0.5.0**: 46
+**Total Commands at v0.5.0**: 48
 
 ---
 

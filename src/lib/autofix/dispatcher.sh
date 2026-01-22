@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Main dispatcher for auto-fix functionality
 # Analyzes errors and delegates to specific handlers

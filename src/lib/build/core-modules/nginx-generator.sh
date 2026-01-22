@@ -2,9 +2,52 @@
 # nginx-generator.sh - Generate nginx configs with runtime env var substitution
 # Uses nginx envsubst or template variables for runtime configuration
 
+# Determine SSL certificate directory name based on domain
+# Returns: directory name for SSL certs (e.g., "localhost", "nself-org", "example-com")
+get_ssl_cert_dir() {
+  local domain="${BASE_DOMAIN:-localhost}"
+
+  # For localhost or *.localhost domains, use localhost
+  if [[ "$domain" == "localhost" ]] || [[ "$domain" == *".localhost" ]]; then
+    echo "localhost"
+    return
+  fi
+
+  # For nself.org domains, use nself-org
+  if [[ "$domain" == "nself.org" ]] || [[ "$domain" == *".nself.org" ]]; then
+    echo "nself-org"
+    return
+  fi
+
+  # For other domains, convert dots to dashes (e.g., example.com -> example-com)
+  echo "$domain" | tr '.' '-'
+}
+
+# Detect if running on Linux server (not Docker Desktop)
+is_linux_server() {
+  # Docker Desktop sets DOCKER_HOST or has special indicators
+  # On Linux servers, host.docker.internal doesn't work
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    # Check if Docker Desktop is installed (has desktop features)
+    if ! docker info 2>/dev/null | grep -qi "docker desktop"; then
+      return 0  # Is Linux server
+    fi
+  fi
+  return 1  # Not Linux server (macOS, Windows, or Docker Desktop on Linux)
+}
+
+# Clean up old nginx site configs before regeneration
+cleanup_nginx_sites() {
+  # Remove all generated site configs - they will be regenerated
+  rm -f nginx/sites/*.conf 2>/dev/null || true
+}
+
 # Generate main nginx configuration
 generate_nginx_config() {
   local force="${1:-false}"
+
+  # Clean up old configs first to prevent stale configs for disabled services
+  cleanup_nginx_sites
 
   # Generate main nginx.conf
   generate_main_nginx_conf
@@ -15,8 +58,10 @@ generate_nginx_config() {
   # Generate service routes
   generate_service_routes
 
-  # Generate frontend app routes
-  generate_frontend_routes
+  # Generate frontend app routes (skip on Linux servers)
+  if ! is_linux_server; then
+    generate_frontend_routes
+  fi
 
   # Generate custom service routes
   generate_custom_routes
@@ -89,7 +134,11 @@ EOF
 
 # Generate default server block
 generate_default_server() {
-  cat > nginx/conf.d/default.conf <<'EOF'
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
+
+  cat > nginx/conf.d/default.conf <<EOF
 # Default server - redirect HTTP to HTTPS
 server {
     listen 80 default_server;
@@ -101,18 +150,19 @@ server {
     }
 
     location / {
-        return 301 https://$host$request_uri;
+        return 301 https://\$host\$request_uri;
     }
 }
 
 # Default HTTPS server
 server {
-    listen 443 ssl http2 default_server;
-    server_name ${BASE_DOMAIN:-localhost};
+    listen 443 ssl default_server;
+    http2 on;
+    server_name ${base_domain};
 
-    # SSL certificates - runtime path based on environment
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    # SSL certificates - path based on BASE_DOMAIN
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -123,7 +173,7 @@ server {
     location / {
         root /usr/share/nginx/html;
         index index.html;
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
 
     location /health {
@@ -137,6 +187,9 @@ EOF
 
 # Generate core service routes (Hasura, Auth, etc.)
 generate_service_routes() {
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
+
   # Hasura GraphQL API route
   if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
     local hasura_route="${HASURA_ROUTE:-api}"
@@ -145,11 +198,12 @@ generate_service_routes() {
     cat > nginx/sites/hasura.conf <<EOF
 # Hasura GraphQL Engine
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${hasura_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://hasura:8080;
@@ -182,11 +236,12 @@ EOF
     cat > nginx/sites/auth.conf <<EOF
 # Authentication Service
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${auth_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://auth:4000;
@@ -201,19 +256,19 @@ EOF
   fi
 
   # Storage/MinIO route
+  if [[ "${MINIO_ENABLED:-false}" == "true" ]]; then
     local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console}"
     local storage_route="${STORAGE_ROUTE:-storage}"
     local base_domain="${BASE_DOMAIN:-localhost}"
-
-  if [[ "${MINIO_ENABLED:-true}" == "true" ]]; then
     cat > nginx/sites/storage.conf <<EOF
 # MinIO Storage Console
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${storage_console_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://minio:9001;
@@ -227,11 +282,12 @@ server {
 
 # MinIO S3 API
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${storage_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     client_max_body_size 1000M;
 
@@ -253,21 +309,132 @@ EOF
 
 # Generate optional service routes
 generate_optional_service_routes() {
-  # Admin dashboard
-    local admin_route="${ADMIN_ROUTE:-admin}"
-    local base_domain="${BASE_DOMAIN:-localhost}"
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
 
+  # Admin dashboard
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
+    local admin_route="${ADMIN_ROUTE:-admin}"
+
     cat > nginx/sites/admin.conf <<EOF
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${admin_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://nself-admin:3021;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+  fi
+
+  # MeiliSearch route
+  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
+    local search_route="${SEARCH_ROUTE:-search}"
+
+    cat > nginx/sites/meilisearch.conf <<EOF
+# MeiliSearch
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${search_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    location / {
+        proxy_pass http://meilisearch:7700;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+  fi
+
+  # MailPit route (dev only - mail testing)
+  if [[ "${MAILPIT_ENABLED:-false}" == "true" ]]; then
+    local mail_route="${MAIL_ROUTE:-mail}"
+
+    cat > nginx/sites/mailpit.conf <<EOF
+# MailPit (Development Mail Testing)
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${mail_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    location / {
+        proxy_pass http://mailpit:8025;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+  fi
+
+  # MLflow route
+  if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
+    local mlflow_route="${MLFLOW_ROUTE:-mlflow}"
+
+    cat > nginx/sites/mlflow.conf <<EOF
+# MLflow
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${mlflow_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    location / {
+        proxy_pass http://mlflow:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+  fi
+
+  # Functions route
+  if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+    local functions_route="${FUNCTIONS_ROUTE:-functions}"
+
+    cat > nginx/sites/functions.conf <<EOF
+# Serverless Functions
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${functions_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    location / {
+        proxy_pass http://functions:3000;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -282,15 +449,15 @@ EOF
   if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
     # Grafana
     local grafana_route="${GRAFANA_ROUTE:-grafana}"
-    local base_domain="${BASE_DOMAIN:-localhost}"
 
     cat > nginx/sites/grafana.conf <<EOF
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${grafana_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://grafana:3000;
@@ -305,18 +472,41 @@ EOF
 
     # Prometheus
     local prometheus_route="${PROMETHEUS_ROUTE:-prometheus}"
-    local base_domain="${BASE_DOMAIN:-localhost}"
 
     cat > nginx/sites/prometheus.conf <<EOF
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${prometheus_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://prometheus:9090;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+    # Alertmanager
+    local alertmanager_route="${ALERTMANAGER_ROUTE:-alertmanager}"
+
+    cat > nginx/sites/alertmanager.conf <<EOF
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${alertmanager_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    location / {
+        proxy_pass http://alertmanager:9093;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -330,6 +520,10 @@ EOF
 
 # Generate frontend app routes
 generate_frontend_routes() {
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
+
   for i in {1..10}; do
     local app_name_var="FRONTEND_APP_${i}_NAME"
     local app_name="${!app_name_var:-}"
@@ -344,11 +538,12 @@ generate_frontend_routes() {
       cat > "nginx/sites/frontend-${app_name}.conf" <<EOF
 # Frontend Application: $app_name
 server {
-    listen 443 ssl http2;
-    server_name ${app_route}.\${BASE_DOMAIN:-localhost};
+    listen 443 ssl;
+    http2 on;
+    server_name ${app_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         # Proxy to external frontend app running on host
@@ -380,11 +575,12 @@ EOF
 
         cat >> "nginx/sites/frontend-${app_name}.conf" <<EOF
 server {
-    listen 443 ssl http2;
-    server_name ${api_route}.\${BASE_DOMAIN:-localhost};
+    listen 443 ssl;
+    http2 on;
+    server_name ${api_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         # Proxy to frontend's API endpoint
@@ -404,6 +600,10 @@ EOF
 
 # Generate custom service routes
 generate_custom_routes() {
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
+
   for i in {1..20}; do
     local cs_name_var="CS_${i}_NAME"
     local cs_name="${!cs_name_var:-}"
@@ -423,11 +623,12 @@ generate_custom_routes() {
         cat > "nginx/sites/custom-${cs_name}.conf" <<EOF
 # Custom Service: $cs_name
 server {
-    listen 443 ssl http2;
-    server_name ${cs_route}.\${BASE_DOMAIN:-localhost};
+    listen 443 ssl;
+    http2 on;
+    server_name ${cs_route}.${base_domain};
 
-    ssl_certificate /etc/nginx/ssl/localhost/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/localhost/privkey.pem;
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
         proxy_pass http://${cs_name}:${cs_port};
