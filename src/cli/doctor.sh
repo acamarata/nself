@@ -845,6 +845,190 @@ main() {
 }
 
 # Handle command line arguments
+# Auto-fix functions
+auto_fix_docker() {
+  log_info "Attempting to start Docker..."
+
+  if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS - try to start Docker Desktop
+    open -a Docker 2>/dev/null || {
+      log_error "Cannot start Docker Desktop automatically"
+      log_info "Please start Docker Desktop manually"
+      return 1
+    }
+    log_info "Waiting for Docker to start..."
+    local count=0
+    while [[ $count -lt 30 ]]; do
+      if docker info >/dev/null 2>&1; then
+        log_success "Docker started successfully"
+        return 0
+      fi
+      sleep 2
+      count=$((count + 1))
+    done
+    log_error "Docker did not start within 60 seconds"
+    return 1
+  else
+    # Linux - try systemctl
+    if command -v systemctl >/dev/null 2>&1; then
+      sudo systemctl start docker 2>/dev/null || {
+        log_error "Cannot start Docker. Run: sudo systemctl start docker"
+        return 1
+      }
+      log_success "Docker started"
+      return 0
+    fi
+    log_error "Cannot auto-start Docker. Start it manually."
+    return 1
+  fi
+}
+
+auto_fix_config() {
+  log_info "Creating initial configuration..."
+  if command -v nself >/dev/null 2>&1; then
+    nself init --defaults 2>/dev/null || {
+      log_info "Running basic init..."
+      # Create minimal .env
+      cat > .env << 'EOF'
+PROJECT_NAME=nself-project
+ENV=dev
+BASE_DOMAIN=local.nself.org
+POSTGRES_DB=nhost
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres123
+HASURA_GRAPHQL_ADMIN_SECRET=hasura-admin-secret
+EOF
+      log_success "Created basic .env configuration"
+    }
+  fi
+  return 0
+}
+
+auto_fix_build() {
+  log_info "Running nself build..."
+  if command -v nself >/dev/null 2>&1; then
+    nself build 2>/dev/null || {
+      log_error "Build failed. Check configuration."
+      return 1
+    }
+    log_success "Build completed"
+    return 0
+  fi
+  return 1
+}
+
+auto_fix_ssl() {
+  log_info "Generating SSL certificates..."
+  if command -v nself >/dev/null 2>&1; then
+    nself ssl bootstrap 2>/dev/null || {
+      log_warning "SSL bootstrap failed, trying basic generation..."
+      nself build 2>/dev/null || true
+    }
+    log_success "SSL certificates generated"
+    return 0
+  fi
+  return 1
+}
+
+auto_fix_unhealthy_container() {
+  local container="$1"
+  log_info "Attempting to fix: $container"
+
+  # Try restarting the container
+  docker restart "$container" 2>/dev/null || {
+    log_warning "Cannot restart $container"
+    return 1
+  }
+
+  # Wait for health
+  local count=0
+  while [[ $count -lt 15 ]]; do
+    local health=$(docker inspect "$container" --format='{{.State.Health.Status}}' 2>/dev/null || echo "none")
+    if [[ "$health" == "healthy" ]]; then
+      log_success "$container is now healthy"
+      return 0
+    fi
+    sleep 2
+    count=$((count + 1))
+  done
+
+  log_warning "$container still unhealthy after restart"
+  return 1
+}
+
+run_auto_fix() {
+  log_info "Running auto-fix for detected issues..."
+  echo ""
+
+  local fixed=0
+  local failed=0
+
+  # Fix Docker if not running
+  if ! docker info >/dev/null 2>&1; then
+    if auto_fix_docker; then
+      fixed=$((fixed + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+
+  # Fix missing config
+  if [[ ! -f ".env" ]] && [[ ! -f ".env.dev" ]]; then
+    if auto_fix_config; then
+      fixed=$((fixed + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+
+  # Fix missing docker-compose.yml
+  if [[ ! -f "docker-compose.yml" ]] && [[ -f ".env" ]]; then
+    if auto_fix_build; then
+      fixed=$((fixed + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+
+  # Fix missing SSL
+  if [[ ! -f "nginx/ssl/nself.org.crt" ]] && [[ -f "docker-compose.yml" ]]; then
+    if auto_fix_ssl; then
+      fixed=$((fixed + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+
+  # Fix unhealthy containers
+  if has_running_containers; then
+    local project_name="${PROJECT_NAME:-nself}"
+    local unhealthy_containers=($(docker ps --filter "name=${project_name}_" --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null))
+
+    for container in "${unhealthy_containers[@]}"; do
+      if auto_fix_unhealthy_container "$container"; then
+        fixed=$((fixed + 1))
+      else
+        failed=$((failed + 1))
+      fi
+    done
+  fi
+
+  echo ""
+  if [[ $fixed -gt 0 ]]; then
+    log_success "Fixed $fixed issue(s)"
+  fi
+  if [[ $failed -gt 0 ]]; then
+    log_warning "Could not fix $failed issue(s)"
+  fi
+  if [[ $fixed -eq 0 ]] && [[ $failed -eq 0 ]]; then
+    log_info "No auto-fixable issues detected"
+  fi
+
+  echo ""
+  log_info "Run 'nself doctor' again to verify"
+}
+
+# Handle command line arguments
 case "${1:-}" in
 -h | --help)
   echo "nself doctor - System diagnostics and health checks"
@@ -854,6 +1038,7 @@ case "${1:-}" in
   echo "Options:"
   echo "  -h, --help     Show this help message"
   echo "  -v, --verbose  Verbose output"
+  echo "  --fix          Automatically fix detected issues"
   echo ""
   echo "This command checks:"
   echo "  • System requirements (Docker, memory, disk)"
@@ -862,9 +1047,22 @@ case "${1:-}" in
   echo "  • Service status"
   echo "  • SSL certificates"
   echo ""
+  echo "Auto-fix capabilities:"
+  echo "  • Start Docker if not running"
+  echo "  • Create initial .env configuration"
+  echo "  • Run nself build if needed"
+  echo "  • Generate SSL certificates"
+  echo "  • Restart unhealthy containers"
+  echo ""
   echo "Exit codes:"
   echo "  0 - No critical issues"
   echo "  1 - Critical issues found"
+  ;;
+--fix)
+  # Load environment for PROJECT_NAME
+  [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+  [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
+  run_auto_fix
   ;;
 *)
   main "$@"

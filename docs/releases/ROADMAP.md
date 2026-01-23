@@ -4,9 +4,8 @@
 [Released](#released) | [Next (v0.4.5)](#next-v045) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
-- **v0.4.4 (Current)**: Database Tools - stable release
-- **v0.4.5 (Next)**: Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.)
-- **v0.4.6**: Scaling & Performance
+- **v0.4.5 (Current)**: Provider Support - deploy anywhere (10 providers)
+- **v0.4.6 (Next)**: Scaling & Performance
 - **v0.4.7**: Kubernetes Support
 - **v0.4.8**: Plugin System (nself-stripe first)
 - **v0.4.9**: Extensive QA & Polish
@@ -20,6 +19,27 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 ---
 
 ## Released
+
+### v0.4.5 - Provider Support
+**Status**: Released | **Release Date**: January 23, 2026
+
+Deploy anywhere release adding support for 10 cloud providers with one-command provisioning:
+
+- **Provider Management** - `nself providers` for credential configuration
+- **One-Command Provisioning** - `nself provision <provider>` creates full infrastructure
+- **10 Providers Supported**: AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
+- **Cost Estimation** - See costs before provisioning with `--estimate`
+- **Cost Comparison** - Compare same setup across providers
+- **Terraform Export** - Export infrastructure as Terraform/Pulumi
+- **Environment Sync** - `nself sync` for database/config/file sync between environments
+- **CI/CD Integration** - `nself ci init` generates GitHub Actions or GitLab CI workflows
+- **Shell Completion** - `nself completion` for bash/zsh/fish
+- **Doctor Auto-Fix** - `nself doctor --fix` automatically resolves common issues
+
+All providers use normalized sizing (small/medium/large) that maps to provider-specific instance types.
+Full details: [Provider Documentation](../commands/PROVIDERS.md)
+
+---
 
 ### v0.4.4 - Database Tools
 **Status**: Released | **Release Date**: January 22, 2026
@@ -104,11 +124,11 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ---
 
-## Next (v0.4.5)
+## Next (v0.4.6)
 
-### v0.4.5 - Provider Support
+### v0.4.6 - Scaling & Performance
 **Status**: Next | **Target**: Q2 2026
-**Focus**: Deploy anywhere - AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
+**Focus**: Everything for scale, perf, migrate
 
 #### New Commands (2)
 

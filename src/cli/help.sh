@@ -81,8 +81,17 @@ show_general_help() {
   printf "  ${COLOR_BLUE}deploy${COLOR_RESET}        Deploy to staging or production\n"
   printf "  ${COLOR_BLUE}prod${COLOR_RESET}          Production configuration and hardening\n"
   printf "  ${COLOR_BLUE}staging${COLOR_RESET}       Staging environment management\n"
+  printf "  ${COLOR_BLUE}sync${COLOR_RESET}          Sync data between environments\n"
+
+  show_section "Provider Commands"
+  printf "  ${COLOR_BLUE}providers${COLOR_RESET}     Configure cloud provider credentials\n"
+  printf "  ${COLOR_BLUE}provision${COLOR_RESET}     Provision infrastructure on any provider\n"
   echo
   printf "  ${COLOR_DIM}scale${COLOR_RESET}         ${COLOR_DIM}Scaling management (» 0.4.6)${COLOR_RESET}\n"
+
+  show_section "Utility Commands"
+  printf "  ${COLOR_BLUE}ci${COLOR_RESET}            CI/CD workflow generation (GitHub/GitLab)\n"
+  printf "  ${COLOR_BLUE}completion${COLOR_RESET}    Shell completion (bash/zsh/fish)\n"
   echo
   echo "For command-specific help: nself help <command>"
   echo "                      or: nself <command> --help"
