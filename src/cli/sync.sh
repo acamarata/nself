@@ -110,17 +110,80 @@ EOF
   log_info "Edit this file to configure your remote environments"
 }
 
-# Parse profile (simplified - would use yq in production)
+# Parse profile - prioritize server.json over profiles.yaml for consistency with deploy
 get_profile_value() {
   local profile="$1"
   local key="$2"
+  local value=""
 
-  if [[ ! -f "$SYNC_PROFILES_FILE" ]]; then
-    return 1
+  # Normalize profile name for lookups
+  local lookup_profile="$profile"
+  [[ "$profile" == "prod" ]] && lookup_profile="production"
+
+  # 1. FIRST: Check .environments/<profile>/server.json (most specific)
+  local server_json=".environments/$profile/server.json"
+  if [[ -f "$server_json" ]]; then
+    case "$key" in
+      host)
+        value=$(grep '"host"' "$server_json" 2>/dev/null | head -1 | cut -d'"' -f4)
+        ;;
+      user)
+        value=$(grep '"user"' "$server_json" 2>/dev/null | head -1 | cut -d'"' -f4)
+        ;;
+      port)
+        value=$(grep '"port"' "$server_json" 2>/dev/null | head -1 | cut -d'"' -f4)
+        [[ -z "$value" ]] && value="22"
+        ;;
+      path)
+        value=$(grep '"path"' "$server_json" 2>/dev/null | head -1 | cut -d'"' -f4)
+        ;;
+      ssh_key)
+        value=$(grep '"ssh_key"' "$server_json" 2>/dev/null | head -1 | cut -d'"' -f4)
+        ;;
+    esac
+    if [[ -n "$value" ]]; then
+      echo "$value"
+      return 0
+    fi
   fi
 
-  # Simple grep-based parsing (would use yq in production)
-  grep -A 10 "^  $profile:" "$SYNC_PROFILES_FILE" | grep "    $key:" | head -1 | sed 's/.*: *//' | tr -d '"'
+  # 2. SECOND: Check nself/server.json (used by deploy command)
+  local deploy_server="nself/server.json"
+  if [[ -f "$deploy_server" ]]; then
+    local block
+    block=$(python3 -c "import json; data=json.load(open('$deploy_server')); print(json.dumps(data.get('$lookup_profile', {})))" 2>/dev/null || echo "{}")
+    if [[ "$block" != "{}" ]]; then
+      case "$key" in
+        host)
+          value=$(echo "$block" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('host',''))" 2>/dev/null)
+          ;;
+        user)
+          value=$(echo "$block" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',''))" 2>/dev/null)
+          ;;
+        port)
+          value=$(echo "$block" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('port','22'))" 2>/dev/null)
+          ;;
+        path)
+          value=$(echo "$block" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('path',''))" 2>/dev/null)
+          ;;
+      esac
+      if [[ -n "$value" ]]; then
+        echo "$value"
+        return 0
+      fi
+    fi
+  fi
+
+  # 3. LAST RESORT: Check profiles.yaml (legacy/fallback config)
+  if [[ -f "$SYNC_PROFILES_FILE" ]]; then
+    value=$(grep -A 10 "^  $profile:" "$SYNC_PROFILES_FILE" | grep "    $key:" | head -1 | sed 's/.*: *//' | tr -d '"')
+    if [[ -n "$value" ]]; then
+      echo "$value"
+      return 0
+    fi
+  fi
+
+  return 1
 }
 
 # ============================================================================
@@ -1178,6 +1241,347 @@ cmd_history() {
 }
 
 # ============================================================================
+# AUTO SYNC (File Watcher)
+# ============================================================================
+
+# Configuration for auto sync
+AUTO_SYNC_DEBOUNCE="${AUTO_SYNC_DEBOUNCE:-2}"  # Seconds to wait before syncing
+AUTO_SYNC_PATTERNS="${AUTO_SYNC_PATTERNS:-*.sh,*.js,*.ts,*.py,*.go,*.yml,*.yaml,*.json,*.env*}"
+AUTO_SYNC_EXCLUDE="${AUTO_SYNC_EXCLUDE:-node_modules,.git,_backups,*.log}"
+
+# Auto sync - watch for file changes and sync automatically
+cmd_auto() {
+  local target="${1:-staging}"
+  local mode="${2:-watch}"
+
+  # Validate target
+  local host=$(get_profile_value "$target" "host")
+  if [[ -z "$host" ]]; then
+    log_error "Profile '$target' not configured"
+    log_info "Run 'nself sync init' and edit $SYNC_PROFILES_FILE"
+    return 1
+  fi
+
+  # Check SSH connection
+  local user=$(get_profile_value "$target" "user")
+  local port=$(get_profile_value "$target" "port")
+  local ssh_key=$(get_profile_value "$target" "ssh_key")
+
+  log_info "Testing connection to $target..."
+  if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+    log_error "Cannot connect to $target server"
+    return 1
+  fi
+  log_success "Connection OK"
+
+  case "$mode" in
+    watch)
+      cmd_watch "$target"
+      ;;
+    once)
+      log_info "Running single auto-sync to $target..."
+      sync_files_push "$target" "."
+      ;;
+    *)
+      log_error "Unknown mode: $mode"
+      log_info "Available modes: watch, once"
+      return 1
+      ;;
+  esac
+}
+
+# Watch for file changes and sync
+cmd_watch() {
+  local target="${1:-staging}"
+  local path="${2:-.}"
+
+  log_info "Starting file watcher for $target..."
+  log_info "Press Ctrl+C to stop"
+  printf "\n"
+
+  # Check for available file watcher
+  local watcher=""
+  if command -v fswatch &>/dev/null; then
+    watcher="fswatch"
+  elif command -v inotifywait &>/dev/null; then
+    watcher="inotify"
+  else
+    log_warning "No file watcher found. Installing fswatch is recommended."
+    log_info "  macOS: brew install fswatch"
+    log_info "  Linux: apt install inotify-tools"
+    log_info ""
+    log_info "Falling back to polling mode (checks every ${AUTO_SYNC_DEBOUNCE}s)..."
+    watcher="poll"
+  fi
+
+  # Build exclude patterns
+  local excludes=()
+  IFS=',' read -ra excl_array <<< "$AUTO_SYNC_EXCLUDE"
+  for excl in "${excl_array[@]}"; do
+    excludes+=("--exclude" "$excl")
+  done
+
+  case "$watcher" in
+    fswatch)
+      _watch_with_fswatch "$target" "$path"
+      ;;
+    inotify)
+      _watch_with_inotify "$target" "$path"
+      ;;
+    poll)
+      _watch_with_polling "$target" "$path"
+      ;;
+  esac
+}
+
+# Watch using fswatch (macOS, cross-platform)
+_watch_with_fswatch() {
+  local target="$1"
+  local path="$2"
+
+  local last_sync=0
+
+  # Build fswatch options
+  local fswatch_opts="-r -l $AUTO_SYNC_DEBOUNCE"
+  fswatch_opts="$fswatch_opts --exclude='node_modules' --exclude='.git' --exclude='_backups'"
+  fswatch_opts="$fswatch_opts --exclude='\.log$' --exclude='\.swp$' --exclude='~$'"
+
+  log_info "Watching for changes (fswatch)..."
+
+  eval fswatch $fswatch_opts "$path" | while read -r changed_file; do
+    local now
+    now=$(date +%s)
+
+    # Debounce - skip if less than debounce seconds since last sync
+    if (( now - last_sync < AUTO_SYNC_DEBOUNCE )); then
+      continue
+    fi
+
+    # Skip certain files
+    if [[ "$changed_file" == *"node_modules"* ]] || \
+       [[ "$changed_file" == *".git"* ]] || \
+       [[ "$changed_file" == *".log" ]] || \
+       [[ "$changed_file" == *".swp" ]] || \
+       [[ "$changed_file" == *"~" ]]; then
+      continue
+    fi
+
+    last_sync=$now
+
+    printf "\n[%s] Changed: %s\n" "$(date '+%H:%M:%S')" "$(basename "$changed_file")"
+    log_info "Syncing to $target..."
+
+    if sync_files_push "$target" "." 2>&1 | grep -v "^$"; then
+      log_success "Synced"
+    else
+      log_warning "Sync may have issues"
+    fi
+  done
+}
+
+# Watch using inotifywait (Linux)
+_watch_with_inotify() {
+  local target="$1"
+  local path="$2"
+
+  local last_sync=0
+
+  log_info "Watching for changes (inotify)..."
+
+  inotifywait -m -r -e modify,create,delete,move \
+    --exclude '(node_modules|\.git|_backups|\.log$|\.swp$)' \
+    "$path" 2>/dev/null | while read -r dir event file; do
+
+    local now
+    now=$(date +%s)
+
+    # Debounce
+    if (( now - last_sync < AUTO_SYNC_DEBOUNCE )); then
+      continue
+    fi
+
+    last_sync=$now
+
+    printf "\n[%s] %s: %s\n" "$(date '+%H:%M:%S')" "$event" "$file"
+    log_info "Syncing to $target..."
+
+    if sync_files_push "$target" "." 2>&1 | grep -v "^$"; then
+      log_success "Synced"
+    else
+      log_warning "Sync may have issues"
+    fi
+  done
+}
+
+# Fallback: watch using polling
+_watch_with_polling() {
+  local target="$1"
+  local path="$2"
+
+  local last_checksum=""
+  local poll_interval="${AUTO_SYNC_DEBOUNCE:-2}"
+
+  log_info "Watching for changes (polling every ${poll_interval}s)..."
+
+  while true; do
+    # Calculate checksum of relevant files
+    local current_checksum
+    current_checksum=$(find "$path" -type f \
+      ! -path '*/node_modules/*' \
+      ! -path '*/.git/*' \
+      ! -path '*/_backups/*' \
+      ! -name '*.log' \
+      ! -name '*.swp' \
+      ! -name '*~' \
+      -newer "$SYNC_CONFIG_DIR/.last_poll" 2>/dev/null | head -20 | md5sum 2>/dev/null || echo "none")
+
+    touch "$SYNC_CONFIG_DIR/.last_poll" 2>/dev/null || true
+
+    if [[ "$current_checksum" != "$last_checksum" ]] && [[ -n "$last_checksum" ]]; then
+      printf "\n[%s] Changes detected\n" "$(date '+%H:%M:%S')"
+      log_info "Syncing to $target..."
+
+      if sync_files_push "$target" "." 2>&1 | grep -v "^$"; then
+        log_success "Synced"
+      else
+        log_warning "Sync may have issues"
+      fi
+    fi
+
+    last_checksum="$current_checksum"
+    sleep "$poll_interval"
+  done
+}
+
+# Watch specific files/directories
+cmd_watch_path() {
+  local target="${1:-staging}"
+  local paths="${2:-}"
+
+  if [[ -z "$paths" ]]; then
+    log_error "Paths required"
+    log_info "Usage: nself sync watch <target> --paths 'src,lib,config'"
+    return 1
+  fi
+
+  log_info "Watching specific paths: $paths"
+
+  # Use fswatch if available
+  if command -v fswatch &>/dev/null; then
+    IFS=',' read -ra path_array <<< "$paths"
+    fswatch -r -l "$AUTO_SYNC_DEBOUNCE" "${path_array[@]}" | while read -r changed_file; do
+      printf "\n[%s] Changed: %s\n" "$(date '+%H:%M:%S')" "$changed_file"
+      sync_files_push "$target" "."
+    done
+  else
+    log_warning "fswatch not available, using full directory watch"
+    cmd_watch "$target"
+  fi
+}
+
+# Setup auto-sync on system startup
+cmd_auto_setup() {
+  local target="${1:-staging}"
+
+  log_info "Setting up auto-sync for $target..."
+
+  # Create launchd plist for macOS
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    local plist_dir="$HOME/Library/LaunchAgents"
+    local plist_file="$plist_dir/com.nself.autosync.plist"
+
+    mkdir -p "$plist_dir"
+
+    cat > "$plist_file" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nself.autosync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$(command -v nself || echo "/usr/local/bin/nself")</string>
+    <string>sync</string>
+    <string>auto</string>
+    <string>$target</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>$(pwd)</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>$HOME/.nself/logs/autosync.log</string>
+  <key>StandardErrorPath</key>
+  <string>$HOME/.nself/logs/autosync.error.log</string>
+</dict>
+</plist>
+EOF
+
+    mkdir -p "$HOME/.nself/logs"
+
+    log_success "LaunchAgent created: $plist_file"
+    log_info "Load with: launchctl load $plist_file"
+    log_info "Stop with: launchctl unload $plist_file"
+
+  # Create systemd user service for Linux
+  elif [[ "$(uname)" == "Linux" ]]; then
+    local service_dir="$HOME/.config/systemd/user"
+    local service_file="$service_dir/nself-autosync.service"
+
+    mkdir -p "$service_dir"
+
+    cat > "$service_file" << EOF
+[Unit]
+Description=nself Auto-Sync to $target
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$(pwd)
+ExecStart=$(command -v nself || echo "/usr/local/bin/nself") sync auto $target
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+
+    log_success "Systemd service created: $service_file"
+    log_info "Enable with: systemctl --user enable nself-autosync"
+    log_info "Start with: systemctl --user start nself-autosync"
+    log_info "Status: systemctl --user status nself-autosync"
+  else
+    log_warning "Auto-setup not supported on this platform"
+    log_info "Run manually: nself sync auto $target &"
+  fi
+}
+
+# Stop auto-sync service
+cmd_auto_stop() {
+  log_info "Stopping auto-sync..."
+
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    local plist_file="$HOME/Library/LaunchAgents/com.nself.autosync.plist"
+    if [[ -f "$plist_file" ]]; then
+      launchctl unload "$plist_file" 2>/dev/null || true
+      log_success "LaunchAgent stopped"
+    fi
+  elif [[ "$(uname)" == "Linux" ]]; then
+    systemctl --user stop nself-autosync 2>/dev/null || true
+    log_success "Systemd service stopped"
+  fi
+
+  # Also kill any running watch processes
+  pkill -f "nself sync auto" 2>/dev/null || true
+  pkill -f "nself sync watch" 2>/dev/null || true
+
+  log_success "Auto-sync stopped"
+}
+
+# ============================================================================
 # HELP
 # ============================================================================
 
@@ -1221,6 +1625,14 @@ COMMANDS:
     config pull <env>         Pull .env from remote
     config push <env>         Push .env to remote
     config diff <env>         Compare configs
+
+  Auto Sync (v0.4.7):
+    auto <target> [watch]     Start auto-sync to target (watch mode)
+    auto <target> once        Run single sync and exit
+    watch <target>            Watch for changes and sync automatically
+    watch-path <target> --paths 'src,lib'  Watch specific paths
+    auto-setup <target>       Setup auto-sync as system service
+    auto-stop                 Stop auto-sync service
 
   Management:
     init                      Create sync profiles configuration
@@ -1371,6 +1783,23 @@ main() {
     # Config sync (legacy)
     config)
       cmd_config "$@"
+      ;;
+
+    # Auto sync and watch
+    auto)
+      cmd_auto "$@"
+      ;;
+    watch)
+      cmd_watch "$@"
+      ;;
+    watch-path)
+      cmd_watch_path "$@"
+      ;;
+    auto-setup|setup-auto)
+      cmd_auto_setup "$@"
+      ;;
+    auto-stop|stop-auto)
+      cmd_auto_stop
       ;;
 
     # Management

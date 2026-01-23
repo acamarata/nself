@@ -198,6 +198,23 @@ cmd_clean() {
   if [[ "$all" == "true" ]]; then
     echo
     log_info "Running system-wide Docker cleanup..."
+
+    # Clean BuildKit cache thoroughly (fixes buildx_buildkit container accumulation)
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning BuildKit cache..."
+    if docker buildx prune --all -f >/dev/null 2>&1; then
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} BuildKit cache cleaned                                \n"
+    else
+      printf "\r${COLOR_YELLOW}✱${COLOR_RESET} BuildKit prune skipped (buildx may not be available) \n"
+    fi
+
+    # Remove any lingering buildkit volumes
+    local buildkit_volumes=$(docker volume ls -q --filter "name=buildx" 2>/dev/null)
+    if [[ -n "$buildkit_volumes" ]]; then
+      printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning BuildKit volumes..."
+      echo "$buildkit_volumes" | xargs docker volume rm -f >/dev/null 2>&1 || true
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} BuildKit volumes cleaned                             \n"
+    fi
+
     docker system prune -f >/dev/null 2>&1
     log_success "System cleanup complete"
   fi

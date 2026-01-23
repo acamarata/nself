@@ -295,6 +295,19 @@ check_running_containers() {
       log_success "$service_name: Healthy"
       ((healthy++))
     elif [[ "$health_status" == "unhealthy" ]]; then
+      # Check for Tempo distroless image (no shell for health checks)
+      if [[ "$service_name" == "tempo" ]]; then
+        local image=$(docker inspect "$container" --format='{{.Config.Image}}' 2>/dev/null || echo "")
+        if [[ "$image" == *"distroless"* ]] || [[ "$image" == *"grafana/tempo"* ]]; then
+          # Tempo distroless: check if process is running instead
+          local running=$(docker inspect "$container" --format='{{.State.Running}}' 2>/dev/null || echo "false")
+          if [[ "$running" == "true" ]]; then
+            log_success "$service_name: Running (distroless - no healthcheck)"
+            ((no_health_check++))
+            continue
+          fi
+        fi
+      fi
       log_error "$service_name: Unhealthy"
       issue_found
       ((unhealthy++))

@@ -4,9 +4,8 @@
 [Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
-- **v0.4.6 (Current)**: Scaling & Performance - 9 new commands
-- **v0.4.7 (Next)**: Kubernetes Support
-- **v0.4.8**: Plugin System (nself-stripe first)
+- **v0.4.7 (Current)**: Kubernetes Support - 2 new commands
+- **v0.4.8 (Next)**: Plugin System (nself-stripe first)
 - **v0.4.9**: Extensive QA & Polish
 - **v0.5.0**: Full Production Release + nself-admin v0.1
 
@@ -273,7 +272,7 @@ nself bench baseline save    # Save current as baseline
 ---
 
 ### v0.4.7 - Kubernetes Support
-**Target**: Q3 2026
+**Status**: Released | **Release Date**: January 23, 2026
 **Focus**: Full support for Kubernetes and container orchestration
 
 #### New Commands (2)
@@ -694,8 +693,8 @@ Utility Commands (4) - v0.4.9:
 | v0.4.4 | Released | Database Tools | Jan 2026 |
 | v0.4.5 | Released | Provider Support | Jan 2026 |
 | **v0.4.6** | **Released** | Scaling & Performance | Jan 2026 |
-| **v0.4.7** | **Next** | Kubernetes Support | Q2 2026 |
-| v0.4.8 | Planned | Plugin System (nself-stripe) | Q3 2026 |
+| **v0.4.7** | **Released** | Kubernetes Support | Jan 2026 |
+| **v0.4.8** | **Next** | Plugin System (nself-stripe) | Q3 2026 |
 | v0.4.9 | Planned | Extensive QA & Polish | Q3-Q4 2026 |
 | **v0.5.0** | **Target** | Production Release + nself-admin v0.1 | Q4 2026 |
 
@@ -703,7 +702,7 @@ Utility Commands (4) - v0.4.9:
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.6) - 43 commands
+### Currently Available (v0.4.7) - 45 commands
 ```
 Core: init, build, start, stop, restart, reset, clean, version
 Status: status, logs, exec, urls, doctor, help
@@ -714,14 +713,10 @@ Database: db (migrate, seed, mock, backup, restore, schema, types, shell, inspec
 Provider: providers, provision, sync, ci, completion
 Performance: perf, bench, scale, migrate
 Operations: health, frontend, history, config, servers
+Kubernetes: k8s, helm
 ```
 
 Note: Database operations are consolidated under `nself db` with subcommands.
-
-### Coming in v0.4.7 - +2 commands
-```
-k8s, helm
-```
 
 ### Coming in v0.4.8 - +2 commands
 ```

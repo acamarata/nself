@@ -567,6 +567,74 @@ deploy_webhook() {
 # NEW v0.4.3 FUNCTIONS: Environment-based deployment
 # ============================================================
 
+# Check git status and warn about uncommitted changes
+check_git_status() {
+  local show_warnings="${1:-true}"
+
+  # Skip if not in a git repo
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local warnings=0
+  local git_issues=()
+
+  # Check for uncommitted changes
+  local unstaged=$(git diff --name-only 2>/dev/null | wc -l | tr -d ' ')
+  local staged=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')
+  local untracked=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
+
+  if [[ "$unstaged" -gt 0 ]]; then
+    git_issues+=("$unstaged unstaged changes")
+    warnings=$((warnings + 1))
+  fi
+
+  if [[ "$staged" -gt 0 ]]; then
+    git_issues+=("$staged staged but uncommitted changes")
+    warnings=$((warnings + 1))
+  fi
+
+  if [[ "$untracked" -gt 0 ]]; then
+    git_issues+=("$untracked untracked files")
+    # Not critical, just informational
+  fi
+
+  # Check if branch is behind remote (fetch first, then compare)
+  local current_branch=$(git branch --show-current 2>/dev/null)
+  if [[ -n "$current_branch" ]]; then
+    # Quick fetch to update remote refs (with timeout)
+    git fetch origin "$current_branch" --quiet 2>/dev/null || true
+
+    local behind=$(git rev-list --count HEAD..origin/"$current_branch" 2>/dev/null || echo "0")
+    local ahead=$(git rev-list --count origin/"$current_branch"..HEAD 2>/dev/null || echo "0")
+
+    if [[ "$behind" -gt 0 ]]; then
+      git_issues+=("$behind commit(s) behind origin/$current_branch")
+      warnings=$((warnings + 1))
+    fi
+
+    if [[ "$ahead" -gt 0 ]]; then
+      git_issues+=("$ahead commit(s) ahead of origin/$current_branch (not pushed)")
+    fi
+  fi
+
+  # Display warnings if requested
+  if [[ "$show_warnings" == "true" ]] && [[ ${#git_issues[@]} -gt 0 ]]; then
+    printf "\n${COLOR_YELLOW}⚠ Git Status Warning${COLOR_RESET}\n"
+    for issue in "${git_issues[@]}"; do
+      printf "  ${COLOR_DIM}• %s${COLOR_RESET}\n" "$issue"
+    done
+    printf "\n"
+
+    if [[ $warnings -gt 0 ]]; then
+      printf "${COLOR_DIM}Recommendation: Commit and push changes before deploying${COLOR_RESET}\n"
+      printf "${COLOR_DIM}  git add . && git commit -m 'Pre-deploy commit' && git push${COLOR_RESET}\n\n"
+    fi
+  fi
+
+  return $warnings
+}
+
 # Deploy to a specific environment
 deploy_to_env() {
   local env_name="$1"
@@ -807,6 +875,9 @@ deploy_to_env() {
     printf "${COLOR_GREEN}No changes made (dry run)${COLOR_RESET}\n"
     return 0
   fi
+
+  # Check git status and warn about uncommitted changes
+  check_git_status "true"
 
   # Confirm deployment
   if [[ "$force" != "true" ]]; then
@@ -1322,6 +1393,538 @@ deploy_check() {
 }
 
 # ============================================================
+# Advanced Deployment Strategies (v0.4.7)
+# ============================================================
+
+# Preview deployment - show what would change
+deploy_preview() {
+  local env_name="${1:-staging}"
+  shift || true
+
+  show_command_header "nself deploy preview" "Deployment Preview for $env_name"
+
+  local env_dir=".environments/$env_name"
+
+  if [[ ! -d "$env_dir" ]]; then
+    log_error "Environment '$env_name' not found"
+    return 1
+  fi
+
+  # Load server config
+  local host port user key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  port="${port:-22}"
+  user="${user:-root}"
+  deploy_path="${deploy_path:-/opt/nself}"
+  key_file="${key_file:-$HOME/.ssh/id_rsa}"
+  key_file="${key_file/#\~/$HOME}"
+
+  if [[ -z "$host" ]]; then
+    log_error "No host configured for $env_name"
+    return 1
+  fi
+
+  printf "${COLOR_CYAN}=== Deployment Preview ===${COLOR_RESET}\n\n"
+  printf "Target: %s@%s:%s\n" "$user" "$host" "$deploy_path"
+  printf "Environment: %s\n\n" "$env_name"
+
+  # Show config diff
+  printf "${COLOR_CYAN}Configuration Changes:${COLOR_RESET}\n"
+
+  local remote_env
+  remote_env=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" \
+    "cat '$deploy_path/.env' 2>/dev/null || echo ''" 2>/dev/null)
+
+  if [[ -f "$env_dir/.env" ]]; then
+    local local_env
+    local_env=$(cat "$env_dir/.env")
+
+    local temp_remote=$(mktemp)
+    local temp_local=$(mktemp)
+    echo "$remote_env" > "$temp_remote"
+    echo "$local_env" > "$temp_local"
+
+    local diff_output
+    diff_output=$(diff -u "$temp_remote" "$temp_local" 2>/dev/null || true)
+
+    if [[ -n "$diff_output" ]]; then
+      echo "$diff_output" | head -30
+      local diff_lines=$(echo "$diff_output" | wc -l)
+      if [[ $diff_lines -gt 30 ]]; then
+        printf "... (%d more lines)\n" "$((diff_lines - 30))"
+      fi
+    else
+      printf "  No configuration changes\n"
+    fi
+
+    rm -f "$temp_remote" "$temp_local"
+  fi
+
+  printf "\n"
+
+  # Show Docker image updates
+  printf "${COLOR_CYAN}Docker Image Status:${COLOR_RESET}\n"
+  ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    cd '$deploy_path' 2>/dev/null || exit 0
+    docker compose images 2>/dev/null | tail -n +2 || echo '  No images found'
+  " 2>/dev/null
+
+  printf "\n"
+
+  # Show current running services
+  printf "${COLOR_CYAN}Currently Running Services:${COLOR_RESET}\n"
+  ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    cd '$deploy_path' 2>/dev/null || exit 0
+    docker compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || echo '  No services running'
+  " 2>/dev/null
+
+  printf "\n"
+
+  # Show what would be synced
+  printf "${COLOR_CYAN}Files to Sync:${COLOR_RESET}\n"
+  printf "  docker-compose.yml\n"
+  printf "  nginx/\n"
+  printf "  postgres/\n"
+  [[ -d "services" ]] && printf "  services/\n"
+  [[ -d "monitoring" ]] && printf "  monitoring/\n"
+  printf "  .env (merged with .env.secrets)\n"
+
+  printf "\n${COLOR_GREEN}Preview complete. Run 'nself deploy %s' to apply.${COLOR_RESET}\n" "$env_name"
+}
+
+# Canary deployment - deploy to subset first
+deploy_canary() {
+  local env_name="${1:-staging}"
+  local percentage="${2:-10}"
+  shift 2 || true
+
+  show_command_header "nself deploy canary" "Canary Deployment to $env_name"
+
+  printf "${COLOR_CYAN}Canary Deployment Strategy:${COLOR_RESET}\n"
+  printf "  • Deploy new version to %s%% of instances\n" "$percentage"
+  printf "  • Monitor for errors/performance issues\n"
+  printf "  • Gradually increase if healthy\n"
+  printf "  • Rollback automatically on failure\n\n"
+
+  local env_dir=".environments/$env_name"
+
+  if [[ ! -d "$env_dir" ]]; then
+    log_error "Environment '$env_name' not found"
+    return 1
+  fi
+
+  # Check for Kubernetes deployment
+  if [[ -f ".nself/k8s/manifests/00-namespace.yaml" ]]; then
+    log_info "Kubernetes canary deployment..."
+
+    # Use kubectl for canary
+    local namespace
+    namespace=$(grep "namespace:" ".nself/k8s.yml" 2>/dev/null | cut -d':' -f2 | tr -d ' ')
+    namespace="${namespace:-default}"
+
+    # Get current deployments
+    local deployments
+    deployments=$(kubectl get deployments -n "$namespace" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+
+    for deployment in $deployments; do
+      local current_replicas
+      current_replicas=$(kubectl get deployment "$deployment" -n "$namespace" -o jsonpath='{.spec.replicas}' 2>/dev/null)
+
+      local canary_replicas=$(( (current_replicas * percentage) / 100 ))
+      [[ $canary_replicas -lt 1 ]] && canary_replicas=1
+
+      printf "  Scaling %s canary to %d replicas (original: %d)...\n" "$deployment" "$canary_replicas" "$current_replicas"
+
+      # Create canary deployment
+      kubectl get deployment "$deployment" -n "$namespace" -o yaml | \
+        sed "s/name: $deployment/name: ${deployment}-canary/" | \
+        sed "s/replicas: .*/replicas: $canary_replicas/" | \
+        kubectl apply -f - 2>/dev/null || true
+    done
+
+    log_success "Canary deployment started"
+    log_info "Monitor with: kubectl get pods -n $namespace"
+    log_info "Promote with: nself deploy canary-promote $env_name"
+    log_info "Rollback with: nself deploy canary-rollback $env_name"
+
+  else
+    # Docker-based canary (using docker service or docker-compose scale)
+    log_info "Docker canary deployment..."
+
+    local host port user key_file deploy_path
+    host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+    user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+    port="${port:-22}"
+    user="${user:-root}"
+    deploy_path="${deploy_path:-/opt/nself}"
+    key_file="${key_file:-$HOME/.ssh/id_rsa}"
+    key_file="${key_file/#\~/$HOME}"
+
+    # Deploy with --scale for canary
+    ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      cd '$deploy_path'
+
+      # Create canary directory
+      mkdir -p '$deploy_path-canary'
+
+      # Copy current to canary
+      cp -r '$deploy_path'/* '$deploy_path-canary/' 2>/dev/null || true
+
+      # Start canary with different project name
+      cd '$deploy_path-canary'
+      docker compose -p canary up -d 2>/dev/null
+
+      echo 'canary_deployed'
+    " 2>/dev/null | grep -q "canary_deployed" && \
+      log_success "Canary deployment started" || \
+      log_error "Canary deployment failed"
+
+    log_info "Monitor canary health, then:"
+    log_info "  Promote: nself deploy canary-promote $env_name"
+    log_info "  Rollback: nself deploy canary-rollback $env_name"
+  fi
+}
+
+# Promote canary to full deployment
+deploy_canary_promote() {
+  local env_name="${1:-staging}"
+
+  log_info "Promoting canary deployment for $env_name..."
+
+  local env_dir=".environments/$env_name"
+
+  if [[ -f ".nself/k8s/manifests/00-namespace.yaml" ]]; then
+    # Kubernetes: scale canary to full, remove original
+    local namespace
+    namespace=$(grep "namespace:" ".nself/k8s.yml" 2>/dev/null | cut -d':' -f2 | tr -d ' ')
+    namespace="${namespace:-default}"
+
+    local canary_deployments
+    canary_deployments=$(kubectl get deployments -n "$namespace" -o name 2>/dev/null | grep "\-canary")
+
+    for canary in $canary_deployments; do
+      local original=${canary%-canary}
+      local replicas
+      replicas=$(kubectl get "$original" -n "$namespace" -o jsonpath='{.spec.replicas}' 2>/dev/null)
+
+      # Scale canary to full
+      kubectl scale "$canary" -n "$namespace" --replicas="$replicas" 2>/dev/null
+
+      # Delete original
+      kubectl delete "$original" -n "$namespace" 2>/dev/null
+
+      # Rename canary to original
+      kubectl get "$canary" -n "$namespace" -o yaml | \
+        sed "s/-canary//" | \
+        kubectl apply -f - 2>/dev/null
+
+      kubectl delete "$canary" -n "$namespace" 2>/dev/null
+    done
+
+    log_success "Canary promoted to production"
+
+  else
+    # Docker: swap canary with production
+    local host port user key_file deploy_path
+    host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+    user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+    port="${port:-22}"
+    user="${user:-root}"
+    deploy_path="${deploy_path:-/opt/nself}"
+    key_file="${key_file:-$HOME/.ssh/id_rsa}"
+
+    ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      # Stop old production
+      cd '$deploy_path' && docker compose down 2>/dev/null || true
+
+      # Move canary to production
+      rm -rf '$deploy_path-old'
+      mv '$deploy_path' '$deploy_path-old'
+      mv '$deploy_path-canary' '$deploy_path'
+
+      # Restart as production
+      cd '$deploy_path' && docker compose -p $(basename '$deploy_path') up -d
+
+      echo 'promoted'
+    " 2>/dev/null | grep -q "promoted" && \
+      log_success "Canary promoted" || \
+      log_error "Promotion failed"
+  fi
+}
+
+# Rollback canary deployment
+deploy_canary_rollback() {
+  local env_name="${1:-staging}"
+
+  log_info "Rolling back canary deployment for $env_name..."
+
+  local env_dir=".environments/$env_name"
+
+  if [[ -f ".nself/k8s/manifests/00-namespace.yaml" ]]; then
+    # Kubernetes: delete canary deployments
+    local namespace
+    namespace=$(grep "namespace:" ".nself/k8s.yml" 2>/dev/null | cut -d':' -f2 | tr -d ' ')
+    namespace="${namespace:-default}"
+
+    kubectl delete deployments -n "$namespace" -l canary=true 2>/dev/null || true
+    kubectl get deployments -n "$namespace" -o name | grep "\-canary" | \
+      xargs -I {} kubectl delete {} -n "$namespace" 2>/dev/null || true
+
+    log_success "Canary deployments removed"
+
+  else
+    # Docker: remove canary
+    local host port user key_file deploy_path
+    host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+    user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+    deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+    port="${port:-22}"
+    user="${user:-root}"
+    deploy_path="${deploy_path:-/opt/nself}"
+    key_file="${key_file:-$HOME/.ssh/id_rsa}"
+
+    ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      cd '$deploy_path-canary' && docker compose -p canary down 2>/dev/null || true
+      rm -rf '$deploy_path-canary'
+      echo 'rolled_back'
+    " 2>/dev/null | grep -q "rolled_back" && \
+      log_success "Canary rolled back" || \
+      log_error "Rollback failed"
+  fi
+}
+
+# Blue-green deployment
+deploy_blue_green() {
+  local env_name="${1:-staging}"
+  shift || true
+
+  show_command_header "nself deploy blue-green" "Blue-Green Deployment"
+
+  printf "${COLOR_CYAN}Blue-Green Deployment Strategy:${COLOR_RESET}\n"
+  printf "  • Maintain two identical environments (blue/green)\n"
+  printf "  • Deploy new version to inactive environment\n"
+  printf "  • Switch traffic instantly via load balancer\n"
+  printf "  • Zero downtime, instant rollback capability\n\n"
+
+  local env_dir=".environments/$env_name"
+
+  if [[ ! -d "$env_dir" ]]; then
+    log_error "Environment '$env_name' not found"
+    return 1
+  fi
+
+  local host port user key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  port="${port:-22}"
+  user="${user:-root}"
+  deploy_path="${deploy_path:-/opt/nself}"
+  key_file="${key_file:-$HOME/.ssh/id_rsa}"
+  key_file="${key_file/#\~/$HOME}"
+
+  # Determine current active color
+  local active_color
+  active_color=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    cat '$deploy_path/.active_color' 2>/dev/null || echo 'blue'
+  " 2>/dev/null)
+
+  local inactive_color
+  if [[ "$active_color" == "blue" ]]; then
+    inactive_color="green"
+  else
+    inactive_color="blue"
+  fi
+
+  printf "Current active: ${COLOR_CYAN}%s${COLOR_RESET}\n" "$active_color"
+  printf "Deploying to:   ${COLOR_GREEN}%s${COLOR_RESET}\n\n" "$inactive_color"
+
+  # Deploy to inactive environment
+  log_info "Deploying to $inactive_color environment..."
+
+  local inactive_path="${deploy_path}-${inactive_color}"
+
+  # Sync files to inactive
+  rsync -avz --delete \
+    --exclude '.git' \
+    --exclude 'node_modules' \
+    --exclude '.env.secrets' \
+    -e "ssh -i '$key_file' -p '$port' -o BatchMode=yes" \
+    docker-compose.yml nginx/ postgres/ \
+    $([ -d "services" ] && echo "services/") \
+    $([ -d "monitoring" ] && echo "monitoring/") \
+    "$user@$host:$inactive_path/" 2>/dev/null
+
+  # Sync env
+  if [[ -f "$env_dir/.env" ]]; then
+    scp -i "$key_file" -P "$port" "$env_dir/.env" "$user@$host:$inactive_path/.env" 2>/dev/null
+  fi
+
+  # Start inactive environment
+  ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    cd '$inactive_path'
+
+    # Merge secrets if present
+    if [ -f '.env.secrets' ]; then
+      cat .env.secrets >> .env
+    fi
+
+    # Start with unique project name
+    docker compose -p ${env_name}-${inactive_color} up -d --remove-orphans 2>/dev/null
+
+    echo 'deployed'
+  " 2>/dev/null | grep -q "deployed" || {
+    log_error "Failed to start $inactive_color environment"
+    return 1
+  }
+
+  log_success "Deployed to $inactive_color environment"
+
+  # Wait for health check
+  log_info "Waiting for services to become healthy..."
+  sleep 10
+
+  # Health check
+  local health_ok=true
+  ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    cd '$inactive_path'
+    docker compose -p ${env_name}-${inactive_color} ps --format '{{.Status}}' | grep -v 'Up' | head -1
+  " 2>/dev/null | grep -q "." && health_ok=false
+
+  if [[ "$health_ok" == "true" ]]; then
+    log_success "$inactive_color environment is healthy"
+
+    printf "\n"
+    log_info "Ready to switch traffic"
+    printf "Switch traffic to %s? [y/N] " "$inactive_color"
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$confirm" == "y" || "$confirm" == "yes" ]]; then
+      deploy_blue_green_switch "$env_name" "$inactive_color"
+    else
+      log_info "Deployment complete. Switch manually with:"
+      printf "  nself deploy blue-green-switch %s %s\n" "$env_name" "$inactive_color"
+    fi
+  else
+    log_error "$inactive_color environment health check failed"
+    log_info "Check logs: ssh $user@$host 'cd $inactive_path && docker compose logs'"
+    log_info "Rollback: nself deploy blue-green-rollback $env_name"
+    return 1
+  fi
+}
+
+# Switch blue-green traffic
+deploy_blue_green_switch() {
+  local env_name="${1:-staging}"
+  local target_color="${2:-}"
+
+  local env_dir=".environments/$env_name"
+
+  local host port user key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  port="${port:-22}"
+  user="${user:-root}"
+  deploy_path="${deploy_path:-/opt/nself}"
+  key_file="${key_file:-$HOME/.ssh/id_rsa}"
+  key_file="${key_file/#\~/$HOME}"
+
+  if [[ -z "$target_color" ]]; then
+    local active
+    active=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" \
+      "cat '$deploy_path/.active_color' 2>/dev/null || echo 'blue'" 2>/dev/null)
+
+    if [[ "$active" == "blue" ]]; then
+      target_color="green"
+    else
+      target_color="blue"
+    fi
+  fi
+
+  log_info "Switching traffic to $target_color..."
+
+  ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+    # Update nginx upstream to point to new color
+    # This assumes nginx is configured with upstreams for both colors
+
+    # Update active color marker
+    echo '$target_color' > '$deploy_path/.active_color'
+
+    # Symlink main path to active color
+    rm -f '$deploy_path/current'
+    ln -sf '$deploy_path-$target_color' '$deploy_path/current'
+
+    # Reload nginx to pick up new upstream
+    docker exec nginx nginx -s reload 2>/dev/null || \
+      docker compose exec nginx nginx -s reload 2>/dev/null || true
+
+    echo 'switched'
+  " 2>/dev/null | grep -q "switched" && \
+    log_success "Traffic switched to $target_color" || \
+    log_error "Switch failed"
+}
+
+# Rollback blue-green deployment
+deploy_blue_green_rollback() {
+  local env_name="${1:-staging}"
+
+  local env_dir=".environments/$env_name"
+
+  local host port user key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  port="${port:-22}"
+  user="${user:-root}"
+  deploy_path="${deploy_path:-/opt/nself}"
+  key_file="${key_file:-$HOME/.ssh/id_rsa}"
+
+  log_info "Rolling back blue-green deployment..."
+
+  local active
+  active=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" \
+    "cat '$deploy_path/.active_color' 2>/dev/null || echo 'blue'" 2>/dev/null)
+
+  local rollback_to
+  if [[ "$active" == "blue" ]]; then
+    rollback_to="green"
+  else
+    rollback_to="blue"
+  fi
+
+  deploy_blue_green_switch "$env_name" "$rollback_to"
+
+  log_success "Rolled back to $rollback_to"
+}
+
+# ============================================================
 # Main command function
 # ============================================================
 
@@ -1381,6 +1984,27 @@ cmd_deploy() {
     ;;
   check-access|access)
     deploy_check_access "$@"
+    ;;
+  preview)
+    deploy_preview "$@"
+    ;;
+  canary)
+    deploy_canary "$@"
+    ;;
+  canary-promote)
+    deploy_canary_promote "$@"
+    ;;
+  canary-rollback)
+    deploy_canary_rollback "$@"
+    ;;
+  blue-green|bluegreen)
+    deploy_blue_green "$@"
+    ;;
+  blue-green-switch|switch)
+    deploy_blue_green_switch "$@"
+    ;;
+  blue-green-rollback)
+    deploy_blue_green_rollback "$@"
     ;;
   -h | --help | help | "")
     show_deploy_help

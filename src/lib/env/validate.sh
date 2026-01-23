@@ -327,6 +327,157 @@ env::validate_all() {
   fi
 }
 
+# Validate variable types and formats
+env::validate_types() {
+  local env_file="$1"
+  local errors=0
+  local warnings=0
+
+  printf "${COLOR_CYAN}Checking variable formats...${COLOR_RESET}\n"
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Skip empty lines and comments
+    [[ -z "$line" ]] && continue
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ ! "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] && continue
+
+    local key value
+    key=$(printf "%s" "$line" | cut -d'=' -f1)
+    value=$(printf "%s" "$line" | cut -d'=' -f2-)
+
+    # Remove quotes from value if present
+    value="${value#\"}"
+    value="${value%\"}"
+    value="${value#\'}"
+    value="${value%\'}"
+
+    # Skip empty values
+    [[ -z "$value" ]] && continue
+
+    # Validate port numbers (1-65535)
+    if [[ "$key" =~ _PORT$ ]] || [[ "$key" == "PORT" ]]; then
+      if [[ ! "$value" =~ ^[0-9]+$ ]]; then
+        printf "  ${COLOR_RED}Error: %s must be a number (got: %s)${COLOR_RESET}\n" "$key" "$value"
+        errors=$((errors + 1))
+      elif [[ "$value" -lt 1 ]] || [[ "$value" -gt 65535 ]]; then
+        printf "  ${COLOR_RED}Error: %s must be 1-65535 (got: %s)${COLOR_RESET}\n" "$key" "$value"
+        errors=$((errors + 1))
+      fi
+    fi
+
+    # Validate email addresses
+    if [[ "$key" =~ _EMAIL$ ]] || [[ "$key" == "EMAIL" ]] || [[ "$key" =~ SMTP_FROM ]]; then
+      if [[ -n "$value" ]] && [[ ! "$value" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+        printf "  ${COLOR_YELLOW}Warning: %s may not be a valid email: %s${COLOR_RESET}\n" "$key" "$value"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    # Validate boolean values
+    if [[ "$key" =~ _ENABLED$ ]] || [[ "$key" == "DEBUG" ]] || [[ "$key" =~ ^ENABLE_ ]]; then
+      local lower_value
+      lower_value=$(printf "%s" "$value" | tr '[:upper:]' '[:lower:]')
+      if [[ "$lower_value" != "true" ]] && [[ "$lower_value" != "false" ]] && \
+         [[ "$lower_value" != "1" ]] && [[ "$lower_value" != "0" ]] && \
+         [[ "$lower_value" != "yes" ]] && [[ "$lower_value" != "no" ]]; then
+        printf "  ${COLOR_YELLOW}Warning: %s should be true/false (got: %s)${COLOR_RESET}\n" "$key" "$value"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    # Validate URLs
+    if [[ "$key" =~ _URL$ ]] || [[ "$key" =~ _URI$ ]]; then
+      if [[ -n "$value" ]] && [[ ! "$value" =~ ^(https?|postgres|redis|mongodb|amqp):// ]]; then
+        printf "  ${COLOR_YELLOW}Warning: %s may not be a valid URL: %s${COLOR_RESET}\n" "$key" "$value"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    # Validate domain names (BASE_DOMAIN, etc.)
+    if [[ "$key" =~ DOMAIN$ ]] || [[ "$key" == "BASE_DOMAIN" ]]; then
+      if [[ "$value" != "localhost" ]] && [[ ! "$value" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$ ]]; then
+        printf "  ${COLOR_YELLOW}Warning: %s may not be a valid domain: %s${COLOR_RESET}\n" "$key" "$value"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    # Check password/secret minimum length
+    if [[ "$key" =~ PASSWORD$ ]] || [[ "$key" =~ SECRET$ ]] || [[ "$key" =~ _KEY$ ]]; then
+      local len=${#value}
+      if [[ $len -lt 8 ]] && [[ $len -gt 0 ]]; then
+        printf "  ${COLOR_YELLOW}Warning: %s is short (%d chars, recommend 8+)${COLOR_RESET}\n" "$key" "$len"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+  done < "$env_file"
+
+  if [[ $errors -eq 0 ]] && [[ $warnings -eq 0 ]]; then
+    printf "  ${COLOR_GREEN}✓ Variable formats valid${COLOR_RESET}\n"
+  elif [[ $errors -eq 0 ]]; then
+    printf "  ${COLOR_YELLOW}⚠ %d format warning(s)${COLOR_RESET}\n" "$warnings"
+  fi
+
+  return $errors
+}
+
+# Validate current project .env (not environment directory)
+env::validate_project() {
+  local env_file="${1:-.env}"
+  local errors=0
+  local warnings=0
+
+  if [[ ! -f "$env_file" ]]; then
+    # Try common alternatives
+    for alt in .env.dev .env.local; do
+      if [[ -f "$alt" ]]; then
+        env_file="$alt"
+        break
+      fi
+    done
+  fi
+
+  if [[ ! -f "$env_file" ]]; then
+    printf "${COLOR_RED}No environment file found${COLOR_RESET}\n"
+    printf "Create one with: nself init\n"
+    return 1
+  fi
+
+  printf "Validating: ${COLOR_BLUE}%s${COLOR_RESET}\n\n" "$env_file"
+
+  # Syntax validation
+  env::validate_env_file "$env_file" "project"
+  errors=$((errors + $?))
+
+  # Type validation
+  env::validate_types "$env_file"
+  errors=$((errors + $?))
+
+  # Check for required core variables
+  printf "${COLOR_CYAN}Checking core variables...${COLOR_RESET}\n"
+  local core_vars="PROJECT_NAME POSTGRES_DB"
+  for var in $core_vars; do
+    if ! grep -q "^${var}=" "$env_file" 2>/dev/null; then
+      printf "  ${COLOR_YELLOW}Warning: %s not set${COLOR_RESET}\n" "$var"
+      warnings=$((warnings + 1))
+    fi
+  done
+
+  if [[ $warnings -eq 0 ]]; then
+    printf "  ${COLOR_GREEN}✓ Core variables present${COLOR_RESET}\n"
+  fi
+
+  # Summary
+  printf "\n"
+  if [[ $errors -eq 0 ]]; then
+    printf "${COLOR_GREEN}✓ Configuration is valid${COLOR_RESET}\n"
+    return 0
+  else
+    printf "${COLOR_RED}✗ Found %d error(s)${COLOR_RESET}\n" "$errors"
+    return 1
+  fi
+}
+
 # Export functions
 export -f env::validate
 export -f env::validate_env_file
@@ -334,3 +485,5 @@ export -f env::validate_server_config
 export -f env::validate_secrets_file
 export -f env::validate_required_vars
 export -f env::validate_all
+export -f env::validate_types
+export -f env::validate_project

@@ -1,6 +1,6 @@
 # nself Commands Reference
 
-**Version 0.4.6** | Complete CLI Reference
+**Version 0.4.7** | Complete CLI Reference
 
 ---
 
@@ -76,25 +76,149 @@ nself
 │       ├── export <table>     Export table
 │       └── anonymize          Anonymize PII
 │
-├── Deployment (nself deploy)
+├── Deployment (nself deploy) - Enhanced v0.4.7
 │   ├── (environment)           Deploy to environment
 │   │   ├── staging            Deploy to staging
-│   │   └── prod               Deploy to production
-│   ├── init                    Initialize config
-│   ├── check                   Pre-deploy validation (v0.4.6)
-│   │   └── --fix              Auto-fix issues
-│   ├── status                  Deployment status
+│   │   └── production         Deploy to production
+│   ├── preview                 Preview environments (NEW)
+│   │   ├── (default)          Create preview
+│   │   ├── list               List previews
+│   │   └── destroy <id>       Destroy preview
+│   ├── canary                  Canary deployment (NEW)
+│   │   ├── (default)          Start canary
+│   │   ├── promote            Promote to 100%
+│   │   ├── rollback           Rollback canary
+│   │   └── status             Canary status
+│   ├── blue-green              Blue-green deploy (NEW)
+│   │   ├── (default)          Deploy inactive
+│   │   ├── switch             Switch traffic
+│   │   ├── rollback           Rollback switch
+│   │   └── status             Show active
 │   ├── rollback               Rollback deployment
-│   ├── logs                    Deployment logs
-│   ├── webhook                 Setup webhooks
-│   ├── health                  Check health
-│   └── check-access           Verify SSH access
+│   ├── check                   Pre-deploy validation
+│   │   └── --fix              Auto-fix issues
+│   └── status                  Deployment status
 │
 ├── Environment (nself env)
 │   ├── (default)               List environments
 │   ├── create <name>           Create environment
 │   ├── switch <name>           Switch environment
 │   └── diff <env1> <env2>      Compare environments
+│
+├── Cloud Infrastructure (nself cloud) - NEW v0.4.7
+│   ├── provider                Provider management
+│   │   ├── list               List 26 providers
+│   │   ├── init <provider>    Configure credentials
+│   │   ├── validate           Validate config
+│   │   └── info <provider>    Provider details
+│   ├── server                  Server management
+│   │   ├── create <provider>  Provision server
+│   │   ├── destroy <server>   Destroy server
+│   │   ├── list               List servers
+│   │   ├── status [server]    Server status
+│   │   ├── ssh <server>       SSH to server
+│   │   ├── add <ip>           Add existing server
+│   │   └── remove <server>    Remove from registry
+│   ├── cost                    Cost management
+│   │   ├── estimate <prov>    Estimate costs
+│   │   └── compare            Compare all providers
+│   └── deploy                  Quick deployment
+│       ├── quick              Provision + deploy
+│       └── full               Full production setup
+│
+├── Service Management (nself service) - NEW v0.4.7
+│   ├── list                    List optional services
+│   ├── enable <service>        Enable service
+│   ├── disable <service>       Disable service
+│   ├── status [service]        Service status
+│   ├── restart <service>       Restart service
+│   ├── logs <service>          Service logs
+│   ├── email                   Email service
+│   │   ├── test               Send test email
+│   │   ├── inbox              Open MailPit
+│   │   └── config             Email config
+│   ├── search                  Search service
+│   │   ├── index              Reindex data
+│   │   ├── query <term>       Run query
+│   │   └── stats              Index stats
+│   ├── functions               Serverless
+│   │   ├── deploy             Deploy all
+│   │   ├── invoke <fn>        Invoke function
+│   │   ├── logs [fn]          View logs
+│   │   └── list               List functions
+│   ├── mlflow                  ML tracking
+│   │   ├── ui                 Open UI
+│   │   ├── experiments        List experiments
+│   │   ├── runs               List runs
+│   │   └── artifacts          Browse artifacts
+│   ├── storage                 Object storage
+│   │   ├── buckets            List buckets
+│   │   ├── upload             Upload file
+│   │   ├── download           Download file
+│   │   └── presign            Generate URL
+│   └── cache                   Redis cache
+│       ├── stats              Statistics
+│       ├── flush              Flush cache
+│       └── keys               List keys
+│
+├── Kubernetes (nself k8s) - NEW v0.4.7
+│   ├── init                    Initialize K8s config
+│   ├── convert                 Compose to manifests
+│   │   ├── --output <dir>     Custom output
+│   │   └── --namespace <ns>   Custom namespace
+│   ├── apply                   Apply manifests
+│   │   └── --dry-run          Preview changes
+│   ├── deploy                  Full deployment
+│   │   └── --env <env>        Environment
+│   ├── status                  Deployment status
+│   ├── logs <service>          Pod logs
+│   │   └── -f                 Follow logs
+│   ├── scale <svc> <n>         Scale deployment
+│   ├── rollback <service>      Rollback deployment
+│   ├── delete                  Delete deployment
+│   ├── cluster                 Cluster management
+│   │   ├── list               List clusters
+│   │   ├── connect <name>     Connect to cluster
+│   │   └── info               Cluster info
+│   └── namespace               Namespace management
+│       ├── list               List namespaces
+│       ├── create <name>      Create namespace
+│       ├── delete <name>      Delete namespace
+│       └── switch <name>      Switch namespace
+│
+├── Helm Charts (nself helm) - NEW v0.4.7
+│   ├── init                    Initialize chart
+│   │   └── --from-compose     From docker-compose
+│   ├── generate                Generate/update chart
+│   ├── install                 Install to cluster
+│   │   └── --env <env>        With env values
+│   ├── upgrade                 Upgrade release
+│   ├── rollback                Rollback release
+│   ├── uninstall               Remove release
+│   ├── list                    List releases
+│   ├── status                  Release status
+│   ├── values                  Show/edit values
+│   ├── template                Render locally
+│   ├── package                 Package chart
+│   └── repo                    Repository mgmt
+│       ├── add <name> <url>   Add repository
+│       ├── remove <name>      Remove repository
+│       ├── update             Update repos
+│       └── list               List repos
+│
+├── Sync (nself sync) - Enhanced v0.4.7
+│   ├── db <env>                Sync database
+│   ├── files <env>             Sync files
+│   ├── config <env>            Sync configuration
+│   ├── full <env>              Full sync
+│   ├── auto                    Auto-sync (NEW)
+│   │   ├── --setup            Configure service
+│   │   └── --stop             Stop auto-sync
+│   ├── watch                   Watch mode (NEW)
+│   │   ├── --path <dir>       Watch specific path
+│   │   └── --interval <s>     Polling interval
+│   ├── status                  Sync status
+│   └── history                 Sync history
 │
 ├── Performance (v0.4.6)
 │   ├── perf                    Performance profiling
@@ -150,50 +274,10 @@ nself
 │       ├── import <file>      Import config
 │       └── reset              Reset to defaults
 │
-├── Infrastructure
-│   ├── servers                 Server management (v0.4.6)
-│   │   ├── list               List servers
-│   │   ├── add <name>         Add server
-│   │   ├── remove <name>      Remove server
-│   │   ├── status [name]      Server status
-│   │   ├── ssh <name>         SSH to server
-│   │   ├── logs <name>        Server logs
-│   │   ├── update <name>      Update config
-│   │   ├── reboot <name>      Reboot server
-│   │   └── info <name>        Detailed info
-│   ├── providers               Cloud providers
-│   │   ├── (default)          List providers
-│   │   ├── init <provider>    Configure provider
-│   │   ├── status             Provider status
-│   │   ├── costs              Cost comparison
-│   │   └── remove <provider>  Remove provider
-│   ├── provision               Provision infra
-│   │   ├── <provider>         Provision on provider
-│   │   ├── --estimate         Show cost only
-│   │   ├── --dry-run          Preview resources
-│   │   └── export terraform   Export as Terraform
-│   └── sync                    Data sync
-│       ├── pull <env>         Pull from env
-│       ├── push <env>         Push to env
-│       ├── files              File sync
-│       └── config             Config sync
-│
-├── Services
+├── Utility
 │   ├── ssl                     SSL certificates
 │   ├── trust                   Trust local certs
 │   ├── admin                   Admin UI
-│   │   ├── enable             Enable admin
-│   │   ├── disable            Disable admin
-│   │   ├── open               Open in browser
-│   │   └── password           Set password
-│   ├── email                   Email service
-│   ├── search                  Search service
-│   ├── functions               Serverless functions
-│   ├── mlflow                  ML tracking
-│   ├── metrics                 Monitoring stack
-│   └── monitor                 Access dashboards
-│
-├── Utility
 │   ├── ci                      CI/CD generation
 │   │   ├── init <platform>    Generate workflow
 │   │   ├── validate           Validate config
@@ -209,10 +293,16 @@ nself
 │   │   └── --json             JSON output
 │   └── help [command]          Show help
 │
-└── Legacy/Deprecated
+└── Legacy (backward compatible)
+    ├── providers               → nself cloud provider
+    ├── provision               → nself cloud server create
+    ├── servers                 → nself cloud server
+    ├── email                   → nself service email
+    ├── search                  → nself service search
+    ├── functions               → nself service functions
+    ├── mlflow                  → nself service mlflow
     ├── staging                 → nself deploy staging
-    ├── prod                    → nself deploy prod
-    └── rollback                → nself deploy rollback
+    └── prod                    → nself deploy production
 ```
 
 ---
@@ -244,9 +334,36 @@ nself db types                  # Generate types
 ```bash
 nself deploy check              # Pre-deploy validation
 nself deploy staging            # Deploy to staging
-nself deploy prod --dry-run     # Preview production
-nself deploy prod               # Deploy to production
+nself deploy production         # Deploy to production
+nself deploy canary             # Start canary deployment
+nself deploy blue-green         # Blue-green deployment
 nself deploy rollback           # Rollback if needed
+```
+
+### Kubernetes
+
+```bash
+nself k8s convert               # Generate K8s manifests
+nself k8s deploy                # Deploy to cluster
+nself helm install              # Install Helm chart
+nself helm upgrade              # Upgrade release
+```
+
+### Cloud Infrastructure
+
+```bash
+nself cloud provider list       # List 26 providers
+nself cloud server create       # Provision server
+nself cloud cost compare        # Compare provider costs
+```
+
+### Service Management
+
+```bash
+nself service list              # List optional services
+nself service enable redis      # Enable Redis
+nself service email test        # Test email
+nself service functions deploy  # Deploy functions
 ```
 
 ### Performance
@@ -255,17 +372,7 @@ nself deploy rollback           # Rollback if needed
 nself perf profile              # System profile
 nself perf slow-queries         # Find slow queries
 nself bench run api             # Benchmark API
-nself bench baseline            # Establish baseline
 nself scale postgres --cpu 2    # Scale service
-```
-
-### Configuration
-
-```bash
-nself config show               # View config
-nself config validate           # Validate config
-nself config diff local staging # Compare envs
-nself env create prod           # Create environment
 ```
 
 ---
@@ -277,14 +384,17 @@ nself env create prod           # Create environment
 | **Core** | 7 | Project lifecycle |
 | **Status** | 6 | Monitoring and debugging |
 | **Database** | 10 | Database management |
-| **Deployment** | 8 | Environment and deployment |
+| **Deployment** | 12 | Environment and deployment (enhanced v0.4.7) |
+| **Cloud** | 4 | Infrastructure management (NEW v0.4.7) |
+| **Service** | 8 | Optional service management (NEW v0.4.7) |
+| **Kubernetes** | 11 | K8s operations (NEW v0.4.7) |
+| **Helm** | 12 | Helm chart management (NEW v0.4.7) |
+| **Sync** | 8 | Data sync (enhanced v0.4.7) |
 | **Performance** | 4 | Profiling and scaling (v0.4.6) |
 | **Operations** | 3 | Config, frontend, history (v0.4.6) |
-| **Infrastructure** | 4 | Servers, providers, sync |
-| **Services** | 8 | Service-specific operations |
-| **Utility** | 5 | CI, completions, updates |
+| **Utility** | 7 | CI, completions, updates |
 
-**Total: 55+ commands and subcommands**
+**Total: 90+ commands and subcommands**
 
 ---
 
@@ -310,6 +420,7 @@ All commands support these options:
 | `NSELF_LOG_LEVEL` | Log verbosity | `info` |
 | `NSELF_AUTO_FIX` | Auto-fix issues | `false` |
 | `NSELF_SKIP_HOOKS` | Skip git hooks | `false` |
+| `NSELF_DEFAULT_PROVIDER` | Default cloud provider | - |
 
 ---
 
@@ -344,14 +455,14 @@ Each command has detailed documentation:
 ### Deployment
 - [deploy](DEPLOY.md) | [env](ENV.md) | [sync](SYNC.md)
 
+### Cloud & Kubernetes (v0.4.7)
+- [cloud](CLOUD.md) | [k8s](K8S.md) | [helm](HELM.md) | [service](SERVICE.md)
+
 ### Performance (v0.4.6)
 - [perf](PERF.md) | [bench](BENCH.md) | [scale](SCALE.md) | [migrate](MIGRATE.md)
 
 ### Operations (v0.4.6)
 - [health](HEALTH.md) | [frontend](FRONTEND.md) | [history](HISTORY.md) | [config](CONFIG.md)
-
-### Infrastructure
-- [servers](SERVERS.md) | [providers](PROVIDERS.md) | [provision](PROVISION.md)
 
 ---
 
@@ -359,6 +470,7 @@ Each command has detailed documentation:
 
 | Version | Commands Added |
 |---------|----------------|
+| **0.4.7** | cloud, service, k8s, helm, deploy preview/canary/blue-green, sync auto/watch |
 | **0.4.6** | perf, bench, scale, migrate, health, frontend, history, config, servers |
 | **0.4.5** | providers, provision, sync, ci, completion |
 | **0.4.4** | db schema, db mock, db types |
@@ -366,4 +478,4 @@ Each command has detailed documentation:
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.6*
+*Last Updated: January 23, 2026 | Version: 0.4.7*

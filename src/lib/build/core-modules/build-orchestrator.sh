@@ -254,7 +254,7 @@ build_all_components() {
     generate_docker_compose
   else
     # Fallback to compose-generate script
-    local compose_script="${NSELF_ROOT:-/Users/admin/Sites/nself}/src/services/docker/compose-generate.sh"
+    local compose_script="${NSELF_ROOT:-/usr/local/lib/nself}/src/services/docker/compose-generate.sh"
     if [[ -f "$compose_script" ]]; then
       bash "$compose_script"
     fi
@@ -308,7 +308,7 @@ generate_ssl_certificates() {
 # Copy custom service templates
 copy_custom_service_templates() {
   local force="${1:-false}"
-  local nself_root="${NSELF_ROOT:-/Users/admin/Sites/nself}"
+  local nself_root="${NSELF_ROOT:-/usr/local/lib/nself}"
 
   for i in {1..20}; do
     local cs_name_var="CS_${i}_NAME"

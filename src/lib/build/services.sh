@@ -206,7 +206,7 @@ generate_custom_service() {
       fi
 
       # Find the template
-      local template_root="${NSELF_ROOT:-/Users/admin/Sites/nself}"
+      local template_root="${NSELF_ROOT:-/usr/local/lib/nself}"
       local template_dir="$template_root/src/templates/services"
       local template_found=false
 
@@ -258,7 +258,7 @@ generate_custom_service_from_template() {
   fi
 
   # Find the template
-  local template_root="${NSELF_ROOT:-/Users/admin/Sites/nself}"
+  local template_root="${NSELF_ROOT:-/usr/local/lib/nself}"
   local template_dir="$template_root/src/templates/services"
   local template_found=false
 

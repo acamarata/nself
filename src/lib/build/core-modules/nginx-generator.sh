@@ -316,8 +316,21 @@ generate_optional_service_routes() {
   # Admin dashboard
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
     local admin_route="${ADMIN_ROUTE:-admin}"
+    local admin_upstream="nself-admin:3021"
+
+    # Admin-dev mode: route to local dev server instead of Docker container
+    if [[ "${NSELF_ADMIN_DEV:-false}" == "true" ]]; then
+      local dev_port="${NSELF_ADMIN_DEV_PORT:-3000}"
+      # Use host.docker.internal for Docker Desktop, host-gateway for Linux
+      if is_linux_server; then
+        admin_upstream="172.17.0.1:${dev_port}"
+      else
+        admin_upstream="host.docker.internal:${dev_port}"
+      fi
+    fi
 
     cat > nginx/sites/admin.conf <<EOF
+# nself Admin Dashboard${NSELF_ADMIN_DEV:+ (DEV MODE - routing to local server)}
 server {
     listen 443 ssl;
     http2 on;
@@ -327,12 +340,14 @@ server {
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
-        proxy_pass http://nself-admin:3021;
+        proxy_pass http://${admin_upstream};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 EOF

@@ -21,12 +21,9 @@ generate_tempo_service() {
       - "14268:14268"  # Jaeger ingest
     networks:
       - \${DOCKER_NETWORK}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3200/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
+    # Note: Tempo uses distroless image (no shell/curl/wget)
+    # Health monitoring via Prometheus scraping /ready endpoint instead
+    # Container recovery handled by restart: unless-stopped
 EOF
 }
 

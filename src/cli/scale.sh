@@ -49,27 +49,34 @@ show_scale_help() {
 # Get current resource usage
 get_resource_usage() {
   local service="$1"
-  
-  if docker compose ps --format json "$service" 2>/dev/null | grep -q "$service"; then
-    local container_name
-    container_name=$(docker compose ps --format json "$service" 2>/dev/null | grep -o '"Name":"[^"]*"' | cut -d'"' -f4 | head -1)
-    
-    if [[ -n "$container_name" ]]; then
-      # Get CPU and memory stats
-      local stats
-      stats=$(docker stats --no-stream --format "json" "$container_name" 2>/dev/null || echo "{}")
-      
-      if [[ "$stats" != "{}" ]]; then
-        local cpu_percent=$(echo "$stats" | grep -o '"CPUPerc":"[^"]*"' | cut -d'"' -f4 | tr -d '%')
-        local mem_usage=$(echo "$stats" | grep -o '"MemUsage":"[^"]*"' | cut -d'"' -f4)
-        local mem_limit=$(echo "$stats" | grep -o '"MemLimit":"[^"]*"' | cut -d'"' -f4)
-        
-        echo "CPU: ${cpu_percent}%, Memory: ${mem_usage} / ${mem_limit}"
-      else
-        echo "No stats available"
-      fi
+
+  # Load environment for PROJECT_NAME
+  [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+  [[ -f ".env.dev" ]] && source ".env.dev" 2>/dev/null || true
+
+  local project_name="${PROJECT_NAME:-nself}"
+
+  # Try to find container by project name pattern (more reliable than docker compose ps --format json)
+  local container_name
+  container_name=$(docker ps --filter "name=${project_name}_${service}" --format "{{.Names}}" 2>/dev/null | head -1)
+
+  # Also try with hyphen instead of underscore
+  if [[ -z "$container_name" ]]; then
+    container_name=$(docker ps --filter "name=${project_name}-${service}" --format "{{.Names}}" 2>/dev/null | head -1)
+  fi
+
+  if [[ -n "$container_name" ]]; then
+    # Get CPU and memory stats
+    local stats
+    stats=$(docker stats --no-stream --format "{{.CPUPerc}}\t{{.MemUsage}}" "$container_name" 2>/dev/null || echo "")
+
+    if [[ -n "$stats" ]]; then
+      local cpu_percent=$(echo "$stats" | cut -f1)
+      local mem_usage=$(echo "$stats" | cut -f2)
+
+      echo "CPU: ${cpu_percent}, Memory: ${mem_usage}"
     else
-      echo "Container not found"
+      echo "No stats available"
     fi
   else
     echo "Service not running"

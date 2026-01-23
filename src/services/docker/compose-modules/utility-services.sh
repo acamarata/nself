@@ -39,6 +39,12 @@ generate_nself_admin_service() {
   local enabled="${NSELF_ADMIN_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
+  # Admin-dev mode: skip Docker container, use local dev server instead
+  # Nginx will route admin.domain to host.docker.internal:NSELF_ADMIN_DEV_PORT
+  if [[ "${NSELF_ADMIN_DEV:-false}" == "true" ]]; then
+    return 0
+  fi
+
   # Check if using local development paths
   local admin_local_path="${NSELF_ADMIN_LOCAL_PATH:-}"
   local nself_cli_local_path="${NSELF_CLI_LOCAL_PATH:-}"

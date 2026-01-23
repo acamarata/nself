@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # email-providers.sh - Email provider configuration and management
+# Supports both SMTP and API-based email delivery
 
 set -e
 
@@ -20,6 +21,560 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
   source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 fi
+
+# ============================================================
+# API Email Provider Support (Added in v0.4.7)
+# ============================================================
+# API-based email providers offer advantages over SMTP:
+# - Better deliverability (dedicated IP pools)
+# - Webhooks for delivery tracking
+# - Built-in analytics and reporting
+# - No port 25/587 blocking issues
+# - Easier firewall configuration (HTTPS only)
+# ============================================================
+
+# Supported API providers (6 core providers)
+API_PROVIDERS="elastic-email sendgrid aws-ses resend postmark mailgun"
+
+# Function to get API provider template
+get_api_provider_template() {
+  local provider="$1"
+
+  case "$provider" in
+  elastic-email|elastic)
+    cat <<'EOF'
+# Elastic Email API Configuration
+# Docs: https://elasticemail.com/developers/api-documentation
+AUTH_EMAIL_PROVIDER=elastic-email
+AUTH_EMAIL_API_KEY=YOUR_ELASTIC_EMAIL_API_KEY
+AUTH_EMAIL_SENDER=noreply@yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+
+# Get your API key from:
+# https://elasticemail.com/account#/settings/new/manage-api
+#
+# Pricing: Pay-as-you-go, $0.09 per 1000 emails
+# Free tier: 100 emails/day
+EOF
+    ;;
+
+  sendgrid)
+    cat <<'EOF'
+# SendGrid API Configuration
+# Docs: https://docs.sendgrid.com/api-reference/mail-send
+AUTH_EMAIL_PROVIDER=sendgrid
+AUTH_EMAIL_API_KEY=SG.xxxxxxxxxxxxxxxxxxxx
+AUTH_EMAIL_SENDER=noreply@yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+
+# Get your API key from:
+# https://app.sendgrid.com/settings/api_keys
+# Create key with "Mail Send" permission
+#
+# Pricing: Free tier includes 100 emails/day
+# Paid: Starting at $19.95/mo for 50k emails
+EOF
+    ;;
+
+  aws-ses)
+    cat <<'EOF'
+# AWS SES API Configuration
+# Docs: https://docs.aws.amazon.com/ses/latest/APIReference/
+AUTH_EMAIL_PROVIDER=aws-ses
+AUTH_EMAIL_API_KEY=YOUR_AWS_ACCESS_KEY_ID
+AUTH_EMAIL_API_SECRET=YOUR_AWS_SECRET_ACCESS_KEY
+AUTH_EMAIL_REGION=us-east-1
+AUTH_EMAIL_SENDER=noreply@yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+
+# Setup steps:
+# 1. Verify your domain in SES console
+# 2. Move out of sandbox mode for production
+# 3. Create IAM user with ses:SendEmail permission
+#
+# Pricing: $0.10 per 1000 emails (very cost-effective)
+# Free: 62,000 emails/mo if sent from EC2
+EOF
+    ;;
+
+  resend)
+    cat <<'EOF'
+# Resend API Configuration
+# Docs: https://resend.com/docs/api-reference/emails/send-email
+AUTH_EMAIL_PROVIDER=resend
+AUTH_EMAIL_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+AUTH_EMAIL_SENDER=noreply@yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+
+# Get your API key from:
+# https://resend.com/api-keys
+#
+# Pricing: Free tier includes 3,000 emails/mo
+# Paid: Starting at $20/mo for 50k emails
+# Note: Modern, developer-first email service
+EOF
+    ;;
+
+  postmark)
+    cat <<'EOF'
+# Postmark API Configuration
+# Docs: https://postmarkapp.com/developer/api/email-api
+AUTH_EMAIL_PROVIDER=postmark
+AUTH_EMAIL_API_KEY=YOUR_POSTMARK_SERVER_TOKEN
+AUTH_EMAIL_SENDER=noreply@yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+AUTH_EMAIL_MESSAGE_STREAM=outbound
+
+# Get your Server API Token from:
+# https://account.postmarkapp.com/servers
+#
+# Pricing: $15/mo for 10k emails
+# Focus: Transactional emails with high deliverability
+EOF
+    ;;
+
+  mailgun)
+    cat <<'EOF'
+# Mailgun API Configuration
+# Docs: https://documentation.mailgun.com/en/latest/api-sending-messages.html
+AUTH_EMAIL_PROVIDER=mailgun
+AUTH_EMAIL_API_KEY=YOUR_MAILGUN_API_KEY
+AUTH_EMAIL_DOMAIN=mg.yourdomain.com
+AUTH_EMAIL_SENDER=noreply@mg.yourdomain.com
+
+# Optional settings
+AUTH_EMAIL_SENDER_NAME=My App
+AUTH_EMAIL_REPLY_TO=support@yourdomain.com
+AUTH_EMAIL_REGION=us  # or 'eu' for EU region
+
+# Get your API key from:
+# https://app.mailgun.com/app/account/security/api_keys
+#
+# Pricing: Pay-as-you-go, first 1000 emails free
+# Trial: 5,000 emails for 3 months
+EOF
+    ;;
+
+  *)
+    return 1
+    ;;
+  esac
+}
+
+# Detect if using API-based email
+detect_api_provider() {
+  local provider="${AUTH_EMAIL_PROVIDER:-}"
+
+  if [[ -n "$provider" ]]; then
+    echo "$provider"
+  else
+    echo "not-configured"
+  fi
+}
+
+# API pre-flight connection check
+api_preflight_check() {
+  local provider="${AUTH_EMAIL_PROVIDER:-}"
+  local api_key="${AUTH_EMAIL_API_KEY:-}"
+
+  show_command_header "nself email check --api" "API Connection Pre-flight Check"
+  echo
+
+  if [[ -z "$provider" ]]; then
+    log_error "API email provider not configured"
+    log_info "Set AUTH_EMAIL_PROVIDER in your .env"
+    log_info "Run: nself email configure --api <provider>"
+    return 1
+  fi
+
+  if [[ -z "$api_key" ]]; then
+    log_error "API key not configured"
+    log_info "Set AUTH_EMAIL_API_KEY in your .env"
+    return 1
+  fi
+
+  printf "Provider: %s\n" "$provider"
+  echo
+  log_info "Checking API connection..."
+  echo
+
+  local result=0
+
+  case "$provider" in
+  elastic-email|elastic)
+    printf "  API endpoint... "
+    local response
+    response=$(curl -s -o /dev/null -w "%{http_code}" \
+      "https://api.elasticemail.com/v2/account/load?apikey=$api_key" 2>/dev/null)
+    if [[ "$response" == "200" ]]; then
+      printf "\033[0;32m✓\033[0m (authenticated)\n"
+    else
+      printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+      result=1
+    fi
+    ;;
+
+  sendgrid)
+    printf "  API endpoint... "
+    local response
+    response=$(curl -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: Bearer $api_key" \
+      "https://api.sendgrid.com/v3/user/profile" 2>/dev/null)
+    if [[ "$response" == "200" ]]; then
+      printf "\033[0;32m✓\033[0m (authenticated)\n"
+    else
+      printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+      result=1
+    fi
+    ;;
+
+  aws-ses)
+    printf "  API endpoint... "
+    local region="${AUTH_EMAIL_REGION:-us-east-1}"
+    # AWS SES requires signed requests, just check endpoint reachability
+    local response
+    response=$(curl -s -o /dev/null -w "%{http_code}" \
+      "https://email.$region.amazonaws.com/" 2>/dev/null)
+    if [[ "$response" == "403" ]] || [[ "$response" == "400" ]]; then
+      # 403/400 means endpoint is reachable (auth required)
+      printf "\033[0;32m✓\033[0m (endpoint reachable)\n"
+      printf "  Credentials... "
+      if [[ -n "${AUTH_EMAIL_API_SECRET:-}" ]]; then
+        printf "\033[0;32m✓\033[0m (configured)\n"
+      else
+        printf "\033[0;31m✗\033[0m (AUTH_EMAIL_API_SECRET not set)\n"
+        result=1
+      fi
+    else
+      printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+      result=1
+    fi
+    ;;
+
+  resend)
+    printf "  API endpoint... "
+    local response
+    response=$(curl -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: Bearer $api_key" \
+      "https://api.resend.com/domains" 2>/dev/null)
+    if [[ "$response" == "200" ]]; then
+      printf "\033[0;32m✓\033[0m (authenticated)\n"
+    else
+      printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+      result=1
+    fi
+    ;;
+
+  postmark)
+    printf "  API endpoint... "
+    local response
+    response=$(curl -s -o /dev/null -w "%{http_code}" \
+      -H "X-Postmark-Server-Token: $api_key" \
+      "https://api.postmarkapp.com/server" 2>/dev/null)
+    if [[ "$response" == "200" ]]; then
+      printf "\033[0;32m✓\033[0m (authenticated)\n"
+    else
+      printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+      result=1
+    fi
+    ;;
+
+  mailgun)
+    printf "  API endpoint... "
+    local domain="${AUTH_EMAIL_DOMAIN:-}"
+    local region="${AUTH_EMAIL_REGION:-us}"
+    local api_base="https://api.mailgun.net"
+    [[ "$region" == "eu" ]] && api_base="https://api.eu.mailgun.net"
+
+    if [[ -z "$domain" ]]; then
+      printf "\033[0;31m✗\033[0m (AUTH_EMAIL_DOMAIN not set)\n"
+      result=1
+    else
+      local response
+      response=$(curl -s -o /dev/null -w "%{http_code}" \
+        -u "api:$api_key" \
+        "$api_base/v3/$domain" 2>/dev/null)
+      if [[ "$response" == "200" ]]; then
+        printf "\033[0;32m✓\033[0m (authenticated)\n"
+      else
+        printf "\033[0;31m✗\033[0m (HTTP $response)\n"
+        result=1
+      fi
+    fi
+    ;;
+
+  *)
+    log_error "Unknown API provider: $provider"
+    result=1
+    ;;
+  esac
+
+  echo
+  if [[ $result -eq 0 ]]; then
+    log_success "API connection check passed"
+    log_info "Test email sending: nself email test --api <recipient>"
+  else
+    log_error "API connection check failed"
+    log_info "Verify your API key and configuration"
+  fi
+  echo
+
+  return $result
+}
+
+# Send email via API
+send_api_email() {
+  local recipient="$1"
+  local subject="${2:-nself Email Test}"
+  local body="${3:-This is a test email from nself to verify API configuration.}"
+
+  local provider="${AUTH_EMAIL_PROVIDER:-}"
+  local api_key="${AUTH_EMAIL_API_KEY:-}"
+  local sender="${AUTH_EMAIL_SENDER:-noreply@${BASE_DOMAIN:-localhost}}"
+  local sender_name="${AUTH_EMAIL_SENDER_NAME:-nself}"
+
+  if [[ -z "$provider" ]] || [[ -z "$api_key" ]]; then
+    log_error "API email not configured"
+    return 1
+  fi
+
+  log_info "Sending via $provider API..."
+
+  local result=0
+  local response
+
+  case "$provider" in
+  elastic-email|elastic)
+    response=$(curl -s -X POST "https://api.elasticemail.com/v2/email/send" \
+      -d "apikey=$api_key" \
+      -d "from=$sender" \
+      -d "fromName=$sender_name" \
+      -d "to=$recipient" \
+      -d "subject=$subject" \
+      -d "bodyText=$body" 2>/dev/null)
+    if echo "$response" | grep -q '"success":true'; then
+      log_success "Email sent successfully via Elastic Email"
+    else
+      log_error "Failed to send: $response"
+      result=1
+    fi
+    ;;
+
+  sendgrid)
+    response=$(curl -s -X POST "https://api.sendgrid.com/v3/mail/send" \
+      -H "Authorization: Bearer $api_key" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"personalizations\": [{\"to\": [{\"email\": \"$recipient\"}]}],
+        \"from\": {\"email\": \"$sender\", \"name\": \"$sender_name\"},
+        \"subject\": \"$subject\",
+        \"content\": [{\"type\": \"text/plain\", \"value\": \"$body\"}]
+      }" -w "\n%{http_code}" 2>/dev/null)
+    local http_code
+    http_code=$(echo "$response" | tail -1)
+    if [[ "$http_code" == "202" ]]; then
+      log_success "Email sent successfully via SendGrid"
+    else
+      log_error "Failed to send (HTTP $http_code)"
+      result=1
+    fi
+    ;;
+
+  aws-ses)
+    local region="${AUTH_EMAIL_REGION:-us-east-1}"
+    local secret="${AUTH_EMAIL_API_SECRET:-}"
+    if [[ -z "$secret" ]]; then
+      log_error "AUTH_EMAIL_API_SECRET required for AWS SES"
+      return 1
+    fi
+    # AWS SES requires v4 signature - use aws cli if available
+    if command -v aws >/dev/null 2>&1; then
+      AWS_ACCESS_KEY_ID="$api_key" \
+      AWS_SECRET_ACCESS_KEY="$secret" \
+      aws ses send-email \
+        --region "$region" \
+        --from "$sender" \
+        --to "$recipient" \
+        --subject "$subject" \
+        --text "$body" 2>/dev/null && {
+        log_success "Email sent successfully via AWS SES"
+      } || {
+        log_error "Failed to send via AWS SES"
+        result=1
+      }
+    else
+      log_error "AWS CLI required for SES API. Install: brew install awscli"
+      log_info "Alternative: Use SMTP mode with SES SMTP credentials"
+      result=1
+    fi
+    ;;
+
+  resend)
+    response=$(curl -s -X POST "https://api.resend.com/emails" \
+      -H "Authorization: Bearer $api_key" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"from\": \"$sender_name <$sender>\",
+        \"to\": [\"$recipient\"],
+        \"subject\": \"$subject\",
+        \"text\": \"$body\"
+      }" 2>/dev/null)
+    if echo "$response" | grep -q '"id":'; then
+      log_success "Email sent successfully via Resend"
+    else
+      log_error "Failed to send: $response"
+      result=1
+    fi
+    ;;
+
+  postmark)
+    local stream="${AUTH_EMAIL_MESSAGE_STREAM:-outbound}"
+    response=$(curl -s -X POST "https://api.postmarkapp.com/email" \
+      -H "X-Postmark-Server-Token: $api_key" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"From\": \"$sender\",
+        \"To\": \"$recipient\",
+        \"Subject\": \"$subject\",
+        \"TextBody\": \"$body\",
+        \"MessageStream\": \"$stream\"
+      }" 2>/dev/null)
+    if echo "$response" | grep -q '"MessageID":'; then
+      log_success "Email sent successfully via Postmark"
+    else
+      log_error "Failed to send: $response"
+      result=1
+    fi
+    ;;
+
+  mailgun)
+    local domain="${AUTH_EMAIL_DOMAIN:-}"
+    local region="${AUTH_EMAIL_REGION:-us}"
+    local api_base="https://api.mailgun.net"
+    [[ "$region" == "eu" ]] && api_base="https://api.eu.mailgun.net"
+
+    if [[ -z "$domain" ]]; then
+      log_error "AUTH_EMAIL_DOMAIN required for Mailgun"
+      return 1
+    fi
+
+    response=$(curl -s -X POST "$api_base/v3/$domain/messages" \
+      -u "api:$api_key" \
+      -F "from=$sender_name <$sender>" \
+      -F "to=$recipient" \
+      -F "subject=$subject" \
+      -F "text=$body" 2>/dev/null)
+    if echo "$response" | grep -q '"id":'; then
+      log_success "Email sent successfully via Mailgun"
+    else
+      log_error "Failed to send: $response"
+      result=1
+    fi
+    ;;
+
+  *)
+    log_error "Unknown API provider: $provider"
+    result=1
+    ;;
+  esac
+
+  return $result
+}
+
+# Configure API provider
+configure_api_provider() {
+  local provider="$1"
+  local template
+
+  if [[ -z "$provider" ]]; then
+    show_command_header "nself email configure --api" "Configure API email provider"
+    echo
+    log_error "No provider specified"
+    echo
+    echo "Usage: nself email configure --api <provider>"
+    echo
+    printf "${COLOR_CYAN}➞ Supported API Providers${COLOR_RESET}\n"
+    echo "  • elastic-email  - Elastic Email (budget-friendly)"
+    echo "  • sendgrid       - SendGrid (popular, reliable)"
+    echo "  • aws-ses        - AWS SES (cost-effective at scale)"
+    echo "  • resend         - Resend (modern, developer-first)"
+    echo "  • postmark       - Postmark (transactional focus)"
+    echo "  • mailgun        - Mailgun (developer-friendly)"
+    echo
+    printf "${COLOR_CYAN}➞ Why API over SMTP?${COLOR_RESET}\n"
+    echo "  • Better deliverability (dedicated IP pools)"
+    echo "  • Webhooks for delivery tracking"
+    echo "  • Built-in analytics and reporting"
+    echo "  • No port blocking issues (HTTPS only)"
+    echo "  • Easier firewall configuration"
+    echo
+    return 1
+  fi
+
+  template=$(get_api_provider_template "$provider") || {
+    show_command_header "nself email configure --api" "Configure API email provider"
+    echo
+    log_error "Unknown API provider: $provider"
+    echo
+    echo "Supported providers: $API_PROVIDERS"
+    return 1
+  }
+
+  show_command_header "nself email configure --api" "Configure $provider API"
+  echo
+
+  # Show the template
+  echo "Add these settings to your .env.local file:"
+  echo ""
+  echo "$template"
+  echo ""
+
+  # Ask if user wants to append to .env.local
+  printf "Would you like to append these settings to .env.local? [y/N] "
+  read -r REPLY
+  REPLY=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
+  if [[ "$REPLY" == "y" ]] || [[ "$REPLY" == "yes" ]]; then
+    # Backup current .env.local if exists
+    if [[ -f ".env.local" ]]; then
+      cp .env.local .env.local.backup
+    fi
+
+    # Append configuration
+    {
+      echo ""
+      echo "# ============================================"
+      echo "# Email API Configuration - $provider"
+      echo "# Added on $(date)"
+      echo "# ============================================"
+      echo "$template"
+    } >> .env.local
+
+    log_success "Configuration added to .env.local"
+    [[ -f ".env.local.backup" ]] && log_info "Backup saved: .env.local.backup"
+    echo
+    echo "Next steps:"
+    echo "  1. Update placeholder values with actual credentials"
+    echo "  2. Run: nself build"
+    echo "  3. Run: nself email check --api"
+    echo "  4. Run: nself email test --api your@email.com"
+  fi
+}
+
 # Helper functions
 
 # Function to get provider template
@@ -276,27 +831,35 @@ detect_provider() {
 list_providers() {
   show_command_header "nself email list" "Available email providers"
   echo
-  printf "${COLOR_CYAN}➞ Production Providers${COLOR_RESET} ${COLOR_DIM}(API-based)${COLOR_RESET}\n"
-  echo "  ├── sendgrid      - SendGrid (Popular, reliable)"
-  echo "  ├── aws-ses       - Amazon SES (Cost-effective, scalable)"
-  echo "  ├── mailgun       - Mailgun (Developer-friendly)"
-  echo "  ├── postmark      - Postmark (Transactional focus)"
-  echo "  ├── resend        - Resend (Modern, developer-first)"
+  printf "${COLOR_CYAN}➞ API Providers${COLOR_RESET} ${COLOR_DIM}(Recommended - use --api flag)${COLOR_RESET}\n"
+  echo "  ├── sendgrid      - SendGrid (Popular, reliable)        [API+SMTP]"
+  echo "  ├── aws-ses       - Amazon SES (Cost-effective)         [API+SMTP]"
+  echo "  ├── mailgun       - Mailgun (Developer-friendly)        [API+SMTP]"
+  echo "  ├── postmark      - Postmark (Transactional focus)      [API+SMTP]"
+  echo "  ├── resend        - Resend (Modern, developer-first)    [API+SMTP]"
+  echo "  └── elastic-email - Elastic Email (Budget-friendly)     [API+SMTP]"
+  echo
+  printf "  ${COLOR_DIM}Configure with: nself email configure --api <provider>${COLOR_RESET}\n"
+  echo
+  printf "${COLOR_CYAN}➞ SMTP-Only Providers${COLOR_RESET}\n"
   echo "  ├── brevo         - Brevo/Sendinblue (All-in-one)"
   echo "  ├── sparkpost     - SparkPost (High deliverability)"
   echo "  ├── mailchimp     - Mailchimp Transactional (Mandrill)"
-  echo "  ├── elastic       - Elastic Email (Budget-friendly)"
   echo "  ├── smtp2go       - SMTP2GO (Global infrastructure)"
   echo "  └── mailersend    - MailerSend (Email automation)"
   echo
-  printf "${COLOR_CYAN}➞ Self-hosted/SMTP${COLOR_RESET}\n"
+  printf "${COLOR_CYAN}➞ Self-hosted/Personal SMTP${COLOR_RESET}\n"
   echo "  ├── postfix       - Postfix (Self-hosted mail server)"
   echo "  ├── gmail         - Gmail/Google Workspace"
   echo "  ├── outlook       - Outlook/Office 365"
   echo "  └── custom        - Custom SMTP server"
   echo
   printf "${COLOR_CYAN}➞ Development${COLOR_RESET}\n"
-  echo "  └── development   - MailPit (local testing)"
+  echo "  └── development   - MailPit (local testing, zero config)"
+  echo
+  printf "${COLOR_CYAN}➞ API vs SMTP${COLOR_RESET}\n"
+  echo "  API mode offers: better deliverability, webhooks, analytics,"
+  echo "  no port blocking, and easier firewall configuration."
   echo
 }
 
@@ -793,6 +1356,17 @@ email_main() {
     load_env_with_priority || true
   fi
 
+  # Check for --api flag
+  local use_api=false
+  local args=()
+  for arg in "$@"; do
+    if [[ "$arg" == "--api" ]]; then
+      use_api=true
+    else
+      args+=("$arg")
+    fi
+  done
+
   case "$command" in
   list)
     list_providers
@@ -801,16 +1375,42 @@ email_main() {
     setup_wizard
     ;;
   configure)
-    configure_provider "${1:-}"
+    if [[ "$use_api" == "true" ]]; then
+      configure_api_provider "${args[0]:-}"
+    else
+      configure_provider "${args[0]:-}"
+    fi
     ;;
   validate)
     validate_config
     ;;
   check|preflight)
-    smtp_preflight_check
+    if [[ "$use_api" == "true" ]]; then
+      api_preflight_check
+    else
+      smtp_preflight_check
+    fi
     ;;
   test)
-    test_email "${1:-}"
+    if [[ "$use_api" == "true" ]]; then
+      local recipient="${args[0]:-}"
+      if [[ -z "$recipient" ]]; then
+        show_command_header "nself email test --api" "Send test email via API"
+        echo
+        printf "Enter recipient email address: "
+        read recipient
+      fi
+      if [[ ! "$recipient" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        echo
+        log_error "Invalid email address format"
+        echo
+        return 1
+      fi
+      send_api_email "$recipient" "nself Email Test - $(date)" \
+        "This is a test email from nself to verify your API email configuration."
+    else
+      test_email "${args[0]:-}"
+    fi
     ;;
   docs)
     show_docs "${1:-}"
@@ -845,32 +1445,51 @@ email_main() {
     echo "  • No setup required"
     echo
 
-    printf "${COLOR_CYAN}➞ Production Setup${COLOR_RESET} ${COLOR_DIM}(Quick Setup)${COLOR_RESET}\n"
-    echo "  Run: ${COLOR_BLUE}nself email setup${COLOR_RESET}"
-    echo "  • Interactive wizard guides you"
-    echo "  • Choose from 16+ providers"
-    echo "  • Auto-configures everything"
+    printf "${COLOR_CYAN}➞ Production Setup${COLOR_RESET}\n"
+    echo "  Two options: SMTP or API-based delivery"
+    echo
+    echo "  ${COLOR_BLUE}SMTP Mode${COLOR_RESET} - Traditional email protocol"
+    echo "  ${COLOR_BLUE}nself email setup${COLOR_RESET}"
+    echo
+    echo "  ${COLOR_BLUE}API Mode${COLOR_RESET} - Modern HTTP API (recommended)"
+    echo "  ${COLOR_BLUE}nself email configure --api sendgrid${COLOR_RESET}"
+    echo
+
+    printf "${COLOR_CYAN}➞ Why Use API Mode?${COLOR_RESET}\n"
+    echo "  • Better deliverability (dedicated IP pools)"
+    echo "  • Webhooks for delivery tracking"
+    echo "  • Built-in analytics and reporting"
+    echo "  • No port 25/587 blocking issues"
+    echo "  • Easier firewall configuration (HTTPS only)"
     echo
 
     printf "${COLOR_CYAN}➞ Available Commands${COLOR_RESET}\n"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "setup" "Interactive setup wizard (recommended)"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "list" "See all email providers"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "configure <name>" "Configure specific provider"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "validate" "Check your configuration"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "check" "SMTP connection pre-flight check"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "test [email]" "Send a test email"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "docs [provider]" "Get setup instructions"
-    printf "  ${COLOR_BLUE}%-20s${COLOR_RESET} %s\n" "detect" "Show current provider"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "setup" "Interactive setup wizard (SMTP)"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "list" "See all email providers"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "configure <provider>" "Configure SMTP provider"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "configure --api <name>" "Configure API provider"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "validate" "Check your configuration"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "check" "SMTP connection pre-flight"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "check --api" "API connection pre-flight"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "test [email]" "Send test email (SMTP)"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "test --api [email]" "Send test email (API)"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "docs [provider]" "Get setup instructions"
+    printf "  ${COLOR_BLUE}%-25s${COLOR_RESET} %s\n" "detect" "Show current provider"
+    echo
+
+    printf "${COLOR_CYAN}➞ API Providers (6 supported)${COLOR_RESET}\n"
+    echo "  elastic-email, sendgrid, aws-ses, resend, postmark, mailgun"
     echo
 
     printf "${COLOR_CYAN}➞ Quick Examples${COLOR_RESET}\n"
-    echo "  ${COLOR_DIM}# Start here for production${COLOR_RESET}"
+    echo "  ${COLOR_DIM}# API mode - recommended for production${COLOR_RESET}"
+    echo "  ${COLOR_BLUE}nself email configure --api sendgrid${COLOR_RESET}"
+    echo "  ${COLOR_BLUE}nself email check --api${COLOR_RESET}"
+    echo "  ${COLOR_BLUE}nself email test --api admin@example.com${COLOR_RESET}"
+    echo
+    echo "  ${COLOR_DIM}# SMTP mode - traditional approach${COLOR_RESET}"
     echo "  ${COLOR_BLUE}nself email setup${COLOR_RESET}"
-    echo
-    echo "  ${COLOR_DIM}# Use SendGrid specifically${COLOR_RESET}"
-    echo "  ${COLOR_BLUE}nself email configure sendgrid${COLOR_RESET}"
-    echo
-    echo "  ${COLOR_DIM}# Test your setup${COLOR_RESET}"
+    echo "  ${COLOR_BLUE}nself email check${COLOR_RESET}"
     echo "  ${COLOR_BLUE}nself email test admin@example.com${COLOR_RESET}"
     echo
     ;;

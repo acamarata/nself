@@ -214,7 +214,7 @@ validate_custom_services() {
     fi
 
     # Validate template type exists
-    local template_base="/Users/admin/Sites/nself/src/templates/services"
+    local template_base="${NSELF_TEMPLATES:-${NSELF_ROOT:-/usr/local/lib/nself}/src/templates}/services"
     local template_found=false
 
     for lang_dir in "$template_base"/*; do

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fix npm ci to npm install in all templates
 
-TEMPLATE_DIR="/Users/admin/Sites/nself/src/templates/services"
+TEMPLATE_DIR="${NSELF_TEMPLATES:-${NSELF_ROOT:-/usr/local/lib/nself}/src/templates}/services"
 
 # Find all Dockerfile templates with npm ci
 for file in $(find "$TEMPLATE_DIR" -name "Dockerfile.template" -type f); do

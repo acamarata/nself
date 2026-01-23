@@ -32,18 +32,42 @@ _nself_completions() {
     local cur prev words cword
     _init_completion || return
 
-    # Main commands
-    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync email search functions mlflow metrics monitor"
+    # Main commands (v0.4.7)
+    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync cloud service k8s helm perf bench scale migrate health frontend history config ci completion"
 
     # Subcommands by parent
     local db_commands="migrate seed mock backup restore schema types shell query inspect data optimize reset status help"
     local env_commands="create switch list diff validate export import"
-    local sync_commands="pull push files config init status history"
+    local sync_commands="db files config full auto watch status history"
     local ssl_commands="generate renew bootstrap check trust"
-    local email_commands="test config provider"
-    local search_commands="reindex status config"
-    local functions_commands="deploy list logs invoke"
-    local metrics_commands="profile status export"
+    local deploy_commands="staging production rollback preview canary blue-green"
+
+    # v0.4.7 new command subcommands
+    local cloud_commands="provider server cost deploy"
+    local cloud_provider_commands="list init validate info"
+    local cloud_server_commands="create destroy list status ssh add remove"
+    local cloud_cost_commands="estimate compare"
+    local cloud_deploy_commands="quick full"
+
+    local service_commands="list enable disable status restart logs email search functions mlflow storage cache"
+    local service_email_commands="test inbox config"
+    local service_search_commands="index query stats"
+    local service_functions_commands="deploy invoke logs list"
+    local service_mlflow_commands="ui experiments runs artifacts"
+    local service_storage_commands="buckets upload download presign"
+    local service_cache_commands="stats flush keys"
+
+    local k8s_commands="init convert apply deploy status logs scale rollback delete cluster namespace"
+    local k8s_cluster_commands="list connect info"
+    local k8s_namespace_commands="list create delete switch"
+
+    local helm_commands="init generate install upgrade rollback uninstall list status values template package repo"
+    local helm_repo_commands="add remove update list"
+
+    local perf_commands="profile analyze benchmark report compare"
+    local bench_commands="run http db compare report"
+    local scale_commands="up down auto status config"
+    local health_commands="check dashboard alert history"
 
     case "${prev}" in
         nself)
@@ -66,20 +90,88 @@ _nself_completions() {
             COMPREPLY=($(compgen -W "${ssl_commands}" -- "${cur}"))
             return 0
             ;;
+        deploy)
+            COMPREPLY=($(compgen -W "${deploy_commands}" -- "${cur}"))
+            return 0
+            ;;
+        cloud)
+            COMPREPLY=($(compgen -W "${cloud_commands}" -- "${cur}"))
+            return 0
+            ;;
+        provider)
+            COMPREPLY=($(compgen -W "${cloud_provider_commands}" -- "${cur}"))
+            return 0
+            ;;
+        server)
+            COMPREPLY=($(compgen -W "${cloud_server_commands}" -- "${cur}"))
+            return 0
+            ;;
+        cost)
+            COMPREPLY=($(compgen -W "${cloud_cost_commands}" -- "${cur}"))
+            return 0
+            ;;
+        service)
+            COMPREPLY=($(compgen -W "${service_commands}" -- "${cur}"))
+            return 0
+            ;;
         email)
-            COMPREPLY=($(compgen -W "${email_commands}" -- "${cur}"))
+            COMPREPLY=($(compgen -W "${service_email_commands}" -- "${cur}"))
             return 0
             ;;
         search)
-            COMPREPLY=($(compgen -W "${search_commands}" -- "${cur}"))
+            COMPREPLY=($(compgen -W "${service_search_commands}" -- "${cur}"))
             return 0
             ;;
         functions)
-            COMPREPLY=($(compgen -W "${functions_commands}" -- "${cur}"))
+            COMPREPLY=($(compgen -W "${service_functions_commands}" -- "${cur}"))
             return 0
             ;;
-        metrics)
-            COMPREPLY=($(compgen -W "${metrics_commands}" -- "${cur}"))
+        mlflow)
+            COMPREPLY=($(compgen -W "${service_mlflow_commands}" -- "${cur}"))
+            return 0
+            ;;
+        storage)
+            COMPREPLY=($(compgen -W "${service_storage_commands}" -- "${cur}"))
+            return 0
+            ;;
+        cache)
+            COMPREPLY=($(compgen -W "${service_cache_commands}" -- "${cur}"))
+            return 0
+            ;;
+        k8s)
+            COMPREPLY=($(compgen -W "${k8s_commands}" -- "${cur}"))
+            return 0
+            ;;
+        cluster)
+            COMPREPLY=($(compgen -W "${k8s_cluster_commands}" -- "${cur}"))
+            return 0
+            ;;
+        namespace)
+            COMPREPLY=($(compgen -W "${k8s_namespace_commands}" -- "${cur}"))
+            return 0
+            ;;
+        helm)
+            COMPREPLY=($(compgen -W "${helm_commands}" -- "${cur}"))
+            return 0
+            ;;
+        repo)
+            COMPREPLY=($(compgen -W "${helm_repo_commands}" -- "${cur}"))
+            return 0
+            ;;
+        perf)
+            COMPREPLY=($(compgen -W "${perf_commands}" -- "${cur}"))
+            return 0
+            ;;
+        bench)
+            COMPREPLY=($(compgen -W "${bench_commands}" -- "${cur}"))
+            return 0
+            ;;
+        scale)
+            COMPREPLY=($(compgen -W "${scale_commands}" -- "${cur}"))
+            return 0
+            ;;
+        health)
+            COMPREPLY=($(compgen -W "${health_commands}" -- "${cur}"))
             return 0
             ;;
         migrate)
@@ -130,6 +222,20 @@ _nself_completions() {
             COMPREPLY=($(compgen -W "basic ecommerce saas blog" -- "${cur}"))
             return 0
             ;;
+        canary)
+            COMPREPLY=($(compgen -W "promote rollback status" -- "${cur}"))
+            return 0
+            ;;
+        blue-green)
+            COMPREPLY=($(compgen -W "switch rollback status" -- "${cur}"))
+            return 0
+            ;;
+        create)
+            # Provider names for cloud server create
+            local providers="digitalocean linode vultr hetzner ovh scaleway upcloud aws gcp azure oracle ibm contabo hostinger kamatera ssdnodes exoscale alibaba tencent yandex racknerd buyvm time4vps raspberrypi custom"
+            COMPREPLY=($(compgen -W "${providers}" -- "${cur}"))
+            return 0
+            ;;
         logs)
             # Complete with service names from docker-compose
             if [[ -f "docker-compose.yml" ]]; then
@@ -167,11 +273,13 @@ BASH_COMPLETION
 generate_zsh() {
   cat << 'ZSH_COMPLETION'
 #compdef nself
-# nself zsh completion
+# nself zsh completion (v0.4.7)
 # Add to ~/.zshrc: eval "$(nself completion zsh)"
 
 _nself() {
-    local -a commands db_commands env_commands sync_commands
+    local -a commands db_commands env_commands sync_commands deploy_commands
+    local -a cloud_commands service_commands k8s_commands helm_commands
+    local -a perf_commands bench_commands scale_commands health_commands
 
     commands=(
         'init:Initialize a new nself project'
@@ -193,17 +301,24 @@ _nself() {
         'reset:Reset project to initial state'
         'version:Show version information'
         'env:Environment management'
-        'deploy:Deploy to remote environment'
+        'deploy:Deploy with advanced strategies'
         'prod:Production deployment shortcut'
         'staging:Staging deployment shortcut'
         'db:Database management'
-        'sync:Environment synchronization'
-        'email:Email service configuration'
-        'search:Search service management'
-        'functions:Serverless functions'
-        'mlflow:ML experiment tracking'
-        'metrics:Monitoring metrics'
-        'monitor:Monitoring dashboard'
+        'sync:Environment synchronization with auto-watch'
+        'cloud:Cloud infrastructure management'
+        'service:Optional service management'
+        'k8s:Kubernetes management'
+        'helm:Helm chart management'
+        'perf:Performance profiling'
+        'bench:Benchmarking and load testing'
+        'scale:Service scaling'
+        'migrate:Cross-environment migration'
+        'health:Health check management'
+        'frontend:Frontend application management'
+        'history:Deployment audit trail'
+        'config:Configuration management'
+        'ci:CI/CD workflow generation'
         'completion:Generate shell completions'
     )
 
@@ -235,18 +350,111 @@ _nself() {
     )
 
     sync_commands=(
-        'pull:Pull from remote environment'
-        'push:Push to remote environment'
+        'db:Sync database'
         'files:Sync files'
         'config:Sync configuration'
-        'init:Initialize sync profiles'
+        'full:Full environment sync'
+        'auto:Enable continuous auto-sync'
+        'watch:Manual file watch mode'
         'status:Show sync status'
         'history:Show sync history'
+    )
+
+    deploy_commands=(
+        'staging:Deploy to staging'
+        'production:Deploy to production'
+        'rollback:Rollback deployment'
+        'preview:Create preview environment'
+        'canary:Canary deployment'
+        'blue-green:Blue-green deployment'
+    )
+
+    cloud_commands=(
+        'provider:Provider management (list, init, validate, info)'
+        'server:Server management (create, destroy, list, status, ssh)'
+        'cost:Cost estimation (estimate, compare)'
+        'deploy:Quick deployment (quick, full)'
+    )
+
+    service_commands=(
+        'list:List all optional services'
+        'enable:Enable a service'
+        'disable:Disable a service'
+        'status:Show service status'
+        'restart:Restart a service'
+        'logs:View service logs'
+        'email:Email service management'
+        'search:Search service management'
+        'functions:Serverless functions'
+        'mlflow:ML experiment tracking'
+        'storage:Object storage (MinIO)'
+        'cache:Cache management (Redis)'
+    )
+
+    k8s_commands=(
+        'init:Initialize Kubernetes configuration'
+        'convert:Convert compose to K8s manifests'
+        'apply:Apply manifests to cluster'
+        'deploy:Deploy to Kubernetes'
+        'status:Show deployment status'
+        'logs:View pod logs'
+        'scale:Scale deployment'
+        'rollback:Rollback deployment'
+        'delete:Delete deployment'
+        'cluster:Cluster management'
+        'namespace:Namespace management'
+    )
+
+    helm_commands=(
+        'init:Initialize Helm configuration'
+        'generate:Generate Helm chart from compose'
+        'install:Install Helm release'
+        'upgrade:Upgrade Helm release'
+        'rollback:Rollback Helm release'
+        'uninstall:Uninstall Helm release'
+        'list:List Helm releases'
+        'status:Show release status'
+        'values:Show/set chart values'
+        'template:Render chart templates'
+        'package:Package Helm chart'
+        'repo:Repository management'
+    )
+
+    perf_commands=(
+        'profile:Profile application performance'
+        'analyze:Analyze performance data'
+        'benchmark:Run benchmarks'
+        'report:Generate performance report'
+        'compare:Compare performance runs'
+    )
+
+    bench_commands=(
+        'run:Run benchmarks'
+        'http:HTTP load testing'
+        'db:Database benchmarks'
+        'compare:Compare benchmark results'
+        'report:Generate benchmark report'
+    )
+
+    scale_commands=(
+        'up:Scale up services'
+        'down:Scale down services'
+        'auto:Configure autoscaling'
+        'status:Show scaling status'
+        'config:Configure scaling rules'
+    )
+
+    health_commands=(
+        'check:Run health checks'
+        'dashboard:Open health dashboard'
+        'alert:Configure health alerts'
+        'history:Show health history'
     )
 
     _arguments -C \
         '1: :->command' \
         '2: :->subcommand' \
+        '3: :->subsubcommand' \
         '*::arg:->args'
 
     case "$state" in
@@ -264,8 +472,34 @@ _nself() {
                 sync)
                     _describe -t sync_commands 'sync command' sync_commands
                     ;;
+                deploy)
+                    _describe -t deploy_commands 'deploy command' deploy_commands
+                    ;;
+                cloud)
+                    _describe -t cloud_commands 'cloud command' cloud_commands
+                    ;;
+                service)
+                    _describe -t service_commands 'service command' service_commands
+                    ;;
+                k8s)
+                    _describe -t k8s_commands 'k8s command' k8s_commands
+                    ;;
+                helm)
+                    _describe -t helm_commands 'helm command' helm_commands
+                    ;;
+                perf)
+                    _describe -t perf_commands 'perf command' perf_commands
+                    ;;
+                bench)
+                    _describe -t bench_commands 'bench command' bench_commands
+                    ;;
+                scale)
+                    _describe -t scale_commands 'scale command' scale_commands
+                    ;;
+                health)
+                    _describe -t health_commands 'health command' health_commands
+                    ;;
                 logs|exec)
-                    # Complete with service names
                     if [[ -f "docker-compose.yml" ]]; then
                         local services
                         services=($(grep -E "^  [a-z].*:" docker-compose.yml 2>/dev/null | sed 's/://g'))
@@ -276,6 +510,54 @@ _nself() {
                     local -a doctor_opts
                     doctor_opts=('--fix:Auto-fix detected issues' '--verbose:Verbose output' '--help:Show help')
                     _describe -t doctor_opts 'doctor option' doctor_opts
+                    ;;
+            esac
+            ;;
+        subsubcommand)
+            case "$words[2]-$words[3]" in
+                cloud-provider)
+                    local -a provider_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'info:Show provider info')
+                    _describe -t provider_cmds 'provider command' provider_cmds
+                    ;;
+                cloud-server)
+                    local -a server_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
+                    _describe -t server_cmds 'server command' server_cmds
+                    ;;
+                cloud-cost)
+                    local -a cost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
+                    _describe -t cost_cmds 'cost command' cost_cmds
+                    ;;
+                k8s-cluster)
+                    local -a cluster_cmds=('list:List clusters' 'connect:Connect to cluster' 'info:Show cluster info')
+                    _describe -t cluster_cmds 'cluster command' cluster_cmds
+                    ;;
+                k8s-namespace)
+                    local -a ns_cmds=('list:List namespaces' 'create:Create namespace' 'delete:Delete namespace' 'switch:Switch namespace')
+                    _describe -t ns_cmds 'namespace command' ns_cmds
+                    ;;
+                helm-repo)
+                    local -a repo_cmds=('add:Add repository' 'remove:Remove repository' 'update:Update repositories' 'list:List repositories')
+                    _describe -t repo_cmds 'repo command' repo_cmds
+                    ;;
+                service-email)
+                    local -a email_cmds=('test:Send test email' 'inbox:View inbox (MailPit)' 'config:Email configuration')
+                    _describe -t email_cmds 'email command' email_cmds
+                    ;;
+                service-search)
+                    local -a search_cmds=('index:Reindex data' 'query:Run search query' 'stats:Show statistics')
+                    _describe -t search_cmds 'search command' search_cmds
+                    ;;
+                service-functions)
+                    local -a func_cmds=('deploy:Deploy function' 'invoke:Invoke function' 'logs:View logs' 'list:List functions')
+                    _describe -t func_cmds 'functions command' func_cmds
+                    ;;
+                deploy-canary)
+                    local -a canary_cmds=('promote:Promote canary' 'rollback:Rollback canary' 'status:Show status')
+                    _describe -t canary_cmds 'canary command' canary_cmds
+                    ;;
+                deploy-blue-green)
+                    local -a bg_cmds=('switch:Switch traffic' 'rollback:Rollback' 'status:Show status')
+                    _describe -t bg_cmds 'blue-green command' bg_cmds
                     ;;
             esac
             ;;
@@ -292,7 +574,7 @@ ZSH_COMPLETION
 
 generate_fish() {
   cat << 'FISH_COMPLETION'
-# nself fish completion
+# nself fish completion (v0.4.7)
 # Save to ~/.config/fish/completions/nself.fish
 
 # Main commands
@@ -315,11 +597,24 @@ complete -c nself -f -n "__fish_use_subcommand" -a "clean" -d "Clean up"
 complete -c nself -f -n "__fish_use_subcommand" -a "reset" -d "Reset project"
 complete -c nself -f -n "__fish_use_subcommand" -a "version" -d "Show version"
 complete -c nself -f -n "__fish_use_subcommand" -a "env" -d "Environment management"
-complete -c nself -f -n "__fish_use_subcommand" -a "deploy" -d "Deploy to remote"
+complete -c nself -f -n "__fish_use_subcommand" -a "deploy" -d "Deploy with strategies"
 complete -c nself -f -n "__fish_use_subcommand" -a "prod" -d "Production deploy"
 complete -c nself -f -n "__fish_use_subcommand" -a "staging" -d "Staging deploy"
 complete -c nself -f -n "__fish_use_subcommand" -a "db" -d "Database management"
 complete -c nself -f -n "__fish_use_subcommand" -a "sync" -d "Environment sync"
+complete -c nself -f -n "__fish_use_subcommand" -a "cloud" -d "Cloud infrastructure"
+complete -c nself -f -n "__fish_use_subcommand" -a "service" -d "Optional services"
+complete -c nself -f -n "__fish_use_subcommand" -a "k8s" -d "Kubernetes management"
+complete -c nself -f -n "__fish_use_subcommand" -a "helm" -d "Helm chart management"
+complete -c nself -f -n "__fish_use_subcommand" -a "perf" -d "Performance profiling"
+complete -c nself -f -n "__fish_use_subcommand" -a "bench" -d "Benchmarking"
+complete -c nself -f -n "__fish_use_subcommand" -a "scale" -d "Service scaling"
+complete -c nself -f -n "__fish_use_subcommand" -a "migrate" -d "Cross-env migration"
+complete -c nself -f -n "__fish_use_subcommand" -a "health" -d "Health checks"
+complete -c nself -f -n "__fish_use_subcommand" -a "frontend" -d "Frontend apps"
+complete -c nself -f -n "__fish_use_subcommand" -a "history" -d "Audit trail"
+complete -c nself -f -n "__fish_use_subcommand" -a "config" -d "Configuration"
+complete -c nself -f -n "__fish_use_subcommand" -a "ci" -d "CI/CD workflows"
 complete -c nself -f -n "__fish_use_subcommand" -a "completion" -d "Shell completions"
 
 # db subcommands
@@ -338,20 +633,106 @@ complete -c nself -f -n "__fish_seen_subcommand_from db" -a "optimize" -d "Optim
 complete -c nself -f -n "__fish_seen_subcommand_from db" -a "reset" -d "Reset database"
 
 # sync subcommands
-complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "pull" -d "Pull from remote"
-complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "push" -d "Push to remote"
+complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "db" -d "Sync database"
 complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "files" -d "Sync files"
 complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "config" -d "Sync config"
-complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "init" -d "Initialize profiles"
+complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "full" -d "Full sync"
+complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "auto" -d "Auto-sync mode"
+complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "watch" -d "Watch mode"
 complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "status" -d "Connection status"
 complete -c nself -f -n "__fish_seen_subcommand_from sync" -a "history" -d "Sync history"
+
+# deploy subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "staging" -d "Deploy to staging"
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "production" -d "Deploy to production"
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "rollback" -d "Rollback deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "preview" -d "Preview environment"
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "canary" -d "Canary deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "blue-green" -d "Blue-green deploy"
+
+# cloud subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "provider" -d "Provider management"
+complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "server" -d "Server management"
+complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "cost" -d "Cost estimation"
+complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "deploy" -d "Quick deployment"
+
+# service subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "list" -d "List services"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "enable" -d "Enable service"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "disable" -d "Disable service"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "status" -d "Service status"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "restart" -d "Restart service"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "logs" -d "Service logs"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "email" -d "Email service"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "search" -d "Search service"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "functions" -d "Serverless functions"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "mlflow" -d "ML tracking"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "storage" -d "Object storage"
+complete -c nself -f -n "__fish_seen_subcommand_from service" -a "cache" -d "Cache (Redis)"
+
+# k8s subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "init" -d "Initialize K8s"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "convert" -d "Convert to manifests"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "apply" -d "Apply manifests"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "deploy" -d "Deploy to cluster"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "status" -d "Deployment status"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "logs" -d "Pod logs"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "scale" -d "Scale deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "rollback" -d "Rollback deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "delete" -d "Delete deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "cluster" -d "Cluster management"
+complete -c nself -f -n "__fish_seen_subcommand_from k8s" -a "namespace" -d "Namespace management"
+
+# helm subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "init" -d "Initialize Helm"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "generate" -d "Generate chart"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "install" -d "Install release"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "upgrade" -d "Upgrade release"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "rollback" -d "Rollback release"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "uninstall" -d "Uninstall release"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "list" -d "List releases"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "status" -d "Release status"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "values" -d "Chart values"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "template" -d "Render templates"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "package" -d "Package chart"
+complete -c nself -f -n "__fish_seen_subcommand_from helm" -a "repo" -d "Repository management"
+
+# perf subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from perf" -a "profile" -d "Profile performance"
+complete -c nself -f -n "__fish_seen_subcommand_from perf" -a "analyze" -d "Analyze data"
+complete -c nself -f -n "__fish_seen_subcommand_from perf" -a "benchmark" -d "Run benchmarks"
+complete -c nself -f -n "__fish_seen_subcommand_from perf" -a "report" -d "Generate report"
+complete -c nself -f -n "__fish_seen_subcommand_from perf" -a "compare" -d "Compare runs"
+
+# bench subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from bench" -a "run" -d "Run benchmarks"
+complete -c nself -f -n "__fish_seen_subcommand_from bench" -a "http" -d "HTTP load test"
+complete -c nself -f -n "__fish_seen_subcommand_from bench" -a "db" -d "Database benchmark"
+complete -c nself -f -n "__fish_seen_subcommand_from bench" -a "compare" -d "Compare results"
+complete -c nself -f -n "__fish_seen_subcommand_from bench" -a "report" -d "Generate report"
+
+# scale subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from scale" -a "up" -d "Scale up"
+complete -c nself -f -n "__fish_seen_subcommand_from scale" -a "down" -d "Scale down"
+complete -c nself -f -n "__fish_seen_subcommand_from scale" -a "auto" -d "Autoscaling"
+complete -c nself -f -n "__fish_seen_subcommand_from scale" -a "status" -d "Scale status"
+complete -c nself -f -n "__fish_seen_subcommand_from scale" -a "config" -d "Scale config"
+
+# health subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from health" -a "check" -d "Run checks"
+complete -c nself -f -n "__fish_seen_subcommand_from health" -a "dashboard" -d "Health dashboard"
+complete -c nself -f -n "__fish_seen_subcommand_from health" -a "alert" -d "Configure alerts"
+complete -c nself -f -n "__fish_seen_subcommand_from health" -a "history" -d "Health history"
 
 # doctor options
 complete -c nself -f -n "__fish_seen_subcommand_from doctor" -l fix -d "Auto-fix issues"
 complete -c nself -f -n "__fish_seen_subcommand_from doctor" -l verbose -d "Verbose output"
 complete -c nself -f -n "__fish_seen_subcommand_from doctor" -l help -d "Show help"
 
-# Environment completions for sync
+# Provider list for cloud server create
+complete -c nself -f -n "__fish_seen_subcommand_from create" -a "digitalocean linode vultr hetzner ovh scaleway upcloud aws gcp azure oracle ibm contabo hostinger kamatera ssdnodes exoscale alibaba tencent yandex racknerd buyvm time4vps raspberrypi custom" -d "Provider"
+
+# Environment completions
 complete -c nself -f -n "__fish_seen_subcommand_from pull" -a "staging production" -d "Environment"
 complete -c nself -f -n "__fish_seen_subcommand_from push" -a "staging" -d "Environment"
 FISH_COMPLETION

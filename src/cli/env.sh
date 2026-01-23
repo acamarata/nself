@@ -195,11 +195,14 @@ cmd_env_status() {
 
   local env_dir=".environments/$current"
   if [[ -d "$env_dir" ]]; then
-    env::show_status "$current"
+    env::show_status "$current" || true
   else
     printf "\n${COLOR_YELLOW}Environment directory not found${COLOR_RESET}\n"
     printf "Create it with: nself env create %s\n" "$current"
   fi
+
+  # Always return success - status display completed
+  return 0
 }
 
 # Info subcommand
@@ -258,6 +261,8 @@ cmd_env_validate() {
   local name=""
   local all=false
   local strict=false
+  local project=false
+  local env_file=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -269,8 +274,27 @@ cmd_env_validate() {
         strict=true
         shift
         ;;
+      --project|-p)
+        project=true
+        shift
+        ;;
+      --file|-f)
+        env_file="$2"
+        project=true
+        shift 2
+        ;;
       -h|--help)
-        printf "Usage: nself env validate [name] [--all] [--strict]\n"
+        printf "Usage: nself env validate [name] [--all] [--strict] [--project] [--file <path>]\n\n"
+        printf "Options:\n"
+        printf "  --all       Validate all environments\n"
+        printf "  --strict    Treat warnings as errors\n"
+        printf "  --project   Validate current project .env (not environment directory)\n"
+        printf "  --file      Validate specific .env file\n\n"
+        printf "Examples:\n"
+        printf "  nself env validate             # Validate current environment\n"
+        printf "  nself env validate --project   # Validate project .env file\n"
+        printf "  nself env validate prod        # Validate production environment\n"
+        printf "  nself env validate --all       # Validate all environments\n"
         return 0
         ;;
       -*)
@@ -284,13 +308,33 @@ cmd_env_validate() {
     esac
   done
 
-  if [[ "$all" == "true" ]]; then
+  # Project-level validation (validates .env file directly)
+  if [[ "$project" == "true" ]] || [[ -n "$env_file" ]]; then
+    if command -v env::validate_project >/dev/null 2>&1; then
+      env::validate_project "${env_file:-.env}"
+    else
+      log_error "Project validation not available"
+      return 1
+    fi
+  elif [[ "$all" == "true" ]]; then
     env::validate_all
   else
-    if [[ -z "$name" ]]; then
-      name=$(env::get_current 2>/dev/null || echo "local")
+    # Default: check if running in a project without environments directory
+    if [[ -z "$name" ]] && [[ ! -d ".environments" ]] && [[ -f ".env" ]]; then
+      # No environments dir but has .env - validate project
+      if command -v env::validate_project >/dev/null 2>&1; then
+        env::validate_project ".env"
+      else
+        log_warning "No environments directory found"
+        log_info "Run: nself env validate --project  to validate .env file"
+        return 1
+      fi
+    else
+      if [[ -z "$name" ]]; then
+        name=$(env::get_current 2>/dev/null || echo "local")
+      fi
+      env::validate "$name" "$strict"
     fi
-    env::validate "$name" "$strict"
   fi
 }
 

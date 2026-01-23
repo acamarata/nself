@@ -203,14 +203,25 @@ migrate_status() {
 
   local applied=$(psql_query "SELECT COUNT(*) FROM schema_migrations")
   local pending=0
+  local shown_versions=""
 
   printf "%-50s %s\n" "Migration" "Status"
   printf "%-50s %s\n" "$(printf '%.0s─' {1..45})" "──────"
 
-  for file in "$MIGRATIONS_DIR"/*.sql; do
+  # Only show .up.sql files or standalone .sql files (exclude .down.sql from display)
+  for file in $(ls "$MIGRATIONS_DIR"/*.up.sql "$MIGRATIONS_DIR"/*.sql 2>/dev/null | grep -v '\.down\.sql$' | sort -u); do
     [[ -f "$file" ]] || continue
-    local name=$(basename "$file" .sql)
+    local name=$(basename "$file")
+    # Remove .up.sql or .sql extension for display
+    name="${name%.up.sql}"
+    name="${name%.sql}"
     local version=$(echo "$name" | cut -d'_' -f1)
+
+    # Skip if we already showed this version (dedup)
+    if echo "$shown_versions" | grep -q "|$version|"; then
+      continue
+    fi
+    shown_versions="${shown_versions}|${version}|"
 
     if psql_query "SELECT 1 FROM schema_migrations WHERE version = '$version'" | grep -q 1; then
       printf "%-50s \033[32m✓ Applied\033[0m\n" "$name"
@@ -237,9 +248,13 @@ migrate_up() {
   )" >/dev/null 2>&1
 
   local count=0
-  for file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
+  # Only process .up.sql files (or .sql files without .down. in the name)
+  for file in $(ls "$MIGRATIONS_DIR"/*.up.sql "$MIGRATIONS_DIR"/*.sql 2>/dev/null | grep -v '\.down\.sql$' | sort -u); do
     [[ -f "$file" ]] || continue
-    local name=$(basename "$file" .sql)
+    local name=$(basename "$file")
+    # Remove .up.sql or .sql extension for display
+    name="${name%.up.sql}"
+    name="${name%.sql}"
     local version=$(echo "$name" | cut -d'_' -f1)
 
     # Skip if already applied
@@ -273,16 +288,23 @@ migrate_down() {
   local applied=($(psql_query "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT $steps"))
 
   for version in "${applied[@]}"; do
-    local down_file=$(ls "$MIGRATIONS_DIR"/${version}*_down.sql 2>/dev/null | head -1)
-    [[ -z "$down_file" ]] && down_file="$MIGRATIONS_DIR/${version}_down.sql"
+    # Look for .down.sql files (new convention) or _down.sql (legacy)
+    local down_file=$(ls "$MIGRATIONS_DIR"/${version}*.down.sql 2>/dev/null | head -1)
+    [[ -z "$down_file" ]] && down_file=$(ls "$MIGRATIONS_DIR"/${version}*_down.sql 2>/dev/null | head -1)
 
     if [[ -f "$down_file" ]]; then
-      log_info "Rolling back: $version"
-      psql_exec < "$down_file" >/dev/null 2>&1 || true
+      log_info "Rolling back: $version using $(basename "$down_file")"
+      if psql_exec < "$down_file" 2>&1; then
+        log_success "  SQL executed"
+      else
+        log_warning "  SQL execution had issues (may be expected)"
+      fi
+    else
+      log_warning "  No down migration found for $version"
     fi
 
     psql_exec -c "DELETE FROM schema_migrations WHERE version = '$version'" >/dev/null
-    log_success "  Rolled back"
+    log_success "  Rolled back (removed from tracking)"
   done
 }
 
@@ -636,9 +658,42 @@ mock_generate() {
   require_non_production "Mock data generation" || return 1
   require_db || return 1
 
-  local table="${1:-}"
-  local count="${2:-100}"
-  local seed="${NSELF_MOCK_SEED:-${3:-$(date +%s)}}"
+  local table=""
+  local count="100"
+  local seed="${NSELF_MOCK_SEED:-$(date +%s)}"
+
+  # Parse arguments (support --tables and --count flags)
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --tables|-t)
+        table="$2"
+        shift 2
+        ;;
+      --count|-c)
+        count="$2"
+        shift 2
+        ;;
+      --seed|-s)
+        seed="$2"
+        shift 2
+        ;;
+      -*)
+        log_error "Unknown option: $1"
+        return 1
+        ;;
+      *)
+        # Positional args: table, count, seed
+        if [[ -z "$table" ]]; then
+          table="$1"
+        elif [[ "$count" == "100" ]]; then
+          count="$1"
+        else
+          seed="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
 
   log_info "Generating mock data (seed: $seed)"
   log_info "Same seed = same data across your team!"
@@ -646,11 +701,19 @@ mock_generate() {
   # Save seed for reproducibility
   echo "$seed" > "$MOCK_DIR/mock.seed"
 
+  # System tables to exclude from mock data
+  local exclude_tables="schema_migrations|pg_|information_schema|auth_"
+
   # Get tables if not specified
   local tables
   if [[ -z "$table" ]]; then
-    tables=$(psql_query "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename")
+    tables=$(psql_query "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename" | grep -vE "^($exclude_tables)")
   else
+    # Validate user-specified table is not a system table
+    if echo "$table" | grep -qE "^($exclude_tables)"; then
+      log_error "Cannot generate mock data for system table: $table"
+      return 1
+    fi
     tables="$table"
   fi
 
@@ -667,22 +730,127 @@ mock_table() {
   local table="$1"
   local count="$2"
   local seed="$3"
+  local verbose="${NSELF_MOCK_VERBOSE:-false}"
+  local errors_count=0
+  local first_error=""
 
-  # Get column info
-  local columns=$(psql_query "SELECT column_name, data_type, is_nullable
+  # Get column info (excluding auto-generated columns)
+  local columns_info=$(psql_query "SELECT column_name, data_type, column_default, character_maximum_length
     FROM information_schema.columns
     WHERE table_name = '$table' AND table_schema = 'public'
+    AND (column_default IS NULL OR column_default NOT LIKE 'nextval%')
     ORDER BY ordinal_position")
 
-  # Generate deterministic data based on seed
-  # Real implementation would use proper faker with seed
+  [[ -z "$columns_info" ]] && return 0
+
   local base=$((seed % 1000000))
 
   for i in $(seq 1 $count); do
-    local id=$((base + i))
-    # Simplified - real impl would analyze column types and generate appropriate data
-    psql_exec -c "INSERT INTO $table DEFAULT VALUES ON CONFLICT DO NOTHING" >/dev/null 2>&1 || true
+    local row_id=$((base + i))
+    local col_names=""
+    local col_values=""
+
+    while IFS='|' read -r col_name data_type col_default char_max_len; do
+      [[ -z "$col_name" ]] && continue
+      # Skip id columns that are auto-increment
+      [[ "$col_name" == "id" && "$col_default" =~ nextval ]] && continue
+
+      # Normalize data_type: trim whitespace and convert to lowercase
+      data_type=$(echo "$data_type" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+      # Clean up char_max_len (remove whitespace, empty = unlimited)
+      char_max_len=$(echo "$char_max_len" | tr -d '[:space:]')
+
+      [[ -n "$col_names" ]] && col_names+=", "
+      [[ -n "$col_values" ]] && col_values+=", "
+
+      col_names+="$col_name"
+
+      # Generate appropriate mock value based on type and column name
+      case "$data_type" in
+        integer|bigint|smallint)
+          col_values+="$row_id"
+          ;;
+        numeric|decimal|real|"double precision")
+          col_values+="$row_id.99"
+          ;;
+        boolean)
+          [[ $((row_id % 2)) -eq 0 ]] && col_values+="true" || col_values+="false"
+          ;;
+        *timestamp*|*date*)
+          col_values+="NOW() - INTERVAL '$((row_id % 365)) days'"
+          ;;
+        uuid)
+          col_values+="gen_random_uuid()"
+          ;;
+        json|jsonb)
+          # Generate valid JSONB based on column name patterns
+          case "$col_name" in
+            *metadata*|*meta*)
+              col_values+="'{\"source\": \"mock\", \"version\": 1, \"id\": $row_id}'"
+              ;;
+            *config*|*settings*)
+              col_values+="'{\"enabled\": true, \"level\": $((row_id % 5))}'"
+              ;;
+            *data*|*payload*)
+              col_values+="'{\"type\": \"mock\", \"index\": $row_id, \"valid\": true}'"
+              ;;
+            *)
+              col_values+="'{\"mock\": true, \"id\": $row_id}'"
+              ;;
+          esac
+          ;;
+        inet|cidr|"inet"|"cidr")
+          # Generate valid IP addresses with explicit type cast
+          local octet1=$((10 + (row_id / 65536) % 245))
+          local octet2=$(((row_id / 256) % 256))
+          local octet3=$((row_id % 256))
+          col_values+="'${octet1}.${octet2}.${octet3}.1'::inet"
+          ;;
+        macaddr|macaddr8|"macaddr"|"macaddr8")
+          # Generate valid MAC addresses with explicit type cast
+          local mac_part=$(printf '%02x:%02x:%02x' $((row_id % 256)) $(((row_id / 256) % 256)) $(((row_id / 65536) % 256)))
+          col_values+="'00:00:5e:${mac_part}'::macaddr"
+          ;;
+        *)
+          # Text/varchar - generate based on column name patterns
+          local mock_val=""
+          case "$col_name" in
+            *email*) mock_val="user${row_id}@example.com" ;;
+            *name*|*title*) mock_val="Mock ${col_name} ${row_id}" ;;
+            *url*|*link*) mock_val="https://example.com/${row_id}" ;;
+            *slug*) mock_val="slug-${row_id}" ;;
+            *password*|*hash*) mock_val="hashed_${row_id}" ;;
+            *) mock_val="mock_${col_name}_${row_id}" ;;
+          esac
+          # Truncate if character_maximum_length is defined
+          if [[ -n "$char_max_len" ]] && [[ "$char_max_len" =~ ^[0-9]+$ ]] && [[ ${#mock_val} -gt $char_max_len ]]; then
+            mock_val="${mock_val:0:$char_max_len}"
+          fi
+          col_values+="'$mock_val'"
+          ;;
+      esac
+    done <<< "$columns_info"
+
+    # Execute insert if we have columns
+    if [[ -n "$col_names" ]]; then
+      local insert_result
+      insert_result=$(psql_exec -c "INSERT INTO $table ($col_names) VALUES ($col_values) ON CONFLICT DO NOTHING" 2>&1)
+      local insert_status=$?
+      if [[ $insert_status -ne 0 ]]; then
+        ((errors_count++)) || true
+        if [[ -z "$first_error" ]]; then
+          first_error="$insert_result"
+        fi
+        [[ "$verbose" == "true" ]] && log_warning "Insert failed for row $i: $insert_result"
+      fi
+    fi
   done
+
+  # Report errors if any occurred
+  if [[ $errors_count -gt 0 ]]; then
+    log_warning "$table: $errors_count insert(s) failed"
+    [[ -n "$first_error" ]] && log_debug "First error: $first_error"
+  fi
 }
 
 mock_preview() {

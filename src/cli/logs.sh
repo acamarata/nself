@@ -401,7 +401,7 @@ main() {
       FOLLOW_MODE=true
       shift
       ;;
-    -n | --tail)
+    -n | --tail | --lines)
       TAIL_LINES="$2"
       if ! [[ "$TAIL_LINES" =~ ^[0-9]+$ ]]; then
         log_error "Invalid tail lines: $TAIL_LINES"

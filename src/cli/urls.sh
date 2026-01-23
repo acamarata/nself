@@ -11,6 +11,7 @@ PROJECT_ROOT="$(cd "$CLI_SCRIPT_DIR/../.." && pwd)"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/services.sh" 2>/dev/null || true
 
 # Define colors - always set them to avoid unbound variable errors
 export COLOR_GREEN="${COLOR_GREEN:-\033[0;32m}"

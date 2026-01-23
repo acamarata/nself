@@ -25,38 +25,58 @@ env::diff() {
     return 1
   fi
 
-  local dir_a="$ENVIRONMENTS_DIR/$env_a"
-  local dir_b="$ENVIRONMENTS_DIR/$env_b"
+  # Try to find env files - check multiple locations
+  local file_a=""
+  local file_b=""
 
-  # Validate environments exist
-  if [[ ! -d "$dir_a" ]]; then
-    log_error "Environment '$env_a' does not exist"
+  # Check .environments/ directory first
+  if [[ -f "$ENVIRONMENTS_DIR/$env_a/.env" ]]; then
+    file_a="$ENVIRONMENTS_DIR/$env_a/.env"
+  # Then check root-level .env.<name> files
+  elif [[ -f ".env.$env_a" ]]; then
+    file_a=".env.$env_a"
+  # Special case: "local" might mean .env.local or just .env
+  elif [[ "$env_a" == "local" ]] && [[ -f ".env.local" ]]; then
+    file_a=".env.local"
+  elif [[ "$env_a" == "dev" ]] && [[ -f ".env.dev" ]]; then
+    file_a=".env.dev"
+  fi
+
+  if [[ -f "$ENVIRONMENTS_DIR/$env_b/.env" ]]; then
+    file_b="$ENVIRONMENTS_DIR/$env_b/.env"
+  elif [[ -f ".env.$env_b" ]]; then
+    file_b=".env.$env_b"
+  elif [[ "$env_b" == "local" ]] && [[ -f ".env.local" ]]; then
+    file_b=".env.local"
+  elif [[ "$env_b" == "dev" ]] && [[ -f ".env.dev" ]]; then
+    file_b=".env.dev"
+  fi
+
+  # Validate files exist
+  if [[ -z "$file_a" ]]; then
+    log_error "Environment '$env_a' not found"
+    log_info "Checked: $ENVIRONMENTS_DIR/$env_a/.env and .env.$env_a"
     return 1
   fi
 
-  if [[ ! -d "$dir_b" ]]; then
-    log_error "Environment '$env_b' does not exist"
+  if [[ -z "$file_b" ]]; then
+    log_error "Environment '$env_b' not found"
+    log_info "Checked: $ENVIRONMENTS_DIR/$env_b/.env and .env.$env_b"
     return 1
   fi
 
-  printf "Comparing: ${COLOR_BLUE}%s${COLOR_RESET} vs ${COLOR_BLUE}%s${COLOR_RESET}\n\n" "$env_a" "$env_b"
+  printf "Comparing: ${COLOR_BLUE}%s${COLOR_RESET} vs ${COLOR_BLUE}%s${COLOR_RESET}\n" "$env_a" "$env_b"
+  printf "Files: %s vs %s\n\n" "$file_a" "$file_b"
 
   # Compare .env files
-  if [[ -f "$dir_a/.env" ]] && [[ -f "$dir_b/.env" ]]; then
-    env::compare_env_files "$dir_a/.env" "$dir_b/.env" "$env_a" "$env_b" "$show_values"
-  else
-    if [[ ! -f "$dir_a/.env" ]]; then
-      log_warning "No .env file in $env_a"
-    fi
-    if [[ ! -f "$dir_b/.env" ]]; then
-      log_warning "No .env file in $env_b"
-    fi
-  fi
+  env::compare_env_files "$file_a" "$file_b" "$env_a" "$env_b" "$show_values"
 
-  # Compare server configurations
-  if [[ -f "$dir_a/server.json" ]] || [[ -f "$dir_b/server.json" ]]; then
+  # Compare server configurations if available
+  local server_a="$ENVIRONMENTS_DIR/$env_a/server.json"
+  local server_b="$ENVIRONMENTS_DIR/$env_b/server.json"
+  if [[ -f "$server_a" ]] || [[ -f "$server_b" ]]; then
     printf "\n${COLOR_CYAN}Server Configuration:${COLOR_RESET}\n"
-    env::compare_server_configs "$dir_a/server.json" "$dir_b/server.json" "$env_a" "$env_b"
+    env::compare_server_configs "$server_a" "$server_b" "$env_a" "$env_b"
   fi
 
   return 0
@@ -70,85 +90,109 @@ env::compare_env_files() {
   local name_b="$4"
   local show_values="${5:-false}"
 
-  # Extract keys from both files
+  # Extract keys from both files (allow any valid env var pattern)
   local keys_a keys_b
-  keys_a=$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" "$file_a" 2>/dev/null | cut -d'=' -f1 | sort -u)
-  keys_b=$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" "$file_b" 2>/dev/null | cut -d'=' -f1 | sort -u)
+  keys_a=$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" "$file_a" 2>/dev/null | cut -d'=' -f1 | sort -u || echo "")
+  keys_b=$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" "$file_b" 2>/dev/null | cut -d'=' -f1 | sort -u || echo "")
 
-  # Find common keys, only in A, only in B
+  # Check if either file has no variables
+  if [[ -z "$keys_a" ]] && [[ -z "$keys_b" ]]; then
+    printf "${COLOR_YELLOW}Both environment files appear to be empty or have no parseable variables${COLOR_RESET}\n"
+    return 0
+  fi
+
+  # Find all unique keys from both files
   local all_keys
-  all_keys=$(printf "%s\n%s" "$keys_a" "$keys_b" | sort -u)
+  all_keys=$(printf "%s\n%s" "$keys_a" "$keys_b" | grep -v "^$" | sort -u)
 
-  local different=()
-  local only_a=()
-  local only_b=()
+  # Count differences using simple counters (Bash 3.2 compatible)
+  local diff_count=0
+  local only_a_count=0
+  local only_b_count=0
+
+  # Store results in temp files for Bash 3.2 compatibility
+  local diff_file only_a_file only_b_file
+  diff_file=$(mktemp)
+  only_a_file=$(mktemp)
+  only_b_file=$(mktemp)
 
   while IFS= read -r key; do
     [[ -z "$key" ]] && continue
 
     local val_a val_b
-    val_a=$(grep "^${key}=" "$file_a" 2>/dev/null | cut -d'=' -f2-)
-    val_b=$(grep "^${key}=" "$file_b" 2>/dev/null | cut -d'=' -f2-)
+    # Use || true to handle pipefail when grep finds no matches
+    val_a=$(grep "^${key}=" "$file_a" 2>/dev/null | head -1 | cut -d'=' -f2- || true)
+    val_b=$(grep "^${key}=" "$file_b" 2>/dev/null | head -1 | cut -d'=' -f2- || true)
 
-    if [[ -z "$val_a" ]]; then
-      only_b+=("$key")
-    elif [[ -z "$val_b" ]]; then
-      only_a+=("$key")
+    # Check if key exists in file_a (use || true for set -e compatibility)
+    local in_a=false in_b=false
+    grep -q "^${key}=" "$file_a" 2>/dev/null && in_a=true || true
+    grep -q "^${key}=" "$file_b" 2>/dev/null && in_b=true || true
+
+    if [[ "$in_a" == "false" ]]; then
+      printf "%s\n" "$key" >> "$only_b_file"
+    elif [[ "$in_b" == "false" ]]; then
+      printf "%s\n" "$key" >> "$only_a_file"
     elif [[ "$val_a" != "$val_b" ]]; then
-      different+=("$key|$val_a|$val_b")
+      printf "%s|%s|%s\n" "$key" "$val_a" "$val_b" >> "$diff_file"
     fi
   done <<< "$all_keys"
 
   # Display differences
-  if [[ ${#different[@]} -gt 0 ]]; then
+  diff_count=$(wc -l < "$diff_file" | tr -d ' ')
+  if [[ "$diff_count" -gt 0 ]]; then
     printf "${COLOR_YELLOW}Different values:${COLOR_RESET}\n"
-    for item in "${different[@]}"; do
-      local key val_a val_b
-      key=$(printf "%s" "$item" | cut -d'|' -f1)
-      val_a=$(printf "%s" "$item" | cut -d'|' -f2)
-      val_b=$(printf "%s" "$item" | cut -d'|' -f3)
-
+    while IFS='|' read -r key val_a val_b; do
+      [[ -z "$key" ]] && continue
       printf "  ${COLOR_CYAN}%s${COLOR_RESET}\n" "$key"
 
       if [[ "$show_values" == "true" ]]; then
         # Mask sensitive values
-        if [[ "$key" =~ (PASSWORD|SECRET|KEY|TOKEN) ]]; then
-          printf "    %s: %s\n" "$name_a" "********"
-          printf "    %s: %s\n" "$name_b" "********"
-        else
-          printf "    %s: %s\n" "$name_a" "$val_a"
-          printf "    %s: %s\n" "$name_b" "$val_b"
-        fi
+        case "$key" in
+          *PASSWORD*|*SECRET*|*KEY*|*TOKEN*)
+            printf "    %s: %s\n" "$name_a" "********"
+            printf "    %s: %s\n" "$name_b" "********"
+            ;;
+          *)
+            printf "    %s: %s\n" "$name_a" "$val_a"
+            printf "    %s: %s\n" "$name_b" "$val_b"
+            ;;
+        esac
       fi
-    done
+    done < "$diff_file"
   fi
 
   # Display only in A
-  if [[ ${#only_a[@]} -gt 0 ]]; then
+  only_a_count=$(wc -l < "$only_a_file" | tr -d ' ')
+  if [[ "$only_a_count" -gt 0 ]]; then
     printf "\n${COLOR_GREEN}Only in %s:${COLOR_RESET}\n" "$name_a"
-    for key in "${only_a[@]}"; do
-      printf "  + %s\n" "$key"
-    done
+    while IFS= read -r key; do
+      [[ -n "$key" ]] && printf "  + %s\n" "$key"
+    done < "$only_a_file"
   fi
 
   # Display only in B
-  if [[ ${#only_b[@]} -gt 0 ]]; then
+  only_b_count=$(wc -l < "$only_b_file" | tr -d ' ')
+  if [[ "$only_b_count" -gt 0 ]]; then
     printf "\n${COLOR_RED}Only in %s:${COLOR_RESET}\n" "$name_b"
-    for key in "${only_b[@]}"; do
-      printf "  + %s\n" "$key"
-    done
+    while IFS= read -r key; do
+      [[ -n "$key" ]] && printf "  + %s\n" "$key"
+    done < "$only_b_file"
   fi
 
   # Summary
-  local total_diff=$((${#different[@]} + ${#only_a[@]} + ${#only_b[@]}))
+  local total_diff=$((diff_count + only_a_count + only_b_count))
   if [[ $total_diff -eq 0 ]]; then
     printf "${COLOR_GREEN}✓ Environments have identical configuration${COLOR_RESET}\n"
   else
     printf "\n${COLOR_YELLOW}Summary: %d difference(s)${COLOR_RESET}\n" "$total_diff"
-    printf "  %d different values\n" "${#different[@]}"
-    printf "  %d only in %s\n" "${#only_a[@]}" "$name_a"
-    printf "  %d only in %s\n" "${#only_b[@]}" "$name_b"
+    printf "  %d different values\n" "$diff_count"
+    printf "  %d only in %s\n" "$only_a_count" "$name_a"
+    printf "  %d only in %s\n" "$only_b_count" "$name_b"
   fi
+
+  # Cleanup temp files
+  rm -f "$diff_file" "$only_a_file" "$only_b_file"
 }
 
 # Compare server configurations

@@ -248,6 +248,150 @@ nself admin logs
 nself admin status
 ```
 
+## Development Mode (Admin-Dev)
+
+**Added in v0.4.7**
+
+For nself-admin contributors or those who want to run the admin UI locally with hot-reload while connecting to Docker backend services, nself provides an "admin-dev" mode.
+
+### Overview
+
+Admin-dev mode allows you to:
+- Run nself-admin locally from source (e.g., `~/Sites/nself-admin`)
+- Get hot-reload and debugging capabilities
+- Connect to all Docker services (Postgres, Hasura, Auth, etc.)
+- Access via the same `admin.local.nself.org` URL
+
+### Quick Start
+
+```bash
+# Enable dev mode on port 3000
+nself service admin dev enable 3000 ~/Sites/nself-admin
+
+# Rebuild and restart to apply nginx routing changes
+nself build && nself restart
+
+# Start your local admin server
+cd ~/Sites/nself-admin && npm run dev
+
+# Access at https://admin.local.nself.org
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `nself service admin dev status` | Show current dev mode configuration |
+| `nself service admin dev enable [port] [path]` | Enable dev mode |
+| `nself service admin dev disable` | Disable dev mode (use Docker container) |
+| `nself service admin dev env` | Show environment variables for local development |
+
+### Environment Variables
+
+When dev mode is enabled, these are added to your `.env`:
+
+```bash
+# Admin Development Mode (local dev server)
+NSELF_ADMIN_DEV=true
+NSELF_ADMIN_DEV_PORT=3000
+NSELF_ADMIN_DEV_PATH=~/Sites/nself-admin  # Optional, for documentation
+```
+
+### Local Environment Setup
+
+After enabling dev mode, get the required environment variables for your local admin:
+
+```bash
+nself service admin dev env
+```
+
+This outputs the environment variables to add to your local `nself-admin/.env.local`:
+
+```bash
+# Database (via Docker)
+DATABASE_URL=postgres://postgres:password@localhost:5432/mydb
+
+# Hasura (via Docker)
+HASURA_GRAPHQL_ENDPOINT=http://localhost:8080/v1/graphql
+HASURA_GRAPHQL_ADMIN_SECRET=your-hasura-secret
+
+# Admin
+ADMIN_SECRET_KEY=your-admin-secret
+PROJECT_NAME=myproject
+BASE_DOMAIN=local.nself.org
+NODE_ENV=development
+
+# Project path (your nself project)
+PROJECT_PATH=/path/to/your/project
+NSELF_PROJECT_PATH=/path/to/your/project
+```
+
+### How It Works
+
+1. **Nginx Routing**: When `NSELF_ADMIN_DEV=true`, nginx routes `admin.*` to `host.docker.internal:PORT` instead of the Docker container
+2. **Container Skip**: The nself-admin Docker container is not created during `nself build`
+3. **Backend Services**: All other services (Postgres, Hasura, Auth, etc.) run normally in Docker
+4. **Network Access**: Your local admin connects to Docker services via localhost ports
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Browser (https://admin.local.nself.org)                    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│  Nginx (Docker)                                             │
+│  Routes admin.* → host.docker.internal:3000                 │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│  Local nself-admin (localhost:3000)                         │
+│  ~/Sites/nself-admin                                        │
+│  npm run dev (hot-reload enabled)                           │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│  Docker Services                                            │
+│  ┌─────────┐ ┌────────┐ ┌──────┐ ┌───────┐                 │
+│  │Postgres │ │ Hasura │ │ Auth │ │ Redis │ ...             │
+│  │ :5432   │ │ :8080  │ │:4000 │ │ :6379 │                 │
+│  └─────────┘ └────────┘ └──────┘ └───────┘                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Switching Between Modes
+
+```bash
+# Switch to dev mode (local server)
+nself service admin dev enable 3000
+nself build && nself restart
+
+# Switch back to Docker mode
+nself service admin dev disable
+nself build && nself restart
+```
+
+### Troubleshooting
+
+#### Cannot connect to admin.local.nself.org
+- Ensure your local server is running on the configured port
+- Check that Docker services are running: `nself status`
+- Verify nginx rebuilt: `nself build --force`
+
+#### Local admin can't connect to Hasura/Postgres
+- Verify Docker services are running: `nself status`
+- Check ports are exposed: `docker ps`
+- Ensure `.env.local` has correct connection strings
+
+#### WebSocket errors in dev mode
+- The nginx config includes WebSocket upgrade headers for hot-reload
+- If issues persist, restart nginx: `docker restart <project>_nginx`
+
+#### Linux servers
+- On Linux (non-Docker Desktop), nginx routes to `172.17.0.1:PORT` instead of `host.docker.internal`
+- This is automatically detected during build
+
 ## Resource Requirements
 
 - **CPU**: 0.25 cores minimum
