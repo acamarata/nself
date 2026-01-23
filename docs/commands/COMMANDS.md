@@ -1,35 +1,271 @@
 # nself Commands Reference
 
-**Version 0.4.5** | **34 Commands** | **Full CLI Reference**
+**Version 0.4.6** | Complete CLI Reference
+
+---
+
+## Command Tree Overview
+
+```
+nself
+├── Core Lifecycle
+│   ├── init                    Initialize project
+│   ├── build                   Generate configs
+│   ├── start                   Start services
+│   ├── stop                    Stop services
+│   ├── restart                 Restart services
+│   ├── reset                   Reset to clean state
+│   └── clean                   Clean Docker resources
+│
+├── Status & Monitoring
+│   ├── status                  Service health
+│   │   ├── --all-envs         All environments
+│   │   ├── --json             JSON output
+│   │   └── --watch            Continuous monitoring
+│   ├── logs                    View logs
+│   ├── exec                    Execute in container
+│   ├── urls                    Service URLs
+│   │   ├── --env              Specific environment
+│   │   ├── --diff             Compare environments
+│   │   └── --json             JSON output
+│   ├── doctor                  Diagnostics
+│   │   └── --fix              Auto-repair
+│   └── health                  Health checks (v0.4.6)
+│       ├── check              Run all checks
+│       ├── service <name>     Check specific service
+│       ├── endpoint <url>     Check custom endpoint
+│       ├── watch              Continuous monitoring
+│       ├── history            Check history
+│       └── config             Health configuration
+│
+├── Database (nself db)
+│   ├── migrate                 Migration management
+│   │   ├── up                 Run migrations
+│   │   ├── down               Rollback
+│   │   ├── create <name>      Create migration
+│   │   └── status             Migration status
+│   ├── schema                  Schema operations
+│   │   ├── scaffold <template> Create from template
+│   │   ├── import <file>      Import DBML
+│   │   ├── apply <file>       Full workflow
+│   │   └── diagram            Export to DBML
+│   ├── seed                    Seed data
+│   │   ├── (default)          Run all seeds
+│   │   ├── users              Seed users
+│   │   └── create <name>      Create seed file
+│   ├── mock                    Generate mock data
+│   │   ├── (default)          Generate mocks
+│   │   ├── auto               Auto from schema
+│   │   └── --seed N           Reproducible
+│   ├── backup                  Backup database
+│   │   ├── (default)          Create backup
+│   │   └── list               List backups
+│   ├── restore                 Restore database
+│   ├── shell                   Interactive psql
+│   │   └── --readonly         Read-only mode
+│   ├── query <sql>             Execute SQL
+│   ├── types                   Generate types
+│   │   ├── (default)          TypeScript
+│   │   ├── go                 Go structs
+│   │   └── python             Python classes
+│   ├── inspect                 Database inspection
+│   │   ├── (default)          Overview
+│   │   ├── size               Table sizes
+│   │   └── slow               Slow queries
+│   └── data                    Data operations
+│       ├── export <table>     Export table
+│       └── anonymize          Anonymize PII
+│
+├── Deployment (nself deploy)
+│   ├── (environment)           Deploy to environment
+│   │   ├── staging            Deploy to staging
+│   │   └── prod               Deploy to production
+│   ├── init                    Initialize config
+│   ├── check                   Pre-deploy validation (v0.4.6)
+│   │   └── --fix              Auto-fix issues
+│   ├── status                  Deployment status
+│   ├── rollback               Rollback deployment
+│   ├── logs                    Deployment logs
+│   ├── webhook                 Setup webhooks
+│   ├── health                  Check health
+│   └── check-access           Verify SSH access
+│
+├── Environment (nself env)
+│   ├── (default)               List environments
+│   ├── create <name>           Create environment
+│   ├── switch <name>           Switch environment
+│   └── diff <env1> <env2>      Compare environments
+│
+├── Performance (v0.4.6)
+│   ├── perf                    Performance profiling
+│   │   ├── profile [service]  System/service profile
+│   │   ├── analyze            Analyze performance
+│   │   ├── slow-queries       Slow query analysis
+│   │   ├── report             Generate report
+│   │   ├── dashboard          Real-time dashboard
+│   │   └── suggest            Optimization tips
+│   ├── bench                   Benchmarking
+│   │   ├── run [target]       Run benchmark
+│   │   ├── baseline           Establish baseline
+│   │   ├── compare [file]     Compare to baseline
+│   │   ├── stress [target]    Stress test
+│   │   └── report             Benchmark report
+│   ├── scale                   Service scaling
+│   │   ├── (service)          Scale service
+│   │   ├── status             Scale status
+│   │   └── --auto             Autoscaling
+│   └── migrate                 Cross-env migration
+│       ├── <src> <target>     Migrate environments
+│       ├── diff <s> <t>       Show differences
+│       ├── sync <s> <t>       Continuous sync
+│       └── rollback           Undo migration
+│
+├── Operations (v0.4.6)
+│   ├── frontend                Frontend management
+│   │   ├── status             Frontend status
+│   │   ├── list               List frontends
+│   │   ├── add <name>         Add frontend
+│   │   ├── remove <name>      Remove frontend
+│   │   ├── deploy <name>      Deploy frontend
+│   │   ├── logs <name>        Deploy logs
+│   │   └── env <name>         Environment vars
+│   ├── history                 Audit trail
+│   │   ├── show               Recent history
+│   │   ├── deployments        Deploy history
+│   │   ├── migrations         Migration history
+│   │   ├── rollbacks          Rollback history
+│   │   ├── commands           Command history
+│   │   ├── search <query>     Search history
+│   │   ├── export             Export history
+│   │   └── clear              Clear history
+│   └── config                  Configuration
+│       ├── show               Show config
+│       ├── get <key>          Get value
+│       ├── set <key> <val>    Set value
+│       ├── list               List keys
+│       ├── edit               Open in editor
+│       ├── validate           Validate config
+│       ├── diff <e1> <e2>     Compare envs
+│       ├── export             Export config
+│       ├── import <file>      Import config
+│       └── reset              Reset to defaults
+│
+├── Infrastructure
+│   ├── servers                 Server management (v0.4.6)
+│   │   ├── list               List servers
+│   │   ├── add <name>         Add server
+│   │   ├── remove <name>      Remove server
+│   │   ├── status [name]      Server status
+│   │   ├── ssh <name>         SSH to server
+│   │   ├── logs <name>        Server logs
+│   │   ├── update <name>      Update config
+│   │   ├── reboot <name>      Reboot server
+│   │   └── info <name>        Detailed info
+│   ├── providers               Cloud providers
+│   │   ├── (default)          List providers
+│   │   ├── init <provider>    Configure provider
+│   │   ├── status             Provider status
+│   │   ├── costs              Cost comparison
+│   │   └── remove <provider>  Remove provider
+│   ├── provision               Provision infra
+│   │   ├── <provider>         Provision on provider
+│   │   ├── --estimate         Show cost only
+│   │   ├── --dry-run          Preview resources
+│   │   └── export terraform   Export as Terraform
+│   └── sync                    Data sync
+│       ├── pull <env>         Pull from env
+│       ├── push <env>         Push to env
+│       ├── files              File sync
+│       └── config             Config sync
+│
+├── Services
+│   ├── ssl                     SSL certificates
+│   ├── trust                   Trust local certs
+│   ├── admin                   Admin UI
+│   │   ├── enable             Enable admin
+│   │   ├── disable            Disable admin
+│   │   ├── open               Open in browser
+│   │   └── password           Set password
+│   ├── email                   Email service
+│   ├── search                  Search service
+│   ├── functions               Serverless functions
+│   ├── mlflow                  ML tracking
+│   ├── metrics                 Monitoring stack
+│   └── monitor                 Access dashboards
+│
+├── Utility
+│   ├── ci                      CI/CD generation
+│   │   ├── init <platform>    Generate workflow
+│   │   ├── validate           Validate config
+│   │   └── status             CI status
+│   ├── completion              Shell completions
+│   │   ├── bash               Bash completions
+│   │   ├── zsh                Zsh completions
+│   │   ├── fish               Fish completions
+│   │   └── install <shell>    Auto-install
+│   ├── update                  Update nself
+│   │   └── --check            Check only
+│   ├── version                 Version info
+│   │   └── --json             JSON output
+│   └── help [command]          Show help
+│
+└── Legacy/Deprecated
+    ├── staging                 → nself deploy staging
+    ├── prod                    → nself deploy prod
+    └── rollback                → nself deploy rollback
+```
 
 ---
 
 ## Quick Reference
 
+### Daily Development
+
 ```bash
-# Core workflow
-nself init                    # Initialize project
-nself build                   # Generate configs
-nself start                   # Start services
-nself stop                    # Stop services
+nself start                     # Start services
+nself status                    # Check health
+nself logs [service]            # View logs
+nself db shell                  # Database shell
+nself stop                      # Stop services
+```
 
-# Database (v0.4.4)
-nself db migrate up           # Run migrations
-nself db schema scaffold      # Create schema template
-nself db schema apply         # Full workflow
-nself db seed                 # Seed data
-nself db backup               # Create backup
+### Database Operations
 
-# Deployment (v0.4.3)
-nself env create prod         # Create environment
-nself deploy prod             # Deploy to production
+```bash
+nself db migrate up             # Run migrations
+nself db migrate create NAME    # Create migration
+nself db seed                   # Seed data
+nself db backup                 # Create backup
+nself db types                  # Generate types
+```
 
-# Provider Support (v0.4.5)
-nself providers init hetzner  # Configure cloud provider
-nself provision aws           # Provision infrastructure
-nself sync pull staging       # Sync from staging
-nself ci init github          # Generate CI/CD workflow
-nself completion bash         # Shell completions
+### Deployment
+
+```bash
+nself deploy check              # Pre-deploy validation
+nself deploy staging            # Deploy to staging
+nself deploy prod --dry-run     # Preview production
+nself deploy prod               # Deploy to production
+nself deploy rollback           # Rollback if needed
+```
+
+### Performance
+
+```bash
+nself perf profile              # System profile
+nself perf slow-queries         # Find slow queries
+nself bench run api             # Benchmark API
+nself bench baseline            # Establish baseline
+nself scale postgres --cpu 2    # Scale service
+```
+
+### Configuration
+
+```bash
+nself config show               # View config
+nself config validate           # Validate config
+nself config diff local staging # Compare envs
+nself env create prod           # Create environment
 ```
 
 ---
@@ -38,528 +274,35 @@ nself completion bash         # Shell completions
 
 | Category | Commands | Description |
 |----------|----------|-------------|
-| **Core** | 8 | Project lifecycle |
+| **Core** | 7 | Project lifecycle |
 | **Status** | 6 | Monitoring and debugging |
-| **Management** | 4 | Configuration and admin |
-| **Services** | 6 | Service-specific operations |
-| **Database** | 1 (10+ subcommands) | Database management |
-| **Deployment** | 4 | Environment and deployment |
-| **Provider** | 5 | Cloud providers and sync (v0.4.5) |
+| **Database** | 10 | Database management |
+| **Deployment** | 8 | Environment and deployment |
+| **Performance** | 4 | Profiling and scaling (v0.4.6) |
+| **Operations** | 3 | Config, frontend, history (v0.4.6) |
+| **Infrastructure** | 4 | Servers, providers, sync |
+| **Services** | 8 | Service-specific operations |
+| **Utility** | 5 | CI, completions, updates |
 
-**Total: 34 commands**
+**Total: 55+ commands and subcommands**
 
 ---
 
-## Core Commands (8)
+## Global Options
 
-### `nself init`
+All commands support these options:
 
-Initialize a new nself project.
-
-```bash
-nself init              # Basic setup
-nself init --demo       # Full demo with all services
-nself init --wizard     # Interactive configuration
-nself init --full       # All environment files
-```
-
-**Options:**
-| Flag | Description |
-|------|-------------|
-| `--demo` | All 25 services enabled |
-| `--wizard` | Interactive prompts |
-| `--full` | Creates .env.dev, .env.staging, .env.prod |
-| `--force` | Reinitialize existing project |
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help for command |
+| `--version` | Show version |
+| `--json` | JSON output (where supported) |
 | `--quiet` | Minimal output |
-
----
-
-### `nself build`
-
-Generate docker-compose.yml, nginx configs, and service files.
-
-```bash
-nself build             # Standard build
-nself build --verbose   # Detailed output
-nself build --clean     # Remove generated files first
-```
-
-**What it generates:**
-- `docker-compose.yml` - Service definitions
-- `nginx/` - Reverse proxy configs
-- `postgres/` - Database init scripts
-- `services/` - Custom service code (first time only)
-- `ssl/` - Certificates
-
----
-
-### `nself start`
-
-Start all services.
-
-```bash
-nself start             # Start with smart defaults
-nself start --fresh     # Force recreate all containers
-nself start --verbose   # Detailed output
-```
-
-**Options:**
-| Flag | Description |
-|------|-------------|
-| `--fresh` | Force recreate containers |
 | `--verbose` | Detailed output |
-| `--skip-health-checks` | Don't wait for health |
-| `--timeout N` | Health check timeout (seconds) |
-
----
-
-### `nself stop`
-
-Stop all services.
-
-```bash
-nself stop              # Stop services
-nself stop --remove     # Stop and remove containers
-```
-
----
-
-### `nself restart`
-
-Restart services.
-
-```bash
-nself restart           # Restart all
-nself restart postgres  # Restart specific service
-```
-
----
-
-### `nself reset`
-
-Reset project to clean state.
-
-```bash
-nself reset             # With confirmation
-nself reset --force     # Skip confirmation
-```
-
-**Warning:** Deletes all data. Blocked in production.
-
----
-
-### `nself clean`
-
-Remove generated files and Docker resources.
-
-```bash
-nself clean             # Remove generated files
-nself clean --docker    # Also remove Docker resources
-nself clean --all       # Everything including backups
-```
-
----
-
-### `nself version`
-
-Show version information.
-
-```bash
-nself version           # Full version info
-nself -v                # Short version
-```
-
----
-
-## Status Commands (6)
-
-### `nself status`
-
-Show service health and status.
-
-```bash
-nself status            # All services
-nself status postgres   # Specific service
-nself status --json     # JSON output
-```
-
----
-
-### `nself logs`
-
-View service logs.
-
-```bash
-nself logs              # All services
-nself logs postgres     # Specific service
-nself logs -f           # Follow logs
-nself logs --tail 100   # Last 100 lines
-```
-
----
-
-### `nself exec`
-
-Execute command in a service container.
-
-```bash
-nself exec postgres bash
-nself exec hasura hasura-cli console
-```
-
----
-
-### `nself urls`
-
-Show all service URLs.
-
-```bash
-nself urls              # All URLs
-nself urls --json       # JSON output
-```
-
----
-
-### `nself doctor`
-
-Diagnose issues and suggest fixes.
-
-```bash
-nself doctor            # Full diagnosis
-nself doctor --fix      # Auto-fix issues
-```
-
----
-
-### `nself help`
-
-Show help for commands.
-
-```bash
-nself help              # General help
-nself help db           # Command-specific help
-nself db --help         # Also works
-```
-
----
-
-## Management Commands (4)
-
-### `nself update`
-
-Update nself to latest version.
-
-```bash
-nself update            # Update nself
-nself update --check    # Check for updates only
-```
-
----
-
-### `nself ssl`
-
-Manage SSL certificates.
-
-```bash
-nself ssl               # Generate/renew certs
-nself ssl --staging     # Use Let's Encrypt staging
-```
-
----
-
-### `nself trust`
-
-Trust SSL certificates in system keychain.
-
-```bash
-nself trust             # Add certs to keychain
-```
-
----
-
-### `nself admin`
-
-Manage admin dashboard.
-
-```bash
-nself admin enable      # Enable admin UI
-nself admin disable     # Disable admin UI
-nself admin open        # Open in browser
-nself admin password    # Set password
-```
-
----
-
-## Service Commands (6)
-
-### `nself email`
-
-Configure email service.
-
-```bash
-nself email             # Show current config
-nself email setup       # Interactive setup
-nself email test        # Send test email
-```
-
----
-
-### `nself search`
-
-Configure search service.
-
-```bash
-nself search            # Show current config
-nself search index      # Reindex data
-nself search status     # Index status
-```
-
----
-
-### `nself functions`
-
-Manage serverless functions.
-
-```bash
-nself functions deploy  # Deploy functions
-nself functions logs    # View function logs
-```
-
----
-
-### `nself mlflow`
-
-Manage MLflow service.
-
-```bash
-nself mlflow open       # Open UI
-nself mlflow status     # Check status
-```
-
----
-
-### `nself metrics`
-
-Configure monitoring stack.
-
-```bash
-nself metrics           # Status
-nself metrics enable    # Enable monitoring
-nself metrics disable   # Disable monitoring
-```
-
----
-
-### `nself monitor`
-
-Access monitoring dashboards.
-
-```bash
-nself monitor           # Open Grafana
-nself monitor prometheus # Open Prometheus
-nself monitor logs      # Open Loki
-```
-
----
-
-## Database Command (v0.4.4)
-
-### `nself db`
-
-Comprehensive database management. See [DB.md](DB.md) for complete reference.
-
-```bash
-# Migrations
-nself db migrate up           # Run pending migrations
-nself db migrate down         # Rollback last migration
-nself db migrate create NAME  # Create new migration
-nself db migrate status       # Show migration status
-
-# Schema (NEW in v0.4.4)
-nself db schema scaffold basic  # Create from template
-nself db schema import FILE     # Import DBML
-nself db schema apply FILE      # Full workflow
-nself db schema diagram         # Export to DBML
-
-# Seeding
-nself db seed                 # Run all seeds
-nself db seed users           # Seed users (env-aware)
-nself db seed create NAME     # Create seed file
-
-# Mock Data
-nself db mock                 # Generate mock data
-nself db mock auto            # Auto-generate from schema
-nself db mock --seed 123      # Reproducible data
-
-# Backup/Restore
-nself db backup               # Create backup
-nself db backup list          # List backups
-nself db restore              # Restore latest
-
-# Types
-nself db types                # Generate TypeScript
-nself db types go             # Generate Go structs
-nself db types python         # Generate Python
-
-# Shell & Query
-nself db shell                # Interactive psql
-nself db shell --readonly     # Read-only shell
-nself db query "SQL"          # Execute query
-
-# Inspection
-nself db inspect              # Overview
-nself db inspect size         # Table sizes
-nself db inspect slow         # Slow queries
-
-# Data Operations
-nself db data export users    # Export table
-nself db data anonymize       # Anonymize PII
-```
-
----
-
-## Deployment Commands (v0.4.3)
-
-### `nself env`
-
-Manage environments.
-
-```bash
-nself env                     # List environments
-nself env create prod         # Create environment
-nself env switch staging      # Switch environment
-nself env diff staging prod   # Compare environments
-```
-
-See [ENV.md](ENV.md) for complete reference.
-
----
-
-### `nself deploy`
-
-Deploy to remote servers.
-
-```bash
-nself deploy staging          # Deploy to staging
-nself deploy prod             # Deploy to production
-nself deploy prod --dry-run   # Preview deployment
-nself deploy status           # Check deployment status
-nself deploy rollback         # Rollback to previous
-```
-
-See [DEPLOY.md](DEPLOY.md) for complete reference.
-
----
-
-### `nself prod`
-
-Production configuration.
-
-```bash
-nself prod                    # Show prod config
-nself prod check              # Validate config
-nself prod harden             # Apply security settings
-```
-
-See [PROD.md](PROD.md) for complete reference.
-
----
-
-### `nself staging`
-
-Staging environment.
-
-```bash
-nself staging                 # Show staging config
-nself staging create          # Create staging env
-```
-
-See [STAGING.md](STAGING.md) for complete reference.
-
----
-
-## Provider Commands (v0.4.5)
-
-### `nself providers`
-
-Manage cloud provider credentials.
-
-```bash
-nself providers                 # List configured providers
-nself providers init aws        # Configure AWS credentials
-nself providers init hetzner    # Configure Hetzner
-nself providers status          # Check provider status
-nself providers costs --compare # Compare costs across providers
-nself providers remove hetzner  # Remove provider config
-```
-
-**Supported Providers:**
-AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
-
----
-
-### `nself provision`
-
-One-command infrastructure provisioning.
-
-```bash
-nself provision hetzner         # Default small size
-nself provision aws --size medium
-nself provision do --size large
-nself provision aws --estimate  # Show cost only
-nself provision gcp --dry-run   # Preview resources
-nself provision export terraform # Export as Terraform
-```
-
-**Sizes:** small (1-2 vCPU, 2GB), medium (2 vCPU, 4GB), large (4 vCPU, 8GB), xlarge (8 vCPU, 16GB)
-
----
-
-### `nself sync`
-
-Sync databases, config, and files between environments.
-
-```bash
-nself sync pull staging         # Pull database from staging
-nself sync pull prod --anonymize # Pull prod with PII anonymization
-nself sync push staging         # Push to staging
-nself sync files pull staging uploads/  # Sync files
-nself sync config diff staging  # Compare configs
-```
-
-See [SYNC.md](SYNC.md) for complete reference.
-
----
-
-### `nself ci`
-
-Generate CI/CD workflows.
-
-```bash
-nself ci init github            # Generate GitHub Actions
-nself ci init gitlab            # Generate GitLab CI
-nself ci validate               # Validate config
-nself ci status                 # Check CI status
-```
-
----
-
-### `nself completion`
-
-Generate shell completions.
-
-```bash
-nself completion bash >> ~/.bashrc
-nself completion zsh >> ~/.zshrc
-nself completion fish >> ~/.config/fish/completions/nself.fish
-nself completion install bash   # Auto-install
-```
 
 ---
 
 ## Environment Variables
-
-All commands respect these environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -585,55 +328,42 @@ All commands respect these environment variables:
 
 ---
 
-## Common Workflows
+## Command Documentation
 
-### New Project
+Each command has detailed documentation:
 
-```bash
-mkdir myapp && cd myapp
-nself init
-nself build
-nself start
-nself db schema scaffold basic
-nself db schema apply schema.dbml
-```
+### Core Commands
+- [init](INIT.md) | [build](BUILD.md) | [start](START.md) | [stop](STOP.md)
 
-### Daily Development
+### Status Commands
+- [status](STATUS.md) | [urls](URLS.md) | [logs](LOGS.md) | [doctor](DOCTOR.md)
 
-```bash
-nself start                  # Start working
-nself logs -f                # Watch logs
-nself db migrate up          # Run new migrations
-nself stop                   # Done for the day
-```
+### Database
+- [db](DB.md) - Complete database reference
 
-### Deploy to Production
+### Deployment
+- [deploy](DEPLOY.md) | [env](ENV.md) | [sync](SYNC.md)
 
-```bash
-nself env create prod production
-# Edit .environments/prod/server.json
-nself deploy prod --dry-run  # Preview
-nself deploy prod            # Deploy
-```
+### Performance (v0.4.6)
+- [perf](PERF.md) | [bench](BENCH.md) | [scale](SCALE.md) | [migrate](MIGRATE.md)
 
-### Database Backup
+### Operations (v0.4.6)
+- [health](HEALTH.md) | [frontend](FRONTEND.md) | [history](HISTORY.md) | [config](CONFIG.md)
 
-```bash
-nself db backup              # Create backup
-nself db backup list         # List backups
-ENV=production nself db restore backup.sql  # Restore
-```
+### Infrastructure
+- [servers](SERVERS.md) | [providers](PROVIDERS.md) | [provision](PROVISION.md)
 
 ---
 
-## See Also
+## Version History
 
-- [DB.md](DB.md) - Complete database command reference
-- [DEPLOY.md](DEPLOY.md) - Deployment command reference
-- [ENV.md](ENV.md) - Environment command reference
-- [Quick Start](../guides/Quick-Start.md) - Getting started
-- [Database Workflow](../guides/DATABASE-WORKFLOW.md) - Schema to production
+| Version | Commands Added |
+|---------|----------------|
+| **0.4.6** | perf, bench, scale, migrate, health, frontend, history, config, servers |
+| **0.4.5** | providers, provision, sync, ci, completion |
+| **0.4.4** | db schema, db mock, db types |
+| **0.4.3** | env, deploy, staging, prod |
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.5*
+*Last Updated: January 23, 2026 | Version: 0.4.6*

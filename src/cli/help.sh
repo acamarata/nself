@@ -86,8 +86,19 @@ show_general_help() {
   show_section "Provider Commands"
   printf "  ${COLOR_BLUE}providers${COLOR_RESET}     Configure cloud provider credentials\n"
   printf "  ${COLOR_BLUE}provision${COLOR_RESET}     Provision infrastructure on any provider\n"
-  echo
-  printf "  ${COLOR_DIM}scale${COLOR_RESET}         ${COLOR_DIM}Scaling management (» 0.4.6)${COLOR_RESET}\n"
+  printf "  ${COLOR_BLUE}servers${COLOR_RESET}       Server and infrastructure management\n"
+
+  show_section "Performance Commands (v0.4.6)"
+  printf "  ${COLOR_BLUE}perf${COLOR_RESET}          Performance profiling and analysis\n"
+  printf "  ${COLOR_BLUE}bench${COLOR_RESET}         Benchmarking and load testing\n"
+  printf "  ${COLOR_BLUE}scale${COLOR_RESET}         Service scaling and autoscaling\n"
+  printf "  ${COLOR_BLUE}migrate${COLOR_RESET}       Cross-environment migration\n"
+
+  show_section "Operations Commands (v0.4.6)"
+  printf "  ${COLOR_BLUE}health${COLOR_RESET}        Health check management and monitoring\n"
+  printf "  ${COLOR_BLUE}frontend${COLOR_RESET}      Frontend application management\n"
+  printf "  ${COLOR_BLUE}history${COLOR_RESET}       Deployment and operation audit trail\n"
+  printf "  ${COLOR_BLUE}config${COLOR_RESET}        Configuration management\n"
 
   show_section "Utility Commands"
   printf "  ${COLOR_BLUE}ci${COLOR_RESET}            CI/CD workflow generation (GitHub/GitLab)\n"

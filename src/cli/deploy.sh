@@ -38,6 +38,7 @@ Environment Deployment:
 
 Subcommands:
   init          Initialize deployment configuration
+  check         Pre-deployment validation checks
   ssh           Deploy to VPS via SSH (legacy)
   status        Show deployment status
   rollback      Rollback deployment
@@ -1140,6 +1141,187 @@ deploy_health() {
 }
 
 # ============================================================
+# Pre-deployment validation checks (v0.4.6)
+# ============================================================
+
+deploy_check() {
+  local target_env="${1:-}"
+  local json_mode=false
+  local fix_mode=false
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json_mode=true; shift ;;
+      --fix) fix_mode=true; shift ;;
+      *) target_env="$1"; shift ;;
+    esac
+  done
+
+  show_command_header "nself deploy check" "Pre-deployment Validation"
+  echo ""
+
+  local errors=0
+  local warnings=0
+  local checks_passed=0
+
+  # Helper function for check results
+  check_result() {
+    local status="$1"
+    local check="$2"
+    local message="$3"
+
+    if [[ "$status" == "pass" ]]; then
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} %s\n" "$check"
+      checks_passed=$((checks_passed + 1))
+    elif [[ "$status" == "warn" ]]; then
+      printf "  ${COLOR_YELLOW}!${COLOR_RESET} %s: %s\n" "$check" "$message"
+      warnings=$((warnings + 1))
+    else
+      printf "  ${COLOR_RED}✗${COLOR_RESET} %s: %s\n" "$check" "$message"
+      errors=$((errors + 1))
+    fi
+  }
+
+  # 1. Check if build has been run
+  printf "${COLOR_CYAN}➞ Build Artifacts${COLOR_RESET}\n"
+  if [[ -f "docker-compose.yml" ]]; then
+    check_result "pass" "docker-compose.yml exists"
+  else
+    check_result "fail" "docker-compose.yml" "Run 'nself build' first"
+  fi
+
+  if [[ -d "nginx" ]] && [[ -f "nginx/nginx.conf" ]]; then
+    check_result "pass" "Nginx configuration exists"
+  else
+    check_result "fail" "Nginx config" "Run 'nself build' first"
+  fi
+  echo ""
+
+  # 2. Check environment configuration
+  printf "${COLOR_CYAN}➞ Environment Configuration${COLOR_RESET}\n"
+  if [[ -n "$target_env" ]]; then
+    if [[ -d ".environments/$target_env" ]]; then
+      check_result "pass" "Environment directory exists"
+
+      if [[ -f ".environments/$target_env/server.json" ]]; then
+        check_result "pass" "Server configuration exists"
+
+        # Check required fields
+        local host=$(grep '"host"' ".environments/$target_env/server.json" 2>/dev/null | head -1)
+        if [[ -n "$host" ]]; then
+          check_result "pass" "Host configured"
+        else
+          check_result "fail" "Host" "Missing in server.json"
+        fi
+      else
+        check_result "fail" "server.json" "Missing deployment configuration"
+      fi
+
+      if [[ -f ".environments/$target_env/.env" ]]; then
+        check_result "pass" "Environment variables configured"
+      else
+        check_result "warn" "Environment variables" "No .env file (using defaults)"
+      fi
+
+      if [[ -f ".environments/$target_env/.env.secrets" ]]; then
+        # Check permissions
+        local perms=$(stat -c "%a" ".environments/$target_env/.env.secrets" 2>/dev/null || stat -f "%OLp" ".environments/$target_env/.env.secrets" 2>/dev/null)
+        if [[ "$perms" == "600" ]]; then
+          check_result "pass" "Secrets file permissions (600)"
+        else
+          check_result "warn" "Secrets permissions" "Should be 600, got $perms"
+          if [[ "$fix_mode" == "true" ]]; then
+            chmod 600 ".environments/$target_env/.env.secrets"
+            log_info "Fixed: Set permissions to 600"
+          fi
+        fi
+      fi
+    else
+      check_result "fail" "Environment" "Not found: .environments/$target_env"
+    fi
+  else
+    if [[ -f ".env" ]]; then
+      check_result "pass" "Local .env exists"
+    else
+      check_result "fail" ".env" "Missing configuration"
+    fi
+  fi
+  echo ""
+
+  # 3. Check required secrets
+  printf "${COLOR_CYAN}➞ Required Secrets${COLOR_RESET}\n"
+  load_env_with_priority
+
+  local required_secrets=(
+    "POSTGRES_PASSWORD"
+    "HASURA_GRAPHQL_ADMIN_SECRET"
+    "AUTH_SECRET_KEY"
+  )
+
+  for secret in "${required_secrets[@]}"; do
+    local value="${!secret:-}"
+    if [[ -n "$value" ]] && [[ "$value" != "changeme" ]] && [[ ${#value} -ge 12 ]]; then
+      check_result "pass" "$secret configured"
+    elif [[ -n "$value" ]] && [[ ${#value} -lt 12 ]]; then
+      check_result "warn" "$secret" "Password too short (< 12 chars)"
+    elif [[ "$value" == "changeme" ]]; then
+      check_result "fail" "$secret" "Using default value 'changeme'"
+    else
+      check_result "fail" "$secret" "Not configured"
+    fi
+  done
+  echo ""
+
+  # 4. Check SSH access (if target_env specified)
+  if [[ -n "$target_env" ]] && [[ -f ".environments/$target_env/server.json" ]]; then
+    printf "${COLOR_CYAN}➞ SSH Connectivity${COLOR_RESET}\n"
+
+    local host=$(grep '"host"' ".environments/$target_env/server.json" 2>/dev/null | sed 's/.*: *"\([^"]*\)".*/\1/')
+    local user=$(grep '"user"' ".environments/$target_env/server.json" 2>/dev/null | sed 's/.*: *"\([^"]*\)".*/\1/')
+    user="${user:-root}"
+
+    if [[ -n "$host" ]]; then
+      if ssh -o ConnectTimeout=5 -o BatchMode=yes "${user}@${host}" "echo ok" >/dev/null 2>&1; then
+        check_result "pass" "SSH connection to ${user}@${host}"
+      else
+        check_result "fail" "SSH connection" "Cannot connect to ${user}@${host}"
+      fi
+    fi
+    echo ""
+  fi
+
+  # 5. Check Docker resources
+  printf "${COLOR_CYAN}➞ Docker Resources${COLOR_RESET}\n"
+  if docker info >/dev/null 2>&1; then
+    check_result "pass" "Docker is running"
+
+    # Check disk space (simplified)
+    local disk_free=$(df -h . 2>/dev/null | tail -1 | awk '{print $4}')
+    check_result "pass" "Disk space available: $disk_free"
+  else
+    check_result "fail" "Docker" "Not running or not accessible"
+  fi
+  echo ""
+
+  # Summary
+  printf "${COLOR_CYAN}➞ Summary${COLOR_RESET}\n"
+  echo "  Passed:   $checks_passed"
+  echo "  Warnings: $warnings"
+  echo "  Errors:   $errors"
+  echo ""
+
+  if [[ $errors -eq 0 ]]; then
+    log_success "All critical checks passed"
+    [[ $warnings -gt 0 ]] && log_warning "Review warnings before deploying"
+    return 0
+  else
+    log_error "Deployment blocked: $errors error(s) must be resolved"
+    return 1
+  fi
+}
+
+# ============================================================
 # Main command function
 # ============================================================
 
@@ -1175,6 +1357,9 @@ cmd_deploy() {
     ;;
   init)
     deploy_init "$@"
+    ;;
+  check)
+    deploy_check "$@"
     ;;
   ssh)
     deploy_ssh "$@"

@@ -578,9 +578,11 @@ show_help() {
   echo "Options:"
   echo "  -w, --watch           Watch mode (refresh every 5s)"
   echo "  -i, --interval N      Set refresh interval for watch mode (default: 5s)"
+  echo "  --all-envs            Show status across all configured environments"
   echo "  --no-resources        Hide resource usage information"
   echo "  --no-health           Hide health check information"
   echo "  --show-ports          Show detailed port information"
+  echo "  --json                Output in JSON format"
   echo "  --format FORMAT       Output format: table, json (default: table)"
   echo "  -h, --help            Show this help message"
   echo ""
@@ -589,6 +591,8 @@ show_help() {
   echo "  nself status postgres           # Show detailed status of postgres service"
   echo "  nself status --watch            # Watch mode with 5s refresh"
   echo "  nself status -w -i 10           # Watch mode with 10s refresh"
+  echo "  nself status --json             # JSON output for tooling"
+  echo "  nself status --all-envs         # Check all environments"
   echo ""
   echo "Information shown:"
   echo "  • Service status and health"
@@ -598,9 +602,134 @@ show_help() {
   echo "  • Migration status"
 }
 
+# Function to output JSON status
+output_json_status() {
+  load_env_with_priority
+
+  local services=($(compose config --services 2>/dev/null))
+  local project_name="${PROJECT_NAME:-nself}"
+
+  printf '{\n  "timestamp": "%s",\n  "environment": "%s",\n  "services": [\n' \
+    "$(date -Iseconds)" "${ENV:-local}"
+
+  local first=true
+  for service in "${services[@]}"; do
+    local health=$(check_service_health "$service")
+    local container_name="${project_name}_${service//-/_}"
+
+    # Get container stats
+    local stats=$(docker stats --no-stream --format "{{.CPUPerc}}\t{{.MemUsage}}" "$container_name" 2>/dev/null || echo "0%\t0B")
+    local cpu=$(echo "$stats" | cut -f1)
+    local mem=$(echo "$stats" | cut -f2)
+
+    [[ "$first" != "true" ]] && printf ",\n"
+    first=false
+
+    printf '    {"name": "%s", "status": "%s", "cpu": "%s", "memory": "%s"}' \
+      "$service" "$health" "$cpu" "$mem"
+  done
+
+  printf '\n  ]\n}\n'
+}
+
+# Function to check status across all environments
+check_all_envs_status() {
+  local json_mode="${JSON_OUTPUT:-false}"
+
+  # Find all environment files
+  local env_files=()
+  [[ -f ".env" ]] && env_files+=("local:.env")
+  [[ -f ".env.dev" ]] && env_files+=("dev:.env.dev")
+  [[ -f ".env.staging" ]] && env_files+=("staging:.env.staging")
+  [[ -f ".env.prod" ]] && env_files+=("prod:.env.prod")
+  [[ -f ".env.production" ]] && env_files+=("production:.env.production")
+
+  # Check .environments directory
+  if [[ -d ".environments" ]]; then
+    for env_dir in .environments/*/; do
+      local env_name=$(basename "$env_dir")
+      if [[ -f "${env_dir}server.json" ]]; then
+        env_files+=("${env_name}:${env_dir}server.json")
+      fi
+    done
+  fi
+
+  if [[ "$json_mode" == "true" ]]; then
+    printf '{\n  "timestamp": "%s",\n  "environments": [\n' "$(date -Iseconds)"
+  else
+    show_command_header "nself status" "All Environments Status"
+    echo ""
+    printf "  %-15s %-15s %-12s %s\n" "Environment" "Type" "Status" "Details"
+    printf "  %-15s %-15s %-12s %s\n" "-----------" "----" "------" "-------"
+  fi
+
+  local first=true
+  for entry in "${env_files[@]}"; do
+    local env_name="${entry%%:*}"
+    local env_file="${entry#*:}"
+    local env_type="local"
+    local status="unknown"
+    local details=""
+
+    # Determine if local or remote
+    if [[ "$env_file" == *"server.json"* ]]; then
+      env_type="remote"
+      # Try to get server info
+      if [[ -f "$env_file" ]]; then
+        local host=$(grep '"host"' "$env_file" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+        if [[ -n "$host" ]]; then
+          # Quick ping check
+          if ping -c 1 -W 2 "$host" >/dev/null 2>&1; then
+            status="reachable"
+            details="$host"
+          else
+            status="unreachable"
+            details="$host"
+          fi
+        fi
+      fi
+    else
+      env_type="local"
+      # Check local Docker status
+      if docker ps >/dev/null 2>&1; then
+        local running=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$running" -gt 0 ]]; then
+          status="running"
+          details="$running containers"
+        else
+          status="stopped"
+          details="no containers"
+        fi
+      else
+        status="docker-unavailable"
+      fi
+    fi
+
+    if [[ "$json_mode" == "true" ]]; then
+      [[ "$first" != "true" ]] && printf ",\n"
+      first=false
+      printf '    {"name": "%s", "type": "%s", "status": "%s", "details": "%s"}' \
+        "$env_name" "$env_type" "$status" "$details"
+    else
+      local status_color="$COLOR_GREEN"
+      [[ "$status" == "unreachable" || "$status" == "stopped" ]] && status_color="$COLOR_RED"
+      [[ "$status" == "unknown" ]] && status_color="$COLOR_YELLOW"
+
+      printf "  %-15s %-15s ${status_color}%-12s${COLOR_RESET} %s\n" \
+        "$env_name" "$env_type" "$status" "$details"
+    fi
+  done
+
+  if [[ "$json_mode" == "true" ]]; then
+    printf '\n  ]\n}\n'
+  fi
+}
+
 # Main function
 main() {
   local service_name=""
+  local json_mode=false
+  local all_envs=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -612,6 +741,10 @@ main() {
     -i | --interval)
       REFRESH_INTERVAL="$2"
       shift 2
+      ;;
+    --all-envs)
+      all_envs=true
+      shift
       ;;
     --no-resources)
       SHOW_RESOURCES=false
@@ -625,8 +758,14 @@ main() {
       SHOW_PORTS=true
       shift
       ;;
+    --json)
+      json_mode=true
+      JSON_OUTPUT=true
+      shift
+      ;;
     --format)
       OUTPUT_FORMAT="$2"
+      [[ "$OUTPUT_FORMAT" == "json" ]] && json_mode=true && JSON_OUTPUT=true
       shift 2
       ;;
     -h | --help)
@@ -644,6 +783,12 @@ main() {
       ;;
     esac
   done
+
+  # Handle --all-envs mode
+  if [[ "$all_envs" == "true" ]]; then
+    check_all_envs_status
+    exit 0
+  fi
 
   # Check if docker-compose.yml exists
   if [[ ! -f "docker-compose.yml" ]]; then
@@ -666,6 +811,12 @@ main() {
   # Handle watch mode
   if [[ "$WATCH_MODE" == "true" ]]; then
     watch_status
+    exit 0
+  fi
+
+  # Handle JSON output mode
+  if [[ "$json_mode" == "true" ]]; then
+    output_json_status
     exit 0
   fi
 

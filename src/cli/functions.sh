@@ -22,6 +22,9 @@ cmd_functions() {
     status)
       functions_status
       ;;
+    init)
+      functions_init "$@"
+      ;;
     enable)
       functions_enable
       ;;
@@ -95,6 +98,124 @@ functions_status() {
     log_warning "Functions service is not running"
     log_info "Start with: nself start"
   fi
+}
+
+# Initialize functions service
+functions_init() {
+  show_command_header "Functions" "Initializing serverless functions"
+
+  load_env_with_priority
+  ensure_project_context
+
+  local use_typescript=false
+  for arg in "$@"; do
+    if [[ "$arg" == "--ts" ]] || [[ "$arg" == "--typescript" ]]; then
+      use_typescript=true
+    fi
+  done
+
+  # Create functions directory
+  if [[ ! -d "./functions" ]]; then
+    mkdir -p ./functions
+    log_success "Created functions directory"
+  else
+    log_info "Functions directory already exists"
+  fi
+
+  # Create package.json if it doesn't exist
+  if [[ ! -f "./functions/package.json" ]]; then
+    if [[ "$use_typescript" == "true" ]]; then
+      cat > ./functions/package.json << 'EOF'
+{
+  "name": "nself-functions",
+  "version": "1.0.0",
+  "description": "Serverless functions for nself project",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+EOF
+      log_success "Created package.json (TypeScript)"
+
+      # Create tsconfig.json
+      cat > ./functions/tsconfig.json << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./"
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
+EOF
+      log_success "Created tsconfig.json"
+    else
+      cat > ./functions/package.json << 'EOF'
+{
+  "name": "nself-functions",
+  "version": "1.0.0",
+  "description": "Serverless functions for nself project",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "dependencies": {}
+}
+EOF
+      log_success "Created package.json"
+    fi
+  else
+    log_info "package.json already exists"
+  fi
+
+  # Run npm install if node/npm is available
+  if command -v npm >/dev/null 2>&1; then
+    log_info "Installing dependencies..."
+    (cd ./functions && npm install 2>/dev/null) || log_warning "npm install had warnings (may be normal)"
+    log_success "Dependencies installed"
+  else
+    log_warning "npm not found - skipping dependency installation"
+    log_info "Run 'cd functions && npm install' manually"
+  fi
+
+  # Create example function if none exist
+  local func_count=$(find ./functions -maxdepth 1 \( -name "*.js" -o -name "*.ts" \) 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$func_count" -eq 0 ]]; then
+    if [[ "$use_typescript" == "true" ]]; then
+      functions_create "hello" "basic" "--ts"
+    else
+      functions_create "hello" "basic"
+    fi
+    log_success "Created example function: hello"
+  fi
+
+  # Enable functions in .env if not already
+  if ! grep -q "^FUNCTIONS_ENABLED=true" .env 2>/dev/null; then
+    functions_enable
+  fi
+
+  echo ""
+  log_success "Functions initialized successfully!"
+  echo ""
+  log_info "Next steps:"
+  log_info "  1. nself build          # Rebuild to include functions service"
+  log_info "  2. nself restart        # Restart to apply changes"
+  log_info "  3. nself functions test hello  # Test the example function"
 }
 
 # Enable functions
@@ -1001,6 +1122,7 @@ ${COLOR_YELLOW}Usage:${COLOR_RESET}
 
 ${COLOR_YELLOW}Commands:${COLOR_RESET}
   status              Show functions service status
+  init [--ts]         Initialize functions service (creates directory, package.json, example)
   enable              Enable functions service
   disable             Disable functions service
   list                List available functions
@@ -1013,6 +1135,8 @@ ${COLOR_YELLOW}Commands:${COLOR_RESET}
   help                Show this help message
 
 ${COLOR_YELLOW}Examples:${COLOR_RESET}
+  nself functions init                      # Initialize functions (JS)
+  nself functions init --ts                 # Initialize functions (TypeScript)
   nself functions enable                    # Enable functions
   nself functions create hello basic        # Create basic JS function
   nself functions create hello basic --ts   # Create basic TypeScript function

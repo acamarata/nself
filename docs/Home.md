@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.5-blue.svg)](releases/v0.4.5)
+[![Version](https://img.shields.io/badge/version-0.4.6-blue.svg)](releases/v0.4.6)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -136,7 +136,9 @@ Build custom services in any language.
 | **[db](commands/DB)** | Database tools - migrate, seed, mock, backup, schema, types |
 | **[deploy](commands/DEPLOY)** | SSH deployment with zero-downtime |
 | **[env](commands/ENV)** | Environment management |
-| **[All Commands](commands/COMMANDS)** | Complete reference (34 commands) |
+| **[perf](commands/PERF)** | Performance profiling and analysis |
+| **[bench](commands/BENCH)** | Benchmarking and load testing |
+| **[All Commands](commands/COMMANDS)** | Complete reference (55+ commands) |
 
 ### Services
 
@@ -156,19 +158,31 @@ Build custom services in any language.
 
 ---
 
-## Version 0.4.5 - Provider Support
+## Version 0.4.6 - Scaling & Performance
 
-The current release enables one-command deployment to any of 10 cloud providers:
+The current release adds comprehensive performance, operations, and infrastructure tools:
 
-- **Provider Management** - `nself providers` configures credentials for AWS, GCP, Azure, DigitalOcean, Hetzner, and more
-- **One-Command Provisioning** - `nself provision <provider>` creates full infrastructure
-- **Cost Estimation** - See costs before provisioning with `--estimate`
-- **Environment Sync** - `nself sync` for database/config/file sync between environments
-- **CI/CD Integration** - `nself ci init` generates GitHub Actions or GitLab CI workflows
-- **Shell Completion** - `nself completion` for bash/zsh/fish
-- **Doctor Auto-Fix** - `nself doctor --fix` automatically resolves common issues
+### Performance Commands
+- **`nself perf`** - Performance profiling with container metrics, slow query analysis, and optimization recommendations
+- **`nself bench`** - Benchmarking and load testing with baseline comparison and stress testing
+- **`nself migrate`** - Cross-environment migration for data, configuration, and schema
 
-**[View Full Release Notes](releases/v0.4.5)**
+### Operations Commands
+- **`nself health`** - Health check management with endpoint monitoring and watch mode
+- **`nself history`** - Operation audit trail for deployments, migrations, and rollbacks
+- **`nself config`** - Configuration management with validation and environment diff
+
+### Infrastructure Commands
+- **`nself servers`** - Server management for multi-server deployments
+- **`nself frontend`** - Frontend application management with Vercel/Netlify integration
+
+### Enhancements
+- **`nself status --json`** - JSON output for tooling integration
+- **`nself status --all-envs`** - Check status across all environments
+- **`nself deploy check`** - Pre-deployment validation checks
+- **`nself urls --diff`** - Compare URLs between environments
+
+**[View Full Release Notes](releases/v0.4.6)**
 
 ---
 
@@ -215,6 +229,6 @@ nself deploy prod
 
 <div align="center">
 
-**Version 0.4.5** · **January 2026** · **[Changelog](releases/CHANGELOG)**
+**Version 0.4.6** · **January 2026** · **[Changelog](releases/CHANGELOG)**
 
 </div>

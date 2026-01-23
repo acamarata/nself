@@ -30,6 +30,8 @@ main() {
     local show_all=false
     local format="table"
     local check_conflicts=false
+    local target_env=""
+    local diff_env=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -41,6 +43,14 @@ main() {
             --json)
                 format="json"
                 shift
+                ;;
+            --env)
+                target_env="$2"
+                shift 2
+                ;;
+            --diff)
+                diff_env="$2"
+                shift 2
                 ;;
             --check-conflicts)
                 check_conflicts=true
@@ -58,8 +68,61 @@ main() {
         esac
     done
 
-    # Load environment
-    load_env_with_priority
+    # Handle --env flag: load specific environment
+    if [[ -n "$target_env" ]]; then
+        case "$target_env" in
+            local|dev)
+                [[ -f ".env" ]] && source ".env"
+                [[ -f ".env.dev" ]] && source ".env.dev"
+                ;;
+            staging)
+                [[ -f ".env.staging" ]] && source ".env.staging"
+                # Check for remote config
+                if [[ -f ".environments/staging/server.json" ]]; then
+                    echo -e "${COLOR_CYAN}→ Remote Environment: staging${COLOR_RESET}"
+                    local host=$(grep '"host"' ".environments/staging/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    local domain=$(grep '"domain"' ".environments/staging/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
+                    echo ""
+                fi
+                ;;
+            prod|production)
+                [[ -f ".env.prod" ]] && source ".env.prod"
+                [[ -f ".env.production" ]] && source ".env.production"
+                # Check for remote config
+                if [[ -f ".environments/prod/server.json" ]]; then
+                    echo -e "${COLOR_CYAN}→ Remote Environment: production${COLOR_RESET}"
+                    local domain=$(grep '"domain"' ".environments/prod/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
+                    echo ""
+                fi
+                ;;
+            *)
+                # Try to load from .environments directory
+                if [[ -f ".environments/$target_env/server.json" ]]; then
+                    echo -e "${COLOR_CYAN}→ Remote Environment: $target_env${COLOR_RESET}"
+                    local domain=$(grep '"domain"' ".environments/$target_env/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
+                    echo ""
+                else
+                    echo "Unknown environment: $target_env" >&2
+                    exit 1
+                fi
+                ;;
+        esac
+    else
+        # Load environment normally
+        load_env_with_priority
+    fi
+
+    # Handle --diff flag: compare URLs between environments
+    if [[ -n "$diff_env" ]]; then
+        show_url_diff "$target_env" "$diff_env"
+        exit 0
+    fi
+
+    # Load environment if not already loaded
+    [[ -z "$target_env" ]] && load_env_with_priority
 
     # Get base domain
     local domain="${BASE_DOMAIN:-localhost}"
@@ -92,6 +155,8 @@ Display all configured service URLs organized by category
 
 Options:
   -a, --all             Show all routes including internal services
+  --env NAME            Show URLs for specific environment (staging, prod)
+  --diff ENV            Compare URLs between current and specified environment
   --json                Output in JSON format
   --check-conflicts     Check for route conflicts (used by build)
   -h, --help           Show this help message
@@ -100,6 +165,9 @@ Examples:
   nself urls              # Show all service URLs
   nself urls --json       # Output as JSON
   nself urls --all        # Include internal services
+  nself urls --env staging    # Show staging URLs
+  nself urls --env prod       # Show production URLs
+  nself urls --diff staging   # Compare local vs staging URLs
 
 Categories:
   • Required Services   - Core infrastructure (PostgreSQL, Hasura, Auth, Nginx)
@@ -107,6 +175,62 @@ Categories:
   • Custom Services     - Your microservices from templates
   • Frontend Routes     - External frontend applications
 EOF
+}
+
+# Show URL diff between environments
+show_url_diff() {
+    local env1="${1:-local}"
+    local env2="$2"
+
+    if [[ -z "$env2" ]]; then
+        echo "Error: Second environment required for diff" >&2
+        exit 1
+    fi
+
+    echo -e "${COLOR_CYAN}→ URL Comparison: $env1 ↔ $env2${COLOR_RESET}"
+    echo ""
+
+    # Get domains
+    local domain1="${BASE_DOMAIN:-local.nself.org}"
+    local domain2=""
+
+    case "$env2" in
+        staging)
+            if [[ -f ".environments/staging/server.json" ]]; then
+                domain2=$(grep '"domain"' ".environments/staging/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+            elif [[ -f ".env.staging" ]]; then
+                domain2=$(grep "^BASE_DOMAIN=" ".env.staging" 2>/dev/null | cut -d'=' -f2)
+            fi
+            ;;
+        prod|production)
+            if [[ -f ".environments/prod/server.json" ]]; then
+                domain2=$(grep '"domain"' ".environments/prod/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+            elif [[ -f ".env.prod" ]]; then
+                domain2=$(grep "^BASE_DOMAIN=" ".env.prod" 2>/dev/null | cut -d'=' -f2)
+            fi
+            ;;
+        *)
+            if [[ -f ".environments/$env2/server.json" ]]; then
+                domain2=$(grep '"domain"' ".environments/$env2/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+            fi
+            ;;
+    esac
+
+    domain2="${domain2:-unknown}"
+
+    printf "  %-20s %-35s %-35s\n" "Service" "$env1" "$env2"
+    printf "  %-20s %-35s %-35s\n" "-------" "$(printf '%0.s-' {1..30})" "$(printf '%0.s-' {1..30})"
+
+    # Compare key services
+    local services=("api" "auth" "admin" "storage" "grafana")
+    for svc in "${services[@]}"; do
+        local url1="https://${svc}.${domain1}"
+        local url2="https://${svc}.${domain2}"
+        printf "  %-20s %-35s %-35s\n" "$svc" "$url1" "$url2"
+    done
+
+    echo ""
+    echo -e "${COLOR_GRAY}Note: Only showing common services. Use --json for full comparison.${COLOR_RESET}"
 }
 
 # Check for route conflicts

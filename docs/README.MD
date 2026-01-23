@@ -2,7 +2,7 @@
 
 > **The complete self-hosted Backend-as-a-Service platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.5-blue.svg)](releases/v0.4.5.md)
+[![Version](https://img.shields.io/badge/version-0.4.6-blue.svg)](releases/v0.4.6.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
@@ -43,12 +43,15 @@ nself db schema apply schema.dbml
 
 | Document | Description |
 |----------|-------------|
-| [Commands Overview](commands/COMMANDS.md) | All 34 commands |
+| [Commands Overview](commands/COMMANDS.md) | All 55+ commands |
 | [db](commands/DB.md) | Database tools (migrate, seed, mock, backup, schema, types) |
 | [deploy](commands/DEPLOY.md) | SSH deployment with zero-downtime |
 | [env](commands/ENV.md) | Environment management |
-| [prod](commands/PROD.md) | Production configuration |
-| [staging](commands/STAGING.md) | Staging environment |
+| [perf](commands/PERF.md) | Performance profiling and analysis |
+| [bench](commands/BENCH.md) | Benchmarking and load testing |
+| [health](commands/HEALTH.md) | Health check management |
+| [config](commands/CONFIG.md) | Configuration management |
+| [servers](commands/SERVERS.md) | Server infrastructure |
 
 ### Configuration
 
@@ -176,7 +179,8 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.4.5** | Jan 2026 | Provider Support (current) |
+| **v0.4.6** | Jan 2026 | Scaling & Performance (current) |
+| v0.4.5 | Jan 2026 | Provider Support |
 | v0.4.4 | Jan 2026 | Database Tools |
 | v0.4.3 | Jan 2026 | Deployment Pipeline |
 | v0.4.2 | Jan 2026 | Service & Monitoring |
@@ -193,4 +197,4 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.5*
+*Last Updated: January 23, 2026 | Version: 0.4.6*

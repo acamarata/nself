@@ -1027,12 +1027,220 @@ run_auto_fix() {
   log_info "Run 'nself doctor' again to verify"
 }
 
+# Container diagnostics - shows expected vs running containers
+doctor_containers() {
+  show_command_header "nself doctor containers" "Container count verification"
+
+  # Load environment
+  [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+  [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
+
+  local project_name="${PROJECT_NAME:-nself}"
+
+  echo ""
+  printf "${COLOR_CYAN}➞ Container Analysis${COLOR_RESET}\n"
+  echo ""
+
+  # Get expected services from docker-compose.yml
+  local expected_services=()
+  if [[ -f "docker-compose.yml" ]]; then
+    while IFS= read -r service; do
+      [[ -n "$service" ]] && expected_services+=("$service")
+    done < <(grep -E "^  [a-z][a-z0-9_-]*:$" docker-compose.yml | sed 's/://g' | tr -d ' ')
+  fi
+
+  # Get running containers
+  local running_containers=()
+  while IFS= read -r container; do
+    [[ -n "$container" ]] && running_containers+=("$container")
+  done < <(docker ps --filter "label=com.docker.compose.project=${project_name}" --format "{{.Names}}" 2>/dev/null)
+
+  # Also check by name pattern
+  if [[ ${#running_containers[@]} -eq 0 ]]; then
+    while IFS= read -r container; do
+      [[ -n "$container" ]] && running_containers+=("$container")
+    done < <(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null)
+  fi
+
+  local expected_count=${#expected_services[@]}
+  local running_count=${#running_containers[@]}
+
+  # Calculate counts by category
+  local core_expected=0 core_running=0
+  local optional_expected=0 optional_running=0
+  local monitoring_expected=0 monitoring_running=0
+  local custom_expected=0 custom_running=0
+
+  # Core services
+  local core_services=("postgres" "hasura" "auth" "nginx")
+  # Optional services
+  local optional_services=("minio" "redis" "functions" "mailpit" "meilisearch" "mlflow" "nself-admin" "storage")
+  # Monitoring services
+  local monitoring_services=("prometheus" "grafana" "loki" "promtail" "tempo" "alertmanager" "cadvisor" "node-exporter" "postgres-exporter" "redis-exporter")
+
+  # Count expected by category
+  for service in "${expected_services[@]}"; do
+    local found=false
+    for core in "${core_services[@]}"; do
+      if [[ "$service" == *"$core"* ]]; then
+        core_expected=$((core_expected + 1))
+        found=true
+        break
+      fi
+    done
+    if [[ "$found" == "false" ]]; then
+      for opt in "${optional_services[@]}"; do
+        if [[ "$service" == *"$opt"* ]]; then
+          optional_expected=$((optional_expected + 1))
+          found=true
+          break
+        fi
+      done
+    fi
+    if [[ "$found" == "false" ]]; then
+      for mon in "${monitoring_services[@]}"; do
+        if [[ "$service" == *"$mon"* ]]; then
+          monitoring_expected=$((monitoring_expected + 1))
+          found=true
+          break
+        fi
+      done
+    fi
+    if [[ "$found" == "false" ]]; then
+      custom_expected=$((custom_expected + 1))
+    fi
+  done
+
+  # Show summary
+  printf "  ${COLOR_BOLD}Expected:${COLOR_RESET} %d containers\n" "$expected_count"
+  printf "  ${COLOR_BOLD}Running:${COLOR_RESET}  %d containers\n" "$running_count"
+  echo ""
+
+  if [[ $running_count -eq $expected_count ]]; then
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} All expected containers are running\n"
+  elif [[ $running_count -gt $expected_count ]]; then
+    printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} More containers running than expected (+%d)\n" "$((running_count - expected_count))"
+  else
+    printf "  ${COLOR_RED}✗${COLOR_RESET} Missing %d container(s)\n" "$((expected_count - running_count))"
+  fi
+
+  echo ""
+  printf "${COLOR_CYAN}➞ Expected by Category${COLOR_RESET}\n"
+  echo ""
+  printf "  Core (required):     %d\n" "$core_expected"
+  printf "  Optional services:   %d\n" "$optional_expected"
+  printf "  Monitoring bundle:   %d\n" "$monitoring_expected"
+  printf "  Custom services:     %d\n" "$custom_expected"
+
+  # Find missing containers
+  echo ""
+  printf "${COLOR_CYAN}➞ Service Status${COLOR_RESET}\n"
+  echo ""
+
+  local missing_services=()
+  for service in "${expected_services[@]}"; do
+    local container_name="${project_name}_${service}_1"
+    local alt_name="${project_name}-${service}-1"
+    local short_name="${project_name}_${service}"
+
+    local is_running=false
+    for running in "${running_containers[@]}"; do
+      if [[ "$running" == "$container_name" ]] || [[ "$running" == "$alt_name" ]] || [[ "$running" == "$short_name" ]] || [[ "$running" == *"$service"* ]]; then
+        is_running=true
+        break
+      fi
+    done
+
+    if [[ "$is_running" == "true" ]]; then
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} %s\n" "$service"
+    else
+      printf "  ${COLOR_RED}✗${COLOR_RESET} %s ${COLOR_GRAY}(not running)${COLOR_RESET}\n" "$service"
+      missing_services+=("$service")
+    fi
+  done
+
+  # Show missing details
+  if [[ ${#missing_services[@]} -gt 0 ]]; then
+    echo ""
+    printf "${COLOR_CYAN}➞ Missing Services${COLOR_RESET}\n"
+    echo ""
+    for missing in "${missing_services[@]}"; do
+      printf "  ${COLOR_RED}•${COLOR_RESET} %s\n" "$missing"
+
+      # Try to show why it might be missing
+      local reason=""
+      case "$missing" in
+        *redis-exporter*)
+          [[ "${REDIS_ENABLED:-}" != "true" ]] && reason="REDIS_ENABLED=false"
+          ;;
+        *mlflow*)
+          [[ "${MLFLOW_ENABLED:-}" != "true" ]] && reason="MLFLOW_ENABLED=false"
+          ;;
+        *functions*)
+          [[ "${FUNCTIONS_ENABLED:-}" != "true" ]] && reason="FUNCTIONS_ENABLED=false"
+          ;;
+      esac
+
+      if [[ -n "$reason" ]]; then
+        printf "    ${COLOR_GRAY}Possible reason: %s${COLOR_RESET}\n" "$reason"
+      fi
+    done
+
+    echo ""
+    printf "${COLOR_YELLOW}Tip:${COLOR_RESET} Run 'nself start' to start missing containers\n"
+    printf "     Run 'docker logs ${project_name}_<service>' to check for errors\n"
+  fi
+
+  # Show any extra containers (not in docker-compose.yml)
+  local extra_containers=()
+  for running in "${running_containers[@]}"; do
+    local is_expected=false
+    for service in "${expected_services[@]}"; do
+      if [[ "$running" == *"$service"* ]]; then
+        is_expected=true
+        break
+      fi
+    done
+    if [[ "$is_expected" == "false" ]]; then
+      extra_containers+=("$running")
+    fi
+  done
+
+  if [[ ${#extra_containers[@]} -gt 0 ]]; then
+    echo ""
+    printf "${COLOR_CYAN}➞ Extra Containers (not in docker-compose.yml)${COLOR_RESET}\n"
+    echo ""
+    for extra in "${extra_containers[@]}"; do
+      printf "  ${COLOR_YELLOW}?${COLOR_RESET} %s\n" "$extra"
+    done
+  fi
+
+  # Check for buildx containers
+  local buildx_containers=$(docker ps -a --filter "name=buildx_buildkit" --format "{{.Names}}" 2>/dev/null)
+  if [[ -n "$buildx_containers" ]]; then
+    echo ""
+    printf "${COLOR_CYAN}➞ BuildKit Containers (from docker buildx)${COLOR_RESET}\n"
+    echo ""
+    printf "  ${COLOR_YELLOW}!${COLOR_RESET} Found buildx containers (not part of project):\n"
+    echo "$buildx_containers" | while read -r bx; do
+      printf "    • %s\n" "$bx"
+    done
+    printf "\n  ${COLOR_GRAY}Remove with: nself clean --builders${COLOR_RESET}\n"
+  fi
+
+  echo ""
+}
+
 # Handle command line arguments
 case "${1:-}" in
 -h | --help)
   echo "nself doctor - System diagnostics and health checks"
   echo ""
   echo "Usage: nself doctor [options]"
+  echo "       nself doctor containers"
+  echo ""
+  echo "Subcommands:"
+  echo "  containers     Show expected vs running container analysis"
   echo ""
   echo "Options:"
   echo "  -h, --help     Show this help message"
@@ -1056,6 +1264,9 @@ case "${1:-}" in
   echo "Exit codes:"
   echo "  0 - No critical issues"
   echo "  1 - Critical issues found"
+  ;;
+containers)
+  doctor_containers
   ;;
 --fix)
   # Load environment for PROJECT_NAME

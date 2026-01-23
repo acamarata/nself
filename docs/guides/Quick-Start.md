@@ -209,6 +209,16 @@ nself doctor             # Diagnose issues
 nself reset              # Reset to clean state
 ```
 
+### Performance & Operations (v0.4.6)
+
+```bash
+nself perf               # Performance profiling
+nself bench run          # Run benchmarks
+nself health check       # Check service health
+nself config show        # Show configuration
+nself history show       # View operation history
+```
+
 ---
 
 ## Project Structure

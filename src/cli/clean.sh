@@ -19,6 +19,7 @@ cmd_clean() {
   local volumes=false
   local networks=false
   local containers=false
+  local builders=false
 
   # Parse options
   while [[ $# -gt 0 ]]; do
@@ -41,6 +42,10 @@ cmd_clean() {
       ;;
     --containers | -c)
       containers=true
+      shift
+      ;;
+    --builders | -b)
+      builders=true
       shift
       ;;
     --help | -h)
@@ -151,6 +156,44 @@ cmd_clean() {
     fi
   fi
 
+  # Clean buildx builders
+  if [[ "$all" == "true" ]] || [[ "$builders" == "true" ]]; then
+    printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning Docker Buildx builders..."
+
+    # Check for nself-related buildx builders
+    local nself_builders=$(docker buildx ls 2>/dev/null | grep -E "nself|buildkit" | awk '{print $1}' | grep -v "^NAME" | grep -v "^default" | sort -u)
+
+    if [[ -n "$nself_builders" ]]; then
+      local count=0
+      for builder_name in $nself_builders; do
+        if docker buildx rm "$builder_name" >/dev/null 2>&1; then
+          count=$((count + 1))
+        fi
+      done
+
+      # Also remove any orphaned buildkit containers
+      local buildkit_containers=$(docker ps -a --filter "name=buildx_buildkit" -q 2>/dev/null)
+      if [[ -n "$buildkit_containers" ]]; then
+        docker rm -f $buildkit_containers >/dev/null 2>&1
+      fi
+
+      if [[ $count -gt 0 ]]; then
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Removed $count buildx builder(s)                        \n"
+      else
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} No buildx builders to clean                            \n"
+      fi
+    else
+      # Still check for orphaned containers
+      local buildkit_containers=$(docker ps -a --filter "name=buildx_buildkit" -q 2>/dev/null)
+      if [[ -n "$buildkit_containers" ]]; then
+        docker rm -f $buildkit_containers >/dev/null 2>&1
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} Removed orphaned buildkit containers                   \n"
+      else
+        printf "\r${COLOR_GREEN}✓${COLOR_RESET} No buildx builders to clean                            \n"
+      fi
+    fi
+  fi
+
   # System-wide prune (if --all)
   if [[ "$all" == "true" ]]; then
     echo
@@ -179,12 +222,14 @@ show_help() {
   echo "  -c, --containers   Remove stopped containers"
   echo "  -v, --volumes      Remove project volumes (WARNING: deletes data)"
   echo "  -n, --networks     Remove project networks"
-  echo "  -a, --all          Clean everything (containers, images, volumes, networks)"
+  echo "  -b, --builders     Remove Docker Buildx builders and buildkit containers"
+  echo "  -a, --all          Clean everything (containers, images, volumes, networks, builders)"
   echo "  -h, --help         Show this help message"
   echo ""
   echo "Examples:"
   echo "  nself clean           # Clean images and build cache"
   echo "  nself clean -c        # Remove stopped containers"
+  echo "  nself clean -b        # Remove buildx builders (fixes buildx_buildkit containers)"
   echo "  nself clean -a        # Clean everything"
   echo "  nself clean -i -c     # Clean images and containers"
 }

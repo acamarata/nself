@@ -21,13 +21,15 @@ show_version_help() {
   echo ""
   echo "Options:"
   echo "  --short         Show version number only"
+  echo "  --json          Output in JSON format (for tooling)"
   echo "  -h, --help      Show this help message"
   echo ""
   echo "Examples:"
-  echo "  nself -v                # Show version number only (0.3.9)"
+  echo "  nself -v                # Show version number only"
   echo "  nself --version         # Show detailed information"
   echo "  nself version           # Show detailed information (default)"
   echo "  nself version --short   # Show version number only"
+  echo "  nself version --json    # JSON output for integrations"
 }
 
 # Read version from VERSION file
@@ -56,6 +58,42 @@ cmd_version() {
   # Check if called with --short flag for minimal output
   if [[ "$arg" == "--short" ]]; then
     echo "$version"
+    return 0
+  fi
+
+  # Check if called with --json flag for machine-readable output
+  if [[ "$arg" == "--json" ]]; then
+    local os=$(uname -s)
+    local arch=$(uname -m)
+    local docker_version=""
+    local compose_version=""
+    local git_commit=""
+    local install_path="$CLI_SCRIPT_DIR"
+
+    # Get Docker version
+    if command -v docker >/dev/null 2>&1; then
+      docker_version=$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',')
+    fi
+
+    # Get Docker Compose version
+    if docker compose version >/dev/null 2>&1; then
+      compose_version=$(docker compose version --short 2>/dev/null)
+    fi
+
+    # Get git commit if in a git repo
+    if command -v git >/dev/null 2>&1 && [[ -d "$CLI_SCRIPT_DIR/../../.git" ]]; then
+      git_commit=$(git -C "$CLI_SCRIPT_DIR/../.." rev-parse --short HEAD 2>/dev/null || echo "")
+    fi
+
+    printf '{\n'
+    printf '  "version": "%s",\n' "$version"
+    printf '  "commit": "%s",\n' "$git_commit"
+    printf '  "platform": "%s/%s",\n' "$os" "$arch"
+    printf '  "installPath": "%s",\n' "$install_path"
+    printf '  "docker": "%s",\n' "$docker_version"
+    printf '  "compose": "%s",\n' "$compose_version"
+    printf '  "shell": "%s"\n' "$BASH_VERSION"
+    printf '}\n'
     return 0
   fi
 

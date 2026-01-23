@@ -1,4 +1,4 @@
-# nself v0.4.5
+# nself v0.4.6
 
 ### [Home](Home)
 
@@ -17,11 +17,39 @@
 ## Commands
 
 - [Commands Overview](commands/COMMANDS)
+
+### Core Commands
+- [init](commands/INIT) - Project setup
+- [build](commands/BUILD) - Generate configs
+- [start](commands/START) - Start services
+- [stop](commands/STOP) - Stop services
+- [status](commands/STATUS) - Service status
+- [urls](commands/URLS) - Show URLs
+
+### Database
 - [db](commands/DB) - Database tools
-- [deploy](commands/DEPLOY) - Deployment
+  - migrate, seed, mock, backup, schema, types
+
+### Deployment
+- [deploy](commands/DEPLOY) - SSH deployment
 - [env](commands/ENV) - Environments
 - [prod](commands/PROD) - Production
 - [staging](commands/STAGING) - Staging
+
+### Performance (v0.4.6)
+- [perf](commands/PERF) - Profiling
+- [bench](commands/BENCH) - Benchmarking
+- [migrate](commands/MIGRATE) - Cross-env migration
+
+### Operations (v0.4.6)
+- [health](commands/HEALTH) - Health checks
+- [history](commands/HISTORY) - Audit trail
+- [config](commands/CONFIG) - Configuration
+
+### Infrastructure (v0.4.6)
+- [servers](commands/SERVERS) - Server management
+- [frontend](commands/FRONTEND) - Frontend apps
+- [providers](commands/PROVIDERS) - Cloud providers
 
 ### Service Commands
 - [email](commands/EMAIL)
@@ -75,10 +103,10 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
-- [v0.4.5](releases/v0.4.5) (Current)
+- [v0.4.6](releases/v0.4.6) (Current)
+- [v0.4.5](releases/v0.4.5)
 - [v0.4.4](releases/v0.4.4)
 - [Changelog](releases/CHANGELOG)
-- [All Releases](releases/INDEX)
 
 ---
 
