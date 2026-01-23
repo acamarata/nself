@@ -2,7 +2,7 @@
 
 > **The complete self-hosted Backend-as-a-Service platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.6-blue.svg)](releases/v0.4.6.md)
+[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](releases/v0.4.7.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 

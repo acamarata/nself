@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -23,7 +23,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🚀 v0.4.1**: Bug fixes and platform compatibility improvements. Fixed Bash 3.2 array syntax, cross-platform sed/stat/timeout commands, and portable output formatting. Works flawlessly on macOS, Linux, and WSL. [See changelog](docs/CHANGELOG.md)
+> **🚀 v0.4.7**: Kubernetes Support release! New `nself k8s` and `nself helm` commands for full Kubernetes deployment and Helm chart management. 26 cloud providers supported. [See changelog](docs/releases/ROADMAP.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
@@ -244,14 +244,14 @@ Every template includes:
 ## 📚 Commands
 
 ### Version Status
-- **✅ v0.3.9 (Current)**: All 36 commands functional
-- **🚧 v0.4.0 (Next Q1 2025)**: Complete `deploy` and `search` implementations
-- **🔮 Beyond**: Kubernetes, multi-cloud, enterprise features
+- **✅ v0.4.7 (Current)**: 45 commands - Kubernetes & Helm support, 26 cloud providers
+- **🚧 v0.4.8 (Next)**: Plugin system with nself-stripe
+- **🔮 v0.5.0**: Production release + nself-admin v0.1
 
 ### Complete Command Tree
 
 ```
-nself (36 commands)
+nself (45 commands)
 ├── 🚀 Core Commands
 │   ├── init          Initialize a new project (with --wizard, --full, --admin options)
 │   ├── build         Build project structure and Docker images
@@ -284,7 +284,7 @@ nself (36 commands)
 │   └── mlflow        ML experiment tracking and model registry
 │
 ├── 🚀 Deployment & Scaling
-│   ├── deploy        Deploy to remote servers (partial - full in v0.4.0)
+│   ├── deploy        Deploy to remote servers with zero-downtime
 │   ├── scale         Scale services up/down
 │   ├── rollback      Rollback to previous version
 │   └── update        Update nself CLI to latest version
@@ -292,7 +292,7 @@ nself (36 commands)
 ├── 🛠️ Development Tools
 │   ├── exec          Execute commands in containers
 │   ├── reset         Reset project to clean state (with timestamped backups)
-│   └── search        Enterprise search service management (partial - full in v0.4.0)
+│   └── search        Enterprise search service management (6 engines)
 │
 └── 📝 Utility Commands
     ├── version       Show version information
@@ -737,26 +737,25 @@ nself email test recipient@example.com
 
 ## 🔄 Version History
 
-### v0.4.1 (Current - Stable Release)
-- ✅ Fixed Bash 3.2 compatibility (macOS default shell)
-- ✅ Fixed cross-platform sed -i (macOS/Linux)
-- ✅ Fixed cross-platform stat command
-- ✅ Fixed portable timeout command
-- ✅ Fixed portable output (echo -e to printf)
-- ✅ All 36 commands fully functional on all platforms
+### v0.4.7 (Current - Jan 23, 2026)
+- ✅ New `nself k8s` command for Kubernetes operations
+- ✅ New `nself helm` command for Helm chart management
+- ✅ 26 cloud providers supported
+- ✅ Full K8s manifest generation from docker-compose
+- ✅ 45 commands total
 
-### v0.4.0 (Stable)
-- Production-ready release
-- Enhanced cross-platform compatibility
-- All core features complete and tested
+### v0.4.6 (Jan 22, 2026)
+- Performance profiling with `nself perf`
+- Benchmarking with `nself bench`
+- Cross-environment migration with `nself migrate`
+- 9 new commands for scaling and operations
 
-### v0.3.9 (Stable)
-- Admin UI with web-based monitoring dashboard
-- Fixed critical bugs (status, stop, exec commands)
-- SMTP email testing implementation
-- Serverless functions and MLflow support
+### v0.4.5 (Jan 21, 2026)
+- 10 cloud providers with one-command provisioning
+- Environment sync, CI/CD generation, shell completion
+- Doctor auto-fix capability
 
-[Full Changelog](docs/CHANGELOG.md)
+[Full Changelog](docs/releases/ROADMAP.md)
 
 ## 🧪 Quality Assurance
 

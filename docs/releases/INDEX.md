@@ -2,15 +2,15 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.4.4
+**Current Stable Version:** v0.4.7
 
 ---
 
 ## Latest Release
 
-### [v0.4.4](v0.4.4.md) - Current Stable
+### [v0.4.7](v0.4.7.md) - Current Stable
 
-**Released:** January 22, 2026
+**Released:** January 23, 2026
 
 **Status:** Production Ready
 
@@ -222,4 +222,4 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 ---
 
-**Last Updated:** January 22, 2026 | **Current Version:** v0.4.4
+**Last Updated:** January 23, 2026 | **Current Version:** v0.4.7
