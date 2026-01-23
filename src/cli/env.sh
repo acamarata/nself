@@ -19,6 +19,32 @@ source "$LIB_DIR/env/switch.sh" 2>/dev/null || true
 source "$LIB_DIR/env/diff.sh" 2>/dev/null || true
 source "$LIB_DIR/env/validate.sh" 2>/dev/null || true
 
+# Fallback logging (if display.sh failed to load)
+if ! declare -f log_success >/dev/null 2>&1; then
+  log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
+fi
+if ! declare -f log_warning >/dev/null 2>&1; then
+  log_warning() { printf "\033[0;33m[WARNING]\033[0m %s\n" "$1"; }
+fi
+if ! declare -f log_error >/dev/null 2>&1; then
+  log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
+fi
+if ! declare -f log_info >/dev/null 2>&1; then
+  log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
+fi
+
+# Fallback color definitions
+: "${COLOR_GREEN:=\033[0;32m}"
+: "${COLOR_YELLOW:=\033[0;33m}"
+: "${COLOR_RED:=\033[0;31m}"
+: "${COLOR_CYAN:=\033[0;36m}"
+: "${COLOR_RESET:=\033[0m}"
+
+# Fallback for show_command_header (if header.sh failed to load)
+if ! declare -f show_command_header >/dev/null 2>&1; then
+  show_command_header() { printf "\n%s - %s\n\n" "$1" "$2"; }
+fi
+
 # Show help
 show_env_help() {
   cat <<EOF

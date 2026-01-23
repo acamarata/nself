@@ -26,6 +26,13 @@ if ! declare -f log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
 fi
 
+# Fallback color definitions (if not already defined by display.sh)
+: "${COLOR_GREEN:=\033[0;32m}"
+: "${COLOR_YELLOW:=\033[0;33m}"
+: "${COLOR_RED:=\033[0;31m}"
+: "${COLOR_CYAN:=\033[0;36m}"
+: "${COLOR_RESET:=\033[0m}"
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
@@ -805,13 +812,15 @@ cmd_full() {
   local profile="$target"
   [[ "$target" == "prod" ]] && profile="production"
 
+  # Determine the correct env file based on target
+  local env_file=".env.staging"
+  [[ "$target" == "prod" ]] || [[ "$target" == "production" ]] && env_file=".env.prod"
+
   run_remote_cmd "$profile" "
-    # Merge all env files
+    # Merge env files (base + target + secrets)
     > .env
     [ -f .env.dev ] && cat .env.dev >> .env && echo '' >> .env
-    [ -f '.env.$target' ] && cat '.env.$target' >> .env && echo '' >> .env
-    [ -f .env.staging ] && cat .env.staging >> .env && echo '' >> .env
-    [ -f .env.prod ] && cat .env.prod >> .env && echo '' >> .env
+    [ -f $env_file ] && cat $env_file >> .env && echo '' >> .env
     [ -f .secrets ] && cat .secrets >> .env
 
     chmod 600 .env
@@ -1077,7 +1086,7 @@ sync_config_push() {
   scp $scp_opts ".env" "$user@$host:$remote_path/.env"
 
   log_success "Config pushed to $target"
-  log_info "Run 'nself sync restart $target' to apply changes"
+  log_info "SSH to $target and run 'nself restart' to apply changes"
 }
 
 sync_config_diff() {
@@ -1187,8 +1196,9 @@ COMMANDS:
     pull <env> --db           Pull database from remote environment
 
   Push (upload to remote):
-    push staging [--rebuild]  Push .env.staging to staging (auto-rebuilds)
-    push prod [--rebuild]     Push .env.prod to production
+    push staging              Push .env.staging to staging (auto-rebuilds by default)
+    push staging --no-rebuild Push without restarting services
+    push prod [--rebuild]     Push .env.prod to production (no auto-rebuild)
     push secrets [--rebuild]  Push .secrets to production
 
   Frontend Apps:
@@ -1246,11 +1256,15 @@ EXAMPLES:
   # ... make changes to .env.staging ...
   nself sync push staging              # Push and auto-rebuild
 
+  # Push without rebuilding (useful for minor config changes)
+  nself sync push staging --no-rebuild # Push config only, skip restart
+
   # Full deployment to staging
   nself sync full staging              # Everything: env + files + frontends
 
-  # Production (backend only)
-  nself sync push prod --rebuild       # Push config and restart
+  # Production (backend only, requires explicit --rebuild)
+  nself sync push prod                 # Push config (no auto-rebuild)
+  nself sync push prod --rebuild       # Push config and restart services
 
   # Frontend apps (staging)
   nself sync frontend sync staging     # Sync all configured frontends
