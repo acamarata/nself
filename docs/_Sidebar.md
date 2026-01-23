@@ -61,6 +61,30 @@
 
 ---
 
+## Cloud Providers
+
+- [Complete Provider List](providers/PROVIDERS-COMPLETE)
+
+### Major Cloud
+- AWS, GCP, Azure (Supported)
+- Oracle Cloud, IBM Cloud (v0.4.7)
+
+### Developer Cloud
+- DigitalOcean, Linode, Vultr (Supported)
+- Scaleway, UpCloud (Supported/v0.4.7)
+
+### Budget EU
+- Hetzner, OVH, IONOS (Supported)
+- Contabo, Netcup (v0.4.7)
+
+### Budget Global
+- Hostinger, Hostwinds, Kamatera (v0.4.7)
+
+### Regional
+- Exoscale, Alibaba, Tencent (v0.4.7)
+
+---
+
 ## Configuration
 
 - [Environment Variables](configuration/ENVIRONMENT-VARIABLES)
@@ -103,6 +127,7 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
+- [v0.4.7 Plan](releases/NEXT-RELEASE) (Next)
 - [v0.4.6](releases/v0.4.6) (Current)
 - [v0.4.5](releases/v0.4.5)
 - [v0.4.4](releases/v0.4.4)
