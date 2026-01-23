@@ -1,3 +1,23 @@
+nself (0.4.7-1) stable; urgency=medium
+
+  * Release v0.4.7 - Kubernetes Support
+  * New k8s command for Kubernetes operations
+  * New helm command for Helm chart management
+  * Cloud provider support for 26 providers
+  * Full K8s manifest generation from docker-compose
+  * Bash 3.2 compatibility fixes for all provider files
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Thu, 23 Jan 2026 16:00:00 -0700
+
+nself (0.4.6-1) stable; urgency=medium
+
+  * Release v0.4.6 - Scaling & Performance
+  * New perf, bench, scale, migrate commands
+  * Performance profiling and load testing
+  * Cross-environment migration
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Thu, 23 Jan 2026 14:00:00 -0700
+
 nself (0.4.5-1) stable; urgency=medium
 
   * Release v0.4.5 - Provider Support

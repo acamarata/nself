@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.4.5
+Version:        0.4.7
 Release:        1%{?dist}
 Summary:        Production-ready self-hosted backend infrastructure
 
@@ -50,6 +50,20 @@ find %{buildroot}%{_datadir}/%{name} -type f -name "*.sh" -exec chmod 755 {} \;
 %{_datadir}/%{name}
 
 %changelog
+* Thu Jan 23 2026 Aric Camarata <aric.camarata@gmail.com> - 0.4.7-1
+- Release v0.4.7: Kubernetes Support
+- New k8s command for Kubernetes operations
+- New helm command for Helm chart management
+- Cloud provider support for 26 providers
+- Full K8s manifest generation from docker-compose
+- Bash 3.2 compatibility fixes for all provider files
+
+* Thu Jan 23 2026 Aric Camarata <aric.camarata@gmail.com> - 0.4.6-1
+- Release v0.4.6: Scaling & Performance
+- New perf, bench, scale, migrate commands
+- Performance profiling and load testing
+- Cross-environment migration
+
 * Thu Jan 23 2026 Aric Camarata <aric.camarata@gmail.com> - 0.4.5-1
 - Release v0.4.5: Provider Support
 - New providers command for cloud credential management

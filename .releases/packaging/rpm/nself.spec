@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.4.5
+Version:        0.4.7
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 
@@ -46,13 +46,27 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.4.5 installed successfully!"
+echo "nself v0.4.7 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
 # Nothing to do
 
 %changelog
+* Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.7-1
+- Release v0.4.7: Kubernetes Support
+- New k8s command for Kubernetes operations
+- New helm command for Helm chart management
+- Cloud provider support for 26 providers
+- Full K8s manifest generation from docker-compose
+- Bash 3.2 compatibility fixes for all provider files
+
+* Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.6-1
+- Release v0.4.6: Scaling & Performance
+- New perf, bench, scale, migrate commands
+- Performance profiling and load testing
+- Cross-environment migration
+
 * Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.5-1
 - Release v0.4.5: Provider Support
 - New providers command for cloud credential management

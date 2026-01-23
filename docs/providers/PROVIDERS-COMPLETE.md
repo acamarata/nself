@@ -1,7 +1,7 @@
 # Complete Cloud & VPS Provider Reference
 
 **Last Updated**: January 23, 2026
-**nself Version**: 0.4.6+
+**nself Version**: 0.4.7+
 
 ---
 
@@ -105,7 +105,7 @@ nself provision azure --size medium --region eastus
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 40+ worldwide |
 | **Smallest Instance** | VM.Standard.E2.1.Micro |
 | **Starting Price** | **FREE** (Always Free tier) |
@@ -129,7 +129,7 @@ nself provision oracle --size small --arm  # ARM instances
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 19 worldwide |
 | **Smallest Instance** | bx2-2x8 (2 vCPU, 8GB) |
 | **Starting Price** | ~$40/mo |
@@ -252,7 +252,7 @@ nself provision scaleway --size medium --region fr-par
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 13 worldwide |
 | **Smallest Instance** | 1 vCPU, 1GB |
 | **Starting Price** | $5/mo |
@@ -352,7 +352,7 @@ nself provision ionos --size medium --region de
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 9 (EU, US, Asia, Australia) |
 | **Smallest Instance** | Cloud VPS S (4 vCPU, 8GB) |
 | **Starting Price** | €4.50/mo (~$5) |
@@ -376,7 +376,7 @@ nself provision contabo --size medium --region eu
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 3 (Germany, Austria, USA) |
 | **Smallest Instance** | VPS 200 G10s (2 vCPU, 2GB) |
 | **Starting Price** | €2.99/mo (~$3.25) |
@@ -402,7 +402,7 @@ nself provision netcup --size medium --region de
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 8 (US, EU, Asia, South America) |
 | **Smallest Instance** | KVM 1 (1 vCPU, 4GB) |
 | **Starting Price** | $4.99/mo |
@@ -426,7 +426,7 @@ nself provision hostinger --size medium --region us
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 3 (Seattle, Dallas, Amsterdam) |
 | **Smallest Instance** | Unmanaged VPS (1 vCPU, 1GB) |
 | **Starting Price** | $4.99/mo |
@@ -450,7 +450,7 @@ nself provision hostwinds --managed  # Managed option
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 22 worldwide |
 | **Smallest Instance** | 1 vCPU, 1GB |
 | **Starting Price** | $4/mo |
@@ -474,7 +474,7 @@ nself provision kamatera --custom --cpu 4 --ram 8 --disk 100
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 4 (US, EU) |
 | **Smallest Instance** | 2 vCPU, 4GB |
 | **Starting Price** | $4.99/mo |
@@ -500,7 +500,7 @@ nself provision ssdnodes --nested-virt  # For testing K8s locally
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 4 (Switzerland, Germany, Austria, Bulgaria) |
 | **Smallest Instance** | Tiny (1 vCPU, 512MB) |
 | **Starting Price** | ~$5/mo |
@@ -524,7 +524,7 @@ nself provision exoscale --size medium --region ch-gva-2  # Geneva
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 28 worldwide (strongest in Asia) |
 | **Smallest Instance** | ecs.t6-c1m1.large |
 | **Starting Price** | ~$5/mo |
@@ -549,7 +549,7 @@ nself provision alibaba --size medium --region ap-southeast-1  # Singapore
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 25+ (strong in Asia) |
 | **Smallest Instance** | S5.SMALL2 (1 vCPU, 2GB) |
 | **Starting Price** | ~$4/mo |
@@ -573,7 +573,7 @@ nself provision tencent --size medium --region ap-guangzhou
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 3 (Russia) |
 | **Smallest Instance** | standard-v3 (2 vCPU, 2GB) |
 | **Starting Price** | ~$5/mo |
@@ -599,7 +599,7 @@ nself provision yandex --size medium --region ru-central1
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 7 (US primarily) |
 | **Smallest Instance** | 1 vCPU, 768MB |
 | **Starting Price** | $1.98/mo (promotional) |
@@ -622,7 +622,7 @@ nself provision racknerd --size small
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 3 (US, Luxembourg) |
 | **Smallest Instance** | Slice 512 (1 vCPU, 512MB) |
 | **Starting Price** | $2/mo |
@@ -645,7 +645,7 @@ nself provision buyvm --size small
 
 | Attribute | Value |
 |-----------|-------|
-| **Status** | 🔄 Planned (v0.4.7) |
+| **Status** | ✅ Supported (v0.4.7) |
 | **Regions** | 1 (Lithuania) |
 | **Smallest Instance** | Linux 1 (1 vCPU, 1GB) |
 | **Starting Price** | €2.99/mo (~$3.25) |

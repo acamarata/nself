@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.6-blue.svg)](releases/v0.4.6)
+[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](releases/v0.4.7)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -158,31 +158,24 @@ Build custom services in any language.
 
 ---
 
-## Version 0.4.6 - Scaling & Performance
+## Version 0.4.7 - Kubernetes Support
 
-The current release adds comprehensive performance, operations, and infrastructure tools:
+The current release adds full Kubernetes and container orchestration support:
 
-### Performance Commands
-- **`nself perf`** - Performance profiling with container metrics, slow query analysis, and optimization recommendations
-- **`nself bench`** - Benchmarking and load testing with baseline comparison and stress testing
-- **`nself migrate`** - Cross-environment migration for data, configuration, and schema
+### Kubernetes Commands
+- **`nself k8s`** - Kubernetes operations (generate, apply, status, pods, logs, exec, rollout, scale)
+- **`nself helm`** - Helm chart management (init, package, lint, install, upgrade, rollback)
 
-### Operations Commands
-- **`nself health`** - Health check management with endpoint monitoring and watch mode
-- **`nself history`** - Operation audit trail for deployments, migrations, and rollbacks
-- **`nself config`** - Configuration management with validation and environment diff
+### Key Features
+- **Automatic Conversion** - docker-compose.yml → K8s manifests
+- **Multi-Platform** - EKS, GKE, AKS, DOKS, LKE, k3s, minikube
+- **Helm Charts** - Generate, package, and deploy Helm charts
+- **Rolling Deployments** - Zero-downtime updates with HPA support
 
-### Infrastructure Commands
-- **`nself servers`** - Server management for multi-server deployments
-- **`nself frontend`** - Frontend application management with Vercel/Netlify integration
+### Cloud Providers
+26 cloud providers now supported with normalized sizing and one-command provisioning.
 
-### Enhancements
-- **`nself status --json`** - JSON output for tooling integration
-- **`nself status --all-envs`** - Check status across all environments
-- **`nself deploy check`** - Pre-deployment validation checks
-- **`nself urls --diff`** - Compare URLs between environments
-
-**[View Full Release Notes](releases/v0.4.6)**
+**[View Full Release Notes](releases/v0.4.7)**
 
 ---
 
@@ -229,6 +222,6 @@ nself deploy prod
 
 <div align="center">
 
-**Version 0.4.6** · **January 2026** · **[Changelog](releases/CHANGELOG)**
+**Version 0.4.7** · **January 2026** · **[Changelog](releases/CHANGELOG)**
 
 </div>
