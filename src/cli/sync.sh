@@ -273,6 +273,137 @@ cmd_pull() {
   log_success "Sync complete: $source → local"
 }
 
+# Pull environment config files (new hierarchy support)
+cmd_pull_env() {
+  local source="${1:-staging}"
+
+  case "$source" in
+    staging)
+      log_info "Pulling staging environment config..."
+
+      local host=$(get_profile_value "staging" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Staging profile not configured"
+        log_info "Run 'nself sync init' and edit $SYNC_PROFILES_FILE"
+        return 1
+      fi
+
+      local user=$(get_profile_value "staging" "user")
+      local port=$(get_profile_value "staging" "port")
+      local ssh_key=$(get_profile_value "staging" "ssh_key")
+
+      log_info "Testing SSH access to staging..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to staging server"
+        log_info "Ask your tech lead to add your SSH key"
+        return 1
+      fi
+
+      # Pull .env.staging from remote
+      local remote_config=$(run_remote_cmd "staging" "cat .env.staging 2>/dev/null || cat .env 2>/dev/null || echo ''")
+
+      if [[ -z "$remote_config" ]]; then
+        log_error "Could not read staging config from server"
+        return 1
+      fi
+
+      echo "$remote_config" > ".env.staging"
+      chmod 600 ".env.staging"
+
+      log_success "Saved to .env.staging"
+      printf "Variables pulled: %d\n" "$(grep -c '^[A-Z]' .env.staging 2>/dev/null || echo 0)"
+      ;;
+
+    prod|production)
+      log_info "Pulling production environment config..."
+
+      local host=$(get_profile_value "production" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Production profile not configured"
+        return 1
+      fi
+
+      local user=$(get_profile_value "production" "user")
+      local port=$(get_profile_value "production" "port")
+      local ssh_key=$(get_profile_value "production" "ssh_key")
+
+      log_info "Testing SSH access to production..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to production server"
+        log_info "Only Lead Devs have production access"
+        return 1
+      fi
+
+      # Pull .env.prod from remote
+      local remote_config=$(run_remote_cmd "production" "cat .env.prod 2>/dev/null || cat .env 2>/dev/null || echo ''")
+
+      if [[ -z "$remote_config" ]]; then
+        log_error "Could not read production config from server"
+        return 1
+      fi
+
+      echo "$remote_config" > ".env.prod"
+      chmod 600 ".env.prod"
+
+      log_success "Saved to .env.prod"
+      printf "Variables pulled: %d\n" "$(grep -c '^[A-Z]' .env.prod 2>/dev/null || echo 0)"
+      log_warning "Remember: .env.prod should be gitignored"
+      ;;
+
+    secrets)
+      log_info "Pulling production secrets..."
+
+      local host=$(get_profile_value "production" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Production profile not configured"
+        return 1
+      fi
+
+      local user=$(get_profile_value "production" "user")
+      local port=$(get_profile_value "production" "port")
+      local ssh_key=$(get_profile_value "production" "ssh_key")
+
+      log_info "Testing SSH access to production..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to production server"
+        log_info "Only Lead Devs have access to production secrets"
+        return 1
+      fi
+
+      # Pull .secrets from remote
+      local remote_secrets=$(run_remote_cmd "production" "cat .secrets 2>/dev/null || echo ''")
+
+      if [[ -z "$remote_secrets" ]]; then
+        log_warning "No .secrets file found on production server"
+        log_info "Generate secrets on the server first, or create .secrets manually"
+        return 1
+      fi
+
+      echo "$remote_secrets" > ".secrets"
+      chmod 600 ".secrets"
+
+      log_success "Saved to .secrets (chmod 600)"
+      printf "Secrets pulled: %d\n" "$(grep -c '^[A-Z]' .secrets 2>/dev/null || echo 0)"
+      log_warning "CRITICAL: .secrets must be gitignored!"
+
+      # Verify gitignore
+      if [[ -f ".gitignore" ]]; then
+        if ! grep -q "^\.secrets$" .gitignore 2>/dev/null; then
+          log_error ".secrets is NOT in .gitignore - FIX THIS IMMEDIATELY"
+          printf "Add this line to .gitignore:\n"
+          printf "  .secrets\n"
+        fi
+      fi
+      ;;
+
+    *)
+      log_error "Unknown environment: $source"
+      printf "Valid options: staging, prod, secrets\n"
+      return 1
+      ;;
+  esac
+}
+
 # Push database to remote environment
 cmd_push() {
   local target="${1:-staging}"
@@ -625,53 +756,67 @@ USAGE:
   nself sync <command> [options]
 
 COMMANDS:
+  Environment Config (by access level):
+    pull staging              Pull .env.staging (requires Sr Dev+ access)
+    pull prod                 Pull .env.prod (requires Lead Dev access)
+    pull secrets              Pull .secrets (requires Lead Dev access)
+
   Database:
-    pull <env> [--anonymize]    Pull database from remote environment
-    push <env>                  Push database to remote environment (staging only)
+    pull <env> --db           Pull database from remote environment
+    push <env>                Push database to remote (staging only)
 
   Files:
-    files pull <env> [path]     Pull files from remote
-    files push <env> [path]     Push files to remote (staging only)
+    files pull <env> [path]   Pull files from remote
+    files push <env> [path]   Push files to remote (staging only)
 
-  Config:
-    config pull <env>           Pull .env config from remote
-    config push <env>           Push .env to remote (staging only)
-    config diff <env>           Compare local and remote config
+  Config (legacy):
+    config pull <env>         Pull .env config from remote
+    config push <env>         Push .env to remote (staging only)
+    config diff <env>         Compare local and remote config
 
   Management:
-    init                        Create sync profiles configuration
-    status [env]                Show connection status
-    history                     Show sync history
+    init                      Create sync profiles configuration
+    status [env]              Show connection status
+    history                   Show sync history
 
-ENVIRONMENTS:
-  local       - Your local development
-  staging     - Staging server (full access)
-  production  - Production server (read-only, anonymized)
+ACCESS LEVELS:
+  Dev         Local only (.env.dev + .env.local)
+  Sr Dev      + staging access (SSH to staging server)
+  Lead Dev    + prod + secrets (SSH to production server)
+
+ENVIRONMENT FILE HIERARCHY:
+  .env.dev     → Base config (committed to git)
+  .env.local   → Your machine overrides (gitignored)
+  .env.staging → Staging server config (SSH sync)
+  .env.prod    → Production server config (SSH sync)
+  .secrets     → Top-secret credentials (SSH sync, Lead Dev only)
 
 SAFETY:
-  • Pulling from production REQUIRES --anonymize flag
+  • Pulling database from production REQUIRES --anonymize flag
   • Pushing to production is BLOCKED (use CI/CD)
-  • Backups are created before sync operations
+  • Secrets are generated ON the server, never committed
+  • All sensitive files must be gitignored
 
 EXAMPLES:
-  # Setup
-  nself sync init                       # Create profiles config
+  # Check your access level
+  nself env access
 
-  # Pull staging database to local
-  nself sync pull staging
+  # Pull environment configs (by access level)
+  nself sync pull staging              # Sr Dev+: gets .env.staging
+  nself sync pull prod                 # Lead Dev: gets .env.prod
+  nself sync pull secrets              # Lead Dev: gets .secrets
 
-  # Pull production (anonymized) for local testing
-  nself sync pull production --anonymize
+  # Pull database (requires --db flag)
+  nself sync pull staging --db
+  nself sync pull production --db --anonymize
 
-  # Push local to staging
+  # Push to staging
   nself sync push staging
 
-  # Sync files
-  nself sync files pull staging uploads/
-  nself sync files push staging uploads/
-
-  # Compare configs
-  nself sync config diff staging
+  # Load merged environment
+  nself env load local                 # .env.dev + .env.local
+  nself env load staging               # .env.dev + .env.staging
+  nself env load prod                  # .env.dev + .env.prod + .secrets
 
 CONFIGURATION:
   Edit .nself/sync/profiles.yaml to configure remote servers:
@@ -702,7 +847,20 @@ main() {
   case "$command" in
     # Database sync
     pull)
-      cmd_pull "$@"
+      local target="${1:-staging}"
+      # Check if pulling env config or database
+      if [[ "$target" == "staging" ]] || [[ "$target" == "prod" ]] || [[ "$target" == "production" ]] || [[ "$target" == "secrets" ]]; then
+        # Check for --db flag to force database pull
+        if [[ "${2:-}" == "--db" ]] || [[ "${2:-}" == "--database" ]]; then
+          shift
+          cmd_pull "$@"
+        else
+          # Default: pull environment config
+          cmd_pull_env "$target"
+        fi
+      else
+        cmd_pull "$@"
+      fi
       ;;
     push)
       cmd_push "$@"

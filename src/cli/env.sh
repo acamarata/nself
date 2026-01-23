@@ -37,6 +37,8 @@ Commands:
   delete <name>              Delete an environment
   export <name>              Export environment configuration
   import <file>              Import environment configuration
+  access [--check <env>]     Show your access level or test specific access
+  load                       Load merged environment (respects hierarchy)
 
 Templates:
   local       Local development (default)
@@ -50,24 +52,26 @@ Examples:
   nself env diff local staging        # Compare local vs staging
   nself env validate prod             # Validate production config
 
-Environment Structure:
-  .environments/
-    ├── local/
-    │   ├── .env              # Environment configuration
-    │   └── server.json       # Server connection info
-    ├── staging/
-    │   ├── .env
-    │   ├── .env.secrets      # Sensitive values (chmod 600)
-    │   └── server.json
-    └── prod/
-        ├── .env
-        ├── .env.secrets
-        └── server.json
+Environment File Hierarchy (cascading overrides):
+  .env.dev        Base config for all developers (committed)
+       ↓
+  .env.local      Your machine overrides (gitignored)
+       ↓
+  .env.staging    Staging server only (SSH sync)
+       ↓
+  .env.prod       Production server only (SSH sync)
+       ↓
+  .secrets        Top-secret credentials (generated on server)
+
+Access Levels:
+  Dev        Local only (.env.dev + .env.local)
+  Sr Dev     + staging access (SSH to staging server)
+  Lead Dev   + prod + secrets (SSH to production server)
 
 Notes:
-  • Environments inherit from .env.dev as base
-  • .env.secrets files should have 600 permissions
-  • Use 'nself env validate' before deploying
+  • Access is determined by SSH key authorization
+  • Secrets are generated ON the server, never committed
+  • Use 'nself env access' to check your current level
 EOF
 }
 
@@ -361,6 +365,230 @@ cmd_env_import() {
   log_info "Remember to configure .env.secrets if needed"
 }
 
+# Access subcommand - check user's access level
+cmd_env_access() {
+  local check_env=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --check)
+        check_env="$2"
+        shift 2
+        ;;
+      -h|--help)
+        printf "Usage: nself env access [--check <env>]\n\n"
+        printf "Check your environment access level based on SSH keys.\n\n"
+        printf "Options:\n"
+        printf "  --check <env>  Test access to specific environment (staging/prod)\n"
+        return 0
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # Get server configs
+  local staging_server=""
+  local prod_server=""
+
+  if [[ -f ".environments/staging/server.json" ]]; then
+    staging_server=$(grep -o '"host"[[:space:]]*:[[:space:]]*"[^"]*"' .environments/staging/server.json 2>/dev/null | cut -d'"' -f4)
+  fi
+
+  if [[ -f ".environments/prod/server.json" ]]; then
+    prod_server=$(grep -o '"host"[[:space:]]*:[[:space:]]*"[^"]*"' .environments/prod/server.json 2>/dev/null | cut -d'"' -f4)
+  fi
+
+  # If checking specific environment
+  if [[ -n "$check_env" ]]; then
+    case "$check_env" in
+      staging)
+        if [[ -z "$staging_server" ]]; then
+          log_error "No staging server configured"
+          printf "Configure with: nself sync profile add staging\n"
+          return 1
+        fi
+        printf "Testing SSH access to staging (%s)...\n" "$staging_server"
+        if ssh -o BatchMode=yes -o ConnectTimeout=5 "$staging_server" exit 2>/dev/null; then
+          log_success "You have staging access"
+          return 0
+        else
+          log_error "No staging access (SSH key not authorized)"
+          return 1
+        fi
+        ;;
+      prod|production)
+        if [[ -z "$prod_server" ]]; then
+          log_error "No production server configured"
+          printf "Configure with: nself sync profile add prod\n"
+          return 1
+        fi
+        printf "Testing SSH access to production (%s)...\n" "$prod_server"
+        if ssh -o BatchMode=yes -o ConnectTimeout=5 "$prod_server" exit 2>/dev/null; then
+          log_success "You have production access"
+          return 0
+        else
+          log_error "No production access (SSH key not authorized)"
+          return 1
+        fi
+        ;;
+      *)
+        log_error "Unknown environment: $check_env"
+        printf "Valid environments: staging, prod\n"
+        return 1
+        ;;
+    esac
+  fi
+
+  # Show full access report
+  printf "\n"
+  printf "Your Environment Access Level\n"
+  printf "==============================\n\n"
+
+  local has_staging=false
+  local has_prod=false
+  local role="Dev"
+
+  # Check local access (always yes)
+  printf "  Local (.env.dev + .env.local)   %s\n" "${COLOR_GREEN}Yes${COLOR_RESET}"
+
+  # Check staging access
+  if [[ -n "$staging_server" ]]; then
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 "$staging_server" exit 2>/dev/null; then
+      printf "  Staging (.env.staging)          %s\n" "${COLOR_GREEN}Yes${COLOR_RESET}"
+      has_staging=true
+      role="Sr Dev"
+    else
+      printf "  Staging (.env.staging)          %s\n" "${COLOR_RED}No${COLOR_RESET}"
+    fi
+  else
+    printf "  Staging (.env.staging)          %s\n" "${COLOR_YELLOW}Not configured${COLOR_RESET}"
+  fi
+
+  # Check prod access
+  if [[ -n "$prod_server" ]]; then
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 "$prod_server" exit 2>/dev/null; then
+      printf "  Production (.env.prod)          %s\n" "${COLOR_GREEN}Yes${COLOR_RESET}"
+      printf "  Secrets (.secrets)              %s\n" "${COLOR_GREEN}Yes${COLOR_RESET}"
+      has_prod=true
+      role="Lead Dev"
+    else
+      printf "  Production (.env.prod)          %s\n" "${COLOR_RED}No${COLOR_RESET}"
+      printf "  Secrets (.secrets)              %s\n" "${COLOR_RED}No${COLOR_RESET}"
+    fi
+  else
+    printf "  Production (.env.prod)          %s\n" "${COLOR_YELLOW}Not configured${COLOR_RESET}"
+    printf "  Secrets (.secrets)              %s\n" "${COLOR_YELLOW}Not configured${COLOR_RESET}"
+  fi
+
+  printf "\n"
+  printf "Your role: ${COLOR_CYAN}%s${COLOR_RESET}\n" "$role"
+  printf "\n"
+
+  case "$role" in
+    "Dev")
+      printf "You can:\n"
+      printf "  - Edit .env.dev and .env.local\n"
+      printf "  - Run 'nself env switch local'\n"
+      printf "\n"
+      printf "To get staging access, ask your tech lead to add your SSH key.\n"
+      ;;
+    "Sr Dev")
+      printf "You can:\n"
+      printf "  - Edit .env.dev and .env.local\n"
+      printf "  - Run 'nself sync pull staging' to get staging config\n"
+      printf "  - Run 'nself env switch staging'\n"
+      printf "\n"
+      printf "To get prod access, ask your tech lead to add your SSH key.\n"
+      ;;
+    "Lead Dev")
+      printf "You have full access:\n"
+      printf "  - Run 'nself sync pull staging' for staging config\n"
+      printf "  - Run 'nself sync pull prod' for production config\n"
+      printf "  - Run 'nself sync pull secrets' for production secrets\n"
+      printf "  - Run 'nself env switch <any>' to switch environments\n"
+      ;;
+  esac
+}
+
+# Load subcommand - merge environment files respecting hierarchy
+cmd_env_load() {
+  local target="${1:-local}"
+  local output="${2:-.env}"
+
+  printf "Loading environment: %s\n" "$target"
+
+  # Start with empty merged file
+  local merged_file
+  merged_file=$(mktemp)
+
+  # Layer 1: .env.dev (base for all)
+  if [[ -f ".env.dev" ]]; then
+    cat ".env.dev" >> "$merged_file"
+    printf "  + .env.dev (base)\n"
+  fi
+
+  case "$target" in
+    local)
+      # Layer 2: .env.local (developer overrides)
+      if [[ -f ".env.local" ]]; then
+        printf "\n# --- .env.local overrides ---\n" >> "$merged_file"
+        cat ".env.local" >> "$merged_file"
+        printf "  + .env.local (your overrides)\n"
+      fi
+      ;;
+    staging)
+      # Layer 2: .env.staging
+      if [[ -f ".env.staging" ]]; then
+        printf "\n# --- .env.staging overrides ---\n" >> "$merged_file"
+        cat ".env.staging" >> "$merged_file"
+        printf "  + .env.staging\n"
+      elif [[ -f ".environments/staging/.env" ]]; then
+        printf "\n# --- .env.staging overrides ---\n" >> "$merged_file"
+        cat ".environments/staging/.env" >> "$merged_file"
+        printf "  + .environments/staging/.env\n"
+      else
+        log_warning "No staging config found. Run: nself sync pull staging"
+      fi
+      ;;
+    prod|production)
+      # Layer 2: .env.prod
+      if [[ -f ".env.prod" ]]; then
+        printf "\n# --- .env.prod overrides ---\n" >> "$merged_file"
+        cat ".env.prod" >> "$merged_file"
+        printf "  + .env.prod\n"
+      elif [[ -f ".environments/prod/.env" ]]; then
+        printf "\n# --- .env.prod overrides ---\n" >> "$merged_file"
+        cat ".environments/prod/.env" >> "$merged_file"
+        printf "  + .environments/prod/.env\n"
+      else
+        log_warning "No prod config found. Run: nself sync pull prod"
+      fi
+
+      # Layer 3: .secrets (only for prod)
+      if [[ -f ".secrets" ]]; then
+        printf "\n# --- .secrets overrides ---\n" >> "$merged_file"
+        cat ".secrets" >> "$merged_file"
+        printf "  + .secrets (production secrets)\n"
+      fi
+      ;;
+    *)
+      log_error "Unknown target: $target"
+      rm -f "$merged_file"
+      return 1
+      ;;
+  esac
+
+  # Write merged output
+  mv "$merged_file" "$output"
+  chmod 600 "$output"
+
+  printf "\n"
+  log_success "Created merged environment: $output"
+  printf "Variables loaded: %d\n" "$(grep -c '^[A-Z]' "$output" 2>/dev/null || echo 0)"
+}
+
 # Main command handler
 cmd_env() {
   local subcommand="${1:-}"
@@ -412,6 +640,14 @@ cmd_env() {
       ;;
     import)
       cmd_env_import "$@"
+      ;;
+    access|whoami|level)
+      show_command_header "nself env access" "Your access level"
+      cmd_env_access "$@"
+      ;;
+    load|merge)
+      show_command_header "nself env load" "Merge environment files"
+      cmd_env_load "$@"
       ;;
     *)
       log_error "Unknown subcommand: $subcommand"
