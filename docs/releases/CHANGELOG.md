@@ -5,7 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.4] - 2026-01-22
+## [0.4.7] - 2026-01-23
+
+### Added
+- **Cloud Command** (`nself cloud`): Unified cloud infrastructure management
+  - 26 cloud providers supported (up from 10)
+  - Provider management, server provisioning, cost estimation
+  - Consolidates providers, provision, servers commands
+- **Service Command** (`nself service`): Unified service management
+  - Consolidates email, search, functions, mlflow commands
+  - Storage and cache management subcommands
+- **Kubernetes Command** (`nself k8s`): Full K8s deployment support
+  - Convert docker-compose.yml to K8s manifests
+  - Deploy, scale, rollback, logs for K8s clusters
+  - Namespace and cluster management
+- **Helm Command** (`nself helm`): Helm chart management
+  - Generate Helm charts from nself configuration
+  - Install, upgrade, rollback releases
+  - Repository management
+- **Enhanced Deploy**: Preview, canary, blue-green strategies
+- **Auto-Sync**: File watching and continuous synchronization
+- **Admin Dev Mode**: Hot-reload local development with Docker backend
+
+### Fixed
+- **BUG-001**: Tempo healthcheck for distroless image
+- **BUG-002**: Functions service auto-initialization
+- **BUG-003**: Docker BuildKit container accumulation
+
+## [0.4.6] - 2026-01-22
+
+### Added
+- **Performance Command** (`nself perf`): Performance profiling and analysis
+  - Container resource usage, slow query analysis
+  - Table statistics, optimization recommendations
+  - Watch mode for real-time monitoring
+- **Benchmark Command** (`nself bench`): Benchmarking and load testing
+  - Run benchmark suites, establish baselines
+  - Stress testing, report generation
+- **Health Command** (`nself health`): Health check management
+  - Service-specific checks, custom endpoints
+  - Watch mode with alerts, history tracking
+- **History Command** (`nself history`): Operation audit trail
+  - Deployments, migrations, rollbacks, commands
+  - Search and export functionality
+- **Config Command** (`nself config`): Configuration management
+  - Get/set values, validation, environment diff
+  - Export/import, interactive editing
+- **Servers Command** (`nself servers`): Server infrastructure management
+  - Add, remove, SSH, logs, reboot servers
+- **Frontend Command** (`nself frontend`): Frontend app management
+  - Add, deploy, logs, environment variables
+
+### Changed
+- `nself status` now supports `--json` and `--all-envs` flags
+- `nself urls` now supports `--env` and `--diff` flags
+- `nself deploy` now has `check` subcommand for pre-deploy validation
+
+## [0.4.5] - 2026-01-21
+
+### Added
+- **Providers Command** (`nself providers`): Cloud provider management
+  - Configure credentials for 10 cloud providers
+  - Cost comparison between providers
+- **Provision Command** (`nself provision`): Infrastructure provisioning
+  - One-command deployment to any provider
+  - Normalized sizing across providers
+  - Export to Terraform/Pulumi
+- **Sync Command** (`nself sync`): Environment synchronization
+  - Pull/push databases between environments
+  - File synchronization, config comparison
+  - Anonymization for production data
+- **CI Command** (`nself ci`): CI/CD integration
+  - Generate GitHub Actions and GitLab CI workflows
+  - Workflow validation and status
+- **Completion Command** (`nself completion`): Shell completions
+  - Bash, Zsh, Fish completion scripts
+  - Auto-install to shell configuration
+
+### Changed
+- `nself doctor` now supports `--fix` for auto-repair
+
+## [0.4.4] - 2026-01-20
 
 ### Added
 - **Database Command** (`nself db`): Comprehensive database management
@@ -27,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New Library Module**:
   - `src/lib/database/` - Database utilities (core.sh)
 
-## [0.4.3] - 2026-01-21
+## [0.4.3] - 2026-01-19
 
 ### Added
 - **Environment Command** (`nself env`): Complete environment management
@@ -60,7 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker Compose Modules**: Fixed custom service template generation
 - **Monitoring Exporters**: Fixed exporter service definitions
 
-## [0.4.2] - 2026-01-20
+## [0.4.2] - 2026-01-18
 
 ### Added
 - **Email Command** (`nself email`): Complete email service management
@@ -118,7 +198,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Email Provider**: MailPit is default for development (zero config)
 - **Search Engine**: PostgreSQL FTS is default (no extra services needed)
 
-## [0.4.1] - 2026-01-19
+## [0.4.1] - 2026-01-17
 
 ### Fixed
 - **Bash 3.2 Compatibility**: Fixed array declaration syntax in start.sh

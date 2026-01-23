@@ -97,7 +97,9 @@ nself db schema apply schema.dbml
 | Document | Description |
 |----------|-------------|
 | [Roadmap](releases/ROADMAP.md) | Future plans |
-| [v0.4.5](releases/v0.4.5.md) | Current release - Provider Support |
+| [v0.4.7](releases/v0.4.7.md) | Current release - Infrastructure Everywhere |
+| [v0.4.6](releases/v0.4.6.md) | Scaling & Performance |
+| [v0.4.5](releases/v0.4.5.md) | Provider Support |
 | [v0.4.4](releases/v0.4.4.md) | Database Tools |
 | [v0.4.3](releases/v0.4.3.md) | Deployment Pipeline |
 | [v0.4.2](releases/v0.4.2.md) | Service & Monitoring |
@@ -179,12 +181,13 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.4.6** | Jan 2026 | Scaling & Performance (current) |
-| v0.4.5 | Jan 2026 | Provider Support |
-| v0.4.4 | Jan 2026 | Database Tools |
-| v0.4.3 | Jan 2026 | Deployment Pipeline |
-| v0.4.2 | Jan 2026 | Service & Monitoring |
-| v0.4.1 | Jan 2026 | Platform Compatibility |
+| **v0.4.7** | Jan 23, 2026 | Infrastructure Everywhere (current) |
+| v0.4.6 | Jan 22, 2026 | Scaling & Performance |
+| v0.4.5 | Jan 21, 2026 | Provider Support |
+| v0.4.4 | Jan 20, 2026 | Database Tools |
+| v0.4.3 | Jan 19, 2026 | Deployment Pipeline |
+| v0.4.2 | Jan 18, 2026 | Service & Monitoring |
+| v0.4.1 | Jan 17, 2026 | Platform Compatibility |
 | v0.4.0 | Oct 2025 | Production-Ready Core |
 
 ---
@@ -197,4 +200,4 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.6*
+*Last Updated: January 23, 2026 | Version: 0.4.7*

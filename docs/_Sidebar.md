@@ -127,8 +127,8 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
-- [v0.4.7 Plan](releases/NEXT-RELEASE) (Next)
-- [v0.4.6](releases/v0.4.6) (Current)
+- [v0.4.7](releases/v0.4.7) (Current)
+- [v0.4.6](releases/v0.4.6)
 - [v0.4.5](releases/v0.4.5)
 - [v0.4.4](releases/v0.4.4)
 - [Changelog](releases/CHANGELOG)

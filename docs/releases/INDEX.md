@@ -15,20 +15,58 @@ Complete release history and roadmap for nself - Self-Hosted Infrastructure Mana
 **Status:** Production Ready
 
 **Highlights:**
-- **DBML Schema Workflow**: Design at dbdiagram.io, import to SQL, seed automatically
-- **Schema Templates**: Start with `basic`, `ecommerce`, `saas`, or `blog` templates
-- **One-Command Setup**: `nself db schema apply` does import → migrate → mock → seed
-- **Environment-Aware Safety**: Production-safe operations with automatic guards
-- **Mock Data Generation**: Deterministic, shareable mock data with configurable seeds
-- **Type Generation**: Generate TypeScript, Go, Python types from your schema
+- **26 Cloud Providers**: Massively expanded infrastructure support
+- **Kubernetes Support**: Full K8s deployment and management
+- **Helm Charts**: Generate, deploy, and manage Helm charts
+- **Command Consolidation**: Unified `nself cloud`, `nself service`, `nself k8s`, `nself helm`
+- **Enhanced Deployment**: Preview, canary, and blue-green strategies
+- **Auto-Sync**: Continuous file watching and synchronization
 
-**[View Release Notes →](v0.4.4.md)**
+**[View Release Notes →](v0.4.7.md)**
 
 ---
 
 ## Recent Releases
 
-### [v0.4.3](v0.4.3.md) - January 2026
+### [v0.4.6](v0.4.6.md) - January 22, 2026
+
+**Status:** Stable
+
+**Highlights:**
+- Performance profiling and analysis (`nself perf`)
+- Benchmarking and load testing (`nself bench`)
+- Health check management, operation audit trail
+- Configuration management, server infrastructure
+- Frontend application management
+
+**[View Release Notes →](v0.4.6.md)**
+
+### [v0.4.5](v0.4.5.md) - January 21, 2026
+
+**Status:** Stable
+
+**Highlights:**
+- 10 cloud provider support with normalized sizing
+- One-command provisioning to any provider
+- Environment synchronization (db, files, config)
+- CI/CD integration (GitHub Actions, GitLab CI)
+- Shell completions (bash, zsh, fish)
+
+**[View Release Notes →](v0.4.5.md)**
+
+### [v0.4.4](v0.4.4.md) - January 20, 2026
+
+**Status:** Stable
+
+**Highlights:**
+- DBML Schema Workflow (design → import → migrate → seed)
+- Schema templates: basic, ecommerce, saas, blog
+- Type generation (TypeScript, Go, Python)
+- Database inspection and mock data generation
+
+**[View Release Notes →](v0.4.4.md)**
+
+### [v0.4.3](v0.4.3.md) - January 19, 2026
 
 **Status:** Stable
 
@@ -40,7 +78,7 @@ Complete release history and roadmap for nself - Self-Hosted Infrastructure Mana
 
 **[View Release Notes →](v0.4.3.md)**
 
-### [v0.4.2](v0.4.2.md) - January 2026
+### [v0.4.2](v0.4.2.md) - January 18, 2026
 
 **Status:** Stable
 
@@ -52,7 +90,7 @@ Complete release history and roadmap for nself - Self-Hosted Infrastructure Mana
 
 **[View Release Notes →](v0.4.2.md)**
 
-### [v0.4.1](v0.4.1.md) - January 2026
+### [v0.4.1](v0.4.1.md) - January 17, 2026
 
 **Status:** Stable
 
@@ -94,12 +132,9 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements.
 
 | Version | Target | Focus |
 |---------|--------|-------|
-| **v0.4.5** | Q2 2026 | Provider Support (AWS, GCP, Azure, DO, Hetzner, etc.) |
-| v0.4.6 | Q2-Q3 2026 | Scaling & Performance |
-| v0.4.7 | Q3 2026 | Kubernetes Support |
-| v0.4.8 | Q3-Q4 2026 | Plugin System (nself-stripe) |
-| v0.4.9 | Q4 2026 | Extensive QA & Polish |
-| **v0.5.0** | Q4 2026 / Q1 2027 | **Production Release + nself-admin v0.1** |
+| **v0.4.8** | Q1 2026 | Plugin System (nself-stripe) |
+| v0.4.9 | Q1-Q2 2026 | Extensive QA & Polish |
+| **v0.5.0** | Q2 2026 | **Production Release + nself-admin v0.1** |
 
 ---
 
@@ -111,10 +146,13 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| [v0.4.4](v0.4.4.md) | Jan 2026 | **Current** | Database Tools, DBML workflow |
-| [v0.4.3](v0.4.3.md) | Jan 2026 | Stable | Deployment Pipeline |
-| [v0.4.2](v0.4.2.md) | Jan 2026 | Stable | Service & monitoring commands |
-| [v0.4.1](v0.4.1.md) | Jan 2026 | Stable | Platform compatibility fixes |
+| [v0.4.7](v0.4.7.md) | Jan 23, 2026 | **Current** | Infrastructure Everywhere, K8s, Helm |
+| [v0.4.6](v0.4.6.md) | Jan 22, 2026 | Stable | Scaling & Performance |
+| [v0.4.5](v0.4.5.md) | Jan 21, 2026 | Stable | Provider Support, 10 cloud providers |
+| [v0.4.4](v0.4.4.md) | Jan 20, 2026 | Stable | Database Tools, DBML workflow |
+| [v0.4.3](v0.4.3.md) | Jan 19, 2026 | Stable | Deployment Pipeline |
+| [v0.4.2](v0.4.2.md) | Jan 18, 2026 | Stable | Service & monitoring commands |
+| [v0.4.1](v0.4.1.md) | Jan 17, 2026 | Stable | Platform compatibility fixes |
 | [v0.4.0](v0.4.0.md) | Oct 2025 | Stable | Production-ready release |
 | [v0.3.10](v0.3.10.md) | Sep 2025 | Stable | Critical bug fixes, WSL support |
 | [v0.3.9](v0.3.9.md) | Sep 2025 | Stable | Admin UI, enhanced init |
