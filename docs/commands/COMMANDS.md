@@ -1,6 +1,6 @@
 # nself Commands Reference
 
-**Version 0.4.4** | **29 Commands** | **Full CLI Reference**
+**Version 0.4.5** | **34 Commands** | **Full CLI Reference**
 
 ---
 
@@ -23,6 +23,13 @@ nself db backup               # Create backup
 # Deployment (v0.4.3)
 nself env create prod         # Create environment
 nself deploy prod             # Deploy to production
+
+# Provider Support (v0.4.5)
+nself providers init hetzner  # Configure cloud provider
+nself provision aws           # Provision infrastructure
+nself sync pull staging       # Sync from staging
+nself ci init github          # Generate CI/CD workflow
+nself completion bash         # Shell completions
 ```
 
 ---
@@ -37,8 +44,9 @@ nself deploy prod             # Deploy to production
 | **Services** | 6 | Service-specific operations |
 | **Database** | 1 (10+ subcommands) | Database management |
 | **Deployment** | 4 | Environment and deployment |
+| **Provider** | 5 | Cloud providers and sync (v0.4.5) |
 
-**Total: 29 commands**
+**Total: 34 commands**
 
 ---
 
@@ -470,6 +478,85 @@ See [STAGING.md](STAGING.md) for complete reference.
 
 ---
 
+## Provider Commands (v0.4.5)
+
+### `nself providers`
+
+Manage cloud provider credentials.
+
+```bash
+nself providers                 # List configured providers
+nself providers init aws        # Configure AWS credentials
+nself providers init hetzner    # Configure Hetzner
+nself providers status          # Check provider status
+nself providers costs --compare # Compare costs across providers
+nself providers remove hetzner  # Remove provider config
+```
+
+**Supported Providers:**
+AWS, GCP, Azure, DigitalOcean, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
+
+---
+
+### `nself provision`
+
+One-command infrastructure provisioning.
+
+```bash
+nself provision hetzner         # Default small size
+nself provision aws --size medium
+nself provision do --size large
+nself provision aws --estimate  # Show cost only
+nself provision gcp --dry-run   # Preview resources
+nself provision export terraform # Export as Terraform
+```
+
+**Sizes:** small (1-2 vCPU, 2GB), medium (2 vCPU, 4GB), large (4 vCPU, 8GB), xlarge (8 vCPU, 16GB)
+
+---
+
+### `nself sync`
+
+Sync databases, config, and files between environments.
+
+```bash
+nself sync pull staging         # Pull database from staging
+nself sync pull prod --anonymize # Pull prod with PII anonymization
+nself sync push staging         # Push to staging
+nself sync files pull staging uploads/  # Sync files
+nself sync config diff staging  # Compare configs
+```
+
+See [SYNC.md](SYNC.md) for complete reference.
+
+---
+
+### `nself ci`
+
+Generate CI/CD workflows.
+
+```bash
+nself ci init github            # Generate GitHub Actions
+nself ci init gitlab            # Generate GitLab CI
+nself ci validate               # Validate config
+nself ci status                 # Check CI status
+```
+
+---
+
+### `nself completion`
+
+Generate shell completions.
+
+```bash
+nself completion bash >> ~/.bashrc
+nself completion zsh >> ~/.zshrc
+nself completion fish >> ~/.config/fish/completions/nself.fish
+nself completion install bash   # Auto-install
+```
+
+---
+
 ## Environment Variables
 
 All commands respect these environment variables:
@@ -549,4 +636,4 @@ ENV=production nself db restore backup.sql  # Restore
 
 ---
 
-*Last Updated: January 22, 2026 | Version: 0.4.4*
+*Last Updated: January 23, 2026 | Version: 0.4.5*

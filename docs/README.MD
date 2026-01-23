@@ -2,7 +2,7 @@
 
 > **The complete self-hosted Backend-as-a-Service platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.4-blue.svg)](releases/v0.4.4.md)
+[![Version](https://img.shields.io/badge/version-0.4.5-blue.svg)](releases/v0.4.5.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
@@ -43,7 +43,7 @@ nself db schema apply schema.dbml
 
 | Document | Description |
 |----------|-------------|
-| [Commands Overview](commands/COMMANDS.md) | All 29 commands |
+| [Commands Overview](commands/COMMANDS.md) | All 34 commands |
 | [db](commands/DB.md) | Database tools (migrate, seed, mock, backup, schema, types) |
 | [deploy](commands/DEPLOY.md) | SSH deployment with zero-downtime |
 | [env](commands/ENV.md) | Environment management |
@@ -94,7 +94,8 @@ nself db schema apply schema.dbml
 | Document | Description |
 |----------|-------------|
 | [Roadmap](releases/ROADMAP.md) | Future plans |
-| [v0.4.4](releases/v0.4.4.md) | Current release - Database Tools |
+| [v0.4.5](releases/v0.4.5.md) | Current release - Provider Support |
+| [v0.4.4](releases/v0.4.4.md) | Database Tools |
 | [v0.4.3](releases/v0.4.3.md) | Deployment Pipeline |
 | [v0.4.2](releases/v0.4.2.md) | Service & Monitoring |
 | [Changelog](releases/CHANGELOG.md) | Full version history |
@@ -175,7 +176,8 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.4.4** | Jan 2026 | Database Tools (current) |
+| **v0.4.5** | Jan 2026 | Provider Support (current) |
+| v0.4.4 | Jan 2026 | Database Tools |
 | v0.4.3 | Jan 2026 | Deployment Pipeline |
 | v0.4.2 | Jan 2026 | Service & Monitoring |
 | v0.4.1 | Jan 2026 | Platform Compatibility |
@@ -191,4 +193,4 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 
 ---
 
-*Last Updated: January 22, 2026 | Version: 0.4.4*
+*Last Updated: January 23, 2026 | Version: 0.4.5*

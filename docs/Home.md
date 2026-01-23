@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.4-blue.svg)](releases/v0.4.4)
+[![Version](https://img.shields.io/badge/version-0.4.5-blue.svg)](releases/v0.4.5)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -136,7 +136,7 @@ Build custom services in any language.
 | **[db](commands/DB)** | Database tools - migrate, seed, mock, backup, schema, types |
 | **[deploy](commands/DEPLOY)** | SSH deployment with zero-downtime |
 | **[env](commands/ENV)** | Environment management |
-| **[All Commands](commands/COMMANDS)** | Complete reference (29 commands) |
+| **[All Commands](commands/COMMANDS)** | Complete reference (34 commands) |
 
 ### Services
 
@@ -156,19 +156,19 @@ Build custom services in any language.
 
 ---
 
-## Version 0.4.4 - Database Tools
+## Version 0.4.5 - Provider Support
 
-The current release focuses on comprehensive database management:
+The current release enables one-command deployment to any of 10 cloud providers:
 
-- **Migrations** - Full lifecycle with rollback support
-- **Seeding** - Environment-aware with mock users for dev, real users for prod
-- **Mock Data** - Deterministic, shareable across teams
-- **Backup/Restore** - Complete management with cross-environment restore
-- **Schema Tools** - DBML import/export, diff, index advisor
-- **Type Generation** - TypeScript, Go, Python from your schema
-- **Inspection** - Database analysis like Supabase inspect
+- **Provider Management** - `nself providers` configures credentials for AWS, GCP, Azure, DigitalOcean, Hetzner, and more
+- **One-Command Provisioning** - `nself provision <provider>` creates full infrastructure
+- **Cost Estimation** - See costs before provisioning with `--estimate`
+- **Environment Sync** - `nself sync` for database/config/file sync between environments
+- **CI/CD Integration** - `nself ci init` generates GitHub Actions or GitLab CI workflows
+- **Shell Completion** - `nself completion` for bash/zsh/fish
+- **Doctor Auto-Fix** - `nself doctor --fix` automatically resolves common issues
 
-**[View Full Release Notes](releases/v0.4.4)**
+**[View Full Release Notes](releases/v0.4.5)**
 
 ---
 
@@ -215,6 +215,6 @@ nself deploy prod
 
 <div align="center">
 
-**Version 0.4.4** · **January 2026** · **[Changelog](releases/CHANGELOG)**
+**Version 0.4.5** · **January 2026** · **[Changelog](releases/CHANGELOG)**
 
 </div>

@@ -268,8 +268,8 @@ nself build && nself restart
 ### Docker Not Running?
 
 ```bash
-nself doctor
-# Follow the instructions
+nself doctor           # Diagnose issues
+nself doctor --fix     # Auto-fix common issues (v0.4.5+)
 ```
 
 ### Port Conflicts?

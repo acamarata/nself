@@ -680,8 +680,8 @@ Utility Commands (4) - v0.4.9:
 | v0.4.2 | Released | Service & Monitoring | Jan 2026 |
 | v0.4.3 | Released | Deployment Pipeline | Jan 2026 |
 | v0.4.4 | Released | Database Tools | Jan 2026 |
-| **v0.4.5** | **Next** | Provider Support | Q2 2026 |
-| v0.4.6 | Planned | Scaling & Performance | Q2-Q3 2026 |
+| **v0.4.5** | **Released** | Provider Support | Jan 2026 |
+| **v0.4.6** | **Next** | Scaling & Performance | Q2-Q3 2026 |
 | v0.4.7 | Planned | Kubernetes Support | Q3 2026 |
 | v0.4.8 | Planned | Plugin System (nself-stripe) | Q3-Q4 2026 |
 | v0.4.9 | Planned | Extensive QA & Polish | Q4 2026 |
@@ -691,7 +691,7 @@ Utility Commands (4) - v0.4.9:
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.4) - 29 commands
+### Currently Available (v0.4.5) - 34 commands
 ```
 Core: init, build, start, stop, restart, reset, clean, version
 Status: status, logs, exec, urls, doctor, help
@@ -699,14 +699,10 @@ Management: update, ssl, trust, admin
 Services: email, search, functions, mlflow, metrics, monitor
 Deployment: env, deploy, prod, staging
 Database: db (migrate, seed, mock, backup, restore, schema, types, shell, inspect, data)
+Provider: providers, provision, sync, ci, completion
 ```
 
 Note: Database operations are consolidated under `nself db` with subcommands.
-
-### Coming in v0.4.5 - +2 commands
-```
-cloud, provision
-```
 
 ### Coming in v0.4.6 - +4 commands
 ```

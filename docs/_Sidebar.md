@@ -1,4 +1,4 @@
-# nself v0.4.4
+# nself v0.4.5
 
 ### [Home](Home)
 
@@ -75,7 +75,8 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
-- [v0.4.4](releases/v0.4.4) (Current)
+- [v0.4.5](releases/v0.4.5) (Current)
+- [v0.4.4](releases/v0.4.4)
 - [Changelog](releases/CHANGELOG)
 - [All Releases](releases/INDEX)
 
