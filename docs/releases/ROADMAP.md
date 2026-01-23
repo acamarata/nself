@@ -1,7 +1,7 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Next (v0.4.5)](#next-v045) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
+[Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
 
 ## Current Status Summary
 - **v0.4.5 (Current)**: Provider Support - deploy anywhere (10 providers)
@@ -124,117 +124,10 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 
 ---
 
-## Next (v0.4.6)
+## Planned (v0.4.x Series)
 
 ### v0.4.6 - Scaling & Performance
-**Status**: Next | **Target**: Q2 2026
-**Focus**: Everything for scale, perf, migrate
-
-#### New Commands (2)
-
-| Command | Purpose |
-|---------|---------|
-| `nself cloud` | Cloud provider management |
-| `nself provision` | Infrastructure provisioning |
-
-#### `nself cloud` - Provider Management
-```bash
-# Provider setup
-nself cloud init <provider>  # Configure provider credentials
-nself cloud init aws         # Setup AWS
-nself cloud init gcp         # Setup Google Cloud
-nself cloud init azure       # Setup Azure
-nself cloud init do          # Setup DigitalOcean
-nself cloud init hetzner     # Setup Hetzner
-nself cloud init linode      # Setup Linode
-nself cloud init vultr       # Setup Vultr
-nself cloud init ionos       # Setup IONOS
-nself cloud init ovh         # Setup OVH
-nself cloud init scaleway    # Setup Scaleway
-
-# Provider management
-nself cloud list             # List configured providers
-nself cloud status           # Show resource status
-nself cloud status aws       # Provider-specific status
-nself cloud remove <provider>
-
-# Cost management
-nself cloud costs            # Show current costs
-nself cloud costs --forecast # Forecast monthly costs
-nself cloud costs --compare  # Compare providers
-nself cloud budget           # Set budget alerts
-
-# Resources
-nself cloud resources        # List all resources
-nself cloud resources --provider aws
-nself cloud destroy          # Tear down all resources
-nself cloud destroy --provider aws
-```
-
-#### `nself provision` - Infrastructure Provisioning
-```bash
-# Basic provisioning
-nself provision <provider>   # Provision on provider
-nself provision aws          # Provision on AWS
-nself provision gcp          # Provision on Google Cloud
-nself provision azure        # Provision on Azure
-nself provision do           # Provision on DigitalOcean
-nself provision hetzner      # Provision on Hetzner
-nself provision linode       # Provision on Linode
-nself provision ionos        # Provision on IONOS
-nself provision ovh          # Provision on OVH
-nself provision scaleway     # Provision on Scaleway
-
-# Size options (cross-provider equivalents)
-nself provision --size small    # t3.small / s-1vcpu-2gb / cx11 / etc.
-nself provision --size medium   # t3.medium / s-2vcpu-4gb / cx21 / etc.
-nself provision --size large    # t3.large / s-4vcpu-8gb / cx31 / etc.
-nself provision aws --size t3.2xlarge  # Provider-specific
-
-# Options
-nself provision aws --region us-west-2
-nself provision do --region sfo3
-nself provision hetzner --region fsn1
-nself provision --dry-run    # Preview resources
-nself provision --estimate   # Cost estimate only
-
-# Configuration-based
-nself provision --config infra.yaml
-nself provision --env staging
-
-# Export
-nself provision export terraform
-nself provision export pulumi
-nself provision export cloudformation
-```
-
-#### Supported Providers (10)
-
-| Provider | Compute | Database | Storage | Kubernetes |
-|----------|---------|----------|---------|------------|
-| **AWS** | EC2 | RDS | S3 | EKS |
-| **Google Cloud** | Compute Engine | Cloud SQL | Cloud Storage | GKE |
-| **Azure** | Virtual Machines | Azure Database | Blob Storage | AKS |
-| **DigitalOcean** | Droplets | Managed Databases | Spaces | DOKS |
-| **Hetzner** | Cloud Servers | - | Volumes | - |
-| **Linode** | Linodes | Managed Databases | Object Storage | LKE |
-| **Vultr** | Cloud Compute | Managed Databases | Object Storage | VKE |
-| **IONOS** | Cloud Servers | Managed DBaaS | S3 Object Storage | Managed K8s |
-| **OVH** | Public Cloud | Managed Databases | Object Storage | Managed K8s |
-| **Scaleway** | Instances | Managed Databases | Object Storage | Kapsule |
-
-#### Key Features
-- **One-Command Provisioning**: `nself provision hetzner` creates full infrastructure
-- **10+ Providers**: AWS, GCP, Azure, DO, Hetzner, Linode, Vultr, IONOS, OVH, Scaleway
-- **Cost Estimation**: See costs before provisioning
-- **Cost Comparison**: Compare same setup across providers
-- **Terraform Export**: Export for custom infrastructure management
-- **Interactive Wizard**: Step-by-step provisioning with previews
-
----
-
-### v0.4.6 - Scaling & Performance
-**Target**: Q2-Q3 2026
+**Status**: Planned | **Target**: Q2-Q3 2026
 **Focus**: Everything for scale, perf, migrate
 
 #### New Commands (4)
@@ -858,4 +751,4 @@ completion, interactive, docs, config
 
 *This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
 
-*Last Updated: January 22, 2026*
+*Last Updated: January 23, 2026*

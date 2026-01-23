@@ -844,7 +844,6 @@ main() {
   fi
 }
 
-# Handle command line arguments
 # Auto-fix functions
 auto_fix_docker() {
   log_info "Attempting to start Docker..."
