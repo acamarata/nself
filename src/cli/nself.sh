@@ -4,8 +4,15 @@
 # Use error handling but allow sourcing to fail gracefully
 set -o pipefail
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get script directory (resolve symlinks)
+_script="${BASH_SOURCE[0]}"
+while [[ -L "$_script" ]]; do
+  _dir="$(cd "$(dirname "$_script")" && pwd)"
+  _script="$(readlink "$_script")"
+  [[ "$_script" != /* ]] && _script="$_dir/$_script"
+done
+SCRIPT_DIR="$(cd "$(dirname "$_script")" && pwd)"
+unset _script _dir
 
 # Preserve the CLI script directory before sourcing other files
 CLI_SCRIPT_DIR="$SCRIPT_DIR"
