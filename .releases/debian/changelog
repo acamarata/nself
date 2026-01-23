@@ -16,7 +16,7 @@ nself (0.4.6-1) stable; urgency=medium
   * Performance profiling and load testing
   * Cross-environment migration
 
- -- Aric Camarata <aric.camarata@gmail.com>  Thu, 23 Jan 2026 14:00:00 -0700
+ -- Aric Camarata <aric.camarata@gmail.com>  Wed, 22 Jan 2026 12:00:00 -0700
 
 nself (0.4.5-1) stable; urgency=medium
 
@@ -30,7 +30,7 @@ nself (0.4.5-1) stable; urgency=medium
   * New completion command for shell completions
   * Enhanced doctor command with --fix auto-repair
 
- -- Aric Camarata <aric.camarata@gmail.com>  Thu, 23 Jan 2026 12:00:00 -0700
+ -- Aric Camarata <aric.camarata@gmail.com>  Tue, 21 Jan 2026 12:00:00 -0700
 
 nself (0.4.4-1) stable; urgency=medium
 
@@ -40,7 +40,7 @@ nself (0.4.4-1) stable; urgency=medium
   * Environment-aware seeding and mock data generation
   * Type generation for TypeScript, Go, Python
 
- -- Aric Camarata <aric.camarata@gmail.com>  Wed, 22 Jan 2026 12:00:00 -0700
+ -- Aric Camarata <aric.camarata@gmail.com>  Mon, 20 Jan 2026 12:00:00 -0700
 
 nself (0.4.3-1) stable; urgency=medium
 
@@ -49,7 +49,23 @@ nself (0.4.3-1) stable; urgency=medium
   * Enhanced deploy command with zero-downtime support
   * New prod and staging shortcut commands
 
- -- Aric Camarata <aric.camarata@gmail.com>  Wed, 22 Jan 2026 12:00:00 -0700
+ -- Aric Camarata <aric.camarata@gmail.com>  Sun, 19 Jan 2026 12:00:00 -0700
+
+nself (0.4.2-1) stable; urgency=medium
+
+  * Release v0.4.2 - Service & Monitoring Management
+  * New email, search, functions, mlflow, metrics, monitor commands
+  * 92 unit tests, complete documentation
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Sat, 18 Jan 2026 12:00:00 -0700
+
+nself (0.4.1-1) stable; urgency=medium
+
+  * Release v0.4.1 - Platform Compatibility Fixes
+  * Fixed Bash 3.2 compatibility for macOS
+  * Fixed cross-platform sed, stat, and timeout commands
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Fri, 17 Jan 2026 12:00:00 -0700
 
 nself (0.3.7-1) stable; urgency=medium
 

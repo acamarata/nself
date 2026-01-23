@@ -61,13 +61,13 @@ echo "Run 'nself help' to get started."
 - Full K8s manifest generation from docker-compose
 - Bash 3.2 compatibility fixes for all provider files
 
-* Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.6-1
+* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.6-1
 - Release v0.4.6: Scaling & Performance
 - New perf, bench, scale, migrate commands
 - Performance profiling and load testing
 - Cross-environment migration
 
-* Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.5-1
+* Tue Jan 21 2026 acamarata <contact@acamarata.com> - 0.4.5-1
 - Release v0.4.5: Provider Support
 - New providers command for cloud credential management
 - New provision command for one-click infrastructure deployment
@@ -75,26 +75,26 @@ echo "Run 'nself help' to get started."
 - New sync command for environment synchronization
 - New ci command for CI/CD workflow generation
 
-* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.4-1
+* Mon Jan 20 2026 acamarata <contact@acamarata.com> - 0.4.4-1
 - Release v0.4.4: Database Tools
 - New db command with comprehensive database management
 - DBML schema workflow (scaffold, import, apply)
 - Environment-aware seeding and mock data generation
 - Type generation for TypeScript, Go, Python
 
-* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.3-1
+* Sun Jan 19 2026 acamarata <contact@acamarata.com> - 0.4.3-1
 - Release v0.4.3: Deployment Pipeline
 - New env command for environment management
 - Enhanced deploy command with zero-downtime support
 - New prod and staging shortcut commands
 - Fixed nginx variable substitution and 16 Dockerfile templates
 
-* Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.2-1
+* Sat Jan 18 2026 acamarata <contact@acamarata.com> - 0.4.2-1
 - Release v0.4.2: Service & Monitoring Management
 - 6 new commands: email, search, functions, mlflow, metrics, monitor
 - 92 unit tests, complete documentation
 
-* Tue Jan 21 2026 acamarata <contact@acamarata.com> - 0.4.1-1
+* Fri Jan 17 2026 acamarata <contact@acamarata.com> - 0.4.1-1
 - Release v0.4.1: Platform compatibility fixes
 - Fixed Bash 3.2 compatibility for macOS
 - Fixed cross-platform sed, stat, and timeout commands

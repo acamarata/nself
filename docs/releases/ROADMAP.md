@@ -19,7 +19,7 @@ Transform nself from a powerful CLI tool into a complete self-hosted backend pla
 ## Released
 
 ### v0.4.5 - Provider Support
-**Status**: Released | **Release Date**: January 23, 2026
+**Status**: Released | **Release Date**: January 21, 2026
 
 Deploy anywhere release adding support for 10 cloud providers with one-command provisioning:
 
@@ -40,7 +40,7 @@ Full details: [Provider Documentation](../commands/PROVIDERS.md)
 ---
 
 ### v0.4.4 - Database Tools
-**Status**: Released | **Release Date**: January 22, 2026
+**Status**: Released | **Release Date**: January 20, 2026
 
 Comprehensive database management release adding the unified `nself db` command with all database operations:
 
@@ -59,7 +59,7 @@ Full details: [DB.md](../commands/DB.md)
 ---
 
 ### v0.4.3 - Deployment Pipeline
-**Status**: Released | **Release Date**: January 22, 2026
+**Status**: Released | **Release Date**: January 19, 2026
 
 Feature release adding comprehensive deployment pipeline commands:
 
@@ -74,7 +74,7 @@ Full details: [v0.4.3 Release Notes](./v0.4.3.md)
 ---
 
 ### v0.4.2 - Service & Monitoring Management
-**Status**: Released | **Release Date**: January 22, 2026
+**Status**: Released | **Release Date**: January 18, 2026
 
 Feature release adding 6 new service management commands:
 
@@ -91,7 +91,7 @@ Full details: [v0.4.2 Release Notes](./v0.4.2.md)
 ---
 
 ### v0.4.1 - Platform Compatibility Fixes
-**Status**: Released | **Release Date**: January 21, 2026
+**Status**: Released | **Release Date**: January 17, 2026
 
 Bug fix release addressing 5 critical platform compatibility issues:
 
@@ -125,7 +125,7 @@ v0.4.0 represents the **stable, production-ready release** of nself with all cor
 ## Released
 
 ### v0.4.6 - Scaling & Performance
-**Status**: Released | **Release Date**: January 23, 2026
+**Status**: Released | **Release Date**: January 22, 2026
 **Focus**: Performance profiling, benchmarking, scaling, and cross-environment migration
 
 #### New Commands (9)
@@ -686,14 +686,14 @@ Utility Commands (4) - v0.4.9:
 
 | Version | Status | Focus | Target |
 |---------|--------|-------|--------|
-| v0.4.0 | Released | Production-Ready Core | Oct 2025 |
-| v0.4.1 | Released | Platform Compatibility | Jan 2026 |
-| v0.4.2 | Released | Service & Monitoring | Jan 2026 |
-| v0.4.3 | Released | Deployment Pipeline | Jan 2026 |
-| v0.4.4 | Released | Database Tools | Jan 2026 |
-| v0.4.5 | Released | Provider Support | Jan 2026 |
-| **v0.4.6** | **Released** | Scaling & Performance | Jan 2026 |
-| **v0.4.7** | **Released** | Kubernetes Support | Jan 2026 |
+| v0.4.0 | Released | Production-Ready Core | Oct 13, 2025 |
+| v0.4.1 | Released | Platform Compatibility | Jan 17, 2026 |
+| v0.4.2 | Released | Service & Monitoring | Jan 18, 2026 |
+| v0.4.3 | Released | Deployment Pipeline | Jan 19, 2026 |
+| v0.4.4 | Released | Database Tools | Jan 20, 2026 |
+| v0.4.5 | Released | Provider Support | Jan 21, 2026 |
+| **v0.4.6** | **Released** | Scaling & Performance | Jan 22, 2026 |
+| **v0.4.7** | **Released** | Kubernetes Support | Jan 23, 2026 |
 | **v0.4.8** | **Next** | Plugin System (nself-stripe) | Q3 2026 |
 | v0.4.9 | Planned | Extensive QA & Polish | Q3-Q4 2026 |
 | **v0.5.0** | **Target** | Production Release + nself-admin v0.1 | Q4 2026 |
