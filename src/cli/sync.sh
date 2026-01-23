@@ -404,6 +404,430 @@ cmd_pull_env() {
   esac
 }
 
+# Push environment config files to remote and optionally rebuild
+cmd_push_env() {
+  local target="${1:-staging}"
+  local rebuild="${2:-}"
+
+  case "$target" in
+    staging)
+      log_info "Pushing environment config to staging..."
+
+      if [[ ! -f ".env.staging" ]]; then
+        log_error "No .env.staging file found"
+        log_info "Create one or run: nself sync pull staging"
+        return 1
+      fi
+
+      local host=$(get_profile_value "staging" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Staging profile not configured"
+        return 1
+      fi
+
+      local user=$(get_profile_value "staging" "user")
+      local port=$(get_profile_value "staging" "port")
+      local ssh_key=$(get_profile_value "staging" "ssh_key")
+      local remote_path=$(get_profile_value "staging" "path")
+
+      log_info "Testing SSH access to staging..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to staging server"
+        return 1
+      fi
+
+      # Push .env.staging to remote
+      log_info "Uploading .env.staging to $host:$remote_path..."
+
+      local scp_opts=""
+      [[ -n "$ssh_key" ]] && ssh_key=$(eval echo "$ssh_key") && scp_opts="-i $ssh_key"
+      [[ -n "$port" ]] && scp_opts="$scp_opts -P $port"
+
+      scp $scp_opts ".env.staging" "$user@$host:$remote_path/.env.staging" 2>/dev/null
+
+      # Set permissions
+      run_remote_cmd "staging" "chmod 600 .env.staging"
+
+      log_success "Pushed .env.staging to staging server"
+
+      # Auto-rebuild if requested or by default
+      if [[ "$rebuild" == "--rebuild" ]] || [[ "$rebuild" == "-r" ]] || [[ -z "$rebuild" ]]; then
+        printf "\n"
+        log_info "Rebuilding staging environment..."
+
+        run_remote_cmd "staging" "
+          # Merge env files
+          if [ -f .env.dev ]; then
+            cat .env.dev > .env
+            echo '' >> .env
+          fi
+          cat .env.staging >> .env
+
+          # Add secrets if present
+          if [ -f .secrets ]; then
+            echo '' >> .env
+            cat .secrets >> .env
+          fi
+
+          chmod 600 .env
+
+          # Restart services
+          if command -v nself >/dev/null 2>&1; then
+            nself restart
+          elif [ -f docker-compose.yml ]; then
+            docker compose up -d --force-recreate
+          fi
+
+          echo 'rebuild_complete'
+        " 2>/dev/null | grep -q "rebuild_complete" && log_success "Staging rebuilt successfully" || log_warning "Rebuild may have issues - check staging"
+      fi
+      ;;
+
+    prod|production)
+      log_info "Pushing environment config to production..."
+
+      if [[ ! -f ".env.prod" ]]; then
+        log_error "No .env.prod file found"
+        return 1
+      fi
+
+      local host=$(get_profile_value "production" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Production profile not configured"
+        return 1
+      fi
+
+      local user=$(get_profile_value "production" "user")
+      local port=$(get_profile_value "production" "port")
+      local ssh_key=$(get_profile_value "production" "ssh_key")
+      local remote_path=$(get_profile_value "production" "path")
+
+      log_info "Testing SSH access to production..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to production server"
+        log_info "Only Lead Devs have production access"
+        return 1
+      fi
+
+      # Confirm production push
+      log_warning "You are about to push config to PRODUCTION"
+      printf "Continue? (y/N): "
+      read -r response
+      if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        log_info "Cancelled"
+        return 0
+      fi
+
+      # Push .env.prod to remote
+      log_info "Uploading .env.prod to $host:$remote_path..."
+
+      local scp_opts=""
+      [[ -n "$ssh_key" ]] && ssh_key=$(eval echo "$ssh_key") && scp_opts="-i $ssh_key"
+      [[ -n "$port" ]] && scp_opts="$scp_opts -P $port"
+
+      scp $scp_opts ".env.prod" "$user@$host:$remote_path/.env.prod" 2>/dev/null
+
+      run_remote_cmd "production" "chmod 600 .env.prod"
+
+      log_success "Pushed .env.prod to production server"
+
+      # Auto-rebuild if requested
+      if [[ "$rebuild" == "--rebuild" ]] || [[ "$rebuild" == "-r" ]]; then
+        printf "\n"
+        log_warning "Rebuilding PRODUCTION environment..."
+
+        run_remote_cmd "production" "
+          # Merge env files
+          if [ -f .env.dev ]; then
+            cat .env.dev > .env
+            echo '' >> .env
+          fi
+          cat .env.prod >> .env
+
+          # Add secrets
+          if [ -f .secrets ]; then
+            echo '' >> .env
+            cat .secrets >> .env
+          fi
+
+          chmod 600 .env
+
+          # Restart services
+          if command -v nself >/dev/null 2>&1; then
+            nself restart
+          elif [ -f docker-compose.yml ]; then
+            docker compose up -d --force-recreate
+          fi
+
+          echo 'rebuild_complete'
+        " 2>/dev/null | grep -q "rebuild_complete" && log_success "Production rebuilt successfully" || log_warning "Rebuild may have issues - check production"
+      else
+        log_info "Run with --rebuild to restart services"
+      fi
+      ;;
+
+    secrets)
+      log_info "Pushing secrets to production..."
+
+      if [[ ! -f ".secrets" ]]; then
+        log_error "No .secrets file found locally"
+        return 1
+      fi
+
+      local host=$(get_profile_value "production" "host")
+      if [[ -z "$host" ]]; then
+        log_error "Production profile not configured"
+        return 1
+      fi
+
+      local user=$(get_profile_value "production" "user")
+      local port=$(get_profile_value "production" "port")
+      local ssh_key=$(get_profile_value "production" "ssh_key")
+      local remote_path=$(get_profile_value "production" "path")
+
+      log_info "Testing SSH access to production..."
+      if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+        log_error "No SSH access to production server"
+        return 1
+      fi
+
+      # Confirm secrets push
+      log_warning "You are about to push SECRETS to PRODUCTION"
+      printf "This is a sensitive operation. Continue? (y/N): "
+      read -r response
+      if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        log_info "Cancelled"
+        return 0
+      fi
+
+      # Push .secrets to remote
+      log_info "Uploading .secrets to $host:$remote_path..."
+
+      local scp_opts=""
+      [[ -n "$ssh_key" ]] && ssh_key=$(eval echo "$ssh_key") && scp_opts="-i $ssh_key"
+      [[ -n "$port" ]] && scp_opts="$scp_opts -P $port"
+
+      scp $scp_opts ".secrets" "$user@$host:$remote_path/.secrets" 2>/dev/null
+
+      run_remote_cmd "production" "chmod 600 .secrets"
+
+      log_success "Pushed .secrets to production server"
+
+      if [[ "$rebuild" == "--rebuild" ]] || [[ "$rebuild" == "-r" ]]; then
+        log_info "Rebuilding production with new secrets..."
+        run_remote_cmd "production" "
+          if command -v nself >/dev/null 2>&1; then
+            nself restart
+          elif [ -f docker-compose.yml ]; then
+            docker compose up -d --force-recreate
+          fi
+        " 2>/dev/null
+        log_success "Production restarted with new secrets"
+      fi
+      ;;
+
+    *)
+      log_error "Unknown target: $target"
+      printf "Valid options: staging, prod, secrets\n"
+      return 1
+      ;;
+  esac
+
+  # Log sync
+  ensure_sync_dir
+  echo "$(date -Iseconds) PUSH_ENV $target $(get_current_env)" >> "$SYNC_HISTORY_FILE"
+}
+
+# Sync frontend apps to staging
+cmd_frontend() {
+  local action="${1:-sync}"
+  local target="${2:-staging}"
+
+  case "$action" in
+    sync|push)
+      sync_frontend_apps "$target"
+      ;;
+    pull)
+      log_error "Frontend pull not supported - use git pull on server instead"
+      return 1
+      ;;
+    *)
+      log_error "Unknown action: $action"
+      printf "Usage: nself sync frontend sync|push [staging|prod]\n"
+      return 1
+      ;;
+  esac
+}
+
+# Sync frontend apps to remote server
+sync_frontend_apps() {
+  local target="${1:-staging}"
+
+  # Get frontend app configs from environment
+  [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+  [[ -f ".env.dev" ]] && source ".env.dev" 2>/dev/null || true
+  [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
+
+  local host=$(get_profile_value "$target" "host")
+  if [[ -z "$host" ]]; then
+    log_error "Profile '$target' not configured"
+    return 1
+  fi
+
+  local user=$(get_profile_value "$target" "user")
+  local port=$(get_profile_value "$target" "port")
+  local ssh_key=$(get_profile_value "$target" "ssh_key")
+  local remote_path=$(get_profile_value "$target" "path")
+
+  log_info "Syncing frontend apps to $target..."
+
+  # Check SSH connection
+  if ! test_ssh_connection "$host" "$user" "$port" "$ssh_key"; then
+    log_error "Cannot connect to $target server"
+    return 1
+  fi
+
+  local found_apps=0
+
+  # Iterate through FRONTEND_APP_N configs
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    local name_var="FRONTEND_APP_${i}_NAME"
+    local path_var="FRONTEND_APP_${i}_PATH"
+    local repo_var="FRONTEND_APP_${i}_REPO"
+    local branch_var="FRONTEND_APP_${i}_BRANCH"
+
+    local app_name="${!name_var:-}"
+    local app_path="${!path_var:-}"
+    local app_repo="${!repo_var:-}"
+    local app_branch="${!branch_var:-main}"
+
+    [[ -z "$app_name" ]] && continue
+
+    found_apps=$((found_apps + 1))
+
+    printf "\n  Syncing frontend: %s\n" "$app_name"
+
+    # Determine sync method
+    if [[ -n "$app_repo" ]]; then
+      # Git-based sync
+      printf "    Method: Git (%s)\n" "$app_repo"
+
+      run_remote_cmd "$target" "
+        mkdir -p '$remote_path/frontends/$app_name'
+        cd '$remote_path/frontends/$app_name'
+
+        if [ -d '.git' ]; then
+          git fetch origin
+          git checkout '$app_branch'
+          git pull origin '$app_branch'
+        else
+          git clone -b '$app_branch' '$app_repo' .
+        fi
+
+        # Install dependencies and build if package.json exists
+        if [ -f 'package.json' ]; then
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+            pnpm build 2>/dev/null || true
+          elif command -v npm >/dev/null 2>&1; then
+            npm ci 2>/dev/null || npm install
+            npm run build 2>/dev/null || true
+          fi
+        fi
+
+        echo 'sync_ok'
+      " 2>/dev/null | grep -q "sync_ok" && printf "    ${COLOR_GREEN}✓${COLOR_RESET} Synced via git\n" || printf "    ${COLOR_YELLOW}!${COLOR_RESET} Sync may have issues\n"
+
+    elif [[ -n "$app_path" ]] && [[ -d "$app_path" ]]; then
+      # Rsync-based sync (local directory)
+      printf "    Method: rsync (%s)\n" "$app_path"
+
+      local rsync_opts="-avz --delete"
+      [[ -n "$ssh_key" ]] && ssh_key=$(eval echo "$ssh_key")
+      local ssh_cmd="ssh -p ${port:-22}"
+      [[ -n "$ssh_key" ]] && ssh_cmd="$ssh_cmd -i $ssh_key"
+
+      rsync_opts="$rsync_opts -e '$ssh_cmd'"
+      rsync_opts="$rsync_opts --exclude=node_modules --exclude=.git --exclude='.env.local' --exclude='*.log'"
+
+      # Create remote directory
+      run_remote_cmd "$target" "mkdir -p '$remote_path/frontends/$app_name'" 2>/dev/null
+
+      # Sync files
+      if eval rsync $rsync_opts "'$app_path/'" "'$user@$host:$remote_path/frontends/$app_name/'" 2>/dev/null; then
+        printf "    ${COLOR_GREEN}✓${COLOR_RESET} Synced via rsync\n"
+      else
+        printf "    ${COLOR_YELLOW}!${COLOR_RESET} Sync may have issues\n"
+      fi
+    else
+      printf "    ${COLOR_YELLOW}!${COLOR_RESET} No path or repo configured\n"
+    fi
+  done
+
+  if [[ $found_apps -eq 0 ]]; then
+    log_warning "No frontend apps configured"
+    log_info "Configure in .env with FRONTEND_APP_N_NAME, FRONTEND_APP_N_PATH or FRONTEND_APP_N_REPO"
+    return 0
+  fi
+
+  printf "\n"
+  log_success "Frontend sync complete: $found_apps app(s)"
+}
+
+# Full sync - everything to target environment
+cmd_full() {
+  local target="${1:-staging}"
+  local skip_db="${2:-}"
+
+  log_info "Full sync to $target..."
+  printf "\n"
+
+  # 1. Sync env config
+  printf "Step 1/4: Syncing environment config...\n"
+  cmd_push_env "$target" "--no-rebuild"
+
+  # 2. Sync files (backend)
+  printf "\nStep 2/4: Syncing backend files...\n"
+  sync_files_push "$target" "."
+
+  # 3. Sync frontend apps (staging only by default)
+  if [[ "$target" == "staging" ]] || [[ "$target" == "stage" ]]; then
+    printf "\nStep 3/4: Syncing frontend apps...\n"
+    sync_frontend_apps "$target"
+  else
+    printf "\nStep 3/4: Skipping frontend apps (production)\n"
+    printf "  Frontend apps should be deployed via Vercel/CDN\n"
+  fi
+
+  # 4. Rebuild remote
+  printf "\nStep 4/4: Rebuilding remote environment...\n"
+
+  local profile="$target"
+  [[ "$target" == "prod" ]] && profile="production"
+
+  run_remote_cmd "$profile" "
+    # Merge all env files
+    > .env
+    [ -f .env.dev ] && cat .env.dev >> .env && echo '' >> .env
+    [ -f '.env.$target' ] && cat '.env.$target' >> .env && echo '' >> .env
+    [ -f .env.staging ] && cat .env.staging >> .env && echo '' >> .env
+    [ -f .env.prod ] && cat .env.prod >> .env && echo '' >> .env
+    [ -f .secrets ] && cat .secrets >> .env
+
+    chmod 600 .env
+
+    # Rebuild
+    if command -v nself >/dev/null 2>&1; then
+      nself build && nself restart
+    elif [ -f docker-compose.yml ]; then
+      docker compose build
+      docker compose up -d --force-recreate
+    fi
+
+    echo 'full_sync_complete'
+  " 2>/dev/null | grep -q "full_sync_complete" && log_success "Full sync to $target complete" || log_warning "Sync completed with warnings"
+}
+
 # Push database to remote environment
 cmd_push() {
   local target="${1:-staging}"
@@ -756,23 +1180,37 @@ USAGE:
   nself sync <command> [options]
 
 COMMANDS:
-  Environment Config (by access level):
-    pull staging              Pull .env.staging (requires Sr Dev+ access)
-    pull prod                 Pull .env.prod (requires Lead Dev access)
-    pull secrets              Pull .secrets (requires Lead Dev access)
+  Pull (download from remote):
+    pull staging              Pull .env.staging from staging server
+    pull prod                 Pull .env.prod from production server
+    pull secrets              Pull .secrets from production server
+    pull <env> --db           Pull database from remote environment
+
+  Push (upload to remote):
+    push staging [--rebuild]  Push .env.staging to staging (auto-rebuilds)
+    push prod [--rebuild]     Push .env.prod to production
+    push secrets [--rebuild]  Push .secrets to production
+
+  Frontend Apps:
+    frontend sync staging     Sync all frontend apps to staging (git/rsync)
+    frontend sync prod        Sync frontends to production (if configured)
+
+  Full Sync (everything):
+    full staging              Full sync: env + files + frontends + rebuild
+    full prod                 Full sync to production (backend only)
 
   Database:
-    pull <env> --db           Pull database from remote environment
-    push <env>                Push database to remote (staging only)
+    db pull <env>             Pull database from remote
+    db push <env>             Push database to remote (staging only)
 
   Files:
     files pull <env> [path]   Pull files from remote
-    files push <env> [path]   Push files to remote (staging only)
+    files push <env> [path]   Push files to remote
 
   Config (legacy):
-    config pull <env>         Pull .env config from remote
-    config push <env>         Push .env to remote (staging only)
-    config diff <env>         Compare local and remote config
+    config pull <env>         Pull .env from remote
+    config push <env>         Push .env to remote
+    config diff <env>         Compare configs
 
   Management:
     init                      Create sync profiles configuration
@@ -789,38 +1227,40 @@ ENVIRONMENT FILE HIERARCHY:
   .env.local   → Your machine overrides (gitignored)
   .env.staging → Staging server config (SSH sync)
   .env.prod    → Production server config (SSH sync)
-  .secrets     → Top-secret credentials (SSH sync, Lead Dev only)
+  .secrets     → Top-secret credentials (generated on server)
 
-SAFETY:
-  • Pulling database from production REQUIRES --anonymize flag
-  • Pushing to production is BLOCKED (use CI/CD)
-  • Secrets are generated ON the server, never committed
-  • All sensitive files must be gitignored
+DEFAULT DEPLOYMENT BEHAVIOR:
+  Staging:    Backend + Frontend apps (full replica)
+  Production: Backend only (frontends on Vercel/CDN)
+
+FRONTEND APP CONFIGURATION:
+  In .env or .env.dev, configure frontend apps:
+    FRONTEND_APP_1_NAME=web
+    FRONTEND_APP_1_PATH=../frontend     # Local path for rsync
+    FRONTEND_APP_1_REPO=git@...         # Git repo for server clone
+    FRONTEND_APP_1_BRANCH=main
 
 EXAMPLES:
-  # Check your access level
-  nself env access
+  # Typical development workflow
+  nself sync pull staging              # Get staging config
+  # ... make changes to .env.staging ...
+  nself sync push staging              # Push and auto-rebuild
 
-  # Pull environment configs (by access level)
-  nself sync pull staging              # Sr Dev+: gets .env.staging
-  nself sync pull prod                 # Lead Dev: gets .env.prod
-  nself sync pull secrets              # Lead Dev: gets .secrets
+  # Full deployment to staging
+  nself sync full staging              # Everything: env + files + frontends
 
-  # Pull database (requires --db flag)
-  nself sync pull staging --db
-  nself sync pull production --db --anonymize
+  # Production (backend only)
+  nself sync push prod --rebuild       # Push config and restart
 
-  # Push to staging
-  nself sync push staging
+  # Frontend apps (staging)
+  nself sync frontend sync staging     # Sync all configured frontends
 
-  # Load merged environment
-  nself env load local                 # .env.dev + .env.local
-  nself env load staging               # .env.dev + .env.staging
-  nself env load prod                  # .env.dev + .env.prod + .secrets
+  # Database operations
+  nself sync pull staging --db         # Pull staging database
+  nself sync pull prod --db --anonymize # Pull prod (anonymized)
 
 CONFIGURATION:
-  Edit .nself/sync/profiles.yaml to configure remote servers:
-
+  Edit .nself/sync/profiles.yaml:
     profiles:
       staging:
         host: staging.example.com
@@ -845,7 +1285,7 @@ main() {
   [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
 
   case "$command" in
-    # Database sync
+    # Pull (env config or database)
     pull)
       local target="${1:-staging}"
       # Check if pulling env config or database
@@ -862,8 +1302,51 @@ main() {
         cmd_pull "$@"
       fi
       ;;
+
+    # Push (env config by default, --db for database)
     push)
-      cmd_push "$@"
+      local target="${1:-staging}"
+      if [[ "$target" == "staging" ]] || [[ "$target" == "prod" ]] || [[ "$target" == "production" ]] || [[ "$target" == "secrets" ]]; then
+        # Check for --db flag to force database push
+        if [[ "${2:-}" == "--db" ]] || [[ "${2:-}" == "--database" ]]; then
+          shift
+          cmd_push "$@"
+        else
+          # Default: push environment config
+          cmd_push_env "$@"
+        fi
+      else
+        cmd_push "$@"
+      fi
+      ;;
+
+    # Explicit database operations
+    db)
+      local action="${1:-pull}"
+      shift || true
+      case "$action" in
+        pull)
+          cmd_pull "$@"
+          ;;
+        push)
+          cmd_push "$@"
+          ;;
+        *)
+          log_error "Unknown db action: $action"
+          printf "Usage: nself sync db pull|push <environment>\n"
+          return 1
+          ;;
+      esac
+      ;;
+
+    # Frontend app sync
+    frontend)
+      cmd_frontend "$@"
+      ;;
+
+    # Full sync (everything)
+    full)
+      cmd_full "$@"
       ;;
 
     # File sync
@@ -871,7 +1354,7 @@ main() {
       cmd_files "$@"
       ;;
 
-    # Config sync
+    # Config sync (legacy)
     config)
       cmd_config "$@"
       ;;
