@@ -20,6 +20,45 @@ load_core_modules() {
   done
 }
 
+# Get current CLI version
+get_cli_version() {
+  local version_file="${NSELF_ROOT:-/usr/local/lib/nself}/VERSION"
+  # Also check relative path for development
+  if [[ ! -f "$version_file" ]]; then
+    local script_dir="$(dirname "${BASH_SOURCE[0]}")"
+    version_file="$script_dir/../../../VERSION"
+  fi
+  if [[ -f "$version_file" ]]; then
+    cat "$version_file" 2>/dev/null | tr -d '[:space:]'
+  else
+    echo "unknown"
+  fi
+}
+
+# Check if CLI version changed since last build
+cli_version_changed() {
+  local build_version_file=".nself/build-version"
+  local current_version=$(get_cli_version)
+
+  # If no build version file, assume version changed (first build or upgrade)
+  if [[ ! -f "$build_version_file" ]]; then
+    return 0  # Changed (or unknown)
+  fi
+
+  local build_version=$(cat "$build_version_file" 2>/dev/null | tr -d '[:space:]')
+  if [[ "$current_version" != "$build_version" ]]; then
+    return 0  # Changed
+  fi
+
+  return 1  # Same version
+}
+
+# Save CLI version after successful build
+save_build_version() {
+  mkdir -p ".nself" 2>/dev/null
+  get_cli_version > ".nself/build-version"
+}
+
 # Check what needs to be built
 check_build_requirements() {
   local force_rebuild="${1:-false}"
@@ -32,6 +71,14 @@ check_build_requirements() {
   export NEEDS_DATABASE=false
   export NEEDS_COMPOSE=false
   export NEEDS_SERVICES=false
+  export CLI_VERSION_CHANGED=false
+
+  # Check if CLI version changed - if so, force regeneration of compose and nginx
+  if cli_version_changed; then
+    CLI_VERSION_CHANGED=true
+    NEEDS_COMPOSE=true
+    NEEDS_NGINX=true
+  fi
 
   # Check directory structure
   if command -v check_directory_structure >/dev/null 2>&1; then
@@ -263,6 +310,9 @@ run_post_build_tasks() {
     set_directory_permissions
   fi
 
+  # Save CLI version for future upgrade detection
+  save_build_version
+
   return 0
 }
 
@@ -347,6 +397,9 @@ orchestrate_modular_build() {
 
 # Export functions
 export -f load_core_modules
+export -f get_cli_version
+export -f cli_version_changed
+export -f save_build_version
 export -f check_build_requirements
 export -f execute_build_steps
 export -f generate_docker_compose

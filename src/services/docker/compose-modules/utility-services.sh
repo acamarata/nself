@@ -39,8 +39,9 @@ generate_nself_admin_service() {
   local enabled="${NSELF_ADMIN_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
-  # Check if using local development path
+  # Check if using local development paths
   local admin_local_path="${NSELF_ADMIN_LOCAL_PATH:-}"
+  local nself_cli_local_path="${NSELF_CLI_LOCAL_PATH:-}"
 
   cat <<EOF
 
@@ -72,8 +73,10 @@ EOF
       hasura:
         condition: service_healthy
     environment:
+      NODE_ENV: production
       PROJECT_PATH: /workspace
       NSELF_PROJECT_PATH: /workspace
+      NSELF_CLI_PATH: /usr/local/bin/nself
       PROJECT_NAME: \${PROJECT_NAME}
       BASE_DOMAIN: \${BASE_DOMAIN}
       ENV: \${ENV}
@@ -98,12 +101,20 @@ EOF
 EOF
   fi
 
+  # Mount local nself CLI for development (allows using local source instead of installed version)
+  if [[ -n "$nself_cli_local_path" ]] && [[ -d "$nself_cli_local_path" ]]; then
+    cat <<EOF
+      - ${nself_cli_local_path}:/opt/nself:ro
+EOF
+  fi
+
   cat <<EOF
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3021/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
 EOF
 }
 

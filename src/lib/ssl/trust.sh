@@ -288,9 +288,66 @@ trust::install() {
   return 0
 }
 
+# Check if trust is needed (returns 0 if trust IS needed, 1 if already trusted)
+trust::needs_install() {
+  local mkcert_cmd
+
+  # Get mkcert command
+  if ! mkcert_cmd="$(ssl::get_mkcert 2>/dev/null)"; then
+    return 1  # No mkcert, can't check
+  fi
+
+  # Check if root CA is installed
+  if $mkcert_cmd -install -check 2>/dev/null; then
+    return 1  # Already installed
+  fi
+
+  return 0  # Needs installation
+}
+
+# Auto-install trust if needed (silent mode for automation)
+trust::auto_install() {
+  local silent="${1:-false}"
+
+  # Check if auto-trust is disabled
+  if [[ "${SSL_AUTO_TRUST:-true}" == "false" ]]; then
+    return 0
+  fi
+
+  # Check if trust is needed
+  if ! trust::needs_install; then
+    return 0  # Already trusted
+  fi
+
+  local mkcert_cmd
+  if ! mkcert_cmd="$(ssl::get_mkcert 2>/dev/null)"; then
+    return 1
+  fi
+
+  if [[ "$silent" != "true" ]]; then
+    log_info "Installing SSL root CA to system trust store..."
+  fi
+
+  # Try to install - may prompt for password
+  if $mkcert_cmd -install 2>/dev/null; then
+    if [[ "$silent" != "true" ]]; then
+      log_success "Root CA installed - browsers will trust local certificates"
+    fi
+    return 0
+  else
+    if [[ "$silent" != "true" ]]; then
+      log_warning "Could not auto-install trust (may need password)"
+      log_info "Run 'nself trust' manually to enable trusted HTTPS"
+    fi
+    return 1
+  fi
+}
+
 # Export functions
 export -f trust::install_root_ca
 export -f trust::install_pfx_windows
 export -f trust::uninstall_root_ca
 export -f trust::status
 export -f trust::install
+export -f trust::needs_install
+export -f trust::auto_install

@@ -21,6 +21,11 @@ if [[ -f "$LIB_ROOT/ssl/api.sh" ]]; then
   source "$LIB_ROOT/ssl/api.sh" 2>/dev/null || true
 fi
 
+# Source trust management for auto-install functionality
+if [[ -f "$LIB_ROOT/ssl/trust.sh" ]]; then
+  source "$LIB_ROOT/ssl/trust.sh" 2>/dev/null || true
+fi
+
 # Source build-specific SSL module
 if [[ -f "$CORE_SCRIPT_DIR/modules/ssl.sh" ]]; then
   source "$CORE_SCRIPT_DIR/modules/ssl.sh" 2>/dev/null || true
@@ -227,35 +232,40 @@ build_generate_simple_ssl() {
   # Auto-install trust if certificates are from mkcert
   if [[ -f "ssl/certificates/localhost/fullchain.pem" ]]; then
     if openssl x509 -in "ssl/certificates/localhost/fullchain.pem" -text -noout 2>/dev/null | grep -q "mkcert development CA"; then
-      # Check if trust needs to be installed
-      local mkcert_cmd=""
-      if command -v mkcert >/dev/null 2>&1; then
-        mkcert_cmd="mkcert"
-      elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
-        mkcert_cmd="${HOME}/.nself/bin/mkcert"
-      fi
-
-      if [[ -n "$mkcert_cmd" ]]; then
-        # Check if trust needs to be installed
-        local caroot=$($mkcert_cmd -CAROOT 2>/dev/null)
-        local needs_install=false
-
-        # Check if CAROOT exists and has been installed to system
-        if [[ -z "$caroot" ]] || [[ ! -f "$caroot/rootCA.pem" ]]; then
-          needs_install=true
-        else
-          # On macOS, check if it's in the keychain
-          if [[ "$(uname)" == "Darwin" ]]; then
-            if ! security find-certificate -c "mkcert" -a 2>/dev/null | grep -q "mkcert"; then
-              needs_install=true
-            fi
-          fi
+      # Use trust::auto_install if available (from trust.sh), otherwise fallback
+      if command -v trust::auto_install >/dev/null 2>&1; then
+        if trust::auto_install "false"; then
+          trust_installed=true
+        fi
+      else
+        # Fallback to inline logic if trust.sh not loaded
+        local mkcert_cmd=""
+        if command -v mkcert >/dev/null 2>&1; then
+          mkcert_cmd="mkcert"
+        elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
+          mkcert_cmd="${HOME}/.nself/bin/mkcert"
         fi
 
-        if [[ "$needs_install" == "true" ]]; then
-          # Auto-install trust (will prompt for password if needed)
-          $mkcert_cmd -install 2>&1 || true
-          trust_installed=true
+        if [[ -n "$mkcert_cmd" ]]; then
+          # Check if trust needs to be installed
+          local caroot=$($mkcert_cmd -CAROOT 2>/dev/null)
+          local needs_install=false
+
+          if [[ -z "$caroot" ]] || [[ ! -f "$caroot/rootCA.pem" ]]; then
+            needs_install=true
+          else
+            # On macOS, check if it's in the keychain
+            if [[ "$(uname)" == "Darwin" ]]; then
+              if ! security find-certificate -c "mkcert" -a 2>/dev/null | grep -q "mkcert"; then
+                needs_install=true
+              fi
+            fi
+          fi
+
+          if [[ "$needs_install" == "true" ]]; then
+            $mkcert_cmd -install 2>&1 || true
+            trust_installed=true
+          fi
         fi
       fi
     fi
