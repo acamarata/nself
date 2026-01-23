@@ -1,3 +1,36 @@
+nself (0.4.5-1) stable; urgency=medium
+
+  * Release v0.4.5 - Provider Support
+  * New providers command for cloud credential management
+  * New provision command for one-click infrastructure deployment
+  * Support for 10 cloud providers (AWS, GCP, Azure, DigitalOcean, Hetzner,
+    Linode, Vultr, IONOS, OVH, Scaleway)
+  * New sync command for environment synchronization
+  * New ci command for CI/CD workflow generation
+  * New completion command for shell completions
+  * Enhanced doctor command with --fix auto-repair
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Thu, 23 Jan 2026 12:00:00 -0700
+
+nself (0.4.4-1) stable; urgency=medium
+
+  * Release v0.4.4 - Database Tools
+  * New db command with comprehensive database management
+  * DBML schema workflow (scaffold, import, apply)
+  * Environment-aware seeding and mock data generation
+  * Type generation for TypeScript, Go, Python
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Wed, 22 Jan 2026 12:00:00 -0700
+
+nself (0.4.3-1) stable; urgency=medium
+
+  * Release v0.4.3 - Deployment Pipeline
+  * New env command for environment management
+  * Enhanced deploy command with zero-downtime support
+  * New prod and staging shortcut commands
+
+ -- Aric Camarata <aric.camarata@gmail.com>  Wed, 22 Jan 2026 12:00:00 -0700
+
 nself (0.3.7-1) stable; urgency=medium
 
   * Release v0.3.7

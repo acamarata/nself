@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.4.0
+Version:        0.4.5
 Release:        1%{?dist}
 Summary:        Production-ready self-hosted backend infrastructure
 
@@ -50,6 +50,22 @@ find %{buildroot}%{_datadir}/%{name} -type f -name "*.sh" -exec chmod 755 {} \;
 %{_datadir}/%{name}
 
 %changelog
+* Thu Jan 23 2026 Aric Camarata <aric.camarata@gmail.com> - 0.4.5-1
+- Release v0.4.5: Provider Support
+- New providers command for cloud credential management
+- New provision command for one-click infrastructure deployment
+- Support for 10 cloud providers (AWS, GCP, Azure, DigitalOcean, Hetzner, etc)
+- New sync command for environment synchronization
+- New ci command for CI/CD workflow generation
+- New completion command for shell completions
+- Enhanced doctor command with --fix auto-repair
+
+* Wed Jan 22 2026 Aric Camarata <aric.camarata@gmail.com> - 0.4.4-1
+- Release v0.4.4: Database Tools
+- New db command with comprehensive database management
+- DBML schema workflow (scaffold, import, apply)
+- Environment-aware seeding and mock data generation
+
 * Sun Oct 13 2025 Aric Camarata <aric.camarata@gmail.com> - 0.4.0-1
 - Production-ready release v0.4.0
 - Fixed critical bugs (unbound variables, Bash 4+ compatibility)

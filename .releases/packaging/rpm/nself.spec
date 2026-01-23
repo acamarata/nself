@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.4.4
+Version:        0.4.5
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 
@@ -46,13 +46,21 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.4.4 installed successfully!"
+echo "nself v0.4.5 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
 # Nothing to do
 
 %changelog
+* Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.5-1
+- Release v0.4.5: Provider Support
+- New providers command for cloud credential management
+- New provision command for one-click infrastructure deployment
+- Support for 10 cloud providers (AWS, GCP, Azure, DigitalOcean, Hetzner, etc)
+- New sync command for environment synchronization
+- New ci command for CI/CD workflow generation
+
 * Wed Jan 22 2026 acamarata <contact@acamarata.com> - 0.4.4-1
 - Release v0.4.4: Database Tools
 - New db command with comprehensive database management
