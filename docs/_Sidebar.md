@@ -145,6 +145,12 @@
 
 ---
 
+## Security
+
+- [Security Audit](security/SECURITY-AUDIT)
+
+---
+
 ## Contributing
 
 - [Contributing](CONTRIBUTING)

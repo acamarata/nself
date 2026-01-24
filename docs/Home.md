@@ -238,12 +238,30 @@ nself deploy prod
 
 ---
 
+## Security
+
+nself has been thoroughly audited for security vulnerabilities. The codebase is safe for production use.
+
+| Category | Status |
+|----------|--------|
+| Hardcoded Credentials | ✅ PASS |
+| API Keys & Tokens | ✅ PASS |
+| Command Injection | ✅ PASS |
+| SQL Injection | ✅ PASS |
+| Docker Security | ✅ PASS |
+| Git History | ✅ PASS |
+
+**[View Complete Security Audit](security/SECURITY-AUDIT)** - Comprehensive security assessment with methodology, findings, and recommendations.
+
+---
+
 ## Links
 
 - **[GitHub Repository](https://github.com/acamarata/nself)**
 - **[Report Issues](https://github.com/acamarata/nself/issues)**
 - **[Discussions](https://github.com/acamarata/nself/discussions)**
 - **[Roadmap](releases/ROADMAP)**
+- **[Security Audit](security/SECURITY-AUDIT)**
 
 ---
 
