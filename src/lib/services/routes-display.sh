@@ -5,7 +5,8 @@ set -euo pipefail
 
 # Get the directory where this script is located
 ROUTES_DISPLAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NSELF_ROOT="$(cd "$ROUTES_DISPLAY_DIR/../.." && pwd)"
+# Go up 3 levels: services -> lib -> src -> nself root (only if not already set)
+NSELF_ROOT="${NSELF_ROOT:-$(cd "$ROUTES_DISPLAY_DIR/../../.." && pwd)}"
 
 # Source platform compatibility utilities
 source "$ROUTES_DISPLAY_DIR/../utils/platform-compat.sh" 2>/dev/null || true

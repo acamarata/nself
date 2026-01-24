@@ -7,7 +7,8 @@
 # Get the directory where this script is located
 if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
   NGINX_GEN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  NSELF_ROOT="$(cd "$NGINX_GEN_DIR/../.." && pwd)"
+  # Go up 3 levels: services -> lib -> src -> nself root (only if not already set)
+  NSELF_ROOT="${NSELF_ROOT:-$(cd "$NGINX_GEN_DIR/../../.." && pwd)}"
 else
   # Fallback - try to find nself root dynamically
   if command -v nself >/dev/null 2>&1; then
@@ -15,12 +16,12 @@ else
     if [[ -L "$NSELF_BIN" ]]; then
       NSELF_BIN="$(readlink -f "$NSELF_BIN" 2>/dev/null || readlink "$NSELF_BIN")"
     fi
-    NSELF_ROOT="$(cd "$(dirname "$NSELF_BIN")/.." && pwd)"
+    NSELF_ROOT="${NSELF_ROOT:-$(cd "$(dirname "$NSELF_BIN")/.." && pwd)}"
     NGINX_GEN_DIR="$NSELF_ROOT/src/lib/services"
   else
     # Last resort - use pwd
     NGINX_GEN_DIR="$(pwd)/src/lib/services"
-    NSELF_ROOT="$(pwd)"
+    NSELF_ROOT="${NSELF_ROOT:-$(pwd)}"
   fi
 fi
 
