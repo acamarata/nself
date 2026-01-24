@@ -28,15 +28,15 @@ test_result() {
 
   case "$status" in
     "pass")
-      echo -e "${GREEN}✓${NC} $message"
+      printf "${GREEN}✓${NC} %s\n" "$message"
       ((TESTS_PASSED++))
       ;;
     "fail")
-      echo -e "${RED}✗${NC} $message"
+      printf "${RED}✗${NC} %s\n" "$message"
       ((TESTS_FAILED++))
       ;;
     "skip")
-      echo -e "${YELLOW}⚠${NC} $message (skipped)"
+      printf "${YELLOW}⚠${NC} %s (skipped)\n" "$message"
       ((TESTS_SKIPPED++))
       ;;
   esac

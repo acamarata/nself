@@ -21,13 +21,13 @@ run_test() {
   local test_name="$1"
   local test_command="$2"
 
-  echo -e "${BLUE}Testing:${NC} $test_name"
+  printf "${BLUE}Testing:${NC} %s\n" "$test_name"
 
   if eval "$test_command" >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} $test_name passed"
+    printf "${GREEN}✓${NC} %s passed\n" "$test_name"
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
-    echo -e "${RED}✗${NC} $test_name failed"
+    printf "${RED}✗${NC} %s failed\n" "$test_name"
     TESTS_FAILED=$((TESTS_FAILED + 1))
     # Bash 3.2 compatible array append
     if [ -n "$ISSUES_FOUND" ]; then
@@ -44,7 +44,7 @@ echo "=========================================="
 echo ""
 
 # 1. Check for platform compatibility utilities
-echo -e "${YELLOW}1. Platform Compatibility Checks${NC}"
+printf "${YELLOW}1. Platform Compatibility Checks${NC}\n"
 echo "----------------------------------------"
 
 run_test "Platform utilities exist" "[[ -f src/lib/utils/platform-compat.sh ]]"
@@ -55,11 +55,11 @@ run_test "Safe readlink defined" "grep -q 'safe_readlink' src/lib/utils/platform
 echo ""
 
 # 2. Check for no hardcoded paths
-echo -e "${YELLOW}2. No Hardcoded Paths${NC}"
+printf "${YELLOW}2. No Hardcoded Paths${NC}\n"
 echo "----------------------------------------"
 
 if grep -r "/Users/admin/Sites/nself" src --include="*.sh" | grep -v "test" | grep -v ".backup" > /dev/null; then
-  echo -e "${RED}✗${NC} Found hardcoded paths"
+  printf "${RED}✗${NC} Found hardcoded paths\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
     ISSUES_FOUND="${ISSUES_FOUND}|Hardcoded paths found"
@@ -67,14 +67,14 @@ if grep -r "/Users/admin/Sites/nself" src --include="*.sh" | grep -v "test" | gr
     ISSUES_FOUND="Hardcoded paths found"
   fi
 else
-  echo -e "${GREEN}✓${NC} No hardcoded paths"
+  printf "${GREEN}✓${NC} No hardcoded paths\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
 echo ""
 
 # 3. Check modularity - no files over 500 lines
-echo -e "${YELLOW}3. Modularity Checks${NC}"
+printf "${YELLOW}3. Modularity Checks${NC}\n"
 echo "----------------------------------------"
 
 LARGE_FILES=0
@@ -83,19 +83,19 @@ for file in $(find src -name "*.sh" -type f); do
   if [[ $lines -gt 500 ]]; then
     filename=$(basename "$file")
     if [[ $lines -gt 1000 ]]; then
-      echo -e "${RED}✗${NC} $filename has $lines lines (>1000)"
+      printf "${RED}✗${NC} %s has %d lines (>1000)\n" "$filename" "$lines"
       LARGE_FILES=$((LARGE_FILES + 1))
     elif [[ $lines -gt 800 ]]; then
-      echo -e "${YELLOW}⚠${NC} $filename has $lines lines (>800)"
+      printf "${YELLOW}⚠${NC} %s has %d lines (>800)\n" "$filename" "$lines"
     fi
   fi
 done
 
 if [[ $LARGE_FILES -eq 0 ]]; then
-  echo -e "${GREEN}✓${NC} All modules are properly sized"
+  printf "${GREEN}✓${NC} All modules are properly sized\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-  echo -e "${RED}✗${NC} Found $LARGE_FILES oversized modules"
+  printf "${RED}✗${NC} Found %d oversized modules\n" "$LARGE_FILES"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
     ISSUES_FOUND="${ISSUES_FOUND}|Oversized modules"
@@ -107,12 +107,12 @@ fi
 echo ""
 
 # 4. Check for Bash 3.2 compatibility
-echo -e "${YELLOW}4. Bash 3.2 Compatibility${NC}"
+printf "${YELLOW}4. Bash 3.2 Compatibility${NC}\n"
 echo "----------------------------------------"
 
 # Check for associative arrays
 if grep -r "declare -A" src --include="*.sh" > /dev/null; then
-  echo -e "${RED}✗${NC} Found associative arrays (Bash 4+ feature)"
+  printf "${RED}✗${NC} Found associative arrays (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
     ISSUES_FOUND="${ISSUES_FOUND}|Associative arrays found"
@@ -120,13 +120,13 @@ if grep -r "declare -A" src --include="*.sh" > /dev/null; then
     ISSUES_FOUND="Associative arrays found"
   fi
 else
-  echo -e "${GREEN}✓${NC} No associative arrays"
+  printf "${GREEN}✓${NC} No associative arrays\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
 # Check for mapfile/readarray
 if grep -rE "mapfile|readarray" src --include="*.sh" > /dev/null; then
-  echo -e "${RED}✗${NC} Found mapfile/readarray (Bash 4+ feature)"
+  printf "${RED}✗${NC} Found mapfile/readarray (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
     ISSUES_FOUND="${ISSUES_FOUND}|mapfile/readarray found"
@@ -134,13 +134,13 @@ if grep -rE "mapfile|readarray" src --include="*.sh" > /dev/null; then
     ISSUES_FOUND="mapfile/readarray found"
   fi
 else
-  echo -e "${GREEN}✓${NC} No mapfile/readarray"
+  printf "${GREEN}✓${NC} No mapfile/readarray\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
 # Check for ${var,,} or ${var^^}
 if grep -rE '\$\{[^}]+,,[^}]*\}|\$\{[^}]+\^\^[^}]*\}' src --include="*.sh" > /dev/null; then
-  echo -e "${RED}✗${NC} Found case conversion (Bash 4+ feature)"
+  printf "${RED}✗${NC} Found case conversion (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
     ISSUES_FOUND="${ISSUES_FOUND}|Bash 4+ case conversion found"
@@ -148,14 +148,14 @@ if grep -rE '\$\{[^}]+,,[^}]*\}|\$\{[^}]+\^\^[^}]*\}' src --include="*.sh" > /de
     ISSUES_FOUND="Bash 4+ case conversion found"
   fi
 else
-  echo -e "${GREEN}✓${NC} No Bash 4+ case conversion"
+  printf "${GREEN}✓${NC} No Bash 4+ case conversion\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
 echo ""
 
 # 5. Check sed compatibility
-echo -e "${YELLOW}5. sed Compatibility${NC}"
+printf "${YELLOW}5. sed Compatibility${NC}\n"
 echo "----------------------------------------"
 
 # Check for raw sed -i usage (should use safe_sed_inline)
@@ -169,21 +169,21 @@ for file in $(find src -name "*.sh" -type f); do
   # Check for sed -i without safe_sed_inline
   if grep -E "sed -i[^n]" "$file" | grep -v "safe_sed_inline" > /dev/null 2>&1; then
     UNSAFE_SED_COUNT=$((UNSAFE_SED_COUNT + 1))
-    echo -e "${YELLOW}⚠${NC} $(basename "$file") may have unsafe sed usage"
+    printf "${YELLOW}⚠${NC} %s may have unsafe sed usage\n" "$(basename "$file")"
   fi
 done
 
 if [[ $UNSAFE_SED_COUNT -eq 0 ]]; then
-  echo -e "${GREEN}✓${NC} All sed usage is platform-safe"
+  printf "${GREEN}✓${NC} All sed usage is platform-safe\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-  echo -e "${YELLOW}⚠${NC} Found $UNSAFE_SED_COUNT files with potential sed issues"
+  printf "${YELLOW}⚠${NC} Found %d files with potential sed issues\n" "$UNSAFE_SED_COUNT"
 fi
 
 echo ""
 
 # 6. Test init process
-echo -e "${YELLOW}6. Init Process Tests${NC}"
+printf "${YELLOW}6. Init Process Tests${NC}\n"
 echo "----------------------------------------"
 
 TEST_DIR="/tmp/nself-test-$$"
@@ -201,7 +201,7 @@ rm -rf "$TEST_DIR"
 echo ""
 
 # 7. Test build process
-echo -e "${YELLOW}7. Build Process Tests${NC}"
+printf "${YELLOW}7. Build Process Tests${NC}\n"
 echo "----------------------------------------"
 
 TEST_DIR="/tmp/nself-test-$$"
@@ -222,7 +222,7 @@ rm -rf "$TEST_DIR"
 echo ""
 
 # 8. Check variable scoping
-echo -e "${YELLOW}8. Variable Scoping${NC}"
+printf "${YELLOW}8. Variable Scoping${NC}\n"
 echo "----------------------------------------"
 
 GLOBAL_VAR_COUNT=0
@@ -239,16 +239,16 @@ for file in $(find src/lib -name "*.sh" -type f); do
 done
 
 if [[ $GLOBAL_VAR_COUNT -eq 0 ]]; then
-  echo -e "${GREEN}✓${NC} All variables properly scoped"
+  printf "${GREEN}✓${NC} All variables properly scoped\n"
   TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-  echo -e "${YELLOW}⚠${NC} Found $GLOBAL_VAR_COUNT files with potential scoping issues"
+  printf "${YELLOW}⚠${NC} Found %d files with potential scoping issues\n" "$GLOBAL_VAR_COUNT"
 fi
 
 echo ""
 
 # 9. Check service templates
-echo -e "${YELLOW}9. Service Templates${NC}"
+printf "${YELLOW}9. Service Templates${NC}\n"
 echo "----------------------------------------"
 
 run_test "Service templates exist" "[[ -d src/templates/services ]]"
@@ -259,21 +259,21 @@ echo ""
 
 # 10. Final Summary
 echo "=========================================="
-echo -e "${YELLOW}Final Validation Summary${NC}"
+printf "${YELLOW}Final Validation Summary${NC}\n"
 echo "=========================================="
 echo ""
 
-echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
-echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
+printf "Tests Passed: ${GREEN}%d${NC}\n" "$TESTS_PASSED"
+printf "Tests Failed: ${RED}%d${NC}\n" "$TESTS_FAILED"
 
 if [[ $TESTS_FAILED -eq 0 ]]; then
   echo ""
-  echo -e "${GREEN}✓ All validation checks passed!${NC}"
+  printf "${GREEN}✓ All validation checks passed!${NC}\n"
   echo "The codebase is modular, maintainable, and cross-platform compatible."
   exit 0
 else
   echo ""
-  echo -e "${RED}Issues found:${NC}"
+  printf "${RED}Issues found:${NC}\n"
   # Bash 3.2 compatible loop over pipe-delimited string
   if [ -n "$ISSUES_FOUND" ]; then
     echo "$ISSUES_FOUND" | tr '|' '\n' | while read -r issue; do

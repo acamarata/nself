@@ -30,15 +30,15 @@ test_result() {
 
   case "$status" in
     "pass")
-      echo -e "${GREEN}✓${NC} $message"
+      printf "${GREEN}✓${NC} %s\n" "$message"
       TESTS_PASSED=$((TESTS_PASSED + 1))
       ;;
     "fail")
-      echo -e "${RED}✗${NC} $message"
+      printf "${RED}✗${NC} %s\n" "$message"
       TESTS_FAILED=$((TESTS_FAILED + 1))
       ;;
     "skip")
-      echo -e "${YELLOW}⚠${NC} $message (skipped)"
+      printf "${YELLOW}⚠${NC} %s (skipped)\n" "$message"
       TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
       ;;
   esac
@@ -47,7 +47,7 @@ test_result() {
 # Test section header
 test_section() {
   echo ""
-  echo -e "${BLUE}═══ $1 ═══${NC}"
+  printf "${BLUE}═══ %s ═══${NC}\n" "$1"
 }
 
 # ==========================================
@@ -617,9 +617,9 @@ echo "  Skipped: $TESTS_SKIPPED"
 echo ""
 
 if [[ $TESTS_FAILED -gt 0 ]]; then
-  echo -e "${RED}Some tests failed. Please review the output above.${NC}"
+  printf "${RED}Some tests failed. Please review the output above.${NC}\n"
   exit 1
 else
-  echo -e "${GREEN}All tests passed! ✓${NC}"
+  printf "${GREEN}All tests passed! ✓${NC}\n"
   exit 0
 fi

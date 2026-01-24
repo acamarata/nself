@@ -19,10 +19,10 @@ assert_equals() {
   local message="${3:-}"
 
   if [[ "$expected" == "$actual" ]]; then
-    echo -e "${GREEN}✓${NC} $message"
+    printf "${GREEN}✓${NC} %s\n" "$message"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC} $message"
+    printf "${RED}✗${NC} %s\n" "$message"
     echo "  Expected: '$expected'"
     echo "  Actual: '$actual'"
     ((TESTS_FAILED++))
@@ -34,10 +34,10 @@ assert_true() {
   local message="${2:-}"
 
   if eval "$condition"; then
-    echo -e "${GREEN}✓${NC} $message"
+    printf "${GREEN}✓${NC} %s\n" "$message"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC} $message (condition: $condition)"
+    printf "${RED}✗${NC} %s (condition: %s)\n" "$message" "$condition"
     ((TESTS_FAILED++))
   fi
 }
@@ -47,10 +47,10 @@ assert_false() {
   local message="${2:-}"
 
   if ! eval "$condition"; then
-    echo -e "${GREEN}✓${NC} $message"
+    printf "${GREEN}✓${NC} %s\n" "$message"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC} $message (condition: $condition)"
+    printf "${RED}✗${NC} %s (condition: %s)\n" "$message" "$condition"
     ((TESTS_FAILED++))
   fi
 }
@@ -60,10 +60,10 @@ assert_file_exists() {
   local message="${2:-File should exist: $file}"
 
   if [[ -f "$file" ]]; then
-    echo -e "${GREEN}✓${NC} $message"
+    printf "${GREEN}✓${NC} %s\n" "$message"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC} $message"
+    printf "${RED}✗${NC} %s\n" "$message"
     ((TESTS_FAILED++))
   fi
 }
@@ -73,10 +73,10 @@ assert_dir_exists() {
   local message="${2:-Directory should exist: $dir}"
 
   if [[ -d "$dir" ]]; then
-    echo -e "${GREEN}✓${NC} $message"
+    printf "${GREEN}✓${NC} %s\n" "$message"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC} $message"
+    printf "${RED}✗${NC} %s\n" "$message"
     ((TESTS_FAILED++))
   fi
 }

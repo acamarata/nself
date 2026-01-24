@@ -16,7 +16,7 @@ NSELF_BIN="${NSELF_BIN:-/Users/admin/Sites/nself/bin/nself}"
 
 # Cleanup on exit
 cleanup() {
-  echo -e "${BLUE}Cleaning up test directory...${NC}"
+  printf "${BLUE}Cleaning up test directory...${NC}\n"
   rm -rf "$TEST_DIR"
 }
 trap cleanup EXIT
@@ -26,7 +26,7 @@ run_test() {
   local test_name="$1"
   local test_env="$2"
 
-  echo -e "\n${BLUE}=== Testing: $test_name ===${NC}"
+  printf "\n${BLUE}=== Testing: %s ===${NC}\n" "$test_name"
 
   # Create test directory
   mkdir -p "$TEST_DIR/$test_name"
@@ -34,10 +34,10 @@ run_test() {
 
   # Set environment
   export NSELF_ENV="$test_env"
-  echo -e "Environment: ${YELLOW}$test_env${NC}"
+  printf "Environment: ${YELLOW}%s${NC}\n" "$test_env"
 
   # Initialize with simplified wizard (non-interactive)
-  echo -e "\n${BLUE}Running init...${NC}"
+  printf "\n${BLUE}Running init...${NC}\n"
   cat > .env <<EOF
 PROJECT_NAME=testapp-$test_env
 ENV=\${NSELF_ENV:-dev}
@@ -66,16 +66,16 @@ FRONTEND_APP_2_PORT=3001
 EOF
 
   # Build with environment awareness
-  echo -e "\n${BLUE}Running build...${NC}"
+  printf "\n${BLUE}Running build...${NC}\n"
   if "$NSELF_BIN" build --verbose 2>&1 | grep -q "Build completed"; then
-    echo -e "${GREEN}✓ Build completed successfully${NC}"
+    printf "${GREEN}✓ Build completed successfully${NC}\n"
   else
-    echo -e "${RED}✗ Build failed${NC}"
+    printf "${RED}✗ Build failed${NC}\n"
     return 1
   fi
 
   # Verify files were created
-  echo -e "\n${BLUE}Verifying generated files...${NC}"
+  printf "\n${BLUE}Verifying generated files...${NC}\n"
   local expected_files=(
     "docker-compose.yml"
     "nginx/nginx.conf"
@@ -85,73 +85,73 @@ EOF
 
   for file in "${expected_files[@]}"; do
     if [[ -f "$file" ]]; then
-      echo -e "${GREEN}✓ $file${NC}"
+      printf "${GREEN}✓ %s${NC}\n" "$file"
     else
-      echo -e "${RED}✗ Missing: $file${NC}"
+      printf "${RED}✗ Missing: %s${NC}\n" "$file"
       return 1
     fi
   done
 
   # Check environment-specific configuration
-  echo -e "\n${BLUE}Checking environment configuration...${NC}"
+  printf "\n${BLUE}Checking environment configuration...${NC}\n"
 
   # Verify docker-compose has correct project name
   if grep -q "PROJECT_NAME=testapp-$test_env" docker-compose.yml; then
-    echo -e "${GREEN}✓ Project name correctly set${NC}"
+    printf "${GREEN}✓ Project name correctly set${NC}\n"
   else
-    echo -e "${YELLOW}⚠ Project name may use defaults${NC}"
+    printf "${YELLOW}⚠ Project name may use defaults${NC}\n"
   fi
 
   # Check service count in docker-compose
   local service_count=$(grep -c "^  [a-z_-]*:" docker-compose.yml || true)
-  echo -e "Services in docker-compose.yml: ${YELLOW}$service_count${NC}"
+  printf "Services in docker-compose.yml: ${YELLOW}%s${NC}\n" "$service_count"
 
   # Verify custom services were generated
   if [[ -d "services/api" ]]; then
-    echo -e "${GREEN}✓ Custom service 'api' generated${NC}"
+    printf "${GREEN}✓ Custom service 'api' generated${NC}\n"
   fi
   if [[ -d "services/worker" ]]; then
-    echo -e "${GREEN}✓ Custom service 'worker' generated${NC}"
+    printf "${GREEN}✓ Custom service 'worker' generated${NC}\n"
   fi
 
   # Check nginx routes
   local route_count=$(find nginx -name "*.conf" -type f | wc -l)
-  echo -e "Nginx route configs: ${YELLOW}$route_count${NC}"
+  printf "Nginx route configs: ${YELLOW}%s${NC}\n" "$route_count"
 
   return 0
 }
 
 # Main test execution
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Testing Simplified nself Commands${NC}"
-echo -e "${BLUE}========================================${NC}"
+printf "${BLUE}========================================${NC}\n"
+printf "${BLUE}Testing Simplified nself Commands${NC}\n"
+printf "${BLUE}========================================${NC}\n"
 
 # Test 1: Development environment
 if run_test "dev-environment" "dev"; then
-  echo -e "${GREEN}✓ Development environment test passed${NC}"
+  printf "${GREEN}✓ Development environment test passed${NC}\n"
 else
-  echo -e "${RED}✗ Development environment test failed${NC}"
+  printf "${RED}✗ Development environment test failed${NC}\n"
   exit 1
 fi
 
 # Test 2: Staging environment
 if run_test "staging-environment" "staging"; then
-  echo -e "${GREEN}✓ Staging environment test passed${NC}"
+  printf "${GREEN}✓ Staging environment test passed${NC}\n"
 else
-  echo -e "${RED}✗ Staging environment test failed${NC}"
+  printf "${RED}✗ Staging environment test failed${NC}\n"
   exit 1
 fi
 
 # Test 3: Production environment
 if run_test "prod-environment" "prod"; then
-  echo -e "${GREEN}✓ Production environment test passed${NC}"
+  printf "${GREEN}✓ Production environment test passed${NC}\n"
 else
-  echo -e "${RED}✗ Production environment test failed${NC}"
+  printf "${RED}✗ Production environment test failed${NC}\n"
   exit 1
 fi
 
 # Test 4: Environment switching (same directory, different NSELF_ENV)
-echo -e "\n${BLUE}=== Testing: Environment Switching ===${NC}"
+printf "\n${BLUE}=== Testing: Environment Switching ===${NC}\n"
 TEST_SWITCH_DIR="$TEST_DIR/env-switch"
 mkdir -p "$TEST_SWITCH_DIR"
 cd "$TEST_SWITCH_DIR"
@@ -168,45 +168,46 @@ EOF
 
 # Build for dev
 export NSELF_ENV=dev
-echo -e "\n${BLUE}Building for dev...${NC}"
+printf "\n${BLUE}Building for dev...${NC}\n"
 "$NSELF_BIN" build >/dev/null 2>&1
 cp docker-compose.yml docker-compose.dev.yml
 
 # Build for staging
 export NSELF_ENV=staging
-echo -e "${BLUE}Building for staging...${NC}"
+printf "${BLUE}Building for staging...${NC}\n"
 "$NSELF_BIN" build >/dev/null 2>&1
 cp docker-compose.yml docker-compose.staging.yml
 
 # Build for prod
 export NSELF_ENV=prod
-echo -e "${BLUE}Building for prod...${NC}"
+printf "${BLUE}Building for prod...${NC}\n"
 "$NSELF_BIN" build >/dev/null 2>&1
 cp docker-compose.yml docker-compose.prod.yml
 
 # Verify differences
-echo -e "\n${BLUE}Checking environment differences...${NC}"
+printf "\n${BLUE}Checking environment differences...${NC}\n"
 if ! diff -q docker-compose.dev.yml docker-compose.staging.yml >/dev/null 2>&1; then
-  echo -e "${GREEN}✓ Dev and staging configs differ (expected)${NC}"
+  printf "${GREEN}✓ Dev and staging configs differ (expected)${NC}\n"
 else
-  echo -e "${YELLOW}⚠ Dev and staging configs are identical${NC}"
+  printf "${YELLOW}⚠ Dev and staging configs are identical${NC}\n"
 fi
 
 if ! diff -q docker-compose.staging.yml docker-compose.prod.yml >/dev/null 2>&1; then
-  echo -e "${GREEN}✓ Staging and prod configs differ (expected)${NC}"
+  printf "${GREEN}✓ Staging and prod configs differ (expected)${NC}\n"
 else
-  echo -e "${YELLOW}⚠ Staging and prod configs are identical${NC}"
+  printf "${YELLOW}⚠ Staging and prod configs are identical${NC}\n"
 fi
 
 # Summary
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}All tests completed successfully!${NC}"
-echo -e "${BLUE}========================================${NC}"
-echo -e "\nThe simplified commands are working correctly:"
-echo -e "• Init uses smart defaults with minimal prompts"
-echo -e "• Build is environment-agnostic using ternary patterns"
-echo -e "• Custom services (CS_N) are detected dynamically"
-echo -e "• Frontend apps are handled for routing"
-echo -e "• Environment switching works via NSELF_ENV"
+printf "\n${BLUE}========================================${NC}\n"
+printf "${GREEN}All tests completed successfully!${NC}\n"
+printf "${BLUE}========================================${NC}\n"
+echo ""
+echo "The simplified commands are working correctly:"
+echo "• Init uses smart defaults with minimal prompts"
+echo "• Build is environment-agnostic using ternary patterns"
+echo "• Custom services (CS_N) are detected dynamically"
+echo "• Frontend apps are handled for routing"
+echo "• Environment switching works via NSELF_ENV"
 
 exit 0
