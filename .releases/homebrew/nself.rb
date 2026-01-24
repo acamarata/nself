@@ -2,7 +2,7 @@ class Nself < Formula
   desc "Production-ready self-hosted backend infrastructure"
   homepage "https://nself.org"
   url "https://github.com/acamarata/nself/archive/refs/tags/v0.4.8.tar.gz"
-  sha256 "PLACEHOLDER_UPDATED_BY_GITHUB_ACTION"
+  sha256 "14dc72326344f750b45bbe28d6bb2b32559a8713eeb941faa0fe33c1c682593b"
   license "Source-Available"
   version "0.4.8"
 
