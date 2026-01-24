@@ -26,8 +26,7 @@ Complete observability stack with metrics, logs, traces, and alerting.
 - **KeyDB** - Redis-compatible with better performance
 
 ### Admin Tools
-- **[nself Admin](NSELF_ADMIN)** - Web-based nself project management (recommended)
-- **Portainer** - Docker management UI (optional alternative)
+- **[nself Admin](NSELF_ADMIN)** - Web-based nself project management
 
 ### ML Services
 - **MLflow** - ML experiment tracking
@@ -42,7 +41,7 @@ Complete observability stack with metrics, logs, traces, and alerting.
 REDIS_ENABLED=true           # Caching and sessions
 MAILPIT_ENABLED=true         # Email testing
 MEILISEARCH_ENABLED=true     # Search
-PGADMIN_ENABLED=true         # Database administration
+NSELF_ADMIN_ENABLED=true     # Admin dashboard
 ```
 
 ### Production Setup
@@ -62,7 +61,7 @@ MINIO_ENABLED=true
 MLFLOW_ENABLED=true
 MAILPIT_ENABLED=true
 MEILISEARCH_ENABLED=true
-PGADMIN_ENABLED=true
+NSELF_ADMIN_ENABLED=true
 ```
 
 ## Service Details
@@ -230,7 +229,7 @@ MINIO_ENABLED=true
 MEILISEARCH_ENABLED=true
 MONITORING_ENABLED=true
 MLFLOW_ENABLED=true
-PGADMIN_ENABLED=true
+NSELF_ADMIN_ENABLED=true
 ```
 
 ## Related Documentation

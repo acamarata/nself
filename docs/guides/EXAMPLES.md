@@ -996,7 +996,7 @@ Functions:         https://functions.localhost  [DISABLED]
 Development Tools
 ──────────────────────────────────────────────────
 Database:          postgresql://postgres:****@localhost:5432/postgres
-Adminer:           https://adminer.localhost    [DISABLED]
+nself Admin:       https://admin.localhost      [DISABLED]
 MailHog:           https://mailhog.localhost    [ENABLED]
 
 Connection Examples
