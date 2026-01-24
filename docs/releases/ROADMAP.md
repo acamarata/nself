@@ -1,13 +1,12 @@
 # nself Development Roadmap
 
 ## Quick Navigation
-[Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 Release](#v050---production-release)
+[Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 LTS](#v050---production-ready-lts)
 
 ## Current Status Summary
-- **v0.4.7 (Current)**: Kubernetes Support - 2 new commands
-- **v0.4.8 (Next)**: Plugin System (nself-stripe first)
-- **v0.4.9**: Extensive QA & Polish
-- **v0.5.0**: Full Production Release + nself-admin v0.1
+- **v0.4.8 (Current)**: Plugin System - Stripe, GitHub, Shopify integrations
+- **v0.4.9 (Next)**: Extensive Polish & Testing
+- **v0.5.0**: Production Ready LTS + nself-admin v0.1
 
 ---
 
@@ -374,7 +373,7 @@ nself helm push              # Push to registry
 ---
 
 ### v0.4.8 - Plugin System
-**Target**: Q3-Q4 2026
+**Status**: Released | **Release Date**: January 24, 2026
 **Focus**: Extensible plugin architecture for third-party integrations
 
 #### Overview
@@ -546,9 +545,9 @@ These are ideas for future data sync plugins - not currently planned:
 
 ---
 
-### v0.4.9 - Extensive QA & Polish
-**Target**: Q4 2026
-**Focus**: Comprehensive testing, bug fixes, and nself-admin integration
+### v0.4.9 - Extensive Polish & Testing
+**Target**: Q1 2026
+**Focus**: Comprehensive QA, polish, and minor changes to finish the v0.4.x series
 
 #### Focus Areas
 
@@ -596,13 +595,13 @@ nself help deploy  # Works offline
 
 ---
 
-## v0.5.0 - Production Release
+## v0.5.0 - Production Ready LTS
 
-### v0.5.0 - Full Production Release
-**Target**: Q4 2026 / Q1 2027
-**Focus**: Production-ready platform release with nself-admin v0.1
+### v0.5.0 - Production Ready LTS Release
+**Target**: Q1-Q2 2026
+**Focus**: Production-ready Long-Term Support release with nself-admin v0.1
 
-This is the **1.0-equivalent release** for nself - the complete, production-ready self-hosted backend platform.
+This is the **1.0-equivalent LTS release** for nself - the complete, production-ready, long-term support self-hosted backend platform.
 
 #### Includes
 - **nself CLI v0.5.0** - All features from v0.4.x series stable and polished
@@ -694,15 +693,15 @@ Utility Commands (4) - v0.4.9:
 | v0.4.5 | Released | Provider Support | Jan 21, 2026 |
 | **v0.4.6** | **Released** | Scaling & Performance | Jan 22, 2026 |
 | **v0.4.7** | **Released** | Kubernetes Support | Jan 23, 2026 |
-| **v0.4.8** | **Next** | Plugin System (nself-stripe) | Q3 2026 |
-| v0.4.9 | Planned | Extensive QA & Polish | Q3-Q4 2026 |
-| **v0.5.0** | **Target** | Production Release + nself-admin v0.1 | Q4 2026 |
+| **v0.4.8** | **Released** | Plugin System (Stripe, GitHub, Shopify) | Jan 24, 2026 |
+| **v0.4.9** | **Next** | Extensive Polish & Testing | Q1 2026 |
+| **v0.5.0** | **Target** | Production Ready LTS + nself-admin v0.1 | Q1-Q2 2026 |
 
 ---
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.7) - 45 commands
+### Currently Available (v0.4.8) - 46 commands
 ```
 Core: init, build, start, stop, restart, reset, clean, version
 Status: status, logs, exec, urls, doctor, help
@@ -714,14 +713,11 @@ Provider: providers, provision, sync, ci, completion
 Performance: perf, bench, scale, migrate
 Operations: health, frontend, history, config, servers
 Kubernetes: k8s, helm
+Plugins: plugin (+ stripe, github, shopify actions)
 ```
 
 Note: Database operations are consolidated under `nself db` with subcommands.
-
-### Coming in v0.4.8 - +2 commands
-```
-plugin, stripe
-```
+Plugin actions are accessed via `nself plugin <name> <action>`.
 
 ### Coming in v0.4.9 - +4 commands
 ```
@@ -751,4 +747,4 @@ completion, interactive, docs, config
 
 *This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
 
-*Last Updated: January 23, 2026*
+*Last Updated: January 24, 2026*

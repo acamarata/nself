@@ -175,6 +175,7 @@ Categories:
   • Optional Services   - Additional enabled services
   • Custom Services     - Your microservices from templates
   • Frontend Routes     - External frontend applications
+  • Plugins             - Third-party integrations (Stripe, GitHub, Shopify)
 EOF
 }
 
@@ -430,6 +431,59 @@ suggest_route_fix() {
     fi
 }
 
+# Show plugin webhook URLs
+show_plugin_urls() {
+    local protocol="$1"
+    local domain="$2"
+    local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+    local webhooks_route="${WEBHOOKS_ROUTE:-webhooks}"
+
+    printf "%b%b➞ Plugins%b\n" "${BOLD}" "${COLOR_BLUE}" "${COLOR_RESET}"
+
+    # Check if plugin directory exists
+    if [[ ! -d "$plugin_dir" ]]; then
+        printf "  %bNone installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+        echo
+        return
+    fi
+
+    # Find installed plugins
+    local has_plugins=false
+    for plugin_path in "$plugin_dir"/*/plugin.json; do
+        if [[ -f "$plugin_path" ]]; then
+            local plugin_name
+            plugin_name=$(dirname "$plugin_path")
+            plugin_name=$(basename "$plugin_name")
+
+            # Skip shared utilities
+            if [[ "$plugin_name" == "_shared" ]]; then
+                continue
+            fi
+
+            has_plugins=true
+
+            # Get plugin version from manifest
+            local version=""
+            if command -v jq >/dev/null 2>&1; then
+                version=$(jq -r '.version // "unknown"' "$plugin_path" 2>/dev/null)
+            else
+                version=$(grep '"version"' "$plugin_path" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+            fi
+
+            local padded_name
+            padded_name=$(printf "%-15s" "${plugin_name}:")
+            printf "  %s %b%s://%s.%s/%s%b %b(v%s)%b\n" "$padded_name" "${COLOR_GREEN}" "$protocol" "$webhooks_route" "$domain" "$plugin_name" "${COLOR_RESET}" "${COLOR_GRAY}" "$version" "${COLOR_RESET}"
+        fi
+    done
+
+    if [[ "$has_plugins" == "false" ]]; then
+        printf "  %bNone installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+    else
+        printf "  %bManage: nself plugin list --installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+    fi
+    echo
+}
+
 # Output URLs in table format
 output_table() {
     local protocol="$1"
@@ -617,6 +671,9 @@ output_table() {
     fi
     echo
 
+    # Plugins
+    show_plugin_urls "$protocol" "$domain"
+
     # Summary
     echo -e "${BOLD}${COLOR_GRAY}────────────────────────────────────────${COLOR_RESET}"
     local active_count=$(count_active_routes)
@@ -689,6 +746,23 @@ count_active_routes() {
     # Frontend apps
     local frontend_count="${FRONTEND_APP_COUNT:-0}"
     count=$((count + frontend_count))
+
+    # Plugins (count webhooks route if any plugins installed)
+    local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+    if [[ -d "$plugin_dir" ]]; then
+        local has_plugins=false
+        for plugin_path in "$plugin_dir"/*/plugin.json; do
+            if [[ -f "$plugin_path" ]]; then
+                local pname
+                pname=$(basename "$(dirname "$plugin_path")")
+                if [[ "$pname" != "_shared" ]]; then
+                    has_plugins=true
+                    break
+                fi
+            fi
+        done
+        [[ "$has_plugins" == "true" ]] && count=$((count + 1))
+    fi
 
     echo "$count"
 }

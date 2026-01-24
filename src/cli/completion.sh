@@ -33,7 +33,7 @@ _nself_completions() {
     _init_completion || return
 
     # Main commands (v0.4.7)
-    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync cloud service k8s helm perf bench scale migrate health frontend history config ci completion"
+    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync cloud service k8s helm perf bench scale migrate health frontend history config plugin ci completion"
 
     # Subcommands by parent
     local db_commands="migrate seed mock backup restore schema types shell query inspect data optimize reset status help"
@@ -68,6 +68,10 @@ _nself_completions() {
     local bench_commands="run http db compare report"
     local scale_commands="up down auto status config"
     local health_commands="check dashboard alert history"
+
+    # v0.4.8 plugin commands
+    local plugin_commands="list install remove update status"
+    local plugin_names="stripe github shopify"
 
     case "${prev}" in
         nself)
@@ -172,6 +176,22 @@ _nself_completions() {
             ;;
         health)
             COMPREPLY=($(compgen -W "${health_commands}" -- "${cur}"))
+            return 0
+            ;;
+        plugin)
+            COMPREPLY=($(compgen -W "${plugin_commands} ${plugin_names}" -- "${cur}"))
+            return 0
+            ;;
+        stripe)
+            COMPREPLY=($(compgen -W "sync customers subscriptions invoices webhook" -- "${cur}"))
+            return 0
+            ;;
+        github)
+            COMPREPLY=($(compgen -W "sync repos issues prs workflows webhook" -- "${cur}"))
+            return 0
+            ;;
+        shopify)
+            COMPREPLY=($(compgen -W "sync products orders customers webhook" -- "${cur}"))
             return 0
             ;;
         migrate)

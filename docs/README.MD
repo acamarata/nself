@@ -2,7 +2,7 @@
 
 > **The complete self-hosted Backend-as-a-Service platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](releases/v0.4.7.md)
+[![Version](https://img.shields.io/badge/version-0.4.8-blue.svg)](releases/v0.4.8.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
@@ -27,6 +27,34 @@ nself db schema apply schema.dbml
 
 ---
 
+## What's New in v0.4.8
+
+### Plugin System & Registry
+
+Extend nself with third-party integrations:
+
+```bash
+nself plugin list              # Browse available plugins
+nself plugin install stripe    # Install Stripe integration
+nself plugin stripe sync       # Sync data from Stripe
+nself plugin updates           # Check for updates
+```
+
+**Available Plugins:**
+- **Stripe** - Payment processing, subscriptions, invoices
+- **GitHub** - Repository sync, issues, PRs, workflow runs
+- **Shopify** - Products, orders, customers, inventory
+
+**Plugin Features:**
+- Database schemas with automatic Hasura tracking
+- Webhook handlers with signature verification
+- CLI actions for data management
+- Pre-built analytics views
+
+[View Plugin Documentation](plugins/index.md)
+
+---
+
 ## Documentation Index
 
 ### Getting Started
@@ -44,7 +72,14 @@ nself db schema apply schema.dbml
 | Document | Description |
 |----------|-------------|
 | [Commands Overview](commands/COMMANDS.md) | All 55+ commands |
+| [init](commands/INIT.md) | Project initialization |
+| [build](commands/BUILD.md) | Configuration generation |
+| [start](commands/START.md) | Service startup |
+| [stop](commands/STOP.md) | Service shutdown |
+| [status](commands/STATUS.md) | Service status monitoring |
+| [urls](commands/URLS.md) | Service URLs |
 | [db](commands/DB.md) | Database tools (migrate, seed, mock, backup, schema, types) |
+| [plugin](commands/PLUGIN.md) | Plugin management |
 | [deploy](commands/DEPLOY.md) | SSH deployment with zero-downtime |
 | [env](commands/ENV.md) | Environment management |
 | [perf](commands/PERF.md) | Performance profiling and analysis |
@@ -52,6 +87,17 @@ nself db schema apply schema.dbml
 | [health](commands/HEALTH.md) | Health check management |
 | [config](commands/CONFIG.md) | Configuration management |
 | [servers](commands/SERVERS.md) | Server infrastructure |
+
+### Plugins
+
+| Document | Description |
+|----------|-------------|
+| [Plugin Overview](plugins/index.md) | Plugin system introduction |
+| [Plugin Command](commands/PLUGIN.md) | Plugin management commands |
+| [Plugin Development](plugins/development.md) | Creating custom plugins |
+| [Stripe Plugin](plugins/stripe.md) | Stripe integration |
+| [GitHub Plugin](plugins/github.md) | GitHub integration |
+| [Shopify Plugin](plugins/shopify.md) | Shopify integration |
 
 ### Configuration
 
@@ -97,7 +143,8 @@ nself db schema apply schema.dbml
 | Document | Description |
 |----------|-------------|
 | [Roadmap](releases/ROADMAP.md) | Future plans |
-| [v0.4.7](releases/v0.4.7.md) | Current release - Infrastructure Everywhere |
+| [v0.4.8](releases/v0.4.8.md) | Current release - Plugin System |
+| [v0.4.7](releases/v0.4.7.md) | Infrastructure Everywhere |
 | [v0.4.6](releases/v0.4.6.md) | Scaling & Performance |
 | [v0.4.5](releases/v0.4.5.md) | Provider Support |
 | [v0.4.4](releases/v0.4.4.md) | Database Tools |
@@ -138,6 +185,9 @@ nself is a complete backend platform you can run anywhere:
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  Monitoring: Prometheus, Grafana, Loki, Tempo           │   │
 │  └─────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Plugins: Stripe, GitHub, Shopify, and more             │   │
+│  └─────────────────────────────────────────────────────────┘   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Docker Compose │ Any Cloud │ Any Server │ Local Machine       │
 └─────────────────────────────────────────────────────────────────┘
@@ -151,6 +201,7 @@ nself is a complete backend platform you can run anywhere:
 - **40+ Templates** - Custom services in any language
 - **Full Observability** - Metrics, logs, traces, alerts
 - **Production-Ready** - SSL, security, backups, deployment
+- **Plugin System** - Third-party integrations (Stripe, GitHub, Shopify)
 
 ---
 
@@ -161,7 +212,7 @@ nself is a complete backend platform you can run anywhere:
 | Minimal | 4 | Just the essentials |
 | Typical Dev | 8-12 | Development with extras |
 | Full Demo | 25 | Everything enabled |
-| Maximum | 50+ | All optional + 10 custom |
+| Maximum | 50+ | All optional + 10 custom + plugins |
 
 ### Required Services (4)
 Always running: **PostgreSQL**, **Hasura**, **Auth**, **Nginx**
@@ -175,13 +226,17 @@ Enable with `MONITORING_ENABLED=true`: **Prometheus**, **Grafana**, **Loki**, **
 ### Custom Services (Unlimited)
 Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and more
 
+### Plugins
+Install from registry: **Stripe**, **GitHub**, **Shopify**, and more coming soon
+
 ---
 
 ## Version History
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.4.7** | Jan 23, 2026 | Infrastructure Everywhere (current) |
+| **v0.4.8** | Jan 24, 2026 | Plugin System & Registry (current) |
+| v0.4.7 | Jan 23, 2026 | Infrastructure Everywhere |
 | v0.4.6 | Jan 22, 2026 | Scaling & Performance |
 | v0.4.5 | Jan 21, 2026 | Provider Support |
 | v0.4.4 | Jan 20, 2026 | Database Tools |
@@ -197,7 +252,8 @@ Build from 40+ templates: **Express**, **FastAPI**, **gRPC**, **BullMQ**, and mo
 - **GitHub**: [github.com/acamarata/nself](https://github.com/acamarata/nself)
 - **Issues**: [Report bugs](https://github.com/acamarata/nself/issues)
 - **Discussions**: [Ask questions](https://github.com/acamarata/nself/discussions)
+- **Plugin Registry**: [plugins.nself.org](https://plugins.nself.org)
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.7*
+*Last Updated: January 24, 2026 | Version: 0.4.8*

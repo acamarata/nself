@@ -1,4 +1,4 @@
-# nself v0.4.6
+# nself v0.4.8
 
 ### [Home](Home)
 
@@ -39,6 +39,7 @@
 ### Performance (v0.4.6)
 - [perf](commands/PERF) - Profiling
 - [bench](commands/BENCH) - Benchmarking
+- [scale](commands/SCALE) - Service scaling
 - [migrate](commands/MIGRATE) - Cross-env migration
 
 ### Operations (v0.4.6)
@@ -50,6 +51,14 @@
 - [servers](commands/SERVERS) - Server management
 - [frontend](commands/FRONTEND) - Frontend apps
 - [providers](commands/PROVIDERS) - Cloud providers
+
+### Plugins (v0.4.8)
+- [plugin](commands/PLUGIN) - Plugin management
+- [Plugin Overview](plugins/index)
+- [Plugin Development](plugins/development)
+- [Stripe](plugins/stripe) - Payments
+- [GitHub](plugins/github) - DevOps
+- [Shopify](plugins/shopify) - E-commerce
 
 ### Service Commands
 - [email](commands/EMAIL)
@@ -127,7 +136,8 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
-- [v0.4.7](releases/v0.4.7) (Current)
+- [v0.4.8](releases/v0.4.8) (Current)
+- [v0.4.7](releases/v0.4.7)
 - [v0.4.6](releases/v0.4.6)
 - [v0.4.5](releases/v0.4.5)
 - [v0.4.4](releases/v0.4.4)

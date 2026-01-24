@@ -1,7 +1,7 @@
 # Complete Cloud & VPS Provider Reference
 
-**Last Updated**: January 23, 2026
-**nself Version**: 0.4.7+
+**Last Updated**: January 24, 2026
+**nself Version**: 0.4.8+
 
 ---
 
@@ -784,4 +784,4 @@ For full provider integration (API-based provisioning), see the [Provider Develo
 
 ---
 
-*Last Updated: January 23, 2026*
+*Last Updated: January 24, 2026*

@@ -1,0 +1,775 @@
+#!/usr/bin/env bash
+# plugin.sh - Plugin management for nself v0.4.8
+# Install, manage, and use nself plugins
+
+set -o pipefail
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source utilities
+source "$CLI_SCRIPT_DIR/../lib/utils/env.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
+
+# Fallbacks if display.sh didn't load
+if ! declare -f log_success >/dev/null 2>&1; then
+    log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
+fi
+if ! declare -f log_warning >/dev/null 2>&1; then
+    log_warning() { printf "\033[0;33m[WARNING]\033[0m %s\n" "$1"; }
+fi
+if ! declare -f log_error >/dev/null 2>&1; then
+    log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
+fi
+if ! declare -f log_info >/dev/null 2>&1; then
+    log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
+fi
+
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+
+PLUGIN_DIR="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+PLUGIN_CACHE_DIR="${NSELF_PLUGIN_CACHE:-$HOME/.nself/cache/plugins}"
+PLUGIN_REGISTRY_URL="${NSELF_PLUGIN_REGISTRY:-https://plugins.nself.org}"
+PLUGIN_REGISTRY_FALLBACK="https://raw.githubusercontent.com/acamarata/nself-plugins/main/registry.json"
+PLUGIN_REPO_URL="https://github.com/acamarata/nself-plugins"
+
+# ============================================================================
+# PLUGIN MANAGEMENT
+# ============================================================================
+
+# List available plugins
+cmd_list() {
+    local show_installed_only=false
+    local filter_category=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --installed|-i)
+                show_installed_only=true
+                shift
+                ;;
+            --category|-c)
+                filter_category="$2"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    if [[ "$show_installed_only" == "true" ]]; then
+        printf "\n=== Installed Plugins ===\n\n"
+    else
+        printf "\n=== Available Plugins ===\n\n"
+    fi
+
+    # Fetch registry
+    local registry
+    registry=$(fetch_registry)
+
+    if [[ -z "$registry" ]]; then
+        log_error "Failed to fetch plugin registry"
+        return 1
+    fi
+
+    # Parse and display plugins
+    printf "%-15s %-10s %-12s %-35s\n" "NAME" "VERSION" "CATEGORY" "DESCRIPTION"
+    printf "%-15s %-10s %-12s %-35s\n" "----" "-------" "--------" "-----------"
+
+    # Extract plugin names using grep/sed (Bash 3.2 compatible)
+    local plugins
+    plugins=$(printf '%s' "$registry" | grep -o '"[a-z-]*":{' | sed 's/"//g;s/:{//')
+
+    local count=0
+    for plugin in $plugins; do
+        local version description category
+        version=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"version"' | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        description=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"description"' | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        category=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"category"' | head -1 | sed 's/.*"category"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+        # Filter by installed
+        if [[ "$show_installed_only" == "true" ]] && ! is_plugin_installed "$plugin"; then
+            continue
+        fi
+
+        # Filter by category
+        if [[ -n "$filter_category" ]] && [[ "$category" != "$filter_category" ]]; then
+            continue
+        fi
+
+        # Check if installed
+        local installed=""
+        if is_plugin_installed "$plugin"; then
+            installed=" [installed]"
+        fi
+
+        printf "%-15s %-10s %-12s %-35s%s\n" "$plugin" "$version" "$category" "${description:0:35}" "$installed"
+        ((count++))
+    done
+
+    if [[ $count -eq 0 ]]; then
+        if [[ "$show_installed_only" == "true" ]]; then
+            log_info "No plugins installed"
+        elif [[ -n "$filter_category" ]]; then
+            log_info "No plugins found in category: $filter_category"
+        fi
+    fi
+
+    printf "\nInstall with: nself plugin install <name>\n"
+}
+
+# Install a plugin
+cmd_install() {
+    local plugin_name="$1"
+
+    if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        printf "\nUsage: nself plugin install <name>\n"
+        return 1
+    fi
+
+    # Check if it's a local path
+    if [[ -d "$plugin_name" ]]; then
+        install_local_plugin "$plugin_name"
+        return $?
+    fi
+
+    # Parse version if specified (plugin@version)
+    local version=""
+    if [[ "$plugin_name" == *"@"* ]]; then
+        version="${plugin_name#*@}"
+        plugin_name="${plugin_name%@*}"
+    fi
+
+    log_info "Installing plugin: $plugin_name"
+
+    # Check if already installed
+    if is_plugin_installed "$plugin_name"; then
+        log_warning "Plugin '$plugin_name' is already installed"
+        printf "Use 'nself plugin update %s' to update\n" "$plugin_name"
+        return 0
+    fi
+
+    # Fetch registry
+    local registry
+    registry=$(fetch_registry)
+
+    # Check if plugin exists in registry
+    if ! printf '%s' "$registry" | grep -q "\"$plugin_name\":"; then
+        log_error "Plugin '$plugin_name' not found in registry"
+        printf "\nAvailable plugins:\n"
+        cmd_list
+        return 1
+    fi
+
+    # Download and install
+    download_plugin "$plugin_name" "$version"
+
+    # Run install script
+    run_plugin_installer "$plugin_name"
+
+    log_success "Plugin '$plugin_name' installed successfully!"
+    printf "\nConfigure in .env and run: nself plugin %s sync\n" "$plugin_name"
+}
+
+# Remove a plugin
+cmd_remove() {
+    local plugin_name="$1"
+    local delete_data="${2:-}"
+
+    if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        return 1
+    fi
+
+    if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+    fi
+
+    log_info "Removing plugin: $plugin_name"
+
+    local plugin_dir="$PLUGIN_DIR/$plugin_name"
+
+    # Run uninstall script
+    if [[ -f "$plugin_dir/uninstall.sh" ]]; then
+        local uninstall_args=""
+        [[ "$delete_data" != "--delete-data" ]] && uninstall_args="--keep-data"
+        bash "$plugin_dir/uninstall.sh" $uninstall_args
+    fi
+
+    # Remove plugin directory
+    rm -rf "$plugin_dir"
+
+    log_success "Plugin '$plugin_name' removed"
+}
+
+# Update a plugin
+cmd_update() {
+    local plugin_name=""
+    local update_all=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all|-a)
+                update_all=true
+                shift
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                plugin_name="$1"
+                shift
+                ;;
+        esac
+    done
+
+    # Default to all if no plugin specified
+    if [[ -z "$plugin_name" ]] || [[ "$update_all" == "true" ]]; then
+        log_info "Updating all plugins..."
+        local found=0
+        for plugin_dir in "$PLUGIN_DIR"/*/; do
+            if [[ -f "$plugin_dir/plugin.json" ]]; then
+                local name
+                name=$(basename "$plugin_dir")
+                update_single_plugin "$name"
+                ((found++))
+            fi
+        done
+        if [[ $found -eq 0 ]]; then
+            log_info "No plugins installed"
+        fi
+    else
+        update_single_plugin "$plugin_name"
+    fi
+}
+
+update_single_plugin() {
+    local plugin_name="$1"
+
+    if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+    fi
+
+    log_info "Updating: $plugin_name"
+
+    # Get current version
+    local current_version
+    current_version=$(get_installed_version "$plugin_name")
+
+    # Fetch registry for latest version
+    local registry
+    registry=$(fetch_registry)
+
+    local latest_version
+    latest_version=$(printf '%s' "$registry" | grep -A5 "\"$plugin_name\"" | grep '"version"' | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+    if [[ "$current_version" == "$latest_version" ]]; then
+        log_info "$plugin_name is already at latest version ($current_version)"
+        return 0
+    fi
+
+    log_info "Updating $plugin_name: $current_version -> $latest_version"
+
+    # Download new version
+    download_plugin "$plugin_name" "$latest_version"
+
+    log_success "Updated $plugin_name to $latest_version"
+}
+
+# Show plugin status
+cmd_status() {
+    local plugin_name="${1:-}"
+
+    printf "\n=== Installed Plugins ===\n\n"
+
+    if [[ -n "$plugin_name" ]]; then
+        show_plugin_status "$plugin_name"
+    else
+        local found=0
+        for plugin_dir in "$PLUGIN_DIR"/*/; do
+            if [[ -f "$plugin_dir/plugin.json" ]]; then
+                local name
+                name=$(basename "$plugin_dir")
+                show_plugin_status "$name"
+                ((found++))
+            fi
+        done
+
+        if [[ $found -eq 0 ]]; then
+            log_info "No plugins installed"
+            printf "\nInstall with: nself plugin install <name>\n"
+        else
+            # Check for updates
+            echo ""
+            if declare -f registry_check_updates_formatted >/dev/null 2>&1; then
+                registry_check_updates_formatted
+            fi
+        fi
+    fi
+}
+
+show_plugin_status() {
+    local plugin_name="$1"
+    local plugin_dir="$PLUGIN_DIR/$plugin_name"
+
+    if [[ ! -d "$plugin_dir" ]]; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+    fi
+
+    local manifest="$plugin_dir/plugin.json"
+    if [[ ! -f "$manifest" ]]; then
+        log_error "Invalid plugin: missing plugin.json"
+        return 1
+    fi
+
+    local version description
+    version=$(grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    description=$(grep '"description"' "$manifest" | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+    printf "Plugin: %s\n" "$plugin_name"
+    printf "  Version: %s\n" "$version"
+    printf "  Description: %s\n" "$description"
+    printf "  Path: %s\n" "$plugin_dir"
+
+    # Check required env vars
+    local required_vars
+    required_vars=$(grep -A10 '"required"' "$manifest" | grep -o '"[A-Z_]*"' | tr -d '"' || true)
+
+    if [[ -n "$required_vars" ]]; then
+        printf "  Environment:\n"
+        for var in $required_vars; do
+            if [[ -n "${!var:-}" ]]; then
+                printf "    %s: configured\n" "$var"
+            else
+                printf "    %s: NOT SET\n" "$var"
+            fi
+        done
+    fi
+
+    printf "\n"
+}
+
+# ============================================================================
+# PLUGIN ACTION DISPATCH
+# ============================================================================
+
+# Run plugin action
+cmd_run_action() {
+    local plugin_name="$1"
+    local action="$2"
+    shift 2 || true
+
+    if [[ -z "$plugin_name" ]]; then
+        show_help
+        return 1
+    fi
+
+    if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+    fi
+
+    local plugin_dir="$PLUGIN_DIR/$plugin_name"
+
+    if [[ -z "$action" ]]; then
+        # Show plugin help
+        show_plugin_help "$plugin_name"
+        return 0
+    fi
+
+    local action_script="$plugin_dir/actions/${action}.sh"
+
+    if [[ ! -f "$action_script" ]]; then
+        log_error "Unknown action: $action"
+        show_plugin_help "$plugin_name"
+        return 1
+    fi
+
+    # Export plugin directories for the action script
+    export PLUGIN_DIR="$plugin_dir"
+    export NSELF_PROJECT_DIR="$(pwd)"
+
+    # Run the action
+    bash "$action_script" "$@"
+}
+
+show_plugin_help() {
+    local plugin_name="$1"
+    local plugin_dir="$PLUGIN_DIR/$plugin_name"
+    local manifest="$plugin_dir/plugin.json"
+
+    printf "\nUsage: nself plugin %s <action> [args]\n\n" "$plugin_name"
+    printf "Actions:\n"
+
+    # List available actions
+    for action in "$plugin_dir"/actions/*.sh; do
+        if [[ -f "$action" ]]; then
+            local action_name
+            action_name=$(basename "$action" .sh)
+
+            local action_desc=""
+            if [[ -f "$manifest" ]]; then
+                action_desc=$(grep -A1 "\"$action_name\"" "$manifest" | grep -v "$action_name" | head -1 | sed 's/.*":\s*"\([^"]*\)".*/\1/' || true)
+            fi
+
+            printf "  %-15s %s\n" "$action_name" "$action_desc"
+        fi
+    done
+
+    printf "\n"
+}
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+fetch_registry() {
+    # Check cache first
+    local cache_file="$PLUGIN_CACHE_DIR/registry.json"
+    local cache_age=3600  # 1 hour
+
+    mkdir -p "$PLUGIN_CACHE_DIR"
+
+    if [[ -f "$cache_file" ]]; then
+        local file_time current_time
+        current_time=$(date +%s)
+
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            file_time=$(stat -f %m "$cache_file" 2>/dev/null || echo 0)
+        else
+            file_time=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
+        fi
+
+        if (( current_time - file_time < cache_age )); then
+            cat "$cache_file"
+            return 0
+        fi
+    fi
+
+    # Fetch fresh registry
+    local registry
+    registry=$(curl -s "$PLUGIN_REGISTRY_URL" 2>/dev/null)
+
+    if [[ -n "$registry" ]]; then
+        printf '%s' "$registry" > "$cache_file"
+        printf '%s' "$registry"
+    elif [[ -f "$cache_file" ]]; then
+        # Return stale cache if fetch failed
+        cat "$cache_file"
+    fi
+}
+
+is_plugin_installed() {
+    local plugin_name="$1"
+    [[ -f "$PLUGIN_DIR/$plugin_name/plugin.json" ]]
+}
+
+get_installed_version() {
+    local plugin_name="$1"
+    local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+
+    if [[ -f "$manifest" ]]; then
+        grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+    fi
+}
+
+download_plugin() {
+    local plugin_name="$1"
+    local version="${2:-main}"
+
+    mkdir -p "$PLUGIN_DIR"
+
+    log_info "Downloading $plugin_name..."
+
+    # Download from GitHub
+    local tarball_url="${PLUGIN_REPO_URL}/archive/refs/heads/main.tar.gz"
+    local temp_dir
+    temp_dir=$(mktemp -d)
+
+    if ! curl -sL "$tarball_url" | tar -xz -C "$temp_dir" 2>/dev/null; then
+        log_error "Failed to download plugin"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Find and copy plugin
+    local plugin_src="$temp_dir/nself-plugins-main/plugins/$plugin_name"
+
+    if [[ ! -d "$plugin_src" ]]; then
+        log_error "Plugin '$plugin_name' not found in repository"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Copy to plugin directory
+    rm -rf "$PLUGIN_DIR/$plugin_name"
+    cp -r "$plugin_src" "$PLUGIN_DIR/$plugin_name"
+
+    # Copy shared utilities
+    if [[ -d "$temp_dir/nself-plugins-main/shared" ]]; then
+        mkdir -p "$PLUGIN_DIR/_shared"
+        cp -r "$temp_dir/nself-plugins-main/shared/"* "$PLUGIN_DIR/_shared/"
+    fi
+
+    # Cleanup
+    rm -rf "$temp_dir"
+
+    log_success "Downloaded $plugin_name"
+}
+
+install_local_plugin() {
+    local plugin_path="$1"
+
+    if [[ ! -f "$plugin_path/plugin.json" ]]; then
+        log_error "Invalid plugin: missing plugin.json"
+        return 1
+    fi
+
+    local plugin_name
+    plugin_name=$(grep '"name"' "$plugin_path/plugin.json" | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+    log_info "Installing local plugin: $plugin_name"
+
+    mkdir -p "$PLUGIN_DIR"
+    rm -rf "$PLUGIN_DIR/$plugin_name"
+    cp -r "$plugin_path" "$PLUGIN_DIR/$plugin_name"
+
+    run_plugin_installer "$plugin_name"
+
+    log_success "Local plugin '$plugin_name' installed"
+}
+
+run_plugin_installer() {
+    local plugin_name="$1"
+    local plugin_dir="$PLUGIN_DIR/$plugin_name"
+
+    if [[ -f "$plugin_dir/install.sh" ]]; then
+        log_info "Running plugin installer..."
+
+        # Make shared utilities available
+        export PLUGIN_DIR="$plugin_dir"
+        export NSELF_PROJECT_DIR="$(pwd)"
+
+        # Update shared path in install script
+        local shared_path="$PLUGIN_DIR/_shared"
+        if [[ -d "$shared_path" ]]; then
+            export SHARED_DIR="$shared_path"
+        fi
+
+        bash "$plugin_dir/install.sh"
+    fi
+}
+
+# ============================================================================
+# UPDATE CHECKING
+# ============================================================================
+
+# Check for plugin updates
+cmd_updates() {
+    local quiet=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --quiet|-q)
+                quiet=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    if [[ "$quiet" == "true" ]]; then
+        # Quiet mode: just output update info
+        if declare -f registry_check_updates >/dev/null 2>&1; then
+            registry_check_updates 2>/dev/null
+        fi
+    else
+        printf "\n=== Plugin Updates ===\n\n"
+
+        # Check if any plugins are installed
+        local installed_count=0
+        for plugin_dir in "$PLUGIN_DIR"/*/; do
+            [[ -f "$plugin_dir/plugin.json" ]] && ((installed_count++))
+        done
+
+        if [[ $installed_count -eq 0 ]]; then
+            log_info "No plugins installed"
+            printf "\nInstall plugins with: nself plugin install <name>\n"
+            return 0
+        fi
+
+        log_info "Checking for updates ($installed_count plugins installed)..."
+        echo ""
+
+        if declare -f registry_check_updates_formatted >/dev/null 2>&1; then
+            registry_check_updates_formatted
+        else
+            # Fallback if registry.sh not loaded
+            log_warning "Registry module not loaded. Skipping update check."
+        fi
+    fi
+}
+
+# Refresh plugin registry cache
+cmd_refresh() {
+    log_info "Refreshing plugin registry..."
+
+    if declare -f registry_fetch >/dev/null 2>&1; then
+        if registry_fetch "true" >/dev/null 2>&1; then
+            log_success "Registry cache refreshed"
+
+            # Show registry info
+            if declare -f registry_get_metadata >/dev/null 2>&1; then
+                echo ""
+                registry_get_metadata
+            fi
+        else
+            log_error "Failed to refresh registry"
+            return 1
+        fi
+    else
+        # Fallback
+        local registry
+        if registry=$(curl -sf "$PLUGIN_REGISTRY_URL/registry.json" 2>/dev/null || curl -sf "$PLUGIN_REGISTRY_FALLBACK" 2>/dev/null); then
+            mkdir -p "$PLUGIN_CACHE_DIR"
+            printf '%s' "$registry" > "$PLUGIN_CACHE_DIR/registry.json"
+            log_success "Registry cache refreshed"
+        else
+            log_error "Failed to fetch registry"
+            return 1
+        fi
+    fi
+}
+
+# ============================================================================
+# HELP
+# ============================================================================
+
+show_help() {
+    printf "
+nself plugin - Plugin Management
+
+Usage: nself plugin <command> [options]
+
+Commands:
+  list [options]          List available plugins
+    --installed, -i         Show only installed plugins
+    --category, -c <cat>    Filter by category (billing, ecommerce, devops)
+
+  install <name>          Install a plugin from registry
+  install <path>          Install a local plugin
+
+  remove <name>           Remove a plugin
+    --keep-data             Keep database tables
+
+  update [name]           Update a specific plugin
+    --all, -a               Update all installed plugins
+
+  status [name]           Show plugin status and health
+
+  updates                 Check for available plugin updates
+    --quiet, -q             Output only update info (for scripts)
+
+  refresh                 Force refresh the plugin registry cache
+
+Plugin Actions:
+  <plugin> <action>       Run plugin action (e.g., stripe sync)
+  <plugin> --help         Show plugin's available actions
+
+Examples:
+  nself plugin list
+  nself plugin list --installed
+  nself plugin list --category billing
+  nself plugin install stripe
+  nself plugin stripe sync
+  nself plugin stripe customers list
+  nself plugin update --all
+  nself plugin updates
+  nself plugin status
+  nself plugin remove stripe --keep-data
+
+Available Plugins:
+  stripe    - Payment processing & subscriptions (billing)
+  github    - Repository & CI integration (devops)
+  shopify   - E-commerce store sync (ecommerce)
+
+Registry:
+  Primary:  https://plugins.nself.org
+  Fallback: https://github.com/acamarata/nself-plugins
+
+Environment:
+  NSELF_PLUGIN_DIR        Plugin installation directory (~/.nself/plugins)
+  NSELF_PLUGIN_REGISTRY   Custom registry URL (default: https://plugins.nself.org)
+  NSELF_REGISTRY_CACHE_TTL  Registry cache TTL in seconds (default: 300)
+
+"
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+main() {
+    local command="${1:-}"
+    shift || true
+
+    case "$command" in
+        list|ls)
+            cmd_list "$@"
+            ;;
+        install|add)
+            cmd_install "$@"
+            ;;
+        remove|rm|uninstall)
+            cmd_remove "$@"
+            ;;
+        update|upgrade)
+            cmd_update "$@"
+            ;;
+        status)
+            cmd_status "$@"
+            ;;
+        updates|check-updates)
+            cmd_updates "$@"
+            ;;
+        refresh|sync-registry)
+            cmd_refresh "$@"
+            ;;
+        -h|--help|help|"")
+            show_help
+            ;;
+        *)
+            # Check if it's a plugin name (for running actions)
+            if is_plugin_installed "$command"; then
+                cmd_run_action "$command" "$@"
+            else
+                log_error "Unknown command: $command"
+                show_help
+                return 1
+            fi
+            ;;
+    esac
+}
+
+main "$@"

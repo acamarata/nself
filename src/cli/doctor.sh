@@ -702,6 +702,119 @@ show_recommendations() {
   fi
 }
 
+# Function to check installed plugins health
+check_plugins() {
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+
+  # Check if plugin directory exists
+  if [[ ! -d "$plugin_dir" ]]; then
+    return 0
+  fi
+
+  # Find installed plugins
+  local has_plugins=false
+  for plugin_path in "$plugin_dir"/*/plugin.json; do
+    if [[ -f "$plugin_path" ]]; then
+      local plugin_name
+      plugin_name=$(dirname "$plugin_path")
+      plugin_name=$(basename "$plugin_name")
+
+      # Skip shared utilities
+      if [[ "$plugin_name" == "_shared" ]]; then
+        continue
+      fi
+      has_plugins=true
+      break
+    fi
+  done
+
+  if [[ "$has_plugins" == "false" ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo "Plugin Health"
+  echo "──────────────────────────────────────────────"
+
+  for plugin_path in "$plugin_dir"/*/plugin.json; do
+    if [[ -f "$plugin_path" ]]; then
+      local plugin_name
+      plugin_name=$(dirname "$plugin_path")
+      plugin_name=$(basename "$plugin_name")
+
+      # Skip shared utilities
+      if [[ "$plugin_name" == "_shared" ]]; then
+        continue
+      fi
+
+      # Get plugin info
+      local version=""
+      local required_vars=""
+      if command -v jq >/dev/null 2>&1; then
+        version=$(jq -r '.version // "unknown"' "$plugin_path" 2>/dev/null)
+        required_vars=$(jq -r '.envVars.required // [] | .[]' "$plugin_path" 2>/dev/null | tr '\n' ' ')
+      else
+        version=$(grep '"version"' "$plugin_path" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+      fi
+
+      # Check required environment variables
+      local missing_vars=""
+      local has_all_vars=true
+
+      case "$plugin_name" in
+        stripe)
+          if [[ -z "${STRIPE_API_KEY:-}" ]]; then
+            missing_vars="STRIPE_API_KEY"
+            has_all_vars=false
+          fi
+          ;;
+        github)
+          if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            missing_vars="GITHUB_TOKEN"
+            has_all_vars=false
+          fi
+          ;;
+        shopify)
+          if [[ -z "${SHOPIFY_ACCESS_TOKEN:-}" ]]; then
+            missing_vars="SHOPIFY_ACCESS_TOKEN"
+            has_all_vars=false
+          fi
+          if [[ -z "${SHOPIFY_STORE:-}" ]]; then
+            missing_vars="${missing_vars:+$missing_vars, }SHOPIFY_STORE"
+            has_all_vars=false
+          fi
+          ;;
+      esac
+
+      # Report plugin status
+      if [[ "$has_all_vars" == "true" ]]; then
+        log_success "${plugin_name}: v${version} - Configured"
+      else
+        log_warning "${plugin_name}: v${version} - Missing: ${missing_vars}"
+        warning_found
+      fi
+
+      # Check for webhook secret (optional but recommended)
+      local webhook_secret_var=""
+      case "$plugin_name" in
+        stripe) webhook_secret_var="STRIPE_WEBHOOK_SECRET" ;;
+        github) webhook_secret_var="GITHUB_WEBHOOK_SECRET" ;;
+        shopify) webhook_secret_var="SHOPIFY_WEBHOOK_SECRET" ;;
+      esac
+
+      if [[ -n "$webhook_secret_var" ]] && [[ -z "${!webhook_secret_var:-}" ]]; then
+        log_info "  Webhook secret not configured (${webhook_secret_var})"
+      fi
+    fi
+  done
+
+  # Show plugin commands
+  log_info ""
+  log_info "Plugin commands:"
+  log_info "  nself plugin status           - Check all plugins"
+  log_info "  nself plugin <name> sync      - Sync plugin data"
+}
+
 # Main function
 main() {
   show_command_header "nself doctor" "System diagnostics and health checks"
@@ -791,6 +904,9 @@ main() {
     if docker ps --format "{{.Names}}" | grep -q "${PROJECT_NAME:-nself}_postgres"; then
       check_database 2>/dev/null || true
     fi
+
+    # Check plugin health
+    check_plugins 2>/dev/null || true
 
   else
     # No containers running - perform full system requirements check

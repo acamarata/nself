@@ -2,31 +2,43 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.4.7
+**Current Stable Version:** v0.4.8
 
 ---
 
 ## Latest Release
 
-### [v0.4.7](v0.4.7.md) - Current Stable
+### [v0.4.8](v0.4.8.md) - Current Stable
 
-**Released:** January 23, 2026
+**Released:** January 24, 2026
 
 **Status:** Production Ready
 
 **Highlights:**
-- **26 Cloud Providers**: Massively expanded infrastructure support
-- **Kubernetes Support**: Full K8s deployment and management
-- **Helm Charts**: Generate, deploy, and manage Helm charts
-- **Command Consolidation**: Unified `nself cloud`, `nself service`, `nself k8s`, `nself helm`
-- **Enhanced Deployment**: Preview, canary, and blue-green strategies
-- **Auto-Sync**: Continuous file watching and synchronization
+- **Plugin System**: Extensible architecture for third-party integrations
+- **Three Launch Plugins**: Stripe, GitHub, and Shopify integrations
+- **Plugin Registry**: Two-tier registry (plugins.nself.org + GitHub fallback)
+- **Database Schemas**: Prefixed tables for synced data
+- **Webhook Handlers**: Real-time event processing with signature verification
+- **CLI Actions**: Full command-line interface for managing plugin data
 
-**[View Release Notes →](v0.4.7.md)**
+**[View Release Notes →](v0.4.8.md)**
 
 ---
 
 ## Recent Releases
+
+### [v0.4.7](v0.4.7.md) - January 23, 2026
+
+**Status:** Stable
+
+**Highlights:**
+- 26 Cloud Providers with massively expanded infrastructure support
+- Kubernetes Support with full K8s deployment and management
+- Helm Charts generation, deployment, and management
+- Enhanced Deployment with preview, canary, and blue-green strategies
+
+**[View Release Notes →](v0.4.7.md)**
 
 ### [v0.4.6](v0.4.6.md) - January 22, 2026
 
@@ -132,9 +144,8 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements.
 
 | Version | Target | Focus |
 |---------|--------|-------|
-| **v0.4.8** | Q1 2026 | Plugin System (nself-stripe) |
-| v0.4.9 | Q1-Q2 2026 | Extensive QA & Polish |
-| **v0.5.0** | Q2 2026 | **Production Release + nself-admin v0.1** |
+| **v0.4.9** | Q1 2026 | Extensive Polish & Testing |
+| **v0.5.0** | Q1-Q2 2026 | **Production Ready LTS + nself-admin v0.1** |
 
 ---
 
@@ -146,7 +157,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| [v0.4.7](v0.4.7.md) | Jan 23, 2026 | **Current** | Infrastructure Everywhere, K8s, Helm |
+| [v0.4.8](v0.4.8.md) | Jan 24, 2026 | **Current** | Plugin System (Stripe, GitHub, Shopify) |
+| [v0.4.7](v0.4.7.md) | Jan 23, 2026 | Stable | Infrastructure Everywhere, K8s, Helm |
 | [v0.4.6](v0.4.6.md) | Jan 22, 2026 | Stable | Scaling & Performance |
 | [v0.4.5](v0.4.5.md) | Jan 21, 2026 | Stable | Provider Support, 10 cloud providers |
 | [v0.4.4](v0.4.4.md) | Jan 20, 2026 | Stable | Database Tools, DBML workflow |
@@ -260,4 +272,4 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 ---
 
-**Last Updated:** January 23, 2026 | **Current Version:** v0.4.7
+**Last Updated:** January 24, 2026 | **Current Version:** v0.4.8

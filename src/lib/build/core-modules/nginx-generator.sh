@@ -65,6 +65,9 @@ generate_nginx_config() {
 
   # Generate custom service routes
   generate_custom_routes
+
+  # Generate plugin webhook routes
+  generate_plugin_routes
 }
 
 # Generate main nginx.conf
@@ -729,6 +732,109 @@ EOF
   fi
 }
 
+# Generate plugin webhook routes
+# Routes webhooks to functions service or custom webhook handler
+generate_plugin_routes() {
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+  local base_domain="${BASE_DOMAIN:-localhost}"
+  local ssl_dir
+  ssl_dir=$(get_ssl_cert_dir)
+
+  # Check if any plugins are installed
+  if [[ ! -d "$plugin_dir" ]]; then
+    return 0
+  fi
+
+  # Get list of installed plugins (directories with plugin.json)
+  local installed_plugins=""
+  for plugin_path in "$plugin_dir"/*/plugin.json; do
+    if [[ -f "$plugin_path" ]]; then
+      local plugin_name
+      plugin_name=$(dirname "$plugin_path")
+      plugin_name=$(basename "$plugin_name")
+      # Skip shared utilities directory
+      if [[ "$plugin_name" != "_shared" ]]; then
+        installed_plugins="${installed_plugins} ${plugin_name}"
+      fi
+    fi
+  done
+
+  # No plugins installed
+  if [[ -z "${installed_plugins// /}" ]]; then
+    return 0
+  fi
+
+  # Determine webhook handler upstream
+  # Priority: WEBHOOK_HANDLER_HOST > functions service > hasura
+  local webhook_upstream=""
+  if [[ -n "${WEBHOOK_HANDLER_HOST:-}" ]]; then
+    webhook_upstream="${WEBHOOK_HANDLER_HOST}:${WEBHOOK_HANDLER_PORT:-3000}"
+  elif [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+    webhook_upstream="functions:3000"
+  else
+    # No webhook handler available - skip route generation
+    return 0
+  fi
+
+  local webhooks_route="${WEBHOOKS_ROUTE:-webhooks}"
+
+  cat > nginx/sites/webhooks.conf <<EOF
+# Plugin Webhook Endpoints
+# Installed plugins:${installed_plugins}
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${webhooks_route}.${base_domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Rate limiting for webhooks
+    limit_req zone=api burst=50 nodelay;
+
+    # Common webhook settings
+    client_max_body_size 10M;
+EOF
+
+  # Add location block for each installed plugin
+  for plugin_name in $installed_plugins; do
+    cat >> nginx/sites/webhooks.conf <<EOF
+
+    # ${plugin_name} webhook endpoint
+    location /${plugin_name} {
+        proxy_pass http://${webhook_upstream}/webhooks/${plugin_name};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Webhook-Plugin ${plugin_name};
+        proxy_set_header X-Original-URI \$request_uri;
+
+        # Preserve raw body for signature verification
+        proxy_set_header Content-Type \$content_type;
+        proxy_pass_request_body on;
+
+        # Timeouts for webhook processing
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+EOF
+  done
+
+  cat >> nginx/sites/webhooks.conf <<EOF
+
+    # Health check
+    location /health {
+        access_log off;
+        return 200 "webhooks healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
+}
+
 # Export all functions
 export -f generate_nginx_config
 export -f generate_main_nginx_conf
@@ -737,4 +843,5 @@ export -f generate_service_routes
 export -f generate_optional_service_routes
 export -f generate_frontend_routes
 export -f generate_custom_routes
+export -f generate_plugin_routes
 export -f generate_database_init

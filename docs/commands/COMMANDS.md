@@ -1,6 +1,6 @@
 # nself Commands Reference
 
-**Version 0.4.7** | Complete CLI Reference
+**Version 0.4.8** | Complete CLI Reference
 
 ---
 
@@ -274,6 +274,40 @@ nself
 │       ├── import <file>      Import config
 │       └── reset              Reset to defaults
 │
+├── Plugins (v0.4.8)
+│   └── plugin                 Plugin management
+│       ├── list               List available plugins
+│       │   ├── --installed    Show installed only
+│       │   └── --category     Filter by category
+│       ├── install <name>     Install plugin
+│       ├── remove <name>      Remove plugin
+│       │   └── --keep-data    Keep database tables
+│       ├── update [name]      Update plugin(s)
+│       │   └── --all          Update all plugins
+│       ├── updates            Check for plugin updates
+│       ├── refresh            Refresh registry cache
+│       ├── status [name]      Plugin status
+│       └── <plugin> <action>  Run plugin action
+│           ├── stripe         Payment processing
+│           │   ├── sync       Sync data
+│           │   ├── customers  Customer management
+│           │   ├── subscriptions Subscriptions
+│           │   ├── invoices   Invoice management
+│           │   └── webhook    Webhook events
+│           ├── github         DevOps integration
+│           │   ├── sync       Sync repositories
+│           │   ├── repos      Repository list
+│           │   ├── issues     Issue tracking
+│           │   ├── prs        Pull requests
+│           │   ├── workflows  GitHub Actions
+│           │   └── webhook    Webhook events
+│           └── shopify        E-commerce
+│               ├── sync       Sync store data
+│               ├── products   Product catalog
+│               ├── orders     Order management
+│               ├── customers  Customer data
+│               └── webhook    Webhook events
+│
 ├── Utility
 │   ├── ssl                     SSL certificates
 │   ├── trust                   Trust local certs
@@ -366,6 +400,18 @@ nself service email test        # Test email
 nself service functions deploy  # Deploy functions
 ```
 
+### Plugins
+
+```bash
+nself plugin list               # List available plugins
+nself plugin install stripe     # Install Stripe plugin
+nself plugin stripe sync        # Sync Stripe data
+nself plugin stripe customers list  # List customers
+nself plugin updates            # Check for updates
+nself plugin refresh            # Refresh registry cache
+nself plugin status             # Plugin status
+```
+
 ### Performance
 
 ```bash
@@ -385,16 +431,17 @@ nself scale postgres --cpu 2    # Scale service
 | **Status** | 6 | Monitoring and debugging |
 | **Database** | 10 | Database management |
 | **Deployment** | 12 | Environment and deployment (enhanced v0.4.7) |
-| **Cloud** | 4 | Infrastructure management (NEW v0.4.7) |
-| **Service** | 8 | Optional service management (NEW v0.4.7) |
-| **Kubernetes** | 11 | K8s operations (NEW v0.4.7) |
-| **Helm** | 12 | Helm chart management (NEW v0.4.7) |
+| **Cloud** | 4 | Infrastructure management (v0.4.7) |
+| **Service** | 8 | Optional service management (v0.4.7) |
+| **Kubernetes** | 11 | K8s operations (v0.4.7) |
+| **Helm** | 12 | Helm chart management (v0.4.7) |
 | **Sync** | 8 | Data sync (enhanced v0.4.7) |
 | **Performance** | 4 | Profiling and scaling (v0.4.6) |
 | **Operations** | 3 | Config, frontend, history (v0.4.6) |
+| **Plugins** | 6+ | Third-party integrations (NEW v0.4.8) |
 | **Utility** | 7 | CI, completions, updates |
 
-**Total: 90+ commands and subcommands**
+**Total: 100+ commands and subcommands**
 
 ---
 
@@ -464,12 +511,16 @@ Each command has detailed documentation:
 ### Operations (v0.4.6)
 - [health](HEALTH.md) | [frontend](FRONTEND.md) | [history](HISTORY.md) | [config](CONFIG.md)
 
+### Plugins (v0.4.8)
+- [plugin](PLUGIN.md) - Plugin management and third-party integrations
+
 ---
 
 ## Version History
 
 | Version | Commands Added |
 |---------|----------------|
+| **0.4.8** | plugin (list, install, remove, update, status), stripe/github/shopify actions |
 | **0.4.7** | cloud, service, k8s, helm, deploy preview/canary/blue-green, sync auto/watch |
 | **0.4.6** | perf, bench, scale, migrate, health, frontend, history, config, servers |
 | **0.4.5** | providers, provision, sync, ci, completion |
@@ -478,4 +529,4 @@ Each command has detailed documentation:
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.7*
+*Last Updated: January 24, 2026 | Version: 0.4.8*

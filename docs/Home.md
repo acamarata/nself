@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](releases/v0.4.7)
+[![Version](https://img.shields.io/badge/version-0.4.8-blue.svg)](releases/v0.4.8)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -158,24 +158,51 @@ Build custom services in any language.
 
 ---
 
+## Version 0.4.8 - Plugin System & Registry
+
+The current release introduces a powerful plugin system with a distributed registry:
+
+### Plugin Commands
+```bash
+nself plugin list              # List available plugins
+nself plugin install stripe    # Install a plugin
+nself plugin stripe sync       # Run plugin actions
+nself plugin updates           # Check for plugin updates
+nself plugin refresh           # Refresh registry cache
+```
+
+### Available Plugins
+| Plugin | Category | Description |
+|--------|----------|-------------|
+| **[Stripe](plugins/stripe)** | Billing | Payment processing, subscriptions, invoices |
+| **[GitHub](plugins/github)** | DevOps | Repository sync, issues, PRs, workflow runs |
+| **[Shopify](plugins/shopify)** | E-Commerce | Products, orders, customers, inventory |
+
+### Plugin Architecture
+- **Database Schemas** - Prefixed tables with automatic Hasura tracking
+- **Webhook Handlers** - Real-time event processing with signature verification
+- **CLI Actions** - Sync, list, and manage data from the command line
+- **Analytics Views** - Pre-built SQL views for insights
+- **Service Containers** - Docker services for background processing
+- **Nginx Routes** - Automatic webhook endpoint configuration
+
+### Plugin Registry
+- **Primary**: [plugins.nself.org](https://plugins.nself.org) - Cloudflare Worker API
+- **Fallback**: GitHub raw files for reliability
+- **Features**: Caching, update checking, version management
+
+**[View Plugin Documentation](plugins/index)** | **[Plugin Development Guide](plugins/development)**
+
+---
+
 ## Version 0.4.7 - Kubernetes Support
 
-The current release adds full Kubernetes and container orchestration support:
+Previous release added full Kubernetes and container orchestration support:
+- **`nself k8s`** - Kubernetes operations
+- **`nself helm`** - Helm chart management
+- **26 cloud providers** with normalized sizing
 
-### Kubernetes Commands
-- **`nself k8s`** - Kubernetes operations (generate, apply, status, pods, logs, exec, rollout, scale)
-- **`nself helm`** - Helm chart management (init, package, lint, install, upgrade, rollback)
-
-### Key Features
-- **Automatic Conversion** - docker-compose.yml → K8s manifests
-- **Multi-Platform** - EKS, GKE, AKS, DOKS, LKE, k3s, minikube
-- **Helm Charts** - Generate, package, and deploy Helm charts
-- **Rolling Deployments** - Zero-downtime updates with HPA support
-
-### Cloud Providers
-26 cloud providers now supported with normalized sizing and one-command provisioning.
-
-**[View Full Release Notes](releases/v0.4.7)**
+**[View v0.4.7 Release Notes](releases/v0.4.7)**
 
 ---
 
@@ -222,6 +249,6 @@ nself deploy prod
 
 <div align="center">
 
-**Version 0.4.7** · **January 2026** · **[Changelog](releases/CHANGELOG)**
+**Version 0.4.8** · **January 2026** · **[Changelog](releases/CHANGELOG)**
 
 </div>

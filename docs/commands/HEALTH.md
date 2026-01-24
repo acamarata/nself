@@ -189,4 +189,4 @@ nself health --quiet
 
 ---
 
-*Last Updated: January 23, 2026 | Version: 0.4.6*
+*Last Updated: January 24, 2026 | Version: 0.4.8*

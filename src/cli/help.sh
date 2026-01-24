@@ -127,6 +127,15 @@ show_general_help() {
   printf "  ${COLOR_BLUE}history${COLOR_RESET}       Deployment and operation audit trail\n"
   printf "  ${COLOR_BLUE}config${COLOR_RESET}        Configuration management\n"
 
+  show_section "Plugins (v0.4.8)"
+  printf "  ${COLOR_BLUE}plugin${COLOR_RESET}        Plugin management and execution\n"
+  printf "                   ├─ list: show available plugins\n"
+  printf "                   ├─ install, remove, update, status\n"
+  printf "                   └─ <plugin> <action>: run plugin commands\n"
+  echo
+  printf "  Available: stripe (billing), shopify (e-commerce), github (devops)\n"
+  printf "  Planned: linear, intercom, resend, notion, airtable, plaid\n"
+
   show_section "Utility Commands"
   printf "  ${COLOR_BLUE}ci${COLOR_RESET}            CI/CD workflow generation (GitHub/GitLab)\n"
   printf "  ${COLOR_BLUE}completion${COLOR_RESET}    Shell completion (bash/zsh/fish)\n"

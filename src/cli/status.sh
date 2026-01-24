@@ -1365,6 +1365,78 @@ check_all_envs_status() {
   fi
 }
 
+# Show plugin status
+show_plugin_status() {
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+
+  # Check if plugin directory exists
+  if [[ ! -d "$plugin_dir" ]]; then
+    return 0
+  fi
+
+  # Find installed plugins
+  local plugins=()
+  for plugin_path in "$plugin_dir"/*/plugin.json; do
+    if [[ -f "$plugin_path" ]]; then
+      local plugin_name
+      plugin_name=$(dirname "$plugin_path")
+      plugin_name=$(basename "$plugin_name")
+
+      # Skip shared utilities
+      if [[ "$plugin_name" != "_shared" ]]; then
+        plugins+=("$plugin_name")
+      fi
+    fi
+  done
+
+  # No plugins installed
+  if [[ ${#plugins[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  echo ""
+  printf "\033[1;36m→\033[0m Plugins (%d installed)\n" "${#plugins[@]}"
+  echo ""
+
+  for plugin_name in "${plugins[@]}"; do
+    local plugin_json="$plugin_dir/$plugin_name/plugin.json"
+    local version=""
+    local indicator=""
+    local status_text=""
+
+    # Get version
+    if command -v jq >/dev/null 2>&1; then
+      version=$(jq -r '.version // "?"' "$plugin_json" 2>/dev/null)
+    else
+      version=$(grep '"version"' "$plugin_json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+    fi
+
+    # Check if plugin is configured (has required env vars)
+    local is_configured=true
+    case "$plugin_name" in
+      stripe)
+        [[ -z "${STRIPE_API_KEY:-}" ]] && is_configured=false
+        ;;
+      github)
+        [[ -z "${GITHUB_TOKEN:-}" ]] && is_configured=false
+        ;;
+      shopify)
+        [[ -z "${SHOPIFY_ACCESS_TOKEN:-}" || -z "${SHOPIFY_STORE:-}" ]] && is_configured=false
+        ;;
+    esac
+
+    if [[ "$is_configured" == "true" ]]; then
+      indicator="\033[1;32m✓\033[0m"
+      status_text="configured"
+    else
+      indicator="\033[1;33m○\033[0m"
+      status_text="not configured"
+    fi
+
+    printf "%b %s v%s (%s)\n" "$indicator" "$plugin_name" "$version" "$status_text"
+  done
+}
+
 # Main function
 main() {
   local service_name=""
@@ -1489,6 +1561,9 @@ main() {
   echo
 
   show_service_overview
+
+  # Show plugin status if any plugins are installed
+  show_plugin_status
 
   # Check for configuration drift
   check_config_drift
