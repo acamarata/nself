@@ -1,6 +1,6 @@
 # Maintainer: acamarata <contact@acamarata.com>
 pkgname=nself
-pkgver=0.4.7
+pkgver=0.4.8
 pkgrel=1
 pkgdesc="Self-hosted infrastructure manager for developers"
 arch=('any')
@@ -8,7 +8,7 @@ url="https://github.com/acamarata/nself"
 license=('MIT')
 depends=('bash' 'docker' 'docker-compose' 'curl' 'git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/acamarata/nself/archive/v$pkgver.tar.gz")
-sha256sums=('133ba89bc55c50327f0c22f9b737405a5345f9cd3004333100e88861555b7aca')
+sha256sums=('14dc72326344f750b45bbe28d6bb2b32559a8713eeb941faa0fe33c1c682593b')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
