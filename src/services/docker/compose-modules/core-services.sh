@@ -15,6 +15,7 @@ generate_postgres_service() {
   cat <<EOF
 
   # PostgreSQL Database
+  # SECURITY: Bound to localhost only - never expose database to public internet
   postgres:
     image: postgres:${POSTGRES_VERSION:-16-alpine}
     container_name: \${PROJECT_NAME}_postgres
@@ -25,12 +26,13 @@ generate_postgres_service() {
       POSTGRES_USER: \${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
       POSTGRES_DB: \${POSTGRES_DB:-\${PROJECT_NAME}}
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "\${POSTGRES_PORT:-5432}:5432"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -319,30 +321,59 @@ MINIO_CLIENT_EOF
 }
 
 # Generate Redis service configuration
+# SECURITY: Redis is configured with localhost-only binding and password auth
 generate_redis_service() {
   local enabled="${REDIS_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
 
+  # Build Redis command with security options
+  # --protected-mode yes: Reject connections from external IPs without auth
+  # --appendonly yes: Persist data to disk
+  local redis_cmd="redis-server --appendonly yes --protected-mode yes"
+
+  # Add password authentication if configured (CRITICAL for security)
+  # Without this, Redis is open to anyone who can connect
+  if [[ -n "${REDIS_PASSWORD:-}" ]]; then
+    redis_cmd="${redis_cmd} --requirepass \${REDIS_PASSWORD}"
+  fi
+
   cat <<EOF
 
   # Redis Cache
+  # SECURITY: Bound to 127.0.0.1 only - never expose Redis to public internet
+  # Password authentication enabled when REDIS_PASSWORD is set
   redis:
     image: redis:${REDIS_VERSION:-7-alpine}
     container_name: \${PROJECT_NAME}_redis
     restart: unless-stopped
     networks:
       - \${DOCKER_NETWORK}
-    command: redis-server --appendonly yes
+    command: ${redis_cmd}
     volumes:
       - redis_data:/data
     ports:
-      - "\${REDIS_PORT:-6379}:6379"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${REDIS_PORT:-6379}:6379"
+EOF
+
+  # Use appropriate healthcheck based on password configuration
+  if [[ -n "${REDIS_PASSWORD:-}" ]]; then
+    cat <<EOF
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+EOF
+  else
+    cat <<EOF
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 EOF
+  fi
 
   # Add resource limits if specified
   if [[ -n "${REDIS_MEMORY:-}" ]] || [[ -n "${REDIS_CPU:-}" ]]; then

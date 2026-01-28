@@ -98,34 +98,50 @@ EOF
 }
 
 # Add Redis service
+# SECURITY: Redis is configured with localhost-only binding and password auth
 add_redis_service() {
   local file="$1"
 
+  # Build Redis command with security options
+  local redis_cmd="redis-server --appendonly yes --protected-mode yes"
+  if [[ -n "${REDIS_PASSWORD:-}" ]]; then
+    redis_cmd="${redis_cmd} --requirepass \${REDIS_PASSWORD}"
+  fi
+
   cat >> "$file" <<EOF
 
+  # Redis Cache - SECURITY: Bound to localhost only
   redis:
     image: redis:\${REDIS_VERSION:-7}-alpine
     container_name: \${PROJECT_NAME}_redis
     restart: unless-stopped
+    command: ${redis_cmd}
     ports:
-      - "\${REDIS_PORT:-6379}:6379"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
       - nself_network
+EOF
+
+  # Use appropriate healthcheck based on password
+  if [[ -n "${REDIS_PASSWORD:-}" ]]; then
+    cat >> "$file" <<EOF
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+EOF
+  else
+    cat >> "$file" <<EOF
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 EOF
-
-  # Add Redis password if configured
-  if [[ -n "${REDIS_PASSWORD:-}" ]]; then
-    # Create temp file with added command
-    local temp_file=$(mktemp)
-    awk '/container_name:.*_redis/ {print; print "    command: redis-server --requirepass ${REDIS_PASSWORD}"; next} 1' "$file" > "$temp_file"
-    mv "$temp_file" "$file"
   fi
 }
 
