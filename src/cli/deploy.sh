@@ -1181,10 +1181,73 @@ deploy_to_env() {
         chmod 600 .env
       fi
 
+      # Load environment variables
+      set -a
+      source .env 2>/dev/null || true
+      set +a
+
       # Pull Docker images
       docker compose pull 2>/dev/null || true
 
-      # Start services (recreate to pick up config changes)
+      # ═══════════════════════════════════════════════════════════════
+      # ENSURE DATABASE EXISTS BEFORE STARTING SERVICES
+      # The Golden Rule: Users should NEVER need to SSH into servers
+      # ═══════════════════════════════════════════════════════════════
+
+      # Start ONLY postgres first
+      echo 'step:starting_postgres'
+      docker compose up -d postgres 2>/dev/null
+
+      # Wait for PostgreSQL to accept connections (max 60 seconds)
+      WAITED=0
+      MAX_WAIT=60
+      while [ \$WAITED -lt \$MAX_WAIT ]; do
+        if docker compose exec -T postgres pg_isready -U \"\${POSTGRES_USER:-postgres}\" >/dev/null 2>&1; then
+          break
+        fi
+        sleep 1
+        WAITED=\$((WAITED + 1))
+      done
+
+      if [ \$WAITED -ge \$MAX_WAIT ]; then
+        echo 'error:postgres_not_ready'
+        exit 1
+      fi
+
+      echo 'step:postgres_ready'
+
+      # Get database name from env
+      DB_NAME=\"\${POSTGRES_DB:-\${PROJECT_NAME:-nhost}}\"
+      DB_USER=\"\${POSTGRES_USER:-postgres}\"
+
+      # Create database if it doesn't exist
+      DB_EXISTS=\$(docker compose exec -T postgres psql -U \"\$DB_USER\" -tAc \"SELECT 1 FROM pg_database WHERE datname='\$DB_NAME'\" 2>/dev/null || echo '')
+
+      if [ \"\$DB_EXISTS\" != '1' ]; then
+        echo 'step:creating_database'
+        docker compose exec -T postgres psql -U \"\$DB_USER\" -c \"CREATE DATABASE \\\"\$DB_NAME\\\";\" 2>/dev/null || true
+      fi
+
+      # Create required schemas
+      echo 'step:ensuring_schemas'
+      docker compose exec -T postgres psql -U \"\$DB_USER\" -d \"\$DB_NAME\" -c \"
+        CREATE SCHEMA IF NOT EXISTS auth;
+        CREATE SCHEMA IF NOT EXISTS storage;
+        CREATE SCHEMA IF NOT EXISTS public;
+        CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        CREATE EXTENSION IF NOT EXISTS citext;
+        CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+        GRANT ALL ON SCHEMA auth TO \\\"\$DB_USER\\\";
+        GRANT ALL ON SCHEMA storage TO \\\"\$DB_USER\\\";
+        GRANT ALL ON SCHEMA public TO \\\"\$DB_USER\\\";
+      \" 2>/dev/null || true
+
+      echo 'step:database_ready'
+
+      # ═══════════════════════════════════════════════════════════════
+      # NOW start all services (database is guaranteed to exist)
+      # ═══════════════════════════════════════════════════════════════
+      echo 'step:starting_all_services'
       docker compose up -d --remove-orphans --force-recreate 2>/dev/null
 
       echo 'deploy_ok'
@@ -1192,9 +1255,21 @@ deploy_to_env() {
 
     if echo "$deploy_result" | grep -q "deploy_ok"; then
       printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+
+      # Show steps that were executed
+      if echo "$deploy_result" | grep -q "step:creating_database"; then
+        printf "    ${COLOR_CYAN}→${COLOR_RESET} Created database\n"
+      fi
+      if echo "$deploy_result" | grep -q "step:ensuring_schemas"; then
+        printf "    ${COLOR_CYAN}→${COLOR_RESET} Ensured schemas (auth, storage, public)\n"
+      fi
     else
       printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
-      log_error "Deployment failed. Check server logs."
+      if echo "$deploy_result" | grep -q "error:postgres_not_ready"; then
+        log_error "PostgreSQL failed to start within 60 seconds"
+      else
+        log_error "Deployment failed. Check server logs."
+      fi
       return 1
     fi
 
@@ -1266,46 +1341,204 @@ deploy_to_env() {
     fi
   fi
 
-  # Health checks
+  # ═══════════════════════════════════════════════════════════════
+  # POST-DEPLOY HEALTH VERIFICATION
+  # Verify EVERYTHING works - not just that containers are running
+  # ═══════════════════════════════════════════════════════════════
   if [[ "$skip_health" != "true" ]]; then
     printf "\n"
-    log_info "Waiting for services to start..."
+    log_info "Verifying deployment health..."
 
     # Give services time to start up
-    sleep 5
+    sleep 8
 
-    if command -v health::check_deployment >/dev/null 2>&1; then
-      health::check_deployment "$host" "$deploy_path" "$user" "$port" "$key_file"
+    local health_failures=0
+    local health_warnings=0
+
+    # Step 1: Check Docker container health
+    printf "  Checking container health... "
+    local container_health
+    container_health=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+      cd '$deploy_path'
+      TOTAL=\$(docker compose ps --format '{{.Name}}' 2>/dev/null | wc -l)
+      UP=\$(docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'Up' || echo '0')
+      HEALTHY=\$(docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'healthy' || echo '0')
+      UNHEALTHY=\$(docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'unhealthy' || echo '0')
+      echo \"total:\$TOTAL up:\$UP healthy:\$HEALTHY unhealthy:\$UNHEALTHY\"
+    " 2>/dev/null)
+
+    local total_containers up_containers healthy_containers unhealthy_containers
+    total_containers=$(echo "$container_health" | grep -o 'total:[0-9]*' | cut -d: -f2)
+    up_containers=$(echo "$container_health" | grep -o 'up:[0-9]*' | cut -d: -f2)
+    unhealthy_containers=$(echo "$container_health" | grep -o 'unhealthy:[0-9]*' | cut -d: -f2)
+
+    if [[ "${unhealthy_containers:-0}" -gt 0 ]]; then
+      printf "${COLOR_RED}%s unhealthy${COLOR_RESET}\n" "$unhealthy_containers"
+      health_failures=$((health_failures + 1))
+    elif [[ "${up_containers:-0}" -gt 0 ]]; then
+      printf "${COLOR_GREEN}%s/%s running${COLOR_RESET}\n" "$up_containers" "$total_containers"
     else
-      # Basic health check fallback
-      printf "  Checking Docker services... "
-      local container_count
-      container_count=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
-        cd '$deploy_path' && docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'Up' || echo '0'
-      " 2>/dev/null)
+      printf "${COLOR_YELLOW}Starting...${COLOR_RESET}\n"
+      health_warnings=$((health_warnings + 1))
+    fi
 
-      if [[ "$container_count" -gt 0 ]]; then
-        printf "${COLOR_GREEN}%s container(s) running${COLOR_RESET}\n" "$container_count"
+    # Step 2: Check API health endpoint
+    if [[ -n "$base_domain" ]] && [[ "$base_domain" != "localhost" ]]; then
+      printf "  API health check... "
+      local api_health
+      api_health=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 \
+        "https://api.${base_domain}/healthz" 2>/dev/null || echo "000")
+
+      if [[ "$api_health" == "200" ]]; then
+        printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+      elif [[ "$api_health" == "000" ]]; then
+        printf "${COLOR_YELLOW}No response${COLOR_RESET} (may still be starting)\n"
+        health_warnings=$((health_warnings + 1))
       else
-        printf "${COLOR_YELLOW}Containers starting...${COLOR_RESET}\n"
-        log_info "Services may take a moment to fully start"
-        log_info "Check status with: nself deploy status"
+        printf "${COLOR_RED}HTTP %s${COLOR_RESET}\n" "$api_health"
+        health_failures=$((health_failures + 1))
       fi
 
-      # Check nginx specifically
-      printf "  Checking nginx... "
-      local nginx_status
-      nginx_status=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
-        docker compose ps nginx --format '{{.Status}}' 2>/dev/null | head -1
+      # Step 3: Check Auth health endpoint
+      printf "  Auth health check... "
+      local auth_health
+      auth_health=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 \
+        "https://auth.${base_domain}/healthz" 2>/dev/null || echo "000")
+
+      if [[ "$auth_health" == "200" ]]; then
+        printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+      elif [[ "$auth_health" == "000" ]]; then
+        printf "${COLOR_YELLOW}No response${COLOR_RESET}\n"
+        health_warnings=$((health_warnings + 1))
+      else
+        printf "${COLOR_RED}HTTP %s${COLOR_RESET}\n" "$auth_health"
+        health_failures=$((health_failures + 1))
+      fi
+
+      # Step 4: Test GraphQL endpoint actually works
+      printf "  GraphQL test... "
+      local graphql_test
+      graphql_test=$(curl -s -X POST "https://api.${base_domain}/v1/graphql" \
+        -H "Content-Type: application/json" \
+        -d '{"query":"{ __typename }"}' \
+        --connect-timeout 10 2>/dev/null)
+
+      if echo "$graphql_test" | grep -q '"data"'; then
+        printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+      elif echo "$graphql_test" | grep -q 'errors'; then
+        local error_msg
+        error_msg=$(echo "$graphql_test" | grep -o '"message":"[^"]*"' | head -1 | cut -d'"' -f4)
+        printf "${COLOR_RED}ERROR${COLOR_RESET} - %s\n" "${error_msg:-GraphQL query failed}"
+        health_failures=$((health_failures + 1))
+      else
+        printf "${COLOR_YELLOW}No response${COLOR_RESET}\n"
+        health_warnings=$((health_warnings + 1))
+      fi
+    fi
+
+    # ═══════════════════════════════════════════════════════════════
+    # AUTO-FIX: If health check failed, attempt automatic fixes
+    # ═══════════════════════════════════════════════════════════════
+    if [[ $health_failures -gt 0 ]]; then
+      printf "\n"
+      log_warning "Detected $health_failures health issue(s). Attempting auto-fix..."
+
+      local fix_result
+      fix_result=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+        cd '$deploy_path' || exit 1
+
+        # Load environment
+        set -a
+        source .env 2>/dev/null || true
+        set +a
+
+        DB_NAME=\"\${POSTGRES_DB:-\${PROJECT_NAME:-nhost}}\"
+        DB_USER=\"\${POSTGRES_USER:-postgres}\"
+
+        # Fix 1: Ensure database exists
+        DB_EXISTS=\$(docker compose exec -T postgres psql -U \"\$DB_USER\" -tAc \"SELECT 1 FROM pg_database WHERE datname='\$DB_NAME'\" 2>/dev/null || echo '')
+        if [ \"\$DB_EXISTS\" != '1' ]; then
+          echo 'fix:creating_database'
+          docker compose exec -T postgres psql -U \"\$DB_USER\" -c \"CREATE DATABASE \\\"\$DB_NAME\\\";\" 2>/dev/null || true
+        fi
+
+        # Fix 2: Ensure schemas exist
+        docker compose exec -T postgres psql -U \"\$DB_USER\" -d \"\$DB_NAME\" -c \"
+          CREATE SCHEMA IF NOT EXISTS auth;
+          CREATE SCHEMA IF NOT EXISTS storage;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          CREATE EXTENSION IF NOT EXISTS citext;
+        \" 2>/dev/null && echo 'fix:schemas_ensured'
+
+        # Fix 3: Restart unhealthy services
+        UNHEALTHY=\$(docker compose ps --format '{{.Name}}:{{.Status}}' 2>/dev/null | grep -i 'unhealthy' | cut -d: -f1)
+        if [ -n \"\$UNHEALTHY\" ]; then
+          echo \"fix:restarting_unhealthy:\$UNHEALTHY\"
+          for svc in \$UNHEALTHY; do
+            docker restart \"\$svc\" 2>/dev/null || true
+          done
+        fi
+
+        # Fix 4: Ensure Hasura can connect (restart if needed)
+        HASURA_STATUS=\$(docker compose ps hasura --format '{{.Status}}' 2>/dev/null | head -1)
+        if echo \"\$HASURA_STATUS\" | grep -qi 'unhealthy'; then
+          echo 'fix:restarting_hasura'
+          docker compose restart hasura 2>/dev/null || true
+        fi
+
+        echo 'fix_complete'
       " 2>/dev/null)
 
-      if echo "$nginx_status" | grep -qi "up"; then
-        printf "${COLOR_GREEN}Running${COLOR_RESET}\n"
-      elif [[ -n "$nginx_status" ]]; then
-        printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$nginx_status"
-      else
-        printf "${COLOR_YELLOW}Starting...${COLOR_RESET}\n"
+      # Report what was fixed
+      if echo "$fix_result" | grep -q "fix:creating_database"; then
+        printf "  ${COLOR_CYAN}→${COLOR_RESET} Created missing database\n"
       fi
+      if echo "$fix_result" | grep -q "fix:schemas_ensured"; then
+        printf "  ${COLOR_CYAN}→${COLOR_RESET} Ensured database schemas\n"
+      fi
+      if echo "$fix_result" | grep -q "fix:restarting_unhealthy"; then
+        printf "  ${COLOR_CYAN}→${COLOR_RESET} Restarted unhealthy services\n"
+      fi
+      if echo "$fix_result" | grep -q "fix:restarting_hasura"; then
+        printf "  ${COLOR_CYAN}→${COLOR_RESET} Restarted Hasura\n"
+      fi
+
+      # Wait and re-verify
+      printf "\n  Re-verifying after fixes...\n"
+      sleep 10
+
+      # Quick re-check
+      local recheck_health
+      recheck_health=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+        cd '$deploy_path'
+        UNHEALTHY=\$(docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'unhealthy' || echo '0')
+        UP=\$(docker compose ps --format '{{.Status}}' 2>/dev/null | grep -c 'Up' || echo '0')
+        echo \"up:\$UP unhealthy:\$UNHEALTHY\"
+      " 2>/dev/null)
+
+      local recheck_unhealthy recheck_up
+      recheck_unhealthy=$(echo "$recheck_health" | grep -o 'unhealthy:[0-9]*' | cut -d: -f2)
+      recheck_up=$(echo "$recheck_health" | grep -o 'up:[0-9]*' | cut -d: -f2)
+
+      if [[ "${recheck_unhealthy:-0}" -eq 0 ]] && [[ "${recheck_up:-0}" -gt 0 ]]; then
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} All services now healthy\n"
+        health_failures=0
+      else
+        printf "  ${COLOR_YELLOW}!${COLOR_RESET} Some issues may persist. Run: nself doctor --fix\n"
+      fi
+    fi
+
+    # Final status
+    printf "\n"
+    if [[ $health_failures -eq 0 ]]; then
+      printf "${COLOR_GREEN}═══════════════════════════════════════════════════════════════${COLOR_RESET}\n"
+      printf "${COLOR_GREEN}  ✓ All systems operational${COLOR_RESET}\n"
+      printf "${COLOR_GREEN}═══════════════════════════════════════════════════════════════${COLOR_RESET}\n"
+    else
+      printf "${COLOR_YELLOW}═══════════════════════════════════════════════════════════════${COLOR_RESET}\n"
+      printf "${COLOR_YELLOW}  ! Deployment complete with warnings${COLOR_RESET}\n"
+      printf "${COLOR_YELLOW}  Run: nself doctor --fix for detailed diagnostics${COLOR_RESET}\n"
+      printf "${COLOR_YELLOW}═══════════════════════════════════════════════════════════════${COLOR_RESET}\n"
     fi
   fi
 

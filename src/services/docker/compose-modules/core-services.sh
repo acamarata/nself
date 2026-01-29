@@ -83,13 +83,15 @@ EOF
 
   # Add auth configuration based on auth mode
   if [[ "${AUTH_ENABLED:-false}" == "true" ]]; then
-    # Use webhook auth mode
+    # Use JWT mode (nHost auth's native mode)
+    # IMPORTANT: nHost auth does NOT have a /webhook endpoint
+    # It uses JWT tokens, so Hasura must validate JWTs directly
     cat <<EOF
-      HASURA_GRAPHQL_AUTH_HOOK: http://auth:4000/webhook
-      HASURA_GRAPHQL_AUTH_HOOK_MODE: GET
+      HASURA_GRAPHQL_JWT_SECRET: \${HASURA_GRAPHQL_JWT_SECRET}
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
 EOF
   else
-    # No auth - just use admin secret
+    # No auth - just use admin secret with public access
     cat <<EOF
       HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
 EOF
