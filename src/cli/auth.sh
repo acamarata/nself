@@ -223,15 +223,30 @@ cmd_auth_login() {
     esac
   done
 
-  # Placeholder - will implement in AUTH-004, AUTH-005, AUTH-006, AUTH-007
-  log_info "Login functionality coming in AUTH-004 through AUTH-007"
-  log_info "Provider: ${provider:-none}"
-  log_info "Email: ${email:-none}"
-  log_info "Phone: ${phone:-none}"
-  log_info "Anonymous: $anonymous"
-
-  # TODO: Implement actual login logic
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+  # Route to appropriate auth method
+  if [[ -n "$email" ]] && [[ -n "$password" ]]; then
+    # Email/password login
+    auth_login_email "$email" "$password"
+  elif [[ -n "$provider" ]]; then
+    # OAuth login
+    log_warning "OAuth login not yet implemented (OAUTH-003+)"
+    auth_login_oauth "$provider"
+  elif [[ -n "$phone" ]]; then
+    # Phone/SMS login
+    log_warning "Phone login not yet implemented (AUTH-006)"
+    auth_login_phone "$phone"
+  elif $anonymous; then
+    # Anonymous login
+    log_warning "Anonymous login not yet implemented (AUTH-007)"
+    auth_login_anonymous
+  elif [[ -n "$email" ]]; then
+    # Magic link login (email only, no password)
+    log_warning "Magic link not yet implemented (AUTH-005)"
+    auth_login_magic_link "$email"
+  else
+    log_error "Please provide login credentials (--email and --password, or --provider, or --phone, or --anonymous)"
+    exit 1
+  fi
 }
 
 # ============================================================================
@@ -274,14 +289,22 @@ cmd_auth_signup() {
     esac
   done
 
-  # Placeholder - will implement in AUTH-004, AUTH-005, AUTH-006
-  log_info "Signup functionality coming in AUTH-004 through AUTH-006"
-  log_info "Provider: ${provider:-none}"
-  log_info "Email: ${email:-none}"
-  log_info "Phone: ${phone:-none}"
-
-  # TODO: Implement actual signup logic
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+  # Route to appropriate signup method
+  if [[ -n "$email" ]] && [[ -n "$password" ]]; then
+    # Email/password signup
+    auth_signup_email "$email" "$password"
+  elif [[ -n "$provider" ]]; then
+    # OAuth signup (same as login for OAuth)
+    log_warning "OAuth signup not yet implemented (OAUTH-003+)"
+    auth_login_oauth "$provider"
+  elif [[ -n "$phone" ]] && [[ -n "$password" ]]; then
+    # Phone/SMS signup
+    log_warning "Phone signup not yet implemented (AUTH-006)"
+    # TODO: Implement auth_signup_phone
+  else
+    log_error "Please provide signup credentials (--email and --password, or --provider, or --phone and --password)"
+    exit 1
+  fi
 }
 
 # ============================================================================

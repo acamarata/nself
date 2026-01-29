@@ -28,6 +28,11 @@ if [[ -f "$NSELF_ROOT/src/lib/services/postgres.sh" ]]; then
   source "$NSELF_ROOT/src/lib/services/postgres.sh" 2>/dev/null || true
 fi
 
+# Source password utilities
+if [[ -f "$SCRIPT_DIR/password-utils.sh" ]]; then
+  source "$SCRIPT_DIR/password-utils.sh"
+fi
+
 # ============================================================================
 # Constants
 # ============================================================================
@@ -546,24 +551,167 @@ auth_list_sessions() {
 
 # Login with email/password
 # Usage: auth_login_email <email> <password>
+# Returns: JSON with session token on success
 auth_login_email() {
   local email="$1"
   local password="$2"
 
-  # TODO: Implement in AUTH-004
-  log_warning "auth_login_email not yet implemented (AUTH-004)"
-  return 1
+  if [[ -z "$email" ]] || [[ -z "$password" ]]; then
+    log_error "Email and password required"
+    return 1
+  fi
+
+  log_info "Authenticating user: $email"
+
+  local container
+  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+
+  if [[ -z "$container" ]]; then
+    log_error "PostgreSQL container not found. Run 'nself start' first."
+    return 1
+  fi
+
+  # Get user from database
+  local user_data
+  user_data=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+    "SELECT id, password_hash, email_verified, disabled_at, deleted_at FROM auth.users WHERE email = '$email' LIMIT 1;" \
+    2>/dev/null || echo "")
+
+  if [[ -z "$user_data" ]]; then
+    log_error "Invalid email or password"
+    return 1
+  fi
+
+  # Parse user data (tab-separated: id, password_hash, email_verified, disabled_at, deleted_at)
+  local user_id password_hash email_verified disabled_at deleted_at
+  read -r user_id password_hash email_verified disabled_at deleted_at <<< "$(echo "$user_data" | xargs)"
+
+  # Check if user is disabled or deleted
+  if [[ -n "$disabled_at" ]] || [[ -n "$deleted_at" ]]; then
+    log_error "Account is disabled"
+    return 1
+  fi
+
+  # Verify password
+  if ! verify_password "$password" "$password_hash"; then
+    log_error "Invalid email or password"
+    return 1
+  fi
+
+  # Create session
+  local session_token
+  session_token=$(auth_generate_token 32)
+
+  local refresh_token
+  refresh_token=$(auth_generate_token 48)
+
+  local expires_at
+  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+               date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+
+  # Insert session into database
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$expires_at'::timestamptz);" \
+    >/dev/null 2>&1
+
+  if [[ $? -ne 0 ]]; then
+    log_error "Failed to create session"
+    return 1
+  fi
+
+  # Update last_sign_in_at
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "UPDATE auth.users SET last_sign_in_at = NOW() WHERE id = '$user_id';" \
+    >/dev/null 2>&1
+
+  # Log audit event
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "INSERT INTO auth.audit_log (user_id, event_type, success) VALUES ('$user_id', 'login', true);" \
+    >/dev/null 2>&1
+
+  log_info "✓ Login successful"
+
+  # Return session info as JSON
+  echo "{\"user_id\": \"$user_id\", \"token\": \"$session_token\", \"refresh_token\": \"$refresh_token\", \"expires_at\": \"$expires_at\"}"
+  return 0
 }
 
 # Signup with email/password
 # Usage: auth_signup_email <email> <password>
+# Returns: JSON with user ID on success
 auth_signup_email() {
   local email="$1"
   local password="$2"
 
-  # TODO: Implement in AUTH-004
-  log_warning "auth_signup_email not yet implemented (AUTH-004)"
-  return 1
+  if [[ -z "$email" ]] || [[ -z "$password" ]]; then
+    log_error "Email and password required"
+    return 1
+  fi
+
+  log_info "Creating new user: $email"
+
+  # Validate email format
+  if ! echo "$email" | grep -qE '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; then
+    log_error "Invalid email format"
+    return 1
+  fi
+
+  # Validate password strength
+  if ! validate_password_strength "$password"; then
+    return 1
+  fi
+
+  local container
+  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+
+  if [[ -z "$container" ]]; then
+    log_error "PostgreSQL container not found. Run 'nself start' first."
+    return 1
+  fi
+
+  # Check if user already exists
+  local existing_user
+  existing_user=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+    "SELECT id FROM auth.users WHERE email = '$email' LIMIT 1;" \
+    2>/dev/null || echo "")
+
+  if [[ -n "$existing_user" ]]; then
+    log_error "User with this email already exists"
+    return 1
+  fi
+
+  # Hash password
+  local password_hash
+  password_hash=$(hash_password "$password")
+
+  if [[ -z "$password_hash" ]]; then
+    log_error "Failed to hash password"
+    return 1
+  fi
+
+  # Insert user into database
+  local user_id
+  user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+    "INSERT INTO auth.users (email, password_hash) VALUES ('$email', '$password_hash') RETURNING id;" \
+    2>/dev/null || echo "")
+
+  user_id=$(echo "$user_id" | xargs)
+
+  if [[ -z "$user_id" ]]; then
+    log_error "Failed to create user"
+    return 1
+  fi
+
+  # Log audit event
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "INSERT INTO auth.audit_log (user_id, event_type, success) VALUES ('$user_id', 'signup', true);" \
+    >/dev/null 2>&1
+
+  log_info "✓ User created successfully"
+
+  # Return user info as JSON
+  echo "{\"user_id\": \"$user_id\", \"email\": \"$email\"}"
+  return 0
 }
 
 # Login with magic link
