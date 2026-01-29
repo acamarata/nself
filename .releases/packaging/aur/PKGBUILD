@@ -8,7 +8,7 @@ url="https://github.com/acamarata/nself"
 license=('MIT')
 depends=('bash' 'docker' 'docker-compose' 'curl' 'git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/acamarata/nself/archive/v$pkgver.tar.gz")
-sha256sums=('PLACEHOLDER')
+sha256sums=('ec7cca1d5e51c0f14b4ccf2954ed64e5e86b6a2b38550b40387f06eb6d335be8')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
