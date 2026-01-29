@@ -233,7 +233,7 @@ get_available_memory_gb() {
     ;;
   windows)
     if command -v wmic &>/dev/null; then
-      local mem_bytes=$(wmic computersystem get TotalPhysicalMemory -value | grep = | cut -d= -f2 | tr -d '\r')
+      local mem_bytes=$(wmic computersystem get TotalPhysicalMemory -value | grep '=' | cut -d= -f2 | tr -d '\r')
       echo $((mem_bytes / 1073741824))
     else
       echo 0
@@ -256,7 +256,7 @@ get_available_disk_gb() {
   windows)
     if command -v wmic &>/dev/null; then
       local drive=$(echo "$path" | cut -c1)
-      wmic logicaldisk where "DeviceID='${drive}:'" get FreeSpace -value | grep = | cut -d= -f2 | awk '{print int($1/1073741824)}' || echo 0
+      wmic logicaldisk where "DeviceID='${drive}:'" get FreeSpace -value | grep '=' | cut -d= -f2 | awk '{print int($1/1073741824)}' || echo 0
     else
       df -BG "$path" 2>/dev/null | awk 'NR==2 {print int($4)}' || echo 0
     fi

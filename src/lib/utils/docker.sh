@@ -94,28 +94,28 @@ sort_services() {
 
   # 1. Core services (in order)
   for svc in "${core[@]}"; do
-    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+    if [[ " ${services[*]} " =~ " ${svc} " ]]; then
       sorted+=("$svc")
     fi
   done
 
   # 2. Optional services (in order)
   for svc in "${optional[@]}"; do
-    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+    if [[ " ${services[*]} " =~ " ${svc} " ]]; then
       sorted+=("$svc")
     fi
   done
 
   # 3. Monitoring services (by priority)
   for svc in "${monitoring_priority[@]}"; do
-    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+    if [[ " ${services[*]} " =~ " ${svc} " ]]; then
       sorted+=("$svc")
     fi
   done
 
   # 4. Monitoring exporters (alphabetically)
   for svc in "${monitoring_exporters[@]}"; do
-    if [[ " ${services[@]} " =~ " ${svc} " ]]; then
+    if [[ " ${services[*]} " =~ " ${svc} " ]]; then
       sorted+=("$svc")
     fi
   done
@@ -124,7 +124,7 @@ sort_services() {
   local -a custom=()
   for svc in "${services[@]}"; do
     # Check if it's a custom service (not in any predefined list)
-    if [[ ! " ${sorted[@]} " =~ " ${svc} " ]]; then
+    if [[ ! " ${sorted[*]} " =~ " ${svc} " ]]; then
       custom+=("$svc")
     fi
   done
