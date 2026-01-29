@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# migrate.sh - Cross-environment migration
-# v0.4.6 - Part of the Scaling & Performance release
+# migrate.sh - Cross-environment migration and vendor migration
+# v0.4.8 - Sprint 20: Migration & Upgrade Tools
 
 set -e
 
@@ -13,6 +13,10 @@ source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+
+# Source migration libraries
+source "$CLI_SCRIPT_DIR/../lib/migrate/firebase.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/migrate/supabase.sh" 2>/dev/null || true
 
 # Color fallbacks
 : "${COLOR_GREEN:=\033[0;32m}"
@@ -26,16 +30,23 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 # Show help
 show_migrate_help() {
   cat << 'EOF'
-nself migrate - Cross-environment migration
+nself migrate - Migrations (environments and vendors)
+
+Mission: Help you escape vendor lock-in
 
 Usage: nself migrate <source> <target> [options]
+       nself migrate from <vendor> [options]
        nself migrate <subcommand> [options]
 
-Subcommands:
+Environment Migration:
   <source> <target>     Migrate from source to target environment
   sync <source> <target> Keep environments continuously in sync
   diff <source> <target> Show differences between environments
   rollback              Rollback last migration
+
+Vendor Migration (Escape Lock-in):
+  from firebase         Migrate from Firebase to nself
+  from supabase         Migrate from Supabase to nself
 
 Options:
   --dry-run             Preview migration without making changes
@@ -52,12 +63,21 @@ Environments:
   prod / production     Production environment
 
 Examples:
+  # Environment migrations
   nself migrate local staging          # Migrate local to staging
   nself migrate staging prod           # Migrate staging to production
   nself migrate staging prod --dry-run # Preview migration
   nself migrate diff staging prod      # Show differences
   nself migrate sync staging prod      # Continuous sync
   nself migrate rollback               # Rollback last migration
+
+  # Vendor migrations (escape lock-in)
+  nself migrate from firebase          # Interactive Firebase migration
+  nself migrate from supabase          # Interactive Supabase migration
+
+For detailed migration guides:
+  nself migrate from firebase --help
+  nself migrate from supabase --help
 EOF
 }
 
@@ -402,6 +422,124 @@ cmd_rollback() {
   log_success "Rollback checkpoint cleared"
 }
 
+# Migrate from Firebase
+cmd_migrate_from_firebase() {
+  show_command_header "nself migrate" "Firebase → nself Migration"
+  echo ""
+
+  # Interactive mode
+  log_info "This wizard will help you migrate from Firebase to nself"
+  echo ""
+
+  # Get service account
+  printf "Firebase service account JSON path: "
+  read -r service_account
+
+  if [[ ! -f "$service_account" ]]; then
+    log_error "Service account file not found: $service_account"
+    return 1
+  fi
+
+  # Get collections
+  printf "Collections to migrate (comma-separated or 'all'): "
+  read -r collections
+  collections=${collections:-all}
+
+  # Get storage bucket (optional)
+  printf "Firebase Storage bucket (optional, press Enter to skip): "
+  read -r storage_bucket
+
+  # Output directory
+  local output_dir="./firebase-migration-$(date +%Y%m%d-%H%M%S)"
+  printf "Output directory [${output_dir}]: "
+  read -r custom_output
+  output_dir=${custom_output:-$output_dir}
+
+  echo ""
+
+  # Run migration
+  migrate_from_firebase "$service_account" "$output_dir" "$collections" "$storage_bucket"
+}
+
+# Migrate from Supabase
+cmd_migrate_from_supabase() {
+  show_command_header "nself migrate" "Supabase → nself Migration"
+  echo ""
+
+  # Interactive mode
+  log_info "This wizard will help you migrate from Supabase to nself"
+  echo ""
+
+  # Get Supabase credentials
+  printf "Supabase Project URL (https://xxx.supabase.co): "
+  read -r supabase_url
+
+  printf "Supabase Service Role Key: "
+  read -rs service_role_key
+  echo ""
+
+  # Get database connection details
+  printf "Database host (e.g., db.xxx.supabase.co): "
+  read -r db_host
+
+  printf "Database port [5432]: "
+  read -r db_port
+  db_port=${db_port:-5432}
+
+  printf "Database name [postgres]: "
+  read -r db_name
+  db_name=${db_name:-postgres}
+
+  printf "Database user [postgres]: "
+  read -r db_user
+  db_user=${db_user:-postgres}
+
+  printf "Database password: "
+  read -rs db_pass
+  echo ""
+
+  # Output directory
+  local output_dir="./supabase-migration-$(date +%Y%m%d-%H%M%S)"
+  printf "Output directory [${output_dir}]: "
+  read -r custom_output
+  output_dir=${custom_output:-$output_dir}
+
+  echo ""
+
+  # Run migration
+  migrate_from_supabase "$supabase_url" "$service_role_key" "$db_host" "$db_port" "$db_name" "$db_user" "$db_pass" "$output_dir"
+}
+
+# Handle vendor migration subcommands
+cmd_migrate_from() {
+  local vendor="${1:-}"
+
+  if [[ -z "$vendor" ]]; then
+    log_error "Vendor required: firebase or supabase"
+    echo ""
+    echo "Usage:"
+    echo "  nself migrate from firebase"
+    echo "  nself migrate from supabase"
+    return 1
+  fi
+
+  case "$vendor" in
+    firebase)
+      shift
+      cmd_migrate_from_firebase "$@"
+      ;;
+    supabase)
+      shift
+      cmd_migrate_from_supabase "$@"
+      ;;
+    *)
+      log_error "Unknown vendor: $vendor"
+      log_info "Supported vendors: firebase, supabase"
+      return 1
+      ;;
+  esac
+}
+
 # Main command handler
 cmd_migrate() {
   local subcommand="${1:-}"
@@ -460,6 +598,11 @@ cmd_migrate() {
   subcommand="${1:-}"
 
   case "$subcommand" in
+    from)
+      # Vendor migration (Firebase, Supabase, etc.)
+      shift
+      cmd_migrate_from "$@"
+      ;;
     diff)
       shift
       cmd_diff "$@"
