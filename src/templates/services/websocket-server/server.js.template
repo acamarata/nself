@@ -1,0 +1,317 @@
+const { Server } = require('socket.io');
+const { createServer } = require('http');
+const { Client } = require('pg');
+const Redis = require('redis');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+require('dotenv').config();
+
+const PORT = process.env.{{SERVICE_NAME_UPPER}}_PORT || {{PORT}};
+const JWT_SECRET = process.env.HASURA_GRAPHQL_JWT_SECRET || 'your-jwt-secret';
+
+// PostgreSQL client
+const pgClient = new Client({
+  host: process.env.POSTGRES_HOST || 'postgres',
+  port: process.env.POSTGRES_PORT || 5432,
+  database: process.env.POSTGRES_DB || 'nself',
+  user: process.env.POSTGRES_USER || 'postgres',
+  password: process.env.POSTGRES_PASSWORD
+});
+
+// Redis client (optional - for scaling)
+let redisClient;
+if (process.env.REDIS_ENABLED === 'true') {
+  redisClient = Redis.createClient({
+    socket: {
+      host: process.env.REDIS_HOST || 'redis',
+      port: process.env.REDIS_PORT || 6379
+    }
+  });
+  redisClient.connect();
+}
+
+// Connect to PostgreSQL
+pgClient.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch(err => console.error('PostgreSQL connection error:', err));
+
+// HTTP server
+const httpServer = createServer();
+
+// Socket.IO server
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*', // Configure based on your needs
+    methods: ['GET', 'POST']
+  },
+  transports: ['websocket', 'polling']
+});
+
+// Authentication middleware
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+
+    if (!token) {
+      return next(new Error('Authentication token required'));
+    }
+
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.userId = decoded.sub || decoded.user_id;
+    socket.tenantId = decoded.tenant_id;
+
+    // Record connection in database
+    const result = await pgClient.query(`
+      SELECT realtime.connect(
+        $1::uuid,
+        $2::uuid,
+        $3,
+        $4,
+        $5,
+        $6
+      ) as connection_id
+    `, [
+      socket.userId,
+      socket.tenantId,
+      socket.id,
+      socket.id,
+      socket.handshake.address,
+      socket.handshake.headers['user-agent']
+    ]);
+
+    socket.connectionId = result.rows[0].connection_id;
+
+    next();
+  } catch (err) {
+    console.error('Authentication error:', err);
+    next(new Error('Authentication failed'));
+  }
+});
+
+// Connection handler
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.userId} (${socket.id})`);
+
+  // Subscribe to channel
+  socket.on('subscribe', async (data) => {
+    try {
+      const { channel } = data;
+
+      // Join Socket.IO room
+      socket.join(channel);
+
+      // Record subscription
+      await pgClient.query(`
+        INSERT INTO realtime.subscriptions (user_id, channel_id, connection_id)
+        SELECT $1::uuid, c.id, (SELECT id FROM realtime.connections WHERE connection_id = $3 LIMIT 1)
+        FROM realtime.channels c
+        WHERE c.slug = $2
+        ON CONFLICT DO NOTHING
+      `, [socket.userId, channel, socket.id]);
+
+      // Update presence
+      await pgClient.query(`
+        SELECT realtime.update_presence($1::uuid, (SELECT id FROM realtime.channels WHERE slug = $2 LIMIT 1), 'online', '{}')
+      `, [socket.userId, channel]);
+
+      // Notify others in channel
+      socket.to(channel).emit('user:joined', {
+        userId: socket.userId,
+        timestamp: new Date()
+      });
+
+      socket.emit('subscribed', { channel });
+    } catch (err) {
+      console.error('Subscribe error:', err);
+      socket.emit('error', { message: 'Failed to subscribe' });
+    }
+  });
+
+  // Unsubscribe from channel
+  socket.on('unsubscribe', async (data) => {
+    try {
+      const { channel } = data;
+
+      socket.leave(channel);
+
+      await pgClient.query(`
+        DELETE FROM realtime.subscriptions
+        WHERE user_id = $1::uuid
+        AND channel_id = (SELECT id FROM realtime.channels WHERE slug = $2)
+        AND connection_id = (SELECT id FROM realtime.connections WHERE connection_id = $3)
+      `, [socket.userId, channel, socket.id]);
+
+      socket.to(channel).emit('user:left', {
+        userId: socket.userId,
+        timestamp: new Date()
+      });
+
+      socket.emit('unsubscribed', { channel });
+    } catch (err) {
+      console.error('Unsubscribe error:', err);
+    }
+  });
+
+  // Send message to channel
+  socket.on('message:send', async (data) => {
+    try {
+      const { channel, content, messageType = 'text', metadata = {} } = data;
+
+      // Save message to database
+      const result = await pgClient.query(`
+        SELECT realtime.send_message(
+          (SELECT id FROM realtime.channels WHERE slug = $1),
+          $2::uuid,
+          $3,
+          $4,
+          $5
+        ) as message_id
+      `, [channel, socket.userId, content, messageType, JSON.stringify(metadata)]);
+
+      const messageId = result.rows[0].message_id;
+
+      // Broadcast to channel
+      io.to(channel).emit('message:new', {
+        id: messageId,
+        channelId: channel,
+        userId: socket.userId,
+        content,
+        messageType,
+        metadata,
+        sentAt: new Date()
+      });
+
+    } catch (err) {
+      console.error('Message send error:', err);
+      socket.emit('error', { message: 'Failed to send message' });
+    }
+  });
+
+  // Broadcast ephemeral event (typing, cursor, etc.)
+  socket.on('broadcast', async (data) => {
+    try {
+      const { channel, eventType, payload } = data;
+
+      // Store broadcast (expires in 5 minutes)
+      await pgClient.query(`
+        SELECT realtime.broadcast(
+          (SELECT id FROM realtime.channels WHERE slug = $1),
+          $2::uuid,
+          $3,
+          $4
+        )
+      `, [channel, socket.userId, eventType, JSON.stringify(payload)]);
+
+      // Broadcast to others (not sender)
+      socket.to(channel).emit('broadcast', {
+        eventType,
+        userId: socket.userId,
+        payload,
+        timestamp: new Date()
+      });
+
+    } catch (err) {
+      console.error('Broadcast error:', err);
+    }
+  });
+
+  // Update presence (status, cursor, etc.)
+  socket.on('presence:update', async (data) => {
+    try {
+      const { channel, status, metadata = {} } = data;
+
+      await pgClient.query(`
+        SELECT realtime.update_presence(
+          $1::uuid,
+          (SELECT id FROM realtime.channels WHERE slug = $2),
+          $3,
+          $4
+        )
+      `, [socket.userId, channel, status, JSON.stringify(metadata)]);
+
+      // Broadcast presence update
+      socket.to(channel).emit('presence:update', {
+        userId: socket.userId,
+        status,
+        metadata,
+        timestamp: new Date()
+      });
+
+    } catch (err) {
+      console.error('Presence update error:', err);
+    }
+  });
+
+  // Get online users in channel
+  socket.on('presence:get', async (data) => {
+    try {
+      const { channel } = data;
+
+      const result = await pgClient.query(`
+        SELECT * FROM realtime.get_online_users((SELECT id FROM realtime.channels WHERE slug = $1))
+      `, [channel]);
+
+      socket.emit('presence:list', {
+        channel,
+        users: result.rows
+      });
+
+    } catch (err) {
+      console.error('Get presence error:', err);
+    }
+  });
+
+  // Disconnect handler
+  socket.on('disconnect', async () => {
+    console.log(`User disconnected: ${socket.userId} (${socket.id})`);
+
+    try {
+      // Mark connection as disconnected
+      await pgClient.query(`
+        SELECT realtime.disconnect($1)
+      `, [socket.id]);
+
+    } catch (err) {
+      console.error('Disconnect error:', err);
+    }
+  });
+});
+
+// Listen to PostgreSQL notifications (for database changes)
+pgClient.on('notification', (msg) => {
+  try {
+    const payload = JSON.parse(msg.payload);
+    const channel = msg.channel.replace('channel_', '');
+
+    // Broadcast database notification to connected clients
+    io.to(channel).emit('db:notification', payload);
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+});
+
+// Cleanup job - run every 5 minutes
+setInterval(async () => {
+  try {
+    await pgClient.query('SELECT realtime.cleanup_expired_broadcasts()');
+    await pgClient.query('SELECT realtime.cleanup_stale_connections()');
+  } catch (err) {
+    console.error('Cleanup error:', err);
+  }
+}, 5 * 60 * 1000);
+
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`WebSocket server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  io.close(() => {
+    pgClient.end();
+    if (redisClient) redisClient.quit();
+    process.exit(0);
+  });
+});
