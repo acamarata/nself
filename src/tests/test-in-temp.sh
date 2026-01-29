@@ -51,7 +51,7 @@ echo
 
 # Initialize with demo config
 echo -e "${COLOR_BLUE}1. Initializing demo project...${COLOR_RESET}"
-cp "$NSELF_DIR/src/templates/demo/.env.demo" .env
+cp "$NSELF_DIR/src/templates/demo/.env" .env
 echo -e "${COLOR_GREEN}✓ Demo config copied${COLOR_RESET}"
 echo
 

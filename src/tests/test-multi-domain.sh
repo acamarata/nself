@@ -46,7 +46,7 @@ log_warning() { echo "  ⚠ $@"; }
 log_error() { echo "  ✗ $@" >&2; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../src/lib/services/service-builder.sh"
+source "$SCRIPT_DIR/../../src/lib/services/service-builder.sh"
 
 # Parse and display
 parse_custom_services

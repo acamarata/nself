@@ -48,9 +48,9 @@ log_success() { :; }
 log_warning() { :; }
 log_error() { echo "$@" >&2; }
 
-source "$SCRIPT_DIR/../src/lib/utils/display.sh" 2>/dev/null || true
-source "$SCRIPT_DIR/../src/lib/utils/env.sh" 2>/dev/null || true
-source "$SCRIPT_DIR/../src/lib/services/service-builder.sh"
+source "$SCRIPT_DIR/../../src/lib/utils/display.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../../src/lib/utils/env.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../../src/lib/services/service-builder.sh"
 
 echo "✓ Service builder loaded"
 

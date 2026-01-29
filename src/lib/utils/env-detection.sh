@@ -53,6 +53,10 @@ get_env_file_cascade() {
 
   # Add environment-specific files based on target
   case "$target_env" in
+    dev|development)
+      # For dev environment, add .env.local for per-developer overrides
+      files+=(".env.local")
+      ;;
     staging)
       files+=(".env.staging")
       ;;
