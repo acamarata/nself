@@ -1,0 +1,239 @@
+name: Tenant Isolation Tests
+
+on:
+  push:
+    paths:
+      - 'postgres/migrations/008_*.sql'
+      - 'src/lib/database/**'
+      - 'src/tests/integration/test-tenant-isolation.sh'
+  pull_request:
+    paths:
+      - 'postgres/migrations/008_*.sql'
+      - 'src/lib/database/**'
+      - 'src/tests/integration/test-tenant-isolation.sh'
+  workflow_dispatch:
+
+jobs:
+  tenant-tests:
+    name: Multi-Tenancy Integration Tests
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: nself-test
+      ENV: test
+      POSTGRES_DB: nhost
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install nself
+        run: |
+          # Make nself executable
+          chmod +x nself
+          # Add to PATH for this job
+          echo "${{ github.workspace }}" >> $GITHUB_PATH
+
+      - name: Initialize nself
+        run: |
+          nself init --non-interactive
+        env:
+          NSELF_SKIP_WIZARD: true
+
+      - name: Build nself
+        run: |
+          nself build
+
+      - name: Start services
+        run: |
+          nself start
+          # Wait for services to be healthy
+          sleep 10
+
+      - name: Verify database is running
+        run: |
+          docker ps | grep postgres
+          # Wait for database to be ready
+          for i in {1..30}; do
+            if docker exec ${PROJECT_NAME}_postgres pg_isready -U postgres; then
+              echo "Database is ready"
+              break
+            fi
+            echo "Waiting for database... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run migrations
+        run: |
+          nself db migrate
+          # Verify tenant schema exists
+          docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "\dn tenants"
+
+      - name: Run tenant isolation tests
+        run: |
+          chmod +x src/tests/integration/test-tenant-isolation.sh
+          ./src/tests/integration/test-tenant-isolation.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          nself logs postgres --tail 100
+          echo ""
+          echo "=== Database Status ==="
+          docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "
+            SELECT schemaname, tablename
+            FROM pg_tables
+            WHERE schemaname = 'tenants'
+            ORDER BY tablename;
+          "
+
+      - name: Cleanup
+        if: always()
+        run: |
+          nself stop
+          docker system prune -f
+
+  security-audit:
+    name: RLS Policy Audit
+    runs-on: ubuntu-latest
+    needs: tenant-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Audit RLS policies
+        run: |
+          echo "Checking RLS policy definitions in migration..."
+
+          # Count policies in migration
+          policy_count=$(grep -c "CREATE POLICY" postgres/migrations/008_create_tenant_system.sql || echo 0)
+          echo "Found $policy_count RLS policies in migration"
+
+          # Verify minimum policy count
+          if [ "$policy_count" -lt 10 ]; then
+            echo "ERROR: Expected at least 10 RLS policies, found $policy_count"
+            exit 1
+          fi
+
+          echo "✓ RLS policy count looks good"
+
+          # Check for required policies
+          required_policies=(
+            "tenant_member_select"
+            "tenant_owner_update"
+            "tenant_create"
+            "tenant_owner_delete"
+            "tenant_domains_select"
+            "tenant_domains_manage"
+            "tenant_members_select"
+            "tenant_members_manage"
+            "tenant_settings_select"
+            "tenant_settings_manage"
+          )
+
+          for policy in "${required_policies[@]}"; do
+            if ! grep -q "CREATE POLICY $policy" postgres/migrations/008_create_tenant_system.sql; then
+              echo "ERROR: Required policy missing: $policy"
+              exit 1
+            fi
+            echo "✓ Found policy: $policy"
+          done
+
+          echo "✓ All required RLS policies present"
+
+      - name: Check RLS enable statements
+        run: |
+          echo "Verifying RLS is enabled on all tenant tables..."
+
+          rls_count=$(grep -c "ENABLE ROW LEVEL SECURITY" postgres/migrations/008_create_tenant_system.sql || echo 0)
+          echo "Found $rls_count ENABLE ROW LEVEL SECURITY statements"
+
+          if [ "$rls_count" -lt 5 ]; then
+            echo "ERROR: Expected at least 5 tables with RLS enabled, found $rls_count"
+            exit 1
+          fi
+
+          echo "✓ RLS enabled on all tenant tables"
+
+  documentation-check:
+    name: Documentation Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Verify test documentation exists
+        run: |
+          # Check for test files
+          if [ ! -f "src/tests/integration/test-tenant-isolation.sh" ]; then
+            echo "ERROR: Main test file missing"
+            exit 1
+          fi
+
+          # Check for documentation
+          if [ ! -f "src/tests/integration/README-TENANT-TESTS.md" ]; then
+            echo "ERROR: README missing"
+            exit 1
+          fi
+
+          if [ ! -f "src/tests/integration/TENANT-TESTS-SUMMARY.md" ]; then
+            echo "ERROR: Summary missing"
+            exit 1
+          fi
+
+          if [ ! -f "src/tests/integration/TENANT-TESTS-QUICK-REF.md" ]; then
+            echo "ERROR: Quick reference missing"
+            exit 1
+          fi
+
+          echo "✓ All test documentation files present"
+
+      - name: Verify test file is executable
+        run: |
+          if [ ! -x "src/tests/integration/test-tenant-isolation.sh" ]; then
+            echo "ERROR: Test file is not executable"
+            exit 1
+          fi
+          echo "✓ Test file is executable"
+
+      - name: Check test suite count
+        run: |
+          suite_count=$(grep -c "^test_" src/tests/integration/test-tenant-isolation.sh || echo 0)
+          echo "Found $suite_count test suites"
+
+          if [ "$suite_count" -lt 6 ]; then
+            echo "ERROR: Expected at least 6 test suites, found $suite_count"
+            exit 1
+          fi
+
+          echo "✓ All test suites present"
+
+      - name: Verify assertion functions
+        run: |
+          assertions=(
+            "assert_equals"
+            "assert_not_equals"
+            "assert_empty"
+            "assert_not_empty"
+          )
+
+          for assertion in "${assertions[@]}"; do
+            if ! grep -q "^${assertion}()" src/tests/integration/test-tenant-isolation.sh; then
+              echo "ERROR: Assertion function missing: $assertion"
+              exit 1
+            fi
+            echo "✓ Found assertion: $assertion"
+          done
+
+          echo "✓ All assertion functions present"

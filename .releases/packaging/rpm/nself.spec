@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.7.0
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 
@@ -46,7 +46,7 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.7.0 installed successfully!"
+echo "nself v0.8.0 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun

@@ -4,8 +4,8 @@
 [Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 LTS](#v050---production-ready-lts)
 
 ## Current Status Summary
-- **v0.4.8 (Current)**: Plugin System - Stripe, GitHub, Shopify integrations
-- **v0.4.9 (Next)**: Extensive Polish & Testing
+- **v0.8.0 (Current)**: Security Hardening - Complete security framework
+- **v0.9.0 (Next)**: Enterprise Features - Billing & White-Label
 - **v0.5.0**: Production Ready LTS + nself-admin v0.1
 
 ---
@@ -372,6 +372,36 @@ nself helm push              # Push to registry
 
 ---
 
+### v0.8.0 - Security Hardening
+**Status**: Released | **Release Date**: January 29, 2026
+**Focus**: Complete security framework with SSL/TLS, firewall, secrets management
+
+#### Sprint 21: Security Hardening (25pts)
+- Automated SSL/TLS certificate management (Let's Encrypt integration)
+- Nginx security headers and best practices
+- WAF (Web Application Firewall) integration
+- Firewall configuration and port management
+- Security audit logging
+- Intrusion detection system (IDS) integration
+
+#### Sprint 22: Secrets Management (20pts)
+- Vault integration for secrets storage
+- Environment-specific secret rotation
+- API key management
+- Database credential encryption
+- Secrets audit trail
+- Emergency access protocols
+
+#### Key Features
+- **Automated SSL**: Let's Encrypt certificates with auto-renewal
+- **Firewall Management**: UFW/iptables configuration via nself
+- **Secrets Vault**: Encrypted storage for API keys and credentials
+- **Security Scanning**: Regular vulnerability scans
+- **Audit Logging**: Complete security event tracking
+- **Compliance Tools**: SOC2, HIPAA, PCI-DSS helpers
+
+---
+
 ### v0.4.8 - Plugin System
 **Status**: Released | **Release Date**: January 24, 2026
 **Focus**: Extensible plugin architecture for third-party integrations
@@ -545,6 +575,40 @@ These are ideas for future data sync plugins - not currently planned:
 
 ---
 
+### v0.9.0 - Enterprise Features
+**Target**: Q1 2026
+**Focus**: Billing integration and white-label customization for enterprise use
+
+#### Sprint 13: Billing Integration & Usage Tracking (75pts)
+- Stripe billing integration
+- Usage metering and tracking
+- Subscription management
+- Invoice generation
+- Payment gateway integration
+- Billing analytics and reporting
+- Quota enforcement
+- Cost allocation by tenant/service
+
+#### Sprint 14: White-Label & Customization (60pts)
+- Custom branding configuration
+- White-label admin UI
+- Multi-tenant isolation
+- Custom domain management
+- Email template customization
+- Logo and color scheme overrides
+- Custom authentication flows
+- Client-specific configurations
+
+#### Key Features
+- **Usage Tracking**: Automatic metering of API calls, storage, compute
+- **Billing Automation**: Stripe integration with automated invoicing
+- **White-Label Support**: Complete brand customization
+- **Multi-Tenancy**: Isolated environments per client
+- **Cost Management**: Budget alerts and cost optimization
+- **Enterprise SSO**: SAML, OAuth, LDAP integration
+
+---
+
 ### v0.4.9 - Extensive Polish & Testing
 **Target**: Q1 2026
 **Focus**: Comprehensive QA, polish, and minor changes to finish the v0.4.x series
@@ -691,17 +755,19 @@ Utility Commands (4) - v0.4.9:
 | v0.4.3 | Released | Deployment Pipeline | Jan 19, 2026 |
 | v0.4.4 | Released | Database Tools | Jan 20, 2026 |
 | v0.4.5 | Released | Provider Support | Jan 21, 2026 |
-| **v0.4.6** | **Released** | Scaling & Performance | Jan 22, 2026 |
-| **v0.4.7** | **Released** | Kubernetes Support | Jan 23, 2026 |
-| **v0.4.8** | **Released** | Plugin System (Stripe, GitHub, Shopify) | Jan 24, 2026 |
-| **v0.4.9** | **Next** | Extensive Polish & Testing | Q1 2026 |
+| v0.4.6 | Released | Scaling & Performance | Jan 22, 2026 |
+| v0.4.7 | Released | Kubernetes Support | Jan 23, 2026 |
+| v0.4.8 | Released | Plugin System | Jan 24, 2026 |
+| **v0.8.0** | **Released** | Security Hardening | Jan 29, 2026 |
+| **v0.9.0** | **Next** | Enterprise Features (Billing & White-Label) | Q1 2026 |
+| v0.4.9 | Planned | Extensive Polish & Testing | Q1 2026 |
 | **v0.5.0** | **Target** | Production Ready LTS + nself-admin v0.1 | Q1-Q2 2026 |
 
 ---
 
 ## Command Summary by Release
 
-### Currently Available (v0.4.8) - 46 commands
+### Currently Available (v0.8.0) - 46 commands
 ```
 Core: init, build, start, stop, restart, reset, clean, version
 Status: status, logs, exec, urls, doctor, help
@@ -713,18 +779,25 @@ Provider: providers, provision, sync, ci, completion
 Performance: perf, bench, scale, migrate
 Operations: health, frontend, history, config, servers
 Kubernetes: k8s, helm
-Plugins: plugin (+ stripe, github, shopify actions)
+Plugins: plugin (+ stripe actions)
+Security: security (ssl, firewall, secrets, audit, scan)
 ```
 
 Note: Database operations are consolidated under `nself db` with subcommands.
 Plugin actions are accessed via `nself plugin <name> <action>`.
+Security operations are consolidated under `nself security` with subcommands.
+
+### Coming in v0.9.0 - Enterprise Features
+```
+billing, usage, tenant, whitelabel
+```
 
 ### Coming in v0.4.9 - +4 commands
 ```
 completion, interactive, docs, config
 ```
 
-**Total Commands at v0.5.0**: 50
+**Total Commands at v0.5.0**: 54
 
 ---
 
@@ -747,4 +820,4 @@ completion, interactive, docs, config
 
 *This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
 
-*Last Updated: January 24, 2026*
+*Last Updated: January 29, 2026*

@@ -1,6 +1,6 @@
 # Maintainer: acamarata <contact@acamarata.com>
 pkgname=nself
-pkgver=0.7.0
+pkgver=0.8.0
 pkgrel=1
 pkgdesc="Self-hosted infrastructure manager for developers"
 arch=('any')

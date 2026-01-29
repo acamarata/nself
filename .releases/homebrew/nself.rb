@@ -1,10 +1,10 @@
 class Nself < Formula
-  desc "Production-ready self-hosted backend infrastructure"
+  desc "v0.8.0: Multi-tenant backend with organizations, teams, real-time collaboration, plugins, advanced security, developer tools & migration support"
   homepage "https://nself.org"
-  url "https://github.com/acamarata/nself/archive/refs/tags/v0.7.0.tar.gz"
+  url "https://github.com/acamarata/nself/archive/refs/tags/v0.8.0.tar.gz"
   sha256 "e09b88a8d6e6d673b6e0dba0245c9e759dbd1c953b95f7f078f16e101c8e20b0"
   license "Source-Available"
-  version "0.7.0"
+  version "0.8.0"
 
   depends_on "docker"
   depends_on "docker-compose"

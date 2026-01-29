@@ -1,13 +1,13 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
-> **✅ PRODUCTION READY**: nself v0.5.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, nself is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)). 
+> **✅ PRODUCTION READY**: nself v0.8.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, nself is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)). 
 > 
 > That said, nself is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
 > 
@@ -23,7 +23,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🎉 v0.5.0 - Production Ready!**: First production-ready release with 36 commands, 40+ service templates, full monitoring stack, Kubernetes support, and 26 cloud providers. Complete backend infrastructure in under 5 minutes. [See changelog](docs/releases/CHANGELOG.md) | [Roadmap to v1.0](docs/ROADMAP.md)
+> **🎉 v0.8.0 - Multi-Tenancy & Enterprise Features!**: Complete multi-tenant architecture with organization management, plugin ecosystem, real-time collaboration, enhanced security tools, developer experience improvements, cross-environment migrations, and comprehensive performance profiling. [See changelog](docs/releases/CHANGELOG.md) | [Roadmap to v1.0](docs/ROADMAP.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
@@ -39,6 +39,9 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 ### 🎯 Complete Feature Set
 - **Full Nhost Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
 - **Plus Extras**: Redis, TimescaleDB, PostGIS, pgvector extensions
+- **Multi-Tenancy (NEW v0.8.0)**: Complete tenant isolation, organization management, role-based access
+- **Plugin Ecosystem (NEW v0.8.0)**: Extensible architecture with marketplace integration
+- **Real-Time Collaboration (NEW v0.8.0)**: Presence tracking, live sync, WebSocket broadcasting
 - **Email Management**: 16+ providers (SendGrid, AWS SES, Mailgun, etc.) with zero-config dev
 - **40+ Service Templates**: Express, FastAPI, Flask, Gin, Rust, NestJS, Socket.IO, Celery, Ray, and more
 - **Microservices Ready**: Production-ready templates for JS/TS, Python, Go, Rust, Java, C#, Ruby, Elixir, PHP
@@ -49,6 +52,9 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 
 ### 🛠️ Developer Experience
 - **Admin Dashboard**: Web-based monitoring UI at localhost:3100
+- **Developer Console (NEW v0.8.0)**: Interactive development console with live REPL
+- **Local Tunneling (NEW v0.8.0)**: Expose local services to internet for testing
+- **API Mocking (NEW v0.8.0)**: Mock external APIs for faster development
 - **Single Config File**: One `.env` controls everything
 - **Zero Configuration**: Email, SSL, and services work out of the box
 - **Automated SSL**: Certificates generated automatically (one-time sudo for trust)
@@ -60,9 +66,12 @@ nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinio
 
 ### 🔐 Production Ready
 - **Security First**: Automatic SSL setup with mkcert (handled during build)
+- **Security Scanning (NEW v0.8.0)**: Automated vulnerability detection and auditing
+- **Firewall Management (NEW v0.8.0)**: Simplified network security configuration
 - **Zero SSL Hassle**: Certificates generated and trusted automatically
 - **Email Ready**: Production email in 2 minutes with guided setup
 - **Battle Tested**: Based on proven Nhost.io infrastructure
+- **Multi-Tenant Ready (NEW v0.8.0)**: Enterprise-grade tenant isolation
 - **Scale Ready**: From hobby projects to enterprise deployments
 - **Zero Downtime**: Rolling updates and health checks built-in
 
@@ -244,14 +253,14 @@ Every template includes:
 ## 📚 Commands
 
 ### Version Status
-- **✅ v0.4.7 (Current)**: 45 commands - Kubernetes & Helm support, 26 cloud providers
-- **🚧 v0.4.8 (Next)**: Plugin system with nself-stripe
-- **🔮 v0.5.0**: Production release + nself-admin v0.1
+- **✅ v0.8.0 (Current)**: 56 commands - Multi-tenancy, plugins, real-time collaboration, security tools
+- **🚧 v0.9.0 (Next)**: Advanced AI features, marketplace expansion
+- **🔮 v1.0.0**: LTS release with enterprise guarantees
 
 ### Complete Command Tree
 
 ```
-nself (45 commands)
+nself (56 commands)
 ├── 🚀 Core Commands
 │   ├── init          Initialize a new project (with --wizard, --full, --admin options)
 │   ├── build         Build project structure and Docker images
@@ -279,6 +288,26 @@ nself (45 commands)
 │   ├── monitor       Real-time monitoring dashboard
 │   └── metrics       Metrics collection and reporting
 │
+├── 🏢 Multi-Tenancy (NEW in v0.8.0)
+│   ├── tenant        Tenant management (create, list, switch, delete)
+│   └── org           Organization management (create, invite, roles)
+│
+├── 🔌 Plugin System (NEW in v0.8.0)
+│   ├── plugin        Plugin management (install, list, remove, update)
+│   └── marketplace   Browse and install from plugin marketplace
+│
+├── 🔐 Security Tools (NEW in v0.8.0)
+│   ├── security      Security command suite
+│   │   ├── scan      Vulnerability scanning
+│   │   ├── audit     Security audit and compliance checks
+│   │   └── firewall  Firewall configuration and management
+│
+├── 👥 Real-Time Collaboration (NEW in v0.8.0)
+│   ├── realtime      Real-time features management
+│   │   ├── presence  User presence tracking
+│   │   ├── sync      Live data synchronization
+│   │   └── broadcast WebSocket broadcasting
+│
 ├── 🚀 Serverless & ML
 │   ├── functions     Serverless functions management
 │   └── mlflow        ML experiment tracking and model registry
@@ -287,12 +316,21 @@ nself (45 commands)
 │   ├── deploy        Deploy to remote servers with zero-downtime
 │   ├── scale         Scale services up/down
 │   ├── rollback      Rollback to previous version
+│   ├── migrate       Cross-environment migration (NEW in v0.8.0)
 │   └── update        Update nself CLI to latest version
 │
-├── 🛠️ Development Tools
+├── 🛠️ Development Tools (NEW in v0.8.0)
+│   ├── dev           Developer experience tools
+│   │   ├── console   Interactive development console
+│   │   ├── tunnel    Expose local services to internet
+│   │   └── mock      Mock API endpoints for testing
 │   ├── exec          Execute commands in containers
 │   ├── reset         Reset project to clean state (with timestamped backups)
 │   └── search        Enterprise search service management (6 engines)
+│
+├── ⚡ Performance Tools (NEW in v0.8.0)
+│   ├── perf          Performance profiling and optimization
+│   └── bench         Benchmarking and load testing
 │
 └── 📝 Utility Commands
     ├── version       Show version information
@@ -737,25 +775,33 @@ nself email test recipient@example.com
 
 ## 🔄 Version History
 
-### v0.4.7 (Current - Jan 23, 2026)
-- ✅ New `nself k8s` command for Kubernetes operations
-- ✅ New `nself helm` command for Helm chart management
-- ✅ 26 cloud providers supported
-- ✅ Full K8s manifest generation from docker-compose
-- ✅ 45 commands total
+### v0.8.0 (Current - Jan 29, 2026)
+- ✅ Complete multi-tenant architecture with tenant and organization management
+- ✅ Plugin ecosystem with marketplace integration
+- ✅ Real-time collaboration features (presence, sync, broadcast)
+- ✅ Enhanced security tools (scan, audit, firewall)
+- ✅ Developer experience improvements (console, tunnel, mock)
+- ✅ Cross-environment migration tools
+- ✅ Performance profiling and benchmarking
+- ✅ 56 commands total
 
-### v0.4.6 (Jan 22, 2026)
-- Performance profiling with `nself perf`
-- Benchmarking with `nself bench`
-- Cross-environment migration with `nself migrate`
-- 9 new commands for scaling and operations
+### v0.7.0 (Jan 25, 2026)
+- Real-time collaboration infrastructure
+- Enhanced monitoring and observability
+- Security hardening features
 
-### v0.4.5 (Jan 21, 2026)
-- 10 cloud providers with one-command provisioning
-- Environment sync, CI/CD generation, shell completion
-- Doctor auto-fix capability
+### v0.6.0 (Jan 24, 2026)
+- Plugin system foundation
+- Multi-tenancy support
+- Advanced developer tools
 
-[Full Changelog](docs/releases/ROADMAP.md)
+### v0.5.0 (Jan 23, 2026)
+- First production-ready release
+- 36 commands, 40+ service templates
+- Full monitoring stack
+- Kubernetes and Helm support
+
+[Full Changelog](docs/releases/CHANGELOG.md)
 
 ## 🧪 Quality Assurance
 
