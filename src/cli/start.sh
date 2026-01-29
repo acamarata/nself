@@ -115,6 +115,137 @@ if [[ "$SHOW_HELP" == "true" ]]; then
   exit 0
 fi
 
+# ============================================================
+# AUTOMATIC DATABASE READINESS (runs EVERY start)
+# ============================================================
+# The Golden Rule: Users should NEVER SSH into servers.
+# This function ensures database is ready automatically.
+# ============================================================
+
+ensure_database_ready() {
+  local project_name="$1"
+  local max_wait="${2:-60}"
+  local db_user="${POSTGRES_USER:-postgres}"
+  local db_name="${POSTGRES_DB:-nhost}"
+  local db_password="${POSTGRES_PASSWORD:-}"
+
+  local container_name="${project_name}_postgres"
+
+  # Check if postgres container exists
+  if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+    # Try alternate naming pattern
+    container_name="${project_name}-postgres-1"
+    if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+      return 0  # No postgres container, skip
+    fi
+  fi
+
+  printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Ensuring database is ready..."
+
+  # Step 1: Wait for PostgreSQL to accept connections
+  local waited=0
+  while [[ $waited -lt $max_wait ]]; do
+    if docker exec "$container_name" pg_isready -U "$db_user" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+    # Update spinner
+    local spinners=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    printf "\r  ${COLOR_BLUE}%s${COLOR_RESET} Waiting for PostgreSQL... (%ds)" "${spinners[$((waited % 10))]}" "$waited"
+  done
+
+  if [[ $waited -ge $max_wait ]]; then
+    printf "\r  ${COLOR_YELLOW}!${COLOR_RESET} PostgreSQL not ready after ${max_wait}s (will retry)\n"
+    return 0  # Don't fail, let health checks handle it
+  fi
+
+  # Step 2: Ensure database exists
+  printf "\r  ${COLOR_BLUE}⠋${COLOR_RESET} Checking database '%s'...          " "$db_name"
+
+  local db_exists
+  db_exists=$(docker exec "$container_name" psql -U "$db_user" -tAc \
+    "SELECT 1 FROM pg_database WHERE datname='$db_name'" 2>/dev/null || echo "")
+
+  if [[ "$db_exists" != "1" ]]; then
+    printf "\r  ${COLOR_BLUE}⠋${COLOR_RESET} Creating database '%s'...          " "$db_name"
+    docker exec "$container_name" psql -U "$db_user" -c \
+      "CREATE DATABASE \"$db_name\";" >/dev/null 2>&1 || true
+  fi
+
+  # Step 3: Ensure required schemas exist
+  printf "\r  ${COLOR_BLUE}⠋${COLOR_RESET} Ensuring required schemas...          "
+
+  # Create auth schema (required by nhost-auth)
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "CREATE SCHEMA IF NOT EXISTS auth;" >/dev/null 2>&1 || true
+
+  # Create storage schema (required by nhost-storage)
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "CREATE SCHEMA IF NOT EXISTS storage;" >/dev/null 2>&1 || true
+
+  # Create public schema if missing
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "CREATE SCHEMA IF NOT EXISTS public;" >/dev/null 2>&1 || true
+
+  # Step 4: Grant permissions
+  printf "\r  ${COLOR_BLUE}⠋${COLOR_RESET} Setting schema permissions...          "
+
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "GRANT ALL ON SCHEMA auth TO \"$db_user\";
+     GRANT ALL ON SCHEMA storage TO \"$db_user\";
+     GRANT ALL ON SCHEMA public TO \"$db_user\";" >/dev/null 2>&1 || true
+
+  # Step 5: Ensure pgcrypto extension (required for auth)
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "CREATE EXTENSION IF NOT EXISTS pgcrypto;" >/dev/null 2>&1 || true
+
+  # Step 6: Ensure citext extension (often needed)
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c \
+    "CREATE EXTENSION IF NOT EXISTS citext;" >/dev/null 2>&1 || true
+
+  printf "\r  ${COLOR_GREEN}✓${COLOR_RESET} Database ready: %s (schemas: auth, storage, public)\n" "$db_name"
+  return 0
+}
+
+# ============================================================
+# AUTOMATIC REDIS READINESS
+# ============================================================
+
+ensure_redis_ready() {
+  local project_name="$1"
+  local max_wait="${2:-30}"
+
+  local container_name="${project_name}_redis"
+
+  # Check if redis container exists
+  if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+    container_name="${project_name}-redis-1"
+    if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+      return 0  # No redis container, skip
+    fi
+  fi
+
+  printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Ensuring Redis is ready..."
+
+  local waited=0
+  local redis_password="${REDIS_PASSWORD:-}"
+  local auth_arg=""
+  [[ -n "$redis_password" ]] && auth_arg="-a $redis_password"
+
+  while [[ $waited -lt $max_wait ]]; do
+    if docker exec "$container_name" redis-cli $auth_arg ping 2>/dev/null | grep -q "PONG"; then
+      printf "\r  ${COLOR_GREEN}✓${COLOR_RESET} Redis ready                              \n"
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  printf "\r  ${COLOR_YELLOW}!${COLOR_RESET} Redis not responding (will retry)      \n"
+  return 0
+}
+
 # Progress tracking functions
 PROGRESS_STEPS=()
 PROGRESS_STATUS=()
@@ -507,6 +638,30 @@ start_services() {
         update_progress $i "done"
       fi
     done
+
+    # ========================================================
+    # AUTOMATIC SERVICE READINESS (runs EVERY start)
+    # The Golden Rule: No manual intervention required
+    # ========================================================
+    printf "\n${COLOR_CYAN}Ensuring services are ready...${COLOR_RESET}\n"
+
+    # Load env vars for database configuration
+    if [[ -f "$env_file" ]]; then
+      set -a
+      source "$env_file" 2>/dev/null || true
+      set +a
+    fi
+
+    # Ensure database is ready (creates DB and schemas if needed)
+    ensure_database_ready "$project_name" 60
+
+    # Ensure Redis is ready (if enabled)
+    if [[ "${REDIS_ENABLED:-false}" == "true" ]]; then
+      ensure_redis_ready "$project_name" 30
+    fi
+
+    printf "\n"
+    # ========================================================
 
     # Verify health checks (unless skipped)
     if [[ "$SKIP_HEALTH_CHECKS" != "true" ]]; then

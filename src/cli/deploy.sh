@@ -18,6 +18,7 @@ source "$LIB_DIR/deploy/ssh.sh" 2>/dev/null || true
 source "$LIB_DIR/deploy/credentials.sh" 2>/dev/null || true
 source "$LIB_DIR/deploy/health-check.sh" 2>/dev/null || true
 source "$LIB_DIR/deploy/zero-downtime.sh" 2>/dev/null || true
+source "$LIB_DIR/deploy/security-preflight.sh" 2>/dev/null || true
 
 # Source environment modules
 source "$LIB_DIR/env/create.sh" 2>/dev/null || true
@@ -800,6 +801,88 @@ deploy_to_env() {
   printf "SSH key:     %s\n" "$key_file"
   printf "\n"
 
+  # ═══════════════════════════════════════════════════════════════
+  # PRE-FLIGHT: Server Connectivity Check (BEFORE any deploy steps)
+  # ═══════════════════════════════════════════════════════════════
+  printf "${COLOR_CYAN}Pre-flight checks...${COLOR_RESET}\n"
+
+  # Check 1: Basic network reachability (port check)
+  printf "  Checking server reachability... "
+  if nc -z -w 5 "$host" "$port" 2>/dev/null; then
+    printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+  else
+    printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+    printf "\n"
+    log_error "Cannot reach server $host on port $port"
+    printf "\n"
+    printf "${COLOR_YELLOW}Troubleshooting steps:${COLOR_RESET}\n"
+    printf "  1. Check if server is running in your VPS provider console\n"
+    printf "  2. Verify firewall allows SSH from your IP address\n"
+    printf "  3. Try: ${COLOR_CYAN}nc -vz %s %s${COLOR_RESET}\n" "$host" "$port"
+    printf "  4. Run: ${COLOR_CYAN}nself server diagnose %s${COLOR_RESET}\n" "$env_name"
+    printf "\n"
+    printf "${COLOR_DIM}Common causes:${COLOR_RESET}\n"
+    printf "  • Server is powered off or crashed\n"
+    printf "  • Firewall blocking SSH (check Hetzner/DO firewall rules)\n"
+    printf "  • Wrong IP address in server.json\n"
+    printf "  • SSH port changed from default 22\n"
+    printf "\n"
+    return 1
+  fi
+
+  # Check 2: SSH authentication
+  printf "  Checking SSH authentication... "
+  local ssh_test_args=()
+  [[ -n "$key_file" ]] && ssh_test_args+=("-i" "$key_file")
+  ssh_test_args+=("-o" "ConnectTimeout=10")
+  ssh_test_args+=("-o" "BatchMode=yes")
+  ssh_test_args+=("-o" "StrictHostKeyChecking=accept-new")
+  ssh_test_args+=("-p" "$port")
+
+  if ssh "${ssh_test_args[@]}" "$user@$host" "echo ok" 2>/dev/null | grep -q "ok"; then
+    printf "${COLOR_GREEN}OK${COLOR_RESET}\n"
+  else
+    printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
+    printf "\n"
+    log_error "SSH authentication failed"
+    printf "\n"
+    printf "${COLOR_YELLOW}Troubleshooting steps:${COLOR_RESET}\n"
+    printf "  1. Verify SSH key exists: ${COLOR_CYAN}ls -la %s${COLOR_RESET}\n" "$key_file"
+    printf "  2. Verify key is authorized on server\n"
+    printf "  3. Try manual SSH: ${COLOR_CYAN}ssh -i %s -p %s %s@%s${COLOR_RESET}\n" "$key_file" "$port" "$user" "$host"
+    printf "\n"
+    return 1
+  fi
+
+  # Check 3: Docker on remote server
+  printf "  Checking Docker on server... "
+  local docker_check
+  docker_check=$(ssh "${ssh_test_args[@]}" "$user@$host" "docker --version 2>/dev/null" 2>/dev/null)
+  if [[ -n "$docker_check" ]]; then
+    printf "${COLOR_GREEN}OK${COLOR_RESET} (%s)\n" "$(echo "$docker_check" | head -1 | cut -d',' -f1)"
+  else
+    printf "${COLOR_YELLOW}WARNING${COLOR_RESET} (Docker not found)\n"
+    printf "    ${COLOR_DIM}Run 'nself server init' to install Docker${COLOR_RESET}\n"
+  fi
+
+  # Check 4: Disk space
+  printf "  Checking disk space... "
+  local disk_free
+  disk_free=$(ssh "${ssh_test_args[@]}" "$user@$host" "df -h / | tail -1 | awk '{print \$4}'" 2>/dev/null)
+  if [[ -n "$disk_free" ]]; then
+    # Extract numeric value
+    local disk_gb=$(echo "$disk_free" | sed 's/[^0-9.]//g')
+    if (( $(echo "$disk_gb > 2" | bc -l 2>/dev/null || echo "1") )); then
+      printf "${COLOR_GREEN}OK${COLOR_RESET} (%s available)\n" "$disk_free"
+    else
+      printf "${COLOR_YELLOW}LOW${COLOR_RESET} (%s available)\n" "$disk_free"
+    fi
+  else
+    printf "${COLOR_DIM}SKIP${COLOR_RESET}\n"
+  fi
+
+  printf "\n"
+
   # Show deployment scope
   printf "${COLOR_CYAN}Deployment Scope:${COLOR_RESET}\n"
   printf "  ${COLOR_GREEN}✓${COLOR_RESET} Core Services      (PostgreSQL, Hasura, Auth, Nginx)\n"
@@ -878,6 +961,107 @@ deploy_to_env() {
 
   # Check git status and warn about uncommitted changes
   check_git_status "true"
+
+  # ═══════════════════════════════════════════════════════════════
+  # SECURITY PRE-FLIGHT CHECKS (Production Only)
+  # ═══════════════════════════════════════════════════════════════
+  if [[ "$env_type" == "production" || "$env_type" == "prod" || "$env_name" == "prod" ]]; then
+    printf "\n${COLOR_CYAN}Running security pre-flight checks...${COLOR_RESET}\n\n"
+
+    # Source security preflight module
+    if [[ -f "$LIB_DIR/deploy/security-preflight.sh" ]]; then
+      source "$LIB_DIR/deploy/security-preflight.sh"
+
+      if ! security::preflight "$env_name" "$env_dir" "false"; then
+        printf "\n"
+        log_error "Security checks failed - deployment blocked"
+        printf "\n"
+        printf "To fix these issues:\n"
+        printf "  1. Generate secure secrets:  ${COLOR_CYAN}nself secrets generate --env %s${COLOR_RESET}\n" "$env_name"
+        printf "  2. Review configuration:     ${COLOR_CYAN}nself validate %s${COLOR_RESET}\n" "$env_name"
+        printf "  3. Force deploy (NOT SAFE):  ${COLOR_CYAN}nself deploy %s --force${COLOR_RESET}\n" "$env_name"
+        printf "\n"
+
+        if [[ "$force" != "true" ]]; then
+          return 1
+        else
+          log_warning "Force flag used - proceeding despite security issues"
+        fi
+      fi
+    else
+      log_warning "Security preflight module not found - skipping checks"
+    fi
+  fi
+
+  # ═══════════════════════════════════════════════════════════════
+  # AUTOMATIC SSL CERTIFICATE HANDLING
+  # The Golden Rule: No manual certbot or SSL commands needed
+  # ═══════════════════════════════════════════════════════════════
+  printf "${COLOR_CYAN}Checking SSL certificates...${COLOR_RESET}\n"
+
+  local ssl_ready="false"
+  local base_domain="${BASE_DOMAIN:-}"
+
+  # Load base domain from env if not set
+  if [[ -z "$base_domain" ]] && [[ -f "$env_dir/.env" ]]; then
+    base_domain=$(grep "^BASE_DOMAIN=" "$env_dir/.env" 2>/dev/null | cut -d'=' -f2)
+  fi
+
+  # Check if we have SSL certificates locally
+  local ssl_cert_path=""
+  for cert_dir in "nginx/ssl" "ssl/certificates" "nginx/ssl/nself-org"; do
+    if [[ -f "$cert_dir/fullchain.pem" ]] || [[ -f "$cert_dir/cert.pem" ]]; then
+      ssl_ready="true"
+      ssl_cert_path="$cert_dir"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} SSL certificates found locally: %s\n" "$cert_dir"
+      break
+    fi
+  done
+
+  if [[ "$ssl_ready" == "false" ]]; then
+    printf "  ${COLOR_YELLOW}!${COLOR_RESET} No SSL certificates found locally\n"
+
+    # Auto-generate SSL certificates
+    printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Generating SSL certificates...\n"
+
+    if [[ -f "$SCRIPT_DIR/ssl.sh" ]]; then
+      bash "$SCRIPT_DIR/ssl.sh" bootstrap >/dev/null 2>&1
+      if [[ $? -eq 0 ]]; then
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} SSL certificates generated\n"
+        ssl_ready="true"
+      else
+        printf "  ${COLOR_YELLOW}!${COLOR_RESET} SSL generation failed (will use remote server's certs if available)\n"
+      fi
+    fi
+  fi
+
+  # ═══════════════════════════════════════════════════════════════
+  # AUTOMATIC DNS CHECK
+  # Verify domain resolves before deployment
+  # ═══════════════════════════════════════════════════════════════
+  if [[ -n "$base_domain" ]] && [[ "$base_domain" != "localhost" ]] && [[ "$base_domain" != *"local.nself.org"* ]]; then
+    printf "${COLOR_CYAN}Checking DNS resolution...${COLOR_RESET}\n"
+
+    # Get server IP
+    local server_ip=""
+    server_ip=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes -o ConnectTimeout=5 "$user@$host" \
+      "curl -s ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null" 2>/dev/null)
+
+    if [[ -n "$server_ip" ]]; then
+      # Check if domain resolves to server IP
+      local domain_ip=""
+      domain_ip=$(dig +short "$base_domain" 2>/dev/null | head -1)
+
+      if [[ "$domain_ip" == "$server_ip" ]]; then
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} DNS OK: %s → %s\n" "$base_domain" "$server_ip"
+      else
+        printf "  ${COLOR_YELLOW}!${COLOR_RESET} DNS mismatch: %s → %s (server: %s)\n" "$base_domain" "$domain_ip" "$server_ip"
+        printf "    ${COLOR_DIM}Update your DNS to point to %s${COLOR_RESET}\n" "$server_ip"
+      fi
+    fi
+  fi
+
+  printf "\n"
 
   # Confirm deployment
   if [[ "$force" != "true" ]]; then
@@ -1012,6 +1196,73 @@ deploy_to_env() {
       printf "${COLOR_RED}FAILED${COLOR_RESET}\n"
       log_error "Deployment failed. Check server logs."
       return 1
+    fi
+
+    # ═══════════════════════════════════════════════════════════════
+    # AUTOMATIC SSL ON REMOTE SERVER
+    # Request Let's Encrypt certificate if domain is configured
+    # ═══════════════════════════════════════════════════════════════
+    if [[ -n "$base_domain" ]] && [[ "$base_domain" != "localhost" ]] && [[ "$base_domain" != *"local.nself.org"* ]]; then
+      printf "  Checking/requesting SSL certificate... "
+
+      local ssl_result
+      ssl_result=$(ssh -i "$key_file" -p "$port" -o BatchMode=yes "$user@$host" "
+        cd '$deploy_path' || exit 1
+
+        DOMAIN='$base_domain'
+        SSL_DIR='$deploy_path/nginx/ssl'
+
+        # Check if we already have a valid certificate
+        if [ -f \"\$SSL_DIR/fullchain.pem\" ]; then
+          # Check if cert is valid for at least 7 days
+          if openssl x509 -in \"\$SSL_DIR/fullchain.pem\" -checkend 604800 2>/dev/null; then
+            echo 'ssl_exists'
+            exit 0
+          fi
+        fi
+
+        # Try to get Let's Encrypt certificate
+        if command -v certbot >/dev/null 2>&1; then
+          # Stop nginx temporarily to free port 80
+          docker compose stop nginx 2>/dev/null || true
+
+          certbot certonly --standalone \\
+            -d \$DOMAIN \\
+            --non-interactive \\
+            --agree-tos \\
+            --email admin@\$DOMAIN \\
+            --cert-name nself 2>/dev/null
+
+          if [ -d /etc/letsencrypt/live/nself ]; then
+            mkdir -p \"\$SSL_DIR\"
+            cp /etc/letsencrypt/live/nself/fullchain.pem \"\$SSL_DIR/\"
+            cp /etc/letsencrypt/live/nself/privkey.pem \"\$SSL_DIR/\"
+            chmod 600 \"\$SSL_DIR/privkey.pem\"
+
+            # Restart nginx
+            docker compose start nginx 2>/dev/null || docker compose up -d nginx
+            echo 'ssl_requested'
+            exit 0
+          fi
+
+          # Restart nginx even if cert failed
+          docker compose start nginx 2>/dev/null || docker compose up -d nginx
+        fi
+
+        echo 'ssl_skipped'
+      " 2>/dev/null)
+
+      case "$ssl_result" in
+        *ssl_exists*)
+          printf "${COLOR_GREEN}OK${COLOR_RESET} (certificate valid)\n"
+          ;;
+        *ssl_requested*)
+          printf "${COLOR_GREEN}OK${COLOR_RESET} (Let's Encrypt certificate issued)\n"
+          ;;
+        *)
+          printf "${COLOR_YELLOW}SKIP${COLOR_RESET} (using existing or self-signed)\n"
+          ;;
+      esac
     fi
   fi
 

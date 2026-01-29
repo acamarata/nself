@@ -1084,6 +1084,150 @@ auto_fix_unhealthy_container() {
   return 1
 }
 
+# ============================================================
+# AUTO-FIX: Database and Schema
+# Creates database and required schemas automatically
+# ============================================================
+auto_fix_database() {
+  local project_name="${PROJECT_NAME:-nself}"
+  local db_user="${POSTGRES_USER:-postgres}"
+  local db_name="${POSTGRES_DB:-nhost}"
+
+  log_info "Fixing database and schemas..."
+
+  # Find postgres container
+  local container_name="${project_name}_postgres"
+  if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+    container_name="${project_name}-postgres-1"
+    if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
+      log_warning "PostgreSQL container not running"
+      return 1
+    fi
+  fi
+
+  # Wait for postgres to be ready
+  local waited=0
+  while [[ $waited -lt 30 ]]; do
+    if docker exec "$container_name" pg_isready -U "$db_user" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if [[ $waited -ge 30 ]]; then
+    log_warning "PostgreSQL not ready"
+    return 1
+  fi
+
+  # Create database if needed
+  local db_exists
+  db_exists=$(docker exec "$container_name" psql -U "$db_user" -tAc \
+    "SELECT 1 FROM pg_database WHERE datname='$db_name'" 2>/dev/null || echo "")
+
+  if [[ "$db_exists" != "1" ]]; then
+    log_info "Creating database: $db_name"
+    docker exec "$container_name" psql -U "$db_user" -c \
+      "CREATE DATABASE \"$db_name\";" >/dev/null 2>&1 || true
+  fi
+
+  # Create required schemas
+  log_info "Creating schemas: auth, storage, public"
+
+  docker exec "$container_name" psql -U "$db_user" -d "$db_name" -c "
+    CREATE SCHEMA IF NOT EXISTS auth;
+    CREATE SCHEMA IF NOT EXISTS storage;
+    CREATE SCHEMA IF NOT EXISTS public;
+    GRANT ALL ON SCHEMA auth TO \"$db_user\";
+    GRANT ALL ON SCHEMA storage TO \"$db_user\";
+    GRANT ALL ON SCHEMA public TO \"$db_user\";
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE EXTENSION IF NOT EXISTS citext;
+  " >/dev/null 2>&1 || {
+    log_warning "Schema creation had warnings (may be OK)"
+  }
+
+  log_success "Database and schemas ready"
+  return 0
+}
+
+# ============================================================
+# AUTO-FIX: DNS Resolution
+# Configures reliable DNS fallback on the system
+# ============================================================
+auto_fix_dns() {
+  log_info "Fixing DNS resolution..."
+
+  # Check if we're on a system with systemd-resolved
+  if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+    log_info "Configuring systemd-resolved with fallback DNS..."
+
+    # Create configuration directory
+    sudo mkdir -p /etc/systemd/resolved.conf.d/ 2>/dev/null || {
+      log_warning "Cannot create resolved.conf.d (need sudo)"
+      return 1
+    }
+
+    # Add fallback DNS configuration
+    sudo tee /etc/systemd/resolved.conf.d/nself-dns.conf > /dev/null 2>&1 << 'EOF'
+[Resolve]
+FallbackDNS=1.1.1.1 8.8.8.8 1.0.0.1 8.8.4.4
+DNSOverTLS=opportunistic
+Cache=yes
+EOF
+
+    sudo systemctl restart systemd-resolved 2>/dev/null || {
+      log_warning "Cannot restart systemd-resolved"
+      return 1
+    }
+
+    log_success "DNS fallback configured"
+    return 0
+
+  elif [[ -f /etc/resolv.conf ]]; then
+    log_info "Adding fallback DNS to /etc/resolv.conf..."
+
+    # Check if we already have fallback DNS
+    if ! grep -q "8.8.8.8" /etc/resolv.conf 2>/dev/null; then
+      echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf >/dev/null 2>&1
+      echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf >/dev/null 2>&1
+      log_success "DNS fallback added"
+      return 0
+    else
+      log_info "DNS fallback already configured"
+      return 0
+    fi
+  fi
+
+  log_warning "Cannot detect DNS configuration method"
+  return 1
+}
+
+# ============================================================
+# AUTO-FIX: Service Dependencies
+# Restarts services in correct dependency order
+# ============================================================
+auto_fix_service_dependencies() {
+  local project_name="${PROJECT_NAME:-nself}"
+
+  log_info "Restarting services in dependency order..."
+
+  # Core services must start first
+  local core_services=("postgres" "redis" "hasura" "auth" "nginx")
+
+  for service in "${core_services[@]}"; do
+    local container="${project_name}_${service}"
+    if docker ps -a --format "{{.Names}}" | grep -q "^${container}"; then
+      log_info "Restarting: $service"
+      docker restart "$container" >/dev/null 2>&1 || true
+      sleep 2
+    fi
+  done
+
+  log_success "Core services restarted"
+  return 0
+}
+
 run_auto_fix() {
   log_info "Running auto-fix for detected issues..."
   echo ""
@@ -1139,6 +1283,38 @@ run_auto_fix() {
         failed=$((failed + 1))
       fi
     done
+  fi
+
+  # Fix database and schemas (runs if postgres is running)
+  if has_running_containers; then
+    local project_name="${PROJECT_NAME:-nself}"
+    if docker ps --format "{{.Names}}" | grep -q "${project_name}.*postgres"; then
+      if auto_fix_database; then
+        fixed=$((fixed + 1))
+      fi
+    fi
+  fi
+
+  # Fix DNS resolution issues (check if we can resolve common domains)
+  if ! host google.com >/dev/null 2>&1 && ! nslookup google.com >/dev/null 2>&1; then
+    log_warning "DNS resolution appears broken"
+    if auto_fix_dns; then
+      fixed=$((fixed + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+
+  # Fix service dependency issues (if services are unhealthy)
+  if has_running_containers; then
+    local unhealthy_count
+    unhealthy_count=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$unhealthy_count" -gt 2 ]]; then
+      log_warning "Multiple unhealthy services detected"
+      if auto_fix_service_dependencies; then
+        fixed=$((fixed + 1))
+      fi
+    fi
   fi
 
   echo ""

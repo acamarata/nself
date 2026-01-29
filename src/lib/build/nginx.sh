@@ -127,8 +127,9 @@ EOF
 
 # SSL server configuration
 server {
-    listen 443 ssl http2 default_server;
-    listen [::]:443 ssl http2 default_server;
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    http2 on;
 EOF
     echo "    server_name ${base_domain} *.${base_domain};" >> nginx/conf.d/default.conf
     cat >> nginx/conf.d/default.conf <<'EOF'
@@ -468,7 +469,8 @@ server {
 
 # Main app server
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${app_name}.${BASE_DOMAIN:-localhost};
 
     # SSL configuration
@@ -505,7 +507,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name api.${app_name}.${BASE_DOMAIN:-localhost};
 
     ssl_certificate /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/fullchain.pem;
@@ -542,7 +545,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name auth.${app_name}.${BASE_DOMAIN:-localhost};
 
     ssl_certificate /etc/nginx/ssl/${BASE_DOMAIN:-localhost}/fullchain.pem;
