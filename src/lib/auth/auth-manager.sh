@@ -33,6 +33,11 @@ if [[ -f "$SCRIPT_DIR/password-utils.sh" ]]; then
   source "$SCRIPT_DIR/password-utils.sh"
 fi
 
+# Source magic link utilities
+if [[ -f "$SCRIPT_DIR/magic-link.sh" ]]; then
+  source "$SCRIPT_DIR/magic-link.sh"
+fi
+
 # ============================================================================
 # Constants
 # ============================================================================
@@ -715,31 +720,302 @@ auth_signup_email() {
 }
 
 # Login with magic link
-# Usage: auth_login_magic_link <email>
+# Usage: auth_login_magic_link <email> [token]
+# If token provided, verify it. Otherwise, create and send magic link.
 auth_login_magic_link() {
-  local email="$1"
+  local email="${1:-}"
+  local token="${2:-}"
 
-  # TODO: Implement in AUTH-005
-  log_warning "auth_login_magic_link not yet implemented (AUTH-005)"
-  return 1
+  if [[ -z "$email" ]] && [[ -z "$token" ]]; then
+    log_error "Email or token required"
+    return 1
+  fi
+
+  # If token provided, verify and login
+  if [[ -n "$token" ]]; then
+    log_info "Verifying magic link..."
+
+    local verified_email
+    verified_email=$(verify_magic_link "$token")
+
+    if [[ $? -ne 0 ]]; then
+      log_error "Invalid or expired magic link"
+      return 1
+    fi
+
+    # Get or create user
+    local container
+    container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+
+    local user_id
+    user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+      "SELECT id FROM auth.users WHERE email = '$verified_email' LIMIT 1;" \
+      2>/dev/null | xargs || echo "")
+
+    # Create user if doesn't exist (passwordless signup)
+    if [[ -z "$user_id" ]]; then
+      log_info "Creating new user via magic link..."
+      user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+        "INSERT INTO auth.users (email, email_verified) VALUES ('$verified_email', true) RETURNING id;" \
+        2>/dev/null | xargs || echo "")
+    else
+      # Mark email as verified
+      docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+        "UPDATE auth.users SET email_verified = true WHERE id = '$user_id';" \
+        >/dev/null 2>&1
+    fi
+
+    # Create session (same as email/password login)
+    local session_token
+    session_token=$(auth_generate_token 32)
+
+    local refresh_token
+    refresh_token=$(auth_generate_token 48)
+
+    local expires_at
+    expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+                 date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+      "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$expires_at'::timestamptz);" \
+      >/dev/null 2>&1
+
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+      "UPDATE auth.users SET last_sign_in_at = NOW() WHERE id = '$user_id';" \
+      >/dev/null 2>&1
+
+    log_info "✓ Magic link login successful"
+
+    echo "{\"user_id\": \"$user_id\", \"token\": \"$session_token\", \"refresh_token\": \"$refresh_token\", \"expires_at\": \"$expires_at\"}"
+    return 0
+
+  else
+    # Create and send magic link
+    log_info "Sending magic link to: $email"
+
+    local magic_token
+    magic_token=$(create_magic_link "$email")
+
+    if [[ $? -ne 0 ]]; then
+      log_error "Failed to create magic link"
+      return 1
+    fi
+
+    # In production, this would send an email with the link
+    # For now, just display the token for development
+    log_info "✓ Magic link created"
+    log_info "Token: $magic_token"
+    log_info "Use: nself auth login --magic-link --token=$magic_token"
+
+    echo "{\"email\": \"$email\", \"token\": \"$magic_token\", \"message\": \"Magic link sent to email\"}"
+    return 0
+  fi
 }
 
 # Login with phone/SMS
-# Usage: auth_login_phone <phone>
+# Usage: auth_login_phone <phone> [otp_code]
+# If otp_code provided, verify it. Otherwise, send OTP to phone.
 auth_login_phone() {
   local phone="$1"
+  local otp_code="${2:-}"
 
-  # TODO: Implement in AUTH-006
-  log_warning "auth_login_phone not yet implemented (AUTH-006)"
-  return 1
+  if [[ -z "$phone" ]]; then
+    log_error "Phone number required"
+    return 1
+  fi
+
+  # Normalize phone number (basic validation)
+  if ! echo "$phone" | grep -qE '^\+?[1-9][0-9]{7,14}$'; then
+    log_error "Invalid phone number format (use E.164: +1234567890)"
+    return 1
+  fi
+
+  local container
+  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+
+  if [[ -z "$container" ]]; then
+    log_error "PostgreSQL container not found"
+    return 1
+  fi
+
+  # If OTP code provided, verify and login
+  if [[ -n "$otp_code" ]]; then
+    log_info "Verifying OTP code..."
+
+    # Create phone_otps table if it doesn't exist
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
+CREATE TABLE IF NOT EXISTS auth.phone_otps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_phone_otps_phone ON auth.phone_otps(phone);
+EOSQL
+
+    # Verify OTP
+    local otp_data
+    otp_data=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+      "SELECT phone, expires_at, verified_at FROM auth.phone_otps WHERE phone = '$phone' AND code = '$otp_code' ORDER BY created_at DESC LIMIT 1;" \
+      2>/dev/null || echo "")
+
+    if [[ -z "$otp_data" ]]; then
+      log_error "Invalid OTP code"
+      return 1
+    fi
+
+    local verified_phone expires_at verified_at
+    read -r verified_phone expires_at verified_at <<< "$(echo "$otp_data" | xargs)"
+
+    # Check if already used
+    if [[ -n "$verified_at" ]]; then
+      log_error "OTP code already used"
+      return 1
+    fi
+
+    # Check if expired (5 minutes)
+    local now
+    now=$(date -u "+%Y-%m-%d %H:%M:%S")
+
+    if [[ "$now" > "$expires_at" ]]; then
+      log_error "OTP code expired"
+      return 1
+    fi
+
+    # Mark as verified
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+      "UPDATE auth.phone_otps SET verified_at = NOW() WHERE phone = '$phone' AND code = '$otp_code';" \
+      >/dev/null 2>&1
+
+    # Get or create user
+    local user_id
+    user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+      "SELECT id FROM auth.users WHERE phone = '$phone' LIMIT 1;" \
+      2>/dev/null | xargs || echo "")
+
+    if [[ -z "$user_id" ]]; then
+      user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+        "INSERT INTO auth.users (phone, phone_verified) VALUES ('$phone', true) RETURNING id;" \
+        2>/dev/null | xargs || echo "")
+    else
+      docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+        "UPDATE auth.users SET phone_verified = true WHERE id = '$user_id';" \
+        >/dev/null 2>&1
+    fi
+
+    # Create session
+    local session_token
+    session_token=$(auth_generate_token 32)
+
+    local refresh_token
+    refresh_token=$(auth_generate_token 48)
+
+    local session_expires_at
+    session_expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+                         date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+      "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$session_expires_at'::timestamptz);" \
+      >/dev/null 2>&1
+
+    log_info "✓ Phone login successful"
+
+    echo "{\"user_id\": \"$user_id\", \"token\": \"$session_token\", \"refresh_token\": \"$refresh_token\", \"expires_at\": \"$session_expires_at\"}"
+    return 0
+
+  else
+    # Generate and send OTP code
+    log_info "Sending OTP to: $phone"
+
+    # Generate 6-digit OTP
+    local otp
+    otp=$(openssl rand -hex 3 2>/dev/null | cut -c1-6 || printf "%06d" $((RANDOM % 1000000)))
+
+    # Calculate expiry (5 minutes)
+    local otp_expires_at
+    otp_expires_at=$(date -u -d "+300 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+                     date -u -v+300S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+
+    # Create table if needed
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
+CREATE TABLE IF NOT EXISTS auth.phone_otps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_phone_otps_phone ON auth.phone_otps(phone);
+EOSQL
+
+    # Store OTP
+    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+      "INSERT INTO auth.phone_otps (phone, code, expires_at) VALUES ('$phone', '$otp', '$otp_expires_at'::timestamptz);" \
+      >/dev/null 2>&1
+
+    # In production, this would send SMS via Twilio/AWS SNS
+    # For now, display OTP for development
+    log_info "✓ OTP code generated"
+    log_info "OTP: $otp (valid for 5 minutes)"
+    log_info "Use: nself auth login --phone=$phone --otp=$otp"
+
+    echo "{\"phone\": \"$phone\", \"message\": \"OTP sent to phone\", \"otp_dev\": \"$otp\"}"
+    return 0
+  fi
 }
 
 # Login anonymously
 # Usage: auth_login_anonymous
+# Creates anonymous user account with no credentials
 auth_login_anonymous() {
-  # TODO: Implement in AUTH-007
-  log_warning "auth_login_anonymous not yet implemented (AUTH-007)"
-  return 1
+  log_info "Creating anonymous session..."
+
+  local container
+  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+
+  if [[ -z "$container" ]]; then
+    log_error "PostgreSQL container not found"
+    return 1
+  fi
+
+  # Create anonymous user
+  local user_id
+  user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+    "INSERT INTO auth.users (email) VALUES (NULL) RETURNING id;" \
+    2>/dev/null | xargs || echo "")
+
+  if [[ -z "$user_id" ]]; then
+    log_error "Failed to create anonymous user"
+    return 1
+  fi
+
+  # Create session
+  local session_token
+  session_token=$(auth_generate_token 32)
+
+  local refresh_token
+  refresh_token=$(auth_generate_token 48)
+
+  local expires_at
+  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+               date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$expires_at'::timestamptz);" \
+    >/dev/null 2>&1
+
+  # Log audit event
+  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
+    "INSERT INTO auth.audit_log (user_id, event_type, success) VALUES ('$user_id', 'anonymous_login', true);" \
+    >/dev/null 2>&1
+
+  log_info "✓ Anonymous session created"
+
+  echo "{\"user_id\": \"$user_id\", \"token\": \"$session_token\", \"refresh_token\": \"$refresh_token\", \"expires_at\": \"$expires_at\", \"anonymous\": true}"
+  return 0
 }
 
 # Login with OAuth provider
