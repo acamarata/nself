@@ -1,13 +1,13 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.4.9-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
-> **⚠️ IMPORTANT NOTE**: While the CLI is functional and actively used in production, nself is under heavy development until v0.5 (see [roadmap](docs/ROADMAP.md)). Bugs are expected as we refine features and add capabilities. We recommend production use only for experienced users comfortable with Docker, self-hosting, and troubleshooting. 
+> **✅ PRODUCTION READY**: nself v0.5.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, nself is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)). 
 > 
 > That said, nself is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
 > 
@@ -23,7 +23,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🚀 v0.4.9**: Polish release preparing for v0.5.0! All package versions synchronized, complete QA pass, improved documentation. Ready for the major v0.5.0 release. [See changelog](docs/releases/CHANGELOG.md)
+> **🎉 v0.5.0 - Production Ready!**: First production-ready release with 36 commands, 40+ service templates, full monitoring stack, Kubernetes support, and 26 cloud providers. Complete backend infrastructure in under 5 minutes. [See changelog](docs/releases/CHANGELOG.md) | [Roadmap to v1.0](docs/ROADMAP.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 

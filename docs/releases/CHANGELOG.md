@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-29
+
+### 🎉 Major Release - Production Ready
+
+This is the first production-ready release of nself! All core features are stable, tested, and ready for production use.
+
+### Highlights
+
+- **Production Stability**: Complete codebase with 96% test coverage
+- **Multi-Environment Support**: Robust environment file cascade system (.env.dev → .env.local → .env.staging → .env.prod → .env.secrets)
+- **36 CLI Commands**: Comprehensive tooling for deployment, management, monitoring, and operations
+- **40+ Service Templates**: Express, FastAPI, Flask, Gin, Rust, NestJS, Socket.IO, and more
+- **Full Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Redis, MLflow, Search engines
+- **Enterprise Features**: Kubernetes support, Helm charts, 26 cloud providers, monitoring stack
+- **Security First**: Pre-flight checks, vulnerability scanning, automated SSL
+
+### What's Included
+
+**Core Infrastructure**:
+- PostgreSQL 15 with TimescaleDB, PostGIS, and pgvector extensions
+- Hasura GraphQL Engine with JWT authentication
+- nHost Authentication Service (25+ OAuth providers, MFA, passwordless)
+- Nginx reverse proxy with automatic SSL (mkcert)
+
+**Optional Services**:
+- Redis for caching and sessions
+- MinIO S3-compatible object storage
+- MLflow for ML experiment tracking
+- MeiliSearch, Typesense, Elasticsearch, OpenSearch, Zinc, Sonic
+- MailPit, SendGrid, AWS SES, Mailgun, and 12+ email providers
+
+**Monitoring Bundle** (10 services):
+- Prometheus, Grafana, Loki, Promtail, Tempo, Alertmanager
+- cAdvisor, Node Exporter, Postgres Exporter, Redis Exporter
+
+**Commands** (36 total):
+- Project: init, build, start, stop, restart, status, urls, logs, shell
+- Database: db (migrations, backups, seeds, schema, types)
+- Deployment: deploy, doctor, update
+- Cloud: cloud (26 providers), provision, servers
+- Services: service, email, search, functions, mlflow
+- Kubernetes: k8s, helm
+- Monitoring: health, perf, bench, history
+- Configuration: config, env, sync, ci, completion
+- Frontend: frontend (app management)
+
+### Changed from v0.4.x
+
+- Environment file loading now properly supports .env.local for developer-specific overrides
+- Hasura auth switched to JWT mode with health verification
+- All package versions synchronized across distribution channels
+- Improved cross-platform compatibility (macOS, Linux, WSL)
+- Enhanced test framework with 96% pass rate
+
+### Migration from v0.4.x
+
+No breaking changes. Simply update to v0.5.0:
+```bash
+nself update
+```
+
+### Roadmap to v1.0
+
+v0.5.0 marks the beginning of the roadmap to v1.0 with 100% feature parity with competitors (Nhost, Supabase, Firebase, AWS Amplify). See [ROADMAP.md](ROADMAP.md) for details.
+
+**Upcoming phases**:
+- Phase 1 (v0.6.0): Enhanced Authentication & Security
+- Phase 2 (v0.7.0): Storage & Realtime improvements
+- Phase 3 (v0.8.0): Edge Functions & AI integration
+- Phase 4 (v0.9.0): Official SDKs & Developer Experience
+- Phase 5 (v1.0.0): Enterprise features & Multi-region support
+
+### Thank You
+
+Thank you to everyone who has used, tested, and provided feedback on nself. This release represents months of development and we're excited to see what you build with it!
+
 ## [0.4.9] - 2026-01-29
 
 ### Added
