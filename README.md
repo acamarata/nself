@@ -1,6 +1,6 @@
 # nself - Nhost self-hosted stack and more, in seconds!
 
-[![Version](https://img.shields.io/badge/version-0.4.7-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.4.9-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -23,7 +23,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🚀 v0.4.7**: Kubernetes Support release! New `nself k8s` and `nself helm` commands for full Kubernetes deployment and Helm chart management. 26 cloud providers supported. [See changelog](docs/releases/ROADMAP.md)
+> **🚀 v0.4.9**: Polish release preparing for v0.5.0! All package versions synchronized, complete QA pass, improved documentation. Ready for the major v0.5.0 release. [See changelog](docs/releases/CHANGELOG.md)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 

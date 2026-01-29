@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2026-01-29
+
+### Added
+- **Quality Assurance**: Complete QA pass with all test fixes
+- **Documentation**: Updated README with v0.4.8 improvements
+- **Package Updates**: Synchronized all package manager versions
+
+### Changed
+- **Version Bump**: Preparing for v0.5.0 major release
+- All package versions synchronized (Homebrew, npm, Docker, RPM, AUR)
+
+### Notes
+This is a polish release before v0.5.0. Focuses on quality, documentation, and preparation for the major v0.5.0 release.
+
+## [0.4.8] - 2026-01-29
+
+### Fixed
+- **.env.local Loading**: Environment file cascade now properly includes .env.local for dev environment
+- **Test Suite**: Resolved path issues in test-custom-services.sh, test-in-temp.sh, and test-multi-domain.sh
+- **Hasura Auth**: Switched to JWT mode with deploy health verification
+- **Security**: Fixed Redis and PostgreSQL exposure vulnerabilities
+- All critical unit tests now passing (142/147 tests pass, 96% pass rate)
+
+### Added
+- **Server Diagnostics**: New pre-flight checks for deployment validation
+- **Security Audit**: Comprehensive security audit report and fixes
+- **Documentation**: Added missing command documentation
+
+### Changed
+- Improved environment file precedence system (.env.local properly overrides .env.dev)
+- Enhanced test framework reliability for cross-platform compatibility
+
 ## [0.4.7] - 2026-01-23
 
 ### Added
