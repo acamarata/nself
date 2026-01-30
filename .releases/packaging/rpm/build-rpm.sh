@@ -10,7 +10,7 @@ echo "Building RPM package for nself v${VERSION}"
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Copy spec file
-cp packaging/rpm/nself.spec ~/rpmbuild/SPECS/
+cp .releases/packaging/rpm/nself.spec ~/rpmbuild/SPECS/
 
 # Download source tarball
 cd ~/rpmbuild/SOURCES

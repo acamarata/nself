@@ -13,7 +13,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$DEB_DIR"
 
 # Copy DEBIAN control files
-cp -r packaging/deb/DEBIAN "$DEB_DIR/"
+cp -r .releases/packaging/deb/DEBIAN "$DEB_DIR/"
 chmod 755 "$DEB_DIR/DEBIAN/postinst"
 chmod 755 "$DEB_DIR/DEBIAN/prerm"
 
@@ -22,7 +22,8 @@ mkdir -p "$DEB_DIR/opt/nself"
 mkdir -p "$DEB_DIR/usr/share/doc/nself"
 
 # Copy nself files
-cp -r bin src install.sh LICENSE README.md VERSION "$DEB_DIR/opt/nself/"
+cp -r bin src install.sh LICENSE README.md "$DEB_DIR/opt/nself/"
+cp src/VERSION "$DEB_DIR/opt/nself/"
 
 # Copy documentation
 cp README.md "$DEB_DIR/usr/share/doc/nself/"
@@ -32,7 +33,6 @@ cp LICENSE "$DEB_DIR/usr/share/doc/nself/"
 cd "$BUILD_DIR"
 dpkg-deb --build "${PACKAGE_NAME}_${VERSION}"
 
-# Move to packaging directory
-mv "${PACKAGE_NAME}_${VERSION}.deb" "$(pwd)/packaging/deb/"
-
-echo "✅ Debian package built: packaging/deb/${PACKAGE_NAME}_${VERSION}.deb"
+# Package is in /tmp
+echo "✅ Debian package built: ${BUILD_DIR}/${PACKAGE_NAME}_${VERSION}.deb"
+echo "Package location: ${BUILD_DIR}/${PACKAGE_NAME}_${VERSION}.deb"
