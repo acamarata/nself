@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Error pattern analyzer - identifies root causes from error logs
 # Returns error codes that map to specific fix strategies

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # service-builder.sh - Build custom services from CS_N pattern
 
 # Source utilities

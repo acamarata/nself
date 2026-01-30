@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # config-validator.sh - Comprehensive configuration validation for build
 
 # Source display utilities

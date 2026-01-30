@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 
 source "$(dirname "${BASH_SOURCE[0]}")/display.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/output-formatter.sh"

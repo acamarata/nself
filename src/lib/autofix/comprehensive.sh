@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Comprehensive auto-fix module for nself
 # Handles all common Docker, PostgreSQL, and service issues

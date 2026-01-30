@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # metrics-dashboard.sh - Real-time performance metrics dashboard
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 fix_postgres_connection() {
   local service_name="$1"

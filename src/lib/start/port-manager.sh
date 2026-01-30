@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # port-manager.sh - Port conflict detection and resolution
 # Bash 3.2 compatible, cross-platform
 

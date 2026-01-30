@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # output.sh - Output helpers for build
 
 # Color codes (portable)

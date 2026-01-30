@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # database.sh - Database configuration generation for build
 
 # Generate database initialization

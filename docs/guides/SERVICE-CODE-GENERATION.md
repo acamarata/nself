@@ -211,7 +211,7 @@ Asynchronous task processing and job queues.
 
 Specialized templates for AI/ML workloads.
 
-- `agent-llm` - OpenAI/Anthropic integration, streaming, RAG
+- `agent-llm` - LLM provider integration, streaming, RAG
 - `agent-vision` - Computer vision, image processing, OCR
 - `agent-analytics` - Data analysis, visualization, reporting
 - `agent-training` - Model training, hyperparameter tuning

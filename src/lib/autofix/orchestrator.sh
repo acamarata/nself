@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Main autofix orchestrator - coordinates error analysis and fixes
 # Designed for minimal output and maximum effectiveness

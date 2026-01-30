@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # core.sh - Auto-fix decision engine
 
 # List of fixable errors (limited scope)

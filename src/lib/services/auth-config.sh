@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # auth-config.sh - Generate auth configuration for multi-app support
 
 # Get all allowed redirect URLs for auth service

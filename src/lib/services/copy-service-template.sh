@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # copy-service-template.sh - Copy service templates instead of generating
 # POSIX-compliant, no Bash 4+ features
 

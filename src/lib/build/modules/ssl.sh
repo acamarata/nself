@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # ssl.sh - Build module for SSL certificate generation
 # This is a thin wrapper around the SSL API
 

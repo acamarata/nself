@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Comprehensive auto-fix for all common issues
 
 # Source display utilities if available

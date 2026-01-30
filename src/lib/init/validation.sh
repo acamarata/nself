@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # validation.sh - Validation functions for nself init command
 #
 # This module provides validation functions for checking dependencies,

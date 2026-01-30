@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # installer.sh - Multi-OS trust installation for SSL certificates
 
 # Source dependencies

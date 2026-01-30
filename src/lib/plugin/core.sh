@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # core.sh - Core plugin utilities for nself
 # Provides common functions for plugin management
 

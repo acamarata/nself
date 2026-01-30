@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Main dispatcher for auto-fix functionality
 # Analyzes errors and delegates to specific handlers

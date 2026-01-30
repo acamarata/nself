@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # init-wizard-refactored.sh - Refactored configuration wizard using modules
 # POSIX-compliant, no Bash 4+ features
 

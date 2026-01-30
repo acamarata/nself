@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # Output utility functions
 # Simple wrappers around display.sh for backward compatibility

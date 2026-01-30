@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # services-config.sh - Wizard step for services configuration
 # POSIX-compliant, no Bash 4+ features
 

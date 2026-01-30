@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # mkcert.sh - mkcert certificate generation (cross-platform)
 
 # Source OS detection

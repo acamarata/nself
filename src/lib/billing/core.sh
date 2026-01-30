@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # nself billing/core.sh - Billing System Core Functions
 # Part of nself v0.9.0 - Sprint 13: Billing Integration & Usage Tracking
@@ -218,13 +220,15 @@ billing_db_query() {
   local format="${2:-tuples}"
   shift 2
 
-  local psql_opts="-h ${BILLING_DB_HOST} -p ${BILLING_DB_PORT} -U ${BILLING_DB_USER} -d ${BILLING_DB_NAME}"
+  # Build psql command as array to prevent command injection
+  local psql_opts=(-h "${BILLING_DB_HOST}" -p "${BILLING_DB_PORT}" -U "${BILLING_DB_USER}" -d "${BILLING_DB_NAME}")
   local pgpass_file
 
   # Create .pgpass file for secure credential handling
   pgpass_file=$(mktemp) || {
-    # Fallback without .pgpass if mktemp fails
-    PGPASSWORD="$BILLING_DB_PASSWORD" psql $psql_opts -t -c "$query" 2>/dev/null
+    # Fallback without .pgpass if mktemp fails (use array here too)
+    local fallback_cmd=(psql -h "${BILLING_DB_HOST}" -p "${BILLING_DB_PORT}" -U "${BILLING_DB_USER}" -d "${BILLING_DB_NAME}" -t -c "$query")
+    PGPASSWORD="$BILLING_DB_PASSWORD" "${fallback_cmd[@]}" 2>/dev/null
     return $?
   }
 
@@ -232,28 +236,28 @@ billing_db_query() {
   _billing_create_pgpass "$pgpass_file" >/dev/null
 
   # Build variable bindings from remaining arguments (key-value pairs)
-  local var_opts=""
   while (($# >= 2)); do
     local var_name="$1"
     local var_value="$2"
     shift 2
-    var_opts="${var_opts} -v ${var_name}='${var_value}'"
+    psql_opts+=(-v "${var_name}=${var_value}")
   done
 
   case "$format" in
     csv)
-      psql_opts="${psql_opts} --csv"
+      psql_opts+=(--csv)
       ;;
     json)
       query="SELECT row_to_json(t) FROM (${query}) t;"
+      psql_opts+=(-t)
       ;;
     *)
-      psql_opts="${psql_opts} -t"
+      psql_opts+=(-t)
       ;;
   esac
 
   export PGPASSFILE="$pgpass_file"
-  psql $psql_opts $var_opts -c "$query" 2>/dev/null
+  psql "${psql_opts[@]}" -c "$query" 2>/dev/null
   unset PGPASSFILE
 }
 

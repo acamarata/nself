@@ -12,18 +12,18 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo ""
-echo -e "${BLUE}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║          nself Test Suite Runner             ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════════╝${NC}"
+printf "${BLUE}╔══════════════════════════════════════════════╗${NC}\n"
+printf "${BLUE}║          nself Test Suite Runner             ║${NC}\n"
+printf "${BLUE}╚══════════════════════════════════════════════╝${NC}\n"
 echo ""
 
 # Check if bats is installed
 if ! command -v bats >/dev/null 2>&1; then
-  echo -e "${YELLOW}⚠️  Warning: bats not installed${NC}"
-  echo -e "${BLUE}Installing bats would enable full test suite${NC}"
-  echo -e "${BLUE}Visit: https://github.com/bats-core/bats-core${NC}"
+  printf "${YELLOW}⚠️  Warning: bats not installed${NC}\n"
+  printf "${BLUE}Installing bats would enable full test suite${NC}\n"
+  printf "${BLUE}Visit: https://github.com/bats-core/bats-core${NC}\n"
   echo ""
-  echo -e "${BLUE}Running basic tests without bats...${NC}"
+  printf "${BLUE}Running basic tests without bats...${NC}\n"
   echo ""
 
   # Run basic tests without bats
@@ -33,20 +33,20 @@ if ! command -v bats >/dev/null 2>&1; then
   # Test 1: Check if install.sh exists
   echo -n "Testing install.sh existence... "
   if [ -f "../../install.sh" ]; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
   # Test 2: Check if nself binary exists
   echo -n "Testing nself binary existence... "
   if [ -f "../../bin/nself" ]; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
@@ -54,29 +54,29 @@ if ! command -v bats >/dev/null 2>&1; then
   echo -n "Testing VERSION file... "
   if [ -f "../VERSION" ]; then
     VERSION=$(cat ../VERSION)
-    echo -e "${GREEN}✓${NC} (v$VERSION)"
+    printf "${GREEN}✓${NC} (v%s)\n" "$VERSION"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
   # Test 4: Check shell script syntax
   echo -n "Testing install.sh syntax... "
   if bash -n ../../install.sh 2>/dev/null; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
   echo -n "Testing nself.sh syntax... "
   if bash -n ../cli/nself.sh 2>/dev/null; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
@@ -85,10 +85,10 @@ if ! command -v bats >/dev/null 2>&1; then
   if grep -q "check_existing_installation" ../../install.sh &&
     grep -q "check_requirements" ../../install.sh &&
     grep -q "show_spinner" ../../install.sh; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
@@ -97,41 +97,41 @@ if ! command -v bats >/dev/null 2>&1; then
   if grep -q "cmd_update" ../cli/nself.sh &&
     grep -q "cmd_init" ../cli/nself.sh &&
     grep -q "show_spinner" ../cli/nself.sh; then
-    echo -e "${GREEN}✓${NC}"
+    printf "${GREEN}✓${NC}\n"
     ((TESTS_PASSED++))
   else
-    echo -e "${RED}✗${NC}"
+    printf "${RED}✗${NC}\n"
     ((TESTS_FAILED++))
   fi
 
   echo ""
-  echo -e "${BLUE}═══════════════════════════════════════════════${NC}"
-  echo -e "${GREEN}Passed: $TESTS_PASSED${NC} | ${RED}Failed: $TESTS_FAILED${NC}"
+  printf "${BLUE}═══════════════════════════════════════════════${NC}\n"
+  printf "${GREEN}Passed: %s${NC} | ${RED}Failed: %s${NC}\n" "$TESTS_PASSED" "$TESTS_FAILED"
 
   if [ $TESTS_FAILED -eq 0 ]; then
-    echo -e "${GREEN}✅ All basic tests passed!${NC}"
+    printf "${GREEN}✅ All basic tests passed!${NC}\n"
   else
-    echo -e "${RED}❌ Some tests failed${NC}"
+    printf "${RED}❌ Some tests failed${NC}\n"
     exit 1
   fi
 else
-  echo -e "${GREEN}✓ bats is installed${NC}"
+  printf "${GREEN}✓ bats is installed${NC}\n"
   echo ""
 
   # Run bats tests
-  echo -e "${BLUE}Running test suites...${NC}"
+  printf "${BLUE}Running test suites...${NC}\n"
   echo ""
 
   # Run each test file
   for test_file in *.bats; do
     if [ -f "$test_file" ]; then
-      echo -e "${BLUE}Running $test_file...${NC}"
+      printf "${BLUE}Running %s...${NC}\n" "$test_file"
       bats "$test_file"
       echo ""
     fi
   done
 
-  echo -e "${GREEN}✅ All tests completed!${NC}"
+  printf "${GREEN}✅ All tests completed!${NC}\n"
 fi
 
 echo ""

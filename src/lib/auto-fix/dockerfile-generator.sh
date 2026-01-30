@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # dockerfile-generator.sh - Auto-generate missing Dockerfiles for any service
 

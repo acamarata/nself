@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # monitoring-setup.sh - Set up monitoring configuration files during build
 # Bash 3.2 compatible, cross-platform
 

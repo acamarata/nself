@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # Tenant Routing Library
 # Subdomain-based and custom domain routing for multi-tenancy

@@ -360,9 +360,9 @@ $ nself logs postgres
 
 | Date | Change | Author |
 |------|--------|--------|
-| 2026-01-30 | Initial proposal created | Claude Code Analysis |
-| 2026-01-30 | All 5 documents completed (104 KB) | Claude Code Analysis |
-| 2026-01-30 | Added to main commands documentation | Claude Code Analysis |
+| 2026-01-30 | Initial proposal created | Automated Analysis |
+| 2026-01-30 | All 5 documents completed (104 KB) | Automated Analysis |
+| 2026-01-30 | Added to main commands documentation | Automated Analysis |
 
 ---
 

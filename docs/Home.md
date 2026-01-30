@@ -11,7 +11,7 @@
 
 *Deploy a complete backend in minutes, not days with ɳSelf.*
 
-**[Quick Start](guides/Quick-Start.md)** | **[Installation](guides/Installation.md)** | **[Documentation](README.md)** | **[GitHub](https://github.com/acamarata/nself)**
+**[Quick Start](getting-started/Quick-Start.md)** | **[Installation](getting-started/Installation.md)** | **[Documentation](README.md)** | **[GitHub](https://github.com/acamarata/nself)**
 
 </div>
 
@@ -45,7 +45,7 @@ nself db schema apply schema.dbml # Import → migrate → seed
 - Database with your schema
 - Sample users to test with
 
-**[View Full Quick Start Guide](guides/Quick-Start.md)**
+**[View Full Quick Start Guide](getting-started/Quick-Start.md)**
 
 ---
 
@@ -53,8 +53,8 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 | I want to... | Go to... |
 |-------------|----------|
-| Get started in 5 minutes | **[Quick Start](guides/Quick-Start.md)** |
-| Install nself | **[Installation](guides/Installation.md)** |
+| Get started in 5 minutes | **[Quick Start](getting-started/Quick-Start.md)** |
+| Install nself | **[Installation](getting-started/Installation.md)** |
 | Understand core concepts | **[Architecture](architecture/ARCHITECTURE.md)** |
 | Look up a command | **[Command Reference](commands/COMMANDS.md)** |
 | Configure my setup | **[Configuration](configuration/README.md)** |
@@ -186,19 +186,19 @@ nself tenant domains add app.example.com
 nself tenant branding set-colors --primary #0066cc
 ```
 
-> **v0.9.6 Update:** Commands consolidated under logical groupings. Old commands like `nself billing` and `nself org` are now `nself tenant billing` and `nself tenant org`.
+> **v0.9.6 Update:** Commands consolidated under logical groupings. Old commands like `nself billing` and `nself org` are now `nself tenant billing` and `nself tenant org`. All old commands still work with deprecation warnings.
 
 ### OAuth & Storage (v0.9.0)
 
 **OAuth Integration:**
 - **[OAuth Management](commands/OAUTH.md)** - Google, GitHub, Microsoft, Slack
 - Multiple provider support with easy configuration
-- Commands: `nself auth oauth` (v0.9.6: was `nself oauth`)
+- Commands: `nself auth oauth` (v0.9.6: consolidated from `nself oauth`)
 
 **File Storage:**
-- **[Storage System](commands/STORAGE.md)** - Uploads, thumbnails, virus scanning
+- **[Storage System](commands/storage.md)** - Uploads, thumbnails, virus scanning
 - GraphQL integration generation
-- Commands: `nself service storage` (v0.9.6: was `nself storage`)
+- Commands: `nself service storage` (v0.9.6: consolidated from `nself storage`)
 
 ### Plugin System (v0.4.8)
 
@@ -368,7 +368,7 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 <div align="center">
 
-**Version 0.9.6** · **January 2026** · **[Full Documentation](README.md)**
+**Version 0.9.6** · **January 30, 2026** · **[Full Documentation](README.md)**
 
 *ɳSelf - The complete self-hosted backend platform*
 

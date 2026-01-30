@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # env-quotes-fix.sh - Auto-fix unquoted environment values with spaces
 # This prevents silent failures when sourcing env files with 'set -a'
 

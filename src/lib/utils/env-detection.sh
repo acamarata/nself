@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # env-detection.sh - Environment detection and management utilities
 # Provides centralized environment detection with NSELF_ENV support
 

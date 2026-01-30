@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # headers.sh - Comprehensive security headers management
 # POSIX-compliant, no Bash 4+ features
 

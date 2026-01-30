@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # gitignore.sh - Gitignore management functions for nself init command
 #
 # This module handles all .gitignore file operations including creation,

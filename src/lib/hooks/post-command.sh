@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # post-command.sh - Post-command cleanup and reporting hooks
 
 # Source utilities

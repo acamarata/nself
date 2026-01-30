@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # service-detection.sh - Smart service detection using ternary patterns
 # Environment-agnostic service detection that works across dev/staging/prod
 

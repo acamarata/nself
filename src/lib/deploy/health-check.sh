@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # health-check.sh - Deployment health validation
 # POSIX-compliant, no Bash 4+ features
 

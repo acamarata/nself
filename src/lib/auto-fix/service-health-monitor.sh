@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Service Health Monitor and Auto-Fixer
 # Monitors container health and applies targeted fixes for common issues
 

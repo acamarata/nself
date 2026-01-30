@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # help.sh - Help and documentation functions for nself init command
 #
 # This module provides all help-related functionality for the init command.

@@ -162,7 +162,7 @@ nself db types
 
 ```bash
 # Create production environment
-nself env create prod production
+nself config env create prod production
 
 # Edit server configuration
 # .environments/prod/server.json
@@ -170,6 +170,8 @@ nself env create prod production
 # Deploy
 nself deploy prod
 ```
+
+> **v0.9.6 Note:** Environment commands moved to `nself config env`. Old syntax `nself env` still works.
 
 See [Deployment Guide](Deployment.md) for complete instructions.
 
@@ -310,10 +312,10 @@ nself trust              # Trust SSL certs
 
 | Guide | Description |
 |-------|-------------|
-| **[Database Workflow](DATABASE-WORKFLOW.md)** | Deep dive into DBML, migrations, seeding |
+| **[Database Workflow](../guides/DATABASE-WORKFLOW.md)** | Deep dive into DBML, migrations, seeding |
 | **[Services Overview](../services/SERVICES.md)** | All available services |
 | **[Custom Services](../services/SERVICES_CUSTOM.md)** | Build your own microservices |
-| **[Deployment](Deployment.md)** | Go to production |
+| **[Deployment](../guides/Deployment.md)** | Go to production |
 | **[FAQ](FAQ.md)** | Common questions |
 
 ---
@@ -326,4 +328,4 @@ nself trust              # Trust SSL certs
 
 ---
 
-*Next: [Database Workflow](DATABASE-WORKFLOW.md) - Design your database schema*
+*Next: [Database Workflow](../guides/DATABASE-WORKFLOW.md) - Design your database schema*

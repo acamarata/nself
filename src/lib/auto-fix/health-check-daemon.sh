@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Health Check Daemon
 # Runs periodic health checks and applies fixes automatically
 

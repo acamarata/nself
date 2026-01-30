@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # validation.sh - Environment validation for build
 
 # Source auto-fix utilities

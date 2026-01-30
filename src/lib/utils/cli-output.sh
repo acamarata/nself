@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # cli-output.sh - Standardized CLI output library for nself
 # Cross-platform compatible (Bash 3.2+), POSIX-compliant where possible
 #

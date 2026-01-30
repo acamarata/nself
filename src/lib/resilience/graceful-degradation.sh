@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # graceful-degradation.sh - Graceful degradation strategies for service failures
 

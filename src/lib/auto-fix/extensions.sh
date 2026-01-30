@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # extensions.sh - Auto-fix PostgreSQL extensions compatibility
 
 # Source utilities

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # docker-compose.sh - Docker Compose generation for build
 
 # Source platform compatibility functions

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # error.sh - Simplified error handling and classification
 
 # Source display utilities

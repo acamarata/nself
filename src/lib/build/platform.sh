@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # platform.sh - Platform detection and compatibility layer for build
 
 # Detect platform and set compatibility flags

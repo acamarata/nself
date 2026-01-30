@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # dependencies.sh - Fix missing dependencies
 
 fix_missing_dependency() {

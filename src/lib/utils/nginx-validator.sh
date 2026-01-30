@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # nginx-validator.sh - Nginx configuration validation and auto-fix utilities
 
 # Source display utilities

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # nself Theme System - FULL IMPLEMENTATION
 # Manages theme creation, CSS variables, dark/light mode, and theme preview
 # Part of Sprint 14: White-Label & Customization (60pts) for v0.9.0

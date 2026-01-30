@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # checklist.sh - Production security checklist and audit
 # POSIX-compliant, no Bash 4+ features
 

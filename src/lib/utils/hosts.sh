@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # hosts.sh - Manage /etc/hosts entries for local development
 
 # Check if a hosts entry exists

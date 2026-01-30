@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # wizard-simple.sh - Simplified wizard using smart defaults
 # Only asks for essential information, everything else uses smart defaults
 

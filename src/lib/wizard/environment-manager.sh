@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # environment-manager.sh - Environment management for multi-env support
 
 # Source templates for create_environment_file function

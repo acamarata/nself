@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 
 OUTPUT_FORMATTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${OUTPUT_FORMATTER_DIR}/display.sh"

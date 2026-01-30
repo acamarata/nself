@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # docker.sh - Fix Docker issues
 
 fix_docker_build() {

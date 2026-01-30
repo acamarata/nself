@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # profiles.sh - Monitoring profile management
 
 # Get monitoring profile based on environment

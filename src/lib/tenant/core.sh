@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # Tenant Core Library
 # Multi-tenant management functions

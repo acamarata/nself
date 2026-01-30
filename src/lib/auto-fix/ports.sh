@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # ports.sh - Fix port conflicts
 
 fix_port_conflict() {

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # config.sh - Configuration constants for nself init command
 #
 # This module defines all configuration constants used by the init command.

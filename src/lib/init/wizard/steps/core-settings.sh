@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # core-settings.sh - Wizard step for core project settings
 # POSIX-compliant, no Bash 4+ features
 

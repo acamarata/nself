@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # preflight.sh - Pre-flight checks for nself commands
 
 # Check if running in nself source directory

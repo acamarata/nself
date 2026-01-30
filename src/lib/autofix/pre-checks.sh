@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Pre-flight checks before starting Docker
 # Fixes common issues before they cause Docker failures

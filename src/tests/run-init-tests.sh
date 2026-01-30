@@ -46,21 +46,21 @@ RESET="\033[0m"
 
 # Helper functions
 print_header() {
-  echo -e "\n${BLUE}═══════════════════════════════════════════${RESET}"
-  echo -e "${BLUE}  $1${RESET}"
-  echo -e "${BLUE}═══════════════════════════════════════════${RESET}"
+  printf "\n${BLUE}═══════════════════════════════════════════${RESET}\n"
+  printf "${BLUE}  %s${RESET}\n" "$1"
+  printf "${BLUE}═══════════════════════════════════════════${RESET}\n"
 }
 
 print_success() {
-  echo -e "${GREEN}✓ $1${RESET}"
+  printf "${GREEN}✓ %s${RESET}\n" "$1"
 }
 
 print_error() {
-  echo -e "${RED}✗ $1${RESET}"
+  printf "${RED}✗ %s${RESET}\n" "$1"
 }
 
 print_warning() {
-  echo -e "${YELLOW}⚠ $1${RESET}"
+  printf "${YELLOW}⚠ %s${RESET}\n" "$1"
 }
 
 # Track results
@@ -172,7 +172,7 @@ check_bash_compatibility() {
   fi
 
   # Check for ${var^^} or ${var,,}
-  if grep -hE '\${[^}]*(\^\^|,,)[^}]*}' $files_to_check 2>/dev/null | grep -v "#"; then
+  if grep -hE '\$\{[^}]*(\^\^|,,)[^}]*\}' $files_to_check 2>/dev/null | grep -v "#"; then
     print_error "Found case conversion (Bash 4+)"
     has_issues=true
   fi
@@ -237,18 +237,18 @@ main() {
   # Print summary
   print_header "Test Summary"
   echo "Total tests: $TOTAL_TESTS"
-  echo -e "Passed: ${GREEN}$PASSED_TESTS${RESET}"
+  printf "Passed: ${GREEN}%s${RESET}\n" "$PASSED_TESTS"
   if [[ $FAILED_TESTS -gt 0 ]]; then
-    echo -e "Failed: ${RED}$FAILED_TESTS${RESET}"
+    printf "Failed: ${RED}%s${RESET}\n" "$FAILED_TESTS"
   else
-    echo -e "Failed: $FAILED_TESTS"
+    printf "Failed: %s\n" "$FAILED_TESTS"
   fi
 
   # Exit code
   if [[ $FAILED_TESTS -gt 0 ]]; then
     exit 1
   else
-    echo -e "\n${GREEN}All tests passed!${RESET}"
+    printf "\n${GREEN}All tests passed!${RESET}\n"
     exit 0
   fi
 }

@@ -154,7 +154,7 @@
 ## API Reference
 
 - [API Overview](api/README)
-- [GraphQL API](architecture/API)
+- [Complete API Documentation](architecture/API) (v0.9.6)
 - [Authentication API](api/AUTH-API)
 
 ---

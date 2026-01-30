@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Comprehensive Postgres extension validation and information
 # Uses delimited lists for compatibility with Bash 3.2+

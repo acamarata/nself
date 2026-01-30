@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # core-refactored.sh - Refactored core build orchestration logic using modules
 # POSIX-compliant, no Bash 4+ features
 

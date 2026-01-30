@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # nginx-fix.sh - Auto-fix nginx configuration issues
 
 # Fix nginx restart loop

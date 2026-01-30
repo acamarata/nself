@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # registry.sh - Plugin registry client for nself
 # Handles fetching, caching, and querying the plugin registry
 

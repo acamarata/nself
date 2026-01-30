@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # variables-documentation.sh - Generate documentation for runtime variables
 
 # Generate runtime variables documentation

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Service Template Configuration System
 # Maps service definitions to actual template directories

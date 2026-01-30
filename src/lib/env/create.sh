@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # create.sh - Environment creation functionality
 # POSIX-compliant, no Bash 4+ features
 

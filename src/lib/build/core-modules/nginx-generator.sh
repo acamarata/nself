@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # nginx-generator.sh - Generate nginx configs with runtime env var substitution
 # Uses nginx envsubst or template variables for runtime configuration
 

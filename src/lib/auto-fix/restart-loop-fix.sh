@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Auto-fix common restart loop issues
 
 fix_restart_loops() {

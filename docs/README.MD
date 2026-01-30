@@ -58,7 +58,7 @@ nself db schema apply schema.dbml # Import → migrate → seed
 - Database with your schema
 - Sample users to test with
 
-**[View Full Quick Start Guide](guides/Quick-Start.md)**
+**[View Full Quick Start Guide](getting-started/Quick-Start.md)**
 
 ---
 
@@ -254,11 +254,11 @@ nself tenant init
 # Create tenant
 nself tenant create "Acme Corp" --slug acme --plan pro
 
-# Billing management (v0.9.6: was "nself billing")
+# Billing management (v0.9.6: consolidated from "nself billing")
 nself tenant billing usage
 nself tenant billing subscription upgrade pro
 
-# Organization management (v0.9.6: was "nself org")
+# Organization management (v0.9.6: consolidated from "nself org")
 nself tenant org list
 
 # Custom domains and SSL
@@ -269,20 +269,24 @@ nself tenant domains ssl app.example.com
 nself tenant branding set-colors --primary #0066cc
 ```
 
+> **Note:** All old commands still work with deprecation warnings. See [Migration Guide](releases/v0.9.6.md#migration-guide).
+
 ### OAuth Management
 
 Comprehensive OAuth provider integration (v0.9.6: now under `nself auth oauth`):
 
 ```bash
 # Enable multiple providers
-nself oauth enable --providers google,github,slack,microsoft
+nself auth oauth enable --providers google,github,slack,microsoft
 
 # Configure credentials
-nself oauth config google --client-id=xxx --client-secret=xxx
+nself auth oauth config google --client-id=xxx --client-secret=xxx
 
 # Test configuration
-nself oauth test google
+nself auth oauth test google
 ```
+
+> **v0.9.6:** OAuth commands consolidated under `nself auth oauth`. Old syntax still works.
 
 ### File Storage & Uploads
 
@@ -290,14 +294,16 @@ Advanced file storage with thumbnails, virus scanning, and compression:
 
 ```bash
 # Upload with all features
-nself storage upload photo.jpg --all-features
+nself service storage upload photo.jpg --all-features
 
 # Generate GraphQL integration
-nself storage graphql-setup
+nself service storage graphql-setup
 
 # Manage uploads
-nself storage list users/123/
+nself service storage list users/123/
 ```
+
+> **v0.9.6:** Storage commands consolidated under `nself service storage`. Old syntax still works.
 
 **[View v0.9.0 Release Notes](releases/v0.9.0.md)**
 
@@ -386,7 +392,9 @@ nself deploy prod
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.9.0** | Jan 30, 2026 | Multi-Tenant Platform (current) |
+| **v0.9.6** | Jan 30, 2026 | Command Consolidation (current) |
+| v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
+| v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
 | v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
 | v0.4.7 | Jan 23, 2026 | Infrastructure Everywhere |
 | v0.4.6 | Jan 22, 2026 | Scaling & Performance |
@@ -438,7 +446,7 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 <div align="center">
 
-**Version 0.9.0** · **January 2026** · **[Changelog](releases/CHANGELOG.md)**
+**Version 0.9.6** · **January 30, 2026** · **[Changelog](releases/CHANGELOG.md)**
 
 *ɳSelf - The complete self-hosted backend platform*
 

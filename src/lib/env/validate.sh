@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # validate.sh - Environment validation functionality
 # POSIX-compliant, no Bash 4+ features
 

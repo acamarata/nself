@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # Complete healthcheck fixes - adds tools and endpoints
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 
 # Container health checking utilities
 

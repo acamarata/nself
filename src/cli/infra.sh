@@ -454,10 +454,286 @@ cmd_k8s_cluster() {
     nodes)
       kubectl get nodes "$@"
       ;;
+    create)
+      cmd_k8s_cluster_create "$@"
+      ;;
+    delete | destroy)
+      cmd_k8s_cluster_delete "$@"
+      ;;
+    kubeconfig | config)
+      cmd_k8s_cluster_kubeconfig "$@"
+      ;;
+    list)
+      cmd_k8s_cluster_list "$@"
+      ;;
     *)
       log_error "Unknown cluster action: $action"
-      log_info "Available: info, nodes"
+      log_info "Available: info, nodes, create, delete, kubeconfig, list"
+      log_info ""
+      log_info "Examples:"
+      log_info "  nself infra k8s cluster create --provider aws --name prod-cluster --region us-east-1"
+      log_info "  nself infra k8s cluster list --provider gcp"
+      log_info "  nself infra k8s cluster kubeconfig --provider azure --name prod-cluster"
+      log_info "  nself infra k8s cluster delete --provider digitalocean --name dev-cluster"
       return 1
+      ;;
+  esac
+}
+
+# Create managed Kubernetes cluster
+cmd_k8s_cluster_create() {
+  local provider="${K8S_PROVIDER:-}"
+  local cluster_name="${K8S_CLUSTER_NAME:-nself-cluster}"
+  local region="${K8S_REGION:-}"
+  local node_count="${K8S_NODE_COUNT:-3}"
+  local node_size="${K8S_NODE_SIZE:-medium}"
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --provider)
+        provider="$2"
+        shift 2
+        ;;
+      --name)
+        cluster_name="$2"
+        shift 2
+        ;;
+      --region | --location | --zone)
+        region="$2"
+        shift 2
+        ;;
+      --nodes | --node-count)
+        node_count="$2"
+        shift 2
+        ;;
+      --size | --node-size)
+        node_size="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$provider" ]]; then
+    log_error "Provider required: --provider <name>"
+    log_info "Supported providers: aws, gcp, azure, digitalocean, linode, vultr, scaleway"
+    return 1
+  fi
+
+  # Source provider interface
+  if [[ -f "${SCRIPT_DIR}/../lib/providers/provider-interface.sh" ]]; then
+    source "${SCRIPT_DIR}/../lib/providers/provider-interface.sh"
+  else
+    log_error "Provider interface not found"
+    return 1
+  fi
+
+  # Check if provider supports Kubernetes
+  if ! provider_supports_k8s "$provider"; then
+    log_error "Provider '$provider' does not support managed Kubernetes"
+    log_info "Supported providers with managed K8s:"
+    log_info "  - aws (EKS)"
+    log_info "  - gcp (GKE)"
+    log_info "  - azure (AKS)"
+    log_info "  - digitalocean (DOKS)"
+    log_info "  - linode (LKE)"
+    log_info "  - vultr (VKE)"
+    log_info "  - scaleway (Kapsule)"
+    return 1
+  fi
+
+  # Create cluster using provider interface
+  log_info "Creating managed Kubernetes cluster via $provider..."
+  provider_k8s_create "$provider" "$cluster_name" "$region" "$node_count" "$node_size"
+}
+
+# Delete managed Kubernetes cluster
+cmd_k8s_cluster_delete() {
+  local provider="${K8S_PROVIDER:-}"
+  local cluster_name="${K8S_CLUSTER_NAME:-}"
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --provider)
+        provider="$2"
+        shift 2
+        ;;
+      --name)
+        cluster_name="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$provider" ]]; then
+    log_error "Provider required: --provider <name>"
+    return 1
+  fi
+
+  if [[ -z "$cluster_name" ]]; then
+    log_error "Cluster name required: --name <cluster-name>"
+    return 1
+  fi
+
+  # Source provider interface
+  if [[ -f "${SCRIPT_DIR}/../lib/providers/provider-interface.sh" ]]; then
+    source "${SCRIPT_DIR}/../lib/providers/provider-interface.sh"
+  else
+    log_error "Provider interface not found"
+    return 1
+  fi
+
+  # Confirm deletion
+  log_warning "This will delete the Kubernetes cluster: $cluster_name"
+  printf "Are you sure? [y/N]: "
+  read -r confirm
+  confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+
+  if [[ "$confirm" != "y" && "$confirm" != "yes" ]]; then
+    log_info "Aborted"
+    return 0
+  fi
+
+  # Delete cluster using provider interface
+  log_info "Deleting managed Kubernetes cluster from $provider..."
+  provider_k8s_delete "$provider" "$cluster_name"
+}
+
+# Get kubeconfig for managed Kubernetes cluster
+cmd_k8s_cluster_kubeconfig() {
+  local provider="${K8S_PROVIDER:-}"
+  local cluster_name="${K8S_CLUSTER_NAME:-}"
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --provider)
+        provider="$2"
+        shift 2
+        ;;
+      --name)
+        cluster_name="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$provider" ]]; then
+    log_error "Provider required: --provider <name>"
+    return 1
+  fi
+
+  if [[ -z "$cluster_name" ]]; then
+    log_error "Cluster name required: --name <cluster-name>"
+    return 1
+  fi
+
+  # Source provider interface
+  if [[ -f "${SCRIPT_DIR}/../lib/providers/provider-interface.sh" ]]; then
+    source "${SCRIPT_DIR}/../lib/providers/provider-interface.sh"
+  else
+    log_error "Provider interface not found"
+    return 1
+  fi
+
+  # Get kubeconfig using provider interface
+  log_info "Retrieving kubeconfig for cluster: $cluster_name"
+  provider_k8s_kubeconfig "$provider" "$cluster_name"
+}
+
+# List Kubernetes clusters (placeholder - requires provider-specific implementation)
+cmd_k8s_cluster_list() {
+  local provider="${K8S_PROVIDER:-}"
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --provider)
+        provider="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$provider" ]]; then
+    log_info "Listing clusters requires --provider flag"
+    log_info "Example: nself infra k8s cluster list --provider aws"
+    return 1
+  fi
+
+  # Source provider interface
+  if [[ -f "${SCRIPT_DIR}/../lib/providers/provider-interface.sh" ]]; then
+    source "${SCRIPT_DIR}/../lib/providers/provider-interface.sh"
+  fi
+
+  log_info "Listing Kubernetes clusters for $provider..."
+
+  # Provider-specific listing
+  case "$provider" in
+    aws)
+      if command -v aws &>/dev/null; then
+        aws eks list-clusters --output table
+      else
+        log_error "AWS CLI not installed"
+      fi
+      ;;
+    gcp)
+      if command -v gcloud &>/dev/null; then
+        gcloud container clusters list
+      else
+        log_error "gcloud CLI not installed"
+      fi
+      ;;
+    azure)
+      if command -v az &>/dev/null; then
+        az aks list --output table
+      else
+        log_error "Azure CLI not installed"
+      fi
+      ;;
+    digitalocean)
+      if command -v doctl &>/dev/null; then
+        doctl kubernetes cluster list
+      else
+        log_error "doctl CLI not installed"
+      fi
+      ;;
+    linode)
+      if command -v linode-cli &>/dev/null; then
+        linode-cli lke clusters-list
+      else
+        log_error "linode-cli not installed"
+      fi
+      ;;
+    vultr)
+      if command -v vultr-cli &>/dev/null; then
+        vultr-cli kubernetes list
+      else
+        log_error "vultr-cli not installed"
+      fi
+      ;;
+    scaleway)
+      if command -v scw &>/dev/null; then
+        scw k8s cluster list
+      else
+        log_error "scw CLI not installed"
+      fi
+      ;;
+    *)
+      log_error "Unknown provider: $provider"
       ;;
   esac
 }

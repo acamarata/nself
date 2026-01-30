@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # os-detection.sh - Cross-platform OS detection and platform-specific routing
 
 # Detect the operating system

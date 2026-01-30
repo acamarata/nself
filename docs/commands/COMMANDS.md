@@ -3504,5 +3504,5 @@ nself tenant branding upload-logo logo.png
 
 ---
 
-*Last Updated: January 30, 2026 | Version: 0.9.5*
+*Last Updated: January 30, 2026 | Version: 0.9.6*
 *nself - Self-Hosted Infrastructure Manager*

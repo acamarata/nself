@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # nself billing/quotas.sh - Quota System and Enforcement
 # Part of nself v0.9.0 - Sprint 13: Billing Integration & Usage Tracking

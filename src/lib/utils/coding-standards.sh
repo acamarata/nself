@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # coding-standards.sh - Coding standards and best practices utilities
 # POSIX-compliant, enforces consistent coding style
 

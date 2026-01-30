@@ -405,6 +405,327 @@ EOF
 }
 
 # =============================================================================
+# SERVER INITIALIZATION PHASES
+# =============================================================================
+
+server_init_phase1() {
+  local host="$1"
+  local user="$2"
+  local port="$3"
+  local key_file="$4"
+
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "$key_file")
+  ssh_args+=("-o" "StrictHostKeyChecking=accept-new" "-o" "ConnectTimeout=10" "-p" "$port")
+
+  cli_info "Updating system packages..."
+
+  local update_script='
+    # Detect OS
+    if command -v apt-get >/dev/null 2>&1; then
+      # Debian/Ubuntu
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -qq
+      apt-get upgrade -y -qq
+      apt-get install -y -qq curl wget git ca-certificates gnupg lsb-release
+    elif command -v yum >/dev/null 2>&1; then
+      # RHEL/CentOS/Fedora
+      yum update -y -q
+      yum install -y -q curl wget git ca-certificates
+    else
+      echo "Unsupported OS"
+      exit 1
+    fi
+    echo "packages_updated"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$update_script" 2>/dev/null | grep -q "packages_updated"; then
+    cli_success "System packages updated"
+  else
+    cli_error "Failed to update system packages"
+    return 1
+  fi
+
+  cli_info "Installing Docker and Docker Compose..."
+
+  local docker_script='
+    # Check if Docker already installed
+    if command -v docker >/dev/null 2>&1; then
+      echo "Docker already installed: $(docker --version)"
+      exit 0
+    fi
+
+    # Install Docker
+    if command -v apt-get >/dev/null 2>&1; then
+      # Debian/Ubuntu
+      export DEBIAN_FRONTEND=noninteractive
+
+      # Add Docker official GPG key
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+
+      # Add Docker repository
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+      # Install Docker
+      apt-get update -qq
+      apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    elif command -v yum >/dev/null 2>&1; then
+      # RHEL/CentOS/Fedora
+      yum install -y -q yum-utils
+      yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      yum install -y -q docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    fi
+
+    # Enable and start Docker
+    systemctl enable docker
+    systemctl start docker
+
+    # Verify installation
+    docker --version
+    docker compose version
+    echo "docker_installed"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$docker_script" 2>/dev/null | grep -q "docker_installed\|already installed"; then
+    cli_success "Docker installed and running"
+  else
+    cli_error "Failed to install Docker"
+    return 1
+  fi
+
+  return 0
+}
+
+server_init_phase2() {
+  local host="$1"
+  local user="$2"
+  local port="$3"
+  local key_file="$4"
+
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "$key_file")
+  ssh_args+=("-o" "StrictHostKeyChecking=accept-new" "-o" "ConnectTimeout=10" "-p" "$port")
+
+  cli_info "Configuring firewall (UFW)..."
+
+  local firewall_script='
+    # Install UFW if not present
+    if ! command -v ufw >/dev/null 2>&1; then
+      if command -v apt-get >/dev/null 2>&1; then
+        apt-get install -y -qq ufw
+      elif command -v yum >/dev/null 2>&1; then
+        yum install -y -q ufw
+      fi
+    fi
+
+    # Configure UFW
+    ufw --force reset
+    ufw default deny incoming
+    ufw default allow outgoing
+
+    # Allow SSH
+    ufw allow '"$port"'/tcp
+
+    # Allow HTTP/HTTPS
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+
+    # Enable UFW
+    ufw --force enable
+
+    echo "firewall_configured"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$firewall_script" 2>/dev/null | grep -q "firewall_configured"; then
+    cli_success "Firewall configured"
+  else
+    cli_warning "Could not configure firewall (may not be supported)"
+  fi
+
+  cli_info "Installing and configuring fail2ban..."
+
+  local fail2ban_script='
+    # Install fail2ban
+    if ! command -v fail2ban-client >/dev/null 2>&1; then
+      if command -v apt-get >/dev/null 2>&1; then
+        apt-get install -y -qq fail2ban
+      elif command -v yum >/dev/null 2>&1; then
+        yum install -y -q fail2ban
+      fi
+    fi
+
+    # Create custom SSH jail
+    cat > /etc/fail2ban/jail.local << "FAIL2BAN_EOF"
+[sshd]
+enabled = true
+port = '"$port"'
+logpath = /var/log/auth.log
+maxretry = 5
+bantime = 3600
+findtime = 600
+FAIL2BAN_EOF
+
+    # Start and enable fail2ban
+    systemctl enable fail2ban 2>/dev/null || true
+    systemctl restart fail2ban 2>/dev/null || true
+
+    echo "fail2ban_configured"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$fail2ban_script" 2>/dev/null | grep -q "fail2ban_configured"; then
+    cli_success "fail2ban configured"
+  else
+    cli_warning "Could not configure fail2ban"
+  fi
+
+  cli_info "Hardening SSH configuration..."
+
+  local ssh_harden_script='
+    # Backup current SSH config
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
+
+    # Apply security settings (only if not already set)
+    grep -q "^PermitRootLogin" /etc/ssh/sshd_config || echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config
+    grep -q "^PasswordAuthentication" /etc/ssh/sshd_config || echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+    grep -q "^PubkeyAuthentication" /etc/ssh/sshd_config || echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+    grep -q "^PermitEmptyPasswords" /etc/ssh/sshd_config || echo "PermitEmptyPasswords no" >> /etc/ssh/sshd_config
+    grep -q "^X11Forwarding" /etc/ssh/sshd_config || echo "X11Forwarding no" >> /etc/ssh/sshd_config
+
+    # Reload SSH (dont restart to avoid disconnection)
+    systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+
+    echo "ssh_hardened"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$ssh_harden_script" 2>/dev/null | grep -q "ssh_hardened"; then
+    cli_success "SSH hardened"
+  else
+    cli_warning "Could not harden SSH configuration"
+  fi
+
+  return 0
+}
+
+server_init_phase3() {
+  local host="$1"
+  local user="$2"
+  local port="$3"
+  local key_file="$4"
+  local env_name="$5"
+  local domain="$6"
+
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "$key_file")
+  ssh_args+=("-o" "StrictHostKeyChecking=accept-new" "-o" "ConnectTimeout=10" "-p" "$port")
+
+  cli_info "Creating nself directory structure..."
+
+  local dir_script='
+    # Create nself deployment directory
+    mkdir -p /var/www/nself
+    mkdir -p /var/www/nself/backups
+    mkdir -p /var/www/nself/logs
+
+    # Set permissions
+    chmod 755 /var/www/nself
+
+    echo "directories_created"
+  '
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "$dir_script" 2>/dev/null | grep -q "directories_created"; then
+    cli_success "Directory structure created"
+  else
+    cli_error "Failed to create directory structure"
+    return 1
+  fi
+
+  cli_info "Configuring DNS fallback..."
+
+  local dns_script='
+    # Backup current resolv.conf
+    cp /etc/resolv.conf /etc/resolv.conf.backup 2>/dev/null || true
+
+    # Add Cloudflare and Google DNS as fallback
+    cat > /etc/resolv.conf.d/nself-dns << "DNS_EOF"
+# nself DNS fallback configuration
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+DNS_EOF
+
+    # Make immutable to prevent overwriting
+    chattr +i /etc/resolv.conf.d/nself-dns 2>/dev/null || true
+
+    echo "dns_configured"
+  '
+
+  ssh "${ssh_args[@]}" "${user}@${host}" "$dns_script" 2>/dev/null | grep -q "dns_configured" && \
+    cli_success "DNS fallback configured" || \
+    cli_warning "Could not configure DNS fallback"
+
+  # Setup SSL if domain provided
+  if [[ -n "$domain" ]]; then
+    cli_info "Setting up SSL for domain: $domain"
+
+    local ssl_script='
+      domain="'"$domain"'"
+
+      # Install certbot
+      if ! command -v certbot >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+          apt-get install -y -qq certbot python3-certbot-nginx
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y -q certbot python3-certbot-nginx
+        fi
+      fi
+
+      # Check if domain resolves to this server
+      server_ip=$(curl -s ifconfig.me)
+      domain_ip=$(dig +short "$domain" | tail -n1)
+
+      if [ "$server_ip" = "$domain_ip" ]; then
+        echo "Domain resolves correctly to $server_ip"
+        echo "ssl_ready"
+      else
+        echo "Domain does not resolve to this server yet"
+        echo "Expected: $server_ip, Got: $domain_ip"
+        echo "ssl_not_ready"
+      fi
+    '
+
+    local ssl_result
+    ssl_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "$ssl_script" 2>/dev/null)
+
+    if echo "$ssl_result" | grep -q "ssl_ready"; then
+      cli_success "SSL ready (domain resolves correctly)"
+      cli_info "SSL certificates will be generated on first deployment"
+    else
+      cli_warning "Domain does not resolve to server yet"
+      cli_info "Update your DNS records to point $domain to this server"
+      cli_info "SSL certificates will be generated once DNS propagates"
+    fi
+  fi
+
+  # Create environment marker
+  local env_marker_script='
+    echo "'"$env_name"'" > /var/www/nself/.environment
+    echo "initialized_at=$(date -Iseconds)" >> /var/www/nself/.environment
+    echo "initialized_by=nself-cli" >> /var/www/nself/.environment
+    echo "environment_created"
+  '
+
+  ssh "${ssh_args[@]}" "${user}@${host}" "$env_marker_script" 2>/dev/null | grep -q "environment_created" && \
+    cli_success "Environment marker created" || \
+    cli_warning "Could not create environment marker"
+
+  return 0
+}
+
+# =============================================================================
 # SERVER SUBCOMMANDS
 # =============================================================================
 
@@ -581,10 +902,17 @@ server_init() {
   cli_info "Initializing server..."
   printf "\n"
 
-  # TODO: Implement server initialization phases
-  # server_init_phase1 "$host" "$user" "$port" "$key_file"
-  # server_init_phase2 "$host" "$user" "$port" "$key_file"
-  # server_init_phase3 "$host" "$user" "$port" "$key_file" "$env_name"
+  # Phase 1: System Update & Package Installation
+  cli_section "Phase 1: System Setup"
+  server_init_phase1 "$host" "$user" "$port" "$key_file"
+
+  # Phase 2: Security Hardening
+  cli_section "Phase 2: Security Configuration"
+  server_init_phase2 "$host" "$user" "$port" "$key_file"
+
+  # Phase 3: Environment Setup
+  cli_section "Phase 3: nself Environment"
+  server_init_phase3 "$host" "$user" "$port" "$key_file" "$env_name" "$domain"
 
   printf "\n"
   cli_success "Server initialization complete!"
@@ -598,36 +926,247 @@ server_init() {
 
 server_check() {
   local host="${1:-}"
+  local user="root"
+  local port="22"
+  local key_file=""
+
+  # Parse user@host:port format
+  if [[ "$host" == *"@"* ]]; then
+    user="${host%%@*}"
+    host="${host#*@}"
+  fi
+
+  if [[ "$host" == *":"* ]]; then
+    port="${host#*:}"
+    host="${host%%:*}"
+  fi
 
   if [[ -z "$host" ]]; then
     cli_error "Host is required"
     printf "Usage: nself deploy server check <host>\n"
+    printf "       nself deploy server check user@host:port\n"
     return 1
   fi
 
   show_command_header "nself deploy server check" "Verify server readiness for deployment"
   printf "\n"
 
-  cli_info "Checking server: $host"
+  local ssh_args=()
+  ssh_args+=("-o" "StrictHostKeyChecking=accept-new" "-o" "ConnectTimeout=10" "-p" "$port")
+
+  local total_checks=0
+  local passed_checks=0
+
+  # Check 1: SSH Connectivity
+  total_checks=$((total_checks + 1))
+  printf "  [1/8] SSH Connectivity... "
+  if ssh "${ssh_args[@]}" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+    printf "${CLI_GREEN}PASS${CLI_RESET}\n"
+    passed_checks=$((passed_checks + 1))
+  else
+    printf "${CLI_RED}FAIL${CLI_RESET}\n"
+    cli_error "Cannot connect to $host"
+    return 1
+  fi
+
+  # Check 2: Docker Installation
+  total_checks=$((total_checks + 1))
+  printf "  [2/8] Docker Installation... "
+  local docker_check
+  docker_check=$(ssh "${ssh_args[@]}" "${user}@${host}" "command -v docker >/dev/null 2>&1 && echo 'installed' || echo 'missing'" 2>/dev/null)
+  if [[ "$docker_check" == "installed" ]]; then
+    local docker_version
+    docker_version=$(ssh "${ssh_args[@]}" "${user}@${host}" "docker --version 2>/dev/null" | cut -d' ' -f3 | tr -d ',')
+    printf "${CLI_GREEN}PASS${CLI_RESET} (v%s)\n" "$docker_version"
+    passed_checks=$((passed_checks + 1))
+  else
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (not installed)\n"
+  fi
+
+  # Check 3: Docker Running
+  total_checks=$((total_checks + 1))
+  printf "  [3/8] Docker Service... "
+  local docker_running
+  docker_running=$(ssh "${ssh_args[@]}" "${user}@${host}" "docker info >/dev/null 2>&1 && echo 'running' || echo 'not_running'" 2>/dev/null)
+  if [[ "$docker_running" == "running" ]]; then
+    printf "${CLI_GREEN}PASS${CLI_RESET}\n"
+    passed_checks=$((passed_checks + 1))
+  else
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (not running)\n"
+  fi
+
+  # Check 4: Docker Compose
+  total_checks=$((total_checks + 1))
+  printf "  [4/8] Docker Compose... "
+  local compose_check
+  compose_check=$(ssh "${ssh_args[@]}" "${user}@${host}" "docker compose version >/dev/null 2>&1 && echo 'installed' || echo 'missing'" 2>/dev/null)
+  if [[ "$compose_check" == "installed" ]]; then
+    local compose_version
+    compose_version=$(ssh "${ssh_args[@]}" "${user}@${host}" "docker compose version 2>/dev/null | cut -d' ' -f4" 2>/dev/null)
+    printf "${CLI_GREEN}PASS${CLI_RESET} (v%s)\n" "$compose_version"
+    passed_checks=$((passed_checks + 1))
+  else
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (not installed)\n"
+  fi
+
+  # Check 5: Disk Space
+  total_checks=$((total_checks + 1))
+  printf "  [5/8] Disk Space... "
+  local disk_info
+  disk_info=$(ssh "${ssh_args[@]}" "${user}@${host}" "df -h / | tail -n1 | awk '{print \$4, \$5}'" 2>/dev/null)
+  local disk_avail disk_used
+  disk_avail=$(echo "$disk_info" | cut -d' ' -f1)
+  disk_used=$(echo "$disk_info" | cut -d' ' -f2)
+
+  local used_percent
+  used_percent=$(echo "$disk_used" | tr -d '%')
+
+  if [[ $used_percent -lt 80 ]]; then
+    printf "${CLI_GREEN}PASS${CLI_RESET} (%s available, %s used)\n" "$disk_avail" "$disk_used"
+    passed_checks=$((passed_checks + 1))
+  elif [[ $used_percent -lt 90 ]]; then
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (%s available, %s used)\n" "$disk_avail" "$disk_used"
+  else
+    printf "${CLI_RED}FAIL${CLI_RESET} (%s available, %s used)\n" "$disk_avail" "$disk_used"
+  fi
+
+  # Check 6: Memory
+  total_checks=$((total_checks + 1))
+  printf "  [6/8] Memory... "
+  local mem_info
+  mem_info=$(ssh "${ssh_args[@]}" "${user}@${host}" "free -h | grep '^Mem:' | awk '{print \$2, \$3, \$7}'" 2>/dev/null)
+  local mem_total mem_used mem_avail
+  mem_total=$(echo "$mem_info" | cut -d' ' -f1)
+  mem_used=$(echo "$mem_info" | cut -d' ' -f2)
+  mem_avail=$(echo "$mem_info" | cut -d' ' -f3)
+
+  printf "${CLI_GREEN}PASS${CLI_RESET} (%s total, %s available)\n" "$mem_total" "$mem_avail"
+  passed_checks=$((passed_checks + 1))
+
+  # Check 7: Firewall
+  total_checks=$((total_checks + 1))
+  printf "  [7/8] Firewall... "
+  local firewall_check
+  firewall_check=$(ssh "${ssh_args[@]}" "${user}@${host}" "command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | head -n1" 2>/dev/null)
+  if echo "$firewall_check" | grep -q "Status: active"; then
+    printf "${CLI_GREEN}PASS${CLI_RESET} (active)\n"
+    passed_checks=$((passed_checks + 1))
+  elif echo "$firewall_check" | grep -q "Status: inactive"; then
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (inactive)\n"
+  else
+    printf "${CLI_YELLOW}WARN${CLI_RESET} (not configured)\n"
+  fi
+
+  # Check 8: Ports Available
+  total_checks=$((total_checks + 1))
+  printf "  [8/8] Required Ports (80, 443)... "
+  local port_check
+  port_check=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+    port80=\$(netstat -tuln 2>/dev/null | grep ':80 ' | wc -l || echo 0)
+    port443=\$(netstat -tuln 2>/dev/null | grep ':443 ' | wc -l || echo 0)
+    echo \"\$port80 \$port443\"
+  " 2>/dev/null)
+
+  local port80_used port443_used
+  port80_used=$(echo "$port_check" | cut -d' ' -f1)
+  port443_used=$(echo "$port_check" | cut -d' ' -f2)
+
+  if [[ "$port80_used" -eq 0 ]] && [[ "$port443_used" -eq 0 ]]; then
+    printf "${CLI_GREEN}PASS${CLI_RESET} (available)\n"
+    passed_checks=$((passed_checks + 1))
+  else
+    printf "${CLI_YELLOW}WARN${CLI_RESET} ("
+    [[ "$port80_used" -gt 0 ]] && printf "80 in use "
+    [[ "$port443_used" -gt 0 ]] && printf "443 in use"
+    printf ")\n"
+  fi
+
+  # Summary
+  printf "\n"
+  cli_section "Check Summary"
+  printf "  Passed: %d/%d\n" "$passed_checks" "$total_checks"
   printf "\n"
 
-  # TODO: Implement server checks
-  # - SSH connectivity
-  # - Docker installation
-  # - Firewall status
-  # - Available disk space
-  # - etc.
-
-  cli_success "Server is ready for deployment"
+  if [[ $passed_checks -eq $total_checks ]]; then
+    cli_success "Server is ready for deployment"
+    return 0
+  elif [[ $passed_checks -ge 6 ]]; then
+    cli_warning "Server is mostly ready (some warnings)"
+    printf "\n"
+    cli_info "You can proceed, but consider fixing warnings"
+    return 0
+  else
+    cli_error "Server is not ready for deployment"
+    printf "\n"
+    cli_info "Run 'nself deploy server init %s' to initialize the server" "${user}@${host}"
+    return 1
+  fi
 }
 
 server_status() {
   show_command_header "nself deploy server status" "Check server connectivity"
   printf "\n"
 
-  # TODO: Implement server status checks for all configured environments
+  # Check if environments directory exists
+  if [[ ! -d ".environments" ]]; then
+    cli_info "No environments configured"
+    printf "\n"
+    cli_info "Create an environment with: nself env create <name>"
+    return 0
+  fi
 
-  cli_info "No environments configured"
+  # Find all environments with server configurations
+  local env_count=0
+  local online_count=0
+
+  for env_dir in .environments/*/; do
+    if [[ -d "$env_dir" ]] && [[ -f "$env_dir/server.json" ]]; then
+      local env_name
+      env_name=$(basename "$env_dir")
+
+      # Extract server details from server.json
+      local host user port
+      host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+      user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+      port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+
+      user="${user:-root}"
+      port="${port:-22}"
+
+      # Skip if no host configured
+      if [[ -z "$host" ]] || [[ "$host" == "localhost" ]]; then
+        continue
+      fi
+
+      env_count=$((env_count + 1))
+
+      # Test connection
+      printf "  %-15s " "$env_name"
+
+      if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -p "$port" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+        printf "${CLI_GREEN}●${CLI_RESET} ONLINE   "
+
+        # Get uptime
+        local uptime_info
+        uptime_info=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -p "$port" "${user}@${host}" "uptime -p 2>/dev/null || uptime | cut -d',' -f1" 2>/dev/null | head -n1)
+        printf "%s\n" "$uptime_info"
+
+        online_count=$((online_count + 1))
+      else
+        printf "${CLI_RED}●${CLI_RESET} OFFLINE  "
+        printf "%s@%s:%s\n" "$user" "$host" "$port"
+      fi
+    fi
+  done
+
+  if [[ $env_count -eq 0 ]]; then
+    cli_info "No remote servers configured"
+    printf "\n"
+    cli_info "Add server details to .environments/<name>/server.json"
+  else
+    printf "\n"
+    printf "  Total: %d server(s), %d online, %d offline\n" "$env_count" "$online_count" "$((env_count - online_count))"
+  fi
 }
 
 server_diagnose() {
@@ -636,14 +1175,161 @@ server_diagnose() {
   show_command_header "nself deploy server diagnose" "Full server diagnostics"
   printf "\n"
 
-  # TODO: Implement comprehensive diagnostics
-  # - DNS resolution
-  # - ICMP ping
-  # - Port connectivity
-  # - SSH connection
-  # - Recommendations
+  # Check if environment exists
+  local env_dir=".environments/$env_name"
+  if [[ ! -d "$env_dir" ]]; then
+    cli_error "Environment '$env_name' not found"
+    printf "\n"
+    cli_info "Available environments:"
+    for dir in .environments/*/; do
+      [[ -d "$dir" ]] && printf "  - %s\n" "$(basename "$dir")"
+    done
+    return 1
+  fi
 
-  cli_info "Diagnostics complete"
+  # Load server configuration
+  if [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "No server configuration found for $env_name"
+    printf "\n"
+    cli_info "Configure server details in $env_dir/server.json"
+    return 1
+  fi
+
+  local host user port
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+
+  user="${user:-root}"
+  port="${port:-22}"
+
+  if [[ -z "$host" ]]; then
+    cli_error "No host configured in $env_dir/server.json"
+    return 1
+  fi
+
+  cli_section "Environment: $env_name"
+  printf "  Host: %s\n" "$host"
+  printf "  User: %s\n" "$user"
+  printf "  Port: %s\n" "$port"
+  printf "\n"
+
+  cli_section "Network Diagnostics"
+
+  # DNS Resolution
+  printf "  [1/5] DNS Resolution... "
+  if command -v host >/dev/null 2>&1; then
+    local dns_result
+    dns_result=$(host "$host" 2>&1)
+    if echo "$dns_result" | grep -q "has address"; then
+      local ip_address
+      ip_address=$(echo "$dns_result" | grep "has address" | head -n1 | awk '{print $NF}')
+      printf "${CLI_GREEN}OK${CLI_RESET} → %s\n" "$ip_address"
+    else
+      printf "${CLI_YELLOW}UNRESOLVED${CLI_RESET} (using as-is)\n"
+    fi
+  else
+    printf "${CLI_YELLOW}SKIP${CLI_RESET} (host command not available)\n"
+  fi
+
+  # ICMP Ping
+  printf "  [2/5] ICMP Ping... "
+  if command -v ping >/dev/null 2>&1; then
+    if ping -c 1 -W 2 "$host" >/dev/null 2>&1; then
+      local ping_time
+      ping_time=$(ping -c 1 "$host" 2>/dev/null | grep "time=" | sed 's/.*time=\([0-9.]*\).*/\1/' | head -n1)
+      printf "${CLI_GREEN}OK${CLI_RESET} (%s ms)\n" "${ping_time:-unknown}"
+    else
+      printf "${CLI_RED}FAIL${CLI_RESET} (host not reachable)\n"
+    fi
+  else
+    printf "${CLI_YELLOW}SKIP${CLI_RESET} (ping not available)\n"
+  fi
+
+  # Port 22 (SSH)
+  printf "  [3/5] Port %s (SSH)... " "$port"
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z -w 2 "$host" "$port" 2>/dev/null; then
+      printf "${CLI_GREEN}OPEN${CLI_RESET}\n"
+    else
+      printf "${CLI_RED}CLOSED${CLI_RESET}\n"
+    fi
+  elif command -v telnet >/dev/null 2>&1; then
+    if timeout 2 bash -c "echo '' | telnet $host $port" 2>&1 | grep -q "Connected\|Escape"; then
+      printf "${CLI_GREEN}OPEN${CLI_RESET}\n"
+    else
+      printf "${CLI_RED}CLOSED${CLI_RESET}\n"
+    fi
+  else
+    printf "${CLI_YELLOW}SKIP${CLI_RESET} (nc/telnet not available)\n"
+  fi
+
+  # Port 80 (HTTP)
+  printf "  [4/5] Port 80 (HTTP)... "
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z -w 2 "$host" 80 2>/dev/null; then
+      printf "${CLI_GREEN}OPEN${CLI_RESET}\n"
+    else
+      printf "${CLI_YELLOW}CLOSED${CLI_RESET}\n"
+    fi
+  else
+    printf "${CLI_YELLOW}SKIP${CLI_RESET}\n"
+  fi
+
+  # Port 443 (HTTPS)
+  printf "  [5/5] Port 443 (HTTPS)... "
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z -w 2 "$host" 443 2>/dev/null; then
+      printf "${CLI_GREEN}OPEN${CLI_RESET}\n"
+    else
+      printf "${CLI_YELLOW}CLOSED${CLI_RESET}\n"
+    fi
+  else
+    printf "${CLI_YELLOW}SKIP${CLI_RESET}\n"
+  fi
+
+  printf "\n"
+  cli_section "SSH Connection Test"
+
+  local ssh_args=()
+  ssh_args+=("-o" "BatchMode=yes" "-o" "ConnectTimeout=10" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  printf "  Attempting SSH connection... "
+  if ssh "${ssh_args[@]}" "${user}@${host}" "echo 'connection_ok'" 2>/dev/null | grep -q "connection_ok"; then
+    printf "${CLI_GREEN}SUCCESS${CLI_RESET}\n"
+
+    # Get server info if connected
+    printf "\n"
+    cli_section "Server Information"
+
+    local server_info
+    server_info=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+      echo \"hostname=\$(hostname)\"
+      echo \"os=\$(cat /etc/os-release 2>/dev/null | grep '^ID=' | cut -d= -f2 | tr -d '\"')\"
+      echo \"kernel=\$(uname -r)\"
+      echo \"uptime=\$(uptime -p 2>/dev/null || uptime | cut -d',' -f1)\"
+      echo \"load=\$(uptime | awk -F'load average:' '{print \$2}' | xargs)\"
+      echo \"memory=\$(free -h 2>/dev/null | grep '^Mem:' | awk '{print \$2}')\"
+      echo \"docker=\$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',' || echo 'not installed')\"
+    " 2>/dev/null)
+
+    echo "$server_info" | while IFS='=' read -r key value; do
+      printf "  %-12s %s\n" "${key}:" "$value"
+    done
+
+  else
+    printf "${CLI_RED}FAILED${CLI_RESET}\n"
+    printf "\n"
+    cli_section "Recommendations"
+    printf "  1. Verify SSH key is authorized on the server\n"
+    printf "  2. Check that SSH is running on port %s\n" "$port"
+    printf "  3. Ensure firewall allows SSH connections\n"
+    printf "  4. Try manual connection: ssh -p %s %s@%s\n" "$port" "$user" "$host"
+    return 1
+  fi
+
+  printf "\n"
+  cli_success "Diagnostics complete"
 }
 
 server_list() {
@@ -652,16 +1338,66 @@ server_list() {
   show_command_header "nself deploy server" "Server List"
   printf "\n"
 
-  if [[ ! -f "$SERVERS_FILE" ]]; then
+  local server_count=0
+
+  # Check environments directory
+  if [[ ! -d ".environments" ]]; then
     cli_info "No servers configured"
     printf "\n"
-    cli_info "Add a server with: nself deploy server add <name> --ip <ip>"
+    cli_info "Create an environment with server details:"
+    printf "  nself env create staging\n"
+    printf "  nself deploy server add staging --host server.example.com\n"
     return 0
   fi
 
-  # TODO: Implement server listing
+  # List all environments with server configurations
+  printf "%-15s %-25s %-10s %-10s %s\n" "NAME" "HOST" "USER" "PORT" "STATUS"
+  printf "%-15s %-25s %-10s %-10s %s\n" "---------------" "-------------------------" "----------" "----------" "----------"
 
-  cli_info "Total: 0 server(s)"
+  for env_dir in .environments/*/; do
+    if [[ -d "$env_dir" ]] && [[ -f "$env_dir/server.json" ]]; then
+      local env_name host user port env_type status
+      env_name=$(basename "$env_dir")
+
+      # Parse server.json
+      host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+      user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+      port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+      env_type=$(grep '"type"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+      user="${user:-root}"
+      port="${port:-22}"
+      env_type="${env_type:-unknown}"
+
+      # Skip localhost/local
+      if [[ -z "$host" ]] || [[ "$host" == "localhost" ]] || [[ "$env_type" == "local" ]]; then
+        continue
+      fi
+
+      server_count=$((server_count + 1))
+
+      # Quick connectivity check
+      if ssh -o BatchMode=yes -o ConnectTimeout=2 -o StrictHostKeyChecking=accept-new -p "$port" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+        status="${CLI_GREEN}online${CLI_RESET}"
+      else
+        status="${CLI_RED}offline${CLI_RESET}"
+      fi
+
+      printf "%-15s %-25s %-10s %-10s %s\n" "$env_name" "$host" "$user" "$port" "$status"
+    fi
+  done
+
+  if [[ $server_count -eq 0 ]]; then
+    printf "\n"
+    cli_info "No remote servers configured"
+    printf "\n"
+    cli_info "Add a server:"
+    printf "  nself env create prod\n"
+    printf "  nself deploy server add prod --host server.example.com\n"
+  else
+    printf "\n"
+    printf "Total: %d server(s)\n" "$server_count"
+  fi
 }
 
 server_add() {
@@ -670,25 +1406,159 @@ server_add() {
 
   if [[ -z "$name" ]]; then
     cli_error "Server name required"
+    printf "Usage: nself deploy server add <name> --host <host> [--user <user>] [--port <port>]\n"
     return 1
   fi
 
-  # TODO: Implement server add logic
+  local host=""
+  local user="root"
+  local port="22"
+  local key_file=""
+  local deploy_path="/var/www/nself"
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --host | -h)
+        host="$2"
+        shift 2
+        ;;
+      --user | -u)
+        user="$2"
+        shift 2
+        ;;
+      --port | -p)
+        port="$2"
+        shift 2
+        ;;
+      --key | -k)
+        key_file="$2"
+        shift 2
+        ;;
+      --path)
+        deploy_path="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$host" ]]; then
+    cli_error "Host is required"
+    printf "Usage: nself deploy server add <name> --host <host>\n"
+    return 1
+  fi
+
+  # Check if environment exists
+  local env_dir=".environments/$name"
+  if [[ ! -d "$env_dir" ]]; then
+    cli_info "Environment '$name' does not exist, creating it..."
+    mkdir -p "$env_dir"
+
+    # Create basic .env
+    cat >"$env_dir/.env" <<EOF
+# $name Environment Configuration
+ENV=production
+BASE_DOMAIN=$host
+EOF
+  fi
+
+  # Create or update server.json
+  cat >"$env_dir/server.json" <<EOF
+{
+  "name": "$name",
+  "type": "remote",
+  "host": "$host",
+  "port": $port,
+  "user": "$user",
+  "key": "$key_file",
+  "deploy_path": "$deploy_path",
+  "description": "Remote server configuration",
+  "created_at": "$(date -Iseconds 2>/dev/null || date)"
+}
+EOF
 
   cli_success "Server added: $name"
+  printf "\n"
+  printf "Server details:\n"
+  printf "  Host:        %s\n" "$host"
+  printf "  User:        %s\n" "$user"
+  printf "  Port:        %s\n" "$port"
+  printf "  Deploy path: %s\n" "$deploy_path"
+  printf "\n"
+  cli_info "Test connection with: nself deploy server check $name"
 }
 
 server_remove() {
   local name="$1"
+  shift
 
   if [[ -z "$name" ]]; then
     cli_error "Server name required"
+    printf "Usage: nself deploy server remove <name>\n"
     return 1
   fi
 
-  # TODO: Implement server remove logic
+  local force=false
 
-  cli_success "Server removed: $name"
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force | -f)
+        force=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  local env_dir=".environments/$name"
+
+  if [[ ! -d "$env_dir" ]]; then
+    cli_error "Server '$name' not found"
+    return 1
+  fi
+
+  if [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "Not a configured server: $name"
+    return 1
+  fi
+
+  # Get server details for confirmation
+  local host
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  printf "This will remove server configuration:\n"
+  printf "  Name: %s\n" "$name"
+  printf "  Host: %s\n" "$host"
+  printf "\n"
+  printf "${CLI_YELLOW}WARNING:${CLI_RESET} This will NOT delete the environment or remote data\n"
+  printf "         Only the server.json configuration will be removed\n"
+  printf "\n"
+
+  if [[ "$force" != "true" ]]; then
+    printf "Are you sure? [y/N]: "
+    local confirm
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$confirm" != "y" ]] && [[ "$confirm" != "yes" ]]; then
+      cli_info "Cancelled"
+      return 0
+    fi
+  fi
+
+  # Remove server.json
+  rm -f "$env_dir/server.json"
+
+  cli_success "Server configuration removed: $name"
+  printf "\n"
+  cli_info "The environment directory still exists at: $env_dir"
+  cli_info "To completely remove the environment, use: nself env delete $name"
 }
 
 server_ssh() {
@@ -697,12 +1567,62 @@ server_ssh() {
 
   if [[ -z "$name" ]]; then
     cli_error "Server name required"
+    printf "Usage: nself deploy server ssh <name> [command]\n"
     return 1
   fi
 
-  # TODO: Implement SSH connection logic
+  local env_dir=".environments/$name"
 
-  cli_info "Connecting to ${name}..."
+  if [[ ! -d "$env_dir" ]] || [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "Server '$name' not found"
+    printf "\n"
+    cli_info "Available servers:"
+    for dir in .environments/*/; do
+      if [[ -f "$dir/server.json" ]]; then
+        printf "  - %s\n" "$(basename "$dir")"
+      fi
+    done
+    return 1
+  fi
+
+  # Load server configuration
+  local host user port key_file
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  user="${user:-root}"
+  port="${port:-22}"
+
+  if [[ -z "$host" ]]; then
+    cli_error "No host configured for $name"
+    return 1
+  fi
+
+  # Build SSH command
+  local ssh_cmd="ssh"
+
+  # Add key if specified
+  if [[ -n "$key_file" ]] && [[ -f "${key_file/#\~/$HOME}" ]]; then
+    ssh_cmd="$ssh_cmd -i ${key_file/#\~/$HOME}"
+  fi
+
+  # Add port
+  ssh_cmd="$ssh_cmd -p $port"
+
+  # Add host
+  ssh_cmd="$ssh_cmd ${user}@${host}"
+
+  # If additional arguments provided, treat as remote command
+  if [[ $# -gt 0 ]]; then
+    cli_info "Executing on ${name}: $*"
+    $ssh_cmd "$@"
+  else
+    cli_info "Connecting to ${name} (${user}@${host}:${port})..."
+    printf "\n"
+    $ssh_cmd
+  fi
 }
 
 server_info() {
@@ -710,12 +1630,133 @@ server_info() {
 
   if [[ -z "$name" ]]; then
     cli_error "Server name required"
+    printf "Usage: nself deploy server info <name>\n"
     return 1
   fi
 
-  # TODO: Implement server info display
+  local env_dir=".environments/$name"
 
-  cli_info "Server info for $name"
+  if [[ ! -d "$env_dir" ]] || [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "Server '$name' not found"
+    return 1
+  fi
+
+  show_command_header "nself deploy server info" "Server Details: $name"
+  printf "\n"
+
+  # Parse server.json
+  local host user port key_file deploy_path env_type description
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  env_type=$(grep '"type"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  description=$(grep '"description"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  user="${user:-root}"
+  port="${port:-22}"
+  deploy_path="${deploy_path:-/var/www/nself}"
+  env_type="${env_type:-remote}"
+
+  cli_section "Connection Details"
+  printf "  Name:        %s\n" "$name"
+  printf "  Host:        %s\n" "$host"
+  printf "  User:        %s\n" "$user"
+  printf "  Port:        %s\n" "$port"
+  printf "  Type:        %s\n" "$env_type"
+  [[ -n "$key_file" ]] && printf "  SSH Key:     %s\n" "$key_file"
+  printf "  Deploy Path: %s\n" "$deploy_path"
+  [[ -n "$description" ]] && printf "  Description: %s\n" "$description"
+  printf "\n"
+
+  # Test connectivity
+  cli_section "Connectivity"
+  printf "  Testing SSH connection... "
+
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
+  ssh_args+=("-o" "BatchMode=yes" "-o" "ConnectTimeout=5" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  if ssh "${ssh_args[@]}" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+    printf "${CLI_GREEN}CONNECTED${CLI_RESET}\n"
+
+    # Get remote system information
+    printf "\n"
+    cli_section "Remote System Information"
+
+    local remote_info
+    remote_info=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+      echo \"hostname=\$(hostname 2>/dev/null || echo 'unknown')\"
+      echo \"os=\$(cat /etc/os-release 2>/dev/null | grep '^PRETTY_NAME=' | cut -d'\"' -f2 || echo 'unknown')\"
+      echo \"kernel=\$(uname -r 2>/dev/null || echo 'unknown')\"
+      echo \"arch=\$(uname -m 2>/dev/null || echo 'unknown')\"
+      echo \"cpu_cores=\$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 'unknown')\"
+      echo \"memory=\$(free -h 2>/dev/null | grep '^Mem:' | awk '{print \$2}' || echo 'unknown')\"
+      echo \"disk_root=\$(df -h / 2>/dev/null | tail -n1 | awk '{print \$2}' || echo 'unknown')\"
+      echo \"disk_avail=\$(df -h / 2>/dev/null | tail -n1 | awk '{print \$4}' || echo 'unknown')\"
+      echo \"uptime=\$(uptime -p 2>/dev/null || uptime | cut -d',' -f1 || echo 'unknown')\"
+      echo \"docker=\$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',' || echo 'not installed')\"
+      echo \"compose=\$(docker compose version 2>/dev/null | cut -d' ' -f4 || echo 'not installed')\"
+    " 2>/dev/null)
+
+    if [[ -n "$remote_info" ]]; then
+      echo "$remote_info" | while IFS='=' read -r key value; do
+        printf "  %-15s %s\n" "${key}:" "$value"
+      done
+    else
+      printf "  Could not retrieve system information\n"
+    fi
+
+    # Check if nself is deployed
+    printf "\n"
+    cli_section "Deployment Status"
+
+    local deploy_status
+    deploy_status=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+      if [ -d '$deploy_path' ]; then
+        if [ -f '$deploy_path/docker-compose.yml' ]; then
+          cd '$deploy_path' 2>/dev/null
+          running=\$(docker compose ps --format '{{.Name}}' --filter 'status=running' 2>/dev/null | wc -l)
+          total=\$(docker compose ps -a --format '{{.Name}}' 2>/dev/null | wc -l)
+          echo \"deployed=yes\"
+          echo \"containers=\$running/\$total\"
+        else
+          echo \"deployed=no\"
+          echo \"reason=no docker-compose.yml\"
+        fi
+      else
+        echo \"deployed=no\"
+        echo \"reason=directory not found\"
+      fi
+    " 2>/dev/null)
+
+    local is_deployed containers
+    is_deployed=$(echo "$deploy_status" | grep "^deployed=" | cut -d'=' -f2)
+    containers=$(echo "$deploy_status" | grep "^containers=" | cut -d'=' -f2)
+
+    if [[ "$is_deployed" == "yes" ]]; then
+      printf "  Status:      ${CLI_GREEN}Deployed${CLI_RESET}\n"
+      printf "  Containers:  %s running\n" "$containers"
+    else
+      printf "  Status:      ${CLI_YELLOW}Not deployed${CLI_RESET}\n"
+    fi
+
+  else
+    printf "${CLI_RED}FAILED${CLI_RESET}\n"
+    printf "\n"
+    cli_warning "Cannot connect to server"
+    printf "\n"
+    printf "Try:\n"
+    printf "  ssh -p %s %s@%s\n" "$port" "$user" "$host"
+  fi
+
+  printf "\n"
+  cli_section "Quick Actions"
+  printf "  Connect:     nself deploy server ssh %s\n" "$name"
+  printf "  Diagnose:    nself deploy server diagnose %s\n" "$name"
+  printf "  Deploy:      nself deploy %s\n" "$name"
+  printf "\n"
 }
 
 show_server_help() {
@@ -849,38 +1890,607 @@ cmd_sync() {
 
 sync_pull() {
   local target="${1:-staging}"
+  shift || true
 
-  cli_info "Pulling from $target..."
+  local dry_run=false
+  local force=false
 
-  # TODO: Implement sync pull logic
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      --force | -f)
+        force=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
 
-  cli_success "Sync complete: $target → local"
+  show_command_header "nself deploy sync pull" "Pull configuration from $target"
+  printf "\n"
+
+  # Check if environment exists
+  local env_dir=".environments/$target"
+  if [[ ! -d "$env_dir" ]]; then
+    cli_error "Environment '$target' not found"
+    return 1
+  fi
+
+  if [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "No server configured for $target"
+    return 1
+  fi
+
+  # Load server configuration
+  local host user port key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  user="${user:-root}"
+  port="${port:-22}"
+  deploy_path="${deploy_path:-/var/www/nself}"
+
+  if [[ -z "$host" ]]; then
+    cli_error "No host configured for $target"
+    return 1
+  fi
+
+  cli_section "Sync Configuration"
+  printf "  Source:      %s@%s:%s\n" "$user" "$host" "$deploy_path"
+  printf "  Destination: %s\n" "$env_dir"
+  printf "\n"
+
+  # Build SSH/SCP arguments
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
+  ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Test connection
+  cli_info "Testing connection..."
+  if ! ssh "${ssh_args[@]}" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+    cli_error "Cannot connect to $host"
+    return 1
+  fi
+  cli_success "Connected"
+
+  # Check what files exist remotely
+  cli_info "Checking remote files..."
+
+  local remote_files
+  remote_files=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+    cd '$deploy_path' 2>/dev/null || exit 1
+    [ -f .env ] && echo '.env'
+    [ -f .env.secrets ] && echo '.env.secrets'
+    [ -f docker-compose.yml ] && echo 'docker-compose.yml'
+  " 2>/dev/null)
+
+  if [[ -z "$remote_files" ]]; then
+    cli_warning "No configuration files found on remote server"
+    return 1
+  fi
+
+  printf "\n"
+  cli_section "Files to Pull"
+  echo "$remote_files" | while read -r file; do
+    printf "  - %s\n" "$file"
+  done
+  printf "\n"
+
+  if [[ "$dry_run" == "true" ]]; then
+    cli_info "Dry run - no files were synced"
+    return 0
+  fi
+
+  # Confirm if not forced
+  if [[ "$force" != "true" ]]; then
+    printf "This will overwrite local files. Continue? [y/N]: "
+    local confirm
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$confirm" != "y" ]] && [[ "$confirm" != "yes" ]]; then
+      cli_info "Cancelled"
+      return 0
+    fi
+  fi
+
+  # Pull files
+  cli_info "Pulling files..."
+
+  local pull_errors=0
+
+  echo "$remote_files" | while read -r file; do
+    printf "  Pulling %s... " "$file"
+
+    local remote_path="$deploy_path/$file"
+    local local_path="$env_dir/$file"
+
+    if scp "${ssh_args[@]}" "${user}@${host}:${remote_path}" "$local_path" 2>/dev/null; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      pull_errors=$((pull_errors + 1))
+    fi
+  done
+
+  if [[ $pull_errors -eq 0 ]]; then
+    printf "\n"
+    cli_success "Sync complete: $target → local"
+    printf "\n"
+    cli_info "Files synced to: $env_dir"
+  else
+    printf "\n"
+    cli_warning "Sync completed with $pull_errors error(s)"
+    return 1
+  fi
 }
 
 sync_push() {
   local target="${1:-staging}"
+  shift || true
 
-  cli_info "Pushing to $target..."
+  local dry_run=false
+  local force=false
 
-  # TODO: Implement sync push logic
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      --force | -f)
+        force=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
 
-  cli_success "Sync complete: local → $target"
+  show_command_header "nself deploy sync push" "Push configuration to $target"
+  printf "\n"
+
+  # Check if environment exists
+  local env_dir=".environments/$target"
+  if [[ ! -d "$env_dir" ]]; then
+    cli_error "Environment '$target' not found"
+    return 1
+  fi
+
+  if [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "No server configured for $target"
+    return 1
+  fi
+
+  # Load server configuration
+  local host user port key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  user="${user:-root}"
+  port="${port:-22}"
+  deploy_path="${deploy_path:-/var/www/nself}"
+
+  if [[ -z "$host" ]]; then
+    cli_error "No host configured for $target"
+    return 1
+  fi
+
+  cli_section "Sync Configuration"
+  printf "  Source:      %s\n" "$env_dir"
+  printf "  Destination: %s@%s:%s\n" "$user" "$host" "$deploy_path"
+  printf "\n"
+
+  # Build SSH/SCP arguments
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
+  ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Test connection
+  cli_info "Testing connection..."
+  if ! ssh "${ssh_args[@]}" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+    cli_error "Cannot connect to $host"
+    return 1
+  fi
+  cli_success "Connected"
+
+  # Find local files to push
+  local local_files=()
+  [[ -f "$env_dir/.env" ]] && local_files+=(".env")
+  [[ -f "$env_dir/.env.secrets" ]] && local_files+=(".env.secrets")
+
+  if [[ ${#local_files[@]} -eq 0 ]]; then
+    cli_error "No configuration files found in $env_dir"
+    return 1
+  fi
+
+  printf "\n"
+  cli_section "Files to Push"
+  for file in "${local_files[@]}"; do
+    printf "  - %s\n" "$file"
+  done
+  printf "\n"
+
+  if [[ "$dry_run" == "true" ]]; then
+    cli_info "Dry run - no files were synced"
+    return 0
+  fi
+
+  # Warning for production
+  if [[ "$target" == "prod" ]] || [[ "$target" == "production" ]]; then
+    printf "${CLI_YELLOW}WARNING:${CLI_RESET} You are about to push to PRODUCTION\n"
+    printf "\n"
+  fi
+
+  # Confirm if not forced
+  if [[ "$force" != "true" ]]; then
+    printf "This will overwrite remote files. Continue? [y/N]: "
+    local confirm
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$confirm" != "y" ]] && [[ "$confirm" != "yes" ]]; then
+      cli_info "Cancelled"
+      return 0
+    fi
+  fi
+
+  # Ensure remote directory exists
+  cli_info "Ensuring remote directory exists..."
+  ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path'" 2>/dev/null
+
+  # Push files
+  cli_info "Pushing files..."
+
+  local push_errors=0
+
+  for file in "${local_files[@]}"; do
+    printf "  Pushing %s... " "$file"
+
+    local local_path="$env_dir/$file"
+    local remote_path="$deploy_path/$file"
+
+    if scp "${ssh_args[@]}" "$local_path" "${user}@${host}:${remote_path}" 2>/dev/null; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+
+      # Set proper permissions for secrets
+      if [[ "$file" == ".env.secrets" ]]; then
+        ssh "${ssh_args[@]}" "${user}@${host}" "chmod 600 '$remote_path'" 2>/dev/null
+      fi
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      push_errors=$((push_errors + 1))
+    fi
+  done
+
+  if [[ $push_errors -eq 0 ]]; then
+    printf "\n"
+    cli_success "Sync complete: local → $target"
+    printf "\n"
+    cli_info "Files synced to: ${user}@${host}:${deploy_path}"
+  else
+    printf "\n"
+    cli_warning "Sync completed with $push_errors error(s)"
+    return 1
+  fi
 }
 
 sync_status() {
-  cli_info "Sync status"
+  show_command_header "nself deploy sync" "Synchronization Status"
+  printf "\n"
 
-  # TODO: Implement sync status
+  # Check if environments directory exists
+  if [[ ! -d ".environments" ]]; then
+    cli_info "No environments configured"
+    return 0
+  fi
+
+  # Check each environment for sync status
+  local env_count=0
+
+  printf "%-15s %-10s %-25s %s\n" "ENVIRONMENT" "STATUS" "LAST SYNC" "FILES"
+  printf "%-15s %-10s %-25s %s\n" "---------------" "----------" "-------------------------" "----------"
+
+  for env_dir in .environments/*/; do
+    if [[ -d "$env_dir" ]] && [[ -f "$env_dir/server.json" ]]; then
+      local env_name host status last_sync files_status
+      env_name=$(basename "$env_dir")
+
+      host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+      # Skip localhost/local
+      if [[ -z "$host" ]] || [[ "$host" == "localhost" ]]; then
+        continue
+      fi
+
+      env_count=$((env_count + 1))
+
+      # Check if files exist locally
+      local has_env has_secrets
+      has_env="no"
+      has_secrets="no"
+
+      [[ -f "$env_dir/.env" ]] && has_env="yes"
+      [[ -f "$env_dir/.env.secrets" ]] && has_secrets="yes"
+
+      if [[ "$has_env" == "yes" ]] && [[ "$has_secrets" == "yes" ]]; then
+        files_status="${CLI_GREEN}complete${CLI_RESET}"
+      elif [[ "$has_env" == "yes" ]]; then
+        files_status="${CLI_YELLOW}partial${CLI_RESET}"
+      else
+        files_status="${CLI_RED}missing${CLI_RESET}"
+      fi
+
+      # Check if sync history exists
+      if [[ -f "$env_dir/.sync-history" ]]; then
+        last_sync=$(tail -n1 "$env_dir/.sync-history" 2>/dev/null | cut -d'|' -f1)
+        status="${CLI_GREEN}synced${CLI_RESET}"
+      else
+        last_sync="never"
+        status="${CLI_YELLOW}not synced${CLI_RESET}"
+      fi
+
+      printf "%-15s %-10s %-25s %s\n" "$env_name" "$status" "$last_sync" "$files_status"
+    fi
+  done
+
+  if [[ $env_count -eq 0 ]]; then
+    printf "\n"
+    cli_info "No remote environments configured"
+  else
+    printf "\n"
+    printf "Legend:\n"
+    printf "  ${CLI_GREEN}complete${CLI_RESET} - .env and .env.secrets present\n"
+    printf "  ${CLI_YELLOW}partial${CLI_RESET}  - only .env present\n"
+    printf "  ${CLI_RED}missing${CLI_RESET}  - configuration files missing\n"
+  fi
+
+  printf "\n"
+  cli_info "Sync files between environments:"
+  printf "  Pull: nself deploy sync pull <environment>\n"
+  printf "  Push: nself deploy sync push <environment>\n"
 }
 
 sync_full() {
   local target="${1:-staging}"
+  shift || true
 
-  cli_info "Full sync to $target..."
+  local dry_run=false
+  local force=false
+  local rebuild=true
 
-  # TODO: Implement full sync
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      --force | -f)
+        force=true
+        shift
+        ;;
+      --no-rebuild)
+        rebuild=false
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
 
-  cli_success "Full sync complete"
+  show_command_header "nself deploy sync full" "Full synchronization to $target"
+  printf "\n"
+
+  # Check if environment exists
+  local env_dir=".environments/$target"
+  if [[ ! -d "$env_dir" ]]; then
+    cli_error "Environment '$target' not found"
+    return 1
+  fi
+
+  if [[ ! -f "$env_dir/server.json" ]]; then
+    cli_error "No server configured for $target"
+    return 1
+  fi
+
+  # Load server configuration
+  local host user port key_file deploy_path
+  host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
+  key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+
+  user="${user:-root}"
+  port="${port:-22}"
+  deploy_path="${deploy_path:-/var/www/nself}"
+
+  if [[ -z "$host" ]]; then
+    cli_error "No host configured for $target"
+    return 1
+  fi
+
+  cli_section "Full Sync Plan"
+  printf "  1. Sync environment files (.env, .env.secrets)\n"
+  printf "  2. Sync docker-compose.yml and configs\n"
+  printf "  3. Sync nginx configuration\n"
+  printf "  4. Sync custom services\n"
+  if [[ "$rebuild" == "true" ]]; then
+    printf "  5. Restart services on remote\n"
+  fi
+  printf "\n"
+
+  if [[ "$dry_run" == "true" ]]; then
+    cli_info "Dry run - no files were synced"
+    return 0
+  fi
+
+  # Confirm if not forced
+  if [[ "$force" != "true" ]]; then
+    printf "This will perform a full sync to ${CLI_CYAN}%s${CLI_RESET}. Continue? [y/N]: " "$target"
+    local confirm
+    read -r confirm
+    confirm=$(printf "%s" "$confirm" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$confirm" != "y" ]] && [[ "$confirm" != "yes" ]]; then
+      cli_info "Cancelled"
+      return 0
+    fi
+  fi
+
+  # Build SSH arguments
+  local ssh_args=()
+  [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
+  ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Test connection
+  printf "\n"
+  cli_info "Testing connection..."
+  if ! ssh "${ssh_args[@]}" "${user}@${host}" "echo 'ok'" 2>/dev/null | grep -q "ok"; then
+    cli_error "Cannot connect to $host"
+    return 1
+  fi
+  cli_success "Connected"
+
+  # Step 1: Sync environment files
+  printf "\n"
+  cli_section "Step 1: Environment Files"
+
+  local files_synced=0
+
+  if [[ -f "$env_dir/.env" ]]; then
+    printf "  Syncing .env... "
+    if scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>/dev/null; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+      files_synced=$((files_synced + 1))
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+    fi
+  fi
+
+  if [[ -f "$env_dir/.env.secrets" ]]; then
+    printf "  Syncing .env.secrets... "
+    if scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>/dev/null; then
+      ssh "${ssh_args[@]}" "${user}@${host}" "chmod 600 '$deploy_path/.env.secrets'" 2>/dev/null
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+      files_synced=$((files_synced + 1))
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+    fi
+  fi
+
+  # Step 2: Sync docker-compose and configs
+  printf "\n"
+  cli_section "Step 2: Docker Configuration"
+
+  if [[ -f "docker-compose.yml" ]]; then
+    printf "  Syncing docker-compose.yml... "
+    if scp "${ssh_args[@]}" "docker-compose.yml" "${user}@${host}:${deploy_path}/docker-compose.yml" 2>/dev/null; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+      files_synced=$((files_synced + 1))
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+    fi
+  else
+    printf "  ${CLI_YELLOW}WARNING:${CLI_RESET} docker-compose.yml not found locally\n"
+  fi
+
+  # Step 3: Sync nginx if exists
+  printf "\n"
+  cli_section "Step 3: Nginx Configuration"
+
+  if [[ -d "nginx" ]]; then
+    printf "  Syncing nginx directory... "
+
+    # Use rsync if available, fallback to scp
+    if command -v rsync >/dev/null 2>&1; then
+      local rsync_ssh="ssh"
+      [[ -n "$key_file" ]] && rsync_ssh="$rsync_ssh -i ${key_file/#\~/$HOME}"
+      rsync_ssh="$rsync_ssh -p $port"
+
+      if rsync -avz --delete -e "$rsync_ssh" nginx/ "${user}@${host}:${deploy_path}/nginx/" 2>/dev/null; then
+        printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        files_synced=$((files_synced + 1))
+      else
+        printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      fi
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (rsync not available)\n"
+    fi
+  else
+    printf "  ${CLI_YELLOW}SKIP:${CLI_RESET} nginx directory not found\n"
+  fi
+
+  # Step 4: Sync custom services
+  printf "\n"
+  cli_section "Step 4: Custom Services"
+
+  if [[ -d "services" ]]; then
+    printf "  Syncing services directory... "
+
+    if command -v rsync >/dev/null 2>&1; then
+      local rsync_ssh="ssh"
+      [[ -n "$key_file" ]] && rsync_ssh="$rsync_ssh -i ${key_file/#\~/$HOME}"
+      rsync_ssh="$rsync_ssh -p $port"
+
+      if rsync -avz --delete -e "$rsync_ssh" services/ "${user}@${host}:${deploy_path}/services/" 2>/dev/null; then
+        printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        files_synced=$((files_synced + 1))
+      else
+        printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      fi
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (rsync not available)\n"
+    fi
+  else
+    printf "  ${CLI_YELLOW}SKIP:${CLI_RESET} services directory not found\n"
+  fi
+
+  # Step 5: Restart services if rebuild enabled
+  if [[ "$rebuild" == "true" ]]; then
+    printf "\n"
+    cli_section "Step 5: Restart Services"
+
+    printf "  Restarting services on remote... "
+
+    local restart_result
+    restart_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+      cd '$deploy_path' 2>/dev/null || exit 1
+      docker compose down 2>/dev/null
+      docker compose up -d 2>/dev/null
+      echo 'restarted'
+    " 2>/dev/null)
+
+    if echo "$restart_result" | grep -q "restarted"; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+    else
+      printf "${CLI_YELLOW}PARTIAL${CLI_RESET}\n"
+    fi
+  fi
+
+  # Record sync history
+  echo "$(date -Iseconds 2>/dev/null || date)|full|$files_synced files" >> "$env_dir/.sync-history"
+
+  printf "\n"
+  cli_success "Full sync complete: $files_synced file(s) synced"
+  printf "\n"
+  cli_info "Next: nself deploy $target"
 }
 
 show_sync_help() {

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # platform.sh - Platform detection and terminal capabilities for nself init
 #
 # This module handles platform-specific detection, terminal capabilities,

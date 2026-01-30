@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # database-init.sh - Database initialization module
 # POSIX-compliant, no Bash 4+ features
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # demo.sh - Demo setup functionality for nself init --demo
 #
 # Creates a complete demo environment with all services enabled,

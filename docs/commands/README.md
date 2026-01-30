@@ -78,11 +78,13 @@ nself tenant themes         # Theme management
 OAuth provider management:
 
 ```bash
-nself oauth install         # Install OAuth service
-nself oauth enable          # Enable providers
-nself oauth config          # Configure credentials
-nself oauth test            # Test provider
+nself auth oauth install         # Install OAuth service
+nself auth oauth enable          # Enable providers
+nself auth oauth config          # Configure credentials
+nself auth oauth test            # Test provider
 ```
+
+> **v0.9.6 Update:** OAuth commands moved to `nself auth oauth`. Old syntax `nself oauth` still works but is deprecated.
 
 **Providers:** Google, GitHub, Slack, Microsoft
 
@@ -95,11 +97,13 @@ nself oauth test            # Test provider
 File storage and upload pipeline:
 
 ```bash
-nself storage init          # Initialize storage
-nself storage upload        # Upload files
-nself storage list          # List files
-nself storage config        # Configure pipeline
+nself service storage init          # Initialize storage
+nself service storage upload        # Upload files
+nself service storage list          # List files
+nself service storage config        # Configure pipeline
 ```
+
+> **v0.9.6 Update:** Storage commands moved to `nself service storage`. Old syntax `nself storage` still works but is deprecated.
 
 **Features:** Multipart upload, thumbnails, virus scanning, compression
 
@@ -148,10 +152,12 @@ nself deploy rollback       # Rollback deployment
 Manage cloud providers and servers:
 
 ```bash
-nself provider list         # List 26+ providers
-nself provider server       # Server management
-nself provider cost         # Cost estimation
+nself infra provider list         # List 26+ providers
+nself infra provider server       # Server management
+nself infra provider cost         # Cost estimation
 ```
+
+> **v0.9.6 Update:** Infrastructure commands moved to `nself infra provider`. Old syntax `nself provider` still works but is deprecated.
 
 **Providers:** AWS, GCP, Azure, DigitalOcean, Linode, Vultr, Hetzner, and 19+ more
 
@@ -164,11 +170,13 @@ nself provider cost         # Cost estimation
 Kubernetes and Helm chart management:
 
 ```bash
-nself k8s convert           # Generate K8s manifests
-nself k8s deploy            # Deploy to cluster
-nself helm install          # Install Helm chart
-nself helm upgrade          # Upgrade release
+nself infra k8s convert           # Generate K8s manifests
+nself infra k8s deploy            # Deploy to cluster
+nself infra helm install          # Install Helm chart
+nself infra helm upgrade          # Upgrade release
 ```
+
+> **v0.9.6 Update:** K8s/Helm commands moved to `nself infra k8s` and `nself infra helm`. Old syntax still works but is deprecated.
 
 **See:** [K8S.md](K8S.md), [HELM.md](HELM.md), [Kubernetes & Helm](COMMANDS.md#kubernetes--helm)
 
@@ -199,16 +207,18 @@ nself history               # Audit trail
 Security scanning, secrets, and access control:
 
 ```bash
-nself security              # Security scanning
+nself auth security         # Security scanning
 nself auth                  # Authentication
-nself mfa                   # Multi-factor auth
-nself roles                 # Role management
-nself devices               # Device management
-nself secrets               # Secrets management
-nself vault                 # Vault integration
-nself ssl                   # SSL certificates
-nself trust                 # Trust local certs
+nself auth mfa              # Multi-factor auth
+nself auth roles            # Role management
+nself auth devices          # Device management
+nself config secrets        # Secrets management
+nself config vault          # Vault integration
+nself auth ssl              # SSL certificates
+nself auth ssl trust        # Trust local certs
 ```
+
+> **v0.9.6 Update:** Security commands consolidated under `nself auth` and `nself config`. Old syntax still works but is deprecated.
 
 **See:** [Security Commands](COMMANDS.md#security-commands)
 
@@ -220,10 +230,12 @@ Performance profiling, benchmarking, and scaling:
 
 ```bash
 nself perf                  # Performance profiling
-nself bench                 # Benchmarking
-nself scale                 # Service scaling
-nself migrate               # Cross-env migration
+nself perf bench            # Benchmarking
+nself perf scale            # Service scaling
+nself perf migrate          # Cross-env migration
 ```
+
+> **v0.9.6 Update:** Performance commands consolidated under `nself perf`. Old top-level commands still work but are deprecated.
 
 **See:** [PERF.md](PERF.md), [BENCH.md](BENCH.md), [SCALE.md](SCALE.md), [Performance](COMMANDS.md#performance--optimization)
 
@@ -235,11 +247,13 @@ Tools for developers:
 
 ```bash
 nself dev                   # Developer tools (v0.8.0)
-nself frontend              # Frontend management
-nself ci                    # CI/CD generation
+nself dev frontend          # Frontend management
+nself dev ci                # CI/CD generation
 nself completion            # Shell completions
-nself docs                  # Documentation
+nself dev docs              # Documentation
 ```
+
+> **v0.9.6 Update:** Developer commands consolidated under `nself dev`. Old syntax still works but is deprecated.
 
 **See:** [DEV.md](DEV.md), [Developer Tools](COMMANDS.md#developer-tools)
 
@@ -267,10 +281,12 @@ Configuration and environment management:
 
 ```bash
 nself config                # Configuration mgmt
-nself env                   # Environment mgmt
-nself sync                  # Data synchronization
-nself validate              # Validate config
+nself config env            # Environment mgmt
+nself deploy sync           # Data synchronization
+nself config validate       # Validate config
 ```
+
+> **v0.9.6 Update:** Configuration commands consolidated. `env` → `config env`, `sync` → `deploy sync`, `validate` → `config validate`.
 
 **See:** [CONFIG.md](CONFIG.md), [ENV.md](ENV.md), [Configuration](COMMANDS.md#configuration)
 
@@ -284,9 +300,11 @@ Essential utilities:
 nself help                  # Show help
 nself version               # Version info
 nself update                # Update nself
-nself upgrade               # Zero-downtime upgrades
+nself deploy upgrade        # Zero-downtime upgrades
 nself admin                 # Admin UI
 ```
+
+> **v0.9.6 Update:** Upgrade command moved to `nself deploy upgrade`. Old syntax still works but is deprecated.
 
 **See:** [Utilities](COMMANDS.md#utilities)
 
@@ -458,4 +476,4 @@ nself doctor --fix
 
 ---
 
-*Last Updated: January 30, 2026 | Version: 0.9.5*
+*Last Updated: January 30, 2026 | Version: 0.9.6*

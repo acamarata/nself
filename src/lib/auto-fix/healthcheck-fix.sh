@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Auto-fix health check issues in docker-compose.yml
 
 fix_healthchecks() {

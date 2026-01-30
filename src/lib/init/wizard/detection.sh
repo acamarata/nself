@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # detection.sh - Project detection and analysis
 
 # Global variables for detection results

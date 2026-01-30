@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # zero-downtime.sh - Zero-downtime deployment strategies
 # POSIX-compliant, no Bash 4+ features
 

@@ -49,20 +49,20 @@ pg_query_safe() {
   local container
   container=$(pg_get_container) || return 1
 
-  # Build psql command with -v parameters
-  local psql_cmd="psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-nself_db} -t"
+  # Build psql command as array to prevent command injection
+  local psql_cmd=(psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t)
 
   # Add parameters as psql variables
   local param_num=1
   for param in "$@"; do
     # Escape single quotes in parameter value by doubling them
     local escaped_param="${param//\'/\'\'}"
-    psql_cmd+=" -v param${param_num}='${escaped_param}'"
+    psql_cmd+=(-v "param${param_num}=${escaped_param}")
     ((param_num++))
   done
 
-  # Execute query
-  docker exec -i "$container" $psql_cmd -c "$query" 2>/dev/null
+  # Execute query with properly quoted array expansion
+  docker exec -i "$container" "${psql_cmd[@]}" -c "$query" 2>/dev/null
   return $?
 }
 
@@ -357,7 +357,9 @@ pg_begin() {
   local container
   container=$(pg_get_container) || return 1
 
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "BEGIN;" >/dev/null 2>&1
+  # Use array for safe command execution
+  local psql_cmd=(psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "BEGIN;")
+  docker exec -i "$container" "${psql_cmd[@]}" >/dev/null 2>&1
 }
 
 # Commit transaction
@@ -366,7 +368,9 @@ pg_commit() {
   local container
   container=$(pg_get_container) || return 1
 
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "COMMIT;" >/dev/null 2>&1
+  # Use array for safe command execution
+  local psql_cmd=(psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "COMMIT;")
+  docker exec -i "$container" "${psql_cmd[@]}" >/dev/null 2>&1
 }
 
 # Rollback transaction
@@ -375,7 +379,9 @@ pg_rollback() {
   local container
   container=$(pg_get_container) || return 1
 
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "ROLLBACK;" >/dev/null 2>&1
+  # Use array for safe command execution
+  local psql_cmd=(psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c "ROLLBACK;")
+  docker exec -i "$container" "${psql_cmd[@]}" >/dev/null 2>&1
 }
 
 # ============================================================================

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 #
 # Tenant Lifecycle Management
 # Handles tenant provisioning, activation, suspension, deletion, and migration

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # validation.sh - Input and configuration validation utilities
 
 # Source display utilities

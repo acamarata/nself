@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # env-merger.sh - Environment merging and runtime file generation
 # Cascades and merges environment files based on target environment
 # Generates .env.runtime for docker-compose with fully resolved values

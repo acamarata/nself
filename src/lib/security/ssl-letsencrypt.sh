@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # ssl-letsencrypt.sh - Let's Encrypt SSL certificate management
 # POSIX-compliant, no Bash 4+ features
 

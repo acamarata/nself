@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 
 # multi-env.sh - Multi-environment deployment support
 

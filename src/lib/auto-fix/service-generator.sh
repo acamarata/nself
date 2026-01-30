@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # service-generator-fixed.sh - Service generator that copies templates
 # POSIX-compliant, no Bash 4+ features
 

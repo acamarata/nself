@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # defaults.sh - Default configuration values
 
 # Project defaults

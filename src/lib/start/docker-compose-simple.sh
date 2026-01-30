@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # docker-compose-simple.sh - Simplified docker compose startup
 
 # Simple docker compose up that doesn't hang

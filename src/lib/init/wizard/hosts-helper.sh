@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # hosts-helper.sh - Helper for /etc/hosts configuration
 
 # Check if domain resolves to localhost

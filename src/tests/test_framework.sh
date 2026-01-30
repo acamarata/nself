@@ -203,14 +203,14 @@ assert_exit_code() {
 pass() {
   local message="$1"
   TESTS_PASSED=$((TESTS_PASSED + 1))
-  echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} $message"
+  printf "  ${COLOR_GREEN}✓${COLOR_RESET} %s\n" "$message"
 }
 
 # fail - Mark test as failed
 fail() {
   local message="$1"
   TESTS_FAILED=$((TESTS_FAILED + 1))
-  echo -e "  ${COLOR_RED}✗${COLOR_RESET} $message"
+  printf "  ${COLOR_RED}✗${COLOR_RESET} %s\n" "$message"
   return 1
 }
 
@@ -218,7 +218,7 @@ fail() {
 skip() {
   local message="$1"
   TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
-  echo -e "  ${COLOR_YELLOW}⊘${COLOR_RESET} $message (skipped)"
+  printf "  ${COLOR_YELLOW}⊘${COLOR_RESET} %s (skipped)\n" "$message"
 }
 
 # ============================================
@@ -267,7 +267,7 @@ run_tests() {
     return 1
   fi
 
-  echo -e "${COLOR_BLUE}Running $test_name${COLOR_RESET}"
+  printf "${COLOR_BLUE}Running %s${COLOR_RESET}\n" "$test_name"
   echo "Found ${#test_functions[@]} tests"
   echo
 
@@ -307,25 +307,25 @@ show_test_summary() {
   echo
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "Test Summary:"
-  echo -e "  ${COLOR_GREEN}Passed:${COLOR_RESET}  $TESTS_PASSED"
+  printf "  ${COLOR_GREEN}Passed:${COLOR_RESET}  %s\n" "$TESTS_PASSED"
 
   if [[ $TESTS_FAILED -gt 0 ]]; then
-    echo -e "  ${COLOR_RED}Failed:${COLOR_RESET}  $TESTS_FAILED"
+    printf "  ${COLOR_RED}Failed:${COLOR_RESET}  %s\n" "$TESTS_FAILED"
   else
-    echo -e "  Failed:  $TESTS_FAILED"
+    printf "  Failed:  %s\n" "$TESTS_FAILED"
   fi
 
   if [[ $TESTS_SKIPPED -gt 0 ]]; then
-    echo -e "  ${COLOR_YELLOW}Skipped:${COLOR_RESET} $TESTS_SKIPPED"
+    printf "  ${COLOR_YELLOW}Skipped:${COLOR_RESET} %s\n" "$TESTS_SKIPPED"
   fi
 
   echo "  Total:   $TESTS_RUN"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   if [[ $TESTS_FAILED -eq 0 ]]; then
-    echo -e "${COLOR_GREEN}✓ All tests passed!${COLOR_RESET}"
+    printf "${COLOR_GREEN}✓ All tests passed!${COLOR_RESET}\n"
   else
-    echo -e "${COLOR_RED}✗ Some tests failed${COLOR_RESET}"
+    printf "${COLOR_RED}✗ Some tests failed${COLOR_RESET}\n"
   fi
 }
 

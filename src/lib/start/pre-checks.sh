@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # pre-checks.sh - Pre-flight checks for nself start
 # Bash 3.2 compatible, cross-platform
 
