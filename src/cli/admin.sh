@@ -4,7 +4,11 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$SCRIPT_DIR/../lib/admin/api.sh" ]] && source "$SCRIPT_DIR/../lib/admin/api.sh"
+
+# Only source API functions if not showing help
+if [[ "${1:-help}" != "help" ]] && [[ "${1:-help}" != "--help" ]] && [[ "${1:-help}" != "-h" ]]; then
+  [[ -f "$SCRIPT_DIR/../lib/admin/api.sh" ]] && source "$SCRIPT_DIR/../lib/admin/api.sh" || true
+fi
 
 cmd_admin() {
   case "${1:-help}" in
