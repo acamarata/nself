@@ -17,6 +17,7 @@ nself provides comprehensive security features out of the box, including SSL/TLS
 | Document | Description |
 |----------|-------------|
 | **[Security Audit](SECURITY-AUDIT.md)** | Complete security assessment and findings |
+| **[Dependency Scanning](DEPENDENCY-SCANNING.md)** | CI/CD security scanning and vulnerability detection |
 
 ### Configuration Guides
 
@@ -228,6 +229,50 @@ CS_1_CPU=0.5
 - [ ] Set up monitoring and alerts
 - [ ] Test disaster recovery procedures
 - [ ] Review security audit findings
+
+---
+
+## Security Scanning & CI/CD
+
+### Automated Security Scanning
+
+nself implements comprehensive automated security scanning in CI/CD:
+
+**Tools:**
+- **ShellCheck** - Shell script security analysis
+- **Gitleaks** - Secret detection in code and git history
+- **TruffleHog** - Advanced secret scanning with verification
+- **Trivy** - Container and dependency vulnerability scanning
+- **Semgrep** - Static application security testing (SAST)
+- **Hadolint** - Dockerfile security linting
+
+**[View Complete Dependency Scanning Guide](DEPENDENCY-SCANNING.md)**
+
+### Local Security Scanning
+
+Run security scans locally before committing:
+
+```bash
+# Run all security scans
+./src/scripts/security/scan-dependencies.sh
+
+# Install pre-commit hooks
+pip install pre-commit
+pre-commit install
+
+# Run pre-commit hooks manually
+pre-commit run --all-files
+```
+
+### CI/CD Integration
+
+Security scans run automatically:
+- **On every push** to main/develop
+- **On every pull request**
+- **Daily at 2 AM UTC** (scheduled)
+- **Manually** via workflow dispatch
+
+Results are uploaded to GitHub Security tab (SARIF format).
 
 ---
 

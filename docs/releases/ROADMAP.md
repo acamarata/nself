@@ -1,21 +1,59 @@
-# nself Development Roadmap
+# ɳSelf Development Roadmap
 
 ## Quick Navigation
 [Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 LTS](#v050---production-ready-lts)
 
 ## Current Status Summary
-- **v0.8.0 (Current)**: Security Hardening - Complete security framework
-- **v0.9.0 (Next)**: Enterprise Features - Billing & White-Label
-- **v0.5.0**: Production Ready LTS + nself-admin v0.1
+- **v0.9.5 (Current)**: Feature Parity & Security - Real-time, OAuth, security hardening
+- **v0.10.0 (Next)**: Analytics & Intelligence - Business intelligence, AI features
+- **v0.5.0**: Production Ready LTS + ɳAdmin v0.1
 
 ---
 
 ## Vision
-Transform nself from a powerful CLI tool into a complete self-hosted backend platform that rivals commercial BaaS offerings (Supabase, Nhost, Firebase) while maintaining simplicity, control, and the ability to run anywhere.
+Transform ɳSelf from a powerful CLI tool into a complete self-hosted backend platform that rivals commercial BaaS offerings (Supabase, Nhost, Firebase) while maintaining simplicity, control, and the ability to run anywhere.
 
 ---
 
 ## Released
+
+### v0.9.5 - Feature Parity & Security Hardening
+**Status**: Released | **Release Date**: January 30, 2026
+
+Complete feature parity with Supabase and Nhost, comprehensive security hardening, and real-time communication system:
+
+- **Real-Time Communication** - Complete WebSocket system with channels, presence tracking, broadcast messaging
+- **Database Subscriptions** - Change Data Capture (CDC) with INSERT/UPDATE/DELETE event streaming
+- **Security Hardening** - Fixed ALL SQL injection vulnerabilities, added CSP framework, comprehensive security audit
+- **Enhanced OAuth** - PKCE support for mobile apps, state validation, improved token management
+- **Migration Tools** - One-command migration from Supabase and Nhost with data preservation
+- **Complete Documentation** - 20+ new guides, comprehensive CLI reference, troubleshooting guides
+
+**Competitive Advantages:**
+- Multi-tenancy (vs. none in Supabase/Nhost)
+- White-label customization (vs. locked branding)
+- Built-in billing system (vs. external integration required)
+- Complete data ownership (vs. vendor lock-in)
+- Deploy anywhere (vs. cloud-first)
+
+Full details: [v0.9.5 Release Notes](./v0.9.5.md)
+
+---
+
+### v0.9.0 - Enterprise Features
+**Status**: Released | **Release Date**: January 30, 2026
+
+Complete enterprise monetization and customization platform with billing, white-label, OAuth handlers, file upload pipeline, and code generation:
+
+- **Billing Integration** - Stripe/Paddle subscription management, usage tracking, invoicing
+- **White-Label Platform** - Custom branding, domains, email templates, legal documents
+- **OAuth Framework** - Google, GitHub, Microsoft, Apple with account linking
+- **File Upload Pipeline** - Resumable uploads, image optimization, virus scanning, CDN integration
+- **Code Generation** - TypeScript, Python, Go, Java, Swift SDK generation
+
+Full details: [v0.9.0 Release Notes](./v0.9.0.md)
+
+---
 
 ### v0.4.5 - Provider Support
 **Status**: Released | **Release Date**: January 21, 2026

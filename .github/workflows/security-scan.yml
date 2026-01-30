@@ -1,0 +1,245 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: ShellCheck Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck with security rules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          # Check for security issues (SC2006, SC2086, SC2046, etc.)
+          # Fail on errors, warn on security-related issues
+          find . -type f -name "*.sh" -exec shellcheck -S error -e SC1091 {} + || exit_code=$?
+          if [ $exit_code -ne 0 ]; then
+            printf "\033[31mShellCheck found security issues\033[0m\n"
+            exit 1
+          fi
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  dependency-scan:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy for dependency vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Warn but don't fail on vulnerabilities
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Scan Docker base images
+        run: |
+          # Scan Docker base images used in templates
+          printf "\033[34mScanning Docker base images...\033[0m\n"
+
+          # Extract base images from Dockerfiles
+          base_images=$(find src/templates -name "Dockerfile*" -exec grep -h "^FROM" {} \; | awk '{print $2}' | sort -u)
+
+          for image in $base_images; do
+            printf "\033[33mScanning: %s\033[0m\n" "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image" || true
+          done
+
+  container-scan:
+    name: Container Image Scanning
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test images
+        run: |
+          # Build a few representative service templates for scanning
+          printf "\033[34mBuilding test images...\033[0m\n"
+
+          # Express API
+          if [ -d "src/templates/services/js/express-js" ]; then
+            docker build -t nself-test:express-js \
+              --build-arg SERVICE_NAME=test-api \
+              --build-arg PORT=3000 \
+              src/templates/services/js/express-js/ || true
+          fi
+
+          # FastAPI
+          if [ -d "src/templates/services/py/fastapi" ]; then
+            docker build -t nself-test:fastapi \
+              --build-arg SERVICE_NAME=test-api \
+              --build-arg PORT=8000 \
+              src/templates/services/py/fastapi/ || true
+          fi
+
+      - name: Scan built images with Trivy
+        run: |
+          images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "nself-test:" || echo "")
+          if [ -z "$images" ]; then
+            printf "\033[33mNo test images to scan\033[0m\n"
+            exit 0
+          fi
+
+          for image in $images; do
+            printf "\033[34mScanning image: %s\033[0m\n" "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image" || true
+          done
+
+  sast:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/docker
+          generateSarif: true
+
+      - name: Upload Semgrep results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for license headers
+        run: |
+          printf "\033[34mChecking license headers...\033[0m\n"
+
+          # Check that LICENSE file exists
+          if [ ! -f "LICENSE" ]; then
+            printf "\033[31mERROR: LICENSE file not found\033[0m\n"
+            exit 1
+          fi
+
+          # Check for any GPL/AGPL licenses in dependencies
+          printf "\033[33mChecking for restrictive licenses...\033[0m\n"
+
+          # This is a basic check - in production you'd use a proper tool
+          find . -name "LICENSE*" -o -name "COPYING*" | while read -r file; do
+            if grep -i "GPL\|AGPL" "$file" >/dev/null 2>&1; then
+              printf "\033[31mWARNING: Restrictive license found in %s\033[0m\n" "$file"
+            fi
+          done
+
+  docker-bench:
+    name: Docker Security Benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Docker Bench Security
+        run: |
+          printf "\033[34mRunning Docker Bench Security checks...\033[0m\n"
+
+          # Check Dockerfiles for security best practices
+          find src/templates -name "Dockerfile*" | while read -r dockerfile; do
+            printf "\033[33mChecking: %s\033[0m\n" "$dockerfile"
+
+            # Check for USER instruction (non-root)
+            if ! grep -q "^USER" "$dockerfile"; then
+              printf "\033[31m  WARNING: No USER instruction (runs as root)\033[0m\n"
+            fi
+
+            # Check for HEALTHCHECK
+            if ! grep -q "^HEALTHCHECK" "$dockerfile"; then
+              printf "\033[33m  INFO: No HEALTHCHECK instruction\033[0m\n"
+            fi
+
+            # Check for hardcoded secrets
+            if grep -E "PASSWORD|SECRET|TOKEN|KEY" "$dockerfile" | grep -v "ARG\|ENV"; then
+              printf "\033[31m  WARNING: Possible hardcoded secrets\033[0m\n"
+            fi
+
+            # Check for latest tag
+            if grep "^FROM.*:latest" "$dockerfile"; then
+              printf "\033[33m  INFO: Using :latest tag (prefer specific versions)\033[0m\n"
+            fi
+          done
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [shellcheck, secret-scan, dependency-scan, sast, license-check]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate security summary
+        run: |
+          printf "# Security Scan Summary\n\n" > security-report.md
+          printf "**Scan Date:** %s\n\n" "$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> security-report.md
+
+          printf "## Job Results\n\n" >> security-report.md
+          printf "- ShellCheck: %s\n" "${{ needs.shellcheck.result }}" >> security-report.md
+          printf "- Secret Scanning: %s\n" "${{ needs.secret-scan.result }}" >> security-report.md
+          printf "- Dependency Scanning: %s\n" "${{ needs.dependency-scan.result }}" >> security-report.md
+          printf "- SAST: %s\n" "${{ needs.sast.result }}" >> security-report.md
+          printf "- License Check: %s\n" "${{ needs.license-check.result }}" >> security-report.md
+
+          cat security-report.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 90

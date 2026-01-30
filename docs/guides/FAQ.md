@@ -1,6 +1,6 @@
 # Frequently Asked Questions (FAQ)
 
-**Version 0.4.8** | Comprehensive answers to common questions about nself
+**Version 0.4.8** | Comprehensive answers to common questions about ɳSelf
 
 ---
 
@@ -19,9 +19,9 @@
 
 ## General Questions
 
-### What is nself?
+### What is ɳSelf?
 
-nself is a complete self-hosted Backend-as-a-Service (BaaS) platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure using Docker Compose. It includes PostgreSQL, GraphQL API (Hasura), authentication, storage, functions, monitoring, and more - all configured and managed through a simple CLI.
+ɳSelf is a complete self-hosted Backend-as-a-Service (BaaS) platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure using Docker Compose. It includes PostgreSQL, GraphQL API (Hasura), authentication, storage, functions, monitoring, and more - all configured and managed through a simple CLI.
 
 You get a production-ready backend stack in minutes without vendor lock-in, subscription fees, or data ownership concerns. Everything runs on your servers, whether that's your laptop for development or cloud infrastructure for production.
 
@@ -33,7 +33,7 @@ You get a production-ready backend stack in minutes without vendor lock-in, subs
 
 The key difference is **complete ownership and control**:
 
-| Feature | nself | Supabase | Nhost | Firebase |
+| Feature | ɳSelf | Supabase | Nhost | Firebase |
 |---------|-------|----------|-------|----------|
 | Self-hosted | Full control, any infrastructure | Limited (complex setup) | Limited (complex setup) | Cloud only |
 | Vendor lock-in | None - standard tools | Partial | Partial | High |
@@ -43,7 +43,7 @@ The key difference is **complete ownership and control**:
 | Multi-tenancy | Built-in support | DIY | DIY | DIY |
 | White-label | Full branding control | Limited | Limited | None |
 
-nself uses industry-standard open-source tools (PostgreSQL, Hasura, MinIO, etc.) orchestrated through Docker Compose. This means you can migrate away easily, customize anything, and scale on your terms.
+ɳSelf uses industry-standard open-source tools (PostgreSQL, Hasura, MinIO, etc.) orchestrated through Docker Compose. This means you can migrate away easily, customize anything, and scale on your terms.
 
 **[View Services Overview](services/SERVICES.md)** | **[Compare Commercial BaaS](guides/Quick-Start.md#what-you-get)**
 
@@ -51,7 +51,7 @@ nself uses industry-standard open-source tools (PostgreSQL, Hasura, MinIO, etc.)
 
 ### Is it production ready?
 
-Yes. nself has been production-ready since v0.4.0 and includes:
+Yes. ɳSelf has been production-ready since v0.4.0 and includes:
 
 - **Comprehensive security audit** with no critical vulnerabilities found
 - **Cross-platform compatibility** tested on macOS (Bash 3.2+), Linux (all major distros), and WSL

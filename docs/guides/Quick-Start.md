@@ -17,7 +17,7 @@ Get a complete backend running in under 5 minutes.
 
 ---
 
-## Step 1: Install nself
+## Step 1: Install ɳSelf
 
 ```bash
 curl -sSL https://install.nself.org | bash

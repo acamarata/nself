@@ -1,15 +1,16 @@
-# nself - Nhost self-hosted stack and more, in seconds!
+# ɳSelf - Complete Self-Hosted Backend Platform
 
 [![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
+[![Security Scan](https://github.com/acamarata/nself/actions/workflows/security-scan.yml/badge.svg)](https://github.com/acamarata/nself/actions/workflows/security-scan.yml)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
-> **✅ PRODUCTION READY**: nself v0.8.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, nself is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)). 
-> 
-> That said, nself is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
+> **✅ PRODUCTION READY**: ɳSelf v0.8.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, ɳSelf is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)).
+>
+> That said, ɳSelf is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
 > 
 > We welcome bug reports and appreciate your patience as we work toward these goals!
 
@@ -27,9 +28,9 @@ curl -sSL https://install.nself.org | bash
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
-nself is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
+ɳSelf is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
-## 🚀 Why nself?
+## 🚀 Why ɳSelf?
 
 ### ⚡ Lightning Fast Setup
 - **Under 5 minutes** from zero to running backend
@@ -118,7 +119,7 @@ The installer will:
 - 🔗 Add nself to your PATH automatically
 - 🚀 Create a global `nself` command
 
-### Updating nself
+### Updating ɳSelf
 
 To update to the latest version:
 
@@ -229,7 +230,7 @@ CS_5=chat:socketio-ts:3005        # Real-time WebSocket
 - **Go (4)**: Gin, Echo, Fiber, gRPC
 - **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
 
-**📖 [View Complete Service Templates Documentation](docs/SERVICE_TEMPLATES.md)**
+**📖 [View Complete Service Templates Documentation](docs/services/SERVICE_TEMPLATES.md)**
 
 Every template includes:
 - 🐳 Production Docker setup with multi-stage builds
@@ -240,7 +241,7 @@ Every template includes:
 
 ## 💪 What You Get vs Manual Setup
 
-| Manual Nhost Self-hosting | With nself |
+| Manual Nhost Self-hosting | With ɳSelf |
 |--------------------------|------------|
 | Hours of configuration | 5 minutes total |
 | Multiple config files | Single `.env` |
@@ -812,7 +813,7 @@ nself email test recipient@example.com
 
 ### Dedicated QA Team
 
-nself has a dedicated QA team that ensures the highest quality for every release:
+ɳSelf has a dedicated QA team that ensures the highest quality for every release:
 
 - **Release Testing**: Every release, patch, and update is thoroughly tested before deployment
 - **Issue Reproduction**: All user-reported issues are reproduced and verified by the QA team
@@ -820,7 +821,7 @@ nself has a dedicated QA team that ensures the highest quality for every release
 - **Regression Testing**: Ensures new changes don't break existing functionality
 - **Multi-Platform Testing**: Validates functionality across macOS, Linux, WSL2, and Docker environments
 
-This systematic QA process ensures that nself remains stable and reliable for production use.
+This systematic QA process ensures that ɳSelf remains stable and reliable for production use.
 
 ## 🤝 Contributing
 
@@ -840,7 +841,7 @@ Source Available License - see [LICENSE](LICENSE) file for details.
 
 ## 📄 License
 
-nself is **free for personal use**. Commercial use requires a license.
+ɳSelf is **free for personal use**. Commercial use requires a license.
 
 - ✅ **Personal Projects**: Free forever
 - ✅ **Learning & Education**: Free forever  

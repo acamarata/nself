@@ -1,12 +1,12 @@
-# nself Plugins (v0.4.8)
+# ɳPlugins (v0.4.8)
 
-Extend nself with third-party integrations through the plugin system.
+Extend ɳSelf with third-party integrations through the plugin system.
 
 ---
 
 ## Overview
 
-The nself plugin system allows you to extend your backend with pre-built integrations for popular services. Plugins provide database schemas, webhook handlers, CLI actions, and optional background services.
+The ɳPlugins system allows you to extend your backend with pre-built integrations for popular services. Plugins provide database schemas, webhook handlers, CLI actions, and optional background services.
 
 ---
 

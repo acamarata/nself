@@ -356,12 +356,48 @@ server {
 EOF
   fi
 
-  # MeiliSearch route
-  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
-    local search_route="${SEARCH_ROUTE:-search}"
+  # Search route (provider-agnostic: MeiliSearch or Typesense)
+  local search_enabled="${SEARCH_ENABLED:-false}"
+  local search_provider="${SEARCH_PROVIDER:-meilisearch}"
 
-    cat > nginx/sites/meilisearch.conf <<EOF
-# MeiliSearch
+  # Legacy support for old MEILISEARCH_ENABLED variable
+  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
+    search_enabled="true"
+    search_provider="meilisearch"
+  fi
+
+  # Legacy support for old TYPESENSE_ENABLED variable
+  if [[ "${TYPESENSE_ENABLED:-false}" == "true" ]]; then
+    search_enabled="true"
+    search_provider="typesense"
+  fi
+
+  if [[ "$search_enabled" == "true" ]]; then
+    local search_route="${SEARCH_ROUTE:-search}"
+    local upstream_host=""
+    local upstream_port=""
+    local service_name=""
+
+    case "$search_provider" in
+      meilisearch)
+        upstream_host="meilisearch"
+        upstream_port="7700"
+        service_name="MeiliSearch"
+        ;;
+      typesense)
+        upstream_host="typesense"
+        upstream_port="8108"
+        service_name="Typesense"
+        ;;
+      *)
+        upstream_host="meilisearch"
+        upstream_port="7700"
+        service_name="MeiliSearch"
+        ;;
+    esac
+
+    cat > nginx/sites/search.conf <<EOF
+# ${service_name} Search Engine
 server {
     listen 443 ssl;
     http2 on;
@@ -371,12 +407,15 @@ server {
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     location / {
-        proxy_pass http://meilisearch:7700;
+        proxy_pass http://${upstream_host}:${upstream_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+
+        # Typesense-specific headers (works for MeiliSearch too)
+        proxy_set_header X-Typesense-API-KEY \$http_x_typesense_api_key;
     }
 }
 EOF

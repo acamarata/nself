@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-# user-manager.sh - User CRUD operations (USER-001)
-# Part of nself v0.6.0 - Phase 1 Sprint 2
+# user-manager.sh - User CRUD operations (USER-001) - SECURE VERSION
+# Part of nself v0.9.0 - Security Hardening
 #
-# Implements comprehensive user management operations
-# Create, Read, Update, Delete, List, Search
+# Implements comprehensive user management operations with SQL injection protection
+# All queries use parameterized queries via safe-query.sh
 
 set -euo pipefail
 
-# Source password utilities
+# Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source password utilities
 if [[ -f "$SCRIPT_DIR/password-utils.sh" ]]; then
   source "$SCRIPT_DIR/password-utils.sh"
 fi
+
+# Source safe query library
+source "$SCRIPT_DIR/../database/safe-query.sh"
 
 # ============================================================================
 # User Creation
@@ -27,32 +32,27 @@ user_create() {
   local metadata_json="${4:-{}}"
 
   # Validate email
-  if [[ -z "$email" ]]; then
-    echo "ERROR: Email required" >&2
-    return 1
+  email=$(validate_email "$email") || return 1
+
+  # Validate phone if provided
+  if [[ -n "$phone" ]]; then
+    # Basic phone validation (customize as needed)
+    if [[ ! "$phone" =~ ^\+?[0-9]{10,15}$ ]]; then
+      echo "ERROR: Invalid phone format" >&2
+      return 1
+    fi
   fi
 
-  if ! echo "$email" | grep -qE '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
-    echo "ERROR: Invalid email format" >&2
-    return 1
+  # Validate metadata JSON if provided
+  if [[ "$metadata_json" != "{}" ]]; then
+    metadata_json=$(validate_json "$metadata_json") || return 1
   fi
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+  # Check if user already exists using safe query
+  local existing_check
+  existing_check=$(pg_exists "auth.users" "email" "$email")
 
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Check if user already exists
-  local existing_user
-  existing_user=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT id FROM auth.users WHERE email = '$email' LIMIT 1;" \
-    2>/dev/null | xargs)
-
-  if [[ -n "$existing_user" ]]; then
+  if [[ "$existing_check" == "t" ]]; then
     echo "ERROR: User with email '$email' already exists" >&2
     return 1
   fi
@@ -67,24 +67,29 @@ user_create() {
     fi
   fi
 
-  # Build INSERT query
-  local phone_clause=""
-  if [[ -n "$phone" ]]; then
-    phone_clause=", phone = '$phone'"
-  fi
-
-  local password_clause=""
-  if [[ -n "$password_hash" ]]; then
-    password_clause=", password_hash = '$password_hash'"
-  fi
-
-  # Create user
+  # Create user using safe parameterized query
   local user_id
-  user_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "INSERT INTO auth.users (email${phone_clause:+, phone}${password_clause:+, password_hash}, created_at, last_sign_in_at)
-     VALUES ('$email'${phone:+, '$phone'}${password_hash:+, '$password_hash'}, NOW(), NULL)
-     RETURNING id;" \
-    2>/dev/null | xargs)
+  if [[ -n "$phone" ]] && [[ -n "$password_hash" ]]; then
+    # All fields provided
+    user_id=$(pg_insert_returning_id "auth.users" \
+      "email, phone, password_hash, created_at" \
+      "$email" "$phone" "$password_hash" "NOW()")
+  elif [[ -n "$phone" ]]; then
+    # Email and phone only
+    user_id=$(pg_insert_returning_id "auth.users" \
+      "email, phone, created_at" \
+      "$email" "$phone" "NOW()")
+  elif [[ -n "$password_hash" ]]; then
+    # Email and password only
+    user_id=$(pg_insert_returning_id "auth.users" \
+      "email, password_hash, created_at" \
+      "$email" "$password_hash" "NOW()")
+  else
+    # Email only
+    user_id=$(pg_insert_returning_id "auth.users" \
+      "email, created_at" \
+      "$email" "NOW()")
+  fi
 
   if [[ -z "$user_id" ]]; then
     echo "ERROR: Failed to create user" >&2
@@ -93,10 +98,9 @@ user_create() {
 
   # Store metadata if provided
   if [[ "$metadata_json" != "{}" ]]; then
-    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-      "INSERT INTO auth.user_metadata (user_id, metadata)
-       VALUES ('$user_id', '$metadata_json'::jsonb);" \
-      >/dev/null 2>&1
+    local query="INSERT INTO auth.user_metadata (user_id, metadata)
+                 VALUES (:'param1', :'param2'::jsonb)"
+    pg_query_safe "$query" "$user_id" "$metadata_json" >/dev/null 2>&1
   fi
 
   echo "$user_id"
@@ -113,24 +117,11 @@ user_create() {
 user_get_by_id() {
   local user_id="$1"
 
-  if [[ -z "$user_id" ]]; then
-    echo "ERROR: User ID required" >&2
-    return 1
-  fi
+  # Validate UUID
+  user_id=$(validate_uuid "$user_id") || return 1
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Get user data
-  local user_json
-  user_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT row_to_json(u) FROM (
+  # Use safe query helper
+  local query="SELECT row_to_json(u) FROM (
        SELECT
          id,
          email,
@@ -141,16 +132,18 @@ user_get_by_id() {
          created_at,
          last_sign_in_at
        FROM auth.users
-       WHERE id = '$user_id'
-     ) u;" \
-    2>/dev/null | xargs)
+       WHERE id = :'param1'
+     ) u"
 
-  if [[ -z "$user_json" ]] || [[ "$user_json" == "null" ]]; then
+  local result
+  result=$(pg_query_json "$query" "$user_id")
+
+  if [[ "$result" == "{}" ]]; then
     echo "ERROR: User not found" >&2
     return 1
   fi
 
-  echo "$user_json"
+  echo "$result"
   return 0
 }
 
@@ -160,24 +153,11 @@ user_get_by_id() {
 user_get_by_email() {
   local email="$1"
 
-  if [[ -z "$email" ]]; then
-    echo "ERROR: Email required" >&2
-    return 1
-  fi
+  # Validate email
+  email=$(validate_email "$email") || return 1
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Get user data
-  local user_json
-  user_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT row_to_json(u) FROM (
+  # Use safe query
+  local query="SELECT row_to_json(u) FROM (
        SELECT
          id,
          email,
@@ -188,16 +168,18 @@ user_get_by_email() {
          created_at,
          last_sign_in_at
        FROM auth.users
-       WHERE email = '$email'
-     ) u;" \
-    2>/dev/null | xargs)
+       WHERE email = :'param1'
+     ) u"
 
-  if [[ -z "$user_json" ]] || [[ "$user_json" == "null" ]]; then
+  local result
+  result=$(pg_query_json "$query" "$email")
+
+  if [[ "$result" == "{}" ]]; then
     echo "ERROR: User not found" >&2
     return 1
   fi
 
-  echo "$user_json"
+  echo "$result"
   return 0
 }
 
@@ -213,47 +195,39 @@ user_update() {
   local new_phone="${3:-}"
   local new_password="${4:-}"
 
-  if [[ -z "$user_id" ]]; then
-    echo "ERROR: User ID required" >&2
-    return 1
-  fi
-
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
+  # Validate user_id
+  user_id=$(validate_uuid "$user_id") || return 1
 
   # Check if user exists
-  local existing_user
-  existing_user=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT id FROM auth.users WHERE id = '$user_id' LIMIT 1;" \
-    2>/dev/null | xargs)
-
-  if [[ -z "$existing_user" ]]; then
+  local exists
+  exists=$(pg_exists "auth.users" "id" "$user_id")
+  if [[ "$exists" != "t" ]]; then
     echo "ERROR: User not found" >&2
     return 1
   fi
 
-  # Build UPDATE query
-  local updates=()
+  # Build update columns and values
+  local columns=()
+  local values=()
 
   if [[ -n "$new_email" ]]; then
-    # Validate email format
-    if ! echo "$new_email" | grep -qE '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
-      echo "ERROR: Invalid email format" >&2
-      return 1
-    fi
-    updates+=("email = '$new_email'")
-    updates+=("email_verified = FALSE")
+    new_email=$(validate_email "$new_email") || return 1
+    columns+=("email")
+    values+=("$new_email")
+    columns+=("email_verified")
+    values+=("FALSE")
   fi
 
   if [[ -n "$new_phone" ]]; then
-    updates+=("phone = '$new_phone'")
-    updates+=("phone_verified = FALSE")
+    # Validate phone
+    if [[ ! "$new_phone" =~ ^\+?[0-9]{10,15}$ ]]; then
+      echo "ERROR: Invalid phone format" >&2
+      return 1
+    fi
+    columns+=("phone")
+    values+=("$new_phone")
+    columns+=("phone_verified")
+    values+=("FALSE")
   fi
 
   if [[ -n "$new_password" ]]; then
@@ -263,30 +237,28 @@ user_update() {
       echo "ERROR: Failed to hash password" >&2
       return 1
     fi
-    updates+=("password_hash = '$password_hash'")
+    columns+=("password_hash")
+    values+=("$password_hash")
   fi
 
-  if [[ ${#updates[@]} -eq 0 ]]; then
+  if [[ ${#columns[@]} -eq 0 ]]; then
     echo "ERROR: No fields to update" >&2
     return 1
   fi
 
-  # Join updates with commas
-  local update_clause=$(IFS=', '; echo "${updates[*]}")
+  # Convert arrays to comma-separated strings
+  local columns_str
+  columns_str=$(IFS=,; echo "${columns[*]}")
 
   # Execute update
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-    "UPDATE auth.users
-     SET $update_clause
-     WHERE id = '$user_id';" \
-    >/dev/null 2>&1
+  pg_update_by_id "auth.users" "id" "$user_id" "$columns_str" "${values[@]}"
 
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed to update user" >&2
     return 1
   fi
 
-  echo "✓ User updated successfully" >&2
+  printf "✓ User updated successfully\n" >&2
   return 0
 }
 
@@ -300,52 +272,38 @@ user_delete() {
   local user_id="$1"
   local hard_delete="${2:-false}"
 
-  if [[ -z "$user_id" ]]; then
-    echo "ERROR: User ID required" >&2
-    return 1
-  fi
-
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
+  # Validate UUID
+  user_id=$(validate_uuid "$user_id") || return 1
 
   if [[ "$hard_delete" == "true" ]]; then
-    # Hard delete - permanently remove user and all related data
-    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-      "DELETE FROM auth.users WHERE id = '$user_id';" \
-      >/dev/null 2>&1
+    # Hard delete - permanently remove user
+    pg_delete_by_id "auth.users" "id" "$user_id"
 
     if [[ $? -ne 0 ]]; then
       echo "ERROR: Failed to delete user" >&2
       return 1
     fi
 
-    echo "✓ User permanently deleted" >&2
+    printf "✓ User permanently deleted\n" >&2
   else
     # Soft delete - add deleted_at timestamp
+    local container
+    container=$(pg_get_container) || return 1
+
     # First, create deleted_at column if it doesn't exist
     docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
       "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;" \
       >/dev/null 2>&1
 
-    # Mark as deleted
-    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-      "UPDATE auth.users
-       SET deleted_at = NOW()
-       WHERE id = '$user_id';" \
-      >/dev/null 2>&1
+    # Mark as deleted using safe query
+    pg_update_by_id "auth.users" "id" "$user_id" "deleted_at" "NOW()"
 
     if [[ $? -ne 0 ]]; then
       echo "ERROR: Failed to delete user" >&2
       return 1
     fi
 
-    echo "✓ User marked as deleted (soft delete)" >&2
+    printf "✓ User marked as deleted (soft delete)\n" >&2
   fi
 
   return 0
@@ -356,33 +314,18 @@ user_delete() {
 user_restore() {
   local user_id="$1"
 
-  if [[ -z "$user_id" ]]; then
-    echo "ERROR: User ID required" >&2
-    return 1
-  fi
+  # Validate UUID
+  user_id=$(validate_uuid "$user_id") || return 1
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Restore user
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-    "UPDATE auth.users
-     SET deleted_at = NULL
-     WHERE id = '$user_id';" \
-    >/dev/null 2>&1
+  # Restore user using safe update
+  pg_update_by_id "auth.users" "id" "$user_id" "deleted_at" "NULL"
 
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed to restore user" >&2
     return 1
   fi
 
-  echo "✓ User restored successfully" >&2
+  printf "✓ User restored successfully\n" >&2
   return 0
 }
 
@@ -398,25 +341,14 @@ user_list() {
   local offset="${2:-0}"
   local include_deleted="${3:-false}"
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+  # Validate numeric inputs
+  limit=$(validate_integer "$limit" 1 1000) || return 1
+  offset=$(validate_integer "$offset" 0) || return 1
 
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Build query
-  local where_clause=""
+  # Build query based on include_deleted flag
+  local query
   if [[ "$include_deleted" != "true" ]]; then
-    where_clause="WHERE deleted_at IS NULL"
-  fi
-
-  # Get users
-  local users_json
-  users_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT json_agg(u) FROM (
+    query="SELECT json_agg(u) FROM (
        SELECT
          id,
          email,
@@ -428,18 +360,29 @@ user_list() {
          last_sign_in_at,
          deleted_at
        FROM auth.users
-       $where_clause
+       WHERE deleted_at IS NULL
        ORDER BY created_at DESC
-       LIMIT $limit OFFSET $offset
-     ) u;" \
-    2>/dev/null | xargs)
-
-  if [[ -z "$users_json" ]] || [[ "$users_json" == "null" ]]; then
-    echo "[]"
-    return 0
+       LIMIT :param1 OFFSET :param2
+     ) u"
+  else
+    query="SELECT json_agg(u) FROM (
+       SELECT
+         id,
+         email,
+         phone,
+         mfa_enabled,
+         email_verified,
+         phone_verified,
+         created_at,
+         last_sign_in_at,
+         deleted_at
+       FROM auth.users
+       ORDER BY created_at DESC
+       LIMIT :param1 OFFSET :param2
+     ) u"
   fi
 
-  echo "$users_json"
+  pg_query_json_array "$query" "$limit" "$offset"
   return 0
 }
 
@@ -447,27 +390,22 @@ user_list() {
 # Usage: user_search <query> [limit]
 # Returns: JSON array of users
 user_search() {
-  local query="$1"
+  local search_query="$1"
   local limit="${2:-50}"
 
-  if [[ -z "$query" ]]; then
+  if [[ -z "$search_query" ]]; then
     echo "ERROR: Search query required" >&2
     return 1
   fi
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
+  # Validate limit
+  limit=$(validate_integer "$limit" 1 1000) || return 1
 
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
+  # Use ILIKE with parameterized query
+  # Add wildcards in the parameter value, not in SQL
+  local search_pattern="%${search_query}%"
 
-  # Search users by email or phone
-  local users_json
-  users_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT json_agg(u) FROM (
+  local query="SELECT json_agg(u) FROM (
        SELECT
          id,
          email,
@@ -479,18 +417,12 @@ user_search() {
          last_sign_in_at
        FROM auth.users
        WHERE deleted_at IS NULL
-         AND (email ILIKE '%$query%' OR phone ILIKE '%$query%')
+         AND (email ILIKE :'param1' OR phone ILIKE :'param1')
        ORDER BY created_at DESC
-       LIMIT $limit
-     ) u;" \
-    2>/dev/null | xargs)
+       LIMIT :param2
+     ) u"
 
-  if [[ -z "$users_json" ]] || [[ "$users_json" == "null" ]]; then
-    echo "[]"
-    return 0
-  fi
-
-  echo "$users_json"
+  pg_query_json_array "$query" "$search_pattern" "$limit"
   return 0
 }
 
@@ -500,29 +432,11 @@ user_search() {
 user_count() {
   local include_deleted="${1:-false}"
 
-  # Get PostgreSQL container
-  local container
-  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-
-  if [[ -z "$container" ]]; then
-    echo "ERROR: PostgreSQL container not found" >&2
-    return 1
-  fi
-
-  # Build query
-  local where_clause=""
   if [[ "$include_deleted" != "true" ]]; then
-    where_clause="WHERE deleted_at IS NULL"
+    pg_count "auth.users" "deleted_at IS NULL"
+  else
+    pg_count "auth.users"
   fi
-
-  # Get count
-  local count
-  count=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT COUNT(*) FROM auth.users $where_clause;" \
-    2>/dev/null | xargs)
-
-  echo "${count:-0}"
-  return 0
 }
 
 # ============================================================================

@@ -1,4 +1,4 @@
-# nself
+# ɳSelf
 
 <div align="center">
 
@@ -9,7 +9,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
 
-*Deploy a complete backend in minutes, not days.*
+*Deploy a complete backend in minutes, not days with ɳSelf.*
 
 **[Quick Start](guides/Quick-Start.md)** | **[Installation](guides/Installation.md)** | **[Documentation](README.md)** | **[GitHub](https://github.com/acamarata/nself)**
 
@@ -61,9 +61,9 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 ---
 
-## What is nself?
+## What is ɳSelf?
 
-nself is a complete self-hosted Backend-as-a-Service platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure.
+ɳSelf is a complete self-hosted Backend-as-a-Service platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -72,7 +72,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 │   Frontend (React, Vue, Next.js, etc.)                              │
 │   ↓ GraphQL queries and mutations                                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│                              nself                                   │
+│                              ɳSelf                                   │
 │                                                                      │
 │   ┌──────────────────────────────────────────────────────────┐      │
 │   │              ALWAYS RUNNING (4 services)                  │      │
@@ -357,6 +357,6 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 **Version 0.9.0** · **January 2026** · **[Full Documentation](README.md)**
 
-*nself - The complete self-hosted backend platform*
+*ɳSelf - The complete self-hosted backend platform*
 
 </div>

@@ -1,8 +1,8 @@
-# nself Architecture Documentation
+# ɳSelf Architecture Documentation
 
 ## Overview
 
-nself v0.3.9 is a comprehensive CLI tool for managing self-hosted infrastructure stacks with admin UI, enterprise search, and VPS deployment capabilities. This document outlines the current architecture, design patterns, and system organization.
+ɳSelf v0.3.9 is a comprehensive CLI tool for managing self-hosted infrastructure stacks with admin UI, enterprise search, and VPS deployment capabilities. This document outlines the current architecture, design patterns, and system organization.
 
 ## Current Architecture
 

@@ -1,10 +1,10 @@
-# nself Admin UI
+# ɳAdmin - Web Management Interface
 
-nself Admin is the central web-based management interface for your entire nself deployment. It provides a unified dashboard to monitor, configure, and control all aspects of your Backend-as-a-Service infrastructure.
+ɳAdmin is the central web-based management interface for your entire ɳSelf deployment. It provides a unified dashboard to monitor, configure, and control all aspects of your Backend-as-a-Service infrastructure.
 
 ## Overview
 
-nself Admin is a powerful, extensible administration panel that acts as your command center for:
+ɳAdmin is a powerful, extensible administration panel that acts as your command center for:
 - Real-time service monitoring and health checks
 - Configuration management across all services
 - Database administration (PostgreSQL, Redis)
@@ -36,10 +36,10 @@ nself Admin is a powerful, extensible administration panel that acts as your com
 
 ## Configuration
 
-Enable nself Admin in your `.env` file:
+Enable ɳAdmin in your `.env` file:
 
 ```bash
-# nself Admin Configuration
+# ɳAdmin Configuration
 NSELF_ADMIN_ENABLED=true
 NSELF_ADMIN_PORT=3100
 NSELF_ADMIN_ROUTE=admin.${BASE_DOMAIN}
@@ -59,7 +59,7 @@ NSELF_ADMIN_SESSION_TIMEOUT=3600
 
 ## Access
 
-After enabling and starting nself Admin:
+After enabling and starting ɳAdmin:
 
 ### Local Development
 - URL: `https://admin.local.nself.org`
@@ -71,7 +71,7 @@ After enabling and starting nself Admin:
 
 ## Architecture
 
-nself Admin is built with:
+ɳAdmin is built with:
 - **Frontend**: React with TypeScript, Material-UI
 - **Backend**: Node.js with Express
 - **Real-time**: WebSocket connections for live updates
@@ -79,7 +79,7 @@ nself Admin is built with:
 
 ### Integration Points
 
-nself Admin integrates with:
+ɳAdmin integrates with:
 - **Docker API** - Container management and stats
 - **PostgreSQL** - Direct database access
 - **Hasura** - GraphQL schema introspection
@@ -115,7 +115,7 @@ nself Admin integrates with:
 
 ## Security
 
-nself Admin implements multiple security layers:
+ɳAdmin implements multiple security layers:
 - **Authentication**: JWT-based authentication
 - **Authorization**: Role-based access control (RBAC)
 - **Encryption**: All traffic over HTTPS
@@ -154,7 +154,7 @@ nself Admin implements multiple security layers:
 ## Customization
 
 ### Themes
-nself Admin supports custom themes:
+ɳAdmin supports custom themes:
 ```javascript
 // Custom theme example
 {
@@ -188,7 +188,7 @@ Add dashboard widgets for specific needs:
 
 ## API
 
-nself Admin exposes its own API for automation:
+ɳAdmin exposes its own API for automation:
 
 ```bash
 # Get service status
@@ -229,7 +229,7 @@ GET /api/logs/{service}?lines=100
 
 ## CLI Integration
 
-Manage nself Admin from the command line:
+Manage ɳAdmin from the command line:
 
 ```bash
 # Enable admin UI
@@ -252,12 +252,12 @@ nself admin status
 
 **Added in v0.4.7**
 
-For nself-admin contributors or those who want to run the admin UI locally with hot-reload while connecting to Docker backend services, nself provides an "admin-dev" mode.
+For ɳAdmin contributors or those who want to run the admin UI locally with hot-reload while connecting to Docker backend services, nself provides an "admin-dev" mode.
 
 ### Overview
 
 Admin-dev mode allows you to:
-- Run nself-admin locally from source (e.g., `~/Sites/nself-admin`)
+- Run ɳAdmin locally from source (e.g., `~/Sites/ɳAdmin`)
 - Get hot-reload and debugging capabilities
 - Connect to all Docker services (Postgres, Hasura, Auth, etc.)
 - Access via the same `admin.local.nself.org` URL
@@ -266,13 +266,13 @@ Admin-dev mode allows you to:
 
 ```bash
 # Enable dev mode on port 3000
-nself service admin dev enable 3000 ~/Sites/nself-admin
+nself service admin dev enable 3000 ~/Sites/ɳAdmin
 
 # Rebuild and restart to apply nginx routing changes
 nself build && nself restart
 
 # Start your local admin server
-cd ~/Sites/nself-admin && npm run dev
+cd ~/Sites/ɳAdmin && npm run dev
 
 # Access at https://admin.local.nself.org
 ```
@@ -294,7 +294,7 @@ When dev mode is enabled, these are added to your `.env`:
 # Admin Development Mode (local dev server)
 NSELF_ADMIN_DEV=true
 NSELF_ADMIN_DEV_PORT=3000
-NSELF_ADMIN_DEV_PATH=~/Sites/nself-admin  # Optional, for documentation
+NSELF_ADMIN_DEV_PATH=~/Sites/ɳAdmin  # Optional, for documentation
 ```
 
 ### Local Environment Setup
@@ -305,7 +305,7 @@ After enabling dev mode, get the required environment variables for your local a
 nself service admin dev env
 ```
 
-This outputs the environment variables to add to your local `nself-admin/.env.local`:
+This outputs the environment variables to add to your local `ɳAdmin/.env.local`:
 
 ```bash
 # Database (via Docker)
@@ -329,7 +329,7 @@ NSELF_PROJECT_PATH=/path/to/your/project
 ### How It Works
 
 1. **Nginx Routing**: When `NSELF_ADMIN_DEV=true`, nginx routes `admin.*` to `host.docker.internal:PORT` instead of the Docker container
-2. **Container Skip**: The nself-admin Docker container is not created during `nself build`
+2. **Container Skip**: The ɳAdmin Docker container is not created during `nself build`
 3. **Backend Services**: All other services (Postgres, Hasura, Auth, etc.) run normally in Docker
 4. **Network Access**: Your local admin connects to Docker services via localhost ports
 
@@ -346,8 +346,8 @@ NSELF_PROJECT_PATH=/path/to/your/project
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  Local nself-admin (localhost:3000)                         │
-│  ~/Sites/nself-admin                                        │
+│  Local ɳAdmin (localhost:3000)                         │
+│  ~/Sites/ɳAdmin                                        │
 │  npm run dev (hot-reload enabled)                           │
 └───────────────────────────┬─────────────────────────────────┘
                             │

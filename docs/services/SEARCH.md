@@ -6,11 +6,14 @@ nself provides integrated support for 6 different search engines, all fully self
 
 ## Supported Search Engines
 
+nself provides a **provider-agnostic search interface**, allowing you to switch between search engines without changing your application code. Simply set `SEARCH_PROVIDER` in your `.env` file.
+
 ### 1. Meilisearch (Default)
 **Best for**: General purpose search with typo tolerance
 - **Port**: 7700
 - **Dashboard**: http://localhost:7700
-- **Features**: 
+- **Provider**: `SEARCH_PROVIDER=meilisearch`
+- **Features**:
   - Lightning fast search
   - Typo tolerance
   - Faceted search
@@ -18,19 +21,23 @@ nself provides integrated support for 6 different search engines, all fully self
   - Built-in dashboard
 - **Resource Usage**: Medium (500MB-2GB RAM)
 - **Use Case**: E-commerce, documentation, general search
+- **Documentation**: [MEILISEARCH.md](MEILISEARCH.md)
 
 ### 2. Typesense
 **Best for**: Real-time search with instant results
 - **Port**: 8108
 - **API**: http://localhost:8108
+- **Provider**: `SEARCH_PROVIDER=typesense`
 - **Features**:
   - Blazing fast search (<50ms)
   - Typo tolerance
   - Faceted search
   - Geo search
-  - Vector search
+  - Vector search (semantic search)
+  - Multi-language support
 - **Resource Usage**: Low-Medium (200MB-1GB RAM)
-- **Use Case**: Instant search, autocomplete, e-commerce
+- **Use Case**: Instant search, autocomplete, semantic search, geo-location
+- **Documentation**: [TYPESENSE.md](TYPESENSE.md)
 
 ### 3. Zinc
 **Best for**: Lightweight Elasticsearch alternative
@@ -88,18 +95,73 @@ nself provides integrated support for 6 different search engines, all fully self
 
 ## Configuration
 
-### Basic Setup
+### Provider-Agnostic Setup (Recommended)
+
+The modern way to configure search in nself uses provider-agnostic variables:
 
 1. **Enable search in your `.env` file**:
 ```bash
+# Core configuration
 SEARCH_ENABLED=true
-SEARCH_ENGINE=meilisearch  # or typesense, zinc, elasticsearch, opensearch, sonic
+SEARCH_PROVIDER=meilisearch  # Options: meilisearch, typesense
+
+# Auto-detected port based on provider
+SEARCH_PORT=7700  # Optional - auto-set based on provider
+
+# API key (auto-generated if not set)
+SEARCH_API_KEY=your-api-key-here
+
+# Route configuration
+SEARCH_ROUTE=search  # Creates search.yourdomain.com
+
+# Optional settings
+SEARCH_INDEX_PREFIX=  # For multi-tenant apps
+SEARCH_AUTO_INDEX=true
+SEARCH_LANGUAGE=en
 ```
 
 2. **Build and start**:
 ```bash
 nself build
 nself start
+```
+
+### Switching Between Providers
+
+To switch from MeiliSearch to Typesense (or vice versa):
+
+```bash
+# 1. Backup current search data
+nself search export --output=search-backup.json
+
+# 2. Update .env
+SEARCH_PROVIDER=typesense  # Was: meilisearch
+
+# 3. Rebuild and restart
+nself build --force
+nself restart search
+
+# 4. Import data to new provider
+nself search import --file=search-backup.json
+```
+
+### Legacy Configuration (Deprecated)
+
+The old way using engine-specific variables still works for backward compatibility:
+
+```bash
+# Old way (still supported)
+MEILISEARCH_ENABLED=true
+MEILISEARCH_MASTER_KEY=your-key
+
+# Or
+TYPESENSE_ENABLED=true
+TYPESENSE_API_KEY=your-key
+
+# New way (recommended)
+SEARCH_ENABLED=true
+SEARCH_PROVIDER=meilisearch  # or typesense
+SEARCH_API_KEY=your-key
 ```
 
 ### Engine-Specific Configuration

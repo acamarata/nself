@@ -1,6 +1,6 @@
 # Optional Services
 
-Optional services extend your nself deployment with additional capabilities. Enable only what you need to keep your stack lean and efficient.
+Optional services extend your ɳSelf deployment with additional capabilities. Enable only what you need to keep your stack lean and efficient.
 
 ## Service Categories
 
@@ -26,7 +26,7 @@ Complete observability stack with metrics, logs, traces, and alerting.
 - **KeyDB** - Redis-compatible with better performance
 
 ### Admin Tools
-- **[nself Admin](NSELF_ADMIN)** - Web-based nself project management
+- **[ɳAdmin](NSELF_ADMIN)** - Web-based ɳSelf project management
 
 ### ML Services
 - **MLflow** - ML experiment tracking
@@ -128,7 +128,7 @@ MLFLOW_ARTIFACTS_BUCKET=mlflow-artifacts
 - Tracks: Parameters, metrics, artifacts
 - Model registry included
 
-### [nself Admin](NSELF_ADMIN)
+### [ɳAdmin](NSELF_ADMIN)
 **Purpose:** Comprehensive web-based management interface for your entire nself deployment
 ```bash
 NSELF_ADMIN_ENABLED=true
@@ -149,7 +149,7 @@ NSELF_ADMIN_ROUTE=admin.${BASE_DOMAIN}
 | MeiliSearch | 0.5 cores | 512MB | 5GB | Medium |
 | MailPit | 0.1 cores | 128MB | 100MB | Low |
 | MLflow | 0.5 cores | 512MB | 10GB | Low |
-| nself Admin | 0.25 cores | 256MB | 100MB | Low |
+| ɳAdmin | 0.25 cores | 256MB | 100MB | Low |
 | Monitoring Bundle | 2.5 cores | 3.5GB | 26GB | High |
 
 ## Service Dependencies

@@ -199,8 +199,26 @@ EOF
   [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && echo "  nself_admin_data:" >> docker-compose.yml
   [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "  redis_data:" >> docker-compose.yml
   [[ "${MINIO_ENABLED:-false}" == "true" ]] && echo "  minio_data:" >> docker-compose.yml
-  [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] && echo "  meilisearch_data:" >> docker-compose.yml
-  [[ "${TYPESENSE_ENABLED:-false}" == "true" ]] && echo "  typesense_data:" >> docker-compose.yml
+
+  # Search service volumes (provider-agnostic)
+  local search_enabled="${SEARCH_ENABLED:-false}"
+  local search_provider="${SEARCH_PROVIDER:-meilisearch}"
+
+  # Legacy support for old variables
+  [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] && search_enabled="true" && search_provider="meilisearch"
+  [[ "${TYPESENSE_ENABLED:-false}" == "true" ]] && search_enabled="true" && search_provider="typesense"
+
+  if [[ "$search_enabled" == "true" ]]; then
+    case "$search_provider" in
+      meilisearch)
+        echo "  meilisearch_data:" >> docker-compose.yml
+        ;;
+      typesense)
+        echo "  typesense_data:" >> docker-compose.yml
+        ;;
+    esac
+  fi
+
   [[ "${SONIC_ENABLED:-false}" == "true" ]] && echo "  sonic_data:" >> docker-compose.yml
   [[ "${MLFLOW_ENABLED:-false}" == "true" ]] && echo "  mlflow_data:" >> docker-compose.yml
   [[ "${GRAFANA_ENABLED:-false}" == "true" ]] && echo "  grafana_data:" >> docker-compose.yml
@@ -238,7 +256,9 @@ EOF
      [[ "${REDIS_ENABLED:-false}" == "true" ]] || \
      [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]] || \
      [[ "${MAILPIT_ENABLED:-false}" == "true" ]] || \
+     [[ "${SEARCH_ENABLED:-false}" == "true" ]] || \
      [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]] || \
+     [[ "${TYPESENSE_ENABLED:-false}" == "true" ]] || \
      [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
     echo "" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml

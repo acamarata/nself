@@ -295,13 +295,46 @@ DOCKERFILE
 EOF
 }
 
-# Generate search services (Meilisearch by default)
+# Generate search services (MeiliSearch or Typesense based on SEARCH_PROVIDER)
 generate_search_services() {
-  # Meilisearch
-  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
-    cat <<EOF
+  local search_enabled="${SEARCH_ENABLED:-false}"
+  local search_provider="${SEARCH_PROVIDER:-meilisearch}"
 
-  # Meilisearch - Lightning Fast Search
+  # Legacy: Support old MEILISEARCH_ENABLED for backward compatibility
+  if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
+    search_enabled="true"
+    search_provider="meilisearch"
+  fi
+
+  # Legacy: Support old TYPESENSE_ENABLED for backward compatibility
+  if [[ "${TYPESENSE_ENABLED:-false}" == "true" ]]; then
+    search_enabled="true"
+    search_provider="typesense"
+  fi
+
+  # Return if search is not enabled
+  [[ "$search_enabled" != "true" ]] && return 0
+
+  # Generate service based on provider
+  case "$search_provider" in
+    meilisearch)
+      generate_meilisearch_service
+      ;;
+    typesense)
+      generate_typesense_service
+      ;;
+    *)
+      # Default to meilisearch if unknown provider
+      generate_meilisearch_service
+      ;;
+  esac
+}
+
+# Generate MeiliSearch service
+generate_meilisearch_service() {
+  cat <<EOF
+
+  # MeiliSearch - Lightning Fast Search
   meilisearch:
     image: getmeili/meilisearch:\${MEILISEARCH_VERSION:-v1.5}
     container_name: \${PROJECT_NAME}_meilisearch
@@ -309,21 +342,50 @@ generate_search_services() {
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      MEILI_MASTER_KEY: \${MEILISEARCH_MASTER_KEY:-changeme}
+      MEILI_MASTER_KEY: \${SEARCH_API_KEY:-\${MEILISEARCH_MASTER_KEY:-changeme}}
       MEILI_ENV: \${MEILI_ENV:-development}
       MEILI_HTTP_ADDR: 0.0.0.0:7700
       MEILI_NO_ANALYTICS: true
     volumes:
       - meilisearch_data:/meili_data
     ports:
-      - "\${MEILISEARCH_PORT:-7700}:7700"
+      - "\${SEARCH_PORT:-\${MEILISEARCH_PORT:-7700}}:7700"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
       timeout: 10s
       retries: 5
 EOF
-  fi
+}
+
+# Generate Typesense service
+generate_typesense_service() {
+  cat <<EOF
+
+  # Typesense - Fast, Typo-Tolerant Search Engine
+  typesense:
+    image: typesense/typesense:\${TYPESENSE_VERSION:-27.1}
+    container_name: \${PROJECT_NAME}_typesense
+    restart: unless-stopped
+    networks:
+      - \${DOCKER_NETWORK}
+    environment:
+      TYPESENSE_API_KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}}
+      TYPESENSE_DATA_DIR: /data
+      TYPESENSE_ENABLE_CORS: \${TYPESENSE_ENABLE_CORS:-true}
+      TYPESENSE_LOG_LEVEL: \${TYPESENSE_LOG_LEVEL:-info}
+    command: '--data-dir /data --api-key=\${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}} --enable-cors'
+    volumes:
+      - typesense_data:/data
+    ports:
+      - "\${SEARCH_PORT:-\${TYPESENSE_PORT:-8108}}:8108"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "X-TYPESENSE-API-KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}}", "http://localhost:8108/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+EOF
 }
 
 # Main function to generate all utility services in display order
@@ -343,4 +405,6 @@ export -f generate_nself_admin_service
 export -f generate_functions_service
 export -f generate_mlflow_service
 export -f generate_search_services
+export -f generate_meilisearch_service
+export -f generate_typesense_service
 export -f generate_utility_services

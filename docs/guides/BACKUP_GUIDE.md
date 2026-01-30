@@ -5,6 +5,7 @@ Complete guide to backing up and restoring your nself applications.
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Command Reference](#command-reference)
 - [Backup Types](#backup-types)
 - [Cloud Storage Setup](#cloud-storage-setup)
 - [Retention Policies](#retention-policies)
@@ -38,6 +39,16 @@ nself backup list
 # nself_backup_database_20240114_090000.tar.gz  12MB     2024-01-14 09:00
 ```
 
+### Verify Backups
+
+```bash
+# Verify all backups
+nself backup verify all
+
+# Verify specific backup
+nself backup verify nself_backup_full_20240115_143022.tar.gz
+```
+
 ### Restore from Backup
 
 ```bash
@@ -47,6 +58,83 @@ nself backup restore nself_backup_full_20240115_143022.tar.gz
 # Restore only database
 nself backup restore nself_backup_full_20240115_143022.tar.gz database
 ```
+
+### Manage Retention
+
+```bash
+# View current retention policies
+nself backup retention status
+
+# Remove old backups
+nself backup prune age 30
+
+# Clean failed backups
+nself backup clean
+```
+
+## Command Reference
+
+Complete reference of all backup commands:
+
+### Core Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `create [type] [name]` | Create a backup | `nself backup create full` |
+| `list` | List all backups | `nself backup list` |
+| `restore <name> [type]` | Restore from backup | `nself backup restore backup.tar.gz` |
+| `verify [name\|all]` | Verify backup integrity | `nself backup verify all` |
+| `clean` | Remove failed/partial backups | `nself backup clean` |
+
+### Pruning Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `prune age [days]` | Remove backups older than X days | `nself backup prune age 30` |
+| `prune count [num]` | Keep only last N backups | `nself backup prune count 10` |
+| `prune size [gb]` | Keep total size under X GB | `nself backup prune size 50` |
+| `prune gfs` | Apply GFS retention policy | `nself backup prune gfs` |
+| `prune 3-2-1` | Check 3-2-1 backup rule | `nself backup prune 3-2-1` |
+| `prune smart` | Apply smart retention | `nself backup prune smart` |
+| `prune cloud [days]` | Prune cloud backups | `nself backup prune cloud 30` |
+
+### Retention Management
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `retention status` | Show retention config | `nself backup retention status` |
+| `retention set <param> <val>` | Set retention parameter | `nself backup retention set days 60` |
+| `retention check` | Check 3-2-1 compliance | `nself backup retention check` |
+
+### Cloud Management
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `cloud setup` | Configure cloud provider | `nself backup cloud setup` |
+| `cloud status` | Show cloud configuration | `nself backup cloud status` |
+| `cloud test` | Test cloud connection | `nself backup cloud test` |
+
+### Scheduling
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `schedule [freq]` | Schedule automatic backups | `nself backup schedule daily` |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BACKUP_DIR` | `./backups` | Backup directory |
+| `BACKUP_RETENTION_DAYS` | `30` | Days to keep backups |
+| `BACKUP_RETENTION_COUNT` | `10` | Maximum number of backups |
+| `BACKUP_MAX_SIZE_GB` | `50` | Maximum total size in GB |
+| `BACKUP_RETENTION_MIN` | `3` | Minimum backups to keep |
+| `BACKUP_RETENTION_DAILY` | `7` | Daily backups for GFS |
+| `BACKUP_RETENTION_WEEKLY` | `4` | Weekly backups for GFS |
+| `BACKUP_RETENTION_MONTHLY` | `12` | Monthly backups for GFS |
+| `BACKUP_COMPRESSION` | `true` | Enable compression |
+| `BACKUP_ENCRYPTION` | `false` | Enable encryption |
+| `BACKUP_CLOUD_PROVIDER` | - | Cloud provider name |
 
 ## Backup Types
 
@@ -181,13 +269,33 @@ export RCLONE_PATH=nself-backups
 
 ## Retention Policies
 
-### Simple Age-Based
+### Retention Management
+
+View and manage retention policies:
+
+```bash
+# Show current retention configuration
+nself backup retention status
+
+# Set retention parameters
+nself backup retention set days 60      # Keep 60 days
+nself backup retention set count 20     # Keep last 20 backups
+nself backup retention set size 100     # Max 100GB total
+nself backup retention set min 5        # Always keep at least 5
+
+# Check 3-2-1 backup rule compliance
+nself backup retention check
+```
+
+### Pruning Strategies
+
+#### Age-Based Pruning
 
 Remove backups older than X days:
 
 ```bash
 # Default 30 days
-nself backup prune
+nself backup prune age
 
 # Custom retention
 nself backup prune age 7  # Keep last 7 days
@@ -197,20 +305,70 @@ nself backup prune age 90 # Keep last 90 days
 export BACKUP_RETENTION_MIN=3  # Always keep at least 3 backups
 ```
 
-### Grandfather-Father-Son (GFS)
+#### Count-Based Pruning
+
+Keep only the last N backups:
+
+```bash
+# Keep last 10 backups (default)
+nself backup prune count
+
+# Keep last 20 backups
+nself backup prune count 20
+
+# Keep last 5 backups
+nself backup prune count 5
+```
+
+#### Size-Based Pruning
+
+Keep total backup size under limit:
+
+```bash
+# Keep under 50GB (default)
+nself backup prune size
+
+# Keep under 100GB
+nself backup prune size 100
+
+# Keep under 20GB
+nself backup prune size 20
+```
+
+#### Grandfather-Father-Son (GFS)
 
 Enterprise retention strategy:
 
 ```bash
 nself backup prune gfs
 
-# Keeps:
+# Default configuration:
 # - Last 7 daily backups
 # - Last 4 weekly backups (Sundays)
 # - Last 12 monthly backups (1st of month)
+
+# Custom GFS retention
+export BACKUP_RETENTION_DAILY=14
+export BACKUP_RETENTION_WEEKLY=8
+export BACKUP_RETENTION_MONTHLY=24
+nself backup prune gfs
 ```
 
-### Smart Retention
+#### 3-2-1 Backup Rule
+
+Check compliance with industry best practice:
+
+```bash
+# Verify 3-2-1 rule compliance
+nself backup prune 3-2-1
+
+# Output shows:
+# - 3 copies of data (production + backups)
+# - 2 different media types (local + cloud)
+# - 1 offsite copy (cloud backup)
+```
+
+#### Smart Retention
 
 Intelligent retention based on backup age:
 
@@ -225,7 +383,7 @@ nself backup prune smart
 # - Yearly backups forever
 ```
 
-### Cloud Pruning
+#### Cloud Pruning
 
 Clean up cloud storage:
 
@@ -366,21 +524,64 @@ cp /tmp/restore/config/.env.production ./
    ```bash
    # Production setup
    export BACKUP_RETENTION_DAYS=30
+   export BACKUP_RETENTION_COUNT=20
+   export BACKUP_MAX_SIZE_GB=100
    export BACKUP_RETENTION_MIN=7
+
+   # Schedule daily backups
    nself backup schedule daily
-   nself backup prune smart  # Run weekly
+
+   # Apply smart retention weekly
+   nself backup prune smart
    ```
 
-3. **3-2-1 Rule**
+3. **3-2-1 Rule Compliance**
    - 3 copies of data (production + 2 backups)
    - 2 different storage types (local + cloud)
    - 1 offsite backup (cloud)
 
+   ```bash
+   # Check compliance regularly
+   nself backup retention check
+
+   # Ensure cloud backup is configured
+   nself backup cloud status
+   ```
+
 4. **Testing Backups**
    ```bash
+   # Weekly verification
+   nself backup verify all
+
    # Monthly restore test
-   nself backup restore latest.tar.gz --dry-run
-   nself backup verify latest.tar.gz
+   nself backup restore latest.tar.gz database
+
+   # Clean corrupted backups
+   nself backup clean
+   ```
+
+5. **Automated Maintenance**
+   ```bash
+   # Create weekly maintenance script
+   cat > /usr/local/bin/backup-maintenance << 'EOF'
+   #!/bin/bash
+   # Verify all backups
+   nself backup verify all
+
+   # Clean failed backups
+   nself backup clean
+
+   # Apply retention policy
+   nself backup prune gfs
+
+   # Check 3-2-1 compliance
+   nself backup retention check
+   EOF
+
+   chmod +x /usr/local/bin/backup-maintenance
+
+   # Schedule weekly (Sundays at 4 AM)
+   echo "0 4 * * 0 /usr/local/bin/backup-maintenance" | crontab -
    ```
 
 ### Security Considerations
@@ -461,14 +662,46 @@ nself backup restore backup.tar.gz
 
 ### Verify Backup Integrity
 
+The `verify` command checks backup file integrity using checksums:
+
 ```bash
-# Check backup file
+# Verify a single backup
+nself backup verify nself_backup_full_20240115_143022.tar.gz
+
+# Verify all backups
+nself backup verify all
+
+# Output shows:
+# Verifying backup: nself_backup_full_20240115_143022.tar.gz
+#   ✓ Valid (245 MB, SHA256: 3f7d8e2a1c4b...)
+
+# Manual verification
 tar -tzf backup.tar.gz | head -20
 
 # Test restore in separate location
 mkdir /tmp/test-restore
 cd /tmp/test-restore
-nself backup restore /path/to/backup.tar.gz --dry-run
+nself backup restore /path/to/backup.tar.gz
+```
+
+### Clean Failed Backups
+
+Remove corrupted or partial backups:
+
+```bash
+# Clean failed/partial backups automatically
+nself backup clean
+
+# This removes:
+# - Backups smaller than 1KB (likely failed)
+# - .partial files from interrupted backups
+# - Corrupted archives that fail tar verification
+
+# Output shows:
+# Cleaning failed and partial backups
+#   ✗ Removing failed backup: backup_20240101.tar.gz (342B)
+#   ✗ Removing partial backup: backup_20240102.partial
+# Removed 2 failed/partial backup(s), freed 12KB
 ```
 
 ### Performance Optimization

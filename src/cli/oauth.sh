@@ -43,6 +43,11 @@ if [[ -f "$NSELF_ROOT/src/lib/oauth/providers.sh" ]]; then
   source "$NSELF_ROOT/src/lib/oauth/providers.sh"
 fi
 
+# OAuth linking library
+if [[ -f "$NSELF_ROOT/src/lib/auth/oauth-linking.sh" ]]; then
+  source "$NSELF_ROOT/src/lib/auth/oauth-linking.sh"
+fi
+
 # ============================================================================
 # Helper Functions
 # ============================================================================
@@ -101,6 +106,10 @@ SUBCOMMANDS:
   list               List all OAuth providers
   status             Show OAuth service status
   install            Install OAuth handlers service
+  accounts           Manage user OAuth accounts
+  refresh            Manage token refresh service
+  link               Link OAuth provider to user account
+  unlink             Unlink OAuth provider from user account
 
 ENABLE OPTIONS:
   --providers=<list>    Comma-separated list of providers (google,github,slack,microsoft)
@@ -144,6 +153,20 @@ EXAMPLES:
 
   # Show OAuth service status
   nself oauth status
+
+  # List OAuth accounts for user
+  nself oauth accounts 123e4567-e89b-12d3-a456-426614174000
+
+  # Manage token refresh service
+  nself oauth refresh status
+  nself oauth refresh start
+  nself oauth refresh once
+
+  # Link provider to user account
+  nself oauth link 123e4567-e89b-12d3-a456-426614174000 github
+
+  # Unlink provider from user account
+  nself oauth unlink 123e4567-e89b-12d3-a456-426614174000 github
 
 For more information, see: docs/cli/oauth.md
 EOF
@@ -571,6 +594,98 @@ cmd_oauth_status() {
 }
 
 # ============================================================================
+# Accounts Command
+# ============================================================================
+
+cmd_oauth_accounts() {
+  local user_id="${1:-}"
+
+  if [[ -z "$user_id" ]]; then
+    log_error "User ID required. Usage: nself oauth accounts <user_id>"
+    exit 1
+  fi
+
+  oauth_list_providers "$user_id"
+}
+
+# ============================================================================
+# Refresh Command
+# ============================================================================
+
+cmd_oauth_refresh() {
+  local subcommand="${1:-status}"
+
+  local refresh_script="$NSELF_ROOT/src/lib/auth/oauth-token-refresh.sh"
+
+  if [[ ! -f "$refresh_script" ]]; then
+    log_error "OAuth token refresh service not found"
+    exit 1
+  fi
+
+  case "$subcommand" in
+    status)
+      bash "$refresh_script" status
+      ;;
+    start)
+      log_info "Starting OAuth token refresh service..."
+      nohup bash "$refresh_script" daemon > /var/log/nself/oauth-refresh.log 2>&1 &
+      log_success "OAuth token refresh service started"
+      ;;
+    stop)
+      log_info "Stopping OAuth token refresh service..."
+      pkill -f "oauth-token-refresh.sh daemon" || true
+      log_success "OAuth token refresh service stopped"
+      ;;
+    once)
+      bash "$refresh_script" once
+      ;;
+    *)
+      log_error "Unknown refresh subcommand: $subcommand"
+      printf "Usage: nself oauth refresh [status|start|stop|once]\n"
+      exit 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# Link Provider Command
+# ============================================================================
+
+cmd_oauth_link_provider() {
+  local user_id="${1:-}"
+  local provider="${2:-}"
+
+  if [[ -z "$user_id" ]] || [[ -z "$provider" ]]; then
+    log_error "Usage: nself oauth link <user_id> <provider>"
+    exit 1
+  fi
+
+  log_warning "This command initiates OAuth flow for linking"
+  log_info "User must complete OAuth flow in browser"
+  log_info "Linking $provider to user $user_id"
+
+  # In a real implementation, this would generate a special OAuth URL
+  # that includes the user_id in the state parameter
+  log_info "Visit: http://localhost:3100/oauth/$provider?link_to=$user_id"
+}
+
+# ============================================================================
+# Unlink Provider Command
+# ============================================================================
+
+cmd_oauth_unlink_provider() {
+  local user_id="${1:-}"
+  local provider="${2:-}"
+
+  if [[ -z "$user_id" ]] || [[ -z "$provider" ]]; then
+    log_error "Usage: nself oauth unlink <user_id> <provider>"
+    exit 1
+  fi
+
+  oauth_unlink_provider "$user_id" "$provider"
+}
+
+# ============================================================================
 # Main Command Router
 # ============================================================================
 
@@ -605,6 +720,18 @@ cmd_oauth() {
       ;;
     status)
       cmd_oauth_status "$@"
+      ;;
+    accounts)
+      cmd_oauth_accounts "$@"
+      ;;
+    refresh)
+      cmd_oauth_refresh "$@"
+      ;;
+    link)
+      cmd_oauth_link_provider "$@"
+      ;;
+    unlink)
+      cmd_oauth_unlink_provider "$@"
       ;;
     help|--help|-h)
       oauth_usage

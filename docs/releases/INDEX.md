@@ -2,15 +2,33 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.9.0
+**Current Stable Version:** v0.9.5
 
 ---
 
 ## Latest Release
 
-### [v0.9.0](v0.9.0.md) - Current Stable
+### [v0.9.5](v0.9.5.md) - Current Stable
 
 **Released:** January 30, 2026
+
+**Status:** Production Ready
+
+**Highlights:**
+- **Real-Time Communication**: Complete WebSocket system with channels, presence, and database subscriptions
+- **Security Hardening**: SQL injection fixes, CSP framework, comprehensive security audit
+- **Enhanced OAuth**: PKCE support, state validation, improved token management
+- **Feature Parity**: Matches Supabase/Nhost real-time capabilities
+- **Migration Tools**: One-command migration from Supabase and Nhost
+- **Complete Documentation**: 20+ new guides and comprehensive CLI reference
+
+**[View Release Notes →](v0.9.5.md)**
+
+---
+
+## Recent Releases
+
+### [v0.9.0](v0.9.0.md) - January 30, 2026
 
 **Status:** Production Ready
 

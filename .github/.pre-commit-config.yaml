@@ -1,0 +1,69 @@
+# Pre-commit hooks for nself security scanning
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Secret detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        args: ['-S', 'error', '-e', 'SC1091']
+
+  # Docker linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+
+  # YAML validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+
+  # Security scanning for sensitive files
+  - repo: local
+    hooks:
+      - id: check-env-secrets
+        name: Check .env files for secrets
+        entry: bash -c 'for f in "$@"; do if grep -E "(PASSWORD|SECRET|TOKEN|KEY)=.{8,}" "$f" && ! grep -q "^#" "$f"; then echo "WARNING: Possible secret in $f"; fi; done' --
+        language: system
+        files: '^\.env'
+        exclude: '^\.env\.example$'
+
+      - id: check-dockerfile-security
+        name: Check Dockerfile security
+        entry: bash -c 'for f in "$@"; do echo "Checking $f..."; grep -n "^FROM.*:latest" "$f" && echo "WARNING: Using :latest tag in $f"; ! grep -q "^USER" "$f" && echo "WARNING: No USER instruction in $f"; done || true' --
+        language: system
+        files: 'Dockerfile'
+
+      - id: check-hardcoded-ips
+        name: Check for hardcoded IPs
+        entry: bash -c 'for f in "$@"; do grep -nE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" "$f" | grep -v "127.0.0.1\|0.0.0.0\|localhost" && echo "WARNING: Hardcoded IP in $f"; done || true' --
+        language: system
+        files: '\.(sh|yml|yaml|env)$'
+        exclude: 'test|example'
+
+# Configuration
+default_language_version:
+  python: python3
+
+fail_fast: false

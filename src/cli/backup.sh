@@ -12,17 +12,21 @@ source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/backup/pruning.sh" 2>/dev/null || true
 
 # Backup configuration - Support both old and new naming for backward compatibility
 BACKUP_ENABLED="${BACKUP_ENABLED:-${DB_BACKUP_ENABLED:-false}}"
 BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-${DB_BACKUP_SCHEDULE:-}}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-${DB_BACKUP_RETENTION_DAYS:-30}}"
+BACKUP_RETENTION_COUNT="${BACKUP_RETENTION_COUNT:-10}"  # Max number of backups to keep
+BACKUP_MAX_SIZE_GB="${BACKUP_MAX_SIZE_GB:-50}"  # Max total backup size in GB
 BACKUP_STORAGE="${BACKUP_STORAGE:-${DB_BACKUP_STORAGE:-local}}"
 BACKUP_TYPES="${BACKUP_TYPES:-${DB_BACKUP_TYPES:-database}}"
 BACKUP_COMPRESSION="${BACKUP_COMPRESSION:-${DB_BACKUP_COMPRESSION:-true}}"
 BACKUP_ENCRYPTION="${BACKUP_ENCRYPTION:-${DB_BACKUP_ENCRYPTION:-false}}"
 BACKUP_RETENTION_MIN="${BACKUP_RETENTION_MIN:-3}"  # Minimum backups to keep
+BACKUP_RETENTION_DAILY="${BACKUP_RETENTION_DAILY:-7}"  # Daily backups to keep
 BACKUP_RETENTION_WEEKLY="${BACKUP_RETENTION_WEEKLY:-4}"  # Weekly backups to keep
 BACKUP_RETENTION_MONTHLY="${BACKUP_RETENTION_MONTHLY:-12}"  # Monthly backups to keep
 
@@ -429,27 +433,40 @@ restore_certificates() {
 
 # Prune old backups with advanced retention
 cmd_backup_prune() {
-  local policy="${1:-age}"  # age, gfs (grandfather-father-son), smart
-  local days="${2:-$BACKUP_RETENTION_DAYS}"
-  
+  local policy="${1:-age}"  # age, count, size, gfs, 3-2-1, smart, cloud
+  local param="${2:-}"
+
   show_command_header "nself backup prune" "Remove old backups"
-  
+
   case "$policy" in
     age)
-      prune_by_age "$days"
+      local days="${param:-$BACKUP_RETENTION_DAYS}"
+      prune_by_age "$BACKUP_DIR" "$days" "$BACKUP_RETENTION_MIN"
+      ;;
+    count)
+      local count="${param:-$BACKUP_RETENTION_COUNT}"
+      prune_by_count "$BACKUP_DIR" "$count"
+      ;;
+    size)
+      local size_gb="${param:-$BACKUP_MAX_SIZE_GB}"
+      prune_by_size "$BACKUP_DIR" "$size_gb" "$BACKUP_RETENTION_MIN"
       ;;
     gfs)
-      prune_gfs_policy
+      prune_gfs "$BACKUP_DIR" "$BACKUP_RETENTION_DAILY" "$BACKUP_RETENTION_WEEKLY" "$BACKUP_RETENTION_MONTHLY"
+      ;;
+    3-2-1|321)
+      check_321_rule "$BACKUP_DIR"
       ;;
     smart)
       prune_smart_policy
       ;;
     cloud)
+      local days="${param:-30}"
       prune_cloud_backups "$days"
       ;;
     *)
       log_error "Unknown prune policy: $policy"
-      log_info "Valid policies: age, gfs, smart, cloud"
+      log_info "Valid policies: age, count, size, gfs, 3-2-1, smart, cloud"
       return 1
       ;;
   esac
@@ -1119,15 +1136,166 @@ backup_cloud_test() {
   echo ""
 }
 
+# Verify backup integrity
+cmd_backup_verify() {
+  local backup_name="${1:-all}"
+
+  show_command_header "nself backup verify" "Verify backup integrity"
+
+  if [[ "$backup_name" == "all" ]]; then
+    verify_all_backups "$BACKUP_DIR"
+  else
+    # Find backup file
+    local backup_path=""
+    if [[ -f "$BACKUP_DIR/$backup_name" ]]; then
+      backup_path="$BACKUP_DIR/$backup_name"
+    elif [[ -f "$backup_name" ]]; then
+      backup_path="$backup_name"
+    else
+      log_error "Backup not found: $backup_name"
+      return 1
+    fi
+
+    verify_backup_integrity "$backup_path" true
+    local result=$?
+    echo ""
+
+    if [[ $result -eq 0 ]]; then
+      log_success "Backup is valid and intact"
+    else
+      log_error "Backup verification failed"
+    fi
+    echo ""
+
+    return $result
+  fi
+}
+
+# Clean failed/partial backups
+cmd_backup_clean() {
+  show_command_header "nself backup clean" "Clean failed and partial backups"
+
+  clean_failed_backups "$BACKUP_DIR"
+}
+
+# Manage retention policies
+cmd_backup_retention() {
+  local action="${1:-status}"
+
+  show_command_header "nself backup retention" "Backup retention policies"
+
+  case "$action" in
+    status)
+      log_info "Current retention configuration:"
+      echo ""
+      echo "Age-based retention:"
+      echo "  • Retention days: $BACKUP_RETENTION_DAYS"
+      echo "  • Minimum backups: $BACKUP_RETENTION_MIN"
+      echo ""
+      echo "Count-based retention:"
+      echo "  • Maximum backups: $BACKUP_RETENTION_COUNT"
+      echo ""
+      echo "Size-based retention:"
+      echo "  • Maximum total size: ${BACKUP_MAX_SIZE_GB}GB"
+      echo ""
+      echo "GFS (Grandfather-Father-Son) retention:"
+      echo "  • Daily backups: $BACKUP_RETENTION_DAILY"
+      echo "  • Weekly backups: $BACKUP_RETENTION_WEEKLY"
+      echo "  • Monthly backups: $BACKUP_RETENTION_MONTHLY"
+      echo ""
+      echo "Cloud backup:"
+      echo "  • Provider: ${BACKUP_CLOUD_PROVIDER:-not configured}"
+      echo ""
+
+      # Show actual backup stats
+      local total_backups=$(find "$BACKUP_DIR" -type f -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
+      local total_size=$(calculate_total_backup_size "$BACKUP_DIR")
+      echo "Current backup statistics:"
+      echo "  • Total backups: $total_backups"
+      echo "  • Total size: ${total_size}GB"
+      echo ""
+      ;;
+
+    set)
+      local param="${2:-}"
+      local value="${3:-}"
+
+      if [[ -z "$param" ]] || [[ -z "$value" ]]; then
+        log_error "Usage: nself backup retention set <parameter> <value>"
+        echo ""
+        echo "Available parameters:"
+        echo "  days <number>       - Retention days"
+        echo "  count <number>      - Maximum backup count"
+        echo "  size <number>       - Maximum size in GB"
+        echo "  min <number>        - Minimum backups to keep"
+        echo "  daily <number>      - Daily backups (GFS)"
+        echo "  weekly <number>     - Weekly backups (GFS)"
+        echo "  monthly <number>    - Monthly backups (GFS)"
+        return 1
+      fi
+
+      case "$param" in
+        days)
+          printf "BACKUP_RETENTION_DAYS=$value\n" >> .env
+          log_success "Retention days set to: $value"
+          ;;
+        count)
+          printf "BACKUP_RETENTION_COUNT=$value\n" >> .env
+          log_success "Maximum backup count set to: $value"
+          ;;
+        size)
+          printf "BACKUP_MAX_SIZE_GB=$value\n" >> .env
+          log_success "Maximum backup size set to: ${value}GB"
+          ;;
+        min)
+          printf "BACKUP_RETENTION_MIN=$value\n" >> .env
+          log_success "Minimum backups to keep set to: $value"
+          ;;
+        daily)
+          printf "BACKUP_RETENTION_DAILY=$value\n" >> .env
+          log_success "Daily backup retention set to: $value"
+          ;;
+        weekly)
+          printf "BACKUP_RETENTION_WEEKLY=$value\n" >> .env
+          log_success "Weekly backup retention set to: $value"
+          ;;
+        monthly)
+          printf "BACKUP_RETENTION_MONTHLY=$value\n" >> .env
+          log_success "Monthly backup retention set to: $value"
+          ;;
+        *)
+          log_error "Unknown parameter: $param"
+          return 1
+          ;;
+      esac
+
+      echo ""
+      log_info "Configuration saved to .env"
+      log_info "Run 'source .env' or restart services to apply changes"
+      echo ""
+      ;;
+
+    check)
+      check_321_rule "$BACKUP_DIR"
+      ;;
+
+    *)
+      log_error "Unknown retention action: $action"
+      echo "Valid actions: status, set, check"
+      return 1
+      ;;
+  esac
+}
+
 # Schedule automatic backups
 cmd_backup_schedule() {
   local frequency="${1:-daily}"
-  
+
   show_command_header "nself backup schedule" "Setup automatic backups"
-  
+
   log_info "Setting up $frequency backups..."
   echo ""
-  
+
   # Create backup script
   local backup_script="/usr/local/bin/nself-backup"
   cat > "$backup_script" << 'EOF'
@@ -1137,7 +1305,7 @@ nself backup create full
 nself backup prune smart
 EOF
   chmod +x "$backup_script"
-  
+
   # Setup cron job
   local cron_entry=""
   case "$frequency" in
@@ -1159,10 +1327,10 @@ EOF
       return 1
       ;;
   esac
-  
+
   # Add to crontab
   (crontab -l 2>/dev/null | grep -v "nself-backup"; echo "$cron_entry") | crontab -
-  
+
   log_success "Scheduled $frequency backups"
   echo ""
   log_info "View schedule: crontab -l"
@@ -1178,20 +1346,29 @@ show_backup_help() {
   echo "  create [type] [name]     Create a backup (types: full, database, config)"
   echo "  list                     List available backups"
   echo "  restore <name> [type]    Restore from backup"
-  echo "  prune [policy] [days]    Remove old backups"
-  echo "                           Policies: age, gfs, smart, cloud"
+  echo "  verify [name|all]        Verify backup integrity"
+  echo "  clean                    Remove failed/partial backups"
+  echo "  prune [policy] [param]   Remove old backups based on policy"
+  echo "                           Policies: age, count, size, gfs, 3-2-1, smart, cloud"
+  echo "  retention [action]       Manage retention policies"
+  echo "                           Actions: status, set, check"
   echo "  cloud [action]           Manage cloud backups"
   echo "                           Actions: setup, status, test"
   echo "  schedule [frequency]     Schedule automatic backups"
   echo "                           Frequencies: hourly, daily, weekly, monthly"
   echo ""
-  echo "Environment Variables:"
+  echo "Retention Environment Variables:"
   echo "  BACKUP_DIR                Directory for backups (default: ./backups)"
   echo "  BACKUP_RETENTION_DAYS     Days to keep backups (default: 30)"
+  echo "  BACKUP_RETENTION_COUNT    Maximum number of backups (default: 10)"
+  echo "  BACKUP_MAX_SIZE_GB        Maximum total size in GB (default: 50)"
   echo "  BACKUP_RETENTION_MIN      Minimum backups to keep (default: 3)"
-  echo "  BACKUP_CLOUD_PROVIDER     Cloud provider: s3, dropbox, gdrive, onedrive, rclone"
+  echo "  BACKUP_RETENTION_DAILY    Daily backups for GFS (default: 7)"
+  echo "  BACKUP_RETENTION_WEEKLY   Weekly backups for GFS (default: 4)"
+  echo "  BACKUP_RETENTION_MONTHLY  Monthly backups for GFS (default: 12)"
   echo ""
   echo "Cloud Provider Variables:"
+  echo "  BACKUP_CLOUD_PROVIDER     Provider: s3, dropbox, gdrive, onedrive, rclone"
   echo "  S3: S3_BUCKET, S3_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
   echo "  Dropbox: DROPBOX_TOKEN, DROPBOX_FOLDER"
   echo "  Google Drive: GDRIVE_FOLDER_ID"
@@ -1202,10 +1379,26 @@ show_backup_help() {
   echo "  nself backup create                      # Create full backup"
   echo "  nself backup create database my-backup   # Database backup with custom name"
   echo "  nself backup list                        # Show all backups"
+  echo "  nself backup verify all                  # Verify all backups"
+  echo "  nself backup clean                       # Remove failed backups"
   echo "  nself backup restore backup.tar.gz       # Restore full backup"
+  echo ""
+  echo "  # Pruning strategies"
   echo "  nself backup prune age 7                 # Remove backups older than 7 days"
+  echo "  nself backup prune count 10              # Keep only last 10 backups"
+  echo "  nself backup prune size 50               # Keep total size under 50GB"
   echo "  nself backup prune gfs                   # Apply GFS retention policy"
-  echo "  nself backup prune smart                 # Apply smart retention policy"
+  echo "  nself backup prune 3-2-1                 # Check 3-2-1 backup rule"
+  echo "  nself backup prune smart                 # Apply smart retention"
+  echo ""
+  echo "  # Retention management"
+  echo "  nself backup retention status            # Show current policies"
+  echo "  nself backup retention set days 60       # Set retention to 60 days"
+  echo "  nself backup retention set count 20      # Keep last 20 backups"
+  echo "  nself backup retention set size 100      # Set max size to 100GB"
+  echo "  nself backup retention check             # Check 3-2-1 compliance"
+  echo ""
+  echo "  # Cloud and scheduling"
   echo "  nself backup cloud setup                 # Configure cloud provider"
   echo "  nself backup schedule daily              # Schedule daily backups"
 }
@@ -1214,7 +1407,7 @@ show_backup_help() {
 cmd_backup() {
   local subcommand="${1:-help}"
   shift || true
-  
+
   case "$subcommand" in
     create)
       cmd_backup_create "$@"
@@ -1225,8 +1418,17 @@ cmd_backup() {
     restore)
       cmd_backup_restore "$@"
       ;;
-    prune|clean)
+    verify)
+      cmd_backup_verify "$@"
+      ;;
+    clean)
+      cmd_backup_clean "$@"
+      ;;
+    prune)
       cmd_backup_prune "$@"
+      ;;
+    retention)
+      cmd_backup_retention "$@"
       ;;
     cloud)
       cmd_backup_cloud "$@"

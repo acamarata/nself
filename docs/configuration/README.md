@@ -1,6 +1,6 @@
 # Configuration Documentation
 
-Complete reference for configuring nself projects.
+Complete reference for configuring ɳSelf projects.
 
 ---
 
@@ -24,7 +24,7 @@ Complete reference for configuring nself projects.
 
 | Document | Description |
 |----------|-------------|
-| [Admin-UI.md](Admin-UI.md) | nself Admin UI configuration |
+| [Admin-UI.md](Admin-UI.md) | ɳAdmin UI configuration |
 | [SSL.md](SSL.md) | SSL certificate configuration |
 
 ---

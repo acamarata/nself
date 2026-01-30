@@ -1,4 +1,4 @@
-# nself Documentation
+# ɳSelf Documentation
 
 <div align="center">
 
@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
-*Deploy a complete backend in minutes, not days.*
+*Deploy a complete backend in minutes, not days with ɳSelf.*
 
 </div>
 
@@ -58,9 +58,9 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 ---
 
-## What is nself?
+## What is ɳSelf?
 
-nself is a complete self-hosted Backend-as-a-Service platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure.
+ɳSelf is a complete self-hosted Backend-as-a-Service platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -69,7 +69,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 │   Frontend (React, Vue, Next.js, etc.)                              │
 │   ↓ GraphQL queries and mutations                                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│                              nself                                   │
+│                              ɳSelf                                   │
 │                                                                      │
 │   ┌──────────────────────────────────────────────────────────┐      │
 │   │              ALWAYS RUNNING (4 services)                  │      │
@@ -109,7 +109,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 
 ### Getting Started
 
-**Start here if you're new to nself**
+**Start here if you're new to ɳSelf**
 
 - **[Quick Start](guides/Quick-Start.md)** - Get running in 5 minutes
 - **[Installation](guides/Installation.md)** - Detailed installation guide
@@ -119,7 +119,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 
 ### Core Concepts
 
-**Understand how nself works**
+**Understand how ɳSelf works**
 
 - **[Architecture](architecture/ARCHITECTURE.md)** - System design and components
 - **[Project Structure](architecture/PROJECT_STRUCTURE.md)** - File organization
@@ -140,7 +140,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 
 ### Configuration
 
-**Configure your nself setup**
+**Configure your ɳSelf setup**
 
 - **[Configuration Guide](configuration/README.md)** - Complete configuration overview
 - **[Environment Variables](configuration/ENVIRONMENT-VARIABLES.md)** - All .env variables
@@ -184,7 +184,7 @@ nself is a complete self-hosted Backend-as-a-Service platform that provides all 
 
 ### Plugins (v0.4.8)
 
-**Extend nself with third-party integrations**
+**Extend ɳSelf with third-party integrations**
 
 - **[Plugin Overview](plugins/index.md)** - Plugin system introduction
 - **[Plugin Development](plugins/development.md)** - Creating custom plugins
@@ -415,6 +415,6 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 **Version 0.9.0** · **January 2026** · **[Changelog](releases/CHANGELOG.md)**
 
-*nself - The complete self-hosted backend platform*
+*ɳSelf - The complete self-hosted backend platform*
 
 </div>

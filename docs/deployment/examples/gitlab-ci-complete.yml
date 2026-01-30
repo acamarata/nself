@@ -257,7 +257,7 @@ security:secrets-scan:
     - |
       for service_dir in services/*; do
         echo "Scanning $service_dir for secrets..."
-        detect-secrets scan $service_dir --baseline .secrets.baseline
+        detect-secrets scan $service_dir --baseline .github/.secrets.baseline
       done
   allow_failure: true
 

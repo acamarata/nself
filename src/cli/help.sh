@@ -34,7 +34,7 @@ show_general_help() {
     version=$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
   fi
 
-  show_command_header "nself v${version}" "Self-Hosted Infrastructure Manager"
+  show_command_header "ɳSelf v${version}" "Self-Hosted Infrastructure Manager"
   echo
   echo "Usage: nself <command> [options]"
 
