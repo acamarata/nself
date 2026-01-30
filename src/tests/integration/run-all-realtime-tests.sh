@@ -18,15 +18,15 @@ QUICK=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --verbose|-v)
+    --verbose | -v)
       VERBOSE=true
       shift
       ;;
-    --quick|-q)
+    --quick | -q)
       QUICK=true
       shift
       ;;
-    --help|-h)
+    --help | -h)
       printf "Usage: %s [options]\n" "$(basename "$0")"
       printf "\nOptions:\n"
       printf "  --verbose, -v    Show verbose output\n"

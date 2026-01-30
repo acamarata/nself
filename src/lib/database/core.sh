@@ -21,13 +21,13 @@ db_get_environment() {
 
   # Normalize environment names
   case "$env" in
-    dev|development|local)
+    dev | development | local)
       echo "local"
       ;;
-    staging|stage)
+    staging | stage)
       echo "staging"
       ;;
-    prod|production)
+    prod | production)
       echo "production"
       ;;
     *)
@@ -168,7 +168,7 @@ db_exec_file() {
     return 1
   fi
 
-  docker exec -i "$container" psql -U "$user" -d "$db" < "$file"
+  docker exec -i "$container" psql -U "$user" -d "$db" <"$file"
 }
 
 # Open interactive shell

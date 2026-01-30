@@ -33,7 +33,7 @@ fi
 # Count services in each category
 # Returns: TOTAL REQUIRED OPTIONAL MONITORING CUSTOM
 count_services_by_category() {
-  local required=4  # Always: postgres, hasura, auth, nginx
+  local required=4 # Always: postgres, hasura, auth, nginx
   local optional=0
   local monitoring=0
   local custom=0
@@ -98,7 +98,7 @@ get_service_summary() {
   counts=$(count_services_by_category)
 
   local total required optional monitoring custom
-  read -r total required optional monitoring custom <<< "$counts"
+  read -r total required optional monitoring custom <<<"$counts"
 
   printf "Total: %d services\n" "$total"
   printf "  Required:   %d (PostgreSQL, Hasura, Auth, Nginx)\n" "$required"
@@ -132,7 +132,7 @@ get_unified_status_line() {
   counts=$(count_services_by_category)
 
   local total required optional monitoring custom
-  read -r total required optional monitoring custom <<< "$counts"
+  read -r total required optional monitoring custom <<<"$counts"
 
   local breakdown=""
   [[ $required -gt 0 ]] && breakdown="${required} required"
@@ -220,7 +220,7 @@ print_service_count_table() {
   counts=$(count_services_by_category)
 
   local total required optional monitoring custom
-  read -r total required optional monitoring custom <<< "$counts"
+  read -r total required optional monitoring custom <<<"$counts"
 
   local frontend=$(count_frontend_apps)
   local routes=$(count_routes)

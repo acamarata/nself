@@ -31,10 +31,10 @@ TEST_FONT_SECONDARY="Roboto"
 
 # White-label implementation status
 WHITELABEL_LIBS_AVAILABLE=false
-if [[ -f "$PROJECT_ROOT/src/lib/whitelabel/branding.sh" ]] && \
-   [[ -f "$PROJECT_ROOT/src/lib/whitelabel/domains.sh" ]] && \
-   [[ -f "$PROJECT_ROOT/src/lib/whitelabel/email-templates.sh" ]] && \
-   [[ -f "$PROJECT_ROOT/src/lib/whitelabel/themes.sh" ]]; then
+if [[ -f "$PROJECT_ROOT/src/lib/whitelabel/branding.sh" ]] &&
+  [[ -f "$PROJECT_ROOT/src/lib/whitelabel/domains.sh" ]] &&
+  [[ -f "$PROJECT_ROOT/src/lib/whitelabel/email-templates.sh" ]] &&
+  [[ -f "$PROJECT_ROOT/src/lib/whitelabel/themes.sh" ]]; then
   WHITELABEL_LIBS_AVAILABLE=true
 fi
 
@@ -61,7 +61,7 @@ setup_whitelabel_tests() {
   mkdir -p "$TEST_LOGOS" "$TEST_THEMES" "$TEST_EMAILS" "$TEST_CSS"
 
   # Create test logo file
-  cat > "$TEST_LOGOS/test-logo.svg" << 'EOF'
+  cat >"$TEST_LOGOS/test-logo.svg" <<'EOF'
 <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
   <rect width="100" height="100" fill="#0066cc"/>
   <text x="50" y="50" text-anchor="middle" fill="white">LOGO</text>
@@ -69,7 +69,7 @@ setup_whitelabel_tests() {
 EOF
 
   # Create test CSS file
-  cat > "$TEST_CSS/custom-styles.css" << 'EOF'
+  cat >"$TEST_CSS/custom-styles.css" <<'EOF'
 :root {
   --brand-primary: #0066cc;
   --brand-secondary: #ff6600;
@@ -83,7 +83,7 @@ EOF
 EOF
 
   # Create test theme file
-  cat > "$TEST_THEMES/dark-theme.json" << 'EOF'
+  cat >"$TEST_THEMES/dark-theme.json" <<'EOF'
 {
   "name": "dark-theme",
   "version": "1.0.0",
@@ -107,7 +107,7 @@ EOF
 EOF
 
   # Create test email template
-  cat > "$TEST_EMAILS/welcome.html" << 'EOF'
+  cat >"$TEST_EMAILS/welcome.html" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -275,7 +275,7 @@ test_branding_import_config() {
 
   # Create a test config file
   local config_file="$TEST_ASSETS/brand-config.json"
-  cat > "$config_file" << 'EOF'
+  cat >"$config_file" <<'EOF'
 {
   "brand_name": "Imported Brand",
   "colors": {

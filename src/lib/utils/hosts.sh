@@ -4,8 +4,8 @@
 # Check if a hosts entry exists
 hosts_entry_exists() {
   local domain="$1"
-  grep -q "127\.0\.0\.1.*[[:space:]]${domain}[[:space:]]*" /etc/hosts 2>/dev/null || \
-  grep -q "127\.0\.0\.1.*[[:space:]]${domain}$" /etc/hosts 2>/dev/null
+  grep -q "127\.0\.0\.1.*[[:space:]]${domain}[[:space:]]*" /etc/hosts 2>/dev/null ||
+    grep -q "127\.0\.0\.1.*[[:space:]]${domain}$" /etc/hosts 2>/dev/null
 }
 
 # Add entry to /etc/hosts (requires sudo)
@@ -178,7 +178,7 @@ remove_hosts_entries() {
   local base_domain="${1:-localhost}"
 
   if [[ "$base_domain" == "local.nself.org" ]]; then
-    return 0  # No entries to remove for wildcard domain
+    return 0 # No entries to remove for wildcard domain
   fi
 
   echo "Removing nself entries from /etc/hosts (requires sudo)..."

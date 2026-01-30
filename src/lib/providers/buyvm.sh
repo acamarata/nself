@@ -16,7 +16,7 @@ provider_buyvm_init() {
   read -r ssh_key_path
   ssh_key_path="${ssh_key_path:-$HOME/.ssh/id_rsa.pub}"
 
-  cat > "$config_dir/buyvm.yml" << EOF
+  cat >"$config_dir/buyvm.yml" <<EOF
 provider: buyvm
 ssh_key_path: "$ssh_key_path"
 portal_url: https://my.frantech.ca
@@ -138,12 +138,12 @@ provider_buyvm_get_ip() {
 provider_buyvm_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "2" ;;   # SLICE512
-    small)  echo "4" ;;   # SLICE1024
-    medium) echo "7" ;;   # SLICE2048
-    large)  echo "15" ;;  # SLICE4096
-    xlarge) echo "30" ;;  # Multiple slices
-    *)      echo "4" ;;
+    tiny) echo "2" ;;    # SLICE512
+    small) echo "4" ;;   # SLICE1024
+    medium) echo "7" ;;  # SLICE2048
+    large) echo "15" ;;  # SLICE4096
+    xlarge) echo "30" ;; # Multiple slices
+    *) echo "4" ;;
   esac
 }
 

@@ -26,7 +26,7 @@ provider_exoscale_init() {
     log_warning "Could not validate credentials"
   fi
 
-  cat > "$config_dir/exoscale.yml" << EOF
+  cat >"$config_dir/exoscale.yml" <<EOF
 provider: exoscale
 api_key: "$api_key"
 api_secret: "$api_secret"
@@ -86,12 +86,12 @@ provider_exoscale_provision() {
   # Map size to Exoscale instance type
   local instance_type
   case "$size" in
-    tiny)   instance_type="standard.tiny" ;;
-    small)  instance_type="standard.small" ;;
+    tiny) instance_type="standard.tiny" ;;
+    small) instance_type="standard.small" ;;
     medium) instance_type="standard.medium" ;;
-    large)  instance_type="standard.large" ;;
+    large) instance_type="standard.large" ;;
     xlarge) instance_type="standard.extra-large" ;;
-    *)      instance_type="standard.small" ;;
+    *) instance_type="standard.small" ;;
   esac
 
   log_info "Provisioning Exoscale instance: $name ($instance_type) in $zone..."
@@ -100,7 +100,7 @@ provider_exoscale_provision() {
   local template_id
   template_id=$(curl -s -X GET "${EXOSCALE_API_URL}/template" \
     -H "Authorization: Bearer ${api_key}:${api_secret}" \
-    -H "Content-Type: application/json" 2>/dev/null | \
+    -H "Content-Type: application/json" 2>/dev/null |
     grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
   local response
@@ -197,12 +197,12 @@ provider_exoscale_get_ip() {
 provider_exoscale_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "4" ;;
-    small)  echo "7" ;;
+    tiny) echo "4" ;;
+    small) echo "7" ;;
     medium) echo "28" ;;
-    large)  echo "56" ;;
+    large) echo "56" ;;
     xlarge) echo "112" ;;
-    *)      echo "7" ;;
+    *) echo "7" ;;
   esac
 }
 

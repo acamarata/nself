@@ -114,7 +114,7 @@ env::validate_env_file() {
     # Warn about empty values for important variables
     if [[ -z "$value" ]]; then
       case "$key" in
-        POSTGRES_PASSWORD|HASURA_GRAPHQL_ADMIN_SECRET|JWT_SECRET)
+        POSTGRES_PASSWORD | HASURA_GRAPHQL_ADMIN_SECRET | JWT_SECRET)
           printf "  ${COLOR_YELLOW}Warning: %s is empty${COLOR_RESET}\n" "$key"
           ;;
       esac
@@ -126,7 +126,7 @@ env::validate_env_file() {
       printf "  ${COLOR_YELLOW}Warning: %s references variable without default${COLOR_RESET}\n" "$key"
     fi
 
-  done < "$env_file"
+  done <"$env_file"
 
   if [[ $errors -eq 0 ]]; then
     printf "  ${COLOR_GREEN}✓ .env syntax valid${COLOR_RESET}\n"
@@ -224,7 +224,7 @@ env::validate_secrets_file() {
         break
       fi
     fi
-  done < "$secrets_file"
+  done <"$secrets_file"
 
   if [[ "$has_secrets" != "true" ]]; then
     printf "  ${COLOR_YELLOW}Warning: Secrets file has no configured secrets${COLOR_RESET}\n"
@@ -245,7 +245,7 @@ env::validate_required_vars() {
 
   # Define required variables per environment type
   case "$env_type" in
-    production|prod)
+    production | prod)
       required_vars="BASE_DOMAIN POSTGRES_DB"
       # Secrets required
       if [[ ! -f "$env_dir/.env.secrets" ]]; then
@@ -253,10 +253,10 @@ env::validate_required_vars() {
         errors=$((errors + 1))
       fi
       ;;
-    staging|stage)
+    staging | stage)
       required_vars="BASE_DOMAIN POSTGRES_DB"
       ;;
-    development|dev|local)
+    development | dev | local)
       required_vars="POSTGRES_DB"
       ;;
   esac
@@ -284,8 +284,8 @@ env::validate_required_vars() {
 
     for file in $files_to_check; do
       for weak in $weak_passwords; do
-        if grep -qi "PASSWORD=${weak}" "$file" 2>/dev/null || \
-           grep -qi "SECRET=${weak}" "$file" 2>/dev/null; then
+        if grep -qi "PASSWORD=${weak}" "$file" 2>/dev/null ||
+          grep -qi "SECRET=${weak}" "$file" 2>/dev/null; then
           printf "  ${COLOR_RED}Error: Weak password/secret detected in production config${COLOR_RESET}\n"
           errors=$((errors + 1))
           break 2
@@ -377,9 +377,9 @@ env::validate_types() {
     if [[ "$key" =~ _ENABLED$ ]] || [[ "$key" == "DEBUG" ]] || [[ "$key" =~ ^ENABLE_ ]]; then
       local lower_value
       lower_value=$(printf "%s" "$value" | tr '[:upper:]' '[:lower:]')
-      if [[ "$lower_value" != "true" ]] && [[ "$lower_value" != "false" ]] && \
-         [[ "$lower_value" != "1" ]] && [[ "$lower_value" != "0" ]] && \
-         [[ "$lower_value" != "yes" ]] && [[ "$lower_value" != "no" ]]; then
+      if [[ "$lower_value" != "true" ]] && [[ "$lower_value" != "false" ]] &&
+        [[ "$lower_value" != "1" ]] && [[ "$lower_value" != "0" ]] &&
+        [[ "$lower_value" != "yes" ]] && [[ "$lower_value" != "no" ]]; then
         printf "  ${COLOR_YELLOW}Warning: %s should be true/false (got: %s)${COLOR_RESET}\n" "$key" "$value"
         warnings=$((warnings + 1))
       fi
@@ -410,7 +410,7 @@ env::validate_types() {
       fi
     fi
 
-  done < "$env_file"
+  done <"$env_file"
 
   if [[ $errors -eq 0 ]] && [[ $warnings -eq 0 ]]; then
     printf "  ${COLOR_GREEN}✓ Variable formats valid${COLOR_RESET}\n"

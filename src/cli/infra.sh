@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$SCRIPT_DIR"  # Preserve CLI directory
+CLI_DIR="$SCRIPT_DIR" # Preserve CLI directory
 
 # Source shared utilities (try multiple paths for compatibility)
 if [[ -f "${CLI_DIR}/../lib/utils/cli-output.sh" ]]; then
@@ -36,7 +36,7 @@ if ! declare -f log_info >/dev/null 2>&1; then
 fi
 
 show_infra_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself infra - Infrastructure Management
 
 USAGE:
@@ -123,7 +123,7 @@ EOF
 
 # === K8S HELP ===
 show_k8s_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself infra k8s - Kubernetes Management
 
 USAGE:
@@ -161,7 +161,7 @@ EOF
 
 # === HELM HELP ===
 show_helm_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself infra helm - Helm Chart Management
 
 USAGE:
@@ -214,7 +214,7 @@ cmd_infra_k8s() {
   shift || true
 
   case "$subcommand" in
-    ""|help|-h|--help)
+    "" | help | -h | --help)
       show_k8s_help
       ;;
     init)
@@ -264,7 +264,7 @@ cmd_infra_helm() {
   shift || true
 
   case "$subcommand" in
-    ""|help|-h|--help)
+    "" | help | -h | --help)
       show_helm_help
       ;;
     init)
@@ -467,7 +467,7 @@ cmd_k8s_namespace() {
   shift || true
 
   case "$action" in
-    list|ls)
+    list | ls)
       kubectl get namespaces "$@"
       ;;
     create)
@@ -492,7 +492,7 @@ cmd_helm_init() {
   mkdir -p "$chart_dir/templates"
 
   # Create Chart.yaml
-  cat > "$chart_dir/Chart.yaml" << EOF
+  cat >"$chart_dir/Chart.yaml" <<EOF
 apiVersion: v2
 name: $(basename "$(pwd)")
 description: A Helm chart for nself project
@@ -502,7 +502,7 @@ appVersion: "1.0"
 EOF
 
   # Create values.yaml
-  cat > "$chart_dir/values.yaml" << EOF
+  cat >"$chart_dir/values.yaml" <<EOF
 # Default values for nself project
 replicaCount: 2
 
@@ -722,7 +722,7 @@ cmd_helm_repo() {
   fi
 
   case "$action" in
-    add|remove|update|list)
+    add | remove | update | list)
       helm repo "$action" "$@"
       ;;
     *)
@@ -739,13 +739,13 @@ main() {
   shift || true
 
   case "$category" in
-    ""|help|-h|--help)
+    "" | help | -h | --help)
       show_infra_help
       ;;
-    provider|providers)
+    provider | providers)
       cmd_infra_provider "$@"
       ;;
-    k8s|kubernetes)
+    k8s | kubernetes)
       cmd_infra_k8s "$@"
       ;;
     helm)

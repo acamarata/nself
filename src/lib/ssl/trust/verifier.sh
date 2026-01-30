@@ -62,13 +62,13 @@ trust_is_installed_linux() {
   local os_variant=$(get_os_variant)
 
   case "$os_variant" in
-    ubuntu|debian|linuxmint)
+    ubuntu | debian | linuxmint)
       [[ -f /usr/local/share/ca-certificates/mkcert-root-ca.crt ]]
       ;;
-    fedora|rhel|centos|rocky|alma)
+    fedora | rhel | centos | rocky | alma)
       [[ -f /etc/pki/ca-trust/source/anchors/mkcert-root-ca.pem ]]
       ;;
-    arch|manjaro)
+    arch | manjaro)
       [[ -f /etc/ca-certificates/trust-source/anchors/mkcert-root-ca.pem ]]
       ;;
     opensuse*)
@@ -161,7 +161,7 @@ trust_verify_certificate() {
       # Use security verify-cert on macOS
       security verify-cert -c "$cert_file" 2>/dev/null
       ;;
-    linux|wsl)
+    linux | wsl)
       # Use openssl verify on Linux/WSL
       openssl verify "$cert_file" 2>/dev/null | grep -q "OK"
       ;;

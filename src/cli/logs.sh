@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-
 # logs.sh - Clean and readable logging for nself services
 
 set +e # Don't exit on error for logging
@@ -41,7 +40,7 @@ format_timestamp() {
 # Function to colorize and clean log output
 # Args: [service_name] - optional, used for single-service logs where service isn't in output
 clean_and_colorize() {
-  local fixed_service="$1"  # If provided, use this instead of extracting from line
+  local fixed_service="$1" # If provided, use this instead of extracting from line
 
   while IFS= read -r line; do
     if [[ -z "$line" ]]; then continue; fi
@@ -92,12 +91,12 @@ clean_and_colorize() {
     # Apply level filter
     if [[ -n "$FILTER_LEVEL" ]]; then
       case "$FILTER_LEVEL" in
-      error | ERROR)
-        if ! echo "$message" | grep -i -q -E "(error|fatal|ERROR|FATAL)"; then continue; fi
-        ;;
-      warn | WARNING)
-        if ! echo "$message" | grep -i -q -E "(warn|warning|WARN|WARNING)"; then continue; fi
-        ;;
+        error | ERROR)
+          if ! echo "$message" | grep -i -q -E "(error|fatal|ERROR|FATAL)"; then continue; fi
+          ;;
+        warn | WARNING)
+          if ! echo "$message" | grep -i -q -E "(warn|warning|WARN|WARNING)"; then continue; fi
+          ;;
       esac
     fi
 
@@ -276,11 +275,11 @@ show_service_status() {
     if compose ps "$service" --filter "status=running" >/dev/null 2>&1; then
       running=$((running + 1))
       # Count errors but exclude deprecation warnings
-      local recent_errors=$(docker logs --tail 50 "$container_name" 2>&1 | \
-        grep -i -E "(error|fatal)" | \
-        grep -v -i -E "(deprecat|deprecated)" | \
+      local recent_errors=$(docker logs --tail 50 "$container_name" 2>&1 |
+        grep -i -E "(error|fatal)" |
+        grep -v -i -E "(deprecat|deprecated)" |
         wc -l | tr -d ' ')
-      recent_errors=$(echo "$recent_errors" | tr -d '\n\r ' )
+      recent_errors=$(echo "$recent_errors" | tr -d '\n\r ')
 
       if [[ $recent_errors -gt 0 ]]; then
         with_errors=$((with_errors + 1))
@@ -397,71 +396,71 @@ main() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
-    -f | --follow)
-      FOLLOW_MODE=true
-      shift
-      ;;
-    -n | --tail | --lines)
-      TAIL_LINES="$2"
-      if ! [[ "$TAIL_LINES" =~ ^[0-9]+$ ]]; then
-        log_error "Invalid tail lines: $TAIL_LINES"
+      -f | --follow)
+        FOLLOW_MODE=true
+        shift
+        ;;
+      -n | --tail | --lines)
+        TAIL_LINES="$2"
+        if ! [[ "$TAIL_LINES" =~ ^[0-9]+$ ]]; then
+          log_error "Invalid tail lines: $TAIL_LINES"
+          exit 1
+        fi
+        shift 2
+        ;;
+      --more)
+        TAIL_LINES=50
+        shift
+        ;;
+      --all)
+        TAIL_LINES=100
+        shift
+        ;;
+      -s | --search)
+        SEARCH_PATTERN="$2"
+        shift 2
+        ;;
+      -l | --level)
+        FILTER_LEVEL="$2"
+        shift 2
+        ;;
+      -e | --errors)
+        SHOW_ERRORS_ONLY=true
+        shift
+        ;;
+      -c | --compact)
+        COMPACT_MODE=true
+        shift
+        ;;
+      -q | --quiet)
+        QUIET_MODE=true
+        shift
+        ;;
+      --status)
+        show_status=true
+        shift
+        ;;
+      --summary)
+        show_summary=true
+        shift
+        ;;
+      --top)
+        show_top=true
+        shift
+        ;;
+      -h | --help)
+        show_help
+        exit 0
+        ;;
+      -*)
+        log_error "Unknown option: $1"
+        log_info "Use 'nself logs --help' for usage information"
         exit 1
-      fi
-      shift 2
-      ;;
-    --more)
-      TAIL_LINES=50
-      shift
-      ;;
-    --all)
-      TAIL_LINES=100
-      shift
-      ;;
-    -s | --search)
-      SEARCH_PATTERN="$2"
-      shift 2
-      ;;
-    -l | --level)
-      FILTER_LEVEL="$2"
-      shift 2
-      ;;
-    -e | --errors)
-      SHOW_ERRORS_ONLY=true
-      shift
-      ;;
-    -c | --compact)
-      COMPACT_MODE=true
-      shift
-      ;;
-    -q | --quiet)
-      QUIET_MODE=true
-      shift
-      ;;
-    --status)
-      show_status=true
-      shift
-      ;;
-    --summary)
-      show_summary=true
-      shift
-      ;;
-    --top)
-      show_top=true
-      shift
-      ;;
-    -h | --help)
-      show_help
-      exit 0
-      ;;
-    -*)
-      log_error "Unknown option: $1"
-      log_info "Use 'nself logs --help' for usage information"
-      exit 1
-      ;;
-    *)
-      SERVICE_NAME="$1"
-      shift
-      ;;
+        ;;
+      *)
+        SERVICE_NAME="$1"
+        shift
+        ;;
     esac
   done
 

@@ -51,7 +51,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "To run only Suite 1 (Organization Permission Tests):"
 echo ""
-cat << 'EOF'
+cat <<'EOF'
 #!/bin/bash
 source src/tests/test_framework.sh
 source src/tests/integration/test-org-rbac.sh
@@ -96,7 +96,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "To run just one specific test (e.g., test_custom_role_create):"
 echo ""
-cat << 'EOF'
+cat <<'EOF'
 #!/bin/bash
 source src/tests/test_framework.sh
 source src/tests/integration/test-org-rbac.sh
@@ -143,7 +143,7 @@ echo "  gen_uuid                           - Generate UUID (cross-platform)"
 echo ""
 echo "Example usage:"
 echo ""
-cat << 'EOF'
+cat <<'EOF'
 #!/bin/bash
 source src/tests/integration/test-org-rbac.sh
 
@@ -183,7 +183,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "Here's a template for adding your own test:"
 echo ""
-cat << 'EOF'
+cat <<'EOF'
 #!/bin/bash
 source src/tests/test_framework.sh
 source src/tests/integration/test-org-rbac.sh
@@ -223,7 +223,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "GitHub Actions workflow example:"
 echo ""
-cat << 'EOF'
+cat <<'EOF'
 name: RBAC Integration Tests
 
 on: [push, pull_request]

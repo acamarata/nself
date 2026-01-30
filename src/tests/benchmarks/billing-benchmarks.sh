@@ -103,21 +103,21 @@ print_result() {
   fi
 
   # Record result
-  echo "$test,$result,$baseline,$status" >> "${RESULTS_FILE}.csv"
+  echo "$test,$result,$baseline,$status" >>"${RESULTS_FILE}.csv"
 }
 
 # Initialize results file
 initialize_results() {
-  printf "{\n" > "$RESULTS_FILE"
-  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >> "$RESULTS_FILE"
-  printf "  \"deployment_size\": \"%s\",\n" "$DEPLOYMENT_SIZE" >> "$RESULTS_FILE"
-  printf "  \"tests\": [\n" >> "$RESULTS_FILE"
+  printf "{\n" >"$RESULTS_FILE"
+  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >>"$RESULTS_FILE"
+  printf "  \"deployment_size\": \"%s\",\n" "$DEPLOYMENT_SIZE" >>"$RESULTS_FILE"
+  printf "  \"tests\": [\n" >>"$RESULTS_FILE"
 
-  echo "Test,Result (ops/sec),Baseline (ops/sec),Status" > "${RESULTS_FILE}.csv"
+  echo "Test,Result (ops/sec),Baseline (ops/sec),Status" >"${RESULTS_FILE}.csv"
 }
 
 finalize_results() {
-  printf "  ]\n}\n" >> "$RESULTS_FILE"
+  printf "  ]\n}\n" >>"$RESULTS_FILE"
 }
 
 # Test 1: Usage Tracking Throughput
@@ -132,8 +132,8 @@ test_usage_tracking() {
     # Mock API call to track usage
     {
       echo "INSERT INTO usage_events (tenant_id, metric_name, quantity, timestamp) VALUES" \
-           "('tenant_${i}', 'api_calls', 1, NOW());"
-    } > /dev/null 2>&1
+        "('tenant_${i}', 'api_calls', 1, NOW());"
+    } >/dev/null 2>&1
     count=$((count + 1))
   done
 
@@ -156,7 +156,7 @@ test_quota_checks() {
     # Mock quota check query
     {
       echo "SELECT SUM(quantity) FROM usage_events WHERE tenant_id = 'tenant_${i}' AND metric_name = 'api_calls';"
-    } > /dev/null 2>&1
+    } >/dev/null 2>&1
     count=$((count + 1))
   done
 
@@ -179,12 +179,12 @@ test_invoice_generation() {
     # Mock invoice generation process
     {
       # 1. Aggregate usage
-      echo "SELECT metric_name, SUM(quantity) FROM usage_events GROUP BY metric_name;" > /dev/null
+      echo "SELECT metric_name, SUM(quantity) FROM usage_events GROUP BY metric_name;" >/dev/null
       # 2. Calculate costs
-      echo "SELECT price * quantity FROM pricing;" > /dev/null
+      echo "SELECT price * quantity FROM pricing;" >/dev/null
       # 3. Generate invoice
-      echo "INSERT INTO invoices (tenant_id, amount, period) VALUES ('tenant_${i}', 100.00, '2026-01');" > /dev/null
-    } > /dev/null 2>&1
+      echo "INSERT INTO invoices (tenant_id, amount, period) VALUES ('tenant_${i}', 100.00, '2026-01');" >/dev/null
+    } >/dev/null 2>&1
     count=$((count + 1))
   done
 
@@ -206,7 +206,7 @@ test_stripe_api() {
     local start=$(date +%s.%N)
 
     # Simulate Stripe API call with realistic delay
-    sleep 0.02  # 20ms average latency
+    sleep 0.02 # 20ms average latency
 
     local end=$(date +%s.%N)
     local latency=$(echo "$end - $start" | bc -l)
@@ -233,19 +233,19 @@ test_database_queries() {
     case $query_type in
       0)
         # Simple SELECT
-        echo "SELECT * FROM subscriptions WHERE tenant_id = 'tenant_${i}';" > /dev/null
+        echo "SELECT * FROM subscriptions WHERE tenant_id = 'tenant_${i}';" >/dev/null
         ;;
       1)
         # JOIN query
-        echo "SELECT s.*, p.name FROM subscriptions s JOIN plans p ON s.plan_id = p.id;" > /dev/null
+        echo "SELECT s.*, p.name FROM subscriptions s JOIN plans p ON s.plan_id = p.id;" >/dev/null
         ;;
       2)
         # Aggregate query
-        echo "SELECT COUNT(*), AVG(amount) FROM invoices WHERE tenant_id = 'tenant_${i}';" > /dev/null
+        echo "SELECT COUNT(*), AVG(amount) FROM invoices WHERE tenant_id = 'tenant_${i}';" >/dev/null
         ;;
       3)
         # Complex query with window function
-        echo "SELECT tenant_id, amount, ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY created_at) FROM invoices;" > /dev/null
+        echo "SELECT tenant_id, amount, ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY created_at) FROM invoices;" >/dev/null
         ;;
     esac
     count=$((count + 1))

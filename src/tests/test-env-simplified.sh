@@ -38,7 +38,7 @@ run_test() {
 
   # Initialize with simplified wizard (non-interactive)
   printf "\n${BLUE}Running init...${NC}\n"
-  cat > .env <<EOF
+  cat >.env <<EOF
 PROJECT_NAME=testapp-$test_env
 ENV=\${NSELF_ENV:-dev}
 BASE_DOMAIN=\${BASE_DOMAIN:-localhost}
@@ -157,7 +157,7 @@ mkdir -p "$TEST_SWITCH_DIR"
 cd "$TEST_SWITCH_DIR"
 
 # Create base config
-cat > .env <<EOF
+cat >.env <<EOF
 PROJECT_NAME=multienv
 # Environment will be determined by NSELF_ENV
 POSTGRES_ENABLED=true

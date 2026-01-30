@@ -55,16 +55,16 @@ source "${SCRIPT_DIR}/core.sh"
 
 # Optionally load Redis cache functions (graceful fallback if not available)
 if [[ -f "${SCRIPT_DIR}/../redis/cache.sh" ]]; then
-    source "${SCRIPT_DIR}/../redis/cache.sh" 2>/dev/null || true
+  source "${SCRIPT_DIR}/../redis/cache.sh" 2>/dev/null || true
 fi
 
 if [[ -f "${SCRIPT_DIR}/../redis/rate-limit-distributed.sh" ]]; then
-    source "${SCRIPT_DIR}/../redis/rate-limit-distributed.sh" 2>/dev/null || true
+  source "${SCRIPT_DIR}/../redis/rate-limit-distributed.sh" 2>/dev/null || true
 fi
 
 # Quota enforcement modes
-QUOTA_MODE_SOFT="soft"   # Warn but allow
-QUOTA_MODE_HARD="hard"   # Block when exceeded
+QUOTA_MODE_SOFT="soft" # Warn but allow
+QUOTA_MODE_HARD="hard" # Block when exceeded
 
 # Alert thresholds (percentage)
 QUOTA_ALERT_WARNING=75
@@ -72,97 +72,97 @@ QUOTA_ALERT_CRITICAL=90
 QUOTA_ALERT_EXCEEDED=100
 
 # Cache configuration
-QUOTA_CACHE_TTL="${QUOTA_CACHE_TTL:-60}"  # Default 60 seconds
+QUOTA_CACHE_TTL="${QUOTA_CACHE_TTL:-60}" # Default 60 seconds
 QUOTA_CACHE_ENABLED="${QUOTA_CACHE_ENABLED:-true}"
 
 # Get all quotas for current customer
 quota_get_all() {
-    local show_usage="${1:-false}"
-    local format="${2:-table}"
+  local show_usage="${1:-false}"
+  local format="${2:-table}"
 
-    local customer_id
-    customer_id=$(billing_get_customer_id) || {
-        error "No customer ID found"
-        return 1
-    }
+  local customer_id
+  customer_id=$(billing_get_customer_id) || {
+    error "No customer ID found"
+    return 1
+  }
 
-    case "$format" in
-        json)
-            quota_get_all_json "$customer_id" "$show_usage"
-            ;;
-        csv)
-            quota_get_all_csv "$customer_id" "$show_usage"
-            ;;
-        table)
-            quota_get_all_table "$customer_id" "$show_usage"
-            ;;
-        *)
-            error "Unsupported format: $format"
-            return 1
-            ;;
-    esac
+  case "$format" in
+    json)
+      quota_get_all_json "$customer_id" "$show_usage"
+      ;;
+    csv)
+      quota_get_all_csv "$customer_id" "$show_usage"
+      ;;
+    table)
+      quota_get_all_table "$customer_id" "$show_usage"
+      ;;
+    *)
+      error "Unsupported format: $format"
+      return 1
+      ;;
+  esac
 }
 
 # Get quota for specific service
 quota_get_service() {
-    local service="$1"
-    local show_usage="${2:-false}"
-    local format="${3:-table}"
+  local service="$1"
+  local show_usage="${2:-false}"
+  local format="${3:-table}"
 
-    local customer_id
-    customer_id=$(billing_get_customer_id) || {
-        error "No customer ID found"
-        return 1
-    }
+  local customer_id
+  customer_id=$(billing_get_customer_id) || {
+    error "No customer ID found"
+    return 1
+  }
 
-    case "$format" in
-        json)
-            quota_get_service_json "$customer_id" "$service" "$show_usage"
-            ;;
-        csv)
-            quota_get_service_csv "$customer_id" "$service" "$show_usage"
-            ;;
-        table)
-            quota_get_service_table "$customer_id" "$service" "$show_usage"
-            ;;
-        *)
-            error "Unsupported format: $format"
-            return 1
-            ;;
-    esac
+  case "$format" in
+    json)
+      quota_get_service_json "$customer_id" "$service" "$show_usage"
+      ;;
+    csv)
+      quota_get_service_csv "$customer_id" "$service" "$show_usage"
+      ;;
+    table)
+      quota_get_service_table "$customer_id" "$service" "$show_usage"
+      ;;
+    *)
+      error "Unsupported format: $format"
+      return 1
+      ;;
+  esac
 }
 
 # Display all quotas as table
 quota_get_all_table() {
-    local customer_id="$1"
-    local show_usage="$2"
+  local customer_id="$1"
+  local show_usage="$2"
 
-    # Get current plan
-    local plan_name
-    plan_name=$(billing_db_query "
+  # Get current plan
+  local plan_name
+  plan_name=$(billing_db_query "
         SELECT plan_name FROM billing_subscriptions
         WHERE customer_id = '${customer_id}'
         AND status = 'active'
         LIMIT 1;
     " | tr -d ' ')
 
-    if [[ -z "$plan_name" ]]; then
-        warn "No active subscription found"
-        return 0
-    fi
+  if [[ -z "$plan_name" ]]; then
+    warn "No active subscription found"
+    return 0
+  fi
 
-    printf "╔════════════════════════════════════════════════════════════════════════╗\n"
-    printf "║                            QUOTA LIMITS                                ║\n"
-    printf "╠════════════════════════════════════════════════════════════════════════╣\n"
-    printf "║ Plan: %-64s ║\n" "$plan_name"
-    printf "╠════════════════════════════════════════════════════════════════════════╣\n"
+  printf "╔════════════════════════════════════════════════════════════════════════╗\n"
+  printf "║                            QUOTA LIMITS                                ║\n"
+  printf "╠════════════════════════════════════════════════════════════════════════╣\n"
+  printf "║ Plan: %-64s ║\n" "$plan_name"
+  printf "╠════════════════════════════════════════════════════════════════════════╣\n"
 
-    if [[ "$show_usage" == "true" ]]; then
-        printf "║ Service      │ Limit        │ Current Usage │ Available  │ Status   ║\n"
-        printf "╠══════════════╪══════════════╪═══════════════╪════════════╪══════════╣\n"
+  if [[ "$show_usage" == "true" ]]; then
+    printf "║ Service      │ Limit        │ Current Usage │ Available  │ Status   ║\n"
+    printf "╠══════════════╪══════════════╪═══════════════╪════════════╪══════════╣\n"
 
-        # Get quotas with usage
-        billing_db_query "
+    # Get quotas with usage
+    billing_db_query "
             SELECT
                 q.service_name,
                 q.limit_value,
@@ -180,53 +180,53 @@ quota_get_all_table() {
             GROUP BY q.service_name, q.limit_value, q.limit_type
             ORDER BY q.service_name;
         " | while IFS='|' read -r service limit type usage; do
-            service=$(echo "$service" | tr -d ' ')
-            limit=$(echo "$limit" | tr -d ' ')
-            type=$(echo "$type" | tr -d ' ')
-            usage=$(echo "$usage" | tr -d ' ')
+      service=$(echo "$service" | tr -d ' ')
+      limit=$(echo "$limit" | tr -d ' ')
+      type=$(echo "$type" | tr -d ' ')
+      usage=$(echo "$usage" | tr -d ' ')
 
-            local available status_indicator
+      local available status_indicator
 
-            if [[ "$limit" == "-1" ]]; then
-                limit_display="Unlimited"
-                available="∞"
-                status_indicator="✓"
-            else
-                limit_display=$(quota_format_number "$limit")
-                available=$((limit - usage))
+      if [[ "$limit" == "-1" ]]; then
+        limit_display="Unlimited"
+        available="∞"
+        status_indicator="✓"
+      else
+        limit_display=$(quota_format_number "$limit")
+        available=$((limit - usage))
 
-                # Calculate percentage
-                local percent
-                if [[ $limit -gt 0 ]]; then
-                    percent=$((usage * 100 / limit))
-                else
-                    percent=0
-                fi
+        # Calculate percentage
+        local percent
+        if [[ $limit -gt 0 ]]; then
+          percent=$((usage * 100 / limit))
+        else
+          percent=0
+        fi
 
-                # Set status indicator
-                if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
-                    status_indicator="⚠ OVER"
-                elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
-                    status_indicator="⚠ ${percent}%"
-                elif [[ $percent -ge $QUOTA_ALERT_WARNING ]]; then
-                    status_indicator="⚡ ${percent}%"
-                else
-                    status_indicator="✓ ${percent}%"
-                fi
-            fi
+        # Set status indicator
+        if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
+          status_indicator="⚠ OVER"
+        elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
+          status_indicator="⚠ ${percent}%"
+        elif [[ $percent -ge $QUOTA_ALERT_WARNING ]]; then
+          status_indicator="⚡ ${percent}%"
+        else
+          status_indicator="✓ ${percent}%"
+        fi
+      fi
 
-            printf "║ %-12s │ %12s │ %13s │ %10s │ %-8s ║\n" \
-                "$service" \
-                "$limit_display" \
-                "$(quota_format_number "$usage")" \
-                "$(quota_format_number "$available")" \
-                "$status_indicator"
-        done
-    else
-        printf "║ Service      │ Limit        │ Type         │ Mode                 ║\n"
-        printf "╠══════════════╪══════════════╪══════════════╪══════════════════════╣\n"
+      printf "║ %-12s │ %12s │ %13s │ %10s │ %-8s ║\n" \
+        "$service" \
+        "$limit_display" \
+        "$(quota_format_number "$usage")" \
+        "$(quota_format_number "$available")" \
+        "$status_indicator"
+    done
+  else
+    printf "║ Service      │ Limit        │ Type         │ Mode                 ║\n"
+    printf "╠══════════════╪══════════════╪══════════════╪══════════════════════╣\n"
 
-        billing_db_query "
+    billing_db_query "
             SELECT
                 service_name,
                 limit_value,
@@ -236,46 +236,46 @@ quota_get_all_table() {
             WHERE plan_name = '${plan_name}'
             ORDER BY service_name;
         " | while IFS='|' read -r service limit type mode; do
-            service=$(echo "$service" | tr -d ' ')
-            limit=$(echo "$limit" | tr -d ' ')
-            type=$(echo "$type" | tr -d ' ')
-            mode=$(echo "$mode" | tr -d ' ')
+      service=$(echo "$service" | tr -d ' ')
+      limit=$(echo "$limit" | tr -d ' ')
+      type=$(echo "$type" | tr -d ' ')
+      mode=$(echo "$mode" | tr -d ' ')
 
-            local limit_display
-            if [[ "$limit" == "-1" ]]; then
-                limit_display="Unlimited"
-            else
-                limit_display=$(quota_format_number "$limit")
-            fi
+      local limit_display
+      if [[ "$limit" == "-1" ]]; then
+        limit_display="Unlimited"
+      else
+        limit_display=$(quota_format_number "$limit")
+      fi
 
-            printf "║ %-12s │ %12s │ %-12s │ %-20s ║\n" \
-                "$service" "$limit_display" "$type" "$mode"
-        done
-    fi
+      printf "║ %-12s │ %12s │ %-12s │ %-20s ║\n" \
+        "$service" "$limit_display" "$type" "$mode"
+    done
+  fi
 
-    printf "╚══════════════╧══════════════╧══════════════╧══════════════════════╝\n"
+  printf "╚══════════════╧══════════════╧══════════════╧══════════════════════╝\n"
 
-    # Show legend
-    if [[ "$show_usage" == "true" ]]; then
-        printf "\nStatus Legend:\n"
-        printf "  ✓  - Below 75%% of quota\n"
-        printf "  ⚡ - 75-89%% of quota (Warning)\n"
-        printf "  ⚠  - 90%% or above (Critical)\n"
-        printf "  ⚠ OVER - Quota exceeded\n"
-    fi
+  # Show legend
+  if [[ "$show_usage" == "true" ]]; then
+    printf "\nStatus Legend:\n"
+    printf "  ✓  - Below 75%% of quota\n"
+    printf "  ⚡ - 75-89%% of quota (Warning)\n"
+    printf "  ⚠  - 90%% or above (Critical)\n"
+    printf "  ⚠ OVER - Quota exceeded\n"
+  fi
 
-    printf "\n"
+  printf "\n"
 }
 
 # Display service quota as table
 quota_get_service_table() {
-    local customer_id="$1"
-    local service="$2"
-    local show_usage="$3"
+  local customer_id="$1"
+  local service="$2"
+  local show_usage="$3"
 
-    # Get quota details
-    local quota_data
-    quota_data=$(billing_db_query "
+  # Get quota details
+  local quota_data
+  quota_data=$(billing_db_query "
         SELECT
             q.service_name,
             q.limit_value,
@@ -290,38 +290,38 @@ quota_get_service_table() {
         LIMIT 1;
     ")
 
-    if [[ -z "$quota_data" ]]; then
-        warn "No quota found for service: ${service}"
-        return 0
-    fi
+  if [[ -z "$quota_data" ]]; then
+    warn "No quota found for service: ${service}"
+    return 0
+  fi
 
-    IFS='|' read -r svc limit type mode overage_price <<< "$quota_data"
-    limit=$(echo "$limit" | tr -d ' ')
-    type=$(echo "$type" | tr -d ' ')
-    mode=$(echo "$mode" | tr -d ' ')
-    overage_price=$(echo "$overage_price" | tr -d ' ')
+  IFS='|' read -r svc limit type mode overage_price <<<"$quota_data"
+  limit=$(echo "$limit" | tr -d ' ')
+  type=$(echo "$type" | tr -d ' ')
+  mode=$(echo "$mode" | tr -d ' ')
+  overage_price=$(echo "$overage_price" | tr -d ' ')
 
-    printf "╔════════════════════════════════════════════════════════════════╗\n"
-    printf "║ Service: %-54s ║\n" "$service"
-    printf "╠════════════════════════════════════════════════════════════════╣\n"
-    printf "║                                                                ║\n"
+  printf "╔════════════════════════════════════════════════════════════════╗\n"
+  printf "║ Service: %-54s ║\n" "$service"
+  printf "╠════════════════════════════════════════════════════════════════╣\n"
+  printf "║                                                                ║\n"
 
-    if [[ "$limit" == "-1" ]]; then
-        printf "║ Quota Limit:      %44s ║\n" "Unlimited"
-    else
-        printf "║ Quota Limit:      %44s ║\n" "$(quota_format_number "$limit") ${type}"
-    fi
+  if [[ "$limit" == "-1" ]]; then
+    printf "║ Quota Limit:      %44s ║\n" "Unlimited"
+  else
+    printf "║ Quota Limit:      %44s ║\n" "$(quota_format_number "$limit") ${type}"
+  fi
 
-    printf "║ Enforcement Mode: %44s ║\n" "$mode"
+  printf "║ Enforcement Mode: %44s ║\n" "$mode"
 
-    if [[ -n "$overage_price" ]] && [[ "$overage_price" != "0" ]]; then
-        printf "║ Overage Price:    %44s ║\n" "\$${overage_price} per ${type}"
-    fi
+  if [[ -n "$overage_price" ]] && [[ "$overage_price" != "0" ]]; then
+    printf "║ Overage Price:    %44s ║\n" "\$${overage_price} per ${type}"
+  fi
 
-    if [[ "$show_usage" == "true" ]]; then
-        # Get current usage
-        local current_usage
-        current_usage=$(billing_db_query "
+  if [[ "$show_usage" == "true" ]]; then
+    # Get current usage
+    local current_usage
+    current_usage=$(billing_db_query "
             SELECT COALESCE(SUM(quantity), 0)
             FROM billing_usage_records ur
             JOIN billing_subscriptions s ON s.customer_id = ur.customer_id
@@ -331,63 +331,63 @@ quota_get_service_table() {
             AND ur.recorded_at <= s.current_period_end;
         " | tr -d ' ')
 
-        printf "║                                                                ║\n"
-        printf "║ Current Usage:    %44s ║\n" "$(quota_format_number "$current_usage") ${type}"
-
-        if [[ "$limit" != "-1" ]]; then
-            local available
-            available=$((limit - current_usage))
-
-            if [[ $available -lt 0 ]]; then
-                local overage
-                overage=$((current_usage - limit))
-                printf "║ Available:        %44s ║\n" "0 (exceeded by $(quota_format_number "$overage"))"
-            else
-                printf "║ Available:        %44s ║\n" "$(quota_format_number "$available") ${type}"
-            fi
-
-            # Calculate and show percentage
-            local percent
-            if [[ $limit -gt 0 ]]; then
-                percent=$((current_usage * 100 / limit))
-            else
-                percent=0
-            fi
-
-            printf "║ Usage Percentage: %44s ║\n" "${percent}%"
-
-            # Show status bar
-            printf "║                                                                ║\n"
-            printf "║ "
-            quota_show_progress_bar "$percent" 60
-            printf " ║\n"
-
-            # Show status
-            printf "║                                                                ║\n"
-            if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
-                printf "║ Status:           %44s ║\n" "⚠ QUOTA EXCEEDED"
-            elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
-                printf "║ Status:           %44s ║\n" "⚠ CRITICAL (${percent}%)"
-            elif [[ $percent -ge $QUOTA_ALERT_WARNING ]]; then
-                printf "║ Status:           %44s ║\n" "⚡ WARNING (${percent}%)"
-            else
-                printf "║ Status:           %44s ║\n" "✓ OK (${percent}%)"
-            fi
-        fi
-    fi
-
     printf "║                                                                ║\n"
-    printf "╚════════════════════════════════════════════════════════════════╝\n"
-    printf "\n"
+    printf "║ Current Usage:    %44s ║\n" "$(quota_format_number "$current_usage") ${type}"
+
+    if [[ "$limit" != "-1" ]]; then
+      local available
+      available=$((limit - current_usage))
+
+      if [[ $available -lt 0 ]]; then
+        local overage
+        overage=$((current_usage - limit))
+        printf "║ Available:        %44s ║\n" "0 (exceeded by $(quota_format_number "$overage"))"
+      else
+        printf "║ Available:        %44s ║\n" "$(quota_format_number "$available") ${type}"
+      fi
+
+      # Calculate and show percentage
+      local percent
+      if [[ $limit -gt 0 ]]; then
+        percent=$((current_usage * 100 / limit))
+      else
+        percent=0
+      fi
+
+      printf "║ Usage Percentage: %44s ║\n" "${percent}%"
+
+      # Show status bar
+      printf "║                                                                ║\n"
+      printf "║ "
+      quota_show_progress_bar "$percent" 60
+      printf " ║\n"
+
+      # Show status
+      printf "║                                                                ║\n"
+      if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
+        printf "║ Status:           %44s ║\n" "⚠ QUOTA EXCEEDED"
+      elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
+        printf "║ Status:           %44s ║\n" "⚠ CRITICAL (${percent}%)"
+      elif [[ $percent -ge $QUOTA_ALERT_WARNING ]]; then
+        printf "║ Status:           %44s ║\n" "⚡ WARNING (${percent}%)"
+      else
+        printf "║ Status:           %44s ║\n" "✓ OK (${percent}%)"
+      fi
+    fi
+  fi
+
+  printf "║                                                                ║\n"
+  printf "╚════════════════════════════════════════════════════════════════╝\n"
+  printf "\n"
 }
 
 # Get quotas as JSON
 quota_get_all_json() {
-    local customer_id="$1"
-    local show_usage="$2"
+  local customer_id="$1"
+  local show_usage="$2"
 
-    if [[ "$show_usage" == "true" ]]; then
-        billing_db_query "
+  if [[ "$show_usage" == "true" ]]; then
+    billing_db_query "
             SELECT json_agg(
                 json_build_object(
                     'service', q.service_name,
@@ -412,8 +412,8 @@ quota_get_all_json() {
             AND s.status = 'active'
             GROUP BY q.service_name, q.limit_value, q.limit_type, q.enforcement_mode;
         "
-    else
-        billing_db_query "
+  else
+    billing_db_query "
             SELECT json_agg(
                 json_build_object(
                     'service', service_name,
@@ -427,16 +427,16 @@ quota_get_all_json() {
             WHERE s.customer_id = '${customer_id}'
             AND s.status = 'active';
         "
-    fi
+  fi
 }
 
 # Get quotas as CSV
 quota_get_all_csv() {
-    local customer_id="$1"
-    local show_usage="$2"
+  local customer_id="$1"
+  local show_usage="$2"
 
-    if [[ "$show_usage" == "true" ]]; then
-        billing_db_query "
+  if [[ "$show_usage" == "true" ]]; then
+    billing_db_query "
             SELECT
                 q.service_name,
                 q.limit_value,
@@ -453,8 +453,8 @@ quota_get_all_csv() {
             AND s.status = 'active'
             GROUP BY q.service_name, q.limit_value, q.limit_type, q.enforcement_mode;
         " csv
-    else
-        billing_db_query "
+  else
+    billing_db_query "
             SELECT
                 service_name,
                 limit_value,
@@ -465,16 +465,16 @@ quota_get_all_csv() {
             WHERE s.customer_id = '${customer_id}'
             AND s.status = 'active';
         " csv
-    fi
+  fi
 }
 
 # Get service quota as JSON
 quota_get_service_json() {
-    local customer_id="$1"
-    local service="$2"
-    local show_usage="$3"
+  local customer_id="$1"
+  local service="$2"
+  local show_usage="$3"
 
-    billing_db_query "
+  billing_db_query "
         SELECT json_build_object(
             'service', q.service_name,
             'limit', q.limit_value,
@@ -500,11 +500,11 @@ quota_get_service_json() {
 
 # Get service quota as CSV
 quota_get_service_csv() {
-    local customer_id="$1"
-    local service="$2"
-    local show_usage="$3"
+  local customer_id="$1"
+  local service="$2"
+  local show_usage="$3"
 
-    billing_db_query "
+  billing_db_query "
         SELECT
             q.service_name,
             q.limit_value,
@@ -528,44 +528,44 @@ quota_get_service_csv() {
 
 # Get quota alerts
 quota_get_alerts() {
-    local format="${1:-table}"
+  local format="${1:-table}"
 
-    local customer_id
-    customer_id=$(billing_get_customer_id) || {
-        error "No customer ID found"
-        return 1
-    }
+  local customer_id
+  customer_id=$(billing_get_customer_id) || {
+    error "No customer ID found"
+    return 1
+  }
 
-    case "$format" in
-        json)
-            quota_get_alerts_json "$customer_id"
-            ;;
-        csv)
-            quota_get_alerts_csv "$customer_id"
-            ;;
-        table)
-            quota_get_alerts_table "$customer_id"
-            ;;
-        *)
-            error "Unsupported format: $format"
-            return 1
-            ;;
-    esac
+  case "$format" in
+    json)
+      quota_get_alerts_json "$customer_id"
+      ;;
+    csv)
+      quota_get_alerts_csv "$customer_id"
+      ;;
+    table)
+      quota_get_alerts_table "$customer_id"
+      ;;
+    *)
+      error "Unsupported format: $format"
+      return 1
+      ;;
+  esac
 }
 
 # Display quota alerts as table
 quota_get_alerts_table() {
-    local customer_id="$1"
+  local customer_id="$1"
 
-    printf "╔════════════════════════════════════════════════════════════════╗\n"
-    printf "║                        QUOTA ALERTS                            ║\n"
-    printf "╠════════════════════════════════════════════════════════════════╣\n"
-    printf "║ Service      │ Usage     │ Limit     │ Percent │ Severity    ║\n"
-    printf "╠══════════════╪═══════════╪═══════════╪═════════╪═════════════╣\n"
+  printf "╔════════════════════════════════════════════════════════════════╗\n"
+  printf "║                        QUOTA ALERTS                            ║\n"
+  printf "╠════════════════════════════════════════════════════════════════╣\n"
+  printf "║ Service      │ Usage     │ Limit     │ Percent │ Severity    ║\n"
+  printf "╠══════════════╪═══════════╪═══════════╪═════════╪═════════════╣\n"
 
-    local has_alerts=false
+  local has_alerts=false
 
-    billing_db_query "
+  billing_db_query "
         SELECT
             q.service_name,
             COALESCE(SUM(ur.quantity), 0) as current_usage,
@@ -588,45 +588,45 @@ quota_get_alerts_table() {
         HAVING (COALESCE(SUM(ur.quantity), 0) * 100 / q.limit_value) >= ${QUOTA_ALERT_WARNING}
         ORDER BY percentage DESC;
     " | while IFS='|' read -r service usage limit percent; do
-        has_alerts=true
+    has_alerts=true
 
-        service=$(echo "$service" | tr -d ' ')
-        usage=$(echo "$usage" | tr -d ' ')
-        limit=$(echo "$limit" | tr -d ' ')
-        percent=$(echo "$percent" | tr -d ' ')
+    service=$(echo "$service" | tr -d ' ')
+    usage=$(echo "$usage" | tr -d ' ')
+    limit=$(echo "$limit" | tr -d ' ')
+    percent=$(echo "$percent" | tr -d ' ')
 
-        local severity
-        if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
-            severity="⚠ EXCEEDED"
-        elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
-            severity="⚠ CRITICAL"
-        else
-            severity="⚡ WARNING"
-        fi
-
-        printf "║ %-12s │ %9s │ %9s │ %6s%% │ %-11s ║\n" \
-            "$service" \
-            "$(quota_format_number "$usage")" \
-            "$(quota_format_number "$limit")" \
-            "$percent" \
-            "$severity"
-    done
-
-    if [[ "$has_alerts" == "false" ]]; then
-        printf "║                                                                ║\n"
-        printf "║              ✓ No quota alerts - all services OK               ║\n"
-        printf "║                                                                ║\n"
+    local severity
+    if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
+      severity="⚠ EXCEEDED"
+    elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
+      severity="⚠ CRITICAL"
+    else
+      severity="⚡ WARNING"
     fi
 
-    printf "╚══════════════╧═══════════╧═══════════╧═════════╧═════════════╝\n"
-    printf "\n"
+    printf "║ %-12s │ %9s │ %9s │ %6s%% │ %-11s ║\n" \
+      "$service" \
+      "$(quota_format_number "$usage")" \
+      "$(quota_format_number "$limit")" \
+      "$percent" \
+      "$severity"
+  done
+
+  if [[ "$has_alerts" == "false" ]]; then
+    printf "║                                                                ║\n"
+    printf "║              ✓ No quota alerts - all services OK               ║\n"
+    printf "║                                                                ║\n"
+  fi
+
+  printf "╚══════════════╧═══════════╧═══════════╧═════════╧═════════════╝\n"
+  printf "\n"
 }
 
 # Get quota alerts as JSON
 quota_get_alerts_json() {
-    local customer_id="$1"
+  local customer_id="$1"
 
-    billing_db_query "
+  billing_db_query "
         SELECT json_agg(
             json_build_object(
                 'service', q.service_name,
@@ -660,9 +660,9 @@ quota_get_alerts_json() {
 
 # Get quota alerts as CSV
 quota_get_alerts_csv() {
-    local customer_id="$1"
+  local customer_id="$1"
 
-    billing_db_query "
+  billing_db_query "
         SELECT
             q.service_name,
             COALESCE(SUM(ur.quantity), 0) as usage,
@@ -689,70 +689,70 @@ quota_get_alerts_csv() {
 
 # Format quota number with K/M suffixes
 quota_format_number() {
-    local number="$1"
+  local number="$1"
 
-    if [[ "$number" == "-1" ]]; then
-        printf "Unlimited"
-    elif [[ $number -gt 1000000000 ]]; then
-        printf "%.1fB" "$(awk "BEGIN {print $number/1000000000}")"
-    elif [[ $number -gt 1000000 ]]; then
-        printf "%.1fM" "$(awk "BEGIN {print $number/1000000}")"
-    elif [[ $number -gt 1000 ]]; then
-        printf "%.1fK" "$(awk "BEGIN {print $number/1000}")"
-    else
-        printf "%s" "$number"
-    fi
+  if [[ "$number" == "-1" ]]; then
+    printf "Unlimited"
+  elif [[ $number -gt 1000000000 ]]; then
+    printf "%.1fB" "$(awk "BEGIN {print $number/1000000000}")"
+  elif [[ $number -gt 1000000 ]]; then
+    printf "%.1fM" "$(awk "BEGIN {print $number/1000000}")"
+  elif [[ $number -gt 1000 ]]; then
+    printf "%.1fK" "$(awk "BEGIN {print $number/1000}")"
+  else
+    printf "%s" "$number"
+  fi
 }
 
 # Show progress bar
 quota_show_progress_bar() {
-    local percent="$1"
-    local width="${2:-50}"
+  local percent="$1"
+  local width="${2:-50}"
 
-    # Calculate filled and empty portions
-    local filled
-    filled=$((percent * width / 100))
-    if [[ $filled -gt $width ]]; then
-        filled=$width
+  # Calculate filled and empty portions
+  local filled
+  filled=$((percent * width / 100))
+  if [[ $filled -gt $width ]]; then
+    filled=$width
+  fi
+
+  local empty
+  empty=$((width - filled))
+
+  # Print bar
+  printf "["
+
+  local i
+  for ((i = 0; i < filled; i++)); do
+    if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
+      printf "█"
+    elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
+      printf "▓"
+    else
+      printf "▒"
     fi
+  done
 
-    local empty
-    empty=$((width - filled))
+  for ((i = 0; i < empty; i++)); do
+    printf "░"
+  done
 
-    # Print bar
-    printf "["
-
-    local i
-    for ((i=0; i<filled; i++)); do
-        if [[ $percent -ge $QUOTA_ALERT_EXCEEDED ]]; then
-            printf "█"
-        elif [[ $percent -ge $QUOTA_ALERT_CRITICAL ]]; then
-            printf "▓"
-        else
-            printf "▒"
-        fi
-    done
-
-    for ((i=0; i<empty; i++)); do
-        printf "░"
-    done
-
-    printf "]"
+  printf "]"
 }
 
 # Enforce quota for service
 quota_enforce() {
-    local service="$1"
-    local requested="${2:-1}"
+  local service="$1"
+  local requested="${2:-1}"
 
-    # Check if quota would be exceeded
-    if ! billing_check_quota "$service" "$requested"; then
-        local customer_id
-        customer_id=$(billing_get_customer_id) || return 1
+  # Check if quota would be exceeded
+  if ! billing_check_quota "$service" "$requested"; then
+    local customer_id
+    customer_id=$(billing_get_customer_id) || return 1
 
-        # Get enforcement mode
-        local mode
-        mode=$(billing_db_query "
+    # Get enforcement mode
+    local mode
+    mode=$(billing_db_query "
             SELECT q.enforcement_mode
             FROM billing_quotas q
             JOIN billing_subscriptions s ON s.plan_name = q.plan_name
@@ -762,17 +762,17 @@ quota_enforce() {
             LIMIT 1;
         " | tr -d ' ')
 
-        if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
-            # Hard limit - block request
-            return 1
-        else
-            # Soft limit - allow but log warning
-            warn "Quota exceeded for ${service} (soft limit)"
-            return 0
-        fi
+    if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
+      # Hard limit - block request
+      return 1
+    else
+      # Soft limit - allow but log warning
+      warn "Quota exceeded for ${service} (soft limit)"
+      return 0
     fi
+  fi
 
-    return 0
+  return 0
 }
 
 # ============================================================================
@@ -781,50 +781,50 @@ quota_enforce() {
 
 # Fast quota check with Redis cache (production-optimized)
 quota_check_fast() {
-    local service="$1"
-    local requested="${2:-1}"
-    local cache_ttl="${3:-60}"  # Default 60 seconds cache
+  local service="$1"
+  local requested="${2:-1}"
+  local cache_ttl="${3:-60}" # Default 60 seconds cache
 
-    local customer_id
-    customer_id=$(billing_get_customer_id) || {
-        # No billing setup - allow by default
+  local customer_id
+  customer_id=$(billing_get_customer_id) || {
+    # No billing setup - allow by default
+    return 0
+  }
+
+  # Try Redis cache first (if available)
+  local cache_key="quota:${customer_id}:${service}"
+  local cached_data
+
+  if command -v redis_cache_get >/dev/null 2>&1; then
+    cached_data=$(redis_cache_get "$cache_key" 2>/dev/null)
+
+    if [[ -n "$cached_data" ]] && [[ "$cached_data" != "null" ]]; then
+      # Parse cached quota data: "limit|usage|mode"
+      IFS='|' read -r limit usage mode <<<"$cached_data"
+
+      # Unlimited quota
+      if [[ "$limit" == "-1" ]]; then
         return 0
-    }
+      fi
 
-    # Try Redis cache first (if available)
-    local cache_key="quota:${customer_id}:${service}"
-    local cached_data
-
-    if command -v redis_cache_get >/dev/null 2>&1; then
-        cached_data=$(redis_cache_get "$cache_key" 2>/dev/null)
-
-        if [[ -n "$cached_data" ]] && [[ "$cached_data" != "null" ]]; then
-            # Parse cached quota data: "limit|usage|mode"
-            IFS='|' read -r limit usage mode <<< "$cached_data"
-
-            # Unlimited quota
-            if [[ "$limit" == "-1" ]]; then
-                return 0
-            fi
-
-            # Check if adding requested would exceed
-            local total=$((usage + requested))
-            if [[ $total -gt $limit ]]; then
-                # Check enforcement mode
-                if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
-                    return 1  # Block
-                else
-                    return 0  # Allow with warning (soft limit)
-                fi
-            fi
-
-            return 0  # Within quota
+      # Check if adding requested would exceed
+      local total=$((usage + requested))
+      if [[ $total -gt $limit ]]; then
+        # Check enforcement mode
+        if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
+          return 1 # Block
+        else
+          return 0 # Allow with warning (soft limit)
         fi
-    fi
+      fi
 
-    # Cache miss - query database and cache result
-    local quota_data
-    quota_data=$(billing_db_query "
+      return 0 # Within quota
+    fi
+  fi
+
+  # Cache miss - query database and cache result
+  local quota_data
+  quota_data=$(billing_db_query "
         SELECT
             q.limit_value,
             COALESCE(SUM(ur.quantity), 0) as current_usage,
@@ -843,57 +843,57 @@ quota_check_fast() {
         LIMIT 1;
     ")
 
-    if [[ -z "$quota_data" ]]; then
-        # No quota set - allow unlimited
-        return 0
-    fi
-
-    IFS='|' read -r limit usage mode <<< "$quota_data"
-    limit=$(echo "$limit" | tr -d ' ')
-    usage=$(echo "$usage" | tr -d ' ')
-    mode=$(echo "$mode" | tr -d ' ')
-
-    # Cache the result
-    if command -v redis_cache_set >/dev/null 2>&1; then
-        redis_cache_set "$cache_key" "${limit}|${usage}|${mode}" "$cache_ttl" 2>/dev/null || true
-    fi
-
-    # Unlimited quota
-    if [[ "$limit" == "-1" ]]; then
-        return 0
-    fi
-
-    # Check if adding requested would exceed
-    local total=$((usage + requested))
-    if [[ $total -gt $limit ]]; then
-        if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
-            return 1  # Block
-        else
-            return 0  # Allow (soft limit)
-        fi
-    fi
-
+  if [[ -z "$quota_data" ]]; then
+    # No quota set - allow unlimited
     return 0
+  fi
+
+  IFS='|' read -r limit usage mode <<<"$quota_data"
+  limit=$(echo "$limit" | tr -d ' ')
+  usage=$(echo "$usage" | tr -d ' ')
+  mode=$(echo "$mode" | tr -d ' ')
+
+  # Cache the result
+  if command -v redis_cache_set >/dev/null 2>&1; then
+    redis_cache_set "$cache_key" "${limit}|${usage}|${mode}" "$cache_ttl" 2>/dev/null || true
+  fi
+
+  # Unlimited quota
+  if [[ "$limit" == "-1" ]]; then
+    return 0
+  fi
+
+  # Check if adding requested would exceed
+  local total=$((usage + requested))
+  if [[ $total -gt $limit ]]; then
+    if [[ "$mode" == "$QUOTA_MODE_HARD" ]]; then
+      return 1 # Block
+    else
+      return 0 # Allow (soft limit)
+    fi
+  fi
+
+  return 0
 }
 
 # Rate-limited quota check (uses Redis rate limiter)
 quota_check_rate_limited() {
-    local service="$1"
-    local max_requests_per_sec="${2:-10}"
-    local customer_id
+  local service="$1"
+  local max_requests_per_sec="${2:-10}"
+  local customer_id
 
-    customer_id=$(billing_get_customer_id) || return 0
+  customer_id=$(billing_get_customer_id) || return 0
 
-    local rate_key="quota:rate:${customer_id}:${service}"
+  local rate_key="quota:rate:${customer_id}:${service}"
 
-    # Use Redis rate limiter if available
-    if command -v redis_rate_limit_check >/dev/null 2>&1; then
-        if ! redis_rate_limit_check "$rate_key" "$max_requests_per_sec" 1 2>/dev/null; then
-            return 1  # Rate limited
-        fi
+  # Use Redis rate limiter if available
+  if command -v redis_rate_limit_check >/dev/null 2>&1; then
+    if ! redis_rate_limit_check "$rate_key" "$max_requests_per_sec" 1 2>/dev/null; then
+      return 1 # Rate limited
     fi
+  fi
 
-    return 0
+  return 0
 }
 
 # ============================================================================
@@ -902,27 +902,27 @@ quota_check_rate_limited() {
 
 # Reset quota for billing period
 quota_reset() {
-    local customer_id="${1:-}"
-    local service="${2:-}"
+  local customer_id="${1:-}"
+  local service="${2:-}"
 
-    if [[ -z "$customer_id" ]]; then
-        customer_id=$(billing_get_customer_id) || {
-            error "No customer ID found"
-            return 1
-        }
+  if [[ -z "$customer_id" ]]; then
+    customer_id=$(billing_get_customer_id) || {
+      error "No customer ID found"
+      return 1
+    }
+  fi
+
+  # Invalidate cache
+  if command -v redis_cache_invalidate >/dev/null 2>&1; then
+    if [[ -n "$service" ]]; then
+      redis_cache_delete "quota:${customer_id}:${service}" 2>/dev/null || true
+    else
+      redis_cache_invalidate "quota:${customer_id}:*" 2>/dev/null || true
     fi
+  fi
 
-    # Invalidate cache
-    if command -v redis_cache_invalidate >/dev/null 2>&1; then
-        if [[ -n "$service" ]]; then
-            redis_cache_delete "quota:${customer_id}:${service}" 2>/dev/null || true
-        else
-            redis_cache_invalidate "quota:${customer_id}:*" 2>/dev/null || true
-        fi
-    fi
-
-    # Archive old usage records (optional)
-    billing_db_query "
+  # Archive old usage records (optional)
+  billing_db_query "
         INSERT INTO billing_usage_records_archive
         SELECT * FROM billing_usage_records
         WHERE customer_id = '${customer_id}'
@@ -934,38 +934,38 @@ quota_reset() {
         );
     " 2>/dev/null || true
 
-    success "Quota reset for customer: ${customer_id}"
+  success "Quota reset for customer: ${customer_id}"
 }
 
 # Reset all quotas at end of billing period
 quota_reset_all_expired() {
-    local now
-    now=$(date -u +"%Y-%m-%d %H:%M:%S")
+  local now
+  now=$(date -u +"%Y-%m-%d %H:%M:%S")
 
-    # Find all subscriptions with expired periods
-    local expired_customers
-    expired_customers=$(billing_db_query "
+  # Find all subscriptions with expired periods
+  local expired_customers
+  expired_customers=$(billing_db_query "
         SELECT customer_id
         FROM billing_subscriptions
         WHERE status = 'active'
         AND current_period_end < '${now}';
     ")
 
-    if [[ -z "$expired_customers" ]]; then
-        info "No expired billing periods found"
-        return 0
-    fi
+  if [[ -z "$expired_customers" ]]; then
+    info "No expired billing periods found"
+    return 0
+  fi
 
-    local count=0
-    while IFS= read -r customer_id; do
-        customer_id=$(echo "$customer_id" | tr -d ' ')
-        [[ -z "$customer_id" ]] && continue
+  local count=0
+  while IFS= read -r customer_id; do
+    customer_id=$(echo "$customer_id" | tr -d ' ')
+    [[ -z "$customer_id" ]] && continue
 
-        quota_reset "$customer_id"
-        ((count++))
-    done <<< "$expired_customers"
+    quota_reset "$customer_id"
+    ((count++))
+  done <<<"$expired_customers"
 
-    success "Reset quotas for ${count} customers"
+  success "Reset quotas for ${count} customers"
 }
 
 # ============================================================================
@@ -974,23 +974,23 @@ quota_reset_all_expired() {
 
 # Calculate overage charges for billing period
 quota_calculate_overage() {
-    local customer_id="${1:-}"
-    local service="${2:-}"
+  local customer_id="${1:-}"
+  local service="${2:-}"
 
-    if [[ -z "$customer_id" ]]; then
-        customer_id=$(billing_get_customer_id) || {
-            error "No customer ID found"
-            return 1
-        }
-    fi
+  if [[ -z "$customer_id" ]]; then
+    customer_id=$(billing_get_customer_id) || {
+      error "No customer ID found"
+      return 1
+    }
+  fi
 
-    local service_filter=""
-    if [[ -n "$service" ]]; then
-        service_filter="AND q.service_name = '${service}'"
-    fi
+  local service_filter=""
+  if [[ -n "$service" ]]; then
+    service_filter="AND q.service_name = '${service}'"
+  fi
 
-    # Calculate overages
-    billing_db_query "
+  # Calculate overages
+  billing_db_query "
         SELECT
             q.service_name,
             q.limit_value,
@@ -1016,19 +1016,19 @@ quota_calculate_overage() {
 
 # Display overage report
 quota_show_overage() {
-    local customer_id="${1:-}"
-    local format="${2:-table}"
+  local customer_id="${1:-}"
+  local format="${2:-table}"
 
-    if [[ -z "$customer_id" ]]; then
-        customer_id=$(billing_get_customer_id) || {
-            error "No customer ID found"
-            return 1
-        }
-    fi
+  if [[ -z "$customer_id" ]]; then
+    customer_id=$(billing_get_customer_id) || {
+      error "No customer ID found"
+      return 1
+    }
+  fi
 
-    case "$format" in
-        json)
-            billing_db_query "
+  case "$format" in
+    json)
+      billing_db_query "
                 SELECT json_agg(
                     json_build_object(
                         'service', service_name,
@@ -1043,44 +1043,44 @@ quota_show_overage() {
                     $(quota_calculate_overage "$customer_id")
                 ) overages;
             "
-            ;;
-        csv)
-            quota_calculate_overage "$customer_id" csv
-            ;;
-        table)
-            printf "╔════════════════════════════════════════════════════════════════╗\n"
-            printf "║                      OVERAGE CHARGES                           ║\n"
-            printf "╠════════════════════════════════════════════════════════════════╣\n"
-            printf "║ Service    │ Limit    │ Usage    │ Overage  │ Cost           ║\n"
-            printf "╠════════════╪══════════╪══════════╪══════════╪════════════════╣\n"
+      ;;
+    csv)
+      quota_calculate_overage "$customer_id" csv
+      ;;
+    table)
+      printf "╔════════════════════════════════════════════════════════════════╗\n"
+      printf "║                      OVERAGE CHARGES                           ║\n"
+      printf "╠════════════════════════════════════════════════════════════════╣\n"
+      printf "║ Service    │ Limit    │ Usage    │ Overage  │ Cost           ║\n"
+      printf "╠════════════╪══════════╪══════════╪══════════╪════════════════╣\n"
 
-            local has_overages=false
-            quota_calculate_overage "$customer_id" | while IFS='|' read -r service limit usage overage price cost; do
-                has_overages=true
+      local has_overages=false
+      quota_calculate_overage "$customer_id" | while IFS='|' read -r service limit usage overage price cost; do
+        has_overages=true
 
-                service=$(echo "$service" | tr -d ' ')
-                limit=$(echo "$limit" | tr -d ' ')
-                usage=$(echo "$usage" | tr -d ' ')
-                overage=$(echo "$overage" | tr -d ' ')
-                cost=$(echo "$cost" | tr -d ' ')
+        service=$(echo "$service" | tr -d ' ')
+        limit=$(echo "$limit" | tr -d ' ')
+        usage=$(echo "$usage" | tr -d ' ')
+        overage=$(echo "$overage" | tr -d ' ')
+        cost=$(echo "$cost" | tr -d ' ')
 
-                printf "║ %-10s │ %8s │ %8s │ %8s │ \$%12.2f ║\n" \
-                    "$service" \
-                    "$(quota_format_number "$limit")" \
-                    "$(quota_format_number "$usage")" \
-                    "$(quota_format_number "$overage")" \
-                    "$cost"
-            done
+        printf "║ %-10s │ %8s │ %8s │ %8s │ \$%12.2f ║\n" \
+          "$service" \
+          "$(quota_format_number "$limit")" \
+          "$(quota_format_number "$usage")" \
+          "$(quota_format_number "$overage")" \
+          "$cost"
+      done
 
-            if [[ "$has_overages" == "false" ]]; then
-                printf "║                                                                ║\n"
-                printf "║              ✓ No overages - all within quota                  ║\n"
-                printf "║                                                                ║\n"
-            fi
+      if [[ "$has_overages" == "false" ]]; then
+        printf "║                                                                ║\n"
+        printf "║              ✓ No overages - all within quota                  ║\n"
+        printf "║                                                                ║\n"
+      fi
 
-            printf "╚════════════╧══════════╧══════════╧══════════╧════════════════╝\n"
-            ;;
-    esac
+      printf "╚════════════╧══════════╧══════════╧══════════╧════════════════╝\n"
+      ;;
+  esac
 }
 
 # ============================================================================
@@ -1089,16 +1089,16 @@ quota_show_overage() {
 
 # Check for quotas approaching limits and generate alerts
 quota_check_alerts() {
-    local customer_id="${1:-}"
-    local send_notifications="${2:-false}"
+  local customer_id="${1:-}"
+  local send_notifications="${2:-false}"
 
-    if [[ -z "$customer_id" ]]; then
-        customer_id=$(billing_get_customer_id) || return 1
-    fi
+  if [[ -z "$customer_id" ]]; then
+    customer_id=$(billing_get_customer_id) || return 1
+  fi
 
-    # Find services approaching quota limits
-    local alerts
-    alerts=$(billing_db_query "
+  # Find services approaching quota limits
+  local alerts
+  alerts=$(billing_db_query "
         SELECT
             q.service_name,
             q.limit_value,
@@ -1128,67 +1128,67 @@ quota_check_alerts() {
         ORDER BY percentage DESC;
     ")
 
-    if [[ -z "$alerts" ]]; then
-        return 0  # No alerts
+  if [[ -z "$alerts" ]]; then
+    return 0 # No alerts
+  fi
+
+  # Log alerts
+  while IFS='|' read -r service limit usage percent severity; do
+    service=$(echo "$service" | tr -d ' ')
+    percent=$(echo "$percent" | tr -d ' ')
+    severity=$(echo "$severity" | tr -d ' ')
+
+    billing_log "QUOTA_ALERT" "$service" "$percent%" "{\"severity\":\"$severity\",\"customer_id\":\"$customer_id\"}"
+
+    # Send notifications if enabled
+    if [[ "$send_notifications" == "true" ]]; then
+      quota_send_alert_notification "$customer_id" "$service" "$percent" "$severity"
     fi
+  done <<<"$alerts"
 
-    # Log alerts
-    while IFS='|' read -r service limit usage percent severity; do
-        service=$(echo "$service" | tr -d ' ')
-        percent=$(echo "$percent" | tr -d ' ')
-        severity=$(echo "$severity" | tr -d ' ')
-
-        billing_log "QUOTA_ALERT" "$service" "$percent%" "{\"severity\":\"$severity\",\"customer_id\":\"$customer_id\"}"
-
-        # Send notifications if enabled
-        if [[ "$send_notifications" == "true" ]]; then
-            quota_send_alert_notification "$customer_id" "$service" "$percent" "$severity"
-        fi
-    done <<< "$alerts"
-
-    return 0
+  return 0
 }
 
 # Send quota alert notification
 quota_send_alert_notification() {
-    local customer_id="$1"
-    local service="$2"
-    local percent="$3"
-    local severity="$4"
+  local customer_id="$1"
+  local service="$2"
+  local percent="$3"
+  local severity="$4"
 
-    # TODO: Implement notification system (email, webhook, etc.)
-    # For now, just log
-    billing_log "NOTIFICATION" "quota_alert" "$service" "{\"severity\":\"$severity\",\"percent\":$percent}"
+  # TODO: Implement notification system (email, webhook, etc.)
+  # For now, just log
+  billing_log "NOTIFICATION" "quota_alert" "$service" "{\"severity\":\"$severity\",\"percent\":$percent}"
 }
 
 # Automated quota monitoring (run periodically)
 quota_monitor_all() {
-    info "Starting quota monitoring..."
+  info "Starting quota monitoring..."
 
-    # Get all active customers
-    local customers
-    customers=$(billing_db_query "
+  # Get all active customers
+  local customers
+  customers=$(billing_db_query "
         SELECT DISTINCT customer_id
         FROM billing_subscriptions
         WHERE status = 'active';
     ")
 
-    local count=0
-    local alerts=0
+  local count=0
+  local alerts=0
 
-    while IFS= read -r customer_id; do
-        customer_id=$(echo "$customer_id" | tr -d ' ')
-        [[ -z "$customer_id" ]] && continue
+  while IFS= read -r customer_id; do
+    customer_id=$(echo "$customer_id" | tr -d ' ')
+    [[ -z "$customer_id" ]] && continue
 
-        ((count++))
+    ((count++))
 
-        # Check for alerts
-        if quota_check_alerts "$customer_id" "true"; then
-            ((alerts++))
-        fi
-    done <<< "$customers"
+    # Check for alerts
+    if quota_check_alerts "$customer_id" "true"; then
+      ((alerts++))
+    fi
+  done <<<"$customers"
 
-    success "Monitored ${count} customers, ${alerts} alerts generated"
+  success "Monitored ${count} customers, ${alerts} alerts generated"
 }
 
 # ============================================================================
@@ -1197,30 +1197,30 @@ quota_monitor_all() {
 
 # Invalidate all quota caches (force refresh)
 quota_cache_invalidate_all() {
-    if command -v redis_cache_invalidate >/dev/null 2>&1; then
-        redis_cache_invalidate "quota:*" 2>/dev/null
-        success "All quota caches invalidated"
-    else
-        warn "Redis not available - cache invalidation skipped"
-    fi
+  if command -v redis_cache_invalidate >/dev/null 2>&1; then
+    redis_cache_invalidate "quota:*" 2>/dev/null
+    success "All quota caches invalidated"
+  else
+    warn "Redis not available - cache invalidation skipped"
+  fi
 }
 
 # Warm quota cache for customer
 quota_cache_warm() {
-    local customer_id="${1:-}"
+  local customer_id="${1:-}"
 
-    if [[ -z "$customer_id" ]]; then
-        customer_id=$(billing_get_customer_id) || return 1
-    fi
+  if [[ -z "$customer_id" ]]; then
+    customer_id=$(billing_get_customer_id) || return 1
+  fi
 
-    if ! command -v redis_cache_set >/dev/null 2>&1; then
-        warn "Redis not available - cache warming skipped"
-        return 1
-    fi
+  if ! command -v redis_cache_set >/dev/null 2>&1; then
+    warn "Redis not available - cache warming skipped"
+    return 1
+  fi
 
-    # Get all services for customer's plan
-    local services
-    services=$(billing_db_query "
+  # Get all services for customer's plan
+  local services
+  services=$(billing_db_query "
         SELECT DISTINCT service_name
         FROM billing_quotas q
         JOIN billing_subscriptions s ON s.plan_name = q.plan_name
@@ -1228,17 +1228,17 @@ quota_cache_warm() {
         AND s.status = 'active';
     ")
 
-    local count=0
-    while IFS= read -r service; do
-        service=$(echo "$service" | tr -d ' ')
-        [[ -z "$service" ]] && continue
+  local count=0
+  while IFS= read -r service; do
+    service=$(echo "$service" | tr -d ' ')
+    [[ -z "$service" ]] && continue
 
-        # Trigger fast check to populate cache
-        quota_check_fast "$service" 0 300  # 5 minute cache
-        ((count++))
-    done <<< "$services"
+    # Trigger fast check to populate cache
+    quota_check_fast "$service" 0 300 # 5 minute cache
+    ((count++))
+  done <<<"$services"
 
-    success "Warmed quota cache for ${count} services"
+  success "Warmed quota cache for ${count} services"
 }
 
 # Export functions

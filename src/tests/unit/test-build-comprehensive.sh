@@ -489,7 +489,7 @@ test_integration() {
   }
 
   # Create minimal .env file
-  cat > .env <<EOF
+  cat >.env <<EOF
 PROJECT_NAME=testproject
 BASE_DOMAIN=localhost
 ENV=dev

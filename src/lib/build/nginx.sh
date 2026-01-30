@@ -34,7 +34,7 @@ generate_nginx_config() {
 
 # Generate main nginx.conf
 generate_main_nginx_conf() {
-  cat > nginx/nginx.conf <<'EOF'
+  cat >nginx/nginx.conf <<'EOF'
 user nginx;
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
@@ -104,7 +104,7 @@ generate_default_server_conf() {
     current_env="$(detect_environment)"
   fi
 
-  cat > nginx/conf.d/default.conf <<EOF
+  cat >nginx/conf.d/default.conf <<EOF
 # Default server configuration
 server {
     listen 80 default_server;
@@ -115,7 +115,7 @@ EOF
 
   # Add SSL redirect if enabled
   if [[ "$ssl_enabled" == "true" ]]; then
-    cat >> nginx/conf.d/default.conf <<'EOF'
+    cat >>nginx/conf.d/default.conf <<'EOF'
     # Redirect to HTTPS
     location / {
         return 301 https://$host$request_uri;
@@ -134,8 +134,8 @@ server {
     listen [::]:443 ssl default_server;
     http2 on;
 EOF
-    echo "    server_name ${base_domain} *.${base_domain};" >> nginx/conf.d/default.conf
-    cat >> nginx/conf.d/default.conf <<'EOF'
+    echo "    server_name ${base_domain} *.${base_domain};" >>nginx/conf.d/default.conf
+    cat >>nginx/conf.d/default.conf <<'EOF'
 
     # SSL configuration
     include /etc/nginx/includes/ssl.conf;
@@ -163,7 +163,7 @@ EOF
 EOF
   else
     # Non-SSL configuration
-    cat >> nginx/conf.d/default.conf <<'EOF'
+    cat >>nginx/conf.d/default.conf <<'EOF'
     # Root location
     location / {
         root /usr/share/nginx/html;
@@ -194,7 +194,7 @@ generate_ssl_config() {
     ssl_dir="nself-org"
   fi
 
-  cat > nginx/includes/ssl.conf <<EOF
+  cat >nginx/includes/ssl.conf <<EOF
 # SSL certificates
 ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
 ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
@@ -237,7 +237,7 @@ generate_security_headers_config() {
 generate_basic_security_headers() {
   local ssl_enabled="${1:-true}"
 
-  cat > nginx/includes/security-headers.conf <<'EOF'
+  cat >nginx/includes/security-headers.conf <<'EOF'
 # Security Headers Configuration
 # Basic security headers - for advanced configuration, use nself security headers
 
@@ -248,14 +248,14 @@ EOF
 
   # Add HSTS only if SSL is enabled
   if [[ "$ssl_enabled" == "true" ]]; then
-    cat >> nginx/includes/security-headers.conf <<'EOF'
+    cat >>nginx/includes/security-headers.conf <<'EOF'
 # HTTP Strict Transport Security (HSTS)
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
 EOF
   fi
 
-  cat >> nginx/includes/security-headers.conf <<'EOF'
+  cat >>nginx/includes/security-headers.conf <<'EOF'
 # X-Frame-Options
 add_header X-Frame-Options "DENY" always;
 
@@ -302,7 +302,7 @@ generate_service_routes() {
 
 # Generate Hasura route
 generate_hasura_route() {
-  cat > nginx/sites/hasura.conf <<'EOF'
+  cat >nginx/sites/hasura.conf <<'EOF'
 # Hasura GraphQL Engine
 location /v1/graphql {
     proxy_pass http://hasura:8080/v1/graphql;
@@ -342,7 +342,7 @@ EOF
 
 # Generate Auth route
 generate_auth_route() {
-  cat > nginx/sites/auth.conf <<'EOF'
+  cat >nginx/sites/auth.conf <<'EOF'
 # Auth Service
 location /auth/ {
     proxy_pass http://auth:4000/;
@@ -360,7 +360,7 @@ EOF
 
 # Generate MinIO route
 generate_minio_route() {
-  cat > nginx/sites/minio.conf <<'EOF'
+  cat >nginx/sites/minio.conf <<'EOF'
 # MinIO Object Storage
 location /minio/ {
     proxy_pass http://minio:9000/;
@@ -391,7 +391,7 @@ EOF
 generate_api_routes() {
   # Check for custom API services
   if [[ -n "${API_SERVICES:-}" ]]; then
-    IFS=',' read -ra SERVICES <<< "$API_SERVICES"
+    IFS=',' read -ra SERVICES <<<"$API_SERVICES"
     for service in "${SERVICES[@]}"; do
       generate_custom_api_route "$service"
     done
@@ -405,7 +405,7 @@ generate_custom_api_route() {
   local service_port_var="${service_upper}_PORT"
   local service_port="${!service_port_var:-3000}"
 
-  cat > "nginx/sites/${service}.conf" <<EOF
+  cat >"nginx/sites/${service}.conf" <<EOF
 # ${service} API Service
 location /api/${service}/ {
     proxy_pass http://${service}:${service_port}/;
@@ -460,7 +460,7 @@ generate_frontend_routes() {
 
   # Process Next.js apps
   if [[ -n "${NEXTJS_APPS:-}" ]]; then
-    IFS=',' read -ra apps <<< "$NEXTJS_APPS"
+    IFS=',' read -ra apps <<<"$NEXTJS_APPS"
     for app in "${apps[@]}"; do
       app=$(echo "$app" | xargs)
       local app_port=$((port_counter++))
@@ -470,7 +470,7 @@ generate_frontend_routes() {
 
   # Process React apps
   if [[ -n "${REACT_APPS:-}" ]]; then
-    IFS=',' read -ra apps <<< "$REACT_APPS"
+    IFS=',' read -ra apps <<<"$REACT_APPS"
     for app in "${apps[@]}"; do
       app=$(echo "$app" | xargs)
       local app_port=$((port_counter++))
@@ -480,7 +480,7 @@ generate_frontend_routes() {
 
   # Process Vue apps
   if [[ -n "${VUE_APPS:-}" ]]; then
-    IFS=',' read -ra apps <<< "$VUE_APPS"
+    IFS=',' read -ra apps <<<"$VUE_APPS"
     for app in "${apps[@]}"; do
       app=$(echo "$app" | xargs)
       local app_port=$((port_counter++))
@@ -490,7 +490,7 @@ generate_frontend_routes() {
 
   # Process Angular apps
   if [[ -n "${ANGULAR_APPS:-}" ]]; then
-    IFS=',' read -ra apps <<< "$ANGULAR_APPS"
+    IFS=',' read -ra apps <<<"$ANGULAR_APPS"
     for app in "${apps[@]}"; do
       app=$(echo "$app" | xargs)
       local app_port=$((port_counter++))
@@ -500,7 +500,7 @@ generate_frontend_routes() {
 
   # Process Svelte apps
   if [[ -n "${SVELTE_APPS:-}" ]]; then
-    IFS=',' read -ra apps <<< "$SVELTE_APPS"
+    IFS=',' read -ra apps <<<"$SVELTE_APPS"
     for app in "${apps[@]}"; do
       app=$(echo "$app" | xargs)
       local app_port=$((port_counter++))
@@ -515,7 +515,7 @@ generate_frontend_app_route() {
   local app_port="$2"
   local app_type="$3"
 
-  cat > "nginx/conf.d/${app_name}.conf" <<EOF
+  cat >"nginx/conf.d/${app_name}.conf" <<EOF
 # Frontend app: ${app_name} (${app_type})
 # Running locally on port ${app_port}
 

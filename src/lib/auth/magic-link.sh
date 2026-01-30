@@ -30,8 +30,8 @@ create_magic_link() {
 
   # Calculate expiry
   local expires_at
-  expires_at=$(date -u -d "+${MAGIC_LINK_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${MAGIC_LINK_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${MAGIC_LINK_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${MAGIC_LINK_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Store token in database (create table if needed)
   local container
@@ -103,7 +103,7 @@ verify_magic_link() {
 
   # Parse link data
   local email expires_at used_at
-  read -r email expires_at used_at <<< "$(echo "$link_data" | xargs)"
+  read -r email expires_at used_at <<<"$(echo "$link_data" | xargs)"
 
   # Check if already used
   if [[ -n "$used_at" ]]; then

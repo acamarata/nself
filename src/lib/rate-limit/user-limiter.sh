@@ -91,19 +91,19 @@ user_tier_rate_limit_check() {
   case "$tier" in
     free)
       max_requests=100
-      window_seconds=3600  # 100 req/hour
+      window_seconds=3600 # 100 req/hour
       ;;
     basic)
       max_requests=1000
-      window_seconds=3600  # 1000 req/hour
+      window_seconds=3600 # 1000 req/hour
       ;;
     pro)
       max_requests=10000
-      window_seconds=3600  # 10000 req/hour
+      window_seconds=3600 # 10000 req/hour
       ;;
     enterprise)
       max_requests=100000
-      window_seconds=3600  # 100000 req/hour
+      window_seconds=3600 # 100000 req/hour
       ;;
     unlimited)
       # No limit

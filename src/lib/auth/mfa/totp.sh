@@ -8,10 +8,10 @@
 set -euo pipefail
 
 # TOTP configuration
-readonly TOTP_PERIOD=30           # Time step in seconds
-readonly TOTP_DIGITS=6            # Code length
-readonly TOTP_WINDOW=1            # Allow ±1 time window
-readonly TOTP_ISSUER="nself"      # Issuer name for QR codes
+readonly TOTP_PERIOD=30      # Time step in seconds
+readonly TOTP_DIGITS=6       # Code length
+readonly TOTP_WINDOW=1       # Allow ±1 time window
+readonly TOTP_ISSUER="nself" # Issuer name for QR codes
 
 # ============================================================================
 # TOTP Secret Generation
@@ -78,7 +78,7 @@ totp_verify_code() {
   code=$(echo "$code" | tr -d ' ' | sed 's/^0*//')
 
   # Check current window and ±TOTP_WINDOW windows
-  for ((i=-TOTP_WINDOW; i<=TOTP_WINDOW; i++)); do
+  for ((i = -TOTP_WINDOW; i <= TOTP_WINDOW; i++)); do
     local check_time=$((timestamp + (i * TOTP_PERIOD)))
     local expected_code
     expected_code=$(totp_generate_code "$secret" "$check_time")
@@ -250,7 +250,7 @@ totp_authenticate() {
   fi
 
   local secret enabled
-  read -r secret enabled <<< "$totp_data"
+  read -r secret enabled <<<"$totp_data"
 
   if [[ "$enabled" != "t" ]]; then
     echo "ERROR: TOTP not enabled for user" >&2

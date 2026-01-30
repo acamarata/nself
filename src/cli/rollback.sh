@@ -14,15 +14,15 @@ source "$SCRIPT_DIR/../lib/deployment/rollback.sh"
 # Command function
 cmd_rollback() {
   local target="${1:-}"
-  
+
   # Check for help
   if [[ "$target" == "--help" ]] || [[ "$target" == "-h" ]] || [[ -z "$target" ]]; then
     show_rollback_help
     return 0
   fi
-  
+
   show_command_header "nself rollback" "Rollback to previous version"
-  
+
   case "$target" in
     latest)
       # Rollback to latest backup
@@ -97,7 +97,7 @@ list_available_backups() {
   echo ""
   log_info "Available backups:"
   echo ""
-  
+
   local backup_dir="${BACKUP_DIR:-./backups}"
   if [[ -d "$backup_dir" ]]; then
     ls -1 "$backup_dir" | grep -E '^[0-9]{8}_[0-9]{6}$' | sort -r | head -10 | while read -r backup; do
@@ -106,7 +106,7 @@ list_available_backups() {
       echo "  $backup  ($date, $size)"
     done
   fi
-  
+
   # Check S3 backups if configured
   if [[ -n "${S3_BACKUP_BUCKET:-}" ]]; then
     echo ""
@@ -118,20 +118,20 @@ list_available_backups() {
 # Rollback to latest backup
 rollback_to_latest_backup() {
   log_info "Finding latest backup..."
-  
+
   local backup_dir="${BACKUP_DIR:-./backups}"
   local latest_backup=""
-  
+
   if [[ -d "$backup_dir" ]]; then
     latest_backup=$(ls -1 "$backup_dir" | grep -E '^[0-9]{8}_[0-9]{6}$' | sort -r | head -1)
   fi
-  
+
   if [[ -z "$latest_backup" ]]; then
     log_error "No backups found"
     log_info "Create a backup first with: nself backup create"
     return 1
   fi
-  
+
   log_info "Latest backup: $latest_backup"
   rollback_to_backup "$latest_backup"
 }
@@ -139,7 +139,7 @@ rollback_to_latest_backup() {
 # Rollback to specific backup
 rollback_to_backup() {
   local backup_id="$1"
-  
+
   # Confirm rollback
   echo ""
   log_warning "This will rollback to backup: $backup_id"
@@ -151,32 +151,32 @@ rollback_to_backup() {
     log_info "Rollback cancelled"
     return 1
   fi
-  
+
   # Create backup of current state
   log_info "Creating backup of current state..."
   nself backup create --label "before-rollback"
-  
+
   # Stop services
   log_info "Stopping services..."
   nself stop
-  
+
   # Restore backup
   log_info "Restoring from backup: $backup_id"
   nself backup restore "$backup_id"
-  
+
   # Start services
   log_info "Starting services..."
   nself start
-  
+
   log_success "Rollback completed successfully"
 }
 
 # Rollback database migrations
 rollback_migrations() {
   local steps="${1:-1}"
-  
+
   log_info "Rolling back $steps migration(s)..."
-  
+
   # Use Hasura CLI to rollback migrations
   if command -v hasura &>/dev/null; then
     cd hasura
@@ -193,43 +193,43 @@ rollback_migrations() {
 # Rollback deployment
 rollback_deployment() {
   log_info "Rolling back to previous deployment..."
-  
+
   # Check for deployment history
   local deploy_history=".nself/deployments"
   if [[ ! -d "$deploy_history" ]]; then
     log_error "No deployment history found"
     return 1
   fi
-  
+
   # Get previous deployment
   local previous=$(ls -1 "$deploy_history" | sort -r | head -2 | tail -1)
   if [[ -z "$previous" ]]; then
     log_error "No previous deployment found"
     return 1
   fi
-  
+
   log_info "Previous deployment: $previous"
-  
+
   # Restore previous deployment
   cp "$deploy_history/$previous/docker-compose.yml" docker-compose.yml
   cp "$deploy_history/$previous/.env.local" .env.local 2>/dev/null || true
-  
+
   # Restart services
   nself restart
-  
+
   log_success "Rolled back to deployment: $previous"
 }
 
 # Rollback configuration
 rollback_config() {
   log_info "Rolling back configuration..."
-  
+
   # Check for config backups
   if [[ -f ".env.local.backup" ]]; then
     log_info "Found configuration backup"
     cp .env.local.backup .env.local
     log_success "Configuration rolled back"
-    
+
     # Rebuild and restart
     log_info "Rebuilding with previous configuration..."
     nself build

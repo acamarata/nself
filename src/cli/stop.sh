@@ -30,45 +30,45 @@ cmd_stop() {
   # Parse options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-    --volumes | -v)
-      remove_volumes=true
-      shift
-      ;;
-    --rmi | --remove-images)
-      remove_images=true
-      shift
-      ;;
-    --remove-orphans)
-      remove_orphans=true
-      shift
-      ;;
-    --graceful)
-      if [[ -n "$2" ]] && [[ "$2" =~ ^[0-9]+$ ]]; then
-        graceful_timeout="$2"
-        shift 2
-      else
-        graceful_timeout=30
+      --volumes | -v)
+        remove_volumes=true
         shift
-      fi
-      ;;
-    --verbose)
-      verbose=true
-      shift
-      ;;
-    --help | -h)
-      show_down_help
-      return 0
-      ;;
-    -*)
-      log_error "Unknown option: $1"
-      show_down_help
-      return 1
-      ;;
-    *)
-      # Assume it's a service name
-      services_to_stop="$services_to_stop $1"
-      shift
-      ;;
+        ;;
+      --rmi | --remove-images)
+        remove_images=true
+        shift
+        ;;
+      --remove-orphans)
+        remove_orphans=true
+        shift
+        ;;
+      --graceful)
+        if [[ -n "$2" ]] && [[ "$2" =~ ^[0-9]+$ ]]; then
+          graceful_timeout="$2"
+          shift 2
+        else
+          graceful_timeout=30
+          shift
+        fi
+        ;;
+      --verbose)
+        verbose=true
+        shift
+        ;;
+      --help | -h)
+        show_down_help
+        return 0
+        ;;
+      -*)
+        log_error "Unknown option: $1"
+        show_down_help
+        return 1
+        ;;
+      *)
+        # Assume it's a service name
+        services_to_stop="$services_to_stop $1"
+        shift
+        ;;
     esac
   done
 
@@ -121,7 +121,7 @@ cmd_stop() {
 
   # Show header first (no extra echo before it)
   show_command_header "nself stop" "Stop services and containers"
-  
+
   # Stop health monitoring daemon if running
   if [[ -f "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh" ]]; then
     source "$SCRIPT_DIR/../lib/auto-fix/health-check-daemon.sh"

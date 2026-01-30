@@ -89,7 +89,7 @@ load_env_for_detection() {
         set +a
       fi
       ;;
-    prod|production)
+    prod | production)
       if [[ -f ".env.prod" ]]; then
         set -a
         source ".env.prod" 2>/dev/null || true
@@ -157,7 +157,7 @@ detect_custom_services() {
       CUSTOM_SERVICE_COUNT=$((CUSTOM_SERVICE_COUNT + 1))
 
       # Parse service definition
-      IFS=':' read -r name template port <<< "$cs_value"
+      IFS=':' read -r name template port <<<"$cs_value"
 
       # Export service details for build
       export "CS_${i}_NAME=$name"
@@ -266,7 +266,7 @@ build_all_components() {
   else
     # Basic database init
     mkdir -p postgres/init
-    cat > postgres/init/00-init.sql <<'EOF'
+    cat >postgres/init/00-init.sql <<'EOF'
 -- Database initialization
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -339,10 +339,10 @@ copy_custom_service_templates() {
           find "$service_dir" -type f \( -name "*.js" -o -name "*.ts" -o -name "*.py" \
             -o -name "*.go" -o -name "*.json" -o -name "*.yml" -o -name "Dockerfile*" \) \
             -exec sed -i.bak \
-              -e "s/{{SERVICE_NAME}}/$name/g" \
-              -e "s/{{SERVICE_PORT}}/$port/g" \
-              -e "s/{{PROJECT_NAME}}/\${PROJECT_NAME}/g" \
-              {} \; 2>/dev/null || true
+            -e "s/{{SERVICE_NAME}}/$name/g" \
+            -e "s/{{SERVICE_PORT}}/$port/g" \
+            -e "s/{{PROJECT_NAME}}/\${PROJECT_NAME}/g" \
+            {} \; 2>/dev/null || true
 
           # Remove .template extensions
           find "$service_dir" -name "*.template" -exec bash -c 'mv "$1" "${1%.template}"' _ {} \;

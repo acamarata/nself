@@ -62,9 +62,9 @@ redis_rate_limit_check() {
     --eval <(echo "$lua_script") "$rate_key" , "$max_requests" "$window_seconds" "$now" 2>/dev/null)
 
   if [[ "$result" == "1" ]]; then
-    return 0  # Allowed
+    return 0 # Allowed
   else
-    return 1  # Rate limited
+    return 1 # Rate limited
   fi
 }
 
@@ -125,10 +125,16 @@ redis_rate_limit_stats() {
   local connection_name="${3:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "{}"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "{}"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "{}"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "{}"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -249,7 +255,7 @@ redis_rate_limit_cluster() {
   local connection_name="node_$node_id"
 
   # Try to use specific node, fallback to main
-  redis_rate_limit_check "$key" "$max_requests" "$window_seconds" "$connection_name" 2>/dev/null || \
+  redis_rate_limit_check "$key" "$max_requests" "$window_seconds" "$connection_name" 2>/dev/null ||
     redis_rate_limit_check "$key" "$max_requests" "$window_seconds" "main"
 }
 

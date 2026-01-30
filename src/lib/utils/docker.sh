@@ -53,15 +53,15 @@ compose() {
 
   local project="${PROJECT_NAME:-nself}"
   local compose_files=""
-  
+
   # Always use main docker-compose.yml
   compose_files="-f docker-compose.yml"
-  
+
   # Add custom services if exists
   if [[ -f "docker-compose.custom.yml" ]]; then
     compose_files="$compose_files -f docker-compose.custom.yml"
   fi
-  
+
   # Add override if exists
   if [[ -f "docker-compose.override.yml" ]]; then
     compose_files="$compose_files -f docker-compose.override.yml"
@@ -183,17 +183,17 @@ wait_service_healthy() {
     local health=$(service_health "$service")
 
     case "$health" in
-    healthy | running)
-      log_success "$service is healthy"
-      return 0
-      ;;
-    starting)
-      sleep 2
-      ;;
-    unhealthy | stopped)
-      log_error "$service is $health"
-      return 1
-      ;;
+      healthy | running)
+        log_success "$service is healthy"
+        return 0
+        ;;
+      starting)
+        sleep 2
+        ;;
+      unhealthy | stopped)
+        log_error "$service is $health"
+        return 1
+        ;;
     esac
   done
 

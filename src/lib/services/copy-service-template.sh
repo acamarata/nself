@@ -10,9 +10,9 @@ get_templates_root() {
 
   # Check various possible locations
   for dir in "$script_dir/../../templates/services" \
-             "$NSELF_ROOT/src/templates/services" \
-             "$NSELF_ROOT/templates/services" \
-             "/usr/local/share/nself/src/templates/services"; do
+    "$NSELF_ROOT/src/templates/services" \
+    "$NSELF_ROOT/templates/services" \
+    "/usr/local/share/nself/src/templates/services"; do
     if [[ -d "$dir" ]]; then
       templates_dir="$dir"
       break
@@ -40,7 +40,7 @@ copy_service_template() {
   case "$service_type" in
     express-js) template_path="$templates_root/js/express-js" ;;
     fastify-js) template_path="$templates_root/js/fastify-js" ;;
-    nestjs-js|nest-js) template_path="$templates_root/js/nest-js" ;;
+    nestjs-js | nest-js) template_path="$templates_root/js/nest-js" ;;
     bullmq-js) template_path="$templates_root/js/bullmq-js" ;;
     node-js) template_path="$templates_root/js/node-js" ;;
     fastapi) template_path="$templates_root/py/fastapi" ;;
@@ -92,11 +92,11 @@ process_template_variables() {
 
     # Replace common placeholders
     sed -e "s/{{SERVICE_NAME}}/$service_name/g" \
-        -e "s/{{PROJECT_NAME}}/${PROJECT_NAME:-nself}/g" \
-        -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN:-localhost}/g" \
-        -e "s/{{PORT}}/$service_port/g" \
-        -e "s/{{ENV}}/${ENV:-dev}/g" \
-        "$template_file" > "$output_file"
+      -e "s/{{PROJECT_NAME}}/${PROJECT_NAME:-nself}/g" \
+      -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN:-localhost}/g" \
+      -e "s/{{PORT}}/$service_port/g" \
+      -e "s/{{ENV}}/${ENV:-dev}/g" \
+      "$template_file" >"$output_file"
 
     rm "$template_file"
   done
@@ -105,26 +105,26 @@ process_template_variables() {
   if [[ -f "$target_dir/package.json" ]]; then
     # Use temporary file for compatibility
     local temp_file=$(mktemp)
-    sed "s/\"name\": \"[^\"]*\"/\"name\": \"$service_name\"/" "$target_dir/package.json" > "$temp_file"
+    sed "s/\"name\": \"[^\"]*\"/\"name\": \"$service_name\"/" "$target_dir/package.json" >"$temp_file"
     mv "$temp_file" "$target_dir/package.json"
   fi
 
   # Update go.mod if it exists
   if [[ -f "$target_dir/go.mod" ]]; then
     local temp_file=$(mktemp)
-    sed "s|module .*|module $service_name|" "$target_dir/go.mod" > "$temp_file"
+    sed "s|module .*|module $service_name|" "$target_dir/go.mod" >"$temp_file"
     mv "$temp_file" "$target_dir/go.mod"
   fi
 
   # Update Cargo.toml if it exists
   if [[ -f "$target_dir/Cargo.toml" ]]; then
     local temp_file=$(mktemp)
-    sed "s/name = \"[^\"]*\"/name = \"$service_name\"/" "$target_dir/Cargo.toml" > "$temp_file"
+    sed "s/name = \"[^\"]*\"/name = \"$service_name\"/" "$target_dir/Cargo.toml" >"$temp_file"
     mv "$temp_file" "$target_dir/Cargo.toml"
   fi
 
   # Create .env file with service configuration
-  cat > "$target_dir/.env" <<EOF
+  cat >"$target_dir/.env" <<EOF
 SERVICE_NAME=$service_name
 PORT=$service_port
 NODE_ENV=production
@@ -182,7 +182,7 @@ list_service_templates() {
     if [[ -d "$lang_dir" ]]; then
       local lang=$(basename "$lang_dir")
       case "$lang" in
-        js|py|go) continue ;;
+        js | py | go) continue ;;
         *)
           echo ""
           echo "${lang^}:"
@@ -220,7 +220,7 @@ build_custom_services_from_templates() {
       if copy_service_template "$service_name" "$service_type" "services/$service_name"; then
         # Update port in the copied service
         if [[ -f "services/$service_name/.env" ]]; then
-          echo "PORT=$service_port" >> "services/$service_name/.env"
+          echo "PORT=$service_port" >>"services/$service_name/.env"
         fi
         services_built=$((services_built + 1))
       else

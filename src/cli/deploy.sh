@@ -149,12 +149,30 @@ deploy_environment() {
   # Parse options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --dry-run) dry_run=true; shift ;;
-      --force) force=true; shift ;;
-      --rolling) rolling=true; shift ;;
-      --skip-health) skip_health=true; shift ;;
-      --include-frontends) include_frontends="true"; shift ;;
-      --exclude-frontends|--backend-only) include_frontends="false"; shift ;;
+      --dry-run)
+        dry_run=true
+        shift
+        ;;
+      --force)
+        force=true
+        shift
+        ;;
+      --rolling)
+        rolling=true
+        shift
+        ;;
+      --skip-health)
+        skip_health=true
+        shift
+        ;;
+      --include-frontends)
+        include_frontends="true"
+        shift
+        ;;
+      --exclude-frontends | --backend-only)
+        include_frontends="false"
+        shift
+        ;;
       *) shift ;;
     esac
   done
@@ -239,7 +257,7 @@ cmd_upgrade() {
     rollback)
       upgrade_rollback
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_upgrade_help
       ;;
     *)
@@ -265,9 +283,9 @@ upgrade_check_updates() {
     cli_info "Checking for updates..."
 
     local latest_version
-    latest_version=$(curl -s https://api.github.com/repos/acamarata/nself/releases/latest \
-      | grep '"tag_name"' \
-      | sed -E 's/.*"v?([0-9.]+)".*/\1/' 2>/dev/null || echo "")
+    latest_version=$(curl -s https://api.github.com/repos/acamarata/nself/releases/latest |
+      grep '"tag_name"' |
+      sed -E 's/.*"v?([0-9.]+)".*/\1/' 2>/dev/null || echo "")
 
     if [[ -n "$latest_version" ]]; then
       cli_info "Latest version: $latest_version"
@@ -413,7 +431,7 @@ cmd_server() {
     add)
       server_add "$@"
       ;;
-    remove|rm)
+    remove | rm)
       server_remove "$@"
       ;;
     ssh)
@@ -422,7 +440,7 @@ cmd_server() {
     info)
       server_info "$@"
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_server_help
       ;;
     *)
@@ -448,27 +466,27 @@ server_init() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|-h)
+      --host | -h)
         host="$2"
         shift 2
         ;;
-      --user|-u)
+      --user | -u)
         user="$2"
         shift 2
         ;;
-      --port|-p)
+      --port | -p)
         port="$2"
         shift 2
         ;;
-      --key|-k)
+      --key | -k)
         key_file="$2"
         shift 2
         ;;
-      --env|-e)
+      --env | -e)
         env_name="$2"
         shift 2
         ;;
-      --domain|-d)
+      --domain | -d)
         domain="$2"
         shift 2
         ;;
@@ -480,7 +498,7 @@ server_init() {
         skip_dns="true"
         shift
         ;;
-      --yes|-y)
+      --yes | -y)
         auto_yes="true"
         shift
         ;;
@@ -818,7 +836,7 @@ cmd_sync() {
     full)
       sync_full "$@"
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_sync_help
       ;;
     *)
@@ -892,7 +910,7 @@ init_servers_config() {
   mkdir -p "$SERVERS_DIR"
 
   if [[ ! -f "$SERVERS_FILE" ]]; then
-    printf '{"servers": []}\n' > "$SERVERS_FILE"
+    printf '{"servers": []}\n' >"$SERVERS_FILE"
   fi
 }
 
@@ -912,7 +930,7 @@ cmd_deploy() {
   # Route to appropriate handler
   case "$subcommand" in
     # Environment deployment
-    staging|production|prod|dev|test)
+    staging | production | prod | dev | test)
       shift
       deploy_environment "$subcommand" "$@"
       ;;
@@ -942,7 +960,7 @@ cmd_deploy() {
       ;;
 
     # Legacy/compatibility subcommands
-    init|check|status|rollback|logs|health)
+    init | check | status | rollback | logs | health)
       # These can be implemented or redirect to environment-specific versions
       cli_warning "Legacy command - use 'nself deploy <environment>' instead"
       show_deploy_help

@@ -63,7 +63,7 @@ setup_firebase_tools() {
   cd "$workspace"
 
   # Create package.json
-  cat > package.json << 'EOF'
+  cat >package.json <<'EOF'
 {
   "name": "nself-firebase-migration",
   "version": "1.0.0",
@@ -92,7 +92,7 @@ EOF
 export_firestore_data() {
   local service_account="$1"
   local output_dir="$2"
-  local collections="$3"  # Comma-separated list or "all"
+  local collections="$3" # Comma-separated list or "all"
 
   log_info "Exporting Firestore data..."
 
@@ -101,7 +101,7 @@ export_firestore_data() {
   # Create export script
   local export_script="$output_dir/export-firestore.js"
 
-  cat > "$export_script" << 'EOFJS'
+  cat >"$export_script" <<'EOFJS'
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -203,7 +203,7 @@ export_firebase_auth() {
   # Create export script
   local export_script="$output_dir/export-auth.js"
 
-  cat > "$export_script" << 'EOFJS'
+  cat >"$export_script" <<'EOFJS'
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -300,7 +300,7 @@ export_firebase_storage() {
   # Create export script
   local export_script="$output_dir/export-storage.js"
 
-  cat > "$export_script" << 'EOFJS'
+  cat >"$export_script" <<'EOFJS'
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -411,7 +411,7 @@ import_firestore_to_postgres() {
   # Create import script
   local import_script="$data_dir/import-to-postgres.js"
 
-  cat > "$import_script" << 'EOFJS'
+  cat >"$import_script" <<'EOFJS'
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
@@ -568,7 +568,7 @@ import_firebase_auth_to_nhost() {
   # Create import script
   local import_script="$data_dir/import-auth.js"
 
-  cat > "$import_script" << 'EOFJS'
+  cat >"$import_script" <<'EOFJS'
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');

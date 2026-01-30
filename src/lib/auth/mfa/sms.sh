@@ -9,9 +9,9 @@ set -euo pipefail
 
 # SMS MFA configuration
 readonly SMS_CODE_LENGTH=6
-readonly SMS_CODE_EXPIRY=300      # 5 minutes
+readonly SMS_CODE_EXPIRY=300 # 5 minutes
 readonly SMS_MAX_ATTEMPTS=3
-readonly SMS_RATE_LIMIT=60        # 1 minute between sends
+readonly SMS_RATE_LIMIT=60 # 1 minute between sends
 
 # ============================================================================
 # SMS Code Generation
@@ -114,10 +114,10 @@ sms_send_code() {
     twilio)
       sms_send_twilio "$phone" "$code"
       ;;
-    aws|sns)
+    aws | sns)
       sms_send_aws_sns "$phone" "$code"
       ;;
-    dev|development)
+    dev | development)
       sms_send_dev "$phone" "$code"
       ;;
     *)
@@ -237,8 +237,8 @@ sms_send_verification() {
 
   # Calculate expiry
   local expires_at
-  expires_at=$(date -u -d "+${SMS_CODE_EXPIRY} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${SMS_CODE_EXPIRY}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${SMS_CODE_EXPIRY} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${SMS_CODE_EXPIRY}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Store code
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
@@ -288,7 +288,7 @@ sms_verify() {
   fi
 
   local stored_code expires_at attempts
-  read -r stored_code expires_at attempts <<< "$sms_data"
+  read -r stored_code expires_at attempts <<<"$sms_data"
 
   # Check max attempts
   if [[ "$attempts" -ge "$SMS_MAX_ATTEMPTS" ]]; then

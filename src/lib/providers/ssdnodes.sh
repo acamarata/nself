@@ -20,7 +20,7 @@ provider_ssdnodes_init() {
     log_warning "SSH key not found at $ssh_key_path"
   fi
 
-  cat > "$config_dir/ssdnodes.yml" << EOF
+  cat >"$config_dir/ssdnodes.yml" <<EOF
 provider: ssdnodes
 ssh_key_path: "$ssh_key_path"
 default_location: dallas
@@ -134,12 +134,12 @@ provider_ssdnodes_estimate_cost() {
   local size="${1:-small}"
   # SSDNodes has exceptional value
   case "$size" in
-    tiny)   echo "5" ;;   # Smallest available
-    small)  echo "10" ;;  # Performance plan
-    medium) echo "15" ;;  # Pro plan
-    large)  echo "25" ;;  # Elite plan
-    xlarge) echo "40" ;;  # Custom/larger
-    *)      echo "10" ;;
+    tiny) echo "5" ;;    # Smallest available
+    small) echo "10" ;;  # Performance plan
+    medium) echo "15" ;; # Pro plan
+    large) echo "25" ;;  # Elite plan
+    xlarge) echo "40" ;; # Custom/larger
+    *) echo "10" ;;
   esac
 }
 

@@ -12,7 +12,10 @@ readonly COMPLIANCE_HIPAA="hipaa"
 # Initialize compliance framework
 compliance_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS compliance;
@@ -129,7 +132,7 @@ gdpr_export_user_data() {
        'exported_at', NOW()
      );" 2>/dev/null | xargs)
 
-  echo "$user_data" | jq '.' > "$output_file"
+  echo "$user_data" | jq '.' >"$output_file"
 
   # Record export request
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
@@ -194,7 +197,10 @@ compliance_add_control() {
   local standard_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
     "SELECT id FROM compliance.standards WHERE name = '$standard';" 2>/dev/null | xargs)
 
-  [[ -z "$standard_id" ]] && { echo "ERROR: Standard not found" >&2; return 1; }
+  [[ -z "$standard_id" ]] && {
+    echo "ERROR: Standard not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
     "INSERT INTO compliance.controls (standard_id, control_id, control_name, description, category, implementation_status)
@@ -204,7 +210,7 @@ compliance_add_control() {
 # Update control status
 compliance_update_control_status() {
   local control_id="$1"
-  local status="$2"  # not_implemented, in_progress, implemented, not_applicable
+  local status="$2" # not_implemented, in_progress, implemented, not_applicable
   local evidence="${3:-[]}"
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)

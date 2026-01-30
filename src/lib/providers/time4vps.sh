@@ -15,7 +15,7 @@ provider_time4vps_init() {
   read -rsp "Time4VPS API Password: " password
   echo
 
-  cat > "$config_dir/time4vps.yml" << EOF
+  cat >"$config_dir/time4vps.yml" <<EOF
 provider: time4vps
 username: "$username"
 password: "$password"
@@ -81,12 +81,12 @@ provider_time4vps_provision() {
   # Map size to plan
   local plan
   case "$size" in
-    tiny)   plan="Linux1" ;;
-    small)  plan="Linux2" ;;
+    tiny) plan="Linux1" ;;
+    small) plan="Linux2" ;;
     medium) plan="Linux4" ;;
-    large)  plan="Linux8" ;;
+    large) plan="Linux8" ;;
     xlarge) plan="Linux16" ;;
-    *)      plan="Linux2" ;;
+    *) plan="Linux2" ;;
   esac
 
   log_info "Provisioning Time4VPS: $name ($plan)..."
@@ -170,12 +170,12 @@ provider_time4vps_get_ip() {
 provider_time4vps_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "3" ;;   # Linux1
-    small)  echo "4" ;;   # Linux2
-    medium) echo "6" ;;   # Linux4
-    large)  echo "10" ;;  # Linux8
-    xlarge) echo "18" ;;  # Linux16
-    *)      echo "4" ;;
+    tiny) echo "3" ;;    # Linux1
+    small) echo "4" ;;   # Linux2
+    medium) echo "6" ;;  # Linux4
+    large) echo "10" ;;  # Linux8
+    xlarge) echo "18" ;; # Linux16
+    *) echo "4" ;;
   esac
 }
 

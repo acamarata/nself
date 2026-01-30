@@ -6,32 +6,32 @@
 
 # Source display.sh if not already loaded (use local variable to avoid conflicts)
 if [[ -z "${DISPLAY_SOURCED:-}" ]]; then
-    _OUTPUT_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$_OUTPUT_SH_DIR/display.sh"
-    unset _OUTPUT_SH_DIR
+  _OUTPUT_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$_OUTPUT_SH_DIR/display.sh"
+  unset _OUTPUT_SH_DIR
 fi
 
 # Backward compatibility aliases
 info() {
-    log_info "$@"
+  log_info "$@"
 }
 
 success() {
-    log_success "$@"
+  log_success "$@"
 }
 
 warning() {
-    log_warning "$@"
+  log_warning "$@"
 }
 
 error() {
-    log_error "$@"
+  log_error "$@"
 }
 
 debug() {
-    log_debug "$@"
+  log_debug "$@"
 }
 
 header() {
-    log_header "$@"
+  log_header "$@"
 }

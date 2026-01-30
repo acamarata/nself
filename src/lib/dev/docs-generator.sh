@@ -26,7 +26,7 @@ generate_graphql_docs() {
   mkdir -p "$output_dir"
 
   # Generate overview documentation
-  cat > "$output_dir/README.md" <<'EOF'
+  cat >"$output_dir/README.md" <<'EOF'
 # API Documentation
 
 ## GraphQL API
@@ -211,7 +211,7 @@ For issues or questions:
 EOF
 
   # Generate Postman collection template
-  cat > "$output_dir/postman-collection.json" <<'EOF'
+  cat >"$output_dir/postman-collection.json" <<'EOF'
 {
   "info": {
     "name": "nself API",
@@ -355,7 +355,7 @@ generate_openapi_spec() {
 
   mkdir -p "$(dirname "$output_file")"
 
-  cat > "$output_file" <<'EOF'
+  cat >"$output_file" <<'EOF'
 openapi: 3.0.3
 info:
   title: nself API
@@ -695,7 +695,7 @@ generate_docs() {
   mkdir -p "$output_dir/examples"
 
   # Create example queries
-  cat > "$output_dir/examples/queries.graphql" <<'EOF'
+  cat >"$output_dir/examples/queries.graphql" <<'EOF'
 # Get all users
 query GetUsers {
   users {
@@ -745,7 +745,7 @@ query GetUsersPaginated($limit: Int!, $offset: Int!) {
 }
 EOF
 
-  cat > "$output_dir/examples/mutations.graphql" <<'EOF'
+  cat >"$output_dir/examples/mutations.graphql" <<'EOF'
 # Sign up new user
 mutation SignUp($email: String!, $password: String!, $displayName: String) {
   signUp(email: $email, password: $password, displayName: $displayName) {
@@ -787,7 +787,7 @@ mutation DeleteUser($id: uuid!) {
 }
 EOF
 
-  cat > "$output_dir/examples/subscriptions.graphql" <<'EOF'
+  cat >"$output_dir/examples/subscriptions.graphql" <<'EOF'
 # Subscribe to new users
 subscription OnUserCreated {
   users(order_by: {createdAt: desc}, limit: 1) {

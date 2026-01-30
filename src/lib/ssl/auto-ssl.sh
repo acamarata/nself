@@ -12,26 +12,26 @@ source "$SSL_LIB_DIR/ssl.sh" 2>/dev/null || true
 auto_detect_domains() {
   local domains=()
   local base_domain="${BASE_DOMAIN:-local.nself.org}"
-  
+
   # Always include base domain
   domains+=("$base_domain")
   domains+=("*.$base_domain")
-  
+
   # Scan nginx configs for server_name directives
   if [[ -d "nginx" ]]; then
-    local detected_domains=$(find nginx -name "*.conf" -exec grep -h "server_name" {} \; 2>/dev/null | \
-      sed 's/.*server_name[[:space:]]*\([^;]*\);.*/\1/' | \
-      tr ' ' '\n' | \
-      grep -v "^$" | \
+    local detected_domains=$(find nginx -name "*.conf" -exec grep -h "server_name" {} \; 2>/dev/null |
+      sed 's/.*server_name[[:space:]]*\([^;]*\);.*/\1/' |
+      tr ' ' '\n' |
+      grep -v "^$" |
       sort -u)
-    
+
     while IFS= read -r domain; do
       if [[ -n "$domain" ]] && [[ "$domain" != "_" ]]; then
         domains+=("$domain")
       fi
-    done <<< "$detected_domains"
+    done <<<"$detected_domains"
   fi
-  
+
   # Remove duplicates and wildcards that are covered
   printf "%s\n" "${domains[@]}" | sort -u
 }
@@ -39,20 +39,20 @@ auto_detect_domains() {
 # Automatically set up SSL for all detected domains
 auto_setup_ssl() {
   log_info "🔒 Setting up automatic SSL..."
-  
+
   # Detect all domains
   local domains=($(auto_detect_domains))
   log_debug "Detected domains: ${domains[*]}"
-  
+
   # Ensure SSL tools are available
   if ! ssl::ensure_tools; then
     log_warning "SSL tools not available, skipping SSL setup"
     return 1
   fi
-  
+
   # Set up SSL certificates
   local ssl_success=false
-  
+
   # Try public wildcard first if DNS provider configured
   if [[ -n "${DNS_PROVIDER:-}" ]] && [[ -n "${DNS_API_TOKEN:-}" ]]; then
     log_info "🌐 Attempting public wildcard certificate..."
@@ -63,7 +63,7 @@ auto_setup_ssl() {
       log_warning "⚠ Public wildcard failed, falling back to local certificates"
     fi
   fi
-  
+
   # Fall back to local certificates if needed
   if [[ "$ssl_success" != "true" ]]; then
     log_info "🏠 Generating local certificates..."
@@ -72,18 +72,18 @@ auto_setup_ssl() {
       log_success "✓ Local certificates generated"
     fi
   fi
-  
+
   if [[ "$ssl_success" == "true" ]]; then
     # Copy certificates to project
     ssl::copy_into_project "."
     ssl::render_nginx_snippets "."
-    
+
     # Set up automatic renewal monitoring
     setup_automatic_renewal
-    
+
     # Trust certificates if not already trusted
     check_and_install_trust
-    
+
     return 0
   else
     log_error "✗ SSL setup failed"
@@ -94,10 +94,10 @@ auto_setup_ssl() {
 # Set up automatic renewal with safer 7-day margin
 setup_automatic_renewal() {
   log_debug "Setting up automatic SSL renewal..."
-  
+
   # Create enhanced renewal script
   local renewal_script="/tmp/nself-ssl-auto-renewal.sh"
-  cat > "$renewal_script" <<'EOF'
+  cat >"$renewal_script" <<'EOF'
 #!/usr/bin/env bash
 # nself automatic SSL renewal script
 # Runs daily to check and renew certificates 7+ days before expiry
@@ -189,13 +189,16 @@ fi
 
 log "INFO: Daily SSL check completed"
 EOF
-  
+
   chmod +x "$renewal_script"
-  
+
   # Add to crontab if not already present
   local cron_line="0 3 * * * $renewal_script"
   if ! crontab -l 2>/dev/null | grep -q "nself-ssl-auto-renewal"; then
-    (crontab -l 2>/dev/null || true; echo "$cron_line") | crontab -
+    (
+      crontab -l 2>/dev/null || true
+      echo "$cron_line"
+    ) | crontab -
     log_success "✓ Automatic SSL renewal scheduled (daily at 3 AM)"
     log_info "  • Checks certificates daily"
     log_info "  • Renews 7+ days before expiry"
@@ -225,61 +228,61 @@ check_and_install_trust() {
 auto_detect_microservices() {
   local services=()
   local base_domain="${BASE_DOMAIN:-local.nself.org}"
-  
+
   # Check docker-compose for custom services
   if [[ -f "docker-compose.yml" ]]; then
     # Extract service names that might need SSL
-    local custom_services=$(grep -E "^[[:space:]]*[a-zA-Z][a-zA-Z0-9_-]*:" docker-compose.yml | \
-      sed 's/^[[:space:]]*//' | sed 's/:.*//' | \
+    local custom_services=$(grep -E "^[[:space:]]*[a-zA-Z][a-zA-Z0-9_-]*:" docker-compose.yml |
+      sed 's/^[[:space:]]*//' | sed 's/:.*//' |
       grep -v -E "^(postgres|redis|mailpit)$")
-    
+
     while IFS= read -r service; do
       if [[ -n "$service" ]]; then
         services+=("$service.$base_domain")
       fi
-    done <<< "$custom_services"
+    done <<<"$custom_services"
   fi
-  
+
   # Check for NestJS services
   if [[ "${NESTJS_ENABLED:-false}" == "true" ]] && [[ -n "${NESTJS_SERVICES:-}" ]]; then
-    IFS=',' read -ra nestjs_services <<< "${NESTJS_SERVICES}"
+    IFS=',' read -ra nestjs_services <<<"${NESTJS_SERVICES}"
     for service in "${nestjs_services[@]}"; do
       services+=("$service.$base_domain")
     done
   fi
-  
+
   # Check for Go services
   if [[ "${GOLANG_ENABLED:-false}" == "true" ]] && [[ -n "${GOLANG_SERVICES:-}" ]]; then
-    IFS=',' read -ra go_services <<< "${GOLANG_SERVICES}"
+    IFS=',' read -ra go_services <<<"${GOLANG_SERVICES}"
     for service in "${go_services[@]}"; do
       services+=("$service.$base_domain")
     done
   fi
-  
+
   # Check for Python services
   if [[ "${PYTHON_ENABLED:-false}" == "true" ]] && [[ -n "${PYTHON_SERVICES:-}" ]]; then
-    IFS=',' read -ra python_services <<< "${PYTHON_SERVICES}"
+    IFS=',' read -ra python_services <<<"${PYTHON_SERVICES}"
     for service in "${python_services[@]}"; do
       services+=("$service.$base_domain")
     done
   fi
-  
+
   printf "%s\n" "${services[@]}" | sort -u
 }
 
 # Main auto-SSL function called during build
 auto_ssl_build_integration() {
   log_info "🔄 Checking SSL configuration..."
-  
+
   # Skip if SSL is explicitly disabled
   if [[ "${SSL_ENABLED:-true}" == "false" ]]; then
     log_info "SSL disabled in configuration, skipping"
     return 0
   fi
-  
+
   # Check if certificates exist and are valid
   local needs_ssl=false
-  
+
   if [[ ! -f "nginx/ssl/cert.pem" ]] || [[ ! -f "nginx/ssl/privkey.pem" ]]; then
     needs_ssl=true
     log_debug "SSL certificates not found"
@@ -290,14 +293,14 @@ auto_ssl_build_integration() {
       local expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$expiry_date" +%s 2>/dev/null || echo "0")
       local now_epoch=$(date +%s)
       local days_until_expiry=$(((expiry_epoch - now_epoch) / 86400))
-      
+
       if [[ $days_until_expiry -lt 7 ]]; then
         needs_ssl=true
         log_debug "SSL certificates expire in $days_until_expiry days"
       fi
     fi
   fi
-  
+
   # Set up SSL if needed
   if [[ "$needs_ssl" == "true" ]]; then
     if auto_setup_ssl; then
@@ -308,12 +311,12 @@ auto_ssl_build_integration() {
     fi
   else
     log_debug "SSL certificates are current"
-    
+
     # Still set up auto-renewal if not already done
     setup_automatic_renewal
     check_and_install_trust
   fi
-  
+
   return 0
 }
 

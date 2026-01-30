@@ -5,7 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || source "$SCRIPT_DIR/../../lib/utils/platform-compat.sh" 2>/dev/null || {
   # Fallback definition
   safe_sed_inline() {
-    local file="$1"; shift
+    local file="$1"
+    shift
     if [[ "$OSTYPE" == "darwin"* ]]; then
       sed -i "" "$@" "$file"
     else
@@ -135,7 +136,7 @@ ensure_working_defaults() {
       needs_update=true
     else
       # Add new line
-      echo "PROJECT_NAME=myproject" >> "$env_file"
+      echo "PROJECT_NAME=myproject" >>"$env_file"
       needs_update=true
     fi
   fi
@@ -151,7 +152,7 @@ ensure_working_defaults() {
       fi
       needs_update=true
     else
-      echo "BASE_DOMAIN=local.nself.org" >> "$env_file"
+      echo "BASE_DOMAIN=local.nself.org" >>"$env_file"
       needs_update=true
     fi
   fi
@@ -167,7 +168,7 @@ ensure_working_defaults() {
       fi
       needs_update=true
     else
-      echo "ENV=dev" >> "$env_file"
+      echo "ENV=dev" >>"$env_file"
       needs_update=true
     fi
   fi
@@ -312,7 +313,7 @@ cmd_init() {
   local force_init=false
   local quiet_mode=false
   local script_dir="$1"
-  shift  # Remove script_dir from arguments
+  shift # Remove script_dir from arguments
 
   # Initialize platform and display
   init_platform
@@ -324,50 +325,50 @@ cmd_init() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
-    --full)
-      full_setup=true
-      shift
-      ;;
-    --wizard)
-      INIT_STATE="$INIT_STATE_IN_PROGRESS"
-      run_wizard
-      local wizard_result=$?
-      INIT_STATE="$INIT_STATE_COMPLETED"
-      return $wizard_result
-      ;;
-    --demo)
-      INIT_STATE="$INIT_STATE_IN_PROGRESS"
-      setup_demo "$script_dir"
-      local demo_result=$?
-      INIT_STATE="$INIT_STATE_COMPLETED"
-      return $demo_result
-      ;;
-    --admin)
-      INIT_STATE="$INIT_STATE_IN_PROGRESS"
-      setup_admin "$script_dir"
-      local admin_result=$?
-      INIT_STATE="$INIT_STATE_COMPLETED"
-      return $admin_result
-      ;;
-    --force)
-      force_init=true
-      FORCE_INIT=true
-      shift
-      ;;
-    --quiet | -q)
-      quiet_mode=true
-      QUIET_MODE=true
-      shift
-      ;;
-    -h | --help)
-      show_init_help
-      return $INIT_E_SUCCESS
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      echo "Use 'nself init --help' for usage information" >&2
-      return $INIT_E_MISUSE
-      ;;
+      --full)
+        full_setup=true
+        shift
+        ;;
+      --wizard)
+        INIT_STATE="$INIT_STATE_IN_PROGRESS"
+        run_wizard
+        local wizard_result=$?
+        INIT_STATE="$INIT_STATE_COMPLETED"
+        return $wizard_result
+        ;;
+      --demo)
+        INIT_STATE="$INIT_STATE_IN_PROGRESS"
+        setup_demo "$script_dir"
+        local demo_result=$?
+        INIT_STATE="$INIT_STATE_COMPLETED"
+        return $demo_result
+        ;;
+      --admin)
+        INIT_STATE="$INIT_STATE_IN_PROGRESS"
+        setup_admin "$script_dir"
+        local admin_result=$?
+        INIT_STATE="$INIT_STATE_COMPLETED"
+        return $admin_result
+        ;;
+      --force)
+        force_init=true
+        FORCE_INIT=true
+        shift
+        ;;
+      --quiet | -q)
+        quiet_mode=true
+        QUIET_MODE=true
+        shift
+        ;;
+      -h | --help)
+        show_init_help
+        return $INIT_E_SUCCESS
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        echo "Use 'nself init --help' for usage information" >&2
+        return $INIT_E_MISUSE
+        ;;
     esac
   done
 
@@ -383,7 +384,7 @@ cmd_init() {
     # Show header unless quiet (normal flow)
     if [[ "$quiet_mode" != true ]]; then
       show_command_header "nself init" "Initialize a new full-stack application"
-      echo ""  # Add blank line after header
+      echo "" # Add blank line after header
     fi
     # Perform validations (will show single line unless quiet)
     perform_all_validations "$force_init" "$quiet_mode" || return $?

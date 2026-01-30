@@ -16,7 +16,7 @@ cmd_admin() {
     users) admin_users_list "${2:-50}" "${3:-0}" ;;
     activity) admin_activity_recent "${2:-24}" ;;
     security) admin_security_events ;;
-    help|--help|-h)
+    help | --help | -h)
       cat <<'HELP'
 nself admin - Admin dashboard API
 
@@ -33,7 +33,10 @@ EXAMPLES:
   nself admin security
 HELP
       ;;
-    *) echo "ERROR: Unknown command" >&2; return 1 ;;
+    *)
+      echo "ERROR: Unknown command" >&2
+      return 1
+      ;;
   esac
 }
 

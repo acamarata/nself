@@ -32,7 +32,7 @@ get_active_deployment() {
   if [[ -f "$active_file" ]]; then
     cat "$active_file"
   else
-    echo "blue"  # Default to blue
+    echo "blue" # Default to blue
   fi
 }
 
@@ -41,7 +41,7 @@ set_active_deployment() {
   local color="$1"
 
   mkdir -p "$DEPLOYMENT_DIR"
-  echo "$color" > "$DEPLOYMENT_DIR/active"
+  echo "$color" >"$DEPLOYMENT_DIR/active"
 
   log_success "Active deployment set to: $color"
 }
@@ -74,10 +74,10 @@ create_deployment_snapshot() {
   local project_name="${PROJECT_NAME:-nself}"
 
   docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" \
-    > "$snapshot_dir/containers.txt" 2>/dev/null || true
+    >"$snapshot_dir/containers.txt" 2>/dev/null || true
 
   # Save metadata
-  cat > "$snapshot_dir/metadata.json" << EOF
+  cat >"$snapshot_dir/metadata.json" <<EOF
 {
   "timestamp": "$timestamp",
   "color": "$color",
@@ -142,7 +142,7 @@ check_deployment_health() {
     sleep "$HEALTH_CHECK_INTERVAL"
   done
 
-  echo ""  # Clear progress line
+  echo "" # Clear progress line
 
   if [[ "$all_healthy" == "true" ]]; then
     log_success "$color deployment is healthy"
@@ -274,12 +274,12 @@ perform_blue_green_deployment() {
   if [[ -f "$deployment_record" ]]; then
     # Append to existing history
     local temp_file=$(mktemp)
-    jq ". += [$record_entry]" "$deployment_record" > "$temp_file" 2>/dev/null && mv "$temp_file" "$deployment_record" || {
+    jq ". += [$record_entry]" "$deployment_record" >"$temp_file" 2>/dev/null && mv "$temp_file" "$deployment_record" || {
       # Fallback if jq not available
-      echo "$record_entry" >> "$deployment_record"
+      echo "$record_entry" >>"$deployment_record"
     }
   else
-    echo "[$record_entry]" > "$deployment_record"
+    echo "[$record_entry]" >"$deployment_record"
   fi
 
   log_success "Deployment completed successfully"

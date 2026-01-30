@@ -38,13 +38,11 @@ jobs:
 
       - name: Install nself
         run: |
-          # Install nself globally
-          sudo ./install.sh
-          # Add to PATH
-          echo "/usr/local/bin" >> $GITHUB_PATH
+          # Install nself system-wide (creates symlink at /usr/local/bin/nself)
+          sudo ./install.sh system
           # Verify installation
-          which nself || echo "nself not in PATH"
-          nself version || echo "nself not executable"
+          which nself
+          nself version
 
       - name: Create test project directory
         run: |

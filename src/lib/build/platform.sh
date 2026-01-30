@@ -22,7 +22,7 @@ detect_build_platform() {
         IS_WSL=true
       fi
       ;;
-    CYGWIN*|MINGW*|MSYS*)
+    CYGWIN* | MINGW* | MSYS*)
       PLATFORM="windows"
       IS_WINDOWS=true
       ;;
@@ -88,7 +88,7 @@ safe_math() {
 
 # Get available CPU cores (cross-platform)
 get_cpu_cores() {
-  local cores=2  # Default fallback
+  local cores=2 # Default fallback
 
   if [[ "$IS_MAC" == true ]]; then
     cores=$(sysctl -n hw.ncpu 2>/dev/null || echo 2)
@@ -103,10 +103,10 @@ get_cpu_cores() {
 
 # Get available memory in MB (cross-platform)
 get_memory_mb() {
-  local memory=1024  # Default 1GB
+  local memory=1024 # Default 1GB
 
   if [[ "$IS_MAC" == true ]]; then
-    memory=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 1073741824) / 1024 / 1024 ))
+    memory=$(($(sysctl -n hw.memsize 2>/dev/null || echo 1073741824) / 1024 / 1024))
   elif [[ "$IS_LINUX" == true ]]; then
     memory=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print int($2/1024)}' || echo 1024)
   fi

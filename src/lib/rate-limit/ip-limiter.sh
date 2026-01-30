@@ -16,8 +16,8 @@ if [[ -f "$SCRIPT_DIR/strategies.sh" ]]; then
 fi
 
 # IP rate limit defaults
-readonly IP_RATE_LIMIT_MAX=100    # 100 requests
-readonly IP_RATE_LIMIT_WINDOW=60  # per minute
+readonly IP_RATE_LIMIT_MAX=100   # 100 requests
+readonly IP_RATE_LIMIT_WINDOW=60 # per minute
 
 # ============================================================================
 # IP Rate Limiting
@@ -98,10 +98,10 @@ ip_is_whitelisted() {
     2>/dev/null | xargs)
 
   if [[ -z "$count" ]] || [[ $count -eq 0 ]]; then
-    return 1  # Not whitelisted
+    return 1 # Not whitelisted
   fi
 
-  return 0  # Whitelisted
+  return 0 # Whitelisted
 }
 
 # Add IP to whitelist
@@ -224,7 +224,7 @@ ip_whitelist_list() {
 ip_block() {
   local ip_address="$1"
   local reason="${2:-Exceeded rate limit}"
-  local duration_seconds="${3:-3600}"  # 1 hour default
+  local duration_seconds="${3:-3600}" # 1 hour default
 
   if [[ -z "$ip_address" ]]; then
     echo "ERROR: IP address required" >&2
@@ -259,8 +259,8 @@ EOSQL
 
   # Calculate expiry
   local expires_at
-  expires_at=$(date -u -d "+${duration_seconds} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${duration_seconds}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${duration_seconds} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${duration_seconds}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Add to blocklist
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
@@ -298,10 +298,10 @@ ip_is_blocked() {
     2>/dev/null | xargs)
 
   if [[ -z "$count" ]] || [[ $count -eq 0 ]]; then
-    return 1  # Not blocked
+    return 1 # Not blocked
   fi
 
-  return 0  # Blocked
+  return 0 # Blocked
 }
 
 # Unblock IP address

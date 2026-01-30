@@ -227,7 +227,7 @@ test_non_tty_output() {
   cli_info "Testing non-TTY output (piped to cat)..."
 
   # Test that output works when piped
-  if cli_success "Piped output test" | cat > /dev/null; then
+  if cli_success "Piped output test" | cat >/dev/null; then
     cli_success "Non-TTY output works"
     return 0
   else

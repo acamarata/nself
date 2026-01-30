@@ -108,18 +108,18 @@ stop_spinner() {
   printf "\r\033[K"
 
   case "$status" in
-  success)
-    printf "%s\n" "${COLOR_GREEN}${ICON_SUCCESS}${COLOR_RESET} $message"
-    ;;
-  error)
-    printf "%s\n" "${COLOR_RED}${ICON_FAILURE}${COLOR_RESET} $message"
-    ;;
-  warning)
-    printf "%s\n" "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
-    ;;
-  *)
-    printf "%s\n" "${COLOR_BLUE}${ICON_INFO}${COLOR_RESET} $message"
-    ;;
+    success)
+      printf "%s\n" "${COLOR_GREEN}${ICON_SUCCESS}${COLOR_RESET} $message"
+      ;;
+    error)
+      printf "%s\n" "${COLOR_RED}${ICON_FAILURE}${COLOR_RESET} $message"
+      ;;
+    warning)
+      printf "%s\n" "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
+      ;;
+    *)
+      printf "%s\n" "${COLOR_BLUE}${ICON_INFO}${COLOR_RESET} $message"
+      ;;
   esac
 }
 

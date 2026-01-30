@@ -56,7 +56,7 @@ EOSQL
 
   # Update or insert profile field
   case "$field" in
-    display_name|avatar_url|bio|location|website|timezone|language)
+    display_name | avatar_url | bio | location | website | timezone | language)
       docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
         "INSERT INTO auth.user_profiles (user_id, $field, updated_at)
          VALUES ('$user_id', '$value', NOW())
@@ -160,7 +160,7 @@ profile_get_field() {
   # Get field value
   local value
   case "$field" in
-    display_name|avatar_url|bio|location|website|timezone|language)
+    display_name | avatar_url | bio | location | website | timezone | language)
       value=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
         "SELECT $field FROM auth.user_profiles WHERE user_id = '$user_id' LIMIT 1;" \
         2>/dev/null | xargs)
@@ -220,7 +220,7 @@ profile_update() {
         value=$(echo "$custom_fields" | jq -r ".$key" 2>/dev/null || echo "")
         profile_set "$user_id" "$key" "$value" 2>/dev/null
       fi
-    done <<< "$keys"
+    done <<<"$keys"
   fi
 
   echo "✓ Profile updated successfully" >&2
@@ -384,7 +384,7 @@ profile_search() {
   # Search profiles
   local profiles_json
   case "$field" in
-    display_name|bio|location)
+    display_name | bio | location)
       profiles_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
         "SELECT json_agg(p) FROM (
            SELECT

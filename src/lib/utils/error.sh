@@ -94,63 +94,63 @@ show_error_help() {
   draw_box "ERROR HELP" "error"
 
   case "$error_type" in
-  docker_not_running)
-    echo "Docker is not running. Please start Docker:"
-    echo "  • macOS: Start Docker Desktop"
-    echo "  • Linux: sudo systemctl start docker"
-    ;;
+    docker_not_running)
+      echo "Docker is not running. Please start Docker:"
+      echo "  • macOS: Start Docker Desktop"
+      echo "  • Linux: sudo systemctl start docker"
+      ;;
 
-  port_conflict_self)
-    echo "Port conflict detected with our own containers."
-    echo "Try: nself stop && nself start"
-    ;;
+    port_conflict_self)
+      echo "Port conflict detected with our own containers."
+      echo "Try: nself stop && nself start"
+      ;;
 
-  port_conflict_external)
-    echo "Port is in use by another process."
-    echo "Options:"
-    echo "  • Stop the other process"
-    echo "  • Change the port in .env.local"
-    ;;
+    port_conflict_external)
+      echo "Port is in use by another process."
+      echo "Options:"
+      echo "  • Stop the other process"
+      echo "  • Change the port in .env.local"
+      ;;
 
-  dependency_missing_ts)
-    echo "TypeScript/Node.js dependencies missing."
-    echo "Try: npm install"
-    ;;
+    dependency_missing_ts)
+      echo "TypeScript/Node.js dependencies missing."
+      echo "Try: npm install"
+      ;;
 
-  dependency_missing_go)
-    echo "Go dependencies missing."
-    echo "Try: go mod download"
-    ;;
+    dependency_missing_go)
+      echo "Go dependencies missing."
+      echo "Try: go mod download"
+      ;;
 
-  dependency_missing_py)
-    echo "Python dependencies missing."
-    echo "Try: pip install -r requirements.txt"
-    ;;
+    dependency_missing_py)
+      echo "Python dependencies missing."
+      echo "Try: pip install -r requirements.txt"
+      ;;
 
-  config_missing)
-    echo "Configuration issue detected."
-    echo "Try: nself validate-env --apply-fixes"
-    ;;
+    config_missing)
+      echo "Configuration issue detected."
+      echo "Try: nself validate-env --apply-fixes"
+      ;;
 
-  permission_denied)
-    echo "Permission denied."
-    echo "Check:"
-    echo "  • File permissions"
-    echo "  • Docker group membership"
-    echo "  • Directory ownership"
-    ;;
+    permission_denied)
+      echo "Permission denied."
+      echo "Check:"
+      echo "  • File permissions"
+      echo "  • Docker group membership"
+      echo "  • Directory ownership"
+      ;;
 
-  docker_build)
-    echo "Docker build failed."
-    echo "Check:"
-    echo "  • Dockerfile syntax"
-    echo "  • Build context"
-    echo "  • Available disk space"
-    ;;
+    docker_build)
+      echo "Docker build failed."
+      echo "Check:"
+      echo "  • Dockerfile syntax"
+      echo "  • Build context"
+      echo "  • Available disk space"
+      ;;
 
-  *)
-    echo "An error occurred. Check the logs above for details."
-    ;;
+    *)
+      echo "An error occurred. Check the logs above for details."
+      ;;
   esac
 
   echo

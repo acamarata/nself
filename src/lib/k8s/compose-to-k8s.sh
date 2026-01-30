@@ -60,24 +60,24 @@ k8s_convert_compose() {
 
     # Generate deployment
     _generate_deployment "$service" "$namespace" "$image" "$env_vars" "$healthcheck" \
-      > "$output_dir/${padded}-${service}-deployment.yaml"
+      >"$output_dir/${padded}-${service}-deployment.yaml"
 
     # Generate service if ports are exposed
     if [[ -n "$ports" ]]; then
       _generate_service "$service" "$namespace" "$ports" \
-        > "$output_dir/${padded}-${service}-service.yaml"
+        >"$output_dir/${padded}-${service}-service.yaml"
     fi
 
     # Generate PVC if volumes are defined
     if [[ -n "$volumes" ]]; then
       _generate_pvc "$service" "$namespace" "$volumes" \
-        > "$output_dir/${padded}-${service}-pvc.yaml"
+        >"$output_dir/${padded}-${service}-pvc.yaml"
     fi
 
     # Generate ConfigMap for environment variables
     if [[ -n "$env_vars" ]]; then
       _generate_configmap "$service" "$namespace" "$env_vars" \
-        > "$output_dir/${padded}-${service}-configmap.yaml"
+        >"$output_dir/${padded}-${service}-configmap.yaml"
     fi
 
     ((counter++))
@@ -86,7 +86,7 @@ k8s_convert_compose() {
   # Generate ingress if needed
   _generate_ingress "$namespace" "$output_dir" "$compose_file"
 
-  printf "Conversion complete: %d services processed\n" "$((counter-1))"
+  printf "Conversion complete: %d services processed\n" "$((counter - 1))"
 }
 
 # Parse services from compose file
@@ -118,7 +118,7 @@ _parse_compose_services() {
         echo "$line" | sed 's/^[[:space:]]*//' | tr -d ':'
       fi
     fi
-  done < "$compose_file"
+  done <"$compose_file"
 }
 
 # Get service image
@@ -145,7 +145,7 @@ _get_service_image() {
         return
       fi
     fi
-  done < "$compose_file"
+  done <"$compose_file"
 
   # Default to service name if no image specified (build context)
   echo "${service}:latest"
@@ -186,7 +186,7 @@ _get_service_ports() {
         fi
       fi
     fi
-  done < "$compose_file"
+  done <"$compose_file"
 
   echo "$ports" | tr -s ' '
 }
@@ -226,7 +226,7 @@ _get_service_env() {
         fi
       fi
     fi
-  done < "$compose_file"
+  done <"$compose_file"
 
   echo "$env_vars" | sed 's/^|//'
 }
@@ -266,7 +266,7 @@ _get_service_volumes() {
         fi
       fi
     fi
-  done < "$compose_file"
+  done <"$compose_file"
 
   echo "$volumes" | tr -s ' '
 }
@@ -289,7 +289,7 @@ _generate_namespace() {
   local namespace="$1"
   local output_dir="$2"
 
-  cat > "$output_dir/00-namespace.yaml" << EOF
+  cat >"$output_dir/00-namespace.yaml" <<EOF
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -308,7 +308,7 @@ _generate_deployment() {
   local env_vars="$4"
   local healthcheck="$5"
 
-  cat << EOF
+  cat <<EOF
 apiVersion: ${K8S_API_VERSION_DEPLOYMENT}
 kind: Deployment
 metadata:
@@ -350,7 +350,7 @@ EOF
 
   # Add environment variables from ConfigMap
   if [[ -n "$env_vars" ]]; then
-    cat << EOF
+    cat <<EOF
         envFrom:
         - configMapRef:
             name: ${service}-config
@@ -359,7 +359,7 @@ EOF
 
   # Add liveness probe if healthcheck exists
   if [[ -n "$healthcheck" ]]; then
-    cat << EOF
+    cat <<EOF
         livenessProbe:
           httpGet:
             path: /health
@@ -376,7 +376,7 @@ EOF
   fi
 
   # Close container and pod spec
-  cat << EOF
+  cat <<EOF
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
 EOF
@@ -388,7 +388,7 @@ _generate_service() {
   local namespace="$2"
   local ports="$3"
 
-  cat << EOF
+  cat <<EOF
 apiVersion: ${K8S_API_VERSION_SERVICE}
 kind: Service
 metadata:
@@ -419,7 +419,7 @@ EOF
     # Handle port/protocol format
     container_port=$(echo "$container_port" | cut -d'/' -f1)
 
-    cat << EOF
+    cat <<EOF
   - name: port-${container_port}
     port: ${host_port}
     targetPort: ${container_port}
@@ -427,7 +427,7 @@ EOF
 EOF
   done
 
-  cat << EOF
+  cat <<EOF
   type: ClusterIP
 EOF
 }
@@ -445,7 +445,7 @@ _generate_pvc() {
       local vol_name
       vol_name=$(echo "$vol" | cut -d':' -f1)
 
-      cat << EOF
+      cat <<EOF
 ---
 apiVersion: ${K8S_API_VERSION_PVC}
 kind: PersistentVolumeClaim
@@ -475,7 +475,7 @@ _generate_configmap() {
   local namespace="$2"
   local env_vars="$3"
 
-  cat << EOF
+  cat <<EOF
 apiVersion: ${K8S_API_VERSION_CONFIGMAP}
 kind: ConfigMap
 metadata:
@@ -535,7 +535,7 @@ _generate_ingress() {
       container_port=$(echo "$port" | cut -d':' -f2 | cut -d'/' -f1)
 
       case "$container_port" in
-        80|443|8080|3000|5000|8000)
+        80 | 443 | 8080 | 3000 | 5000 | 8000)
           has_web_services=1
           web_services="$web_services $service:$container_port"
           ;;
@@ -544,7 +544,7 @@ _generate_ingress() {
   done
 
   if [[ $has_web_services -eq 1 ]]; then
-    cat > "$output_dir/99-ingress.yaml" << EOF
+    cat >"$output_dir/99-ingress.yaml" <<EOF
 apiVersion: ${K8S_API_VERSION_INGRESS}
 kind: Ingress
 metadata:
@@ -565,7 +565,7 @@ EOF
       svc=$(echo "$service_port" | cut -d':' -f1)
       port=$(echo "$service_port" | cut -d':' -f2)
 
-      cat >> "$output_dir/99-ingress.yaml" << EOF
+      cat >>"$output_dir/99-ingress.yaml" <<EOF
   - host: ${svc}.example.com
     http:
       paths:

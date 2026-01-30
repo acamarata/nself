@@ -36,10 +36,16 @@ redis_cache_get() {
   local connection_name="${2:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "null"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "null"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "null"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "null"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -50,7 +56,10 @@ redis_cache_get() {
   local value=$(docker exec "$redis_container" redis-cli -h "$host" -p "$port" -n "$database" \
     GET "$cache_key" 2>/dev/null)
 
-  [[ -z "$value" || "$value" == "null" ]] && { echo "null"; return 1; }
+  [[ -z "$value" || "$value" == "null" ]] && {
+    echo "null"
+    return 1
+  }
 
   echo "$value"
 }
@@ -104,7 +113,7 @@ redis_cache_invalidate() {
     [[ -z "$key" ]] && continue
     docker exec "$redis_container" redis-cli -h "$host" -p "$port" -n "$database" \
       DEL "$key" >/dev/null 2>&1
-  done <<< "$keys"
+  done <<<"$keys"
 }
 
 # Cache exists
@@ -136,10 +145,16 @@ redis_cache_ttl() {
   local connection_name="${2:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "0"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "0"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "0"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "0"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -155,7 +170,7 @@ redis_cache_ttl() {
 
 # Cache warming - preload data
 redis_cache_warm() {
-  local cache_config="$1"  # JSON array of {key, query, ttl}
+  local cache_config="$1" # JSON array of {key, query, ttl}
   local connection_name="${2:-main}"
 
   local count=0
@@ -185,10 +200,16 @@ redis_cache_stats() {
   local connection_name="${1:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "{}"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "{}"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "{}"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "{}"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -215,7 +236,7 @@ redis_cache_stats() {
 # Cache get or set (lazy loading)
 redis_cache_get_or_set() {
   local key="$1"
-  local generator_func="$2"  # Function to call if cache miss
+  local generator_func="$2" # Function to call if cache miss
   local ttl="${3:-$CACHE_DEFAULT_TTL}"
   local connection_name="${4:-main}"
 
@@ -239,7 +260,7 @@ redis_cache_get_or_set() {
 # Cache with tags for group invalidation
 redis_cache_tag_add() {
   local key="$1"
-  local tags="$2"  # Comma-separated
+  local tags="$2" # Comma-separated
   local connection_name="${3:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
@@ -252,7 +273,7 @@ redis_cache_tag_add() {
   local port=$(echo "$conn" | jq -r '.port')
   local database=$(echo "$conn" | jq -r '.database')
 
-  IFS=',' read -ra tag_array <<< "$tags"
+  IFS=',' read -ra tag_array <<<"$tags"
   for tag in "${tag_array[@]}"; do
     [[ -z "$tag" ]] && continue
     local tag_key="cache:tag:$tag"
@@ -288,7 +309,7 @@ redis_cache_invalidate_tag() {
   while IFS= read -r key; do
     [[ -z "$key" ]] && continue
     redis_cache_delete "$key" "$connection_name"
-  done <<< "$keys"
+  done <<<"$keys"
 
   # Delete tag set
   docker exec "$redis_container" redis-cli -h "$host" -p "$port" -n "$database" \

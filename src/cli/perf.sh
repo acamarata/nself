@@ -26,7 +26,7 @@ source "$CLI_DIR/../lib/migrate/supabase.sh" 2>/dev/null || true
 # =============================================================================
 
 show_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself perf - Performance & Optimization
 
 USAGE:
@@ -295,7 +295,7 @@ main() {
         FORCE=true
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_help
         return 0
         ;;
@@ -331,7 +331,7 @@ main() {
     optimize)
       cmd_optimize
       ;;
-    help|-h|--help)
+    help | -h | --help)
       show_help
       ;;
     *)

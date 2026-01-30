@@ -23,19 +23,19 @@ SHOW_HELP=false
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -v|--verbose)
+    -v | --verbose)
       VERBOSE=true
       shift
       ;;
-    -q|--quick)
+    -q | --quick)
       QUICK=true
       shift
       ;;
-    -f|--filter)
+    -f | --filter)
       FILTER="$2"
       shift 2
       ;;
-    -h|--help)
+    -h | --help)
       SHOW_HELP=true
       shift
       ;;
@@ -49,7 +49,7 @@ done
 
 # Show help
 if [[ "$SHOW_HELP" == true ]]; then
-  cat << EOF
+  cat <<EOF
 Usage: $0 [OPTIONS]
 
 Options:

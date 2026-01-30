@@ -201,7 +201,7 @@ log_to_file() {
   local message="$1"
   local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
 
-  echo "[$timestamp] $message" >> "$log_file"
+  echo "[$timestamp] $message" >>"$log_file"
 }
 
 # Export functions

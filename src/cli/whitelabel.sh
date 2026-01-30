@@ -31,7 +31,7 @@ readonly CLI_VERSION="0.9.0"
 # ============================================================================
 
 show_help() {
-  cat << EOF
+  cat <<EOF
 nself whitelabel - White-Label & Customization Management
 
 USAGE:

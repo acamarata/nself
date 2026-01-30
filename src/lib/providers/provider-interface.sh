@@ -34,12 +34,12 @@ declare -a SUPPORTED_PROVIDERS=(
 _get_provider_category() {
   local provider="$1"
   case "$provider" in
-    aws|gcp|azure|oracle|ibm) echo "major" ;;
-    digitalocean|linode|vultr|scaleway|upcloud) echo "developer" ;;
-    hetzner|ovh|ionos|contabo|netcup) echo "budget-eu" ;;
-    hostinger|hostwinds|kamatera|ssdnodes) echo "budget-global" ;;
-    exoscale|alibaba|tencent|yandex) echo "regional" ;;
-    racknerd|buyvm|time4vps) echo "extreme-budget" ;;
+    aws | gcp | azure | oracle | ibm) echo "major" ;;
+    digitalocean | linode | vultr | scaleway | upcloud) echo "developer" ;;
+    hetzner | ovh | ionos | contabo | netcup) echo "budget-eu" ;;
+    hostinger | hostwinds | kamatera | ssdnodes) echo "budget-global" ;;
+    exoscale | alibaba | tencent | yandex) echo "regional" ;;
+    racknerd | buyvm | time4vps) echo "extreme-budget" ;;
     *) echo "unknown" ;;
   esac
 }
@@ -53,7 +53,7 @@ _get_size_vcpu() {
     medium) echo "2" ;;
     large) echo "4" ;;
     xlarge) echo "8" ;;
-    *) echo "2" ;;  # default
+    *) echo "2" ;; # default
   esac
 }
 
@@ -66,7 +66,7 @@ _get_size_ram() {
     medium) echo "4096" ;;
     large) echo "8192" ;;
     xlarge) echo "16384" ;;
-    *) echo "2048" ;;  # default
+    *) echo "2048" ;; # default
   esac
 }
 
@@ -79,7 +79,7 @@ _get_size_disk() {
     medium) echo "50" ;;
     large) echo "100" ;;
     xlarge) echo "200" ;;
-    *) echo "40" ;;  # default
+    *) echo "40" ;; # default
   esac
 }
 
@@ -99,7 +99,7 @@ _get_k8s_support() {
     ionos) echo "ionosk8s" ;;
     exoscale) echo "sks" ;;
     alibaba) echo "ack" ;;
-    *) echo "" ;;  # no support
+    *) echo "" ;; # no support
   esac
 }
 
@@ -205,7 +205,7 @@ provider_normalize_size() {
 provider_validate_size() {
   local size="$1"
   case "$size" in
-    tiny|small|medium|large|xlarge) return 0 ;;
+    tiny | small | medium | large | xlarge) return 0 ;;
     *) return 1 ;;
   esac
 }

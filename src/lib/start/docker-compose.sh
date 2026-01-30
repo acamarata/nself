@@ -10,7 +10,7 @@ get_compose_command() {
   elif command -v docker-compose >/dev/null 2>&1; then
     echo "docker-compose"
   else
-    echo "docker compose"  # Assume v2
+    echo "docker compose" # Assume v2
   fi
 }
 
@@ -42,7 +42,7 @@ build_compose_command() {
 execute_compose_with_progress() {
   local compose_cmd="$1"
   local project="${2:-nself}"
-  local timeout="${3:-300}"  # 5 minutes default for image downloads
+  local timeout="${3:-300}" # 5 minutes default for image downloads
   local verbose="${4:-false}"
 
   local output_file=$(mktemp)
@@ -123,7 +123,7 @@ execute_compose_with_progress() {
         sleep 2
         kill -KILL $compose_pid 2>/dev/null
       fi
-      local result=124  # Timeout exit code
+      local result=124 # Timeout exit code
     fi
   fi
 
@@ -272,7 +272,7 @@ monitor_compose_progress() {
       if tail -50 "$output_file" 2>/dev/null | grep -q "ERROR\|failed.*build\|build.*failed\|Error response from daemon\|port is already allocated"; then
         printf "\r${COLOR_YELLOW}⚠${COLOR_RESET}  Errors detected - attempting recovery...              \n"
         kill $compose_pid 2>/dev/null
-        return 2  # Special code for build failures
+        return 2 # Special code for build failures
       fi
     fi
   done
@@ -436,7 +436,7 @@ show_service_details() {
     # Show healthy services if requested
     if [ "$show_all" = "true" ]; then
       echo "${COLOR_GREEN}Healthy services:${COLOR_RESET}"
-      docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}:{{.Status}}" 2>/dev/null | \
+      docker ps --filter "label=com.docker.compose.project=$project" --format "{{.Names}}:{{.Status}}" 2>/dev/null |
         grep "healthy" | while IFS=':' read -r name status; do
         printf "  ${COLOR_GREEN}✓${COLOR_RESET} %-30s %s\n" "$name" "${status:0:40}"
       done

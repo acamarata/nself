@@ -22,7 +22,7 @@ check_password_strength() {
 
   # Length check
   if [[ ${#password} -ge $min_length ]]; then
-    ((score+=25))
+    ((score += 25))
   else
     issues+=("Password too short (minimum: $min_length characters)")
   fi
@@ -30,7 +30,7 @@ check_password_strength() {
   # Uppercase check
   if $require_uppercase; then
     if [[ "$password" =~ [A-Z] ]]; then
-      ((score+=20))
+      ((score += 20))
     else
       issues+=("Missing uppercase letter")
     fi
@@ -39,7 +39,7 @@ check_password_strength() {
   # Lowercase check
   if $require_lowercase; then
     if [[ "$password" =~ [a-z] ]]; then
-      ((score+=20))
+      ((score += 20))
     else
       issues+=("Missing lowercase letter")
     fi
@@ -48,7 +48,7 @@ check_password_strength() {
   # Digit check
   if $require_digit; then
     if [[ "$password" =~ [0-9] ]]; then
-      ((score+=20))
+      ((score += 20))
     else
       issues+=("Missing digit")
     fi
@@ -57,7 +57,7 @@ check_password_strength() {
   # Special character check
   if $require_special; then
     if [[ "$password" =~ [^A-Za-z0-9] ]]; then
-      ((score+=15))
+      ((score += 15))
     else
       issues+=("Missing special character")
     fi
@@ -86,11 +86,11 @@ is_common_password() {
 
   for common in "${common_passwords[@]}"; do
     if [[ "$lower_password" == "$common" ]]; then
-      return 0  # Is common
+      return 0 # Is common
     fi
   done
 
-  return 1  # Not common
+  return 1 # Not common
 }
 
 # ============================================================================
@@ -219,8 +219,8 @@ parse_user_agent() {
 # Detect brute force attempts
 detect_brute_force() {
   local user_id="$1"
-  local time_window="${2:-300}"  # 5 minutes default
-  local threshold="${3:-5}"      # 5 attempts default
+  local time_window="${2:-300}" # 5 minutes default
+  local threshold="${3:-5}"     # 5 attempts default
 
   # This would query the database for failed login attempts
   # Placeholder implementation
@@ -236,8 +236,8 @@ detect_brute_force() {
 # Detect credential stuffing
 detect_credential_stuffing() {
   local ip_address="$1"
-  local time_window="${2:-3600}"  # 1 hour default
-  local threshold="${3:-10}"      # 10 different users from same IP
+  local time_window="${2:-3600}" # 1 hour default
+  local threshold="${3:-10}"     # 10 different users from same IP
 
   # This would query the database for login attempts from the same IP
   # across multiple user accounts

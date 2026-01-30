@@ -26,7 +26,7 @@ show_deprecation_warning() {
 
 show_cloud_help() {
   show_deprecation_warning
-  cat << 'EOF'
+  cat <<'EOF'
 nself cloud - DEPRECATED (use 'nself infra provider' instead)
 
 MIGRATION GUIDE:

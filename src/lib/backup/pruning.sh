@@ -36,7 +36,7 @@ get_backup_age_days() {
   local file="$1"
   local now=$(date +%s)
   local mtime=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null || echo 0)
-  echo $(( (now - mtime) / 86400 ))
+  echo $(((now - mtime) / 86400))
 }
 
 # Calculate total backup size in GB

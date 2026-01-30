@@ -16,7 +16,7 @@ echo "Test 1: Development Environment with Multi-level Subdomains"
 echo "-----------------------------------------------------------"
 
 # Create test .env.local for dev
-cat > .env.local << 'EOF'
+cat >.env.local <<'EOF'
 ENV=dev
 BASE_DOMAIN=local.nself.org
 PROJECT_NAME=test
@@ -52,7 +52,7 @@ source "$SCRIPT_DIR/../../src/lib/services/service-builder.sh"
 parse_custom_services
 echo "Parsed ${#PARSED_SERVICES[@]} services:"
 for service in "${PARSED_SERVICES[@]}"; do
-  IFS='|' read -r name language domain port <<< "$service"
+  IFS='|' read -r name language domain port <<<"$service"
   echo "  • $name ($language) → $domain"
 done
 
@@ -64,7 +64,7 @@ echo "Test 2: Production Environment with Custom Domains"
 echo "--------------------------------------------------"
 
 # Create test .env for production
-cat > .env << 'EOF'
+cat >.env <<'EOF'
 ENV=prod
 BASE_DOMAIN=mycompany.com
 PROJECT_NAME=prod
@@ -88,11 +88,11 @@ source .env
 set +a
 
 # Parse and display
-PARSED_SERVICES=()  # Reset
+PARSED_SERVICES=() # Reset
 parse_custom_services
 echo "Parsed ${#PARSED_SERVICES[@]} services:"
 for service in "${PARSED_SERVICES[@]}"; do
-  IFS='|' read -r name language domain port <<< "$service"
+  IFS='|' read -r name language domain port <<<"$service"
   echo "  • $name ($language) → $domain"
 done
 
@@ -103,7 +103,7 @@ echo ""
 echo "Checking nginx configuration for custom domains:"
 if [[ -f "nginx/conf.d/custom-services.conf" ]]; then
   echo "  ✓ Nginx config generated"
-  
+
   # Check for custom domains
   if grep -q "server_name metals.goldprices.com" nginx/conf.d/custom-services.conf; then
     echo "  ✓ metals.goldprices.com configured"
@@ -114,7 +114,7 @@ if [[ -f "nginx/conf.d/custom-services.conf" ]]; then
   if grep -q "server_name webhooks.mycompany.com" nginx/conf.d/custom-services.conf; then
     echo "  ✓ webhooks.mycompany.com configured"
   fi
-  
+
   # Check SSL cert paths for custom domains
   if grep -q "ssl_certificate /etc/nginx/ssl/certs/metals.goldprices.com/fullchain.pem" nginx/conf.d/custom-services.conf; then
     echo "  ✓ Custom SSL path for metals.goldprices.com"
@@ -129,7 +129,7 @@ echo "Test 3: Mixed Environment with Fallbacks"
 echo "----------------------------------------"
 
 # Create test with ENV switching
-cat > .env.local << 'EOF'
+cat >.env.local <<'EOF'
 ENV=dev
 BASE_DOMAIN=local.nself.org
 PROJECT_NAME=mixed
@@ -154,7 +154,7 @@ PARSED_SERVICES=()
 parse_custom_services
 echo "Development routing:"
 for service in "${PARSED_SERVICES[@]}"; do
-  IFS='|' read -r name language domain port <<< "$service"
+  IFS='|' read -r name language domain port <<<"$service"
   # In dev, metals.prices should become metals.prices.localhost
   echo "  • $name → $domain"
 done
@@ -166,7 +166,7 @@ parse_custom_services
 echo ""
 echo "Production routing (same config, ENV=prod):"
 for service in "${PARSED_SERVICES[@]}"; do
-  IFS='|' read -r name language domain port <<< "$service"
+  IFS='|' read -r name language domain port <<<"$service"
   echo "  • $name → $domain"
 done
 

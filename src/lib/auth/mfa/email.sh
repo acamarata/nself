@@ -9,9 +9,9 @@ set -euo pipefail
 
 # Email MFA configuration
 readonly EMAIL_CODE_LENGTH=6
-readonly EMAIL_CODE_EXPIRY=600    # 10 minutes
+readonly EMAIL_CODE_EXPIRY=600 # 10 minutes
 readonly EMAIL_MAX_ATTEMPTS=5
-readonly EMAIL_RATE_LIMIT=120     # 2 minutes between sends
+readonly EMAIL_RATE_LIMIT=120 # 2 minutes between sends
 
 # ============================================================================
 # Email Code Generation
@@ -112,10 +112,10 @@ email_send_code() {
   local mode="${EMAIL_MODE:-dev}"
 
   case "$mode" in
-    dev|development|mailpit)
+    dev | development | mailpit)
       email_send_mailpit "$email" "$code"
       ;;
-    smtp|production)
+    smtp | production)
       email_send_smtp "$email" "$code"
       ;;
     *)
@@ -235,8 +235,8 @@ email_send_verification() {
 
   # Calculate expiry
   local expires_at
-  expires_at=$(date -u -d "+${EMAIL_CODE_EXPIRY} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${EMAIL_CODE_EXPIRY}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${EMAIL_CODE_EXPIRY} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${EMAIL_CODE_EXPIRY}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Store code
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
@@ -286,7 +286,7 @@ email_verify() {
   fi
 
   local stored_code expires_at attempts
-  read -r stored_code expires_at attempts <<< "$email_data"
+  read -r stored_code expires_at attempts <<<"$email_data"
 
   # Check max attempts
   if [[ "$attempts" -ge "$EMAIL_MAX_ATTEMPTS" ]]; then

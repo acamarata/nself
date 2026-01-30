@@ -104,7 +104,7 @@ auto_resolve_ports() {
           sed -i.bak "s/^$var=.*/$var=$new_port/" "$env_file" && rm "${env_file}.bak"
         else
           # Add new
-          echo "$var=$new_port" >> "$env_file"
+          echo "$var=$new_port" >>"$env_file"
         fi
         port_updates="${port_updates}  - $name: $current_port → $new_port\n"
         changes_made=true

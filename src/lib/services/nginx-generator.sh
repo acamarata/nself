@@ -59,17 +59,17 @@ nginx::generate_service_config() {
   local service_name="$1"
   local output_dir="$2"
   local base_domain="${BASE_DOMAIN:-localhost}"
-  
+
   # Get service configuration
   local config
   config=$(routes::get_service_config "$service_name")
   [[ -z "$config" ]] && return 1
-  
+
   # Parse configuration
   local route container_name internal_port upstream_name
   local needs_websocket="false"
   local max_body_size=""
-  
+
   while IFS='=' read -r key value; do
     case "$key" in
       route) route="$value" ;;
@@ -79,20 +79,20 @@ nginx::generate_service_config() {
       needs_websocket) needs_websocket="$value" ;;
       max_body_size) max_body_size="$value" ;;
     esac
-  done <<< "$config"
-  
+  done <<<"$config"
+
   # Skip if essential info is missing
   [[ -z "$route" || -z "$container_name" || -z "$internal_port" ]] && return 1
 
   # Set default upstream_name if not provided
   [[ -z "$upstream_name" ]] && upstream_name="${container_name//-/_}"
-  
+
   # Determine SSL certificate path based on domain
   local ssl_path
   ssl_path=$(get_ssl_cert_path "$route")
-  
-  # Generate the nginx configuration  
-  cat > "$output_dir/${service_name}.conf" <<EOF
+
+  # Generate the nginx configuration
+  cat >"$output_dir/${service_name}.conf" <<EOF
 # ${service_name} service proxy configuration
 upstream ${upstream_name} {
     server ${container_name}:${internal_port};
@@ -115,11 +115,11 @@ EOF
 
   # Add max body size if specified
   if [[ -n "$max_body_size" ]]; then
-    echo "    client_max_body_size ${max_body_size};" >> "$output_dir/${service_name}.conf"
+    echo "    client_max_body_size ${max_body_size};" >>"$output_dir/${service_name}.conf"
   fi
 
   # Add location block with service-specific settings
-  cat >> "$output_dir/${service_name}.conf" << EOF
+  cat >>"$output_dir/${service_name}.conf" <<EOF
     
     location / {
         proxy_pass http://${upstream_name};
@@ -128,14 +128,14 @@ EOF
 
   # Add WebSocket support if needed
   if [[ "$needs_websocket" == "true" ]]; then
-    cat >> "$output_dir/${service_name}.conf" << 'EOF'
+    cat >>"$output_dir/${service_name}.conf" <<'EOF'
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
 EOF
   fi
 
   # Add common proxy headers
-  cat >> "$output_dir/${service_name}.conf" << 'EOF'
+  cat >>"$output_dir/${service_name}.conf" <<'EOF'
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -173,9 +173,9 @@ nginx::generate_frontend_config() {
   # Determine SSL certificate path
   local ssl_path
   ssl_path=$(get_ssl_cert_path "$route")
-  
+
   # Generate the nginx configuration
-  cat > "$output_dir/${app_name}.conf" << EOF
+  cat >"$output_dir/${app_name}.conf" <<EOF
 # Frontend application: ${app_name}
 server {
     listen 80;
@@ -249,7 +249,7 @@ nginx::generate_frontend_auth_config() {
   # Generate the nginx configuration for per-app auth endpoint
   # Use app prefix to avoid conflicts
   local config_name="${app_name}-auth"
-  cat > "$output_dir/${config_name}.conf" << EOF
+  cat >"$output_dir/${config_name}.conf" <<EOF
 # Per-app auth endpoint for ${app_name}
 server {
     listen 80;
@@ -322,7 +322,7 @@ nginx::generate_frontend_api_config() {
   ssl_path=$(get_ssl_cert_path "$api_route")
 
   # Generate the nginx configuration for API endpoint
-  cat > "$output_dir/${app_name}-api.conf" << EOF
+  cat >"$output_dir/${app_name}-api.conf" <<EOF
 # Frontend API endpoint: ${app_name}
 server {
     listen 80;
@@ -393,16 +393,16 @@ nginx::generate_custom_service_config() {
   local port="$4"
   local container_name="$5"
   local output_dir="$6"
-  
+
   # Determine SSL certificate path
   local ssl_path
   ssl_path=$(get_ssl_cert_path "$route")
-  
+
   # Create upstream name (replace hyphens with underscores for nginx)
   local upstream_name="${service_name//-/_}"
-  
+
   # Generate the nginx configuration
-  cat > "$output_dir/cs-${service_name}.conf" << EOF
+  cat >"$output_dir/cs-${service_name}.conf" <<EOF
 # Custom service: ${service_name} (${service_type})
 upstream ${upstream_name} {
     server ${container_name}:${port};
@@ -451,22 +451,22 @@ EOF
 # Remove wildcard catch-all configs that conflict with specific routing
 nginx::remove_wildcard_conflicts() {
   local nginx_dir="$1"
-  
+
   # Check for problematic wildcard configs
   local conflicts=()
-  
+
   if [[ -f "$nginx_dir/conf.d/ssl-localhost.conf" ]]; then
     if grep -q "server_name \*\.localhost" "$nginx_dir/conf.d/ssl-localhost.conf" 2>/dev/null; then
       conflicts+=("ssl-localhost.conf")
     fi
   fi
-  
+
   if [[ -f "$nginx_dir/conf.d/ssl-local-nself-org.conf" ]]; then
     if grep -q "server_name \*\.local\.nself\.org" "$nginx_dir/conf.d/ssl-local-nself-org.conf" 2>/dev/null; then
       conflicts+=("ssl-local-nself-org.conf")
     fi
   fi
-  
+
   # Disable conflicting configs by renaming them
   if [[ ${#conflicts[@]} -gt 0 ]]; then
     for conflict in "${conflicts[@]}"; do
@@ -483,22 +483,22 @@ nginx::generate_all_configs() {
   local project_dir="${1:-.}"
   local nginx_dir="$project_dir/nginx"
   local conf_dir="$nginx_dir/conf.d"
-  
+
   # Create nginx directories
   mkdir -p "$conf_dir"
-  
+
   # Remove conflicting wildcard configs
   nginx::remove_wildcard_conflicts "$nginx_dir"
-  
+
   local configs_generated=0
-  
+
   # Generate configs for enabled backend services
   while IFS= read -r service; do
     if nginx::generate_service_config "$service" "$conf_dir"; then
       ((configs_generated++))
     fi
   done < <(routes::get_enabled_services)
-  
+
   # Generate configs for frontend applications
   local current_app=""
   local api_route=""
@@ -509,7 +509,7 @@ nginx::generate_all_configs() {
       continue
     fi
 
-    IFS='=' read -r key value <<< "$line"
+    IFS='=' read -r key value <<<"$line"
     case "$key" in
       app_name) current_app="$value" ;;
       route) app_route="$value" ;;
@@ -530,7 +530,7 @@ nginx::generate_all_configs() {
 
             # Generate per-app auth config ONLY if this app has a remote schema
             # Extract base domain from app route (e.g., app1.localhost -> auth.app1.localhost)
-            local app_domain="${app_route#*.}" # Get everything after first dot
+            local app_domain="${app_route#*.}"  # Get everything after first dot
             local app_prefix="${app_route%%.*}" # Get everything before first dot
             local auth_route="auth.${app_prefix}.${app_domain}"
 
@@ -545,7 +545,7 @@ nginx::generate_all_configs() {
         ;;
     esac
   done < <(routes::get_frontend_apps)
-  
+
   # Generate configs for custom services
   local current_app=""
   local cs_name="" cs_type="" cs_route="" cs_port="" cs_container=""
@@ -559,8 +559,8 @@ nginx::generate_all_configs() {
       cs_name="" cs_type="" cs_route="" cs_port="" cs_container=""
       continue
     fi
-    
-    IFS='=' read -r key value <<< "$line"
+
+    IFS='=' read -r key value <<<"$line"
     case "$key" in
       service_name) cs_name="$value" ;;
       service_type) cs_type="$value" ;;
@@ -569,14 +569,14 @@ nginx::generate_all_configs() {
       container_name) cs_container="$value" ;;
     esac
   done < <(routes::get_custom_services)
-  
+
   # Handle last custom service if not ended with ---
   if [[ -n "$cs_name" && -n "$cs_type" && -n "$cs_route" && -n "$cs_port" && -n "$cs_container" ]]; then
     if nginx::generate_custom_service_config "$cs_name" "$cs_type" "$cs_route" "$cs_port" "$cs_container" "$conf_dir"; then
       ((configs_generated++))
     fi
   fi
-  
+
   echo $configs_generated
   return 0
 }
@@ -584,7 +584,7 @@ nginx::generate_all_configs() {
 # Validate nginx configuration
 nginx::validate_config() {
   local nginx_dir="${1:-.}/nginx"
-  
+
   # Test nginx config using docker
   if command -v docker >/dev/null 2>&1; then
     # Use a simple syntax check that doesn't require full nginx setup
@@ -593,16 +593,16 @@ nginx::validate_config() {
     else
       # Try a more lenient validation - check each conf file individually
       local has_errors=false
-      
+
       for conf_file in "$nginx_dir"/conf.d/*.conf; do
         [[ ! -f "$conf_file" ]] && continue
-        
+
         if ! docker run --rm -v "$conf_file:/tmp/test.conf:ro" nginx:alpine sh -c 'nginx -t -c /tmp/test.conf -p /tmp' 2>/dev/null; then
           log_warning "Potential issue in $(basename "$conf_file")"
           has_errors=true
         fi
       done
-      
+
       [[ "$has_errors" == "true" ]] && return 1 || return 0
     fi
   else

@@ -19,19 +19,19 @@ cmd_restore() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --list|-l)
+      --list | -l)
         list_only=true
         shift
         ;;
-      --verbose|-v)
+      --verbose | -v)
         verbose=true
         shift
         ;;
-      --force|-f)
+      --force | -f)
         force=true
         shift
         ;;
-      --help|-h)
+      --help | -h)
         show_restore_help
         return 0
         ;;
@@ -98,7 +98,7 @@ cmd_restore() {
     if [[ -f "$backup_dir/$specific_backup" ]]; then
       backup_to_restore="$backup_dir/$specific_backup"
     # Check if it's a timestamp pattern that matches a file
-    elif compgen -G "$backup_dir/*${specific_backup}*.tar.gz" > /dev/null; then
+    elif compgen -G "$backup_dir/*${specific_backup}*.tar.gz" >/dev/null; then
       backup_to_restore=$(ls -1t "$backup_dir"/*${specific_backup}*.tar.gz 2>/dev/null | head -1)
     else
       log_error "Backup not found: $specific_backup"

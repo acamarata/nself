@@ -14,7 +14,10 @@ readonly LOG_LEVEL_FATAL=50
 # Initialize logging storage
 logging_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS logs;
@@ -165,7 +168,10 @@ log_search() {
   [[ -n "$logger" ]] && where_clauses+=("logger_name = '$logger'")
   [[ -n "$message_pattern" ]] && where_clauses+=("message ILIKE '%$message_pattern%'")
 
-  local where_clause=$(IFS=' AND ' ; echo "${where_clauses[*]}")
+  local where_clause=$(
+    IFS=' AND '
+    echo "${where_clauses[*]}"
+  )
 
   local results=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
     "SELECT json_agg(l) FROM (
@@ -235,7 +241,7 @@ log_stats() {
 # Create alert rule
 log_alert_create() {
   local name="$1"
-  local condition="$2"  # SQL WHERE clause
+  local condition="$2" # SQL WHERE clause
   local threshold="$3"
   local window_minutes="$4"
   local severity="$5"
@@ -335,7 +341,7 @@ log_cleanup() {
 
 # Export logs
 log_export() {
-  local format="${1:-json}"  # json, csv
+  local format="${1:-json}" # json, csv
   local output_file="${2:-/tmp/nself_logs.json}"
   local time_range="${3:-24 hours}"
 
@@ -347,7 +353,7 @@ log_export() {
          SELECT * FROM logs.entries
          WHERE timestamp >= NOW() - INTERVAL '$time_range'
          ORDER BY timestamp DESC
-       ) l;" 2>/dev/null | xargs > "$output_file"
+       ) l;" 2>/dev/null | xargs >"$output_file"
   else
     docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
       "COPY (
@@ -355,7 +361,7 @@ log_export() {
          FROM logs.entries
          WHERE timestamp >= NOW() - INTERVAL '$time_range'
          ORDER BY timestamp DESC
-       ) TO STDOUT WITH CSV HEADER;" 2>/dev/null > "$output_file"
+       ) TO STDOUT WITH CSV HEADER;" 2>/dev/null >"$output_file"
   fi
 
   echo "Exported logs to $output_file"

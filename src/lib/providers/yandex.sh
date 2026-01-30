@@ -21,7 +21,7 @@ provider_yandex_init() {
   read -r zone
   zone="${zone:-ru-central1-a}"
 
-  cat > "$config_dir/yandex.yml" << EOF
+  cat >"$config_dir/yandex.yml" <<EOF
 provider: yandex
 oauth_token: "$oauth_token"
 cloud_id: "$cloud_id"
@@ -80,12 +80,30 @@ provider_yandex_provision() {
   # Map size to cores/memory
   local cores memory
   case "$size" in
-    tiny)   cores=2; memory=$((2*1024*1024*1024)) ;;
-    small)  cores=2; memory=$((4*1024*1024*1024)) ;;
-    medium) cores=4; memory=$((8*1024*1024*1024)) ;;
-    large)  cores=8; memory=$((16*1024*1024*1024)) ;;
-    xlarge) cores=16; memory=$((32*1024*1024*1024)) ;;
-    *)      cores=2; memory=$((4*1024*1024*1024)) ;;
+    tiny)
+      cores=2
+      memory=$((2 * 1024 * 1024 * 1024))
+      ;;
+    small)
+      cores=2
+      memory=$((4 * 1024 * 1024 * 1024))
+      ;;
+    medium)
+      cores=4
+      memory=$((8 * 1024 * 1024 * 1024))
+      ;;
+    large)
+      cores=8
+      memory=$((16 * 1024 * 1024 * 1024))
+      ;;
+    xlarge)
+      cores=16
+      memory=$((32 * 1024 * 1024 * 1024))
+      ;;
+    *)
+      cores=2
+      memory=$((4 * 1024 * 1024 * 1024))
+      ;;
   esac
 
   log_info "Provisioning Yandex VM: $name in $zone..."
@@ -106,7 +124,7 @@ provider_yandex_provision() {
       \"bootDiskSpec\": {
         \"autoDelete\": true,
         \"diskSpec\": {
-          \"size\": $((20*1024*1024*1024)),
+          \"size\": $((20 * 1024 * 1024 * 1024)),
           \"imageId\": \"fd8vmcue7aajpmeo39kk\"
         }
       },
@@ -198,12 +216,12 @@ provider_yandex_get_ip() {
 provider_yandex_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "5" ;;
-    small)  echo "10" ;;
+    tiny) echo "5" ;;
+    small) echo "10" ;;
     medium) echo "25" ;;
-    large)  echo "50" ;;
+    large) echo "50" ;;
     xlarge) echo "100" ;;
-    *)      echo "10" ;;
+    *) echo "10" ;;
   esac
 }
 

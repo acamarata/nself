@@ -239,7 +239,7 @@ metadata_set_bulk() {
         ((count++))
       fi
     fi
-  done <<< "$keys"
+  done <<<"$keys"
 
   echo "✓ Set $count metadata keys" >&2
   return 0
@@ -391,7 +391,7 @@ metadata_restore_version() {
   fi
 
   local value value_type
-  read -r value value_type <<< "$historical_data"
+  read -r value value_type <<<"$historical_data"
 
   # Restore value
   metadata_set "$user_id" "$key" "$value" "$value_type"

@@ -26,11 +26,11 @@ apply_smart_defaults() {
   # CRITICAL: Internal port must always be 5432 for container-to-container communication
   # External port can be different for host access
   : ${POSTGRES_INTERNAL_PORT:=5432}
-  : ${POSTGRES_PORT:=${POSTGRES_EXTERNAL_PORT:-5432}}  # External port for host access
+  : ${POSTGRES_PORT:=${POSTGRES_EXTERNAL_PORT:-5432}} # External port for host access
   : ${POSTGRES_DB:=nhost}
   : ${POSTGRES_USER:=postgres}
   : ${POSTGRES_PASSWORD:=postgres-dev-password}
-  
+
   # Construct database URL - ALWAYS use internal port 5432 for service-to-service communication
   : ${HASURA_GRAPHQL_DATABASE_URL:=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
   : ${POSTGRES_EXTENSIONS:=uuid-ossp}
@@ -110,19 +110,19 @@ apply_smart_defaults() {
   : ${AUTH_ENABLED:=true}
   : ${STORAGE_ENABLED:=true}
   : ${NSELF_ADMIN_ENABLED:=false}
-  
+
   # Map deprecated variable names for backward compatibility
   if [[ "${NADMIN_ENABLED:-}" == "true" ]]; then
     NSELF_ADMIN_ENABLED=true
   fi
-  
+
   # Map STORAGE_ENABLED to MINIO for backward compatibility
   if [[ "$STORAGE_ENABLED" == "true" ]]; then
     MINIO_ENABLED=true
   elif [[ "${MINIO_ENABLED:-}" == "true" ]]; then
     STORAGE_ENABLED=true
   fi
-  
+
   # Optional Services (all disabled by default)
   : ${FUNCTIONS_ENABLED:=false}
   : ${FUNCTIONS_ROUTE:=functions.${BASE_DOMAIN}}
@@ -136,7 +136,7 @@ apply_smart_defaults() {
   : ${REDIS_VERSION:=7-alpine}
   : ${REDIS_PORT:=6379}
   : ${REDIS_PASSWORD:=""}
-  
+
   # MLflow - ML Experiment Tracking
   : ${MLFLOW_ENABLED:=false}
   : ${MLFLOW_VERSION:=2.9.2}
@@ -147,45 +147,45 @@ apply_smart_defaults() {
   : ${MLFLOW_AUTH_ENABLED:=false}
   : ${MLFLOW_AUTH_USERNAME:=admin}
   : ${MLFLOW_AUTH_PASSWORD:=mlflow-admin-password}
-  
+
   # Search Services Configuration
   : ${SEARCH_ENABLED:=false}
-  : ${SEARCH_ENGINE:=meilisearch}  # meilisearch, typesense, elasticsearch, opensearch, zinc, sonic
-  
+  : ${SEARCH_ENGINE:=meilisearch} # meilisearch, typesense, elasticsearch, opensearch, zinc, sonic
+
   # Meilisearch (Default - Best for most use cases)
   : ${MEILISEARCH_VERSION:=v1.6}
   : ${MEILISEARCH_PORT:=7700}
   : ${MEILISEARCH_MASTER_KEY:=meilisearch-master-key-minimum-16-chars}
   : ${MEILISEARCH_ROUTE:=search.${BASE_DOMAIN}}
   : ${MEILISEARCH_ENV:=development}
-  
+
   # Typesense (High-performance alternative)
   : ${TYPESENSE_VERSION:=26.0}
   : ${TYPESENSE_PORT:=8108}
   : ${TYPESENSE_API_KEY:=typesense-api-key-minimum-32-chars}
   : ${TYPESENSE_ROUTE:=search.${BASE_DOMAIN}}
-  
+
   # Elasticsearch (Industry standard, resource heavy)
   : ${ELASTICSEARCH_VERSION:=8.11.3}
   : ${ELASTICSEARCH_PORT:=9200}
   : ${ELASTICSEARCH_PASSWORD:=elasticsearch-password}
   : ${ELASTICSEARCH_ROUTE:=search.${BASE_DOMAIN}}
   : ${ELASTICSEARCH_MEMORY:=1Gi}
-  
+
   # OpenSearch (AWS fork of Elasticsearch)
   : ${OPENSEARCH_VERSION:=2.11.1}
   : ${OPENSEARCH_PORT:=9200}
   : ${OPENSEARCH_PASSWORD:=opensearch-password}
   : ${OPENSEARCH_ROUTE:=search.${BASE_DOMAIN}}
   : ${OPENSEARCH_MEMORY:=1Gi}
-  
+
   # Zinc (Lightweight Elasticsearch alternative in Go)
   : ${ZINC_VERSION:=0.4.9}
   : ${ZINC_PORT:=4080}
   : ${ZINC_ADMIN_USER:=admin}
   : ${ZINC_ADMIN_PASSWORD:=zinc-admin-password}
   : ${ZINC_ROUTE:=search.${BASE_DOMAIN}}
-  
+
   # Sonic (Ultra-lightweight, schema-less)
   : ${SONIC_VERSION:=1.4.8}
   : ${SONIC_PORT:=1491}
@@ -284,20 +284,20 @@ load_env_with_defaults() {
     source ".env.dev" 2>/dev/null
     set +a
   fi
-  
+
   # Normalize ENV after loading
   case "${ENV:-dev}" in
-    development|develop|devel)
+    development | develop | devel)
       export ENV="dev"
       ;;
-    production|prod)
+    production | prod)
       export ENV="prod"
       ;;
-    staging|stage)
+    staging | stage)
       export ENV="staging"
       ;;
   esac
-  
+
   # Load environment-specific files
   if [[ "${ENV:-}" == "staging" ]] && [[ -f ".env.staging" ]]; then
     set -a
@@ -307,7 +307,7 @@ load_env_with_defaults() {
     [[ -f ".env.prod" ]] && source ".env.prod" 2>/dev/null
     [[ -f ".env.secrets" ]] && source ".env.secrets" 2>/dev/null
   fi
-  
+
   # Load .env.local if it exists (alternative to .env)
   if [[ -f ".env.local" ]]; then
     set -a
@@ -321,13 +321,13 @@ load_env_with_defaults() {
     source ".env" 2>/dev/null
     set +a
   fi
-  
+
   # Skip the problematic env.sh loading
   if false; then
     # Fallback: implement the same cascade here
     # Determine current environment (default to dev)
     local current_env="${ENV:-dev}"
-    
+
     # STEP 1: Always load .env.dev as the base (team defaults)
     if [[ -f ".env.dev" ]]; then
       set -a
@@ -336,10 +336,10 @@ load_env_with_defaults() {
       # Update current_env in case it was set in .env.dev
       current_env="${ENV:-dev}"
     fi
-    
+
     # STEP 2: Load environment-specific overrides based on ENV
     case "$current_env" in
-      staging|stage)
+      staging | stage)
         # For staging: .env.dev -> .env.staging
         if [[ -f ".env.staging" ]]; then
           set -a
@@ -347,33 +347,33 @@ load_env_with_defaults() {
           set +a
         fi
         ;;
-      
-      prod|production)
+
+      prod | production)
         # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
         if [[ -f ".env.staging" ]]; then
           set -a
           source ".env.staging" 2>/dev/null
           set +a
         fi
-        
+
         if [[ -f ".env.prod" ]]; then
           set -a
           source ".env.prod" 2>/dev/null
           set +a
         fi
-        
+
         if [[ -f ".env.secrets" ]]; then
           set -a
           source ".env.secrets" 2>/dev/null
           set +a
         fi
         ;;
-      
-      dev|development|*)
+
+      dev | development | *)
         # For dev or any other env: just .env.dev (already loaded)
         ;;
     esac
-    
+
     # STEP 3: Load .env as the FINAL override (HIGHEST PRIORITY)
     if [[ -f ".env" ]]; then
       set -a
@@ -381,7 +381,7 @@ load_env_with_defaults() {
       set +a
     fi
   fi
-  
+
   # Apply smart defaults for any missing values
   apply_smart_defaults
 

@@ -8,7 +8,10 @@ set -euo pipefail
 config_validate() {
   local config_file="${1:-.env}"
 
-  [[ ! -f "$config_file" ]] && { echo "ERROR: Config file not found: $config_file" >&2; return 1; }
+  [[ ! -f "$config_file" ]] && {
+    echo "ERROR: Config file not found: $config_file" >&2
+    return 1
+  }
 
   local errors="[]"
 
@@ -38,12 +41,12 @@ config_validate() {
 
 # Configuration templates
 config_create_template() {
-  local template_type="$1"  # minimal, development, production
+  local template_type="$1" # minimal, development, production
   local output_file="${2:-.env.template}"
 
   case "$template_type" in
     minimal)
-      cat > "$output_file" <<'EOF'
+      cat >"$output_file" <<'EOF'
 # Minimal nself configuration
 PROJECT_NAME=myapp
 ENV=dev
@@ -56,7 +59,7 @@ EOF
       ;;
 
     development)
-      cat > "$output_file" <<'EOF'
+      cat >"$output_file" <<'EOF'
 # Development configuration
 PROJECT_NAME=myapp
 ENV=dev
@@ -80,7 +83,7 @@ EOF
       ;;
 
     production)
-      cat > "$output_file" <<'EOF'
+      cat >"$output_file" <<'EOF'
 # Production configuration
 PROJECT_NAME=myapp
 ENV=prod
@@ -121,9 +124,9 @@ config_migrate() {
     "0.5.0-0.6.0")
       # Add new Redis variables if not present
       if ! grep -q "^REDIS_ENABLED=" .env 2>/dev/null; then
-        echo "" >> .env
-        echo "# Redis (added in v0.6.0)" >> .env
-        echo "REDIS_ENABLED=false" >> .env
+        echo "" >>.env
+        echo "# Redis (added in v0.6.0)" >>.env
+        echo "REDIS_ENABLED=false" >>.env
       fi
       ;;
 
@@ -160,9 +163,9 @@ config_export_json() {
     value=$(echo "$value" | sed 's/^["'\'']\|["'\'']$//g')
 
     json=$(echo "$json" | jq --arg k "$key" --arg v "$value" '. + {($k): $v}')
-  done < "$config_file"
+  done <"$config_file"
 
-  echo "$json" | jq '.' > "$output_file"
+  echo "$json" | jq '.' >"$output_file"
   echo "✓ Configuration exported to $output_file"
 }
 

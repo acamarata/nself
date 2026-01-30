@@ -58,7 +58,7 @@ echo ""
 printf "${YELLOW}2. No Hardcoded Paths${NC}\n"
 echo "----------------------------------------"
 
-if grep -r "/Users/admin/Sites/nself" src --include="*.sh" | grep -v "test" | grep -v ".backup" > /dev/null; then
+if grep -r "/Users/admin/Sites/nself" src --include="*.sh" | grep -v "test" | grep -v ".backup" >/dev/null; then
   printf "${RED}✗${NC} Found hardcoded paths\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
@@ -79,7 +79,7 @@ echo "----------------------------------------"
 
 LARGE_FILES=0
 for file in $(find src -name "*.sh" -type f); do
-  lines=$(wc -l < "$file")
+  lines=$(wc -l <"$file")
   if [[ $lines -gt 500 ]]; then
     filename=$(basename "$file")
     if [[ $lines -gt 1000 ]]; then
@@ -111,7 +111,7 @@ printf "${YELLOW}4. Bash 3.2 Compatibility${NC}\n"
 echo "----------------------------------------"
 
 # Check for associative arrays
-if grep -r "declare -A" src --include="*.sh" > /dev/null; then
+if grep -r "declare -A" src --include="*.sh" >/dev/null; then
   printf "${RED}✗${NC} Found associative arrays (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
@@ -125,7 +125,7 @@ else
 fi
 
 # Check for mapfile/readarray
-if grep -rE "mapfile|readarray" src --include="*.sh" > /dev/null; then
+if grep -rE "mapfile|readarray" src --include="*.sh" >/dev/null; then
   printf "${RED}✗${NC} Found mapfile/readarray (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
@@ -139,7 +139,7 @@ else
 fi
 
 # Check for ${var,,} or ${var^^}
-if grep -rE '\$\{[^}]+,,[^}]*\}|\$\{[^}]+\^\^[^}]*\}' src --include="*.sh" > /dev/null; then
+if grep -rE '\$\{[^}]+,,[^}]*\}|\$\{[^}]+\^\^[^}]*\}' src --include="*.sh" >/dev/null; then
   printf "${RED}✗${NC} Found case conversion (Bash 4+ feature)\n"
   TESTS_FAILED=$((TESTS_FAILED + 1))
   if [ -n "$ISSUES_FOUND" ]; then
@@ -167,7 +167,7 @@ for file in $(find src -name "*.sh" -type f); do
   fi
 
   # Check for sed -i without safe_sed_inline
-  if grep -E "sed -i[^n]" "$file" | grep -v "safe_sed_inline" > /dev/null 2>&1; then
+  if grep -E "sed -i[^n]" "$file" | grep -v "safe_sed_inline" >/dev/null 2>&1; then
     UNSAFE_SED_COUNT=$((UNSAFE_SED_COUNT + 1))
     printf "${YELLOW}⚠${NC} %s may have unsafe sed usage\n" "$(basename "$file")"
   fi
@@ -195,7 +195,7 @@ run_test "Init creates .env" "[[ -f .env ]]"
 run_test "Init demo" "nself init --demo"
 run_test "Demo .env has required vars" "grep -q 'PROJECT_NAME=' .env"
 
-cd - > /dev/null
+cd - >/dev/null
 rm -rf "$TEST_DIR"
 
 echo ""
@@ -209,14 +209,14 @@ mkdir -p "$TEST_DIR"
 cd "$TEST_DIR"
 
 # Initialize first
-nself init --demo > /dev/null 2>&1
+nself init --demo >/dev/null 2>&1
 
 run_test "Build runs" "nself build"
 run_test "Build creates docker-compose.yml" "[[ -f docker-compose.yml ]]"
 run_test "Build creates nginx config" "[[ -d nginx ]]"
 run_test "Build creates SSL certs" "[[ -d ssl ]]"
 
-cd - > /dev/null
+cd - >/dev/null
 rm -rf "$TEST_DIR"
 
 echo ""

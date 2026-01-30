@@ -66,23 +66,23 @@ handle_go_module_error() {
   echo ""
 
   case $REPLY in
-  1)
-    fix_go_modules "$services"
-    ;;
-  2)
-    show_go_manual_fix "$services"
-    ;;
-  3)
-    disable_go_services "$services"
-    ;;
-  4)
-    log_info "Cancelled"
-    return 1
-    ;;
-  *)
-    log_error "Invalid option"
-    return 1
-    ;;
+    1)
+      fix_go_modules "$services"
+      ;;
+    2)
+      show_go_manual_fix "$services"
+      ;;
+    3)
+      disable_go_services "$services"
+      ;;
+    4)
+      log_info "Cancelled"
+      return 1
+      ;;
+    *)
+      log_error "Invalid option"
+      return 1
+      ;;
   esac
 }
 
@@ -292,18 +292,18 @@ handle_disk_space_error() {
   echo ""
 
   case $REPLY in
-  1)
-    clean_docker_safe
-    ;;
-  2)
-    clean_docker_aggressive
-    ;;
-  3)
-    df -h
-    ;;
-  4)
-    return 1
-    ;;
+    1)
+      clean_docker_safe
+      ;;
+    2)
+      clean_docker_aggressive
+      ;;
+    3)
+      df -h
+      ;;
+    4)
+      return 1
+      ;;
   esac
 }
 

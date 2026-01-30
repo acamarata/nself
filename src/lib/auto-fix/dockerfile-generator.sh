@@ -18,22 +18,22 @@ generate_dockerfile_for_service() {
 
   # Determine service type based on name and generate appropriate files
   case "$service_name" in
-  functions)
-    generate_functions_service "$service_path"
-    ;;
-  auth)
-    generate_auth_service "$service_path"
-    ;;
-  storage)
-    generate_storage_service "$service_path"
-    ;;
-  hasura)
-    generate_hasura_service "$service_path"
-    ;;
-  *)
-    # Default to a basic Node.js service
-    generate_generic_node_service "$service_name" "$service_path"
-    ;;
+    functions)
+      generate_functions_service "$service_path"
+      ;;
+    auth)
+      generate_auth_service "$service_path"
+      ;;
+    storage)
+      generate_storage_service "$service_path"
+      ;;
+    hasura)
+      generate_hasura_service "$service_path"
+      ;;
+    *)
+      # Default to a basic Node.js service
+      generate_generic_node_service "$service_name" "$service_path"
+      ;;
   esac
 
   return 0
@@ -111,7 +111,6 @@ EOF
 
   # Successfully generated
 }
-
 
 # Generate auth service placeholder
 generate_auth_service() {

@@ -31,7 +31,7 @@ detect_os() {
         fi
       fi
       ;;
-    CYGWIN*|MINGW*|MSYS*)
+    CYGWIN* | MINGW* | MSYS*)
       os_type="windows"
       os_variant="mingw"
       ;;
@@ -110,8 +110,8 @@ get_platform_command() {
       ;;
     package_manager)
       case "$(get_os_variant)" in
-        ubuntu|debian) echo "apt-get" ;;
-        fedora|rhel|centos) echo "dnf" ;;
+        ubuntu | debian) echo "apt-get" ;;
+        fedora | rhel | centos) echo "dnf" ;;
         arch) echo "pacman" ;;
         alpine) echo "apk" ;;
         *) echo "$default_cmd" ;;

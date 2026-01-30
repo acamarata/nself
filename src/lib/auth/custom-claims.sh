@@ -50,7 +50,8 @@ claims_generate() {
 
   # Build base claims
   local claims_json
-  claims_json=$(cat <<EOF
+  claims_json=$(
+    cat <<EOF
 {
   "user_id": "$user_id",
   "roles": $roles_json,
@@ -58,7 +59,7 @@ claims_generate() {
   "metadata": $metadata_json
 }
 EOF
-)
+  )
 
   # Execute custom claims hooks for additional transformations
   claims_json=$(hook_custom_claims "$claims_json" 2>/dev/null || echo "$claims_json")
@@ -86,7 +87,7 @@ claims_generate_hasura() {
       if [[ -n "$role" ]]; then
         roles_list="${roles_list},\"$role\""
       fi
-    done <<< "$roles_array"
+    done <<<"$roles_array"
 
     if [[ -n "$roles_list" ]]; then
       hasura_roles="[${roles_list#,}]"
@@ -180,7 +181,7 @@ claims_refresh() {
 claims_store() {
   local user_id="$1"
   local claims_json="$2"
-  local ttl="${3:-300}"  # 5 minute default
+  local ttl="${3:-300}" # 5 minute default
 
   if [[ -z "$user_id" ]] || [[ -z "$claims_json" ]]; then
     echo "ERROR: User ID and claims JSON required" >&2
@@ -209,8 +210,8 @@ EOSQL
 
   # Calculate expiry
   local expires_at
-  expires_at=$(date -u -d "+${ttl} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${ttl}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${ttl} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${ttl}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Escape claims JSON
   claims_json=$(echo "$claims_json" | sed "s/'/''/g")
@@ -257,7 +258,7 @@ claims_get_cached() {
     2>/dev/null | xargs)
 
   if [[ -z "$claims_json" ]] || [[ "$claims_json" == "null" ]]; then
-    return 1  # No cached claims
+    return 1 # No cached claims
   fi
 
   echo "$claims_json"
@@ -279,7 +280,7 @@ claims_invalidate() {
   container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
   if [[ -z "$container" ]]; then
-    return 0  # Fail silently
+    return 0 # Fail silently
   fi
 
   # Delete cached claims

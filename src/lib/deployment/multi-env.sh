@@ -9,7 +9,7 @@ CURRENT_ENV_FILE="${CURRENT_ENV_FILE:-./.current-env}"
 # Initialize environment directory
 init_environments() {
   mkdir -p "$ENVIRONMENTS_DIR"
-  
+
   # Create default environments if they don't exist
   for env in development staging production; do
     if [[ ! -f "$ENVIRONMENTS_DIR/$env.env" ]]; then
@@ -22,10 +22,10 @@ init_environments() {
 create_default_env() {
   local env_name="$1"
   local env_file="$ENVIRONMENTS_DIR/$env_name.env"
-  
+
   case "$env_name" in
     development)
-      cat > "$env_file" <<EOF
+      cat >"$env_file" <<EOF
 # Development Environment
 ENV=development
 DEBUG=true
@@ -37,7 +37,7 @@ BACKUP_ENABLED=false
 EOF
       ;;
     staging)
-      cat > "$env_file" <<EOF
+      cat >"$env_file" <<EOF
 # Staging Environment
 ENV=staging
 DEBUG=false
@@ -50,7 +50,7 @@ BACKUP_SCHEDULE=daily
 EOF
       ;;
     production)
-      cat > "$env_file" <<EOF
+      cat >"$env_file" <<EOF
 # Production Environment
 ENV=production
 DEBUG=false
@@ -70,21 +70,21 @@ EOF
 switch_environment() {
   local env_name="$1"
   local env_file="$ENVIRONMENTS_DIR/$env_name.env"
-  
+
   if [[ ! -f "$env_file" ]]; then
     echo "Environment not found: $env_name"
     return 1
   fi
-  
+
   # Backup current environment
   if [[ -f ".env.local" ]]; then
     cp .env.local ".env.local.backup-$(date +%Y%m%d-%H%M%S)"
   fi
-  
+
   # Load new environment
   cp "$env_file" .env.local
-  echo "$env_name" > "$CURRENT_ENV_FILE"
-  
+  echo "$env_name" >"$CURRENT_ENV_FILE"
+
   echo "Switched to environment: $env_name"
 }
 
@@ -100,7 +100,7 @@ get_current_environment() {
 # List environments
 list_environments() {
   local current=$(get_current_environment)
-  
+
   echo "Available environments:"
   for env_file in "$ENVIRONMENTS_DIR"/*.env; do
     if [[ -f "$env_file" ]]; then
@@ -118,43 +118,43 @@ list_environments() {
 deploy_to_environment() {
   local env_name="$1"
   local current=$(get_current_environment)
-  
+
   if [[ "$env_name" != "$current" ]]; then
     switch_environment "$env_name"
   fi
-  
+
   # Environment-specific deployment steps
   case "$env_name" in
     production)
       # Production deployment
       echo "Deploying to production..."
-      
+
       # Run pre-deployment checks
       nself doctor || return 1
-      
+
       # Create backup
       nself backup create pre-deploy
-      
+
       # Deploy with zero-downtime
       nself deploy --zero-downtime
-      
+
       # Run post-deployment tests
       nself test production
       ;;
     staging)
       # Staging deployment
       echo "Deploying to staging..."
-      
+
       # Deploy normally
       nself deploy
-      
+
       # Run integration tests
       nself test integration
       ;;
     development)
       # Development deployment
       echo "Deploying to development..."
-      
+
       # Simple deployment
       nself build
       nself start

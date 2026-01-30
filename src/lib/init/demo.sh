@@ -95,7 +95,7 @@ setup_demo() {
 
   # Create .env if it doesn't exist from template
   if [[ ! -f ".env" ]]; then
-    cat > .env << 'EOF'
+    cat >.env <<'EOF'
 # Local Configuration Overrides for Demo
 # Essential variables are pre-filled from demo configuration
 

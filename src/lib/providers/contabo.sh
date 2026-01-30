@@ -18,7 +18,7 @@ CONTABO_REGIONS=(
 _contabo_get_size() {
   local size="$1"
   case "$size" in
-    tiny|small) echo "vps-s-ssd" ;;   # 4 vCPU, 8GB, 50GB NVMe - €4.50/mo
+    tiny | small) echo "vps-s-ssd" ;; # 4 vCPU, 8GB, 50GB NVMe - €4.50/mo
     medium) echo "vps-m-ssd" ;;       # 6 vCPU, 16GB, 100GB NVMe - €8.99/mo
     large) echo "vps-l-ssd" ;;        # 8 vCPU, 30GB, 200GB NVMe - €14.99/mo
     xlarge) echo "vps-xl-ssd" ;;      # 10 vCPU, 60GB, 400GB NVMe - €26.99/mo
@@ -51,7 +51,7 @@ provider_contabo_init() {
   read -rsp "API Password: " api_password
   echo
 
-  cat > "$config_dir/contabo.yml" << EOF
+  cat >"$config_dir/contabo.yml" <<EOF
 provider: contabo
 client_id: "$client_id"
 client_secret: "$client_secret"
@@ -134,10 +134,22 @@ provider_contabo_provision() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      --size) size="$2"; shift 2 ;;
-      --region) region="$2"; shift 2 ;;
-      --ssh-key) ssh_key="$2"; shift 2 ;;
+      --name)
+        name="$2"
+        shift 2
+        ;;
+      --size)
+        size="$2"
+        shift 2
+        ;;
+      --region)
+        region="$2"
+        shift 2
+        ;;
+      --ssh-key)
+        ssh_key="$2"
+        shift 2
+        ;;
       *) shift ;;
     esac
   done
@@ -293,7 +305,7 @@ provider_contabo_estimate_cost() {
   local size="${1:-small}"
 
   case "$size" in
-    tiny|small) echo "5" ;;
+    tiny | small) echo "5" ;;
     medium) echo "9" ;;
     large) echo "15" ;;
     xlarge) echo "27" ;;

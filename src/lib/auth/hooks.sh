@@ -264,7 +264,7 @@ hook_execute() {
       # Optionally: return error to stop execution
       # return 1
     fi
-  done <<< "$hooks"
+  done <<<"$hooks"
 
   echo "$current_context"
   return 0
@@ -395,7 +395,7 @@ hook_validate_context() {
   local field_count
   field_count=$(echo "$required_fields" | jq 'length')
 
-  for ((i=0; i<field_count; i++)); do
+  for ((i = 0; i < field_count; i++)); do
     local field
     field=$(echo "$required_fields" | jq -r ".[$i]")
 
@@ -428,7 +428,7 @@ hook_log() {
   container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
   if [[ -z "$container" ]]; then
-    return 0  # Fail silently for logging
+    return 0 # Fail silently for logging
   fi
 
   # Create hook_logs table if it doesn't exist

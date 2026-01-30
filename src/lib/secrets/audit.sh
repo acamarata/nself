@@ -75,7 +75,7 @@ audit_log() {
   local error_message="${7:-}"
 
   if [[ -z "$action" ]] || [[ -z "$key_name" ]] || [[ -z "$environment" ]] || [[ -z "$result" ]]; then
-    return 0  # Fail silently for audit logging
+    return 0 # Fail silently for audit logging
   fi
 
   # Get PostgreSQL container
@@ -83,7 +83,7 @@ audit_log() {
   container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
   if [[ -z "$container" ]]; then
-    return 0  # Fail silently
+    return 0 # Fail silently
   fi
 
   # Escape values
@@ -155,7 +155,10 @@ audit_get_logs() {
 
   local where_clause=""
   if [[ ${#where_parts[@]} -gt 0 ]]; then
-    where_clause="WHERE $(IFS=' AND '; echo "${where_parts[*]}")"
+    where_clause="WHERE $(
+      IFS=' AND '
+      echo "${where_parts[*]}"
+    )"
   fi
 
   # Get logs
@@ -369,7 +372,7 @@ audit_get_access_patterns() {
 # Detect suspicious activity
 # Usage: audit_detect_suspicious [threshold]
 audit_detect_suspicious() {
-  local threshold="${1:-10}"  # Failed attempts threshold
+  local threshold="${1:-10}" # Failed attempts threshold
 
   # Get PostgreSQL container
   local container

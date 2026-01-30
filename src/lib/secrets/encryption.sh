@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Encryption defaults
 readonly ENCRYPTION_ALGORITHM="aes-256-cbc"
-readonly KEY_SIZE=32  # 256 bits
+readonly KEY_SIZE=32 # 256 bits
 readonly KEY_ROTATION_DAYS=90
 
 # ============================================================================
@@ -84,8 +84,8 @@ EOSQL
 
   # Calculate expiry (90 days from now)
   local expires_at
-  expires_at=$(date -u -d "+${KEY_ROTATION_DAYS} days" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${KEY_ROTATION_DAYS}d "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${KEY_ROTATION_DAYS} days" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${KEY_ROTATION_DAYS}d "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # If setting as active, deactivate all other keys
   if [[ "$is_active" == "true" ]]; then
@@ -225,7 +225,7 @@ encryption_check_rotation() {
   key_json=$(encryption_get_active_key 2>/dev/null)
 
   if [[ $? -ne 0 ]]; then
-    return 0  # No key exists, rotation needed
+    return 0 # No key exists, rotation needed
   fi
 
   # Get key creation date
@@ -233,7 +233,7 @@ encryption_check_rotation() {
   created_at=$(echo "$key_json" | jq -r '.created_at')
 
   if [[ -z "$created_at" ]] || [[ "$created_at" == "null" ]]; then
-    return 0  # Invalid date, rotation needed
+    return 0 # Invalid date, rotation needed
   fi
 
   # Calculate age in days
@@ -242,14 +242,14 @@ encryption_check_rotation() {
   created_epoch=$(date -d "$created_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$created_at" +%s 2>/dev/null)
   now_epoch=$(date +%s)
 
-  local age_days=$(( (now_epoch - created_epoch) / 86400 ))
+  local age_days=$(((now_epoch - created_epoch) / 86400))
 
   if [[ $age_days -ge $KEY_ROTATION_DAYS ]]; then
     echo "Key is $age_days days old (threshold: $KEY_ROTATION_DAYS days)" >&2
-    return 0  # Rotation needed
+    return 0 # Rotation needed
   fi
 
-  return 1  # No rotation needed
+  return 1 # No rotation needed
 }
 
 # List all encryption keys

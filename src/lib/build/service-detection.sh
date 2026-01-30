@@ -50,7 +50,7 @@ detect_custom_services() {
       cs_count=$((cs_count + 1))
 
       # Parse service definition
-      IFS=':' read -r name template port <<< "$cs_value"
+      IFS=':' read -r name template port <<<"$cs_value"
 
       # Export parsed values for build system
       export "CS_${i}_NAME=$name"
@@ -148,13 +148,13 @@ get_env_domain() {
 
   # Use ternary pattern for domain selection
   case "$env" in
-    prod|production)
+    prod | production)
       echo "${PROD_DOMAIN:-${PRODUCTION_DOMAIN:-${BASE_DOMAIN:-localhost}}}"
       ;;
-    staging|stage)
+    staging | stage)
       echo "${STAGING_DOMAIN:-${BASE_DOMAIN:-localhost}}"
       ;;
-    dev|development|*)
+    dev | development | *)
       echo "${DEV_DOMAIN:-${BASE_DOMAIN:-localhost}}"
       ;;
   esac

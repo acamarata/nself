@@ -379,9 +379,9 @@ permission_check_user() {
     2>/dev/null | xargs)
 
   if [[ "${has_perm:-0}" -gt 0 ]]; then
-    return 0  # Has permission
+    return 0 # Has permission
   else
-    return 1  # No permission
+    return 1 # No permission
   fi
 }
 

@@ -66,15 +66,15 @@ load_env_with_priority() {
 
   # Normalize environment names
   case "$current_env" in
-    development|develop|devel)
+    development | develop | devel)
       current_env="dev"
       export ENV="dev"
       ;;
-    production|prod)
+    production | prod)
       current_env="prod"
       export ENV="prod"
       ;;
-    staging|stage)
+    staging | stage)
       current_env="staging"
       export ENV="staging"
       ;;
@@ -82,7 +82,7 @@ load_env_with_priority() {
 
   # STEP 3: Load environment-specific overrides based on ENV
   case "$current_env" in
-    staging|stage)
+    staging | stage)
       # For staging: .env.dev -> .env.staging
       if [[ -f ".env.staging" ]]; then
         set -a
@@ -92,7 +92,7 @@ load_env_with_priority() {
       fi
       ;;
 
-    prod|production)
+    prod | production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
       if [[ -f ".env.staging" ]]; then
         set -a
@@ -116,7 +116,7 @@ load_env_with_priority() {
       fi
       ;;
 
-    dev|development|*)
+    dev | development | *)
       # For dev or any other env: just .env.dev (already loaded)
       ;;
   esac
@@ -163,9 +163,9 @@ set_env_var() {
     # Add new variable (ensure newline before if needed)
     # Check if file ends with newline
     if [[ -f "$file" ]] && [[ -s "$file" ]] && [[ $(tail -c 1 "$file" | wc -l) -eq 0 ]]; then
-      echo "" >> "$file"
+      echo "" >>"$file"
     fi
-    echo "${var_name}=${value}" >> "$file"
+    echo "${var_name}=${value}" >>"$file"
   fi
 }
 
@@ -178,15 +178,15 @@ is_env_set() {
 # Get environment type (dev/staging/prod)
 get_environment() {
   local env="${ENV:-dev}"
-  
+
   case "$env" in
-    dev|development)
+    dev | development)
       echo "dev"
       ;;
-    staging|stage)
+    staging | stage)
       echo "staging"
       ;;
-    prod|production)
+    prod | production)
       echo "prod"
       ;;
     *)
@@ -210,15 +210,15 @@ is_development() {
 # Export environment from file
 export_env_from_file() {
   local file="$1"
-  
+
   if [[ ! -f "$file" ]]; then
     return 1
   fi
-  
+
   set -a
   source "$file"
   set +a
-  
+
   return 0
 }
 
@@ -226,19 +226,19 @@ export_env_from_file() {
 validate_required_env() {
   local required_vars=("$@")
   local missing=()
-  
+
   for var in "${required_vars[@]}"; do
     if ! is_env_set "$var"; then
       missing+=("$var")
     fi
   done
-  
+
   if [[ ${#missing[@]} -gt 0 ]]; then
     echo "Missing required environment variables:"
     printf '  - %s\n' "${missing[@]}"
     return 1
   fi
-  
+
   return 0
 }
 
@@ -251,7 +251,7 @@ get_env_vars_with_prefix() {
 # Clear env vars with prefix
 clear_env_vars_with_prefix() {
   local prefix="$1"
-  
+
   for var in $(get_env_vars_with_prefix "$prefix"); do
     unset "$var"
   done
@@ -273,16 +273,16 @@ ensure_project_name() {
 
     # Clean it up to be valid (alphanumeric and hyphens only)
     local clean_name=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//' | sed 's/-*$//')
-    
+
     if [[ -z "$clean_name" ]] || [[ "$clean_name" == "." ]] || [[ "$clean_name" == "-" ]]; then
       clean_name="my-project"
     fi
-    
+
     export PROJECT_NAME="$clean_name"
-    
+
     # If we have a .env file, add it there too
     if [[ -f ".env" ]] && ! grep -q "^PROJECT_NAME=" ".env"; then
-      echo "PROJECT_NAME=$clean_name" >> ".env"
+      echo "PROJECT_NAME=$clean_name" >>".env"
     fi
   fi
 }
@@ -306,12 +306,12 @@ ensure_project_context() {
 load_service_env() {
   local service="$1"
   local env_file=".env.${service}"
-  
+
   if [[ -f "$env_file" ]]; then
     export_env_from_file "$env_file"
     return 0
   fi
-  
+
   return 1
 }
 
@@ -325,13 +325,13 @@ get_cascaded_vars() {
 
   # Normalize environment names
   case "$target_env" in
-    development|develop|devel)
+    development | develop | devel)
       target_env="dev"
       ;;
-    production|prod)
+    production | prod)
       target_env="prod"
       ;;
-    staging|stage)
+    staging | stage)
       target_env="staging"
       ;;
   esac
@@ -354,7 +354,7 @@ get_cascaded_vars() {
       fi
       ;;
 
-    prod|production)
+    prod | production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets -> .env
       if [[ -f ".env.staging" ]]; then
         set -a
@@ -375,7 +375,7 @@ get_cascaded_vars() {
       fi
       ;;
 
-    dev|development|*)
+    dev | development | *)
       # For dev: just .env.dev -> .env
       ;;
   esac
@@ -400,14 +400,14 @@ print_cascaded_vars() {
 
   # Save current environment
   local temp_env_file="/tmp/nself_env_before_$$"
-  env > "$temp_env_file"
+  env >"$temp_env_file"
 
   # Load cascaded vars
   get_cascaded_vars "$target_env"
 
   # Show only the vars that were set/changed
   local temp_env_after="/tmp/nself_env_after_$$"
-  env > "$temp_env_after"
+  env >"$temp_env_after"
 
   echo "# Cascaded environment for: $target_env"
   echo "# Cascade order:"
@@ -416,7 +416,7 @@ print_cascaded_vars() {
     staging)
       echo "#   - .env.staging"
       ;;
-    prod|production)
+    prod | production)
       echo "#   - .env.staging"
       echo "#   - .env.prod"
       echo "#   - .env.secrets"

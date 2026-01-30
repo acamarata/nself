@@ -14,7 +14,7 @@ hasura::generate_app_schemas() {
 
   # Add per-app schemas based on table prefixes
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local table_prefix_var="FRONTEND_APP_${i}_TABLE_PREFIX"
       local table_prefix="${!table_prefix_var:-}"
 
@@ -44,7 +44,7 @@ hasura::generate_remote_schemas() {
   local configs=()
 
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local remote_schema_name_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_NAME"
       local remote_schema_url_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_URL"
       local system_name_var="FRONTEND_APP_${i}_SYSTEM_NAME"
@@ -92,7 +92,7 @@ hasura::generate_schema_sql() {
   # Generate SQL
   if [ ${#schemas[@]} -gt 0 ]; then
     for schema in "${schemas[@]}"; do
-    cat <<EOF
+      cat <<EOF
 -- Create schema for $schema
 CREATE SCHEMA IF NOT EXISTS "$schema";
 
@@ -131,7 +131,7 @@ hasura::generate_auth_config() {
 
   # For each app, check if it needs isolated auth
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       if hasura::app_needs_isolated_auth "$i"; then
         local table_prefix_var="FRONTEND_APP_${i}_TABLE_PREFIX"
         local table_prefix="${!table_prefix_var:-}"

@@ -87,16 +87,16 @@ generate_service_lock_files() {
 
       # Create minimal package.json if missing
       if [[ ! -f "$functions_dir/package.json" ]]; then
-        echo '{"name":"functions","version":"1.0.0","dependencies":{}}' > "$functions_dir/package.json"
+        echo '{"name":"functions","version":"1.0.0","dependencies":{}}' >"$functions_dir/package.json"
       fi
 
       # Create lock file
       if [[ ! -f "$functions_dir/package-lock.json" ]]; then
-        echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' > "$functions_dir/package-lock.json"
+        echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' >"$functions_dir/package-lock.json"
       fi
     elif [[ -f "$functions_dir/package.json" ]] && [[ ! -f "$functions_dir/package-lock.json" ]]; then
       [ "$verbose" = "true" ] && echo "  Generating package-lock.json for functions service"
-      echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' > "$functions_dir/package-lock.json"
+      echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' >"$functions_dir/package-lock.json"
     fi
   fi
 
@@ -145,7 +145,7 @@ from fastapi.responses import JSONResponse/'
         # Node.js services
         if [[ -f "$service_dir/package.json" ]] && [[ ! -f "$service_dir/package-lock.json" ]]; then
           [ "$verbose" = "true" ] && echo "  Generating package-lock.json for $service_name"
-          echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' > "$service_dir/package-lock.json"
+          echo '{"lockfileVersion": 2, "requires": true, "packages": {}}' >"$service_dir/package-lock.json"
         fi
 
         # Go services
@@ -172,7 +172,7 @@ fix_jwt_configuration() {
   # Ensure JWT type is set
   if ! grep -q "^AUTH_JWT_TYPE=" "$env_file" 2>/dev/null; then
     [ "$verbose" = "true" ] && echo "  Setting AUTH_JWT_TYPE=HS256"
-    echo "AUTH_JWT_TYPE=HS256" >> "$env_file"
+    echo "AUTH_JWT_TYPE=HS256" >>"$env_file"
   fi
 
   # Get or generate JWT secret
@@ -196,13 +196,13 @@ fix_jwt_configuration() {
 
   # Ensure all JWT-related variables are set
   if ! grep -q "^AUTH_JWT_SECRET=" "$env_file" 2>/dev/null; then
-    echo "AUTH_JWT_SECRET=$jwt_secret" >> "$env_file"
+    echo "AUTH_JWT_SECRET=$jwt_secret" >>"$env_file"
   fi
   if ! grep -q "^AUTH_JWT_KEY=" "$env_file" 2>/dev/null; then
-    echo "AUTH_JWT_KEY=$jwt_secret" >> "$env_file"
+    echo "AUTH_JWT_KEY=$jwt_secret" >>"$env_file"
   fi
   if ! grep -q "^HASURA_JWT_KEY=" "$env_file" 2>/dev/null; then
-    echo "HASURA_JWT_KEY=$jwt_secret" >> "$env_file"
+    echo "HASURA_JWT_KEY=$jwt_secret" >>"$env_file"
   fi
 
   # Fix Hasura JWT secret format - MUST be single-quoted to preserve JSON
@@ -213,7 +213,7 @@ fix_jwt_configuration() {
   if grep -q "^HASURA_GRAPHQL_JWT_SECRET=" "$env_file" 2>/dev/null; then
     safe_sed_inline "$env_file" "/^HASURA_GRAPHQL_JWT_SECRET=/d"
   fi
-  echo "HASURA_GRAPHQL_JWT_SECRET=${hasura_jwt_secret}" >> "$env_file"
+  echo "HASURA_GRAPHQL_JWT_SECRET=${hasura_jwt_secret}" >>"$env_file"
 }
 
 # Fix MeiliSearch environment mapping
@@ -225,13 +225,13 @@ fix_meilisearch_env() {
   local meili_env="development"
 
   case "$env_value" in
-    dev|development)
+    dev | development)
       meili_env="development"
       ;;
-    prod|production)
+    prod | production)
       meili_env="production"
       ;;
-    staging|stage|test)
+    staging | stage | test)
       meili_env="development"
       ;;
     *)
@@ -247,7 +247,7 @@ fix_meilisearch_env() {
     fi
   else
     [ "$verbose" = "true" ] && echo "  Setting MEILI_ENV=$meili_env"
-    echo "MEILI_ENV=$meili_env" >> "$env_file"
+    echo "MEILI_ENV=$meili_env" >>"$env_file"
   fi
 }
 
@@ -269,7 +269,7 @@ fix_custom_service_ports() {
 
         if ! grep -q "^$port_var=" "$env_file" 2>/dev/null; then
           [ "$verbose" = "true" ] && echo "  Setting $port_var=$port"
-          echo "$port_var=$port" >> "$env_file"
+          echo "$port_var=$port" >>"$env_file"
         fi
       fi
     fi
@@ -325,7 +325,7 @@ apply_start_auto_fixes() {
     local db_port="${POSTGRES_PORT:-5432}"
 
     [ "$verbose" = "true" ] && echo "Auto-fixing: Adding DATABASE_URL to env file"
-    echo "DATABASE_URL=postgres://${db_user}:${db_pass}@${db_host}:${db_port}/${safe_db_name}" >> "$env_file"
+    echo "DATABASE_URL=postgres://${db_user}:${db_pass}@${db_host}:${db_port}/${safe_db_name}" >>"$env_file"
   fi
 
   # Fix 4: Comprehensive JWT configuration fix
@@ -334,7 +334,7 @@ apply_start_auto_fixes() {
   # Fix 4.5: Add Hasura endpoint for Auth service
   if ! grep -q "^HASURA_GRAPHQL_GRAPHQL_URL=" "$env_file" 2>/dev/null; then
     [ "$verbose" = "true" ] && echo "  Setting HASURA_GRAPHQL_GRAPHQL_URL for auth service"
-    echo "HASURA_GRAPHQL_GRAPHQL_URL=http://hasura:8080/v1/graphql" >> "$env_file"
+    echo "HASURA_GRAPHQL_GRAPHQL_URL=http://hasura:8080/v1/graphql" >>"$env_file"
   fi
 
   # Fix 5: MeiliSearch environment mapping
@@ -382,17 +382,17 @@ fix_auth_database_connection() {
     # Ensure AUTH_DATABASE_URL is set
     if ! grep -q "^AUTH_DATABASE_URL=" "$env_file" 2>/dev/null; then
       [ "$verbose" = "true" ] && echo "  Setting AUTH_DATABASE_URL for auth service"
-      echo "AUTH_DATABASE_URL=postgresql://${db_user}:${db_pass}@postgres:5432/${db_name}" >> "$env_file"
+      echo "AUTH_DATABASE_URL=postgresql://${db_user}:${db_pass}@postgres:5432/${db_name}" >>"$env_file"
     fi
 
     # Also set individual AUTH_POSTGRES variables as fallback
     if ! grep -q "^AUTH_POSTGRES_HOST=" "$env_file" 2>/dev/null; then
       [ "$verbose" = "true" ] && echo "  Setting AUTH_POSTGRES connection variables"
-      echo "AUTH_POSTGRES_HOST=postgres" >> "$env_file"
-      echo "AUTH_POSTGRES_PORT=5432" >> "$env_file"
-      echo "AUTH_POSTGRES_USER=${db_user}" >> "$env_file"
-      echo "AUTH_POSTGRES_PASSWORD=${db_pass}" >> "$env_file"
-      echo "AUTH_POSTGRES_DATABASE=${db_name}" >> "$env_file"
+      echo "AUTH_POSTGRES_HOST=postgres" >>"$env_file"
+      echo "AUTH_POSTGRES_PORT=5432" >>"$env_file"
+      echo "AUTH_POSTGRES_USER=${db_user}" >>"$env_file"
+      echo "AUTH_POSTGRES_PASSWORD=${db_pass}" >>"$env_file"
+      echo "AUTH_POSTGRES_DATABASE=${db_name}" >>"$env_file"
     fi
   fi
 }
@@ -411,7 +411,7 @@ fix_port_conflicts() {
 
     # Move nself-admin to alternate port
     if ! grep -q "^NSELF_ADMIN_PORT=" "$env_file" 2>/dev/null; then
-      echo "NSELF_ADMIN_PORT=3022" >> "$env_file"
+      echo "NSELF_ADMIN_PORT=3022" >>"$env_file"
       [ "$verbose" = "true" ] && echo "    Moving nself-admin to port 3022"
     else
       safe_sed_inline "$env_file" "s/^NSELF_ADMIN_PORT=.*/NSELF_ADMIN_PORT=3022/"
@@ -421,7 +421,7 @@ fix_port_conflicts() {
   # Check for other common conflicts
   # Tempo/Grafana conflict (both can default to 3000)
   local grafana_port="${GRAFANA_PORT:-3000}"
-  local tempo_port="${TEMPO_PORT:-3200}"  # Tempo actually defaults to 3200, but check anyway
+  local tempo_port="${TEMPO_PORT:-3200}" # Tempo actually defaults to 3200, but check anyway
 
   # Add more conflict resolutions as needed
 }
@@ -440,7 +440,7 @@ fix_functions_requirements() {
   # Create package.json if missing
   if [[ ! -f "functions/package.json" ]]; then
     [ "$verbose" = "true" ] && echo "  Creating functions/package.json"
-    cat > functions/package.json <<'EOF'
+    cat >functions/package.json <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -457,7 +457,7 @@ EOF
   # Create package-lock.json if missing
   if [[ ! -f "functions/package-lock.json" ]]; then
     [ "$verbose" = "true" ] && echo "  Creating functions/package-lock.json"
-    cat > functions/package-lock.json <<'EOF'
+    cat >functions/package-lock.json <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -477,7 +477,7 @@ EOF
   # Create yarn.lock as alternative
   if [[ ! -f "functions/yarn.lock" ]]; then
     [ "$verbose" = "true" ] && echo "  Creating functions/yarn.lock"
-    echo "# yarn lockfile v1" > functions/yarn.lock
+    echo "# yarn lockfile v1" >functions/yarn.lock
   fi
 
   return 0
@@ -498,7 +498,7 @@ fix_auth_database_urls() {
 
   # Also ensure POSTGRES_HOST is set correctly
   if ! grep -q "^POSTGRES_HOST=" "$env_file" 2>/dev/null; then
-    echo "POSTGRES_HOST=postgres" >> "$env_file"
+    echo "POSTGRES_HOST=postgres" >>"$env_file"
   elif grep -q "^POSTGRES_HOST=localhost\|^POSTGRES_HOST=127.0.0.1\|^POSTGRES_HOST=::1" "$env_file" 2>/dev/null; then
     [ "$verbose" = "true" ] && echo "  Fixing POSTGRES_HOST to postgres"
     safe_sed_inline "$env_file" "s/^POSTGRES_HOST=.*/POSTGRES_HOST=postgres/"
@@ -510,19 +510,19 @@ fix_auth_database_urls() {
   local postgres_db=$(grep "^POSTGRES_DB=" "$env_file" 2>/dev/null | cut -d= -f2- || echo "nself_db")
 
   if ! grep -q "^AUTH_POSTGRES_HOST=" "$env_file" 2>/dev/null; then
-    echo "AUTH_POSTGRES_HOST=postgres" >> "$env_file"
+    echo "AUTH_POSTGRES_HOST=postgres" >>"$env_file"
   fi
   if ! grep -q "^AUTH_POSTGRES_PORT=" "$env_file" 2>/dev/null; then
-    echo "AUTH_POSTGRES_PORT=5432" >> "$env_file"
+    echo "AUTH_POSTGRES_PORT=5432" >>"$env_file"
   fi
   if ! grep -q "^AUTH_POSTGRES_USER=" "$env_file" 2>/dev/null; then
-    echo "AUTH_POSTGRES_USER=$postgres_user" >> "$env_file"
+    echo "AUTH_POSTGRES_USER=$postgres_user" >>"$env_file"
   fi
   if ! grep -q "^AUTH_POSTGRES_PASSWORD=" "$env_file" 2>/dev/null; then
-    echo "AUTH_POSTGRES_PASSWORD=$postgres_password" >> "$env_file"
+    echo "AUTH_POSTGRES_PASSWORD=$postgres_password" >>"$env_file"
   fi
   if ! grep -q "^AUTH_POSTGRES_DATABASE=" "$env_file" 2>/dev/null; then
-    echo "AUTH_POSTGRES_DATABASE=$postgres_db" >> "$env_file"
+    echo "AUTH_POSTGRES_DATABASE=$postgres_db" >>"$env_file"
   fi
 
   return 0
@@ -544,7 +544,7 @@ monitor_and_heal_services() {
     sleep 5
 
     # Get unhealthy services
-    local unhealthy_services=$(docker compose ps --format json 2>/dev/null | \
+    local unhealthy_services=$(docker compose ps --format json 2>/dev/null |
       jq -r 'select(.Health == "unhealthy" or .State == "restarting") | .Service' 2>/dev/null)
 
     if [[ -z "$unhealthy_services" ]]; then

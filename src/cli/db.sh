@@ -51,9 +51,9 @@ TYPES_DIR="${NSELF_TYPES_DIR:-types}"
 get_env() {
   local env="${ENV:-${ENVIRONMENT:-local}}"
   case "$env" in
-    dev|development|local) echo "local" ;;
-    staging|stage) echo "staging" ;;
-    prod|production) echo "production" ;;
+    dev | development | local) echo "local" ;;
+    staging | stage) echo "staging" ;;
+    prod | production) echo "production" ;;
     *) echo "$env" ;;
   esac
 }
@@ -77,11 +77,17 @@ require_confirmation() {
     log_warning "PRODUCTION ENVIRONMENT"
     printf "Type 'yes-destroy-production' to confirm: "
     read -r response
-    [[ "$response" == "yes-destroy-production" ]] || { log_info "Cancelled"; return 1; }
+    [[ "$response" == "yes-destroy-production" ]] || {
+      log_info "Cancelled"
+      return 1
+    }
   elif is_staging; then
     printf "Staging environment. Continue? (y/N): "
     read -r response
-    [[ "$response" =~ ^[Yy]$ ]] || { log_info "Cancelled"; return 1; }
+    [[ "$response" =~ ^[Yy]$ ]] || {
+      log_info "Cancelled"
+      return 1
+    }
   fi
 }
 
@@ -132,7 +138,7 @@ snake_to_pascal() {
   local capitalize=true
   local char
 
-  for (( i=0; i<${#input}; i++ )); do
+  for ((i = 0; i < ${#input}; i++)); do
     char="${input:$i:1}"
     if [[ "$char" == "_" ]]; then
       capitalize=true
@@ -181,12 +187,15 @@ cmd_migrate() {
 
   case "$subcmd" in
     status) migrate_status "$@" ;;
-    up|run) migrate_up "$@" ;;
-    down|rollback) migrate_down "$@" ;;
-    create|new) migrate_create "$@" ;;
+    up | run) migrate_up "$@" ;;
+    down | rollback) migrate_down "$@" ;;
+    create | new) migrate_create "$@" ;;
     fresh) migrate_fresh "$@" ;;
     repair) migrate_repair "$@" ;;
-    *) log_error "Unknown: migrate $subcmd"; migrate_help ;;
+    *)
+      log_error "Unknown: migrate $subcmd"
+      migrate_help
+      ;;
   esac
 }
 
@@ -263,7 +272,7 @@ migrate_up() {
     fi
 
     log_info "Applying: $name"
-    if psql_exec < "$file" >/dev/null 2>&1; then
+    if psql_exec <"$file" >/dev/null 2>&1; then
       psql_exec -c "INSERT INTO schema_migrations (version) VALUES ('$version')" >/dev/null
       log_success "  Applied successfully"
       count=$((count + 1))
@@ -294,7 +303,7 @@ migrate_down() {
 
     if [[ -f "$down_file" ]]; then
       log_info "Rolling back: $version using $(basename "$down_file")"
-      if psql_exec < "$down_file" 2>&1; then
+      if psql_exec <"$down_file" 2>&1; then
         log_success "  SQL executed"
       else
         log_warning "  SQL execution had issues (may be expected)"
@@ -310,14 +319,17 @@ migrate_down() {
 
 migrate_create() {
   local name="$1"
-  [[ -z "$name" ]] && { log_error "Usage: nself db migrate create <name>"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Usage: nself db migrate create <name>"
+    return 1
+  }
 
   ensure_dirs
   local timestamp=$(date +%Y%m%d%H%M%S)
   local up_file="$MIGRATIONS_DIR/${timestamp}_${name}.sql"
   local down_file="$MIGRATIONS_DIR/${timestamp}_${name}_down.sql"
 
-  cat > "$up_file" << EOF
+  cat >"$up_file" <<EOF
 -- Migration: $name
 -- Created: $(date)
 -- Environment: $(get_env)
@@ -326,7 +338,7 @@ migrate_create() {
 
 EOF
 
-  cat > "$down_file" << EOF
+  cat >"$down_file" <<EOF
 -- Rollback: $name
 -- Created: $(date)
 
@@ -390,7 +402,7 @@ cmd_shell() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --readonly|-r)
+      --readonly | -r)
         readonly=true
         shift
         ;;
@@ -428,7 +440,10 @@ cmd_query() {
   local sql="$1"
   local format="${2:-table}"
 
-  [[ -z "$sql" ]] && { log_error "Usage: nself db query '<sql>' [format]"; return 1; }
+  [[ -z "$sql" ]] && {
+    log_error "Usage: nself db query '<sql>' [format]"
+    return 1
+  }
 
   case "$format" in
     csv) psql_exec -c "COPY ($sql) TO STDOUT WITH CSV HEADER" ;;
@@ -468,7 +483,7 @@ seed_run() {
     for seed in "$SEEDS_DIR/common"/*.sql; do
       [[ -f "$seed" ]] || continue
       log_info "  $(basename "$seed")"
-      psql_exec < "$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
+      psql_exec <"$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
     done
   fi
 
@@ -479,7 +494,7 @@ seed_run() {
     for seed in "$env_dir"/*.sql; do
       [[ -f "$seed" ]] || continue
       log_info "  $(basename "$seed")"
-      psql_exec < "$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
+      psql_exec <"$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
     done
   fi
 
@@ -515,9 +530,9 @@ seed_users() {
         # Check for NSELF_PROD_USERS (format: email:name:role,email:name:role,...)
         if [[ -n "${NSELF_PROD_USERS:-}" ]]; then
           log_info "Creating users from NSELF_PROD_USERS..."
-          IFS=',' read -ra users <<< "$NSELF_PROD_USERS"
+          IFS=',' read -ra users <<<"$NSELF_PROD_USERS"
           for user_entry in "${users[@]}"; do
-            IFS=':' read -r email name role <<< "$user_entry"
+            IFS=':' read -r email name role <<<"$user_entry"
             if [[ -n "$email" ]]; then
               seed_explicit_user "$email" "" "${role:-user}" "$name"
             fi
@@ -607,13 +622,16 @@ seed_create() {
   local name="$1"
   local env="${2:-common}"
 
-  [[ -z "$name" ]] && { log_error "Usage: nself db seed create <name> [environment]"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Usage: nself db seed create <name> [environment]"
+    return 1
+  }
 
   ensure_dirs
   local file="$SEEDS_DIR/$env/${name}.sql"
   mkdir -p "$(dirname "$file")"
 
-  cat > "$file" << EOF
+  cat >"$file" <<EOF
 -- Seed: $name
 -- Environment: $env
 -- Created: $(date)
@@ -650,7 +668,10 @@ cmd_mock() {
     preview) mock_preview "$@" ;;
     clear) mock_clear "$@" ;;
     config) mock_config "$@" ;;
-    *) log_error "Unknown: mock $subcmd"; mock_help ;;
+    *)
+      log_error "Unknown: mock $subcmd"
+      mock_help
+      ;;
   esac
 }
 
@@ -665,15 +686,15 @@ mock_generate() {
   # Parse arguments (support --tables and --count flags)
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --tables|-t)
+      --tables | -t)
         table="$2"
         shift 2
         ;;
-      --count|-c)
+      --count | -c)
         count="$2"
         shift 2
         ;;
-      --seed|-s)
+      --seed | -s)
         seed="$2"
         shift 2
         ;;
@@ -699,7 +720,7 @@ mock_generate() {
   log_info "Same seed = same data across your team!"
 
   # Save seed for reproducibility
-  echo "$seed" > "$MOCK_DIR/mock.seed"
+  echo "$seed" >"$MOCK_DIR/mock.seed"
 
   # System tables to exclude from mock data
   local exclude_tables="schema_migrations|pg_|information_schema|auth_"
@@ -767,31 +788,31 @@ mock_table() {
 
       # Generate appropriate mock value based on type and column name
       case "$data_type" in
-        integer|bigint|smallint)
+        integer | bigint | smallint)
           col_values+="$row_id"
           ;;
-        numeric|decimal|real|"double precision")
+        numeric | decimal | real | "double precision")
           col_values+="$row_id.99"
           ;;
         boolean)
           [[ $((row_id % 2)) -eq 0 ]] && col_values+="true" || col_values+="false"
           ;;
-        *timestamp*|*date*)
+        *timestamp* | *date*)
           col_values+="NOW() - INTERVAL '$((row_id % 365)) days'"
           ;;
         uuid)
           col_values+="gen_random_uuid()"
           ;;
-        json|jsonb)
+        json | jsonb)
           # Generate valid JSONB based on column name patterns
           case "$col_name" in
-            *metadata*|*meta*)
+            *metadata* | *meta*)
               col_values+="'{\"source\": \"mock\", \"version\": 1, \"id\": $row_id}'"
               ;;
-            *config*|*settings*)
+            *config* | *settings*)
               col_values+="'{\"enabled\": true, \"level\": $((row_id % 5))}'"
               ;;
-            *data*|*payload*)
+            *data* | *payload*)
               col_values+="'{\"type\": \"mock\", \"index\": $row_id, \"valid\": true}'"
               ;;
             *)
@@ -799,14 +820,14 @@ mock_table() {
               ;;
           esac
           ;;
-        inet|cidr|"inet"|"cidr")
+        inet | cidr | "inet" | "cidr")
           # Generate valid IP addresses with explicit type cast
           local octet1=$((10 + (row_id / 65536) % 245))
           local octet2=$(((row_id / 256) % 256))
           local octet3=$((row_id % 256))
           col_values+="'${octet1}.${octet2}.${octet3}.1'::inet"
           ;;
-        macaddr|macaddr8|"macaddr"|"macaddr8")
+        macaddr | macaddr8 | "macaddr" | "macaddr8")
           # Generate valid MAC addresses with explicit type cast
           local mac_part=$(printf '%02x:%02x:%02x' $((row_id % 256)) $(((row_id / 256) % 256)) $(((row_id / 65536) % 256)))
           col_values+="'00:00:5e:${mac_part}'::macaddr"
@@ -816,10 +837,10 @@ mock_table() {
           local mock_val=""
           case "$col_name" in
             *email*) mock_val="user${row_id}@example.com" ;;
-            *name*|*title*) mock_val="Mock ${col_name} ${row_id}" ;;
-            *url*|*link*) mock_val="https://example.com/${row_id}" ;;
+            *name* | *title*) mock_val="Mock ${col_name} ${row_id}" ;;
+            *url* | *link*) mock_val="https://example.com/${row_id}" ;;
             *slug*) mock_val="slug-${row_id}" ;;
-            *password*|*hash*) mock_val="hashed_${row_id}" ;;
+            *password* | *hash*) mock_val="hashed_${row_id}" ;;
             *) mock_val="mock_${col_name}_${row_id}" ;;
           esac
           # Truncate if character_maximum_length is defined
@@ -829,7 +850,7 @@ mock_table() {
           col_values+="'$mock_val'"
           ;;
       esac
-    done <<< "$columns_info"
+    done <<<"$columns_info"
 
     # Execute insert if we have columns
     if [[ -n "$col_names" ]]; then
@@ -881,7 +902,7 @@ mock_config() {
   local config="$MOCK_DIR/mock.config.yaml"
 
   if [[ ! -f "$config" ]]; then
-    cat > "$config" << 'EOF'
+    cat >"$config" <<'EOF'
 # Mock Data Configuration
 # Use deterministic seeds for reproducible team data
 
@@ -934,7 +955,7 @@ cmd_backup() {
 
   case "$subcmd" in
     create) backup_create "$@" ;;
-    list|ls) backup_list "$@" ;;
+    list | ls) backup_list "$@" ;;
     restore) backup_restore "$@" ;;
     schedule) backup_schedule "$@" ;;
     prune) backup_prune "$@" ;;
@@ -952,16 +973,16 @@ backup_create() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --compress|-c)
+      --compress | -c)
         compress=true
         shift
         ;;
-      --name|-n)
+      --name | -n)
         shift
         name="$1"
         shift
         ;;
-      full|database|db|schema|data)
+      full | database | db | schema | data)
         type="$1"
         shift
         ;;
@@ -998,7 +1019,7 @@ backup_create() {
       # Database dump
       log_info "  Dumping database..."
       docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-        "${POSTGRES_DB:-nhost}" > "$temp_dir/database.sql"
+        "${POSTGRES_DB:-nhost}" >"$temp_dir/database.sql"
 
       # Config files
       log_info "  Backing up config..."
@@ -1012,33 +1033,33 @@ backup_create() {
       rm -rf "$temp_dir"
       ;;
 
-    database|db)
+    database | db)
       if [[ "$compress" == true ]]; then
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          "${POSTGRES_DB:-nhost}" | gzip > "$backup_path"
+          "${POSTGRES_DB:-nhost}" | gzip >"$backup_path"
       else
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          "${POSTGRES_DB:-nhost}" > "$backup_path"
+          "${POSTGRES_DB:-nhost}" >"$backup_path"
       fi
       ;;
 
     schema)
       if [[ "$compress" == true ]]; then
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          --schema-only "${POSTGRES_DB:-nhost}" | gzip > "$backup_path"
+          --schema-only "${POSTGRES_DB:-nhost}" | gzip >"$backup_path"
       else
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          --schema-only "${POSTGRES_DB:-nhost}" > "$backup_path"
+          --schema-only "${POSTGRES_DB:-nhost}" >"$backup_path"
       fi
       ;;
 
     data)
       if [[ "$compress" == true ]]; then
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          --data-only "${POSTGRES_DB:-nhost}" | gzip > "$backup_path"
+          --data-only "${POSTGRES_DB:-nhost}" | gzip >"$backup_path"
       else
         docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-          --data-only "${POSTGRES_DB:-nhost}" > "$backup_path"
+          --data-only "${POSTGRES_DB:-nhost}" >"$backup_path"
       fi
       ;;
 
@@ -1099,7 +1120,7 @@ backup_restore() {
 
     if [[ -f "$temp_dir/database.sql" ]]; then
       log_info "  Restoring database..."
-      psql_exec < "$temp_dir/database.sql" >/dev/null 2>&1
+      psql_exec <"$temp_dir/database.sql" >/dev/null 2>&1
     fi
 
     log_info "  Restoring config files..."
@@ -1111,7 +1132,7 @@ backup_restore() {
     rm -rf "$temp_dir"
   else
     log_info "  Restoring database..."
-    psql_exec < "$backup_path" >/dev/null 2>&1
+    psql_exec <"$backup_path" >/dev/null 2>&1
   fi
 
   log_success "Restore complete"
@@ -1164,11 +1185,11 @@ cmd_inspect() {
   case "$subcmd" in
     overview) inspect_overview ;;
     size) inspect_size "$@" ;;
-    cache|cache-hit) inspect_cache ;;
-    index|index-usage) inspect_indexes "$@" ;;
+    cache | cache-hit) inspect_cache ;;
+    index | index-usage) inspect_indexes "$@" ;;
     unused-indexes) inspect_unused_indexes ;;
     bloat) inspect_bloat ;;
-    slow|slow-queries) inspect_slow_queries ;;
+    slow | slow-queries) inspect_slow_queries ;;
     locks) inspect_locks ;;
     connections) inspect_connections ;;
     *) inspect_overview ;;
@@ -1340,14 +1361,17 @@ schema_show() {
 schema_diff() {
   local target="${1:-}"
 
-  [[ -z "$target" ]] && { log_error "Usage: nself db schema diff <environment|file>"; return 1; }
+  [[ -z "$target" ]] && {
+    log_error "Usage: nself db schema diff <environment|file>"
+    return 1
+  }
 
   log_info "Comparing schema with $target..."
 
   # Export current schema
   local current=$(mktemp)
   docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-    --schema-only "${POSTGRES_DB:-nhost}" > "$current"
+    --schema-only "${POSTGRES_DB:-nhost}" >"$current"
 
   if [[ -f "$target" ]]; then
     diff -u "$target" "$current" || true
@@ -1369,7 +1393,7 @@ schema_diagram() {
   # Generate DBML from database
   local tables=$(psql_query "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 
-  cat > "$output" << EOF
+  cat >"$output" <<EOF
 // Database Schema
 // Generated: $(date)
 // Project: ${PROJECT_NAME:-nself}
@@ -1377,7 +1401,7 @@ schema_diagram() {
 EOF
 
   for table in $tables; do
-    echo "Table $table {" >> "$output"
+    echo "Table $table {" >>"$output"
 
     psql_query "SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns
@@ -1386,11 +1410,11 @@ EOF
       local attrs=""
       [[ "$nullable" == "NO" ]] && attrs="not null"
       [[ -n "$default" ]] && attrs="$attrs default: \`$default\`"
-      echo "  $col $dtype [$attrs]" >> "$output"
+      echo "  $col $dtype [$attrs]" >>"$output"
     done
 
-    echo "}" >> "$output"
-    echo "" >> "$output"
+    echo "}" >>"$output"
+    echo "" >>"$output"
   done
 
   log_success "Generated: $output"
@@ -1414,7 +1438,7 @@ schema_indexes() {
       ORDER BY tablename, indexname"
       ;;
 
-    missing|suggest)
+    missing | suggest)
       log_info "Suggested Indexes (based on query patterns)"
       psql_exec -c "SELECT
         relname AS table,
@@ -1446,7 +1470,7 @@ schema_export() {
   case "$format" in
     sql)
       docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-        --schema-only "${POSTGRES_DB:-nhost}" > "$output"
+        --schema-only "${POSTGRES_DB:-nhost}" >"$output"
       ;;
     json)
       psql_query "SELECT json_agg(json_build_object(
@@ -1458,7 +1482,7 @@ schema_export() {
         )) FROM information_schema.columns c
         WHERE c.table_name = t.table_name AND c.table_schema = 'public')
       )) FROM information_schema.tables t
-      WHERE table_schema = 'public'" > "$output"
+      WHERE table_schema = 'public'" >"$output"
       ;;
   esac
 
@@ -1494,28 +1518,28 @@ schema_import() {
   local in_table=false
 
   # Start up migration
-  cat > "$up_file" << 'EOF'
+  cat >"$up_file" <<'EOF'
 -- Migration generated from DBML import
 -- Generated: $(date)
 
 EOF
 
   # Start down migration
-  echo "-- Rollback migration" > "$down_file"
-  echo "" >> "$down_file"
+  echo "-- Rollback migration" >"$down_file"
+  echo "" >>"$down_file"
 
   # Parse DBML file
   while IFS= read -r line || [[ -n "$line" ]]; do
     # Skip comments and empty lines
     [[ "$line" =~ ^[[:space:]]*// ]] && continue
-    [[ -z "${line// }" ]] && continue
+    [[ -z "${line// /}" ]] && continue
 
     # Detect table start: "Table tablename {" or "Table tablename as alias {"
     if [[ "$line" =~ ^[[:space:]]*[Tt]able[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*) ]]; then
       current_table="${BASH_REMATCH[1]}"
       tables_created+=("$current_table")
       in_table=true
-      echo "CREATE TABLE IF NOT EXISTS $current_table (" >> "$up_file"
+      echo "CREATE TABLE IF NOT EXISTS $current_table (" >>"$up_file"
       continue
     fi
 
@@ -1524,8 +1548,8 @@ EOF
       # Remove trailing comma from last column and close table
       sed -i.bak '$ s/,$//' "$up_file" 2>/dev/null || sed -i '' '$ s/,$//' "$up_file"
       rm -f "$up_file.bak"
-      echo ");" >> "$up_file"
-      echo "" >> "$up_file"
+      echo ");" >>"$up_file"
+      echo "" >>"$up_file"
       in_table=false
       current_table=""
       continue
@@ -1541,22 +1565,22 @@ EOF
 
         # Map DBML types to PostgreSQL
         case "$col_type" in
-          int|integer) col_type="INTEGER" ;;
+          int | integer) col_type="INTEGER" ;;
           bigint) col_type="BIGINT" ;;
           smallint) col_type="SMALLINT" ;;
           serial) col_type="SERIAL" ;;
           bigserial) col_type="BIGSERIAL" ;;
           varchar*) col_type=$(echo "$col_type" | tr '[:lower:]' '[:upper:]') ;;
           text) col_type="TEXT" ;;
-          boolean|bool) col_type="BOOLEAN" ;;
-          timestamp|timestamptz) col_type="TIMESTAMPTZ" ;;
+          boolean | bool) col_type="BOOLEAN" ;;
+          timestamp | timestamptz) col_type="TIMESTAMPTZ" ;;
           date) col_type="DATE" ;;
           time) col_type="TIME" ;;
           uuid) col_type="UUID" ;;
           json) col_type="JSON" ;;
           jsonb) col_type="JSONB" ;;
-          decimal*|numeric*) col_type=$(echo "$col_type" | tr '[:lower:]' '[:upper:]') ;;
-          float|real) col_type="REAL" ;;
+          decimal* | numeric*) col_type=$(echo "$col_type" | tr '[:lower:]' '[:upper:]') ;;
+          float | real) col_type="REAL" ;;
           double) col_type="DOUBLE PRECISION" ;;
         esac
 
@@ -1576,12 +1600,12 @@ EOF
             constraints="$constraints DEFAULT '${BASH_REMATCH[1]}'"
           elif [[ "$attrs" =~ default:[[:space:]]*([^,\]]+) ]]; then
             local def_val="${BASH_REMATCH[1]}"
-            def_val=$(echo "$def_val" | xargs)  # trim whitespace
+            def_val=$(echo "$def_val" | xargs) # trim whitespace
             [[ -n "$def_val" ]] && constraints="$constraints DEFAULT $def_val"
           fi
         fi
 
-        echo "  $col_name $col_type$constraints," >> "$up_file"
+        echo "  $col_name $col_type$constraints," >>"$up_file"
       fi
     fi
 
@@ -1592,16 +1616,16 @@ EOF
       local to_table="${BASH_REMATCH[3]}"
       local to_col="${BASH_REMATCH[4]}"
 
-      echo "ALTER TABLE $from_table ADD CONSTRAINT fk_${from_table}_${from_col}" >> "$up_file"
-      echo "  FOREIGN KEY ($from_col) REFERENCES $to_table($to_col);" >> "$up_file"
-      echo "" >> "$up_file"
+      echo "ALTER TABLE $from_table ADD CONSTRAINT fk_${from_table}_${from_col}" >>"$up_file"
+      echo "  FOREIGN KEY ($from_col) REFERENCES $to_table($to_col);" >>"$up_file"
+      echo "" >>"$up_file"
     fi
 
-  done < "$dbml_file"
+  done <"$dbml_file"
 
   # Generate down migration (drop tables in reverse order)
-  for ((i=${#tables_created[@]}-1; i>=0; i--)); do
-    echo "DROP TABLE IF EXISTS ${tables_created[$i]} CASCADE;" >> "$down_file"
+  for ((i = ${#tables_created[@]} - 1; i >= 0; i--)); do
+    echo "DROP TABLE IF EXISTS ${tables_created[$i]} CASCADE;" >>"$down_file"
   done
 
   log_success "Created migration files:"
@@ -1628,7 +1652,7 @@ schema_scaffold() {
 
   case "$template" in
     basic)
-      cat > "$output" << 'EOF'
+      cat >"$output" <<'EOF'
 // Basic Application Schema
 // Edit this file and run: nself db schema import schema.dbml
 
@@ -1672,7 +1696,7 @@ EOF
       ;;
 
     ecommerce)
-      cat > "$output" << 'EOF'
+      cat >"$output" <<'EOF'
 // E-commerce Schema
 // Edit this file and run: nself db schema import schema.dbml
 
@@ -1752,7 +1776,7 @@ EOF
       ;;
 
     saas)
-      cat > "$output" << 'EOF'
+      cat >"$output" <<'EOF'
 // SaaS Multi-tenant Schema
 // Edit this file and run: nself db schema import schema.dbml
 
@@ -1835,7 +1859,7 @@ EOF
       ;;
 
     blog)
-      cat > "$output" << 'EOF'
+      cat >"$output" <<'EOF'
 // Blog/CMS Schema
 // Edit this file and run: nself db schema import schema.dbml
 
@@ -2051,22 +2075,22 @@ mock_auto() {
 
       # Generate appropriate mock value based on type and column name
       case "$data_type" in
-        integer|bigint|smallint)
+        integer | bigint | smallint)
           col_values+="\$(( ($seed + \$row + $i) % 1000 ))"
           ;;
-        *numeric*|*decimal*|real|*double*)
+        *numeric* | *decimal* | real | *double*)
           col_values+="\$(echo \"scale=2; ($seed + \$row + $i) / 100\" | bc)"
           ;;
         boolean)
           col_values+="\$(( ($seed + \$row) % 2 == 0 ? 'true' : 'false' ))"
           ;;
-        *timestamp*|*date*)
+        *timestamp* | *date*)
           col_values+="NOW() - INTERVAL '\$(( ($seed + \$row) % 365 )) days'"
           ;;
         uuid)
           col_values+="gen_random_uuid()"
           ;;
-        json|jsonb)
+        json | jsonb)
           col_values+="'{}'"
           ;;
         *)
@@ -2075,16 +2099,16 @@ mock_auto() {
             *email*)
               col_values+="'user\${row}@example.com'"
               ;;
-            *name*|*title*)
+            *name* | *title*)
               col_values+="'Test $col_name \${row}'"
               ;;
-            *url*|*link*)
+            *url* | *link*)
               col_values+="'https://example.com/\${row}'"
               ;;
             *slug*)
               col_values+="'slug-\${row}'"
               ;;
-            *password*|*hash*)
+            *password* | *hash*)
               col_values+="'hashed_password_\${row}'"
               ;;
             *)
@@ -2095,11 +2119,11 @@ mock_auto() {
       esac
 
       ((i++))
-    done <<< "$columns"
+    done <<<"$columns"
 
     # Generate and execute INSERT statements
     if [[ -n "$col_names" ]]; then
-      for ((row=1; row<=count; row++)); do
+      for ((row = 1; row <= count; row++)); do
         # Evaluate the values template
         local evaluated_values=$(eval "echo \"$col_values\"")
         psql_exec -c "INSERT INTO $table ($col_names) VALUES ($evaluated_values)" 2>/dev/null || true
@@ -2122,10 +2146,13 @@ cmd_types() {
   require_db || return 1
 
   case "$lang" in
-    typescript|ts) types_typescript "$@" ;;
-    go|golang) types_go "$@" ;;
-    python|py) types_python "$@" ;;
-    *) log_error "Supported: typescript, go, python"; return 1 ;;
+    typescript | ts) types_typescript "$@" ;;
+    go | golang) types_go "$@" ;;
+    python | py) types_python "$@" ;;
+    *)
+      log_error "Supported: typescript, go, python"
+      return 1
+      ;;
   esac
 }
 
@@ -2135,7 +2162,7 @@ types_typescript() {
   log_info "Generating TypeScript types..."
   mkdir -p "$(dirname "$output")"
 
-  cat > "$output" << 'EOF'
+  cat >"$output" <<'EOF'
 // Generated by nself db types
 // DO NOT EDIT - regenerate with: nself db types typescript
 
@@ -2147,7 +2174,7 @@ EOF
     # Convert to PascalCase
     local type_name=$(snake_to_pascal "$table")
 
-    echo "export interface $type_name {" >> "$output"
+    echo "export interface $type_name {" >>"$output"
 
     psql_query "SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
@@ -2157,30 +2184,37 @@ EOF
       # Map PostgreSQL types to TypeScript
       local ts_type
       case "$dtype" in
-        integer|bigint|smallint|numeric|decimal|real|"double precision")
-          ts_type="number" ;;
+        integer | bigint | smallint | numeric | decimal | real | "double precision")
+          ts_type="number"
+          ;;
         boolean)
-          ts_type="boolean" ;;
-        json|jsonb)
-          ts_type="Record<string, unknown>" ;;
-        "timestamp"*|date|time*)
-          ts_type="string" ;;
+          ts_type="boolean"
+          ;;
+        json | jsonb)
+          ts_type="Record<string, unknown>"
+          ;;
+        "timestamp"* | date | time*)
+          ts_type="string"
+          ;;
         uuid)
-          ts_type="string" ;;
+          ts_type="string"
+          ;;
         ARRAY)
-          ts_type="unknown[]" ;;
+          ts_type="unknown[]"
+          ;;
         *)
-          ts_type="string" ;;
+          ts_type="string"
+          ;;
       esac
 
       local opt=""
       [[ "$nullable" == "YES" ]] && opt="?"
 
-      echo "  ${col}${opt}: ${ts_type};" >> "$output"
+      echo "  ${col}${opt}: ${ts_type};" >>"$output"
     done
 
-    echo "}" >> "$output"
-    echo "" >> "$output"
+    echo "}" >>"$output"
+    echo "" >>"$output"
   done
 
   log_success "Generated: $output"
@@ -2193,7 +2227,7 @@ types_go() {
   log_info "Generating Go types..."
   mkdir -p "$(dirname "$output")"
 
-  cat > "$output" << EOF
+  cat >"$output" <<EOF
 // Generated by nself db types
 // DO NOT EDIT - regenerate with: nself db types go
 
@@ -2208,7 +2242,7 @@ EOF
   for table in $tables; do
     local struct_name=$(snake_to_pascal "$table")
 
-    echo "type $struct_name struct {" >> "$output"
+    echo "type $struct_name struct {" >>"$output"
 
     psql_query "SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
@@ -2219,23 +2253,23 @@ EOF
 
       local go_type
       case "$dtype" in
-        integer|smallint) go_type="int32" ;;
+        integer | smallint) go_type="int32" ;;
         bigint) go_type="int64" ;;
-        numeric|decimal|real|"double precision") go_type="float64" ;;
+        numeric | decimal | real | "double precision") go_type="float64" ;;
         boolean) go_type="bool" ;;
-        json|jsonb) go_type="map[string]interface{}" ;;
-        "timestamp"*|date|time*) go_type="time.Time" ;;
+        json | jsonb) go_type="map[string]interface{}" ;;
+        "timestamp"* | date | time*) go_type="time.Time" ;;
         uuid) go_type="string" ;;
         *) go_type="string" ;;
       esac
 
       [[ "$nullable" == "YES" ]] && go_type="*$go_type"
 
-      echo "	$field_name $go_type \`json:\"$col\" db:\"$col\"\`" >> "$output"
+      echo "	$field_name $go_type \`json:\"$col\" db:\"$col\"\`" >>"$output"
     done
 
-    echo "}" >> "$output"
-    echo "" >> "$output"
+    echo "}" >>"$output"
+    echo "" >>"$output"
   done
 
   log_success "Generated: $output"
@@ -2247,7 +2281,7 @@ types_python() {
   log_info "Generating Python types..."
   mkdir -p "$(dirname "$output")"
 
-  cat > "$output" << 'EOF'
+  cat >"$output" <<'EOF'
 # Generated by nself db types
 # DO NOT EDIT - regenerate with: nself db types python
 
@@ -2262,8 +2296,8 @@ EOF
   for table in $tables; do
     local class_name=$(snake_to_pascal "$table")
 
-    echo "@dataclass" >> "$output"
-    echo "class $class_name:" >> "$output"
+    echo "@dataclass" >>"$output"
+    echo "class $class_name:" >>"$output"
 
     psql_query "SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
@@ -2272,21 +2306,21 @@ EOF
 
       local py_type
       case "$dtype" in
-        integer|bigint|smallint) py_type="int" ;;
-        numeric|decimal|real|"double precision") py_type="float" ;;
+        integer | bigint | smallint) py_type="int" ;;
+        numeric | decimal | real | "double precision") py_type="float" ;;
         boolean) py_type="bool" ;;
-        json|jsonb) py_type="Dict[str, Any]" ;;
-        "timestamp"*|date|time*) py_type="datetime" ;;
+        json | jsonb) py_type="Dict[str, Any]" ;;
+        "timestamp"* | date | time*) py_type="datetime" ;;
         ARRAY) py_type="List[Any]" ;;
         *) py_type="str" ;;
       esac
 
       [[ "$nullable" == "YES" ]] && py_type="Optional[$py_type]"
 
-      echo "    $col: $py_type" >> "$output"
+      echo "    $col: $py_type" >>"$output"
     done
 
-    echo "" >> "$output"
+    echo "" >>"$output"
   done
 
   log_success "Generated: $output"
@@ -2316,7 +2350,10 @@ data_export() {
   local format="${2:-csv}"
   local output="${3:-}"
 
-  [[ -z "$table" ]] && { log_error "Usage: nself db data export <table> [format] [output]"; return 1; }
+  [[ -z "$table" ]] && {
+    log_error "Usage: nself db data export <table> [format] [output]"
+    return 1
+  }
 
   output="${output:-${table}_$(date +%Y%m%d).${format}}"
 
@@ -2324,14 +2361,14 @@ data_export() {
 
   case "$format" in
     csv)
-      psql_exec -c "COPY $table TO STDOUT WITH CSV HEADER" > "$output"
+      psql_exec -c "COPY $table TO STDOUT WITH CSV HEADER" >"$output"
       ;;
     json)
-      psql_query "SELECT json_agg(t) FROM $table t" > "$output"
+      psql_query "SELECT json_agg(t) FROM $table t" >"$output"
       ;;
     sql)
       docker exec "$(get_container)" pg_dump -U "${POSTGRES_USER:-postgres}" \
-        -t "$table" --data-only "${POSTGRES_DB:-nhost}" > "$output"
+        -t "$table" --data-only "${POSTGRES_DB:-nhost}" >"$output"
       ;;
   esac
 
@@ -2344,7 +2381,10 @@ data_import() {
   local file="$1"
   local table="${2:-}"
 
-  [[ ! -f "$file" ]] && { log_error "File not found: $file"; return 1; }
+  [[ ! -f "$file" ]] && {
+    log_error "File not found: $file"
+    return 1
+  }
 
   local ext="${file##*.}"
   [[ -z "$table" ]] && table="${file%.*}"
@@ -2353,10 +2393,10 @@ data_import() {
 
   case "$ext" in
     csv)
-      psql_exec -c "COPY $table FROM STDIN WITH CSV HEADER" < "$file"
+      psql_exec -c "COPY $table FROM STDIN WITH CSV HEADER" <"$file"
       ;;
     sql)
-      psql_exec < "$file"
+      psql_exec <"$file"
       ;;
     json)
       # Would need jq or similar for JSON import
@@ -2405,7 +2445,10 @@ data_sync() {
   local source="${1:-}"
   local anonymize="${2:-}"
 
-  [[ -z "$source" ]] && { log_error "Usage: nself db data sync <source-env> [--anonymize]"; return 1; }
+  [[ -z "$source" ]] && {
+    log_error "Usage: nself db data sync <source-env> [--anonymize]"
+    return 1
+  }
 
   if [[ "$source" == "production" ]] || [[ "$source" == "prod" ]]; then
     if [[ "$anonymize" != "--anonymize" ]]; then
@@ -2474,7 +2517,7 @@ cmd_reset() {
 # ============================================================================
 
 show_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself db - Database Management (v0.4.4)
 
 USAGE:
@@ -2591,20 +2634,20 @@ main() {
 
   case "$command" in
     # Migrations
-    migrate|migration|migrations)
+    migrate | migration | migrations)
       cmd_migrate "$@"
       ;;
 
     # Interactive
-    shell|console|psql)
+    shell | console | psql)
       cmd_shell "$@"
       ;;
-    query|sql)
+    query | sql)
       cmd_query "$@"
       ;;
 
     # Seeding
-    seed|seeds)
+    seed | seeds)
       cmd_seed "$@"
       ;;
 
@@ -2614,7 +2657,7 @@ main() {
       ;;
 
     # Backup & Restore
-    backup|backups)
+    backup | backups)
       cmd_backup "$@"
       ;;
     restore)
@@ -2622,7 +2665,7 @@ main() {
       ;;
 
     # Inspection
-    inspect|analyze|analysis)
+    inspect | analyze | analysis)
       cmd_inspect "$@"
       ;;
 
@@ -2632,7 +2675,7 @@ main() {
       ;;
 
     # Types
-    types|type)
+    types | type)
       cmd_types "$@"
       ;;
 
@@ -2642,7 +2685,7 @@ main() {
       ;;
 
     # Maintenance
-    optimize|vacuum)
+    optimize | vacuum)
       cmd_optimize "$@"
       ;;
     reset)
@@ -2655,7 +2698,7 @@ main() {
       ;;
 
     # Help
-    help|--help|-h)
+    help | --help | -h)
       show_help
       ;;
 

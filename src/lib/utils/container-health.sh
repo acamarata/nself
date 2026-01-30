@@ -86,29 +86,29 @@ check_project_health() {
     local health=$(get_container_health "$container")
 
     case "$health" in
-    healthy | running)
-      [[ "$verbose" == "true" ]] && echo "✓ $service_name: $health"
-      ;;
-    restarting)
-      all_healthy=false
-      restarting_list="$restarting_list $service_name"
-      [[ "$verbose" == "true" ]] && echo "↻ $service_name: restarting"
-      ;;
-    unhealthy | starting)
-      all_healthy=false
-      unhealthy_list="$unhealthy_list $service_name"
-      [[ "$verbose" == "true" ]] && echo "✱ $service_name: $health"
-      ;;
-    exited | stopped | dead)
-      all_healthy=false
-      stopped_list="$stopped_list $service_name"
-      [[ "$verbose" == "true" ]] && echo "✗ $service_name: $health"
-      ;;
-    *)
-      all_healthy=false
-      unhealthy_list="$unhealthy_list $service_name"
-      [[ "$verbose" == "true" ]] && echo "? $service_name: $health"
-      ;;
+      healthy | running)
+        [[ "$verbose" == "true" ]] && echo "✓ $service_name: $health"
+        ;;
+      restarting)
+        all_healthy=false
+        restarting_list="$restarting_list $service_name"
+        [[ "$verbose" == "true" ]] && echo "↻ $service_name: restarting"
+        ;;
+      unhealthy | starting)
+        all_healthy=false
+        unhealthy_list="$unhealthy_list $service_name"
+        [[ "$verbose" == "true" ]] && echo "✱ $service_name: $health"
+        ;;
+      exited | stopped | dead)
+        all_healthy=false
+        stopped_list="$stopped_list $service_name"
+        [[ "$verbose" == "true" ]] && echo "✗ $service_name: $health"
+        ;;
+      *)
+        all_healthy=false
+        unhealthy_list="$unhealthy_list $service_name"
+        [[ "$verbose" == "true" ]] && echo "? $service_name: $health"
+        ;;
     esac
   done
 

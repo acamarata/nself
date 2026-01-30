@@ -16,7 +16,7 @@ provider_racknerd_init() {
   read -r ssh_key_path
   ssh_key_path="${ssh_key_path:-$HOME/.ssh/id_rsa.pub}"
 
-  cat > "$config_dir/racknerd.yml" << EOF
+  cat >"$config_dir/racknerd.yml" <<EOF
 provider: racknerd
 ssh_key_path: "$ssh_key_path"
 portal_url: https://my.racknerd.com
@@ -143,12 +143,12 @@ provider_racknerd_estimate_cost() {
   local size="${1:-small}"
   # RackNerd yearly prices converted to monthly
   case "$size" in
-    tiny)   echo "1" ;;   # ~$10/year
-    small)  echo "1" ;;   # ~$12/year
-    medium) echo "2" ;;   # ~$19/year
-    large)  echo "3" ;;   # ~$28/year
-    xlarge) echo "4" ;;   # ~$37/year
-    *)      echo "1" ;;
+    tiny) echo "1" ;;   # ~$10/year
+    small) echo "1" ;;  # ~$12/year
+    medium) echo "2" ;; # ~$19/year
+    large) echo "3" ;;  # ~$28/year
+    xlarge) echo "4" ;; # ~$37/year
+    *) echo "1" ;;
   esac
 }
 

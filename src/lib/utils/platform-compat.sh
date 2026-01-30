@@ -5,7 +5,7 @@
 # Platform-safe sed inline editing
 safe_sed_inline() {
   local file="$1"
-  shift  # Remove file from arguments
+  shift # Remove file from arguments
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS requires empty string after -i
@@ -195,7 +195,7 @@ compat_set() {
   local i=0
 
   # Update existing key
-  for ((i=0; i<${#COMPAT_KEYS[@]}; i++)); do
+  for ((i = 0; i < ${#COMPAT_KEYS[@]}; i++)); do
     if [[ "${COMPAT_KEYS[$i]}" == "$key" ]]; then
       COMPAT_VALUES[$i]="$value"
       found=true
@@ -215,7 +215,7 @@ compat_get() {
   local key="$1"
   local i=0
 
-  for ((i=0; i<${#COMPAT_KEYS[@]}; i++)); do
+  for ((i = 0; i < ${#COMPAT_KEYS[@]}; i++)); do
     if [[ "${COMPAT_KEYS[$i]}" == "$key" ]]; then
       echo "${COMPAT_VALUES[$i]}"
       return 0
@@ -281,7 +281,7 @@ sanitize_filename() {
   filename=$(printf '%s' "$filename" | tr '[:upper:]' '[:lower:]')
 
   # Process character by character
-  for ((i=0; i<${#filename}; i++)); do
+  for ((i = 0; i < ${#filename}; i++)); do
     local char="${filename:$i:1}"
     case "$char" in
       # Allow alphanumeric

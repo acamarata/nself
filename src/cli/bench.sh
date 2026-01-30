@@ -25,7 +25,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help
 show_bench_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself bench - Performance benchmarking and load testing
 
 Usage: nself bench <subcommand> [options]
@@ -160,12 +160,12 @@ bench_with_curl() {
 
   local start_time=$(date +%s)
 
-  for ((i=1; i<=requests; i++)); do
+  for ((i = 1; i <= requests; i++)); do
     local req_start=$(date +%s%N)
     local status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$url" 2>/dev/null || echo "000")
     local req_end=$(date +%s%N)
 
-    local req_time=$(( (req_end - req_start) / 1000000 ))  # Convert to ms
+    local req_time=$(((req_end - req_start) / 1000000)) # Convert to ms
     total_time=$((total_time + req_time))
 
     if [[ "$req_time" -lt "$min_time" ]]; then
@@ -205,7 +205,7 @@ bench_with_curl() {
   printf "  %-20s %s ms\n" "Max response:" "$max_time"
 
   # Return JSON data
-  cat << EOF
+  cat <<EOF
 {
   "requests": $requests,
   "successful": $success,
@@ -283,7 +283,7 @@ cmd_run() {
   # Warmup
   if [[ "$BENCH_WARMUP" -gt 0 ]]; then
     printf "${COLOR_DIM}Warming up (%s seconds)...${COLOR_RESET}\n" "$BENCH_WARMUP"
-    for ((i=1; i<=BENCH_WARMUP; i++)); do
+    for ((i = 1; i <= BENCH_WARMUP; i++)); do
       curl -s -o /dev/null "$url" 2>/dev/null || true
       sleep 1
     done
@@ -302,7 +302,7 @@ cmd_run() {
     hey)
       hey -n "$requests" -c "$concurrency" "$url"
       ;;
-    curl|*)
+    curl | *)
       result=$(bench_with_curl "$url" "$requests" "$concurrency")
       ;;
   esac
@@ -312,7 +312,7 @@ cmd_run() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local save_file="${output_file:-${BENCH_DIR}/bench_${target}_${timestamp}.json}"
 
-    cat > "$save_file" << EOF
+    cat >"$save_file" <<EOF
 {
   "timestamp": "$(date -Iseconds)",
   "target": "$target",
@@ -362,13 +362,13 @@ cmd_baseline() {
       # Quick benchmark
       local start=$(date +%s%N)
       local success=0
-      for ((i=1; i<=100; i++)); do
+      for ((i = 1; i <= 100; i++)); do
         if curl -s -o /dev/null --max-time 10 "$url" 2>/dev/null; then
           success=$((success + 1))
         fi
       done
       local end=$(date +%s%N)
-      local total_ms=$(( (end - start) / 1000000 ))
+      local total_ms=$(((end - start) / 1000000))
       local avg_ms=$((total_ms / 100))
       local rps=$((100000 / (total_ms > 0 ? total_ms : 1)))
 
@@ -377,7 +377,8 @@ cmd_baseline() {
       fi
       first=false
 
-      results+=$(cat << EOF
+      results+=$(
+        cat <<EOF
 
     {
       "target": "$name",
@@ -388,7 +389,7 @@ cmd_baseline() {
       "requests_per_sec": $rps
     }
 EOF
-)
+      )
     else
       printf "  %s: ${COLOR_DIM}not available${COLOR_RESET}\n" "$name"
     fi
@@ -398,7 +399,7 @@ EOF
   ]"
 
   # Save baseline
-  cat > "$baseline_file" << EOF
+  cat >"$baseline_file" <<EOF
 {
   "type": "baseline",
   "timestamp": "$(date -Iseconds)",
@@ -465,17 +466,17 @@ cmd_compare() {
     if curl -s -o /dev/null --max-time 5 "$url" 2>/dev/null; then
       # Quick test
       local start=$(date +%s%N)
-      for ((i=1; i<=50; i++)); do
+      for ((i = 1; i <= 50; i++)); do
         curl -s -o /dev/null --max-time 10 "$url" 2>/dev/null || true
       done
       local end=$(date +%s%N)
-      local total_ms=$(( (end - start) / 1000000 ))
+      local total_ms=$(((end - start) / 1000000))
       local current_rps=$((50000 / (total_ms > 0 ? total_ms : 1)))
 
       # Calculate change
       local change=0
       if [[ "$baseline_rps" -gt 0 ]]; then
-        change=$(( (current_rps - baseline_rps) * 100 / baseline_rps ))
+        change=$(((current_rps - baseline_rps) * 100 / baseline_rps))
       fi
 
       local change_str="${change}%"
@@ -545,19 +546,19 @@ cmd_stress() {
   local start_time=$(date +%s)
 
   # Simplified stress test using curl
-  for ((phase=1; phase<=3; phase++)); do
+  for ((phase = 1; phase <= 3; phase++)); do
     local current_concurrency=$((phase_concurrency * phase))
     printf "  Phase %d: %d concurrent connections\n" "$phase" "$current_concurrency"
 
     local phase_end=$((start_time + (ramp_duration * phase)))
 
     while [[ $(date +%s) -lt $phase_end ]]; do
-      for ((c=1; c<=current_concurrency; c++)); do
+      for ((c = 1; c <= current_concurrency; c++)); do
         (
           if curl -s -o /dev/null --max-time 10 "$url" 2>/dev/null; then
-            echo "1" >> "${BENCH_DIR}/.stress_success"
+            echo "1" >>"${BENCH_DIR}/.stress_success"
           else
-            echo "1" >> "${BENCH_DIR}/.stress_fail"
+            echo "1" >>"${BENCH_DIR}/.stress_fail"
           fi
         ) &
       done
@@ -577,11 +578,11 @@ cmd_stress() {
   local success_count=0
   local fail_count=0
   if [[ -f "${BENCH_DIR}/.stress_success" ]]; then
-    success_count=$(wc -l < "${BENCH_DIR}/.stress_success" | tr -d ' ')
+    success_count=$(wc -l <"${BENCH_DIR}/.stress_success" | tr -d ' ')
     rm -f "${BENCH_DIR}/.stress_success"
   fi
   if [[ -f "${BENCH_DIR}/.stress_fail" ]]; then
-    fail_count=$(wc -l < "${BENCH_DIR}/.stress_fail" | tr -d ' ')
+    fail_count=$(wc -l <"${BENCH_DIR}/.stress_fail" | tr -d ' ')
     rm -f "${BENCH_DIR}/.stress_fail"
   fi
 
@@ -708,7 +709,7 @@ cmd_bench() {
         JSON_OUTPUT=true
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_bench_help
         return 0
         ;;

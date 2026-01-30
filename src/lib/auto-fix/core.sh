@@ -33,25 +33,25 @@ attempt_auto_fix() {
   local AF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
   case "$error_type" in
-  docker_build)
-    source "$AF_DIR/docker.sh"
-    fix_docker_build "$error_details"
-    ;;
-  port_conflict_self)
-    source "$AF_DIR/ports.sh"
-    fix_port_conflict "$error_details"
-    ;;
-  dependency_missing)
-    source "$AF_DIR/dependencies.sh"
-    fix_missing_dependency "$error_details"
-    ;;
-  config_missing)
-    source "$AF_DIR/config.sh"
-    fix_missing_config "$error_details"
-    ;;
-  *)
-    return 1
-    ;;
+    docker_build)
+      source "$AF_DIR/docker.sh"
+      fix_docker_build "$error_details"
+      ;;
+    port_conflict_self)
+      source "$AF_DIR/ports.sh"
+      fix_port_conflict "$error_details"
+      ;;
+    dependency_missing)
+      source "$AF_DIR/dependencies.sh"
+      fix_missing_dependency "$error_details"
+      ;;
+    config_missing)
+      source "$AF_DIR/config.sh"
+      fix_missing_config "$error_details"
+      ;;
+    *)
+      return 1
+      ;;
   esac
 }
 

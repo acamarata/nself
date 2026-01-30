@@ -20,8 +20,8 @@ OCI_REGIONS=(
 _oci_get_shape() {
   local size="$1"
   case "$size" in
-    tiny|free) echo "VM.Standard.E2.1.Micro" ;;
-    small|medium|large|xlarge) echo "VM.Standard.E4.Flex" ;;
+    tiny | free) echo "VM.Standard.E2.1.Micro" ;;
+    small | medium | large | xlarge) echo "VM.Standard.E4.Flex" ;;
     arm-free) echo "VM.Standard.A1.Flex" ;;
     *) echo "VM.Standard.E4.Flex" ;;
   esac
@@ -80,7 +80,7 @@ provider_oracle_init() {
   local config_dir="${HOME}/.nself/providers"
   mkdir -p "$config_dir"
 
-  cat > "$config_dir/oracle.yml" << 'EOF'
+  cat >"$config_dir/oracle.yml" <<'EOF'
 provider: oracle
 configured: true
 default_region: us-ashburn-1
@@ -151,13 +151,34 @@ provider_oracle_provision() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      --size) size="$2"; shift 2 ;;
-      --region) region="$2"; shift 2 ;;
-      --compartment) compartment_id="$2"; shift 2 ;;
-      --ssh-key) ssh_key="$2"; shift 2 ;;
-      --free) use_free_tier=true; shift ;;
-      --arm) size="arm-free"; shift ;;
+      --name)
+        name="$2"
+        shift 2
+        ;;
+      --size)
+        size="$2"
+        shift 2
+        ;;
+      --region)
+        region="$2"
+        shift 2
+        ;;
+      --compartment)
+        compartment_id="$2"
+        shift 2
+        ;;
+      --ssh-key)
+        ssh_key="$2"
+        shift 2
+        ;;
+      --free)
+        use_free_tier=true
+        shift
+        ;;
+      --arm)
+        size="arm-free"
+        shift
+        ;;
       *) shift ;;
     esac
   done
@@ -320,7 +341,7 @@ provider_oracle_estimate_cost() {
   local size="${1:-small}"
 
   case "$size" in
-    free|arm-free) echo "0" ;;
+    free | arm-free) echo "0" ;;
     tiny) echo "5" ;;
     small) echo "7" ;;
     medium) echo "14" ;;
@@ -338,9 +359,18 @@ provider_oracle_k8s_create() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      --nodes) node_count="$2"; shift 2 ;;
-      --shape) node_shape="$2"; shift 2 ;;
+      --name)
+        name="$2"
+        shift 2
+        ;;
+      --nodes)
+        node_count="$2"
+        shift 2
+        ;;
+      --shape)
+        node_shape="$2"
+        shift 2
+        ;;
       *) shift ;;
     esac
   done

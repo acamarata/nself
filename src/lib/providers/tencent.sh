@@ -17,7 +17,7 @@ provider_tencent_init() {
   read -r region
   region="${region:-ap-guangzhou}"
 
-  cat > "$config_dir/tencent.yml" << EOF
+  cat >"$config_dir/tencent.yml" <<EOF
 provider: tencent
 secret_id: "$secret_id"
 secret_key: "$secret_key"
@@ -74,12 +74,12 @@ provider_tencent_provision() {
   # Map size to instance type
   local instance_type
   case "$size" in
-    tiny)   instance_type="S5.SMALL1" ;;
-    small)  instance_type="S5.SMALL2" ;;
+    tiny) instance_type="S5.SMALL1" ;;
+    small) instance_type="S5.SMALL2" ;;
     medium) instance_type="S5.MEDIUM4" ;;
-    large)  instance_type="S5.LARGE8" ;;
+    large) instance_type="S5.LARGE8" ;;
     xlarge) instance_type="S5.2XLARGE16" ;;
-    *)      instance_type="S5.SMALL2" ;;
+    *) instance_type="S5.SMALL2" ;;
   esac
 
   log_info "Provisioning Tencent CVM: $name ($instance_type) in $region..."
@@ -120,12 +120,12 @@ provider_tencent_get_ip() {
 provider_tencent_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "5" ;;
-    small)  echo "10" ;;
+    tiny) echo "5" ;;
+    small) echo "10" ;;
     medium) echo "25" ;;
-    large)  echo "50" ;;
+    large) echo "50" ;;
     xlarge) echo "100" ;;
-    *)      echo "10" ;;
+    *) echo "10" ;;
   esac
 }
 

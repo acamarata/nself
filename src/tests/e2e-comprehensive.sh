@@ -234,7 +234,7 @@ test_build_command() {
   cd build-test
 
   # Create minimal .env.dev
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=build-test
 ENV=dev
 BASE_DOMAIN=localhost
@@ -287,7 +287,7 @@ test_env_command() {
   cd env-test
 
   # Create base config
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=env-test
 ENV=dev
 BASE_DOMAIN=localhost
@@ -358,7 +358,7 @@ test_prod_command() {
   cd prod-test
 
   # Create minimal config
-  cat > .env <<'EOF'
+  cat >.env <<'EOF'
 PROJECT_NAME=prod-test
 ENV=production
 BASE_DOMAIN=example.com
@@ -435,7 +435,7 @@ test_service_commands() {
   cd service-test
 
   # Create config
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=service-test
 ENV=dev
 BASE_DOMAIN=localhost
@@ -516,7 +516,7 @@ test_management_commands() {
   fi
 
   # Test urls (should work with config)
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=mgmt-test
 ENV=dev
 BASE_DOMAIN=localhost
@@ -602,7 +602,7 @@ test_config_scenarios() {
   # Test minimal config
   mkdir -p minimal-config
   cd minimal-config
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=minimal
 BASE_DOMAIN=localhost
 EOF
@@ -619,7 +619,7 @@ EOF
   # Test full config with all services
   mkdir -p full-config
   cd full-config
-  cat > .env.dev <<'EOF'
+  cat >.env.dev <<'EOF'
 PROJECT_NAME=fulltest
 ENV=dev
 BASE_DOMAIN=localhost

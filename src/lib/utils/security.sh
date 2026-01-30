@@ -6,26 +6,26 @@
 generate_secure_password() {
   local length="${1:-25}"
   local password=""
-  
+
   # Try OpenSSL first (most secure)
   if command -v openssl >/dev/null 2>&1; then
     password="$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-$length)"
   # Fallback to /dev/urandom
   elif [[ -r /dev/urandom ]]; then
-    password="$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c $length)"
+    password="$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom | head -c $length)"
   # Last resort - use $RANDOM
   else
     local chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-    for ((i=0; i<length; i++)); do
+    for ((i = 0; i < length; i++)); do
       password="${password}${chars:RANDOM%${#chars}:1}"
     done
   fi
-  
+
   # Validate password strength
   if [[ ${#password} -lt $length ]]; then
     log_warning "Generated password may be shorter than requested"
   fi
-  
+
   echo "$password"
 }
 

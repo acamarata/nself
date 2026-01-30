@@ -114,39 +114,39 @@ display_running_services() {
 
         # Service-specific port detection
         case "$service" in
-        postgres)
-          local port=$(docker port "$container_name" 5432 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        redis)
-          local port=$(docker port "$container_name" 6379 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        hasura)
-          local port=$(docker port "$container_name" 8080 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        auth)
-          local port=$(docker port "$container_name" 4000 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        minio | storage)
-          local port=$(docker port "$container_name" 9000 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        mailpit | mail)
-          local port=$(docker port "$container_name" 8025 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        functions)
-          local port=$(docker port "$container_name" 3000 2>/dev/null | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
-        *)
-          # Try to find any exposed port
-          local port=$(docker port "$container_name" 2>/dev/null | head -1 | cut -d: -f2)
-          [[ -n "$port" ]] && port_info=":$port"
-          ;;
+          postgres)
+            local port=$(docker port "$container_name" 5432 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          redis)
+            local port=$(docker port "$container_name" 6379 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          hasura)
+            local port=$(docker port "$container_name" 8080 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          auth)
+            local port=$(docker port "$container_name" 4000 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          minio | storage)
+            local port=$(docker port "$container_name" 9000 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          mailpit | mail)
+            local port=$(docker port "$container_name" 8025 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          functions)
+            local port=$(docker port "$container_name" 3000 2>/dev/null | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
+          *)
+            # Try to find any exposed port
+            local port=$(docker port "$container_name" 2>/dev/null | head -1 | cut -d: -f2)
+            [[ -n "$port" ]] && port_info=":$port"
+            ;;
         esac
 
         printf "  ${COLOR_GREEN}●${COLOR_RESET} %-20s${COLOR_DIM}%s${COLOR_RESET}\n" "$display_name" "$port_info"

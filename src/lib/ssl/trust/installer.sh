@@ -71,17 +71,17 @@ trust_install_linux() {
   fi
 
   case "$os_variant" in
-    ubuntu|debian|linuxmint)
+    ubuntu | debian | linuxmint)
       # Debian-based distributions
       sudo cp "$caroot/rootCA.pem" /usr/local/share/ca-certificates/mkcert-root-ca.crt 2>/dev/null
       sudo update-ca-certificates 2>/dev/null
       ;;
-    fedora|rhel|centos|rocky|alma)
+    fedora | rhel | centos | rocky | alma)
       # Red Hat-based distributions
       sudo cp "$caroot/rootCA.pem" /etc/pki/ca-trust/source/anchors/mkcert-root-ca.pem 2>/dev/null
       sudo update-ca-trust 2>/dev/null
       ;;
-    arch|manjaro)
+    arch | manjaro)
       # Arch-based distributions
       sudo cp "$caroot/rootCA.pem" /etc/ca-certificates/trust-source/anchors/mkcert-root-ca.pem 2>/dev/null
       sudo trust extract-compat 2>/dev/null
@@ -184,15 +184,15 @@ trust_uninstall_linux() {
   local os_variant=$(get_os_variant)
 
   case "$os_variant" in
-    ubuntu|debian|linuxmint)
+    ubuntu | debian | linuxmint)
       sudo rm -f /usr/local/share/ca-certificates/mkcert-root-ca.crt 2>/dev/null
       sudo update-ca-certificates --fresh 2>/dev/null
       ;;
-    fedora|rhel|centos|rocky|alma)
+    fedora | rhel | centos | rocky | alma)
       sudo rm -f /etc/pki/ca-trust/source/anchors/mkcert-root-ca.pem 2>/dev/null
       sudo update-ca-trust 2>/dev/null
       ;;
-    arch|manjaro)
+    arch | manjaro)
       sudo rm -f /etc/ca-certificates/trust-source/anchors/mkcert-root-ca.pem 2>/dev/null
       sudo trust extract-compat 2>/dev/null
       ;;

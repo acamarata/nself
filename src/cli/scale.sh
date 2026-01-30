@@ -87,38 +87,38 @@ get_resource_usage() {
 list_allocations() {
   show_command_header "nself scale" "Current resource allocations"
   echo ""
-  
+
   printf "${COLOR_CYAN}%-20s %-15s %-15s %-30s${COLOR_RESET}\n" "Service" "CPU Limit" "Memory Limit" "Current Usage"
   printf "%-20s %-15s %-15s %-30s\n" "-------------------" "--------------" "--------------" "-----------------------------"
-  
+
   # Read docker-compose.yml for configured limits
   local services=(postgres hasura hasura-auth hasura-storage nginx redis functions)
-  
+
   for service in "${services[@]}"; do
     if grep -q "^  ${service}:" docker-compose.yml 2>/dev/null; then
       # Extract limits from docker-compose.yml
       local cpu_limit="-"
       local mem_limit="-"
-      
+
       # Try to find resource limits in compose file - escape service name for regex
       local escaped_service=$(printf '%s\n' "$service" | sed 's/[[\.*^$()+?{|]/\\&/g')
       local service_block=$(awk "/^  ${escaped_service}:/,/^  [a-z]/" docker-compose.yml 2>/dev/null)
-      
+
       if echo "$service_block" | grep -q "cpus:"; then
         cpu_limit=$(echo "$service_block" | grep "cpus:" | head -1 | sed 's/.*cpus:[ "]*\([^"]*\).*/\1/')
       fi
-      
+
       if echo "$service_block" | grep -q "memory:"; then
         mem_limit=$(echo "$service_block" | grep "memory:" | head -1 | sed 's/.*memory:[ "]*\([^"]*\).*/\1/')
       fi
-      
+
       # Get current usage
       local usage=$(get_resource_usage "$service")
-      
+
       printf "%-20s %-15s %-15s %-30s\n" "$service" "$cpu_limit" "$mem_limit" "$usage"
     fi
   done
-  
+
   echo ""
   log_info "Use 'nself scale <service> --cpu <limit> --memory <limit>' to adjust resources"
 }
@@ -129,69 +129,69 @@ apply_scaling() {
   local cpu_limit="$2"
   local mem_limit="$3"
   local replicas="$4"
-  
+
   # Check if service exists
   if ! grep -q "^  ${service}:" docker-compose.yml 2>/dev/null; then
     log_error "Service '$service' not found in docker-compose.yml"
     return 1
   fi
-  
+
   # Create override file
   local override_file="docker-compose.override.yml"
-  
+
   # Initialize override if it doesn't exist
   if [[ ! -f "$override_file" ]]; then
-    cat > "$override_file" <<EOF
+    cat >"$override_file" <<EOF
 version: '3.8'
 services:
 EOF
   fi
-  
+
   # Add service scaling configuration
   local temp_file=$(mktemp)
-  
+
   # Copy existing override but remove the service block if it exists - escape service name
   local escaped_service=$(printf '%s\n' "$service" | sed 's/[[\.*^$()+?{|]/\\&/g')
-  awk "/^  ${escaped_service}:/,/^  [a-z]/ { if (/^  [a-z]/ && !/^  ${escaped_service}:/) print; next } { print }" "$override_file" > "$temp_file"
-  
+  awk "/^  ${escaped_service}:/,/^  [a-z]/ { if (/^  [a-z]/ && !/^  ${escaped_service}:/) print; next } { print }" "$override_file" >"$temp_file"
+
   # Add new service configuration
-  cat >> "$temp_file" <<EOF
+  cat >>"$temp_file" <<EOF
   ${service}:
     deploy:
       resources:
         limits:
 EOF
-  
+
   if [[ -n "$cpu_limit" ]]; then
-    echo "          cpus: '$cpu_limit'" >> "$temp_file"
+    echo "          cpus: '$cpu_limit'" >>"$temp_file"
   fi
-  
+
   if [[ -n "$mem_limit" ]]; then
-    echo "          memory: $mem_limit" >> "$temp_file"
+    echo "          memory: $mem_limit" >>"$temp_file"
   fi
-  
+
   if [[ -n "$replicas" ]] && [[ "$replicas" -gt 1 ]]; then
-    cat >> "$temp_file" <<EOF
+    cat >>"$temp_file" <<EOF
       replicas: $replicas
 EOF
   fi
-  
+
   # Replace override file atomically
   if ! mv "$temp_file" "$override_file"; then
     log_error "Failed to update override file"
     rm -f "$temp_file"
     return 1
   fi
-  
+
   log_success "Scaling configuration applied for $service"
-  
+
   # Restart service to apply changes
   log_info "Restarting $service to apply changes..."
   docker compose up -d "$service" 2>/dev/null
-  
+
   # Wait for service to be healthy
   sleep 2
-  
+
   # Show new status
   local usage=$(get_resource_usage "$service")
   log_success "Service restarted. Current usage: $usage"
@@ -208,11 +208,11 @@ cmd_scale() {
   local max_replicas=""
   local cpu_target=""
   local list_mode=false
-  
+
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -h|--help)
+      -h | --help)
         show_scale_help
         return 0
         ;;
@@ -258,19 +258,19 @@ cmd_scale() {
         ;;
     esac
   done
-  
+
   # Check if docker-compose.yml exists
   if [[ ! -f "docker-compose.yml" ]]; then
     log_error "No docker-compose.yml found. Run 'nself build' first."
     return 1
   fi
-  
+
   # List mode
   if [[ "$list_mode" == "true" ]]; then
     list_allocations
     return 0
   fi
-  
+
   # Check if service specified
   if [[ -z "$service" ]]; then
     log_error "No service specified"
@@ -281,77 +281,77 @@ cmd_scale() {
     echo "Run 'nself scale --help' for more information"
     return 1
   fi
-  
+
   show_command_header "nself scale" "Scaling service: $service"
   echo ""
-  
+
   # Auto-scaling setup
   if [[ "$auto_scale" == "true" ]]; then
     log_info "Setting up auto-scaling for $service"
-    
+
     if [[ -z "$min_replicas" ]]; then
       min_replicas=1
     fi
-    
+
     if [[ -z "$max_replicas" ]]; then
       max_replicas=10
     fi
-    
+
     if [[ -z "$cpu_target" ]]; then
       cpu_target=70
     fi
-    
+
     echo "  Min replicas: $min_replicas"
     echo "  Max replicas: $max_replicas"
     echo "  CPU target: ${cpu_target}%"
     echo ""
-    
+
     # Store auto-scaling config
     mkdir -p .nself
-    cat > ".nself/autoscale-${service}.conf" <<EOF
+    cat >".nself/autoscale-${service}.conf" <<EOF
 MIN_REPLICAS=$min_replicas
 MAX_REPLICAS=$max_replicas
 CPU_TARGET=$cpu_target
 ENABLED=true
 EOF
-    
+
     log_success "Auto-scaling configured for $service"
     log_info "Auto-scaling will be managed by the monitoring system"
-    
+
     return 0
   fi
-  
+
   # Manual scaling
   if [[ -n "$cpu_limit" ]] || [[ -n "$mem_limit" ]] || [[ -n "$replicas" ]]; then
     printf "${COLOR_CYAN}➞ Applying scaling configuration${COLOR_RESET}\n"
-    
+
     if [[ -n "$cpu_limit" ]]; then
       echo "  CPU limit: $cpu_limit"
     fi
-    
+
     if [[ -n "$mem_limit" ]]; then
       echo "  Memory limit: $mem_limit"
     fi
-    
+
     if [[ -n "$replicas" ]]; then
       echo "  Replicas: $replicas"
     fi
-    
+
     echo ""
-    
+
     apply_scaling "$service" "$cpu_limit" "$mem_limit" "$replicas"
   else
     # Just show current status
     printf "${COLOR_CYAN}➞ Current status for $service${COLOR_RESET}\n"
     echo ""
-    
+
     local usage=$(get_resource_usage "$service")
     echo "  $usage"
     echo ""
-    
+
     log_info "Use 'nself scale $service --cpu <limit> --memory <limit>' to adjust resources"
   fi
-  
+
   return 0
 }
 

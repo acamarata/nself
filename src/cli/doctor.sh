@@ -473,7 +473,6 @@ check_database() {
     local max_conn="${DB_MAX_CONNECTIONS:-100}"
     local conn_percent=$((conn_count * 100 / max_conn))
 
-
     if [[ $conn_percent -lt 80 ]]; then
       log_success "Connections: $conn_count/$max_conn ($conn_percent%)"
     else
@@ -497,15 +496,15 @@ check_database() {
     local db_size=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
       "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB:-nhost}'));" 2>/dev/null | xargs)
     log_info "Database size: $db_size"
-    
+
     # Check backup status
     if [[ -d "backups" ]]; then
       local latest_backup=$(ls -t backups/*.tar.gz 2>/dev/null | head -1)
       if [[ -n "$latest_backup" ]]; then
         local backup_time=$(stat -f %m "$latest_backup" 2>/dev/null || stat -c %Y "$latest_backup" 2>/dev/null)
         local current_time=$(date +%s)
-        local backup_age_hours=$(( (current_time - backup_time) / 3600 ))
-        
+        local backup_age_hours=$(((current_time - backup_time) / 3600))
+
         if [[ $backup_age_hours -lt 48 ]]; then
           log_success "Latest backup: ${backup_age_hours}h old"
         else
@@ -517,12 +516,12 @@ check_database() {
         warning_found
       fi
     fi
-    
+
     # Check WAL archiving if PITR enabled
     if [[ "${DB_PITR_ENABLED:-false}" == "true" ]] || [[ "${ENV:-dev}" == "prod" ]]; then
       local wal_status=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
         "SELECT archive_mode FROM pg_settings WHERE name='archive_mode';" 2>/dev/null | xargs)
-      
+
       if [[ "$wal_status" == "on" ]]; then
         log_success "WAL archiving: Enabled"
       else
@@ -530,12 +529,12 @@ check_database() {
         warning_found
       fi
     fi
-    
+
     # Check replication if configured
     if [[ -n "${DB_REPLICA_HOST:-}" ]]; then
       local rep_lag=$(docker exec "${PROJECT_NAME:-myproject}_postgres" psql -U "${POSTGRES_USER:-postgres}" -t -c \
         "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::int;" 2>/dev/null || echo "")
-      
+
       if [[ -n "$rep_lag" ]] && [[ "$rep_lag" -lt 10 ]]; then
         log_success "Replication lag: ${rep_lag}s"
       elif [[ -n "$rep_lag" ]]; then
@@ -543,13 +542,13 @@ check_database() {
         warning_found
       fi
     fi
-    
+
   else
     log_error "PostgreSQL: Not running"
     issue_found
     return 1
   fi
-  
+
   return 0
 }
 
@@ -1017,7 +1016,7 @@ auto_fix_config() {
     nself init --defaults 2>/dev/null || {
       log_info "Running basic init..."
       # Create minimal .env
-      cat > .env << 'EOF'
+      cat >.env <<'EOF'
 PROJECT_NAME=nself-project
 ENV=dev
 BASE_DOMAIN=local.nself.org
@@ -1169,7 +1168,7 @@ auto_fix_dns() {
     }
 
     # Add fallback DNS configuration
-    sudo tee /etc/systemd/resolved.conf.d/nself-dns.conf > /dev/null 2>&1 << 'EOF'
+    sudo tee /etc/systemd/resolved.conf.d/nself-dns.conf >/dev/null 2>&1 <<'EOF'
 [Resolve]
 FallbackDNS=1.1.1.1 8.8.8.8 1.0.0.1 8.8.4.4
 DNSOverTLS=opportunistic
@@ -1538,48 +1537,48 @@ doctor_containers() {
 
 # Handle command line arguments
 case "${1:-}" in
--h | --help)
-  echo "nself doctor - System diagnostics and health checks"
-  echo ""
-  echo "Usage: nself doctor [options]"
-  echo "       nself doctor containers"
-  echo ""
-  echo "Subcommands:"
-  echo "  containers     Show expected vs running container analysis"
-  echo ""
-  echo "Options:"
-  echo "  -h, --help     Show this help message"
-  echo "  -v, --verbose  Verbose output"
-  echo "  --fix          Automatically fix detected issues"
-  echo ""
-  echo "This command checks:"
-  echo "  • System requirements (Docker, memory, disk)"
-  echo "  • Network connectivity"
-  echo "  • nself configuration"
-  echo "  • Service status"
-  echo "  • SSL certificates"
-  echo ""
-  echo "Auto-fix capabilities:"
-  echo "  • Start Docker if not running"
-  echo "  • Create initial .env configuration"
-  echo "  • Run nself build if needed"
-  echo "  • Generate SSL certificates"
-  echo "  • Restart unhealthy containers"
-  echo ""
-  echo "Exit codes:"
-  echo "  0 - No critical issues"
-  echo "  1 - Critical issues found"
-  ;;
-containers)
-  doctor_containers
-  ;;
---fix)
-  # Load environment for PROJECT_NAME
-  [[ -f ".env" ]] && source ".env" 2>/dev/null || true
-  [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
-  run_auto_fix
-  ;;
-*)
-  main "$@"
-  ;;
+  -h | --help)
+    echo "nself doctor - System diagnostics and health checks"
+    echo ""
+    echo "Usage: nself doctor [options]"
+    echo "       nself doctor containers"
+    echo ""
+    echo "Subcommands:"
+    echo "  containers     Show expected vs running container analysis"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help     Show this help message"
+    echo "  -v, --verbose  Verbose output"
+    echo "  --fix          Automatically fix detected issues"
+    echo ""
+    echo "This command checks:"
+    echo "  • System requirements (Docker, memory, disk)"
+    echo "  • Network connectivity"
+    echo "  • nself configuration"
+    echo "  • Service status"
+    echo "  • SSL certificates"
+    echo ""
+    echo "Auto-fix capabilities:"
+    echo "  • Start Docker if not running"
+    echo "  • Create initial .env configuration"
+    echo "  • Run nself build if needed"
+    echo "  • Generate SSL certificates"
+    echo "  • Restart unhealthy containers"
+    echo ""
+    echo "Exit codes:"
+    echo "  0 - No critical issues"
+    echo "  1 - Critical issues found"
+    ;;
+  containers)
+    doctor_containers
+    ;;
+  --fix)
+    # Load environment for PROJECT_NAME
+    [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+    [[ -f ".env.local" ]] && source ".env.local" 2>/dev/null || true
+    run_auto_fix
+    ;;
+  *)
+    main "$@"
+    ;;
 esac

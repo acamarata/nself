@@ -11,7 +11,7 @@ generate_nginx_conf() {
   mkdir -p nginx
 
   # Generate nginx.conf
-  cat > nginx/nginx.conf <<'EOF'
+  cat >nginx/nginx.conf <<'EOF'
 user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
@@ -58,7 +58,7 @@ generate_default_conf() {
 
   mkdir -p nginx/conf.d
 
-  cat > nginx/conf.d/default.conf <<EOF
+  cat >nginx/conf.d/default.conf <<EOF
 server {
     listen 80 default_server;
     server_name _;
@@ -140,7 +140,7 @@ generate_hasura_nginx_conf() {
   local hasura_route="${HASURA_ROUTE:-api.${base_domain}}"
   local ssl_path="/etc/nginx/ssl/localhost"
 
-  cat > nginx/conf.d/hasura.conf <<EOF
+  cat >nginx/conf.d/hasura.conf <<EOF
 upstream hasura {
     server hasura:8080;
 }
@@ -179,7 +179,7 @@ generate_auth_nginx_conf() {
   local auth_route="${AUTH_ROUTE:-auth.${base_domain}}"
   local ssl_path="/etc/nginx/ssl/localhost"
 
-  cat > nginx/conf.d/auth.conf <<EOF
+  cat >nginx/conf.d/auth.conf <<EOF
 upstream auth {
     server auth:4000;
 }
@@ -216,7 +216,7 @@ generate_storage_nginx_conf() {
   local storage_route="${STORAGE_ROUTE:-storage.${base_domain}}"
   local ssl_path="/etc/nginx/ssl/localhost"
 
-  cat > nginx/conf.d/storage.conf <<EOF
+  cat >nginx/conf.d/storage.conf <<EOF
 upstream storage {
     server storage:5000;
 }
@@ -255,7 +255,7 @@ generate_mailpit_nginx_conf() {
   local mailpit_route="${MAILPIT_ROUTE:-mail.${base_domain}}"
   local ssl_path="/etc/nginx/ssl/localhost"
 
-  cat > nginx/conf.d/mailpit.conf <<EOF
+  cat >nginx/conf.d/mailpit.conf <<EOF
 upstream mailpit {
     server mailpit:8025;
 }

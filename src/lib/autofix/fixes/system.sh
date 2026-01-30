@@ -67,15 +67,15 @@ fix_missing_env_vars() {
 
       # Add default values
       case "$var" in
-      DATABASE_URL)
-        echo "DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres" >>.env.local
-        ;;
-      JWT_SECRET)
-        echo "JWT_SECRET=$(openssl rand -base64 32)" >>.env.local
-        ;;
-      REDIS_URL)
-        echo "REDIS_URL=redis://redis:6379" >>.env.local
-        ;;
+        DATABASE_URL)
+          echo "DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres" >>.env.local
+          ;;
+        JWT_SECRET)
+          echo "JWT_SECRET=$(openssl rand -base64 32)" >>.env.local
+          ;;
+        REDIS_URL)
+          echo "REDIS_URL=redis://redis:6379" >>.env.local
+          ;;
       esac
     fi
   done

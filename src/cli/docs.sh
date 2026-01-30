@@ -14,7 +14,7 @@ WIKI_URL="https://github.com/acamarata/nself/wiki"
 REPO_URL="https://github.com/acamarata/nself"
 
 show_help() {
-  cat << EOF
+  cat <<EOF
 Usage: nself docs [options] [section]
 
 Open nself documentation in your browser or display doc URLs.
@@ -85,31 +85,31 @@ main() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -h|--help)
+      -h | --help)
         show_help
         exit 0
         ;;
-      -u|--url-only)
+      -u | --url-only)
         url_only=true
         shift
         ;;
-      -w|--wiki)
+      -w | --wiki)
         url="$WIKI_URL"
         shift
         ;;
-      -r|--readme)
+      -r | --readme)
         url="$REPO_URL"
         shift
         ;;
-      -g|--guides)
+      -g | --guides)
         url="${WIKI_URL}/Guides"
         shift
         ;;
-      -a|--api)
+      -a | --api)
         url="${WIKI_URL}/API-Reference"
         shift
         ;;
-      -c|--commands)
+      -c | --commands)
         url="${WIKI_URL}/Commands"
         shift
         ;;

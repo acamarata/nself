@@ -47,7 +47,7 @@ cmd_server() {
     secure)
       server_secure "$@"
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_server_help
       ;;
     *)
@@ -76,27 +76,27 @@ server_init() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|-h)
+      --host | -h)
         host="$2"
         shift 2
         ;;
-      --user|-u)
+      --user | -u)
         user="$2"
         shift 2
         ;;
-      --port|-p)
+      --port | -p)
         port="$2"
         shift 2
         ;;
-      --key|-k)
+      --key | -k)
         key_file="$2"
         shift 2
         ;;
-      --env|-e)
+      --env | -e)
         env_name="$2"
         shift 2
         ;;
-      --domain|-d)
+      --domain | -d)
         domain="$2"
         shift 2
         ;;
@@ -108,7 +108,7 @@ server_init() {
         skip_dns="true"
         shift
         ;;
-      --yes|-y)
+      --yes | -y)
         auto_yes="true"
         shift
         ;;
@@ -593,7 +593,7 @@ ssh_exec_script() {
   ssh_args+=("-o" "StrictHostKeyChecking=accept-new")
   ssh_args+=("-p" "$port")
 
-  ssh "${ssh_args[@]}" "${user}@${host}" "bash -s" <<< "$script"
+  ssh "${ssh_args[@]}" "${user}@${host}" "bash -s" <<<"$script"
 }
 
 # ============================================================
@@ -639,19 +639,19 @@ server_check() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|-h)
+      --host | -h)
         host="$2"
         shift 2
         ;;
-      --user|-u)
+      --user | -u)
         user="$2"
         shift 2
         ;;
-      --port|-p)
+      --port | -p)
         port="$2"
         shift 2
         ;;
-      --key|-k)
+      --key | -k)
         key_file="$2"
         shift 2
         ;;
@@ -979,7 +979,7 @@ server_diagnose() {
     resolved_ip=$(dig +short "$host" 2>/dev/null | head -1)
     if [[ -n "$resolved_ip" ]]; then
       printf "   ${COLOR_GREEN}✓${COLOR_RESET} Resolves to: %s\n" "$resolved_ip"
-      host="$resolved_ip"  # Use IP for remaining tests
+      host="$resolved_ip" # Use IP for remaining tests
     else
       printf "   ${COLOR_RED}✗${COLOR_RESET} DNS resolution failed\n"
       printf "   ${COLOR_DIM}Check your domain's DNS settings${COLOR_RESET}\n"

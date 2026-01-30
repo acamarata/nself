@@ -230,24 +230,24 @@ quick_scan() {
   init_error_handling
 
   case "$scan_type" in
-  ports)
-    scan_port_conflicts
-    ;;
-  docker)
-    check_docker_daemon
-    check_docker_disk_space
-    ;;
-  config)
-    check_configuration_files
-    check_environment_variables
-    ;;
-  health)
-    check_container_health
-    ;;
-  *)
-    log_error "Unknown scan type: $scan_type"
-    return 1
-    ;;
+    ports)
+      scan_port_conflicts
+      ;;
+    docker)
+      check_docker_daemon
+      check_docker_disk_space
+      ;;
+    config)
+      check_configuration_files
+      check_environment_variables
+      ;;
+    health)
+      check_container_health
+      ;;
+    *)
+      log_error "Unknown scan type: $scan_type"
+      return 1
+      ;;
   esac
 
   show_error_summary

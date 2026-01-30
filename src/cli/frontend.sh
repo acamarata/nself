@@ -25,7 +25,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help
 show_frontend_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself frontend - Frontend application management
 
 Usage: nself frontend <subcommand> [options]
@@ -285,11 +285,11 @@ cmd_add() {
   # Add to .env
   local env_file=".env"
   if [[ -f "$env_file" ]]; then
-    echo "" >> "$env_file"
-    echo "# Frontend: $name" >> "$env_file"
-    echo "FRONTEND_APP_${slot}_NAME=$name" >> "$env_file"
-    echo "FRONTEND_APP_${slot}_PORT=$port" >> "$env_file"
-    echo "FRONTEND_APP_${slot}_ROUTE=$route" >> "$env_file"
+    echo "" >>"$env_file"
+    echo "# Frontend: $name" >>"$env_file"
+    echo "FRONTEND_APP_${slot}_NAME=$name" >>"$env_file"
+    echo "FRONTEND_APP_${slot}_PORT=$port" >>"$env_file"
+    echo "FRONTEND_APP_${slot}_ROUTE=$route" >>"$env_file"
 
     log_success "Frontend added to .env"
     log_info "Run 'nself build && nself restart nginx' to apply"
@@ -387,7 +387,7 @@ cmd_deploy() {
       # Record deployment
       local timestamp=$(date -Iseconds)
       echo "{\"frontend\": \"$name\", \"provider\": \"vercel\", \"env\": \"$target_env\", \"timestamp\": \"$timestamp\"}" \
-        >> "${FRONTEND_DIR}/deployments.jsonl"
+        >>"${FRONTEND_DIR}/deployments.jsonl"
 
       log_success "Deployment complete"
     else
@@ -505,7 +505,7 @@ cmd_env() {
   local storage_url="https://minio.${BASE_DOMAIN}"
 
   if [[ "$json_mode" == "true" ]]; then
-    cat << EOF
+    cat <<EOF
 {
   "NEXT_PUBLIC_GRAPHQL_URL": "$api_url",
   "NEXT_PUBLIC_AUTH_URL": "$auth_url",
@@ -574,7 +574,7 @@ cmd_frontend() {
         JSON_OUTPUT=true
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_frontend_help
         return 0
         ;;

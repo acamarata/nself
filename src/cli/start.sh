@@ -40,16 +40,16 @@ FORCE_RECREATE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -v|--verbose)
+    -v | --verbose)
       VERBOSE=true
       shift
       ;;
-    -d|--debug)
+    -d | --debug)
       DEBUG=true
-      VERBOSE=true  # Debug implies verbose
+      VERBOSE=true # Debug implies verbose
       shift
       ;;
-    -h|--help)
+    -h | --help)
       SHOW_HELP=true
       shift
       ;;
@@ -65,7 +65,7 @@ while [[ $# -gt 0 ]]; do
       HEALTH_CHECK_TIMEOUT="$2"
       shift 2
       ;;
-    --fresh|--force-recreate)
+    --fresh | --force-recreate)
       START_MODE="fresh"
       shift
       ;;
@@ -136,7 +136,7 @@ ensure_database_ready() {
     # Try alternate naming pattern
     container_name="${project_name}-postgres-1"
     if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
-      return 0  # No postgres container, skip
+      return 0 # No postgres container, skip
     fi
   fi
 
@@ -157,7 +157,7 @@ ensure_database_ready() {
 
   if [[ $waited -ge $max_wait ]]; then
     printf "\r  ${COLOR_YELLOW}!${COLOR_RESET} PostgreSQL not ready after ${max_wait}s (will retry)\n"
-    return 0  # Don't fail, let health checks handle it
+    return 0 # Don't fail, let health checks handle it
   fi
 
   # Step 2: Ensure database exists
@@ -222,7 +222,7 @@ ensure_redis_ready() {
   if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
     container_name="${project_name}-redis-1"
     if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}"; then
-      return 0  # No redis container, skip
+      return 0 # No redis container, skip
     fi
   fi
 
@@ -382,7 +382,7 @@ start_services() {
   local target_env="${ENV:-dev}"
   if command -v merge_environments >/dev/null 2>&1; then
     if [[ "$VERBOSE" == "false" ]]; then
-      merge_environments "$target_env" ".env.runtime" > /dev/null 2>&1
+      merge_environments "$target_env" ".env.runtime" >/dev/null 2>&1
     else
       printf "Merging environment configuration...\n"
       merge_environments "$target_env" ".env.runtime"
@@ -432,12 +432,12 @@ start_services() {
   # Execute docker compose
   if [[ "$VERBOSE" == "true" ]]; then
     # Verbose mode - show Docker output directly
-    printf "\r%-60s\r" " "  # Clear the preparing message
+    printf "\r%-60s\r" " " # Clear the preparing message
     $compose_cmd "${compose_args[@]}" 2>&1 | tee "$start_output"
     local exit_code=${PIPESTATUS[0]}
   else
     # Clean mode - capture output and show progress
-    $compose_cmd "${compose_args[@]}" > "$start_output" 2> "$error_output" &
+    $compose_cmd "${compose_args[@]}" >"$start_output" 2>"$error_output" &
     local compose_pid=$!
 
     # Spinner characters for animation
@@ -464,9 +464,9 @@ start_services() {
     # Initial delay to let docker compose start
     sleep 0.2
 
-    while ps -p $compose_pid > /dev/null 2>&1; do
+    while ps -p $compose_pid >/dev/null 2>&1; do
       # Update spinner
-      spin_index=$(( (spin_index + 1) % 10 ))
+      spin_index=$(((spin_index + 1) % 10))
 
       # Get the last non-empty line from output to see what's happening
       last_line=$(tail -n 10 "$start_output" 2>/dev/null | grep -v "^$" | tail -n 1 || echo "")
@@ -494,7 +494,7 @@ start_services() {
         # Try to estimate total images needed
         if [[ $images_to_pull -eq 0 ]]; then
           # Rough estimate based on service count
-          images_to_pull=$((total_services * 2 / 3))  # Not all services have unique images
+          images_to_pull=$((total_services * 2 / 3)) # Not all services have unique images
         fi
 
         # Get the current image being pulled
@@ -620,7 +620,7 @@ start_services() {
         fi
       fi
 
-      sleep 0.1  # Faster updates for smoother animation
+      sleep 0.1 # Faster updates for smoother animation
     done
 
     wait $compose_pid

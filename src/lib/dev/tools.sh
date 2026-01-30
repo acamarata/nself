@@ -12,7 +12,7 @@ dev_init() {
   mkdir -p .nself/dev/{fixtures,mocks,profiles}
 
   # Create dev config
-  cat > .nself/dev/config.json <<EOF
+  cat >.nself/dev/config.json <<EOF
 {
   "environment": "development",
   "debug": true,
@@ -27,7 +27,7 @@ EOF
 
 # Generate mock data
 dev_generate_mocks() {
-  local entity_type="$1"  # users, posts, products, etc.
+  local entity_type="$1" # users, posts, products, etc.
   local count="${2:-10}"
 
   case "$entity_type" in
@@ -49,7 +49,7 @@ dev_create_fixture() {
   local name="$1"
   local data="$2"
 
-  echo "$data" | jq '.' > ".nself/dev/fixtures/$name.json"
+  echo "$data" | jq '.' >".nself/dev/fixtures/$name.json"
   echo "✓ Fixture created: $name"
 }
 
@@ -72,7 +72,7 @@ dev_profile_start() {
   local start_time=$(date +%s%3N)
   local start_mem=$(ps -o rss= -p $$ 2>/dev/null || echo 0)
 
-  echo "{\"name\":\"$profile_name\",\"start_time\":$start_time,\"start_mem\":$start_mem}" > "/tmp/nself_profile_$$.json"
+  echo "{\"name\":\"$profile_name\",\"start_time\":$start_time,\"start_mem\":$start_mem}" >"/tmp/nself_profile_$$.json"
 
   echo "Profiling started: $profile_name"
 }
@@ -107,7 +107,7 @@ dev_profile_stop() {
       memory_delta_kb: ($mem_delta | tonumber)
     }')
 
-  echo "$result" > ".nself/dev/profiles/${profile_name}_$(date +%s).json"
+  echo "$result" >".nself/dev/profiles/${profile_name}_$(date +%s).json"
 
   rm -f "$profile_file"
 
@@ -162,7 +162,7 @@ dev_watch() {
 
 # Generate API client
 dev_generate_client() {
-  local api_spec="$1"  # OpenAPI/Swagger spec file
+  local api_spec="$1" # OpenAPI/Swagger spec file
   local language="${2:-typescript}"
   local output_dir="${3:-./generated-client}"
 

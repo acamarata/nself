@@ -232,7 +232,7 @@ cmd_config_show() {
   # Determine environment file
   case "$env" in
     staging) env_file=".env.staging" ;;
-    prod|production) env_file=".env.prod" ;;
+    prod | production) env_file=".env.prod" ;;
   esac
 
   [[ ! -f "$env_file" ]] && env_file=".env"
@@ -255,7 +255,7 @@ cmd_config_show() {
 
   while IFS= read -r line; do
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "${line// }" ]] && continue
+    [[ -z "${line// /}" ]] && continue
 
     local key="${line%%=*}"
     local value="${line#*=}"
@@ -279,20 +279,20 @@ cmd_config_show() {
     elif [[ "$key" =~ ^(CS_|FRONTEND_APP_) ]]; then
       custom_vars+="  $key=$value\n"
     fi
-  done < "$env_file"
+  done <"$env_file"
 
   if [[ "$json_mode" == "true" ]]; then
     printf '{"env": "%s", "file": "%s", "config": {' "$env" "$env_file"
     local first=true
     while IFS= read -r line; do
       [[ "$line" =~ ^[[:space:]]*# ]] && continue
-      [[ -z "${line// }" ]] && continue
+      [[ -z "${line// /}" ]] && continue
       local key="${line%%=*}"
       local value="${line#*=}"
       [[ "$first" != "true" ]] && printf ", "
       first=false
       printf '"%s": "%s"' "$key" "$value"
-    done < "$env_file"
+    done <"$env_file"
     printf '}}\n'
   else
     [[ -n "$core_vars" ]] && printf "Core:\n$core_vars\n"
@@ -365,7 +365,7 @@ cmd_config_set() {
     fi
     cli_success "Updated: $key"
   else
-    printf "%s=%s\n" "$key" "$value" >> "$env_file"
+    printf "%s=%s\n" "$key" "$value" >>"$env_file"
     cli_success "Added: $key"
   fi
 
@@ -384,9 +384,9 @@ cmd_config_list() {
 
   while IFS= read -r line; do
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "${line// }" ]] && continue
+    [[ -z "${line// /}" ]] && continue
     printf "%s\n" "${line%%=*}"
-  done < "$env_file"
+  done <"$env_file"
 }
 
 # Edit configuration
@@ -421,12 +421,12 @@ cmd_config_export() {
   [[ -z "$output_file" ]] && output_file="config_export_${timestamp}.json"
 
   printf '{\n  "exported": "%s",\n  "env": "%s",\n  "config": {\n' \
-    "$(date -Iseconds 2>/dev/null || date)" "${ENV:-local}" > "$output_file"
+    "$(date -Iseconds 2>/dev/null || date)" "${ENV:-local}" >"$output_file"
 
   local first=true
   while IFS= read -r line; do
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "${line// }" ]] && continue
+    [[ -z "${line// /}" ]] && continue
 
     local key="${line%%=*}"
     local value="${line#*=}"
@@ -436,12 +436,12 @@ cmd_config_export() {
       value="********"
     fi
 
-    [[ "$first" != "true" ]] && printf ",\n" >> "$output_file"
+    [[ "$first" != "true" ]] && printf ",\n" >>"$output_file"
     first=false
-    printf '    "%s": "%s"' "$key" "$value" >> "$output_file"
-  done < "$env_file"
+    printf '    "%s": "%s"' "$key" "$value" >>"$output_file"
+  done <"$env_file"
 
-  printf '\n  }\n}\n' >> "$output_file"
+  printf '\n  }\n}\n' >>"$output_file"
 
   cli_success "Exported to: $output_file"
   [[ "$reveal" != "true" ]] && cli_info "Secrets redacted. Use --reveal to include."
@@ -477,7 +477,7 @@ cmd_config_import() {
       [[ "$key" == "exported" || "$key" == "env" || "$key" == "config" ]] && continue
       [[ "$value" == "********" ]] && continue
       printf "%s=%s\n" "$key" "$value"
-    done > ".env.new"
+    done >".env.new"
 
     if [[ -s ".env.new" ]]; then
       mv ".env.new" ".env"
@@ -500,7 +500,7 @@ cmd_config_sync() {
   local action="${1:-}"
 
   case "$action" in
-    push|pull)
+    push | pull)
       cli_warning "Config sync requires 'nself deploy sync' command"
       printf "Use: nself deploy sync %s <env>\n" "$action"
       return 1
@@ -522,7 +522,7 @@ cmd_config_env() {
   shift || true
 
   case "$subcommand" in
-    list|ls)
+    list | ls)
       cli_section "Available Environments"
       if command -v env::list >/dev/null 2>&1; then
         env::list
@@ -556,7 +556,7 @@ cmd_config_env() {
       fi
       ;;
 
-    switch|use)
+    switch | use)
       local name="${1:-}"
 
       if [[ -z "$name" ]]; then
@@ -573,7 +573,7 @@ cmd_config_env() {
       fi
       ;;
 
-    delete|rm)
+    delete | rm)
       local name="${1:-}"
 
       if [[ -z "$name" ]]; then
@@ -604,7 +604,7 @@ cmd_config_env() {
       printf "Use: nself deploy sync pull %s\n" "$env_name"
       ;;
 
-    --help|-h)
+    --help | -h)
       printf "Usage: nself config env <subcommand>\n\n"
       printf "Subcommands:\n"
       printf "  list              List all environments\n"
@@ -636,7 +636,10 @@ cmd_config_secrets() {
 
       while [[ $# -gt 0 ]]; do
         case "$1" in
-          --env|-e) env_name="$2"; shift 2 ;;
+          --env | -e)
+            env_name="$2"
+            shift 2
+            ;;
           *) shift ;;
         esac
       done
@@ -661,7 +664,7 @@ cmd_config_secrets() {
         local value="${line#*=}"
         local length=${#value}
         printf "  %s (%d chars)\n" "$key" "$length"
-      done < "$secrets_file"
+      done <"$secrets_file"
       ;;
 
     get)
@@ -714,12 +717,12 @@ cmd_config_secrets() {
         fi
         cli_success "Updated secret: $key"
       else
-        printf "%s=%s\n" "$key" "$value" >> "$secrets_file"
+        printf "%s=%s\n" "$key" "$value" >>"$secrets_file"
         cli_success "Added secret: $key"
       fi
       ;;
 
-    delete|rm)
+    delete | rm)
       local key="${1:-}"
 
       if [[ -z "$key" ]]; then
@@ -752,8 +755,14 @@ cmd_config_secrets() {
 
       while [[ $# -gt 0 ]]; do
         case "$1" in
-          --all) rotate_all=true; shift ;;
-          *) key="$1"; shift ;;
+          --all)
+            rotate_all=true
+            shift
+            ;;
+          *)
+            key="$1"
+            shift
+            ;;
         esac
       done
 
@@ -796,13 +805,13 @@ cmd_config_secrets() {
           fi
           cli_success "Rotated secret: $key"
         else
-          printf "%s=%s\n" "$key" "$new_value" >> "$secrets_file"
+          printf "%s=%s\n" "$key" "$new_value" >>"$secrets_file"
           cli_success "Created secret: $key"
         fi
       fi
       ;;
 
-    --help|-h)
+    --help | -h)
       printf "Usage: nself config secrets <subcommand>\n\n"
       printf "Subcommands:\n"
       printf "  list              List all secrets\n"
@@ -867,7 +876,7 @@ cmd_config_vault() {
       fi
       ;;
 
-    --help|-h)
+    --help | -h)
       printf "Usage: nself config vault <subcommand>\n\n"
       printf "Subcommands:\n"
       printf "  init              Initialize vault\n"
@@ -895,12 +904,27 @@ cmd_config_validate() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --strict) strict=true; shift ;;
-      --fix) fix_mode=true; shift ;;
-      --security) scope="security"; shift ;;
-      --config) scope="config"; shift ;;
-      --deploy) scope="deploy"; shift ;;
-      --help|-h)
+      --strict)
+        strict=true
+        shift
+        ;;
+      --fix)
+        fix_mode=true
+        shift
+        ;;
+      --security)
+        scope="security"
+        shift
+        ;;
+      --config)
+        scope="config"
+        shift
+        ;;
+      --deploy)
+        scope="deploy"
+        shift
+        ;;
+      --help | -h)
         printf "Usage: nself config validate [env] [options]\n\n"
         printf "Options:\n"
         printf "  --strict          Treat warnings as errors\n"
@@ -910,7 +934,10 @@ cmd_config_validate() {
         printf "  --deploy          Deployment readiness only\n"
         return 0
         ;;
-      *) env_name="$1"; shift ;;
+      *)
+        env_name="$1"
+        shift
+        ;;
     esac
   done
 
@@ -1001,14 +1028,38 @@ cmd_config() {
   local args=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --env) export ENV="$2"; shift 2 ;;
-      --reveal) export REVEAL=true; shift ;;
-      --json) export JSON_OUTPUT=true; shift ;;
-      --strict) export STRICT=true; shift ;;
-      --fix) export FIX=true; shift ;;
-      --no-backup) export NO_BACKUP=true; shift ;;
-      -h|--help) show_config_help; return 0 ;;
-      *) args+=("$1"); shift ;;
+      --env)
+        export ENV="$2"
+        shift 2
+        ;;
+      --reveal)
+        export REVEAL=true
+        shift
+        ;;
+      --json)
+        export JSON_OUTPUT=true
+        shift
+        ;;
+      --strict)
+        export STRICT=true
+        shift
+        ;;
+      --fix)
+        export FIX=true
+        shift
+        ;;
+      --no-backup)
+        export NO_BACKUP=true
+        shift
+        ;;
+      -h | --help)
+        show_config_help
+        return 0
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
     esac
   done
 
@@ -1024,7 +1075,7 @@ cmd_config() {
     show) cmd_config_show "$@" ;;
     get) cmd_config_get "$@" ;;
     set) cmd_config_set "$@" ;;
-    list|ls) cmd_config_list "$@" ;;
+    list | ls) cmd_config_list "$@" ;;
     edit) cmd_config_edit "$@" ;;
     export) cmd_config_export "$@" ;;
     import) cmd_config_import "$@" ;;
@@ -1040,10 +1091,10 @@ cmd_config() {
     vault) cmd_config_vault "$@" ;;
 
     # Validation
-    validate|check) cmd_config_validate "$@" ;;
+    validate | check) cmd_config_validate "$@" ;;
 
     # Help
-    help|--help|-h) show_config_help ;;
+    help | --help | -h) show_config_help ;;
 
     *)
       cli_error "Unknown subcommand: $subcommand"

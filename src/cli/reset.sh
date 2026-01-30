@@ -20,27 +20,27 @@ cmd_reset() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-    --force | -f)
-      force_reset=true
-      shift
-      ;;
-    --no-backup)
-      create_backup=false
-      shift
-      ;;
-    --keep-env)
-      keep_env=true
-      shift
-      ;;
-    --help | -h)
-      show_reset_help
-      return 0
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      show_reset_help
-      return 1
-      ;;
+      --force | -f)
+        force_reset=true
+        shift
+        ;;
+      --no-backup)
+        create_backup=false
+        shift
+        ;;
+      --keep-env)
+        keep_env=true
+        shift
+        ;;
+      --help | -h)
+        show_reset_help
+        return 0
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        show_reset_help
+        return 1
+        ;;
     esac
   done
 
@@ -272,7 +272,7 @@ cmd_reset() {
       fi
     done
   done
-  
+
   # Remove any .backup and .old files
   for backup_file in .env.*.backup *.old .*.old; do
     if [[ -f "$backup_file" ]]; then
@@ -290,12 +290,12 @@ cmd_reset() {
   done
 
   printf "\r${COLOR_GREEN}✓${COLOR_RESET} Removed $removed_count files and directories           \n"
-  
+
   # Update .gitignore to exclude backup folders
   if [[ -f ".gitignore" ]]; then
     # Check if _backup* is already in .gitignore
     if ! grep -q "^_backup" .gitignore; then
-      printf "\n# Backup folders from nself reset\n_backup*\n" >> .gitignore
+      printf "\n# Backup folders from nself reset\n_backup*\n" >>.gitignore
       printf "${COLOR_GREEN}✓${COLOR_RESET} Added _backup* to .gitignore\n"
     fi
   else

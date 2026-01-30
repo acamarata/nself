@@ -221,7 +221,7 @@ oauth_list_providers() {
 
       printf "\n"
     fi
-  done <<< "$result"
+  done <<<"$result"
 }
 
 # Check if user can authenticate with a provider
@@ -339,7 +339,7 @@ oauth_merge_accounts() {
       log_warning "Please unlink $provider from one account first"
       return 1
     fi
-  done <<< "$from_providers"
+  done <<<"$from_providers"
 
   # Transfer OAuth providers
   psql_exec "
@@ -472,7 +472,7 @@ main() {
       fi
       oauth_merge_accounts "$2" "$3"
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_usage
       ;;
     *)

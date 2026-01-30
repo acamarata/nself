@@ -243,7 +243,7 @@ cmd_auth() {
       cmd_auth_webhooks "$@"
       ;;
 
-    help|--help|-h)
+    help | --help | -h)
       auth_usage
       exit 0
       ;;
@@ -290,7 +290,7 @@ cmd_auth_login() {
         anonymous=true
         shift
         ;;
-      --help|-h)
+      --help | -h)
         auth_usage
         exit 0
         ;;
@@ -336,7 +336,7 @@ cmd_auth_logout() {
         logout_all=true
         shift
         ;;
-      --help|-h)
+      --help | -h)
         auth_usage
         exit 0
         ;;
@@ -493,7 +493,7 @@ cmd_auth_ssl() {
         exit 1
       fi
       ;;
-    info|status)
+    info | status)
       if [[ -f "$CLI_DIR/_deprecated/ssl.sh.backup" ]]; then
         bash "$CLI_DIR/_deprecated/ssl.sh.backup" status "$@"
       else

@@ -18,23 +18,23 @@ source "${SCRIPT_DIR}/../lib/utils/cli-output.sh"
 
 # Show deprecation warning
 show_deprecation_warning() {
-    printf "\n"
-    cli_warning "DEPRECATION NOTICE"
-    printf "\n"
-    printf "  The 'nself billing' command is deprecated.\n"
-    printf "  Please use 'nself tenant billing' instead.\n"
-    printf "\n"
-    cli_info "Redirecting to 'nself tenant billing'..."
-    printf "\n"
-    sleep 1
+  printf "\n"
+  cli_warning "DEPRECATION NOTICE"
+  printf "\n"
+  printf "  The 'nself billing' command is deprecated.\n"
+  printf "  Please use 'nself tenant billing' instead.\n"
+  printf "\n"
+  cli_info "Redirecting to 'nself tenant billing'..."
+  printf "\n"
+  sleep 1
 }
 
 # Main function - redirect to tenant billing
 main() {
-    show_deprecation_warning
+  show_deprecation_warning
 
-    # Delegate to tenant billing command (tenant.sh is in same directory)
-    exec bash "$(dirname "${BASH_SOURCE[0]}")/tenant.sh" billing "$@"
+  # Delegate to tenant billing command (tenant.sh is in same directory)
+  exec bash "$(dirname "${BASH_SOURCE[0]}")/tenant.sh" billing "$@"
 }
 
 # Execute main function

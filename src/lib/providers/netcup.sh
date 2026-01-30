@@ -34,7 +34,7 @@ provider_netcup_init() {
   read -rsp "API Password: " api_password
   echo
 
-  cat > "$config_dir/netcup.yml" << EOF
+  cat >"$config_dir/netcup.yml" <<EOF
 provider: netcup
 customer_id: "$customer_id"
 api_key: "$api_key"
@@ -48,7 +48,10 @@ EOF
 
 provider_netcup_validate() {
   local config_file="${HOME}/.nself/providers/netcup.yml"
-  [[ ! -f "$config_file" ]] && { log_error "Netcup not configured"; return 1; }
+  [[ ! -f "$config_file" ]] && {
+    log_error "Netcup not configured"
+    return 1
+  }
 
   # Netcup uses SOAP API - validation would require proper SOAP client
   log_info "Netcup credentials saved (SOAP API validation skipped)"
@@ -88,7 +91,11 @@ provider_netcup_destroy() {
 
 provider_netcup_status() { log_info "Check status at: https://www.customercontrolpanel.de/"; }
 provider_netcup_list() { provider_netcup_status; }
-provider_netcup_ssh() { local ip="$1"; shift; ssh -o StrictHostKeyChecking=no "root@${ip}" "$@"; }
+provider_netcup_ssh() {
+  local ip="$1"
+  shift
+  ssh -o StrictHostKeyChecking=no "root@${ip}" "$@"
+}
 provider_netcup_get_ip() { echo "$1"; }
 provider_netcup_estimate_cost() {
   case "${1:-small}" in

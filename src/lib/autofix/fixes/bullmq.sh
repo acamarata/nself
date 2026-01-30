@@ -199,15 +199,15 @@ fix_bullmq_worker() {
   local error_type="${2:-MISSING_NODE_MODULES}"
 
   case "$error_type" in
-  MISSING_NODE_MODULES | MODULE_NOT_FOUND)
-    fix_bullmq_dependencies "$service_name"
-    ;;
-  REDIS_CONNECTION)
-    fix_bullmq_redis_connection "$service_name"
-    ;;
-  *)
-    fix_bullmq_dependencies "$service_name"
-    ;;
+    MISSING_NODE_MODULES | MODULE_NOT_FOUND)
+      fix_bullmq_dependencies "$service_name"
+      ;;
+    REDIS_CONNECTION)
+      fix_bullmq_redis_connection "$service_name"
+      ;;
+    *)
+      fix_bullmq_dependencies "$service_name"
+      ;;
   esac
 
   return $?

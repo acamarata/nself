@@ -75,7 +75,7 @@ export_supabase_schema() {
     --no-acl \
     --exclude-schema=storage \
     --exclude-schema=auth \
-    > "$schema_file" 2>/dev/null; then
+    >"$schema_file" 2>/dev/null; then
     log_success "Schema exported: $schema_file"
   else
     log_error "Failed to export schema"
@@ -93,7 +93,7 @@ export_supabase_schema() {
     --schema=auth \
     --no-owner \
     --no-acl \
-    > "$auth_schema_file" 2>/dev/null; then
+    >"$auth_schema_file" 2>/dev/null; then
     log_success "Auth schema exported: $auth_schema_file"
   fi
 
@@ -104,7 +104,7 @@ export_supabase_schema() {
     --schema=storage \
     --no-owner \
     --no-acl \
-    > "$storage_schema_file" 2>/dev/null; then
+    >"$storage_schema_file" 2>/dev/null; then
     log_success "Storage schema exported: $storage_schema_file"
   fi
 
@@ -140,7 +140,7 @@ export_supabase_data() {
       --no-acl \
       --exclude-schema=storage \
       --exclude-schema=auth \
-      > "$data_file" 2>/dev/null; then
+      >"$data_file" 2>/dev/null; then
       log_success "Data exported: $data_file"
     else
       log_error "Failed to export data"
@@ -154,7 +154,7 @@ export_supabase_data() {
       --no-owner \
       --no-acl \
       -t "$tables" \
-      > "$data_file" 2>/dev/null; then
+      >"$data_file" 2>/dev/null; then
       log_success "Data exported: $data_file"
     else
       log_error "Failed to export data"
@@ -170,7 +170,7 @@ export_supabase_data() {
     --schema=auth \
     --no-owner \
     --no-acl \
-    > "$auth_data_file" 2>/dev/null; then
+    >"$auth_data_file" 2>/dev/null; then
     log_success "Auth data exported: $auth_data_file"
   fi
 
@@ -201,7 +201,7 @@ export_supabase_auth_api() {
       -H "apikey: $service_role_key" \
       -H "Authorization: Bearer $service_role_key" \
       "$auth_endpoint" \
-      > "$output_file" 2>/dev/null; then
+      >"$output_file" 2>/dev/null; then
 
       local user_count=$(command -v jq >/dev/null 2>&1 && jq '. | length' "$output_file" 2>/dev/null || echo "unknown")
       log_success "Exported $user_count users via API: $output_file"
@@ -241,7 +241,7 @@ export_supabase_storage() {
     -H "apikey: $service_role_key" \
     -H "Authorization: Bearer $service_role_key" \
     "$buckets_endpoint" \
-    > "$buckets_file" 2>/dev/null; then
+    >"$buckets_file" 2>/dev/null; then
 
     log_success "Storage buckets exported: $buckets_file"
 

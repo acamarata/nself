@@ -30,7 +30,7 @@ generate_docker_compose() {
 add_nginx_service() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   nginx:
     image: nginx:alpine
@@ -61,9 +61,9 @@ EOF
   [[ "${MINIO_ENABLED:-false}" == "true" ]] && deps+=("minio")
 
   if [[ ${#deps[@]} -gt 0 ]]; then
-    echo "    depends_on:" >> "$file"
+    echo "    depends_on:" >>"$file"
     for dep in "${deps[@]}"; do
-      echo "      - $dep" >> "$file"
+      echo "      - $dep" >>"$file"
     done
   fi
 }
@@ -72,7 +72,7 @@ EOF
 add_postgres_service() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   postgres:
     image: postgres:\${POSTGRES_VERSION:-15}-alpine
@@ -108,7 +108,7 @@ add_redis_service() {
     redis_cmd="${redis_cmd} --requirepass \${REDIS_PASSWORD}"
   fi
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   # Redis Cache - SECURITY: Bound to localhost only
   redis:
@@ -127,7 +127,7 @@ EOF
 
   # Use appropriate healthcheck based on password
   if [[ -n "${REDIS_PASSWORD:-}" ]]; then
-    cat >> "$file" <<EOF
+    cat >>"$file" <<EOF
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -135,7 +135,7 @@ EOF
       retries: 5
 EOF
   else
-    cat >> "$file" <<EOF
+    cat >>"$file" <<EOF
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -149,7 +149,7 @@ EOF
 add_hasura_service() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   hasura:
     image: hasura/graphql-engine:\${HASURA_VERSION:-latest}
@@ -181,7 +181,7 @@ EOF
 add_auth_service() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   auth:
     image: nhost/hasura-auth:\${AUTH_VERSION:-latest}
@@ -213,7 +213,7 @@ EOF
 add_storage_service() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
   storage:
     image: nhost/hasura-storage:\${STORAGE_VERSION:-latest}
@@ -254,8 +254,8 @@ add_custom_services() {
   if [[ -d "services" ]]; then
     for service_file in services/*.yml services/*.yaml; do
       if [[ -f "$service_file" ]]; then
-        echo "" >> "$file"
-        cat "$service_file" >> "$file"
+        echo "" >>"$file"
+        cat "$service_file" >>"$file"
       fi
     done
   fi
@@ -265,20 +265,20 @@ add_custom_services() {
 add_volumes_section() {
   local file="$1"
 
-  echo "" >> "$file"
-  echo "volumes:" >> "$file"
+  echo "" >>"$file"
+  echo "volumes:" >>"$file"
 
-  [[ "${POSTGRES_ENABLED:-true}" == "true" ]] && echo "  postgres_data:" >> "$file"
-  [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "  redis_data:" >> "$file"
-  [[ "${MINIO_ENABLED:-false}" == "true" ]] && echo "  minio_data:" >> "$file"
-  [[ "${NGINX_ENABLED:-true}" == "true" ]] && echo "  nginx_cache:" >> "$file"
+  [[ "${POSTGRES_ENABLED:-true}" == "true" ]] && echo "  postgres_data:" >>"$file"
+  [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "  redis_data:" >>"$file"
+  [[ "${MINIO_ENABLED:-false}" == "true" ]] && echo "  minio_data:" >>"$file"
+  [[ "${NGINX_ENABLED:-true}" == "true" ]] && echo "  nginx_cache:" >>"$file"
 }
 
 # Add networks section
 add_networks_section() {
   local file="$1"
 
-  cat >> "$file" <<EOF
+  cat >>"$file" <<EOF
 
 networks:
   nself_network:

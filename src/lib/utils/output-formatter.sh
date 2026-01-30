@@ -162,25 +162,25 @@ filter_output() {
     LAST_LINE="$line"
 
     case "$context" in
-    docker)
-      format_docker_output "$line"
-      ;;
-    build)
-      format_build_output "$line"
-      ;;
-    test)
-      format_test_output "$line"
-      ;;
-    validation)
-      format_validation_output "$line"
-      ;;
-    *)
-      [[ "$line" =~ "npm WARN" ]] && continue
-      [[ "$line" =~ "npm notice" ]] && continue
-      [[ "$line" =~ "found 0 vulnerabilities" ]] && continue
+      docker)
+        format_docker_output "$line"
+        ;;
+      build)
+        format_build_output "$line"
+        ;;
+      test)
+        format_test_output "$line"
+        ;;
+      validation)
+        format_validation_output "$line"
+        ;;
+      *)
+        [[ "$line" =~ "npm WARN" ]] && continue
+        [[ "$line" =~ "npm notice" ]] && continue
+        [[ "$line" =~ "found 0 vulnerabilities" ]] && continue
 
-      echo "$line"
-      ;;
+        echo "$line"
+        ;;
     esac
   done
 }

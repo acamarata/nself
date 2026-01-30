@@ -397,7 +397,7 @@ wizard_review_generate() {
       for item in "${config_items[@]}"; do
         echo "$item"
       done
-    } > "$output_file"
+    } >"$output_file"
 
     echo ""
     echo "✅ Configuration generated successfully!"

@@ -15,7 +15,7 @@ cmd_audit() {
       local limit="${2:-100}"
       audit_query "$filters" "$limit" | jq '.'
       ;;
-    help|--help|-h)
+    help | --help | -h)
       cat <<'HELP'
 nself audit - Audit log management
 
@@ -30,7 +30,10 @@ EXAMPLES:
   nself audit query '{"actor_id":"<user-uuid>"}'
 HELP
       ;;
-    *) echo "ERROR: Unknown command" >&2; return 1 ;;
+    *)
+      echo "ERROR: Unknown command" >&2
+      return 1
+      ;;
   esac
 }
 

@@ -170,7 +170,7 @@ test_config_arrays() {
   # Source config and check if arrays are available
   if ! source "$INIT_LIB_DIR/config.sh" 2>/dev/null; then
     set -u
-    return 0  # Skip test if config can't be sourced
+    return 0 # Skip test if config can't be sourced
   fi
 
   # Test gitignore required array - check if it's properly defined
@@ -181,7 +181,7 @@ test_config_arrays() {
 
   if [[ $array_size -eq 0 ]]; then
     set -u
-    return 0  # Skip test if array is not populated (environment issue)
+    return 0 # Skip test if array is not populated (environment issue)
   fi
 
   # Check for .env in the array
@@ -199,7 +199,7 @@ test_config_arrays() {
   if [[ "$found_env" == "true" ]]; then
     return 0
   else
-    return 0  # Skip assertion failure - environment specific
+    return 0 # Skip assertion failure - environment specific
   fi
 }
 
@@ -266,7 +266,7 @@ test_atomic_copy() {
   source "$INIT_LIB_DIR/atomic-ops.sh"
 
   # Create test file
-  echo "test content" > test_source.txt
+  echo "test content" >test_source.txt
 
   # Test atomic copy
   atomic_copy "test_source.txt" "test_dest.txt" "644"
@@ -293,11 +293,11 @@ test_rollback() {
   source "$INIT_LIB_DIR/atomic-ops.sh"
 
   # Create and track files
-  echo "file1" > file1.txt
+  echo "file1" >file1.txt
   CREATED_FILES=("file1.txt")
 
-  echo "original" > file2.txt
-  echo "modified" > file2.txt.nself-backup
+  echo "original" >file2.txt
+  echo "modified" >file2.txt.nself-backup
   MODIFIED_FILES=("file2.txt")
 
   # Test rollback
@@ -337,7 +337,7 @@ test_find_templates_dir() {
     return 0
   else
     # For CI, this might not work, so skip
-    return 0  # Mark as passed since it's environment dependent
+    return 0 # Mark as passed since it's environment dependent
   fi
 }
 
@@ -369,7 +369,7 @@ test_gitignore_has_entry() {
   source "$INIT_LIB_DIR/gitignore.sh"
 
   # Create test gitignore
-  cat > .gitignore << 'EOF'
+  cat >.gitignore <<'EOF'
 .env
 *.log
 node_modules/
@@ -442,7 +442,7 @@ test_check_dependencies() {
   # We expect this to pass on CI systems, but be lenient with environment issues
   if command -v git >/dev/null 2>&1; then
     if [[ $result -eq 0 ]]; then
-      return 0  # Pass
+      return 0 # Pass
     elif [[ $result -eq 127 ]]; then
       # Command not found error - likely environment issue, skip instead of fail
       return 0
@@ -450,7 +450,7 @@ test_check_dependencies() {
       assert_equals "0" "$result" "Should pass when dependencies exist"
     fi
   else
-    return 0  # Skip if git not available
+    return 0 # Skip if git not available
   fi
 }
 
@@ -483,8 +483,8 @@ test_init_integration() {
 
   # Mock templates directory structure matching expected layout
   mkdir -p "$TEMP_TEST_DIR/templates/envs"
-  echo "# Test .env" > "$TEMP_TEST_DIR/templates/envs/.env"
-  echo "# Test .env.example" > "$TEMP_TEST_DIR/templates/envs/.env.example"
+  echo "# Test .env" >"$TEMP_TEST_DIR/templates/envs/.env"
+  echo "# Test .env.example" >"$TEMP_TEST_DIR/templates/envs/.env.example"
 
   # Initialize arrays
   CREATED_FILES=()

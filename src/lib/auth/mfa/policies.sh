@@ -8,11 +8,11 @@
 set -euo pipefail
 
 # MFA policy types
-readonly MFA_POLICY_REQUIRED="required"           # MFA always required
-readonly MFA_POLICY_OPTIONAL="optional"           # MFA optional
-readonly MFA_POLICY_ROLE_BASED="role_based"       # Required for certain roles
-readonly MFA_POLICY_IP_BASED="ip_based"           # Required for certain IPs
-readonly MFA_POLICY_TIME_BASED="time_based"       # Required during certain times
+readonly MFA_POLICY_REQUIRED="required"     # MFA always required
+readonly MFA_POLICY_OPTIONAL="optional"     # MFA optional
+readonly MFA_POLICY_ROLE_BASED="role_based" # Required for certain roles
+readonly MFA_POLICY_IP_BASED="ip_based"     # Required for certain IPs
+readonly MFA_POLICY_TIME_BASED="time_based" # Required during certain times
 
 # ============================================================================
 # Global MFA Policy
@@ -196,9 +196,9 @@ mfa_exemption_check() {
     2>/dev/null | xargs)
 
   if [[ "$has_exemption" == "1" ]]; then
-    return 0  # Exempt
+    return 0 # Exempt
   else
-    return 1  # Not exempt
+    return 1 # Not exempt
   fi
 }
 
@@ -210,7 +210,7 @@ mfa_exemption_check() {
 # Usage: mfa_role_requirement_set <role_name> <required>
 mfa_role_requirement_set() {
   local role_name="$1"
-  local required="$2"  # true or false
+  local required="$2" # true or false
 
   # Get PostgreSQL container
   local container
@@ -269,9 +269,9 @@ mfa_role_requirement_check() {
     2>/dev/null | xargs)
 
   if [[ "$is_required" == "t" ]]; then
-    return 0  # Required
+    return 0 # Required
   else
-    return 1  # Not required
+    return 1 # Not required
   fi
 }
 
@@ -288,7 +288,7 @@ mfa_is_required() {
 
   # Check for user exemption first
   if mfa_exemption_check "$user_id" 2>/dev/null; then
-    return 1  # Not required (exempt)
+    return 1 # Not required (exempt)
   fi
 
   # Get global policy
@@ -299,24 +299,24 @@ mfa_is_required() {
 
   case "$policy_type" in
     required)
-      return 0  # Always required
+      return 0 # Always required
       ;;
     optional)
-      return 1  # Never required
+      return 1 # Never required
       ;;
     role_based)
       if [[ -n "$role_name" ]]; then
         if mfa_role_requirement_check "$role_name" 2>/dev/null; then
-          return 0  # Required for this role
+          return 0 # Required for this role
         else
-          return 1  # Not required for this role
+          return 1 # Not required for this role
         fi
       else
-        return 1  # No role specified, not required
+        return 1 # No role specified, not required
       fi
       ;;
     *)
-      return 1  # Default to not required
+      return 1 # Default to not required
       ;;
   esac
 }

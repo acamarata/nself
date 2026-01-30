@@ -74,21 +74,21 @@ print_result() {
   fi
 
   # Record result
-  echo "$test,$result,$baseline,$unit,$status" >> "${RESULTS_FILE}.csv"
+  echo "$test,$result,$baseline,$unit,$status" >>"${RESULTS_FILE}.csv"
 }
 
 # Initialize results file
 initialize_results() {
-  printf "{\n" > "$RESULTS_FILE"
-  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >> "$RESULTS_FILE"
-  printf "  \"tenant_count\": %d,\n" "$TENANT_COUNT" >> "$RESULTS_FILE"
-  printf "  \"tests\": [\n" >> "$RESULTS_FILE"
+  printf "{\n" >"$RESULTS_FILE"
+  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >>"$RESULTS_FILE"
+  printf "  \"tenant_count\": %d,\n" "$TENANT_COUNT" >>"$RESULTS_FILE"
+  printf "  \"tests\": [\n" >>"$RESULTS_FILE"
 
-  echo "Test,Result,Baseline,Unit,Status" > "${RESULTS_FILE}.csv"
+  echo "Test,Result,Baseline,Unit,Status" >"${RESULTS_FILE}.csv"
 }
 
 finalize_results() {
-  printf "  ]\n}\n" >> "$RESULTS_FILE"
+  printf "  ]\n}\n" >>"$RESULTS_FILE"
 }
 
 # Test 1: Asset Loading Time
@@ -105,13 +105,13 @@ test_asset_loading() {
     # Simulate asset loading from CDN/storage
     {
       # Logo
-      echo "GET /assets/tenant_${tenant_id}/logo.png" > /dev/null
+      echo "GET /assets/tenant_${tenant_id}/logo.png" >/dev/null
       # Favicon
-      echo "GET /assets/tenant_${tenant_id}/favicon.ico" > /dev/null
+      echo "GET /assets/tenant_${tenant_id}/favicon.ico" >/dev/null
       # Custom CSS
-      echo "GET /assets/tenant_${tenant_id}/theme.css" > /dev/null
+      echo "GET /assets/tenant_${tenant_id}/theme.css" >/dev/null
       # Custom JS
-      echo "GET /assets/tenant_${tenant_id}/custom.js" > /dev/null
+      echo "GET /assets/tenant_${tenant_id}/custom.js" >/dev/null
     } 2>/dev/null
 
     # Simulate network + processing time (2-5ms)
@@ -140,7 +140,7 @@ test_css_rendering() {
     # Simulate CSS generation and rendering
     {
       # Generate theme variables
-      cat > /dev/null <<EOF
+      cat >/dev/null <<EOF
 :root {
   --primary-color: #${tenant_id}00ff;
   --secondary-color: #00${tenant_id}ff;
@@ -151,7 +151,7 @@ EOF
 
       # Apply theme to components
       for component in header footer sidebar navigation button card; do
-        echo ".${component} { color: var(--primary-color); }" > /dev/null
+        echo ".${component} { color: var(--primary-color); }" >/dev/null
       done
     } 2>/dev/null
 
@@ -181,19 +181,19 @@ test_theme_switching() {
     # Simulate theme switch
     {
       # 1. Unload current theme
-      echo "Removing old theme assets" > /dev/null
+      echo "Removing old theme assets" >/dev/null
 
       # 2. Load new theme configuration
-      echo "SELECT * FROM whitelabel_configs WHERE tenant_id = 'tenant_${tenant_id}';" > /dev/null
+      echo "SELECT * FROM whitelabel_configs WHERE tenant_id = 'tenant_${tenant_id}';" >/dev/null
 
       # 3. Apply new theme
-      echo "Loading new CSS variables" > /dev/null
-      echo "Updating DOM with new classes" > /dev/null
-      echo "Loading custom assets" > /dev/null
+      echo "Loading new CSS variables" >/dev/null
+      echo "Updating DOM with new classes" >/dev/null
+      echo "Loading custom assets" >/dev/null
 
       # 4. Re-render components
       for component in {1..10}; do
-        echo "Re-render component ${component}" > /dev/null
+        echo "Re-render component ${component}" >/dev/null
       done
     } 2>/dev/null
 
@@ -230,13 +230,13 @@ test_domain_routing() {
     # Simulate domain routing
     {
       # 1. DNS lookup (cached)
-      echo "DNS: ${domain} -> nginx" > /dev/null
+      echo "DNS: ${domain} -> nginx" >/dev/null
 
       # 2. Nginx routing to tenant
-      echo "SELECT tenant_id FROM domains WHERE domain = '${domain}';" > /dev/null
+      echo "SELECT tenant_id FROM domains WHERE domain = '${domain}';" >/dev/null
 
       # 3. Load tenant context
-      echo "Loading tenant context for routing" > /dev/null
+      echo "Loading tenant context for routing" >/dev/null
     } 2>/dev/null
 
     # Simulate routing overhead (1-3ms)
@@ -265,10 +265,10 @@ test_email_rendering() {
     # Simulate email template rendering
     {
       # 1. Load tenant branding
-      echo "SELECT * FROM whitelabel_configs WHERE tenant_id = 'tenant_${tenant_id}';" > /dev/null
+      echo "SELECT * FROM whitelabel_configs WHERE tenant_id = 'tenant_${tenant_id}';" >/dev/null
 
       # 2. Render template with variables
-      cat > /dev/null <<EOF
+      cat >/dev/null <<EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -290,11 +290,11 @@ EOF
 
       # 3. Replace variables
       for var in LOGO_URL COMPANY_NAME CONTENT YEAR; do
-        echo "Replace {{${var}}} with actual value" > /dev/null
+        echo "Replace {{${var}}} with actual value" >/dev/null
       done
 
       # 4. Inline CSS for email compatibility
-      echo "Inlining CSS styles" > /dev/null
+      echo "Inlining CSS styles" >/dev/null
     } 2>/dev/null
 
     # Simulate rendering time (3-8ms)

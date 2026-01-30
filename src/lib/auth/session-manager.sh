@@ -7,8 +7,8 @@
 set -euo pipefail
 
 # Session defaults
-readonly SESSION_DEFAULT_TTL=900          # 15 minutes
-readonly REFRESH_TOKEN_TTL=2592000        # 30 days
+readonly SESSION_DEFAULT_TTL=900   # 15 minutes
+readonly REFRESH_TOKEN_TTL=2592000 # 30 days
 readonly MAX_SESSIONS_PER_USER=10
 
 # ============================================================================
@@ -63,12 +63,12 @@ EOSQL
 
   # Calculate expiry times
   local access_expires_at
-  access_expires_at=$(date -u -d "+${SESSION_DEFAULT_TTL} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                      date -u -v+${SESSION_DEFAULT_TTL}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  access_expires_at=$(date -u -d "+${SESSION_DEFAULT_TTL} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${SESSION_DEFAULT_TTL}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   local refresh_expires_at
-  refresh_expires_at=$(date -u -d "+${REFRESH_TOKEN_TTL} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                       date -u -v+${REFRESH_TOKEN_TTL}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  refresh_expires_at=$(date -u -d "+${REFRESH_TOKEN_TTL} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${REFRESH_TOKEN_TTL}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Hash refresh token for storage
   local refresh_token_hash
@@ -351,7 +351,7 @@ session_rotate_refresh_token() {
   fi
 
   local session_id user_id revoked refresh_expires_at
-  read -r session_id user_id revoked refresh_expires_at <<< "$session_data"
+  read -r session_id user_id revoked refresh_expires_at <<<"$session_data"
 
   # Check if session is revoked
   if [[ "$revoked" == "t" ]]; then
@@ -588,9 +588,9 @@ session_validate() {
     2>/dev/null | xargs)
 
   if [[ "${is_valid:-0}" -gt 0 ]]; then
-    return 0  # Valid
+    return 0 # Valid
   else
-    return 1  # Invalid
+    return 1 # Invalid
   fi
 }
 

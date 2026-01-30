@@ -25,7 +25,7 @@ NC='\033[0m' # No Color
 # Parse arguments first (before setting variables)
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
   SHOW_HELP=true
-  TENANT_COUNT=10  # Set default for help
+  TENANT_COUNT=10 # Set default for help
 else
   TENANT_COUNT="${1:-10}"
   SHOW_HELP=false
@@ -90,22 +90,22 @@ print_result() {
   fi
 
   # Record result
-  echo "$test,$result,$baseline,$unit,$status" >> "${RESULTS_FILE}.csv"
+  echo "$test,$result,$baseline,$unit,$status" >>"${RESULTS_FILE}.csv"
 }
 
 # Initialize results file
 initialize_results() {
-  printf "{\n" > "$RESULTS_FILE"
-  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >> "$RESULTS_FILE"
-  printf "  \"tenant_count\": %d,\n" "$TENANT_COUNT" >> "$RESULTS_FILE"
-  printf "  \"scale\": \"%s\",\n" "$TEST_LABEL" >> "$RESULTS_FILE"
-  printf "  \"tests\": [\n" >> "$RESULTS_FILE"
+  printf "{\n" >"$RESULTS_FILE"
+  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >>"$RESULTS_FILE"
+  printf "  \"tenant_count\": %d,\n" "$TENANT_COUNT" >>"$RESULTS_FILE"
+  printf "  \"scale\": \"%s\",\n" "$TEST_LABEL" >>"$RESULTS_FILE"
+  printf "  \"tests\": [\n" >>"$RESULTS_FILE"
 
-  echo "Test,Result,Baseline,Unit,Status" > "${RESULTS_FILE}.csv"
+  echo "Test,Result,Baseline,Unit,Status" >"${RESULTS_FILE}.csv"
 }
 
 finalize_results() {
-  printf "  ]\n}\n" >> "$RESULTS_FILE"
+  printf "  ]\n}\n" >>"$RESULTS_FILE"
 }
 
 # Test 1: Tenant Isolation Overhead
@@ -117,7 +117,7 @@ test_tenant_isolation() {
   local count=0
   for i in $(seq 1 $QUERY_COUNT); do
     # Simulate query without RLS
-    echo "SELECT * FROM data WHERE id = ${i};" > /dev/null 2>&1
+    echo "SELECT * FROM data WHERE id = ${i};" >/dev/null 2>&1
     count=$((count + 1))
   done
   local end_no_rls=$(date +%s.%N)
@@ -130,7 +130,7 @@ test_tenant_isolation() {
   for i in $(seq 1 $QUERY_COUNT); do
     local tenant_id=$((i % TENANT_COUNT + 1))
     # Simulate query with RLS
-    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" > /dev/null 2>&1
+    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" >/dev/null 2>&1
     count=$((count + 1))
   done
   local end_with_rls=$(date +%s.%N)
@@ -162,12 +162,12 @@ test_cross_tenant_prevention() {
     # Simulate query attempt
     if [[ $requesting_tenant != $target_tenant ]]; then
       # Cross-tenant query - should be blocked by RLS
-      echo "SELECT * FROM data WHERE tenant_id = 'tenant_${target_tenant}';" > /dev/null 2>&1
-      echo "-- BLOCKED by RLS policy" > /dev/null 2>&1
+      echo "SELECT * FROM data WHERE tenant_id = 'tenant_${target_tenant}';" >/dev/null 2>&1
+      echo "-- BLOCKED by RLS policy" >/dev/null 2>&1
       prevented=$((prevented + 1))
     else
       # Same tenant query - allowed
-      echo "SELECT * FROM data WHERE tenant_id = 'tenant_${target_tenant}';" > /dev/null 2>&1
+      echo "SELECT * FROM data WHERE tenant_id = 'tenant_${target_tenant}';" >/dev/null 2>&1
     fi
     count=$((count + 1))
   done
@@ -197,16 +197,16 @@ test_tenant_switching() {
     # Simulate tenant context switch
     {
       # 1. Clear current tenant context
-      echo "SET LOCAL app.current_tenant = NULL;" > /dev/null
+      echo "SET LOCAL app.current_tenant = NULL;" >/dev/null
 
       # 2. Set new tenant context
-      echo "SET LOCAL app.current_tenant = 'tenant_${new_tenant}';" > /dev/null
+      echo "SET LOCAL app.current_tenant = 'tenant_${new_tenant}';" >/dev/null
 
       # 3. Verify RLS policies apply
-      echo "SELECT set_config('request.jwt.claims', '{\"tenant_id\":\"tenant_${new_tenant}\"}', true);" > /dev/null
+      echo "SELECT set_config('request.jwt.claims', '{\"tenant_id\":\"tenant_${new_tenant}\"}', true);" >/dev/null
 
       # 4. Execute query with new context
-      echo "SELECT * FROM data WHERE id = ${i};" > /dev/null
+      echo "SELECT * FROM data WHERE id = ${i};" >/dev/null
     } 2>/dev/null
 
     current_tenant=$new_tenant
@@ -241,15 +241,15 @@ test_rls_enforcement() {
       case "$policy_type" in
         simple)
           # Simple RLS: tenant_id = current_tenant
-          echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}';" > /dev/null
+          echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}';" >/dev/null
           ;;
         moderate)
           # Moderate RLS: tenant_id check + user role check
-          echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND (public = true OR user_id = current_user());" > /dev/null
+          echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND (public = true OR user_id = current_user());" >/dev/null
           ;;
         complex)
           # Complex RLS: multiple joins and subqueries
-          echo "SELECT d.* FROM data d JOIN permissions p ON d.id = p.resource_id WHERE d.tenant_id = 'tenant_${tenant_id}' AND p.user_id IN (SELECT id FROM users WHERE tenant_id = 'tenant_${tenant_id}');" > /dev/null
+          echo "SELECT d.* FROM data d JOIN permissions p ON d.id = p.resource_id WHERE d.tenant_id = 'tenant_${tenant_id}' AND p.user_id IN (SELECT id FROM users WHERE tenant_id = 'tenant_${tenant_id}');" >/dev/null
           ;;
       esac
 
@@ -268,7 +268,7 @@ test_rls_enforcement() {
   local count=0
   for i in $(seq 1 $RLS_CHECKS); do
     local tenant_id=$((i % TENANT_COUNT + 1))
-    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}';" > /dev/null 2>&1
+    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}';" >/dev/null 2>&1
     count=$((count + 1))
   done
   local end_time=$(date +%s.%N)
@@ -290,7 +290,7 @@ test_data_partitioning() {
   local count=0
   for i in $(seq 1 1000); do
     local tenant_id=$((i % TENANT_COUNT + 1))
-    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" > /dev/null 2>&1
+    echo "SELECT * FROM data WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" >/dev/null 2>&1
     count=$((count + 1))
   done
   local end_time=$(date +%s.%N)
@@ -303,7 +303,7 @@ test_data_partitioning() {
   for i in $(seq 1 1000); do
     local tenant_id=$((i % TENANT_COUNT + 1))
     local partition=$((tenant_id % 10))
-    echo "SELECT * FROM data_p${partition} WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" > /dev/null 2>&1
+    echo "SELECT * FROM data_p${partition} WHERE tenant_id = 'tenant_${tenant_id}' AND id = ${i};" >/dev/null 2>&1
     count=$((count + 1))
   done
   end_time=$(date +%s.%N)
@@ -315,7 +315,7 @@ test_data_partitioning() {
   count=0
   for i in $(seq 1 1000); do
     local tenant_id=$((i % TENANT_COUNT + 1))
-    echo "SELECT * FROM data_tenant_${tenant_id} WHERE id = ${i};" > /dev/null 2>&1
+    echo "SELECT * FROM data_tenant_${tenant_id} WHERE id = ${i};" >/dev/null 2>&1
     count=$((count + 1))
   done
   end_time=$(date +%s.%N)

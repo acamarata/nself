@@ -346,7 +346,8 @@ detect_existing_installation() {
     
     # Get the installation directory from the command
     local nself_dir=$(dirname $(dirname $(readlink -f "$nself_path" || echo "$nself_path")))
-    if [[ -d "$nself_dir" ]] && [[ ! " ${found_installations[@]} " =~ " ${nself_dir} " ]]; then
+    # shellcheck disable=SC2199 # Intentional array concatenation in regex match
+    if [[ -d "$nself_dir" ]] && [[ ! " ${found_installations[*]} " =~ " ${nself_dir} " ]]; then
       found_installations+=("$nself_dir")
     fi
   fi

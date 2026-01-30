@@ -133,7 +133,7 @@ fetch_graphql_schema() {
     return 1
   fi
 
-  printf '%s' "$response" > "$output_file"
+  printf '%s' "$response" >"$output_file"
   printf "Schema saved to %s\n" "$output_file"
 }
 
@@ -147,7 +147,7 @@ generate_typescript_sdk() {
   mkdir -p "$output_dir/src"
 
   # Generate client wrapper
-  cat > "$output_dir/src/client.ts" <<'EOF'
+  cat >"$output_dir/src/client.ts" <<'EOF'
 import { GraphQLClient } from 'graphql-request';
 
 export interface NselfClientConfig {
@@ -190,7 +190,7 @@ export class NselfClient {
 EOF
 
   # Generate authentication helpers
-  cat > "$output_dir/src/auth.ts" <<'EOF'
+  cat >"$output_dir/src/auth.ts" <<'EOF'
 import { NselfClient } from './client';
 
 export interface SignUpParams {
@@ -287,7 +287,7 @@ export class AuthClient {
 EOF
 
   # Generate index file
-  cat > "$output_dir/src/index.ts" <<'EOF'
+  cat >"$output_dir/src/index.ts" <<'EOF'
 export { NselfClient, NselfClientConfig } from './client';
 export { AuthClient, SignUpParams, SignInParams, AuthResponse } from './auth';
 export { StorageClient, UploadFileParams, FileMetadata } from './storage';
@@ -297,7 +297,7 @@ export type { GraphQLClient } from 'graphql-request';
 EOF
 
   # Generate storage helpers
-  cat > "$output_dir/src/storage.ts" <<'EOF'
+  cat >"$output_dir/src/storage.ts" <<'EOF'
 export interface UploadFileParams {
   file: File | Buffer;
   name?: string;
@@ -364,7 +364,7 @@ export class StorageClient {
 EOF
 
   # Generate package.json
-  cat > "$output_dir/package.json" <<EOF
+  cat >"$output_dir/package.json" <<EOF
 {
   "name": "@nself/sdk",
   "version": "1.0.0",
@@ -394,7 +394,7 @@ EOF
 EOF
 
   # Generate tsconfig.json
-  cat > "$output_dir/tsconfig.json" <<EOF
+  cat >"$output_dir/tsconfig.json" <<EOF
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -416,7 +416,7 @@ EOF
 EOF
 
   # Generate README
-  cat > "$output_dir/README.md" <<'EOF'
+  cat >"$output_dir/README.md" <<'EOF'
 # nself TypeScript SDK
 
 Official TypeScript/JavaScript SDK for nself backends.
@@ -543,7 +543,7 @@ generate_python_sdk() {
   mkdir -p "$output_dir/nself"
 
   # Generate client
-  cat > "$output_dir/nself/client.py" <<'EOF'
+  cat >"$output_dir/nself/client.py" <<'EOF'
 from typing import Any, Dict, Optional
 import requests
 
@@ -598,7 +598,7 @@ class NselfClient:
 EOF
 
   # Generate auth client
-  cat > "$output_dir/nself/auth.py" <<'EOF'
+  cat >"$output_dir/nself/auth.py" <<'EOF'
 from typing import Any, Dict, Optional
 from dataclasses import dataclass
 
@@ -742,7 +742,7 @@ class AuthClient:
 EOF
 
   # Generate storage client
-  cat > "$output_dir/nself/storage.py" <<'EOF'
+  cat >"$output_dir/nself/storage.py" <<'EOF'
 from typing import BinaryIO, Optional
 from dataclasses import dataclass
 import requests
@@ -810,7 +810,7 @@ class StorageClient:
 EOF
 
   # Generate __init__.py
-  cat > "$output_dir/nself/__init__.py" <<'EOF'
+  cat >"$output_dir/nself/__init__.py" <<'EOF'
 """nself Python SDK - Official Python client for nself backends."""
 
 from .client import NselfClient
@@ -829,7 +829,7 @@ __all__ = [
 EOF
 
   # Generate setup.py
-  cat > "$output_dir/setup.py" <<'EOF'
+  cat >"$output_dir/setup.py" <<'EOF'
 from setuptools import setup, find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -862,7 +862,7 @@ setup(
 EOF
 
   # Generate README
-  cat > "$output_dir/README.md" <<'EOF'
+  cat >"$output_dir/README.md" <<'EOF'
 # nself Python SDK
 
 Official Python SDK for nself backends.
@@ -990,11 +990,11 @@ generate_sdk() {
   printf "GraphQL endpoint: %s\n" "$endpoint"
 
   case "$language" in
-    typescript|ts)
+    typescript | ts)
       generate_typescript_sdk "schema.graphql" "$output_dir"
       ;;
 
-    python|py)
+    python | py)
       generate_python_sdk "schema.graphql" "$output_dir"
       ;;
 

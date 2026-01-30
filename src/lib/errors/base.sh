@@ -98,18 +98,18 @@ display_error() {
   fi
 
   case $severity in
-  $ERROR_CRITICAL)
-    log_error "[CRITICAL] $error_msg"
-    ;;
-  $ERROR_MAJOR)
-    log_error "$error_msg"
-    ;;
-  $ERROR_MINOR)
-    log_warning "$error_msg"
-    ;;
-  $ERROR_WARNING)
-    log_info "$error_msg"
-    ;;
+    $ERROR_CRITICAL)
+      log_error "[CRITICAL] $error_msg"
+      ;;
+    $ERROR_MAJOR)
+      log_error "$error_msg"
+      ;;
+    $ERROR_MINOR)
+      log_warning "$error_msg"
+      ;;
+    $ERROR_WARNING)
+      log_info "$error_msg"
+      ;;
   esac
 
   if [[ -n "$context" ]]; then

@@ -83,7 +83,7 @@ compare_versions() {
 
   # Compare each part
   local i
-  for ((i=0; i<3; i++)); do
+  for ((i = 0; i < 3; i++)); do
     local n1="${v1_parts[$i]:-0}"
     local n2="${v2_parts[$i]:-0}"
 
@@ -408,9 +408,9 @@ restart_admin_container() {
       compose_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$admin_container" 2>/dev/null || true)
 
       if [[ -n "$compose_dir" ]] && [[ -d "$compose_dir" ]]; then
-        (cd "$compose_dir" && docker compose up -d --force-recreate nself-admin 2>/dev/null) || \
-        (cd "$compose_dir" && docker-compose up -d --force-recreate nself-admin 2>/dev/null) || \
-        docker restart "$admin_container"
+        (cd "$compose_dir" && docker compose up -d --force-recreate nself-admin 2>/dev/null) ||
+          (cd "$compose_dir" && docker-compose up -d --force-recreate nself-admin 2>/dev/null) ||
+          docker restart "$admin_container"
       else
         docker restart "$admin_container"
       fi
@@ -459,35 +459,35 @@ cmd_update() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
-    --check)
-      check_only=true
-      shift
-      ;;
-    --cli)
-      cli_only=true
-      shift
-      ;;
-    --admin)
-      admin_only=true
-      shift
-      ;;
-    --force)
-      force_update=true
-      shift
-      ;;
-    --restart)
-      do_restart=true
-      shift
-      ;;
-    -h | --help)
-      show_update_help
-      return 0
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      log_info "Use 'nself update --help' for usage information"
-      return 1
-      ;;
+      --check)
+        check_only=true
+        shift
+        ;;
+      --cli)
+        cli_only=true
+        shift
+        ;;
+      --admin)
+        admin_only=true
+        shift
+        ;;
+      --force)
+        force_update=true
+        shift
+        ;;
+      --restart)
+        do_restart=true
+        shift
+        ;;
+      -h | --help)
+        show_update_help
+        return 0
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        log_info "Use 'nself update --help' for usage information"
+        return 1
+        ;;
     esac
   done
 

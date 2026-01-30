@@ -154,7 +154,7 @@ rate_limit_check() {
   refilled=$(echo "scale=6; $tokens + ($refill_rate * $elapsed)" | bc)
 
   # Cap at burst size
-  if (( $(echo "$refilled > $burst_size" | bc -l) )); then
+  if (($(echo "$refilled > $burst_size" | bc -l))); then
     refilled=$burst_size
   fi
 
@@ -162,7 +162,7 @@ rate_limit_check() {
   local allowed=false
   local new_tokens=$refilled
 
-  if (( $(echo "$refilled >= 1" | bc -l) )); then
+  if (($(echo "$refilled >= 1" | bc -l))); then
     allowed=true
     new_tokens=$(echo "scale=6; $refilled - 1" | bc)
   fi
@@ -261,7 +261,7 @@ rate_limit_log() {
   container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
   if [[ -z "$container" ]]; then
-    return 0  # Fail silently for logging
+    return 0 # Fail silently for logging
   fi
 
   # Escape key

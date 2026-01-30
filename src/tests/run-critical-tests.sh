@@ -18,20 +18,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Check for bats
 if ! command -v bats >/dev/null 2>&1; then
-    printf "${RED}ERROR: bats not found${NC}\n"
-    printf "Install bats:\n"
-    printf "  macOS: brew install bats-core\n"
-    printf "  Ubuntu: sudo apt-get install bats\n"
-    exit 1
+  printf "${RED}ERROR: bats not found${NC}\n"
+  printf "Install bats:\n"
+  printf "  macOS: brew install bats-core\n"
+  printf "  Ubuntu: sudo apt-get install bats\n"
+  exit 1
 fi
 
 # Test files to run
 TEST_FILES=(
-    "backup_tests.bats"
-    "deploy_tests.bats"
-    "storage_tests.bats"
-    "ssl_tests.bats"
-    "tenant_tests.bats"
+  "backup_tests.bats"
+  "deploy_tests.bats"
+  "storage_tests.bats"
+  "ssl_tests.bats"
+  "tenant_tests.bats"
 )
 
 # Summary tracking
@@ -48,39 +48,39 @@ printf "${BLUE}═════════════════════�
 # Check if Docker is available
 docker_available=false
 if command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
-    docker_available=true
-    printf "${GREEN}✓${NC} Docker is available - full tests will run\n"
+  docker_available=true
+  printf "${GREEN}✓${NC} Docker is available - full tests will run\n"
 else
-    printf "${YELLOW}⚠${NC}  Docker not available - some tests will be skipped\n"
+  printf "${YELLOW}⚠${NC}  Docker not available - some tests will be skipped\n"
 fi
 
 # Check if nself is in PATH
 if ! command -v nself >/dev/null 2>&1; then
-    printf "${YELLOW}⚠${NC}  nself not in PATH - adding local bin\n"
-    export PATH="$(cd "$SCRIPT_DIR/../.." && pwd)/bin:$PATH"
+  printf "${YELLOW}⚠${NC}  nself not in PATH - adding local bin\n"
+  export PATH="$(cd "$SCRIPT_DIR/../.." && pwd)/bin:$PATH"
 fi
 
 printf "\n"
 
 # Run each test file
 for test_file in "${TEST_FILES[@]}"; do
-    test_path="$SCRIPT_DIR/$test_file"
+  test_path="$SCRIPT_DIR/$test_file"
 
-    if [[ ! -f "$test_path" ]]; then
-        printf "${YELLOW}⚠${NC}  Test file not found: $test_file\n"
-        continue
-    fi
+  if [[ ! -f "$test_path" ]]; then
+    printf "${YELLOW}⚠${NC}  Test file not found: $test_file\n"
+    continue
+  fi
 
-    printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
-    printf "${BLUE}Running: %s${NC}\n" "$test_file"
-    printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n\n"
+  printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
+  printf "${BLUE}Running: %s${NC}\n" "$test_file"
+  printf "${BLUE}═══════════════════════════════════════════════════════════${NC}\n\n"
 
-    # Run bats and capture output
-    if bats "$test_path"; then
-        printf "\n${GREEN}✓ %s: PASSED${NC}\n\n" "$test_file"
-    else
-        printf "\n${YELLOW}⚠ %s: Some tests failed or skipped${NC}\n\n" "$test_file"
-    fi
+  # Run bats and capture output
+  if bats "$test_path"; then
+    printf "\n${GREEN}✓ %s: PASSED${NC}\n\n" "$test_file"
+  else
+    printf "\n${YELLOW}⚠ %s: Some tests failed or skipped${NC}\n\n" "$test_file"
+  fi
 done
 
 # Summary
@@ -92,12 +92,12 @@ printf "Test files executed: %d\n" "${#TEST_FILES[@]}"
 printf "\n"
 
 if [[ "$docker_available" = false ]]; then
-    printf "${YELLOW}Note: Some tests were skipped because Docker is not available.${NC}\n"
-    printf "${YELLOW}      To run full tests:${NC}\n"
-    printf "      1. Start Docker\n"
-    printf "      2. Run: nself start\n"
-    printf "      3. Re-run this script\n"
-    printf "\n"
+  printf "${YELLOW}Note: Some tests were skipped because Docker is not available.${NC}\n"
+  printf "${YELLOW}      To run full tests:${NC}\n"
+  printf "      1. Start Docker\n"
+  printf "      2. Run: nself start\n"
+  printf "      3. Re-run this script\n"
+  printf "\n"
 fi
 
 printf "${GREEN}Coverage Improvement Summary:${NC}\n"

@@ -114,7 +114,7 @@ calculate_priority() {
 # Lock user account (temporary or permanent)
 lock_user_account() {
   local user_id="$1"
-  local duration="${2:-3600}"  # 1 hour default
+  local duration="${2:-3600}" # 1 hour default
   local reason="${3:-Security incident}"
 
   # This would update the database
@@ -133,7 +133,7 @@ EOF
 # Block IP address
 block_ip_address() {
   local ip_address="$1"
-  local duration="${2:-3600}"  # 1 hour default
+  local duration="${2:-3600}" # 1 hour default
   local reason="${3:-Security incident}"
 
   # This would add to IP blocklist (could integrate with fail2ban, iptables, etc.)
@@ -434,7 +434,7 @@ calculate_mttd() {
 
   # Calculate time difference in seconds
   # This would use proper date parsing
-  echo "300"  # Placeholder: 5 minutes
+  echo "300" # Placeholder: 5 minutes
 }
 
 # Calculate mean time to respond (MTTR)
@@ -444,7 +444,7 @@ calculate_mttr() {
 
   # Calculate time difference in seconds
   # This would use proper date parsing
-  echo "900"  # Placeholder: 15 minutes
+  echo "900" # Placeholder: 15 minutes
 }
 
 # Export functions

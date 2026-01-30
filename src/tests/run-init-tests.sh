@@ -71,7 +71,7 @@ FAILED_TESTS=0
 # Run unit tests
 run_unit_tests() {
   print_header "Running Unit Tests"
-  
+
   if [[ -f "$TEST_DIR/unit/test-init.sh" ]]; then
     if bash "$TEST_DIR/unit/test-init.sh"; then
       print_success "Unit tests passed"
@@ -89,17 +89,17 @@ run_unit_tests() {
 # Run integration tests
 run_integration_tests() {
   print_header "Running Integration Tests"
-  
+
   if [[ "$QUICK_MODE" == true ]]; then
     print_warning "Skipping integration tests (--quick mode)"
     return
   fi
-  
+
   # Test basic init
   local temp_dir="/tmp/nself-test-$$"
   mkdir -p "$temp_dir"
   cd "$temp_dir"
-  
+
   echo "Testing basic init..."
   if bash "$CLI_DIR/init.sh" --quiet; then
     if [[ -f .env ]] && [[ -f .env.example ]] && [[ -f .gitignore ]]; then
@@ -114,7 +114,7 @@ run_integration_tests() {
     ((FAILED_TESTS++))
   fi
   ((TOTAL_TESTS++))
-  
+
   # Cleanup
   cd /
   rm -rf "$temp_dir"
@@ -123,17 +123,17 @@ run_integration_tests() {
 # Run shellcheck if available
 run_shellcheck() {
   print_header "Running ShellCheck"
-  
+
   if ! command -v shellcheck >/dev/null 2>&1; then
     print_warning "ShellCheck not installed, skipping"
     return
   fi
-  
+
   local files_to_check=(
     "$CLI_DIR/init.sh"
     "$INIT_DIR/*.sh"
   )
-  
+
   local has_errors=false
   for pattern in "${files_to_check[@]}"; do
     for file in $pattern; do
@@ -147,7 +147,7 @@ run_shellcheck() {
       fi
     done
   done
-  
+
   if [[ "$has_errors" == false ]]; then
     print_success "ShellCheck passed"
     ((PASSED_TESTS++))
@@ -161,28 +161,28 @@ run_shellcheck() {
 # Check for Bash 4+ features
 check_bash_compatibility() {
   print_header "Checking Bash 3.2 Compatibility"
-  
+
   local has_issues=false
   local files_to_check="$INIT_DIR/*.sh $CLI_DIR/init.sh"
-  
+
   # Check for declare -A (associative arrays)
   if grep -h "declare -A" $files_to_check 2>/dev/null | grep -v "#"; then
     print_error "Found associative arrays (Bash 4+)"
     has_issues=true
   fi
-  
+
   # Check for ${var^^} or ${var,,}
   if grep -hE '\${[^}]*(\^\^|,,)[^}]*}' $files_to_check 2>/dev/null | grep -v "#"; then
     print_error "Found case conversion (Bash 4+)"
     has_issues=true
   fi
-  
+
   # Check for mapfile/readarray
   if grep -hE '\b(mapfile|readarray)\b' $files_to_check 2>/dev/null | grep -v "#"; then
     print_error "Found mapfile/readarray (Bash 4+)"
     has_issues=true
   fi
-  
+
   if [[ "$has_issues" == false ]]; then
     print_success "Bash 3.2 compatible"
     ((PASSED_TESTS++))
@@ -195,18 +195,18 @@ check_bash_compatibility() {
 # Check file permissions
 check_permissions() {
   print_header "Checking File Permissions"
-  
+
   local temp_dir="/tmp/nself-perm-test-$$"
   mkdir -p "$temp_dir"
   cd "$temp_dir"
-  
+
   # Run init quietly
   bash "$CLI_DIR/init.sh" --quiet
-  
+
   # Check .env permissions
   local env_perms
   env_perms=$(stat -c "%a" .env 2>/dev/null || stat -f "%OLp" .env 2>/dev/null)
-  
+
   if [[ "$env_perms" == "600" ]]; then
     print_success ".env has correct permissions (600)"
     ((PASSED_TESTS++))
@@ -215,7 +215,7 @@ check_permissions() {
     ((FAILED_TESTS++))
   fi
   ((TOTAL_TESTS++))
-  
+
   # Cleanup
   cd /
   rm -rf "$temp_dir"
@@ -226,14 +226,14 @@ main() {
   echo "╔══════════════════════════════════════════╗"
   echo "║     nself init Test Runner              ║"
   echo "╚══════════════════════════════════════════╝"
-  
+
   # Run all test suites
   run_unit_tests
   run_integration_tests
   run_shellcheck
   check_bash_compatibility
   check_permissions
-  
+
   # Print summary
   print_header "Test Summary"
   echo "Total tests: $TOTAL_TESTS"
@@ -243,7 +243,7 @@ main() {
   else
     echo -e "Failed: $FAILED_TESTS"
   fi
-  
+
   # Exit code
   if [[ $FAILED_TESTS -gt 0 ]]; then
     exit 1

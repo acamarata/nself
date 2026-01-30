@@ -31,14 +31,14 @@ trust::install_root_ca() {
     # Platform-specific success messages
     local os="$(uname -s)"
     case "$os" in
-    Darwin)
-      log_info "✓ Added to macOS Keychain"
-      log_info "✓ Added to Firefox (if installed)"
-      ;;
-    Linux)
-      log_info "✓ Added to system certificate store"
-      log_info "✓ Added to Firefox/Chrome NSS database (if available)"
-      ;;
+      Darwin)
+        log_info "✓ Added to macOS Keychain"
+        log_info "✓ Added to Firefox (if installed)"
+        ;;
+      Linux)
+        log_info "✓ Added to system certificate store"
+        log_info "✓ Added to Firefox/Chrome NSS database (if available)"
+        ;;
     esac
 
     return 0
@@ -147,23 +147,23 @@ trust::status() {
   # Platform-specific trust store info
   local os="$(uname -s)"
   case "$os" in
-  Darwin)
-    echo "Platform: macOS"
-    echo "  Trust stores: System Keychain, Firefox NSS"
-    # Check if certificate is in keychain
-    if security find-certificate -c "mkcert" &>/dev/null; then
-      echo "  ✓ mkcert certificate found in Keychain"
-    fi
-    ;;
-  Linux)
-    echo "Platform: Linux"
-    echo "  Trust stores: /usr/local/share/ca-certificates, Firefox/Chrome NSS"
-    # Check common certificate locations
-    if [[ -f "/usr/local/share/ca-certificates/mkcert-rootCA.crt" ]] ||
-      [[ -f "/etc/pki/ca-trust/source/anchors/mkcert-rootCA.pem" ]]; then
-      echo "  ✓ mkcert certificate found in system store"
-    fi
-    ;;
+    Darwin)
+      echo "Platform: macOS"
+      echo "  Trust stores: System Keychain, Firefox NSS"
+      # Check if certificate is in keychain
+      if security find-certificate -c "mkcert" &>/dev/null; then
+        echo "  ✓ mkcert certificate found in Keychain"
+      fi
+      ;;
+    Linux)
+      echo "Platform: Linux"
+      echo "  Trust stores: /usr/local/share/ca-certificates, Firefox/Chrome NSS"
+      # Check common certificate locations
+      if [[ -f "/usr/local/share/ca-certificates/mkcert-rootCA.crt" ]] ||
+        [[ -f "/etc/pki/ca-trust/source/anchors/mkcert-rootCA.pem" ]]; then
+        echo "  ✓ mkcert certificate found in system store"
+      fi
+      ;;
   esac
   echo
 
@@ -181,7 +181,7 @@ trust::update_hosts() {
   local project_name="${PROJECT_NAME:-app}"
   local needs_update=false
   local hosts_entries=()
-  
+
   # Build list of required hosts entries
   hosts_entries+=(
     "127.0.0.1       api.localhost"
@@ -191,14 +191,14 @@ trust::update_hosts() {
     "127.0.0.1       dashboard.localhost"
     "127.0.0.1       console.localhost"
   )
-  
+
   # Add project-specific entries
   if [[ -n "$project_name" ]]; then
     hosts_entries+=("127.0.0.1       ${project_name}.localhost")
     [[ "$project_name" == "nchat" ]] && hosts_entries+=("127.0.0.1       chat.localhost")
     [[ "$project_name" == "admin" ]] && hosts_entries+=("127.0.0.1       admin.localhost")
   fi
-  
+
   # Check which entries are missing
   local missing_entries=()
   for entry in "${hosts_entries[@]}"; do
@@ -208,7 +208,7 @@ trust::update_hosts() {
       needs_update=true
     fi
   done
-  
+
   if [[ "$needs_update" == "true" ]]; then
     log_info "Some domains need to be added to /etc/hosts for proper resolution"
     echo
@@ -217,7 +217,7 @@ trust::update_hosts() {
       echo "  $entry"
     done
     echo
-    
+
     # Ask for permission
     read -p "Add these entries to /etc/hosts? (requires sudo) [y/N]: " -n 1 -r
     echo
@@ -264,7 +264,7 @@ trust::install() {
   # Show what domains are trusted
   echo
   echo "Trusted domains:"
-  
+
   if [[ "${BASE_DOMAIN:-localhost}" == "localhost" ]]; then
     echo "  • localhost"
     echo "  • api.localhost, auth.localhost, storage.localhost"
@@ -273,7 +273,7 @@ trust::install() {
   else
     echo "  • ${BASE_DOMAIN}, *.${BASE_DOMAIN}"
   fi
-  
+
   echo "  • 127.0.0.1, ::1"
 
   if [[ -f "$NSELF_ROOT/templates/certs/nself-org/fullchain.pem" ]]; then
@@ -295,15 +295,15 @@ trust::needs_install() {
 
   # Get mkcert command
   if ! mkcert_cmd="$(ssl::get_mkcert 2>/dev/null)"; then
-    return 1  # No mkcert, can't check
+    return 1 # No mkcert, can't check
   fi
 
   # Check if root CA is installed
   if $mkcert_cmd -install -check 2>/dev/null; then
-    return 1  # Already installed
+    return 1 # Already installed
   fi
 
-  return 0  # Needs installation
+  return 0 # Needs installation
 }
 
 # Auto-install trust if needed (silent mode for automation)
@@ -317,7 +317,7 @@ trust::auto_install() {
 
   # Check if trust is needed
   if ! trust::needs_install; then
-    return 0  # Already trusted
+    return 0 # Already trusted
   fi
 
   local mkcert_cmd

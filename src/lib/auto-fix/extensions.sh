@@ -9,7 +9,8 @@ source "$SCRIPT_DIR/../utils/display.sh"
 source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || {
   # Fallback definition
   safe_sed_inline() {
-    local file="$1"; shift
+    local file="$1"
+    shift
     if [[ "$OSTYPE" == "darwin"* ]]; then
       if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "$@" "$file"

@@ -27,13 +27,13 @@ detect_environment() {
 
   # Normalize environment names
   case "$env" in
-    development|develop|devel|dev)
+    development | develop | devel | dev)
       echo "dev"
       ;;
-    production|prod)
+    production | prod)
       echo "prod"
       ;;
-    staging|stage)
+    staging | stage)
       echo "staging"
       ;;
     *)
@@ -53,15 +53,15 @@ get_env_file_cascade() {
 
   # Add environment-specific files based on target
   case "$target_env" in
-    dev|development)
+    dev | development)
       # For dev environment, add .env.local for per-developer overrides
       files+=(".env.local")
       ;;
     staging)
       files+=(".env.staging")
       ;;
-    prod|production)
-      files+=(".env.staging")  # Staging configs are base for prod
+    prod | production)
+      files+=(".env.staging") # Staging configs are base for prod
       files+=(".env.prod")
       files+=(".env.secrets")
       ;;
@@ -109,7 +109,7 @@ with_env() {
   # Save current environment
   local original_env="${ENV:-}"
   local temp_env_file="/tmp/nself_env_backup_$$"
-  env > "$temp_env_file"
+  env >"$temp_env_file"
 
   # Load target environment
   cascade_env_vars "$target_env"
@@ -148,7 +148,7 @@ get_domain_for_env() {
     staging)
       echo "${STAGING_DOMAIN:-${BASE_DOMAIN:-localhost}}"
       ;;
-    prod|production)
+    prod | production)
       echo "${PROD_DOMAIN:-${PRODUCTION_DOMAIN:-${BASE_DOMAIN:-localhost}}}"
       ;;
     *)

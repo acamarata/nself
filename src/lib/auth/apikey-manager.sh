@@ -9,7 +9,7 @@ set -euo pipefail
 # API key defaults
 readonly APIKEY_PREFIX="nself"
 readonly APIKEY_LENGTH=32
-readonly APIKEY_DEFAULT_EXPIRY=31536000  # 1 year
+readonly APIKEY_DEFAULT_EXPIRY=31536000 # 1 year
 
 # ============================================================================
 # API Key Generation
@@ -109,8 +109,8 @@ EOSQL
   # Calculate expiry
   local expires_at=""
   if [[ "$expires_in" != "0" ]] && [[ "$expires_in" != "never" ]]; then
-    expires_at=$(date -u -d "+${expires_in} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                 date -u -v+${expires_in}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+    expires_at=$(date -u -d "+${expires_in} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+${expires_in}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
   fi
 
   # Escape name and scopes
@@ -382,8 +382,8 @@ apikey_update_expiry() {
   if [[ "$expires_in" == "0" ]] || [[ "$expires_in" == "never" ]]; then
     expires_at="NULL"
   else
-    expires_at="'$(date -u -d "+${expires_in} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                   date -u -v+${expires_in}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)'::timestamptz"
+    expires_at="'$(date -u -d "+${expires_in} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+${expires_in}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)'::timestamptz"
   fi
 
   # Update expiry
@@ -430,7 +430,7 @@ apikey_rotate() {
   fi
 
   local user_id name scopes expires_at
-  read -r user_id name scopes expires_at <<< "$key_data"
+  read -r user_id name scopes expires_at <<<"$key_data"
 
   # Calculate remaining TTL
   local expires_in="0"

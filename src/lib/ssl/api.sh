@@ -121,7 +121,7 @@ ssl_setup_for_build() {
 
   # Check if certificates already exist and are trusted
   if ssl_exists "$project_dir" "$domain" && ssl_is_mkcert "$project_dir" "$domain" && trust_check; then
-    return 0  # Already setup
+    return 0 # Already setup
   fi
 
   # Generate certificates
@@ -131,7 +131,7 @@ ssl_setup_for_build() {
 
   # Install trust if not already installed
   if ! trust_check; then
-    trust_install || true  # Don't fail if user cancels sudo
+    trust_install || true # Don't fail if user cancels sudo
   fi
 
   return 0

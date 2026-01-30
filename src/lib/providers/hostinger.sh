@@ -12,7 +12,7 @@ HOSTINGER_REGIONS=("us" "eu" "asia" "sa")
 _hostinger_get_plan() {
   local size="$1"
   case "$size" in
-    tiny|small) echo "KVM 1" ;;
+    tiny | small) echo "KVM 1" ;;
     medium) echo "KVM 2" ;;
     large) echo "KVM 4" ;;
     xlarge) echo "KVM 8" ;;
@@ -30,7 +30,7 @@ provider_hostinger_init() {
   read -rsp "API Token: " api_token
   echo
 
-  cat > "$config_dir/hostinger.yml" << EOF
+  cat >"$config_dir/hostinger.yml" <<EOF
 provider: hostinger
 api_token: "$api_token"
 default_region: us
@@ -42,12 +42,18 @@ EOF
 
 provider_hostinger_validate() {
   local config_file="${HOME}/.nself/providers/hostinger.yml"
-  [[ ! -f "$config_file" ]] && { log_error "Hostinger not configured"; return 1; }
-  local token; token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
+  [[ ! -f "$config_file" ]] && {
+    log_error "Hostinger not configured"
+    return 1
+  }
+  local token
+  token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
   if curl -s -H "Authorization: Bearer $token" "https://api.hostinger.com/v1/vps" 2>/dev/null | grep -q "data"; then
-    log_success "Hostinger credentials valid"; return 0
+    log_success "Hostinger credentials valid"
+    return 0
   fi
-  log_error "Hostinger credentials invalid"; return 1
+  log_error "Hostinger credentials invalid"
+  return 1
 }
 
 provider_hostinger_list_regions() {
@@ -66,12 +72,28 @@ provider_hostinger_list_sizes() {
 provider_hostinger_provision() {
   local name="" size="small" region="us"
   while [[ $# -gt 0 ]]; do
-    case "$1" in --name) name="$2"; shift 2 ;; --size) size="$2"; shift 2 ;; --region) region="$2"; shift 2 ;; *) shift ;; esac
+    case "$1" in --name)
+      name="$2"
+      shift 2
+      ;;
+    --size)
+      size="$2"
+      shift 2
+      ;;
+    --region)
+      region="$2"
+      shift 2
+      ;;
+    *) shift ;; esac
   done
-  [[ -z "$name" ]] && { log_error "Server name required"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Server name required"
+    return 1
+  }
 
   local config_file="${HOME}/.nself/providers/hostinger.yml"
-  local token; token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
+  local token
+  token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
   local plan
   plan=$(_hostinger_get_plan "$size")
 
@@ -84,25 +106,29 @@ provider_hostinger_provision() {
     -d "{\"hostname\": \"$name\", \"plan\": \"$plan\", \"location\": \"$region\"}" 2>/dev/null)
 
   if echo "$response" | grep -q "id"; then
-    local id; id=$(echo "$response" | grep -o '"id":[0-9]*' | cut -d':' -f2)
+    local id
+    id=$(echo "$response" | grep -o '"id":[0-9]*' | cut -d':' -f2)
     log_success "VPS created: $id"
     echo "$id"
   else
-    log_error "Failed to create VPS"; return 1
+    log_error "Failed to create VPS"
+    return 1
   fi
 }
 
 provider_hostinger_destroy() {
   local id="$1"
   local config_file="${HOME}/.nself/providers/hostinger.yml"
-  local token; token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
+  local token
+  token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
   curl -s -X DELETE "https://api.hostinger.com/v1/vps/$id" -H "Authorization: Bearer $token" 2>/dev/null
   log_success "VPS deleted"
 }
 
 provider_hostinger_status() {
   local config_file="${HOME}/.nself/providers/hostinger.yml"
-  local token; token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
+  local token
+  token=$(grep "api_token:" "$config_file" | cut -d'"' -f2)
   if [[ -n "${1:-}" ]]; then
     curl -s "https://api.hostinger.com/v1/vps/$1" -H "Authorization: Bearer $token" 2>/dev/null
   else
@@ -111,10 +137,16 @@ provider_hostinger_status() {
 }
 
 provider_hostinger_list() { provider_hostinger_status; }
-provider_hostinger_ssh() { local id="$1"; shift; local ip; ip=$(provider_hostinger_get_ip "$id"); ssh "root@$ip" "$@"; }
+provider_hostinger_ssh() {
+  local id="$1"
+  shift
+  local ip
+  ip=$(provider_hostinger_get_ip "$id")
+  ssh "root@$ip" "$@"
+}
 provider_hostinger_get_ip() { provider_hostinger_status "$1" 2>/dev/null | grep -o '"ip":"[0-9.]*"' | head -1 | cut -d'"' -f4; }
 provider_hostinger_estimate_cost() {
-  case "${1:-small}" in tiny|small) echo "5" ;; medium) echo "9" ;; large) echo "16" ;; xlarge) echo "30" ;; *) echo "5" ;; esac
+  case "${1:-small}" in tiny | small) echo "5" ;; medium) echo "9" ;; large) echo "16" ;; xlarge) echo "30" ;; *) echo "5" ;; esac
 }
 
 export -f provider_hostinger_init provider_hostinger_validate provider_hostinger_list_regions

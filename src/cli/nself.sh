@@ -71,18 +71,18 @@ main() {
 
   # Handle special flags
   case "$command" in
-  -v)
-    # -v flag should show just version number
-    command="version"
-    set -- "--short" "$@"
-    ;;
-  --version)
-    # --version shows full verbose output
-    command="version"
-    ;;
-  --help | -h)
-    command="help"
-    ;;
+    -v)
+      # -v flag should show just version number
+      command="version"
+      set -- "--short" "$@"
+      ;;
+    --version)
+      # --version shows full verbose output
+      command="version"
+      ;;
+    --help | -h)
+      command="help"
+      ;;
   esac
 
   # Map command to file

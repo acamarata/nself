@@ -13,7 +13,7 @@ init_test_environment() {
   mkdir -p "$test_dir"/{fixtures,factories,integration,unit}
 
   # Create test configuration
-  cat > "$test_dir/config.json" <<EOF
+  cat >"$test_dir/config.json" <<EOF
 {
   "database": {
     "host": "localhost",
@@ -32,7 +32,7 @@ init_test_environment() {
 EOF
 
   # Create test utilities
-  cat > "$test_dir/utils.js" <<'EOF'
+  cat >"$test_dir/utils.js" <<'EOF'
 // Test utilities for JavaScript/TypeScript
 const { NselfClient } = require('@nself/sdk');
 
@@ -84,7 +84,7 @@ class TestHelper {
 module.exports = { TestHelper };
 EOF
 
-  cat > "$test_dir/utils.py" <<'EOF'
+  cat >"$test_dir/utils.py" <<'EOF'
 """Test utilities for Python."""
 import time
 from typing import Any, Callable, Dict
@@ -137,7 +137,7 @@ class TestHelper:
 EOF
 
   # Create example test files
-  cat > "$test_dir/integration/example.test.js" <<'EOF'
+  cat >"$test_dir/integration/example.test.js" <<'EOF'
 const { TestHelper } = require('../utils');
 const config = require('../config.json');
 
@@ -187,7 +187,7 @@ describe('User Integration Tests', () => {
 });
 EOF
 
-  cat > "$test_dir/integration/test_example.py" <<'EOF'
+  cat >"$test_dir/integration/test_example.py" <<'EOF'
 """Example integration test."""
 import unittest
 import sys
@@ -270,7 +270,7 @@ generate_mock_factory() {
   mkdir -p "$output_dir"
 
   # JavaScript/TypeScript factory
-  cat > "$output_dir/${entity}.factory.js" <<'EOF'
+  cat >"$output_dir/${entity}.factory.js" <<'EOF'
 const { faker } = require('@faker-js/faker');
 
 class UsersFactory {
@@ -299,7 +299,7 @@ module.exports = { UsersFactory };
 EOF
 
   # Python factory
-  cat > "$output_dir/${entity}_factory.py" <<'EOF'
+  cat >"$output_dir/${entity}_factory.py" <<'EOF'
 """Mock factory for users."""
 from datetime import datetime
 from typing import Any, Dict, List
@@ -368,7 +368,7 @@ generate_fixtures() {
         });
       }
       console.log(JSON.stringify(fixtures, null, 2));
-    " > "$output_file" 2>/dev/null || generate_simple_fixtures "$entity" "$count" "$output_file"
+    " >"$output_file" 2>/dev/null || generate_simple_fixtures "$entity" "$count" "$output_file"
   else
     generate_simple_fixtures "$entity" "$count" "$output_file"
   fi
@@ -398,7 +398,7 @@ generate_simple_fixtures() {
   fixtures+="
 ]"
 
-  printf '%s' "$fixtures" > "$output_file"
+  printf '%s' "$fixtures" >"$output_file"
 }
 
 # Create database snapshot for testing
@@ -423,7 +423,7 @@ create_test_snapshot() {
   # Create snapshot using pg_dump
   if command -v docker >/dev/null 2>&1; then
     docker exec "${PROJECT_NAME:-nself}_postgres" \
-      pg_dump -U "$db_user" "$db_name" > "$snapshot_file"
+      pg_dump -U "$db_user" "$db_name" >"$snapshot_file"
     printf "Snapshot created: %s\n" "$snapshot_file"
   else
     printf "Docker not found. Cannot create snapshot.\n" >&2
@@ -455,7 +455,7 @@ restore_test_snapshot() {
 
   if command -v docker >/dev/null 2>&1; then
     docker exec -i "${PROJECT_NAME:-nself}_postgres" \
-      psql -U "$db_user" "$db_name" < "$snapshot_file"
+      psql -U "$db_user" "$db_name" <"$snapshot_file"
     printf "Snapshot restored successfully\n"
   else
     printf "Docker not found. Cannot restore snapshot.\n" >&2

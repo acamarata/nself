@@ -6,7 +6,7 @@
 
 # Early help check - before sourcing anything that might fail
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "help" ]] || [[ $# -eq 0 ]]; then
-  cat << 'EOF'
+  cat <<'EOF'
 nself service - Consolidated Service Management (43+ subcommands)
 
 USAGE:
@@ -214,7 +214,7 @@ COLOR_DIM=${COLOR_DIM:-$'\033[0;90m'}
 COLOR_BOLD=${COLOR_BOLD:-$'\033[1m'}
 
 show_service_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself service - Consolidated Service Management (43+ subcommands)
 
 USAGE:
@@ -388,15 +388,15 @@ is_service_enabled() {
 
   local env_var
   case "$service" in
-    email|mailpit)    env_var="MAILPIT_ENABLED" ;;
-    search|meilisearch) env_var="MEILISEARCH_ENABLED" ;;
-    functions)        env_var="FUNCTIONS_ENABLED" ;;
-    mlflow)           env_var="MLFLOW_ENABLED" ;;
-    admin|nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
-    storage|minio)    env_var="MINIO_ENABLED" ;;
-    cache|redis)      env_var="REDIS_ENABLED" ;;
-    monitoring)       env_var="MONITORING_ENABLED" ;;
-    *)                return 1 ;;
+    email | mailpit) env_var="MAILPIT_ENABLED" ;;
+    search | meilisearch) env_var="MEILISEARCH_ENABLED" ;;
+    functions) env_var="FUNCTIONS_ENABLED" ;;
+    mlflow) env_var="MLFLOW_ENABLED" ;;
+    admin | nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
+    storage | minio) env_var="MINIO_ENABLED" ;;
+    cache | redis) env_var="REDIS_ENABLED" ;;
+    monitoring) env_var="MONITORING_ENABLED" ;;
+    *) return 1 ;;
   esac
 
   # Check environment
@@ -412,14 +412,14 @@ is_service_running() {
 
   local container_name
   case "$service" in
-    email|mailpit)    container_name="mailpit" ;;
-    search|meilisearch) container_name="meilisearch" ;;
-    functions)        container_name="functions" ;;
-    mlflow)           container_name="mlflow" ;;
-    admin|nself-admin) container_name="nself-admin" ;;
-    storage|minio)    container_name="minio" ;;
-    cache|redis)      container_name="redis" ;;
-    *)                container_name="$service" ;;
+    email | mailpit) container_name="mailpit" ;;
+    search | meilisearch) container_name="meilisearch" ;;
+    functions) container_name="functions" ;;
+    mlflow) container_name="mlflow" ;;
+    admin | nself-admin) container_name="nself-admin" ;;
+    storage | minio) container_name="minio" ;;
+    cache | redis) container_name="redis" ;;
+    *) container_name="$service" ;;
   esac
 
   docker ps --format '{{.Names}}' 2>/dev/null | grep -q "$container_name"
@@ -431,14 +431,14 @@ cmd_service_list() {
   printf "%-15s %-10s %-10s %-30s\n" "SERVICE" "ENABLED" "RUNNING" "DESCRIPTION"
   printf "%s\n" "$(printf '%.0s-' {1..70})"
 
-  _service_row "email"      "MAILPIT_ENABLED"      "Mail testing (MailPit)"
-  _service_row "search"     "MEILISEARCH_ENABLED"  "Full-text search (MeiliSearch)"
-  _service_row "functions"  "FUNCTIONS_ENABLED"    "Serverless functions"
-  _service_row "mlflow"     "MLFLOW_ENABLED"       "ML experiment tracking"
-  _service_row "admin"      "NSELF_ADMIN_ENABLED"  "nself Admin UI"
-  _service_row "storage"    "MINIO_ENABLED"        "S3-compatible storage (MinIO)"
-  _service_row "cache"      "REDIS_ENABLED"        "Cache and sessions (Redis)"
-  _service_row "monitoring" "MONITORING_ENABLED"   "Full monitoring stack (10 services)"
+  _service_row "email" "MAILPIT_ENABLED" "Mail testing (MailPit)"
+  _service_row "search" "MEILISEARCH_ENABLED" "Full-text search (MeiliSearch)"
+  _service_row "functions" "FUNCTIONS_ENABLED" "Serverless functions"
+  _service_row "mlflow" "MLFLOW_ENABLED" "ML experiment tracking"
+  _service_row "admin" "NSELF_ADMIN_ENABLED" "nself Admin UI"
+  _service_row "storage" "MINIO_ENABLED" "S3-compatible storage (MinIO)"
+  _service_row "cache" "REDIS_ENABLED" "Cache and sessions (Redis)"
+  _service_row "monitoring" "MONITORING_ENABLED" "Full monitoring stack (10 services)"
 
   echo ""
   log_info "Enable: nself service enable <service>"
@@ -474,7 +474,7 @@ _service_row() {
       if curl -s -o /dev/null -w '' "http://localhost:${dev_port}" 2>/dev/null; then
         running="yes"
       else
-        running="dev"  # Indicate dev mode but not running
+        running="dev" # Indicate dev mode but not running
       fi
     fi
   fi
@@ -495,14 +495,14 @@ cmd_service_enable() {
 
   local env_var
   case "$service" in
-    email|mailpit)    env_var="MAILPIT_ENABLED" ;;
-    search|meilisearch) env_var="MEILISEARCH_ENABLED" ;;
-    functions)        env_var="FUNCTIONS_ENABLED" ;;
-    mlflow)           env_var="MLFLOW_ENABLED" ;;
-    admin|nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
-    storage|minio)    env_var="MINIO_ENABLED" ;;
-    cache|redis)      env_var="REDIS_ENABLED" ;;
-    monitoring)       env_var="MONITORING_ENABLED" ;;
+    email | mailpit) env_var="MAILPIT_ENABLED" ;;
+    search | meilisearch) env_var="MEILISEARCH_ENABLED" ;;
+    functions) env_var="FUNCTIONS_ENABLED" ;;
+    mlflow) env_var="MLFLOW_ENABLED" ;;
+    admin | nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
+    storage | minio) env_var="MINIO_ENABLED" ;;
+    cache | redis) env_var="REDIS_ENABLED" ;;
+    monitoring) env_var="MONITORING_ENABLED" ;;
     *)
       log_error "Unknown service: $service"
       return 1
@@ -524,7 +524,7 @@ cmd_service_enable() {
     fi
   else
     # Add new
-    echo "${env_var}=true" >> .env
+    echo "${env_var}=true" >>.env
   fi
 
   log_success "Service $service enabled"
@@ -542,14 +542,14 @@ cmd_service_disable() {
 
   local env_var
   case "$service" in
-    email|mailpit)    env_var="MAILPIT_ENABLED" ;;
-    search|meilisearch) env_var="MEILISEARCH_ENABLED" ;;
-    functions)        env_var="FUNCTIONS_ENABLED" ;;
-    mlflow)           env_var="MLFLOW_ENABLED" ;;
-    admin|nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
-    storage|minio)    env_var="MINIO_ENABLED" ;;
-    cache|redis)      env_var="REDIS_ENABLED" ;;
-    monitoring)       env_var="MONITORING_ENABLED" ;;
+    email | mailpit) env_var="MAILPIT_ENABLED" ;;
+    search | meilisearch) env_var="MEILISEARCH_ENABLED" ;;
+    functions) env_var="FUNCTIONS_ENABLED" ;;
+    mlflow) env_var="MLFLOW_ENABLED" ;;
+    admin | nself-admin) env_var="NSELF_ADMIN_ENABLED" ;;
+    storage | minio) env_var="MINIO_ENABLED" ;;
+    cache | redis) env_var="REDIS_ENABLED" ;;
+    monitoring) env_var="MONITORING_ENABLED" ;;
     *)
       log_error "Unknown service: $service"
       return 1
@@ -589,14 +589,14 @@ cmd_service_status() {
 
   local container_name
   case "$service" in
-    email|mailpit)    container_name="mailpit" ;;
-    search|meilisearch) container_name="meilisearch" ;;
-    functions)        container_name="functions" ;;
-    mlflow)           container_name="mlflow" ;;
-    admin|nself-admin) container_name="nself-admin" ;;
-    storage|minio)    container_name="minio" ;;
-    cache|redis)      container_name="redis" ;;
-    *)                container_name="$service" ;;
+    email | mailpit) container_name="mailpit" ;;
+    search | meilisearch) container_name="meilisearch" ;;
+    functions) container_name="functions" ;;
+    mlflow) container_name="mlflow" ;;
+    admin | nself-admin) container_name="nself-admin" ;;
+    storage | minio) container_name="minio" ;;
+    cache | redis) container_name="redis" ;;
+    *) container_name="$service" ;;
   esac
 
   printf "\n=== %s Status ===\n\n" "$service"
@@ -615,14 +615,14 @@ cmd_service_restart() {
 
   local container_name
   case "$service" in
-    email|mailpit)    container_name="mailpit" ;;
-    search|meilisearch) container_name="meilisearch" ;;
-    functions)        container_name="functions" ;;
-    mlflow)           container_name="mlflow" ;;
-    admin|nself-admin) container_name="nself-admin" ;;
-    storage|minio)    container_name="minio" ;;
-    cache|redis)      container_name="redis" ;;
-    *)                container_name="$service" ;;
+    email | mailpit) container_name="mailpit" ;;
+    search | meilisearch) container_name="meilisearch" ;;
+    functions) container_name="functions" ;;
+    mlflow) container_name="mlflow" ;;
+    admin | nself-admin) container_name="nself-admin" ;;
+    storage | minio) container_name="minio" ;;
+    cache | redis) container_name="redis" ;;
+    *) container_name="$service" ;;
   esac
 
   log_info "Restarting $service..."
@@ -648,14 +648,14 @@ cmd_service_logs() {
 
   local container_name
   case "$service" in
-    email|mailpit)    container_name="mailpit" ;;
-    search|meilisearch) container_name="meilisearch" ;;
-    functions)        container_name="functions" ;;
-    mlflow)           container_name="mlflow" ;;
-    admin|nself-admin) container_name="nself-admin" ;;
-    storage|minio)    container_name="minio" ;;
-    cache|redis)      container_name="redis" ;;
-    *)                container_name="$service" ;;
+    email | mailpit) container_name="mailpit" ;;
+    search | meilisearch) container_name="meilisearch" ;;
+    functions) container_name="functions" ;;
+    mlflow) container_name="mlflow" ;;
+    admin | nself-admin) container_name="nself-admin" ;;
+    storage | minio) container_name="minio" ;;
+    cache | redis) container_name="redis" ;;
+    *) container_name="$service" ;;
   esac
 
   local compose_cmd
@@ -683,19 +683,19 @@ cmd_service_init() {
   fi
 
   case "$service" in
-    functions|fn)
+    functions | fn)
       init_functions_service
       ;;
-    search|meilisearch)
+    search | meilisearch)
       init_search_service
       ;;
-    storage|minio|s3)
+    storage | minio | s3)
       init_storage_service
       ;;
-    cache|redis)
+    cache | redis)
       init_cache_service
       ;;
-    mlflow|ml)
+    mlflow | ml)
       init_mlflow_service
       ;;
     *)
@@ -714,7 +714,7 @@ init_functions_service() {
 
   # Create package.json if missing
   if [[ ! -f "./functions/package.json" ]]; then
-    cat > ./functions/package.json << 'PKGEOF'
+    cat >./functions/package.json <<'PKGEOF'
 {
   "name": "nself-functions",
   "version": "1.0.0",
@@ -733,7 +733,7 @@ PKGEOF
   local func_count
   func_count=$(find ./functions -maxdepth 1 \( -name "*.js" -o -name "*.ts" \) 2>/dev/null | wc -l | tr -d ' ')
   if [[ "$func_count" -eq 0 ]]; then
-    cat > ./functions/hello.js << 'FUNCEOF'
+    cat >./functions/hello.js <<'FUNCEOF'
 // Example serverless function
 async function handler(event, context) {
   return {
@@ -763,7 +763,7 @@ init_search_service() {
 
   # Create search configuration file
   if [[ ! -f "./.nself/search/config.json" ]]; then
-    cat > ./.nself/search/config.json << 'SEARCHEOF'
+    cat >./.nself/search/config.json <<'SEARCHEOF'
 {
   "indexes": [],
   "settings": {
@@ -788,7 +788,7 @@ init_storage_service() {
 
   # Create storage configuration
   if [[ ! -f "./.nself/storage/buckets.json" ]]; then
-    cat > ./.nself/storage/buckets.json << 'STOREOF'
+    cat >./.nself/storage/buckets.json <<'STOREOF'
 {
   "buckets": [
     {"name": "default", "public": false},
@@ -815,7 +815,7 @@ init_cache_service() {
 
   # Create Redis configuration
   if [[ ! -f "./.nself/cache/redis.conf" ]]; then
-    cat > ./.nself/cache/redis.conf << 'REDISEOF'
+    cat >./.nself/cache/redis.conf <<'REDISEOF'
 # Redis configuration for nself
 maxmemory 256mb
 maxmemory-policy allkeys-lru
@@ -838,7 +838,7 @@ init_mlflow_service() {
 
   # Create MLflow configuration
   if [[ ! -f "./.nself/mlflow/config.yaml" ]]; then
-    cat > ./.nself/mlflow/config.yaml << 'MLEOF'
+    cat >./.nself/mlflow/config.yaml <<'MLEOF'
 # MLflow configuration
 artifact_store:
   type: local  # or 's3' for MinIO
@@ -971,9 +971,9 @@ cmd_search_index() {
   fi
 
   case "$action" in
-    list|ls)
+    list | ls)
       log_info "Listing indexes..."
-      curl -s "$meilisearch_url/indexes" $auth_header | python3 -m json.tool 2>/dev/null || \
+      curl -s "$meilisearch_url/indexes" $auth_header | python3 -m json.tool 2>/dev/null ||
         curl -s "$meilisearch_url/indexes" $auth_header
       ;;
     create)
@@ -1015,10 +1015,10 @@ cmd_search_query() {
 
   curl -s "$meilisearch_url/indexes/$index/search" \
     -H "Content-Type: application/json" \
-    -d "{\"q\": \"$query\"}" | python3 -m json.tool 2>/dev/null || \
+    -d "{\"q\": \"$query\"}" | python3 -m json.tool 2>/dev/null ||
     curl -s "$meilisearch_url/indexes/$index/search" \
-    -H "Content-Type: application/json" \
-    -d "{\"q\": \"$query\"}"
+      -H "Content-Type: application/json" \
+      -d "{\"q\": \"$query\"}"
 }
 
 cmd_search_stats() {
@@ -1032,10 +1032,10 @@ cmd_search_stats() {
   printf "\n=== Search Statistics ===\n\n"
 
   if [[ -n "$master_key" ]]; then
-    curl -s "$meilisearch_url/stats" -H "Authorization: Bearer $master_key" | python3 -m json.tool 2>/dev/null || \
+    curl -s "$meilisearch_url/stats" -H "Authorization: Bearer $master_key" | python3 -m json.tool 2>/dev/null ||
       curl -s "$meilisearch_url/stats" -H "Authorization: Bearer $master_key"
   else
-    curl -s "$meilisearch_url/stats" | python3 -m json.tool 2>/dev/null || \
+    curl -s "$meilisearch_url/stats" | python3 -m json.tool 2>/dev/null ||
       curl -s "$meilisearch_url/stats"
   fi
 }
@@ -1058,7 +1058,7 @@ cmd_service_functions() {
     logs)
       cmd_service_logs functions
       ;;
-    list|ls)
+    list | ls)
       cmd_functions_list
       ;;
     *)
@@ -1111,7 +1111,7 @@ cmd_functions_list() {
 
   local functions_url="http://localhost:3000"
 
-  curl -s "$functions_url/_functions" 2>/dev/null || \
+  curl -s "$functions_url/_functions" 2>/dev/null ||
     log_info "Functions endpoint not available"
 }
 
@@ -1162,7 +1162,7 @@ cmd_mlflow_experiments() {
 
   log_info "Listing experiments..."
 
-  curl -s "$mlflow_url/api/2.0/mlflow/experiments/list" | python3 -m json.tool 2>/dev/null || \
+  curl -s "$mlflow_url/api/2.0/mlflow/experiments/list" | python3 -m json.tool 2>/dev/null ||
     curl -s "$mlflow_url/api/2.0/mlflow/experiments/list"
 }
 
@@ -1174,10 +1174,10 @@ cmd_mlflow_runs() {
 
   curl -s "$mlflow_url/api/2.0/mlflow/runs/search" \
     -H "Content-Type: application/json" \
-    -d "{\"experiment_ids\": [\"$experiment_id\"]}" | python3 -m json.tool 2>/dev/null || \
+    -d "{\"experiment_ids\": [\"$experiment_id\"]}" | python3 -m json.tool 2>/dev/null ||
     curl -s "$mlflow_url/api/2.0/mlflow/runs/search" \
-    -H "Content-Type: application/json" \
-    -d "{\"experiment_ids\": [\"$experiment_id\"]}"
+      -H "Content-Type: application/json" \
+      -d "{\"experiment_ids\": [\"$experiment_id\"]}"
 }
 
 cmd_mlflow_artifacts() {
@@ -1229,7 +1229,7 @@ cmd_admin_dev() {
     env)
       cmd_admin_dev_env
       ;;
-    status|"")
+    status | "")
       cmd_admin_dev_status
       ;;
     *)
@@ -1288,7 +1288,7 @@ cmd_admin_dev_enable() {
   # Update .env file
   if [[ -f ".env" ]]; then
     # Remove existing settings
-    grep -v "^NSELF_ADMIN_DEV" .env > .env.tmp 2>/dev/null || true
+    grep -v "^NSELF_ADMIN_DEV" .env >.env.tmp 2>/dev/null || true
     mv .env.tmp .env
 
     # Add new settings
@@ -1297,7 +1297,7 @@ cmd_admin_dev_enable() {
       printf "NSELF_ADMIN_DEV=true\n"
       printf "NSELF_ADMIN_DEV_PORT=%s\n" "$port"
       [[ -n "$path" ]] && printf "NSELF_ADMIN_DEV_PATH=%s\n" "$path"
-    } >> .env
+    } >>.env
 
     log_success "Dev mode enabled in .env"
   else
@@ -1320,7 +1320,7 @@ cmd_admin_dev_disable() {
 
   if [[ -f ".env" ]]; then
     # Remove dev mode settings
-    grep -v "^NSELF_ADMIN_DEV" .env > .env.tmp 2>/dev/null || true
+    grep -v "^NSELF_ADMIN_DEV" .env >.env.tmp 2>/dev/null || true
     mv .env.tmp .env
 
     log_success "Dev mode disabled"
@@ -1436,7 +1436,7 @@ cmd_storage_buckets() {
   fi
 
   case "$action" in
-    list|ls)
+    list | ls)
       mc ls minio/ 2>/dev/null || log_info "Configure mc first: mc alias set minio http://localhost:9000 minioadmin minioadmin"
       ;;
     create)
@@ -1545,7 +1545,7 @@ cmd_service_cache() {
 cmd_cache_stats() {
   log_info "Redis statistics:"
 
-  docker exec redis redis-cli INFO stats 2>/dev/null || \
+  docker exec redis redis-cli INFO stats 2>/dev/null ||
     log_error "Redis not running or not accessible"
 }
 
@@ -1574,7 +1574,7 @@ cmd_cache_flush() {
 cmd_cache_keys() {
   local pattern="${1:-*}"
 
-  docker exec redis redis-cli KEYS "$pattern" 2>/dev/null || \
+  docker exec redis redis-cli KEYS "$pattern" 2>/dev/null ||
     log_error "Redis not running or not accessible"
 }
 
@@ -1590,19 +1590,19 @@ cmd_service_scaffold() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --template|-t)
+      --template | -t)
         template="$2"
         shift 2
         ;;
-      --port|-p)
+      --port | -p)
         port="$2"
         shift 2
         ;;
-      --output|-o)
+      --output | -o)
         output_dir="$2"
         shift 2
         ;;
-      -h|--help)
+      -h | --help)
         show_scaffold_help
         return 0
         ;;
@@ -1637,7 +1637,7 @@ cmd_service_scaffold() {
 }
 
 show_scaffold_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself service scaffold - Generate service code from template
 
 USAGE:
@@ -1666,15 +1666,15 @@ cmd_service_list_templates() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --language|-l)
+      --language | -l)
         language="$2"
         shift 2
         ;;
-      --category|-c)
+      --category | -c)
         category="$2"
         shift 2
         ;;
-      -h|--help)
+      -h | --help)
         show_list_templates_help
         return 0
         ;;
@@ -1710,7 +1710,7 @@ cmd_service_list_templates() {
     local metadata
     metadata=$(get_template_metadata "$template_name")
 
-    IFS='|' read -r display_name lang description features deps <<< "$metadata"
+    IFS='|' read -r display_name lang description features deps <<<"$metadata"
 
     # Get category
     local tmpl_category
@@ -1733,7 +1733,7 @@ cmd_service_list_templates() {
     printf "${COLOR_GREEN}%-20s${COLOR_RESET} ${COLOR_DIM}[%s]${COLOR_RESET}\n" "$template_name" "$lang"
     printf "  %s\n" "$description"
 
-  done <<< "$templates"
+  done <<<"$templates"
 
   printf "\n${COLOR_CYAN}Usage:${COLOR_RESET}\n"
   printf "  nself service scaffold <name> --template <template> --port <port>\n"
@@ -1746,7 +1746,7 @@ cmd_service_list_templates() {
 }
 
 show_list_templates_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself service list-templates - Show available service templates
 
 USAGE:
@@ -1795,7 +1795,7 @@ cmd_service_template_info() {
     return 1
   fi
 
-  IFS='|' read -r display_name lang description features deps <<< "$metadata"
+  IFS='|' read -r display_name lang description features deps <<<"$metadata"
 
   local category
   category=$(get_template_category "$template")
@@ -1815,7 +1815,7 @@ cmd_service_template_info() {
 
   if [[ -n "$features" ]]; then
     printf "${COLOR_BOLD}Features:${COLOR_RESET}\n"
-    IFS=',' read -ra FEATURE_ARRAY <<< "$features"
+    IFS=',' read -ra FEATURE_ARRAY <<<"$features"
     for feature in "${FEATURE_ARRAY[@]}"; do
       printf "  • %s\n" "$feature"
     done
@@ -1824,7 +1824,7 @@ cmd_service_template_info() {
 
   if [[ -n "$deps" && "$deps" != "None (Node.js built-in)" && "$deps" != "None (uses"* ]]; then
     printf "${COLOR_BOLD}Key Dependencies:${COLOR_RESET}\n"
-    IFS=',' read -ra DEP_ARRAY <<< "$deps"
+    IFS=',' read -ra DEP_ARRAY <<<"$deps"
     for dep in "${DEP_ARRAY[@]}"; do
       printf "  • %s\n" "$dep"
     done
@@ -1917,13 +1917,13 @@ cmd_service_wizard() {
 
     local metadata
     metadata=$(get_template_metadata "$tmpl")
-    IFS='|' read -r display_name _ description _ _ <<< "$metadata"
+    IFS='|' read -r display_name _ description _ _ <<<"$metadata"
 
     printf "  %d) ${COLOR_GREEN}%s${COLOR_RESET}\n" "$i" "$tmpl"
     printf "     %s\n" "$description"
 
     i=$((i + 1))
-  done <<< "$templates"
+  done <<<"$templates"
 
   printf "\nChoice [1-%d]: " "$((i - 1))"
   read -r template_choice
@@ -1967,7 +1967,7 @@ cmd_service_redis() {
     status)
       cmd_service_status redis
       ;;
-    init|add|list|get|delete|test|health|pool)
+    init | add | list | get | delete | test | health | pool)
       # Delegate to redis command functions
       if declare -f cmd_redis >/dev/null 2>&1; then
         cmd_redis "$action" "$@"
@@ -2000,7 +2000,7 @@ cmd_service_realtime() {
         log_info "Run: nself service realtime init"
       fi
       ;;
-    init|logs|cleanup|subscribe|unsubscribe|listen|subscriptions)
+    init | logs | cleanup | subscribe | unsubscribe | listen | subscriptions)
       # System and subscription commands
       if [[ -f "$SCRIPT_DIR/realtime.sh" ]]; then
         bash "$SCRIPT_DIR/realtime.sh" "$action" "$@"
@@ -2009,7 +2009,7 @@ cmd_service_realtime() {
         return 1
       fi
       ;;
-    channel|broadcast|messages|replay|events|presence|connections|stats)
+    channel | broadcast | messages | replay | events | presence | connections | stats)
       # Channel, broadcast, and presence commands
       if [[ -f "$SCRIPT_DIR/realtime.sh" ]]; then
         bash "$SCRIPT_DIR/realtime.sh" "$action" "$@"
@@ -2035,7 +2035,7 @@ main() {
   # Parse global options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --follow|-f)
+      --follow | -f)
         export FOLLOW="true"
         shift
         ;;
@@ -2043,7 +2043,7 @@ main() {
         export TAIL="$2"
         shift 2
         ;;
-      -h|--help)
+      -h | --help)
         show_service_help
         return 0
         ;;
@@ -2054,10 +2054,10 @@ main() {
   done
 
   case "$subcommand" in
-    ""|help|-h|--help)
+    "" | help | -h | --help)
       show_service_help
       ;;
-    list|ls)
+    list | ls)
       cmd_service_list "$@"
       ;;
     enable)
@@ -2081,31 +2081,31 @@ main() {
     scaffold)
       cmd_service_scaffold "$@"
       ;;
-    list-templates|templates)
+    list-templates | templates)
       cmd_service_list_templates "$@"
       ;;
-    template-info|info)
+    template-info | info)
       cmd_service_template_info "$@"
       ;;
     wizard)
       cmd_service_wizard "$@"
       ;;
-    email|mail)
+    email | mail)
       cmd_service_email "$@"
       ;;
     search)
       cmd_service_search "$@"
       ;;
-    functions|fn)
+    functions | fn)
       cmd_service_functions "$@"
       ;;
-    mlflow|ml)
+    mlflow | ml)
       cmd_service_mlflow "$@"
       ;;
     admin)
       cmd_service_admin "$@"
       ;;
-    storage|minio|s3)
+    storage | minio | s3)
       cmd_service_storage "$@"
       ;;
     cache)
@@ -2114,7 +2114,7 @@ main() {
     redis)
       cmd_service_redis "$@"
       ;;
-    realtime|rt)
+    realtime | rt)
       cmd_service_realtime "$@"
       ;;
     *)

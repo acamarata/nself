@@ -18,7 +18,7 @@ provider_alibaba_init() {
   read -r region
   region="${region:-cn-hangzhou}"
 
-  cat > "$config_dir/alibaba.yml" << EOF
+  cat >"$config_dir/alibaba.yml" <<EOF
 provider: alibaba
 access_key_id: "$access_key_id"
 access_key_secret: "$access_key_secret"
@@ -82,12 +82,12 @@ provider_alibaba_provision() {
   # Map size to instance type
   local instance_type
   case "$size" in
-    tiny)   instance_type="ecs.t6-c1m1.large" ;;
-    small)  instance_type="ecs.t6-c1m2.large" ;;
+    tiny) instance_type="ecs.t6-c1m1.large" ;;
+    small) instance_type="ecs.t6-c1m2.large" ;;
     medium) instance_type="ecs.g6.large" ;;
-    large)  instance_type="ecs.g6.xlarge" ;;
+    large) instance_type="ecs.g6.xlarge" ;;
     xlarge) instance_type="ecs.g6.2xlarge" ;;
-    *)      instance_type="ecs.t6-c1m2.large" ;;
+    *) instance_type="ecs.t6-c1m2.large" ;;
   esac
 
   log_info "Provisioning Alibaba ECS: $name ($instance_type) in $region..."
@@ -131,12 +131,12 @@ provider_alibaba_get_ip() {
 provider_alibaba_estimate_cost() {
   local size="${1:-small}"
   case "$size" in
-    tiny)   echo "4" ;;
-    small)  echo "8" ;;
+    tiny) echo "4" ;;
+    small) echo "8" ;;
     medium) echo "40" ;;
-    large)  echo "80" ;;
+    large) echo "80" ;;
     xlarge) echo "160" ;;
-    *)      echo "8" ;;
+    *) echo "8" ;;
   esac
 }
 

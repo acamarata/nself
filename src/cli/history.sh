@@ -25,7 +25,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help
 show_history_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself history - View deployment and operation history
 
 Usage: nself history [subcommand] [options]
@@ -85,27 +85,28 @@ record_event() {
   local timestamp=$(date -Iseconds)
   local user=$(whoami)
 
-  local event=$(cat << EOF
+  local event=$(
+    cat <<EOF
 {"timestamp": "$timestamp", "type": "$type", "description": "$description", "env": "$env", "status": "$status", "user": "$user", "details": "$details"}
 EOF
-)
+  )
 
   # Write to all log
-  echo "$event" >> "$ALL_LOG"
+  echo "$event" >>"$ALL_LOG"
 
   # Write to type-specific log
   case "$type" in
-    deploy|deployment)
-      echo "$event" >> "$DEPLOYMENTS_LOG"
+    deploy | deployment)
+      echo "$event" >>"$DEPLOYMENTS_LOG"
       ;;
-    migrate|migration)
-      echo "$event" >> "$MIGRATIONS_LOG"
+    migrate | migration)
+      echo "$event" >>"$MIGRATIONS_LOG"
       ;;
     rollback)
-      echo "$event" >> "$ROLLBACKS_LOG"
+      echo "$event" >>"$ROLLBACKS_LOG"
       ;;
     command)
-      echo "$event" >> "$COMMANDS_LOG"
+      echo "$event" >>"$COMMANDS_LOG"
       ;;
   esac
 }
@@ -191,16 +192,16 @@ cmd_show() {
 
   if [[ "$json_mode" == "true" ]]; then
     printf '{"history": ['
-    eval "$filter_cmd" < "$log_file" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
-    printf '], "count": %d}\n' "$(eval "$filter_cmd" < "$log_file" | wc -l | tr -d ' ')"
+    eval "$filter_cmd" <"$log_file" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
+    printf '], "count": %d}\n' "$(eval "$filter_cmd" <"$log_file" | wc -l | tr -d ' ')"
   else
-    eval "$filter_cmd" < "$log_file" | tail -n "$limit" | while read -r line; do
+    eval "$filter_cmd" <"$log_file" | tail -n "$limit" | while read -r line; do
       format_entry "$line" "$format"
     done
 
     if [[ "$csv_mode" != "true" ]]; then
       echo ""
-      local total=$(eval "$filter_cmd" < "$log_file" | wc -l | tr -d ' ')
+      local total=$(eval "$filter_cmd" <"$log_file" | wc -l | tr -d ' ')
       log_info "Showing last $limit of $total entries"
     fi
   fi
@@ -459,7 +460,7 @@ cmd_export() {
   echo ""
 
   if [[ "$format" == "csv" ]]; then
-    echo '"Timestamp","Type","Environment","Status","User","Description"' > "$output_file"
+    echo '"Timestamp","Type","Environment","Status","User","Description"' >"$output_file"
     while read -r line; do
       local ts=$(echo "$line" | grep -o '"timestamp": *"[^"]*"' | sed 's/"timestamp": *"\([^"]*\)"/\1/')
       local type=$(echo "$line" | grep -o '"type": *"[^"]*"' | sed 's/"type": *"\([^"]*\)"/\1/')
@@ -468,15 +469,15 @@ cmd_export() {
       local user=$(echo "$line" | grep -o '"user": *"[^"]*"' | sed 's/"user": *"\([^"]*\)"/\1/')
       local desc=$(echo "$line" | grep -o '"description": *"[^"]*"' | sed 's/"description": *"\([^"]*\)"/\1/')
 
-      printf '"%s","%s","%s","%s","%s","%s"\n' "$ts" "$type" "$env" "$status" "$user" "$desc" >> "$output_file"
-    done < "$ALL_LOG"
+      printf '"%s","%s","%s","%s","%s","%s"\n' "$ts" "$type" "$env" "$status" "$user" "$desc" >>"$output_file"
+    done <"$ALL_LOG"
   else
-    printf '{"exported": "%s", "history": [' "$(date -Iseconds)" > "$output_file"
-    cat "$ALL_LOG" | tr '\n' ',' | sed 's/,$//' >> "$output_file"
-    printf ']}\n' >> "$output_file"
+    printf '{"exported": "%s", "history": [' "$(date -Iseconds)" >"$output_file"
+    cat "$ALL_LOG" | tr '\n' ',' | sed 's/,$//' >>"$output_file"
+    printf ']}\n' >>"$output_file"
   fi
 
-  local count=$(wc -l < "$ALL_LOG" | tr -d ' ')
+  local count=$(wc -l <"$ALL_LOG" | tr -d ' ')
   log_success "Exported $count entries to $output_file"
 }
 
@@ -561,7 +562,7 @@ cmd_history() {
         CSV_OUTPUT=true
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_history_help
         return 0
         ;;
@@ -580,16 +581,16 @@ cmd_history() {
     show)
       cmd_show
       ;;
-    deployments|deploy)
+    deployments | deploy)
       cmd_deployments
       ;;
-    migrations|migrate)
+    migrations | migrate)
       cmd_migrations
       ;;
-    rollbacks|rollback)
+    rollbacks | rollback)
       cmd_rollbacks
       ;;
-    commands|command)
+    commands | command)
       cmd_commands
       ;;
     search)

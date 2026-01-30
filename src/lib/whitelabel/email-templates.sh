@@ -30,183 +30,182 @@ readonly TEMPLATE_TYPES="welcome password-reset verify-email invite password-cha
 
 # Validate template type
 validate_template_type() {
-    local template_type="$1"
+  local template_type="$1"
 
-    for valid_type in $TEMPLATE_TYPES; do
-        if [[ "$template_type" == "$valid_type" ]]; then
-            return 0
-        fi
-    done
+  for valid_type in $TEMPLATE_TYPES; do
+    if [[ "$template_type" == "$valid_type" ]]; then
+      return 0
+    fi
+  done
 
-    printf "${RED}Error: Invalid template type: $template_type${NC}\n" >&2
-    printf "Valid types: %s\n" "$TEMPLATE_TYPES" >&2
-    return 1
+  printf "${RED}Error: Invalid template type: $template_type${NC}\n" >&2
+  printf "Valid types: %s\n" "$TEMPLATE_TYPES" >&2
+  return 1
 }
 
 # Validate language code (ISO 639-1 format: en, fr, es, etc.)
 validate_language_code() {
-    local language="$1"
+  local language="$1"
 
-    if [[ -z "$language" ]]; then
-        printf "${RED}Error: Language code cannot be empty${NC}\n" >&2
-        return 1
-    fi
+  if [[ -z "$language" ]]; then
+    printf "${RED}Error: Language code cannot be empty${NC}\n" >&2
+    return 1
+  fi
 
-    # Must be 2-5 lowercase letters (en, en-US, zh-CN, etc.)
-    if ! [[ "$language" =~ ^[a-z]{2}(-[a-zA-Z]{2,4})?$ ]]; then
-        printf "${RED}Error: Invalid language code: $language. Use ISO 639-1 format (e.g., en, fr, es)${NC}\n" >&2
-        return 1
-    fi
+  # Must be 2-5 lowercase letters (en, en-US, zh-CN, etc.)
+  if ! [[ "$language" =~ ^[a-z]{2}(-[a-zA-Z]{2,4})?$ ]]; then
+    printf "${RED}Error: Invalid language code: $language. Use ISO 639-1 format (e.g., en, fr, es)${NC}\n" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate template variable name (only uppercase, digits, underscore)
 validate_variable_name() {
-    local var_name="$1"
+  local var_name="$1"
 
-    if [[ -z "$var_name" ]]; then
-        printf "${RED}Error: Variable name cannot be empty${NC}\n" >&2
-        return 1
-    fi
+  if [[ -z "$var_name" ]]; then
+    printf "${RED}Error: Variable name cannot be empty${NC}\n" >&2
+    return 1
+  fi
 
-    if ! [[ "$var_name" =~ ^[A-Z][A-Z0-9_]*$ ]]; then
-        printf "${RED}Error: Invalid variable name: $var_name. Must be uppercase alphanumeric and underscore${NC}\n" >&2
-        return 1
-    fi
+  if ! [[ "$var_name" =~ ^[A-Z][A-Z0-9_]*$ ]]; then
+    printf "${RED}Error: Invalid variable name: $var_name. Must be uppercase alphanumeric and underscore${NC}\n" >&2
+    return 1
+  fi
 
-    # Max length 64 characters
-    if [[ ${#var_name} -gt 64 ]]; then
-        printf "${RED}Error: Variable name too long. Maximum 64 characters${NC}\n" >&2
-        return 1
-    fi
+  # Max length 64 characters
+  if [[ ${#var_name} -gt 64 ]]; then
+    printf "${RED}Error: Variable name too long. Maximum 64 characters${NC}\n" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate template variable value for HTML injection
 validate_variable_value() {
-    local var_value="$1"
-    local field_name="${2:-Value}"
+  local var_value="$1"
+  local field_name="${2:-Value}"
 
-    if [[ -z "$var_value" ]]; then
-        return 0  # Empty values are allowed
-    fi
+  if [[ -z "$var_value" ]]; then
+    return 0 # Empty values are allowed
+  fi
 
-    # Max length 10000 characters to prevent abuse
-    if [[ ${#var_value} -gt 10000 ]]; then
-        printf "${RED}Error: %s too long. Maximum 10000 characters${NC}\n" "$field_name" >&2
-        return 1
-    fi
+  # Max length 10000 characters to prevent abuse
+  if [[ ${#var_value} -gt 10000 ]]; then
+    printf "${RED}Error: %s too long. Maximum 10000 characters${NC}\n" "$field_name" >&2
+    return 1
+  fi
 
-    # Check for potentially dangerous patterns (no code injection)
-    if [[ "$var_value" =~ \$\( ]] || [[ "$var_value" =~ \` ]] || [[ "$var_value" =~ eval ]] || [[ "$var_value" =~ exec ]]; then
-        printf "${RED}Error: %s contains potentially dangerous code${NC}\n" "$field_name" >&2
-        return 1
-    fi
+  # Check for potentially dangerous patterns (no code injection)
+  if [[ "$var_value" =~ \$\( ]] || [[ "$var_value" =~ \` ]] || [[ "$var_value" =~ eval ]] || [[ "$var_value" =~ exec ]]; then
+    printf "${RED}Error: %s contains potentially dangerous code${NC}\n" "$field_name" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate email template subject line
 validate_email_subject() {
-    local subject="$1"
+  local subject="$1"
 
-    if [[ -z "$subject" ]]; then
-        printf "${RED}Error: Email subject cannot be empty${NC}\n" >&2
-        return 1
-    fi
+  if [[ -z "$subject" ]]; then
+    printf "${RED}Error: Email subject cannot be empty${NC}\n" >&2
+    return 1
+  fi
 
-    if [[ ${#subject} -gt 255 ]]; then
-        printf "${RED}Error: Email subject too long. Maximum 255 characters${NC}\n" >&2
-        return 1
-    fi
+  if [[ ${#subject} -gt 255 ]]; then
+    printf "${RED}Error: Email subject too long. Maximum 255 characters${NC}\n" >&2
+    return 1
+  fi
 
-    # Warn about common spam trigger patterns
-    if [[ "$subject" =~ ^\[\[|\{\{|\$\( ]]; then
-        printf "${YELLOW}Warning: Subject line starts with template-like syntax${NC}\n"
-    fi
+  # Warn about common spam trigger patterns
+  if [[ "$subject" =~ ^\[\[|\{\{|\$\( ]]; then
+    printf "${YELLOW}Warning: Subject line starts with template-like syntax${NC}\n"
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate all variables in a template have values
 validate_template_variables() {
-    local template_content="$1"
-    shift
-    local -a provided_vars=("$@")
+  local template_content="$1"
+  shift
+  local -a provided_vars=("$@")
 
-    # Extract all {{VAR_NAME}} patterns from template
-    local template_vars
-    template_vars=$(echo "$template_content" | grep -oE '\{\{[A-Z][A-Z0-9_]*\}\}' | sort -u)
+  # Extract all {{VAR_NAME}} patterns from template
+  local template_vars
+  template_vars=$(echo "$template_content" | grep -oE '\{\{[A-Z][A-Z0-9_]*\}\}' | sort -u)
 
-    if [[ -z "$template_vars" ]]; then
-        return 0  # No variables to validate
+  if [[ -z "$template_vars" ]]; then
+    return 0 # No variables to validate
+  fi
+
+  local missing_vars=0
+
+  while IFS= read -r var_pattern; do
+    # Remove {{ and }}
+    local var_name="${var_pattern:2:-2}"
+
+    # Check if variable is provided
+    local found=0
+    for var in "${provided_vars[@]}"; do
+      if [[ "$var" == "$var_name="* ]]; then
+        found=1
+        break
+      fi
+    done
+
+    if [[ $found -eq 0 ]]; then
+      # Check if it's a default variable
+      case "$var_name" in
+        CURRENT_YEAR | BRAND_NAME | APP_URL | LOGO_URL | COMPANY_ADDRESS | SUPPORT_EMAIL | SUPPORT_URL) ;;
+        *)
+          printf "${YELLOW}Warning: Template variable not provided: %s${NC}\n" "$var_name" >&2
+          ((missing_vars++))
+          ;;
+      esac
     fi
+  done <<<"$template_vars"
 
-    local missing_vars=0
-
-    while IFS= read -r var_pattern; do
-        # Remove {{ and }}
-        local var_name="${var_pattern:2:-2}"
-
-        # Check if variable is provided
-        local found=0
-        for var in "${provided_vars[@]}"; do
-            if [[ "$var" == "$var_name="* ]]; then
-                found=1
-                break
-            fi
-        done
-
-        if [[ $found -eq 0 ]]; then
-            # Check if it's a default variable
-            case "$var_name" in
-                CURRENT_YEAR|BRAND_NAME|APP_URL|LOGO_URL|COMPANY_ADDRESS|SUPPORT_EMAIL|SUPPORT_URL)
-                    ;;
-                *)
-                    printf "${YELLOW}Warning: Template variable not provided: %s${NC}\n" "$var_name" >&2
-                    ((missing_vars++))
-                    ;;
-            esac
-        fi
-    done <<< "$template_vars"
-
-    return 0  # Don't fail, just warn
+  return 0 # Don't fail, just warn
 }
 
 # Escape HTML special characters in email variables
 escape_html_for_email() {
-    local text="$1"
+  local text="$1"
 
-    # Replace HTML special characters
-    text="${text//&/&amp;}"
-    text="${text//</&lt;}"
-    text="${text//>/&gt;}"
-    text="${text//\"/&quot;}"
-    text="${text//\'/&#39;}"
+  # Replace HTML special characters
+  text="${text//&/&amp;}"
+  text="${text//</&lt;}"
+  text="${text//>/&gt;}"
+  text="${text//\"/&quot;}"
+  text="${text//\'/&#39;}"
 
-    printf "%s" "$text"
+  printf "%s" "$text"
 }
 
 # Sanitize URL to prevent javascript: and data: protocols
 sanitize_url() {
-    local url="$1"
+  local url="$1"
 
-    # Check for dangerous protocols
-    if [[ "$url" =~ ^(javascript:|data:|vbscript:) ]]; then
-        printf "${RED}Error: URL contains dangerous protocol: $url${NC}\n" >&2
-        return 1
-    fi
+  # Check for dangerous protocols
+  if [[ "$url" =~ ^(javascript:|data:|vbscript:) ]]; then
+    printf "${RED}Error: URL contains dangerous protocol: $url${NC}\n" >&2
+    return 1
+  fi
 
-    # URL should start with http://, https://, or /
-    if ! [[ "$url" =~ ^(https?://|/) ]]; then
-        printf "${RED}Error: Invalid URL format: $url. Must start with http://, https://, or /{{NC}\n" >&2
-        return 1
-    fi
+  # URL should start with http://, https://, or /
+  if ! [[ "$url" =~ ^(https?://|/) ]]; then
+    printf "${RED}Error: Invalid URL format: $url. Must start with http://, https://, or /{{NC}\n" >&2
+    return 1
+  fi
 
-    printf "%s" "$url"
-    return 0
+  printf "%s" "$url"
+  return 0
 }
 
 # ============================================================================
@@ -290,7 +289,7 @@ create_welcome_template() {
   local meta_file="$3"
 
   # HTML version
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -374,7 +373,7 @@ create_welcome_template() {
 EOF
 
   # Plain text version
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 Welcome to {{BRAND_NAME}}!
 
 Hi {{USER_NAME}},
@@ -400,7 +399,7 @@ The {{BRAND_NAME}} Team
 EOF
 
   # Metadata
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "welcome",
   "subject": "Welcome to {{BRAND_NAME}}!",
@@ -423,7 +422,7 @@ create_password_reset_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -467,7 +466,7 @@ create_password_reset_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 Password Reset Request
 
 Hi {{USER_NAME}},
@@ -482,7 +481,7 @@ SECURITY NOTICE: This link will expire in {{EXPIRY_TIME}}. If you didn't request
 © {{CURRENT_YEAR}} {{BRAND_NAME}}
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "password-reset",
   "subject": "Reset Your Password",
@@ -498,7 +497,7 @@ create_verify_email_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -522,7 +521,7 @@ create_verify_email_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 Verify Your Email Address
 
 Hi {{USER_NAME}},
@@ -532,7 +531,7 @@ Please verify your email address by visiting: {{VERIFY_URL}}
 This link expires in {{EXPIRY_TIME}}.
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "verify-email",
   "subject": "Verify Your Email Address",
@@ -548,7 +547,7 @@ create_invite_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body>
@@ -560,7 +559,7 @@ create_invite_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 You're Invited!
 
 Hi {{RECIPIENT_NAME}},
@@ -570,7 +569,7 @@ Hi {{RECIPIENT_NAME}},
 Accept invitation: {{INVITE_URL}}
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "invite",
   "subject": "You're invited to {{BRAND_NAME}}",
@@ -586,7 +585,7 @@ create_password_change_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body>
@@ -598,7 +597,7 @@ create_password_change_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 Password Changed
 
 Hi {{USER_NAME}},
@@ -608,7 +607,7 @@ Your password was successfully changed on {{CHANGE_DATE}}.
 If you didn't make this change, contact support immediately.
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "password-change",
   "subject": "Your password has been changed",
@@ -624,7 +623,7 @@ create_account_update_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body>
@@ -635,7 +634,7 @@ create_account_update_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 Account Updated
 
 Hi {{USER_NAME}},
@@ -643,7 +642,7 @@ Hi {{USER_NAME}},
 Your account information was updated: {{UPDATE_DESCRIPTION}}
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "account-update",
   "subject": "Account Update Notification",
@@ -659,7 +658,7 @@ create_notification_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body>
@@ -670,7 +669,7 @@ create_notification_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 {{NOTIFICATION_TITLE}}
 
 {{NOTIFICATION_MESSAGE}}
@@ -678,7 +677,7 @@ EOF
 {{ACTION_TEXT}}: {{ACTION_URL}}
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "notification",
   "subject": "{{NOTIFICATION_TITLE}}",
@@ -694,7 +693,7 @@ create_alert_template() {
   local txt_file="$2"
   local meta_file="$3"
 
-  cat > "$html_file" << 'EOF'
+  cat >"$html_file" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body style="background-color: #fff3cd;">
@@ -705,7 +704,7 @@ create_alert_template() {
 </html>
 EOF
 
-  cat > "$txt_file" << 'EOF'
+  cat >"$txt_file" <<'EOF'
 ⚠️ {{ALERT_TITLE}}
 
 {{ALERT_MESSAGE}}
@@ -713,7 +712,7 @@ EOF
 Action Required: {{ACTION_REQUIRED}}
 EOF
 
-  cat > "$meta_file" << 'EOF'
+  cat >"$meta_file" <<'EOF'
 {
   "name": "alert",
   "subject": "⚠️ {{ALERT_TITLE}}",
@@ -731,7 +730,7 @@ EOF
 create_template_variables_reference() {
   local ref_file="${TEMPLATES_DIR}/VARIABLES.md"
 
-  cat > "$ref_file" << 'EOF'
+  cat >"$ref_file" <<'EOF'
 # Email Template Variables Reference
 
 ## Global Variables (Available in all templates)
@@ -835,7 +834,7 @@ substitute_template_variables() {
   local i
 
   # Process variable pairs (NAME=value)
-  for ((i=0; i<${#var_pairs[@]}; i++)); do
+  for ((i = 0; i < ${#var_pairs[@]}; i++)); do
     local pair="${var_pairs[$i]}"
     if [[ "$pair" =~ ^([A-Z0-9_]+)=(.*)$ ]]; then
       local var_name="${BASH_REMATCH[1]}"
@@ -870,7 +869,7 @@ substitute_template_variables() {
 render_template() {
   local template_type="$1"
   local language="${2:-$DEFAULT_LANGUAGE}"
-  local format="${3:-html}"  # html or txt
+  local format="${3:-html}" # html or txt
   shift 3
   local -a variables=("$@")
 
@@ -1009,7 +1008,7 @@ list_template_variables() {
   if [[ -n "$variables" ]]; then
     while IFS= read -r var; do
       printf "  • {{%s}}\n" "$var"
-    done <<< "$variables"
+    done <<<"$variables"
   else
     printf "  ${YELLOW}No variables defined${NC}\n"
   fi
@@ -1096,7 +1095,7 @@ preview_email_template() {
 
   # Generate preview file
   local preview_file="${TEMPLATES_PREVIEW_DIR}/${template_name}-${language}.${format}"
-  printf "%s" "$rendered" > "$preview_file"
+  printf "%s" "$rendered" >"$preview_file"
 
   printf "${GREEN}✓${NC} Preview saved: %s\n" "$preview_file"
 
@@ -1108,7 +1107,7 @@ export_template_html() {
   local language="${2:-$DEFAULT_LANGUAGE}"
   local output_file="${3:-${template_name}.html}"
 
-  if ! preview_email_template "$template_name" "$language" "html" > "$output_file" 2>/dev/null; then
+  if ! preview_email_template "$template_name" "$language" "html" >"$output_file" 2>/dev/null; then
     printf "${RED}Error: Failed to export template${NC}\n" >&2
     return 1
   fi
@@ -1165,8 +1164,8 @@ send_email_from_template() {
   local tmp_txt
   tmp_txt=$(mktemp)
 
-  printf "%s" "$html_body" > "$tmp_html"
-  printf "%s" "$txt_body" > "$tmp_txt"
+  printf "%s" "$html_body" >"$tmp_html"
+  printf "%s" "$txt_body" >"$tmp_txt"
 
   # Send email using swaks (in Docker)
   printf "${CYAN}Sending email...${NC}\n"
@@ -1369,7 +1368,7 @@ upload_custom_template() {
   # Create or update metadata
   local meta_file="${lang_dir}/${template_type}.json"
   if [[ ! -f "$meta_file" ]]; then
-    cat > "$meta_file" << EOF
+    cat >"$meta_file" <<EOF
 {
   "name": "${template_type}",
   "subject": "Email from {{BRAND_NAME}}",
@@ -1479,7 +1478,7 @@ initialize_tenant_templates() {
   fi
 
   # Create tenant-specific variables reference
-  cat > "$tenant_dir/VARIABLES.md" << EOF
+  cat >"$tenant_dir/VARIABLES.md" <<EOF
 # Email Template Variables - Tenant: $tenant_id
 
 This tenant has isolated email templates. Changes here will not affect other tenants.
@@ -1605,8 +1604,8 @@ send_tenant_email() {
   local tmp_txt
   tmp_txt=$(mktemp)
 
-  printf "%s" "$html_body" > "$tmp_html"
-  printf "%s" "$txt_body" > "$tmp_txt"
+  printf "%s" "$html_body" >"$tmp_html"
+  printf "%s" "$txt_body" >"$tmp_txt"
 
   # Send email
   printf "${CYAN}Sending email (Tenant: %s)...${NC}\n" "$tenant_id"

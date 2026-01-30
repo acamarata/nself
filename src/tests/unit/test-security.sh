@@ -144,7 +144,7 @@ test_secrets_validate_weak() {
 
   if command -v secrets::validate >/dev/null 2>&1; then
     # Create secrets with weak password
-    cat > ".env.secrets" <<EOF
+    cat >".env.secrets" <<EOF
 POSTGRES_PASSWORD=password
 HASURA_GRAPHQL_ADMIN_SECRET=short
 JWT_SECRET=veryshortsecret
@@ -174,7 +174,7 @@ test_secrets_check_git() {
   if command -v secrets::check_git >/dev/null 2>&1; then
     # Create a git repo
     git init . >/dev/null 2>&1
-    printf ".env.secrets\n" > ".gitignore"
+    printf ".env.secrets\n" >".gitignore"
     touch ".env.secrets"
 
     # Should pass (secrets file is ignored)
@@ -199,7 +199,7 @@ test_security_check_env_settings() {
 
   if command -v security::check_env_settings >/dev/null 2>&1; then
     # Create production-like .env
-    cat > ".env" <<EOF
+    cat >".env" <<EOF
 ENV=production
 DEBUG=false
 LOG_LEVEL=warning
@@ -232,7 +232,7 @@ test_security_check_env_settings_debug() {
 
   if command -v security::check_env_settings >/dev/null 2>&1; then
     # Create insecure .env
-    cat > ".env" <<EOF
+    cat >".env" <<EOF
 ENV=production
 DEBUG=true
 HASURA_GRAPHQL_DEV_MODE=true
@@ -263,7 +263,7 @@ test_security_audit() {
 
   if command -v security::audit >/dev/null 2>&1; then
     # Create minimal secure config
-    cat > ".env" <<EOF
+    cat >".env" <<EOF
 ENV=production
 DEBUG=false
 SSL_ENABLED=true
@@ -386,7 +386,7 @@ test_firewall_detect() {
 
     # Should return one of: ufw, firewalld, iptables, none
     case "$fw_type" in
-      ufw|firewalld|iptables|none)
+      ufw | firewalld | iptables | none)
         pass_test "Firewall detection returns valid type: $fw_type"
         ;;
       *)

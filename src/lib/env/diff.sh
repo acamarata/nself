@@ -130,16 +130,16 @@ env::compare_env_files() {
     grep -q "^${key}=" "$file_b" 2>/dev/null && in_b=true || true
 
     if [[ "$in_a" == "false" ]]; then
-      printf "%s\n" "$key" >> "$only_b_file"
+      printf "%s\n" "$key" >>"$only_b_file"
     elif [[ "$in_b" == "false" ]]; then
-      printf "%s\n" "$key" >> "$only_a_file"
+      printf "%s\n" "$key" >>"$only_a_file"
     elif [[ "$val_a" != "$val_b" ]]; then
-      printf "%s|%s|%s\n" "$key" "$val_a" "$val_b" >> "$diff_file"
+      printf "%s|%s|%s\n" "$key" "$val_a" "$val_b" >>"$diff_file"
     fi
-  done <<< "$all_keys"
+  done <<<"$all_keys"
 
   # Display differences
-  diff_count=$(wc -l < "$diff_file" | tr -d ' ')
+  diff_count=$(wc -l <"$diff_file" | tr -d ' ')
   if [[ "$diff_count" -gt 0 ]]; then
     printf "${COLOR_YELLOW}Different values:${COLOR_RESET}\n"
     while IFS='|' read -r key val_a val_b; do
@@ -149,7 +149,7 @@ env::compare_env_files() {
       if [[ "$show_values" == "true" ]]; then
         # Mask sensitive values
         case "$key" in
-          *PASSWORD*|*SECRET*|*KEY*|*TOKEN*)
+          *PASSWORD* | *SECRET* | *KEY* | *TOKEN*)
             printf "    %s: %s\n" "$name_a" "********"
             printf "    %s: %s\n" "$name_b" "********"
             ;;
@@ -159,25 +159,25 @@ env::compare_env_files() {
             ;;
         esac
       fi
-    done < "$diff_file"
+    done <"$diff_file"
   fi
 
   # Display only in A
-  only_a_count=$(wc -l < "$only_a_file" | tr -d ' ')
+  only_a_count=$(wc -l <"$only_a_file" | tr -d ' ')
   if [[ "$only_a_count" -gt 0 ]]; then
     printf "\n${COLOR_GREEN}Only in %s:${COLOR_RESET}\n" "$name_a"
     while IFS= read -r key; do
       [[ -n "$key" ]] && printf "  + %s\n" "$key"
-    done < "$only_a_file"
+    done <"$only_a_file"
   fi
 
   # Display only in B
-  only_b_count=$(wc -l < "$only_b_file" | tr -d ' ')
+  only_b_count=$(wc -l <"$only_b_file" | tr -d ' ')
   if [[ "$only_b_count" -gt 0 ]]; then
     printf "\n${COLOR_RED}Only in %s:${COLOR_RESET}\n" "$name_b"
     while IFS= read -r key; do
       [[ -n "$key" ]] && printf "  + %s\n" "$key"
-    done < "$only_b_file"
+    done <"$only_b_file"
   fi
 
   # Summary

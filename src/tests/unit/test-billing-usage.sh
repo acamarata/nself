@@ -22,45 +22,45 @@ TESTS_FAILED=0
 # Test helpers
 test_name=""
 test_setup() {
-    test_name="$1"
-    ((TESTS_RUN++))
+  test_name="$1"
+  ((TESTS_RUN++))
 }
 
 test_pass() {
-    ((TESTS_PASSED++))
-    printf "\033[32m✓\033[0m %s\n" "$test_name"
+  ((TESTS_PASSED++))
+  printf "\033[32m✓\033[0m %s\n" "$test_name"
 }
 
 test_fail() {
-    ((TESTS_FAILED++))
-    printf "\033[31m✗\033[0m %s\n" "$test_name"
-    printf "  Error: %s\n" "$1"
+  ((TESTS_FAILED++))
+  printf "\033[31m✗\033[0m %s\n" "$test_name"
+  printf "  Error: %s\n" "$1"
 }
 
 assert_equals() {
-    local expected="$1"
-    local actual="$2"
-    local message="${3:-Values not equal}"
+  local expected="$1"
+  local actual="$2"
+  local message="${3:-Values not equal}"
 
-    if [[ "$expected" == "$actual" ]]; then
-        return 0
-    else
-        test_fail "$message (expected: '$expected', got: '$actual')"
-        return 1
-    fi
+  if [[ "$expected" == "$actual" ]]; then
+    return 0
+  else
+    test_fail "$message (expected: '$expected', got: '$actual')"
+    return 1
+  fi
 }
 
 assert_contains() {
-    local haystack="$1"
-    local needle="$2"
-    local message="${3:-String not found}"
+  local haystack="$1"
+  local needle="$2"
+  local message="${3:-String not found}"
 
-    if [[ "$haystack" == *"$needle"* ]]; then
-        return 0
-    else
-        test_fail "$message (expected to contain: '$needle')"
-        return 1
-    fi
+  if [[ "$haystack" == *"$needle"* ]]; then
+    return 0
+  else
+    test_fail "$message (expected to contain: '$needle')"
+    return 1
+  fi
 }
 
 # ============================================================================
@@ -68,15 +68,15 @@ assert_contains() {
 # ============================================================================
 
 test_batch_init() {
-    test_setup "Batch initialization creates required files"
+  test_setup "Batch initialization creates required files"
 
-    usage_init_batch
+  usage_init_batch
 
-    if [[ -f "$USAGE_BATCH_FILE" ]]; then
-        test_pass
-    else
-        test_fail "Batch file not created"
-    fi
+  if [[ -f "$USAGE_BATCH_FILE" ]]; then
+    test_pass
+  else
+    test_fail "Batch file not created"
+  fi
 }
 
 # ============================================================================
@@ -84,31 +84,31 @@ test_batch_init() {
 # ============================================================================
 
 test_service_definitions() {
-    test_setup "All six services are defined"
+  test_setup "All six services are defined"
 
-    local expected_services=("api" "storage" "bandwidth" "compute" "database" "functions")
-    local all_present=true
+  local expected_services=("api" "storage" "bandwidth" "compute" "database" "functions")
+  local all_present=true
 
-    for service in "${expected_services[@]}"; do
-        local found=false
-        for defined_service in "${USAGE_SERVICES[@]}"; do
-            if [[ "$defined_service" == "$service" ]]; then
-                found=true
-                break
-            fi
-        done
-
-        if [[ "$found" != "true" ]]; then
-            all_present=false
-            break
-        fi
+  for service in "${expected_services[@]}"; do
+    local found=false
+    for defined_service in "${USAGE_SERVICES[@]}"; do
+      if [[ "$defined_service" == "$service" ]]; then
+        found=true
+        break
+      fi
     done
 
-    if [[ "$all_present" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all services defined"
+    if [[ "$found" != "true" ]]; then
+      all_present=false
+      break
     fi
+  done
+
+  if [[ "$all_present" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all services defined"
+  fi
 }
 
 # ============================================================================
@@ -116,16 +116,16 @@ test_service_definitions() {
 # ============================================================================
 
 test_service_pricing() {
-    test_setup "Service pricing returns valid data"
+  test_setup "Service pricing returns valid data"
 
-    local pricing
-    pricing=$(usage_get_service_pricing "api")
+  local pricing
+  pricing=$(usage_get_service_pricing "api")
 
-    if [[ -n "$pricing" ]] && [[ "$pricing" =~ "requests" ]]; then
-        test_pass
-    else
-        test_fail "Invalid pricing data: $pricing"
-    fi
+  if [[ -n "$pricing" ]] && [[ "$pricing" =~ "requests" ]]; then
+    test_pass
+  else
+    test_fail "Invalid pricing data: $pricing"
+  fi
 }
 
 # ============================================================================
@@ -133,22 +133,22 @@ test_service_pricing() {
 # ============================================================================
 
 test_number_formatting() {
-    test_setup "Number formatting works correctly"
+  test_setup "Number formatting works correctly"
 
-    # Test millions
-    local result
-    result=$(usage_format_number 1500000 "api")
-    assert_equals "1.50M" "$result" "Million formatting" || return 1
+  # Test millions
+  local result
+  result=$(usage_format_number 1500000 "api")
+  assert_equals "1.50M" "$result" "Million formatting" || return 1
 
-    # Test thousands
-    result=$(usage_format_number 5500 "api")
-    assert_equals "5.50K" "$result" "Thousand formatting" || return 1
+  # Test thousands
+  result=$(usage_format_number 5500 "api")
+  assert_equals "5.50K" "$result" "Thousand formatting" || return 1
 
-    # Test small numbers
-    result=$(usage_format_number 250 "api")
-    assert_equals "250" "$result" "Small number formatting" || return 1
+  # Test small numbers
+  result=$(usage_format_number 250 "api")
+  assert_equals "250" "$result" "Small number formatting" || return 1
 
-    test_pass
+  test_pass
 }
 
 # ============================================================================
@@ -156,16 +156,16 @@ test_number_formatting() {
 # ============================================================================
 
 test_cost_calculation() {
-    test_setup "Cost calculation is accurate"
+  test_setup "Cost calculation is accurate"
 
-    local result
-    result=$(usage_calculate_cost 1000 0.0001)
+  local result
+  result=$(usage_calculate_cost 1000 0.0001)
 
-    if [[ "$result" == "0.10" ]]; then
-        test_pass
-    else
-        test_fail "Expected 0.10, got $result"
-    fi
+  if [[ "$result" == "0.10" ]]; then
+    test_pass
+  else
+    test_fail "Expected 0.10, got $result"
+  fi
 }
 
 # ============================================================================
@@ -173,24 +173,24 @@ test_cost_calculation() {
 # ============================================================================
 
 test_metadata_generation() {
-    test_setup "API request metadata is valid JSON"
+  test_setup "API request metadata is valid JSON"
 
-    # This would normally call the function, but we'll test the format
-    local endpoint="/api/users"
-    local method="GET"
-    local status=200
+  # This would normally call the function, but we'll test the format
+  local endpoint="/api/users"
+  local method="GET"
+  local status=200
 
-    local metadata
-    metadata=$(printf '{"endpoint":"%s","method":"%s","status":%d}' \
-        "$endpoint" "$method" "$status")
+  local metadata
+  metadata=$(printf '{"endpoint":"%s","method":"%s","status":%d}' \
+    "$endpoint" "$method" "$status")
 
-    if [[ "$metadata" =~ \"endpoint\":\"$endpoint\" ]] && \
-       [[ "$metadata" =~ \"method\":\"$method\" ]] && \
-       [[ "$metadata" =~ \"status\":$status ]]; then
-        test_pass
-    else
-        test_fail "Invalid metadata: $metadata"
-    fi
+  if [[ "$metadata" =~ \"endpoint\":\"$endpoint\" ]] &&
+    [[ "$metadata" =~ \"method\":\"$method\" ]] &&
+    [[ "$metadata" =~ \"status\":$status ]]; then
+    test_pass
+  else
+    test_fail "Invalid metadata: $metadata"
+  fi
 }
 
 # ============================================================================
@@ -198,19 +198,19 @@ test_metadata_generation() {
 # ============================================================================
 
 test_storage_conversion() {
-    test_setup "Storage bytes to GB-hours conversion"
+  test_setup "Storage bytes to GB-hours conversion"
 
-    local bytes=1073741824  # 1GB
-    local hours=24
+  local bytes=1073741824 # 1GB
+  local hours=24
 
-    local gb_hours
-    gb_hours=$(awk "BEGIN {printf \"%.6f\", ($bytes / 1073741824) * $hours}")
+  local gb_hours
+  gb_hours=$(awk "BEGIN {printf \"%.6f\", ($bytes / 1073741824) * $hours}")
 
-    if [[ "$gb_hours" == "24.000000" ]]; then
-        test_pass
-    else
-        test_fail "Expected 24.000000, got $gb_hours"
-    fi
+  if [[ "$gb_hours" == "24.000000" ]]; then
+    test_pass
+  else
+    test_fail "Expected 24.000000, got $gb_hours"
+  fi
 }
 
 # ============================================================================
@@ -218,18 +218,18 @@ test_storage_conversion() {
 # ============================================================================
 
 test_bandwidth_conversion() {
-    test_setup "Bandwidth bytes to GB conversion"
+  test_setup "Bandwidth bytes to GB conversion"
 
-    local bytes=1073741824  # 1GB
+  local bytes=1073741824 # 1GB
 
-    local gb
-    gb=$(awk "BEGIN {printf \"%.6f\", $bytes / 1073741824}")
+  local gb
+  gb=$(awk "BEGIN {printf \"%.6f\", $bytes / 1073741824}")
 
-    if [[ "$gb" == "1.000000" ]]; then
-        test_pass
-    else
-        test_fail "Expected 1.000000, got $gb"
-    fi
+  if [[ "$gb" == "1.000000" ]]; then
+    test_pass
+  else
+    test_fail "Expected 1.000000, got $gb"
+  fi
 }
 
 # ============================================================================
@@ -237,18 +237,18 @@ test_bandwidth_conversion() {
 # ============================================================================
 
 test_compute_conversion() {
-    test_setup "Compute seconds to CPU-hours conversion"
+  test_setup "Compute seconds to CPU-hours conversion"
 
-    local cpu_seconds=7200  # 2 hours
+  local cpu_seconds=7200 # 2 hours
 
-    local cpu_hours
-    cpu_hours=$(awk "BEGIN {printf \"%.6f\", $cpu_seconds / 3600}")
+  local cpu_hours
+  cpu_hours=$(awk "BEGIN {printf \"%.6f\", $cpu_seconds / 3600}")
 
-    if [[ "$cpu_hours" == "2.000000" ]]; then
-        test_pass
-    else
-        test_fail "Expected 2.000000, got $cpu_hours"
-    fi
+  if [[ "$cpu_hours" == "2.000000" ]]; then
+    test_pass
+  else
+    test_fail "Expected 2.000000, got $cpu_hours"
+  fi
 }
 
 # ============================================================================
@@ -256,17 +256,17 @@ test_compute_conversion() {
 # ============================================================================
 
 test_bar_chart() {
-    test_setup "Bar chart creation works"
+  test_setup "Bar chart creation works"
 
-    local bar
-    bar=$(usage_create_bar 10 50)
+  local bar
+  bar=$(usage_create_bar 10 50)
 
-    # Should have opening [, closing ], and 50 total characters between
-    if [[ "$bar" =~ ^\[.*\]$ ]]; then
-        test_pass
-    else
-        test_fail "Invalid bar chart format: $bar"
-    fi
+  # Should have opening [, closing ], and 50 total characters between
+  if [[ "$bar" =~ ^\[.*\]$ ]]; then
+    test_pass
+  else
+    test_fail "Invalid bar chart format: $bar"
+  fi
 }
 
 # ============================================================================
@@ -274,21 +274,21 @@ test_bar_chart() {
 # ============================================================================
 
 test_alert_thresholds() {
-    test_setup "Alert thresholds are properly configured"
+  test_setup "Alert thresholds are properly configured"
 
-    if [[ -n "$USAGE_ALERT_WARNING" ]] && \
-       [[ -n "$USAGE_ALERT_CRITICAL" ]] && \
-       [[ -n "$USAGE_ALERT_EXCEEDED" ]]; then
+  if [[ -n "$USAGE_ALERT_WARNING" ]] &&
+    [[ -n "$USAGE_ALERT_CRITICAL" ]] &&
+    [[ -n "$USAGE_ALERT_EXCEEDED" ]]; then
 
-        if [[ $USAGE_ALERT_WARNING -lt $USAGE_ALERT_CRITICAL ]] && \
-           [[ $USAGE_ALERT_CRITICAL -le $USAGE_ALERT_EXCEEDED ]]; then
-            test_pass
-        else
-            test_fail "Alert thresholds not in correct order"
-        fi
+    if [[ $USAGE_ALERT_WARNING -lt $USAGE_ALERT_CRITICAL ]] &&
+      [[ $USAGE_ALERT_CRITICAL -le $USAGE_ALERT_EXCEEDED ]]; then
+      test_pass
     else
-        test_fail "Alert thresholds not defined"
+      test_fail "Alert thresholds not in correct order"
     fi
+  else
+    test_fail "Alert thresholds not defined"
+  fi
 }
 
 # ============================================================================
@@ -296,13 +296,13 @@ test_alert_thresholds() {
 # ============================================================================
 
 test_batch_configuration() {
-    test_setup "Batch processing is configured"
+  test_setup "Batch processing is configured"
 
-    if [[ -n "$USAGE_BATCH_SIZE" ]] && [[ $USAGE_BATCH_SIZE -gt 0 ]]; then
-        test_pass
-    else
-        test_fail "Invalid batch size: $USAGE_BATCH_SIZE"
-    fi
+  if [[ -n "$USAGE_BATCH_SIZE" ]] && [[ $USAGE_BATCH_SIZE -gt 0 ]]; then
+    test_pass
+  else
+    test_fail "Invalid batch size: $USAGE_BATCH_SIZE"
+  fi
 }
 
 # ============================================================================
@@ -310,29 +310,29 @@ test_batch_configuration() {
 # ============================================================================
 
 test_export_functions() {
-    test_setup "All export functions are defined"
+  test_setup "All export functions are defined"
 
-    local functions=(
-        "usage_get_all"
-        "usage_get_service"
-        "usage_export"
-        "usage_export_csv"
-        "usage_export_json"
-    )
+  local functions=(
+    "usage_get_all"
+    "usage_get_service"
+    "usage_export"
+    "usage_export_csv"
+    "usage_export_json"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all export functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all export functions defined"
+  fi
 }
 
 # ============================================================================
@@ -340,30 +340,30 @@ test_export_functions() {
 # ============================================================================
 
 test_tracking_functions() {
-    test_setup "All tracking functions are defined"
+  test_setup "All tracking functions are defined"
 
-    local functions=(
-        "usage_track_api_request"
-        "usage_track_storage"
-        "usage_track_bandwidth"
-        "usage_track_compute"
-        "usage_track_database_query"
-        "usage_track_function"
-    )
+  local functions=(
+    "usage_track_api_request"
+    "usage_track_storage"
+    "usage_track_bandwidth"
+    "usage_track_compute"
+    "usage_track_database_query"
+    "usage_track_function"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all tracking functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all tracking functions defined"
+  fi
 }
 
 # ============================================================================
@@ -371,28 +371,28 @@ test_tracking_functions() {
 # ============================================================================
 
 test_aggregation_functions() {
-    test_setup "All aggregation functions are defined"
+  test_setup "All aggregation functions are defined"
 
-    local functions=(
-        "usage_aggregate"
-        "usage_aggregate_hourly"
-        "usage_aggregate_daily"
-        "usage_aggregate_monthly"
-    )
+  local functions=(
+    "usage_aggregate"
+    "usage_aggregate_hourly"
+    "usage_aggregate_daily"
+    "usage_aggregate_monthly"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all aggregation functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all aggregation functions defined"
+  fi
 }
 
 # ============================================================================
@@ -400,28 +400,28 @@ test_aggregation_functions() {
 # ============================================================================
 
 test_alert_functions() {
-    test_setup "All alert functions are defined"
+  test_setup "All alert functions are defined"
 
-    local functions=(
-        "usage_check_alerts"
-        "usage_check_service_alert"
-        "usage_trigger_alert"
-        "usage_get_alerts"
-    )
+  local functions=(
+    "usage_check_alerts"
+    "usage_check_service_alert"
+    "usage_trigger_alert"
+    "usage_get_alerts"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all alert functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all alert functions defined"
+  fi
 }
 
 # ============================================================================
@@ -429,27 +429,27 @@ test_alert_functions() {
 # ============================================================================
 
 test_statistics_functions() {
-    test_setup "All statistics functions are defined"
+  test_setup "All statistics functions are defined"
 
-    local functions=(
-        "usage_get_stats"
-        "usage_get_trends"
-        "usage_get_peaks"
-    )
+  local functions=(
+    "usage_get_stats"
+    "usage_get_trends"
+    "usage_get_peaks"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all statistics functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all statistics functions defined"
+  fi
 }
 
 # ============================================================================
@@ -457,28 +457,28 @@ test_statistics_functions() {
 # ============================================================================
 
 test_batch_functions() {
-    test_setup "All batch processing functions are defined"
+  test_setup "All batch processing functions are defined"
 
-    local functions=(
-        "usage_init_batch"
-        "usage_batch_add"
-        "usage_batch_flush"
-        "usage_batch_insert"
-    )
+  local functions=(
+    "usage_init_batch"
+    "usage_batch_add"
+    "usage_batch_flush"
+    "usage_batch_insert"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all batch functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all batch functions defined"
+  fi
 }
 
 # ============================================================================
@@ -486,26 +486,26 @@ test_batch_functions() {
 # ============================================================================
 
 test_cleanup_functions() {
-    test_setup "All cleanup functions are defined"
+  test_setup "All cleanup functions are defined"
 
-    local functions=(
-        "usage_archive"
-        "usage_cleanup_batch"
-    )
+  local functions=(
+    "usage_archive"
+    "usage_cleanup_batch"
+  )
 
-    local all_defined=true
-    for func in "${functions[@]}"; do
-        if ! declare -f "$func" >/dev/null 2>&1; then
-            all_defined=false
-            break
-        fi
-    done
-
-    if [[ "$all_defined" == "true" ]]; then
-        test_pass
-    else
-        test_fail "Not all cleanup functions defined"
+  local all_defined=true
+  for func in "${functions[@]}"; do
+    if ! declare -f "$func" >/dev/null 2>&1; then
+      all_defined=false
+      break
     fi
+  done
+
+  if [[ "$all_defined" == "true" ]]; then
+    test_pass
+  else
+    test_fail "Not all cleanup functions defined"
+  fi
 }
 
 # ============================================================================
@@ -513,55 +513,55 @@ test_cleanup_functions() {
 # ============================================================================
 
 run_all_tests() {
-    printf "\n"
-    printf "╔════════════════════════════════════════════════════════════════╗\n"
-    printf "║           nself Billing Usage Tracking Test Suite             ║\n"
-    printf "╚════════════════════════════════════════════════════════════════╝\n"
-    printf "\n"
+  printf "\n"
+  printf "╔════════════════════════════════════════════════════════════════╗\n"
+  printf "║           nself Billing Usage Tracking Test Suite             ║\n"
+  printf "╚════════════════════════════════════════════════════════════════╝\n"
+  printf "\n"
 
-    # Run tests
-    test_batch_init
-    test_service_definitions
-    test_service_pricing
-    test_number_formatting
-    test_cost_calculation
-    test_metadata_generation
-    test_storage_conversion
-    test_bandwidth_conversion
-    test_compute_conversion
-    test_bar_chart
-    test_alert_thresholds
-    test_batch_configuration
-    test_export_functions
-    test_tracking_functions
-    test_aggregation_functions
-    test_alert_functions
-    test_statistics_functions
-    test_batch_functions
-    test_cleanup_functions
+  # Run tests
+  test_batch_init
+  test_service_definitions
+  test_service_pricing
+  test_number_formatting
+  test_cost_calculation
+  test_metadata_generation
+  test_storage_conversion
+  test_bandwidth_conversion
+  test_compute_conversion
+  test_bar_chart
+  test_alert_thresholds
+  test_batch_configuration
+  test_export_functions
+  test_tracking_functions
+  test_aggregation_functions
+  test_alert_functions
+  test_statistics_functions
+  test_batch_functions
+  test_cleanup_functions
 
-    # Cleanup
-    usage_cleanup_batch
+  # Cleanup
+  usage_cleanup_batch
 
-    # Results
-    printf "\n"
-    printf "╔════════════════════════════════════════════════════════════════╗\n"
-    printf "║                        TEST RESULTS                            ║\n"
-    printf "╠════════════════════════════════════════════════════════════════╣\n"
-    printf "║ Total Tests:    %-46d ║\n" "$TESTS_RUN"
-    printf "║ Passed:         \033[32m%-46d\033[0m ║\n" "$TESTS_PASSED"
-    printf "║ Failed:         \033[31m%-46d\033[0m ║\n" "$TESTS_FAILED"
-    printf "╚════════════════════════════════════════════════════════════════╝\n"
-    printf "\n"
+  # Results
+  printf "\n"
+  printf "╔════════════════════════════════════════════════════════════════╗\n"
+  printf "║                        TEST RESULTS                            ║\n"
+  printf "╠════════════════════════════════════════════════════════════════╣\n"
+  printf "║ Total Tests:    %-46d ║\n" "$TESTS_RUN"
+  printf "║ Passed:         \033[32m%-46d\033[0m ║\n" "$TESTS_PASSED"
+  printf "║ Failed:         \033[31m%-46d\033[0m ║\n" "$TESTS_FAILED"
+  printf "╚════════════════════════════════════════════════════════════════╝\n"
+  printf "\n"
 
-    # Exit code
-    if [[ $TESTS_FAILED -eq 0 ]]; then
-        printf "\033[32m✓ All tests passed!\033[0m\n\n"
-        return 0
-    else
-        printf "\033[31m✗ Some tests failed\033[0m\n\n"
-        return 1
-    fi
+  # Exit code
+  if [[ $TESTS_FAILED -eq 0 ]]; then
+    printf "\033[32m✓ All tests passed!\033[0m\n\n"
+    return 0
+  else
+    printf "\033[31m✗ Some tests failed\033[0m\n\n"
+    return 1
+  fi
 }
 
 # Run tests

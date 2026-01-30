@@ -19,48 +19,48 @@ fi
 parse_cs_services() {
   # Clear previous parsed services
   PARSED_SERVICES=()
-  
+
   # Find all CS_N variables (CS_1, CS_2, etc.)
   local service_num=1
   while true; do
     local service_def=$(eval echo "\${CS_${service_num}:-}")
-    
+
     # Stop if no more services
     if [[ -z "$service_def" ]]; then
       break
     fi
-    
+
     # Parse CS_N=name:framework[:port][:route]
-    IFS=':' read -r name framework port route <<< "$service_def"
-    
+    IFS=':' read -r name framework port route <<<"$service_def"
+
     # Trim whitespace
     name=$(echo "$name" | xargs)
     framework=$(echo "$framework" | xargs)
     port=$(echo "${port:-}" | xargs)
     route=$(echo "${route:-}" | xargs)
-    
+
     # Convert name to uppercase for env var lookups
     local name_upper=$(echo "$name" | tr '[:lower:]' '[:upper:]')
-    
+
     # Get configuration from CS_N_* variables
     port="${port:-$(eval echo "\${CS_${service_num}_PORT:-}")}"
     route="${route:-$(eval echo "\${CS_${service_num}_ROUTE:-}")}"
-    
+
     # Auto-assign port if not set
     if [[ -z "$port" ]]; then
       port=$((8000 + service_num))
     fi
-    
+
     # Don't default route - leave empty if not specified
     # Empty route means internal-only service
-    
+
     # Get all CS_N_* configuration
     local memory=$(eval echo "\${CS_${service_num}_MEMORY:-256M}")
     local cpu=$(eval echo "\${CS_${service_num}_CPU:-0.25}")
     local replicas=$(eval echo "\${CS_${service_num}_REPLICAS:-1}")
     local table_prefix=$(eval echo "\${CS_${service_num}_TABLE_PREFIX:-}")
     local redis_prefix=$(eval echo "\${CS_${service_num}_REDIS_PREFIX:-}")
-    
+
     # Auto-determine public based on route presence
     # If route is specified, default to public=true, otherwise false
     local public_default="false"
@@ -68,15 +68,15 @@ parse_cs_services() {
       public_default="true"
     fi
     local public=$(eval echo "\${CS_${service_num}_PUBLIC:-$public_default}")
-    
+
     local healthcheck=$(eval echo "\${CS_${service_num}_HEALTHCHECK:-/health}")
     local env_vars=$(eval echo "\${CS_${service_num}_ENV:-}")
     local rate_limit=$(eval echo "\${CS_${service_num}_RATE_LIMIT:-}")
-    
+
     # Get environment-specific domain
     local current_env="${ENV:-dev}"
     local domain=""
-    
+
     # Only process domain if route is specified
     if [[ -n "$route" ]]; then
       # Check for environment-specific domain override
@@ -85,7 +85,7 @@ parse_cs_services() {
       else
         domain=$(eval echo "\${CS_${service_num}_DEV_DOMAIN:-}")
       fi
-      
+
       # Process route to determine final domain
       if [[ -z "$domain" ]]; then
         # Check if route is a full domain (contains at least one dot and ends with TLD)
@@ -101,14 +101,14 @@ parse_cs_services() {
         fi
       fi
     fi
-    
+
     # Store parsed service
     PARSED_SERVICES+=("$name|$framework|$domain|$port|$replicas|$memory|$cpu|$env_vars|$healthcheck|$public|$rate_limit|$table_prefix|$redis_prefix")
-    
+
     # Increment service number
     ((service_num++))
   done
-  
+
   # Also check for legacy CUSTOM_SERVICES if no CS_N found
   if [[ ${#PARSED_SERVICES[@]} -eq 0 ]] && [[ -n "${CUSTOM_SERVICES:-}" ]]; then
     parse_legacy_custom_services
@@ -118,27 +118,27 @@ parse_cs_services() {
 # Parse legacy CUSTOM_SERVICES format (backward compatibility)
 parse_legacy_custom_services() {
   local services_def="${CUSTOM_SERVICES:-}"
-  
+
   if [[ -z "$services_def" ]]; then
     return 0
   fi
-  
+
   # Split by comma
-  IFS=',' read -ra SERVICES <<< "$services_def"
-  
+  IFS=',' read -ra SERVICES <<<"$services_def"
+
   for service in "${SERVICES[@]}"; do
     # Trim whitespace
     service=$(echo "$service" | xargs)
-    
+
     # Parse SERVICE_NAME:LANGUAGE:ROUTING
-    IFS=':' read -r name language routing <<< "$service"
-    
+    IFS=':' read -r name language routing <<<"$service"
+
     # Default routing to service name if not provided
     routing="${routing:-$name}"
-    
+
     # Convert to uppercase for env var lookups
     name_upper=$(echo "$name" | tr '[:lower:]' '[:upper:]')
-    
+
     # Get service-specific configuration
     local port=$(eval echo "\${${name_upper}_PORT:-}")
     local replicas=$(eval echo "\${${name_upper}_REPLICAS:-1}")
@@ -148,15 +148,15 @@ parse_legacy_custom_services() {
     local healthcheck=$(eval echo "\${${name_upper}_HEALTHCHECK:-/health}")
     local public=$(eval echo "\${${name_upper}_PUBLIC:-true}")
     local rate_limit=$(eval echo "\${${name_upper}_RATE_LIMIT:-}")
-    
+
     # Auto-assign port if not set
     if [[ -z "$port" ]]; then
       port=$((8000 + ${#PARSED_SERVICES[@]}))
     fi
-    
+
     # Determine final domain
     local final_domain="${routing}.${BASE_DOMAIN}"
-    
+
     # Store parsed service
     PARSED_SERVICES+=("$name|$language|$final_domain|$port|$replicas|$memory|$cpu|$env_vars|$healthcheck|$public|$rate_limit||")
   done
@@ -165,9 +165,9 @@ parse_legacy_custom_services() {
 # Generate docker-compose service definition
 generate_service_compose() {
   local service_info="$1"
-  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
-  
-  cat << EOF
+  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<<"$service_info"
+
+  cat <<EOF
 
   ${name}:
     build: 
@@ -182,16 +182,16 @@ generate_service_compose() {
     networks:
       - default
 EOF
-  
+
   # Only expose ports if service is public or explicitly configured
   if [[ "$public" == "true" ]] || [[ -n "$domain" ]]; then
-    cat << EOF
+    cat <<EOF
     ports:
       - "${port}:${port}"
 EOF
   fi
-  
-  cat << EOF
+
+  cat <<EOF
     environment:
       - SERVICE_NAME=${name}
       - PROJECT_NAME=\${PROJECT_NAME}
@@ -208,32 +208,32 @@ EOF
       - REDIS_HOST=redis
       - REDIS_URL=redis://redis:6379
 EOF
-  
+
   # Add BASE_URL only if domain is specified
   if [[ -n "$domain" ]]; then
     echo "      - BASE_URL=https://${domain}"
   fi
-  
+
   # Add table prefix if specified
   if [[ -n "$table_prefix" ]]; then
     echo "      - TABLE_PREFIX=${table_prefix}"
   fi
-  
+
   # Add Redis prefix if specified
   if [[ -n "$redis_prefix" ]]; then
     echo "      - REDIS_PREFIX=${redis_prefix}"
   fi
-  
+
   # Add custom environment variables
   if [[ -n "$env_vars" ]]; then
-    IFS=',' read -ra ENVS <<< "$env_vars"
+    IFS=',' read -ra ENVS <<<"$env_vars"
     for env in "${ENVS[@]}"; do
       echo "      - $env"
     done
   fi
-  
+
   # Add resource limits
-  cat << EOF
+  cat <<EOF
     deploy:
       replicas: ${replicas}
       resources:
@@ -249,15 +249,15 @@ EOF
     depends_on:
       - postgres
 EOF
-  
+
   # Add Redis dependency if enabled
   if [[ "${REDIS_ENABLED:-false}" == "true" ]]; then
     echo "      - redis"
   fi
-  
+
   # Add volumes for development
   if [[ "${ENV:-dev}" == "dev" ]]; then
-    cat << EOF
+    cat <<EOF
     volumes:
       - ./services/${name}:/app
       - /app/node_modules  # Prevent node_modules from being overwritten
@@ -268,14 +268,14 @@ EOF
 # Generate Nginx configuration for service
 generate_service_nginx() {
   local service_info="$1"
-  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
-  
+  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<<"$service_info"
+
   # Skip if not public or no domain specified
   if [[ "$public" != "true" ]] || [[ -z "$domain" ]]; then
     return
   fi
-  
-  cat << EOF
+
+  cat <<EOF
 
 # ${name} Service (${framework})
 server {
@@ -298,7 +298,7 @@ EOF
 
   # Add rate limiting if configured
   if [[ -n "$rate_limit" ]]; then
-    cat << EOF
+    cat <<EOF
     # Rate Limiting
     limit_req_zone \$binary_remote_addr zone=${name}_limit:10m rate=${rate_limit}r/m;
     limit_req zone=${name}_limit burst=10 nodelay;
@@ -306,8 +306,8 @@ EOF
 
 EOF
   fi
-  
-  cat << EOF
+
+  cat <<EOF
     # Proxy Configuration
     location / {
         proxy_pass http://${name}:${port};
@@ -348,11 +348,11 @@ create_service_from_template() {
     echo "DEBUG: create_service_from_template called with: $service_info" >&2
   fi
 
-  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
-  
+  IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<<"$service_info"
+
   # Map framework aliases to actual template directories
   case "$framework" in
-    nodejs|node)
+    nodejs | node)
       framework="js"
       ;;
     python)
@@ -367,7 +367,7 @@ create_service_from_template() {
     ruby)
       framework="rb"
       ;;
-    dotnet|csharp)
+    dotnet | csharp)
       framework="cs"
       ;;
     typescript)
@@ -377,23 +377,23 @@ create_service_from_template() {
       framework="ex"
       ;;
   esac
-  
+
   local service_dir="./services/${name}"
   local template_dir=""
-  
+
   # Determine language directory based on framework suffix
   local lang_dir=""
   case "$framework" in
-    *-ts|*-js|trpc|bun|deno|node-js|node-ts)
+    *-ts | *-js | trpc | bun | deno | node-js | node-ts)
       lang_dir="js"
       ;;
-    fastapi|flask|django-rest|celery|ray|agent-*)
+    fastapi | flask | django-rest | celery | ray | agent-*)
       lang_dir="py"
       ;;
-    gin|echo|fiber|grpc)
+    gin | echo | fiber | grpc)
       lang_dir="go"
       ;;
-    rails|sinatra)
+    rails | sinatra)
       lang_dir="ruby"
       ;;
     actix-web)
@@ -427,7 +427,7 @@ create_service_from_template() {
       done
       ;;
   esac
-  
+
   # Set template directory
   if [[ -n "$lang_dir" ]]; then
     template_dir="$SERVICE_BUILDER_DIR/../../templates/services/${lang_dir}/${framework}"
@@ -449,7 +449,7 @@ create_service_from_template() {
     mkdir -p "$service_dir"
     return 1
   fi
-  
+
   # Create service directory
   if [[ ! -d "$service_dir" ]]; then
     mkdir -p "$service_dir"
@@ -501,18 +501,18 @@ create_service_from_template() {
           -e "s/{{PORT}}/${port}/g" \
           -e "s/\${BASE_DOMAIN}/${BASE_DOMAIN}/g" \
           -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN}/g" \
-          "$template_file" > "$output_file"
+          "$template_file" >"$output_file"
 
         # Debug: Check output file
         if [[ "${DEBUG:-false}" == "true" ]]; then
-          echo "DEBUG: Created $output_file with size: $(wc -c < "$output_file") bytes" >&2
+          echo "DEBUG: Created $output_file with size: $(wc -c <"$output_file") bytes" >&2
         fi
 
         # Remove template file
         rm "$template_file"
       fi
     done
-    
+
     # Replace placeholders in non-template files
     # Support both ${VAR} and {{VAR}} syntax
     find "$service_dir" -type f ! -name "*.template" -exec sed -i.bak \
@@ -525,7 +525,7 @@ create_service_from_template() {
       -e "s/\${BASE_DOMAIN}/${BASE_DOMAIN}/g" \
       -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN}/g" \
       {} \; 2>/dev/null || true
-    
+
     # Remove backup files
     find "$service_dir" -name "*.bak" -delete 2>/dev/null || true
 
@@ -550,57 +550,57 @@ build_custom_services() {
 
   # Parse CS_N services
   parse_cs_services
-  
+
   if [[ ${#PARSED_SERVICES[@]} -eq 0 ]]; then
     return 0
   fi
-  
+
   log_info "Building ${#PARSED_SERVICES[@]} custom service(s)..."
-  
+
   # Generate docker-compose.custom.yml
   {
     echo "# Custom Services Configuration"
     echo "# Auto-generated by nself from CS_N variables"
     echo ""
     echo "services:"
-    
+
     for service_info in "${PARSED_SERVICES[@]}"; do
       generate_service_compose "$service_info"
     done
-    
+
     echo ""
     echo "networks:"
     echo "  default:"
     echo "    external: true"
     echo "    name: \${PROJECT_NAME}_network"
-  } > docker-compose.custom.yml
-  
+  } >docker-compose.custom.yml
+
   # Generate nginx configurations
   local nginx_config=""
   for service_info in "${PARSED_SERVICES[@]}"; do
     nginx_config+=$(generate_service_nginx "$service_info")
   done
-  
+
   # Write to nginx custom services config
   if [[ -n "$nginx_config" ]]; then
     mkdir -p ./nginx/conf.d
-    echo "$nginx_config" > ./nginx/conf.d/custom-services.conf
+    echo "$nginx_config" >./nginx/conf.d/custom-services.conf
     log_success "Generated Nginx configuration for custom services"
   fi
-  
+
   # Create service templates
   for service_info in "${PARSED_SERVICES[@]}"; do
     create_service_from_template "$service_info"
   done
-  
+
   log_success "Custom services configuration complete"
-  
+
   # Show summary
   echo ""
   echo "Custom Services Summary:"
   echo "========================"
   for service_info in "${PARSED_SERVICES[@]}"; do
-    IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<< "$service_info"
+    IFS='|' read -r name framework domain port replicas memory cpu env_vars healthcheck public rate_limit table_prefix redis_prefix <<<"$service_info"
     if [[ -n "$domain" ]]; then
       echo "  • ${name} (${framework}) → https://${domain}"
     else
@@ -609,7 +609,7 @@ build_custom_services() {
     fi
   done
   echo ""
-  
+
   echo "Next steps:"
   echo "  1. Edit service code in ./services/<name>/"
   echo "  2. Run 'nself build' to rebuild containers"

@@ -12,7 +12,7 @@ mkdir -p "$TEST_DIR"
 cd "$TEST_DIR"
 
 # Create test .env.local
-cat > .env.local << 'EOF'
+cat >.env.local <<'EOF'
 # Custom services definition
 CUSTOM_SERVICES="currency:nodejs:currency,metals:python:metals,analytics:go:analytics"
 
@@ -68,7 +68,7 @@ fi
 echo ""
 echo "Parsed Services:"
 for service in "${PARSED_SERVICES[@]}"; do
-  IFS='|' read -r name language subdomain port <<< "$service"
+  IFS='|' read -r name language subdomain port <<<"$service"
   echo "  • $name ($language) on port $port → $subdomain.localhost"
 done
 
@@ -89,9 +89,9 @@ echo "Checking generated files:"
 # Check docker-compose.custom.yml
 if [[ -f "docker-compose.custom.yml" ]]; then
   echo "  ✓ docker-compose.custom.yml created"
-  if grep -q "currency:" docker-compose.custom.yml && \
-     grep -q "metals:" docker-compose.custom.yml && \
-     grep -q "analytics:" docker-compose.custom.yml; then
+  if grep -q "currency:" docker-compose.custom.yml &&
+    grep -q "metals:" docker-compose.custom.yml &&
+    grep -q "analytics:" docker-compose.custom.yml; then
     echo "    ✓ All services defined in compose file"
   fi
 else
@@ -101,8 +101,8 @@ fi
 # Check nginx config
 if [[ -f "nginx/conf.d/custom-services.conf" ]]; then
   echo "  ✓ Nginx configuration created"
-  if grep -q "currency.localhost" nginx/conf.d/custom-services.conf && \
-     grep -q "metals.localhost" nginx/conf.d/custom-services.conf; then
+  if grep -q "currency.localhost" nginx/conf.d/custom-services.conf &&
+    grep -q "metals.localhost" nginx/conf.d/custom-services.conf; then
     echo "    ✓ Public services have nginx routes"
   fi
   if ! grep -q "analytics.localhost" nginx/conf.d/custom-services.conf; then
@@ -118,7 +118,7 @@ echo "Checking service templates:"
 for service in currency metals analytics; do
   if [[ -d "services/$service" ]]; then
     echo "  ✓ services/$service/ created"
-    
+
     # Check for main file based on language
     case "$service" in
       currency)
@@ -137,7 +137,7 @@ for service in currency metals analytics; do
         fi
         ;;
     esac
-    
+
     # Check for Dockerfile
     if [[ -f "services/$service/Dockerfile" ]]; then
       echo "    ✓ Dockerfile created"

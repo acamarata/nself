@@ -75,10 +75,10 @@ readonly -a INIT_TEMPLATES_FULL=(
 # ========================================================================
 # Paths to search for template directory (in order of preference)
 readonly -a INIT_TEMPLATE_SEARCH_PATHS=(
-  "../templates"                    # Relative to cli directory
-  "../../templates"                 # Development/source location (from cli)
-  "/usr/share/nself/src/templates"  # System installation
-  "$HOME/.nself/src/templates"      # Local user installation
+  "../templates"                     # Relative to cli directory
+  "../../templates"                  # Development/source location (from cli)
+  "/usr/share/nself/src/templates"   # System installation
+  "$HOME/.nself/src/templates"       # Local user installation
   "$HOME/.local/nself/src/templates" # Custom installation path
 )
 

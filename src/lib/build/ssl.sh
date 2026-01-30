@@ -85,7 +85,7 @@ generate_mkcert_certificates() {
 
     # Add custom subdomains if configured
     if [[ -n "${CUSTOM_SUBDOMAINS:-}" ]]; then
-      IFS=',' read -ra CUSTOM <<< "$CUSTOM_SUBDOMAINS"
+      IFS=',' read -ra CUSTOM <<<"$CUSTOM_SUBDOMAINS"
       for subdomain in "${CUSTOM[@]}"; do
         domains+=("${subdomain}.localhost")
       done
@@ -93,8 +93,8 @@ generate_mkcert_certificates() {
 
     # Generate localhost certificates
     mkcert -cert-file ssl/certificates/localhost/fullchain.pem \
-           -key-file ssl/certificates/localhost/privkey.pem \
-           "${domains[@]}" >/dev/null 2>&1
+      -key-file ssl/certificates/localhost/privkey.pem \
+      "${domains[@]}" >/dev/null 2>&1
 
   else
     # For custom domains
@@ -109,13 +109,13 @@ generate_mkcert_certificates() {
 
     # Generate domain certificates
     mkcert -cert-file ssl/certificates/nself-org/fullchain.pem \
-           -key-file ssl/certificates/nself-org/privkey.pem \
-           "${domains[@]}" >/dev/null 2>&1
+      -key-file ssl/certificates/nself-org/privkey.pem \
+      "${domains[@]}" >/dev/null 2>&1
 
     # Also generate localhost as fallback (no wildcard for .localhost TLD)
     mkcert -cert-file ssl/certificates/localhost/fullchain.pem \
-           -key-file ssl/certificates/localhost/privkey.pem \
-           "localhost" "api.localhost" "auth.localhost" "storage.localhost" >/dev/null 2>&1
+      -key-file ssl/certificates/localhost/privkey.pem \
+      "localhost" "api.localhost" "auth.localhost" "storage.localhost" >/dev/null 2>&1
   fi
 
   show_info "Generated trusted SSL certificates with mkcert"
@@ -127,7 +127,7 @@ generate_self_signed_certificates() {
 
   # Generate config for certificate with SANs
   local ssl_config=$(mktemp)
-  cat > "$ssl_config" <<EOF
+  cat >"$ssl_config" <<EOF
 [req]
 default_bits = 2048
 prompt = no

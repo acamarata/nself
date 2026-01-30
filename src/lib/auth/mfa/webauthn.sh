@@ -6,7 +6,10 @@ set -euo pipefail
 
 webauthn_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE TABLE IF NOT EXISTS auth.webauthn_credentials (
@@ -41,8 +44,8 @@ webauthn_generate_challenge() {
   local challenge=$(openssl rand -base64 32 | tr -d '\n')
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
-  local expires=$(date -u -d "+5 minutes" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                  date -u -v+5M "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  local expires=$(date -u -d "+5 minutes" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+5M "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   local user_clause="NULL"
   [[ -n "$user_id" ]] && user_clause="'$user_id'"

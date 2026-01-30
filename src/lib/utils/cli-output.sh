@@ -208,8 +208,8 @@ cli_header() {
   local title="$1"
   local width=60
   local title_len=${#title}
-  local padding=$(( (width - title_len - 2) / 2 ))
-  local right_padding=$(( width - title_len - padding - 2 ))
+  local padding=$(((width - title_len - 2) / 2))
+  local right_padding=$((width - title_len - padding - 2))
 
   printf "\n"
   printf "%b%s%b\n" "${CLI_BLUE}" "$(printf '%*s' "$width" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_RESET}"
@@ -241,7 +241,7 @@ cli_step() {
 cli_box() {
   local message="$1"
   local type="${2:-info}"
-  local width=$(( ${#message} + 4 ))
+  local width=$((${#message} + 4))
   local color="${CLI_BLUE}"
 
   case "$type" in
@@ -263,16 +263,16 @@ cli_box_detailed() {
   local title="$1"
   local content="$2"
   local width=60
-  local content_width=$(( width - 4 ))
+  local content_width=$((width - 4))
 
   printf "\n"
   # Top border
-  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
 
   # Title
   local title_len=${#title}
-  local title_padding=$(( (content_width - title_len) / 2 ))
-  local title_right_padding=$(( content_width - title_len - title_padding ))
+  local title_padding=$(((content_width - title_len) / 2))
+  local title_right_padding=$((content_width - title_len - title_padding))
   printf "%b%s%b %*s%b%s%b%*s %b%s%b\n" \
     "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" \
     "$title_padding" "" \
@@ -281,7 +281,7 @@ cli_box_detailed() {
     "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
 
   # Separator
-  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_T_RIGHT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_HORIZONTAL}")" "${CLI_BOX_T_LEFT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_T_RIGHT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_HORIZONTAL}")" "${CLI_BOX_T_LEFT}" "${CLI_RESET}"
 
   # Content (word wrap at content_width)
   local words=($content)
@@ -289,7 +289,7 @@ cli_box_detailed() {
   for word in "${words[@]}"; do
     if [[ -z "$line" ]]; then
       line="$word"
-    elif [[ $(( ${#line} + ${#word} + 1 )) -le $content_width ]]; then
+    elif [[ $((${#line} + ${#word} + 1)) -le $content_width ]]; then
       line="$line $word"
     else
       # Print current line
@@ -310,7 +310,7 @@ cli_box_detailed() {
   fi
 
   # Bottom border
-  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
   printf "\n"
 }
 
@@ -338,13 +338,13 @@ cli_table_header() {
   local -a widths
 
   # Calculate column widths
-  read -ra widths <<< "$(_cli_calc_column_widths "${headers[@]}")"
+  read -ra widths <<<"$(_cli_calc_column_widths "${headers[@]}")"
 
   # Top border
   printf "%s" "${CLI_BOX_TOP_LEFT}"
   for i in "${!headers[@]}"; do
-    printf "%s" "$(printf '%*s' "$(( widths[i] + 2 ))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
-    if [[ $i -lt $(( ${#headers[@]} - 1 )) ]]; then
+    printf "%s" "$(printf '%*s' "$((widths[i] + 2))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
+    if [[ $i -lt $((${#headers[@]} - 1)) ]]; then
       printf "%s" "${CLI_BOX_T_DOWN}"
     fi
   done
@@ -361,8 +361,8 @@ cli_table_header() {
   # Separator
   printf "%s" "${CLI_BOX_T_RIGHT}"
   for i in "${!headers[@]}"; do
-    printf "%s" "$(printf '%*s' "$(( widths[i] + 2 ))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
-    if [[ $i -lt $(( ${#headers[@]} - 1 )) ]]; then
+    printf "%s" "$(printf '%*s' "$((widths[i] + 2))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
+    if [[ $i -lt $((${#headers[@]} - 1)) ]]; then
       printf "%s" "${CLI_BOX_CROSS}"
     fi
   done
@@ -379,7 +379,7 @@ cli_table_row() {
   local -a widths
 
   # Use stored widths from header
-  read -ra widths <<< "${CLI_TABLE_WIDTHS:-}"
+  read -ra widths <<<"${CLI_TABLE_WIDTHS:-}"
 
   printf "%s" "${CLI_BOX_VERTICAL}"
   for i in "${!values[@]}"; do
@@ -397,14 +397,14 @@ cli_table_footer() {
   local -a widths
 
   # Use stored widths from header
-  read -ra widths <<< "${CLI_TABLE_WIDTHS:-}"
+  read -ra widths <<<"${CLI_TABLE_WIDTHS:-}"
 
   # Bottom border
   printf "%s" "${CLI_BOX_BOTTOM_LEFT}"
   for i in "${!headers[@]}"; do
     local width="${widths[$i]:-20}"
-    printf "%s" "$(printf '%*s' "$(( width + 2 ))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
-    if [[ $i -lt $(( ${#headers[@]} - 1 )) ]]; then
+    printf "%s" "$(printf '%*s' "$((width + 2))" | tr ' ' "${CLI_BOX_HORIZONTAL}")"
+    if [[ $i -lt $((${#headers[@]} - 1)) ]]; then
       printf "%s" "${CLI_BOX_T_UP}"
     fi
   done
@@ -459,9 +459,9 @@ cli_progress() {
   local total="$3"
   local width=40
 
-  local percent=$(( current * 100 / total ))
-  local filled=$(( current * width / total ))
-  local empty=$(( width - filled ))
+  local percent=$((current * 100 / total))
+  local filled=$((current * width / total))
+  local empty=$((width - filled))
 
   # Only use \r (carriage return) in interactive terminals
   if [[ -t 1 ]]; then
@@ -507,7 +507,7 @@ cli_spinner_start() {
     while true; do
       printf "\r%b%s%b %s" \
         "${CLI_BLUE}" "${CLI_SPINNER_FRAMES[$frame]}" "${CLI_RESET}" "${message}"
-      frame=$(( (frame + 1) % ${#CLI_SPINNER_FRAMES[@]} ))
+      frame=$(((frame + 1) % ${#CLI_SPINNER_FRAMES[@]}))
       sleep 0.1
     done
   ) &
@@ -547,13 +547,13 @@ cli_summary() {
 
   printf "\n"
   # Top border
-  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
 
   # Title
   local title_text="${CLI_ICON_STAR} ${title} ${CLI_ICON_STAR}"
-  local title_len=$(( ${#title} + 4 )) # Account for icons
-  local title_padding=$(( (width - title_len - 2) / 2 ))
-  local title_right_padding=$(( width - title_len - title_padding - 2 ))
+  local title_len=$((${#title} + 4)) # Account for icons
+  local title_padding=$(((width - title_len - 2) / 2))
+  local title_right_padding=$((width - title_len - title_padding - 2))
   printf "%b%s%b %*s%b%s %s %s%b%*s %b%s%b\n" \
     "${CLI_GREEN}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" \
     "$title_padding" "" \
@@ -562,19 +562,19 @@ cli_summary() {
     "${CLI_GREEN}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
 
   # Separator
-  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_T_RIGHT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_HORIZONTAL}")" "${CLI_BOX_T_LEFT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_T_RIGHT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_HORIZONTAL}")" "${CLI_BOX_T_LEFT}" "${CLI_RESET}"
 
   # Items
   for item in "${items[@]}"; do
     printf "%b%s%b  %b%s%b %-*s %b%s%b\n" \
       "${CLI_GREEN}" "${CLI_BOX_VERTICAL}" "${CLI_RESET}" \
       "${CLI_BLUE}" "${CLI_ICON_BULLET}" "${CLI_RESET}" \
-      "$(( width - 6 ))" "${item}" \
+      "$((width - 6))" "${item}" \
       "${CLI_GREEN}" "${CLI_BOX_VERTICAL}" "${CLI_RESET}"
   done
 
   # Bottom border
-  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_GREEN}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
   printf "\n"
 }
 
@@ -586,13 +586,13 @@ cli_banner() {
   local width=60
 
   printf "\n"
-  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
-  printf "%b%s%b %*s %b%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" "$(( width - 2 ))" "" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_TOP_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_TOP_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%b %*s %b%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" "$((width - 2))" "" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
 
   # Title (centered)
   local title_len=${#title}
-  local title_padding=$(( (width - title_len - 2) / 2 ))
-  local title_right_padding=$(( width - title_len - title_padding - 2 ))
+  local title_padding=$(((width - title_len - 2) / 2))
+  local title_right_padding=$((width - title_len - title_padding - 2))
   printf "%b%s%b %*s%b%s%b%*s %b%s%b\n" \
     "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" \
     "$title_padding" "" \
@@ -603,8 +603,8 @@ cli_banner() {
   if [[ -n "$subtitle" ]]; then
     # Subtitle (centered, dimmed)
     local subtitle_len=${#subtitle}
-    local subtitle_padding=$(( (width - subtitle_len - 2) / 2 ))
-    local subtitle_right_padding=$(( width - subtitle_len - subtitle_padding - 2 ))
+    local subtitle_padding=$(((width - subtitle_len - 2) / 2))
+    local subtitle_right_padding=$((width - subtitle_len - subtitle_padding - 2))
     printf "%b%s%b %*s%b%s%b%*s %b%s%b\n" \
       "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" \
       "$subtitle_padding" "" \
@@ -613,8 +613,8 @@ cli_banner() {
       "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
   fi
 
-  printf "%b%s%b %*s %b%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" "$(( width - 2 ))" "" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
-  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$(( width - 2 ))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
+  printf "%b%s%b %*s %b%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}" "$((width - 2))" "" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_VERTICAL}" "${CLI_RESET}"
+  printf "%b%s%s%s%b\n" "${CLI_BLUE}" "${CLI_BOX_DOUBLE_BOTTOM_LEFT}" "$(printf '%*s' "$((width - 2))" | tr ' ' "${CLI_BOX_DOUBLE_HORIZONTAL}")" "${CLI_BOX_DOUBLE_BOTTOM_RIGHT}" "${CLI_RESET}"
   printf "\n"
 }
 
@@ -655,8 +655,8 @@ cli_center() {
   if [[ $text_len -ge $width ]]; then
     printf "%s\n" "${text:0:$width}"
   else
-    local padding=$(( (width - text_len) / 2 ))
-    local right_padding=$(( width - text_len - padding ))
+    local padding=$(((width - text_len) / 2))
+    local right_padding=$((width - text_len - padding))
     printf "%*s%s%*s\n" "$padding" "" "$text" "$right_padding" ""
   fi
 }
@@ -666,7 +666,7 @@ cli_center() {
 cli_indent() {
   local message="$1"
   local level="${2:-1}"
-  local indent=$(( level * 2 ))
+  local indent=$((level * 2))
   printf "%*s%s\n" "$indent" "" "$message"
 }
 

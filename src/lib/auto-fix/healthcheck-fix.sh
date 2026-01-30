@@ -4,11 +4,11 @@
 fix_healthchecks() {
   local compose_file="${1:-docker-compose.yml}"
   local fixed=false
-  
+
   if [[ ! -f "$compose_file" ]]; then
     return 0
   fi
-  
+
   # Create backup in _backup/timestamp structure (only in debug mode)
   if [[ "${DEBUG:-false}" == "true" ]]; then
     local timestamp="$(date +%Y%m%d_%H%M%S)"
@@ -16,7 +16,7 @@ fix_healthchecks() {
     mkdir -p "$backup_dir"
     cp "$compose_file" "${backup_dir}/$(basename "$compose_file").healthcheck-backup"
   fi
-  
+
   # Fix auth service health check (ensure correct endpoint and port)
   if grep -q 'container_name:.*_auth' "$compose_file"; then
     # Fix endpoint - auth uses /healthz not /version
@@ -29,7 +29,7 @@ fix_healthchecks() {
       sed -i '' 's|http://localhost:4001/|http://localhost:4000/|g' "$compose_file"
       fixed=true
     fi
-    
+
     # Fix curl command for auth (nhost/hasura-auth has wget)
     if grep -A 5 'container_name:.*_auth' "$compose_file" | grep -q '"CMD", "curl"'; then
       # Find auth service block and fix its health check
@@ -41,11 +41,11 @@ fix_healthchecks() {
         }
         in_healthcheck && /retries:/ { in_healthcheck=0 }
         { print }
-      ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+      ' "$compose_file" >"${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
       fixed=true
     fi
   fi
-  
+
   # Fix MLflow health check (curl -> python urllib)
   if grep -q 'container_name:.*_mlflow' "$compose_file"; then
     if grep -A 5 'container_name:.*_mlflow' "$compose_file" | grep -q '"CMD", "curl"'; then
@@ -59,11 +59,11 @@ fix_healthchecks() {
         }
         in_healthcheck && /retries:/ { in_healthcheck=0; in_mlflow=0 }
         { print }
-      ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+      ' "$compose_file" >"${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
       fixed=true
     fi
   fi
-  
+
   # Fix custom service health checks (curl -> wget for Node Alpine)
   # This handles service_12, service_23, and any other custom services
   if grep -q 'container_name:.*_service_' "$compose_file"; then
@@ -76,10 +76,10 @@ fix_healthchecks() {
       }
       in_healthcheck && /retries:/ { in_healthcheck=0; in_service=0 }
       { print }
-    ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+    ' "$compose_file" >"${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
     fixed=true
   fi
-  
+
   # Fix any remaining Node.js services using curl
   # Look for Node images and fix their health checks
   awk '
@@ -93,8 +93,8 @@ fix_healthchecks() {
     in_healthcheck && /retries:/ { in_healthcheck=0; in_node=0; service_found=0 }
     /^  [a-z_]+:$/ && !/^    / { in_node=0; service_found=0; in_healthcheck=0 }
     { print }
-  ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
-  
+  ' "$compose_file" >"${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+
   # Remove duplicate start_period entries and ensure only one exists
   awk '
     BEGIN { in_service=0; in_healthcheck=0; seen_start_period=0 }
@@ -134,13 +134,13 @@ fix_healthchecks() {
       next
     }
     { print }
-  ' "$compose_file" > "${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
-  
+  ' "$compose_file" >"${compose_file}.tmp" && mv "${compose_file}.tmp" "$compose_file"
+
   if [[ "$fixed" == "true" ]]; then
     echo "Fixed health check configurations in docker-compose.yml"
     return 0
   fi
-  
+
   return 0
 }
 

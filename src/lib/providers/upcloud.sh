@@ -38,7 +38,7 @@ provider_upcloud_init() {
   read -rsp "UpCloud Password: " password
   echo
 
-  cat > "$config_dir/upcloud.yml" << EOF
+  cat >"$config_dir/upcloud.yml" <<EOF
 provider: upcloud
 username: "$username"
 password: "$password"
@@ -54,7 +54,10 @@ EOF
 
 provider_upcloud_validate() {
   local config_file="${HOME}/.nself/providers/upcloud.yml"
-  [[ ! -f "$config_file" ]] && { log_error "UpCloud not configured"; return 1; }
+  [[ ! -f "$config_file" ]] && {
+    log_error "UpCloud not configured"
+    return 1
+  }
 
   local username password
   username=$(grep "username:" "$config_file" | cut -d'"' -f2)
@@ -97,14 +100,26 @@ provider_upcloud_provision() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      --size) size="$2"; shift 2 ;;
-      --region|--zone) zone="$2"; shift 2 ;;
+      --name)
+        name="$2"
+        shift 2
+        ;;
+      --size)
+        size="$2"
+        shift 2
+        ;;
+      --region | --zone)
+        zone="$2"
+        shift 2
+        ;;
       *) shift ;;
     esac
   done
 
-  [[ -z "$name" ]] && { log_error "Server name required"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Server name required"
+    return 1
+  }
 
   local config_file="${HOME}/.nself/providers/upcloud.yml"
   local username password
@@ -190,9 +205,14 @@ provider_upcloud_list() {
 }
 
 provider_upcloud_ssh() {
-  local server_id="$1"; shift
-  local ip; ip=$(provider_upcloud_get_ip "$server_id")
-  [[ -z "$ip" ]] && { log_error "Could not get IP"; return 1; }
+  local server_id="$1"
+  shift
+  local ip
+  ip=$(provider_upcloud_get_ip "$server_id")
+  [[ -z "$ip" ]] && {
+    log_error "Could not get IP"
+    return 1
+  }
   ssh -o StrictHostKeyChecking=no "root@${ip}" "$@"
 }
 

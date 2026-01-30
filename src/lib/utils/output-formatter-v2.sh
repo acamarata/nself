@@ -205,20 +205,20 @@ format_validation_results() {
   local mode="errors"
   for item in "$@"; do
     case "$item" in
-    "WARNINGS:")
-      mode="warnings"
-      continue
-      ;;
-    "FIXES:")
-      mode="fixes"
-      continue
-      ;;
+      "WARNINGS:")
+        mode="warnings"
+        continue
+        ;;
+      "FIXES:")
+        mode="fixes"
+        continue
+        ;;
     esac
 
     case "$mode" in
-    errors) [[ "$item" != "WARNINGS:" ]] && [[ "$item" != "FIXES:" ]] && errors+=("$item") ;;
-    warnings) [[ "$item" != "FIXES:" ]] && warnings+=("$item") ;;
-    fixes) fixes+=("$item") ;;
+      errors) [[ "$item" != "WARNINGS:" ]] && [[ "$item" != "FIXES:" ]] && errors+=("$item") ;;
+      warnings) [[ "$item" != "FIXES:" ]] && warnings+=("$item") ;;
+      fixes) fixes+=("$item") ;;
     esac
   done
 
@@ -273,29 +273,29 @@ format_docker_output() {
   local line="$1"
 
   case "$line" in
-  *"Pulling from"*)
-    printf "${BLUE}${ICON_PACKAGE}${RESET} Downloading Docker images...\n"
-    ;;
-  *"Pull complete"* | *"Already exists"*)
-    printf "${GREEN}.${RESET}"
-    ;;
-  *"Downloaded newer image"* | *"Image is up to date"*)
-    printf " ${GREEN}${ICON_CHECK}${RESET}\n"
-    ;;
-  *"Creating"*)
-    local container=$(echo "$line" | sed 's/.*Creating //' | sed 's/ .*//')
-    printf "${BLUE}${ICON_GEAR}${RESET} Creating: ${BOLD}$container${RESET}\n"
-    ;;
-  *"Started"*)
-    local container=$(echo "$line" | sed 's/.*Started //' | sed 's/ .*//')
-    printf "${GREEN}${ICON_CHECK}${RESET} Started: ${BOLD}$container${RESET}\n"
-    ;;
-  *"Error"* | *"ERROR"*)
-    printf "${RED}${ICON_CROSS}${RESET} ${RED}$line${RESET}\n"
-    ;;
-  *"Warning"* | *"WARNING"*)
-    printf "${YELLOW}${ICON_WARNING}${RESET} ${YELLOW}$line${RESET}\n"
-    ;;
+    *"Pulling from"*)
+      printf "${BLUE}${ICON_PACKAGE}${RESET} Downloading Docker images...\n"
+      ;;
+    *"Pull complete"* | *"Already exists"*)
+      printf "${GREEN}.${RESET}"
+      ;;
+    *"Downloaded newer image"* | *"Image is up to date"*)
+      printf " ${GREEN}${ICON_CHECK}${RESET}\n"
+      ;;
+    *"Creating"*)
+      local container=$(echo "$line" | sed 's/.*Creating //' | sed 's/ .*//')
+      printf "${BLUE}${ICON_GEAR}${RESET} Creating: ${BOLD}$container${RESET}\n"
+      ;;
+    *"Started"*)
+      local container=$(echo "$line" | sed 's/.*Started //' | sed 's/ .*//')
+      printf "${GREEN}${ICON_CHECK}${RESET} Started: ${BOLD}$container${RESET}\n"
+      ;;
+    *"Error"* | *"ERROR"*)
+      printf "${RED}${ICON_CROSS}${RESET} ${RED}$line${RESET}\n"
+      ;;
+    *"Warning"* | *"WARNING"*)
+      printf "${YELLOW}${ICON_WARNING}${RESET} ${YELLOW}$line${RESET}\n"
+      ;;
   esac
 }
 
@@ -309,22 +309,22 @@ format_service_status() {
   local status_color=""
 
   case "$status" in
-  "running")
-    status_icon="${ICON_CHECK}"
-    status_color="${GREEN}"
-    ;;
-  "stopped")
-    status_icon="${ICON_CROSS}"
-    status_color="${RED}"
-    ;;
-  "starting")
-    status_icon="${ICON_LOADING}"
-    status_color="${YELLOW}"
-    ;;
-  *)
-    status_icon="${ICON_WARNING}"
-    status_color="${YELLOW}"
-    ;;
+    "running")
+      status_icon="${ICON_CHECK}"
+      status_color="${GREEN}"
+      ;;
+    "stopped")
+      status_icon="${ICON_CROSS}"
+      status_color="${RED}"
+      ;;
+    "starting")
+      status_icon="${ICON_LOADING}"
+      status_color="${YELLOW}"
+      ;;
+    *)
+      status_icon="${ICON_WARNING}"
+      status_color="${YELLOW}"
+      ;;
   esac
 
   printf "${status_color}%s${RESET} %-20s %s" "$status_icon" "$service" "$status"

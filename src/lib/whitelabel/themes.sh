@@ -75,7 +75,7 @@ exec_sql_file() {
   fi
 
   docker exec -i "${PROJECT_NAME}_postgres" \
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$file_path" 2>/dev/null
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <"$file_path" 2>/dev/null
 }
 
 # Check if database is available
@@ -170,9 +170,9 @@ initialize_themes_system() {
 
   if [[ -z "$active_theme" ]]; then
     exec_sql "UPDATE whitelabel_themes SET is_active = true WHERE brand_id = '$brand_id' AND theme_name = 'light';"
-    printf "light" > "$ACTIVE_THEME_FILE"
+    printf "light" >"$ACTIVE_THEME_FILE"
   else
-    printf "%s" "$active_theme" > "$ACTIVE_THEME_FILE"
+    printf "%s" "$active_theme" >"$ACTIVE_THEME_FILE"
   fi
 
   printf "${GREEN}✓${NC} Theme system initialized\n"
@@ -233,7 +233,8 @@ create_light_theme_db() {
   local brand_id="$1"
 
   local colors_json
-  colors_json=$(cat <<'EOF'
+  colors_json=$(
+    cat <<'EOF'
 {
   "primary": "#0066cc",
   "primaryHover": "#0052a3",
@@ -254,10 +255,11 @@ create_light_theme_db() {
   "info": "#17a2b8"
 }
 EOF
-)
+  )
 
   local typography_json
-  typography_json=$(cat <<'EOF'
+  typography_json=$(
+    cat <<'EOF'
 {
   "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   "fontFamilyMono": "'Fira Code', 'Courier New', monospace",
@@ -266,10 +268,11 @@ EOF
   "lineHeight": "1.5"
 }
 EOF
-)
+  )
 
   local spacing_json
-  spacing_json=$(cat <<'EOF'
+  spacing_json=$(
+    cat <<'EOF'
 {
   "xs": "4px",
   "sm": "8px",
@@ -279,27 +282,29 @@ EOF
   "xxl": "48px"
 }
 EOF
-)
+  )
 
   local borders_json
-  borders_json=$(cat <<'EOF'
+  borders_json=$(
+    cat <<'EOF'
 {
   "radius": "4px",
   "radiusLg": "8px",
   "width": "1px"
 }
 EOF
-)
+  )
 
   local shadows_json
-  shadows_json=$(cat <<'EOF'
+  shadows_json=$(
+    cat <<'EOF'
 {
   "sm": "0 1px 3px rgba(0,0,0,0.12)",
   "md": "0 4px 6px rgba(0,0,0,0.1)",
   "lg": "0 10px 20px rgba(0,0,0,0.15)"
 }
 EOF
-)
+  )
 
   # Escape single quotes for SQL
   colors_json=$(echo "$colors_json" | sed "s/'/''/g")
@@ -338,7 +343,8 @@ create_dark_theme_db() {
   local brand_id="$1"
 
   local colors_json
-  colors_json=$(cat <<'EOF'
+  colors_json=$(
+    cat <<'EOF'
 {
   "primary": "#4a9eff",
   "primaryHover": "#6bb0ff",
@@ -359,7 +365,7 @@ create_dark_theme_db() {
   "info": "#58a6ff"
 }
 EOF
-)
+  )
 
   local typography_json='{"fontFamily": "-apple-system, BlinkMacSystemFont, '\''Segoe UI'\'', Roboto, sans-serif", "fontFamilyMono": "'\''Fira Code'\'', '\''Courier New'\'', monospace", "fontSize": "16px", "fontWeight": "400", "lineHeight": "1.5"}'
   local spacing_json='{"xs": "4px", "sm": "8px", "md": "16px", "lg": "24px", "xl": "32px", "xxl": "48px"}'
@@ -398,7 +404,8 @@ create_high_contrast_theme_db() {
   local brand_id="$1"
 
   local colors_json
-  colors_json=$(cat <<'EOF'
+  colors_json=$(
+    cat <<'EOF'
 {
   "primary": "#ffff00",
   "primaryHover": "#ffff66",
@@ -419,7 +426,7 @@ create_high_contrast_theme_db() {
   "info": "#00ffff"
 }
 EOF
-)
+  )
 
   local typography_json='{"fontFamily": "Arial, sans-serif", "fontFamilyMono": "'\''Courier New'\'', monospace", "fontSize": "18px", "fontWeight": "600", "lineHeight": "1.6"}'
   local spacing_json='{"xs": "6px", "sm": "12px", "md": "20px", "lg": "28px", "xl": "36px", "xxl": "52px"}'
@@ -468,7 +475,7 @@ generate_theme_css() {
   fi
 
   # Start CSS file
-  cat > "$css_file" << 'EOF'
+  cat >"$css_file" <<'EOF'
 /**
  * nself Theme CSS
  * Auto-generated from theme configuration
@@ -480,28 +487,28 @@ EOF
   # Generate CSS variables from JSON config
   if command -v jq >/dev/null 2>&1; then
     # Colors
-    jq -r '.variables.colors // .colors | to_entries[] | "  --color-\(.key): \(.value);"' "$config_file" >> "$css_file" 2>/dev/null || true
-    printf "\n" >> "$css_file"
+    jq -r '.variables.colors // .colors | to_entries[] | "  --color-\(.key): \(.value);"' "$config_file" >>"$css_file" 2>/dev/null || true
+    printf "\n" >>"$css_file"
 
     # Typography
-    jq -r '.variables.typography // .typography | to_entries[] | "  --typography-\(.key): \(.value);"' "$config_file" >> "$css_file" 2>/dev/null || true
-    printf "\n" >> "$css_file"
+    jq -r '.variables.typography // .typography | to_entries[] | "  --typography-\(.key): \(.value);"' "$config_file" >>"$css_file" 2>/dev/null || true
+    printf "\n" >>"$css_file"
 
     # Spacing
-    jq -r '.variables.spacing // .spacing | to_entries[] | "  --spacing-\(.key): \(.value);"' "$config_file" >> "$css_file" 2>/dev/null || true
-    printf "\n" >> "$css_file"
+    jq -r '.variables.spacing // .spacing | to_entries[] | "  --spacing-\(.key): \(.value);"' "$config_file" >>"$css_file" 2>/dev/null || true
+    printf "\n" >>"$css_file"
 
     # Borders
-    jq -r '.variables.borders // .borders | to_entries[] | "  --border-\(.key): \(.value);"' "$config_file" >> "$css_file" 2>/dev/null || true
-    printf "\n" >> "$css_file"
+    jq -r '.variables.borders // .borders | to_entries[] | "  --border-\(.key): \(.value);"' "$config_file" >>"$css_file" 2>/dev/null || true
+    printf "\n" >>"$css_file"
 
     # Shadows
-    jq -r '.variables.shadows // .shadows | to_entries[] | "  --shadow-\(.key): \(.value);"' "$config_file" >> "$css_file" 2>/dev/null || true
-    printf "\n" >> "$css_file"
+    jq -r '.variables.shadows // .shadows | to_entries[] | "  --shadow-\(.key): \(.value);"' "$config_file" >>"$css_file" 2>/dev/null || true
+    printf "\n" >>"$css_file"
   fi
 
   # Close CSS
-  cat >> "$css_file" << 'EOF'
+  cat >>"$css_file" <<'EOF'
 }
 
 /* Base styles */
@@ -739,7 +746,7 @@ activate_theme() {
   exec_sql "UPDATE whitelabel_brands SET active_theme_id = '$theme_id' WHERE id = '$brand_id';"
 
   # Update local cache
-  printf "%s" "$theme_name" > "$ACTIVE_THEME_FILE"
+  printf "%s" "$theme_name" >"$ACTIVE_THEME_FILE"
 
   printf "${GREEN}✓${NC} Theme activated: %s\n" "$theme_name"
 
@@ -772,7 +779,7 @@ preview_theme() {
   printf "%s\n\n" "$(printf '%.s=' {1..60})"
 
   # Parse theme data
-  IFS='|' read -r display_name description mode is_active <<< "$theme_data"
+  IFS='|' read -r display_name description mode is_active <<<"$theme_data"
 
   printf "${BLUE}Name:${NC} %s\n" "$display_name"
   printf "${BLUE}Description:${NC} %s\n" "$description"
@@ -865,9 +872,9 @@ export_theme_to_file() {
 
   # Pretty print if jq available
   if command -v jq >/dev/null 2>&1; then
-    echo "$theme_json" | jq '.' > "$output_file"
+    echo "$theme_json" | jq '.' >"$output_file"
   else
-    echo "$theme_json" > "$output_file"
+    echo "$theme_json" >"$output_file"
   fi
 
   return 0

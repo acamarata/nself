@@ -31,28 +31,28 @@ cmd_restart() {
   # Parse options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-    --all | -a)
-      force_all=true
-      smart_mode=false
-      shift
-      ;;
-    --smart | -s)
-      smart_mode=true
-      shift
-      ;;
-    --verbose | -v)
-      verbose=true
-      shift
-      ;;
-    --help | -h)
-      show_help
-      return 0
-      ;;
-    *)
-      # Assume it's a service name
-      services_to_restart="$services_to_restart $1"
-      shift
-      ;;
+      --all | -a)
+        force_all=true
+        smart_mode=false
+        shift
+        ;;
+      --smart | -s)
+        smart_mode=true
+        shift
+        ;;
+      --verbose | -v)
+        verbose=true
+        shift
+        ;;
+      --help | -h)
+        show_help
+        return 0
+        ;;
+      *)
+        # Assume it's a service name
+        services_to_restart="$services_to_restart $1"
+        shift
+        ;;
     esac
   done
 
@@ -121,7 +121,7 @@ cmd_restart() {
         local build_output=$(mktemp)
         local nself_bin="${SCRIPT_DIR}/../bin/nself"
         if [[ ! -x "$nself_bin" ]]; then
-          nself_bin="nself"  # Fallback to PATH
+          nself_bin="nself" # Fallback to PATH
         fi
         if safe_timeout 30 "$nself_bin" build >"$build_output" 2>&1; then
           printf "\r${COLOR_GREEN}✓${COLOR_RESET} Configuration built                     \n"
@@ -253,7 +253,7 @@ cmd_restart() {
         # Verify health after restart
         echo
         printf "${COLOR_BLUE}⠋${COLOR_RESET} Verifying service health..."
-        sleep 5  # Give services time to initialize
+        sleep 5 # Give services time to initialize
 
         local healthy_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "healthy" || echo "0")
         local running_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')

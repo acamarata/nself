@@ -177,13 +177,13 @@ review_configuration_simple() {
   eval "local config_items=(\"\${${config_array_name}[@]}\")"
   for item in "${config_items[@]}"; do
     case "$item" in
-      PROJECT_NAME=*|BASE_DOMAIN=*|ENV=*)
+      PROJECT_NAME=* | BASE_DOMAIN=* | ENV=*)
         echo "  $item"
         ;;
       *_ENABLED=true)
         echo "  $item"
         ;;
-      CS_*|FRONTEND_APP_*_NAME=*)
+      CS_* | FRONTEND_APP_*_NAME=*)
         echo "  $item"
         ;;
     esac
@@ -246,7 +246,7 @@ run_simple_wizard() {
       echo "# POSTGRES_PASSWORD=custom-password"
       echo "# HASURA_GRAPHQL_ADMIN_SECRET=custom-secret"
       echo "# REDIS_PASSWORD=custom-redis-password"
-    } > "$output_file"
+    } >"$output_file"
 
     echo "✅ Configuration saved to $output_file"
     echo ""

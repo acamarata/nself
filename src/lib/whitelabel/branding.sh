@@ -52,233 +52,233 @@ readonly SECURE_DIR_PERMS="0755"
 
 # Validate brand name (prevent injection attacks)
 validate_brand_name() {
-    local brand_name="$1"
+  local brand_name="$1"
 
-    if [[ -z "$brand_name" ]]; then
-        printf "${RED}Error: Brand name cannot be empty${NC}\n" >&2
-        return 1
-    fi
+  if [[ -z "$brand_name" ]]; then
+    printf "${RED}Error: Brand name cannot be empty${NC}\n" >&2
+    return 1
+  fi
 
-    # Max length 255 characters
-    if [[ ${#brand_name} -gt 255 ]]; then
-        printf "${RED}Error: Brand name too long (${#brand_name}). Maximum 255 characters${NC}\n" >&2
-        return 1
-    fi
+  # Max length 255 characters
+  if [[ ${#brand_name} -gt 255 ]]; then
+    printf "${RED}Error: Brand name too long (${#brand_name}). Maximum 255 characters${NC}\n" >&2
+    return 1
+  fi
 
-    # Allow alphanumeric, space, hyphen, underscore
-    if ! [[ "$brand_name" =~ ^[a-zA-Z0-9[:space:]_-]+$ ]]; then
-        printf "${RED}Error: Brand name contains invalid characters. Only alphanumeric, space, hyphen, and underscore allowed${NC}\n" >&2
-        return 1
-    fi
+  # Allow alphanumeric, space, hyphen, underscore
+  if ! [[ "$brand_name" =~ ^[a-zA-Z0-9[:space:]_-]+$ ]]; then
+    printf "${RED}Error: Brand name contains invalid characters. Only alphanumeric, space, hyphen, and underscore allowed${NC}\n" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate tenant ID format
 validate_tenant_id() {
-    local tenant_id="$1"
+  local tenant_id="$1"
 
-    if [[ -z "$tenant_id" ]]; then
-        printf "${RED}Error: Tenant ID cannot be empty${NC}\n" >&2
-        return 1
-    fi
+  if [[ -z "$tenant_id" ]]; then
+    printf "${RED}Error: Tenant ID cannot be empty${NC}\n" >&2
+    return 1
+  fi
 
-    # Max length 64 characters
-    if [[ ${#tenant_id} -gt 64 ]]; then
-        printf "${RED}Error: Tenant ID too long. Maximum 64 characters${NC}\n" >&2
-        return 1
-    fi
+  # Max length 64 characters
+  if [[ ${#tenant_id} -gt 64 ]]; then
+    printf "${RED}Error: Tenant ID too long. Maximum 64 characters${NC}\n" >&2
+    return 1
+  fi
 
-    # Only alphanumeric, hyphen, underscore
-    if ! [[ "$tenant_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-        printf "${RED}Error: Tenant ID contains invalid characters. Only alphanumeric, hyphen, and underscore allowed${NC}\n" >&2
-        return 1
-    fi
+  # Only alphanumeric, hyphen, underscore
+  if ! [[ "$tenant_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    printf "${RED}Error: Tenant ID contains invalid characters. Only alphanumeric, hyphen, and underscore allowed${NC}\n" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate logo type
 validate_logo_type() {
-    local logo_type="$1"
+  local logo_type="$1"
 
-    case "$logo_type" in
-        main|icon|email|favicon)
-            return 0
-            ;;
-        *)
-            printf "${RED}Error: Invalid logo type: $logo_type. Must be main, icon, email, or favicon${NC}\n" >&2
-            return 1
-            ;;
-    esac
+  case "$logo_type" in
+    main | icon | email | favicon)
+      return 0
+      ;;
+    *)
+      printf "${RED}Error: Invalid logo type: $logo_type. Must be main, icon, email, or favicon${NC}\n" >&2
+      return 1
+      ;;
+  esac
 }
 
 # Validate file size (returns 1 if exceeds max)
 validate_file_size() {
-    local file_path="$1"
-    local max_size_mb="$2"
+  local file_path="$1"
+  local max_size_mb="$2"
 
-    if [[ ! -f "$file_path" ]]; then
-        printf "${RED}Error: File does not exist: $file_path${NC}\n" >&2
-        return 1
-    fi
+  if [[ ! -f "$file_path" ]]; then
+    printf "${RED}Error: File does not exist: $file_path${NC}\n" >&2
+    return 1
+  fi
 
-    local file_size_mb
-    file_size_mb=$(branding::get_file_size_mb "$file_path")
+  local file_size_mb
+  file_size_mb=$(branding::get_file_size_mb "$file_path")
 
-    if (( $(printf "%.0f" "$file_size_mb") > max_size_mb )); then
-        printf "${RED}Error: File too large (%.2f MB). Maximum: %d MB${NC}\n" "$file_size_mb" "$max_size_mb" >&2
-        return 1
-    fi
+  if (($(printf "%.0f" "$file_size_mb") > max_size_mb)); then
+    printf "${RED}Error: File too large (%.2f MB). Maximum: %d MB${NC}\n" "$file_size_mb" "$max_size_mb" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate file extension against whitelist
 validate_file_extension() {
-    local file_path="$1"
-    local allowed_extensions="$2"
+  local file_path="$1"
+  local allowed_extensions="$2"
 
-    local extension="${file_path##*.}"
-    extension=$(printf "%s" "$extension" | tr '[:upper:]' '[:lower:]')
+  local extension="${file_path##*.}"
+  extension=$(printf "%s" "$extension" | tr '[:upper:]' '[:lower:]')
 
-    for allowed in $allowed_extensions; do
-        if [[ "$extension" == "$allowed" ]]; then
-            return 0
-        fi
-    done
+  for allowed in $allowed_extensions; do
+    if [[ "$extension" == "$allowed" ]]; then
+      return 0
+    fi
+  done
 
-    printf "${RED}Error: Unsupported file extension '.%s'. Allowed: %s${NC}\n" "$extension" "$allowed_extensions" >&2
-    return 1
+  printf "${RED}Error: Unsupported file extension '.%s'. Allowed: %s${NC}\n" "$extension" "$allowed_extensions" >&2
+  return 1
 }
 
 # Validate file by checking magic bytes (binary file type checking)
 validate_file_magic_bytes() {
-    local file_path="$1"
-    local expected_type="$2"
+  local file_path="$1"
+  local expected_type="$2"
 
-    if ! command -v file >/dev/null 2>&1; then
-        return 0  # Skip validation if 'file' command not available
-    fi
+  if ! command -v file >/dev/null 2>&1; then
+    return 0 # Skip validation if 'file' command not available
+  fi
 
-    local mime_type
-    mime_type=$(file -b --mime-type "$file_path")
+  local mime_type
+  mime_type=$(file -b --mime-type "$file_path")
 
-    case "$expected_type" in
-        image/png)
-            [[ "$mime_type" == "image/png" ]] && return 0
-            ;;
-        image/jpeg)
-            [[ "$mime_type" == "image/jpeg" ]] && return 0
-            ;;
-        image/svg+xml|text/xml|text/plain)
-            [[ "$mime_type" =~ (image/svg\+xml|text/xml|text/plain) ]] && return 0
-            ;;
-        image/webp)
-            [[ "$mime_type" == "image/webp" ]] && return 0
-            ;;
-        *)
-            return 0  # Unknown type, skip validation
-            ;;
-    esac
+  case "$expected_type" in
+    image/png)
+      [[ "$mime_type" == "image/png" ]] && return 0
+      ;;
+    image/jpeg)
+      [[ "$mime_type" == "image/jpeg" ]] && return 0
+      ;;
+    image/svg+xml | text/xml | text/plain)
+      [[ "$mime_type" =~ (image/svg\+xml|text/xml|text/plain) ]] && return 0
+      ;;
+    image/webp)
+      [[ "$mime_type" == "image/webp" ]] && return 0
+      ;;
+    *)
+      return 0 # Unknown type, skip validation
+      ;;
+  esac
 
-    printf "${RED}Error: File does not match expected type. Expected: %s, Got: %s${NC}\n" "$expected_type" "$mime_type" >&2
-    return 1
+  printf "${RED}Error: File does not match expected type. Expected: %s, Got: %s${NC}\n" "$expected_type" "$mime_type" >&2
+  return 1
 }
 
 # Validate string length constraints
 validate_string_length() {
-    local value="$1"
-    local min_length="${2:-0}"
-    local max_length="${3:-1000}"
-    local field_name="${4:-Value}"
+  local value="$1"
+  local min_length="${2:-0}"
+  local max_length="${3:-1000}"
+  local field_name="${4:-Value}"
 
-    local actual_length=${#value}
+  local actual_length=${#value}
 
-    if [[ $actual_length -lt $min_length ]]; then
-        printf "${RED}Error: %s too short (%d chars). Minimum: %d${NC}\n" "$field_name" "$actual_length" "$min_length" >&2
-        return 1
-    fi
+  if [[ $actual_length -lt $min_length ]]; then
+    printf "${RED}Error: %s too short (%d chars). Minimum: %d${NC}\n" "$field_name" "$actual_length" "$min_length" >&2
+    return 1
+  fi
 
-    if [[ $actual_length -gt $max_length ]]; then
-        printf "${RED}Error: %s too long (%d chars). Maximum: %d${NC}\n" "$field_name" "$actual_length" "$max_length" >&2
-        return 1
-    fi
+  if [[ $actual_length -gt $max_length ]]; then
+    printf "${RED}Error: %s too long (%d chars). Maximum: %d${NC}\n" "$field_name" "$actual_length" "$max_length" >&2
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Validate CSS file for security issues before upload
 validate_css_security() {
-    local css_path="$1"
+  local css_path="$1"
 
-    if [[ ! -f "$css_path" ]]; then
-        printf "${RED}Error: CSS file not found: $css_path${NC}\n" >&2
-        return 1
-    fi
+  if [[ ! -f "$css_path" ]]; then
+    printf "${RED}Error: CSS file not found: $css_path${NC}\n" >&2
+    return 1
+  fi
 
-    local issues=0
+  local issues=0
 
-    # Check for JavaScript in CSS (XSS vector)
-    if grep -qi 'javascript:' "$css_path" 2>/dev/null; then
-        printf "${RED}Error: CSS contains JavaScript references (XSS vector)${NC}\n" >&2
-        ((issues++))
-    fi
+  # Check for JavaScript in CSS (XSS vector)
+  if grep -qi 'javascript:' "$css_path" 2>/dev/null; then
+    printf "${RED}Error: CSS contains JavaScript references (XSS vector)${NC}\n" >&2
+    ((issues++))
+  fi
 
-    # Check for expression() (IE XSS vector)
-    if grep -qi 'expression(' "$css_path" 2>/dev/null; then
-        printf "${RED}Error: CSS contains expression() - potential XSS vulnerability${NC}\n" >&2
-        ((issues++))
-    fi
+  # Check for expression() (IE XSS vector)
+  if grep -qi 'expression(' "$css_path" 2>/dev/null; then
+    printf "${RED}Error: CSS contains expression() - potential XSS vulnerability${NC}\n" >&2
+    ((issues++))
+  fi
 
-    # Check for behavior: (IE XSS vector)
-    if grep -qi 'behavior:' "$css_path" 2>/dev/null; then
-        printf "${RED}Error: CSS contains behavior: - potential XSS vulnerability${NC}\n" >&2
-        ((issues++))
-    fi
+  # Check for behavior: (IE XSS vector)
+  if grep -qi 'behavior:' "$css_path" 2>/dev/null; then
+    printf "${RED}Error: CSS contains behavior: - potential XSS vulnerability${NC}\n" >&2
+    ((issues++))
+  fi
 
-    # Warn about external URLs (potential data exfiltration)
-    if grep -q 'url([^)]*https*://' "$css_path" 2>/dev/null; then
-        printf "${YELLOW}Warning: CSS contains external URLs - verify they are trusted${NC}\n"
-    fi
+  # Warn about external URLs (potential data exfiltration)
+  if grep -q 'url([^)]*https*://' "$css_path" 2>/dev/null; then
+    printf "${YELLOW}Warning: CSS contains external URLs - verify they are trusted${NC}\n"
+  fi
 
-    if [[ $issues -gt 0 ]]; then
-        return 1
-    fi
+  if [[ $issues -gt 0 ]]; then
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Escape HTML special characters in template variables
 escape_html() {
-    local text="$1"
+  local text="$1"
 
-    # Replace HTML special characters
-    text="${text//&/&amp;}"
-    text="${text//</&lt;}"
-    text="${text//>/&gt;}"
-    text="${text//\"/&quot;}"
-    text="${text//\'/&#39;}"
+  # Replace HTML special characters
+  text="${text//&/&amp;}"
+  text="${text//</&lt;}"
+  text="${text//>/&gt;}"
+  text="${text//\"/&quot;}"
+  text="${text//\'/&#39;}"
 
-    printf "%s" "$text"
+  printf "%s" "$text"
 }
 
 # Escape JSON string values
 escape_json_string() {
-    local text="$1"
+  local text="$1"
 
-    # Escape backslashes first
-    text="${text//\\/\\\\}"
-    # Escape quotes
-    text="${text//\"/\\\"}"
-    # Escape newlines
-    text="${text//$'\n'/\\n}"
-    # Escape carriage returns
-    text="${text//$'\r'/\\r}"
-    # Escape tabs
-    text="${text//$'\t'/\\t}"
+  # Escape backslashes first
+  text="${text//\\/\\\\}"
+  # Escape quotes
+  text="${text//\"/\\\"}"
+  # Escape newlines
+  text="${text//$'\n'/\\n}"
+  # Escape carriage returns
+  text="${text//$'\r'/\\r}"
+  # Escape tabs
+  text="${text//$'\t'/\\t}"
 
-    printf "%s" "$text"
+  printf "%s" "$text"
 }
 
 # ============================================================================
@@ -311,7 +311,7 @@ initialize_branding_system() {
   fi
 
   # Create .gitignore for sensitive assets
-  cat > "${BRANDING_DIR}/.gitignore" << 'EOF'
+  cat >"${BRANDING_DIR}/.gitignore" <<'EOF'
 # Uploaded logos and assets
 logos/*
 assets/*
@@ -352,7 +352,7 @@ branding::create_default_config() {
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  cat > "$config_file" << EOF
+  cat >"$config_file" <<EOF
 {
   "version": "1.0.0",
   "tenantId": "${tenant_id}",
@@ -464,17 +464,17 @@ create_brand() {
 
     if [[ -n "$tagline" ]] && [[ -n "$description" ]]; then
       jq --arg name "$brand_name" --arg tenant "$tenant_id" \
-         --arg tagline "$tagline" --arg description "$description" \
-         --arg timestamp "$timestamp" \
-         "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+        --arg tagline "$tagline" --arg description "$description" \
+        --arg timestamp "$timestamp" \
+        "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
     elif [[ -n "$tagline" ]]; then
       jq --arg name "$brand_name" --arg tenant "$tenant_id" \
-         --arg tagline "$tagline" --arg timestamp "$timestamp" \
-         "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+        --arg tagline "$tagline" --arg timestamp "$timestamp" \
+        "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
     else
       jq --arg name "$brand_name" --arg tenant "$tenant_id" \
-         --arg timestamp "$timestamp" \
-         "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+        --arg timestamp "$timestamp" \
+        "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
     fi
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
@@ -551,8 +551,8 @@ update_brand() {
     [[ -n "$description" ]] && jq_filter="$jq_filter | .brand.description = \$description"
 
     jq --arg name "$name" --arg tagline "$tagline" \
-       --arg description "$description" --arg timestamp "$timestamp" \
-       "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      --arg description "$description" --arg timestamp "$timestamp" \
+      "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -664,7 +664,7 @@ set_brand_colors() {
     [[ -n "$background" ]] && jq_filter="$jq_filter | .colors.background = \"$background\""
     [[ -n "$text" ]] && jq_filter="$jq_filter | .colors.text = \"$text\""
 
-    jq "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+    jq "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
   fi
 
   # Generate CSS variables file
@@ -781,8 +781,8 @@ set_brand_fonts() {
     [[ -n "$code" ]] && jq_filter="$jq_filter | .typography.fonts.code = \$code"
 
     jq --arg primary "$primary" --arg secondary "$secondary" \
-       --arg code "$code" --arg timestamp "$timestamp" \
-       "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      --arg code "$code" --arg timestamp "$timestamp" \
+      "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -869,9 +869,9 @@ set_typography() {
     [[ -n "$line_height" ]] && jq_filter="$jq_filter | .typography.lineHeights.normal = \$lineHeight"
 
     jq --arg baseSize "$base_size" --arg h1Size "$h1_size" --arg h2Size "$h2_size" \
-       --arg normalWeight "$normal_weight" --arg boldWeight "$bold_weight" \
-       --arg lineHeight "$line_height" --arg timestamp "$timestamp" \
-       "$jq_filter" "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      --arg normalWeight "$normal_weight" --arg boldWeight "$bold_weight" \
+      --arg lineHeight "$line_height" --arg timestamp "$timestamp" \
+      "$jq_filter" "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -936,7 +936,7 @@ upload_font() {
 
     jq --arg name "$font_name" --arg path "$font_filename" --arg timestamp "$update_timestamp" \
       '.customFonts += [{"name": $name, "path": $path}] | .updatedAt = $timestamp' \
-      "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -983,7 +983,7 @@ branding::validate_font_file() {
   local file_size_mb
   file_size_mb=$(branding::get_file_size_mb "$file_path")
 
-  if (( $(printf "%.0f" "$file_size_mb") > MAX_FONT_SIZE_MB )); then
+  if (($(printf "%.0f" "$file_size_mb") > MAX_FONT_SIZE_MB)); then
     printf "${RED}Error: Font file too large (%.2f MB). Maximum: %d MB${NC}\n" "$file_size_mb" "$MAX_FONT_SIZE_MB" >&2
     return 1
   fi
@@ -1026,7 +1026,7 @@ upload_brand_logo() {
     png)
       validate_file_magic_bytes "$logo_path" "image/png" || return 1
       ;;
-    jpg|jpeg)
+    jpg | jpeg)
       validate_file_magic_bytes "$logo_path" "image/jpeg" || return 1
       ;;
     svg)
@@ -1073,7 +1073,7 @@ upload_brand_logo() {
 
     jq --arg type "$logo_type" --arg path "$logo_filename" --arg timestamp "$update_timestamp" \
       '.logos[$type] = $path | .updatedAt = $timestamp' \
-      "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -1122,7 +1122,7 @@ branding::validate_logo_file() {
   local file_size_mb
   file_size_mb=$(branding::get_file_size_mb "$file_path")
 
-  if (( $(printf "%.0f" "$file_size_mb") > MAX_LOGO_SIZE_MB )); then
+  if (($(printf "%.0f" "$file_size_mb") > MAX_LOGO_SIZE_MB)); then
     printf "${RED}Error: Logo file too large (%.2f MB). Maximum: %d MB${NC}\n" "$file_size_mb" "$MAX_LOGO_SIZE_MB" >&2
     return 1
   fi
@@ -1139,7 +1139,7 @@ branding::validate_logo_file() {
           return 1
         fi
         ;;
-      jpg|jpeg)
+      jpg | jpeg)
         if [[ "$file_type" != "image/jpeg" ]]; then
           printf "${RED}Error: File is not a valid JPEG image${NC}\n" >&2
           return 1
@@ -1258,7 +1258,7 @@ remove_logo() {
     local temp_file
     temp_file=$(mktemp)
     jq --arg type "$logo_type" '.logos[$type] = null | .updatedAt = now | todate' \
-      "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
   fi
 
   printf "${GREEN}✓${NC} Logo removed successfully\n"
@@ -1323,7 +1323,7 @@ set_custom_css() {
 
     jq --arg path "$css_filename" --arg timestamp "$update_timestamp" \
       '.customCSS = $path | .updatedAt = $timestamp' \
-      "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -1362,7 +1362,7 @@ branding::validate_css_file() {
   local file_size_mb
   file_size_mb=$(branding::get_file_size_mb "$file_path")
 
-  if (( $(printf "%.0f" "$file_size_mb") > MAX_CSS_SIZE_MB )); then
+  if (($(printf "%.0f" "$file_size_mb") > MAX_CSS_SIZE_MB)); then
     printf "${RED}Error: CSS file too large (%.2f MB). Maximum: %d MB${NC}\n" "$file_size_mb" "$MAX_CSS_SIZE_MB" >&2
     return 1
   fi
@@ -1448,7 +1448,7 @@ remove_custom_css() {
 
     jq --arg timestamp "$timestamp" \
       '.customCSS = null | .updatedAt = $timestamp' \
-      "$config_file" > "$temp_file" && mv "$temp_file" "$config_file"
+      "$config_file" >"$temp_file" && mv "$temp_file" "$config_file"
 
     chmod "$SECURE_FILE_PERMS" "$config_file"
   fi
@@ -1493,7 +1493,7 @@ branding::cleanup_old_versions() {
 
   if [[ $version_count -gt 10 ]]; then
     # Remove oldest versions, keep 10
-    find "$VERSIONS_DIR" -name "config-*.json" -type f 2>/dev/null | \
+    find "$VERSIONS_DIR" -name "config-*.json" -type f 2>/dev/null |
       sort | head -n -10 | xargs rm -f 2>/dev/null || true
   fi
 }
@@ -1534,7 +1534,7 @@ branding::list_versions() {
       "$count" "$year" "$month" "$day" "$hour" "$minute" "$second"
 
     count=$((count + 1))
-  done <<< "$versions"
+  done <<<"$versions"
 }
 
 branding::restore_version() {
@@ -1586,7 +1586,7 @@ generate_css_variables() {
   fi
 
   # Start CSS file with header
-  cat > "$output_file" << 'EOF'
+  cat >"$output_file" <<'EOF'
 /**
  * nself White-Label CSS Variables
  * Auto-generated from branding configuration
@@ -1603,10 +1603,10 @@ EOF
   if command -v jq >/dev/null 2>&1; then
     local colors
     colors=$(jq -r '.colors | to_entries[] | "  --color-\(.key): \(.value);"' "$config_file")
-    printf "%s\n" "$colors" >> "$output_file"
+    printf "%s\n" "$colors" >>"$output_file"
 
     # Add fonts section
-    cat >> "$output_file" << 'EOF'
+    cat >>"$output_file" <<'EOF'
 
   /* ========================================
    * Typography - Fonts
@@ -1615,10 +1615,10 @@ EOF
 
     local fonts
     fonts=$(jq -r '.typography.fonts | to_entries[] | "  --font-\(.key): \(.value);"' "$config_file")
-    printf "%s\n" "$fonts" >> "$output_file"
+    printf "%s\n" "$fonts" >>"$output_file"
 
     # Add font sizes section
-    cat >> "$output_file" << 'EOF'
+    cat >>"$output_file" <<'EOF'
 
   /* ========================================
    * Typography - Sizes
@@ -1627,10 +1627,10 @@ EOF
 
     local sizes
     sizes=$(jq -r '.typography.sizes | to_entries[] | "  --font-size-\(.key): \(.value);"' "$config_file")
-    printf "%s\n" "$sizes" >> "$output_file"
+    printf "%s\n" "$sizes" >>"$output_file"
 
     # Add font weights section
-    cat >> "$output_file" << 'EOF'
+    cat >>"$output_file" <<'EOF'
 
   /* ========================================
    * Typography - Weights
@@ -1639,10 +1639,10 @@ EOF
 
     local weights
     weights=$(jq -r '.typography.weights | to_entries[] | "  --font-weight-\(.key): \(.value);"' "$config_file")
-    printf "%s\n" "$weights" >> "$output_file"
+    printf "%s\n" "$weights" >>"$output_file"
 
     # Add line heights section
-    cat >> "$output_file" << 'EOF'
+    cat >>"$output_file" <<'EOF'
 
   /* ========================================
    * Typography - Line Heights
@@ -1651,11 +1651,11 @@ EOF
 
     local line_heights
     line_heights=$(jq -r '.typography.lineHeights | to_entries[] | "  --line-height-\(.key): \(.value);"' "$config_file")
-    printf "%s\n" "$line_heights" >> "$output_file"
+    printf "%s\n" "$line_heights" >>"$output_file"
   fi
 
   # Close CSS file
-  printf "}\n" >> "$output_file"
+  printf "}\n" >>"$output_file"
 
   # Set secure permissions
   chmod "$SECURE_FILE_PERMS" "$output_file"
@@ -1760,7 +1760,7 @@ list_tenants() {
         tenant_name=$(basename "$tenant_dir")
         printf "${GREEN}%d.${NC} %s\n" "$count" "$tenant_name"
         count=$((count + 1))
-      done <<< "$tenant_dirs"
+      done <<<"$tenant_dirs"
     fi
   fi
 
@@ -1849,7 +1849,7 @@ clean_unused_assets() {
             is_referenced=1
             break
           fi
-        done <<< "$referenced_logos"
+        done <<<"$referenced_logos"
 
         # Remove if not referenced and not a symlink
         if [[ $is_referenced -eq 0 ]] && [[ ! -L "$logo_file" ]]; then
@@ -1918,7 +1918,7 @@ export_whitelabel_config() {
     json)
       cat "$config_file"
       ;;
-    yaml|yml)
+    yaml | yml)
       if command -v yq >/dev/null 2>&1; then
         yq eval -P "$config_file"
       elif command -v python3 >/dev/null 2>&1; then
@@ -2037,7 +2037,7 @@ validate_branding_config() {
         printf "${RED}✗${NC} Invalid color '%s': %s\n" "$color_name" "$color_value"
         ((errors++))
       fi
-    done <<< "$colors"
+    done <<<"$colors"
   fi
 
   # Check file references exist
@@ -2054,7 +2054,7 @@ validate_branding_config() {
       else
         printf "${YELLOW}⚠${NC}  Logo missing: %s\n" "$logo_file"
       fi
-    done <<< "$logo_files"
+    done <<<"$logo_files"
   fi
 
   printf "\n"

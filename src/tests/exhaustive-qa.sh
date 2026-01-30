@@ -209,7 +209,7 @@ test_init_command() {
 
   # Scenario 24: Init with --force
   scenario "nself init --force overwrites existing"
-  echo "CUSTOM=test" >> .env
+  echo "CUSTOM=test" >>.env
   "$NSELF_BIN" init --force --quiet 2>/dev/null || true
   if ! grep -q "CUSTOM=test" .env 2>/dev/null; then pass; else fail "Force didn't overwrite"; fi
 
@@ -238,7 +238,7 @@ test_init_command() {
   # Scenario 28: Init preserves existing .gitignore entries
   scenario "Init preserves existing .gitignore entries"
   mkdir -p "$test_dir/preserve" && cd "$test_dir/preserve"
-  echo "*.log" > .gitignore
+  echo "*.log" >.gitignore
   "$NSELF_BIN" init --quiet 2>/dev/null || true
   if grep -q "*.log" .gitignore 2>/dev/null; then pass; else fail "Lost existing entries"; fi
 
@@ -308,7 +308,7 @@ test_build_command() {
   scenario "Build with REDIS_ENABLED=true includes redis"
   mkdir -p "$test_dir/redis" && cd "$test_dir/redis"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "REDIS_ENABLED=true" >> .env
+  echo "REDIS_ENABLED=true" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -q "redis:" docker-compose.yml 2>/dev/null; then pass; else fail "No redis service"; fi
 
@@ -316,7 +316,7 @@ test_build_command() {
   scenario "Build with MINIO_ENABLED=true includes minio"
   mkdir -p "$test_dir/minio" && cd "$test_dir/minio"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "MINIO_ENABLED=true" >> .env
+  echo "MINIO_ENABLED=true" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -q "minio:" docker-compose.yml 2>/dev/null; then pass; else fail "No minio service"; fi
 
@@ -324,7 +324,7 @@ test_build_command() {
   scenario "Build with MEILISEARCH_ENABLED=true includes meilisearch"
   mkdir -p "$test_dir/meili" && cd "$test_dir/meili"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "MEILISEARCH_ENABLED=true" >> .env
+  echo "MEILISEARCH_ENABLED=true" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -q "meilisearch:" docker-compose.yml 2>/dev/null; then pass; else fail "No meilisearch service"; fi
 
@@ -332,7 +332,7 @@ test_build_command() {
   scenario "Build with MONITORING_ENABLED=true includes monitoring"
   mkdir -p "$test_dir/monitoring" && cd "$test_dir/monitoring"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "MONITORING_ENABLED=true" >> .env
+  echo "MONITORING_ENABLED=true" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -qE "prometheus:|grafana:" docker-compose.yml 2>/dev/null; then pass; else fail "No monitoring"; fi
 
@@ -360,7 +360,7 @@ test_build_command() {
   scenario "Build with CS_1 custom service"
   mkdir -p "$test_dir/custom" && cd "$test_dir/custom"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "CS_1=myapi:express-js:8001" >> .env
+  echo "CS_1=myapi:express-js:8001" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -qE "myapi:|express" docker-compose.yml 2>/dev/null; then pass; else fail "No custom service"; fi
 
@@ -368,7 +368,7 @@ test_build_command() {
   scenario "Build with NSELF_ADMIN_ENABLED includes admin"
   mkdir -p "$test_dir/admin" && cd "$test_dir/admin"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "NSELF_ADMIN_ENABLED=true" >> .env
+  echo "NSELF_ADMIN_ENABLED=true" >>.env
   "$NSELF_BIN" build --quiet 2>/dev/null || true
   if grep -qE "admin:|nself-admin:" docker-compose.yml 2>/dev/null; then pass; else fail "No admin service"; fi
 
@@ -719,7 +719,7 @@ test_error_handling() {
   scenario "Double init without force preserves files"
   mkdir -p "$test_dir/double" && cd "$test_dir/double"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo "CUSTOM=value" >> .env
+  echo "CUSTOM=value" >>.env
   "$NSELF_BIN" init --quiet 2>/dev/null || true
   # Should either error or preserve
   if grep -q "CUSTOM=value" .env 2>/dev/null || "$NSELF_BIN" init 2>&1 | grep -qiE "exist|force"; then pass; else fail "Overwrote without force"; fi
@@ -734,7 +734,7 @@ test_error_handling() {
   # Scenario 107: Missing required ENV vars
   scenario "Build with missing vars shows warning"
   mkdir -p "$test_dir/missing" && cd "$test_dir/missing"
-  echo "PROJECT_NAME=test" > .env
+  echo "PROJECT_NAME=test" >.env
   # Missing many vars
   local output
   output=$("$NSELF_BIN" build 2>&1) || true
@@ -744,7 +744,7 @@ test_error_handling() {
   # Scenario 108: Very long project name
   scenario "Init handles very long project name"
   mkdir -p "$test_dir/longname" && cd "$test_dir/longname"
-  cat > .env << 'EOF'
+  cat >.env <<'EOF'
 PROJECT_NAME=this-is-a-very-long-project-name-that-exceeds-normal-limits-and-should-be-handled-gracefully
 EOF
   "$NSELF_BIN" build 2>/dev/null || true
@@ -754,14 +754,14 @@ EOF
   scenario "Build handles special characters in .env"
   mkdir -p "$test_dir/special" && cd "$test_dir/special"
   "$NSELF_BIN" init --quiet 2>/dev/null || true
-  echo 'SPECIAL_VAR="value with spaces & special chars!"' >> .env
+  echo 'SPECIAL_VAR="value with spaces & special chars!"' >>.env
   "$NSELF_BIN" build 2>/dev/null || true
   if [[ -f docker-compose.yml ]]; then pass; else fail "Failed with special chars"; fi
 
   # Scenario 110: Unicode in project name
   scenario "Init handles unicode characters"
   mkdir -p "$test_dir/unicode" && cd "$test_dir/unicode"
-  cat > .env << 'EOF'
+  cat >.env <<'EOF'
 PROJECT_NAME=test-项目
 BASE_DOMAIN=localhost
 ENV=dev
@@ -800,7 +800,7 @@ EOF
   # Scenario 114: Malformed .env
   scenario "Build handles malformed .env"
   mkdir -p "$test_dir/malformed" && cd "$test_dir/malformed"
-  echo "THIS IS NOT VALID ENV FORMAT" > .env
+  echo "THIS IS NOT VALID ENV FORMAT" >.env
   local output
   output=$("$NSELF_BIN" build 2>&1) || true
   # Should either handle gracefully or show clear error
@@ -971,16 +971,16 @@ main() {
   setup_test_env
 
   # Run all test sections
-  test_binary_and_help      # 1-15
-  test_init_command         # 16-30
-  test_build_command        # 31-50
-  test_env_command          # 51-65
-  test_deploy_command       # 66-75
-  test_prod_command         # 76-85
-  test_staging_command      # 86-90
-  test_service_management   # 91-100
-  test_error_handling       # 101-115
-  test_cross_platform       # 116-125
+  test_binary_and_help    # 1-15
+  test_init_command       # 16-30
+  test_build_command      # 31-50
+  test_env_command        # 51-65
+  test_deploy_command     # 66-75
+  test_prod_command       # 76-85
+  test_staging_command    # 86-90
+  test_service_management # 91-100
+  test_error_handling     # 101-115
+  test_cross_platform     # 116-125
 
   # Cleanup
   cleanup_test_env

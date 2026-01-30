@@ -23,7 +23,7 @@ ssl::init() {
   mkdir -p "$CERTBOT_WEBROOT/.well-known/acme-challenge"
 
   # Create placeholder for ACME challenges
-  printf "Ready for ACME challenges\n" > "$CERTBOT_WEBROOT/.well-known/acme-challenge/.placeholder"
+  printf "Ready for ACME challenges\n" >"$CERTBOT_WEBROOT/.well-known/acme-challenge/.placeholder"
 
   log_success "SSL directory initialized: $SSL_DIR"
 }
@@ -257,7 +257,7 @@ ssl::status() {
     now_epoch=$(date +%s)
 
     if [[ -n "$expiry_epoch" ]]; then
-      local days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
+      local days_left=$(((expiry_epoch - now_epoch) / 86400))
 
       printf "\n"
       if [[ $days_left -lt 0 ]]; then

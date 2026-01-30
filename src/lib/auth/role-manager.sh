@@ -166,7 +166,10 @@ role_update() {
 
   # Convert arrays to comma-separated strings
   local columns_str
-  columns_str=$(IFS=,; echo "${columns[*]}")
+  columns_str=$(
+    IFS=,
+    echo "${columns[*]}"
+  )
 
   # Update role
   pg_update_by_id "auth.roles" "id" "$role_id" "$columns_str" "${values[@]}"

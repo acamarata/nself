@@ -182,7 +182,7 @@ generate_nginx_fallback() {
   fi
 
   # Create minimal working config
-  cat > "$config_dir/00-fallback.conf" << 'EOF'
+  cat >"$config_dir/00-fallback.conf" <<'EOF'
 # Minimal fallback configuration
 server {
     listen 80 default_server;

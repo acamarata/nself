@@ -182,13 +182,13 @@ env_compare() {
     else
       only_in_env1+=("$key")
     fi
-  done <<< "$keys1"
+  done <<<"$keys1"
 
   while IFS= read -r key; do
     if ! echo "$keys1" | grep -q "^${key}$"; then
       only_in_env2+=("$key")
     fi
-  done <<< "$keys2"
+  done <<<"$keys2"
 
   # Build comparison JSON
   local comparison
@@ -280,7 +280,7 @@ env_sync_all() {
   local skipped=0
   local failed=0
 
-  for ((i=0; i<count; i++)); do
+  for ((i = 0; i < count; i++)); do
     local key_name
     key_name=$(echo "$secrets" | jq -r ".[$i].key_name")
 
@@ -359,7 +359,7 @@ env_validate_environment() {
   local environment="$1"
 
   case "$environment" in
-    "$ENV_DEFAULT"|"$ENV_DEV"|"$ENV_STAGING"|"$ENV_PROD")
+    "$ENV_DEFAULT" | "$ENV_DEV" | "$ENV_STAGING" | "$ENV_PROD")
       return 0
       ;;
     *)

@@ -5,7 +5,7 @@
 generate_runtime_variables_doc() {
   local output_file="${1:-RUNTIME_VARIABLES.md}"
 
-  cat > "$output_file" <<'EOF'
+  cat >"$output_file" <<'EOF'
 # Runtime Variables Reference
 
 This file documents all runtime variables used in the generated configuration files.

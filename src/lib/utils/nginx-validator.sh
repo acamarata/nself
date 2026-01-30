@@ -64,8 +64,8 @@ nginx::validate_config() {
         if [[ -n "$upstream" ]] && [[ "$upstream" != "host.docker.internal" ]]; then
           # Check if service exists in docker-compose
           if [[ -f "docker-compose.yml" ]]; then
-            if ! grep -q "^\s*${upstream}:" docker-compose.yml 2>/dev/null && \
-               ! grep -q "^\s*${upstream}:" docker-compose.custom.yml 2>/dev/null; then
+            if ! grep -q "^\s*${upstream}:" docker-compose.yml 2>/dev/null &&
+              ! grep -q "^\s*${upstream}:" docker-compose.custom.yml 2>/dev/null; then
               log_warning "Upstream service '$upstream' referenced in $filename may not exist"
               warnings+=("$filename references potentially missing service: $upstream")
             fi
@@ -122,7 +122,7 @@ nginx::fix_http2_directive() {
   perl -i -pe 's/^(\s*listen\s+443\s+ssl)\s+http2\s*;/$1;\n$1;\n    http2 on;/g' "$conf_file"
 
   # Remove duplicate listen lines
-  awk '!seen[$0]++' "$conf_file" > "${conf_file}.tmp" && mv "${conf_file}.tmp" "$conf_file"
+  awk '!seen[$0]++' "$conf_file" >"${conf_file}.tmp" && mv "${conf_file}.tmp" "$conf_file"
 
   log_success "Updated http2 directive in $filename"
 }
@@ -135,7 +135,7 @@ nginx::generate_fallback_config() {
 
   mkdir -p "$config_dir"
 
-  cat > "$config_dir/default-fallback.conf" << 'EOF'
+  cat >"$config_dir/default-fallback.conf" <<'EOF'
 # Fallback configuration - minimal working setup
 server {
     listen 80 default_server;
@@ -252,8 +252,8 @@ nginx::auto_fix() {
       # Check if this is a custom service config referencing non-existent containers
       if [[ "$filename" == "custom-services.conf" ]]; then
         # Check if custom services are actually defined
-        if ! grep -q "^\s*actions:" docker-compose*.yml 2>/dev/null && \
-           ! grep -q "^\s*realtime:" docker-compose*.yml 2>/dev/null; then
+        if ! grep -q "^\s*actions:" docker-compose*.yml 2>/dev/null &&
+          ! grep -q "^\s*realtime:" docker-compose*.yml 2>/dev/null; then
           log_warning "Disabling $filename - referenced services not found"
           mv "$conf_file" "${conf_file}.disabled"
           ((fixed_issues++))

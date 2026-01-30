@@ -152,7 +152,7 @@ validate_env_mode() {
   local mode="$1"
 
   case "$mode" in
-    dev|development|prod|production|staging|test)
+    dev | development | prod | production | staging | test)
       return 0
       ;;
     *)
@@ -208,7 +208,7 @@ validate_file_permissions() {
   local expected_perms="$2"
 
   if [[ ! -f "$file" ]]; then
-    return 1  # File doesn't exist
+    return 1 # File doesn't exist
   fi
 
   # Get current permissions (portable way)

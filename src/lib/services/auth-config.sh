@@ -13,7 +13,7 @@ auth::get_allowed_redirect_urls() {
   # Add all frontend app URLs
   local app_count="${FRONTEND_APP_COUNT:-0}"
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local route_var="FRONTEND_APP_${i}_ROUTE"
       local route="${!route_var:-}"
 
@@ -63,7 +63,7 @@ auth::get_allowed_redirect_urls() {
 
   # Add any custom redirect URLs if specified
   if [[ -n "${AUTH_ALLOWED_REDIRECT_URLS:-}" ]]; then
-    IFS=',' read -ra CUSTOM_URLS <<< "$AUTH_ALLOWED_REDIRECT_URLS"
+    IFS=',' read -ra CUSTOM_URLS <<<"$AUTH_ALLOWED_REDIRECT_URLS"
     for url in "${CUSTOM_URLS[@]}"; do
       urls+=("$url")
     done
@@ -84,7 +84,7 @@ auth::generate_env_vars() {
   local redirect_urls=$(auth::get_allowed_redirect_urls)
   local email_redirect_urls=$(auth::get_allowed_email_redirect_urls)
 
-  cat << EOF
+  cat <<EOF
 AUTH_ALLOWED_REDIRECT_URLS=${redirect_urls}
 AUTH_ALLOWED_EMAIL_REDIRECT_URLS=${email_redirect_urls}
 EOF
@@ -102,7 +102,7 @@ auth::get_ssl_domains() {
   # Add per-app auth routes
   local app_count="${FRONTEND_APP_COUNT:-0}"
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local route_var="FRONTEND_APP_${i}_ROUTE"
       local route="${!route_var:-}"
 

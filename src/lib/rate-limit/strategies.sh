@@ -223,7 +223,7 @@ strategy_adaptive() {
   local key="$1"
   local base_max_requests="$2"
   local window_seconds="$3"
-  local success_threshold="${4:-0.9}"  # 90% success rate threshold
+  local success_threshold="${4:-0.9}" # 90% success rate threshold
 
   if [[ -z "$key" ]] || [[ -z "$base_max_requests" ]] || [[ -z "$window_seconds" ]]; then
     echo "ERROR: Key, max requests, and window required" >&2
@@ -232,7 +232,7 @@ strategy_adaptive() {
 
   # Get recent success rate
   local stats
-  stats=$(rate_limit_get_stats "$key" 1)  # Last hour
+  stats=$(rate_limit_get_stats "$key" 1) # Last hour
 
   local total
   local allowed
@@ -249,7 +249,7 @@ strategy_adaptive() {
 
   # Adjust limit based on success rate
   local adjusted_max
-  if (( $(echo "$success_rate < $success_threshold" | bc -l) )); then
+  if (($(echo "$success_rate < $success_threshold" | bc -l))); then
     # Reduce limit if too many failures
     adjusted_max=$(echo "scale=0; ($base_max_requests * $success_rate) / 1" | bc)
     # Minimum 10% of base
@@ -277,7 +277,7 @@ strategy_burst_protection() {
   local key="$1"
   local max_requests="$2"
   local window_seconds="$3"
-  local burst_multiplier="${4:-2}"  # Allow 2x burst temporarily
+  local burst_multiplier="${4:-2}" # Allow 2x burst temporarily
 
   if [[ -z "$key" ]] || [[ -z "$max_requests" ]] || [[ -z "$window_seconds" ]]; then
     echo "ERROR: Key, max requests, and window required" >&2

@@ -7,7 +7,10 @@ set -euo pipefail
 # Initialize tracing storage
 tracing_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS tracing;
@@ -201,7 +204,10 @@ trace_list() {
   [[ -n "$status" ]] && where_clauses+=("status = '$status'")
 
   local where_clause="TRUE"
-  [[ ${#where_clauses[@]} -gt 0 ]] && where_clause=$(IFS=' AND ' ; echo "${where_clauses[*]}")
+  [[ ${#where_clauses[@]} -gt 0 ]] && where_clause=$(
+    IFS=' AND '
+    echo "${where_clauses[*]}"
+  )
 
   local traces=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
     "SELECT json_agg(t) FROM (
@@ -303,7 +309,10 @@ trace_visualize() {
   local trace_id="$1"
   local trace=$(trace_get "$trace_id")
 
-  [[ "$trace" == "null" ]] && { echo "Trace not found"; return 1; }
+  [[ "$trace" == "null" ]] && {
+    echo "Trace not found"
+    return 1
+  }
 
   local operation=$(echo "$trace" | jq -r '.operation_name')
   local duration=$(echo "$trace" | jq -r '.duration_ms')

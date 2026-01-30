@@ -42,21 +42,21 @@ cli_version_changed() {
 
   # If no build version file, assume version changed (first build or upgrade)
   if [[ ! -f "$build_version_file" ]]; then
-    return 0  # Changed (or unknown)
+    return 0 # Changed (or unknown)
   fi
 
   local build_version=$(cat "$build_version_file" 2>/dev/null | tr -d '[:space:]')
   if [[ "$current_version" != "$build_version" ]]; then
-    return 0  # Changed
+    return 0 # Changed
   fi
 
-  return 1  # Same version
+  return 1 # Same version
 }
 
 # Save CLI version after successful build
 save_build_version() {
   mkdir -p ".nself" 2>/dev/null
-  get_cli_version > ".nself/build-version"
+  get_cli_version >".nself/build-version"
 }
 
 # Check what needs to be built
@@ -145,11 +145,11 @@ check_build_requirements() {
   fi
 
   # Check if any work is needed
-  if [[ "$NEEDS_DIRECTORIES" == "true" ]] || \
-     [[ "$NEEDS_SSL" == "true" ]] || \
-     [[ "$NEEDS_NGINX" == "true" ]] || \
-     [[ "$NEEDS_DATABASE" == "true" ]] || \
-     [[ "$NEEDS_COMPOSE" == "true" ]]; then
+  if [[ "$NEEDS_DIRECTORIES" == "true" ]] ||
+    [[ "$NEEDS_SSL" == "true" ]] ||
+    [[ "$NEEDS_NGINX" == "true" ]] ||
+    [[ "$NEEDS_DATABASE" == "true" ]] ||
+    [[ "$NEEDS_COMPOSE" == "true" ]]; then
     return 0
   else
     return 1
@@ -277,7 +277,10 @@ generate_docker_compose() {
 
   if [[ -f "$compose_script" ]]; then
     # Run the compose generation with clean output (disable tracing)
-    if (set +x; bash "$compose_script") >/dev/null 2>&1; then
+    if (
+      set +x
+      bash "$compose_script"
+    ) >/dev/null 2>&1; then
       # Apply health check fixes if available
       if [[ -f "${LIB_ROOT:-/usr/local/lib/nself}/auto-fix/healthcheck-fix.sh" ]]; then
         source "${LIB_ROOT:-/usr/local/lib/nself}/auto-fix/healthcheck-fix.sh"

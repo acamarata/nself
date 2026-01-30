@@ -20,7 +20,7 @@ setup_monitoring_configs() {
   if [[ "$loki_enabled" == "true" ]] || [[ "$monitoring_enabled" == "true" ]]; then
     if [[ ! -f "monitoring/loki/local-config.yaml" ]]; then
       mkdir -p monitoring/loki
-      cat > monitoring/loki/local-config.yaml <<'EOF'
+      cat >monitoring/loki/local-config.yaml <<'EOF'
 auth_enabled: false
 
 server:
@@ -62,7 +62,7 @@ EOF
   if [[ "$prometheus_enabled" == "true" ]] || [[ "$monitoring_enabled" == "true" ]]; then
     if [[ ! -f "monitoring/prometheus/prometheus.yml" ]]; then
       mkdir -p monitoring/prometheus
-      cat > monitoring/prometheus/prometheus.yml <<'EOF'
+      cat >monitoring/prometheus/prometheus.yml <<'EOF'
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -101,12 +101,12 @@ EOF
         [[ -z "$cs_value" ]] && continue
 
         # Parse CS format: service_name:template_type:port
-        IFS=':' read -r service_name template_type port <<< "$cs_value"
+        IFS=':' read -r service_name template_type port <<<"$cs_value"
 
         # Skip if no port or port is 0
         [[ -z "$port" || "$port" == "0" ]] && continue
 
-        cat >> monitoring/prometheus/prometheus.yml <<EOF
+        cat >>monitoring/prometheus/prometheus.yml <<EOF
 
   - job_name: 'custom_${service_name}'
     static_configs:
@@ -121,7 +121,7 @@ EOF
   if [[ "$loki_enabled" == "true" ]] || [[ "$monitoring_enabled" == "true" ]]; then
     if [[ ! -f "monitoring/promtail/config.yml" ]]; then
       mkdir -p monitoring/promtail
-      cat > monitoring/promtail/config.yml <<'EOF'
+      cat >monitoring/promtail/config.yml <<'EOF'
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
@@ -173,7 +173,7 @@ EOF
       mkdir -p monitoring/grafana/provisioning/dashboards
 
       # Create datasources config
-      cat > monitoring/grafana/provisioning/datasources/prometheus.yml <<'EOF'
+      cat >monitoring/grafana/provisioning/datasources/prometheus.yml <<'EOF'
 apiVersion: 1
 
 datasources:
@@ -193,7 +193,7 @@ datasources:
 EOF
 
       # Create dashboards config
-      cat > monitoring/grafana/provisioning/dashboards/dashboards.yml <<'EOF'
+      cat >monitoring/grafana/provisioning/dashboards/dashboards.yml <<'EOF'
 apiVersion: 1
 
 providers:
@@ -213,7 +213,7 @@ EOF
   if [[ "${TEMPO_ENABLED:-false}" == "true" ]]; then
     if [[ ! -f "monitoring/tempo/tempo.yml" ]]; then
       mkdir -p monitoring/tempo
-      cat > monitoring/tempo/tempo.yml <<'EOF'
+      cat >monitoring/tempo/tempo.yml <<'EOF'
 server:
   http_listen_port: 3200
 
@@ -243,7 +243,7 @@ EOF
   if [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] || [[ "$monitoring_enabled" == "true" ]]; then
     if [[ ! -f "monitoring/alertmanager/alertmanager.yml" ]]; then
       mkdir -p monitoring/alertmanager
-      cat > monitoring/alertmanager/alertmanager.yml <<'EOF'
+      cat >monitoring/alertmanager/alertmanager.yml <<'EOF'
 global:
   resolve_timeout: 5m
 

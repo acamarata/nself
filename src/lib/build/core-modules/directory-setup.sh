@@ -39,7 +39,7 @@ create_directory_structure() {
     if [[ -n "$dir" ]] && [[ ! -d "$dir" ]]; then
       dirs_to_create=$((dirs_to_create + 1))
     fi
-  done <<< "$directories"
+  done <<<"$directories"
 
   if [[ $dirs_to_create -eq 0 ]]; then
     return 0
@@ -54,7 +54,7 @@ create_directory_structure() {
         failed_dirs="${failed_dirs}${dir} "
       fi
     fi
-  done <<< "$directories"
+  done <<<"$directories"
 
   # Return status
   if [[ -n "$failed_dirs" ]]; then
@@ -74,7 +74,7 @@ check_directory_structure() {
     if [[ -n "$dir" ]] && [[ ! -d "$dir" ]]; then
       missing_count=$((missing_count + 1))
     fi
-  done <<< "$directories"
+  done <<<"$directories"
 
   echo "$missing_count"
 }
@@ -113,7 +113,7 @@ create_service_directories() {
   # NOW create functions package files after directories exist
   if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
     if [[ ! -f "functions/package.json" ]]; then
-      cat > functions/package.json <<'EOF'
+      cat >functions/package.json <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -125,7 +125,7 @@ EOF
     fi
 
     if [[ ! -f "functions/package-lock.json" ]]; then
-      cat > functions/package-lock.json <<'EOF'
+      cat >functions/package-lock.json <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",

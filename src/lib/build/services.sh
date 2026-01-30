@@ -44,7 +44,7 @@ generate_frontend_service() {
 
   mkdir -p services 2>/dev/null || true
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   ${service_name}:
     build:
       context: ./${service_name}
@@ -80,7 +80,7 @@ generate_backend_service() {
 
   mkdir -p services 2>/dev/null || true
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   ${service_name}:
     build:
       context: ./${service_name}
@@ -170,7 +170,7 @@ process_template() {
       line="${line//\$\{${var_name}\}/$var_value}"
     done
     echo "$line"
-  done < "$template" > "$temp_file"
+  done <"$template" >"$temp_file"
 
   # Move to final location
   mv "$temp_file" "$output"
@@ -192,7 +192,7 @@ generate_custom_service() {
     fi
 
     # Parse CS_N format: service_name:template_type:port
-    IFS=':' read -r configured_name template_type port <<< "$cs_value"
+    IFS=':' read -r configured_name template_type port <<<"$cs_value"
 
     # Match by name or by CS number
     if [[ "$configured_name" == "$service_name" ]]; then
@@ -314,7 +314,7 @@ generate_custom_services() {
     fi
 
     # Parse CS_N format: service_name:template_type:port
-    IFS=':' read -r service_name template_type port <<< "$cs_value"
+    IFS=':' read -r service_name template_type port <<<"$cs_value"
 
     # Generate the service from template
     generate_custom_service_from_template "$service_name" "$template_type" "$port" "$force"
@@ -361,7 +361,7 @@ generate_nextjs_service() {
 
   mkdir -p services 2>/dev/null || true
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   nextjs:
     build:
       context: .
@@ -393,7 +393,7 @@ EOF
 
 # Create Next.js Dockerfile
 create_nextjs_dockerfile() {
-  cat > Dockerfile <<'EOF'
+  cat >Dockerfile <<'EOF'
 FROM node:18-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
@@ -434,7 +434,7 @@ generate_react_service() {
 
   mkdir -p services 2>/dev/null || true
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   react:
     build:
       context: .
@@ -459,7 +459,7 @@ EOF
 
 # Create React Dockerfile
 create_react_dockerfile() {
-  cat > Dockerfile.react <<'EOF'
+  cat >Dockerfile.react <<'EOF'
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -491,7 +491,7 @@ generate_nodejs_service() {
   [[ -f "server.js" ]] && main_file="server.js"
   [[ -f "app.js" ]] && main_file="app.js"
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   nodejs:
     build:
       context: .
@@ -537,7 +537,7 @@ generate_python_service() {
     main_file="main.py"
   fi
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   python:
     build:
       context: .
@@ -568,7 +568,7 @@ generate_go_service() {
 
   mkdir -p services 2>/dev/null || true
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   go:
     build:
       context: .
@@ -591,7 +591,7 @@ generate_microservices() {
   local force="${1:-false}"
 
   if [[ -n "${MICROSERVICES:-}" ]]; then
-    IFS=',' read -ra SERVICES <<< "$MICROSERVICES"
+    IFS=',' read -ra SERVICES <<<"$MICROSERVICES"
     for service in "${SERVICES[@]}"; do
       generate_microservice "$service" "$force"
     done
@@ -615,7 +615,7 @@ generate_microservice() {
   # Use eval for Bash 3.2 compatibility
   eval "local port=\${$port_var:-3000}"
 
-  cat > "$service_file" <<EOF
+  cat >"$service_file" <<EOF
   ${service_name}:
     image: \${${service_upper}_IMAGE:-${service_name}:latest}
     container_name: \${PROJECT_NAME}_${service_name}

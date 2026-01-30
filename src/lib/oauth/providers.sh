@@ -333,7 +333,7 @@ oauth_store_tokens() {
   umask 077
 
   # Create token file with restrictive permissions
-  cat > "$token_file" <<EOF
+  cat >"$token_file" <<EOF
 {
   "provider": "$provider",
   "user_id": "$user_id",

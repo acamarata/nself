@@ -244,7 +244,7 @@ security::check_ssl() {
           now_epoch=$(date +%s)
 
           if [[ -n "$expiry_epoch" ]]; then
-            local days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
+            local days_left=$(((expiry_epoch - now_epoch) / 86400))
             if [[ $days_left -lt 0 ]]; then
               security::fail "SSL certificate has expired"
             elif [[ $days_left -lt 7 ]]; then

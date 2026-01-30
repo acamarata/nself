@@ -83,150 +83,150 @@ autofix_service() {
   local fix_description=""
 
   case "$error_code" in
-  POSTGRES_PORT_5433)
-    fix_postgres_port_5433 "$service_name" "$attempts"
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  POSTGRES_NOT_RUNNING)
-    fix_postgres_not_running
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  POSTGRES_AUTH_FAILED)
-    fix_postgres_auth_failed
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  POSTGRES_CONNECTION)
-    fix_postgres_connection
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  DATABASE_NOT_FOUND)
-    fix_database_not_found
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  REDIS_CONNECTION)
-    fix_redis_connection
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  ELASTICSEARCH_CONNECTION)
-    fix_elasticsearch_connection
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  PORT_IN_USE)
-    fix_port_in_use "$service_name"
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  OUT_OF_MEMORY)
-    fix_out_of_memory
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  NETWORK_DNS)
-    fix_network_dns
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  PERMISSION_DENIED)
-    fix_permission_denied "$service_name"
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  MISSING_ENV_VARS)
-    fix_missing_env_vars
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  MISSING_FILES)
-    # Try to generate missing files
-    docker compose stop "$service_name" >/dev/null 2>&1
-    docker compose rm -f "$service_name" >/dev/null 2>&1
-    nself build --force >/dev/null 2>&1
-    fix_result=0
-    fix_description="Regenerated missing files"
-    ;;
-  SSL_CERT_ERROR)
-    fix_ssl_cert_error
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  SCHEMA_NOT_FOUND)
-    fix_missing_schemas "$service_name"
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  MISSING_NODE_MODULES)
-    fix_missing_node_modules "$service_name"
-    fix_result=$?
-    fix_description=$(get_last_fix_description)
-    ;;
-  NGINX_UPSTREAM_NOT_FOUND|NGINX_*)
-    # Use comprehensive nginx fix function if available
-    if declare -f fix_nginx_restart_loop >/dev/null 2>&1; then
-      fix_nginx_restart_loop "$service_name" "$verbose"
-      fix_result=$?
-      fix_description="Fixed nginx configuration issues"
-    else
-      # Fallback to basic fix
-      fix_nginx_upstream
+    POSTGRES_PORT_5433)
+      fix_postgres_port_5433 "$service_name" "$attempts"
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    fi
-    ;;
-  NO_SHELL_IN_CONTAINER)
-    # Container has no shell - just recreate it
-    docker compose stop "$service_name" >/dev/null 2>&1
-    docker compose rm -f "$service_name" >/dev/null 2>&1
-    docker compose up -d "$service_name" >/dev/null 2>&1
-    fix_result=$?
-    fix_description="Recreated $service_name container"
-    ;;
-  MISSING_HEALTHCHECK_TOOLS)
-    if declare -f fix_service_healthcheck >/dev/null 2>&1; then
-      fix_service_healthcheck "$service_name"
+      ;;
+    POSTGRES_NOT_RUNNING)
+      fix_postgres_not_running
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    else
-      fix_missing_healthcheck_tools "$service_name"
+      ;;
+    POSTGRES_AUTH_FAILED)
+      fix_postgres_auth_failed
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    fi
-    ;;
-  BULLMQ_MISSING_MODULES)
-    if declare -f fix_bullmq_worker >/dev/null 2>&1; then
-      fix_bullmq_worker "$service_name" "MISSING_NODE_MODULES"
+      ;;
+    POSTGRES_CONNECTION)
+      fix_postgres_connection
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    else
-      fix_missing_node_modules "$service_name"
+      ;;
+    DATABASE_NOT_FOUND)
+      fix_database_not_found
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    fi
-    ;;
-  BULLMQ_REDIS_CONNECTION)
-    if declare -f fix_bullmq_worker >/dev/null 2>&1; then
-      fix_bullmq_worker "$service_name" "REDIS_CONNECTION"
-      fix_result=$?
-      fix_description=$(get_last_fix_description)
-    else
+      ;;
+    REDIS_CONNECTION)
       fix_redis_connection
       fix_result=$?
       fix_description=$(get_last_fix_description)
-    fi
-    ;;
-  *)
-    # Generic fix: recreate service
-    docker compose stop "$service_name" >/dev/null 2>&1
-    docker compose rm -f "$service_name" >/dev/null 2>&1
-    fix_result=0
-    fix_description="Recreated $clean_name service"
-    ;;
+      ;;
+    ELASTICSEARCH_CONNECTION)
+      fix_elasticsearch_connection
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    PORT_IN_USE)
+      fix_port_in_use "$service_name"
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    OUT_OF_MEMORY)
+      fix_out_of_memory
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    NETWORK_DNS)
+      fix_network_dns
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    PERMISSION_DENIED)
+      fix_permission_denied "$service_name"
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    MISSING_ENV_VARS)
+      fix_missing_env_vars
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    MISSING_FILES)
+      # Try to generate missing files
+      docker compose stop "$service_name" >/dev/null 2>&1
+      docker compose rm -f "$service_name" >/dev/null 2>&1
+      nself build --force >/dev/null 2>&1
+      fix_result=0
+      fix_description="Regenerated missing files"
+      ;;
+    SSL_CERT_ERROR)
+      fix_ssl_cert_error
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    SCHEMA_NOT_FOUND)
+      fix_missing_schemas "$service_name"
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    MISSING_NODE_MODULES)
+      fix_missing_node_modules "$service_name"
+      fix_result=$?
+      fix_description=$(get_last_fix_description)
+      ;;
+    NGINX_UPSTREAM_NOT_FOUND | NGINX_*)
+      # Use comprehensive nginx fix function if available
+      if declare -f fix_nginx_restart_loop >/dev/null 2>&1; then
+        fix_nginx_restart_loop "$service_name" "$verbose"
+        fix_result=$?
+        fix_description="Fixed nginx configuration issues"
+      else
+        # Fallback to basic fix
+        fix_nginx_upstream
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      fi
+      ;;
+    NO_SHELL_IN_CONTAINER)
+      # Container has no shell - just recreate it
+      docker compose stop "$service_name" >/dev/null 2>&1
+      docker compose rm -f "$service_name" >/dev/null 2>&1
+      docker compose up -d "$service_name" >/dev/null 2>&1
+      fix_result=$?
+      fix_description="Recreated $service_name container"
+      ;;
+    MISSING_HEALTHCHECK_TOOLS)
+      if declare -f fix_service_healthcheck >/dev/null 2>&1; then
+        fix_service_healthcheck "$service_name"
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      else
+        fix_missing_healthcheck_tools "$service_name"
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      fi
+      ;;
+    BULLMQ_MISSING_MODULES)
+      if declare -f fix_bullmq_worker >/dev/null 2>&1; then
+        fix_bullmq_worker "$service_name" "MISSING_NODE_MODULES"
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      else
+        fix_missing_node_modules "$service_name"
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      fi
+      ;;
+    BULLMQ_REDIS_CONNECTION)
+      if declare -f fix_bullmq_worker >/dev/null 2>&1; then
+        fix_bullmq_worker "$service_name" "REDIS_CONNECTION"
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      else
+        fix_redis_connection
+        fix_result=$?
+        fix_description=$(get_last_fix_description)
+      fi
+      ;;
+    *)
+      # Generic fix: recreate service
+      docker compose stop "$service_name" >/dev/null 2>&1
+      docker compose rm -f "$service_name" >/dev/null 2>&1
+      fix_result=0
+      fix_description="Recreated $clean_name service"
+      ;;
   esac
 
   # Record attempt

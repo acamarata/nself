@@ -61,27 +61,27 @@ ssl::install_mkcert() {
 
   # Map architecture names
   case "$arch" in
-  x86_64) arch="amd64" ;;
-  aarch64 | arm64) arch="arm64" ;;
-  *)
-    log_error "Unsupported architecture: $arch"
-    return 1
-    ;;
+    x86_64) arch="amd64" ;;
+    aarch64 | arm64) arch="arm64" ;;
+    *)
+      log_error "Unsupported architecture: $arch"
+      return 1
+      ;;
   esac
 
   # Construct download URL
   local mkcert_version="v1.4.4"
   case "$os" in
-  darwin)
-    mkcert_url="https://github.com/FiloSottile/mkcert/releases/download/${mkcert_version}/mkcert-${mkcert_version}-${os}-${arch}"
-    ;;
-  linux)
-    mkcert_url="https://github.com/FiloSottile/mkcert/releases/download/${mkcert_version}/mkcert-${mkcert_version}-${os}-${arch}"
-    ;;
-  *)
-    log_error "Unsupported OS: $os"
-    return 1
-    ;;
+    darwin)
+      mkcert_url="https://github.com/FiloSottile/mkcert/releases/download/${mkcert_version}/mkcert-${mkcert_version}-${os}-${arch}"
+      ;;
+    linux)
+      mkcert_url="https://github.com/FiloSottile/mkcert/releases/download/${mkcert_version}/mkcert-${mkcert_version}-${os}-${arch}"
+      ;;
+    *)
+      log_error "Unsupported OS: $os"
+      return 1
+      ;;
   esac
 
   log_info "Downloading mkcert from $mkcert_url..."
@@ -126,21 +126,21 @@ ssl::issue_public_wildcard() {
   # Build docker command based on provider
   local docker_env_args=()
   case "$provider" in
-  cloudflare)
-    docker_env_args+=("-e" "CF_Token=${DNS_API_TOKEN:-}")
-    docker_env_args+=("-e" "CF_Email=${CF_EMAIL:-}")
-    ;;
-  route53)
-    docker_env_args+=("-e" "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}")
-    docker_env_args+=("-e" "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}")
-    ;;
-  digitalocean)
-    docker_env_args+=("-e" "DO_API_KEY=${DO_API_KEY:-}")
-    ;;
-  *)
-    log_error "Unsupported DNS provider: $provider"
-    return 1
-    ;;
+    cloudflare)
+      docker_env_args+=("-e" "CF_Token=${DNS_API_TOKEN:-}")
+      docker_env_args+=("-e" "CF_Email=${CF_EMAIL:-}")
+      ;;
+    route53)
+      docker_env_args+=("-e" "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}")
+      docker_env_args+=("-e" "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}")
+      ;;
+    digitalocean)
+      docker_env_args+=("-e" "DO_API_KEY=${DO_API_KEY:-}")
+      ;;
+    *)
+      log_error "Unsupported DNS provider: $provider"
+      return 1
+      ;;
   esac
 
   # Run acme.sh in docker
@@ -275,12 +275,12 @@ ssl::copy_into_project() {
     cp "$CERTS_DIR/localhost/fullchain.pem" "$nginx_ssl_dir/localhost/"
     cp "$CERTS_DIR/localhost/privkey.pem" "$nginx_ssl_dir/localhost/"
     chmod 600 "$nginx_ssl_dir/localhost/privkey.pem"
-    
+
     # Copy to project ssl directory
     cp "$CERTS_DIR/localhost/fullchain.pem" "$ssl_dir/localhost/"
     cp "$CERTS_DIR/localhost/privkey.pem" "$ssl_dir/localhost/"
     chmod 600 "$ssl_dir/localhost/privkey.pem"
-    
+
     log_success "Copied localhost certificates"
   fi
 
@@ -290,7 +290,7 @@ ssl::copy_into_project() {
     cp "$CERTS_DIR/nself-org/fullchain.pem" "$nginx_ssl_dir/nself-org/"
     cp "$CERTS_DIR/nself-org/privkey.pem" "$nginx_ssl_dir/nself-org/"
     chmod 600 "$nginx_ssl_dir/nself-org/privkey.pem"
-    
+
     # Copy to project ssl directory
     cp "$CERTS_DIR/nself-org/fullchain.pem" "$ssl_dir/nself-org/"
     cp "$CERTS_DIR/nself-org/privkey.pem" "$ssl_dir/nself-org/"
@@ -311,12 +311,12 @@ ssl::copy_into_project() {
     cp "$CERTS_DIR/custom/fullchain.pem" "$nginx_ssl_dir/custom/"
     cp "$CERTS_DIR/custom/privkey.pem" "$nginx_ssl_dir/custom/"
     chmod 600 "$nginx_ssl_dir/custom/privkey.pem"
-    
+
     # Copy to project ssl directory
     cp "$CERTS_DIR/custom/fullchain.pem" "$ssl_dir/custom/"
     cp "$CERTS_DIR/custom/privkey.pem" "$ssl_dir/custom/"
     chmod 600 "$ssl_dir/custom/privkey.pem"
-    
+
     log_success "Copied custom domain certificates"
   fi
 
@@ -468,27 +468,27 @@ ssl::create_route_config() {
   local subdomain="$2"
 
   case "$subdomain" in
-  api)
-    cat >"$routes_dir/api.conf" <<'EOF'
+    api)
+      cat >"$routes_dir/api.conf" <<'EOF'
 proxy_pass http://hasura:8080;
 EOF
-    ;;
-  auth)
-    cat >"$routes_dir/auth.conf" <<'EOF'
+      ;;
+    auth)
+      cat >"$routes_dir/auth.conf" <<'EOF'
 proxy_pass http://auth:4000;
 EOF
-    ;;
-  storage)
-    cat >"$routes_dir/storage.conf" <<'EOF'
+      ;;
+    storage)
+      cat >"$routes_dir/storage.conf" <<'EOF'
 proxy_pass http://storage:5001;
 client_max_body_size 1000m;
 EOF
-    ;;
-  functions)
-    cat >"$routes_dir/functions.conf" <<EOF
+      ;;
+    functions)
+      cat >"$routes_dir/functions.conf" <<EOF
 proxy_pass http://\${PROJECT_NAME:-nself}-functions:4300;
 EOF
-    ;;
+      ;;
   esac
 }
 
@@ -496,47 +496,47 @@ EOF
 ssl::needs_regeneration() {
   local base_domain="${1:-localhost}"
   local project_ssl_dir="${2:-.}"
-  
+
   # Check if we're using localhost domain
   if [[ "$base_domain" == "localhost" ]]; then
     local cert_file="$project_ssl_dir/ssl/certificates/localhost/fullchain.pem"
-    
+
     # Check if certificate exists
     if [[ ! -f "$cert_file" ]]; then
-      return 0  # Needs generation
+      return 0 # Needs generation
     fi
-    
+
     # Check if certificate includes wildcard
     local san=$(openssl x509 -in "$cert_file" -text -noout 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1)
     if [[ ! "$san" == *"*.localhost"* ]]; then
       log_info "Certificate doesn't include wildcard *.localhost"
-      return 0  # Needs regeneration
+      return 0 # Needs regeneration
     fi
-    
+
     # Check expiry
     if ! openssl x509 -in "$cert_file" -checkend 86400 &>/dev/null; then
       log_info "Certificate expires within 24 hours"
-      return 0  # Needs regeneration
+      return 0 # Needs regeneration
     fi
   elif [[ "$base_domain" == "local.nself.org" ]]; then
     local cert_file="$project_ssl_dir/ssl/certificates/nself-org/fullchain.pem"
-    
+
     # Check if certificate exists
     if [[ ! -f "$cert_file" ]]; then
-      return 0  # Needs generation
+      return 0 # Needs generation
     fi
-    
+
     # Check expiry
     if ! openssl x509 -in "$cert_file" -checkend 86400 &>/dev/null; then
       log_info "Certificate expires within 24 hours"
-      return 0  # Needs regeneration
+      return 0 # Needs regeneration
     fi
   else
     # Custom domain - always needs certificate
     return 0
   fi
-  
-  return 1  # No regeneration needed
+
+  return 1 # No regeneration needed
 }
 
 # Generate certificates for project with auto-detection
@@ -544,10 +544,10 @@ ssl::generate_for_project() {
   local project_dir="${1:-.}"
   local base_domain="${2:-localhost}"
   local env="${ENV:-dev}"
-  
+
   # Determine certificate strategy based on environment
-  local cert_strategy="mkcert"  # Default for dev
-  
+  local cert_strategy="mkcert" # Default for dev
+
   if [[ "$env" == "prod" ]] || [[ "$env" == "production" ]]; then
     # Production - use Let's Encrypt if possible
     if [[ -n "${DNS_PROVIDER:-}" ]] && [[ "$base_domain" != "localhost" ]]; then
@@ -564,23 +564,23 @@ ssl::generate_for_project() {
       cert_strategy="mkcert"
     fi
   fi
-  
+
   log_info "SSL Strategy: $cert_strategy for $base_domain (ENV=$env)"
-  
+
   # Check if we need to regenerate
   if ! ssl::needs_regeneration "$base_domain" "$project_dir"; then
     log_info "SSL certificates are up to date for $base_domain"
-    
+
     # Check for auto-renewal in production
     if [[ "$cert_strategy" == "letsencrypt" ]]; then
       ssl::check_renewal "$base_domain" "$project_dir"
     fi
-    
+
     return 0
   fi
-  
+
   log_info "Generating SSL certificates for $base_domain..."
-  
+
   # Generate certificates based on strategy
   case "$cert_strategy" in
     letsencrypt)
@@ -591,39 +591,39 @@ ssl::generate_for_project() {
       # Setup auto-renewal
       ssl::setup_auto_renewal "$base_domain" "$project_dir"
       ;;
-      
+
     letsencrypt-staging)
       if ! ssl::issue_letsencrypt_staging "$base_domain" "$project_dir"; then
         log_warning "Let's Encrypt staging failed, falling back to mkcert"
         ssl::issue_with_mkcert "$base_domain" "$project_dir"
       fi
       ;;
-      
+
     mkcert)
       # Ensure tools are available
       if ! ssl::ensure_tools; then
         return 1
       fi
-      
+
       if ! ssl::issue_with_mkcert "$base_domain" "$project_dir"; then
         log_warning "mkcert failed, falling back to self-signed"
         ssl::issue_self_signed "$base_domain" "$project_dir"
       fi
       ;;
-      
+
     self-signed)
       ssl::issue_self_signed "$base_domain" "$project_dir"
       ;;
   esac
-  
+
   # Copy certificates to project
   ssl::copy_into_project "$project_dir"
-  
+
   # Generate nginx configs
   ssl::render_nginx_snippets "$project_dir"
-  
+
   log_success "SSL certificates generated and installed for $base_domain"
-  
+
   # Check if root CA is installed (for dev environments)
   if [[ "$cert_strategy" == "mkcert" ]]; then
     local mkcert_cmd
@@ -633,7 +633,7 @@ ssl::generate_for_project() {
       fi
     fi
   fi
-  
+
   return 0
 }
 
@@ -642,16 +642,16 @@ ssl::issue_with_mkcert() {
   local base_domain="${1}"
   local project_dir="${2}"
   local project_name="${PROJECT_NAME:-app}"
-  
+
   local mkcert_cmd
   if ! mkcert_cmd="$(ssl::get_mkcert)"; then
     log_error "mkcert not available"
     return 1
   fi
-  
+
   # Install root CA if needed
   $mkcert_cmd -install 2>/dev/null || true
-  
+
   # Determine certificate directory based on domain type
   local cert_dir
   if [[ "$base_domain" == "localhost" ]]; then
@@ -662,12 +662,12 @@ ssl::issue_with_mkcert() {
     # Custom domain (production, staging, or custom dev domain)
     cert_dir="$CERTS_DIR/custom"
   fi
-  
+
   mkdir -p "$cert_dir"
-  
+
   # Use dynamic service discovery to collect ALL domains
   local sans=()
-  
+
   # Source service discovery if available
   # Set SCRIPT_DIR if not already set
   if [[ -z "${SCRIPT_DIR:-}" ]]; then
@@ -676,7 +676,7 @@ ssl::issue_with_mkcert() {
 
   if [[ -f "$SCRIPT_DIR/../lib/services/service-routes.sh" ]]; then
     source "$SCRIPT_DIR/../lib/services/service-routes.sh"
-    
+
     # Collect all domains dynamically
     while IFS= read -r domain; do
       [[ -n "$domain" ]] && sans+=("$domain")
@@ -690,7 +690,7 @@ ssl::issue_with_mkcert() {
         "127.0.0.1"
         "::1"
       )
-      
+
       # Common service subdomains (explicitly listed)
       sans+=(
         "api.localhost"       # Hasura GraphQL
@@ -704,16 +704,16 @@ ssl::issue_with_mkcert() {
         "db.localhost"        # Adminer
         "queues.localhost"    # BullMQ Dashboard
       )
-      
+
       # Project-specific subdomains
       if [[ -n "$project_name" ]]; then
-        sans+=("${project_name}.localhost")  # Main app domain
-        
+        sans+=("${project_name}.localhost") # Main app domain
+
         # Common variations (chat app, admin, etc)
         [[ "$project_name" == "nchat" ]] && sans+=("chat.localhost")
         [[ "$project_name" == "admin" ]] && sans+=("admin.localhost")
       fi
-      
+
       # Add wildcard as last resort
       sans+=("*.localhost")
     else
@@ -729,32 +729,32 @@ ssl::issue_with_mkcert() {
         "db.$base_domain"
         "queues.$base_domain"
       )
-      
+
       if [[ -n "$project_name" ]]; then
         sans+=("${project_name}.$base_domain")
       fi
     fi
   fi
-  
+
   log_info "Generating certificate for ${#sans[@]} domains"
-  log_info "Domains: ${sans[*]:0:10}$(( ${#sans[@]} > 10 ? "..." : "" ))"
-  
+  log_info "Domains: ${sans[*]:0:10}$((${#sans[@]} > 10 ? "..." : ""))"
+
   if $mkcert_cmd \
     -cert-file "$cert_dir/fullchain.pem" \
     -key-file "$cert_dir/privkey.pem" \
     "${sans[@]}"; then
-    
+
     # Copy cert as fullchain for compatibility
     cp "$cert_dir/fullchain.pem" "$cert_dir/cert.pem" 2>/dev/null || true
-    
+
     # Set proper permissions
     chmod 644 "$cert_dir/fullchain.pem" "$cert_dir/cert.pem"
     chmod 600 "$cert_dir/privkey.pem"
-    
+
     log_success "Certificate generated with ${#sans[@]} domains"
     return 0
   fi
-  
+
   return 1
 }
 
@@ -762,14 +762,14 @@ ssl::issue_with_mkcert() {
 ssl::issue_letsencrypt() {
   local base_domain="${1}"
   local project_dir="${2}"
-  
+
   # Use existing public wildcard function with modifications
   export SSL_NSELF_ORG_DOMAIN="$base_domain"
-  
+
   if ssl::issue_public_wildcard; then
     return 0
   fi
-  
+
   return 1
 }
 
@@ -777,37 +777,37 @@ ssl::issue_letsencrypt() {
 ssl::issue_letsencrypt_staging() {
   local base_domain="${1}"
   local project_dir="${2}"
-  
+
   # Similar to production but with staging server
   local provider="${DNS_PROVIDER:-}"
   if [[ -z "$provider" ]]; then
     return 1
   fi
-  
+
   # Use staging server for testing
   # Implementation would be similar to ssl::issue_public_wildcard
   # but with --server letsencrypt_test
-  
-  return 1  # Placeholder for now
+
+  return 1 # Placeholder for now
 }
 
 # Issue self-signed certificate
 ssl::issue_self_signed() {
   local base_domain="${1}"
   local project_dir="${2}"
-  
+
   local cert_dir="$CERTS_DIR/self-signed"
   mkdir -p "$cert_dir"
-  
+
   # Generate self-signed certificate
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$cert_dir/privkey.pem" \
     -out "$cert_dir/fullchain.pem" \
     -subj "/C=US/ST=State/L=City/O=nself/CN=$base_domain" \
     -addext "subjectAltName=DNS:$base_domain,DNS:*.$base_domain" 2>/dev/null
-  
+
   cp "$cert_dir/fullchain.pem" "$cert_dir/cert.pem"
-  
+
   log_warning "Using self-signed certificate for $base_domain"
   return 0
 }
@@ -816,12 +816,12 @@ ssl::issue_self_signed() {
 ssl::check_renewal() {
   local base_domain="${1}"
   local project_dir="${2}"
-  
+
   local cert_file="$project_dir/ssl/certificates/nself-org/fullchain.pem"
-  
+
   if [[ -f "$cert_file" ]]; then
     # Check if certificate expires within 30 days
-    if ! openssl x509 -in "$cert_file" -checkend $((30*24*60*60)) &>/dev/null; then
+    if ! openssl x509 -in "$cert_file" -checkend $((30 * 24 * 60 * 60)) &>/dev/null; then
       log_info "Certificate expires within 30 days, renewing..."
       ssl::issue_letsencrypt "$base_domain" "$project_dir"
     fi
@@ -832,11 +832,11 @@ ssl::check_renewal() {
 ssl::setup_auto_renewal() {
   local base_domain="${1}"
   local project_dir="${2}"
-  
+
   # Create renewal script
   local renewal_script="$HOME/.nself/ssl-renewal.sh"
-  
-  cat > "$renewal_script" <<EOF
+
+  cat >"$renewal_script" <<EOF
 #!/usr/bin/env bash
 # Auto-renewal script for nself SSL certificates
 
@@ -858,13 +858,16 @@ fi
 EOF
 
   chmod +x "$renewal_script"
-  
+
   # Add to crontab (run daily at 2 AM)
   local cron_entry="0 2 * * * $renewal_script >> $HOME/.nself/ssl-renewal.log 2>&1"
-  
+
   # Check if cron entry already exists
   if ! crontab -l 2>/dev/null | grep -q "$renewal_script"; then
-    (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
+    (
+      crontab -l 2>/dev/null
+      echo "$cron_entry"
+    ) | crontab -
     log_info "Added SSL auto-renewal to crontab"
   fi
 }

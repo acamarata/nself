@@ -199,33 +199,33 @@ fix_port_conflicts() {
 
           # Build environment variable updates
           case "$service" in
-          nginx_http)
-            env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
-            ;;
-          nginx_https)
-            env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
-            ;;
-          postgres)
-            env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
-            ;;
-          hasura)
-            env_updates="${env_updates}\nHASURA_PORT=$alt_port"
-            ;;
-          auth)
-            env_updates="${env_updates}\nAUTH_PORT=$alt_port"
-            ;;
-          minio)
-            env_updates="${env_updates}\nMINIO_PORT=$alt_port"
-            ;;
-          redis)
-            env_updates="${env_updates}\nREDIS_PORT=$alt_port"
-            ;;
-          mailpit_smtp)
-            env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
-            ;;
-          mailpit_ui)
-            env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
-            ;;
+            nginx_http)
+              env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
+              ;;
+            nginx_https)
+              env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
+              ;;
+            postgres)
+              env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
+              ;;
+            hasura)
+              env_updates="${env_updates}\nHASURA_PORT=$alt_port"
+              ;;
+            auth)
+              env_updates="${env_updates}\nAUTH_PORT=$alt_port"
+              ;;
+            minio)
+              env_updates="${env_updates}\nMINIO_PORT=$alt_port"
+              ;;
+            redis)
+              env_updates="${env_updates}\nREDIS_PORT=$alt_port"
+              ;;
+            mailpit_smtp)
+              env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
+              ;;
+            mailpit_ui)
+              env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
+              ;;
           esac
 
           ((fixes_applied++))
@@ -250,33 +250,33 @@ fix_port_conflicts() {
 
           # Build environment variable updates
           case "$service" in
-          nginx_http)
-            env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
-            ;;
-          nginx_https)
-            env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
-            ;;
-          postgres)
-            env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
-            ;;
-          hasura)
-            env_updates="${env_updates}\nHASURA_PORT=$alt_port"
-            ;;
-          auth)
-            env_updates="${env_updates}\nAUTH_PORT=$alt_port"
-            ;;
-          minio)
-            env_updates="${env_updates}\nMINIO_PORT=$alt_port"
-            ;;
-          redis)
-            env_updates="${env_updates}\nREDIS_PORT=$alt_port"
-            ;;
-          mailpit_smtp)
-            env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
-            ;;
-          mailpit_ui)
-            env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
-            ;;
+            nginx_http)
+              env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
+              ;;
+            nginx_https)
+              env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
+              ;;
+            postgres)
+              env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
+              ;;
+            hasura)
+              env_updates="${env_updates}\nHASURA_PORT=$alt_port"
+              ;;
+            auth)
+              env_updates="${env_updates}\nAUTH_PORT=$alt_port"
+              ;;
+            minio)
+              env_updates="${env_updates}\nMINIO_PORT=$alt_port"
+              ;;
+            redis)
+              env_updates="${env_updates}\nREDIS_PORT=$alt_port"
+              ;;
+            mailpit_smtp)
+              env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
+              ;;
+            mailpit_ui)
+              env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
+              ;;
           esac
 
           ((fixes_applied++))
@@ -378,29 +378,29 @@ stop_conflicting_processes() {
 
     # Special handling for common services
     case "$process" in
-    docker*)
-      log_info "Stopping Docker container on port $port..."
-      # Find and stop the container
-      local container=$(docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ":$port->" | awk '{print $1}')
-      if [[ -n "$container" ]]; then
-        if docker stop "$container"; then
-          log_success "Stopped container: $container"
-          ((stopped++))
+      docker*)
+        log_info "Stopping Docker container on port $port..."
+        # Find and stop the container
+        local container=$(docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ":$port->" | awk '{print $1}')
+        if [[ -n "$container" ]]; then
+          if docker stop "$container"; then
+            log_success "Stopped container: $container"
+            ((stopped++))
+          fi
         fi
-      fi
-      ;;
-    postgres | postgresql)
-      log_info "PostgreSQL is running on port $port"
-      log_warning "Consider using a different port for this project"
-      ;;
-    nginx)
-      log_info "Nginx is running on port $port"
-      log_warning "This might be another nself project or system nginx"
-      ;;
-    *)
-      log_info "Process '$process' is using port $port"
-      log_warning "Please stop it manually if it's safe to do so"
-      ;;
+        ;;
+      postgres | postgresql)
+        log_info "PostgreSQL is running on port $port"
+        log_warning "Consider using a different port for this project"
+        ;;
+      nginx)
+        log_info "Nginx is running on port $port"
+        log_warning "This might be another nself project or system nginx"
+        ;;
+      *)
+        log_info "Process '$process' is using port $port"
+        log_warning "Please stop it manually if it's safe to do so"
+        ;;
     esac
   done
 

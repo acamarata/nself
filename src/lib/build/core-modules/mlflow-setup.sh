@@ -14,7 +14,7 @@ generate_mlflow_dockerfile() {
   mkdir -p "$mlflow_dir"
 
   # Generate Dockerfile with psycopg2 support
-  cat > "$mlflow_dir/Dockerfile" <<'DOCKERFILE'
+  cat >"$mlflow_dir/Dockerfile" <<'DOCKERFILE'
 FROM ghcr.io/mlflow/mlflow:latest
 
 # Install PostgreSQL adapter

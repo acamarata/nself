@@ -60,7 +60,7 @@ save_build_state() {
     echo "monitoring_enabled=${MONITORING_ENABLED:-false}"
     echo "custom_service_count=${CUSTOM_SERVICE_COUNT:-0}"
     echo "frontend_app_count=${FRONTEND_APP_COUNT:-0}"
-  } > "$state_file"
+  } >"$state_file"
 }
 
 # Load previous build state
@@ -75,7 +75,7 @@ load_previous_build_state() {
   while IFS='=' read -r key value; do
     [[ -z "$key" || "$key" =~ ^# ]] && continue
     export "PREV_${key}=$value"
-  done < "$state_file"
+  done <"$state_file"
 
   return 0
 }
@@ -158,7 +158,7 @@ determine_restart_recommendation() {
   local has_topology_change=false
   for change in "${CHANGES_DETECTED[@]}"; do
     case "$change" in
-      *-toggled|custom-services-changed|frontend-apps-changed|force-rebuild)
+      *-toggled | custom-services-changed | frontend-apps-changed | force-rebuild)
         has_topology_change=true
         break
         ;;
@@ -174,7 +174,7 @@ determine_restart_recommendation() {
   local has_config_change=false
   for change in "${CHANGES_DETECTED[@]}"; do
     case "$change" in
-      .env|.env.*)
+      .env | .env.*)
         has_config_change=true
         break
         ;;
@@ -206,7 +206,7 @@ check_ssl_status() {
   elif [[ -x "${HOME}/.nself/bin/mkcert" ]]; then
     mkcert_cmd="${HOME}/.nself/bin/mkcert"
   else
-    return 0  # Can't check trust without mkcert
+    return 0 # Can't check trust without mkcert
   fi
 
   # Check if root CA is installed
@@ -220,7 +220,7 @@ check_ssl_status() {
     if [[ -n "$expiry_date" ]]; then
       local expiry_epoch=$(date -j -f "%b %d %T %Y %Z" "$expiry_date" "+%s" 2>/dev/null || date -d "$expiry_date" "+%s" 2>/dev/null)
       local current_epoch=$(date "+%s")
-      local days_until_expiry=$(( (expiry_epoch - current_epoch) / 86400 ))
+      local days_until_expiry=$(((expiry_epoch - current_epoch) / 86400))
 
       # If expiring in less than 30 days, recommend regeneration
       if [[ $days_until_expiry -lt 30 ]]; then

@@ -30,10 +30,10 @@ is_linux_server() {
   if [[ "$(uname -s)" == "Linux" ]]; then
     # Check if Docker Desktop is installed (has desktop features)
     if ! docker info 2>/dev/null | grep -qi "docker desktop"; then
-      return 0  # Is Linux server
+      return 0 # Is Linux server
     fi
   fi
-  return 1  # Not Linux server (macOS, Windows, or Docker Desktop on Linux)
+  return 1 # Not Linux server (macOS, Windows, or Docker Desktop on Linux)
 }
 
 # Clean up old nginx site configs before regeneration
@@ -72,7 +72,7 @@ generate_nginx_config() {
 
 # Generate main nginx.conf
 generate_main_nginx_conf() {
-  cat > nginx/nginx.conf <<'EOF'
+  cat >nginx/nginx.conf <<'EOF'
 user nginx;
 worker_processes auto;
 pid /var/run/nginx.pid;
@@ -141,7 +141,7 @@ generate_default_server() {
   local ssl_dir
   ssl_dir=$(get_ssl_cert_dir)
 
-  cat > nginx/conf.d/default.conf <<EOF
+  cat >nginx/conf.d/default.conf <<EOF
 # Default server - redirect HTTP to HTTPS
 server {
     listen 80 default_server;
@@ -198,7 +198,7 @@ generate_service_routes() {
     local hasura_route="${HASURA_ROUTE:-api}"
     local base_domain="${BASE_DOMAIN:-localhost}"
 
-    cat > nginx/sites/hasura.conf <<EOF
+    cat >nginx/sites/hasura.conf <<EOF
 # Hasura GraphQL Engine
 server {
     listen 443 ssl;
@@ -236,7 +236,7 @@ EOF
     local auth_route="${AUTH_ROUTE:-auth}"
     local base_domain="${BASE_DOMAIN:-localhost}"
 
-    cat > nginx/sites/auth.conf <<EOF
+    cat >nginx/sites/auth.conf <<EOF
 # Authentication Service
 server {
     listen 443 ssl;
@@ -263,7 +263,7 @@ EOF
     local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console}"
     local storage_route="${STORAGE_ROUTE:-storage}"
     local base_domain="${BASE_DOMAIN:-localhost}"
-    cat > nginx/sites/storage.conf <<EOF
+    cat >nginx/sites/storage.conf <<EOF
 # MinIO Storage Console
 server {
     listen 443 ssl;
@@ -332,7 +332,7 @@ generate_optional_service_routes() {
       fi
     fi
 
-    cat > nginx/sites/admin.conf <<EOF
+    cat >nginx/sites/admin.conf <<EOF
 # nself Admin Dashboard${NSELF_ADMIN_DEV:+ (DEV MODE - routing to local server)}
 server {
     listen 443 ssl;
@@ -396,7 +396,7 @@ EOF
         ;;
     esac
 
-    cat > nginx/sites/search.conf <<EOF
+    cat >nginx/sites/search.conf <<EOF
 # ${service_name} Search Engine
 server {
     listen 443 ssl;
@@ -425,7 +425,7 @@ EOF
   if [[ "${MAILPIT_ENABLED:-false}" == "true" ]]; then
     local mail_route="${MAIL_ROUTE:-mail}"
 
-    cat > nginx/sites/mailpit.conf <<EOF
+    cat >nginx/sites/mailpit.conf <<EOF
 # MailPit (Development Mail Testing)
 server {
     listen 443 ssl;
@@ -454,7 +454,7 @@ EOF
   if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
     local mlflow_route="${MLFLOW_ROUTE:-mlflow}"
 
-    cat > nginx/sites/mlflow.conf <<EOF
+    cat >nginx/sites/mlflow.conf <<EOF
 # MLflow
 server {
     listen 443 ssl;
@@ -480,7 +480,7 @@ EOF
   if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
     local functions_route="${FUNCTIONS_ROUTE:-functions}"
 
-    cat > nginx/sites/functions.conf <<EOF
+    cat >nginx/sites/functions.conf <<EOF
 # Serverless Functions
 server {
     listen 443 ssl;
@@ -507,7 +507,7 @@ EOF
     # Grafana
     local grafana_route="${GRAFANA_ROUTE:-grafana}"
 
-    cat > nginx/sites/grafana.conf <<EOF
+    cat >nginx/sites/grafana.conf <<EOF
 server {
     listen 443 ssl;
     http2 on;
@@ -530,7 +530,7 @@ EOF
     # Prometheus
     local prometheus_route="${PROMETHEUS_ROUTE:-prometheus}"
 
-    cat > nginx/sites/prometheus.conf <<EOF
+    cat >nginx/sites/prometheus.conf <<EOF
 server {
     listen 443 ssl;
     http2 on;
@@ -553,7 +553,7 @@ EOF
     # Alertmanager
     local alertmanager_route="${ALERTMANAGER_ROUTE:-alertmanager}"
 
-    cat > nginx/sites/alertmanager.conf <<EOF
+    cat >nginx/sites/alertmanager.conf <<EOF
 server {
     listen 443 ssl;
     http2 on;
@@ -592,7 +592,7 @@ generate_frontend_routes() {
       local app_port_var="FRONTEND_APP_${i}_PORT"
       local app_port="${!app_port_var:-$((3000 + i - 1))}"
 
-      cat > "nginx/sites/frontend-${app_name}.conf" <<EOF
+      cat >"nginx/sites/frontend-${app_name}.conf" <<EOF
 # Frontend Application: $app_name
 server {
     listen 443 ssl;
@@ -630,7 +630,7 @@ EOF
         local api_port_var="FRONTEND_APP_${i}_API_PORT"
         local api_port="${!api_port_var:-$((4000 + i))}"
 
-        cat >> "nginx/sites/frontend-${app_name}.conf" <<EOF
+        cat >>"nginx/sites/frontend-${app_name}.conf" <<EOF
 server {
     listen 443 ssl;
     http2 on;
@@ -677,7 +677,7 @@ generate_custom_routes() {
         local cs_port_var="CS_${i}_PORT"
         local cs_port="${!cs_port_var:-$((8000 + i))}"
 
-        cat > "nginx/sites/custom-${cs_name}.conf" <<EOF
+        cat >"nginx/sites/custom-${cs_name}.conf" <<EOF
 # Custom Service: $cs_name
 server {
     listen 443 ssl;
@@ -718,7 +718,7 @@ generate_database_init() {
   local force="${1:-false}"
 
   if [[ "$force" == "true" ]] || [[ ! -f "postgres/init/00-init.sql" ]]; then
-    cat > postgres/init/00-init.sql <<'EOF'
+    cat >postgres/init/00-init.sql <<'EOF'
 -- Database initialization script
 -- Uses runtime environment variables
 
@@ -761,7 +761,7 @@ EOF
       local prefix="${!prefix_var:-}"
 
       if [[ -n "$app_name" ]] && [[ -n "$prefix" ]]; then
-        cat >> postgres/init/00-init.sql <<EOF
+        cat >>postgres/init/00-init.sql <<EOF
 
 -- Tables for frontend app: $app_name
 CREATE SCHEMA IF NOT EXISTS ${prefix}schema;
@@ -817,7 +817,7 @@ generate_plugin_routes() {
 
   local webhooks_route="${WEBHOOKS_ROUTE:-webhooks}"
 
-  cat > nginx/sites/webhooks.conf <<EOF
+  cat >nginx/sites/webhooks.conf <<EOF
 # Plugin Webhook Endpoints
 # Installed plugins:${installed_plugins}
 server {
@@ -837,7 +837,7 @@ EOF
 
   # Add location block for each installed plugin
   for plugin_name in $installed_plugins; do
-    cat >> nginx/sites/webhooks.conf <<EOF
+    cat >>nginx/sites/webhooks.conf <<EOF
 
     # ${plugin_name} webhook endpoint
     location /${plugin_name} {
@@ -862,7 +862,7 @@ EOF
 EOF
   done
 
-  cat >> nginx/sites/webhooks.conf <<EOF
+  cat >>nginx/sites/webhooks.conf <<EOF
 
     # Health check
     location /health {

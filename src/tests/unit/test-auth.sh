@@ -397,7 +397,7 @@ main() {
     printf "\n✓ All tests passed! (100%%)\n"
     exit 0
   else
-    local pass_rate=$(( (TESTS_PASSED * 100) / TESTS_RUN ))
+    local pass_rate=$(((TESTS_PASSED * 100) / TESTS_RUN))
     printf "\n⚠ Pass rate: %d%%\n" "$pass_rate"
     exit 1
   fi

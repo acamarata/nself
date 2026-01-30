@@ -103,29 +103,29 @@ validate_postgres_extension() {
 
   # Check common misspellings
   case "$ext_lower" in
-  "uuid_ossp" | "uuid-generate")
-    echo "uuid-ossp" # Return correct name
-    return 3         # Misspelled
-    ;;
-  "pg_crypto" | "pg-crypto")
-    echo "pgcrypto"
-    return 3
-    ;;
-  "time_scale" | "time-scale" | "timescale")
-    echo "timescaledb"
-    return 3
-    ;;
-  "post_gis" | "post-gis")
-    echo "postgis"
-    return 3
-    ;;
-  "pg_vector" | "pg-vector")
-    echo "pgvector"
-    return 3
-    ;;
-  *)
-    return 1 # Unknown extension
-    ;;
+    "uuid_ossp" | "uuid-generate")
+      echo "uuid-ossp" # Return correct name
+      return 3         # Misspelled
+      ;;
+    "pg_crypto" | "pg-crypto")
+      echo "pgcrypto"
+      return 3
+      ;;
+    "time_scale" | "time-scale" | "timescale")
+      echo "timescaledb"
+      return 3
+      ;;
+    "post_gis" | "post-gis")
+      echo "postgis"
+      return 3
+      ;;
+    "pg_vector" | "pg-vector")
+      echo "pgvector"
+      return 3
+      ;;
+    *)
+      return 1 # Unknown extension
+      ;;
   esac
 }
 
@@ -148,37 +148,37 @@ suggest_extension_alternatives() {
 
   # Try to determine the purpose based on the extension name
   case "$ext" in
-  *crypt* | *security* | *hash*)
-    purpose="crypto"
-    echo "Consider using: pgcrypto"
-    ;;
-  *uuid* | *guid*)
-    purpose="uuid"
-    echo "Consider using: uuid-ossp"
-    ;;
-  *time* | *series*)
-    purpose="timeseries"
-    echo "Consider using: timescaledb"
-    ;;
-  *geo* | *spatial* | *map*)
-    purpose="spatial"
-    echo "Consider using: postgis"
-    ;;
-  *vector* | *embed* | *ml*)
-    purpose="ml"
-    echo "Consider using: pgvector"
-    ;;
-  *search* | *text*)
-    purpose="search"
-    echo "Consider using: pg_trgm, fuzzystrmatch"
-    ;;
-  *json*)
-    purpose="json"
-    echo "Consider using: built-in JSON/JSONB types"
-    ;;
-  *)
-    echo "Check available extensions with: SELECT * FROM pg_available_extensions;"
-    ;;
+    *crypt* | *security* | *hash*)
+      purpose="crypto"
+      echo "Consider using: pgcrypto"
+      ;;
+    *uuid* | *guid*)
+      purpose="uuid"
+      echo "Consider using: uuid-ossp"
+      ;;
+    *time* | *series*)
+      purpose="timeseries"
+      echo "Consider using: timescaledb"
+      ;;
+    *geo* | *spatial* | *map*)
+      purpose="spatial"
+      echo "Consider using: postgis"
+      ;;
+    *vector* | *embed* | *ml*)
+      purpose="ml"
+      echo "Consider using: pgvector"
+      ;;
+    *search* | *text*)
+      purpose="search"
+      echo "Consider using: pg_trgm, fuzzystrmatch"
+      ;;
+    *json*)
+      purpose="json"
+      echo "Consider using: built-in JSON/JSONB types"
+      ;;
+    *)
+      echo "Check available extensions with: SELECT * FROM pg_available_extensions;"
+      ;;
   esac
 }
 
@@ -189,7 +189,8 @@ check_extension_compatibility() {
   IFS=',' read -r -a ext_array <<<"$extensions"
 
   # Check for conflicting extensions
-  if [[ " ${ext_array[@]} " =~ " citus " ]] && [[ " ${ext_array[@]} " =~ " timescaledb " ]]; then
+  # shellcheck disable=SC2199 # Intentional array concatenation in regex match
+  if [[ " ${ext_array[*]} " =~ " citus " ]] && [[ " ${ext_array[*]} " =~ " timescaledb " ]]; then
     warnings+=("Citus and TimescaleDB may conflict - use one or the other")
   fi
 
@@ -197,9 +198,9 @@ check_extension_compatibility() {
   local heavy_count=0
   for ext in "${ext_array[@]}"; do
     case "$ext" in
-    timescaledb | postgis | citus | orioledb)
-      ((heavy_count++))
-      ;;
+      timescaledb | postgis | citus | orioledb)
+        ((heavy_count++))
+        ;;
     esac
   done
 
@@ -210,12 +211,12 @@ check_extension_compatibility() {
   # Check for deprecated extensions
   for ext in "${ext_array[@]}"; do
     case "$ext" in
-    xml2)
-      warnings+=("xml2 is deprecated - use built-in XML functions")
-      ;;
-    tsearch2)
-      warnings+=("tsearch2 is obsolete - use built-in full text search")
-      ;;
+      xml2)
+        warnings+=("xml2 is deprecated - use built-in XML functions")
+        ;;
+      tsearch2)
+        warnings+=("tsearch2 is obsolete - use built-in full text search")
+        ;;
     esac
   done
 
@@ -232,27 +233,27 @@ recommend_extensions() {
   local use_case="$1"
 
   case "$use_case" in
-  "api" | "backend")
-    echo "uuid-ossp,pgcrypto,pg_trgm"
-    ;;
-  "analytics" | "reporting")
-    echo "timescaledb,pg_stat_statements,tablefunc"
-    ;;
-  "geospatial" | "maps")
-    echo "postgis,postgis_topology,pgrouting"
-    ;;
-  "ml" | "ai" | "embeddings")
-    echo "pgvector,plpython3u"
-    ;;
-  "search" | "fulltext")
-    echo "pg_trgm,unaccent,fuzzystrmatch"
-    ;;
-  "audit" | "compliance")
-    echo "pgaudit,pg_stat_statements"
-    ;;
-  *)
-    echo "uuid-ossp,pgcrypto"
-    ;;
+    "api" | "backend")
+      echo "uuid-ossp,pgcrypto,pg_trgm"
+      ;;
+    "analytics" | "reporting")
+      echo "timescaledb,pg_stat_statements,tablefunc"
+      ;;
+    "geospatial" | "maps")
+      echo "postgis,postgis_topology,pgrouting"
+      ;;
+    "ml" | "ai" | "embeddings")
+      echo "pgvector,plpython3u"
+      ;;
+    "search" | "fulltext")
+      echo "pg_trgm,unaccent,fuzzystrmatch"
+      ;;
+    "audit" | "compliance")
+      echo "pgaudit,pg_stat_statements"
+      ;;
+    *)
+      echo "uuid-ossp,pgcrypto"
+      ;;
   esac
 }
 

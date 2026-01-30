@@ -276,7 +276,7 @@ pg_update_by_id() {
   fi
 
   # Build SET clause (col1 = :'param1', col2 = :'param2', etc.)
-  IFS=',' read -ra cols <<< "$update_columns"
+  IFS=',' read -ra cols <<<"$update_columns"
   local set_clause=""
   local param_num=1
   for col in "${cols[@]}"; do

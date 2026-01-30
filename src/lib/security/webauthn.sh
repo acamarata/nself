@@ -10,7 +10,7 @@ set -euo pipefail
 
 # Generate a cryptographically secure random challenge for WebAuthn
 generate_webauthn_challenge() {
-  local challenge_length="${1:-32}"  # 32 bytes default
+  local challenge_length="${1:-32}" # 32 bytes default
 
   if command -v openssl >/dev/null 2>&1; then
     # Generate random bytes and base64url encode
@@ -18,12 +18,12 @@ generate_webauthn_challenge() {
   else
     # Fallback to /dev/urandom
     if [[ -r /dev/urandom ]]; then
-      LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$challenge_length"
+      LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$challenge_length"
     else
       # Last resort - use $RANDOM (not cryptographically secure!)
       local challenge=""
       local chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-      for ((i=0; i<challenge_length; i++)); do
+      for ((i = 0; i < challenge_length; i++)); do
         challenge="${challenge}${chars:RANDOM%${#chars}:1}"
       done
       echo "$challenge"
@@ -80,7 +80,7 @@ EOF
 # Generate authentication options for WebAuthn
 generate_authentication_options() {
   local rp_id="${1:-localhost}"
-  local allow_credentials="${2:-[]}"  # JSON array of allowed credential IDs
+  local allow_credentials="${2:-[]}" # JSON array of allowed credential IDs
 
   local challenge
   challenge=$(generate_webauthn_challenge)
@@ -173,9 +173,9 @@ is_counter_valid() {
   local new_counter="$2"
 
   if [[ $new_counter -gt $stored_counter ]]; then
-    return 0  # Valid
+    return 0 # Valid
   else
-    return 1  # Invalid - possible replay attack
+    return 1 # Invalid - possible replay attack
   fi
 }
 
@@ -334,12 +334,12 @@ is_webauthn_required() {
 
   # Policy: Require WebAuthn for admin and security_admin roles
   if [[ "$user_role" =~ (admin|security_admin) ]]; then
-    return 0  # Required
+    return 0 # Required
   fi
 
   # Check if user has opted into WebAuthn requirement
   # This would query the database
-  return 1  # Not required
+  return 1 # Not required
 }
 
 # Export functions

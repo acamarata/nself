@@ -19,20 +19,20 @@ fi
 # Function to check if a value needs quotes
 needs_quotes() {
   local value="$1"
-  
+
   # Skip if already quoted
   if [[ "$value" =~ ^\".*\"$ ]] || [[ "$value" =~ ^\'.*\'$ ]]; then
     return 1
   fi
-  
+
   # Check if contains spaces or special characters that need quoting
   # Extended list to catch more problematic cases
-  if [[ "$value" =~ [[:space:]] ]] || \
-     [[ "$value" =~ [\*\?\[\]\{\}\(\)\!\|\&\;\<\>\`\$] ]] || \
-     [[ "$value" =~ ^[0-9]+[[:space:]] ]]; then
+  if [[ "$value" =~ [[:space:]] ]] ||
+    [[ "$value" =~ [\*\?\[\]\{\}\(\)\!\|\&\;\<\>\`\$] ]] ||
+    [[ "$value" =~ ^[0-9]+[[:space:]] ]]; then
     return 0
   fi
-  
+
   return 1
 }
 
@@ -41,41 +41,41 @@ fix_env_file_quotes() {
   local env_file="${1:-.env}"
   local fixed_count=0
   local temp_file=$(mktemp)
-  
+
   if [[ ! -f "$env_file" ]]; then
     return 0
   fi
-  
+
   # Process each line
   while IFS= read -r line || [[ -n "$line" ]]; do
     # Skip comments and empty lines
-    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
-      echo "$line" >> "$temp_file"
+    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// /}" ]]; then
+      echo "$line" >>"$temp_file"
       continue
     fi
-    
+
     # Check if it's a variable assignment
     if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
       local var_name="${BASH_REMATCH[1]}"
       local var_value="${BASH_REMATCH[2]}"
-      
+
       # Check if value needs quotes
       if needs_quotes "$var_value"; then
         # Add quotes around the value
-        echo "${var_name}=\"${var_value}\"" >> "$temp_file"
+        echo "${var_name}=\"${var_value}\"" >>"$temp_file"
         ((fixed_count++))
         # Log the fix if verbose
         if [[ "${VERBOSE:-false}" == "true" ]] || [[ "${DEBUG:-false}" == "true" ]]; then
           echo "  Fixed: ${var_name}=${var_value} → ${var_name}=\"${var_value}\"" >&2
         fi
       else
-        echo "$line" >> "$temp_file"
+        echo "$line" >>"$temp_file"
       fi
     else
-      echo "$line" >> "$temp_file"
+      echo "$line" >>"$temp_file"
     fi
-  done < "$env_file"
-  
+  done <"$env_file"
+
   # Replace original file if fixes were made
   if [[ $fixed_count -gt 0 ]]; then
     cp "$temp_file" "$env_file"
@@ -102,7 +102,7 @@ validate_env_file() {
     ((line_num++))
 
     # Skip comments and empty lines
-    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
+    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// /}" ]]; then
       continue
     fi
 
@@ -126,7 +126,7 @@ validate_env_file() {
         fi
       fi
     fi
-  done < "$env_file"
+  done <"$env_file"
 
   if [[ "$has_issues" == "true" ]]; then
     # Return the issue count

@@ -25,7 +25,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
 # Show help
 show_health_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself health - Health check management and monitoring
 
 Usage: nself health [subcommand] [options]
@@ -116,7 +116,7 @@ check_service_health() {
   fi
 
   local end_time=$(date +%s%N)
-  response_time=$(( (end_time - start_time) / 1000000 ))
+  response_time=$(((end_time - start_time) / 1000000))
 
   # Return JSON
   printf '{"service": "%s", "status": "%s", "details": "%s", "response_time_ms": %d}' \
@@ -138,10 +138,10 @@ check_endpoint_health() {
   http_code="$result"
 
   local end_time=$(date +%s%N)
-  response_time=$(( (end_time - start_time) / 1000000 ))
+  response_time=$(((end_time - start_time) / 1000000))
 
   case "$http_code" in
-    2*|3*)
+    2* | 3*)
       status="healthy"
       ;;
     4*)
@@ -218,12 +218,12 @@ cmd_check() {
     local status_icon="?"
 
     case "$status" in
-      healthy|running)
+      healthy | running)
         healthy=$((healthy + 1))
         status_color="$COLOR_GREEN"
         status_icon="✓"
         ;;
-      unhealthy|stopped|not_found)
+      unhealthy | stopped | not_found)
         unhealthy=$((unhealthy + 1))
         status_color="$COLOR_RED"
         status_icon="✗"
@@ -270,7 +270,7 @@ cmd_check() {
     local status_color="$COLOR_RESET"
     case "$status" in
       healthy) status_color="$COLOR_GREEN" ;;
-      client_error|server_error) status_color="$COLOR_RED" ;;
+      client_error | server_error) status_color="$COLOR_RED" ;;
       unreachable) status_color="$COLOR_RED" ;;
     esac
 
@@ -303,7 +303,7 @@ cmd_check() {
   # Record history
   local timestamp=$(date +%Y%m%d_%H%M%S)
   printf '{"timestamp": "%s", "healthy": %d, "unhealthy": %d, "total": %d}\n' \
-    "$(date -Iseconds)" "$healthy" "$unhealthy" "$total" >> "${HEALTH_DIR}/history.jsonl"
+    "$(date -Iseconds)" "$healthy" "$unhealthy" "$total" >>"${HEALTH_DIR}/history.jsonl"
 
   [[ "$unhealthy" -eq 0 ]]
 }
@@ -333,8 +333,8 @@ cmd_service() {
   else
     local status_color="$COLOR_RESET"
     case "$status" in
-      healthy|running) status_color="$COLOR_GREEN" ;;
-      unhealthy|stopped|not_found) status_color="$COLOR_RED" ;;
+      healthy | running) status_color="$COLOR_GREEN" ;;
+      unhealthy | stopped | not_found) status_color="$COLOR_RED" ;;
       starting) status_color="$COLOR_YELLOW" ;;
     esac
 
@@ -542,7 +542,7 @@ cmd_health() {
         QUIET_MODE=true
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_health_help
         return 0
         ;;

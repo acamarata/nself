@@ -10,7 +10,7 @@ generate_fallback_auth() {
   mkdir -p "$build_dir/fallback-services"
 
   # Generate simple auth service
-  cat > "$build_dir/fallback-services/auth-server.js" <<'EOF'
+  cat >"$build_dir/fallback-services/auth-server.js" <<'EOF'
 // Fallback auth service - replaces nhost/hasura-auth when it fails
 const http = require('http');
 
@@ -60,7 +60,7 @@ process.on('SIGTERM', () => {
 EOF
 
   # Generate Dockerfile for auth fallback
-  cat > "$build_dir/fallback-services/Dockerfile.auth" <<'EOF'
+  cat >"$build_dir/fallback-services/Dockerfile.auth" <<'EOF'
 FROM node:18-alpine
 WORKDIR /app
 COPY auth-server.js /app/server.js
@@ -81,7 +81,7 @@ generate_fallback_functions() {
   mkdir -p "$build_dir/fallback-services"
 
   # Generate simple functions service
-  cat > "$build_dir/fallback-services/functions-server.js" <<'EOF'
+  cat >"$build_dir/fallback-services/functions-server.js" <<'EOF'
 // Fallback functions service - replaces nhost/functions when it fails
 const http = require('http');
 const fs = require('fs');
@@ -146,7 +146,7 @@ process.on('SIGTERM', () => {
 EOF
 
   # Generate Dockerfile for functions fallback
-  cat > "$build_dir/fallback-services/Dockerfile.functions" <<'EOF'
+  cat >"$build_dir/fallback-services/Dockerfile.functions" <<'EOF'
 FROM node:18-alpine
 WORKDIR /app
 COPY functions-server.js /app/server.js
@@ -165,7 +165,7 @@ EOF
 
   # Create minimal package.json if it doesn't exist
   if [[ ! -f "$build_dir/functions/package.json" ]]; then
-    cat > "$build_dir/functions/package.json" <<'EOF'
+    cat >"$build_dir/functions/package.json" <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -181,7 +181,7 @@ EOF
 
   # Create package-lock.json to satisfy nhost/functions requirements
   if [[ ! -f "$build_dir/functions/package-lock.json" ]]; then
-    cat > "$build_dir/functions/package-lock.json" <<'EOF'
+    cat >"$build_dir/functions/package-lock.json" <<'EOF'
 {
   "name": "functions",
   "version": "1.0.0",
@@ -200,7 +200,7 @@ EOF
 
   # Create yarn.lock as alternative
   if [[ ! -f "$build_dir/functions/yarn.lock" ]]; then
-    echo "# yarn lockfile v1" > "$build_dir/functions/yarn.lock"
+    echo "# yarn lockfile v1" >"$build_dir/functions/yarn.lock"
   fi
 
   echo "Generated fallback functions service in $build_dir/fallback-services/"

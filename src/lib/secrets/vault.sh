@@ -145,8 +145,8 @@ vault_set() {
   local expires_sql="NULL"
   if [[ -n "$expires_days" ]]; then
     local expires_at
-    expires_at=$(date -u -d "+${expires_days} days" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                 date -u -v+${expires_days}d "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+    expires_at=$(date -u -d "+${expires_days} days" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+${expires_days}d "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
     expires_sql="'$expires_at'::timestamptz"
   fi
 
@@ -440,7 +440,7 @@ vault_rotate_all() {
   local rotated=0
   local failed=0
 
-  for ((i=0; i<count; i++)); do
+  for ((i = 0; i < count; i++)); do
     local key_name
     local environment
     key_name=$(echo "$secrets" | jq -r ".[$i].key_name")

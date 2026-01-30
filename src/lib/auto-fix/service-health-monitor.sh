@@ -18,7 +18,7 @@ fi
 FIX_ATTEMPTS_FILE="/tmp/.nself_fix_attempts_${PROJECT_NAME:-nself}"
 LAST_FIX_TIME_FILE="/tmp/.nself_fix_time_${PROJECT_NAME:-nself}"
 MAX_FIX_ATTEMPTS=3
-FIX_COOLDOWN=300  # 5 minutes between fix attempts
+FIX_COOLDOWN=300 # 5 minutes between fix attempts
 
 # Track intentionally stopped services
 STOPPED_SERVICES_FILE="/tmp/.nself_stopped_services_${PROJECT_NAME:-nself}"
@@ -36,14 +36,14 @@ is_intentionally_stopped() {
 # Mark service as intentionally stopped
 mark_as_stopped() {
   local service="$1"
-  echo "$service" >> "$STOPPED_SERVICES_FILE"
+  echo "$service" >>"$STOPPED_SERVICES_FILE"
 }
 
 # Remove service from stopped list
 mark_as_started() {
   local service="$1"
   if [[ -f "$STOPPED_SERVICES_FILE" ]]; then
-    grep -v "^$service$" "$STOPPED_SERVICES_FILE" > "${STOPPED_SERVICES_FILE}.tmp" || true
+    grep -v "^$service$" "$STOPPED_SERVICES_FILE" >"${STOPPED_SERVICES_FILE}.tmp" || true
     mv "${STOPPED_SERVICES_FILE}.tmp" "$STOPPED_SERVICES_FILE"
   fi
 }
@@ -63,10 +63,10 @@ set_fix_attempts() {
   local service="$1"
   local attempts="$2"
   if [[ -f "$FIX_ATTEMPTS_FILE" ]]; then
-    grep -v "^$service:" "$FIX_ATTEMPTS_FILE" > "${FIX_ATTEMPTS_FILE}.tmp" 2>/dev/null || true
+    grep -v "^$service:" "$FIX_ATTEMPTS_FILE" >"${FIX_ATTEMPTS_FILE}.tmp" 2>/dev/null || true
     mv "${FIX_ATTEMPTS_FILE}.tmp" "$FIX_ATTEMPTS_FILE"
   fi
-  echo "$service:$attempts" >> "$FIX_ATTEMPTS_FILE"
+  echo "$service:$attempts" >>"$FIX_ATTEMPTS_FILE"
 }
 
 # Get last fix time for a service
@@ -84,22 +84,22 @@ set_last_fix_time() {
   local service="$1"
   local time="$2"
   if [[ -f "$LAST_FIX_TIME_FILE" ]]; then
-    grep -v "^$service:" "$LAST_FIX_TIME_FILE" > "${LAST_FIX_TIME_FILE}.tmp" 2>/dev/null || true
+    grep -v "^$service:" "$LAST_FIX_TIME_FILE" >"${LAST_FIX_TIME_FILE}.tmp" 2>/dev/null || true
     mv "${LAST_FIX_TIME_FILE}.tmp" "$LAST_FIX_TIME_FILE"
   fi
-  echo "$service:$time" >> "$LAST_FIX_TIME_FILE"
+  echo "$service:$time" >>"$LAST_FIX_TIME_FILE"
 }
 
 # Check if we should attempt a fix
 should_attempt_fix() {
   local service="$1"
   local current_time=$(date +%s)
-  
+
   # Check if service was intentionally stopped
   if is_intentionally_stopped "$service"; then
     return 1
   fi
-  
+
   # Check fix attempts
   local attempts=$(get_fix_attempts "$service")
   if [[ $attempts -ge $MAX_FIX_ATTEMPTS ]]; then
@@ -113,7 +113,7 @@ should_attempt_fix() {
       set_fix_attempts "$service" "0"
     fi
   fi
-  
+
   return 0
 }
 
@@ -130,11 +130,11 @@ record_fix_attempt() {
 fix_postgres() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   if echo "$logs" | grep -q "database system is ready to accept connections"; then
-    return 0  # Healthy
+    return 0 # Healthy
   fi
-  
+
   if echo "$logs" | grep -q "could not bind IPv4 address"; then
     log_warning "Postgres: Port conflict detected"
     # Find and update port in docker-compose.yml
@@ -145,7 +145,7 @@ fix_postgres() {
       # This would need to update docker-compose.yml and recreate
     fi
   fi
-  
+
   if echo "$logs" | grep -q "FATAL:  data directory .* has wrong ownership"; then
     log_warning "Postgres: Permission issue detected"
     docker exec "$container" chown -R postgres:postgres /var/lib/postgresql/data 2>/dev/null || true
@@ -156,11 +156,11 @@ fix_postgres() {
 fix_hasura() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for postgres connection issues
   if echo "$logs" | grep -q "connection to server.*failed"; then
     log_warning "Hasura: Database connection issue"
-    
+
     # Extract the connection string to check port
     local conn_string=$(echo "$logs" | grep -o "postgres://[^\"]*" | head -1)
     if echo "$conn_string" | grep -q ":543[3-9]"; then
@@ -172,13 +172,13 @@ fix_hasura() {
       fi
     fi
   fi
-  
+
   # Check for JWT secret issues
   if echo "$logs" | grep -q "JWT secret"; then
     log_warning "Hasura: JWT configuration issue"
     # Ensure JWT secret is properly formatted
   fi
-  
+
   # Check for metadata issues
   if echo "$logs" | grep -q "metadata.*inconsistent"; then
     log_warning "Hasura: Metadata inconsistency"
@@ -192,22 +192,22 @@ fix_hasura() {
 fix_auth() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for database connection
   if echo "$logs" | grep -q "connection.*refused\|no pg_hba.conf entry"; then
     log_warning "Auth: Database connection issue"
     # Ensure auth database exists
     local postgres_container="${PROJECT_NAME:-nself}_postgres"
-    docker exec "$postgres_container" psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'auth'" | grep -q 1 || \
+    docker exec "$postgres_container" psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'auth'" | grep -q 1 ||
       docker exec "$postgres_container" psql -U postgres -c "CREATE DATABASE auth;" 2>/dev/null
   fi
-  
+
   # Check for port issues
   if echo "$logs" | grep -q "listen.*address already in use"; then
     log_warning "Auth: Port conflict on 4000"
     # Auth typically runs on 4000, but health checks might expect 4001
   fi
-  
+
   # Check for missing environment variables
   if echo "$logs" | grep -q "required.*environment\|missing.*config"; then
     log_warning "Auth: Missing configuration"
@@ -219,7 +219,7 @@ fix_auth() {
 fix_storage() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for MinIO connection
   if echo "$logs" | grep -q "connection.*minio.*refused"; then
     log_warning "Storage: MinIO connection issue"
@@ -229,7 +229,7 @@ fix_storage() {
       docker start "$minio_container" 2>/dev/null
     fi
   fi
-  
+
   # Check for Hasura connection
   if echo "$logs" | grep -q "dial tcp.*hasura.*no such host"; then
     log_warning "Storage: Cannot connect to Hasura"
@@ -246,7 +246,7 @@ fix_storage() {
       ((retries++))
     done
   fi
-  
+
   # Check for database issues
   if echo "$logs" | grep -q "storage.*database.*not exist"; then
     log_warning "Storage: Database missing"
@@ -259,7 +259,7 @@ fix_storage() {
 fix_nginx() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for SSL certificate issues
   if echo "$logs" | grep -q "SSL_CTX_use_certificate.*failed\|no such file.*\.pem"; then
     log_warning "Nginx: SSL certificate missing"
@@ -272,7 +272,7 @@ fix_nginx() {
         -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost" 2>/dev/null
     fi
   fi
-  
+
   # Check for upstream issues
   if echo "$logs" | grep -q "host not found in upstream"; then
     log_warning "Nginx: Upstream service not found"
@@ -289,28 +289,28 @@ fix_nginx() {
       fi
     fi
   fi
-  
+
   # Check for config syntax errors
   if echo "$logs" | grep -q "nginx:.*emerg.*failed"; then
     log_warning "Nginx: Configuration syntax error"
     # Test nginx config
     docker exec "$container" nginx -t 2>&1 || true
   fi
-  
+
   # Check for missing includes
   if echo "$logs" | grep -q 'open.*"/etc/nginx/ssl/ssl.conf".*failed'; then
     log_warning "Nginx: Missing SSL config include"
     # Create the missing file
     if [[ -d "nginx/conf.d" ]]; then
-      echo "# SSL configuration placeholder" > nginx/conf.d/ssl.conf
+      echo "# SSL configuration placeholder" >nginx/conf.d/ssl.conf
       # Fix include paths in all conf files
       for conf in nginx/conf.d/*.conf; do
-        sed -i.bak 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null && rm "$conf.bak" 2>/dev/null || \
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-          sed -i '' 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null
-        else
-          sed -i 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null
-        fi
+        sed -i.bak 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null && rm "$conf.bak" 2>/dev/null ||
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null
+          else
+            sed -i 's|include /etc/nginx/ssl/ssl.conf;|include /etc/nginx/conf.d/ssl.conf;|g' "$conf" 2>/dev/null
+          fi
       done
       docker restart "$container" 2>/dev/null
     fi
@@ -322,7 +322,7 @@ fix_mlflow() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -50)
   local postgres_container="${PROJECT_NAME:-nself}_postgres"
-  
+
   # Check for command parsing issues (multi-line command problem)
   if echo "$logs" | grep -q "sh:.*--.*not found\|command not found"; then
     log_warning "MLflow: Command parsing issue detected"
@@ -331,14 +331,14 @@ fix_mlflow() {
     if [[ -f "docker-compose.yml" ]]; then
       # Fix the multi-line mlflow server command to be single line
       sed -i.bak '/mlflow server$/,/--workers.*$/c\
-        mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null || \
-      if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' '/mlflow server$/,/--workers.*$/c\
+        mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null ||
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          sed -i '' '/mlflow server$/,/--workers.*$/c\
         mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null
-      else
-        sed -i '/mlflow server$/,/--workers.*$/c\
+        else
+          sed -i '/mlflow server$/,/--workers.*$/c\
         mlflow server --backend-store-uri postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/ --host 0.0.0.0 --port 5000 --serve-artifacts --workers 4' docker-compose.yml 2>/dev/null
-      fi
+        fi
 
       # Recreate the container
       docker stop "$container" 2>/dev/null
@@ -347,27 +347,27 @@ fix_mlflow() {
       return 0
     fi
   fi
-  
+
   # Check for database schema issues (metrics table missing)
   if echo "$logs" | grep -q "relation.*metrics.*does not exist\|mlflow.*database.*does not exist\|UndefinedTable"; then
     log_warning "MLflow: Database schema missing"
-    
+
     # First ensure database exists
     if ! docker exec "$postgres_container" psql -U postgres -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "mlflow"; then
       log_info "Creating MLflow database..."
       docker exec "$postgres_container" psql -U postgres -c "CREATE DATABASE mlflow;" 2>/dev/null || true
     fi
-    
+
     # Get database credentials from container environment
     local db_user=$(docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^POSTGRES_USER=" | cut -d= -f2 || echo "postgres")
     local db_pass=$(docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^POSTGRES_PASSWORD=" | cut -d= -f2 || echo "postgres")
-    
+
     # Run MLflow database migrations to create schema
     log_info "Initializing MLflow database schema..."
-    
+
     # Method 1: Try using mlflow db upgrade inside the container
     docker exec "$container" sh -c "pip install -q psycopg2-binary 2>/dev/null; mlflow db upgrade postgresql://${db_user}:${db_pass}@postgres:5432/mlflow" 2>/dev/null
-    
+
     if [[ $? -ne 0 ]]; then
       # Method 2: Run a temporary container to initialize the database
       log_info "Running MLflow database migration via temporary container..."
@@ -377,13 +377,13 @@ fix_mlflow() {
         ghcr.io/mlflow/mlflow:v2.9.2 \
         sh -c "pip install -q psycopg2-binary && mlflow db upgrade postgresql://${db_user}:${db_pass}@postgres:5432/mlflow" 2>/dev/null
     fi
-    
+
     # Restart MLflow after database initialization
     docker restart "$container" 2>/dev/null
     log_success "MLflow database initialized"
     return 0
   fi
-  
+
   # Check for S3/MinIO connection issues
   if echo "$logs" | grep -q "S3.*Connection.*Error\|Unable to connect to S3\|botocore.*exceptions"; then
     log_warning "MLflow: S3/MinIO connection issue"
@@ -393,13 +393,13 @@ fix_mlflow() {
       docker start "$minio_container" 2>/dev/null
       sleep 3
     fi
-    
+
     # Create mlflow-artifacts bucket if it doesn't exist
     docker exec "$minio_container" sh -c "mc alias set local http://localhost:9000 minioadmin minioadmin 2>/dev/null; mc mb local/mlflow-artifacts 2>/dev/null" || true
-    
+
     docker restart "$container" 2>/dev/null
   fi
-  
+
   # Check for port binding issues
   if echo "$logs" | grep -q "bind.*address already in use.*5000"; then
     log_warning "MLflow: Port 5000 already in use"
@@ -415,13 +415,13 @@ fix_mlflow() {
 fix_tempo() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for config file issues
   if echo "$logs" | grep -q "failed to read configFile.*tempo.yaml"; then
     log_warning "Tempo: Configuration file missing"
     # Create minimal tempo config
     mkdir -p monitoring/tempo
-    cat > monitoring/tempo/tempo.yaml <<'EOF'
+    cat >monitoring/tempo/tempo.yaml <<'EOF'
 server:
   http_listen_port: 3200
 
@@ -454,13 +454,13 @@ storage:
 EOF
     docker restart "$container" 2>/dev/null
   fi
-  
+
   # Check for invalid config fields
   if echo "$logs" | grep -q "field.*not found in type"; then
     log_warning "Tempo: Invalid configuration fields"
     # Remove problematic fields from config
   fi
-  
+
   # Check for permission issues
   if echo "$logs" | grep -q "permission denied.*tempo"; then
     log_warning "Tempo: Permission issue"
@@ -472,19 +472,19 @@ EOF
 fix_loki() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check for config issues
   if echo "$logs" | grep -q "error loading config"; then
     log_warning "Loki: Configuration error"
     # Create default loki config if missing
   fi
-  
+
   # Check for storage issues
   if echo "$logs" | grep -q "permission denied.*/loki"; then
     log_warning "Loki: Storage permission issue"
     docker exec "$container" chown -R 10001:10001 /loki 2>/dev/null || true
   fi
-  
+
   # Check for schema version issues
   if echo "$logs" | grep -q "schema.*version"; then
     log_warning "Loki: Schema version issue"
@@ -496,12 +496,12 @@ fix_loki() {
 check_service_health() {
   local container="$1"
   local service_type="$2"
-  
+
   # Get container status
   local container_status=$(docker inspect "$container" --format='{{.State.Status}}' 2>/dev/null)
   local exit_code=$(docker inspect "$container" --format='{{.State.ExitCode}}' 2>/dev/null)
   local restart_count=$(docker inspect "$container" --format='{{.RestartCount}}' 2>/dev/null)
-  
+
   # Check if service needs attention
   case "$container_status" in
     "running")
@@ -515,16 +515,16 @@ check_service_health() {
     "restarting")
       # Service is in restart loop
       if [[ $restart_count -gt 3 ]]; then
-        return 2  # Needs intervention
+        return 2 # Needs intervention
       fi
       return 1
       ;;
-    "exited"|"dead")
+    "exited" | "dead")
       # Check if it was intentional
       if is_intentionally_stopped "$container"; then
-        return 0  # Don't fix
+        return 0 # Don't fix
       fi
-      return 2  # Needs restart
+      return 2 # Needs restart
       ;;
     *)
       return 1
@@ -536,13 +536,13 @@ check_service_health() {
 apply_service_fix() {
   local container="$1"
   local service_type="$2"
-  
+
   if ! should_attempt_fix "$container"; then
     return 1
   fi
-  
+
   record_fix_attempt "$container"
-  
+
   # Apply service-specific fix
   case "$service_type" in
     postgres) fix_postgres "$container" ;;
@@ -561,7 +561,7 @@ apply_service_fix() {
 generic_fix() {
   local container="$1"
   local logs=$(docker logs "$container" 2>&1 | tail -20)
-  
+
   # Check common error patterns
   for pattern in "connection refused" "no such host" "permission denied" "cannot allocate memory" "address already in use" "no such file or directory" "command not found" "exit code 127" "exit code 137" "exit code 143"; do
     if echo "$logs" | grep -qi "$pattern"; then
@@ -585,7 +585,7 @@ generic_fix() {
           log_warning "Missing file detected"
           # Try to create missing files
           ;;
-        "command not found"|"exit code 127")
+        "command not found" | "exit code 127")
           log_error "Command issue - check docker-compose.yml"
           ;;
         "exit code 137")
@@ -605,31 +605,31 @@ monitor_all_services() {
   local project_name="${PROJECT_NAME:-nself}"
   local unhealthy_count=0
   local fixed_count=0
-  
+
   # Get all containers for this project
   local containers=$(docker ps -a --filter "label=com.docker.compose.project=$project_name" --format "{{.Names}}")
-  
+
   for container in $containers; do
     # Extract service type from container name
     local service_type=$(echo "$container" | sed "s/${project_name}_//")
-    
+
     if ! check_service_health "$container" "$service_type"; then
       ((unhealthy_count++))
       log_warning "Service $service_type needs attention"
-      
+
       if apply_service_fix "$container" "$service_type"; then
         ((fixed_count++))
         log_success "Applied fix for $service_type"
       fi
     fi
   done
-  
+
   if [[ $unhealthy_count -eq 0 ]]; then
     log_success "All services healthy"
   else
     log_info "Found $unhealthy_count unhealthy services, fixed $fixed_count"
   fi
-  
+
   return $unhealthy_count
 }
 

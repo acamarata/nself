@@ -7,7 +7,10 @@ set -euo pipefail
 # Initialize health check storage
 health_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS health;
@@ -58,7 +61,7 @@ EOSQL
 # Perform health check
 health_check() {
   local service_name="$1"
-  local check_type="${2:-liveness}"  # liveness, readiness, startup
+  local check_type="${2:-liveness}" # liveness, readiness, startup
 
   local start_time=$(date +%s%3N)
   local status="healthy"
@@ -76,9 +79,18 @@ health_check() {
     local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
 
     case "$health_status" in
-      healthy) status="healthy"; message="Container reports healthy" ;;
-      starting) status="degraded"; message="Container starting" ;;
-      unhealthy) status="unhealthy"; message="Container reports unhealthy" ;;
+      healthy)
+        status="healthy"
+        message="Container reports healthy"
+        ;;
+      starting)
+        status="degraded"
+        message="Container starting"
+        ;;
+      unhealthy)
+        status="unhealthy"
+        message="Container reports unhealthy"
+        ;;
       none)
         # No health check defined - check if running
         local running=$(docker inspect --format='{{.State.Running}}' "$container" 2>/dev/null)
@@ -109,7 +121,7 @@ health_check_all() {
     [[ -z "$service" ]] && continue
     local result=$(health_check "$service" "liveness" 2>/dev/null)
     results=$(echo "$results" | jq --argjson r "$result" '. += [$r]')
-  done <<< "$services"
+  done <<<"$services"
 
   echo "$results"
 }
@@ -118,7 +130,7 @@ health_check_all() {
 health_check_dependency() {
   local service_name="$1"
   local dependency_name="$2"
-  local dependency_type="$3"  # database, cache, api, queue
+  local dependency_type="$3" # database, cache, api, queue
 
   local status="healthy"
   local db_container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
@@ -214,7 +226,7 @@ health_status() {
 # Trigger recovery action
 health_recover() {
   local service_name="$1"
-  local action_type="${2:-restart}"  # restart, scale, notify
+  local action_type="${2:-restart}" # restart, scale, notify
 
   local success=false
   local details="{}"
@@ -280,7 +292,7 @@ health_status_page() {
   local db_container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
   local statuses=$(health_status)
 
-  cat > "$output_file" <<EOF
+  cat >"$output_file" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -308,9 +320,9 @@ health_status_page() {
     </tr>
 EOF
 
-  echo "$statuses" | jq -r '.[] | "<tr><td>\(.service_name)</td><td class=\"\(.status)\">\(.status)</td><td>\(.message)</td><td>\(.response_time_ms)ms</td><td>\(.checked_at)</td></tr>"' >> "$output_file"
+  echo "$statuses" | jq -r '.[] | "<tr><td>\(.service_name)</td><td class=\"\(.status)\">\(.status)</td><td>\(.message)</td><td>\(.response_time_ms)ms</td><td>\(.checked_at)</td></tr>"' >>"$output_file"
 
-  cat >> "$output_file" <<EOF
+  cat >>"$output_file" <<EOF
   </table>
 </body>
 </html>

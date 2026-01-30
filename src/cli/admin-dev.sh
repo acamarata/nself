@@ -35,7 +35,7 @@ if ! declare -f log_info >/dev/null 2>&1; then
 fi
 
 show_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself admin-dev - Quick toggle for nself-admin local development
 
 USAGE:
@@ -98,7 +98,7 @@ get_active_env_file() {
         return
       fi
       ;;
-    prod|production)
+    prod | production)
       if [[ -f ".env.prod" ]]; then
         echo ".env.prod"
         return
@@ -142,7 +142,7 @@ cmd_admin_dev_on() {
   # Remove existing NSELF_ADMIN_DEV settings
   local temp_file
   temp_file=$(mktemp)
-  grep -v "^NSELF_ADMIN_DEV" "$env_file" > "$temp_file" 2>/dev/null || true
+  grep -v "^NSELF_ADMIN_DEV" "$env_file" >"$temp_file" 2>/dev/null || true
   mv "$temp_file" "$env_file"
 
   # Add new settings
@@ -151,7 +151,7 @@ cmd_admin_dev_on() {
     printf "NSELF_ADMIN_DEV=true\n"
     printf "NSELF_ADMIN_DEV_PORT=%s\n" "$port"
     [[ -n "$path" ]] && printf "NSELF_ADMIN_DEV_PATH=%s\n" "$path"
-  } >> "$env_file"
+  } >>"$env_file"
 
   log_success "Dev mode enabled (port: $port)"
 
@@ -173,8 +173,8 @@ cmd_admin_dev_on() {
   local project_name="${PROJECT_NAME:-nself}"
 
   # Restart nginx container
-  docker restart "${project_name}_nginx" 2>/dev/null || \
-    docker restart "nginx" 2>/dev/null || \
+  docker restart "${project_name}_nginx" 2>/dev/null ||
+    docker restart "nginx" 2>/dev/null ||
     log_warning "Could not restart nginx (may need manual restart)"
 
   log_success "Nginx restarted"
@@ -211,8 +211,8 @@ cmd_admin_dev_off() {
   # Remove dev mode settings
   local temp_file
   temp_file=$(mktemp)
-  grep -v "^NSELF_ADMIN_DEV" "$env_file" > "$temp_file" 2>/dev/null || true
-  grep -v "^# Admin Development Mode" "$temp_file" > "$env_file" 2>/dev/null || mv "$temp_file" "$env_file"
+  grep -v "^NSELF_ADMIN_DEV" "$env_file" >"$temp_file" 2>/dev/null || true
+  grep -v "^# Admin Development Mode" "$temp_file" >"$env_file" 2>/dev/null || mv "$temp_file" "$env_file"
   rm -f "$temp_file" 2>/dev/null || true
 
   log_success "Dev mode disabled"
@@ -234,11 +234,11 @@ cmd_admin_dev_off() {
   local project_name="${PROJECT_NAME:-nself}"
 
   # Restart nginx and admin container
-  docker restart "${project_name}_nginx" 2>/dev/null || \
+  docker restart "${project_name}_nginx" 2>/dev/null ||
     docker restart "nginx" 2>/dev/null || true
 
   # Try to start admin container if it exists
-  docker start "${project_name}_nself-admin" 2>/dev/null || \
+  docker start "${project_name}_nself-admin" 2>/dev/null ||
     docker start "nself-admin" 2>/dev/null || true
 
   log_success "Services restarted"
@@ -286,16 +286,16 @@ main() {
   shift || true
 
   case "$action" in
-    on|enable)
+    on | enable)
       cmd_admin_dev_on "$@"
       ;;
-    off|disable)
+    off | disable)
       cmd_admin_dev_off "$@"
       ;;
-    status|"")
+    status | "")
       cmd_admin_dev_status "$@"
       ;;
-    -h|--help|help)
+    -h | --help | help)
       show_help
       ;;
     *)

@@ -95,14 +95,14 @@ check_variable_scope() {
   # Look for variables that should be local
   while IFS= read -r line; do
     # Check for variable assignments without local
-    if [[ "$line" =~ ^[[:space:]]*([a-z_][a-z0-9_]*)= ]] && \
-       [[ ! "$line" =~ ^[[:space:]]*local ]] && \
-       [[ ! "$line" =~ ^[[:space:]]*readonly ]] && \
-       [[ ! "$line" =~ ^[[:space:]]*export ]]; then
+    if [[ "$line" =~ ^[[:space:]]*([a-z_][a-z0-9_]*)= ]] &&
+      [[ ! "$line" =~ ^[[:space:]]*local ]] &&
+      [[ ! "$line" =~ ^[[:space:]]*readonly ]] &&
+      [[ ! "$line" =~ ^[[:space:]]*export ]]; then
       echo "Warning: Variable '${BASH_REMATCH[1]}' should be declared as local" >&2
       warnings=$((warnings + 1))
     fi
-  done < "$file"
+  done <"$file"
 
   return $warnings
 }
@@ -134,7 +134,7 @@ fix_indentation() {
   local temp_file=$(mktemp)
 
   # Convert tabs to 2 spaces
-  expand -t 2 "$file" > "$temp_file"
+  expand -t 2 "$file" >"$temp_file"
   mv "$temp_file" "$file"
 }
 

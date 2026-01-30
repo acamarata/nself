@@ -121,23 +121,23 @@ offer_port_solutions() {
   echo ""
 
   case $REPLY in
-  1)
-    stop_conflicting_services_interactive
-    ;;
-  2)
-    configure_alternative_ports
-    ;;
-  3)
-    log_warning "Continuing with port conflicts..."
-    ;;
-  4)
-    log_info "Cancelled"
-    exit 0
-    ;;
-  *)
-    log_error "Invalid option"
-    exit 1
-    ;;
+    1)
+      stop_conflicting_services_interactive
+      ;;
+    2)
+      configure_alternative_ports
+      ;;
+    3)
+      log_warning "Continuing with port conflicts..."
+      ;;
+    4)
+      log_info "Cancelled"
+      exit 0
+      ;;
+    *)
+      log_error "Invalid option"
+      exit 1
+      ;;
   esac
 }
 

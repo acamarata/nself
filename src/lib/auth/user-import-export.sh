@@ -20,7 +20,7 @@ fi
 # Export all users to JSON
 # Usage: user_export_json [output_file] [include_deleted]
 user_export_json() {
-  local output_file="${1:--}"  # Default to stdout
+  local output_file="${1:--}" # Default to stdout
   local include_deleted="${2:-false}"
 
   # Get PostgreSQL container
@@ -77,7 +77,7 @@ user_export_json() {
   if [[ "$output_file" == "-" ]]; then
     echo "$export_json"
   else
-    echo "$export_json" > "$output_file"
+    echo "$export_json" >"$output_file"
     echo "✓ Exported users to $output_file" >&2
   fi
 
@@ -119,7 +119,7 @@ user_import_json() {
   local skipped=0
   local failed=0
 
-  for ((i=0; i<user_count; i++)); do
+  for ((i = 0; i < user_count; i++)); do
     local user_data
     user_data=$(echo "$import_json" | jq ".[$i]" 2>/dev/null)
 
@@ -237,7 +237,7 @@ $csv_data"
   if [[ "$output_file" == "-" ]]; then
     echo "$csv_output"
   else
-    echo "$csv_output" > "$output_file"
+    echo "$csv_output" >"$output_file"
     echo "✓ Exported users to $output_file" >&2
   fi
 
@@ -315,7 +315,7 @@ user_import_csv() {
       echo "✗ Failed to import user: $email" >&2
       ((failed++))
     fi
-  done < "$input_file"
+  done <"$input_file"
 
   echo "" >&2
   echo "Import complete:" >&2
@@ -351,7 +351,7 @@ user_bulk_delete() {
   local deleted=0
   local failed=0
 
-  for ((i=0; i<user_count; i++)); do
+  for ((i = 0; i < user_count; i++)); do
     local user_id
     user_id=$(echo "$user_ids_json" | jq -r ".[$i]")
 

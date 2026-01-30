@@ -34,7 +34,7 @@ creds::detect_ssh_keys() {
     if [[ -f "$key_file" ]]; then
       # Skip public keys and known_hosts
       case "$key_file" in
-        *.pub|*known_hosts*|*config|*authorized_keys)
+        *.pub | *known_hosts* | *config | *authorized_keys)
           continue
           ;;
       esac

@@ -21,17 +21,17 @@ cd "$TEMP_DIR"
 
 # Cleanup function
 cleanup() {
-    local exit_code=$?
-    echo
-    echo -e "${COLOR_YELLOW}Cleaning up temp directory...${COLOR_RESET}"
-    cd /
-    rm -rf "$TEMP_DIR"
-    if [ $exit_code -eq 0 ]; then
-        echo -e "${COLOR_GREEN}✓ Test completed successfully${COLOR_RESET}"
-    else
-        echo -e "${COLOR_RED}✗ Test failed with exit code $exit_code${COLOR_RESET}"
-    fi
-    exit $exit_code
+  local exit_code=$?
+  echo
+  echo -e "${COLOR_YELLOW}Cleaning up temp directory...${COLOR_RESET}"
+  cd /
+  rm -rf "$TEMP_DIR"
+  if [ $exit_code -eq 0 ]; then
+    echo -e "${COLOR_GREEN}✓ Test completed successfully${COLOR_RESET}"
+  else
+    echo -e "${COLOR_RED}✗ Test failed with exit code $exit_code${COLOR_RESET}"
+  fi
+  exit $exit_code
 }
 
 # Set trap for cleanup
@@ -39,10 +39,10 @@ trap cleanup EXIT INT TERM
 
 # Function to run nself commands
 run_nself() {
-    local cmd="$1"
-    shift
-    printf "${COLOR_BLUE}Running: nself $cmd %s${COLOR_RESET}\n" "$*"
-    bash "$NSELF_DIR/src/cli/${cmd}.sh" "$@"
+  local cmd="$1"
+  shift
+  printf "${COLOR_BLUE}Running: nself $cmd %s${COLOR_RESET}\n" "$*"
+  bash "$NSELF_DIR/src/cli/${cmd}.sh" "$@"
 }
 
 # Test sequence
@@ -72,11 +72,11 @@ echo
 
 # Test with intentional conflict
 echo -e "${COLOR_BLUE}5. Testing with intentional conflict...${COLOR_RESET}"
-echo "CS_1_ROUTE=api" >> .env
+echo "CS_1_ROUTE=api" >>.env
 if run_nself urls --check-conflicts 2>&1 | grep -q "conflict"; then
-    echo -e "${COLOR_GREEN}✓ Conflict detection working${COLOR_RESET}"
+  echo -e "${COLOR_GREEN}✓ Conflict detection working${COLOR_RESET}"
 else
-    echo -e "${COLOR_RED}✗ Conflict detection failed${COLOR_RESET}"
+  echo -e "${COLOR_RED}✗ Conflict detection failed${COLOR_RESET}"
 fi
 
 echo

@@ -180,7 +180,7 @@ test_template_validation() {
 
   # Create invalid template with dangerous code
   local bad_template="/tmp/bad-template-$$.html"
-  printf '<!DOCTYPE html><html><body>$(whoami)</body></html>' > "$bad_template"
+  printf '<!DOCTYPE html><html><body>$(whoami)</body></html>' >"$bad_template"
 
   TESTS_RUN=$((TESTS_RUN + 1))
   if validate_template_content "$bad_template" 2>/dev/null; then
@@ -251,7 +251,7 @@ test_template_backup_on_edit() {
 
   # Create a fake editor script
   local fake_editor="/tmp/fake-editor-$$.sh"
-  cat > "$fake_editor" << 'EOF'
+  cat >"$fake_editor" <<'EOF'
 #!/usr/bin/env bash
 printf 'Modified content' > "$1"
 EOF
@@ -286,7 +286,7 @@ test_custom_template_upload() {
 
   # Create custom template
   local custom_html="/tmp/custom-$$.html"
-  cat > "$custom_html" << 'EOF'
+  cat >"$custom_html" <<'EOF'
 <!DOCTYPE html>
 <html>
 <body>

@@ -102,7 +102,7 @@ log_refresh() {
   # File output
   if [[ -n "$LOG_FILE" ]]; then
     mkdir -p "$(dirname "$LOG_FILE")"
-    printf "[%s] [%s] %s\n" "$timestamp" "$level" "$message" >> "$LOG_FILE"
+    printf "[%s] [%s] %s\n" "$timestamp" "$level" "$message" >>"$LOG_FILE"
   fi
 }
 
@@ -345,7 +345,7 @@ process_pending_refreshes() {
     else
       ((failed++))
     fi
-  done <<< "$pending_tokens"
+  done <<<"$pending_tokens"
 
   if [[ $processed -gt 0 ]]; then
     log_refresh INFO "Processed $processed token refreshes ($failed failed)"
@@ -421,7 +421,7 @@ show_status() {
   local result
   result=$(psql_exec "$query")
 
-  IFS='|' read -r total pending failed <<< "$result"
+  IFS='|' read -r total pending failed <<<"$result"
 
   printf "  Total queued: %s\n" "$total"
   printf "  Pending refresh: %s\n" "$pending"
@@ -469,7 +469,7 @@ main() {
     status)
       show_status
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_usage
       ;;
     *)

@@ -30,11 +30,11 @@ bitbucket_get_user_info() {
   local user_id=$(echo "$response" | jq -r '.uuid')
   local username=$(echo "$response" | jq -r '.username')
   local display_name=$(echo "$response" | jq -r '.display_name')
-  
+
   # Get email from separate endpoint
   local email_response=$(curl -s -H "Authorization: Bearer $1" "${BITBUCKET_USERINFO_ENDPOINT}/emails")
   local email=$(echo "$email_response" | jq -r '.values[0].email // empty')
-  
+
   jq -n --arg id "$user_id" --arg username "$username" --arg email "$email" --arg name "$display_name" \
     '{id: $id, username: $username, email: $email, name: $name, provider: "bitbucket"}'
 }

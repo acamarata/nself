@@ -301,7 +301,7 @@ auth_load_providers() {
       PROVIDER_ENABLED+=("$enabled")
       PROVIDER_CONFIG+=("$config")
     fi
-  done <<< "$providers"
+  done <<<"$providers"
 
   log_info "✓ Loaded ${#PROVIDER_NAMES[@]} provider(s)"
   return 0
@@ -589,7 +589,7 @@ auth_login_email() {
 
   # Parse user data (tab-separated: id, password_hash, email_verified, disabled_at, deleted_at)
   local user_id password_hash email_verified disabled_at deleted_at
-  read -r user_id password_hash email_verified disabled_at deleted_at <<< "$(echo "$user_data" | xargs)"
+  read -r user_id password_hash email_verified disabled_at deleted_at <<<"$(echo "$user_data" | xargs)"
 
   # Check if user is disabled or deleted
   if [[ -n "$disabled_at" ]] || [[ -n "$deleted_at" ]]; then
@@ -611,8 +611,8 @@ auth_login_email() {
   refresh_token=$(auth_generate_token 48)
 
   local expires_at
-  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   # Insert session into database
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
@@ -773,8 +773,8 @@ auth_login_magic_link() {
     refresh_token=$(auth_generate_token 48)
 
     local expires_at
-    expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                 date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+    expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
     docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
       "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$expires_at'::timestamptz);" \
@@ -867,7 +867,7 @@ EOSQL
     fi
 
     local verified_phone expires_at verified_at
-    read -r verified_phone expires_at verified_at <<< "$(echo "$otp_data" | xargs)"
+    read -r verified_phone expires_at verified_at <<<"$(echo "$otp_data" | xargs)"
 
     # Check if already used
     if [[ -n "$verified_at" ]]; then
@@ -913,8 +913,8 @@ EOSQL
     refresh_token=$(auth_generate_token 48)
 
     local session_expires_at
-    session_expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                         date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+    session_expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
     docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
       "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$session_expires_at'::timestamptz);" \
@@ -935,8 +935,8 @@ EOSQL
 
     # Calculate expiry (5 minutes)
     local otp_expires_at
-    otp_expires_at=$(date -u -d "+300 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-                     date -u -v+300S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+    otp_expires_at=$(date -u -d "+300 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+      date -u -v+300S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
     # Create table if needed
     docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
@@ -1000,8 +1000,8 @@ auth_login_anonymous() {
   refresh_token=$(auth_generate_token 48)
 
   local expires_at
-  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
-               date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+  expires_at=$(date -u -d "+${AUTH_SESSION_EXPIRY_SECONDS} seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
+    date -u -v+${AUTH_SESSION_EXPIRY_SECONDS}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
     "INSERT INTO auth.sessions (user_id, token, refresh_token, expires_at) VALUES ('$user_id', '$session_token', '$refresh_token', '$expires_at'::timestamptz);" \

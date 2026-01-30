@@ -27,40 +27,40 @@ source "$REALTIME_LIB_DIR/../utils/docker.sh"
 #   0 on success, 1 on failure
 #######################################
 presence_track() {
-    local user_id="$1"
-    local channel="${2:-}"
-    local status="${3:-online}"
-    local metadata="${4:-{}}"
+  local user_id="$1"
+  local channel="${2:-}"
+  local status="${3:-online}"
+  local metadata="${4:-{}}"
 
-    if [[ -z "$user_id" ]]; then
-        error "User ID required"
-        return 1
+  if [[ -z "$user_id" ]]; then
+    error "User ID required"
+    return 1
+  fi
+
+  # Validate status
+  if [[ ! "$status" =~ ^(online|away|offline)$ ]]; then
+    error "Invalid status: $status (must be online, away, or offline)"
+    return 1
+  fi
+
+  local channel_id="NULL"
+  if [[ -n "$channel" ]]; then
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    channel_id="'$channel_id'"
+  fi
 
-    # Validate status
-    if [[ ! "$status" =~ ^(online|away|offline)$ ]]; then
-        error "Invalid status: $status (must be online, away, or offline)"
-        return 1
-    fi
+  # Escape metadata for SQL
+  local escaped_metadata
+  escaped_metadata=$(printf "%s" "$metadata" | sed "s/'/''/g")
 
-    local channel_id="NULL"
-    if [[ -n "$channel" ]]; then
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
-
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        channel_id="'$channel_id'"
-    fi
-
-    # Escape metadata for SQL
-    local escaped_metadata
-    escaped_metadata=$(printf "%s" "$metadata" | sed "s/'/''/g")
-
-    local sql="
+  local sql="
     INSERT INTO realtime.presence (user_id, channel_id, status, metadata, last_seen_at)
     VALUES ('$user_id', $channel_id, '$status', '$escaped_metadata'::jsonb, NOW())
     ON CONFLICT (user_id, COALESCE(channel_id, '00000000-0000-0000-0000-000000000000'::uuid))
@@ -70,13 +70,13 @@ presence_track() {
         last_seen_at = NOW();
     "
 
-    if docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
-        return 0
-    else
-        error "Failed to track presence"
-        return 1
-    fi
+  if docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
+    return 0
+  else
+    error "Failed to track presence"
+    return 1
+  fi
 }
 
 #######################################
@@ -89,31 +89,31 @@ presence_track() {
 #   0 on success, 1 on failure
 #######################################
 presence_get() {
-    local user_id="$1"
-    local channel="${2:-}"
-    local format="${3:-json}"
+  local user_id="$1"
+  local channel="${2:-}"
+  local format="${3:-json}"
 
-    if [[ -z "$user_id" ]]; then
-        error "User ID required"
-        return 1
+  if [[ -z "$user_id" ]]; then
+    error "User ID required"
+    return 1
+  fi
+
+  local where_clause="p.user_id = '$user_id'"
+
+  if [[ -n "$channel" ]]; then
+    local channel_id
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    where_clause="$where_clause AND p.channel_id = '$channel_id'"
+  fi
 
-    local where_clause="p.user_id = '$user_id'"
-
-    if [[ -n "$channel" ]]; then
-        local channel_id
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
-
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        where_clause="$where_clause AND p.channel_id = '$channel_id'"
-    fi
-
-    local sql="
+  local sql="
     SELECT
         p.user_id,
         c.slug as channel,
@@ -126,14 +126,14 @@ presence_get() {
     WHERE $where_clause;
     "
 
-    if [[ "$format" == "json" ]]; then
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT row_to_json(t) FROM ($sql) t;"
-    else
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
-    fi
+  if [[ "$format" == "json" ]]; then
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT row_to_json(t) FROM ($sql) t;"
+  else
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
+  fi
 }
 
 #######################################
@@ -145,25 +145,25 @@ presence_get() {
 #   0 on success, 1 on failure
 #######################################
 presence_list_online() {
-    local channel="${1:-}"
-    local format="${2:-table}"
+  local channel="${1:-}"
+  local format="${2:-table}"
 
-    local where_clause="p.status IN ('online', 'away')"
+  local where_clause="p.status IN ('online', 'away')"
 
-    if [[ -n "$channel" ]]; then
-        local channel_id
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+  if [[ -n "$channel" ]]; then
+    local channel_id
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
 
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        where_clause="$where_clause AND p.channel_id = '$channel_id'"
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    where_clause="$where_clause AND p.channel_id = '$channel_id'"
+  fi
 
-    local sql="
+  local sql="
     SELECT
         p.user_id,
         c.slug as channel,
@@ -177,14 +177,14 @@ presence_list_online() {
     ORDER BY p.last_seen_at DESC;
     "
 
-    if [[ "$format" == "json" ]]; then
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT json_agg(row_to_json(t)) FROM ($sql) t;"
-    else
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
-    fi
+  if [[ "$format" == "json" ]]; then
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT json_agg(row_to_json(t)) FROM ($sql) t;"
+  else
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
+  fi
 }
 
 #######################################
@@ -196,30 +196,30 @@ presence_list_online() {
 #   Outputs count on success
 #######################################
 presence_count_online() {
-    local channel="${1:-}"
+  local channel="${1:-}"
 
-    local where_clause="status IN ('online', 'away')"
+  local where_clause="status IN ('online', 'away')"
 
-    if [[ -n "$channel" ]]; then
-        local channel_id
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+  if [[ -n "$channel" ]]; then
+    local channel_id
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
 
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        where_clause="$where_clause AND channel_id = '$channel_id'"
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    where_clause="$where_clause AND channel_id = '$channel_id'"
+  fi
 
-    local count
-    count=$(docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-        "SELECT COUNT(*) FROM realtime.presence WHERE $where_clause;" | tr -d ' \n')
+  local count
+  count=$(docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+    "SELECT COUNT(*) FROM realtime.presence WHERE $where_clause;" | tr -d ' \n')
 
-    printf "%s\n" "$count"
-    return 0
+  printf "%s\n" "$count"
+  return 0
 }
 
 #######################################
@@ -231,42 +231,42 @@ presence_count_online() {
 #   0 on success, 1 on failure
 #######################################
 presence_set_offline() {
-    local user_id="$1"
-    local channel="${2:-}"
+  local user_id="$1"
+  local channel="${2:-}"
 
-    if [[ -z "$user_id" ]]; then
-        error "User ID required"
-        return 1
+  if [[ -z "$user_id" ]]; then
+    error "User ID required"
+    return 1
+  fi
+
+  local where_clause="user_id = '$user_id'"
+
+  if [[ -n "$channel" ]]; then
+    local channel_id
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    where_clause="$where_clause AND channel_id = '$channel_id'"
+  fi
 
-    local where_clause="user_id = '$user_id'"
-
-    if [[ -n "$channel" ]]; then
-        local channel_id
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
-
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        where_clause="$where_clause AND channel_id = '$channel_id'"
-    fi
-
-    local sql="
+  local sql="
     UPDATE realtime.presence
     SET status = 'offline', last_seen_at = NOW()
     WHERE $where_clause;
     "
 
-    if docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
-        return 0
-    else
-        error "Failed to set user offline"
-        return 1
-    fi
+  if docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
+    return 0
+  else
+    error "Failed to set user offline"
+    return 1
+  fi
 }
 
 #######################################
@@ -278,11 +278,11 @@ presence_set_offline() {
 #   Outputs number of cleaned records
 #######################################
 presence_cleanup() {
-    local timeout="${1:-300}"
+  local timeout="${1:-300}"
 
-    info "Cleaning up presence records older than ${timeout}s..."
+  info "Cleaning up presence records older than ${timeout}s..."
 
-    local sql="
+  local sql="
     UPDATE realtime.presence
     SET status = 'offline'
     WHERE status != 'offline'
@@ -290,13 +290,13 @@ presence_cleanup() {
     RETURNING user_id;
     "
 
-    local result
-    result=$(docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$sql" 2>&1 | wc -l | tr -d ' ')
+  local result
+  result=$(docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$sql" 2>&1 | wc -l | tr -d ' ')
 
-    success "Cleaned up $result stale presence records"
-    printf "%s\n" "$result"
-    return 0
+  success "Cleaned up $result stale presence records"
+  printf "%s\n" "$result"
+  return 0
 }
 
 #######################################
@@ -307,7 +307,7 @@ presence_cleanup() {
 #   0 on success, 1 on failure
 #######################################
 presence_stats() {
-    local sql="
+  local sql="
     SELECT
         COUNT(*) FILTER (WHERE status = 'online') as online,
         COUNT(*) FILTER (WHERE status = 'away') as away,
@@ -317,8 +317,8 @@ presence_stats() {
     FROM realtime.presence;
     "
 
-    docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
+  docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
 }
 
 #######################################
@@ -331,45 +331,45 @@ presence_stats() {
 #   0 on success, 1 on failure
 #######################################
 presence_update_metadata() {
-    local user_id="$1"
-    local channel="${2:-}"
-    local metadata="$3"
+  local user_id="$1"
+  local channel="${2:-}"
+  local metadata="$3"
 
-    if [[ -z "$user_id" ]] || [[ -z "$metadata" ]]; then
-        error "User ID and metadata required"
-        return 1
+  if [[ -z "$user_id" ]] || [[ -z "$metadata" ]]; then
+    error "User ID and metadata required"
+    return 1
+  fi
+
+  local where_clause="user_id = '$user_id'"
+
+  if [[ -n "$channel" ]]; then
+    local channel_id
+    channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
+
+    if [[ -z "$channel_id" ]]; then
+      error "Channel not found: $channel"
+      return 1
     fi
+    where_clause="$where_clause AND channel_id = '$channel_id'"
+  fi
 
-    local where_clause="user_id = '$user_id'"
+  # Escape metadata for SQL
+  local escaped_metadata
+  escaped_metadata=$(printf "%s" "$metadata" | sed "s/'/''/g")
 
-    if [[ -n "$channel" ]]; then
-        local channel_id
-        channel_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT id FROM realtime.channels WHERE id::text = '$channel' OR slug = '$channel';" | tr -d ' \n')
-
-        if [[ -z "$channel_id" ]]; then
-            error "Channel not found: $channel"
-            return 1
-        fi
-        where_clause="$where_clause AND channel_id = '$channel_id'"
-    fi
-
-    # Escape metadata for SQL
-    local escaped_metadata
-    escaped_metadata=$(printf "%s" "$metadata" | sed "s/'/''/g")
-
-    local sql="
+  local sql="
     UPDATE realtime.presence
     SET metadata = '$escaped_metadata'::jsonb, last_seen_at = NOW()
     WHERE $where_clause;
     "
 
-    if docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
-        return 0
-    else
-        error "Failed to update presence metadata"
-        return 1
-    fi
+  if docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
+    return 0
+  else
+    error "Failed to update presence metadata"
+    return 1
+  fi
 }

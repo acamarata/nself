@@ -154,44 +154,44 @@ categorize_service() {
 
   # Infrastructure services (no health checks needed)
   case "$service" in
-  nginx | storage | minio | mailhog | mailpit | adminer)
-    echo "infrastructure"
-    ;;
-  postgres | redis)
-    echo "database"
-    ;;
-  hasura | auth)
-    echo "core"
-    ;;
-  *)
-    # Check if it's a CS_N custom service
-    local n=1
-    while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
-      local cs_def=$(eval echo "\${CS_${n}:-}")
-      IFS=',' read -r cs_name cs_framework <<< "$cs_def"
-      cs_name=$(echo "$cs_name" | xargs)
-      if [[ "$service" == "$cs_name" ]]; then
-        echo "custom"
-        return
-      fi
-      ((n++))
-    done
-    
-    # Check legacy CUSTOM_SERVICES
-    if [[ -n "${CUSTOM_SERVICES:-}" ]]; then
-      IFS=',' read -ra services <<< "${CUSTOM_SERVICES}"
-      for svc in "${services[@]}"; do
-        IFS=':' read -r svc_name rest <<< "$svc"
-        svc_name=$(echo "$svc_name" | xargs)
-        if [[ "$service" == "$svc_name" ]]; then
+    nginx | storage | minio | mailhog | mailpit | adminer)
+      echo "infrastructure"
+      ;;
+    postgres | redis)
+      echo "database"
+      ;;
+    hasura | auth)
+      echo "core"
+      ;;
+    *)
+      # Check if it's a CS_N custom service
+      local n=1
+      while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
+        local cs_def=$(eval echo "\${CS_${n}:-}")
+        IFS=',' read -r cs_name cs_framework <<<"$cs_def"
+        cs_name=$(echo "$cs_name" | xargs)
+        if [[ "$service" == "$cs_name" ]]; then
           echo "custom"
           return
         fi
+        ((n++))
       done
-    fi
-    
-    echo "application"
-    ;;
+
+      # Check legacy CUSTOM_SERVICES
+      if [[ -n "${CUSTOM_SERVICES:-}" ]]; then
+        IFS=',' read -ra services <<<"${CUSTOM_SERVICES}"
+        for svc in "${services[@]}"; do
+          IFS=':' read -r svc_name rest <<<"$svc"
+          svc_name=$(echo "$svc_name" | xargs)
+          if [[ "$service" == "$svc_name" ]]; then
+            echo "custom"
+            return
+          fi
+        done
+      fi
+
+      echo "application"
+      ;;
   esac
 }
 
@@ -201,57 +201,57 @@ get_service_status_desc() {
   local health=$2
 
   case "$service" in
-  postgres)
-    [[ "$health" == "healthy" ]] && echo "DB accepting connections" || echo "Database unavailable"
-    ;;
-  hasura)
-    [[ "$health" == "healthy" ]] && echo "GraphQL endpoint responsive" || echo "GraphQL unavailable"
-    ;;
-  redis)
-    [[ "$health" == "healthy" ]] && echo "Cache operational" || echo "Cache unavailable"
-    ;;
-  auth)
-    [[ "$health" == "healthy" ]] && echo "Auth endpoints working" || echo "Auth service down"
-    ;;
-  nginx)
-    echo "Proxy active"
-    ;;
-  storage | minio)
-    echo "S3 compatible storage"
-    ;;
-  functions)
-    [[ "$health" == "healthy" ]] && echo "Functions available" || echo "No health endpoint"
-    ;;
-  *)
-    # Check if it's a CS_N custom service
-    local n=1
-    while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
-      local cs_def=$(eval echo "\${CS_${n}:-}")
-      IFS=',' read -r cs_name cs_framework <<< "$cs_def"
-      cs_name=$(echo "$cs_name" | xargs)
-      cs_framework=$(echo "$cs_framework" | xargs)
-      if [[ "$service" == "$cs_name" ]]; then
-        if [[ "$health" == "healthy" ]]; then
-          echo "Custom ${cs_framework} service"
-        elif [[ "$health" == "unhealthy" ]]; then
-          echo "${cs_framework} service down"
-        else
-          echo "${cs_framework} running"
+    postgres)
+      [[ "$health" == "healthy" ]] && echo "DB accepting connections" || echo "Database unavailable"
+      ;;
+    hasura)
+      [[ "$health" == "healthy" ]] && echo "GraphQL endpoint responsive" || echo "GraphQL unavailable"
+      ;;
+    redis)
+      [[ "$health" == "healthy" ]] && echo "Cache operational" || echo "Cache unavailable"
+      ;;
+    auth)
+      [[ "$health" == "healthy" ]] && echo "Auth endpoints working" || echo "Auth service down"
+      ;;
+    nginx)
+      echo "Proxy active"
+      ;;
+    storage | minio)
+      echo "S3 compatible storage"
+      ;;
+    functions)
+      [[ "$health" == "healthy" ]] && echo "Functions available" || echo "No health endpoint"
+      ;;
+    *)
+      # Check if it's a CS_N custom service
+      local n=1
+      while [[ -n "$(eval echo "\${CS_${n}:-}")" ]]; do
+        local cs_def=$(eval echo "\${CS_${n}:-}")
+        IFS=',' read -r cs_name cs_framework <<<"$cs_def"
+        cs_name=$(echo "$cs_name" | xargs)
+        cs_framework=$(echo "$cs_framework" | xargs)
+        if [[ "$service" == "$cs_name" ]]; then
+          if [[ "$health" == "healthy" ]]; then
+            echo "Custom ${cs_framework} service"
+          elif [[ "$health" == "unhealthy" ]]; then
+            echo "${cs_framework} service down"
+          else
+            echo "${cs_framework} running"
+          fi
+          return
         fi
-        return
+        ((n++))
+      done
+
+      # Default behavior for unknown services
+      if [[ "$health" == "healthy" ]]; then
+        echo "Service healthy"
+      elif [[ "$health" == "unhealthy" ]]; then
+        echo "Health check failed"
+      else
+        echo "Running"
       fi
-      ((n++))
-    done
-    
-    # Default behavior for unknown services
-    if [[ "$health" == "healthy" ]]; then
-      echo "Service healthy"
-    elif [[ "$health" == "unhealthy" ]]; then
-      echo "Health check failed"
-    else
-      echo "Running"
-    fi
-    ;;
+      ;;
   esac
 }
 
@@ -1154,7 +1154,7 @@ show_detailed_status() {
 
       # Parse CS_N format: name,template or name:template:port
       local cs_name cs_route cs_port
-      IFS=':,' read -r cs_name cs_template cs_port <<< "$cs_def"
+      IFS=':,' read -r cs_name cs_template cs_port <<<"$cs_def"
       cs_name=$(echo "$cs_name" | xargs)
 
       local cs_health=$(check_service_health "$cs_name")
@@ -1448,61 +1448,61 @@ main() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
-    -d | --detailed | --full)
-      detailed_mode=true
-      shift
-      ;;
-    -v | --verbose)
-      verbose_mode=true
-      shift
-      ;;
-    -w | --watch)
-      WATCH_MODE=true
-      shift
-      ;;
-    -i | --interval)
-      REFRESH_INTERVAL="$2"
-      shift 2
-      ;;
-    --all-envs)
-      all_envs=true
-      shift
-      ;;
-    --no-resources)
-      SHOW_RESOURCES=false
-      shift
-      ;;
-    --no-health)
-      SHOW_HEALTH=false
-      shift
-      ;;
-    --show-ports)
-      SHOW_PORTS=true
-      shift
-      ;;
-    --json)
-      json_mode=true
-      JSON_OUTPUT=true
-      shift
-      ;;
-    --format)
-      OUTPUT_FORMAT="$2"
-      [[ "$OUTPUT_FORMAT" == "json" ]] && json_mode=true && JSON_OUTPUT=true
-      shift 2
-      ;;
-    -h | --help)
-      show_help
-      exit 0
-      ;;
-    -*)
-      log_error "Unknown option: $1"
-      log_info "Use 'nself status --help' for usage information"
-      exit 1
-      ;;
-    *)
-      service_name="$1"
-      shift
-      ;;
+      -d | --detailed | --full)
+        detailed_mode=true
+        shift
+        ;;
+      -v | --verbose)
+        verbose_mode=true
+        shift
+        ;;
+      -w | --watch)
+        WATCH_MODE=true
+        shift
+        ;;
+      -i | --interval)
+        REFRESH_INTERVAL="$2"
+        shift 2
+        ;;
+      --all-envs)
+        all_envs=true
+        shift
+        ;;
+      --no-resources)
+        SHOW_RESOURCES=false
+        shift
+        ;;
+      --no-health)
+        SHOW_HEALTH=false
+        shift
+        ;;
+      --show-ports)
+        SHOW_PORTS=true
+        shift
+        ;;
+      --json)
+        json_mode=true
+        JSON_OUTPUT=true
+        shift
+        ;;
+      --format)
+        OUTPUT_FORMAT="$2"
+        [[ "$OUTPUT_FORMAT" == "json" ]] && json_mode=true && JSON_OUTPUT=true
+        shift 2
+        ;;
+      -h | --help)
+        show_help
+        exit 0
+        ;;
+      -*)
+        log_error "Unknown option: $1"
+        log_info "Use 'nself status --help' for usage information"
+        exit 1
+        ;;
+      *)
+        service_name="$1"
+        shift
+        ;;
     esac
   done
 

@@ -52,7 +52,7 @@ validate_env_syntax() {
         issues+=("Line $line_num: $key contains special characters that should be quoted")
       fi
     fi
-  done < "$env_file"
+  done <"$env_file"
 
   if [[ ${#issues[@]} -gt 0 ]]; then
     echo "Environment file syntax issues:"

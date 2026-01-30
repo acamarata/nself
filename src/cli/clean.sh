@@ -24,39 +24,39 @@ cmd_clean() {
   # Parse options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-    --all | -a)
-      all=true
-      shift
-      ;;
-    --images | -i)
-      images=true
-      shift
-      ;;
-    --volumes | -v)
-      volumes=true
-      shift
-      ;;
-    --networks | -n)
-      networks=true
-      shift
-      ;;
-    --containers | -c)
-      containers=true
-      shift
-      ;;
-    --builders | -b)
-      builders=true
-      shift
-      ;;
-    --help | -h)
-      show_help
-      return 0
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      show_help
-      return 1
-      ;;
+      --all | -a)
+        all=true
+        shift
+        ;;
+      --images | -i)
+        images=true
+        shift
+        ;;
+      --volumes | -v)
+        volumes=true
+        shift
+        ;;
+      --networks | -n)
+        networks=true
+        shift
+        ;;
+      --containers | -c)
+        containers=true
+        shift
+        ;;
+      --builders | -b)
+        builders=true
+        shift
+        ;;
+      --help | -h)
+        show_help
+        return 0
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        show_help
+        return 1
+        ;;
     esac
   done
 

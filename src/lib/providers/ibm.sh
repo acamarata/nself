@@ -12,7 +12,7 @@ IBM_REGIONS=("us-south" "us-east" "eu-gb" "eu-de" "jp-tok" "au-syd" "jp-osa" "br
 _ibm_get_profile() {
   local size="$1"
   case "$size" in
-    tiny|small) echo "bx2-2x8" ;;
+    tiny | small) echo "bx2-2x8" ;;
     medium) echo "bx2-4x16" ;;
     large) echo "bx2-8x32" ;;
     xlarge) echo "bx2-16x64" ;;
@@ -34,7 +34,7 @@ provider_ibm_init() {
 
   local config_dir="${HOME}/.nself/providers"
   mkdir -p "$config_dir"
-  cat > "$config_dir/ibm.yml" << 'EOF'
+  cat >"$config_dir/ibm.yml" <<'EOF'
 provider: ibm
 configured: true
 default_region: us-south
@@ -45,9 +45,16 @@ EOF
 }
 
 provider_ibm_validate() {
-  command -v ibmcloud &>/dev/null || { log_error "IBM Cloud CLI not installed"; return 1; }
-  ibmcloud account show &>/dev/null && { log_success "IBM Cloud credentials valid"; return 0; }
-  log_error "IBM Cloud credentials invalid"; return 1
+  command -v ibmcloud &>/dev/null || {
+    log_error "IBM Cloud CLI not installed"
+    return 1
+  }
+  ibmcloud account show &>/dev/null && {
+    log_success "IBM Cloud credentials valid"
+    return 0
+  }
+  log_error "IBM Cloud credentials invalid"
+  return 1
 }
 
 provider_ibm_list_regions() {
@@ -73,13 +80,25 @@ provider_ibm_provision() {
   local name="" size="small" region="us-south"
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      --size) size="$2"; shift 2 ;;
-      --region) region="$2"; shift 2 ;;
+      --name)
+        name="$2"
+        shift 2
+        ;;
+      --size)
+        size="$2"
+        shift 2
+        ;;
+      --region)
+        region="$2"
+        shift 2
+        ;;
       *) shift ;;
     esac
   done
-  [[ -z "$name" ]] && { log_error "Server name required"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Server name required"
+    return 1
+  }
 
   local profile
   profile=$(_ibm_get_profile "$size")
@@ -89,7 +108,10 @@ provider_ibm_provision() {
     --profile "$profile" \
     --zone "${region}-1" \
     --image ibm-ubuntu-22-04-minimal-amd64-1 \
-    --vpc default 2>/dev/null || { log_error "Failed to create instance"; return 1; }
+    --vpc default 2>/dev/null || {
+    log_error "Failed to create instance"
+    return 1
+  }
 
   log_success "Instance creation initiated"
 }
@@ -109,11 +131,17 @@ provider_ibm_status() {
 }
 
 provider_ibm_list() { ibmcloud is instances 2>/dev/null || echo "No instances"; }
-provider_ibm_ssh() { local id="$1"; shift; local ip; ip=$(provider_ibm_get_ip "$id"); ssh "root@$ip" "$@"; }
+provider_ibm_ssh() {
+  local id="$1"
+  shift
+  local ip
+  ip=$(provider_ibm_get_ip "$id")
+  ssh "root@$ip" "$@"
+}
 provider_ibm_get_ip() { ibmcloud is instance "$1" --output json 2>/dev/null | grep -o '"address":"[0-9.]*"' | head -1 | cut -d'"' -f4; }
 provider_ibm_estimate_cost() {
   case "${1:-small}" in
-    tiny|small) echo "40" ;; medium) echo "80" ;; large) echo "160" ;; xlarge) echo "320" ;; *) echo "40" ;;
+    tiny | small) echo "40" ;; medium) echo "80" ;; large) echo "160" ;; xlarge) echo "320" ;; *) echo "40" ;;
   esac
 }
 
@@ -121,9 +149,20 @@ provider_ibm_estimate_cost() {
 provider_ibm_k8s_create() {
   local name="" nodes=3
   while [[ $# -gt 0 ]]; do
-    case "$1" in --name) name="$2"; shift 2 ;; --nodes) nodes="$2"; shift 2 ;; *) shift ;; esac
+    case "$1" in --name)
+      name="$2"
+      shift 2
+      ;;
+    --nodes)
+      nodes="$2"
+      shift 2
+      ;;
+    *) shift ;; esac
   done
-  [[ -z "$name" ]] && { log_error "Cluster name required"; return 1; }
+  [[ -z "$name" ]] && {
+    log_error "Cluster name required"
+    return 1
+  }
   log_info "Creating IKS cluster: $name"
   ibmcloud ks cluster create vpc-gen2 --name "$name" --workers "$nodes" 2>/dev/null
 }

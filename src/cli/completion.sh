@@ -24,7 +24,7 @@ fi
 # ============================================================================
 
 generate_bash() {
-  cat << 'BASH_COMPLETION'
+  cat <<'BASH_COMPLETION'
 # nself bash completion
 # Add to ~/.bashrc: eval "$(nself completion bash)"
 
@@ -350,7 +350,7 @@ BASH_COMPLETION
 # ============================================================================
 
 generate_zsh() {
-  cat << 'ZSH_COMPLETION'
+  cat <<'ZSH_COMPLETION'
 #compdef nself
 # nself zsh completion (v0.9.7)
 # Add to ~/.zshrc: eval "$(nself completion zsh)"
@@ -784,7 +784,7 @@ ZSH_COMPLETION
 # ============================================================================
 
 generate_fish() {
-  cat << 'FISH_COMPLETION'
+  cat <<'FISH_COMPLETION'
 # nself fish completion (v0.9.7)
 # Save to ~/.config/fish/completions/nself.fish
 
@@ -1065,9 +1065,9 @@ install_bash() {
     return 0
   fi
 
-  echo '' >> "$target"
-  echo '# nself shell completion' >> "$target"
-  echo 'eval "$(nself completion bash)"' >> "$target"
+  echo '' >>"$target"
+  echo '# nself shell completion' >>"$target"
+  echo 'eval "$(nself completion bash)"' >>"$target"
 
   log_success "Bash completion installed in $target"
   log_info "Restart your shell or run: source $target"
@@ -1081,9 +1081,9 @@ install_zsh() {
     return 0
   fi
 
-  echo '' >> "$target"
-  echo '# nself shell completion' >> "$target"
-  echo 'eval "$(nself completion zsh)"' >> "$target"
+  echo '' >>"$target"
+  echo '# nself shell completion' >>"$target"
+  echo 'eval "$(nself completion zsh)"' >>"$target"
 
   log_success "Zsh completion installed in $target"
   log_info "Restart your shell or run: source $target"
@@ -1093,7 +1093,7 @@ install_fish() {
   local target="${1:-$HOME/.config/fish/completions/nself.fish}"
 
   mkdir -p "$(dirname "$target")"
-  generate_fish > "$target"
+  generate_fish >"$target"
 
   log_success "Fish completion installed in $target"
   log_info "Completions will be available in new fish sessions"
@@ -1104,7 +1104,7 @@ install_fish() {
 # ============================================================================
 
 show_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself completion - Generate shell completions
 
 USAGE:
@@ -1177,10 +1177,13 @@ main() {
         bash) install_bash ;;
         zsh) install_zsh ;;
         fish) install_fish ;;
-        *) log_error "Unknown shell: $shell"; return 1 ;;
+        *)
+          log_error "Unknown shell: $shell"
+          return 1
+          ;;
       esac
       ;;
-    help|--help|-h)
+    help | --help | -h)
       show_help
       ;;
     *)

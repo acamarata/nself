@@ -21,9 +21,9 @@ post_command() {
   # Show URLs after certain commands
   if [[ "$exit_code" -eq 0 ]]; then
     case "$command" in
-    up | status)
-      show_service_urls
-      ;;
+      up | status)
+        show_service_urls
+        ;;
     esac
   fi
 
@@ -79,29 +79,29 @@ post_command_success() {
   local command="$1"
 
   case "$command" in
-  init)
-    draw_box "Project initialized successfully!" "success"
-    echo "Next steps:"
-    echo "  1. Review and edit .env.local"
-    echo "  2. Run: nself build"
-    echo "  3. Run: nself start"
-    ;;
+    init)
+      draw_box "Project initialized successfully!" "success"
+      echo "Next steps:"
+      echo "  1. Review and edit .env.local"
+      echo "  2. Run: nself build"
+      echo "  3. Run: nself start"
+      ;;
 
-  build)
-    draw_box "Build completed successfully!" "success"
-    ;;
+    build)
+      draw_box "Build completed successfully!" "success"
+      ;;
 
-  up)
-    draw_box "Services started successfully!" "success"
-    ;;
+    up)
+      draw_box "Services started successfully!" "success"
+      ;;
 
-  down)
-    draw_box "Services stopped successfully!" "success"
-    ;;
+    down)
+      draw_box "Services stopped successfully!" "success"
+      ;;
 
-  *)
-    log_success "Command completed successfully"
-    ;;
+    *)
+      log_success "Command completed successfully"
+      ;;
   esac
 }
 

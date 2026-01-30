@@ -10,13 +10,13 @@
 # Returns: 0
 detect_platform() {
   case "$OSTYPE" in
-    linux*)   OS="linux" ;;
-    darwin*)  OS="macos" ;;
-    msys*|cygwin*|mingw*) OS="windows-bash" ;;
+    linux*) OS="linux" ;;
+    darwin*) OS="macos" ;;
+    msys* | cygwin* | mingw*) OS="windows-bash" ;;
     freebsd*) OS="freebsd" ;;
     openbsd*) OS="openbsd" ;;
     solaris*) OS="solaris" ;;
-    *)        OS="unknown" ;;
+    *) OS="unknown" ;;
   esac
 
   export OS
@@ -37,7 +37,7 @@ detect_terminal() {
   # Check for Unicode support
   SUPPORTS_UNICODE=false
   case "$TERMINAL" in
-    *256color*|*unicode*|xterm*|rxvt*|screen*|tmux*|alacritty*|kitty*)
+    *256color* | *unicode* | xterm* | rxvt* | screen* | tmux* | alacritty* | kitty*)
       # These terminals generally support Unicode
       if [[ "$OS" != "windows-bash" ]] || [[ -n "${WT_SESSION:-}" ]]; then
         # Not Windows bash, or Windows Terminal detected
@@ -55,9 +55,9 @@ detect_terminal() {
 
   # Check for color support
   SUPPORTS_COLOR=false
-  if [[ -t 1 ]]; then  # Check if stdout is a terminal
+  if [[ -t 1 ]]; then # Check if stdout is a terminal
     case "$TERMINAL" in
-      *color*|xterm*|rxvt*|screen*|tmux*|vt100*|linux|alacritty*|kitty*)
+      *color* | xterm* | rxvt* | screen* | tmux* | vt100* | linux | alacritty* | kitty*)
         SUPPORTS_COLOR=true
         ;;
     esac
@@ -218,7 +218,7 @@ init_platform() {
 # Outputs: Terminal width as integer
 # Returns: 0 on success, 1 on failure
 get_terminal_width() {
-  local width=80  # Default
+  local width=80 # Default
 
   if command -v tput >/dev/null 2>&1; then
     # Ensure TERM is set for tput

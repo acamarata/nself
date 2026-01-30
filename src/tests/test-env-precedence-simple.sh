@@ -21,7 +21,7 @@ source "/Users/admin/Sites/nself/src/lib/utils/env.sh"
 echo ""
 echo "Test 1: Loading .env.dev (team defaults)"
 echo "-----------------------------------------"
-cat > .env.dev << 'EOF'
+cat >.env.dev <<'EOF'
 PROJECT_NAME=dev-project
 BASE_DOMAIN=dev.local
 TEST_VAR=from-dev
@@ -35,7 +35,7 @@ echo "TEST_VAR = $TEST_VAR (expected: from-dev)"
 echo ""
 echo "Test 2: .env.local overrides .env.dev"
 echo "--------------------------------------"
-cat > .env.local << 'EOF'
+cat >.env.local <<'EOF'
 PROJECT_NAME=my-project
 TEST_VAR=from-local
 LOCAL_ONLY=local-value
@@ -53,7 +53,7 @@ echo "LOCAL_ONLY = $LOCAL_ONLY (expected: local-value)"
 echo ""
 echo "Test 3: .env overrides everything"
 echo "----------------------------------"
-cat > .env << 'EOF'
+cat >.env <<'EOF'
 PROJECT_NAME=production
 BASE_DOMAIN=prod.com
 OVERRIDE=true
@@ -71,9 +71,9 @@ echo "OVERRIDE = $OVERRIDE (expected: true)"
 echo ""
 echo "Test 4: .env.secrets always loaded"
 echo "-----------------------------------"
-rm -f .env  # Remove override
+rm -f .env # Remove override
 
-cat > .env.secrets << 'EOF'
+cat >.env.secrets <<'EOF'
 DB_PASSWORD=secret123
 API_KEY=key456
 EOF
@@ -92,7 +92,7 @@ echo "---------------------------------------------"
 rm -f .env.local
 export ENV=staging
 
-cat > .env.staging << 'EOF'
+cat >.env.staging <<'EOF'
 PROJECT_NAME=staging-project
 BASE_DOMAIN=staging.company.com
 STAGING_VAR=staging-only

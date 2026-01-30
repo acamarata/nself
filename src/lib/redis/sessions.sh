@@ -16,10 +16,16 @@ redis_session_create() {
   local connection_name="${5:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "ERROR: Redis not available" >&2; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "ERROR: Redis not available" >&2
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "ERROR: Connection not found" >&2; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "ERROR: Connection not found" >&2
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -64,10 +70,16 @@ redis_session_get() {
   local connection_name="${2:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "null"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "null"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "null"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "null"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -78,7 +90,10 @@ redis_session_get() {
   local session=$(docker exec "$redis_container" redis-cli -h "$host" -p "$port" -n "$database" \
     GET "$session_key" 2>/dev/null)
 
-  [[ -z "$session" || "$session" == "null" ]] && { echo "null"; return 1; }
+  [[ -z "$session" || "$session" == "null" ]] && {
+    echo "null"
+    return 1
+  }
 
   # Update last accessed timestamp
   local now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -101,7 +116,10 @@ redis_session_update() {
   local connection_name="${3:-main}"
 
   local session=$(redis_session_get "$session_id" "$connection_name")
-  [[ "$session" == "null" ]] && { echo "ERROR: Session not found" >&2; return 1; }
+  [[ "$session" == "null" ]] && {
+    echo "ERROR: Session not found" >&2
+    return 1
+  }
 
   # Merge updates into session data
   local updated_session=$(echo "$session" | jq --argjson updates "$updates" '.data += $updates')
@@ -163,10 +181,16 @@ redis_session_list_user() {
   local connection_name="${2:-main}"
 
   local redis_container=$(docker ps --filter 'name=redis' --format '{{.Names}}' | head -1)
-  [[ -z "$redis_container" ]] && { echo "[]"; return 1; }
+  [[ -z "$redis_container" ]] && {
+    echo "[]"
+    return 1
+  }
 
   local conn=$(redis_connection_get "$connection_name" 2>/dev/null)
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "[]"; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "[]"
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -178,7 +202,10 @@ redis_session_list_user() {
   local session_ids=$(docker exec "$redis_container" redis-cli -h "$host" -p "$port" -n "$database" \
     SMEMBERS "$user_sessions_key" 2>/dev/null)
 
-  [[ -z "$session_ids" ]] && { echo "[]"; return 0; }
+  [[ -z "$session_ids" ]] && {
+    echo "[]"
+    return 0
+  }
 
   # Fetch each session
   local sessions="[]"
@@ -186,7 +213,7 @@ redis_session_list_user() {
     [[ -z "$sid" ]] && continue
     local session=$(redis_session_get "$sid" "$connection_name" 2>/dev/null)
     [[ "$session" != "null" ]] && sessions=$(echo "$sessions" | jq --argjson s "$session" '. += [$s]')
-  done <<< "$session_ids"
+  done <<<"$session_ids"
 
   echo "$sessions"
 }
@@ -211,11 +238,14 @@ redis_session_revoke_user() {
 redis_session_replicate() {
   local session_id="$1"
   local source_connection="${2:-main}"
-  local target_connections="${3:-}"  # Comma-separated list
+  local target_connections="${3:-}" # Comma-separated list
 
   # Get session from source
   local session=$(redis_session_get "$session_id" "$source_connection" 2>/dev/null)
-  [[ "$session" == "null" ]] && { echo "ERROR: Session not found" >&2; return 1; }
+  [[ "$session" == "null" ]] && {
+    echo "ERROR: Session not found" >&2
+    return 1
+  }
 
   local user_id=$(echo "$session" | jq -r '.user_id')
   local session_data=$(echo "$session" | jq -r '.data')
@@ -226,10 +256,13 @@ redis_session_replicate() {
   local expires=$(date -d "$ttl" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ttl" +%s)
   local remaining_ttl=$((expires - now))
 
-  [[ $remaining_ttl -lt 0 ]] && { echo "ERROR: Session expired" >&2; return 1; }
+  [[ $remaining_ttl -lt 0 ]] && {
+    echo "ERROR: Session expired" >&2
+    return 1
+  }
 
   # Replicate to target connections
-  IFS=',' read -ra targets <<< "$target_connections"
+  IFS=',' read -ra targets <<<"$target_connections"
   for target in "${targets[@]}"; do
     [[ -z "$target" ]] && continue
     redis_session_create "$session_id" "$user_id" "$session_data" "$remaining_ttl" "$target" >/dev/null 2>&1
@@ -252,7 +285,7 @@ redis_session_find() {
       echo "$session"
       return 0
     fi
-  done <<< "$connections"
+  done <<<"$connections"
 
   echo "null"
   return 1

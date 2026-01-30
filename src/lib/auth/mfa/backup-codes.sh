@@ -10,7 +10,7 @@ set -euo pipefail
 # Backup codes configuration
 readonly BACKUP_CODE_COUNT=10
 readonly BACKUP_CODE_LENGTH=8
-readonly BACKUP_CODE_FORMAT="XXXX-XXXX"  # 4 chars hyphen 4 chars
+readonly BACKUP_CODE_FORMAT="XXXX-XXXX" # 4 chars hyphen 4 chars
 
 # ============================================================================
 # Backup Code Generation
@@ -21,10 +21,10 @@ readonly BACKUP_CODE_FORMAT="XXXX-XXXX"  # 4 chars hyphen 4 chars
 # Returns: 8-character alphanumeric code (format: XXXX-XXXX)
 backup_code_generate_one() {
   # Generate 8 random alphanumeric characters (no ambiguous characters)
-  local chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # No I, O, 0, 1
+  local chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789" # No I, O, 0, 1
   local code=""
 
-  for ((i=0; i<8; i++)); do
+  for ((i = 0; i < 8; i++)); do
     if command -v openssl >/dev/null 2>&1; then
       local random_index=$(($(openssl rand -hex 1 | tr -d '\n' | awk '{print "0x" $0}') % ${#chars}))
       code="${code}${chars:$random_index:1}"
@@ -43,7 +43,7 @@ backup_code_generate_one() {
 backup_codes_generate() {
   local count="${1:-$BACKUP_CODE_COUNT}"
 
-  for ((i=0; i<count; i++)); do
+  for ((i = 0; i < count; i++)); do
     backup_code_generate_one
   done
 }
@@ -90,7 +90,7 @@ EOSQL
 
   # Generate new codes
   local codes=()
-  for ((i=0; i<BACKUP_CODE_COUNT; i++)); do
+  for ((i = 0; i < BACKUP_CODE_COUNT; i++)); do
     local code
     code=$(backup_code_generate_one)
     codes+=("$code")
@@ -112,7 +112,7 @@ EOSQL
 
   # Return codes as JSON array
   printf '{\n  "codes": [\n'
-  for ((i=0; i<${#codes[@]}; i++)); do
+  for ((i = 0; i < ${#codes[@]}; i++)); do
     printf '    "%s"' "${codes[$i]}"
     if [[ $i -lt $((${#codes[@]} - 1)) ]]; then
       printf ',\n'
@@ -222,7 +222,7 @@ backup_codes_status() {
   fi
 
   local unused used total
-  read -r unused used total <<< "$stats"
+  read -r unused used total <<<"$stats"
 
   cat <<EOF
 {
@@ -296,7 +296,7 @@ backup_codes_list() {
       printf '\n'
     fi
     printf '    }'
-  done <<< "$codes_json"
+  done <<<"$codes_json"
   printf '\n  ]\n}\n'
 
   return 0

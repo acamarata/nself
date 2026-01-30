@@ -174,10 +174,10 @@ draw_box() {
   local width=$((${#message} + 4))
 
   case "$type" in
-  success) local color="$COLOR_GREEN" ;;
-  error) local color="$COLOR_RED" ;;
-  warning) local color="$COLOR_YELLOW" ;;
-  *) local color="$COLOR_BLUE" ;;
+    success) local color="$COLOR_GREEN" ;;
+    error) local color="$COLOR_RED" ;;
+    warning) local color="$COLOR_YELLOW" ;;
+    *) local color="$COLOR_BLUE" ;;
   esac
 
   printf "${color}┌$(printf '─%.0s' $(seq 1 $width))┐${COLOR_RESET}\n"

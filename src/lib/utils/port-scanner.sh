@@ -98,62 +98,62 @@ fix_port_in_env() {
 
   # Map common ports to their env variables
   case "$old_port" in
-  5432)
-    sed -i.bak "s/^POSTGRES_PORT=.*/POSTGRES_PORT=$new_port/" .env.local
-    if ! grep -q "^POSTGRES_PORT=" .env.local; then
-      echo "POSTGRES_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  8080)
-    sed -i.bak "s/^HASURA_PORT=.*/HASURA_PORT=$new_port/" .env.local
-    if ! grep -q "^HASURA_PORT=" .env.local; then
-      echo "HASURA_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  4000)
-    sed -i.bak "s/^AUTH_PORT=.*/AUTH_PORT=$new_port/" .env.local
-    if ! grep -q "^AUTH_PORT=" .env.local; then
-      echo "AUTH_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  6379)
-    # Redis port
-    sed -i.bak "s/^REDIS_PORT=.*/REDIS_PORT=$new_port/" .env.local
-    if ! grep -q "^REDIS_PORT=" .env.local; then
-      echo "REDIS_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  1025)
-    # Mailpit SMTP port
-    sed -i.bak "s/^MAILPIT_SMTP_PORT=.*/MAILPIT_SMTP_PORT=$new_port/" .env.local
-    if ! grep -q "^MAILPIT_SMTP_PORT=" .env.local; then
-      echo "MAILPIT_SMTP_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  8025)
-    # Mailpit UI port
-    sed -i.bak "s/^MAILPIT_UI_PORT=.*/MAILPIT_UI_PORT=$new_port/" .env.local
-    if ! grep -q "^MAILPIT_UI_PORT=" .env.local; then
-      echo "MAILPIT_UI_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  5000 | 5001)
-    # Storage port - add if not exists
-    sed -i.bak "s/^STORAGE_PORT=.*/STORAGE_PORT=$new_port/" .env.local
-    if ! grep -q "^STORAGE_PORT=" .env.local; then
-      echo "STORAGE_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  9000)
-    sed -i.bak "s/^MINIO_PORT=.*/MINIO_PORT=$new_port/" .env.local
-    if ! grep -q "^MINIO_PORT=" .env.local; then
-      echo "MINIO_PORT=$new_port" >>.env.local
-    fi
-    ;;
-  *)
-    # Generic port update - just append
-    echo "# Port $old_port changed to $new_port" >>.env.local
-    ;;
+    5432)
+      sed -i.bak "s/^POSTGRES_PORT=.*/POSTGRES_PORT=$new_port/" .env.local
+      if ! grep -q "^POSTGRES_PORT=" .env.local; then
+        echo "POSTGRES_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    8080)
+      sed -i.bak "s/^HASURA_PORT=.*/HASURA_PORT=$new_port/" .env.local
+      if ! grep -q "^HASURA_PORT=" .env.local; then
+        echo "HASURA_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    4000)
+      sed -i.bak "s/^AUTH_PORT=.*/AUTH_PORT=$new_port/" .env.local
+      if ! grep -q "^AUTH_PORT=" .env.local; then
+        echo "AUTH_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    6379)
+      # Redis port
+      sed -i.bak "s/^REDIS_PORT=.*/REDIS_PORT=$new_port/" .env.local
+      if ! grep -q "^REDIS_PORT=" .env.local; then
+        echo "REDIS_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    1025)
+      # Mailpit SMTP port
+      sed -i.bak "s/^MAILPIT_SMTP_PORT=.*/MAILPIT_SMTP_PORT=$new_port/" .env.local
+      if ! grep -q "^MAILPIT_SMTP_PORT=" .env.local; then
+        echo "MAILPIT_SMTP_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    8025)
+      # Mailpit UI port
+      sed -i.bak "s/^MAILPIT_UI_PORT=.*/MAILPIT_UI_PORT=$new_port/" .env.local
+      if ! grep -q "^MAILPIT_UI_PORT=" .env.local; then
+        echo "MAILPIT_UI_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    5000 | 5001)
+      # Storage port - add if not exists
+      sed -i.bak "s/^STORAGE_PORT=.*/STORAGE_PORT=$new_port/" .env.local
+      if ! grep -q "^STORAGE_PORT=" .env.local; then
+        echo "STORAGE_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    9000)
+      sed -i.bak "s/^MINIO_PORT=.*/MINIO_PORT=$new_port/" .env.local
+      if ! grep -q "^MINIO_PORT=" .env.local; then
+        echo "MINIO_PORT=$new_port" >>.env.local
+      fi
+      ;;
+    *)
+      # Generic port update - just append
+      echo "# Port $old_port changed to $new_port" >>.env.local
+      ;;
   esac
 
   # Clean up backup

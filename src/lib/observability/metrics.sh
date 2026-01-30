@@ -7,7 +7,10 @@ set -euo pipefail
 # Initialize metrics storage
 metrics_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS metrics;
@@ -66,7 +69,7 @@ EOSQL
 metrics_record() {
   local name="$1"
   local value="$2"
-  local metric_type="${3:-gauge}"  # counter, gauge, histogram, summary
+  local metric_type="${3:-gauge}" # counter, gauge, histogram, summary
   local labels="${4:-{}}"
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
@@ -106,10 +109,10 @@ metrics_performance_record() {
 
 # Record resource utilization
 metrics_resource_record() {
-  local resource_type="$1"  # cpu, memory, disk, network
+  local resource_type="$1" # cpu, memory, disk, network
   local service_name="$2"
   local value="$3"
-  local unit="$4"  # percent, MB, GB, Mbps
+  local unit="$4" # percent, MB, GB, Mbps
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 
@@ -254,7 +257,7 @@ metrics_export_prometheus() {
 
       echo "nself_${name}{${labels}} ${value}"
     done
-  } > "$output_file"
+  } >"$output_file"
 }
 
 export -f metrics_init metrics_record metrics_business_record metrics_performance_record

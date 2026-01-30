@@ -157,8 +157,8 @@ get_template_metadata() {
 
     agent-llm)
       printf "LLM Agent|python|Large Language Model agent service|"
-      printf "OpenAI/Anthropic integration, Streaming, RAG, Function calling|"
-      printf "openai, anthropic, langchain, chromadb"
+      printf "Multiple LLM provider integration, Streaming, RAG, Function calling|"
+      printf "openai, llm-providers, langchain, chromadb"
       ;;
 
     agent-vision)
@@ -351,43 +351,43 @@ get_templates_by_language() {
   local lang="$1"
 
   case "$lang" in
-    javascript|js)
+    javascript | js)
       printf "express-js fastify-js hono-js nest-js socketio-js bullmq-js temporal-js bun deno node-js\n"
       ;;
-    typescript|ts)
+    typescript | ts)
       printf "express-ts fastify-ts hono-ts nest-ts socketio-ts bullmq-ts temporal-ts trpc node-ts\n"
       ;;
-    python|py)
+    python | py)
       printf "fastapi flask django-rest celery ray agent-llm agent-vision agent-analytics agent-training agent-timeseries\n"
       ;;
-    go|golang)
+    go | golang)
       printf "gin fiber echo grpc\n"
       ;;
-    ruby|rb)
+    ruby | rb)
       printf "rails sinatra\n"
       ;;
-    rust|rs)
+    rust | rs)
       printf "actix-web\n"
       ;;
     java)
       printf "spring-boot\n"
       ;;
-    csharp|cs)
+    csharp | cs)
       printf "aspnet\n"
       ;;
     php)
       printf "laravel\n"
       ;;
-    elixir|ex)
+    elixir | ex)
       printf "phoenix\n"
       ;;
-    kotlin|kt)
+    kotlin | kt)
       printf "ktor\n"
       ;;
     swift)
       printf "vapor\n"
       ;;
-    cpp|c++)
+    cpp | c++)
       printf "oatpp\n"
       ;;
     lua)
@@ -407,16 +407,16 @@ get_template_category() {
   local template="$1"
 
   case "$template" in
-    socketio-*|temporal-*)
+    socketio-* | temporal-*)
       printf "Real-time & Messaging"
       ;;
-    express-*|fastify-*|hono-*|gin|fiber|echo|rails|sinatra|actix-web|spring-boot|aspnet|laravel|phoenix|ktor|vapor|oatpp|lapis|zap)
+    express-* | fastify-* | hono-* | gin | fiber | echo | rails | sinatra | actix-web | spring-boot | aspnet | laravel | phoenix | ktor | vapor | oatpp | lapis | zap)
       printf "Web Frameworks"
       ;;
-    nest-*|fastapi|django-rest|flask)
+    nest-* | fastapi | django-rest | flask)
       printf "Full-Stack Frameworks"
       ;;
-    bullmq-*|celery|ray)
+    bullmq-* | celery | ray)
       printf "Background Jobs & Workers"
       ;;
     agent-*)
@@ -428,7 +428,7 @@ get_template_category() {
     grpc)
       printf "RPC Frameworks"
       ;;
-    bun|deno|node-*)
+    bun | deno | node-*)
       printf "Runtime Servers"
       ;;
     *)

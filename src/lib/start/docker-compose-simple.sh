@@ -15,7 +15,7 @@ simple_compose_up() {
   if [ "$verbose" = "true" ]; then
     $compose_cmd --project-name "$project" --env-file "$env_file" up -d --no-build
   else
-    $compose_cmd --project-name "$project" --env-file "$env_file" up -d --no-build 2>&1 | \
+    $compose_cmd --project-name "$project" --env-file "$env_file" up -d --no-build 2>&1 |
       grep -E "(Pulling|Creating|Starting|Created|Started|Container|Network|Volume)" || true
   fi
 
@@ -62,7 +62,7 @@ run_init_containers() {
   fi
 
   # Start init-containers profile, wait for completion, then remove
-  $compose_cmd --project-name "$project" --env-file "$env_file" --profile init-containers up --no-build 2>&1 | \
+  $compose_cmd --project-name "$project" --env-file "$env_file" --profile init-containers up --no-build 2>&1 |
     grep -v "Attaching to" || true
 
   # Remove exited init containers to keep Docker clean

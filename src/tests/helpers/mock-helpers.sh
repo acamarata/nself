@@ -25,7 +25,7 @@ fi
 mock_command() {
   local cmd="$1"
   local mock_impl="$2"
-  
+
   # Save original if it exists
   if command -v "$cmd" >/dev/null 2>&1; then
     if [[ -n "${ORIGINAL_COMMANDS:-}" ]]; then
@@ -34,11 +34,11 @@ mock_command() {
       ORIGINAL_COMMANDS_LIST="$ORIGINAL_COMMANDS_LIST|$cmd:$(command -v "$cmd")"
     fi
   fi
-  
+
   # Create mock function
   eval "function $cmd() { $mock_impl; }"
   export -f "$cmd"
-  
+
   # Track mocked command
   MOCKED_COMMANDS+=("$cmd")
 }
@@ -104,7 +104,7 @@ stub_git() {
 # Stub for stat command (cross-platform)
 stub_stat() {
   local file="${2:-$1}"
-  
+
   # Return mock permissions
   case "$file" in
     *.env)
@@ -127,19 +127,19 @@ stub_stat() {
 # Create a mock project structure
 create_mock_project() {
   local base_dir="${1:-mock-project}"
-  
+
   mkdir -p "$base_dir"/{src,tests,docs}
-  
+
   # Create mock files
   touch "$base_dir/README.md"
-  echo "# Mock project" > "$base_dir/README.md"
-  
+  echo "# Mock project" >"$base_dir/README.md"
+
   # Create mock git repo
   mkdir -p "$base_dir/.git"
-  echo "ref: refs/heads/main" > "$base_dir/.git/HEAD"
-  
+  echo "ref: refs/heads/main" >"$base_dir/.git/HEAD"
+
   # Create mock package.json
-  cat > "$base_dir/package.json" << 'EOF'
+  cat >"$base_dir/package.json" <<'EOF'
 {
   "name": "mock-project",
   "version": "1.0.0",
@@ -149,7 +149,7 @@ create_mock_project() {
   }
 }
 EOF
-  
+
   echo "$base_dir"
 }
 
@@ -187,12 +187,12 @@ FUNCTION_CALLS=()
 spy_function() {
   local func_name="$1"
   local original_func="original_$func_name"
-  
+
   # Save original function
   if declare -f "$func_name" >/dev/null; then
     eval "$(declare -f "$func_name" | sed "1s/$func_name/$original_func/")"
   fi
-  
+
   # Create spy wrapper
   eval "function $func_name() {
     FUNCTION_CALLS+=(\"$func_name:\$@\")
@@ -257,15 +257,15 @@ clear_spies() {
 mock_input() {
   local inputs=("$@")
   local input_file="/tmp/mock_input_$$"
-  
+
   # Write inputs to temp file
   for input in "${inputs[@]}"; do
     echo "$input"
-  done > "$input_file"
-  
+  done >"$input_file"
+
   # Redirect stdin from file
-  exec < "$input_file"
-  
+  exec <"$input_file"
+
   # Clean up on exit
   trap "rm -f $input_file" EXIT
 }
@@ -274,17 +274,17 @@ mock_input() {
 # Usage: output=$(capture_output my_function arg1 arg2)
 capture_output() {
   local temp_file="/tmp/capture_output_$$"
-  
+
   # Run command and capture output
-  "$@" > "$temp_file" 2>&1
+  "$@" >"$temp_file" 2>&1
   local exit_code=$?
-  
+
   # Read and output captured text
   cat "$temp_file"
-  
+
   # Cleanup
   rm -f "$temp_file"
-  
+
   return $exit_code
 }
 
@@ -299,7 +299,7 @@ stub_date() {
       echo "2024-01-15"
       ;;
     +%s)
-      echo "1705334400"  # 2024-01-15 00:00:00 UTC
+      echo "1705334400" # 2024-01-15 00:00:00 UTC
       ;;
     *)
       echo "Mon Jan 15 00:00:00 UTC 2024"
@@ -313,8 +313,8 @@ stub_date() {
 
 # Mock curl command
 stub_curl() {
-  local url="${@: -1}"  # Last argument is usually URL
-  
+  local url="${@: -1}" # Last argument is usually URL
+
   case "$url" in
     *api.github.com*)
       echo '{"tag_name": "v1.0.0"}'
@@ -332,7 +332,7 @@ stub_curl() {
 # Mock wget command
 stub_wget() {
   echo "mock: Downloaded $*"
-  touch "${@: -1}"  # Create empty file with last arg as name
+  touch "${@: -1}" # Create empty file with last arg as name
   return 0
 }
 
@@ -344,10 +344,10 @@ stub_wget() {
 cleanup_test_env() {
   restore_mocks
   clear_spies
-  
+
   # Remove any temp files
   rm -f /tmp/mock_input_* /tmp/capture_output_* 2>/dev/null || true
-  
+
   # Reset environment
   unset CI GITHUB_ACTIONS RUNNER_OS NO_COLOR FORCE_COLOR 2>/dev/null || true
 }

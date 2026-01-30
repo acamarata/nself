@@ -4,22 +4,22 @@
 # Check if domain resolves to localhost
 check_domain_resolution() {
   local domain="$1"
-  
+
   # Skip for standard domains
   if [[ "$domain" == "localhost" ]] || [[ "$domain" == "local.nself.org" ]]; then
     return 0
   fi
-  
+
   # Check if domain resolves
   local resolved_ip
   resolved_ip=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | head -1)
-  
+
   if [[ -z "$resolved_ip" ]]; then
-    return 1  # Domain doesn't resolve
+    return 1 # Domain doesn't resolve
   elif [[ "$resolved_ip" == "127.0.0.1" ]] || [[ "$resolved_ip" == "::1" ]]; then
-    return 0  # Already resolves to localhost
+    return 0 # Already resolves to localhost
   else
-    return 2  # Resolves to different IP
+    return 2 # Resolves to different IP
   fi
 }
 
@@ -27,10 +27,10 @@ check_domain_resolution() {
 generate_hosts_entries() {
   local base_domain="$1"
   local services="${2:-api hasura storage auth admin}"
-  
+
   echo "# nself entries for $base_domain"
   echo "127.0.0.1 $base_domain"
-  
+
   for service in $services; do
     echo "127.0.0.1 $service.$base_domain"
   done
@@ -42,37 +42,37 @@ update_hosts_file() {
 
   # Skip for domains that auto-resolve
   if [[ "$base_domain" == "localhost" ]] ||
-     [[ "$base_domain" =~ \.localhost$ ]] ||
-     [[ "$base_domain" == "local.nself.org" ]]; then
+    [[ "$base_domain" =~ \.localhost$ ]] ||
+    [[ "$base_domain" == "local.nself.org" ]]; then
     return 0
   fi
-  
+
   # Check if entries exist
   if grep -q "$base_domain" /etc/hosts 2>/dev/null; then
     log_info "/etc/hosts already contains $base_domain entries"
     return 0
   fi
-  
+
   # Generate entries
   local entries
   entries=$(generate_hosts_entries "$base_domain")
-  
+
   echo "The following entries need to be added to /etc/hosts:"
   echo ""
   echo "$entries"
   echo ""
-  
+
   echo -n "Add these entries to /etc/hosts now? (requires sudo) (Y/n): "
   local add_entries
   read add_entries
   add_entries="${add_entries:-y}"
-  
+
   if [[ "$add_entries" == "y" ]] || [[ "$add_entries" == "Y" ]]; then
     # Create temp file with entries
     local temp_file="/tmp/nself-hosts-$$"
-    echo "" > "$temp_file"
-    echo "$entries" >> "$temp_file"
-    
+    echo "" >"$temp_file"
+    echo "$entries" >>"$temp_file"
+
     # Append to /etc/hosts
     if sudo sh -c "cat '$temp_file' >> /etc/hosts"; then
       log_success "Added entries to /etc/hosts"
@@ -95,11 +95,11 @@ update_hosts_file() {
 # Check if running on macOS and offer to use dnsmasq
 check_macos_dnsmasq() {
   local base_domain="$1"
-  
+
   if [[ "$(uname)" != "Darwin" ]]; then
     return 0
   fi
-  
+
   # Check if domain ends with .local
   if [[ "$base_domain" == *.local ]]; then
     echo ""
@@ -117,10 +117,10 @@ check_macos_dnsmasq() {
 # Validate domain for local development
 validate_local_domain() {
   local domain="$1"
-  
+
   # Check for problematic TLDs
   case "$domain" in
-    *.com|*.org|*.net|*.io)
+    *.com | *.org | *.net | *.io)
       log_warning "Using a real TLD for local development"
       echo "Consider using .local or .test instead"
       ;;

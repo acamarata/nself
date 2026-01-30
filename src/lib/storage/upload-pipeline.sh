@@ -22,8 +22,8 @@ output_error() { log_error "$@"; }
 output_warning() { log_warning "$@"; }
 
 # Upload pipeline configuration defaults
-readonly DEFAULT_CHUNK_SIZE=$((5 * 1024 * 1024))  # 5MB chunks
-readonly DEFAULT_MAX_FILE_SIZE=$((5 * 1024 * 1024 * 1024))  # 5GB
+readonly DEFAULT_CHUNK_SIZE=$((5 * 1024 * 1024))           # 5MB chunks
+readonly DEFAULT_MAX_FILE_SIZE=$((5 * 1024 * 1024 * 1024)) # 5GB
 readonly DEFAULT_THUMBNAIL_SIZES="150x150,300x300,600x600"
 readonly DEFAULT_IMAGE_FORMATS="avif,webp,jpg"
 readonly SUPPORTED_IMAGE_TYPES="image/jpeg image/png image/gif image/webp image/svg+xml"
@@ -343,8 +343,8 @@ generate_thumbnails() {
   output_info "Generating thumbnails..."
 
   # Parse thumbnail sizes
-  IFS=',' read -ra sizes <<< "${DEFAULT_THUMBNAIL_SIZES}"
-  IFS=',' read -ra formats <<< "${DEFAULT_IMAGE_FORMATS}"
+  IFS=',' read -ra sizes <<<"${DEFAULT_THUMBNAIL_SIZES}"
+  IFS=',' read -ra formats <<<"${DEFAULT_IMAGE_FORMATS}"
 
   local base_dest="${dest_path%.*}"
   local dest_dir
@@ -407,7 +407,7 @@ compress_file() {
 
   output_info "Compressing file..."
 
-  if gzip -c "${file_path}" > "${compressed_path}"; then
+  if gzip -c "${file_path}" >"${compressed_path}"; then
     local original_size
     original_size="$(stat -f%z "${file_path}" 2>/dev/null || stat -c%s "${file_path}" 2>/dev/null)"
     local compressed_size
@@ -433,13 +433,13 @@ should_compress_file() {
 
   # Don't compress already compressed formats
   case "${mime_type}" in
-    image/jpeg|image/png|image/gif|image/webp)
+    image/jpeg | image/png | image/gif | image/webp)
       return 1
       ;;
     video/*)
       return 1
       ;;
-    application/zip|application/gzip|application/x-gzip)
+    application/zip | application/gzip | application/x-gzip)
       return 1
       ;;
     *)

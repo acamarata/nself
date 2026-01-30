@@ -38,10 +38,10 @@ build_needs_ssl() {
 
   # If SSL is fully configured, we don't need to regenerate
   if ssl_is_configured "$project_dir" "$domain"; then
-    return 1  # Return 1 = no need to regenerate
+    return 1 # Return 1 = no need to regenerate
   fi
 
-  return 0  # Return 0 = need to generate/setup
+  return 0 # Return 0 = need to generate/setup
 }
 
 # Export functions

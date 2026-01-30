@@ -8,7 +8,7 @@ set -euo pipefail
 backup_restore() {
   local backup_id="$1"
   local target_database="${2:-${POSTGRES_DB:-nself_db}}"
-  local point_in_time="${3:-}"  # Optional: ISO 8601 timestamp
+  local point_in_time="${3:-}" # Optional: ISO 8601 timestamp
 
   # Get backup info
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
@@ -21,19 +21,25 @@ backup_restore() {
      FROM backups.history
      WHERE id = '$backup_id';" 2>/dev/null | xargs)
 
-  [[ -z "$backup" || "$backup" == "null" ]] && { echo "ERROR: Backup not found" >&2; return 1; }
+  [[ -z "$backup" || "$backup" == "null" ]] && {
+    echo "ERROR: Backup not found" >&2
+    return 1
+  }
 
   local file_path=$(echo "$backup" | jq -r '.file_path')
   local compressed=$(echo "$backup" | jq -r '.compressed')
 
-  [[ ! -f "$file_path" ]] && { echo "ERROR: Backup file not found" >&2; return 1; }
+  [[ ! -f "$file_path" ]] && {
+    echo "ERROR: Backup file not found" >&2
+    return 1
+  }
 
   local temp_file="$file_path"
 
   # Decompress if needed
   if [[ "$compressed" == "true" ]]; then
     temp_file="/tmp/backup_restore_$$.sql"
-    gunzip -c "$file_path" > "$temp_file"
+    gunzip -c "$file_path" >"$temp_file"
   fi
 
   # Copy to container
@@ -58,7 +64,7 @@ backup_restore() {
 
 # Point-in-time recovery
 backup_pitr() {
-  local target_time="$1"  # ISO 8601 timestamp
+  local target_time="$1" # ISO 8601 timestamp
   local target_database="${2:-${POSTGRES_DB:-nself_db}}"
 
   # Find last backup before target time
@@ -70,7 +76,10 @@ backup_pitr() {
      ORDER BY created_at DESC
      LIMIT 1;" 2>/dev/null | xargs)
 
-  [[ -z "$backup_id" ]] && { echo "ERROR: No backup found before $target_time" >&2; return 1; }
+  [[ -z "$backup_id" ]] && {
+    echo "ERROR: No backup found before $target_time" >&2
+    return 1
+  }
 
   echo "Restoring from backup: $backup_id"
   backup_restore "$backup_id" "$target_database"
@@ -108,14 +117,17 @@ backup_test_restore() {
 # Export backup to external storage
 backup_export() {
   local backup_id="$1"
-  local destination="$2"  # S3, GCS, Azure, etc.
+  local destination="$2" # S3, GCS, Azure, etc.
 
   # Get backup file
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
   local file_path=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d postgres -t -c \
     "SELECT file_path FROM backups.history WHERE id = '$backup_id';" 2>/dev/null | xargs)
 
-  [[ ! -f "$file_path" ]] && { echo "ERROR: Backup file not found" >&2; return 1; }
+  [[ ! -f "$file_path" ]] && {
+    echo "ERROR: Backup file not found" >&2
+    return 1
+  }
 
   # Export based on destination type
   case "$destination" in
@@ -138,8 +150,8 @@ backup_export() {
 # Create recovery plan
 recovery_plan_create() {
   local name="$1"
-  local rto_minutes="$2"  # Recovery Time Objective
-  local rpo_minutes="$3"  # Recovery Point Objective
+  local rto_minutes="$2" # Recovery Time Objective
+  local rpo_minutes="$3" # Recovery Point Objective
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
 

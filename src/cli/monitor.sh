@@ -25,13 +25,13 @@ fi
 # Command function
 cmd_monitor() {
   local mode="${1:-dashboard}"
-  
+
   # Check for help
   if [[ "$mode" == "--help" ]] || [[ "$mode" == "-h" ]]; then
     show_monitor_help
     return 0
   fi
-  
+
   # Check if monitoring is enabled
   if [[ "${MONITORING_ENABLED:-false}" != "true" ]]; then
     log_error "Monitoring is not enabled"
@@ -40,9 +40,9 @@ cmd_monitor() {
     echo "  nself metrics enable"
     return 1
   fi
-  
+
   case "$mode" in
-    dashboard|grafana)
+    dashboard | grafana)
       # Open Grafana dashboard
       open_grafana_dashboard
       ;;
@@ -54,7 +54,7 @@ cmd_monitor() {
       # Open Loki through Grafana
       open_loki_dashboard
       ;;
-    alerts|alertmanager)
+    alerts | alertmanager)
       # Open Alertmanager UI
       open_alertmanager_ui
       ;;
@@ -109,14 +109,14 @@ show_monitor_help() {
 # Open Grafana dashboard
 open_grafana_dashboard() {
   local url="https://grafana.${BASE_DOMAIN:-local.nself.org}"
-  
+
   log_info "Opening Grafana dashboard..."
   echo "URL: $url"
   echo ""
   echo "Credentials:"
   echo "  Username: ${GRAFANA_ADMIN_USER:-admin}"
   echo "  Password: ${GRAFANA_ADMIN_PASSWORD:-admin-password-change-me}"
-  
+
   # Try to open in browser
   if command -v open &>/dev/null; then
     open "$url"
@@ -135,12 +135,12 @@ open_prometheus_ui() {
     echo "Set PROMETHEUS_WEB_ENABLE=true to enable it"
     return 1
   fi
-  
+
   local url="https://prometheus.${BASE_DOMAIN:-local.nself.org}"
-  
+
   log_info "Opening Prometheus UI..."
   echo "URL: $url"
-  
+
   # Try to open in browser
   if command -v open &>/dev/null; then
     open "$url"
@@ -159,12 +159,12 @@ open_loki_dashboard() {
     echo "Enable it with: nself metrics profile standard"
     return 1
   fi
-  
+
   local url="https://grafana.${BASE_DOMAIN:-local.nself.org}/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Loki%22,%7B%7D%5D"
-  
+
   log_info "Opening Loki in Grafana Explore..."
   echo "URL: $url"
-  
+
   # Try to open in browser
   if command -v open &>/dev/null; then
     open "$url"
@@ -183,12 +183,12 @@ open_alertmanager_ui() {
     echo "Enable it with: nself metrics profile full"
     return 1
   fi
-  
+
   local url="https://alerts.${BASE_DOMAIN:-local.nself.org}"
-  
+
   log_info "Opening Alertmanager UI..."
   echo "URL: $url"
-  
+
   # Try to open in browser
   if command -v open &>/dev/null; then
     open "$url"
@@ -206,7 +206,7 @@ show_service_status() {
   echo "║                     SERVICE STATUS                           ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   # Core services
   echo "Core Services:"
   check_container_status "nginx" "Nginx"
@@ -215,14 +215,14 @@ show_service_status() {
   check_container_status "auth" "Auth"
   check_container_status "minio" "MinIO"
   check_container_status "storage" "Storage"
-  
+
   # Optional services
   echo ""
   echo "Optional Services:"
   [[ "${FUNCTIONS_ENABLED:-}" == "true" ]] && check_container_status "functions" "Functions"
   [[ "${REDIS_ENABLED:-}" == "true" ]] && check_container_status "redis" "Redis"
   [[ "${ADMIN_ENABLED:-}" == "true" ]] && check_container_status "admin" "Admin UI"
-  
+
   # Monitoring services
   if [[ "${MONITORING_ENABLED:-}" == "true" ]]; then
     echo ""
@@ -242,12 +242,12 @@ check_container_status() {
   local service="$1"
   local display_name="$2"
   local container_name="${PROJECT_NAME:-nself}_${service}"
-  
+
   if docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
     local stats=$(docker inspect "$container_name" --format='{{.State.Status}} | {{.State.Health.Status}}' 2>/dev/null || echo "unknown")
     local status=$(echo "$stats" | cut -d'|' -f1 | tr -d ' ')
     local health=$(echo "$stats" | cut -d'|' -f2 | tr -d ' ')
-    
+
     if [[ "$health" == "healthy" ]] || [[ "$health" == "<novalue>" && "$status" == "running" ]]; then
       printf "  • %-20s $(color_text "● Running" "green")\n" "$display_name:"
     elif [[ "$health" == "unhealthy" ]]; then
@@ -266,19 +266,19 @@ show_resource_usage() {
   echo "║                    RESOURCE USAGE                            ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   # Get all nself containers
   local containers=$(docker ps --format "{{.Names}}" | grep "^${PROJECT_NAME:-nself}_" | sort)
-  
+
   if [[ -z "$containers" ]]; then
     log_error "No nself containers are running"
     return 1
   fi
-  
+
   # Header
   printf "%-30s %10s %15s %15s\n" "CONTAINER" "CPU %" "MEMORY" "MEMORY %"
   printf "%-30s %10s %15s %15s\n" "---------" "-----" "------" "--------"
-  
+
   # Get stats for each container
   for container in $containers; do
     local stats=$(docker stats --no-stream --format "{{.Container}} {{.CPUPerc}} {{.MemUsage}} {{.MemPerc}}" "$container" 2>/dev/null)
@@ -287,21 +287,21 @@ show_resource_usage() {
       local cpu=$(echo "$stats" | awk '{print $2}')
       local mem=$(echo "$stats" | awk '{print $3}')
       local mem_perc=$(echo "$stats" | awk '{print $4}')
-      
+
       # Color code based on usage
       local cpu_val=$(echo "$cpu" | sed 's/%//')
-      if (( $(echo "$cpu_val > 80" | bc -l) )); then
+      if (($(echo "$cpu_val > 80" | bc -l))); then
         cpu=$(color_text "$cpu" "red")
-      elif (( $(echo "$cpu_val > 50" | bc -l) )); then
+      elif (($(echo "$cpu_val > 50" | bc -l))); then
         cpu=$(color_text "$cpu" "yellow")
       else
         cpu=$(color_text "$cpu" "green")
       fi
-      
+
       printf "%-30s %10s %15s %15s\n" "$name" "$cpu" "$mem" "$mem_perc"
     fi
   done
-  
+
   echo ""
   echo "Total containers: $(echo "$containers" | wc -l | tr -d ' ')"
 }
@@ -309,7 +309,7 @@ show_resource_usage() {
 # Tail service logs
 tail_service_logs() {
   local service="${1:-}"
-  
+
   if [[ -z "$service" ]]; then
     echo "Available services:"
     docker ps --format "{{.Names}}" | grep "^${PROJECT_NAME:-nself}_" | sed "s/${PROJECT_NAME:-nself}_/  • /" | sort
@@ -318,14 +318,14 @@ tail_service_logs() {
     echo "Example: nself monitor logs nginx"
     return 1
   fi
-  
+
   local container_name="${PROJECT_NAME:-nself}_${service}"
-  
+
   if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
     log_error "Service '$service' is not running"
     return 1
   fi
-  
+
   log_info "Tailing logs for $service (Ctrl+C to stop)..."
   echo ""
   docker logs -f "$container_name" --tail 50
@@ -365,21 +365,21 @@ color_text() {
 run_monitoring_dashboard() {
   clear
   tput civis 2>/dev/null || true
-  
+
   # Trap to restore cursor on exit
   trap 'tput cnorm 2>/dev/null || true; clear' EXIT INT TERM
-  
+
   local refresh_interval="${MONITOR_INTERVAL:-2}"
   local paused=false
   local view="dashboard"
-  
+
   while true; do
     # Clear screen for refresh
     clear
-    
+
     # Show header
     show_dashboard_header "$view" "$paused"
-    
+
     # Show appropriate view
     case "$view" in
       dashboard)
@@ -398,17 +398,17 @@ run_monitoring_dashboard() {
         show_alerts_view
         ;;
     esac
-    
+
     # Show footer with controls
     show_dashboard_footer
-    
+
     # Handle input with timeout
     if read -t "$refresh_interval" -n 1 key; then
       case "$key" in
-        q|Q)
+        q | Q)
           break
           ;;
-        r|R)
+        r | R)
           continue
           ;;
         s)
@@ -428,7 +428,7 @@ run_monitoring_dashboard() {
           ;;
       esac
     fi
-    
+
     # Skip refresh if paused
     if [[ "$paused" == "true" ]]; then
       sleep 0.1
@@ -546,7 +546,7 @@ show_resources_view() {
 
   echo
   printf "\033[0;36m▶ System Resources\033[0m\n"
-  
+
   # CPU info
   if [[ "$(uname)" == "Darwin" ]]; then
     local cpu_usage=$(top -l 1 | grep "CPU usage" | awk '{print $3}' | sed 's/%//')
@@ -555,7 +555,7 @@ show_resources_view() {
     local cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//')
     echo "  System CPU: ${cpu_usage}%"
   fi
-  
+
   # Memory info
   if [[ "$(uname)" == "Darwin" ]]; then
     local mem_info=$(top -l 1 | grep "PhysMem")
@@ -564,7 +564,7 @@ show_resources_view() {
     local mem_info=$(free -h | grep "^Mem" | awk '{printf "%s / %s (%s used)", $3, $2, $3}')
     echo "  System Memory: $mem_info"
   fi
-  
+
   # Disk info
   local disk_info=$(df -h . | tail -1 | awk '{printf "%s / %s (%s used)", $3, $2, $5}')
   echo "  Disk Usage: $disk_info"

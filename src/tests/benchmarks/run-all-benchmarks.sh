@@ -153,14 +153,14 @@ main() {
     printf "Scale:              %s\n" "$SCALE"
     printf "Test Date:          %s\n" "$(date)"
     printf "Timestamp:          %s\n\n" "$TIMESTAMP"
-  } > "$CONSOLIDATED_REPORT"
+  } >"$CONSOLIDATED_REPORT"
 
   local start_time=$(date +%s)
   local failed=0
 
   # Benchmark 1: Billing System
   print_section "1/4 Running Billing System Benchmark..."
-  if ./billing-benchmarks.sh "$BILLING_SIZE" >> "$CONSOLIDATED_REPORT" 2>&1; then
+  if ./billing-benchmarks.sh "$BILLING_SIZE" >>"$CONSOLIDATED_REPORT" 2>&1; then
     printf "${GREEN}✓ Billing benchmark complete${NC}\n"
   else
     printf "${RED}✗ Billing benchmark failed${NC}\n"
@@ -169,7 +169,7 @@ main() {
 
   # Benchmark 2: White-Label System
   print_section "2/4 Running White-Label System Benchmark..."
-  if ./whitelabel-benchmarks.sh "$TENANT_COUNT" >> "$CONSOLIDATED_REPORT" 2>&1; then
+  if ./whitelabel-benchmarks.sh "$TENANT_COUNT" >>"$CONSOLIDATED_REPORT" 2>&1; then
     printf "${GREEN}✓ White-label benchmark complete${NC}\n"
   else
     printf "${RED}✗ White-label benchmark failed${NC}\n"
@@ -178,7 +178,7 @@ main() {
 
   # Benchmark 3: Multi-Tenant System
   print_section "3/4 Running Multi-Tenant System Benchmark..."
-  if ./tenant-benchmarks.sh "$TENANT_COUNT" >> "$CONSOLIDATED_REPORT" 2>&1; then
+  if ./tenant-benchmarks.sh "$TENANT_COUNT" >>"$CONSOLIDATED_REPORT" 2>&1; then
     printf "${GREEN}✓ Multi-tenant benchmark complete${NC}\n"
   else
     printf "${RED}✗ Multi-tenant benchmark failed${NC}\n"
@@ -187,7 +187,7 @@ main() {
 
   # Benchmark 4: Real-Time System
   print_section "4/4 Running Real-Time System Benchmark..."
-  if ./realtime-benchmarks.sh "$CONNECTION_COUNT" >> "$CONSOLIDATED_REPORT" 2>&1; then
+  if ./realtime-benchmarks.sh "$CONNECTION_COUNT" >>"$CONSOLIDATED_REPORT" 2>&1; then
     printf "${GREEN}✓ Real-time benchmark complete${NC}\n"
   else
     printf "${RED}✗ Real-time benchmark failed${NC}\n"

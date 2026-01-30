@@ -175,7 +175,7 @@ test_css_generation() {
   local test_theme_dir="$TEST_THEMES_DIR/test-theme"
   mkdir -p "$test_theme_dir"
 
-  cat > "$test_theme_dir/theme.json" << 'EOF'
+  cat >"$test_theme_dir/theme.json" <<'EOF'
 {
   "name": "test-theme",
   "displayName": "Test Theme",
@@ -233,7 +233,7 @@ test_theme_validation() {
   local valid_theme_dir="$TEST_THEMES_DIR/valid-theme"
   mkdir -p "$valid_theme_dir"
 
-  cat > "$valid_theme_dir/theme.json" << 'EOF'
+  cat >"$valid_theme_dir/theme.json" <<'EOF'
 {
   "name": "valid-theme",
   "displayName": "Valid Theme",
@@ -309,7 +309,7 @@ test_theme_file_structure() {
   mkdir -p "$theme_dir"
 
   # Create theme with all required fields
-  cat > "$theme_dir/theme.json" << 'EOF'
+  cat >"$theme_dir/theme.json" <<'EOF'
 {
   "name": "structure-test",
   "displayName": "Structure Test",
@@ -374,7 +374,7 @@ test_css_variable_naming() {
   local theme_dir="$TEST_THEMES_DIR/css-vars-test"
   mkdir -p "$theme_dir"
 
-  cat > "$theme_dir/theme.json" << 'EOF'
+  cat >"$theme_dir/theme.json" <<'EOF'
 {
   "name": "css-vars-test",
   "displayName": "CSS Vars Test",
@@ -459,7 +459,7 @@ test_json_export_import() {
   mkdir -p "$theme_dir"
 
   # Create theme
-  cat > "$theme_dir/theme.json" << 'EOF'
+  cat >"$theme_dir/theme.json" <<'EOF'
 {
   "name": "export-test",
   "displayName": "Export Test",
@@ -490,7 +490,7 @@ EOF
   # Test JSON roundtrip
   local temp_file
   temp_file=$(mktemp)
-  jq '.' "$theme_dir/theme.json" > "$temp_file"
+  jq '.' "$theme_dir/theme.json" >"$temp_file"
 
   local roundtrip_name
   roundtrip_name=$(jq -r '.name' "$temp_file")

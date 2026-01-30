@@ -25,7 +25,7 @@ NC='\033[0m' # No Color
 # Parse arguments first (before setting variables)
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
   SHOW_HELP=true
-  CONNECTION_COUNT=100  # Set default for help
+  CONNECTION_COUNT=100 # Set default for help
 else
   CONNECTION_COUNT="${1:-100}"
   SHOW_HELP=false
@@ -109,22 +109,22 @@ print_result() {
   fi
 
   # Record result
-  echo "$test,$result,$baseline,$unit,$status" >> "${RESULTS_FILE}.csv"
+  echo "$test,$result,$baseline,$unit,$status" >>"${RESULTS_FILE}.csv"
 }
 
 # Initialize results file
 initialize_results() {
-  printf "{\n" > "$RESULTS_FILE"
-  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >> "$RESULTS_FILE"
-  printf "  \"connection_count\": %d,\n" "$CONNECTION_COUNT" >> "$RESULTS_FILE"
-  printf "  \"scale\": \"%s\",\n" "$TEST_LABEL" >> "$RESULTS_FILE"
-  printf "  \"tests\": [\n" >> "$RESULTS_FILE"
+  printf "{\n" >"$RESULTS_FILE"
+  printf "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\n" >>"$RESULTS_FILE"
+  printf "  \"connection_count\": %d,\n" "$CONNECTION_COUNT" >>"$RESULTS_FILE"
+  printf "  \"scale\": \"%s\",\n" "$TEST_LABEL" >>"$RESULTS_FILE"
+  printf "  \"tests\": [\n" >>"$RESULTS_FILE"
 
-  echo "Test,Result,Baseline,Unit,Status" > "${RESULTS_FILE}.csv"
+  echo "Test,Result,Baseline,Unit,Status" >"${RESULTS_FILE}.csv"
 }
 
 finalize_results() {
-  printf "  ]\n}\n" >> "$RESULTS_FILE"
+  printf "  ]\n}\n" >>"$RESULTS_FILE"
 }
 
 # Test 1: WebSocket Connection Throughput
@@ -138,10 +138,10 @@ test_websocket_throughput() {
   for i in $(seq 1 $CONNECTION_COUNT); do
     # Mock WebSocket handshake
     {
-      echo "GET /realtime HTTP/1.1" > /dev/null
-      echo "Upgrade: websocket" > /dev/null
-      echo "Connection: Upgrade" > /dev/null
-      echo "Sec-WebSocket-Key: generated-key-${i}" > /dev/null
+      echo "GET /realtime HTTP/1.1" >/dev/null
+      echo "Upgrade: websocket" >/dev/null
+      echo "Connection: Upgrade" >/dev/null
+      echo "Sec-WebSocket-Key: generated-key-${i}" >/dev/null
     } 2>/dev/null
 
     # Simulate connection establishment (0.5ms per connection)
@@ -182,18 +182,18 @@ test_message_latency() {
       # Simulate message delivery
       {
         # 1. Serialize message
-        echo "JSON.stringify(message_${size}b)" > /dev/null
+        echo "JSON.stringify(message_${size}b)" >/dev/null
 
         # 2. Publish to channel
-        echo "PUBLISH channel message" > /dev/null
+        echo "PUBLISH channel message" >/dev/null
 
         # 3. Fan-out to subscribers
         for subscriber in {1..10}; do
-          echo "SEND to subscriber_${subscriber}" > /dev/null
+          echo "SEND to subscriber_${subscriber}" >/dev/null
         done
 
         # 4. Deserialize on client
-        echo "JSON.parse(message)" > /dev/null
+        echo "JSON.parse(message)" >/dev/null
       } 2>/dev/null
 
       # Simulate network latency (proportional to size)
@@ -230,13 +230,13 @@ test_presence_updates() {
     # Mock presence update
     {
       # 1. Update presence state
-      echo "UPDATE presence SET status = 'online', last_seen = NOW() WHERE user_id = ${user_id};" > /dev/null
+      echo "UPDATE presence SET status = 'online', last_seen = NOW() WHERE user_id = ${user_id};" >/dev/null
 
       # 2. Broadcast to channel subscribers
-      echo "PUBLISH channel_${channel_id} presence_update" > /dev/null
+      echo "PUBLISH channel_${channel_id} presence_update" >/dev/null
 
       # 3. Update presence count cache
-      echo "INCR presence:channel_${channel_id}" > /dev/null
+      echo "INCR presence:channel_${channel_id}" >/dev/null
     } 2>/dev/null
 
     count=$((count + 1))
@@ -273,11 +273,11 @@ test_channel_scaling() {
       # Simulate message broadcast
       {
         # 1. Publish message
-        echo "PUBLISH channel_test message_${i}" > /dev/null
+        echo "PUBLISH channel_test message_${i}" >/dev/null
 
         # 2. Fan-out to all subscribers
         for sub in $(seq 1 $subscribers); do
-          echo "SEND to subscriber_${sub}" > /dev/null
+          echo "SEND to subscriber_${sub}" >/dev/null
         done
       } 2>/dev/null
     done
@@ -288,7 +288,7 @@ test_channel_scaling() {
     local fanout=$(echo "$messages_sent * $subscribers / $duration" | bc -l)
 
     printf "    %5d subscribers: %7.2f msg/sec, %10.2f deliveries/sec\n" \
-           "$subscribers" "$throughput" "$fanout"
+      "$subscribers" "$throughput" "$fanout"
   done
 
   # Use largest subscriber count for baseline
@@ -301,7 +301,7 @@ test_channel_scaling() {
   local count=0
   for i in $(seq 1 100); do
     for sub in $(seq 1 "$max_subs"); do
-      echo "SEND message" > /dev/null 2>&1
+      echo "SEND message" >/dev/null 2>&1
       count=$((count + 1))
     done
   done
@@ -323,7 +323,7 @@ test_concurrent_operations() {
   local count=0
   for i in $(seq 1 1000); do
     local channel_id=$((i % CHANNELS + 1))
-    echo "SUBSCRIBE channel_${channel_id}" > /dev/null 2>&1
+    echo "SUBSCRIBE channel_${channel_id}" >/dev/null 2>&1
     count=$((count + 1))
   done
   local end_time=$(date +%s.%N)
@@ -336,7 +336,7 @@ test_concurrent_operations() {
   count=0
   for i in $(seq 1 1000); do
     local channel_id=$((i % CHANNELS + 1))
-    echo "PUBLISH channel_${channel_id} message" > /dev/null 2>&1
+    echo "PUBLISH channel_${channel_id} message" >/dev/null 2>&1
     count=$((count + 1))
   done
   end_time=$(date +%s.%N)
@@ -349,7 +349,7 @@ test_concurrent_operations() {
   count=0
   for i in $(seq 1 1000); do
     local channel_id=$((i % CHANNELS + 1))
-    echo "UNSUBSCRIBE channel_${channel_id}" > /dev/null 2>&1
+    echo "UNSUBSCRIBE channel_${channel_id}" >/dev/null 2>&1
     count=$((count + 1))
   done
   end_time=$(date +%s.%N)
@@ -391,7 +391,7 @@ test_backpressure() {
   done
 
   printf "Dropped %d/%d messages (%.2f%%)\n" "$dropped" "2000" \
-         "$(echo "$dropped / 2000 * 100" | bc -l)"
+    "$(echo "$dropped / 2000 * 100" | bc -l)"
 
   # Scenario 2: Burst traffic
   printf "    Burst handling:     "
@@ -401,7 +401,7 @@ test_backpressure() {
   # Normal traffic (100 msg/sec)
   for i in $(seq 1 100); do
     queue_size=$((queue_size + 1))
-    queue_size=$((queue_size - 1))  # Processed immediately
+    queue_size=$((queue_size - 1)) # Processed immediately
   done
 
   # Burst traffic (1000 msg/sec)

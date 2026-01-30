@@ -29,7 +29,7 @@ source "$CLI_SCRIPT_DIR/../lib/migrate/supabase.sh" 2>/dev/null || true
 
 # Show help
 show_migrate_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself migrate - Migrations (environments and vendors)
 
 Mission: Help you escape vendor lock-in
@@ -86,13 +86,13 @@ get_env_config() {
   local env_name="$1"
 
   case "$env_name" in
-    local|dev)
+    local | dev)
       echo ".env.dev:.env.local:local"
       ;;
     staging)
       echo ".env.staging:.environments/staging/server.json:staging"
       ;;
-    prod|production)
+    prod | production)
       echo ".env.prod:.environments/prod/server.json:production"
       ;;
     *)
@@ -210,7 +210,7 @@ cmd_migrate_env() {
   # Create checkpoint before migration
   local checkpoint="migrate_${source}_to_${target}_$(date +%Y%m%d_%H%M%S)"
   mkdir -p ".nself/checkpoints"
-  echo "$checkpoint" > ".nself/checkpoints/latest"
+  echo "$checkpoint" >".nself/checkpoints/latest"
 
   # Backup target before migration
   printf "${COLOR_CYAN}➞ Creating backup of target environment${COLOR_RESET}\n"
@@ -229,7 +229,7 @@ cmd_migrate_env() {
       load_env_with_priority
       local project_name="${PROJECT_NAME:-nself}"
       docker exec "${project_name}_postgres" pg_dump -U "${POSTGRES_USER:-postgres}" \
-        -d "${POSTGRES_DB:-nhost}" --schema-only > "$source_schema" 2>/dev/null || true
+        -d "${POSTGRES_DB:-nhost}" --schema-only >"$source_schema" 2>/dev/null || true
     fi
 
     log_success "Schema migration prepared"
@@ -261,7 +261,7 @@ cmd_migrate_env() {
 
   # Record migration
   mkdir -p ".nself/migrations"
-  cat > ".nself/migrations/$checkpoint.json" << EOF
+  cat >".nself/migrations/$checkpoint.json" <<EOF
 {
   "timestamp": "$(date -Iseconds)",
   "source": "$source",
@@ -582,7 +582,7 @@ cmd_migrate() {
         OUTPUT_FORMAT="json"
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_migrate_help
         return 0
         ;;
@@ -614,7 +614,7 @@ cmd_migrate() {
     rollback)
       cmd_rollback
       ;;
-    local|staging|prod|production|dev)
+    local | staging | prod | production | dev)
       # Environment migration
       cmd_migrate_env "$@"
       ;;

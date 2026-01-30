@@ -50,7 +50,7 @@ mkcert_ensure_installed() {
         chmod +x "$install_dir/mkcert"
       fi
       ;;
-    linux|wsl)
+    linux | wsl)
       # Try package manager first
       local pkg_mgr=$(get_platform_command "package_manager")
       if [[ "$pkg_mgr" == "apt-get" ]]; then

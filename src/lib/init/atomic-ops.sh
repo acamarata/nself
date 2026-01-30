@@ -132,7 +132,7 @@ restore_file() {
     }
     return 0
   else
-    return 1  # No backup exists
+    return 1 # No backup exists
   fi
 }
 
@@ -212,7 +212,7 @@ atomic_write() {
   temp_file="$TEMP_DIR/$(basename "$dest").tmp"
 
   # Write content to temp file
-  if echo "$content" > "$temp_file" 2>/dev/null; then
+  if echo "$content" >"$temp_file" 2>/dev/null; then
     # Set permissions
     chmod "$perms" "$temp_file" 2>/dev/null || true
 

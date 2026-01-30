@@ -7,7 +7,7 @@ set -euo pipefail
 # Generate compliance report
 compliance_generate_report() {
   local standard="${1:-all}"
-  local output_format="${2:-json}"  # json, html, pdf
+  local output_format="${2:-json}" # json, html, pdf
   local output_file="${3:-/tmp/compliance_report.json}"
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
@@ -47,11 +47,11 @@ compliance_generate_report() {
 
   case "$output_format" in
     json)
-      echo "$report" | jq '.' > "$output_file"
+      echo "$report" | jq '.' >"$output_file"
       ;;
     html)
       # Would generate HTML report
-      echo "<html><body><h1>Compliance Report</h1><pre>$report</pre></body></html>" > "$output_file"
+      echo "<html><body><h1>Compliance Report</h1><pre>$report</pre></body></html>" >"$output_file"
       ;;
     pdf)
       # Would generate PDF report

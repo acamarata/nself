@@ -12,7 +12,10 @@ readonly BACKUP_TYPE_DIFFERENTIAL="differential"
 # Initialize backup system
 backup_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
 CREATE SCHEMA IF NOT EXISTS backups;
@@ -93,9 +96,9 @@ backup_create() {
       -d "${POSTGRES_DB:-nself_db}" \
       -F p \
       -f "/tmp/$backup_file" 2>/dev/null || {
-        status="failed"
-        error_message="PostgreSQL backup failed"
-      }
+      status="failed"
+      error_message="PostgreSQL backup failed"
+    }
 
     # Copy from container to host
     docker cp "$pg_container:/tmp/$backup_file" "$backup_dir/$backup_file" 2>/dev/null
@@ -142,7 +145,7 @@ backup_create() {
 backup_schedule_create() {
   local name="$1"
   local backup_type="$2"
-  local frequency="$3"  # hourly, daily, weekly, monthly
+  local frequency="$3" # hourly, daily, weekly, monthly
   local retention_days="${4:-30}"
 
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
@@ -265,13 +268,19 @@ backup_verify() {
   local backup_id="$1"
   local backup=$(backup_get "$backup_id")
 
-  [[ -z "$backup" || "$backup" == "null" ]] && { echo "Backup not found"; return 1; }
+  [[ -z "$backup" || "$backup" == "null" ]] && {
+    echo "Backup not found"
+    return 1
+  }
 
   local file_path=$(echo "$backup" | jq -r '.file_path')
   local stored_checksum=$(echo "$backup" | jq -r '.checksum')
 
   # Check if file exists
-  [[ ! -f "$file_path" ]] && { echo "Backup file not found"; return 1; }
+  [[ ! -f "$file_path" ]] && {
+    echo "Backup file not found"
+    return 1
+  }
 
   # Verify checksum
   local current_checksum=$(sha256sum "$file_path" | cut -d' ' -f1)

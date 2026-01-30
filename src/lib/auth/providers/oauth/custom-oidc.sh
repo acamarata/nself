@@ -84,7 +84,7 @@ oidc_configure_auto() {
 
   # Store configuration (for now, in a temp file; should be in database)
   local config_file="/tmp/nself_oidc_${provider_name}.json"
-  cat > "$config_file" <<EOF
+  cat >"$config_file" <<EOF
 {
   "provider": "${provider_name}",
   "issuer": "${issuer_url}",
@@ -110,7 +110,7 @@ oidc_configure_manual() {
 
   # Store configuration
   local config_file="/tmp/nself_oidc_${provider_name}.json"
-  cat > "$config_file" <<EOF
+  cat >"$config_file" <<EOF
 {
   "provider": "${provider_name}",
   "authorization_endpoint": "${auth_endpoint}",

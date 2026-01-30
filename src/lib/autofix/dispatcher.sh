@@ -62,7 +62,6 @@ analyze_and_fix_service() {
     return $?
   fi
 
-
   # Redis connection issues
   if echo "$service_logs" | grep -q "redis.*connection\|connection.*redis\|port 637[0-9]"; then
     log_info "Detected Redis connection issue"

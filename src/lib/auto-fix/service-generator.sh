@@ -50,7 +50,7 @@ copy_service_template() {
     case "$service_type" in
       express-js) template_path="$templates_dir/js/express-js" ;;
       fastify-js) template_path="$templates_dir/js/fastify-js" ;;
-      nestjs-js|nest-js) template_path="$templates_dir/js/nest-js" ;;
+      nestjs-js | nest-js) template_path="$templates_dir/js/nest-js" ;;
       bullmq-js) template_path="$templates_dir/js/bullmq-js" ;;
       node-js) template_path="$templates_dir/js/node-js" ;;
       fastapi) template_path="$templates_dir/py/fastapi" ;;
@@ -95,11 +95,11 @@ process_template_variables() {
     output_file="${output_file%.tpl}"
 
     sed -e "s/{{SERVICE_NAME}}/$service_name/g" \
-        -e "s/{{PROJECT_NAME}}/${PROJECT_NAME:-nself}/g" \
-        -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN:-localhost}/g" \
-        -e "s/{{PORT}}/$service_port/g" \
-        -e "s/{{ENV}}/${ENV:-dev}/g" \
-        "$template_file" > "$output_file"
+      -e "s/{{PROJECT_NAME}}/${PROJECT_NAME:-nself}/g" \
+      -e "s/{{BASE_DOMAIN}}/${BASE_DOMAIN:-localhost}/g" \
+      -e "s/{{PORT}}/$service_port/g" \
+      -e "s/{{ENV}}/${ENV:-dev}/g" \
+      "$template_file" >"$output_file"
 
     rm "$template_file"
   done
@@ -115,7 +115,7 @@ process_template_variables() {
   fi
 
   # Create .env file
-  cat > "$target_dir/.env" <<EOF
+  cat >"$target_dir/.env" <<EOF
 SERVICE_NAME=$service_name
 PORT=$service_port
 NODE_ENV=${ENV:-development}
@@ -204,7 +204,7 @@ generate_configured_services() {
 
     if [[ -n "$service_def" ]]; then
       # Parse service definition (name:type:port)
-      IFS=':' read -r name type port <<< "$service_def"
+      IFS=':' read -r name type port <<<"$service_def"
 
       if [[ -n "$name" ]] && [[ -n "$type" ]]; then
         if [[ ! -d "services/$name" ]]; then

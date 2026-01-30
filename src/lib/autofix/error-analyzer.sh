@@ -107,7 +107,6 @@ analyze_error() {
     return
   fi
 
-
   # Redis connection issues
   if echo "$service_logs" | grep -q "redis.*connection\|connection.*redis\|ECONNREFUSED.*6379"; then
     echo "REDIS_CONNECTION"
@@ -171,71 +170,71 @@ get_error_message() {
   local error_code="$1"
 
   case "$error_code" in
-  POSTGRES_PORT_5433)
-    echo "Postgres port mismatch (expects 5433)"
-    ;;
-  POSTGRES_NOT_RUNNING)
-    echo "Postgres not running"
-    ;;
-  POSTGRES_AUTH_FAILED)
-    echo "Postgres authentication failed"
-    ;;
-  POSTGRES_CONNECTION)
-    echo "Cannot connect to Postgres"
-    ;;
-  DATABASE_NOT_FOUND)
-    echo "Database does not exist"
-    ;;
-  REDIS_CONNECTION)
-    echo "Cannot connect to Redis"
-    ;;
-  ELASTICSEARCH_CONNECTION)
-    echo "Cannot connect to Elasticsearch/OpenSearch"
-    ;;
-  NETWORK_DNS)
-    echo "Network/DNS resolution issue"
-    ;;
-  PORT_IN_USE)
-    echo "Port already in use"
-    ;;
-  OUT_OF_MEMORY)
-    echo "Out of memory"
-    ;;
-  PERMISSION_DENIED)
-    echo "Permission denied"
-    ;;
-  MISSING_ENV_VARS)
-    echo "Missing required environment variables"
-    ;;
-  MISSING_FILES)
-    echo "Required files missing"
-    ;;
-  SSL_CERT_ERROR)
-    echo "SSL/TLS certificate error"
-    ;;
-  SCHEMA_NOT_FOUND)
-    echo "Database schema missing"
-    ;;
-  MISSING_NODE_MODULES)
-    echo "Node modules not installed"
-    ;;
-  BULLMQ_MISSING_MODULES)
-    echo "BullMQ dependencies missing"
-    ;;
-  BULLMQ_REDIS_CONNECTION)
-    echo "BullMQ cannot connect to Redis"
-    ;;
-  NGINX_UPSTREAM_NOT_FOUND)
-    echo "Nginx cannot find upstream service"
-    ;;
-  MISSING_HEALTHCHECK_TOOLS)
-    echo "Healthcheck tools missing in container"
-    ;;
-  NO_SHELL_IN_CONTAINER)
-    echo "Container has no shell (minimal image)"
-    ;;
-  *)
-    echo "Service startup failed"
-    ;;
+    POSTGRES_PORT_5433)
+      echo "Postgres port mismatch (expects 5433)"
+      ;;
+    POSTGRES_NOT_RUNNING)
+      echo "Postgres not running"
+      ;;
+    POSTGRES_AUTH_FAILED)
+      echo "Postgres authentication failed"
+      ;;
+    POSTGRES_CONNECTION)
+      echo "Cannot connect to Postgres"
+      ;;
+    DATABASE_NOT_FOUND)
+      echo "Database does not exist"
+      ;;
+    REDIS_CONNECTION)
+      echo "Cannot connect to Redis"
+      ;;
+    ELASTICSEARCH_CONNECTION)
+      echo "Cannot connect to Elasticsearch/OpenSearch"
+      ;;
+    NETWORK_DNS)
+      echo "Network/DNS resolution issue"
+      ;;
+    PORT_IN_USE)
+      echo "Port already in use"
+      ;;
+    OUT_OF_MEMORY)
+      echo "Out of memory"
+      ;;
+    PERMISSION_DENIED)
+      echo "Permission denied"
+      ;;
+    MISSING_ENV_VARS)
+      echo "Missing required environment variables"
+      ;;
+    MISSING_FILES)
+      echo "Required files missing"
+      ;;
+    SSL_CERT_ERROR)
+      echo "SSL/TLS certificate error"
+      ;;
+    SCHEMA_NOT_FOUND)
+      echo "Database schema missing"
+      ;;
+    MISSING_NODE_MODULES)
+      echo "Node modules not installed"
+      ;;
+    BULLMQ_MISSING_MODULES)
+      echo "BullMQ dependencies missing"
+      ;;
+    BULLMQ_REDIS_CONNECTION)
+      echo "BullMQ cannot connect to Redis"
+      ;;
+    NGINX_UPSTREAM_NOT_FOUND)
+      echo "Nginx cannot find upstream service"
+      ;;
+    MISSING_HEALTHCHECK_TOOLS)
+      echo "Healthcheck tools missing in container"
+      ;;
+    NO_SHELL_IN_CONTAINER)
+      echo "Container has no shell (minimal image)"
+      ;;
+    *)
+      echo "Service startup failed"
+      ;;
   esac
 }

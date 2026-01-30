@@ -27,44 +27,44 @@ source "$REALTIME_LIB_DIR/../utils/docker.sh"
 #   Outputs subscription ID on success
 #######################################
 subscribe_table() {
-    local table="$1"
-    local events="${2:-INSERT,UPDATE,DELETE}"
-    local filter="${3:-}"
+  local table="$1"
+  local events="${2:-INSERT,UPDATE,DELETE}"
+  local filter="${3:-}"
 
-    if [[ -z "$table" ]]; then
-        error "Table name required"
-        return 1
-    fi
+  if [[ -z "$table" ]]; then
+    error "Table name required"
+    return 1
+  fi
 
-    # Validate table format
-    if [[ ! "$table" =~ ^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
-        error "Invalid table format: $table (use schema.table)"
-        return 1
-    fi
+  # Validate table format
+  if [[ ! "$table" =~ ^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    error "Invalid table format: $table (use schema.table)"
+    return 1
+  fi
 
-    local schema
-    local table_name
-    schema=$(echo "$table" | cut -d'.' -f1)
-    table_name=$(echo "$table" | cut -d'.' -f2)
+  local schema
+  local table_name
+  schema=$(echo "$table" | cut -d'.' -f1)
+  table_name=$(echo "$table" | cut -d'.' -f2)
 
-    # Convert events to array
-    local events_upper
-    events_upper=$(echo "$events" | tr '[:lower:]' '[:upper:]')
+  # Convert events to array
+  local events_upper
+  events_upper=$(echo "$events" | tr '[:lower:]' '[:upper:]')
 
-    info "Creating subscription for table: $table"
-    info "Events: $events_upper"
-    if [[ -n "$filter" ]]; then
-        info "Filter: $filter"
-    fi
+  info "Creating subscription for table: $table"
+  info "Events: $events_upper"
+  if [[ -n "$filter" ]]; then
+    info "Filter: $filter"
+  fi
 
-    # Escape filter for SQL
-    local escaped_filter=""
-    if [[ -n "$filter" ]]; then
-        escaped_filter=$(printf "%s" "$filter" | sed "s/'/''/g")
-    fi
+  # Escape filter for SQL
+  local escaped_filter=""
+  if [[ -n "$filter" ]]; then
+    escaped_filter=$(printf "%s" "$filter" | sed "s/'/''/g")
+  fi
 
-    # Create trigger function if not exists
-    local sql="
+  # Create trigger function if not exists
+  local sql="
     -- Create trigger function
     CREATE OR REPLACE FUNCTION realtime.notify_${schema}_${table_name}()
     RETURNS trigger AS \$\$
@@ -111,18 +111,18 @@ subscribe_table() {
     RETURNING id;
     "
 
-    local sub_id
-    if ! sub_id=$(docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$sql" 2>&1 | tr -d ' \n'); then
-        error "Failed to create subscription"
-        return 1
-    fi
+  local sub_id
+  if ! sub_id=$(docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$sql" 2>&1 | tr -d ' \n'); then
+    error "Failed to create subscription"
+    return 1
+  fi
 
-    # Create triggers for each event type
-    IFS=',' read -ra EVENT_ARRAY <<< "$events_upper"
-    for event in "${EVENT_ARRAY[@]}"; do
-        event=$(echo "$event" | tr -d ' ')
-        local trigger_sql="
+  # Create triggers for each event type
+  IFS=',' read -ra EVENT_ARRAY <<<"$events_upper"
+  for event in "${EVENT_ARRAY[@]}"; do
+    event=$(echo "$event" | tr -d ' ')
+    local trigger_sql="
         DROP TRIGGER IF EXISTS realtime_${event}_${table_name} ON ${schema}.${table_name};
         CREATE TRIGGER realtime_${event}_${table_name}
         AFTER $event ON ${schema}.${table_name}
@@ -130,15 +130,15 @@ subscribe_table() {
         EXECUTE FUNCTION realtime.notify_${schema}_${table_name}();
         "
 
-        if ! docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$trigger_sql" >/dev/null 2>&1; then
-            warn "Failed to create $event trigger"
-        fi
-    done
+    if ! docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$trigger_sql" >/dev/null 2>&1; then
+      warn "Failed to create $event trigger"
+    fi
+  done
 
-    success "Subscription created (ID: $sub_id)"
-    printf "%s\n" "$sub_id"
-    return 0
+  success "Subscription created (ID: $sub_id)"
+  printf "%s\n" "$sub_id"
+  return 0
 }
 
 #######################################
@@ -149,57 +149,57 @@ subscribe_table() {
 #   0 on success, 1 on failure
 #######################################
 unsubscribe_table() {
-    local identifier="$1"
+  local identifier="$1"
 
-    if [[ -z "$identifier" ]]; then
-        error "Table name or subscription ID required"
-        return 1
+  if [[ -z "$identifier" ]]; then
+    error "Table name or subscription ID required"
+    return 1
+  fi
+
+  # Get table name
+  local table_name
+  if [[ "$identifier" =~ ^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    table_name="$identifier"
+  else
+    table_name=$(docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT table_name FROM realtime.subscriptions WHERE id = '$identifier';" | tr -d ' ')
+
+    if [[ -z "$table_name" ]]; then
+      error "Subscription not found: $identifier"
+      return 1
     fi
+  fi
 
-    # Get table name
-    local table_name
-    if [[ "$identifier" =~ ^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
-        table_name="$identifier"
-    else
-        table_name=$(docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT table_name FROM realtime.subscriptions WHERE id = '$identifier';" | tr -d ' ')
+  local schema
+  local tbl
+  schema=$(echo "$table_name" | cut -d'.' -f1)
+  tbl=$(echo "$table_name" | cut -d'.' -f2)
 
-        if [[ -z "$table_name" ]]; then
-            error "Subscription not found: $identifier"
-            return 1
-        fi
-    fi
+  info "Removing subscription for: $table_name"
 
-    local schema
-    local tbl
-    schema=$(echo "$table_name" | cut -d'.' -f1)
-    tbl=$(echo "$table_name" | cut -d'.' -f2)
-
-    info "Removing subscription for: $table_name"
-
-    # Drop triggers
-    local trigger_sql="
+  # Drop triggers
+  local trigger_sql="
     DROP TRIGGER IF EXISTS realtime_INSERT_${tbl} ON ${schema}.${tbl};
     DROP TRIGGER IF EXISTS realtime_UPDATE_${tbl} ON ${schema}.${tbl};
     DROP TRIGGER IF EXISTS realtime_DELETE_${tbl} ON ${schema}.${tbl};
     DROP FUNCTION IF EXISTS realtime.notify_${schema}_${tbl}();
     "
 
-    docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$trigger_sql" >/dev/null 2>&1 || true
+  docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$trigger_sql" >/dev/null 2>&1 || true
 
-    # Delete subscription record
-    local sql="DELETE FROM realtime.subscriptions WHERE table_name = '$table_name';"
+  # Delete subscription record
+  local sql="DELETE FROM realtime.subscriptions WHERE table_name = '$table_name';"
 
-    if docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
-        success "Subscription removed"
-        return 0
-    else
-        error "Failed to remove subscription"
-        return 1
-    fi
+  if docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
+    success "Subscription removed"
+    return 0
+  else
+    error "Failed to remove subscription"
+    return 1
+  fi
 }
 
 #######################################
@@ -210,9 +210,9 @@ unsubscribe_table() {
 #   0 on success, 1 on failure
 #######################################
 list_subscriptions() {
-    local format="${1:-table}"
+  local format="${1:-table}"
 
-    local sql="
+  local sql="
     SELECT
         id,
         table_name,
@@ -224,14 +224,14 @@ list_subscriptions() {
     ORDER BY created_at DESC;
     "
 
-    if [[ "$format" == "json" ]]; then
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
-            "SELECT json_agg(row_to_json(t)) FROM ($sql) t;"
-    else
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
-    fi
+  if [[ "$format" == "json" ]]; then
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c \
+      "SELECT json_agg(row_to_json(t)) FROM ($sql) t;"
+  else
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
+  fi
 }
 
 #######################################
@@ -242,27 +242,27 @@ list_subscriptions() {
 #   0 on success, 1 on failure
 #######################################
 test_subscription() {
-    local table="$1"
+  local table="$1"
 
-    if [[ -z "$table" ]]; then
-        error "Table name required"
-        return 1
-    fi
+  if [[ -z "$table" ]]; then
+    error "Table name required"
+    return 1
+  fi
 
-    info "Testing subscription for: $table"
-    info "This will attempt to query the table..."
+  info "Testing subscription for: $table"
+  info "This will attempt to query the table..."
 
-    local sql="SELECT COUNT(*) FROM $table LIMIT 1;"
+  local sql="SELECT COUNT(*) FROM $table LIMIT 1;"
 
-    if docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
-        success "Subscription test successful"
-        info "Monitor logs to see NOTIFY events"
-        return 0
-    else
-        error "Failed to test subscription"
-        return 1
-    fi
+  if docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1; then
+    success "Subscription test successful"
+    info "Monitor logs to see NOTIFY events"
+    return 0
+  else
+    error "Failed to test subscription"
+    return 1
+  fi
 }
 
 #######################################
@@ -274,38 +274,38 @@ test_subscription() {
 #   0 on success, 1 on failure
 #######################################
 listen_table() {
-    local table="$1"
-    local duration="${2:-0}"
+  local table="$1"
+  local duration="${2:-0}"
 
-    if [[ -z "$table" ]]; then
-        error "Table name required"
-        return 1
-    fi
+  if [[ -z "$table" ]]; then
+    error "Table name required"
+    return 1
+  fi
 
-    local channel="realtime:table:$table"
+  local channel="realtime:table:$table"
 
-    info "Listening to changes on: $table"
-    info "Channel: $channel"
-    info "Press Ctrl+C to stop"
-    printf "\n"
+  info "Listening to changes on: $table"
+  info "Channel: $channel"
+  info "Press Ctrl+C to stop"
+  printf "\n"
 
-    local listen_sql="LISTEN \"$channel\";"
+  local listen_sql="LISTEN \"$channel\";"
 
-    if [[ $duration -gt 0 ]]; then
-        info "Will listen for $duration seconds..."
-        if command -v timeout >/dev/null 2>&1; then
-            timeout "$duration" docker exec -i "$(docker_get_container_name postgres)" \
-                psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep(999999);" 2>&1 || true
-        else
-            docker exec -i "$(docker_get_container_name postgres)" \
-                psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep($duration);" 2>&1 || true
-        fi
+  if [[ $duration -gt 0 ]]; then
+    info "Will listen for $duration seconds..."
+    if command -v timeout >/dev/null 2>&1; then
+      timeout "$duration" docker exec -i "$(docker_get_container_name postgres)" \
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep(999999);" 2>&1 || true
     else
-        docker exec -i "$(docker_get_container_name postgres)" \
-            psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep(999999);" 2>&1 || true
+      docker exec -i "$(docker_get_container_name postgres)" \
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep($duration);" 2>&1 || true
     fi
+  else
+    docker exec -i "$(docker_get_container_name postgres)" \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$listen_sql; SELECT pg_sleep(999999);" 2>&1 || true
+  fi
 
-    return 0
+  return 0
 }
 
 #######################################
@@ -316,7 +316,7 @@ listen_table() {
 #   0 on success, 1 on failure
 #######################################
 subscription_stats() {
-    local sql="
+  local sql="
     SELECT
         COUNT(*) as total_subscriptions,
         COUNT(DISTINCT table_name) as unique_tables,
@@ -327,6 +327,6 @@ subscription_stats() {
     FROM realtime.subscriptions;
     "
 
-    docker exec -i "$(docker_get_container_name postgres)" \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
+  docker exec -i "$(docker_get_container_name postgres)" \
+    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql"
 }

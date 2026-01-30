@@ -11,7 +11,7 @@ source "$PROMPTS_SCRIPT_DIR/../../utils/display.sh"
 show_wizard_header() {
   local title="$1"
   local subtitle="$2"
-  
+
   show_command_header "$title" "$subtitle"
 }
 
@@ -20,11 +20,11 @@ show_wizard_step() {
   local current="$1"
   local total="$2"
   local title="$3"
-  
+
   # Use same width as standard headers (60 chars)
   local step_text="Step $current of $total: $title"
   local padding_needed=$((56 - ${#step_text})) # 56 = content width
-  
+
   echo
   printf "%s┌──────────────────────────────────────────────────────────┐%s\n" "${COLOR_CYAN}" "${COLOR_RESET}"
   printf "${COLOR_CYAN}│${COLOR_RESET} %s%*s ${COLOR_CYAN}│${COLOR_RESET}\n" "$step_text" $padding_needed ""
@@ -37,25 +37,25 @@ select_option() {
   local prompt="$1"
   local options_var="$2"
   local result_var="$3"
-  
+
   # Use eval to handle array references (Bash 3.2 compatible)
   eval "local options=(\"\${${options_var}[@]}\")"
-  
+
   echo "$prompt"
   echo ""
-  
+
   local i=1
   for option in "${options[@]}"; do
     echo "  $i) $option"
     ((i++))
   done
-  
+
   echo ""
   echo -n "Selection [1]: "
   local choice
   read choice
   choice="${choice:-1}"
-  
+
   # Validate choice (Bash 3.2 compatible)
   if echo "$choice" | grep -q '^[0-9][0-9]*$' && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
     eval "${result_var}=$((choice - 1))"
@@ -68,27 +68,27 @@ select_option() {
 multi_select() {
   local options_var="$1"
   local selected_var="$2"
-  
+
   # Use eval to handle array references (Bash 3.2 compatible)
   eval "local options=(\"\${${options_var}[@]}\")"
-  
+
   echo "(Enter numbers separated by spaces, or 'all' for all, 'none' for none)"
   echo ""
-  
+
   local i=1
   for option in "${options[@]}"; do
     echo "  $i) $option"
     ((i++))
   done
-  
+
   echo ""
   echo -n "Selection [none]: "
   local choices
   read choices
   choices="${choices:-none}"
-  
+
   local selected_items=()
-  
+
   if [[ "$choices" == "all" ]]; then
     selected_items=("${options[@]}")
   elif [[ "$choices" != "none" ]]; then
@@ -98,7 +98,7 @@ multi_select() {
       fi
     done
   fi
-  
+
   # Assign back to the variable (handle empty array safely)
   if [[ ${#selected_items[@]} -gt 0 ]]; then
     eval "${selected_var}=(\"\${selected_items[@]}\")"
@@ -113,18 +113,18 @@ prompt_input() {
   local default="$2"
   local result_var="$3"
   local pattern="${4:-.*}"
-  
+
   while true; do
     if [[ -n "$default" ]]; then
       echo -n "$prompt [$default]: "
     else
       echo -n "$prompt: "
     fi
-    
+
     local input
     read input
     input="${input:-$default}"
-    
+
     # Validate input (Bash 3.2 compatible)
     if echo "$input" | grep -q "$pattern"; then
       eval "${result_var}=\"\$input\""
@@ -148,17 +148,17 @@ prompt_input() {
 prompt_yes_no() {
   local prompt="$1"
   local default="${2:-n}"
-  
+
   local yn
   if [[ "$default" == "y" ]]; then
     echo -n "$prompt (Y/n): "
   else
     echo -n "$prompt (y/N): "
   fi
-  
+
   read yn
   yn="${yn:-$default}"
-  
+
   [[ "$yn" == "y" ]] || [[ "$yn" == "Y" ]]
 }
 
@@ -167,15 +167,15 @@ show_progress() {
   local current="$1"
   local total="$2"
   local width=50
-  
+
   local percent=$((current * 100 / total))
   local filled=$((current * width / total))
-  
+
   printf "\r["
   printf "%${filled}s" | tr ' ' '='
   printf "%$((width - filled))s" | tr ' ' '-'
   printf "] %3d%%" "$percent"
-  
+
   if [[ $current -eq $total ]]; then
     echo ""
   fi
@@ -186,7 +186,7 @@ show_spinner() {
   local pid=$1
   local delay=0.1
   local spinstr='|/-\'
-  
+
   while kill -0 $pid 2>/dev/null; do
     local temp=${spinstr#?}
     printf " [%c]  " "$spinstr"

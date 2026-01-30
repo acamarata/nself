@@ -33,7 +33,7 @@ mkdir -p "$BACKUP_DIR"
 # =============================================================================
 
 show_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself backup - Backup & Recovery
 
 USAGE:
@@ -186,7 +186,7 @@ backup_database() {
     local db_user="${POSTGRES_USER:-postgres}"
 
     docker exec "${project_name}_postgres" pg_dumpall -U "$db_user" \
-      > "$db_backup_dir/postgres_dump.sql" 2>/dev/null || {
+      >"$db_backup_dir/postgres_dump.sql" 2>/dev/null || {
       cli_warning "Failed to dump database"
     }
   else
@@ -249,8 +249,8 @@ cmd_list() {
       if [[ -f "$backup" ]]; then
         local name=$(basename "$backup")
         local size=$(du -h "$backup" | cut -f1)
-        local created=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$backup" 2>/dev/null || \
-                        stat -c "%y" "$backup" 2>/dev/null | cut -d' ' -f1,2)
+        local created=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$backup" 2>/dev/null ||
+          stat -c "%y" "$backup" 2>/dev/null | cut -d' ' -f1,2)
         cli_table_row "$name" "$size" "$created"
       fi
     done
@@ -343,7 +343,7 @@ restore_database() {
     fi
 
     docker exec -i "${project_name}_postgres" psql -U "$db_user" \
-      < "$source_dir/database/postgres_dump.sql" 2>/dev/null || {
+      <"$source_dir/database/postgres_dump.sql" 2>/dev/null || {
       cli_error "Failed to restore database"
       return 1
     }
@@ -459,7 +459,7 @@ prune_by_count() {
   local backups=($(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null))
   local removed=0
 
-  for ((i=count; i<${#backups[@]}; i++)); do
+  for ((i = count; i < ${#backups[@]}; i++)); do
     cli_info "Removing: $(basename "${backups[$i]}")"
     rm -f "${backups[$i]}"
     removed=$((removed + 1))
@@ -491,7 +491,7 @@ prune_smart_policy() {
       if [[ -f "$backup" ]]; then
         local name=$(basename "$backup")
         local backup_time=$(stat -f %m "$backup" 2>/dev/null || stat -c %Y "$backup")
-        local age_days=$(( (now - backup_time) / 86400 ))
+        local age_days=$(((now - backup_time) / 86400))
 
         local keep=false
         local reason=""
@@ -575,7 +575,7 @@ cmd_reset() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --force|-f)
+      --force | -f)
         force_reset=true
         shift
         ;;
@@ -663,19 +663,19 @@ cmd_clean() {
   # Parse options
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --images|-i)
+      --images | -i)
         clean_images=true
         shift
         ;;
-      --containers|-c)
+      --containers | -c)
         clean_containers=true
         shift
         ;;
-      --volumes|-v)
+      --volumes | -v)
         clean_volumes=true
         shift
         ;;
-      --all|-a)
+      --all | -a)
         clean_all=true
         shift
         ;;
@@ -686,8 +686,8 @@ cmd_clean() {
   done
 
   # Default to images if nothing specified
-  if [[ "$clean_images" == "false" ]] && [[ "$clean_containers" == "false" ]] && \
-     [[ "$clean_volumes" == "false" ]] && [[ "$clean_all" == "false" ]]; then
+  if [[ "$clean_images" == "false" ]] && [[ "$clean_containers" == "false" ]] &&
+    [[ "$clean_volumes" == "false" ]] && [[ "$clean_all" == "false" ]]; then
     clean_images=true
   fi
 
@@ -768,7 +768,7 @@ main() {
     create)
       cmd_create "$@"
       ;;
-    list|ls)
+    list | ls)
       cmd_list "$@"
       ;;
     restore)
@@ -786,7 +786,7 @@ main() {
     clean)
       cmd_clean "$@"
       ;;
-    help|-h|--help)
+    help | -h | --help)
       show_help
       ;;
     *)

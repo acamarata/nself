@@ -37,7 +37,7 @@ routes::collect_all() {
   # Core domains
   routes+=("$base_domain")
   [[ "$base_domain" != "localhost" ]] && routes+=("localhost")
-  
+
   # Core nself services with their routes
   # Check both env vars AND nginx configs (more reliable during build)
   if [[ "${HASURA_ENABLED:-false}" == "true" ]] || [[ -f "nginx/conf.d/hasura.conf" ]]; then
@@ -58,53 +58,53 @@ routes::collect_all() {
     local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console.${base_domain}}"
     routes+=("$storage_console_route")
   fi
-  
+
   # Additional services
   if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
     local meilisearch_route="${MEILISEARCH_ROUTE:-search.${base_domain}}"
     routes+=("$meilisearch_route")
   fi
-  
+
   # Mailpit - check config file exists since env var defaults to true
   if [[ -f "nginx/conf.d/mailpit.conf" ]]; then
     local mailpit_route="${MAILPIT_ROUTE:-mail.${base_domain}}"
     routes+=("$mailpit_route")
   fi
-  
+
   if [[ "${ADMINER_ENABLED:-false}" == "true" ]]; then
     local adminer_route="${ADMINER_ROUTE:-db.${base_domain}}"
     routes+=("$adminer_route")
   fi
-  
+
   if [[ "${BULLMQ_DASHBOARD_ENABLED:-false}" == "true" ]]; then
     local bullmq_route="${BULLMQ_DASHBOARD_ROUTE:-queues.${base_domain}}"
     routes+=("$bullmq_route")
   fi
-  
+
   if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
     local functions_route="${FUNCTIONS_ROUTE:-functions.${base_domain}}"
     routes+=("$functions_route")
   fi
-  
+
   if [[ "${DASHBOARD_ENABLED:-false}" == "true" ]]; then
     local dashboard_route="${DASHBOARD_ROUTE:-dashboard.${base_domain}}"
     routes+=("$dashboard_route")
   fi
-  
+
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
     local admin_route="${NSELF_ADMIN_ROUTE:-admin.${base_domain}}"
     routes+=("$admin_route")
   fi
-  
+
   if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
     local mlflow_route="${MLFLOW_ROUTE:-mlflow.${base_domain}}"
     routes+=("$mlflow_route")
   fi
-  
+
   # Frontend applications
   local app_count="${FRONTEND_APP_COUNT:-0}"
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local route_var="FRONTEND_APP_${i}_ROUTE"
       local remote_url_var="FRONTEND_APP_${i}_REMOTE_SCHEMA_URL"
       local route="${!route_var:-}"
@@ -128,7 +128,7 @@ routes::collect_all() {
           api_route=$(echo "$remote_url" | sed -E 's|https?://([^/]+).*|\1|')
         elif [[ "$remote_url" == *'${BASE_DOMAIN}'* ]]; then
           # Safely expand BASE_DOMAIN variable
-          api_route="${remote_url//\${BASE_DOMAIN}/${base_domain}}"
+          api_route="${remote_url//\${BASE_DOMAIN/}/${base_domain}}"
         else
           # Simple format like "api.app1"
           api_route="${remote_url}.${base_domain}"
@@ -164,7 +164,7 @@ routes::collect_all() {
       fi
     done
   fi
-  
+
   # Handle direct FRONTEND_APPS if no individual variables
   if [[ "$app_count" -eq 0 && -n "${FRONTEND_APPS:-}" ]]; then
     # Bash 3.2 compatible: use echo with pipe
@@ -181,7 +181,7 @@ routes::collect_all() {
       fi
     done
   fi
-  
+
   # CS_N services (Custom Services) - check both env vars and nginx configs
   for i in {1..20}; do
     local cs_route_var="CS_${i}_ROUTE"
@@ -197,12 +197,12 @@ routes::collect_all() {
       fi
     fi
   done
-  
+
   # Project main domain
   if [[ -n "$project_name" && "$project_name" != "app" ]]; then
     routes+=("${project_name}.${base_domain}")
   fi
-  
+
   # Remove duplicates and sort
   printf '%s\n' "${routes[@]}" | sort -u
 }
@@ -211,9 +211,9 @@ routes::collect_all() {
 routes::get_service_config() {
   local service_name="$1"
   local base_domain="${BASE_DOMAIN:-localhost}"
-  
+
   case "$service_name" in
-    hasura|graphql|api)
+    hasura | graphql | api)
       if [[ "${HASURA_ENABLED:-false}" == "true" ]]; then
         echo "service_name=hasura"
         echo "route=${HASURA_ROUTE:-api.${base_domain}}"
@@ -244,7 +244,7 @@ routes::get_service_config() {
         echo "max_body_size=100M"
       fi
       ;;
-    mailpit|mail)
+    mailpit | mail)
       if [[ "${MAILPIT_ENABLED:-true}" == "true" ]]; then
         echo "service_name=mailpit"
         echo "route=${MAILPIT_ROUTE:-mail.${base_domain}}"
@@ -254,7 +254,7 @@ routes::get_service_config() {
         echo "upstream_name=mailpit"
       fi
       ;;
-    meilisearch|search)
+    meilisearch | search)
       if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
         echo "service_name=meilisearch"
         echo "route=${MEILISEARCH_ROUTE:-search.${base_domain}}"
@@ -264,7 +264,7 @@ routes::get_service_config() {
         echo "upstream_name=meilisearch"
       fi
       ;;
-    adminer|db)
+    adminer | db)
       if [[ "${ADMINER_ENABLED:-false}" == "true" ]]; then
         echo "service_name=adminer"
         echo "route=${ADMINER_ROUTE:-db.${base_domain}}"
@@ -274,7 +274,7 @@ routes::get_service_config() {
         echo "upstream_name=adminer"
       fi
       ;;
-    bullmq|queues)
+    bullmq | queues)
       if [[ "${BULLMQ_DASHBOARD_ENABLED:-false}" == "true" ]]; then
         echo "service_name=bullmq"
         echo "route=${BULLMQ_DASHBOARD_ROUTE:-queues.${base_domain}}"
@@ -304,7 +304,7 @@ routes::get_service_config() {
         echo "upstream_name=dashboard"
       fi
       ;;
-    nself-admin|admin)
+    nself-admin | admin)
       if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
         echo "service_name=nself-admin"
         echo "route=${NSELF_ADMIN_ROUTE:-admin.${base_domain}}"
@@ -330,7 +330,7 @@ routes::get_service_config() {
 # Get all enabled services
 routes::get_enabled_services() {
   local services=()
-  
+
   [[ "${HASURA_ENABLED:-false}" == "true" ]] && services+=(hasura)
   [[ "${AUTH_ENABLED:-false}" == "true" ]] && services+=(auth)
   [[ "${STORAGE_ENABLED:-false}" == "true" ]] && services+=(storage)
@@ -342,7 +342,7 @@ routes::get_enabled_services() {
   [[ "${DASHBOARD_ENABLED:-false}" == "true" ]] && services+=(dashboard)
   [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]] && services+=(nself-admin)
   [[ "${MLFLOW_ENABLED:-false}" == "true" ]] && services+=(mlflow)
-  
+
   printf '%s\n' "${services[@]}"
 }
 
@@ -350,11 +350,11 @@ routes::get_enabled_services() {
 routes::get_frontend_apps() {
   local base_domain="${BASE_DOMAIN:-localhost}"
   local apps=()
-  
+
   # Check FRONTEND_APP_N variables
   local app_count="${FRONTEND_APP_COUNT:-0}"
   if [[ "$app_count" -gt 0 ]]; then
-    for ((i=1; i<=app_count; i++)); do
+    for ((i = 1; i <= app_count; i++)); do
       local name_var="FRONTEND_APP_${i}_SYSTEM_NAME"
       local display_var="FRONTEND_APP_${i}_DISPLAY_NAME"
       local route_var="FRONTEND_APP_${i}_ROUTE"
@@ -407,16 +407,16 @@ routes::get_frontend_apps() {
       fi
     done
   fi
-  
+
   # Check direct FRONTEND_APPS variable
   if [[ "$app_count" -eq 0 && -n "${FRONTEND_APPS:-}" ]]; then
     IFS=',' read -ra APPS <<<"$FRONTEND_APPS"
     for app_config in "${APPS[@]}"; do
       IFS=':' read -r app_name app_short app_prefix app_port <<<"$app_config"
-      
+
       if [[ -n "$app_name" ]]; then
         local route="${app_short:-$app_name}.${base_domain}"
-        
+
         echo "app_name=${app_name}"
         echo "route=${route}"
         echo "port=${app_port:-3000}"
@@ -429,7 +429,7 @@ routes::get_frontend_apps() {
 # Get custom services (CS_N)
 routes::get_custom_services() {
   local base_domain="${BASE_DOMAIN:-localhost}"
-  
+
   for i in {1..20}; do
     local cs_var="CS_${i}"
     local cs_value
@@ -437,11 +437,11 @@ routes::get_custom_services() {
     if [[ -n "$cs_value" ]]; then
       # Parse CS_N format: type:name:port[:route[:internal]]
       IFS=':' read -r cs_type cs_name cs_port cs_route cs_internal <<<"$cs_value"
-      
+
       # Only include services with external routes
       if [[ -n "$cs_route" && "$cs_internal" != "true" ]]; then
         local full_route="${cs_route}.${base_domain}"
-        
+
         echo "service_name=${cs_name}"
         echo "service_type=${cs_type}"
         echo "route=${full_route}"
@@ -458,19 +458,19 @@ routes::get_custom_services() {
 routes::get_ssl_domains() {
   local base_domain="${BASE_DOMAIN:-localhost}"
   local domains=()
-  
+
   # Collect all routes and convert to domains
   while IFS= read -r route; do
     [[ -n "$route" ]] && domains+=("$route")
   done < <(routes::collect_all)
-  
+
   # Add wildcard for convenience (but explicit domains are primary)
   if [[ "$base_domain" == "localhost" ]]; then
     domains+=("*.localhost")
   else
     domains+=("*.$base_domain")
   fi
-  
+
   printf '%s\n' "${domains[@]}" | sort -u
 }
 

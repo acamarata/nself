@@ -69,7 +69,7 @@ create_gitignore() {
     echo "dist/"
     echo "build/"
     echo "*.pid"
-  } > .gitignore
+  } >.gitignore
 
   if [[ $? -eq 0 ]]; then
     CREATED_FILES+=(".gitignore")
@@ -122,8 +122,8 @@ gitignore_has_entry() {
   escaped_entry=$(printf '%s\n' "$entry" | sed 's/[[\.*^$()+?{|]/\\&/g')
 
   # Check if entry already exists (exact match or with comment)
-  if grep -q "^${escaped_entry}$" .gitignore 2>/dev/null || \
-     grep -q "^${escaped_entry}[[:space:]]*#" .gitignore 2>/dev/null; then
+  if grep -q "^${escaped_entry}$" .gitignore 2>/dev/null ||
+    grep -q "^${escaped_entry}[[:space:]]*#" .gitignore 2>/dev/null; then
     return 0
   else
     return 1
@@ -140,11 +140,11 @@ add_gitignore_entry() {
 
   # Add header for first .env entry if requested
   if [[ "$entry" == ".env"* ]] && [[ "$add_header" == true ]]; then
-    echo "" >> .gitignore
-    echo "# Environment files (sensitive)" >> .gitignore
+    echo "" >>.gitignore
+    echo "# Environment files (sensitive)" >>.gitignore
   fi
 
-  echo "$entry" >> .gitignore
+  echo "$entry" >>.gitignore
   return $?
 }
 

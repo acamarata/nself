@@ -25,7 +25,7 @@ provider_kamatera_init() {
     log_warning "Could not validate credentials (may still work)"
   fi
 
-  cat > "$config_dir/kamatera.yml" << EOF
+  cat >"$config_dir/kamatera.yml" <<EOF
 provider: kamatera
 client_id: "$client_id"
 api_secret: "$api_secret"
@@ -91,12 +91,36 @@ provider_kamatera_provision() {
   # Map size to Kamatera specs
   local cpu ram disk
   case "$size" in
-    tiny)   cpu="1B"; ram="1024"; disk="20" ;;
-    small)  cpu="1B"; ram="2048"; disk="30" ;;
-    medium) cpu="2B"; ram="4096"; disk="40" ;;
-    large)  cpu="4B"; ram="8192"; disk="80" ;;
-    xlarge) cpu="8B"; ram="16384"; disk="160" ;;
-    *)      cpu="1B"; ram="2048"; disk="30" ;;
+    tiny)
+      cpu="1B"
+      ram="1024"
+      disk="20"
+      ;;
+    small)
+      cpu="1B"
+      ram="2048"
+      disk="30"
+      ;;
+    medium)
+      cpu="2B"
+      ram="4096"
+      disk="40"
+      ;;
+    large)
+      cpu="4B"
+      ram="8192"
+      disk="80"
+      ;;
+    xlarge)
+      cpu="8B"
+      ram="16384"
+      disk="160"
+      ;;
+    *)
+      cpu="1B"
+      ram="2048"
+      disk="30"
+      ;;
   esac
 
   log_info "Provisioning Kamatera server: $name ($size) in $datacenter..."
@@ -219,12 +243,12 @@ provider_kamatera_estimate_cost() {
   local size="${1:-small}"
   # Hourly rates converted to monthly (730 hours)
   case "$size" in
-    tiny)   echo "5" ;;
-    small)  echo "11" ;;
+    tiny) echo "5" ;;
+    small) echo "11" ;;
     medium) echo "22" ;;
-    large)  echo "44" ;;
+    large) echo "44" ;;
     xlarge) echo "88" ;;
-    *)      echo "11" ;;
+    *) echo "11" ;;
   esac
 }
 

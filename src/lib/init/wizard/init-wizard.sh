@@ -104,7 +104,7 @@ confirm_action() {
   echo -n "$prompt [y/N]: "
   read -r response
   case "$response" in
-    [yY][eE][sS]|[yY]) return 0 ;;
+    [yY][eE][sS] | [yY]) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -147,7 +147,7 @@ apply_template() {
       echo "Demo template applied to $env_file"
       ;;
     minimal)
-      cat > "$env_file" <<'EOF'
+      cat >"$env_file" <<'EOF'
 PROJECT_NAME=myproject
 BASE_DOMAIN=localhost
 ENV=dev
@@ -165,7 +165,7 @@ EOF
       echo "Minimal template applied to $env_file"
       ;;
     production)
-      cat > "$env_file" <<'EOF'
+      cat >"$env_file" <<'EOF'
 PROJECT_NAME=myproject
 BASE_DOMAIN=example.com
 ENV=prod

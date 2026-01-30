@@ -145,8 +145,8 @@ generate_localhost_ssl() {
     done
 
     mkcert -cert-file "$output_dir/fullchain.pem" \
-           -key-file "$output_dir/privkey.pem" \
-           "${domains_array[@]}" >/dev/null 2>&1
+      -key-file "$output_dir/privkey.pem" \
+      "${domains_array[@]}" >/dev/null 2>&1
 
     if [[ -f "$output_dir/fullchain.pem" ]] && [[ -f "$output_dir/privkey.pem" ]]; then
       chmod 644 "$output_dir/fullchain.pem" 2>/dev/null
@@ -160,7 +160,7 @@ generate_localhost_ssl() {
   local temp_config=$(mktemp)
 
   # Write config header
-  cat > "$temp_config" << EOF
+  cat >"$temp_config" <<EOF
 [req]
 default_bits = 2048
 prompt = no
@@ -187,11 +187,11 @@ EOF
   for domain in $all_domains; do
     if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$domain" == "::1" ]]; then
       # IP address
-      printf "IP.%d = %s\n" "$ip_index" "$domain" >> "$temp_config"
+      printf "IP.%d = %s\n" "$ip_index" "$domain" >>"$temp_config"
       ip_index=$((ip_index + 1))
     else
       # DNS name
-      printf "DNS.%d = %s\n" "$dns_index" "$domain" >> "$temp_config"
+      printf "DNS.%d = %s\n" "$dns_index" "$domain" >>"$temp_config"
       dns_index=$((dns_index + 1))
     fi
   done
@@ -225,7 +225,7 @@ generate_nself_org_ssl() {
 
   # Create OpenSSL config for *.nself.org
   local temp_config=$(mktemp)
-  cat > "$temp_config" <<'EOF'
+  cat >"$temp_config" <<'EOF'
 [req]
 default_bits = 2048
 prompt = no
@@ -324,7 +324,7 @@ check_ssl_status() {
     if [[ -n "$expiry_date" ]]; then
       local expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$expiry_date" +%s 2>/dev/null)
       local current_epoch=$(date +%s)
-      local days_until_expiry=$(( (expiry_epoch - current_epoch) / 86400 ))
+      local days_until_expiry=$(((expiry_epoch - current_epoch) / 86400))
 
       if [[ $days_until_expiry -lt 30 ]]; then
         echo "expiring"

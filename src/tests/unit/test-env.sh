@@ -198,7 +198,7 @@ test_env_switch() {
     env::create "switch-test" "local" >/dev/null 2>&1
 
     # Create a base .env.dev
-    printf "BASE_VAR=base\n" > ".env.dev"
+    printf "BASE_VAR=base\n" >".env.dev"
 
     # Switch to the environment
     env::switch "switch-test" >/dev/null 2>&1
@@ -221,7 +221,7 @@ test_env_switch_creates_backup() {
   if command -v env::switch >/dev/null 2>&1 && command -v env::create >/dev/null 2>&1; then
     # Create environment and initial .env
     env::create "backup-test" "local" >/dev/null 2>&1
-    printf "ORIGINAL=value\n" > ".env"
+    printf "ORIGINAL=value\n" >".env"
 
     # Switch
     env::switch "backup-test" >/dev/null 2>&1
@@ -251,8 +251,8 @@ test_env_diff() {
     env::create "diff-b" "staging" >/dev/null 2>&1
 
     # Add different values
-    printf "\nCUSTOM_VAR=value-a\n" >> ".environments/diff-a/.env"
-    printf "\nCUSTOM_VAR=value-b\n" >> ".environments/diff-b/.env"
+    printf "\nCUSTOM_VAR=value-a\n" >>".environments/diff-a/.env"
+    printf "\nCUSTOM_VAR=value-b\n" >>".environments/diff-b/.env"
 
     local output
     output=$(env::diff "diff-a" "diff-b" 2>&1)

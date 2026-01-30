@@ -178,7 +178,7 @@ validate_custom_services() {
     [[ -z "$cs_value" ]] && continue
 
     # Parse CS format: service_name:template_type:port
-    IFS=':' read -r service_name template_type port <<< "$cs_value"
+    IFS=':' read -r service_name template_type port <<<"$cs_value"
 
     # Validate format
     if [[ -z "$service_name" || -z "$template_type" ]]; then
@@ -252,11 +252,11 @@ validate_boolean_vars() {
       # Convert common boolean representations
       local value_lower=$(echo "$value" | tr '[:upper:]' '[:lower:]')
       case "$value_lower" in
-        1|yes|y|on|enabled)
+        1 | yes | y | on | enabled)
           eval "$var=true"
           fixes+=("Fixed $var to 'true'")
           ;;
-        0|no|n|off|disabled)
+        0 | no | n | off | disabled)
           eval "$var=false"
           fixes+=("Fixed $var to 'false'")
           ;;
@@ -293,7 +293,7 @@ apply_validation_fixes() {
   while IFS= read -r line || [[ -n "$line" ]]; do
     # Skip empty lines and comments (Bash 3.2 compatible)
     if [[ -z "$line" ]] || echo "$line" | grep -q '^[[:space:]]*#'; then
-      echo "$line" >> "$temp_file"
+      echo "$line" >>"$temp_file"
       continue
     fi
 
@@ -306,14 +306,14 @@ apply_validation_fixes() {
       # Use eval for Bash 3.2 compatibility
       eval "local new_value=\${$key:-}"
       if [[ -n "$new_value" ]]; then
-        echo "${key}=${new_value}" >> "$temp_file"
+        echo "${key}=${new_value}" >>"$temp_file"
       else
-        echo "$line" >> "$temp_file"
+        echo "$line" >>"$temp_file"
       fi
     else
-      echo "$line" >> "$temp_file"
+      echo "$line" >>"$temp_file"
     fi
-  done < "$env_file"
+  done <"$env_file"
 
   # Add any new variables that weren't in the file (Bash 3.2 compatible)
   for fix in "${fixes[@]}"; do
@@ -321,7 +321,7 @@ apply_validation_fixes() {
       local key=$(echo "$fix" | sed 's/Set \([A-Z_][A-Z_]*\) to.*/\1/')
       if ! grep -q "^${key}=" "$temp_file"; then
         eval "local new_val=\${$key:-}"
-        echo "${key}=${new_val}" >> "$temp_file"
+        echo "${key}=${new_val}" >>"$temp_file"
       fi
     fi
   done

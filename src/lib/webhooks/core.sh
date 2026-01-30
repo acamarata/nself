@@ -251,7 +251,7 @@ webhook_trigger() {
 
     # Deliver webhook in background
     webhook_deliver_async "$endpoint_id" "$url" "$secret" "$event_type" "$payload_json" "$headers_json" &
-  done <<< "$endpoints"
+  done <<<"$endpoints"
 
   return 0
 }
@@ -283,7 +283,7 @@ webhook_deliver_async() {
   if [[ "$headers_json" != "{}" ]]; then
     local header_count
     header_count=$(echo "$headers_json" | jq 'length')
-    for ((i=0; i<header_count; i++)); do
+    for ((i = 0; i < header_count; i++)); do
       local key
       local value
       key=$(echo "$headers_json" | jq -r "keys[$i]")

@@ -167,7 +167,7 @@ generate_password() {
     openssl rand -base64 "$length" | tr -d "=+/" | head -c "$length"
   else
     # Fallback to /dev/urandom
-    LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
+    LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$length"
   fi
 }
 

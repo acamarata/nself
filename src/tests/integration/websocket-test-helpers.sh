@@ -45,9 +45,9 @@ ws_connect() {
 
   # Start wscat in background
   if [[ -n "$token" ]]; then
-    wscat -c "$url" -H "Authorization: Bearer $token" > "$log_file" 2>&1 &
+    wscat -c "$url" -H "Authorization: Bearer $token" >"$log_file" 2>&1 &
   else
-    wscat -c "$url" > "$log_file" 2>&1 &
+    wscat -c "$url" >"$log_file" 2>&1 &
   fi
 
   local pid=$!
@@ -78,7 +78,7 @@ ws_send() {
   fi
 
   # Send message to wscat stdin
-  printf "%s\n" "$message" > "/proc/$pid/fd/0" 2>/dev/null || {
+  printf "%s\n" "$message" >"/proc/$pid/fd/0" 2>/dev/null || {
     printf "Failed to send message\n" >&2
     return 1
   }

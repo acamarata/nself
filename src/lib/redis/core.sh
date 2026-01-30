@@ -14,7 +14,10 @@ readonly REDIS_DEFAULT_POOL_SIZE="${REDIS_POOL_SIZE:-10}"
 # Initialize Redis
 redis_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)
-  [[ -z "$container" ]] && { echo "ERROR: PostgreSQL not found" >&2; return 1; }
+  [[ -z "$container" ]] && {
+    echo "ERROR: PostgreSQL not found" >&2
+    return 1
+  }
 
   # Create Redis configuration table
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" <<'EOSQL' >/dev/null 2>&1
@@ -133,7 +136,10 @@ redis_connection_test() {
 
   # Get connection details
   local conn=$(redis_connection_get "$name")
-  [[ -z "$conn" || "$conn" == "null" ]] && { echo "ERROR: Connection not found" >&2; return 1; }
+  [[ -z "$conn" || "$conn" == "null" ]] && {
+    echo "ERROR: Connection not found" >&2
+    return 1
+  }
 
   local host=$(echo "$conn" | jq -r '.host')
   local port=$(echo "$conn" | jq -r '.port')
@@ -223,7 +229,10 @@ redis_pool_configure() {
   local conn_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
     "SELECT id FROM redis_config.connections WHERE name = '$connection_name';" 2>/dev/null | xargs)
 
-  [[ -z "$conn_id" ]] && { echo "ERROR: Connection not found" >&2; return 1; }
+  [[ -z "$conn_id" ]] && {
+    echo "ERROR: Connection not found" >&2
+    return 1
+  }
 
   # Create or update pool configuration
   docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \

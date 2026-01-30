@@ -147,7 +147,7 @@ oauth_store_state() {
 
   # Store in temporary file (in production, use database)
   local state_file="/tmp/nself_oauth_state_${state}"
-  echo "$user_data" > "$state_file"
+  echo "$user_data" >"$state_file"
 }
 
 # Verify OAuth state
@@ -161,7 +161,7 @@ oauth_verify_state() {
   if [[ -f "$state_file" ]]; then
     # Check if file is recent (less than 10 minutes old)
     local file_age
-    file_age=$(( $(date +%s) - $(stat -c %Y "$state_file" 2>/dev/null || stat -f %m "$state_file" 2>/dev/null) ))
+    file_age=$(($(date +%s) - $(stat -c %Y "$state_file" 2>/dev/null || stat -f %m "$state_file" 2>/dev/null)))
 
     if [[ $file_age -lt 600 ]]; then
       rm -f "$state_file"

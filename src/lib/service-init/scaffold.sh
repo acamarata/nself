@@ -85,16 +85,16 @@ get_template_path() {
 
   # Map template name to path
   case "$template" in
-    socketio-js|socketio-ts|express-js|express-ts|fastify-js|fastify-ts|hono-js|hono-ts|nest-js|nest-ts|bullmq-js|bullmq-ts|temporal-js|temporal-ts|trpc|bun|deno|node-js|node-ts)
+    socketio-js | socketio-ts | express-js | express-ts | fastify-js | fastify-ts | hono-js | hono-ts | nest-js | nest-ts | bullmq-js | bullmq-ts | temporal-js | temporal-ts | trpc | bun | deno | node-js | node-ts)
       printf "%s/js/%s" "$base_path" "$template"
       ;;
-    fastapi|flask|django-rest|celery|ray|agent-*)
+    fastapi | flask | django-rest | celery | ray | agent-*)
       printf "%s/py/%s" "$base_path" "$template"
       ;;
-    gin|fiber|echo|grpc)
+    gin | fiber | echo | grpc)
       printf "%s/go/%s" "$base_path" "$template"
       ;;
-    rails|sinatra)
+    rails | sinatra)
       printf "%s/ruby/%s" "$base_path" "$template"
       ;;
     actix-web)
@@ -148,7 +148,7 @@ load_env_vars() {
 
       # Export variable
       export "$key=$value"
-    done < .env
+    done <.env
   fi
 
   # Set defaults if not set
@@ -267,7 +267,7 @@ substitute_placeholders() {
   content=$(echo "$content" | sed "s|{{MEILISEARCH_URL}}|${MEILISEARCH_URL}|g")
 
   # Write to destination
-  printf "%s\n" "$content" > "$dest_file"
+  printf "%s\n" "$content" >"$dest_file"
 }
 
 # Post-process template based on type
@@ -276,7 +276,7 @@ post_process_template() {
   local template="$2"
 
   case "$template" in
-    socketio-ts|socketio-js)
+    socketio-ts | socketio-js)
       # Add Redis adapter configuration hint
       if [[ -f "$service_dir/package.json" ]]; then
         printf "\nℹ️  Socket.IO Redis adapter:\n"
@@ -284,7 +284,7 @@ post_process_template() {
         printf "   npm install @socket.io/redis-adapter ioredis\n"
       fi
       ;;
-    bullmq-ts|bullmq-js|celery)
+    bullmq-ts | bullmq-js | celery)
       printf "\nℹ️  Worker service created.\n"
       printf "   Make sure Redis is enabled in .env: REDIS_ENABLED=true\n"
       ;;

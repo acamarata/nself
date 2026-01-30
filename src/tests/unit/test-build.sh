@@ -94,7 +94,7 @@ setup_test_env() {
   cd "$TEST_DIR"
 
   # Create minimal .env
-  cat > .env <<EOF
+  cat >.env <<EOF
 PROJECT_NAME=testproject
 BASE_DOMAIN=localhost
 ENV=dev

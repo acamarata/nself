@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/service-health-monitor.sh"
 
 # Configuration
-CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-60}"  # Check every 60 seconds by default
+CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-60}" # Check every 60 seconds by default
 MAX_CONSECUTIVE_FAILURES=3
 DAEMON_PID_FILE="/tmp/.nself_health_daemon_${PROJECT_NAME:-nself}.pid"
 DAEMON_LOG_FILE="/tmp/.nself_health_daemon_${PROJECT_NAME:-nself}.log"
@@ -19,7 +19,7 @@ CONSECUTIVE_FAILURES_FILE="/tmp/.nself_consecutive_failures_${PROJECT_NAME:-nsel
 is_daemon_running() {
   if [[ -f "$DAEMON_PID_FILE" ]]; then
     local pid=$(cat "$DAEMON_PID_FILE")
-    if ps -p "$pid" > /dev/null 2>&1; then
+    if ps -p "$pid" >/dev/null 2>&1; then
       return 0
     fi
   fi
@@ -32,16 +32,16 @@ start_health_daemon() {
     log_info "Health daemon already running (PID: $(cat "$DAEMON_PID_FILE"))"
     return 0
   fi
-  
+
   log_info "Starting health check daemon..."
-  
+
   # Run in background
   (
-    echo $$ > "$DAEMON_PID_FILE"
-    
+    echo $$ >"$DAEMON_PID_FILE"
+
     while true; do
       # Run health check
-      if monitor_all_services >> "$DAEMON_LOG_FILE" 2>&1; then
+      if monitor_all_services >>"$DAEMON_LOG_FILE" 2>&1; then
         # Reset failure counters on success
         rm -f "$CONSECUTIVE_FAILURES_FILE"
       else
@@ -55,39 +55,39 @@ start_health_daemon() {
               failures=$(grep "^$container:" "$CONSECUTIVE_FAILURES_FILE" 2>/dev/null | cut -d: -f2 || echo "0")
             fi
             failures=$((failures + 1))
-            
+
             # Update failure count
             if [[ -f "$CONSECUTIVE_FAILURES_FILE" ]]; then
-              grep -v "^$container:" "$CONSECUTIVE_FAILURES_FILE" > "${CONSECUTIVE_FAILURES_FILE}.tmp" 2>/dev/null || true
+              grep -v "^$container:" "$CONSECUTIVE_FAILURES_FILE" >"${CONSECUTIVE_FAILURES_FILE}.tmp" 2>/dev/null || true
               mv "${CONSECUTIVE_FAILURES_FILE}.tmp" "$CONSECUTIVE_FAILURES_FILE"
             fi
-            echo "$container:$failures" >> "$CONSECUTIVE_FAILURES_FILE"
-            
+            echo "$container:$failures" >>"$CONSECUTIVE_FAILURES_FILE"
+
             # Alert if too many consecutive failures
             if [[ $failures -ge $MAX_CONSECUTIVE_FAILURES ]]; then
-              echo "$(date '+%Y-%m-%d %H:%M:%S') WARNING: $container has failed $MAX_CONSECUTIVE_FAILURES consecutive health checks" >> "$DAEMON_LOG_FILE"
+              echo "$(date '+%Y-%m-%d %H:%M:%S') WARNING: $container has failed $MAX_CONSECUTIVE_FAILURES consecutive health checks" >>"$DAEMON_LOG_FILE"
             fi
           else
             # Reset failures for this container
             if [[ -f "$CONSECUTIVE_FAILURES_FILE" ]]; then
-              grep -v "^$container:" "$CONSECUTIVE_FAILURES_FILE" > "${CONSECUTIVE_FAILURES_FILE}.tmp" 2>/dev/null || true
+              grep -v "^$container:" "$CONSECUTIVE_FAILURES_FILE" >"${CONSECUTIVE_FAILURES_FILE}.tmp" 2>/dev/null || true
               mv "${CONSECUTIVE_FAILURES_FILE}.tmp" "$CONSECUTIVE_FAILURES_FILE"
             fi
           fi
         done
       fi
-      
+
       sleep "$CHECK_INTERVAL"
     done
   ) &
-  
+
   local daemon_pid=$!
-  echo $daemon_pid > "$DAEMON_PID_FILE"
+  echo $daemon_pid >"$DAEMON_PID_FILE"
   log_success "Health daemon started (PID: $daemon_pid)"
-  
+
   # Give it a moment to start
   sleep 2
-  
+
   if is_daemon_running; then
     return 0
   else
@@ -102,13 +102,13 @@ stop_health_daemon() {
     log_info "Health daemon not running"
     return 0
   fi
-  
+
   local pid=$(cat "$DAEMON_PID_FILE")
   log_info "Stopping health daemon (PID: $pid)..."
-  
+
   kill "$pid" 2>/dev/null
   rm -f "$DAEMON_PID_FILE"
-  
+
   log_success "Health daemon stopped"
 }
 
@@ -117,7 +117,7 @@ daemon_status() {
   if is_daemon_running; then
     local pid=$(cat "$DAEMON_PID_FILE")
     log_success "Health daemon is running (PID: $pid)"
-    
+
     if [[ -f "$DAEMON_LOG_FILE" ]]; then
       echo ""
       echo "Recent activity:"

@@ -73,11 +73,11 @@ cmd_exec() {
   local workdir=""
   local env_vars=()
   local command=()
-  
+
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -h|--help)
+      -h | --help)
         show_exec_help
         return 0
         ;;
@@ -93,7 +93,7 @@ cmd_exec() {
         # Just -t without -i
         shift
         ;;
-      -T|--no-tty)
+      -T | --no-tty)
         no_tty=true
         shift
         ;;
@@ -119,7 +119,7 @@ cmd_exec() {
         ;;
     esac
   done
-  
+
   # Check if service specified
   if [[ -z "$service" ]]; then
     log_error "No service specified"
@@ -128,16 +128,16 @@ cmd_exec() {
     echo "Run 'nself exec --help' for more information"
     return 1
   fi
-  
+
   # Check if docker-compose.yml exists
   if [[ ! -f "docker-compose.yml" ]]; then
     log_error "No docker-compose.yml found. Run 'nself build' first."
     return 1
   fi
-  
+
   # Load environment
   load_env_with_priority
-  
+
   # Check if service exists
   if ! grep -q "^  ${service}:" docker-compose.yml 2>/dev/null; then
     log_error "Service '$service' not found in docker-compose.yml"
@@ -146,7 +146,7 @@ cmd_exec() {
     grep "^  [a-z]" docker-compose.yml | sed 's/://' | sed 's/^/  /' | sort
     return 1
   fi
-  
+
   # Check if service is running
   if ! compose ps --services --filter "status=running" 2>/dev/null | grep -q "^${service}$"; then
     log_warning "Service '$service' is not running"
@@ -154,7 +154,7 @@ cmd_exec() {
     echo "Start the service with: nself start"
     return 1
   fi
-  
+
   # Build docker exec options as array for safety
   local docker_opts_array=()
 
@@ -164,17 +164,17 @@ cmd_exec() {
     docker_opts_array+=("-i")
   fi
   # Don't auto-add -t for non-interactive commands - let docker handle it
-  
+
   # Add user option
   if [[ -n "$user" ]]; then
     docker_opts_array+=("-u" "$user")
   fi
-  
+
   # Add workdir option
   if [[ -n "$workdir" ]]; then
     docker_opts_array+=("-w" "$workdir")
   fi
-  
+
   # Default commands for services (always interactive when no command specified)
   if [[ ${#command[@]} -eq 0 ]]; then
     # Default commands are interactive shells, so ensure -it is set
@@ -192,7 +192,7 @@ cmd_exec() {
       nginx)
         command=("/bin/bash")
         ;;
-      hasura|auth|minio)
+      hasura | auth | minio)
         command=("/bin/sh")
         ;;
       *)
@@ -201,13 +201,13 @@ cmd_exec() {
         ;;
     esac
   fi
-  
+
   # Get container name - try different methods
   local container_name
-  
+
   # Try compose ps with simpler format first
   container_name=$(compose ps --format "table {{.Name}}" "$service" 2>/dev/null | tail -n +2 | head -1)
-  
+
   # If that fails, try with JSON parsing
   if [[ -z "$container_name" ]]; then
     if command -v jq >/dev/null 2>&1; then
@@ -218,26 +218,26 @@ cmd_exec() {
       container_name=$(compose ps --format json "$service" 2>/dev/null | grep -o '"Name":"[^"]*"' | cut -d'"' -f4 | head -1)
     fi
   fi
-  
+
   # Final fallback - use container prefix
   if [[ -z "$container_name" ]]; then
     local project_name="${PROJECT_NAME:-$(basename "$(pwd)")}"
     container_name="${project_name}-${service}-1"
   fi
-  
+
   # Check if container actually exists
   if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
     log_error "Container '$container_name' for service '$service' is not running"
     return 1
   fi
-  
+
   # Show what we're doing
   show_command_header "nself exec" "Execute in container"
   echo ""
   printf "${COLOR_CYAN}➞ Container:${COLOR_RESET} %s\n" "$container_name"
   printf "${COLOR_CYAN}➞ Command:${COLOR_RESET} %s\n" "${command[*]}"
   echo ""
-  
+
   # Execute the command safely with array expansion
   docker exec "${docker_opts_array[@]}" "${env_vars[@]}" "$container_name" "${command[@]}"
 }

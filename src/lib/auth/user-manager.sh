@@ -248,7 +248,10 @@ user_update() {
 
   # Convert arrays to comma-separated strings
   local columns_str
-  columns_str=$(IFS=,; echo "${columns[*]}")
+  columns_str=$(
+    IFS=,
+    echo "${columns[*]}"
+  )
 
   # Execute update
   pg_update_by_id "auth.users" "id" "$user_id" "$columns_str" "${values[@]}"

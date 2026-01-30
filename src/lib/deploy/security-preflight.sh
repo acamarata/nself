@@ -22,7 +22,7 @@ MIN_SECRET_LENGTH=32
 security::preflight() {
   local env_name="${1:-prod}"
   local env_dir="${2:-.environments/$env_name}"
-  local strict="${3:-false}"  # Strict mode fails on warnings too
+  local strict="${3:-false}" # Strict mode fails on warnings too
 
   printf "\n${COLOR_CYAN}═══════════════════════════════════════════════════${COLOR_RESET}\n"
   printf "${COLOR_CYAN}     Production Security Pre-flight Checks${COLOR_RESET}\n"
@@ -354,7 +354,7 @@ security::generate_secrets() {
   local minio_pw=$(openssl rand -base64 32 | tr -d '/+=' | head -c 44)
   local meili_key=$(openssl rand -base64 32 | tr -d '/+=' | head -c 44)
 
-  cat > "$secrets_file" << EOF
+  cat >"$secrets_file" <<EOF
 # Production Secrets - Generated $(date)
 # NEVER commit this file to version control
 # Permissions should be 600 (chmod 600 $secrets_file)

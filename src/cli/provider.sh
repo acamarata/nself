@@ -31,7 +31,7 @@ source "${SCRIPT_DIR}/../lib/providers/provider-interface.sh" 2>/dev/null || tru
 SERVERS_FILE="${HOME}/.nself/servers.yml"
 
 show_provider_help() {
-  cat << 'EOF'
+  cat <<'EOF'
 nself provider - Unified Provider Infrastructure Management
 
 USAGE:
@@ -94,7 +94,7 @@ EOF
 init_servers_file() {
   if [[ ! -f "$SERVERS_FILE" ]]; then
     mkdir -p "$(dirname "$SERVERS_FILE")"
-    cat > "$SERVERS_FILE" << EOF
+    cat >"$SERVERS_FILE" <<EOF
 # nself Server Registry
 # Managed servers across all providers
 servers: []
@@ -108,16 +108,16 @@ cmd_provider_info() {
   shift || true
 
   case "$action" in
-    list|ls)
+    list | ls)
       cmd_provider_list "$@"
       ;;
-    init|setup)
+    init | setup)
       cmd_provider_init "$@"
       ;;
-    validate|check)
+    validate | check)
       cmd_provider_validate "$@"
       ;;
-    show|info)
+    show | info)
       cmd_provider_show "$@"
       ;;
     *)
@@ -327,25 +327,25 @@ cmd_provider_server() {
   init_servers_file
 
   case "$action" in
-    create|provision|new)
+    create | provision | new)
       cmd_server_create "$@"
       ;;
-    destroy|delete|terminate)
+    destroy | delete | terminate)
       cmd_server_destroy "$@"
       ;;
-    list|ls)
+    list | ls)
       cmd_server_list "$@"
       ;;
-    status|info)
+    status | info)
       cmd_server_status "$@"
       ;;
-    ssh|connect)
+    ssh | connect)
       cmd_server_ssh "$@"
       ;;
-    add|register)
+    add | register)
       cmd_server_add "$@"
       ;;
-    remove|unregister)
+    remove | unregister)
       cmd_server_remove "$@"
       ;;
     *)
@@ -511,7 +511,7 @@ cmd_server_list() {
 
         printf "%-20s %-15s %-15s %-12s %-10s\n" "$name" "$provider" "$ip" "$region" "$size"
       fi
-    done < "$SERVERS_FILE"
+    done <"$SERVERS_FILE"
   fi
 
   echo ""
@@ -689,7 +689,7 @@ cmd_cost_compare() {
   # This would need to query actual provider APIs or use cached data
   # For now, provide general guidance
 
-  cat << EOF
+  cat <<EOF
 
 Recommended by use case:
 
@@ -812,7 +812,7 @@ _add_server_to_registry() {
   init_servers_file
 
   # Append to servers file
-  cat >> "$SERVERS_FILE" << EOF
+  cat >>"$SERVERS_FILE" <<EOF
   - name: $name
     provider: $provider
     server_id: $server_id
@@ -837,7 +837,7 @@ _remove_server_from_registry() {
   local skip=0
   while IFS= read -r line; do
     if echo "$line" | grep -q "- name: $name$"; then
-      skip=6  # Skip this entry (6 lines)
+      skip=6 # Skip this entry (6 lines)
       continue
     fi
 
@@ -846,8 +846,8 @@ _remove_server_from_registry() {
       continue
     fi
 
-    echo "$line" >> "$temp_file"
-  done < "$SERVERS_FILE"
+    echo "$line" >>"$temp_file"
+  done <"$SERVERS_FILE"
 
   mv "$temp_file" "$SERVERS_FILE"
 }
@@ -884,7 +884,7 @@ _get_server_from_registry() {
         return
       fi
     fi
-  done < "$SERVERS_FILE"
+  done <"$SERVERS_FILE"
 }
 
 # === MAIN ENTRY POINT ===
@@ -919,11 +919,11 @@ main() {
         export RAM="$2"
         shift 2
         ;;
-      --force|-f)
+      --force | -f)
         export FORCE="true"
         shift
         ;;
-      -h|--help)
+      -h | --help)
         show_provider_help
         return 0
         ;;
@@ -934,23 +934,23 @@ main() {
   done
 
   case "$subcommand" in
-    ""|help|-h|--help)
+    "" | help | -h | --help)
       show_provider_help
       ;;
     info)
       cmd_provider_info "$@"
       ;;
-    server|servers)
+    server | servers)
       cmd_provider_server "$@"
       ;;
-    cost|costs)
+    cost | costs)
       cmd_provider_cost "$@"
       ;;
     deploy)
       cmd_provider_deploy "$@"
       ;;
     # Shortcuts
-    list|ls)
+    list | ls)
       cmd_provider_list "$@"
       ;;
     init)

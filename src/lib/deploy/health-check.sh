@@ -237,7 +237,7 @@ health::check_http_endpoints() {
     return 0
   else
     printf "${COLOR_YELLOW}WARNING${COLOR_RESET} (no health endpoints responding)\n"
-    return 0  # Not a critical failure
+    return 0 # Not a critical failure
   fi
 }
 
