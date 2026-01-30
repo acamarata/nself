@@ -43,8 +43,8 @@ nself provides comprehensive production deployment capabilities for all services
 nself provision digitalocean --size medium --region nyc1
 
 # 2. Setup environment
-nself env create prod prod
-nself secrets generate --env prod
+nself config env create prod prod
+nself config secrets generate --env prod
 
 # 3. Configure custom services
 cat > .environments/prod/.env <<EOF
@@ -69,10 +69,10 @@ nself deploy prod
 
 ```bash
 # 1. Convert to Kubernetes
-nself k8s convert --env production
+nself infra k8s convert --env production
 
 # 2. Deploy to cluster
-nself k8s deploy --env production
+nself infra k8s deploy --env production
 
 # Custom services deploy as K8s Deployments with:
 # - Auto-scaling (HPA)
@@ -229,13 +229,13 @@ https://ml-api.example.com
 
 ```bash
 # Generate production secrets
-nself secrets generate --env prod
+nself config secrets generate --env prod
 
 # Never commit secrets
 echo ".env.secrets" >> .gitignore
 
 # Rotate regularly
-nself secrets rotate --all --env prod
+nself config secrets rotate --all --env prod
 ```
 
 ### Container Security
@@ -254,21 +254,20 @@ capabilities:
   - ALL
 ```
 
-### Network Security
+### Container Security
 
-```yaml
-# Restrict traffic with NetworkPolicy
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: custom-services-netpol
-spec:
-  podSelector:
-    matchLabels:
-      component: custom-service
-  policyTypes:
-  - Ingress
-  - Egress
+```dockerfile
+# Run as non-root user
+USER 1001
+
+# Read-only filesystem (Kubernetes)
+securityContext:
+  readOnlyRootFilesystem: true
+
+# Drop all capabilities
+capabilities:
+  drop:
+  - ALL
 ```
 
 ---
@@ -493,16 +492,16 @@ nself deploy logs --env prod
 
 - [Custom Services Overview](../services/SERVICES_CUSTOM.md)
 - [Service Templates](../services/SERVICE_TEMPLATES.md)
-- [Environment Management](../commands/ENV.md)
-- [Kubernetes Commands](../commands/K8S.md)
+- [Environment Management](../commands/CONFIG.md)
+- [Kubernetes Commands](../commands/INFRA.md)
 
 ### Command Reference
 
 ```bash
 nself deploy --help          # Deployment help
-nself k8s --help            # Kubernetes help
-nself secrets --help        # Secrets management
-nself validate --help       # Pre-deployment validation
+nself infra k8s --help      # Kubernetes help
+nself config secrets --help # Secrets management
+nself config validate --help # Pre-deployment validation
 ```
 
 ### Community

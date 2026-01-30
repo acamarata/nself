@@ -1,4 +1,6 @@
-# Functions Command
+# nself service functions
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself functions` in v0.x. It has been consolidated to `nself service functions` in v1.0. The old command name may still work as an alias.
 
 Create and manage serverless functions for your nself project.
 
@@ -6,31 +8,31 @@ Create and manage serverless functions for your nself project.
 
 ```bash
 # Enable functions service
-nself functions enable
+nself service functions enable
 
 # Create a function
-nself functions create hello basic
+nself service functions create hello basic
 
 # Rebuild and start
 nself build && nself start
 
 # Test your function
-nself functions test hello
+nself service functions test hello
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `nself functions` | Show status |
-| `nself functions enable` | Enable functions service |
-| `nself functions disable` | Disable functions service |
-| `nself functions list` | List all functions |
-| `nself functions create <name> [template]` | Create a new function |
-| `nself functions delete <name>` | Delete a function |
-| `nself functions test <name> [data]` | Test a function |
-| `nself functions logs [-f]` | View function logs |
-| `nself functions deploy [target]` | Deploy functions |
+| `nself service functions` | Show status |
+| `nself service functions enable` | Enable functions service |
+| `nself service functions disable` | Disable functions service |
+| `nself service functions list` | List all functions |
+| `nself service functions create <name> [template]` | Create a new function |
+| `nself service functions delete <name>` | Delete a function |
+| `nself service functions test <name> [data]` | Test a function |
+| `nself service functions logs [-f]` | View function logs |
+| `nself service functions deploy [target]` | Deploy functions |
 
 ## Creating Functions
 
@@ -38,10 +40,10 @@ nself functions test hello
 
 ```bash
 # Create with a template
-nself functions create myfunction basic
-nself functions create webhook webhook
-nself functions create api api
-nself functions create cleanup scheduled
+nself service functions create myfunction basic
+nself service functions create webhook webhook
+nself service functions create api api
+nself service functions create cleanup scheduled
 ```
 
 ### TypeScript Functions
@@ -49,8 +51,8 @@ nself functions create cleanup scheduled
 Add the `--ts` flag for TypeScript:
 
 ```bash
-nself functions create myfunction basic --ts
-nself functions create api api --ts
+nself service functions create myfunction basic --ts
+nself service functions create api api --ts
 ```
 
 ## Templates
@@ -144,10 +146,10 @@ async function handler(event, context) {
 
 ```bash
 # Test with default empty body
-nself functions test myfunction
+nself service functions test myfunction
 
 # Test with JSON data
-nself functions test myfunction '{"action":"test","data":{"id":123}}'
+nself service functions test myfunction '{"action":"test","data":{"id":123}}'
 
 # Test via HTTP
 curl http://localhost:4300/function/myfunction
@@ -163,7 +165,7 @@ curl -X POST http://localhost:4300/function/myfunction \
 Restarts the functions service to pick up changes:
 
 ```bash
-nself functions deploy local
+nself service functions deploy local
 ```
 
 ### Production Deployment
@@ -177,7 +179,7 @@ DEPLOY_PATH=/opt/myapp
 DEPLOY_KEY=~/.ssh/deploy_key
 
 # Deploy
-nself functions deploy production
+nself service functions deploy production
 ```
 
 ### Validate Only
@@ -185,7 +187,7 @@ nself functions deploy production
 Check functions for errors without deploying:
 
 ```bash
-nself functions deploy validate
+nself service functions deploy validate
 ```
 
 ## Directory Structure
@@ -250,10 +252,10 @@ Functions are accessible at:
 
 ```bash
 # View recent logs
-nself functions logs
+nself service functions logs
 
 # Follow logs in real-time
-nself functions logs -f
+nself service functions logs -f
 ```
 
 ## Best Practices
@@ -262,4 +264,4 @@ nself functions logs -f
 2. **Handle errors gracefully** - Return proper status codes
 3. **Validate input** - Check event.body before using
 4. **Use TypeScript** - Better type safety and IDE support
-5. **Test locally first** - Use `nself functions test` before deploying
+5. **Test locally first** - Use `nself service functions test` before deploying

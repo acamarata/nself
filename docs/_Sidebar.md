@@ -180,7 +180,9 @@
 ## Releases
 
 - [Roadmap](releases/ROADMAP)
-- [v0.9.0](releases/v0.9.0) (Current)
+- [v0.9.6](releases/v0.9.6) (Current)
+- [v0.9.5](releases/v0.9.5)
+- [v0.9.0](releases/v0.9.0)
 - [v0.4.8](releases/v0.4.8)
 - [v0.4.7](releases/v0.4.7)
 - [v0.4.6](releases/v0.4.6)

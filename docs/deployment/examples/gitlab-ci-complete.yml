@@ -317,7 +317,7 @@ deploy:staging:
     - nself build
     - nself deploy staging --include-frontends
     - sleep 60
-    - nself deploy health --env staging
+    - nself health --env staging
     - |
       # Test custom services
       curl -f https://payment-api.staging.example.com/health
@@ -356,7 +356,7 @@ deploy:production:pre-checks:
       echo "$PROD_ENV" > .environments/prod/.env
       echo "$PROD_SECRETS" > .environments/prod/.env.secrets
       chmod 600 .environments/prod/.env.secrets
-    - nself validate prod --strict
+    - nself config validate prod --strict
   only:
     - main
   when: manual
@@ -422,13 +422,13 @@ deploy:production:main:
     - nself build
     - |
       echo "Starting production deployment..."
-      nself deploy prod --rolling --exclude-frontends
+      nself deploy production --rolling --exclude-frontends
     - |
       echo "Waiting for services to stabilize..."
       sleep 120
     - |
       echo "Running health checks..."
-      nself deploy health --env prod
+      nself health --env prod
     - |
       echo "Verifying custom services..."
       for service in payment-api analytics-api; do
@@ -469,13 +469,13 @@ deploy:production:rollback:
   script:
     - |
       echo "⚠️  Rolling back production deployment..."
-      nself deploy rollback --env prod
+      nself backup rollback --env prod
     - |
       echo "Waiting for rollback to complete..."
       sleep 60
     - |
       echo "Verifying rollback..."
-      nself deploy health --env prod
+      nself health --env prod
     - |
       echo "✅ Rollback completed"
   when: manual

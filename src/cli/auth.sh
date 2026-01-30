@@ -1,20 +1,63 @@
 #!/usr/bin/env bash
-# auth.sh - Authentication management CLI
-# Part of nself v0.6.0 - Phase 1 Sprint 1
+# auth.sh - Authentication & Security Management CLI
+# Part of nself - Consolidated authentication and security commands
 #
-# Commands:
-#   nself auth login [--provider=<provider>] [--email=<email>] [--password=<password>]
-#   nself auth signup [--provider=<provider>] [--email=<email>] [--password=<password>]
-#   nself auth logout [--all]
-#   nself auth status
-#   nself auth providers list
-#   nself auth providers add <provider> [--client-id=<id>] [--client-secret=<secret>]
-#   nself auth providers remove <provider>
-#   nself auth providers enable <provider>
-#   nself auth providers disable <provider>
-#   nself auth sessions list
-#   nself auth sessions revoke <session-id>
-#   nself auth config [--show|--set key=value]
+# Commands (38 subcommands total):
+#   Authentication:
+#     nself auth login [--provider=<provider>] [--email=<email>] [--password=<password>]
+#     nself auth logout [--all]
+#     nself auth status
+#
+#   MFA (Multi-Factor Authentication):
+#     nself auth mfa enable [--method=totp|sms|email] [--user=<id>]
+#     nself auth mfa disable [--method=<method>] [--user=<id>]
+#     nself auth mfa verify [--method=<method>] [--user=<id>] [--code=<code>]
+#     nself auth mfa backup-codes [generate|list|status] [--user=<id>]
+#
+#   Roles & Permissions:
+#     nself auth roles list
+#     nself auth roles create [--name=<name>] [--description=<desc>]
+#     nself auth roles assign [--user=<id>] [--role=<name>]
+#     nself auth roles remove [--user=<id>] [--role=<name>]
+#
+#   Devices:
+#     nself auth devices list <user_id>
+#     nself auth devices register <device>
+#     nself auth devices revoke <device>
+#     nself auth devices trust <device>
+#
+#   OAuth:
+#     nself auth oauth install
+#     nself auth oauth enable <provider>
+#     nself auth oauth disable <provider>
+#     nself auth oauth config <provider> [--client-id=<id>] [--client-secret=<secret>]
+#     nself auth oauth test <provider>
+#     nself auth oauth list
+#     nself auth oauth status
+#
+#   Security:
+#     nself auth security scan [--deep]
+#     nself auth security audit
+#     nself auth security report
+#
+#   SSL Management:
+#     nself auth ssl generate [domain]
+#     nself auth ssl install <cert>
+#     nself auth ssl renew [domain]
+#     nself auth ssl info [domain]
+#     nself auth ssl trust
+#
+#   Rate Limiting:
+#     nself auth rate-limit config [options]
+#     nself auth rate-limit status
+#     nself auth rate-limit reset [ip]
+#
+#   Webhooks:
+#     nself auth webhooks create <url> [events]
+#     nself auth webhooks list
+#     nself auth webhooks delete <id>
+#     nself auth webhooks test <id>
+#     nself auth webhooks logs <id>
 #
 # Usage: nself auth <subcommand> [options]
 
@@ -24,16 +67,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NSELF_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Source dependencies (only if not already sourced)
-if ! declare -f log_error >/dev/null 2>&1; then
-  source "$NSELF_ROOT/src/lib/utils/display.sh" 2>/dev/null || true
+# Save CLI directory before sourcing other modules (which may override SCRIPT_DIR)
+CLI_DIR="$SCRIPT_DIR"
+
+# Source dependencies
+if [[ -z "${CLI_OUTPUT_SOURCED:-}" ]]; then
+  source "$NSELF_ROOT/src/lib/utils/cli-output.sh" 2>/dev/null || true
 fi
 
-if ! declare -f detect_environment >/dev/null 2>&1; then
-  source "$NSELF_ROOT/src/lib/utils/env-detection.sh" 2>/dev/null || true
-fi
-
-# Constants might already be set by main CLI
 if [[ -z "${EXIT_SUCCESS:-}" ]]; then
   source "$NSELF_ROOT/src/lib/config/constants.sh" 2>/dev/null || true
 fi
@@ -41,15 +82,6 @@ fi
 # Source auth manager
 if [[ -f "$NSELF_ROOT/src/lib/auth/auth-manager.sh" ]]; then
   source "$NSELF_ROOT/src/lib/auth/auth-manager.sh"
-else
-  log_error "Auth manager not found. Installation may be corrupt."
-  exit 1
-fi
-
-# Initialize auth service
-if ! auth_init 2>/dev/null; then
-  log_warning "Auth service initialization failed. Some features may not work."
-  log_warning "Make sure PostgreSQL is running: nself start"
 fi
 
 # ============================================================================
@@ -61,69 +93,85 @@ auth_usage() {
   cat <<EOF
 Usage: nself auth <subcommand> [options]
 
-Authentication management for nself
+Authentication and Security management for nself
 
-SUBCOMMANDS:
+AUTHENTICATION:
   login              Authenticate user
-  signup             Create new user account
   logout             End session
   status             Show current auth status
-  providers          Manage authentication providers
-  sessions           Manage user sessions
-  config             View or modify auth configuration
 
-LOGIN OPTIONS:
-  --provider=<name>     OAuth provider (google, github, apple, etc.)
-  --email=<email>       Email address
-  --password=<pass>     Password (for email/password auth)
-  --phone=<number>      Phone number (for SMS auth)
-  --anonymous           Anonymous authentication
+MFA (MULTI-FACTOR AUTHENTICATION):
+  mfa enable         Enable MFA for a user
+  mfa disable        Disable MFA for a user
+  mfa verify         Verify MFA code
+  mfa backup-codes   Manage backup codes
 
-SIGNUP OPTIONS:
-  --provider=<name>     OAuth provider (google, github, apple, etc.)
-  --email=<email>       Email address
-  --password=<pass>     Password (for email/password auth)
-  --phone=<number>      Phone number (for SMS auth)
+ROLES & PERMISSIONS:
+  roles list         List all roles
+  roles create       Create a new role
+  roles assign       Assign role to user
+  roles remove       Remove role from user
 
-LOGOUT OPTIONS:
-  --all                 Logout from all sessions
+DEVICES:
+  devices list       List user's devices
+  devices register   Register a new device
+  devices revoke     Revoke device access
+  devices trust      Trust a device
 
-PROVIDER SUBCOMMANDS:
-  providers list                List all available providers
-  providers add <name>          Add new OAuth provider
-  providers remove <name>       Remove OAuth provider
-  providers enable <name>       Enable provider
-  providers disable <name>      Disable provider
+OAUTH:
+  oauth install      Install OAuth handlers service
+  oauth enable       Enable OAuth provider
+  oauth disable      Disable OAuth provider
+  oauth config       Configure OAuth credentials
+  oauth test         Test OAuth provider
+  oauth list         List OAuth providers
+  oauth status       Show OAuth service status
 
-SESSION SUBCOMMANDS:
-  sessions list                 List active sessions
-  sessions revoke <id>          Revoke specific session
+SECURITY:
+  security scan      Security vulnerability scan
+  security audit     Security audit
+  security report    Generate security report
 
-CONFIG SUBCOMMANDS:
-  config                        Show current configuration
-  config --set key=value        Set configuration value
+SSL:
+  ssl generate       Generate SSL certificate
+  ssl install        Install SSL certificate
+  ssl renew          Renew SSL certificate
+  ssl info           Show certificate info
+  ssl trust          Trust local certificates
+
+RATE LIMITING:
+  rate-limit config  Configure rate limits
+  rate-limit status  Rate limit status
+  rate-limit reset   Reset rate limits
+
+WEBHOOKS:
+  webhooks create    Create webhook
+  webhooks list      List webhooks
+  webhooks delete    Delete webhook
+  webhooks test      Test webhook
+  webhooks logs      Webhook logs
 
 EXAMPLES:
   # Email/password login
   nself auth login --email=user@example.com --password=secret
 
-  # OAuth login with Google
-  nself auth login --provider=google
+  # Enable MFA
+  nself auth mfa enable --method=totp --user=<user_id>
 
-  # Sign up with email
-  nself auth signup --email=user@example.com --password=secret
+  # List roles
+  nself auth roles list
 
-  # List OAuth providers
-  nself auth providers list
+  # Configure OAuth
+  nself auth oauth config google --client-id=xxx --client-secret=yyy
 
-  # Add Google OAuth provider
-  nself auth providers add google --client-id=xxx --client-secret=yyy
+  # Security scan
+  nself auth security scan
 
-  # List active sessions
-  nself auth sessions list
+  # Generate SSL certificate
+  nself auth ssl generate
 
-  # Logout from all devices
-  nself auth logout --all
+  # Trust local certificates
+  nself auth ssl trust
 
 For more information, see: docs/cli/auth.md
 EOF
@@ -144,11 +192,9 @@ cmd_auth() {
   shift
 
   case "$subcommand" in
+    # Authentication
     login)
       cmd_auth_login "$@"
-      ;;
-    signup)
-      cmd_auth_signup "$@"
       ;;
     logout)
       cmd_auth_logout "$@"
@@ -156,22 +202,54 @@ cmd_auth() {
     status)
       cmd_auth_status "$@"
       ;;
-    providers)
-      cmd_auth_providers "$@"
+
+    # MFA
+    mfa)
+      cmd_auth_mfa "$@"
       ;;
-    sessions)
-      cmd_auth_sessions "$@"
+
+    # Roles
+    roles)
+      cmd_auth_roles "$@"
       ;;
-    config)
-      cmd_auth_config "$@"
+
+    # Devices
+    devices)
+      cmd_auth_devices "$@"
       ;;
+
+    # OAuth
+    oauth)
+      cmd_auth_oauth "$@"
+      ;;
+
+    # Security
+    security)
+      cmd_auth_security "$@"
+      ;;
+
+    # SSL
+    ssl)
+      cmd_auth_ssl "$@"
+      ;;
+
+    # Rate Limiting
+    rate-limit)
+      cmd_auth_rate_limit "$@"
+      ;;
+
+    # Webhooks
+    webhooks)
+      cmd_auth_webhooks "$@"
+      ;;
+
     help|--help|-h)
       auth_usage
       exit 0
       ;;
     *)
-      log_error "Unknown subcommand: $subcommand"
-      echo ""
+      cli_error "Unknown subcommand: $subcommand"
+      printf "\n"
       auth_usage
       exit 1
       ;;
@@ -217,7 +295,7 @@ cmd_auth_login() {
         exit 0
         ;;
       *)
-        log_error "Unknown option: $1"
+        cli_error "Unknown option: $1"
         exit 1
         ;;
     esac
@@ -225,84 +303,22 @@ cmd_auth_login() {
 
   # Route to appropriate auth method
   if [[ -n "$email" ]] && [[ -n "$password" ]]; then
-    # Email/password login
     auth_login_email "$email" "$password"
   elif [[ -n "$provider" ]]; then
-    # OAuth login
-    log_warning "OAuth login not yet implemented (OAUTH-003+)"
+    cli_warning "OAuth login not yet implemented (OAUTH-003+)"
     auth_login_oauth "$provider"
   elif [[ -n "$phone" ]]; then
-    # Phone/SMS login
-    log_warning "Phone login not yet implemented (AUTH-006)"
+    cli_warning "Phone login not yet implemented (AUTH-006)"
     auth_login_phone "$phone"
   elif $anonymous; then
-    # Anonymous login
-    log_warning "Anonymous login not yet implemented (AUTH-007)"
+    cli_warning "Anonymous login not yet implemented (AUTH-007)"
     auth_login_anonymous
   elif [[ -n "$email" ]]; then
-    # Magic link login (email only, no password)
-    log_warning "Magic link not yet implemented (AUTH-005)"
+    cli_warning "Magic link not yet implemented (AUTH-005)"
     auth_login_magic_link "$email"
   else
-    log_error "Please provide login credentials (--email and --password, or --provider, or --phone, or --anonymous)"
-    exit 1
-  fi
-}
-
-# ============================================================================
-# Signup Command
-# ============================================================================
-
-cmd_auth_signup() {
-  local provider=""
-  local email=""
-  local password=""
-  local phone=""
-
-  # Parse arguments
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --provider=*)
-        provider="${1#*=}"
-        shift
-        ;;
-      --email=*)
-        email="${1#*=}"
-        shift
-        ;;
-      --password=*)
-        password="${1#*=}"
-        shift
-        ;;
-      --phone=*)
-        phone="${1#*=}"
-        shift
-        ;;
-      --help|-h)
-        auth_usage
-        exit 0
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        exit 1
-        ;;
-    esac
-  done
-
-  # Route to appropriate signup method
-  if [[ -n "$email" ]] && [[ -n "$password" ]]; then
-    # Email/password signup
-    auth_signup_email "$email" "$password"
-  elif [[ -n "$provider" ]]; then
-    # OAuth signup (same as login for OAuth)
-    log_warning "OAuth signup not yet implemented (OAUTH-003+)"
-    auth_login_oauth "$provider"
-  elif [[ -n "$phone" ]] && [[ -n "$password" ]]; then
-    # Phone/SMS signup
-    log_warning "Phone signup not yet implemented (AUTH-006)"
-    # TODO: Implement auth_signup_phone
-  else
-    log_error "Please provide signup credentials (--email and --password, or --provider, or --phone and --password)"
+    cli_error "Please provide login credentials"
+    printf "Options: --email and --password, --provider, --phone, or --anonymous\n"
     exit 1
   fi
 }
@@ -314,7 +330,6 @@ cmd_auth_signup() {
 cmd_auth_logout() {
   local logout_all=false
 
-  # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --all)
@@ -326,18 +341,15 @@ cmd_auth_logout() {
         exit 0
         ;;
       *)
-        log_error "Unknown option: $1"
+        cli_error "Unknown option: $1"
         exit 1
         ;;
     esac
   done
 
-  # Placeholder - will implement in AUTH-003
-  log_info "Logout functionality coming in AUTH-003"
-  log_info "Logout all sessions: $logout_all"
-
-  # TODO: Implement actual logout logic
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+  cli_info "Logout functionality coming in AUTH-003"
+  cli_info "Logout all sessions: $logout_all"
+  cli_warning "Not yet implemented - Sprint 1 in progress"
 }
 
 # ============================================================================
@@ -345,230 +357,202 @@ cmd_auth_logout() {
 # ============================================================================
 
 cmd_auth_status() {
-  # Placeholder - will implement in AUTH-003
-  log_info "Auth status functionality coming in AUTH-003"
-
-  # TODO: Implement actual status logic
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+  cli_info "Auth status functionality coming in AUTH-003"
+  cli_warning "Not yet implemented - Sprint 1 in progress"
 }
 
 # ============================================================================
-# Providers Command
+# MFA Commands
 # ============================================================================
 
-cmd_auth_providers() {
-  local action="${1:-list}"
-  shift || true
+cmd_auth_mfa() {
+  local action="${1:-}"
 
-  case "$action" in
-    list)
-      cmd_auth_providers_list "$@"
-      ;;
-    add)
-      cmd_auth_providers_add "$@"
-      ;;
-    remove)
-      cmd_auth_providers_remove "$@"
-      ;;
-    enable)
-      cmd_auth_providers_enable "$@"
-      ;;
-    disable)
-      cmd_auth_providers_disable "$@"
-      ;;
-    help|--help|-h)
-      auth_usage
-      exit 0
-      ;;
-    *)
-      log_error "Unknown providers subcommand: $action"
-      exit 1
-      ;;
-  esac
-}
-
-cmd_auth_providers_list() {
-  # Call auth manager to list providers
-  auth_list_providers
-}
-
-cmd_auth_providers_add() {
-  local provider_name="${1:-}"
-
-  if [[ -z "$provider_name" ]]; then
-    log_error "Provider name required"
+  if [[ -z "$action" ]]; then
+    cli_error "MFA action required"
+    printf "Actions: enable, disable, verify, backup-codes\n"
     exit 1
   fi
 
   shift
 
-  # Parse provider options
-  local client_id=""
-  local client_secret=""
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --client-id=*)
-        client_id="${1#*=}"
-        shift
-        ;;
-      --client-secret=*)
-        client_secret="${1#*=}"
-        shift
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        exit 1
-        ;;
-    esac
-  done
-
-  # Build provider config JSON
-  local config="{}"
-  if [[ -n "$client_id" ]] && [[ -n "$client_secret" ]]; then
-    config="{\"client_id\": \"$client_id\", \"client_secret\": \"$client_secret\"}"
-  elif [[ -n "$client_id" ]]; then
-    config="{\"client_id\": \"$client_id\"}"
-  fi
-
-  # Call auth manager to add provider
-  auth_add_provider "$provider_name" "oauth" "$config"
-}
-
-cmd_auth_providers_remove() {
-  local provider_name="${1:-}"
-
-  if [[ -z "$provider_name" ]]; then
-    log_error "Provider name required"
+  # Delegate to original mfa implementation
+  if [[ -f "$CLI_DIR/_deprecated/mfa.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/mfa.sh.backup" "$action" "$@"
+  else
+    cli_error "MFA module not found"
     exit 1
   fi
-
-  # Call auth manager to remove provider
-  auth_remove_provider "$provider_name"
-}
-
-cmd_auth_providers_enable() {
-  local provider_name="${1:-}"
-
-  if [[ -z "$provider_name" ]]; then
-    log_error "Provider name required"
-    exit 1
-  fi
-
-  # Call auth manager to enable provider
-  auth_enable_provider "$provider_name"
-}
-
-cmd_auth_providers_disable() {
-  local provider_name="${1:-}"
-
-  if [[ -z "$provider_name" ]]; then
-    log_error "Provider name required"
-    exit 1
-  fi
-
-  # Call auth manager to disable provider
-  auth_disable_provider "$provider_name"
 }
 
 # ============================================================================
-# Sessions Command
+# Roles Commands
 # ============================================================================
 
-cmd_auth_sessions() {
+cmd_auth_roles() {
   local action="${1:-list}"
   shift || true
 
+  # Delegate to original roles implementation
+  if [[ -f "$CLI_DIR/_deprecated/roles.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/roles.sh.backup" "$action" "$@"
+  else
+    cli_error "Roles module not found"
+    exit 1
+  fi
+}
+
+# ============================================================================
+# Devices Commands
+# ============================================================================
+
+cmd_auth_devices() {
+  local action="${1:-list}"
+  shift || true
+
+  # Delegate to original devices implementation
+  if [[ -f "$CLI_DIR/_deprecated/devices.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/devices.sh.backup" "$action" "$@"
+  else
+    cli_error "Devices module not found"
+    exit 1
+  fi
+}
+
+# ============================================================================
+# OAuth Commands
+# ============================================================================
+
+cmd_auth_oauth() {
+  local action="${1:-}"
+
+  if [[ -z "$action" ]]; then
+    cli_error "OAuth action required"
+    printf "Actions: install, enable, disable, config, test, list, status\n"
+    exit 1
+  fi
+
+  shift
+
+  # Delegate to original oauth implementation
+  if [[ -f "$CLI_DIR/_deprecated/oauth.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/oauth.sh.backup" "$action" "$@"
+  else
+    cli_error "OAuth module not found"
+    exit 1
+  fi
+}
+
+# ============================================================================
+# Security Commands
+# ============================================================================
+
+cmd_auth_security() {
+  local action="${1:-scan}"
+  shift || true
+
+  # Delegate to original security implementation
+  if [[ -f "$CLI_DIR/_deprecated/security.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/security.sh.backup" "$action" "$@"
+  else
+    cli_error "Security module not found"
+    exit 1
+  fi
+}
+
+# ============================================================================
+# SSL Commands
+# ============================================================================
+
+cmd_auth_ssl() {
+  local action="${1:-}"
+
+  if [[ -z "$action" ]]; then
+    cli_error "SSL action required"
+    printf "Actions: generate, install, renew, info, trust\n"
+    exit 1
+  fi
+
+  shift
+
   case "$action" in
-    list)
-      cmd_auth_sessions_list "$@"
+    generate)
+      # Delegate to original ssl implementation
+      if [[ -f "$CLI_DIR/_deprecated/ssl.sh.backup" ]]; then
+        bash "$CLI_DIR/_deprecated/ssl.sh.backup" bootstrap "$@"
+      else
+        cli_error "SSL module not found"
+        exit 1
+      fi
       ;;
-    revoke)
-      cmd_auth_sessions_revoke "$@"
+    renew)
+      if [[ -f "$CLI_DIR/_deprecated/ssl.sh.backup" ]]; then
+        bash "$CLI_DIR/_deprecated/ssl.sh.backup" renew "$@"
+      else
+        cli_error "SSL module not found"
+        exit 1
+      fi
       ;;
-    help|--help|-h)
-      auth_usage
-      exit 0
+    info|status)
+      if [[ -f "$CLI_DIR/_deprecated/ssl.sh.backup" ]]; then
+        bash "$CLI_DIR/_deprecated/ssl.sh.backup" status "$@"
+      else
+        cli_error "SSL module not found"
+        exit 1
+      fi
+      ;;
+    trust)
+      # Delegate to original trust implementation
+      if [[ -f "$CLI_DIR/_deprecated/trust.sh.backup" ]]; then
+        bash "$CLI_DIR/_deprecated/trust.sh.backup" install "$@"
+      else
+        cli_error "Trust module not found"
+        exit 1
+      fi
+      ;;
+    install)
+      cli_warning "SSL installation is handled automatically by 'nself build'"
+      cli_info "To manually trust certificates, use: nself auth ssl trust"
       ;;
     *)
-      log_error "Unknown sessions subcommand: $action"
+      cli_error "Unknown SSL action: $action"
+      printf "Actions: generate, install, renew, info, trust\n"
       exit 1
       ;;
   esac
 }
 
-cmd_auth_sessions_list() {
-  # Placeholder - will implement in AUTH-003
-  log_info "Sessions list functionality coming in AUTH-003"
+# ============================================================================
+# Rate Limit Commands
+# ============================================================================
 
-  # TODO: Implement actual sessions listing
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
-}
+cmd_auth_rate_limit() {
+  local action="${1:-status}"
+  shift || true
 
-cmd_auth_sessions_revoke() {
-  local session_id="${1:-}"
-
-  if [[ -z "$session_id" ]]; then
-    log_error "Session ID required"
+  # Delegate to original rate-limit implementation
+  if [[ -f "$CLI_DIR/_deprecated/rate-limit.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/rate-limit.sh.backup" "$action" "$@"
+  else
+    cli_error "Rate limiting module not found"
     exit 1
   fi
-
-  # Placeholder - will implement in AUTH-003
-  log_info "Session revoke functionality coming in AUTH-003"
-  log_info "Session ID: $session_id"
-
-  # TODO: Implement actual session revoke logic
-  log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
 }
 
 # ============================================================================
-# Config Command
+# Webhooks Commands
 # ============================================================================
 
-cmd_auth_config() {
-  local show=true
-  local set_key=""
-  local set_value=""
+cmd_auth_webhooks() {
+  local action="${1:-list}"
+  shift || true
 
-  # Parse arguments
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --show)
-        show=true
-        shift
-        ;;
-      --set)
-        show=false
-        if [[ "$2" =~ ^(.+)=(.+)$ ]]; then
-          set_key="${BASH_REMATCH[1]}"
-          set_value="${BASH_REMATCH[2]}"
-          shift 2
-        else
-          log_error "Invalid --set format. Use: --set key=value"
-          exit 1
-        fi
-        ;;
-      --help|-h)
-        auth_usage
-        exit 0
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        exit 1
-        ;;
-    esac
-  done
-
-  if $show; then
-    # Show current config
-    log_info "Auth config show functionality coming in AUTH-003"
-    log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+  # Delegate to original webhooks implementation
+  if [[ -f "$CLI_DIR/_deprecated/webhooks.sh.backup" ]]; then
+    bash "$CLI_DIR/_deprecated/webhooks.sh.backup" "$action" "$@"
   else
-    # Set config value
-    log_info "Auth config set functionality coming in AUTH-003"
-    log_info "Key: $set_key"
-    log_info "Value: $set_value"
-    log_warning "⚠️  Not yet implemented - Sprint 1 in progress"
+    cli_error "Webhooks module not found"
+    exit 1
   fi
 }
 

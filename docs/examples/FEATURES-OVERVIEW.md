@@ -2,6 +2,8 @@
 
 Quick reference guide for the three major features introduced in v0.9.0.
 
+> **Command Structure Note:** v0.9.6+ uses consolidated v1.0 commands. Examples below use the new command structure.
+
 ## 1. Billing & Monetization
 
 **Purpose:** Monetize your application with subscriptions, usage-based pricing, and payment processing.

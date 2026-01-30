@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# migrate.sh - DEPRECATED: Use 'nself perf migrate' instead
+
+printf "\033[0;33m⚠\033[0m  The 'nself migrate' command is deprecated.\n"
+printf "   Please use: \033[1mnself perf migrate\033[0m\n\n"
+
+# Delegate to new command
+exec "$(dirname "${BASH_SOURCE[0]}")/perf.sh" migrate "$@"

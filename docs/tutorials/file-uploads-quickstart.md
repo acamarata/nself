@@ -2,6 +2,8 @@
 
 Get file uploads working in your nself app in 10 minutes.
 
+> **Note:** As of v0.9.6, storage commands have been consolidated under `nself service storage`. Throughout this guide, `nself storage` refers to `nself service storage` in the new command structure.
+
 ## What You'll Build
 
 A complete file upload system with:
@@ -55,7 +57,7 @@ nself status | grep minio
 ## Step 2: Initialize Storage (1 minute)
 
 ```bash
-nself storage init
+nself service storage init
 ```
 
 Expected output:
@@ -82,7 +84,7 @@ Features:
 
 ```bash
 # Test with any image file
-nself storage upload ~/Downloads/photo.jpg --thumbnails
+nself service storage upload ~/Downloads/photo.jpg --thumbnails
 ```
 
 Expected output:
@@ -108,7 +110,7 @@ Open the URL in your browser to verify the upload worked.
 ### Generate GraphQL Integration
 
 ```bash
-nself storage graphql-setup
+nself service storage graphql-setup
 ```
 
 This creates:

@@ -1,4 +1,6 @@
-# nself rollback - Deployment Rollback
+# nself backup rollback - Deployment Rollback
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself rollback` in v0.x. It has been consolidated to `nself backup rollback` in v1.0. The old command name may still work as an alias. For deployment rollbacks, use `nself deploy rollback`.
 
 **Version 0.4.8** | Roll back to previous deployment
 
@@ -6,7 +8,7 @@
 
 ## Overview
 
-The `nself rollback` command reverts to a previous deployment state. It's useful for recovering from failed deployments or reverting problematic changes.
+The `nself backup rollback` command reverts to a previous deployment state. It's useful for recovering from failed deployments or reverting problematic changes.
 
 > **Note**: This is a legacy command. Use `nself deploy rollback` for new workflows.
 
@@ -16,13 +18,13 @@ The `nself rollback` command reverts to a previous deployment state. It's useful
 
 ```bash
 # Rollback to previous deployment
-nself rollback
+nself backup rollback
 
 # Rollback to specific version
-nself rollback --version v1.2.3
+nself backup rollback --version v1.2.3
 
 # Rollback specific environment
-nself rollback staging
+nself backup rollback staging
 ```
 
 ---
@@ -33,7 +35,7 @@ nself rollback staging
 
 ```bash
 # Roll back one version
-nself rollback
+nself backup rollback
 ```
 
 Reverts to the previous deployment using stored state.
@@ -42,7 +44,7 @@ Reverts to the previous deployment using stored state.
 
 ```bash
 # Roll back to specific tag
-nself rollback --version v1.2.3
+nself backup rollback --version v1.2.3
 ```
 
 Deploys a specific tagged version.
@@ -51,7 +53,7 @@ Deploys a specific tagged version.
 
 ```bash
 # Roll back with database
-nself rollback --include-db
+nself backup rollback --include-db
 ```
 
 Also restores the database from the matching backup.

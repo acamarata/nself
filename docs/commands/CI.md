@@ -1,4 +1,6 @@
-# nself ci - CI/CD Configuration
+# nself dev ci - CI/CD Configuration
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself ci` in v0.x. It has been consolidated to `nself dev ci` in v1.0. The old command name may still work as an alias.
 
 **Version 0.4.8** | Generate CI/CD pipeline configuration
 
@@ -6,7 +8,7 @@
 
 ## Overview
 
-The `nself ci` command generates CI/CD pipeline configuration files for popular platforms. It creates ready-to-use workflows for testing, building, and deploying nself projects.
+The `nself dev ci` command generates CI/CD pipeline configuration files for popular platforms. It creates ready-to-use workflows for testing, building, and deploying nself projects.
 
 ---
 
@@ -14,12 +16,12 @@ The `nself ci` command generates CI/CD pipeline configuration files for popular 
 
 ```bash
 # Interactive setup
-nself ci
+nself dev ci
 
 # Generate for specific platform
-nself ci github
-nself ci gitlab
-nself ci bitbucket
+nself dev ci github
+nself dev ci gitlab
+nself dev ci bitbucket
 ```
 
 ---
@@ -28,10 +30,10 @@ nself ci bitbucket
 
 | Platform | Command | Output |
 |----------|---------|--------|
-| GitHub Actions | `nself ci github` | `.github/workflows/` |
-| GitLab CI | `nself ci gitlab` | `.gitlab-ci.yml` |
-| Bitbucket Pipelines | `nself ci bitbucket` | `bitbucket-pipelines.yml` |
-| CircleCI | `nself ci circleci` | `.circleci/config.yml` |
+| GitHub Actions | `nself dev ci github` | `.github/workflows/` |
+| GitLab CI | `nself dev ci gitlab` | `.gitlab-ci.yml` |
+| Bitbucket Pipelines | `nself dev ci bitbucket` | `bitbucket-pipelines.yml` |
+| CircleCI | `nself dev ci circleci` | `.circleci/config.yml` |
 
 ---
 
@@ -87,7 +89,7 @@ Set these in your CI platform:
 
 ```bash
 # Generate GitHub Actions workflow
-nself ci github --with-deploy
+nself dev ci github --with-deploy
 ```
 
 Creates:

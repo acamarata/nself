@@ -114,7 +114,7 @@ git push origin main
 
 1. **Generate manifests from your nself project**:
 ```bash
-nself k8s convert --env production
+nself infra k8s convert --env production
 ```
 
 2. **Or copy and customize example manifests**:
@@ -148,7 +148,7 @@ kubectl get pods -n myapp
 
 4. **Verify deployment**:
 ```bash
-nself k8s status
+nself infra k8s status
 ```
 
 ---
@@ -329,7 +329,7 @@ curl https://payment-api.example.com/health
 ./scripts/rollback-blue-green.sh
 
 # Kubernetes:
-nself k8s rollback payment-api
+nself infra k8s rollback payment-api
 ```
 
 ---
@@ -507,7 +507,7 @@ docker exec myapp_nginx nginx -s reload
 - [Custom Services Production Deployment Guide](../CUSTOM-SERVICES-PRODUCTION.md)
 - [Multi-Cloud Deployment Guide](../CLOUD-PROVIDERS.md)
 - [Production Deployment Best Practices](../PRODUCTION-DEPLOYMENT.md)
-- [Kubernetes Command Reference](../../commands/K8S.md)
+- [Kubernetes Command Reference](../../commands/INFRA.md)
 
 ---
 

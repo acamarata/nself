@@ -1,275 +1,283 @@
 #!/usr/bin/env bash
+# backup.sh - Backup & Recovery
+# Consolidated command including: rollback, reset, clean subcommands
 
-# backup.sh - Comprehensive backup and restore for nself
+set -euo pipefail
 
-set -e
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Source shared utilities
-CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$CLI_SCRIPT_DIR"
-source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
-source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
-source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
-source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
-source "$CLI_SCRIPT_DIR/../lib/backup/pruning.sh" 2>/dev/null || true
+# Source utilities (save SCRIPT_DIR before it gets redefined by sourced files)
+CLI_DIR="$SCRIPT_DIR"
+source "$CLI_DIR/../lib/utils/cli-output.sh"
+source "$CLI_DIR/../lib/utils/env.sh"
+source "$CLI_DIR/../lib/utils/docker.sh"
+source "$CLI_DIR/../lib/utils/header.sh"
+source "$CLI_DIR/../lib/hooks/pre-command.sh"
+source "$CLI_DIR/../lib/hooks/post-command.sh"
+source "$CLI_DIR/../lib/backup/pruning.sh" 2>/dev/null || true
 
-# Backup configuration - Support both old and new naming for backward compatibility
+# Backup configuration
 BACKUP_ENABLED="${BACKUP_ENABLED:-${DB_BACKUP_ENABLED:-false}}"
-BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-${DB_BACKUP_SCHEDULE:-}}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-${DB_BACKUP_RETENTION_DAYS:-30}}"
-BACKUP_RETENTION_COUNT="${BACKUP_RETENTION_COUNT:-10}"  # Max number of backups to keep
-BACKUP_MAX_SIZE_GB="${BACKUP_MAX_SIZE_GB:-50}"  # Max total backup size in GB
-BACKUP_STORAGE="${BACKUP_STORAGE:-${DB_BACKUP_STORAGE:-local}}"
-BACKUP_TYPES="${BACKUP_TYPES:-${DB_BACKUP_TYPES:-database}}"
-BACKUP_COMPRESSION="${BACKUP_COMPRESSION:-${DB_BACKUP_COMPRESSION:-true}}"
-BACKUP_ENCRYPTION="${BACKUP_ENCRYPTION:-${DB_BACKUP_ENCRYPTION:-false}}"
-BACKUP_RETENTION_MIN="${BACKUP_RETENTION_MIN:-3}"  # Minimum backups to keep
-BACKUP_RETENTION_DAILY="${BACKUP_RETENTION_DAILY:-7}"  # Daily backups to keep
-BACKUP_RETENTION_WEEKLY="${BACKUP_RETENTION_WEEKLY:-4}"  # Weekly backups to keep
-BACKUP_RETENTION_MONTHLY="${BACKUP_RETENTION_MONTHLY:-12}"  # Monthly backups to keep
-
-# Cloud storage configuration
-BACKUP_CLOUD_PROVIDER="${BACKUP_CLOUD_PROVIDER:-}"  # s3, dropbox, gdrive, onedrive, rclone
-S3_BUCKET="${S3_BUCKET:-}"
-S3_ENDPOINT="${S3_ENDPOINT:-}"  # For MinIO/S3-compatible
-DROPBOX_TOKEN="${DROPBOX_TOKEN:-}"
-DROPBOX_FOLDER="${DROPBOX_FOLDER:-/nself-backups}"
-GDRIVE_FOLDER_ID="${GDRIVE_FOLDER_ID:-}"
-ONEDRIVE_FOLDER="${ONEDRIVE_FOLDER:-nself-backups}"
-RCLONE_REMOTE="${RCLONE_REMOTE:-}"  # Name of rclone remote
-RCLONE_PATH="${RCLONE_PATH:-nself-backups}"  # Path on remote
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+BACKUP_RETENTION_COUNT="${BACKUP_RETENTION_COUNT:-10}"
+BACKUP_RETENTION_MIN="${BACKUP_RETENTION_MIN:-3}"
 
 # Ensure backup directory exists
 mkdir -p "$BACKUP_DIR"
 
-# Generate backup filename
-generate_backup_name() {
-  local type="${1:-full}"
-  local timestamp=$(date +%Y%m%d_%H%M%S)
-  echo "nself_backup_${type}_${timestamp}.tar.gz"
+# =============================================================================
+# HELP TEXT
+# =============================================================================
+
+show_help() {
+  cat << 'EOF'
+nself backup - Backup & Recovery
+
+USAGE:
+  nself backup <subcommand> [options]
+
+SUBCOMMANDS:
+  create [type] [name]           Create a backup
+  list                           List available backups
+  restore <name> [type]          Restore from backup
+  verify [name|all]              Verify backup integrity
+  prune [policy] [param]         Remove old backups
+  clean                          Remove failed/partial backups
+  rollback [target]              Rollback to previous version/backup
+  reset [options]                Reset project to clean state
+
+BACKUP TYPES:
+  full                           All components (default)
+  database                       Database only
+  config                         Configuration only
+
+ROLLBACK TARGETS:
+  latest                         Rollback to latest backup
+  backup [id]                    Rollback to specific backup
+  migration [steps]              Rollback database migrations
+  deployment                     Rollback to previous deployment
+  config                         Rollback configuration changes
+
+PRUNE POLICIES:
+  age <days>                     Remove backups older than N days
+  count <n>                      Keep only last N backups
+  size <gb>                      Keep total size under N GB
+  gfs                            Grandfather-Father-Son retention
+  smart                          Apply smart retention policy
+
+RESET OPTIONS:
+  --force, -f                    Skip confirmation prompt
+  --no-backup                    Don't create backup before reset
+  --keep-env                     Preserve environment files
+
+CLEAN OPTIONS:
+  --images, -i                   Clean project images (default)
+  --containers, -c               Remove stopped containers
+  --volumes, -v                  Remove project volumes
+  --networks, -n                 Remove project networks
+  --builders, -b                 Remove Docker Buildx builders
+  --all, -a                      Clean everything
+
+EXAMPLES:
+  # Create backups
+  nself backup create                      # Full backup
+  nself backup create database my-backup   # Database backup with custom name
+
+  # List and restore
+  nself backup list
+  nself backup restore backup.tar.gz
+
+  # Pruning
+  nself backup prune age 7                 # Remove backups older than 7 days
+  nself backup prune count 10              # Keep only last 10 backups
+  nself backup prune smart                 # Apply smart retention
+
+  # Rollback
+  nself backup rollback latest
+  nself backup rollback backup 20240117_143022
+
+  # Reset
+  nself backup reset --force
+  nself backup reset --keep-env
+
+  # Clean Docker resources
+  nself backup clean --images
+  nself backup clean --all
+
+For more information: https://docs.nself.org/backup
+EOF
 }
 
-# Create backup
-cmd_backup_create() {
+# =============================================================================
+# CREATE SUBCOMMAND
+# =============================================================================
+
+cmd_create() {
   local backup_type="${1:-full}"
   local custom_name="${2:-}"
-  
-  show_command_header "nself backup create" "Create backup of nself data"
-  
+
+  cli_section "Creating backup: $backup_type"
+  printf "\n"
+
   # Determine backup name
-  local backup_name="${custom_name:-$(generate_backup_name "$backup_type")}"
+  local timestamp=$(date +%Y%m%d_%H%M%S)
+  local backup_name="${custom_name:-nself_backup_${backup_type}_${timestamp}.tar.gz}"
   local backup_path="$BACKUP_DIR/$backup_name"
   local temp_dir=$(mktemp -d)
-  
-  log_info "Creating backup: $backup_name"
-  echo ""
-  
+
   # Backup components based on type
   case "$backup_type" in
     full)
-      log_info "Backing up all components..."
+      cli_info "Backing up all components..."
       backup_database "$temp_dir"
       backup_config "$temp_dir"
       backup_volumes "$temp_dir"
-      backup_certificates "$temp_dir"
       ;;
     database)
-      log_info "Backing up database only..."
+      cli_info "Backing up database only..."
       backup_database "$temp_dir"
       ;;
     config)
-      log_info "Backing up configuration only..."
+      cli_info "Backing up configuration only..."
       backup_config "$temp_dir"
       ;;
     *)
-      log_error "Unknown backup type: $backup_type"
-      log_info "Valid types: full, database, config"
+      cli_error "Unknown backup type: $backup_type"
+      cli_info "Valid types: full, database, config"
       rm -rf "$temp_dir"
       return 1
       ;;
   esac
-  
+
   # Create tarball
-  log_info "Creating archive..."
+  cli_info "Creating archive..."
   tar -czf "$backup_path" -C "$temp_dir" . 2>/dev/null
-  
+  rm -rf "$temp_dir"
+
   # Calculate size
   local size=$(du -h "$backup_path" | cut -f1)
-  
-  # Upload to cloud if configured
-  upload_to_cloud "$backup_path" "$backup_name"
-  
-  # Cleanup
-  rm -rf "$temp_dir"
-  
-  # Success message
-  echo ""
-  log_success "Backup created successfully!"
-  echo "  Location: $backup_path"
-  echo "  Size: $size"
-  echo "  Type: $backup_type"
-  
-  if [[ -n "$S3_BUCKET" ]]; then
-    echo "  S3: s3://$S3_BUCKET/nself-backups/$backup_name"
-  fi
-  
-  echo ""
-  log_info "To restore this backup, run:"
-  echo "  nself backup restore $backup_name"
-  echo ""
+
+  printf "\n"
+  cli_success "Backup created successfully!"
+  cli_list_item "Location: $backup_path"
+  cli_list_item "Size: $size"
+  cli_list_item "Type: $backup_type"
+
+  printf "\n"
+  cli_info "To restore this backup, run:"
+  cli_indent "nself backup restore $backup_name"
 }
 
-# Backup database
+# Helper functions for backup
 backup_database() {
   local dest_dir="$1"
   local db_backup_dir="$dest_dir/database"
   mkdir -p "$db_backup_dir"
-  
-  # Check if postgres is running
-  if docker ps --format "{{.Names}}" | grep -q postgres; then
-    log_info "  • Dumping PostgreSQL database..."
-    
-    # Get database credentials from .env
+
+  load_env_with_priority
+  local project_name="${PROJECT_NAME:-nself}"
+
+  if docker ps --format "{{.Names}}" | grep -q "${project_name}_postgres"; then
+    cli_list_item "Dumping PostgreSQL database..."
     local db_name="${POSTGRES_DB:-postgres}"
     local db_user="${POSTGRES_USER:-postgres}"
-    
-    # Dump all databases
-    docker exec postgres pg_dumpall -U "$db_user" > "$db_backup_dir/postgres_dump.sql" 2>/dev/null || {
-      log_warning "  Failed to dump database (container may not be running)"
+
+    docker exec "${project_name}_postgres" pg_dumpall -U "$db_user" \
+      > "$db_backup_dir/postgres_dump.sql" 2>/dev/null || {
+      cli_warning "Failed to dump database"
     }
-    
-    # Also backup Hasura metadata if available
-    if [[ -d "./hasura/metadata" ]]; then
-      log_info "  • Copying Hasura metadata..."
-      cp -r ./hasura/metadata "$db_backup_dir/hasura_metadata"
-    fi
   else
-    log_warning "  PostgreSQL not running, skipping database backup"
+    cli_warning "PostgreSQL not running, skipping database backup"
   fi
 }
 
-# Backup configuration
 backup_config() {
   local dest_dir="$1"
   local config_backup_dir="$dest_dir/config"
   mkdir -p "$config_backup_dir"
-  
-  log_info "  • Backing up configuration files..."
-  
-  # Backup environment files
-  for env_file in .env .env.dev .env.production; do
-    if [[ -f "$env_file" ]]; then
-      cp "$env_file" "$config_backup_dir/"
-    fi
+
+  cli_list_item "Backing up configuration files..."
+
+  for env_file in .env .env.dev .env.production .env.local; do
+    [[ -f "$env_file" ]] && cp "$env_file" "$config_backup_dir/"
   done
-  
-  # Backup docker-compose files
-  for compose_file in docker-compose.yml docker-compose.override.yml docker-compose.prod.yml; do
-    if [[ -f "$compose_file" ]]; then
-      cp "$compose_file" "$config_backup_dir/"
-    fi
+
+  for compose_file in docker-compose.yml docker-compose.override.yml; do
+    [[ -f "$compose_file" ]] && cp "$compose_file" "$config_backup_dir/"
   done
-  
-  # Backup nginx config if exists
-  if [[ -d "./nginx" ]]; then
-    cp -r ./nginx "$config_backup_dir/"
-  fi
+
+  [[ -d "./nginx" ]] && cp -r ./nginx "$config_backup_dir/"
 }
 
-# Backup Docker volumes
 backup_volumes() {
   local dest_dir="$1"
   local volumes_backup_dir="$dest_dir/volumes"
   mkdir -p "$volumes_backup_dir"
-  
-  log_info "  • Backing up Docker volumes..."
-  
-  # Get list of nself volumes
-  local volumes=$(docker volume ls --format "{{.Name}}" | grep -E "^${PROJECT_NAME:-nself}" || true)
-  
+
+  cli_list_item "Backing up Docker volumes..."
+
+  load_env_with_priority
+  local project_name="${PROJECT_NAME:-nself}"
+  local volumes=$(docker volume ls --format "{{.Name}}" | grep -E "^${project_name}" || true)
+
   if [[ -n "$volumes" ]]; then
     for volume in $volumes; do
-      local volume_name=$(echo "$volume" | sed "s/${PROJECT_NAME:-nself}_//")
-      log_info "    - Volume: $volume_name"
-      
-      # Create temporary container to export volume
+      local volume_name=$(printf '%s\n' "$volume" | sed "s/${project_name}_//")
       docker run --rm -v "$volume:/data" -v "$volumes_backup_dir:/backup" \
         alpine tar -czf "/backup/${volume_name}.tar.gz" -C /data . 2>/dev/null || {
-        log_warning "    Failed to backup volume: $volume"
+        cli_warning "Failed to backup volume: $volume"
       }
     done
-  else
-    log_info "    No volumes found"
   fi
 }
 
-# Backup certificates
-backup_certificates() {
-  local dest_dir="$1"
-  
-  if [[ -d "./certs" ]]; then
-    log_info "  • Backing up SSL certificates..."
-    cp -r ./certs "$dest_dir/"
-  fi
-}
+# =============================================================================
+# LIST SUBCOMMAND
+# =============================================================================
 
-# List backups
-cmd_backup_list() {
-  show_command_header "nself backup list" "Available backups"
-  
-  # Local backups
-  printf "${COLOR_BOLD}Local Backups:${COLOR_RESET}\n"
-  echo ""
-  
+cmd_list() {
+  cli_section "Available Backups"
+  printf "\n"
+
   if [[ -d "$BACKUP_DIR" ]] && [[ -n "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]]; then
-    printf "%-40s %-10s %-20s\n" "Name" "Size" "Created"
-    printf "%-40s %-10s %-20s\n" "────" "────" "───────"
-    
+    cli_table_header "Name" "Size" "Created"
+
     for backup in "$BACKUP_DIR"/*.tar.gz; do
       if [[ -f "$backup" ]]; then
         local name=$(basename "$backup")
         local size=$(du -h "$backup" | cut -f1)
-        local created=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$backup" 2>/dev/null || stat -c "%y" "$backup" 2>/dev/null | cut -d' ' -f1,2)
-        printf "%-40s %-10s %-20s\n" "$name" "$size" "$created"
+        local created=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$backup" 2>/dev/null || \
+                        stat -c "%y" "$backup" 2>/dev/null | cut -d' ' -f1,2)
+        cli_table_row "$name" "$size" "$created"
       fi
     done
+
+    cli_table_footer "Name" "Size" "Created"
   else
-    echo "  No local backups found"
-  fi
-  
-  echo ""
-  
-  # S3 backups if configured
-  if [[ -n "$S3_BUCKET" ]]; then
-    printf "${COLOR_BOLD}S3 Backups:${COLOR_RESET}\n"
-    echo ""
-    
-    if command -v aws >/dev/null 2>&1; then
-      aws s3 ls "s3://$S3_BUCKET/nself-backups/" --human-readable 2>/dev/null || {
-        echo "  Unable to list S3 backups"
-      }
-    else
-      echo "  AWS CLI not installed (needed for S3 backups)"
-    fi
-    echo ""
+    cli_info "No local backups found"
   fi
 }
 
-# Restore backup
-cmd_backup_restore() {
+# =============================================================================
+# RESTORE SUBCOMMAND
+# =============================================================================
+
+cmd_restore() {
   local backup_name="$1"
   local restore_type="${2:-full}"
-  
+
   if [[ -z "$backup_name" ]]; then
-    log_error "Backup name required"
-    echo "Usage: nself backup restore <backup_name> [full|database|config]"
+    cli_error "Backup name required"
+    printf "Usage: nself backup restore <backup_name> [full|database|config]\n"
     return 1
   fi
-  
-  show_command_header "nself backup restore" "Restore from backup"
-  
+
+  cli_section "Restoring from backup"
+  printf "\n"
+
   # Find backup file
   local backup_path=""
   if [[ -f "$BACKUP_DIR/$backup_name" ]]; then
@@ -277,1171 +285,514 @@ cmd_backup_restore() {
   elif [[ -f "$backup_name" ]]; then
     backup_path="$backup_name"
   else
-    log_error "Backup not found: $backup_name"
+    cli_error "Backup not found: $backup_name"
     return 1
   fi
-  
-  log_warning "⚠️  This will overwrite existing data!"
-  echo -n "Are you sure you want to restore from $backup_name? (y/N): "
-  read -r confirm
+
+  cli_warning "This will overwrite existing data!"
+  read -p "Are you sure? (y/N): " confirm
   if [[ "$confirm" != "y" ]] && [[ "$confirm" != "Y" ]]; then
-    log_info "Restore cancelled"
+    cli_info "Restore cancelled"
     return 0
   fi
-  
-  # Create temporary directory for extraction
+
   local temp_dir=$(mktemp -d)
-  
-  log_info "Extracting backup..."
+  cli_info "Extracting backup..."
   tar -xzf "$backup_path" -C "$temp_dir"
-  
-  # Restore components based on type
+
+  # Restore based on type
   case "$restore_type" in
     full)
-      log_info "Restoring all components..."
       restore_database "$temp_dir"
       restore_config "$temp_dir"
       restore_volumes "$temp_dir"
-      restore_certificates "$temp_dir"
       ;;
     database)
-      log_info "Restoring database only..."
       restore_database "$temp_dir"
       ;;
     config)
-      log_info "Restoring configuration only..."
       restore_config "$temp_dir"
       ;;
-    *)
-      log_error "Unknown restore type: $restore_type"
-      rm -rf "$temp_dir"
-      return 1
-      ;;
   esac
-  
-  # Cleanup
+
   rm -rf "$temp_dir"
-  
-  echo ""
-  log_success "Restore completed successfully!"
-  echo ""
-  log_info "Next steps:"
-  echo "  1. Run 'nself restart' to apply restored configuration"
-  echo "  2. Run 'nself status' to verify services"
-  echo "  3. Run 'nself doctor' to check system health"
-  echo ""
+
+  printf "\n"
+  cli_success "Restore completed successfully!"
+  printf "\n"
+  cli_info "Next steps:"
+  cli_list_numbered 1 "Run 'nself restart' to apply restored configuration"
+  cli_list_numbered 2 "Run 'nself status' to verify services"
 }
 
-# Restore database
+# Helper functions for restore
 restore_database() {
   local source_dir="$1"
-  
+
   if [[ -f "$source_dir/database/postgres_dump.sql" ]]; then
-    log_info "  • Restoring PostgreSQL database..."
-    
-    # Ensure postgres is running
-    if ! docker ps --format "{{.Names}}" | grep -q postgres; then
-      log_info "    Starting PostgreSQL..."
+    cli_list_item "Restoring PostgreSQL database..."
+
+    load_env_with_priority
+    local project_name="${PROJECT_NAME:-nself}"
+    local db_user="${POSTGRES_USER:-postgres}"
+
+    if ! docker ps --format "{{.Names}}" | grep -q "${project_name}_postgres"; then
+      cli_info "Starting PostgreSQL..."
       docker compose up -d postgres
       sleep 5
     fi
-    
-    # Restore database
-    local db_user="${POSTGRES_USER:-postgres}"
-    docker exec -i postgres psql -U "$db_user" < "$source_dir/database/postgres_dump.sql" 2>/dev/null || {
-      log_error "    Failed to restore database"
+
+    docker exec -i "${project_name}_postgres" psql -U "$db_user" \
+      < "$source_dir/database/postgres_dump.sql" 2>/dev/null || {
+      cli_error "Failed to restore database"
       return 1
     }
-    
-    # Restore Hasura metadata if available
-    if [[ -d "$source_dir/database/hasura_metadata" ]]; then
-      log_info "  • Restoring Hasura metadata..."
-      rm -rf ./hasura/metadata
-      cp -r "$source_dir/database/hasura_metadata" ./hasura/metadata
-    fi
-  else
-    log_warning "  No database backup found in archive"
   fi
 }
 
-# Restore configuration
 restore_config() {
   local source_dir="$1"
-  
+
   if [[ -d "$source_dir/config" ]]; then
-    log_info "  • Restoring configuration files..."
-    
-    # Backup existing config first
-    for file in .env .env.dev .env.production; do
-      if [[ -f "$file" ]]; then
-        cp "$file" "${file}.backup-$(date +%Y%m%d_%H%M%S)"
-      fi
-    done
-    
-    # Restore config files
+    cli_list_item "Restoring configuration files..."
     cp -f "$source_dir/config"/.env* . 2>/dev/null || true
     cp -f "$source_dir/config"/docker-compose*.yml . 2>/dev/null || true
-    
+
     if [[ -d "$source_dir/config/nginx" ]]; then
       rm -rf ./nginx
       cp -r "$source_dir/config/nginx" ./
     fi
-  else
-    log_warning "  No configuration backup found in archive"
   fi
 }
 
-# Restore volumes
 restore_volumes() {
   local source_dir="$1"
-  
+
   if [[ -d "$source_dir/volumes" ]]; then
-    log_info "  • Restoring Docker volumes..."
-    
+    cli_list_item "Restoring Docker volumes..."
+
     for volume_archive in "$source_dir/volumes"/*.tar.gz; do
       if [[ -f "$volume_archive" ]]; then
         local volume_name=$(basename "$volume_archive" .tar.gz)
-        local full_volume_name="${PROJECT_NAME:-nself}_${volume_name}"
-        
-        log_info "    - Restoring volume: $volume_name"
-        
-        # Create volume if it doesn't exist
+        load_env_with_priority
+        local project_name="${PROJECT_NAME:-nself}"
+        local full_volume_name="${project_name}_${volume_name}"
+
         docker volume create "$full_volume_name" >/dev/null 2>&1 || true
-        
-        # Restore volume data
         docker run --rm -v "$full_volume_name:/data" -v "$source_dir/volumes:/backup" \
           alpine tar -xzf "/backup/${volume_name}.tar.gz" -C /data 2>/dev/null || {
-          log_warning "    Failed to restore volume: $volume_name"
+          cli_warning "Failed to restore volume: $volume_name"
         }
       fi
     done
-  else
-    log_info "  No volume backups found in archive"
   fi
 }
 
-# Restore certificates
-restore_certificates() {
-  local source_dir="$1"
-  
-  if [[ -d "$source_dir/certs" ]]; then
-    log_info "  • Restoring SSL certificates..."
-    rm -rf ./certs
-    cp -r "$source_dir/certs" ./
-  fi
-}
+# =============================================================================
+# PRUNE SUBCOMMAND
+# =============================================================================
 
-# Prune old backups with advanced retention
-cmd_backup_prune() {
-  local policy="${1:-age}"  # age, count, size, gfs, 3-2-1, smart, cloud
+cmd_prune() {
+  local policy="${1:-age}"
   local param="${2:-}"
 
-  show_command_header "nself backup prune" "Remove old backups"
+  cli_section "Pruning old backups"
+  printf "\n"
 
   case "$policy" in
     age)
       local days="${param:-$BACKUP_RETENTION_DAYS}"
-      prune_by_age "$BACKUP_DIR" "$days" "$BACKUP_RETENTION_MIN"
+      prune_by_age "$days"
       ;;
     count)
       local count="${param:-$BACKUP_RETENTION_COUNT}"
-      prune_by_count "$BACKUP_DIR" "$count"
-      ;;
-    size)
-      local size_gb="${param:-$BACKUP_MAX_SIZE_GB}"
-      prune_by_size "$BACKUP_DIR" "$size_gb" "$BACKUP_RETENTION_MIN"
-      ;;
-    gfs)
-      prune_gfs "$BACKUP_DIR" "$BACKUP_RETENTION_DAILY" "$BACKUP_RETENTION_WEEKLY" "$BACKUP_RETENTION_MONTHLY"
-      ;;
-    3-2-1|321)
-      check_321_rule "$BACKUP_DIR"
+      prune_by_count "$count"
       ;;
     smart)
       prune_smart_policy
       ;;
-    cloud)
-      local days="${param:-30}"
-      prune_cloud_backups "$days"
-      ;;
     *)
-      log_error "Unknown prune policy: $policy"
-      log_info "Valid policies: age, count, size, gfs, 3-2-1, smart, cloud"
+      cli_error "Unknown prune policy: $policy"
+      cli_info "Valid policies: age, count, smart"
       return 1
       ;;
   esac
 }
 
-# Simple age-based pruning
 prune_by_age() {
   local days="$1"
-  
-  log_info "Removing backups older than $days days..."
-  echo ""
-  
+
+  cli_info "Removing backups older than $days days..."
+  printf "\n"
+
   local count=0
-  local freed_space=0
-  local kept_count=0
-  
-  # Count total backups
-  local total_backups=$(find "$BACKUP_DIR" -name "*.tar.gz" -type f 2>/dev/null | wc -l)
-  
-  # Find old backups
+  local total_backups=$(find "$BACKUP_DIR" -name "*.tar.gz" -type f 2>/dev/null | wc -l | tr -d ' ')
+
   if [[ -d "$BACKUP_DIR" ]]; then
     while IFS= read -r backup; do
       if [[ -f "$backup" ]]; then
-        # Check if we should keep minimum backups
         if [[ $((total_backups - count)) -le ${BACKUP_RETENTION_MIN:-3} ]]; then
-          log_info "  Keeping (minimum retention): $(basename "$backup")"
-          kept_count=$((kept_count + 1))
+          cli_info "Keeping (minimum retention): $(basename "$backup")"
         else
-          local size=$(du -k "$backup" | cut -f1)
-          local name=$(basename "$backup")
-          
-          log_info "  Removing: $name"
+          cli_info "Removing: $(basename "$backup")"
           rm -f "$backup"
-          
           count=$((count + 1))
-          freed_space=$((freed_space + size))
         fi
       fi
     done < <(find "$BACKUP_DIR" -name "*.tar.gz" -type f -mtime +${days} | sort)
   fi
-  
-  # Summary
-  echo ""
+
+  printf "\n"
   if [[ $count -gt 0 ]]; then
-    local freed_mb=$((freed_space / 1024))
-    log_success "Removed $count backup(s), freed ${freed_mb}MB"
+    cli_success "Removed $count backup(s)"
+  else
+    cli_info "No backups older than $days days found"
   fi
-  if [[ $kept_count -gt 0 ]]; then
-    log_info "Kept $kept_count backup(s) (minimum retention policy)"
-  fi
-  if [[ $count -eq 0 ]] && [[ $kept_count -eq 0 ]]; then
-    log_info "No backups older than $days days found"
-  fi
-  echo ""
 }
 
-# Grandfather-Father-Son retention policy
-prune_gfs_policy() {
-  log_info "Applying GFS retention policy..."
-  echo ""
-  log_info "  Keeping: Last 7 daily, 4 weekly, 12 monthly backups"
-  echo ""
-  
-  local daily="${BACKUP_RETENTION_DAILY:-7}"
-  local weekly="${BACKUP_RETENTION_WEEKLY:-4}"
-  local monthly="${BACKUP_RETENTION_MONTHLY:-12}"
-  
-  # This is a complex policy - for now, keep recent + sample older
-  # In production, this would analyze backup dates and keep strategic samples
-  
-  local count=0
-  local kept=0
-  
-  # Sort backups by date (newest first)
-  local backups=($(ls -t "$BACKUP_DIR"/*.tar.gz 2>/dev/null))
-  
-  for i in "${!backups[@]}"; do
-    local backup="${backups[$i]}"
-    local name=$(basename "$backup")
-    
-    if [[ $i -lt $daily ]]; then
-      # Keep daily backups
-      log_info "  [DAILY] Keeping: $name"
-      kept=$((kept + 1))
-    elif [[ $((i % 7)) -eq 0 ]] && [[ $i -lt $((daily + weekly * 7)) ]]; then
-      # Keep weekly backups
-      log_info "  [WEEKLY] Keeping: $name"
-      kept=$((kept + 1))
-    elif [[ $((i % 30)) -eq 0 ]] && [[ $i -lt $((daily + weekly * 7 + monthly * 30)) ]]; then
-      # Keep monthly backups
-      log_info "  [MONTHLY] Keeping: $name"
-      kept=$((kept + 1))
-    else
-      # Remove old backup
-      log_info "  Removing: $name"
-      rm -f "$backup"
-      count=$((count + 1))
-    fi
+prune_by_count() {
+  local count="$1"
+
+  cli_info "Keeping only last $count backups..."
+  printf "\n"
+
+  local backups=($(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null))
+  local removed=0
+
+  for ((i=count; i<${#backups[@]}; i++)); do
+    cli_info "Removing: $(basename "${backups[$i]}")"
+    rm -f "${backups[$i]}"
+    removed=$((removed + 1))
   done
-  
-  echo ""
-  log_success "GFS policy applied: Kept $kept, removed $count backup(s)"
-  echo ""
+
+  printf "\n"
+  if [[ $removed -gt 0 ]]; then
+    cli_success "Removed $removed backup(s)"
+  else
+    cli_info "No backups to remove"
+  fi
 }
 
-# Smart retention policy (keeps important backups)
 prune_smart_policy() {
-  log_info "Applying smart retention policy..."
-  echo ""
-  
-  # Keep backups based on importance:
+  cli_info "Applying smart retention policy..."
+  printf "\n"
+
+  # Keep:
   # - All backups from last 24 hours
   # - Daily backups for last week
   # - Weekly backups for last month
-  # - Monthly backups for last year
-  # - Yearly backups forever
-  
+
   local now=$(date +%s)
   local count=0
   local kept=0
-  
+
   if [[ -d "$BACKUP_DIR" ]]; then
     for backup in "$BACKUP_DIR"/*.tar.gz; do
       if [[ -f "$backup" ]]; then
         local name=$(basename "$backup")
         local backup_time=$(stat -f %m "$backup" 2>/dev/null || stat -c %Y "$backup")
         local age_days=$(( (now - backup_time) / 86400 ))
-        
+
         local keep=false
         local reason=""
-        
+
         if [[ $age_days -le 1 ]]; then
           keep=true
           reason="last 24 hours"
         elif [[ $age_days -le 7 ]]; then
           keep=true
           reason="last week"
-        elif [[ $age_days -le 30 ]] && [[ $((age_days % 7)) -eq 0 ]]; then
-          keep=true
-          reason="weekly (last month)"
-        elif [[ $age_days -le 365 ]] && [[ $((age_days % 30)) -eq 0 ]]; then
-          keep=true
-          reason="monthly (last year)"
-        elif [[ $((age_days % 365)) -eq 0 ]]; then
-          keep=true
-          reason="yearly"
         fi
-        
+
         if [[ "$keep" == true ]]; then
-          log_info "  Keeping ($reason): $name"
+          cli_list_item "Keeping ($reason): $name"
           kept=$((kept + 1))
         else
-          log_info "  Removing: $name"
+          cli_info "Removing: $name"
           rm -f "$backup"
           count=$((count + 1))
         fi
       fi
     done
   fi
-  
-  echo ""
-  log_success "Smart policy applied: Kept $kept, removed $count backup(s)"
-  echo ""
+
+  printf "\n"
+  cli_success "Smart policy applied: Kept $kept, removed $count backup(s)"
 }
 
-# Prune cloud backups
-prune_cloud_backups() {
-  local days="${1:-30}"
-  
-  log_info "Pruning cloud backups older than $days days..."
-  echo ""
-  
-  local provider="${BACKUP_CLOUD_PROVIDER:-}"
-  
-  case "$provider" in
-    s3)
-      if command -v aws >/dev/null 2>&1; then
-        log_info "Pruning S3 backups..."
-        # List and delete old S3 objects
-        local cutoff_date=$(date -d "$days days ago" +%Y-%m-%d 2>/dev/null || date -v -${days}d +%Y-%m-%d)
-        aws s3 ls "s3://$S3_BUCKET/nself-backups/" | while read -r line; do
-          local file_date=$(echo "$line" | awk '{print $1}')
-          local file_name=$(echo "$line" | awk '{print $4}')
-          if [[ "$file_date" < "$cutoff_date" ]]; then
-            log_info "  Removing from S3: $file_name"
-            aws s3 rm "s3://$S3_BUCKET/nself-backups/$file_name"
-          fi
-        done
+# =============================================================================
+# ROLLBACK SUBCOMMAND (from rollback.sh)
+# =============================================================================
+
+cmd_rollback() {
+  local target="${1:-latest}"
+
+  cli_section "Rolling back to: $target"
+  printf "\n"
+
+  case "$target" in
+    latest)
+      rollback_to_latest_backup
+      ;;
+    backup)
+      local backup_id="${2:-}"
+      if [[ -z "$backup_id" ]]; then
+        cmd_list
+        read -p "Enter backup ID to rollback to: " backup_id
       fi
+      cmd_restore "$backup_id"
       ;;
-    rclone)
-      if command -v rclone >/dev/null 2>&1; then
-        log_info "Pruning rclone backups..."
-        rclone delete "${RCLONE_REMOTE}:${RCLONE_PATH}" --min-age "${days}d"
+    *)
+      cli_error "Unknown rollback target: $target"
+      cli_info "Valid targets: latest, backup [id]"
+      return 1
+      ;;
+  esac
+}
+
+rollback_to_latest_backup() {
+  local latest_backup=$(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | head -1)
+
+  if [[ -z "$latest_backup" ]]; then
+    cli_error "No backups found"
+    cli_info "Create a backup first with: nself backup create"
+    return 1
+  fi
+
+  cli_info "Latest backup: $(basename "$latest_backup")"
+  cmd_restore "$(basename "$latest_backup")"
+}
+
+# =============================================================================
+# RESET SUBCOMMAND (from reset.sh)
+# =============================================================================
+
+cmd_reset() {
+  local force_reset=false
+  local create_backup=true
+  local keep_env=false
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force|-f)
+        force_reset=true
+        shift
+        ;;
+      --no-backup)
+        create_backup=false
+        shift
+        ;;
+      --keep-env)
+        keep_env=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  cli_section "Reset project to clean state"
+  printf "\n"
+
+  cli_warning "This will:"
+  cli_list_item "Stop and remove all containers"
+  cli_list_item "Delete all Docker volumes"
+  cli_list_item "Remove all generated files"
+  printf "\n"
+
+  if [[ "$force_reset" != "true" ]]; then
+    read -p "Are you sure you want to reset everything? (y/N): " confirm
+    if [[ "$confirm" != "y" ]] && [[ "$confirm" != "Y" ]]; then
+      cli_info "Reset cancelled"
+      return 1
+    fi
+  fi
+
+  # Create backup if requested
+  if [[ "$create_backup" == "true" ]]; then
+    cmd_create "full" "before-reset-$(date +%Y%m%d_%H%M%S)"
+  fi
+
+  # Stop and remove containers
+  load_env_with_priority
+  local project_name="${PROJECT_NAME:-nself}"
+
+  if [[ -f "docker-compose.yml" ]]; then
+    docker compose down -v >/dev/null 2>&1 || true
+  fi
+
+  # Remove project containers
+  local containers=$(docker ps -aq --filter "name=${project_name}")
+  if [[ -n "$containers" ]]; then
+    printf '%s\n' "$containers" | xargs docker rm -f >/dev/null 2>&1 || true
+  fi
+
+  # Remove volumes
+  local volumes=$(docker volume ls -q | grep "^${project_name}_")
+  if [[ -n "$volumes" ]]; then
+    printf '%s\n' "$volumes" | xargs docker volume rm -f >/dev/null 2>&1 || true
+  fi
+
+  # Remove network
+  docker network rm "${project_name}_network" >/dev/null 2>&1 || true
+
+  # Remove generated files
+  rm -rf docker-compose.yml nginx postgres monitoring services .nself
+
+  printf "\n"
+  cli_success "Project reset complete!"
+  printf "\n"
+  cli_info "Next steps:"
+  cli_list_numbered 1 "nself init    # Create new configuration"
+  cli_list_numbered 2 "nself build   # Generate infrastructure"
+  cli_list_numbered 3 "nself start   # Start services"
+}
+
+# =============================================================================
+# CLEAN SUBCOMMAND (from clean.sh)
+# =============================================================================
+
+cmd_clean() {
+  local clean_images=false
+  local clean_containers=false
+  local clean_volumes=false
+  local clean_all=false
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --images|-i)
+        clean_images=true
+        shift
+        ;;
+      --containers|-c)
+        clean_containers=true
+        shift
+        ;;
+      --volumes|-v)
+        clean_volumes=true
+        shift
+        ;;
+      --all|-a)
+        clean_all=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # Default to images if nothing specified
+  if [[ "$clean_images" == "false" ]] && [[ "$clean_containers" == "false" ]] && \
+     [[ "$clean_volumes" == "false" ]] && [[ "$clean_all" == "false" ]]; then
+    clean_images=true
+  fi
+
+  cli_section "Cleaning Docker resources"
+  printf "\n"
+
+  load_env_with_priority
+  local project_name="${PROJECT_NAME:-nself}"
+
+  # Clean containers
+  if [[ "$clean_all" == "true" ]] || [[ "$clean_containers" == "true" ]]; then
+    cli_info "Cleaning stopped containers..."
+    local stopped=$(docker ps -a --filter "name=${project_name}" --filter "status=exited" -q)
+    if [[ -n "$stopped" ]]; then
+      printf '%s\n' "$stopped" | xargs docker rm >/dev/null 2>&1
+      cli_success "Removed stopped containers"
+    else
+      cli_info "No stopped containers to clean"
+    fi
+  fi
+
+  # Clean images
+  if [[ "$clean_all" == "true" ]] || [[ "$clean_images" == "true" ]]; then
+    cli_info "Cleaning project images..."
+    local images=$(docker images | grep -E "^${project_name}" | awk '{print $3}' | sort -u)
+    if [[ -n "$images" ]]; then
+      printf '%s\n' "$images" | xargs docker rmi -f >/dev/null 2>&1
+      cli_success "Removed project images"
+    else
+      cli_info "No images to clean"
+    fi
+
+    docker builder prune -f >/dev/null 2>&1
+  fi
+
+  # Clean volumes
+  if [[ "$clean_all" == "true" ]] || [[ "$clean_volumes" == "true" ]]; then
+    cli_warning "This will delete all data in project volumes!"
+    read -p "Are you sure? (y/N): " confirm
+    if [[ "$confirm" == "y" ]] || [[ "$confirm" == "Y" ]]; then
+      local volumes=$(docker volume ls --filter "name=${project_name}" -q)
+      if [[ -n "$volumes" ]]; then
+        printf '%s\n' "$volumes" | xargs docker volume rm >/dev/null 2>&1
+        cli_success "Removed project volumes"
+      else
+        cli_info "No volumes to clean"
       fi
-      ;;
-    *)
-      log_warning "Cloud pruning not implemented for: $provider"
-      ;;
-  esac
-  
-  echo ""
-  log_success "Cloud pruning complete"
-  echo ""
-}
-
-# Universal cloud upload function
-upload_to_cloud() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  # Determine which cloud provider to use
-  local provider="${BACKUP_CLOUD_PROVIDER:-}"
-  
-  # Auto-detect if not specified
-  if [[ -z "$provider" ]]; then
-    if [[ -n "$S3_BUCKET" ]]; then
-      provider="s3"
-    elif [[ -n "$DROPBOX_TOKEN" ]]; then
-      provider="dropbox"
-    elif [[ -n "$GDRIVE_FOLDER_ID" ]]; then
-      provider="gdrive"
-    elif [[ -n "$RCLONE_REMOTE" ]]; then
-      provider="rclone"
     fi
   fi
-  
-  # Upload based on provider
-  case "$provider" in
-    s3)
-      upload_to_s3 "$file_path" "$file_name"
-      ;;
-    dropbox)
-      upload_to_dropbox "$file_path" "$file_name"
-      ;;
-    gdrive)
-      upload_to_gdrive "$file_path" "$file_name"
-      ;;
-    onedrive)
-      upload_to_onedrive "$file_path" "$file_name"
-      ;;
-    rclone)
-      upload_to_rclone "$file_path" "$file_name"
-      ;;
-    "")
-      # No cloud provider configured, skip
-      ;;
-    *)
-      log_warning "Unknown cloud provider: $provider"
-      ;;
-  esac
-}
 
-# Upload to Dropbox
-upload_to_dropbox() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  if [[ -z "$DROPBOX_TOKEN" ]]; then
-    log_warning "Dropbox token not configured"
-    return 1
+  # System prune if --all
+  if [[ "$clean_all" == "true" ]]; then
+    docker system prune -f >/dev/null 2>&1
+    cli_success "System cleanup complete"
   fi
-  
-  log_info "Uploading to Dropbox..."
-  
-  local dropbox_path="${DROPBOX_FOLDER}/${file_name}"
-  
-  # Use Dropbox API
-  if command -v curl >/dev/null 2>&1; then
-    local response=$(curl -s -X POST https://content.dropboxapi.com/2/files/upload \
-      --header "Authorization: Bearer ${DROPBOX_TOKEN}" \
-      --header "Dropbox-API-Arg: {\"path\": \"${dropbox_path}\", \"mode\": \"overwrite\"}" \
-      --header "Content-Type: application/octet-stream" \
-      --data-binary @"${file_path}" 2>&1)
-    
-    if echo "$response" | grep -q "error"; then
-      log_error "Dropbox upload failed: $response"
-      return 1
-    else
-      log_success "  Uploaded to Dropbox: $dropbox_path"
-    fi
-  else
-    log_warning "curl not found, cannot upload to Dropbox"
-    return 1
-  fi
+
+  printf "\n"
+  cli_success "Cleanup complete!"
 }
 
-# Upload to Google Drive
-upload_to_gdrive() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  log_info "Uploading to Google Drive..."
-  
-  # Check for gdrive CLI tool
-  if command -v gdrive >/dev/null 2>&1; then
-    if [[ -n "$GDRIVE_FOLDER_ID" ]]; then
-      gdrive upload --parent "$GDRIVE_FOLDER_ID" "$file_path" || {
-        log_warning "Failed to upload to Google Drive"
-        return 1
-      }
-    else
-      gdrive upload "$file_path" || {
-        log_warning "Failed to upload to Google Drive"
-        return 1
-      }
-    fi
-    log_success "  Uploaded to Google Drive: $file_name"
-  else
-    log_warning "gdrive CLI not installed. Install from: https://github.com/prasmussen/gdrive"
-    log_info "  Or use rclone instead: nself backup cloud setup"
-    return 1
-  fi
-}
+# =============================================================================
+# MAIN COMMAND ROUTER
+# =============================================================================
 
-# Upload to OneDrive
-upload_to_onedrive() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  log_info "Uploading to OneDrive..."
-  
-  # OneDrive requires rclone or similar tool
-  if command -v rclone >/dev/null 2>&1; then
-    rclone copy "$file_path" "onedrive:${ONEDRIVE_FOLDER}/" || {
-      log_warning "Failed to upload to OneDrive"
-      return 1
-    }
-    log_success "  Uploaded to OneDrive: ${ONEDRIVE_FOLDER}/$file_name"
-  else
-    log_warning "rclone not installed. OneDrive requires rclone."
-    log_info "  Run: nself backup cloud setup"
-    return 1
-  fi
-}
-
-# Upload using rclone (supports 40+ providers)
-upload_to_rclone() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  if [[ -z "$RCLONE_REMOTE" ]]; then
-    log_warning "rclone remote not configured"
-    return 1
-  fi
-  
-  log_info "Uploading via rclone to $RCLONE_REMOTE..."
-  
-  if command -v rclone >/dev/null 2>&1; then
-    rclone copy "$file_path" "${RCLONE_REMOTE}:${RCLONE_PATH}/" || {
-      log_warning "Failed to upload via rclone"
-      return 1
-    }
-    log_success "  Uploaded via rclone: ${RCLONE_REMOTE}:${RCLONE_PATH}/$file_name"
-  else
-    log_warning "rclone not installed"
-    log_info "  Run: nself backup cloud setup"
-    return 1
-  fi
-}
-
-# Upload to S3
-upload_to_s3() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  log_info "Uploading to S3..."
-  
-  if command -v aws >/dev/null 2>&1; then
-    local s3_path="s3://$S3_BUCKET/nself-backups/$file_name"
-    
-    if [[ -n "$S3_ENDPOINT" ]]; then
-      aws s3 cp "$file_path" "$s3_path" --endpoint-url "$S3_ENDPOINT" || {
-        log_warning "  Failed to upload to S3"
-        return 1
-      }
-    else
-      aws s3 cp "$file_path" "$s3_path" || {
-        log_warning "  Failed to upload to S3"
-        return 1
-      }
-    fi
-    
-    log_success "  Uploaded to S3: $s3_path"
-  else
-    log_warning "  AWS CLI not installed, skipping S3 upload"
-  fi
-}
-
-# Cloud setup wizard
-cmd_backup_cloud() {
-  local action="${1:-setup}"
-  
-  case "$action" in
-    setup)
-      backup_cloud_setup
-      ;;
-    status)
-      backup_cloud_status
-      ;;
-    test)
-      backup_cloud_test
-      ;;
-    *)
-      log_error "Unknown cloud action: $action"
-      echo "Usage: nself backup cloud [setup|status|test]"
-      return 1
-      ;;
-  esac
-}
-
-# Setup cloud backup provider
-backup_cloud_setup() {
-  show_command_header "nself backup cloud setup" "Configure cloud backup provider"
-  
-  echo "Select cloud provider:"
-  echo "  1) Amazon S3"
-  echo "  2) Dropbox"
-  echo "  3) Google Drive"
-  echo "  4) OneDrive"
-  echo "  5) rclone (supports 40+ providers)"
-  echo "  6) None (disable cloud backups)"
-  echo ""
-  echo -n "Choice [1-6]: "
-  read choice
-  
-  case "$choice" in
-    1)
-      setup_s3
-      ;;
-    2)
-      setup_dropbox
-      ;;
-    3)
-      setup_gdrive
-      ;;
-    4)
-      setup_onedrive
-      ;;
-    5)
-      setup_rclone
-      ;;
-    6)
-      echo "BACKUP_CLOUD_PROVIDER=" >> .env
-      log_info "Cloud backups disabled"
-      ;;
-    *)
-      log_error "Invalid choice"
-      return 1
-      ;;
-  esac
-}
-
-# Setup S3
-setup_s3() {
-  log_info "Setting up Amazon S3..."
-  echo ""
-  
-  echo -n "S3 bucket name: "
-  read s3_bucket
-  
-  echo -n "S3 endpoint (leave empty for AWS): "
-  read s3_endpoint
-  
-  echo -n "AWS Access Key ID: "
-  read aws_key
-  
-  echo -n "AWS Secret Access Key: "
-  read -s aws_secret
-  echo ""
-  
-  # Save configuration
-  {
-    echo "BACKUP_CLOUD_PROVIDER=s3"
-    echo "S3_BUCKET=$s3_bucket"
-    [[ -n "$s3_endpoint" ]] && echo "S3_ENDPOINT=$s3_endpoint"
-    echo "AWS_ACCESS_KEY_ID=$aws_key"
-    echo "AWS_SECRET_ACCESS_KEY=$aws_secret"
-  } >> .env
-  
-  log_success "S3 configuration saved"
-  echo ""
-  log_info "Testing S3 connection..."
-  backup_cloud_test
-}
-
-# Setup Dropbox
-setup_dropbox() {
-  log_info "Setting up Dropbox..."
-  echo ""
-  echo "To use Dropbox backup, you need an access token:"
-  echo "  1. Go to https://www.dropbox.com/developers/apps"
-  echo "  2. Create a new app (scoped access)"
-  echo "  3. Generate an access token"
-  echo ""
-  echo -n "Dropbox access token: "
-  read -s dropbox_token
-  echo ""
-  
-  echo -n "Dropbox folder path [/nself-backups]: "
-  read dropbox_folder
-  dropbox_folder="${dropbox_folder:-/nself-backups}"
-  
-  # Save configuration
-  {
-    echo "BACKUP_CLOUD_PROVIDER=dropbox"
-    echo "DROPBOX_TOKEN=$dropbox_token"
-    echo "DROPBOX_FOLDER=$dropbox_folder"
-  } >> .env
-  
-  log_success "Dropbox configuration saved"
-  echo ""
-  log_info "Testing Dropbox connection..."
-  backup_cloud_test
-}
-
-# Setup Google Drive
-setup_gdrive() {
-  log_info "Setting up Google Drive..."
-  echo ""
-  
-  # Check if gdrive is installed
-  if ! command -v gdrive >/dev/null 2>&1; then
-    log_warning "gdrive CLI not installed"
-    echo ""
-    echo "Install gdrive CLI:"
-    echo "  1. Download from: https://github.com/prasmussen/gdrive"
-    echo "  2. Follow authentication instructions"
-    echo ""
-    echo "Or use rclone instead (option 5)"
-    return 1
-  fi
-  
-  echo "Authenticating with Google Drive..."
-  gdrive list
-  
-  echo -n "Google Drive folder ID (optional): "
-  read gdrive_folder
-  
-  # Save configuration
-  {
-    echo "BACKUP_CLOUD_PROVIDER=gdrive"
-    [[ -n "$gdrive_folder" ]] && echo "GDRIVE_FOLDER_ID=$gdrive_folder"
-  } >> .env
-  
-  log_success "Google Drive configuration saved"
-}
-
-# Setup OneDrive
-setup_onedrive() {
-  log_info "Setting up OneDrive..."
-  echo ""
-  echo "OneDrive requires rclone. Setting up rclone for OneDrive..."
-  echo ""
-  
-  # Install rclone if needed
-  if ! command -v rclone >/dev/null 2>&1; then
-    log_info "Installing rclone..."
-    curl https://rclone.org/install.sh | sudo bash
-  fi
-  
-  log_info "Configuring rclone for OneDrive..."
-  rclone config create onedrive onedrive
-  
-  echo -n "OneDrive folder path [nself-backups]: "
-  read onedrive_folder
-  onedrive_folder="${onedrive_folder:-nself-backups}"
-  
-  # Save configuration
-  {
-    echo "BACKUP_CLOUD_PROVIDER=onedrive"
-    echo "ONEDRIVE_FOLDER=$onedrive_folder"
-  } >> .env
-  
-  log_success "OneDrive configuration saved"
-}
-
-# Setup rclone
-setup_rclone() {
-  log_info "Setting up rclone..."
-  echo ""
-  
-  # Install rclone if needed
-  if ! command -v rclone >/dev/null 2>&1; then
-    log_info "Installing rclone..."
-    curl https://rclone.org/install.sh | sudo bash
-  fi
-  
-  log_info "Running rclone configuration wizard..."
-  echo "rclone supports 40+ cloud providers including:"
-  echo "  Box, Dropbox, Google Drive, OneDrive, MEGA, pCloud, etc."
-  echo ""
-  rclone config
-  
-  echo -n "rclone remote name: "
-  read rclone_remote
-  
-  echo -n "Remote path [nself-backups]: "
-  read rclone_path
-  rclone_path="${rclone_path:-nself-backups}"
-  
-  # Save configuration
-  {
-    echo "BACKUP_CLOUD_PROVIDER=rclone"
-    echo "RCLONE_REMOTE=$rclone_remote"
-    echo "RCLONE_PATH=$rclone_path"
-  } >> .env
-  
-  log_success "rclone configuration saved"
-}
-
-# Show cloud backup status
-backup_cloud_status() {
-  show_command_header "nself backup cloud status" "Cloud backup configuration"
-  
-  local provider="${BACKUP_CLOUD_PROVIDER:-none}"
-  
-  echo "Provider: $provider"
-  echo ""
-  
-  case "$provider" in
-    s3)
-      echo "S3 Bucket: ${S3_BUCKET:-not configured}"
-      echo "S3 Endpoint: ${S3_ENDPOINT:-AWS}"
-      echo "AWS Key: ${AWS_ACCESS_KEY_ID:+configured}"
-      ;;
-    dropbox)
-      echo "Dropbox Token: ${DROPBOX_TOKEN:+configured}"
-      echo "Dropbox Folder: ${DROPBOX_FOLDER:-/nself-backups}"
-      ;;
-    gdrive)
-      echo "Google Drive: ${GDRIVE_FOLDER_ID:-root folder}"
-      ;;
-    onedrive)
-      echo "OneDrive Folder: ${ONEDRIVE_FOLDER:-nself-backups}"
-      ;;
-    rclone)
-      echo "rclone Remote: ${RCLONE_REMOTE:-not configured}"
-      echo "rclone Path: ${RCLONE_PATH:-nself-backups}"
-      ;;
-    none)
-      echo "No cloud provider configured"
-      echo "Run 'nself backup cloud setup' to configure"
-      ;;
-  esac
-  echo ""
-}
-
-# Test cloud backup connection
-backup_cloud_test() {
-  show_command_header "nself backup cloud test" "Testing cloud connection"
-  
-  local test_file=$(mktemp)
-  echo "nself backup test" > "$test_file"
-  local test_name="test_$(date +%s).txt"
-  
-  upload_to_cloud "$test_file" "$test_name"
-  local result=$?
-  
-  rm -f "$test_file"
-  
-  if [[ $result -eq 0 ]]; then
-    log_success "Cloud backup test successful!"
-  else
-    log_error "Cloud backup test failed"
-  fi
-  echo ""
-}
-
-# Verify backup integrity
-cmd_backup_verify() {
-  local backup_name="${1:-all}"
-
-  show_command_header "nself backup verify" "Verify backup integrity"
-
-  if [[ "$backup_name" == "all" ]]; then
-    verify_all_backups "$BACKUP_DIR"
-  else
-    # Find backup file
-    local backup_path=""
-    if [[ -f "$BACKUP_DIR/$backup_name" ]]; then
-      backup_path="$BACKUP_DIR/$backup_name"
-    elif [[ -f "$backup_name" ]]; then
-      backup_path="$backup_name"
-    else
-      log_error "Backup not found: $backup_name"
-      return 1
-    fi
-
-    verify_backup_integrity "$backup_path" true
-    local result=$?
-    echo ""
-
-    if [[ $result -eq 0 ]]; then
-      log_success "Backup is valid and intact"
-    else
-      log_error "Backup verification failed"
-    fi
-    echo ""
-
-    return $result
-  fi
-}
-
-# Clean failed/partial backups
-cmd_backup_clean() {
-  show_command_header "nself backup clean" "Clean failed and partial backups"
-
-  clean_failed_backups "$BACKUP_DIR"
-}
-
-# Manage retention policies
-cmd_backup_retention() {
-  local action="${1:-status}"
-
-  show_command_header "nself backup retention" "Backup retention policies"
-
-  case "$action" in
-    status)
-      log_info "Current retention configuration:"
-      echo ""
-      echo "Age-based retention:"
-      echo "  • Retention days: $BACKUP_RETENTION_DAYS"
-      echo "  • Minimum backups: $BACKUP_RETENTION_MIN"
-      echo ""
-      echo "Count-based retention:"
-      echo "  • Maximum backups: $BACKUP_RETENTION_COUNT"
-      echo ""
-      echo "Size-based retention:"
-      echo "  • Maximum total size: ${BACKUP_MAX_SIZE_GB}GB"
-      echo ""
-      echo "GFS (Grandfather-Father-Son) retention:"
-      echo "  • Daily backups: $BACKUP_RETENTION_DAILY"
-      echo "  • Weekly backups: $BACKUP_RETENTION_WEEKLY"
-      echo "  • Monthly backups: $BACKUP_RETENTION_MONTHLY"
-      echo ""
-      echo "Cloud backup:"
-      echo "  • Provider: ${BACKUP_CLOUD_PROVIDER:-not configured}"
-      echo ""
-
-      # Show actual backup stats
-      local total_backups=$(find "$BACKUP_DIR" -type f -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
-      local total_size=$(calculate_total_backup_size "$BACKUP_DIR")
-      echo "Current backup statistics:"
-      echo "  • Total backups: $total_backups"
-      echo "  • Total size: ${total_size}GB"
-      echo ""
-      ;;
-
-    set)
-      local param="${2:-}"
-      local value="${3:-}"
-
-      if [[ -z "$param" ]] || [[ -z "$value" ]]; then
-        log_error "Usage: nself backup retention set <parameter> <value>"
-        echo ""
-        echo "Available parameters:"
-        echo "  days <number>       - Retention days"
-        echo "  count <number>      - Maximum backup count"
-        echo "  size <number>       - Maximum size in GB"
-        echo "  min <number>        - Minimum backups to keep"
-        echo "  daily <number>      - Daily backups (GFS)"
-        echo "  weekly <number>     - Weekly backups (GFS)"
-        echo "  monthly <number>    - Monthly backups (GFS)"
-        return 1
-      fi
-
-      case "$param" in
-        days)
-          printf "BACKUP_RETENTION_DAYS=$value\n" >> .env
-          log_success "Retention days set to: $value"
-          ;;
-        count)
-          printf "BACKUP_RETENTION_COUNT=$value\n" >> .env
-          log_success "Maximum backup count set to: $value"
-          ;;
-        size)
-          printf "BACKUP_MAX_SIZE_GB=$value\n" >> .env
-          log_success "Maximum backup size set to: ${value}GB"
-          ;;
-        min)
-          printf "BACKUP_RETENTION_MIN=$value\n" >> .env
-          log_success "Minimum backups to keep set to: $value"
-          ;;
-        daily)
-          printf "BACKUP_RETENTION_DAILY=$value\n" >> .env
-          log_success "Daily backup retention set to: $value"
-          ;;
-        weekly)
-          printf "BACKUP_RETENTION_WEEKLY=$value\n" >> .env
-          log_success "Weekly backup retention set to: $value"
-          ;;
-        monthly)
-          printf "BACKUP_RETENTION_MONTHLY=$value\n" >> .env
-          log_success "Monthly backup retention set to: $value"
-          ;;
-        *)
-          log_error "Unknown parameter: $param"
-          return 1
-          ;;
-      esac
-
-      echo ""
-      log_info "Configuration saved to .env"
-      log_info "Run 'source .env' or restart services to apply changes"
-      echo ""
-      ;;
-
-    check)
-      check_321_rule "$BACKUP_DIR"
-      ;;
-
-    *)
-      log_error "Unknown retention action: $action"
-      echo "Valid actions: status, set, check"
-      return 1
-      ;;
-  esac
-}
-
-# Schedule automatic backups
-cmd_backup_schedule() {
-  local frequency="${1:-daily}"
-
-  show_command_header "nself backup schedule" "Setup automatic backups"
-
-  log_info "Setting up $frequency backups..."
-  echo ""
-
-  # Create backup script
-  local backup_script="/usr/local/bin/nself-backup"
-  cat > "$backup_script" << 'EOF'
-#!/bin/bash
-cd $(dirname $(nself which))
-nself backup create full
-nself backup prune smart
-EOF
-  chmod +x "$backup_script"
-
-  # Setup cron job
-  local cron_entry=""
-  case "$frequency" in
-    hourly)
-      cron_entry="0 * * * * $backup_script"
-      ;;
-    daily)
-      cron_entry="0 3 * * * $backup_script"
-      ;;
-    weekly)
-      cron_entry="0 3 * * 0 $backup_script"
-      ;;
-    monthly)
-      cron_entry="0 3 1 * * $backup_script"
-      ;;
-    *)
-      log_error "Invalid frequency: $frequency"
-      echo "Valid options: hourly, daily, weekly, monthly"
-      return 1
-      ;;
-  esac
-
-  # Add to crontab
-  (crontab -l 2>/dev/null | grep -v "nself-backup"; echo "$cron_entry") | crontab -
-
-  log_success "Scheduled $frequency backups"
-  echo ""
-  log_info "View schedule: crontab -l"
-  log_info "Remove schedule: crontab -e (delete nself-backup line)"
-  echo ""
-}
-
-# Show help
-show_backup_help() {
-  echo "Usage: nself backup <command> [options]"
-  echo ""
-  echo "Commands:"
-  echo "  create [type] [name]     Create a backup (types: full, database, config)"
-  echo "  list                     List available backups"
-  echo "  restore <name> [type]    Restore from backup"
-  echo "  verify [name|all]        Verify backup integrity"
-  echo "  clean                    Remove failed/partial backups"
-  echo "  prune [policy] [param]   Remove old backups based on policy"
-  echo "                           Policies: age, count, size, gfs, 3-2-1, smart, cloud"
-  echo "  retention [action]       Manage retention policies"
-  echo "                           Actions: status, set, check"
-  echo "  cloud [action]           Manage cloud backups"
-  echo "                           Actions: setup, status, test"
-  echo "  schedule [frequency]     Schedule automatic backups"
-  echo "                           Frequencies: hourly, daily, weekly, monthly"
-  echo ""
-  echo "Retention Environment Variables:"
-  echo "  BACKUP_DIR                Directory for backups (default: ./backups)"
-  echo "  BACKUP_RETENTION_DAYS     Days to keep backups (default: 30)"
-  echo "  BACKUP_RETENTION_COUNT    Maximum number of backups (default: 10)"
-  echo "  BACKUP_MAX_SIZE_GB        Maximum total size in GB (default: 50)"
-  echo "  BACKUP_RETENTION_MIN      Minimum backups to keep (default: 3)"
-  echo "  BACKUP_RETENTION_DAILY    Daily backups for GFS (default: 7)"
-  echo "  BACKUP_RETENTION_WEEKLY   Weekly backups for GFS (default: 4)"
-  echo "  BACKUP_RETENTION_MONTHLY  Monthly backups for GFS (default: 12)"
-  echo ""
-  echo "Cloud Provider Variables:"
-  echo "  BACKUP_CLOUD_PROVIDER     Provider: s3, dropbox, gdrive, onedrive, rclone"
-  echo "  S3: S3_BUCKET, S3_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
-  echo "  Dropbox: DROPBOX_TOKEN, DROPBOX_FOLDER"
-  echo "  Google Drive: GDRIVE_FOLDER_ID"
-  echo "  OneDrive: ONEDRIVE_FOLDER"
-  echo "  rclone: RCLONE_REMOTE, RCLONE_PATH"
-  echo ""
-  echo "Examples:"
-  echo "  nself backup create                      # Create full backup"
-  echo "  nself backup create database my-backup   # Database backup with custom name"
-  echo "  nself backup list                        # Show all backups"
-  echo "  nself backup verify all                  # Verify all backups"
-  echo "  nself backup clean                       # Remove failed backups"
-  echo "  nself backup restore backup.tar.gz       # Restore full backup"
-  echo ""
-  echo "  # Pruning strategies"
-  echo "  nself backup prune age 7                 # Remove backups older than 7 days"
-  echo "  nself backup prune count 10              # Keep only last 10 backups"
-  echo "  nself backup prune size 50               # Keep total size under 50GB"
-  echo "  nself backup prune gfs                   # Apply GFS retention policy"
-  echo "  nself backup prune 3-2-1                 # Check 3-2-1 backup rule"
-  echo "  nself backup prune smart                 # Apply smart retention"
-  echo ""
-  echo "  # Retention management"
-  echo "  nself backup retention status            # Show current policies"
-  echo "  nself backup retention set days 60       # Set retention to 60 days"
-  echo "  nself backup retention set count 20      # Keep last 20 backups"
-  echo "  nself backup retention set size 100      # Set max size to 100GB"
-  echo "  nself backup retention check             # Check 3-2-1 compliance"
-  echo ""
-  echo "  # Cloud and scheduling"
-  echo "  nself backup cloud setup                 # Configure cloud provider"
-  echo "  nself backup schedule daily              # Schedule daily backups"
-}
-
-# Main command router
-cmd_backup() {
+main() {
   local subcommand="${1:-help}"
+
+  # Check for help
+  if [[ "$subcommand" == "-h" ]] || [[ "$subcommand" == "--help" ]] || [[ "$subcommand" == "help" ]]; then
+    show_help
+    return 0
+  fi
+
   shift || true
 
+  # Route to subcommand
   case "$subcommand" in
     create)
-      cmd_backup_create "$@"
+      cmd_create "$@"
       ;;
     list|ls)
-      cmd_backup_list "$@"
+      cmd_list "$@"
       ;;
     restore)
-      cmd_backup_restore "$@"
-      ;;
-    verify)
-      cmd_backup_verify "$@"
-      ;;
-    clean)
-      cmd_backup_clean "$@"
+      cmd_restore "$@"
       ;;
     prune)
-      cmd_backup_prune "$@"
+      cmd_prune "$@"
       ;;
-    retention)
-      cmd_backup_retention "$@"
+    rollback)
+      cmd_rollback "$@"
       ;;
-    cloud)
-      cmd_backup_cloud "$@"
+    reset)
+      cmd_reset "$@"
       ;;
-    schedule)
-      cmd_backup_schedule "$@"
+    clean)
+      cmd_clean "$@"
       ;;
     help|-h|--help)
-      show_backup_help
+      show_help
       ;;
     *)
-      log_error "Unknown backup command: $subcommand"
-      show_backup_help
+      cli_error "Unknown subcommand: $subcommand"
+      printf "\n"
+      show_help
       return 1
       ;;
   esac
@@ -1450,7 +801,7 @@ cmd_backup() {
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   pre_command "backup" || exit $?
-  cmd_backup "$@"
+  main "$@"
   exit_code=$?
   post_command "backup" $exit_code
   exit $exit_code

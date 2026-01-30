@@ -2,7 +2,9 @@
 
 > Quick reference guide for all nself commands - Optimized for printing
 
-**Version:** v0.9.5 | **Total Commands:** 80+ commands with 200+ subcommands
+**Version:** v1.0 (consolidated in v0.9.6) | **Total Commands:** 31 top-level commands with 285+ subcommands
+
+> **Important:** v0.9.6 introduced the consolidated v1.0 command structure. Old commands like `nself billing`, `nself org`, `nself staging` are now subcommands under `nself tenant`, `nself deploy`, etc. See [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) for full details.
 
 ---
 
@@ -54,6 +56,8 @@ nself db data [export <table>|anonymize] # Data operations
 
 ## Multi-Tenant Commands (1 with 32+ subcommands) - v0.9.0
 
+> **Consolidated in v0.9.6:** The old `nself billing` and `nself org` commands are now `nself tenant billing` and `nself tenant org`.
+
 ```bash
 # Core
 nself tenant init                      # Initialize multi-tenancy
@@ -74,7 +78,7 @@ nself tenant setting set <tenant> <key> <value>
 nself tenant setting get <tenant> <key>
 nself tenant setting list <tenant>
 
-# Billing
+# Billing (was: nself billing)
 nself tenant billing usage             # Usage statistics
 nself tenant billing invoice [list|show|download|pay]
 nself tenant billing subscription [show|upgrade|downgrade]
@@ -82,6 +86,13 @@ nself tenant billing payment [list|add|remove]
 nself tenant billing quota             # Check quota
 nself tenant billing plan [list|show|compare]
 nself tenant billing export --format csv
+
+# Organization (was: nself org)
+nself tenant org list                  # List organizations
+nself tenant org create <name>         # Create organization
+nself tenant org show <id>             # Show details
+nself tenant org update <id>           # Update organization
+nself tenant org delete <id>           # Delete organization
 
 # Branding
 nself tenant branding create <name>
@@ -117,17 +128,19 @@ nself tenant themes import <path>
 
 ## OAuth Commands (1 with 6 subcommands) - v0.9.0
 
+> **Consolidated in v0.9.6:** OAuth commands are now under `nself auth oauth`.
+
 ```bash
-nself oauth install                    # Install OAuth service
-nself oauth enable --providers <list>  # Enable providers
-nself oauth disable --providers <list> # Disable providers
-nself oauth config <provider>          # Configure credentials
+nself auth oauth install               # Install OAuth service
+nself auth oauth enable --providers <list>  # Enable providers
+nself auth oauth disable --providers <list> # Disable providers
+nself auth oauth config <provider>     # Configure credentials
   --client-id=<id>
   --client-secret=<secret>
   --tenant-id=<id>                     # Microsoft only
-nself oauth test <provider>            # Test configuration
-nself oauth list                       # List all providers
-nself oauth status                     # Service status
+nself auth oauth test <provider>       # Test configuration
+nself auth oauth list                  # List all providers
+nself auth oauth status                # Service status
 ```
 
 **Providers:** `google`, `github`, `slack`, `microsoft`
@@ -136,20 +149,22 @@ nself oauth status                     # Service status
 
 ## Storage Commands (1 with 7 subcommands) - v0.9.0
 
+> **Consolidated in v0.9.6:** Storage commands are now under `nself service storage`.
+
 ```bash
-nself storage init                     # Initialize storage
-nself storage upload <file>            # Upload file
+nself service storage init             # Initialize storage
+nself service storage upload <file>    # Upload file
   --dest <path>                        # Destination path
   --thumbnails                         # Generate thumbnails
   --virus-scan                         # Scan for viruses
   --compression                        # Compress large files
   --all-features                       # Enable all features
-nself storage list [prefix]            # List files
-nself storage delete <path>            # Delete file
-nself storage config                   # Configure pipeline
-nself storage status                   # Pipeline status
-nself storage test                     # Test uploads
-nself storage graphql-setup            # Generate GraphQL integration
+nself service storage list [prefix]    # List files
+nself service storage delete <path>    # Delete file
+nself service storage config           # Configure pipeline
+nself service storage status           # Pipeline status
+nself service storage test             # Test uploads
+nself service storage graphql-setup    # Generate GraphQL integration
 ```
 
 ---
@@ -197,10 +212,22 @@ nself service cache stats|flush|keys
 
 ## Deployment Commands (1 with 12 subcommands)
 
+> **Consolidated in v0.9.6:** Old top-level commands like `nself staging`, `nself prod`, `nself upgrade` are now under `nself deploy`. Server management moved from `nself servers` to `nself deploy server`.
+
 ```bash
 # Basic Deployment
-nself deploy staging                   # Deploy to staging
-nself deploy production                # Deploy to production
+nself deploy staging                   # Deploy to staging (was: nself staging)
+nself deploy production                # Deploy to production (was: nself prod)
+nself deploy upgrade                   # Upgrade deployment (was: nself upgrade)
+
+# Server Management (was: nself servers)
+nself deploy server list               # List servers
+nself deploy server create <name>      # Create server
+nself deploy server remove <name>      # Remove server
+nself deploy server ssh <name>         # SSH into server
+
+# Environment Sync (was: nself sync)
+nself deploy sync <source> <target>    # Sync environments
 
 # Preview Environments
 nself deploy preview                   # Create preview
@@ -225,81 +252,72 @@ nself deploy check [--fix]             # Pre-deploy validation
 nself deploy status                    # Deployment status
 ```
 
-**Legacy shortcuts:**
-```bash
-nself staging                          # = nself deploy staging
-nself prod                             # = nself deploy production
-```
-
 ---
 
 ## Cloud Infrastructure (1 with 9+ subcommands) - v0.4.7
 
-```bash
-# Providers
-nself provider list                    # List 26+ providers
-nself provider init <provider>         # Configure credentials
-nself provider validate                # Validate config
-nself provider info <provider>         # Provider details
+> **Consolidated in v0.9.6:** Cloud provider commands moved from `nself cloud`/`nself provider` to `nself infra provider`. Server provisioning moved to `nself deploy server`.
 
-# Server Management
-nself provider server create <provider> [--size]
-nself provider server destroy <server>
-nself provider server list
-nself provider server status [server]
-nself provider server ssh <server>
-nself provider server add <ip>
-nself provider server remove <server>
+```bash
+# Providers (was: nself cloud / nself provider)
+nself infra provider list              # List 26+ providers
+nself infra provider init <provider>   # Configure credentials
+nself infra provider validate          # Validate config
+nself infra provider info <provider>   # Provider details
+
+# Server Management (now under: nself deploy server)
+nself deploy server create <provider> [--size]
+nself deploy server destroy <server>
+nself deploy server list
+nself deploy server status [server]
+nself deploy server ssh <server>
+nself deploy server add <ip>
+nself deploy server remove <server>
 
 # Cost Management
-nself provider cost estimate <provider>
-nself provider cost compare
+nself infra provider cost estimate <provider>
+nself infra provider cost compare
 
 # Quick Deploy
-nself provider deploy quick <provider>
-nself provider deploy full <provider>
+nself infra provider deploy quick <provider>
+nself infra provider deploy full <provider>
 ```
 
 **Providers:** AWS, GCP, Azure, DigitalOcean, Linode, Vultr, Hetzner, OVH, and 18+ more
-
-**Legacy aliases:**
-```bash
-nself providers                        # = nself provider
-nself provision <provider>             # = nself provider server create
-nself servers                          # = nself provider server
-```
 
 ---
 
 ## Kubernetes & Helm (2 commands) - v0.4.7
 
-```bash
-# Kubernetes
-nself k8s init                         # Initialize K8s config
-nself k8s convert [--output|--namespace]
-nself k8s apply [--dry-run]
-nself k8s deploy [--env <env>]
-nself k8s status
-nself k8s logs <service> [-f]
-nself k8s scale <service> <replicas>
-nself k8s rollback <service>
-nself k8s delete
-nself k8s cluster [list|connect|info]
-nself k8s namespace [list|create|delete|switch]
+> **Consolidated in v0.9.6:** K8s and Helm commands are now under `nself infra k8s` and `nself infra helm`.
 
-# Helm
-nself helm init [--from-compose]
-nself helm generate
-nself helm install [--env <env>]
-nself helm upgrade
-nself helm rollback
-nself helm uninstall
-nself helm list
-nself helm status
-nself helm values
-nself helm template
-nself helm package
-nself helm repo [add|remove|update|list]
+```bash
+# Kubernetes (was: nself k8s)
+nself infra k8s init                   # Initialize K8s config
+nself infra k8s convert [--output|--namespace]
+nself infra k8s apply [--dry-run]
+nself infra k8s deploy [--env <env>]
+nself infra k8s status
+nself infra k8s logs <service> [-f]
+nself infra k8s scale <service> <replicas>
+nself infra k8s rollback <service>
+nself infra k8s delete
+nself infra k8s cluster [list|connect|info]
+nself infra k8s namespace [list|create|delete|switch]
+
+# Helm (was: nself helm)
+nself infra helm init [--from-compose]
+nself infra helm generate
+nself infra helm install [--env <env>]
+nself infra helm upgrade
+nself infra helm rollback
+nself infra helm uninstall
+nself infra helm list
+nself infra helm status
+nself infra helm values
+nself infra helm template
+nself infra helm package
+nself infra helm repo [add|remove|update|list]
 ```
 
 ---
@@ -330,37 +348,41 @@ nself audit [logs|events <user>]
 
 ## Security Commands (10 commands)
 
+> **Consolidated in v0.9.6:** Security commands like `mfa`, `roles`, `devices`, `oauth`, `ssl`, `rate-limit`, `webhooks` are now under `nself auth`. Secrets and vault moved to `nself config`.
+
 ```bash
-# Security Scanning
-nself security scan [passwords|mfa|suspicious]
-nself security devices|incidents|events <user>|webauthn
+# Security Scanning (was: nself security)
+nself auth security scan [passwords|mfa|suspicious]
+nself auth security devices|incidents|events <user>|webauthn
 
 # Authentication
 nself auth users|roles|providers
 
-# MFA & Devices
-nself mfa enable|disable|status
-nself devices list|approve <id>|revoke <id>
+# MFA & Devices (was: nself mfa, nself devices)
+nself auth mfa enable|disable|status
+nself auth devices list|approve <id>|revoke <id>
 
-# Roles & Permissions
-nself roles list|create <name>|assign <user> <role>
+# Roles & Permissions (was: nself roles)
+nself auth roles list|create <name>|assign <user> <role>
 
-# Secrets & Vault
-nself secrets list|add <key> <value>|rotate
-nself vault init|status|unseal
+# Secrets & Vault (was: nself secrets, nself vault)
+nself config secrets list|add <key> <value>|rotate
+nself config vault init|status|unseal
 
-# SSL & Trust
-nself ssl generate|renew|info
-nself trust [--system]
+# SSL & Trust (was: nself ssl, nself trust)
+nself auth ssl generate|renew|info
+nself auth ssl trust [--system]
 
-# Rate Limiting & Webhooks
-nself rate-limit config|status
-nself webhooks list|test <url>
+# Rate Limiting & Webhooks (was: nself rate-limit, nself webhooks)
+nself auth rate-limit config|status
+nself auth webhooks list|test <url>
 ```
 
 ---
 
 ## Performance & Optimization (4 commands) - v0.4.6
+
+> **Consolidated in v0.9.6:** Performance commands like `bench`, `scale`, `migrate` are now under `nself perf`.
 
 ```bash
 # Performance Profiling
@@ -371,28 +393,30 @@ nself perf report
 nself perf dashboard
 nself perf suggest
 
-# Benchmarking
-nself bench run [target]
-nself bench baseline
-nself bench compare [file]
-nself bench stress [target] --users N
-nself bench report
+# Benchmarking (was: nself bench)
+nself perf bench run [target]
+nself perf bench baseline
+nself perf bench compare [file]
+nself perf bench stress [target] --users N
+nself perf bench report
 
-# Scaling
-nself scale <service> [--cpu N|--memory N|--replicas N]
-nself scale <service> --auto --min N --max N
-nself scale status
+# Scaling (was: nself scale)
+nself perf scale <service> [--cpu N|--memory N|--replicas N]
+nself perf scale <service> --auto --min N --max N
+nself perf scale status
 
-# Migration
-nself migrate <source> <target> [--dry-run]
-nself migrate diff <source> <target>
-nself migrate sync <source> <target>
-nself migrate rollback
+# Migration (was: nself migrate)
+nself perf migrate <source> <target> [--dry-run]
+nself perf migrate diff <source> <target>
+nself perf migrate sync <source> <target>
+nself perf migrate rollback
 ```
 
 ---
 
 ## Developer Tools (6 commands)
+
+> **Consolidated in v0.9.6:** Developer tools like `frontend`, `ci`, `docs`, `whitelabel` are now under `nself dev`.
 
 ```bash
 # Dev Tools - v0.8.0
@@ -401,20 +425,23 @@ nself dev docs [generate|openapi]
 nself dev test [init|fixtures|factory|snapshot|run]
 nself dev mock <entity> <count>
 
-# Frontend Management
-nself frontend [status|list|add|remove|deploy|logs|env]
+# Frontend Management (was: nself frontend)
+nself dev frontend [status|list|add|remove|deploy|logs|env]
 
-# CI/CD Generation
-nself ci init [github|gitlab|circleci]
-nself ci validate
-nself ci status
+# CI/CD Generation (was: nself ci)
+nself dev ci init [github|gitlab|circleci]
+nself dev ci validate
+nself dev ci status
+
+# Documentation (was: nself docs)
+nself dev docs generate|openapi
+
+# White-label (was: nself whitelabel)
+nself dev whitelabel [init|config|brand|theme]
 
 # Shell Completion
 nself completion [bash|zsh|fish]
 nself completion install <shell>
-
-# Documentation
-nself docs generate|openapi
 ```
 
 ---
@@ -459,6 +486,8 @@ nself plugin shopify webhook status
 
 ## Configuration (4 commands)
 
+> **Consolidated in v0.9.6:** Configuration commands like `env`, `secrets`, `vault`, `validate` are now under `nself config`. Sync moved to `nself deploy sync`.
+
 ```bash
 # Configuration
 nself config show|get <key>|set <key> <value>
@@ -467,28 +496,40 @@ nself config diff <env1> <env2>
 nself config export|import <file>
 nself config reset
 
-# Environment
-nself env [list]
-nself env create <name> <type>
-nself env switch <env>
-nself env diff <env1> <env2>
-nself env validate
-nself env access [--check <env>]
+# Environment (was: nself env)
+nself config env [list]
+nself config env create <name> <type>
+nself config env switch <env>
+nself config env diff <env1> <env2>
+nself config env validate
+nself config env access [--check <env>]
 
-# Sync
-nself sync db|files|config|full <source> <target>
-nself sync pull <env>
-nself sync auto [--setup|--stop]
-nself sync watch [--path|--interval]
-nself sync status|history
+# Secrets (was: nself secrets)
+nself config secrets list|add <key> <value>|rotate
+nself config secrets get <key>
+nself config secrets delete <key>
 
-# Validation
-nself validate [--fix|--strict]
+# Vault (was: nself vault)
+nself config vault init|status|unseal
+nself config vault seal
+nself config vault rotate
+
+# Validation (was: nself validate)
+nself config validate [--fix|--strict]
+
+# Sync (was: nself sync - now under deploy)
+nself deploy sync db|files|config|full <source> <target>
+nself deploy sync pull <env>
+nself deploy sync auto [--setup|--stop]
+nself deploy sync watch [--path|--interval]
+nself deploy sync status|history
 ```
 
 ---
 
 ## Utilities (5 commands)
+
+> **Consolidated in v0.9.6:** The `upgrade` command is now `nself deploy upgrade`.
 
 ```bash
 # Help & Version
@@ -498,8 +539,8 @@ nself version [--short|--json|--check]
 # Updates
 nself update [--check|--version <ver>|--force]
 
-# Zero-Downtime Upgrades - v0.8.0
-nself upgrade perform|rolling|rollback|status
+# Zero-Downtime Upgrades - v0.8.0 (was: nself upgrade)
+nself deploy upgrade perform|rolling|rollback|status
 
 # Admin UI
 nself admin [start|stop]
@@ -638,10 +679,10 @@ nself db types
 ### Deployment
 
 ```bash
-nself env switch staging
+nself config env switch staging        # was: nself env switch staging
 nself deploy check
-nself deploy staging
-nself deploy production --blue-green
+nself deploy staging                   # was: nself staging
+nself deploy production --blue-green   # was: nself prod --blue-green
 ```
 
 ### Multi-Tenant SaaS
@@ -649,7 +690,8 @@ nself deploy production --blue-green
 ```bash
 nself tenant init
 nself tenant create "Acme Corp" --plan pro
-nself tenant billing usage
+nself tenant billing usage              # was: nself billing usage
+nself tenant org list                   # was: nself org list
 nself tenant domains add app.example.com
 nself tenant branding upload-logo logo.png
 ```
@@ -725,6 +767,7 @@ app2.local.nself.org                   # Frontend App 2
 
 | Version | Commands Added |
 |---------|----------------|
+| **1.0 (v0.9.6)** | Consolidated command structure (79→31 commands) |
 | **0.9.5** | Feature parity & security hardening |
 | **0.9.0** | `tenant` (32+), `oauth` (7), `storage` (8) |
 | **0.8.0** | `dev`, `realtime`, `org`, `security`, `upgrade` |
@@ -754,7 +797,59 @@ nself version --check                  # Check updates
 
 ---
 
+## Command Consolidation Reference
+
+**Quick lookup for old → new commands:**
+
+| Old Command | New Command (v1.0) |
+|-------------|-------------------|
+| `nself billing` | `nself tenant billing` |
+| `nself org` | `nself tenant org` |
+| `nself staging` | `nself deploy staging` |
+| `nself prod` | `nself deploy production` |
+| `nself upgrade` | `nself deploy upgrade` |
+| `nself servers` | `nself deploy server` |
+| `nself sync` | `nself deploy sync` |
+| `nself cloud` | `nself infra provider` |
+| `nself provider` | `nself infra provider` |
+| `nself k8s` | `nself infra k8s` |
+| `nself helm` | `nself infra helm` |
+| `nself storage` | `nself service storage` |
+| `nself email` | `nself service email` |
+| `nself search` | `nself service search` |
+| `nself redis` | `nself service redis` |
+| `nself functions` | `nself service functions` |
+| `nself mlflow` | `nself service mlflow` |
+| `nself realtime` | `nself service realtime` |
+| `nself env` | `nself config env` |
+| `nself secrets` | `nself config secrets` |
+| `nself vault` | `nself config vault` |
+| `nself validate` | `nself config validate` |
+| `nself mfa` | `nself auth mfa` |
+| `nself roles` | `nself auth roles` |
+| `nself devices` | `nself auth devices` |
+| `nself oauth` | `nself auth oauth` |
+| `nself security` | `nself auth security` |
+| `nself ssl` | `nself auth ssl` |
+| `nself trust` | `nself auth ssl trust` |
+| `nself rate-limit` | `nself auth rate-limit` |
+| `nself webhooks` | `nself auth webhooks` |
+| `nself bench` | `nself perf bench` |
+| `nself scale` | `nself perf scale` |
+| `nself migrate` | `nself perf migrate` |
+| `nself rollback` | `nself backup rollback` |
+| `nself reset` | `nself backup reset` |
+| `nself clean` | `nself backup clean` |
+| `nself frontend` | `nself dev frontend` |
+| `nself ci` | `nself dev ci` |
+| `nself docs` | `nself dev docs` |
+| `nself whitelabel` | `nself dev whitelabel` |
+
+**Full details:** [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md)
+
+---
+
 *Print this page for your desk!*
 
-*Last Updated: January 30, 2026 | Version: 0.9.5*
+*Last Updated: January 30, 2026 | Version: 1.0 (v0.9.6 consolidated)*
 *nself - Self-Hosted Infrastructure Manager*

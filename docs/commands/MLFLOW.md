@@ -1,4 +1,6 @@
-# MLflow Command
+# nself service mlflow
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself mlflow` in v0.x. It has been consolidated to `nself service mlflow` in v1.0. The old command name may still work as an alias.
 
 Manage MLflow for ML experiment tracking and model registry.
 
@@ -6,33 +8,33 @@ Manage MLflow for ML experiment tracking and model registry.
 
 ```bash
 # Enable MLflow
-nself mlflow enable
+nself service mlflow enable
 
 # Rebuild and start
 nself build && nself start
 
 # Open the UI
-nself mlflow open
+nself service mlflow open
 
 # Test connection
-nself mlflow test
+nself service mlflow test
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `nself mlflow` | Show status |
-| `nself mlflow enable` | Enable MLflow service |
-| `nself mlflow disable` | Disable MLflow service |
-| `nself mlflow open` | Open MLflow UI in browser |
-| `nself mlflow configure <setting> <value>` | Configure settings |
-| `nself mlflow experiments` | List experiments |
-| `nself mlflow experiments create <name>` | Create experiment |
-| `nself mlflow experiments delete <id>` | Delete experiment |
-| `nself mlflow runs [exp_id]` | List runs |
-| `nself mlflow test` | Test connection |
-| `nself mlflow logs [-f]` | View logs |
+| `nself service mlflow` | Show status |
+| `nself service mlflow enable` | Enable MLflow service |
+| `nself service mlflow disable` | Disable MLflow service |
+| `nself service mlflow open` | Open MLflow UI in browser |
+| `nself service mlflow configure <setting> <value>` | Configure settings |
+| `nself service mlflow experiments` | List experiments |
+| `nself service mlflow experiments create <name>` | Create experiment |
+| `nself service mlflow experiments delete <id>` | Delete experiment |
+| `nself service mlflow runs [exp_id]` | List runs |
+| `nself service mlflow test` | Test connection |
+| `nself service mlflow logs [-f]` | View logs |
 
 ## Prerequisites
 
@@ -44,14 +46,14 @@ MLflow requires:
 
 ```bash
 # Set username
-nself mlflow configure username admin
+nself service mlflow configure username admin
 
 # Set/generate password
-nself mlflow configure password
-nself mlflow configure password mypassword
+nself service mlflow configure password
+nself service mlflow configure password mypassword
 
 # Change port
-nself mlflow configure port 5001
+nself service mlflow configure port 5001
 ```
 
 ## Experiment Management
@@ -59,7 +61,7 @@ nself mlflow configure port 5001
 ### List Experiments
 
 ```bash
-nself mlflow experiments
+nself service mlflow experiments
 ```
 
 Output:
@@ -73,23 +75,23 @@ Output:
 ### Create Experiment
 
 ```bash
-nself mlflow experiments create my-model
+nself service mlflow experiments create my-model
 ```
 
 ### Delete Experiment
 
 ```bash
-nself mlflow experiments delete 1
+nself service mlflow experiments delete 1
 ```
 
 ### List Runs
 
 ```bash
 # All runs
-nself mlflow runs
+nself service mlflow runs
 
 # Runs for specific experiment
-nself mlflow runs 1
+nself service mlflow runs 1
 ```
 
 ## Python Integration
@@ -224,20 +226,20 @@ nself mlflow status
 nself status mlflow
 
 # Test connection
-nself mlflow test
+nself service mlflow test
 
 # View logs
-nself mlflow logs
+nself service mlflow logs
 ```
 
 ### Authentication Issues
 
 ```bash
 # Verify credentials
-nself mlflow status
+nself service mlflow status
 
 # Reset password
-nself mlflow configure password
+nself service mlflow configure password
 ```
 
 ### Missing Artifacts

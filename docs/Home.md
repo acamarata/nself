@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](releases/v0.9.0.md)
+[![Version](https://img.shields.io/badge/version-0.9.6-blue.svg)](releases/v0.9.6.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -14,6 +14,10 @@
 **[Quick Start](guides/Quick-Start.md)** | **[Installation](guides/Installation.md)** | **[Documentation](README.md)** | **[GitHub](https://github.com/acamarata/nself)**
 
 </div>
+
+---
+
+> **🔄 v0.9.6 Command Update:** Commands have been consolidated into a v1.0 structure (79→31 top-level commands). Old commands still work but are organized logically: `nself billing` → `nself tenant billing`, `nself staging` → `nself deploy staging`, etc. [Full mapping here](architecture/COMMAND-CONSOLIDATION-MAP.md).
 
 ---
 
@@ -170,24 +174,31 @@ Complete multi-tenancy, billing, and white-labeling:
 # Tenant management
 nself tenant create "Acme Corp" --slug acme --plan pro
 
-# Billing & subscriptions
+# Billing & subscriptions (v0.9.6: was "nself billing")
 nself tenant billing usage
 nself tenant billing subscription upgrade
+
+# Organization management (v0.9.6: was "nself org")
+nself tenant org list
 
 # Custom domains & branding
 nself tenant domains add app.example.com
 nself tenant branding set-colors --primary #0066cc
 ```
 
+> **v0.9.6 Update:** Commands consolidated under logical groupings. Old commands like `nself billing` and `nself org` are now `nself tenant billing` and `nself tenant org`.
+
 ### OAuth & Storage (v0.9.0)
 
 **OAuth Integration:**
 - **[OAuth Management](commands/OAUTH.md)** - Google, GitHub, Microsoft, Slack
 - Multiple provider support with easy configuration
+- Commands: `nself auth oauth` (v0.9.6: was `nself oauth`)
 
 **File Storage:**
 - **[Storage System](commands/STORAGE.md)** - Uploads, thumbnails, virus scanning
 - GraphQL integration generation
+- Commands: `nself service storage` (v0.9.6: was `nself storage`)
 
 ### Plugin System (v0.4.8)
 
@@ -247,20 +258,20 @@ nself tenant branding set-colors --primary #0066cc
 
 ---
 
-## What's New in v0.9.0
+## What's New in v0.9.6
 
-### Multi-Tenant Platform
+### Command Consolidation Complete
 
-Complete platform for building SaaS applications:
+The CLI has been dramatically improved with a 60.8% reduction in top-level commands:
 
-- **Tenant Management** - Create, suspend, activate, delete tenants
-- **Billing Integration** - Stripe-based usage tracking and invoicing
-- **White-Labeling** - Custom domains, branding, email templates, themes
-- **OAuth Providers** - Google, GitHub, Microsoft, Slack integration
-- **File Storage** - Advanced upload pipeline with thumbnails and virus scanning
-- **Member Management** - Role-based access control per tenant
+- **79 → 31 Commands** - Reduced complexity while preserving all functionality
+- **Logical Hierarchies** - Commands organized by domain (tenant, deploy, infra, service, auth)
+- **285+ Subcommands** - All features accessible through intuitive structure
+- **100% Backward Compatible** - Old commands still work with migration warnings
+- **Improved Discoverability** - Easy to find and learn commands
+- **Clear Migration Path** - Automated tools and comprehensive guides
 
-**[v0.9.0 Documentation](releases/v0.9.0.md)** | **[Release Notes](releases/v0.9.0.md)**
+**[v0.9.6 Documentation](releases/v0.9.6.md)** | **[Release Notes](releases/v0.9.6.md)**
 
 ---
 
@@ -305,7 +316,9 @@ nself deploy prod
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.9.0** | Jan 30, 2026 | Multi-Tenant Platform (current) |
+| **v0.9.6** | Jan 30, 2026 | Command Consolidation (current) |
+| v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
+| v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
 | v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
 | v0.4.7 | Jan 23, 2026 | Infrastructure Everywhere |
 | v0.4.6 | Jan 22, 2026 | Scaling & Performance |
@@ -355,7 +368,7 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 <div align="center">
 
-**Version 0.9.0** · **January 2026** · **[Full Documentation](README.md)**
+**Version 0.9.6** · **January 2026** · **[Full Documentation](README.md)**
 
 *ɳSelf - The complete self-hosted backend platform*
 

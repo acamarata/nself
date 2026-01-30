@@ -1,5 +1,9 @@
 # nself storage
 
+> **⚠️ DEPRECATED in v0.9.6**: This command has been consolidated.
+> Please use `nself service storage` instead.
+> See [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) and [v0.9.6 Release Notes](../releases/v0.9.6.md) for details.
+
 File storage and upload management commands.
 
 ## Synopsis

@@ -54,10 +54,10 @@ nself supports deployment to 26+ cloud providers with custom services fully inte
 
 ```bash
 # Initialize AWS provider
-nself provider init aws
+nself infra provider init aws
 
 # Provision EC2 instance for Docker Compose
-nself provider server create aws --size medium --region us-east-1
+nself infra provider server create aws --size medium --region us-east-1
 
 # This creates:
 # - t3.medium (2 vCPU, 4GB RAM)
@@ -70,7 +70,7 @@ nself provider server create aws --size medium --region us-east-1
 
 ```bash
 # Deploy to AWS EC2
-nself deploy prod
+nself deploy production
 
 # Custom services deploy via Docker Compose
 # All CS_N services included automatically
@@ -89,8 +89,8 @@ aws eks create-cluster \
 aws eks update-kubeconfig --name myapp-prod --region us-east-1
 
 # Convert and deploy
-nself k8s convert
-nself k8s deploy --env production
+nself infra k8s convert
+nself infra k8s deploy --env production
 
 # Custom services deploy as K8s Deployments with:
 # - Auto-scaling (HPA)
@@ -103,10 +103,10 @@ nself k8s deploy --env production
 
 ```bash
 # Use Spot Instances for workers
-nself provider server create aws --spot --size large
+nself infra provider server create aws --spot --size large
 
 # Use ARM instances (Graviton2) - 20% cheaper
-nself provider server create aws --architecture arm64 --size medium
+nself infra provider server create aws --architecture arm64 --size medium
 
 # Reserved Instances for production
 # Save 30-40% with 1-year commitment
@@ -116,7 +116,7 @@ nself provider server create aws --architecture arm64 --size medium
 
 ```bash
 # EKS with Cluster Autoscaler
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 3 --max 20 \
   --cpu 70
 
@@ -157,20 +157,20 @@ aws elbv2 create-target-group \
 # Complete AWS production deployment
 
 # 1. Provision infrastructure
-nself provider server create aws \
+nself infra provider server create aws \
   --size large \
   --region us-east-1 \
   --high-availability \
   --backup-enabled
 
 # 2. Configure environment
-nself env create prod prod
+nself config env create prod prod
 
 # 3. Generate secrets
-nself secrets generate --env prod
+nself config secrets generate --env prod
 
 # 4. Deploy
-nself deploy prod
+nself deploy production
 
 # Services deployed:
 # - Core: PostgreSQL, Hasura, Auth, Nginx
@@ -196,10 +196,10 @@ nself deploy prod
 
 ```bash
 # Initialize GCP
-nself provider init gcp
+nself infra provider init gcp
 
 # Provision VM instance
-nself provider server create gcp --size medium --region us-central1
+nself infra provider server create gcp --size medium --region us-central1
 
 # Creates:
 # - e2-medium (2 vCPU, 4GB)
@@ -220,21 +220,21 @@ gcloud container clusters create myapp-prod \
 gcloud container clusters get-credentials myapp-prod --region us-central1
 
 # Deploy custom services
-nself k8s convert
-nself k8s deploy --env production
+nself infra k8s convert
+nself infra k8s deploy --env production
 ```
 
 #### Cost Optimization
 
 ```bash
 # Use preemptible VMs (80% cheaper)
-nself provider server create gcp --preemptible --size medium
+nself infra provider server create gcp --preemptible --size medium
 
 # Use committed use discounts
 # Save 37% with 1-year commitment
 
 # Use Google's free tier
-nself provider server create gcp --size micro  # Always free
+nself infra provider server create gcp --size micro  # Always free
 ```
 
 #### Auto-Scaling
@@ -246,7 +246,7 @@ gcloud container clusters create myapp-auto \
   --min-nodes=2 --max-nodes=10
 
 # Custom service auto-scaling
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 2 --max 15 \
   --cpu 70 --memory 80
 ```
@@ -285,10 +285,10 @@ nself k8s scale payment-api --auto \
 
 ```bash
 # Initialize Azure
-nself provider init azure
+nself infra provider init azure
 
 # Provision VM
-nself provider server create azure --size medium --region eastus
+nself infra provider server create azure --size medium --region eastus
 
 # Creates:
 # - Standard_B2s (2 vCPU, 4GB)
@@ -310,14 +310,14 @@ az aks create \
 az aks get-credentials --resource-group myapp-rg --name myapp-aks
 
 # Deploy
-nself k8s deploy --env production
+nself infra k8s deploy --env production
 ```
 
 #### Cost Optimization
 
 ```bash
 # Use Spot VMs
-nself provider server create azure --spot --size large
+nself infra provider server create azure --spot --size large
 
 # Use Azure reservations
 # Save 40% with 1-year commitment
@@ -351,10 +351,10 @@ az aks update \
 
 ```bash
 # Initialize Oracle Cloud
-nself provider init oracle
+nself infra provider init oracle
 
 # Provision FREE VM (amazing value)
-nself provider server create oracle --size free
+nself infra provider server create oracle --size free
 
 # This gives you:
 # - 2 AMD VMs (1GB each) OR 1 ARM VM (4 cores, 24GB)
@@ -367,10 +367,10 @@ nself provider server create oracle --size free
 
 ```bash
 # Use ARM VM for best free tier value
-nself provider server create oracle --size free --arm
+nself infra provider server create oracle --size free --arm
 
 # Deploy normally
-nself deploy prod
+nself deploy production
 
 # You get full nself stack + custom services for FREE:
 # - PostgreSQL, Hasura, Auth, Nginx
@@ -394,8 +394,8 @@ docker buildx build --platform linux/arm64 -t payment-api .
 
 ```bash
 # Paid instances
-nself provider server create oracle --size small  # ~$10/mo
-nself provider server create oracle --size medium # ~$30/mo
+nself infra provider server create oracle --size small  # ~$10/mo
+nself infra provider server create oracle --size medium # ~$30/mo
 ```
 
 ---
@@ -417,10 +417,10 @@ nself provider server create oracle --size medium # ~$30/mo
 
 ```bash
 # Initialize DigitalOcean
-nself provider init digitalocean
+nself infra provider init digitalocean
 
 # Provision droplet
-nself provider server create digitalocean --size medium --region nyc1
+nself infra provider server create digitalocean --size medium --region nyc1
 
 # Creates:
 # - 4GB RAM, 2 vCPU
@@ -433,7 +433,7 @@ nself provider server create digitalocean --size medium --region nyc1
 
 ```bash
 # Deploy via Docker Compose
-nself deploy prod
+nself deploy production
 
 # All custom services included:
 # - CS_1: payment-api
@@ -451,8 +451,8 @@ doctl kubernetes cluster create myapp-prod \
   --region nyc1
 
 # Deploy custom services
-nself k8s convert
-nself k8s deploy --env production
+nself infra k8s convert
+nself infra k8s deploy --env production
 
 # Custom services get:
 # - Load balancing (via LoadBalancer service)
@@ -465,7 +465,7 @@ nself k8s deploy --env production
 ```bash
 # Right-size your droplet
 # Start small, scale up as needed
-nself provider server create digitalocean --size small  # $6/mo
+nself infra provider server create digitalocean --size small  # $6/mo
 
 # Use snapshots for backup (cheaper than backups)
 doctl compute snapshot create --droplet-id <id>
@@ -484,18 +484,18 @@ doctl compute snapshot create --droplet-id <id>
 # Recommended production setup
 
 # 1. Provision droplet
-nself provider server create digitalocean \
+nself infra provider server create digitalocean \
   --size dedicated-cpu-2 \
   --region nyc1 \
   --vpc myapp-vpc \
   --tag production
 
 # 2. Setup
-nself env create prod prod
-nself secrets generate --env prod
+nself config env create prod prod
+nself config secrets generate --env prod
 
 # 3. Deploy
-nself deploy prod
+nself deploy production
 
 # Cost: ~$48/mo for 2 dedicated vCPU, 4GB RAM
 ```
@@ -517,10 +517,10 @@ nself deploy prod
 
 ```bash
 # Initialize Linode
-nself provider init linode
+nself infra provider init linode
 
 # Provision server
-nself provider server create linode --size medium --region us-east
+nself infra provider server create linode --size medium --region us-east
 
 # Creates:
 # - 4GB RAM, 2 vCPU
@@ -531,7 +531,7 @@ nself provider server create linode --size medium --region us-east
 #### Deploy Custom Services
 
 ```bash
-nself deploy prod
+nself deploy production
 # Custom services deploy normally via Docker Compose
 ```
 
@@ -545,7 +545,7 @@ linode-cli lke cluster-create \
   --k8s_version 1.28
 
 # Deploy
-nself k8s deploy --env production
+nself infra k8s deploy --env production
 ```
 
 ---
@@ -565,16 +565,16 @@ nself k8s deploy --env production
 
 ```bash
 # Initialize Vultr
-nself provider init vultr
+nself infra provider init vultr
 
 # Provision instance
-nself provider server create vultr --size medium --region ewr
+nself infra provider server create vultr --size medium --region ewr
 
 # High-frequency compute (better CPU)
-nself provider server create vultr --size high-frequency --region ewr
+nself infra provider server create vultr --size high-frequency --region ewr
 
 # Bare metal (dedicated hardware)
-nself provider server create vultr --bare-metal --size bm-small
+nself infra provider server create vultr --bare-metal --size bm-small
 ```
 
 #### Global Deployment
@@ -583,10 +583,10 @@ Vultr has 32+ locations worldwide:
 
 ```bash
 # Deploy to multiple regions
-nself provider server create vultr --size medium --region ewr  # Newark
-nself provider server create vultr --size medium --region lax  # Los Angeles
-nself provider server create vultr --size medium --region fra  # Frankfurt
-nself provider server create vultr --size medium --region sgp  # Singapore
+nself infra provider server create vultr --size medium --region ewr  # Newark
+nself infra provider server create vultr --size medium --region lax  # Los Angeles
+nself infra provider server create vultr --size medium --region fra  # Frankfurt
+nself infra provider server create vultr --size medium --region sgp  # Singapore
 
 # Setup geo-routing with CloudFlare or Route53
 ```
@@ -608,10 +608,10 @@ nself provider server create vultr --size medium --region sgp  # Singapore
 
 ```bash
 # Initialize Hetzner
-nself provider init hetzner
+nself infra provider init hetzner
 
 # Provision cloud server
-nself provider server create hetzner --size medium --region fsn1
+nself infra provider server create hetzner --size medium --region fsn1
 
 # Creates CX21:
 # - 2 vCPU
@@ -624,7 +624,7 @@ nself provider server create hetzner --size medium --region fsn1
 #### Deploy Custom Services
 
 ```bash
-nself deploy prod
+nself deploy production
 
 # Hetzner's value makes it perfect for:
 # - Multiple custom services
@@ -636,7 +636,7 @@ nself deploy prod
 
 ```bash
 # Best value production setup
-nself provider server create hetzner --size large --region fsn1
+nself infra provider server create hetzner --size large --region fsn1
 
 # CX31:
 # - 2 vCPU
@@ -656,7 +656,7 @@ nself provider server create hetzner --size large --region fsn1
 
 ```bash
 # Even better value for high-traffic apps
-nself provider server create hetzner --dedicated --size ax41-nvme
+nself infra provider server create hetzner --dedicated --size ax41-nvme
 
 # AX41-NVMe:
 # - AMD Ryzen 5 3600 (6 cores, 12 threads)
@@ -676,18 +676,18 @@ Deploy to multiple providers for redundancy:
 
 ```bash
 # Region 1: AWS US-East (primary)
-nself provider server create aws --region us-east-1
-nself env create prod-aws prod
+nself infra provider server create aws --region us-east-1
+nself config env create prod-aws prod
 nself deploy prod-aws
 
 # Region 2: GCP US-Central (secondary)
-nself provider server create gcp --region us-central1
-nself env create prod-gcp prod
+nself infra provider server create gcp --region us-central1
+nself config env create prod-gcp prod
 nself deploy prod-gcp
 
 # Region 3: Hetzner EU (tertiary)
-nself provider server create hetzner --region fsn1
-nself env create prod-eu prod
+nself infra provider server create hetzner --region fsn1
+nself config env create prod-eu prod
 nself deploy prod-eu
 ```
 
@@ -715,10 +715,10 @@ export default {
 
 ```bash
 # Primary: DigitalOcean
-nself deploy prod
+nself deploy production
 
 # Disaster Recovery: Vultr (standby)
-nself env create prod-dr prod
+nself config env create prod-dr prod
 nself deploy prod-dr
 
 # Automated failover with health checks
@@ -731,8 +731,8 @@ nself deploy prod-dr
 # Cloud: Custom services + APIs
 
 # Deploy custom services to cloud
-nself provider server create aws --size large
-CS_1=payment-api:express-ts:8001 nself deploy prod
+nself infra provider server create aws --size large
+CS_1=payment-api:express-ts:8001 nself deploy production
 
 # Connect to on-prem database
 POSTGRES_HOST=on-prem.example.com
@@ -771,13 +771,13 @@ Start small, scale up as needed:
 
 ```bash
 # Start with small instance
-nself provider server create hetzner --size small  # 2GB RAM, $3.50/mo
+nself infra provider server create hetzner --size small  # 2GB RAM, $3.50/mo
 
 # Monitor resource usage
 nself metrics
 
 # Scale up when needed
-nself provider server create hetzner --size medium  # 4GB RAM, $6.20/mo
+nself infra provider server create hetzner --size medium  # 4GB RAM, $6.20/mo
 ```
 
 #### 2. Spot/Preemptible Instances
@@ -786,10 +786,10 @@ Save 60-80% for fault-tolerant workloads:
 
 ```bash
 # AWS Spot
-nself provider server create aws --spot --size large
+nself infra provider server create aws --spot --size large
 
 # GCP Preemptible
-nself provider server create gcp --preemptible --size large
+nself infra provider server create gcp --preemptible --size large
 
 # Good for:
 # - Background workers
@@ -815,10 +815,10 @@ Save 20% with ARM instances:
 
 ```bash
 # AWS Graviton2
-nself provider server create aws --architecture arm64
+nself infra provider server create aws --architecture arm64
 
 # Oracle Always Free ARM (4 cores, 24GB!)
-nself provider server create oracle --size free --arm
+nself infra provider server create oracle --size free --arm
 
 # Build multi-arch images
 docker buildx build --platform linux/amd64,linux/arm64 -t payment-api .
@@ -835,7 +835,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t payment-api .
 
 ```bash
 # Use object storage for files (cheaper than block storage)
-MINIO_ENABLED=true nself deploy prod
+MINIO_ENABLED=true nself deploy production
 
 # Or use provider object storage
 # - AWS S3
@@ -872,17 +872,17 @@ Full horizontal pod autoscaling:
 
 ```bash
 # Scale based on CPU
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 2 --max 10 \
   --cpu 70
 
 # Scale based on memory
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 2 --max 10 \
   --memory 80
 
 # Scale based on custom metrics
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 2 --max 10 \
   --custom 'http_requests_per_second>100'
 ```
@@ -1037,18 +1037,18 @@ doctl compute load-balancer create \
 # Complete AWS production deployment with custom services
 
 # 1. Initialize AWS
-nself provider init aws
+nself infra provider init aws
 export AWS_REGION=us-east-1
 
 # 2. Provision infrastructure
-nself provider server create aws \
+nself infra provider server create aws \
   --size large \
   --region $AWS_REGION \
   --high-availability \
   --multi-az
 
 # 3. Setup environment
-nself env create prod prod
+nself config env create prod prod
 
 # 4. Configure custom services
 cat > .environments/prod/.env <<EOF
@@ -1069,7 +1069,7 @@ MINIO_ENABLED=true
 EOF
 
 # 5. Generate secrets
-nself secrets generate --env prod
+nself config secrets generate --env prod
 
 # 6. Add custom secrets
 cat >> .environments/prod/.env.secrets <<EOF
@@ -1082,13 +1082,13 @@ EOF
 chmod 600 .environments/prod/.env.secrets
 
 # 7. Deploy
-nself deploy prod
+nself deploy production
 
 # 8. Configure DNS
 # Point *.example.com to server IP
 
 # 9. Setup SSL
-nself ssl bootstrap --env prod
+nself auth ssl bootstrap --env prod
 
 # 10. Verify
 nself deploy health --env prod
@@ -1113,10 +1113,10 @@ echo "  - SSL: Let's Encrypt configured"
 # Total cost: ~$13/mo for full stack + custom services
 
 # 1. Initialize Hetzner
-nself provider init hetzner
+nself infra provider init hetzner
 
 # 2. Provision server (best value)
-nself provider server create hetzner \
+nself infra provider server create hetzner \
   --size large \
   --region fsn1 \
   --backups
@@ -1125,7 +1125,7 @@ nself provider server create hetzner \
 # Cost: €11.90/mo (~$12.70)
 
 # 3. Setup
-nself env create prod prod
+nself config env create prod prod
 
 # 4. Configure (enable everything, we have resources)
 cat > .environments/prod/.env <<EOF
@@ -1147,11 +1147,11 @@ MEILISEARCH_ENABLED=true
 EOF
 
 # 5. Deploy
-nself secrets generate --env prod
-nself deploy prod
+nself config secrets generate --env prod
+nself deploy production
 
 # 6. SSL
-nself ssl bootstrap --env prod
+nself auth ssl bootstrap --env prod
 
 echo "✓ Hetzner budget setup complete"
 echo "  - Total cost: ~$13/mo"
@@ -1167,10 +1167,10 @@ echo "  - Bandwidth: 20TB included"
 # Cost: $0/mo forever
 
 # 1. Initialize Oracle Cloud
-nself provider init oracle
+nself infra provider init oracle
 
 # 2. Provision FREE ARM instance
-nself provider server create oracle --size free --arm
+nself infra provider server create oracle --size free --arm
 
 # This gives you:
 # - 4 ARM cores (Ampere Altra)
@@ -1180,7 +1180,7 @@ nself provider server create oracle --size free --arm
 # - FOREVER FREE
 
 # 3. Setup
-nself env create prod prod
+nself config env create prod prod
 
 # 4. Configure (be generous, it's free)
 cat > .environments/prod/.env <<EOF
@@ -1203,8 +1203,8 @@ docker buildx create --use
 docker buildx build --platform linux/arm64 -t myapp_api services/api
 
 # 6. Deploy
-nself secrets generate --env prod
-nself deploy prod
+nself config secrets generate --env prod
+nself deploy production
 
 echo "✓ Oracle free tier setup complete"
 echo "  - Cost: $0/mo FOREVER"

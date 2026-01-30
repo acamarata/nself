@@ -1,4 +1,6 @@
-# nself migrate - Cross-Environment Migration
+# nself perf migrate - Cross-Environment Migration
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself migrate` in v0.x. It has been consolidated to `nself perf migrate` in v1.0. The old command name may still work as an alias.
 
 **Version 0.4.6** | Environment migration and synchronization
 
@@ -6,15 +8,15 @@
 
 ## Overview
 
-The `nself migrate` command handles cross-environment migration, allowing you to migrate schema, data, and configuration between local, staging, and production environments.
+The `nself perf migrate` command handles cross-environment migration, allowing you to migrate schema, data, and configuration between local, staging, and production environments.
 
 ---
 
 ## Usage
 
 ```bash
-nself migrate <source> <target> [options]
-nself migrate <subcommand> [options]
+nself perf migrate <source> <target> [options]
+nself perf migrate <subcommand> [options]
 ```
 
 ---
@@ -26,8 +28,8 @@ nself migrate <subcommand> [options]
 Migrate from source to target environment.
 
 ```bash
-nself migrate local staging      # Migrate local to staging
-nself migrate staging prod       # Migrate staging to production
+nself perf migrate local staging      # Migrate local to staging
+nself perf migrate staging prod       # Migrate staging to production
 ```
 
 ### `diff <source> <target>`
@@ -35,8 +37,8 @@ nself migrate staging prod       # Migrate staging to production
 Show differences between environments.
 
 ```bash
-nself migrate diff local staging    # Compare local vs staging
-nself migrate diff staging prod     # Compare staging vs prod
+nself perf migrate diff local staging    # Compare local vs staging
+nself perf migrate diff staging prod     # Compare staging vs prod
 ```
 
 ### `sync <source> <target>`
@@ -44,8 +46,8 @@ nself migrate diff staging prod     # Compare staging vs prod
 Keep environments continuously in sync.
 
 ```bash
-nself migrate sync staging prod          # One-time sync
-nself migrate sync staging prod --watch  # Continuous sync
+nself perf migrate sync staging prod          # One-time sync
+nself perf migrate sync staging prod --watch  # Continuous sync
 ```
 
 ### `rollback`
@@ -53,7 +55,7 @@ nself migrate sync staging prod --watch  # Continuous sync
 Rollback the last migration.
 
 ```bash
-nself migrate rollback           # Undo last migration
+nself perf migrate rollback           # Undo last migration
 ```
 
 ---
@@ -89,19 +91,19 @@ nself migrate rollback           # Undo last migration
 
 ```bash
 # Preview migration without changes
-nself migrate local staging --dry-run
+nself perf migrate local staging --dry-run
 
 # Migrate only schema
-nself migrate staging prod --schema-only
+nself perf migrate staging prod --schema-only
 
 # Compare environments
-nself migrate diff staging prod
+nself perf migrate diff staging prod
 
 # Continuous sync (Ctrl+C to stop)
-nself migrate sync staging prod --watch
+nself perf migrate sync staging prod --watch
 
 # Rollback last migration
-nself migrate rollback
+nself perf migrate rollback
 ```
 
 ---
@@ -142,7 +144,7 @@ Each migration creates a checkpoint in `.nself/migrations/`. Checkpoints allow y
 ls .nself/migrations/
 
 # Rollback using checkpoint
-nself migrate rollback
+nself perf migrate rollback
 ```
 
 ---
@@ -158,8 +160,8 @@ When migrating to production:
 
 ```bash
 # Safe production migration workflow
-nself migrate staging prod --dry-run    # Preview
-nself migrate staging prod              # Execute with confirmation
+nself perf migrate staging prod --dry-run    # Preview
+nself perf migrate staging prod              # Execute with confirmation
 ```
 
 ---

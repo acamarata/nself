@@ -1,4 +1,6 @@
-# nself bench - Benchmarking
+# nself perf bench - Benchmarking
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself bench` in v0.x. It has been consolidated to `nself perf bench` in v1.0. The old command name may still work as an alias.
 
 **Version 0.4.6** | Performance benchmarking and load testing
 
@@ -6,14 +8,14 @@
 
 ## Overview
 
-The `nself bench` command provides performance benchmarking and load testing capabilities. Run benchmarks against your API, database, and other services to measure performance and establish baselines.
+The `nself perf bench` command provides performance benchmarking and load testing capabilities. Run benchmarks against your API, database, and other services to measure performance and establish baselines.
 
 ---
 
 ## Usage
 
 ```bash
-nself bench <subcommand> [options]
+nself perf bench <subcommand> [options]
 ```
 
 ---
@@ -25,11 +27,11 @@ nself bench <subcommand> [options]
 Run benchmark against a target.
 
 ```bash
-nself bench run api             # Benchmark GraphQL API
-nself bench run auth            # Benchmark auth service
-nself bench run db              # Benchmark database
-nself bench run functions       # Benchmark serverless functions
-nself bench run custom <url>    # Custom endpoint
+nself perf bench run api             # Benchmark GraphQL API
+nself perf bench run auth            # Benchmark auth service
+nself perf bench run db              # Benchmark database
+nself perf bench run functions       # Benchmark serverless functions
+nself perf bench run custom <url>    # Custom endpoint
 ```
 
 ### `baseline`
@@ -37,7 +39,7 @@ nself bench run custom <url>    # Custom endpoint
 Establish a performance baseline for future comparisons.
 
 ```bash
-nself bench baseline           # Create baseline
+nself perf bench baseline           # Create baseline
 ```
 
 The baseline is saved to `.nself/benchmarks/baseline_latest.json`.
@@ -47,8 +49,8 @@ The baseline is saved to `.nself/benchmarks/baseline_latest.json`.
 Compare current performance against a baseline.
 
 ```bash
-nself bench compare                    # Compare to latest baseline
-nself bench compare baseline.json      # Compare to specific file
+nself perf bench compare                    # Compare to latest baseline
+nself perf bench compare baseline.json      # Compare to specific file
 ```
 
 ### `stress [target]`
@@ -56,8 +58,8 @@ nself bench compare baseline.json      # Compare to specific file
 Run stress test with high load.
 
 ```bash
-nself bench stress api              # Stress test API
-nself bench stress api --duration 120  # 2 minute stress test
+nself perf bench stress api              # Stress test API
+nself perf bench stress api --duration 120  # 2 minute stress test
 ```
 
 **Warning:** Stress tests can impact system performance.
@@ -67,8 +69,8 @@ nself bench stress api --duration 120  # 2 minute stress test
 Generate benchmark report.
 
 ```bash
-nself bench report              # Show recent benchmarks
-nself bench report --json       # JSON output
+nself perf bench report              # Show recent benchmarks
+nself perf bench report --json       # JSON output
 ```
 
 ---
@@ -105,29 +107,29 @@ nself bench report --json       # JSON output
 
 ```bash
 # Quick API benchmark
-nself bench run api
+nself perf bench run api
 
 # Thorough benchmark with more requests
-nself bench run api --requests 5000 --concurrency 50
+nself perf bench run api --requests 5000 --concurrency 50
 
 # Establish baseline
-nself bench baseline
+nself perf bench baseline
 
 # Compare against baseline
-nself bench compare
+nself perf bench compare
 
 # Stress test for 60 seconds
-nself bench stress api --duration 60 --force
+nself perf bench stress api --duration 60 --force
 
 # Export benchmark report
-nself bench report --json > benchmarks.json
+nself perf bench report --json > benchmarks.json
 ```
 
 ---
 
 ## Benchmark Tools
 
-nself bench uses available tools in order of preference:
+nself perf bench uses available tools in order of preference:
 
 1. **wrk** - High-performance HTTP benchmarking tool
 2. **hey** - HTTP load generator

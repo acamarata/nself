@@ -338,7 +338,7 @@ jobs:
 
       - name: Run health checks
         run: |
-          nself deploy health --env staging
+          nself health --env staging
 
       - name: Run smoke tests
         run: |
@@ -421,7 +421,7 @@ jobs:
 
       - name: Validate configuration
         run: |
-          nself validate prod --strict
+          nself config validate prod --strict
 
       - name: Build nself configuration
         run: nself build
@@ -437,7 +437,7 @@ jobs:
       - name: Deploy to production (Blue-Green)
         run: |
           # Deploy to green environment
-          nself deploy prod --rolling
+          nself deploy production --rolling
 
       - name: Post-deployment health checks
         run: |
@@ -445,7 +445,7 @@ jobs:
           sleep 120
 
           # Comprehensive health checks
-          nself deploy health --env prod
+          nself health --env prod
 
       - name: Verify custom services
         run: |
@@ -521,12 +521,12 @@ jobs:
 
       - name: Rollback deployment
         run: |
-          nself deploy rollback --env prod
+          nself backup rollback --env prod
 
       - name: Verify rollback
         run: |
           sleep 60
-          nself deploy health --env prod
+          nself health --env prod
 
       - name: Restore from backup
         if: failure()

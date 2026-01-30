@@ -558,7 +558,7 @@ nself service scaffold compute --template ray --port 8265
 
 **Features:**
 - OpenAI API integration
-- Anthropic Claude integration
+- LLM provider integration
 - Streaming responses
 - RAG (Retrieval Augmented Generation)
 - Function calling
@@ -579,7 +579,7 @@ nself service scaffold ai --template agent-llm --port 8001
 
 **Dependencies:**
 - openai ^1.3.0
-- anthropic ^0.7.0
+- llm-providers ^0.7.0
 - langchain ^0.0.340
 - chromadb ^0.4.0
 

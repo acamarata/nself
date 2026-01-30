@@ -126,8 +126,8 @@ jobs:
           cd /tmp
           $HOME/.local/nself/bin/nself version
           $HOME/.local/nself/bin/nself help
-          $HOME/.local/nself/bin/nself email list
-          $HOME/.local/nself/bin/nself ssl help
+          $HOME/.local/nself/bin/nself service email list
+          $HOME/.local/nself/bin/nself auth ssl help
           $HOME/.local/nself/bin/nself backup help
           # Skip admin help - requires Docker/PostgreSQL running
           echo "ℹ️  Skipping admin help test (requires Docker)"
@@ -162,7 +162,7 @@ jobs:
         run: |
           cd /tmp/test-project
           # Validate should check configuration
-          $HOME/.local/nself/bin/nself validate || true
+          $HOME/.local/nself/bin/nself config validate || true
           
   portability-check:
     name: Portability & Compatibility Check

@@ -1,10 +1,10 @@
 class Nself < Formula
-  desc "ɳSelf v0.9.5: Feature Parity & Security Hardening - Production-ready platform with OAuth flows, realtime commands, security fixes & complete documentation"
+  desc "ɳSelf v0.9.6: Command Consolidation - Streamlined CLI from 79 to 31 commands with improved hierarchy and documentation"
   homepage "https://nself.org"
-  url "https://github.com/acamarata/nself/archive/refs/tags/v0.9.5.tar.gz"
+  url "https://github.com/acamarata/nself/archive/refs/tags/v0.9.6.tar.gz"
   sha256 "PLACEHOLDER_SHA256"
   license "Source-Available"
-  version "0.9.5"
+  version "0.9.6"
 
   depends_on "docker"
   depends_on "docker-compose"

@@ -1,4 +1,8 @@
-# nself scale - Resource Scaling
+# nself perf scale - Resource Scaling
+
+> **⚠️ DEPRECATED in v0.9.6**: This command has been consolidated.
+> Please use `nself perf scale` instead.
+> See [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) and [v0.9.6 Release Notes](../releases/v0.9.6.md) for details.
 
 **Version 0.4.7** | Service resource scaling and auto-scaling
 
@@ -6,15 +10,15 @@
 
 ## Overview
 
-The `nself scale` command manages resource allocation and scaling for services. Set CPU limits, memory limits, replicas, and configure auto-scaling based on load.
+The `nself perf scale` command manages resource allocation and scaling for services. Set CPU limits, memory limits, replicas, and configure auto-scaling based on load.
 
 ---
 
 ## Usage
 
 ```bash
-nself scale [options] <service> [replicas]
-nself scale --list
+nself perf scale [options] <service> [replicas]
+nself perf scale --list
 ```
 
 ---
@@ -56,7 +60,7 @@ The following services can be scaled:
 ### List Current Allocations
 
 ```bash
-nself scale --list
+nself perf scale --list
 ```
 
 Shows a table of all services with their CPU limits, memory limits, and current usage.
@@ -65,36 +69,36 @@ Shows a table of all services with their CPU limits, memory limits, and current 
 
 ```bash
 # Set PostgreSQL to 4GB memory and 2 CPUs
-nself scale postgres --memory 4G --cpu 2
+nself perf scale postgres --memory 4G --cpu 2
 
 # Increase Hasura memory
-nself scale hasura --memory 2G
+nself perf scale hasura --memory 2G
 
 # Set Redis CPU limit
-nself scale redis --cpu 0.5
+nself perf scale redis --cpu 0.5
 ```
 
 ### Horizontal Scaling
 
 ```bash
 # Scale Hasura to 3 replicas
-nself scale hasura --replicas 3
+nself perf scale hasura --replicas 3
 
 # Scale nginx to 2 replicas
-nself scale nginx --replicas 2
+nself perf scale nginx --replicas 2
 ```
 
 ### Auto-Scaling
 
 ```bash
 # Enable auto-scaling for nginx (defaults: min=1, max=10, cpu-target=70%)
-nself scale nginx --auto
+nself perf scale nginx --auto
 
 # Configure auto-scaling with limits
-nself scale hasura --auto --min 2 --max 10 --cpu-target 80
+nself perf scale hasura --auto --min 2 --max 10 --cpu-target 80
 
 # Scale between 1 and 5 replicas based on 60% CPU
-nself scale functions --auto --min 1 --max 5 --cpu-target 60
+nself perf scale functions --auto --min 1 --max 5 --cpu-target 60
 ```
 
 ---
@@ -171,7 +175,7 @@ free -h
 
 ```bash
 # Increase memory limit
-nself scale <service> --memory 2G
+nself perf scale <service> --memory 2G
 
 # Check host memory
 free -h
@@ -182,7 +186,7 @@ docker stats
 
 ```bash
 # Increase CPU limit
-nself scale <service> --cpu 2
+nself perf scale <service> --cpu 2
 
 # Check CPU stats
 docker stats --no-stream

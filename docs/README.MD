@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](releases/v0.9.0.md)
+[![Version](https://img.shields.io/badge/version-0.9.6-blue.svg)](releases/v0.9.6.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
@@ -14,12 +14,16 @@
 
 ---
 
+> **🔄 v0.9.6 Command Update:** Commands have been consolidated into a v1.0 structure. Old commands like `nself billing`, `nself org`, `nself staging` still work but are now organized under logical groupings: `nself tenant billing`, `nself tenant org`, `nself deploy staging`. See [Command Consolidation Map](architecture/COMMAND-CONSOLIDATION-MAP.md) for the complete reference.
+
+---
+
 ## Quick Navigation
 
 | I want to... | Go to... |
 |-------------|----------|
-| Get started in 5 minutes | [Quick Start Guide](guides/Quick-Start.md) |
-| Install nself | [Installation](guides/Installation.md) |
+| Get started in 5 minutes | [Quick Start Guide](getting-started/Quick-Start.md) |
+| Install nself | [Installation](getting-started/Installation.md) |
 | Understand core concepts | [Architecture](architecture/ARCHITECTURE.md) |
 | Look up a command | [Command Reference](commands/COMMANDS.md) |
 | Configure my setup | [Configuration Guide](configuration/README.md) |
@@ -111,11 +115,12 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 **Start here if you're new to ɳSelf**
 
-- **[Quick Start](guides/Quick-Start.md)** - Get running in 5 minutes
-- **[Installation](guides/Installation.md)** - Detailed installation guide
+- **[Getting Started Guide](getting-started/README.md)** - Complete getting started guide
+- **[Quick Start](getting-started/Quick-Start.md)** - Get running in 5 minutes
+- **[Installation](getting-started/Installation.md)** - Detailed installation guide
+- **[FAQ](getting-started/FAQ.md)** - Frequently asked questions
 - **[Database Workflow](guides/DATABASE-WORKFLOW.md)** - DBML to production in one command
 - **[Demo Setup](services/DEMO_SETUP.md)** - Full demo with 25 services
-- **[FAQ](guides/FAQ.md)** - Frequently asked questions
 
 ### Core Concepts
 
@@ -136,7 +141,7 @@ nself db schema apply schema.dbml # Import → migrate → seed
 - **[Deployment Commands](commands/DEPLOY.md)** - SSH deployment, environments
 - **[Performance Commands](commands/PERF.md)** - Profiling and benchmarking
 - **[Plugin Commands](commands/PLUGIN.md)** - Plugin management
-- **[Quick Reference](COMMAND-REFERENCE.md)** - Printable cheat sheet
+- **[Quick Reference](reference/COMMAND-REFERENCE.md)** - Printable cheat sheet
 
 ### Configuration
 
@@ -196,9 +201,11 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 **GraphQL and REST APIs**
 
-- **[API Overview](api/README.md)** - API documentation
+- **[API Overview](reference/api/README.md)** - API documentation
 - **[GraphQL API](architecture/API.md)** - Hasura GraphQL reference
-- **[Authentication API](api/AUTH-API.md)** - Auth endpoints
+- **[Billing API](reference/api/BILLING-API.md)** - Billing endpoints
+- **[OAuth API](reference/api/OAUTH-API.md)** - OAuth endpoints
+- **[White-Label API](reference/api/WHITE-LABEL-API.md)** - White-label endpoints
 
 ### Troubleshooting
 
@@ -220,9 +227,23 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 ---
 
-## What's New in v0.9.0
+## What's New
 
-### Multi-Tenant Platform
+### v0.9.6 - Command Consolidation (v1.0 Structure)
+
+**Major Update:** Commands consolidated from 79 → 31 top-level commands for better organization:
+
+- `nself billing` → `nself tenant billing`
+- `nself org` → `nself tenant org`
+- `nself staging` → `nself deploy staging`
+- `nself prod` → `nself deploy production`
+- `nself storage` → `nself service storage`
+- `nself oauth` → `nself auth oauth`
+- And 40+ more command mappings
+
+**[View Complete Consolidation Map](architecture/COMMAND-CONSOLIDATION-MAP.md)**
+
+### v0.9.0 - Multi-Tenant Platform
 
 Complete multi-tenancy with billing, white-labeling, and tenant isolation:
 
@@ -233,9 +254,12 @@ nself tenant init
 # Create tenant
 nself tenant create "Acme Corp" --slug acme --plan pro
 
-# Billing management
+# Billing management (v0.9.6: was "nself billing")
 nself tenant billing usage
 nself tenant billing subscription upgrade pro
+
+# Organization management (v0.9.6: was "nself org")
+nself tenant org list
 
 # Custom domains and SSL
 nself tenant domains add app.example.com
@@ -247,7 +271,7 @@ nself tenant branding set-colors --primary #0066cc
 
 ### OAuth Management
 
-Comprehensive OAuth provider integration:
+Comprehensive OAuth provider integration (v0.9.6: now under `nself auth oauth`):
 
 ```bash
 # Enable multiple providers
@@ -395,9 +419,10 @@ nself has been thoroughly audited for security vulnerabilities. The codebase is 
 
 We welcome contributions! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
 
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
+- **[Contributing Guide](contributing/CONTRIBUTING.md)** - How to contribute
 - **[Development Setup](contributing/DEVELOPMENT.md)** - Dev environment
 - **[Cross-Platform Compatibility](contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Bash 3.2+ requirements
+- **[CLI Output Library](contributing/CLI-OUTPUT-LIBRARY.md)** - Output formatting standards
 
 ---
 

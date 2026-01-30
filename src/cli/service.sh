@@ -1,20 +1,207 @@
 #!/usr/bin/env bash
-# service.sh - Unified optional service management
-# Part of nself v0.4.7 - Infrastructure Everywhere
-# Consolidates: email, search, functions, mlflow, admin commands
+# service.sh - Consolidated service management
+# Part of nself v1.0 - Service Command Consolidation
+# Consolidates: storage, email, search, redis, functions, mlflow, realtime, admin
+# Total: 43+ subcommands across 8 service categories
+
+# Early help check - before sourcing anything that might fail
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "help" ]] || [[ $# -eq 0 ]]; then
+  cat << 'EOF'
+nself service - Consolidated Service Management (43+ subcommands)
+
+USAGE:
+  nself service <subcommand> [options]
+
+CORE OPERATIONS:
+  list              List all optional services and their status
+  enable <name>     Enable an optional service
+  disable <name>    Disable an optional service
+  status [name]     Show status of all or specific service
+  restart <name>    Restart a service
+  logs <name> [-f]  View service logs
+  init <name>       Initialize a service
+
+CODE GENERATION (4):
+  scaffold <name> --template <type> --port <port>
+                    Scaffold a custom service from template
+  list-templates    List all available service templates
+  template-info     Show detailed information about a template
+  wizard            Interactive service creation wizard
+
+ADMIN SERVICE (consolidated from admin, admin-dev):
+  admin [--dev]              Open admin UI
+  admin dev enable [port]    Enable dev mode (route to localhost)
+  admin dev disable          Disable dev mode (use Docker container)
+  admin dev env              Show env vars for local development
+  admin dev status           Show current dev mode status
+  admin stats                Get overview statistics
+  admin users [limit]        List users
+  admin activity [hours]     Recent activity
+  admin security             Security events
+
+STORAGE SERVICE (consolidated from storage):
+  storage init               Initialize storage system
+  storage upload <file>      Upload a file to storage
+  storage list [prefix]      List uploaded files
+  storage delete <path>      Delete an uploaded file
+  storage config             Configure upload pipeline
+  storage status             Show pipeline status
+  storage test               Test upload functionality
+  storage graphql-setup      Generate GraphQL integration package
+
+EMAIL SERVICE (consolidated from email):
+  email setup                Interactive email setup wizard
+  email list                 List all email providers
+  email configure <provider> Configure SMTP provider
+  email configure --api <p>  Configure API provider
+  email validate             Check email configuration
+  email check                SMTP connection pre-flight
+  email check --api          API connection pre-flight
+  email test [email]         Send test email (SMTP)
+  email test --api [email]   Send test email (API)
+  email docs [provider]      Get setup instructions
+  email detect               Show current provider
+
+SEARCH SERVICE (consolidated from search):
+  search enable [engine]     Enable search with selected engine
+  search disable             Disable search service
+  search status              Show search service status
+  search list                List available search engines
+  search setup               Interactive search setup
+  search test ["query"]      Test search functionality
+  search reindex             Rebuild search index
+  search config              Show current configuration
+  search docs [engine]       Show search documentation
+
+REDIS SERVICE (consolidated from redis):
+  redis init                 Initialize Redis configuration
+  redis add --name <name>    Add Redis connection
+  redis list                 List all connections
+  redis get <name>           Get connection details
+  redis delete <name>        Delete connection
+  redis test <name>          Test connection
+  redis health [name]        Get health status
+  redis pool configure       Configure connection pool
+  redis pool get <name>      Get pool configuration
+
+FUNCTIONS SERVICE (consolidated from functions):
+  functions status           Show functions service status
+  functions init [--ts]      Initialize functions service
+  functions enable           Enable functions service
+  functions disable          Disable functions service
+  functions list             List available functions
+  functions create <name>    Create a new function
+  functions delete <name>    Delete a function
+  functions test <name>      Test a function
+  functions logs [-f]        View function logs
+  functions deploy [target]  Deploy functions
+
+MLFLOW SERVICE (consolidated from mlflow):
+  mlflow status              Show MLflow status
+  mlflow enable              Enable MLflow service
+  mlflow disable             Disable MLflow service
+  mlflow open                Open MLflow UI in browser
+  mlflow configure <s> <v>   Configure MLflow settings
+  mlflow experiments         List/manage experiments
+  mlflow runs [exp_id]       List runs
+  mlflow logs [-f]           View MLflow logs
+  mlflow test                Test MLflow connection
+
+REALTIME SERVICE (consolidated from realtime):
+  realtime init              Initialize real-time system
+  realtime status            Show real-time system status
+  realtime logs [--follow]   Show real-time logs
+  realtime cleanup           Clean up stale connections
+  realtime subscribe <tbl>   Subscribe to table changes
+  realtime unsubscribe <t>   Unsubscribe from table changes
+  realtime listen <tbl>      Listen to table changes
+  realtime subscriptions     List active subscriptions
+  realtime channel create    Create a channel
+  realtime channel list      List channels
+  realtime broadcast         Send message to channel
+  realtime presence track    Track user presence
+  realtime presence online   List online users
+  realtime connections       Show active connections
+
+EXAMPLES:
+  # Core operations
+  nself service list                        # List all services
+  nself service enable search               # Enable search service
+
+  # Admin
+  nself service admin dev enable 3000       # Enable admin dev mode
+  nself service admin stats                 # Get stats
+
+  # Storage
+  nself service storage upload photo.jpg    # Upload file
+  nself service storage list                # List files
+
+  # Email
+  nself service email configure sendgrid    # Configure email
+  nself service email test --api admin@x.com
+
+  # Search
+  nself service search enable meilisearch   # Enable search
+  nself service search test "hello world"   # Test search
+
+  # Functions
+  nself service functions create hello      # Create function
+  nself service functions deploy            # Deploy
+
+  # MLflow
+  nself service mlflow enable               # Enable MLflow
+  nself service mlflow experiments          # List experiments
+
+  # Realtime
+  nself service realtime init               # Initialize
+  nself service realtime subscribe users    # Subscribe to table
+
+OPTIONS:
+  -h, --help        Show this help message
+  --follow, -f      Follow logs (for logs commands)
+  --tail <n>        Show last n lines (for logs commands)
+
+See individual command help for more options.
+EOF
+  exit 0
+fi
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source shared utilities (same pattern as email.sh and other CLI files)
+# Source shared utilities
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/utils/docker.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 
 # Source service init utilities
 source "$SCRIPT_DIR/../lib/service-init/templates-metadata.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/service-init/scaffold.sh" 2>/dev/null || true
+
+# Source storage utilities
+source "$SCRIPT_DIR/../lib/storage/upload-pipeline.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/storage/graphql-integration.sh" 2>/dev/null || true
+
+# Source realtime utilities
+source "$SCRIPT_DIR/../lib/realtime/channels.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/realtime/presence.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/realtime/broadcast.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/realtime/subscriptions.sh" 2>/dev/null || true
+
+# Source Redis utilities
+[[ -f "$SCRIPT_DIR/../lib/redis/core.sh" ]] && source "$SCRIPT_DIR/../lib/redis/core.sh" || true
+
+# Source admin utilities
+[[ -f "$SCRIPT_DIR/../lib/admin/api.sh" ]] && source "$SCRIPT_DIR/../lib/admin/api.sh" || true
+
+# Compatibility aliases for storage commands
+output_info() { log_info "$@"; }
+output_success() { log_success "$@"; }
+output_error() { log_error "$@"; }
+output_warning() { log_warning "$@"; }
 
 # Ensure color variables are defined
 COLOR_RESET=${COLOR_RESET:-$'\033[0m'}
@@ -28,91 +215,161 @@ COLOR_BOLD=${COLOR_BOLD:-$'\033[1m'}
 
 show_service_help() {
   cat << 'EOF'
-nself service - Optional Service Management
+nself service - Consolidated Service Management (43+ subcommands)
 
 USAGE:
   nself service <subcommand> [options]
 
-SUBCOMMANDS:
+CORE OPERATIONS:
   list              List all optional services and their status
-  enable            Enable an optional service
-  disable           Disable an optional service
-  status            Show status of all or specific service
-  restart           Restart a service
-  logs              View service logs
-  init              Initialize a service (scaffold from template)
+  enable <name>     Enable an optional service
+  disable <name>    Disable an optional service
+  status [name]     Show status of all or specific service
+  restart <name>    Restart a service
+  logs <name> [-f]  View service logs
+  init <name>       Initialize a service
 
-CODE GENERATION:
-  scaffold          Scaffold a custom service from template
+CODE GENERATION (4):
+  scaffold <name> --template <type> --port <port>
+                    Scaffold a custom service from template
   list-templates    List all available service templates
   template-info     Show detailed information about a template
   wizard            Interactive service creation wizard
 
-SERVICE COMMANDS:
-  email             Email service management (MailPit, SMTP)
-    test            Send test email
-    inbox           Open mail inbox (dev)
-    config          Show/set email configuration
+ADMIN SERVICE (consolidated from admin, admin-dev):
+  admin [--dev]              Open admin UI
+  admin dev enable [port]    Enable dev mode (route to localhost)
+  admin dev disable          Disable dev mode (use Docker container)
+  admin dev env              Show env vars for local development
+  admin dev status           Show current dev mode status
+  admin stats                Get overview statistics
+  admin users [limit]        List users
+  admin activity [hours]     Recent activity
+  admin security             Security events
 
-  search            Search service management (MeiliSearch, Typesense)
-    index           Manage search indexes
-    query           Run search query
-    stats           Show search statistics
+STORAGE SERVICE (consolidated from storage):
+  storage init               Initialize storage system
+  storage upload <file>      Upload a file to storage
+  storage list [prefix]      List uploaded files
+  storage delete <path>      Delete an uploaded file
+  storage config             Configure upload pipeline
+  storage status             Show pipeline status
+  storage test               Test upload functionality
+  storage graphql-setup      Generate GraphQL integration package
 
-  functions         Serverless functions management
-    deploy          Deploy functions
-    invoke          Invoke a function
-    logs            View function logs
-    list            List deployed functions
+EMAIL SERVICE (consolidated from email):
+  email setup                Interactive email setup wizard
+  email list                 List all email providers
+  email configure <provider> Configure SMTP provider
+  email configure --api <p>  Configure API provider
+  email validate             Check email configuration
+  email check                SMTP connection pre-flight
+  email check --api          API connection pre-flight
+  email test [email]         Send test email (SMTP)
+  email test --api [email]   Send test email (API)
+  email docs [provider]      Get setup instructions
+  email detect               Show current provider
 
-  mlflow            MLflow experiment tracking
-    ui              Open MLflow UI
-    experiments     List experiments
-    runs            List runs for experiment
-    artifacts       Manage artifacts
+SEARCH SERVICE (consolidated from search):
+  search enable [engine]     Enable search with selected engine
+  search disable             Disable search service
+  search status              Show search service status
+  search list                List available search engines
+  search setup               Interactive search setup
+  search test ["query"]      Test search functionality
+  search reindex             Rebuild search index
+  search config              Show current configuration
+  search docs [engine]       Show search documentation
 
-  admin             nself Admin UI management
-    open            Open admin UI
-    users           Manage admin users
-    config          Show/set admin configuration
-    dev             Development mode (local server instead of Docker)
-      enable        Enable dev mode (route to localhost)
-      disable       Disable dev mode (use Docker container)
-      env           Show env vars for local development
-      status        Show current dev mode status
+REDIS SERVICE (consolidated from redis):
+  redis init                 Initialize Redis configuration
+  redis add --name <name>    Add Redis connection
+  redis list                 List all connections
+  redis get <name>           Get connection details
+  redis delete <name>        Delete connection
+  redis test <name>          Test connection
+  redis health [name]        Get health status
+  redis pool configure       Configure connection pool
+  redis pool get <name>      Get pool configuration
 
-  storage           MinIO/S3 storage management
-    buckets         List/manage buckets
-    upload          Upload file to storage
-    download        Download file from storage
-    presign         Generate presigned URL
+FUNCTIONS SERVICE (consolidated from functions):
+  functions status           Show functions service status
+  functions init [--ts]      Initialize functions service
+  functions enable           Enable functions service
+  functions disable          Disable functions service
+  functions list             List available functions
+  functions create <name>    Create a new function
+  functions delete <name>    Delete a function
+  functions test <name>      Test a function
+  functions logs [-f]        View function logs
+  functions deploy [target]  Deploy functions
 
-  cache             Redis cache management
-    stats           Show cache statistics
-    flush           Flush cache
-    keys            List/search keys
+MLFLOW SERVICE (consolidated from mlflow):
+  mlflow status              Show MLflow status
+  mlflow enable              Enable MLflow service
+  mlflow disable             Disable MLflow service
+  mlflow open                Open MLflow UI in browser
+  mlflow configure <s> <v>   Configure MLflow settings
+  mlflow experiments         List/manage experiments
+  mlflow runs [exp_id]       List runs
+  mlflow logs [-f]           View MLflow logs
+  mlflow test                Test MLflow connection
 
-CODE GENERATION EXAMPLES:
-  nself service scaffold realtime --template socketio-ts --port 3101
-  nself service list-templates           # Show all templates
-  nself service list-templates --language typescript
-  nself service template-info socketio-ts
-  nself service wizard                   # Interactive service creation
+REALTIME SERVICE (consolidated from realtime):
+  realtime init              Initialize real-time system
+  realtime status            Show real-time system status
+  realtime logs [--follow]   Show real-time logs
+  realtime cleanup           Clean up stale connections
+  realtime subscribe <tbl>   Subscribe to table changes
+  realtime unsubscribe <t>   Unsubscribe from table changes
+  realtime listen <tbl>      Listen to table changes
+  realtime subscriptions     List active subscriptions
+  realtime channel create    Create a channel
+  realtime channel list      List channels
+  realtime broadcast         Send message to channel
+  realtime presence track    Track user presence
+  realtime presence online   List online users
+  realtime connections       Show active connections
 
-SERVICE MANAGEMENT EXAMPLES:
-  nself service list                     # List all services
-  nself service enable search            # Enable search service
-  nself service email test               # Send test email
-  nself service search index create users
-  nself service functions deploy
-  nself service storage buckets list
-  nself service admin dev enable 3000    # Enable admin dev mode on port 3000
-  nself service admin dev env            # Show env vars for local admin dev
+EXAMPLES:
+  # Core operations
+  nself service list                        # List all services
+  nself service enable search               # Enable search service
+
+  # Admin
+  nself service admin dev enable 3000       # Enable admin dev mode
+  nself service admin stats                 # Get stats
+
+  # Storage
+  nself service storage upload photo.jpg    # Upload file
+  nself service storage list                # List files
+
+  # Email
+  nself service email configure sendgrid    # Configure email
+  nself service email test --api admin@x.com
+
+  # Search
+  nself service search enable meilisearch   # Enable search
+  nself service search test "hello world"   # Test search
+
+  # Functions
+  nself service functions create hello      # Create function
+  nself service functions deploy            # Deploy
+
+  # MLflow
+  nself service mlflow enable               # Enable MLflow
+  nself service mlflow experiments          # List experiments
+
+  # Realtime
+  nself service realtime init               # Initialize
+  nself service realtime subscribe users    # Subscribe to table
 
 OPTIONS:
   -h, --help        Show this help message
+  --follow, -f      Follow logs (for logs commands)
+  --tail <n>        Show last n lines (for logs commands)
 
-See 'nself service <service> --help' for service-specific options.
+See individual command help for more options.
 EOF
 }
 
@@ -1701,6 +1958,75 @@ cmd_service_wizard() {
   scaffold_service "$service_name" "$selected_template" "$port" "services"
 }
 
+# === REDIS SUBCOMMANDS ===
+cmd_service_redis() {
+  local action="${1:-status}"
+  shift || true
+
+  case "$action" in
+    status)
+      cmd_service_status redis
+      ;;
+    init|add|list|get|delete|test|health|pool)
+      # Delegate to redis command functions
+      if declare -f cmd_redis >/dev/null 2>&1; then
+        cmd_redis "$action" "$@"
+      else
+        log_error "Redis CLI not available"
+        log_info "Redis core functions missing"
+        return 1
+      fi
+      ;;
+    *)
+      log_error "Unknown redis action: $action"
+      log_info "Available: status, init, add, list, get, delete, test, health, pool"
+      return 1
+      ;;
+  esac
+}
+
+# === REALTIME SUBCOMMANDS ===
+cmd_service_realtime() {
+  local action="${1:-status}"
+  shift || true
+
+  case "$action" in
+    status)
+      # Show realtime service status
+      if declare -f cmd_status >/dev/null 2>&1; then
+        cmd_status "$@"
+      else
+        log_info "Realtime service"
+        log_info "Run: nself service realtime init"
+      fi
+      ;;
+    init|logs|cleanup|subscribe|unsubscribe|listen|subscriptions)
+      # System and subscription commands
+      if [[ -f "$SCRIPT_DIR/realtime.sh" ]]; then
+        bash "$SCRIPT_DIR/realtime.sh" "$action" "$@"
+      else
+        log_error "Realtime service not available"
+        return 1
+      fi
+      ;;
+    channel|broadcast|messages|replay|events|presence|connections|stats)
+      # Channel, broadcast, and presence commands
+      if [[ -f "$SCRIPT_DIR/realtime.sh" ]]; then
+        bash "$SCRIPT_DIR/realtime.sh" "$action" "$@"
+      else
+        log_error "Realtime service not available"
+        return 1
+      fi
+      ;;
+    *)
+      log_error "Unknown realtime action: $action"
+      log_info "Available: init, status, subscribe, channel, broadcast, presence"
+      log_info "Run: nself service realtime --help"
+      return 1
+      ;;
+  esac
+}
+
 # === MAIN ENTRY POINT ===
 main() {
   local subcommand="${1:-}"
@@ -1782,8 +2108,14 @@ main() {
     storage|minio|s3)
       cmd_service_storage "$@"
       ;;
-    cache|redis)
+    cache)
       cmd_service_cache "$@"
+      ;;
+    redis)
+      cmd_service_redis "$@"
+      ;;
+    realtime|rt)
+      cmd_service_realtime "$@"
       ;;
     *)
       log_error "Unknown subcommand: $subcommand"

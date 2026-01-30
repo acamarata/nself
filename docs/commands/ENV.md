@@ -1,16 +1,18 @@
-# nself env
+# nself config env
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself env` in v0.x. It has been consolidated to `nself config env` in v1.0. The old command name may still work as an alias.
 
 Environment management command for creating, switching, and managing multiple deployment environments.
 
 ## Synopsis
 
 ```bash
-nself env <subcommand> [options]
+nself config env <subcommand> [options]
 ```
 
 ## Description
 
-The `nself env` command provides comprehensive environment management capabilities. It allows you to create separate configurations for local development, staging, and production environments, with support for environment-specific variables, secrets, and server configurations.
+The `nself config env` command provides comprehensive environment management capabilities. It allows you to create separate configurations for local development, staging, and production environments, with support for environment-specific variables, secrets, and server configurations.
 
 ## Subcommands
 
@@ -19,7 +21,7 @@ The `nself env` command provides comprehensive environment management capabiliti
 Create a new environment configuration.
 
 ```bash
-nself env create <name> [template] [--force]
+nself config env create <name> [template] [--force]
 ```
 
 **Arguments:**
@@ -31,10 +33,10 @@ nself env create <name> [template] [--force]
 
 **Examples:**
 ```bash
-nself env create dev                    # Create local dev environment
-nself env create staging staging        # Create staging environment
-nself env create production prod        # Create production environment
-nself env create qa staging             # Create QA from staging template
+nself config env create dev                    # Create local dev environment
+nself config env create staging staging        # Create staging environment
+nself config env create production prod        # Create production environment
+nself config env create qa staging             # Create QA from staging template
 ```
 
 ### list
@@ -42,7 +44,7 @@ nself env create qa staging             # Create QA from staging template
 List all available environments.
 
 ```bash
-nself env list
+nself config env list
 ```
 
 Shows all environments with the current active environment marked with `*`.
@@ -52,7 +54,7 @@ Shows all environments with the current active environment marked with `*`.
 Switch to a different environment.
 
 ```bash
-nself env switch <name> [--quiet]
+nself config env switch <name> [--quiet]
 ```
 
 **Arguments:**
@@ -65,8 +67,8 @@ nself env switch <name> [--quiet]
 
 **Examples:**
 ```bash
-nself env switch staging
-nself env switch production
+nself config env switch staging
+nself config env switch production
 ```
 
 ### status
@@ -74,7 +76,7 @@ nself env switch production
 Show current environment status.
 
 ```bash
-nself env status
+nself config env status
 ```
 
 Displays:
@@ -88,7 +90,7 @@ Displays:
 Show detailed information about an environment.
 
 ```bash
-nself env info [name]
+nself config env info [name]
 ```
 
 **Arguments:**
@@ -99,7 +101,7 @@ nself env info [name]
 Compare two environments.
 
 ```bash
-nself env diff <env1> <env2> [--values]
+nself config env diff <env1> <env2> [--values]
 ```
 
 **Arguments:**
@@ -111,8 +113,8 @@ nself env diff <env1> <env2> [--values]
 
 **Examples:**
 ```bash
-nself env diff staging production
-nself env diff dev staging --values
+nself config env diff staging production
+nself config env diff dev staging --values
 ```
 
 ### validate
@@ -120,7 +122,7 @@ nself env diff dev staging --values
 Validate an environment's configuration.
 
 ```bash
-nself env validate [name]
+nself config env validate [name]
 ```
 
 Checks:
@@ -134,7 +136,7 @@ Checks:
 Delete an environment configuration.
 
 ```bash
-nself env delete <name> [--force]
+nself config env delete <name> [--force]
 ```
 
 **Note:** Cannot delete the currently active environment.
@@ -144,7 +146,7 @@ nself env delete <name> [--force]
 Export an environment as a tarball.
 
 ```bash
-nself env export <name> [--output <file>]
+nself config env export <name> [--output <file>]
 ```
 
 **Options:**
@@ -155,7 +157,7 @@ nself env export <name> [--output <file>]
 Import an environment from a tarball.
 
 ```bash
-nself env import <file> [--name <name>]
+nself config env import <file> [--name <name>]
 ```
 
 **Options:**

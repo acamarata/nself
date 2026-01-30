@@ -12,10 +12,10 @@ nself server init root@your-server.com --domain example.com
 nself env create prod prod
 
 # 3. Generate secure secrets
-nself secrets generate --env prod
+nself config secrets generate --env prod
 
 # 4. Validate before deployment
-nself validate prod
+nself config validate prod
 
 # 5. Deploy to production
 nself deploy prod
@@ -82,7 +82,7 @@ Production deployments require secure, randomly-generated secrets.
 ### Generate Secrets
 
 ```bash
-nself secrets generate --env prod
+nself config secrets generate --env prod
 ```
 
 This creates `.environments/prod/.env.secrets` with:
@@ -99,27 +99,27 @@ This creates `.environments/prod/.env.secrets` with:
 ### Validate Secrets
 
 ```bash
-nself secrets validate --env prod
+nself config secrets validate --env prod
 ```
 
 ### Rotate Secrets
 
 ```bash
 # Rotate a single secret
-nself secrets rotate POSTGRES_PASSWORD --env prod
+nself config secrets rotate POSTGRES_PASSWORD --env prod
 
 # Rotate all secrets (requires service restart)
-nself secrets rotate --all --env prod
+nself config secrets rotate --all --env prod
 ```
 
 ### View Secrets
 
 ```bash
 # Masked view
-nself secrets show --env prod
+nself config secrets show --env prod
 
 # Unmask values (use with caution)
-nself secrets show --env prod --unmask
+nself config secrets show --env prod --unmask
 ```
 
 ## Pre-deployment Validation
@@ -127,7 +127,7 @@ nself secrets show --env prod --unmask
 Always validate before deploying to production:
 
 ```bash
-nself validate prod
+nself config validate prod
 ```
 
 ### What's Validated
@@ -155,7 +155,7 @@ nself validate prod
 For production, use strict mode to treat warnings as errors:
 
 ```bash
-nself validate prod --strict
+nself config validate prod --strict
 ```
 
 ### Auto-fix
@@ -163,7 +163,7 @@ nself validate prod --strict
 Attempt to automatically fix issues:
 
 ```bash
-nself validate prod --fix
+nself config validate prod --fix
 ```
 
 ## Security Pre-flight Checks
@@ -192,7 +192,7 @@ When deploying to production (`ENV=prod`), nself automatically runs security che
 To bypass security checks (NOT RECOMMENDED):
 
 ```bash
-nself deploy prod --force
+nself deploy production --force
 ```
 
 ## SSL Certificates
@@ -235,13 +235,13 @@ Supported DNS providers:
 
 ```bash
 # Check SSL status
-nself ssl status
+nself auth ssl status
 
 # Force regenerate certificates
-nself ssl bootstrap
+nself auth ssl bootstrap
 
 # Renew Let's Encrypt certificates
-nself ssl renew
+nself auth ssl renew
 ```
 
 ## Deployment
@@ -249,25 +249,25 @@ nself ssl renew
 ### Standard Deployment
 
 ```bash
-nself deploy prod
+nself deploy production
 ```
 
 ### Dry Run (Preview)
 
 ```bash
-nself deploy prod --dry-run
+nself deploy production --dry-run
 ```
 
 ### Rolling Deployment (Zero-downtime)
 
 ```bash
-nself deploy prod --rolling
+nself deploy production --rolling
 ```
 
 ### Skip Health Checks
 
 ```bash
-nself deploy prod --skip-health
+nself deploy production --skip-health
 ```
 
 ### Include/Exclude Frontends
@@ -277,7 +277,7 @@ nself deploy prod --skip-health
 nself deploy staging --include-frontends
 
 # Exclude frontends (default for production)
-nself deploy prod --exclude-frontends
+nself deploy production --exclude-frontends
 ```
 
 ## Health Checks
@@ -306,7 +306,7 @@ nself doctor
 If deployment fails:
 
 ```bash
-nself deploy rollback --env prod
+nself backup rollback --env prod
 ```
 
 ## Backup Before Deploy
@@ -391,10 +391,10 @@ nself doctor --fix
 
 ## Best Practices
 
-1. **Always validate before deploying**: `nself validate prod`
+1. **Always validate before deploying**: `nself config validate prod`
 2. **Use separate secrets per environment**: Never share production secrets
 3. **Backup before major changes**: `nself backup create`
-4. **Use dry-run first**: `nself deploy prod --dry-run`
+4. **Use dry-run first**: `nself deploy production --dry-run`
 5. **Monitor after deployment**: `nself doctor`
 6. **Rotate secrets regularly**: Every 90 days minimum
 7. **Keep secrets out of git**: Use `.env.secrets` (gitignored)

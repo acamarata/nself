@@ -33,7 +33,7 @@ nself status
 nself logs --tail 50
 
 # Validate configuration
-nself validate-env
+nself config validate
 ```
 
 ## Installation Issues
@@ -242,7 +242,7 @@ Container nself_hasura_1 is restarting, wait until...
 
 3. **Fix configuration:**
    ```bash
-   nself validate-env
+   nself config validate
    # Fix any reported issues
    nself down
    nself up
@@ -349,14 +349,14 @@ bind: address already in use
 
 1. **Trust certificates:**
    ```bash
-   nself trust
+   nself auth ssl trust
    ```
 
 2. **Regenerate certificates:**
    ```bash
    rm -rf nginx/ssl/*
    nself build
-   nself trust
+   nself auth ssl trust
    ```
 
 3. **For Chrome - type this in the error page:**
@@ -461,7 +461,7 @@ SSL certificate has expired
    ```bash
    rm -rf nginx/ssl/*
    nself build
-   nself trust
+   nself auth ssl trust
    nself restart nginx
    ```
 
@@ -565,13 +565,13 @@ HASURA_GRAPHQL_JWT_SECRET: invalid JSON
 
 1. **Validate configuration:**
    ```bash
-   nself validate-env
+   nself config validate
    ```
 
 2. **Common fixes:**
    ```bash
    # Generate secure passwords
-   nself prod --passwords
+   nself config secrets generate
    
    # Fix JWT secret format
    HASURA_GRAPHQL_JWT_SECRET='{"type":"HS256","key":"32-character-secret-key-here!!!"}'
@@ -579,7 +579,7 @@ HASURA_GRAPHQL_JWT_SECRET: invalid JSON
 
 3. **Compare with example:**
    ```bash
-   nself diff .env.local .env.example
+   diff .env.local .env.example
    ```
 
 ---
@@ -718,8 +718,7 @@ If these solutions don't resolve your issue:
 
 2. **Before production:**
    ```bash
-   nself validate-env
-   nself prod
+   nself config validate
    nself doctor
    ```
 

@@ -1,37 +1,15 @@
 #!/usr/bin/env bash
-# devices.sh - Device management CLI
-# Part of nself v0.6.0 - Phase 2
+# devices.sh - DEPRECATED - Wrapper for 'nself auth devices'
+# This command has been consolidated into 'nself auth devices'
+# This wrapper provides backward compatibility
 
 set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$SCRIPT_DIR/../lib/auth/device-manager.sh" ]] && source "$SCRIPT_DIR/../lib/auth/device-manager.sh"
 
-cmd_devices() {
-  case "${1:-help}" in
-    init) device_init && printf "✓ Device management initialized\n" ;;
-    list) device_list_user "$2" | jq '.' ;;
-    trust) device_trust "$2" && printf "✓ Device trusted\n" ;;
-    revoke) device_revoke "$2" && printf "✓ Device revoked\n" ;;
-    help|--help|-h)
-      cat <<'HELP'
-nself devices - Device management
+# Show deprecation warning
+printf "\033[0;33m⚠\033[0m  WARNING: 'nself devices' is deprecated. Use 'nself auth devices' instead.\n" >&2
+printf "   This compatibility wrapper will be removed in v1.0.0\n\n" >&2
 
-COMMANDS:
-  init              Initialize device management
-  list <user_id>    List user's devices
-  trust <device_id> Trust a device
-  revoke <device_id> Revoke device access
-
-EXAMPLES:
-  nself devices init
-  nself devices list <user-uuid>
-  nself devices trust <device-id>
-  nself devices revoke <device-id>
-HELP
-      ;;
-    *) echo "ERROR: Unknown command. Run 'nself devices help'" >&2; return 1 ;;
-  esac
-}
-
-export -f cmd_devices
-[[ "${BASH_SOURCE[0]}" == "${0}" ]] && cmd_devices "$@"
+# Delegate to new auth command
+exec bash "$SCRIPT_DIR/auth.sh" devices "$@"

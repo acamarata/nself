@@ -6,6 +6,11 @@ Complete step-by-step guide to launch a production-ready SaaS platform with bill
 **Difficulty**: Beginner
 **Prerequisites**: Docker Desktop installed
 
+> **Note:** As of v0.9.6, commands have been consolidated. This guide uses the new v1.0 command structure where applicable:
+> - `nself env` → `nself config env`
+> - `nself scale` → `nself perf scale`
+> - Other commands referenced use their consolidated forms
+
 ---
 
 ## What You'll Build
@@ -337,7 +342,7 @@ nself whitelabel email edit welcome
 ### Create production environment
 
 ```bash
-nself env create prod
+nself config env create prod
 ```
 
 ### Configure production server
@@ -758,8 +763,8 @@ npm install @apollo/client @nhost/react graphql
 
 ```bash
 # Scale specific services
-nself scale hasura --replicas 3
-nself scale auth --replicas 2
+nself perf scale hasura --replicas 3
+nself perf scale auth --replicas 2
 
 # Enable load balancing
 LOAD_BALANCER_ENABLED=true nself build

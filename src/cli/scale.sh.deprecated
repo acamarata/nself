@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# scale.sh - DEPRECATED: Use 'nself perf scale' instead
+
+printf "\033[0;33m⚠\033[0m  The 'nself scale' command is deprecated.\n"
+printf "   Please use: \033[1mnself perf scale\033[0m\n\n"
+
+# Delegate to new command
+exec "$(dirname "${BASH_SOURCE[0]}")/perf.sh" scale "$@"

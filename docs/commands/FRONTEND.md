@@ -1,4 +1,8 @@
-# nself frontend - Frontend Application Management
+# nself dev frontend - Frontend Application Management
+
+> **⚠️ DEPRECATED in v0.9.6**: This command has been consolidated.
+> Please use `nself dev frontend` instead.
+> See [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) and [v0.9.6 Release Notes](../releases/v0.9.6.md) for details.
 
 **Version 0.4.6** | Frontend deployment and tracking
 
@@ -6,14 +10,14 @@
 
 ## Overview
 
-The `nself frontend` command manages frontend applications integrated with your nself backend. Track deployments, manage environment variables, and integrate with deployment providers like Vercel and Netlify.
+The `nself dev frontend` command manages frontend applications integrated with your nself backend. Track deployments, manage environment variables, and integrate with deployment providers like Vercel and Netlify.
 
 ---
 
 ## Usage
 
 ```bash
-nself frontend <subcommand> [options]
+nself dev frontend <subcommand> [options]
 ```
 
 ---
@@ -25,8 +29,8 @@ nself frontend <subcommand> [options]
 Show frontend deployment status.
 
 ```bash
-nself frontend                  # Show all frontends
-nself frontend status           # Same as above
+nself dev frontend                  # Show all frontends
+nself dev frontend status           # Same as above
 ```
 
 ### `list`
@@ -34,8 +38,8 @@ nself frontend status           # Same as above
 List configured frontend apps.
 
 ```bash
-nself frontend list             # List names
-nself frontend list --json      # JSON output
+nself dev frontend list             # List names
+nself dev frontend list --json      # JSON output
 ```
 
 ### `add <name>`
@@ -43,8 +47,8 @@ nself frontend list --json      # JSON output
 Add a new frontend application.
 
 ```bash
-nself frontend add webapp --port 3000
-nself frontend add admin --port 3001 --route admin-ui
+nself dev frontend add webapp --port 3000
+nself dev frontend add admin --port 3001 --route admin-ui
 ```
 
 ### `remove <name>`
@@ -52,7 +56,7 @@ nself frontend add admin --port 3001 --route admin-ui
 Remove a frontend application.
 
 ```bash
-nself frontend remove webapp
+nself dev frontend remove webapp
 ```
 
 ### `deploy <name>`
@@ -60,8 +64,8 @@ nself frontend remove webapp
 Deploy frontend (Vercel/Netlify integration).
 
 ```bash
-nself frontend deploy webapp              # Deploy to staging
-nself frontend deploy webapp --env prod   # Deploy to production
+nself dev frontend deploy webapp              # Deploy to staging
+nself dev frontend deploy webapp --env prod   # Deploy to production
 ```
 
 ### `logs <name>`
@@ -69,8 +73,8 @@ nself frontend deploy webapp --env prod   # Deploy to production
 View frontend build/deploy logs.
 
 ```bash
-nself frontend logs webapp           # Recent logs
-nself frontend logs webapp --limit 50  # Last 50 entries
+nself dev frontend logs webapp           # Recent logs
+nself dev frontend logs webapp --limit 50  # Last 50 entries
 ```
 
 ### `env <name>`
@@ -78,8 +82,8 @@ nself frontend logs webapp --limit 50  # Last 50 entries
 Show environment variables for frontend.
 
 ```bash
-nself frontend env webapp           # Show env vars
-nself frontend env webapp --json    # JSON output
+nself dev frontend env webapp           # Show env vars
+nself dev frontend env webapp --json    # JSON output
 ```
 
 ---
@@ -119,19 +123,19 @@ FRONTEND_APP_2_ROUTE=admin
 
 ```bash
 # Add a new frontend
-nself frontend add myapp --port 3000
+nself dev frontend add myapp --port 3000
 
 # Check status
-nself frontend status
+nself dev frontend status
 
 # Deploy to production
-nself frontend deploy myapp --env prod
+nself dev frontend deploy myapp --env prod
 
 # Get environment variables for frontend
-nself frontend env myapp
+nself dev frontend env myapp
 
 # View deployment logs
-nself frontend logs myapp
+nself dev frontend logs myapp
 ```
 
 ---
@@ -171,8 +175,8 @@ REACT_APP_AUTH_URL=https://auth.local.nself.org
 If `vercel.json` or `.vercel/` directory exists:
 
 ```bash
-nself frontend deploy webapp           # Deploy preview
-nself frontend deploy webapp --env prod  # Deploy production
+nself dev frontend deploy webapp           # Deploy preview
+nself dev frontend deploy webapp --env prod  # Deploy production
 ```
 
 Requires: `vercel` CLI (`npm i -g vercel`)
@@ -182,8 +186,8 @@ Requires: `vercel` CLI (`npm i -g vercel`)
 If `netlify.toml` or `.netlify/` directory exists:
 
 ```bash
-nself frontend deploy webapp           # Deploy preview
-nself frontend deploy webapp --env prod  # Deploy production
+nself dev frontend deploy webapp           # Deploy preview
+nself dev frontend deploy webapp --env prod  # Deploy production
 ```
 
 Requires: `netlify` CLI (`npm i -g netlify-cli`)

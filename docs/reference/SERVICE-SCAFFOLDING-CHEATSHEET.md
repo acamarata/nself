@@ -63,7 +63,7 @@ nself service scaffold worker --template celery --port 5555
 ### AI/ML Services
 
 ```bash
-# LLM Agent - OpenAI/Anthropic
+# LLM Agent - OpenAI and others
 nself service scaffold ai --template agent-llm --port 8001
 
 # Vision Agent - Computer vision

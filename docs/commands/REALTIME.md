@@ -1,4 +1,6 @@
-# nself realtime - Real-Time Communication
+# nself service realtime - Real-Time Communication
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself realtime` in v0.x. It has been consolidated to `nself service realtime` in v1.0. The old command name may still work as an alias.
 
 Real-time communication system for WebSocket channels, presence tracking, broadcast messaging, and database subscriptions (Change Data Capture).
 
@@ -10,14 +12,14 @@ Real-time communication system for WebSocket channels, presence tracking, broadc
 ## Synopsis
 
 ```bash
-nself realtime <command> [options]
+nself service realtime <command> [options]
 ```
 
 ---
 
 ## Description
 
-The `nself realtime` command provides a complete real-time communication system compatible with Supabase and Nhost. It includes:
+The `nself service realtime` command provides a complete real-time communication system compatible with Supabase and Nhost. It includes:
 
 - **Database Subscriptions (CDC)** - Subscribe to table changes (INSERT, UPDATE, DELETE)
 - **Channel Management** - Public, private, and presence channels
@@ -34,7 +36,7 @@ The `nself realtime` command provides a complete real-time communication system 
 Initialize the real-time system and database schema.
 
 ```bash
-nself realtime init
+nself service realtime init
 ```
 
 **What it does:**
@@ -45,7 +47,7 @@ nself realtime init
 
 **Example:**
 ```bash
-nself realtime init
+nself service realtime init
 ```
 
 ---
@@ -55,7 +57,7 @@ nself realtime init
 Show real-time system status.
 
 ```bash
-nself realtime status
+nself service realtime status
 ```
 
 **Shows:**
@@ -67,7 +69,7 @@ nself realtime status
 
 **Example:**
 ```bash
-nself realtime status
+nself service realtime status
 ```
 
 **Output:**
@@ -88,7 +90,7 @@ Real-Time System Status
 View real-time system logs.
 
 ```bash
-nself realtime logs [--follow]
+nself service realtimelogs [--follow]
 ```
 
 **Options:**
@@ -97,10 +99,10 @@ nself realtime logs [--follow]
 **Examples:**
 ```bash
 # View recent logs
-nself realtime logs
+nself service realtimelogs
 
 # Follow logs
-nself realtime logs --follow
+nself service realtimelogs --follow
 ```
 
 ---
@@ -110,7 +112,7 @@ nself realtime logs --follow
 Clean up stale connections and old messages.
 
 ```bash
-nself realtime cleanup
+nself service realtimecleanup
 ```
 
 **What it cleans:**
@@ -121,7 +123,7 @@ nself realtime cleanup
 
 **Example:**
 ```bash
-nself realtime cleanup
+nself service realtimecleanup
 ```
 
 ---
@@ -135,7 +137,7 @@ Subscribe to database table changes using PostgreSQL Change Data Capture (CDC).
 Subscribe to table changes.
 
 ```bash
-nself realtime subscribe <table> [events]
+nself service realtimesubscribe <table> [events]
 ```
 
 **Arguments:**
@@ -145,13 +147,13 @@ nself realtime subscribe <table> [events]
 **Examples:**
 ```bash
 # Subscribe to all events
-nself realtime subscribe public.users
+nself service realtimesubscribe public.users
 
 # Subscribe to specific events
-nself realtime subscribe public.posts INSERT,UPDATE
+nself service realtimesubscribe public.posts INSERT,UPDATE
 
 # Subscribe to schema
-nself realtime subscribe public.*
+nself service realtimesubscribe public.*
 ```
 
 ---
@@ -161,12 +163,12 @@ nself realtime subscribe public.*
 Remove subscription from table.
 
 ```bash
-nself realtime unsubscribe <table>
+nself service realtimeunsubscribe <table>
 ```
 
 **Example:**
 ```bash
-nself realtime unsubscribe public.users
+nself service realtimeunsubscribe public.users
 ```
 
 ---
@@ -176,7 +178,7 @@ nself realtime unsubscribe public.users
 Listen to table changes in real-time (blocking).
 
 ```bash
-nself realtime listen <table> [seconds]
+nself service realtimelisten <table> [seconds]
 ```
 
 **Arguments:**
@@ -186,10 +188,10 @@ nself realtime listen <table> [seconds]
 **Example:**
 ```bash
 # Listen for 60 seconds
-nself realtime listen public.users
+nself service realtimelisten public.users
 
 # Listen for 5 minutes
-nself realtime listen public.users 300
+nself service realtimelisten public.users 300
 ```
 
 **Output:**
@@ -206,12 +208,12 @@ Listening to public.users...
 List all active subscriptions.
 
 ```bash
-nself realtime subscriptions
+nself service realtimesubscriptions
 ```
 
 **Example:**
 ```bash
-nself realtime subscriptions
+nself service realtimesubscriptions
 ```
 
 **Output:**
@@ -234,7 +236,7 @@ Create and manage real-time channels for messaging.
 Create a new channel.
 
 ```bash
-nself realtime channel create <name> [type]
+nself service realtimechannel create <name> [type]
 ```
 
 **Arguments:**
@@ -249,13 +251,13 @@ nself realtime channel create <name> [type]
 **Examples:**
 ```bash
 # Public channel (anyone can join)
-nself realtime channel create general public
+nself service realtimechannel create general public
 
 # Private channel (invite only)
-nself realtime channel create team-alpha private
+nself service realtimechannel create team-alpha private
 
 # Presence channel (tracks online users)
-nself realtime channel create lobby presence
+nself service realtimechannel create lobby presence
 ```
 
 ---
@@ -265,7 +267,7 @@ nself realtime channel create lobby presence
 List all channels.
 
 ```bash
-nself realtime channel list [type]
+nself service realtimechannel list [type]
 ```
 
 **Arguments:**
@@ -274,13 +276,13 @@ nself realtime channel list [type]
 **Examples:**
 ```bash
 # All channels
-nself realtime channel list
+nself service realtimechannel list
 
 # Only public channels
-nself realtime channel list public
+nself service realtimechannel list public
 
 # Only presence channels
-nself realtime channel list presence
+nself service realtimechannel list presence
 ```
 
 **Output:**
@@ -300,12 +302,12 @@ Channels:
 Get channel details.
 
 ```bash
-nself realtime channel get <id>
+nself service realtimechannel get <id>
 ```
 
 **Example:**
 ```bash
-nself realtime channel get general
+nself service realtimechannel get general
 ```
 
 **Output:**
@@ -324,14 +326,14 @@ Messages (24h): 1,847
 Delete a channel.
 
 ```bash
-nself realtime channel delete <id>
+nself service realtimechannel delete <id>
 ```
 
 **Warning:** This deletes all channel messages and memberships.
 
 **Example:**
 ```bash
-nself realtime channel delete old-channel
+nself service realtimechannel delete old-channel
 ```
 
 ---
@@ -341,12 +343,12 @@ nself realtime channel delete old-channel
 List channel members.
 
 ```bash
-nself realtime channel members <id>
+nself service realtimechannel members <id>
 ```
 
 **Example:**
 ```bash
-nself realtime channel members general
+nself service realtimechannel members general
 ```
 
 **Output:**
@@ -365,12 +367,12 @@ Members of #general (245):
 Add user to channel.
 
 ```bash
-nself realtime channel join <channel> <user>
+nself service realtimechannel join <channel> <user>
 ```
 
 **Example:**
 ```bash
-nself realtime channel join general user-123
+nself service realtimechannel join general user-123
 ```
 
 ---
@@ -380,12 +382,12 @@ nself realtime channel join general user-123
 Remove user from channel.
 
 ```bash
-nself realtime channel leave <channel> <user>
+nself service realtimechannel leave <channel> <user>
 ```
 
 **Example:**
 ```bash
-nself realtime channel leave general user-123
+nself service realtimechannel leave general user-123
 ```
 
 ---
@@ -399,7 +401,7 @@ Send messages to channel subscribers.
 Send message to channel.
 
 ```bash
-nself realtime broadcast <channel> <event> <payload>
+nself service realtimebroadcast <channel> <event> <payload>
 ```
 
 **Arguments:**
@@ -410,13 +412,13 @@ nself realtime broadcast <channel> <event> <payload>
 **Examples:**
 ```bash
 # User joined event
-nself realtime broadcast general user.joined '{"user_id": "123", "name": "John"}'
+nself service realtimebroadcast general user.joined '{"user_id": "123", "name": "John"}'
 
 # New message event
-nself realtime broadcast general message.new '{"text": "Hello!", "from": "user-123"}'
+nself service realtimebroadcast general message.new '{"text": "Hello!", "from": "user-123"}'
 
 # Custom event
-nself realtime broadcast general app.notification '{"title": "Update", "body": "New version available"}'
+nself service realtimebroadcast general app.notification '{"title": "Update", "body": "New version available"}'
 ```
 
 ---
@@ -426,7 +428,7 @@ nself realtime broadcast general app.notification '{"title": "Update", "body": "
 Get recent channel messages.
 
 ```bash
-nself realtime messages <channel> [limit]
+nself service realtimemessages <channel> [limit]
 ```
 
 **Arguments:**
@@ -436,10 +438,10 @@ nself realtime messages <channel> [limit]
 **Example:**
 ```bash
 # Last 50 messages
-nself realtime messages general
+nself service realtimemessages general
 
 # Last 100 messages
-nself realtime messages general 100
+nself service realtimemessages general 100
 ```
 
 ---
@@ -449,7 +451,7 @@ nself realtime messages general 100
 Replay messages since timestamp.
 
 ```bash
-nself realtime replay <channel> <timestamp>
+nself service realtimereplay <channel> <timestamp>
 ```
 
 **Arguments:**
@@ -459,10 +461,10 @@ nself realtime replay <channel> <timestamp>
 **Example:**
 ```bash
 # Replay messages from today
-nself realtime replay general 2026-01-30T00:00:00Z
+nself service realtimereplay general 2026-01-30T00:00:00Z
 
 # Replay last hour
-nself realtime replay general 2026-01-30T09:00:00Z
+nself service realtimereplay general 2026-01-30T09:00:00Z
 ```
 
 ---
@@ -472,7 +474,7 @@ nself realtime replay general 2026-01-30T09:00:00Z
 List event types in channel.
 
 ```bash
-nself realtime events <channel> [hours]
+nself service realtimeevents <channel> [hours]
 ```
 
 **Arguments:**
@@ -482,10 +484,10 @@ nself realtime events <channel> [hours]
 **Example:**
 ```bash
 # Event types in last 24 hours
-nself realtime events general
+nself service realtimeevents general
 
 # Event types in last week
-nself realtime events general 168
+nself service realtimeevents general 168
 ```
 
 **Output:**
@@ -509,7 +511,7 @@ Track user online/away/offline status.
 Track user presence.
 
 ```bash
-nself realtime presence track <user> <channel> [status]
+nself service realtimepresence track <user> <channel> [status]
 ```
 
 **Arguments:**
@@ -520,13 +522,13 @@ nself realtime presence track <user> <channel> [status]
 **Examples:**
 ```bash
 # User comes online
-nself realtime presence track user-123 general online
+nself service realtimepresence track user-123 general online
 
 # User goes away
-nself realtime presence track user-123 general away
+nself service realtimepresence track user-123 general away
 
 # User goes offline
-nself realtime presence track user-123 general offline
+nself service realtimepresence track user-123 general offline
 ```
 
 ---
@@ -536,7 +538,7 @@ nself realtime presence track user-123 general offline
 Get user presence.
 
 ```bash
-nself realtime presence get <user> [channel]
+nself service realtimepresence get <user> [channel]
 ```
 
 **Arguments:**
@@ -546,10 +548,10 @@ nself realtime presence get <user> [channel]
 **Examples:**
 ```bash
 # All channels
-nself realtime presence get user-123
+nself service realtimepresence get user-123
 
 # Specific channel
-nself realtime presence get user-123 general
+nself service realtimepresence get user-123 general
 ```
 
 **Output:**
@@ -568,7 +570,7 @@ Presence: user-123
 List online users.
 
 ```bash
-nself realtime presence online [channel]
+nself service realtimepresence online [channel]
 ```
 
 **Arguments:**
@@ -577,10 +579,10 @@ nself realtime presence online [channel]
 **Examples:**
 ```bash
 # Global online users
-nself realtime presence online
+nself service realtimepresence online
 
 # Channel online users
-nself realtime presence online general
+nself service realtimepresence online general
 ```
 
 **Output:**
@@ -599,16 +601,16 @@ Online Users (general): 89
 Count online users.
 
 ```bash
-nself realtime presence count [channel]
+nself service realtimepresence count [channel]
 ```
 
 **Example:**
 ```bash
 # Global count
-nself realtime presence count
+nself service realtimepresence count
 
 # Channel count
-nself realtime presence count general
+nself service realtimepresence count general
 ```
 
 **Output:**
@@ -626,16 +628,16 @@ Total: 245
 Set user offline.
 
 ```bash
-nself realtime presence offline <user> [channel]
+nself service realtimepresence offline <user> [channel]
 ```
 
 **Examples:**
 ```bash
 # Offline in all channels
-nself realtime presence offline user-123
+nself service realtimepresence offline user-123
 
 # Offline in specific channel
-nself realtime presence offline user-123 general
+nself service realtimepresence offline user-123 general
 ```
 
 ---
@@ -645,12 +647,12 @@ nself realtime presence offline user-123 general
 Get presence statistics.
 
 ```bash
-nself realtime presence stats
+nself service realtimepresence stats
 ```
 
 **Example:**
 ```bash
-nself realtime presence stats
+nself service realtimepresence stats
 ```
 
 **Output:**
@@ -675,7 +677,7 @@ Presence Statistics:
 Show active WebSocket connections.
 
 ```bash
-nself realtime connections [--json]
+nself service realtimeconnections [--json]
 ```
 
 **Options:**
@@ -683,7 +685,7 @@ nself realtime connections [--json]
 
 **Example:**
 ```bash
-nself realtime connections
+nself service realtimeconnections
 ```
 
 **Output:**
@@ -702,12 +704,12 @@ Active Connections: 145
 Show detailed real-time statistics.
 
 ```bash
-nself realtime stats
+nself service realtimestats
 ```
 
 **Example:**
 ```bash
-nself realtime stats
+nself service realtimestats
 ```
 
 **Output:**
@@ -792,48 +794,48 @@ realtime.connections (id, user_id, connected_at, last_ping)
 
 ```bash
 # 1. Initialize system
-nself realtime init
+nself service realtimeinit
 
 # 2. Create channels
-nself realtime channel create general public
-nself realtime channel create announcements public
-nself realtime channel create support private
+nself service realtimechannel create general public
+nself service realtimechannel create announcements public
+nself service realtimechannel create support private
 
 # 3. Subscribe to database changes
-nself realtime subscribe public.users INSERT,UPDATE,DELETE
-nself realtime subscribe public.posts INSERT,UPDATE
+nself service realtimesubscribe public.users INSERT,UPDATE,DELETE
+nself service realtimesubscribe public.posts INSERT,UPDATE
 
 # 4. Check status
-nself realtime status
+nself service realtimestatus
 ```
 
 ### User Joins Channel
 
 ```bash
 # Add user to channel
-nself realtime channel join general user-123
+nself service realtimechannel join general user-123
 
 # Track presence
-nself realtime presence track user-123 general online
+nself service realtimepresence track user-123 general online
 
 # Broadcast join event
-nself realtime broadcast general user.joined '{"user_id": "user-123", "name": "John Doe"}'
+nself service realtimebroadcast general user.joined '{"user_id": "user-123", "name": "John Doe"}'
 ```
 
 ### Monitor Activity
 
 ```bash
 # Watch database changes
-nself realtime listen public.users 300
+nself service realtimelisten public.users 300
 
 # View channel messages
-nself realtime messages general 50
+nself service realtimemessages general 50
 
 # Check who's online
-nself realtime presence online general
+nself service realtimepresence online general
 
 # View statistics
-nself realtime stats
+nself service realtimestats
 ```
 
 ---
@@ -874,39 +876,39 @@ All real-time operations require authentication via JWT tokens.
 
 ```bash
 # Check WebSocket server
-nself realtime status
+nself service realtimestatus
 
 # View logs
-nself realtime logs --follow
+nself service realtimelogs --follow
 
 # Check connections
-nself realtime connections
+nself service realtimeconnections
 ```
 
 ### Message Delivery Issues
 
 ```bash
 # Verify channel exists
-nself realtime channel list
+nself service realtimechannel list
 
 # Check recent messages
-nself realtime messages <channel> 10
+nself service realtimemessages <channel> 10
 
 # Monitor broadcast
-nself realtime listen <table>
+nself service realtimelisten <table>
 ```
 
 ### Presence Not Updating
 
 ```bash
 # Check presence configuration
-nself realtime presence stats
+nself service realtimepresence stats
 
 # Manually update presence
-nself realtime presence track <user> <channel> online
+nself service realtimepresence track <user> <channel> online
 
 # Clean up stale presence
-nself realtime cleanup
+nself service realtimecleanup
 ```
 
 ---

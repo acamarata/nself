@@ -2,15 +2,33 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.9.5
+**Current Stable Version:** v0.9.6
 
 ---
 
 ## Latest Release
 
-### [v0.9.5](v0.9.5.md) - Current Stable
+### [v0.9.6](v0.9.6.md) - Current Stable
 
 **Released:** January 30, 2026
+
+**Status:** Production Ready
+
+**Highlights:**
+- **Command Consolidation**: 79 → 31 top-level commands (60.8% reduction)
+- **Improved Discoverability**: Logical hierarchical command structure
+- **285+ Subcommands**: Organized by domain (tenant, deploy, infra, service, auth, etc.)
+- **100% Backward Compatible**: All old commands work with migration warnings
+- **96% Test Pass Rate**: 137/142 comprehensive QA tests passing
+- **Zero Breaking Changes**: Clear migration path to v1.0
+
+**[View Release Notes →](v0.9.6.md)**
+
+---
+
+## Recent Releases
+
+### [v0.9.5](v0.9.5.md) - January 30, 2026
 
 **Status:** Production Ready
 
@@ -23,10 +41,6 @@ Complete release history and roadmap for nself - Self-Hosted Infrastructure Mana
 - **Complete Documentation**: 20+ new guides and comprehensive CLI reference
 
 **[View Release Notes →](v0.9.5.md)**
-
----
-
-## Recent Releases
 
 ### [v0.9.0](v0.9.0.md) - January 30, 2026
 
@@ -190,7 +204,9 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| [v0.9.0](v0.9.0.md) | Jan 30, 2026 | **Current** | Multi-Tenant Platform, OAuth, Storage |
+| [v0.9.6](v0.9.6.md) | Jan 30, 2026 | **Current** | Command Consolidation (79→31 commands) |
+| [v0.9.5](v0.9.5.md) | Jan 30, 2026 | Stable | Real-Time, Security Hardening, Enhanced OAuth |
+| [v0.9.0](v0.9.0.md) | Jan 30, 2026 | Stable | Multi-Tenant Platform, OAuth, Storage |
 | [v0.4.8](v0.4.8.md) | Jan 24, 2026 | Stable | Plugin System (Stripe, GitHub, Shopify) |
 | [v0.4.7](v0.4.7.md) | Jan 23, 2026 | Stable | Infrastructure Everywhere, K8s, Helm |
 | [v0.4.6](v0.4.6.md) | Jan 22, 2026 | Stable | Scaling & Performance |
@@ -306,4 +322,4 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 ---
 
-**Last Updated:** January 30, 2026 | **Current Version:** v0.9.0
+**Last Updated:** January 30, 2026 | **Current Version:** v0.9.6

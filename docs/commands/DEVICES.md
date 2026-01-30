@@ -1,10 +1,12 @@
-# nself devices
+# nself auth devices
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself devices` in v0.x. It has been consolidated to `nself auth devices` in v1.0. The old command name may still work as an alias.
 
 Device management and trusted device authentication.
 
 ## Description
 
-The `devices` command manages user devices, device trust, and device-based authentication. It provides tools for tracking user devices, managing trusted devices, and implementing device-based security policies.
+The `nself auth devices` command manages user devices, device trust, and device-based authentication. It provides tools for tracking user devices, managing trusted devices, and implementing device-based security policies.
 
 **Use Cases:**
 - Track devices accessing user accounts
@@ -18,7 +20,7 @@ The `devices` command manages user devices, device trust, and device-based authe
 ## Usage
 
 ```bash
-nself devices <command> [options]
+nself auth devices <command> [options]
 ```
 
 ---
@@ -30,7 +32,7 @@ nself devices <command> [options]
 Initialize the device management system in your database.
 
 ```bash
-nself devices init
+nself auth devices init
 ```
 
 **What it does:**
@@ -41,7 +43,7 @@ nself devices init
 
 **Example:**
 ```bash
-nself devices init
+nself auth devices init
 ```
 
 **Output:**
@@ -56,7 +58,7 @@ nself devices init
 List all devices for a specific user.
 
 ```bash
-nself devices list <user_id>
+nself auth devices list <user_id>
 ```
 
 **Parameters:**
@@ -64,7 +66,7 @@ nself devices list <user_id>
 
 **Example:**
 ```bash
-nself devices list 550e8400-e29b-41d4-a716-446655440000
+nself auth devices list 550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Output (JSON):**
@@ -108,7 +110,7 @@ nself devices list 550e8400-e29b-41d4-a716-446655440000
 Mark a device as trusted for a user.
 
 ```bash
-nself devices trust <device_id>
+nself auth devices trust <device_id>
 ```
 
 **Parameters:**
@@ -116,7 +118,7 @@ nself devices trust <device_id>
 
 **Example:**
 ```bash
-nself devices trust dev_xyz789abc123
+nself auth devices trust dev_xyz789abc123
 ```
 
 **Output:**
@@ -137,7 +139,7 @@ nself devices trust dev_xyz789abc123
 Revoke trust and access for a device.
 
 ```bash
-nself devices revoke <device_id>
+nself auth devices revoke <device_id>
 ```
 
 **Parameters:**
@@ -145,7 +147,7 @@ nself devices revoke <device_id>
 
 **Example:**
 ```bash
-nself devices revoke dev_xyz789abc123
+nself auth devices revoke dev_xyz789abc123
 ```
 
 **Output:**
@@ -196,16 +198,16 @@ nself devices revoke dev_xyz789abc123
 
 ```bash
 # Initialize device management
-nself devices init
+nself auth devices init
 
 # List devices for a user
-nself devices list 550e8400-e29b-41d4-a716-446655440000
+nself auth devices list 550e8400-e29b-41d4-a716-446655440000
 
 # Trust a device
-nself devices trust dev_abc123
+nself auth devices trust dev_abc123
 
 # Revoke a compromised device
-nself devices revoke dev_suspicious123
+nself auth devices revoke dev_suspicious123
 ```
 
 ### Security Response Workflow
@@ -213,11 +215,11 @@ nself devices revoke dev_suspicious123
 ```bash
 # 1. User reports suspicious activity
 # 2. List all devices for the user
-nself devices list <user-uuid>
+nself auth devices list <user-uuid>
 
 # 3. Revoke unrecognized devices
-nself devices revoke dev_unknown123
-nself devices revoke dev_foreign456
+nself auth devices revoke dev_unknown123
+nself auth devices revoke dev_foreign456
 
 # 4. User re-authenticates on trusted devices
 ```
@@ -230,7 +232,7 @@ nself devices revoke dev_foreign456
 
 # 2. User verifies device via email/SMS
 # Device is marked as trusted
-nself devices trust <device-id>
+nself auth devices trust <device-id>
 
 # 3. User can now skip MFA on this device for 90 days
 ```
@@ -314,7 +316,7 @@ if (!device.trusted && !session.mfa_verified) {
 **Detect suspicious devices:**
 ```bash
 # List devices from unusual locations
-nself devices list <user-id> | jq '.[] | select(.ip_address | startswith("203."))'
+nself auth devices list <user-id> | jq '.[] | select(.ip_address | startswith("203."))'
 ```
 
 ### User Experience
@@ -323,7 +325,7 @@ nself devices list <user-id> | jq '.[] | select(.ip_address | startswith("203.")
 ```bash
 # User checks "Remember this device"
 # Device is automatically trusted after login
-nself devices trust <device-id>
+nself auth devices trust <device-id>
 ```
 
 **Skip MFA on trusted devices:**
@@ -337,14 +339,14 @@ nself devices trust <device-id>
 **Track all access points:**
 ```bash
 # Audit all devices accessing sensitive data
-nself devices list <user-id>
+nself auth devices list <user-id>
 ```
 
 **Revoke access for ex-employees:**
 ```bash
 # Revoke all devices for a user
-for device_id in $(nself devices list <user-id> | jq -r '.[].id'); do
-  nself devices revoke $device_id
+for device_id in $(nself auth devices list <user-id> | jq -r '.[].id'); do
+  nself auth devices revoke $device_id
 done
 ```
 
@@ -465,7 +467,7 @@ CREATE TABLE device_events (
 
 ```bash
 # Verify device ID
-nself devices list <user-id> | jq '.[].id'
+nself auth devices list <user-id> | jq '.[].id'
 
 # Check device was deleted
 # Devices are automatically deleted after 365 days of inactivity
@@ -475,23 +477,23 @@ nself devices list <user-id> | jq '.[].id'
 
 ```bash
 # Verify device is trusted
-nself devices list <user-id> | jq '.[] | select(.id=="<device-id>")'
+nself auth devices list <user-id> | jq '.[] | select(.id=="<device-id>")'
 
 # Check trust expiration
 # Trust expires after configured duration (default: 90 days)
 
 # Re-trust device
-nself devices trust <device-id>
+nself auth devices trust <device-id>
 ```
 
 ### Too Many Devices
 
 ```bash
 # List all devices
-nself devices list <user-id>
+nself auth devices list <user-id>
 
 # Revoke old/unused devices
-nself devices revoke <old-device-id>
+nself auth devices revoke <old-device-id>
 
 # Configure max trusted devices
 NSELF_DEVICE_MAX_TRUSTED=20

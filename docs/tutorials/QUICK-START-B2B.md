@@ -6,6 +6,11 @@ Build a B2B platform with organization hierarchies, team management, custom bran
 **Difficulty**: Intermediate
 **Prerequisites**: Docker Desktop, basic understanding of multi-tenancy
 
+> **Note:** As of v0.9.6, commands have been consolidated. This guide uses the new v1.0 command structure:
+> - `nself org` → `nself tenant org`
+> - `nself whitelabel` → `nself dev whitelabel`
+> - `nself env` → `nself config env`
+
 ---
 
 ## What You'll Build
@@ -460,29 +465,29 @@ query GetOrganizationHierarchy {
 ### Install white-label system
 
 ```bash
-nself whitelabel init
+nself dev whitelabel init
 ```
 
 ### Create brand for each organization
 
 ```bash
 # Brand for Acme
-nself whitelabel branding create "Acme Corporation" \
+nself dev whitelabel branding create "Acme Corporation" \
   --tenant acme \
   --tagline "Building the future"
 
-nself whitelabel branding set-colors \
+nself dev whitelabel branding set-colors \
   --tenant acme \
   --primary #0066cc \
   --secondary #00cc66 \
   --accent #ff6600
 
 # Brand for TechCo
-nself whitelabel branding create "TechCo Industries" \
+nself dev whitelabel branding create "TechCo Industries" \
   --tenant techco \
   --tagline "Technology that works"
 
-nself whitelabel branding set-colors \
+nself dev whitelabel branding set-colors \
   --tenant techco \
   --primary #6600cc \
   --secondary #cc0066 \
@@ -521,14 +526,14 @@ mutation UpdateOrganizationBranding {
 
 ```bash
 # Add custom domain for Acme
-nself whitelabel domain add app.acme.com --tenant acme
-nself whitelabel domain verify app.acme.com
-nself whitelabel domain ssl app.acme.com --auto-renew
+nself dev whitelabel domain add app.acme.com --tenant acme
+nself dev whitelabel domain verify app.acme.com
+nself dev whitelabel domain ssl app.acme.com --auto-renew
 
 # Add custom domain for TechCo
-nself whitelabel domain add app.techco.com --tenant techco
-nself whitelabel domain verify app.techco.com
-nself whitelabel domain ssl app.techco.com --auto-renew
+nself dev whitelabel domain add app.techco.com --tenant techco
+nself dev whitelabel domain verify app.techco.com
+nself dev whitelabel domain ssl app.techco.com --auto-renew
 ```
 
 ---
@@ -678,7 +683,7 @@ WHERE email = 'admin@mycompany.com';
 ### Configure production environment
 
 ```bash
-nself env create prod
+nself config env create prod
 ```
 
 Edit `.env.prod`:
@@ -950,7 +955,7 @@ nself config show nginx | grep acme.com
 curl -I https://app.acme.com
 
 # Check certificate
-nself ssl check app.acme.com
+nself auth ssl check app.acme.com
 ```
 
 ---

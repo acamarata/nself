@@ -4,8 +4,8 @@
 [Released](#released) | [Planned (v0.4.x)](#planned-v04x-series) | [Plugins (v0.4.8)](#v048---plugin-system) | [v0.5.0 LTS](#v050---production-ready-lts)
 
 ## Current Status Summary
-- **v0.9.5 (Current)**: Feature Parity & Security - Real-time, OAuth, security hardening
-- **v0.10.0 (Next)**: Analytics & Intelligence - Business intelligence, AI features
+- **v0.9.6 (Current)**: Command Consolidation - 79→31 commands, improved CLI structure
+- **v0.10.0 (Next)**: Enhanced Tooling - Analytics, Intelligence, AI features
 - **v0.5.0**: Production Ready LTS + ɳAdmin v0.1
 
 ---
@@ -16,6 +16,22 @@ Transform ɳSelf from a powerful CLI tool into a complete self-hosted backend pl
 ---
 
 ## Released
+
+### v0.9.6 - Command Consolidation Complete
+**Status**: Released | **Release Date**: January 30, 2026
+
+Complete command consolidation from 79 top-level commands to 31 organized commands with logical hierarchies:
+
+- **Command Reduction** - 79 → 31 top-level commands (60.8% reduction)
+- **Logical Hierarchies** - Organized by domain: tenant, deploy, infra, service, auth, config
+- **285+ Subcommands** - All functionality preserved, better organized
+- **100% Backward Compatible** - All old commands work with deprecation warnings
+- **Improved Discoverability** - Consistent patterns, logical grouping
+- **Clear Migration Path** - Automated migration tools, comprehensive guides
+
+Full details: [v0.9.6 Release Notes](./v0.9.6.md)
+
+---
 
 ### v0.9.5 - Feature Parity & Security Hardening
 **Status**: Released | **Release Date**: January 30, 2026
@@ -796,9 +812,11 @@ Utility Commands (4) - v0.4.9:
 | v0.4.6 | Released | Scaling & Performance | Jan 22, 2026 |
 | v0.4.7 | Released | Kubernetes Support | Jan 23, 2026 |
 | v0.4.8 | Released | Plugin System | Jan 24, 2026 |
-| **v0.8.0** | **Released** | Security Hardening | Jan 29, 2026 |
-| **v0.9.0** | **Next** | Enterprise Features (Billing & White-Label) | Q1 2026 |
-| v0.4.9 | Planned | Extensive Polish & Testing | Q1 2026 |
+| v0.8.0 | Released | Security Hardening | Jan 29, 2026 |
+| v0.9.0 | Released | Enterprise Features | Jan 30, 2026 |
+| v0.9.5 | Released | Feature Parity & Security | Jan 30, 2026 |
+| **v0.9.6** | **Released** | Command Consolidation | Jan 30, 2026 |
+| **v0.10.0** | **Next** | Enhanced Tooling & Analytics | Q1 2026 |
 | **v0.5.0** | **Target** | Production Ready LTS + nself-admin v0.1 | Q1-Q2 2026 |
 
 ---
@@ -858,4 +876,4 @@ completion, interactive, docs, config
 
 *This roadmap reflects actual implemented features and realistic future plans. Updated regularly based on development progress and community feedback.*
 
-*Last Updated: January 29, 2026*
+*Last Updated: January 30, 2026*

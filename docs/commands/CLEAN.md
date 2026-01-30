@@ -1,4 +1,6 @@
-# nself clean - Clean Docker Resources
+# nself backup clean - Clean Docker Resources
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself clean` in v0.x. It has been consolidated to `nself backup clean` in v1.0. The old command name may still work as an alias.
 
 **Version 0.4.8** | Remove containers, volumes, and images
 
@@ -6,7 +8,7 @@
 
 ## Overview
 
-The `nself clean` command removes Docker resources created by nself. It provides options for selective cleanup, from stopping containers to complete removal of all project data.
+The `nself backup clean` command removes Docker resources created by nself. It provides options for selective cleanup, from stopping containers to complete removal of all project data.
 
 ---
 
@@ -14,16 +16,16 @@ The `nself clean` command removes Docker resources created by nself. It provides
 
 ```bash
 # Stop and remove containers
-nself clean
+nself backup clean
 
 # Remove containers and volumes
-nself clean --volumes
+nself backup clean --volumes
 
 # Remove everything including images
-nself clean --all
+nself backup clean --all
 
 # Dry run (show what would be removed)
-nself clean --dry-run
+nself backup clean --dry-run
 ```
 
 ---
@@ -33,7 +35,7 @@ nself clean --dry-run
 ### Level 1: Containers Only (Default)
 
 ```bash
-nself clean
+nself backup clean
 ```
 
 Removes:
@@ -47,7 +49,7 @@ Keeps:
 ### Level 2: With Volumes
 
 ```bash
-nself clean --volumes
+nself backup clean --volumes
 ```
 
 Removes:
@@ -61,7 +63,7 @@ Keeps:
 ### Level 3: Everything
 
 ```bash
-nself clean --all
+nself backup clean --all
 ```
 
 Removes:
@@ -98,7 +100,7 @@ Are you sure? [y/N]
 ### Dry Run
 
 ```bash
-nself clean --all --dry-run
+nself backup clean --all --dry-run
 ```
 
 Shows what would be removed without actually deleting.
@@ -111,7 +113,7 @@ Shows what would be removed without actually deleting.
 
 ```bash
 # Complete reset
-nself clean --all
+nself backup clean --all
 nself init
 nself build
 nself start
@@ -121,7 +123,7 @@ nself start
 
 ```bash
 # Remove unused images
-nself clean --images
+nself backup clean --images
 
 # Docker system prune
 docker system prune -a
@@ -131,7 +133,7 @@ docker system prune -a
 
 ```bash
 # Keep images, reset data
-nself clean --volumes
+nself backup clean --volumes
 nself start
 ```
 

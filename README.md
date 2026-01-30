@@ -178,8 +178,10 @@ Email works out of the box with MailPit - all emails are captured locally:
 
 ### Production (2-Minute Setup)
 ```bash
-nself email setup
+nself service email config
 ```
+
+> **Note:** v0.9.6+ uses consolidated v1.0 command structure. See [Command Tree](docs/commands/COMMAND-TREE-V1.md) for details.
 
 Choose from 16+ providers:
 - **SendGrid** - 100 emails/day free
@@ -192,7 +194,7 @@ Choose from 16+ providers:
 
 The wizard guides you through everything. Example for SendGrid:
 ```bash
-nself email configure sendgrid
+nself service email config sendgrid
 # Add your API key to .env
 nself build && nself restart
 ```
@@ -266,95 +268,94 @@ Every template includes:
 ## 📚 Commands
 
 ### Version Status
-- **✅ v0.8.0 (Current)**: 56 commands - Multi-tenancy, plugins, real-time collaboration, security tools
-- **🚧 v0.9.0 (Next)**: Advanced AI features, marketplace expansion
-- **🔮 v1.0.0**: LTS release with enterprise guarantees
+- **✅ v1.0.0 (Current)**: 31 top-level commands with 285+ subcommands - Production-ready with complete feature set
+- **🔮 v1.1.0 (Next)**: Performance optimizations, enhanced plugin marketplace
+- **🎯 v2.0.0**: Advanced AI features, distributed deployment
 
-### Complete Command Tree
+### Complete Command Tree (v1.0)
+
+> **v0.9.6 Consolidation:** Old commands like `nself billing`, `nself org`, `nself staging`, etc. have been consolidated into this streamlined structure. See [Command Consolidation Map](docs/architecture/COMMAND-CONSOLIDATION-MAP.md) for the full mapping.
 
 ```
-nself (56 commands)
-├── 🚀 Core Commands
-│   ├── init          Initialize a new project (with --wizard, --full, --admin options)
-│   ├── build         Build project structure and Docker images
-│   ├── start         Start all services
-│   ├── stop          Stop all services
-│   ├── restart       Restart all or specific services
-│   ├── status        Show service status and health
+nself (31 top-level commands, 285+ subcommands)
+├── 🚀 Core Commands (5)
+│   ├── init          Initialize project with wizard
+│   ├── build         Generate Docker configs
+│   ├── start         Start services
+│   ├── stop          Stop services
+│   └── restart       Restart services
+│
+├── 📊 Utilities (15)
+│   ├── status        Service health status
 │   ├── logs          View service logs
-│   └── clean         Clean up Docker resources
+│   ├── help          Help system
+│   ├── admin         Admin UI
+│   ├── urls          Service URLs
+│   ├── exec          Execute in container
+│   ├── doctor        System diagnostics
+│   ├── monitor       Monitoring dashboards
+│   ├── health        Health checks
+│   ├── version       Version info
+│   ├── update        Update nself
+│   ├── completion    Shell completions
+│   ├── metrics       Metrics & profiling
+│   ├── history       Audit trail
+│   └── audit         Audit logging
 │
-├── 📊 Database & Backup
-│   ├── db            Interactive database operations menu (25+ operations)
-│   └── backup        Comprehensive backup system with cloud support
-│
-├── 🔧 Configuration
-│   ├── ssl           SSL certificate management (bootstrap, renew, status)
-│   ├── trust         Install SSL certificates locally for browser trust
-│   ├── email         Email service configuration (16+ providers)
-│   ├── prod          Generate production configuration with secure passwords
-│   └── urls          Show all service URLs
-│
-├── 🎯 Admin & Monitoring
-│   ├── admin         Admin UI management (localhost:3100)
-│   ├── doctor        System diagnostics and auto-fixes
-│   ├── monitor       Real-time monitoring dashboard
-│   └── metrics       Metrics collection and reporting
-│
-├── 🏢 Multi-Tenancy (NEW in v0.8.0)
-│   ├── tenant        Multi-tenant management (create, list, switch, delete)
-│   │   ├── billing   Billing and subscription management
-│   │   ├── branding  Brand customization (logo, colors, themes)
-│   │   ├── domains   Custom domain management and SSL
-│   │   ├── email     Email template customization
-│   │   └── themes    Theme management and activation
-│   └── org           Organization management (create, invite, roles)
-│
-├── 🔌 Plugin System (NEW in v0.8.0)
-│   ├── plugin        Plugin management (install, list, remove, update)
-│   └── marketplace   Browse and install from plugin marketplace
-│
-├── 🔐 Security Tools (NEW in v0.8.0)
-│   ├── security      Security command suite
-│   │   ├── scan      Vulnerability scanning
-│   │   ├── audit     Security audit and compliance checks
-│   │   └── firewall  Firewall configuration and management
-│
-├── 👥 Real-Time Collaboration (NEW in v0.8.0)
-│   ├── realtime      Real-time features management
-│   │   ├── presence  User presence tracking
-│   │   ├── sync      Live data synchronization
-│   │   └── broadcast WebSocket broadcasting
-│
-├── 🚀 Serverless & ML
-│   ├── functions     Serverless functions management
-│   └── mlflow        ML experiment tracking and model registry
-│
-├── 🚀 Deployment & Scaling
-│   ├── deploy        Deploy to remote servers with zero-downtime
-│   ├── scale         Scale services up/down
-│   ├── rollback      Rollback to previous version
-│   ├── migrate       Cross-environment migration (NEW in v0.8.0)
-│   └── update        Update nself CLI to latest version
-│
-├── 🛠️ Development Tools (NEW in v0.8.0)
-│   ├── dev           Developer experience tools
-│   │   ├── console   Interactive development console
-│   │   ├── tunnel    Expose local services to internet
-│   │   └── mock      Mock API endpoints for testing
-│   ├── exec          Execute commands in containers
-│   ├── reset         Reset project to clean state (with timestamped backups)
-│   └── search        Enterprise search service management (6 engines)
-│
-├── ⚡ Performance Tools (NEW in v0.8.0)
-│   ├── perf          Performance profiling and optimization
-│   └── bench         Benchmarking and load testing
-│
-└── 📝 Utility Commands
-    ├── version       Show version information
-    ├── help          Display help information
-    ├── up            Alias for 'start'
-    └── down          Alias for 'stop'
+└── 🎯 Other Commands (11)
+    ├── db            Database operations (11 subcommands)
+    ├── tenant        Multi-tenancy (50+ subcommands)
+    │   ├── billing   → Billing management (was: nself billing)
+    │   └── org       → Organization management (was: nself org)
+    ├── deploy        Deployment (23 subcommands)
+    │   ├── staging   → Deploy to staging (was: nself staging)
+    │   ├── production → Deploy to production (was: nself prod)
+    │   ├── upgrade   → Upgrade deployment (was: nself upgrade)
+    │   ├── server    → Server management (was: nself servers)
+    │   └── sync      → Sync environments (was: nself sync)
+    ├── infra         Infrastructure (38 subcommands)
+    │   ├── provider  → Cloud providers (was: nself cloud/provider)
+    │   ├── k8s       → Kubernetes operations (was: nself k8s)
+    │   └── helm      → Helm charts (was: nself helm)
+    ├── service       Service management (43 subcommands)
+    │   ├── storage   → Storage service (was: nself storage)
+    │   ├── email     → Email service (was: nself email)
+    │   ├── search    → Search service (was: nself search)
+    │   ├── redis     → Redis cache (was: nself redis)
+    │   ├── functions → Serverless functions (was: nself functions)
+    │   ├── mlflow    → ML tracking (was: nself mlflow)
+    │   └── realtime  → Real-time features (was: nself realtime)
+    ├── config        Configuration (20 subcommands)
+    │   ├── env       → Environment management (was: nself env)
+    │   ├── secrets   → Secrets management (was: nself secrets)
+    │   ├── vault     → Vault integration (was: nself vault)
+    │   └── validate  → Config validation (was: nself validate)
+    ├── auth          Security (38 subcommands)
+    │   ├── mfa       → Multi-factor auth (was: nself mfa)
+    │   ├── roles     → Role management (was: nself roles)
+    │   ├── devices   → Device management (was: nself devices)
+    │   ├── oauth     → OAuth providers (was: nself oauth)
+    │   ├── security  → Security scanning (was: nself security)
+    │   ├── ssl       → SSL management (was: nself ssl/trust)
+    │   ├── rate-limit → Rate limiting (was: nself rate-limit)
+    │   └── webhooks  → Webhook management (was: nself webhooks)
+    ├── perf          Performance (5 subcommands)
+    │   ├── bench     → Benchmarking (was: nself bench)
+    │   ├── scale     → Scaling (was: nself scale)
+    │   └── migrate   → Migration tools (was: nself migrate)
+    ├── backup        Backup & recovery (6 subcommands)
+    │   ├── rollback  → Rollback changes (was: nself rollback)
+    │   ├── reset     → Reset state (was: nself reset)
+    │   └── clean     → Clean resources (was: nself clean)
+    ├── dev           Developer tools (16 subcommands)
+    │   ├── frontend  → Frontend management (was: nself frontend)
+    │   ├── ci        → CI/CD config (was: nself ci)
+    │   ├── docs      → Documentation (was: nself docs)
+    │   └── whitelabel → White-label config (was: nself whitelabel)
+    └── plugin        Plugin system (8+ subcommands)
+        ├── install   → Install plugins
+        ├── list      → List plugins
+        └── update    → Update plugins
 ```
 
 ## 🎯 Admin Dashboard
@@ -371,37 +372,35 @@ The new admin dashboard provides complete visibility and control over your nself
 
 ### Quick Setup
 ```bash
-# Enable admin UI
-nself admin enable
+# Open admin UI in browser
+nself admin
 
-# Set password
-nself admin password mypassword
+# Or open in development mode
+nself admin --dev
 
-# Open in browser (localhost:3100)
-nself admin open
+# Served at localhost:3100
 ```
 
 ## 📚 Documentation
 
-- **[Commands Reference](docs/COMMANDS.md)** - All 34 available commands
-- **[Release Notes](docs/RELEASES.md)** - Latest features and fixes
-- **[Roadmap](docs/ROADMAP.md)** - Development roadmap and upcoming features
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Changelog](docs/CHANGELOG.md)** - Version history
-- **[All Releases](docs/RELEASES.md)** - Complete release history
+- **[Commands Reference](docs/commands/COMMAND-TREE-V1.md)** - Complete v1.0 command tree
+- **[Command Mapping](docs/architecture/COMMAND-CONSOLIDATION-MAP.md)** - Old → New command reference
+- **[Release Notes](docs/releases/INDEX.md)** - Latest features and fixes
+- **[Roadmap](docs/releases/ROADMAP.md)** - Development roadmap and upcoming features
+- **[Architecture](docs/architecture/README.md)** - System architecture and design
+- **[Troubleshooting](docs/guides/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Changelog](docs/releases/CHANGELOG.md)** - Version history
+- **[All Releases](docs/releases/INDEX.md)** - Complete release history
 
 ### Quick Reference
 
-### Email Commands
+### Email Commands (v1.0)
 | Command | Description |
 |---------|-------------|
-| `nself email setup` | Interactive email setup wizard |
-| `nself email list` | Show all 16+ supported email providers |
-| `nself email configure <provider>` | Configure specific email provider |
-| `nself email validate` | Check email configuration |
-| `nself email test [email]` | Send a test email |
-| `nself email docs <provider>` | Show provider setup guide |
+| `nself service email send` | Send email interactively |
+| `nself service email config` | Configure email provider |
+| `nself service email test` | Test email configuration |
+| `nself service email template` | Manage email templates |
 
 ## 🌐 Default Service URLs
 
@@ -481,8 +480,8 @@ nself provides bulletproof SSL with green locks in browsers - no warnings!
 ### Automatic Certificate Generation
 
 ```bash
-nself build    # Automatically generates SSL certificates
-nself trust    # Install root CA for green locks (one-time)
+nself build              # Automatically generates SSL certificates
+nself auth ssl trust     # Install root CA for green locks (one-time)
 ```
 
 That's it! Your browser will show green locks for:
@@ -491,7 +490,7 @@ That's it! Your browser will show green locks for:
 
 ### Advanced: Public Wildcard Certificates
 
-For teams or CI/CD, get globally-trusted certificates (no `nself trust` needed):
+For teams or CI/CD, get globally-trusted certificates (no `nself auth ssl trust` needed):
 
 ```bash
 # Add to .env
@@ -499,7 +498,7 @@ DNS_PROVIDER=cloudflare        # or route53, digitalocean
 DNS_API_TOKEN=your_api_token
 
 # Generate public wildcard
-nself ssl bootstrap
+nself auth ssl generate
 ```
 
 Supported DNS providers:
@@ -508,15 +507,15 @@ Supported DNS providers:
 - DigitalOcean
 - And more via acme.sh
 
-### SSL Commands
+### SSL Commands (v1.0)
 
 | Command | Description |
 |---------|-------------|
-| `nself ssl bootstrap` | Generate SSL certificates |
-| `nself ssl renew` | Renew public certificates |
-| `nself ssl status` | Check certificate status |
-| `nself trust` | Install root CA to system |
-| `nself trust status` | Check trust status |
+| `nself auth ssl generate` | Generate SSL certificates |
+| `nself auth ssl renew` | Renew certificates |
+| `nself auth ssl info` | Check certificate status |
+| `nself auth ssl trust` | Install root CA to system |
+| `nself auth ssl install` | Install certificate |
 
 ## 💾 Backup & Restore
 
@@ -565,31 +564,30 @@ Intelligently manage backup storage with multiple retention strategies:
 
 ```bash
 # Simple age-based cleanup (default)
-nself backup prune age 30        # Remove backups older than 30 days
+nself backup clean --age 30      # Remove backups older than 30 days
 
-# Grandfather-Father-Son policy
-nself backup prune gfs           # Keep 7 daily, 4 weekly, 12 monthly
+# List backups with filtering
+nself backup list --filter DATE  # View backups by date
 
-# Smart retention (recommended)
-nself backup prune smart         # Intelligent retention based on age
-
-# Cloud backup cleanup
-nself backup prune cloud 30      # Prune cloud backups
+# Create full or incremental backups
+nself backup create --full       # Full backup
+nself backup create --incremental # Incremental backup
 ```
 
 ### Automated Backups
 
-Schedule automatic backups with built-in cron integration:
+Schedule automatic backups:
 
 ```bash
-# Schedule options
-nself backup schedule hourly
-nself backup schedule daily      # Recommended for production
-nself backup schedule weekly
-nself backup schedule monthly
+# Create backups
+nself backup create              # Full backup
+nself backup create --incremental # Incremental backup
 
-# View schedule
-crontab -l
+# Restore from backup
+nself backup restore <backup-id>
+
+# Clean old backups
+nself backup clean --age 30      # Remove backups older than 30 days
 ```
 
 ### Backup Configuration
@@ -625,24 +623,25 @@ RCLONE_REMOTE=myremote
 
 ## 🚀 Production Deployment
 
-### Using nself prod Command
+### Using Production Deployment
 
-The `nself prod` command automatically generates secure passwords for production:
+Deploy to production environments:
 
 ```bash
-# 1. Generate production configuration with secure passwords
-nself prod
+# 1. Configure production environment
+nself config env create production
 
-# This creates:
-# - .env.prod-template (ready-to-use production config)
-# - .env.prod-secrets (backup of generated passwords)
+# 2. Deploy to production
+nself deploy production
 
-# 2. Edit .env.prod-template to set your domain and email
+# 3. Check deployment status
+nself deploy status
 
-# 3. Deploy to production
-cp .env.prod-template .env
-nself start
+# 4. Monitor deployment
+nself monitor
 ```
+
+> **Command Update:** In v0.9.6+, use `nself deploy staging` and `nself deploy production` instead of the old `nself staging` and `nself prod` commands.
 
 Environment files are loaded in priority order (highest priority last):
 - `.env.dev` - Team defaults (always loaded)
@@ -783,12 +782,12 @@ Known issue: Auth health check reports unhealthy but service works (port 4001 vs
 Edit the port numbers in `.env` and rebuild.
 
 #### SSL certificate warnings?
-Run `nself trust` to install the root CA and get green locks in your browser. No more warnings!
+Run `nself auth ssl trust` to install the root CA and get green locks in your browser. No more warnings!
 
 #### Email test not working?
 ```bash
-# SMTP testing uses swaks Docker container
-nself email test recipient@example.com
+# Test email configuration
+nself service email test recipient@example.com
 ```
 
 ## 🔄 Version History
@@ -870,14 +869,13 @@ See [LICENSE](LICENSE) for full terms.
 - [Hasura Documentation](https://hasura.io/docs) - GraphQL engine docs
 - [Report Issues](https://github.com/acamarata/nself/issues) - We'd love your feedback!
 
-## v0.3.9 Admin UI
+## Admin UI
 
-Enable the web-based administration interface:
+Access the web-based administration interface:
 
 ```bash
-nself admin enable     # Enable admin web interface
-nself admin password   # Set admin password
-nself admin open       # Open admin in browser
+nself admin           # Open admin in browser
+nself admin --dev     # Open in development mode
 ```
 
 The admin UI provides:
@@ -887,14 +885,14 @@ The admin UI provides:
 - Backup management interface
 - Resource usage monitoring
 
-## v0.3.9 Enterprise Search
+## Enterprise Search
 
 Choose from 6 different search engines:
 
 ```bash
-nself search enable    # Interactive engine selection
-nself search setup     # Configure search settings
-nself search test      # Test search functionality
+nself service search init <provider>    # Initialize search provider
+nself service search config             # Configure search settings
+nself service search query <text>       # Test search functionality
 ```
 
 **Available Engines:**
@@ -902,14 +900,15 @@ nself search test      # Test search functionality
 - MeiliSearch (recommended)
 - Typesense, Elasticsearch, OpenSearch, Sonic
 
-## v0.3.9 SSH Deployment
+## Remote Deployment
 
 Deploy to any VPS with one command:
 
 ```bash
-nself deploy init      # Setup deployment config
-nself deploy ssh       # Deploy to VPS server
-nself deploy status    # Check deployment status
+nself deploy provision <provider>  # Provision new server
+nself deploy staging              # Deploy to staging
+nself deploy production           # Deploy to production
+nself deploy status               # Check deployment status
 ```
 
 Supports DigitalOcean, Linode, Vultr, Hetzner, and any Ubuntu/Debian VPS.

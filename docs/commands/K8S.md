@@ -1,5 +1,9 @@
 # nself k8s - Kubernetes Management
 
+> **⚠️ DEPRECATED in v0.9.6**: This command has been consolidated.
+> Please use `nself infra k8s` instead.
+> See [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) and [v0.9.6 Release Notes](../releases/v0.9.6.md) for details.
+
 **Version**: 0.4.7+ | **Status**: Available
 
 ---

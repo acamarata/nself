@@ -570,7 +570,7 @@ stripe_payment_add() {
     customer_id=$(billing_get_customer_id) || {
         error "No customer ID found"
         return 1
-    fi
+    }
 
     info "Add Payment Method"
     printf "\n"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cloud.sh - DEPRECATED: Use 'nself provider' instead
+# cloud.sh - DEPRECATED: Use 'nself infra provider' instead
 # This is a compatibility wrapper that will be removed in v1.0.0
 set -euo pipefail
 
@@ -19,32 +19,32 @@ fi
 # Show deprecation warning
 show_deprecation_warning() {
   log_warning "DEPRECATION: 'nself cloud' is deprecated and will be removed in v1.0.0"
-  printf "             Please use 'nself provider' instead.\n"
-  printf "             https://docs.nself.org/migration/cloud-to-provider\n"
+  printf "             Please use 'nself infra provider' instead.\n"
+  printf "             https://docs.nself.org/migration/cloud-to-infra\n"
   echo ""
 }
 
 show_cloud_help() {
   show_deprecation_warning
   cat << 'EOF'
-nself cloud - DEPRECATED (use 'nself provider' instead)
+nself cloud - DEPRECATED (use 'nself infra provider' instead)
 
 MIGRATION GUIDE:
   Old Command                           →  New Command
   ────────────────────────────────────────────────────────────────────
-  nself cloud provider list             →  nself provider info list
-  nself cloud provider init <name>      →  nself provider info init <name>
-  nself cloud provider validate         →  nself provider info validate
-  nself cloud provider info <name>      →  nself provider info show <name>
+  nself cloud provider list             →  nself infra provider list
+  nself cloud provider init <name>      →  nself infra provider init <name>
+  nself cloud provider validate         →  nself infra provider validate
+  nself cloud provider info <name>      →  nself infra provider show <name>
 
-  nself cloud server create             →  nself provider server create
-  nself cloud server list               →  nself provider server list
-  nself cloud server ssh <name>         →  nself provider server ssh <name>
+  nself cloud server create             →  nself infra provider server create
+  nself cloud server list               →  nself infra provider server list
+  nself cloud server ssh <name>         →  nself infra provider server ssh <name>
 
-  nself cloud cost estimate             →  nself provider cost estimate
-  nself cloud deploy quick <server>     →  nself provider deploy quick <server>
+  nself cloud cost estimate             →  nself infra provider cost estimate
+  nself cloud deploy quick <server>     →  nself infra provider deploy quick <server>
 
-For full documentation, run: nself provider --help
+For full documentation, run: nself infra provider --help
 EOF
 }
 
@@ -59,8 +59,8 @@ main() {
   # Show deprecation warning for actual command usage
   show_deprecation_warning
 
-  # Delegate all commands to provider.sh
-  bash "${SCRIPT_DIR}/provider.sh" "$@"
+  # Delegate all commands to infra.sh provider
+  bash "${SCRIPT_DIR}/infra.sh" provider "$@"
 }
 
 # Run if executed directly

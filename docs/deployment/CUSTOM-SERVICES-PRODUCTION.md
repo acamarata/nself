@@ -425,7 +425,7 @@ services:
 
 ```bash
 # Convert your deployment to K8s manifests
-nself k8s convert
+nself infra k8s convert
 
 # This generates:
 .nself/k8s/manifests/
@@ -553,16 +553,16 @@ spec:
 
 ```bash
 # Deploy to K8s cluster
-nself k8s deploy --env production
+nself infra k8s deploy --env production
 
 # Verify deployment
-nself k8s status
+nself infra k8s status
 
 # Scale custom service
-nself k8s scale payment-api 5
+nself infra k8s scale payment-api 5
 
 # View logs
-nself k8s logs payment-api -f
+nself infra k8s logs payment-api -f
 ```
 
 ### Method 3: Cloud-Specific Deployment
@@ -688,7 +688,7 @@ MINIO_ROOT_PASSWORD=<from-secrets>
 
 ```bash
 # Generate all secrets for production
-nself secrets generate --env prod
+nself config secrets generate --env prod
 
 # This creates .environments/prod/.env.secrets with:
 # - POSTGRES_PASSWORD (44 chars)
@@ -717,7 +717,7 @@ kubectl create secret generic custom-service-secrets \
   --namespace=myapp
 
 # Or use nself
-nself k8s secrets sync --env prod
+nself infra k8s secrets sync --env prod
 ```
 
 ### Vault Integration (Advanced)
@@ -1104,10 +1104,10 @@ services:
 
 ```bash
 # Scale manually
-nself k8s scale payment-api 5
+nself infra k8s scale payment-api 5
 
 # Auto-scaling
-nself k8s scale payment-api --auto \
+nself infra k8s scale payment-api --auto \
   --min 3 --max 10 \
   --cpu 70 --memory 80
 ```
@@ -1301,16 +1301,16 @@ nself deploy rollback --env prod
 
 ```bash
 # Automatic rollback on failure
-nself k8s deploy --auto-rollback
+nself infra k8s deploy --auto-rollback
 
 # Manual rollback
-nself k8s rollback payment-api
+nself infra k8s rollback payment-api
 
 # Rollback to specific revision
-nself k8s rollback payment-api --revision 3
+nself infra k8s rollback payment-api --revision 3
 
 # Check rollout history
-nself k8s rollout history payment-api
+nself infra k8s rollout history payment-api
 ```
 
 ### Manual Rollback
@@ -1461,5 +1461,5 @@ For cloud-specific deployment patterns, see [Cloud Provider Deployment Guide](CL
 - [Service Templates](../services/SERVICE_TEMPLATES.md)
 - [Production Deployment](PRODUCTION-DEPLOYMENT.md)
 - [Cloud Providers](CLOUD-PROVIDERS.md)
-- [Kubernetes Management](../commands/K8S.md)
+- [Kubernetes Management](../commands/INFRA.md)
 - [Monitoring Bundle](../services/MONITORING_BUNDLE.md)

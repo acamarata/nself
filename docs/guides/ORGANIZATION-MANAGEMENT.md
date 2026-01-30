@@ -2,6 +2,8 @@
 
 **nself v0.8.0** - Complete guide to organizations, teams, and RBAC
 
+> **Note:** As of v0.9.6, organization commands have been consolidated under `nself tenant org`. Throughout this guide, `nself org` refers to `nself tenant org` in the new command structure.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -195,13 +197,13 @@ scope = 'team', scope_id = 'engineering-team-uuid'
 
 ```bash
 # Create with auto-generated slug
-nself org create "Acme Corporation"
+nself tenant org create "Acme Corporation"
 
 # Create with custom slug
-nself org create "Acme Corporation" --slug acme
+nself tenant org create "Acme Corporation" --slug acme
 
 # Create with specific owner
-nself org create "Acme Corp" --slug acme --owner <user_uuid>
+nself tenant org create "Acme Corp" --slug acme --owner <user_uuid>
 ```
 
 **What happens**:
@@ -236,10 +238,10 @@ Organizations include flexible settings stored as JSONB:
 
 ```bash
 # Table format
-nself org list
+nself tenant org list
 
 # JSON output
-nself org list --json
+nself tenant org list --json
 ```
 
 **Output**:
@@ -254,8 +256,8 @@ nself org list --json
 
 ```bash
 # By ID or slug
-nself org show acme
-nself org show a1b2c3d4-e5f6-...
+nself tenant org show acme
+nself tenant org show a1b2c3d4-e5f6-...
 ```
 
 **Output includes**:
@@ -268,7 +270,7 @@ nself org show a1b2c3d4-e5f6-...
 ### Deleting an Organization
 
 ```bash
-nself org delete acme
+nself tenant org delete acme
 ```
 
 **Confirmation required**:
@@ -290,9 +292,9 @@ Are you sure you want to delete organization 'acme'? (yes/no): yes
 
 ```bash
 # Create team in organization
-nself org team create acme "Engineering"
-nself org team create acme "Sales Team"
-nself org team create project-x "Backend Developers"
+nself tenant org team create acme "Engineering"
+nself tenant org team create acme "Sales Team"
+nself tenant org team create project-x "Backend Developers"
 ```
 
 **Auto-generated slug**:
@@ -304,7 +306,7 @@ nself org team create project-x "Backend Developers"
 
 ```bash
 # List all teams in organization
-nself org team list acme
+nself tenant org team list acme
 ```
 
 **Output**:
@@ -319,27 +321,27 @@ nself org team list acme
 
 ```bash
 # Show team information
-nself org team show engineering
-nself org team show 1a2b3c4d-...
+nself tenant org team show engineering
+nself tenant org team show 1a2b3c4d-...
 ```
 
 ### Managing Team Members
 
 ```bash
 # Add user to team as member (default)
-nself org team add engineering user-uuid-123
+nself tenant org team add engineering user-uuid-123
 
 # Add user as team lead
-nself org team add engineering user-uuid-456 lead
+nself tenant org team add engineering user-uuid-456 lead
 
 # Remove user from team
-nself org team remove engineering user-uuid-123
+nself tenant org team remove engineering user-uuid-123
 ```
 
 ### Deleting Teams
 
 ```bash
-nself org team delete engineering
+nself tenant org team delete engineering
 ```
 
 **Note**: Team members are removed, but users remain in the organization.
@@ -353,7 +355,7 @@ nself org team delete engineering
 #### Initialize Organization System
 
 ```bash
-nself org init
+nself tenant org init
 ```
 
 **What it does**:
@@ -366,45 +368,45 @@ nself org init
 #### Create Organization
 
 ```bash
-nself org create <name> [options]
+nself tenant org create <name> [options]
 
 Options:
   --slug <slug>       Custom slug (auto-generated if omitted)
   --owner <user_id>   Owner user ID (defaults to first user)
 
 Examples:
-  nself org create "Acme Corp"
-  nself org create "Acme Corp" --slug acme
-  nself org create "Acme Corp" --slug acme --owner a1b2c3d4-...
+  nself tenant org create "Acme Corp"
+  nself tenant org create "Acme Corp" --slug acme
+  nself tenant org create "Acme Corp" --slug acme --owner a1b2c3d4-...
 ```
 
 #### List Organizations
 
 ```bash
-nself org list [--json]
+nself tenant org list [--json]
 
 Examples:
-  nself org list
-  nself org list --json | jq '.[] | {name, slug, status}'
+  nself tenant org list
+  nself tenant org list --json | jq '.[] | {name, slug, status}'
 ```
 
 #### Show Organization
 
 ```bash
-nself org show <id_or_slug>
+nself tenant org show <id_or_slug>
 
 Examples:
-  nself org show acme
-  nself org show a1b2c3d4-e5f6-...
+  nself tenant org show acme
+  nself tenant org show a1b2c3d4-e5f6-...
 ```
 
 #### Delete Organization
 
 ```bash
-nself org delete <id_or_slug>
+nself tenant org delete <id_or_slug>
 
 Examples:
-  nself org delete acme
+  nself tenant org delete acme
 ```
 
 ### Member Management Commands
@@ -412,7 +414,7 @@ Examples:
 #### Add Member
 
 ```bash
-nself org member add <org> <user_id> [role]
+nself tenant org member add <org> <user_id> [role]
 
 Roles:
   owner      - Full control (only one per org)
@@ -421,26 +423,26 @@ Roles:
   guest      - Read-only access
 
 Examples:
-  nself org member add acme user-123 admin
-  nself org member add acme user-456          # Defaults to 'member'
+  nself tenant org member add acme user-123 admin
+  nself tenant org member add acme user-456          # Defaults to 'member'
 ```
 
 #### Remove Member
 
 ```bash
-nself org member remove <org> <user_id>
+nself tenant org member remove <org> <user_id>
 
 Examples:
-  nself org member remove acme user-123
+  nself tenant org member remove acme user-123
 ```
 
 #### List Members
 
 ```bash
-nself org member list <org>
+nself tenant org member list <org>
 
 Examples:
-  nself org member list acme
+  nself tenant org member list acme
 ```
 
 **Output**:
@@ -455,11 +457,11 @@ Examples:
 #### Change Member Role
 
 ```bash
-nself org member role <org> <user_id> <new_role>
+nself tenant org member role <org> <user_id> <new_role>
 
 Examples:
-  nself org member role acme user-123 admin
-  nself org member role acme user-456 guest
+  nself tenant org member role acme user-123 admin
+  nself tenant org member role acme user-456 guest
 ```
 
 ### Team Commands
@@ -467,62 +469,62 @@ Examples:
 #### Create Team
 
 ```bash
-nself org team create <org> <name>
+nself tenant org team create <org> <name>
 
 Examples:
-  nself org team create acme "Engineering"
-  nself org team create acme "Customer Success"
+  nself tenant org team create acme "Engineering"
+  nself tenant org team create acme "Customer Success"
 ```
 
 #### List Teams
 
 ```bash
-nself org team list <org>
+nself tenant org team list <org>
 
 Examples:
-  nself org team list acme
+  nself tenant org team list acme
 ```
 
 #### Show Team
 
 ```bash
-nself org team show <team_id_or_slug>
+nself tenant org team show <team_id_or_slug>
 
 Examples:
-  nself org team show engineering
-  nself org team show 1a2b3c4d-...
+  nself tenant org team show engineering
+  nself tenant org team show 1a2b3c4d-...
 ```
 
 #### Delete Team
 
 ```bash
-nself org team delete <team_id_or_slug>
+nself tenant org team delete <team_id_or_slug>
 
 Examples:
-  nself org team delete engineering
+  nself tenant org team delete engineering
 ```
 
 #### Add Team Member
 
 ```bash
-nself org team add <team> <user_id> [role]
+nself tenant org team add <team> <user_id> [role]
 
 Roles:
   lead       - Team manager
   member     - Standard team member (default)
 
 Examples:
-  nself org team add engineering user-123 lead
-  nself org team add engineering user-456       # Defaults to 'member'
+  nself tenant org team add engineering user-123 lead
+  nself tenant org team add engineering user-456       # Defaults to 'member'
 ```
 
 #### Remove Team Member
 
 ```bash
-nself org team remove <team> <user_id>
+nself tenant org team remove <team> <user_id>
 
 Examples:
-  nself org team remove engineering user-123
+  nself tenant org team remove engineering user-123
 ```
 
 ### Role & Permission Commands
@@ -530,20 +532,20 @@ Examples:
 #### Create Custom Role
 
 ```bash
-nself org role create <org> <role_name>
+nself tenant org role create <org> <role_name>
 
 Examples:
-  nself org role create acme "Developer"
-  nself org role create acme "Support Agent"
+  nself tenant org role create acme "Developer"
+  nself tenant org role create acme "Support Agent"
 ```
 
 #### List Roles
 
 ```bash
-nself org role list <org>
+nself tenant org role list <org>
 
 Examples:
-  nself org role list acme
+  nself tenant org role list acme
 ```
 
 **Output**:
@@ -557,45 +559,45 @@ Examples:
 #### Assign Role to User
 
 ```bash
-nself org role assign <org> <user_id> <role_name>
+nself tenant org role assign <org> <user_id> <role_name>
 
 Examples:
-  nself org role assign acme user-123 Developer
-  nself org role assign acme user-456 "Support Agent"
+  nself tenant org role assign acme user-123 Developer
+  nself tenant org role assign acme user-456 "Support Agent"
 ```
 
 #### Revoke Role from User
 
 ```bash
-nself org role revoke <org> <user_id> <role_name>
+nself tenant org role revoke <org> <user_id> <role_name>
 
 Examples:
-  nself org role revoke acme user-123 Developer
+  nself tenant org role revoke acme user-123 Developer
 ```
 
 #### Grant Permission to Role
 
 ```bash
-nself org permission grant <role_name> <permission>
+nself tenant org permission grant <role_name> <permission>
 
 Examples:
-  nself org permission grant Developer tenant.create
-  nself org permission grant "Support Agent" user.read
+  nself tenant org permission grant Developer tenant.create
+  nself tenant org permission grant "Support Agent" user.read
 ```
 
 #### Revoke Permission from Role
 
 ```bash
-nself org permission revoke <role_name> <permission>
+nself tenant org permission revoke <role_name> <permission>
 
 Examples:
-  nself org permission revoke Developer tenant.delete
+  nself tenant org permission revoke Developer tenant.delete
 ```
 
 #### List All Permissions
 
 ```bash
-nself org permission list
+nself tenant org permission list
 ```
 
 **Output**:
@@ -782,40 +784,40 @@ FROM permissions.get_user_permissions(
 
 ```bash
 # Create organization
-nself org create "Acme Corp" --slug acme
+nself tenant org create "Acme Corp" --slug acme
 
 # Create teams for departments
-nself org team create acme "Engineering"
-nself org team create acme "Sales"
-nself org team create acme "Support"
+nself tenant org team create acme "Engineering"
+nself tenant org team create acme "Sales"
+nself tenant org team create acme "Support"
 
 # Create custom roles
-nself org role create acme "Engineer"
-nself org role create acme "Sales Rep"
-nself org role create acme "Support Agent"
+nself tenant org role create acme "Engineer"
+nself tenant org role create acme "Sales Rep"
+nself tenant org role create acme "Support Agent"
 
 # Grant permissions to Engineer role
-nself org permission grant Engineer tenant.create
-nself org permission grant Engineer tenant.update
-nself org permission grant Engineer tenant.delete
-nself org permission grant Engineer user.read
+nself tenant org permission grant Engineer tenant.create
+nself tenant org permission grant Engineer tenant.update
+nself tenant org permission grant Engineer tenant.delete
+nself tenant org permission grant Engineer user.read
 
 # Grant permissions to Sales Rep role
-nself org permission grant "Sales Rep" tenant.read
-nself org permission grant "Sales Rep" user.create
+nself tenant org permission grant "Sales Rep" tenant.read
+nself tenant org permission grant "Sales Rep" user.create
 
 # Grant permissions to Support Agent role
-nself org permission grant "Support Agent" tenant.read
-nself org permission grant "Support Agent" user.read
+nself tenant org permission grant "Support Agent" tenant.read
+nself tenant org permission grant "Support Agent" user.read
 
 # Add members and assign roles
-nself org member add acme user-eng-1 member
-nself org role assign acme user-eng-1 Engineer
-nself org team add engineering user-eng-1
+nself tenant org member add acme user-eng-1 member
+nself tenant org role assign acme user-eng-1 Engineer
+nself tenant org team add engineering user-eng-1
 
-nself org member add acme user-sales-1 member
-nself org role assign acme user-sales-1 "Sales Rep"
-nself org team add sales user-sales-1
+nself tenant org member add acme user-sales-1 member
+nself tenant org role assign acme user-sales-1 "Sales Rep"
+nself tenant org team add sales user-sales-1
 ```
 
 ### Pattern 2: Project-Based Isolation
@@ -824,15 +826,15 @@ nself org team add sales user-sales-1
 
 ```bash
 # Create organization
-nself org create "Software Agency" --slug agency
+nself tenant org create "Software Agency" --slug agency
 
 # Create teams for projects
-nself org team create agency "Project Alpha"
-nself org team create agency "Project Beta"
+nself tenant org team create agency "Project Alpha"
+nself tenant org team create agency "Project Beta"
 
 # Create project-specific roles
-nself org role create agency "Alpha Developer"
-nself org role create agency "Beta Developer"
+nself tenant org role create agency "Alpha Developer"
+nself tenant org role create agency "Beta Developer"
 
 # Grant scoped permissions (using SQL for scope)
 -- This would be done via database or API, as CLI doesn't support scopes yet
@@ -844,19 +846,19 @@ nself org role create agency "Beta Developer"
 
 ```bash
 # Create organization
-nself org create "Financial Corp" --slug fincorp
+nself tenant org create "Financial Corp" --slug fincorp
 
 # Create auditor role
-nself org role create fincorp "Auditor"
+nself tenant org role create fincorp "Auditor"
 
 # Grant read-only permissions
-nself org permission grant Auditor tenant.read
-nself org permission grant Auditor user.read
-nself org permission grant Auditor team.read
+nself tenant org permission grant Auditor tenant.read
+nself tenant org permission grant Auditor user.read
+nself tenant org permission grant Auditor team.read
 
 # Add auditor as guest
-nself org member add fincorp auditor-user-123 guest
-nself org role assign fincorp auditor-user-123 Auditor
+nself tenant org member add fincorp auditor-user-123 guest
+nself tenant org role assign fincorp auditor-user-123 Auditor
 ```
 
 ### Pattern 4: Tenant-Specific Permissions
@@ -882,13 +884,13 @@ WHERE r.name = 'Developer';
 
 ```bash
 # Add user to team as lead
-nself org team add engineering user-123 lead
+nself tenant org team add engineering user-123 lead
 
 # Create team-specific role
-nself org role create acme "Team Manager"
-nself org permission grant "Team Manager" team.update
-nself org permission grant "Team Manager" user.read
-nself org role assign acme user-123 "Team Manager"
+nself tenant org role create acme "Team Manager"
+nself tenant org permission grant "Team Manager" team.update
+nself tenant org permission grant "Team Manager" user.read
+nself tenant org role assign acme user-123 "Team Manager"
 
 # In database, scope to their team
 -- UPDATE permissions.user_roles
@@ -1015,16 +1017,16 @@ Start with minimal access and grant more as needed:
 
 ```bash
 # Add as member first
-nself org member add acme user-123 member
+nself tenant org member add acme user-123 member
 
 # Grant specific role
-nself org role create acme "Junior Developer"
-nself org permission grant "Junior Developer" tenant.read
-nself org permission grant "Junior Developer" user.read
-nself org role assign acme user-123 "Junior Developer"
+nself tenant org role create acme "Junior Developer"
+nself tenant org permission grant "Junior Developer" tenant.read
+nself tenant org permission grant "Junior Developer" user.read
+nself tenant org role assign acme user-123 "Junior Developer"
 
 # Promote later when needed
-nself org permission grant "Junior Developer" tenant.update
+nself tenant org permission grant "Junior Developer" tenant.update
 ```
 
 #### Strategy 2: Role Templates
@@ -1032,15 +1034,15 @@ Create role templates for common job functions:
 
 ```bash
 # Backend Developer template
-nself org role create acme "Backend Developer"
-nself org permission grant "Backend Developer" tenant.create
-nself org permission grant "Backend Developer" tenant.update
-nself org permission grant "Backend Developer" user.read
+nself tenant org role create acme "Backend Developer"
+nself tenant org permission grant "Backend Developer" tenant.create
+nself tenant org permission grant "Backend Developer" tenant.update
+nself tenant org permission grant "Backend Developer" user.read
 
 # Frontend Developer template
-nself org role create acme "Frontend Developer"
-nself org permission grant "Frontend Developer" tenant.read
-nself org permission grant "Frontend Developer" user.read
+nself tenant org role create acme "Frontend Developer"
+nself tenant org permission grant "Frontend Developer" tenant.read
+nself tenant org permission grant "Frontend Developer" user.read
 
 # Full Stack template = Backend + Frontend
 # Assign both roles to full stack developers
@@ -1456,13 +1458,13 @@ const syncFromHR = async () => {
 **Solution**:
 ```bash
 # Check membership
-nself org member list acme
+nself tenant org member list acme
 
 # Add user if missing
-nself org member add acme user-123
+nself tenant org member add acme user-123
 
 # Check organization status
-nself org show acme
+nself tenant org show acme
 ```
 
 ### Issue: Permission denied despite having role
@@ -1484,7 +1486,7 @@ INNER JOIN permissions.permissions p ON rp.permission_id = p.id
 WHERE rp.role_id = (SELECT id FROM permissions.roles WHERE name = 'Developer');
 
 -- Grant missing permission
--- Use CLI: nself org permission grant Developer tenant.create
+-- Use CLI: nself tenant org permission grant Developer tenant.create
 ```
 
 ### Issue: Cannot delete organization
@@ -1496,11 +1498,11 @@ WHERE rp.role_id = (SELECT id FROM permissions.roles WHERE name = 'Developer');
 **Solution**:
 ```bash
 # Check your role
-nself org show acme
+nself tenant org show acme
 
 # Organization deletion cascades, so this should work
 # If not, check database logs
-nself org delete acme
+nself tenant org delete acme
 ```
 
 ---

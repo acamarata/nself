@@ -1,4 +1,6 @@
-# nself sync - Environment Synchronization
+# nself deploy sync - Environment Synchronization
+
+> **DEPRECATED COMMAND NAME**: This command was formerly `nself sync` in v0.x. It has been consolidated to `nself deploy sync` in v1.0. The old command name may still work as an alias.
 
 **Version 0.4.8** | Synchronize data and configuration between environments
 
@@ -6,7 +8,7 @@
 
 ## Overview
 
-The `nself sync` command synchronizes databases, files, and configuration between environments. It enables workflows like pulling production data to staging or syncing configuration across team members.
+The `nself deploy sync` command synchronizes databases, files, and configuration between environments. It enables workflows like pulling production data to staging or syncing configuration across team members.
 
 ---
 
@@ -14,13 +16,13 @@ The `nself sync` command synchronizes databases, files, and configuration betwee
 
 ```bash
 # Sync database from production
-nself sync db prod
+nself deploy sync db prod
 
 # Sync configuration files
-nself sync config staging
+nself deploy sync config staging
 
 # Full sync
-nself sync full staging
+nself deploy sync full staging
 ```
 
 ---
@@ -31,38 +33,38 @@ nself sync full staging
 
 ```bash
 # Pull database from remote
-nself sync db prod
-nself sync db staging
+nself deploy sync db prod
+nself deploy sync db staging
 
 # Push database to remote
-nself sync db push staging
+nself deploy sync db push staging
 ```
 
 ### File Sync
 
 ```bash
 # Sync uploads/assets
-nself sync files prod
+nself deploy sync files prod
 
 # Sync specific directory
-nself sync files prod --path uploads/
+nself deploy sync files prod --path uploads/
 ```
 
 ### Configuration Sync
 
 ```bash
 # Sync .env files
-nself sync config prod
+nself deploy sync config prod
 
 # Sync all config
-nself sync config prod --all
+nself deploy sync config prod --all
 ```
 
 ### Full Sync
 
 ```bash
 # Database + files + config
-nself sync full staging
+nself deploy sync full staging
 ```
 
 ---
@@ -110,7 +112,7 @@ Proceed? [y/N]
 
 ```bash
 # Anonymize sensitive data
-nself sync db prod --anonymize
+nself deploy sync db prod --anonymize
 ```
 
 ---
