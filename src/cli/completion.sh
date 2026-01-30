@@ -32,8 +32,8 @@ _nself_completions() {
     local cur prev words cword
     _init_completion || return
 
-    # Main commands (v0.9.6)
-    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync provider cloud service k8s helm perf bench scale migrate health frontend history config plugin ci completion tenant"
+    # Main commands (v0.9.7)
+    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync provider cloud service k8s helm perf bench scale migrate health frontend history config plugin ci completion tenant monitor restore rollback validate upgrade"
 
     # Subcommands by parent
     local db_commands="migrate seed mock backup restore schema types shell query inspect data optimize reset status help"
@@ -41,6 +41,9 @@ _nself_completions() {
     local sync_commands="db files config full auto watch status history"
     local ssl_commands="generate renew bootstrap check trust"
     local deploy_commands="staging production rollback preview canary blue-green"
+    local tenant_commands="init create list show delete switch suspend activate billing branding domains email themes"
+    local monitor_commands="start stop status logs grafana prometheus alertmanager"
+    local plugin_commands="list install remove update status"
 
     # v0.9.6 provider command subcommands
     local provider_commands="info server cost deploy list init validate show create destroy ssh"
@@ -76,9 +79,18 @@ _nself_completions() {
     local scale_commands="up down auto status config"
     local health_commands="check dashboard alert history"
 
-    # v0.4.8 plugin commands
-    local plugin_commands="list install remove update status"
+    # Plugin commands and available plugins
     local plugin_names="stripe github shopify"
+    local plugin_actions="sync customers subscriptions invoices webhook repos issues prs workflows products orders"
+
+    # Frontend commands
+    local frontend_commands="add remove list status config"
+
+    # History commands
+    local history_commands="list show stats clear filter"
+
+    # Config commands
+    local config_commands="show edit validate diff backup restore"
 
     case "${prev}" in
         nself)
@@ -193,6 +205,26 @@ _nself_completions() {
             COMPREPLY=($(compgen -W "${plugin_commands} ${plugin_names}" -- "${cur}"))
             return 0
             ;;
+        tenant)
+            COMPREPLY=($(compgen -W "${tenant_commands}" -- "${cur}"))
+            return 0
+            ;;
+        monitor)
+            COMPREPLY=($(compgen -W "${monitor_commands}" -- "${cur}"))
+            return 0
+            ;;
+        frontend)
+            COMPREPLY=($(compgen -W "${frontend_commands}" -- "${cur}"))
+            return 0
+            ;;
+        history)
+            COMPREPLY=($(compgen -W "${history_commands}" -- "${cur}"))
+            return 0
+            ;;
+        config)
+            COMPREPLY=($(compgen -W "${config_commands}" -- "${cur}"))
+            return 0
+            ;;
         stripe)
             COMPREPLY=($(compgen -W "sync customers subscriptions invoices webhook" -- "${cur}"))
             return 0
@@ -261,6 +293,22 @@ _nself_completions() {
             COMPREPLY=($(compgen -W "switch rollback status" -- "${cur}"))
             return 0
             ;;
+        billing)
+            COMPREPLY=($(compgen -W "usage invoices quotas plans upgrade downgrade" -- "${cur}"))
+            return 0
+            ;;
+        branding)
+            COMPREPLY=($(compgen -W "logo colors themes css preview" -- "${cur}"))
+            return 0
+            ;;
+        domains)
+            COMPREPLY=($(compgen -W "add remove list verify ssl status" -- "${cur}"))
+            return 0
+            ;;
+        themes)
+            COMPREPLY=($(compgen -W "create edit preview activate list" -- "${cur}"))
+            return 0
+            ;;
         create)
             # Provider names for cloud server create
             local providers="digitalocean linode vultr hetzner ovh scaleway upcloud aws gcp azure oracle ibm contabo hostinger kamatera ssdnodes exoscale alibaba tencent yandex racknerd buyvm time4vps raspberrypi custom"
@@ -304,13 +352,15 @@ BASH_COMPLETION
 generate_zsh() {
   cat << 'ZSH_COMPLETION'
 #compdef nself
-# nself zsh completion (v0.4.7)
+# nself zsh completion (v0.9.7)
 # Add to ~/.zshrc: eval "$(nself completion zsh)"
 
 _nself() {
     local -a commands db_commands env_commands sync_commands deploy_commands
     local -a cloud_commands service_commands k8s_commands helm_commands
     local -a perf_commands bench_commands scale_commands health_commands
+    local -a tenant_commands monitor_commands plugin_commands frontend_commands
+    local -a history_commands config_commands provider_commands
 
     commands=(
         'init:Initialize a new nself project'
@@ -354,6 +404,11 @@ _nself() {
         'tenant:Multi-tenant management'
         'ci:CI/CD workflow generation'
         'completion:Generate shell completions'
+        'monitor:Monitoring dashboard management'
+        'restore:Restore configuration from backup'
+        'rollback:Rollback deployments or migrations'
+        'validate:Validate configuration files'
+        'upgrade:Upgrade nself or dependencies'
     )
 
     db_commands=(
@@ -499,6 +554,65 @@ _nself() {
         'history:Show health history'
     )
 
+    tenant_commands=(
+        'init:Initialize multi-tenancy'
+        'create:Create new tenant'
+        'list:List all tenants'
+        'show:Show tenant details'
+        'delete:Delete tenant'
+        'switch:Switch active tenant'
+        'suspend:Suspend tenant'
+        'activate:Activate tenant'
+        'billing:Billing management'
+        'branding:Branding customization'
+        'domains:Domain management'
+        'email:Email template management'
+        'themes:Theme management'
+    )
+
+    monitor_commands=(
+        'start:Start monitoring stack'
+        'stop:Stop monitoring stack'
+        'status:Show monitoring status'
+        'logs:View monitoring logs'
+        'grafana:Open Grafana dashboard'
+        'prometheus:Open Prometheus UI'
+        'alertmanager:Open Alertmanager UI'
+    )
+
+    plugin_commands=(
+        'list:List available plugins'
+        'install:Install plugin'
+        'remove:Remove plugin'
+        'update:Update plugin'
+        'status:Show plugin status'
+    )
+
+    frontend_commands=(
+        'add:Add frontend application'
+        'remove:Remove frontend application'
+        'list:List frontend applications'
+        'status:Show frontend status'
+        'config:Configure frontend'
+    )
+
+    history_commands=(
+        'list:List deployment history'
+        'show:Show deployment details'
+        'stats:Show deployment statistics'
+        'clear:Clear history'
+        'filter:Filter history entries'
+    )
+
+    config_commands=(
+        'show:Show configuration'
+        'edit:Edit configuration'
+        'validate:Validate configuration'
+        'diff:Compare configurations'
+        'backup:Backup configuration'
+        'restore:Restore configuration'
+    )
+
     _arguments -C \
         '1: :->command' \
         '2: :->subcommand' \
@@ -549,6 +663,24 @@ _nself() {
                     ;;
                 health)
                     _describe -t health_commands 'health command' health_commands
+                    ;;
+                tenant)
+                    _describe -t tenant_commands 'tenant command' tenant_commands
+                    ;;
+                monitor)
+                    _describe -t monitor_commands 'monitor command' monitor_commands
+                    ;;
+                plugin)
+                    _describe -t plugin_commands 'plugin command' plugin_commands
+                    ;;
+                frontend)
+                    _describe -t frontend_commands 'frontend command' frontend_commands
+                    ;;
+                history)
+                    _describe -t history_commands 'history command' history_commands
+                    ;;
+                config)
+                    _describe -t config_commands 'config command' config_commands
                     ;;
                 logs|exec)
                     if [[ -f "docker-compose.yml" ]]; then
@@ -622,6 +754,22 @@ _nself() {
                     local -a bg_cmds=('switch:Switch traffic' 'rollback:Rollback' 'status:Show status')
                     _describe -t bg_cmds 'blue-green command' bg_cmds
                     ;;
+                tenant-billing)
+                    local -a billing_cmds=('usage:Usage tracking' 'invoices:Invoice management' 'quotas:Quota management' 'plans:Plan management' 'upgrade:Upgrade plan' 'downgrade:Downgrade plan')
+                    _describe -t billing_cmds 'billing command' billing_cmds
+                    ;;
+                tenant-branding)
+                    local -a branding_cmds=('logo:Logo management' 'colors:Color customization' 'themes:Theme selection' 'css:Custom CSS' 'preview:Preview branding')
+                    _describe -t branding_cmds 'branding command' branding_cmds
+                    ;;
+                tenant-domains)
+                    local -a domain_cmds=('add:Add domain' 'remove:Remove domain' 'list:List domains' 'verify:Verify domain' 'ssl:SSL management' 'status:Domain status')
+                    _describe -t domain_cmds 'domain command' domain_cmds
+                    ;;
+                tenant-themes)
+                    local -a theme_cmds=('create:Create theme' 'edit:Edit theme' 'preview:Preview theme' 'activate:Activate theme' 'list:List themes')
+                    _describe -t theme_cmds 'theme command' theme_cmds
+                    ;;
             esac
             ;;
     esac
@@ -637,7 +785,7 @@ ZSH_COMPLETION
 
 generate_fish() {
   cat << 'FISH_COMPLETION'
-# nself fish completion (v0.4.7)
+# nself fish completion (v0.9.7)
 # Save to ~/.config/fish/completions/nself.fish
 
 # Main commands
@@ -680,6 +828,13 @@ complete -c nself -f -n "__fish_use_subcommand" -a "history" -d "Audit trail"
 complete -c nself -f -n "__fish_use_subcommand" -a "config" -d "Configuration"
 complete -c nself -f -n "__fish_use_subcommand" -a "ci" -d "CI/CD workflows"
 complete -c nself -f -n "__fish_use_subcommand" -a "completion" -d "Shell completions"
+complete -c nself -f -n "__fish_use_subcommand" -a "tenant" -d "Multi-tenant management"
+complete -c nself -f -n "__fish_use_subcommand" -a "monitor" -d "Monitoring dashboards"
+complete -c nself -f -n "__fish_use_subcommand" -a "restore" -d "Restore configuration"
+complete -c nself -f -n "__fish_use_subcommand" -a "rollback" -d "Rollback deployments"
+complete -c nself -f -n "__fish_use_subcommand" -a "validate" -d "Validate configuration"
+complete -c nself -f -n "__fish_use_subcommand" -a "upgrade" -d "Upgrade nself"
+complete -c nself -f -n "__fish_use_subcommand" -a "plugin" -d "Plugin management"
 
 # db subcommands
 complete -c nself -f -n "__fish_seen_subcommand_from db" -a "migrate" -d "Run migrations"
@@ -801,6 +956,89 @@ complete -c nself -f -n "__fish_seen_subcommand_from health" -a "dashboard" -d "
 complete -c nself -f -n "__fish_seen_subcommand_from health" -a "alert" -d "Configure alerts"
 complete -c nself -f -n "__fish_seen_subcommand_from health" -a "history" -d "Health history"
 
+# tenant subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "init" -d "Initialize multi-tenancy"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "create" -d "Create tenant"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "list" -d "List tenants"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "show" -d "Show tenant details"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "delete" -d "Delete tenant"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "switch" -d "Switch tenant"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "suspend" -d "Suspend tenant"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "activate" -d "Activate tenant"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "billing" -d "Billing management"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "branding" -d "Branding customization"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "domains" -d "Domain management"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "email" -d "Email templates"
+complete -c nself -f -n "__fish_seen_subcommand_from tenant" -a "themes" -d "Theme management"
+
+# tenant billing subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "usage" -d "Usage tracking"
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "invoices" -d "Invoice management"
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "quotas" -d "Quota management"
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "plans" -d "Plan management"
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "upgrade" -d "Upgrade plan"
+complete -c nself -f -n "__fish_seen_subcommand_from billing; and __fish_seen_subcommand_from tenant" -a "downgrade" -d "Downgrade plan"
+
+# tenant branding subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from branding; and __fish_seen_subcommand_from tenant" -a "logo" -d "Logo management"
+complete -c nself -f -n "__fish_seen_subcommand_from branding; and __fish_seen_subcommand_from tenant" -a "colors" -d "Color customization"
+complete -c nself -f -n "__fish_seen_subcommand_from branding; and __fish_seen_subcommand_from tenant" -a "themes" -d "Theme selection"
+complete -c nself -f -n "__fish_seen_subcommand_from branding; and __fish_seen_subcommand_from tenant" -a "css" -d "Custom CSS"
+complete -c nself -f -n "__fish_seen_subcommand_from branding; and __fish_seen_subcommand_from tenant" -a "preview" -d "Preview branding"
+
+# tenant domains subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "add" -d "Add domain"
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "remove" -d "Remove domain"
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "list" -d "List domains"
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "verify" -d "Verify domain"
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "ssl" -d "SSL management"
+complete -c nself -f -n "__fish_seen_subcommand_from domains; and __fish_seen_subcommand_from tenant" -a "status" -d "Domain status"
+
+# tenant themes subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from themes; and __fish_seen_subcommand_from tenant" -a "create" -d "Create theme"
+complete -c nself -f -n "__fish_seen_subcommand_from themes; and __fish_seen_subcommand_from tenant" -a "edit" -d "Edit theme"
+complete -c nself -f -n "__fish_seen_subcommand_from themes; and __fish_seen_subcommand_from tenant" -a "preview" -d "Preview theme"
+complete -c nself -f -n "__fish_seen_subcommand_from themes; and __fish_seen_subcommand_from tenant" -a "activate" -d "Activate theme"
+complete -c nself -f -n "__fish_seen_subcommand_from themes; and __fish_seen_subcommand_from tenant" -a "list" -d "List themes"
+
+# monitor subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "start" -d "Start monitoring"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "stop" -d "Stop monitoring"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "status" -d "Monitoring status"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "logs" -d "Monitoring logs"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "grafana" -d "Open Grafana"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "prometheus" -d "Open Prometheus"
+complete -c nself -f -n "__fish_seen_subcommand_from monitor" -a "alertmanager" -d "Open Alertmanager"
+
+# plugin subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from plugin" -a "list" -d "List plugins"
+complete -c nself -f -n "__fish_seen_subcommand_from plugin" -a "install" -d "Install plugin"
+complete -c nself -f -n "__fish_seen_subcommand_from plugin" -a "remove" -d "Remove plugin"
+complete -c nself -f -n "__fish_seen_subcommand_from plugin" -a "update" -d "Update plugin"
+complete -c nself -f -n "__fish_seen_subcommand_from plugin" -a "status" -d "Plugin status"
+
+# frontend subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from frontend" -a "add" -d "Add frontend app"
+complete -c nself -f -n "__fish_seen_subcommand_from frontend" -a "remove" -d "Remove frontend app"
+complete -c nself -f -n "__fish_seen_subcommand_from frontend" -a "list" -d "List frontend apps"
+complete -c nself -f -n "__fish_seen_subcommand_from frontend" -a "status" -d "Frontend status"
+complete -c nself -f -n "__fish_seen_subcommand_from frontend" -a "config" -d "Configure frontend"
+
+# history subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from history" -a "list" -d "List history"
+complete -c nself -f -n "__fish_seen_subcommand_from history" -a "show" -d "Show details"
+complete -c nself -f -n "__fish_seen_subcommand_from history" -a "stats" -d "Show statistics"
+complete -c nself -f -n "__fish_seen_subcommand_from history" -a "clear" -d "Clear history"
+complete -c nself -f -n "__fish_seen_subcommand_from history" -a "filter" -d "Filter entries"
+
+# config subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "show" -d "Show config"
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "edit" -d "Edit config"
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "validate" -d "Validate config"
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "diff" -d "Compare configs"
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "backup" -d "Backup config"
+complete -c nself -f -n "__fish_seen_subcommand_from config" -a "restore" -d "Restore config"
+
 # doctor options
 complete -c nself -f -n "__fish_seen_subcommand_from doctor" -l fix -d "Auto-fix issues"
 complete -c nself -f -n "__fish_seen_subcommand_from doctor" -l verbose -d "Verbose output"
@@ -900,6 +1138,17 @@ AFTER INSTALLATION:
   Restart your shell or source your config file:
     source ~/.bashrc   # bash
     source ~/.zshrc    # zsh
+
+COMPLETIONS INCLUDE:
+  - All top-level commands
+  - Nested subcommands (2-3 levels deep)
+  - Context-aware service/provider names
+  - Deprecated commands (with warnings)
+
+NOTES:
+  - 'nself cloud' is deprecated, use 'nself provider' instead
+  - Tab completion will work for all command levels
+  - Dynamic completions for services from docker-compose.yml
 
 EOF
 }
