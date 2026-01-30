@@ -1,8 +1,10 @@
 # nself Commands Reference
 
-**Complete CLI Reference** | Version 0.9.5
+**Complete CLI Reference** | Version 1.0.0
 
 The definitive guide to all nself commands, organized by logical categories with examples, cross-references, and migration guidance.
+
+**BREAKING CHANGES:** v1.0 consolidates 79 commands → 31 top-level commands for better organization and discoverability. See [Migration Guide](#migration-from-v09x) below.
 
 ---
 
@@ -34,212 +36,114 @@ The definitive guide to all nself commands, organized by logical categories with
 
 ---
 
-## Command Tree Overview
+## Command Tree Overview (v1.0)
+
+**BREAKING CHANGES:** Commands consolidated from 79 → 31 top-level commands.
 
 ```
-nself
-├── Core Lifecycle (7)
+nself (31 commands)
+│
+├── Core (5)
 │   ├── init                    # Initialize project
 │   ├── build                   # Generate configs
 │   ├── start                   # Start services
 │   ├── stop                    # Stop services
-│   ├── restart                 # Restart services
-│   ├── reset                   # Reset to clean state
-│   └── clean                   # Clean Docker resources
+│   └── restart                 # Restart services
 │
-├── Database (1 with 11 subcommands)
-│   └── db                      # Database management
-│       ├── migrate             # Migration management
-│       ├── schema              # Schema operations
-│       ├── seed                # Seed data
-│       ├── mock                # Generate mock data
-│       ├── backup              # Backup database
-│       ├── restore             # Restore database
-│       ├── shell               # Interactive psql
-│       ├── query               # Execute SQL
-│       ├── types               # Generate types
-│       ├── inspect             # Database inspection
-│       └── data                # Data operations
-│
-├── Multi-Tenant (1 with 32+ subcommands) - v0.9.0
-│   └── tenant                  # Multi-tenancy system
-│       ├── init                # Initialize multi-tenancy
-│       ├── create              # Create tenant
-│       ├── list                # List tenants
-│       ├── show                # Show tenant details
-│       ├── suspend/activate    # Tenant lifecycle
-│       ├── member              # Member management
-│       ├── setting             # Settings management
-│       ├── billing             # Billing management
-│       ├── branding            # Brand customization
-│       ├── domains             # Custom domains & SSL
-│       ├── email               # Email templates
-│       └── themes              # Theme management
-│
-├── OAuth (1 with 6 subcommands) - v0.9.0
-│   └── oauth                   # OAuth providers
-│       ├── install             # Install OAuth service
-│       ├── enable              # Enable providers
-│       ├── disable             # Disable providers
-│       ├── config              # Configure credentials
-│       ├── test                # Test provider
-│       ├── list                # List providers
-│       └── status              # Service status
-│
-├── Storage (1 with 7 subcommands) - v0.9.0
-│   └── storage                 # File storage
-│       ├── init                # Initialize storage
-│       ├── upload              # Upload files
-│       ├── list                # List files
-│       ├── delete              # Delete files
-│       ├── config              # Configure pipeline
-│       ├── status              # Pipeline status
-│       ├── test                # Test uploads
-│       └── graphql-setup       # Generate GraphQL integration
-│
-├── Service Management (1 with 15+ subcommands)
-│   └── service                 # Service operations
-│       ├── list                # List services
-│       ├── enable/disable      # Toggle services
-│       ├── status              # Service status
-│       ├── restart             # Restart service
-│       ├── logs                # Service logs
-│       ├── init                # Initialize from template
-│       ├── scaffold            # Scaffold service
-│       ├── wizard              # Creation wizard
-│       ├── search              # Search services
-│       ├── admin               # Admin UI
-│       ├── email               # Email service
-│       ├── search              # Search service
-│       ├── functions           # Serverless functions
-│       ├── mlflow              # ML tracking
-│       ├── storage             # Object storage
-│       └── cache               # Redis cache
-│
-├── Deployment (1 with 12 subcommands)
-│   └── deploy                  # Deployment
-│       ├── staging             # Deploy to staging
-│       ├── production          # Deploy to production
-│       ├── preview             # Preview environments
-│       ├── canary              # Canary deployment
-│       ├── blue-green          # Zero-downtime deploy
-│       ├── rollback            # Rollback deployment
-│       ├── check               # Pre-deploy validation
-│       └── status              # Deployment status
-│
-├── Cloud Infrastructure (1 with 9+ subcommands) - v0.4.7
-│   └── provider                # Cloud providers
-│       ├── list                # List providers (26+)
-│       ├── init                # Configure credentials
-│       ├── validate            # Validate config
-│       ├── info                # Provider details
-│       ├── server              # Server management
-│       │   ├── create          # Provision server
-│       │   ├── destroy         # Destroy server
-│       │   ├── list            # List servers
-│       │   ├── status          # Server status
-│       │   ├── ssh             # SSH to server
-│       │   ├── add             # Add existing server
-│       │   └── remove          # Remove from registry
-│       ├── cost                # Cost management
-│       │   ├── estimate        # Estimate costs
-│       │   └── compare         # Compare providers
-│       └── deploy              # Quick deployment
-│           ├── quick           # Provision + deploy
-│           └── full            # Full production setup
-│
-├── Kubernetes & Helm (2 commands) - v0.4.7
-│   ├── k8s                     # Kubernetes operations
-│   │   ├── init                # Initialize K8s config
-│   │   ├── convert             # Compose to manifests
-│   │   ├── apply               # Apply manifests
-│   │   ├── deploy              # Full deployment
-│   │   ├── status              # Deployment status
-│   │   ├── logs                # Pod logs
-│   │   ├── scale               # Scale deployment
-│   │   ├── rollback            # Rollback deployment
-│   │   ├── delete              # Delete deployment
-│   │   ├── cluster             # Cluster management
-│   │   └── namespace           # Namespace management
-│   │
-│   └── helm                    # Helm charts
-│       ├── init                # Initialize chart
-│       ├── generate            # Generate/update chart
-│       ├── install             # Install to cluster
-│       ├── upgrade             # Upgrade release
-│       ├── rollback            # Rollback release
-│       ├── uninstall           # Remove release
-│       ├── list                # List releases
-│       ├── status              # Release status
-│       ├── values              # Show/edit values
-│       ├── template            # Render locally
-│       ├── package             # Package chart
-│       └── repo                # Repository mgmt
-│
-├── Observability & Monitoring (6 commands)
+├── Utilities (15)
 │   ├── status                  # Service health
 │   ├── logs                    # View logs
-│   ├── exec                    # Execute in container
+│   ├── help                    # Help system
+│   ├── admin                   # Admin UI
 │   ├── urls                    # Service URLs
+│   ├── exec                    # Execute in container
 │   ├── doctor                  # Diagnostics
-│   ├── health                  # Health checks - v0.4.6
-│   ├── monitor                 # Dashboard access
-│   ├── metrics                 # Monitoring profiles
+│   ├── monitor                 # Monitoring dashboards
+│   ├── health                  # Health checks
+│   ├── version                 # Version info
+│   ├── update                  # Update nself
+│   ├── completion              # Shell completions
+│   ├── metrics                 # Metrics & profiling
 │   ├── history                 # Audit trail
 │   └── audit                   # Audit logging
 │
-├── Security (6 commands)
-│   ├── security                # Security scanning
-│   ├── auth                    # Authentication
-│   ├── mfa                     # Multi-factor auth
-│   ├── roles                   # Role management
-│   ├── devices                 # Device management
-│   ├── secrets                 # Secrets management
-│   ├── vault                   # Vault integration
-│   ├── ssl                     # SSL certificates
-│   ├── trust                   # Trust local certs
-│   ├── rate-limit              # Rate limiting
-│   └── webhooks                # Webhook management
-│
-├── Performance & Optimization (4 commands) - v0.4.6
-│   ├── perf                    # Performance profiling
-│   ├── bench                   # Benchmarking
-│   ├── scale                   # Service scaling
-│   └── migrate                 # Cross-env migration
-│
-├── Developer Tools (6 commands)
-│   ├── dev                     # Developer tools - v0.8.0
-│   ├── frontend                # Frontend management
-│   ├── ci                      # CI/CD generation
-│   ├── completion              # Shell completions
-│   └── docs                    # Documentation
-│
-├── Plugin System (1 command) - v0.4.8
-│   └── plugin                  # Plugin management
-│       ├── list                # List available plugins
-│       ├── install             # Install plugin
-│       ├── remove              # Remove plugin
-│       ├── update              # Update plugin(s)
-│       ├── updates             # Check for updates
-│       ├── refresh             # Refresh registry
-│       ├── status              # Plugin status
-│       └── <plugin> <action>   # Run plugin action
-│
-├── Configuration (4 commands)
-│   ├── config                  # Configuration mgmt
-│   ├── env                     # Environment mgmt
-│   ├── sync                    # Data synchronization
-│   └── validate                # Validate config
-│
-└── Utilities (5 commands)
-    ├── help                    # Show help
-    ├── version                 # Version info
-    ├── update                  # Update nself
-    ├── upgrade                 # Zero-downtime upgrades
-    └── admin                   # Admin UI
+└── Other (11)
+    ├── db                      # Database (11 subcommands)
+    │   ├── migrate/schema/seed/mock
+    │   └── backup/restore/shell/query/types/inspect/data
+    │
+    ├── tenant                  # Multi-tenancy (50+ subcommands)
+    │   ├── init/create/list/show/update/suspend/activate/delete
+    │   ├── member (add/remove/list/update/role/invite/accept)
+    │   ├── setting (get/set/list/delete/reset)
+    │   ├── billing (plans/subscribe/cancel/usage/invoice/payment/stripe/test)
+    │   ├── org (create/list/show/members/delete)
+    │   ├── branding (logo/colors/preview/reset)
+    │   ├── domains (add/remove/verify/list/ssl/primary)
+    │   ├── email (list/edit/preview/reset)
+    │   └── themes (list/apply/customize/preview/reset)
+    │
+    ├── deploy                  # Deployment (23 subcommands)
+    │   ├── staging/production/preview/canary/blue-green
+    │   ├── rollback/upgrade/status/config/logs/history/promote
+    │   ├── provision
+    │   ├── server (create/destroy/list/status/ssh/add/remove)
+    │   └── sync (push/pull/status)
+    │
+    ├── infra                   # Infrastructure (38 subcommands)
+    │   ├── provider (list/init/validate/info/server/cost/deploy)
+    │   ├── k8s (init/convert/apply/deploy/status/logs/scale/rollback/delete/cluster/namespace)
+    │   └── helm (init/generate/install/upgrade/rollback/uninstall/list/status/values/template/package/repo)
+    │
+    ├── service                 # Services (43 subcommands)
+    │   ├── list/enable/disable/status/restart/logs
+    │   ├── init/scaffold/wizard/search
+    │   ├── admin
+    │   ├── storage (init/upload/list/delete/config/status/test/graphql-setup)
+    │   ├── email (send/template/test/config)
+    │   ├── search (init/index/query/config)
+    │   ├── redis (init/flush/cli/stats)
+    │   ├── functions (init/deploy/list/logs/invoke)
+    │   ├── mlflow (init/ui/experiments/models)
+    │   └── realtime (init/events/test)
+    │
+    ├── config                  # Configuration (20 subcommands)
+    │   ├── show/edit/validate/export/import/sync
+    │   ├── env (list/switch/create/delete/sync)
+    │   ├── secrets (list/get/set/delete/rotate)
+    │   └── vault (init/config/status)
+    │
+    ├── auth                    # Authentication & Security (38 subcommands)
+    │   ├── login/logout/status
+    │   ├── mfa (enable/disable/verify/backup-codes)
+    │   ├── roles (list/create/assign/remove)
+    │   ├── devices (list/register/revoke/trust)
+    │   ├── oauth (install/enable/disable/config/test/list/status)
+    │   ├── security (scan/audit/report)
+    │   ├── ssl (generate/install/renew/info/trust)
+    │   ├── rate-limit (config/status/reset)
+    │   └── webhooks (create/list/delete/test/logs)
+    │
+    ├── perf                    # Performance (5 subcommands)
+    │   ├── profile/bench/scale/migrate/optimize
+    │
+    ├── backup                  # Backup & Recovery (6 subcommands)
+    │   ├── create/restore/list/rollback/reset/clean
+    │
+    ├── dev                     # Developer Tools (16 subcommands)
+    │   ├── mode
+    │   ├── frontend (add/remove/list/config)
+    │   ├── ci (generate/update/templates)
+    │   ├── docs (generate/serve/build)
+    │   └── whitelabel (config/preview/deploy)
+    │
+    └── plugin                  # Plugin System (8+ subcommands)
+        └── list/install/remove/update/updates/refresh/status/create/<plugin>
 ```
 
-**Total: 80+ top-level commands with 200+ subcommands**
+**Total: 31 top-level commands with 285+ subcommands**
+
+**For complete details:** See [COMMAND-TREE-V1.md](./COMMAND-TREE-V1.md)
 
 ---
 
@@ -299,6 +203,76 @@ nself restart hasura
 # System health check
 nself doctor
 nself doctor --fix              # Auto-fix issues
+```
+
+---
+
+## Migration from v0.9.x
+
+**v1.0 Breaking Changes:** Commands have been reorganized for better discoverability.
+
+### Quick Migration Reference
+
+| v0.9.x Command | v1.0 Command | Notes |
+|----------------|--------------|-------|
+| `nself billing` | `nself tenant billing` | Billing is tenant-specific |
+| `nself org` | `nself tenant org` | Organizations under tenant |
+| `nself upgrade` | `nself deploy upgrade` | Deployment operation |
+| `nself staging` | `nself deploy staging` | Quick staging deployment |
+| `nself prod` | `nself deploy production` | Quick prod deployment |
+| `nself provision` | `nself deploy provision` | Server provisioning |
+| `nself server` | `nself deploy server` | Server management |
+| `nself provider` | `nself infra provider` | Cloud infrastructure |
+| `nself cloud` | `nself infra provider` | Deprecated, use provider |
+| `nself k8s` | `nself infra k8s` | Kubernetes operations |
+| `nself helm` | `nself infra helm` | Helm charts |
+| `nself storage` | `nself service storage` | Storage service |
+| `nself email` | `nself service email` | Email service |
+| `nself search` | `nself service search` | Search service |
+| `nself redis` | `nself service redis` | Redis cache |
+| `nself functions` | `nself service functions` | Functions service |
+| `nself mlflow` | `nself service mlflow` | MLflow service |
+| `nself env` | `nself config env` | Environment config |
+| `nself secrets` | `nself config secrets` | Secrets management |
+| `nself vault` | `nself config vault` | Vault integration |
+| `nself validate` | `nself config validate` | Config validation |
+| `nself mfa` | `nself auth mfa` | Multi-factor auth |
+| `nself roles` | `nself auth roles` | Role management |
+| `nself devices` | `nself auth devices` | Device management |
+| `nself oauth` | `nself auth oauth` | OAuth providers |
+| `nself security` | `nself auth security` | Security scanning |
+| `nself ssl` | `nself auth ssl` | SSL certificates |
+| `nself trust` | `nself auth ssl trust` | Trust certificates |
+| `nself rate-limit` | `nself auth rate-limit` | Rate limiting |
+| `nself webhooks` | `nself auth webhooks` | Webhook management |
+| `nself bench` | `nself perf bench` | Benchmarking |
+| `nself scale` | `nself perf scale` | Service scaling |
+| `nself migrate` | `nself perf migrate` | Migration tools |
+| `nself rollback` | `nself backup rollback` | Rollback changes |
+| `nself reset` | `nself backup reset` | Reset environment |
+| `nself clean` | `nself backup clean` | Clean resources |
+| `nself frontend` | `nself dev frontend` | Frontend management |
+| `nself ci` | `nself dev ci` | CI/CD generation |
+| `nself docs` | `nself dev docs` | Documentation |
+| `nself whitelabel` | `nself dev whitelabel` | White-label branding |
+
+### Unchanged Commands
+
+These commands remain at the top level:
+- Core: `init`, `build`, `start`, `stop`, `restart`
+- Utilities: `status`, `logs`, `help`, `admin`, `urls`, `exec`, `doctor`, `monitor`, `health`, `version`, `update`, `completion`, `metrics`, `history`, `audit`
+- Platform: `db`, `tenant`, `deploy`, `infra`, `service`, `config`, `auth`, `perf`, `backup`, `dev`, `plugin`
+
+### Automatic Aliases (Temporary)
+
+For backward compatibility, all old commands are aliased with deprecation warnings until v2.0.
+
+```bash
+$ nself billing plans
+⚠ DEPRECATED: 'nself billing' → use 'nself tenant billing'
+This alias will be removed in v2.0.0.
+
+[command continues normally...]
 ```
 
 ---
