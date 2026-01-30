@@ -2,7 +2,7 @@ class Nself < Formula
   desc "v0.9.0: Enterprise multi-tenant platform with billing, white-label customization, OAuth handlers, file upload pipeline & 150+ commands"
   homepage "https://nself.org"
   url "https://github.com/acamarata/nself/archive/refs/tags/v0.9.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256_WILL_BE_UPDATED_BY_WORKFLOW"
+  sha256 "514a0214af45f6f2cd9e3e0151059a8b42278d8d569b859eda058935fa5d9b01"
   license "Source-Available"
   version "0.9.0"
 
