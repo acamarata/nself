@@ -127,8 +127,8 @@ jobs:
           $HOME/.local/nself/bin/nself version
           $HOME/.local/nself/bin/nself help
           $HOME/.local/nself/bin/nself service --help
-          $HOME/.local/nself/bin/nself auth ssl help
-          $HOME/.local/nself/bin/nself backup help
+          $HOME/.local/nself/bin/nself auth --help
+          $HOME/.local/nself/bin/nself backup --help
           # Skip admin help - requires Docker/PostgreSQL running
           echo "ℹ️  Skipping admin help test (requires Docker)"
           
