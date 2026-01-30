@@ -1,0 +1,175 @@
+# OAuth Handlers Service
+
+Production-ready OAuth 2.0 authentication handlers for {{PROJECT_NAME}}.
+
+## Features
+
+- Pre-built OAuth handlers for Google, GitHub, Microsoft, and Slack
+- Token exchange and profile normalization
+- Nhost Auth integration
+- CSRF protection with state validation
+- Production-ready error handling
+- TypeScript support with full type definitions
+
+## Supported Providers
+
+- **Google OAuth 2.0**
+- **GitHub OAuth 2.0**
+- **Microsoft OAuth 2.0 / Azure AD**
+- **Slack OAuth 2.0**
+
+## Configuration
+
+Configure OAuth providers in your `.env` file:
+
+```env
+# Google OAuth
+OAUTH_GOOGLE_ENABLED=true
+OAUTH_GOOGLE_CLIENT_ID=your-client-id
+OAUTH_GOOGLE_CLIENT_SECRET=your-client-secret
+OAUTH_GOOGLE_CALLBACK_URL=http://localhost:{{PORT}}/oauth/google/callback
+
+# GitHub OAuth
+OAUTH_GITHUB_ENABLED=true
+OAUTH_GITHUB_CLIENT_ID=your-client-id
+OAUTH_GITHUB_CLIENT_SECRET=your-client-secret
+OAUTH_GITHUB_CALLBACK_URL=http://localhost:{{PORT}}/oauth/github/callback
+
+# Microsoft OAuth
+OAUTH_MICROSOFT_ENABLED=true
+OAUTH_MICROSOFT_CLIENT_ID=your-client-id
+OAUTH_MICROSOFT_CLIENT_SECRET=your-client-secret
+OAUTH_MICROSOFT_TENANT_ID=common
+OAUTH_MICROSOFT_CALLBACK_URL=http://localhost:{{PORT}}/oauth/microsoft/callback
+
+# Slack OAuth
+OAUTH_SLACK_ENABLED=true
+OAUTH_SLACK_CLIENT_ID=your-client-id
+OAUTH_SLACK_CLIENT_SECRET=your-client-secret
+OAUTH_SLACK_CALLBACK_URL=http://localhost:{{PORT}}/oauth/slack/callback
+```
+
+## API Endpoints
+
+### GET /oauth/providers
+List all enabled OAuth providers.
+
+**Response:**
+```json
+{
+  "providers": [
+    {
+      "name": "google",
+      "displayName": "Google",
+      "iconUrl": "https://www.google.com/favicon.ico",
+      "color": "#4285f4",
+      "authUrl": "/oauth/google"
+    }
+  ]
+}
+```
+
+### GET /oauth/:provider
+Initiate OAuth flow for a specific provider.
+
+**Parameters:**
+- `provider` (path): Provider name (google, github, microsoft, slack)
+- `redirect` (query, optional): URL to redirect to after authentication
+
+**Response:** Redirects to provider's authorization page
+
+### GET /oauth/:provider/callback
+OAuth callback endpoint (handled automatically by provider).
+
+**Parameters:**
+- `code` (query): Authorization code
+- `state` (query): CSRF protection token
+
+**Response:** Redirects to frontend with JWT token
+
+### POST /oauth/:provider/token
+Exchange authorization code for token (for mobile apps).
+
+**Request:**
+```json
+{
+  "code": "authorization-code"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "jwt-token",
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "displayName": "User Name",
+    "avatarUrl": "https://..."
+  }
+}
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run dev
+
+# Build for production
+npm run build
+
+# Run production build
+npm start
+```
+
+## Integration with Frontend
+
+### Web Application
+
+```typescript
+// Redirect to OAuth flow
+window.location.href = 'http://localhost:{{PORT}}/oauth/google?redirect=/dashboard';
+
+// Handle callback (extract token from URL)
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get('token');
+
+if (token) {
+  // Store token and authenticate user
+  localStorage.setItem('authToken', token);
+  // Redirect to app
+  window.location.href = '/dashboard';
+}
+```
+
+### Mobile Application
+
+```typescript
+// Exchange code for token
+const response = await fetch('http://localhost:{{PORT}}/oauth/google/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ code: authorizationCode }),
+});
+
+const { token, user } = await response.json();
+```
+
+## Security Features
+
+- **CSRF Protection**: State parameter validation
+- **Token Security**: Secure JWT generation with configurable expiration
+- **Session Management**: Automatic state cleanup
+- **Error Handling**: Comprehensive error handling and logging
+
+## Environment Variables
+
+See `.env.template` for complete configuration options.
+
+## License
+
+Part of nself - {{PROJECT_NAME}}

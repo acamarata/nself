@@ -1,6 +1,6 @@
 {
   "name": "nself-cli",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Self-hosted infrastructure manager with Multi-Tenancy & Enterprise features",
   "main": "bin/nself.js",
   "bin": {

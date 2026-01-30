@@ -1,0 +1,77 @@
+/**
+ * OAuth State Manager
+ * Manages OAuth state tokens with TTL and validation
+ */
+
+import { OAuthStateData } from '../types';
+import { generateState, generateNonce, base64UrlEncode, base64UrlDecode } from './crypto';
+
+// In-memory state storage (for production, use Redis)
+const stateStore = new Map<string, OAuthStateData>();
+
+// State TTL: 10 minutes
+const STATE_TTL = 10 * 60 * 1000;
+
+/**
+ * Create and store OAuth state
+ */
+export function createState(provider: string, redirectUrl?: string): string {
+  const state = generateState();
+  const nonce = generateNonce();
+
+  const stateData: OAuthStateData = {
+    provider,
+    redirectUrl,
+    nonce,
+    timestamp: Date.now(),
+  };
+
+  stateStore.set(state, stateData);
+
+  // Schedule cleanup
+  setTimeout(() => {
+    stateStore.delete(state);
+  }, STATE_TTL);
+
+  return state;
+}
+
+/**
+ * Verify and retrieve OAuth state
+ */
+export function verifyAndRetrieveState(state: string): OAuthStateData | null {
+  const stateData = stateStore.get(state);
+
+  if (!stateData) {
+    return null;
+  }
+
+  // Check if state has expired
+  const age = Date.now() - stateData.timestamp;
+  if (age > STATE_TTL) {
+    stateStore.delete(state);
+    return null;
+  }
+
+  // State is valid and consumed - delete it
+  stateStore.delete(state);
+
+  return stateData;
+}
+
+/**
+ * Clean up expired states (run periodically)
+ */
+export function cleanupExpiredStates(): void {
+  const now = Date.now();
+
+  for (const [state, data] of stateStore.entries()) {
+    const age = now - data.timestamp;
+    if (age > STATE_TTL) {
+      stateStore.delete(state);
+    }
+  }
+}
+
+// Run cleanup every 5 minutes
+setInterval(cleanupExpiredStates, 5 * 60 * 1000);

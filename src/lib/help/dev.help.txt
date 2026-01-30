@@ -1,0 +1,448 @@
+================================================================================
+nself dev - Developer Experience Tools
+================================================================================
+
+OVERVIEW:
+  Developer productivity tools including SDK generation, API documentation,
+  test helpers, mock data factories, and database snapshots for testing.
+
+USAGE:
+  nself dev <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+SDK GENERATION:
+  sdk generate <language> [output]       Generate typed SDK from GraphQL
+                                         Languages: typescript, python
+                                         Default: ./sdk/<language>
+
+DOCUMENTATION:
+  docs generate [output]                 Generate API documentation
+                                         Default: ./docs/api
+
+  docs openapi [output]                  Generate OpenAPI specification
+                                         Default: ./docs/api/openapi.yaml
+
+TESTING:
+  test init [dir]                        Initialize test environment
+                                         Default: .nself/test
+
+  test fixtures <entity> [count]         Generate test fixtures
+                                         Default count: 10
+
+  test factory <entity> [output]         Generate mock data factory
+                                         Default: .nself/test/factories
+
+  test snapshot create <name>            Create database snapshot
+  test snapshot restore <name>           Restore database snapshot
+
+  test run [dir]                         Run integration tests
+                                         Default: .nself/test/integration
+
+MOCK DATA:
+  mock <entity> <count>                  Generate mock data
+                                         Entities: users, posts, etc.
+
+================================================================================
+OPTIONS
+================================================================================
+
+  -h, --help               Show this help message
+  -v, --verbose            Verbose output
+  --debug                  Debug mode with detailed logging
+
+================================================================================
+SDK GENERATION
+================================================================================
+
+  TypeScript SDK:
+    - Full type safety with TypeScript
+    - Auto-generated from GraphQL schema
+    - Includes all queries, mutations, subscriptions
+    - Type definitions for all models
+    - GraphQL client included
+
+    Output Structure:
+      sdk/typescript/
+        ├── src/
+        │   ├── client.ts           GraphQL client
+        │   ├── types.ts            Type definitions
+        │   ├── queries.ts          Query functions
+        │   ├── mutations.ts        Mutation functions
+        │   └── subscriptions.ts    Subscription functions
+        ├── package.json
+        ├── tsconfig.json
+        └── README.md
+
+  Python SDK:
+    - Full typing support with mypy
+    - Auto-generated from GraphQL schema
+    - Pydantic models for validation
+    - Async/await support
+    - Type hints throughout
+
+    Output Structure:
+      sdk/python/
+        ├── nself_sdk/
+        │   ├── __init__.py
+        │   ├── client.py           GraphQL client
+        │   ├── models.py           Pydantic models
+        │   ├── queries.py          Query functions
+        │   ├── mutations.py        Mutation functions
+        │   └── subscriptions.py    Subscription functions
+        ├── setup.py
+        ├── requirements.txt
+        └── README.md
+
+================================================================================
+API DOCUMENTATION
+================================================================================
+
+  Generated Documentation:
+    - GraphQL schema reference
+    - Query/mutation documentation
+    - Type definitions
+    - Examples for each operation
+    - Authentication guide
+    - Rate limiting info
+
+  OpenAPI Specification:
+    - REST-equivalent API definition
+    - Can be imported into Postman, Insomnia
+    - Used for code generation tools
+    - Swagger UI compatible
+
+  Output Formats:
+    - HTML (interactive docs)
+    - Markdown (for git repos)
+    - JSON (OpenAPI spec)
+    - YAML (OpenAPI spec)
+
+================================================================================
+TESTING TOOLS
+================================================================================
+
+  Test Environment:
+    .nself/test/
+      ├── fixtures/            Generated test data
+      ├── factories/           Mock data factories
+      ├── snapshots/           Database snapshots
+      ├── integration/         Integration tests
+      └── helpers.sh           Test utilities
+
+  Fixtures:
+    - Pre-generated test data
+    - JSON format for easy import
+    - Consistent across test runs
+    - Version controlled
+
+  Factories:
+    - Generate data on-demand
+    - Configurable attributes
+    - Relationships supported
+    - Faker.js integration
+
+  Snapshots:
+    - Complete database state
+    - Fast restore (< 1 second)
+    - Named snapshots for scenarios
+    - Automatic cleanup
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Generate TypeScript SDK:
+    $ nself dev sdk generate typescript
+
+  Generate Python SDK to custom location:
+    $ nself dev sdk generate python ./backend/sdk
+
+  Generate API documentation:
+    $ nself dev docs generate
+
+  Generate OpenAPI spec:
+    $ nself dev docs openapi ./api-spec.yaml
+
+  Initialize test environment:
+    $ nself dev test init
+
+  Generate 50 user fixtures:
+    $ nself dev test fixtures users 50
+
+  Generate user factory:
+    $ nself dev test factory users
+
+  Create database snapshot:
+    $ nself dev test snapshot create clean-state
+
+  Restore snapshot:
+    $ nself dev test snapshot restore clean-state
+
+  Run integration tests:
+    $ nself dev test run
+
+  Generate 100 mock users:
+    $ nself dev mock users 100
+
+  Generate 50 mock posts:
+    $ nself dev mock posts 50
+
+================================================================================
+SDK USAGE EXAMPLES
+================================================================================
+
+  TypeScript SDK:
+    import { NselfClient } from './sdk/typescript';
+
+    const client = new NselfClient({
+      endpoint: 'http://localhost:8080/v1/graphql',
+      adminSecret: 'your-admin-secret'
+    });
+
+    // Query users
+    const users = await client.queries.getUsers({
+      limit: 10
+    });
+
+    // Create user
+    const newUser = await client.mutations.createUser({
+      email: 'user@example.com',
+      displayName: 'John Doe'
+    });
+
+    // Subscribe to new posts
+    client.subscriptions.onNewPost((post) => {
+      console.log('New post:', post);
+    });
+
+  Python SDK:
+    from nself_sdk import NselfClient
+
+    client = NselfClient(
+        endpoint='http://localhost:8080/v1/graphql',
+        admin_secret='your-admin-secret'
+    )
+
+    # Query users
+    users = await client.queries.get_users(limit=10)
+
+    # Create user
+    new_user = await client.mutations.create_user(
+        email='user@example.com',
+        display_name='John Doe'
+    )
+
+    # Subscribe to new posts
+    async for post in client.subscriptions.on_new_post():
+        print(f'New post: {post}')
+
+================================================================================
+TESTING WORKFLOW
+================================================================================
+
+  1. Initialize Test Environment:
+     $ nself dev test init
+
+  2. Create Clean Database Snapshot:
+     $ nself dev test snapshot create baseline
+
+  3. Generate Test Fixtures:
+     $ nself dev test fixtures users 100
+     $ nself dev test fixtures posts 500
+
+  4. Create Test Factories:
+     $ nself dev test factory users
+     $ nself dev test factory posts
+
+  5. Write Integration Tests:
+     Create tests in .nself/test/integration/
+
+  6. Run Tests:
+     Before each test:
+       $ nself dev test snapshot restore baseline
+     Run test suite:
+       $ nself dev test run
+
+  7. Create Scenario Snapshots:
+     $ nself dev test snapshot create with-admin-user
+     $ nself dev test snapshot create with-sample-data
+
+================================================================================
+MOCK DATA ENTITIES
+================================================================================
+
+  Supported Entities:
+    users                  User accounts with realistic data
+                           - Email, name, avatar
+                           - Created timestamps
+                           - UUIDs
+
+    posts                  Blog posts or content
+                           - Title, content
+                           - Author references
+                           - Timestamps
+
+  Custom Entities:
+    Create your own in .nself/test/factories/
+    Use Faker.js for realistic data
+
+================================================================================
+CONTINUOUS INTEGRATION
+================================================================================
+
+  GitHub Actions Example:
+    name: Integration Tests
+    on: [push, pull_request]
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+          - name: Setup nself
+            run: |
+              nself init --demo
+              nself build
+              nself start
+          - name: Initialize tests
+            run: nself dev test init
+          - name: Create baseline
+            run: nself dev test snapshot create baseline
+          - name: Run tests
+            run: nself dev test run
+
+================================================================================
+SDK CONFIGURATION
+================================================================================
+
+  TypeScript SDK (.env):
+    GRAPHQL_ENDPOINT=http://localhost:8080/v1/graphql
+    HASURA_GRAPHQL_ADMIN_SECRET=your-secret
+
+  Python SDK (.env):
+    GRAPHQL_ENDPOINT=http://localhost:8080/v1/graphql
+    HASURA_GRAPHQL_ADMIN_SECRET=your-secret
+
+  Custom Configuration:
+    Both SDKs support custom configuration:
+      - Custom headers
+      - Request timeout
+      - Retry logic
+      - Error handling
+      - Debug logging
+
+================================================================================
+FIXTURE FORMAT
+================================================================================
+
+  User Fixtures (JSON):
+    [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "email": "user1@example.com",
+        "displayName": "Alice Smith",
+        "createdAt": "2026-01-30T10:00:00Z"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "email": "user2@example.com",
+        "displayName": "Bob Johnson",
+        "createdAt": "2026-01-30T10:01:00Z"
+      }
+    ]
+
+  Import Fixtures:
+    $ nself db import .nself/test/fixtures/users.json
+
+================================================================================
+INTEGRATION TEST EXAMPLE
+================================================================================
+
+  Bash Test (.nself/test/integration/test_users.sh):
+    #!/usr/bin/env bash
+    set -e
+
+    # Restore clean state
+    nself dev test snapshot restore baseline
+
+    # Create test user
+    USER_ID=$(nself db exec "
+      INSERT INTO auth.users (email, display_name)
+      VALUES ('test@example.com', 'Test User')
+      RETURNING id
+    " | tail -1)
+
+    # Verify user exists
+    COUNT=$(nself db exec "
+      SELECT COUNT(*) FROM auth.users WHERE id = '$USER_ID'
+    " | tail -1)
+
+    if [[ "$COUNT" != "1" ]]; then
+      echo "Test failed: User not created"
+      exit 1
+    fi
+
+    echo "Test passed"
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself db                 Database management
+  nself build              Build project
+  nself test               Run tests (alias)
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Generate SDK after schema changes
+  2. Version control generated fixtures
+  3. Use snapshots for fast test setup
+  4. Create scenario-specific snapshots
+  5. Keep factories small and focused
+  6. Generate realistic test data
+  7. Document custom test helpers
+  8. Run tests in CI/CD pipeline
+  9. Clean up snapshots regularly
+  10. Use SDK in production code
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "SDK generation failed"
+    - Ensure PostgreSQL and Hasura are running
+    - Verify GraphQL endpoint is accessible
+    - Check HASURA_GRAPHQL_ADMIN_SECRET is set
+    - Review schema for errors
+
+  "Test snapshot restore failed"
+    - Ensure snapshot exists
+    - Check database is running
+    - Verify sufficient disk space
+    - Try creating new snapshot
+
+  "Mock data generation slow"
+    - Reduce count parameter
+    - Generate in batches
+    - Use factories instead of fixtures
+    - Check database performance
+
+  "Integration tests failing"
+    - Restore baseline before each test
+    - Check test isolation
+    - Verify test dependencies
+    - Review test logs for errors
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/developer-tools
+  SDK Reference:     https://docs.nself.org/sdk
+  Testing Guide:     https://docs.nself.org/testing
+  Examples:          https://github.com/acamarata/nself/tree/main/examples
+  Support:           support@nself.org

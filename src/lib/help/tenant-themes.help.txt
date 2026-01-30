@@ -1,0 +1,102 @@
+================================================================================
+nself tenant themes - Tenant Theme Management
+================================================================================
+
+OVERVIEW:
+  Create, edit, and manage custom themes for tenants. Define colors, typography,
+  spacing, and visual styles for each tenant.
+
+USAGE:
+  nself tenant themes <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+THEME MANAGEMENT:
+  create <name>                 Create custom theme
+  edit <name>                   Edit theme configuration
+  activate <name>               Activate theme for tenant
+  preview <name>                Preview theme in browser
+  export <name>                 Export theme as JSON
+  import <path>                 Import theme from file
+  list                          List all themes
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --tenant <id>            Specify tenant ID
+  --format <json|yaml>     Output/import format
+  --help, -h               Show this help message
+
+================================================================================
+THEME PROPERTIES
+================================================================================
+
+  colors                   Color palette configuration
+  typography               Font families and sizes
+  spacing                  Layout spacing system
+  borders                  Border radius and styles
+  shadows                  Shadow definitions
+  animations               Animation configurations
+
+================================================================================
+THEME STRUCTURE
+================================================================================
+
+  Theme JSON format:
+    {
+      "name": "dark-mode",
+      "version": "1.0.0",
+      "colors": {
+        "primary": "#3b82f6",
+        "secondary": "#8b5cf6",
+        "background": "#1f2937",
+        "surface": "#374151",
+        "text": "#f9fafb"
+      },
+      "typography": {
+        "fontFamily": {
+          "primary": "Inter",
+          "secondary": "Roboto Mono"
+        },
+        "fontSize": {
+          "sm": "0.875rem",
+          "base": "1rem",
+          "lg": "1.125rem"
+        }
+      },
+      "spacing": {
+        "unit": "8px",
+        "scale": [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
+      }
+    }
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Create custom theme:
+    $ nself tenant themes create dark-mode --tenant acme
+
+  Edit theme:
+    $ nself tenant themes edit dark-mode --tenant acme
+
+  Preview theme:
+    $ nself tenant themes preview dark-mode --tenant acme
+
+  Activate theme:
+    $ nself tenant themes activate dark-mode --tenant acme
+
+  Export theme:
+    $ nself tenant themes export dark-mode --tenant acme > theme.json
+
+  Import theme:
+    $ nself tenant themes import ./theme.json --tenant acme
+
+  List all themes:
+    $ nself tenant themes list --tenant acme
+
+For complete theme documentation:
+  https://docs.nself.org/whitelabel/themes

@@ -1,0 +1,42 @@
+/**
+ * OAuth Handlers Index
+ * Exports all OAuth handler classes
+ */
+
+export { BaseOAuthHandler } from './base-handler';
+export { GoogleOAuthHandler } from './google-handler';
+export { GitHubOAuthHandler } from './github-handler';
+export { MicrosoftOAuthHandler } from './microsoft-handler';
+export { SlackOAuthHandler } from './slack-handler';
+
+import { ProviderName } from '../types';
+import { getProviderConfig } from '../config/providers';
+import { BaseOAuthHandler } from './base-handler';
+import { GoogleOAuthHandler } from './google-handler';
+import { GitHubOAuthHandler } from './github-handler';
+import { MicrosoftOAuthHandler } from './microsoft-handler';
+import { SlackOAuthHandler } from './slack-handler';
+
+/**
+ * Get OAuth handler for a specific provider
+ */
+export function getOAuthHandler(provider: ProviderName): BaseOAuthHandler | null {
+  const config = getProviderConfig(provider);
+
+  if (!config) {
+    return null;
+  }
+
+  switch (provider) {
+    case 'google':
+      return new GoogleOAuthHandler(config);
+    case 'github':
+      return new GitHubOAuthHandler(config);
+    case 'microsoft':
+      return new MicrosoftOAuthHandler(config);
+    case 'slack':
+      return new SlackOAuthHandler(config);
+    default:
+      return null;
+  }
+}

@@ -1,0 +1,75 @@
+================================================================================
+nself tenant branding - Tenant Branding & Customization
+================================================================================
+
+OVERVIEW:
+  Tenant-specific branding and customization. Customize colors, logos, fonts,
+  and styles for each tenant in a multi-tenant application.
+
+USAGE:
+  nself tenant branding <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+BRANDING:
+  create <name>                        Create new brand configuration
+  set-colors --primary=<hex>           Set brand colors
+             --secondary=<hex>
+  set-fonts --primary=<name>           Set brand typography
+            --secondary=<name>
+  upload-logo <path>                   Upload brand logo
+  set-css <path>                       Apply custom CSS stylesheet
+  preview                              Preview branding in browser
+
+LOGO MANAGEMENT:
+  logo upload <path>                   Upload logo file
+  logo upload <path> --type=<type>     Upload specific logo type
+  logo list                            List all uploaded logos
+  logo remove <id>                     Remove logo
+
+SYSTEM:
+  settings                             View branding settings
+  list                                 List all brands
+  export --format=<format>             Export branding config
+  import <path>                        Import branding config
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --tenant <id>            Specify tenant ID
+  --primary <color>        Primary brand color (hex)
+  --secondary <color>      Secondary brand color (hex)
+  --format <json|yaml>     Output format (default: json)
+  --type <logo_type>       Logo type (main, dark, icon, email)
+  --help, -h               Show this help message
+
+LOGO TYPES:
+  main                     Primary logo (light background)
+  dark                     Dark mode logo
+  icon                     App icon/favicon
+  email                    Email header logo
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Create brand for tenant:
+    $ nself tenant branding create "Acme Corp" --tenant acme
+
+  Set brand colors:
+    $ nself tenant branding set-colors \
+        --primary "#0066cc" \
+        --secondary "#ff6600" \
+        --tenant acme
+
+  Upload logo:
+    $ nself tenant branding logo upload ./logo.png --type main --tenant acme
+
+  Export branding config:
+    $ nself tenant branding export --tenant acme --format json
+
+For complete branding documentation:
+  https://docs.nself.org/whitelabel/branding

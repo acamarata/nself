@@ -1,0 +1,419 @@
+================================================================================
+nself org - Organization & Team Management
+================================================================================
+
+OVERVIEW:
+  Manage organizations, teams, roles, and permissions. Build hierarchical
+  organizational structures with fine-grained access control and RBAC.
+
+USAGE:
+  nself org <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+ORGANIZATION MANAGEMENT:
+  init                           Initialize organization system
+  create <name>                  Create a new organization
+  list                           List all organizations
+  show <id>                      Show organization details
+  delete <id>                    Delete an organization
+
+MEMBER MANAGEMENT:
+  member add <org> <user> [role]       Add member to organization
+  member remove <org> <user>           Remove member from organization
+  member list <org>                    List organization members
+  member role <org> <user> <role>      Change member's role
+
+TEAM MANAGEMENT:
+  team create <org> <name>             Create a team in organization
+  team list <org>                      List teams in organization
+  team show <team>                     Show team details
+  team delete <team>                   Delete a team
+  team add <team> <user> [role]        Add user to team
+  team remove <team> <user>            Remove user from team
+
+ROLE & PERMISSION MANAGEMENT:
+  role create <org> <name>             Create custom role
+  role list <org>                      List all roles in organization
+  role assign <org> <user> <role>      Assign role to user
+  role revoke <org> <user> <role>      Revoke role from user
+  permission grant <role> <perm>       Grant permission to role
+  permission revoke <role> <perm>      Revoke permission from role
+  permission list                      List all available permissions
+
+================================================================================
+OPTIONS
+================================================================================
+
+  -h, --help               Show this help message
+  --json                   Output in JSON format
+  --slug <slug>            Organization slug (URL-friendly)
+  --owner <user_id>        Owner user ID for organization
+
+================================================================================
+BUILT-IN ROLES
+================================================================================
+
+  owner                    Full control over organization
+                           - Manage billing and settings
+                           - Delete organization
+                           - Assign any role
+
+  admin                    Administrative access
+                           - Manage teams and members
+                           - Create/edit resources
+                           - Cannot delete organization
+
+  developer                Development access
+                           - Create/edit projects
+                           - Deploy applications
+                           - View logs and metrics
+
+  member                   Standard access
+                           - Read/write access to resources
+                           - Cannot manage organization
+
+  viewer                   Read-only access
+                           - View resources and data
+                           - Cannot make changes
+
+================================================================================
+PERMISSION SYSTEM
+================================================================================
+
+  Categories:
+    tenant.*                 Tenant management permissions
+    org.*                    Organization management
+    team.*                   Team management
+    user.*                   User management
+    project.*                Project management
+    billing.*                Billing and usage
+    resource.*               Resource access
+
+  Permission Format:
+    <category>.<action>
+    Examples:
+      tenant.create          Create new tenants
+      org.update             Update organization settings
+      team.delete            Delete teams
+      user.invite            Invite new users
+      billing.view           View billing information
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Initialize organization system:
+    $ nself org init
+
+  Create new organization:
+    $ nself org create "Acme Corporation" --slug acme
+
+  Create organization with specific owner:
+    $ nself org create "Beta Inc" \
+        --slug beta \
+        --owner user-123-uuid
+
+  List all organizations:
+    $ nself org list
+
+  List organizations in JSON format:
+    $ nself org list --json
+
+  Show organization details:
+    $ nself org show acme
+
+  Delete organization (requires confirmation):
+    $ nself org delete acme
+
+  Add member to organization:
+    $ nself org member add acme user-456-uuid admin
+
+  Add member with default role (member):
+    $ nself org member add acme user-789-uuid
+
+  Remove member from organization:
+    $ nself org member remove acme user-456-uuid
+
+  List all organization members:
+    $ nself org member list acme
+
+  Change member's role:
+    $ nself org member role acme user-456-uuid developer
+
+  Create team in organization:
+    $ nself org team create acme "Engineering"
+
+  Create multiple teams:
+    $ nself org team create acme "Engineering"
+    $ nself org team create acme "Design"
+    $ nself org team create acme "Marketing"
+
+  List all teams in organization:
+    $ nself org team list acme
+
+  Show team details:
+    $ nself org team show engineering
+
+  Delete team:
+    $ nself org team delete engineering
+
+  Add user to team:
+    $ nself org team add engineering user-123 lead
+
+  Add user with default role:
+    $ nself org team add engineering user-456
+
+  Remove user from team:
+    $ nself org team remove engineering user-123
+
+  Create custom role:
+    $ nself org role create acme "Contractor"
+
+  List all roles in organization:
+    $ nself org role list acme
+
+  Assign role to user:
+    $ nself org role assign acme user-789 Contractor
+
+  Revoke role from user:
+    $ nself org role revoke acme user-789 Contractor
+
+  Grant permission to role:
+    $ nself org permission grant Contractor project.read
+
+  Grant multiple permissions:
+    $ nself org permission grant Developer project.create
+    $ nself org permission grant Developer project.update
+    $ nself org permission grant Developer project.delete
+
+  Revoke permission from role:
+    $ nself org permission revoke Contractor project.delete
+
+  List all available permissions:
+    $ nself org permission list
+
+================================================================================
+ORGANIZATIONAL HIERARCHY
+================================================================================
+
+  Structure:
+    Organization
+      ├── Teams
+      │   ├── Engineering
+      │   │   ├── Frontend
+      │   │   └── Backend
+      │   ├── Design
+      │   └── Marketing
+      ├── Members (org-level)
+      └── Roles & Permissions
+
+  Inheritance:
+    - Organization members have org-level access
+    - Team members inherit team permissions
+    - Roles can be org-wide or team-specific
+
+================================================================================
+TEAM ROLES
+================================================================================
+
+  lead                     Team lead with administrative access
+                           - Manage team members
+                           - Assign team resources
+                           - Cannot delete team
+
+  member                   Standard team member
+                           - Contribute to team resources
+                           - View team data
+
+  contributor              Limited access contributor
+                           - Read team resources
+                           - Submit changes for review
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Complete Organization Setup:
+    1. nself org init
+    2. nself org create "My Company" --slug myco
+    3. nself org member add myco owner-user-id owner
+    4. nself org team create myco "Engineering"
+    5. nself org team create myco "Design"
+    6. nself org team add engineering dev-user-id lead
+
+  Adding Team Structure:
+    1. nself org team create myco "Frontend"
+    2. nself org team create myco "Backend"
+    3. nself org team create myco "DevOps"
+    4. nself org team add frontend user-1 lead
+    5. nself org team add frontend user-2 member
+    6. nself org team add backend user-3 lead
+
+  Custom Role Creation:
+    1. nself org role create myco "ProjectManager"
+    2. nself org permission grant ProjectManager project.create
+    3. nself org permission grant ProjectManager project.update
+    4. nself org permission grant ProjectManager team.view
+    5. nself org role assign myco pm-user-id ProjectManager
+
+  Permission Audit:
+    1. nself org role list myco
+    2. nself org permission list
+    3. Review each role's permissions
+    4. Revoke excessive permissions
+    5. Document role definitions
+
+================================================================================
+RBAC (ROLE-BASED ACCESS CONTROL)
+================================================================================
+
+  How It Works:
+    1. User assigned to organization/team
+    2. User given role(s) in org/team
+    3. Role has specific permissions
+    4. System checks permissions on each action
+
+  Permission Check Flow:
+    User → Role → Permissions → Allow/Deny
+
+  Best Practices:
+    - Use least privilege principle
+    - Create specific roles for job functions
+    - Regularly audit role assignments
+    - Document custom roles and permissions
+    - Use teams for project-based access
+
+================================================================================
+PERMISSION REFERENCE
+================================================================================
+
+  Tenant Permissions:
+    tenant.create              Create new tenants
+    tenant.read                View tenant information
+    tenant.update              Update tenant settings
+    tenant.delete              Delete tenants
+    tenant.suspend             Suspend/activate tenants
+
+  Organization Permissions:
+    org.create                 Create organizations
+    org.read                   View organization info
+    org.update                 Update organization settings
+    org.delete                 Delete organizations
+    org.invite                 Invite members to org
+
+  Team Permissions:
+    team.create                Create teams
+    team.read                  View team information
+    team.update                Update team settings
+    team.delete                Delete teams
+    team.manage_members        Add/remove team members
+
+  User Permissions:
+    user.read                  View user profiles
+    user.update                Update user information
+    user.delete                Delete users
+    user.invite                Invite new users
+    user.impersonate           Impersonate users (admin only)
+
+  Project Permissions:
+    project.create             Create projects
+    project.read               View projects
+    project.update             Update projects
+    project.delete             Delete projects
+    project.deploy             Deploy projects
+
+  Billing Permissions:
+    billing.view               View billing information
+    billing.manage             Manage payment methods
+    billing.export             Export billing data
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself tenant             Multi-tenant management
+  nself auth               Authentication and users
+  nself roles              Role management (alias)
+  nself team               Team management (alias)
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Start with built-in roles before creating custom ones
+  2. Use teams for project/department-based organization
+  3. Assign roles at the lowest necessary level
+  4. Regularly review and audit role assignments
+  5. Document custom roles and their purposes
+  6. Use descriptive role names
+  7. Test permissions before rolling out to users
+  8. Separate dev/staging/prod organization access
+  9. Use groups for bulk permission management
+  10. Enable audit logging for permission changes
+
+================================================================================
+SECURITY BEST PRACTICES
+================================================================================
+
+  Role Assignment:
+    - Limit owner role to 1-2 people
+    - Use admin sparingly
+    - Default new users to viewer
+    - Promote to higher roles as needed
+
+  Permission Scoping:
+    - Grant minimum required permissions
+    - Use time-limited role assignments
+    - Review permissions quarterly
+    - Revoke on role/team change
+
+  Audit Trail:
+    - Log all role assignments
+    - Track permission changes
+    - Monitor privilege escalation
+    - Alert on suspicious activity
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Permission denied"
+    - Check user's role: nself org member list <org>
+    - Verify role permissions: nself org role list <org>
+    - Ensure JWT token includes correct claims
+    - Check org membership
+
+  "Cannot delete organization"
+    - Ensure you have owner role
+    - Remove all teams first
+    - Remove all members except owner
+    - Check for active resources
+
+  "User not found in organization"
+    - Add user first: nself org member add <org> <user>
+    - Verify user UUID is correct
+    - Check user exists: nself auth users list
+
+  "Role already exists"
+    - Use different role name
+    - Update existing role instead
+    - Delete old role first if replacing
+
+  "Too many permission errors"
+    - Review role hierarchy
+    - Check for conflicting permissions
+    - Verify RLS policies in database
+    - Check Hasura permissions
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/organizations
+  RBAC Guide:        https://docs.nself.org/rbac
+  Permissions:       https://docs.nself.org/permissions
+  Team Setup:        https://docs.nself.org/teams
+  Support:           support@nself.org

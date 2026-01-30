@@ -1,0 +1,434 @@
+================================================================================
+nself plugin - Plugin Management System
+================================================================================
+
+OVERVIEW:
+  Extend nself with plugins for third-party integrations, custom features,
+  and additional functionality. Install from the official registry or create
+  your own custom plugins.
+
+USAGE:
+  nself plugin <command> [options]
+  nself plugin <plugin-name> <action> [args]
+
+================================================================================
+COMMANDS
+================================================================================
+
+PLUGIN DISCOVERY & INSTALLATION:
+  list                           List available plugins from registry
+  list --installed               Show only installed plugins
+  list --category <category>     Filter by category
+  install <name>                 Install plugin from registry
+  install <path>                 Install local plugin
+  remove <name>                  Remove installed plugin
+  remove <name> --keep-data      Remove plugin but keep data
+
+PLUGIN MANAGEMENT:
+  update [name]                  Update specific plugin
+  update --all                   Update all installed plugins
+  status [name]                  Show plugin status and health
+  updates                        Check for available updates
+  updates --quiet                Quiet mode (for scripts)
+  refresh                        Refresh plugin registry cache
+
+PLUGIN ACTIONS:
+  <plugin> <action>              Run plugin-specific action
+  <plugin> --help                Show plugin's available actions
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --installed, -i          Show only installed plugins
+  --category, -c <cat>     Filter by category
+  --all, -a                Apply to all plugins
+  --keep-data              Keep database tables when removing
+  --quiet, -q              Quiet output (for scripts)
+  --help, -h               Show help message
+
+================================================================================
+PLUGIN CATEGORIES
+================================================================================
+
+  billing                  Payment processing, subscriptions, invoicing
+  ecommerce                E-commerce integrations
+  devops                   Development and deployment tools
+  analytics                Analytics and tracking
+  communication            Email, SMS, notifications
+  storage                  File storage and CDN
+  auth                     Authentication providers
+  database                 Database connectors
+  monitoring               Monitoring and observability
+
+================================================================================
+OFFICIAL PLUGINS
+================================================================================
+
+  BILLING & PAYMENTS:
+    stripe                 Stripe payment processing & subscriptions
+                           - Payment methods, invoices, subscriptions
+                           - Webhook handling, customer portal
+
+  E-COMMERCE:
+    shopify                Shopify store integration
+                           - Product sync, order management
+                           - Inventory tracking, webhooks
+
+  DEVOPS:
+    github                 GitHub repository integration
+                           - CI/CD integration, deployments
+                           - Issue tracking, webhooks
+
+  COMMUNICATION:
+    sendgrid               SendGrid email service
+                           - Transactional emails, templates
+                           - Analytics and tracking
+
+    twilio                 Twilio SMS and voice
+                           - SMS messaging, phone verification
+                           - Voice calls, conferences
+
+  STORAGE:
+    s3                     AWS S3 storage integration
+                           - File uploads, bucket management
+                           - CDN integration
+
+  ANALYTICS:
+    google-analytics       Google Analytics integration
+                           - Event tracking, reports
+                           - User analytics
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  List all available plugins:
+    $ nself plugin list
+
+  List installed plugins only:
+    $ nself plugin list --installed
+
+  Filter plugins by category:
+    $ nself plugin list --category billing
+
+  Install plugin from registry:
+    $ nself plugin install stripe
+
+  Install specific version:
+    $ nself plugin install stripe@2.1.0
+
+  Install local plugin (development):
+    $ nself plugin install ./my-custom-plugin
+
+  Remove plugin:
+    $ nself plugin remove stripe
+
+  Remove but keep data:
+    $ nself plugin remove stripe --keep-data
+
+  Update specific plugin:
+    $ nself plugin update stripe
+
+  Update all installed plugins:
+    $ nself plugin update --all
+
+  Check plugin status:
+    $ nself plugin status stripe
+
+  Check all plugin statuses:
+    $ nself plugin status
+
+  Check for updates:
+    $ nself plugin updates
+
+  Refresh registry cache:
+    $ nself plugin refresh
+
+  Run plugin action (Stripe examples):
+    $ nself plugin stripe sync
+    $ nself plugin stripe customers list
+    $ nself plugin stripe subscriptions create
+    $ nself plugin stripe webhooks test
+
+  Show plugin help:
+    $ nself plugin stripe --help
+
+  GitHub plugin actions:
+    $ nself plugin github repos list
+    $ nself plugin github workflow run deploy
+    $ nself plugin github issues list
+
+  Shopify plugin actions:
+    $ nself plugin shopify products sync
+    $ nself plugin shopify orders list
+    $ nself plugin shopify inventory update
+
+================================================================================
+PLUGIN INSTALLATION
+================================================================================
+
+  From Registry:
+    1. Find plugin: nself plugin list
+    2. Install: nself plugin install <name>
+    3. Configure in .env
+    4. Sync/initialize: nself plugin <name> sync
+
+  Local Development:
+    1. Create plugin directory
+    2. Add plugin.json manifest
+    3. Create actions/ directory
+    4. Install: nself plugin install ./path/to/plugin
+
+  Configuration:
+    After installation, add to .env:
+      STRIPE_API_KEY=sk_test_...
+      STRIPE_WEBHOOK_SECRET=whsec_...
+
+    Then sync:
+      $ nself plugin stripe sync
+
+================================================================================
+PLUGIN STRUCTURE
+================================================================================
+
+  Directory Layout:
+    my-plugin/
+      ├── plugin.json          Plugin manifest
+      ├── README.md            Documentation
+      ├── install.sh           Installation script
+      ├── uninstall.sh         Cleanup script
+      ├── actions/             Action scripts
+      │   ├── sync.sh
+      │   ├── list.sh
+      │   └── test.sh
+      └── migrations/          Database migrations
+          └── 001_init.sql
+
+  plugin.json Format:
+    {
+      "name": "my-plugin",
+      "version": "1.0.0",
+      "description": "My custom plugin",
+      "category": "billing",
+      "author": "Your Name",
+      "repository": "https://github.com/...",
+      "required_env": ["MY_API_KEY"],
+      "actions": {
+        "sync": "Synchronize data",
+        "list": "List resources"
+      }
+    }
+
+================================================================================
+CREATING CUSTOM PLUGINS
+================================================================================
+
+  Step 1: Create plugin directory
+    $ mkdir -p my-plugin/actions
+
+  Step 2: Create plugin.json
+    {
+      "name": "my-plugin",
+      "version": "1.0.0",
+      "description": "Description",
+      "category": "custom",
+      "required_env": ["MY_API_KEY"]
+    }
+
+  Step 3: Create action script (actions/sync.sh)
+    #!/usr/bin/env bash
+    set -e
+
+    echo "Syncing data..."
+    # Your sync logic here
+
+  Step 4: Make scripts executable
+    $ chmod +x actions/*.sh
+
+  Step 5: Install locally
+    $ nself plugin install ./my-plugin
+
+  Step 6: Test action
+    $ nself plugin my-plugin sync
+
+================================================================================
+PLUGIN REGISTRY
+================================================================================
+
+  Primary Registry:
+    https://plugins.nself.org
+
+  Fallback Registry:
+    https://github.com/acamarata/nself-plugins
+
+  Local Cache:
+    ~/.nself/cache/plugins/registry.json
+
+  Cache TTL:
+    Default: 5 minutes
+    Override: NSELF_REGISTRY_CACHE_TTL=300
+
+  Manual Refresh:
+    $ nself plugin refresh
+
+================================================================================
+PLUGIN ACTIONS
+================================================================================
+
+  Common Actions:
+    sync                   Sync data with external service
+    list                   List resources
+    create                 Create new resource
+    update                 Update resource
+    delete                 Delete resource
+    test                   Test configuration/connection
+    webhooks               Manage webhooks
+    migrate                Run migrations
+
+  Plugin-Specific:
+    Each plugin defines its own actions.
+    Use --help to see available actions:
+      $ nself plugin <name> --help
+
+================================================================================
+ENVIRONMENT VARIABLES
+================================================================================
+
+  Plugin Configuration:
+    NSELF_PLUGIN_DIR                Plugin installation directory
+                                    Default: ~/.nself/plugins
+
+    NSELF_PLUGIN_REGISTRY           Custom registry URL
+                                    Default: https://plugins.nself.org
+
+    NSELF_REGISTRY_CACHE_TTL        Cache TTL in seconds
+                                    Default: 300 (5 minutes)
+
+  Plugin-Specific:
+    Each plugin requires its own environment variables.
+    Check README or plugin.json for required_env fields.
+
+    Example (Stripe):
+      STRIPE_API_KEY=sk_test_...
+      STRIPE_WEBHOOK_SECRET=whsec_...
+      STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Install and Configure Plugin:
+    1. nself plugin list --category billing
+    2. nself plugin install stripe
+    3. Add STRIPE_API_KEY to .env
+    4. nself plugin stripe sync
+    5. nself plugin stripe test
+
+  Update All Plugins:
+    1. nself plugin updates
+    2. Review available updates
+    3. nself plugin update --all
+    4. Test critical functionality
+
+  Remove Plugin Cleanly:
+    1. nself plugin status <name>
+    2. Export data if needed
+    3. nself plugin remove <name>
+    4. Verify removal: nself plugin list --installed
+
+  Develop Custom Plugin:
+    1. Create plugin structure
+    2. Write action scripts
+    3. Test locally: nself plugin install ./my-plugin
+    4. Iterate and refine
+    5. Publish to registry (optional)
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Plugin not found in registry"
+    - Refresh cache: nself plugin refresh
+    - Check spelling of plugin name
+    - Visit registry URL to verify plugin exists
+
+  "Failed to install plugin"
+    - Check network connection
+    - Verify plugin name and version
+    - Check disk space: df -h
+    - Review error logs
+
+  "Required environment variable not set"
+    - Check plugin.json for required_env
+    - Add missing variables to .env
+    - Reload environment: source .env
+    - Verify with: nself plugin status <name>
+
+  "Plugin action failed"
+    - Check API credentials in .env
+    - Test connection manually
+    - Review action logs
+    - Verify external service is accessible
+
+  "Plugin update failed"
+    - Check current version: nself plugin status <name>
+    - Try manual update: nself plugin update <name>
+    - Remove and reinstall if needed
+    - Check for breaking changes in changelog
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself billing            (works with stripe plugin)
+  nself admin              Plugin management UI
+  nself db migrate         Database migrations for plugins
+  nself webhooks           Webhook management
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Always check plugin status after installation
+  2. Keep plugins updated for security patches
+  3. Test plugins in staging before production
+  4. Document custom plugins thoroughly
+  5. Use environment variables for secrets (never hardcode)
+  6. Review plugin permissions and data access
+  7. Backup data before removing plugins
+  8. Monitor plugin API usage and quotas
+  9. Use --keep-data when testing plugin removal
+  10. Check for breaking changes before updating
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+  Plugin Installation:
+    - Only install trusted plugins
+    - Review plugin source code if possible
+    - Check plugin author and repository
+    - Read reviews and ratings
+
+  API Keys:
+    - Store in .env (gitignored)
+    - Use environment-specific keys
+    - Rotate keys regularly
+    - Limit key permissions to minimum required
+
+  Data Access:
+    - Review plugin database migrations
+    - Understand what data plugin accesses
+    - Monitor plugin activity in logs
+    - Use read-only keys when possible
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Plugin Registry:   https://plugins.nself.org
+  Plugin Docs:       https://docs.nself.org/plugins
+  Development:       https://docs.nself.org/plugins/development
+  GitHub:            https://github.com/acamarata/nself-plugins
+  Support:           support@nself.org

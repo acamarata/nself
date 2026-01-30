@@ -1,0 +1,96 @@
+/**
+ * OAuth Types and Interfaces
+ * Production-ready type definitions for OAuth handlers
+ */
+
+export interface OAuthProvider {
+  name: string;
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+  callbackUrl: string;
+  authorizationUrl: string;
+  tokenUrl: string;
+  userInfoUrl: string;
+  scopes: string[];
+  additionalParams?: Record<string, string>;
+}
+
+export interface OAuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in?: number;
+  refresh_token?: string;
+  scope?: string;
+  id_token?: string;
+}
+
+export interface OAuthUserProfile {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  locale?: string;
+  provider: string;
+  providerUserId: string;
+  rawProfile: any;
+}
+
+export interface NhostUser {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+  locale?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface OAuthStateData {
+  provider: string;
+  redirectUrl?: string;
+  nonce: string;
+  timestamp: number;
+}
+
+export interface OAuthCallbackRequest {
+  code: string;
+  state: string;
+  error?: string;
+  error_description?: string;
+}
+
+export interface OAuthConfig {
+  google: OAuthProviderConfig;
+  github: OAuthProviderConfig;
+  microsoft: OAuthProviderConfig;
+  slack: OAuthProviderConfig;
+}
+
+export interface OAuthProviderConfig {
+  enabled: boolean;
+  clientId?: string;
+  clientSecret?: string;
+  callbackUrl?: string;
+  tenantId?: string; // For Microsoft
+}
+
+export interface JWTPayload {
+  sub: string;
+  email: string;
+  displayName: string;
+  provider: string;
+  iat: number;
+  exp: number;
+}
+
+export type ProviderName = 'google' | 'github' | 'microsoft' | 'slack';
+
+export interface ProviderMetadata {
+  name: ProviderName;
+  displayName: string;
+  iconUrl: string;
+  color: string;
+}

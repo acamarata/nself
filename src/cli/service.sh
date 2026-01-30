@@ -12,6 +12,10 @@ source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/utils/docker.sh" 2>/dev/null || true
 
+# Source service init utilities
+source "$SCRIPT_DIR/../lib/service-init/templates-metadata.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/service-init/scaffold.sh" 2>/dev/null || true
+
 # Ensure color variables are defined
 COLOR_RESET=${COLOR_RESET:-$'\033[0m'}
 COLOR_BLUE=${COLOR_BLUE:-$'\033[0;34m'}
@@ -36,7 +40,13 @@ SUBCOMMANDS:
   status            Show status of all or specific service
   restart           Restart a service
   logs              View service logs
-  init              Initialize a service (create dirs, configs)
+  init              Initialize a service (scaffold from template)
+
+CODE GENERATION:
+  scaffold          Scaffold a custom service from template
+  list-templates    List all available service templates
+  template-info     Show detailed information about a template
+  wizard            Interactive service creation wizard
 
 SERVICE COMMANDS:
   email             Email service management (MailPit, SMTP)
@@ -82,7 +92,14 @@ SERVICE COMMANDS:
     flush           Flush cache
     keys            List/search keys
 
-EXAMPLES:
+CODE GENERATION EXAMPLES:
+  nself service scaffold realtime --template socketio-ts --port 3101
+  nself service list-templates           # Show all templates
+  nself service list-templates --language typescript
+  nself service template-info socketio-ts
+  nself service wizard                   # Interactive service creation
+
+SERVICE MANAGEMENT EXAMPLES:
   nself service list                     # List all services
   nself service enable search            # Enable search service
   nself service email test               # Send test email
@@ -1304,6 +1321,386 @@ cmd_cache_keys() {
     log_error "Redis not running or not accessible"
 }
 
+# === SERVICE CODE GENERATION SUBCOMMANDS ===
+
+# Scaffold a service from template
+cmd_service_scaffold() {
+  local service_name=""
+  local template=""
+  local port="3000"
+  local output_dir="services"
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --template|-t)
+        template="$2"
+        shift 2
+        ;;
+      --port|-p)
+        port="$2"
+        shift 2
+        ;;
+      --output|-o)
+        output_dir="$2"
+        shift 2
+        ;;
+      -h|--help)
+        show_scaffold_help
+        return 0
+        ;;
+      *)
+        if [[ -z "$service_name" ]]; then
+          service_name="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  # Validate required arguments
+  if [[ -z "$service_name" ]]; then
+    log_error "Service name required"
+    printf "\nUsage: nself service scaffold <name> --template <template> [--port <port>]\n"
+    printf "Example: nself service scaffold realtime --template socketio-ts --port 3101\n\n"
+    printf "Run 'nself service list-templates' to see available templates\n"
+    return 1
+  fi
+
+  if [[ -z "$template" ]]; then
+    log_error "Template required"
+    printf "\nUsage: nself service scaffold <name> --template <template> [--port <port>]\n"
+    printf "Example: nself service scaffold realtime --template socketio-ts --port 3101\n\n"
+    printf "Run 'nself service list-templates' to see available templates\n"
+    return 1
+  fi
+
+  # Scaffold the service
+  scaffold_service "$service_name" "$template" "$port" "$output_dir"
+}
+
+show_scaffold_help() {
+  cat << 'EOF'
+nself service scaffold - Generate service code from template
+
+USAGE:
+  nself service scaffold <name> --template <template> [options]
+
+OPTIONS:
+  --template, -t    Template to use (required)
+  --port, -p        Port number (default: 3000)
+  --output, -o      Output directory (default: services)
+  --help, -h        Show this help
+
+EXAMPLES:
+  nself service scaffold realtime --template socketio-ts --port 3101
+  nself service scaffold api --template fastapi --port 8000
+  nself service scaffold worker --template bullmq-ts --port 3102
+
+See 'nself service list-templates' for available templates.
+EOF
+}
+
+# List all available templates
+cmd_service_list_templates() {
+  local language="${1:-}"
+  local category=""
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --language|-l)
+        language="$2"
+        shift 2
+        ;;
+      --category|-c)
+        category="$2"
+        shift 2
+        ;;
+      -h|--help)
+        show_list_templates_help
+        return 0
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  printf "\n${COLOR_CYAN}Available Service Templates${COLOR_RESET}\n"
+  printf "============================\n\n"
+
+  # Get templates to display
+  local templates
+  if [[ -n "$language" ]]; then
+    templates=$(get_templates_by_language "$language")
+    if [[ -z "$templates" ]]; then
+      log_error "Unknown language: $language"
+      return 1
+    fi
+    printf "${COLOR_BOLD}Language:${COLOR_RESET} %s\n\n" "$language"
+  else
+    templates=$(list_all_templates)
+  fi
+
+  # Display templates grouped by category
+  local current_category=""
+
+  while read -r template_name; do
+    [[ -z "$template_name" ]] && continue
+
+    # Get metadata
+    local metadata
+    metadata=$(get_template_metadata "$template_name")
+
+    IFS='|' read -r display_name lang description features deps <<< "$metadata"
+
+    # Get category
+    local tmpl_category
+    tmpl_category=$(get_template_category "$template_name")
+
+    # Filter by category if specified
+    if [[ -n "$category" && "$tmpl_category" != "$category" ]]; then
+      continue
+    fi
+
+    # Print category header if changed
+    if [[ "$tmpl_category" != "$current_category" ]]; then
+      [[ -n "$current_category" ]] && printf "\n"
+      printf "${COLOR_BOLD}%s${COLOR_RESET}\n" "$tmpl_category"
+      printf "%s\n" "$(printf '%.0s-' {1..60})"
+      current_category="$tmpl_category"
+    fi
+
+    # Print template info
+    printf "${COLOR_GREEN}%-20s${COLOR_RESET} ${COLOR_DIM}[%s]${COLOR_RESET}\n" "$template_name" "$lang"
+    printf "  %s\n" "$description"
+
+  done <<< "$templates"
+
+  printf "\n${COLOR_CYAN}Usage:${COLOR_RESET}\n"
+  printf "  nself service scaffold <name> --template <template> --port <port>\n"
+  printf "  nself service template-info <template>  # Detailed info\n\n"
+
+  printf "${COLOR_CYAN}Examples:${COLOR_RESET}\n"
+  printf "  nself service scaffold realtime --template socketio-ts --port 3101\n"
+  printf "  nself service scaffold api --template fastapi --port 8000\n"
+  printf "  nself service scaffold worker --template bullmq-ts\n\n"
+}
+
+show_list_templates_help() {
+  cat << 'EOF'
+nself service list-templates - Show available service templates
+
+USAGE:
+  nself service list-templates [options]
+
+OPTIONS:
+  --language, -l    Filter by language (js, ts, python, go, etc.)
+  --category, -c    Filter by category
+  --help, -h        Show this help
+
+CATEGORIES:
+  - Web Frameworks
+  - Full-Stack Frameworks
+  - Real-time & Messaging
+  - Background Jobs & Workers
+  - AI & ML Agents
+  - API Frameworks
+  - RPC Frameworks
+  - Runtime Servers
+
+EXAMPLES:
+  nself service list-templates
+  nself service list-templates --language typescript
+  nself service list-templates --category "Real-time & Messaging"
+EOF
+}
+
+# Show detailed template information
+cmd_service_template_info() {
+  local template="${1:-}"
+
+  if [[ -z "$template" ]]; then
+    log_error "Template name required"
+    printf "Usage: nself service template-info <template>\n"
+    printf "Example: nself service template-info socketio-ts\n"
+    return 1
+  fi
+
+  # Get metadata
+  local metadata
+  metadata=$(get_template_metadata "$template")
+
+  if [[ "$metadata" == "Unknown|"* ]]; then
+    log_error "Template not found: $template"
+    printf "\nRun 'nself service list-templates' to see available templates\n"
+    return 1
+  fi
+
+  IFS='|' read -r display_name lang description features deps <<< "$metadata"
+
+  local category
+  category=$(get_template_category "$template")
+
+  printf "\n${COLOR_CYAN}%s${COLOR_RESET}\n" "$display_name"
+  printf "%s\n" "$(printf '%.0s=' {1..60})"
+  printf "\n"
+
+  printf "${COLOR_BOLD}Template ID:${COLOR_RESET}    %s\n" "$template"
+  printf "${COLOR_BOLD}Language:${COLOR_RESET}       %s\n" "$lang"
+  printf "${COLOR_BOLD}Category:${COLOR_RESET}       %s\n" "$category"
+  printf "\n"
+
+  printf "${COLOR_BOLD}Description:${COLOR_RESET}\n"
+  printf "  %s\n" "$description"
+  printf "\n"
+
+  if [[ -n "$features" ]]; then
+    printf "${COLOR_BOLD}Features:${COLOR_RESET}\n"
+    IFS=',' read -ra FEATURE_ARRAY <<< "$features"
+    for feature in "${FEATURE_ARRAY[@]}"; do
+      printf "  • %s\n" "$feature"
+    done
+    printf "\n"
+  fi
+
+  if [[ -n "$deps" && "$deps" != "None (Node.js built-in)" && "$deps" != "None (uses"* ]]; then
+    printf "${COLOR_BOLD}Key Dependencies:${COLOR_RESET}\n"
+    IFS=',' read -ra DEP_ARRAY <<< "$deps"
+    for dep in "${DEP_ARRAY[@]}"; do
+      printf "  • %s\n" "$dep"
+    done
+    printf "\n"
+  fi
+
+  printf "${COLOR_CYAN}Usage:${COLOR_RESET}\n"
+  printf "  nself service scaffold <name> --template %s --port <port>\n" "$template"
+  printf "\n"
+
+  printf "${COLOR_CYAN}Example:${COLOR_RESET}\n"
+  case "$template" in
+    socketio-ts)
+      printf "  nself service scaffold realtime --template socketio-ts --port 3101\n"
+      printf "  # Generates: services/realtime/ with Socket.IO + TypeScript + Redis adapter\n"
+      ;;
+    fastapi)
+      printf "  nself service scaffold api --template fastapi --port 8000\n"
+      printf "  # Generates: services/api/ with FastAPI + Pydantic + auto-docs\n"
+      ;;
+    bullmq-ts)
+      printf "  nself service scaffold worker --template bullmq-ts --port 3102\n"
+      printf "  # Generates: services/worker/ with BullMQ + TypeScript worker\n"
+      ;;
+    *)
+      printf "  nself service scaffold myservice --template %s --port 3000\n" "$template"
+      ;;
+  esac
+  printf "\n"
+}
+
+# Interactive service creation wizard
+cmd_service_wizard() {
+  printf "\n${COLOR_CYAN}Service Creation Wizard${COLOR_RESET}\n"
+  printf "========================\n\n"
+
+  # Get service name
+  printf "Service name: "
+  read -r service_name
+
+  if [[ -z "$service_name" ]]; then
+    log_error "Service name is required"
+    return 1
+  fi
+
+  # Show language options
+  printf "\nSelect language:\n"
+  printf "  1) TypeScript\n"
+  printf "  2) JavaScript\n"
+  printf "  3) Python\n"
+  printf "  4) Go\n"
+  printf "  5) Other\n"
+  printf "\nChoice [1-5]: "
+  read -r lang_choice
+
+  local language
+  case "$lang_choice" in
+    1) language="typescript" ;;
+    2) language="javascript" ;;
+    3) language="python" ;;
+    4) language="go" ;;
+    5)
+      printf "\nEnter language (ruby, rust, java, etc.): "
+      read -r language
+      ;;
+    *)
+      log_error "Invalid choice"
+      return 1
+      ;;
+  esac
+
+  # Get templates for selected language
+  local templates
+  templates=$(get_templates_by_language "$language")
+
+  if [[ -z "$templates" ]]; then
+    log_error "No templates found for language: $language"
+    return 1
+  fi
+
+  # Show templates
+  printf "\nAvailable templates for %s:\n\n" "$language"
+
+  local -a template_array
+  local i=1
+
+  while read -r tmpl; do
+    [[ -z "$tmpl" ]] && continue
+    template_array+=("$tmpl")
+
+    local metadata
+    metadata=$(get_template_metadata "$tmpl")
+    IFS='|' read -r display_name _ description _ _ <<< "$metadata"
+
+    printf "  %d) ${COLOR_GREEN}%s${COLOR_RESET}\n" "$i" "$tmpl"
+    printf "     %s\n" "$description"
+
+    i=$((i + 1))
+  done <<< "$templates"
+
+  printf "\nChoice [1-%d]: " "$((i - 1))"
+  read -r template_choice
+
+  if [[ "$template_choice" -lt 1 || "$template_choice" -ge "$i" ]]; then
+    log_error "Invalid choice"
+    return 1
+  fi
+
+  local selected_template="${template_array[$((template_choice - 1))]}"
+
+  # Get port
+  printf "\nPort number [3000]: "
+  read -r port
+  port="${port:-3000}"
+
+  # Confirm
+  printf "\n${COLOR_CYAN}Summary:${COLOR_RESET}\n"
+  printf "  Name:     %s\n" "$service_name"
+  printf "  Template: %s\n" "$selected_template"
+  printf "  Port:     %s\n" "$port"
+  printf "\nProceed? [Y/n]: "
+  read -r confirm
+  confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+
+  if [[ "$confirm" == "n" || "$confirm" == "no" ]]; then
+    log_info "Cancelled"
+    return 0
+  fi
+
+  # Scaffold the service
+  scaffold_service "$service_name" "$selected_template" "$port" "services"
+}
+
 # === MAIN ENTRY POINT ===
 main() {
   local subcommand="${1:-}"
@@ -1354,6 +1751,18 @@ main() {
       ;;
     init)
       cmd_service_init "$@"
+      ;;
+    scaffold)
+      cmd_service_scaffold "$@"
+      ;;
+    list-templates|templates)
+      cmd_service_list_templates "$@"
+      ;;
+    template-info|info)
+      cmd_service_template_info "$@"
+      ;;
+    wizard)
+      cmd_service_wizard "$@"
       ;;
     email|mail)
       cmd_service_email "$@"

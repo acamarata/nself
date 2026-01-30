@@ -1,0 +1,70 @@
+/**
+ * Cryptographic Utilities
+ * POSIX-compliant helpers for OAuth state management and token handling
+ */
+
+import crypto from 'crypto';
+
+/**
+ * Generate a secure random state parameter for CSRF protection
+ */
+export function generateState(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Generate a secure random nonce
+ */
+export function generateNonce(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+/**
+ * Create HMAC signature for state validation
+ */
+export function signState(state: string, secret: string): string {
+  return crypto
+    .createHmac('sha256', secret)
+    .update(state)
+    .digest('hex');
+}
+
+/**
+ * Verify HMAC signature
+ */
+export function verifyState(state: string, signature: string, secret: string): boolean {
+  const expectedSignature = signState(state, secret);
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+
+/**
+ * Base64 URL-safe encoding
+ */
+export function base64UrlEncode(str: string): string {
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+/**
+ * Base64 URL-safe decoding
+ */
+export function base64UrlDecode(str: string): string {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  return Buffer.from(base64, 'base64').toString('utf-8');
+}
+
+/**
+ * Hash a value using SHA-256
+ */
+export function sha256(value: string): string {
+  return crypto
+    .createHash('sha256')
+    .update(value)
+    .digest('hex');
+}

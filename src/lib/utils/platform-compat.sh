@@ -268,6 +268,56 @@ safe_check_port() {
   fi
 }
 
+# Sanitize filename to prevent path traversal attacks
+# Removes path separators and dangerous characters
+# Keeps only alphanumeric, dots, dashes, underscores
+# Limits to 255 characters (standard filesystem limit)
+sanitize_filename() {
+  local filename="$1"
+  local sanitized=""
+  local i
+
+  # Convert to lowercase for consistency
+  filename=$(printf '%s' "$filename" | tr '[:upper:]' '[:lower:]')
+
+  # Process character by character
+  for ((i=0; i<${#filename}; i++)); do
+    local char="${filename:$i:1}"
+    case "$char" in
+      # Allow alphanumeric
+      [a-z0-9])
+        sanitized="${sanitized}${char}"
+        ;;
+      # Allow safe special characters
+      [._-])
+        sanitized="${sanitized}${char}"
+        ;;
+      # Convert spaces to underscores
+      ' ')
+        sanitized="${sanitized}_"
+        ;;
+      # Skip all other characters (includes / \ and other dangerous chars)
+      *)
+        :
+        ;;
+    esac
+  done
+
+  # Handle edge cases
+  if [[ -z "$sanitized" ]]; then
+    sanitized="file"
+  fi
+
+  # Remove leading/trailing dashes (can cause issues with some tools)
+  sanitized="${sanitized#-}"
+  sanitized="${sanitized%-}"
+
+  # Limit to 255 characters (standard filesystem limit)
+  sanitized="${sanitized:0:255}"
+
+  printf '%s' "$sanitized"
+}
+
 # Export all functions
 export -f safe_sed_inline
 export -f safe_readlink
@@ -287,3 +337,4 @@ export -f compat_set
 export -f compat_get
 export -f safe_timeout
 export -f safe_check_port
+export -f sanitize_filename

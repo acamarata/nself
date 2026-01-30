@@ -1,0 +1,73 @@
+/**
+ * GitHub OAuth Handler
+ * Implements GitHub OAuth 2.0 flow
+ */
+
+import { BaseOAuthHandler } from './base-handler';
+import { OAuthUserProfile, OAuthTokenResponse } from '../types';
+import { normalizeGitHubProfile } from '../utils/profile-normalizer';
+
+export class GitHubOAuthHandler extends BaseOAuthHandler {
+  async getUserInfo(accessToken: string): Promise<any> {
+    try {
+      // Get user profile
+      const userResponse = await this.httpClient.get(this.provider.userInfoUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const user = userResponse.data;
+
+      // Get primary email if not public
+      if (!user.email) {
+        const emailResponse = await this.httpClient.get('https://api.github.com/user/emails', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const emails = emailResponse.data;
+        const primaryEmail = emails.find((e: any) => e.primary);
+        user.email = primaryEmail?.email;
+      }
+
+      return user;
+    } catch (error: any) {
+      console.error('GitHub getUserInfo failed:', error.response?.data || error.message);
+      throw new Error(`Failed to get GitHub user info: ${error.message}`);
+    }
+  }
+
+  normalizeProfile(profile: any): OAuthUserProfile {
+    return normalizeGitHubProfile(profile);
+  }
+
+  /**
+   * Override token exchange to handle GitHub's Accept header requirement
+   */
+  async exchangeCode(code: string): Promise<OAuthTokenResponse> {
+    try {
+      const response = await this.httpClient.post<OAuthTokenResponse>(
+        this.provider.tokenUrl,
+        new URLSearchParams({
+          client_id: this.provider.clientId,
+          client_secret: this.provider.clientSecret,
+          code,
+          redirect_uri: this.provider.callbackUrl,
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json', // GitHub requires this
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('GitHub token exchange failed:', error.response?.data || error.message);
+      throw new Error(`Failed to exchange GitHub authorization code: ${error.message}`);
+    }
+  }
+}

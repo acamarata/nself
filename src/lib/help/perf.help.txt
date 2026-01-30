@@ -1,0 +1,412 @@
+================================================================================
+nself perf - Performance Optimization & Monitoring
+================================================================================
+
+OVERVIEW:
+  Database and application performance optimization tools. Analyze slow
+  queries, optimize indexes, monitor resource usage, and improve overall
+  system performance.
+
+USAGE:
+  nself perf <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+  optimize                 Run database optimization
+                           - VACUUM ANALYZE
+                           - Update statistics
+                           - Clean up dead rows
+
+  slow-queries             Show slow query log
+                           - Queries > threshold (default: 1000ms)
+                           - With execution plans
+                           - Ordered by duration
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --threshold <ms>         Slow query threshold in milliseconds
+                           Default: 1000ms (1 second)
+
+  --limit <n>              Number of queries to show
+                           Default: 20
+
+  --help, -h               Show this help message
+
+================================================================================
+DATABASE OPTIMIZATION
+================================================================================
+
+  What 'optimize' Does:
+    1. VACUUM
+       - Reclaims storage from dead tuples
+       - Updates visibility map
+       - Prevents transaction ID wraparound
+
+    2. ANALYZE
+       - Updates query planner statistics
+       - Improves query plan selection
+       - Scans table to gather statistics
+
+    3. VACUUM ANALYZE
+       - Combines both operations
+       - Most efficient for regular maintenance
+
+  When to Run:
+    - After bulk INSERT/UPDATE/DELETE operations
+    - Weekly for moderate-traffic databases
+    - Daily for high-traffic databases
+    - When query performance degrades
+
+  Safety:
+    - Non-blocking (VACUUM without FULL)
+    - Safe to run on production
+    - Can run during normal operations
+    - Low overhead
+
+================================================================================
+SLOW QUERY ANALYSIS
+================================================================================
+
+  What's Tracked:
+    - Query text (parameterized)
+    - Average execution time
+    - Number of executions
+    - Total time spent
+    - Rows returned/affected
+    - Execution plan
+
+  Slow Query Output:
+    Query: SELECT * FROM users WHERE email = $1
+    Executions: 1,234
+    Avg Time: 1,523 ms
+    Total Time: 1,879,782 ms (31.3 minutes)
+    Rows: 1 per execution
+
+  Interpreting Results:
+    - High execution count + low time = Optimize with caching
+    - Low execution count + high time = Optimize query/add index
+    - High total time = Biggest impact to optimize
+    - Sequential scans = Missing indexes
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Run database optimization:
+    $ nself perf optimize
+
+  Show slow queries (default: > 1000ms):
+    $ nself perf slow-queries
+
+  Show queries slower than 500ms:
+    $ nself perf slow-queries --threshold 500
+
+  Show top 50 slowest queries:
+    $ nself perf slow-queries --limit 50
+
+  Show extremely slow queries only:
+    $ nself perf slow-queries --threshold 5000 --limit 10
+
+  Optimize after bulk operations:
+    $ nself db migrate
+    $ nself perf optimize
+
+  Weekly maintenance routine:
+    $ nself perf optimize
+    $ nself perf slow-queries --limit 10 > weekly-perf-$(date +%Y%m%d).log
+
+================================================================================
+PERFORMANCE OPTIMIZATION WORKFLOW
+================================================================================
+
+  1. Identify Slow Queries:
+     $ nself perf slow-queries --limit 20
+
+  2. Analyze Execution Plans:
+     $ nself db exec "EXPLAIN ANALYZE <query>"
+
+  3. Add Missing Indexes:
+     Identify sequential scans in EXPLAIN output
+     $ nself db exec "CREATE INDEX idx_users_email ON users(email)"
+
+  4. Optimize Query:
+     - Use specific columns instead of SELECT *
+     - Add WHERE clauses to limit rows
+     - Use JOINs efficiently
+     - Avoid N+1 queries
+
+  5. Test Performance:
+     $ nself perf slow-queries
+     Verify query no longer appears or time reduced
+
+  6. Run Maintenance:
+     $ nself perf optimize
+
+  7. Monitor Continuously:
+     Schedule weekly review of slow queries
+
+================================================================================
+COMMON PERFORMANCE ISSUES
+================================================================================
+
+  Missing Indexes:
+    Symptom: Sequential scans in EXPLAIN output
+    Solution: Add indexes on frequently queried columns
+    Example:
+      CREATE INDEX idx_users_email ON users(email);
+      CREATE INDEX idx_posts_user_id ON posts(user_id);
+
+  SELECT * Queries:
+    Symptom: Large data transfer, slow response
+    Solution: Select only needed columns
+    Example:
+      -- Bad
+      SELECT * FROM users WHERE id = $1;
+      -- Good
+      SELECT id, email, name FROM users WHERE id = $1;
+
+  N+1 Queries:
+    Symptom: Hundreds of similar queries
+    Solution: Use JOINs or batch loading
+    Example:
+      -- Bad (N+1)
+      SELECT * FROM posts;
+      For each post: SELECT * FROM users WHERE id = post.user_id;
+      -- Good
+      SELECT p.*, u.* FROM posts p JOIN users u ON p.user_id = u.id;
+
+  Unbounded Queries:
+    Symptom: Full table scans, high memory usage
+    Solution: Add LIMIT and pagination
+    Example:
+      -- Bad
+      SELECT * FROM posts ORDER BY created_at DESC;
+      -- Good
+      SELECT * FROM posts ORDER BY created_at DESC LIMIT 20 OFFSET 0;
+
+  Unoptimized JOINs:
+    Symptom: Multiple sequential scans, cartesian products
+    Solution: Ensure join columns are indexed
+    Example:
+      CREATE INDEX idx_posts_user_id ON posts(user_id);
+      CREATE INDEX idx_users_id ON users(id);
+
+================================================================================
+INDEX OPTIMIZATION
+================================================================================
+
+  Find Missing Indexes:
+    $ nself db exec "
+      SELECT schemaname, tablename, attname, n_distinct, correlation
+      FROM pg_stats
+      WHERE schemaname = 'public'
+      ORDER BY n_distinct DESC
+    "
+
+  Index Usage Statistics:
+    $ nself db exec "
+      SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read
+      FROM pg_stat_user_indexes
+      ORDER BY idx_scan ASC
+    "
+
+  Unused Indexes:
+    $ nself db exec "
+      SELECT schemaname, tablename, indexname
+      FROM pg_stat_user_indexes
+      WHERE idx_scan = 0 AND schemaname = 'public'
+    "
+
+  Remove Unused Indexes:
+    -- After verification
+    $ nself db exec "DROP INDEX idx_name"
+
+================================================================================
+QUERY OPTIMIZATION TIPS
+================================================================================
+
+  1. Use Covering Indexes:
+     Index contains all columns needed by query
+     Example: CREATE INDEX idx_users_email_name ON users(email, name);
+
+  2. Partial Indexes:
+     Index only rows matching condition
+     Example: CREATE INDEX idx_active_users ON users(email) WHERE active = true;
+
+  3. Index-Only Scans:
+     Query can be satisfied by index alone
+     Requires VACUUM to update visibility map
+
+  4. Connection Pooling:
+     Reuse database connections
+     Reduces connection overhead
+     Configure in .env: POSTGRES_MAX_CONNECTIONS=100
+
+  5. Prepared Statements:
+     Parse query once, execute multiple times
+     GraphQL/Hasura does this automatically
+
+  6. Batch Operations:
+     Use array operations and bulk inserts
+     Example: INSERT INTO ... VALUES (...), (...), (...)
+
+  7. Materialized Views:
+     Pre-compute expensive queries
+     Refresh periodically
+     Example:
+       CREATE MATERIALIZED VIEW user_stats AS
+       SELECT user_id, COUNT(*) FROM posts GROUP BY user_id;
+
+  8. Query Result Caching:
+     Cache frequently accessed data
+     Use Redis for hot data
+     Set appropriate TTL
+
+================================================================================
+MONITORING & METRICS
+================================================================================
+
+  Database Metrics:
+    - Active connections
+    - Long-running queries
+    - Cache hit ratio
+    - Transaction rate
+    - Disk I/O
+    - Lock contention
+
+  View Current Activity:
+    $ nself db exec "
+      SELECT pid, usename, application_name, state, query_start, query
+      FROM pg_stat_activity
+      WHERE state = 'active'
+    "
+
+  Connection Count:
+    $ nself db exec "
+      SELECT count(*) FROM pg_stat_activity
+    "
+
+  Cache Hit Ratio (should be > 99%):
+    $ nself db exec "
+      SELECT sum(blks_hit)::float / (sum(blks_hit) + sum(blks_read)) AS cache_hit_ratio
+      FROM pg_stat_database
+    "
+
+  Table Bloat:
+    $ nself db exec "
+      SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+      FROM pg_tables
+      WHERE schemaname = 'public'
+      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+    "
+
+================================================================================
+AUTOMATED OPTIMIZATION
+================================================================================
+
+  Scheduled Maintenance (Cron):
+    # Daily optimization at 2 AM
+    0 2 * * * cd /path/to/project && nself perf optimize
+
+    # Weekly slow query report
+    0 9 * * 1 cd /path/to/project && nself perf slow-queries > /var/log/nself-perf.log
+
+  Auto-VACUUM Configuration (.env):
+    POSTGRES_AUTOVACUUM=on
+    POSTGRES_AUTOVACUUM_MAX_WORKERS=3
+    POSTGRES_AUTOVACUUM_NAPTIME=1min
+
+  pg_stat_statements:
+    Already enabled in nself
+    Tracks query performance automatically
+    Used by slow-queries command
+
+================================================================================
+PERFORMANCE BENCHMARKING
+================================================================================
+
+  Before Optimization:
+    1. Run slow queries: nself perf slow-queries
+    2. Record top 10 queries and times
+    3. Document current performance
+
+  Apply Optimizations:
+    - Add indexes
+    - Rewrite queries
+    - Update statistics
+
+  After Optimization:
+    1. Run optimize: nself perf optimize
+    2. Run slow queries again
+    3. Compare results
+    4. Measure improvement percentage
+
+  Load Testing:
+    Use tools like:
+      - Apache Bench (ab)
+      - wrk
+      - k6
+      - Artillery
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself db exec            Execute SQL queries
+  nself db migrate         Run database migrations
+  nself monitor metrics    Real-time metrics monitoring
+  nself scale              Scale database resources
+
+================================================================================
+BEST PRACTICES
+================================================================================
+
+  1. Run 'optimize' weekly on production
+  2. Review 'slow-queries' after each release
+  3. Add indexes before they're needed (proactive)
+  4. Monitor cache hit ratio (target > 99%)
+  5. Use connection pooling
+  6. Keep statistics up to date
+  7. Test queries with EXPLAIN ANALYZE
+  8. Profile before optimizing
+  9. Document optimization changes
+  10. Set up automated monitoring
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Optimization taking too long"
+    - Large tables need more time
+    - Consider VACUUM during low-traffic hours
+    - Use VACUUM ANALYZE instead of VACUUM FULL
+
+  "Slow queries not showing"
+    - Check pg_stat_statements is enabled
+    - Verify threshold is appropriate
+    - May need to wait for query executions
+
+  "Optimization not improving performance"
+    - Run ANALYZE separately
+    - Check for missing indexes
+    - Review query execution plans
+    - May need query rewrites
+
+  "Out of memory during VACUUM"
+    - Increase maintenance_work_mem
+    - Run VACUUM on tables individually
+    - Consider autovacuum settings
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/performance
+  Query Optimization: https://docs.nself.org/performance/queries
+  Index Guide:       https://docs.nself.org/performance/indexes
+  PostgreSQL Docs:   https://www.postgresql.org/docs/current/maintenance.html
+  Support:           support@nself.org

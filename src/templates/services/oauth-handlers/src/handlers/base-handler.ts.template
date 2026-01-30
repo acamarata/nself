@@ -1,0 +1,121 @@
+/**
+ * Base OAuth Handler
+ * Abstract base class for all OAuth provider handlers
+ */
+
+import axios, { AxiosInstance } from 'axios';
+import { OAuthProvider, OAuthTokenResponse, OAuthUserProfile } from '../types';
+
+export abstract class BaseOAuthHandler {
+  protected provider: OAuthProvider;
+  protected httpClient: AxiosInstance;
+
+  constructor(provider: OAuthProvider) {
+    this.provider = provider;
+    this.httpClient = axios.create({
+      timeout: 10000,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'nself-oauth-handlers/1.0',
+      },
+    });
+  }
+
+  /**
+   * Generate authorization URL
+   */
+  getAuthorizationUrl(state: string, additionalParams?: Record<string, string>): string {
+    const params = new URLSearchParams({
+      client_id: this.provider.clientId,
+      redirect_uri: this.provider.callbackUrl,
+      response_type: 'code',
+      scope: this.provider.scopes.join(' '),
+      state,
+      ...additionalParams,
+    });
+
+    return `${this.provider.authorizationUrl}?${params.toString()}`;
+  }
+
+  /**
+   * Exchange authorization code for access token
+   */
+  async exchangeCode(code: string): Promise<OAuthTokenResponse> {
+    try {
+      const response = await this.httpClient.post<OAuthTokenResponse>(
+        this.provider.tokenUrl,
+        new URLSearchParams({
+          client_id: this.provider.clientId,
+          client_secret: this.provider.clientSecret,
+          code,
+          redirect_uri: this.provider.callbackUrl,
+          grant_type: 'authorization_code',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error(`${this.provider.name} token exchange failed:`, error.response?.data || error.message);
+      throw new Error(`Failed to exchange authorization code: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get user profile information
+   */
+  abstract getUserInfo(accessToken: string): Promise<any>;
+
+  /**
+   * Normalize user profile to standard format
+   */
+  abstract normalizeProfile(profile: any, additionalData?: any): OAuthUserProfile;
+
+  /**
+   * Complete OAuth flow: exchange code and get normalized profile
+   */
+  async handleCallback(code: string): Promise<{ token: OAuthTokenResponse; profile: OAuthUserProfile }> {
+    // Exchange code for token
+    const token = await this.exchangeCode(code);
+
+    // Get user info
+    const rawProfile = await this.getUserInfo(token.access_token);
+
+    // Normalize profile
+    const profile = this.normalizeProfile(rawProfile);
+
+    return { token, profile };
+  }
+
+  /**
+   * Refresh access token (if supported)
+   */
+  async refreshToken(refreshToken: string): Promise<OAuthTokenResponse> {
+    try {
+      const response = await this.httpClient.post<OAuthTokenResponse>(
+        this.provider.tokenUrl,
+        new URLSearchParams({
+          client_id: this.provider.clientId,
+          client_secret: this.provider.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error(`${this.provider.name} token refresh failed:`, error.response?.data || error.message);
+      throw new Error(`Failed to refresh token: ${error.message}`);
+    }
+  }
+}

@@ -2,31 +2,45 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.4.8
+**Current Stable Version:** v0.9.0
 
 ---
 
 ## Latest Release
 
-### [v0.4.8](v0.4.8.md) - Current Stable
+### [v0.9.0](v0.9.0.md) - Current Stable
 
-**Released:** January 24, 2026
+**Released:** January 30, 2026
 
 **Status:** Production Ready
 
 **Highlights:**
-- **Plugin System**: Extensible architecture for third-party integrations
-- **Three Launch Plugins**: Stripe, GitHub, and Shopify integrations
-- **Plugin Registry**: Two-tier registry (plugins.nself.org + GitHub fallback)
-- **Database Schemas**: Prefixed tables for synced data
-- **Webhook Handlers**: Real-time event processing with signature verification
-- **CLI Actions**: Full command-line interface for managing plugin data
+- **Multi-Tenant Platform**: Complete tenant management with isolation
+- **Billing Integration**: Stripe-based usage tracking, invoicing, and subscriptions
+- **White-Labeling**: Custom domains, branding, email templates, and themes
+- **OAuth Management**: Google, GitHub, Microsoft, Slack provider integration
+- **File Storage**: Advanced upload pipeline with thumbnails, virus scanning, and compression
+- **Member Management**: Role-based access control per tenant
+- **150+ Commands**: Comprehensive CLI for all platform features
 
-**[View Release Notes →](v0.4.8.md)**
+**[View Release Notes →](v0.9.0.md)**
 
 ---
 
 ## Recent Releases
+
+### [v0.4.8](v0.4.8.md) - January 24, 2026
+
+**Status:** Stable
+
+**Highlights:**
+- Plugin System with extensible architecture
+- Stripe, GitHub, and Shopify integrations
+- Plugin Registry with distributed architecture
+- Database schemas and webhook handlers
+- CLI actions for plugin management
+
+**[View Release Notes →](v0.4.8.md)**
 
 ### [v0.4.7](v0.4.7.md) - January 23, 2026
 
@@ -144,8 +158,9 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements.
 
 | Version | Target | Focus |
 |---------|--------|-------|
-| **v0.4.9** | Q1 2026 | Extensive Polish & Testing |
-| **v0.5.0** | Q1-Q2 2026 | **Production Ready LTS + nself-admin v0.1** |
+| **v0.9.1** | Q1 2026 | Multi-tenant refinements & bug fixes |
+| **v0.10.0** | Q1 2026 | Advanced analytics & reporting |
+| **v0.5.0 LTS** | Q2 2026 | **Production Ready LTS + nself-admin v0.1** |
 
 ---
 
@@ -157,7 +172,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| [v0.4.8](v0.4.8.md) | Jan 24, 2026 | **Current** | Plugin System (Stripe, GitHub, Shopify) |
+| [v0.9.0](v0.9.0.md) | Jan 30, 2026 | **Current** | Multi-Tenant Platform, OAuth, Storage |
+| [v0.4.8](v0.4.8.md) | Jan 24, 2026 | Stable | Plugin System (Stripe, GitHub, Shopify) |
 | [v0.4.7](v0.4.7.md) | Jan 23, 2026 | Stable | Infrastructure Everywhere, K8s, Helm |
 | [v0.4.6](v0.4.6.md) | Jan 22, 2026 | Stable | Scaling & Performance |
 | [v0.4.5](v0.4.5.md) | Jan 21, 2026 | Stable | Provider Support, 10 cloud providers |
@@ -272,4 +288,4 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 ---
 
-**Last Updated:** January 24, 2026 | **Current Version:** v0.4.8
+**Last Updated:** January 30, 2026 | **Current Version:** v0.9.0

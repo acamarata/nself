@@ -13,7 +13,7 @@ nself plugin install stripe
 ### Required
 
 ```bash
-STRIPE_API_KEY=sk_test_xxxxxxxxxxxx
+STRIPE_API_KEY=sk_test_PLACEHOLDER
 ```
 
 ### Optional
@@ -25,7 +25,7 @@ STRIPE_SYNC_INTERVAL=3600                   # Sync interval (default: 1 hour)
 
 ### API Key Types
 
-- **Test Mode**: Use `sk_test_*` keys for development
+- **Test Mode**: Use `sk_test_PLACEHOLDER*` keys for development
 - **Live Mode**: Use `sk_live_*` keys for production
 
 The plugin auto-detects test vs live mode from the key prefix.
@@ -172,7 +172,7 @@ ORDER BY i.created_at DESC;
 
 ```bash
 ENV=dev
-STRIPE_API_KEY=sk_test_xxxxx
+STRIPE_API_KEY=sk_test_PLACEHOLDER
 ```
 
 Uses test customers, no real charges.
@@ -202,7 +202,7 @@ nself plugin remove stripe --keep-data
 
 ```bash
 # Check API key
-curl -u sk_test_xxx: https://api.stripe.com/v1/customers?limit=1
+curl -u sk_test_PLACEHOLDER: https://api.stripe.com/v1/customers?limit=1
 
 # Verbose sync
 nself plugin stripe sync --verbose

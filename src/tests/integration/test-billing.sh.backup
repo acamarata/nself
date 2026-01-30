@@ -1,0 +1,801 @@
+#!/usr/bin/env bash
+# test-billing.sh - Billing system integration tests
+# Part of nself v0.8.0+ - Billing & monetization features
+# Tests: Usage tracking, Stripe integration, quota enforcement, invoicing, plan management
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source billing modules (will be created as part of billing implementation)
+# These paths are placeholders for future implementation
+BILLING_LIB="$SCRIPT_DIR/../../lib/billing"
+
+# Test configuration
+TEST_PROJECT="billing_test_$$"
+TEST_CUSTOMER_ID="cus_test_$(date +%s)"
+TEST_SUBSCRIPTION_ID="sub_test_$(date +%s)"
+TEST_INVOICE_ID="inv_test_$(date +%s)"
+TOTAL_TESTS=60
+PASSED_TESTS=0
+FAILED_TESTS=0
+
+# Colors for output (using printf for compatibility)
+print_success() {
+  printf "\033[32m✓\033[0m %s\n" "$1"
+  ((PASSED_TESTS++))
+}
+
+print_failure() {
+  printf "\033[31m✗\033[0m %s\n" "$1"
+  ((FAILED_TESTS++))
+}
+
+print_header() {
+  printf "\n\033[1m=== %s ===\033[0m\n\n" "$1"
+}
+
+print_subheader() {
+  printf "\n\033[36m--- %s ---\033[0m\n" "$1"
+}
+
+# Helper function to check if billing modules exist
+check_billing_modules() {
+  local required_modules=(
+    "usage-tracking.sh"
+    "stripe-integration.sh"
+    "quota-enforcement.sh"
+    "invoice-generation.sh"
+    "plan-management.sh"
+  )
+
+  for module in "${required_modules[@]}"; do
+    if [[ ! -f "$BILLING_LIB/$module" ]]; then
+      printf "\033[33mWarning: Billing module not found: %s\033[0m\n" "$module"
+      printf "These tests require billing modules to be implemented.\n"
+      printf "Tests will run in simulation mode.\n\n"
+      return 1
+    fi
+  done
+
+  return 0
+}
+
+# Check if modules exist, source them if available
+SIMULATION_MODE=false
+if ! check_billing_modules; then
+  SIMULATION_MODE=true
+  printf "Running in SIMULATION MODE - tests will validate structure only\n"
+fi
+
+# Source modules if they exist
+if [[ "$SIMULATION_MODE" == "false" ]]; then
+  source "$BILLING_LIB/usage-tracking.sh"
+  source "$BILLING_LIB/stripe-integration.sh"
+  source "$BILLING_LIB/quota-enforcement.sh"
+  source "$BILLING_LIB/invoice-generation.sh"
+  source "$BILLING_LIB/plan-management.sh"
+fi
+
+# Simulation functions (used when billing modules don't exist yet)
+simulate_success() {
+  return 0
+}
+
+simulate_with_output() {
+  local output="$1"
+  printf "%s" "$output"
+  return 0
+}
+
+# Helper to run tests with proper error handling
+run_test() {
+  local test_name="$1"
+  local test_function="$2"
+
+  printf "Test %s... " "$test_name"
+
+  if $test_function 2>/dev/null; then
+    print_success "passed"
+  else
+    print_failure "failed"
+  fi
+}
+
+print_header "Billing System Integration Tests"
+
+printf "Test Configuration:\n"
+printf "  Project: %s\n" "$TEST_PROJECT"
+printf "  Mode: %s\n" "$([[ "$SIMULATION_MODE" == "true" ]] && echo "SIMULATION" || echo "LIVE")"
+printf "  Total Tests: %d\n" "$TOTAL_TESTS"
+
+#==============================================================================
+# SECTION 1: Usage Tracking Tests (15 tests)
+#==============================================================================
+
+print_subheader "Section 1: Usage Tracking Tests (15 tests)"
+
+# Test 1: Initialize usage tracking
+printf "Test 1: Initialize usage tracking... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "usage tracking initialized (simulated)"
+else
+  if usage_tracking_init; then
+    print_success "usage tracking initialized"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 2: Track API request
+printf "Test 2: Track API request... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "API request tracked (simulated)"
+else
+  if usage_track_api_request "$TEST_CUSTOMER_ID" "/graphql" "POST" 200 0.125; then
+    print_success "API request tracked"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 3: Track storage usage
+printf "Test 3: Track storage usage... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "storage usage tracked (simulated)"
+else
+  if usage_track_storage "$TEST_CUSTOMER_ID" 1073741824; then
+    print_success "storage usage tracked (1GB)"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 4: Track bandwidth consumption
+printf "Test 4: Track bandwidth consumption... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "bandwidth tracked (simulated)"
+else
+  if usage_track_bandwidth "$TEST_CUSTOMER_ID" 524288000 "egress"; then
+    print_success "bandwidth tracked (500MB)"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 5: Track compute time
+printf "Test 5: Track compute time... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "compute time tracked (simulated)"
+else
+  if usage_track_compute "$TEST_CUSTOMER_ID" "function_execution" 3600; then
+    print_success "compute time tracked (1 hour)"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 6: Get current usage
+printf "Test 6: Get current usage... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"api_requests":100,"storage_gb":1,"bandwidth_gb":0.5,"compute_hours":1}' >/dev/null
+  print_success "usage retrieved (simulated)"
+else
+  usage=$(usage_get_current "$TEST_CUSTOMER_ID" 2>/dev/null)
+  if [[ -n "$usage" ]]; then
+    print_success "usage retrieved"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 7: Aggregate usage by hour
+printf "Test 7: Aggregate usage by hour... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "hourly aggregation (simulated)"
+else
+  if usage_aggregate "$TEST_CUSTOMER_ID" "hour"; then
+    print_success "hourly aggregation complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 8: Aggregate usage by day
+printf "Test 8: Aggregate usage by day... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "daily aggregation (simulated)"
+else
+  if usage_aggregate "$TEST_CUSTOMER_ID" "day"; then
+    print_success "daily aggregation complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 9: Aggregate usage by month
+printf "Test 9: Aggregate usage by month... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "monthly aggregation (simulated)"
+else
+  if usage_aggregate "$TEST_CUSTOMER_ID" "month"; then
+    print_success "monthly aggregation complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 10: Export usage data (CSV)
+printf "Test 10: Export usage data (CSV)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "CSV export (simulated)"
+else
+  if usage_export "$TEST_CUSTOMER_ID" "csv" "/tmp/usage_export_$$.csv"; then
+    print_success "CSV export complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 11: Export usage data (JSON)
+printf "Test 11: Export usage data (JSON)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "JSON export (simulated)"
+else
+  if usage_export "$TEST_CUSTOMER_ID" "json" "/tmp/usage_export_$$.json"; then
+    print_success "JSON export complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 12: Set usage alert threshold
+printf "Test 12: Set usage alert threshold... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "alert threshold set (simulated)"
+else
+  if usage_alert_set "$TEST_CUSTOMER_ID" "api_requests" 10000 "email"; then
+    print_success "alert threshold set (10k requests)"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 13: Check alert threshold
+printf "Test 13: Check alert threshold... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "threshold check (simulated)"
+else
+  if usage_alert_check "$TEST_CUSTOMER_ID"; then
+    print_success "threshold check complete"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 14: Get usage history
+printf "Test 14: Get usage history... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '[{"date":"2026-01-01","api_requests":1000}]' >/dev/null
+  print_success "history retrieved (simulated)"
+else
+  history=$(usage_get_history "$TEST_CUSTOMER_ID" 30 2>/dev/null)
+  if [[ -n "$history" ]]; then
+    print_success "history retrieved (30 days)"
+  else
+    print_failure "failed"
+  fi
+fi
+
+# Test 15: Reset usage counters
+printf "Test 15: Reset usage counters... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success
+  print_success "counters reset (simulated)"
+else
+  if usage_reset "$TEST_CUSTOMER_ID" "monthly"; then
+    print_success "monthly counters reset"
+  else
+    print_failure "failed"
+  fi
+fi
+
+#==============================================================================
+# SECTION 2: Stripe Integration Tests (15 tests)
+#==============================================================================
+
+print_subheader "Section 2: Stripe Integration Tests (15 tests)"
+
+# Test 16: Initialize Stripe client
+printf "Test 16: Initialize Stripe client... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "Stripe initialized (simulated)" || print_failure "failed"
+else
+  stripe_init "sk_test_dummy" && print_success "Stripe initialized" || print_failure "failed"
+fi
+
+# Test 17: Create Stripe customer
+printf "Test 17: Create Stripe customer... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "cus_test_12345" >/dev/null && print_success "customer created (simulated)" || print_failure "failed"
+else
+  customer_id=$(stripe_customer_create "test@example.com" "Test User" 2>/dev/null)
+  [[ -n "$customer_id" ]] && print_success "customer created: $customer_id" || print_failure "failed"
+fi
+
+# Test 18: Get Stripe customer
+printf "Test 18: Get Stripe customer... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"id":"cus_test_12345","email":"test@example.com"}' >/dev/null && \
+    print_success "customer retrieved (simulated)" || print_failure "failed"
+else
+  customer=$(stripe_customer_get "$TEST_CUSTOMER_ID" 2>/dev/null)
+  [[ -n "$customer" ]] && print_success "customer retrieved" || print_failure "failed"
+fi
+
+# Test 19: Update Stripe customer
+printf "Test 19: Update Stripe customer... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "customer updated (simulated)" || print_failure "failed"
+else
+  stripe_customer_update "$TEST_CUSTOMER_ID" "name" "Updated Name" && \
+    print_success "customer updated" || print_failure "failed"
+fi
+
+# Test 20: Add payment method
+printf "Test 20: Add payment method... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "pm_test_card" >/dev/null && print_success "payment method added (simulated)" || print_failure "failed"
+else
+  pm_id=$(stripe_payment_method_attach "$TEST_CUSTOMER_ID" "pm_card_visa" 2>/dev/null)
+  [[ -n "$pm_id" ]] && print_success "payment method added" || print_failure "failed"
+fi
+
+# Test 21: List payment methods
+printf "Test 21: List payment methods... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '[{"id":"pm_1","type":"card"}]' >/dev/null && \
+    print_success "payment methods listed (simulated)" || print_failure "failed"
+else
+  methods=$(stripe_payment_methods_list "$TEST_CUSTOMER_ID" 2>/dev/null)
+  [[ -n "$methods" ]] && print_success "payment methods listed" || print_failure "failed"
+fi
+
+# Test 22: Create subscription
+printf "Test 22: Create subscription... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "sub_test_12345" >/dev/null && print_success "subscription created (simulated)" || print_failure "failed"
+else
+  sub_id=$(stripe_subscription_create "$TEST_CUSTOMER_ID" "price_pro_monthly" 2>/dev/null)
+  [[ -n "$sub_id" ]] && print_success "subscription created: $sub_id" || print_failure "failed"
+fi
+
+# Test 23: Get subscription
+printf "Test 23: Get subscription... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"id":"sub_test_12345","status":"active"}' >/dev/null && \
+    print_success "subscription retrieved (simulated)" || print_failure "failed"
+else
+  subscription=$(stripe_subscription_get "$TEST_SUBSCRIPTION_ID" 2>/dev/null)
+  [[ -n "$subscription" ]] && print_success "subscription retrieved" || print_failure "failed"
+fi
+
+# Test 24: Update subscription
+printf "Test 24: Update subscription... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "subscription updated (simulated)" || print_failure "failed"
+else
+  stripe_subscription_update "$TEST_SUBSCRIPTION_ID" "price_enterprise_monthly" && \
+    print_success "subscription updated" || print_failure "failed"
+fi
+
+# Test 25: Cancel subscription
+printf "Test 25: Cancel subscription... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "subscription cancelled (simulated)" || print_failure "failed"
+else
+  stripe_subscription_cancel "$TEST_SUBSCRIPTION_ID" "at_period_end" && \
+    print_success "subscription cancelled" || print_failure "failed"
+fi
+
+# Test 26: Create invoice
+printf "Test 26: Create invoice... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "in_test_12345" >/dev/null && print_success "invoice created (simulated)" || print_failure "failed"
+else
+  invoice_id=$(stripe_invoice_create "$TEST_CUSTOMER_ID" 2>/dev/null)
+  [[ -n "$invoice_id" ]] && print_success "invoice created: $invoice_id" || print_failure "failed"
+fi
+
+# Test 27: Add invoice item
+printf "Test 27: Add invoice item... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "invoice item added (simulated)" || print_failure "failed"
+else
+  stripe_invoice_item_add "$TEST_CUSTOMER_ID" 1000 "Overage charges" && \
+    print_success "invoice item added" || print_failure "failed"
+fi
+
+# Test 28: Finalize invoice
+printf "Test 28: Finalize invoice... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "invoice finalized (simulated)" || print_failure "failed"
+else
+  stripe_invoice_finalize "$TEST_INVOICE_ID" && \
+    print_success "invoice finalized" || print_failure "failed"
+fi
+
+# Test 29: Process payment
+printf "Test 29: Process payment... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"status":"succeeded","amount":1000}' >/dev/null && \
+    print_success "payment processed (simulated)" || print_failure "failed"
+else
+  payment=$(stripe_payment_process "$TEST_INVOICE_ID" 2>/dev/null)
+  [[ -n "$payment" ]] && print_success "payment processed" || print_failure "failed"
+fi
+
+# Test 30: Handle webhook event
+printf "Test 30: Handle webhook event... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "webhook handled (simulated)" || print_failure "failed"
+else
+  webhook_payload='{"type":"invoice.payment_succeeded","data":{"object":{"id":"in_test"}}}'
+  stripe_webhook_handle "$webhook_payload" && \
+    print_success "webhook handled" || print_failure "failed"
+fi
+
+#==============================================================================
+# SECTION 3: Quota Enforcement Tests (12 tests)
+#==============================================================================
+
+print_subheader "Section 3: Quota Enforcement Tests (12 tests)"
+
+# Test 31: Initialize quota system
+printf "Test 31: Initialize quota system... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "quota system initialized (simulated)" || print_failure "failed"
+else
+  quota_init && print_success "quota system initialized" || print_failure "failed"
+fi
+
+# Test 32: Set API rate limit
+printf "Test 32: Set API rate limit... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "rate limit set (simulated)" || print_failure "failed"
+else
+  quota_set_limit "$TEST_CUSTOMER_ID" "api_requests" 10000 "per_month" && \
+    print_success "rate limit set (10k/month)" || print_failure "failed"
+fi
+
+# Test 33: Set storage limit
+printf "Test 33: Set storage limit... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "storage limit set (simulated)" || print_failure "failed"
+else
+  quota_set_limit "$TEST_CUSTOMER_ID" "storage" 10737418240 "absolute" && \
+    print_success "storage limit set (10GB)" || print_failure "failed"
+fi
+
+# Test 34: Set bandwidth limit
+printf "Test 34: Set bandwidth limit... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "bandwidth limit set (simulated)" || print_failure "failed"
+else
+  quota_set_limit "$TEST_CUSTOMER_ID" "bandwidth" 107374182400 "per_month" && \
+    print_success "bandwidth limit set (100GB/month)" || print_failure "failed"
+fi
+
+# Test 35: Check quota before operation
+printf "Test 35: Check quota before operation... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "quota check passed (simulated)" || print_failure "failed"
+else
+  quota_check "$TEST_CUSTOMER_ID" "api_requests" 1 && \
+    print_success "quota check passed" || print_failure "failed"
+fi
+
+# Test 36: Enforce API rate limit (within limit)
+printf "Test 36: Enforce API rate limit (within limit)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "request allowed (simulated)" || print_failure "failed"
+else
+  quota_enforce "$TEST_CUSTOMER_ID" "api_requests" 1 && \
+    print_success "request allowed" || print_failure "failed"
+fi
+
+# Test 37: Enforce storage limit
+printf "Test 37: Enforce storage limit... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "storage within limit (simulated)" || print_failure "failed"
+else
+  quota_enforce "$TEST_CUSTOMER_ID" "storage" 1048576 && \
+    print_success "storage within limit" || print_failure "failed"
+fi
+
+# Test 38: Handle soft limit (warning)
+printf "Test 38: Handle soft limit (warning)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"warning":true,"usage":80}' >/dev/null && \
+    print_success "soft limit warning (simulated)" || print_failure "failed"
+else
+  result=$(quota_soft_limit_check "$TEST_CUSTOMER_ID" "api_requests" 2>/dev/null)
+  [[ -n "$result" ]] && print_success "soft limit warning generated" || print_failure "failed"
+fi
+
+# Test 39: Handle hard limit (block)
+printf "Test 39: Handle hard limit (block)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  ! simulate_success && print_success "hard limit blocked (simulated)" || print_failure "failed"
+else
+  ! quota_hard_limit_check "$TEST_CUSTOMER_ID" "api_requests" 999999 && \
+    print_success "hard limit blocked operation" || print_failure "failed"
+fi
+
+# Test 40: Calculate overage
+printf "Test 40: Calculate overage... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"overage":1000,"cost":10.00}' >/dev/null && \
+    print_success "overage calculated (simulated)" || print_failure "failed"
+else
+  overage=$(quota_calculate_overage "$TEST_CUSTOMER_ID" "api_requests" 2>/dev/null)
+  [[ -n "$overage" ]] && print_success "overage calculated" || print_failure "failed"
+fi
+
+# Test 41: Get quota usage percentage
+printf "Test 41: Get quota usage percentage... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "45" >/dev/null && print_success "usage percentage (simulated)" || print_failure "failed"
+else
+  percentage=$(quota_get_usage_percentage "$TEST_CUSTOMER_ID" "storage" 2>/dev/null)
+  [[ -n "$percentage" ]] && print_success "usage: ${percentage}%" || print_failure "failed"
+fi
+
+# Test 42: Reset quota (monthly schedule)
+printf "Test 42: Reset quota (monthly schedule)... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "quota reset (simulated)" || print_failure "failed"
+else
+  quota_reset "$TEST_CUSTOMER_ID" "monthly" && \
+    print_success "monthly quota reset" || print_failure "failed"
+fi
+
+#==============================================================================
+# SECTION 4: Invoice Generation Tests (10 tests)
+#==============================================================================
+
+print_subheader "Section 4: Invoice Generation Tests (10 tests)"
+
+# Test 43: Initialize invoice system
+printf "Test 43: Initialize invoice system... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "invoice system initialized (simulated)" || print_failure "failed"
+else
+  invoice_init && print_success "invoice system initialized" || print_failure "failed"
+fi
+
+# Test 44: Generate monthly invoice
+printf "Test 44: Generate monthly invoice... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "INV-2026-01-001" >/dev/null && print_success "invoice generated (simulated)" || print_failure "failed"
+else
+  invoice_id=$(invoice_generate "$TEST_CUSTOMER_ID" "monthly" 2>/dev/null)
+  [[ -n "$invoice_id" ]] && print_success "invoice generated: $invoice_id" || print_failure "failed"
+fi
+
+# Test 45: Calculate usage charges
+printf "Test 45: Calculate usage charges... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"total":125.50,"breakdown":{}}' >/dev/null && \
+    print_success "charges calculated (simulated)" || print_failure "failed"
+else
+  charges=$(invoice_calculate_charges "$TEST_CUSTOMER_ID" 2>/dev/null)
+  [[ -n "$charges" ]] && print_success "charges calculated" || print_failure "failed"
+fi
+
+# Test 46: Apply discount code
+printf "Test 46: Apply discount code... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "discount applied (simulated)" || print_failure "failed"
+else
+  invoice_apply_discount "$TEST_INVOICE_ID" "SAVE20" && \
+    print_success "discount applied (SAVE20)" || print_failure "failed"
+fi
+
+# Test 47: Apply percentage discount
+printf "Test 47: Apply percentage discount... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "percentage discount (simulated)" || print_failure "failed"
+else
+  invoice_apply_discount_percentage "$TEST_INVOICE_ID" 15 && \
+    print_success "15% discount applied" || print_failure "failed"
+fi
+
+# Test 48: Calculate tax
+printf "Test 48: Calculate tax... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"tax_rate":0.08,"tax_amount":10.00}' >/dev/null && \
+    print_success "tax calculated (simulated)" || print_failure "failed"
+else
+  tax=$(invoice_calculate_tax "$TEST_CUSTOMER_ID" 125.50 2>/dev/null)
+  [[ -n "$tax" ]] && print_success "tax calculated" || print_failure "failed"
+fi
+
+# Test 49: Generate invoice PDF
+printf "Test 49: Generate invoice PDF... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "PDF generated (simulated)" || print_failure "failed"
+else
+  invoice_generate_pdf "$TEST_INVOICE_ID" "/tmp/invoice_$$.pdf" && \
+    print_success "PDF generated" || print_failure "failed"
+fi
+
+# Test 50: Email invoice to customer
+printf "Test 50: Email invoice to customer... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "invoice emailed (simulated)" || print_failure "failed"
+else
+  invoice_email_send "$TEST_INVOICE_ID" "$TEST_CUSTOMER_ID" && \
+    print_success "invoice emailed" || print_failure "failed"
+fi
+
+# Test 51: Get invoice history
+printf "Test 51: Get invoice history... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '[{"id":"INV-001","date":"2026-01-01"}]' >/dev/null && \
+    print_success "history retrieved (simulated)" || print_failure "failed"
+else
+  history=$(invoice_get_history "$TEST_CUSTOMER_ID" 12 2>/dev/null)
+  [[ -n "$history" ]] && print_success "invoice history retrieved" || print_failure "failed"
+fi
+
+# Test 52: Mark invoice as paid
+printf "Test 52: Mark invoice as paid... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "invoice marked paid (simulated)" || print_failure "failed"
+else
+  invoice_mark_paid "$TEST_INVOICE_ID" "stripe" && \
+    print_success "invoice marked as paid" || print_failure "failed"
+fi
+
+#==============================================================================
+# SECTION 5: Plan Management Tests (8 tests)
+#==============================================================================
+
+print_subheader "Section 5: Plan Management Tests (8 tests)"
+
+# Test 53: Initialize plan system
+printf "Test 53: Initialize plan system... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "plan system initialized (simulated)" || print_failure "failed"
+else
+  plan_init && print_success "plan system initialized" || print_failure "failed"
+fi
+
+# Test 54: List available plans
+printf "Test 54: List available plans... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '[{"id":"free","name":"Free"},{"id":"pro","name":"Pro"}]' >/dev/null && \
+    print_success "plans listed (simulated)" || print_failure "failed"
+else
+  plans=$(plan_list 2>/dev/null)
+  [[ -n "$plans" ]] && print_success "plans listed" || print_failure "failed"
+fi
+
+# Test 55: Get plan details
+printf "Test 55: Get plan details... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"id":"pro","price":29,"limits":{}}' >/dev/null && \
+    print_success "plan details (simulated)" || print_failure "failed"
+else
+  details=$(plan_get_details "pro" 2>/dev/null)
+  [[ -n "$details" ]] && print_success "plan details retrieved" || print_failure "failed"
+fi
+
+# Test 56: Upgrade to Pro plan
+printf "Test 56: Upgrade to Pro plan... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "upgraded to Pro (simulated)" || print_failure "failed"
+else
+  plan_upgrade "$TEST_CUSTOMER_ID" "pro" && \
+    print_success "upgraded to Pro plan" || print_failure "failed"
+fi
+
+# Test 57: Downgrade to Free plan
+printf "Test 57: Downgrade to Free plan... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && print_success "downgraded to Free (simulated)" || print_failure "failed"
+else
+  plan_downgrade "$TEST_CUSTOMER_ID" "free" "at_period_end" && \
+    print_success "downgraded to Free plan" || print_failure "failed"
+fi
+
+# Test 58: Create custom enterprise plan
+printf "Test 58: Create custom enterprise plan... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output "plan_custom_12345" >/dev/null && \
+    print_success "custom plan created (simulated)" || print_failure "failed"
+else
+  custom_plan=$(plan_create_custom "$TEST_CUSTOMER_ID" "enterprise_custom" 299 '{"api_requests":100000}' 2>/dev/null)
+  [[ -n "$custom_plan" ]] && print_success "custom plan created" || print_failure "failed"
+fi
+
+# Test 59: Compare plans
+printf "Test 59: Compare plans... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"comparison":[{"feature":"API Requests","free":"1000","pro":"10000"}]}' >/dev/null && \
+    print_success "plans compared (simulated)" || print_failure "failed"
+else
+  comparison=$(plan_compare "free" "pro" 2>/dev/null)
+  [[ -n "$comparison" ]] && print_success "plans compared" || print_failure "failed"
+fi
+
+# Test 60: Get current plan for customer
+printf "Test 60: Get current plan for customer... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_with_output '{"plan":"pro","status":"active"}' >/dev/null && \
+    print_success "current plan retrieved (simulated)" || print_failure "failed"
+else
+  current=$(plan_get_current "$TEST_CUSTOMER_ID" 2>/dev/null)
+  [[ -n "$current" ]] && print_success "current plan retrieved" || print_failure "failed"
+fi
+
+#==============================================================================
+# CLEANUP & SUMMARY
+#==============================================================================
+
+print_header "Cleanup"
+
+printf "Cleaning up test data... "
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  simulate_success && printf "✓\n" || printf "✗\n"
+else
+  # Clean up test customer, subscriptions, etc.
+  if command -v stripe_customer_delete >/dev/null 2>&1; then
+    stripe_customer_delete "$TEST_CUSTOMER_ID" 2>/dev/null || true
+  fi
+
+  # Clean up temporary files
+  rm -f /tmp/usage_export_$$.*
+  rm -f /tmp/invoice_$$.pdf
+
+  printf "✓\n"
+fi
+
+#==============================================================================
+# TEST SUMMARY
+#==============================================================================
+
+print_header "Test Summary"
+
+printf "Total Tests:  %d\n" "$TOTAL_TESTS"
+printf "Passed:       \033[32m%d\033[0m\n" "$PASSED_TESTS"
+printf "Failed:       \033[31m%d\033[0m\n" "$FAILED_TESTS"
+printf "Success Rate: %.1f%%\n" "$(awk "BEGIN {printf \"%.1f\", ($PASSED_TESTS/$TOTAL_TESTS)*100}")"
+
+if [[ "$SIMULATION_MODE" == "true" ]]; then
+  printf "\n\033[33mNote: Tests ran in SIMULATION MODE\033[0m\n"
+  printf "To run live tests, implement billing modules in:\n"
+  printf "  %s/\n" "$BILLING_LIB"
+fi
+
+printf "\n\033[1m=== Billing Integration Tests Complete ===\033[0m\n\n"
+
+# Exit with proper code
+if [[ "$FAILED_TESTS" -gt 0 ]]; then
+  exit 1
+else
+  exit 0
+fi

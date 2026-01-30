@@ -1,0 +1,107 @@
+/**
+ * Profile Normalizer
+ * Normalizes user profiles from different OAuth providers into a consistent format
+ */
+
+import { OAuthUserProfile, ProviderName } from '../types';
+
+/**
+ * Normalize Google user profile
+ */
+export function normalizeGoogleProfile(profile: any): OAuthUserProfile {
+  return {
+    id: profile.id,
+    email: profile.email,
+    emailVerified: profile.verified_email || false,
+    displayName: profile.name || profile.email,
+    firstName: profile.given_name,
+    lastName: profile.family_name,
+    avatarUrl: profile.picture,
+    locale: profile.locale,
+    provider: 'google',
+    providerUserId: profile.id,
+    rawProfile: profile,
+  };
+}
+
+/**
+ * Normalize GitHub user profile
+ */
+export function normalizeGitHubProfile(profile: any, email?: string): OAuthUserProfile {
+  return {
+    id: profile.id.toString(),
+    email: email || profile.email || `${profile.login}@github.local`,
+    emailVerified: true, // GitHub verifies emails
+    displayName: profile.name || profile.login,
+    firstName: profile.name?.split(' ')[0],
+    lastName: profile.name?.split(' ').slice(1).join(' '),
+    avatarUrl: profile.avatar_url,
+    locale: profile.location,
+    provider: 'github',
+    providerUserId: profile.id.toString(),
+    rawProfile: profile,
+  };
+}
+
+/**
+ * Normalize Microsoft user profile
+ */
+export function normalizeMicrosoftProfile(profile: any): OAuthUserProfile {
+  return {
+    id: profile.id,
+    email: profile.mail || profile.userPrincipalName,
+    emailVerified: true,
+    displayName: profile.displayName || profile.mail,
+    firstName: profile.givenName,
+    lastName: profile.surname,
+    avatarUrl: undefined, // Microsoft Graph requires separate API call for photo
+    locale: profile.preferredLanguage,
+    provider: 'microsoft',
+    providerUserId: profile.id,
+    rawProfile: profile,
+  };
+}
+
+/**
+ * Normalize Slack user profile
+ */
+export function normalizeSlackProfile(profile: any): OAuthUserProfile {
+  const user = profile.user || profile;
+  const email = user.email || profile.email;
+
+  return {
+    id: user.id,
+    email,
+    emailVerified: true,
+    displayName: user.real_name || user.name || email,
+    firstName: user.profile?.first_name,
+    lastName: user.profile?.last_name,
+    avatarUrl: user.profile?.image_512 || user.profile?.image_192,
+    locale: user.locale,
+    provider: 'slack',
+    providerUserId: user.id,
+    rawProfile: profile,
+  };
+}
+
+/**
+ * Normalize profile based on provider
+ */
+export function normalizeProfile(
+  provider: ProviderName,
+  profile: any,
+  additionalData?: any
+): OAuthUserProfile {
+  switch (provider) {
+    case 'google':
+      return normalizeGoogleProfile(profile);
+    case 'github':
+      return normalizeGitHubProfile(profile, additionalData?.email);
+    case 'microsoft':
+      return normalizeMicrosoftProfile(profile);
+    case 'slack':
+      return normalizeSlackProfile(profile);
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
+  }
+}

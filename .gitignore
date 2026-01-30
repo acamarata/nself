@@ -51,3 +51,6 @@ DONE.md
 # QA feedback files (not for commit)
 DONE.md
 FEEDBACK.md
+
+# Runtime logs
+.nself/logs/

@@ -1,0 +1,380 @@
+================================================================================
+nself tenant - Multi-Tenant Management
+================================================================================
+
+OVERVIEW:
+  Manage tenants, organizations, and tenant isolation for multi-tenant
+  applications. Create isolated workspaces with separate databases, users,
+  and configurations.
+
+USAGE:
+  nself tenant <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+TENANT MANAGEMENT:
+  init                         Initialize multi-tenancy system
+  create <name>                Create a new tenant
+  list                         List all tenants
+  show <id>                    Show tenant details
+  suspend <id>                 Suspend a tenant (disable access)
+  activate <id>                Activate a suspended tenant
+  delete <id>                  Delete a tenant (with confirmation)
+  stats                        Show tenant statistics
+
+MEMBER MANAGEMENT:
+  member add <tenant> <user> [role]      Add user to tenant
+  member remove <tenant> <user>          Remove user from tenant
+  member list <tenant>                   List all tenant members
+  member role <tenant> <user> <role>     Change member role
+
+DOMAIN MANAGEMENT:
+  domain add <tenant> <domain>           Add custom domain to tenant
+  domain verify <tenant> <domain>        Verify domain ownership
+  domain remove <tenant> <domain>        Remove domain from tenant
+  domain list <tenant>                   List all tenant domains
+
+SETTINGS MANAGEMENT:
+  setting set <tenant> <key> <value>     Set tenant setting
+  setting get <tenant> <key>             Get tenant setting value
+  setting list <tenant>                  List all tenant settings
+
+TENANT-SPECIFIC FEATURES:
+  billing <subcommand>                   Billing and usage tracking
+  branding <subcommand>                  Brand customization
+  domains <subcommand>                   Advanced domain management
+  email <subcommand>                     Email template customization
+  themes <subcommand>                    Theme management
+
+================================================================================
+OPTIONS
+================================================================================
+
+  -h, --help               Show this help message
+  --json                   Output in JSON format
+  --slug <slug>            Tenant slug (URL-friendly identifier)
+  --plan <plan>            Billing plan (free, pro, enterprise)
+  --owner <user_id>        Owner user ID for tenant
+
+================================================================================
+MEMBER ROLES
+================================================================================
+
+  owner                    Full control, can delete tenant
+  admin                    Manage settings, members, and resources
+  member                   Read/write access to tenant resources
+  viewer                   Read-only access to tenant resources
+
+================================================================================
+TENANT SETTINGS
+================================================================================
+
+  Branding:
+    branding.logo_url              Logo image URL
+    branding.primary_color         Primary brand color (hex)
+    branding.secondary_color       Secondary brand color (hex)
+    branding.company_name          Company/organization name
+
+  Features:
+    features.api_enabled           Enable GraphQL API
+    features.storage_enabled       Enable file storage
+    features.functions_enabled     Enable serverless functions
+    features.realtime_enabled      Enable WebSocket/real-time
+
+  Quotas:
+    quotas.max_users               Maximum number of users
+    quotas.max_storage_gb          Storage quota in GB
+    quotas.max_api_requests        Daily API request limit
+    quotas.max_bandwidth_gb        Monthly bandwidth limit
+
+  Notifications:
+    notifications.email            Notification email address
+    notifications.slack_webhook    Slack webhook URL
+    notifications.alerts_enabled   Enable quota alerts
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Initialize multi-tenancy system:
+    $ nself tenant init
+
+  Create new tenant:
+    $ nself tenant create "Acme Corp" --slug acme --plan pro
+
+  Create tenant with specific owner:
+    $ nself tenant create "Beta Inc" \
+        --slug beta \
+        --owner user-123-uuid \
+        --plan enterprise
+
+  List all tenants:
+    $ nself tenant list
+
+  List tenants in JSON format:
+    $ nself tenant list --json
+
+  Show tenant details:
+    $ nself tenant show acme
+
+  Show tenant by UUID:
+    $ nself tenant show 550e8400-e29b-41d4-a716-446655440000
+
+  Suspend tenant (temporarily disable):
+    $ nself tenant suspend acme
+
+  Activate suspended tenant:
+    $ nself tenant activate acme
+
+  Delete tenant (requires confirmation):
+    $ nself tenant delete acme
+
+  Show tenant statistics:
+    $ nself tenant stats
+
+  Add member to tenant:
+    $ nself tenant member add acme user-456-uuid admin
+
+  Add member with default role (member):
+    $ nself tenant member add acme user-789-uuid
+
+  Remove member from tenant:
+    $ nself tenant member remove acme user-456-uuid
+
+  List all tenant members:
+    $ nself tenant member list acme
+
+  Change member role:
+    $ nself tenant member role acme user-456-uuid owner
+
+  Add custom domain:
+    $ nself tenant domain add acme app.acmecorp.com
+
+  Verify domain ownership:
+    $ nself tenant domain verify acme app.acmecorp.com
+
+  List tenant domains:
+    $ nself tenant domain list acme
+
+  Remove domain:
+    $ nself tenant domain remove acme app.acmecorp.com
+
+  Set tenant setting:
+    $ nself tenant setting set acme branding.logo_url \
+        "https://cdn.example.com/logo.png"
+
+  Set quota limit:
+    $ nself tenant setting set acme quotas.max_users 100
+
+  Get tenant setting:
+    $ nself tenant setting get acme branding.logo_url
+
+  List all tenant settings:
+    $ nself tenant setting list acme
+
+  Tenant-specific feature examples:
+    $ nself tenant billing usage --tenant acme
+    $ nself tenant branding set-colors --primary "#0066cc" --tenant acme
+    $ nself tenant domains add app.acme.com --tenant acme
+    $ nself tenant email list --tenant acme
+    $ nself tenant themes activate dark-mode --tenant acme
+
+For detailed help on tenant-specific features:
+  $ nself tenant billing --help
+  $ nself tenant branding --help
+  $ nself tenant domains --help
+  $ nself tenant email --help
+  $ nself tenant themes --help
+
+================================================================================
+TENANT ISOLATION
+================================================================================
+
+  Database Isolation:
+    Each tenant gets:
+      - Dedicated schema in PostgreSQL
+      - Row-level security policies
+      - Isolated GraphQL permissions
+
+  Data Access:
+    - Users can only access data within their tenant
+    - Hasura automatically filters queries by tenant_id
+    - JWT tokens include tenant_id claim
+
+  Resource Quotas:
+    - Per-tenant API rate limiting
+    - Storage quotas enforced
+    - Bandwidth tracking per tenant
+    - Custom quota alerts
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Complete Tenant Setup:
+    1. nself tenant init
+    2. nself tenant create "My Company" --slug myco --plan pro
+    3. nself tenant member add myco owner-user-id owner
+    4. nself tenant setting set myco branding.logo_url "https://..."
+    5. nself tenant domain add myco app.mycompany.com
+    6. nself tenant domain verify myco app.mycompany.com
+
+  Adding Team Members:
+    1. nself tenant member add myco user-1 admin
+    2. nself tenant member add myco user-2 member
+    3. nself tenant member add myco user-3 viewer
+    4. nself tenant member list myco
+
+  Tenant Migration:
+    1. nself tenant create "New Tenant"
+    2. Export data from old tenant
+    3. Import data to new tenant
+    4. nself tenant member add <new> <users>
+    5. Update configurations
+
+  Quota Management:
+    1. nself tenant setting set <tenant> quotas.max_users 50
+    2. nself tenant setting set <tenant> quotas.max_storage_gb 10
+    3. nself tenant billing quota --tenant=<tenant>
+    4. Monitor usage regularly
+
+================================================================================
+MULTI-TENANT ARCHITECTURE
+================================================================================
+
+  Schema-per-Tenant:
+    - PostgreSQL schemas: tenant_<slug>
+    - Isolated tables, views, functions
+    - No cross-tenant data leakage
+
+  Shared Services:
+    - Authentication service (shared)
+    - Billing system (shared)
+    - Core infrastructure (shared)
+
+  Tenant Resolution:
+    1. Request includes tenant identifier (subdomain or header)
+    2. Middleware resolves tenant from request
+    3. JWT token includes tenant_id
+    4. Hasura applies tenant filters automatically
+
+  GraphQL Permissions:
+    {
+      "tenant_id": {
+        "_eq": "X-Hasura-Tenant-Id"
+      }
+    }
+
+================================================================================
+BILLING INTEGRATION
+================================================================================
+
+  Each tenant can have:
+    - Separate billing plan (free, pro, enterprise)
+    - Individual usage tracking
+    - Per-tenant invoicing
+    - Quota enforcement based on plan
+
+  Plan Limits:
+    FREE:          10 users, 1 GB storage, 10k API requests/day
+    PRO:           100 users, 50 GB storage, 1M API requests/day
+    ENTERPRISE:    Unlimited users, custom storage, unlimited API
+
+  Check tenant billing:
+    $ nself tenant billing usage --tenant=<tenant-id>
+    $ nself tenant billing quota --tenant=<tenant-id>
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself org                Organization and team management
+  nself auth               User authentication
+  nself db                 Database per tenant
+
+NOTE: Billing and white-label features are now accessed via:
+  nself tenant billing     (instead of nself billing)
+  nself tenant branding    (instead of nself whitelabel)
+  nself tenant domains     (instead of nself whitelabel domain)
+  nself tenant email       (instead of nself whitelabel email)
+  nself tenant themes      (instead of nself whitelabel theme)
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Use descriptive tenant slugs (URL-friendly)
+  2. Set up domain verification before going live
+  3. Configure quotas based on billing plan
+  4. Regularly review member access levels
+  5. Monitor tenant-specific usage and costs
+  6. Use owner role sparingly (high privileges)
+  7. Enable tenant-specific logging
+  8. Set up alerts for quota thresholds
+  9. Document tenant onboarding process
+  10. Test tenant isolation thoroughly
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+  Row-Level Security:
+    - All tables include tenant_id column
+    - RLS policies enforce tenant isolation
+    - No cross-tenant queries possible
+
+  JWT Claims:
+    - X-Hasura-Tenant-Id: Current tenant identifier
+    - X-Hasura-User-Id: Current user identifier
+    - X-Hasura-Role: User role within tenant
+
+  Domain Verification:
+    - TXT record verification required
+    - Prevents domain hijacking
+    - SSL certificates per domain
+
+  Audit Logging:
+    - All tenant actions logged
+    - Per-tenant audit trail
+    - Compliance-ready logs
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Tenant not found"
+    - Verify tenant slug or UUID
+    - Check tenant status (may be suspended)
+    - Use: nself tenant list
+
+  "Permission denied"
+    - Verify user is member of tenant
+    - Check user role: nself tenant member list <tenant>
+    - Ensure JWT token includes tenant_id
+
+  "Domain verification failed"
+    - Check DNS TXT record: dig _nself-verify.example.com TXT
+    - Wait for DNS propagation (up to 48 hours)
+    - Verify TXT record value matches
+
+  "Quota exceeded"
+    - Check current usage: nself tenant billing quota --tenant=<id>
+    - Increase quota: nself tenant setting set <tenant> quotas.max_users 200
+    - Consider plan upgrade
+
+  "Cannot delete tenant"
+    - Ensure you have owner role
+    - Check for active resources
+    - Suspend first, then delete
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/multi-tenant
+  Architecture:      https://docs.nself.org/multi-tenant/architecture
+  Security:          https://docs.nself.org/multi-tenant/security
+  Migration Guide:   https://docs.nself.org/multi-tenant/migration
+  Support:           support@nself.org

@@ -4,12 +4,14 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.4.8-blue.svg)](releases/v0.4.8)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](releases/v0.9.0.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
 
 *Deploy a complete backend in minutes, not days.*
+
+**[Quick Start](guides/Quick-Start.md)** | **[Installation](guides/Installation.md)** | **[Documentation](README.md)** | **[GitHub](https://github.com/acamarata/nself)**
 
 </div>
 
@@ -39,9 +41,29 @@ nself db schema apply schema.dbml # Import → migrate → seed
 - Database with your schema
 - Sample users to test with
 
+**[View Full Quick Start Guide](guides/Quick-Start.md)**
+
 ---
 
-## What You Get
+## Quick Navigation
+
+| I want to... | Go to... |
+|-------------|----------|
+| Get started in 5 minutes | **[Quick Start](guides/Quick-Start.md)** |
+| Install nself | **[Installation](guides/Installation.md)** |
+| Understand core concepts | **[Architecture](architecture/ARCHITECTURE.md)** |
+| Look up a command | **[Command Reference](commands/COMMANDS.md)** |
+| Configure my setup | **[Configuration](configuration/README.md)** |
+| Deploy to production | **[Deployment](deployment/README.md)** |
+| Fix a problem | **[Troubleshooting](guides/TROUBLESHOOTING.md)** |
+| See examples | **[Examples](examples/README.md)** |
+| Learn specific features | **[Tutorials](tutorials/README.md)** |
+
+---
+
+## What is nself?
+
+nself is a complete self-hosted Backend-as-a-Service platform that provides all the features of commercial services like Supabase, Nhost, or Firebase, but runs entirely on your own infrastructure.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -72,10 +94,17 @@ nself db schema apply schema.dbml # Import → migrate → seed
 │   │              YOUR CUSTOM SERVICES                         │      │
 │   │   Express · FastAPI · gRPC · BullMQ · and 40+ more       │      │
 │   └──────────────────────────────────────────────────────────┘      │
+│                                                                      │
+│   ┌──────────────────────────────────────────────────────────┐      │
+│   │              PLUGINS (v0.4.8)                             │      │
+│   │   Stripe · GitHub · Shopify · and more                    │      │
+│   └──────────────────────────────────────────────────────────┘      │
 ├─────────────────────────────────────────────────────────────────────┤
 │   Runs on: Docker Compose · Any Cloud · Any Server · Laptop         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+**[Learn More](architecture/ARCHITECTURE.md)**
 
 ---
 
@@ -90,6 +119,10 @@ nself db schema scaffold saas       # Start with a template
 nself db schema apply schema.dbml   # Creates tables + mock data + users
 ```
 
+**[Database Workflow Guide](guides/DATABASE-WORKFLOW.md)**
+
+---
+
 ### Environment-Aware Safety
 Different behavior for local, staging, and production.
 
@@ -98,6 +131,10 @@ Different behavior for local, staging, and production.
 | `db mock` | Works | Works | Blocked |
 | `db reset` | Works | Confirm | Blocked |
 | `db seed users` | Mock users | QA users | Only explicit users |
+
+**[Environment Management](guides/ENVIRONMENTS.md)**
+
+---
 
 ### Smart Defaults Everywhere
 Zero configuration required for common cases.
@@ -109,6 +146,10 @@ nself db seed           # Knows your environment
 nself db types          # Generates TypeScript by default
 ```
 
+**[Commands Reference](commands/README.md)**
+
+---
+
 ### 40+ Service Templates
 Build custom services in any language.
 
@@ -117,92 +158,109 @@ Build custom services in any language.
 **Go:** Gin, Fiber, Echo, gRPC
 **Others:** Rust, Java, PHP, Ruby, C#, Elixir
 
----
-
-## Documentation
-
-### Start Here
-
-| Guide | Description |
-|-------|-------------|
-| **[Quick Start](guides/Quick-Start)** | Get running in 5 minutes |
-| **[Database Workflow](guides/DATABASE-WORKFLOW)** | DBML to production in one command |
-| **[Demo Setup](services/DEMO_SETUP)** | Full demo with 25 services |
-
-### Commands Reference
-
-| Command | Description |
-|---------|-------------|
-| **[db](commands/DB)** | Database tools - migrate, seed, mock, backup, schema, types |
-| **[deploy](commands/DEPLOY)** | SSH deployment with zero-downtime |
-| **[env](commands/ENV)** | Environment management |
-| **[perf](commands/PERF)** | Performance profiling and analysis |
-| **[bench](commands/BENCH)** | Benchmarking and load testing |
-| **[All Commands](commands/COMMANDS)** | Complete reference (55+ commands) |
-
-### Services
-
-| Guide | Description |
-|-------|-------------|
-| **[Services Overview](services/SERVICES)** | All available services |
-| **[Custom Services](services/SERVICES_CUSTOM)** | Build your own with templates |
-| **[Monitoring Bundle](services/MONITORING-BUNDLE)** | Full observability stack |
-
-### Deep Dives
-
-| Guide | Description |
-|-------|-------------|
-| **[Architecture](architecture/ARCHITECTURE)** | How nself works |
-| **[Deployment Guide](guides/Deployment)** | Go to production |
-| **[Troubleshooting](guides/TROUBLESHOOTING)** | Fix common issues |
+**[View All Templates](services/SERVICE_TEMPLATES.md)**
 
 ---
 
-## Version 0.4.8 - Plugin System & Registry
+### Multi-Tenant Platform (v0.9.0)
 
-The current release introduces a powerful plugin system with a distributed registry:
+Complete multi-tenancy, billing, and white-labeling:
 
-### Plugin Commands
 ```bash
-nself plugin list              # List available plugins
-nself plugin install stripe    # Install a plugin
-nself plugin stripe sync       # Run plugin actions
-nself plugin updates           # Check for plugin updates
-nself plugin refresh           # Refresh registry cache
+# Tenant management
+nself tenant create "Acme Corp" --slug acme --plan pro
+
+# Billing & subscriptions
+nself tenant billing usage
+nself tenant billing subscription upgrade
+
+# Custom domains & branding
+nself tenant domains add app.example.com
+nself tenant branding set-colors --primary #0066cc
 ```
 
-### Available Plugins
-| Plugin | Category | Description |
-|--------|----------|-------------|
-| **[Stripe](plugins/stripe)** | Billing | Payment processing, subscriptions, invoices |
-| **[GitHub](plugins/github)** | DevOps | Repository sync, issues, PRs, workflow runs |
-| **[Shopify](plugins/shopify)** | E-Commerce | Products, orders, customers, inventory |
+### OAuth & Storage (v0.9.0)
 
-### Plugin Architecture
-- **Database Schemas** - Prefixed tables with automatic Hasura tracking
-- **Webhook Handlers** - Real-time event processing with signature verification
-- **CLI Actions** - Sync, list, and manage data from the command line
-- **Analytics Views** - Pre-built SQL views for insights
-- **Service Containers** - Docker services for background processing
-- **Nginx Routes** - Automatic webhook endpoint configuration
+**OAuth Integration:**
+- **[OAuth Management](commands/OAUTH.md)** - Google, GitHub, Microsoft, Slack
+- Multiple provider support with easy configuration
 
-### Plugin Registry
-- **Primary**: [plugins.nself.org](https://plugins.nself.org) - Cloudflare Worker API
-- **Fallback**: GitHub raw files for reliability
-- **Features**: Caching, update checking, version management
+**File Storage:**
+- **[Storage System](commands/STORAGE.md)** - Uploads, thumbnails, virus scanning
+- GraphQL integration generation
 
-**[View Plugin Documentation](plugins/index)** | **[Plugin Development Guide](plugins/development)**
+### Plugin System (v0.4.8)
+
+**Available Plugins:**
+- **[Stripe](plugins/stripe.md)** - Payment processing
+- **[GitHub](plugins/github.md)** - Repository sync
+- **[Shopify](plugins/shopify.md)** - E-commerce
+
+**[View Plugin Documentation](plugins/README.md)**
 
 ---
 
-## Version 0.4.7 - Kubernetes Support
+## Documentation Structure
 
-Previous release added full Kubernetes and container orchestration support:
-- **`nself k8s`** - Kubernetes operations
-- **`nself helm`** - Helm chart management
-- **26 cloud providers** with normalized sizing
+### 📚 Getting Started
+- **[Quick Start](guides/Quick-Start.md)** - Get running in 5 minutes
+- **[Installation](guides/Installation.md)** - Detailed installation
+- **[Database Workflow](guides/DATABASE-WORKFLOW.md)** - DBML to production
+- **[FAQ](guides/FAQ.md)** - Frequently asked questions
 
-**[View v0.4.7 Release Notes](releases/v0.4.7)**
+### 🛠️ Core Concepts
+- **[Architecture](architecture/ARCHITECTURE.md)** - System design
+- **[Services Overview](services/SERVICES.md)** - Available services
+- **[Project Structure](architecture/PROJECT_STRUCTURE.md)** - File organization
+
+### 💻 CLI Reference
+- **[All Commands](commands/COMMANDS.md)** - 150+ commands
+- **[Quick Reference](quick-reference/COMMAND-REFERENCE.md)** - Printable cheat sheet
+- **[Core Commands](commands/README.md#core-commands)** - Essential commands
+
+### ⚙️ Configuration
+- **[Configuration Guide](configuration/README.md)** - Complete overview
+- **[Environment Variables](configuration/ENVIRONMENT-VARIABLES.md)** - All variables
+- **[Custom Services](configuration/CUSTOM-SERVICES-ENV-VARS.md)** - CS_N configuration
+
+### 🚀 Deployment
+- **[Deployment Guide](deployment/README.md)** - Production deployment
+- **[SSH Deployment](guides/Deployment.md)** - Zero-downtime deployment
+- **[Cloud Providers](deployment/CLOUD-PROVIDERS.md)** - 26+ providers
+
+### 📖 Guides & Tutorials
+- **[All Guides](guides/README.md)** - Usage guides
+- **[All Tutorials](tutorials/README.md)** - Step-by-step tutorials
+- **[Examples](examples/README.md)** - Real-world examples
+
+### 🔌 Plugins
+- **[Plugin Overview](plugins/README.md)** - Plugin system
+- **[Plugin Development](plugins/development.md)** - Creating plugins
+
+### 🔐 Security
+- **[Security Overview](security/README.md)** - Security features
+- **[Security Audit](security/SECURITY-AUDIT.md)** - Audit results
+
+### 📡 API Reference
+- **[API Overview](api/README.md)** - All APIs
+- **[GraphQL API](architecture/API.md)** - Hasura GraphQL
+
+---
+
+## What's New in v0.9.0
+
+### Multi-Tenant Platform
+
+Complete platform for building SaaS applications:
+
+- **Tenant Management** - Create, suspend, activate, delete tenants
+- **Billing Integration** - Stripe-based usage tracking and invoicing
+- **White-Labeling** - Custom domains, branding, email templates, themes
+- **OAuth Providers** - Google, GitHub, Microsoft, Slack integration
+- **File Storage** - Advanced upload pipeline with thumbnails and virus scanning
+- **Member Management** - Role-based access control per tenant
+
+**[v0.9.0 Documentation](releases/v0.9.0.md)** | **[Release Notes](releases/v0.9.0.md)**
 
 ---
 
@@ -225,6 +283,8 @@ nself deploy prod
 
 **5-6 commands** from blank folder to production.
 
+**[Complete Deployment Guide](deployment/README.md)**
+
 ---
 
 ## Service Summary
@@ -234,13 +294,31 @@ nself deploy prod
 | **Required** | 4 | PostgreSQL, Hasura, Auth, Nginx |
 | **Optional** | 7 | Redis, MinIO, Search, Mail, Functions, MLflow, Admin |
 | **Monitoring** | 10 | Prometheus, Grafana, Loki, Tempo, Alertmanager, + exporters |
+| **Plugins** | 3+ | Stripe, GitHub, Shopify, and more coming |
 | **Custom** | Unlimited | Your services from 40+ templates |
+
+**[Services Overview](services/SERVICES.md)**
+
+---
+
+## Version History
+
+| Version | Date | Focus |
+|---------|------|-------|
+| **v0.9.0** | Jan 30, 2026 | Multi-Tenant Platform (current) |
+| v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
+| v0.4.7 | Jan 23, 2026 | Infrastructure Everywhere |
+| v0.4.6 | Jan 22, 2026 | Scaling & Performance |
+| v0.4.5 | Jan 21, 2026 | Provider Support |
+| v0.4.4 | Jan 20, 2026 | Database Tools |
+
+**[Roadmap](releases/ROADMAP.md)** | **[Changelog](releases/CHANGELOG.md)**
 
 ---
 
 ## Security
 
-nself has been thoroughly audited for security vulnerabilities. The codebase is safe for production use.
+nself has been thoroughly audited for security vulnerabilities.
 
 | Category | Status |
 |----------|--------|
@@ -251,7 +329,7 @@ nself has been thoroughly audited for security vulnerabilities. The codebase is 
 | Docker Security | ✅ PASS |
 | Git History | ✅ PASS |
 
-**[View Complete Security Audit](security/SECURITY-AUDIT)** - Comprehensive security assessment with methodology, findings, and recommendations.
+**[View Security Audit](security/SECURITY-AUDIT.md)**
 
 ---
 
@@ -260,13 +338,25 @@ nself has been thoroughly audited for security vulnerabilities. The codebase is 
 - **[GitHub Repository](https://github.com/acamarata/nself)**
 - **[Report Issues](https://github.com/acamarata/nself/issues)**
 - **[Discussions](https://github.com/acamarata/nself/discussions)**
-- **[Roadmap](releases/ROADMAP)**
-- **[Security Audit](security/SECURITY-AUDIT)**
+- **[Plugin Registry](https://plugins.nself.org)**
+- **[Roadmap](releases/ROADMAP.md)**
+
+---
+
+## Contributing
+
+We welcome contributions! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
+
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
+- **[Development Setup](contributing/README.md)** - Dev environment
+- **[Cross-Platform](contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Compatibility requirements
 
 ---
 
 <div align="center">
 
-**Version 0.4.8** · **January 2026** · **[Changelog](releases/CHANGELOG)**
+**Version 0.9.0** · **January 2026** · **[Full Documentation](README.md)**
+
+*nself - The complete self-hosted backend platform*
 
 </div>

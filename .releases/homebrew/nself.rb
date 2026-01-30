@@ -4,7 +4,7 @@ class Nself < Formula
   url "https://github.com/acamarata/nself/archive/refs/tags/v0.8.0.tar.gz"
   sha256 "57a55c41fe81a49e69c21fdb770afcf7fddaae55966c7303babbd7b923b86f5f"
   license "Source-Available"
-  version "0.8.0"
+  version "0.9.0"
 
   depends_on "docker"
   depends_on "docker-compose"

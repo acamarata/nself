@@ -1,0 +1,139 @@
+/**
+ * OAuth Provider Configurations
+ * Centralized configuration for all supported OAuth providers
+ */
+
+import { OAuthProvider, ProviderName, ProviderMetadata } from '../types';
+
+/**
+ * Get OAuth provider configuration from environment variables
+ */
+export function getProviderConfig(provider: ProviderName): OAuthProvider | null {
+  const enabled = process.env[`OAUTH_${provider.toUpperCase()}_ENABLED`] === 'true';
+
+  if (!enabled) {
+    return null;
+  }
+
+  const clientId = process.env[`OAUTH_${provider.toUpperCase()}_CLIENT_ID`];
+  const clientSecret = process.env[`OAUTH_${provider.toUpperCase()}_CLIENT_SECRET`];
+  const callbackUrl = process.env[`OAUTH_${provider.toUpperCase()}_CALLBACK_URL`];
+
+  if (!clientId || !clientSecret || !callbackUrl) {
+    console.warn(`${provider} OAuth is enabled but missing required credentials`);
+    return null;
+  }
+
+  switch (provider) {
+    case 'google':
+      return {
+        name: 'google',
+        enabled: true,
+        clientId,
+        clientSecret,
+        callbackUrl,
+        authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl: 'https://oauth2.googleapis.com/token',
+        userInfoUrl: 'https://www.googleapis.com/oauth2/v2/userinfo',
+        scopes: ['openid', 'profile', 'email'],
+      };
+
+    case 'github':
+      return {
+        name: 'github',
+        enabled: true,
+        clientId,
+        clientSecret,
+        callbackUrl,
+        authorizationUrl: 'https://github.com/login/oauth/authorize',
+        tokenUrl: 'https://github.com/login/oauth/access_token',
+        userInfoUrl: 'https://api.github.com/user',
+        scopes: ['read:user', 'user:email'],
+      };
+
+    case 'microsoft':
+      const tenantId = process.env.OAUTH_MICROSOFT_TENANT_ID || 'common';
+      return {
+        name: 'microsoft',
+        enabled: true,
+        clientId,
+        clientSecret,
+        callbackUrl,
+        authorizationUrl: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`,
+        tokenUrl: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+        userInfoUrl: 'https://graph.microsoft.com/v1.0/me',
+        scopes: ['openid', 'profile', 'email', 'User.Read'],
+      };
+
+    case 'slack':
+      return {
+        name: 'slack',
+        enabled: true,
+        clientId,
+        clientSecret,
+        callbackUrl,
+        authorizationUrl: 'https://slack.com/oauth/v2/authorize',
+        tokenUrl: 'https://slack.com/api/oauth.v2.access',
+        userInfoUrl: 'https://slack.com/api/users.identity',
+        scopes: ['openid', 'profile', 'email'],
+      };
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Get all enabled OAuth providers
+ */
+export function getEnabledProviders(): OAuthProvider[] {
+  const providers: ProviderName[] = ['google', 'github', 'microsoft', 'slack'];
+  const enabled: OAuthProvider[] = [];
+
+  for (const provider of providers) {
+    const config = getProviderConfig(provider);
+    if (config) {
+      enabled.push(config);
+    }
+  }
+
+  return enabled;
+}
+
+/**
+ * Provider metadata for UI display
+ */
+export const PROVIDER_METADATA: Record<ProviderName, ProviderMetadata> = {
+  google: {
+    name: 'google',
+    displayName: 'Google',
+    iconUrl: 'https://www.google.com/favicon.ico',
+    color: '#4285f4',
+  },
+  github: {
+    name: 'github',
+    displayName: 'GitHub',
+    iconUrl: 'https://github.com/favicon.ico',
+    color: '#24292e',
+  },
+  microsoft: {
+    name: 'microsoft',
+    displayName: 'Microsoft',
+    iconUrl: 'https://www.microsoft.com/favicon.ico',
+    color: '#00a4ef',
+  },
+  slack: {
+    name: 'slack',
+    displayName: 'Slack',
+    iconUrl: 'https://slack.com/favicon.ico',
+    color: '#4a154b',
+  },
+};
+
+/**
+ * Check if a provider is enabled
+ */
+export function isProviderEnabled(provider: ProviderName): boolean {
+  const config = getProviderConfig(provider);
+  return config !== null;
+}

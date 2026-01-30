@@ -1,0 +1,319 @@
+================================================================================
+nself billing - Billing Management & Usage Tracking
+================================================================================
+
+⚠️  DEPRECATION NOTICE (v0.5.0+):
+    This command is deprecated and will be removed in a future version.
+    Please use: nself tenant billing <command> [options]
+
+    Migration examples:
+      nself billing usage        →  nself tenant billing usage
+      nself billing quota        →  nself tenant billing quota
+      nself billing invoice list →  nself tenant billing invoice list
+
+OVERVIEW:
+  Comprehensive billing management with Stripe integration, usage metering,
+  quota enforcement, and subscription management for your nself project.
+
+USAGE:
+  nself billing <command> [options]         (DEPRECATED)
+  nself tenant billing <command> [options]  (RECOMMENDED)
+
+================================================================================
+COMMANDS
+================================================================================
+
+USAGE TRACKING:
+  usage                          Show current billing period usage
+  usage --service=<name>         Show usage for specific service
+  usage --detailed               Show detailed usage breakdown
+  usage --period=<period>        Show usage for time period
+
+INVOICE MANAGEMENT:
+  invoice list                   List all invoices
+  invoice show <id>              Show invoice details
+  invoice download <id>          Download invoice PDF
+  invoice pay <id>               Pay unpaid invoice
+
+SUBSCRIPTION MANAGEMENT:
+  subscription show              Show current subscription details
+  subscription plans             List available billing plans
+  subscription upgrade <plan>    Upgrade to higher plan
+  subscription downgrade <plan>  Downgrade to lower plan
+  subscription cancel            Cancel subscription
+  subscription reactivate        Reactivate cancelled subscription
+
+PAYMENT METHODS:
+  payment list                   List saved payment methods
+  payment add                    Add new payment method
+  payment remove <id>            Remove payment method
+  payment default <id>           Set default payment method
+
+QUOTA MANAGEMENT:
+  quota                          Show all quota limits
+  quota --service=<name>         Show specific service quota
+  quota --usage                  Show quota with current usage
+  quota --alerts                 Show quota alert thresholds
+
+PLAN MANAGEMENT:
+  plan list                      List all available plans
+  plan show <name>               Show plan details and pricing
+  plan compare                   Compare all plans side-by-side
+  plan current                   Show current active plan
+
+DATA EXPORT:
+  export usage --format=<fmt>    Export usage data
+  export invoices --year=<year>  Export invoices for year
+  export --all                   Export all billing data
+
+CUSTOMER MANAGEMENT:
+  customer show                  Show customer information
+  customer update                Update customer details
+  customer portal                Open Stripe customer portal
+
+WEBHOOK TESTING:
+  webhook test                   Test webhook endpoints
+  webhook list                   List webhook configurations
+  webhook events                 Show recent webhook events
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --service=<name>         Filter by service type
+                           Services: api, storage, compute, bandwidth,
+                                    database, functions
+
+  --period=<period>        Time period for usage data
+                           Periods: current, last-month, custom
+
+  --start=<date>           Start date for custom period (YYYY-MM-DD)
+  --end=<date>             End date for custom period (YYYY-MM-DD)
+
+  --format=<format>        Output format
+                           Formats: table, json, csv
+
+  --detailed               Show detailed breakdown with metrics
+  --help, -h               Show this help message
+
+================================================================================
+TRACKED SERVICES
+================================================================================
+
+  API REQUESTS             Per-request metering
+  STORAGE                  GB-hours usage tracking
+  BANDWIDTH                GB transferred (ingress/egress)
+  COMPUTE                  CPU-hours for custom services
+  DATABASE                 Connection pool, query count
+  FUNCTIONS                Invocations and execution duration
+
+================================================================================
+BILLING PLANS
+================================================================================
+
+  FREE TIER
+    - Development and testing
+    - Limited API requests: 1,000/day
+    - Storage: 500 MB
+    - Best for: Learning, prototypes
+
+  STARTER
+    - Small production projects
+    - API requests: 100,000/day
+    - Storage: 5 GB
+    - Best for: MVP, side projects
+
+  PRO
+    - Production applications
+    - API requests: 1,000,000/day
+    - Storage: 50 GB
+    - Priority support
+    - Best for: Growing apps
+
+  ENTERPRISE
+    - Large-scale deployments
+    - Unlimited API requests
+    - Custom storage limits
+    - Dedicated support
+    - SLA guarantees
+    - Best for: High-traffic apps
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Check current usage across all services:
+    $ nself billing usage
+
+  Show detailed API usage for last month:
+    $ nself billing usage --service=api --period=last-month --detailed
+
+  List all invoices:
+    $ nself billing invoice list
+
+  Download specific invoice:
+    $ nself billing invoice download inv_abc123
+
+  Check quota limits with current usage:
+    $ nself billing quota --usage
+
+  View quota alerts (near limits):
+    $ nself billing quota --alerts
+
+  Upgrade to Pro plan:
+    $ nself billing subscription upgrade pro
+
+  Compare all available plans:
+    $ nself billing plan compare
+
+  Add new payment method:
+    $ nself billing payment add
+
+  Set default payment method:
+    $ nself billing payment default pm_abc123
+
+  Export usage data as CSV:
+    $ nself billing export usage --format=csv > usage.csv
+
+  Export all invoices for 2026:
+    $ nself billing export invoices --year=2026 --format=json
+
+  Show current subscription:
+    $ nself billing subscription show
+
+  Cancel subscription (with confirmation):
+    $ nself billing subscription cancel
+
+  Test webhook integration:
+    $ nself billing webhook test
+
+  Open Stripe customer portal:
+    $ nself billing customer portal
+
+================================================================================
+USAGE METRICS EXPLAINED
+================================================================================
+
+  API REQUESTS:
+    Every GraphQL query, mutation, or subscription counts as one request.
+    Batch requests count as multiple requests.
+
+  STORAGE:
+    Measured in GB-hours. 1 GB stored for 1 hour = 1 GB-hour.
+    Includes database storage and file storage (MinIO).
+
+  BANDWIDTH:
+    Total data transferred in/out of your nself instance.
+    Includes API responses, file uploads/downloads, and backups.
+
+  COMPUTE:
+    CPU time used by custom services (CS_1-CS_10).
+    Measured in CPU-hours. Does not include core services.
+
+  DATABASE:
+    Active connections and total query count.
+    Slow queries may incur additional charges on Enterprise plans.
+
+  FUNCTIONS:
+    Serverless function invocations and total execution time.
+    Cold starts included in execution duration.
+
+================================================================================
+QUOTA ALERTS
+================================================================================
+
+  Automatic alerts are sent when you reach:
+    - 50% of quota (warning)
+    - 80% of quota (critical)
+    - 100% of quota (limit reached)
+
+  Configure alert thresholds:
+    Edit .env: QUOTA_WARNING_THRESHOLD=50
+              QUOTA_CRITICAL_THRESHOLD=80
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Monthly Billing Review:
+    1. nself billing usage
+    2. nself billing quota --usage
+    3. nself billing invoice list
+    4. Check for quota alerts
+    5. Adjust plan if needed
+
+  Plan Upgrade:
+    1. nself billing plan compare
+    2. nself billing subscription upgrade <plan>
+    3. Verify new quota limits
+    4. Update payment method if needed
+
+  Cost Optimization:
+    1. nself billing usage --detailed
+    2. Identify high-usage services
+    3. Review slow queries: nself perf slow-queries
+    4. Optimize or cache frequent requests
+
+  Invoice Payment:
+    1. nself billing invoice list
+    2. nself billing invoice show <id>
+    3. nself billing invoice pay <id>
+    4. Download receipt
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself quota              (alias for billing quota)
+  nself perf optimize      Performance optimization (reduce DB costs)
+  nself perf slow-queries  Find expensive queries
+  nself monitor metrics    Monitor resource usage in real-time
+  nself scale              Scale resources to optimize costs
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Monitor usage weekly to avoid surprises
+  2. Set up quota alerts in production
+  3. Use caching to reduce API request costs
+  4. Archive old data to reduce storage costs
+  5. Review slow queries monthly
+  6. Use custom periods to analyze specific events
+  7. Export data regularly for accounting
+  8. Test webhooks before going live
+  9. Update payment methods before expiration
+  10. Compare plans before major traffic increases
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Failed to initialize billing system"
+    - Ensure PostgreSQL is running: nself status
+    - Check billing tables exist: nself db migrate
+    - Verify STRIPE_API_KEY in .env
+
+  "No usage data available"
+    - Usage tracking may take up to 1 hour to populate
+    - Check if billing period has started
+    - Verify timezone settings in .env
+
+  "Quota exceeded"
+    - Check current usage: nself billing quota --usage
+    - Upgrade plan or wait for quota reset
+    - Contact support for emergency quota increase
+
+  "Payment method declined"
+    - Update payment method: nself billing payment add
+    - Set new default: nself billing payment default <id>
+    - Check Stripe dashboard for details
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:  https://docs.nself.org/billing
+  Stripe Setup:   https://docs.nself.org/billing/stripe-integration
+  Pricing:        https://docs.nself.org/pricing
+  Support:        support@nself.org

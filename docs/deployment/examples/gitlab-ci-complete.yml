@@ -1,0 +1,567 @@
+# Complete GitLab CI/CD pipeline for nself custom services
+# Includes: build, test, security, deploy staging, deploy production, rollback
+
+stages:
+  - build
+  - test
+  - security
+  - deploy-staging
+  - deploy-production
+  - monitor
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  GIT_DEPTH: 0
+  NSELF_VERSION: "latest"
+
+# ============================================================================
+# TEMPLATES
+# ============================================================================
+
+.docker-template: &docker-template
+  image: docker:24-git
+  services:
+    - docker:24-dind
+  before_script:
+    - apk add --no-cache curl bash openssh-client rsync
+    - docker info
+
+.nself-template: &nself-template
+  before_script:
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - nself --version
+
+# ============================================================================
+# BUILD STAGE
+# ============================================================================
+
+build:payment-api:
+  <<: *docker-template
+  stage: build
+  script:
+    - cd services/payment-api
+    - docker build -t $CI_REGISTRY_IMAGE/payment-api:$CI_COMMIT_SHORT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE/payment-api:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/payment-api:latest
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/payment-api:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE/payment-api:latest
+  artifacts:
+    reports:
+      dotenv: build.env
+  only:
+    changes:
+      - services/payment-api/**/*
+      - .gitlab-ci.yml
+
+build:notification-worker:
+  <<: *docker-template
+  stage: build
+  script:
+    - cd services/notification-worker
+    - docker build -t $CI_REGISTRY_IMAGE/notification-worker:$CI_COMMIT_SHORT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE/notification-worker:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/notification-worker:latest
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/notification-worker:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE/notification-worker:latest
+  only:
+    changes:
+      - services/notification-worker/**/*
+      - .gitlab-ci.yml
+
+build:analytics-api:
+  <<: *docker-template
+  stage: build
+  script:
+    - cd services/analytics-api
+    - docker build -t $CI_REGISTRY_IMAGE/analytics-api:$CI_COMMIT_SHORT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE/analytics-api:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/analytics-api:latest
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/analytics-api:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE/analytics-api:latest
+  only:
+    changes:
+      - services/analytics-api/**/*
+      - .gitlab-ci.yml
+
+build:ml-inference:
+  <<: *docker-template
+  stage: build
+  script:
+    - cd services/ml-inference
+    - docker build -t $CI_REGISTRY_IMAGE/ml-inference:$CI_COMMIT_SHORT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE/ml-inference:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/ml-inference:latest
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/ml-inference:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE/ml-inference:latest
+  only:
+    changes:
+      - services/ml-inference/**/*
+      - .gitlab-ci.yml
+
+# ============================================================================
+# TEST STAGE
+# ============================================================================
+
+test:payment-api:
+  image: node:18-alpine
+  stage: test
+  script:
+    - cd services/payment-api
+    - npm ci
+    - npm run lint
+    - npm test
+    - npm run test:coverage
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: services/payment-api/coverage/cobertura-coverage.xml
+      junit: services/payment-api/junit.xml
+  only:
+    changes:
+      - services/payment-api/**/*
+
+test:notification-worker:
+  image: node:18-alpine
+  stage: test
+  services:
+    - redis:7-alpine
+  variables:
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  script:
+    - cd services/notification-worker
+    - npm ci
+    - npm test
+  only:
+    changes:
+      - services/notification-worker/**/*
+
+test:analytics-api:
+  image: python:3.11-slim
+  stage: test
+  services:
+    - postgres:16-alpine
+  variables:
+    POSTGRES_HOST: postgres
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: test_password
+  script:
+    - cd services/analytics-api
+    - pip install -r requirements.txt
+    - pip install pytest pytest-cov
+    - pytest tests/ --cov=. --cov-report=xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: services/analytics-api/coverage.xml
+  only:
+    changes:
+      - services/analytics-api/**/*
+
+test:ml-inference:
+  image: python:3.11-slim
+  stage: test
+  script:
+    - cd services/ml-inference
+    - pip install -r requirements.txt
+    - pip install pytest
+    - pytest tests/ -v
+  only:
+    changes:
+      - services/ml-inference/**/*
+
+# Integration tests
+integration-tests:
+  <<: *docker-template
+  stage: test
+  services:
+    - postgres:16-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_HOST: postgres
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: test_password
+    REDIS_HOST: redis
+  script:
+    - apk add --no-cache nodejs npm python3
+    - |
+      # Create docker-compose for integration tests
+      cat > docker-compose.test.yml <<EOF
+      version: '3.8'
+      services:
+        payment-api:
+          image: $CI_REGISTRY_IMAGE/payment-api:$CI_COMMIT_SHORT_SHA
+          environment:
+            POSTGRES_HOST: postgres
+            POSTGRES_DB: test_db
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: test_password
+            REDIS_HOST: redis
+          ports:
+            - "8001:8001"
+        notification-worker:
+          image: $CI_REGISTRY_IMAGE/notification-worker:$CI_COMMIT_SHORT_SHA
+          environment:
+            REDIS_HOST: redis
+      EOF
+    - docker compose -f docker-compose.test.yml up -d
+    - sleep 30
+    - curl -f http://localhost:8001/health || exit 1
+    - docker compose -f docker-compose.test.yml down
+  dependencies:
+    - build:payment-api
+    - build:notification-worker
+
+# ============================================================================
+# SECURITY STAGE
+# ============================================================================
+
+security:trivy:
+  <<: *docker-template
+  stage: security
+  allow_failure: true
+  script:
+    - apk add --no-cache curl
+    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - |
+      for service in payment-api notification-worker analytics-api ml-inference; do
+        echo "Scanning $service..."
+        trivy image \
+          --severity CRITICAL,HIGH \
+          --format json \
+          --output trivy-$service.json \
+          $CI_REGISTRY_IMAGE/$service:$CI_COMMIT_SHORT_SHA
+      done
+  artifacts:
+    reports:
+      container_scanning: trivy-*.json
+    paths:
+      - trivy-*.json
+    expire_in: 1 week
+
+security:secrets-scan:
+  image: python:3.11-slim
+  stage: security
+  script:
+    - pip install detect-secrets
+    - |
+      for service_dir in services/*; do
+        echo "Scanning $service_dir for secrets..."
+        detect-secrets scan $service_dir --baseline .secrets.baseline
+      done
+  allow_failure: true
+
+security:dependency-check:
+  image: node:18-alpine
+  stage: security
+  script:
+    - |
+      for service_dir in services/*/; do
+        if [ -f "$service_dir/package.json" ]; then
+          echo "Checking $service_dir..."
+          cd $service_dir
+          npm audit --audit-level=high
+          cd -
+        fi
+      done
+  allow_failure: true
+
+# ============================================================================
+# DEPLOY STAGING
+# ============================================================================
+
+deploy:staging:
+  <<: *nself-template
+  stage: deploy-staging
+  image: alpine:latest
+  environment:
+    name: staging
+    url: https://staging.example.com
+    on_stop: cleanup:staging
+  before_script:
+    - apk add --no-cache curl bash openssh-client rsync git
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - eval $(ssh-agent -s)
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H $STAGING_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      # Setup staging environment
+      mkdir -p .environments/staging
+      echo "$STAGING_ENV" > .environments/staging/.env
+      echo "$STAGING_SECRETS" > .environments/staging/.env.secrets
+      chmod 600 .environments/staging/.env.secrets
+
+      cat > .environments/staging/server.json <<EOF
+      {
+        "host": "$STAGING_HOST",
+        "port": 22,
+        "user": "deploy",
+        "key": "$HOME/.ssh/id_rsa",
+        "deploy_path": "/opt/nself"
+      }
+      EOF
+
+    - nself build
+    - nself deploy staging --include-frontends
+    - sleep 60
+    - nself deploy health --env staging
+    - |
+      # Test custom services
+      curl -f https://payment-api.staging.example.com/health
+      curl -f https://analytics-api.staging.example.com/health
+  only:
+    - merge_requests
+    - main
+  when: manual
+
+cleanup:staging:
+  <<: *nself-template
+  stage: deploy-staging
+  image: alpine:latest
+  environment:
+    name: staging
+    action: stop
+  script:
+    - echo "Staging environment cleanup"
+    - nself stop --env staging || true
+  when: manual
+
+# ============================================================================
+# DEPLOY PRODUCTION
+# ============================================================================
+
+deploy:production:pre-checks:
+  <<: *nself-template
+  stage: deploy-production
+  image: alpine:latest
+  script:
+    - apk add --no-cache curl bash openssh-client rsync
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - |
+      mkdir -p .environments/prod
+      echo "$PROD_ENV" > .environments/prod/.env
+      echo "$PROD_SECRETS" > .environments/prod/.env.secrets
+      chmod 600 .environments/prod/.env.secrets
+    - nself validate prod --strict
+  only:
+    - main
+  when: manual
+
+deploy:production:backup:
+  <<: *nself-template
+  stage: deploy-production
+  image: alpine:latest
+  needs:
+    - deploy:production:pre-checks
+  before_script:
+    - apk add --no-cache curl bash openssh-client rsync
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+  script:
+    - nself backup create --env prod
+    - echo "Backup completed at $(date)" > backup.log
+  artifacts:
+    paths:
+      - backup.log
+    expire_in: 1 week
+  only:
+    - main
+
+deploy:production:main:
+  <<: *nself-template
+  stage: deploy-production
+  image: alpine:latest
+  environment:
+    name: production
+    url: https://example.com
+  needs:
+    - deploy:production:backup
+  before_script:
+    - apk add --no-cache curl bash openssh-client rsync git
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      # Setup production environment
+      mkdir -p .environments/prod
+      echo "$PROD_ENV" > .environments/prod/.env
+      echo "$PROD_SECRETS" > .environments/prod/.env.secrets
+      chmod 600 .environments/prod/.env.secrets
+
+      cat > .environments/prod/server.json <<EOF
+      {
+        "host": "$PROD_HOST",
+        "port": 22,
+        "user": "deploy",
+        "key": "$HOME/.ssh/id_rsa",
+        "deploy_path": "/opt/nself"
+      }
+      EOF
+
+    - nself build
+    - |
+      echo "Starting production deployment..."
+      nself deploy prod --rolling --exclude-frontends
+    - |
+      echo "Waiting for services to stabilize..."
+      sleep 120
+    - |
+      echo "Running health checks..."
+      nself deploy health --env prod
+    - |
+      echo "Verifying custom services..."
+      for service in payment-api analytics-api; do
+        echo "Testing $service..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://$service.example.com/health)
+        if [ "$response" != "200" ]; then
+          echo "❌ $service health check failed"
+          exit 1
+        fi
+        echo "✅ $service healthy"
+      done
+    - |
+      echo "✅ Production deployment successful"
+      echo "Deployed at: $(date)" > deployment.log
+      echo "Commit: $CI_COMMIT_SHORT_SHA" >> deployment.log
+      echo "Pipeline: $CI_PIPELINE_URL" >> deployment.log
+  artifacts:
+    paths:
+      - deployment.log
+    expire_in: 30 days
+  only:
+    - main
+
+# Rollback job (manual trigger)
+deploy:production:rollback:
+  <<: *nself-template
+  stage: deploy-production
+  image: alpine:latest
+  environment:
+    name: production
+    url: https://example.com
+  before_script:
+    - apk add --no-cache curl bash openssh-client rsync
+    - curl -fsSL https://install.nself.org | bash
+    - export PATH="$HOME/.nself/bin:$PATH"
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_KEY" | tr -d '\r' | ssh-add -
+  script:
+    - |
+      echo "⚠️  Rolling back production deployment..."
+      nself deploy rollback --env prod
+    - |
+      echo "Waiting for rollback to complete..."
+      sleep 60
+    - |
+      echo "Verifying rollback..."
+      nself deploy health --env prod
+    - |
+      echo "✅ Rollback completed"
+  when: manual
+  only:
+    - main
+
+# ============================================================================
+# MONITORING STAGE
+# ============================================================================
+
+monitor:production:
+  image: alpine:latest
+  stage: monitor
+  needs:
+    - deploy:production:main
+  script:
+    - apk add --no-cache curl jq
+    - |
+      echo "Monitoring production for 5 minutes..."
+      end_time=$(($(date +%s) + 300))
+
+      while [ $(date +%s) -lt $end_time ]; do
+        for service in payment-api analytics-api; do
+          response=$(curl -s https://$service.example.com/health)
+          status=$(echo $response | jq -r '.status // "unknown"')
+
+          if [ "$status" != "healthy" ]; then
+            echo "⚠️  $service is $status"
+          else
+            echo "✅ $service is healthy"
+          fi
+        done
+
+        sleep 60
+      done
+    - echo "Monitoring complete - all services stable"
+  only:
+    - main
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+
+notify:success:
+  image: alpine:latest
+  stage: .post
+  script:
+    - apk add --no-cache curl
+    - |
+      curl -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-Type: application/json' \
+        -d "{
+          \"text\": \"✅ Production deployment successful\",
+          \"attachments\": [{
+            \"color\": \"good\",
+            \"fields\": [
+              {\"title\": \"Project\", \"value\": \"$CI_PROJECT_NAME\", \"short\": true},
+              {\"title\": \"Branch\", \"value\": \"$CI_COMMIT_REF_NAME\", \"short\": true},
+              {\"title\": \"Commit\", \"value\": \"$CI_COMMIT_SHORT_SHA\", \"short\": true},
+              {\"title\": \"Author\", \"value\": \"$GITLAB_USER_NAME\", \"short\": true},
+              {\"title\": \"Pipeline\", \"value\": \"$CI_PIPELINE_URL\", \"short\": false}
+            ]
+          }]
+        }"
+  when: on_success
+  only:
+    - main
+
+notify:failure:
+  image: alpine:latest
+  stage: .post
+  script:
+    - apk add --no-cache curl
+    - |
+      curl -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-Type: application/json' \
+        -d "{
+          \"text\": \"❌ Pipeline failed\",
+          \"attachments\": [{
+            \"color\": \"danger\",
+            \"fields\": [
+              {\"title\": \"Project\", \"value\": \"$CI_PROJECT_NAME\", \"short\": true},
+              {\"title\": \"Branch\", \"value\": \"$CI_COMMIT_REF_NAME\", \"short\": true},
+              {\"title\": \"Failed Job\", \"value\": \"$CI_JOB_NAME\", \"short\": true},
+              {\"title\": \"Pipeline\", \"value\": \"$CI_PIPELINE_URL\", \"short\": false}
+            ]
+          }]
+        }"
+  when: on_failure

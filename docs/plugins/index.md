@@ -146,7 +146,7 @@ URL routing configuration:
 
    ```bash
    # Add to .env
-   echo "STRIPE_API_KEY=sk_test_xxx" >> .env
+   echo "STRIPE_API_KEY=sk_test_PLACEHOLDER" >> .env
    ```
 
 2. **Verify API access**
@@ -206,7 +206,7 @@ Each plugin requires specific environment variables. These should be added to yo
 
 ```bash
 # Required
-STRIPE_API_KEY=sk_test_xxxxx
+STRIPE_API_KEY=sk_test_PLACEHOLDER
 
 # Optional
 STRIPE_WEBHOOK_SECRET=whsec_xxxxx

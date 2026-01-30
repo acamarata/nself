@@ -1,0 +1,102 @@
+================================================================================
+nself tenant billing - Tenant Billing Management
+================================================================================
+
+OVERVIEW:
+  Tenant-specific billing management with usage tracking, quota enforcement,
+  and subscription management. All billing operations are scoped to the current
+  tenant context.
+
+USAGE:
+  nself tenant billing <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+USAGE TRACKING:
+  usage                          Show current billing period usage
+  usage --service=<name>         Show usage for specific service
+  usage --detailed               Show detailed usage breakdown
+  usage --period=<period>        Show usage for time period
+  usage --tenant=<id>            Show usage for specific tenant
+
+INVOICE MANAGEMENT:
+  invoice list                   List all invoices for tenant
+  invoice show <id>              Show invoice details
+  invoice download <id>          Download invoice PDF
+  invoice pay <id>               Pay unpaid invoice
+
+SUBSCRIPTION MANAGEMENT:
+  subscription show              Show current subscription details
+  subscription plans             List available billing plans
+  subscription upgrade <plan>    Upgrade to higher plan
+  subscription downgrade <plan>  Downgrade to lower plan
+  subscription cancel            Cancel subscription
+  subscription reactivate        Reactivate cancelled subscription
+
+PAYMENT METHODS:
+  payment list                   List saved payment methods
+  payment add                    Add new payment method
+  payment remove <id>            Remove payment method
+  payment default <id>           Set default payment method
+
+QUOTA MANAGEMENT:
+  quota                          Show all quota limits
+  quota --service=<name>         Show specific service quota
+  quota --usage                  Show quota with current usage
+  quota --alerts                 Show quota alert thresholds
+
+PLAN MANAGEMENT:
+  plan list                      List all available plans
+  plan show <name>               Show plan details and pricing
+  plan compare                   Compare all plans side-by-side
+  plan current                   Show current active plan
+
+DATA EXPORT:
+  export usage --format=<fmt>    Export usage data
+  export invoices --year=<year>  Export invoices for year
+  export --all                   Export all billing data
+
+CUSTOMER MANAGEMENT:
+  customer show                  Show customer information
+  customer update                Update customer details
+  customer portal                Open Stripe customer portal
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --tenant=<id>            Tenant identifier (slug or UUID)
+  --service=<name>         Filter by service type
+  --period=<period>        Time period for usage data
+  --start=<date>           Start date (YYYY-MM-DD)
+  --end=<date>             End date (YYYY-MM-DD)
+  --format=<format>        Output format (table, json, csv)
+  --detailed               Show detailed breakdown
+  --help, -h               Show this help message
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Check current tenant usage:
+    $ nself tenant billing usage
+
+  Show detailed API usage:
+    $ nself tenant billing usage --service=api --detailed
+
+  Check quota for specific tenant:
+    $ nself tenant billing quota --tenant acme --usage
+
+  Upgrade tenant plan:
+    $ nself tenant billing subscription upgrade pro --tenant acme
+
+  List tenant invoices:
+    $ nself tenant billing invoice list --tenant acme
+
+  Export tenant usage data:
+    $ nself tenant billing export usage --tenant acme --format=csv
+
+For complete billing documentation:
+  https://docs.nself.org/billing

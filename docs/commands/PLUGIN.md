@@ -404,7 +404,7 @@ Plugins require environment variables for API access. Add to your `.env`:
 
 ```bash
 # Required
-STRIPE_API_KEY=sk_test_xxxxx
+STRIPE_API_KEY=sk_test_PLACEHOLDER
 
 # Optional
 STRIPE_WEBHOOK_SECRET=whsec_xxxxx
@@ -754,7 +754,7 @@ nself doctor
 
 ```bash
 # Set environment variables
-echo "STRIPE_API_KEY=sk_test_xxx" >> .env
+echo "STRIPE_API_KEY=sk_test_PLACEHOLDER" >> .env
 echo "STRIPE_WEBHOOK_SECRET=whsec_xxx" >> .env
 
 # Install plugin

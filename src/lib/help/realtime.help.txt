@@ -1,0 +1,440 @@
+================================================================================
+nself realtime - Real-Time Communication Management
+================================================================================
+
+OVERVIEW:
+  Manage WebSocket server, channels, presence, and real-time features for
+  building collaborative applications with live updates, chat, notifications,
+  and real-time data synchronization.
+
+USAGE:
+  nself realtime <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+SERVER MANAGEMENT:
+  init                           Initialize real-time system
+  start                          Start WebSocket server
+  stop                           Stop WebSocket server
+  restart                        Restart WebSocket server
+  status                         Show server status and stats
+  logs                           Show WebSocket server logs
+
+CHANNEL MANAGEMENT:
+  channel create <name>          Create a new channel
+  channel list                   List all channels
+  channel delete <id>            Delete a channel
+
+MONITORING:
+  connections                    Show active WebSocket connections
+  stats                          Show real-time statistics
+  cleanup                        Clean up stale connections and broadcasts
+
+================================================================================
+OPTIONS
+================================================================================
+
+  -h, --help               Show this help message
+  --json                   Output in JSON format
+  --port <port>            WebSocket server port (default: 3100)
+
+================================================================================
+CHANNEL TYPES
+================================================================================
+
+  public                   Open to all authenticated users
+                           - No permission check required
+                           - Anyone can join and send messages
+
+  private                  Invite-only access
+                           - Requires permission to join
+                           - Members managed explicitly
+
+  presence                 Tracks online/offline status
+                           - Shows who's currently in channel
+                           - Automatic presence updates
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Initialize real-time system:
+    $ nself realtime init
+
+  Start WebSocket server:
+    $ nself realtime start
+
+  Stop WebSocket server:
+    $ nself realtime stop
+
+  Restart server (apply config changes):
+    $ nself realtime restart
+
+  Check server status:
+    $ nself realtime status
+
+  View server logs (follow mode):
+    $ nself realtime logs
+
+  Create public channel:
+    $ nself realtime channel create "general"
+
+  Create private channel:
+    $ nself realtime channel create "private-team" private
+
+  List all channels:
+    $ nself realtime channel list
+
+  Delete channel:
+    $ nself realtime channel delete channel-uuid
+
+  Delete channel by slug:
+    $ nself realtime channel delete general
+
+  Show active connections:
+    $ nself realtime connections
+
+  Show real-time statistics:
+    $ nself realtime stats
+
+  Clean up stale connections:
+    $ nself realtime cleanup
+
+================================================================================
+WEBSOCKET SERVER
+================================================================================
+
+  Configuration (.env):
+    WEBSOCKET_PORT=3100              Server port
+    WEBSOCKET_HOST=0.0.0.0           Bind address
+    WEBSOCKET_MAX_CONNECTIONS=1000   Max concurrent connections
+    WEBSOCKET_PING_INTERVAL=30       Ping interval (seconds)
+    WEBSOCKET_TIMEOUT=60             Connection timeout (seconds)
+
+  URL Format:
+    ws://localhost:3100
+    wss://realtime.yourdomain.com   (with SSL)
+
+  Authentication:
+    - JWT token required in connection headers
+    - User ID extracted from token
+    - Permissions checked per channel
+
+================================================================================
+CHANNEL FEATURES
+================================================================================
+
+  Messages:
+    - Send/receive real-time messages
+    - Message persistence in database
+    - Message history retrieval
+    - Typing indicators
+
+  Presence:
+    - Track who's online in channel
+    - Automatic join/leave events
+    - Custom presence metadata
+    - Away/offline status
+
+  Broadcasts:
+    - One-to-many messaging
+    - System announcements
+    - Scheduled broadcasts
+    - Broadcast expiration
+
+  Subscriptions:
+    - Subscribe to specific channels
+    - Unsubscribe when leaving
+    - Automatic cleanup on disconnect
+    - Subscription permissions
+
+================================================================================
+CLIENT USAGE
+================================================================================
+
+  JavaScript Example:
+    const ws = new WebSocket('ws://localhost:3100');
+
+    // Authenticate
+    ws.send(JSON.stringify({
+      type: 'auth',
+      token: 'your-jwt-token'
+    }));
+
+    // Subscribe to channel
+    ws.send(JSON.stringify({
+      type: 'subscribe',
+      channel: 'general'
+    }));
+
+    // Send message
+    ws.send(JSON.stringify({
+      type: 'message',
+      channel: 'general',
+      content: 'Hello, world!'
+    }));
+
+    // Receive messages
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Received:', data);
+    };
+
+  Message Types:
+    auth               Authenticate connection
+    subscribe          Join channel
+    unsubscribe        Leave channel
+    message            Send message to channel
+    presence           Update presence status
+    typing             Send typing indicator
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+  Tables:
+    realtime.connections       Active WebSocket connections
+    realtime.channels          Channel definitions
+    realtime.messages          Message history
+    realtime.subscriptions     Channel subscriptions
+    realtime.presence          User presence tracking
+    realtime.broadcasts        Scheduled broadcasts
+    realtime.channel_members   Channel membership
+
+  Functions:
+    cleanup_stale_connections()      Remove inactive connections
+    cleanup_expired_broadcasts()     Delete old broadcasts
+    get_channel_members()            Get users in channel
+    update_presence()                Update user presence
+
+================================================================================
+REAL-TIME STATISTICS
+================================================================================
+
+  Metrics Tracked:
+    - Active connections count
+    - Total channels
+    - Messages per 24 hours
+    - Online users count
+    - Average connection duration
+    - Peak concurrent connections
+
+  View Statistics:
+    $ nself realtime stats
+
+  Output Example:
+    Active Connections:     47
+    Total Channels:         12
+    Messages (24h):         1,234
+    Online Users:           42
+    Peak Connections:       89
+
+================================================================================
+COMMON USE CASES
+================================================================================
+
+  Live Chat Application:
+    1. nself realtime init
+    2. nself realtime channel create "chat" public
+    3. Users connect via WebSocket
+    4. Subscribe to "chat" channel
+    5. Send/receive messages in real-time
+
+  Collaborative Editing:
+    1. Create channel per document
+    2. Track user presence (who's editing)
+    3. Broadcast cursor positions
+    4. Send operational transforms
+    5. Handle conflict resolution
+
+  Live Notifications:
+    1. Create user-specific channels
+    2. Subscribe users to their channel
+    3. Broadcast notifications from backend
+    4. Display in-app notifications
+    5. Mark as read/dismissed
+
+  Real-Time Dashboard:
+    1. Create metrics channel
+    2. Broadcast metric updates
+    3. Clients subscribe and update UI
+    4. Show live graphs and counters
+    5. Handle data aggregation
+
+  Multiplayer Game:
+    1. Create game room channels
+    2. Track player presence
+    3. Broadcast game state changes
+    4. Handle player actions
+    5. Manage game sessions
+
+================================================================================
+PRESENCE TRACKING
+================================================================================
+
+  Presence States:
+    online                 User is actively connected
+    away                   User is idle (no activity)
+    offline                User disconnected
+
+  Automatic Detection:
+    - Heartbeat every 30 seconds
+    - Mark away after 5 minutes idle
+    - Mark offline on disconnect
+    - Clean up stale presence records
+
+  Custom Metadata:
+    {
+      "status": "online",
+      "custom_status": "In a meeting",
+      "last_active": "2026-01-30T10:00:00Z",
+      "device": "desktop"
+    }
+
+================================================================================
+PERFORMANCE OPTIMIZATION
+================================================================================
+
+  Connection Pooling:
+    - Reuse connections when possible
+    - Automatic reconnection on disconnect
+    - Exponential backoff for retries
+
+  Message Batching:
+    - Batch multiple messages together
+    - Reduce network overhead
+    - Configurable batch size and delay
+
+  Channel Optimization:
+    - Use private channels for sensitive data
+    - Limit channel size (max members)
+    - Archive inactive channels
+    - Clean up old messages periodically
+
+  Monitoring:
+    - Track connection count
+    - Monitor message throughput
+    - Alert on high error rates
+    - Log slow operations
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+  Authentication:
+    - JWT token required for all connections
+    - Token expiration enforced
+    - User ID validated per message
+    - Rate limiting per user
+
+  Authorization:
+    - Channel permissions checked
+    - Private channel access control
+    - Message send permissions
+    - Admin-only operations
+
+  Data Protection:
+    - SSL/TLS for production (wss://)
+    - Message encryption optional
+    - Sensitive data filtering
+    - Audit logging enabled
+
+  Rate Limiting:
+    - Max connections per user: 5
+    - Max messages per second: 10
+    - Max channels subscribed: 50
+    - Automatic throttling
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "WebSocket server not starting"
+    - Check port availability: lsof -i :3100
+    - Verify PostgreSQL is running
+    - Check server logs: nself realtime logs
+    - Ensure migrations ran: nself realtime init
+
+  "Cannot connect to WebSocket"
+    - Verify server is running: nself realtime status
+    - Check firewall rules
+    - Verify JWT token is valid
+    - Check WebSocket URL format
+
+  "Connection keeps dropping"
+    - Check network stability
+    - Verify heartbeat/ping settings
+    - Review timeout configuration
+    - Check server resource usage
+
+  "Messages not being received"
+    - Verify subscription to channel
+    - Check channel permissions
+    - Review message format
+    - Check server logs for errors
+
+  "High memory usage"
+    - Run cleanup: nself realtime cleanup
+    - Review connection count: nself realtime connections
+    - Check for message buildup
+    - Restart server: nself realtime restart
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself monitor            Monitor server metrics
+  nself logs               View application logs
+  nself db migrate         Run database migrations
+  nself scale              Scale WebSocket servers
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Use presence tracking for collaborative features
+  2. Implement exponential backoff for reconnections
+  3. Batch messages when possible to reduce overhead
+  4. Clean up channels and connections regularly
+  5. Monitor connection count and set alerts
+  6. Use private channels for sensitive data
+  7. Implement message acknowledgments
+  8. Handle network interruptions gracefully
+  9. Test under load before production
+  10. Use SSL/TLS (wss://) in production
+
+================================================================================
+MONITORING & METRICS
+================================================================================
+
+  Key Metrics:
+    - Connection count (current, peak)
+    - Message throughput (per second)
+    - Channel activity (messages per channel)
+    - Presence updates (per minute)
+    - Error rate (failed connections, messages)
+    - Latency (message delivery time)
+
+  Monitoring Commands:
+    $ nself realtime stats           # Overall statistics
+    $ nself realtime connections     # Active connections
+    $ nself monitor metrics --realtime  # Live metrics
+
+  Alerting:
+    Set up alerts for:
+      - High connection count (> 80% max)
+      - High error rate (> 5%)
+      - Server downtime
+      - Memory/CPU usage spikes
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/realtime
+  WebSocket API:     https://docs.nself.org/realtime/websocket-api
+  Client SDKs:       https://docs.nself.org/realtime/client-sdks
+  Examples:          https://github.com/acamarata/nself/tree/main/examples/realtime
+  Support:           support@nself.org

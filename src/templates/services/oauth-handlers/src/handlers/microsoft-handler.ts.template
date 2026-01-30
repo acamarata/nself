@@ -1,0 +1,39 @@
+/**
+ * Microsoft OAuth Handler
+ * Implements Microsoft OAuth 2.0 / Azure AD flow
+ */
+
+import { BaseOAuthHandler } from './base-handler';
+import { OAuthUserProfile } from '../types';
+import { normalizeMicrosoftProfile } from '../utils/profile-normalizer';
+
+export class MicrosoftOAuthHandler extends BaseOAuthHandler {
+  async getUserInfo(accessToken: string): Promise<any> {
+    try {
+      const response = await this.httpClient.get(this.provider.userInfoUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Microsoft getUserInfo failed:', error.response?.data || error.message);
+      throw new Error(`Failed to get Microsoft user info: ${error.message}`);
+    }
+  }
+
+  normalizeProfile(profile: any): OAuthUserProfile {
+    return normalizeMicrosoftProfile(profile);
+  }
+
+  /**
+   * Override authorization URL to include Microsoft-specific parameters
+   */
+  getAuthorizationUrl(state: string): string {
+    return super.getAuthorizationUrl(state, {
+      response_mode: 'query',
+      prompt: 'select_account',
+    });
+  }
+}

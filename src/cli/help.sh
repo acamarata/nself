@@ -136,6 +136,15 @@ show_general_help() {
   printf "  Available: stripe (billing), shopify (e-commerce), github (devops)\n"
   printf "  Planned: linear, intercom, resend, notion, airtable, plaid\n"
 
+  show_section "Multi-Tenancy (v0.5.0)"
+  printf "  ${COLOR_BLUE}tenant${COLOR_RESET}        Multi-tenant management\n"
+  printf "                   ├─ Tenant lifecycle: init, create, list, show, suspend, activate, delete\n"
+  printf "                   ├─ billing: Usage tracking, invoices, quotas, plans\n"
+  printf "                   ├─ branding: Logo, colors, themes, custom CSS\n"
+  printf "                   ├─ domains: Custom domains, SSL, verification\n"
+  printf "                   ├─ email: Template management and testing\n"
+  printf "                   └─ themes: Create, edit, preview, activate themes\n"
+
   show_section "Utility Commands"
   printf "  ${COLOR_BLUE}ci${COLOR_RESET}            CI/CD workflow generation (GitHub/GitLab)\n"
   printf "  ${COLOR_BLUE}completion${COLOR_RESET}    Shell completion (bash/zsh/fish)\n"

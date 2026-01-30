@@ -1,0 +1,493 @@
+================================================================================
+nself migrate - Cross-Environment & Vendor Migration Tools
+================================================================================
+
+OVERVIEW:
+  Migrate between environments (local, staging, prod) and escape vendor
+  lock-in by migrating from Firebase, Supabase, or other platforms to nself.
+
+MISSION:
+  Help you escape vendor lock-in and own your infrastructure.
+
+USAGE:
+  nself migrate <source> <target> [options]
+  nself migrate from <vendor> [options]
+  nself migrate <subcommand> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+ENVIRONMENT MIGRATION:
+  <source> <target>        Migrate from source to target environment
+  diff <source> <target>   Show differences between environments
+  sync <source> <target>   Continuous sync between environments
+  rollback                 Rollback last migration
+
+VENDOR MIGRATION (ESCAPE LOCK-IN):
+  from firebase            Migrate from Firebase to nself
+  from supabase            Migrate from Supabase to nself
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --dry-run                Preview migration without making changes
+  --schema-only            Migrate only database schema
+  --data-only              Migrate only data (no schema changes)
+  --config-only            Migrate only configuration
+  --force                  Skip confirmation prompts
+  --watch                  Continuous sync mode (for sync command)
+  --json                   Output in JSON format
+  -h, --help               Show this help message
+
+================================================================================
+ENVIRONMENTS
+================================================================================
+
+  local / dev              Local development environment
+                           Uses: .env.dev and .env.local
+
+  staging                  Staging environment
+                           Uses: .env.staging
+
+  prod / production        Production environment
+                           Uses: .env.prod and .secrets
+
+================================================================================
+ENVIRONMENT MIGRATION EXAMPLES
+================================================================================
+
+  Migrate local to staging:
+    $ nself migrate local staging
+
+  Preview migration (dry run):
+    $ nself migrate staging prod --dry-run
+
+  Migrate schema only:
+    $ nself migrate local staging --schema-only
+
+  Migrate data only:
+    $ nself migrate local staging --data-only
+
+  Migrate config only:
+    $ nself migrate local staging --config-only
+
+  Force migration (no prompts):
+    $ nself migrate staging prod --force
+
+  Show differences between environments:
+    $ nself migrate diff local staging
+
+  Show config differences:
+    $ nself migrate diff staging prod
+
+  Continuous sync (watch mode):
+    $ nself migrate sync staging prod --watch
+
+  One-time sync:
+    $ nself migrate sync local staging
+
+  Rollback last migration:
+    $ nself migrate rollback
+
+================================================================================
+VENDOR MIGRATION EXAMPLES
+================================================================================
+
+  Migrate from Firebase (interactive):
+    $ nself migrate from firebase
+
+  Migrate from Supabase (interactive):
+    $ nself migrate from supabase
+
+  Show vendor migration help:
+    $ nself migrate from firebase --help
+    $ nself migrate from supabase --help
+
+================================================================================
+MIGRATION WORKFLOW
+================================================================================
+
+  Environment Migration:
+    1. Review differences:
+       $ nself migrate diff source target
+
+    2. Preview migration:
+       $ nself migrate source target --dry-run
+
+    3. Backup target:
+       Automatic backup created before migration
+
+    4. Run migration:
+       $ nself migrate source target
+
+    5. Verify:
+       Test target environment
+       Check logs and data
+
+    6. Rollback if needed:
+       $ nself migrate rollback
+
+  Vendor Migration (Firebase):
+    1. Export Firebase data:
+       Use Firebase CLI or Admin SDK
+
+    2. Run migration wizard:
+       $ nself migrate from firebase
+
+    3. Provide credentials:
+       - Service account JSON path
+       - Collections to migrate
+       - Storage bucket (optional)
+       - Output directory
+
+    4. Review migration report:
+       Check exported data and schema
+
+    5. Import to nself:
+       Use nself db import commands
+
+    6. Verify data integrity:
+       Compare record counts
+       Spot-check critical data
+
+================================================================================
+FIREBASE MIGRATION DETAILS
+================================================================================
+
+  What Gets Migrated:
+    - Firestore collections and documents
+    - User authentication data
+    - Firebase Storage files (optional)
+    - Security rules (converted to RLS)
+    - Cloud Functions (manual conversion needed)
+
+  Requirements:
+    - Firebase service account JSON
+    - Firebase Admin SDK access
+    - Sufficient Firebase quota
+    - Disk space for exported data
+
+  Interactive Prompts:
+    1. Service account path
+    2. Collections (comma-separated or 'all')
+    3. Storage bucket (optional)
+    4. Output directory
+
+  Output Structure:
+    firebase-migration-YYYYMMDD-HHMMSS/
+      ├── collections/
+      │   ├── users.json
+      │   ├── posts.json
+      │   └── comments.json
+      ├── storage/
+      │   └── [downloaded files]
+      ├── auth/
+      │   └── users.json
+      ├── schema/
+      │   └── nself-schema.sql
+      └── migration-report.json
+
+  Post-Migration:
+    1. Review migration report
+    2. Import schema: nself db migrate
+    3. Import data: nself db import
+    4. Update authentication
+    5. Configure storage (MinIO)
+    6. Convert Cloud Functions to nself Functions
+
+================================================================================
+SUPABASE MIGRATION DETAILS
+================================================================================
+
+  What Gets Migrated:
+    - PostgreSQL database schema
+    - All table data
+    - User authentication data
+    - Storage buckets and files
+    - Edge Functions (manual conversion)
+    - Row Level Security policies
+
+  Requirements:
+    - Supabase project URL
+    - Service role key
+    - Database credentials
+    - pgdump access
+    - Disk space for backup
+
+  Interactive Prompts:
+    1. Supabase project URL
+    2. Service role key
+    3. Database host
+    4. Database port (default: 5432)
+    5. Database name (default: postgres)
+    6. Database user (default: postgres)
+    7. Database password
+    8. Output directory
+
+  Output Structure:
+    supabase-migration-YYYYMMDD-HHMMSS/
+      ├── schema/
+      │   └── schema.sql
+      ├── data/
+      │   └── data.sql
+      ├── auth/
+      │   └── users.json
+      ├── storage/
+      │   └── [downloaded files]
+      └── migration-report.json
+
+  Post-Migration:
+    1. Review migration report
+    2. Import schema: psql < schema.sql
+    3. Import data: psql < data.sql
+    4. Verify RLS policies
+    5. Configure storage (MinIO)
+    6. Convert Edge Functions to nself Functions
+
+================================================================================
+MIGRATION SAFETY
+================================================================================
+
+  Automatic Safeguards:
+    - Pre-migration backup created
+    - Confirmation prompt for production
+    - Checkpoint saved before migration
+    - Rollback capability
+    - Migration logged to .nself/migrations/
+
+  Safety Checklist:
+    1. Test in staging first
+    2. Backup target environment
+    3. Use --dry-run to preview
+    4. Verify data after migration
+    5. Keep rollback option ready
+    6. Monitor for issues
+    7. Document changes
+
+  Production Safety:
+    - Always requires confirmation
+    - Use --force to skip (not recommended)
+    - Scheduled maintenance window
+    - Team notification
+    - Rollback plan ready
+
+================================================================================
+MIGRATION CHECKPOINTS
+================================================================================
+
+  Checkpoint Files:
+    .nself/checkpoints/latest           Latest checkpoint ID
+    .nself/migrations/<checkpoint>.json Migration metadata
+
+  Checkpoint Contents:
+    - Timestamp
+    - Source and target environments
+    - Migration components (schema, data, config)
+    - Pre-migration backup reference
+
+  Rollback Process:
+    1. Reads latest checkpoint
+    2. Finds pre-migration backup
+    3. Suggests restore command
+    4. Clears checkpoint after rollback
+
+================================================================================
+CONFIGURATION MIGRATION
+================================================================================
+
+  What Gets Migrated:
+    - Environment variables (.env files)
+    - Service configurations
+    - Feature flags
+    - API keys (sanitized in diff)
+    - Custom settings
+
+  Diff Output:
+    - Shows additions (+)
+    - Shows deletions (-)
+    - Shows changes (~)
+    - Hides sensitive values (API keys shown as ***)
+
+  Safe Handling:
+    - Secrets never displayed in full
+    - .secrets file excluded from diffs
+    - Confirmation required for production
+    - Backup created automatically
+
+================================================================================
+SCHEMA MIGRATION
+================================================================================
+
+  Schema Export:
+    - Full database schema dump
+    - Includes tables, views, functions
+    - Preserves constraints and indexes
+    - Maintains relationships
+
+  Schema Diff:
+    - Table count comparison
+    - Column differences
+    - Index differences
+    - Function changes
+
+  Schema Apply:
+    - Validates syntax first
+    - Applies in transaction
+    - Rollback on error
+    - Logs all changes
+
+================================================================================
+DATA MIGRATION
+================================================================================
+
+  Data Export:
+    - Row-by-row export
+    - Preserves data types
+    - Handles large datasets
+    - Batched operations
+
+  Data Sync:
+    - Use nself sync push <target>
+    - Incremental updates
+    - Conflict detection
+    - Merge strategies
+
+  Data Validation:
+    - Record count verification
+    - Sample data spot-checks
+    - Referential integrity checks
+    - Data type validation
+
+================================================================================
+CONTINUOUS SYNC
+================================================================================
+
+  Watch Mode:
+    $ nself migrate sync source target --watch
+
+  Behavior:
+    - Checks for changes every 30 seconds
+    - Shows detected changes
+    - Can be automated in CI/CD
+    - Runs until stopped (Ctrl+C)
+
+  Use Cases:
+    - Keep staging in sync with local
+    - Mirror production to staging
+    - Continuous backup
+    - Development synchronization
+
+  Monitoring:
+    - Change detection logged
+    - Errors reported
+    - Sync status displayed
+    - Can pipe to log file
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Local to Staging Deployment:
+    1. nself migrate diff local staging
+    2. nself migrate local staging --dry-run
+    3. nself migrate local staging
+    4. Test staging environment
+    5. Fix any issues
+
+  Staging to Production:
+    1. nself migrate diff staging prod
+    2. Schedule maintenance window
+    3. Notify team
+    4. nself migrate staging prod --dry-run
+    5. Backup production manually
+    6. nself migrate staging prod
+    7. Verify production
+    8. Monitor for issues
+
+  Escaping Firebase:
+    1. nself migrate from firebase
+    2. Review exported data
+    3. nself init
+    4. Import schema and data
+    5. Update application code
+    6. Test thoroughly
+    7. Switch DNS/traffic
+    8. Monitor closely
+
+  Escaping Supabase:
+    1. nself migrate from supabase
+    2. Review exported data
+    3. nself init
+    4. Import schema and data
+    5. Configure authentication
+    6. Set up storage
+    7. Update application code
+    8. Test and verify
+    9. Switch traffic
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Source environment not found"
+    - Check environment name (local, staging, prod)
+    - Verify .env files exist
+    - Use: nself env list
+
+  "Permission denied"
+    - Check SSH access to remote servers
+    - Verify server credentials in .environments/
+    - Test: ssh user@server
+
+  "Database connection failed"
+    - Ensure PostgreSQL is running
+    - Check connection settings in .env
+    - Verify network access
+
+  "Migration checkpoint not found"
+    - No previous migration to rollback
+    - Checkpoint may have been deleted
+    - Check .nself/checkpoints/ directory
+
+  "Data sync failed"
+    - Check network connectivity
+    - Verify credentials
+    - Review sync logs
+    - Try manual sync: nself sync push <target>
+
+================================================================================
+MIGRATION BEST PRACTICES
+================================================================================
+
+  1. Always test in staging first
+  2. Use --dry-run before real migration
+  3. Create manual backups before major migrations
+  4. Review diffs carefully
+  5. Schedule production migrations during low-traffic
+  6. Have rollback plan ready
+  7. Monitor after migration
+  8. Document all migrations
+  9. Keep team informed
+  10. Test thoroughly after migration
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself env                Environment management
+  nself sync               Data synchronization
+  nself backup             Database backups
+  nself restore            Restore from backup
+  nself db migrate         Run database migrations
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/migration
+  Firebase Guide:    https://docs.nself.org/migration/firebase
+  Supabase Guide:    https://docs.nself.org/migration/supabase
+  Environments:      https://docs.nself.org/environments
+  Support:           support@nself.org

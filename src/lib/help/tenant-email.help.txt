@@ -1,0 +1,82 @@
+================================================================================
+nself tenant email - Tenant Email Template Management
+================================================================================
+
+OVERVIEW:
+  Manage and customize email templates for each tenant. Edit, preview, and
+  test email templates with tenant-specific branding.
+
+USAGE:
+  nself tenant email <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+EMAIL TEMPLATES:
+  list                          List all email templates
+  edit <template>               Edit email template
+  preview <template>            Preview template in browser
+  test <template> <email>       Send test email
+  set-language <lang>           Set default email language
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --tenant <id>            Specify tenant ID
+  --language <lang>        Template language (en, es, fr, de, ja, zh)
+  --help, -h               Show this help message
+
+================================================================================
+AVAILABLE TEMPLATES
+================================================================================
+
+  welcome              Welcome email for new users
+  verify-email         Email verification
+  password-reset       Password reset instructions
+  invitation           Team/tenant invitation
+  notification         General notifications
+  receipt              Payment receipts
+  report               Periodic reports
+
+TEMPLATE VARIABLES:
+  {{user_name}}          User's display name
+  {{user_email}}         User's email address
+  {{brand_name}}         Tenant brand name
+  {{brand_logo}}         Brand logo URL
+  {{action_url}}         Call-to-action URL
+  {{support_email}}      Support contact email
+
+================================================================================
+SUPPORTED LANGUAGES
+================================================================================
+
+  en    English (default)
+  es    Spanish
+  fr    French
+  de    German
+  ja    Japanese
+  zh    Chinese (Simplified)
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  List all email templates:
+    $ nself tenant email list --tenant acme
+
+  Edit welcome email:
+    $ nself tenant email edit welcome --tenant acme
+
+  Preview template:
+    $ nself tenant email preview welcome --tenant acme
+
+  Send test email:
+    $ nself tenant email test welcome user@example.com --tenant acme
+
+  Set default language:
+    $ nself tenant email set-language es --tenant acme
+
+For complete email documentation:
+  https://docs.nself.org/whitelabel/email-templates

@@ -1,0 +1,69 @@
+================================================================================
+nself tenant domains - Tenant Domain Management
+================================================================================
+
+OVERVIEW:
+  Manage custom domains and SSL certificates for tenants. Configure domain
+  verification, SSL provisioning, and health monitoring.
+
+USAGE:
+  nself tenant domains <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+DOMAIN MANAGEMENT:
+  add <domain>                 Add custom domain to tenant
+  verify <domain>              Verify domain ownership via DNS
+  ssl <domain>                 Provision SSL certificate
+  ssl <domain> --auto-renew    Enable automatic SSL renewal
+  health <domain>              Check domain health status
+  remove <domain>              Remove custom domain
+  list                         List all tenant domains
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --tenant <id>            Specify tenant ID
+  --auto-renew             Enable automatic SSL renewal
+  --help, -h               Show this help message
+
+================================================================================
+DOMAIN VERIFICATION
+================================================================================
+
+  DNS Configuration:
+    1. Add domain: nself tenant domains add example.com --tenant acme
+    2. Get verification records
+    3. Add TXT record to DNS:
+       Name:  _nself-verify.example.com
+       Value: <verification-token>
+    4. Verify: nself tenant domains verify example.com --tenant acme
+
+  SSL Certificate:
+    Automatic via Let's Encrypt:
+      $ nself tenant domains ssl example.com --auto-renew --tenant acme
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Add custom domain:
+    $ nself tenant domains add app.acmecorp.com --tenant acme
+
+  Verify domain ownership:
+    $ nself tenant domains verify app.acmecorp.com --tenant acme
+
+  Provision SSL certificate:
+    $ nself tenant domains ssl app.acmecorp.com --auto-renew --tenant acme
+
+  Check domain health:
+    $ nself tenant domains health app.acmecorp.com --tenant acme
+
+  List all domains:
+    $ nself tenant domains list --tenant acme
+
+For complete domain documentation:
+  https://docs.nself.org/whitelabel/domains

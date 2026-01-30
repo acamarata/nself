@@ -1,0 +1,447 @@
+================================================================================
+nself security - Security Management & Monitoring
+================================================================================
+
+OVERVIEW:
+  Comprehensive security management including vulnerability scanning, device
+  management, MFA, incident tracking, security events, and WebAuthn/FIDO2
+  hardware key support.
+
+USAGE:
+  nself security <command> [options]
+
+================================================================================
+COMMANDS
+================================================================================
+
+SECURITY SCANNING:
+  scan                           Run all security scans
+  scan passwords                 Scan for weak passwords
+  scan mfa                       Find users without MFA
+  scan sessions                  Check for expired/suspicious sessions
+  scan suspicious                Detect suspicious activity
+
+DEVICE MANAGEMENT:
+  devices list <user_id>         List all devices for user
+  devices trust <device_id>      Mark device as trusted
+  devices untrust <device_id>    Remove trusted status
+  devices remove <device_id>     Remove device completely
+
+MULTI-FACTOR AUTHENTICATION:
+  mfa <subcommand>               Delegate to nself mfa command
+                                 (Full MFA management)
+
+INCIDENT MANAGEMENT:
+  incidents list [status]        List security incidents
+  incidents show <id>            Show incident details
+  incidents create <title>       Create new incident
+  incidents resolve <id>         Resolve an incident
+
+SECURITY EVENTS:
+  events [user_id] [limit]       Show security event logs
+                                 Default limit: 20
+
+WEBAUTHN / FIDO2:
+  webauthn list <user_id>        List hardware keys for user
+  webauthn remove <key_id>       Remove hardware key
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --help, -h               Show this help message
+
+SCAN TYPES:
+  all                      Run all security scans (default)
+  passwords                Scan for weak password security
+  mfa                      Scan for missing MFA
+  sessions                 Scan for session issues
+  suspicious               Scan for suspicious activity
+
+================================================================================
+SECURITY SCANS EXPLAINED
+================================================================================
+
+  Weak Password Scan:
+    Detects:
+      - Passwords older than 90 days
+      - Users without MFA enabled
+      - Weak password patterns
+      - Compromised passwords (breach check)
+
+  MFA Status Scan:
+    Detects:
+      - Users without any MFA method
+      - Unverified MFA factors
+      - Admins without MFA (critical)
+      - Expired recovery codes
+
+  Session Security Scan:
+    Detects:
+      - Sessions older than 30 days
+      - Suspicious login patterns
+      - Multiple concurrent sessions (> 5)
+      - Geographic anomalies
+
+  Suspicious Activity Scan:
+    Detects:
+      - Failed login attempts (> 5)
+      - Access from suspicious IPs
+      - Rapid API requests (potential abuse)
+      - Unusual data access patterns
+      - Privilege escalation attempts
+
+================================================================================
+DEVICE MANAGEMENT
+================================================================================
+
+  Device Information:
+    - Device fingerprint (unique ID)
+    - Device name (user-assigned)
+    - Device type (desktop, mobile, tablet)
+    - Operating system and version
+    - Browser and version
+    - Trusted status
+    - Risk score (0-100)
+    - Last seen timestamp
+    - Login count
+
+  Trust Levels:
+    TRUSTED (0-20):        Known device, no MFA required
+    NORMAL (21-50):        Recognized device, MFA on sensitive actions
+    SUSPICIOUS (51-80):    Unusual behavior, require MFA always
+    BLOCKED (81-100):      Blocked device, deny access
+
+  Automatic Risk Scoring:
+    - New device: +30 points
+    - Unusual location: +20 points
+    - Failed login: +15 points per attempt
+    - Rapid requests: +25 points
+    - Suspicious IP: +40 points
+
+================================================================================
+SECURITY INCIDENTS
+================================================================================
+
+  Incident Severity:
+    low                    Informational, no immediate action
+    medium                 Requires review and monitoring
+    high                   Requires prompt attention
+    critical               Immediate action required
+
+  Incident Categories:
+    authentication         Login-related incidents
+    authorization          Permission/access issues
+    data_breach            Potential data exposure
+    malware                Malicious activity detected
+    policy_violation       Security policy breach
+    manual                 Manually created incidents
+
+  Incident Status:
+    open                   New, under investigation
+    investigating          Actively being reviewed
+    resolved               Issue resolved
+    false_positive         Not a real security issue
+
+================================================================================
+SECURITY EVENTS
+================================================================================
+
+  Event Types:
+    login_success          Successful login
+    login_failed           Failed login attempt
+    password_changed       Password reset/changed
+    mfa_enabled            MFA activated
+    mfa_disabled           MFA deactivated
+    session_created        New session created
+    session_expired        Session expired/timed out
+    permission_denied      Access denied
+    suspicious_activity    Anomaly detected
+
+  Event Severity:
+    info                   Normal activity
+    warning                Worth monitoring
+    error                  Failed operation
+    critical               Security concern
+
+================================================================================
+WEBAUTHN / FIDO2 SUPPORT
+================================================================================
+
+  Hardware Keys:
+    - YubiKey
+    - Google Titan
+    - Feitian
+    - SoloKeys
+    - Any FIDO2-compliant device
+
+  Authenticator Types:
+    platform               Built-in (Touch ID, Face ID, Windows Hello)
+    cross-platform         External (USB, NFC, Bluetooth)
+
+  Supported Transports:
+    usb                    USB connection
+    nfc                    Near-field communication
+    ble                    Bluetooth Low Energy
+    internal               Platform authenticator
+
+  Key Information:
+    - Key ID (unique identifier)
+    - Friendly name (user-assigned)
+    - Credential type (public-key)
+    - Supported transports
+    - Authenticator attachment
+    - Created timestamp
+    - Last used timestamp
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Run full security scan:
+    $ nself security scan
+
+  Scan for weak passwords only:
+    $ nself security scan passwords
+
+  Check MFA status across all users:
+    $ nself security scan mfa
+
+  Scan for session issues:
+    $ nself security scan sessions
+
+  Detect suspicious activity:
+    $ nself security scan suspicious
+
+  List devices for user:
+    $ nself security devices list user-uuid-here
+
+  Trust a device (skip MFA):
+    $ nself security devices trust device-uuid-here
+
+  Untrust a device:
+    $ nself security devices untrust device-uuid-here
+
+  Remove device completely:
+    $ nself security devices remove device-uuid-here
+
+  Enable MFA for user:
+    $ nself security mfa enable --user=user-uuid --method=totp
+
+  List security incidents:
+    $ nself security incidents list
+
+  List resolved incidents:
+    $ nself security incidents list resolved
+
+  Show incident details:
+    $ nself security incidents show incident-uuid
+
+  Create security incident:
+    $ nself security incidents create "Suspicious login activity" high
+
+  Resolve incident:
+    $ nself security incidents resolve incident-uuid
+
+  View security events for all users:
+    $ nself security events
+
+  View events for specific user:
+    $ nself security events user-uuid
+
+  View last 50 security events:
+    $ nself security events "" 50
+
+  List WebAuthn keys for user:
+    $ nself security webauthn list user-uuid
+
+  Remove WebAuthn key:
+    $ nself security webauthn remove key-uuid
+
+================================================================================
+SCAN OUTPUT INTERPRETATION
+================================================================================
+
+  Weak Password Scan Results:
+    ✓ Green:  No issues detected
+    ⚠ Yellow: Passwords near expiration (60-90 days)
+    ✗ Red:    Expired passwords (> 90 days) or no MFA
+
+  MFA Status Results:
+    ✓ Green:  All users have MFA enabled
+    ⚠ Yellow: Some non-admin users without MFA
+    ✗ Red:    Admin users without MFA
+
+  Session Scan Results:
+    ✓ Green:  All sessions valid
+    ⚠ Yellow: Some long-running sessions
+    ✗ Red:    Suspicious session patterns detected
+
+  Suspicious Activity Results:
+    ✓ Green:  No suspicious activity
+    ⚠ Yellow: Minor anomalies detected
+    ✗ Red:    Critical security events found
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Weekly Security Review:
+    1. nself security scan
+    2. Review any warnings or errors
+    3. nself security incidents list
+    4. Resolve open incidents
+    5. nself security events "" 100
+    6. Check for patterns
+
+  Onboard New User:
+    1. Create user account
+    2. Enforce MFA: nself security mfa enable --user=<id> --method=totp
+    3. Add hardware key (optional): Use web UI
+    4. Verify device trust levels
+
+  Respond to Security Incident:
+    1. nself security scan suspicious
+    2. Review flagged events
+    3. nself security incidents create "Description" critical
+    4. Investigate affected users
+    5. Take corrective action
+    6. nself security incidents resolve <id>
+
+  Device Management:
+    1. nself security devices list <user-id>
+    2. Review risk scores
+    3. Trust known devices
+    4. Remove unrecognized devices
+    5. Monitor for new device logins
+
+================================================================================
+SECURITY BEST PRACTICES
+================================================================================
+
+  Password Security:
+    1. Enforce 90-day password rotation
+    2. Require strong passwords (complexity rules)
+    3. Check against breach databases
+    4. Enable MFA for all users
+
+  Device Security:
+    1. Trust devices only after verification
+    2. Review device list quarterly
+    3. Remove old/unused devices
+    4. Monitor risk scores
+
+  MFA Requirements:
+    1. Mandatory for admin users
+    2. Recommended for all users
+    3. Support multiple factors (TOTP + WebAuthn)
+    4. Keep recovery codes secure
+
+  Incident Response:
+    1. Document all incidents
+    2. Investigate promptly (within 24 hours)
+    3. Keep stakeholders informed
+    4. Post-incident review
+
+  Monitoring:
+    1. Run security scans weekly
+    2. Review events daily
+    3. Set up automated alerts
+    4. Regular security audits
+
+================================================================================
+SECURITY ALERTS
+================================================================================
+
+  Critical Alerts:
+    - Admin account without MFA
+    - Multiple failed login attempts (> 10)
+    - Access from blacklisted IP
+    - Privilege escalation detected
+    - Data breach suspected
+
+  Warning Alerts:
+    - Password expiring soon (< 7 days)
+    - New device login
+    - Unusual access time
+    - High API usage
+    - Suspicious geographic location
+
+  Configure Alerts:
+    Edit .env:
+      SECURITY_ALERTS_ENABLED=true
+      SECURITY_ALERT_EMAIL=security@example.com
+      SECURITY_SLACK_WEBHOOK=https://hooks.slack.com/...
+
+================================================================================
+COMPLIANCE & AUDITING
+================================================================================
+
+  Audit Logging:
+    All security events are logged:
+      - Who performed the action
+      - What action was performed
+      - When it occurred
+      - IP address and device
+      - Result (success/failure)
+
+  Compliance Reports:
+    $ nself security events > security-audit-$(date +%Y%m).log
+
+  Data Retention:
+    - Security events: 1 year
+    - Incidents: Indefinitely
+    - Device history: 90 days
+
+  Export for Compliance:
+    $ nself security events "" 10000 > audit-report.log
+    $ nself security incidents list --json > incidents.json
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself mfa                Full MFA management
+  nself auth               User authentication
+  nself audit              Audit logging
+  nself devices            Device management (alias)
+  nself roles              Role-based access control
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Failed to initialize security system"
+    - Ensure PostgreSQL is running
+    - Run migrations: nself db migrate
+    - Check database connection
+
+  "No security events found"
+    - Events may not be enabled
+    - Check AUTH_SECURITY_EVENTS_ENABLED in .env
+    - Verify database tables exist
+
+  "Cannot trust device"
+    - Verify device UUID is correct
+    - Check device exists: nself security devices list <user>
+    - Ensure you have permissions
+
+  "MFA command not found"
+    - Use: nself mfa (not nself security mfa)
+    - MFA has its own dedicated CLI
+
+  "Scan taking too long"
+    - Large user base may take time
+    - Run specific scans instead of 'all'
+    - Consider running during off-hours
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/security
+  MFA Setup:         https://docs.nself.org/security/mfa
+  WebAuthn Guide:    https://docs.nself.org/security/webauthn
+  Incident Response: https://docs.nself.org/security/incident-response
+  Best Practices:    https://docs.nself.org/security/best-practices
+  Support:           security@nself.org

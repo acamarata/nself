@@ -1,0 +1,292 @@
+/**
+ * OAuth Handlers Service
+ * Production-ready OAuth authentication handlers for nself
+ */
+
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import dotenv from 'dotenv';
+import { Server } from 'http';
+
+// Load environment variables
+dotenv.config();
+
+// Import types and services
+import { ProviderName, OAuthCallbackRequest } from './types';
+import { getOAuthHandler } from './handlers';
+import { getEnabledProviders, PROVIDER_METADATA, isProviderEnabled } from './config/providers';
+import { createState, verifyAndRetrieveState } from './utils/state-manager';
+import { NhostService } from './services/nhost-service';
+
+// Initialize Express app
+const app = express();
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// Initialize Nhost service
+const nhostService = new NhostService();
+
+// ============================================================================
+// Middleware
+// ============================================================================
+
+// Security middleware
+app.use(helmet());
+
+// CORS middleware
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+app.get('/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    service: '{{SERVICE_NAME}}',
+    timestamp: new Date().toISOString(),
+    providers: getEnabledProviders().map(p => p.name),
+  });
+});
+
+// ============================================================================
+// OAuth Routes
+// ============================================================================
+
+/**
+ * GET /oauth/providers
+ * List all enabled OAuth providers
+ */
+app.get('/oauth/providers', (req: Request, res: Response) => {
+  const providers = getEnabledProviders();
+
+  const providerList = providers.map(p => ({
+    name: p.name,
+    displayName: PROVIDER_METADATA[p.name as ProviderName].displayName,
+    iconUrl: PROVIDER_METADATA[p.name as ProviderName].iconUrl,
+    color: PROVIDER_METADATA[p.name as ProviderName].color,
+    authUrl: `/oauth/${p.name}`,
+  }));
+
+  res.json({ providers: providerList });
+});
+
+/**
+ * GET /oauth/:provider
+ * Initiate OAuth flow for a specific provider
+ */
+app.get('/oauth/:provider', (req: Request, res: Response) => {
+  const provider = req.params.provider as ProviderName;
+  const redirectUrl = req.query.redirect as string | undefined;
+
+  // Check if provider is enabled
+  if (!isProviderEnabled(provider)) {
+    return res.status(404).json({
+      error: 'Provider not found',
+      message: `OAuth provider '${provider}' is not enabled`,
+    });
+  }
+
+  // Get OAuth handler
+  const handler = getOAuthHandler(provider);
+  if (!handler) {
+    return res.status(500).json({
+      error: 'Handler not found',
+      message: `OAuth handler for '${provider}' could not be initialized`,
+    });
+  }
+
+  // Create state for CSRF protection
+  const state = createState(provider, redirectUrl);
+
+  // Generate authorization URL
+  const authUrl = handler.getAuthorizationUrl(state);
+
+  // Redirect user to provider's authorization page
+  res.redirect(authUrl);
+});
+
+/**
+ * GET /oauth/:provider/callback
+ * Handle OAuth callback from provider
+ */
+app.get('/oauth/:provider/callback', async (req: Request, res: Response) => {
+  const provider = req.params.provider as ProviderName;
+  const { code, state, error, error_description } = req.query as Partial<OAuthCallbackRequest>;
+
+  try {
+    // Handle OAuth errors
+    if (error) {
+      console.error(`OAuth error from ${provider}:`, error, error_description);
+      return res.redirect(`${FRONTEND_URL}/auth/error?error=${error}&description=${error_description}`);
+    }
+
+    // Validate required parameters
+    if (!code || !state) {
+      return res.status(400).json({
+        error: 'Invalid callback',
+        message: 'Missing code or state parameter',
+      });
+    }
+
+    // Verify state (CSRF protection)
+    const stateData = verifyAndRetrieveState(state);
+    if (!stateData || stateData.provider !== provider) {
+      return res.status(400).json({
+        error: 'Invalid state',
+        message: 'State validation failed. Possible CSRF attack.',
+      });
+    }
+
+    // Get OAuth handler
+    const handler = getOAuthHandler(provider);
+    if (!handler) {
+      return res.status(500).json({
+        error: 'Handler not found',
+        message: `OAuth handler for '${provider}' could not be initialized`,
+      });
+    }
+
+    // Handle OAuth callback (exchange code for token and get profile)
+    const { token, profile } = await handler.handleCallback(code);
+
+    console.log(`OAuth callback successful for ${provider}:`, {
+      email: profile.email,
+      displayName: profile.displayName,
+    });
+
+    // Find or create user in Nhost
+    const user = await nhostService.findOrCreateUser(profile);
+
+    // Generate JWT
+    const jwt = nhostService.generateJWT(user, provider);
+
+    // Redirect to frontend with JWT
+    const redirectUrl = stateData.redirectUrl || '/';
+    const finalRedirectUrl = `${FRONTEND_URL}${redirectUrl}?token=${jwt}`;
+
+    res.redirect(finalRedirectUrl);
+  } catch (error: any) {
+    console.error(`OAuth callback error for ${provider}:`, error);
+    res.redirect(`${FRONTEND_URL}/auth/error?error=oauth_failed&description=${encodeURIComponent(error.message)}`);
+  }
+});
+
+/**
+ * POST /oauth/:provider/token
+ * Exchange authorization code for token (for mobile apps)
+ */
+app.post('/oauth/:provider/token', async (req: Request, res: Response) => {
+  const provider = req.params.provider as ProviderName;
+  const { code } = req.body;
+
+  try {
+    if (!code) {
+      return res.status(400).json({
+        error: 'Missing code',
+        message: 'Authorization code is required',
+      });
+    }
+
+    // Get OAuth handler
+    const handler = getOAuthHandler(provider);
+    if (!handler) {
+      return res.status(404).json({
+        error: 'Handler not found',
+        message: `OAuth handler for '${provider}' not found`,
+      });
+    }
+
+    // Handle OAuth callback
+    const { token, profile } = await handler.handleCallback(code);
+
+    // Find or create user in Nhost
+    const user = await nhostService.findOrCreateUser(profile);
+
+    // Generate JWT
+    const jwt = nhostService.generateJWT(user, provider);
+
+    // Return JWT and user info
+    res.json({
+      token: jwt,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      },
+    });
+  } catch (error: any) {
+    console.error(`Token exchange error for ${provider}:`, error);
+    res.status(500).json({
+      error: 'Token exchange failed',
+      message: error.message,
+    });
+  }
+});
+
+// ============================================================================
+// Error Handlers
+// ============================================================================
+
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.path} not found`,
+    path: req.path,
+  });
+});
+
+// Global error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+  });
+});
+
+// ============================================================================
+// Server Lifecycle
+// ============================================================================
+
+// Graceful shutdown
+const gracefulShutdown = (server: Server) => {
+  return (): void => {
+    console.log('Shutting down gracefully...');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  };
+};
+
+// Start server
+const server = app.listen(PORT, () => {
+  console.log(`OAuth Handlers service running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Frontend URL: ${FRONTEND_URL}`);
+  console.log('Enabled OAuth providers:', getEnabledProviders().map(p => p.name).join(', '));
+  console.log(`Health check: http://localhost:${PORT}/health`);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown(server));
+process.on('SIGINT', gracefulShutdown(server));

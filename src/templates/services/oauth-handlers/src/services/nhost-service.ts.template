@@ -1,0 +1,218 @@
+/**
+ * Nhost Auth Integration Service
+ * Integrates OAuth profiles with Nhost authentication
+ */
+
+import axios, { AxiosInstance } from 'axios';
+import jwt from 'jsonwebtoken';
+import { OAuthUserProfile, NhostUser, JWTPayload } from '../types';
+
+export class NhostService {
+  private client: AxiosInstance;
+  private adminSecret: string;
+  private jwtSecret: string;
+  private jwtExpiresIn: string;
+
+  constructor() {
+    const hasuraUrl = process.env.HASURA_GRAPHQL_URL || 'http://api:8080';
+    this.adminSecret = process.env.HASURA_ADMIN_SECRET || '';
+    this.jwtSecret = process.env.JWT_SECRET || this.adminSecret;
+    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
+
+    this.client = axios.create({
+      baseURL: `${hasuraUrl}/v1/graphql`,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hasura-admin-secret': this.adminSecret,
+      },
+    });
+  }
+
+  /**
+   * Find or create user from OAuth profile
+   */
+  async findOrCreateUser(profile: OAuthUserProfile): Promise<NhostUser> {
+    // Check if user exists by email
+    const existingUser = await this.findUserByEmail(profile.email);
+
+    if (existingUser) {
+      // Update user profile with latest OAuth data
+      return await this.updateUser(existingUser.id, profile);
+    } else {
+      // Create new user
+      return await this.createUser(profile);
+    }
+  }
+
+  /**
+   * Find user by email
+   */
+  private async findUserByEmail(email: string): Promise<NhostUser | null> {
+    try {
+      const query = `
+        query FindUserByEmail($email: citext!) {
+          users(where: { email: { _eq: $email } }, limit: 1) {
+            id
+            email
+            displayName
+            avatarUrl
+            locale
+            metadata
+          }
+        }
+      `;
+
+      const response = await this.client.post('', {
+        query,
+        variables: { email },
+      });
+
+      const users = response.data?.data?.users;
+      return users && users.length > 0 ? users[0] : null;
+    } catch (error: any) {
+      console.error('Error finding user by email:', error.response?.data || error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Create new user
+   */
+  private async createUser(profile: OAuthUserProfile): Promise<NhostUser> {
+    try {
+      const mutation = `
+        mutation CreateUser($user: users_insert_input!) {
+          insert_users_one(object: $user) {
+            id
+            email
+            displayName
+            avatarUrl
+            locale
+            metadata
+          }
+        }
+      `;
+
+      const response = await this.client.post('', {
+        query: mutation,
+        variables: {
+          user: {
+            email: profile.email,
+            emailVerified: profile.emailVerified,
+            displayName: profile.displayName,
+            avatarUrl: profile.avatarUrl,
+            locale: profile.locale,
+            metadata: {
+              provider: profile.provider,
+              providerUserId: profile.providerUserId,
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+            },
+          },
+        },
+      });
+
+      const user = response.data?.data?.insert_users_one;
+
+      if (!user) {
+        throw new Error('Failed to create user');
+      }
+
+      return user;
+    } catch (error: any) {
+      console.error('Error creating user:', error.response?.data || error.message);
+      throw new Error(`Failed to create user: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update existing user
+   */
+  private async updateUser(userId: string, profile: OAuthUserProfile): Promise<NhostUser> {
+    try {
+      const mutation = `
+        mutation UpdateUser($userId: uuid!, $updates: users_set_input!) {
+          update_users_by_pk(pk_columns: { id: $userId }, _set: $updates) {
+            id
+            email
+            displayName
+            avatarUrl
+            locale
+            metadata
+          }
+        }
+      `;
+
+      const response = await this.client.post('', {
+        query: mutation,
+        variables: {
+          userId,
+          updates: {
+            displayName: profile.displayName,
+            avatarUrl: profile.avatarUrl,
+            locale: profile.locale,
+            emailVerified: profile.emailVerified,
+            metadata: {
+              provider: profile.provider,
+              providerUserId: profile.providerUserId,
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+            },
+          },
+        },
+      });
+
+      const user = response.data?.data?.update_users_by_pk;
+
+      if (!user) {
+        throw new Error('Failed to update user');
+      }
+
+      return user;
+    } catch (error: any) {
+      console.error('Error updating user:', error.response?.data || error.message);
+      throw new Error(`Failed to update user: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate JWT for user
+   */
+  generateJWT(user: NhostUser, provider: string): string {
+    const payload: JWTPayload = {
+      sub: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      provider,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + this.parseExpiresIn(this.jwtExpiresIn),
+    };
+
+    return jwt.sign(payload, this.jwtSecret);
+  }
+
+  /**
+   * Parse JWT expires in string (e.g., "7d", "24h", "3600")
+   */
+  private parseExpiresIn(expiresIn: string): number {
+    const match = expiresIn.match(/^(\d+)([dhms]?)$/);
+    if (!match) {
+      return 604800; // Default 7 days
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2] || 's';
+
+    switch (unit) {
+      case 'd':
+        return value * 86400;
+      case 'h':
+        return value * 3600;
+      case 'm':
+        return value * 60;
+      case 's':
+      default:
+        return value;
+    }
+  }
+}

@@ -1,0 +1,69 @@
+/**
+ * Slack OAuth Handler
+ * Implements Slack OAuth 2.0 flow
+ */
+
+import { BaseOAuthHandler } from './base-handler';
+import { OAuthUserProfile, OAuthTokenResponse } from '../types';
+import { normalizeSlackProfile } from '../utils/profile-normalizer';
+
+export class SlackOAuthHandler extends BaseOAuthHandler {
+  async getUserInfo(accessToken: string): Promise<any> {
+    try {
+      const response = await this.httpClient.get(this.provider.userInfoUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Slack getUserInfo failed:', error.response?.data || error.message);
+      throw new Error(`Failed to get Slack user info: ${error.message}`);
+    }
+  }
+
+  normalizeProfile(profile: any): OAuthUserProfile {
+    return normalizeSlackProfile(profile);
+  }
+
+  /**
+   * Override token exchange for Slack's OAuth v2 format
+   */
+  async exchangeCode(code: string): Promise<OAuthTokenResponse> {
+    try {
+      const response = await this.httpClient.post(
+        this.provider.tokenUrl,
+        new URLSearchParams({
+          client_id: this.provider.clientId,
+          client_secret: this.provider.clientSecret,
+          code,
+          redirect_uri: this.provider.callbackUrl,
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      const data = response.data;
+
+      // Slack OAuth v2 returns data in a different format
+      if (!data.ok) {
+        throw new Error(data.error || 'Unknown Slack OAuth error');
+      }
+
+      // Convert Slack format to standard OAuth format
+      return {
+        access_token: data.authed_user?.access_token || data.access_token,
+        token_type: data.token_type || 'Bearer',
+        scope: data.scope,
+        // Slack doesn't provide expires_in or refresh_token in v2
+      };
+    } catch (error: any) {
+      console.error('Slack token exchange failed:', error.response?.data || error.message);
+      throw new Error(`Failed to exchange Slack authorization code: ${error.message}`);
+    }
+  }
+}

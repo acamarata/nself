@@ -1,6 +1,6 @@
 # nself Commands Reference
 
-**Version 0.4.8** | Complete CLI Reference
+**Version 0.9.0** | Complete CLI Reference
 
 ---
 
@@ -76,6 +76,89 @@ nself
 │       ├── export <table>     Export table
 │       └── anonymize          Anonymize PII
 │
+├── Multi-Tenant (nself tenant) - NEW v0.9.0
+│   ├── init                    Initialize multi-tenancy system
+│   ├── create <name>           Create a new tenant
+│   ├── list                    List all tenants
+│   ├── show <id>               Show tenant details
+│   ├── suspend <id>            Suspend a tenant
+│   ├── activate <id>           Activate a suspended tenant
+│   ├── delete <id>             Delete a tenant
+│   ├── stats                   Show tenant statistics
+│   ├── member                  Member management
+│   │   ├── add <tenant> <user> [role]    Add user to tenant
+│   │   ├── remove <tenant> <user>        Remove user from tenant
+│   │   └── list <tenant>                 List tenant members
+│   ├── setting                 Settings management
+│   │   ├── set <tenant> <key> <value>    Set tenant setting
+│   │   ├── get <tenant> <key>            Get tenant setting
+│   │   └── list <tenant>                 List tenant settings
+│   ├── billing                 Billing management
+│   │   ├── usage              Show usage statistics
+│   │   ├── invoice            Manage invoices (list, show, download, pay)
+│   │   ├── subscription       Manage subscriptions (show, upgrade, downgrade)
+│   │   ├── payment            Manage payment methods (list, add, remove)
+│   │   ├── quota              Check quota limits
+│   │   ├── plan               Manage plans (list, show, compare, current)
+│   │   ├── export             Export billing data
+│   │   └── customer           Manage customer info (show, update, portal)
+│   ├── branding                Brand customization
+│   │   ├── create <name>      Create new brand
+│   │   ├── set-colors         Set brand colors
+│   │   ├── set-fonts          Set brand fonts
+│   │   ├── upload-logo        Upload brand logo
+│   │   ├── set-css            Set custom CSS
+│   │   └── preview            Preview branding
+│   ├── domains                 Custom domains & SSL
+│   │   ├── add <domain>       Add custom domain
+│   │   ├── verify <domain>    Verify domain ownership
+│   │   ├── ssl <domain>       Provision SSL certificate
+│   │   ├── health <domain>    Check domain health
+│   │   └── remove <domain>    Remove custom domain
+│   ├── email                   Email templates
+│   │   ├── list               List all email templates
+│   │   ├── edit <template>    Edit email template
+│   │   ├── preview <template> Preview email template
+│   │   ├── test <template>    Send test email
+│   │   └── set-language       Set email language
+│   └── themes                  Theme management
+│       ├── create <name>      Create new theme
+│       ├── edit <name>        Edit theme
+│       ├── activate <name>    Activate theme
+│       ├── preview <name>     Preview theme
+│       ├── export <name>      Export theme
+│       └── import <path>      Import theme
+│
+├── OAuth (nself oauth) - NEW v0.9.0
+│   ├── install                 Install OAuth handlers service
+│   ├── enable                  Enable OAuth providers
+│   │   └── --providers=<list> Comma-separated list (google,github,slack,microsoft)
+│   ├── disable                 Disable OAuth providers
+│   │   └── --providers=<list> Providers to disable
+│   ├── config <provider>       Configure OAuth provider credentials
+│   │   ├── --client-id=<id>   OAuth client ID
+│   │   ├── --client-secret    OAuth client secret
+│   │   ├── --tenant-id        Tenant ID (Microsoft only)
+│   │   └── --callback-url     Custom callback URL
+│   ├── test <provider>         Test OAuth provider configuration
+│   ├── list                    List all OAuth providers
+│   └── status                  Show OAuth service status
+│
+├── Storage (nself storage) - NEW v0.9.0
+│   ├── init                    Initialize storage system
+│   ├── upload <file>           Upload a file to storage
+│   │   ├── --dest <path>      Destination path in storage
+│   │   ├── --thumbnails       Generate image thumbnails
+│   │   ├── --virus-scan       Scan file for viruses
+│   │   ├── --compression      Compress large files
+│   │   └── --all-features     Enable all features
+│   ├── list [prefix]           List uploaded files
+│   ├── delete <path>           Delete an uploaded file
+│   ├── config                  Configure upload pipeline
+│   ├── status                  Show pipeline status
+│   ├── test                    Test upload functionality
+│   └── graphql-setup           Generate GraphQL integration package
+│
 ├── Deployment (nself deploy) - Enhanced v0.4.7
 │   ├── (environment)           Deploy to environment
 │   │   ├── staging            Deploy to staging
@@ -94,7 +177,7 @@ nself
 │   │   ├── switch             Switch traffic
 │   │   ├── rollback           Rollback switch
 │   │   └── status             Show active
-│   ├── rollback               Rollback deployment
+│   ├── rollback                Rollback deployment
 │   ├── check                   Pre-deploy validation
 │   │   └── --fix              Auto-fix issues
 │   └── status                  Deployment status
@@ -105,7 +188,7 @@ nself
 │   ├── switch <name>           Switch environment
 │   └── diff <env1> <env2>      Compare environments
 │
-├── Cloud Infrastructure (nself cloud) - NEW v0.4.7
+├── Cloud Infrastructure (nself cloud) - v0.4.7
 │   ├── provider                Provider management
 │   │   ├── list               List 26 providers
 │   │   ├── init <provider>    Configure credentials
@@ -126,13 +209,23 @@ nself
 │       ├── quick              Provision + deploy
 │       └── full               Full production setup
 │
-├── Service Management (nself service) - NEW v0.4.7
+├── Service Management (nself service) - Enhanced v0.9.0
 │   ├── list                    List optional services
 │   ├── enable <service>        Enable service
 │   ├── disable <service>       Disable service
 │   ├── status [service]        Service status
 │   ├── restart <service>       Restart service
 │   ├── logs <service>          Service logs
+│   ├── init                    Initialize service from template
+│   ├── scaffold                Scaffold new service
+│   ├── wizard                  Service creation wizard
+│   ├── search                  Search services
+│   ├── admin                   Admin UI management
+│   │   ├── status             Admin UI status
+│   │   ├── open               Open admin UI
+│   │   ├── users              User management
+│   │   ├── config             Admin configuration
+│   │   └── dev                Development mode
 │   ├── email                   Email service
 │   │   ├── test               Send test email
 │   │   ├── inbox              Open MailPit
@@ -161,7 +254,7 @@ nself
 │       ├── flush              Flush cache
 │       └── keys               List keys
 │
-├── Kubernetes (nself k8s) - NEW v0.4.7
+├── Kubernetes (nself k8s) - v0.4.7
 │   ├── init                    Initialize K8s config
 │   ├── convert                 Compose to manifests
 │   │   ├── --output <dir>     Custom output
@@ -186,7 +279,7 @@ nself
 │       ├── delete <name>      Delete namespace
 │       └── switch <name>      Switch namespace
 │
-├── Helm Charts (nself helm) - NEW v0.4.7
+├── Helm Charts (nself helm) - v0.4.7
 │   ├── init                    Initialize chart
 │   │   └── --from-compose     From docker-compose
 │   ├── generate                Generate/update chart
@@ -336,7 +429,9 @@ nself
     ├── functions               → nself service functions
     ├── mlflow                  → nself service mlflow
     ├── staging                 → nself deploy staging
-    └── prod                    → nself deploy production
+    ├── prod                    → nself deploy production
+    ├── billing                 → nself tenant billing
+    └── whitelabel              → nself tenant branding/domains/email/themes
 ```
 
 ---
@@ -361,6 +456,76 @@ nself db migrate create NAME    # Create migration
 nself db seed                   # Seed data
 nself db backup                 # Create backup
 nself db types                  # Generate types
+```
+
+### Multi-Tenant Management (NEW v0.9.0)
+
+```bash
+# Initialize multi-tenancy
+nself tenant init
+
+# Create tenant
+nself tenant create "Acme Corp" --slug acme --plan pro
+
+# Manage billing
+nself tenant billing usage
+nself tenant billing invoice list
+nself tenant billing subscription show
+
+# Custom domains
+nself tenant domains add app.example.com
+nself tenant domains verify app.example.com
+nself tenant domains ssl app.example.com
+
+# Branding
+nself tenant branding set-colors --primary #0066cc
+nself tenant branding upload-logo logo.png
+
+# Email templates
+nself tenant email list
+nself tenant email edit welcome
+```
+
+### OAuth Management (NEW v0.9.0)
+
+```bash
+# Install OAuth service
+nself oauth install
+
+# Enable providers
+nself oauth enable --providers google,github,slack
+
+# Configure provider
+nself oauth config google \
+  --client-id=xxx.apps.googleusercontent.com \
+  --client-secret=GOCSPX-xxx
+
+# Test configuration
+nself oauth test google
+nself oauth list
+nself oauth status
+```
+
+### Storage Management (NEW v0.9.0)
+
+```bash
+# Initialize storage
+nself storage init
+
+# Upload files
+nself storage upload photo.jpg
+nself storage upload avatar.png --thumbnails
+nself storage upload doc.pdf --all-features
+
+# Manage uploads
+nself storage list
+nself storage list users/123/
+nself storage delete users/123/file.txt
+
+# Configuration
+nself storage config
+nself storage status
+nself storage test
 ```
 
 ### Deployment
@@ -398,6 +563,7 @@ nself service list              # List optional services
 nself service enable redis      # Enable Redis
 nself service email test        # Test email
 nself service functions deploy  # Deploy functions
+nself service admin open        # Open admin UI
 ```
 
 ### Plugins
@@ -430,18 +596,21 @@ nself scale postgres --cpu 2    # Scale service
 | **Core** | 7 | Project lifecycle |
 | **Status** | 6 | Monitoring and debugging |
 | **Database** | 10 | Database management |
+| **Multi-Tenant** | 32+ | Tenant, billing, branding (NEW v0.9.0) |
+| **OAuth** | 7 | OAuth provider management (NEW v0.9.0) |
+| **Storage** | 8 | File storage and uploads (NEW v0.9.0) |
 | **Deployment** | 12 | Environment and deployment (enhanced v0.4.7) |
 | **Cloud** | 4 | Infrastructure management (v0.4.7) |
-| **Service** | 8 | Optional service management (v0.4.7) |
+| **Service** | 15+ | Optional service management (enhanced v0.9.0) |
 | **Kubernetes** | 11 | K8s operations (v0.4.7) |
 | **Helm** | 12 | Helm chart management (v0.4.7) |
 | **Sync** | 8 | Data sync (enhanced v0.4.7) |
 | **Performance** | 4 | Profiling and scaling (v0.4.6) |
 | **Operations** | 3 | Config, frontend, history (v0.4.6) |
-| **Plugins** | 6+ | Third-party integrations (NEW v0.4.8) |
+| **Plugins** | 6+ | Third-party integrations (v0.4.8) |
 | **Utility** | 7 | CI, completions, updates |
 
-**Total: 100+ commands and subcommands**
+**Total: 150+ commands and subcommands**
 
 ---
 
@@ -499,6 +668,20 @@ Each command has detailed documentation:
 ### Database
 - [db](DB.md) - Complete database reference
 
+### Multi-Tenant (NEW v0.9.0)
+- [tenant](TENANT.md) - Multi-tenant management
+- [tenant billing](BILLING.md) - Billing and subscriptions
+- [tenant branding](BRANDING.md) - Brand customization
+- [tenant domains](DOMAINS.md) - Custom domains and SSL
+- [tenant email](EMAIL-TEMPLATES.md) - Email templates
+- [tenant themes](THEMES.md) - Theme management
+
+### OAuth (NEW v0.9.0)
+- [oauth](OAUTH.md) - OAuth provider management
+
+### Storage (NEW v0.9.0)
+- [storage](STORAGE.md) - File storage and uploads
+
 ### Deployment
 - [deploy](DEPLOY.md) | [env](ENV.md) | [sync](SYNC.md)
 
@@ -520,6 +703,7 @@ Each command has detailed documentation:
 
 | Version | Commands Added |
 |---------|----------------|
+| **0.9.0** | tenant (32+ subcommands), oauth (7 commands), storage (8 commands) |
 | **0.4.8** | plugin (list, install, remove, update, status), stripe/github/shopify actions |
 | **0.4.7** | cloud, service, k8s, helm, deploy preview/canary/blue-green, sync auto/watch |
 | **0.4.6** | perf, bench, scale, migrate, health, frontend, history, config, servers |
@@ -529,4 +713,4 @@ Each command has detailed documentation:
 
 ---
 
-*Last Updated: January 24, 2026 | Version: 0.4.8*
+*Last Updated: January 30, 2026 | Version: 0.9.0*

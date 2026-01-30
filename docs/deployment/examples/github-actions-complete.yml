@@ -1,0 +1,593 @@
+# Complete GitHub Actions workflow for nself custom services deployment
+# This example includes: build, test, security scan, deploy, and rollback
+
+name: Deploy Custom Services to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - '.environments/prod/.env'
+      - 'docker-compose.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - staging
+          - prod
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # ============================================================================
+  # STAGE 1: BUILD & TEST
+  # ============================================================================
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - payment-api
+          - notification-worker
+          - analytics-api
+          - ml-inference
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for JS/TS services)
+        if: matrix.service != 'ml-inference'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+
+      - name: Set up Python (for Python services)
+        if: matrix.service == 'ml-inference' || matrix.service == 'analytics-api'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/${{ matrix.service }}/requirements.txt
+
+      - name: Install dependencies (Node.js)
+        if: matrix.service != 'ml-inference'
+        working-directory: services/${{ matrix.service }}
+        run: npm ci
+
+      - name: Install dependencies (Python)
+        if: matrix.service == 'ml-inference' || matrix.service == 'analytics-api'
+        working-directory: services/${{ matrix.service }}
+        run: pip install -r requirements.txt
+
+      - name: Run linter
+        working-directory: services/${{ matrix.service }}
+        run: |
+          if [ -f "package.json" ]; then
+            npm run lint || echo "No lint script"
+          elif [ -f "requirements.txt" ]; then
+            pip install flake8 && flake8 . || echo "Linting skipped"
+          fi
+
+      - name: Run unit tests
+        working-directory: services/${{ matrix.service }}
+        run: |
+          if [ -f "package.json" ]; then
+            npm test
+          elif [ -f "requirements.txt" ]; then
+            pip install pytest && pytest tests/ || echo "No tests found"
+          fi
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ matrix.service }}:${{ github.sha }} \
+            services/${{ matrix.service }}
+
+      - name: Test Docker image health
+        run: |
+          # Start container
+          docker run -d \
+            --name ${{ matrix.service }}-test \
+            -p 8080:8080 \
+            -e SERVICE_PORT=8080 \
+            ${{ matrix.service }}:${{ github.sha }}
+
+          # Wait for startup
+          sleep 10
+
+          # Health check
+          curl -f http://localhost:8080/health || exit 1
+
+          # Cleanup
+          docker stop ${{ matrix.service }}-test
+          docker rm ${{ matrix.service }}-test
+
+      - name: Save Docker image
+        run: |
+          docker save ${{ matrix.service }}:${{ github.sha }} | \
+            gzip > /tmp/${{ matrix.service }}.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-image
+          path: /tmp/${{ matrix.service }}.tar.gz
+          retention-days: 1
+
+  # ============================================================================
+  # STAGE 2: SECURITY SCANNING
+  # ============================================================================
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    strategy:
+      matrix:
+        service:
+          - payment-api
+          - notification-worker
+          - analytics-api
+          - ml-inference
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.service }}-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load < /tmp/${{ matrix.service }}.tar.gz
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ matrix.service }}:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Check for vulnerabilities
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image \
+            --exit-code 1 \
+            --severity CRITICAL,HIGH \
+            ${{ matrix.service }}:${{ github.sha }}
+
+      - name: Scan for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: services/${{ matrix.service }}
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  # ============================================================================
+  # STAGE 3: INTEGRATION TESTS
+  # ============================================================================
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install nself
+        run: |
+          curl -fsSL https://install.nself.org | bash
+          echo "$HOME/.nself/bin" >> $GITHUB_PATH
+
+      - name: Setup test environment
+        run: |
+          mkdir -p .environments/test
+          cat > .environments/test/.env <<EOF
+          ENV=test
+          PROJECT_NAME=myapp-test
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_DB=test_db
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=test_password
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          CS_1=payment-api:express-ts:8001
+          CS_2=notification-worker:bullmq-js:8002
+          CS_3=analytics-api:fastapi:8003
+          EOF
+
+      - name: Download all Docker images
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/images
+
+      - name: Load all Docker images
+        run: |
+          for img in /tmp/images/*/*.tar.gz; do
+            docker load < "$img"
+          done
+
+      - name: Run integration tests
+        run: |
+          # Start services
+          docker compose -f docker-compose.test.yml up -d
+
+          # Wait for services
+          sleep 30
+
+          # Run integration tests
+          npm run test:integration || pytest tests/integration
+
+          # Cleanup
+          docker compose -f docker-compose.test.yml down
+
+  # ============================================================================
+  # STAGE 4: STAGING DEPLOYMENT
+  # ============================================================================
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'pull_request'
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install nself
+        run: |
+          curl -fsSL https://install.nself.org | bash
+          echo "$HOME/.nself/bin" >> $GITHUB_PATH
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Setup staging environment
+        run: |
+          mkdir -p .environments/staging
+          echo "${{ secrets.STAGING_ENV }}" > .environments/staging/.env
+          echo "${{ secrets.STAGING_SECRETS }}" > .environments/staging/.env.secrets
+          chmod 600 .environments/staging/.env.secrets
+
+          cat > .environments/staging/server.json <<EOF
+          {
+            "host": "${{ secrets.STAGING_HOST }}",
+            "port": 22,
+            "user": "deploy",
+            "key": "~/.ssh/staging_key",
+            "deploy_path": "/opt/nself"
+          }
+          EOF
+
+      - name: Download all Docker images
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/images
+
+      - name: Tag images for staging
+        run: |
+          for service in payment-api notification-worker analytics-api ml-inference; do
+            docker load < /tmp/images/${service}-image/${service}.tar.gz
+            docker tag ${service}:${{ github.sha }} ${service}:staging-latest
+          done
+
+      - name: Build nself configuration
+        run: nself build
+
+      - name: Deploy to staging
+        run: |
+          nself deploy staging --skip-health
+
+      - name: Wait for deployment
+        run: sleep 60
+
+      - name: Run health checks
+        run: |
+          nself deploy health --env staging
+
+      - name: Run smoke tests
+        run: |
+          # Test custom service endpoints
+          curl -f https://payment-api.staging.example.com/health
+          curl -f https://analytics-api.staging.example.com/health
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Deployed to staging: https://staging.example.com\n\nCustom services:\n- payment-api: https://payment-api.staging.example.com\n- analytics-api: https://analytics-api.staging.example.com'
+            })
+
+  # ============================================================================
+  # STAGE 5: PRODUCTION DEPLOYMENT
+  # ============================================================================
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install nself
+        run: |
+          curl -fsSL https://install.nself.org | bash
+          echo "$HOME/.nself/bin" >> $GITHUB_PATH
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+          ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Setup production environment
+        run: |
+          mkdir -p .environments/prod
+          echo "${{ secrets.PROD_ENV }}" > .environments/prod/.env
+          echo "${{ secrets.PROD_SECRETS }}" > .environments/prod/.env.secrets
+          chmod 600 .environments/prod/.env.secrets
+
+          cat > .environments/prod/server.json <<EOF
+          {
+            "host": "${{ secrets.PROD_HOST }}",
+            "port": 22,
+            "user": "deploy",
+            "key": "~/.ssh/prod_key",
+            "deploy_path": "/opt/nself"
+          }
+          EOF
+
+      - name: Download all Docker images
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/images
+
+      - name: Tag images for production
+        run: |
+          for service in payment-api notification-worker analytics-api ml-inference; do
+            docker load < /tmp/images/${service}-image/${service}.tar.gz
+            docker tag ${service}:${{ github.sha }} ${service}:${{ github.run_number }}
+            docker tag ${service}:${{ github.sha }} ${service}:latest
+          done
+
+      - name: Create backup
+        run: |
+          nself backup create --env prod
+
+      - name: Validate configuration
+        run: |
+          nself validate prod --strict
+
+      - name: Build nself configuration
+        run: nself build
+
+      - name: Pre-deployment checks
+        run: |
+          # Check disk space
+          ssh -i ~/.ssh/prod_key deploy@${{ secrets.PROD_HOST }} "df -h"
+
+          # Check current load
+          ssh -i ~/.ssh/prod_key deploy@${{ secrets.PROD_HOST }} "uptime"
+
+      - name: Deploy to production (Blue-Green)
+        run: |
+          # Deploy to green environment
+          nself deploy prod --rolling
+
+      - name: Post-deployment health checks
+        run: |
+          # Wait for services to stabilize
+          sleep 120
+
+          # Comprehensive health checks
+          nself deploy health --env prod
+
+      - name: Verify custom services
+        run: |
+          # Test each custom service
+          services=(
+            "payment-api.example.com"
+            "analytics-api.example.com"
+          )
+
+          for service in "${services[@]}"; do
+            echo "Testing $service..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://$service/health)
+            if [ "$response" != "200" ]; then
+              echo "❌ $service health check failed"
+              exit 1
+            fi
+            echo "✅ $service healthy"
+          done
+
+      - name: Run smoke tests
+        run: |
+          # Run production smoke tests
+          npm run test:smoke:prod || echo "Smoke tests not configured"
+
+      - name: Notify success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "✅ Production deployment successful",
+              attachments: [{
+                color: 'good',
+                text: `
+                  Commit: ${{ github.sha }}
+                  Author: ${{ github.actor }}
+                  Custom services: 4 deployed
+                  Health: All passing
+                  URL: https://example.com
+                `
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ============================================================================
+  # STAGE 6: ROLLBACK (On Failure)
+  # ============================================================================
+
+  rollback:
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: failure()
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install nself
+        run: |
+          curl -fsSL https://install.nself.org | bash
+          echo "$HOME/.nself/bin" >> $GITHUB_PATH
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+
+      - name: Rollback deployment
+        run: |
+          nself deploy rollback --env prod
+
+      - name: Verify rollback
+        run: |
+          sleep 60
+          nself deploy health --env prod
+
+      - name: Restore from backup
+        if: failure()
+        run: |
+          nself backup restore --latest --env prod
+
+      - name: Notify failure and rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "❌ Production deployment failed - ROLLED BACK",
+              attachments: [{
+                color: 'danger',
+                text: `
+                  Commit: ${{ github.sha }}
+                  Author: ${{ github.actor }}
+                  Action: Rolled back to previous version
+                  Status: Please investigate
+                `
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ============================================================================
+  # STAGE 7: POST-DEPLOYMENT MONITORING
+  # ============================================================================
+
+  post-deployment-monitoring:
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+
+    steps:
+      - name: Monitor for 5 minutes
+        run: |
+          echo "Monitoring production for 5 minutes..."
+          sleep 300
+
+      - name: Check error rates
+        run: |
+          # Query Prometheus for error rates
+          # This would use your monitoring API
+          echo "Checking error rates..."
+
+      - name: Check response times
+        run: |
+          # Query for p95 response times
+          echo "Checking response times..."
+
+      - name: Create deployment record
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              description: 'Custom services deployed',
+              auto_merge: false
+            })

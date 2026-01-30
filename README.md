@@ -289,7 +289,12 @@ nself (56 commands)
 │   └── metrics       Metrics collection and reporting
 │
 ├── 🏢 Multi-Tenancy (NEW in v0.8.0)
-│   ├── tenant        Tenant management (create, list, switch, delete)
+│   ├── tenant        Multi-tenant management (create, list, switch, delete)
+│   │   ├── billing   Billing and subscription management
+│   │   ├── branding  Brand customization (logo, colors, themes)
+│   │   ├── domains   Custom domain management and SSL
+│   │   ├── email     Email template customization
+│   │   └── themes    Theme management and activation
 │   └── org           Organization management (create, invite, roles)
 │
 ├── 🔌 Plugin System (NEW in v0.8.0)

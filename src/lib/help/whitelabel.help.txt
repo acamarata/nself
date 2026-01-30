@@ -1,0 +1,400 @@
+================================================================================
+nself whitelabel - White-Label & Customization Management
+================================================================================
+
+⚠️  DEPRECATION NOTICE (v0.5.0+):
+    This command is deprecated and will be removed in a future version.
+    Please use the new tenant-scoped commands:
+
+    Migration guide:
+      nself whitelabel branding  →  nself tenant branding
+      nself whitelabel domain    →  nself tenant domains
+      nself whitelabel email     →  nself tenant email
+      nself whitelabel theme     →  nself tenant themes
+      nself whitelabel logo      →  nself tenant branding logo
+
+OVERVIEW:
+  Complete white-label solution for branding, customization, and multi-tenant
+  configurations. Customize every aspect of your nself application to match
+  your brand identity.
+
+USAGE:
+  nself whitelabel <command> [options]      (DEPRECATED)
+  nself tenant <feature> <command> [options] (RECOMMENDED)
+
+================================================================================
+COMMANDS
+================================================================================
+
+BRANDING:
+  branding create <name>              Create new brand configuration
+  branding set-colors --primary=<hex> Set brand colors
+                      --secondary=<hex>
+  branding set-fonts --primary=<name> Set brand typography
+                     --secondary=<name>
+  branding upload-logo <path>         Upload brand logo
+  branding set-css <path>             Apply custom CSS stylesheet
+  branding preview                    Preview branding in browser
+
+DOMAIN MANAGEMENT:
+  domain add <domain>                 Add custom domain
+  domain verify <domain>              Verify domain ownership
+  domain ssl <domain>                 Provision SSL certificate
+  domain ssl <domain> --auto-renew    Enable auto-renewal
+  domain health <domain>              Check domain health status
+  domain remove <domain>              Remove custom domain
+
+EMAIL TEMPLATES:
+  email list                          List all email templates
+  email edit <template>               Edit email template
+  email preview <template>            Preview template in browser
+  email test <template> <email>       Send test email
+  email set-language <lang>           Set default email language
+
+THEME MANAGEMENT:
+  theme create <name>                 Create custom theme
+  theme edit <name>                   Edit theme configuration
+  theme activate <name>               Activate theme
+  theme preview <name>                Preview theme
+  theme export <name>                 Export theme as JSON
+  theme import <path>                 Import theme from file
+
+LOGO MANAGEMENT:
+  logo upload <path>                  Upload logo file
+  logo upload <path> --type=<type>    Upload specific logo type
+  logo list                           List all uploaded logos
+  logo remove <id>                    Remove logo
+
+SYSTEM:
+  settings                            View whitelabel settings
+  init                                Initialize whitelabel system
+  list                                List all brands/themes/domains
+  export --format=<format>            Export branding config
+  import <path>                       Import branding config
+
+================================================================================
+OPTIONS
+================================================================================
+
+  --brand <name>           Specify brand name for multi-brand setups
+  --tenant <id>            Specify tenant ID for multi-tenant mode
+  --format <json|yaml>     Output format (default: json)
+  --help, -h               Show this help message
+  --version, -v            Show version information
+
+LOGO TYPES:
+  main                     Primary logo (light background)
+  dark                     Dark mode logo
+  icon                     App icon/favicon
+  email                    Email header logo
+
+THEME PROPERTIES:
+  colors                   Color palette configuration
+  typography               Font families and sizes
+  spacing                  Layout spacing system
+  borders                  Border radius and styles
+  shadows                  Shadow definitions
+  animations               Animation configurations
+
+================================================================================
+EMAIL TEMPLATES
+================================================================================
+
+  Available templates:
+    - welcome              Welcome email for new users
+    - verify-email         Email verification
+    - password-reset       Password reset instructions
+    - invitation           Team/tenant invitation
+    - notification         General notifications
+    - receipt              Payment receipts
+    - report               Periodic reports
+
+  Template variables:
+    {{user_name}}          User's display name
+    {{user_email}}         User's email address
+    {{brand_name}}         Your brand name
+    {{brand_logo}}         Brand logo URL
+    {{action_url}}         Call-to-action URL
+    {{support_email}}      Support contact email
+
+================================================================================
+SUPPORTED LANGUAGES
+================================================================================
+
+  Email templates support:
+    en    English (default)
+    es    Spanish
+    fr    French
+    de    German
+    ja    Japanese
+    zh    Chinese (Simplified)
+
+  Custom languages can be added via template files.
+
+================================================================================
+EXAMPLES
+================================================================================
+
+  Create new brand:
+    $ nself whitelabel branding create "Acme Corporation"
+
+  Set brand colors:
+    $ nself whitelabel branding set-colors \
+        --primary "#0066cc" \
+        --secondary "#ff6600"
+
+  Set brand fonts:
+    $ nself whitelabel branding set-fonts \
+        --primary "Inter" \
+        --secondary "Roboto"
+
+  Upload main logo:
+    $ nself whitelabel logo upload ./logo.png --type main
+
+  Upload dark mode logo:
+    $ nself whitelabel logo upload ./logo-dark.png --type dark
+
+  Add custom domain:
+    $ nself whitelabel domain add app.acmecorp.com
+
+  Verify domain ownership (DNS):
+    $ nself whitelabel domain verify app.acmecorp.com
+
+  Provision SSL certificate:
+    $ nself whitelabel domain ssl app.acmecorp.com --auto-renew
+
+  Check domain health:
+    $ nself whitelabel domain health app.acmecorp.com
+
+  List all email templates:
+    $ nself whitelabel email list
+
+  Edit welcome email template:
+    $ nself whitelabel email edit welcome
+
+  Preview email template:
+    $ nself whitelabel email preview welcome
+
+  Send test email:
+    $ nself whitelabel email test welcome user@example.com
+
+  Set default language to Spanish:
+    $ nself whitelabel email set-language es
+
+  Create custom theme:
+    $ nself whitelabel theme create dark-mode
+
+  Edit theme:
+    $ nself whitelabel theme edit dark-mode
+
+  Activate theme:
+    $ nself whitelabel theme activate dark-mode
+
+  Preview theme before activation:
+    $ nself whitelabel theme preview dark-mode
+
+  Export theme configuration:
+    $ nself whitelabel theme export dark-mode > theme.json
+
+  Import theme:
+    $ nself whitelabel theme import ./theme.json
+
+  Export entire branding config:
+    $ nself whitelabel export --format json > branding.json
+
+  Import branding config:
+    $ nself whitelabel import ./branding.json
+
+  View current settings:
+    $ nself whitelabel settings
+
+  List all resources (brands, themes, domains):
+    $ nself whitelabel list
+
+================================================================================
+CUSTOM CSS GUIDELINES
+================================================================================
+
+  CSS Variable Override:
+    :root {
+      --primary-color: #0066cc;
+      --secondary-color: #ff6600;
+      --font-primary: 'Inter', sans-serif;
+      --font-secondary: 'Roboto', sans-serif;
+      --border-radius: 8px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+  Component Customization:
+    .nself-button {
+      background: var(--primary-color);
+      border-radius: var(--border-radius);
+    }
+
+    .nself-card {
+      box-shadow: var(--shadow-sm);
+    }
+
+  Best Practices:
+    1. Use CSS variables for maintainability
+    2. Avoid !important unless absolutely necessary
+    3. Test in light and dark modes
+    4. Ensure sufficient color contrast (WCAG AA)
+    5. Test on mobile devices
+
+================================================================================
+DOMAIN VERIFICATION
+================================================================================
+
+  DNS Configuration:
+    1. Add custom domain: nself whitelabel domain add example.com
+    2. Get verification records
+    3. Add TXT record to DNS:
+       Name:  _nself-verify.example.com
+       Value: <verification-token>
+    4. Verify: nself whitelabel domain verify example.com
+
+  SSL Certificate:
+    Automatic via Let's Encrypt:
+      $ nself whitelabel domain ssl example.com --auto-renew
+
+    Manual certificate upload:
+      Place cert.pem and key.pem in:
+        ssl/custom/<domain>/
+
+================================================================================
+MULTI-TENANT USAGE
+================================================================================
+
+  Create brand per tenant:
+    $ nself whitelabel branding create "Tenant A" --tenant=tenant-a-id
+
+  Set tenant-specific colors:
+    $ nself whitelabel branding set-colors \
+        --primary "#ff0000" \
+        --tenant=tenant-a-id
+
+  Configure tenant domain:
+    $ nself whitelabel domain add tenant-a.app.com --tenant=tenant-a-id
+
+  List brands by tenant:
+    $ nself whitelabel list --tenant=tenant-a-id
+
+================================================================================
+THEME STRUCTURE
+================================================================================
+
+  Theme JSON format:
+    {
+      "name": "dark-mode",
+      "version": "1.0.0",
+      "colors": {
+        "primary": "#3b82f6",
+        "secondary": "#8b5cf6",
+        "background": "#1f2937",
+        "surface": "#374151",
+        "text": "#f9fafb"
+      },
+      "typography": {
+        "fontFamily": {
+          "primary": "Inter",
+          "secondary": "Roboto Mono"
+        },
+        "fontSize": {
+          "sm": "0.875rem",
+          "base": "1rem",
+          "lg": "1.125rem"
+        }
+      },
+      "spacing": {
+        "unit": "8px",
+        "scale": [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
+      }
+    }
+
+================================================================================
+COMMON WORKFLOWS
+================================================================================
+
+  Complete Brand Setup:
+    1. nself whitelabel init
+    2. nself whitelabel branding create "My Brand"
+    3. nself whitelabel branding set-colors --primary="#..." --secondary="#..."
+    4. nself whitelabel logo upload ./logo.png
+    5. nself whitelabel domain add app.mybrand.com
+    6. nself whitelabel domain verify app.mybrand.com
+    7. nself whitelabel domain ssl app.mybrand.com --auto-renew
+
+  Email Template Customization:
+    1. nself whitelabel email list
+    2. nself whitelabel email edit welcome
+    3. nself whitelabel email preview welcome
+    4. nself whitelabel email test welcome test@example.com
+    5. Deploy changes
+
+  Theme Creation:
+    1. nself whitelabel theme create my-theme
+    2. nself whitelabel theme edit my-theme
+    3. nself whitelabel theme preview my-theme
+    4. nself whitelabel theme activate my-theme
+
+================================================================================
+RELATED COMMANDS
+================================================================================
+
+  nself tenant             Manage multi-tenant system
+  nself org                Organization management
+  nself ssl                SSL certificate management
+  nself admin              Admin interface configuration
+
+================================================================================
+TIPS & BEST PRACTICES
+================================================================================
+
+  1. Always preview branding changes before activating
+  2. Keep backup of theme configurations
+  3. Test email templates with real data
+  4. Verify domain before pointing DNS
+  5. Use version control for custom CSS
+  6. Test themes in light and dark modes
+  7. Ensure logo files are optimized (< 100KB)
+  8. Use SVG logos when possible for scalability
+  9. Document brand guidelines for team
+  10. Test on multiple devices and browsers
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+  "Domain verification failed"
+    - Check DNS propagation: dig _nself-verify.example.com TXT
+    - Wait up to 48 hours for DNS propagation
+    - Verify TXT record value matches exactly
+
+  "SSL certificate provisioning failed"
+    - Ensure domain is verified first
+    - Check domain points to correct IP
+    - Verify ports 80 and 443 are accessible
+    - Check Let's Encrypt rate limits
+
+  "Logo not displaying"
+    - Verify logo uploaded successfully: nself whitelabel logo list
+    - Check file format (PNG, SVG, JPG supported)
+    - Ensure file size < 5MB
+    - Clear browser cache
+
+  "Email template changes not applied"
+    - Rebuild templates: nself whitelabel email list
+    - Check template syntax
+    - Verify variables are correctly formatted
+    - Clear email service cache
+
+================================================================================
+MORE INFORMATION
+================================================================================
+
+  Documentation:     https://docs.nself.org/whitelabel
+  Theme Gallery:     https://themes.nself.org
+  Brand Examples:    https://docs.nself.org/whitelabel/examples
+  CSS Variables:     https://docs.nself.org/whitelabel/css-reference
+  Support:           support@nself.org
