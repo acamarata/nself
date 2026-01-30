@@ -287,7 +287,8 @@ stripe_customer_show() {
     printf "Name:         %s\n" "${name:-N/A}"
     printf "Email:        %s\n" "${email:-N/A}"
     printf "Created:      %s\n" "$(date -r "$created" 2>/dev/null || echo "$created")"
-    printf "Balance:      %s %s\n" "$((balance / 100))" "${currency^^}"
+    # Convert currency to uppercase using tr for Bash 3.2 compatibility
+    printf "Balance:      %s %s\n" "$((balance / 100))" "$(echo "$currency" | tr '[:lower:]' '[:upper:]')"
     printf "\n"
 }
 

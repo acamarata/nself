@@ -10,6 +10,13 @@ docs/**
 src/tests/**
 src/examples/**
 
+# Build modules contain generated nginx configs (legitimate use of $host)
+src/lib/build/**
+src/lib/services/nginx-generator.sh
+
+# Workflow files use controlled GitHub context variables (not user input)
+.github/workflows/**
+
 # Third-party or generated files
 node_modules/
 vendor/

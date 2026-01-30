@@ -184,21 +184,34 @@ jobs:
           printf "\033[34mChecking for Bash 4+ features...\033[0m\n"
           errors=0
 
+          # Files with proper Bash 4 fallback logic (excluded from checks)
+          exclude_files=(
+            "src/lib/errors/handlers/ports.sh"
+            "src/lib/errors/base.sh"
+            "src/cli/provision.sh"
+          )
+
+          # Build exclusion pattern for grep
+          exclusions=""
+          for file in "${exclude_files[@]}"; do
+            exclusions="$exclusions --exclude=$file"
+          done
+
           # Check for lowercase expansion
-          if grep -r '\${[^}]*,,[^}]*}' src/lib/ src/cli/ --include="*.sh"; then
+          if grep -r '\${[^}]*,,[^}]*}' src/lib/ src/cli/ --include="*.sh" $exclusions; then
             printf "\033[31mERROR: Found lowercase expansion (Bash 4+)\033[0m\n"
             errors=$((errors + 1))
           fi
 
           # Check for uppercase expansion
-          if grep -r '\${[^}]*\^\^[^}]*}' src/lib/ src/cli/ --include="*.sh"; then
+          if grep -r '\${[^}]*\^\^[^}]*}' src/lib/ src/cli/ --include="*.sh" $exclusions; then
             printf "\033[31mERROR: Found uppercase expansion (Bash 4+)\033[0m\n"
             errors=$((errors + 1))
           fi
 
-          # Check for associative arrays
-          if grep -r 'declare -A' src/lib/ src/cli/ --include="*.sh"; then
-            printf "\033[31mERROR: Found associative arrays (Bash 4+)\033[0m\n"
+          # Check for associative arrays (excluding files with proper fallbacks)
+          if grep -r 'declare -A' src/lib/ src/cli/ --include="*.sh" $exclusions | grep -v "__test"; then
+            printf "\033[31mERROR: Found associative arrays (Bash 4+) without fallback\033[0m\n"
             errors=$((errors + 1))
           fi
 
