@@ -188,12 +188,11 @@ nself
 │   ├── switch <name>           Switch environment
 │   └── diff <env1> <env2>      Compare environments
 │
-├── Cloud Infrastructure (nself cloud) - v0.4.7
-│   ├── provider                Provider management
-│   │   ├── list               List 26 providers
-│   │   ├── init <provider>    Configure credentials
-│   │   ├── validate           Validate config
-│   │   └── info <provider>    Provider details
+├── Provider Infrastructure (nself provider) - v0.4.7
+│   ├── list                    List 26 providers
+│   ├── init <provider>         Configure credentials
+│   ├── validate                Validate config
+│   ├── info <provider>         Provider details
 │   ├── server                  Server management
 │   │   ├── create <provider>  Provision server
 │   │   ├── destroy <server>   Destroy server
@@ -421,9 +420,10 @@ nself
 │   └── help [command]          Show help
 │
 └── Legacy (backward compatible)
-    ├── providers               → nself cloud provider
-    ├── provision               → nself cloud server create
-    ├── servers                 → nself cloud server
+    ├── providers               → nself provider
+    ├── provision               → nself provider server create
+    ├── servers                 → nself provider server
+    ├── cloud                   → nself provider (legacy alias)
     ├── email                   → nself service email
     ├── search                  → nself service search
     ├── functions               → nself service functions
@@ -548,12 +548,12 @@ nself helm install              # Install Helm chart
 nself helm upgrade              # Upgrade release
 ```
 
-### Cloud Infrastructure
+### Provider Infrastructure
 
 ```bash
-nself cloud provider list       # List 26 providers
-nself cloud server create       # Provision server
-nself cloud cost compare        # Compare provider costs
+nself provider list             # List 26 providers
+nself provider server create    # Provision server
+nself provider cost compare     # Compare provider costs
 ```
 
 ### Service Management
@@ -600,7 +600,7 @@ nself scale postgres --cpu 2    # Scale service
 | **OAuth** | 7 | OAuth provider management (NEW v0.9.0) |
 | **Storage** | 8 | File storage and uploads (NEW v0.9.0) |
 | **Deployment** | 12 | Environment and deployment (enhanced v0.4.7) |
-| **Cloud** | 4 | Infrastructure management (v0.4.7) |
+| **Provider** | 4 | Infrastructure management (v0.4.7) |
 | **Service** | 15+ | Optional service management (enhanced v0.9.0) |
 | **Kubernetes** | 11 | K8s operations (v0.4.7) |
 | **Helm** | 12 | Helm chart management (v0.4.7) |
@@ -685,8 +685,8 @@ Each command has detailed documentation:
 ### Deployment
 - [deploy](DEPLOY.md) | [env](ENV.md) | [sync](SYNC.md)
 
-### Cloud & Kubernetes (v0.4.7)
-- [cloud](CLOUD.md) | [k8s](K8S.md) | [helm](HELM.md) | [service](SERVICE.md)
+### Provider & Kubernetes (v0.4.7)
+- [provider](PROVIDER.md) | [k8s](K8S.md) | [helm](HELM.md) | [service](SERVICE.md)
 
 ### Performance (v0.4.6)
 - [perf](PERF.md) | [bench](BENCH.md) | [scale](SCALE.md) | [migrate](MIGRATE.md)

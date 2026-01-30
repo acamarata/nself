@@ -35,7 +35,7 @@ provider_alibaba_validate() {
     log_success "Alibaba Cloud configured"
     return 0
   fi
-  log_error "Alibaba Cloud not configured. Run: nself cloud init alibaba"
+  log_error "Alibaba Cloud not configured. Run: nself provider init alibaba"
   return 1
 }
 

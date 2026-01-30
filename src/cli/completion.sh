@@ -32,8 +32,8 @@ _nself_completions() {
     local cur prev words cword
     _init_completion || return
 
-    # Main commands (v0.4.7)
-    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync cloud service k8s helm perf bench scale migrate health frontend history config plugin ci completion"
+    # Main commands (v0.9.6)
+    local commands="init build start stop restart status logs exec urls doctor help update ssl trust admin clean reset version env deploy prod staging db sync provider cloud service k8s helm perf bench scale migrate health frontend history config plugin ci completion tenant"
 
     # Subcommands by parent
     local db_commands="migrate seed mock backup restore schema types shell query inspect data optimize reset status help"
@@ -42,7 +42,14 @@ _nself_completions() {
     local ssl_commands="generate renew bootstrap check trust"
     local deploy_commands="staging production rollback preview canary blue-green"
 
-    # v0.4.7 new command subcommands
+    # v0.9.6 provider command subcommands
+    local provider_commands="info server cost deploy list init validate show create destroy ssh"
+    local provider_info_commands="list init validate show"
+    local provider_server_commands="create destroy list status ssh add remove"
+    local provider_cost_commands="estimate compare"
+    local provider_deploy_commands="quick full"
+
+    # v0.4.7 cloud command (deprecated, maps to provider)
     local cloud_commands="provider server cost deploy"
     local cloud_provider_commands="list init validate info"
     local cloud_server_commands="create destroy list status ssh add remove"
@@ -98,20 +105,24 @@ _nself_completions() {
             COMPREPLY=($(compgen -W "${deploy_commands}" -- "${cur}"))
             return 0
             ;;
+        provider)
+            COMPREPLY=($(compgen -W "${provider_commands}" -- "${cur}"))
+            return 0
+            ;;
         cloud)
             COMPREPLY=($(compgen -W "${cloud_commands}" -- "${cur}"))
             return 0
             ;;
-        provider)
-            COMPREPLY=($(compgen -W "${cloud_provider_commands}" -- "${cur}"))
+        info)
+            COMPREPLY=($(compgen -W "${provider_info_commands}" -- "${cur}"))
             return 0
             ;;
         server)
-            COMPREPLY=($(compgen -W "${cloud_server_commands}" -- "${cur}"))
+            COMPREPLY=($(compgen -W "${provider_server_commands}" -- "${cur}"))
             return 0
             ;;
         cost)
-            COMPREPLY=($(compgen -W "${cloud_cost_commands}" -- "${cur}"))
+            COMPREPLY=($(compgen -W "${provider_cost_commands}" -- "${cur}"))
             return 0
             ;;
         service)
@@ -326,7 +337,8 @@ _nself() {
         'staging:Staging deployment shortcut'
         'db:Database management'
         'sync:Environment synchronization with auto-watch'
-        'cloud:Cloud infrastructure management'
+        'provider:Provider infrastructure management'
+        'cloud:DEPRECATED - Use provider instead'
         'service:Optional service management'
         'k8s:Kubernetes management'
         'helm:Helm chart management'
@@ -338,6 +350,8 @@ _nself() {
         'frontend:Frontend application management'
         'history:Deployment audit trail'
         'config:Configuration management'
+        'plugin:Plugin management'
+        'tenant:Multi-tenant management'
         'ci:CI/CD workflow generation'
         'completion:Generate shell completions'
     )
@@ -387,6 +401,20 @@ _nself() {
         'preview:Create preview environment'
         'canary:Canary deployment'
         'blue-green:Blue-green deployment'
+    )
+
+    provider_commands=(
+        'info:Provider information (list, init, validate, show)'
+        'server:Server management (create, destroy, list, status, ssh)'
+        'cost:Cost estimation (estimate, compare)'
+        'deploy:Quick deployment (quick, full)'
+        'list:List all providers (shortcut)'
+        'init:Initialize provider (shortcut)'
+        'validate:Validate configuration (shortcut)'
+        'show:Show provider info (shortcut)'
+        'create:Create server (shortcut)'
+        'destroy:Destroy server (shortcut)'
+        'ssh:SSH to server (shortcut)'
     )
 
     cloud_commands=(
@@ -495,8 +523,11 @@ _nself() {
                 deploy)
                     _describe -t deploy_commands 'deploy command' deploy_commands
                     ;;
+                provider)
+                    _describe -t provider_commands 'provider command' provider_commands
+                    ;;
                 cloud)
-                    _describe -t cloud_commands 'cloud command' cloud_commands
+                    _describe -t cloud_commands 'cloud command (deprecated)' cloud_commands
                     ;;
                 service)
                     _describe -t service_commands 'service command' service_commands
@@ -535,17 +566,29 @@ _nself() {
             ;;
         subsubcommand)
             case "$words[2]-$words[3]" in
-                cloud-provider)
-                    local -a provider_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'info:Show provider info')
-                    _describe -t provider_cmds 'provider command' provider_cmds
+                provider-info)
+                    local -a info_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'show:Show provider info')
+                    _describe -t info_cmds 'info command' info_cmds
                     ;;
-                cloud-server)
+                provider-server)
                     local -a server_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
                     _describe -t server_cmds 'server command' server_cmds
                     ;;
-                cloud-cost)
+                provider-cost)
                     local -a cost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
                     _describe -t cost_cmds 'cost command' cost_cmds
+                    ;;
+                cloud-provider)
+                    local -a provider_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'info:Show provider info')
+                    _describe -t provider_cmds 'provider command (deprecated)' provider_cmds
+                    ;;
+                cloud-server)
+                    local -a server_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
+                    _describe -t server_cmds 'server command (deprecated)' server_cmds
+                    ;;
+                cloud-cost)
+                    local -a cost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
+                    _describe -t cost_cmds 'cost command (deprecated)' cost_cmds
                     ;;
                 k8s-cluster)
                     local -a cluster_cmds=('list:List clusters' 'connect:Connect to cluster' 'info:Show cluster info')
@@ -622,7 +665,8 @@ complete -c nself -f -n "__fish_use_subcommand" -a "prod" -d "Production deploy"
 complete -c nself -f -n "__fish_use_subcommand" -a "staging" -d "Staging deploy"
 complete -c nself -f -n "__fish_use_subcommand" -a "db" -d "Database management"
 complete -c nself -f -n "__fish_use_subcommand" -a "sync" -d "Environment sync"
-complete -c nself -f -n "__fish_use_subcommand" -a "cloud" -d "Cloud infrastructure"
+complete -c nself -f -n "__fish_use_subcommand" -a "provider" -d "Provider infrastructure"
+complete -c nself -f -n "__fish_use_subcommand" -a "cloud" -d "DEPRECATED - Use provider"
 complete -c nself -f -n "__fish_use_subcommand" -a "service" -d "Optional services"
 complete -c nself -f -n "__fish_use_subcommand" -a "k8s" -d "Kubernetes management"
 complete -c nself -f -n "__fish_use_subcommand" -a "helm" -d "Helm chart management"
@@ -670,7 +714,20 @@ complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "preview" -d "Pr
 complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "canary" -d "Canary deployment"
 complete -c nself -f -n "__fish_seen_subcommand_from deploy" -a "blue-green" -d "Blue-green deploy"
 
-# cloud subcommands
+# provider subcommands
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "info" -d "Provider information"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "server" -d "Server management"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "cost" -d "Cost estimation"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "deploy" -d "Quick deployment"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "list" -d "List providers (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "init" -d "Init provider (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "validate" -d "Validate config (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "show" -d "Show info (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "create" -d "Create server (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "destroy" -d "Destroy server (shortcut)"
+complete -c nself -f -n "__fish_seen_subcommand_from provider" -a "ssh" -d "SSH to server (shortcut)"
+
+# cloud subcommands (deprecated)
 complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "provider" -d "Provider management"
 complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "server" -d "Server management"
 complete -c nself -f -n "__fish_seen_subcommand_from cloud" -a "cost" -d "Cost estimation"

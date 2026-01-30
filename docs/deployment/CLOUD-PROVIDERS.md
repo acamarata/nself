@@ -54,10 +54,10 @@ nself supports deployment to 26+ cloud providers with custom services fully inte
 
 ```bash
 # Initialize AWS provider
-nself providers init aws
+nself provider init aws
 
 # Provision EC2 instance for Docker Compose
-nself provision aws --size medium --region us-east-1
+nself provider server create aws --size medium --region us-east-1
 
 # This creates:
 # - t3.medium (2 vCPU, 4GB RAM)
@@ -103,10 +103,10 @@ nself k8s deploy --env production
 
 ```bash
 # Use Spot Instances for workers
-nself provision aws --spot --size large
+nself provider server create aws --spot --size large
 
 # Use ARM instances (Graviton2) - 20% cheaper
-nself provision aws --architecture arm64 --size medium
+nself provider server create aws --architecture arm64 --size medium
 
 # Reserved Instances for production
 # Save 30-40% with 1-year commitment
@@ -157,7 +157,7 @@ aws elbv2 create-target-group \
 # Complete AWS production deployment
 
 # 1. Provision infrastructure
-nself provision aws \
+nself provider server create aws \
   --size large \
   --region us-east-1 \
   --high-availability \
@@ -196,10 +196,10 @@ nself deploy prod
 
 ```bash
 # Initialize GCP
-nself providers init gcp
+nself provider init gcp
 
 # Provision VM instance
-nself provision gcp --size medium --region us-central1
+nself provider server create gcp --size medium --region us-central1
 
 # Creates:
 # - e2-medium (2 vCPU, 4GB)
@@ -228,13 +228,13 @@ nself k8s deploy --env production
 
 ```bash
 # Use preemptible VMs (80% cheaper)
-nself provision gcp --preemptible --size medium
+nself provider server create gcp --preemptible --size medium
 
 # Use committed use discounts
 # Save 37% with 1-year commitment
 
 # Use Google's free tier
-nself provision gcp --size micro  # Always free
+nself provider server create gcp --size micro  # Always free
 ```
 
 #### Auto-Scaling
@@ -285,10 +285,10 @@ nself k8s scale payment-api --auto \
 
 ```bash
 # Initialize Azure
-nself providers init azure
+nself provider init azure
 
 # Provision VM
-nself provision azure --size medium --region eastus
+nself provider server create azure --size medium --region eastus
 
 # Creates:
 # - Standard_B2s (2 vCPU, 4GB)
@@ -317,7 +317,7 @@ nself k8s deploy --env production
 
 ```bash
 # Use Spot VMs
-nself provision azure --spot --size large
+nself provider server create azure --spot --size large
 
 # Use Azure reservations
 # Save 40% with 1-year commitment
@@ -351,10 +351,10 @@ az aks update \
 
 ```bash
 # Initialize Oracle Cloud
-nself providers init oracle
+nself provider init oracle
 
 # Provision FREE VM (amazing value)
-nself provision oracle --size free
+nself provider server create oracle --size free
 
 # This gives you:
 # - 2 AMD VMs (1GB each) OR 1 ARM VM (4 cores, 24GB)
@@ -367,7 +367,7 @@ nself provision oracle --size free
 
 ```bash
 # Use ARM VM for best free tier value
-nself provision oracle --size free --arm
+nself provider server create oracle --size free --arm
 
 # Deploy normally
 nself deploy prod
@@ -394,8 +394,8 @@ docker buildx build --platform linux/arm64 -t payment-api .
 
 ```bash
 # Paid instances
-nself provision oracle --size small  # ~$10/mo
-nself provision oracle --size medium # ~$30/mo
+nself provider server create oracle --size small  # ~$10/mo
+nself provider server create oracle --size medium # ~$30/mo
 ```
 
 ---
@@ -417,10 +417,10 @@ nself provision oracle --size medium # ~$30/mo
 
 ```bash
 # Initialize DigitalOcean
-nself providers init digitalocean
+nself provider init digitalocean
 
 # Provision droplet
-nself provision digitalocean --size medium --region nyc1
+nself provider server create digitalocean --size medium --region nyc1
 
 # Creates:
 # - 4GB RAM, 2 vCPU
@@ -465,7 +465,7 @@ nself k8s deploy --env production
 ```bash
 # Right-size your droplet
 # Start small, scale up as needed
-nself provision digitalocean --size small  # $6/mo
+nself provider server create digitalocean --size small  # $6/mo
 
 # Use snapshots for backup (cheaper than backups)
 doctl compute snapshot create --droplet-id <id>
@@ -484,7 +484,7 @@ doctl compute snapshot create --droplet-id <id>
 # Recommended production setup
 
 # 1. Provision droplet
-nself provision digitalocean \
+nself provider server create digitalocean \
   --size dedicated-cpu-2 \
   --region nyc1 \
   --vpc myapp-vpc \
@@ -517,10 +517,10 @@ nself deploy prod
 
 ```bash
 # Initialize Linode
-nself providers init linode
+nself provider init linode
 
 # Provision server
-nself provision linode --size medium --region us-east
+nself provider server create linode --size medium --region us-east
 
 # Creates:
 # - 4GB RAM, 2 vCPU
@@ -565,16 +565,16 @@ nself k8s deploy --env production
 
 ```bash
 # Initialize Vultr
-nself providers init vultr
+nself provider init vultr
 
 # Provision instance
-nself provision vultr --size medium --region ewr
+nself provider server create vultr --size medium --region ewr
 
 # High-frequency compute (better CPU)
-nself provision vultr --size high-frequency --region ewr
+nself provider server create vultr --size high-frequency --region ewr
 
 # Bare metal (dedicated hardware)
-nself provision vultr --bare-metal --size bm-small
+nself provider server create vultr --bare-metal --size bm-small
 ```
 
 #### Global Deployment
@@ -583,10 +583,10 @@ Vultr has 32+ locations worldwide:
 
 ```bash
 # Deploy to multiple regions
-nself provision vultr --size medium --region ewr  # Newark
-nself provision vultr --size medium --region lax  # Los Angeles
-nself provision vultr --size medium --region fra  # Frankfurt
-nself provision vultr --size medium --region sgp  # Singapore
+nself provider server create vultr --size medium --region ewr  # Newark
+nself provider server create vultr --size medium --region lax  # Los Angeles
+nself provider server create vultr --size medium --region fra  # Frankfurt
+nself provider server create vultr --size medium --region sgp  # Singapore
 
 # Setup geo-routing with CloudFlare or Route53
 ```
@@ -608,10 +608,10 @@ nself provision vultr --size medium --region sgp  # Singapore
 
 ```bash
 # Initialize Hetzner
-nself providers init hetzner
+nself provider init hetzner
 
 # Provision cloud server
-nself provision hetzner --size medium --region fsn1
+nself provider server create hetzner --size medium --region fsn1
 
 # Creates CX21:
 # - 2 vCPU
@@ -636,7 +636,7 @@ nself deploy prod
 
 ```bash
 # Best value production setup
-nself provision hetzner --size large --region fsn1
+nself provider server create hetzner --size large --region fsn1
 
 # CX31:
 # - 2 vCPU
@@ -656,7 +656,7 @@ nself provision hetzner --size large --region fsn1
 
 ```bash
 # Even better value for high-traffic apps
-nself provision hetzner --dedicated --size ax41-nvme
+nself provider server create hetzner --dedicated --size ax41-nvme
 
 # AX41-NVMe:
 # - AMD Ryzen 5 3600 (6 cores, 12 threads)
@@ -676,17 +676,17 @@ Deploy to multiple providers for redundancy:
 
 ```bash
 # Region 1: AWS US-East (primary)
-nself provision aws --region us-east-1
+nself provider server create aws --region us-east-1
 nself env create prod-aws prod
 nself deploy prod-aws
 
 # Region 2: GCP US-Central (secondary)
-nself provision gcp --region us-central1
+nself provider server create gcp --region us-central1
 nself env create prod-gcp prod
 nself deploy prod-gcp
 
 # Region 3: Hetzner EU (tertiary)
-nself provision hetzner --region fsn1
+nself provider server create hetzner --region fsn1
 nself env create prod-eu prod
 nself deploy prod-eu
 ```
@@ -731,7 +731,7 @@ nself deploy prod-dr
 # Cloud: Custom services + APIs
 
 # Deploy custom services to cloud
-nself provision aws --size large
+nself provider server create aws --size large
 CS_1=payment-api:express-ts:8001 nself deploy prod
 
 # Connect to on-prem database
@@ -771,13 +771,13 @@ Start small, scale up as needed:
 
 ```bash
 # Start with small instance
-nself provision hetzner --size small  # 2GB RAM, $3.50/mo
+nself provider server create hetzner --size small  # 2GB RAM, $3.50/mo
 
 # Monitor resource usage
 nself metrics
 
 # Scale up when needed
-nself provision hetzner --size medium  # 4GB RAM, $6.20/mo
+nself provider server create hetzner --size medium  # 4GB RAM, $6.20/mo
 ```
 
 #### 2. Spot/Preemptible Instances
@@ -786,10 +786,10 @@ Save 60-80% for fault-tolerant workloads:
 
 ```bash
 # AWS Spot
-nself provision aws --spot --size large
+nself provider server create aws --spot --size large
 
 # GCP Preemptible
-nself provision gcp --preemptible --size large
+nself provider server create gcp --preemptible --size large
 
 # Good for:
 # - Background workers
@@ -815,10 +815,10 @@ Save 20% with ARM instances:
 
 ```bash
 # AWS Graviton2
-nself provision aws --architecture arm64
+nself provider server create aws --architecture arm64
 
 # Oracle Always Free ARM (4 cores, 24GB!)
-nself provision oracle --size free --arm
+nself provider server create oracle --size free --arm
 
 # Build multi-arch images
 docker buildx build --platform linux/amd64,linux/arm64 -t payment-api .
@@ -1037,11 +1037,11 @@ doctl compute load-balancer create \
 # Complete AWS production deployment with custom services
 
 # 1. Initialize AWS
-nself providers init aws
+nself provider init aws
 export AWS_REGION=us-east-1
 
 # 2. Provision infrastructure
-nself provision aws \
+nself provider server create aws \
   --size large \
   --region $AWS_REGION \
   --high-availability \
@@ -1113,10 +1113,10 @@ echo "  - SSL: Let's Encrypt configured"
 # Total cost: ~$13/mo for full stack + custom services
 
 # 1. Initialize Hetzner
-nself providers init hetzner
+nself provider init hetzner
 
 # 2. Provision server (best value)
-nself provision hetzner \
+nself provider server create hetzner \
   --size large \
   --region fsn1 \
   --backups
@@ -1167,10 +1167,10 @@ echo "  - Bandwidth: 20TB included"
 # Cost: $0/mo forever
 
 # 1. Initialize Oracle Cloud
-nself providers init oracle
+nself provider init oracle
 
 # 2. Provision FREE ARM instance
-nself provision oracle --size free --arm
+nself provider server create oracle --size free --arm
 
 # This gives you:
 # - 4 ARM cores (Ampere Altra)
@@ -1245,4 +1245,4 @@ echo "  - Perfect for side projects, MVPs, learning"
 - [Complete Provider List](../providers/PROVIDERS-COMPLETE.md)
 - [Kubernetes Management](../commands/K8S.md)
 - [Production Deployment](PRODUCTION-DEPLOYMENT.md)
-- [Cloud Command Reference](../commands/CLOUD.md)
+- [Provider Command Reference](../commands/PROVIDER.md)

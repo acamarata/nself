@@ -34,7 +34,7 @@ provider_tencent_validate() {
     log_success "Tencent Cloud configured"
     return 0
   fi
-  log_error "Tencent Cloud not configured. Run: nself cloud init tencent"
+  log_error "Tencent Cloud not configured. Run: nself provider init tencent"
   return 1
 }
 

@@ -72,7 +72,7 @@ provider_contabo_validate() {
   local config_file="${HOME}/.nself/providers/contabo.yml"
 
   if [[ ! -f "$config_file" ]]; then
-    log_error "Contabo not configured. Run: nself cloud providers init contabo"
+    log_error "Contabo not configured. Run: nself provider init contabo"
     return 1
   fi
 
@@ -195,7 +195,7 @@ provider_contabo_provision() {
     local instance_id
     instance_id=$(echo "$response" | grep -o '"instanceId":[0-9]*' | cut -d':' -f2)
     log_success "VPS ordered: $instance_id"
-    log_info "Check status: nself cloud status contabo $instance_id"
+    log_info "Check status: nself provider status contabo $instance_id"
     log_warning "Provisioning may take 1-24 hours"
   else
     log_error "Failed to create VPS"

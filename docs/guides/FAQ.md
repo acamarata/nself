@@ -613,7 +613,7 @@ nself start
 
 ### What cloud providers are supported?
 
-nself runs on **any cloud provider with Linux VMs and Docker**. Full support for 26 providers via `nself cloud` command:
+nself runs on **any cloud provider with Linux VMs and Docker**. Full support for 26 providers via `nself provider` command:
 
 **Tier 1 (Fully Tested):**
 - AWS (EC2, Lightsail)

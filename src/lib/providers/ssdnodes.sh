@@ -40,7 +40,7 @@ provider_ssdnodes_validate() {
     log_success "SSDNodes configured"
     return 0
   fi
-  log_error "SSDNodes not configured. Run: nself cloud init ssdnodes"
+  log_error "SSDNodes not configured. Run: nself provider init ssdnodes"
   return 1
 }
 
@@ -67,7 +67,7 @@ provider_ssdnodes_provision() {
   log_warning "SSDNodes requires manual provisioning via portal"
   log_info "1. Visit: https://www.ssdnodes.com/pricing/"
   log_info "2. Select your plan and complete checkout"
-  log_info "3. Add your server IP to nself with: nself cloud server add <ip>"
+  log_info "3. Add your server IP to nself with: nself provider server add <ip>"
   echo ""
   log_info "Recommended plans for nself:"
   echo "  - Performance VPS: 4 vCPU, 16GB RAM, 80GB NVMe - \$9.99/mo"
@@ -77,7 +77,7 @@ provider_ssdnodes_provision() {
 
 provider_ssdnodes_destroy() {
   log_warning "Manage your SSDNodes servers at: https://www.ssdnodes.com/manage/"
-  log_info "To remove from nself: nself cloud server remove <ip>"
+  log_info "To remove from nself: nself provider server remove <ip>"
   return 1
 }
 
@@ -115,7 +115,7 @@ provider_ssdnodes_list() {
     done
   else
     log_info "No SSDNodes servers registered"
-    log_info "Add servers with: nself cloud server add <ip> --provider ssdnodes"
+    log_info "Add servers with: nself provider server add <ip> --provider ssdnodes"
   fi
 }
 

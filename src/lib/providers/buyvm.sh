@@ -36,7 +36,7 @@ provider_buyvm_validate() {
     log_success "BuyVM configured"
     return 0
   fi
-  log_error "BuyVM not configured. Run: nself cloud init buyvm"
+  log_error "BuyVM not configured. Run: nself provider init buyvm"
   return 1
 }
 
@@ -74,7 +74,7 @@ provider_buyvm_provision() {
   log_info "1. Visit: https://buyvm.net"
   log_info "2. Select location and plan"
   log_info "3. Complete checkout"
-  log_info "4. Add server: nself cloud server add <ip>"
+  log_info "4. Add server: nself provider server add <ip>"
   echo ""
   log_info "Recommended for nself:"
   echo "  - SLICE1024: 1GB RAM, 20GB SSD - \$3.50/mo"
@@ -85,7 +85,7 @@ provider_buyvm_provision() {
 
 provider_buyvm_destroy() {
   log_warning "Manage BuyVM servers at: https://my.frantech.ca"
-  log_info "To remove from nself: nself cloud server remove <ip>"
+  log_info "To remove from nself: nself provider server remove <ip>"
   return 1
 }
 
@@ -121,7 +121,7 @@ provider_buyvm_list() {
     done
   else
     log_info "No BuyVM servers registered"
-    log_info "Add servers: nself cloud server add <ip> --provider buyvm"
+    log_info "Add servers: nself provider server add <ip> --provider buyvm"
   fi
 }
 

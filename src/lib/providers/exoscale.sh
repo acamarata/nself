@@ -43,7 +43,7 @@ provider_exoscale_validate() {
     log_success "Exoscale configured"
     return 0
   fi
-  log_error "Exoscale not configured. Run: nself cloud init exoscale"
+  log_error "Exoscale not configured. Run: nself provider init exoscale"
   return 1
 }
 

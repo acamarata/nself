@@ -65,7 +65,7 @@
 
 ### Infrastructure
 - [servers](commands/SERVERS) - Server management
-- [cloud](commands/CLOUD) - Cloud providers
+- [provider](commands/PROVIDER) - Cloud providers
 - [k8s](commands/K8S) - Kubernetes
 - [helm](commands/HELM) - Helm charts
 

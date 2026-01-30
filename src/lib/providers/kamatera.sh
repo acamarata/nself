@@ -44,7 +44,7 @@ provider_kamatera_validate() {
     log_success "Kamatera configured"
     return 0
   fi
-  log_error "Kamatera not configured. Run: nself cloud init kamatera"
+  log_error "Kamatera not configured. Run: nself provider init kamatera"
   return 1
 }
 

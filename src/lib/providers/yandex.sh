@@ -39,7 +39,7 @@ provider_yandex_validate() {
     log_success "Yandex Cloud configured"
     return 0
   fi
-  log_error "Yandex Cloud not configured. Run: nself cloud init yandex"
+  log_error "Yandex Cloud not configured. Run: nself provider init yandex"
   return 1
 }
 

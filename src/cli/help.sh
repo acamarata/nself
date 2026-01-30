@@ -76,12 +76,14 @@ show_general_help() {
   printf "  ${COLOR_BLUE}ssl${COLOR_RESET}           Manage SSL certificates\n"
   printf "  ${COLOR_BLUE}trust${COLOR_RESET}         Trust local SSL certificates\n"
 
-  show_section "Cloud Infrastructure (v0.4.7)"
-  printf "  ${COLOR_BLUE}cloud${COLOR_RESET}         Unified cloud infrastructure management\n"
-  printf "                   ├─ provider: list, init, validate, info\n"
+  show_section "Provider Infrastructure (v0.9.6)"
+  printf "  ${COLOR_BLUE}provider${COLOR_RESET}      Unified provider infrastructure management\n"
+  printf "                   ├─ info: list, init, validate, show\n"
   printf "                   ├─ server: create, destroy, list, status, ssh, add, remove\n"
   printf "                   ├─ cost: estimate, compare\n"
   printf "                   └─ deploy: quick, full\n"
+  echo
+  printf "  ${COLOR_BLUE}cloud${COLOR_RESET}         ${COLOR_YELLOW}DEPRECATED${COLOR_RESET} - Use 'nself provider' instead (will be removed in v1.0.0)\n"
   echo
   printf "  Supported: DigitalOcean, Linode, Vultr, Hetzner, OVH, Scaleway, UpCloud,\n"
   printf "             AWS, GCP, Azure, Oracle, IBM, Contabo, Hostinger, Kamatera,\n"

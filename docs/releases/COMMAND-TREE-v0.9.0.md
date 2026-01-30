@@ -536,8 +536,9 @@ Legacy commands still work and redirect to new structure:
 |----------------|-------------|
 | `nself billing` | `nself tenant billing` |
 | `nself whitelabel` | `nself tenant branding/domains/email/themes` |
-| `nself providers` | `nself cloud provider` |
-| `nself provision` | `nself cloud server create` |
+| `nself providers` | `nself provider` |
+| `nself provision` | `nself provider server create` |
+| `nself cloud` | `nself provider` (legacy alias) |
 | `nself staging` | `nself deploy staging` |
 | `nself prod` | `nself deploy production` |
 

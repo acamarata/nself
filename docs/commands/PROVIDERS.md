@@ -6,7 +6,7 @@
 
 ## Overview
 
-The `nself providers` command manages cloud provider configurations. This is a legacy alias for `nself cloud provider`.
+The `nself providers` command manages cloud provider configurations. This is a legacy alias for `nself provider`.
 
 ---
 
@@ -17,7 +17,7 @@ The `nself providers` command manages cloud provider configurations. This is a l
 nself providers list
 
 # Equivalent to:
-nself cloud provider list
+nself provider list
 ```
 
 ---
@@ -30,11 +30,11 @@ See [Complete Provider List](../providers/PROVIDERS-COMPLETE.md) for all 26 supp
 
 ## Note
 
-For new projects, use `nself cloud provider` instead. The `providers` command is maintained for backward compatibility.
+For new projects, use `nself provider` instead. The `providers` command is maintained for backward compatibility.
 
 ---
 
 ## See Also
 
-- [cloud command](CLOUD.md) - Cloud operations
+- [provider command](PROVIDER.md) - Provider operations
 - [Provider List](../providers/PROVIDERS-COMPLETE.md) - All providers

@@ -1,4 +1,4 @@
-# nself cloud - Cloud Infrastructure Management
+# nself provider - Provider Infrastructure Management
 
 **Version**: 0.4.7+ | **Status**: Available
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-The `nself cloud` command provides unified management for cloud infrastructure across 26 providers. It consolidates provider configuration, server provisioning, and cost management into a single coherent interface.
+The `nself provider` command provides unified management for provider infrastructure across 26 cloud providers. It consolidates provider configuration, server provisioning, and cost management into a single coherent interface.
 
 ---
 
@@ -15,36 +15,36 @@ The `nself cloud` command provides unified management for cloud infrastructure a
 ### Provider Management
 
 ```bash
-nself cloud provider list              # List all 26 supported providers
-nself cloud provider init <provider>   # Configure provider credentials
-nself cloud provider validate          # Validate current configuration
-nself cloud provider info <provider>   # Show provider details
+nself provider list              # List all 26 supported providers
+nself provider init <provider>   # Configure provider credentials
+nself provider validate          # Validate current configuration
+nself provider info <provider>   # Show provider details
 ```
 
 ### Server Management
 
 ```bash
-nself cloud server create <provider>   # Provision new server
-nself cloud server destroy <server>    # Destroy server
-nself cloud server list                # List all managed servers
-nself cloud server status [server]     # Server health status
-nself cloud server ssh <server>        # SSH to server
-nself cloud server add <ip>            # Add existing server
-nself cloud server remove <server>     # Remove from registry
+nself provider server create <provider>   # Provision new server
+nself provider server destroy <server>    # Destroy server
+nself provider server list                # List all managed servers
+nself provider server status [server]     # Server health status
+nself provider server ssh <server>        # SSH to server
+nself provider server add <ip>            # Add existing server
+nself provider server remove <server>     # Remove from registry
 ```
 
 ### Cost Management
 
 ```bash
-nself cloud cost estimate <provider>   # Estimate monthly costs
-nself cloud cost compare               # Compare costs across providers
+nself provider cost estimate <provider>   # Estimate monthly costs
+nself provider cost compare               # Compare costs across providers
 ```
 
 ### Quick Deployment
 
 ```bash
-nself cloud deploy quick               # Provision and deploy in one step
-nself cloud deploy full                # Full production setup
+nself provider deploy quick               # Provision and deploy in one step
+nself provider deploy full                # Full production setup
 ```
 
 ---
@@ -54,7 +54,7 @@ nself cloud deploy full                # Full production setup
 ### Initializing a Provider
 
 ```bash
-$ nself cloud provider init digitalocean
+$ nself provider provider init digitalocean
 Initializing DigitalOcean provider...
 API Token: ****************************
 Default Region [nyc1]:
@@ -103,7 +103,7 @@ Example mappings:
 ### Creating a Server
 
 ```bash
-$ nself cloud server create digitalocean --name myapp-prod --size medium
+$ nself provider server create digitalocean --name myapp-prod --size medium
 Provisioning DigitalOcean Droplet...
 Name: myapp-prod
 Size: s-2vcpu-4gb (medium)
@@ -124,7 +124,7 @@ SSH: ssh root@164.92.123.45
 For servers provisioned outside nself:
 
 ```bash
-$ nself cloud server add 164.92.123.45 --name prod-server --provider manual
+$ nself provider server add 164.92.123.45 --name prod-server --provider manual
 Testing SSH connection... success
 Adding to server registry... done
 
@@ -157,7 +157,7 @@ servers:
 ### Estimate for Single Provider
 
 ```bash
-$ nself cloud cost estimate hetzner --size medium
+$ nself provider cost estimate hetzner --size medium
 Hetzner Cost Estimate (medium)
 ==============================
 Instance: CX31 (2 vCPU, 8GB RAM)
@@ -173,7 +173,7 @@ Includes:
 ### Compare All Providers
 
 ```bash
-$ nself cloud cost compare --size medium
+$ nself provider cost compare --size medium
 Provider Cost Comparison (medium)
 =================================
 Provider        Monthly    Specs
@@ -233,7 +233,7 @@ AWS             $35.00     2 vCPU / 4GB (t3.medium)
 ### One-Command Deployment
 
 ```bash
-$ nself cloud deploy quick --provider digitalocean
+$ nself provider deploy quick --provider digitalocean
 This will:
 1. Provision a new server on DigitalOcean (medium)
 2. Install Docker and nself prerequisites
@@ -269,10 +269,10 @@ SSH: ssh root@164.92.123.45
 
 ```bash
 # Setup provider once
-nself cloud provider init hetzner
+nself provider provider init hetzner
 
 # Create development server
-nself cloud server create hetzner --name dev --size small
+nself provider server create hetzner --name dev --size small
 
 # Deploy to it
 nself deploy --target dev
@@ -282,16 +282,16 @@ nself deploy --target dev
 
 ```bash
 # Compare costs first
-nself cloud cost compare --size large
+nself provider cost compare --size large
 
 # Provision production server
-nself cloud server create digitalocean \
+nself provider server create digitalocean \
   --name prod \
   --size large \
   --region nyc1
 
 # Full deployment with monitoring
-nself cloud deploy full --target prod
+nself provider deploy full --target prod
 ```
 
 ---
@@ -302,7 +302,7 @@ nself cloud deploy full --target prod
 
 ```bash
 # Test SSH access
-nself cloud server status myserver
+nself provider server status myserver
 
 # Manual SSH test
 ssh -v root@<ip>
@@ -312,10 +312,10 @@ ssh -v root@<ip>
 
 ```bash
 # Validate all configured providers
-nself cloud provider validate
+nself provider provider validate
 
 # Check specific provider
-nself cloud provider info digitalocean
+nself provider provider info digitalocean
 ```
 
 ---

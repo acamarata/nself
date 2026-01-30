@@ -76,7 +76,7 @@ provider_netcup_list_sizes() {
 provider_netcup_provision() {
   log_warning "Netcup provisioning requires manual setup via SCP (Server Control Panel)"
   log_info "Visit: https://www.customercontrolpanel.de/"
-  log_info "After creating VPS, add server: nself cloud servers add <name> --ip <ip>"
+  log_info "After creating VPS, add server: nself provider servers add <name> --ip <ip>"
   return 1
 }
 

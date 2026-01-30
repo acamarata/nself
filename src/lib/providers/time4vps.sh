@@ -34,7 +34,7 @@ provider_time4vps_validate() {
     log_success "Time4VPS configured"
     return 0
   fi
-  log_error "Time4VPS not configured. Run: nself cloud init time4vps"
+  log_error "Time4VPS not configured. Run: nself provider init time4vps"
   return 1
 }
 
@@ -93,13 +93,13 @@ provider_time4vps_provision() {
   log_warning "Time4VPS API requires order through portal:"
   log_info "  Visit: https://www.time4vps.com/linux-vps/"
   log_info "  Select: $plan"
-  log_info "  After provisioning: nself cloud server add <ip>"
+  log_info "  After provisioning: nself provider server add <ip>"
   return 1
 }
 
 provider_time4vps_destroy() {
   log_warning "Manage Time4VPS servers at: https://billing.time4vps.com"
-  log_info "To remove from nself: nself cloud server remove <ip>"
+  log_info "To remove from nself: nself provider server remove <ip>"
   return 1
 }
 
@@ -152,7 +152,7 @@ provider_time4vps_list() {
       done
     else
       log_info "No Time4VPS servers found"
-      log_info "Add servers: nself cloud server add <ip> --provider time4vps"
+      log_info "Add servers: nself provider server add <ip> --provider time4vps"
     fi
   fi
 }

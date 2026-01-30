@@ -37,7 +37,7 @@ provider_racknerd_validate() {
     log_success "RackNerd configured"
     return 0
   fi
-  log_error "RackNerd not configured. Run: nself cloud init racknerd"
+  log_error "RackNerd not configured. Run: nself provider init racknerd"
   return 1
 }
 
@@ -79,7 +79,7 @@ provider_racknerd_provision() {
   log_info "1. Visit: https://www.racknerd.com/NewYear/"
   log_info "2. Or check: https://lowendbox.com (search 'RackNerd')"
   log_info "3. Select plan and complete checkout"
-  log_info "4. Add your server: nself cloud server add <ip>"
+  log_info "4. Add your server: nself provider server add <ip>"
   echo ""
   log_info "Best value recommendations:"
   echo "  - New Year Deal: 1GB/1vCPU/21GB SSD - \$11.49/year"
@@ -89,7 +89,7 @@ provider_racknerd_provision() {
 
 provider_racknerd_destroy() {
   log_warning "Manage RackNerd servers at: https://my.racknerd.com"
-  log_info "To remove from nself: nself cloud server remove <ip>"
+  log_info "To remove from nself: nself provider server remove <ip>"
   return 1
 }
 
@@ -125,7 +125,7 @@ provider_racknerd_list() {
     done
   else
     log_info "No RackNerd servers registered"
-    log_info "Add servers: nself cloud server add <ip> --provider racknerd"
+    log_info "Add servers: nself provider server add <ip> --provider racknerd"
   fi
 }
 
