@@ -26,6 +26,9 @@ generate_nginx_config() {
   # Generate SSL configuration
   generate_ssl_config
 
+  # Generate security headers configuration
+  generate_security_headers_config
+
   return 0
 }
 
@@ -138,10 +141,7 @@ EOF
     include /etc/nginx/includes/ssl.conf;
 
     # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    include /etc/nginx/includes/security-headers.conf;
 
     # Root location
     location / {
@@ -214,6 +214,65 @@ ssl_stapling on;
 ssl_stapling_verify on;
 resolver 8.8.8.8 8.8.4.4 valid=300s;
 resolver_timeout 5s;
+EOF
+}
+
+# Generate security headers configuration
+generate_security_headers_config() {
+  local csp_mode="${CSP_MODE:-moderate}"
+  local ssl_enabled="${SSL_ENABLED:-true}"
+  local custom_domains="${CSP_CUSTOM_DOMAINS:-}"
+
+  # Source security headers library if available
+  if [[ -f "src/lib/security/headers.sh" ]]; then
+    source src/lib/security/headers.sh 2>/dev/null || true
+    headers::export_nginx "nginx/includes/security-headers.conf" "$ssl_enabled"
+  else
+    # Fallback: generate basic security headers manually
+    generate_basic_security_headers "$ssl_enabled"
+  fi
+}
+
+# Generate basic security headers (fallback)
+generate_basic_security_headers() {
+  local ssl_enabled="${1:-true}"
+
+  cat > nginx/includes/security-headers.conf <<'EOF'
+# Security Headers Configuration
+# Basic security headers - for advanced configuration, use nself security headers
+
+# Content Security Policy (CSP)
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" always;
+
+EOF
+
+  # Add HSTS only if SSL is enabled
+  if [[ "$ssl_enabled" == "true" ]]; then
+    cat >> nginx/includes/security-headers.conf <<'EOF'
+# HTTP Strict Transport Security (HSTS)
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+EOF
+  fi
+
+  cat >> nginx/includes/security-headers.conf <<'EOF'
+# X-Frame-Options
+add_header X-Frame-Options "DENY" always;
+
+# X-Content-Type-Options
+add_header X-Content-Type-Options "nosniff" always;
+
+# X-XSS-Protection (legacy)
+add_header X-XSS-Protection "1; mode=block" always;
+
+# Referrer-Policy
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# Permissions-Policy
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" always;
+
+# X-Permitted-Cross-Domain-Policies
+add_header X-Permitted-Cross-Domain-Policies "none" always;
 EOF
 }
 
@@ -580,6 +639,8 @@ export -f generate_nginx_config
 export -f generate_main_nginx_conf
 export -f generate_default_server_conf
 export -f generate_ssl_config
+export -f generate_security_headers_config
+export -f generate_basic_security_headers
 export -f generate_service_routes
 export -f generate_hasura_route
 export -f generate_auth_route

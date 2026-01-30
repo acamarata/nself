@@ -9,6 +9,7 @@
 #   nself security incidents       - View security incidents
 #   nself security events          - View security events
 #   nself security webauthn        - Manage WebAuthn/FIDO2 keys
+#   nself security headers         - Manage security headers (CSP, HSTS, etc.)
 #
 # Usage: nself security <subcommand> [options]
 
@@ -704,6 +705,7 @@ SUBCOMMANDS:
   incidents         View and manage security incidents
   events            View security event logs
   webauthn          Manage WebAuthn/FIDO2 hardware keys
+  headers           Manage security headers (CSP, HSTS, etc.)
 
 SCAN OPTIONS:
   all               Scan all security checks (default)
@@ -789,6 +791,9 @@ cmd_security() {
       ;;
     webauthn)
       cmd_security_webauthn "$@"
+      ;;
+    headers)
+      cmd_security_headers "$@"
       ;;
     help|--help|-h)
       security_usage

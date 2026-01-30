@@ -315,38 +315,94 @@ security::check_network_security() {
 
   # Check nginx security headers
   if [[ -d "nginx" ]]; then
-    # Check for security headers
-    local has_hsts=false
-    local has_xss=false
-    local has_frame=false
-    local has_content_type=false
-
-    if grep -rq "Strict-Transport-Security" nginx/ 2>/dev/null; then
-      has_hsts=true
-      security::pass "HSTS header configured"
+    # Check for security headers include
+    if [[ -f "nginx/includes/security-headers.conf" ]]; then
+      security::pass "Security headers configuration file exists"
     else
-      security::warn "HSTS header not found in nginx config"
+      security::warn "Security headers configuration file not found"
     fi
 
+    # Check for Content-Security-Policy (CSP)
+    if grep -rq "Content-Security-Policy" nginx/ 2>/dev/null; then
+      security::pass "Content-Security-Policy (CSP) header configured"
+
+      # Check CSP mode/strictness
+      if grep -rq "script-src 'self'" nginx/ 2>/dev/null; then
+        security::pass "CSP uses strict script-src (no unsafe-inline/unsafe-eval)"
+      elif grep -rq "unsafe-inline\|unsafe-eval" nginx/ 2>/dev/null; then
+        security::warn "CSP allows unsafe-inline or unsafe-eval (consider strict mode)"
+      fi
+    else
+      security::fail "Content-Security-Policy (CSP) header not configured - CRITICAL"
+    fi
+
+    # Check for HSTS (only for SSL-enabled sites)
+    local ssl_enabled
+    ssl_enabled=$(grep "^SSL_ENABLED=" .env 2>/dev/null | cut -d'=' -f2)
+    if [[ "$ssl_enabled" == "true" ]]; then
+      if grep -rq "Strict-Transport-Security" nginx/ 2>/dev/null; then
+        security::pass "HSTS header configured"
+
+        # Check HSTS max-age
+        local hsts_age
+        hsts_age=$(grep -r "Strict-Transport-Security" nginx/ 2>/dev/null | grep -o "max-age=[0-9]*" | cut -d= -f2 | head -1)
+        if [[ -n "$hsts_age" ]] && [[ $hsts_age -ge 31536000 ]]; then
+          security::pass "HSTS max-age is adequate (>= 1 year)"
+        elif [[ -n "$hsts_age" ]]; then
+          security::warn "HSTS max-age is less than 1 year ($hsts_age seconds)"
+        fi
+
+        # Check for includeSubDomains
+        if grep -rq "includeSubDomains" nginx/ 2>/dev/null; then
+          security::pass "HSTS includes subdomains"
+        else
+          security::warn "HSTS does not include subdomains (consider adding)"
+        fi
+      else
+        security::warn "HSTS header not found (recommended for HTTPS sites)"
+      fi
+    fi
+
+    # Check for X-XSS-Protection
     if grep -rq "X-XSS-Protection" nginx/ 2>/dev/null; then
-      has_xss=true
       security::pass "X-XSS-Protection header configured"
     else
       security::warn "X-XSS-Protection header not found"
     fi
 
+    # Check for X-Frame-Options
     if grep -rq "X-Frame-Options" nginx/ 2>/dev/null; then
-      has_frame=true
       security::pass "X-Frame-Options header configured"
+
+      # Check value (DENY is most secure)
+      if grep -rq 'X-Frame-Options.*"DENY"' nginx/ 2>/dev/null; then
+        security::pass "X-Frame-Options set to DENY (most secure)"
+      elif grep -rq 'X-Frame-Options.*"SAMEORIGIN"' nginx/ 2>/dev/null; then
+        security::pass "X-Frame-Options set to SAMEORIGIN"
+      fi
     else
       security::warn "X-Frame-Options header not found"
     fi
 
+    # Check for X-Content-Type-Options
     if grep -rq "X-Content-Type-Options" nginx/ 2>/dev/null; then
-      has_content_type=true
       security::pass "X-Content-Type-Options header configured"
     else
       security::warn "X-Content-Type-Options header not found"
+    fi
+
+    # Check for Referrer-Policy
+    if grep -rq "Referrer-Policy" nginx/ 2>/dev/null; then
+      security::pass "Referrer-Policy header configured"
+    else
+      security::warn "Referrer-Policy header not found (recommended)"
+    fi
+
+    # Check for Permissions-Policy
+    if grep -rq "Permissions-Policy" nginx/ 2>/dev/null; then
+      security::pass "Permissions-Policy header configured"
+    else
+      security::info "Permissions-Policy header not configured (optional)"
     fi
   else
     security::warn "nginx directory not found"
@@ -418,6 +474,11 @@ security::fail() {
   local message="$1"
   printf "  ${COLOR_RED}✗${COLOR_RESET} %s\n" "$message"
   SECURITY_FAILED=$((SECURITY_FAILED + 1))
+}
+
+security::info() {
+  local message="$1"
+  printf "  ${COLOR_BLUE}ℹ${COLOR_RESET} %s\n" "$message"
 }
 
 # Print security audit summary
