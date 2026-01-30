@@ -40,6 +40,11 @@ jobs:
         run: |
           # Install nself globally
           sudo ./install.sh
+          # Add to PATH
+          echo "/usr/local/bin" >> $GITHUB_PATH
+          # Verify installation
+          which nself || echo "nself not in PATH"
+          nself version || echo "nself not executable"
 
       - name: Create test project directory
         run: |

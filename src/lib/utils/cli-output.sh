@@ -3,7 +3,7 @@
 # Cross-platform compatible (Bash 3.2+), POSIX-compliant where possible
 #
 # DESIGN PRINCIPLES:
-# - Uses printf exclusively (not echo -e) for portability
+# - Uses printf exclusively (not echo with -e flag) for portability
 # - Supports NO_COLOR environment variable
 # - Works in both interactive terminals and CI/non-TTY environments
 # - Consistent spacing, alignment, and visual hierarchy
