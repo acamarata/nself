@@ -18,8 +18,15 @@ RUN apk add --no-cache \
 RUN addgroup -g 1000 nself && \
     adduser -D -s /bin/bash -G nself -u 1000 nself
 
-# Copy nself files
-COPY . /opt/nself
+# Copy only essential nself files (exclude tests, docs, examples)
+COPY bin/ /opt/nself/bin/
+COPY src/VERSION /opt/nself/src/VERSION
+COPY src/cli/ /opt/nself/src/cli/
+COPY src/lib/ /opt/nself/src/lib/
+COPY src/templates/ /opt/nself/src/templates/
+COPY src/services/ /opt/nself/src/services/
+COPY LICENSE README.md /opt/nself/
+
 RUN chmod +x /opt/nself/bin/nself && \
     ln -s /opt/nself/bin/nself /usr/local/bin/nself
 

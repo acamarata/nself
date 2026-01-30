@@ -4,6 +4,23 @@ Understanding how nself works internally.
 
 ---
 
+## 🔥 NEW: Command Reorganization Proposal (2026-01-30)
+
+A comprehensive proposal to reorganize nself's CLI from **77 top-level commands to 13 logical categories** (71% reduction):
+
+**Start Here**: [Command Reorganization Index](./COMMAND-REORGANIZATION-INDEX.md)
+
+**Quick Links**:
+- [Executive Summary](../../COMMAND-REORGANIZATION-SUMMARY.md) (5-min read)
+- [Visual Guide](./COMMAND-REORGANIZATION-VISUAL.md) (diagrams & examples)
+- [Complete Proposal](./COMMAND-REORGANIZATION-PROPOSAL.md) (full details)
+- [Implementation Checklist](./COMMAND-REORGANIZATION-CHECKLIST.md) (for developers)
+- [Consolidation Map](./COMMAND-CONSOLIDATION-MAP.md) (command flows)
+
+**Total Documentation**: 104 KB across 5 comprehensive documents
+
+---
+
 ## Overview
 
 - **[Architecture Overview](ARCHITECTURE.md)** - Complete system architecture

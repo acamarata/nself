@@ -612,27 +612,28 @@ install_files() {
     if [[ -d "$source_dir/bin" ]]; then
       run_cmd cp -r "$source_dir/bin" "$INSTALL_DIR/"
     fi
-    
-    # Copy src directory (contains all the logic)
+
+    # Copy ONLY essential src directories (exclude tests, examples, development files)
     if [[ -d "$source_dir/src" ]]; then
-      run_cmd cp -r "$source_dir/src" "$INSTALL_DIR/"
+      run_cmd mkdir -p "$INSTALL_DIR/src"
+
+      # Copy VERSION file first
+      for version_file in "$source_dir/src/VERSION" "$source_dir/src/config/VERSION" "$source_dir/VERSION"; do
+        if [[ -f "$version_file" ]]; then
+          run_cmd cp "$version_file" "$INSTALL_DIR/src/VERSION"
+          break
+        fi
+      done
+
+      # Copy only essential directories (exclude tests, examples, database/tests)
+      for dir in cli lib templates services; do
+        if [[ -d "$source_dir/src/$dir" ]]; then
+          run_cmd cp -r "$source_dir/src/$dir" "$INSTALL_DIR/src/"
+        fi
+      done
     fi
-    
-    # Copy docs directory
-    if [[ -d "$source_dir/docs" ]]; then
-      run_cmd cp -r "$source_dir/docs" "$INSTALL_DIR/"
-    fi
-    
-    # Copy VERSION file from its new location
-    for version_file in "$source_dir/src/VERSION" "$source_dir/src/config/VERSION" "$source_dir/VERSION"; do
-      if [[ -f "$version_file" ]]; then
-        # Keep VERSION in src where it belongs
-        run_cmd cp "$version_file" "$INSTALL_DIR/src/VERSION"
-        break
-      fi
-    done
-    
-    # Copy LICENSE and README
+
+    # Copy LICENSE and README only (no docs/ directory)
     for file in LICENSE README.md; do
       [[ -f "$source_dir/$file" ]] && run_cmd cp "$source_dir/$file" "$INSTALL_DIR/"
     done

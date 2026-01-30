@@ -1,18 +1,18 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/acamarata/nself/releases)
-[![Status](https://img.shields.io/badge/status-stable-green.svg)](#-important-note)
+[![Version](https://img.shields.io/badge/version-0.9.5-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Status](https://img.shields.io/badge/status-production--ready-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
 [![Security Scan](https://github.com/acamarata/nself/actions/workflows/security-scan.yml/badge.svg)](https://github.com/acamarata/nself/actions/workflows/security-scan.yml)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
-> **✅ PRODUCTION READY**: ɳSelf v0.8.0 is production-ready! With 96% test coverage, comprehensive features, and stable core infrastructure, ɳSelf is ready for production use. We continue active development toward v1.0 with enhanced features (see [roadmap](docs/ROADMAP.md)).
+> **✅ PRODUCTION READY**: ɳSelf v0.9.5 is production-ready! With 60% test coverage (445 tests), enterprise security hardening, complete feature parity with Supabase/Nhost, and battle-tested infrastructure, ɳSelf is ready for production deployment. Security fixes include SQL injection prevention, Content Security Policy framework, and automated dependency scanning.
 >
-> That said, ɳSelf is essentially a helper tool that generates Docker Compose configurations and wraps Docker commands - tasks you'd need to handle manually with any self-hosted backend solution (Nhost, Supabase, or others). The underlying services (PostgreSQL, Hasura, etc.) are production-ready; it's the orchestration layer that's evolving.
-> 
-> We welcome bug reports and appreciate your patience as we work toward these goals!
+> ɳSelf provides a complete orchestration layer that generates Docker Compose configurations and manages services - the same tasks required for any self-hosted backend (Nhost, Supabase, or DIY). The underlying services (PostgreSQL, Hasura, etc.) are production-grade; ɳSelf adds enterprise security, multi-tenancy, billing, and 150+ CLI commands on top.
+>
+> We welcome bug reports and contributions as we continue toward v1.0!
 
 ---
 
@@ -24,7 +24,7 @@ Deploy a feature-complete backend infrastructure on your own servers with Postgr
 curl -sSL https://install.nself.org | bash
 ```
 
-> **🎉 v0.8.0 - Multi-Tenancy & Enterprise Features!**: Complete multi-tenant architecture with organization management, plugin ecosystem, real-time collaboration, enhanced security tools, developer experience improvements, cross-environment migrations, and comprehensive performance profiling. [See changelog](docs/releases/CHANGELOG.md) | [Roadmap to v1.0](docs/ROADMAP.md)
+> **🎉 v0.9.5 - Feature Parity & Security Hardening!**: Complete real-time communication system (WebSocket, CDC, presence), enhanced OAuth with 13 providers, SQL injection fixes, Content Security Policy framework, Typesense search integration, intelligent backup pruning, migration tools from Supabase/Nhost/Firebase, and 368 new tests. [See v0.9.5 release](docs/releases/v0.9.5.md) | [View all releases](https://github.com/acamarata/nself/releases)
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
@@ -40,22 +40,29 @@ curl -sSL https://install.nself.org | bash
 ### 🎯 Complete Feature Set
 - **Full Nhost Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
 - **Plus Extras**: Redis, TimescaleDB, PostGIS, pgvector extensions
-- **Multi-Tenancy (NEW v0.8.0)**: Complete tenant isolation, organization management, role-based access
-- **Plugin Ecosystem (NEW v0.8.0)**: Extensible architecture with marketplace integration
-- **Real-Time Collaboration (NEW v0.8.0)**: Presence tracking, live sync, WebSocket broadcasting
+- **Real-Time System (NEW v0.9.5)**: WebSocket channels, Database CDC subscriptions, Presence tracking, Broadcast messaging
+- **OAuth Providers (ENHANCED v0.9.5)**: 13 providers (Google, GitHub, Microsoft, Facebook, Apple, Slack, Discord, Twitch, Twitter, LinkedIn, GitLab, Bitbucket, Spotify) with PKCE support
+- **Multi-Tenancy**: Complete tenant isolation, organization management, role-based access, per-tenant billing
+- **Security Hardening (NEW v0.9.5)**: SQL injection prevention, Content Security Policy framework, Dependency scanning (ShellCheck, Gitleaks, Trivy, Semgrep)
+- **Migration Tools (NEW v0.9.5)**: One-command migration from Supabase, Nhost, and Firebase
+- **Backup System (ENHANCED v0.9.5)**: Intelligent pruning (age, count, size, GFS), 3-2-1 rule verification, cloud backup support
+- **Enterprise Search**: MeiliSearch, Typesense, Elasticsearch, OpenSearch, Zinc, Sonic with provider switching
+- **Plugin Ecosystem**: Extensible architecture with marketplace integration
 - **Email Management**: 16+ providers (SendGrid, AWS SES, Mailgun, etc.) with zero-config dev
 - **40+ Service Templates**: Express, FastAPI, Flask, Gin, Rust, NestJS, Socket.IO, Celery, Ray, and more
 - **Microservices Ready**: Production-ready templates for JS/TS, Python, Go, Rust, Java, C#, Ruby, Elixir, PHP
 - **Serverless Functions**: Built-in functions runtime with hot reload and deployment
 - **ML Platform**: MLflow integration for experiment tracking and model registry
-- **Enterprise Search**: 6 search engines (MeiliSearch, Typesense, Elasticsearch, OpenSearch, Zinc, Sonic)
 - **Production SSL**: Automatic trusted certificates (no browser warnings!)
 
 ### 🛠️ Developer Experience
+- **150+ CLI Commands**: Complete feature control from terminal
 - **Admin Dashboard**: Web-based monitoring UI at localhost:3100
-- **Developer Console (NEW v0.8.0)**: Interactive development console with live REPL
-- **Local Tunneling (NEW v0.8.0)**: Expose local services to internet for testing
-- **API Mocking (NEW v0.8.0)**: Mock external APIs for faster development
+- **Developer Console**: Interactive development console with live REPL
+- **Real-Time CLI (NEW v0.9.5)**: 40+ commands for channels, presence, subscriptions, broadcast
+- **Security Audit (NEW v0.9.5)**: One-command security assessment with auto-fix
+- **Local Tunneling**: Expose local services to internet for testing
+- **API Mocking**: Mock external APIs for faster development
 - **Single Config File**: One `.env` controls everything
 - **Zero Configuration**: Email, SSL, and services work out of the box
 - **Automated SSL**: Certificates generated automatically (one-time sudo for trust)
@@ -63,18 +70,23 @@ curl -sSL https://install.nself.org | bash
 - **Hot Reload**: Changes apply instantly without rebuild
 - **Multi-Environment**: Same setup works locally, staging, and production
 - **No Lock-in**: Standard Docker Compose under the hood
-- **Debugging Tools**: `doctor`, `status`, `logs` commands for troubleshooting
+- **Debugging Tools**: `doctor`, `status`, `logs`, `observe` commands for troubleshooting
+- **445 Automated Tests**: 60% code coverage ensuring reliability
 
 ### 🔐 Production Ready
-- **Security First**: Automatic SSL setup with mkcert (handled during build)
-- **Security Scanning (NEW v0.8.0)**: Automated vulnerability detection and auditing
-- **Firewall Management (NEW v0.8.0)**: Simplified network security configuration
-- **Zero SSL Hassle**: Certificates generated and trusted automatically
-- **Email Ready**: Production email in 2 minutes with guided setup
-- **Battle Tested**: Based on proven Nhost.io infrastructure
-- **Multi-Tenant Ready (NEW v0.8.0)**: Enterprise-grade tenant isolation
+- **Security Hardened (NEW v0.9.5)**: SQL injection prevention, Content Security Policy, OWASP Top 10 compliance
+- **Dependency Scanning (NEW v0.9.5)**: Automated ShellCheck, Gitleaks, Trivy, Semgrep in CI/CD
+- **Security Audit System (NEW v0.9.5)**: One-command production readiness check with auto-fix
+- **Automated SSL**: Certificates generated and trusted automatically (mkcert or Let's Encrypt)
+- **Security Scanning**: Automated vulnerability detection and auditing
+- **Firewall Management**: Simplified network security configuration
+- **Email Ready**: Production email in 2 minutes with 16+ provider support
+- **Battle Tested**: Based on proven Nhost.io infrastructure with enterprise enhancements
+- **Multi-Tenant Ready**: Enterprise-grade tenant isolation with Row Level Security
+- **445 Tests**: Comprehensive test coverage (60%+) ensuring reliability
 - **Scale Ready**: From hobby projects to enterprise deployments
 - **Zero Downtime**: Rolling updates and health checks built-in
+- **Migration Ready (NEW v0.9.5)**: Migrate from Supabase, Nhost, or Firebase in minutes
 
 ## 📋 Prerequisites
 

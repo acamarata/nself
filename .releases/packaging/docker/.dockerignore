@@ -1,0 +1,58 @@
+# Development files
+.git/
+.github/
+.releases/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation (available online)
+docs/
+
+# Tests and examples (not needed in production)
+src/tests/
+src/examples/
+src/database/tests/
+src/benchmarks/
+
+# Build artifacts
+*.tar.gz
+*.deb
+*.rpm
+*.zip
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+
+# Environment files (user creates these)
+.env
+.env.*
+!.env.example
+.secrets
+
+# IDE and editor files
+.editorconfig
+.prettierrc
+.eslintrc
+
+# CI/CD (not needed in container)
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Package manager files
+package-lock.json
+yarn.lock
+Gemfile.lock
+composer.lock
+
+# Temporary files
+tmp/
+temp/
+*.log

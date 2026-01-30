@@ -10,24 +10,28 @@ class Nself < Formula
   depends_on "docker-compose"
 
   def install
-    # Install all source files to libexec
-    libexec.install "src"
-    
-    # Install templates
-    libexec.install "templates" if File.exist?("templates")
-    
+    # Install ONLY essential source directories to libexec (exclude tests, examples)
+    libexec.mkpath
+
+    # Copy VERSION file
+    (libexec/"src").install "src/VERSION" if File.exist?("src/VERSION")
+
+    # Install only essential directories (exclude tests, examples, development files)
+    %w[cli lib templates services].each do |dir|
+      (libexec/"src").install "src/#{dir}" if File.directory?("src/#{dir}")
+    end
+
     # Create the main executable wrapper
     (bin/"nself").write <<~EOS
       #!/usr/bin/env bash
       exec "#{libexec}/src/cli/nself.sh" "$@"
     EOS
-    
+
     # Make it executable
     (bin/"nself").chmod 0755
-    
-    # Install documentation
-    doc.install "README.md", "LICENSE" if File.exist?("README.md")
-    doc.install "docs" if File.exist?("docs")
+
+    # Install minimal documentation (LICENSE only, docs available online)
+    doc.install "LICENSE" if File.exist?("LICENSE")
   end
 
   def post_install

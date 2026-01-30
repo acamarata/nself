@@ -713,4 +713,24 @@ Each command has detailed documentation:
 
 ---
 
+## Future: Command Reorganization (Proposed)
+
+A comprehensive reorganization proposal is in progress to reduce top-level commands from 77 to 13 logical categories:
+
+**See:**
+- [Command Reorganization Proposal](../architecture/COMMAND-REORGANIZATION-PROPOSAL.md) - Full proposal with rationale
+- [Visual Command Guide](../architecture/COMMAND-REORGANIZATION-VISUAL.md) - Before/after visual comparison
+- [Command Consolidation Map](../architecture/COMMAND-CONSOLIDATION-MAP.md) - Detailed command flow diagrams
+- [Implementation Checklist](../architecture/COMMAND-REORGANIZATION-CHECKLIST.md) - Development roadmap
+
+**Proposed Structure:**
+- **13 categories** instead of 77 top-level commands (71% reduction)
+- **Backward compatible** with legacy aliases for 2+ versions
+- **Logical grouping**: `observe` (monitoring), `secure` (security), expanded `auth`, `service`, `deploy`, `cloud`, `dev`, `config`
+- **4-phase rollout** over 6-12 months with deprecation warnings
+
+This reorganization aims to improve discoverability, reduce cognitive load, and create a clearer mental model while maintaining full backward compatibility during the transition.
+
+---
+
 *Last Updated: January 30, 2026 | Version: 0.9.0*
