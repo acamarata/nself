@@ -10,33 +10,33 @@ show_docker_not_running_error() {
 
   format_error "Docker is not running" ""
 
-  echo -e "\n${BOLD}Quick Fix:${RESET}"
+  printf "\n%s\n" "${BOLD}Quick Fix:${RESET}"
 
   case "$platform" in
   macos)
-    echo -e "  ${BLUE}→${RESET} Open Docker Desktop: ${BOLD}open -a Docker${RESET}"
-    echo -e "  ${BLUE}→${RESET} Or from Spotlight: Press ${BOLD}⌘ + Space${RESET} and type 'Docker'"
-    echo -e "\n${DIM}If Docker Desktop is not installed:${RESET}"
-    echo -e "  ${BLUE}→${RESET} Download from: ${UNDERLINE}https://docker.com/products/docker-desktop${RESET}"
-    echo -e "  ${BLUE}→${RESET} Or install via Homebrew: ${BOLD}brew install --cask docker${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Open Docker Desktop: ${BOLD}open -a Docker${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Or from Spotlight: Press ${BOLD}⌘ + Space${RESET} and type 'Docker'"
+    printf "\n%s\n" "${DIM}If Docker Desktop is not installed:${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Download from: ${UNDERLINE}https://docker.com/products/docker-desktop${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Or install via Homebrew: ${BOLD}brew install --cask docker${RESET}"
     ;;
   linux)
-    echo -e "  ${BLUE}→${RESET} Start Docker service: ${BOLD}sudo systemctl start docker${RESET}"
-    echo -e "  ${BLUE}→${RESET} Enable on boot: ${BOLD}sudo systemctl enable docker${RESET}"
-    echo -e "\n${DIM}If Docker is not installed:${RESET}"
-    echo -e "  ${BLUE}→${RESET} Install: ${BOLD}curl -fsSL https://get.docker.com | sh${RESET}"
-    echo -e "  ${BLUE}→${RESET} Add user to group: ${BOLD}sudo usermod -aG docker \$USER${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Start Docker service: ${BOLD}sudo systemctl start docker${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Enable on boot: ${BOLD}sudo systemctl enable docker${RESET}"
+    printf "\n%s\n" "${DIM}If Docker is not installed:${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Install: ${BOLD}curl -fsSL https://get.docker.com | sh${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Add user to group: ${BOLD}sudo usermod -aG docker \$USER${RESET}"
     ;;
   windows)
-    echo -e "  ${BLUE}→${RESET} Open Docker Desktop from Start Menu"
-    echo -e "  ${BLUE}→${RESET} Or run: ${BOLD}\"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\"${RESET}"
-    echo -e "\n${DIM}If Docker Desktop is not installed:${RESET}"
-    echo -e "  ${BLUE}→${RESET} Download from: ${UNDERLINE}https://docker.com/products/docker-desktop${RESET}"
-    echo -e "  ${BLUE}→${RESET} Or via winget: ${BOLD}winget install Docker.DockerDesktop${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Open Docker Desktop from Start Menu"
+    printf "  %s\n" "${BLUE}→${RESET} Or run: ${BOLD}\"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\"${RESET}"
+    printf "\n%s\n" "${DIM}If Docker Desktop is not installed:${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Download from: ${UNDERLINE}https://docker.com/products/docker-desktop${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Or via winget: ${BOLD}winget install Docker.DockerDesktop${RESET}"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} After starting Docker, wait 10-15 seconds for it to fully initialize."
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} After starting Docker, wait 10-15 seconds for it to fully initialize."
 }
 
 show_port_conflict_error() {
@@ -45,7 +45,7 @@ show_port_conflict_error() {
 
   format_error "Port $port is already in use" ""
 
-  echo -e "\n${BOLD}Conflicting Service:${RESET}"
+  printf "\n%s\n" "${BOLD}Conflicting Service:${RESET}"
 
   # Try to identify what's using the port
   local process_info=""
@@ -56,52 +56,52 @@ show_port_conflict_error() {
   fi
 
   if [[ -n "$process_info" ]]; then
-    echo -e "  ${RED}✗${RESET} $process_info"
+    printf "  %s\n" "${RED}✗${RESET} $process_info"
   fi
 
-  echo -e "\n${BOLD}Solutions:${RESET}"
-  echo -e "  ${BLUE}1.${RESET} Stop the conflicting service:"
+  printf "\n%s\n" "${BOLD}Solutions:${RESET}"
+  printf "  %s\n" "${BLUE}1.${RESET} Stop the conflicting service:"
 
   case "$port" in
   5432)
-    echo -e "     ${DIM}# PostgreSQL${RESET}"
-    [[ "$PLATFORM" == "macos" ]] && echo -e "     ${BOLD}brew services stop postgresql${RESET}"
-    [[ "$PLATFORM" == "linux" ]] && echo -e "     ${BOLD}sudo systemctl stop postgresql${RESET}"
+    printf "     %s\n" "${DIM}# PostgreSQL${RESET}"
+    [[ "$PLATFORM" == "macos" ]] && printf "     %s\n" "${BOLD}brew services stop postgresql${RESET}"
+    [[ "$PLATFORM" == "linux" ]] && printf "     %s\n" "${BOLD}sudo systemctl stop postgresql${RESET}"
     ;;
   6379)
-    echo -e "     ${DIM}# Redis${RESET}"
-    [[ "$PLATFORM" == "macos" ]] && echo -e "     ${BOLD}brew services stop redis${RESET}"
-    [[ "$PLATFORM" == "linux" ]] && echo -e "     ${BOLD}sudo systemctl stop redis${RESET}"
+    printf "     %s\n" "${DIM}# Redis${RESET}"
+    [[ "$PLATFORM" == "macos" ]] && printf "     %s\n" "${BOLD}brew services stop redis${RESET}"
+    [[ "$PLATFORM" == "linux" ]] && printf "     %s\n" "${BOLD}sudo systemctl stop redis${RESET}"
     ;;
   8080)
-    echo -e "     ${DIM}# Common web services${RESET}"
-    echo -e "     ${BOLD}lsof -ti:$port | xargs kill -9${RESET}"
+    printf "     %s\n" "${DIM}# Common web services${RESET}"
+    printf "     %s\n" "${BOLD}lsof -ti:$port | xargs kill -9${RESET}"
     ;;
   3000 | 3001)
-    echo -e "     ${DIM}# Node.js applications${RESET}"
-    echo -e "     ${BOLD}npx kill-port $port${RESET}"
+    printf "     %s\n" "${DIM}# Node.js applications${RESET}"
+    printf "     %s\n" "${BOLD}npx kill-port $port${RESET}"
     ;;
   esac
 
-  echo -e "\n  ${BLUE}2.${RESET} Or change the port in your ${BOLD}.env.local${RESET}:"
-  echo -e "     ${DIM}# Add to .env.local:${RESET}"
+  printf "\n  %s\n" "${BLUE}2.${RESET} Or change the port in your ${BOLD}.env.local${RESET}:"
+  printf "     %s\n" "${DIM}# Add to .env.local:${RESET}"
 
   case "$service" in
   postgres)
-    echo -e "     ${BOLD}POSTGRES_PORT=$((port + 1000))${RESET}"
+    printf "     %s\n" "${BOLD}POSTGRES_PORT=$((port + 1000))${RESET}"
     ;;
   redis)
-    echo -e "     ${BOLD}REDIS_PORT=$((port + 1000))${RESET}"
+    printf "     %s\n" "${BOLD}REDIS_PORT=$((port + 1000))${RESET}"
     ;;
   hasura)
-    echo -e "     ${BOLD}HASURA_PORT=$((port + 1000))${RESET}"
+    printf "     %s\n" "${BOLD}HASURA_PORT=$((port + 1000))${RESET}"
     ;;
   dashboard)
-    echo -e "     ${BOLD}DASHBOARD_PORT=$((port + 1000))${RESET}"
+    printf "     %s\n" "${BOLD}DASHBOARD_PORT=$((port + 1000))${RESET}"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} Use 'lsof -i :$port' to see what's using the port."
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} Use 'lsof -i :$port' to see what's using the port."
 }
 
 show_memory_warning() {
@@ -110,33 +110,33 @@ show_memory_warning() {
 
   format_warning "Low system memory: ${available_gb}GB available (${required_gb}GB recommended)" ""
 
-  echo -e "\n${BOLD}Impact:${RESET}"
-  echo -e "  ${YELLOW}⚠${RESET} Services may run slowly"
-  echo -e "  ${YELLOW}⚠${RESET} Builds might fail with out-of-memory errors"
-  echo -e "  ${YELLOW}⚠${RESET} Database operations could timeout"
+  printf "\n%s\n" "${BOLD}Impact:${RESET}"
+  printf "  %s\n" "${YELLOW}⚠${RESET} Services may run slowly"
+  printf "  %s\n" "${YELLOW}⚠${RESET} Builds might fail with out-of-memory errors"
+  printf "  %s\n" "${YELLOW}⚠${RESET} Database operations could timeout"
 
-  echo -e "\n${BOLD}Solutions:${RESET}"
+  printf "\n%s\n" "${BOLD}Solutions:${RESET}"
 
   case "$PLATFORM" in
   macos)
-    echo -e "  ${BLUE}→${RESET} Close unnecessary applications"
-    echo -e "  ${BLUE}→${RESET} Increase Docker Desktop memory allocation:"
-    echo -e "     ${DIM}Docker Desktop → Settings → Resources → Memory${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Close unnecessary applications"
+    printf "  %s\n" "${BLUE}→${RESET} Increase Docker Desktop memory allocation:"
+    printf "     %s\n" "${DIM}Docker Desktop → Settings → Resources → Memory${RESET}"
     ;;
   linux)
-    echo -e "  ${BLUE}→${RESET} Check memory usage: ${BOLD}free -h${RESET}"
-    echo -e "  ${BLUE}→${RESET} Clear cache: ${BOLD}sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'${RESET}"
-    echo -e "  ${BLUE}→${RESET} Add swap space if needed"
+    printf "  %s\n" "${BLUE}→${RESET} Check memory usage: ${BOLD}free -h${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Clear cache: ${BOLD}sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Add swap space if needed"
     ;;
   windows)
-    echo -e "  ${BLUE}→${RESET} Close unnecessary applications"
-    echo -e "  ${BLUE}→${RESET} Increase Docker Desktop memory in Settings"
-    echo -e "  ${BLUE}→${RESET} Consider WSL2 memory configuration"
+    printf "  %s\n" "${BLUE}→${RESET} Close unnecessary applications"
+    printf "  %s\n" "${BLUE}→${RESET} Increase Docker Desktop memory in Settings"
+    printf "  %s\n" "${BLUE}→${RESET} Consider WSL2 memory configuration"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} You can run with reduced services for development:"
-  echo -e "  ${BOLD}REDIS_ENABLED=false BULLMQ_ENABLED=false nself start${RESET}"
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} You can run with reduced services for development:"
+  printf "  %s\n" "${BOLD}REDIS_ENABLED=false BULLMQ_ENABLED=false nself start${RESET}"
 }
 
 show_disk_space_error() {
@@ -145,33 +145,33 @@ show_disk_space_error() {
 
   format_error "Insufficient disk space: ${available_gb}GB available (${required_gb}GB required)" ""
 
-  echo -e "\n${BOLD}Free up space:${RESET}"
-  echo -e "  ${BLUE}1.${RESET} Clean Docker resources:"
-  echo -e "     ${BOLD}docker system prune -a --volumes${RESET}"
-  echo -e "     ${DIM}This will remove all unused containers, images, and volumes${RESET}"
+  printf "\n%s\n" "${BOLD}Free up space:${RESET}"
+  printf "  %s\n" "${BLUE}1.${RESET} Clean Docker resources:"
+  printf "     %s\n" "${BOLD}docker system prune -a --volumes${RESET}"
+  printf "     %s\n" "${DIM}This will remove all unused containers, images, and volumes${RESET}"
 
-  echo -e "\n  ${BLUE}2.${RESET} Remove old nself builds:"
-  echo -e "     ${BOLD}rm -rf ./generated ./node_modules ./services/*/node_modules${RESET}"
+  printf "\n  %s\n" "${BLUE}2.${RESET} Remove old nself builds:"
+  printf "     %s\n" "${BOLD}rm -rf ./generated ./node_modules ./services/*/node_modules${RESET}"
 
   case "$PLATFORM" in
   macos)
-    echo -e "\n  ${BLUE}3.${RESET} macOS specific cleanup:"
-    echo -e "     ${BOLD}rm -rf ~/Library/Caches/*${RESET}"
-    echo -e "     ${BOLD}brew cleanup${RESET}"
+    printf "\n  %s\n" "${BLUE}3.${RESET} macOS specific cleanup:"
+    printf "     %s\n" "${BOLD}rm -rf ~/Library/Caches/*${RESET}"
+    printf "     %s\n" "${BOLD}brew cleanup${RESET}"
     ;;
   linux)
-    echo -e "\n  ${BLUE}3.${RESET} Linux specific cleanup:"
-    echo -e "     ${BOLD}sudo apt-get clean${RESET} ${DIM}(or yum/dnf clean all)${RESET}"
-    echo -e "     ${BOLD}journalctl --vacuum-size=100M${RESET}"
+    printf "\n  %s\n" "${BLUE}3.${RESET} Linux specific cleanup:"
+    printf "     %s\n" "${BOLD}sudo apt-get clean${RESET} ${DIM}(or yum/dnf clean all)${RESET}"
+    printf "     %s\n" "${BOLD}journalctl --vacuum-size=100M${RESET}"
     ;;
   windows)
-    echo -e "\n  ${BLUE}3.${RESET} Windows specific cleanup:"
-    echo -e "     Run Disk Cleanup utility"
-    echo -e "     ${BOLD}cleanmgr /sageset:1${RESET}"
+    printf "\n  %s\n" "${BLUE}3.${RESET} Windows specific cleanup:"
+    printf "     %s\n" "Run Disk Cleanup utility"
+    printf "     %s\n" "${BOLD}cleanmgr /sageset:1${RESET}"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} Check disk usage with: ${BOLD}df -h${RESET} (Unix) or ${BOLD}dir${RESET} (Windows)"
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} Check disk usage with: ${BOLD}df -h${RESET} (Unix) or ${BOLD}dir${RESET} (Windows)"
 }
 
 show_permission_error() {
@@ -179,29 +179,29 @@ show_permission_error() {
 
   format_error "Permission denied: $path" ""
 
-  echo -e "\n${BOLD}Solutions:${RESET}"
+  printf "\n%s\n" "${BOLD}Solutions:${RESET}"
 
   case "$PLATFORM" in
   macos | linux)
-    echo -e "  ${BLUE}1.${RESET} Fix ownership:"
-    echo -e "     ${BOLD}sudo chown -R \$(whoami) $path${RESET}"
-    echo -e "\n  ${BLUE}2.${RESET} Fix permissions:"
-    echo -e "     ${BOLD}chmod -R 755 $path${RESET}"
+    printf "  %s\n" "${BLUE}1.${RESET} Fix ownership:"
+    printf "     %s\n" "${BOLD}sudo chown -R \$(whoami) $path${RESET}"
+    printf "\n  %s\n" "${BLUE}2.${RESET} Fix permissions:"
+    printf "     %s\n" "${BOLD}chmod -R 755 $path${RESET}"
 
     if [[ "$path" =~ docker ]]; then
-      echo -e "\n  ${BLUE}3.${RESET} Add user to docker group:"
-      echo -e "     ${BOLD}sudo usermod -aG docker \$USER${RESET}"
-      echo -e "     ${DIM}Then log out and back in${RESET}"
+      printf "\n  %s\n" "${BLUE}3.${RESET} Add user to docker group:"
+      printf "     %s\n" "${BOLD}sudo usermod -aG docker \$USER${RESET}"
+      printf "     %s\n" "${DIM}Then log out and back in${RESET}"
     fi
     ;;
   windows)
-    echo -e "  ${BLUE}1.${RESET} Run as Administrator"
-    echo -e "  ${BLUE}2.${RESET} Check file properties → Security tab"
-    echo -e "  ${BLUE}3.${RESET} For WSL issues, check Windows Defender settings"
+    printf "  %s\n" "${BLUE}1.${RESET} Run as Administrator"
+    printf "  %s\n" "${BLUE}2.${RESET} Check file properties → Security tab"
+    printf "  %s\n" "${BLUE}3.${RESET} For WSL issues, check Windows Defender settings"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} Always run 'nself init' in a directory you own."
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} Always run 'nself init' in a directory you own."
 }
 
 show_network_error() {
@@ -210,21 +210,21 @@ show_network_error() {
 
   format_error "Network connection failed: $service" ""
 
-  echo -e "\n${BOLD}Check:${RESET}"
-  echo -e "  ${BLUE}✓${RESET} Internet connection: ${BOLD}ping -c 1 google.com${RESET}"
-  echo -e "  ${BLUE}✓${RESET} DNS resolution: ${BOLD}nslookup $service${RESET}"
-  echo -e "  ${BLUE}✓${RESET} Proxy settings: ${BOLD}echo \$HTTP_PROXY${RESET}"
+  printf "\n%s\n" "${BOLD}Check:${RESET}"
+  printf "  %s\n" "${BLUE}✓${RESET} Internet connection: ${BOLD}ping -c 1 google.com${RESET}"
+  printf "  %s\n" "${BLUE}✓${RESET} DNS resolution: ${BOLD}nslookup $service${RESET}"
+  printf "  %s\n" "${BLUE}✓${RESET} Proxy settings: ${BOLD}echo \$HTTP_PROXY${RESET}"
 
   if [[ -n "$url" ]]; then
-    echo -e "  ${BLUE}✓${RESET} Service status: ${BOLD}curl -I $url${RESET}"
+    printf "  %s\n" "${BLUE}✓${RESET} Service status: ${BOLD}curl -I $url${RESET}"
   fi
 
-  echo -e "\n${BOLD}Common fixes:${RESET}"
-  echo -e "  ${BLUE}→${RESET} Behind corporate proxy? Set proxy environment variables"
-  echo -e "  ${BLUE}→${RESET} Using VPN? Try disconnecting temporarily"
-  echo -e "  ${BLUE}→${RESET} Firewall blocking? Check firewall rules"
+  printf "\n%s\n" "${BOLD}Common fixes:${RESET}"
+  printf "  %s\n" "${BLUE}→${RESET} Behind corporate proxy? Set proxy environment variables"
+  printf "  %s\n" "${BLUE}→${RESET} Using VPN? Try disconnecting temporarily"
+  printf "  %s\n" "${BLUE}→${RESET} Firewall blocking? Check firewall rules"
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} For Docker Hub issues, try: ${BOLD}docker pull hello-world${RESET}"
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} For Docker Hub issues, try: ${BOLD}docker pull hello-world${RESET}"
 }
 
 show_dependency_missing_error() {
@@ -232,57 +232,57 @@ show_dependency_missing_error() {
 
   format_error "Required dependency not found: $dep" ""
 
-  echo -e "\n${BOLD}Install $dep:${RESET}"
+  printf "\n%s\n" "${BOLD}Install $dep:${RESET}"
 
   case "$dep" in
   node | nodejs)
-    echo -e "  ${BLUE}→${RESET} Via nvm: ${BOLD}curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash${RESET}"
-    echo -e "  ${BLUE}→${RESET} Then: ${BOLD}nvm install --lts${RESET}"
-    [[ "$PKG_MANAGER" == "brew" ]] && echo -e "  ${BLUE}→${RESET} Or via Homebrew: ${BOLD}brew install node${RESET}"
-    [[ "$PKG_MANAGER" == "apt" ]] && echo -e "  ${BLUE}→${RESET} Or via apt: ${BOLD}sudo apt-get install nodejs npm${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Via nvm: ${BOLD}curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Then: ${BOLD}nvm install --lts${RESET}"
+    [[ "$PKG_MANAGER" == "brew" ]] && printf "  %s\n" "${BLUE}→${RESET} Or via Homebrew: ${BOLD}brew install node${RESET}"
+    [[ "$PKG_MANAGER" == "apt" ]] && printf "  %s\n" "${BLUE}→${RESET} Or via apt: ${BOLD}sudo apt-get install nodejs npm${RESET}"
     ;;
   go | golang)
-    echo -e "  ${BLUE}→${RESET} Download: ${UNDERLINE}https://go.dev/dl/${RESET}"
-    [[ "$PKG_MANAGER" == "brew" ]] && echo -e "  ${BLUE}→${RESET} Or via Homebrew: ${BOLD}brew install go${RESET}"
-    [[ "$PKG_MANAGER" == "apt" ]] && echo -e "  ${BLUE}→${RESET} Or via apt: ${BOLD}sudo apt-get install golang${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Download: ${UNDERLINE}https://go.dev/dl/${RESET}"
+    [[ "$PKG_MANAGER" == "brew" ]] && printf "  %s\n" "${BLUE}→${RESET} Or via Homebrew: ${BOLD}brew install go${RESET}"
+    [[ "$PKG_MANAGER" == "apt" ]] && printf "  %s\n" "${BLUE}→${RESET} Or via apt: ${BOLD}sudo apt-get install golang${RESET}"
     ;;
   python | python3)
-    [[ "$PKG_MANAGER" == "brew" ]] && echo -e "  ${BLUE}→${RESET} Via Homebrew: ${BOLD}brew install python3${RESET}"
-    [[ "$PKG_MANAGER" == "apt" ]] && echo -e "  ${BLUE}→${RESET} Via apt: ${BOLD}sudo apt-get install python3 python3-pip${RESET}"
-    echo -e "  ${BLUE}→${RESET} Or via pyenv for version management"
+    [[ "$PKG_MANAGER" == "brew" ]] && printf "  %s\n" "${BLUE}→${RESET} Via Homebrew: ${BOLD}brew install python3${RESET}"
+    [[ "$PKG_MANAGER" == "apt" ]] && printf "  %s\n" "${BLUE}→${RESET} Via apt: ${BOLD}sudo apt-get install python3 python3-pip${RESET}"
+    printf "  %s\n" "${BLUE}→${RESET} Or via pyenv for version management"
     ;;
   git)
-    [[ "$PKG_MANAGER" == "brew" ]] && echo -e "  ${BLUE}→${RESET} Via Homebrew: ${BOLD}brew install git${RESET}"
-    [[ "$PKG_MANAGER" == "apt" ]] && echo -e "  ${BLUE}→${RESET} Via apt: ${BOLD}sudo apt-get install git${RESET}"
-    [[ "$PLATFORM" == "windows" ]] && echo -e "  ${BLUE}→${RESET} Download: ${UNDERLINE}https://git-scm.com/download/win${RESET}"
+    [[ "$PKG_MANAGER" == "brew" ]] && printf "  %s\n" "${BLUE}→${RESET} Via Homebrew: ${BOLD}brew install git${RESET}"
+    [[ "$PKG_MANAGER" == "apt" ]] && printf "  %s\n" "${BLUE}→${RESET} Via apt: ${BOLD}sudo apt-get install git${RESET}"
+    [[ "$PLATFORM" == "windows" ]] && printf "  %s\n" "${BLUE}→${RESET} Download: ${UNDERLINE}https://git-scm.com/download/win${RESET}"
     ;;
   esac
 
-  echo -e "\n${YELLOW}⚡ Pro Tip:${RESET} Dependencies will run in Docker even if not installed locally."
+  printf "\n%s\n" "${YELLOW}⚡ Pro Tip:${RESET} Dependencies will run in Docker even if not installed locally."
 }
 
 show_success_banner() {
   local message="$1"
 
   echo
-  echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}"
-  echo -e "${GREEN}║${RESET}                                                          ${GREEN}║${RESET}"
-  echo -e "${GREEN}║${RESET}   ${GREEN}✨ SUCCESS ✨${RESET}                                        ${GREEN}║${RESET}"
+  printf "%s\n" "${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}"
+  printf "%s\n" "${GREEN}║${RESET}                                                          ${GREEN}║${RESET}"
+  printf "%s\n" "${GREEN}║${RESET}   ${GREEN}✨ SUCCESS ✨${RESET}                                        ${GREEN}║${RESET}"
   printf "${GREEN}║${RESET}   %-54s${GREEN}║${RESET}\n" "$message"
-  echo -e "${GREEN}║${RESET}                                                          ${GREEN}║${RESET}"
-  echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${RESET}"
+  printf "%s\n" "${GREEN}║${RESET}                                                          ${GREEN}║${RESET}"
+  printf "%s\n" "${GREEN}╚══════════════════════════════════════════════════════════╝${RESET}"
   echo
 }
 
 show_welcome_message() {
   echo
-  echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
-  echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
-  echo -e "${BLUE}║${RESET}   ${BOLD}Welcome to nself${RESET} - Modern Full-Stack Platform       ${BLUE}║${RESET}"
-  echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
-  echo -e "${BLUE}║${RESET}   ${DIM}Build production-ready applications with ease${RESET}       ${BLUE}║${RESET}"
-  echo -e "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
-  echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${RESET}"
+  printf "%s\n" "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
+  printf "%s\n" "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
+  printf "%s\n" "${BLUE}║${RESET}   ${BOLD}Welcome to nself${RESET} - Modern Full-Stack Platform       ${BLUE}║${RESET}"
+  printf "%s\n" "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
+  printf "%s\n" "${BLUE}║${RESET}   ${DIM}Build production-ready applications with ease${RESET}       ${BLUE}║${RESET}"
+  printf "%s\n" "${BLUE}║${RESET}                                                          ${BLUE}║${RESET}"
+  printf "%s\n" "${BLUE}╚══════════════════════════════════════════════════════════╝${RESET}"
   echo
 }
 

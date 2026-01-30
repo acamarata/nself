@@ -70,7 +70,7 @@ show_steps() {
   local description=$3
   local status="${4:-}"
 
-  echo -e "${COLOR_BOLD}Step $current/$total:${COLOR_RESET} $description"
+  printf "%s\n" "${COLOR_BOLD}Step $current/$total:${COLOR_RESET} $description"
   [[ -n "$status" ]] && echo "  Status: $status"
 }
 
@@ -81,7 +81,7 @@ confirm_with_timeout() {
   local default="${3:-n}"
 
   local response
-  echo -e "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
+  printf "%s\n" "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
 
   if read -t "$timeout" -p "Continue? [y/N] (timeout in ${timeout}s): " response; then
     [[ "$response" =~ ^[Yy]$ ]]
@@ -109,16 +109,16 @@ stop_spinner() {
 
   case "$status" in
   success)
-    echo -e "${COLOR_GREEN}${ICON_SUCCESS}${COLOR_RESET} $message"
+    printf "%s\n" "${COLOR_GREEN}${ICON_SUCCESS}${COLOR_RESET} $message"
     ;;
   error)
-    echo -e "${COLOR_RED}${ICON_FAILURE}${COLOR_RESET} $message"
+    printf "%s\n" "${COLOR_RED}${ICON_FAILURE}${COLOR_RESET} $message"
     ;;
   warning)
-    echo -e "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
+    printf "%s\n" "${COLOR_YELLOW}${ICON_WARNING}${COLOR_RESET} $message"
     ;;
   *)
-    echo -e "${COLOR_BLUE}${ICON_INFO}${COLOR_RESET} $message"
+    printf "%s\n" "${COLOR_BLUE}${ICON_INFO}${COLOR_RESET} $message"
     ;;
   esac
 }

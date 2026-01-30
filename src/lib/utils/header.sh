@@ -54,7 +54,7 @@ word_wrap() {
     result="${result}${result:+\n}${current_line}"
   fi
 
-  echo -e "$result"
+  printf "%s\n" "$result"
 }
 
 # Generate top border
@@ -123,7 +123,7 @@ generate_header() {
   # Bottom border
   output="${output}${prefix}$(generate_bottom_border)"
 
-  echo -e "$output"
+  printf "%s\n" "$output"
 }
 
 # Generate header for .env files (with # prefix)
@@ -138,7 +138,7 @@ show_header() {
   local title="$1"
   local content="${2:-}"
   echo
-  echo -e "${COLOR_CYAN}$(generate_header "$title" "$content")${COLOR_RESET}"
+  printf "%s\n" "${COLOR_CYAN}$(generate_header "$title" "$content")${COLOR_RESET}"
   echo
 }
 

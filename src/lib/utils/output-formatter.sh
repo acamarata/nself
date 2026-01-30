@@ -25,7 +25,7 @@ format_docker_output() {
 
   if [[ "$line" =~ "Pulling from" ]]; then
     DOCKER_PULL_ACTIVE=true
-    echo -e "${BLUE}📦${RESET} Pulling Docker images..."
+    printf "%s\n" "${BLUE}📦${RESET} Pulling Docker images..."
     return
   fi
 
@@ -38,7 +38,7 @@ format_docker_output() {
 
   if [[ "$line" =~ "Downloaded newer image" ]] || [[ "$line" =~ "Image is up to date" ]]; then
     if [[ "$DOCKER_PULL_ACTIVE" == true ]]; then
-      echo -e "\n${GREEN}✓${RESET} Docker images ready"
+      printf "\n%s\n" "${GREEN}✓${RESET} Docker images ready"
       DOCKER_PULL_ACTIVE=false
     fi
     return
@@ -46,23 +46,23 @@ format_docker_output() {
 
   if [[ "$line" =~ "Creating" ]]; then
     local container=$(echo "$line" | sed 's/.*Creating //' | sed 's/ .*//')
-    echo -e "${BLUE}🔨${RESET} Creating container: ${BOLD}$container${RESET}"
+    printf "%s\n" "${BLUE}🔨${RESET} Creating container: ${BOLD}$container${RESET}"
     return
   fi
 
   if [[ "$line" =~ "Started" ]]; then
     local container=$(echo "$line" | sed 's/.*Started //' | sed 's/ .*//')
-    echo -e "${GREEN}✓${RESET} Started: ${BOLD}$container${RESET}"
+    printf "%s\n" "${GREEN}✓${RESET} Started: ${BOLD}$container${RESET}"
     return
   fi
 
   if [[ "$line" =~ "Error" ]] || [[ "$line" =~ "ERROR" ]]; then
-    echo -e "${RED}✗${RESET} $line"
+    printf "%s\n" "${RED}✗${RESET} $line"
     return
   fi
 
   if [[ "$line" =~ "Warning" ]] || [[ "$line" =~ "WARNING" ]]; then
-    echo -e "${YELLOW}⚠${RESET} $line"
+    printf "%s\n" "${YELLOW}⚠${RESET} $line"
     return
   fi
 }
@@ -72,13 +72,13 @@ format_build_output() {
 
   if [[ "$line" =~ "Generating" ]]; then
     local file=$(echo "$line" | sed 's/.*Generating //' | sed 's/ .*//')
-    echo -e "${BLUE}📝${RESET} Generating: ${BOLD}$file${RESET}"
+    printf "%s\n" "${BLUE}📝${RESET} Generating: ${BOLD}$file${RESET}"
     return
   fi
 
   if [[ "$line" =~ "Created" ]]; then
     local file=$(echo "$line" | sed 's/.*Created //' | sed 's/ .*//')
-    echo -e "${GREEN}✓${RESET} Created: ${BOLD}$file${RESET}"
+    printf "%s\n" "${GREEN}✓${RESET} Created: ${BOLD}$file${RESET}"
     return
   fi
 
@@ -87,7 +87,7 @@ format_build_output() {
   fi
 
   if [[ "$line" =~ "Error" ]] || [[ "$line" =~ "ERROR" ]]; then
-    echo -e "${RED}✗${RESET} $line"
+    printf "%s\n" "${RED}✗${RESET} $line"
     return
   fi
 }
@@ -115,17 +115,17 @@ format_test_output() {
   local line="$1"
 
   if [[ "$line" =~ "PASS" ]]; then
-    echo -e "${GREEN}✓${RESET} Test passed"
+    printf "%s\n" "${GREEN}✓${RESET} Test passed"
     return
   fi
 
   if [[ "$line" =~ "FAIL" ]]; then
-    echo -e "${RED}✗${RESET} Test failed"
+    printf "%s\n" "${RED}✗${RESET} Test failed"
     return
   fi
 
   if [[ "$line" =~ "SKIP" ]]; then
-    echo -e "${YELLOW}⊘${RESET} Test skipped"
+    printf "%s\n" "${YELLOW}⊘${RESET} Test skipped"
     return
   fi
 }
@@ -135,17 +135,17 @@ format_validation_output() {
 
   if [[ "$line" =~ "Validating" ]]; then
     local item=$(echo "$line" | sed 's/.*Validating //' | sed 's/ .*//')
-    echo -e "${BLUE}🔍${RESET} Validating: ${BOLD}$item${RESET}"
+    printf "%s\n" "${BLUE}🔍${RESET} Validating: ${BOLD}$item${RESET}"
     return
   fi
 
   if [[ "$line" =~ "Valid" ]]; then
-    echo -e "${GREEN}✓${RESET} Validation passed"
+    printf "%s\n" "${GREEN}✓${RESET} Validation passed"
     return
   fi
 
   if [[ "$line" =~ "Invalid" ]]; then
-    echo -e "${RED}✗${RESET} Validation failed: $line"
+    printf "%s\n" "${RED}✗${RESET} Validation failed: $line"
     return
   fi
 }
@@ -202,36 +202,36 @@ format_error() {
   local error="$1"
   local suggestion="${2:-}"
 
-  echo -e "\n${RED}═══ ERROR ═══${RESET}"
-  echo -e "${RED}✗${RESET} $error"
+  printf "\n%s\n" "${RED}═══ ERROR ═══${RESET}"
+  printf "%s\n" "${RED}✗${RESET} $error"
 
   if [[ -n "$suggestion" ]]; then
-    echo -e "${YELLOW}💡${RESET} Suggestion: $suggestion"
+    printf "%s\n" "${YELLOW}💡${RESET} Suggestion: $suggestion"
   fi
 
-  echo -e "${RED}═════════════${RESET}\n"
+  printf "%s\n\n" "${RED}═════════════${RESET}"
 }
 
 format_warning() {
   local warning="$1"
   local suggestion="${2:-}"
 
-  echo -e "\n${YELLOW}⚠ WARNING${RESET}"
-  echo -e "$warning"
+  printf "\n%s\n" "${YELLOW}⚠ WARNING${RESET}"
+  printf "%s\n" "$warning"
 
   if [[ -n "$suggestion" ]]; then
-    echo -e "${DIM}Suggestion: $suggestion${RESET}"
+    printf "%s\n" "${DIM}Suggestion: $suggestion${RESET}"
   fi
 }
 
 format_success() {
   local message="$1"
-  echo -e "${GREEN}✓${RESET} ${BOLD}$message${RESET}"
+  printf "%s\n" "${GREEN}✓${RESET} ${BOLD}$message${RESET}"
 }
 
 format_info() {
   local message="$1"
-  echo -e "${BLUE}ℹ${RESET} $message"
+  printf "%s\n" "${BLUE}ℹ${RESET} $message"
 }
 
 format_step() {
@@ -239,7 +239,7 @@ format_step() {
   local total="$2"
   local message="$3"
 
-  echo -e "\n${BOLD}[$step_num/$total]${RESET} $message"
+  printf "\n%s\n" "${BOLD}[$step_num/$total]${RESET} $message"
 }
 
 format_section() {
@@ -249,10 +249,10 @@ format_section() {
   local padding=$(((width - ${#title} - 2) / 2))
   local line=$(printf '%*s' "$width" | tr ' ' '─')
 
-  echo -e "\n${BLUE}$line${RESET}"
+  printf "\n%s\n" "${BLUE}$line${RESET}"
   printf "${BLUE}│${RESET}%*s${BOLD}%s${RESET}%*s${BLUE}│${RESET}\n" \
     "$padding" "" "$title" "$padding" ""
-  echo -e "${BLUE}$line${RESET}\n"
+  printf "%s\n\n" "${BLUE}$line${RESET}"
 }
 
 format_summary() {
@@ -260,12 +260,12 @@ format_summary() {
   shift
   local items=("$@")
 
-  echo -e "\n${BOLD}📊 $title${RESET}"
-  echo -e "${DIM}$(printf '%.0s─' {1..40})${RESET}"
+  printf "\n%s\n" "${BOLD}📊 $title${RESET}"
+  printf "%s\n" "${DIM}$(printf '%.0s─' {1..40})${RESET}"
 
   for item in "${items[@]}"; do
-    echo -e "  • $item"
+    printf "  • %s\n" "$item"
   done
 
-  echo -e "${DIM}$(printf '%.0s─' {1..40})${RESET}\n"
+  printf "%s\n\n" "${DIM}$(printf '%.0s─' {1..40})${RESET}"
 }

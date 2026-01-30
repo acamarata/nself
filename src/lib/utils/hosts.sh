@@ -129,7 +129,7 @@ ensure_hosts_entries() {
     fi
 
     # Add all entries at once
-    if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null; then
+    if printf "%s" "$entries" | sudo tee -a /etc/hosts >/dev/null; then
       echo "✅ Successfully added ${#missing_domains[@]} entries to /etc/hosts"
       return 0
     else
@@ -145,7 +145,7 @@ ensure_hosts_entries() {
     fi
 
     # Try to add entries with sudo
-    if echo -e "$entries" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
+    if printf "%s" "$entries" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
       printf "\n✓ Successfully added %d entries to /etc/hosts\n" "${#missing_domains[@]}"
       return 0
     else

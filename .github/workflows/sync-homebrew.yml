@@ -122,6 +122,10 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           SHA256="${{ steps.sha256.outputs.sha256 }}"
 
+          # Checkout main branch (release events create detached HEAD)
+          git fetch origin main
+          git checkout main
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -131,5 +135,5 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: Update Homebrew formula for v${VERSION}"
-            git push
+            git push origin main
           fi

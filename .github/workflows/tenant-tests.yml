@@ -43,18 +43,26 @@ jobs:
           # Add to PATH for this job
           echo "${{ github.workspace }}" >> $GITHUB_PATH
 
+      - name: Create test project directory
+        run: |
+          mkdir -p ~/nself-test
+          cd ~/nself-test
+
       - name: Initialize nself
         run: |
+          cd ~/nself-test
           nself init --non-interactive
         env:
           NSELF_SKIP_WIZARD: true
 
       - name: Build nself
         run: |
+          cd ~/nself-test
           nself build
 
       - name: Start services
         run: |
+          cd ~/nself-test
           nself start
           # Wait for services to be healthy
           sleep 10
@@ -74,14 +82,17 @@ jobs:
 
       - name: Run migrations
         run: |
+          cd ~/nself-test
           nself db migrate
           # Verify tenant schema exists
           docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "\dn tenants"
 
       - name: Run tenant isolation tests
         run: |
+          cd ${{ github.workspace }}
           chmod +x src/tests/integration/test-tenant-isolation.sh
-          ./src/tests/integration/test-tenant-isolation.sh
+          cd ~/nself-test
+          ${{ github.workspace }}/src/tests/integration/test-tenant-isolation.sh
 
       - name: Show logs on failure
         if: failure()
@@ -90,7 +101,8 @@ jobs:
           docker ps -a
           echo ""
           echo "=== PostgreSQL Logs ==="
-          nself logs postgres --tail 100
+          cd ~/nself-test
+          nself logs postgres --tail 100 || true
           echo ""
           echo "=== Database Status ==="
           docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "
@@ -98,12 +110,13 @@ jobs:
             FROM pg_tables
             WHERE schemaname = 'tenants'
             ORDER BY tablename;
-          "
+          " || true
 
       - name: Cleanup
         if: always()
         run: |
-          nself stop
+          cd ~/nself-test || true
+          nself stop || true
           docker system prune -f
 
   security-audit:
