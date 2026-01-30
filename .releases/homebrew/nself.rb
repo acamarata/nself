@@ -1,8 +1,8 @@
 class Nself < Formula
-  desc "v0.8.0: Multi-tenant backend with organizations, teams, real-time collaboration, plugins, advanced security, developer tools & migration support"
+  desc "v0.9.0: Enterprise multi-tenant platform with billing, white-label customization, OAuth handlers, file upload pipeline & 150+ commands"
   homepage "https://nself.org"
-  url "https://github.com/acamarata/nself/archive/refs/tags/v0.8.0.tar.gz"
-  sha256 "57a55c41fe81a49e69c21fdb770afcf7fddaae55966c7303babbd7b923b86f5f"
+  url "https://github.com/acamarata/nself/archive/refs/tags/v0.9.0.tar.gz"
+  sha256 "PLACEHOLDER_SHA256_WILL_BE_UPDATED_BY_WORKFLOW"
   license "Source-Available"
   version "0.9.0"
 

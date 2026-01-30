@@ -4,13 +4,15 @@ setup() {
     # Create temp test directory
     TEST_DIR=$(mktemp -d)
     cd "$TEST_DIR"
-    
-    # Copy nself to test location
-    NSELF_PATH="/Users/admin/Sites/nself"
-    export PATH="$NSELF_PATH/bin:$PATH"
-    
+
+    # Resolve nself path dynamically (works in CI and locally)
+    NSELF_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    export PATH="$NSELF_PATH:$PATH"
+
     # Source portable timeout for tests
-    source "$NSELF_PATH/src/lib/utils/timeout.sh"
+    if [ -f "$NSELF_PATH/src/lib/utils/timeout.sh" ]; then
+        source "$NSELF_PATH/src/lib/utils/timeout.sh"
+    fi
 }
 
 teardown() {

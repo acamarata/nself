@@ -3,13 +3,17 @@ name: Tenant Isolation Tests
 on:
   push:
     paths:
-      - 'postgres/migrations/008_*.sql'
+      - 'src/database/migrations/008_*.sql'
+      - 'src/database/migrations/009_*.sql'
       - 'src/lib/database/**'
+      - 'src/lib/tenant/**'
       - 'src/tests/integration/test-tenant-isolation.sh'
   pull_request:
     paths:
-      - 'postgres/migrations/008_*.sql'
+      - 'src/database/migrations/008_*.sql'
+      - 'src/database/migrations/009_*.sql'
       - 'src/lib/database/**'
+      - 'src/lib/tenant/**'
       - 'src/tests/integration/test-tenant-isolation.sh'
   workflow_dispatch:
 
@@ -116,7 +120,7 @@ jobs:
           echo "Checking RLS policy definitions in migration..."
 
           # Count policies in migration
-          policy_count=$(grep -c "CREATE POLICY" postgres/migrations/008_create_tenant_system.sql || echo 0)
+          policy_count=$(grep -c "CREATE POLICY" src/database/migrations/008_create_tenant_system.sql || echo 0)
           echo "Found $policy_count RLS policies in migration"
 
           # Verify minimum policy count
@@ -142,7 +146,7 @@ jobs:
           )
 
           for policy in "${required_policies[@]}"; do
-            if ! grep -q "CREATE POLICY $policy" postgres/migrations/008_create_tenant_system.sql; then
+            if ! grep -q "CREATE POLICY $policy" src/database/migrations/008_create_tenant_system.sql; then
               echo "ERROR: Required policy missing: $policy"
               exit 1
             fi
@@ -155,7 +159,7 @@ jobs:
         run: |
           echo "Verifying RLS is enabled on all tenant tables..."
 
-          rls_count=$(grep -c "ENABLE ROW LEVEL SECURITY" postgres/migrations/008_create_tenant_system.sql || echo 0)
+          rls_count=$(grep -c "ENABLE ROW LEVEL SECURITY" src/database/migrations/008_create_tenant_system.sql || echo 0)
           echo "Found $rls_count ENABLE ROW LEVEL SECURITY statements"
 
           if [ "$rls_count" -lt 5 ]; then

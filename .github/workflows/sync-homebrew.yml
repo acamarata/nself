@@ -77,7 +77,18 @@ jobs:
 
           cat .releases/homebrew/nself.rb
 
+      - name: Check for Homebrew token
+        id: check-token
+        run: |
+          if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
+            echo "has_token=false" >> $GITHUB_OUTPUT
+            echo "::warning::HOMEBREW_TAP_TOKEN secret not configured - skipping tap sync"
+          else
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout homebrew-nself
+        if: steps.check-token.outputs.has_token == 'true'
         uses: actions/checkout@v4
         with:
           repository: acamarata/homebrew-nself
@@ -85,6 +96,7 @@ jobs:
           path: homebrew-tap
 
       - name: Sync formula to tap
+        if: steps.check-token.outputs.has_token == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -105,6 +117,12 @@ jobs:
             git push
             echo "::notice::Successfully updated homebrew-nself to v${VERSION}"
           fi
+
+      - name: Skip tap sync (no token)
+        if: steps.check-token.outputs.has_token == 'false'
+        run: |
+          echo "::notice::Skipping tap sync - HOMEBREW_TAP_TOKEN not configured"
+          echo "Formula updated in main repo only"
 
       - name: Commit formula update to main repo
         if: github.event_name == 'release'
