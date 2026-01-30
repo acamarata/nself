@@ -141,7 +141,7 @@ validate_environment() {
   
   local seen_ports=()
   for port in "${ports[@]}"; do
-    if [[ " ${seen_ports[@]} " =~ " ${port} " ]]; then
+    if [[ " ${seen_ports[*]} " =~ " ${port} " ]]; then
       log_error "Port conflict detected: $port"
       ((errors++))
     fi

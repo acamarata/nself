@@ -829,7 +829,7 @@ FUNCEOF
       # Run post-build tasks
       run_post_build_tasks 2>/dev/null || true
     else
-      echo -e "${COLOR_GREEN}✓${COLOR_RESET} Everything is up to date"
+      printf "${COLOR_GREEN}✓${COLOR_RESET} Everything is up to date\n"
     fi
   else
     # Fallback to direct orchestrate_build if modular version not available
@@ -1002,14 +1002,14 @@ FUNCEOF
     COLOR_DIM='\033[2m'
   fi
 
-  echo -e "${COLOR_BLUE:-}1.${COLOR_RESET:-} nself start - Launch your services"
-  echo -e "   ${COLOR_DIM}Starts all configured Docker containers${COLOR_RESET:-}"
+  printf "${COLOR_BLUE:-}1.${COLOR_RESET:-} nself start - Launch your services\n"
+  printf "   ${COLOR_DIM}Starts all configured Docker containers${COLOR_RESET:-}\n"
   echo ""
-  echo -e "${COLOR_BLUE:-}2.${COLOR_RESET:-} nself status - Check service health"
-  echo -e "   ${COLOR_DIM}View running containers and their status${COLOR_RESET:-}"
+  printf "${COLOR_BLUE:-}2.${COLOR_RESET:-} nself status - Check service health\n"
+  printf "   ${COLOR_DIM}View running containers and their status${COLOR_RESET:-}\n"
   echo ""
-  echo -e "${COLOR_BLUE:-}3.${COLOR_RESET:-} nself logs - View service logs"
-  echo -e "   ${COLOR_DIM}Monitor real-time logs from all services${COLOR_RESET:-}"
+  printf "${COLOR_BLUE:-}3.${COLOR_RESET:-} nself logs - View service logs\n"
+  printf "   ${COLOR_DIM}Monitor real-time logs from all services${COLOR_RESET:-}\n"
   echo ""
   echo "For more help, use: nself help or nself help build"
   echo ""

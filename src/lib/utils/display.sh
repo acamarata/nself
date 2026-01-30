@@ -102,10 +102,10 @@ show_command_header() {
   local subtitle_padding=$((content_width - subtitle_len - 1)) # -1 for the leading space
 
   echo
-  echo -e "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}"
+  printf "${COLOR_BLUE}╔══════════════════════════════════════════════════════════╗${COLOR_RESET}\n"
   printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_BOLD}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$title" $title_padding " "
   printf "${COLOR_BLUE}║${COLOR_RESET} ${COLOR_DIM}%s${COLOR_RESET}%*s${COLOR_BLUE}║${COLOR_RESET}\n" "$subtitle" $subtitle_padding " "
-  echo -e "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}"
+  printf "${COLOR_BLUE}╚══════════════════════════════════════════════════════════╝${COLOR_RESET}\n"
 }
 
 # Alias for compatibility
@@ -121,7 +121,7 @@ show_header() {
 show_section() {
   local title="$1"
   echo
-  echo -e "${COLOR_CYAN}▶ $title${COLOR_RESET}"
+  printf "${COLOR_CYAN}▶ $title${COLOR_RESET}\n"
 }
 
 # Table formatting
@@ -180,9 +180,9 @@ draw_box() {
   *) local color="$COLOR_BLUE" ;;
   esac
 
-  echo -e "${color}┌$(printf '─%.0s' $(seq 1 $width))┐${COLOR_RESET}"
-  echo -e "${color}│  $message  │${COLOR_RESET}"
-  echo -e "${color}└$(printf '─%.0s' $(seq 1 $width))┘${COLOR_RESET}"
+  printf "${color}┌$(printf '─%.0s' $(seq 1 $width))┐${COLOR_RESET}\n"
+  printf "${color}│  $message  │${COLOR_RESET}\n"
+  printf "${color}└$(printf '─%.0s' $(seq 1 $width))┘${COLOR_RESET}\n"
 }
 
 # Strip colors for log file output

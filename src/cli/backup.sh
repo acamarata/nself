@@ -220,7 +220,7 @@ cmd_backup_list() {
   show_command_header "nself backup list" "Available backups"
   
   # Local backups
-  echo -e "${COLOR_BOLD}Local Backups:${COLOR_RESET}"
+  printf "${COLOR_BOLD}Local Backups:${COLOR_RESET}\n"
   echo ""
   
   if [[ -d "$BACKUP_DIR" ]] && [[ -n "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]]; then
@@ -243,7 +243,7 @@ cmd_backup_list() {
   
   # S3 backups if configured
   if [[ -n "$S3_BUCKET" ]]; then
-    echo -e "${COLOR_BOLD}S3 Backups:${COLOR_RESET}"
+    printf "${COLOR_BOLD}S3 Backups:${COLOR_RESET}\n"
     echo ""
     
     if command -v aws >/dev/null 2>&1; then

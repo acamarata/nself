@@ -75,19 +75,19 @@ cmd_restore() {
 
       if [[ "$timestamp" != "unknown" ]]; then
         local date_formatted="${timestamp:0:4}-${timestamp:4:2}-${timestamp:6:2} ${timestamp:9:2}:${timestamp:11:2}:${timestamp:13:2}"
-        echo -e "  ${COLOR_BLUE}$filename${COLOR_RESET}"
-        echo -e "    Date: $date_formatted"
-        echo -e "    Size: $filesize"
+        printf "  ${COLOR_BLUE}$filename${COLOR_RESET}\n"
+        printf "    Date: $date_formatted\n"
+        printf "    Size: $filesize\n"
       else
-        echo -e "  ${COLOR_BLUE}$filename${COLOR_RESET} (${filesize})"
+        printf "  ${COLOR_BLUE}$filename${COLOR_RESET} (${filesize})\n"
       fi
       echo
     done
     echo "To restore a specific backup:"
-    echo -e "  ${COLOR_BLUE}nself restore $filename${COLOR_RESET}"
+    printf "  ${COLOR_BLUE}nself restore $filename${COLOR_RESET}\n"
     echo
     echo "To restore the most recent backup:"
-    echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}"
+    printf "  ${COLOR_BLUE}nself restore${COLOR_RESET}\n"
     return 0
   fi
 
@@ -126,7 +126,7 @@ cmd_restore() {
 
   # Ask for confirmation unless force flag is used
   if [[ "$force" != true ]]; then
-    echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  This will overwrite existing files"
+    printf "${COLOR_YELLOW}⚠${COLOR_RESET}  This will overwrite existing files\n"
     echo -n "Continue? [y/N]: "
     read -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -186,14 +186,14 @@ cmd_restore() {
 
   # Show next steps
   echo
-  echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
+  printf "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}\n"
   echo
-  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure from restored config${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}"
+  printf "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure from restored config${COLOR_RESET}\n"
+  printf "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}\n"
   echo
 
   if [[ -n "$files_to_backup" ]]; then
-    echo -e "${COLOR_DIM}Previous files backed up to: $pre_restore_backup${COLOR_RESET}"
+    printf "${COLOR_DIM}Previous files backed up to: $pre_restore_backup${COLOR_RESET}\n"
     echo
   fi
 

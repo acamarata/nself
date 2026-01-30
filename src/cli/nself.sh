@@ -36,8 +36,8 @@ SCRIPT_DIR="$CLI_SCRIPT_DIR"
 
 # Simple fallback if display.sh didn't load
 if ! declare -f log_error >/dev/null; then
-  log_error() { echo -e "\033[0;31m[ERROR]\033[0m $1" >&2; }
-  log_info() { echo -e "\033[0;34m[INFO]\033[0m $1"; }
+  log_error() { printf "\033[0;31m[ERROR]\033[0m $1\n" >&2; }
+  log_info() { printf "\033[0;34m[INFO]\033[0m $1\n"; }
 fi
 
 # Main router function

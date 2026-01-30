@@ -278,7 +278,7 @@ deploy-staging:
         nself update || true
         nself build
         nself restart
-      EOF
+EOF
 
 # Deploy to production
 deploy-production:
@@ -298,7 +298,7 @@ deploy-production:
         nself build
         nself restart
         nself db migrate up || true
-      EOF
+EOF
 EOF
 
   log_success "Created .gitlab-ci.yml"

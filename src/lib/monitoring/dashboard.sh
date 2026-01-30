@@ -148,7 +148,7 @@ draw_service_grid() {
   local cols=4
   local count=0
   
-  echo -e "[0;36m┌────────────────┬────────────────┬────────────────┬────────────────┐[0m"
+  printf "[0;36m┌────────────────┬────────────────┬────────────────┬────────────────┐[0m\n"
   
   local row=""
   echo "$services" | while read -r service; do
@@ -168,7 +168,7 @@ draw_service_grid() {
         row="${row}│                "
         ((count++))
       done
-      echo -e "${row}│"
+      printf "${row}│\n"
       row=""
     fi
   done
@@ -179,10 +179,10 @@ draw_service_grid() {
       row="${row}│                "
       ((count++))
     done
-    echo -e "${row}│"
+    printf "${row}│\n"
   fi
   
-  echo -e "[0;36m└────────────────┴────────────────┴────────────────┴────────────────┘[0m"
+  printf "[0;36m└────────────────┴────────────────┴────────────────┴────────────────┘[0m\n"
 }
 
 # Export functions

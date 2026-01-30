@@ -41,7 +41,7 @@ handle_api_request() {
         if [[ "$enforcement_mode" == "hard" ]]; then
             # Hard limit - block request
             echo '{"error":"Quota exceeded","code":"QUOTA_EXCEEDED","status":429}'
-            return 429
+            return 1  # Exit code (429 written to stdout as JSON)
         else
             # Soft limit - log warning but continue
             billing_log "QUOTA_WARNING" "api" "1" "{\"customer_id\":\"$customer_id\"}"
@@ -51,7 +51,7 @@ handle_api_request() {
     # Rate limiting check (burst protection)
     if ! quota_check_rate_limited "api" 100; then
         echo '{"error":"Rate limited","code":"RATE_LIMITED","status":429}'
-        return 429
+        return 1  # Exit code (429 written to stdout as JSON)
     fi
 
     # Process request

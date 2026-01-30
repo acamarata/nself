@@ -96,7 +96,7 @@ cmd_clean() {
     local project_images=$(docker images | grep -E "^${project_name}" | awk '{print $3}' | sort -u)
     local dangling_images=$(docker images -f "dangling=true" -q 2>/dev/null | sort -u)
 
-    local all_images=$(echo -e "$project_images\n$dangling_images" | sort -u | grep -v '^$')
+    local all_images=$(printf "$project_images\n$dangling_images\n" | sort -u | grep -v '^$')
 
     if [[ -n "$all_images" ]]; then
       local count=$(echo "$all_images" | wc -l | tr -d ' ')

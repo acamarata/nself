@@ -71,7 +71,7 @@ stub_docker() {
       return 0
       ;;
     *)
-      echo "mock: docker $@"
+      echo "mock: docker $*"
       return 0
       ;;
   esac
@@ -95,7 +95,7 @@ stub_git() {
       return 0
       ;;
     *)
-      echo "mock: git $@"
+      echo "mock: git $*"
       return 0
       ;;
   esac
@@ -331,7 +331,7 @@ stub_curl() {
 
 # Mock wget command
 stub_wget() {
-  echo "mock: Downloaded $@"
+  echo "mock: Downloaded $*"
   touch "${@: -1}"  # Create empty file with last arg as name
   return 0
 }

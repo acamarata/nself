@@ -40,10 +40,10 @@ source .env.local
 set +a
 
 # Override log functions for testing
-log_info() { echo "  ℹ $@"; }
-log_success() { echo "  ✓ $@"; }
-log_warning() { echo "  ⚠ $@"; }
-log_error() { echo "  ✗ $@" >&2; }
+log_info() { echo "  ℹ $*"; }
+log_success() { echo "  ✓ $*"; }
+log_warning() { echo "  ⚠ $*"; }
+log_error() { echo "  ✗ $*" >&2; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../src/lib/services/service-builder.sh"

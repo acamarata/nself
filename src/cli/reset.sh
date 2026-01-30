@@ -47,7 +47,7 @@ cmd_reset() {
   # Show standardized header
   show_command_header "nself reset" "Reset project to clean state"
 
-  echo -e "${COLOR_YELLOW}⚠${COLOR_RESET}  This will:"
+  printf "${COLOR_YELLOW}⚠${COLOR_RESET}  This will:\n"
   echo "  • Stop and remove all containers"
   echo "  • Delete all Docker volumes"
   echo "  • Remove all generated files"
@@ -295,7 +295,7 @@ cmd_reset() {
   if [[ -f ".gitignore" ]]; then
     # Check if _backup* is already in .gitignore
     if ! grep -q "^_backup" .gitignore; then
-      echo -e "\n# Backup folders from nself reset\n_backup*" >> .gitignore
+      printf "\n# Backup folders from nself reset\n_backup*\n" >> .gitignore
       printf "${COLOR_GREEN}✓${COLOR_RESET} Added _backup* to .gitignore\n"
     fi
   else
@@ -315,14 +315,14 @@ cmd_reset() {
   log_success "Project reset complete!"
   echo
 
-  echo -e "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}"
+  printf "${COLOR_CYAN}➞ Next Steps${COLOR_RESET}\n"
   echo
 
-  echo -e "  ${COLOR_BLUE}nself init${COLOR_RESET}     ${COLOR_DIM}# Create new configuration${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself restore${COLOR_RESET}  ${COLOR_DIM}# ..or restore latest backup${COLOR_RESET}"
+  printf "  ${COLOR_BLUE}nself init${COLOR_RESET}     ${COLOR_DIM}# Create new configuration${COLOR_RESET}\n"
+  printf "  ${COLOR_BLUE}nself restore${COLOR_RESET}  ${COLOR_DIM}# ..or restore latest backup${COLOR_RESET}\n"
   echo
-  echo -e "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure${COLOR_RESET}"
-  echo -e "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}"
+  printf "  ${COLOR_BLUE}nself build${COLOR_RESET}    ${COLOR_DIM}# Generate infrastructure${COLOR_RESET}\n"
+  printf "  ${COLOR_BLUE}nself start${COLOR_RESET}    ${COLOR_DIM}# Start services${COLOR_RESET}\n"
 
   return 0
 }

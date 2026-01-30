@@ -162,7 +162,7 @@ stripe_customer_portal() {
     customer_id=$(billing_get_customer_id) || {
         error "No customer ID found"
         return 1
-    fi
+    }
 
     info "Creating customer portal session..."
 

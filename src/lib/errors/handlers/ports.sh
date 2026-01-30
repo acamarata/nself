@@ -307,7 +307,7 @@ fix_port_conflicts() {
     fi
     echo "" >>.env.local
     echo "# Port overrides due to conflicts (added $(date))" >>.env.local
-    echo -e "$env_updates" >>.env.local
+    printf "$env_updates\n" >>.env.local
 
     log_success "Updated .env.local with $fixes_applied port override(s)"
     log_info "Backup saved as .env.local.backup.*"

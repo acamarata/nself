@@ -213,7 +213,7 @@ configure_alternative_ports() {
       else
         echo "${var}=${newval}" >>.env.local
       fi
-    done <<<"$(echo -e "$port_updates")"
+    done <<<"$(printf "$port_updates\n")"
     rm -f .env.local.bak
 
     log_success "Port configuration updated"

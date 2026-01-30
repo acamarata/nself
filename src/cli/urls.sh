@@ -80,7 +80,7 @@ main() {
                 [[ -f ".env.staging" ]] && source ".env.staging"
                 # Check for remote config
                 if [[ -f ".environments/staging/server.json" ]]; then
-                    echo -e "${COLOR_CYAN}→ Remote Environment: staging${COLOR_RESET}"
+                    printf "${COLOR_CYAN}→ Remote Environment: staging${COLOR_RESET}\n"
                     local host=$(grep '"host"' ".environments/staging/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
                     local domain=$(grep '"domain"' ".environments/staging/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
                     [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
@@ -92,7 +92,7 @@ main() {
                 [[ -f ".env.production" ]] && source ".env.production"
                 # Check for remote config
                 if [[ -f ".environments/prod/server.json" ]]; then
-                    echo -e "${COLOR_CYAN}→ Remote Environment: production${COLOR_RESET}"
+                    printf "${COLOR_CYAN}→ Remote Environment: production${COLOR_RESET}\n"
                     local domain=$(grep '"domain"' ".environments/prod/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
                     [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
                     echo ""
@@ -101,7 +101,7 @@ main() {
             *)
                 # Try to load from .environments directory
                 if [[ -f ".environments/$target_env/server.json" ]]; then
-                    echo -e "${COLOR_CYAN}→ Remote Environment: $target_env${COLOR_RESET}"
+                    printf "${COLOR_CYAN}→ Remote Environment: $target_env${COLOR_RESET}\n"
                     local domain=$(grep '"domain"' ".environments/$target_env/server.json" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
                     [[ -n "$domain" ]] && BASE_DOMAIN="$domain"
                     echo ""
@@ -189,7 +189,7 @@ show_url_diff() {
         exit 1
     fi
 
-    echo -e "${COLOR_CYAN}→ URL Comparison: $env1 ↔ $env2${COLOR_RESET}"
+    printf "${COLOR_CYAN}→ URL Comparison: $env1 ↔ $env2${COLOR_RESET}\n"
     echo ""
 
     # Get domains
@@ -232,7 +232,7 @@ show_url_diff() {
     done
 
     echo ""
-    echo -e "${COLOR_GRAY}Note: Only showing common services. Use --json for full comparison.${COLOR_RESET}"
+    printf "${COLOR_GRAY}Note: Only showing common services. Use --json for full comparison.${COLOR_RESET}\n"
 }
 
 # Check for route conflicts
@@ -249,10 +249,10 @@ check_route_conflicts() {
         local i
         for i in "${!routes[@]}"; do
             if [[ "${routes[$i]}" == "$route" ]]; then
-                echo -e "${COLOR_RED}✗ Route conflict detected!${COLOR_RESET}" >&2
-                echo -e "  Route '${COLOR_YELLOW}$route${COLOR_RESET}' used by both:" >&2
-                echo -e "    - ${services[$i]}" >&2
-                echo -e "    - $service" >&2
+                printf "${COLOR_RED}✗ Route conflict detected!${COLOR_RESET}\n" >&2
+                printf "  Route '${COLOR_YELLOW}$route${COLOR_RESET}' used by both:\n" >&2
+                printf "    - ${services[$i]}\n" >&2
+                printf "    - $service\n" >&2
                 has_conflicts=true
                 return 1
             fi
@@ -388,19 +388,19 @@ check_route_conflicts() {
     done
 
     if [[ "$has_conflicts" == "true" ]]; then
-        echo -e "${COLOR_YELLOW}⚠ Route conflicts must be resolved before building${COLOR_RESET}"
+        printf "${COLOR_YELLOW}⚠ Route conflicts must be resolved before building${COLOR_RESET}\n"
         echo "Suggested fixes:"
 
         for conflict in "${route_conflicts[@]}"; do
             IFS=':' read -r cs_var route <<< "$conflict"
             local service_num="${cs_var#CS_}"
             local new_route=$(suggest_route_fix "$route" "$service_num")
-            echo -e "  In your .env file, add: ${COLOR_GREEN}${cs_var}_ROUTE=${new_route}${COLOR_RESET}"
+            printf "  In your .env file, add: ${COLOR_GREEN}${cs_var}_ROUTE=${new_route}${COLOR_RESET}\n"
         done
 
         return 1
     else
-        echo -e "${COLOR_GREEN}✓ No route conflicts detected${COLOR_RESET}"
+        printf "${COLOR_GREEN}✓ No route conflicts detected${COLOR_RESET}\n"
         return 0
     fi
 }
@@ -494,124 +494,124 @@ output_table() {
     echo
 
     # Show base application URL (nginx default page)
-    echo -e "  ${BOLD}Base URL:${COLOR_RESET}       ${COLOR_GREEN}${protocol}://${domain}${COLOR_RESET} ${COLOR_GRAY}(nginx default page)${COLOR_RESET}"
+    printf "  ${BOLD}Base URL:${COLOR_RESET}       ${COLOR_GREEN}${protocol}://${domain}${COLOR_RESET} ${COLOR_GRAY}(nginx default page)${COLOR_RESET}\n"
     echo
 
     # Required Services
-    echo -e "${BOLD}${COLOR_BLUE}➞ Required Services${COLOR_RESET}"
+    printf "${BOLD}${COLOR_BLUE}➞ Required Services${COLOR_RESET}\n"
 
     if [[ "${HASURA_ENABLED:-true}" == "true" ]]; then
         local hasura_route="${HASURA_ROUTE:-api}"
-        echo -e "  GraphQL API:    ${COLOR_GREEN}${protocol}://${hasura_route}.${domain}${COLOR_RESET}"
-        echo -e "   - Console:     ${COLOR_GRAY}${protocol}://${hasura_route}.${domain}/console${COLOR_RESET}"
+        printf "  GraphQL API:    ${COLOR_GREEN}${protocol}://${hasura_route}.${domain}${COLOR_RESET}\n"
+        printf "   - Console:     ${COLOR_GRAY}${protocol}://${hasura_route}.${domain}/console${COLOR_RESET}\n"
     fi
 
     if [[ "${AUTH_ENABLED:-true}" == "true" ]]; then
         local auth_route="${AUTH_ROUTE:-auth}"
-        echo -e "  Auth:           ${COLOR_GREEN}${protocol}://${auth_route}.${domain}${COLOR_RESET}"
+        printf "  Auth:           ${COLOR_GREEN}${protocol}://${auth_route}.${domain}${COLOR_RESET}\n"
     fi
 
     # Note: PostgreSQL and Nginx don't have public URLs
-    [[ "$show_all" == "true" ]] && echo -e "  PostgreSQL:     ${COLOR_GRAY}Internal only (port 5432)${COLOR_RESET}"
-    [[ "$show_all" == "true" ]] && echo -e "  Nginx:          ${COLOR_GRAY}Reverse proxy (ports 80/443)${COLOR_RESET}"
+    [[ "$show_all" == "true" ]] && printf "  PostgreSQL:     ${COLOR_GRAY}Internal only (port 5432)${COLOR_RESET}\n"
+    [[ "$show_all" == "true" ]] && printf "  Nginx:          ${COLOR_GRAY}Reverse proxy (ports 80/443)${COLOR_RESET}\n"
     echo
 
     # Optional Services
     local has_optional=false
-    echo -e "${BOLD}${COLOR_BLUE}➞ Optional Services${COLOR_RESET}"
+    printf "${BOLD}${COLOR_BLUE}➞ Optional Services${COLOR_RESET}\n"
 
     # Storage
     if [[ "${STORAGE_ENABLED:-false}" == "true" ]]; then
         local storage_route="${STORAGE_ROUTE:-storage}"
-        echo -e "  Storage:        ${COLOR_GREEN}${protocol}://${storage_route}.${domain}${COLOR_RESET}"
+        printf "  Storage:        ${COLOR_GREEN}${protocol}://${storage_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${MINIO_ENABLED:-false}" == "true" ]]; then
         local minio_console="${STORAGE_CONSOLE_ROUTE:-storage-console}"
-        echo -e "  MinIO Console:  ${COLOR_GREEN}${protocol}://${minio_console}.${domain}${COLOR_RESET}"
+        printf "  MinIO Console:  ${COLOR_GREEN}${protocol}://${minio_console}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Mail
     if [[ "${MAILPIT_ENABLED:-false}" == "true" ]]; then
         local mail_route="${MAILPIT_ROUTE:-mail}"
-        echo -e "  Mail UI:        ${COLOR_GREEN}${protocol}://${mail_route}.${domain}${COLOR_RESET}"
+        printf "  Mail UI:        ${COLOR_GREEN}${protocol}://${mail_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Search
     if [[ "${MEILISEARCH_ENABLED:-false}" == "true" ]]; then
         local search_route="${MEILISEARCH_ROUTE:-search}"
-        echo -e "  MeiliSearch:    ${COLOR_GREEN}${protocol}://${search_route}.${domain}${COLOR_RESET}"
+        printf "  MeiliSearch:    ${COLOR_GREEN}${protocol}://${search_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Monitoring
     if [[ "${GRAFANA_ENABLED:-false}" == "true" ]]; then
         local grafana_route="${GRAFANA_ROUTE:-grafana}"
-        echo -e "  Grafana:        ${COLOR_GREEN}${protocol}://${grafana_route}.${domain}${COLOR_RESET}"
+        printf "  Grafana:        ${COLOR_GREEN}${protocol}://${grafana_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${PROMETHEUS_ENABLED:-false}" == "true" ]]; then
         local prom_route="${PROMETHEUS_ROUTE:-prometheus}"
-        echo -e "  Prometheus:     ${COLOR_GREEN}${protocol}://${prom_route}.${domain}${COLOR_RESET}"
+        printf "  Prometheus:     ${COLOR_GREEN}${protocol}://${prom_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]]; then
         local alert_route="${ALERTMANAGER_ROUTE:-alertmanager}"
-        echo -e "  Alertmanager:   ${COLOR_GREEN}${protocol}://${alert_route}.${domain}${COLOR_RESET}"
+        printf "  Alertmanager:   ${COLOR_GREEN}${protocol}://${alert_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Admin
     if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
         local admin_route="${NSELF_ADMIN_ROUTE:-admin}"
-        echo -e "  nself Admin:    ${COLOR_GREEN}${protocol}://${admin_route}.${domain}${COLOR_RESET}"
+        printf "  nself Admin:    ${COLOR_GREEN}${protocol}://${admin_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${BULLMQ_UI_ENABLED:-false}" == "true" ]]; then
         local bullmq_route="${BULLMQ_UI_ROUTE:-bullmq}"
-        echo -e "  BullMQ UI:      ${COLOR_GREEN}${protocol}://${bullmq_route}.${domain}${COLOR_RESET}"
+        printf "  BullMQ UI:      ${COLOR_GREEN}${protocol}://${bullmq_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # ML
     if [[ "${MLFLOW_ENABLED:-false}" == "true" ]]; then
         local mlflow_route="${MLFLOW_ROUTE:-mlflow}"
-        echo -e "  MLflow:         ${COLOR_GREEN}${protocol}://${mlflow_route}.${domain}${COLOR_RESET}"
+        printf "  MLflow:         ${COLOR_GREEN}${protocol}://${mlflow_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Other
     if [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
         local functions_route="${FUNCTIONS_ROUTE:-functions}"
-        echo -e "  Functions:      ${COLOR_GREEN}${protocol}://${functions_route}.${domain}${COLOR_RESET}"
+        printf "  Functions:      ${COLOR_GREEN}${protocol}://${functions_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${WEBHOOK_SERVICE_ENABLED:-false}" == "true" ]]; then
         local webhook_route="${WEBHOOK_SERVICE_ROUTE:-webhooks}"
-        echo -e "  Webhooks:       ${COLOR_GREEN}${protocol}://${webhook_route}.${domain}${COLOR_RESET}"
+        printf "  Webhooks:       ${COLOR_GREEN}${protocol}://${webhook_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     if [[ "${NESTJS_ENABLED:-false}" == "true" ]]; then
         local nestjs_route="${NESTJS_ROUTE:-nestjs-api}"
-        echo -e "  NestJS API:     ${COLOR_GREEN}${protocol}://${nestjs_route}.${domain}${COLOR_RESET}"
+        printf "  NestJS API:     ${COLOR_GREEN}${protocol}://${nestjs_route}.${domain}${COLOR_RESET}\n"
         has_optional=true
     fi
 
     # Show Redis if enabled (internal)
     if [[ "$show_all" == "true" && "${REDIS_ENABLED:-false}" == "true" ]]; then
-        echo -e "  Redis:          ${COLOR_GRAY}Internal only (port 6379)${COLOR_RESET}"
+        printf "  Redis:          ${COLOR_GRAY}Internal only (port 6379)${COLOR_RESET}\n"
         has_optional=true
     fi
 
-    [[ "$has_optional" == "false" ]] && echo -e "  ${COLOR_GRAY}None enabled${COLOR_RESET}"
+    [[ "$has_optional" == "false" ]] && printf "  ${COLOR_GRAY}None enabled${COLOR_RESET}\n"
     echo
 
     # Custom Services
@@ -622,7 +622,7 @@ output_table() {
 
         if [[ -n "$cs_value" ]]; then
             if [[ $custom_count -eq 0 ]]; then
-                echo -e "${BOLD}${COLOR_BLUE}➞ Custom Services${COLOR_RESET}"
+                printf "${BOLD}${COLOR_BLUE}➞ Custom Services${COLOR_RESET}\n"
             fi
             custom_count=$((custom_count + 1))
 
@@ -638,18 +638,18 @@ output_table() {
             if [[ "$is_public" == "true" ]]; then
                 # Pad service name for alignment
                 local padded_name=$(printf "%-15s" "$service_name:")
-                echo -e "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(${template})${COLOR_RESET}"
+                printf "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(${template})${COLOR_RESET}\n"
             elif [[ "$show_all" == "true" ]]; then
                 local padded_name=$(printf "%-15s" "$service_name:")
-                echo -e "  ${padded_name} ${COLOR_GRAY}Internal only - port ${port}${COLOR_RESET}"
+                printf "  ${padded_name} ${COLOR_GRAY}Internal only - port ${port}${COLOR_RESET}\n"
             fi
         fi
     done
-    [[ $custom_count -eq 0 ]] && echo -e "${BOLD}${COLOR_BLUE}➞ Custom Services${COLOR_RESET}" && echo -e "  ${COLOR_GRAY}None configured${COLOR_RESET}"
+    [[ $custom_count -eq 0 ]] && printf "${BOLD}${COLOR_BLUE}➞ Custom Services${COLOR_RESET}\n" && printf "  ${COLOR_GRAY}None configured${COLOR_RESET}\n"
     echo
 
     # Frontend Applications - detect dynamically
-    echo -e "${BOLD}${COLOR_BLUE}➞ Frontend Routes${COLOR_RESET}"
+    printf "${BOLD}${COLOR_BLUE}➞ Frontend Routes${COLOR_RESET}\n"
     local has_frontend=false
 
     # Check for frontend apps (FRONTEND_APP_1, FRONTEND_APP_2, etc.)
@@ -662,12 +662,12 @@ output_table() {
         if [[ -n "$route" ]]; then
             has_frontend=true
             local padded_name=$(printf "%-15s" "${name}:")
-            echo -e "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}"
+            printf "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}\n"
         fi
     done
 
     if [[ "$has_frontend" == "false" ]]; then
-        echo -e "  ${COLOR_GRAY}None configured${COLOR_RESET}"
+        printf "  ${COLOR_GRAY}None configured${COLOR_RESET}\n"
     fi
     echo
 
@@ -675,9 +675,9 @@ output_table() {
     show_plugin_urls "$protocol" "$domain"
 
     # Summary
-    echo -e "${BOLD}${COLOR_GRAY}────────────────────────────────────────${COLOR_RESET}"
+    printf "${BOLD}${COLOR_GRAY}────────────────────────────────────────${COLOR_RESET}\n"
     local active_count=$(count_active_routes)
-    echo -e "  ${COLOR_GRAY}Total routes: ${active_count} | Domain: ${domain} | Protocol: ${protocol}${COLOR_RESET}"
+    printf "  ${COLOR_GRAY}Total routes: ${active_count} | Domain: ${domain} | Protocol: ${protocol}${COLOR_RESET}\n"
 
     # SSL/Trust Status
     if [[ "${protocol}" == "https" ]]; then
@@ -706,7 +706,7 @@ output_table() {
         fi
     fi
 
-    echo -e "  ${COLOR_GRAY}Use 'nself urls --all' to see internal services${COLOR_RESET}"
+    printf "  ${COLOR_GRAY}Use 'nself urls --all' to see internal services${COLOR_RESET}\n"
     echo
 }
 

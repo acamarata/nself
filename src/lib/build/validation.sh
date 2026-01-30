@@ -192,7 +192,7 @@ validate_custom_services() {
     fi
 
     # Check for duplicate service names
-    if [[ ${#service_names[@]} -gt 0 ]] && [[ " ${service_names[@]} " =~ " ${service_name} " ]]; then
+    if [[ ${#service_names[@]} -gt 0 ]] && [[ " ${service_names[*]} " =~ " ${service_name} " ]]; then
       errors+=("CS_${i} duplicate service name: $service_name")
     else
       service_names+=("$service_name")
@@ -206,7 +206,7 @@ validate_custom_services() {
       fi
 
       # Check for port conflicts
-      if [[ ${#used_ports[@]} -gt 0 ]] && [[ " ${used_ports[@]} " =~ " ${port} " ]]; then
+      if [[ ${#used_ports[@]} -gt 0 ]] && [[ " ${used_ports[*]} " =~ " ${port} " ]]; then
         warnings+=("CS_${i} port $port is already in use by another service")
       else
         used_ports+=("$port")

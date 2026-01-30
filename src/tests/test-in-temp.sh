@@ -41,7 +41,7 @@ trap cleanup EXIT INT TERM
 run_nself() {
     local cmd="$1"
     shift
-    echo -e "${COLOR_BLUE}Running: nself $cmd $@${COLOR_RESET}"
+    printf "${COLOR_BLUE}Running: nself $cmd %s${COLOR_RESET}\n" "$*"
     bash "$NSELF_DIR/src/cli/${cmd}.sh" "$@"
 }
 

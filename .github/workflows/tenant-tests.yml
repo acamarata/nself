@@ -38,10 +38,8 @@ jobs:
 
       - name: Install nself
         run: |
-          # Make nself executable
-          chmod +x nself
-          # Add to PATH for this job
-          echo "${{ github.workspace }}" >> $GITHUB_PATH
+          # Install nself globally
+          sudo ./install.sh
 
       - name: Create test project directory
         run: |
@@ -101,8 +99,7 @@ jobs:
           docker ps -a
           echo ""
           echo "=== PostgreSQL Logs ==="
-          cd ~/nself-test
-          nself logs postgres --tail 100 || true
+          cd ~/nself-test && nself logs postgres --tail 100 || true
           echo ""
           echo "=== Database Status ==="
           docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "
@@ -115,8 +112,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          cd ~/nself-test || true
-          nself stop || true
+          cd ~/nself-test && nself stop || true
           docker system prune -f
 
   security-audit:

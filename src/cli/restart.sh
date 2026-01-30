@@ -113,7 +113,7 @@ cmd_restart() {
         # No containers at all - do a fresh build and start
         show_command_header "nself restart" "No containers found - building and starting"
 
-        echo -e "${COLOR_CYAN}➞ Building Configuration${COLOR_RESET}"
+        printf "${COLOR_CYAN}➞ Building Configuration${COLOR_RESET}\n"
         echo
 
         # Build configuration
@@ -147,7 +147,7 @@ cmd_restart() {
       show_command_header "nself restart" "Smart restart - applying configuration changes"
 
       # Detect which services need restart
-      echo -e "${COLOR_CYAN}➞ Analyzing Changes${COLOR_RESET}"
+      printf "${COLOR_CYAN}➞ Analyzing Changes${COLOR_RESET}\n"
       echo
 
       # Check if docker-compose.yml or any .env file changed
@@ -179,7 +179,7 @@ cmd_restart() {
 
         if [[ $compose_modified -gt $container_timestamp ]]; then
           compose_changed=true
-          echo -e "  ${COLOR_YELLOW}●${COLOR_RESET} docker-compose.yml changed"
+          printf "  ${COLOR_YELLOW}●${COLOR_RESET} docker-compose.yml changed\n"
         fi
 
         if [[ $env_modified -gt $container_timestamp ]]; then
@@ -189,7 +189,7 @@ cmd_restart() {
             if [[ -f "$env_file" ]]; then
               local this_modified=$(stat -f %m "$env_file" 2>/dev/null || stat -c %Y "$env_file" 2>/dev/null)
               if [[ $this_modified -gt $container_timestamp ]]; then
-                echo -e "  ${COLOR_YELLOW}●${COLOR_RESET} $env_file changed"
+                printf "  ${COLOR_YELLOW}●${COLOR_RESET} $env_file changed\n"
               fi
             fi
           done
@@ -214,7 +214,7 @@ cmd_restart() {
           # Show build errors if verbose
           if [[ "$verbose" == "true" ]]; then
             echo
-            echo -e "${COLOR_YELLOW}Build output:${COLOR_RESET}"
+            printf "${COLOR_YELLOW}Build output:${COLOR_RESET}\n"
             cat "$build_output"
             echo
           fi
@@ -228,7 +228,7 @@ cmd_restart() {
 
       # Smart restart with minimal downtime
       echo
-      echo -e "${COLOR_CYAN}➞ Restarting Services${COLOR_RESET}"
+      printf "${COLOR_CYAN}➞ Restarting Services${COLOR_RESET}\n"
       echo
 
       # Use docker compose up to handle changes intelligently
@@ -242,11 +242,11 @@ cmd_restart() {
         local recreated=$(grep "Recreated\|Created" "$output_file" | sed 's/.*Container //' | sed 's/ .*//' | sort -u)
         if [[ -n "$recreated" ]]; then
           echo
-          echo -e "${COLOR_CYAN}➞ Updated Services${COLOR_RESET}"
+          printf "${COLOR_CYAN}➞ Updated Services${COLOR_RESET}\n"
           echo
           for container in $recreated; do
             local service="${container#${project_name}_}"
-            echo -e "  ${COLOR_GREEN}↻${COLOR_RESET} $service"
+            printf "  ${COLOR_GREEN}↻${COLOR_RESET} $service\n"
           done
         fi
 
@@ -279,7 +279,7 @@ cmd_restart() {
       # No configuration changes, just restart running services
       show_command_header "nself restart" "Quick restart - no configuration changes"
 
-      echo -e "${COLOR_CYAN}➞ Restarting Services${COLOR_RESET}"
+      printf "${COLOR_CYAN}➞ Restarting Services${COLOR_RESET}\n"
       echo
 
       # Get all running services
@@ -348,7 +348,7 @@ cmd_restart() {
 
 # Show service URLs (same as in start.sh)
 show_service_urls() {
-  echo -e "${COLOR_CYAN}➞ Service URLs${COLOR_RESET}"
+  printf "${COLOR_CYAN}➞ Service URLs${COLOR_RESET}\n"
   echo
 
   # Load environment if available
@@ -372,7 +372,7 @@ show_service_urls() {
   if echo "$running_services" | grep -q "hasura"; then
     local hasura_port=$(docker port "${project_name}_hasura" 8080 2>/dev/null | cut -d: -f2)
     if [[ -n "$hasura_port" ]]; then
-      echo -e "${COLOR_GREEN}✓${COLOR_RESET} GraphQL:    ${COLOR_BLUE}http://localhost:$hasura_port/console${COLOR_RESET}"
+      printf "${COLOR_GREEN}✓${COLOR_RESET} GraphQL:    ${COLOR_BLUE}http://localhost:$hasura_port/console${COLOR_RESET}\n"
       urls_shown=true
     fi
   fi
@@ -383,7 +383,7 @@ show_service_urls() {
     if [[ -z "$pg_port" ]]; then
       pg_port="${POSTGRES_PORT:-5432}"
     fi
-    echo -e "${COLOR_GREEN}✓${COLOR_RESET} Database:   ${COLOR_BLUE}postgresql://localhost:$pg_port/postgres${COLOR_RESET}"
+    printf "${COLOR_GREEN}✓${COLOR_RESET} Database:   ${COLOR_BLUE}postgresql://localhost:$pg_port/postgres${COLOR_RESET}\n"
     urls_shown=true
   fi
 
@@ -393,13 +393,13 @@ show_service_urls() {
     if [[ -z "$redis_port" ]]; then
       redis_port="${REDIS_PORT:-6379}"
     fi
-    echo -e "${COLOR_GREEN}✓${COLOR_RESET} Redis:      ${COLOR_BLUE}redis://localhost:$redis_port${COLOR_RESET}"
+    printf "${COLOR_GREEN}✓${COLOR_RESET} Redis:      ${COLOR_BLUE}redis://localhost:$redis_port${COLOR_RESET}\n"
     urls_shown=true
   fi
 
   # If no URLs shown, indicate no exposed services
   if [[ "$urls_shown" != "true" ]]; then
-    echo -e "${COLOR_DIM}No services with exposed ports found${COLOR_RESET}"
+    printf "${COLOR_DIM}No services with exposed ports found${COLOR_RESET}\n"
   fi
 }
 

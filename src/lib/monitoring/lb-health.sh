@@ -294,9 +294,9 @@ display_health_dashboard() {
       echo -n "  • $backend: "
       
       if health_check_endpoint "$backend"; then
-        echo -e "\033[32m● Healthy\033[0m"
+        printf "\033[32m● Healthy\033[0m\n"
       else
-        echo -e "\033[31m○ Unhealthy\033[0m"
+        printf "\033[31m○ Unhealthy\033[0m\n"
       fi
     done
     

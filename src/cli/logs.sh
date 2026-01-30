@@ -156,7 +156,7 @@ show_error_summary() {
       if [[ "$error_found" == "false" ]]; then
         error_found=true
       fi
-      echo -e "\033[1;31m● $service\033[0m"
+      printf "\033[1;31m● $service\033[0m\n"
       echo "$errors" | while read -r line; do
         echo "  $(echo "$line" | sed 's/^.*[0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9][^ ]* *//' | cut -c1-100)"
       done
@@ -326,7 +326,7 @@ show_top_talkers() {
   done
 
   # Sort by line count and show top 5
-  echo -e "$service_data" | sort -rn | head -5 | while IFS=: read -r count service; do
+  printf "$service_data\n" | sort -rn | head -5 | while IFS=: read -r count service; do
     if [[ -n "$service" ]]; then
       if [[ $count -gt 20 ]]; then
         printf "\033[1;33m● %-12s\033[0m %s lines\n" "$service" "$count"
@@ -491,7 +491,7 @@ main() {
 
   # Setup signal handlers for follow mode
   if [[ "$FOLLOW_MODE" == "true" ]]; then
-    trap 'echo -e "\n\nLog following stopped"; exit 0' INT
+    trap 'printf "\n\nLog following stopped\n"; exit 0' INT
     if [[ "$COMPACT_MODE" != "true" ]]; then
       show_header "Following logs... (Press Ctrl+C to stop)"
       echo ""

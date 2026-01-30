@@ -424,16 +424,16 @@ show_service_overview() {
   done
 
   # Show services header with count
-  echo -e "\033[1;36m→\033[0m Services ($running/$total running)"
+  printf "\033[1;36m→\033[0m Services ($running/$total running)\n"
   echo ""
 
   # Show all services
   for service_entry in "${service_list[@]}"; do
-    echo -e "$service_entry"
+    printf "$service_entry\n"
   done
 
   if [[ $stopped_count -gt 5 ]]; then
-    echo -e "\033[1;37m...\033[0m +$(($stopped_count - 5)) more stopped"
+    printf "\033[1;37m...\033[0m +$(($stopped_count - 5)) more stopped\n"
   fi
 }
 
@@ -517,7 +517,7 @@ show_urls() {
   local base_domain="${BASE_DOMAIN:-local.nself.org}"
 
   echo ""
-  echo -e "\033[1;36m→\033[0m Service URLs"
+  printf "\033[1;36m→\033[0m Service URLs\n"
   echo ""
 
   # GraphQL API with sub-items
@@ -591,7 +591,7 @@ Exiting watch mode..."; exit 0' INT
 
     clear
     echo ""
-    echo -e "\033[1;36mnself Status (Watch Mode)\033[0m • Refresh: ${REFRESH_INTERVAL}s • Ctrl+C to exit"
+    printf "\033[1;36mnself Status (Watch Mode)\033[0m • Refresh: ${REFRESH_INTERVAL}s • Ctrl+C to exit\n"
     echo "───────────────────────────────────────────────────────────────────────────"
     echo ""
 
@@ -732,7 +732,7 @@ show_verbose_service_overview() {
   local total=${#services[@]}
   local sorted_services=($(sort_services "${services[@]}"))
 
-  echo -e "\033[1;36m→\033[0m Services ($total total) - Verbose Health Check Output"
+  printf "\033[1;36m→\033[0m Services ($total total) - Verbose Health Check Output\n"
   echo ""
 
   for service in "${sorted_services[@]}"; do
@@ -756,11 +756,11 @@ show_verbose_service_overview() {
         indicator="\033[1;36m●\033[0m"
       fi
 
-      echo -e "${indicator} ${COLOR_BOLD}$service${COLOR_RESET}"
+      printf "${indicator} ${COLOR_BOLD}$service${COLOR_RESET}\n"
       show_verbose_health "$service"
       echo ""
     else
-      echo -e "\033[1;37m○\033[0m ${COLOR_DIM}$service (stopped)${COLOR_RESET}"
+      printf "\033[1;37m○\033[0m ${COLOR_DIM}$service (stopped)${COLOR_RESET}\n"
     fi
   done
 
@@ -1570,7 +1570,7 @@ main() {
 
   # Show legend right after services
   echo ""
-  echo -e "\033[1;32m✓\033[0m Healthy  \033[1;31m✗\033[0m Unhealthy  \033[1;36m●\033[0m Running  \033[1;33m⟳\033[0m Starting  \033[1;37m○\033[0m Stopped"
+  printf "\033[1;32m✓\033[0m Healthy  \033[1;31m✗\033[0m Unhealthy  \033[1;36m●\033[0m Running  \033[1;33m⟳\033[0m Starting  \033[1;37m○\033[0m Stopped\n"
 
   echo ""
   echo "nself status <service> | nself status --watch"

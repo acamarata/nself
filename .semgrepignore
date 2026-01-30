@@ -1,0 +1,16 @@
+# Semgrep ignore file for nself project
+
+# Templates are example/starter code, not production code
+src/templates/**
+
+# Documentation contains example nginx configs
+docs/**
+
+# Test files may have intentional security issues for testing
+src/tests/**
+src/examples/**
+
+# Third-party or generated files
+node_modules/
+vendor/
+.git/

@@ -225,11 +225,11 @@ draw_bar() {
   
   # Choose color based on value
   if [[ $value -lt 50 ]]; then
-    echo -en "\033[32m"  # Green
+    printf "\033[32m"  # Green
   elif [[ $value -lt 80 ]]; then
-    echo -en "\033[33m"  # Yellow
+    printf "\033[33m"  # Yellow
   else
-    echo -en "\033[31m"  # Red
+    printf "\033[31m"  # Red
   fi
   
   # Draw filled part
@@ -238,7 +238,7 @@ draw_bar() {
   done
   
   # Reset color and draw empty part
-  echo -en "\033[0m"
+  printf "\033[0m"
   for ((i=0; i<empty; i++)); do
     echo -n "░"
   done
@@ -254,18 +254,18 @@ draw_mini_bar() {
   
   # Choose color
   if [[ $value -lt 50 ]]; then
-    echo -en "\033[32m"  # Green
+    printf "\033[32m"  # Green
   elif [[ $value -lt 80 ]]; then
-    echo -en "\033[33m"  # Yellow
+    printf "\033[33m"  # Yellow
   else
-    echo -en "\033[31m"  # Red
+    printf "\033[31m"  # Red
   fi
   
   # Draw bar
   for ((i=0; i<filled; i++)); do
     echo -n "▰"
   done
-  echo -en "\033[0m"
+  printf "\033[0m"
   for ((i=0; i<empty; i++)); do
     echo -n "▱"
   done
@@ -276,15 +276,15 @@ draw_health_bar() {
   local value=$1
   
   if [[ $value -ge 90 ]]; then
-    echo -en "\033[32m"  # Green
+    printf "\033[32m"  # Green
   elif [[ $value -ge 70 ]]; then
-    echo -en "\033[33m"  # Yellow
+    printf "\033[33m"  # Yellow
   else
-    echo -en "\033[31m"  # Red
+    printf "\033[31m"  # Red
   fi
   
   draw_bar "$value" 100
-  echo -en "\033[0m"
+  printf "\033[0m"
 }
 
 # Run metrics dashboard
