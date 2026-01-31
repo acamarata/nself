@@ -223,10 +223,15 @@ CREATE TRIGGER update_tenant_settings_updated_at
     EXECUTE FUNCTION tenants.update_updated_at();
 
 -- Function: Auto-add owner as member when tenant is created
+-- SECURITY DEFINER allows this to bypass RLS policies
 CREATE OR REPLACE FUNCTION tenants.auto_add_owner_as_member()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = tenants, pg_temp
+AS $$
 BEGIN
     -- Automatically add the owner as a member with 'owner' role
+    -- This bypasses RLS since we need to create the first member
     INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
     VALUES (NEW.id, NEW.owner_user_id, 'owner')
     ON CONFLICT (tenant_id, user_id) DO NOTHING;
