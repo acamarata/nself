@@ -457,7 +457,7 @@ nself doctor > diagnostics.txt
 Available for enterprise customers. Contact for SLAs, priority support, and custom features.
 
 **Contributing:**
-Pull requests are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Pull requests are welcome! See [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) for guidelines.
 
 ---
 

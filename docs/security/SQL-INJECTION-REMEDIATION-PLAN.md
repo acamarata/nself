@@ -438,7 +438,7 @@ echo "✓ No SQL injection vulnerabilities detected"
 
 ### Documentation
 - [ ] All developers trained on safe-query.sh usage
-- [ ] CONTRIBUTING.md updated with security requirements
+- [ ] contributing/CONTRIBUTING.md updated with security requirements
 - [ ] Security best practices documented
 - [ ] Code review checklist includes SQL injection checks
 

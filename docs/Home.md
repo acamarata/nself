@@ -360,7 +360,7 @@ nself has been thoroughly audited for security vulnerabilities.
 
 We welcome contributions! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
 
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
+- **[Contributing Guide](contributing/CONTRIBUTING.md)** - How to contribute
 - **[Development Setup](contributing/README.md)** - Dev environment
 - **[Cross-Platform](contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Compatibility requirements
 

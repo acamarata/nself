@@ -969,7 +969,7 @@ Supports DigitalOcean, Linode, Vultr, Hetzner, and any Ubuntu/Debian VPS.
 - **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
 - **[Environment Cascade](docs/CONFIG.md)** - Multi-environment configuration
 - **[Directory Structure](docs/DIRECTORY_STRUCTURE.md)** - Complete file organization
-- **[Contributing](docs/CONTRIBUTING.md)** - Development guidelines
+- **[Contributing](docs/contributing/CONTRIBUTING.md)** - Development guidelines
 
 ### Release Information
 - **[Release Notes](docs/RELEASES.md)** - Complete version history

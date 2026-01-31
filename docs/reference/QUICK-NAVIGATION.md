@@ -154,7 +154,7 @@
 
 | Task | Go to |
 |------|-------|
-| Contribute to nself | [Contributing Guide](../CONTRIBUTING.md) |
+| Contribute to nself | [Contributing Guide](../contributing/CONTRIBUTING.md) |
 | Development setup | [Development](../contributing/README.md) |
 | Create service templates | [Service Templates](../services/SERVICE_TEMPLATES.md) |
 | Create plugins | [Plugin Development](../plugins/development.md) |

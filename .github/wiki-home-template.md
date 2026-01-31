@@ -6,7 +6,7 @@
 
 ### Core Documentation
 - [API Reference](https://github.com/acamarata/nself/blob/main/docs/API.md) - Complete command reference
-- [Contributing Guide](https://github.com/acamarata/nself/blob/main/docs/CONTRIBUTING.md) - How to contribute
+- [Contributing Guide](https://github.com/acamarata/nself/blob/main/docs/contributing/CONTRIBUTING.md) - How to contribute
 - [Architecture](https://github.com/acamarata/nself/blob/main/docs/ARCHITECTURE.MD) - System design
 
 ### Development Guides
@@ -18,7 +18,7 @@
 ### Reference
 - [Output Formatting](https://github.com/acamarata/nself/blob/main/docs/OUTPUT_FORMATTING.MD) - UI standards
 - [Roadmap](https://github.com/acamarata/nself/blob/main/docs/REFACTORING_ROADMAP.MD) - Future plans
-- [Changelog](https://github.com/acamarata/nself/blob/main/docs/CHANGELOG.md) - Version history
+- [Changelog](https://github.com/acamarata/nself/blob/main/docs/releases/CHANGELOG.md) - Version history
 
 ## Why Documentation Lives in `/docs`
 

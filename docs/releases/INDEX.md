@@ -310,7 +310,7 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 - **[Home](../Home.md)** - Documentation homepage
 - **[Commands Reference](../commands/COMMANDS.md)** - Complete CLI reference
-- **[Contributing](../CONTRIBUTING.md)** - Contribution guidelines
+- **[Contributing](../contributing/CONTRIBUTING.md)** - Contribution guidelines
 - **[Architecture](../architecture/ARCHITECTURE.md)** - System design
 
 ---

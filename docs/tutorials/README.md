@@ -248,7 +248,7 @@ Links to related tutorials and advanced topics.
 Found an issue in a tutorial? Have a suggestion?
 
 1. **Open an issue**: [GitHub Issues](https://github.com/acamarata/nself/issues)
-2. **Submit a PR**: [Contributing Guide](../CONTRIBUTING.md)
+2. **Submit a PR**: [Contributing Guide](../contributing/CONTRIBUTING.md)
 3. **Request a tutorial**: [Discussions](https://github.com/acamarata/nself/discussions)
 
 ---

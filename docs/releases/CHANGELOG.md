@@ -776,11 +776,11 @@ Complete advanced backend implementation with real-time collaboration, performan
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+See [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) for development guidelines.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for security policy and reporting vulnerabilities.
+See [SECURITY.md](../guides/SECURITY.md) for security policy and reporting vulnerabilities.
 
 ## License
 

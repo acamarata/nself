@@ -628,7 +628,7 @@ docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_
    - Add to CI/CD pipeline
 
 5. **Documentation**
-   - Document safe-query.sh usage in CONTRIBUTING.md
+   - Document safe-query.sh usage in contributing/CONTRIBUTING.md
    - Add security best practices guide
    - Require code review for all DB queries
 

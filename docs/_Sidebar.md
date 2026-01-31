@@ -1,76 +1,70 @@
-# nself v0.9.0
+# nself v0.9.6
 
-### [Home](README)
+### [Home](Home)
+### [Documentation](README)
 
 ---
 
 ## Getting Started
 
-- [Quick Start](guides/Quick-Start)
-- [Installation](guides/Installation)
+- [Quick Start](getting-started/Quick-Start)
+- [Installation](getting-started/Installation)
+- [FAQ](getting-started/FAQ)
 - [Database Workflow](guides/DATABASE-WORKFLOW)
 - [Demo Setup](services/DEMO_SETUP)
-- [FAQ](guides/FAQ)
 
 ---
 
-## Commands
+## Commands (v1.0)
 
 - [Commands Overview](commands/README)
-- [Quick Reference](quick-reference/COMMAND-REFERENCE)
+- [Command Tree](commands/COMMAND-TREE-V1)
+- [Quick Reference](reference/COMMAND-REFERENCE)
 
-### Core
-- [init](commands/INIT) - Project setup
-- [build](commands/BUILD) - Generate configs
+### Core (5)
+- [init](commands/INIT) - Initialize
+- [build](commands/BUILD) - Build configs
 - [start](commands/START) - Start services
 - [stop](commands/STOP) - Stop services
-- [status](commands/STATUS) - Service status
-- [urls](commands/URLS) - Show URLs
+- [restart](commands/RESTART) - Restart
 
-### Database
-- [db](commands/DB) - Database tools
+### Database (11 subcommands)
+- [db](commands/DB) - Database management
   - migrate, seed, mock, backup, schema, types
 
-### Multi-Tenant (v0.9.0)
-- [tenant](commands/TENANT) - Multi-tenant management
-  - create, list, show, suspend, activate, delete
-- [tenant billing](commands/BILLING) - Billing & subscriptions
-- [tenant branding](commands/BRANDING) - Brand customization
-- [tenant domains](commands/DOMAINS) - Custom domains & SSL
-- [tenant email](commands/EMAIL-TEMPLATES) - Email templates
-- [tenant themes](commands/THEMES) - Theme management
+### Multi-Tenant (50+ subcommands)
+- [tenant](commands/TENANT) - Multi-tenancy
+  - Includes: billing, org, branding, domains
 
-### OAuth & Storage (v0.9.0)
-- [oauth](commands/OAUTH) - OAuth providers
-  - enable, config, test, list, status
-- [storage](commands/STORAGE) - File storage
-  - upload, list, delete, config, graphql-setup
+### Deployment (23 subcommands)
+- [deploy](commands/DEPLOY) - Deployments
+  - Includes: staging, prod, upgrade, servers
 
-### Deployment
-- [deploy](commands/DEPLOY) - SSH deployment
-- [env](commands/ENV) - Environments
-- [prod](commands/PROD) - Production
-- [staging](commands/STAGING) - Staging
+### Infrastructure (38 subcommands)
+- [infra](commands/INFRA) - Infrastructure
+  - Includes: provider, k8s, helm
 
-### Performance
-- [perf](commands/PERF) - Profiling
-- [bench](commands/BENCH) - Benchmarking
-- [scale](commands/SCALE) - Service scaling
+### Services (43 subcommands)
+- [service](commands/SERVICE) - Services
+  - Includes: storage, email, search, redis
 
-### Operations
-- [health](commands/HEALTH) - Health checks
-- [doctor](commands/DOCTOR) - Diagnostics
+### Auth & Security (38 subcommands)
+- [auth](commands/AUTH) - Authentication
+  - Includes: oauth, mfa, ssl, roles
+
+### Configuration (20 subcommands)
 - [config](commands/CONFIG) - Configuration
-- [history](commands/HISTORY) - Audit trail
+  - Includes: env, secrets, vault
 
-### Infrastructure
-- [servers](commands/SERVERS) - Server management
-- [provider](commands/PROVIDER) - Cloud providers
-- [k8s](commands/K8S) - Kubernetes
-- [helm](commands/HELM) - Helm charts
+### Utilities (15 commands)
+- [status](commands/STATUS) - Status
+- [logs](commands/LOGS) - Logs
+- [urls](commands/URLS) - URLs
+- [doctor](commands/DOCTOR) - Diagnostics
+- [monitor](commands/MONITOR) - Monitoring
 
 ### Plugins (v0.4.8)
-- [plugin](commands/PLUGIN) - Plugin management
+- [plugin](commands/PLUGIN) - Plugins
 
 ---
 
@@ -124,75 +118,110 @@
 
 ## Tutorials
 
-- [Tutorials Overview](tutorials/README)
-- [SaaS in 15 Minutes](tutorials/QUICK-START-SAAS)
-- [B2B Platform](tutorials/QUICK-START-B2B)
+- [Tutorials Index](tutorials/INDEX)
+- [SaaS Quick Start](tutorials/QUICK-START-SAAS)
+- [B2B Quick Start](tutorials/QUICK-START-B2B)
 - [Marketplace](tutorials/QUICK-START-MARKETPLACE)
 - [Agency Platform](tutorials/QUICK-START-AGENCY)
 - [Stripe Integration](tutorials/STRIPE-INTEGRATION)
 - [Custom Domains](tutorials/CUSTOM-DOMAINS)
+- [File Uploads](tutorials/file-uploads-quickstart)
 
 ---
 
 ## Examples
 
-- [Examples Overview](examples/README)
-- [Database Examples](examples/DATABASE-EXAMPLES)
+- [Examples Index](examples/INDEX)
+- [Features Overview](examples/FEATURES-OVERVIEW)
+- [Real-Time Chat](examples/REALTIME-CHAT-SERVICE)
 - [Deployment Examples](deployment/examples/README)
 
 ---
 
 ## Architecture
 
-- [Architecture Overview](architecture/README)
+- [Architecture Index](architecture/INDEX)
 - [System Design](architecture/ARCHITECTURE)
+- [Multi-Tenancy](architecture/MULTI-TENANCY)
 - [Project Structure](architecture/PROJECT_STRUCTURE)
 - [Build System](architecture/BUILD_ARCHITECTURE)
+- [Command Consolidation](architecture/COMMAND-CONSOLIDATION-MAP)
 
 ---
 
 ## API Reference
 
-- [API Overview](api/README)
-- [Complete API Documentation](architecture/API) (v0.9.6)
-- [Authentication API](api/AUTH-API)
+- [API Index](reference/api/README)
+- [GraphQL API](architecture/API)
+- [Billing API](reference/api/BILLING-API)
+- [OAuth API](reference/api/OAUTH-API)
+- [White-Label API](reference/api/WHITE-LABEL-API)
 
 ---
 
 ## Deployment
 
 - [Deployment Guide](deployment/README)
-- [Production Deployment](deployment/PRODUCTION-DEPLOYMENT)
-- [Custom Services](deployment/CUSTOM-SERVICES-PRODUCTION)
+- [Production](deployment/PRODUCTION-DEPLOYMENT)
 - [Cloud Providers](deployment/CLOUD-PROVIDERS)
+- [Server Management](deployment/SERVER-MANAGEMENT)
+
+---
+
+## Infrastructure
+
+- [Infrastructure Docs](infrastructure/README)
+- [Kubernetes Guide](infrastructure/K8S-IMPLEMENTATION-GUIDE)
 
 ---
 
 ## Security
 
-- [Security Overview](security/README)
+- [Security Index](security/INDEX)
 - [Security Audit](security/SECURITY-AUDIT)
-- [SSL Setup](security/SSL-SETUP)
-- [Secrets Management](security/SECRETS-MANAGEMENT)
+- [SQL Safety](security/SQL-SAFETY)
+- [Input Validation](security/INPUT_VALIDATION_SECURITY_AUDIT)
+
+---
+
+## Features
+
+- [Features Index](features/INDEX)
+- [Real-Time](features/REALTIME)
+- [White-Label](features/WHITELABEL-SYSTEM)
+- [File Uploads](features/file-upload-pipeline)
+
+---
+
+## Migrations
+
+- [Migration Guides](migrations/README)
+- [From Firebase](migrations/FROM-FIREBASE)
+- [From Supabase](migrations/FROM-SUPABASE)
+- [From Nhost](migrations/FROM-NHOST)
+
+---
+
+## Testing & QA
+
+- [Testing Docs](testing/README)
+- [QA Reports](qa/README)
 
 ---
 
 ## Releases
 
+- [Release Index](releases/INDEX)
 - [Roadmap](releases/ROADMAP)
-- [v0.9.6](releases/v0.9.6) (Current)
-- [v0.9.5](releases/v0.9.5)
-- [v0.9.0](releases/v0.9.0)
-- [v0.4.8](releases/v0.4.8)
-- [v0.4.7](releases/v0.4.7)
-- [v0.4.6](releases/v0.4.6)
-- [v0.4.5](releases/v0.4.5)
+- [v0.9.6](releases/v0.9.6) - Current
+- [v0.9.0](releases/v0.9.0) - Multi-Tenant
+- [v0.4.8](releases/v0.4.8) - Plugins
 - [Changelog](releases/CHANGELOG)
 
 ---
 
 ## Contributing
 
-- [Contributing Guide](CONTRIBUTING)
-- [Development Setup](contributing/README)
+- [Contributing Guide](contributing/CONTRIBUTING)
+- [Development](contributing/DEVELOPMENT)
 - [Cross-Platform](contributing/CROSS-PLATFORM-COMPATIBILITY)
