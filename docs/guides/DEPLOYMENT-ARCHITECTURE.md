@@ -119,6 +119,8 @@ FRONTEND_APP_2_ROUTE=dashboard
 
 ## Deployment Flow
 
+> **🔑 KEY DIFFERENCE:** Frontend apps are **included in staging** (complete testing environment) but **excluded in production** (deployed separately to Vercel/CDN).
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    LOCAL DEVELOPMENT                             │
@@ -129,34 +131,36 @@ FRONTEND_APP_2_ROUTE=dashboard
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                       STAGING                                    │
-│  nself staging deploy                                           │
+│  nself deploy staging                                           │
 │                                                                  │
-│  Deploys: Core + Optional + Monitoring + Custom + Frontends    │
+│  ✅ Deploys: Core + Optional + Monitoring + Custom + Frontends │
 │                                                                  │
 │  Frontend apps served by Nginx on subdomains:                   │
 │    app.staging.example.com → Frontend App 1                     │
 │    dashboard.staging.example.com → Frontend App 2               │
 │                                                                  │
-│  Complete replica for testing                                    │
+│  Complete replica for testing everything together               │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      PRODUCTION                                  │
-│  nself deploy prod                                              │
+│  nself deploy production                                        │
 │                                                                  │
-│  Deploys: Core + Optional + Monitoring + Custom                 │
-│  (Frontend apps excluded - they're external)                    │
+│  ✅ Deploys: Core + Optional + Monitoring + Custom              │
+│  ❌ Frontend apps EXCLUDED by default (deploy separately)       │
 │                                                                  │
-│  Frontend apps deployed separately:                              │
-│    ├── Vercel (Next.js, React)                                  │
-│    ├── Cloudflare Pages (static sites)                          │
+│  Frontend apps deployed to specialized platforms:               │
+│    ├── Vercel (Next.js, React) - Auto-scaling, edge cache      │
+│    ├── Cloudflare Pages (static) - Global CDN                  │
 │    ├── Mobile apps (App Store, Play Store)                      │
 │    └── Any CDN/hosting platform                                 │
 │                                                                  │
 │  API endpoints exposed:                                          │
 │    api.example.com → Hasura GraphQL                             │
 │    auth.example.com → Authentication                            │
+│                                                                  │
+│  💡 Override: Use --include-frontends to deploy frontends       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -164,9 +168,11 @@ FRONTEND_APP_2_ROUTE=dashboard
 
 ## Staging vs Production
 
+> **⚠️ IMPORTANT:** The key difference is frontend app deployment behavior!
+
 | Aspect | Staging | Production |
 |--------|---------|------------|
-| **Frontend Apps** | ✅ Deployed (Nginx serves them) | ❌ External (Vercel, CDN) |
+| **Frontend Apps** | ✅ **INCLUDED** (Nginx serves) | ❌ **EXCLUDED** (Vercel/CDN) |
 | **Hasura Console** | ✅ Enabled | ❌ Disabled |
 | **Debug Mode** | ❌ Off | ❌ Off |
 | **Log Level** | `info` | `warning` |
@@ -176,12 +182,20 @@ FRONTEND_APP_2_ROUTE=dashboard
 
 ### Why This Distinction?
 
-**Staging**: You want a complete replica to test everything together - frontend, backend, APIs, integrations. Nginx serves all frontend apps on staging subdomains.
+> **💡 TL;DR:** Staging = test everything together. Production = backend on VPS, frontends on specialized platforms.
 
-**Production**: Frontend apps have different scaling needs and are typically deployed on:
-- **Vercel/Netlify**: Automatic scaling, edge caching, preview deployments
-- **Cloudflare Pages**: Global CDN, fast worldwide access
-- **Mobile Apps**: App Store / Google Play (can't be on your VPS anyway)
+**Staging**: You want a **complete replica** to test everything together - frontend, backend, APIs, integrations. Nginx serves all frontend apps on staging subdomains. This ensures your staging environment matches the full user experience.
+
+**Production**: Frontend apps have **different scaling needs** and are typically deployed on specialized platforms:
+- **Vercel/Netlify**: Automatic scaling, edge caching, preview deployments, serverless functions
+- **Cloudflare Pages**: Global CDN with 200+ edge locations, instant cache invalidation
+- **Mobile Apps**: App Store / Google Play (can't run on your VPS anyway)
+
+**Why separate?**
+- ✅ Better performance (global CDN vs single VPS)
+- ✅ Lower costs (frontend hosting is often free)
+- ✅ Easier deployment (Git push vs Docker rebuild)
+- ✅ Better DX (preview deployments, instant rollbacks)
 
 Your VPS focuses on what it does best: running the backend services, APIs, and databases.
 

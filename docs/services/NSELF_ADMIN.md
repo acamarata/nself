@@ -41,9 +41,8 @@ Enable ɳAdmin in your `.env` file:
 ```bash
 # ɳAdmin Configuration
 NSELF_ADMIN_ENABLED=true
-NSELF_ADMIN_PORT=3100
+NSELF_ADMIN_PORT=3021
 NSELF_ADMIN_ROUTE=admin.${BASE_DOMAIN}
-ADMIN_PORT=3005  # Internal port
 
 # Optional: Authentication
 NSELF_ADMIN_AUTH_ENABLED=true
@@ -211,7 +210,7 @@ GET /api/logs/{service}?lines=100
 
 ### Admin UI Not Loading
 - Check `NSELF_ADMIN_ENABLED=true` in .env
-- Verify port 3100 is not in use
+- Verify port 3021 is not in use
 - Check nginx routing configuration
 - Ensure Docker socket is accessible
 

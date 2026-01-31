@@ -213,7 +213,7 @@ nself realtime logs
 
 # Output:
 # Connected to PostgreSQL
-# WebSocket server running on port 3100
+# WebSocket server running on port 3001
 # User connected: 123e4567-e89b-12d3-a456-426614174000 (abc123)
 ```
 

@@ -57,7 +57,7 @@ curl -sSL https://install.nself.org | bash
 
 ### 🛠️ Developer Experience
 - **150+ CLI Commands**: Complete feature control from terminal
-- **Admin Dashboard**: Web-based monitoring UI at localhost:3100
+- **Admin Dashboard**: Web-based monitoring UI at localhost:3021
 - **Developer Console**: Interactive development console with live REPL
 - **Real-Time CLI (NEW v0.9.5)**: 40+ commands for channels, presence, subscriptions, broadcast
 - **Security Audit (NEW v0.9.5)**: One-command security assessment with auto-fix
@@ -93,9 +93,12 @@ curl -sSL https://install.nself.org | bash
 
 ## 📋 Prerequisites
 
-- Linux, macOS, or Windows with WSL
-- Docker and Docker Compose (installer will help install these)
-- `curl` (for installation)
+- **Bash 3.2+** (default on macOS and most Linux distributions)
+- **Linux, macOS, or Windows with WSL**
+- **Docker and Docker Compose** (installer will help install these)
+- **curl** (for installation)
+
+**Note:** nself is fully compatible with Bash 3.2+, the default shell on macOS. No Bash upgrade needed!
 
 ## 🔧 Installation
 
@@ -408,7 +411,7 @@ nself admin
 # Or open in development mode
 nself admin --dev
 
-# Served at localhost:3100
+# Served at localhost:3021
 ```
 
 ## 📚 Documentation
@@ -448,7 +451,7 @@ When using the default `local.nself.org` domain:
 - **Storage Console**: https://storage-console.local.nself.org
 - **Functions** (if enabled): https://functions.local.nself.org
 - **Email** (development): https://mail.local.nself.org - MailPit email viewer
-- **Admin UI**: http://localhost:3100 - Admin dashboard
+- **Admin UI**: http://localhost:3021 - Admin dashboard
 - **Dashboard** (if enabled): https://dashboard.local.nself.org
 
 All `*.nself.org` domains resolve to `127.0.0.1` for local development.

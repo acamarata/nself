@@ -5,6 +5,8 @@ Complete API reference for the nself billing system with Stripe integration, usa
 **Version:** 0.9.0
 **Sprint:** 13 - Billing Integration & Usage Tracking
 
+> **⚠️ v0.9.6+ Command Structure:** Billing commands have been consolidated under `nself tenant billing`. While the examples below show `nself billing`, the new syntax is `nself tenant billing`. Both syntaxes work (old commands show deprecation warnings). See [Command Consolidation Map](../../architecture/COMMAND-CONSOLIDATION-MAP.md) for full details.
+
 ---
 
 ## Table of Contents

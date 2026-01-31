@@ -203,6 +203,9 @@ CS_1_CPU=0.5
 ### Development
 
 - [ ] Use `.env.local` for local secrets (gitignored)
+- [ ] Verify `.env.secrets` is in `.gitignore`
+- [ ] Set `.env.secrets` permissions to `600`
+- [ ] Install git pre-commit hooks: `nself auth security install-hooks`
 - [ ] Use test API keys for third-party services
 - [ ] Enable Hasura console for debugging
 - [ ] Use self-signed SSL certificates
@@ -220,6 +223,8 @@ CS_1_CPU=0.5
 ### Production
 
 - [ ] Generate strong secrets (`openssl rand -hex 32`)
+- [ ] Verify `.env.secrets` NEVER committed to git
+- [ ] Confirm `.env.secrets` has `600` permissions
 - [ ] Enable SSL with Let's Encrypt or custom certs
 - [ ] Disable Hasura console and introspection
 - [ ] Restrict CORS to production domains
@@ -306,10 +311,51 @@ HASURA_GRAPHQL_ADMIN_SECRET=dev-secret
 POSTGRES_PASSWORD=<generated-strong-password>
 HASURA_GRAPHQL_ADMIN_SECRET=<generated-strong-secret>
 
-# .secrets (production secrets - never commit)
+# .env.secrets (production secrets - NEVER commit)
 STRIPE_SECRET_KEY=sk_live_...
 JWT_PRIVATE_KEY=...
 ```
+
+**🔒 .env.secrets Security Best Practices:**
+
+1. **Auto-Protection:** Run `nself init` to automatically:
+   - Add `.env.secrets` to `.gitignore`
+   - Set file permissions to `600` (user read/write only)
+   - Create a git pre-commit hook to prevent accidental commits
+
+2. **Manual Setup (if needed):**
+   ```bash
+   # Add to .gitignore
+   echo ".env.secrets" >> .gitignore
+
+   # Set secure permissions
+   chmod 600 .env.secrets
+
+   # Install pre-commit hook
+   nself auth security install-hooks
+   ```
+
+3. **Verify Protection:**
+   ```bash
+   # Check file permissions
+   ls -la .env.secrets
+   # Should show: -rw------- (600)
+
+   # Check .gitignore
+   grep ".env.secrets" .gitignore
+   # Should return: .env.secrets
+
+   # Test pre-commit hook
+   git add .env.secrets
+   # Should be blocked with warning message
+   ```
+
+4. **Never Commit These Files:**
+   - `.env.secrets`
+   - `.env.local`
+   - `.env.prod`
+   - `.env.staging`
+   - Any file containing `SECRET`, `PASSWORD`, `KEY`, `TOKEN`
 
 ### 2. Rotate Secrets Regularly
 
