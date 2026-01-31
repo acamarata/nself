@@ -98,7 +98,7 @@ jobs:
       - name: Run migrations
         run: |
           cd ~/nself-test
-          nself db migrate
+          nself db migrate up
           # Verify tenant schema exists (database name matches PROJECT_NAME)
           docker exec nself-test_postgres psql -U postgres -d nself-test -c "\dn tenants"
 
