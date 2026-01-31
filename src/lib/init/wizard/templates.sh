@@ -382,6 +382,9 @@ AWS_SECRET_ACCESS_KEY=
 STRIPE_SECRET_KEY=
 EOF
 
+      # Set secure permissions (user read/write only)
+      chmod 600 .env.secrets
+
       # Add to .gitignore
       if ! grep -q ".env.secrets" .gitignore 2>/dev/null; then
         echo ".env.secrets" >>.gitignore

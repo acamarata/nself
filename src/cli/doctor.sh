@@ -388,6 +388,8 @@ check_ports() {
   check_port 6379 "Redis"
   check_port 1025 "SMTP (MailPit)"
   check_port 8025 "MailPit UI"
+  check_port 3021 "nself Admin"
+  check_port 3100 "Loki (Monitoring)"
 }
 
 # Function to check SSL certificates
@@ -428,6 +430,63 @@ check_ssl() {
     stop_spinner "warning" "SSL certificates not found"
     warning_found
     log_info "Run 'nself build' to generate certificates"
+  fi
+}
+
+# Function to check .env.secrets security
+check_secrets_security() {
+  start_spinner "Checking .env.secrets security"
+
+  if [[ -f ".env.secrets" ]]; then
+    # Check file permissions
+    local perms
+    if command -v stat >/dev/null 2>&1; then
+      # Use platform-compatible stat command
+      if stat --version 2>/dev/null | grep -q GNU; then
+        perms=$(stat -c "%a" ".env.secrets" 2>/dev/null)
+      else
+        # macOS/BSD
+        perms=$(stat -f "%OLp" ".env.secrets" 2>/dev/null)
+      fi
+    fi
+
+    if [[ "$perms" == "600" ]]; then
+      stop_spinner "success" ".env.secrets has secure permissions (600)"
+    else
+      stop_spinner "error" ".env.secrets has insecure permissions: $perms (should be 600)"
+      issue_found
+      log_info "Fix with: chmod 600 .env.secrets"
+    fi
+
+    # Check if in .gitignore
+    start_spinner "Checking .env.secrets in .gitignore"
+    if [[ -f ".gitignore" ]]; then
+      if grep -q "\.env\.secrets" .gitignore 2>/dev/null; then
+        stop_spinner "success" ".env.secrets is in .gitignore"
+      else
+        stop_spinner "error" ".env.secrets is NOT in .gitignore - risk of committing secrets!"
+        issue_found
+        log_info "Fix with: echo '.env.secrets' >> .gitignore"
+      fi
+    else
+      stop_spinner "warning" "No .gitignore file found"
+      warning_found
+    fi
+
+    # Check if tracked by git
+    if command -v git >/dev/null 2>&1 && [[ -d ".git" ]]; then
+      start_spinner "Checking if .env.secrets is tracked by git"
+      if git ls-files --error-unmatch ".env.secrets" >/dev/null 2>&1; then
+        stop_spinner "error" ".env.secrets IS TRACKED BY GIT - CRITICAL SECURITY ISSUE!"
+        issue_found
+        log_error "Secrets file is committed to git repository!"
+        log_info "Fix with: git rm --cached .env.secrets && git commit -m 'Remove secrets from git'"
+      else
+        stop_spinner "success" ".env.secrets is not tracked by git"
+      fi
+    fi
+  else
+    stop_spinner "info" ".env.secrets file not found (optional for dev)"
   fi
 }
 
@@ -937,6 +996,7 @@ main() {
     check_nself_config
     check_services
     check_ssl
+    check_secrets_security
   fi
 
   show_recommendations "$containers_running"

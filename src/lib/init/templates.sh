@@ -187,7 +187,8 @@ copy_full_templates() {
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env.prod (production config)"
           ;;
         .env.secrets)
-          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env.secrets (sensitive data)"
+          safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created .env.secrets (permissions: 600)"
+          safe_echo "  ${COLOR_YELLOW:-}⚠${COLOR_RESET:-} Keep this file secure - never commit to git!"
           ;;
         schema.dbml)
           safe_echo "${COLOR_GREEN:-}${CHECK_MARK:-✓}${COLOR_RESET:-} Created schema.dbml (database schema)"
