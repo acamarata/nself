@@ -230,7 +230,7 @@ WHITELABEL_TIER=professional
 
 ```bash
 # Copy example to .env
-cp examples/quick-start-saas.env .env
+cp src/examples/quick-start-saas.env .env
 
 # Edit configuration
 nano .env
@@ -273,8 +273,8 @@ open http://app.local.nself.org
 ## Resources
 
 - **Documentation:** https://docs.nself.org
-- **Examples Directory:** `/examples/`
-- **Configuration Reference:** `examples/README.md`
+- **Examples Directory:** `/src/examples/`
+- **Configuration Reference:** `src/examples/README.md`
 - **Community:** https://discord.gg/nself
 - **Support:** support@nself.org
 
@@ -301,4 +301,4 @@ After getting familiar with these features:
 
 ---
 
-**Need help?** Check `examples/README.md` for detailed guides and troubleshooting.
+**Need help?** Check `src/examples/README.md` for detailed guides and troubleshooting.

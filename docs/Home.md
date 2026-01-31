@@ -60,7 +60,7 @@ nself db schema apply schema.dbml # Import → migrate → seed
 | Configure my setup | **[Configuration](configuration/README.md)** |
 | Deploy to production | **[Deployment](deployment/README.md)** |
 | Fix a problem | **[Troubleshooting](guides/TROUBLESHOOTING.md)** |
-| See examples | **[Examples](examples/README.md)** |
+| See examples | **[Examples](src/src/examples/README.md)** |
 | Learn specific features | **[Tutorials](tutorials/README.md)** |
 
 ---
@@ -242,7 +242,7 @@ nself tenant branding set-colors --primary #0066cc
 ### 📖 Guides & Tutorials
 - **[All Guides](guides/README.md)** - Usage guides
 - **[All Tutorials](tutorials/README.md)** - Step-by-step tutorials
-- **[Examples](examples/README.md)** - Real-world examples
+- **[Examples](src/src/examples/README.md)** - Real-world examples
 
 ### 🔌 Plugins
 - **[Plugin Overview](plugins/README.md)** - Plugin system

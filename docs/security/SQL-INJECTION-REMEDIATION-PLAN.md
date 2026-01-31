@@ -452,7 +452,7 @@ echo "✓ No SQL injection vulnerabilities detected"
 - `/Users/admin/Sites/nself/docs/security/` - Security documentation
 
 ### Tools
-- `scripts/security-audit.sh` - Automated vulnerability scanner
+- `src/scripts/security-audit.sh` - Automated vulnerability scanner
 - `grep -rn 'psql.*-c.*"\$' src/lib/` - Manual scan command
 
 ### Reference

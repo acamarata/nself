@@ -26,7 +26,7 @@ Minimal configuration to get a SaaS application running quickly with:
 
 **How to use:**
 ```bash
-cp examples/quick-start-saas.env .env
+cp src/examples/quick-start-saas.env .env
 # Edit .env and fill in your Stripe test keys
 nself build && nself start
 ```
@@ -140,7 +140,7 @@ Full-featured production setup with:
 ### Method 1: Copy entire file
 ```bash
 # Start with the example closest to your needs
-cp examples/quick-start-saas.env .env
+cp src/examples/quick-start-saas.env .env
 
 # Customize for your project
 nano .env
@@ -162,7 +162,7 @@ nano .env
 ```bash
 # Use examples as documentation
 # Open example files to see all available options and comments
-less examples/billing-config-example.env
+less src/examples/billing-config-example.env
 ```
 
 ## Configuration Workflow

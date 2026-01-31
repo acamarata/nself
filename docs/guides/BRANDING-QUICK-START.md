@@ -173,6 +173,6 @@ nself whitelabel branding restore TIMESTAMP
 ## Support
 
 - Documentation: `/docs/whitelabel/`
-- Examples: `/examples/whitelabel/`
+- Examples: `/src/examples/whitelabel/`
 - GitHub Issues: Report bugs
 - Community: Discussions and tips

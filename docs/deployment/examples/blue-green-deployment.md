@@ -342,7 +342,7 @@ done
 
 # Step 5: Run smoke tests
 echo "Running smoke tests on $NEW_ENV..."
-./scripts/smoke-tests.sh "$NEW_ENV" || {
+./src/scripts/smoke-tests.sh "$NEW_ENV" || {
     echo "Smoke tests failed. Rolling back."
     docker compose -f docker-compose.${NEW_ENV}.yml down
     exit 1

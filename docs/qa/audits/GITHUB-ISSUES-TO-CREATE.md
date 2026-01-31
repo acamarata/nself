@@ -1541,7 +1541,7 @@ Complete plugin development guide with examples and best practices.
 
 **Files Affected**:
 - `/docs/guides/plugin-development.md` (new)
-- `/docs/examples/plugins/` (new examples)
+- `/docs/src/examples/plugins/` (new examples)
 - `/src/lib/plugin/` (documentation)
 
 **Acceptance Criteria**:

@@ -1877,7 +1877,7 @@ echo "Validation exit code: $?"
 - **Stripe API Documentation:** https://stripe.com/docs/api
 - **nself Documentation:** https://docs.nself.org/billing
 - **Database Schema:** `/docs/database/billing-schema.sql`
-- **Integration Examples:** `/examples/billing/`
+- **Integration Examples:** `/src/examples/billing/`
 
 ---
 

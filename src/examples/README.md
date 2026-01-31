@@ -12,10 +12,10 @@ Comprehensive demonstration of the CLI output library, showing all available fun
 
 ```bash
 # Run the full demo
-bash examples/cli-output-demo.sh
+bash src/examples/cli-output-demo.sh
 
 # Run without colors
-NO_COLOR=1 bash examples/cli-output-demo.sh
+NO_COLOR=1 bash src/examples/cli-output-demo.sh
 ```
 
 **What it demonstrates:**
@@ -43,10 +43,10 @@ All example scripts are self-contained and can be run directly:
 
 ```bash
 # Make executable (first time only)
-chmod +x examples/*.sh
+chmod +x src/examples/*.sh
 
 # Run any example
-./examples/cli-output-demo.sh
+./src/examples/cli-output-demo.sh
 ```
 
 ## Creating Your Own

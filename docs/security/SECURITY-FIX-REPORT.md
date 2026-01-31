@@ -720,7 +720,7 @@ nself tenant domain add <tenant_id> "example.com'; DROP TABLE tenants.tenant_dom
 
 ## Automated Security Audit Results
 
-A comprehensive security audit script has been created: `/scripts/security-audit.sh`
+A comprehensive security audit script has been created: `/src/scripts/security-audit.sh`
 
 **Audit Statistics:**
 - Total shell scripts scanned: **293 files**
@@ -765,11 +765,11 @@ The safe-query.sh library provides all necessary functions for secure database q
 
 **Tools Created:**
 - `SECURITY-FIX-REPORT.md` - Detailed vulnerability analysis
-- `scripts/security-audit.sh` - Automated detection script (reusable for CI/CD)
+- `src/scripts/security-audit.sh` - Automated detection script (reusable for CI/CD)
 
 **Run the audit:**
 ```bash
-bash scripts/security-audit.sh
+bash src/scripts/security-audit.sh
 ```
 
 ---

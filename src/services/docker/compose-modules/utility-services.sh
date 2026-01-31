@@ -227,7 +227,7 @@ generate_backup_service() {
       BACKUP_RETENTION_DAYS: \${BACKUP_RETENTION_DAYS:-7}
     volumes:
       - ./backups:/backups
-      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./src/scripts/backup.sh:/usr/local/bin/backup.sh:ro
     entrypoint: >
       sh -c "
         apk add --no-cache dcron &&

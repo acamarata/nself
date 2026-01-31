@@ -11,7 +11,7 @@ This directory contains in-depth documentation for nself's key features, includi
 ### Real-Time Features
 - **[Real-Time Overview](REALTIME.md)** - Real-time subscriptions and live data
 - **[Real-Time Examples](realtime-examples.md)** - Code examples and patterns
-- **[Real-Time Chat Service](../examples/REALTIME-CHAT-SERVICE.md)** - Building a chat service
+- **[Real-Time Chat Service](../src/src/examples/REALTIME-CHAT-SERVICE.md)** - Building a chat service
 
 #### What Real-Time Provides
 
@@ -151,9 +151,9 @@ All features support multi-tenancy:
 
 Find complete examples in:
 
-- **[Examples Directory](../examples/README.md)** - All examples
-- **[Real-Time Chat Service](../examples/REALTIME-CHAT-SERVICE.md)** - Chat implementation
-- **[Features Overview](../examples/FEATURES-OVERVIEW.md)** - Feature examples
+- **[Examples Directory](../src/src/examples/README.md)** - All examples
+- **[Real-Time Chat Service](../src/src/examples/REALTIME-CHAT-SERVICE.md)** - Chat implementation
+- **[Features Overview](../src/src/examples/FEATURES-OVERVIEW.md)** - Feature examples
 
 ---
 

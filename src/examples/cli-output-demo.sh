@@ -4,7 +4,7 @@
 # This script showcases all available functions and their visual output.
 # Run this to see what each function produces.
 #
-# Usage: bash examples/cli-output-demo.sh
+# Usage: bash src/examples/cli-output-demo.sh
 
 set -euo pipefail
 
@@ -306,7 +306,7 @@ demo_no_color() {
   cli_blank
 
   cli_info "Try running this demo with NO_COLOR=1:"
-  cli_dim "$ NO_COLOR=1 bash examples/cli-output-demo.sh"
+  cli_dim "$ NO_COLOR=1 bash src/examples/cli-output-demo.sh"
 }
 
 # =============================================================================

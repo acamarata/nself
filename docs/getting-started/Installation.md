@@ -453,7 +453,7 @@ For environments without internet:
 1. **Download on connected machine**:
 ```bash
 # Download nself and all images
-./scripts/download-offline.sh
+./src/scripts/download-offline.sh
 ```
 
 2. **Transfer to air-gapped system**:

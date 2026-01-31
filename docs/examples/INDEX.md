@@ -101,7 +101,7 @@ This directory contains 7 comprehensive configuration examples totaling **3,821 
 
 ### Pattern 1: Learning (Development)
 ```bash
-cp examples/quick-start-saas.env .env
+cp src/examples/quick-start-saas.env .env
 # Edit with your Stripe test keys
 nself build && nself start
 ```
@@ -116,7 +116,7 @@ nself build && nself start
 
 ### Pattern 3: Production Deployment
 ```bash
-cp examples/enterprise-example.env .env
+cp src/examples/enterprise-example.env .env
 # Review ALL settings
 # Replace ALL <CHANGE_ME_*> placeholders
 # Store secrets in .secrets file

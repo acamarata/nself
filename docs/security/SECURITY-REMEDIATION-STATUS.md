@@ -226,7 +226,7 @@ This document tracks the progress of fixing 150+ SQL injection vulnerabilities i
 - `/src/lib/database/safe-query.sh` - Safe query library
 
 ### Tools
-- `scripts/security-audit.sh` - Automated vulnerability scanner
+- `src/scripts/security-audit.sh` - Automated vulnerability scanner
 - `grep -rn 'psql.*-c.*"\$' src/lib/` - Manual scan command
 
 ### Standards

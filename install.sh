@@ -19,6 +19,7 @@ DEFAULT_INSTALL_DIR="$HOME/.nself"
 DEFAULT_BRANCH="main"
 DEFAULT_REPO="acamarata/nself"
 NSELF_VERSION="${NSELF_VERSION:-}"  # Allow version override
+FULL_INSTALL="${FULL_INSTALL:-false}"  # Install all files including examples, scripts, tests
 
 # Parse command line arguments (will be re-parsed in main() after flags)
 INSTALL_MODE="${1:-$DEFAULT_INSTALL_MODE}"
@@ -606,30 +607,64 @@ download_nself() {
 # ========================================================================
 # INSTALLATION FUNCTIONS
 # ========================================================================
+#
+# File Installation Strategy:
+# ---------------------------
+# MINIMAL (default):
+#   - bin/           : CLI entry point (~4KB)
+#   - src/cli/       : Command implementations (~1.4MB)
+#   - src/lib/       : Core libraries (~3.7MB)
+#   - src/templates/ : Project templates for init (~1.3MB)
+#   - src/services/  : Service definitions (~144KB)
+#   - src/database/  : Schema definitions (~264KB)
+#   - src/tools/     : Runtime utilities (SSL, etc) (~4.9MB)
+#   - src/VERSION    : Version tracking
+#   Total: ~11.6MB (sufficient for all CLI operations)
+#
+# FULL (--full flag):
+#   - Everything above, PLUS:
+#   - src/examples/  : Example projects (~48KB)
+#   - src/scripts/   : Development scripts (~16KB)
+#   - src/tests/     : Test suites (~1.4MB)
+#   Total: ~13.1MB (for development and testing)
+#
+# EXCLUDED from both modes:
+#   - docs/          : Documentation (available online)
+#   - .github/       : CI/CD workflows
+#   - Hidden dirs    : Git metadata, IDE configs
+#
+# ========================================================================
 
 install_files() {
   echo_header "Installing Files"
-  
+
   local source_dir="$TEMP_DIR/nself"
   [[ -d "$source_dir" ]] || source_dir="$TEMP_DIR"
-  
+
   # Create installation directory
   echo_info "Creating directory: $INSTALL_DIR"
   run_cmd mkdir -p "$INSTALL_DIR"
-  
+
+  # Determine installation mode
+  if [[ "$FULL_INSTALL" == "true" ]]; then
+    echo_info "Full installation mode (all files including examples, scripts, tests)"
+  else
+    echo_info "Minimal installation mode (CLI runtime only, ~8MB)"
+  fi
+
   # Copy files
   echo_info "Copying files..."
   (
-    # Copy bin directory (should only contain the shim)
+    # Copy bin directory (CLI entry point shim)
     if [[ -d "$source_dir/bin" ]]; then
       run_cmd cp -r "$source_dir/bin" "$INSTALL_DIR/"
     fi
 
-    # Copy ONLY essential src directories (exclude tests, examples, development files)
+    # Copy src directory with smart filtering
     if [[ -d "$source_dir/src" ]]; then
       run_cmd mkdir -p "$INSTALL_DIR/src"
 
-      # Copy VERSION file first
+      # Always copy VERSION file
       for version_file in "$source_dir/src/VERSION" "$source_dir/src/config/VERSION" "$source_dir/VERSION"; do
         if [[ -f "$version_file" ]]; then
           run_cmd cp "$version_file" "$INSTALL_DIR/src/VERSION"
@@ -637,21 +672,59 @@ install_files() {
         fi
       done
 
-      # Copy only essential directories (exclude tests, examples, database/tests)
-      for dir in cli lib templates services; do
-        if [[ -d "$source_dir/src/$dir" ]]; then
-          run_cmd cp -r "$source_dir/src/$dir" "$INSTALL_DIR/src/"
+      if [[ "$FULL_INSTALL" == "true" ]]; then
+        # Full install: Copy everything except hidden directories
+        for item in "$source_dir/src/"*; do
+          local basename=$(basename "$item")
+          if [[ "$basename" != .* ]]; then
+            run_cmd cp -r "$item" "$INSTALL_DIR/src/"
+          fi
+        done
+      else
+        # Minimal install: Copy only runtime essentials
+        # Core runtime: cli, lib (required for all commands)
+        for dir in cli lib; do
+          if [[ -d "$source_dir/src/$dir" ]]; then
+            run_cmd cp -r "$source_dir/src/$dir" "$INSTALL_DIR/src/"
+          fi
+        done
+
+        # Templates: Required for nself init and custom service generation
+        if [[ -d "$source_dir/src/templates" ]]; then
+          run_cmd cp -r "$source_dir/src/templates" "$INSTALL_DIR/src/"
         fi
-      done
+
+        # Services: Copy directory structure if exists (may contain starter services)
+        if [[ -d "$source_dir/src/services" ]]; then
+          run_cmd cp -r "$source_dir/src/services" "$INSTALL_DIR/src/"
+        fi
+
+        # Database: Schema definitions used at runtime
+        if [[ -d "$source_dir/src/database" ]]; then
+          run_cmd cp -r "$source_dir/src/database" "$INSTALL_DIR/src/"
+        fi
+
+        # Tools: SSL certificate generation and other runtime utilities
+        if [[ -d "$source_dir/src/tools" ]]; then
+          run_cmd cp -r "$source_dir/src/tools" "$INSTALL_DIR/src/"
+        fi
+
+        # EXCLUDED from minimal install (development/documentation only):
+        # - src/examples/   (~48KB)  - Example projects and reference code
+        # - src/scripts/    (~16KB)  - Development helper scripts
+        # - src/tests/      (~1.4MB) - Test suites (not needed for runtime)
+
+        echo_debug "Excluded from minimal install: examples/ scripts/ tests/ (~1.5MB saved)"
+      fi
     fi
 
-    # Copy LICENSE and README only (no docs/ directory)
+    # Copy LICENSE and README only (documentation is online)
     for file in LICENSE README.md; do
       [[ -f "$source_dir/$file" ]] && run_cmd cp "$source_dir/$file" "$INSTALL_DIR/"
     done
   ) &
   show_spinner $! "Installing files"
-  
+
   # Set permissions
   echo_info "Setting permissions..."
   (
@@ -660,12 +733,20 @@ install_files() {
     run_cmd chmod +x "$INSTALL_DIR/bin/nself" 2>/dev/null || true
     # Make all CLI scripts executable
     run_cmd chmod +x "$INSTALL_DIR/src/cli/"*.sh 2>/dev/null || true
-    # Make all tool scripts executable
-    run_cmd find "$INSTALL_DIR/src/tools" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+    # Make all tool scripts executable (only if installed)
+    if [[ -d "$INSTALL_DIR/src/tools" ]]; then
+      run_cmd find "$INSTALL_DIR/src/tools" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+    fi
   ) &
   show_spinner $! "Setting permissions"
-  
+
   echo_success "Files installed to: $INSTALL_DIR"
+
+  # Show installation size info
+  if command_exists du; then
+    local install_size=$(du -sh "$INSTALL_DIR" 2>/dev/null | awk '{print $1}')
+    echo_info "Installation size: $install_size"
+  fi
 }
 
 setup_path() {
@@ -967,6 +1048,7 @@ print_help() {
   echo "  portable  Install to current/specified directory"
   echo ""
   echo "Options:"
+  echo "  --full            Install all files (examples, scripts, tests)"
   echo "  --force           Force reinstall even if up to date"
   echo "  --skip-backup     Don't backup existing installation"
   echo "  --skip-path       Don't modify PATH"
@@ -975,45 +1057,66 @@ print_help() {
   echo "  --help            Show this help"
   echo ""
   echo "Examples:"
-  echo "  $0                    # Install for current user"
+  echo "  $0                    # Minimal install for current user (~11.6MB)"
+  echo "  $0 --full             # Full install with examples/tests (~13.1MB)"
   echo "  $0 system             # Install system-wide"
   echo "  $0 portable ./tools   # Install to ./tools/nself"
   echo "  $0 --uninstall        # Remove nself"
   echo ""
   echo "Environment variables:"
+  echo "  FULL_INSTALL=true     Install all files (same as --full)"
   echo "  FORCE_REINSTALL=true  Force reinstallation"
   echo "  SKIP_BACKUP=true      Skip backup"
   echo "  VERBOSE=true          Verbose output"
+  echo ""
+  echo "Note: By default, only runtime files are installed (cli, lib, templates)."
+  echo "      Use --full to include examples, scripts, and test files."
 }
 
 main() {
-  # Handle special flags
-  case "${1:-}" in
-    --help|-h)
-      print_help
-      exit 0
-      ;;
-    --uninstall)
-      uninstall_nself
-      exit 0
-      ;;
-    --force)
-      FORCE_REINSTALL=true
-      shift
-      ;;
-    --skip-backup)
-      SKIP_BACKUP=true
-      shift
-      ;;
-    --skip-path)
-      SKIP_PATH=true
-      shift
-      ;;
-    --verbose|-v)
-      VERBOSE=true
-      shift
-      ;;
-  esac
+  # Handle special flags (can be combined, so loop through all args)
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)
+        print_help
+        exit 0
+        ;;
+      --uninstall)
+        uninstall_nself
+        exit 0
+        ;;
+      --full)
+        FULL_INSTALL=true
+        shift
+        ;;
+      --force)
+        FORCE_REINSTALL=true
+        shift
+        ;;
+      --skip-backup)
+        SKIP_BACKUP=true
+        shift
+        ;;
+      --skip-path)
+        SKIP_PATH=true
+        shift
+        ;;
+      --verbose|-v)
+        VERBOSE=true
+        shift
+        ;;
+      --*)
+        echo_error "Unknown option: $1"
+        echo ""
+        print_help
+        exit 1
+        ;;
+      *)
+        # Not a flag, must be install mode or directory
+        break
+        ;;
+    esac
+  done
   
   # Re-parse after handling flags
   INSTALL_MODE="${1:-$DEFAULT_INSTALL_MODE}"

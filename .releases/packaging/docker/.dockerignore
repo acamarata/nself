@@ -15,6 +15,7 @@ docs/
 # Tests and examples (not needed in production)
 src/tests/
 src/examples/
+src/scripts/
 src/database/tests/
 src/benchmarks/
 

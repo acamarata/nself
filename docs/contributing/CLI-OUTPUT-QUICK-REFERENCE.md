@@ -168,6 +168,6 @@ See [CLI-OUTPUT-LIBRARY.md](CLI-OUTPUT-LIBRARY.md) for complete API reference.
 ## Examples
 
 ```bash
-bash examples/cli-output-demo.sh        # Interactive demo
+bash src/examples/cli-output-demo.sh        # Interactive demo
 bash src/tests/unit/test-cli-output-quick.sh  # Quick test
 ```

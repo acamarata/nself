@@ -983,7 +983,7 @@ nself whitelabel branding set-css /path/to/cleaned.css
 ### Documentation
 - Main docs: `/docs/whitelabel/`
 - API reference: This file
-- Examples: `/examples/whitelabel/`
+- Examples: `/src/examples/whitelabel/`
 
 ### Community
 - GitHub Issues: Report bugs and feature requests

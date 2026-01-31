@@ -47,12 +47,12 @@ Created a comprehensive, production-ready CLI output library for nself with 40+ 
 
 ### 4. Examples
 
-**Demo Script:** `examples/cli-output-demo.sh`
+**Demo Script:** `src/examples/cli-output-demo.sh`
 - Live demonstration of all functions
 - Practical usage examples
 - Visual reference for output styles
 
-**README:** `examples/README.md`
+**README:** `src/examples/README.md`
 - Quick start guide
 - Example catalog
 - Usage instructions
@@ -299,7 +299,7 @@ bash src/tests/unit/test-cli-output.sh
 
 ### Run Demo
 ```bash
-bash examples/cli-output-demo.sh
+bash src/examples/cli-output-demo.sh
 ```
 
 ## Integration
@@ -351,7 +351,7 @@ src/tests/unit/
   ├── test-cli-output.sh               (400+ lines)
   └── test-cli-output-quick.sh         (100+ lines)
 
-examples/
+src/examples/
   ├── cli-output-demo.sh               (400+ lines)
   └── README.md                        (100+ lines)
 

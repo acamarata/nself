@@ -3,7 +3,7 @@
 # Security Audit Script for nself
 # Detects potential SQL injection and command injection vulnerabilities
 #
-# Usage: bash scripts/security-audit.sh
+# Usage: bash src/scripts/security-audit.sh
 
 set -euo pipefail
 

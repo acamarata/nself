@@ -96,7 +96,7 @@ Test suite with 19 unit tests covering:
 
 #### Examples
 
-**`/Users/admin/Sites/nself/examples/billing/usage-tracking-demo.sh`** (547 lines)
+**`/Users/admin/Sites/nself/src/examples/billing/usage-tracking-demo.sh`** (547 lines)
 
 Comprehensive demo script with 10 scenarios:
 1. Basic usage tracking

@@ -95,8 +95,8 @@ Each tutorial follows this structure:
 - **[Multi-App Setup](../guides/MULTI_APP_SETUP.md)** - Multiple applications
 
 ### Examples
-- **[Examples Index](../examples/README.md)** - Code examples
-- **[Features Overview](../examples/FEATURES-OVERVIEW.md)** - Feature examples
+- **[Examples Index](../src/src/examples/README.md)** - Code examples
+- **[Features Overview](../src/src/examples/FEATURES-OVERVIEW.md)** - Feature examples
 
 ### Commands
 - **[Command Reference](../commands/COMMANDS.md)** - All commands

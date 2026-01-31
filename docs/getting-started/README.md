@@ -263,7 +263,7 @@ nself help db
 1. **[Complete Installation](Installation.md)** - If you haven't already
 2. **[Follow Quick Start](Quick-Start.md)** - Get your first project running
 3. **[Design Your Database](../guides/DATABASE-WORKFLOW.md)** - Create your schema
-4. **[Explore Examples](../examples/README.md)** - See real-world patterns
+4. **[Explore Examples](../src/src/examples/README.md)** - See real-world patterns
 
 ---
 
