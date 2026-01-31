@@ -1,0 +1,24 @@
+# Gitleaks ignore file for nself
+# This file tells Gitleaks to ignore false positives
+
+# Test files with example/dummy credentials
+src/tests/**
+*.bats
+
+# Template files with placeholder credentials
+src/templates/**/*.template
+src/templates/**/config.lua
+
+# Documentation files with example credentials
+docs/**/*.md
+*.md
+
+# Example environment files (not actual secrets)
+.env.example
+.env.dev.example
+
+# SQL migration files (may contain test data)
+src/lib/db/migrations/**
+
+# Configuration examples
+examples/**

@@ -7,6 +7,10 @@
 # Backup folders from nself reset
 _backup*
 
+# Runtime directories
+.nself/
+.environments/
+
 # Docker volumes
 .volumes/
 
@@ -21,7 +25,7 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
-.claude
+.claude/
 *.swp
 *.swo
 *~
@@ -30,7 +34,6 @@ node_modules/
 dist/
 /build/
 *.pid
-.claude/
 
 # Environment files should not be in CLI (except templates)
 .env
@@ -40,7 +43,6 @@ dist/
 # But DO include env templates
 !src/templates/envs/.env*
 !src/templates/demo/.env*
-# Git config fixed
 
 # Release planning (local only)
 next.md
@@ -48,9 +50,16 @@ NEXT.md
 feedback.md
 TODO.md
 DONE.md
-# QA feedback files (not for commit)
-DONE.md
 FEEDBACK.md
 
-# Runtime logs
-.nself/logs/
+# Working documents (should be moved to docs/ before commit)
+*-SUMMARY.md
+*-INDEX.md
+*-UPDATES.md
+*-ADDITIONS.md
+*-COMPLETE.md
+*-VERIFICATION.md
+*-CHECKLIST.md
+*-ISSUES.md
+*-REPORT.md
+*-FIXES.md
