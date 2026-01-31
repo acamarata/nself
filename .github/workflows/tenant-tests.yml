@@ -46,19 +46,14 @@ jobs:
       - name: Initialize nself
         run: |
           cd ~/nself-test
-          # Create .env file with test configuration
-          cat > .env << EOF
-          PROJECT_NAME=nself-test
-          ENV=test
-          BASE_DOMAIN=localhost
-          POSTGRES_DB=nhost
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres
-          POSTGRES_PORT=5432
-          HASURA_GRAPHQL_ADMIN_SECRET=test-secret
-          AUTH_JWT_SECRET=test-jwt-secret-at-least-32-chars-long
-          EOF
-          nself init --quiet
+          # Run init first (creates default .env)
+          nself init --quiet || true
+          # Then update .env with test configuration
+          sed -i 's/^PROJECT_NAME=.*/PROJECT_NAME=nself-test/' .env
+          sed -i 's/^ENV=.*/ENV=test/' .env
+          sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=nhost/' .env
+          sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=postgres/' .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=postgres/' .env
         env:
           NSELF_SKIP_WIZARD: true
 
