@@ -104,6 +104,12 @@ jobs:
           cd ${{ github.workspace }}
           chmod +x src/tests/integration/test-tenant-isolation.sh
           cd ~/nself-test
+          # Export environment variables for test script
+          export PROJECT_NAME=nself-test
+          export ENV=test
+          export POSTGRES_USER=postgres
+          export POSTGRES_PASSWORD=postgres
+          export POSTGRES_DB=nself-test
           ${{ github.workspace }}/src/tests/integration/test-tenant-isolation.sh
 
       - name: Show logs on failure
