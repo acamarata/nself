@@ -10,6 +10,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/output.sh"
 source "$SCRIPT_DIR/../utils/docker.sh"
 
+# Source safe query library for SQL injection prevention
+if [[ -f "$SCRIPT_DIR/../database/safe-query.sh" ]]; then
+  source "$SCRIPT_DIR/../database/safe-query.sh"
+fi
+
 # ============================================================================
 # Tenant Initialization
 # ============================================================================
@@ -99,16 +104,31 @@ tenant_create() {
 
   info "Creating tenant: $name (slug: $slug)"
 
-  # Create tenant
-  local sql="
-    INSERT INTO tenants.tenants (name, slug, plan_id, owner_user_id)
-    VALUES ('$name', '$slug', '$plan', '$owner_id')
-    RETURNING id, slug;
-    "
+  # Validate slug format (alphanumeric and hyphens only)
+  if ! slug=$(validate_identifier "$slug" 100 2>/dev/null); then
+    error "Invalid slug format (use only letters, numbers, hyphens, underscores)"
+    return 1
+  fi
 
+  # Validate plan (should be alphanumeric identifier)
+  if ! plan=$(validate_identifier "$plan" 50 2>/dev/null); then
+    error "Invalid plan format"
+    return 1
+  fi
+
+  # Validate owner_id as UUID
+  if ! owner_id=$(validate_uuid "$owner_id" 2>/dev/null); then
+    error "Invalid owner user ID format"
+    return 1
+  fi
+
+  # Create tenant (SAFE - parameterized query)
   local result
-  result=$(docker exec -i "$(docker_get_container_name postgres)" \
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$sql" 2>&1)
+  result=$(pg_query_value "
+    INSERT INTO tenants.tenants (name, slug, plan_id, owner_user_id)
+    VALUES (:'param1', :'param2', :'param3', :'param4')
+    RETURNING id || ' ' || slug
+  " "$name" "$slug" "$plan" "$owner_id" 2>&1)
 
   if [[ $? -ne 0 ]]; then
     error "Failed to create tenant: $result"
@@ -297,15 +317,21 @@ tenant_delete() {
 
   info "Deleting tenant: $tenant_id"
 
-  # Drop tenant schema
-  local drop_schema_sql="SELECT tenants.drop_tenant_schema('$tenant_id');"
-  docker exec -i "$(docker_get_container_name postgres)" \
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$drop_schema_sql" >/dev/null 2>&1
+  # Validate tenant_id (could be UUID or slug)
+  # Try UUID first, if that fails, validate as identifier
+  local validated_id="$tenant_id"
+  if ! validated_id=$(validate_uuid "$tenant_id" 2>/dev/null); then
+    if ! validated_id=$(validate_identifier "$tenant_id" 100 2>/dev/null); then
+      error "Invalid tenant ID or slug format"
+      return 1
+    fi
+  fi
 
-  # Delete tenant (cascades to all related tables)
-  local sql="DELETE FROM tenants.tenants WHERE id = '$tenant_id' OR slug = '$tenant_id';"
-  docker exec -i "$(docker_get_container_name postgres)" \
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1
+  # Drop tenant schema (SAFE - parameterized query)
+  pg_query_safe "SELECT tenants.drop_tenant_schema(:'param1')" "$validated_id" >/dev/null 2>&1
+
+  # Delete tenant (cascades to all related tables) - SAFE - parameterized query
+  pg_query_safe "DELETE FROM tenants.tenants WHERE id = :'param1' OR slug = :'param1'" "$validated_id" >/dev/null 2>&1
 
   success "Tenant deleted: $tenant_id"
 }
@@ -361,16 +387,36 @@ tenant_member_add() {
 
   info "Adding user $user_id to tenant $tenant_id as $role"
 
-  local sql="
-    INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
-    SELECT t.id, '$user_id', '$role'
-    FROM tenants.tenants t
-    WHERE t.id = '$tenant_id' OR t.slug = '$tenant_id'
-    ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = '$role';
-    "
+  # Validate inputs
+  # tenant_id could be UUID or slug
+  local validated_tenant_id="$tenant_id"
+  if ! validated_tenant_id=$(validate_uuid "$tenant_id" 2>/dev/null); then
+    if ! validated_tenant_id=$(validate_identifier "$tenant_id" 100 2>/dev/null); then
+      error "Invalid tenant ID or slug format"
+      return 1
+    fi
+  fi
 
-  docker exec -i "$(docker_get_container_name postgres)" \
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$sql" >/dev/null 2>&1
+  # user_id should be UUID
+  if ! user_id=$(validate_uuid "$user_id" 2>/dev/null); then
+    error "Invalid user ID format"
+    return 1
+  fi
+
+  # role should be alphanumeric identifier
+  if ! role=$(validate_identifier "$role" 50 2>/dev/null); then
+    error "Invalid role format"
+    return 1
+  fi
+
+  # Add member (SAFE - parameterized query)
+  pg_query_safe "
+    INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
+    SELECT t.id, :'param2', :'param3'
+    FROM tenants.tenants t
+    WHERE t.id = :'param1' OR t.slug = :'param1'
+    ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = :'param3'
+  " "$validated_tenant_id" "$user_id" "$role" >/dev/null 2>&1
 
   success "User added to tenant"
 }
