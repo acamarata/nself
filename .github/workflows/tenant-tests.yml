@@ -53,7 +53,7 @@ jobs:
       - name: Initialize nself
         run: |
           cd ~/nself-test
-          nself init --non-interactive
+          nself init --quiet
         env:
           NSELF_SKIP_WIZARD: true
 
