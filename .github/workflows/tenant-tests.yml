@@ -22,13 +22,6 @@ jobs:
     name: Multi-Tenancy Integration Tests
     runs-on: ubuntu-latest
 
-    env:
-      PROJECT_NAME: nself-test
-      ENV: test
-      POSTGRES_DB: nhost
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -53,6 +46,18 @@ jobs:
       - name: Initialize nself
         run: |
           cd ~/nself-test
+          # Create .env file with test configuration
+          cat > .env << EOF
+          PROJECT_NAME=nself-test
+          ENV=test
+          BASE_DOMAIN=localhost
+          POSTGRES_DB=nhost
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_PORT=5432
+          HASURA_GRAPHQL_ADMIN_SECRET=test-secret
+          AUTH_JWT_SECRET=test-jwt-secret-at-least-32-chars-long
+          EOF
           nself init --quiet
         env:
           NSELF_SKIP_WIZARD: true
@@ -80,7 +85,7 @@ jobs:
           docker ps | grep postgres
           # Wait for database to be ready
           for i in {1..30}; do
-            if docker exec ${PROJECT_NAME}_postgres pg_isready -U postgres; then
+            if docker exec nself-test_postgres pg_isready -U postgres; then
               echo "Database is ready"
               break
             fi
@@ -93,7 +98,7 @@ jobs:
           cd ~/nself-test
           nself db migrate
           # Verify tenant schema exists
-          docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "\dn tenants"
+          docker exec nself-test_postgres psql -U postgres -d nhost -c "\dn tenants"
 
       - name: Run tenant isolation tests
         run: |
@@ -112,7 +117,7 @@ jobs:
           cd ~/nself-test && nself logs postgres --tail 100 || true
           echo ""
           echo "=== Database Status ==="
-          docker exec ${PROJECT_NAME}_postgres psql -U postgres -d nhost -c "
+          docker exec nself-test_postgres psql -U postgres -d nhost -c "
             SELECT schemaname, tablename
             FROM pg_tables
             WHERE schemaname = 'tenants'
