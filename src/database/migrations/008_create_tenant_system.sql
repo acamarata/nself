@@ -63,13 +63,13 @@ CREATE TABLE tenants.tenant_domains (
     is_verified BOOLEAN DEFAULT false,
     verification_token TEXT,
     verified_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    UNIQUE (tenant_id, is_primary) WHERE is_primary = true
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_tenant_domains_tenant ON tenants.tenant_domains(tenant_id);
 CREATE INDEX idx_tenant_domains_domain ON tenants.tenant_domains(domain);
+-- Partial unique index: only one primary domain per tenant
+CREATE UNIQUE INDEX idx_tenant_domains_primary ON tenants.tenant_domains(tenant_id, is_primary) WHERE is_primary = true;
 
 -- Tenant members (users belonging to tenants)
 CREATE TABLE tenants.tenant_members (
