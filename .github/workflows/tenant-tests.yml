@@ -63,9 +63,9 @@ jobs:
       - name: Build nself
         run: |
           cd ~/nself-test
-          # Copy migration files (not included in system install)
-          mkdir -p src/database/migrations
-          cp -r ${{ github.workspace }}/src/database/migrations/* src/database/migrations/
+          # Copy migration files to correct location (nself/migrations)
+          mkdir -p nself/migrations
+          cp -r ${{ github.workspace }}/src/database/migrations/*.sql nself/migrations/
           # Rebuild to generate config with updated .env values
           nself build
 
