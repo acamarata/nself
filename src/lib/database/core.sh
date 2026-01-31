@@ -154,7 +154,10 @@ db_query_raw() {
   local container=$(db_get_container_name)
   local user="${POSTGRES_USER:-postgres}"
 
-  docker exec -i "$container" psql -U "$user" -d "$db" -t -A -c "$sql" 2>/dev/null
+  # -q: quiet mode (suppresses command tags like "INSERT 0 1")
+  # -t: tuple-only mode (no headers)
+  # -A: unaligned output
+  docker exec -i "$container" psql -U "$user" -d "$db" -q -t -A -c "$sql" 2>/dev/null
 }
 
 # Execute SQL file
