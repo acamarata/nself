@@ -60,6 +60,7 @@ jobs:
       - name: Build nself
         run: |
           cd ~/nself-test
+          # Rebuild to generate config with updated .env values
           nself build
 
       - name: Start services
