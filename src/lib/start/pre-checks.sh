@@ -3,6 +3,10 @@
 # pre-checks.sh - Pre-flight checks for nself start
 # Bash 3.2 compatible, cross-platform
 
+# Source error messages library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../utils/error-messages.sh" 2>/dev/null || true
+
 # Check if services are already running
 check_existing_services() {
   local project="${PROJECT_NAME:-nself}"

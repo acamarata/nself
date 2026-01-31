@@ -434,6 +434,93 @@ check_ssl() {
 }
 
 # Function to check .env.secrets security
+# Function to check rate limiting configuration
+check_rate_limiting() {
+  start_spinner "Checking rate limiting configuration"
+
+  # Check if rate limits config exists
+  if [[ -f "nginx/includes/rate-limits.conf" ]]; then
+    stop_spinner "success" "Rate limiting configuration exists"
+  else
+    stop_spinner "warning" "Rate limiting not configured"
+    warning_found
+    log_info "Run 'nself build' to generate rate limiting configuration"
+  fi
+
+  # Check if rate limiting is active in nginx
+  local nginx_container
+  nginx_container=$(docker ps --filter 'name=nginx' --format '{{.Names}}' 2>/dev/null | head -1)
+
+  if [[ -n "$nginx_container" ]]; then
+    start_spinner "Checking if rate limiting is active"
+    if docker exec "$nginx_container" grep -q "limit_req_zone" /etc/nginx/includes/rate-limits.conf 2>/dev/null; then
+      stop_spinner "success" "Rate limiting is active in nginx"
+    else
+      stop_spinner "error" "Rate limiting configuration not loaded"
+      issue_found
+      log_info "Run 'nself restart nginx' to reload configuration"
+    fi
+  fi
+
+  # Check for excessive violations (production concern)
+  if [[ "${ENV:-dev}" == "prod" ]] || [[ "${ENV:-dev}" == "production" ]]; then
+    local postgres_container
+    postgres_container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' 2>/dev/null | head -1)
+
+    if [[ -n "$postgres_container" ]]; then
+      start_spinner "Checking for excessive rate limit violations"
+
+      # Check if rate_limit schema exists
+      local schema_exists
+      schema_exists=$(docker exec -i "$postgres_container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+        "SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = 'rate_limit');" \
+        2>/dev/null | xargs)
+
+      if [[ "$schema_exists" == "t" ]]; then
+        local violations
+        violations=$(docker exec -i "$postgres_container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+          "SELECT COUNT(*) FROM rate_limit.log WHERE allowed = false AND requested_at >= NOW() - INTERVAL '1 hour';" \
+          2>/dev/null | xargs)
+
+        if [[ "${violations:-0}" -gt 1000 ]]; then
+          stop_spinner "warning" "High rate limit violations: ${violations} in last hour"
+          warning_found
+          log_info "Review with: nself auth rate-limit violations"
+          log_info "Consider blocking IPs: nself auth rate-limit block add <ip>"
+        elif [[ "${violations:-0}" -gt 100 ]]; then
+          stop_spinner "info" "Moderate violations: ${violations} in last hour"
+        else
+          stop_spinner "success" "Low violations: ${violations} in last hour"
+        fi
+      else
+        stop_spinner "warning" "Rate limiting not initialized"
+        warning_found
+        log_info "Run 'nself auth rate-limit init' to initialize"
+      fi
+    fi
+  fi
+
+  # Check default rate limit values (production warning)
+  if [[ "${ENV:-dev}" == "prod" ]] || [[ "${ENV:-dev}" == "production" ]]; then
+    start_spinner "Checking rate limit configuration for production"
+
+    local using_defaults=false
+
+    if ! grep -q "^RATE_LIMIT_AUTH_RATE=" .env 2>/dev/null && ! grep -q "^RATE_LIMIT_AUTH_RATE=" .env.prod 2>/dev/null; then
+      using_defaults=true
+    fi
+
+    if [[ "$using_defaults" == "true" ]]; then
+      stop_spinner "warning" "Using default rate limits (recommended to customize for production)"
+      warning_found
+      log_info "Customize with: nself auth rate-limit set <zone> <rate>"
+      log_info "View current: nself auth rate-limit list"
+    else
+      stop_spinner "success" "Custom rate limits configured"
+    fi
+  fi
+}
+
 check_secrets_security() {
   start_spinner "Checking .env.secrets security"
 
@@ -485,6 +572,69 @@ check_secrets_security() {
         stop_spinner "success" ".env.secrets is not tracked by git"
       fi
     fi
+
+    # Check for weak/default secrets
+    start_spinner "Checking for weak or default secrets"
+    local weak_secrets=0
+    local weak_patterns=(
+      "password123"
+      "admin123"
+      "postgres"
+      "hasura"
+      "secret"
+      "changeme"
+      "dev-password"
+      "admin-secret"
+      "test"
+      "demo"
+    )
+
+    for pattern in "${weak_patterns[@]}"; do
+      if grep -qi "$pattern" ".env.secrets" 2>/dev/null; then
+        weak_secrets=$((weak_secrets + 1))
+      fi
+    done
+
+    if [[ $weak_secrets -gt 0 ]]; then
+      stop_spinner "error" "Detected $weak_secrets weak or default secret(s)"
+      issue_found
+      log_error "Weak secrets detected in .env.secrets!"
+      log_info "Run: nself config secrets rotate --all"
+    else
+      stop_spinner "success" "No weak or default secrets detected"
+    fi
+
+    # Check secret length
+    start_spinner "Validating secret strength"
+    local short_secrets=0
+    while IFS= read -r line; do
+      # Skip comments and empty lines
+      if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
+        continue
+      fi
+
+      # Extract secret value
+      if [[ "$line" =~ ^([A-Z_]+)=(.+)$ ]]; then
+        local key="${BASH_REMATCH[1]}"
+        local value="${BASH_REMATCH[2]}"
+
+        # Check if it's a password or secret key
+        if [[ "$key" =~ (PASSWORD|SECRET|KEY|TOKEN) ]]; then
+          if [[ ${#value} -lt 16 ]]; then
+            short_secrets=$((short_secrets + 1))
+          fi
+        fi
+      fi
+    done < ".env.secrets"
+
+    if [[ $short_secrets -gt 0 ]]; then
+      stop_spinner "warning" "Found $short_secrets secret(s) shorter than 16 characters"
+      warning_found
+      log_info "Consider running: nself config secrets validate"
+    else
+      stop_spinner "success" "All secrets meet minimum length requirements"
+    fi
+
   else
     stop_spinner "info" ".env.secrets file not found (optional for dev)"
   fi
@@ -997,6 +1147,7 @@ main() {
     check_services
     check_ssl
     check_secrets_security
+    check_rate_limiting
   fi
 
   show_recommendations "$containers_running"

@@ -379,12 +379,321 @@ secrets::check_git() {
   return 0
 }
 
+# Check if secret is weak/default
+secrets::is_weak() {
+  local value="$1"
+
+  # List of common weak passwords and default values
+  local weak_patterns=(
+    "password123"
+    "admin123"
+    "postgres"
+    "hasura"
+    "secret"
+    "changeme"
+    "dev-password"
+    "admin-secret"
+    "test"
+    "demo"
+    "password"
+    "admin"
+    "root"
+    "123456"
+    "qwerty"
+  )
+
+  # Convert to lowercase for comparison
+  local value_lower
+  value_lower=$(echo "$value" | tr '[:upper:]' '[:lower:]')
+
+  for pattern in "${weak_patterns[@]}"; do
+    if [[ "$value_lower" == *"$pattern"* ]]; then
+      return 0  # Is weak
+    fi
+  done
+
+  # Check length
+  if [[ ${#value} -lt 16 ]]; then
+    return 0  # Too short
+  fi
+
+  return 1  # Not weak
+}
+
+# Rotate all secrets
+secrets::rotate_all() {
+  local secrets_file="${1:-$SECRETS_FILE}"
+
+  if [[ ! -f "$secrets_file" ]]; then
+    log_error "Secrets file not found: $secrets_file"
+    return 1
+  fi
+
+  log_info "Rotating all secrets in: $secrets_file"
+
+  # Create backup
+  cp "$secrets_file" "${secrets_file}.backup-$(date +%Y%m%d-%H%M%S)"
+
+  # Extract all secret names
+  local secret_names=()
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([A-Z_]+)= ]]; then
+      secret_names+=("${BASH_REMATCH[1]}")
+    fi
+  done < "$secrets_file"
+
+  # Rotate each secret
+  local rotated=0
+  for secret_name in "${secret_names[@]}"; do
+    if secrets::rotate "$secret_name" "$secrets_file"; then
+      rotated=$((rotated + 1))
+    fi
+  done
+
+  log_success "Rotated $rotated secret(s)"
+  log_warning "Remember to restart services to apply new secrets"
+
+  return 0
+}
+
+# Encrypt secrets file (requires openssl or gpg)
+secrets::encrypt() {
+  local secrets_file="${1:-$SECRETS_FILE}"
+  local output_file="${2:-${secrets_file}.enc}"
+  local password="${3:-}"
+
+  if [[ ! -f "$secrets_file" ]]; then
+    log_error "Secrets file not found: $secrets_file"
+    return 1
+  fi
+
+  if [[ -z "$password" ]]; then
+    log_error "Password is required for encryption"
+    return 1
+  fi
+
+  if command -v openssl >/dev/null 2>&1; then
+    # Use AES-256-CBC encryption
+    echo "$password" | openssl enc -aes-256-cbc -salt -pbkdf2 \
+      -in "$secrets_file" -out "$output_file" -pass stdin
+
+    log_success "Encrypted secrets to: $output_file"
+    return 0
+  else
+    log_error "openssl not found - cannot encrypt"
+    return 1
+  fi
+}
+
+# Decrypt secrets file
+secrets::decrypt() {
+  local encrypted_file="${1:-${SECRETS_FILE}.enc}"
+  local output_file="${2:-$SECRETS_FILE}"
+  local password="${3:-}"
+
+  if [[ ! -f "$encrypted_file" ]]; then
+    log_error "Encrypted file not found: $encrypted_file"
+    return 1
+  fi
+
+  if [[ -z "$password" ]]; then
+    log_error "Password is required for decryption"
+    return 1
+  fi
+
+  if command -v openssl >/dev/null 2>&1; then
+    echo "$password" | openssl enc -aes-256-cbc -d -pbkdf2 \
+      -in "$encrypted_file" -out "$output_file" -pass stdin
+
+    chmod 600 "$output_file"
+    log_success "Decrypted secrets to: $output_file"
+    return 0
+  else
+    log_error "openssl not found - cannot decrypt"
+    return 1
+  fi
+}
+
+# Integration with HashiCorp Vault
+secrets::import_from_vault() {
+  local vault_path="${1:-secret/nself}"
+  local secrets_file="${2:-$SECRETS_FILE}"
+
+  if ! command -v vault >/dev/null 2>&1; then
+    log_error "Vault CLI not installed"
+    log_info "Install from: https://www.vaultproject.io/downloads"
+    return 1
+  fi
+
+  log_info "Importing secrets from Vault: $vault_path"
+
+  # Read from Vault and convert to .env format
+  local vault_data
+  vault_data=$(vault kv get -format=json "$vault_path" 2>/dev/null)
+
+  if [[ $? -ne 0 ]]; then
+    log_error "Failed to read from Vault"
+    return 1
+  fi
+
+  # Parse JSON and write to secrets file
+  if command -v jq >/dev/null 2>&1; then
+    echo "$vault_data" | jq -r '.data.data | to_entries[] | "\(.key)=\(.value)"' > "$secrets_file"
+    chmod 600 "$secrets_file"
+    log_success "Imported secrets from Vault"
+    return 0
+  else
+    log_error "jq not installed - cannot parse Vault response"
+    return 1
+  fi
+}
+
+# Export secrets to HashiCorp Vault
+secrets::export_to_vault() {
+  local secrets_file="${1:-$SECRETS_FILE}"
+  local vault_path="${2:-secret/nself}"
+
+  if ! command -v vault >/dev/null 2>&1; then
+    log_error "Vault CLI not installed"
+    return 1
+  fi
+
+  if [[ ! -f "$secrets_file" ]]; then
+    log_error "Secrets file not found: $secrets_file"
+    return 1
+  fi
+
+  log_info "Exporting secrets to Vault: $vault_path"
+
+  # Build Vault command arguments
+  local vault_args=""
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
+      local key="${BASH_REMATCH[1]}"
+      local value="${BASH_REMATCH[2]}"
+      vault_args="$vault_args ${key}=${value}"
+    fi
+  done < "$secrets_file"
+
+  # Write to Vault
+  if vault kv put "$vault_path" $vault_args >/dev/null 2>&1; then
+    log_success "Exported secrets to Vault"
+    return 0
+  else
+    log_error "Failed to write to Vault"
+    return 1
+  fi
+}
+
+# Integration with AWS Secrets Manager
+secrets::import_from_aws() {
+  local secret_id="${1:-nself/secrets}"
+  local secrets_file="${2:-$SECRETS_FILE}"
+
+  if ! command -v aws >/dev/null 2>&1; then
+    log_error "AWS CLI not installed"
+    log_info "Install from: https://aws.amazon.com/cli/"
+    return 1
+  fi
+
+  log_info "Importing secrets from AWS Secrets Manager: $secret_id"
+
+  # Get secret value
+  local secret_value
+  secret_value=$(aws secretsmanager get-secret-value \
+    --secret-id "$secret_id" \
+    --query SecretString \
+    --output text 2>/dev/null)
+
+  if [[ $? -ne 0 ]]; then
+    log_error "Failed to retrieve secret from AWS"
+    return 1
+  fi
+
+  # Parse JSON and write to file
+  if command -v jq >/dev/null 2>&1; then
+    echo "$secret_value" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > "$secrets_file"
+    chmod 600 "$secrets_file"
+    log_success "Imported secrets from AWS Secrets Manager"
+    return 0
+  else
+    log_error "jq not installed - cannot parse AWS response"
+    return 1
+  fi
+}
+
+# Export secrets to AWS Secrets Manager
+secrets::export_to_aws() {
+  local secrets_file="${1:-$SECRETS_FILE}"
+  local secret_id="${2:-nself/secrets}"
+
+  if ! command -v aws >/dev/null 2>&1; then
+    log_error "AWS CLI not installed"
+    return 1
+  fi
+
+  if [[ ! -f "$secrets_file" ]]; then
+    log_error "Secrets file not found: $secrets_file"
+    return 1
+  fi
+
+  log_info "Exporting secrets to AWS Secrets Manager: $secret_id"
+
+  # Convert .env to JSON
+  local json_data="{"
+  local first=true
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
+      local key="${BASH_REMATCH[1]}"
+      local value="${BASH_REMATCH[2]}"
+
+      if [[ "$first" == "true" ]]; then
+        first=false
+      else
+        json_data="${json_data},"
+      fi
+
+      json_data="${json_data}\"${key}\":\"${value}\""
+    fi
+  done < "$secrets_file"
+  json_data="${json_data}}"
+
+  # Create or update secret
+  if aws secretsmanager describe-secret --secret-id "$secret_id" >/dev/null 2>&1; then
+    # Update existing secret
+    aws secretsmanager update-secret \
+      --secret-id "$secret_id" \
+      --secret-string "$json_data" >/dev/null 2>&1
+  else
+    # Create new secret
+    aws secretsmanager create-secret \
+      --name "$secret_id" \
+      --secret-string "$json_data" >/dev/null 2>&1
+  fi
+
+  if [[ $? -eq 0 ]]; then
+    log_success "Exported secrets to AWS Secrets Manager"
+    return 0
+  else
+    log_error "Failed to export to AWS Secrets Manager"
+    return 1
+  fi
+}
+
 # Export functions
 export -f secrets::generate_random
 export -f secrets::generate_all
 export -f secrets::rotate
+export -f secrets::rotate_all
 export -f secrets::validate
 export -f secrets::show
 export -f secrets::import_from_env
 export -f secrets::export_to_env
 export -f secrets::check_git
+export -f secrets::is_weak
+export -f secrets::encrypt
+export -f secrets::decrypt
+export -f secrets::import_from_vault
+export -f secrets::export_to_vault
+export -f secrets::import_from_aws
+export -f secrets::export_to_aws

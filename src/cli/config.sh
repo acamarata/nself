@@ -766,6 +766,11 @@ cmd_config_secrets() {
         esac
       done
 
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
       if [[ "$rotate_all" == "true" ]]; then
         cli_section "Rotating All Secrets"
         cli_warning "This will generate new values for all secrets"
@@ -777,12 +782,11 @@ cmd_config_secrets() {
           return 0
         fi
 
-        # Generate new secrets
-        if command -v security::generate_secrets >/dev/null 2>&1; then
-          security::generate_secrets "."
-          cli_success "All secrets rotated"
+        # Use secrets library if available
+        if command -v secrets::rotate_all >/dev/null 2>&1; then
+          secrets::rotate_all ".env.secrets"
         else
-          cli_error "Secret generation not available"
+          cli_error "Secret rotation not available"
           return 1
         fi
       else
@@ -793,32 +797,245 @@ cmd_config_secrets() {
           return 1
         fi
 
-        # Generate new value
-        local new_value=$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)
-
-        local secrets_file=".env.secrets"
-        if grep -q "^${key}=" "$secrets_file" 2>/dev/null; then
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|^${key}=.*|${key}=${new_value}|" "$secrets_file"
-          else
-            sed -i "s|^${key}=.*|${key}=${new_value}|" "$secrets_file"
-          fi
-          cli_success "Rotated secret: $key"
+        # Use secrets library if available
+        if command -v secrets::rotate >/dev/null 2>&1; then
+          secrets::rotate "$key" ".env.secrets"
         else
-          printf "%s=%s\n" "$key" "$new_value" >>"$secrets_file"
-          cli_success "Created secret: $key"
+          # Fallback to manual rotation
+          local new_value=$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)
+
+          local secrets_file=".env.secrets"
+          if grep -q "^${key}=" "$secrets_file" 2>/dev/null; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+              sed -i '' "s|^${key}=.*|${key}=${new_value}|" "$secrets_file"
+            else
+              sed -i "s|^${key}=.*|${key}=${new_value}|" "$secrets_file"
+            fi
+            cli_success "Rotated secret: $key"
+          else
+            printf "%s=%s\n" "$key" "$new_value" >>"$secrets_file"
+            cli_success "Created secret: $key"
+          fi
         fi
       fi
       ;;
 
+    generate)
+      cli_section "Generating Secrets"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      local key="${1:-}"
+      local output_file="${2:-.env.secrets}"
+
+      if [[ -z "$key" ]]; then
+        # Generate all secrets
+        if command -v secrets::generate_all >/dev/null 2>&1; then
+          secrets::generate_all "$output_file"
+        else
+          cli_error "Secret generation not available"
+          return 1
+        fi
+      else
+        # Generate specific secret
+        local length="${3:-32}"
+        local type="${4:-hex}"
+
+        if command -v secrets::generate_random >/dev/null 2>&1; then
+          local value
+          value=$(secrets::generate_random "$length" "$type")
+          printf "%s=%s\n" "$key" "$value"
+        else
+          cli_error "Secret generation not available"
+          return 1
+        fi
+      fi
+      ;;
+
+    validate)
+      cli_section "Validating Secrets"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      local secrets_file="${1:-.env.secrets}"
+
+      if command -v secrets::validate >/dev/null 2>&1; then
+        secrets::validate "$secrets_file"
+      else
+        cli_error "Secret validation not available"
+        return 1
+      fi
+      ;;
+
+    import)
+      local provider="${1:-env}"
+      shift || true
+
+      cli_section "Importing Secrets from $provider"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      case "$provider" in
+        env | environment)
+          if command -v secrets::import_from_env >/dev/null 2>&1; then
+            secrets::import_from_env ".env.secrets" "${1:-NSELF_SECRET_}"
+          else
+            cli_error "Import from environment not available"
+            return 1
+          fi
+          ;;
+        vault)
+          if command -v secrets::import_from_vault >/dev/null 2>&1; then
+            secrets::import_from_vault "${1:-secret/nself}" ".env.secrets"
+          else
+            cli_error "Vault import not available"
+            cli_info "Install vault CLI: https://www.vaultproject.io/downloads"
+            return 1
+          fi
+          ;;
+        aws)
+          if command -v secrets::import_from_aws >/dev/null 2>&1; then
+            secrets::import_from_aws "${1:-nself/secrets}" ".env.secrets"
+          else
+            cli_error "AWS import not available"
+            cli_info "Install AWS CLI: https://aws.amazon.com/cli/"
+            return 1
+          fi
+          ;;
+        *)
+          cli_error "Unknown provider: $provider"
+          printf "Supported providers: env, vault, aws\n"
+          return 1
+          ;;
+      esac
+      ;;
+
+    export)
+      local provider="${1:-}"
+      shift || true
+
+      if [[ -z "$provider" ]]; then
+        cli_error "Provider required"
+        printf "Usage: nself config secrets export <provider> [args]\n"
+        printf "Providers: vault, aws, azure, gcp\n"
+        return 1
+      fi
+
+      cli_section "Exporting Secrets to $provider"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      case "$provider" in
+        vault)
+          if command -v secrets::export_to_vault >/dev/null 2>&1; then
+            secrets::export_to_vault ".env.secrets" "${1:-secret/nself}"
+          else
+            cli_error "Vault export not available"
+            return 1
+          fi
+          ;;
+        aws)
+          if command -v secrets::export_to_aws >/dev/null 2>&1; then
+            secrets::export_to_aws ".env.secrets" "${1:-nself/secrets}"
+          else
+            cli_error "AWS export not available"
+            return 1
+          fi
+          ;;
+        *)
+          cli_error "Unknown provider: $provider"
+          printf "Supported providers: vault, aws\n"
+          return 1
+          ;;
+      esac
+      ;;
+
+    encrypt)
+      cli_section "Encrypting Secrets"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      local secrets_file="${1:-.env.secrets}"
+      local output_file="${2:-${secrets_file}.enc}"
+
+      printf "Enter encryption password: "
+      read -s password
+      printf "\n"
+
+      if command -v secrets::encrypt >/dev/null 2>&1; then
+        secrets::encrypt "$secrets_file" "$output_file" "$password"
+      else
+        cli_error "Encryption not available"
+        cli_info "Install openssl or gpg"
+        return 1
+      fi
+      ;;
+
+    decrypt)
+      cli_section "Decrypting Secrets"
+
+      # Source secrets library
+      if [[ -f "$LIB_DIR/security/secrets.sh" ]]; then
+        source "$LIB_DIR/security/secrets.sh"
+      fi
+
+      local encrypted_file="${1:-.env.secrets.enc}"
+      local output_file="${2:-.env.secrets}"
+
+      printf "Enter decryption password: "
+      read -s password
+      printf "\n"
+
+      if command -v secrets::decrypt >/dev/null 2>&1; then
+        secrets::decrypt "$encrypted_file" "$output_file" "$password"
+      else
+        cli_error "Decryption not available"
+        return 1
+      fi
+      ;;
+
     --help | -h)
-      printf "Usage: nself config secrets <subcommand>\n\n"
+      printf "Usage: nself config secrets <subcommand> [options]\n\n"
       printf "Subcommands:\n"
-      printf "  list              List all secrets\n"
-      printf "  get <key>         Get secret value\n"
-      printf "  set <key> <val>   Set secret value\n"
-      printf "  delete <key>      Delete secret\n"
-      printf "  rotate [key]      Rotate secret(s)\n"
+      printf "  list [--env ENV]           List all secrets\n"
+      printf "  get <key> [--reveal]       Get secret value\n"
+      printf "  set <key> <value>          Set secret value\n"
+      printf "  delete <key>               Delete secret\n"
+      printf "  rotate [key] [--all]       Rotate secret(s)\n"
+      printf "  generate [key]             Generate new secret(s)\n"
+      printf "  validate                   Validate secrets strength\n"
+      printf "  import <provider> [args]   Import from provider (env, vault, aws)\n"
+      printf "  export <provider> [args]   Export to provider (vault, aws)\n"
+      printf "  encrypt [file]             Encrypt secrets file\n"
+      printf "  decrypt [file]             Decrypt secrets file\n"
+      printf "\n"
+      printf "Options:\n"
+      printf "  --env NAME        Target environment\n"
+      printf "  --reveal          Show secret values (use with caution)\n"
+      printf "  --all             Apply to all secrets\n"
+      printf "\n"
+      printf "Examples:\n"
+      printf "  nself config secrets list                    # List all secrets\n"
+      printf "  nself config secrets generate                # Generate all secrets\n"
+      printf "  nself config secrets rotate --all            # Rotate all secrets\n"
+      printf "  nself config secrets validate                # Check secret strength\n"
+      printf "  nself config secrets import vault            # Import from Vault\n"
+      printf "  nself config secrets export aws nself/prod   # Export to AWS\n"
       ;;
 
     *)

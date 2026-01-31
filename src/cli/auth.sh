@@ -140,9 +140,12 @@ SSL:
   ssl trust          Trust local certificates
 
 RATE LIMITING:
-  rate-limit config  Configure rate limits
-  rate-limit status  Rate limit status
-  rate-limit reset   Reset rate limits
+  rate-limit set     Set rate limit for zone
+  rate-limit list    List rate limit configuration
+  rate-limit status  Show rate limit status
+  rate-limit reset   Reset rate limits for IP
+  rate-limit whitelist  Manage IP whitelist
+  rate-limit block   Manage IP blacklist
 
 WEBHOOKS:
   webhooks create    Create webhook
@@ -530,13 +533,253 @@ cmd_auth_rate_limit() {
   local action="${1:-status}"
   shift || true
 
-  # Delegate to original rate-limit implementation
-  if [[ -f "$CLI_DIR/_deprecated/rate-limit.sh.backup" ]]; then
-    bash "$CLI_DIR/_deprecated/rate-limit.sh.backup" "$action" "$@"
-  else
-    cli_error "Rate limiting module not found"
-    exit 1
+  # Source rate limit libraries
+  if [[ -f "$NSELF_ROOT/src/lib/rate-limit/core.sh" ]]; then
+    source "$NSELF_ROOT/src/lib/rate-limit/core.sh"
   fi
+  if [[ -f "$NSELF_ROOT/src/lib/rate-limit/nginx-manager.sh" ]]; then
+    source "$NSELF_ROOT/src/lib/rate-limit/nginx-manager.sh"
+  fi
+
+  case "$action" in
+    set)
+      # Set rate limit for a zone
+      local zone="${1:-}"
+      local rate="${2:-}"
+
+      if [[ -z "$zone" ]] || [[ -z "$rate" ]]; then
+        cli_error "Zone and rate required"
+        printf "Usage: nself auth rate-limit set <zone> <rate>\n"
+        printf "Zones: general, graphql_api, auth, uploads, static, webhooks, functions\n"
+        printf "Rate: 10r/s (per second) or 100r/m (per minute)\n"
+        exit 1
+      fi
+
+      nginx_rate_limit_set "$zone" "$rate"
+      ;;
+
+    list)
+      # List current rate limit configuration
+      nginx_rate_limit_list
+      ;;
+
+    status)
+      # Show rate limit status
+      nginx_rate_limit_status
+      ;;
+
+    reset)
+      # Reset rate limits for an IP
+      local ip="${1:-}"
+
+      if [[ -z "$ip" ]]; then
+        cli_error "IP address required"
+        printf "Usage: nself auth rate-limit reset <ip_address>\n"
+        exit 1
+      fi
+
+      nginx_rate_limit_reset_ip "$ip"
+      ;;
+
+    whitelist)
+      # Manage whitelist
+      local wl_action="${1:-list}"
+      shift || true
+
+      case "$wl_action" in
+        add)
+          local ip="${1:-}"
+          local description="${2:-}"
+
+          if [[ -z "$ip" ]]; then
+            cli_error "IP address required"
+            printf "Usage: nself auth rate-limit whitelist add <ip> [description]\n"
+            exit 1
+          fi
+
+          nginx_whitelist_add "$ip" "$description"
+          ;;
+        remove)
+          local ip="${1:-}"
+
+          if [[ -z "$ip" ]]; then
+            cli_error "IP address required"
+            printf "Usage: nself auth rate-limit whitelist remove <ip>\n"
+            exit 1
+          fi
+
+          nginx_whitelist_remove "$ip"
+          ;;
+        list)
+          local whitelist
+          whitelist=$(nginx_whitelist_list)
+
+          if [[ "$whitelist" == "No whitelisted IPs" ]]; then
+            printf "No whitelisted IPs\n"
+          else
+            printf "Whitelisted IPs:\n\n"
+            echo "$whitelist" | jq -r '["IP", "DESCRIPTION", "ENABLED", "CREATED"],
+              (.[] | [.ip_address, .description, .enabled, .created_at]) | @tsv' | column -t
+          fi
+          ;;
+        *)
+          cli_error "Unknown whitelist action: $wl_action"
+          printf "Actions: add, remove, list\n"
+          exit 1
+          ;;
+      esac
+      ;;
+
+    block)
+      # Manage blacklist
+      local bl_action="${1:-list}"
+      shift || true
+
+      case "$bl_action" in
+        add)
+          local ip="${1:-}"
+          local reason="${2:-Blocked for abuse}"
+          local duration="${3:-}"
+
+          if [[ -z "$ip" ]]; then
+            cli_error "IP address required"
+            printf "Usage: nself auth rate-limit block add <ip> [reason] [duration_seconds]\n"
+            exit 1
+          fi
+
+          nginx_blacklist_add "$ip" "$reason" "$duration"
+          ;;
+        remove)
+          local ip="${1:-}"
+
+          if [[ -z "$ip" ]]; then
+            cli_error "IP address required"
+            printf "Usage: nself auth rate-limit block remove <ip>\n"
+            exit 1
+          fi
+
+          nginx_blacklist_remove "$ip"
+          ;;
+        *)
+          cli_error "Unknown block action: $bl_action"
+          printf "Actions: add, remove\n"
+          exit 1
+          ;;
+      esac
+      ;;
+
+    init)
+      # Initialize rate limiter
+      cli_info "Initializing rate limiter..."
+      if rate_limit_init; then
+        cli_success "Rate limiter initialized"
+      else
+        cli_error "Failed to initialize rate limiter"
+        exit 1
+      fi
+      ;;
+
+    violations)
+      # Show violations
+      if [[ -f "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh" ]]; then
+        source "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh"
+      fi
+
+      local hours="${1:-24}"
+      local violations
+      violations=$(rate_limit_violations "$hours")
+
+      if [[ "$violations" == "[]" ]]; then
+        printf "No violations in last %s hours\n" "$hours"
+      else
+        printf "Rate Limit Violations (last %s hours):\n\n" "$hours"
+        echo "$violations" | jq -r '["KEY", "VIOLATIONS", "FIRST", "LAST"],
+          (.[] | [.key, .violation_count, .first_violation, .last_violation]) | @tsv' | column -t
+      fi
+      ;;
+
+    alerts)
+      # Check for alerts
+      if [[ -f "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh" ]]; then
+        source "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh"
+      fi
+
+      rate_limit_check_alerts
+      ;;
+
+    analyze)
+      # Analyze nginx logs
+      if [[ -f "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh" ]]; then
+        source "$NSELF_ROOT/src/lib/rate-limit/monitoring.sh"
+      fi
+
+      rate_limit_analyze_nginx_logs
+      ;;
+
+    help | --help | -h)
+      cat <<EOF
+Usage: nself auth rate-limit <action> [options]
+
+Rate limiting management for DDoS protection and abuse prevention
+
+ACTIONS:
+  set <zone> <rate>           Set rate limit for a zone
+  list                        List current configuration
+  status                      Show rate limit status
+  reset <ip>                  Reset rate limits for IP
+  whitelist <action>          Manage IP whitelist
+  block <action>              Manage IP blacklist
+  init                        Initialize rate limiter
+  violations [hours]          Show recent violations
+  alerts                      Check for suspicious patterns
+  analyze                     Analyze nginx logs
+
+ZONES:
+  general                     General API endpoints
+  graphql_api                 GraphQL API (Hasura)
+  auth                        Authentication endpoints
+  uploads                     File upload endpoints
+  static                      Static assets (CSS/JS/images)
+  webhooks                    Webhook endpoints
+  functions                   Serverless functions
+  user_api                    Per-user authenticated requests
+
+RATE FORMAT:
+  10r/s                       10 requests per second
+  100r/m                      100 requests per minute
+
+EXAMPLES:
+  # Set GraphQL API limit
+  nself auth rate-limit set graphql_api 200r/m
+
+  # List configuration
+  nself auth rate-limit list
+
+  # Check status
+  nself auth rate-limit status
+
+  # Reset limits for IP
+  nself auth rate-limit reset 192.168.1.100
+
+  # Whitelist trusted IP
+  nself auth rate-limit whitelist add 10.0.0.1 "Internal server"
+
+  # Block abusive IP for 1 hour
+  nself auth rate-limit block add 1.2.3.4 "Brute force attempt" 3600
+
+  # Remove block
+  nself auth rate-limit block remove 1.2.3.4
+
+For more information: https://docs.nself.org/security/rate-limiting
+EOF
+      ;;
+
+    *)
+      cli_error "Unknown rate-limit action: $action"
+      printf "Run 'nself auth rate-limit help' for usage\n"
+      exit 1
+      ;;
+  esac
 }
 
 # ============================================================================

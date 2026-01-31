@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.9.6
+Version:        0.9.7
 Release:        1%{?dist}
 Summary:        Self-hosted infrastructure manager for developers
 

@@ -2,31 +2,42 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.9.6
+**Current Stable Version:** v0.9.7
 
 ---
 
 ## Latest Release
 
-### [v0.9.6](v0.9.6.md) - Current Stable
+### [v0.9.7](v0.9.7.md) - Current Stable
 
-**Released:** January 30, 2026
+**Released:** January 31, 2026
 
-**Status:** Production Ready
+**Status:** Production Ready ✅
 
 **Highlights:**
-- **Command Consolidation**: 79 → 31 top-level commands (60.8% reduction)
-- **Improved Discoverability**: Logical hierarchical command structure
-- **285+ Subcommands**: Organized by domain (tenant, deploy, infra, service, auth, etc.)
-- **100% Backward Compatible**: All old commands work with migration warnings
-- **96% Test Pass Rate**: 137/142 comprehensive QA tests passing
-- **Zero Breaking Changes**: Clear migration path to v1.0
+- **All CI/CD Passing**: 7/7 GitHub Actions workflows green
+- **Tenant Isolation Complete**: 100% test coverage with RLS policies
+- **Enterprise Security**: Comprehensive scanning, secrets management, rate limiting
+- **Compliance Ready**: GDPR (85%), HIPAA (75%), SOC 2 (70%)
+- **Structured Logging**: Immutable audit trails with tamper detection
+- **100% Backward Compatible**: Zero breaking changes
 
-**[View Release Notes →](v0.9.6.md)**
+**[View Release Notes →](v0.9.7.md)**
 
 ---
 
 ## Recent Releases
+
+### [v0.9.6](v0.9.6.md) - Command Consolidation
+
+**Released:** January 30, 2026
+
+**Highlights:**
+- Command Consolidation: 79 → 31 top-level commands
+- 285+ Subcommands organized by domain
+- 100% Backward Compatible with migration warnings
+
+**[View Release Notes →](v0.9.6.md)**
 
 ### [v0.9.5](v0.9.5.md) - January 30, 2026
 

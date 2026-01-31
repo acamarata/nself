@@ -131,10 +131,10 @@
 
 ## Examples
 
-- [Examples Index](src/src/examples/INDEX)
-- [Features Overview](src/src/examples/FEATURES-OVERVIEW)
-- [Real-Time Chat](src/src/examples/REALTIME-CHAT-SERVICE)
-- [Deployment Examples](deployment/src/examples/README)
+- [Examples Index](src/examples/INDEX)
+- [Features Overview](src/examples/FEATURES-OVERVIEW)
+- [Real-Time Chat](src/examples/REALTIME-CHAT-SERVICE)
+- [Deployment Examples](deployment/examples/README)
 
 ---
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 #
 # nself billing/reports.sh - Billing Reports and Analytics
@@ -7,6 +6,8 @@ set -euo pipefail
 #
 # Comprehensive reporting, analytics, and business intelligence for billing data.
 #
+# Note: Library files should not use set -euo pipefail as it can cause
+# issues when sourced by other scripts. Use explicit error checking instead.
 
 # Prevent multiple sourcing
 [[ -n "${NSELF_BILLING_REPORTS_LOADED:-}" ]] && return 0

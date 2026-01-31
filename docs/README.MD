@@ -29,7 +29,7 @@
 | Configure my setup | [Configuration Guide](configuration/README.md) |
 | Deploy to production | [Deployment Guide](deployment/README.md) |
 | Fix a problem | [Troubleshooting](guides/TROUBLESHOOTING.md) |
-| See examples | [Examples](src/src/examples/README.md) |
+| See examples | [Examples](src/examples/README.md) |
 | Learn specific features | [Tutorials](tutorials/README.md) |
 
 ---
@@ -220,10 +220,10 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 **Real-world examples and code**
 
-- **[Examples Index](src/src/examples/README.md)** - All examples
-- **[Database Examples](src/src/examples/DATABASE-EXAMPLES.md)** - Schema patterns
-- **[Deployment Examples](deployment/src/examples/README.md)** - Production setups
-- **[Service Examples](src/src/examples/CUSTOM-SERVICE-EXAMPLES.md)** - Custom service patterns
+- **[Examples Index](src/examples/README.md)** - All examples
+- **[Database Examples](src/examples/DATABASE-EXAMPLES.md)** - Schema patterns
+- **[Deployment Examples](deployment/examples/README.md)** - Production setups
+- **[Service Examples](src/examples/CUSTOM-SERVICE-EXAMPLES.md)** - Custom service patterns
 
 ---
 

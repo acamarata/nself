@@ -8,12 +8,15 @@ Get a complete backend running in under 5 minutes.
 
 | Requirement | Minimum | Check |
 |-------------|---------|-------|
+| **Bash** | 3.2+ | `bash --version` |
 | **Docker Desktop** | v4.0+ | `docker --version` |
 | **Docker Compose** | v2.0+ | `docker compose version` |
 | **RAM** | 4 GB | - |
 | **Disk** | 10 GB | - |
 
 **Install Docker:** [docs.docker.com/get-docker](https://docs.docker.com/get-docker/)
+
+**Note:** nself is fully compatible with Bash 3.2+ (the default on macOS). No need to upgrade Bash!
 
 ---
 

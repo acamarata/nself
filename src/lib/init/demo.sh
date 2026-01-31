@@ -109,7 +109,7 @@ BASE_DOMAIN=localhost
 
 # Database configuration
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=demo-postgres-$(openssl rand -hex 8)
 POSTGRES_DB=demo-app_db
 
 # Network configuration

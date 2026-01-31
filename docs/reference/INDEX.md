@@ -319,7 +319,7 @@ See **[Troubleshooting Guide](../guides/TROUBLESHOOTING.md)** for complete list.
 - [Configuration Guide](../configuration/README.md)
 
 ### Examples
-- [Examples Index](../src/src/examples/README.md)
+- [Examples Index](../src/examples/README.md)
 - [Tutorials](../tutorials/README.md)
 
 ---

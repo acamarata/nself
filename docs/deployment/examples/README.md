@@ -56,7 +56,7 @@ This directory contains battle-tested deployment configurations and workflows fo
 1. **Copy workflow file**:
 ```bash
 mkdir -p .github/workflows
-cp docs/deployment/src/examples/github-actions-complete.yml .github/workflows/deploy.yml
+cp docs/deployment/examples/github-actions-complete.yml .github/workflows/deploy.yml
 ```
 
 2. **Add GitHub Secrets**:
@@ -85,7 +85,7 @@ git push origin main
 
 1. **Copy pipeline file**:
 ```bash
-cp docs/deployment/src/examples/gitlab-ci-complete.yml .gitlab-ci.yml
+cp docs/deployment/examples/gitlab-ci-complete.yml .gitlab-ci.yml
 ```
 
 2. **Add GitLab CI/CD Variables** (Settings → CI/CD → Variables):
@@ -120,7 +120,7 @@ nself infra k8s convert --env production
 2. **Or copy and customize example manifests**:
 ```bash
 mkdir -p k8s/
-cp docs/deployment/src/examples/kubernetes-manifests.yml k8s/manifests.yml
+cp docs/deployment/examples/kubernetes-manifests.yml k8s/manifests.yml
 
 # Edit k8s/manifests.yml:
 # - Replace image registry URLs
@@ -157,7 +157,7 @@ nself infra k8s status
 
 1. **Read the guide**:
 ```bash
-cat docs/deployment/src/examples/blue-green-deployment.md
+cat docs/deployment/examples/blue-green-deployment.md
 ```
 
 2. **Setup Docker Compose files**:

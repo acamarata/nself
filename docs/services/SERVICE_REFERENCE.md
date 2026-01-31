@@ -37,7 +37,7 @@ These services are **always enabled** and form the core infrastructure:
 ### THE AUTHORITATIVE LIST - EXACTLY THESE 7
 
 1. **nself Admin** - Web-based management UI
-   - Port: 3100
+   - Port: 3021
    - URL: `https://admin.<domain>`
    - Complete project management interface
 
@@ -229,7 +229,7 @@ Frontend applications run outside Docker and connect via nginx routing:
 - **MinIO**: 9000-9001
 - **Custom Services**: 8001-8010
 - **Frontend Apps**: 3000-3009
-- **Admin Tools**: 3100-3199
+- **nself Admin**: 3021
 - **Monitoring**: 9090-9199, 3100-3200
 - **Search**: 7700-7799
 - **ML Services**: 5000-5099

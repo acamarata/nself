@@ -53,6 +53,9 @@ generate_nginx_config() {
   # Generate main nginx.conf
   generate_main_nginx_conf
 
+  # Generate rate limiting configuration
+  generate_rate_limit_config
+
   # Generate default server block
   generate_default_server
 
@@ -69,6 +72,87 @@ generate_nginx_config() {
 
   # Generate plugin webhook routes
   generate_plugin_routes
+}
+
+# Generate rate limiting configuration
+generate_rate_limit_config() {
+  # Create includes directory if it doesn't exist
+  mkdir -p nginx/includes
+
+  # Read template
+  local template_file="src/templates/nginx/includes/rate-limits.conf.template"
+
+  if [[ ! -f "$template_file" ]]; then
+    # Fallback: create basic rate limiting config
+    cat >nginx/includes/rate-limits.conf <<'EOF'
+# Basic Rate Limiting Configuration
+limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=graphql_api:10m rate=100r/m;
+limit_req_zone $binary_remote_addr zone=auth:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=uploads:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=static:10m rate=1000r/m;
+limit_req_zone $binary_remote_addr zone=webhooks:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=functions:10m rate=50r/m;
+limit_req_zone $http_authorization zone=user_api:10m rate=1000r/m;
+
+# Connection limits
+limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
+limit_conn_zone $server_name zone=conn_limit_server:10m;
+
+# Rate limit status
+limit_req_status 429;
+limit_conn_status 429;
+EOF
+    return
+  fi
+
+  # Get whitelist and blacklist from database
+  local whitelist_entries=""
+  local blacklist_entries=""
+
+  # Try to fetch from database (if postgres is running)
+  local container
+  container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' 2>/dev/null | head -1)
+
+  if [[ -n "$container" ]]; then
+    # Fetch whitelist IPs
+    whitelist_entries=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+      "SELECT string_agg('    ' || ip_address || ' 1;', E'\n')
+       FROM rate_limit.whitelist
+       WHERE enabled = true;" 2>/dev/null | tr -d '\n' | xargs || true)
+
+    # Fetch blacklist IPs
+    blacklist_entries=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
+      "SELECT string_agg('    ' || ip_address || ' 1;', E'\n')
+       FROM rate_limit.blacklist
+       WHERE enabled = true AND (expires_at IS NULL OR expires_at > NOW());" 2>/dev/null | tr -d '\n' | xargs || true)
+  fi
+
+  # Default values if database isn't available
+  whitelist_entries="${whitelist_entries:-# No whitelisted IPs}"
+  blacklist_entries="${blacklist_entries:-# No blacklisted IPs}"
+
+  # Substitute template variables
+  cat "$template_file" \
+    | sed "s|{{RATE_LIMIT_GENERAL_RATE:-10r/s}}|${RATE_LIMIT_GENERAL_RATE:-10r/s}|g" \
+    | sed "s|{{RATE_LIMIT_GRAPHQL_RATE:-100r/m}}|${RATE_LIMIT_GRAPHQL_RATE:-100r/m}|g" \
+    | sed "s|{{RATE_LIMIT_AUTH_RATE:-10r/m}}|${RATE_LIMIT_AUTH_RATE:-10r/m}|g" \
+    | sed "s|{{RATE_LIMIT_UPLOAD_RATE:-5r/m}}|${RATE_LIMIT_UPLOAD_RATE:-5r/m}|g" \
+    | sed "s|{{RATE_LIMIT_STATIC_RATE:-1000r/m}}|${RATE_LIMIT_STATIC_RATE:-1000r/m}|g" \
+    | sed "s|{{RATE_LIMIT_WEBHOOK_RATE:-30r/m}}|${RATE_LIMIT_WEBHOOK_RATE:-30r/m}|g" \
+    | sed "s|{{RATE_LIMIT_FUNCTIONS_RATE:-50r/m}}|${RATE_LIMIT_FUNCTIONS_RATE:-50r/m}|g" \
+    | sed "s|{{RATE_LIMIT_USER_RATE:-1000r/m}}|${RATE_LIMIT_USER_RATE:-1000r/m}|g" \
+    | sed "s|{{CLIENT_MAX_BODY_SIZE:-10M}}|${CLIENT_MAX_BODY_SIZE:-10M}|g" \
+    | sed "s|{{CLIENT_HEADER_BUFFER_SIZE:-1k}}|${CLIENT_HEADER_BUFFER_SIZE:-1k}|g" \
+    | sed "s|{{LARGE_CLIENT_HEADER_BUFFERS:-8k}}|${LARGE_CLIENT_HEADER_BUFFERS:-8k}|g" \
+    | sed "s|{{CLIENT_BODY_BUFFER_SIZE:-16k}}|${CLIENT_BODY_BUFFER_SIZE:-16k}|g" \
+    | sed "s|{{CLIENT_BODY_TIMEOUT:-12s}}|${CLIENT_BODY_TIMEOUT:-12s}|g" \
+    | sed "s|{{CLIENT_HEADER_TIMEOUT:-12s}}|${CLIENT_HEADER_TIMEOUT:-12s}|g" \
+    | sed "s|{{KEEPALIVE_TIMEOUT:-15s}}|${KEEPALIVE_TIMEOUT:-15s}|g" \
+    | sed "s|{{SEND_TIMEOUT:-10s}}|${SEND_TIMEOUT:-10s}|g" \
+    | sed "s|{{RATE_LIMIT_WHITELIST}}|${whitelist_entries}|g" \
+    | sed "s|{{RATE_LIMIT_BLACKLIST}}|${blacklist_entries}|g" \
+    > nginx/includes/rate-limits.conf
 }
 
 # Generate main nginx.conf
@@ -125,9 +209,8 @@ http {
     access_log /var/log/nginx/access.log main;
     error_log /var/log/nginx/error.log warn;
 
-    # Rate limiting
-    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
-    limit_req_zone $binary_remote_addr zone=api:10m rate=100r/s;
+    # Include rate limiting configuration
+    include /etc/nginx/includes/rate-limits.conf;
 
     # Include all configurations
     include /etc/nginx/conf.d/*.conf;
@@ -209,6 +292,10 @@ server {
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
+    # Rate limiting for GraphQL API
+    limit_req zone=graphql_api burst=20 nodelay;
+    limit_conn conn_limit_per_ip 10;
+
     location / {
         proxy_pass http://hasura:8080;
         proxy_http_version 1.1;
@@ -246,6 +333,10 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Strict rate limiting for auth endpoints (prevents brute force)
+    limit_req zone=auth burst=5 nodelay;
+    limit_conn conn_limit_per_ip 5;
 
     location / {
         proxy_pass http://auth:4000;
@@ -294,6 +385,10 @@ server {
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     client_max_body_size 1000M;
+
+    # Rate limiting for uploads (prevents storage abuse)
+    limit_req zone=uploads burst=2 nodelay;
+    limit_conn conn_limit_per_ip 5;
 
     location / {
         proxy_pass http://minio:9000;
@@ -490,6 +585,10 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Rate limiting for functions
+    limit_req zone=functions burst=15 nodelay;
+    limit_conn conn_limit_per_ip 10;
 
     location / {
         proxy_pass http://functions:3000;
@@ -830,7 +929,8 @@ server {
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
     # Rate limiting for webhooks
-    limit_req zone=api burst=50 nodelay;
+    limit_req zone=webhooks burst=10 nodelay;
+    limit_conn conn_limit_per_ip 10;
 
     # Common webhook settings
     client_max_body_size 10M;
@@ -877,6 +977,7 @@ EOF
 
 # Export all functions
 export -f generate_nginx_config
+export -f generate_rate_limit_config
 export -f generate_main_nginx_conf
 export -f generate_default_server
 export -f generate_service_routes

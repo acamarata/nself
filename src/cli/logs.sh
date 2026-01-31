@@ -14,6 +14,8 @@ source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/audit-logging.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/logging.sh" 2>/dev/null || true
 # Color output functions
 
 # Function to format service names
@@ -336,6 +338,40 @@ show_top_talkers() {
   done
 }
 
+# Function to show audit logs
+show_audit_logs() {
+  local filter_category="${1:-}"
+  local filter_action="${2:-}"
+  local limit="${3:-50}"
+
+  if [[ "$NSELF_AUDIT_ENABLED" != "true" ]]; then
+    log_warning "Audit logging is not enabled"
+    log_info "Set NSELF_AUDIT_ENABLED=true in .env to enable"
+    return 1
+  fi
+
+  show_header "Audit Trail"
+  echo ""
+
+  if [[ -n "$filter_category" ]]; then
+    audit_query "$filter_category" "$filter_action"
+  else
+    # Show recent audit events
+    local audit_path="${NSELF_AUDIT_DIR}/${NSELF_AUDIT_FILE}"
+    if [[ -f "$audit_path" ]]; then
+      log_info "Recent audit events (last ${limit}):"
+      echo ""
+      grep -v '^#' "$audit_path" 2>/dev/null | tail -"$limit" | while IFS='|' read -r timestamp event_id category action user hostname pid details checksum; do
+        printf "%b[%s]%b %s - %s (user: %s)\n" \
+          "${COLOR_CYAN}" "$category" "${COLOR_RESET}" \
+          "${timestamp%% UTC*}" "$action" "$user"
+      done
+    else
+      log_warning "No audit logs found"
+    fi
+  fi
+}
+
 # Function to show help
 show_help() {
   echo "nself logs - Clean and readable service logs"
@@ -360,6 +396,11 @@ show_help() {
   echo "  --top                     Show most active services"
   echo "  -h, --help                Show this help message"
   echo ""
+  echo "Audit Logs:"
+  echo "  --audit [category]        Show audit trail (security events)"
+  echo "  --audit-stats             Show audit log statistics"
+  echo "  --audit-export FILE       Export audit logs to file"
+  echo ""
   echo "Examples:"
   echo "  nself logs                      # Last 10 lines, all services"
   echo "  nself logs --more               # Last 50 lines, all services"
@@ -369,6 +410,9 @@ show_help() {
   echo "  nself logs -q                   # Quiet mode (filter noise)"
   echo "  nself logs --summary            # Recent errors by service"
   echo "  nself logs -n 25 -s database    # Last 25 lines containing 'database'"
+  echo "  nself logs --audit              # Show audit trail"
+  echo "  nself logs --audit AUTH         # Show authentication events"
+  echo "  nself logs --audit-export audit.csv  # Export to CSV"
   echo ""
   echo "Output format:"
   echo "  • Service names are cleaned and colored"
@@ -382,6 +426,10 @@ main() {
   local show_status=false
   local show_summary=false
   local show_top=false
+  local show_audit=false
+  local audit_category=""
+  local audit_stats=false
+  local audit_export=""
 
   # Initialize variables
   FOLLOW_MODE=false
@@ -448,6 +496,22 @@ main() {
         show_top=true
         shift
         ;;
+      --audit)
+        show_audit=true
+        if [[ -n "${2:-}" ]] && [[ ! "$2" =~ ^- ]]; then
+          audit_category="$2"
+          shift
+        fi
+        shift
+        ;;
+      --audit-stats)
+        audit_stats=true
+        shift
+        ;;
+      --audit-export)
+        audit_export="$2"
+        shift 2
+        ;;
       -h | --help)
         show_help
         exit 0
@@ -466,6 +530,24 @@ main() {
 
   # Load environment
   load_env_with_priority
+
+  # Handle audit logging modes first
+  if [[ "$audit_stats" == "true" ]]; then
+    audit_stats
+    exit 0
+  fi
+
+  if [[ -n "$audit_export" ]]; then
+    local format="${audit_export##*.}"
+    [[ "$format" != "csv" && "$format" != "json" && "$format" != "txt" ]] && format="txt"
+    audit_export "$audit_export" "$format"
+    exit 0
+  fi
+
+  if [[ "$show_audit" == "true" ]]; then
+    show_audit_logs "$audit_category"
+    exit 0
+  fi
 
   # Show command header (not for help mode)
   if [[ "$show_status" != "true" && "$show_summary" != "true" && "$show_top" != "true" ]]; then

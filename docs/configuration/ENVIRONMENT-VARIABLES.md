@@ -147,7 +147,7 @@ All monitoring services default to `false`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NSELF_ADMIN_VERSION` | `v0.0.7` | Admin UI version |
-| `NSELF_ADMIN_PORT` | `3100` | Admin UI port |
+| `NSELF_ADMIN_PORT` | `3021` | Admin UI port |
 | `NSELF_ADMIN_AUTH_PROVIDER` | `basic` | Auth provider (basic, oauth2) |
 | `ADMIN_USERNAME` | `admin` | Admin username |
 | `ADMIN_PASSWORD` | `<generated>` | Admin password (plain) |

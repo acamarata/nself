@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 #
 # nself billing/invoices.sh - Invoice Generation and Management
@@ -7,6 +6,8 @@ set -euo pipefail
 #
 # Comprehensive invoice generation, management, and PDF export functionality.
 #
+# Note: Library files should not use set -euo pipefail as it can cause
+# issues when sourced by other scripts. Use explicit error checking instead.
 
 # Prevent multiple sourcing
 [[ -n "${NSELF_BILLING_INVOICES_LOADED:-}" ]] && return 0

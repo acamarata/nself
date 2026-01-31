@@ -1,40 +1,166 @@
 #!/usr/bin/env bash
-# audit.sh - Audit log CLI
-# Part of nself v0.6.0 - Phase 2
+# audit.sh - Audit log management CLI
+# Provides secure audit trail for compliance and security tracking
 
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$SCRIPT_DIR/../lib/auth/audit-log.sh" ]] && source "$SCRIPT_DIR/../lib/auth/audit-log.sh"
 
+# Source dependencies
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$CLI_SCRIPT_DIR/../lib/utils/audit-logging.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+
+# Main command handler
 cmd_audit() {
-  case "${1:-help}" in
-    init) audit_init && printf "✓ Audit logging initialized\n" ;;
+  local subcommand="${1:-help}"
+
+  case "$subcommand" in
+    init)
+      # Initialize audit logging system
+      audit_init
+      log_success "Audit logging initialized"
+      log_info "Audit logs location: ${NSELF_AUDIT_DIR}/${NSELF_AUDIT_FILE}"
+      ;;
+
     query)
+      # Query audit logs
       shift
-      local filters="${1:-{}}"
-      local limit="${2:-100}"
-      audit_query "$filters" "$limit" | jq '.'
+      local category="${1:-}"
+      local action="${2:-}"
+      local user="${3:-}"
+      local since="${4:-}"
+
+      audit_query "$category" "$action" "$user" "$since"
       ;;
+
+    stats)
+      # Show audit statistics
+      audit_stats
+      ;;
+
+    export)
+      # Export audit logs
+      shift
+      local output_file="${1:-audit-export.txt}"
+      local format="${2:-txt}"
+
+      audit_export "$output_file" "$format"
+      ;;
+
+    verify)
+      # Verify audit log integrity
+      audit_verify
+      ;;
+
+    enable)
+      # Enable audit logging
+      export NSELF_AUDIT_ENABLED=true
+      log_success "Audit logging enabled"
+      log_info "Set NSELF_AUDIT_ENABLED=true in your .env file to persist"
+      ;;
+
+    disable)
+      # Disable audit logging (with warning)
+      log_warning "Disabling audit logging"
+      log_warning "This may impact compliance requirements"
+      read -p "Are you sure? (yes/no): " -r confirm
+      if [[ "$confirm" == "yes" ]]; then
+        export NSELF_AUDIT_ENABLED=false
+        log_info "Audit logging disabled"
+        log_info "Set NSELF_AUDIT_ENABLED=false in your .env file to persist"
+      else
+        log_info "Audit logging remains enabled"
+      fi
+      ;;
+
     help | --help | -h)
-      cat <<'HELP'
-nself audit - Audit log management
-
-COMMANDS:
-  init                Initialize audit logging
-  query [filters]     Query audit logs
-
-EXAMPLES:
-  nself audit init
-  nself audit query
-  nself audit query '{"event_type":"user.login"}' 50
-  nself audit query '{"actor_id":"<user-uuid>"}'
-HELP
+      show_help
       ;;
+
     *)
-      echo "ERROR: Unknown command" >&2
+      log_error "Unknown command: $subcommand"
+      log_info "Use 'nself audit help' for usage information"
       return 1
       ;;
   esac
+}
+
+# Show help
+show_help() {
+  cat <<'HELP'
+nself audit - Audit log management and compliance tracking
+
+USAGE:
+  nself audit <command> [options]
+
+COMMANDS:
+  init                          Initialize audit logging system
+  query [category] [action]     Query audit logs with filters
+  stats                         Show audit trail statistics
+  export <file> [format]        Export audit logs (formats: txt, csv, json)
+  verify                        Verify audit log integrity
+  enable                        Enable audit logging
+  disable                       Disable audit logging (requires confirmation)
+  help                          Show this help message
+
+AUDIT CATEGORIES:
+  AUTH        - Authentication and authorization events
+  CONFIG      - Configuration changes
+  DEPLOY      - Deployment actions
+  SECRET      - Secret operations (access, rotation)
+  SECURITY    - Security events and violations
+  DATA        - Data operations
+  ADMIN       - Administrative actions
+  SYSTEM      - System events
+
+EXAMPLES:
+  # Initialize audit logging
+  nself audit init
+
+  # View all audit events
+  nself audit query
+
+  # View authentication events
+  nself audit query AUTH
+
+  # View deployment actions
+  nself audit query DEPLOY
+
+  # Show statistics
+  nself audit stats
+
+  # Export to CSV
+  nself audit export audit-trail.csv csv
+
+  # Export to JSON
+  nself audit export audit-trail.json json
+
+  # Verify integrity
+  nself audit verify
+
+CONFIGURATION:
+  Environment variables:
+    NSELF_AUDIT_DIR        - Audit log directory (default: ~/.nself/audit)
+    NSELF_AUDIT_FILE       - Audit log filename (default: audit.log)
+    NSELF_AUDIT_ENABLED    - Enable/disable audit logging (default: true)
+
+SECURITY NOTES:
+  • Audit logs are append-only and tamper-resistant
+  • Each entry includes integrity checksum
+  • File permissions are restricted to owner only
+  • Sensitive data is never logged
+  • On Linux, append-only attribute is set when possible
+
+COMPLIANCE:
+  Audit logs support compliance requirements for:
+    - SOC 2 Type II
+    - HIPAA
+    - PCI-DSS
+    - GDPR (with proper data handling)
+    - ISO 27001
+
+For more information: https://docs.nself.org/security/audit-logging
+
+HELP
 }
 
 export -f cmd_audit

@@ -4,7 +4,8 @@
 #
 # Manages encrypted storage, rotation, and versioning of secrets
 
-set -euo pipefail
+# Note: Library files should not use set -euo pipefail as it can cause
+# issues when sourced by other scripts. Use explicit error checking instead.
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

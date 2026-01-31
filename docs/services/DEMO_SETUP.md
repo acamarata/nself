@@ -202,7 +202,7 @@ graph TB
         Redis[(Redis :6379)]
         MinIO[MinIO :9000]
         Search[MeiliSearch :7700]
-        Admin[nself Admin :3100]
+        Admin[nself Admin :3021]
     end
 
     subgraph "Monitoring"

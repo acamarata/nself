@@ -1172,14 +1172,9 @@ branding::get_file_size_mb() {
   fi
 
   # Get file size in bytes
+  # Get file size using platform-safe wrapper
   local size_bytes
-  if stat --version 2>/dev/null | grep -q GNU; then
-    # GNU stat (Linux)
-    size_bytes=$(stat -c %s "$file_path")
-  else
-    # BSD stat (macOS)
-    size_bytes=$(stat -f %z "$file_path")
-  fi
+  size_bytes=$(safe_stat_size "$file_path")
 
   # Convert to MB
   local size_mb

@@ -132,7 +132,7 @@ MLFLOW_ARTIFACTS_BUCKET=mlflow-artifacts
 **Purpose:** Comprehensive web-based management interface for your entire nself deployment
 ```bash
 NSELF_ADMIN_ENABLED=true
-NSELF_ADMIN_PORT=3100
+NSELF_ADMIN_PORT=3021
 NSELF_ADMIN_ROUTE=admin.${BASE_DOMAIN}
 ```
 - URL: `https://admin.<domain>`

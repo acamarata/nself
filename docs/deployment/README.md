@@ -24,11 +24,11 @@ nself provides comprehensive production deployment capabilities for all services
 
 | Resource | Description | Format |
 |----------|-------------|--------|
-| **[Examples Directory](src/src/examples/)** | Production-ready configurations | Complete workflows |
-| [GitHub Actions](src/src/examples/github-actions-complete.yml) | Full CI/CD pipeline for GitHub | YAML workflow |
-| [GitLab CI](src/src/examples/gitlab-ci-complete.yml) | Complete GitLab CI/CD pipeline | YAML config |
-| [Kubernetes Manifests](src/src/examples/kubernetes-manifests.yml) | Production K8s manifests | K8s YAML |
-| [Blue-Green Deployment](src/src/examples/blue-green-deployment.md) | Zero-downtime deployment pattern | Guide + scripts |
+| **[Examples Directory](src/examples/)** | Production-ready configurations | Complete workflows |
+| [GitHub Actions](src/examples/github-actions-complete.yml) | Full CI/CD pipeline for GitHub | YAML workflow |
+| [GitLab CI](src/examples/gitlab-ci-complete.yml) | Complete GitLab CI/CD pipeline | YAML config |
+| [Kubernetes Manifests](src/examples/kubernetes-manifests.yml) | Production K8s manifests | K8s YAML |
+| [Blue-Green Deployment](src/examples/blue-green-deployment.md) | Zero-downtime deployment pattern | Guide + scripts |
 
 ---
 
@@ -81,7 +81,7 @@ nself infra k8s deploy --env production
 # - Rolling updates
 ```
 
-**Read**: [Kubernetes Manifests Example](src/src/examples/kubernetes-manifests.yml)
+**Read**: [Kubernetes Manifests Example](src/examples/kubernetes-manifests.yml)
 
 ---
 
@@ -113,7 +113,7 @@ nself deploy prod-asia
 
 ```bash
 # 1. Copy workflow template
-cp docs/deployment/src/examples/github-actions-complete.yml .github/workflows/deploy.yml
+cp docs/deployment/examples/github-actions-complete.yml .github/workflows/deploy.yml
 
 # 2. Add secrets to GitHub
 # - PROD_SSH_KEY
@@ -134,7 +134,7 @@ git push origin main
 # - Rollback on failure
 ```
 
-**Read**: [CI/CD Examples](src/src/examples/README.md)
+**Read**: [CI/CD Examples](src/examples/README.md)
 
 ---
 
@@ -470,7 +470,7 @@ nself deploy logs --env prod
 
 ### 2. Intermediate (CI/CD & Automation)
 
-1. Read: [CI/CD Examples](src/src/examples/README.md)
+1. Read: [CI/CD Examples](src/examples/README.md)
 2. Setup: GitHub Actions or GitLab CI
 3. Configure: Staging + Production environments
 4. Implement: Automated testing and deployment
@@ -479,7 +479,7 @@ nself deploy logs --env prod
 ### 3. Advanced (Multi-Cloud & K8s)
 
 1. Read: [Cloud Providers Guide](CLOUD-PROVIDERS.md)
-2. Read: [Kubernetes Manifests](src/src/examples/kubernetes-manifests.yml)
+2. Read: [Kubernetes Manifests](src/examples/kubernetes-manifests.yml)
 3. Deploy: Multi-region setup
 4. Implement: Blue-green or canary deployments
 5. Optimize: Cost and performance tuning

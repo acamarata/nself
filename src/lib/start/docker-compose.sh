@@ -3,6 +3,10 @@
 # docker-compose.sh - Docker Compose operations for nself start
 # Bash 3.2 compatible, cross-platform
 
+# Source error messages library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../utils/error-messages.sh" 2>/dev/null || true
+
 # Get the appropriate docker compose command
 get_compose_command() {
   # Prefer docker compose v2
@@ -313,17 +317,29 @@ start_created_containers() {
           # Extract the port number
           local port=$(echo "$error_msg" | grep -oE ":[0-9]+" | tail -1 | tr -d ':')
           if [ -n "$port" ]; then
-            # Try to find and stop the conflicting container
+            # Try to find what's using the port
             local conflicting=$(docker ps --format "{{.Names}}" --filter "publish=$port" 2>/dev/null | head -1)
+            local process=""
+            if command -v lsof >/dev/null 2>&1; then
+              process=$(lsof -iTCP:$port -sTCP:LISTEN 2>/dev/null | tail -1 | awk '{print $1}')
+            fi
+
+            # Show helpful error message
             if [ -n "$conflicting" ] && [ "$conflicting" != "$container" ]; then
-              printf "Port conflict on %s, stopping %s\n" "$port" "$conflicting" >&2
+              # It's another Docker container
+              printf "\n" >&2
+              printf "${COLOR_YELLOW}⚠${COLOR_RESET}  Port conflict: Container '%s' cannot start\n" "$container" >&2
+              printf "${COLOR_DIM}   Port %s is used by container '%s'${COLOR_RESET}\n" "$port" "$conflicting" >&2
+              printf "${COLOR_DIM}   Stopping conflicting container...${COLOR_RESET}\n" >&2
               docker stop "$conflicting" >/dev/null 2>&1
               sleep 1
               docker start "$container" >/dev/null 2>&1 || true
             else
-              # Remove and recreate the container without the port mapping
+              # It's an external process or we can't start it
+              printf "\n" >&2
+              show_port_conflict_error "$port" "$container" "$process" >&2
+              printf "${COLOR_DIM}   Removing container - please fix port conflict and restart${COLOR_RESET}\n" >&2
               docker rm -f "$container" >/dev/null 2>&1
-              printf "Removed container %s due to port conflict\n" "$container" >&2
             fi
           fi
         fi

@@ -11,6 +11,7 @@ LIB_DIR="$SCRIPT_DIR/../lib"
 # Source only essential utilities
 source "$LIB_DIR/utils/display.sh"
 source "$LIB_DIR/utils/env.sh"
+source "$LIB_DIR/utils/error-messages.sh" 2>/dev/null || true
 
 # Smart defaults from environment variables
 HEALTH_CHECK_TIMEOUT="${NSELF_HEALTH_CHECK_TIMEOUT:-120}"

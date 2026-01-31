@@ -96,6 +96,19 @@ safe_stat_perms() {
   fi
 }
 
+# Platform-safe stat for file size in bytes
+safe_stat_size() {
+  local file="$1"
+
+  if stat --version 2>/dev/null | grep -q GNU; then
+    # GNU stat (Linux) - size in bytes
+    stat -c "%s" "$file"
+  else
+    # BSD stat (macOS) - size in bytes
+    stat -f "%z" "$file"
+  fi
+}
+
 # Platform-safe grep with extended regex
 safe_grep_extended() {
   if grep --version 2>/dev/null | grep -q GNU; then

@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+# pre-commit hook for nself projects
+# Prevents committing sensitive files and secrets
+#
+# Installation:
+#   cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or use nself to install:
+#   nself dev git install-hooks
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Files that should NEVER be committed
+FORBIDDEN_FILES=(
+  ".env"
+  ".env.local"
+  ".env.secrets"
+  ".env.production"
+  ".env.prod"
+  "secrets.json"
+  "credentials.json"
+  "service-account.json"
+  "*.pem"
+  "*.key"
+  "id_rsa"
+  "id_dsa"
+)
+
+# Patterns to search for in committed files (potential secrets)
+SECRET_PATTERNS=(
+  "POSTGRES_PASSWORD=.*"
+  "HASURA_GRAPHQL_ADMIN_SECRET=.*"
+  "JWT_SECRET=.*"
+  "API_KEY=.*"
+  "SECRET_KEY=.*"
+  "PRIVATE_KEY=.*"
+  "-----BEGIN.*PRIVATE KEY-----"
+  "-----BEGIN RSA PRIVATE KEY-----"
+  "aws_access_key_id"
+  "aws_secret_access_key"
+)
+
+# ============================================================================
+# Functions
+# ============================================================================
+
+# Print error message
+print_error() {
+  printf "${RED}✗ COMMIT REJECTED${NC}\n" >&2
+  printf "${RED}$1${NC}\n" >&2
+}
+
+# Print warning message
+print_warning() {
+  printf "${YELLOW}⚠ WARNING${NC}\n" >&2
+  printf "${YELLOW}$1${NC}\n" >&2
+}
+
+# Print info message
+print_info() {
+  printf "${GREEN}$1${NC}\n" >&2
+}
+
+# Check if file is in forbidden list
+is_forbidden_file() {
+  local file="$1"
+
+  for pattern in "${FORBIDDEN_FILES[@]}"; do
+    # Use shell pattern matching
+    case "$file" in
+      $pattern)
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+# Scan file content for secrets
+scan_file_for_secrets() {
+  local file="$1"
+
+  # Skip binary files
+  if ! file "$file" | grep -q "text" 2>/dev/null; then
+    return 1
+  fi
+
+  for pattern in "${SECRET_PATTERNS[@]}"; do
+    if grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# ============================================================================
+# Main Pre-Commit Checks
+# ============================================================================
+
+errors=0
+warnings=0
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [[ -z "$staged_files" ]]; then
+  # No files staged
+  exit 0
+fi
+
+printf "\n"
+printf "${GREEN}Running pre-commit security checks...${NC}\n\n"
+
+# Check 1: Forbidden files
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+
+  if is_forbidden_file "$file"; then
+    print_error "Attempting to commit forbidden file: $file"
+    printf "  → This file should be in .gitignore\n" >&2
+    printf "  → Run: git reset HEAD $file\n" >&2
+    printf "\n"
+    errors=$((errors + 1))
+  fi
+done <<<"$staged_files"
+
+# Check 2: Secret patterns in file content
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  [[ ! -f "$file" ]] && continue
+
+  if scan_file_for_secrets "$file"; then
+    print_warning "Potential secret detected in: $file"
+    printf "  → Review file contents before committing\n" >&2
+    printf "  → Secrets should be in .env.secrets (gitignored)\n" >&2
+    printf "\n"
+    warnings=$((warnings + 1))
+  fi
+done <<<"$staged_files"
+
+# Check 3: Large files (> 10MB)
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  [[ ! -f "$file" ]] && continue
+
+  file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+
+  if [[ $file_size -gt 10485760 ]]; then
+    size_mb=$((file_size / 1048576))
+    print_warning "Large file detected: $file (${size_mb}MB)"
+    printf "  → Consider using Git LFS for large files\n" >&2
+    printf "\n"
+    warnings=$((warnings + 1))
+  fi
+done <<<"$staged_files"
+
+# Check 4: .env files in .gitignore
+if [[ -f ".gitignore" ]]; then
+  required_patterns=(
+    ".env"
+    ".env.local"
+    ".env.secrets"
+  )
+
+  missing_patterns=()
+
+  for pattern in "${required_patterns[@]}"; do
+    if ! grep -q "^${pattern}$" .gitignore 2>/dev/null; then
+      missing_patterns+=("$pattern")
+    fi
+  done
+
+  if [[ ${#missing_patterns[@]} -gt 0 ]]; then
+    print_warning ".gitignore missing sensitive file patterns"
+    printf "  → Add these patterns to .gitignore:\n" >&2
+    for pattern in "${missing_patterns[@]}"; do
+      printf "    - %s\n" "$pattern" >&2
+    done
+    printf "\n"
+    warnings=$((warnings + 1))
+  fi
+fi
+
+# ============================================================================
+# Summary
+# ============================================================================
+
+printf "\n"
+printf "────────────────────────────────────────────\n"
+
+if [[ $errors -gt 0 ]]; then
+  print_error "Pre-commit checks failed!"
+  printf "\n"
+  printf "Found ${RED}%d error(s)${NC}\n" "$errors" >&2
+
+  if [[ $warnings -gt 0 ]]; then
+    printf "Found ${YELLOW}%d warning(s)${NC}\n" "$warnings" >&2
+  fi
+
+  printf "\n"
+  printf "Fix the errors above before committing.\n" >&2
+  printf "To bypass this hook (NOT RECOMMENDED):\n" >&2
+  printf "  git commit --no-verify\n" >&2
+  printf "\n"
+  exit 1
+elif [[ $warnings -gt 0 ]]; then
+  printf "Found ${YELLOW}%d warning(s)${NC}\n" "$warnings" >&2
+  printf "\n"
+  printf "Review warnings above. Proceeding with commit.\n" >&2
+  printf "To cancel: Ctrl+C within 3 seconds...\n" >&2
+  sleep 3
+  printf "\n"
+  print_info "✓ Proceeding with commit"
+  printf "\n"
+  exit 0
+else
+  print_info "✓ All pre-commit checks passed"
+  printf "\n"
+  exit 0
+fi

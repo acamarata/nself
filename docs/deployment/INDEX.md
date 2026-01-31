@@ -19,8 +19,8 @@ Guide to deploying ɳSelf to production servers and cloud providers.
 
 ## Deployment Examples
 
-- **[Examples Index](src/src/examples/README.md)** - Real-world deployment examples
-- **[Blue-Green Deployment](src/src/examples/blue-green-deployment.md)** - Zero-downtime deployments
+- **[Examples Index](src/examples/README.md)** - Real-world deployment examples
+- **[Blue-Green Deployment](src/examples/blue-green-deployment.md)** - Zero-downtime deployments
 
 ## Deployment Commands
 

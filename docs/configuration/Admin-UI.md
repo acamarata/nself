@@ -13,7 +13,7 @@ The Admin UI is a React-based dashboard that offers:
 - Backup management
 - Configuration editor
 
-**Default URL**: http://localhost:3100
+**Default URL**: http://localhost:3021
 
 ## 🚀 Quick Start
 
@@ -26,7 +26,7 @@ nself admin enable
 # Output:
 # ✅ Admin UI enabled
 # 📝 Temporary password: xY3mK9pL
-# 🌐 URL: http://localhost:3100
+# 🌐 URL: http://localhost:3021
 ```
 
 ### Set Custom Password
@@ -46,7 +46,7 @@ nself admin password --generate
 nself admin open
 
 # Or navigate manually to:
-# http://localhost:3100
+# http://localhost:3021
 ```
 
 ## 🔧 Configuration
@@ -58,7 +58,7 @@ Add to your `.env` file:
 ```bash
 # Admin UI Configuration
 NSELF_ADMIN_ENABLED=true
-NSELF_ADMIN_PORT=3100
+NSELF_ADMIN_PORT=3021
 NSELF_ADMIN_HOST=0.0.0.0
 
 # Authentication

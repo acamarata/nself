@@ -387,7 +387,7 @@ billing_generate_invoice "$customer_id" "2026-01-01" "2026-01-31"
 - **Implementation Summary**: [USAGE-IMPLEMENTATION-SUMMARY.md](./USAGE-IMPLEMENTATION-SUMMARY.md)
 - **Database Schema**: [../../database/migrations/015_create_billing_system.sql](../../database/migrations/015_create_billing_system.sql)
 - **Test Suite**: [../../src/tests/unit/test-billing-usage.sh](../../src/tests/unit/test-billing-usage.sh)
-- **Demo Script**: [../../src/src/examples/billing/usage-tracking-demo.sh](../../src/src/examples/billing/usage-tracking-demo.sh)
+- **Demo Script**: [../../src/examples/billing/usage-tracking-demo.sh](../../src/examples/billing/usage-tracking-demo.sh)
 
 ---
 

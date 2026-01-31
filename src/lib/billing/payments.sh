@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 #
 # nself billing/payments.sh - Payment Method Management
@@ -7,6 +6,8 @@ set -euo pipefail
 #
 # Payment method storage, management, and Stripe integration.
 #
+# Note: Library files should not use set -euo pipefail as it can cause
+# issues when sourced by other scripts. Use explicit error checking instead.
 
 # Prevent multiple sourcing
 [[ -n "${NSELF_BILLING_PAYMENTS_LOADED:-}" ]] && return 0

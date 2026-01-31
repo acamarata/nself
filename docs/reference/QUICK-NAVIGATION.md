@@ -80,7 +80,7 @@
 |------|-------|
 | Multi-tenancy | [Organization Management](../guides/ORGANIZATION-MANAGEMENT.md) |
 | Billing & subscriptions | [Billing & Usage](../guides/BILLING-AND-USAGE.md) |
-| White-label branding | [Examples](../src/src/examples/README.md#whitelabel-config-example) |
+| White-label branding | [Examples](../src/examples/README.md#whitelabel-config-example) |
 | Usage tracking | [Billing & Usage](../guides/BILLING-AND-USAGE.md) |
 | Build a SaaS in 15 min | [SaaS Tutorial](../tutorials/QUICK-START-SAAS.md) |
 
@@ -115,12 +115,12 @@
 
 | Task | Go to |
 |------|-------|
-| See code examples | [Examples](../src/src/examples/README.md) |
+| See code examples | [Examples](../src/examples/README.md) |
 | Follow step-by-step tutorials | [Tutorials](../tutorials/README.md) |
 | Build a SaaS | [SaaS Tutorial](../tutorials/QUICK-START-SAAS.md) |
 | Build a marketplace | [Marketplace Tutorial](../tutorials/QUICK-START-MARKETPLACE.md) |
 | Set up agency platform | [Agency Tutorial](../tutorials/QUICK-START-AGENCY.md) |
-| Database examples | [Database Examples](../src/src/examples/DATABASE-EXAMPLES.md) |
+| Database examples | [Database Examples](../src/examples/DATABASE-EXAMPLES.md) |
 
 ---
 
@@ -185,7 +185,7 @@
 1. [Database Workflow](../guides/DATABASE-WORKFLOW.md)
 2. [API Reference](../api/README.md)
 3. [Custom Services](../configuration/CUSTOM-SERVICES-ENV-VARS.md)
-4. [Examples](../src/src/examples/README.md)
+4. [Examples](../src/examples/README.md)
 
 ### DevOps Engineers
 1. [Deployment Guide](../deployment/README.md)
