@@ -48,12 +48,15 @@ jobs:
           cd ~/nself-test
           # Run init first (creates default .env)
           nself init --quiet || true
-          # Then update .env with test configuration
+          # Update .env with test configuration
           sed -i 's/^PROJECT_NAME=.*/PROJECT_NAME=nself-test/' .env
           sed -i 's/^ENV=.*/ENV=test/' .env
-          sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=nhost/' .env
+          # Don't change POSTGRES_DB - let it match PROJECT_NAME
           sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=postgres/' .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=postgres/' .env
+          # Show the final config
+          echo "Final .env configuration:"
+          cat .env | grep -v PASSWORD
         env:
           NSELF_SKIP_WIZARD: true
 
@@ -93,8 +96,8 @@ jobs:
         run: |
           cd ~/nself-test
           nself db migrate
-          # Verify tenant schema exists
-          docker exec nself-test_postgres psql -U postgres -d nhost -c "\dn tenants"
+          # Verify tenant schema exists (database name matches PROJECT_NAME)
+          docker exec nself-test_postgres psql -U postgres -d nself-test -c "\dn tenants"
 
       - name: Run tenant isolation tests
         run: |
@@ -113,7 +116,7 @@ jobs:
           cd ~/nself-test && nself logs postgres --tail 100 || true
           echo ""
           echo "=== Database Status ==="
-          docker exec nself-test_postgres psql -U postgres -d nhost -c "
+          docker exec nself-test_postgres psql -U postgres -d nself-test -c "
             SELECT schemaname, tablename
             FROM pg_tables
             WHERE schemaname = 'tenants'
