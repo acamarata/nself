@@ -65,7 +65,13 @@ jobs:
       - name: Start services
         run: |
           cd ~/nself-test
-          nself start
+          nself start --verbose || {
+            echo "Start failed, showing docker-compose.yml:"
+            cat docker-compose.yml
+            echo "Showing .env file:"
+            cat .env | grep -v PASSWORD
+            exit 1
+          }
           # Wait for services to be healthy
           sleep 10
 
