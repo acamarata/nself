@@ -227,11 +227,11 @@ jobs:
           printf "**Scan Date:** %s\n\n" "$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> security-report.md
 
           printf "## Job Results\n\n" >> security-report.md
-          printf "- ShellCheck: %s\n" "${{ needs.shellcheck.result }}" >> security-report.md
-          printf "- Secret Scanning: %s\n" "${{ needs.secret-scan.result }}" >> security-report.md
-          printf "- Dependency Scanning: %s\n" "${{ needs.dependency-scan.result }}" >> security-report.md
-          printf "- SAST: %s\n" "${{ needs.sast.result }}" >> security-report.md
-          printf "- License Check: %s\n" "${{ needs.license-check.result }}" >> security-report.md
+          printf -- "- ShellCheck: %s\n" "${{ needs.shellcheck.result }}" >> security-report.md
+          printf -- "- Secret Scanning: %s\n" "${{ needs.secret-scan.result }}" >> security-report.md
+          printf -- "- Dependency Scanning: %s\n" "${{ needs.dependency-scan.result }}" >> security-report.md
+          printf -- "- SAST: %s\n" "${{ needs.sast.result }}" >> security-report.md
+          printf -- "- License Check: %s\n" "${{ needs.license-check.result }}" >> security-report.md
 
           cat security-report.md
 
