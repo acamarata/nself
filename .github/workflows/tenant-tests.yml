@@ -51,7 +51,7 @@ jobs:
           # Update .env with test configuration
           sed -i 's/^PROJECT_NAME=.*/PROJECT_NAME=nself-test/' .env
           sed -i 's/^ENV=.*/ENV=test/' .env
-          # Don't change POSTGRES_DB - let it match PROJECT_NAME
+          sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=nself_test/' .env
           sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=postgres/' .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=postgres/' .env
           # Show the final config
