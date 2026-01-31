@@ -916,3 +916,22 @@ export -f billing_update_customer
 export -f billing_delete_customer
 export -f billing_list_customers
 export -f billing_get_customer_plan
+
+# ============================================================================
+# Load Additional Billing Modules
+# ============================================================================
+
+# Source invoices module (if exists)
+if [[ -f "${SCRIPT_DIR}/invoices.sh" ]]; then
+  source "${SCRIPT_DIR}/invoices.sh"
+fi
+
+# Source payments module (if exists)
+if [[ -f "${SCRIPT_DIR}/payments.sh" ]]; then
+  source "${SCRIPT_DIR}/payments.sh"
+fi
+
+# Source reports module (if exists)
+if [[ -f "${SCRIPT_DIR}/reports.sh" ]]; then
+  source "${SCRIPT_DIR}/reports.sh"
+fi
