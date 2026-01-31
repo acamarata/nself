@@ -260,8 +260,8 @@ test_tenant_isolation() {
   # Instead, verify that user A can only see their own tenant's settings
   local user_a_visible_settings
   user_a_visible_settings=$(db_query_raw "
-    SELECT value->>'app_name' FROM tenants.tenant_settings
-    WHERE tenant_id = '$TENANT_A_ID'
+    SELECT value#>>'{}'::text[] FROM tenants.tenant_settings
+    WHERE tenant_id = '$TENANT_A_ID' AND key = 'app_name'
   " "$TEST_DB" 2>/dev/null | grep -v '^$' | head -1 || echo "")
 
   assert_equals "Tenant A App" "$user_a_visible_settings" "User A should only see Tenant A settings"
@@ -271,8 +271,8 @@ test_tenant_isolation() {
 
   local user_b_visible_settings
   user_b_visible_settings=$(db_query_raw "
-    SELECT value FROM tenants.tenant_settings
-    WHERE tenant_id = '$TENANT_B_ID'
+    SELECT value#>>'{}'::text[] FROM tenants.tenant_settings
+    WHERE tenant_id = '$TENANT_B_ID' AND key = 'app_name'
   " "$TEST_DB" 2>/dev/null | grep -v '^$' | head -1 || echo "")
 
   assert_not_empty "$user_b_visible_settings" "User B should see Tenant B settings"
