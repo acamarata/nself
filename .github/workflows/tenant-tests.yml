@@ -66,8 +66,13 @@ jobs:
           # Copy migration files to correct location (nself/migrations)
           mkdir -p nself/migrations
           cp -r ${{ github.workspace }}/src/database/migrations/*.sql nself/migrations/
+          # Clean any existing generated files to force regeneration
+          rm -rf postgres/ nginx/ docker-compose.yml
           # Rebuild to generate config with updated .env values
           nself build
+          # Verify the extensions SQL uses correct database name
+          echo "Checking generated extensions.sql:"
+          grep "\\c" postgres/init/01-extensions.sql || true
 
       - name: Start services
         run: |
