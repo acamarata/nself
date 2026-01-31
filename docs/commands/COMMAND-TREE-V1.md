@@ -2,7 +2,13 @@
 
 **Complete command hierarchy for nself v1.0**
 
-This is the authoritative command structure after consolidation from 79 → 31 top-level commands.
+This is the authoritative command structure after consolidation from 79 → 32 top-level commands.
+
+**New in v0.9.6:**
+- `destroy` - Safe infrastructure destruction with selective targeting
+- `deploy server` - 10 new subcommands for complete VPS lifecycle management
+- `deploy sync` - 4 subcommands for environment synchronization
+- `infra provider k8s-*` - Unified Kubernetes management across 8 cloud providers
 
 ---
 
@@ -37,6 +43,58 @@ Stop all services or specific services.
 nself restart [service...]
 ```
 Restart all services or specific services.
+
+---
+
+## Infrastructure Management (1 command)
+
+### destroy
+```
+nself destroy [OPTIONS]
+
+Options:
+  -f, --force              Skip all confirmation prompts
+  -y, --yes                Auto-confirm (same as --force)
+  --dry-run                Show what would be destroyed without executing
+  --keep-volumes           Preserve data volumes (keep databases, files, etc.)
+  --containers-only        Only remove Docker containers
+  --volumes-only           Only remove Docker volumes (requires confirmation)
+  --networks-only          Only remove Docker networks
+  --generated-only         Only remove generated files (docker-compose.yml, etc.)
+  --verbose                Show detailed output
+  -h, --help               Show help message
+```
+
+Safe destruction of project infrastructure with configurable scope.
+
+**What Gets Destroyed:**
+- Docker containers (running and stopped)
+- Docker volumes (ALL DATA LOSS) - unless `--keep-volumes`
+- Docker networks
+- Generated files (docker-compose.yml, nginx/, services/, etc.)
+
+**What Gets Preserved:**
+- .env files (all variants)
+- Source code and custom files
+- Docker volumes (if `--keep-volumes` used)
+
+**Safety Features:**
+- Interactive confirmation by default
+- Double confirmation for volume destruction
+- Dry-run mode for preview
+- Selective destruction with `--*-only` flags
+- Color-coded warnings
+
+**Examples:**
+```bash
+nself destroy                        # Interactive (safest)
+nself destroy --dry-run              # Preview only
+nself destroy --keep-volumes         # Preserve data
+nself destroy --containers-only      # Only remove containers
+nself destroy --force                # Non-interactive (automation)
+```
+
+**Related:** [Destroy Command Documentation](DESTROY.md)
 
 ---
 
@@ -256,22 +314,37 @@ Deployment:
   promote <from> <to>                        # Promote environment
 
 Remote Server Management (consolidated from 'server', 'servers', 'provision'):
-  provision <provider> [options]             # Provision remote server
-  server create <name> [options]             # Create server
-  server destroy <server-id>                 # Destroy server
-  server list                                # List servers
-  server status <server-id>                  # Server status
-  server ssh <server-id>                     # SSH to server
-  server add <host> [options]                # Add existing server
-  server remove <server-id>                  # Remove from registry
+  provision <provider> [options]             # Provision remote server (was: separate command)
+
+  server init <host> [--domain DOMAIN]       # Initialize VPS for nself (NEW v0.9.6)
+  server check <host>                        # Verify server readiness (NEW v0.9.6)
+  server status [server-id]                  # Quick status of all/specific servers (NEW v0.9.6)
+  server diagnose <env>                      # Comprehensive diagnostics (NEW v0.9.6)
+  server list                                # List all configured servers (NEW v0.9.6)
+  server add <name> --host <host> [options]  # Add server configuration (NEW v0.9.6)
+  server remove <name> [--force]             # Remove server configuration (NEW v0.9.6)
+  server ssh <name> [command]                # Quick SSH connection (NEW v0.9.6)
+  server info <name>                         # Display comprehensive server info (NEW v0.9.6)
+  server create <name> [options]             # Create server (legacy)
+  server destroy <server-id>                 # Destroy server (legacy)
 
 Synchronization (consolidated from 'sync' command):
-  sync push <env> [--force]                  # Push to remote
-  sync pull <env>                            # Pull from remote
-  sync status                                # Sync status
+  sync pull <env> [--dry-run] [--force]      # Pull configuration from remote (NEW v0.9.6)
+  sync push <env> [--dry-run] [--force]      # Push configuration to remote (NEW v0.9.6)
+  sync status                                # Show synchronization status (NEW v0.9.6)
+  sync full <env> [--no-rebuild]             # Complete synchronization (NEW v0.9.6)
 ```
 
-**Total subcommands:** 23
+**Total subcommands:** 33 (10 new server subcommands + 4 sync subcommands)
+
+**New in v0.9.6 - Server Management:**
+- Complete VPS lifecycle management
+- Automated server initialization with security hardening
+- Comprehensive health checks and diagnostics
+- SSH connection management
+- Environment file synchronization
+
+**Related Documentation:** [Server Management Guide](../deployment/SERVER-MANAGEMENT.md)
 
 ---
 
@@ -284,6 +357,8 @@ Cloud Providers (consolidated from 'provider', 'cloud'):
   provider init <provider>                   # Configure credentials
   provider validate <provider>               # Validate configuration
   provider info <provider>                   # Provider details
+  provider install <provider>                # Install provider CLI (NEW v0.9.6)
+  provider test <provider>                   # Test provider connection (NEW v0.9.6)
   provider server create <provider> [opts]   # Provision server
   provider server destroy <id>               # Destroy server
   provider server list                       # List servers
@@ -295,6 +370,21 @@ Cloud Providers (consolidated from 'provider', 'cloud'):
   provider cost compare                      # Compare providers
   provider deploy quick <provider>           # Quick deploy
   provider deploy full <provider>            # Full production setup
+
+  # Kubernetes Abstraction (NEW v0.9.6)
+  provider k8s-create <provider> <name> <region> <nodes> <size>  # Create managed K8s cluster
+  provider k8s-delete <provider> <name> [region]                 # Delete managed K8s cluster
+  provider k8s-kubeconfig <provider> <name> [region]             # Get kubeconfig credentials
+
+  # Supported K8s Providers (8 total):
+  # - aws (EKS)           - $73/month control plane
+  # - gcp (GKE)           - Free control plane
+  # - azure (AKS)         - Free control plane
+  # - digitalocean (DOKS) - $12/month
+  # - linode (LKE)        - Free control plane
+  # - vultr (VKE)         - Free control plane
+  # - hetzner             - Free control plane (manual setup via console)
+  # - scaleway (Kapsule)  - Free control plane
 
 Kubernetes (consolidated from 'k8s'):
   k8s init [--provider PROVIDER]             # Initialize K8s config
@@ -324,7 +414,22 @@ Helm (consolidated from 'helm'):
   helm repo <action>                         # Repository management
 ```
 
-**Total subcommands:** 38
+**Total subcommands:** 48 (added 10 new K8s abstraction commands)
+
+**New in v0.9.6 - Kubernetes Abstraction:**
+- Unified CLI across 8 cloud providers
+- Intelligent node size mapping (small/medium/large/xlarge)
+- Automatic kubeconfig configuration
+- Multi-cloud deployment support
+- Cost-optimized provider selection
+
+**K8s Node Sizes:**
+- `small` - Development (~2 vCPU, 4GB RAM)
+- `medium` - Production (~2-4 vCPU, 8-16GB RAM)
+- `large` - High-performance (~4-8 vCPU, 16-32GB RAM)
+- `xlarge` - Enterprise (~8-16 vCPU, 32-64GB RAM)
+
+**Related Documentation:** [Kubernetes Implementation Guide](../infrastructure/K8S-IMPLEMENTATION-GUIDE.md)
 
 ---
 
