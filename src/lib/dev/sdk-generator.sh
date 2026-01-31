@@ -2,7 +2,6 @@
 # sdk-generator.sh - Generate SDKs from GraphQL schema
 # Part of nself v0.7.0 - Sprint 19: Developer Experience Tools
 
-set -euo pipefail
 
 # Get Hasura GraphQL endpoint
 get_hasura_endpoint() {

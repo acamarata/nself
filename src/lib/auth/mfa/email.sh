@@ -5,7 +5,6 @@
 # Implements email-based multi-factor authentication
 # Uses nself email service (MailPit in dev, SMTP in production)
 
-set -euo pipefail
 
 # Email MFA configuration
 readonly EMAIL_CODE_LENGTH=6

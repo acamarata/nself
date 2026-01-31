@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # docker.sh - Docker-specific error detection and handling

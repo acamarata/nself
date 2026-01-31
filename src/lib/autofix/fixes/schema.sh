@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # Schema-related fixes for auth, storage, and other services

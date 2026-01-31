@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # Portable timeout implementation for cross-platform compatibility

@@ -5,7 +5,6 @@
 # Implements backup codes for MFA recovery
 # One-time use codes for account recovery
 
-set -euo pipefail
 
 # Backup codes configuration
 readonly BACKUP_CODE_COUNT=10

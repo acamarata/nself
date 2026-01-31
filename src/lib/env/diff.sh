@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # diff.sh - Environment comparison functionality
 # POSIX-compliant, no Bash 4+ features

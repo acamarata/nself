@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # display.sh - Centralized display utilities for consistent output
 

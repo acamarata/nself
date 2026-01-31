@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # ibm.sh - IBM Cloud provider module
 
-set -euo pipefail
 
 PROVIDER_NAME="ibm"
 PROVIDER_DISPLAY_NAME="IBM Cloud"

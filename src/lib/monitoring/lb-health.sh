@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # lb-health.sh - Load balancer health monitoring

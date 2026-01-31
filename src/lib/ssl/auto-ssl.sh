@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # auto-ssl.sh - Fully automatic SSL management
 
-set -euo pipefail
 
 # Get the directory where this script is located
 SSL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

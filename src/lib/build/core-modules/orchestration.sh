@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # orchestration.sh - Main build orchestration logic
 # POSIX-compliant, no Bash 4+ features

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # service-prereq-generator.sh - Pre-generate all services defined in docker-compose.yml

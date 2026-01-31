@@ -5,7 +5,6 @@
 # Allows users to link/unlink multiple OAuth providers to their account
 # Example: Link both Google and GitHub to the same user account
 
-set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

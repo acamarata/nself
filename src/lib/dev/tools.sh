@@ -2,7 +2,6 @@
 # tools.sh - Development tools and utilities
 # Part of nself v0.7.0 - Sprint 10: DEV-003
 
-set -euo pipefail
 
 # Initialize development environment
 dev_init() {

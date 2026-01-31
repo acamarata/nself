@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # trust.sh - OS trust store management for SSL certificates
 
-set -euo pipefail
 
 # Get the directory where this script is located
 TRUST_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

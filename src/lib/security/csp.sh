@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # csp.sh - Content Security Policy (CSP) generator
 # POSIX-compliant, no Bash 4+ features

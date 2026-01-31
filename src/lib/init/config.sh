@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # config.sh - Configuration constants for nself init command
 #

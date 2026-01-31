@@ -2,7 +2,6 @@
 # graphql-integration.sh - Auto-generate GraphQL mutations and queries for file uploads
 # Part of nself storage system
 
-set -euo pipefail
 
 # Source required utilities
 GRAPHQL_INTEGRATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

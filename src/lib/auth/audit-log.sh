@@ -2,7 +2,6 @@
 # audit-log.sh - Comprehensive audit logging
 # Part of nself v0.6.0 - Phase 2
 
-set -euo pipefail
 
 audit_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)

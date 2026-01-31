@@ -3,7 +3,6 @@
 # Manages custom email templates with variable injection and multi-language support
 # Part of Sprint 14: White-Label & Customization (60pts) for v0.9.0
 
-set -euo pipefail
 
 # Color definitions for output
 readonly RED='\033[0;31m'

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # netcup.sh - Netcup provider module (German quality at budget prices)
 
-set -euo pipefail
 
 PROVIDER_NAME="netcup"
 PROVIDER_DISPLAY_NAME="Netcup"

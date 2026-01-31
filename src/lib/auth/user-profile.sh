@@ -5,7 +5,6 @@
 # Implements user profile management features
 # Avatar, display name, bio, custom fields
 
-set -euo pipefail
 
 # ============================================================================
 # Profile Creation & Retrieval

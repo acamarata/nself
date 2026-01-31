@@ -2,7 +2,6 @@
 # magic-link.sh - Magic link (passwordless email) authentication
 # Part of nself v0.6.0 - Phase 1 Sprint 1 (AUTH-005)
 
-set -euo pipefail
 
 # Magic link expiry (15 minutes)
 readonly MAGIC_LINK_EXPIRY_SECONDS=900

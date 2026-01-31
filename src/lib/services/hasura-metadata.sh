@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # hasura-metadata.sh - Generate Hasura metadata for multi-app support
 

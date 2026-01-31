@@ -2,7 +2,6 @@
 # upcloud.sh - UpCloud provider module
 # Known for MaxIOPS high-performance storage
 
-set -euo pipefail
 
 PROVIDER_NAME="upcloud"
 PROVIDER_DISPLAY_NAME="UpCloud"

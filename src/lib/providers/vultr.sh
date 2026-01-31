@@ -2,7 +2,6 @@
 # vultr.sh - Vultr provider module
 # Supports Instances, VKE (Vultr Kubernetes Engine)
 
-set -euo pipefail
 
 PROVIDER_NAME="vultr"
 PROVIDER_DISPLAY_NAME="Vultr"

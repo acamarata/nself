@@ -4,7 +4,6 @@
 #
 # Webhook delivery and management system
 
-set -euo pipefail
 
 # Webhook defaults
 readonly WEBHOOK_TIMEOUT=30

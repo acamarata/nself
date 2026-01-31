@@ -7,7 +7,6 @@
 #
 # CRITICAL: All SQL queries that include user input MUST use these functions
 
-set -euo pipefail
 
 # Prevent multiple sourcing
 [[ -n "${NSELF_SAFE_QUERY_LOADED:-}" ]] && return 0

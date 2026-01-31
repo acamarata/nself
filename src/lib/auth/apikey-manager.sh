@@ -4,7 +4,6 @@
 #
 # Implements API key CRUD, scopes, expiration, rotation, and usage tracking
 
-set -euo pipefail
 
 # API key defaults
 readonly APIKEY_PREFIX="nself"

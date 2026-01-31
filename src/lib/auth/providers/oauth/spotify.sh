@@ -2,7 +2,6 @@
 # spotify.sh - Spotify OAuth 2.0 provider
 # Part of nself v0.8.0+
 
-set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

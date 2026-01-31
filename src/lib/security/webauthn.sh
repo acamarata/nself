@@ -2,7 +2,6 @@
 # webauthn.sh - WebAuthn/FIDO2 helper functions
 # Part of nself v0.6.0 - Sprint 17: Advanced Security
 
-set -euo pipefail
 
 # ============================================================================
 # WebAuthn Challenge Generation

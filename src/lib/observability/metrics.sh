@@ -2,7 +2,6 @@
 # metrics.sh - Enhanced metrics collection
 # Part of nself v0.7.0 - Sprint 7: OBS-001
 
-set -euo pipefail
 
 # Initialize metrics storage
 metrics_init() {

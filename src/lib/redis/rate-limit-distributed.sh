@@ -2,7 +2,6 @@
 # rate-limit-distributed.sh - Distributed rate limiting with Redis
 # Part of nself v0.7.0 - Sprint 6: RDS-002
 
-set -euo pipefail
 
 # Distributed rate limit check using Redis
 redis_rate_limit_check() {

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # rollback.sh - Rollback functionality library
 
-set -euo pipefail
 
 # Create deployment snapshot
 create_deployment_snapshot() {

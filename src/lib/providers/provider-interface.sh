@@ -2,7 +2,6 @@
 # provider-interface.sh - Unified provider abstraction layer
 # Provides consistent interface across all cloud providers
 
-set -euo pipefail
 
 # Get script directory
 PROVIDER_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

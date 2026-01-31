@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # api.sh - Unified SSL/Trust API
 # This is the single public interface that all commands use

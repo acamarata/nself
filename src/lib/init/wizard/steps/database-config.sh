@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # database-config.sh - Wizard step for database configuration
 # POSIX-compliant, no Bash 4+ features

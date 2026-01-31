@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # progress.sh - Centralized progress indicators and spinners
 

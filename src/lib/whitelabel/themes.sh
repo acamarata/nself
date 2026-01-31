@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # nself Theme System - FULL IMPLEMENTATION
 # Manages theme creation, CSS variables, dark/light mode, and theme preview
@@ -13,7 +12,6 @@ set -euo pipefail
 # - Multi-tenant theme isolation
 # - Built-in themes: light, dark, high-contrast
 
-set -euo pipefail
 
 # Color definitions for output
 readonly RED='\033[0;31m'

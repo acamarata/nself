@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # registry.sh - Plugin registry client for nself
 # Handles fetching, caching, and querying the plugin registry
@@ -453,6 +452,267 @@ registry_get_categories() {
 }
 
 # ============================================================================
+# Marketplace Integration (Stubs for future implementation)
+# ============================================================================
+
+# Search plugins in marketplace
+registry_marketplace_search() {
+  local query="$1"
+  local category="${2:-}"
+
+  printf "Searching marketplace for: %s\n" "$query"
+
+  # Try marketplace API first (if available)
+  local results
+  if results=$(curl -sf --connect-timeout 5 --max-time 10 \
+    "${PLUGIN_REGISTRY_URL}/search?q=${query}&category=${category}" 2>/dev/null); then
+
+    if command -v jq >/dev/null 2>&1; then
+      printf '%s' "$results" | jq -r '.plugins[] | "\(.name)|\(.version)|\(.description)"'
+    else
+      printf '%s' "$results"
+    fi
+    return 0
+  fi
+
+  # Fallback to local registry search
+  local registry
+  registry=$(registry_fetch) || return 1
+
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$registry" | jq -r \
+      ".plugins[] | select(.name | contains(\"$query\") or .description | contains(\"$query\")) | \"\(.name)|\(.version)|\(.description)\""
+  else
+    printf '%s' "$registry" | grep -i "$query" || true
+  fi
+}
+
+# Get plugin ratings and reviews from marketplace
+registry_marketplace_ratings() {
+  local plugin_name="$1"
+
+  # Stub: Would fetch from marketplace API
+  printf "Fetching ratings for %s from marketplace...\n" "$plugin_name"
+
+  # TODO: Implement marketplace ratings API
+  printf "Marketplace ratings not yet available\n"
+  return 0
+}
+
+# Get plugin statistics (downloads, stars, etc.)
+registry_marketplace_stats() {
+  local plugin_name="$1"
+
+  printf "Fetching statistics for %s...\n" "$plugin_name"
+
+  # Try marketplace API
+  local stats
+  if stats=$(curl -sf --connect-timeout 5 --max-time 10 \
+    "${PLUGIN_REGISTRY_URL}/plugins/${plugin_name}/stats" 2>/dev/null); then
+
+    if command -v jq >/dev/null 2>&1; then
+      local downloads stars updated
+      downloads=$(printf '%s' "$stats" | jq -r '.downloads // 0')
+      stars=$(printf '%s' "$stats" | jq -r '.stars // 0')
+      updated=$(printf '%s' "$stats" | jq -r '.last_updated // "unknown"')
+
+      printf "Downloads: %s\n" "$downloads"
+      printf "Stars: %s\n" "$stars"
+      printf "Last Updated: %s\n" "$updated"
+      return 0
+    fi
+  fi
+
+  # Fallback
+  printf "Statistics not available\n"
+  return 1
+}
+
+# Publish plugin to marketplace (requires authentication)
+registry_marketplace_publish() {
+  local plugin_path="$1"
+  local api_token="${NSELF_REGISTRY_TOKEN:-}"
+
+  if [[ ! -d "$plugin_path" ]]; then
+    printf "Error: Plugin directory not found: %s\n" "$plugin_path" >&2
+    return 1
+  fi
+
+  if [[ -z "$api_token" ]]; then
+    printf "Error: NSELF_REGISTRY_TOKEN not set\n" >&2
+    printf "Get your token from: https://plugins.nself.org/account\n"
+    return 1
+  fi
+
+  # Read plugin manifest
+  local manifest="$plugin_path/plugin.json"
+  if [[ ! -f "$manifest" ]]; then
+    printf "Error: Missing plugin.json\n" >&2
+    return 1
+  fi
+
+  # Extract plugin name and version
+  local plugin_name plugin_version
+  if command -v jq >/dev/null 2>&1; then
+    plugin_name=$(jq -r '.name' "$manifest")
+    plugin_version=$(jq -r '.version' "$manifest")
+  else
+    plugin_name=$(grep '"name"' "$manifest" | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    plugin_version=$(grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+  fi
+
+  printf "Publishing %s@%s to marketplace...\n" "$plugin_name" "$plugin_version"
+
+  # Create tarball
+  local tarball="/tmp/${plugin_name}-${plugin_version}.tar.gz"
+  tar -czf "$tarball" -C "$(dirname "$plugin_path")" "$(basename "$plugin_path")"
+
+  # Calculate checksum
+  local checksum
+  if command -v sha256sum >/dev/null 2>&1; then
+    checksum=$(sha256sum "$tarball" | cut -d' ' -f1)
+  elif command -v shasum >/dev/null 2>&1; then
+    checksum=$(shasum -a 256 "$tarball" | cut -d' ' -f1)
+  else
+    printf "Error: No checksum tool available\n" >&2
+    return 1
+  fi
+
+  # Upload to marketplace
+  # TODO: Implement actual API upload
+  printf "  Checksum: sha256:%s\n" "$checksum"
+  printf "\nMarketplace publishing not yet implemented\n"
+  printf "Submit manually to: https://github.com/acamarata/nself-plugins\n"
+
+  # Cleanup
+  rm -f "$tarball"
+
+  return 0
+}
+
+# Report plugin issue to marketplace
+registry_marketplace_report() {
+  local plugin_name="$1"
+  local issue_type="${2:-security}"
+  local description="${3:-}"
+
+  printf "Reporting issue for %s...\n" "$plugin_name"
+
+  # TODO: Implement marketplace issue reporting API
+  printf "Please report issues at:\n"
+  printf "https://github.com/acamarata/nself-plugins/issues\n"
+
+  return 0
+}
+
+# Get plugin trust score from marketplace
+registry_marketplace_trust_score() {
+  local plugin_name="$1"
+
+  # Try marketplace API
+  local score
+  if score=$(curl -sf --connect-timeout 5 --max-time 10 \
+    "${PLUGIN_REGISTRY_URL}/plugins/${plugin_name}/trust" 2>/dev/null); then
+
+    if command -v jq >/dev/null 2>&1; then
+      local trust_score verified official
+      trust_score=$(printf '%s' "$score" | jq -r '.score // 0')
+      verified=$(printf '%s' "$score" | jq -r '.verified // false')
+      official=$(printf '%s' "$score" | jq -r '.official // false')
+
+      printf "Trust Score: %s/100\n" "$trust_score"
+      [[ "$verified" == "true" ]] && printf "Status: Verified\n" || printf "Status: Unverified\n"
+      [[ "$official" == "true" ]] && printf "Official: Yes\n"
+
+      return 0
+    fi
+  fi
+
+  # Fallback - check if official plugin
+  local registry
+  registry=$(registry_fetch) || return 1
+
+  if command -v jq >/dev/null 2>&1; then
+    local is_official
+    is_official=$(printf '%s' "$registry" | jq -r ".plugins[] | select(.name==\"$plugin_name\") | .official // false")
+
+    if [[ "$is_official" == "true" ]]; then
+      printf "Trust Score: 100/100 (Official Plugin)\n"
+      return 0
+    fi
+  fi
+
+  printf "Trust Score: Not Available\n"
+  return 0
+}
+
+# ============================================================================
+# Plugin Discovery and Recommendations
+# ============================================================================
+
+# Get popular plugins from marketplace
+registry_get_popular() {
+  local limit="${1:-10}"
+
+  printf "Fetching popular plugins...\n"
+
+  # Try marketplace API
+  local popular
+  if popular=$(curl -sf --connect-timeout 5 --max-time 10 \
+    "${PLUGIN_REGISTRY_URL}/plugins/popular?limit=${limit}" 2>/dev/null); then
+
+    if command -v jq >/dev/null 2>&1; then
+      printf '%s' "$popular" | jq -r '.plugins[] | "\(.name)|\(.downloads)|\(.description)"'
+      return 0
+    fi
+  fi
+
+  # Fallback to registry
+  printf "Popular plugins list not available from marketplace\n"
+  return 1
+}
+
+# Get trending plugins
+registry_get_trending() {
+  local limit="${1:-10}"
+  local timeframe="${2:-week}" # day, week, month
+
+  printf "Fetching trending plugins (%s)...\n" "$timeframe"
+
+  # Stub: Would fetch from marketplace API
+  printf "Trending plugins not yet available\n"
+  return 1
+}
+
+# Get recommended plugins based on installed plugins
+registry_get_recommendations() {
+  printf "Fetching personalized recommendations...\n"
+
+  # Get installed plugins
+  local installed
+  installed=$(registry_list_installed | tr '\n' ',' | sed 's/,$//')
+
+  if [[ -z "$installed" ]]; then
+    printf "No plugins installed. Install some plugins to get recommendations.\n"
+    return 0
+  fi
+
+  # Try marketplace API for recommendations
+  local recommendations
+  if recommendations=$(curl -sf --connect-timeout 5 --max-time 10 \
+    "${PLUGIN_REGISTRY_URL}/recommendations?installed=${installed}" 2>/dev/null); then
+
+    if command -v jq >/dev/null 2>&1; then
+      printf '%s' "$recommendations" | jq -r '.plugins[] | "\(.name)|\(.reason)"'
+      return 0
+    fi
+  fi
+
+  printf "Recommendations not yet available\n"
+  return 1
+}
+
+# ============================================================================
 # Export Functions
 # ============================================================================
 
@@ -470,3 +730,14 @@ export -f registry_get_download_url
 export -f registry_verify_checksum
 export -f registry_get_metadata
 export -f registry_get_categories
+
+# Marketplace functions
+export -f registry_marketplace_search
+export -f registry_marketplace_ratings
+export -f registry_marketplace_stats
+export -f registry_marketplace_publish
+export -f registry_marketplace_report
+export -f registry_marketplace_trust_score
+export -f registry_get_popular
+export -f registry_get_trending
+export -f registry_get_recommendations

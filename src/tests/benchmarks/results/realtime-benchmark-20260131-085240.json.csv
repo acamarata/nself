@@ -1,0 +1,4 @@
+Test,Result,Baseline,Unit,Status
+Connection Throughput,372.71571853999798733511,10000,conn/sec,WARN
+Message Latency,35.97017000000000000000,5,ms,WARN
+Presence Updates,13082.49823386273842853031,1000,updates/sec,PASS

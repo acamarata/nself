@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # nginx-setup.sh - Nginx configuration generation module
 # POSIX-compliant, no Bash 4+ features

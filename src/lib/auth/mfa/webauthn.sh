@@ -2,7 +2,6 @@
 # webauthn.sh - WebAuthn/FIDO2 support
 # Part of nself v0.6.0 - Phase 1 Sprint 2 (deferred item)
 
-set -euo pipefail
 
 webauthn_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # environment-manager.sh - Environment management for multi-env support
 

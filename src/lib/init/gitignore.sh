@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # gitignore.sh - Gitignore management functions for nself init command
 #

@@ -1,0 +1,9 @@
+Multi-Tenant System Performance Benchmark
+==========================================
+
+Scale: Small Scale
+Tenant Count: 10
+Test Date: Sat Jan 31 08:53:00 EST 2026
+Results File: /Users/admin/Sites/nself/src/tests/benchmarks/results/tenant-benchmark-20260131-085259.json
+
+Performance Results:

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # hostinger.sh - Hostinger VPS provider module
 
-set -euo pipefail
 
 PROVIDER_NAME="hostinger"
 PROVIDER_DISPLAY_NAME="Hostinger"

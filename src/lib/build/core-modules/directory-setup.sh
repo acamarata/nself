@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # directory-setup.sh - Directory structure creation module
 # POSIX-compliant, no Bash 4+ features

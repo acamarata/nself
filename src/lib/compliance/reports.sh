@@ -2,7 +2,6 @@
 # reports.sh - Compliance reporting and security scanning
 # Part of nself v0.7.0 - Sprint 9: CSA-003, CSA-005
 
-set -euo pipefail
 
 # Generate compliance report
 compliance_generate_report() {

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # nginx.sh - Nginx configuration generation for build
 

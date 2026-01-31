@@ -5,7 +5,6 @@
 # Implements SMS-based multi-factor authentication
 # Supports Twilio, AWS SNS, and development mode
 
-set -euo pipefail
 
 # SMS MFA configuration
 readonly SMS_CODE_LENGTH=6

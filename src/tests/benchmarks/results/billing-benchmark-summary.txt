@@ -2,7 +2,7 @@ Billing System Performance Benchmark
 =====================================
 
 Deployment Size: small
-Test Date: Fri Jan 30 05:31:07 EST 2026
-Results File: /Users/admin/Sites/nself/benchmarks/results/billing-benchmark-20260130-053105.json
+Test Date: Sat Jan 31 08:52:40 EST 2026
+Results File: /Users/admin/Sites/nself/src/tests/benchmarks/results/billing-benchmark-20260131-085238.json
 
 Performance Results:

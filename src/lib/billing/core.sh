@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 #
 # nself billing/core.sh - Billing System Core Functions

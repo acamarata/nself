@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # platform-compat.sh - Platform compatibility utilities
 # POSIX-compliant, cross-platform helpers

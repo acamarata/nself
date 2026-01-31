@@ -2,7 +2,6 @@
 # logging.sh - Advanced structured logging
 # Part of nself v0.7.0 - Sprint 7: OBS-002
 
-set -euo pipefail
 
 # Log levels
 readonly LOG_LEVEL_DEBUG=10

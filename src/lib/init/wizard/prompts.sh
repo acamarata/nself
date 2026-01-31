@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # prompts.sh - Interactive UI components for wizard
 

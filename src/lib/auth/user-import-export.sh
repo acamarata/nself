@@ -5,7 +5,6 @@
 # Implements user data import/export in JSON and CSV formats
 # Supports bulk operations and data migration
 
-set -euo pipefail
 
 # Source user manager
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

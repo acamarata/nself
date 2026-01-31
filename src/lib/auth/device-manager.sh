@@ -2,7 +2,6 @@
 # device-manager.sh - Device management and tracking
 # Part of nself v0.6.0 - Phase 2
 
-set -euo pipefail
 
 device_init() {
   local container=$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)

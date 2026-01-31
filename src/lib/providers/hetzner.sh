@@ -2,7 +2,6 @@
 # hetzner.sh - Hetzner Cloud provider module
 # Supports Cloud Servers, managed Kubernetes
 
-set -euo pipefail
 
 PROVIDER_NAME="hetzner"
 PROVIDER_DISPLAY_NAME="Hetzner Cloud"

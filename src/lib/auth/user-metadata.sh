@@ -5,7 +5,6 @@
 # Implements flexible key-value metadata storage for users
 # Supports versioning and JSON data types
 
-set -euo pipefail
 
 # ============================================================================
 # Metadata Storage

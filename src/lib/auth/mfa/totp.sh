@@ -5,7 +5,6 @@
 # Implements RFC 6238 TOTP for multi-factor authentication
 # Compatible with Google Authenticator, Authy, etc.
 
-set -euo pipefail
 
 # TOTP configuration
 readonly TOTP_PERIOD=30      # Time step in seconds

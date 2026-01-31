@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # hosts-helper.sh - Helper for /etc/hosts configuration
 

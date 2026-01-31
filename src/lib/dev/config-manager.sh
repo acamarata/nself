@@ -2,7 +2,6 @@
 # config-manager.sh - Enhanced configuration management
 # Part of nself v0.7.0 - Sprint 10: DEV-002
 
-set -euo pipefail
 
 # Validate configuration
 config_validate() {

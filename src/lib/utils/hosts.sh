@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # hosts.sh - Manage /etc/hosts entries for local development
 

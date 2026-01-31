@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # docker-compose-simple.sh - Simplified docker compose startup
 

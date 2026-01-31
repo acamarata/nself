@@ -2,7 +2,6 @@
 # contabo.sh - Contabo VPS provider module
 # Best specs-per-dollar provider
 
-set -euo pipefail
 
 PROVIDER_NAME="contabo"
 PROVIDER_DISPLAY_NAME="Contabo"

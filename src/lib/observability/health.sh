@@ -2,7 +2,6 @@
 # health.sh - Deep health checks and automatic recovery
 # Part of nself v0.7.0 - Sprint 7: OBS-004
 
-set -euo pipefail
 
 # Initialize health check storage
 health_init() {

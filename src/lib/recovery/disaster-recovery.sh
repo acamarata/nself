@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # disaster-recovery.sh - Automated disaster recovery procedures

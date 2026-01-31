@@ -4,7 +4,6 @@
 #
 # Rate limiting by user ID
 
-set -euo pipefail
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

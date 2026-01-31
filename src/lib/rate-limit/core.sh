@@ -4,7 +4,6 @@
 #
 # Core rate limiting functionality
 
-set -euo pipefail
 
 # Rate limit defaults
 readonly RATE_LIMIT_WINDOW=60        # 60 seconds (1 minute)

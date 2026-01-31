@@ -5,7 +5,6 @@
 # Implements MFA enforcement policies, exemptions, and rules
 # Allows flexible MFA requirements based on user roles, IP, etc.
 
-set -euo pipefail
 
 # MFA policy types
 readonly MFA_POLICY_REQUIRED="required"     # MFA always required

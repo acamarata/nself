@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # verifier.sh - Multi-OS trust verification for SSL certificates
 

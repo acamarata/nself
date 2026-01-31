@@ -4,7 +4,6 @@
 #
 # Implements JWT token configuration and RS256 key rotation
 
-set -euo pipefail
 
 # JWT defaults
 readonly JWT_ALGORITHM="RS256"

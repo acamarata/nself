@@ -2,7 +2,6 @@
 # gcp.sh - Google Cloud Platform (GCP) provider module
 # Supports Compute Engine, GKE (Google Kubernetes Engine)
 
-set -euo pipefail
 
 PROVIDER_NAME="gcp"
 PROVIDER_DISPLAY_NAME="Google Cloud Platform"

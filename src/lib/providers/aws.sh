@@ -2,7 +2,6 @@
 # aws.sh - Amazon Web Services (AWS) provider module
 # Supports EC2, EKS (Elastic Kubernetes Service)
 
-set -euo pipefail
 
 PROVIDER_NAME="aws"
 PROVIDER_DISPLAY_NAME="Amazon Web Services"

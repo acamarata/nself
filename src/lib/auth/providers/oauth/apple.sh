@@ -2,7 +2,6 @@
 # apple.sh - Apple OAuth provider (Sign in with Apple)
 # Part of nself v0.6.0 - Phase 1 Sprint 2
 
-set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -f "$SCRIPT_DIR/../oauth-core.sh" ]] && source "$SCRIPT_DIR/../oauth-core.sh"

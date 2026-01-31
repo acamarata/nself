@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # env-validation.sh - Comprehensive environment variable validation with auto-fix
 

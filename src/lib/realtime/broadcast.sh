@@ -5,7 +5,6 @@
 # Manages broadcast messages to channels
 #
 
-set -euo pipefail
 
 # Source dependencies
 REALTIME_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

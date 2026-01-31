@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # firewall.sh - Firewall configuration and management
 # POSIX-compliant, no Bash 4+ features

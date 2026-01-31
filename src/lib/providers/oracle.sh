@@ -2,7 +2,6 @@
 # oracle.sh - Oracle Cloud Infrastructure (OCI) provider module
 # Supports Always Free tier, ARM instances, and OKE
 
-set -euo pipefail
 
 PROVIDER_NAME="oracle"
 PROVIDER_DISPLAY_NAME="Oracle Cloud Infrastructure"

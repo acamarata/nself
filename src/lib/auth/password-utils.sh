@@ -4,7 +4,6 @@
 #
 # Uses bcrypt for password hashing (via htpasswd or Python)
 
-set -euo pipefail
 
 # ============================================================================
 # Password Hashing (bcrypt)

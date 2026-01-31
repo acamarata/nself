@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # platform.sh - Platform detection and terminal capabilities for nself init
 #

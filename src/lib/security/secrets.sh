@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # secrets.sh - Secrets generation and management
 # POSIX-compliant, no Bash 4+ features

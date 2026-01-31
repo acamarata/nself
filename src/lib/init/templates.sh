@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # templates.sh - Template management functions for nself init command
 #

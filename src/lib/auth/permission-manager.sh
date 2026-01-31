@@ -4,7 +4,6 @@
 #
 # Implements granular permission management for RBAC
 
-set -euo pipefail
 
 # ============================================================================
 # Permission CRUD Operations

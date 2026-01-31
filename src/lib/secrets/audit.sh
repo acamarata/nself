@@ -4,7 +4,6 @@
 #
 # Tracks all secret access for security and compliance
 
-set -euo pipefail
 
 # ============================================================================
 # Audit Initialization

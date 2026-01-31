@@ -2,7 +2,6 @@
 # azure.sh - Microsoft Azure provider module
 # Supports Virtual Machines, AKS (Azure Kubernetes Service)
 
-set -euo pipefail
 
 PROVIDER_NAME="azure"
 PROVIDER_DISPLAY_NAME="Microsoft Azure"

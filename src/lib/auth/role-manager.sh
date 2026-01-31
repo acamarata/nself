@@ -5,7 +5,6 @@
 # Implements role-based access control (RBAC) with SQL injection protection
 # All queries use parameterized queries via safe-query.sh
 
-set -euo pipefail
 
 # Source safe query library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

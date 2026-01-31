@@ -2,7 +2,6 @@
 # docs-generator.sh - Generate API documentation
 # Part of nself v0.7.0 - Sprint 19: Developer Experience Tools
 
-set -euo pipefail
 
 # Get Hasura endpoint
 get_hasura_endpoint() {

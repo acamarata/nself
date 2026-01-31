@@ -2,7 +2,6 @@
 # test-helpers.sh - Testing utilities and helpers
 # Part of nself v0.7.0 - Sprint 19: Developer Experience Tools
 
-set -euo pipefail
 
 # Initialize test environment
 init_test_environment() {

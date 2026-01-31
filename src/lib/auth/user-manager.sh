@@ -5,7 +5,6 @@
 # Implements comprehensive user management operations with SQL injection protection
 # All queries use parameterized queries via safe-query.sh
 
-set -euo pipefail
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

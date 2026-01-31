@@ -2,7 +2,6 @@
 # upload-pipeline.sh - Comprehensive file upload pipeline with multipart, thumbnails, virus scanning
 # Part of nself storage management system
 
-set -euo pipefail
 
 # Source required utilities
 UPLOAD_PIPELINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

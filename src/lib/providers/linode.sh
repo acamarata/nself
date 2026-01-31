@@ -2,7 +2,6 @@
 # linode.sh - Linode (Akamai) provider module
 # Supports Linodes, LKE (Linode Kubernetes Engine)
 
-set -euo pipefail
 
 PROVIDER_NAME="linode"
 PROVIDER_DISPLAY_NAME="Linode"

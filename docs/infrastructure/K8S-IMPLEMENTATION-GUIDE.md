@@ -1,5 +1,24 @@
 # Kubernetes Implementation Guide for nself
 
+**Commands:** `nself infra k8s` and `nself infra provider k8s-*`
+
+Complete guide to nself's Kubernetes abstraction layer - deploy managed Kubernetes clusters across 8 cloud providers with a unified CLI.
+
+---
+
+## Quick Navigation
+
+- [Overview](#overview)
+- [Supported Providers](#supported-providers)
+- [Quick Start](#quick-start-deploy-in-5-minutes)
+- [CLI Installation](#cli-installation-requirements)
+- [Usage Examples](#usage-examples)
+- [Provider Details](#provider-specific-details)
+- [Cost Comparison](#cost-comparison)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 This guide documents the Kubernetes abstraction layer implementation across all supported cloud providers in nself.
 
 ## Table of Contents
@@ -178,6 +197,63 @@ curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/g
 ```bash
 nself infra provider init scaleway
 # Or: scw init
+```
+
+---
+
+## Quick Start: Deploy in 5 Minutes
+
+### 1. Install Provider CLI
+
+```bash
+# Choose your provider and install CLI
+# AWS
+brew install awscli eksctl
+
+# GCP
+brew install google-cloud-sdk
+
+# DigitalOcean
+brew install doctl
+
+# Or use nself to help
+nself infra provider install aws
+```
+
+### 2. Initialize Provider
+
+```bash
+# Interactive setup
+nself infra provider init aws
+
+# Or manual
+aws configure
+```
+
+### 3. Create Cluster
+
+```bash
+# One command to create managed K8s cluster
+nself infra provider k8s-create aws production-cluster us-east-1 3 medium
+
+# Wait 10-15 minutes for cluster provisioning
+```
+
+### 4. Get kubeconfig
+
+```bash
+# Automatically configures kubectl
+nself infra provider k8s-kubeconfig aws production-cluster us-east-1
+
+# Verify connection
+kubectl get nodes
+```
+
+### 5. Deploy nself
+
+```bash
+# Deploy your application to K8s
+nself infra k8s deploy production
 ```
 
 ---
@@ -786,6 +862,87 @@ velero schedule create daily-backup --schedule="0 2 * * *"
 - **Provider Interface:** `/src/lib/providers/provider-interface.sh`
 - **CLI Commands:** `nself infra provider --help`
 - **Configuration:** `~/.nself/providers/<provider>.yml`
+
+---
+
+## nself K8s Abstraction Benefits
+
+### Unified CLI Across Providers
+
+**Without nself:**
+```bash
+# AWS (3 different tools)
+eksctl create cluster --name prod --region us-east-1
+aws eks update-kubeconfig --name prod --region us-east-1
+eksctl delete cluster --name prod
+
+# GCP (different syntax)
+gcloud container clusters create prod --region us-central1
+gcloud container clusters get-credentials prod --region us-central1
+gcloud container clusters delete prod --region us-central1
+
+# Azure (completely different)
+az aks create --resource-group rg --name prod --location eastus
+az aks get-credentials --resource-group rg --name prod
+az aks delete --resource-group rg --name prod
+```
+
+**With nself:**
+```bash
+# Same commands for all providers!
+nself infra provider k8s-create <provider> prod <region> 3 medium
+nself infra provider k8s-kubeconfig <provider> prod <region>
+nself infra provider k8s-delete <provider> prod <region>
+```
+
+### Intelligent Node Size Mapping
+
+nself maps human-readable sizes to provider-specific instance types:
+
+```bash
+# Same command, provider chooses appropriate instance
+nself infra provider k8s-create aws prod us-east-1 3 medium
+# AWS: Uses t3.large (2 vCPU, 8GB)
+
+nself infra provider k8s-create gcp prod us-central1 3 medium
+# GCP: Uses e2-standard-2 (2 vCPU, 8GB)
+
+nself infra provider k8s-create azure prod eastus 3 medium
+# Azure: Uses Standard_D4s_v3 (4 vCPU, 16GB)
+```
+
+**Size Options:**
+- `small` - Development workloads (~2 vCPU, 4GB RAM)
+- `medium` - Production workloads (~2-4 vCPU, 8-16GB RAM)
+- `large` - High-performance apps (~4-8 vCPU, 16-32GB RAM)
+- `xlarge` - Enterprise workloads (~8-16 vCPU, 32-64GB RAM)
+
+### Provider Detection and Validation
+
+```bash
+# Check provider setup
+nself infra provider validate aws
+
+# Test connectivity
+nself infra provider test aws
+
+# View provider info
+nself infra provider info aws
+```
+
+### Multi-Cloud Management
+
+```bash
+# Deploy to multiple clouds simultaneously
+nself infra provider k8s-create aws prod-aws us-east-1 3 medium
+nself infra provider k8s-create gcp prod-gcp us-central1 3 medium
+nself infra provider k8s-create azure prod-azure eastus 3 medium
+
+# Switch between clusters easily
+kubectx prod-aws
+kubectx prod-gcp
+kubectx prod-azure
+```
 
 ---
 

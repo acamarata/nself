@@ -4,7 +4,6 @@
 #
 # Manages encryption keys for secrets vault
 
-set -euo pipefail
 
 # Encryption defaults
 readonly ENCRYPTION_ALGORITHM="aes-256-cbc"

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # racknerd.sh - RackNerd provider (extreme budget VPS)
-set -euo pipefail
 
 PROVIDER_NAME="racknerd"
 

@@ -2,7 +2,6 @@
 # tracing.sh - Distributed tracing system
 # Part of nself v0.7.0 - Sprint 7: OBS-003
 
-set -euo pipefail
 
 # Initialize tracing storage
 tracing_init() {

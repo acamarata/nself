@@ -12,6 +12,11 @@ if [[ -f "$SCRIPT_DIR/encryption.sh" ]]; then
   source "$SCRIPT_DIR/encryption.sh"
 fi
 
+# Source safe query library for SQL injection prevention
+if [[ -f "$SCRIPT_DIR/../database/safe-query.sh" ]]; then
+  source "$SCRIPT_DIR/../database/safe-query.sh"
+fi
+
 # ============================================================================
 # Vault Initialization
 # ============================================================================
@@ -129,65 +134,96 @@ vault_set() {
     return 1
   fi
 
-  # Check if secret exists
+  # Validate key_name (alphanumeric, underscore, hyphen only)
+  key_name=$(validate_identifier "$key_name" 100) || {
+    echo "ERROR: Invalid key name format (use only letters, numbers, underscore, hyphen)" >&2
+    return 1
+  }
+
+  # Validate environment
+  environment=$(validate_identifier "$environment" 50) || {
+    echo "ERROR: Invalid environment format" >&2
+    return 1
+  }
+
+  # Validate encryption_key_id as UUID
+  encryption_key_id=$(validate_uuid "$encryption_key_id") || {
+    echo "ERROR: Invalid encryption key ID" >&2
+    return 1
+  }
+
+  # Check if secret exists (SAFE - parameterized query)
   local existing_id
-  existing_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT id FROM secrets.vault
-     WHERE key_name = '$key_name' AND environment = '$environment' AND is_active = TRUE
-     LIMIT 1;" \
-    2>/dev/null | xargs)
+  existing_id=$(pg_query_value "
+    SELECT id FROM secrets.vault
+    WHERE key_name = :'param1' AND environment = :'param2' AND is_active = TRUE
+    LIMIT 1
+  " "$key_name" "$environment")
 
-  # Escape values
-  encrypted_value=$(echo "$encrypted_value" | sed "s/'/''/g")
-  description=$(echo "$description" | sed "s/'/''/g")
-
-  # Calculate expiry
-  local expires_sql="NULL"
+  # Calculate expiry (NULL or timestamptz)
+  local expires_at=""
   if [[ -n "$expires_days" ]]; then
-    local expires_at
     expires_at=$(date -u -d "+${expires_days} days" "+%Y-%m-%d %H:%M:%S" 2>/dev/null ||
       date -u -v+${expires_days}d "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
-    expires_sql="'$expires_at'::timestamptz"
   fi
 
   if [[ -n "$existing_id" ]]; then
-    # Update existing secret
-    # First, get current version
-    local current_version
-    current_version=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-      "SELECT version FROM secrets.vault WHERE id = '$existing_id';" \
-      2>/dev/null | xargs)
+    # Validate existing_id as UUID
+    existing_id=$(validate_uuid "$existing_id") || {
+      echo "ERROR: Invalid existing secret ID" >&2
+      return 1
+    }
 
-    # Archive current version
-    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-      "INSERT INTO secrets.vault_versions (vault_id, version, encrypted_value, encryption_key_id)
-       SELECT id, version, encrypted_value, encryption_key_id
-       FROM secrets.vault
-       WHERE id = '$existing_id';" \
-      >/dev/null 2>&1
+    # Archive current version (SAFE - parameterized query)
+    pg_query_safe "
+      INSERT INTO secrets.vault_versions (vault_id, version, encrypted_value, encryption_key_id)
+      SELECT id, version, encrypted_value, encryption_key_id
+      FROM secrets.vault
+      WHERE id = :'param1'
+    " "$existing_id"
 
-    # Update with new version
-    local new_version=$((current_version + 1))
-    docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-      "UPDATE secrets.vault SET
-         encrypted_value = '$encrypted_value',
-         encryption_key_id = '$encryption_key_id',
-         version = $new_version,
-         description = '$description',
-         updated_at = NOW(),
-         expires_at = $expires_sql
-       WHERE id = '$existing_id';" \
-      >/dev/null 2>&1
+    # Update with new version (SAFE - parameterized query)
+    if [[ -n "$expires_at" ]]; then
+      pg_query_safe "
+        UPDATE secrets.vault SET
+          encrypted_value = :'param1',
+          encryption_key_id = :'param2',
+          version = version + 1,
+          description = :'param3',
+          updated_at = NOW(),
+          expires_at = :'param4'::timestamptz
+        WHERE id = :'param5'
+      " "$encrypted_value" "$encryption_key_id" "$description" "$expires_at" "$existing_id"
+    else
+      pg_query_safe "
+        UPDATE secrets.vault SET
+          encrypted_value = :'param1',
+          encryption_key_id = :'param2',
+          version = version + 1,
+          description = :'param3',
+          updated_at = NOW(),
+          expires_at = NULL
+        WHERE id = :'param4'
+      " "$encrypted_value" "$encryption_key_id" "$description" "$existing_id"
+    fi
 
     echo "$existing_id"
   else
-    # Create new secret
+    # Create new secret (SAFE - parameterized query)
     local secret_id
-    secret_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-      "INSERT INTO secrets.vault (key_name, encrypted_value, encryption_key_id, environment, description, expires_at)
-       VALUES ('$key_name', '$encrypted_value', '$encryption_key_id', '$environment', '$description', $expires_sql)
-       RETURNING id;" \
-      2>/dev/null | xargs)
+    if [[ -n "$expires_at" ]]; then
+      secret_id=$(pg_query_value "
+        INSERT INTO secrets.vault (key_name, encrypted_value, encryption_key_id, environment, description, expires_at)
+        VALUES (:'param1', :'param2', :'param3', :'param4', :'param5', :'param6'::timestamptz)
+        RETURNING id
+      " "$key_name" "$encrypted_value" "$encryption_key_id" "$environment" "$description" "$expires_at")
+    else
+      secret_id=$(pg_query_value "
+        INSERT INTO secrets.vault (key_name, encrypted_value, encryption_key_id, environment, description)
+        VALUES (:'param1', :'param2', :'param3', :'param4', :'param5')
+        RETURNING id
+      " "$key_name" "$encrypted_value" "$encryption_key_id" "$environment" "$description")
+    fi
 
     if [[ -z "$secret_id" ]]; then
       echo "ERROR: Failed to store secret" >&2
@@ -221,21 +257,43 @@ vault_get() {
     return 1
   fi
 
-  # Build query based on version
-  local query
+  # Validate key_name
+  key_name=$(validate_identifier "$key_name" 100) || {
+    echo "ERROR: Invalid key name format" >&2
+    return 1
+  }
+
+  # Validate environment
+  environment=$(validate_identifier "$environment" 50) || {
+    echo "ERROR: Invalid environment format" >&2
+    return 1
+  }
+
+  # Validate version if provided
   if [[ -n "$version" ]]; then
-    query="SELECT encrypted_value, encryption_key_id FROM secrets.vault
-           WHERE key_name = '$key_name' AND environment = '$environment' AND version = $version
-           LIMIT 1;"
-  else
-    query="SELECT encrypted_value, encryption_key_id FROM secrets.vault
-           WHERE key_name = '$key_name' AND environment = '$environment' AND is_active = TRUE
-           LIMIT 1;"
+    version=$(validate_integer "$version" 1) || {
+      echo "ERROR: Invalid version number" >&2
+      return 1
+    }
   fi
 
-  # Get encrypted secret
+  # Get encrypted secret (SAFE - parameterized query)
   local result
-  result=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -A -F'|' -c "$query" 2>/dev/null)
+  if [[ -n "$version" ]]; then
+    result=$(pg_query_value "
+      SELECT encrypted_value || '|' || encryption_key_id
+      FROM secrets.vault
+      WHERE key_name = :'param1' AND environment = :'param2' AND version = :'param3'
+      LIMIT 1
+    " "$key_name" "$environment" "$version")
+  else
+    result=$(pg_query_value "
+      SELECT encrypted_value || '|' || encryption_key_id
+      FROM secrets.vault
+      WHERE key_name = :'param1' AND environment = :'param2' AND is_active = TRUE
+      LIMIT 1
+    " "$key_name" "$environment")
+  fi
 
   if [[ -z "$result" ]]; then
     echo "ERROR: Secret not found: $key_name (environment: $environment)" >&2
@@ -290,11 +348,24 @@ vault_delete() {
     return 1
   fi
 
-  # Soft delete (mark as inactive)
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-    "UPDATE secrets.vault SET is_active = FALSE, updated_at = NOW()
-     WHERE key_name = '$key_name' AND environment = '$environment' AND is_active = TRUE;" \
-    >/dev/null 2>&1
+  # Validate key_name
+  key_name=$(validate_identifier "$key_name" 100) || {
+    echo "ERROR: Invalid key name format" >&2
+    return 1
+  }
+
+  # Validate environment
+  environment=$(validate_identifier "$environment" 50) || {
+    echo "ERROR: Invalid environment format" >&2
+    return 1
+  }
+
+  # Soft delete (mark as inactive) - SAFE - parameterized query
+  pg_query_safe "
+    UPDATE secrets.vault
+    SET is_active = FALSE, updated_at = NOW()
+    WHERE key_name = :'param1' AND environment = :'param2' AND is_active = TRUE
+  " "$key_name" "$environment"
 
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed to delete secret" >&2
@@ -318,22 +389,37 @@ vault_list() {
     return 1
   fi
 
-  # Build query
-  local where_clause="WHERE is_active = TRUE"
+  # Validate environment if provided
   if [[ -n "$environment" ]]; then
-    where_clause="$where_clause AND environment = '$environment'"
+    environment=$(validate_identifier "$environment" 50) || {
+      echo "ERROR: Invalid environment format" >&2
+      return 1
+    }
   fi
 
-  # Get secrets (without values)
+  # Get secrets (without values) - SAFE - parameterized query
   local secrets_json
-  secrets_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT json_agg(s) FROM (
-       SELECT id, key_name, environment, version, description, created_at, updated_at, expires_at
-       FROM secrets.vault
-       $where_clause
-       ORDER BY key_name, environment
-     ) s;" \
-    2>/dev/null | xargs)
+  if [[ -n "$environment" ]]; then
+    secrets_json=$(pg_query_value "
+      SELECT COALESCE(json_agg(s), '[]'::json)
+      FROM (
+        SELECT id, key_name, environment, version, description, created_at, updated_at, expires_at
+        FROM secrets.vault
+        WHERE is_active = TRUE AND environment = :'param1'
+        ORDER BY key_name, environment
+      ) s
+    " "$environment")
+  else
+    secrets_json=$(pg_query_value "
+      SELECT COALESCE(json_agg(s), '[]'::json)
+      FROM (
+        SELECT id, key_name, environment, version, description, created_at, updated_at, expires_at
+        FROM secrets.vault
+        WHERE is_active = TRUE
+        ORDER BY key_name, environment
+      ) s
+    ")
+  fi
 
   if [[ -z "$secrets_json" ]] || [[ "$secrets_json" == "null" ]]; then
     echo "[]"
@@ -398,18 +484,33 @@ vault_rotate() {
     return 1
   fi
 
-  # Escape value
-  new_encrypted_value=$(echo "$new_encrypted_value" | sed "s/'/''/g")
+  # Validate key_name
+  key_name=$(validate_identifier "$key_name" 100) || {
+    echo "ERROR: Invalid key name format" >&2
+    return 1
+  }
 
-  # Update secret with new encryption
-  docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -c \
-    "UPDATE secrets.vault SET
-       encrypted_value = '$new_encrypted_value',
-       encryption_key_id = '$new_encryption_key_id',
-       rotated_at = NOW(),
-       updated_at = NOW()
-     WHERE key_name = '$key_name' AND environment = '$environment' AND is_active = TRUE;" \
-    >/dev/null 2>&1
+  # Validate environment
+  environment=$(validate_identifier "$environment" 50) || {
+    echo "ERROR: Invalid environment format" >&2
+    return 1
+  }
+
+  # Validate encryption_key_id as UUID
+  new_encryption_key_id=$(validate_uuid "$new_encryption_key_id") || {
+    echo "ERROR: Invalid encryption key ID" >&2
+    return 1
+  }
+
+  # Update secret with new encryption (SAFE - parameterized query)
+  pg_query_safe "
+    UPDATE secrets.vault SET
+      encrypted_value = :'param1',
+      encryption_key_id = :'param2',
+      rotated_at = NOW(),
+      updated_at = NOW()
+    WHERE key_name = :'param3' AND environment = :'param4' AND is_active = TRUE
+  " "$new_encrypted_value" "$new_encryption_key_id" "$key_name" "$environment"
 
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed to rotate secret" >&2
@@ -482,29 +583,48 @@ vault_get_versions() {
     return 1
   fi
 
-  # Get vault ID
+  # Validate key_name
+  key_name=$(validate_identifier "$key_name" 100) || {
+    echo "ERROR: Invalid key name format" >&2
+    return 1
+  }
+
+  # Validate environment
+  environment=$(validate_identifier "$environment" 50) || {
+    echo "ERROR: Invalid environment format" >&2
+    return 1
+  }
+
+  # Get vault ID (SAFE - parameterized query)
   local vault_id
-  vault_id=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT id FROM secrets.vault
-     WHERE key_name = '$key_name' AND environment = '$environment'
-     LIMIT 1;" \
-    2>/dev/null | xargs)
+  vault_id=$(pg_query_value "
+    SELECT id FROM secrets.vault
+    WHERE key_name = :'param1' AND environment = :'param2'
+    LIMIT 1
+  " "$key_name" "$environment")
 
   if [[ -z "$vault_id" ]]; then
     echo "ERROR: Secret not found" >&2
     return 1
   fi
 
-  # Get version history
+  # Validate vault_id as UUID
+  vault_id=$(validate_uuid "$vault_id") || {
+    echo "ERROR: Invalid vault ID format" >&2
+    return 1
+  }
+
+  # Get version history (SAFE - parameterized query)
   local versions_json
-  versions_json=$(docker exec -i "$container" psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-nself_db}" -t -c \
-    "SELECT json_agg(v) FROM (
-       SELECT version, changed_at, changed_by
-       FROM secrets.vault_versions
-       WHERE vault_id = '$vault_id'
-       ORDER BY version DESC
-     ) v;" \
-    2>/dev/null | xargs)
+  versions_json=$(pg_query_value "
+    SELECT COALESCE(json_agg(v), '[]'::json)
+    FROM (
+      SELECT version, changed_at, changed_by
+      FROM secrets.vault_versions
+      WHERE vault_id = :'param1'
+      ORDER BY version DESC
+    ) v
+  " "$vault_id")
 
   if [[ -z "$versions_json" ]] || [[ "$versions_json" == "null" ]]; then
     echo "[]"

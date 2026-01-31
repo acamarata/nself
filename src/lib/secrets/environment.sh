@@ -4,7 +4,6 @@
 #
 # Manages secrets per environment (dev, staging, prod)
 
-set -euo pipefail
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

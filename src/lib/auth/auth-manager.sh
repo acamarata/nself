@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # auth-manager.sh - Core authentication service manager
 # Part of nself v0.6.0 - Phase 1 Sprint 1
@@ -10,7 +9,6 @@ set -euo pipefail
 #   - Token generation and verification
 #   - User authentication operations
 
-set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

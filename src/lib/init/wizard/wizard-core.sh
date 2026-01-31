@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # wizard-core.sh - Core wizard orchestration using modules
 # POSIX-compliant, no Bash 4+ features

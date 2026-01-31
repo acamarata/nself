@@ -5,7 +5,6 @@
 # Automatically refreshes OAuth access tokens before they expire
 # Processes oauth_token_refresh_queue table
 
-set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

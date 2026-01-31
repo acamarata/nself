@@ -1,0 +1,8 @@
+White-Label System Performance Benchmark
+=========================================
+
+Tenant Count: 10
+Test Date: Sat Jan 31 08:53:07 EST 2026
+Results File: /Users/admin/Sites/nself/src/tests/benchmarks/results/whitelabel-benchmark-20260131-085300.json
+
+Performance Results:

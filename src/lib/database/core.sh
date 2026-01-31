@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # core.sh - Core database utilities for nself
 # Provides shared functions for all database operations

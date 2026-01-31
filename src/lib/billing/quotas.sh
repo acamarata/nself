@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 #
 # nself billing/quotas.sh - Quota System and Enforcement

@@ -4,7 +4,6 @@
 #
 # Implements session lifecycle, refresh token rotation, and session revocation
 
-set -euo pipefail
 
 # Session defaults
 readonly SESSION_DEFAULT_TTL=900   # 15 minutes

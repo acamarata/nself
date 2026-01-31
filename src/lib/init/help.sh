@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # help.sh - Help and documentation functions for nself init command
 #

@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 
 # Service health checking utilities

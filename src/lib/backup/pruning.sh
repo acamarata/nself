@@ -2,7 +2,6 @@
 # pruning.sh - Advanced backup pruning and retention policies
 # Part of nself backup system
 
-set -euo pipefail
 
 # Source required utilities
 source "${SCRIPT_DIR:-$(dirname "${BASH_SOURCE[0]}")/..}/lib/utils/display.sh" 2>/dev/null || true

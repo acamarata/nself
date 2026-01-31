@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # ssdnodes.sh - SSDNodes provider (extreme budget, high specs)
-set -euo pipefail
 
 PROVIDER_NAME="ssdnodes"
 

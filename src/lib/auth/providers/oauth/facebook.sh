@@ -2,7 +2,6 @@
 # facebook.sh - Facebook OAuth 2.0 provider (OAUTH-006)
 # Part of nself v0.6.0 - Phase 1 Sprint 1
 
-set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

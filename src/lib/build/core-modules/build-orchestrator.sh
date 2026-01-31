@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # build-orchestrator.sh - Main build orchestration with proper env handling
 # Loads env to detect WHAT to build, but outputs use runtime vars for HOW

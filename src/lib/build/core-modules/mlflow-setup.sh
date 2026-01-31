@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # mlflow-setup.sh - Setup MLflow with PostgreSQL support
 

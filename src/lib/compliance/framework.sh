@@ -2,7 +2,6 @@
 # framework.sh - Compliance framework (GDPR, SOC2, HIPAA)
 # Part of nself v0.7.0 - Sprint 9: CSA-001
 
-set -euo pipefail
 
 # Compliance standards
 readonly COMPLIANCE_GDPR="gdpr"

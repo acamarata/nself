@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # templates-metadata.sh - Service template metadata and descriptions
 
 # Get template metadata

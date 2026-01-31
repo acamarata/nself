@@ -2,7 +2,6 @@
 # recovery.sh - Disaster recovery and restore
 # Part of nself v0.7.0 - Sprint 8: BDR-003
 
-set -euo pipefail
 
 # Restore from backup
 backup_restore() {

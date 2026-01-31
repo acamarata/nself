@@ -4,7 +4,6 @@
 #
 # Provides common OAuth 2.0 / OIDC functionality that all providers inherit
 
-set -euo pipefail
 
 # ============================================================================
 # OAuth Constants

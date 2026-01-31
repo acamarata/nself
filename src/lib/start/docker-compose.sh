@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # docker-compose.sh - Docker Compose operations for nself start
 # Bash 3.2 compatible, cross-platform

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # services.sh - Standardized service counting and categorization
 # Part of nself v0.4.7 - Provides consistent service counts across all commands

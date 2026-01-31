@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # ssh.sh - SSH connection management for deployments
 # POSIX-compliant, no Bash 4+ features

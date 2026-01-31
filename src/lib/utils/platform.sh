@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 
 # Platform detection and compatibility utilities

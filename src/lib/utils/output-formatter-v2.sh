@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 
 # Enhanced output formatter with professional styling

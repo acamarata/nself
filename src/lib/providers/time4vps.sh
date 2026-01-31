@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # time4vps.sh - Time4VPS provider (Lithuanian budget VPS)
-set -euo pipefail
 
 PROVIDER_NAME="time4vps"
 TIME4VPS_API_URL="https://billing.time4vps.com/api"

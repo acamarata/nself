@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # tencent.sh - Tencent Cloud provider (TKE Kubernetes, Asia coverage)
-set -euo pipefail
 
 PROVIDER_NAME="tencent"
 

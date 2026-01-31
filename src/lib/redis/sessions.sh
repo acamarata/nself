@@ -2,7 +2,6 @@
 # sessions.sh - Distributed session management with Redis
 # Part of nself v0.7.0 - Sprint 6: RDS-003
 
-set -euo pipefail
 
 # Default session TTL (30 days)
 readonly SESSION_DEFAULT_TTL=2592000

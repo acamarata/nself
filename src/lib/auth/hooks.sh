@@ -5,7 +5,6 @@
 # Implements pluggable hooks for authentication lifecycle events
 # Allows custom logic injection at key points in auth flows
 
-set -euo pipefail
 
 # Hook types
 readonly HOOK_PRE_SIGNUP="pre_signup"

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # pre-build.sh - Pre-build required images before starting
 

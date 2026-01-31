@@ -2,7 +2,6 @@
 # digitalocean.sh - DigitalOcean provider module
 # Supports Droplets, DOKS (DigitalOcean Kubernetes Service)
 
-set -euo pipefail
 
 PROVIDER_NAME="digitalocean"
 PROVIDER_DISPLAY_NAME="DigitalOcean"

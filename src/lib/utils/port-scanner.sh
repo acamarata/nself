@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # port-scanner.sh - Fast port availability checking before Docker startup

@@ -3,7 +3,6 @@
 # Manages white-label branding including logos, colors, fonts, and custom CSS
 # Part of Sprint 14: White-Label & Customization (60pts) for v0.9.0
 
-set -euo pipefail
 
 # Get script directory and source dependencies
 BRANDING_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

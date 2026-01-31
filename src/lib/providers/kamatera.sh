@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # kamatera.sh - Kamatera provider (excellent hourly billing)
-set -euo pipefail
 
 PROVIDER_NAME="kamatera"
 KAMATERA_API_URL="https://console.kamatera.com/service/server"

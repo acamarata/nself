@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # routes-display.sh - Display available service routes to users
 
-set -euo pipefail
 
 # Get the directory where this script is located
 ROUTES_DISPLAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

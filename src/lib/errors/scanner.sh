@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 # scanner.sh - Comprehensive error scanning orchestrator

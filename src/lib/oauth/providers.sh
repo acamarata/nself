@@ -4,7 +4,6 @@
 #
 # Provides functions for managing OAuth provider configurations
 
-set -euo pipefail
 
 # Prevent double-sourcing
 [[ "${OAUTH_PROVIDERS_SOURCED:-}" == "1" ]] && return 0

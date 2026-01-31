@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # fallback-services.sh - Generate fallback services for problematic containers
 # Bash 3.2 compatible

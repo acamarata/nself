@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # alibaba.sh - Alibaba Cloud provider (ACK Kubernetes, Asia-focused)
-set -euo pipefail
 
 PROVIDER_NAME="alibaba"
 ALIBABA_API_URL="https://ecs.aliyuncs.com"

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # pre-command.sh - Pre-command validation and setup hooks
 

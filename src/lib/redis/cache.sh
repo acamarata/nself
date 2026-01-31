@@ -2,7 +2,6 @@
 # cache.sh - Redis caching layer
 # Part of nself v0.7.0 - Sprint 6: RDS-004
 
-set -euo pipefail
 
 # Default cache TTL (1 hour)
 readonly CACHE_DEFAULT_TTL=3600

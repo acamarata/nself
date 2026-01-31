@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # ssl.sh - Core SSL certificate management functions
 
-set -euo pipefail
 
 # Get the directory where this script is located
 SSL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

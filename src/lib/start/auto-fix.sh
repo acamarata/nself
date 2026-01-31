@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # auto-fix.sh - Automatic fixes applied during start
 # Bash 3.2 compatible, cross-platform

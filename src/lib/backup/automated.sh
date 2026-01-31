@@ -2,7 +2,6 @@
 # automated.sh - Automated backup system
 # Part of nself v0.7.0 - Sprint 8: BDR-001
 
-set -euo pipefail
 
 # Backup types
 readonly BACKUP_TYPE_FULL="full"

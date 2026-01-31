@@ -2,7 +2,6 @@
 # core.sh - Redis core functionality
 # Part of nself v0.7.0 - Sprint 6: RDS-001
 
-set -euo pipefail
 
 # Redis connection defaults
 readonly REDIS_DEFAULT_HOST="${REDIS_HOST:-localhost}"

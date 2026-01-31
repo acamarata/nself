@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # change-detection.sh - Intelligent build change detection and restart recommendations
 

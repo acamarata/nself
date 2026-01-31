@@ -4,7 +4,6 @@
 #
 # Integrates RBAC system with JWT tokens via custom claims
 
-set -euo pipefail
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

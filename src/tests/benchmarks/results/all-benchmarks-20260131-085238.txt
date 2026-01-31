@@ -1,0 +1,11 @@
+nself Performance Benchmark Suite
+==================================
+
+Scale:              medium
+Test Date:          Sat Jan 31 08:52:38 EST 2026
+Timestamp:          20260131-085238
+
+src/tests/benchmarks/run-all-benchmarks.sh: line 163: ./billing-benchmarks.sh: No such file or directory
+src/tests/benchmarks/run-all-benchmarks.sh: line 172: ./whitelabel-benchmarks.sh: No such file or directory
+src/tests/benchmarks/run-all-benchmarks.sh: line 181: ./tenant-benchmarks.sh: No such file or directory
+src/tests/benchmarks/run-all-benchmarks.sh: line 190: ./realtime-benchmarks.sh: No such file or directory

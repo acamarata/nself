@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # validation.sh - Validation functions for nself init command
 #

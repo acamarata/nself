@@ -1,4 +1,21 @@
-# Deploy Server Management - Implementation Guide
+# Deploy Server Management - Complete Guide
+
+**Command:** `nself deploy server` and `nself deploy sync`
+
+Comprehensive server management, initialization, diagnostics, and environment synchronization for nself deployments.
+
+---
+
+## Quick Navigation
+
+- [Overview](#overview)
+- [Server Management Commands](#server-management-commands)
+- [Sync Commands](#sync-operations)
+- [Common Workflows](#common-workflows)
+- [Security](#security-considerations)
+- [Troubleshooting](#troubleshooting)
+
+---
 
 Complete documentation for the 10 newly implemented deploy server management features.
 
@@ -1076,9 +1093,113 @@ nself backup rollback
 
 ---
 
+---
+
+## Server Management Commands
+
+The `nself deploy server` command provides comprehensive server management with 10 core subcommands:
+
+| Subcommand | Purpose | Safety Level |
+|------------|---------|--------------|
+| `init` | Initialize VPS for nself deployment | Destructive (SSH hardening) |
+| `check` | Verify server readiness | Read-only |
+| `status` | Quick status of all servers | Read-only |
+| `diagnose` | Comprehensive server diagnostics | Read-only |
+| `list` | List all configured servers | Read-only |
+| `add` | Add server configuration | Modifies config |
+| `remove` | Remove server configuration | Modifies config |
+| `ssh` | Quick SSH connection or command | Interactive |
+| `info` | Display comprehensive server info | Read-only |
+| `sync` | Synchronize files (use `nself deploy sync`) | Modifies files |
+
+---
+
+## Command Examples by Use Case
+
+### Initial Server Setup
+
+```bash
+# Complete server initialization workflow
+# 1. Initialize the VPS
+nself deploy server init root@prod.example.com --domain example.com --yes
+
+# 2. Verify server is ready
+nself deploy server check root@prod.example.com
+
+# 3. Add to nself configuration
+nself deploy server add prod --host prod.example.com
+
+# 4. Test SSH connection
+nself deploy server ssh prod "uptime"
+
+# 5. View complete info
+nself deploy server info prod
+```
+
+### Daily Operations
+
+```bash
+# Quick health check
+nself deploy server status
+
+# Detailed diagnostics for specific server
+nself deploy server diagnose prod
+
+# Execute remote commands
+nself deploy server ssh staging "docker ps"
+nself deploy server ssh prod "df -h"
+
+# Interactive SSH session
+nself deploy server ssh prod
+```
+
+### Configuration Management
+
+```bash
+# List all servers
+nself deploy server list
+
+# Add new server
+nself deploy server add staging \
+  --host staging.example.com \
+  --user deploy \
+  --port 2222 \
+  --key ~/.ssh/staging_key
+
+# Remove old server
+nself deploy server remove old-prod --force
+
+# Update existing (re-add)
+nself deploy server add prod --host new-prod.example.com
+```
+
+### Health Monitoring
+
+```bash
+# Check all servers
+nself deploy server status
+
+# Deep dive on specific server
+nself deploy server check prod
+nself deploy server diagnose prod
+nself deploy server info prod
+
+# Monitor in script
+#!/bin/bash
+if nself deploy server check prod > /dev/null 2>&1; then
+  echo "Server healthy"
+else
+  echo "Server issues detected"
+  nself deploy server diagnose prod
+fi
+```
+
+---
+
 ## Related Documentation
 
 - [Production Deployment Guide](./PRODUCTION-DEPLOYMENT.md)
 - [Environment Management](../configuration/ENVIRONMENT-MANAGEMENT.md)
 - [Security Best Practices](../security/BEST-PRACTICES.md)
+- [Destroy Command](../commands/DESTROY.md) - Safe infrastructure teardown
 - [Troubleshooting Guide](../troubleshooting/COMMON-ISSUES.md)

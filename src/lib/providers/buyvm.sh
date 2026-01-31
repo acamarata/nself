@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # buyvm.sh - BuyVM/Frantech provider (storage VPS, DDoS protection)
-set -euo pipefail
 
 PROVIDER_NAME="buyvm"
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # templates.sh - Email templates system
 # Part of nself v0.6.0 - Phase 2
-set -euo pipefail
 
 template_welcome() {
   cat <<TEMPLATE

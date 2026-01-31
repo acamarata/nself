@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # atomic-ops.sh - Atomic file operations for nself init command
 #

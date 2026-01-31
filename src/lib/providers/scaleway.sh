@@ -2,7 +2,6 @@
 # scaleway.sh - Scaleway provider module
 # Supports Instances, Kapsule (Scaleway Kubernetes)
 
-set -euo pipefail
 
 PROVIDER_NAME="scaleway"
 PROVIDER_DISPLAY_NAME="Scaleway"

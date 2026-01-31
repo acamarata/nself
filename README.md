@@ -77,6 +77,9 @@ curl -sSL https://install.nself.org | bash
 - **Security Hardened (NEW v0.9.5)**: SQL injection prevention, Content Security Policy, OWASP Top 10 compliance
 - **Dependency Scanning (NEW v0.9.5)**: Automated ShellCheck, Gitleaks, Trivy, Semgrep in CI/CD
 - **Security Audit System (NEW v0.9.5)**: One-command production readiness check with auto-fix
+- **Safe Destruction (NEW v0.9.6)**: Intelligent infrastructure teardown with multi-level safety and selective removal
+- **Server Management (NEW v0.9.6)**: Complete VPS lifecycle management - init, health checks, diagnostics, SSH
+- **Kubernetes Abstraction (NEW v0.9.6)**: Deploy to 8 cloud providers with unified commands (AWS, GCP, Azure, DO, Linode, Vultr, Hetzner, Scaleway)
 - **Automated SSL**: Certificates generated and trusted automatically (mkcert or Let's Encrypt)
 - **Security Scanning**: Automated vulnerability detection and auditing
 - **Firewall Management**: Simplified network security configuration
@@ -268,22 +271,31 @@ Every template includes:
 ## 📚 Commands
 
 ### Version Status
-- **✅ v1.0.0 (Current)**: 31 top-level commands with 285+ subcommands - Production-ready with complete feature set
+- **✅ v1.0.0 (Current)**: 32 top-level commands with 295+ subcommands - Production-ready with complete feature set
 - **🔮 v1.1.0 (Next)**: Performance optimizations, enhanced plugin marketplace
 - **🎯 v2.0.0**: Advanced AI features, distributed deployment
+
+### New in v0.9.6
+- **`destroy`** - Safe infrastructure destruction with selective targeting
+- **`deploy server`** - Complete server lifecycle management (10 subcommands)
+- **`deploy sync`** - Environment synchronization (pull, push, full)
+- **`infra provider k8s-*`** - Unified Kubernetes management across 8 cloud providers
 
 ### Complete Command Tree (v1.0)
 
 > **v0.9.6 Consolidation:** Old commands like `nself billing`, `nself org`, `nself staging`, etc. have been consolidated into this streamlined structure. See [Command Consolidation Map](docs/architecture/COMMAND-CONSOLIDATION-MAP.md) for the full mapping.
 
 ```
-nself (31 top-level commands, 285+ subcommands)
+nself (32 top-level commands, 295+ subcommands)
 ├── 🚀 Core Commands (5)
 │   ├── init          Initialize project with wizard
 │   ├── build         Generate Docker configs
 │   ├── start         Start services
 │   ├── stop          Stop services
 │   └── restart       Restart services
+│
+├── 🗑️  Infrastructure Management (1)
+│   └── destroy       Safe infrastructure destruction
 │
 ├── 📊 Utilities (15)
 │   ├── status        Service health status
@@ -307,14 +319,32 @@ nself (31 top-level commands, 285+ subcommands)
     ├── tenant        Multi-tenancy (50+ subcommands)
     │   ├── billing   → Billing management (was: nself billing)
     │   └── org       → Organization management (was: nself org)
-    ├── deploy        Deployment (23 subcommands)
+    ├── deploy        Deployment (33 subcommands)
     │   ├── staging   → Deploy to staging (was: nself staging)
     │   ├── production → Deploy to production (was: nself prod)
     │   ├── upgrade   → Upgrade deployment (was: nself upgrade)
-    │   ├── server    → Server management (was: nself servers)
-    │   └── sync      → Sync environments (was: nself sync)
-    ├── infra         Infrastructure (38 subcommands)
+    │   ├── server    → Server management - 10 subcommands (was: nself servers)
+    │   │   ├── init      Initialize VPS for nself
+    │   │   ├── check     Verify server readiness
+    │   │   ├── status    Quick status of all servers
+    │   │   ├── diagnose  Comprehensive diagnostics
+    │   │   ├── list      List configured servers
+    │   │   ├── add       Add server configuration
+    │   │   ├── remove    Remove server configuration
+    │   │   ├── ssh       Quick SSH connection
+    │   │   ├── info      Display server details
+    │   │   └── sync      → Use 'nself deploy sync' instead
+    │   └── sync      → Environment sync - 4 subcommands (was: nself sync)
+    │       ├── pull      Pull config from remote
+    │       ├── push      Push config to remote
+    │       ├── status    Show sync status
+    │       └── full      Complete synchronization
+    ├── infra         Infrastructure (48 subcommands)
     │   ├── provider  → Cloud providers (was: nself cloud/provider)
+    │   │   ├── k8s-create     Create managed K8s cluster
+    │   │   ├── k8s-delete     Delete managed K8s cluster
+    │   │   ├── k8s-kubeconfig Get kubeconfig credentials
+    │   │   └── ... (8 providers: AWS, GCP, Azure, DO, Linode, Vultr, Hetzner, Scaleway)
     │   ├── k8s       → Kubernetes operations (was: nself k8s)
     │   └── helm      → Helm charts (was: nself helm)
     ├── service       Service management (43 subcommands)
@@ -383,6 +413,7 @@ nself admin --dev
 
 ## 📚 Documentation
 
+### Core Documentation
 - **[Commands Reference](docs/commands/COMMAND-TREE-V1.md)** - Complete v1.0 command tree
 - **[Command Mapping](docs/architecture/COMMAND-CONSOLIDATION-MAP.md)** - Old → New command reference
 - **[Release Notes](docs/releases/INDEX.md)** - Latest features and fixes
@@ -391,6 +422,11 @@ nself admin --dev
 - **[Troubleshooting](docs/guides/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Changelog](docs/releases/CHANGELOG.md)** - Version history
 - **[All Releases](docs/releases/INDEX.md)** - Complete release history
+
+### New Feature Guides (v0.9.6)
+- **[Destroy Command](docs/commands/DESTROY.md)** - Safe infrastructure destruction
+- **[Server Management](docs/deployment/SERVER-MANAGEMENT.md)** - Complete VPS lifecycle management
+- **[Kubernetes Guide](docs/infrastructure/K8S-IMPLEMENTATION-GUIDE.md)** - Multi-cloud K8s abstraction layer
 
 ### Quick Reference
 

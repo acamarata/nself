@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 
 AUTO_FIXER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # compose-to-k8s.sh - Docker Compose to Kubernetes manifest converter
 # Part of nself v0.4.7 - Infrastructure Everywhere
-set -euo pipefail
 
 # Conversion configuration
 K8S_API_VERSION_DEPLOYMENT="apps/v1"

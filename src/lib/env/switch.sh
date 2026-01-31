@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # switch.sh - Environment switching functionality
 # POSIX-compliant, no Bash 4+ features

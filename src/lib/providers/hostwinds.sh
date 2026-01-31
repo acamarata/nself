@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # hostwinds.sh - Hostwinds provider (managed VPS option)
-set -euo pipefail
 PROVIDER_NAME="hostwinds"
 
 provider_hostwinds_init() {

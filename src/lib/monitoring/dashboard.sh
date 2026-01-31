@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # dashboard.sh - Monitoring dashboard utilities
 
-set -euo pipefail
 
 # Terminal control functions
 term_save_cursor() {
