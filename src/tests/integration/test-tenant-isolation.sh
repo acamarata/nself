@@ -212,36 +212,24 @@ test_tenant_isolation() {
   fi
   test_count=$((test_count + 1))
 
-  # Test 1.3: Add member to Tenant A
-  printf "Test 1.3: Add user A as member to Tenant A... "
-  db_query "
-    INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
-    VALUES ('$TENANT_A_ID', '$USER_A_ID', 'owner')
-    ON CONFLICT (tenant_id, user_id) DO NOTHING
-  " "$TEST_DB" >/dev/null 2>&1
-
+  # Test 1.3: Verify owner auto-created as member for Tenant A
+  printf "Test 1.3: Verify user A auto-added as member to Tenant A... "
   local member_count
   member_count=$(db_query_raw "
     SELECT COUNT(*) FROM tenants.tenant_members
-    WHERE tenant_id = '$TENANT_A_ID' AND user_id = '$USER_A_ID'
+    WHERE tenant_id = '$TENANT_A_ID' AND user_id = '$USER_A_ID' AND role = 'owner'
   " "$TEST_DB")
 
-  assert_equals "1" "$member_count" "User A should be member of Tenant A"
+  assert_equals "1" "$member_count" "User A should be auto-created as owner of Tenant A"
 
-  # Test 1.4: Add member to Tenant B
-  printf "Test 1.4: Add user B as member to Tenant B... "
-  db_query "
-    INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
-    VALUES ('$TENANT_B_ID', '$USER_B_ID', 'owner')
-    ON CONFLICT (tenant_id, user_id) DO NOTHING
-  " "$TEST_DB" >/dev/null 2>&1
-
+  # Test 1.4: Verify owner auto-created as member for Tenant B
+  printf "Test 1.4: Verify user B auto-added as member to Tenant B... "
   member_count=$(db_query_raw "
     SELECT COUNT(*) FROM tenants.tenant_members
-    WHERE tenant_id = '$TENANT_B_ID' AND user_id = '$USER_B_ID'
+    WHERE tenant_id = '$TENANT_B_ID' AND user_id = '$USER_B_ID' AND role = 'owner'
   " "$TEST_DB")
 
-  assert_equals "1" "$member_count" "User B should be member of Tenant B"
+  assert_equals "1" "$member_count" "User B should be auto-created as owner of Tenant B"
 
   # Test 1.5: Create tenant-specific data (simulate tenant schemas)
   printf "Test 1.5: Create tenant-specific settings... "
