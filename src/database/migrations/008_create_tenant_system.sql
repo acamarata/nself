@@ -345,6 +345,15 @@ AND t.status = 'active';
 -- GRANTS: Hasura permissions
 -- ============================================================================
 
+-- Create hasura role if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'hasura') THEN
+    CREATE ROLE hasura WITH LOGIN PASSWORD 'hasura';
+  END IF;
+END
+$$;
+
 -- Grant usage on schema
 GRANT USAGE ON SCHEMA tenants TO hasura;
 
