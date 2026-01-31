@@ -290,8 +290,6 @@ EOF
   when: manual
   script:
   - |
-    # shellcheck disable=SC2259
-    # Heredoc after pipe is valid syntax for ssh
     ssh \$PROD_USER@\$PROD_HOST <<'EOF'
         cd /var/www/$project_name
         nself db backup create pre-deploy
