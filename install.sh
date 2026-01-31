@@ -20,13 +20,15 @@ DEFAULT_BRANCH="main"
 DEFAULT_REPO="acamarata/nself"
 NSELF_VERSION="${NSELF_VERSION:-}"  # Allow version override
 
-# Parse command line arguments
+# Parse command line arguments (will be re-parsed in main() after flags)
 INSTALL_MODE="${1:-$DEFAULT_INSTALL_MODE}"
 INSTALL_DIR="${2:-$DEFAULT_INSTALL_DIR}"
 FORCE_REINSTALL="${FORCE_REINSTALL:-false}"
 SKIP_BACKUP="${SKIP_BACKUP:-false}"
 SKIP_PATH="${SKIP_PATH:-false}"
 VERBOSE="${VERBOSE:-false}"
+BIN_LINK=""
+NEEDS_SUDO=false
 
 # Repository URLs
 REPO_URL="https://github.com/${DEFAULT_REPO}"
@@ -51,34 +53,43 @@ get_install_version() {
 INSTALL_VERSION=$(get_install_version)
 REPO_RAW_URL="https://raw.githubusercontent.com/${DEFAULT_REPO}/${INSTALL_VERSION}"
 
-# Installation paths
-case "$INSTALL_MODE" in
-  system)
-    INSTALL_DIR="/usr/local/nself"
-    BIN_LINK="/usr/local/bin/nself"
-    NEEDS_SUDO=true
-    ;;
-  docker)
-    INSTALL_DIR="/opt/nself"
-    BIN_LINK="/usr/bin/nself"
-    NEEDS_SUDO=false
-    ;;
-  portable)
-    INSTALL_DIR="${INSTALL_DIR:-./nself}"
-    BIN_LINK=""
-    NEEDS_SUDO=false
-    ;;
-  user|*)
-    INSTALL_DIR="${INSTALL_DIR:-$HOME/.nself}"
-    BIN_LINK=""
-    NEEDS_SUDO=false
-    ;;
-esac
-
-BIN_DIR="$INSTALL_DIR/bin"
-SRC_DIR="$INSTALL_DIR/src"
+# Installation paths will be set based on mode (done in main() after arg parsing)
+BIN_DIR=""
+SRC_DIR=""
 BACKUP_DIR="$HOME/.nself-backup"
 TEMP_DIR=$(mktemp -d -t nself-install-XXXXXX)
+
+# Function to set installation paths based on mode
+set_install_paths() {
+  local mode="$1"
+  local custom_dir="${2:-}"
+
+  case "$mode" in
+    system)
+      INSTALL_DIR="/usr/local/nself"
+      BIN_LINK="/usr/local/bin/nself"
+      NEEDS_SUDO=true
+      ;;
+    docker)
+      INSTALL_DIR="/opt/nself"
+      BIN_LINK="/usr/bin/nself"
+      NEEDS_SUDO=false
+      ;;
+    portable)
+      INSTALL_DIR="${custom_dir:-./nself}"
+      BIN_LINK=""
+      NEEDS_SUDO=false
+      ;;
+    user|*)
+      INSTALL_DIR="${custom_dir:-$HOME/.nself}"
+      BIN_LINK=""
+      NEEDS_SUDO=false
+      ;;
+  esac
+
+  BIN_DIR="$INSTALL_DIR/bin"
+  SRC_DIR="$INSTALL_DIR/src"
+}
 
 # Cleanup on exit
 trap 'rm -rf "$TEMP_DIR"' EXIT
@@ -1006,11 +1017,14 @@ main() {
   
   # Re-parse after handling flags
   INSTALL_MODE="${1:-$DEFAULT_INSTALL_MODE}"
-  INSTALL_DIR="${2:-$DEFAULT_INSTALL_DIR}"
-  
+  local custom_install_dir="${2:-}"
+
+  # Set installation paths based on mode
+  set_install_paths "$INSTALL_MODE" "$custom_install_dir"
+
   # Print banner
   print_banner
-  
+
   echo_info "Installation mode: ${BOLD}$INSTALL_MODE${RESET}"
   echo_info "Installation directory: ${BOLD}$INSTALL_DIR${RESET}"
   echo ""
