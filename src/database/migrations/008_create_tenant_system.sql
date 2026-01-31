@@ -222,6 +222,25 @@ CREATE TRIGGER update_tenant_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION tenants.update_updated_at();
 
+-- Function: Auto-add owner as member when tenant is created
+CREATE OR REPLACE FUNCTION tenants.auto_add_owner_as_member()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Automatically add the owner as a member with 'owner' role
+    INSERT INTO tenants.tenant_members (tenant_id, user_id, role)
+    VALUES (NEW.id, NEW.owner_user_id, 'owner')
+    ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger: Add owner as member after tenant creation
+CREATE TRIGGER auto_add_owner_as_member
+    AFTER INSERT ON tenants.tenants
+    FOR EACH ROW
+    EXECUTE FUNCTION tenants.auto_add_owner_as_member();
+
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================================

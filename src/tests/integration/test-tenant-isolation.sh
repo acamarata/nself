@@ -110,11 +110,12 @@ assert_not_empty() {
 # TEST DATA & SETUP
 # ============================================================================
 
+# Use hardcoded UUIDs for test users (no auth.users dependency)
 TENANT_A_ID=""
 TENANT_B_ID=""
-USER_A_ID=""
-USER_B_ID=""
-USER_C_ID=""
+USER_A_ID="11111111-1111-1111-1111-111111111111"
+USER_B_ID="22222222-2222-2222-2222-222222222222"
+USER_C_ID="33333333-3333-3333-3333-333333333333"
 
 setup() {
   printf "\n${YELLOW}=== Setting up test environment ===${NC}\n\n"
@@ -141,23 +142,9 @@ setup() {
     exit 1
   fi
 
-  # Create test users (simulating auth.users table)
-  printf "Creating test users... "
-  USER_A_ID=$(db_query_raw "INSERT INTO auth.users (email) VALUES ('user_a@test.com') ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id" "$TEST_DB" 2>/dev/null || echo "")
-  USER_B_ID=$(db_query_raw "INSERT INTO auth.users (email) VALUES ('user_b@test.com') ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id" "$TEST_DB" 2>/dev/null || echo "")
-  USER_C_ID=$(db_query_raw "INSERT INTO auth.users (email) VALUES ('user_c@test.com') ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id" "$TEST_DB" 2>/dev/null || echo "")
-
-  if [[ -n "$USER_A_ID" && -n "$USER_B_ID" && -n "$USER_C_ID" ]]; then
-    printf "${GREEN}✓${NC}\n"
-  else
-    printf "${YELLOW}⚠ Users may already exist or auth schema missing${NC}\n"
-    # Try to get existing users
-    USER_A_ID=$(db_query_raw "SELECT id FROM auth.users WHERE email = 'user_a@test.com'" "$TEST_DB" 2>/dev/null || echo "00000000-0000-0000-0000-000000000001")
-    USER_B_ID=$(db_query_raw "SELECT id FROM auth.users WHERE email = 'user_b@test.com'" "$TEST_DB" 2>/dev/null || echo "00000000-0000-0000-0000-000000000002")
-    USER_C_ID=$(db_query_raw "SELECT id FROM auth.users WHERE email = 'user_c@test.com'" "$TEST_DB" 2>/dev/null || echo "00000000-0000-0000-0000-000000000003")
-  fi
-
-  printf "User IDs created: A=$USER_A_ID, B=$USER_B_ID, C=$USER_C_ID\n\n"
+  # Use hardcoded test user UUIDs (no database creation needed)
+  printf "Using test user UUIDs... ${GREEN}✓${NC}\n"
+  printf "User IDs: A=$USER_A_ID, B=$USER_B_ID, C=$USER_C_ID\n\n"
 }
 
 teardown() {
@@ -172,9 +159,8 @@ teardown() {
   db_query "ALTER TABLE tenants.tenant_domains DISABLE ROW LEVEL SECURITY" "$TEST_DB" 2>/dev/null || true
   db_query "ALTER TABLE tenants.tenant_settings DISABLE ROW LEVEL SECURITY" "$TEST_DB" 2>/dev/null || true
 
-  # Delete test data
+  # Delete test data (no need to delete from auth.users - we used hardcoded UUIDs)
   db_query "DELETE FROM tenants.tenants WHERE slug IN ('test-tenant-a', 'test-tenant-b')" "$TEST_DB" 2>/dev/null || true
-  db_query "DELETE FROM auth.users WHERE email IN ('user_a@test.com', 'user_b@test.com', 'user_c@test.com')" "$TEST_DB" 2>/dev/null || true
 
   # Re-enable RLS
   db_query "ALTER TABLE tenants.tenants ENABLE ROW LEVEL SECURITY" "$TEST_DB" 2>/dev/null || true
