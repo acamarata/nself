@@ -68,7 +68,13 @@ jobs:
           cp -r ${{ github.workspace }}/src/database/migrations/*.sql nself/migrations/
           # Clean any existing generated files to force regeneration
           rm -rf postgres/ nginx/ docker-compose.yml
-          # Rebuild to generate config with updated .env values
+          # Export environment variables to ensure build uses them
+          export PROJECT_NAME=nself-test
+          export ENV=test
+          export POSTGRES_DB=nself_test
+          export POSTGRES_USER=postgres
+          export POSTGRES_PASSWORD=postgres
+          # Rebuild to generate config with exported values
           nself build
           # Verify the extensions SQL uses correct database name
           echo "Checking generated extensions.sql:"
