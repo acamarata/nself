@@ -272,12 +272,18 @@ migrate_up() {
     fi
 
     log_info "Applying: $name"
-    if psql_exec <"$file" >/dev/null 2>&1; then
+    # Capture migration output to temp file for error reporting
+    local temp_output=$(mktemp)
+    if psql_exec <"$file" >"$temp_output" 2>&1; then
       psql_exec -c "INSERT INTO schema_migrations (version) VALUES ('$version')" >/dev/null
       log_success "  Applied successfully"
       count=$((count + 1))
+      rm -f "$temp_output"
     else
       log_error "  Failed to apply migration"
+      printf "\n%sError details:%s\n" "$RED" "$NC" >&2
+      cat "$temp_output" >&2
+      rm -f "$temp_output"
       return 1
     fi
 

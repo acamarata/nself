@@ -109,7 +109,27 @@ jobs:
       - name: Run migrations
         run: |
           cd ~/nself-test
-          nself db migrate up
+          # Run migrations with verbose output
+          nself db migrate up || {
+            echo "========================================="
+            echo "Migration failed! Debugging information:"
+            echo "========================================="
+            echo ""
+            echo "PostgreSQL logs (last 50 lines):"
+            docker logs nself-test_postgres --tail 50
+            echo ""
+            echo "Migration files in nself/migrations/:"
+            ls -la nself/migrations/ || echo "Directory not found"
+            echo ""
+            echo "Attempting direct SQL execution to see actual error:"
+            for migration in nself/migrations/008*.sql; do
+              if [ -f "$migration" ]; then
+                echo "Trying: $migration"
+                docker exec -i nself-test_postgres psql -U postgres -d nself_test < "$migration" 2>&1 || echo "Failed"
+              fi
+            done
+            exit 1
+          }
           # Verify tenant schema exists (database name matches PROJECT_NAME)
           docker exec nself-test_postgres psql -U postgres -d nself_test -c "\dn tenants"
 
@@ -123,7 +143,7 @@ jobs:
           export ENV=test
           export POSTGRES_USER=postgres
           export POSTGRES_PASSWORD=postgres
-          export POSTGRES_DB=nself-test
+          export POSTGRES_DB=nself_test
           ${{ github.workspace }}/src/tests/integration/test-tenant-isolation.sh
 
       - name: Show logs on failure
@@ -136,7 +156,7 @@ jobs:
           cd ~/nself-test && nself logs postgres --tail 100 || true
           echo ""
           echo "=== Database Status ==="
-          docker exec nself-test_postgres psql -U postgres -d nself-test -c "
+          docker exec nself-test_postgres psql -U postgres -d nself_test -c "
             SELECT schemaname, tablename
             FROM pg_tables
             WHERE schemaname = 'tenants'
