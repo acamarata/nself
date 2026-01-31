@@ -42,7 +42,8 @@ jobs:
           sudo ./install.sh system
           # Verify installation
           which nself
-          nself version
+          # Note: We can't run 'nself version' here because we're in the source repo
+          # The version check will work once we're in the test project directory
 
       - name: Create test project directory
         run: |
