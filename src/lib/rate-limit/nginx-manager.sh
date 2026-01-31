@@ -50,8 +50,9 @@ nginx_rate_limit_set() {
     return 1
   fi
 
-  # Convert zone name to env var name
-  local env_var="RATE_LIMIT_${zone^^}_RATE"
+  # Convert zone name to env var name (portable - Bash 3.2+ compatible)
+  local zone_upper=$(echo "$zone" | tr '[:lower:]' '[:upper:]')
+  local env_var="RATE_LIMIT_${zone_upper}_RATE"
 
   # Update .env file
   local env_file="${NSELF_ROOT}/.env"

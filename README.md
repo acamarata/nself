@@ -1,6 +1,6 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-0.9.5-blue.svg)](https://github.com/acamarata/nself/releases)
+[![Version](https://img.shields.io/badge/version-0.9.7-blue.svg)](https://github.com/acamarata/nself/releases)
 [![Status](https://img.shields.io/badge/status-production--ready-green.svg)](#-important-note)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/acamarata/nself#-supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
@@ -18,7 +18,7 @@
 
 Deploy a feature-complete backend infrastructure on your own servers with PostgreSQL, Hasura GraphQL, Redis, Auth, Storage, and optional microservices. Works seamlessly across local development, staging, and production with automated SSL, smart defaults, and production-ready configurations with enterprise monitoring.
 
-**Based on [Nhost.io](https://nhost.io) for self-hosting!** and expanded with more features. Copy the below command in Terminal to install and get up and running in seconds!
+**A complete self-hosted backend platform** with production-grade infrastructure and enterprise features. Inspired by the architecture of hosted platforms like Nhost and Supabase, but designed from the ground up for self-hosting with full control and flexibility. Copy the below command in Terminal to install and get up and running in seconds!
 
 ```bash
 curl -sSL https://install.nself.org | bash
@@ -28,7 +28,7 @@ curl -sSL https://install.nself.org | bash
 
 📋 **[View Roadmap](docs/ROADMAP.md)** - See development roadmap and future releases!
 
-ɳSelf is *the* CLI for Nhost self-hosted deployments - with extras and an opinionated setup that makes everything smooth. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
+ɳSelf is *the* complete self-hosted backend platform CLI - providing the same capabilities as hosted services like Nhost and Supabase, but fully under your control. From zero to production-ready backend in under 5 minutes. Just edit an env file with your preferences and build!
 
 ## 🚀 Why ɳSelf?
 
@@ -38,7 +38,7 @@ curl -sSL https://install.nself.org | bash
 - Smart defaults that just work™
 
 ### 🎯 Complete Feature Set
-- **Full Nhost Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
+- **Complete Backend Stack**: PostgreSQL, Hasura GraphQL, Auth, Storage, Functions
 - **Plus Extras**: Redis, TimescaleDB, PostGIS, pgvector extensions
 - **Real-Time System (NEW v0.9.5)**: WebSocket channels, Database CDC subscriptions, Presence tracking, Broadcast messaging
 - **OAuth Providers (ENHANCED v0.9.5)**: 13 providers (Google, GitHub, Microsoft, Facebook, Apple, Slack, Discord, Twitch, Twitter, LinkedIn, GitLab, Bitbucket, Spotify) with PKCE support
@@ -261,8 +261,8 @@ Every template includes:
 
 ## 💪 What You Get vs Manual Setup
 
-| Manual Nhost Self-hosting | With ɳSelf |
-|--------------------------|------------|
+| Manual Self-Hosting | With ɳSelf |
+|---------------------|------------|
 | Hours of configuration | 5 minutes total |
 | Multiple config files | Single `.env` |
 | Complex networking setup | Automatic service discovery |
@@ -496,8 +496,8 @@ All services communicate through:
 
 ### Optional Services
 - **Redis**: In-memory caching and queue management
-- **Nhost Functions**: Serverless functions support
-- **Nhost Dashboard**: Admin interface for managing your backend
+- **Serverless Functions**: Cloud functions runtime with auto-scaling
+- **Admin Dashboard**: Web interface for managing your backend
 - **MailHog**: Email testing for development
 - **NestJS Run Service**: For constantly running microservices
 
@@ -904,7 +904,7 @@ See [LICENSE](LICENSE) for full terms.
 
 - [nself.org](https://nself.org) - Official Website
 - [Commercial Licensing](https://nself.org/commercial) - For business use
-- [Nhost Documentation](https://docs.nhost.io) - Learn more about Nhost
+- [Documentation](https://github.com/acamarata/nself/wiki) - Complete nself documentation
 - [Hasura Documentation](https://hasura.io/docs) - GraphQL engine docs
 - [Report Issues](https://github.com/acamarata/nself/issues) - We'd love your feedback!
 
