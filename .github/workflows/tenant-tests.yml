@@ -109,13 +109,6 @@ jobs:
       - name: Run migrations
         run: |
           cd ~/nself-test
-          # Try running the first migration manually to see the error
-          echo "=== Attempting migration 008 manually ==="
-          docker exec -i nself-test_postgres psql -U postgres -d nself_test < nself/migrations/008_create_tenant_system.sql || {
-            echo "Migration 008 failed, showing error above"
-            exit 1
-          }
-          # Now run remaining migrations
           nself db migrate up
           # Verify tenant schema exists (database name matches PROJECT_NAME)
           docker exec nself-test_postgres psql -U postgres -d nself_test -c "\dn tenants"
