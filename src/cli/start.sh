@@ -13,6 +13,9 @@ source "$LIB_DIR/utils/display.sh"
 source "$LIB_DIR/utils/env.sh"
 source "$LIB_DIR/utils/error-messages.sh" 2>/dev/null || true
 
+# Source security module for secure-by-default enforcement
+source "$LIB_DIR/security/secure-defaults.sh" 2>/dev/null || true
+
 # Smart defaults from environment variables
 HEALTH_CHECK_TIMEOUT="${NSELF_HEALTH_CHECK_TIMEOUT:-120}"
 HEALTH_CHECK_INTERVAL="${NSELF_HEALTH_CHECK_INTERVAL:-2}"
@@ -403,6 +406,14 @@ start_services() {
   local start_output=$(mktemp)
   local error_output=$(mktemp)
 
+  # ============================================================
+  # SECURE BY DEFAULT: Force recreate security-sensitive containers
+  # This ensures Redis/PostgreSQL pick up latest secure config
+  # ============================================================
+  if command -v security::force_recreate_sensitive_containers >/dev/null 2>&1; then
+    security::force_recreate_sensitive_containers "$project_name"
+  fi
+
   # Build the docker compose command based on start mode
   local compose_args=(
     "--project-name" "$project_name"
@@ -412,6 +423,7 @@ start_services() {
   )
 
   # Add mode-specific flags
+  # SECURITY: Always force-recreate for fresh/force modes to ensure config is applied
   if [[ "$START_MODE" == "fresh" ]]; then
     compose_args+=("--force-recreate")
   elif [[ "$START_MODE" == "force" ]]; then
@@ -659,6 +671,24 @@ start_services() {
     # Ensure Redis is ready (if enabled)
     if [[ "${REDIS_ENABLED:-false}" == "true" ]]; then
       ensure_redis_ready "$project_name" 30
+    fi
+
+    # ========================================================
+    # SECURE BY DEFAULT: Verify no sensitive ports exposed
+    # This catches config drift or misconfigured containers
+    # ========================================================
+    if command -v security::verify_no_exposed_ports >/dev/null 2>&1; then
+      if ! security::verify_no_exposed_ports; then
+        # Critical security violation - stop everything
+        printf "\n${COLOR_RED}CRITICAL SECURITY VIOLATION DETECTED${COLOR_RESET}\n"
+        printf "Sensitive ports exposed to public internet.\n"
+        printf "Stopping all services to prevent security breach...\n\n"
+        docker compose --project-name "$project_name" down >/dev/null 2>&1 || true
+        printf "Fix the port bindings in docker-compose.yml and run 'nself build' again.\n"
+        printf "All internal services (Redis, PostgreSQL, etc.) must bind to 127.0.0.1 only.\n\n"
+        rm -f "$start_output" "$error_output"
+        return 1
+      fi
     fi
 
     printf "\n"

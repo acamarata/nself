@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # monitoring-services.sh - Generate monitoring and search service definitions
 # This module handles MLflow, search engines, logging, and monitoring services
+# SECURITY: All monitoring services bind to 127.0.0.1 only - access via nginx proxy
 
 # Generate Grafana monitoring service
+# SECURITY: Grafana binds to 127.0.0.1 only - access via nginx proxy
 generate_grafana_service() {
   local enabled="${GRAFANA_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
@@ -10,6 +12,7 @@ generate_grafana_service() {
   cat <<EOF
 
   # Grafana - Monitoring Dashboard
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-latest}
     container_name: \${PROJECT_NAME}_grafana
@@ -28,7 +31,8 @@ generate_grafana_service() {
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     ports:
-      - "\${GRAFANA_PORT:-3000}:3000"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${GRAFANA_PORT:-3000}:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -38,6 +42,7 @@ EOF
 }
 
 # Generate Prometheus service
+# SECURITY: Prometheus binds to 127.0.0.1 only - access via nginx proxy
 generate_prometheus_service() {
   local enabled="${PROMETHEUS_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
@@ -45,6 +50,7 @@ generate_prometheus_service() {
   cat <<EOF
 
   # Prometheus - Metrics Collection
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   prometheus:
     image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
     container_name: \${PROJECT_NAME}_prometheus
@@ -61,7 +67,8 @@ generate_prometheus_service() {
       - prometheus_data:/prometheus
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "\${PROMETHEUS_PORT:-9090}:9090"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${PROMETHEUS_PORT:-9090}:9090"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
       interval: 30s
@@ -71,6 +78,7 @@ EOF
 }
 
 # Generate Loki logging service
+# SECURITY: Loki binds to 127.0.0.1 only - access via nginx proxy
 generate_loki_service() {
   local enabled="${LOKI_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
@@ -78,6 +86,7 @@ generate_loki_service() {
   cat <<EOF
 
   # Loki - Log Aggregation
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   loki:
     image: grafana/loki:${LOKI_VERSION:-2.9.0}
     container_name: \${PROJECT_NAME}_loki
@@ -89,7 +98,8 @@ generate_loki_service() {
       - loki_data:/loki
       - ./monitoring/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
     ports:
-      - "\${LOKI_PORT:-3100}:3100"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${LOKI_PORT:-3100}:3100"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
       interval: 30s

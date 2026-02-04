@@ -22,6 +22,9 @@ source "$LIB_DIR/deploy/health-check.sh" 2>/dev/null || true
 source "$LIB_DIR/deploy/zero-downtime.sh" 2>/dev/null || true
 source "$LIB_DIR/deploy/security-preflight.sh" 2>/dev/null || true
 
+# Source secure-by-default module
+source "$LIB_DIR/security/secure-defaults.sh" 2>/dev/null || true
+
 # Source upgrade libraries
 source "$LIB_DIR/upgrade/blue-green.sh" 2>/dev/null || true
 
@@ -221,13 +224,125 @@ deploy_environment() {
     return 0
   fi
 
-  # Perform deployment (integration with existing deploy logic)
+  # ============================================================
+  # SECURE BY DEFAULT: Production Security Pre-flight
+  # ============================================================
+  if [[ "$env_name" == "prod" ]] || [[ "$env_name" == "production" ]]; then
+    cli_section "Security Pre-flight"
+
+    # Run production security checks
+    if command -v security::production_preflight >/dev/null 2>&1; then
+      if ! security::production_preflight "$env_name"; then
+        cli_error "Deployment blocked due to security issues"
+        return 1
+      fi
+    fi
+
+    # Auto-configure firewall on remote server
+    cli_info "Configuring firewall on remote server..."
+
+    local firewall_script='
+      # Configure UFW if available
+      if command -v ufw >/dev/null 2>&1; then
+        ufw default deny incoming
+        ufw default allow outgoing
+        ufw allow ssh
+        ufw allow 80/tcp
+        ufw allow 443/tcp
+        ufw --force enable
+        echo "firewall_configured"
+      elif command -v firewall-cmd >/dev/null 2>&1; then
+        firewall-cmd --permanent --add-service=ssh
+        firewall-cmd --permanent --add-service=http
+        firewall-cmd --permanent --add-service=https
+        firewall-cmd --reload
+        echo "firewall_configured"
+      else
+        echo "no_firewall"
+      fi
+    '
+
+    local fw_result
+    fw_result=$(ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "$firewall_script" 2>/dev/null || echo "ssh_failed")
+
+    if echo "$fw_result" | grep -q "firewall_configured"; then
+      cli_success "Firewall configured (only ports 22, 80, 443 allowed)"
+    elif echo "$fw_result" | grep -q "no_firewall"; then
+      cli_warning "No firewall available on server - install ufw or firewalld"
+    else
+      cli_warning "Could not configure firewall automatically"
+    fi
+    printf "\n"
+  fi
+
+  # Perform deployment
   cli_info "Deploying to $env_name..."
 
-  # TODO: Integrate with existing deployment modules
-  # deploy_to_environment "$env_name" "$host" "$user" "$port"
+  # Build on server
+  local deploy_script='
+    cd /var/www/nself 2>/dev/null || cd /opt/nself 2>/dev/null || exit 1
 
-  cli_success "Deployment complete"
+    # Pull latest code if git repo
+    if [[ -d ".git" ]]; then
+      git pull origin main 2>/dev/null || true
+    fi
+
+    # Run build
+    if command -v nself >/dev/null 2>&1; then
+      nself build
+    fi
+
+    # Start with force-recreate for security
+    docker compose up -d --force-recreate
+
+    echo "deployment_complete"
+  '
+
+  local deploy_result
+  deploy_result=$(ssh -o ConnectTimeout=30 -p "$port" "${user}@${host}" "$deploy_script" 2>&1 || echo "deploy_failed")
+
+  if echo "$deploy_result" | grep -q "deployment_complete"; then
+    # ============================================================
+    # SECURE BY DEFAULT: Post-deployment security verification
+    # ============================================================
+    cli_info "Verifying security on remote server..."
+
+    local verify_script='
+      errors=0
+      # Check each sensitive port is NOT exposed externally
+      for port in 6379 5432 7700 9000; do
+        if ss -tlnp 2>/dev/null | grep ":$port" | grep -q "0.0.0.0"; then
+          echo "SECURITY_ERROR: Port $port exposed on 0.0.0.0"
+          errors=$((errors + 1))
+        fi
+      done
+
+      if [[ $errors -eq 0 ]]; then
+        echo "security_verified"
+      else
+        echo "security_failed"
+      fi
+    '
+
+    local verify_result
+    verify_result=$(ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "$verify_script" 2>/dev/null || echo "verify_failed")
+
+    if echo "$verify_result" | grep -q "security_verified"; then
+      cli_success "Security verification passed"
+    else
+      cli_error "SECURITY VIOLATION: Sensitive ports exposed"
+      echo "$verify_result" | grep "SECURITY_ERROR" || true
+      cli_warning "Rolling back deployment..."
+      ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "docker compose down" 2>/dev/null || true
+      return 1
+    fi
+
+    cli_success "Deployment complete"
+  else
+    cli_error "Deployment failed"
+    echo "$deploy_result" | head -20
+    return 1
+  fi
 }
 
 # =============================================================================

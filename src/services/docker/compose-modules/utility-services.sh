@@ -238,6 +238,7 @@ EOF
 }
 
 # Generate MLflow service
+# SECURITY: MLflow binds to 127.0.0.1 only - access via nginx proxy
 generate_mlflow_service() {
   local enabled="${MLFLOW_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
@@ -260,6 +261,7 @@ DOCKERFILE
   cat <<EOF
 
   # MLflow - Machine Learning Lifecycle Platform
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   mlflow:
     build:
       context: ./mlflow
@@ -285,7 +287,8 @@ DOCKERFILE
     volumes:
       - mlflow_data:/mlflow/artifacts
     ports:
-      - "\${MLFLOW_PORT:-5005}:\${MLFLOW_PORT:-5005}"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${MLFLOW_PORT:-5005}:\${MLFLOW_PORT:-5005}"
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:\${MLFLOW_PORT:-5005}/health\")' || wget --spider -q http://localhost:\${MLFLOW_PORT:-5005}/health || curl -f http://localhost:\${MLFLOW_PORT:-5005}/health"]
       interval: 30s
@@ -331,10 +334,12 @@ generate_search_services() {
 }
 
 # Generate MeiliSearch service
+# SECURITY: MeiliSearch binds to 127.0.0.1 only - access via nginx proxy
 generate_meilisearch_service() {
   cat <<EOF
 
   # MeiliSearch - Lightning Fast Search
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   meilisearch:
     image: getmeili/meilisearch:\${MEILISEARCH_VERSION:-v1.5}
     container_name: \${PROJECT_NAME}_meilisearch
@@ -349,7 +354,8 @@ generate_meilisearch_service() {
     volumes:
       - meilisearch_data:/meili_data
     ports:
-      - "\${SEARCH_PORT:-\${MEILISEARCH_PORT:-7700}}:7700"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${SEARCH_PORT:-\${MEILISEARCH_PORT:-7700}}:7700"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
@@ -359,10 +365,12 @@ EOF
 }
 
 # Generate Typesense service
+# SECURITY: Typesense binds to 127.0.0.1 only - access via nginx proxy
 generate_typesense_service() {
   cat <<EOF
 
   # Typesense - Fast, Typo-Tolerant Search Engine
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   typesense:
     image: typesense/typesense:\${TYPESENSE_VERSION:-27.1}
     container_name: \${PROJECT_NAME}_typesense
@@ -378,7 +386,8 @@ generate_typesense_service() {
     volumes:
       - typesense_data:/data
     ports:
-      - "\${SEARCH_PORT:-\${TYPESENSE_PORT:-8108}}:8108"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${SEARCH_PORT:-\${TYPESENSE_PORT:-8108}}:8108"
     healthcheck:
       test: ["CMD", "curl", "-f", "-H", "X-TYPESENSE-API-KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}}", "http://localhost:8108/health"]
       interval: 30s

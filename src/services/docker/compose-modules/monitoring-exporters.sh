@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # monitoring-exporters.sh - Generate monitoring exporter services
+# SECURITY: All exporters bind to 127.0.0.1 only - Prometheus scrapes internally via Docker network
 
 # Generate Tempo service
+# SECURITY: Tempo binds to 127.0.0.1 only
 generate_tempo_service() {
   [[ "${TEMPO_ENABLED:-false}" != "true" ]] && return 0
 
   cat <<EOF
 
   # Tempo - Distributed Tracing
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   tempo:
     image: grafana/tempo:${TEMPO_VERSION:-latest}
     container_name: \${PROJECT_NAME}_tempo
@@ -17,8 +20,9 @@ generate_tempo_service() {
       - ./monitoring/tempo/tempo.yml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
-      - "\${TEMPO_PORT:-3200}:3200"
-      - "14268:14268"  # Jaeger ingest
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${TEMPO_PORT:-3200}:3200"
+      - "127.0.0.1:14268:14268"  # Jaeger ingest
     networks:
       - \${DOCKER_NETWORK}
     # Note: Tempo uses distroless image (no shell/curl/wget)
@@ -28,12 +32,14 @@ EOF
 }
 
 # Generate Alertmanager service
+# SECURITY: Alertmanager binds to 127.0.0.1 only
 generate_alertmanager_service() {
   [[ "${ALERTMANAGER_ENABLED:-false}" != "true" ]] && return 0
 
   cat <<EOF
 
   # Alertmanager - Alert Routing
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   alertmanager:
     image: prom/alertmanager:${ALERTMANAGER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_alertmanager
@@ -45,7 +51,8 @@ generate_alertmanager_service() {
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
     ports:
-      - "\${ALERTMANAGER_PORT:-9093}:9093"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${ALERTMANAGER_PORT:-9093}:9093"
     networks:
       - \${DOCKER_NETWORK}
     healthcheck:
@@ -57,6 +64,7 @@ EOF
 }
 
 # Generate cAdvisor service
+# SECURITY: cAdvisor binds to 127.0.0.1 only - Prometheus scrapes internally
 generate_cadvisor_service() {
   [[ "${CADVISOR_ENABLED:-false}" != "true" ]] && return 0
 
@@ -78,6 +86,7 @@ generate_cadvisor_service() {
   cat <<EOF
 
   # cAdvisor - Container Metrics
+  # SECURITY: Bound to localhost only - Prometheus scrapes internally
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:${CADVISOR_VERSION:-latest}
     container_name: \${PROJECT_NAME}_cadvisor
@@ -86,7 +95,8 @@ generate_cadvisor_service() {
     volumes:
 $volumes
     ports:
-      - "\${CADVISOR_PORT:-8082}:8080"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${CADVISOR_PORT:-8082}:8080"
     networks:
       - \${DOCKER_NETWORK}
     command:
@@ -102,12 +112,14 @@ EOF
 }
 
 # Generate Node Exporter service
+# SECURITY: Node Exporter binds to 127.0.0.1 only - Prometheus scrapes internally
 generate_node_exporter_service() {
   [[ "${NODE_EXPORTER_ENABLED:-false}" != "true" ]] && return 0
 
   cat <<EOF
 
   # Node Exporter - Host Metrics
+  # SECURITY: Bound to localhost only - Prometheus scrapes internally
   node-exporter:
     image: prom/node-exporter:${NODE_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_node_exporter
@@ -123,7 +135,8 @@ generate_node_exporter_service() {
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
-      - "\${NODE_EXPORTER_PORT:-9100}:9100"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${NODE_EXPORTER_PORT:-9100}:9100"
     networks:
       - \${DOCKER_NETWORK}
     healthcheck:
@@ -136,6 +149,7 @@ EOF
 }
 
 # Generate Postgres Exporter service
+# SECURITY: Postgres Exporter binds to 127.0.0.1 only - Prometheus scrapes internally
 generate_postgres_exporter_service() {
   [[ "${POSTGRES_EXPORTER_ENABLED:-false}" != "true" ]] && return 0
   # Note: PostgreSQL is always required in nself, so no need to check POSTGRES_ENABLED
@@ -143,6 +157,7 @@ generate_postgres_exporter_service() {
   cat <<EOF
 
   # Postgres Exporter - Database Metrics
+  # SECURITY: Bound to localhost only - Prometheus scrapes internally
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:${POSTGRES_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_postgres_exporter
@@ -150,7 +165,8 @@ generate_postgres_exporter_service() {
     environment:
       DATA_SOURCE_NAME: "postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}?sslmode=disable"
     ports:
-      - "\${POSTGRES_EXPORTER_PORT:-9187}:9187"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${POSTGRES_EXPORTER_PORT:-9187}:9187"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -165,6 +181,7 @@ EOF
 }
 
 # Generate Redis Exporter service
+# SECURITY: Redis Exporter binds to 127.0.0.1 only - Prometheus scrapes internally
 generate_redis_exporter_service() {
   # Redis exporter requires both monitoring AND Redis to be enabled
   [[ "${REDIS_EXPORTER_ENABLED:-false}" != "true" ]] && return 0
@@ -176,6 +193,7 @@ generate_redis_exporter_service() {
   cat <<EOF
 
   # Redis Exporter - Redis Metrics
+  # SECURITY: Bound to localhost only - Prometheus scrapes internally
   redis-exporter:
     image: oliver006/redis_exporter:${REDIS_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_redis_exporter
@@ -183,7 +201,8 @@ generate_redis_exporter_service() {
     environment:
       REDIS_ADDR: "${redis_addr}"
     ports:
-      - "\${REDIS_EXPORTER_PORT:-9121}:9121"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${REDIS_EXPORTER_PORT:-9121}:9121"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:

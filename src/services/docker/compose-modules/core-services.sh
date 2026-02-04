@@ -247,6 +247,7 @@ EOF
 }
 
 # Generate MinIO service configuration
+# SECURITY: MinIO binds to 127.0.0.1 only - access via nginx proxy
 generate_minio_service() {
   local enabled="${MINIO_ENABLED:-false}"
   [[ "$enabled" != "true" ]] && return 0
@@ -254,6 +255,7 @@ generate_minio_service() {
   cat <<EOF
 
   # MinIO Object Storage
+  # SECURITY: Bound to localhost only - access via nginx reverse proxy
   minio:
     image: minio/minio:${MINIO_VERSION:-latest}
     container_name: \${PROJECT_NAME}_minio
@@ -269,8 +271,9 @@ generate_minio_service() {
     volumes:
       - minio_data:/data
     ports:
-      - "\${MINIO_PORT:-9000}:9000"
-      - "\${MINIO_CONSOLE_PORT:-9001}:9001"
+      # SECURITY: Bind to localhost only - prevents external access
+      - "127.0.0.1:\${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:\${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
