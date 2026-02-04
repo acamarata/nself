@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.9.6-blue.svg)](releases/v0.9.6.md)
+[![Version](https://img.shields.io/badge/version-0.9.8-blue.svg)](releases/v0.9.8.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)]()
@@ -17,7 +17,7 @@
 
 ---
 
-> **🔄 v0.9.6 Command Update:** Commands have been consolidated into a v1.0 structure (79→31 top-level commands). Old commands still work but are organized logically: `nself billing` → `nself tenant billing`, `nself staging` → `nself deploy staging`, etc. [Full mapping here](architecture/COMMAND-CONSOLIDATION-MAP.md).
+> **✅ v0.9.8 Production Ready:** nself is production-ready with 80% test coverage, 100% documentation, and enterprise-grade features. Next: v0.9.9 (QA) → v1.0.0 LTS (Q1 2026). [View Roadmap](releases/ROADMAP.md)
 
 ---
 
@@ -60,7 +60,7 @@ nself db schema apply schema.dbml # Import → migrate → seed
 | Configure my setup | **[Configuration](configuration/README.md)** |
 | Deploy to production | **[Deployment](deployment/README.md)** |
 | Fix a problem | **[Troubleshooting](guides/TROUBLESHOOTING.md)** |
-| See examples | **[Examples](src/examples/README.md)** |
+| See examples | **[Examples](examples/README.md)** |
 | Learn specific features | **[Tutorials](tutorials/README.md)** |
 
 ---
@@ -242,7 +242,7 @@ nself tenant branding set-colors --primary #0066cc
 ### 📖 Guides & Tutorials
 - **[All Guides](guides/README.md)** - Usage guides
 - **[All Tutorials](tutorials/README.md)** - Step-by-step tutorials
-- **[Examples](src/examples/README.md)** - Real-world examples
+- **[Examples](examples/README.md)** - Real-world examples
 
 ### 🔌 Plugins
 - **[Plugin Overview](plugins/README.md)** - Plugin system
@@ -258,20 +258,20 @@ nself tenant branding set-colors --primary #0066cc
 
 ---
 
-## What's New in v0.9.6
+## What's New in v0.9.8
 
-### Command Consolidation Complete
+### Production Ready Release
 
-The CLI has been dramatically improved with a 60.8% reduction in top-level commands:
+nself v0.9.8 is production-ready with comprehensive testing, complete documentation, and enterprise features:
 
-- **79 → 31 Commands** - Reduced complexity while preserving all functionality
-- **Logical Hierarchies** - Commands organized by domain (tenant, deploy, infra, service, auth)
-- **285+ Subcommands** - All features accessible through intuitive structure
-- **100% Backward Compatible** - Old commands still work with migration warnings
-- **Improved Discoverability** - Easy to find and learn commands
-- **Clear Migration Path** - Automated tools and comprehensive guides
+- **80% Test Coverage** - 700+ tests across unit, integration, and E2E
+- **100% Documentation** - Every command and feature fully documented
+- **UX Polish** - Standardized errors, progress indicators, input validation
+- **Performance Optimized** - Build caching, batched operations, parallel execution
+- **Production Features** - Health endpoints, graceful shutdown, automated backups
+- **Quality Metrics** - Benchmarks, security audits, cross-platform verification
 
-**[v0.9.6 Documentation](releases/v0.9.6.md)** | **[Release Notes](releases/v0.9.6.md)**
+**[v0.9.8 Release Notes](releases/v0.9.8.md)** | **[Full Roadmap](releases/ROADMAP.md)** | **[v1.0 Plan](releases/v1.0.0-PLAN.md)**
 
 ---
 
@@ -316,16 +316,16 @@ nself deploy prod
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.9.6** | Jan 30, 2026 | Command Consolidation (current) |
+| **v0.9.8** | Feb 2026 | Production Ready (current) |
+| v0.9.7 | Jan 31, 2026 | Security & CI/CD Complete |
+| v0.9.6 | Jan 30, 2026 | Command Consolidation |
 | v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
 | v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
 | v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
 | v0.4.7 | Jan 23, 2026 | Infrastructure Everywhere |
 | v0.4.6 | Jan 22, 2026 | Scaling & Performance |
-| v0.4.5 | Jan 21, 2026 | Provider Support |
-| v0.4.4 | Jan 20, 2026 | Database Tools |
 
-**[Roadmap](releases/ROADMAP.md)** | **[Changelog](releases/CHANGELOG.md)**
+**[Full Roadmap](releases/ROADMAP.md)** | **[Changelog](releases/CHANGELOG.md)** | **[v1.0 Plan](releases/v1.0.0-PLAN.md)**
 
 ---
 
@@ -368,8 +368,10 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 <div align="center">
 
-**Version 0.9.6** · **January 30, 2026** · **[Full Documentation](README.md)**
+**Version 0.9.8** · **February 2026** · **[Full Documentation](README.md)**
 
 *ɳSelf - The complete self-hosted backend platform*
+
+**Path to v1.0**: [v0.9.9 Plan](releases/v0.9.9-PLAN.md) → [v1.0 Plan](releases/v1.0.0-PLAN.md)
 
 </div>

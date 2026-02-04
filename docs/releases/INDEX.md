@@ -2,31 +2,43 @@
 
 Complete release history and roadmap for nself - Self-Hosted Infrastructure Manager.
 
-**Current Stable Version:** v0.9.7
+**Current Stable Version:** v0.9.8
 
 ---
 
 ## Latest Release
 
-### [v0.9.7](v0.9.7.md) - Current Stable
+### [v0.9.8](v0.9.8.md) - Current Stable
 
-**Released:** January 31, 2026
+**Released:** February 2026
 
 **Status:** Production Ready ✅
 
 **Highlights:**
-- **All CI/CD Passing**: 7/7 GitHub Actions workflows green
-- **Tenant Isolation Complete**: 100% test coverage with RLS policies
-- **Enterprise Security**: Comprehensive scanning, secrets management, rate limiting
-- **Compliance Ready**: GDPR (85%), HIPAA (75%), SOC 2 (70%)
-- **Structured Logging**: Immutable audit trails with tamper detection
-- **100% Backward Compatible**: Zero breaking changes
+- **80% Test Coverage**: 700+ tests across unit, integration, and E2E
+- **100% Documentation**: Every command and feature fully documented
+- **UX Polish**: Standardized errors, progress indicators, input validation
+- **Performance Optimized**: Build caching, batched operations, parallel execution
+- **Production Features**: Health endpoints, graceful shutdown, automated backups
+- **Quality Metrics**: Benchmarks, security audits, cross-platform verification
 
-**[View Release Notes →](v0.9.7.md)**
+**[View Release Notes →](v0.9.8.md)**
 
 ---
 
 ## Recent Releases
+
+### [v0.9.7](v0.9.7.md) - Security & CI/CD Complete
+
+**Released:** January 31, 2026
+
+**Highlights:**
+- All CI/CD Passing: 7/7 GitHub Actions workflows green
+- Tenant Isolation Complete: 100% test coverage with RLS policies
+- Enterprise Security: Comprehensive scanning, secrets management, rate limiting
+- Compliance Ready: GDPR (85%), HIPAA (75%), SOC 2 (70%)
+
+**[View Release Notes →](v0.9.7.md)**
 
 ### [v0.9.6](v0.9.6.md) - Command Consolidation
 
@@ -39,7 +51,7 @@ Complete release history and roadmap for nself - Self-Hosted Infrastructure Mana
 
 **[View Release Notes →](v0.9.6.md)**
 
-### [v0.9.5](v0.9.5.md) - January 30, 2026
+### [v0.9.5](v0.9.5.md) - Feature Parity & Security
 
 **Status:** Production Ready
 
@@ -201,9 +213,9 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements.
 
 | Version | Target | Focus |
 |---------|--------|-------|
-| **v0.9.1** | Q1 2026 | Multi-tenant refinements & bug fixes |
-| **v0.10.0** | Q1 2026 | Advanced analytics & reporting |
-| **v0.5.0 LTS** | Q2 2026 | **Production Ready LTS + nself-admin v0.1** |
+| **v0.9.9** | February 2026 | QA & Final Testing |
+| **v1.0.0 LTS** | Q1 2026 | **Production Ready LTS Release** |
+| **v1.1.0** | Q2 2026 | Plugin Marketplace & Additional Features |
 
 ---
 
@@ -215,7 +227,9 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history with all changes.
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| [v0.9.6](v0.9.6.md) | Jan 30, 2026 | **Current** | Command Consolidation (79→31 commands) |
+| [v0.9.8](v0.9.8.md) | Feb 2026 | **Current** | Production Ready (80% coverage, 100% docs) |
+| [v0.9.7](v0.9.7.md) | Jan 31, 2026 | Stable | Security & CI/CD Complete |
+| [v0.9.6](v0.9.6.md) | Jan 30, 2026 | Stable | Command Consolidation (79→31 commands) |
 | [v0.9.5](v0.9.5.md) | Jan 30, 2026 | Stable | Real-Time, Security Hardening, Enhanced OAuth |
 | [v0.9.0](v0.9.0.md) | Jan 30, 2026 | Stable | Multi-Tenant Platform, OAuth, Storage |
 | [v0.4.8](v0.4.8.md) | Jan 24, 2026 | Stable | Plugin System (Stripe, GitHub, Shopify) |
@@ -333,4 +347,4 @@ NSELF_VERSION=v0.4.1 bash <(curl -sSL https://install.nself.org)
 
 ---
 
-**Last Updated:** January 30, 2026 | **Current Version:** v0.9.6
+**Last Updated:** January 31, 2026 | **Current Version:** v0.9.8

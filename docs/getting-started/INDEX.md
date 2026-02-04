@@ -8,9 +8,9 @@ This section provides introductory documentation for new users, including instal
 
 ## Quick Start
 
-- **[Quick Start Guide](Quick-Start.md)** - Get running in 5 minutes
-- **[Installation Guide](Installation.md)** - Detailed installation instructions
-- **[FAQ](FAQ.md)** - Frequently asked questions
+- **[Quick Start Guide](../getting-started/Quick-Start.md)** - Get running in 5 minutes
+- **[Installation Guide](../getting-started/Installation.md)** - Detailed installation instructions
+- **[FAQ](../getting-started/FAQ.md)** - Frequently asked questions
 - **[Getting Started Overview](README.md)** - Complete getting started guide
 
 ## Installation Methods
@@ -39,7 +39,7 @@ wget https://github.com/acamarata/nself/releases/latest/download/nself-linux-amd
 curl -sSL https://install.nself.org | bash
 ```
 
-See **[Installation Guide](Installation.md)** for complete details.
+See **[Installation Guide](../getting-started/Installation.md)** for complete details.
 
 ## Your First Project
 
@@ -74,7 +74,7 @@ nself db schema apply schema.dbml
 nself build && nself start
 ```
 
-See **[Quick Start Guide](Quick-Start.md)** for complete walkthrough.
+See **[Quick Start Guide](../getting-started/Quick-Start.md)** for complete walkthrough.
 
 ## Common Questions
 
@@ -96,7 +96,7 @@ Yes, ɳSelf uses Docker Compose to run all services. Install Docker Desktop from
 ### "Is it production-ready?"
 Yes! ɳSelf v0.9.6 is stable and production-ready with comprehensive security audits completed.
 
-See **[FAQ](FAQ.md)** for more questions and answers.
+See **[FAQ](../getting-started/FAQ.md)** for more questions and answers.
 
 ## Next Steps
 

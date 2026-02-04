@@ -883,9 +883,9 @@ For production deployments:
 
 ## Additional Resources
 
-- [Logging API Reference](../api/logging.md)
-- [Audit Logging API Reference](../api/audit-logging.md)
-- [Error Codes Reference](../api/error-codes.md)
+- [Logging API Reference](../reference/api/logging.md)
+- [Audit Logging API Reference](../reference/api/audit-logging.md)
+- [Error Codes Reference](../reference/api/error-codes.md)
 - [Security Best Practices](../security/BEST-PRACTICES.md)
 - [Compliance Guide](../compliance/OVERVIEW.md)
 

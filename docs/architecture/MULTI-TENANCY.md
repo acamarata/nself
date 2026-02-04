@@ -2267,10 +2267,10 @@ nself's multi-tenancy system provides:
 5. Deploy to production with monitoring
 
 For more information:
-- [Database Architecture](/docs/architecture/DATABASE.md)
-- [Security Best Practices](/docs/guides/SECURITY.md)
-- [Production Deployment](/docs/guides/PRODUCTION.md)
-- [API Documentation](/docs/architecture/API.md)
+- [Database Architecture](architecture/DATABASE.md)
+- [Security Best Practices](guides/SECURITY.md)
+- [Production Deployment](guides/PRODUCTION.md)
+- [API Documentation](architecture/API.md)
 
 ---
 

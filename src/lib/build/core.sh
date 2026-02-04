@@ -46,6 +46,15 @@ if [[ -f "$CORE_SCRIPT_DIR/config-validator.sh" ]]; then
   source "$CORE_SCRIPT_DIR/config-validator.sh"
 fi
 
+# Source performance optimization modules
+if [[ -f "$LIB_ROOT/utils/build-cache.sh" ]]; then
+  source "$LIB_ROOT/utils/build-cache.sh"
+fi
+
+if [[ -f "$LIB_ROOT/utils/docker-batch.sh" ]]; then
+  source "$LIB_ROOT/utils/docker-batch.sh"
+fi
+
 # Source our modular components
 source "$CORE_SCRIPT_DIR/platform.sh"
 source "$CORE_SCRIPT_DIR/validation.sh"
@@ -630,6 +639,15 @@ orchestrate_build() {
     fi
   fi
 
+  # Initialize build cache (Performance: v0.9.8)
+  local use_cache=true
+  if [[ "$force_rebuild" == "true" ]]; then
+    use_cache=false
+    clear_build_cache 2>/dev/null || true
+  else
+    init_build_cache 2>/dev/null || true
+  fi
+
   # Use modular orchestration if available
   if command -v orchestrate_modular_build >/dev/null 2>&1; then
     # Load core modules
@@ -652,6 +670,24 @@ orchestrate_build() {
       export NEEDS_NGINX=true
       export NEEDS_DATABASE=true
       export NEEDS_COMPOSE=true
+    else
+      # Use cache to determine what needs rebuilding (Performance: v0.9.8)
+      if [[ "$use_cache" == "true" ]]; then
+        if command -v needs_compose_rebuild >/dev/null 2>&1 && ! needs_compose_rebuild; then
+          export NEEDS_COMPOSE=false
+          SKIP_ACTIONS+=("docker-compose.yml (cached)")
+        fi
+
+        if command -v needs_nginx_rebuild >/dev/null 2>&1 && ! needs_nginx_rebuild; then
+          export NEEDS_NGINX=false
+          SKIP_ACTIONS+=("nginx config (cached)")
+        fi
+
+        if command -v needs_ssl_rebuild >/dev/null 2>&1 && ! needs_ssl_rebuild; then
+          export NEEDS_SSL=false
+          SKIP_ACTIONS+=("SSL certs (cached)")
+        fi
+      fi
     fi
 
     if check_build_requirements "$force_rebuild" "$env_file" || [[ "$needs_initial_build" == "true" ]]; then
@@ -819,6 +855,8 @@ FUNCEOF
           else
             CREATED_FILES+=("docker-compose.yml")
           fi
+          # Mark as cached (Performance: v0.9.8)
+          mark_cached "docker-compose.yml" "$(get_file_checksum docker-compose.yml 2>/dev/null)" 2>/dev/null || true
         else
           printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to generate docker-compose.yml       \n"
         fi

@@ -567,10 +567,10 @@ nself doctor                          # Diagnostics
 
 ### Security Resources
 
-- [nself Security Documentation](/docs/security/README.md)
-- [SQL Injection Prevention](/docs/security/SQL-SAFETY.md)
-- [Input Validation Reference](/docs/security/VALIDATION_FUNCTIONS_REFERENCE.md)
-- [Dependency Scanning](/docs/security/DEPENDENCY-SCANNING.md)
+- [nself Security Documentation](security/README.md)
+- [SQL Injection Prevention](security/SQL-SAFETY.md)
+- [Input Validation Reference](security/VALIDATION_FUNCTIONS_REFERENCE.md)
+- [Dependency Scanning](security/DEPENDENCY-SCANNING.md)
 
 ---
 

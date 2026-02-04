@@ -769,4 +769,4 @@ export default function FileManager({ userId }: { userId: string }) {
 - [File Upload Pipeline Guide](file-upload-pipeline.md)
 - [File Upload Security](../security/file-upload-security.md)
 - [Quick Start Tutorial](../tutorials/file-uploads-quickstart.md)
-- [GraphQL API Documentation](../api/graphql-schema.md)
+- [GraphQL API Documentation](../reference/api/graphql-schema.md)

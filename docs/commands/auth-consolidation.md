@@ -254,9 +254,9 @@ nself oauth help
 
 ## Related Documentation
 
-- [Command Tree v1.0](/docs/commands/COMMAND-TREE-V1.md)
+- [Command Tree v1.0](commands/COMMAND-TREE-V1.md)
 - [CLI Output Library](/src/lib/utils/cli-output.sh)
-- [Auth Command Reference](/docs/cli/auth.md)
+- [Auth Command Reference](cli/auth.md)
 
 ---
 

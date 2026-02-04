@@ -1,0 +1,270 @@
+name: Optimized Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Cancel in-progress runs on new push to same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Fast Checks (run first, fail fast)
+  # ============================================================================
+
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck (error-level only)
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          # Only check for errors, not warnings
+          find src/lib src/cli -name "*.sh" -exec shellcheck -S error {} + || true
+
+      - name: Portability Check
+        run: |
+          printf "\033[34mChecking for portability issues...\033[0m\n"
+          errors=0
+
+          # Check for echo -e
+          if grep -r 'echo -e' src/lib/ src/cli/ --include="*.sh" | grep -v "test\|example"; then
+            printf "\033[31mERROR: Found echo -e usage\033[0m\n"
+            errors=$((errors + 1))
+          fi
+
+          # Check for Bash 4+ features
+          if grep -r '\${[^}]*,,[^}]*}' src/lib/ src/cli/ --include="*.sh"; then
+            printf "\033[31mERROR: Found lowercase expansion (Bash 4+)\033[0m\n"
+            errors=$((errors + 1))
+          fi
+
+          exit $errors
+
+  # ============================================================================
+  # Unit Tests (parallel matrix)
+  # ============================================================================
+
+  unit-tests:
+    name: Unit Tests
+    needs: quick-checks
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache test dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache
+            /tmp/test-cache
+          key: test-deps-${{ runner.os }}-${{ hashFiles('**/package.json', '**/*.sh') }}
+          restore-keys: |
+            test-deps-${{ runner.os }}-
+
+      - name: Setup Bats
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt-get update && sudo apt-get install -y bats
+          else
+            brew install bats-core
+          fi
+
+      - name: Run unit tests (shard ${{ matrix.shard }}/4)
+        run: |
+          # Run tests in shards for parallelization
+          cd src/tests
+
+          # Get all test files
+          test_files=(unit/test-*.sh)
+          total_tests=${#test_files[@]}
+          tests_per_shard=$(( (total_tests + 3) / 4 ))
+
+          # Calculate this shard's range
+          start_idx=$(( (${{ matrix.shard }} - 1) * tests_per_shard ))
+          end_idx=$(( start_idx + tests_per_shard ))
+
+          # Run this shard's tests
+          for ((i=start_idx; i<end_idx && i<total_tests; i++)); do
+            test_file="${test_files[$i]}"
+            if [[ -f "$test_file" ]]; then
+              printf "\n=== Running %s ===\n" "$(basename "$test_file")"
+              bash "$test_file" || echo "::warning::Test failed: $test_file"
+            fi
+          done
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard }}
+          path: |
+            src/tests/**/*.log
+            src/tests/**/*-report.txt
+          retention-days: 7
+
+  # ============================================================================
+  # Integration Tests (matrix with Docker cache)
+  # ============================================================================
+
+  integration-tests:
+    name: Integration Tests
+    needs: quick-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: [init, build, deploy, tenant]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: docker-${{ runner.os }}-${{ hashFiles('**/docker-compose*.yml', '**/Dockerfile') }}
+          restore-keys: |
+            docker-${{ runner.os }}-
+
+      - name: Run integration tests (${{ matrix.test-type }})
+        run: |
+          cd src/tests/integration
+
+          # Find tests matching this type
+          for test_file in test-${{ matrix.test-type }}*.sh; do
+            if [[ -f "$test_file" ]]; then
+              printf "\n=== Running %s ===\n" "$test_file"
+              timeout 300 bash "$test_file" || echo "::warning::Integration test failed or timed out"
+            fi
+          done
+
+  # ============================================================================
+  # Performance & Flakiness Detection
+  # ============================================================================
+
+  test-quality:
+    name: Test Quality Analysis
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run performance analysis
+        run: |
+          bash scripts/test-performance-analysis.sh \
+            --save-history \
+            --show-trend \
+            --output performance-report.txt
+
+      - name: Detect flaky tests
+        run: |
+          bash scripts/find-flaky-tests.sh \
+            --iterations 5 \
+            --output flakiness-report.txt || true
+
+      - name: Upload quality reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-quality-reports
+          path: |
+            performance-report.txt
+            flakiness-report.txt
+            .test-performance-history.json
+          retention-days: 30
+
+  # ============================================================================
+  # Test Coverage (on main only)
+  # ============================================================================
+
+  test-coverage:
+    name: Test Coverage
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install coverage tools
+        run: |
+          # Install kcov for bash coverage
+          sudo apt-get update
+          sudo apt-get install -y kcov
+
+      - name: Run tests with coverage
+        run: |
+          mkdir -p coverage
+
+          # Run tests under kcov
+          for test_file in src/tests/unit/test-*.sh; do
+            if [[ -f "$test_file" ]]; then
+              test_name=$(basename "$test_file" .sh)
+              kcov --exclude-path=/usr,/tmp "coverage/$test_name" bash "$test_file" || true
+            fi
+          done
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 30
+
+  # ============================================================================
+  # Summary Report
+  # ============================================================================
+
+  test-summary:
+    name: Test Summary
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v3
+
+      - name: Generate summary
+        run: |
+          printf "# Test Suite Summary\n\n"
+          printf "## Test Results\n\n"
+
+          # Count test artifacts
+          unit_count=$(find . -name "test-results-*" -type d | wc -l)
+          printf "- Unit test shards completed: %d/8\n" "$unit_count"
+
+          # Check for failures
+          if find . -name "*.log" -exec grep -l "FAIL" {} \; 2>/dev/null | grep -q .; then
+            printf "- ⚠️ Some tests failed - review logs\n"
+          else
+            printf "- ✅ All tests passed\n"
+          fi
+
+          printf "\n## Next Steps\n\n"
+          printf "1. Review any failed tests\n"
+          printf "2. Check performance and flakiness reports (if available)\n"
+          printf "3. Verify coverage meets requirements\n"

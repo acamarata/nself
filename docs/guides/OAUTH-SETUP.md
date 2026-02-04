@@ -522,8 +522,8 @@ useEffect(() => {
 ## Next Steps
 
 - [Frontend Integration Guide](./OAUTH-FRONTEND-INTEGRATION.md)
-- [OAuth API Reference](../api/OAUTH-API.md)
-- [OAuth CLI Reference](../cli/oauth.md)
+- [OAuth API Reference](../reference/api/OAUTH-API.md)
+- [OAuth CLI Reference](../commands/oauth.md)
 - [Security Best Practices](./OAUTH-SECURITY.md)
 
 ---

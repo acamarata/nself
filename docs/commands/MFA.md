@@ -725,7 +725,7 @@ Content-Type: application/json
 GET /auth/mfa/status?user_id=user-123
 ```
 
-See [MFA API Documentation](../api/MFA-API.md) for complete API reference.
+See [MFA API Documentation](../reference/api/MFA-API.md) for complete API reference.
 
 ---
 
@@ -791,7 +791,7 @@ services:
 
 - [Authentication Guide](../guides/AUTHENTICATION.md)
 - [Security Best Practices](../guides/SECURITY.md)
-- [MFA API Reference](../api/MFA-API.md)
+- [MFA API Reference](../reference/api/MFA-API.md)
 - [Compliance Documentation](../security/COMPLIANCE.md)
 
 ---

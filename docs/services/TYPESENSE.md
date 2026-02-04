@@ -719,6 +719,6 @@ Choose Typesense if you need:
 
 ## Related Documentation
 
-- [SEARCH.md](/docs/services/SEARCH.md) - General search documentation
-- [MEILISEARCH.md](/docs/services/MEILISEARCH.md) - MeiliSearch alternative
-- [Hasura Integration](/docs/guides/HASURA-SEARCH.md) - GraphQL integration guide
+- [SEARCH.md](services/SEARCH.md) - General search documentation
+- [MEILISEARCH.md](services/MEILISEARCH.md) - MeiliSearch alternative
+- [Hasura Integration](guides/HASURA-SEARCH.md) - GraphQL integration guide

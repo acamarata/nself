@@ -411,4 +411,4 @@ chmod +x setup-branding.sh
 
 ---
 
-**Ready to customize further?** Check out the [complete documentation](/docs/features/WHITELABEL-SYSTEM.md).
+**Ready to customize further?** Check out the [complete documentation](features/WHITELABEL-SYSTEM.md).

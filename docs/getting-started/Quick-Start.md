@@ -174,7 +174,7 @@ nself config env create prod production
 nself deploy prod
 ```
 
-> **v0.9.6 Note:** Environment commands moved to `nself config env`. Old syntax `nself env` still works.
+> **v0.9.7+:** Environment commands moved to `nself config env`. Old syntax `nself env` still works.
 
 See [Deployment Guide](Deployment.md) for complete instructions.
 
@@ -319,7 +319,7 @@ nself trust              # Trust SSL certs
 | **[Services Overview](../services/SERVICES.md)** | All available services |
 | **[Custom Services](../services/SERVICES_CUSTOM.md)** | Build your own microservices |
 | **[Deployment](../guides/Deployment.md)** | Go to production |
-| **[FAQ](FAQ.md)** | Common questions |
+| **[FAQ](../getting-started/FAQ.md)** | Common questions |
 
 ---
 

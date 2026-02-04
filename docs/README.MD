@@ -4,7 +4,7 @@
 
 **The Complete Self-Hosted Backend Platform**
 
-[![Version](https://img.shields.io/badge/version-0.9.6-blue.svg)](releases/v0.9.6.md)
+[![Version](https://img.shields.io/badge/version-0.9.8-blue.svg)](releases/v0.9.8.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 
@@ -14,7 +14,7 @@
 
 ---
 
-> **🔄 v0.9.6 Command Update:** Commands have been consolidated into a v1.0 structure. Old commands like `nself billing`, `nself org`, `nself staging` still work but are now organized under logical groupings: `nself tenant billing`, `nself tenant org`, `nself deploy staging`. See [Command Consolidation Map](architecture/COMMAND-CONSOLIDATION-MAP.md) for the complete reference.
+> **🔄 v0.9.8 Command Update:** Commands have been consolidated into a v1.0 structure. Old commands like `nself billing`, `nself org`, `nself staging` still work but are now organized under logical groupings: `nself tenant billing`, `nself tenant org`, `nself deploy staging`. See [Command Consolidation Map](architecture/COMMAND-CONSOLIDATION-MAP.md) for the complete reference.
 
 ---
 
@@ -29,7 +29,7 @@
 | Configure my setup | [Configuration Guide](configuration/README.md) |
 | Deploy to production | [Deployment Guide](deployment/README.md) |
 | Fix a problem | [Troubleshooting](guides/TROUBLESHOOTING.md) |
-| See examples | [Examples](src/examples/README.md) |
+| See examples | [Examples](examples/README.md) |
 | Learn specific features | [Tutorials](tutorials/README.md) |
 
 ---
@@ -220,16 +220,22 @@ nself db schema apply schema.dbml # Import → migrate → seed
 
 **Real-world examples and code**
 
-- **[Examples Index](src/examples/README.md)** - All examples
-- **[Database Examples](src/examples/DATABASE-EXAMPLES.md)** - Schema patterns
+- **[Examples Index](examples/README.md)** - All examples
+- **[Features Overview](examples/FEATURES-OVERVIEW.md)** - Feature examples
 - **[Deployment Examples](deployment/examples/README.md)** - Production setups
-- **[Service Examples](src/examples/CUSTOM-SERVICE-EXAMPLES.md)** - Custom service patterns
+- **[Real-Time Chat](examples/REALTIME-CHAT-SERVICE.md)** - Real-time example
 
 ---
 
 ## What's New
 
-### v0.9.6 - Command Consolidation (v1.0 Structure)
+### v0.9.8 - Security & CI/CD Complete (Current)
+
+**Latest Release:** Complete security audit, CI/CD improvements, and documentation standardization.
+
+See [v0.9.8 Release Notes](releases/v0.9.8.md) for details.
+
+### v0.9.7 - Command Consolidation (v1.0 Structure)
 
 **Major Update:** Commands consolidated from 79 → 31 top-level commands for better organization:
 
@@ -392,7 +398,9 @@ nself deploy prod
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.9.6** | Jan 30, 2026 | Command Consolidation (current) |
+| **v0.9.8** | Jan 31, 2026 | Security & CI/CD Complete (current) |
+| v0.9.7 | Jan 31, 2026 | SQL Injection Fixes & Validation |
+| v0.9.6 | Jan 30, 2026 | Command Consolidation |
 | v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
 | v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
 | v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
@@ -400,7 +408,6 @@ nself deploy prod
 | v0.4.6 | Jan 22, 2026 | Scaling & Performance |
 | v0.4.5 | Jan 21, 2026 | Provider Support |
 | v0.4.4 | Jan 20, 2026 | Database Tools |
-| v0.4.3 | Jan 19, 2026 | Deployment Pipeline |
 
 **[View Roadmap](releases/ROADMAP.md)** | **[View Changelog](releases/CHANGELOG.md)**
 
@@ -446,7 +453,7 @@ We welcome contributions! Whether it's bug reports, feature requests, documentat
 
 <div align="center">
 
-**Version 0.9.6** · **January 30, 2026** · **[Changelog](releases/CHANGELOG.md)**
+**Version 0.9.8** · **January 31, 2026** · **[Changelog](releases/CHANGELOG.md)**
 
 *ɳSelf - The complete self-hosted backend platform*
 

@@ -23,9 +23,9 @@ All running in Docker containers on your own infrastructure.
 
 | Document | Description |
 |----------|-------------|
-| **[Installation](Installation.md)** | Detailed installation instructions |
-| **[Quick Start](Quick-Start.md)** | Get running in 5 minutes |
-| **[FAQ](FAQ.md)** | Frequently asked questions |
+| **[Installation](../getting-started/Installation.md)** | Detailed installation instructions |
+| **[Quick Start](../getting-started/Quick-Start.md)** | Get running in 5 minutes |
+| **[FAQ](../getting-started/FAQ.md)** | Frequently asked questions |
 
 ## 5-Minute Quick Start
 
@@ -242,7 +242,7 @@ nself help db
 
 ## Need Help?
 
-- **[FAQ](FAQ.md)** - Common questions
+- **[FAQ](../getting-started/FAQ.md)** - Common questions
 - **[Troubleshooting](../guides/TROUBLESHOOTING.md)** - Common issues
 - **[Doctor Command](../commands/DOCTOR.md)** - Automated diagnostics
 - **[GitHub Issues](https://github.com/acamarata/nself/issues)** - Report bugs
@@ -255,13 +255,13 @@ nself help db
 - **Git** (for deployments)
 - **Operating System**: macOS, Linux, or WSL (Windows)
 
-**[View Full Installation Guide](Installation.md)**
+**[View Full Installation Guide](../getting-started/Installation.md)**
 
 ---
 
 **Next Steps:**
-1. **[Complete Installation](Installation.md)** - If you haven't already
-2. **[Follow Quick Start](Quick-Start.md)** - Get your first project running
+1. **[Complete Installation](../getting-started/Installation.md)** - If you haven't already
+2. **[Follow Quick Start](../getting-started/Quick-Start.md)** - Get your first project running
 3. **[Design Your Database](../guides/DATABASE-WORKFLOW.md)** - Create your schema
 4. **[Explore Examples](../src/examples/README.md)** - See real-world patterns
 

@@ -16,6 +16,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/audit-logging.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/logging.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/parallel-logs.sh" 2>/dev/null || true
 # Color output functions
 
 # Function to format service names
@@ -228,6 +229,17 @@ get_all_logs() {
     log_warning "No services are currently running"
     log_info "Run 'nself start' to start services"
     return 1
+  fi
+
+  # Performance: Use parallel log tailing for multiple services (v0.9.8)
+  if [[ "$FOLLOW_MODE" == "true" ]] && [[ ${#running_services[@]} -gt 3 ]] && command -v parallel_tail_logs_colored >/dev/null 2>&1; then
+    if [[ "$COMPACT_MODE" != "true" ]]; then
+      show_header "Following logs from ${#running_services[@]} services (parallel mode)"
+      echo ""
+    fi
+    # Use parallel log tailing with color coding
+    parallel_tail_logs_colored "${running_services[@]}"
+    return $?
   fi
 
   if [[ "$COMPACT_MODE" != "true" ]]; then

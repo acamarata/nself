@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.9.7"
+VERSION="0.9.8"
 PACKAGE_NAME="nself"
 BUILD_DIR="/tmp/${PACKAGE_NAME}-deb-build"
 DEB_DIR="${BUILD_DIR}/${PACKAGE_NAME}_${VERSION}"

@@ -731,7 +731,7 @@ Files must be > 100MB for multipart upload progress tracking. For smaller files,
 ## Next Steps
 
 - [Storage Service Configuration](../services/minio.md)
-- [GraphQL Schema Design](../api/graphql-schema.md)
+- [GraphQL Schema Design](../reference/api/graphql-schema.md)
 - [Security Best Practices](../security/file-uploads.md)
 - [CDN Integration](../deployment/cdn-setup.md)
 

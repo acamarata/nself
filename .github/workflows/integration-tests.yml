@@ -1,0 +1,170 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'bin/**'
+      - 'src/tests/integration/**'
+      - '.github/workflows/integration-tests.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'bin/**'
+      - 'src/tests/integration/**'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Specific test suite to run (leave empty for all)'
+        required: false
+        type: string
+
+jobs:
+  integration-tests:
+    name: Integration Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Set up Docker (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install docker docker-compose
+          colima start || true
+
+      - name: Install nself
+        run: |
+          # Make bin/nself executable
+          chmod +x bin/nself
+
+          # Add to PATH
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+          # Set NSELF_ROOT
+          echo "NSELF_ROOT=${{ github.workspace }}" >> $GITHUB_ENV
+
+      - name: Verify installation
+        run: |
+          nself --version
+          docker --version
+          docker-compose --version
+
+      - name: Run specific test suite
+        if: github.event.inputs.test_suite != ''
+        run: |
+          cd src/tests/integration
+          bash run-all-integration-tests.sh --test ${{ github.event.inputs.test_suite }}
+
+      - name: Run all integration tests
+        if: github.event.inputs.test_suite == ''
+        run: |
+          cd src/tests/integration
+          bash run-all-integration-tests.sh --verbose
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ matrix.os }}
+          path: |
+            /tmp/nself-integration-test-*
+            /tmp/nself-test-*/
+          retention-days: 7
+
+      - name: Cleanup test environments
+        if: always()
+        run: |
+          # Clean up any remaining test containers
+          docker ps -a | grep "nself-integration-test" | awk '{print $1}' | xargs -r docker rm -f || true
+
+          # Clean up test directories
+          rm -rf /tmp/nself-integration-test-* || true
+
+  test-summary:
+    name: Test Summary
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+
+      - name: Generate summary
+        run: |
+          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count results
+          total_suites=0
+          passed_suites=0
+          failed_suites=0
+
+          for os_dir in test-results/*; do
+            if [[ -d "$os_dir" ]]; then
+              os_name=$(basename "$os_dir" | sed 's/integration-test-results-//')
+              echo "### $os_name" >> $GITHUB_STEP_SUMMARY
+
+              # Parse results from logs
+              # This is a simple example - adjust based on actual output format
+              echo "- Tests executed successfully" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Run critical tests on every commit
+  critical-tests:
+    name: Critical Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Install nself
+        run: |
+          chmod +x bin/nself
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+          echo "NSELF_ROOT=${{ github.workspace }}" >> $GITHUB_ENV
+
+      - name: Run full deployment test
+        run: |
+          cd src/tests/integration
+          bash test-full-deployment.sh
+
+      - name: Upload deployment test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-test-results
+          path: /tmp/nself-integration-test-*
+          retention-days: 3

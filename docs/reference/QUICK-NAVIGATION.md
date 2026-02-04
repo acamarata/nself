@@ -28,7 +28,7 @@
 | Generate mock data | [db mock](../commands/DB.md#mock-data) |
 | Create backups | [Backup Guide](../guides/BACKUP_GUIDE.md) |
 | Generate TypeScript types | [db types](../commands/DB.md#types) |
-| Connect from frontend | [API Reference](../api/README.md) |
+| Connect from frontend | [API Reference](../reference/api/README.md) |
 
 ---
 
@@ -39,7 +39,7 @@
 | Deploy to a server | [Deployment Guide](../deployment/README.md) |
 | Set up environments | [Environment Management](../guides/ENVIRONMENTS.md) |
 | Configure SSL | [SSL Setup](../security/SSL-SETUP.md) |
-| Manage secrets | [Secrets Management](../security/SECRETS-MANAGEMENT.md) |
+| Manage secrets | [Secrets Management](../configuration/SECRETS-MANAGEMENT.md) |
 | Zero-downtime deployment | [SSH Deployment](../guides/Deployment.md) |
 | Deploy to Kubernetes | [K8s Commands](../commands/K8S.md) |
 | Choose a cloud provider | [Cloud Providers](../deployment/CLOUD-PROVIDERS.md) |
@@ -146,7 +146,7 @@
 | Build system | [Build Architecture](../architecture/BUILD_ARCHITECTURE.md) |
 | Available services | [Services Overview](../services/SERVICES.md) |
 | Service templates | [Service Templates](../services/SERVICE_TEMPLATES.md) |
-| API reference | [API Reference](../api/README.md) |
+| API reference | [API Reference](../reference/api/README.md) |
 
 ---
 
@@ -169,7 +169,7 @@
 | Security best practices | [Security Guide](../guides/SECURITY.md) |
 | Security audit | [Security Audit](../security/SECURITY-AUDIT.md) |
 | SSL/TLS setup | [SSL Setup](../security/SSL-SETUP.md) |
-| Manage secrets | [Secrets Management](../security/SECRETS-MANAGEMENT.md) |
+| Manage secrets | [Secrets Management](../configuration/SECRETS-MANAGEMENT.md) |
 
 ---
 
@@ -183,7 +183,7 @@
 
 ### Developers
 1. [Database Workflow](../guides/DATABASE-WORKFLOW.md)
-2. [API Reference](../api/README.md)
+2. [API Reference](../reference/api/README.md)
 3. [Custom Services](../configuration/CUSTOM-SERVICES-ENV-VARS.md)
 4. [Examples](../src/examples/README.md)
 
@@ -206,7 +206,7 @@
 ### Building a Web App
 - [Quick Start](../guides/Quick-Start.md)
 - [Database Workflow](../guides/DATABASE-WORKFLOW.md)
-- [API Reference](../api/README.md)
+- [API Reference](../reference/api/README.md)
 - [Deployment Guide](../deployment/README.md)
 
 ### Building a SaaS
@@ -223,7 +223,7 @@
 ### Building an API
 - [Custom Services](../services/SERVICES_CUSTOM.md)
 - [Service Templates](../services/SERVICE_TEMPLATES.md)
-- [API Reference](../api/README.md)
+- [API Reference](../reference/api/README.md)
 - [Deployment](../deployment/README.md)
 
 ---

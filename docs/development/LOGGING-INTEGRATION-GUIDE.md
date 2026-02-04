@@ -879,9 +879,9 @@ log_debug "Debug info" "data=$(expensive_operation)"
 ## Additional Resources
 
 - [Error Handling Best Practices](ERROR-HANDLING.md)
-- [Logging API Reference](../api/logging.md)
-- [Audit Logging API Reference](../api/audit-logging.md)
-- [Error Codes Reference](../api/error-codes.md)
+- [Logging API Reference](../reference/api/logging.md)
+- [Audit Logging API Reference](../reference/api/audit-logging.md)
+- [Error Codes Reference](../reference/api/error-codes.md)
 
 ---
 

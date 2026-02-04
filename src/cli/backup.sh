@@ -48,6 +48,7 @@ SUBCOMMANDS:
   clean                          Remove failed/partial backups
   rollback [target]              Rollback to previous version/backup
   reset [options]                Reset project to clean state
+  schedule [action]              Manage automated backup scheduling
 
 BACKUP TYPES:
   full                           All components (default)
@@ -89,6 +90,13 @@ EXAMPLES:
   # List and restore
   nself backup list
   nself backup restore backup.tar.gz
+
+  # Scheduling
+  nself backup schedule create daily       # Daily backups at 2 AM
+  nself backup schedule create hourly      # Hourly backups
+  nself backup schedule list               # List schedules
+  nself backup schedule disable daily      # Disable schedule
+  nself backup schedule enable daily       # Enable schedule
 
   # Pruning
   nself backup prune age 7                 # Remove backups older than 7 days
@@ -651,6 +659,228 @@ cmd_reset() {
 }
 
 # =============================================================================
+# SCHEDULE SUBCOMMAND
+# =============================================================================
+
+cmd_schedule() {
+  local action="${1:-list}"
+  shift || true
+
+  case "$action" in
+    create)
+      schedule_create "$@"
+      ;;
+    list | ls)
+      schedule_list
+      ;;
+    enable)
+      schedule_toggle "$1" "true"
+      ;;
+    disable)
+      schedule_toggle "$1" "false"
+      ;;
+    remove | delete)
+      schedule_remove "$1"
+      ;;
+    status)
+      schedule_status
+      ;;
+    *)
+      cli_error "Unknown schedule action: $action"
+      printf "Valid actions: create, list, enable, disable, remove, status\n"
+      return 1
+      ;;
+  esac
+}
+
+schedule_create() {
+  local frequency="${1:-daily}"
+  local backup_type="${2:-full}"
+
+  cli_section "Creating backup schedule"
+  printf "\n"
+
+  # Validate frequency
+  case "$frequency" in
+    hourly | daily | weekly | monthly) ;;
+    *)
+      cli_error "Invalid frequency: $frequency"
+      cli_info "Valid frequencies: hourly, daily, weekly, monthly"
+      return 1
+      ;;
+  esac
+
+  # Create cron job
+  local cron_schedule=""
+  case "$frequency" in
+    hourly)
+      cron_schedule="0 * * * *"
+      ;;
+    daily)
+      cron_schedule="0 2 * * *" # 2 AM daily
+      ;;
+    weekly)
+      cron_schedule="0 2 * * 0" # 2 AM on Sundays
+      ;;
+    monthly)
+      cron_schedule="0 2 1 * *" # 2 AM on 1st of month
+      ;;
+  esac
+
+  local cron_command="cd $(pwd) && nself backup create $backup_type automated_${frequency}_\$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S) >> $(pwd)/backups/backup.log 2>&1"
+  local cron_entry="$cron_schedule $cron_command # nself-backup-$frequency"
+
+  # Add to crontab
+  (
+    crontab -l 2>/dev/null | grep -v "nself-backup-$frequency"
+    printf "%s\n" "$cron_entry"
+  ) | crontab - 2>/dev/null
+
+  if [[ $? -eq 0 ]]; then
+    cli_success "Backup schedule created!"
+    cli_list_item "Frequency: $frequency"
+    cli_list_item "Type: $backup_type"
+    cli_list_item "Next run: $(next_run_time "$frequency")"
+    printf "\n"
+    cli_info "Backups will be created automatically and logged to backups/backup.log"
+  else
+    cli_error "Failed to create cron job"
+    cli_info "You may need to use 'nself backup schedule create-systemd' instead"
+    return 1
+  fi
+}
+
+schedule_list() {
+  cli_section "Backup Schedules"
+  printf "\n"
+
+  local schedules=$(crontab -l 2>/dev/null | grep "nself-backup-")
+
+  if [[ -z "$schedules" ]]; then
+    cli_info "No backup schedules found"
+    printf "\n"
+    cli_info "Create one with: nself backup schedule create daily"
+    return 0
+  fi
+
+  cli_table_header "Frequency" "Type" "Next Run" "Status"
+
+  while IFS= read -r line; do
+    local frequency=$(printf '%s\n' "$line" | sed -n 's/.*nself-backup-\([^"]*\).*/\1/p')
+    local type=$(printf '%s\n' "$line" | sed -n 's/.*backup create \([^ ]*\).*/\1/p')
+    local next_run=$(next_run_time "$frequency")
+
+    # Check if commented (disabled)
+    local status="Enabled"
+    if printf '%s\n' "$line" | grep -q "^#"; then
+      status="Disabled"
+    fi
+
+    cli_table_row "$frequency" "$type" "$next_run" "$status"
+  done <<<"$schedules"
+
+  cli_table_footer "Frequency" "Type" "Next Run" "Status"
+}
+
+schedule_toggle() {
+  local frequency="$1"
+  local enable="$2"
+
+  if [[ -z "$frequency" ]]; then
+    cli_error "Frequency required"
+    printf "Usage: nself backup schedule enable|disable <frequency>\n"
+    return 1
+  fi
+
+  local temp_cron=$(mktemp)
+  crontab -l 2>/dev/null >"$temp_cron"
+
+  if [[ "$enable" == "true" ]]; then
+    # Remove comment to enable
+    sed -i.bak "s/^#\(.*nself-backup-$frequency\)/\1/" "$temp_cron"
+    cli_success "Schedule '$frequency' enabled"
+  else
+    # Add comment to disable
+    sed -i.bak "s/^\([^#].*nself-backup-$frequency\)/#\1/" "$temp_cron"
+    cli_success "Schedule '$frequency' disabled"
+  fi
+
+  crontab "$temp_cron"
+  rm -f "$temp_cron" "$temp_cron.bak"
+}
+
+schedule_remove() {
+  local frequency="$1"
+
+  if [[ -z "$frequency" ]]; then
+    cli_error "Frequency required"
+    printf "Usage: nself backup schedule remove <frequency>\n"
+    return 1
+  fi
+
+  crontab -l 2>/dev/null | grep -v "nself-backup-$frequency" | crontab - 2>/dev/null
+
+  cli_success "Schedule '$frequency' removed"
+}
+
+schedule_status() {
+  cli_section "Backup Schedule Status"
+  printf "\n"
+
+  # Check if cron is available
+  if ! command -v crontab >/dev/null 2>&1; then
+    cli_warning "crontab not available on this system"
+    cli_info "Consider using systemd timers instead"
+    return 1
+  fi
+
+  # Check recent backup activity
+  if [[ -f "$BACKUP_DIR/backup.log" ]]; then
+    cli_info "Recent backup activity:"
+    printf "\n"
+    tail -n 20 "$BACKUP_DIR/backup.log" | while read -r line; do
+      cli_list_item "$line"
+    done
+  else
+    cli_info "No backup log found yet"
+  fi
+
+  # Show next scheduled runs
+  printf "\n"
+  cli_info "Next scheduled runs:"
+  printf "\n"
+
+  crontab -l 2>/dev/null | grep "nself-backup-" | while IFS= read -r line; do
+    local frequency=$(printf '%s\n' "$line" | sed -n 's/.*nself-backup-\([^"]*\).*/\1/p')
+    local next_run=$(next_run_time "$frequency")
+    cli_list_item "$frequency: $next_run"
+  done
+}
+
+next_run_time() {
+  local frequency="$1"
+  local now=$(date +%s)
+
+  case "$frequency" in
+    hourly)
+      date -d "@$((now + 3600))" "+%Y-%m-%d %H:00" 2>/dev/null || date -r $((now + 3600)) "+%Y-%m-%d %H:00"
+      ;;
+    daily)
+      date -d "tomorrow 02:00" "+%Y-%m-%d 02:00" 2>/dev/null || date -v +1d -v 2H -v 0M "+%Y-%m-%d 02:00" 2>/dev/null || echo "Tomorrow 02:00"
+      ;;
+    weekly)
+      echo "Next Sunday 02:00"
+      ;;
+    monthly)
+      echo "1st of next month 02:00"
+      ;;
+    *)
+      echo "Unknown"
+      ;;
+  esac
+}
+
+# =============================================================================
 # CLEAN SUBCOMMAND (from clean.sh)
 # =============================================================================
 
@@ -785,6 +1015,9 @@ main() {
       ;;
     clean)
       cmd_clean "$@"
+      ;;
+    schedule)
+      cmd_schedule "$@"
       ;;
     help | -h | --help)
       show_help

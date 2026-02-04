@@ -6,6 +6,36 @@ Step-by-step tutorials for learning nself features and use cases.
 
 These tutorials provide hands-on, step-by-step instructions for implementing specific features and patterns with nself. Each tutorial includes complete code examples and explanations.
 
+---
+
+## Featured Tutorials
+
+### Zero to Production in 15 Minutes ⚡
+**[ZERO-TO-PRODUCTION-15MIN.md](ZERO-TO-PRODUCTION-15MIN.md)**
+
+Deploy a complete production application from scratch in just 15 minutes. Includes SSL, monitoring, and automated backups.
+
+**Time:** 15 minutes | **Difficulty:** Beginner | **Cost:** $10-30/month
+
+---
+
+## Complete Tutorials
+
+### Building a Multi-Tenant SaaS
+**[BUILD-MULTI-TENANT-SAAS.md](BUILD-MULTI-TENANT-SAAS.md)**
+
+Comprehensive guide to building a production-ready SaaS application with:
+- Complete tenant isolation (RLS)
+- Stripe billing integration
+- Team management and invitations
+- Usage-based billing
+- Admin dashboard
+- Role-based permissions
+
+**Time:** 3-4 hours | **Difficulty:** Intermediate to Advanced
+
+---
+
 ## Quick Start Tutorials
 
 ### Use-Case Specific Quick Starts
@@ -34,6 +64,8 @@ These tutorials provide hands-on, step-by-step instructions for implementing spe
   - Multi-project support
   - Client billing
 
+---
+
 ## Feature Tutorials
 
 ### Integration Tutorials
@@ -56,9 +88,12 @@ These tutorials provide hands-on, step-by-step instructions for implementing spe
   - Multi-domain routing
   - Tenant isolation
 
+---
+
 ## Quick Reference
 
 - **[Quick Reference Guide](QUICK-REFERENCE.md)** - Command cheat sheet
+- **[Quick Reference Cards](../reference/QUICK-REFERENCE-CARDS.md)** - Printable cheat sheets
 
 ## Tutorial Format
 
@@ -74,13 +109,16 @@ Each tutorial follows this structure:
 
 | Tutorial | Level | Time | Prerequisites |
 |----------|-------|------|---------------|
-| SaaS Quick Start | Beginner | 30 min | Basic nself knowledge |
-| B2B Quick Start | Intermediate | 45 min | Multi-tenancy understanding |
-| Marketplace Quick Start | Advanced | 60 min | Database design, payment flows |
-| Agency Quick Start | Intermediate | 45 min | White-label concepts |
-| Stripe Integration | Intermediate | 30 min | Payment processing basics |
-| File Uploads | Beginner | 20 min | Storage understanding |
-| Custom Domains | Intermediate | 30 min | DNS knowledge |
+| **Zero to Production** | Beginner | 15 min | Basic command-line |
+| **Simple Blog** (Example 01) | Beginner | 30 min | Basic nself knowledge |
+| **Multi-Tenant SaaS** | Intermediate | 3-4 hours | Database design, GraphQL |
+| **SaaS Quick Start** | Beginner | 30 min | Basic nself knowledge |
+| **B2B Quick Start** | Intermediate | 45 min | Multi-tenancy understanding |
+| **Marketplace Quick Start** | Advanced | 60 min | Database design, payment flows |
+| **Agency Quick Start** | Intermediate | 45 min | White-label concepts |
+| **Stripe Integration** | Intermediate | 30 min | Payment processing basics |
+| **File Uploads** | Beginner | 20 min | Storage understanding |
+| **Custom Domains** | Intermediate | 30 min | DNS knowledge |
 
 ## Related Documentation
 
@@ -95,8 +133,13 @@ Each tutorial follows this structure:
 - **[Multi-App Setup](../guides/MULTI_APP_SETUP.md)** - Multiple applications
 
 ### Examples
-- **[Examples Index](../src/examples/README.md)** - Code examples
-- **[Features Overview](../src/examples/FEATURES-OVERVIEW.md)** - Feature examples
+- **[Examples Index](../../examples/README.md)** - Complete working examples
+- **[Simple Blog](../../examples/01-simple-blog/)** - Beginner example
+- **[SaaS Starter](../../examples/02-saas-starter/)** - Multi-tenant SaaS
+- **[E-commerce](../../examples/03-ecommerce/)** - Online store
+- **[Real-time Chat](../../examples/04-realtime-chat/)** - WebSocket app
+- **[API Backend](../../examples/05-api-backend/)** - REST + GraphQL
+- **[ML Platform](../../examples/06-ml-platform/)** - Machine learning
 
 ### Commands
 - **[Command Reference](../commands/COMMANDS.md)** - All commands
@@ -109,16 +152,62 @@ Have a great tutorial idea? We welcome contributions!
 
 See **[Contributing Guide](../contributing/CONTRIBUTING.md)** for details on submitting tutorials.
 
+## Learning Paths
+
+### Path 1: Complete Beginner
+1. **Zero to Production in 15 Minutes** - Get started fast
+2. **Simple Blog Example** - Learn the basics
+3. **SaaS Quick Start** - Build something real
+
+### Path 2: Building a SaaS
+1. **Multi-Tenant SaaS Tutorial** - Comprehensive guide
+2. **Stripe Integration** - Add billing
+3. **Custom Domains** - White-label features
+4. **SaaS Starter Example** - Complete template
+
+### Path 3: Building an API
+1. **API Backend Example** - REST + GraphQL
+2. **Database Workflow Guide** - Schema design
+3. **File Uploads** - Storage integration
+4. **Performance Optimization** - Scale your API
+
+### Path 4: Advanced Topics
+1. **Multi-Tenant SaaS** - Complex architecture
+2. **E-commerce Example** - Payments and orders
+3. **ML Platform Example** - Data science workflows
+4. **Real-time Chat Example** - WebSocket features
+
+---
+
+## Video Tutorials
+
+Coming soon! Subscribe to [YouTube](https://youtube.com/@nself) for updates.
+
+Planned videos:
+- Getting Started with nself (5 min)
+- Building Your First API (10 min)
+- Multi-Tenant Apps Made Easy (15 min)
+- Production Deployment Walkthrough (20 min)
+- Complete SaaS in 60 Minutes (60 min)
+
+---
+
 ## Upcoming Tutorials
 
+- Migrating from Supabase
+- Migrating from Firebase
+- Advanced Monitoring Setup
+- Production Deployment Best Practices
+- Custom Service Development
 - OAuth Authentication Deep Dive
-- Real-Time Chat Application
 - Multi-Language Support
 - Advanced Database Patterns
 - Performance Optimization
 - Security Best Practices
+- Kubernetes Deployment
+- CI/CD with GitHub Actions
 
 ---
 
 **Last Updated**: January 31, 2026
-**Version**: v0.9.6
+**Version**: v0.9.8

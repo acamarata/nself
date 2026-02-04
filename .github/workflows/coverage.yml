@@ -1,0 +1,201 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**/*.sh'
+      - 'src/tests/**'
+      - '.github/workflows/coverage.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/**/*.sh'
+      - 'src/tests/**'
+
+jobs:
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for trend analysis
+
+      - name: Install coverage tools
+        run: |
+          # Install kcov for bash coverage
+          sudo apt-get update
+          sudo apt-get install -y kcov
+
+          # Install lcov for coverage merging
+          sudo apt-get install -y lcov
+
+      - name: Install test dependencies
+        run: |
+          # Install bats for testing
+          sudo npm install -g bats
+
+          # Install jq for JSON processing
+          sudo apt-get install -y jq
+
+      - name: Run tests with coverage
+        run: |
+          chmod +x src/scripts/coverage/collect-coverage.sh
+          ./src/scripts/coverage/collect-coverage.sh
+        continue-on-error: false
+
+      - name: Generate coverage reports
+        run: |
+          chmod +x src/scripts/coverage/generate-coverage-report.sh
+          ./src/scripts/coverage/generate-coverage-report.sh
+
+      - name: Track coverage history
+        run: |
+          chmod +x src/scripts/coverage/track-coverage-history.sh
+          ./src/scripts/coverage/track-coverage-history.sh track
+
+      - name: Verify coverage requirements
+        run: |
+          chmod +x src/scripts/coverage/verify-coverage.sh
+          ./src/scripts/coverage/verify-coverage.sh
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/reports/coverage.json
+          fail_ci_if_error: true
+          verbose: true
+        continue-on-error: true
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: |
+            coverage/reports/
+            coverage/.coverage-history.json
+          retention-days: 30
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read coverage report
+            let coverage = { overall: { line: 0 } };
+            try {
+              const data = fs.readFileSync('./coverage/reports/coverage.json', 'utf8');
+              coverage = JSON.parse(data);
+            } catch (err) {
+              console.log('Could not read coverage.json');
+            }
+
+            // Read text report
+            let textReport = '';
+            try {
+              textReport = fs.readFileSync('./coverage/reports/coverage.txt', 'utf8');
+            } catch (err) {
+              console.log('Could not read coverage.txt');
+            }
+
+            // Create comment
+            const comment = `## 📊 Coverage Report
+
+            **Overall Coverage:** ${coverage.overall.line}%
+            **Target:** 100%
+            **Gap:** ${(100 - coverage.overall.line).toFixed(1)}%
+
+            <details>
+            <summary>Full Report</summary>
+
+            \`\`\`
+            ${textReport}
+            \`\`\`
+
+            </details>
+
+            ${coverage.overall.line >= 100 ? '🎉 **100% Coverage Achieved!**' : '⚠️ Coverage below target'}
+            `;
+
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Copy badge to docs
+          mkdir -p docs/badges
+          cp coverage/reports/badge.svg docs/badges/coverage.svg
+
+          # Commit badge update
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/badges/coverage.svg
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update coverage badge [skip ci]"
+          git push
+        continue-on-error: true
+
+      - name: Generate coverage diff
+        if: github.event_name == 'pull_request'
+        run: |
+          # Get base coverage
+          git checkout ${{ github.base_ref }}
+          BASE_COVERAGE=$(cat coverage/reports/coverage.json 2>/dev/null | jq -r '.overall.line' || echo "0")
+
+          # Get PR coverage
+          git checkout ${{ github.head_ref }}
+          PR_COVERAGE=$(cat coverage/reports/coverage.json 2>/dev/null | jq -r '.overall.line' || echo "0")
+
+          # Calculate diff
+          DIFF=$(awk "BEGIN {printf \"%.1f\", $PR_COVERAGE - $BASE_COVERAGE}")
+
+          echo "Coverage diff: $DIFF%"
+          echo "COVERAGE_DIFF=$DIFF" >> $GITHUB_ENV
+
+      - name: Fail if coverage decreased
+        if: github.event_name == 'pull_request' && env.COVERAGE_DIFF < 0
+        run: |
+          echo "❌ Coverage decreased by ${{ env.COVERAGE_DIFF }}%"
+          echo "Please add tests to maintain coverage"
+          exit 1
+
+  coverage-summary:
+    name: Coverage Summary
+    needs: coverage
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage/reports/
+
+      - name: Display summary
+        run: |
+          if [ -f coverage/reports/coverage.txt ]; then
+            cat coverage/reports/coverage.txt
+          else
+            echo "No coverage report available"
+          fi
+
+      - name: Check coverage status
+        run: |
+          if [ "${{ needs.coverage.result }}" == "success" ]; then
+            echo "✅ Coverage verification passed"
+            exit 0
+          else
+            echo "❌ Coverage verification failed"
+            exit 1
+          fi

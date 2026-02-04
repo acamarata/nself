@@ -925,7 +925,7 @@ pg_dump $DATABASE_URL \
 ## Next Steps
 
 - [Frontend Integration Guide](./OAUTH-FRONTEND-INTEGRATION.md)
-- [OAuth API Reference](../api/OAUTH-API.md)
+- [OAuth API Reference](../reference/api/OAUTH-API.md)
 - [OAuth Security Guide](./OAUTH-SECURITY.md)
 - [Multi-Tenant OAuth](./OAUTH-MULTI-TENANT.md)
 

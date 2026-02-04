@@ -294,7 +294,7 @@ EOF
   when: manual
   script:
   - |
-    ssh \$PROD_USER@\$PROD_HOST <<'EOF'
+    ssh \$PROD_USER@\$PROD_HOST << 'SSHEOF'
         cd /var/www/$project_name
         nself db backup create pre-deploy
         git fetch --tags
@@ -302,8 +302,8 @@ EOF
         nself build
         nself restart
         nself db migrate up || true
+SSHEOF
 EOF
-  EOF
 
   log_success "Created .gitlab-ci.yml"
 

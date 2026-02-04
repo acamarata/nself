@@ -25,7 +25,7 @@ Comprehensive guides for specific features and workflows.
 
 ### White-Label & Branding
 - **[White-Label Customization](WHITE-LABEL-CUSTOMIZATION.md)** - Complete customization guide
-- **[White-Label Quick Start](WHITELABEL-QUICKSTART.md)** - Get started with white-labeling
+- **[White-Label Quick Start](WHITELABEL-Quick-Start.md)** - Get started with white-labeling
 - **[Branding System](BRANDING-SYSTEM.md)** - Advanced branding features
 - **[Branding Quick Start](BRANDING-QUICK-START.md)** - Basic branding setup
 - **[Branding Function Reference](BRANDING-FUNCTION-REFERENCE.md)** - Branding API reference

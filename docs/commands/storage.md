@@ -520,7 +520,7 @@ chmod +x /usr/local/bin/mc
 - [File Upload Security](../security/file-upload-security.md)
 - [Quick Start Tutorial](../tutorials/file-uploads-quickstart.md)
 - [MinIO Service](../services/minio.md)
-- [GraphQL API](../api/graphql-schema.md)
+- [GraphQL API](../reference/api/graphql-schema.md)
 
 ## Related Commands
 

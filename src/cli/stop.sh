@@ -9,6 +9,7 @@ SCRIPT_DIR="$CLI_SCRIPT_DIR"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
+source "$CLI_SCRIPT_DIR/../lib/utils/ux-standards.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 
@@ -60,8 +61,10 @@ cmd_stop() {
         return 0
         ;;
       -*)
-        log_error "Unknown option: $1"
-        show_down_help
+        ux_error_invalid_input \
+          "$1" \
+          "valid option (see --help)" \
+          "--volumes, --verbose, --help"
         return 1
         ;;
       *)
@@ -79,9 +82,11 @@ cmd_stop() {
 
   # Check if docker-compose.yml exists
   if [[ ! -f "docker-compose.yml" ]]; then
-    log_error "docker-compose.yml not found"
-    log_info "No services to stop"
-    return 0
+    ux_error \
+      "docker-compose.yml not found in current directory" \
+      "Run 'nself build' to generate configuration" \
+      "Current directory: $(pwd)"
+    return 1
   fi
 
   # Load environment
@@ -178,8 +183,7 @@ cmd_stop() {
   fi
 
   # Ensure Docker is running
-  if ! docker info >/dev/null 2>&1; then
-    log_error "Docker is not running"
+  if ! ux_validate_docker; then
     return 1
   fi
 

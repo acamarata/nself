@@ -282,4 +282,4 @@ go mod download
 
 - [Complete Guide](../guides/SERVICE-CODE-GENERATION.md)
 - [Template Reference](../reference/SERVICE-TEMPLATES.md)
-- [Examples](../src/src/examples/REALTIME-CHAT-SERVICE.md)
+- [Examples](../src/examples/REALTIME-CHAT-SERVICE.md)

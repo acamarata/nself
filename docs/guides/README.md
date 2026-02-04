@@ -10,10 +10,10 @@ Essential guides for new users:
 
 | Guide | Description |
 |-------|-------------|
-| **[Quick Start](Quick-Start.md)** | Get running in 5 minutes |
-| **[Installation](Installation.md)** | Detailed installation guide |
+| **[Quick Start](../getting-started/Quick-Start.md)** | Get running in 5 minutes |
+| **[Installation](../getting-started/Installation.md)** | Detailed installation guide |
 | **[Database Workflow](DATABASE-WORKFLOW.md)** | DBML to production in one command |
-| **[FAQ](FAQ.md)** | Frequently asked questions |
+| **[FAQ](../getting-started/FAQ.md)** | Frequently asked questions |
 
 ---
 
@@ -36,7 +36,7 @@ Master the essential workflows:
 ### Security & Production
 - **[Security](SECURITY.md)** - Production security best practices
 - **[SSL/TLS Setup](../security/SSL-SETUP.md)** - Certificate management
-- **[Secrets Management](../security/SECRETS-MANAGEMENT.md)** - Handling sensitive data
+- **[Secrets Management](../configuration/SECRETS-MANAGEMENT.md)** - Handling sensitive data
 
 ---
 
@@ -70,7 +70,7 @@ When things go wrong:
 ## By Topic
 
 ### Development
-- [Quick Start](Quick-Start.md)
+- [Quick Start](../getting-started/Quick-Start.md)
 - [Database Workflow](DATABASE-WORKFLOW.md)
 - [Service Communication](SERVICE-TO-SERVICE-COMMUNICATION.md)
 - [Examples](EXAMPLES.md)
@@ -94,17 +94,17 @@ When things go wrong:
 ### Security
 - [Security](SECURITY.md)
 - [SSL/TLS Setup](../security/SSL-SETUP.md)
-- [Secrets Management](../security/SECRETS-MANAGEMENT.md)
+- [Secrets Management](../configuration/SECRETS-MANAGEMENT.md)
 
 ---
 
 ## Learning Paths
 
 ### New to nself?
-1. [Quick Start](Quick-Start.md)
-2. [Installation](Installation.md)
+1. [Quick Start](../getting-started/Quick-Start.md)
+2. [Installation](../getting-started/Installation.md)
 3. [Database Workflow](DATABASE-WORKFLOW.md)
-4. [FAQ](FAQ.md)
+4. [FAQ](../getting-started/FAQ.md)
 
 ### Building an Application?
 1. [Database Workflow](DATABASE-WORKFLOW.md)

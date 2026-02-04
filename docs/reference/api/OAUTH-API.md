@@ -490,7 +490,7 @@ All OAuth flows use state parameter for CSRF protection:
 ## See Also
 
 - [OAuth Setup Guide](../guides/OAUTH-SETUP.md)
-- [OAuth CLI Reference](../cli/oauth.md)
+- [OAuth CLI Reference](../commands/oauth.md)
 - [Frontend Integration Guide](../guides/OAUTH-FRONTEND-INTEGRATION.md)
 
 ---

@@ -98,7 +98,7 @@
 
 #### White-Label System
 - [ ] `docs/features/WHITELABEL-SYSTEM.md`
-- [ ] `docs/guides/WHITELABEL-QUICKSTART.md`
+- [ ] `docs/guides/WHITELABEL-Quick-Start.md`
 - [ ] `docs/guides/WHITE-LABEL-CUSTOMIZATION.md`
 - [ ] `docs/troubleshooting/WHITE-LABEL-TROUBLESHOOTING.md`
 - [ ] `docs/architecture/WHITE-LABEL-ARCHITECTURE.md`

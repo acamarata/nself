@@ -931,7 +931,7 @@ nself migrate from-supabase realtime
 ## See Also
 
 - [Real-Time Features Guide](../guides/REALTIME-FEATURES.md)
-- [WebSocket API Reference](../api/WEBSOCKET-API.md)
+- [WebSocket API Reference](../reference/api/WEBSOCKET-API.md)
 - [Database Subscriptions](../guides/DATABASE-SUBSCRIPTIONS.md)
 - [Presence Tracking](../guides/PRESENCE-TRACKING.md)
 - [nself status](./STATUS.md)

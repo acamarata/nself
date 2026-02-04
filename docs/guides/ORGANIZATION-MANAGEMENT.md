@@ -1441,10 +1441,10 @@ const syncFromHR = async () => {
 
 ## Related Documentation
 
-- [Multi-Tenant Guide](/docs/guides/MULTI-TENANT.md) - Tenant isolation and management
-- [Database Workflow Guide](/docs/guides/DATABASE-WORKFLOW.md) - Database operations
-- [Security Guide](/docs/guides/SECURITY.md) - Security best practices
-- [Deployment Architecture](/docs/guides/DEPLOYMENT-ARCHITECTURE.md) - Production setup
+- [Multi-Tenant Guide](guides/MULTI-TENANT.md) - Tenant isolation and management
+- [Database Workflow Guide](guides/DATABASE-WORKFLOW.md) - Database operations
+- [Security Guide](guides/SECURITY.md) - Security best practices
+- [Deployment Architecture](guides/DEPLOYMENT-ARCHITECTURE.md) - Production setup
 
 ## Troubleshooting
 

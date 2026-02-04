@@ -11,7 +11,7 @@ Welcome to the nself migration guides! These comprehensive guides will help you 
 - **Time**: 4-8 hours
 - **Compatibility**: 95% (same core stack)
 
-Nhost and nself share the same technology stack (PostgreSQL, Hasura, nHost Auth), making this the easiest migration path. The main differences are in deployment model and management interface.
+nself provides complete feature parity with Nhost (PostgreSQL, Hasura GraphQL, Auth, Storage), making this the easiest migration path. The main difference is deployment: Nhost is cloud-hosted, nself is self-hosted with full control.
 
 **Key Steps**:
 - Database export/import (straightforward)

@@ -298,7 +298,7 @@ Found an issue in a tutorial? Have a suggestion?
 **Already using nself?** Skip to:
 - [Integration Guides](#integration-guides)
 - [Advanced Topics](../guides/)
-- [API Reference](../api/)
+- [API Reference](../reference/api/)
 
 ---
 

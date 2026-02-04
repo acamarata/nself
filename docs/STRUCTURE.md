@@ -41,7 +41,7 @@ docs/
 │   ├── OAUTH-QUICK-START.md
 │   ├── OAUTH-COMPLETE-FLOWS.md
 │   ├── WHITE-LABEL-CUSTOMIZATION.md
-│   ├── WHITELABEL-QUICKSTART.md
+│   ├── WHITELABEL-Quick-Start.md
 │   ├── domain-selection-guide.md
 │   ├── file-upload-examples.md
 │   ├── file-upload-pipeline.md

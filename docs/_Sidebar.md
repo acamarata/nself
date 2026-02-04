@@ -1,4 +1,4 @@
-# nself v0.9.6
+# nself v0.9.8
 
 ### [Home](Home)
 ### [Documentation](README)
@@ -85,7 +85,7 @@
 - [Optional (7)](services/SERVICES_OPTIONAL)
 - [Monitoring (10)](services/MONITORING-BUNDLE)
 - [Custom Services](services/SERVICES_CUSTOM)
-- [Templates](services/SERVICE_TEMPLATES)
+- [Templates](reference/SERVICE_TEMPLATES)
 
 ---
 
@@ -131,9 +131,9 @@
 
 ## Examples
 
-- [Examples Index](src/examples/INDEX)
-- [Features Overview](src/examples/FEATURES-OVERVIEW)
-- [Real-Time Chat](src/examples/REALTIME-CHAT-SERVICE)
+- [Examples Index](examples/INDEX)
+- [Features Overview](examples/FEATURES-OVERVIEW)
+- [Real-Time Chat](examples/REALTIME-CHAT-SERVICE)
 - [Deployment Examples](deployment/examples/README)
 
 ---
@@ -149,9 +149,15 @@
 
 ---
 
-## API Reference
+## Reference
 
-- [API Index](reference/api/README)
+- [Reference Index](reference/INDEX)
+- [Command Reference](reference/COMMAND-REFERENCE)
+- [Quick Reference Cards](reference/QUICK-REFERENCE-CARDS)
+- [Service Scaffolding](reference/SERVICE-SCAFFOLDING-CHEATSHEET)
+- [Feature Comparison](reference/FEATURE-COMPARISON)
+
+### API Reference
 - [GraphQL API](architecture/API)
 - [Billing API](reference/api/BILLING-API)
 - [OAuth API](reference/api/OAUTH-API)
@@ -179,8 +185,26 @@
 
 - [Security Index](security/INDEX)
 - [Security Audit](security/SECURITY-AUDIT)
+- [Best Practices](security/SECURITY-BEST-PRACTICES)
 - [SQL Safety](security/SQL-SAFETY)
-- [Input Validation](security/INPUT_VALIDATION_SECURITY_AUDIT)
+- [Rate Limiting](security/RATE-LIMITING)
+- [Compliance](security/COMPLIANCE-GUIDE)
+
+---
+
+## Performance
+
+- [Optimization Guide](performance/PERFORMANCE-OPTIMIZATION-V0.9.8)
+- [Benchmarks](development/PERFORMANCE-BENCHMARKS)
+
+---
+
+## Troubleshooting
+
+- [Troubleshooting Guide](troubleshooting/README)
+- [Error Messages](troubleshooting/ERROR-MESSAGES)
+- [Billing Issues](troubleshooting/BILLING-TROUBLESHOOTING)
+- [White-Label Issues](troubleshooting/WHITE-LABEL-TROUBLESHOOTING)
 
 ---
 
@@ -213,7 +237,7 @@
 
 - [Release Index](releases/INDEX)
 - [Roadmap](releases/ROADMAP)
-- [v0.9.6](releases/v0.9.6) - Current
+- [v0.9.8](releases/v0.9.8) - Current
 - [v0.9.0](releases/v0.9.0) - Multi-Tenant
 - [v0.4.8](releases/v0.4.8) - Plugins
 - [Changelog](releases/CHANGELOG)

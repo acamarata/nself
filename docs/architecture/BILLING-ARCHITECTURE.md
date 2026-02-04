@@ -3831,9 +3831,9 @@ The nself billing system provides a complete, production-ready solution for usag
 - Quota Enforcement: `/src/lib/billing/quotas.sh`
 
 **Related Documentation:**
-- [Billing & Usage Guide](/docs/guides/BILLING-AND-USAGE.md)
-- [Billing API Reference](/docs/api/BILLING-API.md)
-- [Troubleshooting Guide](/docs/troubleshooting/BILLING-TROUBLESHOOTING.md)
+- [Billing & Usage Guide](guides/BILLING-AND-USAGE.md)
+- [Billing API Reference](api/BILLING-API.md)
+- [Troubleshooting Guide](troubleshooting/BILLING-TROUBLESHOOTING.md)
 
 ---
 

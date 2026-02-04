@@ -457,7 +457,7 @@ nself oauth test google
 ## See Also
 
 - [OAuth Setup Guide](../guides/OAUTH-SETUP.md)
-- [OAuth API Reference](../api/OAUTH-API.md)
+- [OAuth API Reference](../reference/api/OAUTH-API.md)
 - [Frontend Integration](../guides/OAUTH-FRONTEND-INTEGRATION.md)
 - [nself build](./build.md)
 - [nself start](./start.md)

@@ -3009,11 +3009,11 @@ df -h /var/lib/nself/storage
 
 ## Additional Resources
 
-- [White-Label Architecture Documentation](/docs/architecture/WHITE-LABEL-ARCHITECTURE.md)
-- [Multi-Tenant Guide](/docs/guides/MULTI-TENANT-SETUP.md)
-- [Security Best Practices](/docs/security/BEST-PRACTICES.md)
-- [Performance Optimization](/docs/performance/OPTIMIZATION.md)
-- [API Documentation](/docs/api/BRANDING-API.md)
+- [White-Label Architecture Documentation](architecture/WHITE-LABEL-ARCHITECTURE.md)
+- [Multi-Tenant Guide](guides/MULTI-TENANT-SETUP.md)
+- [Security Best Practices](security/BEST-PRACTICES.md)
+- [Performance Optimization](performance/OPTIMIZATION.md)
+- [API Documentation](api/BRANDING-API.md)
 
 ---
 

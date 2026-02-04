@@ -30,6 +30,9 @@ node_modules/
 *.swo
 *~
 
+# Coverage reports (stored in .nself/coverage/)
+*.coverage
+
 # Build artifacts
 dist/
 /build/
