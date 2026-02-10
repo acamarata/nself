@@ -97,13 +97,13 @@ security::check_required_passwords() {
     if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
       # Auto-generate for dev
       export POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Auto-generated for dev\n"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Auto-generated for dev\n" >&2
     else
-      printf "  ${COLOR_RED}✗${COLOR_RESET} POSTGRES_PASSWORD: ${COLOR_RED}Not set${COLOR_RESET}\n"
+      printf "  ${COLOR_RED}✗${COLOR_RESET} POSTGRES_PASSWORD: ${COLOR_RED}Not set${COLOR_RESET}\n" >&2
       errors=$((errors + 1))
     fi
   else
-    printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Set\n"
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Set\n" >&2
   fi
 
   # Redis password (required if Redis enabled)
@@ -111,13 +111,13 @@ security::check_required_passwords() {
     if [[ -z "${REDIS_PASSWORD:-}" ]]; then
       if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
         export REDIS_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Auto-generated for dev\n"
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Auto-generated for dev\n" >&2
       else
-        printf "  ${COLOR_RED}✗${COLOR_RESET} REDIS_PASSWORD: ${COLOR_RED}Not set (Redis is enabled)${COLOR_RESET}\n"
+        printf "  ${COLOR_RED}✗${COLOR_RESET} REDIS_PASSWORD: ${COLOR_RED}Not set (Redis is enabled)${COLOR_RESET}\n" >&2
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Set\n"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Set\n" >&2
     fi
   fi
 
@@ -126,13 +126,13 @@ security::check_required_passwords() {
     if [[ -z "${HASURA_GRAPHQL_ADMIN_SECRET:-}" ]]; then
       if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
         export HASURA_GRAPHQL_ADMIN_SECRET=$(openssl rand -base64 32 | tr -d '/+=' | head -c 44)
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Auto-generated for dev\n"
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Auto-generated for dev\n" >&2
       else
-        printf "  ${COLOR_RED}✗${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: ${COLOR_RED}Not set${COLOR_RESET}\n"
+        printf "  ${COLOR_RED}✗${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: ${COLOR_RED}Not set${COLOR_RESET}\n" >&2
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Set\n"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Set\n" >&2
     fi
   fi
 
@@ -141,13 +141,13 @@ security::check_required_passwords() {
     if [[ -z "${MEILISEARCH_MASTER_KEY:-}" ]] && [[ -z "${SEARCH_API_KEY:-}" ]]; then
       if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
         export MEILISEARCH_MASTER_KEY=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Auto-generated for dev\n"
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Auto-generated for dev\n" >&2
       else
-        printf "  ${COLOR_RED}✗${COLOR_RESET} MEILISEARCH_MASTER_KEY: ${COLOR_RED}Not set (MeiliSearch is enabled)${COLOR_RESET}\n"
+        printf "  ${COLOR_RED}✗${COLOR_RESET} MEILISEARCH_MASTER_KEY: ${COLOR_RED}Not set (MeiliSearch is enabled)${COLOR_RESET}\n" >&2
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Set\n"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Set\n" >&2
     fi
   fi
 
@@ -156,13 +156,13 @@ security::check_required_passwords() {
     if [[ -z "${MINIO_ROOT_PASSWORD:-}" ]]; then
       if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
         export MINIO_ROOT_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Auto-generated for dev\n"
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Auto-generated for dev\n" >&2
       else
-        printf "  ${COLOR_RED}✗${COLOR_RESET} MINIO_ROOT_PASSWORD: ${COLOR_RED}Not set (MinIO is enabled)${COLOR_RESET}\n"
+        printf "  ${COLOR_RED}✗${COLOR_RESET} MINIO_ROOT_PASSWORD: ${COLOR_RED}Not set (MinIO is enabled)${COLOR_RESET}\n" >&2
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Set\n"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Set\n" >&2
     fi
   fi
 
@@ -178,20 +178,20 @@ security::check_port_bindings() {
     return 0
   fi
 
-  printf "\n  ${COLOR_BOLD}Port Bindings:${COLOR_RESET}\n"
+  printf "\n  ${COLOR_BOLD}Port Bindings:${COLOR_RESET}\n" >&2
 
   # Check each sensitive port
   for port in $SENSITIVE_PORTS; do
     # Look for ports exposed without 127.0.0.1 prefix
     # Pattern: "PORT:PORT" without "127.0.0.1:"
     if grep -E "^\s+-\s*\"?${port}:${port}\"?" docker-compose.yml 2>/dev/null | grep -v "127.0.0.1" >/dev/null 2>&1; then
-      printf "  ${COLOR_RED}✗${COLOR_RESET} Port %s: Bound to 0.0.0.0 (should be 127.0.0.1)\n" "$port"
+      printf "  ${COLOR_RED}✗${COLOR_RESET} Port %s: Bound to 0.0.0.0 (should be 127.0.0.1)\n" "$port" >&2
       errors=$((errors + 1))
     elif grep -E "^\s+-\s*\"?0\.0\.0\.0:${port}:${port}\"?" docker-compose.yml >/dev/null 2>&1; then
-      printf "  ${COLOR_RED}✗${COLOR_RESET} Port %s: Explicitly bound to 0.0.0.0\n" "$port"
+      printf "  ${COLOR_RED}✗${COLOR_RESET} Port %s: Explicitly bound to 0.0.0.0\n" "$port" >&2
       errors=$((errors + 1))
     elif grep "127.0.0.1.*${port}:${port}" docker-compose.yml >/dev/null 2>&1; then
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} Port %s: Localhost only\n" "$port"
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} Port %s: Localhost only\n" "$port" >&2
     fi
   done
 
@@ -203,7 +203,7 @@ security::check_insecure_values() {
   local errors=0
   local insecure_patterns="password changeme secret admin 12345 qwerty default"
 
-  printf "\n  ${COLOR_BOLD}Insecure Values:${COLOR_RESET}\n"
+  printf "\n  ${COLOR_BOLD}Insecure Values:${COLOR_RESET}\n" >&2
 
   # Check each security-sensitive variable
   for var in POSTGRES_PASSWORD HASURA_GRAPHQL_ADMIN_SECRET AUTH_JWT_SECRET REDIS_PASSWORD MINIO_ROOT_PASSWORD; do
@@ -214,7 +214,7 @@ security::check_insecure_values() {
 
       for pattern in $insecure_patterns; do
         if [[ "$value_lower" == "$pattern" ]]; then
-          printf "  ${COLOR_RED}✗${COLOR_RESET} %s: Uses insecure value '%s'\n" "$var" "$pattern"
+          printf "  ${COLOR_RED}✗${COLOR_RESET} %s: Uses insecure value '%s'\n" "$var" "$pattern" >&2
           errors=$((errors + 1))
           break
         fi
@@ -223,7 +223,7 @@ security::check_insecure_values() {
   done
 
   if [[ $errors -eq 0 ]]; then
-    printf "  ${COLOR_GREEN}✓${COLOR_RESET} No insecure default values detected\n"
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} No insecure default values detected\n" >&2
   fi
 
   echo "$errors"
