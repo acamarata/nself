@@ -2,11 +2,11 @@
 
 # pre-command.sh - Pre-command validation and setup hooks
 
-# Source utilities
-SHARED_DIR="$(dirname "${BASH_SOURCE[0]}")/.."
-source "$SHARED_DIR/utils/display.sh" 2>/dev/null || true
-source "$SHARED_DIR/utils/docker.sh" 2>/dev/null || true
-source "$SHARED_DIR/utils/env.sh" 2>/dev/null || true
+# Source utilities (namespaced to avoid clobbering caller globals)
+_HOOKS_SHARED_DIR="$(dirname "${BASH_SOURCE[0]}")/.."
+source "$_HOOKS_SHARED_DIR/utils/display.sh" 2>/dev/null || true
+source "$_HOOKS_SHARED_DIR/utils/docker.sh" 2>/dev/null || true
+source "$_HOOKS_SHARED_DIR/utils/env.sh" 2>/dev/null || true
 
 # Pre-command validation
 pre_command() {
@@ -18,7 +18,7 @@ pre_command() {
   check_not_in_nself_repo "$command"
 
   # Commands that don't need project initialization
-  local no_init_commands="init help version update"
+  local no_init_commands="init help version update reset checklist doctor completion"
 
   # Check if project is initialized (unless exempt)
   if [[ ! " $no_init_commands " =~ " $command " ]]; then
@@ -60,7 +60,7 @@ check_not_in_nself_repo() {
   fi
 
   # Check for telltale signs we're in the nself repo root (not subdirectories)
-  if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "docs" ]] && [[ -f "install.sh" ]]; then
+  if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "src/cli" ]] && [[ -f "install.sh" ]]; then
     log_warning "You appear to be in the nself repository root!"
     log_error "nself commands should be run in your project directory, not the nself source root."
     echo ""
@@ -77,7 +77,7 @@ check_not_in_nself_repo() {
 # Ensure required directories exist
 ensure_directories() {
   # Skip if we're in nself repo (safety check)
-  if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "docs" ]]; then
+  if [[ -f "bin/nself" ]] && [[ -d "src/lib" ]] && [[ -d "src/cli" ]]; then
     return 0
   fi
 

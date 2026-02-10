@@ -248,7 +248,7 @@ Tests must:
 
 ## Related Documentation
 
-- `/docs/TESTING.md` - Testing guidelines
-- `/docs/STATE-MACHINE.md` - Service state documentation
+- `/.wiki/testing/README.md` - Testing guidelines
+- `/.wiki/development/ERROR-HANDLING.md` - Error handling and state transitions
 - `/src/tests/unit/` - Unit tests
 - `/src/tests/integration/` - Integration tests

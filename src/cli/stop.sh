@@ -350,6 +350,13 @@ export -f cmd_stop
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_down_help
+      exit 0
+    fi
+  done
   pre_command "stop" || exit $?
   cmd_stop "$@"
   exit_code=$?

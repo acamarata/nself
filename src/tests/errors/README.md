@@ -185,6 +185,6 @@ Tests verify:
 
 ## Related Documentation
 
-- `/docs/ERROR-HANDLING.md` - Error handling guidelines
+- `/.wiki/development/ERROR-HANDLING.md` - Error handling guidelines
 - `/src/lib/utils/error-messages.sh` - Error message library
 - `/src/tests/unit/test-error-messages.sh` - Unit tests for error library

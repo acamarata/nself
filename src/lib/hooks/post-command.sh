@@ -2,9 +2,9 @@
 
 # post-command.sh - Post-command cleanup and reporting hooks
 
-# Source utilities
-SHARED_DIR="$(dirname "${BASH_SOURCE[0]}")/.."
-source "$SHARED_DIR/utils/display.sh" 2>/dev/null || true
+# Source utilities (namespaced to avoid clobbering caller globals)
+_HOOKS_SHARED_DIR="$(dirname "${BASH_SOURCE[0]}")/.."
+source "$_HOOKS_SHARED_DIR/utils/display.sh" 2>/dev/null || true
 
 # Post-command cleanup
 post_command() {

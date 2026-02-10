@@ -366,8 +366,11 @@ validate_file_path() {
     return 0
   fi
 
-  # Expand path
-  path=$(eval echo "$path")
+  # SECURITY: Expand path safely - only handle ~ and $HOME, not arbitrary commands
+  # Replace leading ~ with $HOME, and expand known env vars without eval
+  path="${path/#\~/$HOME}"
+  path="${path/\$HOME/$HOME}"
+  path="${path/\${HOME\}/$HOME}"
 
   if [[ ! -e "$path" ]]; then
     VALIDATION_WARNINGS+=("$var_name references non-existent path: $path")

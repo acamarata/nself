@@ -5,16 +5,16 @@
 # POSIX-compliant, no Bash 4+ features, cross-platform compatible
 
 
-# Get the directory where this script is located
+# Get the directory where this script is located (namespaced to avoid clobbering caller globals)
 WHITELABEL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_ROOT="$(dirname "$WHITELABEL_LIB_DIR")"
+_WHITELABEL_LIB_ROOT="$(dirname "$WHITELABEL_LIB_DIR")"
 
 # Source dependencies
-source "$LIB_ROOT/utils/display.sh" 2>/dev/null || true
-source "$LIB_ROOT/utils/platform-compat.sh" 2>/dev/null || true
+source "$_WHITELABEL_LIB_ROOT/utils/display.sh" 2>/dev/null || true
+source "$_WHITELABEL_LIB_ROOT/utils/platform-compat.sh" 2>/dev/null || true
 
 # Domain configuration
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$LIB_ROOT/../.." && pwd)}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$_WHITELABEL_LIB_ROOT/../.." && pwd)}"
 readonly DOMAINS_DIR="${DOMAINS_DIR:-${PROJECT_ROOT}/branding/domains}"
 readonly DOMAINS_CONFIG="${DOMAINS_CONFIG:-${DOMAINS_DIR}/domains.json}"
 readonly SSL_DIR="${SSL_DIR:-${DOMAINS_DIR}/ssl}"

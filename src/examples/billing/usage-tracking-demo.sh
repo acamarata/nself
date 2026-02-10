@@ -433,7 +433,7 @@ main() {
     printf "║  ${GREEN}✓${NC} All 10 demos executed successfully                        ║\n"
     printf "║                                                                ║\n"
     printf "║  For full documentation, see:                                 ║\n"
-    printf "║  docs/billing/USAGE-TRACKING.md                               ║\n"
+    printf "║  .wiki/guides/USAGE-TRACKING.md                                ║\n"
     printf "║                                                                ║\n"
     printf "╚════════════════════════════════════════════════════════════════╝\n"
     printf "\n"

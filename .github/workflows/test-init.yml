@@ -84,7 +84,8 @@ jobs:
                 echo "Skipping wizard test - templates directory not found"
                 exit 0
               fi
-              # Project name, environment mode
+              # ADVISORY: Wizard mode requires interactive TTY input - piped stdin is a
+              # best-effort simulation that may not complete fully in CI environments
               # Use gtimeout on macOS if available, otherwise skip timeout
               if command -v timeout >/dev/null 2>&1; then
                 printf "TestProject\ndev\n" | timeout 30 bash "${{ github.workspace }}/src/cli/init.sh" --wizard 2>/dev/null || true
@@ -93,7 +94,7 @@ jobs:
               else
                 printf "TestProject\ndev\n" | bash "${{ github.workspace }}/src/cli/init.sh" --wizard 2>/dev/null || true
               fi
-              # Verify basic files created (wizard might not work fully in CI)
+              # ADVISORY: Wizard may not produce all files in CI - accept partial success
               test -f .env || test -f .env.example || exit 0
               ;;
             force)

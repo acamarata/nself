@@ -1,7 +1,0 @@
-{
-  "environment": "development",
-  "debug": true,
-  "hot_reload": true,
-  "mock_external_apis": true,
-  "performance_profiling": false
-}

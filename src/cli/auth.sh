@@ -176,7 +176,7 @@ EXAMPLES:
   # Trust local certificates
   nself auth ssl trust
 
-For more information, see: docs/cli/auth.md
+For more information, see: .wiki/commands/AUTH.md
 EOF
 }
 

@@ -5,7 +5,7 @@
 #
 # NOTE: This script must be self-contained since it runs before nself is installed.
 #       Output functions mirror those in src/lib/utils/display.sh but are
-#       duplicated here for independence. See docs/OUTPUT_FORMATTING.MD for standards.
+#       duplicated here for independence. See .wiki/OUTPUT_FORMATTING.MD for standards.
 
 set -e
 
@@ -555,51 +555,111 @@ check_prerequisites() {
 # DOWNLOAD FUNCTIONS
 # ========================================================================
 
+verify_checksum() {
+  local file="$1"
+  local expected_checksum="$2"
+
+  if [[ -z "$expected_checksum" ]]; then
+    echo_warning "No checksum available for verification"
+    return 1
+  fi
+
+  local actual_checksum=""
+  if command_exists sha256sum; then
+    actual_checksum=$(sha256sum "$file" | awk '{print $1}')
+  elif command_exists shasum; then
+    actual_checksum=$(shasum -a 256 "$file" | awk '{print $1}')
+  else
+    echo_warning "No SHA-256 tool found (sha256sum or shasum) - skipping verification"
+    return 1
+  fi
+
+  if [[ "$actual_checksum" == "$expected_checksum" ]]; then
+    echo_success "Checksum verification passed (SHA-256)"
+    return 0
+  else
+    echo_error "Checksum verification FAILED!"
+    echo_error "  Expected: $expected_checksum"
+    echo_error "  Actual:   $actual_checksum"
+    echo_error "The downloaded file may be corrupted or tampered with."
+    echo_error "Aborting installation for safety."
+    return 2
+  fi
+}
+
 download_nself() {
   echo_header "Downloading nself"
-  
+
   echo_info "Version: $INSTALL_VERSION"
   echo_info "Target: $TEMP_DIR"
-  
+
   local tar_url=""
-  
+  local checksum_url=""
+  local archive_file="$TEMP_DIR/nself-archive.tar.gz"
+
   # Determine download URL based on version
   if [[ "$INSTALL_VERSION" == "main" ]] || [[ "$INSTALL_VERSION" == "latest" ]]; then
-    # Development version - full source from GitHub
     tar_url="$REPO_URL/archive/refs/heads/main.tar.gz"
     echo_info "Installing development version (full source)"
   elif [[ "$INSTALL_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    # Release version - use minimal release tarball
-    local version="${INSTALL_VERSION#v}"  # Remove 'v' prefix if present
+    local version="${INSTALL_VERSION#v}"
     tar_url="${REPO_URL}/releases/download/v${version}/nself-v${version}.tar.gz"
+    checksum_url="${REPO_URL}/releases/download/v${version}/nself-v${version}.tar.gz.sha256"
     echo_info "Installing release version (minimal runtime files)"
   else
-    # Try as branch/tag - full source
     tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
     echo_info "Installing from tag/branch (full source)"
   fi
-  
-  # Download tarball
-  (
-    if curl -fsSL "$tar_url" | tar -xz -C "$TEMP_DIR" --strip-components=1; then
-      true
-    else
-      # Fallback for release versions if release tarball doesn't exist
-      if [[ "$INSTALL_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo_warning "Release tarball not found, falling back to source archive..."
-        tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
-        curl -fsSL "$tar_url" | tar -xz -C "$TEMP_DIR" --strip-components=1
-      else
-        false
+
+  # Download archive to file first (for integrity verification)
+  echo_info "Downloading archive..."
+  if ! curl -fsSL "$tar_url" -o "$archive_file" 2>/dev/null; then
+    # Fallback for release versions
+    if [[ "$INSTALL_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo_warning "Release tarball not found, falling back to source archive..."
+      tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
+      checksum_url=""
+      if ! curl -fsSL "$tar_url" -o "$archive_file" 2>/dev/null; then
+        echo_error "Failed to download nself from $tar_url"
+        exit 1
       fi
+    else
+      echo_error "Failed to download nself from $tar_url"
+      exit 1
     fi
-  ) &
-  
-  if show_spinner $! "Downloading nself"; then
-    echo_success "Downloaded successfully"
-    return 0
+  fi
+
+  echo_success "Downloaded archive"
+
+  # Verify integrity if checksum is available
+  if [[ -n "$checksum_url" ]]; then
+    echo_info "Verifying artifact integrity..."
+    local expected_checksum
+    expected_checksum=$(curl -fsSL "$checksum_url" 2>/dev/null | awk '{print $1}')
+
+    if [[ -n "$expected_checksum" ]]; then
+      verify_checksum "$archive_file" "$expected_checksum"
+      local verify_result=$?
+      if [[ $verify_result -eq 2 ]]; then
+        rm -f "$archive_file"
+        exit 1
+      fi
+    else
+      echo_warning "Checksum file not available - skipping verification"
+      echo_warning "For maximum security, verify the download manually"
+    fi
   else
-    echo_error "Failed to download nself from $tar_url"
+    echo_info "No checksum endpoint for this version type - skipping verification"
+  fi
+
+  # Extract verified archive
+  echo_info "Extracting archive..."
+  if tar -xzf "$archive_file" -C "$TEMP_DIR" --strip-components=1; then
+    echo_success "Archive extracted successfully"
+    rm -f "$archive_file"
+  else
+    echo_error "Failed to extract archive"
+    rm -f "$archive_file"
     exit 1
   fi
 }
@@ -629,7 +689,7 @@ download_nself() {
 #   Total: ~13.1MB (for development and testing)
 #
 # EXCLUDED from both modes:
-#   - docs/          : Documentation (available online)
+#   - .wiki/          : Documentation (available online)
 #   - .github/       : CI/CD workflows
 #   - Hidden dirs    : Git metadata, IDE configs
 #

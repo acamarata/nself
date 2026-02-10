@@ -282,7 +282,7 @@ OUTPUT
   printf "  ${GREEN}✓${NC} Encryption for secure backups\n"
   printf "\n"
   printf "For full documentation, see:\n"
-  printf "  ${CYAN}docs/configuration/SECRETS-MANAGEMENT.md${NC}\n"
+  printf "  ${CYAN}.wiki/configuration/SECRETS-MANAGEMENT.md${NC}\n"
   printf "\n"
   printf "Available commands:\n"
   printf "  ${GREEN}nself config secrets --help${NC}\n"

@@ -12,9 +12,9 @@
 [[ -n "${NSELF_BILLING_USAGE_LOADED:-}" ]] && return 0
 NSELF_BILLING_USAGE_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_USAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_USAGE_DIR}/core.sh"
 
 # Usage service definitions
 declare -a USAGE_SERVICES=(

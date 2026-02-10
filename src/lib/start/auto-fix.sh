@@ -3,9 +3,9 @@
 # auto-fix.sh - Automatic fixes applied during start
 # Bash 3.2 compatible, cross-platform
 
-# Source platform compatibility utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || {
+# Source platform compatibility utilities (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_START_AUTOFIX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_START_AUTOFIX_DIR/../utils/platform-compat.sh" 2>/dev/null || {
   # Fallback definition if not found
   safe_sed_inline() {
     local file="$1"

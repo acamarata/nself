@@ -17,12 +17,12 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
 cmd_help() {
   local command="${1:-}"
 
-  if [[ -n "$command" ]]; then
+  # Handle --help/-h on the help command itself
+  if [[ "$command" == "--help" ]] || [[ "$command" == "-h" ]] || [[ -z "$command" ]]; then
+    show_general_help
+  else
     # Show help for specific command
     show_command_help "$command"
-  else
-    # Show general help
-    show_general_help
   fi
 }
 
@@ -195,6 +195,13 @@ export -f cmd_help
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]] || [[ -z "$*" ]]; then
+      cmd_help "$@"
+      exit 0
+    fi
+  done
   pre_command "help" || exit $?
   cmd_help "$@"
   exit_code=$?

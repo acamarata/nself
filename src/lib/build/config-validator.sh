@@ -2,10 +2,10 @@
 
 # config-validator.sh - Comprehensive configuration validation for build
 
-# Source display utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-if [[ -f "$SCRIPT_DIR/../utils/display.sh" ]]; then
-  source "$SCRIPT_DIR/../utils/display.sh"
+# Source display utilities (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BUILD_VALIDATOR_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [[ -f "$_BUILD_VALIDATOR_DIR/../utils/display.sh" ]]; then
+  source "$_BUILD_VALIDATOR_DIR/../utils/display.sh"
 fi
 
 # Validate environment file syntax

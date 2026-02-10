@@ -48,7 +48,8 @@ jobs:
       - name: Initialize nself
         run: |
           cd ~/nself-test
-          # Run init first (creates default .env)
+          # ADVISORY: init may return non-zero in CI when run inside the source repo
+          # or when .env already exists - subsequent sed commands configure the env
           nself init --quiet || true
           # Update .env with test configuration
           sed -i 's/^PROJECT_NAME=.*/PROJECT_NAME=nself-test/' .env
@@ -80,6 +81,7 @@ jobs:
           # Rebuild to generate config with exported values
           nself build
           # Verify the extensions SQL uses correct database name
+          # ADVISORY: Diagnostic check - file may not contain \c depending on build version
           echo "Checking generated extensions.sql:"
           grep "\\c" postgres/init/01-extensions.sql || true
 
@@ -138,6 +140,7 @@ jobs:
       - name: Show logs on failure
         if: failure()
         run: |
+          # ADVISORY: Diagnostic step - services may already be down, so commands may fail
           echo "=== Docker Containers ==="
           docker ps -a
           echo ""
@@ -155,6 +158,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
+          # ADVISORY: Cleanup must not fail the pipeline - services may already be stopped
           cd ~/nself-test && nself stop || true
           docker system prune -f
 

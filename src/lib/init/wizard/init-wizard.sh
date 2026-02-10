@@ -3,10 +3,10 @@
 # init-wizard-refactored.sh - Refactored configuration wizard using modules
 # POSIX-compliant, no Bash 4+ features
 
-# Determine directories
+# Determine directories (namespaced to avoid clobbering caller globals)
 WIZARD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INIT_LIB_DIR="$(dirname "$WIZARD_DIR")"
-ROOT_DIR="$(dirname "$(dirname "$(dirname "$INIT_LIB_DIR")")")"
+_WIZARD_ROOT_DIR="$(dirname "$(dirname "$(dirname "$INIT_LIB_DIR")")")"
 
 # Source required modules with existence checks
 for module in "$WIZARD_DIR/prompts.sh" "$WIZARD_DIR/detection.sh" "$WIZARD_DIR/templates.sh" "$WIZARD_DIR/hosts-helper.sh"; do
@@ -82,7 +82,11 @@ prompt_input() {
 
     # Validate pattern
     if [[ "$input_value" =~ $pattern ]]; then
-      eval "$var_name='$input_value'"
+      # SECURITY: Sanitize input before eval to prevent injection via single quotes
+      # Reject values containing shell-dangerous characters in variable assignment
+      local _sanitized
+      _sanitized=$(printf "%s" "$input_value" | sed "s/'/'\\\\''/" )
+      eval "$var_name='$_sanitized'"
       break
     else
       echo "Invalid input. Please try again."
@@ -97,7 +101,10 @@ prompt_password() {
   echo -n "$prompt: "
   read -s -r password_value
   echo ""
-  eval "$var_name='$password_value'"
+  # SECURITY: Sanitize password before eval to prevent injection via single quotes
+  local _sanitized
+  _sanitized=$(printf "%s" "$password_value" | sed "s/'/'\\\\''/" )
+  eval "$var_name='$_sanitized'"
 }
 
 confirm_action() {
@@ -144,7 +151,7 @@ apply_template() {
 
   case "$template" in
     demo)
-      cp "$ROOT_DIR/templates/demo/.env.demo" "$env_file"
+      cp "$_WIZARD_ROOT_DIR/templates/demo/.env.demo" "$env_file"
       echo "Demo template applied to $env_file"
       ;;
     minimal)

@@ -631,6 +631,13 @@ export -f cmd_migrate
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_migrate_help
+      exit 0
+    fi
+  done
   pre_command "migrate" || exit $?
   cmd_migrate "$@"
   exit_code=$?

@@ -79,26 +79,37 @@ run_test_file() {
 
   # Apply filter if set
   if [[ -n "$FILTER" ]] && [[ ! "$test_name" =~ $FILTER ]]; then
-    return
+    return 0
   fi
+
+  TESTS_RUN=$((TESTS_RUN + 1))
 
   printf "${COLOR_MAGENTA}▶ Running %s${COLOR_RESET}\n" "$test_name"
 
+  local exit_code=0
+
   if [[ "$VERBOSE" == true ]]; then
-    bash "$test_file"
+    bash "$test_file" || exit_code=$?
   else
     # Capture output and only show on failure
     local output
-    local exit_code=0
     output=$(bash "$test_file" 2>&1) || exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
       printf "  ${COLOR_GREEN}✓ Passed${COLOR_RESET}\n"
     else
-      printf "  ${COLOR_RED}✗ Failed${COLOR_RESET}\n"
-      echo "$output" | sed 's/^/    /'
+      printf "  ${COLOR_RED}✗ Failed (exit code %d)${COLOR_RESET}\n" "$exit_code"
+      printf "%s\n" "$output" | sed 's/^/    /'
     fi
   fi
+
+  if [[ $exit_code -eq 0 ]]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  return $exit_code
 }
 
 # Run unit tests
@@ -108,7 +119,7 @@ if [[ -d "$UNIT_DIR" ]]; then
 
   for test_file in "$UNIT_DIR"/test-*.sh; do
     if [[ -f "$test_file" ]]; then
-      run_test_file "$test_file"
+      run_test_file "$test_file" || true
     fi
   done
   echo ""
@@ -121,7 +132,7 @@ if [[ "$QUICK" != true ]] && [[ -d "$INTEGRATION_DIR" ]]; then
 
   for test_file in "$INTEGRATION_DIR"/test-*.sh; do
     if [[ -f "$test_file" ]]; then
-      run_test_file "$test_file"
+      run_test_file "$test_file" || true
     fi
   done
   echo ""
@@ -133,7 +144,7 @@ echo ""
 
 for test_file in "$TEST_DIR"/test-*.sh; do
   if [[ -f "$test_file" ]]; then
-    run_test_file "$test_file"
+    run_test_file "$test_file" || true
   fi
 done
 echo ""
@@ -145,20 +156,23 @@ echo ""
 # Test init command specifically
 if [[ -z "$FILTER" ]] || [[ "init" =~ $FILTER ]]; then
   if [[ -f "$TEST_DIR/run-init-tests.sh" ]]; then
+    TESTS_RUN=$((TESTS_RUN + 1))
     printf "${COLOR_MAGENTA}▶ Running init tests${COLOR_RESET}\n"
     if bash "$TEST_DIR/run-init-tests.sh" --quick >/dev/null 2>&1; then
+      TESTS_PASSED=$((TESTS_PASSED + 1))
       printf "  ${COLOR_GREEN}✓ Init tests passed${COLOR_RESET}\n"
     else
+      TESTS_FAILED=$((TESTS_FAILED + 1))
       printf "  ${COLOR_RED}✗ Init tests failed${COLOR_RESET}\n"
     fi
   fi
 fi
 echo ""
 
-# Print summary
-print_test_summary
+# Print summary (ignore return code - we handle exit explicitly below)
+print_test_summary || true
 
-# Exit with appropriate code
+# Exit with appropriate code based on failure count
 if [[ $TESTS_FAILED -gt 0 ]]; then
   printf "${COLOR_RED}Some tests failed. Please review the output above.${COLOR_RESET}\n"
   exit 1

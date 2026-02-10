@@ -2128,10 +2128,16 @@ mock_auto() {
     done <<<"$columns"
 
     # Generate and execute INSERT statements
+    # SECURITY: Use parameter substitution instead of eval to prevent injection
     if [[ -n "$col_names" ]]; then
       for ((row = 1; row <= count; row++)); do
-        # Evaluate the values template
-        local evaluated_values=$(eval "echo \"$col_values\"")
+        # Safely substitute ${row} and $row without eval
+        local evaluated_values
+        evaluated_values=$(printf "%s" "$col_values" | sed "s/\\\${row}/${row}/g" | sed "s/\\\$row/${row}/g")
+        # Evaluate any remaining arithmetic expressions safely via subshell
+        evaluated_values=$(printf "%s" "$evaluated_values" | while IFS= read -r _line; do
+          printf "%s" "$_line" | sed "s/\$(( *\([^)]*\) *))/$(( \1 ))/g" 2>/dev/null || printf "%s" "$_line"
+        done)
         psql_exec -c "INSERT INTO $table ($col_names) VALUES ($evaluated_values)" 2>/dev/null || true
       done
       log_info "  + $count records"

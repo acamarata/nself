@@ -4,25 +4,10 @@
 # base.sh - Base error handling framework
 
 # Error registry - track all errors found
-# On macOS, the default /bin/bash is 3.2 which lacks associative arrays.
-# Provide a compatibility shim by detecting support and falling back to
-# delimited-string maps if needed.
-
-_HAS_ASSOC_ARRAYS=true
-if ! (declare -A __test 2>/dev/null); then
-  _HAS_ASSOC_ARRAYS=false
-fi
-
-if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-  declare -A ERROR_REGISTRY
-  declare -A ERROR_FIXES
-  declare -A ERROR_ACTIONS
-else
-  # Emulate simple key->value maps using newline-delimited key=value pairs
-  ERROR_REGISTRY=""
-  ERROR_FIXES=""
-  ERROR_ACTIONS=""
-fi
+# Bash 3.2 compatible: use delimited-string maps instead of associative arrays
+ERROR_REGISTRY=""
+ERROR_FIXES=""
+ERROR_ACTIONS=""
 
 # Error severity levels
 readonly ERROR_CRITICAL=3 # Cannot continue
@@ -32,46 +17,31 @@ readonly ERROR_WARNING=0  # Just informational
 
 # Initialize error handling
 init_error_handling() {
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    ERROR_REGISTRY=()
-    ERROR_FIXES=()
-    ERROR_ACTIONS=()
-  else
-    ERROR_REGISTRY=""
-    ERROR_FIXES=""
-    ERROR_ACTIONS=""
-  fi
+  ERROR_REGISTRY=""
+  ERROR_FIXES=""
+  ERROR_ACTIONS=""
   export ERROR_COUNT=0
   export CRITICAL_ERRORS=0
   export FIXABLE_ERRORS=0
   export FIXED_ERRORS=0
 }
 
-# Register an error
+# Register an error (Bash 3.2 compatible)
 register_error() {
   local error_code="$1"
   local error_msg="$2"
   local severity="${3:-$ERROR_MAJOR}"
   local fix_available="${4:-false}"
   local fix_function="${5:-}"
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    ERROR_REGISTRY["$error_code"]="$error_msg"
-    ERROR_REGISTRY["${error_code}_severity"]="$severity"
-    ERROR_REGISTRY["${error_code}_fixable"]="$fix_available"
-    if [[ "$fix_available" == "true" ]] && [[ -n "$fix_function" ]]; then
-      ERROR_FIXES["$error_code"]="$fix_function"
-      ((FIXABLE_ERRORS++))
-    fi
-  else
-    ERROR_REGISTRY+="$error_code=$error_msg
+
+  ERROR_REGISTRY+="$error_code=$error_msg
 ${error_code}_severity=$severity
 ${error_code}_fixable=$fix_available
 "
-    if [[ "$fix_available" == "true" ]] && [[ -n "$fix_function" ]]; then
-      ERROR_FIXES+="$error_code=$fix_function
+  if [[ "$fix_available" == "true" ]] && [[ -n "$fix_function" ]]; then
+    ERROR_FIXES+="$error_code=$fix_function
 "
-      ((FIXABLE_ERRORS++))
-    fi
+    ((FIXABLE_ERRORS++))
   fi
 
   ((ERROR_COUNT++))
@@ -81,22 +51,17 @@ ${error_code}_fixable=$fix_available
   fi
 }
 
-# Display error with context
+# Display error with context (Bash 3.2 compatible)
 display_error() {
   local error_code="$1"
   local context="${2:-}"
   local error_msg
   local severity
   local fixable
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    error_msg="${ERROR_REGISTRY[$error_code]}"
-    severity="${ERROR_REGISTRY[${error_code}_severity]}"
-    fixable="${ERROR_REGISTRY[${error_code}_fixable]}"
-  else
-    error_msg=$(echo "$ERROR_REGISTRY" | awk -F= -v k="$error_code" '$1==k{print substr($0,index($0,$2)) }' | head -1)
-    severity=$(echo "$ERROR_REGISTRY" | awk -F= -v k="${error_code}_severity" '$1==k{print $2}' | head -1)
-    fixable=$(echo "$ERROR_REGISTRY" | awk -F= -v k="${error_code}_fixable" '$1==k{print $2}' | head -1)
-  fi
+
+  error_msg=$(echo "$ERROR_REGISTRY" | awk -F= -v k="$error_code" '$1==k{print substr($0,index($0,$2)) }' | head -1)
+  severity=$(echo "$ERROR_REGISTRY" | awk -F= -v k="${error_code}_severity" '$1==k{print $2}' | head -1)
+  fixable=$(echo "$ERROR_REGISTRY" | awk -F= -v k="${error_code}_fixable" '$1==k{print $2}' | head -1)
 
   case $severity in
     $ERROR_CRITICAL)
@@ -122,22 +87,20 @@ display_error() {
   fi
 }
 
-# Attempt to fix an error
+# Attempt to fix an error (Bash 3.2 compatible)
 attempt_fix() {
   local error_code="$1"
   local fix_function
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    fix_function="${ERROR_FIXES[$error_code]}"
-  else
-    fix_function=$(echo "$ERROR_FIXES" | awk -F= -v k="$error_code" '$1==k{print $2}' | head -1)
-  fi
+  fix_function=$(echo "$ERROR_FIXES" | awk -F= -v k="$error_code" '$1==k{print $2}' | head -1)
 
   if [[ -z "$fix_function" ]]; then
     log_debug "No fix available for error: $error_code"
     return 1
   fi
 
-  log_info "Attempting to fix: ${ERROR_REGISTRY[$error_code]}"
+  local error_msg
+  error_msg=$(echo "$ERROR_REGISTRY" | awk -F= -v k="$error_code" '$1==k{print substr($0,index($0,$2)) }' | head -1)
+  log_info "Attempting to fix: $error_msg"
 
   if $fix_function; then
     ((FIXED_ERRORS++))
@@ -174,21 +137,13 @@ run_auto_fixes() {
   echo ""
   log_info "Running auto-fixes..."
 
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    for error_code in "${!ERROR_FIXES[@]}"; do
-      if attempt_fix "$error_code"; then
-        ((fixed_count++))
-      fi
-    done
-  else
-    # Iterate over newline-delimited list
-    while IFS='=' read -r k v; do
-      [[ -z "$k" ]] && continue
-      if attempt_fix "$k"; then
-        ((fixed_count++))
-      fi
-    done <<<"$ERROR_FIXES"
-  fi
+  # Iterate over newline-delimited list (Bash 3.2 compatible)
+  while IFS='=' read -r k v; do
+    [[ -z "$k" ]] && continue
+    if attempt_fix "$k"; then
+      ((fixed_count++))
+    fi
+  done <<<"$ERROR_FIXES"
 
   echo ""
   if [[ $fixed_count -eq $FIXABLE_ERRORS ]]; then

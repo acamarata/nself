@@ -6,14 +6,14 @@
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/acamarata/nself/actions/workflows/ci.yml/badge.svg)](https://github.com/acamarata/nself/actions)
 [![Security Scan](https://github.com/acamarata/nself/actions/workflows/security-scan.yml/badge.svg)](https://github.com/acamarata/nself/actions/workflows/security-scan.yml)
-[![Test Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen.svg)](docs/releases/v0.9.8.md)
+[![Test Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen.svg)](.wiki/releases/v0.9.8.md)
 [![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
 
 > **✅ PRODUCTION READY**: ɳSelf v0.9.8 is production-ready with 80% test coverage (700+ tests), 100% documentation, enterprise security, and battle-tested infrastructure. Complete feature parity with Supabase/Nhost plus unique advantages: multi-tenancy, built-in billing, white-label customization, and deploy-anywhere flexibility.
 >
 > ɳSelf orchestrates production-grade services (PostgreSQL, Hasura, Redis, MinIO) with enterprise features on top: security hardening, multi-tenancy, billing integration, and 295+ CLI commands. Same powerful infrastructure as commercial BaaS platforms, but fully under your control.
 >
-> **Path to v1.0 LTS**: v0.9.9 (QA) → v1.0.0 (Q1 2026) with 2-year support commitment. [View Roadmap](docs/releases/ROADMAP.md)
+> **Path to v1.0 LTS**: v0.9.9 (QA) → v1.0.0 (Q1 2026) with 2-year support commitment. [View Roadmap](.wiki/releases/ROADMAP.md)
 
 ---
 
@@ -29,7 +29,9 @@ curl -sSL https://install.nself.org | bash
 
 **One command. Complete backend. Your infrastructure.**
 
-[Quick Start](#-quick-start---3-commands-to-backend-bliss) • [Features](#-why-nself) • [Documentation](docs/Home.md) • [Roadmap](docs/releases/ROADMAP.md)
+[Quick Start](#-quick-start---3-commands-to-backend-bliss) • [Features](#-why-nself) • [Documentation](.wiki/Home.md) • [Roadmap](.wiki/releases/ROADMAP.md)
+
+**Repo policy**: [Root Structure Policy](.wiki/ROOT-STRUCTURE-POLICY.md)
 
 </div>
 
@@ -289,7 +291,7 @@ CS_5=chat:socketio-ts:3005      # Real-time WebSocket
 - **Go (4)**: Gin, Echo, Fiber, gRPC
 - **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
 
-📖 **[View Complete Service Templates Documentation](docs/services/SERVICE_TEMPLATES.md)**
+📖 **[View Complete Service Templates Documentation](.wiki/reference/SERVICE_TEMPLATES.md)**
 
 Every template includes:
 - 🐳 Production Docker setup with multi-stage builds
@@ -300,7 +302,7 @@ Every template includes:
 
 ## 📚 Commands Overview
 
-ɳSelf provides **31 top-level commands** with **295+ subcommands** organized by domain:
+ɳSelf provides a **32-command canonical runtime surface** (**31 grouped domains + `destroy`**) with **295+ subcommands** organized by domain:
 
 ### Core Commands (5)
 ```bash
@@ -339,7 +341,7 @@ nself plugin        # Plugin system (8+ subcommands)
 nself destroy       # Safe infrastructure destruction
 ```
 
-📖 **[Complete Command Reference](docs/commands/COMMAND-TREE-V1.md)**
+📖 **[Complete Command Reference](.wiki/commands/COMMAND-TREE-V1.md)**
 
 ## 🎯 Admin Dashboard
 
@@ -586,38 +588,38 @@ nself service email test recipient@example.com
 nself build --force     # Force rebuild
 ```
 
-📖 **[Complete Troubleshooting Guide](docs/guides/TROUBLESHOOTING.md)**
+📖 **[Complete Troubleshooting Guide](.wiki/guides/TROUBLESHOOTING.md)**
 
 ## 📚 Documentation
 
 ### Getting Started
-- **[Quick Start Tutorial](docs/guides/Quick-Start.md)** - 5-minute tutorial
-- **[Installation Guide](docs/guides/Installation.md)** - Detailed installation
-- **[Configuration Reference](docs/configuration/README.md)** - Complete .env settings
-- **[Command Reference](docs/commands/COMMAND-TREE-V1.md)** - All 295+ commands
+- **[Quick Start Tutorial](.wiki/getting-started/Quick-Start.md)** - 5-minute tutorial
+- **[Installation Guide](.wiki/getting-started/Installation.md)** - Detailed installation
+- **[Configuration Reference](.wiki/configuration/README.md)** - Complete .env settings
+- **[Command Reference](.wiki/commands/COMMAND-TREE-V1.md)** - All 295+ commands
 
 ### Features & Services
-- **[Service Templates](docs/services/SERVICE_TEMPLATES.md)** - 40+ microservice templates
-- **[Database Workflow](docs/guides/DATABASE-WORKFLOW.md)** - DBML to production
-- **[Multi-Tenancy](docs/guides/MULTI-TENANCY.md)** - Enterprise SaaS features
-- **[Email Setup](docs/guides/EMAIL.md)** - 16+ provider configuration
+- **[Service Templates](.wiki/reference/SERVICE_TEMPLATES.md)** - 40+ microservice templates
+- **[Database Workflow](.wiki/guides/DATABASE-WORKFLOW.md)** - DBML to production
+- **[Multi-Tenancy](.wiki/architecture/MULTI-TENANCY.md)** - Enterprise SaaS features
+- **[Email Setup](.wiki/commands/EMAIL.md)** - 16+ provider configuration
 
 ### Deployment & Operations
-- **[Production Deployment](docs/deployment/README.md)** - Production guide
-- **[Backup Guide](docs/guides/BACKUP.md)** - Comprehensive backup system
-- **[Monitoring Setup](docs/guides/MONITORING.md)** - Grafana dashboards
-- **[Security Hardening](docs/security/README.md)** - Security best practices
+- **[Production Deployment](.wiki/deployment/README.md)** - Production guide
+- **[Backup Guide](.wiki/guides/BACKUP_GUIDE.md)** - Comprehensive backup system
+- **[Monitoring Setup](.wiki/guides/MONITORING-COMPLETE.md)** - Grafana dashboards
+- **[Security Hardening](.wiki/security/README.md)** - Security best practices
 
 ### Migration & Compatibility
-- **[Migration from Supabase](docs/guides/MIGRATION-SUPABASE.md)** - Step-by-step migration
-- **[Migration from Nhost](docs/guides/MIGRATION-NHOST.md)** - One-command migration
-- **[Migration from Firebase](docs/guides/MIGRATION-FIREBASE.md)** - Auth & Firestore
+- **[Migration from Supabase](.wiki/migrations/FROM-SUPABASE.md)** - Step-by-step migration
+- **[Migration from Nhost](.wiki/migrations/FROM-NHOST.md)** - One-command migration
+- **[Migration from Firebase](.wiki/migrations/FROM-FIREBASE.md)** - Auth & Firestore
 
 ### Release Information
-- **[Release Notes](docs/releases/v0.9.8.md)** - What's new in v0.9.8
-- **[Roadmap](docs/releases/ROADMAP.md)** - Development roadmap
-- **[Changelog](docs/releases/CHANGELOG.md)** - Version history
-- **[All Releases](docs/releases/INDEX.md)** - Complete release history
+- **[Release Notes](.wiki/releases/v0.9.8.md)** - What's new in v0.9.8
+- **[Roadmap](.wiki/releases/ROADMAP.md)** - Development roadmap
+- **[Changelog](.wiki/releases/CHANGELOG.md)** - Version history
+- **[All Releases](.wiki/releases/INDEX.md)** - Complete release history
 
 ## 🧪 Quality Assurance
 
@@ -653,15 +655,15 @@ Thoroughly audited for security vulnerabilities:
 | Docker Security | ✅ PASS |
 | Git History | ✅ PASS |
 
-📖 **[View Security Audit](docs/security/SECURITY-AUDIT.md)**
+📖 **[View Security Audit](.wiki/security/SECURITY-AUDIT.md)**
 
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
 
-- **[Contributing Guide](docs/contributing/CONTRIBUTING.md)** - How to contribute
-- **[Development Setup](docs/contributing/README.md)** - Dev environment
-- **[Cross-Platform](docs/contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Compatibility requirements
+- **[Contributing Guide](.wiki/contributing/CONTRIBUTING.md)** - How to contribute
+- **[Development Setup](.wiki/contributing/README.md)** - Dev environment
+- **[Cross-Platform](.wiki/contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Compatibility requirements
 
 ## 📄 License
 
@@ -702,7 +704,7 @@ See [LICENSE](LICENSE) for full terms.
 | v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
 | v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
 
-**[Full Roadmap](docs/releases/ROADMAP.md)** | **[Changelog](docs/releases/CHANGELOG.md)** | **[v1.0 Plan](docs/releases/v1.0.0-PLAN.md)**
+**[Full Roadmap](.wiki/releases/ROADMAP.md)** | **[Changelog](.wiki/releases/CHANGELOG.md)** | **[v1.0 Plan](.wiki/releases/v1.0.0-PLAN.md)**
 
 ---
 
@@ -712,6 +714,6 @@ See [LICENSE](LICENSE) for full terms.
 
 **Ready for v1.0 LTS** 🚀
 
-[Get Started](#-quick-start---3-commands-to-backend-bliss) • [Documentation](docs/Home.md) • [Roadmap](docs/releases/ROADMAP.md)
+[Get Started](#-quick-start---3-commands-to-backend-bliss) • [Documentation](.wiki/Home.md) • [Roadmap](.wiki/releases/ROADMAP.md)
 
 </div>

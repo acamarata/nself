@@ -11,11 +11,13 @@ LIB_ROOT="$(dirname "$SECURITY_LIB_DIR")"
 source "$LIB_ROOT/utils/display.sh" 2>/dev/null || true
 
 # CSP default directives
+# SECURITY: Defaults use strict values - no unsafe-inline or unsafe-eval
+# To opt in to less restrictive defaults, set CSP_MODE=moderate or CSP_MODE=permissive
 CSP_DEFAULT_SRC="${CSP_DEFAULT_SRC:-'self'}"
-CSP_SCRIPT_SRC="${CSP_SCRIPT_SRC:-'self' 'unsafe-inline' 'unsafe-eval'}"
-CSP_STYLE_SRC="${CSP_STYLE_SRC:-'self' 'unsafe-inline'}"
-CSP_IMG_SRC="${CSP_IMG_SRC:-'self' data: https:}"
-CSP_FONT_SRC="${CSP_FONT_SRC:-'self' data:}"
+CSP_SCRIPT_SRC="${CSP_SCRIPT_SRC:-'self'}"
+CSP_STYLE_SRC="${CSP_STYLE_SRC:-'self'}"
+CSP_IMG_SRC="${CSP_IMG_SRC:-'self' data:}"
+CSP_FONT_SRC="${CSP_FONT_SRC:-'self'}"
 CSP_CONNECT_SRC="${CSP_CONNECT_SRC:-'self'}"
 CSP_MEDIA_SRC="${CSP_MEDIA_SRC:-'self'}"
 CSP_OBJECT_SRC="${CSP_OBJECT_SRC:-'none'}"
@@ -25,8 +27,12 @@ CSP_FORM_ACTION="${CSP_FORM_ACTION:-'self'}"
 CSP_FRAME_ANCESTORS="${CSP_FRAME_ANCESTORS:-'none'}"
 CSP_UPGRADE_INSECURE_REQUESTS="${CSP_UPGRADE_INSECURE_REQUESTS:-true}"
 
-# CSP mode: strict, moderate, permissive
-CSP_MODE="${CSP_MODE:-moderate}"
+# CSP mode: strict (default), moderate, permissive
+# SECURITY HARDENING: Default changed from 'moderate' to 'strict' (V098-P1-013)
+# - strict: No unsafe-inline or unsafe-eval (maximum security)
+# - moderate: Allows unsafe-inline/unsafe-eval (for compatibility - opt-in only)
+# - permissive: Minimal restrictions (development/debugging only)
+CSP_MODE="${CSP_MODE:-strict}"
 
 # Generate CSP header based on mode
 csp::generate() {
@@ -201,7 +207,9 @@ csp::generate_for_service() {
 
   case "$service" in
     hasura)
-      # Hasura needs websockets and GraphQL introspection
+      # Hasura console requires unsafe-inline/unsafe-eval for its GraphQL IDE
+      # This is a known limitation of the Hasura console UI
+      # SECURITY NOTE: Only applied to the Hasura admin route, not the main app
       local csp="default-src 'self'; "
       csp="${csp}script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
       csp="${csp}style-src 'self' 'unsafe-inline'; "
@@ -211,7 +219,9 @@ csp::generate_for_service() {
       printf "%s" "$csp"
       ;;
     grafana)
-      # Grafana needs inline scripts for dashboards
+      # Grafana requires unsafe-inline/unsafe-eval for dashboard rendering
+      # This is a known limitation of the Grafana UI framework
+      # SECURITY NOTE: Only applied to the Grafana monitoring route
       local csp="default-src 'self'; "
       csp="${csp}script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
       csp="${csp}style-src 'self' 'unsafe-inline'; "
@@ -221,7 +231,8 @@ csp::generate_for_service() {
       printf "%s" "$csp"
       ;;
     minio)
-      # MinIO console needs specific permissions
+      # MinIO console requires unsafe-inline for its React-based UI
+      # SECURITY NOTE: Only applied to the MinIO console route
       local csp="default-src 'self'; "
       csp="${csp}script-src 'self' 'unsafe-inline'; "
       csp="${csp}style-src 'self' 'unsafe-inline'; "
@@ -230,7 +241,7 @@ csp::generate_for_service() {
       printf "%s" "$csp"
       ;;
     *)
-      # Use default mode for unknown services
+      # Use default mode for unknown services (strict by default)
       csp::generate "$mode"
       ;;
   esac
@@ -328,20 +339,20 @@ csp::configure() {
 
   # Select mode
   printf "Select CSP mode:\n"
-  printf "  1) Strict (maximum security, may break some features)\n"
-  printf "  2) Moderate (balanced security and compatibility) [recommended]\n"
-  printf "  3) Permissive (minimal restrictions, more compatible)\n"
+  printf "  1) Strict (maximum security, no unsafe-inline/unsafe-eval) [recommended]\n"
+  printf "  2) Moderate (allows unsafe-inline/unsafe-eval for compatibility)\n"
+  printf "  3) Permissive (minimal restrictions - development/debugging only)\n"
   printf "  4) Custom (configure each directive manually)\n"
-  printf "\nChoice [2]: "
+  printf "\nChoice [1]: "
   read -r mode_choice
 
-  local mode="moderate"
-  case "${mode_choice:-2}" in
+  local mode="strict"
+  case "${mode_choice:-1}" in
     1) mode="strict" ;;
     2) mode="moderate" ;;
     3) mode="permissive" ;;
     4) mode="custom" ;;
-    *) mode="moderate" ;;
+    *) mode="strict" ;;
   esac
 
   # Ask for custom domains

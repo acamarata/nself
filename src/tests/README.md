@@ -91,9 +91,9 @@ finalize_test_suite
 - ✅ Comprehensive test suite management
 
 **Documentation**:
-- [Complete Guide](/docs/testing/RESILIENT-TEST-FRAMEWORK.md)
-- [Migration Guide](/docs/testing/MIGRATION-GUIDE.md)
-- [Implementation Summary](/docs/testing/RESILIENT-FRAMEWORK-SUMMARY.md)
+- [Complete Guide](/.wiki/testing/RESILIENT-TEST-FRAMEWORK.md)
+- [Migration Guide](/.wiki/testing/MIGRATION-GUIDE.md)
+- [Implementation Summary](/.wiki/testing/RESILIENT-FRAMEWORK-SUMMARY.md)
 
 **Example**: `examples/resilient-test-example.sh`
 
@@ -233,8 +233,8 @@ open ../../coverage/reports/html/index.html
 
 ### Documentation
 
-- **Coverage Guide**: `../../docs/development/COVERAGE-GUIDE.md`
-- **Coverage Dashboard**: `../../docs/development/COVERAGE-DASHBOARD.md`
+- **Coverage Guide**: `../../.wiki/development/COVERAGE-GUIDE.md`
+- **Coverage Dashboard**: `../../.wiki/development/COVERAGE-DASHBOARD.md`
 - **Script Docs**: `../scripts/coverage/README.md`
 - **Quick Reference**: `../scripts/coverage/QUICK-REFERENCE.md`
 

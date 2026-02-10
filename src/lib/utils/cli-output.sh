@@ -14,9 +14,9 @@
 [[ "${CLI_OUTPUT_SOURCED:-}" == "1" ]] && return 0
 export CLI_OUTPUT_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/platform-compat.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_CLI_OUTPUT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_CLI_OUTPUT_DIR}/platform-compat.sh" 2>/dev/null || true
 
 # =============================================================================
 # COLOR AND FORMATTING CODES

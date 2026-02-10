@@ -376,7 +376,7 @@ Add to rollback script:
 - `015_create_billing_system.sql` - Billing system forward migration
 - `016_create_whitelabel_system.sql` - White-label forward migration
 - `tests/test-rollback-migrations.sql` - Rollback testing script
-- `docs/database/MIGRATION-STRATEGY.md` - Overall migration strategy
+- `/.wiki/migrations/README.md` - Overall migration strategy
 
 ---
 

@@ -20,10 +20,10 @@ SDK GENERATION:
 
 DOCUMENTATION:
   docs generate [output]                 Generate API documentation
-                                         Default: ./docs/api
+                                         Default: ./.wiki/api
 
   docs openapi [output]                  Generate OpenAPI specification
-                                         Default: ./docs/api/openapi.yaml
+                                         Default: ./.wiki/api/openapi.yaml
 
 TESTING:
   test init [dir]                        Initialize test environment

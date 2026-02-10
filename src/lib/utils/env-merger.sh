@@ -4,12 +4,12 @@
 # Cascades and merges environment files based on target environment
 # Generates .env.runtime for docker-compose with fully resolved values
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get script directory (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_ENV_MERGER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source env-detection for helper functions
-if [[ -f "$SCRIPT_DIR/env-detection.sh" ]]; then
-  source "$SCRIPT_DIR/env-detection.sh"
+if [[ -f "$_ENV_MERGER_DIR/env-detection.sh" ]]; then
+  source "$_ENV_MERGER_DIR/env-detection.sh"
 fi
 
 # Merge environment files and generate runtime configuration

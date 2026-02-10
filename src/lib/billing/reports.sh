@@ -13,9 +13,9 @@
 [[ -n "${NSELF_BILLING_REPORTS_LOADED:-}" ]] && return 0
 NSELF_BILLING_REPORTS_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_REPORTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_REPORTS_DIR}/core.sh"
 
 # Report configuration
 REPORT_OUTPUT_DIR="${BILLING_EXPORT_DIR}/reports"

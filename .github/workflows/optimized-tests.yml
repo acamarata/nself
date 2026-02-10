@@ -27,8 +27,8 @@ jobs:
       - name: ShellCheck (error-level only)
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck
-          # Only check for errors, not warnings
-          find src/lib src/cli -name "*.sh" -exec shellcheck -S error {} + || true
+          # BLOCKING: ShellCheck errors indicate real code quality issues
+          find src/lib src/cli -name "*.sh" -exec shellcheck -S error {} +
 
       - name: Portability Check
         run: |
@@ -99,14 +99,19 @@ jobs:
           start_idx=$(( (${{ matrix.shard }} - 1) * tests_per_shard ))
           end_idx=$(( start_idx + tests_per_shard ))
 
-          # Run this shard's tests
+          # BLOCKING: Unit test failures must fail the pipeline
+          failed=0
           for ((i=start_idx; i<end_idx && i<total_tests; i++)); do
             test_file="${test_files[$i]}"
             if [[ -f "$test_file" ]]; then
               printf "\n=== Running %s ===\n" "$(basename "$test_file")"
-              bash "$test_file" || echo "::warning::Test failed: $test_file"
+              bash "$test_file" || failed=$((failed + 1))
             fi
           done
+          if [[ $failed -gt 0 ]]; then
+            printf "\n\033[31mFAILED: %d test file(s) had failures\033[0m\n" "$failed"
+            exit 1
+          fi
 
       - name: Upload test results
         if: always()
@@ -150,13 +155,18 @@ jobs:
         run: |
           cd src/tests/integration
 
-          # Find tests matching this type
+          # BLOCKING: Integration test failures must fail the pipeline
+          failed=0
           for test_file in test-${{ matrix.test-type }}*.sh; do
             if [[ -f "$test_file" ]]; then
               printf "\n=== Running %s ===\n" "$test_file"
-              timeout 300 bash "$test_file" || echo "::warning::Integration test failed or timed out"
+              timeout 300 bash "$test_file" || failed=$((failed + 1))
             fi
           done
+          if [[ $failed -gt 0 ]]; then
+            printf "\n\033[31mFAILED: %d integration test(s) failed or timed out\033[0m\n" "$failed"
+            exit 1
+          fi
 
   # ============================================================================
   # Performance & Flakiness Detection
@@ -181,6 +191,8 @@ jobs:
 
       - name: Detect flaky tests
         run: |
+          # ADVISORY: Flaky test detection is diagnostic/informational - script may not exist
+          # or may fail due to environment differences; this is a best-effort analysis
           bash scripts/find-flaky-tests.sh \
             --iterations 5 \
             --output flakiness-report.txt || true
@@ -219,13 +231,31 @@ jobs:
         run: |
           mkdir -p coverage
 
-          # Run tests under kcov
+          # Track coverage successes to ensure at least some tests succeed
+          success_count=0
+          total_count=0
+
           for test_file in src/tests/unit/test-*.sh; do
             if [[ -f "$test_file" ]]; then
               test_name=$(basename "$test_file" .sh)
-              kcov --exclude-path=/usr,/tmp "coverage/$test_name" bash "$test_file" || true
+              total_count=$((total_count + 1))
+              # kcov may fail on some tests (subshell complexity, bash version diffs)
+              if kcov --exclude-path=/usr,/tmp "coverage/$test_name" bash "$test_file"; then
+                success_count=$((success_count + 1))
+                echo "::notice::Coverage collected for $test_name"
+              else
+                echo "::warning::Coverage collection failed for $test_name (may be expected)"
+              fi
             fi
           done
+
+          # Fail if NO tests succeeded - that indicates a real problem
+          if [[ $total_count -gt 0 ]] && [[ $success_count -eq 0 ]]; then
+            echo "::error::Coverage collection failed for all $total_count tests"
+            exit 1
+          else
+            echo "::notice::Coverage collected for $success_count/$total_count tests"
+          fi
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v3

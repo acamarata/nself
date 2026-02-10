@@ -11,15 +11,15 @@
 [[ -n "${NSELF_BILLING_CORE_LOADED:-}" ]] && return 0
 NSELF_BILLING_CORE_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NSELF_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NSELF_ROOT="$(cd "${_BILLING_DIR}/../.." && pwd)"
 
 # Source utility functions (with fallback)
 if [[ -f "${NSELF_ROOT}/lib/utils/output.sh" ]]; then
   source "${NSELF_ROOT}/lib/utils/output.sh"
-elif [[ -f "${SCRIPT_DIR}/../utils/output.sh" ]]; then
-  source "${SCRIPT_DIR}/../utils/output.sh"
+elif [[ -f "${_BILLING_DIR}/../utils/output.sh" ]]; then
+  source "${_BILLING_DIR}/../utils/output.sh"
 else
   # Fallback output functions
   error() { printf "[ERROR] %s\n" "$*" >&2; }
@@ -30,8 +30,8 @@ fi
 
 if [[ -f "${NSELF_ROOT}/lib/utils/validation.sh" ]]; then
   source "${NSELF_ROOT}/lib/utils/validation.sh"
-elif [[ -f "${SCRIPT_DIR}/../utils/validation.sh" ]]; then
-  source "${SCRIPT_DIR}/../utils/validation.sh"
+elif [[ -f "${_BILLING_DIR}/../utils/validation.sh" ]]; then
+  source "${_BILLING_DIR}/../utils/validation.sh"
 fi
 
 # Billing configuration
@@ -922,16 +922,16 @@ export -f billing_get_customer_plan
 # ============================================================================
 
 # Source invoices module (if exists)
-if [[ -f "${SCRIPT_DIR}/invoices.sh" ]]; then
-  source "${SCRIPT_DIR}/invoices.sh"
+if [[ -f "${_BILLING_DIR}/invoices.sh" ]]; then
+  source "${_BILLING_DIR}/invoices.sh"
 fi
 
 # Source payments module (if exists)
-if [[ -f "${SCRIPT_DIR}/payments.sh" ]]; then
-  source "${SCRIPT_DIR}/payments.sh"
+if [[ -f "${_BILLING_DIR}/payments.sh" ]]; then
+  source "${_BILLING_DIR}/payments.sh"
 fi
 
 # Source reports module (if exists)
-if [[ -f "${SCRIPT_DIR}/reports.sh" ]]; then
-  source "${SCRIPT_DIR}/reports.sh"
+if [[ -f "${_BILLING_DIR}/reports.sh" ]]; then
+  source "${_BILLING_DIR}/reports.sh"
 fi

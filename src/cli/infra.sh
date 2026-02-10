@@ -155,7 +155,7 @@ EXAMPLES:
   nself infra k8s scale api --replicas 3  # Scale API pods
   nself infra k8s logs api-pod-xyz        # View pod logs
 
-For full documentation, see: docs/infrastructure/kubernetes.md
+For full documentation, see: .wiki/infrastructure/K8S-IMPLEMENTATION-GUIDE.md
 EOF
 }
 
@@ -193,7 +193,7 @@ EXAMPLES:
   nself infra helm upgrade myapp          # Upgrade release
   nself infra helm list                   # List all releases
 
-For full documentation, see: docs/infrastructure/helm.md
+For full documentation, see: .wiki/commands/HELM.md
 EOF
 }
 

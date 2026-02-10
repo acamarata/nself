@@ -68,7 +68,7 @@ cli_success "Operation complete!"
 
 ## Documentation
 
-Full API documentation: [docs/development/CLI-OUTPUT-LIBRARY.md](../docs/development/CLI-OUTPUT-LIBRARY.md)
+Full API documentation: [/.wiki/contributing/CLI-OUTPUT-LIBRARY.md](/.wiki/contributing/CLI-OUTPUT-LIBRARY.md)
 
 ## Contributing
 

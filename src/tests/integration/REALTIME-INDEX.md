@@ -325,7 +325,6 @@ websocket-test-helpers.sh       ← Future utilities
 
 **Last Updated**: 2026-01-29
 **Version**: nself v0.8.0
-**Author**: AI Assistant
 **Files**: 7
 **Lines**: 1,185
 **Tests**: 45

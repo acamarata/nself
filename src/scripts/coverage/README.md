@@ -370,8 +370,8 @@ kcov --include-pattern=oauth.sh coverage/data/oauth \
 
 ## Documentation
 
-- [Coverage Guide](../../../docs/development/COVERAGE-GUIDE.md) - Complete guide
-- [Coverage Dashboard](../../../docs/development/COVERAGE-DASHBOARD.md) - Live dashboard
+- [Coverage Guide](../../../.wiki/development/COVERAGE-GUIDE.md) - Complete guide
+- [Coverage Dashboard](../../../.wiki/development/COVERAGE-DASHBOARD.md) - Live dashboard
 - [Testing Guidelines](../../../src/tests/TESTING_GUIDELINES.md) - Test writing guide
 
 ## Support
@@ -379,7 +379,7 @@ kcov --include-pattern=oauth.sh coverage/data/oauth \
 Issues with coverage scripts?
 
 1. Check script output for error messages
-2. Review [Coverage Guide](../../../docs/development/COVERAGE-GUIDE.md)
+2. Review [Coverage Guide](../../../.wiki/development/COVERAGE-GUIDE.md)
 3. Verify tools are installed: `kcov`, `lcov`, `jq`
 4. Run with debug: `bash -x ./collect-coverage.sh`
 

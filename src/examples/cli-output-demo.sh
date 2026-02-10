@@ -358,7 +358,7 @@ main() {
   cli_blank 2
   cli_separator
   cli_success "Demo complete!"
-  cli_info "For more information, see: docs/development/CLI-OUTPUT-LIBRARY.md"
+  cli_info "For more information, see: .wiki/development/CLI-OUTPUT-LIBRARY.md"
   cli_separator
   cli_blank
 }

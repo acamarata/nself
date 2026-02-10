@@ -27,6 +27,19 @@ find_templates_dir() {
   local script_dir="${1:-$SCRIPT_DIR}"
   local templates_dir=""
 
+  # SECURITY: Safe path expansion helper - expand known vars without eval
+  _safe_expand_path() {
+    local _p="$1"
+    _p="${_p/#\~/$HOME}"
+    _p="${_p/\$HOME/$HOME}"
+    _p="${_p/\${HOME\}/$HOME}"
+    _p="${_p/\$NSELF_ROOT/${NSELF_ROOT:-}}"
+    _p="${_p/\${NSELF_ROOT\}/${NSELF_ROOT:-}}"
+    _p="${_p/\$NSELF_DIR/${NSELF_DIR:-}}"
+    _p="${_p/\${NSELF_DIR\}/${NSELF_DIR:-}}"
+    printf "%s" "$_p"
+  }
+
   # Use configured search paths
   for relative_path in "${INIT_TEMPLATE_SEARCH_PATHS[@]}"; do
     local check_path
@@ -35,8 +48,8 @@ find_templates_dir() {
     if [[ "$relative_path" == ../* ]] || [[ "$relative_path" == ./* ]]; then
       check_path="$script_dir/$relative_path"
     else
-      # Expand environment variables in path
-      check_path=$(eval echo "$relative_path")
+      # Expand known environment variables in path safely (no eval)
+      check_path=$(_safe_expand_path "$relative_path")
     fi
 
     if [[ -d "$check_path" ]]; then
@@ -53,7 +66,7 @@ find_templates_dir() {
       if [[ "$path" == ../* ]] || [[ "$path" == ./* ]]; then
         expanded_path="$script_dir/$path"
       else
-        expanded_path=$(eval echo "$path")
+        expanded_path=$(_safe_expand_path "$path")
       fi
       echo "  - $expanded_path" >&2
     done

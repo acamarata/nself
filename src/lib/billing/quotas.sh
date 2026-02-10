@@ -50,17 +50,17 @@
 [[ -n "${NSELF_BILLING_QUOTAS_LOADED:-}" ]] && return 0
 NSELF_BILLING_QUOTAS_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_QUOTAS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_QUOTAS_DIR}/core.sh"
 
 # Optionally load Redis cache functions (graceful fallback if not available)
-if [[ -f "${SCRIPT_DIR}/../redis/cache.sh" ]]; then
-  source "${SCRIPT_DIR}/../redis/cache.sh" 2>/dev/null || true
+if [[ -f "${_BILLING_QUOTAS_DIR}/../redis/cache.sh" ]]; then
+  source "${_BILLING_QUOTAS_DIR}/../redis/cache.sh" 2>/dev/null || true
 fi
 
-if [[ -f "${SCRIPT_DIR}/../redis/rate-limit-distributed.sh" ]]; then
-  source "${SCRIPT_DIR}/../redis/rate-limit-distributed.sh" 2>/dev/null || true
+if [[ -f "${_BILLING_QUOTAS_DIR}/../redis/rate-limit-distributed.sh" ]]; then
+  source "${_BILLING_QUOTAS_DIR}/../redis/rate-limit-distributed.sh" 2>/dev/null || true
 fi
 
 # Quota enforcement modes

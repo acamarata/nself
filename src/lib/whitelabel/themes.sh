@@ -13,15 +13,15 @@
 # - Built-in themes: light, dark, high-contrast
 
 
-# Color definitions for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly MAGENTA='\033[0;35m'
-readonly NC='\033[0m'
-readonly BOLD='\033[1m'
+# Color definitions for output (guard against double-declaration when sourced together)
+[[ -z "${RED:-}" ]] && readonly RED='\033[0;31m'
+[[ -z "${GREEN:-}" ]] && readonly GREEN='\033[0;32m'
+[[ -z "${YELLOW:-}" ]] && readonly YELLOW='\033[1;33m'
+[[ -z "${BLUE:-}" ]] && readonly BLUE='\033[0;34m'
+[[ -z "${CYAN:-}" ]] && readonly CYAN='\033[0;36m'
+[[ -z "${MAGENTA:-}" ]] && readonly MAGENTA='\033[0;35m'
+[[ -z "${NC:-}" ]] && readonly NC='\033[0m'
+[[ -z "${BOLD:-}" ]] && readonly BOLD='\033[1m'
 
 # Theme configuration
 readonly THEMES_DIR="${PROJECT_ROOT:-$(pwd)}/branding/themes"

@@ -220,7 +220,7 @@ EOF
 
 # Generate security headers configuration
 generate_security_headers_config() {
-  local csp_mode="${CSP_MODE:-moderate}"
+  local csp_mode="${CSP_MODE:-strict}"
   local ssl_enabled="${SSL_ENABLED:-true}"
   local custom_domains="${CSP_CUSTOM_DOMAINS:-}"
 
@@ -243,7 +243,10 @@ generate_basic_security_headers() {
 # Basic security headers - for advanced configuration, use nself security headers
 
 # Content Security Policy (CSP)
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" always;
+# SECURITY: Strict CSP by default - no unsafe-inline or unsafe-eval
+# To allow unsafe-inline/unsafe-eval, set CSP_MODE=moderate in your .env file
+# and run: nself build
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" always;
 
 EOF
 

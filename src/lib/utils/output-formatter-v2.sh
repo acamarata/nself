@@ -3,8 +3,9 @@
 
 # Enhanced output formatter with professional styling
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/display.sh"
+# Namespaced to avoid clobbering caller's SCRIPT_DIR
+_OUTPUT_FMT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_OUTPUT_FMT_DIR}/display.sh"
 
 # Unicode box drawing characters
 BOX_TOP_LEFT="╭"

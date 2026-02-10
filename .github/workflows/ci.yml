@@ -18,14 +18,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          # Only check for errors, not warnings or info
-          find . -type f -name "*.sh" -exec shellcheck -S error {} + || true
-          
+          # BLOCKING: ShellCheck errors indicate real code quality issues
+          find . -type f -name "*.sh" -exec shellcheck -S error {} +
+
       - name: Check shell script formatting
         run: |
           sudo apt-get install -y shfmt
-          # Just check, don't fail on formatting issues
-          shfmt -d -i 2 src/ || echo "::warning::Formatting issues found"
+          # ADVISORY: Formatting is stylistic - warn but don't fail the build
+          shfmt -d -i 2 src/ || echo "::warning::Formatting issues found - run 'shfmt -w -i 2 src/' to fix"
 
   test:
     name: Run Tests
@@ -61,18 +61,18 @@ jobs:
       - name: Run unit tests
         run: |
           cd src/tests
-          # Run all bats tests (including new coverage tests)
-          bats *.bats || echo "::warning::Some tests failed - please fix"
+          # BLOCKING: Unit tests must pass - failures indicate real regressions
+          bats *.bats
 
       - name: Run critical path tests
         run: |
           cd src/tests
-          # Run backup, deploy, storage, SSL, and tenant tests
+          # BLOCKING: Critical path tests (backup, deploy, storage, SSL, tenant) must pass
           test_files=(backup_tests.bats deploy_tests.bats storage_tests.bats ssl_tests.bats tenant_tests.bats)
           for test_file in "${test_files[@]}"; do
             if [ -f "$test_file" ]; then
               printf "\n=== Running %s ===\n" "$test_file"
-              bats "$test_file" || echo "::warning::Some tests in $test_file failed"
+              bats "$test_file"
             fi
           done
           
@@ -98,7 +98,7 @@ jobs:
           
       - name: Test nself init
         run: |
-          # Create test directory outside of repo
+          # BLOCKING: init must succeed and produce required files
           cd /tmp
           mkdir -p test-project
           cd test-project
@@ -106,19 +106,29 @@ jobs:
           test -f .env
           test -f .env.example
           test -f .gitignore
-          grep -q "PROJECT_NAME" .env || echo "Note: PROJECT_NAME is commented in .env (expected)"
-          
+
       - name: Test nself build
         run: |
           cd /tmp/test-project
-          # Add timeout to prevent hanging, show any errors
-          timeout 30s $HOME/.local/nself/bin/nself build || echo "Build command exited with code $?"
+          # Build should complete even without Docker - it generates config files
+          # Allow timeout but not silent failures
+          if timeout 30s $HOME/.local/nself/bin/nself build; then
+            echo "::notice::Build succeeded"
+          else
+            exit_code=$?
+            if [[ $exit_code -eq 124 ]]; then
+              echo "::error::Build timed out after 30s"
+              exit 1
+            else
+              echo "::warning::Build exited with code $exit_code (may be expected without Docker)"
+            fi
+          fi
           # Check if files were created
           ls -la
-          # These tests may fail but let's see what was created
-          test -f docker-compose.yml || echo "docker-compose.yml not created"
-          test -d nginx || echo "nginx directory not created"
-          test -d postgres || echo "postgres directory not created"
+          # These may not be created in CI (no Docker) - informational only
+          test -f docker-compose.yml || echo "::notice::docker-compose.yml not created (expected without Docker)"
+          test -d nginx || echo "::notice::nginx directory not created (expected without Docker)"
+          test -d postgres || echo "::notice::postgres directory not created (expected without Docker)"
           
       - name: Test nself commands
         run: |
@@ -148,20 +158,31 @@ jobs:
           # Test environment variable handling
           echo "SERVICES_ENABLED=true" >> .env
           echo "CS_1=api:fastapi:3001:/api" >> .env
-          # Try build with custom service (may fail but shouldn't hang)
-          timeout 30s $HOME/.local/nself/bin/nself build || true
-          
+          # Build with custom service - should handle missing Docker gracefully
+          if timeout 30s $HOME/.local/nself/bin/nself build; then
+            echo "::notice::Build with custom service succeeded"
+          else
+            exit_code=$?
+            if [[ $exit_code -eq 124 ]]; then
+              echo "::error::Build with custom service timed out after 30s"
+              exit 1
+            else
+              echo "::warning::Build exited with code $exit_code (may be expected without Docker)"
+            fi
+          fi
+
       - name: Test doctor command
         run: |
           cd /tmp/test-project
-          # Doctor should work even without Docker running
-          $HOME/.local/nself/bin/nself doctor || true
-          
+          # Doctor should run and exit 0 even without Docker - just reports status
+          # If this fails, the doctor command needs to be fixed to handle missing Docker
+          $HOME/.local/nself/bin/nself doctor
+
       - name: Test validate command
         run: |
           cd /tmp/test-project
-          # Validate should check configuration
-          $HOME/.local/nself/bin/nself config validate || true
+          # Config validation should work without Docker - it only checks .env file
+          $HOME/.local/nself/bin/nself config validate
           
   portability-check:
     name: Portability & Compatibility Check
@@ -223,7 +244,8 @@ jobs:
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail the build
+          # BLOCKING: CRITICAL and HIGH vulnerabilities must fail the pipeline
+          exit-code: '1'
 
       - name: Check for common security issues
         run: |

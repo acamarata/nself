@@ -8,11 +8,11 @@
 [[ "${ERROR_CODES_SOURCED:-}" == "1" ]] && return 0
 export ERROR_CODES_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/logging.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/error-messages.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/cli-output.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_ERROR_CODES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_ERROR_CODES_DIR}/logging.sh" 2>/dev/null || true
+source "${_ERROR_CODES_DIR}/error-messages.sh" 2>/dev/null || true
+source "${_ERROR_CODES_DIR}/cli-output.sh" 2>/dev/null || true
 
 # =============================================================================
 # ERROR CODE DEFINITIONS

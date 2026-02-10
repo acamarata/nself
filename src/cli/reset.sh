@@ -10,6 +10,8 @@ LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
 source "$LIB_DIR/utils/display.sh"
 source "$LIB_DIR/utils/env.sh"
 source "$LIB_DIR/utils/header.sh"
+source "$LIB_DIR/hooks/pre-command.sh" 2>/dev/null || true
+source "$LIB_DIR/hooks/post-command.sh" 2>/dev/null || true
 
 # Command function
 cmd_reset() {
@@ -360,6 +362,13 @@ export -f cmd_reset
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_reset_help
+      exit 0
+    fi
+  done
   pre_command "reset" || exit $?
   cmd_reset "$@"
   exit_code=$?

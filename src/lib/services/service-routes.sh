@@ -394,8 +394,8 @@ routes::get_frontend_apps() {
             # Extract domain from full URL
             api_route=$(echo "$remote_url" | sed -E 's|https?://([^/]+).*|\1|')
           elif [[ "$remote_url" == *'${BASE_DOMAIN}'* ]]; then
-            # Expand BASE_DOMAIN variable
-            api_route=$(eval echo "$remote_url")
+            # SECURITY: Expand BASE_DOMAIN safely without eval
+            api_route="${remote_url/\$\{BASE_DOMAIN\}/${BASE_DOMAIN:-localhost}}"
           else
             # Simple format like "api.app1"
             api_route="${remote_url}.${base_domain}"

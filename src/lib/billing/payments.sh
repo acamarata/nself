@@ -13,9 +13,9 @@
 [[ -n "${NSELF_BILLING_PAYMENTS_LOADED:-}" ]] && return 0
 NSELF_BILLING_PAYMENTS_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_PAYMENTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_PAYMENTS_DIR}/core.sh"
 
 # Payment configuration
 PAYMENT_METHODS_ENABLED="${PAYMENT_METHODS_ENABLED:-card,us_bank_account}"

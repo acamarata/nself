@@ -8,9 +8,9 @@
 [[ "${LOGGING_SOURCED:-}" == "1" ]] && return 0
 export LOGGING_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/platform-compat.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_LOGGING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_LOGGING_DIR}/platform-compat.sh" 2>/dev/null || true
 
 # =============================================================================
 # LOGGING CONFIGURATION

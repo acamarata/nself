@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 from collections import defaultdict
 
-DOCS_DIR = Path("/Users/admin/Sites/nself/docs")
+DOCS_DIR = Path("/Users/admin/Sites/nself/.wiki")
 REPORT_FILE = DOCS_DIR / "LINK-AUDIT-REPORT.md"
 
 class LinkAnalyzer:
@@ -40,11 +40,11 @@ class LinkAnalyzer:
         if not clean_url:
             return None
 
-        # Handle absolute paths from docs root
+        # Handle absolute paths from wiki root
         if clean_url.startswith('/'):
             clean_url = clean_url.lstrip('/')
-            if clean_url.startswith('docs/'):
-                clean_url = clean_url[5:]  # Remove 'docs/' prefix
+            if clean_url.startswith('.wiki/'):
+                clean_url = clean_url[6:]  # Remove '.wiki/' prefix
             return DOCS_DIR / clean_url
 
         # Handle relative paths
@@ -117,7 +117,7 @@ class LinkAnalyzer:
             try:
                 target_str = str(target_path.relative_to(DOCS_DIR)) if target_path else link_url
             except ValueError:
-                # Path is outside docs directory
+                # Path is outside wiki directory
                 target_str = str(target_path) if target_path else link_url
 
             link_info = {
@@ -136,7 +136,7 @@ class LinkAnalyzer:
                 self.broken_links.append(link_info)
 
     def find_similar_file(self, target: Path) -> str:
-        """Find similar filename in docs"""
+        """Find similar filename in wiki docs"""
         target_name = target.name.lower()
 
         # Search for files with similar names
@@ -249,7 +249,7 @@ class LinkAnalyzer:
             f.write("\n## Recommendations\n\n")
             f.write("### For Wiki Compatibility\n\n")
             f.write("1. **Remove .md extensions**: Wiki links should be `[Text](Page)` not `[Text](Page.md)`\n")
-            f.write("2. **Use relative paths**: Prefer `../folder/Page` over `/docs/folder/Page`\n")
+            f.write("2. **Use relative paths**: Prefer `../folder/Page` over `/.wiki/folder/Page`\n")
             f.write("3. **Fix broken links**: Update or remove the broken links listed above\n")
             f.write("4. **Test in wiki**: Verify links work in GitHub Wiki environment\n\n")
 

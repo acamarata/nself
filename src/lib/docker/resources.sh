@@ -10,57 +10,39 @@ source "${SCRIPT_DIR}/../utils/cli-output.sh" 2>/dev/null || true
 
 # Resource allocation weights by service type
 # Scale from 1-10 where 10 = highest resource priority
-declare -A SERVICE_WEIGHTS=(
-  ["postgres"]=10
-  ["hasura"]=8
-  ["redis"]=6
-  ["auth"]=5
-  ["nginx"]=4
-  ["minio"]=7
-  ["meilisearch"]=7
-  ["prometheus"]=6
-  ["grafana"]=5
-  ["loki"]=6
-  ["tempo"]=6
-  ["custom"]=5
-  ["functions"]=6
-  ["mlflow"]=7
-)
+# Bash 3.2 compatible: use functions instead of associative arrays
+get_service_weight() {
+  case "$1" in
+    postgres) echo "10" ;;
+    hasura) echo "8" ;;
+    minio|meilisearch|mlflow) echo "7" ;;
+    redis|prometheus|loki|tempo|functions) echo "6" ;;
+    auth|grafana|custom) echo "5" ;;
+    nginx) echo "4" ;;
+    *) echo "5" ;; # default
+  esac
+}
 
-# Minimum resource requirements (in MB for memory, millicores for CPU)
-declare -A MIN_MEMORY=(
-  ["postgres"]=512
-  ["hasura"]=256
-  ["redis"]=128
-  ["auth"]=128
-  ["nginx"]=64
-  ["minio"]=256
-  ["meilisearch"]=512
-  ["prometheus"]=512
-  ["grafana"]=256
-  ["loki"]=256
-  ["tempo"]=256
-  ["custom"]=128
-  ["functions"]=256
-  ["mlflow"]=512
-)
+# Minimum memory requirements (in MB)
+get_min_memory() {
+  case "$1" in
+    postgres|meilisearch|prometheus|mlflow) echo "512" ;;
+    hasura|minio|grafana|loki|tempo|functions) echo "256" ;;
+    redis|auth|custom) echo "128" ;;
+    nginx) echo "64" ;;
+    *) echo "128" ;; # default
+  esac
+}
 
-declare -A MIN_CPU=(
-  ["postgres"]=500
-  ["hasura"]=250
-  ["redis"]=100
-  ["auth"]=100
-  ["nginx"]=100
-  ["minio"]=250
-  ["meilisearch"]=250
-  ["prometheus"]=250
-  ["grafana"]=100
-  ["loki"]=250
-  ["tempo"]=250
-  ["custom"]=100
-  ["functions"]=250
-  ["mlflow"]=250
-)
+# Minimum CPU requirements (in millicores)
+get_min_cpu() {
+  case "$1" in
+    postgres) echo "500" ;;
+    hasura|minio|meilisearch|prometheus|loki|tempo|functions|mlflow) echo "250" ;;
+    redis|auth|nginx|grafana|custom) echo "100" ;;
+    *) echo "100" ;; # default
+  esac
+}
 
 # Detect system resources
 detect_system_resources() {
@@ -127,12 +109,15 @@ calculate_resources() {
   local total_cpu_cores="$3"
   local service_count="$4"
 
-  # Get service weight (default to 5 if not defined)
-  local weight="${SERVICE_WEIGHTS[$service]:-5}"
+  # Get service weight using Bash 3.2 compatible function
+  local weight
+  weight=$(get_service_weight "$service")
 
-  # Check for manual override
-  local mem_var="${service^^}_MEMORY_MB"
-  local cpu_var="${service^^}_CPU_MILLICORES"
+  # Check for manual override (Bash 3.2 compatible uppercase conversion)
+  local service_upper
+  service_upper=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+  local mem_var="${service_upper}_MEMORY_MB"
+  local cpu_var="${service_upper}_CPU_MILLICORES"
 
   if [[ -n "${!mem_var:-}" ]]; then
     local memory_mb="${!mem_var}"
@@ -140,8 +125,9 @@ calculate_resources() {
     # Calculate based on weight and available resources
     local memory_mb=$((total_memory_mb * weight / (service_count * 5)))
 
-    # Enforce minimum
-    local min_mem="${MIN_MEMORY[$service]:-128}"
+    # Enforce minimum using Bash 3.2 compatible function
+    local min_mem
+    min_mem=$(get_min_memory "$service")
     [[ $memory_mb -lt $min_mem ]] && memory_mb=$min_mem
   fi
 
@@ -151,8 +137,9 @@ calculate_resources() {
     # Calculate CPU (in millicores)
     local cpu_millicores=$((total_cpu_cores * 1000 * weight / (service_count * 5)))
 
-    # Enforce minimum
-    local min_cpu="${MIN_CPU[$service]:-100}"
+    # Enforce minimum using Bash 3.2 compatible function
+    local min_cpu
+    min_cpu=$(get_min_cpu "$service")
     [[ $cpu_millicores -lt $min_cpu ]] && cpu_millicores=$min_cpu
   fi
 
@@ -271,7 +258,8 @@ check_minimum_requirements() {
   # Calculate total minimum memory needed
   local total_min_memory=0
   for service in "${services[@]}"; do
-    local min_mem="${MIN_MEMORY[$service]:-128}"
+    local min_mem
+    min_mem=$(get_min_memory "$service")
     total_min_memory=$((total_min_memory + min_mem))
   done
 

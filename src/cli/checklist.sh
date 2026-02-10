@@ -4,15 +4,15 @@
 
 set -euo pipefail
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Get script directory (use namespaced variable to avoid clobbering caller globals)
+_CHECKLIST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$_CHECKLIST_DIR/../.." && pwd)"
 
 # Source utilities
-source "$SCRIPT_DIR/../lib/utils/cli-output.sh"
-source "$SCRIPT_DIR/../lib/utils/env.sh"
-source "$SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$_CHECKLIST_DIR/../lib/utils/cli-output.sh"
+source "$_CHECKLIST_DIR/../lib/utils/env.sh"
+source "$_CHECKLIST_DIR/../lib/hooks/pre-command.sh"
+source "$_CHECKLIST_DIR/../lib/hooks/post-command.sh"
 
 # Colors
 COLOR_GREEN="\033[0;32m"
@@ -554,6 +554,13 @@ main() {
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_help
+      exit 0
+    fi
+  done
   pre_command "checklist" || exit $?
   main "$@"
   exit_code=$?

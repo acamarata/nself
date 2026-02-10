@@ -179,29 +179,35 @@ cmd_show() {
   [[ "$json_mode" == "true" ]] && format="json"
   [[ "$csv_mode" == "true" ]] && format="csv"
 
-  # Build filter command
-  local filter_cmd="cat"
-
-  if [[ -n "$filter_env" ]]; then
-    filter_cmd="$filter_cmd | grep '\"env\": *\"$filter_env\"'"
-  fi
-
-  if [[ -n "$filter_type" ]]; then
-    filter_cmd="$filter_cmd | grep '\"type\": *\"$filter_type\"'"
-  fi
+  # Build filter pipeline without eval - apply grep filters safely
+  # SECURITY: Avoid eval with user-influenced filter values
+  _history_apply_filters() {
+    local _src_file="$1"
+    local _fenv="$2"
+    local _ftype="$3"
+    if [[ -n "$_fenv" ]] && [[ -n "$_ftype" ]]; then
+      grep "\"env\": *\"$_fenv\"" "$_src_file" | grep "\"type\": *\"$_ftype\""
+    elif [[ -n "$_fenv" ]]; then
+      grep "\"env\": *\"$_fenv\"" "$_src_file"
+    elif [[ -n "$_ftype" ]]; then
+      grep "\"type\": *\"$_ftype\"" "$_src_file"
+    else
+      cat "$_src_file"
+    fi
+  }
 
   if [[ "$json_mode" == "true" ]]; then
     printf '{"history": ['
-    eval "$filter_cmd" <"$log_file" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
-    printf '], "count": %d}\n' "$(eval "$filter_cmd" <"$log_file" | wc -l | tr -d ' ')"
+    _history_apply_filters "$log_file" "$filter_env" "$filter_type" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
+    printf '], "count": %d}\n' "$(_history_apply_filters "$log_file" "$filter_env" "$filter_type" | wc -l | tr -d ' ')"
   else
-    eval "$filter_cmd" <"$log_file" | tail -n "$limit" | while read -r line; do
+    _history_apply_filters "$log_file" "$filter_env" "$filter_type" | tail -n "$limit" | while read -r line; do
       format_entry "$line" "$format"
     done
 
     if [[ "$csv_mode" != "true" ]]; then
       echo ""
-      local total=$(eval "$filter_cmd" <"$log_file" | wc -l | tr -d ' ')
+      local total=$(_history_apply_filters "$log_file" "$filter_env" "$filter_type" | wc -l | tr -d ' ')
       log_info "Showing last $limit of $total entries"
     fi
   fi
@@ -617,6 +623,13 @@ export -f record_event
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_history_help
+      exit 0
+    fi
+  done
   pre_command "history" || exit $?
   cmd_history "$@"
   exit_code=$?

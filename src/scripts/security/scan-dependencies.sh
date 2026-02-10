@@ -241,7 +241,7 @@ generate_report() {
     printf "- .pre-commit-config.yaml\n\n"
 
     printf "Documentation:\n"
-    printf "- docs/security/DEPENDENCY-SCANNING.md\n"
+    printf "- .wiki/security/DEPENDENCY-SCANNING.md\n"
   } > "$report_file"
 
   success "Report generated: $report_file"
@@ -284,7 +284,7 @@ main() {
   printf "\nFor continuous security scanning, see:\n"
   printf "  - GitHub Actions: .github/workflows/security-scan.yml\n"
   printf "  - Pre-commit hooks: .pre-commit-config.yaml\n"
-  printf "  - Documentation: docs/security/DEPENDENCY-SCANNING.md\n"
+  printf "  - Documentation: .wiki/security/DEPENDENCY-SCANNING.md\n"
 
   exit $exit_code
 }

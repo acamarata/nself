@@ -247,6 +247,13 @@ export -f cmd_exec
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_exec_help
+      exit 0
+    fi
+  done
   pre_command "exec" || exit $?
   cmd_exec "$@"
   exit_code=$?

@@ -5,26 +5,26 @@
 
 # Get the correct script directory
 CORE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_ROOT="$(dirname "$CORE_SCRIPT_DIR")"
+_BUILD_LIB_ROOT="$(dirname "$CORE_SCRIPT_DIR")"
 
 # Source the original utilities that build.sh needs
-source "$LIB_ROOT/utils/platform-compat.sh"
-source "$LIB_ROOT/utils/env.sh"
-source "$LIB_ROOT/utils/display.sh"
-source "$LIB_ROOT/utils/header.sh"
-source "$LIB_ROOT/utils/preflight.sh"
-source "$LIB_ROOT/utils/timeout.sh"
-source "$LIB_ROOT/config/smart-defaults.sh"
-source "$LIB_ROOT/utils/hosts.sh"
+source "$_BUILD_LIB_ROOT/utils/platform-compat.sh"
+source "$_BUILD_LIB_ROOT/utils/env.sh"
+source "$_BUILD_LIB_ROOT/utils/display.sh"
+source "$_BUILD_LIB_ROOT/utils/header.sh"
+source "$_BUILD_LIB_ROOT/utils/preflight.sh"
+source "$_BUILD_LIB_ROOT/utils/timeout.sh"
+source "$_BUILD_LIB_ROOT/config/smart-defaults.sh"
+source "$_BUILD_LIB_ROOT/utils/hosts.sh"
 
 # Source unified SSL API
-if [[ -f "$LIB_ROOT/ssl/api.sh" ]]; then
-  source "$LIB_ROOT/ssl/api.sh" 2>/dev/null || true
+if [[ -f "$_BUILD_LIB_ROOT/ssl/api.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/ssl/api.sh" 2>/dev/null || true
 fi
 
 # Source trust management for auto-install functionality
-if [[ -f "$LIB_ROOT/ssl/trust.sh" ]]; then
-  source "$LIB_ROOT/ssl/trust.sh" 2>/dev/null || true
+if [[ -f "$_BUILD_LIB_ROOT/ssl/trust.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/ssl/trust.sh" 2>/dev/null || true
 fi
 
 # Source build-specific SSL module
@@ -33,12 +33,12 @@ if [[ -f "$CORE_SCRIPT_DIR/modules/ssl.sh" ]]; then
 fi
 
 # Source validation scripts with error checking
-if [[ -f "$LIB_ROOT/auto-fix/config-validator-v2.sh" ]]; then
-  source "$LIB_ROOT/auto-fix/config-validator-v2.sh"
+if [[ -f "$_BUILD_LIB_ROOT/auto-fix/config-validator-v2.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/auto-fix/config-validator-v2.sh"
 fi
 
-if [[ -f "$LIB_ROOT/auto-fix/auto-fixer-v2.sh" ]]; then
-  source "$LIB_ROOT/auto-fix/auto-fixer-v2.sh"
+if [[ -f "$_BUILD_LIB_ROOT/auto-fix/auto-fixer-v2.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/auto-fix/auto-fixer-v2.sh"
 fi
 
 # Source comprehensive config validator
@@ -47,12 +47,12 @@ if [[ -f "$CORE_SCRIPT_DIR/config-validator.sh" ]]; then
 fi
 
 # Source performance optimization modules
-if [[ -f "$LIB_ROOT/utils/build-cache.sh" ]]; then
-  source "$LIB_ROOT/utils/build-cache.sh"
+if [[ -f "$_BUILD_LIB_ROOT/utils/build-cache.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/utils/build-cache.sh"
 fi
 
-if [[ -f "$LIB_ROOT/utils/docker-batch.sh" ]]; then
-  source "$LIB_ROOT/utils/docker-batch.sh"
+if [[ -f "$_BUILD_LIB_ROOT/utils/docker-batch.sh" ]]; then
+  source "$_BUILD_LIB_ROOT/utils/docker-batch.sh"
 fi
 
 # Source our modular components
@@ -74,6 +74,79 @@ if [[ -d "$MODULE_DIR" ]]; then
     fi
   done
 fi
+
+# Monorepo migration check (V098-P1-015)
+# Detects if package.json has moved from root to a subdirectory,
+# suggesting a monorepo layout. Emits a warning if FRONTEND_DIR is not set.
+monorepo_check() {
+  local build_dir="${BUILD_DIR:-$(pwd)}"
+  local frontend_dir="${FRONTEND_DIR:-}"
+
+  # If FRONTEND_DIR is already set, user is aware of the layout
+  if [[ -n "$frontend_dir" ]]; then
+    return 0
+  fi
+
+  # Check if package.json exists at root - if so, no monorepo concern
+  if [[ -f "$build_dir/package.json" ]]; then
+    return 0
+  fi
+
+  # package.json is NOT at root - look for it in common subdirectories
+  local found_dirs=""
+  local found_count=0
+  local search_dirs="apps packages frontend client web src"
+
+  for dir in $search_dirs; do
+    if [[ -d "$build_dir/$dir" ]]; then
+      # Look one level deep for package.json
+      for subdir in "$build_dir/$dir"/*/; do
+        if [[ -f "${subdir}package.json" ]]; then
+          local relative_path="${subdir#$build_dir/}"
+          # Remove trailing slash
+          relative_path="${relative_path%/}"
+          if [[ -n "$found_dirs" ]]; then
+            found_dirs="$found_dirs, $relative_path"
+          else
+            found_dirs="$relative_path"
+          fi
+          found_count=$((found_count + 1))
+        fi
+      done
+    fi
+  done
+
+  # Also check direct subdirectories (one level)
+  for subdir in "$build_dir"/*/; do
+    if [[ -f "${subdir}package.json" ]] && [[ ! -f "$build_dir/package.json" ]]; then
+      local dirname
+      dirname=$(basename "$subdir")
+      # Skip node_modules and common non-app dirs
+      case "$dirname" in
+        node_modules|.git|.nself|dist|build|coverage) continue ;;
+      esac
+      # Only add if not already found through the search_dirs path
+      if [[ "$found_dirs" != *"$dirname"* ]]; then
+        if [[ -n "$found_dirs" ]]; then
+          found_dirs="$found_dirs, $dirname"
+        else
+          found_dirs="$dirname"
+        fi
+        found_count=$((found_count + 1))
+      fi
+    fi
+  done
+
+  if [[ $found_count -gt 0 ]]; then
+    printf "${COLOR_YELLOW:-}⚠${COLOR_RESET:-}  Monorepo layout detected: package.json found in subdirectories\n"
+    printf "   ${COLOR_DIM:-}Found in: %s${COLOR_RESET:-}\n" "$found_dirs"
+    printf "   ${COLOR_DIM:-}Set FRONTEND_DIR in your .env to specify the frontend root directory${COLOR_RESET:-}\n"
+    printf "   ${COLOR_DIM:-}Example: FRONTEND_DIR=apps/web${COLOR_RESET:-}\n"
+    echo ""
+  fi
+
+  return 0
+}
 
 # Port detection function for compatibility with tests
 detect_app_port() {
@@ -113,6 +186,33 @@ init_build_environment() {
   : ${DOCKER_NETWORK:="${PROJECT_NAME}_network"}
   : ${BASE_DOMAIN:="localhost"}
 
+  # FRONTEND_DIR support (V098-P1-016) - default "." for backward compat
+  export FRONTEND_DIR="${FRONTEND_DIR:-.}"
+
+  return 0
+}
+
+# Get the effective frontend directory path (V098-P1-016)
+# Returns the resolved FRONTEND_DIR relative to the build root
+get_frontend_build_context() {
+  local frontend_dir="${FRONTEND_DIR:-.}"
+
+  # If it is ".", return current directory marker
+  if [[ "$frontend_dir" == "." ]]; then
+    printf "."
+    return 0
+  fi
+
+  # Strip trailing slashes
+  frontend_dir="${frontend_dir%/}"
+
+  # Validate the directory exists
+  if [[ ! -d "$frontend_dir" ]]; then
+    printf "." # fallback to root
+    return 1
+  fi
+
+  printf "%s" "$frontend_dir"
   return 0
 }
 
@@ -385,6 +485,9 @@ orchestrate_build() {
   # Load env for detection
   load_env_for_detection
 
+  # Run monorepo migration check (V098-P1-015) - warning only
+  monorepo_check 2>/dev/null || true
+
   # Validate and sanitize environment variables (including PROJECT_NAME)
   if command -v validate_environment >/dev/null 2>&1; then
     validate_environment || true
@@ -520,8 +623,8 @@ orchestrate_build() {
   fi
 
   # Apply database auto-configuration
-  if [[ -f "$LIB_ROOT/database/auto-config.sh" ]]; then
-    source "$LIB_ROOT/database/auto-config.sh" 2>/dev/null || true
+  if [[ -f "$_BUILD_LIB_ROOT/database/auto-config.sh" ]]; then
+    source "$_BUILD_LIB_ROOT/database/auto-config.sh" 2>/dev/null || true
     printf "${COLOR_BLUE}⠋${COLOR_RESET} Configuring database for optimal performance..."
     if command -v get_system_resources >/dev/null 2>&1 && command -v apply_smart_defaults >/dev/null 2>&1; then
       get_system_resources >/dev/null 2>&1 || true
@@ -573,7 +676,7 @@ orchestrate_build() {
 
   # Use nself urls command to check conflicts
   local conflict_check_output
-  local urls_script="$LIB_ROOT/../cli/urls.sh"
+  local urls_script="$_BUILD_LIB_ROOT/../cli/urls.sh"
   if [[ -f "$urls_script" ]]; then
     # Try to check conflicts, but don't fail build if script has issues
     conflict_check_output=$(cd "$PWD" && "$urls_script" --check-conflicts 2>&1 || true)
@@ -863,7 +966,7 @@ FUNCEOF
       fi
 
       # Skip runtime variables documentation generation
-      # Documentation should be in the wiki/docs, not generated in project
+      # Documentation should be in /.wiki, not generated in project root
 
       # Run post-build tasks
       run_post_build_tasks 2>/dev/null || true
@@ -1126,6 +1229,7 @@ run_build() {
 }
 
 # Export functions
+export -f monorepo_check
 export -f convert_frontend_apps_to_expanded
 export -f build_generate_simple_ssl
 export -f orchestrate_build

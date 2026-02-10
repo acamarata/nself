@@ -8,11 +8,11 @@
 [[ "${UX_STANDARDS_SOURCED:-}" == "1" ]] && return 0
 export UX_STANDARDS_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/display.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/cli-output.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/platform-compat.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_UX_STANDARDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_UX_STANDARDS_DIR}/display.sh" 2>/dev/null || true
+source "${_UX_STANDARDS_DIR}/cli-output.sh" 2>/dev/null || true
+source "${_UX_STANDARDS_DIR}/platform-compat.sh" 2>/dev/null || true
 
 # =============================================================================
 # USER-FRIENDLY ERROR MESSAGES
@@ -523,32 +523,27 @@ ux_show_help() {
 
   ux_help_section "See Also"
   printf "  ${COLOR_DIM}Run 'nself help' for all commands${COLOR_RESET}\n"
-  printf "  ${COLOR_DIM}Docs: docs/commands/$(echo "$command" | tr ' ' '-' | tr '[:upper:]' '[:lower:]').md${COLOR_RESET}\n\n"
+  printf "  ${COLOR_DIM}Docs: .wiki/commands/$(echo "$command" | tr ' ' '-' | tr '[:upper:]' '[:lower:]').md${COLOR_RESET}\n\n"
 }
 
 # =============================================================================
 # COMMAND ALIASES
 # =============================================================================
 
-# Map of command aliases (for reference)
-declare -A UX_ALIASES=(
-  ["ps"]="status"
-  ["ls"]="list"
-  ["rm"]="remove"
-  ["del"]="remove"
-  ["restart-all"]="restart"
-  ["log"]="logs"
-  ["tail"]="logs"
-  ["run"]="exec"
-  ["shell"]="exec"
-  ["up"]="start"
-  ["down"]="stop"
-)
-
-# Resolve alias to actual command
+# Resolve alias to actual command (Bash 3.2 compatible)
 ux_resolve_alias() {
   local alias="$1"
-  echo "${UX_ALIASES[$alias]:-$alias}"
+  case "$alias" in
+    ps) echo "status" ;;
+    ls) echo "list" ;;
+    rm|del) echo "remove" ;;
+    restart-all) echo "restart" ;;
+    log|tail) echo "logs" ;;
+    run|shell) echo "exec" ;;
+    up) echo "start" ;;
+    down) echo "stop" ;;
+    *) echo "$alias" ;;  # Return original if no alias
+  esac
 }
 
 # =============================================================================

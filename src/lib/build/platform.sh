@@ -38,6 +38,10 @@ detect_build_platform() {
 # Safe arithmetic increment that works on all platforms
 safe_increment() {
   local var_name="$1"
+  # SECURITY: Validate var_name is a valid identifier before eval
+  if ! printf "%s" "$var_name" | grep -q '^[a-zA-Z_][a-zA-Z0-9_]*$'; then
+    return 1
+  fi
   # More portable way to get variable value
   eval "local current_val=\${$var_name:-0}"
 
@@ -138,6 +142,11 @@ get_sed_inplace_flag() {
 set_default() {
   local var_name="$1"
   local default_value="$2"
+
+  # SECURITY: Validate var_name is a valid identifier before eval
+  if ! printf "%s" "$var_name" | grep -q '^[a-zA-Z_][a-zA-Z0-9_]*$'; then
+    return 1
+  fi
 
   # Check if variable is unset or empty (more portable)
   eval "local current_val=\${$var_name:-}"

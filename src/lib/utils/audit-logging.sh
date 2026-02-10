@@ -8,10 +8,10 @@
 [[ "${AUDIT_LOGGING_SOURCED:-}" == "1" ]] && return 0
 export AUDIT_LOGGING_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/platform-compat.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/logging.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_AUDIT_LOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_AUDIT_LOG_DIR}/platform-compat.sh" 2>/dev/null || true
+source "${_AUDIT_LOG_DIR}/logging.sh" 2>/dev/null || true
 
 # =============================================================================
 # AUDIT CONFIGURATION

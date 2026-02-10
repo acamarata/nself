@@ -18,7 +18,7 @@ get_hasura_endpoint() {
 # Generate GraphQL documentation
 generate_graphql_docs() {
   local schema_file="${1:-schema.graphql}"
-  local output_dir="${2:-./docs/api}"
+  local output_dir="${2:-./.wiki/api}"
 
   printf "Generating GraphQL documentation...\n"
 
@@ -348,7 +348,7 @@ EOF
 
 # Generate OpenAPI specification from GraphQL
 generate_openapi_spec() {
-  local output_file="${1:-./docs/api/openapi.yaml}"
+  local output_file="${1:-./.wiki/api/openapi.yaml}"
 
   printf "Generating OpenAPI specification...\n"
 
@@ -680,7 +680,7 @@ EOF
 
 # Generate API documentation
 generate_docs() {
-  local output_dir="${1:-./docs/api}"
+  local output_dir="${1:-./.wiki/api}"
 
   printf "Generating API documentation...\n"
 

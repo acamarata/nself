@@ -50,11 +50,13 @@ jobs:
       - name: Run quick unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+          # BLOCKING: Unit tests must pass
+          timeout 60 bash src/tests/unit/test-build-quick.sh
 
       - name: Run comprehensive unit tests
         run: |
           cd $GITHUB_WORKSPACE
+          # BLOCKING: Comprehensive tests must pass
           timeout 120 bash src/tests/unit/test-build-comprehensive.sh
 
       - name: Test build command help
@@ -73,16 +75,20 @@ jobs:
           ENV=dev
           EOF
 
-          # Run build (may not complete fully in CI, that's okay)
-          bash $GITHUB_WORKSPACE/src/cli/build.sh || true
+          # Run build and check results
+          if bash $GITHUB_WORKSPACE/src/cli/build.sh; then
+            echo "::notice::Build succeeded"
+          else
+            build_exit=$?
+            echo "::warning::Build exited with code $build_exit (may be expected without Docker)"
+          fi
 
-          # Check that at least some files were generated
-          # We're more lenient here since CI might not have all dependencies
+          # Verify build produced expected artifacts (even if exit code was non-zero)
           if [[ -f "docker-compose.yml" ]] || [[ -d "nginx" ]] || [[ -d "ssl" ]]; then
-            echo "Build generated expected files"
+            echo "::notice::Build generated expected files"
             exit 0
           else
-            echo "Build did not generate any expected files"
+            echo "::error::Build did not generate any expected files - this indicates a real build failure"
             exit 1
           fi
 
@@ -115,11 +121,12 @@ jobs:
       - name: Run quick unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          # macOS doesn't have timeout command, use gtimeout if available or skip timeout
+          # BLOCKING: Unit tests must pass
+          # ADVISORY: timeout command may not exist on macOS - use gtimeout or run without timeout
           if command -v timeout >/dev/null 2>&1; then
-            timeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+            timeout 60 bash src/tests/unit/test-build-quick.sh
           elif command -v gtimeout >/dev/null 2>&1; then
-            gtimeout 60 bash src/tests/unit/test-build-quick.sh || bash src/tests/unit/test-build-quick.sh
+            gtimeout 60 bash src/tests/unit/test-build-quick.sh
           else
             bash src/tests/unit/test-build-quick.sh
           fi
@@ -127,7 +134,8 @@ jobs:
       - name: Run comprehensive unit tests
         run: |
           cd $GITHUB_WORKSPACE
-          # macOS doesn't have timeout command, use gtimeout if available or skip timeout
+          # BLOCKING: Comprehensive tests must pass
+          # ADVISORY: timeout command may not exist on macOS - use gtimeout or run without timeout
           if command -v timeout >/dev/null 2>&1; then
             timeout 120 bash src/tests/unit/test-build-comprehensive.sh
           elif command -v gtimeout >/dev/null 2>&1; then
@@ -227,12 +235,30 @@ jobs:
           POSTGRES_ENABLED=maybe
           EOF
 
-          # Run build - should fix issues
-          bash $GITHUB_WORKSPACE/src/cli/build.sh || true
+          # Build with intentionally invalid config - should either fail or auto-fix
+          if bash $GITHUB_WORKSPACE/src/cli/build.sh; then
+            echo "::notice::Build succeeded (validation may have auto-fixed issues)"
+          else
+            exit_code=$?
+            # Exit codes 1-10 might be validation errors (expected)
+            # Other exit codes indicate real problems
+            if [[ $exit_code -le 10 ]]; then
+              echo "::notice::Build failed with validation error (expected): exit $exit_code"
+            else
+              echo "::error::Build failed with unexpected error: exit $exit_code"
+              exit 1
+            fi
+          fi
 
-          # Check that validation fixes were applied
-          source .env
-          [[ ! "$PROJECT_NAME" =~ " " ]] || exit 1
+          # Check that validation fixes were applied or invalid values were rejected
+          if [ -f .env ]; then
+            source .env
+            # PROJECT_NAME should not have spaces (should be fixed or build should have failed)
+            if [[ "$PROJECT_NAME" =~ " " ]]; then
+              echo "::error::PROJECT_NAME still has spaces - validation failed"
+              exit 1
+            fi
+          fi
 
   integration-test:
     runs-on: ubuntu-latest
@@ -276,9 +302,10 @@ jobs:
           STORAGE_PORT=5001
           EOF
 
-          # Run build (allow it to fail, we'll check what was created)
+          # ADVISORY: Build may exit non-zero in CI without full Docker runtime
+          # We validate success by checking generated artifacts below
           echo "Running build..."
-          bash $GITHUB_WORKSPACE/src/cli/build.sh --force || echo "Build exited with code $?"
+          bash $GITHUB_WORKSPACE/src/cli/build.sh --force || echo "::notice::Build exited with code $? (may be expected in CI)"
 
           # Debug: Show what was created
           echo "Listing directory contents:"
@@ -314,7 +341,8 @@ jobs:
 
             # Try to validate docker-compose if it exists
             if [[ -f "docker-compose.yml" ]]; then
-              docker-compose config || echo "docker-compose config validation skipped"
+              # ADVISORY: docker-compose may not validate cleanly without all build-time variables
+              docker-compose config || echo "::notice::docker-compose config validation skipped"
             fi
 
             exit 0

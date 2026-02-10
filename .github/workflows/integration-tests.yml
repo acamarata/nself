@@ -49,6 +49,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install docker docker-compose
+          # ADVISORY: colima may fail to start in CI (resource limits, virtualization)
+          # Subsequent Docker-dependent steps will fail naturally if Docker is unavailable
           colima start || true
 
       - name: Install nself
@@ -93,6 +95,7 @@ jobs:
       - name: Cleanup test environments
         if: always()
         run: |
+          # ADVISORY: Cleanup must not fail the pipeline - containers may already be removed
           # Clean up any remaining test containers
           docker ps -a | grep "nself-integration-test" | awk '{print $1}' | xargs -r docker rm -f || true
 

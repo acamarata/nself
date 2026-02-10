@@ -368,10 +368,10 @@ When adding new billing features:
 
 ## Related Documentation
 
-- [nself Billing System Documentation](../../docs/features/BILLING.md)
-- [Stripe Plugin Documentation](../../docs/plugins/STRIPE.md)
-- [Usage Tracking Guide](../../docs/guides/USAGE-TRACKING.md)
-- [Quota Management Guide](../../docs/guides/QUOTAS.md)
+- [nself Billing System Documentation](/.wiki/commands/BILLING.md)
+- [Stripe Plugin Documentation](/.wiki/plugins/stripe.md)
+- [Usage Tracking Guide](/.wiki/guides/USAGE-TRACKING.md)
+- [Quota Management Guide](/.wiki/guides/QUOTAS.md)
 
 ## Version History
 

@@ -28,6 +28,16 @@ source "$NSELF_ROOT/src/lib/security/csp.sh" 2>/dev/null || {
 # CSP Tests
 # ============================================================================
 
+test_csp_default_is_strict() {
+  # V098-P1-013: Default CSP mode should be strict
+  local csp
+  csp=$(csp::generate)
+
+  assert_not_contains "$csp" "unsafe-inline" "Default CSP should not contain unsafe-inline"
+  assert_not_contains "$csp" "unsafe-eval" "Default CSP should not contain unsafe-eval"
+  assert_contains "$csp" "script-src 'self'" "Default CSP should have strict script-src"
+}
+
 test_csp_generate_strict() {
   local csp
   csp=$(csp::generate "strict")
@@ -201,6 +211,7 @@ test_suite_description="Security Headers Testing"
 
 # Run all tests
 run_test_suite \
+  test_csp_default_is_strict \
   test_csp_generate_strict \
   test_csp_generate_moderate \
   test_csp_generate_permissive \

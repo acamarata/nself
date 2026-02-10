@@ -260,7 +260,7 @@ jobs:
 ## Support
 
 - Documentation: See README files in this directory
-- nself docs: `/docs/features/BILLING.md`
+- nself docs: `/.wiki/commands/BILLING.md`
 - Test issues: Create GitHub issue with test output
 
 ---

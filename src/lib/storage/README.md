@@ -249,7 +249,7 @@ await remove(fileId);
 
 ### Components
 
-See `docs/guides/file-upload-examples.md` for complete examples:
+See `/.wiki/guides/file-upload-examples.md` for complete examples:
 
 - Avatar upload with cropping
 - Multi-file upload with progress
@@ -286,7 +286,7 @@ See `docs/guides/file-upload-examples.md` for complete examples:
    - Disable script execution
    - Content Security Policy
 
-See `docs/security/file-upload-security.md` for complete guide.
+See `/.wiki/security/file-upload-security.md` for complete guide.
 
 ## Performance
 
@@ -379,11 +379,11 @@ mc ls test/
 
 ## Resources
 
-- [File Upload Pipeline Guide](../../docs/guides/file-upload-pipeline.md)
-- [Security Best Practices](../../docs/security/file-upload-security.md)
-- [Quick Start Tutorial](../../docs/tutorials/file-uploads-quickstart.md)
-- [CLI Reference](../../docs/commands/storage.md)
-- [Integration Examples](../../docs/guides/file-upload-examples.md)
+- [File Upload Pipeline Guide](/.wiki/guides/file-upload-pipeline.md)
+- [Security Best Practices](/.wiki/security/file-upload-security.md)
+- [Quick Start Tutorial](/.wiki/tutorials/file-uploads-quickstart.md)
+- [CLI Reference](/.wiki/commands/storage.md)
+- [Integration Examples](/.wiki/guides/file-upload-examples.md)
 
 ## Contributing
 

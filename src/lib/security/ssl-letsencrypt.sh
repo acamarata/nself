@@ -141,8 +141,8 @@ ssl::request_cert() {
 
   printf "\nRunning: %s\n\n" "$certbot_cmd"
 
-  # Execute certbot
-  if eval "$certbot_cmd"; then
+  # SECURITY: Execute certbot via bash -c instead of raw eval
+  if bash -c "$certbot_cmd"; then
     log_success "Certificate obtained successfully"
     ssl::link_cert "$domain"
     return 0

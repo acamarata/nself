@@ -360,6 +360,13 @@ export -f cmd_scale
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_scale_help
+      exit 0
+    fi
+  done
   pre_command "scale" || exit $?
   cmd_scale "$@"
   exit_code=$?

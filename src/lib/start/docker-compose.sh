@@ -3,9 +3,9 @@
 # docker-compose.sh - Docker Compose operations for nself start
 # Bash 3.2 compatible, cross-platform
 
-# Source error messages library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../utils/error-messages.sh" 2>/dev/null || true
+# Source error messages library (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_START_COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_START_COMPOSE_DIR}/../utils/error-messages.sh" 2>/dev/null || true
 
 # Get the appropriate docker compose command
 get_compose_command() {
@@ -63,7 +63,8 @@ execute_compose_with_progress() {
     if command -v timeout >/dev/null 2>&1; then
       timeout "$timeout" sh -c "$compose_cmd" 2>&1 | tee "$output_file"
     else
-      eval "$compose_cmd" 2>&1 | tee "$output_file" &
+      # SECURITY: Use bash -c instead of raw eval for compose commands
+      bash -c "$compose_cmd" 2>&1 | tee "$output_file" &
       local cmd_pid=$!
       sleep "$timeout"
       kill -TERM $cmd_pid 2>/dev/null
@@ -175,10 +176,11 @@ execute_compose_without_build() {
 
   if [ "$verbose" = "true" ]; then
     printf "\n"
-    eval "$cmd" 2>&1 | tee "$output_file"
+    # SECURITY: Use bash -c instead of raw eval for compose commands
+    bash -c "$cmd" 2>&1 | tee "$output_file"
     local result=${PIPESTATUS[0]}
   else
-    (eval "$cmd" 2>&1) >"$output_file" &
+    (bash -c "$cmd" 2>&1) >"$output_file" &
     local compose_pid=$!
 
     # Monitor with shorter timeout for fallback

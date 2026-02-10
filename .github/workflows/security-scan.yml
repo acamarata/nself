@@ -69,7 +69,8 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Warn but don't fail on vulnerabilities
+          # BLOCKING: CRITICAL and HIGH dependency vulnerabilities must fail the pipeline
+          exit-code: '1'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -87,8 +88,11 @@ jobs:
 
           for image in $base_images; do
             printf "\033[33mScanning: %s\033[0m\n" "$image"
+            # ADVISORY: Upstream base images may have known vulns we can't immediately fix
+            # Scans are informational; review results manually and update base images when patches available
+            # Allow scan failures (rate limits, network issues, or image pull failures)
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image" || true
+              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image" || echo "::warning::Base image scan failed or found vulnerabilities: $image"
           done
 
   container-scan:
@@ -108,33 +112,51 @@ jobs:
 
           # Express API
           if [ -d "src/templates/services/js/express-js" ]; then
-            docker build -t nself-test:express-js \
+            if docker build -t nself-test:express-js \
               --build-arg SERVICE_NAME=test-api \
               --build-arg PORT=3000 \
-              src/templates/services/js/express-js/ || true
+              src/templates/services/js/express-js/; then
+              echo "::notice::Built nself-test:express-js"
+            else
+              echo "::warning::Failed to build Express template (may need full nself pipeline)"
+            fi
           fi
 
           # FastAPI
           if [ -d "src/templates/services/py/fastapi" ]; then
-            docker build -t nself-test:fastapi \
+            if docker build -t nself-test:fastapi \
               --build-arg SERVICE_NAME=test-api \
               --build-arg PORT=8000 \
-              src/templates/services/py/fastapi/ || true
+              src/templates/services/py/fastapi/; then
+              echo "::notice::Built nself-test:fastapi"
+            else
+              echo "::warning::Failed to build FastAPI template (may need full nself pipeline)"
+            fi
           fi
 
       - name: Scan built images with Trivy
         run: |
           images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "nself-test:" || echo "")
           if [ -z "$images" ]; then
-            printf "\033[33mNo test images to scan\033[0m\n"
+            printf "\033[33mNo test images to scan (builds may have failed)\033[0m\n"
             exit 0
           fi
 
+          scan_failed=0
           for image in $images; do
             printf "\033[34mScanning image: %s\033[0m\n" "$image"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image" || true
+            # FAIL CI if our built images have critical vulnerabilities
+            if ! docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity HIGH,CRITICAL "$image"; then
+              echo "::error::Found HIGH/CRITICAL vulnerabilities in $image"
+              scan_failed=1
+            fi
           done
+
+          if [ $scan_failed -eq 1 ]; then
+            echo "::error::Security scan failed - fix vulnerabilities in service templates"
+            exit 1
+          fi
 
   sast:
     name: Static Application Security Testing
@@ -149,7 +171,7 @@ jobs:
             p/security-audit
             p/owasp-top-ten
             p/docker
-        continue-on-error: true  # Don't fail on findings, just report them
+        # BLOCKING: SAST findings (security-audit, OWASP Top 10) must fail the pipeline
 
   license-check:
     name: License Compliance

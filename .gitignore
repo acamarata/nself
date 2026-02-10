@@ -7,9 +7,13 @@
 # Backup folders from nself reset
 _backup*
 
-# Runtime directories
+# Runtime directories (created by nself CLI - must never exist in source tree)
 .nself/
 .environments/
+certs/
+hasura/
+nself/
+types/
 
 # Docker volumes
 .volumes/
@@ -20,12 +24,15 @@ logs/
 
 # Dependencies
 node_modules/
+__pycache__/
+*.pyc
 
 # System files
 .DS_Store
 .idea/
 .vscode/
 .claude/
+.codex/
 *.swp
 *.swo
 *~
@@ -55,7 +62,7 @@ TODO.md
 DONE.md
 FEEDBACK.md
 
-# Working documents (should be moved to docs/ before commit)
+# Working documents (keep in hidden control folders before commit)
 *-SUMMARY.md
 *-INDEX.md
 *-UPDATES.md

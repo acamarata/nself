@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-DOCS_DIR="/Users/admin/Sites/nself/docs"
+DOCS_DIR="/Users/admin/Sites/nself/.wiki"
 SIDEBAR="$DOCS_DIR/_Sidebar.md"
 
 GREEN='\033[0;32m'

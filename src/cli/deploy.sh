@@ -131,7 +131,7 @@ ${CLI_BOLD}Examples:${CLI_RESET}
   nself deploy sync push staging
 
 ${CLI_BOLD}Documentation:${CLI_RESET}
-  Full deployment docs: docs/deployment/
+  Full deployment docs: .wiki/deployment/
 EOF
 }
 

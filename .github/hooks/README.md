@@ -89,5 +89,5 @@ If the hook incorrectly blocks a file:
 ## Additional Resources
 
 - [Git Hooks Documentation](https://git-scm.com/docs/githooks)
-- [nself Security Guide](../../docs/guides/SECURITY.md)
-- [Environment Variables Guide](../../docs/configuration/ENVIRONMENT-VARIABLES.md)
+- [nself Security Guide](../../.wiki/guides/SECURITY.md)
+- [Environment Variables Guide](../../.wiki/configuration/ENVIRONMENT-VARIABLES.md)

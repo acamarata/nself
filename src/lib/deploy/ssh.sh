@@ -150,8 +150,8 @@ ssh::rsync_to() {
     return 1
   fi
 
-  # Build rsync options
-  local rsync_opts="-avz --delete"
+  # SECURITY: Build rsync command using arrays instead of eval to prevent injection
+  local rsync_args=("-avz" "--delete")
 
   # Build SSH command for rsync
   local ssh_cmd="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=$SSH_CONNECT_TIMEOUT -p $port"
@@ -161,20 +161,27 @@ ssh::rsync_to() {
     ssh_cmd="$ssh_cmd -i $expanded_key"
   fi
 
-  # Add excludes
+  # Add excludes safely using array
   if [[ -n "$exclude" ]]; then
     # Split by comma
     local IFS=','
     for pattern in $exclude; do
-      rsync_opts="$rsync_opts --exclude='$pattern'"
+      # Validate exclude pattern - reject suspicious characters
+      case "$pattern" in
+        *\;*|*\&*|*\|*|*\`*|*\$\(*)
+          log_warning "Skipping suspicious exclude pattern: $pattern"
+          continue
+          ;;
+      esac
+      rsync_args+=("--exclude=$pattern")
     done
   fi
 
   # Default excludes for nself projects
-  rsync_opts="$rsync_opts --exclude='.git' --exclude='node_modules' --exclude='.env.local' --exclude='.env.secrets'"
+  rsync_args+=("--exclude=.git" "--exclude=node_modules" "--exclude=.env.local" "--exclude=.env.secrets")
 
-  # Execute rsync
-  eval "rsync $rsync_opts -e \"$ssh_cmd\" \"$local_path\" \"${user}@${host}:${remote_path}\""
+  # Execute rsync directly using arrays (no eval needed)
+  rsync "${rsync_args[@]}" -e "$ssh_cmd" "$local_path" "${user}@${host}:${remote_path}"
 }
 
 # Get server info

@@ -11,9 +11,9 @@
 [[ -n "${NSELF_BILLING_STRIPE_LOADED:-}" ]] && return 0
 NSELF_BILLING_STRIPE_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_STRIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_STRIPE_DIR}/core.sh"
 
 # Stripe API endpoint
 STRIPE_API_BASE="${STRIPE_API_BASE:-https://api.stripe.com/v1}"

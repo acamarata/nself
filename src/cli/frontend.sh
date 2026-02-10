@@ -448,15 +448,24 @@ cmd_logs() {
     printf "  %-20s %-15s %-15s %s\n" "--------" "--------" "-----------" "---------"
   fi
 
-  local filter_cmd="cat"
-  [[ -n "$name" ]] && filter_cmd="grep \"\\\"frontend\\\": \\\"$name\\\"\""
+  # SECURITY: Use direct grep instead of eval with user-influenced filter
+  # Apply frontend name filter safely without eval
+  _frontend_filter_log() {
+    local _file="$1"
+    local _name="$2"
+    if [[ -n "$_name" ]]; then
+      grep "\"frontend\": *\"$_name\"" "$_file" 2>/dev/null || true
+    else
+      cat "$_file"
+    fi
+  }
 
   if [[ "$json_mode" == "true" ]]; then
     printf '{"deployments": ['
-    eval "$filter_cmd \"$log_file\"" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
+    _frontend_filter_log "$log_file" "$name" | tail -n "$limit" | tr '\n' ',' | sed 's/,$//'
     printf ']}\n'
   else
-    eval "$filter_cmd \"$log_file\"" | tail -n "$limit" | while read -r line; do
+    _frontend_filter_log "$log_file" "$name" | tail -n "$limit" | while read -r line; do
       local frontend=$(echo "$line" | grep -o '"frontend": *"[^"]*"' | sed 's/"frontend": *"\([^"]*\)"/\1/')
       local provider=$(echo "$line" | grep -o '"provider": *"[^"]*"' | sed 's/"provider": *"\([^"]*\)"/\1/')
       local env=$(echo "$line" | grep -o '"env": *"[^"]*"' | sed 's/"env": *"\([^"]*\)"/\1/')
@@ -629,6 +638,13 @@ export -f cmd_frontend
 
 # Execute if run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Help is read-only - bypass init/env guards
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
+      show_frontend_help
+      exit 0
+    fi
+  done
   pre_command "frontend" || exit $?
   cmd_frontend "$@"
   exit_code=$?

@@ -84,7 +84,7 @@ Full production-ready implementation of email templates system for nself v0.9.0.
 
 1. `/Users/admin/Sites/nself/src/lib/whitelabel/email-templates.sh` - Core implementation (1714 lines)
 2. `/Users/admin/Sites/nself/src/tests/unit/test-email-templates.sh` - Unit tests (323 lines)
-3. `/Users/admin/Sites/nself/docs/whitelabel/EMAIL-TEMPLATES.md` - Documentation
+3. `/Users/admin/Sites/nself/.wiki/guides/EMAIL-TEMPLATES.md` - Documentation
 4. This README
 
 ## API Functions (45 functions)

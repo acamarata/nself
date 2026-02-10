@@ -675,7 +675,7 @@ my_function() {
 ## Support
 
 - Test documentation: `test-billing.README.md`
-- nself docs: `/docs/features/BILLING.md`
+- nself docs: `/.wiki/commands/BILLING.md`
 - Stripe docs: https://stripe.com/docs/api
 
 ## License

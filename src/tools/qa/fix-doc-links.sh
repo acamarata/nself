@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-DOCS_DIR="/Users/admin/Sites/nself/docs"
+DOCS_DIR="/Users/admin/Sites/nself/.wiki"
 DRY_RUN="${DRY_RUN:-true}"
 BACKUP_DIR="/tmp/nself-docs-backup-$(date +%Y%m%d-%H%M%S)"
 
@@ -51,12 +51,12 @@ fix_file_links() {
         rm -f "${temp_file}.bak"
     fi
 
-    # Fix 2: Remove /docs/ prefix from absolute links
-    # [Text](/docs/folder/Page.md) → [Text](folder/Page.md)
-    if sed -i.bak 's|\](/docs/|\](|g' "$temp_file" 2>/dev/null; then
+    # Fix 2: Remove /.wiki/ prefix from absolute links
+    # [Text](/.wiki/folder/Page.md) → [Text](folder/Page.md)
+    if sed -i.bak 's|\](/.wiki/|\](|g' "$temp_file" 2>/dev/null; then
         if ! cmp -s "$file" "$temp_file"; then
             modified=true
-            printf "  ${GREEN}✓${NC} Removed /docs/ prefix\n"
+            printf "  ${GREEN}✓${NC} Removed /.wiki/ prefix\n"
             ((fixes_applied++))
         fi
         rm -f "${temp_file}.bak"

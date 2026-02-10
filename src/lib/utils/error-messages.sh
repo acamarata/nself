@@ -8,10 +8,10 @@
 [[ "${ERROR_MESSAGES_SOURCED:-}" == "1" ]] && return 0
 export ERROR_MESSAGES_SOURCED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/cli-output.sh" 2>/dev/null || true
-source "${SCRIPT_DIR}/platform-compat.sh" 2>/dev/null || true
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_ERROR_MSGS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_ERROR_MSGS_DIR}/cli-output.sh" 2>/dev/null || true
+source "${_ERROR_MSGS_DIR}/platform-compat.sh" 2>/dev/null || true
 
 # =============================================================================
 # ERROR MESSAGE TEMPLATES - Top 10 Common Scenarios
@@ -137,7 +137,7 @@ show_config_missing_error() {
   cli_indent "nself config validate --fix" 2
   printf "\n"
 
-  cli_info "Documentation: docs/configuration/ENVIRONMENT-VARIABLES.md"
+  cli_info "Documentation: .wiki/configuration/ENVIRONMENT-VARIABLES.md"
   printf "\n"
 }
 
@@ -524,7 +524,7 @@ show_error_reference() {
   cli_indent "nself doctor" 2
   printf "\n"
 
-  cli_info "Full documentation: docs/troubleshooting/"
+  cli_info "Full documentation: .wiki/troubleshooting/"
   printf "\n"
 }
 

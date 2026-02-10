@@ -1,43 +1,16 @@
 #!/usr/bin/env bash
 
 
-# ports.sh - Port conflict detection and resolution
+# ports.sh - Port conflict detection and resolution (Bash 3.2 compatible)
 
-# Check for associative array support
-_HAS_ASSOC_ARRAYS=true
-if ! (declare -A __test 2>/dev/null); then
-  _HAS_ASSOC_ARRAYS=false
-fi
+# Required ports for nself services using parallel arrays
+REQUIRED_PORTS_KEYS=(nginx_http nginx_https postgres hasura auth minio minio_console redis mailpit_smtp mailpit_ui)
+REQUIRED_PORTS_VALUES=(80 443 5432 8080 4000 9000 9001 6379 1025 8025)
 
-# Required ports for nself services
-if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-  declare -A REQUIRED_PORTS=(
-    ["nginx_http"]=80
-    ["nginx_https"]=443
-    ["postgres"]=5432
-    ["hasura"]=8080
-    ["auth"]=4000
-    ["minio"]=9000
-    ["minio_console"]=9001
-    ["redis"]=6379
-    ["mailpit_smtp"]=1025
-    ["mailpit_ui"]=8025
-  )
-
-  # Port availability cache
-  declare -A PORT_STATUS
-  declare -A PORT_CONFLICTS
-  declare -A PORT_ALTERNATIVES
-else
-  # Fallback for older bash versions using parallel arrays
-  REQUIRED_PORTS_KEYS=(nginx_http nginx_https postgres hasura auth minio minio_console redis mailpit_smtp mailpit_ui)
-  REQUIRED_PORTS_VALUES=(80 443 5432 8080 4000 9000 9001 6379 1025 8025)
-
-  # Simple string-based caches
-  PORT_STATUS=""
-  PORT_CONFLICTS=""
-  PORT_ALTERNATIVES=""
-fi
+# Simple string-based caches
+PORT_STATUS=""
+PORT_CONFLICTS=""
+PORT_ALTERNATIVES=""
 
 # Check if a port is available
 is_port_available() {
@@ -110,62 +83,34 @@ scan_port_conflicts() {
 
   local conflicts_found=0
 
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    PORT_STATUS=()
-    PORT_CONFLICTS=()
-    PORT_ALTERNATIVES=()
+  # Bash 3.2 compatible using parallel arrays
+  PORT_STATUS=""
+  PORT_CONFLICTS=""
+  PORT_ALTERNATIVES=""
 
-    for service in "${!REQUIRED_PORTS[@]}"; do
-      local port="${REQUIRED_PORTS[$service]}"
+  for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
+    local service="${REQUIRED_PORTS_KEYS[$i]}"
+    local port="${REQUIRED_PORTS_VALUES[$i]}"
 
-      if is_port_available $port; then
-        PORT_STATUS["$service"]="available"
-        log_debug "✓ Port $port ($service) is available"
+    if is_port_available $port; then
+      PORT_STATUS="${PORT_STATUS}${service}=available\n"
+      log_debug "✓ Port $port ($service) is available"
+    else
+      local process=$(get_port_process $port)
+      PORT_STATUS="${PORT_STATUS}${service}=conflict\n"
+      PORT_CONFLICTS="${PORT_CONFLICTS}${service}=${process}\n"
+      ((conflicts_found++))
+
+      # Find alternative
+      if alt_port=$(find_alternative_port $port); then
+        PORT_ALTERNATIVES="${PORT_ALTERNATIVES}${service}=${alt_port}\n"
+        log_warning "✗ Port $port ($service) is in use by: $process"
+        log_info "  Alternative port available: $alt_port"
       else
-        PORT_STATUS["$service"]="conflict"
-        PORT_CONFLICTS["$service"]=$(get_port_process $port)
-        ((conflicts_found++))
-
-        # Find alternative
-        if alt_port=$(find_alternative_port $port); then
-          PORT_ALTERNATIVES["$service"]=$alt_port
-          log_warning "✗ Port $port ($service) is in use by: ${PORT_CONFLICTS[$service]}"
-          log_info "  Alternative port available: $alt_port"
-        else
-          log_error "✗ Port $port ($service) is in use and no alternative found"
-        fi
+        log_error "✗ Port $port ($service) is in use and no alternative found"
       fi
-    done
-  else
-    # Fallback for older bash versions
-    PORT_STATUS=""
-    PORT_CONFLICTS=""
-    PORT_ALTERNATIVES=""
-
-    for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
-      local service="${REQUIRED_PORTS_KEYS[$i]}"
-      local port="${REQUIRED_PORTS_VALUES[$i]}"
-
-      if is_port_available $port; then
-        PORT_STATUS="${PORT_STATUS}${service}=available\n"
-        log_debug "✓ Port $port ($service) is available"
-      else
-        local process=$(get_port_process $port)
-        PORT_STATUS="${PORT_STATUS}${service}=conflict\n"
-        PORT_CONFLICTS="${PORT_CONFLICTS}${service}=${process}\n"
-        ((conflicts_found++))
-
-        # Find alternative
-        if alt_port=$(find_alternative_port $port); then
-          PORT_ALTERNATIVES="${PORT_ALTERNATIVES}${service}=${alt_port}\n"
-          log_warning "✗ Port $port ($service) is in use by: $process"
-          log_info "  Alternative port available: $alt_port"
-        else
-          log_error "✗ Port $port ($service) is in use and no alternative found"
-        fi
-      fi
-    done
-  fi
+    fi
+  done
 
   if [[ $conflicts_found -gt 0 ]]; then
     register_error "PORT_CONFLICTS" \
@@ -188,105 +133,56 @@ fix_port_conflicts() {
   local fixes_applied=0
   local env_updates=""
 
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    for service in "${!PORT_STATUS[@]}"; do
-      if [[ "${PORT_STATUS[$service]}" == "conflict" ]]; then
-        local original_port="${REQUIRED_PORTS[$service]}"
-        local alt_port="${PORT_ALTERNATIVES[$service]}"
-        local process="${PORT_CONFLICTS[$service]}"
+  # Bash 3.2 compatible using parallel arrays
+  for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
+    local service="${REQUIRED_PORTS_KEYS[$i]}"
+    local status=$(echo "$PORT_STATUS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
 
-        if [[ -n "$alt_port" ]]; then
-          log_info "Updating $service port: $original_port → $alt_port"
+    if [[ "$status" == "conflict" ]]; then
+      local original_port="${REQUIRED_PORTS_VALUES[$i]}"
+      local alt_port=$(echo "$PORT_ALTERNATIVES" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
+      local process=$(echo "$PORT_CONFLICTS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
 
-          # Build environment variable updates
-          case "$service" in
-            nginx_http)
-              env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
-              ;;
-            nginx_https)
-              env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
-              ;;
-            postgres)
-              env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
-              ;;
-            hasura)
-              env_updates="${env_updates}\nHASURA_PORT=$alt_port"
-              ;;
-            auth)
-              env_updates="${env_updates}\nAUTH_PORT=$alt_port"
-              ;;
-            minio)
-              env_updates="${env_updates}\nMINIO_PORT=$alt_port"
-              ;;
-            redis)
-              env_updates="${env_updates}\nREDIS_PORT=$alt_port"
-              ;;
-            mailpit_smtp)
-              env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
-              ;;
-            mailpit_ui)
-              env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
-              ;;
-          esac
+      if [[ -n "$alt_port" ]]; then
+        log_info "Updating $service port: $original_port → $alt_port"
 
-          ((fixes_applied++))
-        else
-          log_error "Cannot fix port conflict for $service (no alternative found)"
-        fi
+        # Build environment variable updates
+        case "$service" in
+          nginx_http)
+            env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
+            ;;
+          nginx_https)
+            env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
+            ;;
+          postgres)
+            env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
+            ;;
+          hasura)
+            env_updates="${env_updates}\nHASURA_PORT=$alt_port"
+            ;;
+          auth)
+            env_updates="${env_updates}\nAUTH_PORT=$alt_port"
+            ;;
+          minio)
+            env_updates="${env_updates}\nMINIO_PORT=$alt_port"
+            ;;
+          redis)
+            env_updates="${env_updates}\nREDIS_PORT=$alt_port"
+            ;;
+          mailpit_smtp)
+            env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
+            ;;
+          mailpit_ui)
+            env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
+            ;;
+        esac
+
+        ((fixes_applied++))
+      else
+        log_error "Cannot fix port conflict for $service (no alternative found)"
       fi
-    done
-  else
-    # Fallback for older bash versions
-    for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
-      local service="${REQUIRED_PORTS_KEYS[$i]}"
-      local status=$(echo "$PORT_STATUS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
-
-      if [[ "$status" == "conflict" ]]; then
-        local original_port="${REQUIRED_PORTS_VALUES[$i]}"
-        local alt_port=$(echo "$PORT_ALTERNATIVES" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
-        local process=$(echo "$PORT_CONFLICTS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
-
-        if [[ -n "$alt_port" ]]; then
-          log_info "Updating $service port: $original_port → $alt_port"
-
-          # Build environment variable updates
-          case "$service" in
-            nginx_http)
-              env_updates="${env_updates}\nNGINX_HTTP_PORT=$alt_port"
-              ;;
-            nginx_https)
-              env_updates="${env_updates}\nNGINX_HTTPS_PORT=$alt_port"
-              ;;
-            postgres)
-              env_updates="${env_updates}\nPOSTGRES_PORT=$alt_port"
-              ;;
-            hasura)
-              env_updates="${env_updates}\nHASURA_PORT=$alt_port"
-              ;;
-            auth)
-              env_updates="${env_updates}\nAUTH_PORT=$alt_port"
-              ;;
-            minio)
-              env_updates="${env_updates}\nMINIO_PORT=$alt_port"
-              ;;
-            redis)
-              env_updates="${env_updates}\nREDIS_PORT=$alt_port"
-              ;;
-            mailpit_smtp)
-              env_updates="${env_updates}\nMAILPIT_SMTP_PORT=$alt_port"
-              ;;
-            mailpit_ui)
-              env_updates="${env_updates}\nMAILPIT_UI_PORT=$alt_port"
-              ;;
-          esac
-
-          ((fixes_applied++))
-        else
-          log_error "Cannot fix port conflict for $service (no alternative found)"
-        fi
-      fi
-    done
-  fi
+    fi
+  done
 
   # Update .env.local with new ports
   if [[ -n "$env_updates" ]] && [[ -f ".env.local" ]]; then
@@ -325,38 +221,23 @@ fix_port_conflicts() {
   return 0
 }
 
-# Offer to stop conflicting services
+# Offer to stop conflicting services (Bash 3.2 compatible)
 offer_stop_conflicts() {
-  if [[ "$_HAS_ASSOC_ARRAYS" == "true" ]]; then
-    if [[ ${#PORT_CONFLICTS[@]} -eq 0 ]]; then
-      return 0
-    fi
-
-    log_info "The following processes are using required ports:"
-    echo ""
-
-    for service in "${!PORT_CONFLICTS[@]}"; do
-      local port="${REQUIRED_PORTS[$service]}"
-      local process="${PORT_CONFLICTS[$service]}"
-      echo "  • Port $port: $process"
-    done
-  else
-    if [[ -z "$PORT_CONFLICTS" ]]; then
-      return 0
-    fi
-
-    log_info "The following processes are using required ports:"
-    echo ""
-
-    for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
-      local service="${REQUIRED_PORTS_KEYS[$i]}"
-      local port="${REQUIRED_PORTS_VALUES[$i]}"
-      local process=$(echo "$PORT_CONFLICTS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
-      if [[ -n "$process" ]]; then
-        echo "  • Port $port: $process"
-      fi
-    done
+  if [[ -z "$PORT_CONFLICTS" ]]; then
+    return 0
   fi
+
+  log_info "The following processes are using required ports:"
+  echo ""
+
+  for i in "${!REQUIRED_PORTS_KEYS[@]}"; do
+    local service="${REQUIRED_PORTS_KEYS[$i]}"
+    local port="${REQUIRED_PORTS_VALUES[$i]}"
+    local process=$(echo "$PORT_CONFLICTS" | awk -F= -v k="$service" '$1==k{print $2}' | head -1)
+    if [[ -n "$process" ]]; then
+      echo "  • Port $port: $process"
+    fi
+  done
 
   echo ""
   read -p "Would you like to stop these processes? [y/N]: " -n 1 -r

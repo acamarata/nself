@@ -13,9 +13,9 @@
 [[ -n "${NSELF_BILLING_INVOICES_LOADED:-}" ]] && return 0
 NSELF_BILLING_INVOICES_LOADED=1
 
-# Source dependencies
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/core.sh"
+# Source dependencies (namespaced to avoid clobbering caller's SCRIPT_DIR)
+_BILLING_INVOICES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_BILLING_INVOICES_DIR}/core.sh"
 
 # Invoice configuration
 INVOICE_TEMPLATE_DIR="${NSELF_ROOT}/src/templates/invoices"

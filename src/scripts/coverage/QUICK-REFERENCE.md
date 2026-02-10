@@ -157,6 +157,6 @@ stat -c "%y" coverage/reports/coverage.txt   # Linux
 
 ## Full Documentation
 
-- **Guide**: `docs/development/COVERAGE-GUIDE.md`
-- **Dashboard**: `docs/development/COVERAGE-DASHBOARD.md`
+- **Guide**: `.wiki/development/COVERAGE-GUIDE.md`
+- **Dashboard**: `.wiki/development/COVERAGE-DASHBOARD.md`
 - **Scripts**: `src/scripts/coverage/README.md`

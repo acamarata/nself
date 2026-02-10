@@ -223,8 +223,20 @@ deploy_with_rollback() {
   printf "\n"
   cli_info "Executing deployment..."
 
-  # Execute deployment command
-  if eval "$deployment_command"; then
+  # SECURITY: Validate deployment command before execution
+  # Only allow known safe command prefixes (docker compose, nself, bash scripts)
+  case "$deployment_command" in
+    docker\ compose\ *|docker-compose\ *|nself\ *|bash\ *|sh\ *|./*)
+      : # allowed
+      ;;
+    *)
+      cli_error "Deployment command must start with a known safe prefix (docker compose, nself, bash, sh, ./)"
+      return 1
+      ;;
+  esac
+
+  # Execute deployment command via bash -c (slightly safer than raw eval)
+  if bash -c "$deployment_command"; then
     cli_success "Deployment command completed"
   else
     cli_error "Deployment command failed"

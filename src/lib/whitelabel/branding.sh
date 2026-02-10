@@ -4,21 +4,21 @@
 # Part of Sprint 14: White-Label & Customization (60pts) for v0.9.0
 
 
-# Get script directory and source dependencies
+# Get script directory and source dependencies (namespaced to avoid clobbering caller globals)
 BRANDING_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_ROOT="$(dirname "$BRANDING_LIB_DIR")"
+_BRANDING_LIB_ROOT="$(dirname "$BRANDING_LIB_DIR")"
 
 # Source dependencies
-source "$LIB_ROOT/utils/platform-compat.sh" 2>/dev/null || true
-source "$LIB_ROOT/utils/validation.sh" 2>/dev/null || true
+source "$_BRANDING_LIB_ROOT/utils/platform-compat.sh" 2>/dev/null || true
+source "$_BRANDING_LIB_ROOT/utils/validation.sh" 2>/dev/null || true
 
-# Color definitions for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'
+# Color definitions for output (guard against double-declaration when sourced together)
+[[ -z "${RED:-}" ]] && readonly RED='\033[0;31m'
+[[ -z "${GREEN:-}" ]] && readonly GREEN='\033[0;32m'
+[[ -z "${YELLOW:-}" ]] && readonly YELLOW='\033[1;33m'
+[[ -z "${BLUE:-}" ]] && readonly BLUE='\033[0;34m'
+[[ -z "${CYAN:-}" ]] && readonly CYAN='\033[0;36m'
+[[ -z "${NC:-}" ]] && readonly NC='\033[0m'
 
 # Branding configuration paths
 readonly BRANDING_DIR="${PROJECT_ROOT:-$PWD}/branding"

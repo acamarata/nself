@@ -6,8 +6,8 @@
 
 set -euo pipefail
 
-DOCS_DIR="/Users/admin/Sites/nself/docs"
-REPORT_FILE="/Users/admin/Sites/nself/docs/LINK-AUDIT-REPORT.md"
+DOCS_DIR="/Users/admin/Sites/nself/.wiki"
+REPORT_FILE="/Users/admin/Sites/nself/.wiki/LINK-AUDIT-REPORT.md"
 BROKEN_LINKS_FILE="/tmp/broken-links.txt"
 FIXED_LINKS_FILE="/tmp/fixed-links.txt"
 
@@ -208,7 +208,7 @@ cat >> "$REPORT_FILE" << 'EOF'
 1. **Use relative paths**: `[Text](../folder/Page.md)` or `[Text](Page.md)`
 2. **Remove file extensions**: Wiki links should be `[Text](Page)` not `[Text](Page.md)`
 3. **Use kebab-case**: File names should use hyphens, not underscores
-4. **Avoid absolute paths**: Don't use `/docs/...` paths
+4. **Avoid absolute paths**: Don't use `/.wiki/...` paths
 5. **Check case sensitivity**: Links are case-sensitive
 
 ### Link Format Examples
@@ -222,7 +222,7 @@ cat >> "$REPORT_FILE" << 'EOF'
 
 #### Bad (Not Wiki-Compatible)
 ```markdown
-[Installation Guide](/docs/getting-started/Installation.md)
+[Installation Guide](/.wiki/getting-started/Installation.md)
 [Quick Start](./quick-start.md)
 [Architecture](../../architecture/ARCHITECTURE.MD)
 ```

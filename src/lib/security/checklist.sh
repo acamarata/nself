@@ -327,11 +327,13 @@ security::check_network_security() {
     if grep -rq "Content-Security-Policy" nginx/ 2>/dev/null; then
       security::pass "Content-Security-Policy (CSP) header configured"
 
-      # Check CSP mode/strictness
-      if grep -rq "script-src 'self'" nginx/ 2>/dev/null; then
-        security::pass "CSP uses strict script-src (no unsafe-inline/unsafe-eval)"
-      elif grep -rq "unsafe-inline\|unsafe-eval" nginx/ 2>/dev/null; then
-        security::warn "CSP allows unsafe-inline or unsafe-eval (consider strict mode)"
+      # Check CSP mode/strictness - strict is the default since V098-P1-013
+      if grep -rq "unsafe-eval" nginx/ 2>/dev/null; then
+        security::warn "CSP allows unsafe-eval (set CSP_MODE=strict to harden)"
+      elif grep -rq "unsafe-inline" nginx/ 2>/dev/null; then
+        security::warn "CSP allows unsafe-inline (set CSP_MODE=strict to harden)"
+      else
+        security::pass "CSP uses strict mode (no unsafe-inline/unsafe-eval)"
       fi
     else
       security::fail "Content-Security-Policy (CSP) header not configured - CRITICAL"

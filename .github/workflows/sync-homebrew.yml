@@ -79,6 +79,8 @@ jobs:
 
       - name: Checkout homebrew-nself
         id: checkout-tap
+        # ADVISORY: HOMEBREW_TAP_TOKEN may not be configured - checkout failure is handled
+        # gracefully by the conditional "Sync formula to tap" / "Skip tap sync" steps below
         continue-on-error: true
         uses: actions/checkout@v4
         with:

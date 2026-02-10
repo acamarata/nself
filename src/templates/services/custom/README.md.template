@@ -226,7 +226,7 @@ app.listen(port, () => {
 
 ## Need Help?
 
-- Check the nself documentation: `/docs/`
+- Check the nself documentation: `/.wiki/`
 - View other service examples in `/src/templates/services/`
 - Run `nself help` for CLI commands
 - Run `nself status` to check service health

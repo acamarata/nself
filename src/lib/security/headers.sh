@@ -41,7 +41,7 @@ headers::generate_all() {
 
   # Content-Security-Policy
   local csp
-  csp=$(csp::generate "${CSP_MODE:-moderate}")
+  csp=$(csp::generate "${CSP_MODE:-strict}")
   header_names+=("Content-Security-Policy")
   header_values+=("$csp")
 
@@ -204,7 +204,7 @@ headers::show() {
 
   printf "${COLOR_YELLOW}General Settings${COLOR_RESET}\n"
   printf "  Mode: %s\n" "${SECURITY_HEADERS_MODE:-strict}"
-  printf "  CSP Mode: %s\n" "${CSP_MODE:-moderate}"
+  printf "  CSP Mode: %s\n" "${CSP_MODE:-strict}"
   printf "\n"
 
   printf "${COLOR_YELLOW}HSTS Configuration${COLOR_RESET}\n"

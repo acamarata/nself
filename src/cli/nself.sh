@@ -17,6 +17,22 @@ unset _script _dir
 # Preserve the CLI script directory before sourcing other files
 CLI_SCRIPT_DIR="$SCRIPT_DIR"
 
+# CRITICAL: Prevent running nself in its own source repository
+# Must run BEFORE sourcing any modules that may create directories as side effects
+_cwd="$(pwd)"
+if [[ -f "$_cwd/bin/nself" ]] && [[ -d "$_cwd/src/cli" ]] && [[ -d "$_cwd/src/lib" ]]; then
+  printf "\033[0;31m[ERROR]\033[0m FATAL: Cannot run nself in its source repository!\n" >&2
+  printf "\033[0;34m[INFO]\033[0m Run in a separate project directory instead.\n"
+  printf "\n  mkdir -p ~/test-project && cd ~/test-project\n  nself init\n\n"
+  exit 1
+fi
+if [[ -f "$_cwd/src/cli/nself.sh" ]] || { [[ -f "$_cwd/src/VERSION" ]] && [[ -d "$_cwd/src/templates" ]]; }; then
+  printf "\033[0;31m[ERROR]\033[0m FATAL: This appears to be the nself source directory!\n" >&2
+  printf "\033[0;31m[ERROR]\033[0m Please run nself commands in a separate project directory.\n" >&2
+  exit 1
+fi
+unset _cwd
+
 # Source configuration and utilities with error handling
 # Path adjusted for new structure: src/cli -> src/lib
 for file in \
