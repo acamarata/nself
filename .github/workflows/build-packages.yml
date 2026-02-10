@@ -1,0 +1,96 @@
+name: Build and Publish Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 0.9.8)'
+        required: true
+        default: '0.9.8'
+
+jobs:
+  build-deb:
+    name: Build DEB Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build DEB package
+        run: |
+          bash .releases/packaging/deb/build-deb.sh
+
+      - name: Upload DEB to Release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} \
+            /tmp/nself-deb-build/*.deb \
+            --clobber
+
+      - name: Upload DEB as Artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nself-deb-package
+          path: /tmp/nself-deb-build/*.deb
+
+  build-rpm:
+    name: Build RPM Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install RPM build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Build RPM package
+        run: |
+          bash .releases/packaging/rpm/build-rpm.sh
+
+      - name: Find RPM files
+        id: find-rpm
+        run: |
+          RPM_PATH=$(find ~/rpmbuild/RPMS -name "*.rpm" -type f | head -1)
+          echo "rpm_path=$RPM_PATH" >> $GITHUB_OUTPUT
+          echo "Found RPM: $RPM_PATH"
+
+      - name: Upload RPM to Release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          find ~/rpmbuild/RPMS -name "*.rpm" -exec \
+            gh release upload ${{ github.event.release.tag_name }} {} --clobber \;
+
+      - name: Upload RPM as Artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nself-rpm-package
+          path: ~/rpmbuild/RPMS/*/*.rpm
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-deb, build-rpm]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Package Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ DEB package: ${{ needs.build-deb.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ RPM package: ${{ needs.build-rpm.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "release" ]; then
+            echo "Packages uploaded to release: ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Packages available as artifacts" >> $GITHUB_STEP_SUMMARY
+          fi
