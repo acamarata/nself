@@ -1,6 +1,6 @@
 pkgbase = nself
 	pkgdesc = Self-hosted infrastructure manager for developers
-	pkgver = 0.4.7
+	pkgver = 0.9.8
 	pkgrel = 1
 	url = https://github.com/acamarata/nself
 	arch = any
@@ -10,7 +10,7 @@ pkgbase = nself
 	depends = docker-compose
 	depends = curl
 	depends = git
-	source = nself-0.4.7.tar.gz::https://github.com/acamarata/nself/archive/v0.4.7.tar.gz
-	sha256sums = 133ba89bc55c50327f0c22f9b737405a5345f9cd3004333100e88861555b7aca
+	source = nself-0.9.8.tar.gz::https://github.com/acamarata/nself/archive/v0.9.8.tar.gz
+	sha256sums = 3324fce82a264646c88a85f1f54e911fa5090da7f0fb86239a4c226a8a6780b1
 
 pkgname = nself
