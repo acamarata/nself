@@ -15,7 +15,7 @@ docker buildx build \
   -t "${IMAGE_NAME}:${VERSION}" \
   -t "${IMAGE_NAME}:latest" \
   --push \
-  -f packaging/docker/Dockerfile \
+  -f .releases/packaging/docker/Dockerfile \
   .
 
 echo "✅ Docker image ${IMAGE_NAME}:${VERSION} built and pushed successfully!"
