@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.9.6"
+VERSION="0.9.8"
 PACKAGE_NAME="nself"
 
 echo "Building RPM package for nself v${VERSION}"
