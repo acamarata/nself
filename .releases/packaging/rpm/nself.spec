@@ -39,20 +39,28 @@ cp README.md $RPM_BUILD_ROOT/usr/share/doc/nself/
 cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %files
-%doc usr/share/doc/nself/README.md
-%license usr/share/doc/nself/LICENSE
+%doc README.md
+%license LICENSE
 /opt/nself/
 /usr/bin/nself
+/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.8.0 installed successfully!"
+echo "nself v0.9.8 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
 # Nothing to do
 
 %changelog
+* Mon Feb 10 2026 acamarata <contact@acamarata.com> - 0.9.8-1
+- Release v0.9.8: Production Readiness & Help Contract
+- Bash 3.2 compatibility (works on macOS default)
+- Help contract across all 31 commands
+- CI/CD fail-closed for critical checks
+- Published to 5 platforms (Homebrew, npm, Docker Hub, GitHub, AUR)
+
 * Thu Jan 23 2026 acamarata <contact@acamarata.com> - 0.4.7-1
 - Release v0.4.7: Kubernetes Support
 - New k8s command for Kubernetes operations

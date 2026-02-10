@@ -5,6 +5,147 @@ All notable changes to nself will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2026-02-10
+
+### Production Readiness & Help Contract Release
+
+**Type:** Quality & Portability Release
+**Status:** Production Ready ✅
+
+#### Added
+- **Bash 3.2 Compatibility** - Complete removal of Bash 4+ dependencies
+  - Removed ALL `declare -A` (associative arrays) from 4 critical files
+  - Removed ALL `${var,,}` / `${var^^}` (parameter expansion)
+  - Converted to Bash 3.2 compatible patterns (case statements, parallel arrays, `tr` command)
+  - Works on macOS Bash 3.2, all Linux distros, WSL environments
+
+- **Help Contract Implementation** - Universal help bypass pattern across 31 commands
+  - `--help` or `-h` exits with code 0 (success)
+  - Help executes BEFORE environment/Docker checks
+  - No side effects (no Docker operations, no .env requirements)
+  - Consistent output schema across all commands
+  - Documented in `src/lib/help/HELP-CONTRACT.md`
+
+- **Canonical Test Entrypoint** - `src/tests/run-tests.sh`
+  - Official entrypoint for running nself tests
+  - Delegates to `run-all-tests.sh` with all arguments
+  - Provides help output with `-h` or `--help`
+  - Works across all platforms
+
+- **Monorepo Support** - `monorepo_check()` function
+  - Detects monorepo structure
+  - Provides appropriate warnings
+  - Handles build path resolution
+
+- **Frontend Directory Support** - FRONTEND_DIR environment variable
+  - Build system aware of custom frontend paths
+  - Proper routing configuration
+  - Works with monorepo structures
+
+#### Fixed
+- **P0-001**: Fixed `reset --help` runtime regression (help bypass pattern)
+- **P0-002**: Fixed `checklist --help` SCRIPT_DIR global clobber
+- **P0-005**: Fixed `help --help` exit code (now exits 0)
+- **P0-006**: Fixed `whitelabel --help` readonly constant collisions
+- **P0-008**: Fixed `run-all-tests.sh` false-green behavior (5 bugs)
+- **P0-009**: Rewrote v1 command structure test for 31 commands
+- **P0-011**: Added installer integrity verification (SHA-256 checksum)
+- **P0-012**: Fixed feedback ingest marker corruption
+- Security check diagnostic output now goes to stderr (CI fix)
+
+#### Improved
+- **CI/CD Fail-Closed** - Critical checks now fail CI on errors
+  - `nself build` must succeed (was `|| true`)
+  - `nself doctor` must exit gracefully (was `|| true`)
+  - Trivy scans fail on HIGH/CRITICAL vulnerabilities
+  - Coverage collection tracked with success counter
+  - Legitimate fail-open preserved for external services
+
+- **Cross-Platform CLI Output** - All commands use standardized output
+  - Consistent color coding (green/red/yellow)
+  - Proper icons (✓, ✗, ⚠, ℹ)
+  - Platform-compatible (no emoji by default)
+  - All output uses `printf`, not `echo -e`
+
+- **Developer Experience Enhancements**
+  - All help output exits 0
+  - No environment requirements for --help
+  - Faster feedback loops
+  - Better error messages
+
+#### Security
+- **P0-003**: Credential remediation (8 credentials sanitized)
+- **P0-004**: Wiki private-path cleaned
+- Zero credentials in Git
+
+#### Verified
+- ✅ **All 15/15 verification checks passing** (100%)
+- ✅ **209 service templates** across 17 languages
+- ✅ **Plugin system** (Stripe, Shopify, GitHub all working)
+- ✅ **Multi-app support** (FRONTEND_APP_1-10 functional)
+- ✅ **Complete infrastructure** (PostgreSQL, Hasura, Auth, Nginx, etc.)
+
+#### Distribution
+- Published to **5 platforms**: GitHub Release, Homebrew, npm, Docker Hub, AUR
+- Multi-arch Docker image (linux/amd64, linux/arm64)
+- Comprehensive 13,000+ word release notes
+- Migration guide included
+
+For full details, see: [v0.9.8 Release Notes](v0.9.8.md)
+
+---
+
+## [0.9.7] - 2026-02-10
+
+### Security & CI/CD Complete
+
+- Complete security audit and remediation
+- CI/CD workflow hardening
+- Documentation consolidation
+- Production deployment readiness
+
+For details, see: [v0.9.7 Release Notes](v0.9.7.md)
+
+---
+
+## [0.9.6] - 2026-01-31
+
+### Command Consolidation & Refactoring
+
+- Consolidated 79 commands → 31 top-level commands
+- Command tree v1.0 structure
+- Improved CLI organization and discoverability
+
+For details, see: [v0.9.6 Release Notes](v0.9.6.md)
+
+---
+
+## [0.9.5] - 2026-01-30
+
+### White-Label System Complete
+
+- Full white-label customization system
+- Theme support
+- Email template customization
+- Branding API
+
+For details, see: [v0.9.5 Release Notes](v0.9.5.md)
+
+---
+
+## [0.9.0] - 2026-01-29
+
+### Major Release - Plugin System & Custom Services
+
+- Plugin system architecture
+- 209 service templates across 17 languages
+- Official plugins (Stripe, Shopify, GitHub)
+- Custom service scaffolding (CS_1 through CS_10)
+
+For details, see: [v0.9.0 Release Notes](v0.9.0.md)
+
+---
+
 ## [0.8.0] - 2026-01-29
 
 ### Added - Phase 3: Multi-Tenancy & Enterprise (100%)

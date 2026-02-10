@@ -19,16 +19,26 @@
 
 ## What's New in v0.9.8
 
-> **Production Ready** - nself v0.9.8 is stable and production-grade. [View Release Notes](releases/v0.9.8.md)
+> **Production Ready** - Maximum portability (Bash 3.2+), help contract across all commands, and fail-closed CI/CD. [View Release Notes](releases/v0.9.8.md)
 
-- **80% Test Coverage** - 700+ tests across unit, integration, and E2E
-- **Complete Documentation** - Every command and feature fully documented
-- **UX Polish** - Standardized errors, progress indicators, input validation
-- **Performance** - Build caching, batched operations, parallel execution
-- **Production Features** - Health endpoints, graceful shutdown, automated backups
-- **Security Hardened** - Full audit pass, SQL injection remediation, CSP headers
+**Key Achievements:**
 
-**Next:** v0.9.9 (QA freeze) → v1.0.0 LTS | **[Full Roadmap](releases/ROADMAP.md)**
+- ✅ **Bash 3.2 Compatible** - Works on macOS default, all Linux, WSL
+- ✅ **Help Contract** - All 31 commands exit 0 with `--help`
+- ✅ **CI/CD Fail-Closed** - Critical checks fail CI on issues
+- ✅ **15/15 Verification Passing** - 100% test success
+- ✅ **209 Service Templates** - Verified across 17 languages
+- ✅ **Zero Credentials in Git** - Security hardened
+- ✅ **Published to 5 Platforms** - Homebrew, npm, Docker Hub, GitHub, AUR
+
+**Distribution:**
+```bash
+brew install acamarata/nself/nself    # Homebrew
+npm install -g nself-cli              # npm
+docker pull acamarata/nself:0.9.8     # Docker
+```
+
+**Next:** v0.9.9 (Documentation cleanup) → v1.0.0 LTS | **[Full Roadmap](releases/ROADMAP.md)**
 
 ---
 
