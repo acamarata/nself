@@ -12,8 +12,8 @@ echo "Building Debian package for nself v${VERSION}"
 rm -rf "$BUILD_DIR"
 mkdir -p "$DEB_DIR"
 
-# Copy DEBIAN control files
-cp -r .releases/packaging/deb/DEBIAN "$DEB_DIR/"
+# Copy DEBIAN control files (source is debian/, target is DEBIAN/)
+cp -r .releases/packaging/deb/debian "$DEB_DIR/DEBIAN"
 chmod 755 "$DEB_DIR/DEBIAN/postinst"
 chmod 755 "$DEB_DIR/DEBIAN/prerm"
 
