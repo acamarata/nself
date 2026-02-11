@@ -6,6 +6,7 @@ set -euo pipefail
 # Source required libraries
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../lib/utils/cli-output.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/../lib/utils/env.sh" 2>/dev/null || true
 
 # Database command entry point

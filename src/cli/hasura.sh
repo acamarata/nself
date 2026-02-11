@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/utils/display.sh"
+source "$SCRIPT_DIR/../lib/utils/cli-output.sh"
 source "$SCRIPT_DIR/../lib/utils/env.sh"
 
 cmd_hasura() {
