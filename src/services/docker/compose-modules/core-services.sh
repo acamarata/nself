@@ -273,6 +273,26 @@ generate_minio_service() {
 
   cat <<EOF
 
+  # MinIO Volume Permission Fix - Init Container
+  # Fixes permissions on MinIO data volume for non-root user (1000:1000)
+  # This runs once before MinIO starts to ensure the container can write to the volume
+  minio-init:
+    image: busybox:latest
+    container_name: \${PROJECT_NAME}_minio_init
+    user: root
+    volumes:
+      - minio_data:/data
+    command: >
+      sh -c "
+        echo '→ Fixing MinIO volume permissions...';
+        chown -R 1000:1000 /data;
+        chmod -R 755 /data;
+        echo '✓ MinIO volume permissions fixed';
+      "
+    labels:
+      - "nself.type=init-container"
+      - "nself.service=minio"
+
   # MinIO Object Storage
   # SECURITY: Bound to localhost only - access via nginx reverse proxy
   minio:
@@ -282,6 +302,9 @@ generate_minio_service() {
     user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
     environment:
       MINIO_ROOT_USER: \${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: \${MINIO_ROOT_PASSWORD}

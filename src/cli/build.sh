@@ -163,7 +163,12 @@ cmd_build() {
   # This ensures security validation sees all configured values from the cascade
   # Cascade order: .env.dev → .env.staging/prod → .env.secrets → .env
   # Critical: Must load BEFORE security validation to detect actual values
-  load_env_with_priority true
+  # When verbose mode is enabled, show the cascade visualization
+  if [[ "$verbose" == "true" ]]; then
+    load_env_with_priority false  # Don't suppress output in verbose mode
+  else
+    load_env_with_priority true   # Suppress normal output
+  fi
   env="${ENV:-$env}"
 
   # ============================================================

@@ -203,6 +203,15 @@ load_env_with_priority() {
   # Ensure PROJECT_NAME is always set after loading
   ensure_project_context
 
+  # CRITICAL: Construct and export derived environment variables for docker-compose
+  # These variables are required by services in docker-compose.yml but aren't
+  # directly set in .env files - they must be constructed from other variables
+
+  # DATABASE_URL - Required by Hasura, Functions, and other services
+  if [[ -n "${POSTGRES_USER:-}" ]] && [[ -n "${POSTGRES_PASSWORD:-}" ]] && [[ -n "${POSTGRES_DB:-}" ]]; then
+    export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+  fi
+
   return 0
 }
 

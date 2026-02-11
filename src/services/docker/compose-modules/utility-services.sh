@@ -356,6 +356,26 @@ generate_search_services() {
 generate_meilisearch_service() {
   cat <<EOF
 
+  # MeiliSearch Volume Permission Fix - Init Container
+  # Fixes permissions on MeiliSearch data volume for non-root user (1000:1000)
+  # This runs once before MeiliSearch starts to ensure the container can write to the volume
+  meilisearch-init:
+    image: busybox:latest
+    container_name: \${PROJECT_NAME}_meilisearch_init
+    user: root
+    volumes:
+      - meilisearch_data:/meili_data
+    command: >
+      sh -c "
+        echo '→ Fixing MeiliSearch volume permissions...';
+        chown -R 1000:1000 /meili_data;
+        chmod -R 755 /meili_data;
+        echo '✓ MeiliSearch volume permissions fixed';
+      "
+    labels:
+      - "nself.type=init-container"
+      - "nself.service=meilisearch"
+
   # MeiliSearch - Lightning Fast Search
   # SECURITY: Bound to localhost only - access via nginx reverse proxy
   meilisearch:
@@ -365,6 +385,9 @@ generate_meilisearch_service() {
     user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
+    depends_on:
+      meilisearch-init:
+        condition: service_completed_successfully
     environment:
       MEILI_MASTER_KEY: \${SEARCH_API_KEY:-\${MEILISEARCH_MASTER_KEY}}
       MEILI_ENV: \${MEILI_ENV:-development}
