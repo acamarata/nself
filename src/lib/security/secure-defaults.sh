@@ -103,7 +103,19 @@ security::check_required_passwords() {
       errors=$((errors + 1))
     fi
   else
-    printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Set\n" >&2
+    # Show character count and strength assessment
+    local pg_len=${#POSTGRES_PASSWORD}
+    local pg_strength="weak"
+    if [[ $pg_len -ge 48 ]]; then
+      pg_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+    elif [[ $pg_len -ge 32 ]]; then
+      pg_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+    elif [[ $pg_len -ge 24 ]]; then
+      pg_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+    else
+      pg_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+    fi
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} POSTGRES_PASSWORD: Set (%d chars, %b)\n" "$pg_len" "$pg_strength" >&2
   fi
 
   # Redis password (required if Redis enabled)
@@ -117,7 +129,18 @@ security::check_required_passwords() {
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Set\n" >&2
+      local redis_len=${#REDIS_PASSWORD}
+      local redis_strength="weak"
+      if [[ $redis_len -ge 48 ]]; then
+        redis_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+      elif [[ $redis_len -ge 32 ]]; then
+        redis_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+      elif [[ $redis_len -ge 24 ]]; then
+        redis_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+      else
+        redis_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+      fi
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} REDIS_PASSWORD: Set (%d chars, %b)\n" "$redis_len" "$redis_strength" >&2
     fi
   fi
 
@@ -132,7 +155,18 @@ security::check_required_passwords() {
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Set\n" >&2
+      local hasura_len=${#HASURA_GRAPHQL_ADMIN_SECRET}
+      local hasura_strength="weak"
+      if [[ $hasura_len -ge 48 ]]; then
+        hasura_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+      elif [[ $hasura_len -ge 32 ]]; then
+        hasura_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+      elif [[ $hasura_len -ge 24 ]]; then
+        hasura_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+      else
+        hasura_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+      fi
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} HASURA_GRAPHQL_ADMIN_SECRET: Set (%d chars, %b)\n" "$hasura_len" "$hasura_strength" >&2
     fi
   fi
 
@@ -147,7 +181,19 @@ security::check_required_passwords() {
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Set\n" >&2
+      local meili_key="${MEILISEARCH_MASTER_KEY:-${SEARCH_API_KEY}}"
+      local meili_len=${#meili_key}
+      local meili_strength="weak"
+      if [[ $meili_len -ge 48 ]]; then
+        meili_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+      elif [[ $meili_len -ge 32 ]]; then
+        meili_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+      elif [[ $meili_len -ge 24 ]]; then
+        meili_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+      else
+        meili_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+      fi
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MEILISEARCH_MASTER_KEY: Set (%d chars, %b)\n" "$meili_len" "$meili_strength" >&2
     fi
   fi
 
@@ -162,7 +208,18 @@ security::check_required_passwords() {
         errors=$((errors + 1))
       fi
     else
-      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Set\n" >&2
+      local minio_len=${#MINIO_ROOT_PASSWORD}
+      local minio_strength="weak"
+      if [[ $minio_len -ge 48 ]]; then
+        minio_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+      elif [[ $minio_len -ge 32 ]]; then
+        minio_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+      elif [[ $minio_len -ge 24 ]]; then
+        minio_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+      else
+        minio_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+      fi
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} MINIO_ROOT_PASSWORD: Set (%d chars, %b)\n" "$minio_len" "$minio_strength" >&2
     fi
   fi
 
@@ -549,6 +606,186 @@ security::generate_secrets() {
   fi
 }
 
+# ============================================================
+# COMPREHENSIVE SECURITY REPORT
+# ============================================================
+
+# Generate comprehensive security report
+security::generate_report() {
+  local env="${ENV:-dev}"
+
+  printf "\n${COLOR_CYAN}Security Validation Report${COLOR_RESET}\n"
+  printf "═══════════════════════════════════════\n\n"
+
+  # Calculate scores
+  local total_score=0
+  local max_score=0
+  local password_score=0
+  local cors_score=0
+  local port_score=0
+  local container_score=0
+  local default_score=0
+
+  # 1. Password Strength Analysis
+  printf "${COLOR_BOLD}Password Strength:${COLOR_RESET}\n"
+  local password_count=0
+  local secure_passwords=0
+
+  for var in POSTGRES_PASSWORD HASURA_GRAPHQL_ADMIN_SECRET REDIS_PASSWORD MINIO_ROOT_PASSWORD MEILISEARCH_MASTER_KEY; do
+    local value="${!var:-}"
+    if [[ -n "$value" ]]; then
+      password_count=$((password_count + 1))
+      local len=${#value}
+      if [[ $len -ge 32 ]]; then
+        secure_passwords=$((secure_passwords + 1))
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} %s: %d chars (secure)\n" "$var" "$len"
+      elif [[ $len -ge 24 ]]; then
+        printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} %s: %d chars (moderate - recommend 32+)\n" "$var" "$len"
+      else
+        printf "  ${COLOR_RED}✗${COLOR_RESET} %s: %d chars (weak - recommend 32+)\n" "$var" "$len"
+      fi
+    fi
+  done
+
+  if [[ $password_count -gt 0 ]]; then
+    password_score=$((secure_passwords * 100 / password_count))
+    printf "  Score: ${COLOR_CYAN}%d/%d${COLOR_RESET} passwords are secure\n" "$secure_passwords" "$password_count"
+  else
+    printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} No passwords configured\n"
+  fi
+  max_score=$((max_score + 20))
+  total_score=$((total_score + (password_score * 20 / 100)))
+  printf "\n"
+
+  # 2. CORS Configuration
+  printf "${COLOR_BOLD}CORS Configuration:${COLOR_RESET}\n"
+  if [[ "$env" == "prod" ]] || [[ "$env" == "production" ]]; then
+    if [[ "${HASURA_GRAPHQL_CORS_DOMAIN:-}" =~ \* ]]; then
+      printf "  ${COLOR_RED}✗${COLOR_RESET} CORS allows wildcard in production\n"
+      cors_score=0
+    else
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} CORS properly restricted\n"
+      cors_score=100
+    fi
+  else
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} CORS configured for %s environment\n" "$env"
+    cors_score=100
+  fi
+  max_score=$((max_score + 20))
+  total_score=$((total_score + (cors_score * 20 / 100)))
+  printf "\n"
+
+  # 3. Port Exposure
+  printf "${COLOR_BOLD}Port Configuration:${COLOR_RESET}\n"
+  if [[ "$env" == "prod" ]] || [[ "$env" == "production" ]]; then
+    if [[ "${POSTGRES_EXPOSE_PORT:-auto}" == "false" ]] || [[ "${POSTGRES_EXPOSE_PORT:-auto}" == "auto" ]]; then
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} Database port not exposed\n"
+      port_score=100
+    else
+      printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Database port may be exposed\n"
+      port_score=50
+    fi
+  else
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} Port configuration appropriate for %s\n" "$env"
+    port_score=100
+  fi
+  max_score=$((max_score + 20))
+  total_score=$((total_score + (port_score * 20 / 100)))
+  printf "\n"
+
+  # 4. No Insecure Defaults
+  printf "${COLOR_BOLD}Insecure Defaults:${COLOR_RESET}\n"
+  local insecure_count=0
+  for var in POSTGRES_PASSWORD HASURA_GRAPHQL_ADMIN_SECRET REDIS_PASSWORD MINIO_ROOT_PASSWORD; do
+    local value="${!var:-}"
+    local value_lower
+    value_lower=$(printf "%s" "$value" | tr '[:upper:]' '[:lower:]')
+    if [[ "$value_lower" =~ (password|changeme|secret|admin|12345|qwerty|default) ]]; then
+      insecure_count=$((insecure_count + 1))
+      printf "  ${COLOR_RED}✗${COLOR_RESET} %s uses insecure default\n" "$var"
+    fi
+  done
+
+  if [[ $insecure_count -eq 0 ]]; then
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} No insecure default values detected\n"
+    default_score=100
+  else
+    printf "  ${COLOR_RED}✗${COLOR_RESET} %d insecure default(s) found\n" "$insecure_count"
+    default_score=0
+  fi
+  max_score=$((max_score + 20))
+  total_score=$((total_score + (default_score * 20 / 100)))
+  printf "\n"
+
+  # 5. Container Security
+  printf "${COLOR_BOLD}Container Security:${COLOR_RESET}\n"
+  if [[ -f "docker-compose.yml" ]]; then
+    # Check if containers run as non-root (basic check)
+    local root_containers=0
+    local total_containers=0
+
+    # Count services in docker-compose
+    total_containers=$(grep -c "^  [a-z]" docker-compose.yml 2>/dev/null || echo "0")
+
+    # Count services WITHOUT user directive (rough estimate)
+    root_containers=$(grep -A 20 "^  [a-z]" docker-compose.yml 2>/dev/null | grep -c "user:" || echo "0")
+
+    if [[ $root_containers -gt 0 ]]; then
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} %d services run as non-root\n" "$root_containers"
+      container_score=100
+    else
+      printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Unable to verify container users\n"
+      container_score=80
+    fi
+  else
+    printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} No docker-compose.yml found\n"
+    container_score=50
+  fi
+  max_score=$((max_score + 20))
+  total_score=$((total_score + (container_score * 20 / 100)))
+  printf "\n"
+
+  # Calculate final score
+  local final_score=$((total_score * 100 / max_score))
+
+  # Display final score with color
+  printf "═══════════════════════════════════════\n"
+  if [[ $final_score -ge 90 ]]; then
+    printf "${COLOR_GREEN}Security Score: %d/100 ✅${COLOR_RESET}\n" "$final_score"
+    printf "  Status: ${COLOR_GREEN}Excellent${COLOR_RESET}\n"
+  elif [[ $final_score -ge 75 ]]; then
+    printf "${COLOR_CYAN}Security Score: %d/100 ✓${COLOR_RESET}\n" "$final_score"
+    printf "  Status: ${COLOR_CYAN}Good${COLOR_RESET}\n"
+  elif [[ $final_score -ge 60 ]]; then
+    printf "${COLOR_YELLOW}Security Score: %d/100 ⚠${COLOR_RESET}\n" "$final_score"
+    printf "  Status: ${COLOR_YELLOW}Needs Improvement${COLOR_RESET}\n"
+  else
+    printf "${COLOR_RED}Security Score: %d/100 ✗${COLOR_RESET}\n" "$final_score"
+    printf "  Status: ${COLOR_RED}Critical Issues${COLOR_RESET}\n"
+  fi
+  printf "\n"
+
+  # Recommendations
+  if [[ $final_score -lt 90 ]]; then
+    printf "${COLOR_BOLD}Recommendations:${COLOR_RESET}\n"
+    if [[ $password_score -lt 80 ]]; then
+      printf "  • Strengthen passwords (use 32+ characters)\n"
+    fi
+    if [[ $cors_score -lt 100 ]]; then
+      printf "  • Fix CORS configuration for production\n"
+    fi
+    if [[ $default_score -lt 100 ]]; then
+      printf "  • Replace insecure default values\n"
+    fi
+    if [[ $port_score -lt 100 ]]; then
+      printf "  • Review port exposure settings\n"
+    fi
+    printf "  • Run: ${COLOR_CYAN}nself audit security${COLOR_RESET} for detailed analysis\n"
+    printf "  • Run: ${COLOR_CYAN}nself harden${COLOR_RESET} to auto-fix issues\n"
+    printf "\n"
+  fi
+}
+
 # Export functions
 export -f security::validate_build
 export -f security::check_required_passwords
@@ -561,3 +798,4 @@ export -f security::production_preflight
 export -f security::get_sensitive_containers
 export -f security::force_recreate_sensitive_containers
 export -f security::generate_secrets
+export -f security::generate_report

@@ -48,17 +48,20 @@ show_build_help() {
   echo "  and all necessary infrastructure based on your .env settings."
   echo ""
   echo "Options:"
-  echo "  -f, --force         Force rebuild of all components"
-  echo "  --no-cache          Disable build cache (force full rebuild)"
-  echo "  -h, --help          Show this help message"
-  echo "  -v, --verbose       Show detailed output"
-  echo "  --debug             Enable debug mode"
-  echo "  --allow-insecure    Allow insecure config (DEV ONLY, not for prod)"
+  echo "  -f, --force           Force rebuild of all components"
+  echo "  --no-cache            Disable build cache (force full rebuild)"
+  echo "  -h, --help            Show this help message"
+  echo "  -v, --verbose         Show detailed output (environment cascade)"
+  echo "  --debug               Enable debug mode"
+  echo "  --security-report     Show comprehensive security analysis"
+  echo "  --allow-insecure      Allow insecure config (DEV ONLY, not for prod)"
   echo ""
   echo "Examples:"
   echo "  nself build                    # Build with current configuration"
   echo "  nself build --force            # Force rebuild everything"
   echo "  nself build --no-cache         # Disable cache, rebuild all"
+  echo "  nself build --verbose          # Show environment cascade details"
+  echo "  nself build --security-report  # Get comprehensive security score"
   echo "  nself build --debug            # Build with debug output"
   echo ""
   echo "Files Generated:"
@@ -90,6 +93,7 @@ cmd_build() {
   local verbose=false
   local no_cache=false
   local allow_insecure=false
+  local security_report=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -120,6 +124,10 @@ cmd_build() {
         ;;
       --allow-insecure)
         allow_insecure=true
+        shift
+        ;;
+      --security-report)
+        security_report=true
         shift
         ;;
       *)
@@ -171,6 +179,13 @@ cmd_build() {
         echo ""
       else
         return 1
+      fi
+    fi
+
+    # Generate comprehensive security report if requested
+    if [[ "$security_report" == "true" ]]; then
+      if command -v security::generate_report >/dev/null 2>&1; then
+        security::generate_report
       fi
     fi
   fi

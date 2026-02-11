@@ -34,6 +34,14 @@ fi
 #   5) .env         (LOCAL ONLY priority overrides) - HIGHEST PRIORITY
 load_env_with_priority() {
   local silent="${1:-false}"
+  local verbose="${VERBOSE:-false}"
+  local total_vars=0
+  local files_loaded=0
+
+  # Show cascade visualization if verbose mode enabled
+  if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+    printf "\n${COLOR_CYAN}Environment Cascade:${COLOR_RESET}\n"
+  fi
 
   # Use the new cascading function if available
   if command -v cascade_env_vars >/dev/null 2>&1; then
@@ -48,18 +56,34 @@ load_env_with_priority() {
 
   # STEP 1: Always load .env.dev as the base (team defaults)
   if [[ -f ".env.dev" ]]; then
+    local before_count=$(env | wc -l | tr -d ' ')
     set -a
     source ".env.dev" 2>/dev/null
     set +a
+    local after_count=$(env | wc -l | tr -d ' ')
+    local loaded_count=$((after_count - before_count))
     loaded=true
+    files_loaded=$((files_loaded + 1))
+    total_vars=$((total_vars + loaded_count))
+    if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+      printf "  %d. Loaded: .env.dev (%d vars)\n" "$files_loaded" "$loaded_count"
+    fi
   fi
 
   # STEP 1.5: Load .env.local if it exists (legacy/alternative to .env)
   if [[ -f ".env.local" ]]; then
+    local before_count=$(env | wc -l | tr -d ' ')
     set -a
     source ".env.local" 2>/dev/null
     set +a
+    local after_count=$(env | wc -l | tr -d ' ')
+    local loaded_count=$((after_count - before_count))
     loaded=true
+    files_loaded=$((files_loaded + 1))
+    total_vars=$((total_vars + loaded_count))
+    if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+      printf "  %d. Loaded: .env.local (%d vars)\n" "$files_loaded" "$loaded_count"
+    fi
   fi
 
   # STEP 2: Detect environment using NSELF_ENV first, then ENV
@@ -86,34 +110,66 @@ load_env_with_priority() {
     staging | stage)
       # For staging: .env.dev -> .env.staging
       if [[ -f ".env.staging" ]]; then
+        local before_count=$(env | wc -l | tr -d ' ')
         set -a
         source ".env.staging" 2>/dev/null
         set +a
+        local after_count=$(env | wc -l | tr -d ' ')
+        local loaded_count=$((after_count - before_count))
         loaded=true
+        files_loaded=$((files_loaded + 1))
+        total_vars=$((total_vars + loaded_count))
+        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+          printf "  %d. Loaded: .env.staging (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
       fi
       ;;
 
     prod | production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
       if [[ -f ".env.staging" ]]; then
+        local before_count=$(env | wc -l | tr -d ' ')
         set -a
         source ".env.staging" 2>/dev/null
         set +a
+        local after_count=$(env | wc -l | tr -d ' ')
+        local loaded_count=$((after_count - before_count))
         loaded=true
+        files_loaded=$((files_loaded + 1))
+        total_vars=$((total_vars + loaded_count))
+        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+          printf "  %d. Loaded: .env.staging (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
       fi
 
       if [[ -f ".env.prod" ]]; then
+        local before_count=$(env | wc -l | tr -d ' ')
         set -a
         source ".env.prod" 2>/dev/null
         set +a
+        local after_count=$(env | wc -l | tr -d ' ')
+        local loaded_count=$((after_count - before_count))
         loaded=true
+        files_loaded=$((files_loaded + 1))
+        total_vars=$((total_vars + loaded_count))
+        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+          printf "  %d. Loaded: .env.prod (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
       fi
 
       if [[ -f ".env.secrets" ]]; then
+        local before_count=$(env | wc -l | tr -d ' ')
         set -a
         source ".env.secrets" 2>/dev/null
         set +a
+        local after_count=$(env | wc -l | tr -d ' ')
+        local loaded_count=$((after_count - before_count))
         loaded=true
+        files_loaded=$((files_loaded + 1))
+        total_vars=$((total_vars + loaded_count))
+        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+          printf "  %d. Loaded: .env.secrets (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
       fi
       ;;
 
@@ -125,10 +181,23 @@ load_env_with_priority() {
   # STEP 4: Load .env as the FINAL override (HIGHEST PRIORITY)
   # This allows local overrides of ANY setting regardless of environment
   if [[ -f ".env" ]]; then
+    local before_count=$(env | wc -l | tr -d ' ')
     set -a
     source ".env" 2>/dev/null
     set +a
+    local after_count=$(env | wc -l | tr -d ' ')
+    local loaded_count=$((after_count - before_count))
     loaded=true
+    files_loaded=$((files_loaded + 1))
+    total_vars=$((total_vars + loaded_count))
+    if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+      printf "  %d. Loaded: .env (%d vars)\n" "$files_loaded" "$loaded_count"
+    fi
+  fi
+
+  # Show summary if verbose
+  if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+    printf "  ${COLOR_GREEN}Final: %d files loaded, %d variables total${COLOR_RESET}\n\n" "$files_loaded" "$total_vars"
   fi
 
   # Ensure PROJECT_NAME is always set after loading
