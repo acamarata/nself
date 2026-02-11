@@ -46,6 +46,16 @@ export PROJECT_NAME="${PROJECT_NAME:-myproject}"
 export ENV="${ENV:-dev}"
 export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
 
+# Validate critical variables are set (helps catch export issues early)
+# This validation helps debug environment variable inheritance problems
+if [[ "${PROJECT_NAME}" == "myproject" ]] && [[ -f ".env" || -f ".env.dev" ]]; then
+  # If we're using default PROJECT_NAME but .env files exist, warn (likely export issue)
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    echo "Warning: PROJECT_NAME='myproject' (default) but .env files exist" >&2
+    echo "This may indicate environment variables weren't exported from parent process" >&2
+  fi
+fi
+
 # Database defaults
 export POSTGRES_USER="${POSTGRES_USER:-postgres}"
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
