@@ -400,6 +400,11 @@ wizard_review_generate() {
       done
     } >"$output_file"
 
+    # Auto-generate strong secrets for enabled services
+    if command -v auto_generate_secrets_for_env >/dev/null 2>&1; then
+      auto_generate_secrets_for_env "$output_file"
+    fi
+
     echo ""
     echo "✅ Configuration generated successfully!"
     echo ""

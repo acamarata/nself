@@ -60,6 +60,133 @@ generate_random_secret() {
   esac
 }
 
+# Generate environment-appropriate secrets with varying strength
+auto_generate_secrets_for_env() {
+  local env="${ENV:-dev}"
+  local env_file="${1:-.env}"
+
+  if [[ ! -f "$env_file" ]]; then
+    return 0
+  fi
+
+  # Secret strength by environment
+  local postgres_length=32
+  local hasura_length=64
+  local jwt_length=64
+  local minio_length=32
+  local search_length=32
+
+  if [[ "$env" == "production" ]] || [[ "$env" == "prod" ]]; then
+    postgres_length=48
+    hasura_length=96
+    jwt_length=96
+    minio_length=48
+    search_length=48
+  elif [[ "$env" == "staging" ]]; then
+    postgres_length=40
+    hasura_length=80
+    jwt_length=80
+    minio_length=40
+    search_length=40
+  fi
+
+  # Generate POSTGRES_PASSWORD if empty
+  if ! grep -q "^POSTGRES_PASSWORD=.\\+" "$env_file" 2>/dev/null; then
+    local pg_pass
+    pg_pass=$(generate_random_secret "$postgres_length" "alphanumeric")
+    if grep -q "^POSTGRES_PASSWORD=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$pg_pass|" "$env_file"
+    else
+      printf "POSTGRES_PASSWORD=%s\n" "$pg_pass" >> "$env_file"
+    fi
+  fi
+
+  # Generate HASURA_GRAPHQL_ADMIN_SECRET if empty
+  if ! grep -q "^HASURA_GRAPHQL_ADMIN_SECRET=.\\+" "$env_file" 2>/dev/null; then
+    local hasura_secret
+    hasura_secret=$(generate_random_secret "$hasura_length" "hex")
+    if grep -q "^HASURA_GRAPHQL_ADMIN_SECRET=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^HASURA_GRAPHQL_ADMIN_SECRET=.*|HASURA_GRAPHQL_ADMIN_SECRET=$hasura_secret|" "$env_file"
+    else
+      printf "HASURA_GRAPHQL_ADMIN_SECRET=%s\n" "$hasura_secret" >> "$env_file"
+    fi
+  fi
+
+  # Generate HASURA_JWT_KEY if empty
+  if ! grep -q "^HASURA_JWT_KEY=.\\+" "$env_file" 2>/dev/null; then
+    local jwt_key
+    jwt_key=$(generate_random_secret "$jwt_length" "hex")
+    if grep -q "^HASURA_JWT_KEY=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^HASURA_JWT_KEY=.*|HASURA_JWT_KEY=$jwt_key|" "$env_file"
+    else
+      printf "HASURA_JWT_KEY=%s\n" "$jwt_key" >> "$env_file"
+    fi
+  fi
+
+  # Generate MINIO_ROOT_PASSWORD if empty and MinIO enabled
+  if grep -q "^MINIO_ENABLED=true" "$env_file" 2>/dev/null && ! grep -q "^MINIO_ROOT_PASSWORD=.\\+" "$env_file" 2>/dev/null; then
+    local minio_pass
+    minio_pass=$(generate_random_secret "$minio_length" "alphanumeric")
+    if grep -q "^MINIO_ROOT_PASSWORD=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=$minio_pass|" "$env_file"
+    else
+      printf "MINIO_ROOT_PASSWORD=%s\n" "$minio_pass" >> "$env_file"
+    fi
+    # Also set MINIO_ROOT_USER if not set
+    if ! grep -q "^MINIO_ROOT_USER=.\\+" "$env_file" 2>/dev/null; then
+      if grep -q "^MINIO_ROOT_USER=" "$env_file" 2>/dev/null; then
+        sed -i.bak "s|^MINIO_ROOT_USER=.*|MINIO_ROOT_USER=admin|" "$env_file"
+      else
+        printf "MINIO_ROOT_USER=admin\n" >> "$env_file"
+      fi
+    fi
+  fi
+
+  # Generate GRAFANA_ADMIN_PASSWORD if empty and monitoring enabled
+  if grep -q "^MONITORING_ENABLED=true" "$env_file" 2>/dev/null && ! grep -q "^GRAFANA_ADMIN_PASSWORD=.\\+" "$env_file" 2>/dev/null; then
+    local grafana_pass
+    grafana_pass=$(generate_random_secret "$postgres_length" "alphanumeric")
+    if grep -q "^GRAFANA_ADMIN_PASSWORD=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^GRAFANA_ADMIN_PASSWORD=.*|GRAFANA_ADMIN_PASSWORD=$grafana_pass|" "$env_file"
+    else
+      printf "GRAFANA_ADMIN_PASSWORD=%s\n" "$grafana_pass" >> "$env_file"
+    fi
+    # Also set GRAFANA_ADMIN_USER if not set
+    if ! grep -q "^GRAFANA_ADMIN_USER=.\\+" "$env_file" 2>/dev/null; then
+      if grep -q "^GRAFANA_ADMIN_USER=" "$env_file" 2>/dev/null; then
+        sed -i.bak "s|^GRAFANA_ADMIN_USER=.*|GRAFANA_ADMIN_USER=admin|" "$env_file"
+      else
+        printf "GRAFANA_ADMIN_USER=admin\n" >> "$env_file"
+      fi
+    fi
+  fi
+
+  # Generate MEILISEARCH_MASTER_KEY if empty and search enabled
+  if grep -q "^MEILISEARCH_ENABLED=true" "$env_file" 2>/dev/null && ! grep -q "^MEILISEARCH_MASTER_KEY=.\\+" "$env_file" 2>/dev/null; then
+    local search_key
+    search_key=$(generate_random_secret "$search_length" "hex")
+    if grep -q "^MEILISEARCH_MASTER_KEY=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^MEILISEARCH_MASTER_KEY=.*|MEILISEARCH_MASTER_KEY=$search_key|" "$env_file"
+    else
+      printf "MEILISEARCH_MASTER_KEY=%s\n" "$search_key" >> "$env_file"
+    fi
+  fi
+
+  # Generate ADMIN_SECRET_KEY if empty and admin enabled
+  if grep -q "^NSELF_ADMIN_ENABLED=true" "$env_file" 2>/dev/null && ! grep -q "^ADMIN_SECRET_KEY=.\\+" "$env_file" 2>/dev/null; then
+    local admin_key
+    admin_key=$(generate_random_secret "$jwt_length" "hex")
+    if grep -q "^ADMIN_SECRET_KEY=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^ADMIN_SECRET_KEY=.*|ADMIN_SECRET_KEY=$admin_key|" "$env_file"
+    else
+      printf "ADMIN_SECRET_KEY=%s\n" "$admin_key" >> "$env_file"
+    fi
+  fi
+
+  # Clean up backup files
+  rm -f "$env_file.bak"
+}
+
 # Replace default secrets in environment file
 replace_default_secrets_in_file() {
   local env_file="$1"
@@ -218,6 +345,7 @@ enhance_env_file_security() {
 
 # Export functions
 export -f generate_random_secret
+export -f auto_generate_secrets_for_env
 export -f replace_default_secrets_in_file
 export -f generate_secrets_section
 export -f enhance_env_file_security

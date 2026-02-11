@@ -15,6 +15,7 @@ generate_tempo_service() {
     image: grafana/tempo:${TEMPO_VERSION:-latest}
     container_name: \${PROJECT_NAME}_tempo
     restart: unless-stopped
+    user: "10001:10001"
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./monitoring/tempo/tempo.yml:/etc/tempo.yaml:ro
@@ -44,6 +45,7 @@ generate_alertmanager_service() {
     image: prom/alertmanager:${ALERTMANAGER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_alertmanager
     restart: unless-stopped
+    user: "65534:65534"
     volumes:
       - ./monitoring/alertmanager:/etc/alertmanager:ro
       - alertmanager_data:/alertmanager
@@ -124,6 +126,7 @@ generate_node_exporter_service() {
     image: prom/node-exporter:${NODE_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_node_exporter
     restart: unless-stopped
+    user: "65534:65534"
     pid: host
     volumes:
       - /proc:/host/proc:ro
@@ -162,6 +165,7 @@ generate_postgres_exporter_service() {
     image: prometheuscommunity/postgres-exporter:${POSTGRES_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_postgres_exporter
     restart: unless-stopped
+    user: "65534:65534"
     environment:
       DATA_SOURCE_NAME: "postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}?sslmode=disable"
     ports:
@@ -198,6 +202,7 @@ generate_redis_exporter_service() {
     image: oliver006/redis_exporter:${REDIS_EXPORTER_VERSION:-latest}
     container_name: \${PROJECT_NAME}_redis_exporter
     restart: unless-stopped
+    user: "59000:59000"
     environment:
       REDIS_ADDR: "${redis_addr}"
     ports:

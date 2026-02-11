@@ -72,6 +72,42 @@ cmd_audit() {
       fi
       ;;
 
+    security)
+      # Source security audit functions
+      if [[ -f "$CLI_SCRIPT_DIR/../lib/security/audit-checks.sh" ]]; then
+        source "$CLI_SCRIPT_DIR/../lib/security/audit-checks.sh"
+      else
+        log_error "Security audit module not found"
+        exit 1
+      fi
+
+      shift || true
+      local check_type="${1:-all}"
+
+      case "$check_type" in
+        all)
+          run_security_audit
+          ;;
+        secrets)
+          check_weak_secrets
+          ;;
+        cors)
+          check_cors_security
+          ;;
+        ports)
+          check_exposed_ports
+          ;;
+        containers)
+          check_container_users
+          ;;
+        *)
+          log_error "Unknown security check: $check_type"
+          printf "Options: all, secrets, cors, ports, containers\n"
+          exit 1
+          ;;
+      esac
+      ;;
+
     help | --help | -h)
       show_help
       ;;
@@ -98,6 +134,7 @@ COMMANDS:
   stats                         Show audit trail statistics
   export <file> [format]        Export audit logs (formats: txt, csv, json)
   verify                        Verify audit log integrity
+  security [check]              Run security audits (checks: all, secrets, cors, ports, containers)
   enable                        Enable audit logging
   disable                       Disable audit logging (requires confirmation)
   help                          Show this help message
@@ -127,6 +164,13 @@ EXAMPLES:
 
   # Show statistics
   nself audit stats
+
+  # Run security audit
+  nself audit security                 # All checks
+  nself audit security secrets         # Check weak secrets
+  nself audit security cors            # Check CORS config
+  nself audit security ports           # Check exposed ports
+  nself audit security containers      # Check container users
 
   # Export to CSV
   nself audit export audit-trail.csv csv

@@ -17,11 +17,12 @@ generate_grafana_service() {
     image: grafana/grafana:${GRAFANA_VERSION:-latest}
     container_name: \${PROJECT_NAME}_grafana
     restart: unless-stopped
+    user: "472:472"
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      GF_SECURITY_ADMIN_USER: \${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: \${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_USER: \${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: \${GRAFANA_ADMIN_PASSWORD}
       GF_INSTALL_PLUGINS: \${GRAFANA_PLUGINS:-}
       GF_SERVER_ROOT_URL: \${GRAFANA_ROOT_URL:-http://localhost:3000}
       GF_ANALYTICS_REPORTING_ENABLED: "false"
@@ -55,6 +56,7 @@ generate_prometheus_service() {
     image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
     container_name: \${PROJECT_NAME}_prometheus
     restart: unless-stopped
+    user: "65534:65534"
     networks:
       - \${DOCKER_NETWORK}
     command:
@@ -91,6 +93,7 @@ generate_loki_service() {
     image: grafana/loki:${LOKI_VERSION:-2.9.0}
     container_name: \${PROJECT_NAME}_loki
     restart: unless-stopped
+    user: "10001:10001"
     networks:
       - \${DOCKER_NETWORK}
     command: -config.file=/etc/loki/local-config.yaml

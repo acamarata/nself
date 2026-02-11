@@ -414,6 +414,13 @@ start_services() {
     security::force_recreate_sensitive_containers "$project_name"
   fi
 
+  # Warning for Mailpit in production
+  if [[ "${ENV:-dev}" == "production" ]] && [[ "${MAILPIT_ENABLED:-false}" == "true" ]]; then
+    printf "\n${COLOR_YELLOW}⚠ Warning:${COLOR_RESET} Mailpit is for development only and insecure\n"
+    printf "  Configure production email with: ${COLOR_BLUE}nself service email configure${COLOR_RESET}\n\n"
+    sleep 2
+  fi
+
   # Build the docker compose command based on start mode
   local compose_args=(
     "--project-name" "$project_name"

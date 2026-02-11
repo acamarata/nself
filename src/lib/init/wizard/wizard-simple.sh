@@ -249,6 +249,11 @@ run_simple_wizard() {
       echo "# REDIS_PASSWORD=custom-redis-password"
     } >"$output_file"
 
+    # Auto-generate strong secrets for enabled services
+    if command -v auto_generate_secrets_for_env >/dev/null 2>&1; then
+      auto_generate_secrets_for_env "$output_file"
+    fi
+
     echo "✅ Configuration saved to $output_file"
     echo ""
     echo "Next steps:"

@@ -20,6 +20,7 @@ generate_postgres_service() {
     image: postgres:${POSTGRES_VERSION:-16-alpine}
     container_name: \${PROJECT_NAME}_postgres
     restart: unless-stopped
+    user: "70:70"
     networks:
       - \${DOCKER_NETWORK}
     environment:
@@ -30,9 +31,24 @@ generate_postgres_service() {
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
+EOF
+
+  # Conditional port exposure based on environment
+  if [[ "${POSTGRES_EXPOSE_PORT:-auto}" == "true" ]] || \
+     [[ "${POSTGRES_EXPOSE_PORT:-auto}" == "auto" && "${ENV:-dev}" == "dev" ]]; then
+    cat <<'EOF'
     ports:
       # SECURITY: Bind to localhost only - prevents external access
-      - "127.0.0.1:\${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+EOF
+  else
+    cat <<'EOF'
+    expose:
+      - "5432"  # Internal Docker network only
+EOF
+  fi
+
+  cat <<EOF
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -66,6 +82,7 @@ generate_hasura_service() {
     image: hasura/graphql-engine:${HASURA_VERSION:-v2.36.0}
     container_name: \${PROJECT_NAME}_hasura
     restart: unless-stopped
+    user: "1001:1001"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -77,7 +94,7 @@ generate_hasura_service() {
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_DEV_MODE: \${HASURA_DEV_MODE:-false}
       HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
-      HASURA_GRAPHQL_CORS_DOMAIN: "*"
+      HASURA_GRAPHQL_CORS_DOMAIN: "\${HASURA_GRAPHQL_CORS_DOMAIN}"
       HASURA_GRAPHQL_LOG_LEVEL: \${HASURA_LOG_LEVEL:-info}
 EOF
 
@@ -139,6 +156,7 @@ generate_auth_service() {
       dockerfile: Dockerfile.auth
     container_name: \${PROJECT_NAME}_auth
     restart: unless-stopped
+    user: "1001:1001"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -159,6 +177,7 @@ EOF
     image: ${auth_image}
     container_name: \${PROJECT_NAME}_auth
     restart: unless-stopped
+    user: "1001:1001"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -260,11 +279,12 @@ generate_minio_service() {
     image: minio/minio:${MINIO_VERSION:-latest}
     container_name: \${PROJECT_NAME}_minio
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      MINIO_ROOT_USER: \${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: \${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: \${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: \${MINIO_ROOT_PASSWORD}
       MINIO_DEFAULT_BUCKETS: \${MINIO_DEFAULT_BUCKETS:-uploads}
       MINIO_REGION: \${MINIO_REGION:-us-east-1}
     command: server /data --console-address ":9001"
@@ -315,7 +335,7 @@ EOF
       /bin/sh -c "
       set -e;
       echo '→ Initializing MinIO buckets...';
-      /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
       for bucket in $(echo ${MINIO_DEFAULT_BUCKETS:-uploads} | tr ',' ' '); do
         /usr/bin/mc mb -p myminio/$$bucket 2>/dev/null || echo \"  Bucket $$bucket exists\";
         /usr/bin/mc anonymous set download myminio/$$bucket 2>/dev/null || true;
@@ -351,6 +371,7 @@ generate_redis_service() {
     image: redis:${REDIS_VERSION:-7-alpine}
     container_name: \${PROJECT_NAME}_redis
     restart: unless-stopped
+    user: "999:999"
     networks:
       - \${DOCKER_NETWORK}
     command: ${redis_cmd}

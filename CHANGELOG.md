@@ -46,6 +46,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-tracks auth schema tables (users, user_providers, providers, etc.)
 - Integrated with `nself auth setup` workflow
 
+#### Security Hardening System
+- **`nself audit security`** - Comprehensive security audit command
+  - Detects weak secrets (minioadmin, changeme, admin, etc.)
+  - Checks secret length (warns if < 24 characters)
+  - Validates CORS configuration (detects wildcards in production)
+  - Audits exposed ports (warns if database exposed in production)
+  - Verifies container users (checks for root containers)
+  - Subcommands: `all`, `secrets`, `cors`, `ports`, `containers`
+
+- **`nself harden`** - Automated security hardening command
+  - Interactive wizard mode (audit → review → apply)
+  - `nself harden all` - Apply all fixes automatically
+  - `nself harden secrets` - Rotate weak secrets only
+  - `nself harden cors` - Fix CORS configuration
+  - Generates cryptographically strong secrets
+  - Environment-aware hardening (dev/staging/prod)
+
+#### Environment-Aware CORS Configuration
+- CORS now respects environment settings (no more wildcard "*" in production)
+- **Development**: Permissive CORS for localhost development
+  - `http://localhost:*`, `http://*.local.nself.org`, `https://*.local.nself.org`
+- **Staging**: Production domains + localhost for testing
+  - `https://*.${BASE_DOMAIN}`, `http://localhost:3000`
+- **Production**: Strict CORS - only your domain
+  - `https://*.${BASE_DOMAIN}` (NO wildcards, NO localhost)
+- Can be overridden via `HASURA_GRAPHQL_CORS_DOMAIN` environment variable
+- Custom service templates (Express, FastAPI, Flask) use same environment-aware pattern
+
+#### Enhanced Secret Generation
+- **Environment-specific secret strength**:
+  - Development: 32-64 character secrets (convenient but secure)
+  - Staging: 40-80 character secrets (production-like)
+  - Production: 48-96 character secrets (maximum security)
+- Auto-generates secrets for:
+  - PostgreSQL password
+  - Hasura admin secret & JWT key
+  - MinIO credentials
+  - Grafana credentials
+  - MeiliSearch/Typesense API keys
+  - nself-admin secret key
+- Uses cryptographically secure random generation (openssl, /dev/urandom)
+- Only generates if empty (preserves existing secrets)
+- Integrated into `nself init` wizard
+
+#### Non-Root Container Users
+- All containers now run as non-root users for security:
+  - PostgreSQL: `user: "70:70"`
+  - Hasura: `user: "1001:1001"`
+  - Auth: `user: "1001:1001"`
+  - Redis: `user: "999:999"`
+  - MinIO: `user: "1000:1000"`
+  - Mailpit: `user: "1000:1000"`
+  - MeiliSearch: `user: "1000:1000"`
+  - Grafana: `user: "472:472"`
+  - Prometheus: `user: "65534:65534"`
+  - All monitoring exporters run as non-root
+- **Exceptions** (require root privileges):
+  - Nginx: Needs root for ports 80/443
+  - cAdvisor: Requires privileged mode
+  - Promtail: Needs root to read system logs
+
+#### Conditional Port Exposure
+- Database ports now conditionally exposed based on environment
+- **`POSTGRES_EXPOSE_PORT`** variable with three modes:
+  - `auto` (default): Expose in dev, hide in prod/staging
+  - `true`: Always expose to 127.0.0.1 (localhost only)
+  - `false`: Never expose (internal Docker network only)
+- **Development**: Port exposed to `127.0.0.1:5432` (database tools work)
+- **Production**: Port NOT exposed (internal Docker network only, maximum security)
+- Reduces attack surface in production deployments
+
+#### Environment-Conditional Mailpit
+- Mailpit security settings now respect environment:
+  - **Development**: `MP_SMTP_AUTH_ACCEPT_ANY=1`, `MP_SMTP_AUTH_ALLOW_INSECURE=1`
+  - **Production/Staging**: Secure defaults, respects `MAILPIT_ACCEPT_ANY_AUTH` env var
+- Production warning added: "Mailpit is for development only and insecure"
+- Guides users to configure production email: `nself service email configure`
+
+#### Security Documentation
+- **`.wiki/security/HARDENING-GUIDE.md`** - Comprehensive security hardening guide
+  - Security philosophy and best practices
+  - Environment-specific security configurations
+  - Using audit and hardening commands
+  - Production deployment checklist
+  - Compliance considerations (SOC 2, GDPR, HIPAA)
+  - Troubleshooting common security issues
+  - Advanced topics (secret rotation, CI/CD, monitoring)
+
+- **`.wiki/security/MIGRATION-V0.10.0.md`** - Migration guide
+  - Breaking changes and impact assessment
+  - Safe 8-step upgrade process
+  - Environment-specific migration procedures
+  - Troubleshooting migration issues
+  - Post-migration checklist
+  - Rollback instructions
+
 #### Seed Templates
 - **`src/templates/seeds/001_auth_users.sql.template`** - nHost auth seed template
   - Creates users with proper schema structure

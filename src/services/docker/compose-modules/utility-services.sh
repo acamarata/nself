@@ -14,16 +14,32 @@ generate_mailpit_service() {
     image: axllent/mailpit:${MAILPIT_VERSION:-latest}
     container_name: \${PROJECT_NAME}_mailpit
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
       MP_UI_BIND_ADDR: 0.0.0.0:8025
       MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+EOF
+
+  # Environment-conditional security settings
+  if [[ "${ENV:-dev}" == "dev" ]]; then
+    cat <<'EOF'
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+EOF
+  else
+    cat <<'EOF'
+      MP_SMTP_AUTH_ACCEPT_ANY: ${MAILPIT_ACCEPT_ANY_AUTH:-0}
+      MP_SMTP_AUTH_ALLOW_INSECURE: 0
+EOF
+  fi
+
+  cat <<'EOF'
+      MP_MAX_MESSAGES: ${MAILPIT_MAX_MESSAGES:-500}
     ports:
-      - "\${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "\${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8025"]
       interval: 30s
@@ -53,6 +69,7 @@ generate_nself_admin_service() {
 
   # nself Admin - Project Management Dashboard
   nself-admin:
+    user: "1000:1000"
 EOF
 
   # Use build context if local path is set, otherwise use Docker image
@@ -89,7 +106,7 @@ EOF
       DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
       HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
-      ADMIN_SECRET_KEY: \${ADMIN_SECRET_KEY:-admin-secret-key-change-me}
+      ADMIN_SECRET_KEY: \${ADMIN_SECRET_KEY}
       ADMIN_PASSWORD_HASH: \${ADMIN_PASSWORD_HASH}
       DOCKER_HOST: unix:///var/run/docker.sock
     ports:
@@ -268,6 +285,7 @@ DOCKERFILE
       dockerfile: Dockerfile
     container_name: \${PROJECT_NAME}_mlflow
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -344,10 +362,11 @@ generate_meilisearch_service() {
     image: getmeili/meilisearch:\${MEILISEARCH_VERSION:-v1.5}
     container_name: \${PROJECT_NAME}_meilisearch
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      MEILI_MASTER_KEY: \${SEARCH_API_KEY:-\${MEILISEARCH_MASTER_KEY:-changeme}}
+      MEILI_MASTER_KEY: \${SEARCH_API_KEY:-\${MEILISEARCH_MASTER_KEY}}
       MEILI_ENV: \${MEILI_ENV:-development}
       MEILI_HTTP_ADDR: 0.0.0.0:7700
       MEILI_NO_ANALYTICS: true
@@ -378,18 +397,18 @@ generate_typesense_service() {
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      TYPESENSE_API_KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}}
+      TYPESENSE_API_KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY}}
       TYPESENSE_DATA_DIR: /data
       TYPESENSE_ENABLE_CORS: \${TYPESENSE_ENABLE_CORS:-true}
       TYPESENSE_LOG_LEVEL: \${TYPESENSE_LOG_LEVEL:-info}
-    command: '--data-dir /data --api-key=\${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}} --enable-cors'
+    command: '--data-dir /data --api-key=\${SEARCH_API_KEY:-\${TYPESENSE_API_KEY}} --enable-cors'
     volumes:
       - typesense_data:/data
     ports:
       # SECURITY: Bind to localhost only - prevents external access
       - "127.0.0.1:\${SEARCH_PORT:-\${TYPESENSE_PORT:-8108}}:8108"
     healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "X-TYPESENSE-API-KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY:-changeme}}", "http://localhost:8108/health"]
+      test: ["CMD", "curl", "-f", "-H", "X-TYPESENSE-API-KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY}}", "http://localhost:8108/health"]
       interval: 30s
       timeout: 10s
       retries: 5

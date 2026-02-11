@@ -15,10 +15,26 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+def get_cors_origins():
+    """Get CORS origins based on environment."""
+    cors_origin = os.getenv('CORS_ORIGIN')
+    if cors_origin:
+        return cors_origin.split(',')
+
+    env = os.getenv('ENV', 'development')
+    base_domain = os.getenv('BASE_DOMAIN', 'localhost')
+
+    if env == 'production':
+        return [f"https://{base_domain}", f"https://*.{base_domain}"]
+    elif env == 'staging':
+        return [f"https://{base_domain}", f"https://*.{base_domain}", "http://localhost:3000"]
+    else:
+        return ["http://localhost:3000", "http://localhost:3001", f"http://*.local.{base_domain}"]
+
+# CORS middleware with environment-aware origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,7 +42,7 @@ app.add_middleware(
 
 # Trusted host middleware (security)
 app.add_middleware(
-    TrustedHostMiddleware, 
+    TrustedHostMiddleware,
     allowed_hosts=["*"]  # Configure appropriately for production
 )
 

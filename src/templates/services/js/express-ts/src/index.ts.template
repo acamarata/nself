@@ -35,9 +35,27 @@ interface ErrorResponse {
 // Security middleware
 app.use(helmet());
 
+// Environment-aware CORS configuration
+const getCorsOrigin = () => {
+  if (process.env.CORS_ORIGIN) {
+    return process.env.CORS_ORIGIN.split(',');
+  }
+
+  const env = process.env.ENV || 'development';
+  const baseDomain = process.env.BASE_DOMAIN || 'localhost';
+
+  if (env === 'production') {
+    return [`https://${baseDomain}`, `https://*.${baseDomain}`];
+  } else if (env === 'staging') {
+    return [`https://${baseDomain}`, `https://*.${baseDomain}`, 'http://localhost:3000'];
+  } else {
+    return [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/.*\.local\.nself\.org$/];
+  }
+};
+
 // CORS middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: getCorsOrigin(),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
