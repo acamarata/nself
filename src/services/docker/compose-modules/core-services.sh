@@ -280,6 +280,8 @@ generate_minio_service() {
     image: busybox:latest
     container_name: \${PROJECT_NAME}_minio_init
     user: root
+    networks:
+      - \${DOCKER_NETWORK}
     volumes:
       - minio_data:/data
     command: >

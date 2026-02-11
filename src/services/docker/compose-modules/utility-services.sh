@@ -363,6 +363,8 @@ generate_meilisearch_service() {
     image: busybox:latest
     container_name: \${PROJECT_NAME}_meilisearch_init
     user: root
+    networks:
+      - \${DOCKER_NETWORK}
     volumes:
       - meilisearch_data:/meili_data
     command: >

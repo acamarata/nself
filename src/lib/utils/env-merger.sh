@@ -76,8 +76,8 @@ merge_environments() {
   # Add computed runtime values based on environment
   add_computed_values "$target_env" "$temp_file"
 
-  # Add critical smart defaults
-  add_smart_defaults "$temp_file"
+  # Add critical smart defaults (pass target_env for environment-specific defaults)
+  add_smart_defaults "$temp_file" "$target_env"
 
   # Generate final runtime file with header
   {
@@ -111,6 +111,7 @@ merge_environments() {
 # Add smart defaults for critical runtime variables
 add_smart_defaults() {
   local output_file="$1"
+  local target_env="${2:-dev}"  # Accept environment parameter for context-aware defaults
 
   # Helper to check if variable exists in file
   var_exists() {
@@ -165,6 +166,28 @@ add_smart_defaults() {
 
   # Hasura defaults
   var_exists "HASURA_GRAPHQL_ADMIN_SECRET" || echo "HASURA_GRAPHQL_ADMIN_SECRET=change-this-secret" >>"$output_file"
+
+  # CRITICAL: Hasura CORS domain (REQUIRED for Hasura to start)
+  # Environment-specific defaults to prevent wildcard CORS in production
+  if ! var_exists "HASURA_GRAPHQL_CORS_DOMAIN"; then
+    local base_domain="$(get_var BASE_DOMAIN)"
+    [ -z "$base_domain" ] && base_domain="localhost"
+
+    case "$target_env" in
+      prod | production)
+        # Production: Only allow base domain, no wildcards
+        echo "HASURA_GRAPHQL_CORS_DOMAIN=https://*.${base_domain}" >>"$output_file"
+        ;;
+      staging | stage)
+        # Staging: Base domain + localhost for testing
+        echo "HASURA_GRAPHQL_CORS_DOMAIN=https://*.${base_domain},http://localhost:3000" >>"$output_file"
+        ;;
+      dev | development | *)
+        # Development: Permissive for convenience
+        echo "HASURA_GRAPHQL_CORS_DOMAIN=http://localhost:*,http://*.${base_domain},https://*.${base_domain}" >>"$output_file"
+        ;;
+    esac
+  fi
 
   # Hasura JWT configuration (JSON format required by auth service)
   if ! var_exists "HASURA_GRAPHQL_JWT_SECRET"; then
