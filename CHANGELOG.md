@@ -196,6 +196,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auth service no longer returns "field 'users' not found" error
 - Seed files can now be piped to containers without hanging
 - Hasura metadata properly tracks auth tables on setup
+- **Security validation timing bug:** `nself build` now loads full environment cascade before security validation
+  - Previously: Only loaded `.env` before validation, missing values from `.env.dev`, `.env.staging/prod`, `.env.secrets`
+  - Now: Loads complete cascade (.env.dev → .env.staging/prod → .env.secrets → .env) before validation
+  - Impact: Security validation now correctly detects secure passwords from environment files
+  - Fix: Users no longer need `--allow-insecure` flag when passwords are properly configured
 
 ### Performance
 

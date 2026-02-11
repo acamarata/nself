@@ -151,13 +151,12 @@ cmd_build() {
   local project_name="${PROJECT_NAME:-$(basename "$PWD")}"
   local env="${ENV:-dev}"
 
-  # Load environment to detect settings
-  if [[ -f ".env" ]]; then
-    set -a
-    source ".env" 2>/dev/null || true
-    set +a
-    env="${ENV:-$env}"
-  fi
+  # Load full environment cascade (secure-by-default requirement)
+  # This ensures security validation sees all configured values from the cascade
+  # Cascade order: .env.dev → .env.staging/prod → .env.secrets → .env
+  # Critical: Must load BEFORE security validation to detect actual values
+  load_env_with_priority true
+  env="${ENV:-$env}"
 
   # ============================================================
   # SECURE BY DEFAULT: Security validation before build
