@@ -219,6 +219,13 @@ cli_header() {
   printf "\n"
 }
 
+# Print a subheader (smaller, dimmed text under main header)
+# Usage: cli_subheader "Description text"
+cli_subheader() {
+  local text="$1"
+  printf "%b%s%b\n" "${CLI_DIM}" "${text}" "${CLI_RESET}"
+}
+
 # Print a step indicator (e.g., "Step 1/5")
 # Usage: cli_step 1 5 "Installing dependencies"
 cli_step() {
