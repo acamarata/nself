@@ -238,6 +238,12 @@ cmd_exec() {
   printf "${COLOR_CYAN}➞ Command:${COLOR_RESET} %s\n" "${command[*]}"
   echo ""
 
+  # Ensure -i flag is present for stdin piping support
+  # This allows: cat file.sql | nself exec postgres psql
+  if [[ ! " ${docker_opts_array[*]} " =~ " -i" ]] && [[ ! " ${docker_opts_array[*]} " =~ " -it" ]]; then
+    docker_opts_array=("-i" "${docker_opts_array[@]}")
+  fi
+
   # Execute the command safely with array expansion
   docker exec "${docker_opts_array[@]}" "${env_vars[@]}" "$container_name" "${command[@]}"
 }

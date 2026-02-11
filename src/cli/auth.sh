@@ -100,6 +100,11 @@ AUTHENTICATION:
   logout             End session
   status             Show current auth status
 
+USER MANAGEMENT:
+  setup              Interactive auth setup wizard
+  create-user        Create new auth user
+  list-users         List all auth users
+
 MFA (MULTI-FACTOR AUTHENTICATION):
   mfa enable         Enable MFA for a user
   mfa disable        Disable MFA for a user
@@ -204,6 +209,17 @@ cmd_auth() {
       ;;
     status)
       cmd_auth_status "$@"
+      ;;
+
+    # User Management
+    setup)
+      cmd_auth_setup "$@"
+      ;;
+    create-user | user-create)
+      cmd_auth_create_user "$@"
+      ;;
+    list-users | users)
+      cmd_auth_list_users "$@"
       ;;
 
     # MFA
@@ -797,6 +813,329 @@ cmd_auth_webhooks() {
     cli_error "Webhooks module not found"
     exit 1
   fi
+}
+
+# ============================================================================
+# User Management Commands (New)
+# ============================================================================
+
+# Setup auth - interactive wizard
+cmd_auth_setup() {
+  local interactive=true
+  local create_defaults=false
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --default-users)
+        create_defaults=true
+        interactive=false
+        shift
+        ;;
+      --non-interactive)
+        interactive=false
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  cli_header "Auth Setup Wizard"
+  echo ""
+
+  # Step 1: Check database running
+  if ! docker ps --format "{{.Names}}" | grep -q postgres; then
+    cli_error "PostgreSQL not running. Run 'nself start' first."
+    exit 1
+  fi
+
+  # Step 2: Check Hasura metadata
+  cli_info "Checking Hasura metadata..."
+  if ! check_hasura_tracks_auth_tables; then
+    cli_warning "Hasura doesn't track auth tables"
+    if [[ "$interactive" == "true" ]]; then
+      printf "Apply Hasura metadata now? (Y/n): "
+      read -r response
+      response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
+      if [[ ! "$response" =~ ^n ]]; then
+        apply_hasura_auth_metadata
+      fi
+    else
+      apply_hasura_auth_metadata
+    fi
+  else
+    cli_success "Hasura metadata configured"
+  fi
+
+  # Step 3: Create users
+  if [[ "$create_defaults" == "true" ]] || [[ "$interactive" == "false" ]]; then
+    cli_info "Creating default users..."
+    create_default_auth_users
+  else
+    printf "Create default staff users? (Y/n): "
+    read -r response
+    response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
+    if [[ ! "$response" =~ ^n ]]; then
+      create_default_auth_users
+    else
+      cli_info "Skipping user creation"
+    fi
+  fi
+
+  # Step 4: Verify auth service
+  cli_info "Verifying auth service..."
+  if verify_auth_service_health; then
+    cli_success "Auth service configured correctly!"
+  else
+    cli_warning "Auth service verification failed"
+    cli_info "Check logs: nself logs auth"
+  fi
+
+  echo ""
+  cli_success "Auth setup complete!"
+  echo ""
+  cli_info "Next steps:"
+  echo "  - Test login: curl -k https://auth.local.nself.org/signin/email-password"
+  echo "  - Create more users: nself auth create-user user@example.com"
+  echo "  - List users: nself auth list-users"
+}
+
+# Create single auth user
+cmd_auth_create_user() {
+  local email=""
+  local password=""
+  local role="user"
+  local display_name=""
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --email=*)
+        email="${1#*=}"
+        shift
+        ;;
+      --password=*)
+        password="${1#*=}"
+        shift
+        ;;
+      --role=*)
+        role="${1#*=}"
+        shift
+        ;;
+      --name=*)
+        display_name="${1#*=}"
+        shift
+        ;;
+      *)
+        # First positional arg is email
+        if [[ -z "$email" ]]; then
+          email="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  # Interactive mode if email not provided
+  if [[ -z "$email" ]]; then
+    printf "Email: "
+    read -r email
+  fi
+
+  if [[ -z "$email" ]]; then
+    cli_error "Email is required"
+    exit 1
+  fi
+
+  if [[ -z "$password" ]]; then
+    printf "Password (leave empty for auto-generated): "
+    read -rs password
+    echo ""
+    if [[ -z "$password" ]]; then
+      password=$(openssl rand -base64 16 2>/dev/null || echo "default123")
+      cli_info "Generated password: $password"
+    fi
+  fi
+
+  if [[ -z "$display_name" ]]; then
+    display_name="$email"
+  fi
+
+  # Create user in database
+  create_nhost_auth_user "$email" "$password" "$role" "$display_name"
+}
+
+# List auth users
+cmd_auth_list_users() {
+  # Check database
+  if ! docker ps --format "{{.Names}}" | grep -q postgres; then
+    cli_error "PostgreSQL not running. Run 'nself start' first."
+    exit 1
+  fi
+
+  cli_info "Auth Users"
+  echo ""
+
+  # Load environment
+  load_env_with_priority 2>/dev/null || true
+
+  local db="${POSTGRES_DB:-nself}"
+  local user="${POSTGRES_USER:-postgres}"
+  local project_name="${PROJECT_NAME:-$(basename "$(pwd)")}"
+
+  # Query with JOIN to get email from user_providers
+  local sql="
+    SELECT
+      u.id,
+      up.provider_user_id as email,
+      u.display_name,
+      u.metadata->>'role' as role,
+      u.email_verified,
+      u.disabled,
+      u.created_at
+    FROM auth.users u
+    LEFT JOIN auth.user_providers up ON u.id = up.user_id AND up.provider_id = 'email'
+    ORDER BY u.created_at DESC;
+  "
+
+  docker exec -i "${project_name}_postgres" psql -U "$user" -d "$db" -c "$sql" 2>/dev/null || {
+    cli_error "Failed to query users"
+    exit 1
+  }
+}
+
+# ============================================================================
+# Helper Functions for User Management
+# ============================================================================
+
+# Create nHost auth user with proper schema
+create_nhost_auth_user() {
+  local email="$1"
+  local password="$2"
+  local role="${3:-user}"
+  local display_name="${4:-$email}"
+
+  # Generate UUID (cross-platform compatible)
+  local user_id
+  if command -v uuidgen >/dev/null 2>&1; then
+    user_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+  else
+    # Fallback: generate pseudo-UUID
+    user_id=$(cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 32 | head -n 1 | sed 's/\(.\{8\}\)\(.\{4\}\)\(.\{4\}\)\(.\{4\}\)\(.\{12\}\)/\1-\2-\3-\4-\5/')
+  fi
+
+  cli_info "Creating user: $email (role: $role)"
+
+  # Load environment
+  load_env_with_priority 2>/dev/null || true
+
+  local db="${POSTGRES_DB:-nself}"
+  local user="${POSTGRES_USER:-postgres}"
+  local project_name="${PROJECT_NAME:-$(basename "$(pwd)")}"
+
+  # SQL to create user with proper nHost structure
+  local sql="
+    -- Ensure email provider exists
+    INSERT INTO auth.providers (id) VALUES ('email') ON CONFLICT DO NOTHING;
+
+    -- Create user
+    INSERT INTO auth.users (
+      id, display_name, password_hash, email_verified,
+      locale, default_role, metadata
+    ) VALUES (
+      '$user_id',
+      '$display_name',
+      crypt('$password', gen_salt('bf', 10)),
+      true,
+      'en',
+      'user',
+      '{\"role\": \"$role\"}'::jsonb
+    ) ON CONFLICT (id) DO NOTHING;
+
+    -- Link to email provider
+    INSERT INTO auth.user_providers (
+      id, user_id, provider_id, provider_user_id, access_token
+    ) VALUES (
+      gen_random_uuid(),
+      '$user_id',
+      'email',
+      '$email',
+      'seed_token_' || gen_random_uuid()::text
+    ) ON CONFLICT (provider_id, provider_user_id) DO NOTHING;
+  "
+
+  # Execute via psql
+  if echo "$sql" | docker exec -i "${project_name}_postgres" psql -U "$user" -d "$db" >/dev/null 2>&1; then
+    cli_success "User created: $email"
+    cli_info "User ID: $user_id"
+    return 0
+  else
+    cli_error "Failed to create user"
+    return 1
+  fi
+}
+
+# Check if Hasura tracks auth tables
+check_hasura_tracks_auth_tables() {
+  # Load environment
+  load_env_with_priority 2>/dev/null || true
+
+  local hasura_url="http://localhost:${HASURA_GRAPHQL_PORT:-8080}"
+  local admin_secret="${HASURA_GRAPHQL_ADMIN_SECRET}"
+
+  if [[ -z "$admin_secret" ]]; then
+    return 1
+  fi
+
+  local response=$(curl -s -X POST "$hasura_url/v1/metadata" \
+    -H "X-Hasura-Admin-Secret: $admin_secret" \
+    -d '{"type":"export_metadata","args":{}}' 2>/dev/null)
+
+  # Check if auth.users is in tracked tables
+  echo "$response" | grep -q '"schema":"auth"' && \
+  echo "$response" | grep -q '"name":"users"'
+}
+
+# Apply Hasura metadata for auth
+apply_hasura_auth_metadata() {
+  cli_info "Applying Hasura metadata for auth tables..."
+
+  # Source hasura.sh to use its functions
+  if [[ -f "$CLI_DIR/hasura.sh" ]]; then
+    source "$CLI_DIR/hasura.sh"
+    track_default_schemas
+  else
+    cli_warning "Hasura commands not available"
+    return 1
+  fi
+}
+
+# Create default staff users
+create_default_auth_users() {
+  # Load environment for password
+  load_env_with_priority 2>/dev/null || true
+
+  local default_password="${AUTH_DEFAULT_PASSWORD:-npass123}"
+
+  create_nhost_auth_user "owner@nself.org" "$default_password" "owner" "Platform Owner"
+  create_nhost_auth_user "admin@nself.org" "$default_password" "admin" "Administrator"
+  create_nhost_auth_user "support@nself.org" "$default_password" "support" "Support Staff"
+
+  cli_success "Created 3 default users (password: $default_password)"
+}
+
+# Verify auth service health
+verify_auth_service_health() {
+  # Load environment
+  load_env_with_priority 2>/dev/null || true
+
+  local base_domain="${BASE_DOMAIN:-local.nself.org}"
+  local auth_url="https://auth.${base_domain}"
+
+  local response=$(curl -sk "$auth_url/healthz" 2>/dev/null)
+  [[ "$response" == *"ok"* ]] || [[ "$response" == *"healthy"* ]]
 }
 
 # ============================================================================

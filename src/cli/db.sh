@@ -467,44 +467,20 @@ cmd_seed() {
   shift || true
 
   case "$subcmd" in
+    apply) seed_apply "$@" ;;
     run) seed_run "$@" ;;
     users) seed_users "$@" ;;
     create) seed_create "$@" ;;
     status) seed_status "$@" ;;
+    list) seed_list "$@" ;;
+    rollback) seed_rollback "$@" ;;
     *) seed_run "$subcmd" "$@" ;;
   esac
 }
 
 seed_run() {
-  require_db || return 1
-  local target="${1:-all}"
-  local env=$(get_env)
-
-  log_info "Seeding database (environment: $env)"
-  ensure_dirs
-
-  # Run common seeds first
-  if [[ -d "$SEEDS_DIR/common" ]]; then
-    log_info "Applying common seeds..."
-    for seed in "$SEEDS_DIR/common"/*.sql; do
-      [[ -f "$seed" ]] || continue
-      log_info "  $(basename "$seed")"
-      psql_exec <"$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
-    done
-  fi
-
-  # Run environment-specific seeds
-  local env_dir="$SEEDS_DIR/$env"
-  if [[ -d "$env_dir" ]]; then
-    log_info "Applying $env seeds..."
-    for seed in "$env_dir"/*.sql; do
-      [[ -f "$seed" ]] || continue
-      log_info "  $(basename "$seed")"
-      psql_exec <"$seed" >/dev/null 2>&1 || log_warning "  Failed: $(basename "$seed")"
-    done
-  fi
-
-  log_success "Seeding complete"
+  # Backward compatibility - use seed_apply internally
+  seed_apply "$@"
 }
 
 seed_users() {
@@ -659,6 +635,146 @@ seed_status() {
     local count=$(ls -1 "$dir"/*.sql 2>/dev/null | wc -l | tr -d ' ')
     printf "  %-12s %s file(s)\n" "$env_dir:" "$count"
   done
+}
+
+# Apply seed files (with tracking)
+seed_apply() {
+  require_db || return 1
+  local env=$(get_env)
+  local target="${1:-all}"
+
+  log_info "Applying seeds for environment: $env"
+  ensure_dirs
+
+  # Create seed tracking table
+  psql_exec -c "CREATE TABLE IF NOT EXISTS nself_seeds (
+    filename VARCHAR(255) PRIMARY KEY,
+    applied_at TIMESTAMPTZ DEFAULT NOW(),
+    environment VARCHAR(50)
+  )" >/dev/null 2>&1
+
+  # Determine which seeds to run
+  local seed_files=()
+  if [[ "$target" == "all" ]]; then
+    # Common seeds first
+    if [[ -d "$SEEDS_DIR/common" ]]; then
+      for file in "$SEEDS_DIR/common"/*.sql; do
+        [[ -f "$file" ]] && seed_files+=("$file")
+      done
+    fi
+    # Environment-specific seeds
+    if [[ -d "$SEEDS_DIR/$env" ]]; then
+      for file in "$SEEDS_DIR/$env"/*.sql; do
+        [[ -f "$file" ]] && seed_files+=("$file")
+      done
+    fi
+  else
+    # Specific file
+    if [[ -f "$target" ]]; then
+      seed_files=("$target")
+    else
+      log_error "Seed file not found: $target"
+      return 1
+    fi
+  fi
+
+  local count=0
+  local skipped=0
+  for seed_file in "${seed_files[@]}"; do
+    local filename=$(basename "$seed_file")
+
+    # Check if already applied
+    local applied=$(psql_query "SELECT 1 FROM nself_seeds WHERE filename = '$filename'" 2>/dev/null)
+    if [[ "$applied" == "1" ]]; then
+      log_info "Already applied: $filename"
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    log_info "Applying seed: $filename"
+
+    # Apply seed via stdin (using fixed exec command)
+    if cat "$seed_file" | psql_exec >/dev/null 2>&1; then
+      psql_exec -c "INSERT INTO nself_seeds (filename, environment) VALUES ('$filename', '$env')" >/dev/null 2>&1
+      log_success "  Applied successfully"
+      count=$((count + 1))
+    else
+      log_error "  Failed to apply seed"
+      return 1
+    fi
+  done
+
+  if [[ $count -eq 0 ]]; then
+    if [[ $skipped -gt 0 ]]; then
+      log_info "All seeds already applied ($skipped skipped)"
+    else
+      log_warning "No seed files found"
+    fi
+  else
+    log_success "Applied $count seed(s)"
+  fi
+}
+
+# List available seeds with status
+seed_list() {
+  require_db || return 1
+  local env=$(get_env)
+
+  log_info "Available Seeds (environment: $env)"
+  echo ""
+
+  printf "%-50s %s\n" "Seed File" "Status"
+  printf "%-50s %s\n" "$(printf '%0.s-' {1..50})" "----------"
+
+  # Common seeds
+  if [[ -d "$SEEDS_DIR/common" ]]; then
+    for file in "$SEEDS_DIR/common"/*.sql; do
+      [[ -f "$file" ]] || continue
+      local name=$(basename "$file")
+      local applied=$(psql_query "SELECT 1 FROM nself_seeds WHERE filename = '$name'" 2>/dev/null)
+      if [[ "$applied" == "1" ]]; then
+        printf "%-50s \033[32m✓ Applied\033[0m\n" "common/$name"
+      else
+        printf "%-50s \033[33m○ Pending\033[0m\n" "common/$name"
+      fi
+    done
+  fi
+
+  # Environment seeds
+  if [[ -d "$SEEDS_DIR/$env" ]]; then
+    for file in "$SEEDS_DIR/$env"/*.sql; do
+      [[ -f "$file" ]] || continue
+      local name=$(basename "$file")
+      local applied=$(psql_query "SELECT 1 FROM nself_seeds WHERE filename = '$name'" 2>/dev/null)
+      if [[ "$applied" == "1" ]]; then
+        printf "%-50s \033[32m✓ Applied\033[0m\n" "$env/$name"
+      else
+        printf "%-50s \033[33m○ Pending\033[0m\n" "$env/$name"
+      fi
+    done
+  fi
+}
+
+# Rollback last seed
+seed_rollback() {
+  require_db || return 1
+  require_confirmation "Rollback last seed" || return 1
+
+  # Get last applied seed
+  local last_seed=$(psql_query "SELECT filename FROM nself_seeds ORDER BY applied_at DESC LIMIT 1" 2>/dev/null)
+
+  if [[ -z "$last_seed" ]]; then
+    log_warning "No seeds to rollback"
+    return 0
+  fi
+
+  log_info "Rolling back: $last_seed"
+  log_warning "This will NOT automatically undo changes - manual intervention required"
+
+  # Remove from tracking
+  psql_exec -c "DELETE FROM nself_seeds WHERE filename = '$last_seed'" >/dev/null 2>&1
+  log_success "Seed tracking removed: $last_seed"
+  log_info "Note: You must manually revert database changes"
 }
 
 # ============================================================================
