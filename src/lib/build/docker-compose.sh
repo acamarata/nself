@@ -17,6 +17,36 @@ generate_docker_compose() {
   fi
 
   if [[ -f "$compose_script" ]]; then
+    # CRITICAL: Export ALL environment variables so compose-generate.sh can use them
+    # compose-generate.sh doesn't load .env files (by design for environment-agnostic builds)
+    # so we must export everything it needs from the parent process
+
+    # Core project variables (MUST be set before calling compose-generate.sh)
+    # Note: These may already be set by orchestrate_build, but we ensure they're exported
+    [[ -z "${PROJECT_NAME:-}" ]] && export PROJECT_NAME="myproject"
+    [[ -z "${ENV:-}" ]] && export ENV="dev"
+    [[ -z "${BASE_DOMAIN:-}" ]] && export BASE_DOMAIN="localhost"
+    export DOCKER_NETWORK="${PROJECT_NAME}_network"
+
+    # Service-enabled flags
+    export MINIO_ENABLED="${MINIO_ENABLED:-false}"
+    export MEILISEARCH_ENABLED="${MEILISEARCH_ENABLED:-false}"
+    export REDIS_ENABLED="${REDIS_ENABLED:-false}"
+    export FUNCTIONS_ENABLED="${FUNCTIONS_ENABLED:-false}"
+    export MAILPIT_ENABLED="${MAILPIT_ENABLED:-false}"
+    export NSELF_ADMIN_ENABLED="${NSELF_ADMIN_ENABLED:-false}"
+    export MLFLOW_ENABLED="${MLFLOW_ENABLED:-false}"
+    export MONITORING_ENABLED="${MONITORING_ENABLED:-false}"
+    export GRAFANA_ENABLED="${GRAFANA_ENABLED:-false}"
+    export PROMETHEUS_ENABLED="${PROMETHEUS_ENABLED:-false}"
+    export LOKI_ENABLED="${LOKI_ENABLED:-false}"
+    export TEMPO_ENABLED="${TEMPO_ENABLED:-false}"
+    export PROMTAIL_ENABLED="${PROMTAIL_ENABLED:-false}"
+    export ALERTMANAGER_ENABLED="${ALERTMANAGER_ENABLED:-false}"
+    export TYPESENSE_ENABLED="${TYPESENSE_ENABLED:-false}"
+    export SONIC_ENABLED="${SONIC_ENABLED:-false}"
+    export SEARCH_ENABLED="${SEARCH_ENABLED:-false}"
+
     bash "$compose_script"
     return $?
   else
