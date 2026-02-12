@@ -286,9 +286,16 @@ start_services() {
     env=$(grep "^ENV=" .env 2>/dev/null | cut -d= -f2- || echo "dev")
   fi
 
-  local project_name="${PROJECT_NAME:-}"
+  # CRITICAL: Check COMPOSE_PROJECT_NAME first (user preference for short names)
+  # Priority: COMPOSE_PROJECT_NAME > PROJECT_NAME > directory name
+  local project_name="${COMPOSE_PROJECT_NAME:-${PROJECT_NAME:-}}"
   if [[ -z "$project_name" ]] && [[ -f ".env" ]]; then
-    project_name=$(grep "^PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
+    # Try COMPOSE_PROJECT_NAME from .env first
+    project_name=$(grep "^COMPOSE_PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
+    # Fall back to PROJECT_NAME if COMPOSE_PROJECT_NAME not set
+    if [[ -z "$project_name" ]]; then
+      project_name=$(grep "^PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
+    fi
   fi
   if [[ -z "$project_name" ]]; then
     project_name=$(basename "$PWD")
@@ -426,6 +433,10 @@ start_services() {
     printf "  Configure production email with: ${COLOR_BLUE}nself service email configure${COLOR_RESET}\n\n"
     sleep 2
   fi
+
+  # Export COMPOSE_PROJECT_NAME for docker-compose.yml name: field
+  # Docker Compose needs this as environment variable to respect the name: field
+  export COMPOSE_PROJECT_NAME="$project_name"
 
   # Build the docker compose command based on start mode
   local compose_args=(
