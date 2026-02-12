@@ -32,6 +32,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Error: `syntax error: operand expected (error token is "✓ POSTGRES_PASSWORD: Set...")`
   - Commit: `97bf107`
 
+- **CRITICAL**: Fixed database deployment not executing during deployment
+  - Step 6 condition was checking for local `hasura` directory instead of remote
+  - Now properly checks remote server for hasura files before attempting deployment
+  - Ensures migrations, seeds, and metadata apply on remote during `nself deploy sync full`
+  - Database automation now runs reliably on all deployment targets
+  - Commit: `65d3196`
+
+- **CRITICAL**: Fixed environment-aware security validation
+  - Security check was blocking staging deployments (ports on 0.0.0.0 needed for nginx)
+  - Now only runs strict port validation in production environments
+  - Staging/dev: Informational message only (allows nginx proxying)
+  - Production: Fails deployment if sensitive ports exposed (redis, postgres, meilisearch, minio)
+  - Prevents false-positive security rollbacks in non-production environments
+  - Commit: `65d3196`
+
 ### 🆕 Features
 
 #### Plugin System
