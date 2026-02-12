@@ -2510,6 +2510,33 @@ sync_full() {
     fi
   fi
 
+  # Step 1.5: Rebuild configs on remote with correct environment
+  printf "\n"
+  cli_section "Step 1.5: Rebuild Configuration"
+
+  # Check if nself CLI is available on remote
+  local nself_available
+  nself_available=$(ssh "${ssh_args[@]}" "${user}@${host}" "command -v nself" 2>/dev/null || echo "")
+
+  if [[ -n "$nself_available" ]]; then
+    printf "  Rebuilding configs for target environment... "
+
+    local rebuild_result
+    rebuild_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "cd '$deploy_path' && nself build --force 2>&1" || echo "rebuild_failed")
+
+    if echo "$rebuild_result" | grep -q "rebuild_failed"; then
+      printf "${CLI_YELLOW}PARTIAL${CLI_RESET}\n"
+      printf "  ${CLI_DIM}Note: Configs may use local BASE_DOMAIN${CLI_RESET}\n"
+    else
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+      printf "  ${CLI_DIM}Configs regenerated with remote .env${CLI_RESET}\n"
+    fi
+  else
+    printf "  ${CLI_YELLOW}⚠${CLI_RESET} nself CLI not found on remote\n"
+    printf "  ${CLI_DIM}Configs will use local BASE_DOMAIN${CLI_RESET}\n"
+    printf "  ${CLI_DIM}Install nself CLI on remote for automatic config rebuild${CLI_RESET}\n"
+  fi
+
   # Step 2: Sync docker-compose and configs
   printf "\n"
   cli_section "Step 2: Docker Configuration"
@@ -2780,6 +2807,36 @@ sync_full() {
         # Check tables created
         table_count=\$(docker exec \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'\" 2>/dev/null | tr -d ' ')
         echo \"✓ Database has \$table_count table(s)\"
+        echo \"\"
+
+        # Apply Hasura metadata (if metadata directory exists)
+        if [ -d 'hasura/metadata' ]; then
+          echo 'Applying Hasura metadata...'
+
+          # Get Hasura admin secret from .env
+          HASURA_ADMIN_SECRET=\$(grep -E '^HASURA_GRAPHQL_ADMIN_SECRET=' .env 2>/dev/null | cut -d'=' -f2)
+
+          if [ -n \"\$HASURA_ADMIN_SECRET\" ]; then
+            # Check if hasura CLI is available
+            if command -v hasura >/dev/null 2>&1; then
+              # Use Hasura CLI
+              cd hasura && hasura metadata apply --endpoint http://localhost:8080 --admin-secret \"\$HASURA_ADMIN_SECRET\" 2>&1 || echo '  ⚠ Metadata apply failed (may need manual intervention)'
+              cd ..
+            else
+              # Use direct API call as fallback
+              if [ -f 'hasura/metadata/metadata.json' ]; then
+                curl -s -X POST http://localhost:8080/v1/metadata \
+                  -H \"x-hasura-admin-secret: \$HASURA_ADMIN_SECRET\" \
+                  -H \"Content-Type: application/json\" \
+                  -d @hasura/metadata/metadata.json >/dev/null 2>&1 && echo '  ✓ Metadata applied via API' || echo '  ⚠ Metadata API call failed'
+              else
+                echo '  ⚠ metadata.json not found (install hasura CLI for metadata apply)'
+              fi
+            fi
+          else
+            echo '  ⚠ HASURA_GRAPHQL_ADMIN_SECRET not set in .env'
+          fi
+        fi
 
         echo 'database_deployment_complete'
       " 2>&1)
