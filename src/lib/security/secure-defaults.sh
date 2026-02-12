@@ -229,6 +229,32 @@ security::check_required_passwords() {
     fi
   fi
 
+  # Grafana admin password
+  if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
+    if [[ -z "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
+      if [[ "$env" == "dev" ]] && [[ "$allow_insecure" != "false" ]]; then
+        export GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} GRAFANA_ADMIN_PASSWORD: Auto-generated for dev\n" >&2
+      else
+        printf "  ${COLOR_RED}✗${COLOR_RESET} GRAFANA_ADMIN_PASSWORD: ${COLOR_RED}Not set (Monitoring is enabled)${COLOR_RESET}\n" >&2
+        errors=$((errors + 1))
+      fi
+    else
+      local grafana_len=${#GRAFANA_ADMIN_PASSWORD}
+      local grafana_strength="weak"
+      if [[ $grafana_len -ge 48 ]]; then
+        grafana_strength="${COLOR_GREEN}secure${COLOR_RESET}"
+      elif [[ $grafana_len -ge 32 ]]; then
+        grafana_strength="${COLOR_CYAN}strong${COLOR_RESET}"
+      elif [[ $grafana_len -ge 24 ]]; then
+        grafana_strength="${COLOR_YELLOW}moderate${COLOR_RESET}"
+      else
+        grafana_strength="${COLOR_RED}weak - recommend 32+${COLOR_RESET}"
+      fi
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} GRAFANA_ADMIN_PASSWORD: Set (%d chars, %b)\n" "$grafana_len" "$grafana_strength" >&2
+    fi
+  fi
+
   echo "$errors"
 }
 
@@ -269,7 +295,7 @@ security::check_insecure_values() {
   printf "\n  ${COLOR_BOLD}Insecure Values:${COLOR_RESET}\n" >&2
 
   # Check each security-sensitive variable
-  for var in POSTGRES_PASSWORD HASURA_GRAPHQL_ADMIN_SECRET AUTH_JWT_SECRET REDIS_PASSWORD MINIO_ROOT_PASSWORD; do
+  for var in POSTGRES_PASSWORD HASURA_GRAPHQL_ADMIN_SECRET AUTH_JWT_SECRET REDIS_PASSWORD MINIO_ROOT_PASSWORD GRAFANA_ADMIN_PASSWORD MEILISEARCH_MASTER_KEY; do
     local value="${!var:-}"
     if [[ -n "$value" ]]; then
       local value_lower
