@@ -31,8 +31,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
-.claude/
-.codex/
 *.swp
 *.swo
 *~
@@ -76,3 +74,24 @@ FEEDP.md
 *-ISSUES.md
 *-REPORT.md
 *-FIXES.md
+
+# AI agent directories (private)
+.ai/
+.claude
+.codex
+
+# Standard entries (added by global compliance)
+Thumbs.db
+.secrets/
+*.key
+*.pem
+build/
+.cache/
+*.tmp
+*.temp
+tmp/
+coverage/
+test-results/
+TRACKING.md
+PLAN.md
+.claude/

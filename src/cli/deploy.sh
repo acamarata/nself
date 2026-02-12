@@ -1538,6 +1538,7 @@ server_add() {
   local port="22"
   local key_file=""
   local deploy_path="/var/www/nself"
+  local project_subdir=""
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -1560,6 +1561,10 @@ server_add() {
         ;;
       --path)
         deploy_path="$2"
+        shift 2
+        ;;
+      --subdir)
+        project_subdir="$2"
         shift 2
         ;;
       *)
@@ -1589,7 +1594,23 @@ EOF
   fi
 
   # Create or update server.json
-  cat >"$env_dir/server.json" <<EOF
+  if [[ -n "$project_subdir" ]]; then
+    cat >"$env_dir/server.json" <<EOF
+{
+  "name": "$name",
+  "type": "remote",
+  "host": "$host",
+  "port": $port,
+  "user": "$user",
+  "key": "$key_file",
+  "deploy_path": "$deploy_path",
+  "project_subdir": "$project_subdir",
+  "description": "Remote server configuration",
+  "created_at": "$(date -Iseconds 2>/dev/null || date)"
+}
+EOF
+  else
+    cat >"$env_dir/server.json" <<EOF
 {
   "name": "$name",
   "type": "remote",
@@ -1602,6 +1623,7 @@ EOF
   "created_at": "$(date -Iseconds 2>/dev/null || date)"
 }
 EOF
+  fi
 
   cli_success "Server added: $name"
   printf "\n"
@@ -1610,6 +1632,10 @@ EOF
   printf "  User:        %s\n" "$user"
   printf "  Port:        %s\n" "$port"
   printf "  Deploy path: %s\n" "$deploy_path"
+  if [[ -n "$project_subdir" ]]; then
+    printf "  Subdir:      %s\n" "$project_subdir"
+    printf "  Project dir: %s/%s\n" "$deploy_path" "$project_subdir"
+  fi
   printf "\n"
   cli_info "Test connection with: nself deploy server check $name"
 }
@@ -2051,16 +2077,22 @@ sync_pull() {
   fi
 
   # Load server configuration
-  local host user port key_file deploy_path
+  local host user port key_file deploy_path project_subdir
   host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
   key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  project_subdir=$(grep '"project_subdir"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
 
   user="${user:-root}"
   port="${port:-22}"
   deploy_path="${deploy_path:-/var/www/nself}"
+
+  # Monorepo support: if project_subdir is set, resolve full project path
+  if [[ -n "$project_subdir" ]]; then
+    deploy_path="${deploy_path}/${project_subdir}"
+  fi
 
   if [[ -z "$host" ]]; then
     cli_error "No host configured for $target"
@@ -2072,10 +2104,15 @@ sync_pull() {
   printf "  Destination: %s\n" "$env_dir"
   printf "\n"
 
-  # Build SSH/SCP arguments
+  # Build SSH arguments (lowercase -p for ssh)
   local ssh_args=()
   [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
   ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Build SCP arguments (uppercase -P for scp)
+  local scp_args=()
+  [[ -n "$key_file" ]] && scp_args+=("-i" "${key_file/#\~/$HOME}")
+  scp_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-P" "$port")
 
   # Test connection
   cli_info "Testing connection..."
@@ -2137,7 +2174,7 @@ sync_pull() {
     local remote_path="$deploy_path/$file"
     local local_path="$env_dir/$file"
 
-    if scp "${ssh_args[@]}" "${user}@${host}:${remote_path}" "$local_path" 2>/dev/null; then
+    if scp "${scp_args[@]}" "${user}@${host}:${remote_path}" "$local_path" 2>/dev/null; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
     else
       printf "${CLI_RED}FAILED${CLI_RESET}\n"
@@ -2197,16 +2234,22 @@ sync_push() {
   fi
 
   # Load server configuration
-  local host user port key_file deploy_path
+  local host user port key_file deploy_path project_subdir
   host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
   key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  project_subdir=$(grep '"project_subdir"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
 
   user="${user:-root}"
   port="${port:-22}"
   deploy_path="${deploy_path:-/var/www/nself}"
+
+  # Monorepo support: if project_subdir is set, resolve full project path
+  if [[ -n "$project_subdir" ]]; then
+    deploy_path="${deploy_path}/${project_subdir}"
+  fi
 
   if [[ -z "$host" ]]; then
     cli_error "No host configured for $target"
@@ -2218,10 +2261,15 @@ sync_push() {
   printf "  Destination: %s@%s:%s\n" "$user" "$host" "$deploy_path"
   printf "\n"
 
-  # Build SSH/SCP arguments
+  # Build SSH arguments (lowercase -p for ssh)
   local ssh_args=()
   [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
   ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Build SCP arguments (uppercase -P for scp)
+  local scp_args=()
+  [[ -n "$key_file" ]] && scp_args+=("-i" "${key_file/#\~/$HOME}")
+  scp_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-P" "$port")
 
   # Test connection
   cli_info "Testing connection..."
@@ -2287,7 +2335,7 @@ sync_push() {
     local local_path="$env_dir/$file"
     local remote_path="$deploy_path/$file"
 
-    if scp "${ssh_args[@]}" "$local_path" "${user}@${host}:${remote_path}" 2>/dev/null; then
+    if scp "${scp_args[@]}" "$local_path" "${user}@${host}:${remote_path}" 2>/dev/null; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
 
       # Set proper permissions for secrets
@@ -2433,16 +2481,22 @@ sync_full() {
   fi
 
   # Load server configuration
-  local host user port key_file deploy_path
+  local host user port key_file deploy_path project_subdir
   host=$(grep '"host"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   user=$(grep '"user"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   port=$(grep '"port"' "$env_dir/server.json" 2>/dev/null | sed 's/[^0-9]//g')
   key_file=$(grep '"key"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
   deploy_path=$(grep '"deploy_path"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
+  project_subdir=$(grep '"project_subdir"' "$env_dir/server.json" 2>/dev/null | cut -d'"' -f4)
 
   user="${user:-root}"
   port="${port:-22}"
   deploy_path="${deploy_path:-/var/www/nself}"
+
+  # Monorepo support: if project_subdir is set, resolve full project path
+  if [[ -n "$project_subdir" ]]; then
+    deploy_path="${deploy_path}/${project_subdir}"
+  fi
 
   if [[ -z "$host" ]]; then
     cli_error "No host configured for $target"
@@ -2450,6 +2504,11 @@ sync_full() {
   fi
 
   cli_section "Full Sync Plan"
+  printf "  Target: %s@%s:%s\n" "$user" "$host" "$deploy_path"
+  if [[ -n "$project_subdir" ]]; then
+    printf "  ${CLI_DIM}(monorepo subdir: %s)${CLI_RESET}\n" "$project_subdir"
+  fi
+  printf "\n"
   printf "  1. Sync environment files (.env, .env.secrets)\n"
   printf "  2. Sync docker-compose.yml and configs\n"
   printf "  3. Sync nginx configuration\n"
@@ -2619,7 +2678,7 @@ sync_full() {
 
   if [[ -f "docker-compose.yml" ]]; then
     printf "  Syncing docker-compose.yml... "
-    if scp "${ssh_args[@]}" "docker-compose.yml" "${user}@${host}:${deploy_path}/docker-compose.yml" 2>/dev/null; then
+    if scp "${scp_args[@]}" "docker-compose.yml" "${user}@${host}:${deploy_path}/docker-compose.yml" 2>/dev/null; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       files_synced=$((files_synced + 1))
     else
@@ -2767,44 +2826,76 @@ sync_full() {
     printf "\n"
     cli_section "Step 5: Restart Services"
 
-    printf "  Restarting services on remote... "
+    # Clean up any stale containers before restarting
+    printf "  Cleaning up stale containers... "
+    local cleanup_result
+    cleanup_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+      cd '$deploy_path' 2>/dev/null || exit 1
+      # Source .env so docker compose can parse the config
+      if [ -f .env ]; then
+        set -a
+        . .env
+        [ -f .env.secrets ] && . .env.secrets
+        set +a
+      fi
+      # Stop and remove existing project containers
+      docker compose down --remove-orphans 2>/dev/null || true
+      echo 'cleaned'
+    " 2>/dev/null)
+    if printf "%s" "$cleanup_result" | grep -q "cleaned"; then
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET}\n"
+    fi
+
+    printf "  Starting services on remote... "
 
     local restart_result
     restart_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
       cd '$deploy_path' 2>/dev/null || exit 1
-      docker compose down 2>/dev/null
-      docker compose up -d 2>/dev/null
+      # CRITICAL (Bug #8): Source .env so docker compose can resolve variables
+      if [ -f .env ]; then
+        set -a
+        . .env
+        [ -f .env.secrets ] && . .env.secrets
+        set +a
+      fi
+      docker compose up -d 2>&1
       echo 'restarted'
     " 2>/dev/null)
 
     if echo "$restart_result" | grep -q "restarted"; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
 
-      # CRITICAL FIX (Bug #7): Wait for database to be ready before Step 6
-      printf "  Waiting for database to be ready... "
+      # Wait for database to be ready before Step 6
+      printf "  Waiting for database to be ready"
 
-      local max_wait=60
+      # Configurable timeout via env var
+      local max_wait=${DEPLOYMENT_DB_WAIT_TIMEOUT:-60}
       local waited=0
       local db_ready=false
 
-      # Get project name to construct container name
-      local project_name=$(grep -E '^PROJECT_NAME=' "$env_dir/.env" 2>/dev/null | cut -d'=' -f2)
+      # Get project name from remote .env to match actual container names
+      local project_name
+      project_name=$(ssh "${ssh_args[@]}" "${user}@${host}" \
+        "grep -E '^PROJECT_NAME=' '$deploy_path/.env' 2>/dev/null | cut -d'=' -f2" 2>/dev/null)
       project_name="${project_name:-nself}"
 
       while [[ $waited -lt $max_wait ]]; do
         # Check if postgres container is accepting connections
         if ssh "${ssh_args[@]}" "${user}@${host}" \
           "docker exec ${project_name}_postgres pg_isready -U postgres" 2>/dev/null | grep -q "accepting connections"; then
-          printf "${CLI_GREEN}OK${CLI_RESET} (${waited}s)\n"
+          printf " ${CLI_GREEN}OK${CLI_RESET} (${waited}s)\n"
           db_ready=true
           break
         fi
+        printf "."
         sleep 2
         waited=$((waited + 2))
       done
 
       if [[ "$db_ready" != "true" ]]; then
-        printf "${CLI_YELLOW}TIMEOUT${CLI_RESET} (${max_wait}s)\n"
+        printf " ${CLI_YELLOW}TIMEOUT${CLI_RESET} (${max_wait}s)\n"
         cli_warning "Database not ready - database automation may fail"
       fi
     else
