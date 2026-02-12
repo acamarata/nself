@@ -20,6 +20,11 @@ if [[ -f "$ENV_UTILS_DIR/env-detection.sh" ]]; then
   source "$ENV_UTILS_DIR/env-detection.sh"
 fi
 
+# Source environment validator for undefined variable detection
+if [[ -f "$ENV_UTILS_DIR/env-validator.sh" ]]; then
+  source "$ENV_UTILS_DIR/env-validator.sh"
+fi
+
 # Load environment files with correct priority order
 # CONFIGURATION PHILOSOPHY:
 #   • Smart Defaults: Everything works without changes
@@ -177,7 +182,18 @@ load_env_with_priority() {
       # For dev: load .env.secrets if it exists
       # CRITICAL FIX: Developers use `nself config secrets generate` in dev too
       # These secrets should be loaded regardless of environment
+
+      # DEBUG: Always show if we're checking for .env.secrets
+      if [[ "${DEBUG:-false}" == "true" ]]; then
+        printf "[DEBUG] Checking for .env.secrets in dev mode at: %s/.env.secrets\n" "$PWD" >&2
+      fi
+
       if [[ -f ".env.secrets" ]]; then
+        # DEBUG: Show that we found it
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] Found .env.secrets, loading...\n" >&2
+        fi
+
         local before_count=$(env | wc -l | tr -d ' ')
         set -a
         source ".env.secrets" 2>/dev/null
@@ -187,8 +203,20 @@ load_env_with_priority() {
         loaded=true
         files_loaded=$((files_loaded + 1))
         total_vars=$((total_vars + loaded_count))
+
+        # DEBUG: Show what we loaded
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] Loaded .env.secrets: %d vars\n" "$loaded_count" >&2
+          printf "[DEBUG] POSTGRES_PASSWORD is now: %s***\n" "${POSTGRES_PASSWORD:0:5}" >&2
+        fi
+
         if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
           printf "  %d. Loaded: .env.secrets (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
+      else
+        # DEBUG: Show that we didn't find it
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] .env.secrets NOT FOUND\n" >&2
         fi
       fi
       ;;
@@ -473,10 +501,30 @@ get_cascaded_vars() {
     dev | development | *)
       # For dev: .env.dev -> .env.secrets (if exists) -> .env
       # CRITICAL FIX: Load .env.secrets in dev too (developers generate secrets for local testing)
+
+      # DEBUG: Always show if we're checking for .env.secrets
+      if [[ "${DEBUG:-false}" == "true" ]]; then
+        printf "[DEBUG] get_cascaded_vars: Checking for .env.secrets in dev mode\n" >&2
+      fi
+
       if [[ -f ".env.secrets" ]]; then
+        # DEBUG: Show that we found it
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] get_cascaded_vars: Loading .env.secrets...\n" >&2
+        fi
+
         set -a
         source ".env.secrets" 2>/dev/null || true
         set +a
+
+        # DEBUG: Show result
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] get_cascaded_vars: After loading, POSTGRES_PASSWORD=%s***\n" "${POSTGRES_PASSWORD:0:5}" >&2
+        fi
+      else
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+          printf "[DEBUG] get_cascaded_vars: .env.secrets NOT FOUND at %s/.env.secrets\n" "$PWD" >&2
+        fi
       fi
       ;;
   esac
