@@ -333,7 +333,64 @@ install_plugin_dependencies() {
       fi
     fi
   done <<< "$required_deps"
-  
+
+  # Also process recommended dependencies (optional, with default=no)
+  local recommended_deps=$(parse_system_dependencies "$manifest" "recommended")
+
+  if [[ -n "$recommended_deps" ]]; then
+    printf "\n${CLI_DIM}Recommended dependencies:${CLI_RESET}\n"
+
+    local current_dep=""
+    local current_verify=""
+
+    while IFS= read -r line; do
+      if [[ "$line" =~ \"name\" ]]; then
+        current_dep=$(echo "$line" | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      elif [[ "$line" =~ \"verify\" ]]; then
+        current_verify=$(echo "$line" | sed 's/.*"verify"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      elif [[ "$line" =~ \"$pkg_mgr\" ]]; then
+        local current_pkg=$(echo "$line" | sed 's/.*"'"$pkg_mgr"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+        if ! verify_dependency "$current_dep" "$current_verify"; then
+          # Split space-delimited packages
+          IFS=' ' read -ra _pkgs <<< "$current_pkg"
+          for _pkg in "${_pkgs[@]}"; do
+            to_install+=("$_pkg")
+          done
+          printf "${CLI_BLUE}→${CLI_RESET} Available (recommended): %s\n" "$current_pkg"
+        else
+          printf "${CLI_GREEN}✓${CLI_RESET} Already installed: %s\n" "$current_dep"
+        fi
+      elif [[ "$line" =~ \"custom_install\" ]]; then
+        local custom_cmd=$(echo "$line" | sed 's/.*"custom_install"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+        if ! verify_dependency "$current_dep" "$current_verify"; then
+          printf "${CLI_BLUE}→${CLI_RESET} Recommended custom install: %s\n" "$current_dep"
+
+          if [[ "$check_only" != "true" ]]; then
+            printf "  Command: %s\n" "$custom_cmd"
+            printf "  Install recommended dependency? [y/N]: "
+            read -r custom_response
+            custom_response=$(echo "$custom_response" | tr '[:upper:]' '[:lower:]')
+
+            if [[ "$custom_response" == "y" || "$custom_response" == "yes" ]]; then
+              eval "$custom_cmd"
+              if [[ $? -eq 0 ]]; then
+                printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+              else
+                printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+              fi
+            else
+              printf "${CLI_DIM}○${CLI_RESET} Skipped: %s\n" "$current_dep"
+            fi
+          fi
+        else
+          printf "${CLI_GREEN}✓${CLI_RESET} Already installed: %s\n" "$current_dep"
+        fi
+      fi
+    done <<< "$recommended_deps"
+  fi
+
   if [[ ${#to_install[@]} -eq 0 ]]; then
     printf "\n${CLI_GREEN}✓${CLI_RESET} All required dependencies already installed\n\n"
     return 0
