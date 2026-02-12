@@ -291,11 +291,43 @@ install_plugin_dependencies() {
       current_verify=$(echo "$line" | sed 's/.*"verify"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
     elif [[ "$line" =~ \"$pkg_mgr\" ]]; then
       current_pkg=$(echo "$line" | sed 's/.*"'"$pkg_mgr"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-      
+
       # Check if already installed
       if ! verify_dependency "$current_dep" "$current_verify"; then
-        to_install+=("$current_pkg")
+        # BUG FIX: Split space-delimited package strings into individual array elements
+        IFS=' ' read -ra _pkgs <<< "$current_pkg"
+        for _pkg in "${_pkgs[@]}"; do
+          to_install+=("$_pkg")
+        done
         printf "${CLI_BLUE}→${CLI_RESET} Will install: %s\n" "$current_pkg"
+      else
+        printf "${CLI_GREEN}✓${CLI_RESET} Already installed: %s\n" "$current_dep"
+      fi
+    elif [[ "$line" =~ \"custom_install\" ]]; then
+      # BUG FIX: Handle custom_install commands
+      local custom_cmd=$(echo "$line" | sed 's/.*"custom_install"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+      # Check if already installed
+      if ! verify_dependency "$current_dep" "$current_verify"; then
+        printf "${CLI_BLUE}→${CLI_RESET} Will run custom install for: %s\n" "$current_dep"
+
+        if [[ "$check_only" != "true" ]]; then
+          printf "  Command: %s\n" "$custom_cmd"
+          printf "  Run custom install? [Y/n]: "
+          read -r custom_response
+          custom_response=$(echo "$custom_response" | tr '[:upper:]' '[:lower:]')
+
+          if [[ "$custom_response" != "n" && "$custom_response" != "no" ]]; then
+            eval "$custom_cmd"
+            if [[ $? -eq 0 ]]; then
+              printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+            else
+              printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+            fi
+          else
+            printf "${CLI_YELLOW}⚠${CLI_RESET} Skipped: %s\n" "$current_dep"
+          fi
+        fi
       else
         printf "${CLI_GREEN}✓${CLI_RESET} Already installed: %s\n" "$current_dep"
       fi
