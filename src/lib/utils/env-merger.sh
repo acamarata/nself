@@ -12,6 +12,11 @@ if [[ -f "$_ENV_MERGER_DIR/env-detection.sh" ]]; then
   source "$_ENV_MERGER_DIR/env-detection.sh"
 fi
 
+# Source platform-compat for safe wrappers
+if [[ -f "$_ENV_MERGER_DIR/platform-compat.sh" ]]; then
+  source "$_ENV_MERGER_DIR/platform-compat.sh"
+fi
+
 # Merge environment files and generate runtime configuration
 # Usage: merge_environments <target_env> [output_file]
 merge_environments() {
@@ -66,8 +71,8 @@ merge_environments() {
         # Extract key if it's a key=value pair
         if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)= ]]; then
           local key="${BASH_REMATCH[1]}"
-          # Remove any existing occurrence of this key
-          sed -i.bak "/^${key}=/d" "$temp_file" 2>/dev/null || true
+          # Remove any existing occurrence of this key (CRITICAL: Use safe wrapper for cross-platform)
+          safe_sed_inline "$temp_file" "/^${key}=/d" 2>/dev/null || true
         fi
 
         # Add the line
@@ -103,7 +108,7 @@ merge_environments() {
   } >"$output_file"
 
   # Cleanup
-  rm -f "$temp_file" "$temp_file.bak"
+  rm -f "$temp_file"
 
   # Report what was loaded
   echo "Environment cascade for '$target_env':"

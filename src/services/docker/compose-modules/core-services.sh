@@ -192,7 +192,7 @@ EOF
 
   cat <<EOF
     environment:
-      AUTH_HOST: "0.0.0.0"
+      AUTH_HOST: "127.0.0.1"  # Security: Internal access only
       AUTH_PORT: "4000"
       AUTH_LOG_LEVEL: \${AUTH_LOG_LEVEL:-info}
       DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}

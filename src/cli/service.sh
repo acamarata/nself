@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail  # CRITICAL: Proper error handling (exit on error, undefined vars, pipe failures)
+
 # service.sh - Consolidated service management
 # Part of nself v1.0 - Service Command Consolidation
 # Consolidates: storage, email, search, redis, functions, mlflow, realtime, admin

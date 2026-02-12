@@ -261,8 +261,8 @@ EOF
   [[ "${LOKI_ENABLED:-false}" == "true" ]] && echo "  loki_data:" >> docker-compose.yml
   [[ "${TEMPO_ENABLED:-false}" == "true" ]] && echo "  tempo_data:" >> docker-compose.yml
   [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] && echo "  alertmanager_data:" >> docker-compose.yml
-  [[ "${PGADMIN_ENABLED:-false}" == "true" ]] && echo "  pgadmin_data:" >> docker-compose.yml
-  [[ "${PORTAINER_ENABLED:-false}" == "true" ]] && echo "  portainer_data:" >> docker-compose.yml
+  # NOTE: pgAdmin and Portainer are NOT supported services (per architecture specification)
+  # Users should use 'nself admin' for management UI instead
 
   # Start services section
   echo "" >> docker-compose.yml

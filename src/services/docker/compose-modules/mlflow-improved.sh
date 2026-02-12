@@ -21,7 +21,7 @@ generate_mlflow_service_improved() {
     environment:
       MLFLOW_BACKEND_STORE_URI: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD}@postgres:5432/mlflow
       MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
-      MLFLOW_HOST: 0.0.0.0
+      MLFLOW_HOST: 127.0.0.1  # Security: Internal access only
       MLFLOW_PORT: \${MLFLOW_PORT:-5005}
       POSTGRES_USER: \${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
