@@ -61,7 +61,8 @@ EOF
   if [[ -n "$service_port" && "$service_port" != "0" ]]; then
     cat <<EOF
     ports:
-      - "${service_port}:${service_port}"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:${service_port}:${service_port}"
 EOF
   fi
 

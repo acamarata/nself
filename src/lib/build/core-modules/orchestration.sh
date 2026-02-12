@@ -304,11 +304,16 @@ generate_docker_compose() {
   local script_dir="$(dirname "${BASH_SOURCE[0]}")"
   local computed_env_script="$script_dir/../generate-computed-env.sh"
 
+  [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] Looking for computed env script at: $computed_env_script" >&2
+
   if [[ -f "$computed_env_script" ]]; then
+    [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] Sourcing computed env generator..." >&2
     source "$computed_env_script"
 
     # Check if function is available
     if type generate_computed_env >/dev/null 2>&1; then
+      [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] Function available, generating .env.computed..." >&2
+
       # Load environment files so we have all variables
       set -a
       [[ -f .env ]] && source .env 2>/dev/null || true
@@ -316,8 +321,21 @@ generate_docker_compose() {
       set +a
 
       # Generate the computed environment file
-      generate_computed_env ".env.computed" 2>/dev/null || true
+      generate_computed_env ".env.computed" || {
+        echo "[ERROR] Failed to generate .env.computed" >&2
+        return $compose_result
+      }
+
+      if [[ -f .env.computed ]]; then
+        [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] .env.computed created ($(wc -l < .env.computed 2>/dev/null || echo 0) lines)" >&2
+      else
+        echo "[WARNING] .env.computed was not created" >&2
+      fi
+    else
+      [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] generate_computed_env function not available" >&2
     fi
+  else
+    [[ "${DEBUG:-false}" == "true" ]] && echo "[DEBUG] Computed env script not found at $computed_env_script" >&2
   fi
 
   return $compose_result
