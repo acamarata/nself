@@ -30,8 +30,10 @@ merge_environments() {
 
   case "$target_env" in
     staging | stage)
-      # Staging: dev → staging → local overrides
+      # Staging: dev → staging → secrets → local overrides
       env_files+=(".env.staging")
+      # CRITICAL: Load .env.secrets in staging (Bug #17 fix - Part 2)
+      env_files+=(".env.secrets")
       ;;
     prod | production)
       # Production: dev → staging → prod → secrets → local overrides
@@ -40,7 +42,10 @@ merge_environments() {
       env_files+=(".env.secrets")
       ;;
     dev | development | *)
-      # Dev: just dev → local overrides (default)
+      # Dev: dev → secrets → local overrides (default)
+      # CRITICAL: Load .env.secrets in dev too (Bug #17 fix - Part 2)
+      # Developers use `nself config secrets generate` in dev mode
+      env_files+=(".env.secrets")
       ;;
   esac
 
