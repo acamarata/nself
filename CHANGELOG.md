@@ -47,6 +47,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents false-positive security rollbacks in non-production environments
   - Commit: `65d3196`
 
+- **CRITICAL**: Fixed .env file sync failure (Round 4 - Bug #9)
+  - scp requires `-P` (capital) for port flag, ssh uses `-p` (lowercase)
+  - Error: "scp: stat local '22': No such file or directory"
+  - Port number was treated as filename causing all file transfers to fail
+  - Created separate `ssh_args` and `scp_args` arrays with correct flags
+  - .env and .env.secrets now sync correctly to remote server
+  - Commit: `0590a36`
+
+- **CRITICAL**: Fixed services not ready during database automation (Round 4 - Bug #7)
+  - `docker compose up -d` returns immediately but containers need 5-30s to start
+  - Step 6 database automation ran before postgres was accepting connections
+  - Added health check wait using `pg_isready` between Step 5 and Step 6
+  - Waits up to 60 seconds for database to be ready before proceeding
+  - Database commands now execute when services are actually healthy
+  - Commit: `0590a36`
+
+- **CRITICAL**: Fixed environment variables not available during deployment (Round 4 - Bug #8)
+  - SSH non-interactive shells don't automatically source .env files
+  - Database commands failed with "unbound variable" errors (HASURA_GRAPHQL_ADMIN_SECRET, etc.)
+  - Now explicitly loads .env and .env.secrets before running nself CLI commands
+  - Uses `set -a / set +a` to auto-export all environment variables
+  - Database automation commands now have access to all required configuration
+  - Commit: `0590a36`
+
 ### 🆕 Features
 
 #### Plugin System
