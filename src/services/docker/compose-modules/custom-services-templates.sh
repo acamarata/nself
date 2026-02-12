@@ -192,7 +192,10 @@ generate_template_custom_services() {
   local services_found=false
 
   # Check for CS_ variables (format: service_name:template_type:port)
-  for i in {1..20}; do
+  # CRITICAL (Bug #17 fix): Use seq instead of {1..10} for Bash 3.2 compatibility
+  # Note: nself only supports CS_1 through CS_10 (per documentation)
+  local i
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 

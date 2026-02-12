@@ -51,16 +51,23 @@ generate_docker_compose() {
     export SEARCH_ENABLED="${SEARCH_ENABLED:-false}"
 
     bash "$compose_script"
-    local result=$?
+    local compose_result=$?
 
-    # Generate computed environment variables file (Bug #12 fix)
-    # This creates .env.computed with DOCKER_NETWORK, DATABASE_URL, etc.
-    # so that docker compose commands have all required variables
-    if [[ $result -eq 0 ]] && type generate_computed_env >/dev/null 2>&1; then
-      generate_computed_env ".env.computed"
+    # CRITICAL (Bug #14 fix): Generate .env.computed regardless of compose result
+    # The compose script may return non-zero for warnings but still create the file
+    # We need .env.computed even if there are non-fatal issues
+    if type generate_computed_env >/dev/null 2>&1; then
+      # Load environment first so computed values are correct
+      set -a
+      [[ -f .env ]] && source .env 2>/dev/null || true
+      [[ -f .env.secrets ]] && source .env.secrets 2>/dev/null || true
+      set +a
+
+      # Generate computed environment variables
+      generate_computed_env ".env.computed" || true
     fi
 
-    return $result
+    return $compose_result
   else
     echo "Error: compose-generate.sh not found" >&2
     echo "  Tried: ${script_dir}/../../services/docker/compose-generate.sh" >&2

@@ -7,7 +7,7 @@
 # Priority order:
 #   1. TARGET_ENV (from command line flags)
 #   2. NSELF_ENV (machine-level environment variable)
-#   3. ENV (from .env file if loaded)
+#   3. ENV from .env file (read from file, not environment variable)
 #   4. Default to "dev"
 detect_environment() {
   local env=""
@@ -18,11 +18,19 @@ detect_environment() {
   # Then check machine-level NSELF_ENV
   elif [[ -n "${NSELF_ENV:-}" ]]; then
     env="$NSELF_ENV"
-  # Then check ENV variable (might be set from .env)
-  elif [[ -n "${ENV:-}" ]]; then
+  # CRITICAL (Bug #16 fix): Read ENV from .env file, not environment variable
+  # This ensures we use the environment specified in .env, not a stale ENV var
+  elif [[ -f ".env" ]]; then
+    env=$(grep "^ENV=" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' | tr -d '"' | tr -d "'")
+  fi
+
+  # Fallback: check ENV variable if .env didn't have it
+  if [[ -z "$env" ]] && [[ -n "${ENV:-}" ]]; then
     env="$ENV"
-  # Default to dev
-  else
+  fi
+
+  # Default to dev if still empty
+  if [[ -z "$env" ]]; then
     env="dev"
   fi
 

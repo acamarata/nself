@@ -276,6 +276,13 @@ execute_build_steps() {
 generate_docker_compose() {
   local compose_script="${LIB_ROOT:-/usr/local/lib/nself}/../services/docker/compose-generate.sh"
 
+  # Source computed env generator (Bug #14 fix)
+  local script_dir="$(dirname "${BASH_SOURCE[0]}")"
+  if [[ -f "$script_dir/../generate-computed-env.sh" ]]; then
+    source "$script_dir/../generate-computed-env.sh" 2>/dev/null || true
+  fi
+
+  local compose_result=0
   if [[ -f "$compose_script" ]]; then
     # Run the compose generation with clean output (disable tracing)
     if (
@@ -287,11 +294,29 @@ generate_docker_compose() {
         source "${LIB_ROOT:-/usr/local/lib/nself}/auto-fix/healthcheck-fix.sh"
         fix_healthchecks "docker-compose.yml" >/dev/null 2>&1
       fi
-      return 0
+      compose_result=0
+    else
+      compose_result=$?
     fi
+  else
+    compose_result=1
   fi
 
-  return 1
+  # CRITICAL (Bug #14 fix): Generate .env.computed regardless of compose result
+  # The compose script may return non-zero for warnings but still create the file
+  # We need .env.computed even if there are non-fatal issues
+  if type generate_computed_env >/dev/null 2>&1; then
+    # Load environment first so computed values are correct
+    set -a
+    [[ -f .env ]] && source .env 2>/dev/null || true
+    [[ -f .env.secrets ]] && source .env.secrets 2>/dev/null || true
+    set +a
+
+    # Generate computed environment variables
+    generate_computed_env ".env.computed" || true
+  fi
+
+  return $compose_result
 }
 
 # Run post-build tasks
