@@ -2577,6 +2577,88 @@ sync_full() {
     printf "  ${CLI_YELLOW}SKIP:${CLI_RESET} services directory not found\n"
   fi
 
+  # Step 4.5: Sync Hasura database files (CRITICAL for database deployment)
+  printf "\n"
+  cli_section "Step 4.5: Database Files (Hasura)"
+
+  local hasura_synced=0
+
+  # Sync migrations
+  if [[ -d "hasura/migrations" ]]; then
+    printf "  Syncing migrations... "
+    if command -v rsync >/dev/null 2>&1; then
+      local rsync_ssh="ssh"
+      [[ -n "$key_file" ]] && rsync_ssh="$rsync_ssh -i ${key_file/#\~/$HOME}"
+      rsync_ssh="$rsync_ssh -p $port"
+
+      # Ensure directory exists on remote
+      ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path/hasura/migrations'" 2>/dev/null
+
+      if rsync -avz -e "$rsync_ssh" hasura/migrations/ "${user}@${host}:${deploy_path}/hasura/migrations/" 2>/dev/null; then
+        printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        ((hasura_synced++))
+      else
+        printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      fi
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (rsync not available)\n"
+    fi
+  else
+    printf "  ${CLI_DIM}SKIP:${CLI_RESET} No migrations directory\n"
+  fi
+
+  # Sync seeds
+  if [[ -d "hasura/seeds" ]]; then
+    printf "  Syncing seeds... "
+    if command -v rsync >/dev/null 2>&1; then
+      local rsync_ssh="ssh"
+      [[ -n "$key_file" ]] && rsync_ssh="$rsync_ssh -i ${key_file/#\~/$HOME}"
+      rsync_ssh="$rsync_ssh -p $port"
+
+      # Ensure directory exists on remote
+      ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path/hasura/seeds'" 2>/dev/null
+
+      if rsync -avz -e "$rsync_ssh" hasura/seeds/ "${user}@${host}:${deploy_path}/hasura/seeds/" 2>/dev/null; then
+        printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        ((hasura_synced++))
+      else
+        printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      fi
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (rsync not available)\n"
+    fi
+  else
+    printf "  ${CLI_DIM}SKIP:${CLI_RESET} No seeds directory\n"
+  fi
+
+  # Sync metadata
+  if [[ -d "hasura/metadata" ]]; then
+    printf "  Syncing metadata... "
+    if command -v rsync >/dev/null 2>&1; then
+      local rsync_ssh="ssh"
+      [[ -n "$key_file" ]] && rsync_ssh="$rsync_ssh -i ${key_file/#\~/$HOME}"
+      rsync_ssh="$rsync_ssh -p $port"
+
+      # Ensure directory exists on remote
+      ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path/hasura/metadata'" 2>/dev/null
+
+      if rsync -avz -e "$rsync_ssh" hasura/metadata/ "${user}@${host}:${deploy_path}/hasura/metadata/" 2>/dev/null; then
+        printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        ((hasura_synced++))
+      else
+        printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      fi
+    else
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (rsync not available)\n"
+    fi
+  else
+    printf "  ${CLI_DIM}SKIP:${CLI_RESET} No metadata directory\n"
+  fi
+
+  if [[ $hasura_synced -gt 0 ]]; then
+    printf "\n  ${CLI_GREEN}✓${CLI_RESET} Synced %d Hasura directory/directories\n" "$hasura_synced"
+  fi
+
   # Step 5: Restart services if rebuild enabled
   if [[ "$rebuild" == "true" ]]; then
     printf "\n"
@@ -2599,13 +2681,199 @@ sync_full() {
     fi
   fi
 
+  # Step 6: Database Automation (CRITICAL - Apply migrations, seeds, metadata)
+  if [[ $hasura_synced -gt 0 ]] || [[ -d "hasura" ]]; then
+    printf "\n"
+    cli_section "Step 6: Database Deployment"
+
+    printf "\n${CLI_DIM}Running database automation on remote server...${CLI_RESET}\n\n"
+
+    # Check if nself CLI is available on remote
+    local nself_available
+    nself_available=$(ssh "${ssh_args[@]}" "${user}@${host}" "command -v nself" 2>/dev/null || echo "")
+
+    if [[ -z "$nself_available" ]]; then
+      printf "  ${CLI_YELLOW}⚠${CLI_RESET} nself CLI not found on remote server\n"
+      printf "  ${CLI_DIM}Running database commands via docker exec...${CLI_RESET}\n\n"
+
+      # Fallback: Run database commands directly via docker exec
+      local db_result
+      db_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+        cd '$deploy_path' 2>/dev/null || exit 1
+
+        # Get project name and database info from .env
+        PROJECT_NAME=\$(grep -E '^PROJECT_NAME=' .env 2>/dev/null | cut -d'=' -f2)
+        POSTGRES_DB=\$(grep -E '^POSTGRES_DB=' .env 2>/dev/null | cut -d'=' -f2)
+        POSTGRES_USER=\$(grep -E '^POSTGRES_USER=' .env 2>/dev/null | cut -d'=' -f2)
+        ENV=\$(grep -E '^ENV=' .env 2>/dev/null | cut -d'=' -f2)
+
+        PROJECT_NAME=\${PROJECT_NAME:-nself}
+        POSTGRES_DB=\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+        POSTGRES_USER=\${POSTGRES_USER:-postgres}
+        ENV=\${ENV:-production}
+
+        DB_CONTAINER=\"\${PROJECT_NAME}_postgres\"
+
+        echo \"Environment: \$ENV\"
+        echo \"Database: \$POSTGRES_DB\"
+        echo \"\"
+
+        # Apply migrations
+        if [ -d 'hasura/migrations/default' ]; then
+          echo 'Applying migrations...'
+          migration_count=0
+          for migration_dir in hasura/migrations/default/*/; do
+            if [ -f \"\${migration_dir}up.sql\" ]; then
+              migration_name=\$(basename \"\$migration_dir\")
+              echo \"  → \$migration_name\"
+              docker exec \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -f /docker-entrypoint-initdb.d/\"\$migration_name\"/up.sql 2>/dev/null || \
+              docker exec -i \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" < \"\${migration_dir}up.sql\" 2>/dev/null
+              migration_count=\$((migration_count + 1))
+            fi
+          done
+          echo \"✓ Applied \$migration_count migration(s)\"
+          echo \"\"
+        fi
+
+        # Apply seeds (environment-aware)
+        if [ -d 'hasura/seeds/default' ]; then
+          echo 'Applying seeds...'
+          seed_count=0
+
+          # Determine seed pattern based on environment
+          case \"\$ENV\" in
+            prod|production)
+              # Production: Only 000-001
+              seed_pattern='^(000|001)_'
+              echo '  Strategy: Production-safe seeds only (000-001)'
+              ;;
+            staging|stage)
+              # Staging: 000-004
+              seed_pattern='^(000|001|002|003|004)_'
+              echo '  Strategy: System + basic demo data (000-004)'
+              ;;
+            *)
+              # Development: All seeds
+              seed_pattern='.*'
+              echo '  Strategy: All seeds (full demo)'
+              ;;
+          esac
+
+          for seed_file in hasura/seeds/default/*.sql; do
+            if [ -f \"\$seed_file\" ]; then
+              seed_name=\$(basename \"\$seed_file\")
+
+              # Check if seed matches environment pattern
+              if echo \"\$seed_name\" | grep -qE \"\$seed_pattern\"; then
+                echo \"  → \$seed_name\"
+                docker exec -i \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" < \"\$seed_file\" 2>/dev/null
+                seed_count=\$((seed_count + 1))
+              else
+                echo \"  ○ \$seed_name (skipped for \$ENV)\"
+              fi
+            fi
+          done
+          echo \"✓ Applied \$seed_count seed(s)\"
+          echo \"\"
+        fi
+
+        # Check tables created
+        table_count=\$(docker exec \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'\" 2>/dev/null | tr -d ' ')
+        echo \"✓ Database has \$table_count table(s)\"
+
+        echo 'database_deployment_complete'
+      " 2>&1)
+
+      # Display results
+      echo "$db_result" | while IFS= read -r line; do
+        if [[ "$line" == "database_deployment_complete" ]]; then
+          continue
+        elif [[ "$line" =~ ^"✓" ]]; then
+          printf "  ${CLI_GREEN}%s${CLI_RESET}\n" "$line"
+        elif [[ "$line" =~ ^"→" ]]; then
+          printf "  ${CLI_BLUE}%s${CLI_RESET}\n" "$line"
+        elif [[ "$line" =~ ^"○" ]]; then
+          printf "  ${CLI_DIM}%s${CLI_RESET}\n" "$line"
+        elif [[ -n "$line" ]]; then
+          printf "  %s\n" "$line"
+        fi
+      done
+
+      if echo "$db_result" | grep -q "database_deployment_complete"; then
+        printf "\n  ${CLI_GREEN}✓${CLI_RESET} Database deployment successful\n"
+
+        # Health check: Verify database
+        printf "\n  ${CLI_DIM}Running health checks...${CLI_RESET}\n"
+        local health_result
+        health_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+          cd '$deploy_path' 2>/dev/null || exit 1
+          PROJECT_NAME=\$(grep -E '^PROJECT_NAME=' .env 2>/dev/null | cut -d'=' -f2)
+          POSTGRES_DB=\$(grep -E '^POSTGRES_DB=' .env 2>/dev/null | cut -d'=' -f2)
+          POSTGRES_USER=\$(grep -E '^POSTGRES_USER=' .env 2>/dev/null | cut -d'=' -f2)
+          PROJECT_NAME=\${PROJECT_NAME:-nself}
+          POSTGRES_DB=\${POSTGRES_DB:-\${PROJECT_NAME}_db}
+          POSTGRES_USER=\${POSTGRES_USER:-postgres}
+          DB_CONTAINER=\"\${PROJECT_NAME}_postgres\"
+
+          # Count tables
+          table_count=\$(docker exec \"\$DB_CONTAINER\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'\" 2>/dev/null | tr -d ' ')
+          echo \"tables:\$table_count\"
+        " 2>/dev/null)
+
+        local table_count=$(echo "$health_result" | grep "tables:" | cut -d':' -f2)
+        if [[ -n "$table_count" ]] && [[ "$table_count" -gt 0 ]]; then
+          printf "    ${CLI_GREEN}✓${CLI_RESET} Database health check passed (%d tables)\n" "$table_count"
+        else
+          printf "    ${CLI_YELLOW}⚠${CLI_RESET} Database may be empty\n"
+        fi
+      else
+        printf "\n  ${CLI_YELLOW}⚠${CLI_RESET} Database deployment may have issues\n"
+      fi
+    else
+      printf "  ${CLI_GREEN}✓${CLI_RESET} nself CLI found on remote: $nself_available\n\n"
+
+      # Use nself CLI commands directly
+      local db_cli_result
+      db_cli_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
+        cd '$deploy_path' 2>/dev/null || exit 1
+
+        echo 'Running: nself db migrate up'
+        nself db migrate up 2>&1 || echo 'migrate_failed'
+
+        echo ''
+        echo 'Running: nself db seed'
+        nself db seed 2>&1 || echo 'seed_failed'
+
+        echo ''
+        echo 'Running: nself hasura metadata apply'
+        nself hasura metadata apply 2>&1 || echo 'metadata_failed'
+
+        echo 'cli_complete'
+      " 2>&1)
+
+      echo "$db_cli_result"
+
+      if echo "$db_cli_result" | grep -q "cli_complete" && ! echo "$db_cli_result" | grep -q "_failed"; then
+        printf "\n  ${CLI_GREEN}✓${CLI_RESET} Database automation completed via nself CLI\n"
+      else
+        printf "\n  ${CLI_YELLOW}⚠${CLI_RESET} Some database commands may have failed\n"
+      fi
+    fi
+  fi
+
   # Record sync history
   echo "$(date -Iseconds 2>/dev/null || date)|full|$files_synced files" >> "$env_dir/.sync-history"
 
   printf "\n"
   cli_success "Full sync complete: $files_synced file(s) synced"
+
+  if [[ $hasura_synced -gt 0 ]]; then
+    printf "\n"
+    cli_info "Database deployed - verify at: https://api.$target.nself.org/healthz"
+  fi
+
   printf "\n"
-  cli_info "Next: nself deploy $target"
+  cli_info "Next: Test deployment with 'curl https://api.$target.nself.org/v1/graphql'"
 }
 
 show_sync_help() {
