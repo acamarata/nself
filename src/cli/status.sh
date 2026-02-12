@@ -540,7 +540,7 @@ show_service_overview() {
     echo ""
     printf "\033[1;36m→\033[0m Initialization Jobs\n"
     echo ""
-    for init_svc in "${init_containers[@]}"; then
+    for init_svc in "${init_containers[@]}"; do
       local container_name="${PROJECT_NAME:-nself}_${init_svc//-/_}"
       local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "")
       if [[ "$exit_code" == "0" ]]; then
