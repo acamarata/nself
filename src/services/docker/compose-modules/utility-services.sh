@@ -38,8 +38,9 @@ EOF
   cat <<'EOF'
       MP_MAX_MESSAGES: ${MAILPIT_MAX_MESSAGES:-500}
     ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_UI_PORT:-8025}:8025"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8025"]
       interval: 30s
@@ -110,7 +111,8 @@ EOF
       ADMIN_PASSWORD_HASH: \${ADMIN_PASSWORD_HASH}
       DOCKER_HOST: unix:///var/run/docker.sock
     ports:
-      - "\${NSELF_ADMIN_PORT:-3021}:3021"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${NSELF_ADMIN_PORT:-3021}:3021"
     volumes:
       - ./:/workspace:rw
       - nself_admin_data:/app/data
@@ -177,7 +179,8 @@ generate_functions_service() {
     volumes:
       - ./functions:/opt/project
     ports:
-      - "\${FUNCTIONS_PORT:-3008}:3000"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${FUNCTIONS_PORT:-3008}:3000"
 EOF
   else
     # Use original nhost/functions
@@ -204,7 +207,8 @@ EOF
     volumes:
       - ./functions:/opt/project
     ports:
-      - "\${FUNCTIONS_PORT:-3008}:3008"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${FUNCTIONS_PORT:-3008}:3008"
     healthcheck:
       test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:3000/healthz\", (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))' || curl -f http://localhost:3000/healthz || wget -q --spider http://localhost:3000/healthz"]
       interval: 30s

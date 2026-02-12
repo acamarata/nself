@@ -116,7 +116,8 @@ EOF
 
   cat <<EOF
     ports:
-      - "\${HASURA_PORT:-8080}:8080"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${HASURA_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -166,7 +167,8 @@ generate_auth_service() {
       AUTH_PORT: 4000
       NODE_ENV: \${ENV:-development}
     ports:
-      - "\${AUTH_PORT:-4000}:4000"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${AUTH_PORT:-4000}:4000"
 EOF
   else
     # Use original nhost/hasura-auth with fixes
@@ -244,7 +246,8 @@ EOF
 
   cat <<EOF
     ports:
-      - "\${AUTH_PORT:-4000}:4000"
+      # SECURITY: Bind to localhost only - access via nginx reverse proxy
+      - "127.0.0.1:\${AUTH_PORT:-4000}:4000"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/healthz"]
       interval: 30s

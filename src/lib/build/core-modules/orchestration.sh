@@ -276,12 +276,6 @@ execute_build_steps() {
 generate_docker_compose() {
   local compose_script="${LIB_ROOT:-/usr/local/lib/nself}/../services/docker/compose-generate.sh"
 
-  # Source computed env generator (Bug #14 fix)
-  local script_dir="$(dirname "${BASH_SOURCE[0]}")"
-  if [[ -f "$script_dir/../generate-computed-env.sh" ]]; then
-    source "$script_dir/../generate-computed-env.sh" 2>/dev/null || true
-  fi
-
   local compose_result=0
   if [[ -f "$compose_script" ]]; then
     # Run the compose generation with clean output (disable tracing)
@@ -302,18 +296,28 @@ generate_docker_compose() {
     compose_result=1
   fi
 
-  # CRITICAL (Bug #14 fix): Generate .env.computed regardless of compose result
-  # The compose script may return non-zero for warnings but still create the file
-  # We need .env.computed even if there are non-fatal issues
-  if type generate_computed_env >/dev/null 2>&1; then
-    # Load environment first so computed values are correct
-    set -a
-    [[ -f .env ]] && source .env 2>/dev/null || true
-    [[ -f .env.secrets ]] && source .env.secrets 2>/dev/null || true
-    set +a
+  # CRITICAL (Bug #14 fix): Generate .env.computed AFTER docker-compose.yml generation
+  # This ensures we have all environment variables loaded and can compute derived values
+  # The .env.computed file contains computed values like DOCKER_NETWORK, DATABASE_URL, etc.
 
-    # Generate computed environment variables
-    generate_computed_env ".env.computed" || true
+  # Find and source the computed env generator
+  local script_dir="$(dirname "${BASH_SOURCE[0]}")"
+  local computed_env_script="$script_dir/../generate-computed-env.sh"
+
+  if [[ -f "$computed_env_script" ]]; then
+    source "$computed_env_script"
+
+    # Check if function is available
+    if type generate_computed_env >/dev/null 2>&1; then
+      # Load environment files so we have all variables
+      set -a
+      [[ -f .env ]] && source .env 2>/dev/null || true
+      [[ -f .env.secrets ]] && source .env.secrets 2>/dev/null || true
+      set +a
+
+      # Generate the computed environment file
+      generate_computed_env ".env.computed" 2>/dev/null || true
+    fi
   fi
 
   return $compose_result

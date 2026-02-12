@@ -53,18 +53,18 @@ generate_docker_compose() {
     bash "$compose_script"
     local compose_result=$?
 
-    # CRITICAL (Bug #14 fix): Generate .env.computed regardless of compose result
-    # The compose script may return non-zero for warnings but still create the file
-    # We need .env.computed even if there are non-fatal issues
+    # CRITICAL (Bug #14 fix): Generate .env.computed AFTER docker-compose.yml generation
+    # This ensures we have all environment variables loaded and can compute derived values
+    # The .env.computed file contains computed values like DOCKER_NETWORK, DATABASE_URL, etc.
     if type generate_computed_env >/dev/null 2>&1; then
-      # Load environment first so computed values are correct
+      # Load environment files so we have all variables
       set -a
       [[ -f .env ]] && source .env 2>/dev/null || true
       [[ -f .env.secrets ]] && source .env.secrets 2>/dev/null || true
       set +a
 
-      # Generate computed environment variables
-      generate_computed_env ".env.computed" || true
+      # Generate the computed environment file
+      generate_computed_env ".env.computed" 2>/dev/null || true
     fi
 
     return $compose_result
