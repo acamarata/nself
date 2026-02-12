@@ -2826,45 +2826,23 @@ sync_full() {
     printf "\n"
     cli_section "Step 5: Restart Services"
 
-    # Clean up any stale containers before restarting
-    printf "  Cleaning up stale containers... "
-    local cleanup_result
-    cleanup_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
-      cd '$deploy_path' 2>/dev/null || exit 1
-      # Source .env so docker compose can parse the config
-      if [ -f .env ]; then
-        set -a
-        . .env
-        [ -f .env.secrets ] && . .env.secrets
-        set +a
-      fi
-      # Stop and remove existing project containers
-      docker compose down --remove-orphans 2>/dev/null || true
-      echo 'cleaned'
-    " 2>/dev/null)
-    if printf "%s" "$cleanup_result" | grep -q "cleaned"; then
-      printf "${CLI_GREEN}OK${CLI_RESET}\n"
+    # Use nself stop/start instead of raw docker compose commands
+    # This ensures environment variables are computed correctly (Bug #12 fix)
+    printf "  Stopping services on remote... "
+    local stop_result
+    stop_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "cd '$deploy_path' && nself stop 2>&1" || echo "stop_failed")
+
+    if echo "$stop_result" | grep -q "stop_failed"; then
+      printf "${CLI_YELLOW}SKIP${CLI_RESET} (services may not be running)\n"
     else
-      printf "${CLI_YELLOW}SKIP${CLI_RESET}\n"
+      printf "${CLI_GREEN}OK${CLI_RESET}\n"
     fi
 
     printf "  Starting services on remote... "
-
     local restart_result
-    restart_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
-      cd '$deploy_path' 2>/dev/null || exit 1
-      # CRITICAL (Bug #8): Source .env so docker compose can resolve variables
-      if [ -f .env ]; then
-        set -a
-        . .env
-        [ -f .env.secrets ] && . .env.secrets
-        set +a
-      fi
-      docker compose up -d 2>&1
-      echo 'restarted'
-    " 2>/dev/null)
+    restart_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "cd '$deploy_path' && nself start 2>&1" || echo "start_failed")
 
-    if echo "$restart_result" | grep -q "restarted"; then
+    if ! echo "$restart_result" | grep -q "start_failed"; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
 
       # Wait for database to be ready before Step 6
@@ -3169,19 +3147,53 @@ sync_full() {
     fi
   fi
 
+  # Post-deployment verification (ensures services actually started)
+  if [[ "$rebuild" == "true" ]]; then
+    printf "\n"
+    cli_section "Step 7: Deployment Verification"
+
+    printf "  Checking service status... "
+    local running_count
+    running_count=$(ssh "${ssh_args[@]}" "${user}@${host}" "cd '$deploy_path' && docker compose ps --services --filter 'status=running' 2>/dev/null | wc -l" 2>/dev/null || echo "0")
+    running_count=$(echo "$running_count" | tr -d '[:space:]')
+
+    if [[ "${running_count:-0}" -gt 0 ]]; then
+      printf "${CLI_GREEN}OK${CLI_RESET} (${running_count} services running)\n"
+    else
+      printf "${CLI_RED}FAILED${CLI_RESET} (no services running)\n"
+      printf "\n${CLI_RED}✗ Deployment verification failed${CLI_RESET}\n"
+      printf "  Services did not start. Check logs with:\n"
+      printf "  ${CLI_DIM}ssh ${user}@${host} 'cd $deploy_path && nself logs'${CLI_RESET}\n"
+      exit 1
+    fi
+
+    # Test API health if Hasura is enabled
+    if [[ "${HASURA_ENABLED:-false}" == "true" ]] || [[ $hasura_synced -gt 0 ]]; then
+      printf "  Testing API health... "
+      local health_url="https://api.${BASE_DOMAIN}/healthz"
+      if command -v curl >/dev/null 2>&1; then
+        if curl -sf "$health_url" > /dev/null 2>&1; then
+          printf "${CLI_GREEN}OK${CLI_RESET}\n"
+        else
+          printf "${CLI_YELLOW}SKIP${CLI_RESET} (API not responding yet)\n"
+        fi
+      else
+        printf "${CLI_YELLOW}SKIP${CLI_RESET} (curl not available)\n"
+      fi
+    fi
+  fi
+
   # Record sync history
   echo "$(date -Iseconds 2>/dev/null || date)|full|$files_synced files" >> "$env_dir/.sync-history"
 
   printf "\n"
-  cli_success "Full sync complete: $files_synced file(s) synced"
+  cli_success "Deployment complete and verified"
+  printf "  ${CLI_DIM}Synced %d file(s), %d services running${CLI_RESET}\n" "$files_synced" "${running_count:-0}"
 
   if [[ $hasura_synced -gt 0 ]]; then
     printf "\n"
-    cli_info "Database deployed - verify at: https://api.$target.nself.org/healthz"
+    cli_info "GraphQL API: https://api.$target.nself.org/v1/graphql"
   fi
-
-  printf "\n"
-  cli_info "Next: Test deployment with 'curl https://api.$target.nself.org/v1/graphql'"
 }
 
 show_sync_help() {

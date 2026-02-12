@@ -5,6 +5,9 @@
 # Source platform compatibility functions
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/platform-compat.sh" 2>/dev/null || true
 
+# Source computed env generator (Bug #12 fix)
+source "$(dirname "${BASH_SOURCE[0]}")/generate-computed-env.sh" 2>/dev/null || true
+
 # Generate docker-compose.yml
 generate_docker_compose() {
   # Determine the correct path to compose-generate.sh
@@ -48,7 +51,16 @@ generate_docker_compose() {
     export SEARCH_ENABLED="${SEARCH_ENABLED:-false}"
 
     bash "$compose_script"
-    return $?
+    local result=$?
+
+    # Generate computed environment variables file (Bug #12 fix)
+    # This creates .env.computed with DOCKER_NETWORK, DATABASE_URL, etc.
+    # so that docker compose commands have all required variables
+    if [[ $result -eq 0 ]] && type generate_computed_env >/dev/null 2>&1; then
+      generate_computed_env ".env.computed"
+    fi
+
+    return $result
   else
     echo "Error: compose-generate.sh not found" >&2
     echo "  Tried: ${script_dir}/../../services/docker/compose-generate.sh" >&2

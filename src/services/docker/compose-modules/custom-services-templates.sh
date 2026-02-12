@@ -14,7 +14,26 @@ generate_template_based_service() {
   # Check if replicas are specified (can't use container_name with replicas > 1)
   local replicas_var="CS_${index}_REPLICAS"
   local has_replicas=false
-  if [[ -n "${!replicas_var:-}" ]] && [[ "${!replicas_var}" != "1" ]]; then
+  local replica_count="${!replicas_var:-1}"
+
+  # CRITICAL (Bug #11): Block replicas > 1 with port bindings in standalone mode
+  # Docker Compose standalone doesn't support port bindings with replicas
+  # All replicas try to bind to the same host port, causing conflicts
+  if [[ "$replica_count" -gt 1 ]] && [[ -n "$service_port" && "$service_port" != "0" ]]; then
+    printf "\n${CLI_RED}✗ ERROR: ${service_name} has replicas=${replica_count} with port binding${CLI_RESET}\n" >&2
+    printf "  Port bindings conflict with replicas in standalone Docker Compose\n" >&2
+    printf "\n" >&2
+    printf "  ${CLI_YELLOW}Fix options:${CLI_RESET}\n" >&2
+    printf "    1. Set CS_${index}_REPLICAS=1 (recommended for standalone mode)\n" >&2
+    printf "    2. Remove port binding (set CS_${index}_PORT=0)\n" >&2
+    printf "    3. Deploy to Docker Swarm mode (supports load-balanced ports)\n" >&2
+    printf "\n" >&2
+    printf "  ${CLI_DIM}Replicas > 1 require Docker Swarm for proper load balancing${CLI_RESET}\n" >&2
+    printf "  ${CLI_DIM}In standalone mode, all replicas compete for the same host port${CLI_RESET}\n" >&2
+    exit 1
+  fi
+
+  if [[ "$replica_count" -gt 1 ]]; then
     has_replicas=true
   fi
 
