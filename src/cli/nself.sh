@@ -40,6 +40,7 @@ for file in \
   "$CLI_SCRIPT_DIR/../lib/config/constants.sh" \
   "$CLI_SCRIPT_DIR/../lib/utils/display.sh" \
   "$CLI_SCRIPT_DIR/../lib/utils/output-formatter.sh" \
+  "$CLI_SCRIPT_DIR/../lib/utils/project-detection.sh" \
   "$CLI_SCRIPT_DIR/../lib/auto-fix/config-validator-v2.sh" \
   "$CLI_SCRIPT_DIR/../lib/auto-fix/auto-fixer-v2.sh"; do
   if [[ -f "$file" ]]; then
@@ -98,6 +99,42 @@ main() {
       ;;
     --help | -h)
       command="help"
+      ;;
+  esac
+
+  # Smart project detection - auto-navigate to backend/ if needed
+  # Commands are categorized by whether they require a project
+  case "$command" in
+    # Commands that don't require a project
+    help|version|completion|update|--help|-h|-v|--version)
+      # No project detection needed
+      ;;
+
+    # Destructive commands - check safety but don't require project
+    init)
+      # init creates a new project, so check if we're in a safe location
+      if type check_destructive_command_safety >/dev/null 2>&1; then
+        if ! check_destructive_command_safety "$command"; then
+          return 1
+        fi
+      fi
+      ;;
+
+    # All other commands require a project - auto-navigate if needed
+    *)
+      if type auto_navigate_to_project >/dev/null 2>&1; then
+        # Destructive commands (build) should ask before auto-navigating
+        local allow_destructive=false
+        case "$command" in
+          build)
+            allow_destructive=true
+            ;;
+        esac
+
+        if ! auto_navigate_to_project "$command" true "$allow_destructive"; then
+          return 1
+        fi
+      fi
       ;;
   esac
 

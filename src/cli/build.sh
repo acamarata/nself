@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
+
+# CRITICAL DIAGNOSTIC: Output BEFORE set -euo pipefail to diagnose Linux failures
+# This should ALWAYS print, even if script fails immediately after
+printf "=== NSELF BUILD STARTING ===\n" >&2
+printf "Date: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" >&2
+printf "PWD: %s\n" "$PWD" >&2
+printf "USER: %s\n" "$USER" >&2
+printf "BASH_VERSION: %s\n" "$BASH_VERSION" >&2
+printf "Script: %s\n" "${BASH_SOURCE[0]}" >&2
+printf "========================\n" >&2
+
 set -euo pipefail
+
+printf "=== set -euo pipefail SUCCESS ===\n" >&2
 
 # build.sh - nself build command wrapper
 # This is now a thin wrapper that delegates to modular components
@@ -7,6 +20,8 @@ set -euo pipefail
 # CRITICAL: Error trap to catch silent failures
 # This ensures errors are NEVER silently swallowed
 trap 'handle_build_error $? $LINENO' ERR
+
+printf "=== ERR TRAP SET ===\n" >&2
 
 handle_build_error() {
   local exit_code=$1
