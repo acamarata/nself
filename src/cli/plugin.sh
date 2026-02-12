@@ -19,6 +19,8 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/dependencies.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/cli-output.sh" 2>/dev/null || true
 
 # Fallbacks if display.sh didn't load
 if ! declare -f log_success >/dev/null 2>&1; then
@@ -182,6 +184,16 @@ cmd_install() {
   run_plugin_installer "$plugin_name"
 
   log_success "Plugin '$plugin_name' installed successfully!"
+
+  # Check for system dependencies
+  if declare -f check_plugin_dependencies >/dev/null 2>&1; then
+    printf "\n"
+    if ! check_plugin_dependencies "$plugin_name" 2>/dev/null; then
+      printf "Note: This plugin has system dependencies\n"
+      printf "Run: ${CLI_CYAN}nself plugin check-deps %s${CLI_RESET}\n" "$plugin_name"
+    fi
+  fi
+
   printf "\nConfigure in .env and run: nself plugin %s sync\n" "$plugin_name"
 }
 
@@ -363,6 +375,42 @@ show_plugin_status() {
         printf "    %s: NOT SET\n" "$var"
       fi
     done
+  fi
+
+  # Check system dependencies (if dependencies.sh is loaded)
+  if declare -f check_plugin_dependencies >/dev/null 2>&1; then
+    printf "  Dependencies:\n"
+
+    # Parse and show quick dependency status
+    local required_deps=$(parse_system_dependencies "$manifest" "required" 2>/dev/null || echo "")
+
+    if [[ -n "$required_deps" ]]; then
+      local dep_count=0
+      local dep_ok=0
+
+      while IFS= read -r line; do
+        if [[ "$line" =~ \"name\" ]]; then
+          local name=$(echo "$line" | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+          ((dep_count++))
+
+          # Get verify command from next few lines
+          local verify_cmd=$(echo "$required_deps" | grep -A5 "\"name\"[[:space:]]*:[[:space:]]*\"$name\"" | grep '"verify"' | head -1 | sed 's/.*"verify"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+          if verify_dependency "$name" "$verify_cmd" 2>/dev/null; then
+            ((dep_ok++))
+          fi
+        fi
+      done <<< "$required_deps"
+
+      if [[ $dep_ok -eq $dep_count ]]; then
+        printf "    ✓ All %d dependencies satisfied\n" "$dep_count"
+      else
+        printf "    ⚠ %d/%d dependencies installed\n" "$dep_ok" "$dep_count"
+        printf "    Run: nself plugin check-deps %s\n" "$plugin_name"
+      fi
+    else
+      printf "    (none required)\n"
+    fi
   fi
 
   printf "\n"
@@ -693,6 +741,10 @@ Commands:
 
   refresh                 Force refresh the plugin registry cache
 
+  check-deps <name>       Check system dependencies for a plugin
+  install-deps <name>     Install missing system dependencies
+    --check-only            Dry run (show what would be installed)
+
 Plugin Actions:
   <plugin> <action>       Run plugin action (e.g., stripe sync)
   <plugin> --help         Show plugin's available actions
@@ -702,6 +754,9 @@ Examples:
   nself plugin list --installed
   nself plugin list --category billing
   nself plugin install stripe
+  nself plugin check-deps stripe
+  nself plugin install-deps stripe
+  nself plugin install-deps stripe --check-only
   nself plugin stripe sync
   nself plugin stripe customers list
   nself plugin update --all
@@ -755,6 +810,45 @@ main() {
       ;;
     refresh | sync-registry)
       cmd_refresh "$@"
+      ;;
+    check-deps)
+      local plugin_name="$1"
+      if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        printf "\nUsage: nself plugin check-deps <name>\n"
+        return 1
+      fi
+      if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+      fi
+      check_plugin_dependencies "$plugin_name"
+      ;;
+    install-deps)
+      local plugin_name="$1"
+      shift || true
+      local check_only=false
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --check-only)
+            check_only=true
+            shift
+            ;;
+          *)
+            shift
+            ;;
+        esac
+      done
+      if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        printf "\nUsage: nself plugin install-deps <name> [--check-only]\n"
+        return 1
+      fi
+      if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+      fi
+      install_plugin_dependencies "$plugin_name" "$check_only"
       ;;
     -h | --help | help | "")
       show_help

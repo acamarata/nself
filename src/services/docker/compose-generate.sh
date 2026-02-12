@@ -294,6 +294,11 @@ EOF
   # ============================================
   generate_template_custom_services >> docker-compose.yml
 
+  # ============================================
+  # Plugin Services (Dockerized plugins)
+  # ============================================
+  generate_all_plugin_services >> docker-compose.yml
+
   # Frontend apps are not Docker containers, skip from compose file
   generate_frontend_apps >> docker-compose.yml
 
