@@ -192,6 +192,19 @@ generate_docker_compose() {
 # Project: ${PROJECT_NAME}
 # Date: $(date '+%Y-%m-%d %H:%M:%S')
 # Build Version: $(cat "$COMPOSE_SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
+#
+# ⚠️  CRITICAL WARNING: Do NOT run 'docker compose' directly!
+#    Use 'nself start' instead, which properly loads .env.computed
+#
+#    Direct 'docker compose up' will FAIL because:
+#    - Missing DOCKER_NETWORK, DATABASE_URL, and other computed variables
+#    - These are generated in .env.computed during 'nself build'
+#    - docker compose doesn't automatically load .env.computed
+#
+#    Always use:
+#      nself start    # Start all services
+#      nself stop     # Stop all services
+#      nself restart  # Restart services
 
 networks:
   ${DOCKER_NETWORK}:

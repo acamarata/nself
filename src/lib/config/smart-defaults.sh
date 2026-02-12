@@ -195,7 +195,9 @@ apply_smart_defaults() {
 
   # Email Provider
   : ${EMAIL_PROVIDER:=mailpit}
-  : ${MAILPIT_SMTP_PORT:=1025}
+  # CRITICAL FIX (Issue #3): Changed from 1025 to 2025 to avoid Docker Desktop conflicts on macOS
+  # Docker Desktop occupies port 1025 on all interfaces, causing bind failures
+  : ${MAILPIT_SMTP_PORT:=2025}
   : ${MAILPIT_UI_PORT:=8025}
   : ${MAILPIT_ROUTE:=mail.${BASE_DOMAIN}}
   : ${EMAIL_FROM:=noreply@${BASE_DOMAIN}}

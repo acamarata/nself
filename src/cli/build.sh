@@ -4,6 +4,30 @@ set -euo pipefail
 # build.sh - nself build command wrapper
 # This is now a thin wrapper that delegates to modular components
 
+# CRITICAL: Error trap to catch silent failures
+# This ensures errors are NEVER silently swallowed
+trap 'handle_build_error $? $LINENO' ERR
+
+handle_build_error() {
+  local exit_code=$1
+  local line_number=$2
+  printf "\nError: Build failed at line %d (exit code: %d)\n" "$line_number" "$exit_code" >&2
+
+  # Log to file for remote debugging
+  mkdir -p "$HOME/.nself/logs" 2>/dev/null
+  {
+    printf "\n=== Build Error: %s ===\n" "$(date '+%Y-%m-%d %H:%M:%S')"
+    printf "Script: %s\n" "${BASH_SOURCE[1]:-build.sh}"
+    printf "Line: %d\n" "$line_number"
+    printf "Exit Code: %d\n" "$exit_code"
+    printf "Working Directory: %s\n" "$PWD"
+    printf "User: %s\n" "$USER"
+    printf "Hostname: %s\n" "$(hostname 2>/dev/null || echo 'unknown')"
+  } >> "$HOME/.nself/logs/build-errors.log" 2>/dev/null
+
+  return "$exit_code"
+}
+
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
