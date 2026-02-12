@@ -66,6 +66,14 @@ EOF
 # For direct docker-compose usage, load with:
 #   docker-compose --env-file .env --env-file .env.computed up
 EOF
+
+  # CRITICAL: Merge .env.secrets into .env.computed for docker compose
+  # Docker compose needs all variables (base + secrets + computed) in one place
+  # This ensures containers receive all required credentials
+  if [[ -f ".env.secrets" ]]; then
+    printf "\n# Secrets from .env.secrets (auto-merged)\n" >> "$output_file"
+    cat ".env.secrets" >> "$output_file"
+  fi
 }
 
 # Export function for use in other scripts

@@ -65,9 +65,13 @@ get_env_file_cascade() {
     dev | development)
       # For dev environment, add .env.local for per-developer overrides
       files+=(".env.local")
+      # CRITICAL: Load .env.secrets in dev too (developers use `nself config secrets generate`)
+      files+=(".env.secrets")
       ;;
     staging)
       files+=(".env.staging")
+      # CRITICAL: Load .env.secrets in staging (Bug #17 fix)
+      files+=(".env.secrets")
       ;;
     prod | production)
       files+=(".env.staging") # Staging configs are base for prod

@@ -394,11 +394,17 @@ start_services() {
   fi
 
   # 8. Determine env file and update project name from runtime
+  # Priority: .env.runtime > .env.computed > .env
+  # .env.computed includes all secrets + computed vars for docker compose
   local env_file=".env"
   if [[ -f ".env.runtime" ]]; then
     env_file=".env.runtime"
     # Update project_name from runtime file
     project_name=$(grep "^PROJECT_NAME=" .env.runtime 2>/dev/null | cut -d= -f2- || echo "$project_name")
+  elif [[ -f ".env.computed" ]]; then
+    # Use .env.computed which merges base + secrets + computed variables
+    # This ensures docker compose has all required credentials
+    env_file=".env.computed"
   fi
 
   # 9. Start services with progress tracking
