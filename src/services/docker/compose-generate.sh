@@ -207,9 +207,17 @@ generate_docker_compose() {
 #      nself restart  # Restart services
 
 networks:
+  # Custom network for all services
   ${DOCKER_NETWORK}:
     name: ${DOCKER_NETWORK}
     driver: bridge
+
+  # CRITICAL FIX: Set default network to be our custom network
+  # This prevents Docker Compose from creating a separate default network
+  # which was causing postgres/redis to fail joining the custom network
+  default:
+    name: ${DOCKER_NETWORK}
+    external: false
 
 volumes:
   postgres_data:

@@ -174,7 +174,23 @@ load_env_with_priority() {
       ;;
 
     dev | development | *)
-      # For dev or any other env: just .env.dev (already loaded)
+      # For dev: load .env.secrets if it exists
+      # CRITICAL FIX: Developers use `nself config secrets generate` in dev too
+      # These secrets should be loaded regardless of environment
+      if [[ -f ".env.secrets" ]]; then
+        local before_count=$(env | wc -l | tr -d ' ')
+        set -a
+        source ".env.secrets" 2>/dev/null
+        set +a
+        local after_count=$(env | wc -l | tr -d ' ')
+        local loaded_count=$((after_count - before_count))
+        loaded=true
+        files_loaded=$((files_loaded + 1))
+        total_vars=$((total_vars + loaded_count))
+        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
+          printf "  %d. Loaded: .env.secrets (%d vars)\n" "$files_loaded" "$loaded_count"
+        fi
+      fi
       ;;
   esac
 
@@ -455,7 +471,13 @@ get_cascaded_vars() {
       ;;
 
     dev | development | *)
-      # For dev: just .env.dev -> .env
+      # For dev: .env.dev -> .env.secrets (if exists) -> .env
+      # CRITICAL FIX: Load .env.secrets in dev too (developers generate secrets for local testing)
+      if [[ -f ".env.secrets" ]]; then
+        set -a
+        source ".env.secrets" 2>/dev/null || true
+        set +a
+      fi
       ;;
   esac
 
