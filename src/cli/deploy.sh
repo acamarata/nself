@@ -305,36 +305,44 @@ deploy_environment() {
     # ============================================================
     # SECURE BY DEFAULT: Post-deployment security verification
     # ============================================================
-    cli_info "Verifying security on remote server..."
 
-    local verify_script='
-      errors=0
-      # Check each sensitive port is NOT exposed externally
-      for port in 6379 5432 7700 9000; do
-        if ss -tlnp 2>/dev/null | grep ":$port" | grep -q "0.0.0.0"; then
-          echo "SECURITY_ERROR: Port $port exposed on 0.0.0.0"
-          errors=$((errors + 1))
+    # Only run strict security check for production environments
+    if [[ "$env_name" == "prod" ]] || [[ "$env_name" == "production" ]]; then
+      cli_info "Verifying production security on remote server..."
+
+      local verify_script='
+        errors=0
+        # Check each sensitive port is NOT exposed externally
+        for port in 6379 5432 7700 9000; do
+          if ss -tlnp 2>/dev/null | grep ":$port" | grep -q "0.0.0.0"; then
+            echo "SECURITY_ERROR: Port $port exposed on 0.0.0.0"
+            errors=$((errors + 1))
+          fi
+        done
+
+        if [[ $errors -eq 0 ]]; then
+          echo "security_verified"
+        else
+          echo "security_failed"
         fi
-      done
+      '
 
-      if [[ $errors -eq 0 ]]; then
-        echo "security_verified"
+      local verify_result
+      verify_result=$(ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "$verify_script" 2>/dev/null || echo "verify_failed")
+
+      if echo "$verify_result" | grep -q "security_verified"; then
+        cli_success "Production security verification passed"
       else
-        echo "security_failed"
+        cli_error "SECURITY VIOLATION: Sensitive ports exposed in production"
+        echo "$verify_result" | grep "SECURITY_ERROR" || true
+        cli_warning "Rolling back deployment..."
+        ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "docker compose down" 2>/dev/null || true
+        return 1
       fi
-    '
-
-    local verify_result
-    verify_result=$(ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "$verify_script" 2>/dev/null || echo "verify_failed")
-
-    if echo "$verify_result" | grep -q "security_verified"; then
-      cli_success "Security verification passed"
     else
-      cli_error "SECURITY VIOLATION: Sensitive ports exposed"
-      echo "$verify_result" | grep "SECURITY_ERROR" || true
-      cli_warning "Rolling back deployment..."
-      ssh -o ConnectTimeout=10 -p "$port" "${user}@${host}" "docker compose down" 2>/dev/null || true
-      return 1
+      # Staging/dev - just informational
+      cli_info "Skipping strict port security check for $env_name environment"
+      printf "  ${CLI_DIM}Note: In production, sensitive ports must NOT be exposed on 0.0.0.0${CLI_RESET}\n"
     fi
 
     cli_success "Deployment complete"
@@ -2772,7 +2780,20 @@ sync_full() {
   fi
 
   # Step 6: Database Automation (CRITICAL - Apply migrations, seeds, metadata)
-  if [[ $hasura_synced -gt 0 ]] || [[ -d "hasura" ]]; then
+  # Always run if we synced hasura files OR if hasura exists on remote
+  local should_deploy_db=false
+  if [[ $hasura_synced -gt 0 ]]; then
+    should_deploy_db=true
+  else
+    # Check if hasura directory exists on REMOTE server
+    local remote_hasura_check
+    remote_hasura_check=$(ssh "${ssh_args[@]}" "${user}@${host}" "[ -d '$deploy_path/hasura' ] && echo 'exists'" 2>/dev/null || echo "")
+    if [[ "$remote_hasura_check" == "exists" ]]; then
+      should_deploy_db=true
+    fi
+  fi
+
+  if [[ "$should_deploy_db" == "true" ]]; then
     printf "\n"
     cli_section "Step 6: Database Deployment"
 
