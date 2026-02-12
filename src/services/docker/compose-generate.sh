@@ -206,6 +206,10 @@ generate_docker_compose() {
 #      nself stop     # Stop all services
 #      nself restart  # Restart services
 
+# COMPOSE_PROJECT_NAME support: Respect user's project name preference
+# Priority: COMPOSE_PROJECT_NAME > PROJECT_NAME
+name: \${COMPOSE_PROJECT_NAME:-\${PROJECT_NAME}}
+
 networks:
   # Custom network for all services
   ${DOCKER_NETWORK}:

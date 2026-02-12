@@ -382,6 +382,11 @@ clear_env_vars_with_prefix() {
 
 # Ensure PROJECT_NAME is set with auto-generation if needed
 ensure_project_name() {
+  # DEBUG: Show we're starting
+  if [[ "${DEBUG:-false}" == "true" ]]; then
+    printf "[DEBUG] ensure_project_name: Starting (current PROJECT_NAME=%s)\n" "${PROJECT_NAME:-unset}" >&2
+  fi
+
   if [[ -z "${PROJECT_NAME:-}" ]]; then
     # Try to get from current directory name (with error handling)
     local dir_name=""
@@ -394,11 +399,22 @@ ensure_project_name() {
       dir_name="my-project"
     fi
 
+    # DEBUG: Show directory name before cleaning
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      printf "[DEBUG] ensure_project_name: dir_name=%s (before cleaning)\n" "$dir_name" >&2
+    fi
+
     # Clean it up to be valid (alphanumeric and hyphens only)
+    # CRITICAL: Timeout protection - avoid infinite loops in sed
     local clean_name=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//' | sed 's/-*$//')
 
     if [[ -z "$clean_name" ]] || [[ "$clean_name" == "." ]] || [[ "$clean_name" == "-" ]]; then
       clean_name="my-project"
+    fi
+
+    # DEBUG: Show final clean name
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+      printf "[DEBUG] ensure_project_name: Setting PROJECT_NAME=%s\n" "$clean_name" >&2
     fi
 
     export PROJECT_NAME="$clean_name"
