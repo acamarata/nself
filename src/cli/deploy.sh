@@ -2477,10 +2477,15 @@ sync_full() {
     fi
   fi
 
-  # Build SSH arguments
+  # Build SSH arguments (lowercase -p for ssh)
   local ssh_args=()
   [[ -n "$key_file" ]] && ssh_args+=("-i" "${key_file/#\~/$HOME}")
   ssh_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-p" "$port")
+
+  # Build SCP arguments (capital -P for scp)
+  local scp_args=()
+  [[ -n "$key_file" ]] && scp_args+=("-i" "${key_file/#\~/$HOME}")
+  scp_args+=("-o" "BatchMode=yes" "-o" "StrictHostKeyChecking=accept-new" "-P" "$port")
 
   # Test connection
   printf "\n"
@@ -2516,14 +2521,14 @@ sync_full() {
     local scp_result=0
     local env_error_file=$(mktemp)
 
-    # Run scp with timeout (30 seconds max)
+    # Run scp with timeout (30 seconds max) - use scp_args with -P for port
     if command -v timeout >/dev/null 2>&1; then
-      timeout 30 scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+      timeout 30 scp "${scp_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
     elif command -v gtimeout >/dev/null 2>&1; then
-      gtimeout 30 scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+      gtimeout 30 scp "${scp_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
     else
       # No timeout available - run directly but warn
-      scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+      scp "${scp_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
     fi
 
     if [[ $scp_result -eq 0 ]]; then
@@ -2549,14 +2554,14 @@ sync_full() {
     local scp_result=0
     local secrets_error_file=$(mktemp)
 
-    # Run scp with timeout (30 seconds max)
+    # Run scp with timeout (30 seconds max) - use scp_args with -P for port
     if command -v timeout >/dev/null 2>&1; then
-      timeout 30 scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+      timeout 30 scp "${scp_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
     elif command -v gtimeout >/dev/null 2>&1; then
-      gtimeout 30 scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+      gtimeout 30 scp "${scp_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
     else
       # No timeout available - run directly
-      scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+      scp "${scp_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
     fi
 
     if [[ $scp_result -eq 0 ]]; then
@@ -2774,8 +2779,37 @@ sync_full() {
 
     if echo "$restart_result" | grep -q "restarted"; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
+
+      # CRITICAL FIX (Bug #7): Wait for database to be ready before Step 6
+      printf "  Waiting for database to be ready... "
+
+      local max_wait=60
+      local waited=0
+      local db_ready=false
+
+      # Get project name to construct container name
+      local project_name=$(grep -E '^PROJECT_NAME=' "$env_dir/.env" 2>/dev/null | cut -d'=' -f2)
+      project_name="${project_name:-nself}"
+
+      while [[ $waited -lt $max_wait ]]; do
+        # Check if postgres container is accepting connections
+        if ssh "${ssh_args[@]}" "${user}@${host}" \
+          "docker exec ${project_name}_postgres pg_isready -U postgres" 2>/dev/null | grep -q "accepting connections"; then
+          printf "${CLI_GREEN}OK${CLI_RESET} (${waited}s)\n"
+          db_ready=true
+          break
+        fi
+        sleep 2
+        waited=$((waited + 2))
+      done
+
+      if [[ "$db_ready" != "true" ]]; then
+        printf "${CLI_YELLOW}TIMEOUT${CLI_RESET} (${max_wait}s)\n"
+        cli_warning "Database not ready - database automation may fail"
+      fi
     else
       printf "${CLI_YELLOW}PARTIAL${CLI_RESET}\n"
+      cli_warning "Service restart may have issues - database automation may fail"
     fi
   fi
 
@@ -2977,6 +3011,17 @@ sync_full() {
       local db_cli_result
       db_cli_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "
         cd '$deploy_path' 2>/dev/null || exit 1
+
+        # CRITICAL FIX (Bug #8): Load environment variables before running nself commands
+        # SSH non-interactive shells don't auto-source .env files
+        if [ -f .env ]; then
+          set -a  # Auto-export all variables
+          source .env 2>/dev/null || true
+          if [ -f .env.secrets ]; then
+            source .env.secrets 2>/dev/null || true
+          fi
+          set +a
+        fi
 
         echo 'Running: nself db migrate up'
         nself db migrate up 2>&1 || echo 'migrate_failed'
