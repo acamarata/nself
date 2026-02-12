@@ -2489,24 +2489,37 @@ sync_full() {
 
   local files_synced=0
 
+  # Ensure deploy directory exists on remote
+  ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path'" 2>/dev/null || true
+
   if [[ -f "$env_dir/.env" ]]; then
     printf "  Syncing .env... "
-    if scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>/dev/null; then
+    local env_error
+    env_error=$(scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>&1)
+    if [[ $? -eq 0 ]]; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       files_synced=$((files_synced + 1))
     else
       printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      if [[ -n "$env_error" ]]; then
+        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(echo "$env_error" | head -1)"
+      fi
     fi
   fi
 
   if [[ -f "$env_dir/.env.secrets" ]]; then
     printf "  Syncing .env.secrets... "
-    if scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>/dev/null; then
+    local secrets_error
+    secrets_error=$(scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>&1)
+    if [[ $? -eq 0 ]]; then
       ssh "${ssh_args[@]}" "${user}@${host}" "chmod 600 '$deploy_path/.env.secrets'" 2>/dev/null
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       files_synced=$((files_synced + 1))
     else
       printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      if [[ -n "$secrets_error" ]]; then
+        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(echo "$secrets_error" | head -1)"
+      fi
     fi
   fi
 
@@ -2524,9 +2537,14 @@ sync_full() {
     local rebuild_result
     rebuild_result=$(ssh "${ssh_args[@]}" "${user}@${host}" "cd '$deploy_path' && nself build --force 2>&1" || echo "rebuild_failed")
 
-    if echo "$rebuild_result" | grep -q "rebuild_failed"; then
-      printf "${CLI_YELLOW}PARTIAL${CLI_RESET}\n"
-      printf "  ${CLI_DIM}Note: Configs may use local BASE_DOMAIN${CLI_RESET}\n"
+    if echo "$rebuild_result" | grep -q "rebuild_failed" || echo "$rebuild_result" | grep -q "syntax error"; then
+      printf "${CLI_RED}FAILED${CLI_RESET}\n"
+      printf "  ${CLI_DIM}Config rebuild failed on remote server${CLI_RESET}\n"
+      if echo "$rebuild_result" | grep -q "syntax error"; then
+        printf "  ${CLI_DIM}Error: Bash syntax error detected${CLI_RESET}\n"
+        printf "  ${CLI_DIM}This is a bug in nself - please report it${CLI_RESET}\n"
+      fi
+      printf "  ${CLI_YELLOW}⚠${CLI_RESET} Continuing with existing configs (may be stale)\n"
     else
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       printf "  ${CLI_DIM}Configs regenerated with remote .env${CLI_RESET}\n"
@@ -2902,8 +2920,39 @@ sync_full() {
         nself db seed 2>&1 || echo 'seed_failed'
 
         echo ''
-        echo 'Running: nself hasura metadata apply'
-        nself hasura metadata apply 2>&1 || echo 'metadata_failed'
+        echo 'Applying Hasura metadata...'
+
+        # Check if nself hasura command exists
+        if nself hasura >/dev/null 2>&1; then
+          echo '  Using: nself hasura metadata apply'
+          nself hasura metadata apply 2>&1 || echo 'metadata_failed'
+        else
+          # Fallback: nself hasura not available in minimal installation
+          echo '  ⚠ nself hasura not available, using fallback method'
+
+          # Get admin secret from .env
+          ADMIN_SECRET=\$(grep -E '^HASURA_GRAPHQL_ADMIN_SECRET=' .env 2>/dev/null | cut -d'=' -f2)
+
+          if [ -z \"\$ADMIN_SECRET\" ]; then
+            echo '  ✗ HASURA_GRAPHQL_ADMIN_SECRET not set in .env'
+            echo 'metadata_failed'
+          elif command -v hasura >/dev/null 2>&1; then
+            # Use hasura CLI directly
+            echo '  Using: hasura CLI'
+            cd hasura && hasura metadata apply --endpoint http://localhost:8080 --admin-secret \"\$ADMIN_SECRET\" 2>&1 || echo 'metadata_failed'
+            cd ..
+          elif [ -f 'hasura/metadata/metadata.json' ]; then
+            # Use direct API call
+            echo '  Using: Direct API call'
+            curl -s -X POST http://localhost:8080/v1/metadata \
+              -H \"x-hasura-admin-secret: \$ADMIN_SECRET\" \
+              -H \"Content-Type: application/json\" \
+              -d @hasura/metadata/metadata.json >/dev/null 2>&1 && echo '  ✓ Metadata applied via API' || echo 'metadata_failed'
+          else
+            echo '  ✗ No method available to apply metadata'
+            echo 'metadata_failed'
+          fi
+        fi
 
         echo 'cli_complete'
       " 2>&1)

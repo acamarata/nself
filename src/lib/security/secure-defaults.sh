@@ -49,15 +49,21 @@ security::validate_build() {
   printf "═══════════════════════════════════════\n\n"
 
   # 1. Check required passwords
-  errors=$((errors + $(security::check_required_passwords "$env" "$allow_insecure")))
+  local password_errors
+  password_errors=$(security::check_required_passwords "$env" "$allow_insecure" 2>&2)
+  errors=$((errors + ${password_errors:-0}))
 
   # 2. Validate port bindings if docker-compose exists
   if [[ -f "docker-compose.yml" ]]; then
-    errors=$((errors + $(security::check_port_bindings)))
+    local port_errors
+    port_errors=$(security::check_port_bindings 2>&2)
+    errors=$((errors + ${port_errors:-0}))
   fi
 
   # 3. Check for insecure defaults
-  errors=$((errors + $(security::check_insecure_values)))
+  local insecure_errors
+  insecure_errors=$(security::check_insecure_values 2>&2)
+  errors=$((errors + ${insecure_errors:-0}))
 
   printf "\n"
 
