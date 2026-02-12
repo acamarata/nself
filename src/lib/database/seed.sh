@@ -52,7 +52,7 @@ seed_database() {
     exit 1
   fi
 
-  printf "\n${COLOR_BLUE}→${COLOR_RESET} Environment: ${COLOR_CYAN}$env${COLOR_RESET}\n"
+  printf "\n${CLI_BLUE}→${CLI_RESET} Environment: ${CLI_CYAN}$env${CLI_RESET}\n"
 
   # Determine seed strategy based on environment
   local seed_pattern=""
@@ -60,21 +60,21 @@ seed_database() {
     prod|production)
       # Production: Only critical system seeds (000-001)
       seed_pattern="^(000|001)_.*\\.sql$"
-      printf "  Strategy: ${COLOR_YELLOW}Production-safe seeds only${COLOR_RESET}\n"
+      printf "  Strategy: ${CLI_YELLOW}Production-safe seeds only${CLI_RESET}\n"
       ;;
     staging|stage)
       # Staging: System + basic demo (000-004)
       seed_pattern="^(000|001|002|003|004)_.*\\.sql$"
-      printf "  Strategy: ${COLOR_CYAN}System + basic demo data${COLOR_RESET}\n"
+      printf "  Strategy: ${CLI_CYAN}System + basic demo data${CLI_RESET}\n"
       ;;
     dev|development|*)
       # Development: All seeds
       seed_pattern=".*\\.sql$"
-      printf "  Strategy: ${COLOR_GREEN}All seeds (full demo)${COLOR_RESET}\n"
+      printf "  Strategy: ${CLI_GREEN}All seeds (full demo)${CLI_RESET}\n"
       ;;
   esac
 
-  printf "\n${COLOR_BLUE}→${COLOR_RESET} Applying seeds:\n"
+  printf "\n${CLI_BLUE}→${CLI_RESET} Applying seeds:\n"
 
   local applied=0
   local skipped=0
@@ -86,19 +86,19 @@ seed_database() {
 
     # Check if seed matches environment pattern
     if echo "$seed_name" | grep -qE "$seed_pattern"; then
-      printf "  ${COLOR_BLUE}⠋${COLOR_RESET} $seed_name..."
+      printf "  ${CLI_BLUE}⠋${CLI_RESET} $seed_name..."
 
       if docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" < "$seed_file" >/dev/null 2>&1; then
         # Count affected rows
         local row_count=$(docker exec "$db_container" psql -U "$db_user" -d "$db_name" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null | tr -d ' ')
-        printf "\r  ${COLOR_GREEN}✓${COLOR_RESET} $seed_name\n"
+        printf "\r  ${CLI_GREEN}✓${CLI_RESET} $seed_name\n"
         ((applied++))
       else
-        printf "\r  ${COLOR_RED}✗${COLOR_RESET} $seed_name (FAILED)\n"
+        printf "\r  ${CLI_RED}✗${CLI_RESET} $seed_name (FAILED)\n"
         ((failed++))
       fi
     else
-      printf "  ${COLOR_DIM}○${COLOR_RESET} $seed_name ${COLOR_DIM}(skipped for $env)${COLOR_RESET}\n"
+      printf "  ${CLI_DIM}○${CLI_RESET} $seed_name ${CLI_DIM}(skipped for $env)${CLI_RESET}\n"
       ((skipped++))
     fi
   done

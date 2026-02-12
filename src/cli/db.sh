@@ -105,8 +105,8 @@ db_shell() {
     exit 1
   fi
 
-  printf "${COLOR_GREEN}✓${COLOR_RESET} Connected to: $db_name\n"
-  printf "${COLOR_DIM}Type \\\\q to exit${COLOR_RESET}\n\n"
+  printf "${CLI_GREEN}✓${CLI_RESET} Connected to: $db_name\n"
+  printf "${CLI_DIM}Type \\\\q to exit${CLI_RESET}\n\n"
 
   # Open psql shell
   docker exec -it "$db_container" psql -U "$db_user" -d "$db_name"
@@ -145,11 +145,11 @@ db_backup() {
   fi
 
   # Create backup
-  printf "${COLOR_BLUE}→${COLOR_RESET} Creating backup: $backup_file...\n"
+  printf "${CLI_BLUE}→${CLI_RESET} Creating backup: $backup_file...\n"
 
   if docker exec "$db_container" pg_dump -U "$db_user" "$db_name" > "$backup_path" 2>/dev/null; then
     local size=$(du -h "$backup_path" | cut -f1)
-    printf "${COLOR_GREEN}✓${COLOR_RESET} Backup created: $backup_path ($size)\n"
+    printf "${CLI_GREEN}✓${CLI_RESET} Backup created: $backup_path ($size)\n"
     cli_success "Database backup complete"
   else
     cli_error "Backup failed"
@@ -177,7 +177,7 @@ db_restore() {
   # Check environment
   local env="${ENV:-dev}"
   if [[ "$env" == "prod" ]] || [[ "$env" == "production" ]]; then
-    printf "${COLOR_RED}⚠ WARNING:${COLOR_RESET} Restoring in production environment\n"
+    printf "${CLI_RED}⚠ WARNING:${CLI_RESET} Restoring in production environment\n"
     printf "Continue? (type 'yes' to confirm): "
     read -r response
     if [[ "$response" != "yes" ]]; then
@@ -204,10 +204,10 @@ db_restore() {
   fi
 
   # Restore backup
-  printf "${COLOR_BLUE}→${COLOR_RESET} Restoring from: $backup_file...\n"
+  printf "${CLI_BLUE}→${CLI_RESET} Restoring from: $backup_file...\n"
 
   if docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" < "$backup_file" >/dev/null 2>&1; then
-    printf "${COLOR_GREEN}✓${COLOR_RESET} Database restored\n"
+    printf "${CLI_GREEN}✓${CLI_RESET} Database restored\n"
     cli_success "Restore complete"
   else
     cli_error "Restore failed"
@@ -232,8 +232,8 @@ db_reset() {
   fi
 
   # Confirm reset
-  printf "${COLOR_RED}⚠ WARNING:${COLOR_RESET} This will DROP ALL TABLES\n"
-  printf "Environment: ${COLOR_YELLOW}$env${COLOR_RESET}\n"
+  printf "${CLI_RED}⚠ WARNING:${CLI_RESET} This will DROP ALL TABLES\n"
+  printf "Environment: ${CLI_YELLOW}$env${CLI_RESET}\n"
   printf "Continue? (type 'yes' to confirm): "
   read -r response
 
@@ -248,7 +248,7 @@ db_reset() {
   local db_name="${POSTGRES_DB:-${PROJECT_NAME}}"
 
   # Drop all tables
-  printf "\n${COLOR_BLUE}→${COLOR_RESET} Dropping all tables...\n"
+  printf "\n${CLI_BLUE}→${CLI_RESET} Dropping all tables...\n"
   docker exec "$db_container" psql -U "$db_user" -d "$db_name" <<'SQL' >/dev/null 2>&1
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
@@ -256,7 +256,7 @@ GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
 SQL
 
-  printf "${COLOR_GREEN}✓${COLOR_RESET} Database reset complete\n"
+  printf "${CLI_GREEN}✓${CLI_RESET} Database reset complete\n"
   printf "\n"
   cli_info "Run 'nself db migrate up' to re-apply migrations"
 }
