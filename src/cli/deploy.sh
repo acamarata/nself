@@ -2489,38 +2489,83 @@ sync_full() {
 
   local files_synced=0
 
+  # CRITICAL FIX: Test SSH connection first to avoid hangs
+  printf "  ${CLI_DIM}Testing SSH connection...${CLI_RESET}\n"
+  if ! ssh "${ssh_args[@]}" -o ConnectTimeout=10 "${user}@${host}" "echo 'connected' >/dev/null 2>&1" 2>/dev/null; then
+    printf "  ${CLI_RED}✗${CLI_RESET} SSH connection failed\n"
+    cli_error "Cannot connect to ${host}"
+    cli_info "Check your SSH keys and server accessibility"
+    exit 1
+  fi
+
   # Ensure deploy directory exists on remote
   ssh "${ssh_args[@]}" "${user}@${host}" "mkdir -p '$deploy_path'" 2>/dev/null || true
 
   if [[ -f "$env_dir/.env" ]]; then
     printf "  Syncing .env... "
-    local env_error
-    env_error=$(scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>&1)
-    if [[ $? -eq 0 ]]; then
+
+    # CRITICAL FIX: Use timeout and proper error handling to prevent hangs
+    local scp_result=0
+    local env_error_file=$(mktemp)
+
+    # Run scp with timeout (30 seconds max)
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 30 scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+    elif command -v gtimeout >/dev/null 2>&1; then
+      gtimeout 30 scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+    else
+      # No timeout available - run directly but warn
+      scp "${ssh_args[@]}" "$env_dir/.env" "${user}@${host}:${deploy_path}/.env" 2>"$env_error_file" || scp_result=$?
+    fi
+
+    if [[ $scp_result -eq 0 ]]; then
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       files_synced=$((files_synced + 1))
     else
       printf "${CLI_RED}FAILED${CLI_RESET}\n"
-      if [[ -n "$env_error" ]]; then
-        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(echo "$env_error" | head -1)"
+      if [[ -s "$env_error_file" ]]; then
+        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(head -1 "$env_error_file")"
+      fi
+      if [[ $scp_result -eq 124 ]] || [[ $scp_result -eq 137 ]]; then
+        printf "  ${CLI_DIM}(timed out after 30 seconds)${CLI_RESET}\n"
       fi
     fi
+
+    rm -f "$env_error_file"
   fi
 
   if [[ -f "$env_dir/.env.secrets" ]]; then
     printf "  Syncing .env.secrets... "
-    local secrets_error
-    secrets_error=$(scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>&1)
-    if [[ $? -eq 0 ]]; then
+
+    # CRITICAL FIX: Use timeout and proper error handling to prevent hangs
+    local scp_result=0
+    local secrets_error_file=$(mktemp)
+
+    # Run scp with timeout (30 seconds max)
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 30 scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+    elif command -v gtimeout >/dev/null 2>&1; then
+      gtimeout 30 scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+    else
+      # No timeout available - run directly
+      scp "${ssh_args[@]}" "$env_dir/.env.secrets" "${user}@${host}:${deploy_path}/.env.secrets" 2>"$secrets_error_file" || scp_result=$?
+    fi
+
+    if [[ $scp_result -eq 0 ]]; then
       ssh "${ssh_args[@]}" "${user}@${host}" "chmod 600 '$deploy_path/.env.secrets'" 2>/dev/null
       printf "${CLI_GREEN}OK${CLI_RESET}\n"
       files_synced=$((files_synced + 1))
     else
       printf "${CLI_RED}FAILED${CLI_RESET}\n"
-      if [[ -n "$secrets_error" ]]; then
-        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(echo "$secrets_error" | head -1)"
+      if [[ -s "$secrets_error_file" ]]; then
+        printf "  ${CLI_DIM}Error: %s${CLI_RESET}\n" "$(head -1 "$secrets_error_file")"
+      fi
+      if [[ $scp_result -eq 124 ]] || [[ $scp_result -eq 137 ]]; then
+        printf "  ${CLI_DIM}(timed out after 30 seconds)${CLI_RESET}\n"
       fi
     fi
+
+    rm -f "$secrets_error_file"
   fi
 
   # Step 1.5: Rebuild configs on remote with correct environment

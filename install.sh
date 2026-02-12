@@ -37,6 +37,13 @@ GITHUB_API="https://api.github.com/repos/${DEFAULT_REPO}"
 
 # Get the version to install (latest release or specified version)
 get_install_version() {
+  # CRITICAL FIX: Allow forcing latest main branch via env var
+  # Usage: curl -fsSL install.sh | INSTALL_LATEST=true bash
+  if [[ "${INSTALL_LATEST:-false}" == "true" ]]; then
+    echo "main"
+    return 0
+  fi
+
   if [[ -n "$NSELF_VERSION" ]]; then
     echo "$NSELF_VERSION"
   else
@@ -606,9 +613,14 @@ download_nself() {
     tar_url="${REPO_URL}/releases/download/v${version}/nself-v${version}.tar.gz"
     checksum_url="${REPO_URL}/releases/download/v${version}/nself-v${version}.tar.gz.sha256"
     echo_info "Installing release version (minimal runtime files)"
+  elif [[ "$INSTALL_VERSION" == "main" ]] || [[ "$INSTALL_VERSION" == "master" ]]; then
+    # CRITICAL FIX: Use correct URL for branch archives (not tags)
+    tar_url="$REPO_URL/archive/refs/heads/${INSTALL_VERSION}.tar.gz"
+    echo_info "Installing latest from ${INSTALL_VERSION} branch (full source)"
   else
+    # Assume it's a tag
     tar_url="$REPO_URL/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
-    echo_info "Installing from tag/branch (full source)"
+    echo_info "Installing from tag: ${INSTALL_VERSION} (full source)"
   fi
 
   # Download archive to file first (for integrity verification)
