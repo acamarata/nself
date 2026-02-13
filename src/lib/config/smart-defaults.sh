@@ -125,6 +125,9 @@ apply_smart_defaults() {
   fi
 
   # Optional Services (all disabled by default)
+  : ${MONITORING_ENABLED:=false}
+  : ${MAILPIT_ENABLED:=false}
+  : ${MEILISEARCH_ENABLED:=false}
   : ${FUNCTIONS_ENABLED:=false}
   : ${FUNCTIONS_ROUTE:=functions.${BASE_DOMAIN}}
   : ${MLFLOW_ENABLED:=false}
@@ -195,9 +198,7 @@ apply_smart_defaults() {
 
   # Email Provider
   : ${EMAIL_PROVIDER:=mailpit}
-  # CRITICAL FIX (Issue #3): Changed from 1025 to 2025 to avoid Docker Desktop conflicts on macOS
-  # Docker Desktop occupies port 1025 on all interfaces, causing bind failures
-  : ${MAILPIT_SMTP_PORT:=2025}
+  : ${MAILPIT_SMTP_PORT:=1025}
   : ${MAILPIT_UI_PORT:=8025}
   : ${MAILPIT_ROUTE:=mail.${BASE_DOMAIN}}
   : ${EMAIL_FROM:=noreply@${BASE_DOMAIN}}
@@ -253,6 +254,7 @@ apply_smart_defaults() {
   export S3_ACCESS_KEY S3_SECRET_KEY S3_BUCKET S3_REGION
   export NGINX_VERSION NGINX_HTTP_PORT NGINX_HTTPS_PORT NGINX_CLIENT_MAX_BODY_SIZE NGINX_GZIP_ENABLED NGINX_RATE_LIMIT
   export SSL_MODE
+  export MONITORING_ENABLED MAILPIT_ENABLED MEILISEARCH_ENABLED
   export FUNCTIONS_ENABLED FUNCTIONS_ROUTE
   export DASHBOARD_ENABLED DASHBOARD_VERSION DASHBOARD_ROUTE
   export REDIS_ENABLED REDIS_VERSION REDIS_PORT REDIS_PASSWORD
@@ -280,13 +282,29 @@ apply_smart_defaults() {
 
 # Load environment files with proper priority
 load_env_with_defaults() {
-  # Simplified direct loading to avoid hanging
-  # Load .env.dev first (team defaults)
-  if [[ -f ".env.dev" ]]; then
-    set -a
-    source ".env.dev" 2>/dev/null
-    set +a
+  # Source safe env parser if available
+  local _sd_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if command -v safe_source_env >/dev/null 2>&1; then
+    : # Already available
+  elif [[ -f "$_sd_script_dir/../utils/env.sh" ]]; then
+    source "$_sd_script_dir/../utils/env.sh"
   fi
+
+  # Use safe_source_env if available, fallback to source for .env files
+  _sd_load_env() {
+    local file="$1"
+    [[ ! -f "$file" ]] && return 1
+    if command -v safe_source_env >/dev/null 2>&1; then
+      safe_source_env "$file"
+    else
+      set -a
+      source "$file" 2>/dev/null
+      set +a
+    fi
+  }
+
+  # Load .env.dev first (team defaults)
+  _sd_load_env ".env.dev"
 
   # Normalize ENV after loading
   case "${ENV:-dev}" in
@@ -302,88 +320,18 @@ load_env_with_defaults() {
   esac
 
   # Load environment-specific files
-  if [[ "${ENV:-}" == "staging" ]] && [[ -f ".env.staging" ]]; then
-    set -a
-    source ".env.staging" 2>/dev/null
-    set +a
+  if [[ "${ENV:-}" == "staging" ]]; then
+    _sd_load_env ".env.staging"
   elif [[ "${ENV:-}" == "prod" ]]; then
-    [[ -f ".env.prod" ]] && source ".env.prod" 2>/dev/null
-    [[ -f ".env.secrets" ]] && source ".env.secrets" 2>/dev/null
+    _sd_load_env ".env.prod"
+    _sd_load_env ".env.secrets"
   fi
 
   # Load .env.local if it exists (alternative to .env)
-  if [[ -f ".env.local" ]]; then
-    set -a
-    source ".env.local" 2>/dev/null
-    set +a
-  fi
+  _sd_load_env ".env.local"
 
-  # Load local overrides last
-  if [[ -f ".env" ]]; then
-    set -a
-    source ".env" 2>/dev/null
-    set +a
-  fi
-
-  # Skip the problematic env.sh loading
-  if false; then
-    # Fallback: implement the same cascade here
-    # Determine current environment (default to dev)
-    local current_env="${ENV:-dev}"
-
-    # STEP 1: Always load .env.dev as the base (team defaults)
-    if [[ -f ".env.dev" ]]; then
-      set -a
-      source ".env.dev" 2>/dev/null
-      set +a
-      # Update current_env in case it was set in .env.dev
-      current_env="${ENV:-dev}"
-    fi
-
-    # STEP 2: Load environment-specific overrides based on ENV
-    case "$current_env" in
-      staging | stage)
-        # For staging: .env.dev -> .env.staging
-        if [[ -f ".env.staging" ]]; then
-          set -a
-          source ".env.staging" 2>/dev/null
-          set +a
-        fi
-        ;;
-
-      prod | production)
-        # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
-        if [[ -f ".env.staging" ]]; then
-          set -a
-          source ".env.staging" 2>/dev/null
-          set +a
-        fi
-
-        if [[ -f ".env.prod" ]]; then
-          set -a
-          source ".env.prod" 2>/dev/null
-          set +a
-        fi
-
-        if [[ -f ".env.secrets" ]]; then
-          set -a
-          source ".env.secrets" 2>/dev/null
-          set +a
-        fi
-        ;;
-
-      dev | development | *)
-        # For dev or any other env: just .env.dev (already loaded)
-        ;;
-    esac
-
-    # STEP 3: Load .env as the FINAL override (HIGHEST PRIORITY)
-    if [[ -f ".env" ]]; then
-      set -a
-      source ".env" 2>/dev/null
-      set +a
-    fi
-  fi
+  # Load local overrides last (HIGHEST PRIORITY)
+  _sd_load_env ".env"
 
   # Apply smart defaults for any missing values
   apply_smart_defaults

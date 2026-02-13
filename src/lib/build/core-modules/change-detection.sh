@@ -123,23 +123,23 @@ detect_changes() {
     CHANGES_DETECTED+=(".env.prod")
   fi
 
-  # Check service enable/disable changes
-  [[ "$REDIS_ENABLED" != "${PREV_redis_enabled:-false}" ]] && CHANGES_DETECTED+=("redis-toggled")
-  [[ "$MINIO_ENABLED" != "${PREV_minio_enabled:-false}" ]] && CHANGES_DETECTED+=("minio-toggled")
-  [[ "$NSELF_ADMIN_ENABLED" != "${PREV_nself_admin_enabled:-false}" ]] && CHANGES_DETECTED+=("admin-toggled")
-  [[ "$MEILISEARCH_ENABLED" != "${PREV_meilisearch_enabled:-false}" ]] && CHANGES_DETECTED+=("search-toggled")
-  [[ "$MAILPIT_ENABLED" != "${PREV_mailpit_enabled:-false}" ]] && CHANGES_DETECTED+=("mail-toggled")
-  [[ "$MLFLOW_ENABLED" != "${PREV_mlflow_enabled:-false}" ]] && CHANGES_DETECTED+=("mlflow-toggled")
-  [[ "$FUNCTIONS_ENABLED" != "${PREV_functions_enabled:-false}" ]] && CHANGES_DETECTED+=("functions-toggled")
-  [[ "$MONITORING_ENABLED" != "${PREV_monitoring_enabled:-false}" ]] && CHANGES_DETECTED+=("monitoring-toggled")
+  # Check service enable/disable changes (use defaults to avoid unbound variable errors)
+  [[ "${REDIS_ENABLED:-false}" != "${PREV_redis_enabled:-false}" ]] && CHANGES_DETECTED+=("redis-toggled")
+  [[ "${MINIO_ENABLED:-false}" != "${PREV_minio_enabled:-false}" ]] && CHANGES_DETECTED+=("minio-toggled")
+  [[ "${NSELF_ADMIN_ENABLED:-false}" != "${PREV_nself_admin_enabled:-false}" ]] && CHANGES_DETECTED+=("admin-toggled")
+  [[ "${MEILISEARCH_ENABLED:-false}" != "${PREV_meilisearch_enabled:-false}" ]] && CHANGES_DETECTED+=("search-toggled")
+  [[ "${MAILPIT_ENABLED:-false}" != "${PREV_mailpit_enabled:-false}" ]] && CHANGES_DETECTED+=("mail-toggled")
+  [[ "${MLFLOW_ENABLED:-false}" != "${PREV_mlflow_enabled:-false}" ]] && CHANGES_DETECTED+=("mlflow-toggled")
+  [[ "${FUNCTIONS_ENABLED:-false}" != "${PREV_functions_enabled:-false}" ]] && CHANGES_DETECTED+=("functions-toggled")
+  [[ "${MONITORING_ENABLED:-false}" != "${PREV_monitoring_enabled:-false}" ]] && CHANGES_DETECTED+=("monitoring-toggled")
 
   # Check custom services count change
-  if [[ "$CUSTOM_SERVICE_COUNT" != "${PREV_custom_service_count:-0}" ]]; then
+  if [[ "${CUSTOM_SERVICE_COUNT:-0}" != "${PREV_custom_service_count:-0}" ]]; then
     CHANGES_DETECTED+=("custom-services-changed")
   fi
 
   # Check frontend apps count change
-  if [[ "$FRONTEND_APP_COUNT" != "${PREV_frontend_app_count:-0}" ]]; then
+  if [[ "${FRONTEND_APP_COUNT:-0}" != "${PREV_frontend_app_count:-0}" ]]; then
     CHANGES_DETECTED+=("frontend-apps-changed")
   fi
 

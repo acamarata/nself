@@ -20,10 +20,46 @@ if [[ -f "$ENV_UTILS_DIR/env-detection.sh" ]]; then
   source "$ENV_UTILS_DIR/env-detection.sh"
 fi
 
-# Source environment validator for undefined variable detection
-if [[ -f "$ENV_UTILS_DIR/env-validator.sh" ]]; then
-  source "$ENV_UTILS_DIR/env-validator.sh"
-fi
+# Safe environment file loader - parses line-by-line instead of sourcing
+# Prevents unquoted values with spaces (e.g., CMD=pnpm dev) from being
+# executed as shell commands. Sets _SAFE_SOURCE_ENV_COUNT with vars loaded.
+safe_source_env() {
+  local env_file="$1"
+  [[ ! -f "$env_file" ]] && return 1
+
+  _SAFE_SOURCE_ENV_COUNT=0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    # Skip lines without = (not KEY=VALUE)
+    [[ "$line" != *=* ]] && continue
+
+    # Extract key (everything before first =)
+    local key="${line%%=*}"
+    # Trim leading/trailing whitespace from key
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+
+    # Validate key format (must be valid env var name)
+    [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && continue
+
+    # Extract value (everything after first =)
+    local value="${line#*=}"
+
+    # Strip surrounding double quotes
+    if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+      value="${BASH_REMATCH[1]}"
+    # Strip surrounding single quotes
+    elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+      value="${BASH_REMATCH[1]}"
+    fi
+
+    export "$key=$value"
+    _SAFE_SOURCE_ENV_COUNT=$((_SAFE_SOURCE_ENV_COUNT + 1))
+  done < "$env_file"
+
+  return 0
+}
 
 # Load environment files with correct priority order
 # CONFIGURATION PHILOSOPHY:
@@ -61,12 +97,8 @@ load_env_with_priority() {
 
   # STEP 1: Always load .env.dev as the base (team defaults)
   if [[ -f ".env.dev" ]]; then
-    local before_count=$(env | wc -l | tr -d ' ')
-    set -a
-    source ".env.dev" 2>/dev/null
-    set +a
-    local after_count=$(env | wc -l | tr -d ' ')
-    local loaded_count=$((after_count - before_count))
+    safe_source_env ".env.dev"
+    local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
     loaded=true
     files_loaded=$((files_loaded + 1))
     total_vars=$((total_vars + loaded_count))
@@ -77,12 +109,8 @@ load_env_with_priority() {
 
   # STEP 1.5: Load .env.local if it exists (legacy/alternative to .env)
   if [[ -f ".env.local" ]]; then
-    local before_count=$(env | wc -l | tr -d ' ')
-    set -a
-    source ".env.local" 2>/dev/null
-    set +a
-    local after_count=$(env | wc -l | tr -d ' ')
-    local loaded_count=$((after_count - before_count))
+    safe_source_env ".env.local"
+    local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
     loaded=true
     files_loaded=$((files_loaded + 1))
     total_vars=$((total_vars + loaded_count))
@@ -115,12 +143,8 @@ load_env_with_priority() {
     staging | stage)
       # For staging: .env.dev -> .env.staging
       if [[ -f ".env.staging" ]]; then
-        local before_count=$(env | wc -l | tr -d ' ')
-        set -a
-        source ".env.staging" 2>/dev/null
-        set +a
-        local after_count=$(env | wc -l | tr -d ' ')
-        local loaded_count=$((after_count - before_count))
+        safe_source_env ".env.staging"
+        local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
         loaded=true
         files_loaded=$((files_loaded + 1))
         total_vars=$((total_vars + loaded_count))
@@ -133,12 +157,8 @@ load_env_with_priority() {
     prod | production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets
       if [[ -f ".env.staging" ]]; then
-        local before_count=$(env | wc -l | tr -d ' ')
-        set -a
-        source ".env.staging" 2>/dev/null
-        set +a
-        local after_count=$(env | wc -l | tr -d ' ')
-        local loaded_count=$((after_count - before_count))
+        safe_source_env ".env.staging"
+        local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
         loaded=true
         files_loaded=$((files_loaded + 1))
         total_vars=$((total_vars + loaded_count))
@@ -148,12 +168,8 @@ load_env_with_priority() {
       fi
 
       if [[ -f ".env.prod" ]]; then
-        local before_count=$(env | wc -l | tr -d ' ')
-        set -a
-        source ".env.prod" 2>/dev/null
-        set +a
-        local after_count=$(env | wc -l | tr -d ' ')
-        local loaded_count=$((after_count - before_count))
+        safe_source_env ".env.prod"
+        local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
         loaded=true
         files_loaded=$((files_loaded + 1))
         total_vars=$((total_vars + loaded_count))
@@ -163,12 +179,8 @@ load_env_with_priority() {
       fi
 
       if [[ -f ".env.secrets" ]]; then
-        local before_count=$(env | wc -l | tr -d ' ')
-        set -a
-        source ".env.secrets" 2>/dev/null
-        set +a
-        local after_count=$(env | wc -l | tr -d ' ')
-        local loaded_count=$((after_count - before_count))
+        safe_source_env ".env.secrets"
+        local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
         loaded=true
         files_loaded=$((files_loaded + 1))
         total_vars=$((total_vars + loaded_count))
@@ -179,58 +191,15 @@ load_env_with_priority() {
       ;;
 
     dev | development | *)
-      # For dev: load .env.secrets if it exists
-      # CRITICAL FIX: Developers use `nself config secrets generate` in dev too
-      # These secrets should be loaded regardless of environment
-
-      # DEBUG: Always show if we're checking for .env.secrets
-      if [[ "${DEBUG:-false}" == "true" ]]; then
-        printf "[DEBUG] Checking for .env.secrets in dev mode at: %s/.env.secrets\n" "$PWD" >&2
-      fi
-
-      if [[ -f ".env.secrets" ]]; then
-        # DEBUG: Show that we found it
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] Found .env.secrets, loading...\n" >&2
-        fi
-
-        local before_count=$(env | wc -l | tr -d ' ')
-        set -a
-        source ".env.secrets" 2>/dev/null
-        set +a
-        local after_count=$(env | wc -l | tr -d ' ')
-        local loaded_count=$((after_count - before_count))
-        loaded=true
-        files_loaded=$((files_loaded + 1))
-        total_vars=$((total_vars + loaded_count))
-
-        # DEBUG: Show what we loaded
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] Loaded .env.secrets: %d vars\n" "$loaded_count" >&2
-          printf "[DEBUG] POSTGRES_PASSWORD is now: %s***\n" "${POSTGRES_PASSWORD:0:5}" >&2
-        fi
-
-        if [[ "$verbose" == "true" ]] && [[ "$silent" != "true" ]]; then
-          printf "  %d. Loaded: .env.secrets (%d vars)\n" "$files_loaded" "$loaded_count"
-        fi
-      else
-        # DEBUG: Show that we didn't find it
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] .env.secrets NOT FOUND\n" >&2
-        fi
-      fi
+      # For dev or any other env: just .env.dev (already loaded)
       ;;
   esac
 
   # STEP 4: Load .env as the FINAL override (HIGHEST PRIORITY)
   # This allows local overrides of ANY setting regardless of environment
   if [[ -f ".env" ]]; then
-    local before_count=$(env | wc -l | tr -d ' ')
-    set -a
-    source ".env" 2>/dev/null
-    set +a
-    local after_count=$(env | wc -l | tr -d ' ')
-    local loaded_count=$((after_count - before_count))
+    safe_source_env ".env"
+    local loaded_count=${_SAFE_SOURCE_ENV_COUNT:-0}
     loaded=true
     files_loaded=$((files_loaded + 1))
     total_vars=$((total_vars + loaded_count))
@@ -330,7 +299,7 @@ is_development() {
   [[ "$env" == "dev" ]] || [[ "$env" == "development" ]]
 }
 
-# Export environment from file
+# Export environment from file (uses safe parser to avoid command execution)
 export_env_from_file() {
   local file="$1"
 
@@ -338,10 +307,7 @@ export_env_from_file() {
     return 1
   fi
 
-  set -a
-  source "$file"
-  set +a
-
+  safe_source_env "$file"
   return 0
 }
 
@@ -382,11 +348,6 @@ clear_env_vars_with_prefix() {
 
 # Ensure PROJECT_NAME is set with auto-generation if needed
 ensure_project_name() {
-  # DEBUG: Show we're starting
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] ensure_project_name: Starting (current PROJECT_NAME=%s)\n" "${PROJECT_NAME:-unset}" >&2
-  fi
-
   if [[ -z "${PROJECT_NAME:-}" ]]; then
     # Try to get from current directory name (with error handling)
     local dir_name=""
@@ -399,22 +360,11 @@ ensure_project_name() {
       dir_name="my-project"
     fi
 
-    # DEBUG: Show directory name before cleaning
-    if [[ "${DEBUG:-false}" == "true" ]]; then
-      printf "[DEBUG] ensure_project_name: dir_name=%s (before cleaning)\n" "$dir_name" >&2
-    fi
-
     # Clean it up to be valid (alphanumeric and hyphens only)
-    # CRITICAL: Timeout protection - avoid infinite loops in sed
     local clean_name=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/^-*//' | sed 's/-*$//')
 
     if [[ -z "$clean_name" ]] || [[ "$clean_name" == "." ]] || [[ "$clean_name" == "-" ]]; then
       clean_name="my-project"
-    fi
-
-    # DEBUG: Show final clean name
-    if [[ "${DEBUG:-false}" == "true" ]]; then
-      printf "[DEBUG] ensure_project_name: Setting PROJECT_NAME=%s\n" "$clean_name" >&2
     fi
 
     export PROJECT_NAME="$clean_name"
@@ -476,81 +426,29 @@ get_cascaded_vars() {
   esac
 
   # Always start with .env.dev as base (team defaults)
-  if [[ -f ".env.dev" ]]; then
-    set -a
-    source ".env.dev" 2>/dev/null || true
-    set +a
-  fi
+  [[ -f ".env.dev" ]] && safe_source_env ".env.dev"
 
   # Load environment-specific files based on target_env
   case "$target_env" in
     staging)
       # For staging: .env.dev -> .env.staging -> .env
-      if [[ -f ".env.staging" ]]; then
-        set -a
-        source ".env.staging" 2>/dev/null || true
-        set +a
-      fi
+      [[ -f ".env.staging" ]] && safe_source_env ".env.staging"
       ;;
 
     prod | production)
       # For production: .env.dev -> .env.staging -> .env.prod -> .env.secrets -> .env
-      if [[ -f ".env.staging" ]]; then
-        set -a
-        source ".env.staging" 2>/dev/null || true
-        set +a
-      fi
-
-      if [[ -f ".env.prod" ]]; then
-        set -a
-        source ".env.prod" 2>/dev/null || true
-        set +a
-      fi
-
-      if [[ -f ".env.secrets" ]]; then
-        set -a
-        source ".env.secrets" 2>/dev/null || true
-        set +a
-      fi
+      [[ -f ".env.staging" ]] && safe_source_env ".env.staging"
+      [[ -f ".env.prod" ]] && safe_source_env ".env.prod"
+      [[ -f ".env.secrets" ]] && safe_source_env ".env.secrets"
       ;;
 
     dev | development | *)
-      # For dev: .env.dev -> .env.secrets (if exists) -> .env
-      # CRITICAL FIX: Load .env.secrets in dev too (developers generate secrets for local testing)
-
-      # DEBUG: Always show if we're checking for .env.secrets
-      if [[ "${DEBUG:-false}" == "true" ]]; then
-        printf "[DEBUG] get_cascaded_vars: Checking for .env.secrets in dev mode\n" >&2
-      fi
-
-      if [[ -f ".env.secrets" ]]; then
-        # DEBUG: Show that we found it
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] get_cascaded_vars: Loading .env.secrets...\n" >&2
-        fi
-
-        set -a
-        source ".env.secrets" 2>/dev/null || true
-        set +a
-
-        # DEBUG: Show result
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] get_cascaded_vars: After loading, POSTGRES_PASSWORD=%s***\n" "${POSTGRES_PASSWORD:0:5}" >&2
-        fi
-      else
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-          printf "[DEBUG] get_cascaded_vars: .env.secrets NOT FOUND at %s/.env.secrets\n" "$PWD" >&2
-        fi
-      fi
+      # For dev: just .env.dev -> .env
       ;;
   esac
 
   # Always load .env last as highest priority override
-  if [[ -f ".env" ]]; then
-    set -a
-    source ".env" 2>/dev/null || true
-    set +a
-  fi
+  [[ -f ".env" ]] && safe_source_env ".env"
 
   # Export the determined environment
   export ENV="$target_env"
@@ -603,6 +501,7 @@ print_cascaded_vars() {
 }
 
 # Export functions
+export -f safe_source_env
 export -f load_env_with_priority
 export -f get_env_var
 export -f set_env_var

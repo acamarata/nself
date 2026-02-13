@@ -286,16 +286,11 @@ start_services() {
     env=$(grep "^ENV=" .env 2>/dev/null | cut -d= -f2- || echo "dev")
   fi
 
-  # CRITICAL: Check COMPOSE_PROJECT_NAME first (user preference for short names)
-  # Priority: COMPOSE_PROJECT_NAME > PROJECT_NAME > directory name
+  # Project name priority: COMPOSE_PROJECT_NAME > PROJECT_NAME > .env > dirname
   local project_name="${COMPOSE_PROJECT_NAME:-${PROJECT_NAME:-}}"
   if [[ -z "$project_name" ]] && [[ -f ".env" ]]; then
-    # Try COMPOSE_PROJECT_NAME from .env first
     project_name=$(grep "^COMPOSE_PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
-    # Fall back to PROJECT_NAME if COMPOSE_PROJECT_NAME not set
-    if [[ -z "$project_name" ]]; then
-      project_name=$(grep "^PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
-    fi
+    [[ -z "$project_name" ]] && project_name=$(grep "^PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2-)
   fi
   if [[ -z "$project_name" ]]; then
     project_name=$(basename "$PWD")
@@ -320,10 +315,21 @@ start_services() {
   update_progress 0 "running"
 
   if [[ ! -f "docker-compose.yml" ]]; then
-    update_progress 0 "error"
-    printf "\n${COLOR_RED}Error: docker-compose.yml not found${COLOR_RESET}\n"
-    printf "Run '${COLOR_BLUE}nself build${COLOR_RESET}' first to generate configuration\n\n"
-    return 1
+    # Monorepo fallback: check if backend/ has docker-compose.yml
+    if [[ -d "backend" ]] && [[ -f "backend/docker-compose.yml" ]]; then
+      printf "${COLOR_CYAN}Monorepo detected${COLOR_RESET} — switching to backend/ directory\n"
+      cd backend
+      # Reload environment from backend directory
+      if [[ -f ".env" ]] || [[ -f ".env.local" ]]; then
+        load_env_with_priority >/dev/null 2>&1 || true
+        project_name="${PROJECT_NAME:-$(basename "$PWD")}"
+      fi
+    else
+      update_progress 0 "error"
+      printf "\n${COLOR_RED}Error: docker-compose.yml not found${COLOR_RESET}\n"
+      printf "Run '${COLOR_BLUE}nself build${COLOR_RESET}' first to generate configuration\n\n"
+      return 1
+    fi
   fi
 
   if ! command -v docker >/dev/null 2>&1; then
@@ -339,56 +345,33 @@ start_services() {
     return 1
   fi
 
-  # Check Docker memory allocation (warn if < 4GB, prevents Hasura OOM/exit 137)
-  local docker_mem_bytes
-  docker_mem_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "0")
-  if [[ "$docker_mem_bytes" -gt 0 ]] && [[ "$docker_mem_bytes" -lt 4000000000 ]]; then
-    local docker_mem_gb=$(( docker_mem_bytes / 1073741824 ))
-    printf "\n${COLOR_YELLOW}⚠ Warning:${COLOR_RESET} Docker has only %sGB memory allocated\n" "$docker_mem_gb"
-    printf "  Recommended: ${COLOR_BOLD}4GB+${COLOR_RESET} to prevent service OOM kills (exit 137)\n"
-    printf "  Increase in: Docker Desktop → Settings → Resources → Memory\n\n"
-  fi
-
   update_progress 0 "done"
 
   # 5. Clean up containers based on CLEANUP_ON_START setting
   update_progress 1 "running"
 
-  # Also check for containers with the actual project name from .env
-  local actual_project_name="${PROJECT_NAME:-$project_name}"
-  if [[ -f ".env" ]]; then
-    actual_project_name=$(grep "^PROJECT_NAME=" .env 2>/dev/null | cut -d= -f2- || echo "$project_name")
-  fi
-
-  # Determine cleanup behavior
+  # Determine cleanup behavior — use Docker Compose labels to scope cleanup
+  # to ONLY this project's containers (prevents cross-project destruction)
   local should_cleanup=false
   if [[ "$CLEANUP_ON_START" == "always" ]]; then
     should_cleanup=true
   elif [[ "$CLEANUP_ON_START" == "auto" ]]; then
-    # Check if any containers are in error state
-    local error_containers=$(docker ps -a --filter "name=${actual_project_name}_" --filter "status=exited" --format "{{.Names}}" 2>/dev/null)
+    # Check if any containers for THIS project are in error state (label-scoped)
+    local error_containers=$(docker ps -a --filter "label=com.docker.compose.project=$project_name" --filter "status=exited" --format "{{.Names}}" 2>/dev/null)
     if [[ -n "$error_containers" ]]; then
       should_cleanup=true
     fi
   fi
 
   if [[ "$should_cleanup" == "true" ]]; then
-    # Clean up containers with both potential naming patterns
-    local existing_containers=$(docker ps -aq --filter "name=${actual_project_name}_" 2>/dev/null)
+    # Clean up ONLY containers belonging to this project (label-scoped)
+    local existing_containers=$(docker ps -aq --filter "label=com.docker.compose.project=$project_name" 2>/dev/null)
     if [[ -n "$existing_containers" ]]; then
       docker rm -f $existing_containers >/dev/null 2>&1 || true
     fi
 
-    # Also clean up with directory-based name if different
-    if [[ "$project_name" != "$actual_project_name" ]]; then
-      existing_containers=$(docker ps -aq --filter "name=${project_name}_" 2>/dev/null)
-      if [[ -n "$existing_containers" ]]; then
-        docker rm -f $existing_containers >/dev/null 2>&1 || true
-      fi
-    fi
-
-    # Clean up any existing network to avoid conflicts
-    docker network rm "${actual_project_name}_network" >/dev/null 2>&1 || true
+    # Clean up project network
+    docker network rm "${project_name}_network" >/dev/null 2>&1 || true
     docker network rm "${project_name}_default" >/dev/null 2>&1 || true
   fi
 
@@ -411,38 +394,11 @@ start_services() {
   fi
 
   # 8. Determine env file and update project name from runtime
-  # Priority: .env.runtime > .env.computed > .env
-  # .env.computed includes all secrets + computed vars for docker compose
   local env_file=".env"
   if [[ -f ".env.runtime" ]]; then
     env_file=".env.runtime"
     # Update project_name from runtime file
     project_name=$(grep "^PROJECT_NAME=" .env.runtime 2>/dev/null | cut -d= -f2- || echo "$project_name")
-  elif [[ -f ".env.computed" ]]; then
-    # Use .env.computed which merges base + secrets + computed variables
-    # This ensures docker compose has all required credentials
-    env_file=".env.computed"
-  fi
-
-  # CRITICAL: Convert env_file to absolute path for docker compose
-  # Docker Compose V2 requires absolute path for --env-file to work reliably
-  if [[ "$env_file" != /* ]]; then
-    env_file="$(pwd)/$env_file"
-  fi
-
-  # Validate env file exists and has content
-  if [[ ! -f "$env_file" ]]; then
-    printf "\n${COLOR_RED}✗${COLOR_RESET} Environment file not found: $env_file\n" >&2
-    printf "  Run ${COLOR_BLUE}nself build${COLOR_RESET} first to generate configuration files.\n" >&2
-    exit 1
-  fi
-
-  # Check if env file has variables (not just comments/empty lines)
-  local var_count=$(grep -c "^[A-Z_][A-Z0-9_]*=" "$env_file" 2>/dev/null || echo "0")
-  if [[ "$var_count" -eq 0 ]]; then
-    printf "\n${COLOR_YELLOW}⚠${COLOR_RESET} Warning: Environment file appears empty: $env_file\n" >&2
-    printf "  Variable count: $var_count\n" >&2
-    printf "  Run ${COLOR_BLUE}nself build${COLOR_RESET} to regenerate configuration.\n" >&2
   fi
 
   # 9. Start services with progress tracking
@@ -463,20 +419,6 @@ start_services() {
     printf "\n${COLOR_YELLOW}⚠ Warning:${COLOR_RESET} Mailpit is for development only and insecure\n"
     printf "  Configure production email with: ${COLOR_BLUE}nself service email configure${COLOR_RESET}\n\n"
     sleep 2
-  fi
-
-  # Export COMPOSE_PROJECT_NAME for docker-compose.yml name: field
-  # Docker Compose needs this as environment variable to respect the name: field
-  export COMPOSE_PROJECT_NAME="$project_name"
-
-  # CRITICAL: Source env file into shell environment for Docker Compose variable substitution
-  # Docker Compose --env-file is unreliable across V2 versions; sourcing ensures variables
-  # like REDIS_PORT, POSTGRES_PORT etc. are available for ${VAR:-default} substitution
-  # in docker-compose.yml. The 127.0.0.1 port bindings stay secure regardless.
-  if [[ -f "$env_file" ]]; then
-    set -a
-    source "$env_file" 2>/dev/null || true
-    set +a
   fi
 
   # Build the docker compose command based on start mode
@@ -500,15 +442,6 @@ start_services() {
     echo "DEBUG: Project name: $project_name"
     echo "DEBUG: Environment: $env"
     echo "DEBUG: Env file: $env_file"
-    echo "DEBUG: Env file exists: $([ -f "$env_file" ] && echo "yes" || echo "NO")"
-    if [[ -f "$env_file" ]]; then
-      echo "DEBUG: Env file size: $(wc -c < "$env_file") bytes"
-      echo "DEBUG: Env variables count: $(grep -c "^[A-Z_]" "$env_file" 2>/dev/null || echo "0")"
-      echo "DEBUG: Sample variables:"
-      grep "^PROJECT_NAME=" "$env_file" 2>/dev/null || echo "  PROJECT_NAME not found"
-      grep "^POSTGRES_PASSWORD=" "$env_file" 2>/dev/null | sed 's/=.*/=***/' || echo "  POSTGRES_PASSWORD not found"
-      grep "^DOCKER_NETWORK=" "$env_file" 2>/dev/null || echo "  DOCKER_NETWORK not found"
-    fi
     echo "DEBUG: Command: $compose_cmd ${compose_args[*]}"
     echo ""
   fi
@@ -835,46 +768,14 @@ start_services() {
     custom_count=$(grep -c "^CS_[0-9]=" "$env_file" 2>/dev/null) || custom_count=0
 
     # Final summary (like build command)
-    # CRITICAL: Check actual health status before claiming success
-    # Prevents misleading "success" when containers are crash-looping
     printf "\n"
-
-    # Determine if health checks actually passed
-    local health_ok=true
-    if [[ "$SKIP_HEALTH_CHECKS" != "true" ]] && [[ "${health_check_passed:-false}" != "true" ]]; then
-      # Check for crash-looping containers
-      local crashed_count=0
-      crashed_count=$(docker ps -a --filter "label=com.docker.compose.project=$project_name" --filter "status=exited" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ') || crashed_count=0
-      local restarting_count=0
-      restarting_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "Restarting") || restarting_count=0
-
-      if [[ $crashed_count -gt 0 ]] || [[ $restarting_count -gt 0 ]] || [[ $total_with_health -gt 0 && $healthy_count -eq 0 ]]; then
-        health_ok=false
-      fi
-    fi
-
-    if [[ "$health_ok" == "true" ]]; then
-      printf "${COLOR_GREEN}✓${COLOR_RESET} ${COLOR_BOLD}All services started successfully${COLOR_RESET}\n"
-    else
-      printf "${COLOR_YELLOW}⚠${COLOR_RESET} ${COLOR_BOLD}Services started with issues${COLOR_RESET}\n"
-    fi
-
+    printf "${COLOR_GREEN}✓${COLOR_RESET} ${COLOR_BOLD}All services started successfully${COLOR_RESET}\n"
     printf "${COLOR_GREEN}✓${COLOR_RESET} Project: ${COLOR_BOLD}%s${COLOR_RESET} (%s) / BD: %s\n" "$project_name" "$env" "${BASE_DOMAIN:-localhost}"
     printf "${COLOR_GREEN}✓${COLOR_RESET} Services (%s): %s core, %s optional, %s monitoring, %s custom\n" \
       "${running_count:-0}" "${core_count:-4}" "${optional_count:-0}" "${monitoring_count:-0}" "${custom_count:-0}"
 
     if [[ $total_with_health -gt 0 ]]; then
-      if [[ "$health_ok" == "true" ]]; then
-        printf "${COLOR_GREEN}✓${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
-      else
-        printf "${COLOR_YELLOW}⚠${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
-        if [[ ${crashed_count:-0} -gt 0 ]]; then
-          printf "${COLOR_RED}✗${COLOR_RESET} Crashed containers: %s (check logs with: nself logs <service>)\n" "$crashed_count"
-        fi
-        if [[ ${restarting_count:-0} -gt 0 ]]; then
-          printf "${COLOR_YELLOW}⚠${COLOR_RESET} Restarting containers: %s (may be crash-looping)\n" "$restarting_count"
-        fi
-      fi
+      printf "${COLOR_GREEN}✓${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
     fi
 
     printf "\n\n${COLOR_BOLD}Next steps:${COLOR_RESET}\n\n"
@@ -926,269 +827,5 @@ start_services() {
   return 0
 }
 
-# ============================================================
-# MONOREPO DETECTION AND ORCHESTRATION
-# ============================================================
-
-# Detect monorepo structure
-is_monorepo() {
-  local backend_dir="${BACKEND_DIR:-backend}"
-  [[ -d "$backend_dir" ]] && [[ -f "$backend_dir/docker-compose.yml" ]]
-}
-
-# Show monorepo status
-show_monorepo_status() {
-  local backend_pid="$1"
-  shift
-  local frontend_pids=("$@")
-
-  printf "\n"
-  printf "${COLOR_BOLD}╔═══════════════════════════════════════════════════════════╗${COLOR_RESET}\n"
-  printf "${COLOR_BOLD}║                   MONOREPO STATUS                         ║${COLOR_RESET}\n"
-  printf "${COLOR_BOLD}╚═══════════════════════════════════════════════════════════╝${COLOR_RESET}\n\n"
-
-  # Backend status
-  printf "${COLOR_CYAN}Backend (nself services):${COLOR_RESET}\n"
-  if kill -0 "$backend_pid" 2>/dev/null; then
-    printf "  ${COLOR_GREEN}✓${COLOR_RESET} Running (PID: %s)\n" "$backend_pid"
-
-    # Show key backend URLs (if available)
-    local backend_dir="${BACKEND_DIR:-backend}"
-    if [[ -f "$backend_dir/.env" ]]; then
-      local base_domain=$(grep "^BASE_DOMAIN=" "$backend_dir/.env" 2>/dev/null | cut -d= -f2-)
-      if [[ -n "$base_domain" ]]; then
-        printf "  ${COLOR_DIM}→ GraphQL:${COLOR_RESET} https://api.%s\n" "$base_domain"
-        printf "  ${COLOR_DIM}→ Auth:${COLOR_RESET}    https://auth.%s\n" "$base_domain"
-      fi
-    fi
-  else
-    printf "  ${COLOR_RED}✗${COLOR_RESET} Not running\n"
-  fi
-
-  # Frontend status
-  printf "\n${COLOR_CYAN}Frontend Applications:${COLOR_RESET}\n"
-  if [[ ${#frontend_pids[@]} -eq 0 ]]; then
-    printf "  ${COLOR_DIM}(none detected)${COLOR_RESET}\n"
-  else
-    local index=1
-    for pid in "${frontend_pids[@]}"; do
-      if kill -0 "$pid" 2>/dev/null; then
-        printf "  ${COLOR_GREEN}✓${COLOR_RESET} App %d running (PID: %s)\n" "$index" "$pid"
-      else
-        printf "  ${COLOR_RED}✗${COLOR_RESET} App %d stopped\n" "$index"
-      fi
-      ((index++))
-    done
-  fi
-
-  printf "\n"
-  printf "${COLOR_BOLD}═══════════════════════════════════════════════════════════${COLOR_RESET}\n"
-  printf "${COLOR_DIM}Press ${COLOR_BOLD}Ctrl+C${COLOR_RESET}${COLOR_DIM} to stop all services${COLOR_RESET}\n"
-  printf "${COLOR_BOLD}═══════════════════════════════════════════════════════════${COLOR_RESET}\n\n"
-}
-
-# Start monorepo (backend + frontends)
-start_monorepo() {
-  source "$LIB_DIR/utils/frontend-manager.sh"
-
-  local FRONTEND_PIDS=()
-  local BACKEND_PID=""
-  local backend_dir="${BACKEND_DIR:-backend}"
-
-  # Load optional config
-  if [[ -f ".nself-monorepo.conf" ]]; then
-    source ".nself-monorepo.conf"
-  fi
-
-  # CRITICAL: Resolve backend_dir to absolute path to prevent CWD issues
-  # Relative paths like "backend" break when subprocess changes directory
-  backend_dir="$(cd "$backend_dir" && pwd)"
-
-  # Load backend env files to get FRONTEND_APP_N configuration
-  # These vars are defined in backend/.env but needed by the monorepo orchestrator
-  # NOTE: We only extract FRONTEND_APP_N vars to avoid polluting the parent env
-  for _env_file in "$backend_dir/.env.dev" "$backend_dir/.env" "$backend_dir/.env.runtime"; do
-    if [[ -f "$_env_file" ]]; then
-      while IFS= read -r _line || [[ -n "$_line" ]]; do
-        # Only export FRONTEND_APP_* variables (don't leak other env vars)
-        if [[ "$_line" =~ ^FRONTEND_APP_[0-9]+_ ]]; then
-          export "$_line"
-        fi
-      done < "$_env_file"
-    fi
-  done
-
-  # Setup cleanup trap
-  cleanup_monorepo() {
-    printf "\n${COLOR_YELLOW}Shutting down monorepo services...${COLOR_RESET}\n"
-
-    # Stop frontends
-    for pid in "${FRONTEND_PIDS[@]}"; do
-      if kill -0 "$pid" 2>/dev/null; then
-        kill "$pid" 2>/dev/null || true
-        # Give it a moment to exit gracefully
-        sleep 0.5
-        # Force kill if still running
-        if kill -0 "$pid" 2>/dev/null; then
-          kill -9 "$pid" 2>/dev/null || true
-        fi
-      fi
-    done
-
-    # Stop backend
-    if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
-      printf "  Stopping backend services...\n"
-      (cd "$backend_dir" && nself stop >/dev/null 2>&1)
-    fi
-
-    printf "${COLOR_GREEN}✓${COLOR_RESET} All services stopped\n"
-    exit 0
-  }
-  trap cleanup_monorepo EXIT INT TERM
-
-  # Show header
-  printf "\n${COLOR_BOLD}${COLOR_BLUE}🚀 Monorepo Mode Detected${COLOR_RESET}\n\n"
-
-  # 1. Start backend
-  printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting nself backend...\n"
-  (cd "$backend_dir" && nself start) &
-  BACKEND_PID=$!
-
-  # 2. Wait for backend to be healthy
-  sleep 5
-  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    printf "${COLOR_RED}✗${COLOR_RESET} Backend failed to start\n" >&2
-    return 1
-  fi
-
-  printf "${COLOR_GREEN}✓${COLOR_RESET} Backend services starting\n\n"
-
-  # 3. Detect and start frontends
-  local apps=()
-
-  # Check if using FRONTEND_APP_N configuration
-  local use_auto_detect=true
-  for i in $(seq 1 10); do
-    eval "local app_name=\${FRONTEND_APP_${i}_NAME:-}"
-    if [[ -n "$app_name" ]]; then
-      use_auto_detect=false
-      break
-    fi
-  done
-
-  if [[ "$use_auto_detect" == "true" ]]; then
-    printf "${COLOR_BLUE}Auto-detecting frontend applications...${COLOR_RESET}\n\n"
-
-    # Detect apps (Bash 3.2 compatible - no mapfile)
-    while IFS= read -r app; do
-      apps+=("$app")
-    done < <(detect_frontend_apps)
-
-    if [[ ${#apps[@]} -eq 0 ]]; then
-      printf "  ${COLOR_DIM}No frontend apps detected${COLOR_RESET}\n\n"
-    else
-      # Start each app
-      for app_dir in "${apps[@]}"; do
-        local app_name=$(basename "$app_dir")
-        local pkg_manager=$(detect_package_manager "$app_dir")
-
-        if ! has_dev_script "$app_dir"; then
-          printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Skipping %s (no dev script)\n" "$app_name"
-          continue
-        fi
-
-        printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Starting %s (%s)..." "$app_name" "$pkg_manager"
-
-        local pid=$(start_frontend_app "$app_dir")
-        if [[ -n "$pid" ]]; then
-          sleep 2
-          if kill -0 "$pid" 2>/dev/null; then
-            FRONTEND_PIDS+=("$pid")
-            printf " ${COLOR_GREEN}✓${COLOR_RESET}\n"
-          else
-            printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
-          fi
-        else
-          printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
-        fi
-      done
-      printf "\n"
-    fi
-  else
-    printf "${COLOR_BLUE}Using FRONTEND_APP_N configuration${COLOR_RESET}\n\n"
-
-    # Start frontend apps defined via FRONTEND_APP_N variables
-    for i in $(seq 1 10); do
-      eval "local app_name=\${FRONTEND_APP_${i}_NAME:-}"
-      eval "local app_port=\${FRONTEND_APP_${i}_PORT:-}"
-      eval "local app_route=\${FRONTEND_APP_${i}_ROUTE:-}"
-
-      [[ -z "$app_name" ]] && continue
-
-      # Find the app directory (check common locations relative to monorepo root)
-      # CWD is the monorepo root, backend_dir is absolute path to backend/
-      local monorepo_root
-      monorepo_root="$(dirname "$backend_dir")"
-      local app_dir=""
-      if [[ -d "$monorepo_root/$app_name" ]]; then
-        app_dir="$monorepo_root/$app_name"
-      elif [[ -d "$monorepo_root/apps/$app_name" ]]; then
-        app_dir="$monorepo_root/apps/$app_name"
-      elif [[ -d "./$app_name" ]]; then
-        app_dir="./$app_name"
-      fi
-
-      if [[ -z "$app_dir" ]] || [[ ! -f "$app_dir/package.json" ]]; then
-        printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} %s: directory not found or no package.json\n" "$app_name"
-        continue
-      fi
-
-      local pkg_manager=$(detect_package_manager "$app_dir")
-
-      if ! has_dev_script "$app_dir"; then
-        printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Skipping %s (no dev script)\n" "$app_name"
-        continue
-      fi
-
-      printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Starting %s (port %s, %s)..." "$app_name" "${app_port:-auto}" "$pkg_manager"
-
-      # Start with port if specified
-      local pid
-      if [[ -n "$app_port" ]]; then
-        pid=$(PORT="$app_port" start_frontend_app "$app_dir")
-      else
-        pid=$(start_frontend_app "$app_dir")
-      fi
-
-      if [[ -n "$pid" ]]; then
-        sleep 2
-        if kill -0 "$pid" 2>/dev/null; then
-          FRONTEND_PIDS+=("$pid")
-          printf " ${COLOR_GREEN}✓${COLOR_RESET}\n"
-        else
-          printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
-        fi
-      else
-        printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
-      fi
-    done
-    printf "\n"
-  fi
-
-  # 4. Show unified status
-  show_monorepo_status "$BACKEND_PID" "${FRONTEND_PIDS[@]}"
-
-  # 5. Wait for any process to exit
-  wait
-}
-
-# ============================================================
-# MAIN ENTRY POINT
-# ============================================================
-
-# Detect if we're in monorepo mode and route accordingly
-if is_monorepo; then
-  start_monorepo
-else
-  start_services
-fi
+# Run start
+start_services

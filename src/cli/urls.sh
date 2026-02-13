@@ -656,13 +656,20 @@ output_table() {
   for i in {1..10}; do
     local route_var="FRONTEND_APP_${i}_ROUTE"
     local name_var="FRONTEND_APP_${i}_NAME"
+    local port_var="FRONTEND_APP_${i}_PORT"
     local route="${!route_var:-}"
-    local name="${!name_var:-}"
+    local name="${!name_var:-app${i}}"
+    local port="${!port_var:-}"
 
     if [[ -n "$route" ]]; then
       has_frontend=true
       local padded_name=$(printf "%-15s" "${name}:")
-      printf "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}\n"
+      # Handle root route "/" — display as base domain, not /.domain
+      if [[ "$route" == "/" ]]; then
+        printf "  ${padded_name} ${COLOR_GREEN}${protocol}://${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}\n"
+      else
+        printf "  ${padded_name} ${COLOR_GREEN}${protocol}://${route}.${domain}${COLOR_RESET} ${COLOR_GRAY}(external)${COLOR_RESET}\n"
+      fi
     fi
   done
 

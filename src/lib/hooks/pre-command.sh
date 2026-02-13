@@ -22,6 +22,12 @@ pre_command() {
 
   # Check if project is initialized (unless exempt)
   if [[ ! " $no_init_commands " =~ " $command " ]]; then
+    # Monorepo auto-detection: if no .env.local here but backend/ has one, cd into it
+    if [[ ! -f ".env.local" ]] && [[ -d "backend" ]] && [[ -f "backend/.env.local" ]]; then
+      log_info "Monorepo detected — switching to backend/ directory"
+      cd backend
+    fi
+
     if [[ ! -f ".env.local" ]]; then
       log_error "Project not initialized. Run 'nself init' first."
       return 1

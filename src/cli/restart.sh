@@ -59,18 +59,12 @@ cmd_restart() {
   # Load environment FIRST - before any docker compose operations
   # This ensures PROJECT_NAME is set for compose commands
   if [[ -f ".env" ]] || [[ -f ".env.local" ]] || [[ -f ".env.dev" ]]; then
-    set -a
     load_env_with_priority
-    set +a
   fi
 
-  # Regenerate .env.runtime to ensure fresh config
-  # CRITICAL: Do NOT delete .env.runtime — it's needed by docker compose operations below.
-  # Instead, regenerate it so it picks up any .env changes.
-  if [[ -f "$SCRIPT_DIR/../lib/utils/env-merger.sh" ]]; then
-    source "$SCRIPT_DIR/../lib/utils/env-merger.sh"
-    local target_env="${ENV:-dev}"
-    merge_environments "$target_env" ".env.runtime" >/dev/null 2>&1 || true
+  # Clean up runtime environment to ensure fresh config
+  if [[ -f ".env.runtime" ]]; then
+    rm -f .env.runtime
   fi
 
   # Load service health utilities
@@ -140,12 +134,9 @@ cmd_restart() {
         show_command_header "nself restart" "Starting stopped services"
       fi
 
-      # Now start services via nself start
-      local nself_bin="${SCRIPT_DIR}/../bin/nself"
-      if [[ ! -x "$nself_bin" ]]; then
-        nself_bin="nself" # Fallback to PATH
-      fi
-      "$nself_bin" start
+      # Now start services
+      source "$SCRIPT_DIR/start.sh"
+      cmd_start
       return $?
     fi
 
@@ -238,14 +229,6 @@ cmd_restart() {
       printf "${COLOR_CYAN}➞ Restarting Services${COLOR_RESET}\n"
       echo
 
-      # CRITICAL: Source .env.runtime so Docker Compose variable substitution works
-      # Without this, ${VAR:-default} in docker-compose.yml won't resolve correctly
-      if [[ -f ".env.runtime" ]]; then
-        set -a
-        source ".env.runtime" 2>/dev/null || true
-        set +a
-      fi
-
       # Use docker compose up to handle changes intelligently
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Applying changes with minimal downtime..."
 
@@ -326,13 +309,10 @@ cmd_restart() {
     # Small delay
     sleep 2
 
-    # Start services via nself start
+    # Start services
     echo
-    local nself_bin="${SCRIPT_DIR}/../bin/nself"
-    if [[ ! -x "$nself_bin" ]]; then
-      nself_bin="nself" # Fallback to PATH
-    fi
-    "$nself_bin" start
+    source "$SCRIPT_DIR/start.sh"
+    cmd_start
     return $?
   fi
 

@@ -65,13 +65,9 @@ get_env_file_cascade() {
     dev | development)
       # For dev environment, add .env.local for per-developer overrides
       files+=(".env.local")
-      # CRITICAL: Load .env.secrets in dev too (developers use `nself config secrets generate`)
-      files+=(".env.secrets")
       ;;
     staging)
       files+=(".env.staging")
-      # CRITICAL: Load .env.secrets in staging (Bug #17 fix)
-      files+=(".env.secrets")
       ;;
     prod | production)
       files+=(".env.staging") # Staging configs are base for prod
@@ -91,75 +87,27 @@ get_env_file_cascade() {
 # Usage: cascade_env_vars [target_env]
 cascade_env_vars() {
   local target_env="${1:-$(detect_environment)}"
-
-  # DEBUG: Show we're starting cascade
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] cascade_env_vars: Starting for env=%s\n" "$target_env" >&2
-  fi
-
   local files=$(get_env_file_cascade "$target_env")
-
-  # DEBUG: Show file list
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] cascade_env_vars: Files to load: %s\n" "$files" >&2
-  fi
-
   local loaded=false
 
   for file in $files; do
-    # CRITICAL: Progress marker to identify which file causes hang
-    printf "[ENV] Loading: %s\n" "$file" >&2
-
     if [[ -f "$file" ]]; then
-      # DEBUG: Show file exists
-      if [[ "${DEBUG:-false}" == "true" ]]; then
-        printf "[DEBUG] cascade_env_vars: File exists, sourcing %s\n" "$file" >&2
-      fi
-
-      set -a
-      # CRITICAL: Don't suppress errors in DEBUG mode
-      if [[ "${DEBUG:-false}" == "true" ]]; then
-        source "$file" || {
-          printf "[ERROR] Failed to source %s (exit code: $?)\n" "$file" >&2
-          set +a
-          continue
-        }
+      if command -v safe_source_env >/dev/null 2>&1; then
+        safe_source_env "$file"
       else
+        set -a
         source "$file" 2>/dev/null || true
+        set +a
       fi
-      set +a
       loaded=true
-
-      # CRITICAL: Progress marker after successful load
-      printf "[ENV] Loaded: %s ✓\n" "$file" >&2
-    else
-      # File doesn't exist - skip with note
-      if [[ "${DEBUG:-false}" == "true" ]]; then
-        printf "[DEBUG] cascade_env_vars: File not found, skipping %s\n" "$file" >&2
-      fi
     fi
   done
-
-  # DEBUG: Show we're exporting ENV
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] cascade_env_vars: Exporting ENV=%s\n" "$target_env" >&2
-  fi
 
   # Export the determined environment
   export ENV="$target_env"
 
-  # DEBUG: Show we're calling ensure_project_context
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] cascade_env_vars: Calling ensure_project_context\n" >&2
-  fi
-
   # Ensure PROJECT_NAME is set
   ensure_project_context
-
-  # DEBUG: Show completion
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    printf "[DEBUG] cascade_env_vars: Completed successfully\n" >&2
-  fi
 
   return 0
 }
