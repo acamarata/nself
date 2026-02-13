@@ -1,25 +1,15 @@
 #!/usr/bin/env bash
-# migrate.sh - Database migration management (hot apply without restart)
+# migrate.sh - DEPRECATED: Use 'nself db migrate' instead
+# This wrapper redirects to the proper db subcommand
 
 set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$SCRIPT_DIR/../lib"
 
-# Source utilities
-source "$LIB_DIR/utils/display.sh"
-source "$LIB_DIR/utils/env.sh"
-
-# Migration directory
-MIGRATIONS_DIR="${MIGRATIONS_DIR:-db/migrations}"
-MIGRATIONS_TABLE="${MIGRATIONS_TABLE:-_migrations}"
-
-# Colors
+# Colors for deprecation warning
 COLOR_RESET='\033[0m'
-COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
-COLOR_RED='\033[0;31m'
 COLOR_BLUE='\033[0;34m'
 COLOR_DIM='\033[2m'
 

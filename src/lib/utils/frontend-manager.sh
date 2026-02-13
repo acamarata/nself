@@ -104,29 +104,38 @@ start_frontend_app() {
   local app_name=$(basename "$app_dir")
   local pkg_manager=$(detect_package_manager "$app_dir")
   local dev_cmd=$(get_dev_command "$pkg_manager")
-  
+
   # Verify dev script exists
   if ! has_dev_script "$app_dir"; then
     return 1
   fi
-  
+
   # Verify package manager is installed
   local pkg_cmd=$(echo "$pkg_manager" | awk '{print $1}')
   if ! command -v "$pkg_cmd" >/dev/null 2>&1; then
     printf "Warning: %s not installed. Please install it to run %s\n" "$pkg_cmd" "$app_name" >&2
     return 1
   fi
-  
-  # Create log directory if needed
-  mkdir -p ".nself/frontend-logs"
-  
-  # Start in background with output redirect
-  (cd "$app_dir" && $dev_cmd > "../.nself/frontend-logs/$app_name.log" 2>&1 &)
+
+  # Resolve to absolute path for reliable directory change
+  local abs_app_dir
+  abs_app_dir="$(cd "$app_dir" && pwd)"
+
+  # Create log directory if needed (at monorepo root level)
+  local log_dir
+  log_dir="$(dirname "$abs_app_dir")/.nself/frontend-logs"
+  mkdir -p "$log_dir"
+
+  # CRITICAL: Start as a direct background process (not in a subshell)
+  # Using a subshell (cd ... &) causes $! to capture the subshell PID which exits
+  # immediately, making the PID useless for tracking. Instead, use bash -c to
+  # create a trackable background process.
+  bash -c "cd \"$abs_app_dir\" && exec $dev_cmd" > "$log_dir/$app_name.log" 2>&1 &
   local pid=$!
-  
+
   # Give it a moment to fail if there's an immediate error
-  sleep 0.5
-  
+  sleep 1
+
   # Check if still running
   if kill -0 "$pid" 2>/dev/null; then
     echo "$pid"

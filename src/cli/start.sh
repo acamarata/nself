@@ -835,14 +835,46 @@ start_services() {
     custom_count=$(grep -c "^CS_[0-9]=" "$env_file" 2>/dev/null) || custom_count=0
 
     # Final summary (like build command)
+    # CRITICAL: Check actual health status before claiming success
+    # Prevents misleading "success" when containers are crash-looping
     printf "\n"
-    printf "${COLOR_GREEN}✓${COLOR_RESET} ${COLOR_BOLD}All services started successfully${COLOR_RESET}\n"
+
+    # Determine if health checks actually passed
+    local health_ok=true
+    if [[ "$SKIP_HEALTH_CHECKS" != "true" ]] && [[ "${health_check_passed:-false}" != "true" ]]; then
+      # Check for crash-looping containers
+      local crashed_count=0
+      crashed_count=$(docker ps -a --filter "label=com.docker.compose.project=$project_name" --filter "status=exited" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ') || crashed_count=0
+      local restarting_count=0
+      restarting_count=$(docker ps --filter "label=com.docker.compose.project=$project_name" --format "{{.Status}}" 2>/dev/null | grep -c "Restarting") || restarting_count=0
+
+      if [[ $crashed_count -gt 0 ]] || [[ $restarting_count -gt 0 ]] || [[ $total_with_health -gt 0 && $healthy_count -eq 0 ]]; then
+        health_ok=false
+      fi
+    fi
+
+    if [[ "$health_ok" == "true" ]]; then
+      printf "${COLOR_GREEN}✓${COLOR_RESET} ${COLOR_BOLD}All services started successfully${COLOR_RESET}\n"
+    else
+      printf "${COLOR_YELLOW}⚠${COLOR_RESET} ${COLOR_BOLD}Services started with issues${COLOR_RESET}\n"
+    fi
+
     printf "${COLOR_GREEN}✓${COLOR_RESET} Project: ${COLOR_BOLD}%s${COLOR_RESET} (%s) / BD: %s\n" "$project_name" "$env" "${BASE_DOMAIN:-localhost}"
     printf "${COLOR_GREEN}✓${COLOR_RESET} Services (%s): %s core, %s optional, %s monitoring, %s custom\n" \
       "${running_count:-0}" "${core_count:-4}" "${optional_count:-0}" "${monitoring_count:-0}" "${custom_count:-0}"
 
     if [[ $total_with_health -gt 0 ]]; then
-      printf "${COLOR_GREEN}✓${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
+      if [[ "$health_ok" == "true" ]]; then
+        printf "${COLOR_GREEN}✓${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
+      else
+        printf "${COLOR_YELLOW}⚠${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
+        if [[ ${crashed_count:-0} -gt 0 ]]; then
+          printf "${COLOR_RED}✗${COLOR_RESET} Crashed containers: %s (check logs with: nself logs <service>)\n" "$crashed_count"
+        fi
+        if [[ ${restarting_count:-0} -gt 0 ]]; then
+          printf "${COLOR_YELLOW}⚠${COLOR_RESET} Restarting containers: %s (may be crash-looping)\n" "$restarting_count"
+        fi
+      fi
     fi
 
     printf "\n\n${COLOR_BOLD}Next steps:${COLOR_RESET}\n\n"
@@ -968,13 +1000,21 @@ start_monorepo() {
     source ".nself-monorepo.conf"
   fi
 
-  # CRITICAL: Load backend env files to get FRONTEND_APP_N configuration
+  # CRITICAL: Resolve backend_dir to absolute path to prevent CWD issues
+  # Relative paths like "backend" break when subprocess changes directory
+  backend_dir="$(cd "$backend_dir" && pwd)"
+
+  # Load backend env files to get FRONTEND_APP_N configuration
   # These vars are defined in backend/.env but needed by the monorepo orchestrator
+  # NOTE: We only extract FRONTEND_APP_N vars to avoid polluting the parent env
   for _env_file in "$backend_dir/.env.dev" "$backend_dir/.env" "$backend_dir/.env.runtime"; do
     if [[ -f "$_env_file" ]]; then
-      set -a
-      source "$_env_file" 2>/dev/null || true
-      set +a
+      while IFS= read -r _line || [[ -n "$_line" ]]; do
+        # Only export FRONTEND_APP_* variables (don't leak other env vars)
+        if [[ "$_line" =~ ^FRONTEND_APP_[0-9]+_ ]]; then
+          export "$_line"
+        fi
+      done < "$_env_file"
     fi
   done
 
@@ -1085,14 +1125,17 @@ start_monorepo() {
 
       [[ -z "$app_name" ]] && continue
 
-      # Find the app directory (check common locations)
+      # Find the app directory (check common locations relative to monorepo root)
+      # CWD is the monorepo root, backend_dir is absolute path to backend/
+      local monorepo_root
+      monorepo_root="$(dirname "$backend_dir")"
       local app_dir=""
-      if [[ -d "./$app_name" ]]; then
+      if [[ -d "$monorepo_root/$app_name" ]]; then
+        app_dir="$monorepo_root/$app_name"
+      elif [[ -d "$monorepo_root/apps/$app_name" ]]; then
+        app_dir="$monorepo_root/apps/$app_name"
+      elif [[ -d "./$app_name" ]]; then
         app_dir="./$app_name"
-      elif [[ -d "../$app_name" ]]; then
-        app_dir="../$app_name"
-      elif [[ -d "./apps/$app_name" ]]; then
-        app_dir="./apps/$app_name"
       fi
 
       if [[ -z "$app_dir" ]] || [[ ! -f "$app_dir/package.json" ]]; then

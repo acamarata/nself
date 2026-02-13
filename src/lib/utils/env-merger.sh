@@ -200,12 +200,16 @@ add_smart_defaults() {
   fi
 
   # Hasura JWT configuration (JSON format required by auth service)
+  # CRITICAL: Single-quote wrapping ensures JSON survives BOTH:
+  #   - Docker Compose .env parsing (strips outer quotes, preserves inner content)
+  #   - Shell sourcing via `source .env` (single quotes prevent bash interpretation)
+  # Without single quotes, bash strips double quotes: {"type":"HS256"} → {type:HS256} (invalid JSON)
   if ! var_exists "HASURA_GRAPHQL_JWT_SECRET"; then
     local jwt_secret="$(get_var AUTH_JWT_SECRET)"
     local jwt_type="$(get_var AUTH_JWT_TYPE)"
     [ -z "$jwt_secret" ] && jwt_secret="change-this-secret-in-production"
     [ -z "$jwt_type" ] && jwt_type="HS256"
-    echo "HASURA_GRAPHQL_JWT_SECRET={\"type\":\"$jwt_type\",\"key\":\"$jwt_secret\"}" >>"$output_file"
+    echo "HASURA_GRAPHQL_JWT_SECRET='{\"type\":\"$jwt_type\",\"key\":\"$jwt_secret\"}'" >>"$output_file"
   fi
 
   # Base domain
@@ -218,6 +222,23 @@ add_smart_defaults() {
       echo "MEILI_ENV=production" >>"$output_file"
     else
       echo "MEILI_ENV=development" >>"$output_file"
+    fi
+  fi
+
+  # CRITICAL: Map HTTP_PORT/HTTPS_PORT → NGINX_PORT/NGINX_SSL_PORT
+  # Users set HTTP_PORT/HTTPS_PORT in .env for multi-project port avoidance,
+  # but docker-compose.yml uses NGINX_PORT/NGINX_SSL_PORT for port bindings.
+  # Without this mapping, nginx always binds to 80/443 regardless of user settings.
+  if ! var_exists "NGINX_PORT"; then
+    local http_port="$(get_var HTTP_PORT)"
+    if [[ -n "$http_port" ]]; then
+      echo "NGINX_PORT=$http_port" >>"$output_file"
+    fi
+  fi
+  if ! var_exists "NGINX_SSL_PORT"; then
+    local https_port="$(get_var HTTPS_PORT)"
+    if [[ -n "$https_port" ]]; then
+      echo "NGINX_SSL_PORT=$https_port" >>"$output_file"
     fi
   fi
 
