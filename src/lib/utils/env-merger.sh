@@ -221,13 +221,40 @@ add_smart_defaults() {
     fi
   fi
 
-  # Service ports
-  var_exists "HASURA_PORT" || echo "HASURA_PORT=8080" >>"$output_file"
-  var_exists "AUTH_PORT" || echo "AUTH_PORT=4000" >>"$output_file"
-  var_exists "STORAGE_PORT" || echo "STORAGE_PORT=5000" >>"$output_file"
-  var_exists "REDIS_PORT" || echo "REDIS_PORT=6379" >>"$output_file"
-  var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
-  var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
+  # PORT_OFFSET support for multi-project development
+  # When set, all service ports are shifted by this offset to avoid conflicts
+  # Example: PORT_OFFSET=100 shifts 5432→5532, 8080→8180, 6379→6479, etc.
+  local port_offset="$(get_var PORT_OFFSET)"
+  if [[ -z "$port_offset" ]]; then
+    port_offset=0
+  fi
+
+  # Service ports (apply PORT_OFFSET if set)
+  if [[ "$port_offset" -gt 0 ]]; then
+    var_exists "POSTGRES_PORT" || echo "POSTGRES_PORT=$((5432 + port_offset))" >>"$output_file"
+    var_exists "HASURA_PORT" || echo "HASURA_PORT=$((8080 + port_offset))" >>"$output_file"
+    var_exists "AUTH_PORT" || echo "AUTH_PORT=$((4000 + port_offset))" >>"$output_file"
+    var_exists "STORAGE_PORT" || echo "STORAGE_PORT=$((5000 + port_offset))" >>"$output_file"
+    var_exists "REDIS_PORT" || echo "REDIS_PORT=$((6379 + port_offset))" >>"$output_file"
+    var_exists "MINIO_PORT" || echo "MINIO_PORT=$((9000 + port_offset))" >>"$output_file"
+    var_exists "MINIO_CONSOLE_PORT" || echo "MINIO_CONSOLE_PORT=$((9001 + port_offset))" >>"$output_file"
+    var_exists "MAILPIT_SMTP_PORT" || echo "MAILPIT_SMTP_PORT=$((1025 + port_offset))" >>"$output_file"
+    var_exists "MAILPIT_UI_PORT" || echo "MAILPIT_UI_PORT=$((8025 + port_offset))" >>"$output_file"
+    var_exists "MEILISEARCH_PORT" || echo "MEILISEARCH_PORT=$((7700 + port_offset))" >>"$output_file"
+    var_exists "MLFLOW_PORT" || echo "MLFLOW_PORT=$((5005 + port_offset))" >>"$output_file"
+    var_exists "NSELF_ADMIN_PORT" || echo "NSELF_ADMIN_PORT=$((3021 + port_offset))" >>"$output_file"
+    var_exists "FUNCTIONS_PORT" || echo "FUNCTIONS_PORT=$((3008 + port_offset))" >>"$output_file"
+    # Nginx ports typically shouldn't be offset (80/443 are standard)
+    var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
+    var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
+  else
+    var_exists "HASURA_PORT" || echo "HASURA_PORT=8080" >>"$output_file"
+    var_exists "AUTH_PORT" || echo "AUTH_PORT=4000" >>"$output_file"
+    var_exists "STORAGE_PORT" || echo "STORAGE_PORT=5000" >>"$output_file"
+    var_exists "REDIS_PORT" || echo "REDIS_PORT=6379" >>"$output_file"
+    var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
+    var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
+  fi
 }
 
 # Add computed values based on environment

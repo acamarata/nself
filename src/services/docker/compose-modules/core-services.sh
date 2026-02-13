@@ -125,16 +125,17 @@ EOF
       retries: 5
 EOF
 
-  # Add resource limits if specified
-  if [[ -n "${HASURA_MEMORY:-}" ]] || [[ -n "${HASURA_CPU:-}" ]]; then
-    cat <<EOF
+  # Add resource limits (always set for Hasura to prevent OOM/exit 137)
+  # Hasura is memory-intensive; without limits Docker may SIGKILL it
+  cat <<EOF
     deploy:
       resources:
         limits:
           memory: \${HASURA_MEMORY:-1G}
-          cpus: '\${HASURA_CPU:-0.5}'
+          cpus: '\${HASURA_CPU:-1.0}'
+        reservations:
+          memory: 256M
 EOF
-  fi
 }
 
 # Generate Auth service configuration
@@ -192,7 +193,7 @@ EOF
 
   cat <<EOF
     environment:
-      AUTH_HOST: "127.0.0.1"  # Security: Internal access only
+      AUTH_HOST: "0.0.0.0"  # Bind inside container (host restricted via port mapping)
       AUTH_PORT: "4000"
       AUTH_LOG_LEVEL: \${AUTH_LOG_LEVEL:-info}
       DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD:-postgres}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}

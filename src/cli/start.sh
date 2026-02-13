@@ -339,6 +339,16 @@ start_services() {
     return 1
   fi
 
+  # Check Docker memory allocation (warn if < 4GB, prevents Hasura OOM/exit 137)
+  local docker_mem_bytes
+  docker_mem_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "0")
+  if [[ "$docker_mem_bytes" -gt 0 ]] && [[ "$docker_mem_bytes" -lt 4000000000 ]]; then
+    local docker_mem_gb=$(( docker_mem_bytes / 1073741824 ))
+    printf "\n${COLOR_YELLOW}⚠ Warning:${COLOR_RESET} Docker has only %sGB memory allocated\n" "$docker_mem_gb"
+    printf "  Recommended: ${COLOR_BOLD}4GB+${COLOR_RESET} to prevent service OOM kills (exit 137)\n"
+    printf "  Increase in: Docker Desktop → Settings → Resources → Memory\n\n"
+  fi
+
   update_progress 0 "done"
 
   # 5. Clean up containers based on CLEANUP_ON_START setting
@@ -458,6 +468,16 @@ start_services() {
   # Export COMPOSE_PROJECT_NAME for docker-compose.yml name: field
   # Docker Compose needs this as environment variable to respect the name: field
   export COMPOSE_PROJECT_NAME="$project_name"
+
+  # CRITICAL: Source env file into shell environment for Docker Compose variable substitution
+  # Docker Compose --env-file is unreliable across V2 versions; sourcing ensures variables
+  # like REDIS_PORT, POSTGRES_PORT etc. are available for ${VAR:-default} substitution
+  # in docker-compose.yml. The 127.0.0.1 port bindings stay secure regardless.
+  if [[ -f "$env_file" ]]; then
+    set -a
+    source "$env_file" 2>/dev/null || true
+    set +a
+  fi
 
   # Build the docker compose command based on start mode
   local compose_args=(
@@ -948,6 +968,16 @@ start_monorepo() {
     source ".nself-monorepo.conf"
   fi
 
+  # CRITICAL: Load backend env files to get FRONTEND_APP_N configuration
+  # These vars are defined in backend/.env but needed by the monorepo orchestrator
+  for _env_file in "$backend_dir/.env.dev" "$backend_dir/.env" "$backend_dir/.env.runtime"; do
+    if [[ -f "$_env_file" ]]; then
+      set -a
+      source "$_env_file" 2>/dev/null || true
+      set +a
+    fi
+  done
+
   # Setup cleanup trap
   cleanup_monorepo() {
     printf "\n${COLOR_YELLOW}Shutting down monorepo services...${COLOR_RESET}\n"
@@ -1045,8 +1075,61 @@ start_monorepo() {
       printf "\n"
     fi
   else
-    printf "${COLOR_BLUE}Using FRONTEND_APP_N configuration${COLOR_RESET}\n"
-    printf "${COLOR_DIM}(FRONTEND_APP_N support coming in future release)${COLOR_RESET}\n\n"
+    printf "${COLOR_BLUE}Using FRONTEND_APP_N configuration${COLOR_RESET}\n\n"
+
+    # Start frontend apps defined via FRONTEND_APP_N variables
+    for i in $(seq 1 10); do
+      eval "local app_name=\${FRONTEND_APP_${i}_NAME:-}"
+      eval "local app_port=\${FRONTEND_APP_${i}_PORT:-}"
+      eval "local app_route=\${FRONTEND_APP_${i}_ROUTE:-}"
+
+      [[ -z "$app_name" ]] && continue
+
+      # Find the app directory (check common locations)
+      local app_dir=""
+      if [[ -d "./$app_name" ]]; then
+        app_dir="./$app_name"
+      elif [[ -d "../$app_name" ]]; then
+        app_dir="../$app_name"
+      elif [[ -d "./apps/$app_name" ]]; then
+        app_dir="./apps/$app_name"
+      fi
+
+      if [[ -z "$app_dir" ]] || [[ ! -f "$app_dir/package.json" ]]; then
+        printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} %s: directory not found or no package.json\n" "$app_name"
+        continue
+      fi
+
+      local pkg_manager=$(detect_package_manager "$app_dir")
+
+      if ! has_dev_script "$app_dir"; then
+        printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Skipping %s (no dev script)\n" "$app_name"
+        continue
+      fi
+
+      printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Starting %s (port %s, %s)..." "$app_name" "${app_port:-auto}" "$pkg_manager"
+
+      # Start with port if specified
+      local pid
+      if [[ -n "$app_port" ]]; then
+        pid=$(PORT="$app_port" start_frontend_app "$app_dir")
+      else
+        pid=$(start_frontend_app "$app_dir")
+      fi
+
+      if [[ -n "$pid" ]]; then
+        sleep 2
+        if kill -0 "$pid" 2>/dev/null; then
+          FRONTEND_PIDS+=("$pid")
+          printf " ${COLOR_GREEN}✓${COLOR_RESET}\n"
+        else
+          printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
+        fi
+      else
+        printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
+      fi
+    done
+    printf "\n"
   fi
 
   # 4. Show unified status

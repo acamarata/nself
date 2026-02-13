@@ -18,8 +18,8 @@ generate_mailpit_service() {
     networks:
       - \${DOCKER_NETWORK}
     environment:
-      MP_UI_BIND_ADDR: 127.0.0.1:8025  # Security: Internal access only
-      MP_SMTP_BIND_ADDR: 127.0.0.1:1025  # Security: Internal access only
+      MP_UI_BIND_ADDR: 0.0.0.0:8025  # Bind inside container (host restricted via port mapping)
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025  # Bind inside container (host restricted via port mapping)
 EOF
 
   # Environment-conditional security settings
@@ -302,7 +302,7 @@ DOCKERFILE
       "mlflow", "server",
       "--backend-store-uri", "postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD}@postgres:5432/mlflow",
       "--default-artifact-root", "/mlflow/artifacts",
-      "--host", "127.0.0.1",  # Security: Internal access only
+      "--host", "0.0.0.0",  # Bind inside container (host restricted via port mapping)
       "--port", "\${MLFLOW_PORT:-5005}",
       "--serve-artifacts"
     ]
@@ -397,7 +397,7 @@ generate_meilisearch_service() {
     environment:
       MEILI_MASTER_KEY: \${SEARCH_API_KEY:-\${MEILISEARCH_MASTER_KEY}}
       MEILI_ENV: \${MEILI_ENV:-development}
-      MEILI_HTTP_ADDR: 127.0.0.1:7700  # Security: Internal access only
+      MEILI_HTTP_ADDR: 0.0.0.0:7700  # Bind inside container (host restricted via port mapping)
       MEILI_NO_ANALYTICS: true
     volumes:
       - meilisearch_data:/meili_data

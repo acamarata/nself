@@ -50,6 +50,29 @@ generate_docker_compose() {
     export SONIC_ENABLED="${SONIC_ENABLED:-false}"
     export SEARCH_ENABLED="${SEARCH_ENABLED:-false}"
 
+    # CRITICAL: Export custom service (CS_N) variables so compose-generate.sh can use them
+    # Without this, CS_1 through CS_10 won't be available in the child process
+    # and custom services won't appear in generated docker-compose.yml
+    local _cs_i
+    for _cs_i in $(seq 1 10); do
+      local _cs_var="CS_${_cs_i}"
+      if [[ -n "${!_cs_var:-}" ]]; then
+        export "CS_${_cs_i}=${!_cs_var}"
+      fi
+      # Also export per-service resource vars if set
+      local _cs_mem="CS_${_cs_i}_MEMORY"
+      local _cs_cpu="CS_${_cs_i}_CPU"
+      local _cs_rep="CS_${_cs_i}_REPLICAS"
+      [[ -n "${!_cs_mem:-}" ]] && export "${_cs_mem}=${!_cs_mem}"
+      [[ -n "${!_cs_cpu:-}" ]] && export "${_cs_cpu}=${!_cs_cpu}"
+      [[ -n "${!_cs_rep:-}" ]] && export "${_cs_rep}=${!_cs_rep}"
+    done
+
+    # Export additional service configuration variables
+    export AUTH_ENABLED="${AUTH_ENABLED:-false}"
+    export HASURA_ENABLED="${HASURA_ENABLED:-true}"
+    export BACKUP_ENABLED="${BACKUP_ENABLED:-false}"
+
     bash "$compose_script"
     local compose_result=$?
 
