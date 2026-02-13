@@ -414,6 +414,27 @@ start_services() {
     env_file=".env.computed"
   fi
 
+  # CRITICAL: Convert env_file to absolute path for docker compose
+  # Docker Compose V2 requires absolute path for --env-file to work reliably
+  if [[ "$env_file" != /* ]]; then
+    env_file="$(pwd)/$env_file"
+  fi
+
+  # Validate env file exists and has content
+  if [[ ! -f "$env_file" ]]; then
+    printf "\n${COLOR_RED}✗${COLOR_RESET} Environment file not found: $env_file\n" >&2
+    printf "  Run ${COLOR_BLUE}nself build${COLOR_RESET} first to generate configuration files.\n" >&2
+    exit 1
+  fi
+
+  # Check if env file has variables (not just comments/empty lines)
+  local var_count=$(grep -c "^[A-Z_][A-Z0-9_]*=" "$env_file" 2>/dev/null || echo "0")
+  if [[ "$var_count" -eq 0 ]]; then
+    printf "\n${COLOR_YELLOW}⚠${COLOR_RESET} Warning: Environment file appears empty: $env_file\n" >&2
+    printf "  Variable count: $var_count\n" >&2
+    printf "  Run ${COLOR_BLUE}nself build${COLOR_RESET} to regenerate configuration.\n" >&2
+  fi
+
   # 9. Start services with progress tracking
   local compose_cmd="docker compose"
   local start_output=$(mktemp)
@@ -459,6 +480,15 @@ start_services() {
     echo "DEBUG: Project name: $project_name"
     echo "DEBUG: Environment: $env"
     echo "DEBUG: Env file: $env_file"
+    echo "DEBUG: Env file exists: $([ -f "$env_file" ] && echo "yes" || echo "NO")"
+    if [[ -f "$env_file" ]]; then
+      echo "DEBUG: Env file size: $(wc -c < "$env_file") bytes"
+      echo "DEBUG: Env variables count: $(grep -c "^[A-Z_]" "$env_file" 2>/dev/null || echo "0")"
+      echo "DEBUG: Sample variables:"
+      grep "^PROJECT_NAME=" "$env_file" 2>/dev/null || echo "  PROJECT_NAME not found"
+      grep "^POSTGRES_PASSWORD=" "$env_file" 2>/dev/null | sed 's/=.*/=***/' || echo "  POSTGRES_PASSWORD not found"
+      grep "^DOCKER_NETWORK=" "$env_file" 2>/dev/null || echo "  DOCKER_NETWORK not found"
+    fi
     echo "DEBUG: Command: $compose_cmd ${compose_args[*]}"
     echo ""
   fi
