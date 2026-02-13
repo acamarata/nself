@@ -1,646 +1,395 @@
 #!/usr/bin/env bash
+# migrate.sh - Database migration management (hot apply without restart)
 
-# migrate.sh - Cross-environment migration and vendor migration
-# v0.4.8 - Sprint 20: Migration & Upgrade Tools
+set -euo pipefail
 
-set -e
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/../lib"
 
-# Source shared utilities
-CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$CLI_SCRIPT_DIR"
-source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
-source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
-source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
-source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
-source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+# Source utilities
+source "$LIB_DIR/utils/display.sh"
+source "$LIB_DIR/utils/env.sh"
 
-# Source migration libraries
-source "$CLI_SCRIPT_DIR/../lib/migrate/firebase.sh" 2>/dev/null || true
-source "$CLI_SCRIPT_DIR/../lib/migrate/supabase.sh" 2>/dev/null || true
+# Migration directory
+MIGRATIONS_DIR="${MIGRATIONS_DIR:-db/migrations}"
+MIGRATIONS_TABLE="${MIGRATIONS_TABLE:-_migrations}"
 
-# Color fallbacks
-: "${COLOR_GREEN:=\033[0;32m}"
-: "${COLOR_YELLOW:=\033[0;33m}"
-: "${COLOR_RED:=\033[0;31m}"
-: "${COLOR_CYAN:=\033[0;36m}"
-: "${COLOR_RESET:=\033[0m}"
-: "${COLOR_DIM:=\033[2m}"
-: "${COLOR_BOLD:=\033[1m}"
+# Colors
+COLOR_RESET='\033[0m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
+COLOR_RED='\033[0;31m'
+COLOR_BLUE='\033[0;34m'
+COLOR_DIM='\033[2m'
 
 # Show help
-show_migrate_help() {
-  cat <<'EOF'
-nself migrate - Migrations (environments and vendors)
+show_help() {
+  cat << 'EOF'
+Usage: nself migrate <command> [options]
 
-Mission: Help you escape vendor lock-in
+Database migration management - apply schema changes without restarting containers.
 
-Usage: nself migrate <source> <target> [options]
-       nself migrate from <vendor> [options]
-       nself migrate <subcommand> [options]
-
-Environment Migration:
-  <source> <target>     Migrate from source to target environment
-  sync <source> <target> Keep environments continuously in sync
-  diff <source> <target> Show differences between environments
-  rollback              Rollback last migration
-
-Vendor Migration (Escape Lock-in):
-  from firebase         Migrate from Firebase to nself
-  from supabase         Migrate from Supabase to nself
+Commands:
+  create <name>    Create a new migration file
+  apply            Apply all pending migrations
+  rollback         Rollback the last applied migration
+  status           Show migration status
+  list             List all migrations
 
 Options:
-  --dry-run             Preview migration without making changes
-  --schema-only         Migrate only database schema
-  --data-only           Migrate only data (no schema changes)
-  --config-only         Migrate only configuration
-  --force               Skip confirmation prompts
-  --json                Output in JSON format
-  -h, --help            Show this help message
-
-Environments:
-  local                 Local development environment
-  staging               Staging environment
-  prod / production     Production environment
+  -h, --help       Show this help message
+  -v, --verbose    Show detailed output
 
 Examples:
-  # Environment migrations
-  nself migrate local staging          # Migrate local to staging
-  nself migrate staging prod           # Migrate staging to production
-  nself migrate staging prod --dry-run # Preview migration
-  nself migrate diff staging prod      # Show differences
-  nself migrate sync staging prod      # Continuous sync
-  nself migrate rollback               # Rollback last migration
+  nself migrate create add_user_roles
+  nself migrate apply
+  nself migrate rollback
+  nself migrate status
 
-  # Vendor migrations (escape lock-in)
-  nself migrate from firebase          # Interactive Firebase migration
-  nself migrate from supabase          # Interactive Supabase migration
+Migration File Format:
+  Migrations are stored in db/migrations/
+  Format: YYYYMMDD_HHMMSS_description.sql
 
-For detailed migration guides:
-  nself migrate from firebase --help
-  nself migrate from supabase --help
+  Example migration file:
+  -- Migration: add_user_roles
+  -- Created: 2026-02-13
+
+  -- UP: Apply migration
+  CREATE TABLE user_roles (
+    user_id UUID REFERENCES auth.users(id),
+    role VARCHAR(50) NOT NULL
+  );
+
+  -- DOWN: Rollback migration (optional)
+  DROP TABLE user_roles;
+
 EOF
 }
 
-# Get environment configuration
-get_env_config() {
-  local env_name="$1"
-
-  case "$env_name" in
-    local | dev)
-      echo ".env.dev:.env.local:local"
-      ;;
-    staging)
-      echo ".env.staging:.environments/staging/server.json:staging"
-      ;;
-    prod | production)
-      echo ".env.prod:.environments/prod/server.json:production"
-      ;;
-    *)
-      echo ""
-      ;;
-  esac
+# Ensure migrations directory exists
+ensure_migrations_dir() {
+  if [[ ! -d "$MIGRATIONS_DIR" ]]; then
+    mkdir -p "$MIGRATIONS_DIR"
+    printf "${COLOR_GREEN}✓${COLOR_RESET} Created migrations directory: $MIGRATIONS_DIR\n"
+  fi
 }
 
-# Load environment settings
-load_target_env() {
-  local env_name="$1"
-  local config=$(get_env_config "$env_name")
+# Get database connection info
+get_db_connection() {
+  # Load environment
+  if [[ -f ".env.runtime" ]]; then
+    set -a
+    source .env.runtime 2>/dev/null || true
+    set +a
+  elif [[ -f ".env" ]]; then
+    set -a
+    source .env 2>/dev/null || true
+    set +a
+  fi
 
-  if [[ -z "$config" ]]; then
-    log_error "Unknown environment: $env_name"
+  local db_name="${POSTGRES_DB:-postgres}"
+  local db_user="${POSTGRES_USER:-postgres}"
+  local project_name="${PROJECT_NAME:-$(basename "$PWD")}"
+
+  # Determine postgres container name
+  local container_name="${project_name}_postgres"
+
+  # Check if container exists
+  if ! docker ps --filter "name=$container_name" --format "{{.Names}}" | grep -q "$container_name"; then
+    printf "${COLOR_RED}✗${COLOR_RESET} PostgreSQL container not running: $container_name\n" >&2
+    printf "  Run ${COLOR_BLUE}nself start${COLOR_RESET} first\n" >&2
     return 1
   fi
 
-  local env_file=$(echo "$config" | cut -d: -f1)
-  local server_file=$(echo "$config" | cut -d: -f2)
+  echo "$container_name:$db_user:$db_name"
+}
 
-  if [[ -f "$env_file" ]]; then
-    source "$env_file" 2>/dev/null || true
+# Execute SQL in database
+exec_sql() {
+  local sql="$1"
+  local connection=$(get_db_connection) || return 1
+  local container=$(echo "$connection" | cut -d: -f1)
+  local user=$(echo "$connection" | cut -d: -f2)
+  local db=$(echo "$connection" | cut -d: -f3)
+
+  docker exec -i "$container" psql -U "$user" -d "$db" -c "$sql" 2>&1
+}
+
+# Ensure migrations table exists
+ensure_migrations_table() {
+  local sql="CREATE TABLE IF NOT EXISTS $MIGRATIONS_TABLE (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    applied_at TIMESTAMPTZ DEFAULT NOW()
+  );"
+
+  exec_sql "$sql" >/dev/null 2>&1 || {
+    printf "${COLOR_RED}✗${COLOR_RESET} Failed to create migrations table\n" >&2
+    return 1
+  }
+}
+
+# Create new migration
+cmd_create() {
+  local name="$1"
+
+  if [[ -z "$name" ]]; then
+    printf "${COLOR_RED}✗${COLOR_RESET} Migration name required\n" >&2
+    printf "  Usage: nself migrate create <name>\n" >&2
+    return 1
+  fi
+
+  ensure_migrations_dir
+
+  # Generate timestamp
+  local timestamp=$(date +%Y%m%d_%H%M%S)
+  local filename="${MIGRATIONS_DIR}/${timestamp}_${name}.sql"
+
+  # Create migration file with template
+  cat > "$filename" << 'EOFMIG'
+-- Migration: MIGRATION_NAME
+-- Created: CREATION_DATE
+
+-- UP: Apply migration
+-- Add your SQL here
+
+
+-- DOWN: Rollback migration (optional)
+-- Add rollback SQL here
+
+EOFMIG
+
+  # Replace placeholders
+  sed -i.bak "s/MIGRATION_NAME/$name/g" "$filename"
+  sed -i.bak "s/CREATION_DATE/$(date +%Y-%m-%d)/g" "$filename"
+  rm -f "$filename.bak"
+
+  printf "${COLOR_GREEN}✓${COLOR_RESET} Created migration: ${COLOR_BLUE}$filename${COLOR_RESET}\n"
+  printf "  Edit the file to add your SQL statements\n"
+}
+
+# Get list of applied migrations
+get_applied_migrations() {
+  ensure_migrations_table || return 1
+
+  exec_sql "SELECT name FROM $MIGRATIONS_TABLE ORDER BY id;" 2>/dev/null | \
+    grep -v "^-" | grep -v "^ *$" | grep -v "^name$" | grep -v "rows)" | grep -v "^(" || true
+}
+
+# Get list of pending migrations
+get_pending_migrations() {
+  if [[ ! -d "$MIGRATIONS_DIR" ]]; then
     return 0
   fi
 
-  return 1
+  local applied=$(get_applied_migrations | tr '\n' '|' | sed 's/|$//' | sed 's/^ *//')
+
+  find "$MIGRATIONS_DIR" -name "*.sql" -type f | sort | while read -r file; do
+    local basename=$(basename "$file" .sql)
+    if [[ -z "$applied" ]] || ! echo "$basename" | grep -qE "^($applied)$"; then
+      echo "$basename"
+    fi
+  done
 }
 
-# Migrate between environments
-cmd_migrate_env() {
-  local source="$1"
-  local target="$2"
-  local dry_run="${DRY_RUN:-false}"
-  local schema_only="${SCHEMA_ONLY:-false}"
-  local data_only="${DATA_ONLY:-false}"
-  local config_only="${CONFIG_ONLY:-false}"
-  local force="${FORCE:-false}"
+# Apply pending migrations
+cmd_apply() {
+  ensure_migrations_table || return 1
 
-  # Validate environments
-  if [[ -z "$source" ]] || [[ -z "$target" ]]; then
-    log_error "Both source and target environments are required"
-    show_migrate_help
-    return 1
-  fi
+  local pending=$(get_pending_migrations)
 
-  if [[ "$source" == "$target" ]]; then
-    log_error "Source and target environments cannot be the same"
-    return 1
-  fi
-
-  show_command_header "nself migrate" "Migrating $source → $target"
-  echo ""
-
-  # Safety check for production
-  if [[ "$target" == "prod" ]] || [[ "$target" == "production" ]]; then
-    if [[ "$force" != "true" ]]; then
-      log_warning "You are about to migrate to PRODUCTION"
-      echo ""
-      read -p "Type 'yes' to confirm: " confirm
-      if [[ "$confirm" != "yes" ]]; then
-        log_info "Migration cancelled"
-        return 1
-      fi
-    fi
-  fi
-
-  # Load source environment
-  if ! load_target_env "$source"; then
-    log_error "Failed to load source environment: $source"
-    return 1
-  fi
-
-  local source_config=$(get_env_config "$source")
-  local target_config=$(get_env_config "$target")
-
-  if [[ "$dry_run" == "true" ]]; then
-    printf "${COLOR_CYAN}➞ Dry Run - Preview Only${COLOR_RESET}\n"
-    echo ""
-  fi
-
-  # Determine what to migrate
-  local migrate_schema=true
-  local migrate_data=true
-  local migrate_config=true
-
-  if [[ "$schema_only" == "true" ]]; then
-    migrate_data=false
-    migrate_config=false
-  elif [[ "$data_only" == "true" ]]; then
-    migrate_schema=false
-    migrate_config=false
-  elif [[ "$config_only" == "true" ]]; then
-    migrate_schema=false
-    migrate_data=false
-  fi
-
-  # Show migration plan
-  printf "${COLOR_CYAN}➞ Migration Plan${COLOR_RESET}\n"
-  echo ""
-  echo "  Source: $source"
-  echo "  Target: $target"
-  echo ""
-  echo "  Components:"
-  [[ "$migrate_schema" == "true" ]] && echo "    ✓ Database schema"
-  [[ "$migrate_data" == "true" ]] && echo "    ✓ Database data"
-  [[ "$migrate_config" == "true" ]] && echo "    ✓ Configuration"
-  echo ""
-
-  if [[ "$dry_run" == "true" ]]; then
-    log_info "Dry run completed - no changes made"
+  if [[ -z "$pending" ]]; then
+    printf "${COLOR_GREEN}✓${COLOR_RESET} No pending migrations\n"
     return 0
   fi
 
-  # Create checkpoint before migration
-  local checkpoint="migrate_${source}_to_${target}_$(date +%Y%m%d_%H%M%S)"
-  mkdir -p ".nself/checkpoints"
-  echo "$checkpoint" >".nself/checkpoints/latest"
+  local count=$(echo "$pending" | wc -l | tr -d ' ')
+  printf "${COLOR_BLUE}⠿${COLOR_RESET} Applying $count migration(s)...\n\n"
 
-  # Backup target before migration
-  printf "${COLOR_CYAN}➞ Creating backup of target environment${COLOR_RESET}\n"
-  if command -v nself >/dev/null 2>&1; then
-    ENV="$target" nself db backup --label "pre-migrate" 2>/dev/null || true
-  fi
-  echo ""
+  local applied=0
+  local failed=0
+  local connection=$(get_db_connection) || return 1
+  local container=$(echo "$connection" | cut -d: -f1)
+  local user=$(echo "$connection" | cut -d: -f2)
+  local db=$(echo "$connection" | cut -d: -f3)
 
-  # Schema migration
-  if [[ "$migrate_schema" == "true" ]]; then
-    printf "${COLOR_CYAN}➞ Migrating schema${COLOR_RESET}\n"
+  while IFS= read -r migration; do
+    local file="${MIGRATIONS_DIR}/${migration}.sql"
 
-    # Get source schema
-    local source_schema=$(mktemp)
-    if [[ "$source" == "local" ]] || [[ "$source" == "dev" ]]; then
-      load_env_with_priority
-      local project_name="${PROJECT_NAME:-nself}"
-      docker exec "${project_name}_postgres" pg_dump -U "${POSTGRES_USER:-postgres}" \
-        -d "${POSTGRES_DB:-nhost}" --schema-only >"$source_schema" 2>/dev/null || true
+    printf "  ${COLOR_BLUE}⠿${COLOR_RESET} Applying: $migration\n"
+
+    # Extract UP section (everything before -- DOWN:)
+    local up_sql=$(sed -n '/-- UP:/,/-- DOWN:/p' "$file" | grep -v "^-- DOWN:" | grep -v "^-- UP:")
+
+    if [[ -z "$up_sql" ]]; then
+      # No UP section marker, use entire file
+      up_sql=$(cat "$file")
     fi
 
-    log_success "Schema migration prepared"
-    rm -f "$source_schema"
-    echo ""
-  fi
+    # Apply migration
+    if echo "$up_sql" | docker exec -i "$container" psql -U "$user" -d "$db" >/dev/null 2>&1; then
 
-  # Data migration
-  if [[ "$migrate_data" == "true" ]]; then
-    printf "${COLOR_CYAN}➞ Migrating data${COLOR_RESET}\n"
-    log_info "Use 'nself sync push $target' for data migration"
-    echo ""
-  fi
+      # Record in migrations table
+      exec_sql "INSERT INTO $MIGRATIONS_TABLE (name) VALUES ('$migration');" >/dev/null 2>&1
 
-  # Config migration
-  if [[ "$migrate_config" == "true" ]]; then
-    printf "${COLOR_CYAN}➞ Migrating configuration${COLOR_RESET}\n"
-
-    local source_env=$(echo "$source_config" | cut -d: -f1)
-    local target_env=$(echo "$target_config" | cut -d: -f1)
-
-    if [[ -f "$source_env" ]] && [[ -f "$target_env" ]]; then
-      # Show config diff
-      log_info "Configuration differences:"
-      diff "$source_env" "$target_env" 2>/dev/null | head -20 || true
-    fi
-    echo ""
-  fi
-
-  # Record migration
-  mkdir -p ".nself/migrations"
-  cat >".nself/migrations/$checkpoint.json" <<EOF
-{
-  "timestamp": "$(date -Iseconds)",
-  "source": "$source",
-  "target": "$target",
-  "schema": $migrate_schema,
-  "data": $migrate_data,
-  "config": $migrate_config
-}
-EOF
-
-  log_success "Migration completed: $source → $target"
-  log_info "Checkpoint saved: $checkpoint"
-  log_info "Use 'nself migrate rollback' to undo"
-}
-
-# Show differences between environments
-cmd_diff() {
-  local source="$1"
-  local target="$2"
-  local diff_schema=true
-  local diff_config=true
-
-  if [[ -z "$source" ]] || [[ -z "$target" ]]; then
-    log_error "Both source and target environments are required"
-    return 1
-  fi
-
-  show_command_header "nself migrate diff" "Comparing $source ↔ $target"
-  echo ""
-
-  local source_config=$(get_env_config "$source")
-  local target_config=$(get_env_config "$target")
-
-  # Configuration diff
-  printf "${COLOR_CYAN}➞ Configuration Differences${COLOR_RESET}\n"
-  echo ""
-
-  local source_env=$(echo "$source_config" | cut -d: -f1)
-  local target_env=$(echo "$target_config" | cut -d: -f1)
-
-  if [[ -f "$source_env" ]] && [[ -f "$target_env" ]]; then
-    local diff_output=$(diff -u "$source_env" "$target_env" 2>/dev/null || true)
-
-    if [[ -n "$diff_output" ]]; then
-      echo "$diff_output" | head -50
+      printf "    ${COLOR_GREEN}✓${COLOR_RESET} Applied: $migration\n"
+      ((applied++))
     else
-      log_success "No configuration differences found"
+      printf "    ${COLOR_RED}✗${COLOR_RESET} Failed: $migration\n" >&2
+      ((failed++))
+      break
     fi
+  done <<< "$pending"
+
+  printf "\n"
+
+  if [[ $failed -eq 0 ]]; then
+    printf "${COLOR_GREEN}✓${COLOR_RESET} Successfully applied $applied migration(s)\n"
+    return 0
   else
-    log_warning "Cannot compare - environment files not found"
-    [[ ! -f "$source_env" ]] && log_info "  Missing: $source_env"
-    [[ ! -f "$target_env" ]] && log_info "  Missing: $target_env"
-  fi
-
-  echo ""
-
-  # Schema diff (if both are accessible)
-  if [[ "$source" == "local" ]] || [[ "$source" == "dev" ]]; then
-    printf "${COLOR_CYAN}➞ Schema Comparison${COLOR_RESET}\n"
-    echo ""
-
-    load_env_with_priority
-    local project_name="${PROJECT_NAME:-nself}"
-
-    if docker ps --format "{{.Names}}" | grep -q "${project_name}_postgres"; then
-      # Get table counts
-      local table_count=$(docker exec "${project_name}_postgres" psql -U "${POSTGRES_USER:-postgres}" \
-        -d "${POSTGRES_DB:-nhost}" -t -c \
-        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | xargs)
-
-      log_info "Local database tables: $table_count"
-      log_info "Use 'nself db schema diagram' to export schema for comparison"
-    else
-      log_warning "Local database not running"
-    fi
-  fi
-
-  echo ""
-  log_info "Use 'nself migrate $source $target --dry-run' to preview full migration"
-}
-
-# Continuous sync between environments
-cmd_sync() {
-  local source="$1"
-  local target="$2"
-  local watch="${WATCH_MODE:-false}"
-
-  if [[ -z "$source" ]] || [[ -z "$target" ]]; then
-    log_error "Both source and target environments are required"
+    printf "${COLOR_RED}✗${COLOR_RESET} Failed to apply migrations ($applied applied, $failed failed)\n" >&2
     return 1
-  fi
-
-  show_command_header "nself migrate sync" "Syncing $source → $target"
-  echo ""
-
-  if [[ "$watch" == "true" ]]; then
-    log_info "Continuous sync mode (Ctrl+C to stop)..."
-    trap 'echo ""; log_info "Sync stopped"; exit 0' INT
-
-    while true; do
-      log_info "Checking for changes..."
-      cmd_diff "$source" "$target" 2>/dev/null | grep -E "^(\+|\-)" | head -5 || true
-
-      sleep 30
-    done
-  else
-    # One-time sync
-    log_info "Use 'nself sync push $target' to sync data"
-    log_info "Use 'nself migrate sync $source $target --watch' for continuous sync"
   fi
 }
 
 # Rollback last migration
 cmd_rollback() {
-  show_command_header "nself migrate" "Rolling back last migration"
-  echo ""
+  ensure_migrations_table || return 1
 
-  local latest_checkpoint=".nself/checkpoints/latest"
+  # Get last applied migration
+  local last=$(exec_sql "SELECT name FROM $MIGRATIONS_TABLE ORDER BY id DESC LIMIT 1;" 2>/dev/null | \
+    grep -v "^-" | grep -v "^ *$" | grep -v "^name$" | grep -v "rows)" | grep -v "^(" | head -n 1 | sed 's/^ *//')
 
-  if [[ ! -f "$latest_checkpoint" ]]; then
-    log_error "No migration checkpoint found"
-    log_info "Nothing to rollback"
-    return 1
-  fi
-
-  local checkpoint=$(cat "$latest_checkpoint")
-  local migration_record=".nself/migrations/${checkpoint}.json"
-
-  if [[ -f "$migration_record" ]]; then
-    printf "${COLOR_CYAN}➞ Last Migration${COLOR_RESET}\n"
-    echo ""
-    cat "$migration_record"
-    echo ""
-  fi
-
-  log_warning "This will attempt to restore the previous state"
-  read -p "Continue? (y/N) " -n 1 -r
-  echo
-
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Rollback cancelled"
-    return 1
-  fi
-
-  # Find backup created before migration
-  local backup_dir="${BACKUP_DIR:-./backups}"
-  local pre_migrate_backup=$(ls -1 "$backup_dir" 2>/dev/null | grep "pre-migrate" | sort -r | head -1)
-
-  if [[ -n "$pre_migrate_backup" ]]; then
-    log_info "Found pre-migration backup: $pre_migrate_backup"
-    log_info "Use 'nself rollback backup $pre_migrate_backup' to restore"
-  else
-    log_warning "No pre-migration backup found"
-  fi
-
-  # Remove checkpoint
-  rm -f "$latest_checkpoint"
-  log_success "Rollback checkpoint cleared"
-}
-
-# Migrate from Firebase
-cmd_migrate_from_firebase() {
-  show_command_header "nself migrate" "Firebase → nself Migration"
-  echo ""
-
-  # Interactive mode
-  log_info "This wizard will help you migrate from Firebase to nself"
-  echo ""
-
-  # Get service account
-  printf "Firebase service account JSON path: "
-  read -r service_account
-
-  if [[ ! -f "$service_account" ]]; then
-    log_error "Service account file not found: $service_account"
-    return 1
-  fi
-
-  # Get collections
-  printf "Collections to migrate (comma-separated or 'all'): "
-  read -r collections
-  collections=${collections:-all}
-
-  # Get storage bucket (optional)
-  printf "Firebase Storage bucket (optional, press Enter to skip): "
-  read -r storage_bucket
-
-  # Output directory
-  local output_dir="./firebase-migration-$(date +%Y%m%d-%H%M%S)"
-  printf "Output directory [${output_dir}]: "
-  read -r custom_output
-  output_dir=${custom_output:-$output_dir}
-
-  echo ""
-
-  # Run migration
-  migrate_from_firebase "$service_account" "$output_dir" "$collections" "$storage_bucket"
-}
-
-# Migrate from Supabase
-cmd_migrate_from_supabase() {
-  show_command_header "nself migrate" "Supabase → nself Migration"
-  echo ""
-
-  # Interactive mode
-  log_info "This wizard will help you migrate from Supabase to nself"
-  echo ""
-
-  # Get Supabase credentials
-  printf "Supabase Project URL (https://xxx.supabase.co): "
-  read -r supabase_url
-
-  printf "Supabase Service Role Key: "
-  read -rs service_role_key
-  echo ""
-
-  # Get database connection details
-  printf "Database host (e.g., db.xxx.supabase.co): "
-  read -r db_host
-
-  printf "Database port [5432]: "
-  read -r db_port
-  db_port=${db_port:-5432}
-
-  printf "Database name [postgres]: "
-  read -r db_name
-  db_name=${db_name:-postgres}
-
-  printf "Database user [postgres]: "
-  read -r db_user
-  db_user=${db_user:-postgres}
-
-  printf "Database password: "
-  read -rs db_pass
-  echo ""
-
-  # Output directory
-  local output_dir="./supabase-migration-$(date +%Y%m%d-%H%M%S)"
-  printf "Output directory [${output_dir}]: "
-  read -r custom_output
-  output_dir=${custom_output:-$output_dir}
-
-  echo ""
-
-  # Run migration
-  migrate_from_supabase "$supabase_url" "$service_role_key" "$db_host" "$db_port" "$db_name" "$db_user" "$db_pass" "$output_dir"
-}
-
-# Handle vendor migration subcommands
-cmd_migrate_from() {
-  local vendor="${1:-}"
-
-  if [[ -z "$vendor" ]]; then
-    log_error "Vendor required: firebase or supabase"
-    echo ""
-    echo "Usage:"
-    echo "  nself migrate from firebase"
-    echo "  nself migrate from supabase"
-    return 1
-  fi
-
-  case "$vendor" in
-    firebase)
-      shift
-      cmd_migrate_from_firebase "$@"
-      ;;
-    supabase)
-      shift
-      cmd_migrate_from_supabase "$@"
-      ;;
-    *)
-      log_error "Unknown vendor: $vendor"
-      log_info "Supported vendors: firebase, supabase"
-      return 1
-      ;;
-  esac
-}
-
-# Main command handler
-cmd_migrate() {
-  local subcommand="${1:-}"
-
-  # Check for help first
-  if [[ "$subcommand" == "-h" ]] || [[ "$subcommand" == "--help" ]] || [[ -z "$subcommand" ]]; then
-    show_migrate_help
+  if [[ -z "$last" ]]; then
+    printf "${COLOR_YELLOW}⚠${COLOR_RESET} No migrations to rollback\n"
     return 0
   fi
 
-  # Parse global options
-  local args=()
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --dry-run)
-        DRY_RUN=true
-        shift
-        ;;
-      --schema-only)
-        SCHEMA_ONLY=true
-        shift
-        ;;
-      --data-only)
-        DATA_ONLY=true
-        shift
-        ;;
-      --config-only)
-        CONFIG_ONLY=true
-        shift
-        ;;
-      --force)
-        FORCE=true
-        shift
-        ;;
-      --watch)
-        WATCH_MODE=true
-        shift
-        ;;
-      --json)
-        OUTPUT_FORMAT="json"
-        shift
-        ;;
-      -h | --help)
-        show_migrate_help
-        return 0
-        ;;
-      *)
-        args+=("$1")
-        shift
-        ;;
-    esac
+  local file="${MIGRATIONS_DIR}/${last}.sql"
+
+  if [[ ! -f "$file" ]]; then
+    printf "${COLOR_RED}✗${COLOR_RESET} Migration file not found: $file\n" >&2
+    return 1
+  fi
+
+  printf "${COLOR_YELLOW}⚠${COLOR_RESET} Rolling back: $last\n"
+
+  # Extract DOWN section
+  local down_sql=$(sed -n '/-- DOWN:/,$p' "$file" | grep -v "^-- DOWN:")
+
+  if [[ -z "$down_sql" ]]; then
+    printf "${COLOR_RED}✗${COLOR_RESET} No rollback SQL found (-- DOWN: section missing)\n" >&2
+    return 1
+  fi
+
+  local connection=$(get_db_connection) || return 1
+  local container=$(echo "$connection" | cut -d: -f1)
+  local user=$(echo "$connection" | cut -d: -f2)
+  local db=$(echo "$connection" | cut -d: -f3)
+
+  # Apply rollback
+  if echo "$down_sql" | docker exec -i "$container" psql -U "$user" -d "$db" >/dev/null 2>&1; then
+
+    # Remove from migrations table
+    exec_sql "DELETE FROM $MIGRATIONS_TABLE WHERE name = '$last';" >/dev/null 2>&1
+
+    printf "${COLOR_GREEN}✓${COLOR_RESET} Rolled back: $last\n"
+    return 0
+  else
+    printf "${COLOR_RED}✗${COLOR_RESET} Failed to rollback migration\n" >&2
+    return 1
+  fi
+}
+
+# Show migration status
+cmd_status() {
+  ensure_migrations_table || return 1
+
+  printf "${COLOR_BLUE}Migration Status:${COLOR_RESET}\n\n"
+
+  # Applied migrations
+  local applied=$(get_applied_migrations | sed 's/^ *//')
+
+  if [[ -n "$applied" ]]; then
+    printf "${COLOR_GREEN}Applied Migrations:${COLOR_RESET}\n"
+    while IFS= read -r migration; do
+      [[ -z "$migration" ]] && continue
+      printf "  ${COLOR_GREEN}✓${COLOR_RESET} $migration\n"
+    done <<< "$applied"
+    printf "\n"
+  else
+    printf "${COLOR_DIM}No applied migrations${COLOR_RESET}\n\n"
+  fi
+
+  # Pending migrations
+  local pending=$(get_pending_migrations)
+
+  if [[ -n "$pending" ]]; then
+    printf "${COLOR_YELLOW}Pending Migrations:${COLOR_RESET}\n"
+    while IFS= read -r migration; do
+      [[ -z "$migration" ]] && continue
+      printf "  ${COLOR_YELLOW}○${COLOR_RESET} $migration\n"
+    done <<< "$pending"
+    printf "\n"
+  else
+    printf "${COLOR_DIM}No pending migrations${COLOR_RESET}\n\n"
+  fi
+
+  # Summary
+  local applied_count=$(echo "$applied" | grep -c . || echo "0")
+  local pending_count=$(echo "$pending" | grep -c . || echo "0")
+
+  printf "${COLOR_DIM}Total:${COLOR_RESET} $applied_count applied, $pending_count pending\n"
+}
+
+# List all migrations
+cmd_list() {
+  ensure_migrations_dir
+
+  if [[ ! -d "$MIGRATIONS_DIR" ]] || [[ -z "$(ls -A "$MIGRATIONS_DIR"/*.sql 2>/dev/null)" ]]; then
+    printf "${COLOR_DIM}No migrations found in $MIGRATIONS_DIR${COLOR_RESET}\n"
+    return 0
+  fi
+
+  printf "${COLOR_BLUE}Available Migrations:${COLOR_RESET}\n\n"
+
+  find "$MIGRATIONS_DIR" -name "*.sql" -type f | sort | while read -r file; do
+    local basename=$(basename "$file" .sql")
+    printf "  $basename\n"
   done
+}
 
-  # Restore positional arguments
-  set -- "${args[@]}"
-  subcommand="${1:-}"
+# Main command dispatcher
+main() {
+  local command="${1:-}"
 
-  case "$subcommand" in
-    from)
-      # Vendor migration (Firebase, Supabase, etc.)
+  case "$command" in
+    create)
       shift
-      cmd_migrate_from "$@"
+      cmd_create "$@"
       ;;
-    diff)
-      shift
-      cmd_diff "$@"
-      ;;
-    sync)
-      shift
-      cmd_sync "$@"
+    apply)
+      cmd_apply
       ;;
     rollback)
       cmd_rollback
       ;;
-    local | staging | prod | production | dev)
-      # Environment migration
-      cmd_migrate_env "$@"
+    status)
+      cmd_status
+      ;;
+    list)
+      cmd_list
+      ;;
+    -h|--help|help|"")
+      show_help
       ;;
     *)
-      log_error "Unknown subcommand: $subcommand"
-      show_migrate_help
+      printf "${COLOR_RED}✗${COLOR_RESET} Unknown command: $command\n" >&2
+      printf "  Run ${COLOR_BLUE}nself migrate --help${COLOR_RESET} for usage\n" >&2
       return 1
       ;;
   esac
 }
 
-# Export for use as library
-export -f cmd_migrate
-
-# Execute if run directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  # Help is read-only - bypass init/env guards
-  for _arg in "$@"; do
-    if [[ "$_arg" == "--help" ]] || [[ "$_arg" == "-h" ]]; then
-      show_migrate_help
-      exit 0
-    fi
-  done
-  pre_command "migrate" || exit $?
-  cmd_migrate "$@"
-  exit_code=$?
-  post_command "migrate" $exit_code
-  exit $exit_code
-fi
+main "$@"
