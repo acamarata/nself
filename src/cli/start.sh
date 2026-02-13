@@ -874,5 +874,195 @@ start_services() {
   return 0
 }
 
-# Run start
-start_services
+# ============================================================
+# MONOREPO DETECTION AND ORCHESTRATION
+# ============================================================
+
+# Detect monorepo structure
+is_monorepo() {
+  local backend_dir="${BACKEND_DIR:-backend}"
+  [[ -d "$backend_dir" ]] && [[ -f "$backend_dir/docker-compose.yml" ]]
+}
+
+# Show monorepo status
+show_monorepo_status() {
+  local backend_pid="$1"
+  shift
+  local frontend_pids=("$@")
+
+  printf "\n"
+  printf "${COLOR_BOLD}╔═══════════════════════════════════════════════════════════╗${COLOR_RESET}\n"
+  printf "${COLOR_BOLD}║                   MONOREPO STATUS                         ║${COLOR_RESET}\n"
+  printf "${COLOR_BOLD}╚═══════════════════════════════════════════════════════════╝${COLOR_RESET}\n\n"
+
+  # Backend status
+  printf "${COLOR_CYAN}Backend (nself services):${COLOR_RESET}\n"
+  if kill -0 "$backend_pid" 2>/dev/null; then
+    printf "  ${COLOR_GREEN}✓${COLOR_RESET} Running (PID: %s)\n" "$backend_pid"
+
+    # Show key backend URLs (if available)
+    local backend_dir="${BACKEND_DIR:-backend}"
+    if [[ -f "$backend_dir/.env" ]]; then
+      local base_domain=$(grep "^BASE_DOMAIN=" "$backend_dir/.env" 2>/dev/null | cut -d= -f2-)
+      if [[ -n "$base_domain" ]]; then
+        printf "  ${COLOR_DIM}→ GraphQL:${COLOR_RESET} https://api.%s\n" "$base_domain"
+        printf "  ${COLOR_DIM}→ Auth:${COLOR_RESET}    https://auth.%s\n" "$base_domain"
+      fi
+    fi
+  else
+    printf "  ${COLOR_RED}✗${COLOR_RESET} Not running\n"
+  fi
+
+  # Frontend status
+  printf "\n${COLOR_CYAN}Frontend Applications:${COLOR_RESET}\n"
+  if [[ ${#frontend_pids[@]} -eq 0 ]]; then
+    printf "  ${COLOR_DIM}(none detected)${COLOR_RESET}\n"
+  else
+    local index=1
+    for pid in "${frontend_pids[@]}"; do
+      if kill -0 "$pid" 2>/dev/null; then
+        printf "  ${COLOR_GREEN}✓${COLOR_RESET} App %d running (PID: %s)\n" "$index" "$pid"
+      else
+        printf "  ${COLOR_RED}✗${COLOR_RESET} App %d stopped\n" "$index"
+      fi
+      ((index++))
+    done
+  fi
+
+  printf "\n"
+  printf "${COLOR_BOLD}═══════════════════════════════════════════════════════════${COLOR_RESET}\n"
+  printf "${COLOR_DIM}Press ${COLOR_BOLD}Ctrl+C${COLOR_RESET}${COLOR_DIM} to stop all services${COLOR_RESET}\n"
+  printf "${COLOR_BOLD}═══════════════════════════════════════════════════════════${COLOR_RESET}\n\n"
+}
+
+# Start monorepo (backend + frontends)
+start_monorepo() {
+  source "$LIB_DIR/utils/frontend-manager.sh"
+
+  local FRONTEND_PIDS=()
+  local BACKEND_PID=""
+  local backend_dir="${BACKEND_DIR:-backend}"
+
+  # Load optional config
+  if [[ -f ".nself-monorepo.conf" ]]; then
+    source ".nself-monorepo.conf"
+  fi
+
+  # Setup cleanup trap
+  cleanup_monorepo() {
+    printf "\n${COLOR_YELLOW}Shutting down monorepo services...${COLOR_RESET}\n"
+
+    # Stop frontends
+    for pid in "${FRONTEND_PIDS[@]}"; do
+      if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+        # Give it a moment to exit gracefully
+        sleep 0.5
+        # Force kill if still running
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -9 "$pid" 2>/dev/null || true
+        fi
+      fi
+    done
+
+    # Stop backend
+    if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+      printf "  Stopping backend services...\n"
+      (cd "$backend_dir" && nself stop >/dev/null 2>&1)
+    fi
+
+    printf "${COLOR_GREEN}✓${COLOR_RESET} All services stopped\n"
+    exit 0
+  }
+  trap cleanup_monorepo EXIT INT TERM
+
+  # Show header
+  printf "\n${COLOR_BOLD}${COLOR_BLUE}🚀 Monorepo Mode Detected${COLOR_RESET}\n\n"
+
+  # 1. Start backend
+  printf "${COLOR_BLUE}⠋${COLOR_RESET} Starting nself backend...\n"
+  (cd "$backend_dir" && nself start) &
+  BACKEND_PID=$!
+
+  # 2. Wait for backend to be healthy
+  sleep 5
+  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    printf "${COLOR_RED}✗${COLOR_RESET} Backend failed to start\n" >&2
+    return 1
+  fi
+
+  printf "${COLOR_GREEN}✓${COLOR_RESET} Backend services starting\n\n"
+
+  # 3. Detect and start frontends
+  local apps=()
+
+  # Check if using FRONTEND_APP_N configuration
+  local use_auto_detect=true
+  for i in $(seq 1 10); do
+    eval "local app_name=\${FRONTEND_APP_${i}_NAME:-}"
+    if [[ -n "$app_name" ]]; then
+      use_auto_detect=false
+      break
+    fi
+  done
+
+  if [[ "$use_auto_detect" == "true" ]]; then
+    printf "${COLOR_BLUE}Auto-detecting frontend applications...${COLOR_RESET}\n\n"
+
+    # Detect apps (Bash 3.2 compatible - no mapfile)
+    while IFS= read -r app; do
+      apps+=("$app")
+    done < <(detect_frontend_apps)
+
+    if [[ ${#apps[@]} -eq 0 ]]; then
+      printf "  ${COLOR_DIM}No frontend apps detected${COLOR_RESET}\n\n"
+    else
+      # Start each app
+      for app_dir in "${apps[@]}"; do
+        local app_name=$(basename "$app_dir")
+        local pkg_manager=$(detect_package_manager "$app_dir")
+
+        if ! has_dev_script "$app_dir"; then
+          printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} Skipping %s (no dev script)\n" "$app_name"
+          continue
+        fi
+
+        printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Starting %s (%s)..." "$app_name" "$pkg_manager"
+
+        local pid=$(start_frontend_app "$app_dir")
+        if [[ -n "$pid" ]]; then
+          sleep 2
+          if kill -0 "$pid" 2>/dev/null; then
+            FRONTEND_PIDS+=("$pid")
+            printf " ${COLOR_GREEN}✓${COLOR_RESET}\n"
+          else
+            printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
+          fi
+        else
+          printf " ${COLOR_RED}✗${COLOR_RESET} (failed to start)\n"
+        fi
+      done
+      printf "\n"
+    fi
+  else
+    printf "${COLOR_BLUE}Using FRONTEND_APP_N configuration${COLOR_RESET}\n"
+    printf "${COLOR_DIM}(FRONTEND_APP_N support coming in future release)${COLOR_RESET}\n\n"
+  fi
+
+  # 4. Show unified status
+  show_monorepo_status "$BACKEND_PID" "${FRONTEND_PIDS[@]}"
+
+  # 5. Wait for any process to exit
+  wait
+}
+
+# ============================================================
+# MAIN ENTRY POINT
+# ============================================================
+
+# Detect if we're in monorepo mode and route accordingly
+if is_monorepo; then
+  start_monorepo
+else
+  start_services
+fi
