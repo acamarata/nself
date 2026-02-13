@@ -2,7 +2,7 @@
 # plugin.sh - Plugin management for nself v0.4.8
 # Install, manage, and use nself plugins
 
-set -euo pipefail  # Full error handling (exit on error, undefined vars, pipe failures)
+set -o pipefail
 
 # ============================================================================
 # INITIALIZATION

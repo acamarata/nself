@@ -21,21 +21,6 @@ orchestrate_build() {
   export ENV="${ENV:-$env}"
   export VERBOSE="$verbose"
 
-  # CRITICAL DEBUG: Output environment info at start of build
-  if [[ "${DEBUG:-false}" == "true" ]] || [[ "${BUILD_DEBUG:-false}" == "true" ]] || [[ "${VERBOSE:-false}" == "true" ]]; then
-    printf "\n[DEBUG] Build started: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" >&2
-    printf "[DEBUG] Working directory: %s\n" "$PWD" >&2
-    printf "[DEBUG] Project name: %s\n" "$PROJECT_NAME" >&2
-    printf "[DEBUG] Environment: %s\n" "$ENV" >&2
-    printf "[DEBUG] Force rebuild: %s\n" "$force" >&2
-    printf "[DEBUG] Verbose: %s\n" "$verbose" >&2
-    printf "[DEBUG] User: %s\n" "$USER" >&2
-    printf "[DEBUG] Hostname: %s\n" "$(hostname 2>/dev/null || echo 'unknown')" >&2
-    printf "[DEBUG] NSELF_ROOT: %s\n" "${NSELF_ROOT:-not set}" >&2
-    printf "[DEBUG] LIB_ROOT: %s\n" "${LIB_ROOT:-not set}" >&2
-    printf "\n" >&2
-  fi
-
   # Initialize change tracking
   if command -v init_change_tracking >/dev/null 2>&1; then
     init_change_tracking

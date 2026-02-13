@@ -1,47 +1,8 @@
 #!/usr/bin/env bash
-
-# CRITICAL DIAGNOSTIC: Output BEFORE set -euo pipefail to diagnose Linux failures
-# This should ALWAYS print, even if script fails immediately after
-printf "=== NSELF BUILD STARTING ===\n" >&2
-printf "Date: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" >&2
-printf "PWD: %s\n" "$PWD" >&2
-printf "USER: %s\n" "$USER" >&2
-printf "BASH_VERSION: %s\n" "$BASH_VERSION" >&2
-printf "Script: %s\n" "${BASH_SOURCE[0]}" >&2
-printf "========================\n" >&2
-
 set -euo pipefail
-
-printf "=== set -euo pipefail SUCCESS ===\n" >&2
 
 # build.sh - nself build command wrapper
 # This is now a thin wrapper that delegates to modular components
-
-# CRITICAL: Error trap to catch silent failures
-# This ensures errors are NEVER silently swallowed
-trap 'handle_build_error $? $LINENO' ERR
-
-printf "=== ERR TRAP SET ===\n" >&2
-
-handle_build_error() {
-  local exit_code=$1
-  local line_number=$2
-  printf "\nError: Build failed at line %d (exit code: %d)\n" "$line_number" "$exit_code" >&2
-
-  # Log to file for remote debugging
-  mkdir -p "$HOME/.nself/logs" 2>/dev/null
-  {
-    printf "\n=== Build Error: %s ===\n" "$(date '+%Y-%m-%d %H:%M:%S')"
-    printf "Script: %s\n" "${BASH_SOURCE[1]:-build.sh}"
-    printf "Line: %d\n" "$line_number"
-    printf "Exit Code: %d\n" "$exit_code"
-    printf "Working Directory: %s\n" "$PWD"
-    printf "User: %s\n" "$USER"
-    printf "Hostname: %s\n" "$(hostname 2>/dev/null || echo 'unknown')"
-  } >> "$HOME/.nself/logs/build-errors.log" 2>/dev/null
-
-  return "$exit_code"
-}
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -203,44 +164,16 @@ cmd_build() {
   # Cascade order: .env.dev → .env.staging/prod → .env.secrets → .env
   # Critical: Must load BEFORE security validation to detect actual values
   # When verbose mode is enabled, show the cascade visualization
-  printf "=== LOADING ENVIRONMENT ===\n" >&2
-  printf "Environment mode: %s\n" "${ENV:-dev}" >&2
   if [[ "$verbose" == "true" ]]; then
     load_env_with_priority false  # Don't suppress output in verbose mode
   else
     load_env_with_priority true   # Suppress normal output
   fi
   env="${ENV:-$env}"
-  printf "=== ENV LOADED (ENV=%s) ===\n" "$env" >&2
-
-  # Debug: Check if .env.secrets was actually loaded
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    if [[ -f ".env.secrets" ]]; then
-      printf "[DEBUG] .env.secrets exists: YES\n" >&2
-      printf "[DEBUG] POSTGRES_PASSWORD after load: %s***\n" "${POSTGRES_PASSWORD:0:5}" >&2
-    else
-      printf "[DEBUG] .env.secrets exists: NO\n" >&2
-    fi
-  fi
-
-  # Validate environment files for undefined variable references
-  # This prevents silent failures from ${UNDEFINED_VAR} expansions
-  if command -v validate_env_cascade >/dev/null 2>&1; then
-    printf "=== VALIDATING ENVIRONMENT VARIABLES ===\n" >&2
-    if ! validate_env_cascade "$env" true; then
-      # Validation found issues - warn but don't fail build
-      printf "\n⚠️  Warning: Environment validation found undefined variables\n" >&2
-      printf "Build will continue, but you may encounter runtime issues\n" >&2
-      printf "Run 'nself config validate' for detailed analysis\n\n" >&2
-    else
-      printf "=== ENV VALIDATION PASSED ===\n" >&2
-    fi
-  fi
 
   # ============================================================
   # SECURE BY DEFAULT: Security validation before build
   # ============================================================
-  printf "=== STARTING SECURITY VALIDATION ===\n" >&2
   if command -v security::validate_build >/dev/null 2>&1; then
     if ! security::validate_build "$allow_insecure"; then
       # Security validation failed
@@ -250,7 +183,6 @@ cmd_build() {
         echo "⚠ Continuing with insecure configuration (--allow-insecure flag)"
         echo ""
       else
-        printf "=== SECURITY VALIDATION FAILED ===\n" >&2
         return 1
       fi
     fi
@@ -262,24 +194,18 @@ cmd_build() {
       fi
     fi
   fi
-  printf "=== SECURITY VALIDATION PASSED ===\n" >&2
 
   # Verify build system is properly initialized
-  printf "=== VERIFYING BUILD SYSTEM ===\n" >&2
   if ! command -v orchestrate_build >/dev/null 2>&1; then
     echo "Error: Build system not properly initialized" >&2
     echo "Missing orchestrate_build function from core.sh" >&2
     return 1
   fi
-  printf "=== BUILD SYSTEM OK ===\n" >&2
 
   # Run the orchestrated build
-  printf "=== CALLING ORCHESTRATE_BUILD ===\n" >&2
-  printf "Parameters: project=%s, env=%s, force=%s, verbose=%s\n" "$project_name" "$env" "$force_rebuild" "$verbose" >&2
   local build_result
   orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"
   build_result=$?
-  printf "=== ORCHESTRATE_BUILD COMPLETED (exit=%s) ===\n" "$build_result" >&2
 
   return $build_result
 }

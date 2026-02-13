@@ -278,22 +278,11 @@ generate_docker_compose() {
 
   local compose_result=0
   if [[ -f "$compose_script" ]]; then
-    # CRITICAL FIX: Never suppress errors - they must be visible for debugging
-    # Only suppress output when verbose/debug mode is OFF and build succeeds
-    local temp_output
-    temp_output=$(mktemp)
-
-    # Run the compose generation (disable tracing but keep errors)
+    # Run the compose generation with clean output (disable tracing)
     if (
       set +x
       bash "$compose_script"
-    ) >"$temp_output" 2>&1; then
-      # Success - suppress output unless verbose/debug
-      if [[ "${VERBOSE:-false}" == "true" ]] || [[ "${DEBUG:-false}" == "true" ]] || [[ "${BUILD_DEBUG:-false}" == "true" ]]; then
-        cat "$temp_output"
-      fi
-      rm -f "$temp_output"
-
+    ) >/dev/null 2>&1; then
       # Apply health check fixes if available
       if [[ -f "${LIB_ROOT:-/usr/local/lib/nself}/auto-fix/healthcheck-fix.sh" ]]; then
         source "${LIB_ROOT:-/usr/local/lib/nself}/auto-fix/healthcheck-fix.sh"
@@ -302,25 +291,8 @@ generate_docker_compose() {
       compose_result=0
     else
       compose_result=$?
-      # CRITICAL: On failure, ALWAYS show the error output
-      printf "\nError: docker-compose.yml generation failed (exit code: %d)\n" "$compose_result" >&2
-      printf "Output from compose-generate.sh:\n" >&2
-      cat "$temp_output" >&2
-      rm -f "$temp_output"
-
-      # Also log to file for remote debugging
-      mkdir -p "$HOME/.nself/logs" 2>/dev/null
-      {
-        printf "\n=== Build Error: %s ===\n" "$(date '+%Y-%m-%d %H:%M:%S')"
-        printf "Script: %s\n" "$compose_script"
-        printf "Exit Code: %d\n" "$compose_result"
-        printf "Working Directory: %s\n" "$PWD"
-        printf "Output:\n"
-        cat "$temp_output"
-      } >> "$HOME/.nself/logs/build-errors.log" 2>/dev/null
     fi
   else
-    printf "Error: Compose generation script not found: %s\n" "$compose_script" >&2
     compose_result=1
   fi
 

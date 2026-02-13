@@ -192,36 +192,11 @@ generate_docker_compose() {
 # Project: ${PROJECT_NAME}
 # Date: $(date '+%Y-%m-%d %H:%M:%S')
 # Build Version: $(cat "$COMPOSE_SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
-#
-# ⚠️  CRITICAL WARNING: Do NOT run 'docker compose' directly!
-#    Use 'nself start' instead, which properly loads .env.computed
-#
-#    Direct 'docker compose up' will FAIL because:
-#    - Missing DOCKER_NETWORK, DATABASE_URL, and other computed variables
-#    - These are generated in .env.computed during 'nself build'
-#    - docker compose doesn't automatically load .env.computed
-#
-#    Always use:
-#      nself start    # Start all services
-#      nself stop     # Stop all services
-#      nself restart  # Restart services
-
-# COMPOSE_PROJECT_NAME support: Respect user's project name preference
-# Priority: COMPOSE_PROJECT_NAME > PROJECT_NAME
-name: \${COMPOSE_PROJECT_NAME:-\${PROJECT_NAME}}
 
 networks:
-  # Custom network for all services
   ${DOCKER_NETWORK}:
     name: ${DOCKER_NETWORK}
     driver: bridge
-
-  # CRITICAL FIX: Set default network to be our custom network
-  # This prevents Docker Compose from creating a separate default network
-  # which was causing postgres/redis to fail joining the custom network
-  default:
-    name: ${DOCKER_NETWORK}
-    external: false
 
 volumes:
   postgres_data:
@@ -261,8 +236,8 @@ EOF
   [[ "${LOKI_ENABLED:-false}" == "true" ]] && echo "  loki_data:" >> docker-compose.yml
   [[ "${TEMPO_ENABLED:-false}" == "true" ]] && echo "  tempo_data:" >> docker-compose.yml
   [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] && echo "  alertmanager_data:" >> docker-compose.yml
-  # NOTE: pgAdmin and Portainer are NOT supported services (per architecture specification)
-  # Users should use 'nself admin' for management UI instead
+  [[ "${PGADMIN_ENABLED:-false}" == "true" ]] && echo "  pgadmin_data:" >> docker-compose.yml
+  [[ "${PORTAINER_ENABLED:-false}" == "true" ]] && echo "  portainer_data:" >> docker-compose.yml
 
   # Start services section
   echo "" >> docker-compose.yml

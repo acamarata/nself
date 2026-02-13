@@ -12,11 +12,6 @@ if [[ -f "$_ENV_MERGER_DIR/env-detection.sh" ]]; then
   source "$_ENV_MERGER_DIR/env-detection.sh"
 fi
 
-# Source platform-compat for safe wrappers
-if [[ -f "$_ENV_MERGER_DIR/platform-compat.sh" ]]; then
-  source "$_ENV_MERGER_DIR/platform-compat.sh"
-fi
-
 # Merge environment files and generate runtime configuration
 # Usage: merge_environments <target_env> [output_file]
 merge_environments() {
@@ -35,10 +30,8 @@ merge_environments() {
 
   case "$target_env" in
     staging | stage)
-      # Staging: dev → staging → secrets → local overrides
+      # Staging: dev → staging → local overrides
       env_files+=(".env.staging")
-      # CRITICAL: Load .env.secrets in staging (Bug #17 fix - Part 2)
-      env_files+=(".env.secrets")
       ;;
     prod | production)
       # Production: dev → staging → prod → secrets → local overrides
@@ -47,10 +40,7 @@ merge_environments() {
       env_files+=(".env.secrets")
       ;;
     dev | development | *)
-      # Dev: dev → secrets → local overrides (default)
-      # CRITICAL: Load .env.secrets in dev too (Bug #17 fix - Part 2)
-      # Developers use `nself config secrets generate` in dev mode
-      env_files+=(".env.secrets")
+      # Dev: just dev → local overrides (default)
       ;;
   esac
 
@@ -71,8 +61,8 @@ merge_environments() {
         # Extract key if it's a key=value pair
         if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)= ]]; then
           local key="${BASH_REMATCH[1]}"
-          # Remove any existing occurrence of this key (CRITICAL: Use safe wrapper for cross-platform)
-          safe_sed_inline "$temp_file" "/^${key}=/d" 2>/dev/null || true
+          # Remove any existing occurrence of this key
+          sed -i.bak "/^${key}=/d" "$temp_file" 2>/dev/null || true
         fi
 
         # Add the line
@@ -108,7 +98,7 @@ merge_environments() {
   } >"$output_file"
 
   # Cleanup
-  rm -f "$temp_file"
+  rm -f "$temp_file" "$temp_file.bak"
 
   # Report what was loaded
   echo "Environment cascade for '$target_env':"
@@ -200,16 +190,12 @@ add_smart_defaults() {
   fi
 
   # Hasura JWT configuration (JSON format required by auth service)
-  # CRITICAL: Single-quote wrapping ensures JSON survives BOTH:
-  #   - Docker Compose .env parsing (strips outer quotes, preserves inner content)
-  #   - Shell sourcing via `source .env` (single quotes prevent bash interpretation)
-  # Without single quotes, bash strips double quotes: {"type":"HS256"} → {type:HS256} (invalid JSON)
   if ! var_exists "HASURA_GRAPHQL_JWT_SECRET"; then
     local jwt_secret="$(get_var AUTH_JWT_SECRET)"
     local jwt_type="$(get_var AUTH_JWT_TYPE)"
     [ -z "$jwt_secret" ] && jwt_secret="change-this-secret-in-production"
     [ -z "$jwt_type" ] && jwt_type="HS256"
-    echo "HASURA_GRAPHQL_JWT_SECRET='{\"type\":\"$jwt_type\",\"key\":\"$jwt_secret\"}'" >>"$output_file"
+    echo "HASURA_GRAPHQL_JWT_SECRET={\"type\":\"$jwt_type\",\"key\":\"$jwt_secret\"}" >>"$output_file"
   fi
 
   # Base domain
@@ -225,57 +211,13 @@ add_smart_defaults() {
     fi
   fi
 
-  # CRITICAL: Map HTTP_PORT/HTTPS_PORT → NGINX_PORT/NGINX_SSL_PORT
-  # Users set HTTP_PORT/HTTPS_PORT in .env for multi-project port avoidance,
-  # but docker-compose.yml uses NGINX_PORT/NGINX_SSL_PORT for port bindings.
-  # Without this mapping, nginx always binds to 80/443 regardless of user settings.
-  if ! var_exists "NGINX_PORT"; then
-    local http_port="$(get_var HTTP_PORT)"
-    if [[ -n "$http_port" ]]; then
-      echo "NGINX_PORT=$http_port" >>"$output_file"
-    fi
-  fi
-  if ! var_exists "NGINX_SSL_PORT"; then
-    local https_port="$(get_var HTTPS_PORT)"
-    if [[ -n "$https_port" ]]; then
-      echo "NGINX_SSL_PORT=$https_port" >>"$output_file"
-    fi
-  fi
-
-  # PORT_OFFSET support for multi-project development
-  # When set, all service ports are shifted by this offset to avoid conflicts
-  # Example: PORT_OFFSET=100 shifts 5432→5532, 8080→8180, 6379→6479, etc.
-  local port_offset="$(get_var PORT_OFFSET)"
-  if [[ -z "$port_offset" ]]; then
-    port_offset=0
-  fi
-
-  # Service ports (apply PORT_OFFSET if set)
-  if [[ "$port_offset" -gt 0 ]]; then
-    var_exists "POSTGRES_PORT" || echo "POSTGRES_PORT=$((5432 + port_offset))" >>"$output_file"
-    var_exists "HASURA_PORT" || echo "HASURA_PORT=$((8080 + port_offset))" >>"$output_file"
-    var_exists "AUTH_PORT" || echo "AUTH_PORT=$((4000 + port_offset))" >>"$output_file"
-    var_exists "STORAGE_PORT" || echo "STORAGE_PORT=$((5000 + port_offset))" >>"$output_file"
-    var_exists "REDIS_PORT" || echo "REDIS_PORT=$((6379 + port_offset))" >>"$output_file"
-    var_exists "MINIO_PORT" || echo "MINIO_PORT=$((9000 + port_offset))" >>"$output_file"
-    var_exists "MINIO_CONSOLE_PORT" || echo "MINIO_CONSOLE_PORT=$((9001 + port_offset))" >>"$output_file"
-    var_exists "MAILPIT_SMTP_PORT" || echo "MAILPIT_SMTP_PORT=$((1025 + port_offset))" >>"$output_file"
-    var_exists "MAILPIT_UI_PORT" || echo "MAILPIT_UI_PORT=$((8025 + port_offset))" >>"$output_file"
-    var_exists "MEILISEARCH_PORT" || echo "MEILISEARCH_PORT=$((7700 + port_offset))" >>"$output_file"
-    var_exists "MLFLOW_PORT" || echo "MLFLOW_PORT=$((5005 + port_offset))" >>"$output_file"
-    var_exists "NSELF_ADMIN_PORT" || echo "NSELF_ADMIN_PORT=$((3021 + port_offset))" >>"$output_file"
-    var_exists "FUNCTIONS_PORT" || echo "FUNCTIONS_PORT=$((3008 + port_offset))" >>"$output_file"
-    # Nginx ports typically shouldn't be offset (80/443 are standard)
-    var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
-    var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
-  else
-    var_exists "HASURA_PORT" || echo "HASURA_PORT=8080" >>"$output_file"
-    var_exists "AUTH_PORT" || echo "AUTH_PORT=4000" >>"$output_file"
-    var_exists "STORAGE_PORT" || echo "STORAGE_PORT=5000" >>"$output_file"
-    var_exists "REDIS_PORT" || echo "REDIS_PORT=6379" >>"$output_file"
-    var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
-    var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
-  fi
+  # Service ports
+  var_exists "HASURA_PORT" || echo "HASURA_PORT=8080" >>"$output_file"
+  var_exists "AUTH_PORT" || echo "AUTH_PORT=4000" >>"$output_file"
+  var_exists "STORAGE_PORT" || echo "STORAGE_PORT=5000" >>"$output_file"
+  var_exists "REDIS_PORT" || echo "REDIS_PORT=6379" >>"$output_file"
+  var_exists "NGINX_PORT" || echo "NGINX_PORT=80" >>"$output_file"
+  var_exists "NGINX_SSL_PORT" || echo "NGINX_SSL_PORT=443" >>"$output_file"
 }
 
 # Add computed values based on environment

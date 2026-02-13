@@ -72,26 +72,6 @@ get_container_info() {
   compose ps --format "$format" "$service" 2>/dev/null || echo "$service\tN/A\tN/A\tN/A\tN/A"
 }
 
-# Function to check if a service is an init container
-is_init_container() {
-  local service=$1
-  local project_name="${PROJECT_NAME:-nself}"
-  local container_name="${project_name}_${service//-/_}"
-
-  # Check for nself.type=init-container label
-  local label=$(docker inspect --format='{{index .Config.Labels "nself.type"}}' "$container_name" 2>/dev/null || echo "")
-  [[ "$label" == "init-container" ]] && return 0
-
-  # Fallback: check restart policy (init containers have restart: "no")
-  local restart_policy=$(docker inspect --format='{{.HostConfig.RestartPolicy.Name}}' "$container_name" 2>/dev/null || echo "")
-  if [[ "$restart_policy" == "no" || "$restart_policy" == "" ]]; then
-    # Additional check: init containers typically have names ending in _init
-    [[ "$service" == *"init" || "$service" == *"-init" ]] && return 0
-  fi
-
-  return 1
-}
-
 # Function to check service health efficiently
 check_service_health() {
   local service=$1
@@ -325,22 +305,9 @@ check_config_drift() {
     drift_reasons+=(".env file modified since last start")
   fi
 
-  # Check service count mismatch (exclude init containers)
-  local all_compose_services=($(compose config --services 2>/dev/null))
-  local expected_services=0
-  for svc in "${all_compose_services[@]}"; do
-    if ! is_init_container "$svc"; then
-      expected_services=$((expected_services + 1))
-    fi
-  done
-
-  local all_running_containers=($(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//'))
-  local running_services=0
-  for container in "${all_running_containers[@]}"; do
-    if ! is_init_container "$container"; then
-      running_services=$((running_services + 1))
-    fi
-  done
+  # Check service count mismatch
+  local expected_services=$(compose config --services 2>/dev/null | wc -l | tr -d ' ')
+  local running_services=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
 
   if [[ "$expected_services" -gt 0 ]] && [[ "$running_services" -gt 0 ]]; then
     if [[ "$expected_services" != "$running_services" ]]; then
@@ -383,20 +350,9 @@ show_service_overview() {
     local running=0
     local total=0
     local service_list=()
-    local init_list=()
 
     while IFS='|' read -r service is_running state; do
       if [[ -n "$service" ]]; then
-        # Skip init containers from main count
-        if is_init_container "$service"; then
-          if [[ "$is_running" == "true" ]]; then
-            init_list+=("\033[1;32m✓\033[0m $service (completed)")
-          else
-            init_list+=("\033[1;37m○\033[0m $service")
-          fi
-          continue
-        fi
-
         total=$((total + 1))
         if [[ "$is_running" == "true" ]]; then
           running=$((running + 1))
@@ -416,42 +372,21 @@ show_service_overview() {
       printf "$service_entry\n"
     done
 
-    # Show init containers separately
-    if [[ ${#init_list[@]} -gt 0 ]]; then
-      echo ""
-      printf "\033[1;36m→\033[0m Initialization Jobs\n"
-      echo ""
-      for init_entry in "${init_list[@]}"; do
-        printf "$init_entry\n"
-      done
-    fi
-
     return
   fi
 
   # Standard mode (original implementation)
   # Get services from compose config, fallback to Docker if config fails
-  local all_services=($(compose config --services 2>/dev/null))
+  local services=($(compose config --services 2>/dev/null))
 
   # If compose config fails, get running containers directly from Docker
-  if [[ ${#all_services[@]} -eq 0 ]]; then
+  if [[ ${#services[@]} -eq 0 ]]; then
     local project_name="${PROJECT_NAME:-nself}"
-    all_services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//' | sort -u))
+    services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//' | sort -u))
   fi
 
-  # CRITICAL: Separate init containers from regular services
-  local services=()
-  local init_containers=()
-  for svc in "${all_services[@]}"; do
-    if is_init_container "$svc"; then
-      init_containers+=("$svc")
-    else
-      services+=("$svc")
-    fi
-  done
-
   local running=0
-  local total=${#services[@]}  # Only count regular services, not init containers
+  local total=${#services[@]}
 
   # Sort services in display order
   local sorted_services=($(sort_services "${services[@]}"))
@@ -533,24 +468,6 @@ show_service_overview() {
 
   if [[ $stopped_count -gt 5 ]]; then
     printf "\033[1;37m...\033[0m +$(($stopped_count - 5)) more stopped\n"
-  fi
-
-  # Show init containers separately (if any)
-  if [[ ${#init_containers[@]} -gt 0 ]]; then
-    echo ""
-    printf "\033[1;36m→\033[0m Initialization Jobs\n"
-    echo ""
-    for init_svc in "${init_containers[@]}"; do
-      local container_name="${PROJECT_NAME:-nself}_${init_svc//-/_}"
-      local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "")
-      if [[ "$exit_code" == "0" ]]; then
-        printf "\033[1;32m✓\033[0m $init_svc (completed)\n"
-      elif [[ -n "$exit_code" ]]; then
-        printf "\033[1;31m✗\033[0m $init_svc (failed with exit code $exit_code)\n"
-      else
-        printf "\033[1;37m○\033[0m $init_svc\n"
-      fi
-    done
   fi
 }
 
