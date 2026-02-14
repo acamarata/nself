@@ -3,6 +3,11 @@
 # env-merger.sh - Environment merging and runtime file generation
 # Cascades and merges environment files based on target environment
 # Generates .env.runtime for docker-compose with fully resolved values
+#
+# IMPORTANT: DATABASE_URL Dual Strategy
+# - .env files use @localhost:5432 (for external tools: plugins, nself db commands)
+# - .env.runtime uses @postgres:5432 (for Docker internal networking)
+# This file ALWAYS overrides DATABASE_URL in .env.runtime to use service names
 
 # Get script directory (namespaced to avoid clobbering caller's SCRIPT_DIR)
 _ENV_MERGER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -146,13 +151,16 @@ add_smart_defaults() {
   var_exists "POSTGRES_DB" || echo "POSTGRES_DB=$project_name" >>"$output_file"
   var_exists "POSTGRES_PORT" || echo "POSTGRES_PORT=5432" >>"$output_file"
 
-  # Build DATABASE_URL if not exists
-  if ! var_exists "DATABASE_URL"; then
-    local db_user="$(get_var POSTGRES_USER)"
-    local db_pass="$(get_var POSTGRES_PASSWORD)"
-    local db_name="$(get_var POSTGRES_DB)"
-    echo "DATABASE_URL=postgresql://${db_user}:${db_pass}@postgres:5432/${db_name}" >>"$output_file"
-  fi
+  # CRITICAL: Always override DATABASE_URL for Docker internal networking
+  # .env files may have @localhost (correct for external tools like plugins)
+  # But Docker services MUST use @postgres service name
+  # Remove any existing DATABASE_URL and set the correct one
+  sed -i.bak "/^DATABASE_URL=/d" "$output_file" 2>/dev/null || true
+
+  local db_user="$(get_var POSTGRES_USER)"
+  local db_pass="$(get_var POSTGRES_PASSWORD)"
+  local db_name="$(get_var POSTGRES_DB)"
+  echo "DATABASE_URL=postgresql://${db_user}:${db_pass}@postgres:5432/${db_name}" >>"$output_file"
 
   # Auth service defaults
   var_exists "AUTH_SMTP_USER" || echo "AUTH_SMTP_USER=" >>"$output_file"
