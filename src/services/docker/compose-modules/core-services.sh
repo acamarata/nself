@@ -88,7 +88,7 @@ generate_hasura_service() {
       postgres:
         condition: service_healthy
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: \${DATABASE_URL}
+      HASURA_GRAPHQL_DATABASE_URL: postgresql://\${POSTGRES_USER:-postgres}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB:-\${PROJECT_NAME}}
       HASURA_GRAPHQL_ADMIN_SECRET: \${HASURA_GRAPHQL_ADMIN_SECRET}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_DEV_MODE: \${HASURA_DEV_MODE:-false}
