@@ -444,7 +444,7 @@ cmd_run_action() {
   fi
 
   # Export plugin context
-  export PLUGIN_DIR="$plugin_dir"
+  export NSELF_PLUGIN_PATH="$plugin_dir"
   export NSELF_PROJECT_DIR="$(pwd)"
 
   # 1. Check for shell script action (original behavior)
@@ -600,7 +600,7 @@ run_builtin_integrate() {
   local description=""
 
   if command -v jq >/dev/null 2>&1; then
-    port=$(jq -r '.config.port // 3000' "$manifest" 2>/dev/null)
+    port=$(jq -r '.port // .config.port // 3000' "$manifest" 2>/dev/null)
     description=$(jq -r '.description // ""' "$manifest" 2>/dev/null)
   else
     port=$(grep '"port"' "$manifest" | head -1 | sed 's/[^0-9]//g')

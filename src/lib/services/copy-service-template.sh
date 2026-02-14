@@ -53,6 +53,7 @@ copy_service_template() {
     actix) template_path="$templates_root/rust/actix-web" ;;
     rails) template_path="$templates_root/ruby/rails" ;;
     spring) template_path="$templates_root/java/spring-boot" ;;
+    custom) template_path="$templates_root/custom" ;;
     *)
       echo "Error: Unknown service type: $service_type" >&2
       return 1
