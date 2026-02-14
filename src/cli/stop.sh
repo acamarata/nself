@@ -247,6 +247,9 @@ cmd_stop() {
   if [[ $result -eq 0 ]]; then
     printf "\r${COLOR_GREEN}✓${COLOR_RESET} All services stopped                              \n"
 
+    # Clean up any exited init containers
+    cleanup_init_containers 2>/dev/null || true
+
     # Clean up runtime environment file (so changes to .env files take effect on restart)
     if [[ -f ".env.runtime" ]]; then
       rm -f .env.runtime

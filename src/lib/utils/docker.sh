@@ -271,8 +271,26 @@ validate_compose_file() {
   fi
 }
 
+# Cleanup exited init containers
+# Init containers (minio_init, meilisearch_init, etc.) are meant to run once and exit
+# They clutter the status display and should be removed after they complete
+cleanup_init_containers() {
+  local project="${PROJECT_NAME:-$(project_name)}"
+
+  # Find all exited init containers for this project
+  local init_containers=$(docker ps -a \
+    --filter "name=${project}_.*_init" \
+    --filter "status=exited" \
+    --format "{{.Names}}" 2>/dev/null)
+
+  if [[ -n "$init_containers" ]]; then
+    # Remove them silently
+    echo "$init_containers" | xargs docker rm >/dev/null 2>&1 || true
+  fi
+}
+
 # Export all functions
 export -f ensure_docker_running compose project_name container_name
 export -f is_service_running service_health wait_service_healthy
 export -f kill_port_if_ours is_port_available ports_in_use_for_project
-export -f cleanup_stopped_containers get_compose_config validate_compose_file
+export -f cleanup_stopped_containers cleanup_init_containers get_compose_config validate_compose_file

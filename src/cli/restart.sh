@@ -339,6 +339,9 @@ cmd_restart() {
     log_info "Run 'nself status' to check service health"
   fi
 
+  # Clean up any exited init containers
+  cleanup_init_containers 2>/dev/null || true
+
   echo
   log_success "Restart completed successfully"
   return 0

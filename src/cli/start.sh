@@ -11,6 +11,7 @@ LIB_DIR="$SCRIPT_DIR/../lib"
 # Source only essential utilities
 source "$LIB_DIR/utils/display.sh"
 source "$LIB_DIR/utils/env.sh"
+source "$LIB_DIR/utils/docker.sh"
 source "$LIB_DIR/utils/error-messages.sh" 2>/dev/null || true
 
 # Source security module for secure-by-default enforcement
@@ -770,6 +771,10 @@ start_services() {
     # Final summary (like build command)
     printf "\n"
     printf "${COLOR_GREEN}✓${COLOR_RESET} ${COLOR_BOLD}All services started successfully${COLOR_RESET}\n"
+
+    # Clean up any exited init containers (minio_init, meilisearch_init, etc.)
+    cleanup_init_containers 2>/dev/null || true
+
     printf "${COLOR_GREEN}✓${COLOR_RESET} Project: ${COLOR_BOLD}%s${COLOR_RESET} (%s) / BD: %s\n" "$project_name" "$env" "${BASE_DOMAIN:-localhost}"
     printf "${COLOR_GREEN}✓${COLOR_RESET} Services (%s): %s core, %s optional, %s monitoring, %s custom\n" \
       "${running_count:-0}" "${core_count:-4}" "${optional_count:-0}" "${monitoring_count:-0}" "${custom_count:-0}"
