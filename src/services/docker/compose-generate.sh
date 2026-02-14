@@ -37,23 +37,35 @@ if [[ -f "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh" ]]; then
   source "$COMPOSE_SCRIPT_DIR/../../lib/utils/env.sh"
 fi
 
-# IMPORTANT: Build is environment-agnostic
-# We DO NOT load env files - use smart defaults with ternary operators
-# This allows the same docker-compose.yml to work in any environment
+# IMPORTANT: Build is environment-agnostic for service CONFIGURATION
+# Configuration values use ${VAR:-default} in generated docker-compose.yml
+# so the same file works across environments (dev, staging, prod).
+#
+# However, STRUCTURAL variables (which services exist: CS_N, MONITORING_ENABLED, etc.)
+# must be known at build time. These are normally inherited from the parent process,
+# but we load .env files as a fallback if they're missing (Bug #19 definitive fix).
 
 # Set smart defaults that can be overridden by explicitly set env vars
 export PROJECT_NAME="${PROJECT_NAME:-myproject}"
 export ENV="${ENV:-dev}"
 export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
 
-# Validate critical variables are set (helps catch export issues early)
-# This validation helps debug environment variable inheritance problems
-if [[ "${PROJECT_NAME}" == "myproject" ]] && [[ -f ".env" || -f ".env.dev" ]]; then
-  # If we're using default PROJECT_NAME but .env files exist, warn (likely export issue)
-  if [[ "${DEBUG:-false}" == "true" ]]; then
-    echo "Warning: PROJECT_NAME='myproject' (default) but .env files exist" >&2
-    echo "This may indicate environment variables weren't exported from parent process" >&2
-  fi
+# CRITICAL (Bug #19 definitive fix): Load env files if structural variables are missing
+# CS_N variables define which custom services to create and have no defaults.
+# If the parent process didn't export them, we must load them directly.
+# This also covers MONITORING_ENABLED, *_ENABLED flags, and FRONTEND_APP_N variables.
+if [[ -z "${CS_1:-}" ]] && { [[ -f ".env.dev" ]] || [[ -f ".env" ]]; }; then
+  for _envfile in .env.dev .env; do
+    if [[ -f "$_envfile" ]]; then
+      set -a
+      source "$_envfile" 2>/dev/null || true
+      set +a
+    fi
+  done
+  # Re-derive defaults with potentially updated values
+  export PROJECT_NAME="${PROJECT_NAME:-myproject}"
+  export ENV="${ENV:-dev}"
+  export BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
 fi
 
 # Database defaults
