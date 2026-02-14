@@ -50,6 +50,43 @@ generate_docker_compose() {
     export SONIC_ENABLED="${SONIC_ENABLED:-false}"
     export SEARCH_ENABLED="${SEARCH_ENABLED:-false}"
 
+    # CRITICAL (Bug #19 fix): Export custom service variables (CS_1 through CS_10)
+    # These are loaded from .env via set -a in orchestrate_build, but must be
+    # explicitly exported here for the child bash process to inherit them.
+    # Without this, compose-generate.sh cannot see CS_N values and skips
+    # generating custom service blocks in docker-compose.yml.
+    local _cs_i
+    for _cs_i in $(seq 1 10); do
+      local _cs_var="CS_${_cs_i}"
+      if [[ -n "${!_cs_var:-}" ]]; then
+        export "${_cs_var}=${!_cs_var}"
+      fi
+      # Also export parsed service details if set
+      local _cs_name_var="CS_${_cs_i}_NAME"
+      local _cs_tmpl_var="CS_${_cs_i}_TEMPLATE"
+      local _cs_port_var="CS_${_cs_i}_PORT"
+      local _cs_mem_var="CS_${_cs_i}_MEMORY"
+      local _cs_cpu_var="CS_${_cs_i}_CPU"
+      local _cs_rep_var="CS_${_cs_i}_REPLICAS"
+      [[ -n "${!_cs_name_var:-}" ]] && export "${_cs_name_var}=${!_cs_name_var}"
+      [[ -n "${!_cs_tmpl_var:-}" ]] && export "${_cs_tmpl_var}=${!_cs_tmpl_var}"
+      [[ -n "${!_cs_port_var:-}" ]] && export "${_cs_port_var}=${!_cs_port_var}"
+      [[ -n "${!_cs_mem_var:-}" ]] && export "${_cs_mem_var}=${!_cs_mem_var}"
+      [[ -n "${!_cs_cpu_var:-}" ]] && export "${_cs_cpu_var}=${!_cs_cpu_var}"
+      [[ -n "${!_cs_rep_var:-}" ]] && export "${_cs_rep_var}=${!_cs_rep_var}"
+    done
+
+    # Export frontend app variables for compose generation
+    local _fa_i
+    for _fa_i in $(seq 1 10); do
+      local _fa_name="FRONTEND_APP_${_fa_i}_NAME"
+      local _fa_port="FRONTEND_APP_${_fa_i}_PORT"
+      local _fa_route="FRONTEND_APP_${_fa_i}_ROUTE"
+      [[ -n "${!_fa_name:-}" ]] && export "${_fa_name}=${!_fa_name}"
+      [[ -n "${!_fa_port:-}" ]] && export "${_fa_port}=${!_fa_port}"
+      [[ -n "${!_fa_route:-}" ]] && export "${_fa_route}=${!_fa_route}"
+    done
+
     bash "$compose_script"
     local compose_result=$?
 

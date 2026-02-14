@@ -278,6 +278,38 @@ generate_docker_compose() {
 
   local compose_result=0
   if [[ -f "$compose_script" ]]; then
+    # CRITICAL (Bug #19 fix): Explicitly export CS_N and frontend app variables
+    # for the child bash process. compose-generate.sh does not load .env files
+    # (by design), so it relies on inherited environment variables.
+    local _cs_i
+    for _cs_i in $(seq 1 10); do
+      local _cs_var="CS_${_cs_i}"
+      if [[ -n "${!_cs_var:-}" ]]; then
+        export "${_cs_var}=${!_cs_var}"
+      fi
+      local _cs_name="CS_${_cs_i}_NAME"
+      local _cs_tmpl="CS_${_cs_i}_TEMPLATE"
+      local _cs_port="CS_${_cs_i}_PORT"
+      local _cs_mem="CS_${_cs_i}_MEMORY"
+      local _cs_cpu="CS_${_cs_i}_CPU"
+      local _cs_rep="CS_${_cs_i}_REPLICAS"
+      [[ -n "${!_cs_name:-}" ]] && export "${_cs_name}=${!_cs_name}"
+      [[ -n "${!_cs_tmpl:-}" ]] && export "${_cs_tmpl}=${!_cs_tmpl}"
+      [[ -n "${!_cs_port:-}" ]] && export "${_cs_port}=${!_cs_port}"
+      [[ -n "${!_cs_mem:-}" ]] && export "${_cs_mem}=${!_cs_mem}"
+      [[ -n "${!_cs_cpu:-}" ]] && export "${_cs_cpu}=${!_cs_cpu}"
+      [[ -n "${!_cs_rep:-}" ]] && export "${_cs_rep}=${!_cs_rep}"
+    done
+    local _fa_i
+    for _fa_i in $(seq 1 10); do
+      local _fa_name="FRONTEND_APP_${_fa_i}_NAME"
+      local _fa_port="FRONTEND_APP_${_fa_i}_PORT"
+      local _fa_route="FRONTEND_APP_${_fa_i}_ROUTE"
+      [[ -n "${!_fa_name:-}" ]] && export "${_fa_name}=${!_fa_name}"
+      [[ -n "${!_fa_port:-}" ]] && export "${_fa_port}=${!_fa_port}"
+      [[ -n "${!_fa_route:-}" ]] && export "${_fa_route}=${!_fa_route}"
+    done
+
     # Run the compose generation with clean output (disable tracing)
     if (
       set +x
