@@ -98,7 +98,7 @@ nself destroy --force                # Non-interactive (automation)
 
 ---
 
-## Utilities (15 commands)
+## Utilities (17 commands)
 
 ### status
 ```
@@ -190,6 +190,18 @@ nself audit [--export] [--format json|csv]
 ```
 View audit logs and security events.
 
+### harden
+```
+nself harden [--all] [--check]
+```
+Security hardening for nself infrastructure.
+
+### hasura
+```
+nself hasura [console|migrations|metadata|seed]
+```
+Hasura console and migration management.
+
 ---
 
 ## Other (11 commands)
@@ -200,6 +212,7 @@ nself db <subcommand>
 
 Subcommands:
   migrate <up|down|status|create|rollback>   # Migration management
+  checklist                                  # Database migration checklist
   schema <dump|load|diff|validate>           # Schema operations
   seed [dataset]                             # Seed data
   mock <table> [--count N]                   # Generate mock data
@@ -212,7 +225,7 @@ Subcommands:
   data <import|export> [options]             # Data operations
 ```
 
-**Total subcommands:** 11
+**Total subcommands:** 12
 
 ---
 
@@ -684,11 +697,20 @@ Plugin Management:
   status [plugin]                            # Plugin status
   create <name>                              # Create new plugin
 
+Plugin Runtime:
+  start [plugin] [--all]                     # Start plugins
+  stop [plugin] [--all]                      # Stop plugins
+  restart <plugin>                           # Restart a plugin
+  logs <plugin> [-f|--follow]                # View plugin logs
+  ps                                         # List running plugins
+  running                                    # Alias for ps
+  health                                     # Health check all running plugins
+
 Plugin Actions:
   <plugin> <action> [args...]                # Run plugin action
 ```
 
-**Total subcommands:** 8+ (plugin-specific actions)
+**Total subcommands:** 15+ (plugin-specific actions)
 
 ---
 
@@ -747,15 +769,15 @@ Plugin Actions:
 
 ## Summary Statistics
 
-- **Total Top-Level Commands:** 31 (was 79)
-- **Reduction:** 60.8%
-- **Total Subcommands:** 285+
-- **Average Subcommands per TLC:** 9.2
+- **Total Top-Level Commands:** 33 (was 79)
+- **Reduction:** 58.2%
+- **Total Subcommands:** 300+
+- **Average Subcommands per TLC:** 9.1
 
 **Category Breakdown:**
-- Core: 5 commands (16%)
-- Utilities: 15 commands (48%)
-- Other: 11 commands (36%)
+- Core: 5 commands (15%)
+- Utilities: 17 commands (52%)
+- Other: 11 commands (33%)
 
 **Most Complex Commands (by subcommand count):**
 1. tenant: 50+ subcommands
