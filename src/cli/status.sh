@@ -385,10 +385,10 @@ show_service_overview() {
     services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s/^${project_name}_//" | sed 's/_[0-9]*$//' | sort -u))
   fi
 
-  # Filter out init containers (anything ending with _init)
+  # Filter out init containers (anything ending with -init or _init)
   local filtered_services=()
   for service in "${services[@]}"; do
-    if [[ ! "$service" =~ _init$ ]]; then
+    if [[ ! "$service" =~ ([-_]init)$ ]]; then
       filtered_services+=("$service")
     fi
   done
