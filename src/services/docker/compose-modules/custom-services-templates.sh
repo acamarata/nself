@@ -94,9 +94,19 @@ EOF
 EOF
 
   # Add volumes ONLY for development (not staging/production)
-  # Volume mounts overwrite the built dist/ folder, breaking compiled services
+  # CRITICAL (Bug #23 fix): Skip volume mounts entirely for compiled-language templates.
+  # Volume mounts overwrite the compiled binary from the multi-stage Docker build,
+  # causing "no such file or directory" errors. Hot-reload doesn't work for compiled
+  # languages anyway — developers must rebuild the container.
   local current_env="${ENV:-dev}"
-  if [[ "$current_env" == "dev" || "$current_env" == "development" || "$current_env" == "local" ]]; then
+  local is_compiled=false
+  case "$template_type" in
+    go|grpc|gin|echo|fiber|spring*|quarkus|actix*|rocket|axum|oatpp|zap|aspnet|ktor|vapor)
+      is_compiled=true
+      ;;
+  esac
+
+  if [[ "$current_env" == "dev" || "$current_env" == "development" || "$current_env" == "local" ]] && [[ "$is_compiled" != "true" ]]; then
     cat <<EOF
     volumes:
       - ./services/${service_name}:/app
@@ -111,17 +121,6 @@ EOF
       py*|fastapi|django*|flask|celery)
         echo "      - /app/.venv"
         echo "      - /app/__pycache__"
-        ;;
-      go|grpc|gin|echo|fiber)
-        echo "      - /app/vendor"
-        ;;
-      java*|spring*|kotlin*|ktor)
-        echo "      - /app/target"
-        echo "      - /app/.gradle"
-        ;;
-      rust*|actix*)
-        echo "      - /app/target"
-        echo "      - /app/Cargo.lock"
         ;;
       php*|laravel)
         echo "      - /app/vendor"

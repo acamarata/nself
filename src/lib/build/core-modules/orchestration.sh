@@ -311,8 +311,15 @@ generate_docker_compose() {
     done
 
     # Run the compose generation with clean output (disable tracing)
+    # CRITICAL (Bug #20 fix): Source env files directly in the subshell to guarantee
+    # the child bash process has ALL structural variables (CS_N, *_ENABLED, FRONTEND_APP_N).
+    # Previous approach of exporting from parent scope was unreliable across bash versions.
     if (
       set +x
+      set -a
+      [[ -f ".env.dev" ]] && source ".env.dev" 2>/dev/null || true
+      [[ -f ".env" ]] && source ".env" 2>/dev/null || true
+      set +a
       bash "$compose_script"
     ) >/dev/null 2>&1; then
       # Apply health check fixes if available

@@ -2,15 +2,15 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
+# Copy go mod files and download dependencies
 COPY go.mod .
 RUN go mod download
 
 # Copy source code
-COPY main.go .
+COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server .
+# Build the binary (use -mod=mod to avoid vendor issues)
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -installsuffix cgo -o server .
 
 # Final stage
 FROM alpine:latest

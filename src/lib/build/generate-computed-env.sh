@@ -16,21 +16,37 @@ generate_computed_env() {
   local postgres_password="${POSTGRES_PASSWORD:-}"
   local postgres_db="${POSTGRES_DB:-${project_name}}"
   local hasura_admin_secret="${HASURA_GRAPHQL_ADMIN_SECRET:-}"
-  local hasura_jwt_secret="${HASURA_JWT_SECRET:-}"
+  local hasura_jwt_secret="${HASURA_GRAPHQL_JWT_SECRET:-${HASURA_JWT_SECRET:-}}"
 
   # Construct DATABASE_URL
-  local database_url="postgresql://${postgres_user}:${postgres_password}@postgres:5432/${postgres_db}"
+  # Bug #27 fix: Add sslmode parameter based on environment
+  local sslmode_param=""
+  if [[ "$env" == "dev" || "$env" == "development" || "$env" == "local" ]]; then
+    sslmode_param="?sslmode=disable"
+  elif [[ "$env" == "prod" || "$env" == "production" ]]; then
+    sslmode_param="?sslmode=require"
+  fi
+  local database_url="postgresql://${postgres_user}:${postgres_password}@postgres:5432/${postgres_db}${sslmode_param}"
 
   # Construct HASURA_GRAPHQL_JWT_SECRET (if needed)
+  # Bug #25 fix: If the value is already valid JSON (starts with '{'), pass it through unchanged.
+  # Only wrap in JSON if it's a raw key string.
   local hasura_jwt_config=""
   if [[ -n "$hasura_jwt_secret" ]]; then
-    hasura_jwt_config="{\"type\":\"HS256\",\"key\":\"${hasura_jwt_secret}\"}"
+    if [[ "$hasura_jwt_secret" == "{"* ]]; then
+      # Already JSON — use as-is (don't double-wrap)
+      hasura_jwt_config="$hasura_jwt_secret"
+    else
+      # Raw key string — wrap in JSON
+      hasura_jwt_config="{\"type\":\"HS256\",\"key\":\"${hasura_jwt_secret}\"}"
+    fi
   fi
 
   # Construct HASURA_GRAPHQL_CORS_DOMAIN
-  local cors_domain="https://*.${base_domain}, http://*.${base_domain}, http://localhost:*"
+  # Bug #26 fix: No spaces after commas — Hasura parses empty domain strings otherwise
+  local cors_domain="https://*.${base_domain},http://*.${base_domain},http://localhost:*"
   if [[ "$env" == "dev" || "$env" == "development" ]]; then
-    cors_domain="${cors_domain}, http://localhost:3000, http://localhost:3001, http://localhost:8080"
+    cors_domain="${cors_domain},http://localhost:3000,http://localhost:3001,http://localhost:8080"
   fi
 
   # Write computed variables to file

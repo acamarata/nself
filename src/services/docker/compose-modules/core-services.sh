@@ -20,7 +20,6 @@ generate_postgres_service() {
     image: postgres:${POSTGRES_VERSION:-16-alpine}
     container_name: \${PROJECT_NAME}_postgres
     restart: unless-stopped
-    user: "70:70"
     networks:
       - \${DOCKER_NETWORK}
     environment:
@@ -157,7 +156,6 @@ generate_auth_service() {
       dockerfile: Dockerfile.auth
     container_name: \${PROJECT_NAME}_auth
     restart: unless-stopped
-    user: "1001:1001"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
@@ -179,7 +177,6 @@ EOF
     image: ${auth_image}
     container_name: \${PROJECT_NAME}_auth
     restart: unless-stopped
-    user: "1001:1001"
     networks:
       - \${DOCKER_NETWORK}
     depends_on:
