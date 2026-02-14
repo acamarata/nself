@@ -439,26 +439,257 @@ cmd_run_action() {
   local plugin_dir="$PLUGIN_DIR/$plugin_name"
 
   if [[ -z "$action" ]]; then
-    # Show plugin help
     show_plugin_help "$plugin_name"
     return 0
   fi
 
-  local action_script="$plugin_dir/actions/${action}.sh"
-
-  if [[ ! -f "$action_script" ]]; then
-    log_error "Unknown action: $action"
-    show_plugin_help "$plugin_name"
-    return 1
-  fi
-
-  # Export plugin directories for the action script
+  # Export plugin context
   export PLUGIN_DIR="$plugin_dir"
   export NSELF_PROJECT_DIR="$(pwd)"
 
-  # Run the action
-  bash "$action_script" "$@"
+  # 1. Check for shell script action (original behavior)
+  local action_script="$plugin_dir/actions/${action}.sh"
+  if [[ -f "$action_script" ]]; then
+    bash "$action_script" "$@"
+    return $?
+  fi
+
+  # 2. Check for built-in actions
+  case "$action" in
+    init)
+      run_builtin_init "$plugin_name" "$@"
+      return $?
+      ;;
+    integrate)
+      run_builtin_integrate "$plugin_name" "$@"
+      return $?
+      ;;
+  esac
+
+  # 3. Check if action is defined in plugin manifest
+  local manifest="$plugin_dir/plugin.json"
+  if [[ -f "$manifest" ]]; then
+    local action_exists=false
+    local action_desc=""
+
+    if command -v jq >/dev/null 2>&1; then
+      if jq -e ".actions[\"$action\"]" "$manifest" >/dev/null 2>&1; then
+        action_exists=true
+        action_desc=$(jq -r ".actions[\"$action\"].description // \"\"" "$manifest" 2>/dev/null)
+      fi
+    else
+      if grep -q "\"$action\"" "$manifest"; then
+        action_exists=true
+        action_desc=$(grep -A2 "\"$action\"" "$manifest" | grep '"description"' | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+      fi
+    fi
+
+    if [[ "$action_exists" == "true" ]]; then
+      log_info "Action '$action' is defined in plugin manifest"
+      [[ -n "$action_desc" ]] && printf "  Description: %s\n" "$action_desc"
+      printf "\nThis action requires the plugin to be running as a service.\n"
+      printf "To set up the plugin service:\n\n"
+      printf "  nself plugin %s integrate    # Show CS_N configuration\n" "$plugin_name"
+      printf "  # Add the configuration to your .env file\n"
+      printf "  nself build && nself restart  # Start the service\n\n"
+      printf "Once running, plugin actions are available via its API.\n"
+      return 0
+    fi
+  fi
+
+  # 4. Action not found
+  log_error "Unknown action: $action"
+  show_plugin_help "$plugin_name"
+  return 1
 }
+
+# ============================================================================
+# BUILT-IN PLUGIN ACTIONS
+# ============================================================================
+
+# Built-in init action: apply database schema
+run_builtin_init() {
+  local plugin_name="$1"
+  shift || true
+  local plugin_dir="$PLUGIN_DIR/$plugin_name"
+  local manifest="$plugin_dir/plugin.json"
+
+  log_info "Initializing plugin: $plugin_name"
+
+  # Load project environment
+  if declare -f plugin_load_env >/dev/null 2>&1; then
+    plugin_load_env "$plugin_name"
+  fi
+
+  # Look for schema SQL files
+  local schema_applied=false
+
+  # Check for specific schema files (in priority order)
+  for sql_file in "$plugin_dir/schema/tables.sql" "$plugin_dir/schema/schema.sql" "$plugin_dir/schema/init.sql"; do
+    if [[ -f "$sql_file" ]]; then
+      log_info "Applying schema: $(basename "$sql_file")"
+      if declare -f plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
+        log_success "Schema applied successfully"
+        schema_applied=true
+      else
+        log_error "Failed to apply schema. Is the database running?"
+        printf "\nEnsure services are running: nself start\n"
+        return 1
+      fi
+      break
+    fi
+  done
+
+  # Apply all SQL files in schema directory
+  if [[ "$schema_applied" == "false" ]] && [[ -d "$plugin_dir/schema" ]]; then
+    for sql_file in "$plugin_dir"/schema/*.sql; do
+      if [[ -f "$sql_file" ]]; then
+        log_info "Applying: $(basename "$sql_file")"
+        if declare -f plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
+          schema_applied=true
+        else
+          log_error "Failed to apply: $(basename "$sql_file")"
+        fi
+      fi
+    done
+    if [[ "$schema_applied" == "true" ]]; then
+      log_success "Schema applied successfully"
+    fi
+  fi
+
+  if [[ "$schema_applied" == "true" ]]; then
+    log_success "Plugin '$plugin_name' initialized"
+    return 0
+  fi
+
+  # No schema files found - show table info from manifest
+  log_info "No SQL schema files found in plugin directory"
+
+  local tables=""
+  if command -v jq >/dev/null 2>&1; then
+    tables=$(jq -r '.tables[]? // empty' "$manifest" 2>/dev/null)
+  else
+    tables=$(grep -o '"np_[a-z_]*"' "$manifest" | tr -d '"' || true)
+  fi
+
+  if [[ -n "$tables" ]]; then
+    printf "\nPlugin expects these database tables:\n"
+    printf '%s\n' "$tables" | while read -r table; do
+      [[ -n "$table" ]] && printf "  - %s\n" "$table"
+    done
+    printf "\nThe plugin will create these tables when started as a service.\n"
+  fi
+
+  printf "\nTo run the plugin as a service:\n"
+  printf "  nself plugin %s integrate    # Show configuration\n" "$plugin_name"
+  printf "  # Add configuration to .env\n"
+  printf "  nself build && nself restart  # Start services\n"
+
+  return 0
+}
+
+# Built-in integrate action: generate CS_N configuration
+run_builtin_integrate() {
+  local plugin_name="$1"
+  shift || true
+  local plugin_dir="$PLUGIN_DIR/$plugin_name"
+  local manifest="$plugin_dir/plugin.json"
+
+  # Get plugin config
+  local port="3000"
+  local description=""
+
+  if command -v jq >/dev/null 2>&1; then
+    port=$(jq -r '.config.port // 3000' "$manifest" 2>/dev/null)
+    description=$(jq -r '.description // ""' "$manifest" 2>/dev/null)
+  else
+    port=$(grep '"port"' "$manifest" | head -1 | sed 's/[^0-9]//g')
+    description=$(grep '"description"' "$manifest" | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+  fi
+
+  port="${port:-3000}"
+
+  # Load project env to find next CS_N slot
+  if declare -f plugin_load_env >/dev/null 2>&1; then
+    plugin_load_env "$plugin_name"
+  fi
+
+  local next_cs=1
+  for i in $(seq 1 10); do
+    local cs_var="CS_${i}"
+    if [[ -z "${!cs_var:-}" ]]; then
+      next_cs=$i
+      break
+    fi
+  done
+
+  # Determine plugin type based on source
+  local plugin_type="custom"
+  if [[ -f "$plugin_dir/ts/package.json" ]] || [[ -f "$plugin_dir/package.json" ]]; then
+    plugin_type="express-js"
+  elif [[ -f "$plugin_dir/requirements.txt" ]] || [[ -f "$plugin_dir/setup.py" ]]; then
+    plugin_type="fastapi"
+  elif [[ -f "$plugin_dir/go.mod" ]]; then
+    plugin_type="gin"
+  fi
+
+  local upper_name
+  upper_name=$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+
+  printf "\n=== Plugin Integration: %s ===\n\n" "$plugin_name"
+  [[ -n "$description" ]] && printf "%s\n\n" "$description"
+
+  printf "Add the following to your .env file:\n\n"
+
+  printf "  # %s Plugin\n" "$plugin_name"
+  printf "  CS_%d=%s:%s:%s\n" "$next_cs" "$plugin_name" "$plugin_type" "$port"
+  printf "  %s_PLUGIN_ENABLED=true\n" "$upper_name"
+  printf "  %s_PLUGIN_PORT=%s\n" "$upper_name" "$port"
+
+  # Show required env vars
+  if command -v jq >/dev/null 2>&1; then
+    local required_vars
+    required_vars=$(jq -r '.envVars.required[]? // empty' "$manifest" 2>/dev/null)
+    if [[ -n "$required_vars" ]]; then
+      printf "\n  # Required environment variables\n"
+      printf '%s\n' "$required_vars" | while read -r var; do
+        [[ -n "$var" ]] && printf "  %s=\n" "$var"
+      done
+    fi
+
+    local optional_vars
+    optional_vars=$(jq -r '.envVars.optional[]? // empty' "$manifest" 2>/dev/null)
+    if [[ -n "$optional_vars" ]]; then
+      printf "\n  # Optional environment variables\n"
+      printf '%s\n' "$optional_vars" | while read -r var; do
+        [[ -n "$var" ]] && printf "  # %s=\n" "$var"
+      done
+    fi
+  fi
+
+  printf "\nThen run:\n"
+  printf "  nself build      # Generate docker-compose config\n"
+  printf "  nself restart     # Start/restart services\n\n"
+  printf "The plugin will be available at:\n"
+  printf "  https://%s.{BASE_DOMAIN}\n\n" "$plugin_name"
+
+  # Show tables
+  local tables=""
+  if command -v jq >/dev/null 2>&1; then
+    tables=$(jq -r '.tables[]? // empty' "$manifest" 2>/dev/null)
+  fi
+  if [[ -n "$tables" ]]; then
+    printf "Database tables (auto-created on startup):\n"
+    printf '%s\n' "$tables" | while read -r table; do
+      [[ -n "$table" ]] && printf "  - %s\n" "$table"
+    done
+    printf "\n"
+  fi
+}
+
+# ============================================================================
+# PLUGIN HELP
+# ============================================================================
 
 show_plugin_help() {
   local plugin_name="$1"
@@ -466,22 +697,62 @@ show_plugin_help() {
   local manifest="$plugin_dir/plugin.json"
 
   printf "\nUsage: nself plugin %s <action> [args]\n\n" "$plugin_name"
-  printf "Actions:\n"
 
-  # List available actions
-  for action in "$plugin_dir"/actions/*.sh; do
-    if [[ -f "$action" ]]; then
-      local action_name
-      action_name=$(basename "$action" .sh)
+  # Show built-in actions
+  printf "Built-in Actions:\n"
+  printf "  %-20s %s\n" "init" "Initialize database schema"
+  printf "  %-20s %s\n" "integrate" "Show CS_N service configuration"
 
-      local action_desc=""
-      if [[ -f "$manifest" ]]; then
-        action_desc=$(grep -A1 "\"$action_name\"" "$manifest" | grep -v "$action_name" | head -1 | sed 's/.*":\s*"\([^"]*\)".*/\1/' || true)
+  # List shell script actions
+  local has_scripts=false
+  if [[ -d "$plugin_dir/actions" ]]; then
+    for action in "$plugin_dir"/actions/*.sh; do
+      if [[ -f "$action" ]]; then
+        if [[ "$has_scripts" == "false" ]]; then
+          printf "\nScript Actions:\n"
+          has_scripts=true
+        fi
+        local action_name
+        action_name=$(basename "$action" .sh)
+        local action_desc=""
+        if [[ -f "$manifest" ]]; then
+          if command -v jq >/dev/null 2>&1; then
+            action_desc=$(jq -r ".actions[\"$action_name\"].description // \"\"" "$manifest" 2>/dev/null)
+          else
+            action_desc=$(grep -A2 "\"$action_name\"" "$manifest" | grep '"description"' | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+          fi
+        fi
+        printf "  %-20s %s\n" "$action_name" "$action_desc"
       fi
+    done
+  fi
 
-      printf "  %-15s %s\n" "$action_name" "$action_desc"
+  # List manifest-defined actions (service actions)
+  if [[ -f "$manifest" ]]; then
+    local manifest_actions=""
+    if command -v jq >/dev/null 2>&1; then
+      manifest_actions=$(jq -r '.actions // {} | keys[]' "$manifest" 2>/dev/null)
     fi
-  done
+
+    if [[ -n "$manifest_actions" ]]; then
+      local has_service_actions=false
+      while IFS= read -r action_name; do
+        [[ -z "$action_name" ]] && continue
+        # Skip if shell script exists or is a built-in
+        [[ -f "$plugin_dir/actions/${action_name}.sh" ]] && continue
+        [[ "$action_name" == "init" || "$action_name" == "integrate" ]] && continue
+
+        if [[ "$has_service_actions" == "false" ]]; then
+          printf "\nService Actions (requires running service):\n"
+          has_service_actions=true
+        fi
+
+        local desc=""
+        desc=$(jq -r ".actions[\"$action_name\"].description // \"\"" "$manifest" 2>/dev/null)
+        printf "  %-20s %s\n" "$action_name" "$desc"
+      done <<< "$manifest_actions"
+    fi
+  fi
 
   printf "\n"
 }
@@ -749,6 +1020,10 @@ Plugin Actions:
   <plugin> <action>       Run plugin action (e.g., stripe sync)
   <plugin> --help         Show plugin's available actions
 
+Built-in Plugin Actions:
+  <plugin> init           Initialize database schema for the plugin
+  <plugin> integrate      Show CS_N service configuration for .env
+
 Examples:
   nself plugin list
   nself plugin list --installed
@@ -763,6 +1038,10 @@ Examples:
   nself plugin updates
   nself plugin status
   nself plugin remove stripe --keep-data
+
+  # Plugin service integration
+  nself plugin devices init           # Initialize plugin schema
+  nself plugin devices integrate      # Show CS_N config for .env
 
 Available Plugins:
   stripe    - Payment processing & subscriptions (billing)

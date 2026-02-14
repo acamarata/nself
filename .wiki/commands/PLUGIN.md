@@ -357,6 +357,53 @@ NSELF_PLUGIN_UPDATE_INTERVAL=86400
 
 Each plugin provides its own set of actions. Use `nself plugin <name> --help` to see available actions.
 
+### Built-in Actions (All Plugins)
+
+Every installed plugin has these built-in actions:
+
+```bash
+nself plugin <name> init              # Initialize database schema
+nself plugin <name> integrate         # Show CS_N service configuration for .env
+```
+
+**`init`** - Applies database schema SQL files from the plugin's `schema/` directory. If no SQL files exist, displays the expected database tables and guides you to run the plugin as a service.
+
+**`integrate`** - Generates the configuration needed to run the plugin as a custom service (CS_N). Outputs the environment variables to add to your `.env` file, including the CS_N definition, required vars, and optional vars.
+
+### Running Plugins as Services
+
+Plugins that provide API servers (TypeScript, Python, Go, etc.) run as Docker containers via the CS_N custom service system. The workflow is:
+
+```bash
+# 1. Install the plugin
+nself plugin install devices
+
+# 2. See what configuration is needed
+nself plugin devices integrate
+
+# 3. Add the output to your .env file (example output):
+#    CS_7=devices:express-js:3603
+#    DEVICES_PLUGIN_ENABLED=true
+#    DEVICES_PLUGIN_PORT=3603
+#    DATABASE_URL=...
+
+# 4. Build and start
+nself build && nself restart
+
+# 5. Initialize database schema (if needed)
+nself plugin devices init
+```
+
+### Action Types
+
+Plugins have three types of actions:
+
+1. **Built-in actions** (`init`, `integrate`) - Always available
+2. **Script actions** - Shell scripts in the plugin's `actions/` directory
+3. **Service actions** - Defined in `plugin.json`, require the plugin service to be running
+
+When you run a service action and the plugin is not yet running, the CLI will guide you through the setup process.
+
 ### Stripe Plugin
 
 ```bash
@@ -1010,4 +1057,4 @@ curl https://raw.githubusercontent.com/acamarata/nself-plugins/main/registry.jso
 
 ---
 
-*Last Updated: January 2026 | Version 0.9.8*
+*Last Updated: February 2026 | Version 0.9.9*
