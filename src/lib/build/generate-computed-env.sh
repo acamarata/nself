@@ -68,8 +68,16 @@ STORAGE_DATABASE_URL=${database_url}
 EOF
 
   # Add JWT config if available
+  # Bug #25 fix (round 5): Single-quote JSON values so they survive bash `source`.
+  # Without single quotes, `source .env.computed` strips inner double quotes from JSON,
+  # turning {"type":"HS256"} into {type:HS256} which Hasura can't parse.
   if [[ -n "$hasura_jwt_config" ]]; then
-    printf "HASURA_GRAPHQL_JWT_SECRET=%s\n" "$hasura_jwt_config" >> "$output_file"
+    if [[ "$hasura_jwt_config" == "{"* ]]; then
+      # JSON value — must be single-quoted to preserve double quotes during source
+      printf "HASURA_GRAPHQL_JWT_SECRET='%s'\n" "$hasura_jwt_config" >> "$output_file"
+    else
+      printf "HASURA_GRAPHQL_JWT_SECRET=%s\n" "$hasura_jwt_config" >> "$output_file"
+    fi
   fi
 
   # Add CORS domain

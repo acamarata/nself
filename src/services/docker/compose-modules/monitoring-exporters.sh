@@ -192,7 +192,7 @@ generate_redis_exporter_service() {
   [[ "${REDIS_ENABLED:-false}" != "true" ]] && return 0
 
   local redis_addr="redis://redis:6379"
-  [[ -n "${REDIS_PASSWORD}" ]] && redis_addr="redis://:\${REDIS_PASSWORD}@redis:6379"
+  [[ -n "${REDIS_PASSWORD:-}" ]] && redis_addr="redis://:\${REDIS_PASSWORD}@redis:6379"
 
   cat <<EOF
 

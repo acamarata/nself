@@ -289,20 +289,63 @@ setup_directories() {
 }
 
 # Generate SSL certificates
+# Bug #35 fix: Use setup_ssl_certificates() from ssl-generation.sh if available.
+# The original version only generated a CN=localhost cert without SAN, and never
+# created domain-specific certs (e.g., ssl/certificates/nself-org/).
 generate_ssl_certificates() {
   local force="${1:-false}"
+  local base_domain="${BASE_DOMAIN:-localhost}"
 
-  if [[ "$force" == "true" ]] || [[ ! -f "ssl/cert.pem" ]]; then
-    # Generate self-signed cert for local development
+  # Prefer the full SSL generator from ssl-generation.sh (handles SAN, mkcert, domain certs)
+  if command -v setup_ssl_certificates >/dev/null 2>&1; then
+    setup_ssl_certificates "$force"
+    return $?
+  fi
+
+  # Fallback: generate self-signed certs with SAN for all domains
+  mkdir -p ssl/certificates/localhost 2>/dev/null || true
+
+  if [[ "$force" == "true" ]] || [[ ! -f "ssl/certificates/localhost/fullchain.pem" ]]; then
+    # Build SAN list for all configured domains
+    local san_entries="DNS:localhost,DNS:*.localhost,IP:127.0.0.1,IP:::1"
+
+    if [[ "$base_domain" != "localhost" ]]; then
+      san_entries="${san_entries},DNS:${base_domain},DNS:*.${base_domain}"
+    fi
+
+    # Always include local.nself.org for development
+    san_entries="${san_entries},DNS:local.nself.org,DNS:*.local.nself.org"
+
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      -keyout ssl/key.pem \
-      -out ssl/cert.pem \
-      -subj "/C=US/ST=State/L=City/O=Dev/CN=localhost" \
+      -keyout ssl/certificates/localhost/privkey.pem \
+      -out ssl/certificates/localhost/fullchain.pem \
+      -subj "/C=US/ST=State/L=City/O=Local Development/CN=${base_domain}" \
+      -addext "subjectAltName=${san_entries}" \
       2>/dev/null || true
+  fi
 
-    # Also create versioned certs for different domains
-    cp ssl/cert.pem ssl/certificates/localhost/fullchain.pem 2>/dev/null || true
-    cp ssl/key.pem ssl/certificates/localhost/privkey.pem 2>/dev/null || true
+  # Create domain-specific cert directories with symlinks to the same cert
+  # Nginx configs reference ssl/certificates/<domain-dir>/fullchain.pem
+  if [[ "$base_domain" != "localhost" ]]; then
+    local cert_dir_name
+    if [[ "$base_domain" == "nself.org" ]] || [[ "$base_domain" == *".nself.org" ]]; then
+      cert_dir_name="nself-org"
+    else
+      cert_dir_name=$(printf '%s' "$base_domain" | tr '.' '-')
+    fi
+
+    mkdir -p "ssl/certificates/${cert_dir_name}" 2>/dev/null || true
+    if [[ ! -f "ssl/certificates/${cert_dir_name}/fullchain.pem" ]]; then
+      cp ssl/certificates/localhost/fullchain.pem "ssl/certificates/${cert_dir_name}/fullchain.pem" 2>/dev/null || true
+      cp ssl/certificates/localhost/privkey.pem "ssl/certificates/${cert_dir_name}/privkey.pem" 2>/dev/null || true
+    fi
+  fi
+
+  # Always ensure nself-org certs exist for local dev
+  mkdir -p ssl/certificates/nself-org 2>/dev/null || true
+  if [[ ! -f "ssl/certificates/nself-org/fullchain.pem" ]]; then
+    cp ssl/certificates/localhost/fullchain.pem ssl/certificates/nself-org/fullchain.pem 2>/dev/null || true
+    cp ssl/certificates/localhost/privkey.pem ssl/certificates/nself-org/privkey.pem 2>/dev/null || true
   fi
 }
 

@@ -13,9 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -installsuffix cgo -o main .
 
 # Final stage
 FROM alpine:latest
-RUN apk add --no-cache curl
-
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates wget
 WORKDIR /root/
 
 # Copy the binary from builder
@@ -30,5 +28,5 @@ USER appuser
 EXPOSE {{PORT}} 8081
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8081/health || exit 1
+  CMD wget --no-verbose --tries=1 -O /dev/null http://127.0.0.1:8081/health || exit 1
 CMD ["./main"]

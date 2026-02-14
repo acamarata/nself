@@ -297,8 +297,11 @@ EOF
     echo "  # ============================================" >> docker-compose.yml
     echo "  # Monitoring Services" >> docker-compose.yml
     echo "  # ============================================" >> docker-compose.yml
-    generate_monitoring_services >> docker-compose.yml
-    generate_monitoring_exporters >> docker-compose.yml
+    # CRITICAL (Bug #20/#29 fix): Generate monitoring in isolation so errors
+    # don't prevent custom services from being generated. Monitoring failures
+    # are non-fatal — custom services MUST always be generated.
+    generate_monitoring_services >> docker-compose.yml 2>/dev/null || true
+    generate_monitoring_exporters >> docker-compose.yml 2>/dev/null || true
   fi
 
   # ============================================
@@ -345,7 +348,11 @@ main() {
       return 1
     fi
   else
-    if ! generate_docker_compose >/dev/null 2>&1; then
+    if ! generate_docker_compose 2>&1 | grep -i 'error\|fatal\|unbound' >&2; then
+      : # Errors (if any) were already shown
+    fi
+    # Verify the file was actually generated
+    if [[ ! -f "docker-compose.yml" ]] || [[ ! -s "docker-compose.yml" ]]; then
       echo "Error: Failed to generate docker-compose.yml" >&2
       return 1
     fi

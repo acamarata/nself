@@ -377,14 +377,17 @@ generate_redis_service() {
   [[ "$enabled" != "true" ]] && return 0
 
   # Build Redis command with security options
-  # --protected-mode yes: Reject connections from external IPs without auth
   # --appendonly yes: Persist data to disk
-  local redis_cmd="redis-server --appendonly yes --protected-mode yes"
+  # Bug #30 fix: When no password is set, use --protected-mode no so Docker containers
+  # on the bridge network (172.18.x.x) can connect. Protected-mode blocks all non-localhost
+  # connections when no password is configured, which breaks all Docker services.
+  local redis_cmd="redis-server --appendonly yes"
 
   # Add password authentication if configured (CRITICAL for security)
-  # Without this, Redis is open to anyone who can connect
   if [[ -n "${REDIS_PASSWORD:-}" ]]; then
-    redis_cmd="${redis_cmd} --requirepass \${REDIS_PASSWORD}"
+    redis_cmd="${redis_cmd} --protected-mode yes --requirepass \${REDIS_PASSWORD}"
+  else
+    redis_cmd="${redis_cmd} --protected-mode no"
   fi
 
   cat <<EOF

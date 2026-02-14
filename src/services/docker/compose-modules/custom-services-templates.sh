@@ -84,11 +84,11 @@ EOF
       - POSTGRES_DB=\${POSTGRES_DB}
       - POSTGRES_USER=\${POSTGRES_USER}
       - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
+      - DATABASE_URL=postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}?sslmode=disable
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=\${REDIS_PASSWORD:-}
-      - REDIS_URL=redis://:\${REDIS_PASSWORD:-}@redis:6379
+      - REDIS_URL=redis://redis:6379
       - HASURA_GRAPHQL_ENDPOINT=http://hasura:8080/v1/graphql
       - HASURA_ADMIN_SECRET=\${HASURA_GRAPHQL_ADMIN_SECRET}
 EOF
@@ -158,14 +158,38 @@ EOF
   [[ "${HASURA_ENABLED:-false}" == "true" ]] && echo "      - hasura"
 
   # Add healthcheck if port is exposed
+  # Bug #33 fix: Match actual template names (gin, echo, fiber, not just *go*).
+  # Use wget (not curl) for Alpine images, 127.0.0.1 (not localhost) to avoid IPv6.
+  # Python slim images don't have curl either — use python urllib.
   if [[ -n "$service_port" && "$service_port" != "0" ]]; then
-    # Use appropriate health check based on template type
     case "$template_type" in
-      *go*|*grpc*|*rust*)
-        # These containers might not have curl, use a simple TCP check
+      go|grpc|gin|echo|fiber|actix*|rocket|axum|oatpp|zap)
+        # Go/Rust Alpine images: use wget (always available), 127.0.0.1 (no IPv6)
         cat <<EOF
     healthcheck:
-      test: ["CMD", "/bin/sh", "-c", "nc -z localhost ${service_port} || exit 1"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://127.0.0.1:${service_port}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+EOF
+        ;;
+      py*|fastapi|django*|flask|celery)
+        # Python slim images: no curl/wget, use python stdlib
+        cat <<EOF
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${service_port}/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+EOF
+        ;;
+      *js|*ts|node*|express*|nest*|fastify*|hono*|bun|deno)
+        # Node.js images: wget available, use 127.0.0.1 to avoid IPv6
+        cat <<EOF
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://127.0.0.1:${service_port}/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -173,10 +197,10 @@ EOF
 EOF
         ;;
       *)
-        # Most other containers should have curl or wget
+        # Fallback: wget with 127.0.0.1 (most portable)
         cat <<EOF
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${service_port}/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://127.0.0.1:${service_port}/health"]
       interval: 30s
       timeout: 10s
       retries: 5
