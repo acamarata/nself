@@ -1155,6 +1155,9 @@ main() {
       install_plugin_dependencies "$plugin_name" "$check_only"
       ;;
     start)
+      # Export project directory for runtime functions to read backend .env files
+      export NSELF_PROJECT_DIR="$(pwd)"
+
       # Check for --all first
       if [[ "$1" == "--all" ]] || [[ "$1" == "-a" ]]; then
         start_all_plugins
@@ -1173,6 +1176,9 @@ main() {
       fi
       ;;
     stop)
+      # Export project directory for runtime functions
+      export NSELF_PROJECT_DIR="$(pwd)"
+
       # Check for --all first
       if [[ "$1" == "--all" ]] || [[ "$1" == "-a" ]]; then
         stop_all_plugins
@@ -1187,6 +1193,9 @@ main() {
       fi
       ;;
     restart)
+      # Export project directory for runtime functions
+      export NSELF_PROJECT_DIR="$(pwd)"
+
       local plugin_name="$1"
       if [[ -z "$plugin_name" ]]; then
         log_error "Plugin name required"

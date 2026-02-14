@@ -61,8 +61,11 @@ setup_shared_utilities() {
 get_database_url() {
   local db_url=""
 
+  # Use project directory (where nself command was run)
+  local project_dir="${NSELF_PROJECT_DIR:-$(pwd)}"
+
   # Try to load from project .env files
-  for env_file in .env.dev .env.local .env; do
+  for env_file in "$project_dir/.env.dev" "$project_dir/.env.local" "$project_dir/.env"; do
     if [[ -f "$env_file" ]]; then
       db_url=$(grep "^DATABASE_URL=" "$env_file" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
       if [[ -n "$db_url" ]]; then
