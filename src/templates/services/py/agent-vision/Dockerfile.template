@@ -22,9 +22,9 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download models (optional - comment out for faster builds)
+# Pre-download models (optional - uncomment for faster cold starts)
 # RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
-# RUN python -c "from transformers import CLIPModel, CLIPProcessor; CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')"
+# RUN python -c "from transformers import CLIPModel, CLIPProcessor; m='clip-vit-base-patch32'; CLIPModel.from_pretrained(m); CLIPProcessor.from_pretrained(m)"
 
 # Copy application code
 COPY vision_agent.py .
@@ -35,6 +35,6 @@ RUN mkdir -p /app/models
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health')" || exit 1
 
 CMD ["python", "vision_agent.py"]
