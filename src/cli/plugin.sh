@@ -20,6 +20,7 @@ source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/dependencies.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/cli-output.sh" 2>/dev/null || true
 
 # Fallbacks if display.sh didn't load
@@ -1016,6 +1017,17 @@ Commands:
   install-deps <name>     Install missing system dependencies
     --check-only            Dry run (show what would be installed)
 
+Runtime Management:
+  start <name>            Start a plugin as external process
+  start --all             Start all installed plugins
+  stop <name>             Stop a running plugin
+  stop --all              Stop all running plugins
+  restart <name>          Restart a plugin
+  logs <name>             View plugin logs
+    -f, --follow            Follow log output
+  ps | running            List running plugins
+  health                  Health check all running plugins
+
 Plugin Actions:
   <plugin> <action>       Run plugin action (e.g., stripe sync)
   <plugin> --help         Show plugin's available actions
@@ -1025,28 +1037,40 @@ Built-in Plugin Actions:
   <plugin> integrate      Show CS_N service configuration for .env
 
 Examples:
+  # Installation & management
   nself plugin list
   nself plugin list --installed
-  nself plugin list --category billing
   nself plugin install stripe
-  nself plugin check-deps stripe
-  nself plugin install-deps stripe
-  nself plugin install-deps stripe --check-only
+  nself plugin update --all
+  nself plugin status
+
+  # Runtime (external processes)
+  nself plugin start vpn              # Start single plugin
+  nself plugin start --all            # Start all plugins
+  nself plugin stop vpn               # Stop plugin
+  nself plugin stop --all             # Stop all
+  nself plugin restart vpn            # Restart plugin
+  nself plugin logs vpn               # View logs
+  nself plugin logs vpn -f            # Follow logs
+  nself plugin ps                     # List running
+  nself plugin health                 # Health check all
+
+  # Plugin actions
   nself plugin stripe sync
   nself plugin stripe customers list
-  nself plugin update --all
-  nself plugin updates
-  nself plugin status
-  nself plugin remove stripe --keep-data
+  nself plugin devices init           # Initialize schema
+  nself plugin devices integrate      # Show CS_N config
 
-  # Plugin service integration
-  nself plugin devices init           # Initialize plugin schema
-  nself plugin devices integrate      # Show CS_N config for .env
+  # Dependencies
+  nself plugin check-deps stripe
+  nself plugin install-deps stripe
 
 Available Plugins:
   stripe    - Payment processing & subscriptions (billing)
   github    - Repository & CI integration (devops)
   shopify   - E-commerce store sync (ecommerce)
+  vpn       - VPN management (NordVPN, PIA, Mullvad)
+  See full list: nself plugin list
 
 Registry:
   Primary:  https://plugins.nself.org
@@ -1056,6 +1080,7 @@ Environment:
   NSELF_PLUGIN_DIR        Plugin installation directory (~/.nself/plugins)
   NSELF_PLUGIN_REGISTRY   Custom registry URL (default: https://plugins.nself.org)
   NSELF_REGISTRY_CACHE_TTL  Registry cache TTL in seconds (default: 300)
+  NSELF_PLUGIN_RUNTIME    Plugin runtime directory (~/.nself/runtime)
 
 "
 }
@@ -1128,6 +1153,79 @@ main() {
         return 1
       fi
       install_plugin_dependencies "$plugin_name" "$check_only"
+      ;;
+    start)
+      # Check for --all first
+      if [[ "$1" == "--all" ]] || [[ "$1" == "-a" ]]; then
+        start_all_plugins
+      else
+        local plugin_name="$1"
+        if [[ -z "$plugin_name" ]]; then
+          log_error "Plugin name required"
+          printf "\nUsage: nself plugin start <name>  OR  nself plugin start --all\n"
+          return 1
+        fi
+        if ! is_plugin_installed "$plugin_name"; then
+          log_error "Plugin '$plugin_name' is not installed"
+          return 1
+        fi
+        start_plugin "$plugin_name"
+      fi
+      ;;
+    stop)
+      # Check for --all first
+      if [[ "$1" == "--all" ]] || [[ "$1" == "-a" ]]; then
+        stop_all_plugins
+      else
+        local plugin_name="$1"
+        if [[ -z "$plugin_name" ]]; then
+          log_error "Plugin name required"
+          printf "\nUsage: nself plugin stop <name>  OR  nself plugin stop --all\n"
+          return 1
+        fi
+        stop_plugin "$plugin_name"
+      fi
+      ;;
+    restart)
+      local plugin_name="$1"
+      if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        printf "\nUsage: nself plugin restart <name>\n"
+        return 1
+      fi
+      if ! is_plugin_installed "$plugin_name"; then
+        log_error "Plugin '$plugin_name' is not installed"
+        return 1
+      fi
+      restart_plugin "$plugin_name"
+      ;;
+    logs)
+      local plugin_name="$1"
+      shift || true
+      local follow=false
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          -f | --follow)
+            follow=true
+            shift
+            ;;
+          *)
+            shift
+            ;;
+        esac
+      done
+      if [[ -z "$plugin_name" ]]; then
+        log_error "Plugin name required"
+        printf "\nUsage: nself plugin logs <name> [-f|--follow]\n"
+        return 1
+      fi
+      show_plugin_logs "$plugin_name" "$follow"
+      ;;
+    ps | running)
+      list_running_plugins
+      ;;
+    health)
+      health_check_all
       ;;
     -h | --help | help | "")
       show_help
