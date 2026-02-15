@@ -793,21 +793,22 @@ start_services() {
     # ========================================================
     local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
     if [[ -d "$plugin_dir" ]] && command -v start_all_plugins >/dev/null 2>&1; then
-      # Count installed plugins (exclude _shared directory)
-      local plugin_count=0
+      # Check if any plugins are installed (exclude _shared directory)
+      local has_plugins=false
       for _pdir in "$plugin_dir"/*/plugin.json; do
         if [[ -f "$_pdir" ]]; then
           local _pname
           _pname=$(dirname "$_pdir")
           _pname=$(basename "$_pname")
           if [[ "$_pname" != "_shared" ]]; then
-            plugin_count=$((plugin_count + 1))
+            has_plugins=true
+            break
           fi
         fi
       done
 
-      if [[ $plugin_count -gt 0 ]]; then
-        printf "\n${COLOR_CYAN}Starting installed plugins (%d found)...${COLOR_RESET}\n" "$plugin_count"
+      if [[ "$has_plugins" == "true" ]]; then
+        printf "\n${COLOR_CYAN}Starting installed plugins...${COLOR_RESET}\n"
         start_all_plugins
       fi
     fi

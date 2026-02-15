@@ -10,6 +10,7 @@ PLUGIN_DIR="${PLUGIN_DIR:-${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}}"
 PLUGIN_RUNTIME_DIR="${NSELF_PLUGIN_RUNTIME:-$HOME/.nself/runtime}"
 PLUGIN_LOGS_DIR="$PLUGIN_RUNTIME_DIR/logs"
 PLUGIN_PIDS_DIR="$PLUGIN_RUNTIME_DIR/pids"
+PLUGIN_STATES_DIR="$PLUGIN_RUNTIME_DIR/states"
 
 # ============================================================================
 # Setup & Prerequisites
@@ -19,6 +20,41 @@ PLUGIN_PIDS_DIR="$PLUGIN_RUNTIME_DIR/pids"
 ensure_runtime_dirs() {
   mkdir -p "$PLUGIN_LOGS_DIR"
   mkdir -p "$PLUGIN_PIDS_DIR"
+  mkdir -p "$PLUGIN_STATES_DIR"
+}
+
+# ============================================================================
+# Lifecycle State Management
+# ============================================================================
+# States: starting, running, stopping, stopped, failed
+
+# Set plugin state
+set_plugin_state() {
+  local plugin_name="$1"
+  local state="$2"
+  local state_file="$PLUGIN_STATES_DIR/${plugin_name}.state"
+
+  ensure_runtime_dirs
+  printf "%s" "$state" > "$state_file"
+}
+
+# Get plugin state
+get_plugin_state() {
+  local plugin_name="$1"
+  local state_file="$PLUGIN_STATES_DIR/${plugin_name}.state"
+
+  if [[ -f "$state_file" ]]; then
+    cat "$state_file"
+  else
+    printf "stopped"
+  fi
+}
+
+# Clear plugin state
+clear_plugin_state() {
+  local plugin_name="$1"
+  local state_file="$PLUGIN_STATES_DIR/${plugin_name}.state"
+  rm -f "$state_file"
 }
 
 # Setup shared utilities (one-time)
@@ -248,13 +284,57 @@ prepare_plugin() {
   # Install dependencies if needed
   if [[ ! -d "$plugin_dir/node_modules" ]]; then
     log_info "Installing dependencies for $plugin_name..."
-    (cd "$plugin_dir" && pnpm install --silent) || return 1
+    local install_output=$(mktemp)
+    (cd "$plugin_dir" && pnpm install 2>&1) > "$install_output" &
+    local install_pid=$!
+
+    # Show spinner while installing
+    local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    local i=0
+    while kill -0 $install_pid 2>/dev/null; do
+      local char="${spin_chars:$((i % ${#spin_chars})):1}"
+      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Installing dependencies for $plugin_name..." "$char"
+      ((i++))
+      sleep 0.1
+    done
+    wait $install_pid
+    local install_result=$?
+    rm -f "$install_output"
+
+    if [[ $install_result -ne 0 ]]; then
+      printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to install dependencies for $plugin_name\n"
+      return 1
+    else
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Dependencies installed for $plugin_name         \n"
+    fi
   fi
 
   # Build if needed
   if [[ ! -d "$plugin_dir/dist" ]]; then
     log_info "Building $plugin_name..."
-    (cd "$plugin_dir" && pnpm build 2>&1 >/dev/null) || return 1
+    local build_output=$(mktemp)
+    (cd "$plugin_dir" && pnpm build 2>&1) > "$build_output" &
+    local build_pid=$!
+
+    # Show spinner while building
+    local spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    local i=0
+    while kill -0 $build_pid 2>/dev/null; do
+      local char="${spin_chars:$((i % ${#spin_chars})):1}"
+      printf "\r${COLOR_BLUE}%s${COLOR_RESET} Building $plugin_name..." "$char"
+      ((i++))
+      sleep 0.1
+    done
+    wait $build_pid
+    local build_result=$?
+    rm -f "$build_output"
+
+    if [[ $build_result -ne 0 ]]; then
+      printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to build $plugin_name                    \n"
+      return 1
+    else
+      printf "\r${COLOR_GREEN}✓${COLOR_RESET} Build completed for $plugin_name               \n"
+    fi
   fi
 
   return 0
@@ -332,6 +412,52 @@ EOF
   log_success "Created .env for $plugin_name"
 }
 
+# Validate required environment variables for plugin
+validate_plugin_env() {
+  local plugin_name="$1"
+  local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+
+  if [[ ! -f "$manifest" ]]; then
+    return 0  # No manifest, skip validation
+  fi
+
+  # Check if plugin specifies required env vars
+  local required_env=""
+  if command -v jq >/dev/null 2>&1; then
+    required_env=$(jq -r '.required_env // [] | .[]' "$manifest" 2>/dev/null)
+  else
+    # Fallback: parse JSON manually for required_env array
+    required_env=$(grep -A10 '"required_env"' "$manifest" | grep -o '"[A-Z_]*"' | tr -d '"' | grep -v "required_env")
+  fi
+
+  if [[ -z "$required_env" ]]; then
+    return 0  # No required env vars
+  fi
+
+  # Check each required variable
+  local env_file="$PLUGIN_DIR/$plugin_name/ts/.env"
+  local missing_vars=""
+  for var in $required_env; do
+    # Check if var exists in .env file
+    if [[ -f "$env_file" ]]; then
+      local value=$(grep "^${var}=" "$env_file" | cut -d= -f2-)
+      if [[ -z "$value" ]]; then
+        missing_vars="$missing_vars $var"
+      fi
+    else
+      missing_vars="$missing_vars $var"
+    fi
+  done
+
+  if [[ -n "$missing_vars" ]]; then
+    log_error "Missing required environment variables for $plugin_name:$missing_vars"
+    log_info "Add these variables to $env_file or your project's .env file"
+    return 1
+  fi
+
+  return 0
+}
+
 # Start a plugin
 start_plugin() {
   local plugin_name="$1"
@@ -355,6 +481,9 @@ start_plugin() {
   # Create .env if needed
   create_plugin_env "$plugin_name" "$port" || return 1
 
+  # Validate required environment variables
+  validate_plugin_env "$plugin_name" || return 1
+
   # Check port availability before starting
   local plugin_dir="$PLUGIN_DIR/$plugin_name/ts"
   local env_file="$plugin_dir/.env"
@@ -376,6 +505,7 @@ start_plugin() {
   local pid_file="$PLUGIN_PIDS_DIR/${plugin_name}.pid"
 
   log_info "Starting $plugin_name..."
+  set_plugin_state "$plugin_name" "starting"
 
   # Start plugin in background
   (
@@ -387,10 +517,12 @@ start_plugin() {
   sleep 0.5
 
   if is_plugin_running "$plugin_name"; then
+    set_plugin_state "$plugin_name" "running"
     log_success "$plugin_name started (PID: $(get_plugin_pid "$plugin_name"))"
     printf "Logs: nself plugin logs %s\n" "$plugin_name"
     return 0
   else
+    set_plugin_state "$plugin_name" "failed"
     log_error "$plugin_name failed to start (check logs: $log_file)"
     return 1
   fi
@@ -399,6 +531,7 @@ start_plugin() {
 # Stop a plugin
 stop_plugin() {
   local plugin_name="$1"
+  local force="${2:-false}"
 
   if ! is_plugin_running "$plugin_name"; then
     log_warning "Plugin '$plugin_name' is not running"
@@ -406,23 +539,36 @@ stop_plugin() {
   fi
 
   local pid=$(get_plugin_pid "$plugin_name")
-  log_info "Stopping $plugin_name (PID: $pid)..."
 
-  # Kill child processes first (e.g., node spawned by pnpm)
-  pkill -P "$pid" 2>/dev/null || true
+  if [[ "$force" == "true" ]]; then
+    log_info "Force-stopping $plugin_name (PID: $pid)..."
+  else
+    log_info "Stopping $plugin_name (PID: $pid)..."
+  fi
 
-  if kill "$pid" 2>/dev/null; then
-    # Wait for graceful shutdown
-    local timeout=5
-    while kill -0 "$pid" 2>/dev/null && ((timeout > 0)); do
-      sleep 1
-      ((timeout--))
-    done
+  set_plugin_state "$plugin_name" "stopping"
 
-    # Force kill if still running (process and any remaining children)
-    if kill -0 "$pid" 2>/dev/null; then
-      pkill -9 -P "$pid" 2>/dev/null || true
-      kill -9 "$pid" 2>/dev/null
+  if [[ "$force" == "true" ]]; then
+    # Force mode: immediate SIGKILL
+    pkill -9 -P "$pid" 2>/dev/null || true
+    kill -9 "$pid" 2>/dev/null || true
+  else
+    # Graceful mode: Try SIGTERM first
+    pkill -P "$pid" 2>/dev/null || true
+
+    if kill "$pid" 2>/dev/null; then
+      # Wait for graceful shutdown
+      local timeout=5
+      while kill -0 "$pid" 2>/dev/null && ((timeout > 0)); do
+        sleep 1
+        ((timeout--))
+      done
+
+      # Force kill if still running (process and any remaining children)
+      if kill -0 "$pid" 2>/dev/null; then
+        pkill -9 -P "$pid" 2>/dev/null || true
+        kill -9 "$pid" 2>/dev/null
+      fi
     fi
   fi
 
@@ -439,6 +585,7 @@ stop_plugin() {
   fi
 
   rm -f "$PLUGIN_PIDS_DIR/${plugin_name}.pid"
+  set_plugin_state "$plugin_name" "stopped"
   log_success "$plugin_name stopped"
   return 0
 }
@@ -469,28 +616,134 @@ restart_plugin() {
 }
 
 # ============================================================================
+# Dependency Management
+# ============================================================================
+
+# Get plugin dependencies from manifest
+get_plugin_dependencies() {
+  local plugin_name="$1"
+  local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+
+  if [[ ! -f "$manifest" ]]; then
+    return 0
+  fi
+
+  # Extract dependencies
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '.dependencies // [] | .[]' "$manifest" 2>/dev/null
+  else
+    # Fallback: parse JSON manually
+    grep -A10 '"dependencies"' "$manifest" | grep -o '"[a-z-]*"' | tr -d '"' | grep -v "dependencies"
+  fi
+}
+
+# Topological sort for plugin dependencies
+# Returns plugins in dependency order (dependencies first)
+topological_sort_plugins() {
+  local -a all_plugins=()
+  local -a sorted=()
+  local -a visiting=()
+  local -a visited=()
+
+  # Collect all plugin names
+  for plugin_dir in "$PLUGIN_DIR"/*/; do
+    if [[ -f "$plugin_dir/plugin.json" ]]; then
+      local name=$(basename "$plugin_dir")
+      [[ "$name" == "_shared" ]] && continue
+      all_plugins+=("$name")
+    fi
+  done
+
+  # DFS visit function
+  visit_plugin() {
+    local plugin="$1"
+
+    # Check if already visited
+    local p
+    for p in "${visited[@]}"; do
+      if [[ "$p" == "$plugin" ]]; then
+        return 0
+      fi
+    done
+
+    # Check for circular dependency
+    for p in "${visiting[@]}"; do
+      if [[ "$p" == "$plugin" ]]; then
+        log_warning "Circular dependency detected involving $plugin"
+        return 1
+      fi
+    done
+
+    visiting+=("$plugin")
+
+    # Visit dependencies first
+    local deps=$(get_plugin_dependencies "$plugin")
+    for dep in $deps; do
+      # Check if dependency is installed
+      local dep_installed=false
+      for p in "${all_plugins[@]}"; do
+        if [[ "$p" == "$dep" ]]; then
+          dep_installed=true
+          break
+        fi
+      done
+
+      if [[ "$dep_installed" == "true" ]]; then
+        visit_plugin "$dep"
+      else
+        log_warning "Plugin $plugin depends on $dep which is not installed"
+      fi
+    done
+
+    # Remove from visiting, add to visited
+    local new_visiting=()
+    for p in "${visiting[@]}"; do
+      [[ "$p" != "$plugin" ]] && new_visiting+=("$p")
+    done
+    visiting=("${new_visiting[@]}")
+
+    visited+=("$plugin")
+    sorted+=("$plugin")
+  }
+
+  # Visit all plugins
+  for plugin in "${all_plugins[@]}"; do
+    visit_plugin "$plugin"
+  done
+
+  # Output sorted list
+  printf "%s\n" "${sorted[@]}"
+}
+
+# ============================================================================
 # Batch Operations
 # ============================================================================
 
-# Start all installed plugins
+# Start all installed plugins (respecting dependencies)
 start_all_plugins() {
   ensure_runtime_dirs
 
   local count=0
   local failed=0
 
-  for plugin_dir in "$PLUGIN_DIR"/*/; do
-    if [[ -f "$plugin_dir/plugin.json" ]]; then
-      local name=$(basename "$plugin_dir")
-      # Skip shared utilities directory
-      [[ "$name" == "_shared" ]] && continue
-      if start_plugin "$name"; then
-        ((count++))
-      else
-        ((failed++))
-      fi
+  # Get plugins in dependency order
+  local sorted_plugins
+  sorted_plugins=$(topological_sort_plugins)
+
+  if [[ -z "$sorted_plugins" ]]; then
+    log_info "No plugins installed"
+    return 0
+  fi
+
+  # Start plugins in order
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    if start_plugin "$name"; then
+      ((count++))
+    else
+      ((failed++))
     fi
-  done
+  done <<< "$sorted_plugins"
 
   if [[ $count -eq 0 ]]; then
     log_info "No plugins installed"
@@ -506,12 +759,13 @@ start_all_plugins() {
 
 # Stop all running plugins
 stop_all_plugins() {
+  local force="${1:-false}"
   local count=0
 
   for pid_file in "$PLUGIN_PIDS_DIR"/*.pid; do
     [[ -f "$pid_file" ]] || continue
     local name=$(basename "$pid_file" .pid)
-    if stop_plugin "$name"; then
+    if stop_plugin "$name" "$force"; then
       ((count++))
     fi
   done
@@ -523,7 +777,128 @@ stop_all_plugins() {
   fi
 }
 
-# List running plugins
+# List all installed plugins with detailed status
+list_all_plugins() {
+  printf "\n=== Installed Plugins ===\n\n"
+
+  # Source display utilities for colors
+  if [[ -f "$(dirname "${BASH_SOURCE[0]}")/../utils/display.sh" ]]; then
+    source "$(dirname "${BASH_SOURCE[0]}")/../utils/display.sh" 2>/dev/null || true
+  fi
+
+  # Print header
+  printf "%-25s %-12s %-8s %-8s %-s\n" "PLUGIN" "STATE" "PID" "PORT" "DESCRIPTION"
+  printf "%-25s %-12s %-8s %-8s %-s\n" "------" "-----" "---" "----" "-----------"
+
+  local total=0
+  local running=0
+  local stopped=0
+  local failed=0
+
+  for plugin_dir in "$PLUGIN_DIR"/*/; do
+    [[ -d "$plugin_dir" ]] || continue
+    local name=$(basename "$plugin_dir")
+
+    # Skip shared utilities
+    [[ "$name" == "_shared" ]] && continue
+
+    # Check if it has plugin.json
+    if [[ ! -f "$plugin_dir/plugin.json" ]]; then
+      continue
+    fi
+
+    ((total++))
+
+    # Get state
+    local state=$(get_plugin_state "$name")
+
+    # Get PID if running
+    local pid=""
+    if is_plugin_running "$name"; then
+      pid=$(get_plugin_pid "$name")
+      state="running"
+      ((running++))
+    elif [[ "$state" == "running" ]]; then
+      # State says running but no PID - it crashed
+      state="failed"
+      ((failed++))
+    elif [[ "$state" == "stopped" ]] || [[ "$state" == "failed" ]]; then
+      if [[ "$state" == "failed" ]]; then
+        ((failed++))
+      else
+        ((stopped++))
+      fi
+    else
+      # Default to stopped if no state file
+      state="stopped"
+      ((stopped++))
+    fi
+
+    # Get port from .env
+    local port=""
+    local env_file="$plugin_dir/ts/.env"
+    if [[ -f "$env_file" ]]; then
+      port=$(grep "^PORT=" "$env_file" | cut -d= -f2)
+    fi
+
+    # Get description from plugin.json
+    local desc=""
+    if command -v jq >/dev/null 2>&1; then
+      desc=$(jq -r '.description // ""' "$plugin_dir/plugin.json" 2>/dev/null)
+    else
+      desc=$(grep '"description"' "$plugin_dir/plugin.json" | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
+
+    # Truncate description if too long
+    if [[ ${#desc} -gt 40 ]]; then
+      desc="${desc:0:37}..."
+    fi
+
+    # Color-code state
+    local state_display="$state"
+    case "$state" in
+      running)
+        state_display="${COLOR_GREEN}●${COLOR_RESET} running"
+        ;;
+      stopped)
+        state_display="${COLOR_DIM}○${COLOR_RESET} stopped"
+        ;;
+      starting)
+        state_display="${COLOR_YELLOW}◐${COLOR_RESET} starting"
+        ;;
+      stopping)
+        state_display="${COLOR_YELLOW}◐${COLOR_RESET} stopping"
+        ;;
+      failed)
+        state_display="${COLOR_RED}✗${COLOR_RESET} failed"
+        ;;
+    esac
+
+    # Print row
+    printf "%-25s %-20s %-8s %-8s %-s\n" "$name" "$state_display" "$pid" "$port" "$desc"
+  done
+
+  # Print summary
+  printf "\n"
+  if [[ $total -eq 0 ]]; then
+    log_info "No plugins installed"
+    printf "\nInstall plugins with: nself plugin install <name>\n"
+  else
+    printf "Total: %d installed" "$total"
+    if [[ $running -gt 0 ]]; then
+      printf " | ${COLOR_GREEN}%d running${COLOR_RESET}" "$running"
+    fi
+    if [[ $stopped -gt 0 ]]; then
+      printf " | ${COLOR_DIM}%d stopped${COLOR_RESET}" "$stopped"
+    fi
+    if [[ $failed -gt 0 ]]; then
+      printf " | ${COLOR_RED}%d failed${COLOR_RESET}" "$failed"
+    fi
+    printf "\n"
+  fi
+}
+
+# List running plugins (legacy, kept for compatibility)
 list_running_plugins() {
   printf "\n=== Running Plugins ===\n\n"
 
@@ -647,6 +1022,9 @@ show_plugin_logs() {
 
 # Export functions
 export -f ensure_runtime_dirs
+export -f set_plugin_state
+export -f get_plugin_state
+export -f clear_plugin_state
 export -f setup_shared_utilities
 export -f get_database_url
 export -f get_encryption_key
@@ -656,11 +1034,15 @@ export -f is_plugin_running
 export -f get_plugin_pid
 export -f prepare_plugin
 export -f create_plugin_env
+export -f validate_plugin_env
+export -f get_plugin_dependencies
+export -f topological_sort_plugins
 export -f start_plugin
 export -f stop_plugin
 export -f restart_plugin
 export -f start_all_plugins
 export -f stop_all_plugins
+export -f list_all_plugins
 export -f list_running_plugins
 export -f check_plugin_health
 export -f health_check_all

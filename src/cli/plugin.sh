@@ -55,12 +55,17 @@ PLUGIN_REPO_URL="https://github.com/acamarata/nself-plugins"
 cmd_list() {
   local show_installed_only=false
   local filter_category=""
+  local show_detailed=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --installed | -i)
         show_installed_only=true
+        shift
+        ;;
+      --detailed | -d)
+        show_detailed=true
         shift
         ;;
       --category | -c)
@@ -72,6 +77,12 @@ cmd_list() {
         ;;
     esac
   done
+
+  # If showing installed with detailed flag, use new list_all_plugins
+  if [[ "$show_installed_only" == "true" ]] && [[ "$show_detailed" == "true" ]]; then
+    list_all_plugins
+    return 0
+  fi
 
   if [[ "$show_installed_only" == "true" ]]; then
     printf "\n=== Installed Plugins ===\n\n"
@@ -132,6 +143,9 @@ cmd_list() {
   fi
 
   printf "\nInstall with: nself plugin install <name>\n"
+  if [[ "$show_installed_only" == "true" ]]; then
+    printf "Detailed status: nself plugin list --installed --detailed\n"
+  fi
 }
 
 # Install a plugin

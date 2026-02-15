@@ -436,7 +436,7 @@ show_plugin_urls() {
   local protocol="$1"
   local domain="$2"
   local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
-  local webhooks_route="${WEBHOOKS_ROUTE:-webhooks}"
+  local plugin_runtime="${NSELF_PLUGIN_RUNTIME:-$HOME/.nself/runtime}"
 
   printf "%b%b➞ Plugins%b\n" "${BOLD}" "${COLOR_BLUE}" "${COLOR_RESET}"
 
@@ -445,6 +445,11 @@ show_plugin_urls() {
     printf "  %bNone installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
     echo
     return
+  fi
+
+  # Source plugin runtime functions if available
+  if [[ -f "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" ]]; then
+    source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
   fi
 
   # Find installed plugins
@@ -462,24 +467,57 @@ show_plugin_urls() {
 
       has_plugins=true
 
-      # Get plugin version from manifest
-      local version=""
+      # Get plugin metadata from manifest
+      local version="" port="" route=""
       if command -v jq >/dev/null 2>&1; then
         version=$(jq -r '.version // "unknown"' "$plugin_path" 2>/dev/null)
+        port=$(jq -r '.port // ""' "$plugin_path" 2>/dev/null)
+        route=$(jq -r '.route // ""' "$plugin_path" 2>/dev/null)
       else
         version=$(grep '"version"' "$plugin_path" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+        port=$(grep '"port"' "$plugin_path" 2>/dev/null | head -1 | sed 's/[^0-9]//g')
+        route=$(grep '"route"' "$plugin_path" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
       fi
+
+      # Get actual port from .env if plugin is configured
+      local env_file="$plugin_dir/$plugin_name/ts/.env"
+      if [[ -f "$env_file" ]]; then
+        local env_port=$(grep "^PORT=" "$env_file" | cut -d= -f2)
+        [[ -n "$env_port" ]] && port="$env_port"
+      fi
+
+      # Check if plugin is running
+      local status_indicator=""
+      if declare -f is_plugin_running >/dev/null 2>&1 && is_plugin_running "$plugin_name" 2>/dev/null; then
+        status_indicator="${COLOR_GREEN}●${COLOR_RESET} "
+      else
+        status_indicator="${COLOR_DIM}○${COLOR_RESET} "
+      fi
+
+      # Default route if not specified
+      [[ -z "$route" ]] && route="webhooks/$plugin_name"
 
       local padded_name
       padded_name=$(printf "%-15s" "${plugin_name}:")
-      printf "  %s %b%s://%s.%s/%s%b %b(v%s)%b\n" "$padded_name" "${COLOR_GREEN}" "$protocol" "$webhooks_route" "$domain" "$plugin_name" "${COLOR_RESET}" "${COLOR_GRAY}" "$version" "${COLOR_RESET}"
+
+      # Show URL based on route configuration
+      if [[ -n "$port" ]]; then
+        # Plugin has a port - show local URL
+        printf "  %s%s %bhttp://localhost:%s%b %b(v%s)%b\n" "$status_indicator" "$padded_name" "${COLOR_GREEN}" "$port" "${COLOR_RESET}" "${COLOR_GRAY}" "$version" "${COLOR_RESET}"
+      else
+        # No port configured - show as webhook route
+        printf "  %s%s %b%s://%s%b %b(v%s)%b\n" "$status_indicator" "$padded_name" "${COLOR_GREEN}" "$protocol" "${route}.${domain}" "${COLOR_RESET}" "${COLOR_GRAY}" "$version" "${COLOR_RESET}"
+      fi
     fi
   done
 
   if [[ "$has_plugins" == "false" ]]; then
     printf "  %bNone installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
   else
-    printf "  %bManage: nself plugin list --installed%b\n" "${COLOR_GRAY}" "${COLOR_RESET}"
+    printf "\n  %b●%b = running | %b○%b = stopped | %bManage: nself plugin list --installed --detailed%b\n" \
+      "${COLOR_GREEN}" "${COLOR_RESET}" \
+      "${COLOR_DIM}" "${COLOR_RESET}" \
+      "${COLOR_GRAY}" "${COLOR_RESET}"
   fi
   echo
 }
