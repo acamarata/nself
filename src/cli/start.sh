@@ -17,6 +17,9 @@ source "$LIB_DIR/utils/error-messages.sh" 2>/dev/null || true
 # Source security module for secure-by-default enforcement
 source "$LIB_DIR/security/secure-defaults.sh" 2>/dev/null || true
 
+# Source plugin runtime for auto-start support
+source "$LIB_DIR/plugin/runtime.sh" 2>/dev/null || true
+
 # Smart defaults from environment variables
 HEALTH_CHECK_TIMEOUT="${NSELF_HEALTH_CHECK_TIMEOUT:-120}"
 HEALTH_CHECK_INTERVAL="${NSELF_HEALTH_CHECK_INTERVAL:-2}"
@@ -781,6 +784,32 @@ start_services() {
 
     if [[ $total_with_health -gt 0 ]]; then
       printf "${COLOR_GREEN}✓${COLOR_RESET} Health: %s/%s checks passing\n" "${healthy_count:-0}" "${total_with_health:-0}"
+    fi
+
+    # ========================================================
+    # AUTO-START INSTALLED PLUGINS
+    # Plugins installed via nself plugin install are started
+    # automatically after Docker services are healthy.
+    # ========================================================
+    local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+    if [[ -d "$plugin_dir" ]] && command -v start_all_plugins >/dev/null 2>&1; then
+      # Count installed plugins (exclude _shared directory)
+      local plugin_count=0
+      for _pdir in "$plugin_dir"/*/plugin.json; do
+        if [[ -f "$_pdir" ]]; then
+          local _pname
+          _pname=$(dirname "$_pdir")
+          _pname=$(basename "$_pname")
+          if [[ "$_pname" != "_shared" ]]; then
+            plugin_count=$((plugin_count + 1))
+          fi
+        fi
+      done
+
+      if [[ $plugin_count -gt 0 ]]; then
+        printf "\n${COLOR_CYAN}Starting installed plugins (%d found)...${COLOR_RESET}\n" "$plugin_count"
+        start_all_plugins
+      fi
     fi
 
     printf "\n\n${COLOR_BOLD}Next steps:${COLOR_RESET}\n\n"

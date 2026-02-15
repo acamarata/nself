@@ -171,16 +171,48 @@ show_error_summary() {
   fi
 }
 
-# Function to get logs from specific service
+# Function to get logs from specific service (Docker or plugin)
 get_service_logs() {
   local service="$1"
   # Replace hyphens with underscores in container name (Docker naming convention)
   local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
-  # Check if service exists
+  # Check if service exists in Docker
   if ! compose ps "$service" >/dev/null 2>&1; then
+    # Check if it's a plugin
+    local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+    local plugin_log="$HOME/.nself/runtime/logs/${service}.log"
+    if [[ -f "$plugin_dir/$service/plugin.json" ]]; then
+      # It's a plugin - show plugin logs
+      if [[ ! -f "$plugin_log" ]]; then
+        log_warning "No logs for plugin '$service' (not started yet)"
+        printf "Start with: nself plugin start %s\n" "$service"
+        return 1
+      fi
+      if [[ "$FOLLOW_MODE" == "true" ]]; then
+        tail -f "$plugin_log" | clean_and_colorize "$service"
+      else
+        tail -"$TAIL_LINES" "$plugin_log" | clean_and_colorize "$service"
+      fi
+      return 0
+    fi
     log_error "Service '$service' not found"
     log_info "Available services: $(compose config --services 2>/dev/null | tr '\n' ' ')"
+    # Show available plugins too
+    if [[ -d "$plugin_dir" ]]; then
+      local plugins=""
+      for _pj in "$plugin_dir"/*/plugin.json; do
+        [[ -f "$_pj" ]] || continue
+        local _pn
+        _pn=$(dirname "$_pj")
+        _pn=$(basename "$_pn")
+        [[ "$_pn" == "_shared" ]] && continue
+        plugins="$plugins $_pn"
+      done
+      if [[ -n "$plugins" ]]; then
+        log_info "Available plugins:$plugins"
+      fi
+    fi
     return 1
   fi
 
@@ -417,6 +449,7 @@ show_help() {
   echo "  nself logs                      # Last 10 lines, all services"
   echo "  nself logs --more               # Last 50 lines, all services"
   echo "  nself logs postgres             # Last 10 lines, postgres only"
+  echo "  nself logs epg                  # Plugin logs (auto-detected)"
   echo "  nself logs -f                   # Follow all services (live)"
   echo "  nself logs -e                   # Show only errors"
   echo "  nself logs -q                   # Quiet mode (filter noise)"

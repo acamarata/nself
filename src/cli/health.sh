@@ -13,6 +13,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/header.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 
 # Color fallbacks
 : "${COLOR_GREEN:=\033[0;32m}"
@@ -48,12 +49,15 @@ Options:
   -h, --help            Show this help message
 
 Examples:
-  nself health                      # Check all services
+  nself health                      # Check all services + plugins
   nself health check                # Same as above
   nself health service postgres     # Check PostgreSQL only
   nself health watch                # Continuous monitoring
   nself health --env staging        # Check staging health
   nself health --json               # JSON output for tooling
+
+Note: Installed plugins are automatically included in health checks.
+  Plugin health is checked via GET /health on the plugin's configured port.
 EOF
 }
 
@@ -282,6 +286,79 @@ cmd_check() {
     fi
   done
 
+  # Check plugin health (if any plugins are installed)
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+  local plugin_healthy=0
+  local plugin_total=0
+  if [[ -d "$plugin_dir" ]] && command -v check_plugin_health >/dev/null 2>&1; then
+    local has_plugins=false
+    for _pjson in "$plugin_dir"/*/plugin.json; do
+      if [[ -f "$_pjson" ]]; then
+        local _pname
+        _pname=$(dirname "$_pjson")
+        _pname=$(basename "$_pname")
+        if [[ "$_pname" != "_shared" ]]; then
+          has_plugins=true
+          break
+        fi
+      fi
+    done
+
+    if [[ "$has_plugins" == "true" ]]; then
+      if [[ "$json_mode" != "true" ]]; then
+        echo ""
+        printf "${COLOR_CYAN}➞ Plugin Health${COLOR_RESET}\n"
+        echo ""
+        printf "  %-20s %-12s %s\n" "Plugin" "Status" "Details"
+        printf "  %-20s %-12s %s\n" "------" "------" "-------"
+      fi
+
+      for _pjson in "$plugin_dir"/*/plugin.json; do
+        [[ -f "$_pjson" ]] || continue
+        local _pname
+        _pname=$(dirname "$_pjson")
+        _pname=$(basename "$_pname")
+        [[ "$_pname" == "_shared" ]] && continue
+
+        plugin_total=$((plugin_total + 1))
+        total=$((total + 1))
+
+        if is_plugin_running "$_pname" 2>/dev/null; then
+          local _port=""
+          local _env_file="$plugin_dir/$_pname/ts/.env"
+          if [[ -f "$_env_file" ]]; then
+            _port=$(grep "^PORT=" "$_env_file" | cut -d= -f2)
+          fi
+
+          # Try health endpoint
+          local _plugin_healthy=false
+          if [[ -n "$_port" ]] && command -v curl >/dev/null 2>&1; then
+            if curl -sf "http://localhost:$_port/health" >/dev/null 2>&1; then
+              _plugin_healthy=true
+            fi
+          fi
+
+          if [[ "$_plugin_healthy" == "true" ]]; then
+            plugin_healthy=$((plugin_healthy + 1))
+            healthy=$((healthy + 1))
+            if [[ "$json_mode" != "true" ]]; then
+              printf "  %-20s ${COLOR_GREEN}%-12s${COLOR_RESET} %s\n" "$_pname" "✓ healthy" "port $_port"
+            fi
+          else
+            if [[ "$json_mode" != "true" ]]; then
+              printf "  %-20s ${COLOR_YELLOW}%-12s${COLOR_RESET} %s\n" "$_pname" "○ running" "port ${_port:-unknown}"
+            fi
+          fi
+        else
+          unhealthy=$((unhealthy + 1))
+          if [[ "$json_mode" != "true" ]]; then
+            printf "  %-20s ${COLOR_RED}%-12s${COLOR_RESET} %s\n" "$_pname" "✗ stopped" "not running"
+          fi
+        fi
+      done
+    fi
+  fi
+
   # Summary
   if [[ "$json_mode" == "true" ]]; then
     printf '{"timestamp": "%s", "healthy": %d, "unhealthy": %d, "total": %d, "services": %s}\n' \
@@ -290,6 +367,9 @@ cmd_check() {
     echo ""
     printf "${COLOR_CYAN}➞ Summary${COLOR_RESET}\n"
     printf "  Healthy: %d/%d\n" "$healthy" "$total"
+    if [[ $plugin_total -gt 0 ]]; then
+      printf "  Plugins: %d/%d\n" "$plugin_healthy" "$plugin_total"
+    fi
 
     if [[ "$unhealthy" -eq 0 ]]; then
       echo ""

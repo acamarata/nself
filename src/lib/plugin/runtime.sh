@@ -3,9 +3,10 @@
 # POSIX-compliant, no Bash 4+ features
 
 # ============================================================================
-# Runtime Directories
+# Plugin & Runtime Directories
 # ============================================================================
 
+PLUGIN_DIR="${PLUGIN_DIR:-${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}}"
 PLUGIN_RUNTIME_DIR="${NSELF_PLUGIN_RUNTIME:-$HOME/.nself/runtime}"
 PLUGIN_LOGS_DIR="$PLUGIN_RUNTIME_DIR/logs"
 PLUGIN_PIDS_DIR="$PLUGIN_RUNTIME_DIR/pids"
@@ -421,6 +422,8 @@ start_all_plugins() {
   for plugin_dir in "$PLUGIN_DIR"/*/; do
     if [[ -f "$plugin_dir/plugin.json" ]]; then
       local name=$(basename "$plugin_dir")
+      # Skip shared utilities directory
+      [[ "$name" == "_shared" ]] && continue
       if start_plugin "$name"; then
         ((count++))
       else

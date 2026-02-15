@@ -12,6 +12,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/services.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/docker-batch.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 
 # Source display.sh and force colors to be set
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
@@ -844,6 +845,7 @@ show_help() {
   echo ""
   echo "Information shown:"
   echo "  • Service status and health"
+  echo "  • Plugin status (installed, running, configured)"
   echo "  • Resource usage (CPU, Memory, Network, Disk I/O)"
   echo "  • Database statistics"
   echo "  • Service URLs"
@@ -1473,11 +1475,31 @@ show_plugin_status() {
         ;;
     esac
 
-    if [[ "$is_configured" == "true" ]]; then
+    # Check running status (if runtime.sh is loaded)
+    local is_running=false
+    local plugin_port=""
+    if command -v is_plugin_running >/dev/null 2>&1; then
+      if is_plugin_running "$plugin_name" 2>/dev/null; then
+        is_running=true
+        local _env_file="$plugin_dir/$plugin_name/ts/.env"
+        if [[ -f "$_env_file" ]]; then
+          plugin_port=$(grep "^PORT=" "$_env_file" | cut -d= -f2)
+        fi
+      fi
+    fi
+
+    if [[ "$is_running" == "true" ]]; then
       indicator="\033[1;32m✓\033[0m"
-      status_text="configured"
-    else
+      if [[ -n "$plugin_port" ]]; then
+        status_text="running on port $plugin_port"
+      else
+        status_text="running"
+      fi
+    elif [[ "$is_configured" == "true" ]]; then
       indicator="\033[1;33m○\033[0m"
+      status_text="installed, not running"
+    else
+      indicator="\033[1;31m✗\033[0m"
       status_text="not configured"
     fi
 
