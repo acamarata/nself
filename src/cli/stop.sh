@@ -12,6 +12,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/ux-standards.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 
 # Load environment with smart defaults
 if [[ -f "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
@@ -107,12 +108,12 @@ cmd_stop() {
 
     for service in $services_to_stop; do
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Stopping $service..."
-      if docker compose stop "$service" >/dev/null 2>&1; then
+      if compose stop "$service" >/dev/null 2>&1; then
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Stopped $service                       \n"
 
         # Remove the container if requested
         if [[ "$remove_volumes" == true ]] || [[ "$remove_images" == true ]]; then
-          docker compose rm -f "$service" >/dev/null 2>&1
+          compose rm -f "$service" >/dev/null 2>&1
         fi
       else
         printf "\r${COLOR_RED}✗${COLOR_RESET} Failed to stop $service                \n"
@@ -137,7 +138,7 @@ cmd_stop() {
   fi
 
   # Check what's currently running using docker ps directly
-  local running_containers=$(docker ps --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null)
+  local running_containers=$(docker ps --filter "label=com.docker.compose.project=${project_name}" --format "{{.Names}}" 2>/dev/null)
   local running_count=0
 
   if [[ -n "$running_containers" ]]; then
@@ -149,7 +150,7 @@ cmd_stop() {
     echo
 
     # Check for stopped containers
-    local stopped_containers=$(docker ps -a --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null)
+    local stopped_containers=$(docker ps -a --filter "label=com.docker.compose.project=${project_name}" --format "{{.Names}}" 2>/dev/null)
 
     if [[ -n "$stopped_containers" ]]; then
       local stopped_count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
@@ -161,7 +162,7 @@ cmd_stop() {
         local cleanup_args=("down")
         [[ "$remove_volumes" == true ]] && cleanup_args+=("-v")
         [[ "$remove_images" == true ]] && cleanup_args+=("--rmi" "all")
-        docker compose "${cleanup_args[@]}" >/dev/null 2>&1
+        compose "${cleanup_args[@]}" >/dev/null 2>&1
         printf "\r${COLOR_GREEN}✓${COLOR_RESET} Cleanup completed                      \n"
       else
         printf "   Run ${COLOR_BLUE}nself stop --volumes${COLOR_RESET} to remove all data\n"
@@ -209,20 +210,20 @@ cmd_stop() {
   if [[ "$remove_volumes" != true ]] && [[ "$remove_images" != true ]]; then
     if [[ "$verbose" == true ]]; then
       echo "Gracefully stopping services (timeout: ${graceful_timeout}s)..."
-      docker compose stop --timeout "$graceful_timeout" 2>&1 | tee -a "$output_file"
+      compose stop --timeout "$graceful_timeout" 2>&1 | tee -a "$output_file"
     else
-      docker compose stop --timeout "$graceful_timeout" >/dev/null 2>&1
+      compose stop --timeout "$graceful_timeout" >/dev/null 2>&1
     fi
   fi
 
   if [[ "$verbose" == true ]]; then
     # Show full output in verbose mode
     printf "\n"
-    docker compose "${compose_args[@]}" 2>&1 | tee -a "$output_file"
+    compose "${compose_args[@]}" 2>&1 | tee -a "$output_file"
     result=${PIPESTATUS[0]}
   else
     # Run silently with spinner and progress
-    (docker compose "${compose_args[@]}" 2>&1) >>"$output_file" &
+    (compose "${compose_args[@]}" 2>&1) >>"$output_file" &
     local compose_pid=$!
 
     # Show spinner with progress tracking
@@ -232,7 +233,7 @@ cmd_stop() {
 
     while kill -0 $compose_pid 2>/dev/null; do
       # Count how many have stopped so far
-      local still_running=$(docker ps --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+      local still_running=$(docker ps --filter "label=com.docker.compose.project=${project_name}" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
       stopped_count=$((running_count - still_running))
 
       local char="${spin_chars:$((i % ${#spin_chars})):1}"
@@ -285,12 +286,18 @@ cmd_stop() {
     fi
 
     # Clean up orphaned containers if any
-    local orphaned=$(docker ps -a --filter "name=^${project_name}_" --format "{{.Names}}" 2>/dev/null)
+    local orphaned=$(docker ps -a --filter "label=com.docker.compose.project=${project_name}" --format "{{.Names}}" 2>/dev/null)
     if [[ -n "$orphaned" ]]; then
       echo
       printf "${COLOR_BLUE}⠋${COLOR_RESET} Cleaning up orphaned containers..."
       docker rm -f $orphaned >/dev/null 2>&1
       printf "\r${COLOR_GREEN}✓${COLOR_RESET} Orphaned containers removed                    \n"
+    fi
+
+    # Stop plugins if available
+    if type stop_all_plugins >/dev/null 2>&1; then
+      echo
+      stop_all_plugins 2>/dev/null || true
     fi
 
     # Show next steps (consistent with other commands)

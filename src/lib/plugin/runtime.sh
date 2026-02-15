@@ -284,8 +284,15 @@ create_plugin_env() {
     return 0
   fi
 
-  local db_url=$(get_database_url) || return 1
-  local encryption_key=$(get_encryption_key) || return 1
+  local db_url
+  db_url=$(get_database_url) || return 1
+  if [[ -z "$db_url" ]]; then
+    log_error "Cannot create .env for $plugin_name: DATABASE_URL is empty"
+    log_info "Ensure .env files exist in your project directory with POSTGRES_* or DATABASE_URL"
+    return 1
+  fi
+  local encryption_key
+  encryption_key=$(get_encryption_key) || return 1
 
   # Get optional service configurations
   local minio_config=$(get_minio_config)
@@ -378,6 +385,9 @@ stop_plugin() {
   local pid=$(get_plugin_pid "$plugin_name")
   log_info "Stopping $plugin_name (PID: $pid)..."
 
+  # Kill child processes first (e.g., node spawned by pnpm)
+  pkill -P "$pid" 2>/dev/null || true
+
   if kill "$pid" 2>/dev/null; then
     # Wait for graceful shutdown
     local timeout=5
@@ -386,25 +396,52 @@ stop_plugin() {
       ((timeout--))
     done
 
-    # Force kill if still running
+    # Force kill if still running (process and any remaining children)
     if kill -0 "$pid" 2>/dev/null; then
+      pkill -9 -P "$pid" 2>/dev/null || true
       kill -9 "$pid" 2>/dev/null
     fi
-
-    rm -f "$PLUGIN_PIDS_DIR/${plugin_name}.pid"
-    log_success "$plugin_name stopped"
-    return 0
-  else
-    log_error "Failed to stop $plugin_name"
-    return 1
   fi
+
+  # Clean up any process still holding the plugin's port
+  local env_file="$PLUGIN_DIR/$plugin_name/ts/.env"
+  if [[ -f "$env_file" ]]; then
+    local port=$(grep "^PORT=" "$env_file" | cut -d= -f2)
+    if [[ -n "$port" ]] && command -v lsof >/dev/null 2>&1; then
+      local port_pids=$(lsof -ti ":$port" 2>/dev/null || true)
+      if [[ -n "$port_pids" ]]; then
+        kill -9 $port_pids 2>/dev/null || true
+      fi
+    fi
+  fi
+
+  rm -f "$PLUGIN_PIDS_DIR/${plugin_name}.pid"
+  log_success "$plugin_name stopped"
+  return 0
 }
 
 # Restart a plugin
 restart_plugin() {
   local plugin_name="$1"
   stop_plugin "$plugin_name"
-  sleep 1
+
+  # Wait for port to be fully released
+  local env_file="$PLUGIN_DIR/$plugin_name/ts/.env"
+  if [[ -f "$env_file" ]]; then
+    local port=$(grep "^PORT=" "$env_file" | cut -d= -f2)
+    if [[ -n "$port" ]] && command -v lsof >/dev/null 2>&1; then
+      local wait_count=0
+      while lsof -ti ":$port" >/dev/null 2>&1 && [[ $wait_count -lt 10 ]]; do
+        sleep 0.5
+        ((wait_count++))
+      done
+    else
+      sleep 1
+    fi
+  else
+    sleep 1
+  fi
+
   start_plugin "$plugin_name"
 }
 
