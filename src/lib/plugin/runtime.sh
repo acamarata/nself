@@ -291,6 +291,13 @@ create_plugin_env() {
     log_info "Ensure .env files exist in your project directory with POSTGRES_* or DATABASE_URL"
     return 1
   fi
+
+  # Validate DATABASE_URL format
+  if [[ ! "$db_url" =~ ^postgresql:// ]]; then
+    log_error "Invalid DATABASE_URL format for $plugin_name: $db_url"
+    log_info "Expected: postgresql://user:pass@host:port/database"
+    return 1
+  fi
   local encryption_key
   encryption_key=$(get_encryption_key) || return 1
 
@@ -347,6 +354,22 @@ start_plugin() {
 
   # Create .env if needed
   create_plugin_env "$plugin_name" "$port" || return 1
+
+  # Check port availability before starting
+  local plugin_dir="$PLUGIN_DIR/$plugin_name/ts"
+  local env_file="$plugin_dir/.env"
+  if [[ -f "$env_file" ]]; then
+    local check_port=$(grep "^PORT=" "$env_file" | cut -d= -f2)
+    if [[ -n "$check_port" ]] && command -v lsof >/dev/null 2>&1; then
+      if lsof -ti ":$check_port" >/dev/null 2>&1; then
+        local occupant=$(lsof -ti ":$check_port" | head -1)
+        log_error "Port $check_port already in use by PID $occupant"
+        log_info "Stop the conflicting process: kill $occupant"
+        log_info "Or use a different port in plugin.json"
+        return 1
+      fi
+    fi
+  fi
 
   local plugin_dir="$PLUGIN_DIR/$plugin_name/ts"
   local log_file="$PLUGIN_LOGS_DIR/${plugin_name}.log"

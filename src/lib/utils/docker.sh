@@ -68,6 +68,17 @@ compose() {
     compose_files="$compose_files -f docker-compose.override.yml"
   fi
 
+  # Debug mode - show command being executed
+  if [[ "${NSELF_DEBUG:-false}" == "true" ]]; then
+    if [[ -f "$env_file" ]]; then
+      printf "${COLOR_DIM}[DEBUG] docker compose %s --project-name \"%s\" --env-file \"%s\" %s${COLOR_RESET}\n" \
+        "$compose_files" "$project" "$env_file" "$*" >&2
+    else
+      printf "${COLOR_DIM}[DEBUG] docker compose %s --project-name \"%s\" %s${COLOR_RESET}\n" \
+        "$compose_files" "$project" "$*" >&2
+    fi
+  fi
+
   if [[ -f "$env_file" ]]; then
     docker compose $compose_files --project-name "$project" --env-file "$env_file" "$@"
   else
