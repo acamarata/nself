@@ -4,7 +4,7 @@ set -euo pipefail
 # stop.sh - Stop all services with enhanced feedback
 
 # Source shared utilities
-CLI_SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$CLI_SCRIPT_DIR"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/env.sh"
@@ -17,7 +17,7 @@ source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 # Load environment with smart defaults
 if [[ -f "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh" ]]; then
   source "$CLI_SCRIPT_DIR/../lib/config/smart-defaults.sh"
-  load_env_with_defaults >/dev/null 2>&1
+  load_env_with_defaults >/dev/null 2>&1 || true
 fi
 
 # Command function

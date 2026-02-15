@@ -22,23 +22,32 @@ pre_command() {
 
   # Check if project is initialized (unless exempt)
   if [[ ! " $no_init_commands " =~ " $command " ]]; then
-    # Monorepo auto-detection: if no .env.local here but backend/ has one, cd into it
-    if [[ ! -f ".env.local" ]] && [[ -d "backend" ]] && [[ -f "backend/.env.local" ]]; then
-      log_info "Monorepo detected — switching to backend/ directory"
-      cd backend
+    # Monorepo auto-detection: if no .env files here but backend/ has them, cd into it
+    local has_env_here=false
+    if [[ -f ".env.dev" ]] || [[ -f ".env.local" ]] || [[ -f ".env" ]]; then
+      has_env_here=true
     fi
 
-    if [[ ! -f ".env.local" ]]; then
+    if [[ "$has_env_here" == "false" ]] && [[ -d "backend" ]]; then
+      if [[ -f "backend/.env.dev" ]] || [[ -f "backend/.env.local" ]] || [[ -f "backend/.env" ]]; then
+        log_info "Monorepo detected — switching to backend/ directory"
+        cd backend
+        has_env_here=true
+      fi
+    fi
+
+    # Check if any .env file exists (project is initialized)
+    if [[ "$has_env_here" == "false" ]]; then
       log_error "Project not initialized. Run 'nself init' first."
       return 1
     fi
 
     # Load environment
-    load_env_with_priority ".env.local" || return 1
+    load_env_with_priority || return 1
   fi
 
   # Commands that need Docker
-  local docker_commands="up down restart status logs doctor db build"
+  local docker_commands="up down stop restart status logs doctor db build"
 
   if [[ " $docker_commands " =~ " $command " ]]; then
     ensure_docker_running || return 1
