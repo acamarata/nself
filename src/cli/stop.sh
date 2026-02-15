@@ -97,6 +97,13 @@ cmd_stop() {
     set +a
   fi
 
+  # Load runtime-computed values (PROJECT_NAME, DOCKER_NETWORK, etc.)
+  if [[ -f ".env.runtime" ]]; then
+    set -a
+    source ".env.runtime"
+    set +a
+  fi
+
   # Get project name
   local project_name="${PROJECT_NAME:-nself}"
 
