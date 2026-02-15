@@ -264,7 +264,7 @@ prepare_plugin() {
 create_plugin_env() {
   local plugin_name="$1"
   local plugin_dir="$PLUGIN_DIR/$plugin_name/ts"
-  local port="$2"
+  local port="${2:-}"
 
   # Get plugin manifest for default port
   local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
@@ -321,7 +321,7 @@ EOF
 # Start a plugin
 start_plugin() {
   local plugin_name="$1"
-  local port="$2"
+  local port="${2:-}"
 
   ensure_runtime_dirs
 

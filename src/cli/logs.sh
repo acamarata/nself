@@ -177,25 +177,27 @@ get_service_logs() {
   # Replace hyphens with underscores in container name (Docker naming convention)
   local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
-  # Check if service exists in Docker
-  if ! compose ps "$service" >/dev/null 2>&1; then
-    # Check if it's a plugin
-    local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
-    local plugin_log="$HOME/.nself/runtime/logs/${service}.log"
-    if [[ -f "$plugin_dir/$service/plugin.json" ]]; then
-      # It's a plugin - show plugin logs
-      if [[ ! -f "$plugin_log" ]]; then
-        log_warning "No logs for plugin '$service' (not started yet)"
-        printf "Start with: nself plugin start %s\n" "$service"
-        return 1
-      fi
-      if [[ "$FOLLOW_MODE" == "true" ]]; then
-        tail -f "$plugin_log" | clean_and_colorize "$service"
-      else
-        tail -"$TAIL_LINES" "$plugin_log" | clean_and_colorize "$service"
-      fi
-      return 0
+  # Check if it's a plugin FIRST (before Docker, since compose ps may not
+  # reliably return non-zero for unknown services in all environments)
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+  local plugin_log="$HOME/.nself/runtime/logs/${service}.log"
+  if [[ -f "$plugin_dir/$service/plugin.json" ]]; then
+    # It's a plugin - show plugin logs
+    if [[ ! -f "$plugin_log" ]]; then
+      log_warning "No logs for plugin '$service' (not started yet)"
+      printf "Start with: nself plugin start %s\n" "$service"
+      return 1
     fi
+    if [[ "$FOLLOW_MODE" == "true" ]]; then
+      tail -f "$plugin_log" | clean_and_colorize "$service"
+    else
+      tail -"$TAIL_LINES" "$plugin_log" | clean_and_colorize "$service"
+    fi
+    return 0
+  fi
+
+  # Not a plugin — check if service exists in Docker
+  if ! compose ps "$service" >/dev/null 2>&1; then
     log_error "Service '$service' not found"
     log_info "Available services: $(compose config --services 2>/dev/null | tr '\n' ' ')"
     # Show available plugins too
