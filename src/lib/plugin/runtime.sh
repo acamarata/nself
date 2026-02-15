@@ -630,12 +630,24 @@ get_plugin_dependencies() {
     return 0
   fi
 
-  # Extract dependencies
+  # Extract plugin dependencies (not npm dependencies)
   if command -v jq >/dev/null 2>&1; then
-    jq -r '.dependencies // [] | .[]' "$manifest" 2>/dev/null
+    # Check if dependencies is an object or array
+    local dep_type=$(jq -r '.dependencies | type' "$manifest" 2>/dev/null)
+
+    if [[ "$dep_type" == "object" ]]; then
+      # New format: dependencies.plugins[] for plugin dependencies
+      # dependencies.npm[] is for npm packages (not used for topological sort)
+      jq -r '.dependencies.plugins[]?' "$manifest" 2>/dev/null || true
+    elif [[ "$dep_type" == "array" ]]; then
+      # Old format: flat array of plugin names (backward compatibility)
+      jq -r '.dependencies[]?' "$manifest" 2>/dev/null || true
+    fi
+    # If dependencies is null or other type, return nothing (no plugin dependencies)
   else
     # Fallback: parse JSON manually
-    grep -A10 '"dependencies"' "$manifest" | grep -o '"[a-z-]*"' | tr -d '"' | grep -v "dependencies"
+    # Look for dependencies.plugins field
+    grep -A10 '"plugins"' "$manifest" | grep -o '"[a-z-]*"' | tr -d '"' | grep -v "plugins" || true
   fi
 }
 
