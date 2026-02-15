@@ -1009,6 +1009,7 @@ Usage: nself plugin <command> [options]
 Commands:
   list [options]          List available plugins
     --installed, -i         Show only installed plugins
+    --detailed, -d          Show detailed status (with --installed)
     --category, -c <cat>    Filter by category (billing, ecommerce, devops)
 
   install <name>          Install a plugin from registry
@@ -1033,9 +1034,11 @@ Commands:
 
 Runtime Management:
   start <name>            Start a plugin as external process
-  start --all             Start all installed plugins
+  start --all             Start all installed plugins (respects dependencies)
   stop <name>             Stop a running plugin
+    --force                 Force-stop immediately (SIGKILL)
   stop --all              Stop all running plugins
+    --force                 Force-stop all immediately
   restart <name>          Restart a plugin
   logs <name>             View plugin logs
     -f, --follow            Follow log output
@@ -1054,15 +1057,18 @@ Examples:
   # Installation & management
   nself plugin list
   nself plugin list --installed
+  nself plugin list --installed --detailed   # Show states, PIDs, ports
   nself plugin install stripe
   nself plugin update --all
   nself plugin status
 
   # Runtime (external processes)
   nself plugin start vpn              # Start single plugin
-  nself plugin start --all            # Start all plugins
-  nself plugin stop vpn               # Stop plugin
-  nself plugin stop --all             # Stop all
+  nself plugin start --all            # Start all (respects dependencies)
+  nself plugin stop vpn               # Stop plugin gracefully
+  nself plugin stop vpn --force       # Force-stop immediately
+  nself plugin stop --all             # Stop all gracefully
+  nself plugin stop --all --force     # Force-stop all immediately
   nself plugin restart vpn            # Restart plugin
   nself plugin logs vpn               # View logs
   nself plugin logs vpn -f            # Follow logs
@@ -1078,6 +1084,14 @@ Examples:
   # Dependencies
   nself plugin check-deps stripe
   nself plugin install-deps stripe
+
+Plugin Features:
+  • Lifecycle states (starting/running/stopping/stopped/failed)
+  • Dependency management (automatic startup ordering)
+  • Required environment variable validation
+  • Progress indicators for builds
+  • Plugin URLs in 'nself urls' command
+  • PID/log consolidation in ~/.nself/runtime/
 
 Available Plugins:
   stripe    - Payment processing & subscriptions (billing)

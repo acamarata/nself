@@ -467,6 +467,7 @@ start_plugin() {
 
   if is_plugin_running "$plugin_name"; then
     log_warning "Plugin '$plugin_name' is already running (PID: $(get_plugin_pid "$plugin_name"))"
+    printf "  Use 'nself plugin restart %s' to restart it\n" "$plugin_name"
     return 0
   fi
 
@@ -535,6 +536,7 @@ stop_plugin() {
 
   if ! is_plugin_running "$plugin_name"; then
     log_warning "Plugin '$plugin_name' is not running"
+    printf "  Use 'nself plugin start %s' to start it\n" "$plugin_name"
     return 0
   fi
 
@@ -670,6 +672,7 @@ topological_sort_plugins() {
     for p in "${visiting[@]}"; do
       if [[ "$p" == "$plugin" ]]; then
         log_warning "Circular dependency detected involving $plugin"
+        printf "  Check 'dependencies' field in plugin.json files\n"
         return 1
       fi
     done
@@ -692,6 +695,7 @@ topological_sort_plugins() {
         visit_plugin "$dep"
       else
         log_warning "Plugin $plugin depends on $dep which is not installed"
+        printf "  Install it with: nself plugin install %s\n" "$dep"
       fi
     done
 
