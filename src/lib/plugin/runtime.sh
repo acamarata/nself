@@ -661,21 +661,26 @@ topological_sort_plugins() {
     local plugin="$1"
 
     # Check if already visited
-    local p
-    for p in "${visited[@]}"; do
-      if [[ "$p" == "$plugin" ]]; then
-        return 0
-      fi
-    done
+    if [[ ${#visited[@]} -gt 0 ]]; then
+      local p
+      for p in "${visited[@]}"; do
+        if [[ "$p" == "$plugin" ]]; then
+          return 0
+        fi
+      done
+    fi
 
     # Check for circular dependency
-    for p in "${visiting[@]}"; do
-      if [[ "$p" == "$plugin" ]]; then
-        log_warning "Circular dependency detected involving $plugin"
-        printf "  Check 'dependencies' field in plugin.json files\n"
-        return 1
-      fi
-    done
+    if [[ ${#visiting[@]} -gt 0 ]]; then
+      local p
+      for p in "${visiting[@]}"; do
+        if [[ "$p" == "$plugin" ]]; then
+          log_warning "Circular dependency detected involving $plugin"
+          printf "  Check 'dependencies' field in plugin.json files\n"
+          return 1
+        fi
+      done
+    fi
 
     visiting+=("$plugin")
 
@@ -684,12 +689,15 @@ topological_sort_plugins() {
     for dep in $deps; do
       # Check if dependency is installed
       local dep_installed=false
-      for p in "${all_plugins[@]}"; do
-        if [[ "$p" == "$dep" ]]; then
-          dep_installed=true
-          break
-        fi
-      done
+      if [[ ${#all_plugins[@]} -gt 0 ]]; then
+        local p
+        for p in "${all_plugins[@]}"; do
+          if [[ "$p" == "$dep" ]]; then
+            dep_installed=true
+            break
+          fi
+        done
+      fi
 
       if [[ "$dep_installed" == "true" ]]; then
         visit_plugin "$dep"
@@ -701,22 +709,33 @@ topological_sort_plugins() {
 
     # Remove from visiting, add to visited
     local new_visiting=()
-    for p in "${visiting[@]}"; do
-      [[ "$p" != "$plugin" ]] && new_visiting+=("$p")
-    done
-    visiting=("${new_visiting[@]}")
+    if [[ ${#visiting[@]} -gt 0 ]]; then
+      local p
+      for p in "${visiting[@]}"; do
+        [[ "$p" != "$plugin" ]] && new_visiting+=("$p")
+      done
+    fi
+    if [[ ${#new_visiting[@]} -gt 0 ]]; then
+      visiting=("${new_visiting[@]}")
+    else
+      visiting=()
+    fi
 
     visited+=("$plugin")
     sorted+=("$plugin")
   }
 
   # Visit all plugins
-  for plugin in "${all_plugins[@]}"; do
-    visit_plugin "$plugin"
-  done
+  if [[ ${#all_plugins[@]} -gt 0 ]]; then
+    for plugin in "${all_plugins[@]}"; do
+      visit_plugin "$plugin"
+    done
+  fi
 
   # Output sorted list
-  printf "%s\n" "${sorted[@]}"
+  if [[ ${#sorted[@]} -gt 0 ]]; then
+    printf "%s\n" "${sorted[@]}"
+  fi
 }
 
 # ============================================================================
