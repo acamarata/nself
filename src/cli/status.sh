@@ -285,7 +285,11 @@ check_config_drift() {
   # Get last container start time (use oldest running container)
   local project_name="${PROJECT_NAME:-nself}"
   local container_id
+  # Try underscore (Compose v1: project_service_1) then dash (Compose v2: project-service-1)
   container_id=$(docker ps --filter "name=${project_name}_" --format "{{.ID}}" 2>/dev/null | head -1)
+  if [[ -z "$container_id" ]]; then
+    container_id=$(docker ps --filter "name=${project_name}-" --format "{{.ID}}" 2>/dev/null | head -1)
+  fi
   if [[ -n "$container_id" ]]; then
     # Use docker inspect for reliable ISO 8601 timestamp (State.StartedAt
     # reflects actual start time, not creation time — correct after stop/start)
@@ -316,8 +320,14 @@ check_config_drift() {
   fi
 
   # Check service count mismatch
-  local expected_services=$(compose config --services 2>/dev/null | wc -l | tr -d ' ')
-  local running_services=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+  local expected_services
+  expected_services=$(compose config --services 2>/dev/null | wc -l | tr -d ' ')
+  local running_services
+  # Try underscore (v1) then dash (v2) container naming
+  running_services=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "${running_services:-0}" -eq 0 ]]; then
+    running_services=$(docker ps --filter "name=${project_name}-" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
+  fi
 
   if [[ "$expected_services" -gt 0 ]] && [[ "$running_services" -gt 0 ]]; then
     if [[ "$expected_services" != "$running_services" ]]; then
@@ -461,10 +471,15 @@ show_service_overview() {
     else
       # Use compose ps output.
       # Docker Compose v2 may return "running" in State or "Up ..." in Status.
-      local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
+      # NOTE: grep "^$service\t" uses literal \t in double-quotes (not a tab).
+      # Use awk -F'\t' to match the first tab-delimited field reliably.
+      local info
+      info=$(printf '%s\n' "$all_containers" | awk -F'\t' -v svc="$service" '$1==svc{print; exit}')
       if [[ -n "$info" ]]; then
-        local status=$(echo "$info" | cut -f2)
-        local state=$(echo "$info" | cut -f3)
+        local status
+        local state
+        status=$(printf '%s' "$info" | cut -f2)
+        state=$(printf '%s' "$info" | cut -f3)
         if [[ "$status" == *"Up"* ]] || [[ "$state" == "running" ]]; then
           is_running=true
         fi
