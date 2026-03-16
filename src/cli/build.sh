@@ -268,6 +268,58 @@ cmd_build() {
   orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"
   build_result=$?
 
+  # ============================================================
+  # POST-BUILD SECURITY PREFLIGHT (staging/prod only)
+  # Prints numbered warnings for common host-level issues.
+  # Dev/local: completely silent.
+  # ============================================================
+  if [[ $build_result -eq 0 ]]; then
+    local current_env
+    current_env=$(grep "^ENV=" .env 2>/dev/null | cut -d= -f2- || true)
+    current_env="${current_env:-${env:-dev}}"
+
+    if [[ "$current_env" == "staging" || "$current_env" == "prod" || "$current_env" == "production" ]]; then
+      local _sec_warn_count=0
+      local _sec_warn_msgs=""
+
+      # 1. fail2ban
+      if ! which fail2ban-client >/dev/null 2>&1; then
+        _sec_warn_count=$((_sec_warn_count + 1))
+        _sec_warn_msgs="${_sec_warn_msgs}  ${_sec_warn_count}. fail2ban not installed (brute-force protection)\n"
+      fi
+
+      # 2. SSH password auth
+      if [[ -f /etc/ssh/sshd_config ]]; then
+        if grep -qiE '^[[:space:]]*PasswordAuthentication[[:space:]]+yes' /etc/ssh/sshd_config 2>/dev/null; then
+          _sec_warn_count=$((_sec_warn_count + 1))
+          _sec_warn_msgs="${_sec_warn_msgs}  ${_sec_warn_count}. SSH PasswordAuthentication is enabled\n"
+        fi
+
+        # 3. Root SSH login
+        if grep -qiE '^[[:space:]]*PermitRootLogin[[:space:]]+yes' /etc/ssh/sshd_config 2>/dev/null; then
+          _sec_warn_count=$((_sec_warn_count + 1))
+          _sec_warn_msgs="${_sec_warn_msgs}  ${_sec_warn_count}. SSH PermitRootLogin is enabled\n"
+        fi
+      fi
+
+      # 4. Docker iptables disabled
+      if [[ -f /etc/docker/daemon.json ]]; then
+        if grep -q '"iptables"[[:space:]]*:[[:space:]]*false' /etc/docker/daemon.json 2>/dev/null; then
+          _sec_warn_count=$((_sec_warn_count + 1))
+          _sec_warn_msgs="${_sec_warn_msgs}  ${_sec_warn_count}. Docker iptables disabled — UFW rules will NOT apply to Docker ports\n"
+        fi
+      fi
+
+      if [[ $_sec_warn_count -gt 0 ]]; then
+        printf "\n"
+        printf "\033[0;33m⚠  Security: %d warning(s)\033[0m — run \033[0;36mnself security audit\033[0m for details\n" "$_sec_warn_count"
+        printf "%b" "$_sec_warn_msgs"
+      else
+        printf "\n\033[0;32m✓  Security: no warnings\033[0m\n"
+      fi
+    fi
+  fi
+
   return $build_result
 }
 

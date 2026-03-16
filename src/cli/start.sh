@@ -381,6 +381,53 @@ start_services() {
     fi
   fi
 
+  # 4c. Pre-start exposed port check
+  # Scan docker-compose.yml for non-nginx services binding to 0.0.0.0.
+  # Override: set NSELF_ALLOW_EXPOSED_PORTS=true in .env to warn but continue.
+  local _allow_exposed
+  _allow_exposed=$(grep "^NSELF_ALLOW_EXPOSED_PORTS=" .env 2>/dev/null | cut -d= -f2- || true)
+  if [[ -f "docker-compose.yml" ]]; then
+    local _exposed_services=""
+    local _in_svc=""
+    local _in_ports=false
+    while IFS= read -r _dc_line; do
+      # Detect service name (2-space indented, word char)
+      if printf '%s' "$_dc_line" | grep -qE '^[[:space:]]{2}[a-zA-Z]'; then
+        _in_svc=$(printf '%s' "$_dc_line" | sed 's/[[:space:]]*\([a-zA-Z_-]*\):.*/\1/')
+        _in_ports=false
+      fi
+      # Detect ports section
+      if printf '%s' "$_dc_line" | grep -qE '^[[:space:]]*(ports):'; then
+        _in_ports=true
+      fi
+      # Detect 0.0.0.0 binding for non-nginx services
+      if [[ "$_in_ports" == "true" ]] && printf '%s' "$_dc_line" | grep -qE '0\.0\.0\.0:'; then
+        if [[ "$_in_svc" != "nginx" ]]; then
+          _exposed_services="${_exposed_services} ${_in_svc}"
+        fi
+      fi
+      # Reset ports tracking when leaving ports section
+      if [[ "$_in_ports" == "true" ]] && ! printf '%s' "$_dc_line" | grep -qE '(ports|-[[:space:]])'; then
+        _in_ports=false
+      fi
+    done < "docker-compose.yml"
+
+    if [[ -n "$_exposed_services" ]]; then
+      if [[ "${_allow_exposed:-false}" == "true" ]]; then
+        printf "\n${COLOR_YELLOW}⚠ Warning:${COLOR_RESET} Services with 0.0.0.0 port bindings (NSELF_ALLOW_EXPOSED_PORTS=true):%s\n" "$_exposed_services"
+        printf "  Run 'nself build' to regenerate docker-compose.yml with correct bindings.\n\n"
+      else
+        printf "\n${COLOR_RED}Error: Exposed ports detected on 0.0.0.0${COLOR_RESET}\n"
+        printf "Services with unsafe port bindings:%s\n" "$_exposed_services"
+        printf "These services bypass nginx and expose internal ports to the internet.\n"
+        printf "Run 'nself build' to regenerate docker-compose.yml with 127.0.0.1 bindings.\n"
+        printf "To override (dev only): set NSELF_ALLOW_EXPOSED_PORTS=true in .env\n\n"
+        return 1
+      fi
+    fi
+  fi
+  unset _allow_exposed _exposed_services _in_svc _in_ports _dc_line
+
   # 5. Clean up containers based on CLEANUP_ON_START setting
   update_progress 1 "running"
 
