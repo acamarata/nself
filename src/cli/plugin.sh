@@ -1225,6 +1225,22 @@ download_plugin() {
       rm -rf "$temp_dir"
       return 1
     fi
+    # For Rust binary plugins, also download and install the pre-compiled binary.
+    # The tarball step above installs plugin.json and any TS/config assets;
+    # the binary step installs the executable into $PLUGIN_DIR/<name>/bin/.
+    if plugin_is_rust "$plugin_name"; then
+      log_info "Downloading Rust binary for $plugin_name..."
+      local rust_temp_dir
+      rust_temp_dir=$(mktemp -d)
+      if ! _download_plugin_rust "$plugin_name" "$license_key" "$rust_temp_dir"; then
+        rm -rf "$rust_temp_dir"
+        rm -rf "$temp_dir"
+        return 1
+      fi
+      rm -rf "$rust_temp_dir"
+      # Generate systemd unit file on Linux (no-op on macOS / no systemd)
+      _generate_systemd_unit "$plugin_name"
+    fi
   else
     log_info "Downloading $plugin_name..."
     local tarball_url="${PLUGIN_REPO_URL}/archive/refs/heads/main.tar.gz"
@@ -1326,6 +1342,254 @@ _download_plugin_signed() {
   fi
 
   return 0
+}
+
+# Check whether a plugin is a Rust binary plugin by inspecting its registry entry.
+# Returns 0 if rust, 1 otherwise.
+# Falls back to checking the locally installed plugin.json when the registry is
+# unavailable (e.g. offline install or after the plugin is already downloaded).
+plugin_is_rust() {
+  local plugin_name="$1"
+
+  # Primary: check locally installed plugin.json (fast, no network)
+  local local_manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+  if [[ -f "$local_manifest" ]]; then
+    if grep -q '"language"[[:space:]]*:[[:space:]]*"rust"' "$local_manifest"; then
+      return 0
+    fi
+    # Manifest exists but language is not rust — no need to hit registry
+    return 1
+  fi
+
+  # Secondary: check registry (plugin not yet downloaded)
+  local registry
+  registry=$(fetch_registry 2>/dev/null || true)
+  if [[ -n "$registry" ]]; then
+    printf '%s' "$registry" | grep -A 20 "\"name\"[[:space:]]*:[[:space:]]*\"${plugin_name}\"" \
+      | grep -q '"language"[[:space:]]*:[[:space:]]*"rust"'
+    return $?
+  fi
+
+  return 1
+}
+
+# Download a pre-compiled Rust binary for the current architecture.
+# Requests a signed URL from ping_api with an arch parameter, verifies SHA-256,
+# and installs the binary to $PLUGIN_DIR/<name>/bin/<name>.
+_download_plugin_rust() {
+  local plugin_name="$1"
+  local key="$2"
+  local temp_dir="$3"
+
+  # Detect current platform
+  local os arch uname_m
+  os=$(uname -s | tr '[:upper:]' '[:lower:]')
+  uname_m=$(uname -m)
+  case "$uname_m" in
+    x86_64)        arch="x86_64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    *)
+      log_error "Unsupported architecture: $uname_m"
+      return 1
+      ;;
+  esac
+  local platform="${os}-${arch}"
+
+  # Request signed download URL from ping_api with arch param
+  local ping_url="${NSELF_PING_URL:-https://ping.nself.org}"
+  local url_response
+  url_response=$(curl -sf --connect-timeout 10 --max-time 15 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "X-License-Key: $key" \
+    "${ping_url}/plugins/${plugin_name}/download-url?arch=${platform}" 2>/dev/null)
+
+  if [[ -z "$url_response" ]]; then
+    log_error "Failed to get download URL for $plugin_name ($platform)"
+    return 1
+  fi
+
+  local signed_url sha256
+  signed_url=$(printf '%s' "$url_response" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)
+  sha256=$(printf '%s' "$url_response" | grep -o '"sha256":"[^"]*"' | cut -d'"' -f4)
+
+  if [[ -z "$signed_url" ]]; then
+    log_error "No download URL in response for $plugin_name"
+    return 1
+  fi
+
+  # Download binary
+  local binary_path="${temp_dir}/${plugin_name}"
+  if ! curl -sf --connect-timeout 10 --max-time 120 \
+    -o "$binary_path" \
+    "$signed_url" 2>/dev/null; then
+    log_error "Failed to download $plugin_name binary"
+    return 1
+  fi
+
+  # Verify SHA-256 if provided
+  if [[ -n "$sha256" ]]; then
+    local actual_sha=""
+    if command -v sha256sum >/dev/null 2>&1; then
+      actual_sha=$(sha256sum "$binary_path" | awk '{print $1}')
+    elif command -v shasum >/dev/null 2>&1; then
+      actual_sha=$(shasum -a 256 "$binary_path" | awk '{print $1}')
+    fi
+    if [[ -n "$actual_sha" && "$actual_sha" != "$sha256" ]]; then
+      log_error "SHA-256 mismatch for $plugin_name binary (expected: $sha256, got: $actual_sha)"
+      rm -f "$binary_path"
+      return 1
+    fi
+  fi
+
+  # Install binary
+  local install_dir="$PLUGIN_DIR/$plugin_name/bin"
+  mkdir -p "$install_dir"
+  mv "$binary_path" "${install_dir}/${plugin_name}"
+  chmod +x "${install_dir}/${plugin_name}"
+
+  log_success "Rust binary installed: ${install_dir}/${plugin_name} ($platform)"
+  return 0
+}
+
+# Generate a systemd user unit file for a Rust plugin and enable it when
+# systemd --user is available (Linux only).  On macOS or when systemd is not
+# present the unit file is written but not enabled.
+_generate_systemd_unit() {
+  local plugin_name="$1"
+  local binary_path="$PLUGIN_DIR/$plugin_name/bin/$plugin_name"
+  local env_file="$PLUGIN_DIR/$plugin_name/.env"
+  local unit_dir="$HOME/.config/systemd/user"
+  local unit_file="$unit_dir/nself-${plugin_name}.service"
+
+  mkdir -p "$unit_dir"
+
+  # Write the unit file — use printf to avoid heredoc variable-expansion issues
+  # in Bash 3.2 and to stay consistent with the no-echo-e rule.
+  printf '[Unit]\n' >"$unit_file"
+  printf 'Description=nself plugin: %s\n' "$plugin_name" >>"$unit_file"
+  printf 'After=network.target\n' >>"$unit_file"
+  printf 'PartOf=nself.target\n' >>"$unit_file"
+  printf '\n' >>"$unit_file"
+  printf '[Service]\n' >>"$unit_file"
+  printf 'Type=simple\n' >>"$unit_file"
+  printf 'ExecStart=%s\n' "$binary_path" >>"$unit_file"
+  printf 'Restart=on-failure\n' >>"$unit_file"
+  printf 'RestartSec=5\n' >>"$unit_file"
+  printf 'EnvironmentFile=-%s\n' "$env_file" >>"$unit_file"
+  printf 'StandardOutput=journal\n' >>"$unit_file"
+  printf 'StandardError=journal\n' >>"$unit_file"
+  printf 'SyslogIdentifier=nself-%s\n' "$plugin_name" >>"$unit_file"
+  printf '\n' >>"$unit_file"
+  printf '[Install]\n' >>"$unit_file"
+  printf 'WantedBy=default.target\n' >>"$unit_file"
+
+  if command -v systemctl >/dev/null 2>&1 && systemctl --user status >/dev/null 2>&1; then
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable "nself-${plugin_name}.service" 2>/dev/null || true
+    log_success "systemd unit installed: $unit_file"
+  else
+    log_info "systemd unit created (not enabled — systemd --user not available): $unit_file"
+  fi
+}
+
+# Start a Rust plugin process.  Prefers systemd --user when available; falls
+# back to direct process management with a PID file.
+_start_rust_plugin() {
+  local plugin_name="$1"
+  local health_endpoint="${2:-/health}"
+  local binary_path="$PLUGIN_DIR/$plugin_name/bin/$plugin_name"
+  local pid_file="$PLUGIN_DIR/$plugin_name/pid"
+  local env_file="$PLUGIN_DIR/$plugin_name/.env"
+  local log_file="$PLUGIN_DIR/$plugin_name/plugin.log"
+
+  if [[ ! -x "$binary_path" ]]; then
+    log_error "Binary not found: $binary_path"
+    return 1
+  fi
+
+  # Try systemd --user first on Linux
+  if command -v systemctl >/dev/null 2>&1 && \
+     [[ -f "$HOME/.config/systemd/user/nself-${plugin_name}.service" ]]; then
+    systemctl --user start "nself-${plugin_name}.service" 2>/dev/null
+    log_success "Started $plugin_name via systemd"
+    return 0
+  fi
+
+  # Fallback: direct process management
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid
+    existing_pid=$(cat "$pid_file" 2>/dev/null)
+    if kill -0 "$existing_pid" 2>/dev/null; then
+      log_info "$plugin_name is already running (PID $existing_pid)"
+      return 0
+    fi
+  fi
+
+  # Build env prefix from env file when present (filter comments and blank lines)
+  local env_prefix=""
+  if [[ -f "$env_file" ]]; then
+    env_prefix="env $(grep -v '^#' "$env_file" | grep '=' | tr '\n' ' ')"
+  fi
+
+  # Start in background
+  eval "$env_prefix" "$binary_path" >>"$log_file" 2>&1 &
+  local pid=$!
+  printf '%s' "$pid" >"$pid_file"
+
+  # Determine port for health check
+  local port
+  port=$(grep -o 'PORT=[0-9]*' "$env_file" 2>/dev/null | cut -d= -f2 || true)
+  port="${port:-8080}"
+
+  # Poll health endpoint — 10 retries, 0.5 s apart (5 s total)
+  local retries=10
+  local healthy=false
+  while [ "$retries" -gt 0 ]; do
+    sleep 0.5
+    if curl -sf --connect-timeout 1 "http://127.0.0.1:${port}${health_endpoint}" >/dev/null 2>&1; then
+      healthy=true
+      break
+    fi
+    retries=$((retries - 1))
+  done
+
+  if [ "$healthy" = true ]; then
+    log_success "Plugin $plugin_name started (PID $pid)"
+  else
+    log_warn "Plugin $plugin_name started (PID $pid) — health check timed out, may still be initializing"
+  fi
+}
+
+# Stop a Rust plugin process.  Prefers systemd --user; falls back to
+# SIGTERM via the PID file with a SIGKILL escalation after 1 s.
+_stop_rust_plugin() {
+  local plugin_name="$1"
+  local pid_file="$PLUGIN_DIR/$plugin_name/pid"
+
+  # Try systemd first
+  if command -v systemctl >/dev/null 2>&1 && \
+     [[ -f "$HOME/.config/systemd/user/nself-${plugin_name}.service" ]]; then
+    systemctl --user stop "nself-${plugin_name}.service" 2>/dev/null
+    log_success "Stopped $plugin_name via systemd"
+    return 0
+  fi
+
+  if [[ -f "$pid_file" ]]; then
+    local pid
+    pid=$(cat "$pid_file")
+    if kill -TERM "$pid" 2>/dev/null; then
+      sleep 1
+      kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null || true
+      rm -f "$pid_file"
+      log_success "Stopped $plugin_name (PID $pid)"
+    else
+      rm -f "$pid_file"
+      log_info "$plugin_name was not running"
+    fi
+  else
+    log_info "No PID file found for $plugin_name"
+  fi
 }
 
 # ============================================================================

@@ -109,6 +109,8 @@ show_general_help() {
   printf "  ${COLOR_BLUE}%-14s${COLOR_RESET} Cross-environment migration\n" "migrate"
 
   show_section "PLUGINS & INTEGRATIONS"
+  printf "  ${COLOR_BLUE}%-14s${COLOR_RESET} Cron scheduler — list, add, trigger, view run history\n" "cron"
+  printf "  ${COLOR_BLUE}%-14s${COLOR_RESET} Notification channels — send, manage channels, view logs\n" "notify"
   printf "  ${COLOR_BLUE}%-14s${COLOR_RESET} Plugin management and execution\n" "plugin"
   printf "  ${COLOR_DIM}%16s list, install, remove, update, status${COLOR_RESET}\n" ""
   printf "  ${COLOR_DIM}%16s Available: stripe, shopify, github${COLOR_RESET}\n" ""
