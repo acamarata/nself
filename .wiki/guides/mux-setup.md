@@ -55,6 +55,9 @@ PLUGIN_MUX_IMAP_PASS=yourpassword
 
 # Token for authenticated calls to nself-ai (required if using ai_classify or companion actions)
 PLUGIN_MUX_AI_TOKEN=nself_ai_tok_mux_xxxxxxxxxxxxx
+
+# Shared secret for mux→claw classify RPC (required if using use_claw_classify: true)
+MUX_CLAW_SHARED_SECRET=your-shared-secret-here
 ```
 
 Create the AI token first:
@@ -258,7 +261,19 @@ Add `use_claw_classify: true` to the action:
   use_claw_classify: true
 ```
 
-When this flag is set, mux routes the classification call to the claw plugin's `/claw/classify` endpoint instead of the ai plugin's direct classification endpoint. This requires nself-claw to be running.
+When this flag is set, mux routes the classification call to claw's internal RPC endpoint (`POST /internal/classify`) instead of the ai plugin's direct classification endpoint. This requires nself-claw to be running and `MUX_CLAW_SHARED_SECRET` set in both services.
+
+The `/internal/classify` endpoint requires a `Bearer` auth header using `MUX_CLAW_SHARED_SECRET`. The request body is:
+
+```json
+{
+  "body": "<email body text>",
+  "context": "<rule context — typically the rule name>",
+  "labels": ["label1", "label2", "..."]
+}
+```
+
+mux includes a circuit breaker: after 3 consecutive failures, it opens for 30 seconds and falls back to the standard ai plugin for classification. The circuit breaker resets automatically once claw becomes reachable again.
 
 The output is the same regardless of which classifier runs. Only the routing changes.
 

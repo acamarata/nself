@@ -48,6 +48,9 @@ Add the token to `.env`:
 
 ```bash
 PLUGIN_CLAW_AI_TOKEN=nself_ai_tok_claw_xxxxxxxxxxxxx
+
+# Required only if nself-mux is installed and uses use_claw_classify: true
+MUX_CLAW_SHARED_SECRET=your-shared-secret-here
 ```
 
 Rebuild and start:
@@ -260,6 +263,39 @@ List available personas.
 ### POST /claw/personas
 
 Create a persona.
+
+### POST /internal/classify
+
+Internal endpoint for mux→claw classification RPC. Not for direct use — mux calls this when a rule sets `use_claw_classify: true`.
+
+Requires `Authorization: Bearer <MUX_CLAW_SHARED_SECRET>`.
+
+Request body:
+
+```json
+{
+  "body": "<email or message body>",
+  "context": "<rule name or context string>",
+  "labels": ["label1", "label2", "label3"]
+}
+```
+
+Response:
+
+```json
+{
+  "label": "label1",
+  "confidence": 0.91
+}
+```
+
+mux uses a circuit breaker for this endpoint: 3 consecutive failures open the circuit for 30 seconds, after which mux falls back to the standard ai plugin for classification. The circuit resets automatically once claw is reachable.
+
+To use this integration, both services must have the same `MUX_CLAW_SHARED_SECRET` value in `.env`. Generate a secure secret with:
+
+```bash
+openssl rand -hex 32
+```
 
 ---
 
