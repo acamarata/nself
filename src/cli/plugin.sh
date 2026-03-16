@@ -420,6 +420,14 @@ cmd_install() {
     return 0
   fi
 
+  # Check plugin prerequisites (hard dependencies)
+  if ! _check_plugin_prerequisites "$plugin_name"; then
+    return 1
+  fi
+
+  # Check for port conflicts before downloading
+  _check_port_conflicts "$plugin_name" || return 1
+
   # Fetch registry
   local registry
   registry=$(fetch_registry)
@@ -2224,6 +2232,500 @@ cmd_plugin_license() {
 }
 
 # ============================================================================
+# T-0250: cmd_plugin_list — installed plugins with version + health
+# ============================================================================
+
+cmd_plugin_list() {
+  local show_json=false
+  local show_all=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)
+        printf "Usage: nself plugin plugin-list [options]\n\n"
+        printf "List installed plugins with version, port, and health status.\n\n"
+        printf "Options:\n"
+        printf "  --all, -a      Include uninstalled plugins from the registry\n"
+        printf "  --json         Output parseable JSON\n"
+        printf "  --help, -h     Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin plugin-list\n"
+        printf "  nself plugin plugin-list --all\n"
+        printf "  nself plugin plugin-list --json\n"
+        return 0
+        ;;
+      --json)
+        show_json=true
+        shift
+        ;;
+      --all|-a)
+        show_all=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # Collect running container names once (Bash 3.2 compatible)
+  local running_containers=""
+  if command -v docker >/dev/null 2>&1; then
+    running_containers=$(docker ps --format "{{.Names}}" 2>/dev/null || true)
+  fi
+
+  if [[ "$show_json" == "true" ]]; then
+    # JSON output
+    local first=true
+    printf '[\n'
+    for plugin_dir in "$PLUGIN_DIR"/*/; do
+      [[ -d "$plugin_dir" ]] || continue
+      local pname
+      pname=$(basename "$plugin_dir")
+      [[ "$pname" == "_shared" ]] && continue
+      [[ -f "$plugin_dir/plugin.json" ]] || continue
+
+      local version port
+      version=$(grep '"version"' "$plugin_dir/plugin.json" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      port=$(grep '"port"' "$plugin_dir/plugin.json" | head -1 | sed 's/[^0-9]//g')
+      version="${version:-unknown}"
+      port="${port:-}"
+
+      local container_name="nself-${pname}"
+      local healthy="false"
+      if printf '%s\n' "$running_containers" | grep -qx "$container_name" 2>/dev/null; then
+        healthy="true"
+      fi
+
+      [[ "$first" == "true" ]] || printf ',\n'
+      first=false
+      printf '  {"name":"%s","version":"%s","port":"%s","healthy":%s}' \
+        "$pname" "$version" "$port" "$healthy"
+    done
+    printf '\n]\n'
+    return 0
+  fi
+
+  # Human-readable table
+  local GREEN="\033[0;32m"
+  local RED="\033[0;31m"
+  local RESET="\033[0m"
+
+  printf "\n=== Installed Plugins ===\n\n"
+  printf "%-22s %-10s %-6s %-8s\n" "NAME" "VERSION" "PORT" "HEALTH"
+  printf "%-22s %-10s %-6s %-8s\n" "----" "-------" "----" "------"
+
+  local found=0
+  for plugin_dir in "$PLUGIN_DIR"/*/; do
+    [[ -d "$plugin_dir" ]] || continue
+    local pname
+    pname=$(basename "$plugin_dir")
+    [[ "$pname" == "_shared" ]] && continue
+    [[ -f "$plugin_dir/plugin.json" ]] || continue
+
+    local version port
+    version=$(grep '"version"' "$plugin_dir/plugin.json" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    port=$(grep '"port"' "$plugin_dir/plugin.json" | head -1 | sed 's/[^0-9]//g')
+    version="${version:-unknown}"
+    port="${port:--}"
+
+    local container_name="nself-${pname}"
+    local health_sym health_label
+    if printf '%s\n' "$running_containers" | grep -qx "$container_name" 2>/dev/null; then
+      health_sym="${GREEN}✓${RESET}"
+      health_label="healthy"
+    else
+      health_sym="${RED}✗${RESET}"
+      health_label="stopped"
+    fi
+
+    printf "%-22s %-10s %-6s " "$pname" "$version" "$port"
+    printf "${health_sym} %s\n" "$health_label"
+    found=$((found + 1))
+  done
+
+  if [[ $found -eq 0 ]]; then
+    printf "  (no plugins installed)\n"
+    printf "\nInstall with: nself plugin install <name>\n\n"
+    return 0
+  fi
+
+  # Show uninstalled registry plugins if --all
+  if [[ "$show_all" == "true" ]]; then
+    local registry
+    registry=$(fetch_registry 2>/dev/null || true)
+    if [[ -n "$registry" ]]; then
+      printf "\n--- Available (not installed) ---\n"
+      local free_plugins
+      free_plugins=$(printf '%s' "$registry" | grep -o '"[a-z-]*":{' | sed 's/"//g;s/:{//')
+      for rp in $free_plugins; do
+        if ! is_plugin_installed "$rp"; then
+          printf "%-22s %-10s %-6s %s\n" "$rp" "-" "-" "(not installed)"
+        fi
+      done
+    fi
+  fi
+
+  printf "\n  %d plugin(s) installed\n\n" "$found"
+}
+
+# ============================================================================
+# T-0251: cmd_plugin_info — description, env vars, tier, deps
+# ============================================================================
+
+cmd_plugin_info() {
+  local plugin_name="${1:-}"
+
+  case "$plugin_name" in
+    --help|-h|"")
+      printf "Usage: nself plugin info <name>\n\n"
+      printf "Show detailed information about a plugin.\n\n"
+      printf "Arguments:\n"
+      printf "  name    Plugin name (installed or in registry)\n\n"
+      printf "Examples:\n"
+      printf "  nself plugin info ai\n"
+      printf "  nself plugin info notify\n"
+      return 0
+      ;;
+  esac
+
+  local plugin_dir="$PLUGIN_DIR/$plugin_name"
+  local manifest="$plugin_dir/plugin.json"
+
+  if [[ ! -f "$manifest" ]]; then
+    log_error "Plugin '$plugin_name' is not installed. Install it first: nself plugin install $plugin_name"
+    return 1
+  fi
+
+  # Extract fields — jq preferred, sed fallback (Bash 3.2 compatible)
+  local description version tier docker_image
+  if command -v jq >/dev/null 2>&1; then
+    description=$(jq -r '.description // "(no description)"' "$manifest" 2>/dev/null)
+    version=$(jq -r '.version // "unknown"' "$manifest" 2>/dev/null)
+    docker_image=$(jq -r '.image // ""' "$manifest" 2>/dev/null)
+    tier="Free"
+    if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+      tier="Pro"
+    fi
+  else
+    description=$(grep '"description"' "$manifest" | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    version=$(grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    docker_image=$(grep '"image"' "$manifest" | head -1 | sed 's/.*"image"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    tier="Free"
+    if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+      tier="Pro"
+    fi
+  fi
+
+  description="${description:-(no description)}"
+  version="${version:-unknown}"
+
+  printf "\n=== Plugin: %s ===\n\n" "$plugin_name"
+  printf "  Description:  %s\n" "$description"
+  printf "  Version:      %s\n" "$version"
+  printf "  Tier:         %s\n" "$tier"
+  [[ -n "$docker_image" ]] && printf "  Docker image: %s\n" "$docker_image"
+
+  # Dependencies
+  local deps
+  deps=$(_plugin_deps "$plugin_name")
+  if [[ -n "$deps" ]]; then
+    printf "\n  Dependencies:\n"
+    for dep in $deps; do
+      [[ -z "$dep" ]] && continue
+      if is_plugin_installed "$dep"; then
+        printf "    %-20s (installed)\n" "$dep"
+      else
+        printf "    %-20s (not installed)\n" "$dep"
+      fi
+    done
+  else
+    printf "\n  Dependencies:  none\n"
+  fi
+
+  # Required env vars
+  if command -v jq >/dev/null 2>&1; then
+    local req_vars
+    req_vars=$(jq -r '.envVars.required[]? // empty' "$manifest" 2>/dev/null)
+    if [[ -n "$req_vars" ]]; then
+      printf "\n  Required environment variables:\n"
+      printf '%s\n' "$req_vars" | while IFS= read -r var; do
+        [[ -z "$var" ]] && continue
+        printf "    %s=\n" "$var"
+      done
+    fi
+
+    local opt_vars
+    opt_vars=$(jq -r '.envVars.optional[]? // empty' "$manifest" 2>/dev/null)
+    if [[ -n "$opt_vars" ]]; then
+      printf "\n  Optional environment variables:\n"
+      printf '%s\n' "$opt_vars" | while IFS= read -r var; do
+        [[ -z "$var" ]] && continue
+        printf "    # %s=\n" "$var"
+      done
+    fi
+  else
+    # Fallback: grep for known patterns
+    local req_section
+    req_section=$(grep -A20 '"required"' "$manifest" | grep '"[A-Z_][A-Z0-9_]*"' | sed 's/.*"\([A-Z_][A-Z0-9_]*\)".*/\1/' | grep -v '{' || true)
+    if [[ -n "$req_section" ]]; then
+      printf "\n  Required environment variables:\n"
+      printf '%s\n' "$req_section" | while IFS= read -r var; do
+        [[ -z "$var" ]] && continue
+        printf "    %s=\n" "$var"
+      done
+    fi
+  fi
+
+  printf "\n  Path: %s\n\n" "$plugin_dir"
+}
+
+# ============================================================================
+# T-0254: _check_plugin_prerequisites — dep check before install
+# ============================================================================
+
+# _check_plugin_prerequisites <plugin_name>
+# Called before installing a plugin. Checks declared dependencies.
+# Hard deps: prompts user to install or aborts. Soft deps: warning only.
+# Returns 0 if all hard deps satisfied or user confirmed, 1 to abort.
+_check_plugin_prerequisites() {
+  local plugin_name="$1"
+
+  # Known hard dependency map (Bash 3.2 — no declare -A)
+  # Format: space-separated list for each plugin
+  local hard_deps=""
+  case "$plugin_name" in
+    claw)    hard_deps="ai mux" ;;
+    mux)     hard_deps="ai" ;;
+    voice)   hard_deps="notify" ;;
+    cron)    hard_deps="redis" ;;
+    browser) hard_deps="ai" ;;
+    *)       hard_deps="" ;;
+  esac
+
+  # Also read from installed/downloaded plugin.json when available
+  local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+  if [[ -f "$manifest" ]]; then
+    local manifest_deps
+    manifest_deps=$(_plugin_deps "$plugin_name")
+    if [[ -n "$manifest_deps" ]]; then
+      hard_deps="$manifest_deps"
+    fi
+  fi
+
+  if [[ -z "$hard_deps" ]]; then
+    return 0
+  fi
+
+  local missing_deps=""
+  for dep in $hard_deps; do
+    [[ -z "$dep" ]] && continue
+    if ! is_plugin_installed "$dep"; then
+      missing_deps="$missing_deps $dep"
+    fi
+  done
+  missing_deps="${missing_deps# }"
+
+  if [[ -z "$missing_deps" ]]; then
+    return 0
+  fi
+
+  for dep in $missing_deps; do
+    [[ -z "$dep" ]] && continue
+    printf "\n"
+    log_warning "nself-$plugin_name requires nself-$dep, which is not installed."
+    printf "Install it first? [y/N] "
+    local answer=""
+    read -r answer
+    case "$answer" in
+      [yY]|[yY][eE][sS])
+        log_info "Installing prerequisite: $dep"
+        if ! cmd_install "$dep"; then
+          log_error "Failed to install prerequisite '$dep'. Aborting."
+          return 1
+        fi
+        ;;
+      *)
+        log_error "Cannot install '$plugin_name' without '$dep'. Install it first:"
+        printf "  nself plugin install %s\n\n" "$dep"
+        return 1
+        ;;
+    esac
+  done
+
+  return 0
+}
+
+# ============================================================================
+# T-0255: _check_port_conflicts — port conflict detection
+# ============================================================================
+
+# _check_port_conflicts <plugin_name> [port]
+# Called before nself plugin install or start.
+# Reads port from plugin.json when port arg is not provided.
+# Returns 0 if port is free, 1 if conflict detected.
+_check_port_conflicts() {
+  local plugin_name="$1"
+  local port="${2:-}"
+
+  # Resolve port from plugin.json if not provided
+  if [[ -z "$port" ]]; then
+    local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+    if [[ -f "$manifest" ]]; then
+      port=$(grep '"port"' "$manifest" | head -1 | sed 's/[^0-9]//g')
+    fi
+  fi
+
+  if [[ -z "$port" ]]; then
+    # No port configured — nothing to check
+    return 0
+  fi
+
+  # Get list of listening ports (Bash 3.2 compatible — ss preferred, netstat fallback)
+  local listening_ports=""
+  if command -v ss >/dev/null 2>&1; then
+    listening_ports=$(ss -tlnp 2>/dev/null | grep "LISTEN" | grep -o ':[0-9]*' | tr -d ':' || true)
+  elif command -v netstat >/dev/null 2>&1; then
+    listening_ports=$(netstat -tlnp 2>/dev/null | grep "LISTEN" | grep -o ':[0-9]*' | tr -d ':' || true)
+  else
+    # Cannot check — warn but do not block
+    log_warning "Cannot check port conflicts: neither ss nor netstat found."
+    return 0
+  fi
+
+  if printf '%s\n' "$listening_ports" | grep -qx "$port" 2>/dev/null; then
+    local upper_name
+    upper_name=$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+    log_error "Port $port is already in use."
+    printf "Set %s_PORT=%s (different value) in .env or stop the conflicting process.\n" \
+      "$upper_name" "$port"
+    return 1
+  fi
+
+  return 0
+}
+
+# ============================================================================
+# T-0257: cmd_plugin_status — unified health dashboard
+# ============================================================================
+
+cmd_plugin_status() {
+  local watch_mode=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)
+        printf "Usage: nself plugin plugin-status [options]\n\n"
+        printf "Show a unified health dashboard for all installed plugins.\n\n"
+        printf "Options:\n"
+        printf "  --watch        Refresh every 5 seconds (clear + redraw)\n"
+        printf "  --help, -h     Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin plugin-status\n"
+        printf "  nself plugin plugin-status --watch\n"
+        return 0
+        ;;
+      --watch|-w)
+        watch_mode=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  _render_plugin_status_dashboard() {
+    local GREEN="\033[0;32m"
+    local RED="\033[0;31m"
+    local YELLOW="\033[0;33m"
+    local RESET="\033[0m"
+
+    local healthy_count=0
+    local total_count=0
+
+    # Collect running containers once
+    local running_containers=""
+    if command -v docker >/dev/null 2>&1; then
+      running_containers=$(docker ps --format "{{.Names}}" 2>/dev/null || true)
+    fi
+
+    printf "\n=== Plugin Health Dashboard ===\n\n"
+    printf "%-22s %-10s %-6s %-10s %-20s %-20s\n" \
+      "NAME" "VERSION" "PORT" "HEALTH" "CPU" "MEMORY"
+    printf "%-22s %-10s %-6s %-10s %-20s %-20s\n" \
+      "----" "-------" "----" "------" "---" "------"
+
+    for plugin_dir in "$PLUGIN_DIR"/*/; do
+      [[ -d "$plugin_dir" ]] || continue
+      local pname
+      pname=$(basename "$plugin_dir")
+      [[ "$pname" == "_shared" ]] && continue
+      [[ -f "$plugin_dir/plugin.json" ]] || continue
+
+      total_count=$((total_count + 1))
+
+      local version port
+      version=$(grep '"version"' "$plugin_dir/plugin.json" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      port=$(grep '"port"' "$plugin_dir/plugin.json" | head -1 | sed 's/[^0-9]//g')
+      version="${version:-unknown}"
+      port="${port:--}"
+
+      local container_name="nself-${pname}"
+      local health_label cpu_pct mem_usage last_restart
+      cpu_pct="-"
+      mem_usage="-"
+      last_restart="-"
+
+      if printf '%s\n' "$running_containers" | grep -qx "$container_name" 2>/dev/null; then
+        health_label="${GREEN}healthy${RESET}"
+        healthy_count=$((healthy_count + 1))
+        # Get resource stats (non-streaming — single snapshot)
+        if command -v docker >/dev/null 2>&1; then
+          local stats_line
+          stats_line=$(docker stats --no-stream --format "{{.CPUPerc}} {{.MemUsage}}" \
+            "$container_name" 2>/dev/null | head -1 || true)
+          if [[ -n "$stats_line" ]]; then
+            cpu_pct=$(printf '%s' "$stats_line" | awk '{print $1}')
+            mem_usage=$(printf '%s' "$stats_line" | awk '{print $2}')
+          fi
+          # Last restart time from docker inspect
+          last_restart=$(docker inspect --format "{{.State.StartedAt}}" \
+            "$container_name" 2>/dev/null | cut -c1-16 | tr 'T' ' ' || true)
+          last_restart="${last_restart:--}"
+        fi
+      else
+        health_label="${RED}stopped${RESET}"
+      fi
+
+      printf "%-22s %-10s %-6s " "$pname" "$version" "$port"
+      printf "${health_label}"
+      printf "%-$((10 - ${#health_label} + 31))s" ""
+      printf "%-20s %-20s\n" "$cpu_pct" "$mem_usage"
+    done
+
+    if [[ $total_count -eq 0 ]]; then
+      printf "  (no plugins installed)\n"
+      printf "\nInstall with: nself plugin install <name>\n\n"
+      return 0
+    fi
+
+    printf "\n  %d/%d plugins healthy\n\n" "$healthy_count" "$total_count"
+  }
+
+  if [[ "$watch_mode" == "true" ]]; then
+    while true; do
+      clear
+      _render_plugin_status_dashboard
+      printf "  Refreshing every 5s — Ctrl+C to exit\n\n"
+      sleep 5
+    done
+  else
+    _render_plugin_status_dashboard
+  fi
+}
+
+# ============================================================================
 # HELP
 # ============================================================================
 
@@ -2239,6 +2741,10 @@ Commands:
     --detailed, -d          Show detailed status (with --installed)
     --category, -c <cat>    Filter by category (billing, ecommerce, devops)
 
+  plugin-list [options]   List installed plugins with version, port, and health
+    --all, -a               Include uninstalled plugins from the registry
+    --json                  Output parseable JSON
+
   install <name>          Install a plugin from registry
   install <path>          Install a local plugin
 
@@ -2249,6 +2755,9 @@ Commands:
     --all, -a               Update all installed plugins
 
   status [name]           Show plugin status and health
+
+  plugin-status           Unified health dashboard (CPU, memory, uptime)
+    --watch                 Refresh every 5 seconds
 
   updates                 Check for available plugin updates
     --quiet, -q             Output only update info (for scripts)
@@ -2556,26 +3065,13 @@ main() {
       cmd_sync "$@"
       ;;
     info)
-      case "${1:-}" in
-        --help|-h|"")
-          printf "Usage: nself plugin info <name>\n\n"
-          printf "Show detailed information about an installed plugin.\n\n"
-          printf "Arguments:\n"
-          printf "  name    Plugin name\n\n"
-          printf "Options:\n"
-          printf "  --help, -h  Show this help text\n\n"
-          printf "Examples:\n"
-          printf "  nself plugin info notify\n"
-          return 0
-          ;;
-      esac
-      local _info_name="$1"
-      if is_plugin_installed "$_info_name"; then
-        show_plugin_status "$_info_name"
-      else
-        log_error "Plugin '$_info_name' is not installed"
-        return 1
-      fi
+      cmd_plugin_info "$@"
+      ;;
+    plugin-list)
+      cmd_plugin_list "$@"
+      ;;
+    plugin-status)
+      cmd_plugin_status "$@"
       ;;
     create)
       case "${1:-}" in
