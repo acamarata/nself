@@ -3,6 +3,7 @@
 # Manages accounts, authentication, usage, source-tier routing, and caller tokens.
 #
 # Commands:
+#   nself ai connect      --provider <anthropic> [--label <name>] [--priority <n>]
 #   nself ai auth login   --provider <anthropic|openai> [--label <name>] [--priority <n>]
 #   nself ai auth refresh [<account_id>]
 #   nself ai auth test
@@ -55,7 +56,8 @@ ai_usage() {
   printf "  providers list                              List configured providers with status\n"
   printf "  providers set-key <provider> <key>          Store an API key for a provider\n"
   printf "  query \"<text>\" [--class=<class>]            Send a test query to the AI service\n"
-  printf "  auth login   --provider <anthropic|openai>  OAuth2 PKCE login for subscription accounts\n"
+  printf "  connect      --provider <anthropic>          OAuth2 PKCE login for subscription accounts\n"
+  printf "  auth login   --provider <anthropic|openai>  Alias for connect\n"
   printf "  auth refresh [<account_id>]                 Force token refresh\n"
   printf "  auth test                                   Test all active AI accounts\n"
   printf "  auth add     --provider <p> --key <k>       Add an API key account\n"
@@ -127,6 +129,9 @@ cmd_ai() {
       ;;
     query)
       cmd_ai_query "$@"
+      ;;
+    connect)
+      cmd_ai_connect "$@"
       ;;
     auth)
       cmd_ai_auth "$@"
@@ -435,64 +440,9 @@ cmd_ai_auth() {
   case "$subcmd" in
 
     login)
-      # OAuth2 PKCE login for subscription accounts (Claude Max, ChatGPT Plus).
+      # OAuth2 PKCE login — delegates to cmd_ai_connect.
       # Usage: nself ai auth login --provider <anthropic|openai> [--label <name>] [--priority <n>]
-      local provider="" label="" priority="10"
-      while [ $# -gt 0 ]; do
-        case "$1" in
-          --provider) provider="$2"; shift 2 ;;
-          --label)    label="$2";    shift 2 ;;
-          --priority) priority="$2"; shift 2 ;;
-          *)          shift ;;
-        esac
-      done
-
-      if [ -z "$provider" ]; then
-        printf "Usage: nself ai auth login --provider <anthropic|openai> [--label <name>] [--priority <n>]\n" >&2
-        return 1
-      fi
-
-      local ai_url="${NSELF_AI_URL:-http://localhost:3710}"
-      local resp="" session_id="" auth_url=""
-
-      resp=$(curl -s -X POST "${ai_url}/credentials/oauth/start" \
-        -H "Content-Type: application/json" \
-        -d "{\"provider\":\"${provider}\"}" 2>/dev/null)
-
-      session_id=$(printf '%s' "$resp" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
-      auth_url=$(printf '%s' "$resp" | grep -o '"auth_url":"[^"]*"' | cut -d'"' -f4)
-
-      if [ -z "$session_id" ]; then
-        log_error "Failed to start OAuth session: ${resp}"
-        return 1
-      fi
-
-      printf "\033[0;34m[INFO]\033[0m Open this URL to authenticate:\n\n  %s\n\n" "$auth_url"
-
-      if command -v open >/dev/null 2>&1; then
-        open "$auth_url" 2>/dev/null || true
-      fi
-
-      printf "\033[0;34m[INFO]\033[0m Waiting for authentication (timeout: 5 min)...\n"
-
-      local status="" attempts=0 max_attempts=150
-      while [ "$status" != "complete" ] && [ "$status" != "failed" ] && [ "$status" != "expired" ]; do
-        sleep 2
-        attempts=$((attempts + 1))
-        if [ "$attempts" -ge "$max_attempts" ]; then
-          log_error "Timeout waiting for authentication."
-          return 1
-        fi
-        status=$(curl -s "${ai_url}/credentials/oauth/status/${session_id}" 2>/dev/null \
-          | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-      done
-
-      if [ "$status" != "complete" ]; then
-        log_error "Authentication failed or expired."
-        return 1
-      fi
-
-      printf "\033[0;32m[SUCCESS]\033[0m Authenticated with %s. Account added.\n" "$provider"
+      cmd_ai_connect "$@"
       ;;
 
     refresh)
@@ -590,6 +540,210 @@ cmd_ai_auth() {
       ;;
 
   esac
+}
+
+# ============================================================================
+# T-1220: connect — PKCE browser OAuth flow for subscription accounts
+# ============================================================================
+
+cmd_ai_connect() {
+  # Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]
+  local provider="" label="" priority="1"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --provider) provider="$2"; shift 2 ;;
+      --label)    label="$2";    shift 2 ;;
+      --priority) priority="$2"; shift 2 ;;
+      --help | -h)
+        printf "Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]\n\n"
+        printf "Starts a browser-based OAuth2 PKCE flow for subscription accounts.\n\n"
+        printf "Options:\n"
+        printf "  --provider <name>   Provider name. Currently only 'anthropic' is supported.\n"
+        printf "  --label <name>      Friendly label for this account (default: anthropic-oauth-YYYYMMDD)\n"
+        printf "  --priority <n>      Routing priority (default: 1; lower = higher priority)\n\n"
+        printf "Examples:\n"
+        printf "  nself ai connect --provider anthropic\n"
+        printf "  nself ai connect --provider anthropic --label my-claude-max --priority 1\n"
+        return 0
+        ;;
+      *) shift ;;
+    esac
+  done
+
+  if [ -z "$provider" ]; then
+    printf "Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]\n" >&2
+    return 1
+  fi
+
+  # Validate provider (only anthropic supports PKCE OAuth currently)
+  case "$provider" in
+    anthropic) ;;
+    *)
+      cli_error "Unsupported OAuth provider: ${provider}. Only 'anthropic' is supported."
+      return 1
+      ;;
+  esac
+
+  # Validate required tools
+  local dep
+  for dep in openssl python3 curl; do
+    if ! command -v "$dep" >/dev/null 2>&1; then
+      printf "Error: required tool not found: %s\n" "$dep" >&2
+      return 1
+    fi
+  done
+
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+
+  # Provider-specific OAuth configuration
+  local client_id="9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+  local auth_url_base="https://claude.ai/oauth/authorize"
+  local token_url="https://platform.claude.com/v1/oauth/token"
+  local scope="user:profile user:inference user:sessions:claude_code user:mcp_servers"
+
+  # Generate PKCE values and state
+  local code_verifier code_challenge state
+  code_verifier=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')
+  code_challenge=$(printf '%s' "$code_verifier" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=\n')
+  state=$(openssl rand -hex 16)
+
+  # Pick a random local port for the callback listener
+  local port
+  port=$(( (RANDOM % 10000) + 20000 ))
+
+  # URL-encode the scope string
+  local scope_enc
+  scope_enc=$(printf '%s' "$scope" | python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.stdin.read().strip()),end="")')
+
+  # Build the full authorization URL
+  local auth_url
+  auth_url="${auth_url_base}?response_type=code&client_id=${client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A${port}%2Fcallback&scope=${scope_enc}&state=${state}&code_challenge=${code_challenge}&code_challenge_method=S256"
+
+  # Write the Python callback listener to a temp file
+  local tmpscript
+  tmpscript=$(mktemp /tmp/nself-oauth-XXXXXX.py)
+
+  # Write the callback server script
+  cat > "$tmpscript" << 'PYEOF'
+import http.server, urllib.parse, sys
+
+port = int(sys.argv[1])
+
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        p = urllib.parse.urlparse(self.path)
+        if p.path != '/callback':
+            self.send_response(404); self.end_headers(); return
+        q = urllib.parse.parse_qs(p.query)
+        code = (q.get('code') or [''])[0]
+        state = (q.get('state') or [''])[0]
+        err = (q.get('error') or [''])[0]
+        if err:
+            sys.stdout.write('ERROR:' + err + '\n'); sys.stdout.flush()
+            self.send_response(400); self.end_headers()
+            self.wfile.write(b'<html><body>Error: ' + err.encode() + b'. Close this tab.</body></html>')
+            sys.exit(1)
+        if code:
+            sys.stdout.write('CODE:' + code + '\n')
+            sys.stdout.write('STATE:' + state + '\n')
+            sys.stdout.flush()
+            self.send_response(200); self.end_headers()
+            self.wfile.write(b'<html><body><h2>Connected!</h2><p>You can close this tab.</p><script>setTimeout(()=>window.close(),1500)</script></body></html>')
+            sys.exit(0)
+        self.send_response(400); self.end_headers()
+    def log_message(self, *a): pass
+
+srv = http.server.HTTPServer(('127.0.0.1', port), H)
+srv.timeout = 300
+srv.handle_request()
+PYEOF
+
+  log_info "Opening browser for ${provider} OAuth login..."
+  log_info "Authorize URL: ${auth_url}"
+
+  # Open the browser
+  if command -v open >/dev/null 2>&1; then
+    open "$auth_url" 2>/dev/null || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$auth_url" 2>/dev/null || true
+  fi
+
+  printf "\033[0;34m[INFO]\033[0m Waiting for browser callback on port %s (timeout: 5 min)...\n" "$port"
+
+  # Run the callback listener and capture output
+  local listener_output
+  listener_output=$(python3 "$tmpscript" "$port" 2>/dev/null)
+  rm -f "$tmpscript"
+
+  # Parse CODE and STATE from listener output
+  local code returned_state
+  code=$(printf '%s' "$listener_output" | grep '^CODE:' | cut -d: -f2-)
+  returned_state=$(printf '%s' "$listener_output" | grep '^STATE:' | cut -d: -f2-)
+
+  # Check for error response
+  local oauth_error
+  oauth_error=$(printf '%s' "$listener_output" | grep '^ERROR:' | cut -d: -f2-)
+  if [ -n "$oauth_error" ]; then
+    cli_error "OAuth error: ${oauth_error}"
+    return 1
+  fi
+
+  if [ -z "$code" ]; then
+    cli_error "No authorization code received. Authentication may have timed out or been cancelled."
+    return 1
+  fi
+
+  # Verify state matches to prevent CSRF
+  if [ "$returned_state" != "$state" ]; then
+    cli_error "State mismatch — possible CSRF. Aborting."
+    return 1
+  fi
+
+  log_info "Authorization code received. Exchanging for tokens..."
+
+  # Exchange code for tokens (no client_secret — public PKCE client)
+  local token_resp
+  token_resp=$(curl -s -X POST "$token_url" \
+    -H "Content-Type: application/json" \
+    -d "{\"grant_type\":\"authorization_code\",\"code\":\"${code}\",\"redirect_uri\":\"http://localhost:${port}/callback\",\"client_id\":\"${client_id}\",\"code_verifier\":\"${code_verifier}\"}" \
+    2>/dev/null)
+
+  local access_token refresh_token expires_in
+  access_token=$(printf '%s' "$token_resp" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+  refresh_token=$(printf '%s' "$token_resp" | grep -o '"refresh_token":"[^"]*"' | cut -d'"' -f4)
+  expires_in=$(printf '%s' "$token_resp" | grep -o '"expires_in":[0-9]*' | grep -o '[0-9]*$')
+
+  if [ -z "$access_token" ]; then
+    cli_error "Token exchange failed. Response: ${token_resp}"
+    return 1
+  fi
+
+  # Calculate expires_at (cross-platform: macOS + Linux via python3)
+  expires_in="${expires_in:-86400}"
+  local expires_at
+  expires_at=$(python3 -c "from datetime import datetime,timedelta;print((datetime.utcnow()+timedelta(seconds=${expires_in})).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+
+  # Default label if not provided
+  if [ -z "$label" ]; then
+    label="${provider}-oauth-$(date +%Y%m%d)"
+  fi
+
+  # POST tokens to the AI plugin
+  local body
+  body="{\"provider\":\"${provider}\",\"access_token\":\"${access_token}\",\"refresh_token\":\"${refresh_token}\",\"expires_at\":\"${expires_at}\",\"label\":\"${label}\",\"priority\":${priority}}"
+
+  local store_resp stored_id
+  store_resp=$(curl -s -X POST "${ai_url}/accounts/oauth" \
+    -H "Content-Type: application/json" \
+    -d "$body" 2>/dev/null)
+  stored_id=$(printf '%s' "$store_resp" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+
+  if [ -z "$stored_id" ]; then
+    cli_error "Failed to store OAuth tokens in AI plugin. Response: ${store_resp}"
+    return 1
+  fi
+
+  log_success "Connected! ${provider} OAuth account stored (id: ${stored_id}, label: ${label})."
 }
 
 # ============================================================================
