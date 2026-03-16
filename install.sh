@@ -800,7 +800,9 @@ install_files() {
   # Set permissions
   echo_info "Setting permissions..."
   (
-    run_cmd chmod -R 755 "$INSTALL_DIR"
+    # chmod -R graceful: skip immutable files (e.g. audit.log with chattr +i)
+    run_cmd chmod -R 755 "$INSTALL_DIR" 2>/dev/null || \
+      find "$INSTALL_DIR" -exec chmod 755 {} + 2>/dev/null || true
     # Make the bin shim executable
     run_cmd chmod +x "$INSTALL_DIR/bin/nself" 2>/dev/null || true
     # Make all CLI scripts executable

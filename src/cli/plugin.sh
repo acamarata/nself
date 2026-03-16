@@ -1155,15 +1155,26 @@ fetch_registry() {
     fi
   fi
 
-  # Fetch fresh registry
+  # Fetch fresh registry — try primary URL then GitHub fallback
   local registry
-  registry=$(curl -s "$PLUGIN_REGISTRY_URL" 2>/dev/null)
+  local ua="nself-cli/${NSELF_VERSION:-0.9.9}"
+  registry=$(curl -sf --connect-timeout 10 --max-time 15 \
+    -H "User-Agent: $ua" \
+    "$PLUGIN_REGISTRY_URL/registry.json" 2>/dev/null)
 
-  if [[ -n "$registry" ]]; then
+  # Validate: must contain JSON structure (not a CF challenge HTML page)
+  if [[ -z "$registry" ]] || ! printf '%s' "$registry" | grep -q '"name"\|"plugins"\|"version"'; then
+    # Primary failed or returned non-JSON — try GitHub fallback
+    registry=$(curl -sf --connect-timeout 10 --max-time 15 \
+      -H "User-Agent: $ua" \
+      "$PLUGIN_REGISTRY_FALLBACK" 2>/dev/null)
+  fi
+
+  if [[ -n "$registry" ]] && printf '%s' "$registry" | grep -q '"name"\|"plugins"\|"version"'; then
     printf '%s' "$registry" >"$cache_file"
     printf '%s' "$registry"
   elif [[ -f "$cache_file" ]]; then
-    # Return stale cache if fetch failed
+    # Return stale cache if all fetches failed
     cat "$cache_file"
   fi
 }
