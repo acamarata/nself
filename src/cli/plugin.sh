@@ -52,6 +52,12 @@ PLUGIN_REGISTRY_FALLBACK="https://raw.githubusercontent.com/nself-org/plugins/ma
 PLUGIN_REPO_URL="https://github.com/nself-org/plugins"
 NSELF_API_DOWNLOAD_URL="${NSELF_PING_API_URL:-${NSELF_PING_URL:-https://ping.nself.org}}/plugins"
 
+# Known Rust/Docker pro plugins distributed as pre-built GHCR images.
+# These are pulled from ghcr.io/nself-org/nself-<name>:<version> at install time.
+# plugin_is_rust() checks plugin.json first; this list is a fallback for pre-install detection.
+NSELF_RUST_PLUGINS="ai mux claw voice browser notify cron google"
+NSELF_GHCR_BASE="ghcr.io/nself-org"
+
 # ============================================================================
 # PLUGIN MANAGEMENT
 # ============================================================================
@@ -340,20 +346,35 @@ cmd_install() {
   local dry_run=false
   local order_only=false
   local extra_names=""
+  local pin_version=""
+  local install_channel="stable"
+  local no_docker=false
+  local _skip_next=false
 
   # Parse flags before any other logic (Bash 3.2-compatible)
   for arg in "$@"; do
+    if [[ "$_skip_next" == "true" ]]; then
+      _skip_next=false
+      continue
+    fi
     case "$arg" in
       --help|-h)
         printf "Usage: nself plugin install <name> [options]\n\n"
         printf "Install a plugin by name.\n\n"
         printf "Options:\n"
-        printf "  --dry-run      Show what would be installed without making changes\n"
-        printf "  --order-only   With --dry-run: print dependency install order only\n"
-        printf "  --help, -h     Show this help text\n\n"
+        printf "  --dry-run               Show what would be installed without making changes\n"
+        printf "  --order-only            With --dry-run: print dependency install order only\n"
+        printf "  --version <ver>         Pin a specific image version (Rust/GHCR plugins only)\n"
+        printf "  --channel <channel>     Release channel: stable (default), canary, beta\n"
+        printf "  --no-docker             Install static musl binary instead of Docker image\n"
+        printf "                          (Linux only; requires systemd; no Docker needed)\n"
+        printf "  --help, -h              Show this help text\n\n"
         printf "Examples:\n"
         printf "  nself plugin install notify\n"
         printf "  nself plugin install ai --dry-run\n"
+        printf "  nself plugin install ai --version 0.1.0\n"
+        printf "  nself plugin install ai --channel canary\n"
+        printf "  nself plugin install ai --no-docker\n"
         printf "  nself plugin install --dry-run --order-only claw\n"
         return 0
         ;;
@@ -362,6 +383,19 @@ cmd_install() {
         ;;
       --order-only)
         order_only=true
+        ;;
+      --version)
+        # Next positional arg is the version value — handled in the positional branch below
+        # by setting a flag; we consume it in the next iteration.
+        # Because Bash 3.2 for-in loops can't peek ahead, we use a sentinel approach:
+        # store the fact that the next non-flag arg is a version, not a plugin name.
+        # We handle this via the _skip_next trick with a separate pass.
+        ;;
+      --channel)
+        # Value consumed in second pass below
+        ;;
+      --no-docker)
+        no_docker=true
         ;;
       -*)
         ;;
@@ -374,6 +408,28 @@ cmd_install() {
         ;;
     esac
   done
+
+  # Second pass: extract --version <value> and --channel <value>
+  # (Bash 3.2-compatible: no arrays, use set)
+  local _prev=""
+  for arg in "$@"; do
+    if [[ "$_prev" == "--version" ]]; then
+      pin_version="$arg"
+    elif [[ "$_prev" == "--channel" ]]; then
+      install_channel="$arg"
+    fi
+    _prev="$arg"
+  done
+  unset _prev _skip_next
+
+  # Validate channel value
+  case "$install_channel" in
+    stable|canary|beta) ;;
+    *)
+      log_error "Invalid channel: $install_channel. Valid channels: stable, canary, beta"
+      return 1
+      ;;
+  esac
 
   if [[ -z "$plugin_name" ]]; then
     log_error "Plugin name required"
@@ -404,11 +460,13 @@ cmd_install() {
     return $?
   fi
 
-  # Parse version if specified (plugin@version)
+  # Parse version if specified (plugin@version) — overrides --version flag
   local version=""
   if [[ "$plugin_name" == *"@"* ]]; then
     version="${plugin_name#*@}"
     plugin_name="${plugin_name%@*}"
+  elif [[ -n "$pin_version" ]]; then
+    version="$pin_version"
   fi
 
   log_info "Installing plugin: $plugin_name"
@@ -461,8 +519,32 @@ cmd_install() {
     fi
   fi
 
-  # Download and install
+  # Rust/Docker plugins: pull pre-built GHCR image instead of (or in addition to) downloading source.
+  # The tarball download still runs for plugin.json + config assets.
+  # The GHCR pull writes .ghcr-image so plugin-services.sh generates image: instead of build:.
+  local is_rust=false
+  if _plugin_is_rust_known "$plugin_name"; then
+    is_rust=true
+  fi
+
+  # Download and install (tarball for plugin.json + config assets)
   download_plugin "$plugin_name" "$version"
+
+  # For Rust/Docker plugins that are now confirmed installed (plugin.json exists):
+  # pull the GHCR image and record it for compose generation, OR install the
+  # static musl binary when --no-docker was requested.
+  if plugin_is_rust "$plugin_name" 2>/dev/null || [[ "$is_rust" == "true" ]]; then
+    if [[ "$no_docker" == "true" ]]; then
+      _install_plugin_binary "$plugin_name" "$version" || true
+    else
+      _pull_plugin_docker_image "$plugin_name" "$version" "$install_channel" || true
+    fi
+  fi
+
+  # Record the release channel — written after image pull so it always reflects the
+  # channel actually used (even if the pull failed and fell back to local build).
+  mkdir -p "$PLUGIN_DIR/$plugin_name"
+  printf '%s\n' "$install_channel" > "$PLUGIN_DIR/$plugin_name/.channel"
 
   # Run install script
   run_plugin_installer "$plugin_name"
@@ -501,7 +583,16 @@ cmd_install() {
     fi
   fi
 
-  printf "\nConfigure in .env and run: nself plugin %s sync\n" "$plugin_name"
+  # For GHCR-installed Rust plugins: rebuild compose and bring the service up.
+  if [[ -f "$PLUGIN_DIR/$plugin_name/.ghcr-image" ]]; then
+    _plugin_activate_docker_service "$plugin_name"
+  fi
+
+  if [[ -f "$PLUGIN_DIR/$plugin_name/.ghcr-image" ]]; then
+    printf "\nPlugin running as Docker service nself-%s. Check status: docker ps\n" "$plugin_name"
+  else
+    printf "\nConfigure in .env and run: nself plugin %s sync\n" "$plugin_name"
+  fi
 }
 
 # Remove a plugin
@@ -1199,6 +1290,350 @@ get_installed_version() {
   if [[ -f "$manifest" ]]; then
     grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
   fi
+}
+
+# ---------------------------------------------------------------------------
+# _plugin_is_rust_known <plugin_name>
+# Fast offline check: returns 0 if the plugin is in the known Rust plugin list.
+# This is used before plugin.json exists (pre-install detection).
+# After install, plugin_is_rust() checks plugin.json directly — always prefer that.
+# ---------------------------------------------------------------------------
+_plugin_is_rust_known() {
+  local name="$1"
+  local entry
+  for entry in $NSELF_RUST_PLUGINS; do
+    if [[ "$entry" == "$name" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# _pull_plugin_docker_image <plugin_name> [version] [channel]
+# Pulls the pre-built GHCR image for a Rust/Docker plugin and writes the image
+# reference to ~/.nself/plugins/<name>/.ghcr-image.
+#
+# Image reference format: ghcr.io/nself-org/nself-<name>:<tag>
+# Tag resolution order:
+#   1. channel=canary  → always use :canary tag (ignores version)
+#   2. channel=beta    → always use :beta tag (ignores version)
+#   3. Explicit version argument (from --version flag or plugin@version)
+#   4. PLUGIN_<UPPER_NAME>_VERSION env var
+#   5. version field in plugin.json (if already downloaded)
+#   6. "latest"
+#
+# Requires Docker. Authenticates to GHCR if GHCR_TOKEN or GITHUB_TOKEN is set.
+# Returns 0 on success, 1 on failure (non-fatal — install continues without GHCR).
+# ---------------------------------------------------------------------------
+_pull_plugin_docker_image() {
+  local plugin_name="$1"
+  local explicit_version="${2:-}"
+  local channel="${3:-stable}"
+
+  if ! command -v docker >/dev/null 2>&1; then
+    log_warning "docker not found — skipping GHCR image pull for $plugin_name"
+    return 0
+  fi
+
+  # Resolve image tag — canary/beta channels always override the version
+  local img_version=""
+  case "$channel" in
+    canary|beta)
+      img_version="$channel"
+      ;;
+    *)
+      # stable channel: use explicit version, env var, plugin.json, or "latest"
+      img_version="$explicit_version"
+
+      # Check PLUGIN_<NAME>_VERSION env var (e.g. PLUGIN_AI_VERSION)
+      if [[ -z "$img_version" ]]; then
+        local env_var_name
+        env_var_name="PLUGIN_$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')_VERSION"
+        # Dereference the env var name portably (Bash 3.2 compatible)
+        local env_var_val
+        env_var_val=$(eval "printf '%s' \"\${${env_var_name}:-}\"" 2>/dev/null || true)
+        [[ -n "$env_var_val" ]] && img_version="$env_var_val"
+      fi
+
+      # Check plugin.json version field (plugin already downloaded by download_plugin)
+      if [[ -z "$img_version" ]]; then
+        local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+        if [[ -f "$manifest" ]]; then
+          img_version=$(grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+        fi
+      fi
+
+      # Default to latest
+      [[ -z "$img_version" ]] && img_version="latest"
+      ;;
+  esac
+
+  local image_ref="${NSELF_GHCR_BASE}/nself-${plugin_name}:${img_version}"
+
+  # Authenticate to GHCR if a token is available (needed for private images)
+  local ghcr_token="${GHCR_TOKEN:-${GITHUB_TOKEN:-}}"
+  if [[ -n "$ghcr_token" ]]; then
+    printf '%s' "$ghcr_token" | docker login ghcr.io -u nself-bot --password-stdin >/dev/null 2>&1 || true
+  fi
+
+  log_info "Pulling Docker image: $image_ref"
+  if ! docker pull "$image_ref" 2>/dev/null; then
+    log_warning "Could not pull GHCR image $image_ref — service will use local build if available"
+    return 1
+  fi
+
+  # Record the image reference for compose generation
+  mkdir -p "$PLUGIN_DIR/$plugin_name"
+  printf '%s\n' "$image_ref" > "$PLUGIN_DIR/$plugin_name/.ghcr-image"
+
+  # Track version history so `nself plugin rollback` always has a previous version
+  # Extract version tag from image_ref (everything after the last colon)
+  local pulled_version="${image_ref##*:}"
+  if declare -f _plugin_update_version_files >/dev/null 2>&1; then
+    _plugin_update_version_files "$plugin_name" "$pulled_version"
+  fi
+
+  log_success "GHCR image pulled: $image_ref"
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# _install_plugin_binary <plugin_name> [version]
+# Downloads a static musl binary for a Rust plugin from GitHub Releases and
+# installs it as a systemd service.  Used by `nself plugin install --no-docker`
+# for Docker-free Linux environments.
+#
+# Binary release asset naming convention:
+#   nself-{plugin}-{version}-{arch}-linux-musl.tar.gz
+#
+# Supported architectures (uname -m → asset suffix):
+#   x86_64  → x86_64
+#   aarch64 → aarch64
+#   armv7l  → armv7
+#
+# Install layout:
+#   /usr/local/lib/nself/plugins/nself-{plugin}/
+#     nself-{plugin}          ← binary
+#     plugin.json             ← (already written by download_plugin)
+#   /etc/systemd/system/nself-{plugin}.service
+#
+# Requires: curl or wget, tar, systemctl (on Linux with systemd).
+# Writes a .no-docker marker to $PLUGIN_DIR/{plugin}/ so that plugin-services.sh
+# knows to skip docker compose generation for this plugin.
+# ---------------------------------------------------------------------------
+_install_plugin_binary() {
+  local plugin_name="$1"
+  local explicit_version="${2:-}"
+
+  # Linux-only
+  local os_name
+  os_name=$(uname -s)
+  if [[ "$os_name" != "Linux" ]]; then
+    log_error "--no-docker binary install is only supported on Linux (detected: $os_name)"
+    return 1
+  fi
+
+  # Detect architecture
+  local arch
+  arch=$(uname -m)
+  local asset_arch=""
+  case "$arch" in
+    x86_64)  asset_arch="x86_64" ;;
+    aarch64) asset_arch="aarch64" ;;
+    armv7l)  asset_arch="armv7" ;;
+    *)
+      log_error "Unsupported architecture for binary install: $arch"
+      log_error "Supported: x86_64, aarch64, armv7l"
+      return 1
+      ;;
+  esac
+
+  # Resolve version: explicit > plugin.json > "latest" via GitHub API
+  local version="$explicit_version"
+  if [[ -z "$version" ]]; then
+    local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+    if [[ -f "$manifest" ]]; then
+      version=$(grep '"version"' "$manifest" | head -1 | \
+        sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+    fi
+  fi
+
+  # Fetch latest release tag from GitHub API if version still unknown
+  local api_base="https://api.github.com/repos/nself-org/nself-${plugin_name}"
+  if [[ -z "$version" ]]; then
+    log_info "Resolving latest release for nself-${plugin_name}..."
+    local rel_json=""
+    if command -v curl >/dev/null 2>&1; then
+      rel_json=$(curl -fsSL "${api_base}/releases/latest" 2>/dev/null || true)
+    elif command -v wget >/dev/null 2>&1; then
+      rel_json=$(wget -qO- "${api_base}/releases/latest" 2>/dev/null || true)
+    fi
+    if [[ -n "$rel_json" ]]; then
+      version=$(printf '%s' "$rel_json" | grep '"tag_name"' | head -1 | \
+        sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+    fi
+  fi
+
+  if [[ -z "$version" ]]; then
+    log_error "Could not determine version for nself-${plugin_name}"
+    return 1
+  fi
+
+  local asset_name="nself-${plugin_name}-${version}-${asset_arch}-linux-musl.tar.gz"
+  local download_url="https://github.com/nself-org/nself-${plugin_name}/releases/download/v${version}/${asset_name}"
+
+  log_info "Downloading binary: $asset_name"
+
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
+  local tarball="$tmp_dir/$asset_name"
+
+  # Download
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "$tarball" "$download_url" || {
+      log_error "Download failed: $download_url"
+      rm -rf "$tmp_dir"
+      return 1
+    }
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$tarball" "$download_url" || {
+      log_error "Download failed: $download_url"
+      rm -rf "$tmp_dir"
+      return 1
+    }
+  else
+    log_error "curl or wget is required for binary install"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  # Extract
+  tar -xzf "$tarball" -C "$tmp_dir" || {
+    log_error "Failed to extract $asset_name"
+    rm -rf "$tmp_dir"
+    return 1
+  }
+
+  # Install binary to /usr/local/lib/nself/plugins/nself-{plugin}/
+  local install_dir="/usr/local/lib/nself/plugins/nself-${plugin_name}"
+  mkdir -p "$install_dir"
+
+  local binary_src="$tmp_dir/nself-${plugin_name}"
+  if [[ ! -f "$binary_src" ]]; then
+    # Some archives nest under a directory
+    binary_src=$(find "$tmp_dir" -name "nself-${plugin_name}" -type f | head -1)
+  fi
+  if [[ -z "$binary_src" ]]; then
+    log_error "Binary nself-${plugin_name} not found in archive"
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  cp "$binary_src" "$install_dir/nself-${plugin_name}"
+  chmod 755 "$install_dir/nself-${plugin_name}"
+
+  # Copy plugin.json from download_plugin output if available
+  local plugin_json_src="$PLUGIN_DIR/$plugin_name/plugin.json"
+  if [[ -f "$plugin_json_src" ]]; then
+    cp "$plugin_json_src" "$install_dir/plugin.json"
+  fi
+
+  rm -rf "$tmp_dir"
+
+  # Write .no-docker marker — tells plugin-services.sh to skip compose generation
+  mkdir -p "$PLUGIN_DIR/$plugin_name"
+  printf 'binary\n' > "$PLUGIN_DIR/$plugin_name/.no-docker"
+
+  # Create systemd unit file
+  if command -v systemctl >/dev/null 2>&1; then
+    local service_file="/etc/systemd/system/nself-${plugin_name}.service"
+    # Determine default port from plugin.json if available
+    local svc_port=""
+    if [[ -f "$install_dir/plugin.json" ]]; then
+      svc_port=$(grep '"port"' "$install_dir/plugin.json" | head -1 | \
+        sed 's/.*"port"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/' || true)
+    fi
+
+    # Build env block for systemd unit
+    local env_line=""
+    if [[ -n "$svc_port" ]]; then
+      env_line="Environment=PORT=${svc_port}"
+    fi
+
+    cat > "$service_file" <<UNIT
+[Unit]
+Description=nself plugin: nself-${plugin_name}
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=${install_dir}/nself-${plugin_name}
+Restart=on-failure
+RestartSec=5
+${env_line}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nself-${plugin_name}
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+    systemctl daemon-reload 2>/dev/null || true
+    systemctl enable "nself-${plugin_name}.service" 2>/dev/null || \
+      log_warning "Could not enable nself-${plugin_name} service (run as root?)"
+    systemctl start "nself-${plugin_name}.service" 2>/dev/null || \
+      log_warning "Could not start nself-${plugin_name} service (run as root?)"
+  else
+    log_warning "systemd not available — binary installed but service not registered"
+    log_warning "Start manually: $install_dir/nself-${plugin_name}"
+  fi
+
+  log_success "Binary installed: $install_dir/nself-${plugin_name}"
+  log_success "Plugin $plugin_name installed via binary (no Docker required)"
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# _plugin_activate_docker_service <plugin_name>
+# Regenerates docker-compose.yml via `nself build` (if available and inside a
+# project directory with a .env) then brings the plugin service up.
+# Runs as a best-effort step — failures are logged but do not abort install.
+# ---------------------------------------------------------------------------
+_plugin_activate_docker_service() {
+  local plugin_name="$1"
+
+  # Only run inside a project directory
+  if [[ ! -f ".env" ]]; then
+    log_info "Not in a project directory — skipping docker compose up for $plugin_name"
+    log_info "Run 'nself build && docker compose up -d nself-${plugin_name}' to start the service"
+    return 0
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    log_info "Run 'nself build && docker compose up -d nself-${plugin_name}' to start the service"
+    return 0
+  fi
+
+  # Rebuild compose file to include the new plugin service
+  if command -v nself >/dev/null 2>&1; then
+    log_info "Regenerating docker-compose.yml..."
+    nself build >/dev/null 2>&1 || {
+      log_warning "nself build failed — run 'nself build' manually then start the service"
+      return 0
+    }
+  fi
+
+  # Start the plugin service
+  log_info "Starting nself-${plugin_name}..."
+  if docker compose up -d "nself-${plugin_name}" 2>/dev/null; then
+    log_success "Service nself-${plugin_name} started"
+  else
+    log_warning "Could not start nself-${plugin_name} — run: docker compose up -d nself-${plugin_name}"
+  fi
+
+  return 0
 }
 
 download_plugin() {
@@ -1899,17 +2334,109 @@ cmd_outdated() {
 # PLUGIN ROLLBACK (T-0309)
 # ============================================================================
 
+# ---------------------------------------------------------------------------
+# _plugin_update_version_files <plugin_name> <new_version> [old_version]
+#
+# Writes two tracking files into the plugin directory:
+#   .version          — the currently active image version
+#   .previous-version — the version that was active before this change
+#
+# Also updates plugin.json in-place (version + previous_version fields)
+# when jq is available.
+#
+# Called from _pull_plugin_docker_image (on install/update) and from
+# cmd_plugin_rollback so rollback always has a recorded previous version.
+#
+# Bash 3.2 compatible — no declare -A, no ${var,,}, no echo -e
+# ---------------------------------------------------------------------------
+_plugin_update_version_files() {
+  local plugin_name="$1"
+  local new_version="$2"
+  local old_version="${3:-}"
+  local plugin_dir="$PLUGIN_DIR/$plugin_name"
+
+  mkdir -p "$plugin_dir"
+
+  # If old_version not supplied, read it from the existing .version file
+  if [[ -z "$old_version" && -f "$plugin_dir/.version" ]]; then
+    old_version=$(cat "$plugin_dir/.version" 2>/dev/null || true)
+  fi
+
+  # Write .version
+  printf '%s\n' "$new_version" > "$plugin_dir/.version"
+
+  # Write .previous-version only when there is a meaningful prior version
+  if [[ -n "$old_version" && "$old_version" != "$new_version" ]]; then
+    printf '%s\n' "$old_version" > "$plugin_dir/.previous-version"
+  fi
+
+  # Keep plugin.json in sync when jq is available
+  local manifest="$plugin_dir/plugin.json"
+  if [[ -f "$manifest" ]] && command -v jq >/dev/null 2>&1; then
+    local tmp_file
+    tmp_file=$(mktemp)
+    if [[ -n "$old_version" && "$old_version" != "$new_version" ]]; then
+      jq --arg v "$new_version" --arg pv "$old_version" \
+        '.version = $v | .previous_version = $pv' \
+        "$manifest" > "$tmp_file" && mv "$tmp_file" "$manifest"
+    else
+      jq --arg v "$new_version" \
+        '.version = $v' \
+        "$manifest" > "$tmp_file" && mv "$tmp_file" "$manifest"
+    fi
+  fi
+}
+
 # cmd_plugin_rollback — roll back a plugin to its previous or specified version
 #
 # Usage:
-#   nself plugin rollback <name>              Roll back to previous version
-#   nself plugin rollback <name> <version>    Roll back to specific version
-#   nself plugin rollback <name> --list       List available versions from GHCR
+#   nself plugin rollback <name>                    Roll back to previous version
+#   nself plugin rollback <name> <version>          Roll back to specific version
+#   nself plugin rollback <name> --list             List available versions from GHCR
+#   nself plugin rollback <name> [version] --force  Skip confirmation prompt
 #
 # Bash 3.2 compatible — no declare -A, no ${var,,}, no echo -e
 cmd_plugin_rollback() {
   local plugin_name="${1:-}"
-  local target_version="${2:-}"
+  local target_version=""
+  local force=false
+
+  # Parse remaining args: version string, --list, --force, --help
+  shift || true
+  local _rb_arg
+  for _rb_arg in "$@"; do
+    case "$_rb_arg" in
+      --force|-f)   force=true ;;
+      --list)       target_version="--list" ;;
+      --help|-h)
+        printf "Usage: nself plugin rollback <name> [version] [options]\n\n"
+        printf "Roll back a plugin to its previous or a specific version.\n\n"
+        printf "Arguments:\n"
+        printf "  name        Plugin name (must be installed)\n"
+        printf "  version     Target version (optional, uses previous version if omitted)\n\n"
+        printf "Options:\n"
+        printf "  --list      List available versions pulled from GHCR\n"
+        printf "  --force     Skip confirmation prompt\n"
+        printf "  --help, -h  Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin rollback ai\n"
+        printf "  nself plugin rollback ai 0.0.9\n"
+        printf "  nself plugin rollback ai --list\n"
+        printf "  nself plugin rollback ai 0.0.9 --force\n"
+        return 0
+        ;;
+      -*)
+        # Unknown flag — skip silently for forward compatibility
+        ;;
+      *)
+        # First non-flag positional after name is the version
+        if [[ -z "$target_version" ]]; then
+          target_version="$_rb_arg"
+        fi
+        ;;
+    esac
+  done
+  unset _rb_arg
 
   if [[ -z "$plugin_name" ]]; then
     log_error "Plugin name required"
@@ -1927,49 +2454,91 @@ cmd_plugin_rollback() {
   fi
 
   local plugin_dir="$PLUGIN_DIR/$plugin_name"
-  local registry_file="$plugin_dir/plugin.json"
+  local manifest="$plugin_dir/plugin.json"
   local current_version=""
   local previous_version=""
 
-  # Read current version from plugin.json
-  if [[ -f "$registry_file" ]]; then
+  # Read current version — prefer .version file, fall back to plugin.json
+  if [[ -f "$plugin_dir/.version" ]]; then
+    current_version=$(cat "$plugin_dir/.version" 2>/dev/null || true)
+  fi
+  if [[ -z "$current_version" && -f "$manifest" ]]; then
     if command -v jq >/dev/null 2>&1; then
-      current_version=$(jq -r '.version // ""' "$registry_file" 2>/dev/null)
-      previous_version=$(jq -r '.previous_version // ""' "$registry_file" 2>/dev/null)
+      current_version=$(jq -r '.version // ""' "$manifest" 2>/dev/null)
     else
-      current_version=$(grep '"version"' "$registry_file" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-      previous_version=$(grep '"previous_version"' "$registry_file" | head -1 | sed 's/.*"previous_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      current_version=$(grep '"version"' "$manifest" | head -1 | \
+        sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
     fi
   fi
 
-  # --list: show available GHCR tags
+  # Read previous version — prefer .previous-version file, fall back to plugin.json
+  if [[ -f "$plugin_dir/.previous-version" ]]; then
+    previous_version=$(cat "$plugin_dir/.previous-version" 2>/dev/null || true)
+  fi
+  if [[ -z "$previous_version" && -f "$manifest" ]]; then
+    if command -v jq >/dev/null 2>&1; then
+      previous_version=$(jq -r '.previous_version // ""' "$manifest" 2>/dev/null)
+    else
+      previous_version=$(grep '"previous_version"' "$manifest" | head -1 | \
+        sed 's/.*"previous_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
+  fi
+
+  # --list: show locally cached tags plus remote GHCR listing
   if [[ "$target_version" == "--list" ]]; then
-    log_info "Fetching available versions for nself-$plugin_name from GHCR..."
-    local tags_url="https://ghcr.io/v2/nself-org/nself-$plugin_name/tags/list"
+    printf "Available versions for %s:\n\n" "$plugin_name"
+
+    # Local tags already pulled to the docker daemon
+    if command -v docker >/dev/null 2>&1; then
+      local local_tags
+      local_tags=$(docker image ls \
+        --filter "reference=ghcr.io/nself-org/nself-${plugin_name}*" \
+        --format "{{.Tag}}" 2>/dev/null | grep -v '<none>' | sort -rV || true)
+      if [[ -n "$local_tags" ]]; then
+        printf "Locally cached:\n"
+        printf '%s\n' "$local_tags" | while IFS= read -r tag; do
+          [[ -n "$tag" ]] && printf "  %s\n" "$tag"
+        done
+        printf "\n"
+      fi
+    fi
+
+    # Remote listing via anonymous GHCR token exchange
+    log_info "Fetching remote tags from GHCR..."
     local token
-    # GHCR requires anonymous token exchange for public images
-    token=$(curl -sf "https://ghcr.io/token?scope=repository:nself-org/nself-$plugin_name:pull" | \
-      grep -o '"token":"[^"]*"' | sed 's/"token":"//;s/"$//' 2>/dev/null || true)
+    token=$(curl -sf \
+      "https://ghcr.io/token?scope=repository:nself-org/nself-${plugin_name}:pull" 2>/dev/null | \
+      grep -o '"token":"[^"]*"' | sed 's/"token":"//;s/"$//' || true)
 
     if [[ -n "$token" ]]; then
       local tags_json
-      tags_json=$(curl -sf -H "Authorization: Bearer $token" "$tags_url" 2>/dev/null || true)
+      tags_json=$(curl -sf \
+        -H "Authorization: Bearer $token" \
+        "https://ghcr.io/v2/nself-org/nself-${plugin_name}/tags/list" 2>/dev/null || true)
       if [[ -n "$tags_json" ]]; then
-        printf "Available versions for %s:\n" "$plugin_name"
-        printf '%s' "$tags_json" | grep -o '"[0-9][^"]*"' | tr -d '"' | sort -rV
-        printf "\nCurrent: %s\n" "${current_version:-unknown}"
-        return 0
+        printf "Remote tags:\n"
+        printf '%s' "$tags_json" | grep -o '"[0-9][^"]*"' | tr -d '"' | sort -rV | \
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] && printf "  %s\n" "$tag"
+          done
+        printf "\n"
       fi
+    else
+      log_warning "Could not fetch remote tag list from GHCR. Check network connectivity."
     fi
-    log_warning "Could not fetch version list from GHCR. Check network connectivity."
-    return 1
+
+    printf "Current:  %s\n" "${current_version:-unknown}"
+    [[ -n "$previous_version" ]] && printf "Previous: %s\n" "$previous_version"
+    return 0
   fi
 
   # Determine rollback target
   local rollback_to="$target_version"
   if [[ -z "$rollback_to" ]]; then
     if [[ -z "$previous_version" ]]; then
-      log_error "No previous version recorded for '$plugin_name'. Use: nself plugin rollback $plugin_name <version>"
+      log_error "No previous version recorded for '$plugin_name'."
+      printf "Specify a version: nself plugin rollback %s <version>\n" "$plugin_name"
+      printf "List versions:     nself plugin rollback %s --list\n" "$plugin_name"
       return 1
     fi
     rollback_to="$previous_version"
@@ -1983,62 +2552,61 @@ cmd_plugin_rollback() {
   printf "Rolling back '%s':\n" "$plugin_name"
   printf "  Current:  %s\n" "${current_version:-unknown}"
   printf "  Target:   %s\n" "$rollback_to"
-  printf "\nConfirm rollback? [y/N] "
-  local confirm=""
-  read -r confirm
-  case "$confirm" in
-    [yY]|[yY][eE][sS]) ;;
-    *) log_info "Rollback cancelled."; return 0 ;;
-  esac
 
-  local image="ghcr.io/nself-org/nself-$plugin_name:$rollback_to"
+  if [[ "$force" != "true" ]]; then
+    printf "\nContinue? [y/N] "
+    local confirm=""
+    read -r confirm
+    case "$confirm" in
+      [yY]|[yY][eE][sS]) ;;
+      *) log_info "Rollback cancelled."; return 0 ;;
+    esac
+  fi
+
+  local image="${NSELF_GHCR_BASE}/nself-${plugin_name}:${rollback_to}"
+
+  # Authenticate to GHCR if a token is available (private images)
+  local ghcr_token="${GHCR_TOKEN:-${GITHUB_TOKEN:-}}"
+  if [[ -n "$ghcr_token" ]]; then
+    printf '%s' "$ghcr_token" | docker login ghcr.io -u nself-bot --password-stdin >/dev/null 2>&1 || true
+  fi
 
   log_info "Pulling image: $image"
-  if ! docker pull "$image" 2>&1; then
-    log_error "Failed to pull image $image. Version may not exist."
+  if ! docker pull "$image"; then
+    log_error "Failed to pull image $image. Version may not exist on GHCR."
+    printf "Check available versions: nself plugin rollback %s --list\n" "$plugin_name"
     return 1
   fi
 
-  log_info "Stopping current plugin..."
-  if declare -f stop_plugin >/dev/null 2>&1; then
+  # Update .ghcr-image so docker-compose picks up the pinned image reference
+  printf '%s\n' "$image" > "$plugin_dir/.ghcr-image"
+
+  # Stop current container: prefer docker compose (inside project dir),
+  # fall back to runtime library's stop_plugin helper.
+  log_info "Stopping nself-${plugin_name}..."
+  if [[ -f ".env" ]] && command -v docker >/dev/null 2>&1; then
+    docker compose stop "nself-${plugin_name}" 2>/dev/null || true
+  elif declare -f stop_plugin >/dev/null 2>&1; then
     stop_plugin "$plugin_name" 2>/dev/null || true
   fi
 
-  # Update the plugin.json to reflect rolled-back version
-  if [[ -f "$registry_file" ]]; then
-    local tmp_file
-    tmp_file=$(mktemp)
-    if command -v jq >/dev/null 2>&1; then
-      jq --arg v "$rollback_to" --arg pv "$current_version" \
-        '.version = $v | .previous_version = $pv' \
-        "$registry_file" > "$tmp_file" && mv "$tmp_file" "$registry_file"
-    fi
-  fi
+  # Write .version / .previous-version / update plugin.json
+  _plugin_update_version_files "$plugin_name" "$rollback_to" "$current_version"
 
-  # Store rollback image tag in plugin config for docker-compose
-  local config_file="$plugin_dir/config.env"
-  if [[ -f "$config_file" ]]; then
-    if grep -q "^PLUGIN_IMAGE=" "$config_file" 2>/dev/null; then
-      local safe_sed
-      if declare -f safe_sed_inline >/dev/null 2>&1; then
-        safe_sed_inline "s|^PLUGIN_IMAGE=.*|PLUGIN_IMAGE=$image|" "$config_file"
-      else
-        # Portable fallback (macOS + Linux)
-        local tmpf
-        tmpf=$(mktemp)
-        sed "s|^PLUGIN_IMAGE=.*|PLUGIN_IMAGE=$image|" "$config_file" > "$tmpf" && mv "$tmpf" "$config_file"
-      fi
-    else
-      printf "PLUGIN_IMAGE=%s\n" "$image" >> "$config_file"
+  # Regenerate docker-compose.yml with the new image ref, then start the service
+  log_info "Starting nself-${plugin_name} at $rollback_to..."
+  if [[ -f ".env" ]] && command -v docker >/dev/null 2>&1; then
+    if command -v nself >/dev/null 2>&1; then
+      nself build >/dev/null 2>&1 || \
+        log_warning "nself build failed — run 'nself build' manually if compose is stale"
     fi
-  fi
-
-  log_info "Starting rolled-back plugin..."
-  if declare -f start_plugin >/dev/null 2>&1; then
+    docker compose up -d "nself-${plugin_name}" 2>/dev/null || \
+      log_warning "Could not start nself-${plugin_name} — run: docker compose up -d nself-${plugin_name}"
+  elif declare -f start_plugin >/dev/null 2>&1; then
     start_plugin "$plugin_name" 2>/dev/null || true
   fi
 
-  # Wait for health check
+  # Health check — poll for up to 30 s (10 retries x 3 s)
   local retries=10
   local healthy=false
   log_info "Waiting for health check..."
@@ -2054,89 +2622,371 @@ cmd_plugin_rollback() {
   if [[ "$healthy" == "true" ]]; then
     log_success "Plugin '$plugin_name' rolled back to $rollback_to and is healthy"
   else
-    log_warning "Plugin rolled back to $rollback_to but health check did not pass within 30s. Check: nself plugin health"
+    log_warning "Plugin rolled back to $rollback_to but health check did not pass within 30s."
+    printf "Check status: nself plugin health\n"
   fi
-
-  printf "\nRegistry updated — run 'nself build && nself restart %s' if needed.\n" "$plugin_name"
 }
 
 # ============================================================================
-# PLUGIN CONFIG (T-0208)
+# PLUGIN CONFIG (T-0253)
 # ============================================================================
 
-# cmd_plugin_config — read/write plugin config from ~/.nself/plugins/<name>/config.env
+# _plugin_config_read_var <var_name>
+# Read a variable's current value from .env, .env.local, .env.prod (last wins).
+# Outputs the raw value (empty string if not set).
+_plugin_config_read_var() {
+  local var_name="$1"
+  local val=""
+  local f
+  for f in ".env" ".env.local" ".env.prod"; do
+    if [[ -f "$f" ]]; then
+      local line
+      line=$(grep -E "^${var_name}=" "$f" 2>/dev/null | tail -1)
+      if [[ -n "$line" ]]; then
+        # Use cut -d= -f2- to preserve = characters in values (e.g. base64)
+        val=$(printf '%s' "$line" | cut -d= -f2-)
+      fi
+    fi
+  done
+  printf '%s' "$val"
+}
+
+# _plugin_config_upsert_env_local <key> <value>
+# Write or replace a KEY=VALUE line in .env.local (project directory).
+# Uses a temp-file swap — Bash 3.2 compatible, no sed -i.
+_plugin_config_upsert_env_local() {
+  local key="$1"
+  local value="$2"
+  local env_local=".env.local"
+  if [[ -f "$env_local" ]] && grep -qE "^${key}=" "$env_local" 2>/dev/null; then
+    local tmp_file
+    tmp_file=$(mktemp)
+    grep -v "^${key}=" "$env_local" > "$tmp_file" 2>/dev/null || true
+    printf '%s=%s\n' "$key" "$value" >> "$tmp_file"
+    mv "$tmp_file" "$env_local"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$env_local"
+  fi
+}
+
+# _plugin_config_parse_env_vars <manifest>
+# Parse the env_vars array from plugin.json (Bash 3.2 compatible, no jq required).
+# Outputs one line per var: NAME|DESCRIPTION|REQUIRED|SECRET|EXAMPLE
+# where REQUIRED and SECRET are "true"/"false" strings.
+_plugin_config_parse_env_vars() {
+  local manifest="$1"
+
+  if command -v jq >/dev/null 2>&1; then
+    # jq path: emit pipe-delimited records
+    jq -r '
+      .env_vars[]? |
+      [
+        (.name // ""),
+        (.description // ""),
+        (if .required then "true" else "false" end),
+        (if .secret then "true" else "false" end),
+        (.example // "")
+      ] | join("|")
+    ' "$manifest" 2>/dev/null
+    return
+  fi
+
+  # No jq fallback: hand-parse the env_vars array (handles compact + multi-line JSON).
+  # This is intentionally simple — we only care about 5 known string/bool keys per object.
+  local in_env_vars=false in_obj=false
+  local name="" description="" required="false" secret="false" example=""
+
+  while IFS= read -r line; do
+    # Start of env_vars array
+    case "$line" in
+      *'"env_vars"'*'['*)
+        in_env_vars=true
+        continue
+        ;;
+    esac
+
+    [[ "$in_env_vars" != "true" ]] && continue
+
+    # End of env_vars array
+    case "$line" in
+      *']'*)
+        # Flush any open object before exiting
+        if [[ "$in_obj" == "true" && -n "$name" ]]; then
+          printf '%s|%s|%s|%s|%s\n' "$name" "$description" "$required" "$secret" "$example"
+        fi
+        in_env_vars=false
+        in_obj=false
+        name=""; description=""; required="false"; secret="false"; example=""
+        continue
+        ;;
+    esac
+
+    # Object boundaries
+    case "$line" in
+      *'{'*)
+        in_obj=true
+        name=""; description=""; required="false"; secret="false"; example=""
+        ;;
+      *'}'*)
+        if [[ "$in_obj" == "true" && -n "$name" ]]; then
+          printf '%s|%s|%s|%s|%s\n' "$name" "$description" "$required" "$secret" "$example"
+        fi
+        in_obj=false
+        name=""; description=""; required="false"; secret="false"; example=""
+        ;;
+    esac
+
+    [[ "$in_obj" != "true" ]] && continue
+
+    # Extract field values
+    case "$line" in
+      *'"name"'*)
+        name=$(printf '%s' "$line" | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        ;;
+      *'"description"'*)
+        description=$(printf '%s' "$line" | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        ;;
+      *'"example"'*)
+        example=$(printf '%s' "$line" | sed 's/.*"example"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        ;;
+      *'"required"'*'true'*)
+        required="true"
+        ;;
+      *'"required"'*'false'*)
+        required="false"
+        ;;
+      *'"secret"'*'true'*)
+        secret="true"
+        ;;
+      *'"secret"'*'false'*)
+        secret="false"
+        ;;
+    esac
+  done < "$manifest"
+}
+
+# cmd_plugin_config — interactive env var setup for a plugin
+#
+# Usage:
+#   nself plugin config <name>          Interactive prompts for required env vars
+#   nself plugin config <name> --show   Show current values (secrets masked as ****)
+#   nself plugin config <name> --reset  Clear plugin-specific vars from .env.local
+#
+# Reads env_vars from ~/.nself/plugins/<name>/plugin.json.
+# Writes interactive results to .env.local in the current project directory.
+# Bash 3.2 compatible — no declare -A, no ${var,,}, no echo -e, no mapfile.
 cmd_plugin_config() {
   local plugin_name="${1:-}"
   shift || true
-  local subcmd="${1:-get}"
-  shift || true
 
-  if [[ -z "$plugin_name" ]]; then
-    log_error "Plugin name required"
-    printf "Usage: nself plugin config <name> get [key]\n"
-    printf "       nself plugin config <name> set <key> <value>\n"
-    return 1
-  fi
+  # Help
+  case "$plugin_name" in
+    --help|-h|"")
+      printf "Usage: nself plugin config <name> [options]\n\n"
+      printf "Interactively configure required environment variables for a plugin.\n\n"
+      printf "Arguments:\n"
+      printf "  name         Plugin name (must be installed)\n\n"
+      printf "Options:\n"
+      printf "  --show       Show current values (secrets masked as ****)\n"
+      printf "  --reset      Remove plugin vars from .env.local\n"
+      printf "  --help, -h   Show this help text\n\n"
+      printf "Examples:\n"
+      printf "  nself plugin config ai\n"
+      printf "  nself plugin config ai --show\n"
+      printf "  nself plugin config ai --reset\n"
+      return 0
+      ;;
+  esac
+
+  # Parse mode flag
+  local mode="interactive"
+  for _cfg_arg in "$@"; do
+    case "$_cfg_arg" in
+      --show)   mode="show" ;;
+      --reset)  mode="reset" ;;
+      --help|-h)
+        printf "Usage: nself plugin config <name> [--show|--reset]\n"
+        return 0
+        ;;
+    esac
+  done
+  unset _cfg_arg
 
   if ! is_plugin_installed "$plugin_name" 2>/dev/null; then
     log_error "Plugin '$plugin_name' is not installed"
     return 1
   fi
 
-  local config_file="$PLUGIN_DIR/$plugin_name/config.env"
+  local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+  if [[ ! -f "$manifest" ]]; then
+    log_error "Plugin manifest not found: $manifest"
+    return 1
+  fi
 
-  case "$subcmd" in
-    get)
-      local key="${1:-}"
-      if [[ ! -f "$config_file" ]]; then
-        log_info "No config for $plugin_name (config file not found at $config_file)"
-        return 0
-      fi
-      if [[ -n "$key" ]]; then
-        # Get specific key
-        local val
-        val=$(grep -E "^${key}=" "$config_file" 2>/dev/null | head -1 | cut -d= -f2-)
-        if [[ -n "$val" ]]; then
-          printf '%s\n' "$val"
-        else
-          log_warning "Key '$key' not found in config for $plugin_name"
-          return 1
-        fi
+  # Derive plugin name prefix for env vars: PLUGIN_<UPPER_NAME>_*
+  local upper_name
+  upper_name=$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+
+  # Parse env_vars from manifest
+  local env_vars_raw
+  env_vars_raw=$(_plugin_config_parse_env_vars "$manifest")
+
+  if [[ -z "$env_vars_raw" ]]; then
+    log_info "Plugin '$plugin_name' does not declare any env_vars in its manifest."
+    printf "You may still set variables manually in .env or .env.local.\n"
+    return 0
+  fi
+
+  # ── --show mode ────────────────────────────────────────────────────────────
+  if [[ "$mode" == "show" ]]; then
+    printf "\n=== Config: %s ===\n\n" "$plugin_name"
+    printf "%-40s  %-8s  %s\n" "VARIABLE" "REQUIRED" "VALUE"
+    printf "%-40s  %-8s  %s\n" "--------" "--------" "-----"
+    while IFS='|' read -r var_name var_desc var_required var_secret var_example; do
+      [[ -z "$var_name" ]] && continue
+      local current_val
+      current_val=$(_plugin_config_read_var "$var_name")
+      local display_val
+      if [[ "$var_secret" == "true" && -n "$current_val" ]]; then
+        display_val="****"
+      elif [[ -z "$current_val" ]]; then
+        display_val="(not set)"
       else
-        # Show all config
-        printf '\nConfig for %s:\n' "$plugin_name"
-        grep -v '^#' "$config_file" 2>/dev/null | grep -v '^$' | while IFS='=' read -r k v; do
-          printf '  %-30s = %s\n' "$k" "$v"
-        done
+        display_val="$current_val"
       fi
-      ;;
-    set)
-      local key="${1:-}"
-      local value="${2:-}"
-      if [[ -z "$key" ]]; then
-        log_error "Key required: nself plugin config <name> set <key> <value>"
-        return 1
-      fi
-      mkdir -p "$PLUGIN_DIR/$plugin_name"
-      # Upsert the key in config.env
-      if [[ -f "$config_file" ]] && grep -qE "^${key}=" "$config_file" 2>/dev/null; then
-        # Replace existing — use a temp file (Bash 3.2 compatible, no sed -i -e on macOS)
-        local tmp_file
-        tmp_file=$(mktemp)
-        grep -v "^${key}=" "$config_file" > "$tmp_file" 2>/dev/null || true
-        printf '%s=%s\n' "$key" "$value" >> "$tmp_file"
-        mv "$tmp_file" "$config_file"
+      printf "%-40s  %-8s  %s\n" "$var_name" "$var_required" "$display_val"
+    done <<EOF
+$env_vars_raw
+EOF
+    printf "\n"
+    return 0
+  fi
+
+  # ── --reset mode ───────────────────────────────────────────────────────────
+  if [[ "$mode" == "reset" ]]; then
+    local env_local=".env.local"
+    if [[ ! -f "$env_local" ]]; then
+      log_info "No .env.local found — nothing to reset."
+      return 0
+    fi
+    local tmp_file
+    tmp_file=$(mktemp)
+    # Remove all lines matching PLUGIN_<UPPER_NAME>_* vars declared in manifest
+    local removed=0
+    while IFS= read -r fline; do
+      local keep=true
+      while IFS='|' read -r var_name var_desc var_required var_secret var_example; do
+        [[ -z "$var_name" ]] && continue
+        case "$fline" in
+          "${var_name}="*)
+            keep=false
+            removed=$((removed + 1))
+            break
+            ;;
+        esac
+      done <<EOF2
+$env_vars_raw
+EOF2
+      [[ "$keep" == "true" ]] && printf '%s\n' "$fline" >> "$tmp_file"
+    done < "$env_local"
+    mv "$tmp_file" "$env_local"
+    if [[ $removed -gt 0 ]]; then
+      log_success "Removed $removed variable(s) for '$plugin_name' from .env.local."
+      printf "Run 'nself build' to apply.\n"
+    else
+      log_info "No variables for '$plugin_name' found in .env.local."
+    fi
+    return 0
+  fi
+
+  # ── Interactive mode ───────────────────────────────────────────────────────
+  # Must be inside a project directory (has .env) so we know where to write
+  if [[ ! -f ".env" ]]; then
+    log_error "Not in a project directory (no .env found)."
+    printf "Run this command from your nself project root.\n"
+    return 1
+  fi
+
+  printf "\nConfiguring env vars for plugin '%s'\n" "$plugin_name"
+  printf "Saves to .env.local — press Enter to keep the current value.\n\n"
+
+  local wrote=0
+  while IFS='|' read -r var_name var_desc var_required var_secret var_example; do
+    [[ -z "$var_name" ]] && continue
+
+    # Read current value for display in prompt
+    local current_val
+    current_val=$(_plugin_config_read_var "$var_name")
+
+    # Build prompt line
+    local prompt_current=""
+    if [[ -n "$current_val" ]]; then
+      if [[ "$var_secret" == "true" ]]; then
+        prompt_current="current: ****"
       else
-        printf '%s=%s\n' "$key" "$value" >> "$config_file"
+        prompt_current="current: $current_val"
       fi
-      log_success "Set $key for $plugin_name"
-      ;;
-    *)
-      log_error "Unknown config subcommand: $subcmd"
-      printf "Use 'get' or 'set'\n"
-      return 1
-      ;;
-  esac
+    elif [[ -n "$var_example" ]]; then
+      prompt_current="example: $var_example"
+    fi
+
+    local prompt_label="$var_name"
+    [[ -n "$var_desc" ]] && prompt_label="$var_name ($var_desc)"
+    [[ "$var_required" == "true" ]] && prompt_label="${prompt_label} [required]"
+
+    local new_val=""
+    if [[ "$var_secret" == "true" ]]; then
+      # Masked input for secret vars
+      if [[ -n "$prompt_current" ]]; then
+        printf '%s [%s]: ' "$prompt_label" "$prompt_current"
+      else
+        printf '%s: ' "$prompt_label"
+      fi
+      stty -echo 2>/dev/null || true
+      read -r new_val
+      stty echo 2>/dev/null || true
+      printf '\n'
+    else
+      if [[ -n "$prompt_current" ]]; then
+        printf '%s [%s]: ' "$prompt_label" "$prompt_current"
+      else
+        printf '%s: ' "$prompt_label"
+      fi
+      read -r new_val
+    fi
+
+    # Empty input: keep existing value, skip write
+    if [[ -z "$new_val" ]]; then
+      if [[ "$var_required" == "true" && -z "$current_val" ]]; then
+        log_warning "$var_name is required but was left empty."
+      fi
+      continue
+    fi
+
+    # Validate URL-type vars (ending in _URL or _ENDPOINT)
+    case "$var_name" in
+      *_URL|*_ENDPOINT)
+        case "$new_val" in
+          http://*|https://*)
+            ;;
+          *)
+            log_warning "$var_name should be a URL (http:// or https://). Saving anyway."
+            ;;
+        esac
+        ;;
+    esac
+
+    _plugin_config_upsert_env_local "$var_name" "$new_val"
+    wrote=$((wrote + 1))
+  done <<EOF3
+$env_vars_raw
+EOF3
+
+  if [[ $wrote -gt 0 ]]; then
+    printf "\nSaved %d variable(s) to .env.local. Run 'nself build' to apply.\n" "$wrote"
+  else
+    log_info "No changes made."
+  fi
 }
 
 # ============================================================================
@@ -2726,6 +3576,136 @@ cmd_plugin_status() {
 }
 
 # ============================================================================
+# T-0272: cmd_channel — canary release channel management
+# ============================================================================
+
+# cmd_channel — manage release channels for installed Rust/Docker plugins
+#
+# Usage:
+#   nself plugin channel <name> <stable|canary|beta>
+#       Switch plugin to the given channel. Writes channel to
+#       ~/.nself/plugins/<name>/.channel, re-pulls the GHCR image for the new
+#       channel, rebuilds docker-compose.yml, and restarts the plugin container.
+#
+#   nself plugin channel --list
+#       List the current release channel for every installed plugin.
+#
+# Bash 3.2 compatible — no declare -A, no ${var,,}, no echo -e, no mapfile.
+cmd_channel() {
+  # Handle --list / -l before positional arg parsing
+  case "${1:-}" in
+    --list|-l)
+      printf "\n=== Plugin Release Channels ===\n\n"
+      printf "%-22s %s\n" "PLUGIN" "CHANNEL"
+      printf "%-22s %s\n" "------" "-------"
+      local found=0
+      for plugin_dir in "$PLUGIN_DIR"/*/; do
+        [[ -d "$plugin_dir" ]] || continue
+        local pname
+        pname=$(basename "$plugin_dir")
+        [[ "$pname" == "_shared" ]] && continue
+        [[ -f "$plugin_dir/plugin.json" ]] || continue
+        local ch="stable"
+        if [[ -f "$plugin_dir/.channel" ]]; then
+          ch=$(cat "$plugin_dir/.channel" 2>/dev/null)
+          ch="${ch:-stable}"
+        fi
+        printf "%-22s %s\n" "$pname" "$ch"
+        found=$((found + 1))
+      done
+      if [[ $found -eq 0 ]]; then
+        log_info "No plugins installed"
+        printf "\nInstall with: nself plugin install <name>\n"
+      fi
+      printf "\n"
+      return 0
+      ;;
+    --help|-h|"")
+      printf "Usage: nself plugin channel <name> <stable|canary|beta>\n"
+      printf "       nself plugin channel --list\n\n"
+      printf "Switch a plugin's release channel or list current channels.\n\n"
+      printf "Subcommands:\n"
+      printf "  <name> <channel>   Switch plugin to channel (stable, canary, beta)\n"
+      printf "  --list, -l         Show current channel for every installed plugin\n\n"
+      printf "Examples:\n"
+      printf "  nself plugin channel ai canary\n"
+      printf "  nself plugin channel ai stable\n"
+      printf "  nself plugin channel --list\n\n"
+      return 0
+      ;;
+  esac
+
+  local plugin_name="${1:-}"
+  local new_channel="${2:-}"
+
+  if [[ -z "$plugin_name" ]]; then
+    log_error "Plugin name required"
+    printf "Usage: nself plugin channel <name> <stable|canary|beta>\n"
+    return 1
+  fi
+
+  if [[ -z "$new_channel" ]]; then
+    log_error "Channel required"
+    printf "Valid channels: stable, canary, beta\n"
+    printf "Usage: nself plugin channel %s <stable|canary|beta>\n" "$plugin_name"
+    return 1
+  fi
+
+  # Validate channel
+  case "$new_channel" in
+    stable|canary|beta) ;;
+    *)
+      log_error "Invalid channel: $new_channel. Valid channels: stable, canary, beta"
+      return 1
+      ;;
+  esac
+
+  # Plugin must be installed
+  if ! is_plugin_installed "$plugin_name"; then
+    log_error "Plugin '$plugin_name' is not installed"
+    return 1
+  fi
+
+  # Only Rust/Docker plugins have GHCR images with channels
+  if ! plugin_is_rust "$plugin_name" 2>/dev/null && ! _plugin_is_rust_known "$plugin_name"; then
+    log_error "Plugin '$plugin_name' does not use Docker/GHCR images and does not support channels"
+    return 1
+  fi
+
+  # Read current channel
+  local current_channel="stable"
+  local channel_file="$PLUGIN_DIR/$plugin_name/.channel"
+  if [[ -f "$channel_file" ]]; then
+    current_channel=$(cat "$channel_file" 2>/dev/null)
+    current_channel="${current_channel:-stable}"
+  fi
+
+  if [[ "$current_channel" == "$new_channel" ]]; then
+    log_info "Plugin '$plugin_name' is already on channel: $new_channel"
+    return 0
+  fi
+
+  printf "Switching '%s' from '%s' to '%s'...\n" "$plugin_name" "$current_channel" "$new_channel"
+
+  # Write new channel before pulling so .channel file is always consistent
+  printf '%s\n' "$new_channel" > "$channel_file"
+
+  # Pull the new channel image
+  log_info "Pulling image for channel: $new_channel"
+  if ! _pull_plugin_docker_image "$plugin_name" "" "$new_channel"; then
+    log_warning "Could not pull $new_channel image — reverting channel to $current_channel"
+    printf '%s\n' "$current_channel" > "$channel_file"
+    return 1
+  fi
+
+  # Rebuild compose and restart the plugin container
+  _plugin_activate_docker_service "$plugin_name"
+
+  log_success "Plugin '$plugin_name' switched to channel: $new_channel"
+  printf "\nCheck status: nself plugin plugin-status\n"
+}
+
+# ============================================================================
 # HELP
 # ============================================================================
 
@@ -2747,12 +3727,17 @@ Commands:
 
   install <name>          Install a plugin from registry
   install <path>          Install a local plugin
+    --channel <channel>     Release channel: stable (default), canary, beta
 
   remove <name>           Remove a plugin
     --keep-data             Keep database tables
 
   update [name]           Update a specific plugin
     --all, -a               Update all installed plugins
+
+  rollback <name> [ver]   Roll back to previous or specific version
+    --list                  List available versions from GHCR
+    --force                 Skip confirmation prompt
 
   status [name]           Show plugin status and health
 
@@ -2770,6 +3755,13 @@ Commands:
     show                    Show current license key and status (default)
     validate                Force-validate license key against API
     plugins                 List all 49 Pro Plugins covered by license
+
+  config <name>           Interactive env var setup (reads plugin.json env_vars)
+    --show                  Show current values (secrets masked as ****)
+    --reset                 Remove plugin vars from .env.local
+
+  channel <name> <ch>     Switch plugin to a release channel (stable, canary, beta)
+  channel --list          Show current release channel for every installed plugin
 
   check-deps <name>       Check system dependencies for a plugin
   install-deps <name>     Install missing system dependencies
@@ -2833,6 +3825,12 @@ Examples:
   nself plugin install-deps stripe
   nself plugin check-conflicts         # Scan for version conflicts
   nself plugin check-conflicts --fix   # Auto-resolve update-needed conflicts
+
+  # Release channels (canary/beta/stable — Rust/Docker plugins only)
+  nself plugin install ai --channel canary    # Install from canary channel
+  nself plugin channel ai canary              # Switch installed plugin to canary
+  nself plugin channel ai stable             # Switch back to stable
+  nself plugin channel --list                # Show channels for all plugins
 
   # License
   nself plugin license               # Show license status
@@ -3060,6 +4058,9 @@ main() {
       ;;
     rollback)
       cmd_plugin_rollback "$@"
+      ;;
+    channel)
+      cmd_channel "$@"
       ;;
     sync | source-sync)
       cmd_sync "$@"

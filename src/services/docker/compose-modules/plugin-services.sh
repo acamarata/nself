@@ -5,7 +5,15 @@ set -euo pipefail
 # Constants
 PLUGIN_DIR="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
 
-# Generate Docker service for a single plugin
+# Generate Docker service for a single plugin.
+# Supports two install modes:
+#   GHCR mode:  plugin was installed via `nself plugin install` (Rust/Docker plugins)
+#               and has a .ghcr-image file containing the full image reference.
+#               Generates  image: ghcr.io/nself-org/nself-<name>:<version>
+#   Build mode: plugin was installed locally from source (has Dockerfile).
+#               Generates  build: context: ...
+#
+# Service name is always nself-<plugin> to match expected container naming.
 generate_plugin_service() {
   local plugin_name="$1"
   local plugin_dir="$PLUGIN_DIR/$plugin_name"
@@ -15,22 +23,37 @@ generate_plugin_service() {
   [[ ! -d "$plugin_dir" ]] && return 0
   [[ ! -f "$manifest" ]] && return 0
 
-  # Check if plugin has a Dockerfile
+  # Determine image source: GHCR (pre-built) or local build
+  local ghcr_image_file="$plugin_dir/.ghcr-image"
+  local ghcr_image=""
   local dockerfile_path=""
-  if [[ -f "$plugin_dir/Dockerfile" ]]; then
-    dockerfile_path="Dockerfile"
-  elif [[ -f "$plugin_dir/docker/Dockerfile" ]]; then
-    dockerfile_path="docker/Dockerfile"
-  else
-    # No Dockerfile - skip (plugin might be external or host-based)
-    return 0
+
+  if [[ -f "$ghcr_image_file" ]]; then
+    # GHCR install: read the stored image reference (trim whitespace)
+    ghcr_image=$(tr -d '[:space:]' < "$ghcr_image_file" 2>/dev/null || true)
+  fi
+
+  if [[ -z "$ghcr_image" ]]; then
+    # Fall back to local build mode
+    if [[ -f "$plugin_dir/Dockerfile" ]]; then
+      dockerfile_path="Dockerfile"
+    elif [[ -f "$plugin_dir/docker/Dockerfile" ]]; then
+      dockerfile_path="docker/Dockerfile"
+    else
+      # No Dockerfile and no GHCR image — skip
+      return 0
+    fi
   fi
 
   # Parse plugin metadata
-  local port=$(grep -A5 '"service"' "$manifest" | grep '"port"' | head -1 | sed 's/.*"port"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/')
-  local replicas=$(grep -A5 '"service"' "$manifest" | grep '"replicas"' | head -1 | sed 's/.*"replicas"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/')
-  local memory=$(grep -A5 '"service"' "$manifest" | grep '"memory"' | head -1 | sed 's/.*"memory"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-  local cpu=$(grep -A5 '"service"' "$manifest" | grep '"cpu"' | head -1 | sed 's/.*"cpu"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+  local port
+  local replicas
+  local memory
+  local cpu
+  port=$(grep -A5 '"service"' "$manifest" | grep '"port"' | head -1 | sed 's/.*"port"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/')
+  replicas=$(grep -A5 '"service"' "$manifest" | grep '"replicas"' | head -1 | sed 's/.*"replicas"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/')
+  memory=$(grep -A5 '"service"' "$manifest" | grep '"memory"' | head -1 | sed 's/.*"memory"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+  cpu=$(grep -A5 '"service"' "$manifest" | grep '"cpu"' | head -1 | sed 's/.*"cpu"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
   # Default values
   [[ -z "$port" ]] && port=3000
@@ -38,22 +61,29 @@ generate_plugin_service() {
   [[ -z "$memory" ]] && memory="512M"
   [[ -z "$cpu" ]] && cpu="0.5"
 
-  # Sanitize plugin name for Docker
-  local safe_name=$(echo "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_-')
+  # Service name: nself-<plugin> for GHCR plugins, plugin-<name> for local builds
+  # Tests reference nself-ai, nself-mux etc. — use nself- prefix for all Docker plugins
+  local safe_name
+  safe_name=$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_-')
 
   # Start service definition
-  cat <<YAML
+  printf '\n'
+  printf '  # Plugin: %s\n' "${plugin_name}"
+  printf '  nself-%s:\n' "${safe_name}"
 
-  # Plugin: ${plugin_name}
-  plugin-${safe_name}:
-    build:
-      context: ${plugin_dir}
-      dockerfile: ${dockerfile_path}
-YAML
+  if [[ -n "$ghcr_image" ]]; then
+    # GHCR mode: use pre-built image
+    printf '    image: %s\n' "${ghcr_image}"
+  else
+    # Local build mode
+    printf '    build:\n'
+    printf '      context: %s\n' "${plugin_dir}"
+    printf '      dockerfile: %s\n' "${dockerfile_path}"
+  fi
 
   # Only add container_name if not using replicas
   if [[ "$replicas" == "1" ]]; then
-    echo "    container_name: \${PROJECT_NAME}_plugin_${safe_name}"
+    printf '    container_name: ${PROJECT_NAME}_nself_%s\n' "${safe_name}"
   fi
 
   cat <<YAML
@@ -62,11 +92,11 @@ YAML
       - ${DOCKER_NETWORK}
 YAML
 
-  # Add ports if specified
+  # Add ports if specified — bind to 127.0.0.1 only (nginx proxies externally)
   if [[ -n "$port" && "$port" != "0" ]]; then
     cat <<YAML
     ports:
-      - "${port}:${port}"
+      - "127.0.0.1:${port}:${port}"
 YAML
   fi
 
@@ -96,10 +126,11 @@ YAML
 YAML
 
   # Add plugin-specific environment variables from manifest
-  local env_vars=$(grep -A20 '"environment"' "$manifest" | grep -o '"[A-Z_]*"[[:space:]]*:' | tr -d '":' | tr -d ' ')
+  local env_vars
+  env_vars=$(grep -A20 '"environment"' "$manifest" | grep -o '"[A-Z_]*"[[:space:]]*:' | tr -d '":' | tr -d ' ')
   if [[ -n "$env_vars" ]]; then
     for var in $env_vars; do
-      echo "      - ${var}=\${${var}:-}"
+      printf '      - %s=${%s:-}\n' "${var}" "${var}"
     done
   fi
 
@@ -120,8 +151,8 @@ YAML
 YAML
 
   # Add optional dependencies if enabled
-  [[ "${REDIS_ENABLED:-false}" == "true" ]] && echo "      - redis"
-  [[ "${HASURA_ENABLED:-true}" == "true" ]] && echo "      - hasura"
+  [[ "${REDIS_ENABLED:-false}" == "true" ]] && printf '      - redis\n'
+  [[ "${HASURA_ENABLED:-true}" == "true" ]] && printf '      - hasura\n'
 
   # Add healthcheck if port is exposed
   if [[ -n "$port" && "$port" != "0" ]]; then
@@ -136,7 +167,10 @@ YAML
   fi
 }
 
-# Generate all plugin services
+# Generate all plugin services.
+# Includes both:
+#   - GHCR-installed plugins (have .ghcr-image file, may have no Dockerfile)
+#   - Locally-built plugins (have Dockerfile)
 generate_all_plugin_services() {
   local plugins_found=false
 
@@ -149,15 +183,21 @@ generate_all_plugin_services() {
     [[ ! -d "$plugin_path" ]] && continue
     [[ ! -f "$plugin_path/plugin.json" ]] && continue
 
-    local plugin_name=$(basename "$plugin_path")
+    local plugin_name
+    plugin_name=$(basename "$plugin_path")
 
-    # Check if plugin has Dockerfile
-    if [[ -f "$plugin_path/Dockerfile" ]] || [[ -f "$plugin_path/docker/Dockerfile" ]]; then
+    # Include plugin if it has a GHCR image reference OR a Dockerfile
+    local has_ghcr=false
+    local has_dockerfile=false
+    [[ -f "$plugin_path/.ghcr-image" ]] && has_ghcr=true
+    [[ -f "$plugin_path/Dockerfile" ]] || [[ -f "$plugin_path/docker/Dockerfile" ]] && has_dockerfile=true
+
+    if [[ "$has_ghcr" == "true" ]] || [[ "$has_dockerfile" == "true" ]]; then
       if [[ "$plugins_found" == "false" ]]; then
-        echo ""
-        echo "  # ============================================"
-        echo "  # Plugin Services (with Docker support)"
-        echo "  # ============================================"
+        printf '\n'
+        printf '  # ============================================\n'
+        printf '  # Plugin Services (with Docker support)\n'
+        printf '  # ============================================\n'
         plugins_found=true
       fi
 
@@ -167,8 +207,8 @@ generate_all_plugin_services() {
 
   # If plugins were found, add note about non-Dockerized plugins
   if [[ "$plugins_found" == "true" ]]; then
-    echo ""
-    echo "  # Note: Plugins without Dockerfiles run externally (host or remote)"
+    printf '\n'
+    printf '  # Note: Plugins without Dockerfiles run externally (host or remote)\n'
   fi
 }
 

@@ -26,7 +26,7 @@ set -euo pipefail
 
   # Get list of running services (remove project prefix)
   local project_name="${PROJECT_NAME:-nself}"
-  local running_services=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^${project_name}_" | sed "s|^${project_name}_||" | sort)
+  local running_services=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -E "^${project_name}[-_]" | sed -E "s|^${project_name}[-_]||" | sed 's/-[0-9]*$//' | sort)
 
   # Count running services
   local running_count=0
@@ -96,7 +96,7 @@ display_running_services() {
   fi
 
   # Get list of running services
-  local running_services=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^${project_name}_")
+  local running_services=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -E "^${project_name}[-_]")
 
   # Display each service with status
   for service in $expected_services; do
@@ -177,7 +177,7 @@ check_config_changed() {
 
   # Get the oldest running container's start time
   local project_name="${PROJECT_NAME:-nself}"
-  local oldest_container_start=$(docker ps --format "{{.Names}} {{.CreatedAt}}" 2>/dev/null | grep "^${project_name}_" | while read name created; do
+  local oldest_container_start=$(docker ps --format "{{.Names}} {{.CreatedAt}}" 2>/dev/null | grep -E "^${project_name}[-_]" | while read name created; do
     docker inspect --format='{{.State.StartedAt}}' "$name" 2>/dev/null
   done | sort | head -1)
 

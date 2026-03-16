@@ -418,9 +418,19 @@ show_service_overview() {
 
   # If compose ps failed, query docker directly
   local use_docker_fallback=false
+  local project_name="${PROJECT_NAME:-nself}"
   if [[ -z "$all_containers" ]]; then
     use_docker_fallback=true
-    local project_name="${PROJECT_NAME:-nself}"
+    # Auto-detect actual project name from running containers when PROJECT_NAME is wrong.
+    # Look for a postgres container since every nSelf deployment has one.
+    # Handle both Docker Compose v1 (project_service_1) and v2 (project-service-1) naming.
+    local detected_project
+    detected_project=$(docker ps --format "{{.Names}}" 2>/dev/null \
+      | grep -E '[_-]postgres' | head -1 \
+      | sed 's/[-_]postgres.*//')
+    if [[ -n "$detected_project" ]]; then
+      project_name="$detected_project"
+    fi
   fi
 
   # Build service list
@@ -432,18 +442,30 @@ show_service_overview() {
     local is_running=false
 
     if [[ "$use_docker_fallback" == "true" ]]; then
-      # Query docker directly for container status
-      local container_name="${project_name}_${service}"
-      local container_status=$(docker ps --filter "name=${container_name}" --format "{{.Status}}" 2>/dev/null)
+      # Query docker directly for container status.
+      # Docker Compose v1 names containers: {project}_{service}_{n} (underscore)
+      # Docker Compose v2 names containers: {project}-{service}-{n} (dash)
+      # Try both patterns and treat any match as running.
+      local safe_service
+      safe_service=$(printf '%s' "$service" | tr '-' '_')
+      local container_status=""
+      # v1 format: project_service[_1]
+      container_status=$(docker ps --filter "name=${project_name}_${safe_service}" --format "{{.Status}}" 2>/dev/null)
+      if [[ -z "$container_status" ]]; then
+        # v2 format: project-service[-1]
+        container_status=$(docker ps --filter "name=${project_name}-${service}" --format "{{.Status}}" 2>/dev/null)
+      fi
       if [[ -n "$container_status" ]]; then
         is_running=true
       fi
     else
-      # Use compose ps output
+      # Use compose ps output.
+      # Docker Compose v2 may return "running" in State or "Up ..." in Status.
       local info=$(echo "$all_containers" | grep "^$service\t" | head -1)
       if [[ -n "$info" ]]; then
         local status=$(echo "$info" | cut -f2)
-        if [[ "$status" == *"Up"* ]]; then
+        local state=$(echo "$info" | cut -f3)
+        if [[ "$status" == *"Up"* ]] || [[ "$state" == "running" ]]; then
           is_running=true
         fi
       fi
