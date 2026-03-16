@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a bug with the nself CLI
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: run `nself doctor` and check [existing issues](https://github.com/nself-org/cli/issues).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: When I run `nself start`, the Hasura container exits immediately.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or steps that trigger the issue.
+      placeholder: |
+        1. `nself init my-project`
+        2. `nself start`
+        3. Run `nself logs hasura`
+        4. See error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: Hasura should start and be reachable at api.local.
+    validations:
+      required: true
+
+  - type: textarea
+    id: nself_status
+    attributes:
+      label: nself status output
+      description: Run `nself status` and paste the output here.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: nself_version
+    attributes:
+      label: nself version
+      description: Run `nself version`
+      placeholder: "0.9.9"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15.3 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: docker_version
+    attributes:
+      label: Docker version
+      description: Run `docker --version`
+      placeholder: "Docker 27.4.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste logs from `nself logs <service>` or `nself doctor`.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might be relevant.

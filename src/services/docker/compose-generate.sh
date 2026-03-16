@@ -253,6 +253,11 @@ EOF
   [[ "${PGADMIN_ENABLED:-false}" == "true" ]] && echo "  pgadmin_data:" >> docker-compose.yml
   [[ "${PORTAINER_ENABLED:-false}" == "true" ]] && echo "  portainer_data:" >> docker-compose.yml
 
+  # Plugin volumes
+  if [[ "${PLUGIN_BROWSER_ENABLED:-false}" == "true" ]]; then
+    get_browser_volumes >> docker-compose.yml 2>/dev/null || true
+  fi
+
   # Start services section
   echo "" >> docker-compose.yml
   echo "services:" >> docker-compose.yml
@@ -315,6 +320,17 @@ EOF
   # Plugin Services (Dockerized plugins)
   # ============================================
   generate_all_plugin_services >> docker-compose.yml
+
+  # ============================================
+  # nself Plugin Services (first-party Dockerized plugins)
+  # ============================================
+  if [[ "${PLUGIN_BROWSER_ENABLED:-false}" == "true" ]]; then
+    echo "" >> docker-compose.yml
+    echo "  # ============================================" >> docker-compose.yml
+    echo "  # nself Plugin Services" >> docker-compose.yml
+    echo "  # ============================================" >> docker-compose.yml
+    generate_browser_service >> docker-compose.yml 2>/dev/null || true
+  fi
 
   # Frontend apps are not Docker containers, skip from compose file
   generate_frontend_apps >> docker-compose.yml

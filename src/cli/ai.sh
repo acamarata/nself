@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ai.sh - AI plugin management for nself
-# Manages accounts, authentication, usage, and source-tier routing for the nself-ai pro plugin.
+# Manages accounts, authentication, usage, source-tier routing, and caller tokens.
 #
 # Commands:
 #   nself ai auth login   --provider <anthropic|openai> [--label <name>] [--priority <n>]
@@ -13,6 +13,10 @@
 #   nself ai stats [--today|--week|--month]
 #   nself ai routing show
 #   nself ai routing set  --class <task_class> --tier <local|free_gemini|api_key> --priority <n> [--disable|--enable]
+#   nself ai tokens create <namespace> [--classes <c1,c2>] [--rpm <n>]
+#   nself ai tokens list
+#   nself ai tokens remove <namespace>
+#   nself ai tokens test <token>
 #
 # Usage: nself ai <subcommand> [options]
 
@@ -47,6 +51,10 @@ ai_usage() {
   printf "nself ai — AI plugin account management\n\n"
   printf "Usage: nself ai <subcommand> [options]\n\n"
   printf "Subcommands:\n"
+  printf "  status                                      Show AI service health, providers, queue depths\n"
+  printf "  providers list                              List configured providers with status\n"
+  printf "  providers set-key <provider> <key>          Store an API key for a provider\n"
+  printf "  query \"<text>\" [--class=<class>]            Send a test query to the AI service\n"
   printf "  auth login   --provider <anthropic|openai>  OAuth2 PKCE login for subscription accounts\n"
   printf "  auth refresh [<account_id>]                 Force token refresh\n"
   printf "  auth test                                   Test all active AI accounts\n"
@@ -58,11 +66,21 @@ ai_usage() {
   printf "  routing show                                Show source-tier routing config\n"
   printf "  routing set  --class <c> --tier <t> --priority <n> [--disable|--enable]\n"
   printf "                                              Update a routing entry\n"
-  printf "  transcribe <audio-file> [--language <code>] Transcribe audio via Whisper\n\n"
+  printf "  transcribe <audio-file> [--language <code>] Transcribe audio via Whisper\n"
+  printf "  tokens create <namespace> [--classes <c1,c2>] [--rpm <n>]\n"
+  printf "                                              Create a caller token\n"
+  printf "  tokens list                                 List all caller tokens\n"
+  printf "  tokens remove <namespace>                   Remove a caller token\n"
+  printf "  tokens test <token>                         Test a caller token\n\n"
   printf "Environment:\n"
   printf "  NSELF_AI_URL            AI plugin base URL (default: http://localhost:3101)\n"
-  printf "  PLUGIN_INTERNAL_SECRET  required for usage/stats/routing commands\n\n"
+  printf "  PLUGIN_INTERNAL_SECRET  required for usage/stats/routing/tokens commands\n\n"
   printf "Examples:\n"
+  printf "  nself ai status\n"
+  printf "  nself ai providers list\n"
+  printf "  nself ai providers set-key gemini AIzaSy...\n"
+  printf "  nself ai query \"What is nself?\"\n"
+  printf "  nself ai query \"Classify this text\" --class=Classify\n"
   printf "  nself ai auth login --provider anthropic\n"
   printf "  nself ai auth login --provider openai --label my-plus\n"
   printf "  nself ai auth add --provider anthropic --key sk-ant-xxx\n"
@@ -80,6 +98,10 @@ ai_usage() {
   printf "  nself ai models remove tinyllama\n"
   printf "  nself ai transcribe audio.ogg\n"
   printf "  nself ai transcribe audio.ogg --language en\n"
+  printf "  nself ai tokens create nself-mux --classes Summarize,Faq --rpm 120\n"
+  printf "  nself ai tokens list\n"
+  printf "  nself ai tokens remove nself-mux\n"
+  printf "  nself ai tokens test nself_at_xxxxx...\n"
 }
 
 # ============================================================================
@@ -97,6 +119,15 @@ cmd_ai() {
   shift
 
   case "$subcommand" in
+    status)
+      cmd_ai_status "$@"
+      ;;
+    providers)
+      cmd_ai_providers "$@"
+      ;;
+    query)
+      cmd_ai_query "$@"
+      ;;
     auth)
       cmd_ai_auth "$@"
       ;;
@@ -115,6 +146,9 @@ cmd_ai() {
     transcribe)
       cmd_ai_transcribe "$@"
       ;;
+    tokens)
+      cmd_ai_tokens "$@"
+      ;;
     help | --help | -h)
       ai_usage
       exit 0
@@ -126,6 +160,261 @@ cmd_ai() {
       exit 1
       ;;
   esac
+}
+
+# ============================================================================
+# T-0858: status — show AI service health, providers, queue depths, version
+# ============================================================================
+
+cmd_ai_status() {
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  local response=""
+  response=$(curl -s \
+    -H "x-internal-token: ${internal_secret}" \
+    "${ai_url}/ai/health" 2>/dev/null)
+
+  if [ -z "$response" ]; then
+    cli_error "No response from ai service at ${ai_url}. Is it running?"
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    printf "\n\033[1mAI Service Status\033[0m\n"
+    local status version queue_depth
+    status=$(printf '%s' "$response" | jq -r '.status // "unknown"' 2>/dev/null)
+    version=$(printf '%s' "$response" | jq -r '.version // "unknown"' 2>/dev/null)
+    queue_depth=$(printf '%s' "$response" | jq -r '.queue_depth // 0' 2>/dev/null)
+
+    local color="\033[0;32m"
+    if [ "$status" != "ok" ] && [ "$status" != "healthy" ]; then
+      color="\033[0;31m"
+    fi
+
+    printf "  Status:      ${color}%s\033[0m\n" "$status"
+    printf "  Version:     %s\n" "$version"
+    printf "  Queue depth: %s\n" "$queue_depth"
+
+    # Print providers table if present
+    local providers_json=""
+    providers_json=$(printf '%s' "$response" | jq -r '.providers // empty' 2>/dev/null)
+    if [ -n "$providers_json" ] && [ "$providers_json" != "null" ]; then
+      printf "\n  %-20s %-12s %s\n" "PROVIDER" "STATUS" "OAUTH HEALTH"
+      printf "  %-20s %-12s %s\n" "--------" "------" "------------"
+      printf '%s' "$response" | jq -r '.providers[] | [.name, .status, (.oauth_healthy // "n/a" | tostring)] | @tsv' 2>/dev/null \
+      | while IFS='	' read -r pname pstatus poauth; do
+          local pcolor="\033[0;32m"
+          if [ "$pstatus" != "ok" ] && [ "$pstatus" != "active" ]; then
+            pcolor="\033[0;33m"
+          fi
+          printf "  %-20s ${pcolor}%-12s\033[0m %s\n" "$pname" "$pstatus" "$poauth"
+        done
+    fi
+    printf "\n"
+  else
+    printf '%s\n' "$response"
+  fi
+}
+
+# ============================================================================
+# T-0858: providers — list providers or store API keys
+# ============================================================================
+
+cmd_ai_providers() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  case "$subcmd" in
+
+    list)
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s \
+        -H "x-internal-token: ${internal_secret}" \
+        "${ai_url}/ai/providers" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from ai service at ${ai_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        printf "\n\033[1mConfigured AI Providers\033[0m\n"
+        printf "%-20s %-12s %-15s %s\n" "PROVIDER" "STATUS" "TYPE" "MODELS"
+        printf "%-20s %-12s %-15s %s\n" "--------" "------" "----" "------"
+        printf '%s' "$response" | jq -r '.[] | [.name, .status, (.type // "api_key"), (.models // [] | join(",") | if . == "" then "(default)" else . end)] | @tsv' 2>/dev/null \
+        | while IFS='	' read -r pname pstatus ptype pmodels; do
+            local pcolor="\033[0;32m"
+            if [ "$pstatus" != "ok" ] && [ "$pstatus" != "active" ] && [ "$pstatus" != "ready" ]; then
+              pcolor="\033[0;33m"
+            fi
+            printf "%-20s ${pcolor}%-12s\033[0m %-15s %s\n" "$pname" "$pstatus" "$ptype" "$pmodels"
+          done
+        printf "\n"
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    set-key)
+      # Store an API key for a provider.
+      # Usage: nself ai providers set-key <provider> <key>
+      local provider="${1:-}"
+      local api_key="${2:-}"
+
+      if [ -z "$provider" ] || [ -z "$api_key" ]; then
+        printf "Usage: nself ai providers set-key <provider> <key>\n" >&2
+        printf "Example: nself ai providers set-key gemini AIzaSy...\n" >&2
+        return 1
+      fi
+
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      local body="{\"provider\":\"${provider}\",\"api_key\":\"${api_key}\"}"
+      local response=""
+      response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "x-internal-token: ${internal_secret}" \
+        -d "$body" \
+        "${ai_url}/ai/providers/key" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        log_success "API key stored for provider '${provider}'."
+      else
+        if command -v jq >/dev/null 2>&1; then
+          local ok=""
+          ok=$(printf '%s' "$response" | jq -r '.ok // .success // empty' 2>/dev/null)
+          if [ -n "$ok" ] && [ "$ok" != "false" ]; then
+            log_success "API key stored for provider '${provider}'."
+          else
+            printf '%s\n' "$response"
+          fi
+        else
+          printf '%s\n' "$response"
+        fi
+      fi
+      ;;
+
+    help | --help | -h)
+      printf "Usage: nself ai providers <list|set-key> [options]\n\n"
+      printf "Subcommands:\n"
+      printf "  list                        List all configured providers with status\n"
+      printf "  set-key <provider> <key>    Store an API key for a provider\n\n"
+      printf "Examples:\n"
+      printf "  nself ai providers list\n"
+      printf "  nself ai providers set-key gemini AIzaSy...\n"
+      printf "  nself ai providers set-key openai sk-proj-...\n"
+      ;;
+
+    *)
+      cli_error "Unknown providers action: $subcmd"
+      printf "Actions: list, set-key\n"
+      exit 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0858: query — send a test query to the AI service
+# ============================================================================
+
+cmd_ai_query() {
+  # Usage: nself ai query "<text>" [--class=<class>]
+  local text="" task_class="Chat"
+
+  # First positional arg is the text (unless it starts with --)
+  case "${1:-}" in
+    --help | -h | "")
+      printf "Usage: nself ai query \"<text>\" [--class=<class>]\n\n"
+      printf "  text         The message to send\n"
+      printf "  --class      Task class (default: Chat). Examples: Chat, Code, Summarize, Classify\n\n"
+      printf "Examples:\n"
+      printf "  nself ai query \"What is nself?\"\n"
+      printf "  nself ai query \"Classify this: I love it\" --class=Classify\n"
+      return 0
+      ;;
+  esac
+
+  if [ "${1:-}" != "" ] && [ "$(printf '%s' "${1:-}" | cut -c1-2)" != "--" ]; then
+    text="$1"
+    shift
+  fi
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --class=*) task_class="${1#--class=}"; shift ;;
+      --class)   task_class="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [ -z "$text" ]; then
+    cli_error "Query text required"
+    printf "Usage: nself ai query \"<text>\" [--class=<class>]\n" >&2
+    return 1
+  fi
+
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  # Escape the text for JSON (basic escaping of quotes and backslashes)
+  local escaped_text=""
+  escaped_text=$(printf '%s' "$text" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+  local body="{\"messages\":[{\"role\":\"user\",\"content\":\"${escaped_text}\"}],\"task_class\":\"${task_class}\"}"
+
+  log_info "Sending query (class: ${task_class})..."
+
+  local response=""
+  response=$(curl -s -X POST \
+    -H "Content-Type: application/json" \
+    -H "x-internal-token: ${internal_secret}" \
+    -d "$body" \
+    "${ai_url}/ai/complete" 2>/dev/null)
+
+  if [ -z "$response" ]; then
+    cli_error "No response from ai service at ${ai_url}. Is it running?"
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    local content provider model
+    content=$(printf '%s' "$response" | jq -r '.choices[0].message.content // .content // .response // empty' 2>/dev/null)
+    provider=$(printf '%s' "$response" | jq -r '.provider // empty' 2>/dev/null)
+    model=$(printf '%s' "$response" | jq -r '.model // empty' 2>/dev/null)
+
+    if [ -n "$content" ]; then
+      printf "\n%s\n" "$content"
+      if [ -n "$provider" ] || [ -n "$model" ]; then
+        printf "\n\033[2m[%s/%s]\033[0m\n" "$provider" "$model"
+      fi
+    else
+      printf '%s\n' "$response"
+    fi
+  else
+    printf '%s\n' "$response"
+  fi
 }
 
 # ============================================================================
@@ -801,6 +1090,243 @@ cmd_ai_transcribe() {
   else
     printf '%s\n' "$response"
   fi
+}
+
+# ============================================================================
+# T-0804: tokens — create/list/remove/test caller tokens for X-Ai-Token auth
+# ============================================================================
+
+cmd_ai_tokens() {
+  local subcmd="${1:-}"
+
+  if [ -z "$subcmd" ]; then
+    printf "Usage: nself ai tokens <create|list|remove|test> [options]\n" >&2
+    return 1
+  fi
+
+  shift
+
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  case "$subcmd" in
+
+    create)
+      # Generate a new caller token for a namespace.
+      # Usage: nself ai tokens create <namespace> [--classes <c1,c2>] [--rpm <n>]
+      local namespace="${1:-}"
+      if [ -z "$namespace" ]; then
+        printf "Usage: nself ai tokens create <namespace> [--classes <c1,c2>] [--rpm <n>]\n" >&2
+        return 1
+      fi
+      shift
+
+      local allowed_classes="" rate_limit_rpm="60"
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --classes) allowed_classes="$2"; shift 2 ;;
+          --rpm)     rate_limit_rpm="$2";  shift 2 ;;
+          *)         shift ;;
+        esac
+      done
+
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      # Build JSON body. allowed_classes is a comma-separated string converted
+      # to a JSON array without using bash arrays (Bash 3.2 compatible).
+      local classes_json="[]"
+      if [ -n "$allowed_classes" ]; then
+        # Convert "Summarize,Faq,Translate" → ["Summarize","Faq","Translate"]
+        classes_json="["
+        local first_class=1
+        local IFS_SAVE="$IFS"
+        IFS=","
+        for cls in $allowed_classes; do
+          if [ "$first_class" = "1" ]; then
+            classes_json="${classes_json}\"${cls}\""
+            first_class=0
+          else
+            classes_json="${classes_json},\"${cls}\""
+          fi
+        done
+        IFS="$IFS_SAVE"
+        classes_json="${classes_json}]"
+      fi
+
+      local body="{\"namespace\":\"${namespace}\",\"allowed_classes\":${classes_json},\"rate_limit_rpm\":${rate_limit_rpm}}"
+
+      local response=""
+      response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "x-internal-token: ${internal_secret}" \
+        -d "$body" \
+        "${ai_url}/internal/tokens/create" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from ai service at ${ai_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local token="" ns=""
+        token=$(printf '%s' "$response" | jq -r '.token // empty' 2>/dev/null)
+        ns=$(printf '%s' "$response" | jq -r '.namespace // empty' 2>/dev/null)
+        if [ -n "$token" ]; then
+          log_success "Caller token created for namespace '${ns}'"
+          printf "\n  Token: %s\n\n" "$token"
+          printf "  Store this token securely — it will not be shown again.\n"
+          printf "  Use it in requests as: X-Ai-Token: %s\n\n" "$token"
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    list)
+      # List all caller tokens (namespaces + metadata, not raw tokens).
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s \
+        -H "x-internal-token: ${internal_secret}" \
+        "${ai_url}/internal/tokens" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from ai service at ${ai_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        printf "\n\033[1mCaller Tokens\033[0m\n"
+        printf "%-30s %-8s %-10s %s\n" "NAMESPACE" "RPM" "ENABLED" "ALLOWED CLASSES"
+        printf "%-30s %-8s %-10s %s\n" "---------" "---" "-------" "---------------"
+        printf '%s' "$response" | jq -r '.[] | [.namespace, (.rate_limit_rpm|tostring), (.is_enabled|tostring), (.allowed_classes | if length == 0 then "(all)" else join(",") end)] | @tsv' 2>/dev/null \
+        | while IFS='	' read -r ns rpm enabled classes; do
+            local color="\033[0;32m"
+            if [ "$enabled" = "false" ]; then
+              color="\033[0;31m"
+            fi
+            printf "%-30s %-8s ${color}%-10s\033[0m %s\n" "$ns" "$rpm" "$enabled" "$classes"
+          done
+        printf "\n"
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    remove)
+      # Remove a caller token by namespace.
+      # Usage: nself ai tokens remove <namespace>
+      local namespace="${1:-}"
+      if [ -z "$namespace" ]; then
+        printf "Usage: nself ai tokens remove <namespace>\n" >&2
+        return 1
+      fi
+
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s -X DELETE \
+        -H "x-internal-token: ${internal_secret}" \
+        "${ai_url}/internal/tokens/${namespace}" 2>/dev/null)
+
+      if command -v jq >/dev/null 2>&1; then
+        local removed=""
+        removed=$(printf '%s' "$response" | jq -r '.removed // empty' 2>/dev/null)
+        if [ -n "$removed" ]; then
+          log_success "Caller token removed for namespace '${removed}'."
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    test)
+      # Test whether a caller token is valid and show its permissions.
+      # Usage: nself ai tokens test <token>
+      local token="${1:-}"
+      if [ -z "$token" ]; then
+        printf "Usage: nself ai tokens test <token>\n" >&2
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s \
+        -H "x-ai-token: ${token}" \
+        "${ai_url}/ai/complete" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d '{"messages":[{"role":"user","content":"ping"}],"max_tokens":1,"task_class":"Classify"}' \
+        2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from ai service at ${ai_url}. Is it running?"
+        return 1
+      fi
+
+      # A 401 response means the token is invalid. Any other response means valid.
+      if printf '%s' "$response" | grep -q '"missing_token"\|"invalid_token"\|"token_disabled"'; then
+        local error_code=""
+        if command -v jq >/dev/null 2>&1; then
+          error_code=$(printf '%s' "$response" | jq -r '.error // empty' 2>/dev/null)
+        fi
+        cli_error "Token invalid or disabled (${error_code:-unknown})."
+        return 1
+      else
+        log_success "Token is valid and accepted by the AI service."
+        if command -v jq >/dev/null 2>&1; then
+          local provider=""
+          provider=$(printf '%s' "$response" | jq -r '.provider // empty' 2>/dev/null)
+          if [ -n "$provider" ]; then
+            printf "  Provider: %s\n" "$provider"
+          fi
+        fi
+      fi
+      ;;
+
+    help | --help | -h)
+      printf "nself ai tokens — manage caller tokens for X-Ai-Token authentication\n\n"
+      printf "Usage: nself ai tokens <create|list|remove|test> [options]\n\n"
+      printf "Subcommands:\n"
+      printf "  create <namespace> [--classes <c1,c2>] [--rpm <n>]\n"
+      printf "                         Create a new caller token for a namespace\n"
+      printf "  list                   List all namespaces and token metadata\n"
+      printf "  remove <namespace>     Remove the caller token for a namespace\n"
+      printf "  test <token>           Verify a token is accepted by the AI service\n\n"
+      printf "Options for create:\n"
+      printf "  --classes <c1,c2>  Comma-separated allowed task classes (default: all)\n"
+      printf "                     Classes: Classify, Summarize, Faq, Translate,\n"
+      printf "                     Chat, Code, Search, Sensitive, Legal, Medical,\n"
+      printf "                     LongContext, Embed\n"
+      printf "  --rpm <n>          Rate limit in requests/min (default: 60)\n\n"
+      printf "Examples:\n"
+      printf "  nself ai tokens create nself-mux --classes Summarize,Faq --rpm 120\n"
+      printf "  nself ai tokens create nself-claw\n"
+      printf "  nself ai tokens list\n"
+      printf "  nself ai tokens remove nself-mux\n"
+      printf "  nself ai tokens test nself_at_xxxxx...\n"
+      ;;
+
+    *)
+      cli_error "Unknown tokens action: $subcmd"
+      printf "Actions: create, list, remove, test\n"
+      exit 1
+      ;;
+
+  esac
 }
 
 # ============================================================================

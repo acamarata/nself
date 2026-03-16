@@ -41,6 +41,10 @@ claw_usage() {
   printf "nself claw — ɳClaw AI assistant management\n\n"
   printf "Usage: nself claw <subcommand> [options]\n\n"
   printf "Subcommands:\n"
+  printf "  start                                                 Start the nself-claw service container\n"
+  printf "  stop                                                  Stop the nself-claw service container\n"
+  printf "  status                                                Show claw service health and uptime\n"
+  printf "  sessions list [--page N] [--size N]                  List chat sessions\n"
   printf "  setup [--auto|--status|--reset]                       Run onboarding wizard (or --auto for unattended)\n"
   printf "  models list                                           List available local AI models\n"
   printf "  models install [--auto|--model <name>]                Install a local AI model\n"
@@ -85,11 +89,20 @@ claw_usage() {
   printf "  proactive enable  <job_type>                         Enable a proactive job\n"
   printf "  proactive disable <job_type>                         Disable a proactive job\n"
   printf "  proactive run                                         Preview next morning digest\n"
+  printf "  threads list [--namespace=<ns>]                       List conversation threads\n"
+  printf "  threads delete <thread-id>                            Delete a thread\n"
+  printf "  threads export <thread-id>                            Export thread as JSON\n"
+  printf "  persona list                                          List personas\n"
+  printf "  persona create --name=<n> --system-prompt=<p>         Create a custom persona\n"
+  printf "  persona set-system <name> \"<prompt>\"                  Update system prompt for a persona\n"
+  printf "  memory prune [--days=90]                              Delete memory blocks older than N days\n"
+  printf "  chat [--thread=<id>] [--persona=<name>]               Interactive multi-turn chat REPL\n"
   printf "  email-rules list                                      List ClawDelegate email routing rules\n"
   printf "  email-rules test-delegate --email <addr>              Test delegate routing for an email\n"
   printf "                            --subject <text>\n"
   printf "                            [--body <text>]\n"
-  printf "  email-threads                                         List claw thread-to-session mappings\n\n"
+  printf "  email-threads                                         List claw thread-to-session mappings\n"
+  printf "  migrate-v1                                            Migrate v1 data (np_claw_*) to v2 tables (cl_*)\n\n"
   printf "Environment:\n"
   printf "  NSELF_MUX_URL           mux plugin base URL  (default: http://localhost:3711)\n"
   printf "  NSELF_CLAW_URL          claw plugin base URL (default: http://localhost:3713)\n"
@@ -150,6 +163,21 @@ cmd_claw() {
   shift
 
   case "$subcommand" in
+    start)
+      cmd_claw_start "$@"
+      ;;
+    stop)
+      cmd_claw_stop "$@"
+      ;;
+    status)
+      cmd_claw_status "$@"
+      ;;
+    sessions)
+      cmd_claw_sessions "$@"
+      ;;
+    threads)
+      cmd_claw_threads "$@"
+      ;;
     setup)
       cmd_claw_setup "$@"
       ;;
@@ -181,7 +209,7 @@ cmd_claw() {
       cmd_claw_models "$@"
       ;;
     chat)
-      cmd_claw_chat "$@"
+      cmd_claw_chat_repl "$@"
       ;;
     playbooks)
       cmd_claw_playbooks "$@"
@@ -195,8 +223,17 @@ cmd_claw() {
     memories)
       cmd_claw_memories "$@"
       ;;
+    memory)
+      cmd_claw_memory "$@"
+      ;;
+    persona)
+      cmd_claw_persona "$@"
+      ;;
     proactive)
       cmd_claw_proactive "$@"
+      ;;
+    migrate-v1)
+      cmd_claw_migrate_v1 "$@"
       ;;
     help | --help | -h)
       claw_usage
@@ -2797,6 +2834,742 @@ cmd_claw_proactive() {
       return 1
       ;;
   esac
+}
+
+# ============================================================================
+# start — start the nself-claw container
+# ============================================================================
+
+cmd_claw_start() {
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    printf "Usage: nself claw start\n\n"
+    printf "Start the nself-claw service container.\n"
+    return 0
+  fi
+
+  # Find claw container by name pattern
+  local container
+  container=$(docker ps -a --filter "name=claw" --format "{{.Names}}" 2>/dev/null | head -1)
+  if [ -z "$container" ]; then
+    cli_error "No claw container found. Run 'nself build && nself start' to create it."
+    return 1
+  fi
+
+  log_info "Starting container: $container"
+  if docker start "$container" >/dev/null 2>&1; then
+    log_success "nself-claw started."
+  else
+    cli_error "Failed to start container: $container"
+    return 1
+  fi
+}
+
+# ============================================================================
+# stop — stop the nself-claw container
+# ============================================================================
+
+cmd_claw_stop() {
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    printf "Usage: nself claw stop\n\n"
+    printf "Stop the nself-claw service container.\n"
+    return 0
+  fi
+
+  local container
+  container=$(docker ps --filter "name=claw" --format "{{.Names}}" 2>/dev/null | head -1)
+  if [ -z "$container" ]; then
+    log_info "No running claw container found."
+    return 0
+  fi
+
+  log_info "Stopping container: $container"
+  if docker stop "$container" >/dev/null 2>&1; then
+    log_success "nself-claw stopped."
+  else
+    cli_error "Failed to stop container: $container"
+    return 1
+  fi
+}
+
+# ============================================================================
+# status — show claw service health
+# ============================================================================
+
+cmd_claw_status() {
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    printf "Usage: nself claw status\n\n"
+    printf "Show claw service health and runtime info.\n"
+    printf "\nEnvironment:\n"
+    printf "  NSELF_CLAW_URL   claw plugin base URL (default: http://localhost:3713)\n"
+    return 0
+  fi
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local response=""
+  response=$(curl -s --max-time 5 "${claw_url}/health" 2>/dev/null)
+
+  if [ -z "$response" ]; then
+    cli_error "nself-claw is not reachable at ${claw_url}"
+    return 1
+  fi
+
+  printf "\n\033[34mnself-claw status\033[0m\n"
+  printf "URL: %s\n\n" "$claw_url"
+
+  if command -v jq >/dev/null 2>&1; then
+    local status_val version uptime
+    status_val=$(printf '%s' "$response" | jq -r '.status // "ok"' 2>/dev/null)
+    version=$(printf '%s' "$response" | jq -r '.version // "-"' 2>/dev/null)
+    uptime=$(printf '%s' "$response" | jq -r '.uptime_seconds // empty' 2>/dev/null)
+
+    if [ "$status_val" = "ok" ]; then
+      printf "  \033[32m● healthy\033[0m"
+    else
+      printf "  \033[31m● %s\033[0m" "$status_val"
+    fi
+    [ -n "$version" ] && [ "$version" != "-" ] && printf "  v%s" "$version"
+    if [ -n "$uptime" ]; then
+      local mins
+      mins=$(( uptime / 60 ))
+      printf "  up %dm" "$mins"
+    fi
+    printf "\n"
+  else
+    printf '%s\n' "$response"
+  fi
+  printf "\n"
+}
+
+# ============================================================================
+# sessions — list / manage sessions
+# ============================================================================
+
+cmd_claw_sessions() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  case "$subcmd" in
+    --help|-h)
+      printf "Usage: nself claw sessions <action> [options]\n\n"
+      printf "Actions:\n"
+      printf "  list [--page N] [--size N]   List chat sessions (default: page 1, size 20)\n\n"
+      printf "Examples:\n"
+      printf "  nself claw sessions list\n"
+      printf "  nself claw sessions list --page 2 --size 50\n"
+      return 0
+      ;;
+
+    list)
+      local page=1
+      local page_size=20
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --page) page="${2:-1}"; shift 2 ;;
+          --page=*) page="${1#*=}"; shift ;;
+          --size) page_size="${2:-20}"; shift 2 ;;
+          --size=*) page_size="${1#*=}"; shift ;;
+          *) shift ;;
+        esac
+      done
+
+      local response=""
+      local auth_header=""
+      [ -n "$internal_secret" ] && auth_header="x-internal-token: ${internal_secret}"
+
+      if [ -n "$auth_header" ]; then
+        response=$(curl -s -H "$auth_header" \
+          "${claw_url}/claw/sessions?page=${page}&page_size=${page_size}" 2>/dev/null)
+      else
+        response=$(curl -s \
+          "${claw_url}/claw/sessions?page=${page}&page_size=${page_size}" 2>/dev/null)
+      fi
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local total
+        total=$(printf '%s' "$response" | jq '.total // 0' 2>/dev/null || printf "0")
+        local count
+        count=$(printf '%s' "$response" | jq '.sessions | if type == "array" then length else 0 end' 2>/dev/null || printf "0")
+
+        if [ "${count:-0}" -eq 0 ]; then
+          printf "No sessions found (page %s).\n" "$page"
+          return 0
+        fi
+
+        printf "\n\033[34m%-36s %-20s %-20s %s\033[0m\n" "ID" "Name" "Updated" "Admin"
+        printf "%-36s %-20s %-20s %s\n" "------------------------------------" "--------------------" "--------------------" "-----"
+
+        printf '%s' "$response" | jq -r '.sessions // [] | .[] | [
+          (.id // "-"),
+          ((.name // "Unnamed") | .[0:20]),
+          ((.updated_at // .created_at // "-") | .[0:19] | gsub("T"; " ")),
+          (if .is_admin_mode then "yes" else "no" end)
+        ] | @tsv' 2>/dev/null | \
+        while IFS=$(printf '\t') read -r sess_id name updated admin; do
+          printf "%-36s %-20s %-20s %s\n" "$sess_id" "$name" "$updated" "$admin"
+        done
+
+        printf "\nTotal: %s sessions (page %s, size %s)\n" "$total" "$page" "$page_size"
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    *)
+      cli_error "Unknown sessions action: $subcmd"
+      printf "Actions: list\n"
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# migrate-v1 subcommand — migrate v1 data to v2 schema
+# ============================================================================
+
+cmd_claw_migrate_v1() {
+  local migration_file=""
+
+  # Prefer installed plugin path, fall back to dev path
+  local data_dir="${NSELF_DATA_DIR:-/opt/nself}"
+  migration_file="${data_dir}/plugins/claw/migrations/migrate_v1_to_v2.sql"
+
+  if [ ! -f "$migration_file" ]; then
+    # Dev fallback: relative to CLI location
+    local dev_path
+    dev_path="$(cd "$SCRIPT_DIR/../.." && pwd)/../../plugins-pro/paid/claw/migrations/migrate_v1_to_v2.sql"
+    if [ -f "$dev_path" ]; then
+      migration_file="$dev_path"
+    fi
+  fi
+
+  if [ ! -f "$migration_file" ]; then
+    cli_error "Migration file not found."
+    printf "  Expected: %s/plugins/claw/migrations/migrate_v1_to_v2.sql\n" "$data_dir"
+    printf "  Ensure the claw plugin is installed and up to date.\n"
+    return 1
+  fi
+
+  printf "Running claw v1 to v2 data migration...\n"
+  printf "WARNING: Embeddings will not be migrated — run re-embedding after this.\n"
+  printf "Old np_claw_* tables will be preserved.\n\n"
+
+  nself db psql < "$migration_file"
+  log_success "Migration complete. Old np_claw_* tables preserved."
+  printf "\n"
+  printf "Next step: trigger re-embedding for migrated messages and memory blocks.\n"
+}
+
+# ============================================================================
+# T-0859: threads — manage claw conversation threads
+# ============================================================================
+
+cmd_claw_threads() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  case "$subcmd" in
+
+    list)
+      local namespace=""
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --namespace=*) namespace="${1#--namespace=}"; shift ;;
+          --namespace)   namespace="$2"; shift 2 ;;
+          *) shift ;;
+        esac
+      done
+
+      local url="${claw_url}/claw/threads"
+      if [ -n "$namespace" ]; then
+        url="${url}?namespace=${namespace}"
+      fi
+
+      local response=""
+      response=$(curl -s \
+        -H "x-internal-token: ${internal_secret}" \
+        "$url" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local count=""
+        count=$(printf '%s' "$response" | jq '. | if type == "array" then length else (.threads // [] | length) end' 2>/dev/null || printf "0")
+        if [ "${count:-0}" -eq 0 ]; then
+          printf "No threads found%s.\n" "$([ -n "$namespace" ] && printf " in namespace '%s'" "$namespace")"
+          return 0
+        fi
+        printf "\n\033[1mThreads%s\033[0m\n" "$([ -n "$namespace" ] && printf " [%s]" "$namespace")"
+        printf "%-36s %-20s %-10s %s\n" "THREAD ID" "NAMESPACE" "MESSAGES" "UPDATED"
+        printf "%-36s %-20s %-10s %s\n" "---------" "---------" "--------" "-------"
+        printf '%s' "$response" | jq -r '(if type == "array" then . else .threads // [] end) | .[] | [
+          (.id // .thread_id // "-"),
+          ((.namespace // "default") | .[0:20]),
+          ((.message_count // 0) | tostring),
+          ((.updated_at // .created_at // "-") | .[0:19] | gsub("T"; " "))
+        ] | @tsv' 2>/dev/null \
+        | while IFS='	' read -r tid tns tmsg tupdated; do
+            printf "%-36s %-20s %-10s %s\n" "$tid" "$tns" "$tmsg" "$tupdated"
+          done
+        printf "\n"
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    delete)
+      local thread_id="${1:-}"
+      if [ -z "$thread_id" ]; then
+        printf "Usage: nself claw threads delete <thread-id>\n" >&2
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s -X DELETE \
+        -H "x-internal-token: ${internal_secret}" \
+        "${claw_url}/claw/thread/${thread_id}" 2>/dev/null)
+
+      if command -v jq >/dev/null 2>&1; then
+        local ok=""
+        ok=$(printf '%s' "$response" | jq -r '.deleted // .ok // empty' 2>/dev/null)
+        if [ -n "$ok" ] && [ "$ok" != "false" ]; then
+          log_success "Thread ${thread_id} deleted."
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        log_success "Thread ${thread_id} deleted."
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    export)
+      local thread_id="${1:-}"
+      if [ -z "$thread_id" ]; then
+        printf "Usage: nself claw threads export <thread-id>\n" >&2
+        return 1
+      fi
+
+      local response=""
+      response=$(curl -s \
+        -H "x-internal-token: ${internal_secret}" \
+        "${claw_url}/claw/thread/${thread_id}/export" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      printf '%s\n' "$response"
+      ;;
+
+    help | --help | -h)
+      printf "Usage: nself claw threads <action> [options]\n\n"
+      printf "Actions:\n"
+      printf "  list [--namespace=<ns>]   List threads (optionally filtered by namespace)\n"
+      printf "  delete <thread-id>        Delete a thread and its messages\n"
+      printf "  export <thread-id>        Export thread as JSON\n\n"
+      printf "Examples:\n"
+      printf "  nself claw threads list\n"
+      printf "  nself claw threads list --namespace=myapp\n"
+      printf "  nself claw threads delete abc-123\n"
+      printf "  nself claw threads export abc-123\n"
+      ;;
+
+    *)
+      cli_error "Unknown threads action: $subcmd"
+      printf "Actions: list, delete, export\n"
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0859: persona — manage claw personas
+# ============================================================================
+
+cmd_claw_persona() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  case "$subcmd" in
+
+    list)
+      local response=""
+      response=$(curl -s \
+        -H "x-internal-token: ${internal_secret}" \
+        "${claw_url}/claw/personas" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        printf "\n\033[1mPersonas\033[0m\n"
+        printf "%-20s %-10s %s\n" "NAME" "TYPE" "DESCRIPTION"
+        printf "%-20s %-10s %s\n" "----" "----" "-----------"
+        printf '%s' "$response" | jq -r '(if type == "array" then . else .personas // [] end) | .[] | [
+          ((.name // "-") | .[0:20]),
+          (.type // "custom"),
+          ((.description // .system_prompt // "") | .[0:60])
+        ] | @tsv' 2>/dev/null \
+        | while IFS='	' read -r pname ptype pdesc; do
+            printf "%-20s %-10s %s\n" "$pname" "$ptype" "$pdesc"
+          done
+        printf "\n"
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    create)
+      local name="" system_prompt=""
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --name=*)          name="${1#--name=}"; shift ;;
+          --name)            name="$2"; shift 2 ;;
+          --system-prompt=*) system_prompt="${1#--system-prompt=}"; shift ;;
+          --system-prompt)   system_prompt="$2"; shift 2 ;;
+          *) shift ;;
+        esac
+      done
+
+      if [ -z "$name" ] || [ -z "$system_prompt" ]; then
+        printf "Usage: nself claw persona create --name=<n> --system-prompt=<p>\n" >&2
+        return 1
+      fi
+
+      local escaped_name escaped_prompt
+      escaped_name=$(printf '%s' "$name" | sed 's/\\/\\\\/g; s/"/\\"/g')
+      escaped_prompt=$(printf '%s' "$system_prompt" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+      local body="{\"name\":\"${escaped_name}\",\"system_prompt\":\"${escaped_prompt}\"}"
+      local response=""
+      response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "x-internal-token: ${internal_secret}" \
+        -d "$body" \
+        "${claw_url}/claw/personas" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local created_name=""
+        created_name=$(printf '%s' "$response" | jq -r '.name // empty' 2>/dev/null)
+        if [ -n "$created_name" ]; then
+          log_success "Persona '${created_name}' created."
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    set-system)
+      # Usage: nself claw persona set-system <name> "<prompt>"
+      local name="${1:-}"
+      local prompt="${2:-}"
+      if [ -z "$name" ] || [ -z "$prompt" ]; then
+        printf "Usage: nself claw persona set-system <name> \"<prompt>\"\n" >&2
+        return 1
+      fi
+
+      local escaped_prompt=""
+      escaped_prompt=$(printf '%s' "$prompt" | sed 's/\\/\\\\/g; s/"/\\"/g')
+      local body="{\"system_prompt\":\"${escaped_prompt}\"}"
+
+      local response=""
+      response=$(curl -s -X PATCH \
+        -H "Content-Type: application/json" \
+        -H "x-internal-token: ${internal_secret}" \
+        -d "$body" \
+        "${claw_url}/claw/personas/${name}" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      log_success "System prompt updated for persona '${name}'."
+      ;;
+
+    help | --help | -h)
+      printf "Usage: nself claw persona <action> [options]\n\n"
+      printf "Actions:\n"
+      printf "  list                                          List all personas\n"
+      printf "  create --name=<n> --system-prompt=<p>        Create a custom persona\n"
+      printf "  set-system <name> \"<prompt>\"                  Update system prompt for a persona\n\n"
+      printf "Examples:\n"
+      printf "  nself claw persona list\n"
+      printf "  nself claw persona create --name=devbot --system-prompt=\"You are a senior engineer.\"\n"
+      printf "  nself claw persona set-system devbot \"You are a Rust expert.\"\n"
+      ;;
+
+    *)
+      cli_error "Unknown persona action: $subcmd"
+      printf "Actions: list, create, set-system\n"
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0859: memory — prune old memory blocks
+# ============================================================================
+
+cmd_claw_memory() {
+  local subcmd="${1:-}"
+  shift || true
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  case "$subcmd" in
+
+    prune)
+      local days="90"
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --days=*) days="${1#--days=}"; shift ;;
+          --days)   days="$2"; shift 2 ;;
+          *) shift ;;
+        esac
+      done
+
+      log_info "Pruning memory blocks older than ${days} days..."
+
+      local response=""
+      response=$(curl -s -X DELETE \
+        -H "x-internal-token: ${internal_secret}" \
+        "${claw_url}/claw/memory?older_than=${days}d" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local deleted=""
+        deleted=$(printf '%s' "$response" | jq -r '.deleted // .pruned // empty' 2>/dev/null)
+        if [ -n "$deleted" ]; then
+          log_success "Pruned ${deleted} memory blocks older than ${days} days."
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        log_success "Memory prune complete (>${days} days)."
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    help | --help | -h | "")
+      printf "Usage: nself claw memory <action> [options]\n\n"
+      printf "Actions:\n"
+      printf "  prune [--days=90]   Delete memory blocks older than N days (default: 90)\n\n"
+      printf "Examples:\n"
+      printf "  nself claw memory prune\n"
+      printf "  nself claw memory prune --days=30\n"
+      ;;
+
+    *)
+      cli_error "Unknown memory action: $subcmd"
+      printf "Actions: prune\n"
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0859: chat (REPL) — interactive multi-turn conversation
+# ============================================================================
+
+cmd_claw_chat_repl() {
+  local thread_id="" persona_name=""
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  # Detect one-shot mode: first arg is a message (not a flag)
+  local one_shot_message=""
+  if [ $# -gt 0 ]; then
+    case "$1" in
+      --help | -h)
+        printf "Usage: nself claw chat [--thread=<id>] [--persona=<name>]\n\n"
+        printf "Start an interactive multi-turn chat session with ɳClaw.\n\n"
+        printf "Options:\n"
+        printf "  --thread=<id>     Resume an existing thread\n"
+        printf "  --persona=<name>  Use a specific persona\n\n"
+        printf "In REPL mode:\n"
+        printf "  Type messages and press Enter to send\n"
+        printf "  Type 'exit' or press Ctrl+C to quit\n\n"
+        printf "Examples:\n"
+        printf "  nself claw chat\n"
+        printf "  nself claw chat --persona=devbot\n"
+        printf "  nself claw chat --thread=abc-123\n"
+        return 0
+        ;;
+      --thread=*) thread_id="${1#--thread=}"; shift ;;
+      --thread)   thread_id="$2"; shift 2 ;;
+      --persona=*) persona_name="${1#--persona=}"; shift ;;
+      --persona)   persona_name="$2"; shift 2 ;;
+      # Legacy one-shot mode: positional message arg
+      *)
+        one_shot_message="$1"; shift
+        ;;
+    esac
+  fi
+
+  # Parse remaining flags
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --thread=*)  thread_id="${1#--thread=}"; shift ;;
+      --thread)    thread_id="$2"; shift 2 ;;
+      --persona=*) persona_name="${1#--persona=}"; shift ;;
+      --persona)   persona_name="$2"; shift 2 ;;
+      --model)     shift 2 ;;
+      --model=*)   shift ;;
+      --tier)      shift 2 ;;
+      --tier=*)    shift ;;
+      *) shift ;;
+    esac
+  done
+
+  # If a one-shot message was given with no thread/persona flags originally,
+  # delegate to the original one-shot cmd_claw_chat
+  if [ -n "$one_shot_message" ] && [ -z "$thread_id" ] && [ -z "$persona_name" ]; then
+    cmd_claw_chat "$one_shot_message" "$@"
+    return $?
+  fi
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  # Print connection info
+  printf "\033[1mɳClaw Interactive Chat\033[0m\n"
+  printf "  URL:     %s\n" "$claw_url"
+  if [ -n "$thread_id" ]; then
+    printf "  Thread:  %s\n" "$thread_id"
+  fi
+  if [ -n "$persona_name" ]; then
+    printf "  Persona: %s\n" "$persona_name"
+  fi
+  printf "  Type 'exit' or press Ctrl+C to quit.\n\n"
+
+  # Trap Ctrl+C for clean exit
+  trap 'printf "\n\033[2mSession ended. Thread: %s\033[0m\n" "${thread_id:-new}"; exit 0' INT
+
+  local line=""
+  while true; do
+    printf "> "
+    if ! read -r line; then
+      # EOF (Ctrl+D)
+      printf "\n"
+      break
+    fi
+
+    case "$line" in
+      exit | quit | "")
+        if [ "$line" = "" ]; then
+          continue
+        fi
+        break
+        ;;
+    esac
+
+    # Escape the message for JSON
+    local escaped_line=""
+    escaped_line=$(printf '%s' "$line" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+    # Build JSON body
+    local body="{\"content\":\"${escaped_line}\",\"stream\":false"
+    if [ -n "$thread_id" ]; then
+      body="${body},\"thread_id\":\"${thread_id}\""
+    fi
+    if [ -n "$persona_name" ]; then
+      body="${body},\"persona_name\":\"${persona_name}\""
+    fi
+    body="${body}}"
+
+    local response=""
+    response=$(curl -s -X POST \
+      -H "Content-Type: application/json" \
+      -H "x-internal-token: ${internal_secret}" \
+      -d "$body" \
+      "${claw_url}/claw/message" 2>/dev/null)
+
+    if [ -z "$response" ]; then
+      cli_error "No response from claw service at ${claw_url}. Is it running?"
+      continue
+    fi
+
+    # Extract thread_id from first response (for thread continuity)
+    if [ -z "$thread_id" ] && command -v jq >/dev/null 2>&1; then
+      local new_thread_id=""
+      new_thread_id=$(printf '%s' "$response" | jq -r '.thread_id // empty' 2>/dev/null)
+      if [ -n "$new_thread_id" ]; then
+        thread_id="$new_thread_id"
+        printf "\033[2m[Thread: %s]\033[0m\n" "$thread_id"
+      fi
+    fi
+
+    # Print assistant response
+    if command -v jq >/dev/null 2>&1; then
+      local reply=""
+      reply=$(printf '%s' "$response" | jq -r '.content // .response // .message // empty' 2>/dev/null)
+      if [ -n "$reply" ]; then
+        printf "\n\033[0;36mAssistant:\033[0m %s\n\n" "$reply"
+      else
+        printf '%s\n\n' "$response"
+      fi
+    else
+      printf '%s\n\n' "$response"
+    fi
+  done
+
+  # Restore trap
+  trap - INT
+
+  if [ -n "$thread_id" ]; then
+    printf "\033[2mSession ended. Thread ID: %s\033[0m\n" "$thread_id"
+    printf "\033[2mResume: nself claw chat --thread=%s\033[0m\n" "$thread_id"
+  fi
 }
 
 # ============================================================================

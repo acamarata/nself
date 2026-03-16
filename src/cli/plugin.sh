@@ -564,6 +564,11 @@ cmd_install() {
 
   log_success "Plugin '$plugin_name' installed successfully!"
 
+  # T-0256: Run first-run wizard for the AI plugin if not yet configured
+  if [ "$plugin_name" = "ai" ]; then
+    _run_ai_setup_wizard
+  fi
+
   # Record in project plugin list if running inside a project directory
   if [[ -f ".env" ]]; then
     mkdir -p ".nself"
@@ -3769,6 +3774,12 @@ Commands:
   check-conflicts         Scan all installed plugins for dependency conflicts
     --fix                   Auto-install required versions where possible
 
+  deps <name>             Show declared dependencies for an installed plugin
+  deps --all              List all installed plugins and their dependencies
+
+  metrics [name]          Fetch Prometheus metrics from running plugin services
+                          Shows all Rust plugins when name is omitted
+
 Runtime Management:
   start <name>            Start a plugin as external process
   start --all             Start all installed plugins (respects dependencies)
@@ -3825,6 +3836,12 @@ Examples:
   nself plugin install-deps stripe
   nself plugin check-conflicts         # Scan for version conflicts
   nself plugin check-conflicts --fix   # Auto-resolve update-needed conflicts
+  nself plugin deps ai                 # Show requires[] for installed ai plugin
+  nself plugin deps --all              # Show deps for all installed plugins
+
+  # Metrics
+  nself plugin metrics                 # Show metrics for all running Rust plugins
+  nself plugin metrics ai              # Show metrics for nself-ai only
 
   # Release channels (canary/beta/stable — Rust/Docker plugins only)
   nself plugin install ai --channel canary    # Install from canary channel
@@ -3864,6 +3881,173 @@ Environment:
   NSELF_PLUGIN_LICENSE_KEY  Pro Plugins license key (nself_pro_...)
 
 "
+}
+
+# ============================================================================
+# T-0256: _run_ai_setup_wizard — first-run AI provider configuration
+# ============================================================================
+#
+# Runs after `nself plugin install ai` if PLUGIN_AI_DEFAULT_PROVIDER is not set.
+# Prompts for provider, API key (masked), tests connection, writes to .env.local.
+# Skips silently if already configured.
+#
+# Bash 3.2 compatible — no echo -e, no ${var,,}, no declare -A, no mapfile
+#
+_run_ai_setup_wizard() {
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+
+  # Skip if already configured
+  if grep -q "^PLUGIN_AI_DEFAULT_PROVIDER=" "$env_local" 2>/dev/null; then
+    return 0
+  fi
+
+  printf "\n"
+  printf "┌─────────────────────────────────────────────┐\n"
+  printf "│  nself-ai — First Run Setup                  │\n"
+  printf "└─────────────────────────────────────────────┘\n\n"
+  printf "Which AI provider would you like to use?\n\n"
+  printf "  1) OpenAI     (GPT-4o, GPT-4, GPT-3.5)\n"
+  printf "  2) Anthropic  (Claude 3 Opus, Sonnet, Haiku)\n"
+  printf "  3) Gemini     (Gemini 1.5 Pro, Flash)\n"
+  printf "  4) Ollama     (local models — Llama, Mistral, etc.)\n\n"
+  printf "Enter choice [1-4]: "
+  local choice=""
+  read -r choice
+
+  case "$choice" in
+    1) _setup_ai_openai ;;
+    2) _setup_ai_anthropic ;;
+    3) _setup_ai_gemini ;;
+    4) _setup_ai_ollama ;;
+    *) printf "Skipping setup. Run 'nself plugin config ai' to configure later.\n"; return 0 ;;
+  esac
+}
+
+# Write a key=value pair to .env.local (append if file exists)
+_ai_write_env() {
+  local key="$1"
+  local val="$2"
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+  # Remove existing entry for this key first
+  if [[ -f "$env_local" ]]; then
+    local tmp_file
+    tmp_file=$(mktemp)
+    grep -v "^${key}=" "$env_local" > "$tmp_file" 2>/dev/null || true
+    printf '%s=%s\n' "$key" "$val" >> "$tmp_file"
+    # Use cp + rm instead of mv for Bash 3.2 compatibility across filesystems
+    cp "$tmp_file" "$env_local"
+    rm -f "$tmp_file"
+  else
+    printf '%s=%s\n' "$key" "$val" > "$env_local"
+  fi
+}
+
+_setup_ai_openai() {
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+  printf "\nOpenAI API key (sk-...): "
+  local key=""
+  read -rs key
+  printf "\n"
+
+  if [[ ${#key} -lt 20 ]]; then
+    printf "Error: key too short (minimum 20 characters)\n"
+    return 1
+  fi
+
+  printf "Testing connection... "
+  if curl -s https://api.openai.com/v1/models \
+       -H "Authorization: Bearer $key" 2>/dev/null | grep -q '"id"'; then
+    printf "OK\n"
+  else
+    printf "FAILED\n"
+    printf "Warning: Connection test failed. Key saved anyway — verify at nself.org/docs/plugins/ai\n"
+  fi
+
+  _ai_write_env "PLUGIN_AI_DEFAULT_PROVIDER" "openai"
+  _ai_write_env "PLUGIN_OPENAI_API_KEY" "$key"
+  _ai_write_env "PLUGIN_AI_DEFAULT_MODEL" "gpt-4o"
+  printf "Setup complete. Test with: curl https://api.\${NSELF_DOMAIN}/ai/v1/chat/completions\n"
+}
+
+_setup_ai_anthropic() {
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+  printf "\nAnthropic API key: "
+  local key=""
+  read -rs key
+  printf "\n"
+
+  if [[ ${#key} -lt 20 ]]; then
+    printf "Error: key too short (minimum 20 characters)\n"
+    return 1
+  fi
+
+  printf "Testing connection... "
+  if curl -s https://api.anthropic.com/v1/models \
+       -H "x-api-key: $key" \
+       -H "anthropic-version: 2023-06-01" 2>/dev/null | grep -q '"id"'; then
+    printf "OK\n"
+  else
+    printf "FAILED\n"
+    printf "Warning: Connection test failed. Key saved anyway — verify at nself.org/docs/plugins/ai\n"
+  fi
+
+  _ai_write_env "PLUGIN_AI_DEFAULT_PROVIDER" "anthropic"
+  _ai_write_env "PLUGIN_ANTHROPIC_API_KEY" "$key"
+  _ai_write_env "PLUGIN_AI_DEFAULT_MODEL" "claude-3-5-sonnet-20241022"
+  printf "Setup complete. Test with: curl https://api.\${NSELF_DOMAIN}/ai/v1/chat/completions\n"
+}
+
+_setup_ai_gemini() {
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+  printf "\nGemini API key: "
+  local key=""
+  read -rs key
+  printf "\n"
+
+  if [[ ${#key} -lt 20 ]]; then
+    printf "Error: key too short (minimum 20 characters)\n"
+    return 1
+  fi
+
+  printf "Testing connection... "
+  if curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=${key}" \
+       2>/dev/null | grep -q '"name"'; then
+    printf "OK\n"
+  else
+    printf "FAILED\n"
+    printf "Warning: Connection test failed. Key saved anyway — verify at nself.org/docs/plugins/ai\n"
+  fi
+
+  _ai_write_env "PLUGIN_AI_DEFAULT_PROVIDER" "gemini"
+  _ai_write_env "PLUGIN_GEMINI_API_KEY" "$key"
+  _ai_write_env "PLUGIN_AI_DEFAULT_MODEL" "gemini-1.5-pro"
+  printf "Setup complete. Test with: curl https://api.\${NSELF_DOMAIN}/ai/v1/chat/completions\n"
+}
+
+_setup_ai_ollama() {
+  local env_local="${NSELF_ENV_LOCAL:-.env.local}"
+  printf "\nOllama URL [http://localhost:11434]: "
+  local url=""
+  read -r url
+  url="${url:-http://localhost:11434}"
+
+  printf "Model name [llama3.2]: "
+  local model=""
+  read -r model
+  model="${model:-llama3.2}"
+
+  printf "Testing connection... "
+  if curl -s "${url}/api/tags" 2>/dev/null | grep -q '"models"'; then
+    printf "OK\n"
+  else
+    printf "FAILED\n"
+    printf "Warning: Connection test failed. Settings saved anyway — verify at nself.org/docs/plugins/ai\n"
+  fi
+
+  _ai_write_env "PLUGIN_AI_DEFAULT_PROVIDER" "ollama"
+  _ai_write_env "PLUGIN_OLLAMA_URL" "$url"
+  _ai_write_env "PLUGIN_AI_DEFAULT_MODEL" "$model"
+  printf "Setup complete. Test with: curl https://api.\${NSELF_DOMAIN}/ai/v1/chat/completions\n"
 }
 
 # ============================================================================
@@ -4094,6 +4278,15 @@ main() {
     config)
       cmd_plugin_config "$@"
       ;;
+    watch)
+      cmd_plugin_watch "$@"
+      ;;
+    deps)
+      cmd_plugin_deps "$@"
+      ;;
+    metrics)
+      cmd_plugin_metrics "$@"
+      ;;
     -h | --help | help | "")
       show_help
       ;;
@@ -4106,6 +4299,539 @@ main() {
         show_help
         return 1
       fi
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0223: cmd_plugin_watch — auto-restart daemon with exponential backoff
+# ============================================================================
+#
+# Polls np_plugin_registry every N seconds (default 30).
+# If healthy=false for >90s: restarts the container with backoff.
+# Exponential backoff: 30s -> 60s -> 120s -> 300s per plugin.
+# After 5 restarts in 24h: enters "dead" state, calls notify if available.
+# --daemon: runs in background with nohup.
+# --stop: kills background daemon.
+#
+# State files: /tmp/nself-plugin-watch-<slug>.state
+# Format (line per line): restarts=N lastRestart=EPOCH lastHealthy=EPOCH deadSince=EPOCH
+#
+# Bash 3.2 compatible — no echo -e, no ${var,,}, no declare -A, no mapfile
+#
+cmd_plugin_watch() {
+  local daemon_mode=false
+  local poll_interval=30
+  local stop_mode=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)
+        printf "Usage: nself plugin watch [--daemon] [--interval N] [--stop]\n\n"
+        printf "Monitor plugin health and auto-restart crashed plugins.\n\n"
+        printf "Options:\n"
+        printf "  --daemon          Run in background (nohup)\n"
+        printf "  --interval N      Poll interval in seconds (default: 30)\n"
+        printf "  --stop            Kill background daemon\n"
+        printf "  --help, -h        Show this help text\n\n"
+        printf "Behavior:\n"
+        printf "  Polls np_plugin_registry every N seconds via Hasura Postgres.\n"
+        printf "  If healthy=false for >90s: attempts docker restart with backoff.\n"
+        printf "  Backoff: 30s -> 60s -> 120s -> 300s.\n"
+        printf "  After 5 restarts in 24h: marks plugin dead, stops auto-restart.\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin watch\n"
+        printf "  nself plugin watch --daemon\n"
+        printf "  nself plugin watch --interval 60\n"
+        printf "  nself plugin watch --stop\n"
+        return 0
+        ;;
+      --daemon)
+        daemon_mode=true
+        shift
+        ;;
+      --interval)
+        poll_interval="${2:-30}"
+        shift 2
+        ;;
+      --stop)
+        stop_mode=true
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # --stop: kill background daemon
+  if [[ "$stop_mode" == "true" ]]; then
+    local pid_file="${NSELF_LOG_DIR:-$HOME/.nself/logs}/plugin-watch.pid"
+    if [[ -f "$pid_file" ]]; then
+      local pid
+      pid=$(cat "$pid_file" 2>/dev/null)
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" && rm -f "$pid_file"
+        printf "plugin watch daemon stopped (pid %s)\n" "$pid"
+      else
+        rm -f "$pid_file"
+        printf "No running plugin watch daemon found\n"
+      fi
+    else
+      printf "No plugin watch daemon running\n"
+    fi
+    return 0
+  fi
+
+  # --daemon: relaunch self in background
+  if [[ "$daemon_mode" == "true" ]]; then
+    local log_dir="${NSELF_LOG_DIR:-$HOME/.nself/logs}"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/plugin-watch.log"
+    local pid_file="$log_dir/plugin-watch.pid"
+
+    # Kill any existing daemon first
+    if [[ -f "$pid_file" ]]; then
+      local old_pid
+      old_pid=$(cat "$pid_file" 2>/dev/null)
+      if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        kill "$old_pid" 2>/dev/null || true
+      fi
+      rm -f "$pid_file"
+    fi
+
+    nohup "$0" plugin watch --interval "$poll_interval" >> "$log_file" 2>&1 &
+    local bg_pid=$!
+    printf '%s\n' "$bg_pid" > "$pid_file"
+    printf "plugin watch daemon started (pid %s)\n" "$bg_pid"
+    printf "Logs: %s\n" "$log_file"
+    return 0
+  fi
+
+  # Load env to get Postgres credentials
+  local pg_user pg_db pg_container
+  pg_user="${POSTGRES_USER:-postgres}"
+  pg_db="${POSTGRES_DB:-postgres}"
+  pg_container="${PROJECT_NAME:-nself}_postgres"
+
+  printf "nself plugin watch — polling every %ss\n" "$poll_interval"
+  printf "Container: %s | Ctrl+C to stop\n\n" "$pg_container"
+
+  # Main polling loop
+  while true; do
+    # Query np_plugin_registry for health status
+    local registry_rows=""
+    registry_rows=$(docker exec "$pg_container" psql -U "$pg_user" -d "$pg_db" \
+      -t -c "SELECT plugin_slug, healthy FROM np_plugin_registry;" 2>/dev/null) || true
+
+    local now
+    now=$(date +%s 2>/dev/null || printf '0')
+
+    # Print status table header
+    printf "\n[%s] Plugin Health Poll\n" "$(date '+%H:%M:%S' 2>/dev/null || printf 'unknown')"
+    printf "%-20s %-10s %-10s\n" "Plugin" "Status" "Restarts"
+    printf "%-20s %-10s %-10s\n" "------" "------" "--------"
+
+    # Process each row from pg output
+    # pg -t output format: " plugin_slug | t " or " plugin_slug | f "
+    if [[ -n "$registry_rows" ]]; then
+      while IFS='|' read -r slug healthy_raw; do
+        # Trim whitespace (Bash 3.2 compatible)
+        slug=$(printf '%s' "$slug" | tr -d ' ')
+        healthy_raw=$(printf '%s' "$healthy_raw" | tr -d ' ')
+
+        [[ -z "$slug" ]] && continue
+
+        local state_file="/tmp/nself-plugin-watch-${slug}.state"
+
+        # Read state (Bash 3.2: parse key=value lines manually)
+        local restarts=0 last_restart=0 last_healthy=0 dead_since=0
+        if [[ -f "$state_file" ]]; then
+          while IFS='=' read -r key val; do
+            case "$key" in
+              restarts)    restarts="$val" ;;
+              lastRestart) last_restart="$val" ;;
+              lastHealthy) last_healthy="$val" ;;
+              deadSince)   dead_since="$val" ;;
+            esac
+          done < "$state_file"
+        fi
+
+        local status_label="healthy"
+        if [[ "$healthy_raw" == "t" ]]; then
+          # Plugin is healthy — update lastHealthy, reset backoff flag only
+          last_healthy="$now"
+          dead_since=0
+          # Write updated state
+          printf 'restarts=%s\nlastRestart=%s\nlastHealthy=%s\ndeadSince=%s\n' \
+            "$restarts" "$last_restart" "$last_healthy" "$dead_since" > "$state_file"
+        else
+          status_label="unhealthy"
+
+          # Check if already in dead state (5 restarts in 24h)
+          if [[ "$dead_since" -gt 0 ]]; then
+            status_label="dead"
+          else
+            # How long has it been unhealthy?
+            local unhealthy_secs=0
+            if [[ "$last_healthy" -gt 0 ]]; then
+              unhealthy_secs=$((now - last_healthy))
+            else
+              # Never recorded healthy — treat as unhealthy since epoch 0
+              unhealthy_secs=999
+            fi
+
+            if [[ "$unhealthy_secs" -gt 90 ]]; then
+              # Check restart count in last 24h
+              local restarts_24h=0
+              if [[ "$last_restart" -gt 0 ]]; then
+                local age_last=$((now - last_restart))
+                if [[ "$age_last" -lt 86400 ]]; then
+                  restarts_24h="$restarts"
+                fi
+              fi
+
+              if [[ "$restarts_24h" -ge 5 ]]; then
+                # Mark dead — stop auto-restart
+                dead_since="$now"
+                status_label="dead"
+                printf 'restarts=%s\nlastRestart=%s\nlastHealthy=%s\ndeadSince=%s\n' \
+                  "$restarts" "$last_restart" "$last_healthy" "$dead_since" > "$state_file"
+                printf "WARN: nself-%s has crashed 5 times in 24h — stopped auto-restart\n" "$slug"
+                # Notify via nself-notify if available
+                if docker inspect nself-notify >/dev/null 2>&1 && \
+                   docker exec nself-notify curl -s http://127.0.0.1:3712/health 2>/dev/null | grep -q ok; then
+                  docker exec nself-notify curl -s -X POST http://127.0.0.1:3712/notify \
+                    -H "Content-Type: application/json" \
+                    -d "{\"message\":\"nself-${slug} has crashed 5 times in 24h — auto-restart stopped\"}" \
+                    >/dev/null 2>&1 || true
+                fi
+              else
+                # Compute backoff delay based on restart count
+                local backoff=30
+                case "$restarts" in
+                  0) backoff=30 ;;
+                  1) backoff=60 ;;
+                  2) backoff=120 ;;
+                  *) backoff=300 ;;
+                esac
+
+                # Only restart if enough time has passed since last restart
+                local time_since_last=$((now - last_restart))
+                if [[ "$last_restart" -eq 0 ]] || [[ "$time_since_last" -ge "$backoff" ]]; then
+                  status_label="restarting"
+                  docker restart "nself-${slug}" >/dev/null 2>&1 || true
+                  restarts=$((restarts + 1))
+                  last_restart="$now"
+                  printf 'restarts=%s\nlastRestart=%s\nlastHealthy=%s\ndeadSince=%s\n' \
+                    "$restarts" "$last_restart" "$last_healthy" "$dead_since" > "$state_file"
+                  printf "Restarting nself-%s (attempt %s, backoff was %ss)\n" \
+                    "$slug" "$restarts" "$backoff"
+                fi
+              fi
+            fi
+          fi
+        fi
+
+        printf "%-20s %-10s %-10s\n" "$slug" "$status_label" "$restarts"
+      done <<EOF
+$registry_rows
+EOF
+    else
+      printf "  (no plugins in registry or Postgres not reachable)\n"
+    fi
+
+    sleep "$poll_interval"
+  done
+}
+
+# ============================================================================
+# T-0849: _plugin_install_with_deps — install with automatic dependency resolution
+# ============================================================================
+#
+# Wraps cmd_install with:
+#   - Circular dependency detection (DEPS_BEING_INSTALLED global, space-separated)
+#   - Automatic pre-install of declared `requires` entries from plugin.json
+#   - --no-deps flag to skip resolution
+#
+# Usage: _plugin_install_with_deps <plugin_name> [no_deps_flag]
+#   no_deps_flag: "true" to skip dependency resolution (default: "false")
+#
+# Note: DEPS_BEING_INSTALLED must be exported by the caller if needed across
+# subshells, but within a single shell session it persists as a global.
+
+DEPS_BEING_INSTALLED="${DEPS_BEING_INSTALLED:-}"
+
+_plugin_read_requires() {
+  local plugin_name="$1"
+  local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+  if [ ! -f "$manifest" ]; then
+    return
+  fi
+  # Parse the "requires" field (distinct from "dependencies") — Bash 3.2 compatible
+  local in_requires=false result="" dep inner line
+  while IFS= read -r line; do
+    case "$line" in
+      *'"requires"'*)
+        in_requires=true
+        case "$line" in
+          *"]"*)
+            # Inline array: "requires": ["a", "b"]
+            inner="${line#*\[}"
+            inner="${inner%%\]*}"
+            while [ "${inner#*\"}" != "$inner" ]; do
+              dep="${inner#*\"}"
+              dep="${dep%%\"*}"
+              [ -n "$dep" ] && result="$result $dep"
+              inner="${inner#*\"}"
+              inner="${inner#*\"}"
+            done
+            in_requires=false
+            ;;
+        esac
+        continue
+        ;;
+      *"]"*)
+        [ "$in_requires" = "true" ] && { in_requires=false; break; }
+        ;;
+      *'"'*)
+        if [ "$in_requires" = "true" ]; then
+          dep="${line#*\"}"
+          dep="${dep%%\"*}"
+          [ -n "$dep" ] && result="$result $dep"
+        fi
+        ;;
+    esac
+  done < "$manifest"
+  printf '%s' "$result"
+}
+
+_plugin_install_with_deps() {
+  local plugin_name="$1"
+  local no_deps="${2:-false}"
+
+  # Circular dependency detection
+  case " $DEPS_BEING_INSTALLED " in
+    *" $plugin_name "*)
+      printf "Error: circular dependency detected for plugin '%s'\n" "$plugin_name" >&2
+      return 1
+      ;;
+  esac
+
+  DEPS_BEING_INSTALLED="${DEPS_BEING_INSTALLED} ${plugin_name}"
+
+  # Resolve requires[] dependencies before installing the main plugin
+  if [ "$no_deps" != "true" ]; then
+    # Download/check manifest for requires — first try already-installed manifest,
+    # then fall back to the registry fetch that cmd_install does internally.
+    # We pre-check installed manifest; if not installed yet, deps are resolved
+    # after cmd_install places the manifest. For pre-install resolution we rely
+    # on the static fallback inside _plugin_deps (which covers known plugins).
+    local requires dep
+    requires=$(_plugin_read_requires "$plugin_name" 2>/dev/null || printf '')
+    if [ -z "$requires" ]; then
+      # Plugin not yet installed — use _plugin_deps static fallback for known plugins
+      requires=$(_plugin_deps "$plugin_name" 2>/dev/null || printf '')
+    fi
+    for dep in $requires; do
+      [ -z "$dep" ] && continue
+      if ! is_plugin_installed "$dep"; then
+        printf "Installing required dependency: %s\n" "$dep"
+        _plugin_install_with_deps "$dep" "false" || return 1
+      fi
+    done
+  fi
+
+  # Run the actual install
+  cmd_install "$plugin_name"
+}
+
+# ============================================================================
+# T-0850: cmd_plugin_deps — show dependency tree for installed plugins
+# ============================================================================
+#
+# Usage:
+#   nself plugin deps <plugin-name>   Show deps for a specific installed plugin
+#   nself plugin deps --all           List all installed plugins and their deps
+
+cmd_plugin_deps() {
+  local plugin_name="${1:-}"
+
+  case "$plugin_name" in
+    --help|-h)
+      printf "Usage: nself plugin deps <plugin-name>\n"
+      printf "       nself plugin deps --all\n\n"
+      printf "Show declared dependencies for installed plugins.\n\n"
+      printf "Arguments:\n"
+      printf "  plugin-name   Show deps for a specific installed plugin\n"
+      printf "  --all         List all installed plugins and their deps\n\n"
+      printf "Examples:\n"
+      printf "  nself plugin deps ai\n"
+      printf "  nself plugin deps --all\n"
+      return 0
+      ;;
+    --all|-a)
+      local pname manifest requires requires_str found_any=false
+      local plugin_dir
+      for plugin_dir in "$PLUGIN_DIR"/*/; do
+        [ -d "$plugin_dir" ] || continue
+        pname=$(basename "$plugin_dir")
+        manifest="$plugin_dir/plugin.json"
+        if [ -f "$manifest" ]; then
+          found_any=true
+          requires=$(_plugin_read_requires "$pname" 2>/dev/null || printf '')
+          if [ -z "$requires" ]; then
+            requires_str="none"
+          else
+            # Convert space-separated to comma-separated
+            requires_str=$(printf '%s' "$requires" | tr ' ' ',' | sed 's/^,//')
+          fi
+          printf "%s -> [%s]\n" "$pname" "$requires_str"
+        fi
+      done
+      if [ "$found_any" = "false" ]; then
+        printf "No plugins installed in %s\n" "$PLUGIN_DIR"
+      fi
+      ;;
+    "")
+      printf "Usage: nself plugin deps <plugin-name>\n"
+      printf "       nself plugin deps --all\n"
+      return 1
+      ;;
+    *)
+      local manifest="$PLUGIN_DIR/$plugin_name/plugin.json"
+      if [ ! -f "$manifest" ]; then
+        printf "Plugin '%s' is not installed.\n" "$plugin_name" >&2
+        return 1
+      fi
+      local requires
+      requires=$(_plugin_read_requires "$plugin_name" 2>/dev/null || printf '')
+      printf "Dependencies for %s:\n" "$plugin_name"
+      if [ -z "$requires" ]; then
+        printf "  requires: (none)\n"
+      else
+        local dep
+        for dep in $requires; do
+          [ -z "$dep" ] && continue
+          if is_plugin_installed "$dep"; then
+            printf "  requires: %s (installed)\n" "$dep"
+          else
+            printf "  requires: %s (NOT installed)\n" "$dep"
+          fi
+        done
+      fi
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-0857: cmd_plugin_metrics — fetch and display Prometheus metrics per plugin
+# ============================================================================
+#
+# Usage:
+#   nself plugin metrics              Show metrics for all known Rust plugins
+#   nself plugin metrics <name>       Show metrics for a specific plugin
+#
+# Plugin internal URLs are resolved from env vars:
+#   PLUGIN_AI_INTERNAL_URL      (default: http://localhost:3711)
+#   PLUGIN_CLAW_INTERNAL_URL    (default: http://localhost:3710)
+#   PLUGIN_MUX_INTERNAL_URL     (default: http://localhost:3712)
+#   PLUGIN_VOICE_INTERNAL_URL   (default: http://localhost:3714)
+#   PLUGIN_BROWSER_INTERNAL_URL (default: http://localhost:3716)
+
+_plugin_default_url() {
+  local name="$1"
+  case "$name" in
+    ai)      printf 'http://localhost:3711' ;;
+    claw)    printf 'http://localhost:3710' ;;
+    mux)     printf 'http://localhost:3712' ;;
+    voice)   printf 'http://localhost:3714' ;;
+    browser) printf 'http://localhost:3716' ;;
+    *)       printf 'http://localhost:3711' ;;
+  esac
+}
+
+_plugin_resolve_internal_url() {
+  local name="$1"
+  local upper_name env_var_name url default_url
+  upper_name=$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')
+  env_var_name="PLUGIN_${upper_name}_INTERNAL_URL"
+  default_url=$(_plugin_default_url "$name")
+  # Bash 3.2 compatible indirect variable expansion via eval
+  eval "url=\"\${${env_var_name}:-}\""
+  if [ -z "$url" ]; then
+    url="$default_url"
+  fi
+  printf '%s' "$url"
+}
+
+_show_plugin_metrics() {
+  local name="$1"
+  local base_url="$2"
+  printf "\n=== %s metrics ===\n" "$name"
+  if ! command -v curl >/dev/null 2>&1; then
+    printf "  [curl not available]\n"
+    return
+  fi
+  local output
+  output=$(curl -sf --max-time 5 "${base_url}/metrics" 2>/dev/null) || {
+    printf "  [unavailable — is nself-plugin-%s running?]\n" "$name"
+    return
+  }
+  if [ -z "$output" ]; then
+    printf "  [no metrics output]\n"
+    return
+  fi
+  # Print non-comment, non-empty lines, limit to 20 lines
+  local count=0 line
+  while IFS= read -r line; do
+    case "$line" in
+      '#'*|'') continue ;;
+    esac
+    printf "%s\n" "$line"
+    count=$((count + 1))
+    [ "$count" -ge 20 ] && break
+  done <<EOF
+$output
+EOF
+}
+
+cmd_plugin_metrics() {
+  local plugin_name="${1:-}"
+
+  case "$plugin_name" in
+    --help|-h)
+      printf "Usage: nself plugin metrics [plugin-name]\n\n"
+      printf "Fetch and display Prometheus metrics from running plugin services.\n\n"
+      printf "Arguments:\n"
+      printf "  plugin-name   Show metrics for a specific plugin (optional)\n\n"
+      printf "Supported plugins: ai, claw, mux, voice, browser\n\n"
+      printf "Plugin URLs are resolved from env vars:\n"
+      printf "  PLUGIN_AI_INTERNAL_URL      (default: http://localhost:3711)\n"
+      printf "  PLUGIN_CLAW_INTERNAL_URL    (default: http://localhost:3710)\n"
+      printf "  PLUGIN_MUX_INTERNAL_URL     (default: http://localhost:3712)\n"
+      printf "  PLUGIN_VOICE_INTERNAL_URL   (default: http://localhost:3714)\n"
+      printf "  PLUGIN_BROWSER_INTERNAL_URL (default: http://localhost:3716)\n\n"
+      printf "Examples:\n"
+      printf "  nself plugin metrics\n"
+      printf "  nself plugin metrics ai\n"
+      printf "  nself plugin metrics claw\n"
+      return 0
+      ;;
+    "")
+      # Show metrics for all known Rust plugins
+      local name url
+      for name in ai claw mux voice browser; do
+        url=$(_plugin_resolve_internal_url "$name")
+        _show_plugin_metrics "$name" "$url"
+      done
+      printf "\n"
+      ;;
+    *)
+      local url
+      url=$(_plugin_resolve_internal_url "$plugin_name")
+      _show_plugin_metrics "$plugin_name" "$url"
+      printf "\n"
       ;;
   esac
 }

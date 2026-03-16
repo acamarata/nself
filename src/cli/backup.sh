@@ -193,6 +193,7 @@ backup_database() {
     local db_name="${POSTGRES_DB:-postgres}"
     local db_user="${POSTGRES_USER:-postgres}"
 
+    # Includes np_* plugin tables — no explicit exclusion
     docker exec "${project_name}_postgres" pg_dumpall -U "$db_user" \
       >"$db_backup_dir/postgres_dump.sql" 2>/dev/null || {
       cli_warning "Failed to dump database"

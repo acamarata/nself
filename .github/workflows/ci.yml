@@ -276,3 +276,31 @@ jobs:
           fi
 
           printf "\033[32m✓ Basic security checks complete\033[0m\n"
+
+  bats-test-matrix:
+    name: Bats tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats-core
+        run: |
+          if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y bats
+          else
+            brew install bats-core
+          fi
+
+      - name: Install nself binary
+        run: |
+          chmod +x "${{ github.workspace }}/bin/nself"
+          echo "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
+          sudo ln -sf "${{ github.workspace }}/bin/nself" /usr/local/bin/nself 2>/dev/null || true
+
+      - name: Run full bats test suite
+        run: bats src/tests/*.bats --timing
