@@ -195,6 +195,18 @@ auto_generate_secrets_for_env() {
     fi
   fi
 
+  # Shared secret for mux→claw internal calls (Bearer auth on /internal/* endpoints)
+  # Both plugin-mux and plugin-claw must receive the same value from .env
+  if ! grep -q "^MUX_CLAW_SHARED_SECRET=.\\+" "$env_file" 2>/dev/null; then
+    local mux_claw_secret
+    mux_claw_secret=$(generate_random_secret 64 "hex")
+    if grep -q "^MUX_CLAW_SHARED_SECRET=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^MUX_CLAW_SHARED_SECRET=.*|MUX_CLAW_SHARED_SECRET=$mux_claw_secret|" "$env_file"
+    else
+      printf "MUX_CLAW_SHARED_SECRET=%s\n" "$mux_claw_secret" >> "$env_file"
+    fi
+  fi
+
   # Clean up backup files
   rm -f "$env_file.bak"
 }
