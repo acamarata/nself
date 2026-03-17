@@ -3780,6 +3780,17 @@ Commands:
   metrics [name]          Fetch Prometheus metrics from running plugin services
                           Shows all Rust plugins when name is omitted
 
+Remote Deploy (pro plugins — bypasses registry, uses rsync+SSH):
+  deploy <name>           Sync source to remote server and rebuild container
+    --server <host>         SSH hostname or IP of the target server (required)
+    --user <user>           SSH user (default: root)
+    --dir <dir>             Remote nself project dir (default: /opt/nself)
+    --dry-run               Show what would happen without executing
+    --no-restart            Rebuild image but skip container restart
+
+  deploy-all              Deploy all plugins in plugins-pro/paid/ to a remote server
+    --server <host>         SSH hostname or IP of the target server (required)
+
 Runtime Management:
   start <name>            Start a plugin as external process
   start --all             Start all installed plugins (respects dependencies)
@@ -3853,6 +3864,11 @@ Examples:
   nself plugin license               # Show license status
   nself plugin license validate      # Force-validate against API
   nself plugin license plugins       # List all Pro Plugins
+
+  # Remote deploy (pro plugins — bypasses registry, pushes source directly)
+  nself plugin deploy mux --server 49.13.140.12 --dir /opt/nclaw
+  nself plugin deploy ai --server 49.13.140.12 --dry-run
+  nself plugin deploy-all --server 49.13.140.12 --dir /opt/nclaw
 
 Plugin Features:
   • Lifecycle states (starting/running/stopping/stopped/failed)
@@ -4286,6 +4302,12 @@ main() {
       ;;
     metrics)
       cmd_plugin_metrics "$@"
+      ;;
+    deploy)
+      cmd_plugin_deploy "$@"
+      ;;
+    deploy-all)
+      cmd_plugin_deploy_all "$@"
       ;;
     -h | --help | help | "")
       show_help
@@ -4834,6 +4856,234 @@ cmd_plugin_metrics() {
       printf "\n"
       ;;
   esac
+}
+
+# ============================================================================
+# T-1320: cmd_plugin_deploy — push updated plugin source to remote server
+# ============================================================================
+#
+# Syncs plugin source from the local plugins-pro checkout to a remote nself
+# instance via rsync+SSH, then rebuilds and restarts the plugin container.
+#
+# Usage:
+#   nself plugin deploy <plugin-name> [--server <host>] [--user <user>] [--dir <dir>]
+#   nself plugin deploy-all --server <host> [--user <user>] [--dir <dir>]
+#
+# Options:
+#   --server <host>    SSH hostname or IP of the target server (required)
+#   --user <user>      SSH user (default: root)
+#   --dir <dir>        Remote nself project directory (default: /opt/nself)
+#   --dry-run          Show what would happen without doing it
+#   --no-restart       Rebuild image but skip container restart
+#
+# Bash 3.2 compatible — no declare -A, no ${var,,}, no echo -e, no mapfile.
+
+cmd_plugin_deploy() {
+  local plugin_name="${1:-}"
+  local server_host=""
+  local server_user="root"
+  local remote_dir="/opt/nself"
+  local dry_run=false
+  local restart=true
+
+  shift 2>/dev/null || true
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --server)    server_host="$2"; shift 2 ;;
+      --user)      server_user="$2"; shift 2 ;;
+      --dir)       remote_dir="$2"; shift 2 ;;
+      --dry-run)   dry_run=true; shift ;;
+      --no-restart) restart=false; shift ;;
+      --help|-h)
+        printf "Usage: nself plugin deploy <plugin-name> [options]\n\n"
+        printf "Sync plugin source to a remote nself instance and rebuild.\n\n"
+        printf "Arguments:\n"
+        printf "  plugin-name    Name of the pro plugin to deploy\n\n"
+        printf "Options:\n"
+        printf "  --server <host>   SSH hostname or IP (required)\n"
+        printf "  --user <user>     SSH user (default: root)\n"
+        printf "  --dir <dir>       Remote nself project dir (default: /opt/nself)\n"
+        printf "  --dry-run         Show what would happen without executing\n"
+        printf "  --no-restart      Rebuild image but skip container restart\n"
+        printf "  --help, -h        Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin deploy mux --server 49.13.140.12 --dir /opt/nclaw\n"
+        printf "  nself plugin deploy ai --server 49.13.140.12 --dry-run\n"
+        return 0
+        ;;
+      *) shift ;;
+    esac
+  done
+
+  if [ -z "$plugin_name" ]; then
+    log_error "Plugin name required"
+    printf "\nUsage: nself plugin deploy <plugin-name> [--server <host>] [--user <user>] [--dir <dir>]\n"
+    printf "Example: nself plugin deploy mux --server 49.13.140.12 --dir /opt/nclaw\n"
+    return 1
+  fi
+
+  # Locate plugin source in plugins-pro
+  local plugins_pro_dir=""
+  if [ -d "$HOME/Sites/nself/plugins-pro/paid/${plugin_name}" ]; then
+    plugins_pro_dir="$HOME/Sites/nself/plugins-pro/paid/${plugin_name}"
+  fi
+
+  if [ -z "$plugins_pro_dir" ]; then
+    log_error "Plugin source not found for '${plugin_name}'"
+    log_error "Expected: \$HOME/Sites/nself/plugins-pro/paid/${plugin_name}/"
+    return 1
+  fi
+
+  log_info "Plugin source: $plugins_pro_dir"
+
+  if [ -z "$server_host" ]; then
+    log_error "No --server specified."
+    printf "\nUsage: nself plugin deploy <plugin-name> --server <ip-or-hostname>\n"
+    printf "Example: nself plugin deploy mux --server 49.13.140.12 --dir /opt/nclaw\n"
+    return 1
+  fi
+
+  local remote_plugin_dir="${remote_dir}/plugins-pro/paid/${plugin_name}"
+
+  if [ "$dry_run" = "true" ]; then
+    log_info "[DRY RUN] Would rsync: ${plugins_pro_dir}/src/ -> ${server_user}@${server_host}:${remote_plugin_dir}/src/"
+    if [ -f "${plugins_pro_dir}/Cargo.toml" ]; then
+      log_info "[DRY RUN] Would rsync: ${plugins_pro_dir}/Cargo.toml -> ${server_user}@${server_host}:${remote_plugin_dir}/Cargo.toml"
+    fi
+    log_info "[DRY RUN] Would rebuild: docker compose build plugin-${plugin_name}"
+    if [ "$restart" = "true" ]; then
+      log_info "[DRY RUN] Would restart: docker compose up -d --no-deps plugin-${plugin_name}"
+    fi
+    return 0
+  fi
+
+  # Check required tools
+  if ! command -v rsync >/dev/null 2>&1; then
+    log_error "rsync is required for plugin deploy"
+    return 1
+  fi
+  if ! command -v ssh >/dev/null 2>&1; then
+    log_error "ssh is required for plugin deploy"
+    return 1
+  fi
+
+  # 1. Ensure remote plugin src directory exists
+  # shellcheck disable=SC2029
+  ssh "${server_user}@${server_host}" "mkdir -p '${remote_plugin_dir}/src'" 2>/dev/null || true
+
+  # 2. Sync source files
+  log_info "Syncing ${plugin_name} source to ${server_host}..."
+  if ! rsync -avz --delete \
+    "${plugins_pro_dir}/src/" \
+    "${server_user}@${server_host}:${remote_plugin_dir}/src/"; then
+    log_error "rsync of src/ failed"
+    return 1
+  fi
+
+  # Sync Cargo.toml if it exists at plugin root
+  if [ -f "${plugins_pro_dir}/Cargo.toml" ]; then
+    if ! rsync -avz "${plugins_pro_dir}/Cargo.toml" \
+      "${server_user}@${server_host}:${remote_plugin_dir}/Cargo.toml"; then
+      log_warning "Cargo.toml rsync failed (continuing)"
+    fi
+  fi
+
+  log_success "Source synced"
+
+  # 3. Rebuild Docker image on remote
+  log_info "Rebuilding plugin-${plugin_name} on ${server_host}..."
+  # shellcheck disable=SC2029
+  if ! ssh "${server_user}@${server_host}" \
+    "cd '${remote_dir}' && docker compose build plugin-${plugin_name} 2>&1"; then
+    log_error "Remote build failed"
+    log_info "Check build logs above. Common causes:"
+    log_info "  - Rust compile error in source"
+    log_info "  - Missing dependency in Cargo.toml"
+    return 1
+  fi
+
+  log_success "Build complete"
+
+  # 4. Restart container
+  if [ "$restart" = "true" ]; then
+    log_info "Restarting plugin-${plugin_name}..."
+    # shellcheck disable=SC2029
+    if ssh "${server_user}@${server_host}" \
+      "cd '${remote_dir}' && docker compose up -d --no-deps plugin-${plugin_name} 2>&1"; then
+      log_success "plugin-${plugin_name} restarted"
+    else
+      log_error "Restart failed — build succeeded but container not running"
+      log_info "SSH in and check: docker compose logs plugin-${plugin_name}"
+      return 1
+    fi
+  fi
+
+  log_success "plugin-${plugin_name} deployed to ${server_host}"
+}
+
+# Deploy all plugins in plugins-pro/paid/ to a remote server
+cmd_plugin_deploy_all() {
+  local server_host=""
+  local server_user="root"
+  local remote_dir="/opt/nself"
+  local dry_run=false
+  local restart=true
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --server)    server_host="$2"; shift 2 ;;
+      --user)      server_user="$2"; shift 2 ;;
+      --dir)       remote_dir="$2"; shift 2 ;;
+      --dry-run)   dry_run=true; shift ;;
+      --no-restart) restart=false; shift ;;
+      --help|-h)
+        printf "Usage: nself plugin deploy-all --server <host> [options]\n\n"
+        printf "Deploy all plugins from plugins-pro to a remote nself instance.\n\n"
+        printf "Options:\n"
+        printf "  --server <host>   SSH hostname or IP (required)\n"
+        printf "  --user <user>     SSH user (default: root)\n"
+        printf "  --dir <dir>       Remote nself project dir (default: /opt/nself)\n"
+        printf "  --dry-run         Show what would happen without executing\n"
+        printf "  --no-restart      Rebuild images but skip container restarts\n"
+        printf "  --help, -h        Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin deploy-all --server 49.13.140.12 --dir /opt/nclaw\n"
+        return 0
+        ;;
+      *) shift ;;
+    esac
+  done
+
+  if [ -z "$server_host" ]; then
+    log_error "Usage: nself plugin deploy-all --server <host>"
+    return 1
+  fi
+
+  local plugins_pro_dir="$HOME/Sites/nself/plugins-pro/paid"
+  if [ ! -d "$plugins_pro_dir" ]; then
+    log_error "plugins-pro not found at $plugins_pro_dir"
+    return 1
+  fi
+
+  local deployed=0
+  local failed=0
+
+  for plugin_dir in "$plugins_pro_dir"/*/; do
+    [ -d "$plugin_dir" ] || continue
+    local pname
+    pname="$(basename "$plugin_dir")"
+    log_info "Deploying ${pname}..."
+    if cmd_plugin_deploy "$pname" --server "$server_host" --user "$server_user" --dir "$remote_dir" \
+        $([ "$dry_run" = "true" ] && printf '%s' '--dry-run') \
+        $([ "$restart" = "false" ] && printf '%s' '--no-restart'); then
+      deployed=$((deployed + 1))
+    else
+      failed=$((failed + 1))
+      log_warning "Failed: $pname (continuing)"
+    fi
+  done
+
+  log_success "Deployed: ${deployed} | Failed: ${failed}"
 }
 
 main "$@"
