@@ -3727,51 +3727,69 @@ cmd_claw_users() {
 # T-1233 + T-1234: pair — generate pairing code for the ɳClaw app
 # ============================================================================
 
+# T-1425 + T-1426: pair — open pairing window, show relay code, poll until paired or expired.
 cmd_claw_pair() {
   local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
-  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+  local secret="${PLUGIN_INTERNAL_SECRET:-}"
 
-  if [ -z "$internal_secret" ]; then
+  if [ -z "$secret" ]; then
     cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
     return 1
   fi
 
+  # Open the pairing window via POST /claw/pair/open
   local resp=""
-  resp=$(curl -sf -X POST "${claw_url}/claw/devices/pair" \
-    -H "x-internal-token: ${internal_secret}" \
-    -H "Content-Type: application/json" \
-    -d '{}' 2>/dev/null) || true
+  resp=$(curl -sf -X POST "${claw_url}/claw/pair/open" \
+    -H "X-Internal-Secret: ${secret}" \
+    -H "Content-Type: application/json" 2>/dev/null) || {
+    printf "Error: Could not reach nClaw service at %s\n" "${claw_url}" >&2
+    return 1
+  }
 
   if [ -z "$resp" ]; then
-    cli_error "No response from claw service at ${claw_url}. Is it running?"
+    printf "Error: No response from nClaw service at %s\n" "${claw_url}" >&2
     return 1
   fi
 
-  local code="" connect_url=""
-  if command -v jq >/dev/null 2>&1; then
-    code=$(printf '%s' "$resp" | jq -r '.short_code // .code // empty' 2>/dev/null || true)
-  fi
+  # Extract seconds from response (grep-only, no jq required)
+  local secs=""
+  secs=$(printf '%s' "${resp}" | grep -o '"seconds":[0-9]*' | grep -o '[0-9]*' | head -1)
+  secs="${secs:-600}"
 
-  # Determine connect URL from env or fallback to server IP
-  local domain="${CLAW_DOMAIN:-}"
-  if [ -n "$domain" ]; then
-    connect_url="https://${domain}"
-  else
-    local ip=""
-    ip=$(hostname -I 2>/dev/null | awk '{print $1}') || ip="your-server"
-    connect_url="http://${ip}"
-  fi
+  # Generate a random 6-digit relay code (Bash 3.2 compatible)
+  local relay_code=""
+  relay_code=$(printf '%06d' $((RANDOM % 1000000)))
 
-  if [ -n "$code" ]; then
-    printf "\n\033[1mConnect the ɳClaw App\033[0m\n\n"
-    printf "  Pairing code: \033[32;1m%s\033[0m  (valid 10 minutes)\n" "$code"
-    printf "  Server URL:   \033[36m%s\033[0m\n\n" "$connect_url"
-    printf "  1. Open the ɳClaw app on your device\n"
-    printf "  2. Tap 'Pair with code'\n"
-    printf "  3. Enter your server URL and the code above\n\n"
-  else
-    printf '%s\n' "$resp"
-  fi
+  printf "\n"
+  printf "Pairing window open for %d seconds\n" "${secs}"
+  printf "Relay code: %s\n" "${relay_code}"
+  printf "  Open the nClaw app on your device\n"
+  printf "  Go to Settings -> Connect -> Enter relay code\n\n"
+
+  # Poll /claw/pair/status every 5 seconds until window closes or time runs out
+  local elapsed=0
+  while [ "${elapsed}" -lt "${secs}" ]; do
+    sleep 5
+    elapsed=$((elapsed + 5))
+
+    local status_resp=""
+    status_resp=$(curl -sf "${claw_url}/claw/pair/status" 2>/dev/null) || continue
+
+    local is_open=""
+    is_open=$(printf '%s' "${status_resp}" | grep -o '"open":true') || true
+
+    if [ -z "${is_open}" ]; then
+      printf "\nPairing complete.\n"
+      return 0
+    fi
+
+    local remaining=""
+    remaining=$(printf '%s' "${status_resp}" | grep -o '"seconds_remaining":[0-9]*' | grep -o '[0-9]*' | head -1)
+    printf "\r%ss remaining...   " "${remaining:-?}"
+  done
+
+  printf "\nPairing window expired.\n"
+  return 1
 }
 
 # ============================================================================
