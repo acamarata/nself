@@ -543,39 +543,67 @@ cmd_ai_auth() {
 }
 
 # ============================================================================
-# T-1220: connect — PKCE browser OAuth flow for subscription accounts
+# T-1225: connect — keychain bridge OAuth flow for subscription accounts
+#
+# NOTE: The PKCE browser flow (T-1220) is architecturally blocked because
+# Anthropic's OAuth client (9d1c250a-...) has server-side redirect URI
+# restrictions — http://localhost:PORT/callback is rejected by claude.ai
+# when initiated externally. The flow only works from within Claude Code.
+#
+# Instead we use the keychain bridge (Option A): read the token that
+# Claude Code already stored in the macOS keychain after its own login flow.
 # ============================================================================
 
 cmd_ai_connect() {
-  # Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]
-  local provider="" label="" priority="1"
+  # Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>] [--list]
+  local provider="" label="" priority="1" do_list=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --provider) provider="$2"; shift 2 ;;
       --label)    label="$2";    shift 2 ;;
       --priority) priority="$2"; shift 2 ;;
+      --list)     do_list=true;  shift ;;
       --help | -h)
         printf "Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]\n\n"
-        printf "Starts a browser-based OAuth2 PKCE flow for subscription accounts.\n\n"
+        printf "Reads the OAuth token from the Claude Code keychain entry and stores it in\n"
+        printf "the AI plugin account pool. Requires the Claude Code CLI (claude) to be logged in.\n\n"
         printf "Options:\n"
-        printf "  --provider <name>   Provider name. Currently only 'anthropic' is supported.\n"
+        printf "  --provider <name>   Provider to connect. Currently only 'anthropic' is supported.\n"
         printf "  --label <name>      Friendly label for this account (default: anthropic-oauth-YYYYMMDD)\n"
-        printf "  --priority <n>      Routing priority (default: 1; lower = higher priority)\n\n"
+        printf "  --priority <n>      Routing priority (default: 1; lower = higher priority)\n"
+        printf "  --list              List currently connected OAuth accounts\n\n"
+        printf "How it works:\n"
+        printf "  1. You log into Claude Code CLI normally: claude /login\n"
+        printf "  2. nself reads the resulting token from the macOS keychain\n"
+        printf "  3. nself stores the token in the AI plugin (encrypted, with auto-refresh)\n\n"
         printf "Examples:\n"
         printf "  nself ai connect --provider anthropic\n"
         printf "  nself ai connect --provider anthropic --label my-claude-max --priority 1\n"
+        printf "  nself ai connect --list\n"
         return 0
         ;;
       *) shift ;;
     esac
   done
 
+  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+
+  if [ "$do_list" = "true" ]; then
+    local list_resp
+    list_resp=$(curl -s "${ai_url}/accounts" 2>/dev/null)
+    printf '%s\n' "$list_resp" | grep -o '"id":"[^"]*"\|"provider":"[^"]*"\|"label":"[^"]*"\|"auth_type":"[^"]*"' | \
+      awk -F'"' 'NR%4==0{printf "\n"} {printf "  %s: %s\n", $2, $4}' || \
+      printf '%s\n' "$list_resp"
+    return 0
+  fi
+
   if [ -z "$provider" ]; then
     printf "Usage: nself ai connect --provider <anthropic> [--label <name>] [--priority <n>]\n" >&2
+    printf "Run 'nself ai connect --help' for more information.\n" >&2
     return 1
   fi
 
-  # Validate provider (only anthropic supports PKCE OAuth currently)
+  # Only anthropic is supported via keychain bridge
   case "$provider" in
     anthropic) ;;
     *)
@@ -584,153 +612,143 @@ cmd_ai_connect() {
       ;;
   esac
 
-  # Validate required tools
-  local dep
-  for dep in openssl python3 curl; do
-    if ! command -v "$dep" >/dev/null 2>&1; then
-      printf "Error: required tool not found: %s\n" "$dep" >&2
-      return 1
-    fi
-  done
-
-  local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
-
-  # Provider-specific OAuth configuration
-  local client_id="9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-  local auth_url_base="https://claude.ai/oauth/authorize"
-  local token_url="https://platform.claude.com/v1/oauth/token"
-  local scope="user:profile user:inference user:sessions:claude_code user:mcp_servers"
-
-  # Generate PKCE values and state
-  local code_verifier code_challenge state
-  code_verifier=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')
-  code_challenge=$(printf '%s' "$code_verifier" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=\n')
-  state=$(openssl rand -hex 16)
-
-  # Pick a random local port for the callback listener
-  local port
-  port=$(( (RANDOM % 10000) + 20000 ))
-
-  # URL-encode the scope string
-  local scope_enc
-  scope_enc=$(printf '%s' "$scope" | python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.stdin.read().strip()),end="")')
-
-  # Build the full authorization URL
-  local auth_url
-  auth_url="${auth_url_base}?response_type=code&client_id=${client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A${port}%2Fcallback&scope=${scope_enc}&state=${state}&code_challenge=${code_challenge}&code_challenge_method=S256"
-
-  # Write the Python callback listener to a temp file
-  local tmpscript
-  tmpscript=$(mktemp /tmp/nself-oauth-XXXXXX.py)
-
-  # Write the callback server script
-  cat > "$tmpscript" << 'PYEOF'
-import http.server, urllib.parse, sys
-
-port = int(sys.argv[1])
-
-class H(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        p = urllib.parse.urlparse(self.path)
-        if p.path != '/callback':
-            self.send_response(404); self.end_headers(); return
-        q = urllib.parse.parse_qs(p.query)
-        code = (q.get('code') or [''])[0]
-        state = (q.get('state') or [''])[0]
-        err = (q.get('error') or [''])[0]
-        if err:
-            sys.stdout.write('ERROR:' + err + '\n'); sys.stdout.flush()
-            self.send_response(400); self.end_headers()
-            self.wfile.write(b'<html><body>Error: ' + err.encode() + b'. Close this tab.</body></html>')
-            sys.exit(1)
-        if code:
-            sys.stdout.write('CODE:' + code + '\n')
-            sys.stdout.write('STATE:' + state + '\n')
-            sys.stdout.flush()
-            self.send_response(200); self.end_headers()
-            self.wfile.write(b'<html><body><h2>Connected!</h2><p>You can close this tab.</p><script>setTimeout(()=>window.close(),1500)</script></body></html>')
-            sys.exit(0)
-        self.send_response(400); self.end_headers()
-    def log_message(self, *a): pass
-
-srv = http.server.HTTPServer(('127.0.0.1', port), H)
-srv.timeout = 300
-srv.handle_request()
-PYEOF
-
-  log_info "Opening browser for ${provider} OAuth login..."
-  log_info "Authorize URL: ${auth_url}"
-
-  # Open the browser
-  if command -v open >/dev/null 2>&1; then
-    open "$auth_url" 2>/dev/null || true
-  elif command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$auth_url" 2>/dev/null || true
-  fi
-
-  printf "\033[0;34m[INFO]\033[0m Waiting for browser callback on port %s (timeout: 5 min)...\n" "$port"
-
-  # Run the callback listener and capture output
-  local listener_output
-  listener_output=$(python3 "$tmpscript" "$port" 2>/dev/null)
-  rm -f "$tmpscript"
-
-  # Parse CODE and STATE from listener output
-  local code returned_state
-  code=$(printf '%s' "$listener_output" | grep '^CODE:' | cut -d: -f2-)
-  returned_state=$(printf '%s' "$listener_output" | grep '^STATE:' | cut -d: -f2-)
-
-  # Check for error response
-  local oauth_error
-  oauth_error=$(printf '%s' "$listener_output" | grep '^ERROR:' | cut -d: -f2-)
-  if [ -n "$oauth_error" ]; then
-    cli_error "OAuth error: ${oauth_error}"
+  # Require macOS (keychain is macOS-specific)
+  if [ "$(uname -s)" != "Darwin" ]; then
+    cli_error "nself ai connect requires macOS (reads from macOS Keychain)."
+    printf "\n  On Linux: set the token directly via environment variable:\n"
+    printf "    ANTHROPIC_OAUTH_TOKEN_1=sk-ant-oat01-... nself start\n"
+    printf "  Or store via REST API:\n"
+    printf "    curl -X POST \${NSELF_AI_URL}/accounts/oauth -d '{...}'\n\n"
     return 1
   fi
 
-  if [ -z "$code" ]; then
-    cli_error "No authorization code received. Authentication may have timed out or been cancelled."
+  # Check for the security command
+  if ! command -v security >/dev/null 2>&1; then
+    cli_error "macOS 'security' command not found."
     return 1
   fi
 
-  # Verify state matches to prevent CSRF
-  if [ "$returned_state" != "$state" ]; then
-    cli_error "State mismatch — possible CSRF. Aborting."
+  # Read the Claude Code credentials from the keychain
+  local keychain_json
+  keychain_json=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null || true)
+
+  if [ -z "$keychain_json" ]; then
+    cli_error "No Claude Code credentials found in keychain."
+    printf "\n  To add credentials:\n"
+    printf "  1. Install Claude Code CLI: pip install claude-code OR brew install claude-code\n"
+    printf "  2. Log in: claude /login\n"
+    printf "  3. Then retry: nself ai connect --provider anthropic\n\n"
+    printf "  For accounts beyond the first, log out and back in:\n"
+    printf "  1. claude /logout\n"
+    printf "  2. claude /login   (log in as the next account)\n"
+    printf "  3. nself ai connect --provider anthropic --label account2 --priority 2\n\n"
     return 1
   fi
 
-  log_info "Authorization code received. Exchanging for tokens..."
+  # Parse the JSON using python3 (required for Claude Code anyway)
+  if ! command -v python3 >/dev/null 2>&1; then
+    cli_error "python3 is required to parse the keychain entry."
+    return 1
+  fi
 
-  # Exchange code for tokens (no client_secret — public PKCE client)
-  local token_resp
-  token_resp=$(curl -s -X POST "$token_url" \
-    -H "Content-Type: application/json" \
-    -d "{\"grant_type\":\"authorization_code\",\"code\":\"${code}\",\"redirect_uri\":\"http://localhost:${port}/callback\",\"client_id\":\"${client_id}\",\"code_verifier\":\"${code_verifier}\"}" \
-    2>/dev/null)
+  local access_token refresh_token expires_at email
+  access_token=$(printf '%s' "$keychain_json" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    # Try nested structure first (claudeAiOauth.accessToken), then flat
+    oauth = d.get('claudeAiOauth') or d
+    print(oauth.get('accessToken') or oauth.get('access_token') or '')
+except Exception:
+    print('')
+" 2>/dev/null || true)
 
-  local access_token refresh_token expires_in
-  access_token=$(printf '%s' "$token_resp" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
-  refresh_token=$(printf '%s' "$token_resp" | grep -o '"refresh_token":"[^"]*"' | cut -d'"' -f4)
-  expires_in=$(printf '%s' "$token_resp" | grep -o '"expires_in":[0-9]*' | grep -o '[0-9]*$')
+  refresh_token=$(printf '%s' "$keychain_json" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    oauth = d.get('claudeAiOauth') or d
+    print(oauth.get('refreshToken') or oauth.get('refresh_token') or '')
+except Exception:
+    print('')
+" 2>/dev/null || true)
+
+  expires_at=$(printf '%s' "$keychain_json" | python3 -c "
+import sys, json
+from datetime import datetime, timedelta, timezone
+try:
+    d = json.load(sys.stdin)
+    oauth = d.get('claudeAiOauth') or d
+    exp = oauth.get('expiresAt') or oauth.get('expires_at')
+    if exp:
+        # Handle epoch millis or epoch seconds
+        if isinstance(exp, (int, float)):
+            ts = exp/1000.0 if exp > 1e10 else float(exp)
+            print(datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
+        else:
+            print(str(exp))
+    else:
+        # Default 10h from now (Claude Max tokens expire ~10h)
+        print((datetime.now(tz=timezone.utc)+timedelta(hours=10)).strftime('%Y-%m-%dT%H:%M:%SZ'))
+except Exception:
+    from datetime import datetime, timedelta, timezone
+    print((datetime.now(tz=timezone.utc)+timedelta(hours=10)).strftime('%Y-%m-%dT%H:%M:%SZ'))
+" 2>/dev/null || true)
+
+  email=$(printf '%s' "$keychain_json" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    oauth = d.get('claudeAiOauth') or d
+    print(oauth.get('email') or oauth.get('userEmail') or '')
+except Exception:
+    print('')
+" 2>/dev/null || true)
 
   if [ -z "$access_token" ]; then
-    cli_error "Token exchange failed. Response: ${token_resp}"
+    cli_error "Could not extract access token from keychain entry."
+    printf "\n  The keychain entry may be in an unexpected format.\n"
+    printf "  Try: security find-generic-password -s 'Claude Code-credentials' -w\n"
+    printf "  and inspect the JSON structure.\n\n"
     return 1
   fi
 
-  # Calculate expires_at (cross-platform: macOS + Linux via python3)
-  expires_in="${expires_in:-86400}"
-  local expires_at
-  expires_at=$(python3 -c "from datetime import datetime,timedelta;print((datetime.utcnow()+timedelta(seconds=${expires_in})).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  # Verify it looks like a Claude OAuth token
+  case "$access_token" in
+    sk-ant-oat01-*) ;;
+    *)
+      log_info "Warning: token prefix does not match expected Claude OAuth format (sk-ant-oat01-)"
+      log_info "Proceeding anyway — the AI plugin will auto-detect auth type."
+      ;;
+  esac
 
-  # Default label if not provided
+  # Default label
   if [ -z "$label" ]; then
-    label="${provider}-oauth-$(date +%Y%m%d)"
+    if [ -n "$email" ]; then
+      label="${provider}-$(printf '%s' "$email" | cut -d@ -f1)-$(date +%Y%m%d)"
+    else
+      label="${provider}-oauth-$(date +%Y%m%d)"
+    fi
+  fi
+
+  log_info "Storing ${provider} OAuth token in AI plugin..."
+  if [ -n "$email" ]; then
+    log_info "Account: ${email}"
   fi
 
   # POST tokens to the AI plugin
-  local body
-  body="{\"provider\":\"${provider}\",\"access_token\":\"${access_token}\",\"refresh_token\":\"${refresh_token}\",\"expires_at\":\"${expires_at}\",\"label\":\"${label}\",\"priority\":${priority}}"
+  local body refresh_field
+  if [ -n "$refresh_token" ]; then
+    refresh_field=",\"refresh_token\":\"${refresh_token}\""
+  else
+    refresh_field=""
+  fi
+  local email_field=""
+  if [ -n "$email" ]; then
+    email_field=",\"email\":\"${email}\""
+  fi
+
+  body="{\"provider\":\"${provider}\",\"access_token\":\"${access_token}\"${refresh_field},\"expires_at\":\"${expires_at}\",\"label\":\"${label}\",\"priority\":${priority}${email_field}}"
 
   local store_resp stored_id
   store_resp=$(curl -s -X POST "${ai_url}/accounts/oauth" \
@@ -739,11 +757,22 @@ PYEOF
   stored_id=$(printf '%s' "$store_resp" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
 
   if [ -z "$stored_id" ]; then
-    cli_error "Failed to store OAuth tokens in AI plugin. Response: ${store_resp}"
+    cli_error "Failed to store OAuth token in AI plugin. Response: ${store_resp}"
+    printf "\n  Make sure the AI plugin is running: nself service status ai\n\n"
     return 1
   fi
 
-  log_success "Connected! ${provider} OAuth account stored (id: ${stored_id}, label: ${label})."
+  if [ -n "$email" ]; then
+    log_success "Connected ${email} as '${label}' (id: ${stored_id}, priority: ${priority})"
+  else
+    log_success "Connected! OAuth account stored as '${label}' (id: ${stored_id}, priority: ${priority})"
+  fi
+
+  if [ -n "$refresh_token" ]; then
+    log_info "Refresh token stored — account will auto-refresh before expiry."
+  else
+    log_info "No refresh token found — you will need to reconnect when the token expires (~10h)."
+  fi
 }
 
 # ============================================================================
