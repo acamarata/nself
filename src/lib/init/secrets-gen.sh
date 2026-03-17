@@ -183,6 +183,18 @@ auto_generate_secrets_for_env() {
     fi
   fi
 
+  # Inter-plugin auth token — sent as X-Internal-Token header between plugins
+  # Generate PLUGIN_INTERNAL_SECRET if not already present with a real value
+  if ! grep -q "^PLUGIN_INTERNAL_SECRET=.\\+" "$env_file" 2>/dev/null; then
+    local plugin_secret
+    plugin_secret=$(generate_random_secret 64 "hex")
+    if grep -q "^PLUGIN_INTERNAL_SECRET=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^PLUGIN_INTERNAL_SECRET=.*|PLUGIN_INTERNAL_SECRET=$plugin_secret|" "$env_file"
+    else
+      printf "PLUGIN_INTERNAL_SECRET=%s\n" "$plugin_secret" >> "$env_file"
+    fi
+  fi
+
   # Clean up backup files
   rm -f "$env_file.bak"
 }

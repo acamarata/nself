@@ -102,7 +102,18 @@ claw_usage() {
   printf "                            --subject <text>\n"
   printf "                            [--body <text>]\n"
   printf "  email-threads                                         List claw thread-to-session mappings\n"
-  printf "  migrate-v1                                            Migrate v1 data (np_claw_*) to v2 tables (cl_*)\n\n"
+  printf "  migrate-v1                                            Migrate v1 data (np_claw_*) to v2 tables (cl_*)\n"
+  printf "  reset-setup                                           Reset setup wizard and generate a new setup code\n"
+  printf "  users list                                            List connected users\n"
+  printf "  users revoke <user_id>                               Revoke access for a user\n"
+  printf "  pair                                                  Generate a pairing code to connect the ɳClaw app\n"
+  printf "  web install                                           Install the claw-web companion plugin\n"
+  printf "  web status                                            Show claw-web health\n"
+  printf "  web restart                                           Restart the claw-web container\n"
+  printf "  web logs                                              Tail claw-web container logs\n"
+  printf "  web url                                               Print the claw-web public URL\n"
+  printf "  web nginx-install                                     Print instructions to install nginx config\n"
+  printf "  web generate-vapid-keys                              Generate VAPID keys for push notifications\n\n"
   printf "Environment:\n"
   printf "  NSELF_MUX_URL           mux plugin base URL  (default: http://localhost:3711)\n"
   printf "  NSELF_CLAW_URL          claw plugin base URL (default: http://localhost:3713)\n"
@@ -122,6 +133,9 @@ claw_usage() {
   printf "  nself claw api test\n"
   printf "  nself claw voice status\n"
   printf "  nself claw voice test --text 'Hello from ɳClaw'\n"
+  printf "  nself claw pair\n"
+  printf "  nself claw users list\n"
+  printf "  nself claw web status\n"
 }
 
 # ============================================================================
@@ -234,6 +248,18 @@ cmd_claw() {
       ;;
     migrate-v1)
       cmd_claw_migrate_v1 "$@"
+      ;;
+    reset-setup)
+      cmd_claw_reset_setup "$@"
+      ;;
+    users)
+      cmd_claw_users "$@"
+      ;;
+    pair)
+      cmd_claw_pair "$@"
+      ;;
+    web)
+      cmd_claw_web "$@"
       ;;
     help | --help | -h)
       claw_usage
@@ -3570,6 +3596,285 @@ cmd_claw_chat_repl() {
     printf "\033[2mSession ended. Thread ID: %s\033[0m\n" "$thread_id"
     printf "\033[2mResume: nself claw chat --thread=%s\033[0m\n" "$thread_id"
   fi
+}
+
+# ============================================================================
+# T-1233: reset-setup — regenerate setup token
+# ============================================================================
+
+cmd_claw_reset_setup() {
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  local resp=""
+  resp=$(curl -sf -X POST "${claw_url}/claw/admin/reset-setup" \
+    -H "x-internal-token: ${internal_secret}" \
+    -H "Content-Type: application/json" 2>/dev/null) || true
+
+  if [ -z "$resp" ]; then
+    cli_error "No response from claw service at ${claw_url}. Is it running?"
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    local code=""
+    code=$(printf '%s' "$resp" | jq -r '.code // empty' 2>/dev/null || true)
+    if [ -n "$code" ]; then
+      log_success "Setup reset. New code: ${code}"
+    else
+      printf '%s\n' "$resp"
+    fi
+  else
+    printf '%s\n' "$resp"
+  fi
+}
+
+# ============================================================================
+# T-1233: users — list and revoke connected users
+# ============================================================================
+
+cmd_claw_users() {
+  local subcmd="${1:-list}"
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  shift || true
+
+  case "$subcmd" in
+
+    list)
+      local response=""
+      response=$(curl -sf "${claw_url}/claw/admin/users" \
+        -H "x-internal-token: ${internal_secret}" 2>/dev/null) || true
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local count=""
+        count=$(printf '%s' "$response" | jq '.users | length' 2>/dev/null || printf '0')
+        if [ "${count:-0}" -eq 0 ]; then
+          log_info "No users found."
+          return 0
+        fi
+        printf "\033[34m%-36s %-24s %-10s %s\033[0m\n" "ID" "Display Name" "Role" "Created"
+        printf "%-36s %-24s %-10s %s\n" "------------------------------------" "------------------------" "----------" "-------------------"
+        printf '%s' "$response" | jq -r '.users[] | [.id, (.display_name // "-"), (.role // "-"), (.created_at // "-")] | @tsv' 2>/dev/null | \
+        while IFS=$(printf '\t') read -r uid dname role created; do
+          printf "%-36s %-24s %-10s %s\n" "$uid" "$dname" "$role" "$created"
+        done
+      else
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    revoke)
+      local user_id="${1:-}"
+      if [ -z "$user_id" ]; then
+        printf "Usage: nself claw users revoke <user_id>\n" >&2
+        return 1
+      fi
+      local safe_uid=""
+      safe_uid=$(printf '%s' "$user_id" | sed 's/[^a-fA-F0-9-]//g')
+      local resp=""
+      resp=$(curl -sf -X DELETE "${claw_url}/claw/admin/users/${safe_uid}" \
+        -H "x-internal-token: ${internal_secret}" 2>/dev/null) || true
+      if [ $? -eq 0 ]; then
+        log_success "User ${safe_uid} revoked."
+      else
+        cli_error "Failed to revoke user. Is nself-claw running?"
+        return 1
+      fi
+      ;;
+
+    help | --help | -h)
+      printf "Usage: nself claw users [list|revoke <id>]\n\n"
+      printf "Subcommands:\n"
+      printf "  list            List all connected users\n"
+      printf "  revoke <id>     Revoke access for a user by ID\n"
+      ;;
+
+    *)
+      cli_error "Unknown users action: $subcmd"
+      printf "Actions: list, revoke\n"
+      return 1
+      ;;
+
+  esac
+}
+
+# ============================================================================
+# T-1233 + T-1234: pair — generate pairing code for the ɳClaw app
+# ============================================================================
+
+cmd_claw_pair() {
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  if [ -z "$internal_secret" ]; then
+    cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+    return 1
+  fi
+
+  local resp=""
+  resp=$(curl -sf -X POST "${claw_url}/claw/devices/pair" \
+    -H "x-internal-token: ${internal_secret}" \
+    -H "Content-Type: application/json" \
+    -d '{}' 2>/dev/null) || true
+
+  if [ -z "$resp" ]; then
+    cli_error "No response from claw service at ${claw_url}. Is it running?"
+    return 1
+  fi
+
+  local code="" connect_url=""
+  if command -v jq >/dev/null 2>&1; then
+    code=$(printf '%s' "$resp" | jq -r '.short_code // .code // empty' 2>/dev/null || true)
+  fi
+
+  # Determine connect URL from env or fallback to server IP
+  local domain="${CLAW_DOMAIN:-}"
+  if [ -n "$domain" ]; then
+    connect_url="https://${domain}"
+  else
+    local ip=""
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}') || ip="your-server"
+    connect_url="http://${ip}"
+  fi
+
+  if [ -n "$code" ]; then
+    printf "\n\033[1mConnect the ɳClaw App\033[0m\n\n"
+    printf "  Pairing code: \033[32;1m%s\033[0m  (valid 10 minutes)\n" "$code"
+    printf "  Server URL:   \033[36m%s\033[0m\n\n" "$connect_url"
+    printf "  1. Open the ɳClaw app on your device\n"
+    printf "  2. Tap 'Pair with code'\n"
+    printf "  3. Enter your server URL and the code above\n\n"
+  else
+    printf '%s\n' "$resp"
+  fi
+}
+
+# ============================================================================
+# T-1234: web — claw-web companion plugin management
+# ============================================================================
+
+cmd_claw_web() {
+  local subcmd="${1:-help}"
+  shift 2>/dev/null || true
+
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+  case "$subcmd" in
+
+    install)
+      nself plugin install claw-web
+      ;;
+
+    status)
+      local web_url="${PLUGIN_CLAW_WEB_INTERNAL_URL:-http://plugin-claw-web:3004}"
+      local response=""
+      response=$(curl -sf "${web_url}/health" 2>/dev/null) || true
+      if [ -n "$response" ]; then
+        if command -v jq >/dev/null 2>&1; then
+          printf '%s' "$response" | jq . 2>/dev/null || printf '%s\n' "$response"
+        else
+          printf '%s\n' "$response"
+        fi
+      else
+        cli_error "claw-web is not running (tried ${web_url})"
+        return 1
+      fi
+      ;;
+
+    restart)
+      nself restart claw-web
+      ;;
+
+    logs)
+      if docker logs --tail 100 -f plugin-claw-web 2>/dev/null; then
+        true
+      elif docker logs --tail 100 -f nself-web_plugin-claw-web_1 2>/dev/null; then
+        true
+      else
+        cli_error "Could not find claw-web container. Is it running?"
+        return 1
+      fi
+      ;;
+
+    url)
+      local domain="${CLAW_DOMAIN:-}"
+      if [ -n "$domain" ]; then
+        printf "https://%s\n" "$domain"
+      else
+        cli_error "CLAW_DOMAIN not set. Run: nself claw setup"
+        return 1
+      fi
+      ;;
+
+    nginx-install)
+      local domain="${CLAW_DOMAIN:-claw.yourdomain.com}"
+      printf "nginx config for claw-web:\n\n"
+      printf "  Domain: %s\n" "$domain"
+      printf "  After updating CLAW_DOMAIN in your .env, run:\n"
+      printf "    nself build && nself restart nginx\n"
+      ;;
+
+    generate-vapid-keys)
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+      printf "Generating VAPID keys...\n"
+      local resp=""
+      resp=$(curl -sf -X POST "${claw_url}/claw/admin/generate-vapid-keys" \
+        -H "x-internal-token: ${internal_secret}" 2>/dev/null) || true
+      if [ -n "$resp" ]; then
+        if command -v jq >/dev/null 2>&1; then
+          printf '%s' "$resp" | jq . 2>/dev/null || printf '%s\n' "$resp"
+        else
+          printf '%s\n' "$resp"
+        fi
+        printf "\nAdd the returned keys to your .env file:\n"
+        printf "  CLAW_VAPID_PUBLIC_KEY=...\n"
+        printf "  CLAW_VAPID_PRIVATE_KEY=...\n"
+      else
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+      ;;
+
+    help | --help | -h | "")
+      printf "Usage: nself claw web <subcommand>\n\n"
+      printf "Subcommands:\n"
+      printf "  install                Install the claw-web companion plugin\n"
+      printf "  status                 Show claw-web health\n"
+      printf "  restart                Restart the claw-web container\n"
+      printf "  logs                   Tail claw-web container logs\n"
+      printf "  url                    Print the claw-web public URL\n"
+      printf "  nginx-install          Print instructions to wire up nginx\n"
+      printf "  generate-vapid-keys    Generate VAPID keys for push notifications\n"
+      ;;
+
+    *)
+      cli_error "Unknown web action: $subcmd"
+      printf "Actions: install, status, restart, logs, url, nginx-install, generate-vapid-keys\n"
+      return 1
+      ;;
+
+  esac
 }
 
 # ============================================================================
