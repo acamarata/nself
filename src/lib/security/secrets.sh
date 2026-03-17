@@ -80,6 +80,8 @@ secrets::generate_all() {
   local minio_root_password
   local redis_password
   local grafana_admin_password
+  local notify_internal_secret
+  local cron_internal_secret
 
   postgres_password=$(secrets::generate_random 32 alphanumeric)
   hasura_admin_secret=$(secrets::generate_random 64 hex)
@@ -88,6 +90,8 @@ secrets::generate_all() {
   minio_root_password=$(secrets::generate_random 32 alphanumeric)
   redis_password=$(secrets::generate_random 32 alphanumeric)
   grafana_admin_password=$(secrets::generate_random 24 alphanumeric)
+  notify_internal_secret=$(secrets::generate_random 32 hex)
+  cron_internal_secret=$(secrets::generate_random 32 hex)
 
   # Write to secrets file
   cat >"$output_file" <<EOF
@@ -117,6 +121,11 @@ REDIS_PASSWORD=$redis_password
 
 # Grafana (if monitoring enabled)
 GRAFANA_ADMIN_PASSWORD=$grafana_admin_password
+
+# Plugin Secrets (auto-generated, do not share)
+# Required by the nself-notify and nself-cron pro plugins
+NOTIFY_INTERNAL_SECRET=$notify_internal_secret
+CRON_INTERNAL_SECRET=$cron_internal_secret
 EOF
 
   # Set secure permissions
