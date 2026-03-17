@@ -308,8 +308,161 @@ SQL
   cli_info "Edit SQL files, then run: nself db migrate up"
 }
 
+# migrate_plugin <plugin_name>
+# Apply pending migrations for a specific plugin only.
+# Migrations live in: hasura/migrations/plugins/<plugin_name>/
+# Tracking is stored in np_common.schema_versions, not public.schema_migrations.
+# Each migration SQL is prepended with SET search_path = np_{name},public;
+# and run as the np_{name}_role (via SET LOCAL ROLE).
+# Bash 3.2 compatible.
+migrate_plugin() {
+  local plugin_name="$1"
+
+  if [[ -z "$plugin_name" ]]; then
+    cli_error "Plugin name required"
+    printf "Usage: nself db migrate up --plugin <name>\n"
+    return 1
+  fi
+
+  local schema_name
+  schema_name="np_$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_')"
+  local role_name="${schema_name}_role"
+
+  cli_header "nself db migrate up --plugin $plugin_name"
+  cli_subheader "Apply plugin migrations in schema: $schema_name"
+
+  # Load environment
+  load_env_with_priority true
+
+  local db_container="${PROJECT_NAME}_postgres"
+  local db_user="${POSTGRES_USER:-postgres}"
+  local db_name="${POSTGRES_DB:-${PROJECT_NAME}}"
+
+  # Check if container is running
+  if ! docker ps --format "{{.Names}}" | grep -q "^${db_container}$"; then
+    cli_error "Database container not running: $db_container"
+    cli_info "Start services with: nself start"
+    return 1
+  fi
+
+  # Ensure np_common schema and tracking table exist
+  printf "${COLOR_BLUE}→${COLOR_RESET} Initializing plugin migration tracking...\n"
+  docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" >/dev/null 2>&1 <<'NPCOMMON' || true
+CREATE SCHEMA IF NOT EXISTS np_common;
+CREATE TABLE IF NOT EXISTS np_common.schema_versions (
+  plugin TEXT NOT NULL,
+  version INT NOT NULL,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (plugin, version)
+);
+NPCOMMON
+
+  # Ensure plugin schema + role exist (idempotent)
+  docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" >/dev/null 2>&1 <<NPSCHEMA || true
+DO \$\$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${role_name}') THEN
+    CREATE ROLE ${role_name} NOLOGIN;
+  END IF;
+END \$\$;
+CREATE SCHEMA IF NOT EXISTS ${schema_name};
+GRANT USAGE ON SCHEMA ${schema_name} TO ${role_name};
+GRANT CREATE ON SCHEMA ${schema_name} TO ${role_name};
+ALTER ROLE ${role_name} SET search_path = ${schema_name}, public;
+NPSCHEMA
+
+  # Plugin migrations directory
+  local migrations_dir="hasura/migrations/plugins/${plugin_name}"
+  if [[ ! -d "$migrations_dir" ]]; then
+    cli_warning "No plugin migrations directory found: $migrations_dir"
+    cli_info "Create with: mkdir -p $migrations_dir"
+    cli_info "Then add numbered SQL files: 001_init.sql, 002_add_index.sql, etc."
+    return 0
+  fi
+
+  # Get applied versions for this plugin from np_common.schema_versions
+  local applied_versions
+  applied_versions=$(docker exec "$db_container" psql -U "$db_user" -d "$db_name" \
+    -t -c "SELECT version FROM np_common.schema_versions WHERE plugin = '${plugin_name}' ORDER BY version" \
+    2>/dev/null || printf "")
+
+  local pending_count=0
+  local applied_count=0
+  local failed_count=0
+
+  printf "\n${COLOR_BLUE}→${COLOR_RESET} Checking pending migrations for plugin: %s\n" "$plugin_name"
+
+  # Apply migrations in sorted order (numeric prefix: 001, 002, ...)
+  for up_sql in $(find "$migrations_dir" -maxdepth 1 -name '*.sql' | sort); do
+    local basename_sql
+    basename_sql=$(basename "$up_sql")
+    # Extract leading numeric version (e.g. "001" from "001_init.sql")
+    local version
+    version=$(printf '%s' "$basename_sql" | sed 's/^0*//' | sed 's/[^0-9].*//')
+    # Handle all-zero names (e.g. "000_seed.sql" -> version 0)
+    if [[ -z "$version" ]]; then
+      version=0
+    fi
+
+    # Skip if already applied
+    if printf '%s' "$applied_versions" | grep -q "^\s*${version}\s*$"; then
+      applied_count=$((applied_count + 1))
+      continue
+    fi
+
+    printf "  ${COLOR_BLUE}⠋${COLOR_RESET} Applying: %s..." "$basename_sql"
+
+    # Build wrapped SQL: set role + search_path, then the migration body
+    local wrapped_sql
+    wrapped_sql="SET LOCAL ROLE ${role_name}; SET search_path = ${schema_name},public; $(cat "$up_sql")"
+
+    local start_time
+    start_time=$(date +%s)
+
+    if printf '%s' "$wrapped_sql" | docker exec -i "$db_container" \
+        psql -U "$db_user" -d "$db_name" -v ON_ERROR_STOP=1 >/dev/null 2>&1; then
+      local end_time
+      end_time=$(date +%s)
+      local duration=$((end_time - start_time))
+
+      # Record in np_common.schema_versions
+      docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
+        -c "INSERT INTO np_common.schema_versions (plugin, version) VALUES ('${plugin_name}', ${version}) ON CONFLICT DO NOTHING;" \
+        >/dev/null 2>&1 || true
+
+      printf "\r  ${COLOR_GREEN}✓${COLOR_RESET} %s (%ss)\n" "$basename_sql" "$duration"
+      pending_count=$((pending_count + 1))
+    else
+      printf "\r  ${COLOR_RED}✗${COLOR_RESET} %s (FAILED)\n" "$basename_sql"
+      cli_error "Plugin migration failed. Check SQL syntax and database logs."
+      failed_count=$((failed_count + 1))
+      break
+    fi
+  done
+
+  printf "\n"
+  if [[ $failed_count -gt 0 ]]; then
+    cli_error "Plugin migration failed"
+    cli_info "Fix the SQL error and run: nself db migrate up --plugin $plugin_name"
+    return 1
+  elif [[ $pending_count -eq 0 ]]; then
+    cli_success "Plugin $plugin_name is up to date"
+    if [[ $applied_count -gt 0 ]]; then
+      printf "  Total: %d migration(s) applied\n" "$applied_count"
+    else
+      printf "  No migrations found\n"
+    fi
+  else
+    cli_success "Plugin migrations applied"
+    printf "  Applied: %d migration(s)\n" "$pending_count"
+    printf "  Total:   %d migration(s)\n" "$((applied_count + pending_count))"
+  fi
+
+  printf "\n"
+}
+
 # Export functions
 export -f migrate_up
 export -f migrate_down
 export -f migrate_status
 export -f migrate_create
+export -f migrate_plugin

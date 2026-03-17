@@ -71,9 +71,35 @@ db_migrate() {
     source "$SCRIPT_DIR/../lib/database/migrate.sh"
   fi
 
+  # Source schema isolation library for plugin migrate support
+  if [[ -f "$SCRIPT_DIR/../lib/plugin/schema-isolation.sh" ]]; then
+    source "$SCRIPT_DIR/../lib/plugin/schema-isolation.sh" 2>/dev/null || true
+  fi
+
   case "$action" in
     up)
-      migrate_up "$@"
+      # Check for --plugin <name> flag in remaining args
+      local _plugin_name="" _remaining_args=""
+      local _prev_arg=""
+      for _a in "$@"; do
+        if [[ "$_prev_arg" == "--plugin" ]]; then
+          _plugin_name="$_a"
+          _prev_arg=""
+          continue
+        fi
+        if [[ "$_a" == "--plugin" ]]; then
+          _prev_arg="--plugin"
+          continue
+        fi
+        _remaining_args="${_remaining_args} ${_a}"
+        _prev_arg="$_a"
+      done
+      if [[ -n "$_plugin_name" ]]; then
+        migrate_plugin "$_plugin_name"
+      else
+        # shellcheck disable=SC2086
+        migrate_up $( printf '%s' "$_remaining_args" | sed 's/^ *//')
+      fi
       ;;
     down)
       migrate_down "$@"
@@ -85,12 +111,13 @@ db_migrate() {
       migrate_create "$@"
       ;;
     help | --help | -h)
-      printf "Usage: nself db migrate [up|down|status|create]\n"
+      printf "Usage: nself db migrate [up|down|status|create] [--plugin <name>]\n"
       printf "\nSubcommands:\n"
-      printf "  up      Apply pending migrations\n"
-      printf "  down    Revert last migration\n"
-      printf "  status  Show migration status\n"
-      printf "  create  Create new migration file\n"
+      printf "  up                     Apply pending migrations\n"
+      printf "  up --plugin <name>     Apply migrations for a specific plugin only\n"
+      printf "  down                   Revert last migration\n"
+      printf "  status                 Show migration status\n"
+      printf "  create                 Create new migration file\n"
       return 0
       ;;
     *)

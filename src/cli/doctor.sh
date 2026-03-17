@@ -13,6 +13,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/progress.sh"
 source "$CLI_SCRIPT_DIR/../lib/utils/docker.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+source "$CLI_SCRIPT_DIR/../lib/plugin/schema-isolation.sh" 2>/dev/null || true
 
 # Initialize counters
 ISSUES_FOUND=0
@@ -271,6 +272,38 @@ has_running_containers() {
   local running_count=$(docker ps --filter "name=${project_name}_" --format "{{.Names}}" 2>/dev/null | wc -l | tr -d ' ')
 
   [[ "${running_count}" -gt 0 ]]
+}
+
+# check_plugin_schema_isolation_all
+# Scans all installed plugins and warns if any np_{name}_* tables still
+# exist in the public schema (schema isolation incomplete).
+# Calls check_plugin_schema_isolation() from schema-isolation.sh for each plugin.
+# Bash 3.2 compatible.
+check_plugin_schema_isolation_all() {
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+
+  # Nothing to check if no plugins are installed
+  if [[ ! -d "$plugin_dir" ]]; then
+    return 0
+  fi
+
+  local issues=0
+
+  for plugin_path in "$plugin_dir"/*/plugin.json; do
+    [[ -f "$plugin_path" ]] || continue
+    local pname
+    pname=$(basename "$(dirname "$plugin_path")")
+    [[ "$pname" == "_shared" ]] && continue
+
+    if declare -f check_plugin_schema_isolation >/dev/null 2>&1; then
+      check_plugin_schema_isolation "$pname" || issues=$((issues + 1))
+    fi
+  done
+
+  if [[ $issues -gt 0 ]]; then
+    warning_found
+    printf "  Run 'nself plugin migrate-schema <name>' to complete schema isolation.\n"
+  fi
 }
 
 # Function to check running containers health
@@ -1115,6 +1148,9 @@ main() {
 
     # Check plugin health
     check_plugins 2>/dev/null || true
+
+    # Check plugin schema isolation — warn if np_{name}_* tables are in public
+    check_plugin_schema_isolation_all 2>/dev/null || true
 
   else
     # No containers running - perform full system requirements check

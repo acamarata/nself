@@ -1,0 +1,8 @@
+{
+  "name": "audio-intel",
+  "description": "Audio intelligence: transcribe + analyze audio from URLs and RSS feeds",
+  "language": "python",
+  "port": 8080,
+  "env_vars": ["WHISPER_MODEL", "AI_ANALYSIS_PROMPT", "DATABASE_URL"],
+  "category": "intelligence"
+}

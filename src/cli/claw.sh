@@ -97,6 +97,7 @@ claw_usage() {
   printf "  persona set-system <name> \"<prompt>\"                  Update system prompt for a persona\n"
   printf "  memory prune [--days=90]                              Delete memory blocks older than N days\n"
   printf "  chat [--thread=<id>] [--persona=<name>]               Interactive multi-turn chat REPL\n"
+  printf "  tools list [--json]                                   List all tools available to the ɳClaw agent\n"
   printf "  email-rules list                                      List ClawDelegate email routing rules\n"
   printf "  email-rules test-delegate --email <addr>              Test delegate routing for an email\n"
   printf "                            --subject <text>\n"
@@ -113,7 +114,8 @@ claw_usage() {
   printf "  web logs                                              Tail claw-web container logs\n"
   printf "  web url                                               Print the claw-web public URL\n"
   printf "  web nginx-install                                     Print instructions to install nginx config\n"
-  printf "  web generate-vapid-keys                              Generate VAPID keys for push notifications\n\n"
+  printf "  web generate-vapid-keys                              Generate VAPID keys for push notifications\n"
+  printf "  quick-setup                                           2-step wizard: install claw plugin + open browser onboarding\n\n"
   printf "Environment:\n"
   printf "  NSELF_MUX_URL           mux plugin base URL  (default: http://localhost:3711)\n"
   printf "  NSELF_CLAW_URL          claw plugin base URL (default: http://localhost:3713)\n"
@@ -258,8 +260,14 @@ cmd_claw() {
     pair)
       cmd_claw_pair "$@"
       ;;
+    tools)
+      cmd_claw_tools "$@"
+      ;;
     web)
       cmd_claw_web "$@"
+      ;;
+    quick-setup)
+      cmd_claw_quick_setup "$@"
       ;;
     help | --help | -h)
       claw_usage
@@ -3875,6 +3883,150 @@ cmd_claw_web() {
       ;;
 
   esac
+}
+
+# ============================================================================
+# tools subcommand (T-1360)
+# ============================================================================
+
+cmd_claw_tools() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  case "$subcmd" in
+
+    list)
+      # List all tools available to the claw agent (built-in + plugin manifest).
+      # Calls GET /claw/tools on the running claw plugin.
+      # Usage: nself claw tools list [--json]
+      local json_output="false"
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --json) json_output="true" ;;
+          *) ;;
+        esac
+        shift
+      done
+
+      local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+      local response=""
+      response=$(curl -s "${claw_url}/claw/tools" 2>/dev/null)
+
+      if [ -z "$response" ]; then
+        cli_error "No response from claw service at ${claw_url}. Is it running?"
+        return 1
+      fi
+
+      if [ "$json_output" = "true" ]; then
+        printf '%s\n' "$response"
+        return 0
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+        local tool_count=""
+        tool_count=$(printf '%s' "$response" | jq 'length' 2>/dev/null || printf "?")
+        printf "\n\033[1mɳClaw Tools Registry (%s tools)\033[0m\n\n" "$tool_count"
+        printf "%-45s %-20s %s\n" "TOOL NAME" "PLUGIN" "DESCRIPTION"
+        printf "%-45s %-20s %s\n" "---------------------------------------------" "--------------------" "-----------"
+        printf '%s' "$response" | jq -r '.[] | [
+          (.name // "unknown"),
+          (.plugin // "built-in"),
+          (.description // "" | if length > 60 then .[0:57] + "..." else . end)
+        ] | @tsv' 2>/dev/null | while IFS=$(printf '\t') read -r tool_name plugin_name description; do
+          printf "%-45s %-20s %s\n" "$tool_name" "$plugin_name" "$description"
+        done
+      else
+        # No jq — print raw JSON
+        printf '%s\n' "$response"
+      fi
+      ;;
+
+    --help | -h | help)
+      printf "nself claw tools — Tool registry commands\n\n"
+      printf "Usage: nself claw tools <action> [options]\n\n"
+      printf "Actions:\n"
+      printf "  list [--json]    List all tools available to the ɳClaw agent\n\n"
+      printf "Environment:\n"
+      printf "  NSELF_CLAW_URL   claw plugin base URL (default: http://localhost:3713)\n"
+      ;;
+
+    *)
+      cli_error "Unknown tools action: $subcmd"
+      printf "Actions: list\n"
+      return 1
+      ;;
+
+  esac
+}
+
+# ============================================================================
+# T-1368: nself claw quick-setup — 2-step onboarding wizard
+# ============================================================================
+#
+# Idempotent 2-command shortcut:
+#   1. Ensure the claw plugin is installed (runs nself plugin install claw if not)
+#   2. Open the browser to the claw-web bootstrap wizard URL
+#
+# Usage: nself claw quick-setup
+
+cmd_claw_quick_setup() {
+  case "${1:-}" in
+    -h | --help)
+      printf "nself claw quick-setup — 2-step ɳClaw onboarding wizard\n\n"
+      printf "Usage: nself claw quick-setup\n\n"
+      printf "Steps:\n"
+      printf "  1. Ensures the claw plugin is installed (runs 'nself plugin install claw' if missing)\n"
+      printf "  2. Opens your browser to the onboarding wizard at https://<CLAW_DOMAIN>/onboarding\n\n"
+      printf "This command is idempotent — safe to run multiple times.\n\n"
+      printf "Environment:\n"
+      printf "  CLAW_DOMAIN   Domain of your ɳClaw instance (read from .env)\n"
+      return 0
+      ;;
+  esac
+
+  printf "ɳClaw Quick Setup\n"
+  printf "=================\n\n"
+
+  # Step 1: Ensure plugin is installed
+  printf "Step 1/2: Checking claw plugin...\n"
+  local claw_url="${NSELF_CLAW_URL:-http://localhost:3713}"
+  local health_resp=""
+  health_resp=$(curl -s --max-time 3 "${claw_url}/health" 2>/dev/null || true)
+
+  if [ -z "$health_resp" ]; then
+    printf "  Plugin not running — installing now...\n"
+    if ! nself plugin install claw; then
+      cli_error "Failed to install claw plugin. Check your license key and try again."
+      return 1
+    fi
+    log_success "Plugin installed."
+  else
+    log_success "Plugin already installed and running."
+  fi
+
+  # Step 2: Open browser to onboarding wizard
+  printf "\nStep 2/2: Opening onboarding wizard...\n"
+  local claw_domain="${CLAW_DOMAIN:-}"
+  if [ -z "$claw_domain" ]; then
+    cli_error "CLAW_DOMAIN is not set in your .env. Set it and run 'nself build' first."
+    return 1
+  fi
+
+  local onboarding_url="https://${claw_domain}/onboarding"
+
+  # Open in browser (macOS: open, Linux: xdg-open)
+  if command -v open >/dev/null 2>&1; then
+    open "$onboarding_url" 2>/dev/null || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$onboarding_url" 2>/dev/null || true
+  fi
+
+  printf "\n"
+  log_success "ɳClaw quick setup complete."
+  printf "\n  Onboarding wizard: %s\n\n" "$onboarding_url"
+  printf "  Next steps:\n"
+  printf "  1. Open the URL above and create your account.\n"
+  printf "  2. Pair your devices at Settings -> Companion.\n"
 }
 
 # ============================================================================

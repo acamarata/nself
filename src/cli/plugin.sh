@@ -25,6 +25,7 @@ source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/dependencies.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/runtime.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/licensing.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/plugin/schema-isolation.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/cli-output.sh" 2>/dev/null || true
 
 # Fallbacks if display.sh didn't load
@@ -545,6 +546,11 @@ cmd_install() {
   # channel actually used (even if the pull failed and fell back to local build).
   mkdir -p "$PLUGIN_DIR/$plugin_name"
   printf '%s\n' "$install_channel" > "$PLUGIN_DIR/$plugin_name/.channel"
+
+  # Create plugin PG schema + role (schema isolation — idempotent, non-blocking)
+  if declare -f create_plugin_schema >/dev/null 2>&1; then
+    create_plugin_schema "$plugin_name" || true
+  fi
 
   # Run install script
   run_plugin_installer "$plugin_name"
@@ -4067,6 +4073,237 @@ _setup_ai_ollama() {
 }
 
 # ============================================================================
+# T-1366: cmd_plugin_migrate_schema — move np_{name}_* tables from public to
+# the isolated np_{name} schema.
+# Bash 3.2 compatible.
+# ============================================================================
+#
+# Usage:
+#   nself plugin migrate-schema <name>
+#   nself plugin migrate-schema <name> --dry-run
+#   nself plugin migrate-schema <name> --rollback
+#
+# What it does:
+#   For each table in public matching the pattern np_{name}_%:
+#     1. ALTER TABLE public.np_{name}_{suffix} SET SCHEMA np_{name}
+#     2. ALTER TABLE np_{name}.np_{name}_{suffix} RENAME TO {suffix}
+#      (drops the redundant np_{name}_ prefix inside the schema)
+#   Postgres automatically updates FKs and indexes on schema move.
+#
+# --rollback reverses: moves tables back to public with the np_{name}_ prefix
+#   restored.
+#
+# nself doctor calls check_plugin_schema_isolation() from schema-isolation.sh
+# to warn when public tables are found.
+
+cmd_plugin_migrate_schema() {
+  local plugin_name=""
+  local dry_run=false
+  local rollback=false
+
+  for _arg in "$@"; do
+    case "$_arg" in
+      --help|-h)
+        printf "Usage: nself plugin migrate-schema <name> [--dry-run] [--rollback]\n\n"
+        printf "Move plugin tables from public schema into the isolated np_{name} schema.\n\n"
+        printf "Arguments:\n"
+        printf "  name         Plugin name (e.g. claw, stripe, notify)\n\n"
+        printf "Options:\n"
+        printf "  --dry-run    Print what would be moved without executing\n"
+        printf "  --rollback   Move tables back to public with prefix restored\n"
+        printf "  --help, -h   Show this help text\n\n"
+        printf "Examples:\n"
+        printf "  nself plugin migrate-schema claw\n"
+        printf "  nself plugin migrate-schema claw --dry-run\n"
+        printf "  nself plugin migrate-schema claw --rollback\n\n"
+        printf "What it does:\n"
+        printf "  Moves each public.np_{name}_{suffix} table into the np_{name} schema,\n"
+        printf "  renaming it to {suffix} (drops the now-redundant prefix).\n"
+        printf "  FKs and indexes are updated automatically by Postgres.\n"
+        return 0
+        ;;
+      --dry-run)
+        dry_run=true
+        ;;
+      --rollback)
+        rollback=true
+        ;;
+      -*)
+        ;;
+      *)
+        if [[ -z "$plugin_name" ]]; then
+          plugin_name="$_arg"
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -z "$plugin_name" ]]; then
+    log_error "Plugin name required"
+    printf "\nUsage: nself plugin migrate-schema <name>\n"
+    return 1
+  fi
+
+  # Build schema and role names
+  local schema_name
+  schema_name="np_$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_')"
+  local table_prefix="${schema_name}_"
+
+  # Load environment for DB connection details
+  if declare -f load_env_with_priority >/dev/null 2>&1; then
+    load_env_with_priority true 2>/dev/null || true
+  elif [[ -f ".env" ]]; then
+    set -a
+    { set +u; source ".env"; } 2>/dev/null || true
+    set +a
+  fi
+
+  local project_name="${PROJECT_NAME:-nself}"
+  local db_container="${project_name}_postgres"
+  local db_user="${POSTGRES_USER:-postgres}"
+  local db_name="${POSTGRES_DB:-${project_name}}"
+
+  # Check container
+  if ! docker ps --format "{{.Names}}" 2>/dev/null | grep -q "^${db_container}$"; then
+    log_error "Database container not running: $db_container"
+    log_info "Start services with: nself start"
+    return 1
+  fi
+
+  if [[ "$rollback" == "true" ]]; then
+    # ── ROLLBACK: move tables from np_{name} back to public with prefix ─────
+    printf "\n"
+    log_info "Rolling back schema isolation for plugin: $plugin_name"
+    printf "  Moving tables from np_%s back to public with prefix np_%s_\n" \
+      "$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_')" \
+      "$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_')"
+    printf "\n"
+
+    # Get tables currently in the np_{name} schema
+    local isolated_tables
+    isolated_tables=$(docker exec "$db_container" psql -U "$db_user" -d "$db_name" \
+      -t -c "SELECT table_name FROM information_schema.tables
+             WHERE table_schema = '${schema_name}'
+             ORDER BY table_name;" 2>/dev/null | tr -d ' ' | grep -v '^$' || true)
+
+    if [[ -z "$isolated_tables" ]]; then
+      log_info "No tables found in schema $schema_name — nothing to roll back"
+      return 0
+    fi
+
+    local moved=0
+    while IFS= read -r tbl; do
+      [[ -z "$tbl" ]] && continue
+      local public_name="${table_prefix}${tbl}"
+      if [[ "$dry_run" == "true" ]]; then
+        printf "  [dry-run] RENAME np_%s.%s -> public.%s\n" \
+          "$(printf '%s' "$plugin_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_')" \
+          "$tbl" "$public_name"
+      else
+        printf "  Rolling back: %s.%s -> public.%s\n" "$schema_name" "$tbl" "$public_name"
+        docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
+          -c "ALTER TABLE ${schema_name}.${tbl} RENAME TO ${public_name};
+              ALTER TABLE ${schema_name}.${public_name} SET SCHEMA public;" \
+          >/dev/null 2>&1 || true
+        moved=$((moved + 1))
+      fi
+    done <<TBLS
+$isolated_tables
+TBLS
+
+    if [[ "$dry_run" == "true" ]]; then
+      printf "\n  [dry-run] No changes made\n"
+    else
+      log_success "Rollback complete: $moved table(s) returned to public schema"
+    fi
+    return 0
+  fi
+
+  # ── FORWARD: move tables from public to np_{name} schema ─────────────────
+  printf "\n"
+  log_info "Migrating plugin tables to schema: $schema_name"
+  printf "  Pattern: public.%s{suffix} -> %s.{suffix}\n" "$table_prefix" "$schema_name"
+  printf "\n"
+
+  # Find matching tables in public schema
+  local public_tables
+  public_tables=$(docker exec "$db_container" psql -U "$db_user" -d "$db_name" \
+    -t -c "SELECT table_name FROM information_schema.tables
+           WHERE table_schema = 'public'
+           AND table_name LIKE '${table_prefix}%'
+           ORDER BY table_name;" 2>/dev/null | tr -d ' ' | grep -v '^$' || true)
+
+  if [[ -z "$public_tables" ]]; then
+    log_info "No tables matching 'public.${table_prefix}*' — nothing to migrate"
+    printf "  Plugin %s may already be isolated, or has no tables yet.\n" "$plugin_name"
+    return 0
+  fi
+
+  # Ensure target schema exists (idempotent)
+  if [[ "$dry_run" == "false" ]]; then
+    if declare -f create_plugin_schema >/dev/null 2>&1; then
+      create_plugin_schema "$plugin_name" 2>/dev/null || true
+    else
+      docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
+        -c "CREATE SCHEMA IF NOT EXISTS ${schema_name};" >/dev/null 2>&1 || true
+    fi
+  fi
+
+  local moved=0
+  while IFS= read -r full_tbl; do
+    [[ -z "$full_tbl" ]] && continue
+
+    # Derive the suffix by stripping the np_{name}_ prefix
+    local suffix="${full_tbl#${table_prefix}}"
+
+    if [[ "$dry_run" == "true" ]]; then
+      printf "  [dry-run] public.%s  ->  %s.%s\n" "$full_tbl" "$schema_name" "$suffix"
+    else
+      printf "  Migrating: public.%s -> %s.%s\n" "$full_tbl" "$schema_name" "$suffix"
+
+      # Step 1: move table to target schema (keeps original name temporarily)
+      if ! docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
+          -v ON_ERROR_STOP=1 \
+          -c "ALTER TABLE public.${full_tbl} SET SCHEMA ${schema_name};" \
+          >/dev/null 2>&1; then
+        log_warning "Failed to move table: $full_tbl (skipping)"
+        continue
+      fi
+
+      # Step 2: rename to drop the now-redundant prefix
+      if [[ "$suffix" != "$full_tbl" ]]; then
+        docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
+          -c "ALTER TABLE ${schema_name}.${full_tbl} RENAME TO ${suffix};" \
+          >/dev/null 2>&1 || \
+          log_warning "Rename failed for ${schema_name}.${full_tbl} -> ${suffix} (table moved but not renamed)"
+      fi
+
+      moved=$((moved + 1))
+    fi
+  done <<PTBLS
+$public_tables
+PTBLS
+
+  if [[ "$dry_run" == "true" ]]; then
+    printf "\n  [dry-run] No changes made.\n"
+    printf "  Run without --dry-run to execute.\n"
+  else
+    if [[ $moved -gt 0 ]]; then
+      log_success "Schema migration complete: $moved table(s) moved to $schema_name"
+      printf "\n"
+      log_info "Next steps:"
+      printf "  1. Update any app code that references public.%s* tables\n" "$table_prefix"
+      printf "  2. Update Hasura metadata to reflect new schema location\n"
+      printf "  3. Run: nself build && nself restart\n"
+    else
+      log_warning "No tables were moved (check for errors above)"
+    fi
+  fi
+
+  return 0
+}
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
@@ -4308,6 +4545,9 @@ main() {
       ;;
     deploy-all)
       cmd_plugin_deploy_all "$@"
+      ;;
+    migrate-schema)
+      cmd_plugin_migrate_schema "$@"
       ;;
     -h | --help | help | "")
       show_help
