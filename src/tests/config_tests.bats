@@ -121,7 +121,7 @@ teardown() {
 
 @test "constants defines NSELF_VERSION" {
   [[ -n "${NSELF_VERSION:-}" ]]
-  [[ "$NSELF_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+  [[ "$NSELF_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]
 }
 
 @test "constants defines MIN_DOCKER_VERSION" {

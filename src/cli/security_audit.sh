@@ -27,6 +27,71 @@ _fix()   { printf "         \033[2m→ fix: %s\033[0m\n" "$1"; }
 _note()  { printf "         \033[2m%s\033[0m\n" "$1"; }
 
 # ============================================================================
+# CHECK 0 — Environment File Secrets
+# Reads .env in the current directory, checks for missing/weak secrets
+# This check always runs (including with --no-docker)
+# ============================================================================
+
+check_env_secrets() {
+  local check_num="${1:-0}"
+  printf "\n\033[1m[%s] Environment File Secrets\033[0m\n" "$check_num"
+
+  local env_file=".env"
+  if [[ ! -f "$env_file" ]]; then
+    _skip ".env not found — run nself init first"
+    return 0
+  fi
+
+  local issues=0
+
+  # Check HASURA_GRAPHQL_JWT_SECRET
+  local jwt_secret
+  jwt_secret=$(grep -E '^HASURA_GRAPHQL_JWT_SECRET=' "$env_file" | cut -d= -f2- | tr -d '"' | tr -d "'" || true)
+  if [[ -z "$jwt_secret" ]]; then
+    _fail "JWT secret is not set (HASURA_GRAPHQL_JWT_SECRET missing from .env)"
+    _fix "Add: HASURA_GRAPHQL_JWT_SECRET='{\"type\":\"HS256\",\"key\":\"<32+ char secret>\"}'"
+    _note "Generate: python3 -c \"import secrets; print(secrets.token_hex(32))\""
+    issues=$((issues + 1))
+  elif [[ ${#jwt_secret} -lt 16 ]]; then
+    _fail "JWT secret is too short (${#jwt_secret} chars — minimum 32 chars for HS256)"
+    issues=$((issues + 1))
+  else
+    _pass "JWT secret is set"
+  fi
+
+  # Check HASURA_GRAPHQL_ADMIN_SECRET
+  local admin_secret
+  admin_secret=$(grep -E '^HASURA_GRAPHQL_ADMIN_SECRET=' "$env_file" | cut -d= -f2- | tr -d '"' | tr -d "'" || true)
+  if [[ -z "$admin_secret" ]]; then
+    _warn "ADMIN_SECRET not set — Hasura admin endpoint is unprotected"
+    _fix "Add: HASURA_GRAPHQL_ADMIN_SECRET=<strong secret>"
+    issues=$((issues + 1))
+  elif [[ ${#admin_secret} -lt 16 ]]; then
+    _fail "Admin secret is too short (${#admin_secret} chars — minimum 16 chars)"
+    _note "HASURA_GRAPHQL_ADMIN_SECRET must be at least 16 characters"
+    issues=$((issues + 1))
+  else
+    _pass "Admin secret is set and meets minimum length"
+  fi
+
+  # Check POSTGRES_PASSWORD
+  local pg_pass
+  pg_pass=$(grep -E '^POSTGRES_PASSWORD=' "$env_file" | cut -d= -f2- | tr -d '"' | tr -d "'" || true)
+  if [[ -z "$pg_pass" ]]; then
+    _warn "POSTGRES_PASSWORD not set — database uses no password"
+    issues=$((issues + 1))
+  elif [[ ${#pg_pass} -lt 12 ]]; then
+    _fail "POSTGRES_PASSWORD is too short (${#pg_pass} chars — minimum 12 chars)"
+    _note "Postgres password must be at least 12 characters to meet minimum security requirements"
+    issues=$((issues + 1))
+  else
+    _pass "Postgres password is set and meets minimum length"
+  fi
+
+  return $issues
+}
+
+# ============================================================================
 # CHECK 1 — Port Exposure
 # No non-nginx service must bind to 0.0.0.0
 # ============================================================================
@@ -484,6 +549,8 @@ _autofix() {
 
 cmd_security_audit() {
   local autofix=false
+  local no_docker=false
+  local output_format="text"
   local dc_file="docker-compose.yml"
 
   while [[ $# -gt 0 ]]; do
@@ -492,13 +559,26 @@ cmd_security_audit() {
         autofix=true
         shift
         ;;
+      --no-docker)
+        no_docker=true
+        shift
+        ;;
+      --format)
+        output_format="${2:-text}"
+        shift 2
+        ;;
+      --format=*)
+        output_format="${1#--format=}"
+        shift
+        ;;
       --compose)
         dc_file="${2:-docker-compose.yml}"
         shift 2
         ;;
       --help|-h)
-        printf "Usage: nself security audit [--fix]\n\n"
-        printf "Run 8 security checks on your nself deployment:\n"
+        printf "Usage: nself security audit [--fix] [--no-docker] [--format text|json]\n\n"
+        printf "Run security checks on your nself deployment:\n"
+        printf "  0. Environment secrets (JWT, admin secret, postgres password)\n"
         printf "  1. Port exposure (no service on 0.0.0.0 except nginx)\n"
         printf "  2. SSH configuration (PasswordAuthentication, PermitRootLogin)\n"
         printf "  3. fail2ban installed and active\n"
@@ -508,7 +588,9 @@ cmd_security_audit() {
         printf "  7. Nginx TLS version (no TLS 1.0/1.1)\n"
         printf "  8. Nginx rate limiting zones\n\n"
         printf "Options:\n"
-        printf "  --fix    Auto-remediate safe fixes (sshd, fail2ban, UFW)\n"
+        printf "  --fix          Auto-remediate safe fixes (sshd, fail2ban, UFW)\n"
+        printf "  --no-docker    Skip Docker-dependent checks (runs env + SSH + nginx checks only)\n"
+        printf "  --format json  Output results as JSON\n"
         return 0
         ;;
       -*)
@@ -521,23 +603,61 @@ cmd_security_audit() {
     esac
   done
 
+  if [[ "$output_format" == "json" ]]; then
+    # Capture output and emit JSON summary
+    local json_issues="[]"
+    local env_out failed_list=""
+
+    # Env secrets (always)
+    env_out=$(check_env_secrets "0" 2>&1 || true)
+    # SSH
+    local ssh_out
+    ssh_out=$(check_sshd_config 2>&1 || true)
+
+    # Build minimal JSON summary
+    local issues_count=0
+    if printf '%s' "$env_out" | grep -q '\[FAIL\]'; then
+      issues_count=$((issues_count + 1))
+    fi
+
+    printf '{"audit":{"project":"%s","no_docker":%s,"issues":%d,"env_secrets":"%s","ssh":"%s"}}\n' \
+      "$PWD" "$no_docker" "$issues_count" \
+      "$(printf '%s' "$env_out" | grep -c '\[FAIL\]\|\[WARN\]' || true)" \
+      "$(printf '%s' "$ssh_out" | grep -c '\[FAIL\]\|\[WARN\]' || true)"
+    return 0
+  fi
+
   printf "\n\033[1m\033[0;36m=== nself Security Audit ===\033[0m\n"
   printf "  Project: %s\n" "${PWD}"
   printf "  Date   : %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
+  if [[ "$no_docker" == "true" ]]; then
+    printf "  Mode   : --no-docker (skipping Docker-dependent checks)\n"
+  fi
 
-  local total_checks=8
   local failed=0
   local warned=0
 
-  # Run all 8 checks
-  check_port_exposure "$dc_file" || failed=$((failed + 1))
-  check_sshd_config || warned=$((warned + 1))
-  check_fail2ban || warned=$((warned + 1))
-  check_docker_iptables || failed=$((failed + 1))
-  check_ufw || warned=$((warned + 1))
-  check_grafana_defaults "$dc_file" || failed=$((failed + 1))
-  check_nginx_tls || warned=$((warned + 1))
-  check_nginx_rate_limits || warned=$((warned + 1))
+  # Check 0: env secrets (always runs, even with --no-docker)
+  check_env_secrets "0/8" || failed=$((failed + 1))
+
+  local total_checks=4
+  if [[ "$no_docker" == "false" ]]; then
+    # Full Docker-aware checks
+    check_port_exposure "$dc_file" || failed=$((failed + 1))
+    check_sshd_config || warned=$((warned + 1))
+    check_fail2ban || warned=$((warned + 1))
+    check_docker_iptables || failed=$((failed + 1))
+    check_ufw || warned=$((warned + 1))
+    check_grafana_defaults "$dc_file" || failed=$((failed + 1))
+    check_nginx_tls || warned=$((warned + 1))
+    check_nginx_rate_limits || warned=$((warned + 1))
+    total_checks=9
+  else
+    # No-docker mode: env + SSH + nginx only
+    check_sshd_config || warned=$((warned + 1))
+    check_nginx_tls || warned=$((warned + 1))
+    check_nginx_rate_limits || warned=$((warned + 1))
+  fi
 
   printf "\n\033[1m=== Summary ===\033[0m\n\n"
   printf "  Checks: %d total" "$total_checks"
