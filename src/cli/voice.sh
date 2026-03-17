@@ -51,7 +51,9 @@ voice_usage() {
   printf "  call <number> [--message=\"<msg>\"]            Initiate a phone call\n"
   printf "  wake start                                   Start wake-word detection\n"
   printf "  wake stop                                    Stop wake-word detection\n"
-  printf "  wake status                                  Show wake-word detection status\n\n"
+  printf "  wake status                                  Show wake-word detection status\n"
+  printf "  routing [status]                             Show LLM routing config and TTFT estimate\n"
+  printf "  routing set-tier <standard|realtime>         Configure voice LLM tier\n\n"
   printf "Environment:\n"
   printf "  NSELF_VOICE_URL         Voice plugin base URL (default: http://localhost:3714)\n"
   printf "  PLUGIN_INTERNAL_SECRET  Required for all commands\n\n"
@@ -95,6 +97,9 @@ cmd_voice() {
       ;;
     wake)
       cmd_voice_wake "$@"
+      ;;
+    routing)
+      cmd_voice_routing "$@"
       ;;
     help | --help | -h)
       voice_usage
@@ -486,6 +491,94 @@ cmd_voice_wake() {
       cli_error "Unknown wake action: $subcmd"
       printf "Actions: start, stop, status\n"
       exit 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# T-1407: routing — voice LLM routing management
+# ============================================================================
+
+# Helper: set or update an env var in .env (Bash 3.2 compatible)
+_voice_set_env() {
+  local key="$1" value="$2"
+  if [ -f ".env" ] && grep -q "^${key}=" .env 2>/dev/null; then
+    sed -i.bak "s|^${key}=.*|${key}=${value}|" .env && rm -f .env.bak
+  else
+    printf "\n%s=%s\n" "$key" "$value" >> .env
+  fi
+}
+
+cmd_voice_routing() {
+  local action="${1:-status}"
+
+  case "$action" in
+    status)
+      local provider model mode
+      provider=$(grep "^NSELF_VOICE_LLM_PROVIDER=" .env 2>/dev/null | cut -d= -f2- || printf "google")
+      model=$(grep "^NSELF_VOICE_LLM_MODEL=" .env 2>/dev/null | cut -d= -f2- || printf "gemini-2.5-flash")
+      mode=$(grep "^NSELF_VOICE_MODE=" .env 2>/dev/null | cut -d= -f2- || printf "standard")
+
+      # Provide fallback values when env vars are missing
+      provider="${provider:-google}"
+      model="${model:-gemini-2.5-flash}"
+      mode="${mode:-standard}"
+
+      # Estimate TTFT based on provider
+      local ttft_estimate
+      case "$provider" in
+        google)   ttft_estimate="~300ms (Gemini Flash)" ;;
+        openai)   ttft_estimate="~150ms (GPT-4o Realtime)" ;;
+        *)        ttft_estimate="unknown" ;;
+      esac
+
+      printf "\n\033[1mVoice Routing Status\033[0m\n"
+      printf "  Provider:      %s\n" "$provider"
+      printf "  Model:         %s\n" "$model"
+      printf "  Mode:          %s\n" "$mode"
+      printf "  Est. TTFT:     %s\n" "$ttft_estimate"
+      printf "\n"
+      ;;
+    set-tier)
+      local tier="${2:-standard}"
+      case "$tier" in
+        standard)
+          _voice_set_env "NSELF_VOICE_LLM_PROVIDER" "google"
+          _voice_set_env "NSELF_VOICE_LLM_MODEL" "gemini-2.5-flash"
+          _voice_set_env "NSELF_VOICE_MODE" "standard"
+          printf "Voice tier set to standard (Gemini 2.5 Flash, ~300ms TTFT)\n"
+          ;;
+        realtime)
+          if ! grep -q "^OPENAI_API_KEY=" .env 2>/dev/null; then
+            cli_error "OPENAI_API_KEY not found in .env"
+            printf "Add OPENAI_API_KEY=sk-... to .env then retry.\n" >&2
+            return 1
+          fi
+          _voice_set_env "NSELF_VOICE_LLM_PROVIDER" "openai"
+          _voice_set_env "NSELF_VOICE_LLM_MODEL" "gpt-4o-realtime-preview"
+          _voice_set_env "NSELF_VOICE_MODE" "realtime"
+          printf "Voice tier set to realtime (GPT-4o Realtime, ~150ms TTFT)\n"
+          printf "Note: NSELF_VOICE_MODE=realtime requires nself restart\n"
+          ;;
+        *)
+          printf "Unknown tier '%s'. Use: standard | realtime\n" "$tier" >&2
+          return 1
+          ;;
+      esac
+      ;;
+    help | --help | -h)
+      printf "Usage: nself voice routing [status|set-tier <standard|realtime>]\n\n"
+      printf "  status                Show current LLM routing config and TTFT estimate\n"
+      printf "  set-tier standard     Use Gemini 2.5 Flash (~300ms TTFT)\n"
+      printf "  set-tier realtime     Use GPT-4o Realtime (~150ms TTFT, requires OPENAI_API_KEY)\n\n"
+      printf "Examples:\n"
+      printf "  nself voice routing\n"
+      printf "  nself voice routing set-tier standard\n"
+      printf "  nself voice routing set-tier realtime\n"
+      ;;
+    *)
+      printf "Usage: nself voice routing [status|set-tier <standard|realtime>]\n" >&2
+      return 1
       ;;
   esac
 }
