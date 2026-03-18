@@ -196,8 +196,30 @@ get_service_logs() {
     return 0
   fi
 
-  # Not a plugin — check if service exists in Docker
+  # Not a plugin — check if service exists in Docker compose
   if ! compose ps "$service" >/dev/null 2>&1; then
+    # Try Docker container directly (pro plugins run as standalone Docker containers,
+    # not always in the current compose project). Match by container name pattern.
+    local docker_container=""
+    local _service_safe="${service//-/_}"
+    # Try exact compose container name first, then broad name filter
+    for _pattern in "$container_name" "*${_service_safe}*" "*${service}*"; do
+      local _cid
+      _cid=$(docker ps -q --filter "name=${_pattern}" 2>/dev/null | head -1)
+      if [[ -n "$_cid" ]]; then
+        docker_container="$_cid"
+        break
+      fi
+    done
+
+    if [[ -n "$docker_container" ]]; then
+      local docker_args=("logs")
+      [[ "$FOLLOW_MODE" == "true" ]] && docker_args+=("--follow")
+      docker_args+=("--tail" "$TAIL_LINES" "--timestamps" "$docker_container")
+      docker "${docker_args[@]}" 2>&1 | clean_and_colorize "$service"
+      return 0
+    fi
+
     log_error "Service '$service' not found"
     log_info "Available services: $(compose config --services 2>/dev/null | tr '\n' ' ')"
     # Show available plugins too
