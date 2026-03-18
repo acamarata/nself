@@ -307,4 +307,6 @@ jobs:
           sudo ln -sf "${{ github.workspace }}/bin/nself" /usr/local/bin/nself 2>/dev/null || true
 
       - name: Run full bats test suite
+        env:
+          NSELF_TEST_MODE: "1"
         run: bats src/tests/*.bats --timing
