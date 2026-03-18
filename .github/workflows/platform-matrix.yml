@@ -103,6 +103,8 @@ jobs:
           fi
 
       - name: Run bats unit tests
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           cd src/tests
           BASH_BIN="${BATS_BASH:-bash}"
@@ -110,6 +112,8 @@ jobs:
           bats --tap *.bats 2>&1 | head -200
 
       - name: Run structured bats tests
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           SKIP_DOCKER_TESTS=1 bats --tap src/tests/bats/ 2>&1 | head -300
 

@@ -31,11 +31,15 @@ jobs:
           printf '%s\n' "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
 
       - name: Run bats with bashcov (structured tests)
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           SKIP_DOCKER_TESTS=1 bashcov --skip-uncovered -- \
             bats --tap src/tests/bats/ 2>&1 | tee /tmp/bats-structured.log | tail -80
 
       - name: Run bats with bashcov (legacy tests)
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           if [ -d src/tests ] && ls src/tests/*.bats >/dev/null 2>&1; then
             SKIP_DOCKER_TESTS=1 bashcov --skip-uncovered -- \

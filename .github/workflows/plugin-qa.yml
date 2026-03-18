@@ -129,6 +129,7 @@ jobs:
 
       - name: Run plugin bats tests (no-Docker tier)
         env:
+          NSELF_TEST_MODE: "1"
           SKIP_DOCKER_TESTS: '1'
           SKIP_INTEGRATION_TESTS: '1'
         run: |
@@ -140,6 +141,7 @@ jobs:
 
       - name: Run legacy free-plugin install bats
         env:
+          NSELF_TEST_MODE: "1"
           SKIP_DOCKER_TESTS: '1'
         run: |
           mkdir -p /tmp/nself-bats-legacy

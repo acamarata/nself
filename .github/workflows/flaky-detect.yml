@@ -26,6 +26,8 @@ jobs:
           sudo apt-get install -y bats
 
       - name: Run bats test suite
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           SKIP_DOCKER_TESTS=1 bats src/tests/bats/ --tap 2>&1 | tee /tmp/run-${{ matrix.run_id }}.tap
         continue-on-error: true

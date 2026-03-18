@@ -66,12 +66,16 @@ jobs:
           sudo ln -sf "${{ github.workspace }}/bin/nself" /usr/local/bin/nself 2>/dev/null || true
 
       - name: Run unit tests
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           cd src/tests
           # BLOCKING: Unit tests must pass - failures indicate real regressions
           bats *.bats
 
       - name: Run critical path tests
+        env:
+          NSELF_TEST_MODE: "1"
         run: |
           cd src/tests
           # BLOCKING: Critical path tests (backup, deploy, storage, SSL, tenant) must pass
