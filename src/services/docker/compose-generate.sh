@@ -192,6 +192,27 @@ generate_docker_compose() {
   # Set default DOCKER_NETWORK if not set
   : ${DOCKER_NETWORK:="${PROJECT_NAME}_network"}
 
+  # Auto-enable Redis when pro plugins that require it are installed.
+  # The pro plugins nself-ai, nself-claw, and nself-mux all depend on Redis
+  # for caching, session storage, and job queues. Auto-enabling prevents a
+  # common setup mistake where users install these plugins but forget Redis.
+  local plugin_dir="${NSELF_PLUGIN_DIR:-$HOME/.nself/plugins}"
+  if [[ "${REDIS_ENABLED:-false}" != "true" ]]; then
+    local needs_redis=false
+    for _pro_plugin in ai claw mux; do
+      if [[ -f "${plugin_dir}/${_pro_plugin}/plugin.json" ]]; then
+        needs_redis=true
+        break
+      fi
+    done
+    if [[ "$needs_redis" == "true" ]]; then
+      REDIS_ENABLED=true
+      export REDIS_ENABLED
+      printf '[INFO] Auto-enabling Redis: required by installed pro plugin(s).\n' >&2
+      printf '       Add REDIS_ENABLED=true to your .env to make this permanent.\n' >&2
+    fi
+  fi
+
   # Construct database URLs
   construct_database_urls
 
@@ -400,6 +421,12 @@ main() {
   # Show success in verbose mode
   if [[ "${VERBOSE:-false}" == "true" ]]; then
     echo "✓ docker-compose.yml generated successfully"
+  fi
+
+  # T-1489: Tip — remind operators about the override file for persistent customizations
+  if [[ ! -f "docker-compose.override.yml" ]]; then
+    printf '[TIP] Persistent customizations go in docker-compose.override.yml (never overwritten).\n' >&2
+    printf '      See: https://docs.nself.org/guides/customizing-your-stack\n' >&2
   fi
 
   # Always return success if we got this far

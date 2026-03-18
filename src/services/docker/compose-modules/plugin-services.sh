@@ -58,8 +58,39 @@ generate_plugin_service() {
   # Default values
   [[ -z "$port" ]] && port=3000
   [[ -z "$replicas" ]] && replicas=1
-  [[ -z "$memory" ]] && memory="512M"
-  [[ -z "$cpu" ]] && cpu="0.5"
+
+  # Resource limits: per-plugin env vars override global defaults.
+  # Per-plugin: PLUGIN_{NAME}_MEMORY_LIMIT / PLUGIN_{NAME}_CPU_LIMIT
+  # Global default: PLUGIN_DEFAULT_MEMORY_LIMIT / PLUGIN_DEFAULT_CPU_LIMIT
+  # Special default for plugin-ai: 1g / 1.0
+  local plugin_name_upper
+  plugin_name_upper=$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+  local per_plugin_memory per_plugin_cpu
+  per_plugin_memory=$(eval "printf '%s' \"\${PLUGIN_${plugin_name_upper}_MEMORY_LIMIT:-}\"" 2>/dev/null || true)
+  per_plugin_cpu=$(eval "printf '%s' \"\${PLUGIN_${plugin_name_upper}_CPU_LIMIT:-}\"" 2>/dev/null || true)
+
+  # Determine defaults: ai plugin gets larger defaults
+  local default_memory default_cpu
+  if [[ "$plugin_name" == "ai" ]]; then
+    default_memory="${PLUGIN_DEFAULT_MEMORY_LIMIT:-1g}"
+    default_cpu="${PLUGIN_DEFAULT_CPU_LIMIT:-1.0}"
+  else
+    default_memory="${PLUGIN_DEFAULT_MEMORY_LIMIT:-512m}"
+    default_cpu="${PLUGIN_DEFAULT_CPU_LIMIT:-0.5}"
+  fi
+
+  # Per-plugin env var wins; fall back to manifest value, then default
+  if [[ -n "$per_plugin_memory" ]]; then
+    memory="$per_plugin_memory"
+  elif [[ -z "$memory" ]]; then
+    memory="$default_memory"
+  fi
+
+  if [[ -n "$per_plugin_cpu" ]]; then
+    cpu="$per_plugin_cpu"
+  elif [[ -z "$cpu" ]]; then
+    cpu="$default_cpu"
+  fi
 
   # Service name: nself-<plugin> for GHCR plugins, plugin-<name> for local builds
   # Tests reference nself-ai, nself-mux etc. — use nself- prefix for all Docker plugins

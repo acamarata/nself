@@ -231,6 +231,7 @@ check_nself_config() {
     [[ -z "${BASE_DOMAIN:-}" ]] && missing_vars+=("BASE_DOMAIN")
     [[ -z "${POSTGRES_PASSWORD:-}" ]] && missing_vars+=("POSTGRES_PASSWORD")
     [[ -z "${HASURA_GRAPHQL_ADMIN_SECRET:-}" ]] && missing_vars+=("HASURA_GRAPHQL_ADMIN_SECRET")
+    [[ -z "${HASURA_GRAPHQL_JWT_SECRET:-}" ]] && missing_vars+=("HASURA_GRAPHQL_JWT_SECRET")
 
     if [[ ${#missing_vars[@]} -eq 0 ]]; then
       stop_spinner "success" "Essential configuration variables are set"
@@ -463,6 +464,77 @@ check_ssl() {
     stop_spinner "warning" "SSL certificates not found"
     warning_found
     log_info "Run 'nself build' to generate certificates"
+  fi
+}
+
+# Function to check HTTPS SSL cert validity against a live domain
+check_ssl_live() {
+  local domain="${BASE_DOMAIN:-}"
+  if [[ -z "$domain" ]]; then
+    return 0  # No domain configured, skip
+  fi
+
+  start_spinner "Checking SSL cert for $domain"
+  if ! command -v openssl >/dev/null 2>&1; then
+    stop_spinner "warning" "openssl not found — cannot verify SSL cert"
+    warning_found
+    return
+  fi
+
+  local cert_expiry
+  cert_expiry=$(printf '' | openssl s_client -servername "$domain" -connect "${domain}:443" 2>/dev/null \
+    | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2-)
+
+  if [[ -z "$cert_expiry" ]]; then
+    stop_spinner "warning" "Could not verify SSL cert for $domain (site unreachable or no cert)"
+    warning_found
+    return
+  fi
+
+  # Calculate days until expiry (cross-platform: GNU date + BSD date)
+  local expiry_epoch now_epoch days_left
+  expiry_epoch=$(date -d "$cert_expiry" +%s 2>/dev/null || \
+    date -j -f "%b %d %T %Y %Z" "$cert_expiry" +%s 2>/dev/null || echo "0")
+  now_epoch=$(date +%s)
+  days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
+
+  if [[ "$days_left" -le 0 ]]; then
+    stop_spinner "error" "SSL cert for $domain has EXPIRED"
+    issue_found
+  elif [[ "$days_left" -le 14 ]]; then
+    stop_spinner "error" "SSL cert for $domain expires in $days_left day(s) — renew now"
+    issue_found
+  elif [[ "$days_left" -le 30 ]]; then
+    stop_spinner "warning" "SSL cert for $domain expires in $days_left day(s)"
+    warning_found
+  else
+    stop_spinner "success" "SSL cert valid (expires $cert_expiry)"
+  fi
+}
+
+# Function to check license key configuration
+check_license_key() {
+  start_spinner "Checking license key"
+
+  # Check env var first, then key file
+  local key="${NSELF_PLUGIN_LICENSE_KEY:-}"
+  if [[ -z "$key" ]] && [[ -f "${HOME}/.nself/license/key" ]]; then
+    key=$(tr -d '[:space:]' < "${HOME}/.nself/license/key" 2>/dev/null || true)
+  fi
+
+  if [[ -n "$key" ]]; then
+    # Confirm it looks like a real key (nself_pro_ prefix, minimum length)
+    if printf '%s' "$key" | grep -q '^nself_pro_' && [[ ${#key} -ge 40 ]]; then
+      stop_spinner "success" "License key configured (${key:0:16}...)"
+    else
+      stop_spinner "warning" "License key set but format looks unexpected"
+      warning_found
+    fi
+  else
+    stop_spinner "warning" "License key not configured — pro plugins unavailable"
+    warning_found
+    printf "  Set your key: nself license set nself_pro_xxxx...\n"
+    printf "  Get a license: https://nself.org/pricing\n"
   fi
 }
 
@@ -1182,8 +1254,10 @@ main() {
     check_nself_config
     check_services
     check_ssl
+    check_ssl_live
     check_secrets_security
     check_rate_limiting
+    check_license_key
   fi
 
   show_recommendations "$containers_running"

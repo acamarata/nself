@@ -275,6 +275,49 @@ nself start
 
 ---
 
+---
+
+## Server Sizing and Swap (T-1490)
+
+Pro plugins are memory-intensive. Running 6+ plugins or adding Ollama for local AI requires
+enough RAM — or swap — to avoid OOM kills.
+
+### Recommended VPS Specs
+
+| Setup | RAM | Swap |
+| --- | --- | --- |
+| 1-3 plugins (mux, cron, notify) | 2 GB | 2 GB |
+| 4-6 plugins (add ai, claw, google) | 4 GB | 2 GB |
+| 6+ plugins + Ollama | 8 GB | 4 GB |
+
+### Configure Swap
+
+On a fresh Hetzner CX23 (4 GB RAM), add 2-4 GB swap before installing Max-tier plugins:
+
+```bash
+# Add 2 GB swap file
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Make persistent across reboots
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Tune swappiness (recommended: 10 for server workloads)
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+Confirm swap is active:
+
+```bash
+free -h
+# Swap: should show 2.0G or more
+```
+
+---
+
 ## Related
 
 - [Plugin Architecture](../commands/plugin.md)

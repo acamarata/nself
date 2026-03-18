@@ -1,0 +1,29 @@
+# docker-compose.override.yml.example
+#
+# Copy this file to docker-compose.override.yml and customize as needed.
+# Docker Compose merges this file automatically on every `docker compose up`.
+# This file is NEVER overwritten by `nself build`.
+#
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   # Edit docker-compose.override.yml with your customizations
+#   nself restart
+
+services:
+  # Example: Increase memory for the AI plugin
+  # nself-ai:
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 2048M
+  #         cpus: '2.0'
+
+  # Example: Mount a custom PostgreSQL config
+  # postgres:
+  #   volumes:
+  #     - ./custom-postgresql.conf:/etc/postgresql/postgresql.conf:ro
+
+  # Example: Add extra Hasura environment variables
+  # hasura:
+  #   environment:
+  #     HASURA_GRAPHQL_EXPERIMENTAL_FEATURES: "streaming_subscriptions"

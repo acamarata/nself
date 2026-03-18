@@ -32,6 +32,29 @@ export COLOR_RESET COLOR_BLUE COLOR_BOLD COLOR_DIM COLOR_CYAN COLOR_GREEN COLOR_
 # Note: header.sh is sourced by display.sh, no need to source it again
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh"
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh"
+
+# Resolve the effective Docker Compose project name.
+# Priority: COMPOSE_PROJECT_NAME env var → PROJECT_NAME env var →
+#           COMPOSE_PROJECT_NAME in .env → PROJECT_NAME in .env → "nself"
+# This is called once per sub-command and the result cached in _STATUS_PROJECT_NAME.
+_resolve_project_name() {
+  if [[ -n "${_STATUS_PROJECT_NAME:-}" ]]; then
+    printf '%s' "$_STATUS_PROJECT_NAME"
+    return
+  fi
+  local pname="${COMPOSE_PROJECT_NAME:-${PROJECT_NAME:-}}"
+  if [[ -z "$pname" ]] && [[ -f ".env" ]]; then
+    pname=$(grep -m1 '^COMPOSE_PROJECT_NAME=' .env 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')
+  fi
+  if [[ -z "$pname" ]] && [[ -f ".env" ]]; then
+    pname=$(grep -m1 '^PROJECT_NAME=' .env 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')
+  fi
+  pname="${pname:-nself}"
+  _STATUS_PROJECT_NAME="$pname"
+  export _STATUS_PROJECT_NAME
+  printf '%s' "$pname"
+}
+
 # Color output functions (consistent with main nself.sh)
 
 # Function to format duration
@@ -76,11 +99,39 @@ get_container_info() {
 # Function to check service health efficiently
 check_service_health() {
   local service=$1
-  # Replace hyphens with underscores in container name (Docker naming convention)
-  local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
 
-  # Check if container exists and get state + health in one call
-  local container_info=$(docker inspect "$container_name" --format='{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null)
+  # Resolve project name: prefer COMPOSE_PROJECT_NAME (Docker Compose native var),
+  # then PROJECT_NAME, then read COMPOSE_PROJECT_NAME from .env, then fall back to "nself".
+  local project_name="${COMPOSE_PROJECT_NAME:-${PROJECT_NAME:-}}"
+  if [[ -z "$project_name" ]] && [[ -f ".env" ]]; then
+    project_name=$(grep -m1 '^COMPOSE_PROJECT_NAME=' .env 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')
+  fi
+  if [[ -z "$project_name" ]] && [[ -f ".env" ]]; then
+    project_name=$(grep -m1 '^PROJECT_NAME=' .env 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')
+  fi
+  project_name="${project_name:-nself}"
+
+  # Try multiple container name patterns:
+  # Compose v1 (legacy): project_service_1  (underscores)
+  # Compose v2+:         project-service-1  (hyphens)
+  local safe_service
+  safe_service=$(printf '%s' "$service" | tr '-' '_')
+
+  local container_name="${project_name}_${safe_service}"
+  local container_info
+  container_info=$(docker inspect "$container_name" --format='{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null)
+
+  # Compose v2 hyphen format fallback
+  if [[ -z "$container_info" ]]; then
+    container_name="${project_name}-${service}-1"
+    container_info=$(docker inspect "$container_name" --format='{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null)
+  fi
+
+  # docker inspect exact name fallback (no suffix)
+  if [[ -z "$container_info" ]]; then
+    container_name="${project_name}-${service}"
+    container_info=$(docker inspect "$container_name" --format='{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null)
+  fi
 
   if [[ -z "$container_info" ]]; then
     echo "stopped"
@@ -705,7 +756,9 @@ show_service_detail() {
   show_header "Detailed Status: $service_name"
   echo ""
 
-  local container_name="${PROJECT_NAME:-nself}_${service_name//-/_}"
+  local _pname
+  _pname=$(_resolve_project_name)
+  local container_name="${_pname}_${service_name//-/_}"
 
   # Check if container exists (grep -Fx: fixed-string, exact-line to avoid partial matches)
   if ! docker ps -a --filter "name=$container_name" --format "{{.Names}}" | grep -Fxq "$container_name"; then
@@ -747,7 +800,9 @@ show_service_detail() {
 # Function to show verbose health check details for a service
 show_verbose_health() {
   local service=$1
-  local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
+  local _pname
+  _pname=$(_resolve_project_name)
+  local container_name="${_pname}_${service//-/_}"
 
   # Get health check configuration
   local health_config=$(docker inspect "$container_name" --format='{{json .State.Health}}' 2>/dev/null)
@@ -828,9 +883,11 @@ show_verbose_service_overview() {
   printf "\033[1;36m→\033[0m Services ($total total) - Verbose Health Check Output\n"
   echo ""
 
+  local _pname
+  _pname=$(_resolve_project_name)
   for service in "${sorted_services[@]}"; do
     local health=$(check_service_health "$service")
-    local container_name="${PROJECT_NAME:-nself}_${service//-/_}"
+    local container_name="${_pname}_${service//-/_}"
 
     # Check if running
     local is_running=$(docker ps --filter "name=${container_name}" --format "{{.Status}}" 2>/dev/null)

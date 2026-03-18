@@ -263,6 +263,11 @@ cmd_build() {
     return 1
   fi
 
+  # Tip: remind users about the override file if it doesn't exist yet
+  if [ ! -f "docker-compose.override.yml" ]; then
+    printf "Tip: put persistent customizations in docker-compose.override.yml (never overwritten by nself build)\n"
+  fi
+
   # Run the orchestrated build
   local build_result
   orchestrate_build "$project_name" "$env" "$force_rebuild" "$verbose"

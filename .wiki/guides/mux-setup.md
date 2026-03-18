@@ -126,6 +126,8 @@ POST the message payload to an external URL:
     Authorization: Bearer ${WEBHOOK_TOKEN}
 ```
 
+> **Cloudflare SSL note:** Cloudflare's free plan SSL covers `example.com` and `*.example.com` only — not second-level subdomains like `webhooks.nclaw.example.com`. If your webhook URL uses a second-level subdomain behind Cloudflare DNS, either use a root-level subdomain (`webhooks.example.com`) or set the DNS record to DNS-only (grey cloud) so the origin certificate handles SSL directly. Cloudflare Pro and above support second-level subdomain SSL via Advanced Certificate Manager.
+
 #### ai_classify
 
 Send the email body to nself-ai for classification:

@@ -470,6 +470,13 @@ cmd_install() {
     version="$pin_version"
   fi
 
+  # Normalize plugin name: strip 'nself-' or 'plugin-' prefix if present.
+  # Allows: nself plugin install plugin-mux → mux; nself plugin install nself-ai → ai
+  case "$plugin_name" in
+    plugin-*) plugin_name="${plugin_name#plugin-}" ;;
+    nself-*)  plugin_name="${plugin_name#nself-}" ;;
+  esac
+
   log_info "Installing plugin: $plugin_name"
 
   # Check if already installed
@@ -489,7 +496,7 @@ cmd_install() {
 
   # Fetch registry
   local registry
-  registry=$(fetch_registry)
+  registry=$(fetch_registry "$plugin_name")
 
   # Determine if this is a pro plugin — if so, skip the free registry check
   local is_pro=false
@@ -499,6 +506,12 @@ cmd_install() {
 
   # For free plugins, verify existence in registry
   if [[ "$is_pro" == "false" ]]; then
+    if [[ -z "$registry" ]]; then
+      log_error "Registry format error — cannot verify plugin '$plugin_name'."
+      printf "Try: nself update && nself plugin install %s\n" "$plugin_name"
+      printf "For offline installs: https://nself.org/docs/plugins/offline\n"
+      return 1
+    fi
     if ! printf '%s' "$registry" | grep -qE "\"$plugin_name\"[[:space:]]*:|\"name\"[[:space:]]*:[[:space:]]*\"$plugin_name\""; then
       log_error "Plugin '$plugin_name' not found in registry"
       printf "\nRun 'nself plugin list' to see all available plugins.\n"
@@ -1286,6 +1299,11 @@ fetch_registry() {
   elif [[ -f "$cache_file" ]]; then
     # Return stale cache if all fetches failed
     cat "$cache_file"
+  else
+    # No cache and both fetches failed or returned unexpected format — print diagnostic to stderr
+    printf '\033[0;31m[ERROR]\033[0m Registry format error or network unavailable.\n' >&2
+    printf 'Try: nself update && nself plugin install %s\n' "${1:-<name>}" >&2
+    printf 'For offline installs, see: https://nself.org/docs/plugins/offline\n' >&2
   fi
 }
 
