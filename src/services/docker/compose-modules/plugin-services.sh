@@ -165,6 +165,28 @@ YAML
     done
   fi
 
+  # Inter-plugin internal URLs — allow plugins to call each other over the
+  # Docker network.  Only emitted for plugins that are actually installed
+  # (directory exists in PLUGIN_DIR).  Bash 3.2 compatible: parallel arrays.
+  local _ipu_names="ai mux notify google cron browser claw claw-web"
+  local _ipu_ports="3705 3711 3712 3714 3717 3718 3710 3004"
+  local _ipu_idx=0
+  for _ipu_name in $_ipu_names; do
+    _ipu_idx=$((_ipu_idx + 1))
+    # Skip self — a plugin does not need its own URL
+    if [[ "$_ipu_name" = "$plugin_name" ]]; then
+      continue
+    fi
+    # Only emit if the peer plugin is installed
+    if [[ -d "$PLUGIN_DIR/$_ipu_name" ]]; then
+      local _ipu_port
+      _ipu_port=$(printf '%s' "$_ipu_ports" | tr ' ' '\n' | awk "NR==$_ipu_idx")
+      local _ipu_var
+      _ipu_var=$(printf '%s' "$_ipu_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+      printf '      - PLUGIN_%s_INTERNAL_URL=http://nself-%s:%s\n' "$_ipu_var" "$_ipu_name" "$_ipu_port"
+    fi
+  done
+
   # Add resource limits
   cat <<YAML
     deploy:

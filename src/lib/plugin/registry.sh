@@ -269,6 +269,17 @@ registry_check_updates() {
 
     if command -v jq >/dev/null 2>&1; then
       latest=$(printf '%s' "$registry" | jq -r ".plugins[] | select(.name==\"$name\") | .version" 2>/dev/null)
+    elif command -v python3 >/dev/null 2>&1; then
+      latest=$(printf '%s' "$registry" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    p=d.get('plugins',{})
+    items=p if isinstance(p,list) else list(p.values()) if isinstance(p,dict) else []
+    v=next((e.get('version','') for e in items if e.get('name')==sys.argv[1]),'')
+    if v: print(v)
+except: pass
+" "$name" 2>/dev/null)
     else
       latest=$(printf '%s' "$registry" | grep -A5 "\"name\"[[:space:]]*:[[:space:]]*\"${name}\"" | grep '"version"' | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
     fi
@@ -526,7 +537,7 @@ registry_marketplace_ratings() {
 
   if command -v jq >/dev/null 2>&1 && [ -n "$registry" ]; then
     local stars
-    stars=$(printf '%s' "$registry" | jq -r ".plugins[\"${plugin_name}\"].stars // empty" 2>/dev/null)
+    stars=$(printf '%s' "$registry" | jq -r "(.plugins | if type == \"array\" then (.[] | select(.name==\"${plugin_name}\")) else .[\"${plugin_name}\"] end | .stars) // empty" 2>/dev/null)
     if [ -n "$stars" ]; then
       printf "  GitHub Stars: %s\n" "$stars"
       printf "  Full reviews: https://plugins.nself.org/plugins/%s\n" "$plugin_name"
@@ -790,7 +801,8 @@ registry_get_trending() {
 
   if command -v jq >/dev/null 2>&1 && [ -n "$registry" ]; then
     printf '%s' "$registry" | jq -r \
-      '[.plugins | to_entries[] | {name: .key, updated: .value.updated_at, desc: .value.description}]
+      '[.plugins | if type == "array" then .[] else to_entries[] | .value end
+       | {name: .name, updated: .updated_at, desc: .description}]
       | sort_by(.updated) | reverse | .[0:'"$limit"'][]
       | "  \(.name)  \(.desc // "")"' 2>/dev/null \
       && return 0

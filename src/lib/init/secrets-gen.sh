@@ -195,6 +195,18 @@ auto_generate_secrets_for_env() {
     fi
   fi
 
+  # Notify plugin internal secret — authenticates notify→app webhook deliveries
+  # Generate NOTIFY_INTERNAL_SECRET if not already present with a real value
+  if ! grep -q "^NOTIFY_INTERNAL_SECRET=.\\+" "$env_file" 2>/dev/null; then
+    local notify_secret
+    notify_secret=$(generate_random_secret 64 "hex")
+    if grep -q "^NOTIFY_INTERNAL_SECRET=" "$env_file" 2>/dev/null; then
+      sed -i.bak "s|^NOTIFY_INTERNAL_SECRET=.*|NOTIFY_INTERNAL_SECRET=$notify_secret|" "$env_file"
+    else
+      printf "NOTIFY_INTERNAL_SECRET=%s\n" "$notify_secret" >> "$env_file"
+    fi
+  fi
+
   # Shared secret for mux→claw internal calls (Bearer auth on /internal/* endpoints)
   # Both plugin-mux and plugin-claw must receive the same value from .env
   if ! grep -q "^MUX_CLAW_SHARED_SECRET=.\\+" "$env_file" 2>/dev/null; then

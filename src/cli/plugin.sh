@@ -60,6 +60,70 @@ NSELF_RUST_PLUGINS="ai mux claw voice browser notify cron google"
 NSELF_GHCR_BASE="ghcr.io/nself-org"
 
 # ============================================================================
+# REGISTRY FORMAT HELPERS
+# ============================================================================
+
+# _registry_plugin_names <registry_json>
+# Extracts plugin names from either format:
+#   - Object format (v0.9.7):  { "plugins": { "name": { ... }, ... } }
+#   - Array format  (v0.9.8+): { "plugins": [ { "name": "...", ... }, ... ] }
+# Prints one name per line.
+_registry_plugin_names() {
+  local reg="$1"
+  if command -v jq >/dev/null 2>&1; then
+    # jq .plugins[] iterates values for both objects and arrays
+    printf '%s' "$reg" | jq -r '.plugins | if type == "array" then .[].name else keys[] end' 2>/dev/null
+    return
+  fi
+  # grep fallback: try object format first ("name":{ ), then array format ("name":"value")
+  local names
+  names=$(printf '%s' "$reg" | grep -o '"[a-z][a-z0-9-]*"[[:space:]]*:{' | sed 's/"//g;s/[[:space:]]*:{//')
+  if [[ -n "$names" ]]; then
+    printf '%s\n' "$names"
+    return
+  fi
+  # Array format: extract "name" field values, deduplicate
+  printf '%s' "$reg" | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' | awk '!seen[$0]++'
+}
+
+# _registry_plugin_field <registry_json> <plugin_name> <field>
+# Extracts a specific field value for a named plugin from either registry format.
+# Prints the field value (empty string if not found).
+_registry_plugin_field() {
+  local reg="$1"
+  local pname="$2"
+  local field="$3"
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$reg" | jq -r \
+      "(.plugins | if type == \"array\" then .[] else .[] end | select(.name==\"$pname\") | .$field) // empty" 2>/dev/null
+    return
+  fi
+  # grep fallback: python3 preferred for reliable JSON field extraction
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$reg" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    p=d.get('plugins',{})
+    if isinstance(p,list):
+        for e in p:
+            if e.get('name')==sys.argv[1]:
+                v=e.get(sys.argv[2],'')
+                if v: print(v)
+                break
+    elif isinstance(p,dict):
+        e=p.get(sys.argv[1],{})
+        v=e.get(sys.argv[2],'')
+        if v: print(v)
+except: pass
+" "$pname" "$field" 2>/dev/null
+    return
+  fi
+  # Last resort: grep on multi-line JSON (may be inaccurate for single-line array format)
+  printf '%s' "$reg" | grep -A10 "\"$pname\"" | grep "\"$field\"" | head -1 | sed 's/.*"'"$field"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+}
+
+# ============================================================================
 # PLUGIN MANAGEMENT
 # ============================================================================
 
@@ -174,7 +238,7 @@ cmd_list() {
     pro_count=$(printf '%s' "$NSELF_PRO_PLUGINS" | wc -w | tr -d ' ')
   fi
   local free_plugins
-  free_plugins=$(printf '%s' "$registry" | grep -o '"[a-z-]*":{' | sed 's/"//g;s/:{//')
+  free_plugins=$(_registry_plugin_names "$registry")
   for _p in $free_plugins; do free_count=$((free_count + 1)); done
 
   printf "\n=== Available Plugins (%d free, %d pro) ===\n\n" "$free_count" "$pro_count"
@@ -184,9 +248,9 @@ cmd_list() {
   # Free plugins from registry
   for plugin in $free_plugins; do
     local version description category
-    version=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"version"' | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-    description=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"description"' | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-    category=$(printf '%s' "$registry" | grep -A10 "\"$plugin\"" | grep '"category"' | head -1 | sed 's/.*"category"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    version=$(_registry_plugin_field "$registry" "$plugin" "version")
+    description=$(_registry_plugin_field "$registry" "$plugin" "description")
+    category=$(_registry_plugin_field "$registry" "$plugin" "category")
 
     if [[ -n "$filter_category" ]] && [[ "$category" != "$filter_category" ]]; then
       continue
@@ -3236,7 +3300,7 @@ cmd_plugin_list() {
     if [[ -n "$registry" ]]; then
       printf "\n--- Available (not installed) ---\n"
       local free_plugins
-      free_plugins=$(printf '%s' "$registry" | grep -o '"[a-z-]*":{' | sed 's/"//g;s/:{//')
+      free_plugins=$(_registry_plugin_names "$registry")
       for rp in $free_plugins; do
         if ! is_plugin_installed "$rp"; then
           printf "%-22s %-10s %-6s %s\n" "$rp" "-" "-" "(not installed)"

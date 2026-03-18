@@ -5,6 +5,26 @@ All notable changes to nself will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9-rc3] - 2026-03-18
+
+### Release Candidate 3
+
+- nClaw AI Assistant: enriched CamClaw persona, pgvector auto-embedding, semantic memory recall, email draft approval pipeline
+- Email pipeline: thread history context, blocked recipients, quiet hours enforcement
+- claw-web: budget dashboard, onboarding UI, integrations settings, Svelte 4 migration
+- Mux: message search API, stall detector improvements, robust date parsing
+- CLI: inter-plugin URL generation, NOTIFY_INTERNAL_SECRET auto-gen, plugin install format fix
+- AI plugin: OAuth pool for Anthropic, dual env var prefixes
+- Co-founder agent: GitHub webhook analysis, auto-actions
+- Cloud provisioning engine: Stripe to Hetzner automated deployment
+- Companion: Tauri cross-platform scaffold (Windows/Linux)
+- libnclaw FFI: C header, Swift xcframework, Kotlin JNI
+- New tools: mux_history, get_email, recall_memory
+
+For details, see: [v0.9.9-rc3 Release Notes](v0.9.9-rc3.md)
+
+---
+
 ## [Unreleased]
 
 ### Added

@@ -256,7 +256,9 @@
 
 - [Release Index](releases/INDEX.md)
 - [Roadmap](releases/ROADMAP.md)
-- [v0.9.8](releases/v0.9.8.md) - Current
+- [v0.9.9-rc3](releases/v0.9.9-rc3.md) - Latest RC
+- [v0.9.9](releases/v0.9.9.md) - Current
+- [v0.9.8](releases/v0.9.8.md)
 - [v0.9.0](releases/v0.9.0.md) - Multi-Tenant
 - [v0.4.8](releases/v0.4.8.md) - Plugins
 - [Changelog](releases/CHANGELOG.md)
