@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-cloud.sh - Tests for nself cloud (deprecated wrapper)
+# test-cloud.sh - Tests for nself cloud command
 # Part of nself v0.9.9
 
 set -euo pipefail
@@ -24,43 +24,43 @@ test_syntax() {
   fi
 }
 
-# Test: Deprecation warning present
-test_deprecation_warning() {
+# Test: Help shows subcommands
+test_help_subcommands() {
   TESTS_RUN=$((TESTS_RUN + 1))
   local output
   output=$(bash "$SOURCE_FILE" 2>&1 || true)
 
-  if echo "$output" | grep -qi "deprecat"; then
-    printf "✓ Deprecation warning present\n"
+  if echo "$output" | grep -q "status" && echo "$output" | grep -q "upgrade" && echo "$output" | grep -q "destroy"; then
+    printf "✓ Help shows subcommands (status, upgrade, destroy)\n"
     TESTS_PASSED=$((TESTS_PASSED + 1))
     return 0
   else
-    printf "✗ Deprecation warning missing\n"
+    printf "✗ Help subcommands missing\n"
     return 1
   fi
 }
 
-# Test: Mentions new command
-test_new_command_mentioned() {
+# Test: Legacy provider commands reference infra provider
+test_legacy_reference() {
   TESTS_RUN=$((TESTS_RUN + 1))
   local output
   output=$(bash "$SOURCE_FILE" 2>&1 || true)
 
   if echo "$output" | grep -q "infra provider"; then
-    printf "✓ Mentions 'nself infra provider'\n"
+    printf "✓ Mentions 'nself infra provider' for legacy commands\n"
     TESTS_PASSED=$((TESTS_PASSED + 1))
     return 0
   else
-    printf "✗ New command not mentioned\n"
+    printf "✗ Legacy provider reference missing\n"
     return 1
   fi
 }
 
 # Run all tests
-printf "Testing nself cloud (deprecated)...\n"
+printf "Testing nself cloud...\n"
 test_syntax
-test_deprecation_warning
-test_new_command_mentioned
+test_help_subcommands
+test_legacy_reference
 
 printf "\n"
 printf "Tests passed: %d/%d\n" "$TESTS_PASSED" "$TESTS_RUN"
