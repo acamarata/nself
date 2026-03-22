@@ -102,3 +102,6 @@ PLAN.md
 .windsurf/
 .gemini/
 .codeium/
+
+# CLI generated exports
+config_export_*.json
