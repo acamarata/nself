@@ -355,10 +355,8 @@ start_services() {
     return 1
   fi
 
-  if ! docker info >/dev/null 2>&1; then
+  if ! ensure_docker_running; then
     update_progress 0 "error"
-    printf "\n${COLOR_RED}Error: Docker daemon is not running${COLOR_RESET}\n"
-    printf "Start Docker Desktop or run: ${COLOR_BLUE}sudo systemctl start docker${COLOR_RESET}\n\n"
     return 1
   fi
 

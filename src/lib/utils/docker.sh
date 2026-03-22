@@ -9,14 +9,66 @@ set -euo pipefail
 
 source "$UTILS_DIR/display.sh" 2>/dev/null || true
 
-# Ensure Docker is running
+# Ensure Docker is running — auto-starts on macOS and Linux if possible
+# Override timeout with NSELF_DOCKER_TIMEOUT (seconds, default 120)
 ensure_docker_running() {
-  if ! docker info >/dev/null 2>&1; then
-    log_error "Docker is not running"
-    log_info "Please start Docker Desktop or run: sudo systemctl start docker"
-    return 1
+  if docker info >/dev/null 2>&1; then
+    return 0
   fi
-  return 0
+
+  local timeout="${NSELF_DOCKER_TIMEOUT:-120}"
+
+  # Attempt auto-start before failing
+  # macOS: launch Docker Desktop and poll for readiness
+  if [[ "${OSTYPE:-}" == darwin* ]]; then
+    if [[ -d "/Applications/Docker.app" ]]; then
+      log_info "Docker is not running. Starting Docker Desktop..."
+      local open_output
+      open_output=$(open -a Docker 2>&1) || {
+        if echo "$open_output" | grep -q "error -1712"; then
+          log_error "Docker Desktop requires a GUI session. Unlock your screen or start Docker Desktop manually."
+          return 1
+        fi
+        log_error "Failed to launch Docker Desktop: $open_output"
+        return 1
+      }
+
+      local elapsed=0
+      while [[ $elapsed -lt $timeout ]]; do
+        if docker info >/dev/null 2>&1; then
+          log_success "Docker Desktop started (${elapsed}s)"
+          return 0
+        fi
+        # Show progress every 10 seconds
+        if [[ $((elapsed % 10)) -eq 0 ]] && [[ $elapsed -gt 0 ]]; then
+          printf "  Waiting for Docker Desktop... (%ds/%ds)\n" "$elapsed" "$timeout"
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+      done
+
+      log_error "Docker Desktop did not start within ${timeout} seconds"
+      log_info "Set NSELF_DOCKER_TIMEOUT to increase (e.g. export NSELF_DOCKER_TIMEOUT=180)"
+      return 1
+    else
+      log_error "Docker Desktop is not installed"
+      log_info "Install from: https://docker.com/products/docker-desktop"
+      return 1
+    fi
+  fi
+
+  # Linux: try systemctl
+  if command -v systemctl >/dev/null 2>&1; then
+    log_info "Docker is not running. Starting docker service..."
+    if sudo systemctl start docker 2>/dev/null; then
+      log_success "Docker service started"
+      return 0
+    fi
+  fi
+
+  log_error "Docker is not running"
+  log_info "Please start Docker manually"
+  return 1
 }
 
 # Docker Compose wrapper - enforces v2 and consistent options

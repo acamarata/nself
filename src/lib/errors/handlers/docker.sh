@@ -67,7 +67,15 @@ fix_docker_not_running() {
   if [[ "$OSTYPE" == "darwin"* ]]; then
     if [[ -d "/Applications/Docker.app" ]]; then
       log_info "Starting Docker Desktop..."
-      open -a Docker
+      local open_output
+      open_output=$(open -a Docker 2>&1) || {
+        if echo "$open_output" | grep -q "error -1712"; then
+          log_error "Docker Desktop requires a GUI session. Unlock your screen or start Docker Desktop manually."
+          return 1
+        fi
+        log_error "Failed to launch Docker Desktop: $open_output"
+        return 1
+      }
 
       # Wait for Docker to start (max 30 seconds)
       local attempts=0
