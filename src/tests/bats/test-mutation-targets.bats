@@ -508,7 +508,7 @@ CONFEOF
   [ -f "$NSELF_LICENSE_KEY_FILE" ]
   # Check permissions (should be 600 = -rw-------)
   local perms
-  perms=$(stat -f "%Lp" "$NSELF_LICENSE_KEY_FILE" 2>/dev/null || stat -c "%a" "$NSELF_LICENSE_KEY_FILE" 2>/dev/null)
+  perms=$(stat -c "%a" "$NSELF_LICENSE_KEY_FILE" 2>/dev/null || stat -f "%Lp" "$NSELF_LICENSE_KEY_FILE" 2>/dev/null)
   [ "$perms" = "600" ]
 }
 
