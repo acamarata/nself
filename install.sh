@@ -850,31 +850,48 @@ setup_path() {
   esac
   
   local path_line="export PATH=\"$BIN_DIR:\$PATH\""
+  if [[ "$current_shell" == "fish" ]]; then
+    path_line="set -gx PATH $BIN_DIR \$PATH"
+  fi
   local added_to=()
-  
+
   for config in "${shell_configs[@]}"; do
-    if [[ -f "$config" ]]; then
-      # Check if already in PATH
-      if grep -q "$BIN_DIR" "$config" 2>/dev/null; then
-        echo_info "PATH already configured in $config"
-      else
-        echo "" >> "$config"
-        echo "# Added by nself installer on $(date)" >> "$config"
-        echo "$path_line" >> "$config"
-        added_to+=("$config")
-        echo_success "Added to PATH in: $config"
+    # T-2291: Create the rc file if it does not exist so fresh installs
+    # always get PATH configured.
+    if [[ ! -f "$config" ]]; then
+      local config_dir
+      config_dir=$(dirname "$config")
+      if [[ ! -d "$config_dir" ]]; then
+        mkdir -p "$config_dir"
       fi
+      touch "$config"
+    fi
+
+    # Check if already in PATH
+    if grep -q "$BIN_DIR" "$config" 2>/dev/null; then
+      echo_info "PATH already configured in $config"
+    else
+      echo "" >> "$config"
+      echo "# Added by nself installer on $(date)" >> "$config"
+      echo "$path_line" >> "$config"
+      added_to+=("$config")
+      echo_success "Added to PATH in: $config"
     fi
   done
-  
+
+  # T-2291: Export PATH for the current installer session so that
+  # verify_installation (and subsequent commands) find the nself binary
+  # without requiring a terminal restart.
+  case ":$PATH:" in
+    *":$BIN_DIR:"*) ;;
+    *) export PATH="$BIN_DIR:$PATH" ;;
+  esac
+
   if [[ ${#added_to[@]} -gt 0 ]]; then
     echo ""
-    echo_warning "PATH has been updated in: ${added_to[*]}"
-    echo_warning "Run this to use nself immediately:"
-    echo ""
-    echo "    ${CYAN}source ${added_to[0]}${RESET}"
-    echo ""
-    echo "Or start a new terminal session"
+    echo_success "PATH has been updated in: ${added_to[*]}"
+    echo_info "nself is available in this session. For new terminals, PATH is"
+    echo_info "already configured in your shell rc file."
   fi
 }
 

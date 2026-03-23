@@ -455,7 +455,9 @@ show_service_overview() {
 
   # If compose config fails, get running containers directly from Docker
   if [[ ${#services[@]} -eq 0 ]]; then
-    local project_name="${PROJECT_NAME:-nself}"
+    # T-2292: Use _resolve_project_name() for correct COMPOSE_PROJECT_NAME/.env lookup.
+    local project_name
+    project_name=$(_resolve_project_name)
     services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s|^${project_name}_||" | sed 's/_[0-9]*$//' | sort -u))
   fi
 
@@ -479,7 +481,9 @@ show_service_overview() {
 
   # If compose ps failed, query docker directly
   local use_docker_fallback=false
-  local project_name="${PROJECT_NAME:-nself}"
+  # T-2292: Use _resolve_project_name() for correct COMPOSE_PROJECT_NAME/.env lookup.
+  local project_name
+  project_name=$(_resolve_project_name)
   if [[ -z "$all_containers" ]]; then
     use_docker_fallback=true
     # Auto-detect actual project name from running containers when PROJECT_NAME is wrong.
@@ -872,7 +876,9 @@ show_verbose_service_overview() {
   local services=($(compose config --services 2>/dev/null))
 
   if [[ ${#services[@]} -eq 0 ]]; then
-    local project_name="${PROJECT_NAME:-nself}"
+    # T-2292: Use _resolve_project_name() for correct COMPOSE_PROJECT_NAME/.env lookup.
+    local project_name
+    project_name=$(_resolve_project_name)
     services=($(docker ps -a --filter "name=${project_name}_" --format "{{.Names}}" | sed "s|^${project_name}_||" | sed 's/_[0-9]*$//' | sort -u))
   fi
 
