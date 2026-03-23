@@ -242,7 +242,7 @@ add_hasura_service() {
   cat >>"$file" <<EOF
 
   hasura:
-    image: hasura/graphql-engine:\${HASURA_VERSION:-latest}
+    image: hasura/graphql-engine:\${HASURA_VERSION:-v2.44.0}
     container_name: \${PROJECT_NAME}_hasura
     restart: unless-stopped
     ports:
@@ -274,7 +274,7 @@ add_auth_service() {
   cat >>"$file" <<EOF
 
   auth:
-    image: nhost/hasura-auth:\${AUTH_VERSION:-latest}
+    image: nhost/hasura-auth:\${AUTH_VERSION:-0.26.0}
     container_name: \${PROJECT_NAME}_auth
     restart: unless-stopped
     ports:

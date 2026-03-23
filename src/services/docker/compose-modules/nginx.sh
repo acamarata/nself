@@ -112,6 +112,15 @@ EOF
       start_period: 10s
 EOF
   fi
+
+  # Resource limits (always applied with sensible defaults, overridable via env vars)
+  cat <<EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${NGINX_MEM_LIMIT:-256m}
+          cpus: '\${NGINX_CPU_LIMIT:-0.5}'
+EOF
 }
 
 # Generate environment-aware server blocks

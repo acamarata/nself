@@ -46,6 +46,30 @@ cleanup_nginx_sites() {
   rm -f nginx/sites/*.conf 2>/dev/null || true
 }
 
+# Check if a server_name is already handled by a hand-managed conf.d/ file.
+# If so, skip generating a sites/ config to avoid duplicate server blocks.
+# Usage: nginx_domain_in_confd "api.example.com" && return 0
+nginx_domain_in_confd() {
+  local domain="$1"
+  local env_dir="nginx/conf.d-${ENV:-dev}"
+
+  # Search conf.d/ and conf.d-{ENV}/ for a server_name matching this domain
+  for conf_dir in nginx/conf.d "$env_dir"; do
+    if [[ -d "$conf_dir" ]]; then
+      for conf_file in "$conf_dir"/*.conf; do
+        [[ -f "$conf_file" ]] || continue
+        # Skip the default.conf (it's generated, not hand-managed)
+        [[ "$(basename "$conf_file")" == "default.conf" ]] && continue
+        # Check if this conf file contains a server_name for our domain
+        if grep -q "server_name.*${domain}" "$conf_file" 2>/dev/null; then
+          return 0  # Domain is already handled by conf.d
+        fi
+      done
+    fi
+  done
+  return 1  # Domain not found in conf.d
+}
+
 # Generate main nginx configuration
 generate_nginx_config() {
   local force="${1:-false}"
@@ -269,6 +293,9 @@ server {
         add_header Content-Type text/plain;
     }
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         return 301 https://\$host\$request_uri;
     }
@@ -289,6 +316,9 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         root /usr/share/nginx/html;
@@ -315,6 +345,10 @@ generate_service_routes() {
     local hasura_route="${HASURA_ROUTE:-api}"
     local base_domain="${BASE_DOMAIN:-localhost}"
 
+    # Skip if domain is already handled by a hand-managed conf.d/ file
+    if nginx_domain_in_confd "${hasura_route}.${base_domain}"; then
+      printf '  [nginx] Skipping sites/hasura.conf — domain already in conf.d/\n'
+    else
     cat >nginx/sites/hasura.conf <<EOF
 # Hasura GraphQL Engine
 server {
@@ -328,6 +362,9 @@ server {
     # Rate limiting for GraphQL API
     limit_req zone=graphql_api burst=20 nodelay;
     limit_conn conn_limit_per_ip 10;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass http://hasura:8080;
@@ -350,6 +387,7 @@ server {
     }
 }
 EOF
+    fi  # end nginx_domain_in_confd check for hasura
   fi
 
   # Auth service route
@@ -357,6 +395,10 @@ EOF
     local auth_route="${AUTH_ROUTE:-auth}"
     local base_domain="${BASE_DOMAIN:-localhost}"
 
+    # Skip if domain is already handled by a hand-managed conf.d/ file
+    if nginx_domain_in_confd "${auth_route}.${base_domain}"; then
+      printf '  [nginx] Skipping sites/auth.conf — domain already in conf.d/\n'
+    else
     cat >nginx/sites/auth.conf <<EOF
 # Authentication Service
 server {
@@ -371,6 +413,9 @@ server {
     limit_req zone=auth burst=5 nodelay;
     limit_conn conn_limit_per_ip 5;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://auth:4000;
         proxy_http_version 1.1;
@@ -381,6 +426,7 @@ server {
     }
 }
 EOF
+    fi  # end nginx_domain_in_confd check for auth
   fi
 
   # Storage/MinIO route
@@ -388,6 +434,12 @@ EOF
     local storage_console_route="${STORAGE_CONSOLE_ROUTE:-storage-console}"
     local storage_route="${STORAGE_ROUTE:-storage}"
     local base_domain="${BASE_DOMAIN:-localhost}"
+
+    # Skip if either storage domain is already handled by a hand-managed conf.d/ file
+    if nginx_domain_in_confd "${storage_console_route}.${base_domain}" || \
+       nginx_domain_in_confd "${storage_route}.${base_domain}"; then
+      printf '  [nginx] Skipping sites/storage.conf — domain already in conf.d/\n'
+    else
     cat >nginx/sites/storage.conf <<EOF
 # MinIO Storage Console
 server {
@@ -397,6 +449,9 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass http://minio:9001;
@@ -423,6 +478,9 @@ server {
     limit_req zone=uploads burst=2 nodelay;
     limit_conn conn_limit_per_ip 5;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://minio:9000;
         proxy_http_version 1.1;
@@ -433,6 +491,7 @@ server {
     }
 }
 EOF
+    fi  # end nginx_domain_in_confd check for storage
   fi
 
   # Optional services routes
@@ -475,6 +534,9 @@ server {
     # This prevents nginx from refusing to start when nself-admin is not running.
     resolver 127.0.0.11 valid=10s;
     set \$upstream http://${admin_upstream};
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass \$upstream;
@@ -540,6 +602,9 @@ server {
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://${upstream_host}:${upstream_port};
         proxy_http_version 1.1;
@@ -569,6 +634,9 @@ server {
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://mailpit:8025;
         proxy_http_version 1.1;
@@ -597,6 +665,9 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass http://mlflow:5000;
@@ -628,6 +699,9 @@ server {
     limit_req zone=functions burst=15 nodelay;
     limit_conn conn_limit_per_ip 10;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://functions:3000;
         proxy_http_version 1.1;
@@ -654,6 +728,9 @@ server {
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://grafana:3000;
         proxy_http_version 1.1;
@@ -677,6 +754,9 @@ server {
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass http://prometheus:9090;
         proxy_http_version 1.1;
@@ -699,6 +779,9 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass http://alertmanager:9093;
@@ -730,6 +813,12 @@ generate_frontend_routes() {
       local app_port_var="FRONTEND_APP_${i}_PORT"
       local app_port="${!app_port_var:-$((3000 + i - 1))}"
 
+      # Skip if domain is already handled by a hand-managed conf.d/ file
+      if nginx_domain_in_confd "${app_route}.${base_domain}"; then
+        printf '  [nginx] Skipping sites/frontend-%s.conf — domain already in conf.d/\n' "$app_name"
+        continue
+      fi
+
       cat >"nginx/sites/frontend-${app_name}.conf" <<EOF
 # Frontend Application: $app_name
 server {
@@ -739,6 +828,9 @@ server {
 
     ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         # Proxy to external frontend app running on host
@@ -815,6 +907,12 @@ generate_custom_routes() {
         local cs_port_var="CS_${i}_PORT"
         local cs_port="${!cs_port_var:-$((8000 + i))}"
 
+        # Skip if domain is already handled by a hand-managed conf.d/ file
+        if nginx_domain_in_confd "${cs_route}.${base_domain}"; then
+          printf '  [nginx] Skipping sites/custom-%s.conf — domain already in conf.d/\n' "$cs_name"
+          continue
+        fi
+
         # Check if WebSocket support is enabled
         local cs_ws_var="CS_${i}_WEBSOCKET"
         local cs_ws="${!cs_ws_var:-false}"
@@ -843,6 +941,9 @@ server {
     # This prevents nginx from refusing to start when this service is not running.
     resolver 127.0.0.11 valid=10s;
     set \$upstream http://${cs_name}:${cs_port};
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 
     location / {
         proxy_pass \$upstream;
@@ -990,6 +1091,9 @@ server {
     resolver 127.0.0.11 valid=10s;
     set \$upstream http://${target};
 
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
     location / {
         proxy_pass \$upstream;
         proxy_http_version 1.1;
@@ -1083,6 +1187,9 @@ server {
 
     # Common webhook settings
     client_max_body_size 10M;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
 EOF
 
   # Add location block for each installed plugin
@@ -1122,9 +1229,92 @@ EOF
     }
 }
 EOF
+
+  # Generate dedicated server blocks for per-plugin webhook domains.
+  # If PLUGIN_<NAME>_WEBHOOK_DOMAIN is set, generate a server block that routes
+  # that entire domain to the plugin's webhook handler or container.
+  for plugin_name in $installed_plugins; do
+    local upper_name
+    upper_name=$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+    local domain_var="PLUGIN_${upper_name}_WEBHOOK_DOMAIN"
+    local domain="${!domain_var:-}"
+
+    if [[ -n "$domain" ]]; then
+      # Determine upstream: plugin container port, or fallback to webhook handler
+      local port_var="PLUGIN_${upper_name}_PORT"
+      local plugin_port="${!port_var:-}"
+      local plugin_upstream=""
+
+      if [[ -n "$plugin_port" ]]; then
+        plugin_upstream="${plugin_name}:${plugin_port}"
+      elif [[ -n "${WEBHOOK_HANDLER_HOST:-}" ]]; then
+        plugin_upstream="${WEBHOOK_HANDLER_HOST}:${WEBHOOK_HANDLER_PORT:-3000}"
+      elif [[ "${FUNCTIONS_ENABLED:-false}" == "true" ]]; then
+        plugin_upstream="functions:3000"
+      else
+        printf '  [nginx] Warning: PLUGIN_%s_WEBHOOK_DOMAIN set but no upstream available\n' "$upper_name" >&2
+        continue
+      fi
+
+      # Skip if domain is already handled by conf.d
+      if nginx_domain_in_confd "$domain"; then
+        printf '  [nginx] Skipping plugin webhook domain %s — already in conf.d/\n' "$domain"
+        continue
+      fi
+
+      cat >"nginx/sites/plugin-webhook-${plugin_name}.conf" <<EOF
+# Plugin Webhook Domain: ${plugin_name}
+# Routes ${domain} to ${plugin_upstream}
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${domain};
+
+    ssl_certificate /etc/nginx/ssl/${ssl_dir}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${ssl_dir}/privkey.pem;
+
+    # Rate limiting for webhooks
+    limit_req zone=webhooks burst=10 nodelay;
+    limit_conn conn_limit_per_ip 10;
+
+    client_max_body_size 10M;
+
+    # Deny access to log files
+    location ~* \.(log)$ { deny all; return 404; }
+
+    location / {
+        proxy_pass http://${plugin_upstream};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Webhook-Plugin ${plugin_name};
+        proxy_set_header X-Original-URI \$request_uri;
+
+        # Preserve raw body for signature verification
+        proxy_set_header Content-Type \$content_type;
+        proxy_pass_request_body on;
+
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    location /health {
+        access_log off;
+        return 200 "webhook-${plugin_name} healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
+      printf '  [nginx] Plugin webhook domain: %s -> %s\n' "$domain" "$plugin_upstream"
+    fi
+  done
 }
 
 # Export all functions
+export -f nginx_domain_in_confd
 export -f generate_nginx_config
 export -f generate_rate_limit_config
 export -f generate_main_nginx_conf

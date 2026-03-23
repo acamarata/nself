@@ -56,16 +56,14 @@ EOF
       retries: 5
 EOF
 
-  # Add resource limits if specified
-  if [[ -n "${POSTGRES_MEMORY:-}" ]] || [[ -n "${POSTGRES_CPU:-}" ]]; then
-    cat <<EOF
+  # Resource limits (always applied with sensible defaults, overridable via env vars)
+  cat <<EOF
     deploy:
       resources:
         limits:
-          memory: \${POSTGRES_MEMORY:-2G}
-          cpus: '\${POSTGRES_CPU:-1.0}'
+          memory: \${POSTGRES_MEM_LIMIT:-2g}
+          cpus: '\${POSTGRES_CPU_LIMIT:-2.0}'
 EOF
-  fi
 
   echo ""  # Close the service block
 }
@@ -79,7 +77,7 @@ generate_hasura_service() {
 
   # Hasura GraphQL Engine
   hasura:
-    image: hasura/graphql-engine:${HASURA_VERSION:-v2.36.0}
+    image: hasura/graphql-engine:${HASURA_VERSION:-v2.44.0}
     container_name: \${PROJECT_NAME}_hasura
     restart: unless-stopped
     user: "1001:1001"
@@ -142,16 +140,14 @@ EOF
       retries: 5
 EOF
 
-  # Add resource limits if specified
-  if [[ -n "${HASURA_MEMORY:-}" ]] || [[ -n "${HASURA_CPU:-}" ]]; then
-    cat <<EOF
+  # Resource limits (always applied with sensible defaults, overridable via env vars)
+  cat <<EOF
     deploy:
       resources:
         limits:
-          memory: \${HASURA_MEMORY:-1G}
-          cpus: '\${HASURA_CPU:-0.5}'
+          memory: \${HASURA_MEM_LIMIT:-1g}
+          cpus: '\${HASURA_CPU_LIMIT:-1.0}'
 EOF
-  fi
 }
 
 # Generate Auth service configuration
@@ -161,7 +157,7 @@ generate_auth_service() {
 
   # Check if we should use fallback auth service
   local use_fallback="${AUTH_USE_FALLBACK:-false}"
-  local auth_image="${AUTH_IMAGE:-nhost/hasura-auth:latest}"
+  local auth_image="${AUTH_IMAGE:-nhost/hasura-auth:0.26.0}"
 
   # If fallback is enabled or ENV is demo, use the fallback service
   if [[ "$use_fallback" == "true" ]] || [[ "${ENV:-}" == "demo" ]] || [[ "${DEMO_CONTENT:-false}" == "true" ]]; then
@@ -259,16 +255,14 @@ EOF
       retries: 5
 EOF
 
-  # Add resource limits if specified
-  if [[ -n "${AUTH_MEMORY:-}" ]] || [[ -n "${AUTH_CPU:-}" ]]; then
-    cat <<EOF
+  # Resource limits (always applied with sensible defaults, overridable via env vars)
+  cat <<EOF
     deploy:
       resources:
         limits:
-          memory: \${AUTH_MEMORY:-512M}
-          cpus: '\${AUTH_CPU:-0.5}'
+          memory: \${AUTH_MEM_LIMIT:-512m}
+          cpus: '\${AUTH_CPU_LIMIT:-0.5}'
 EOF
-  fi
   fi  # Close the use_fallback if statement
 }
 
