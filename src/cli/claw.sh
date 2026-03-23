@@ -1730,7 +1730,7 @@ cmd_claw_voice() {
         printf "nself-voice plugin: running (port %s)\n" "${NSELF_VOICE_URL:-3720}"
       else
         printf "nself-voice plugin: not running\n"
-        printf "  Max license required. Install: nself plugin install voice\n"
+        printf "  Max membership required. Install: nself plugin install voice\n"
       fi
       ;;
 
@@ -1794,7 +1794,7 @@ cmd_claw_voice() {
       else
         printf "nself-voice plugin is not running. Using OS TTS only.\n"
         printf "\n"
-        printf "To enable server TTS (Max license required):\n"
+        printf "To enable server TTS (Max membership required):\n"
         printf "  nself plugin install voice\n"
         printf "  nself build && nself start\n"
       fi
@@ -4014,7 +4014,7 @@ cmd_claw_quick_setup() {
   if [ -z "$health_resp" ]; then
     printf "  Plugin not running — installing now...\n"
     if ! nself plugin install claw; then
-      cli_error "Failed to install claw plugin. Check your license key and try again."
+      cli_error "Failed to install claw plugin. Check your membership key and try again."
       return 1
     fi
     log_success "Plugin installed."

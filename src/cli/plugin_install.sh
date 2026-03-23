@@ -76,7 +76,7 @@ plugin_install_rust_binary() {
   fi
 
   if [ -z "$license_key" ]; then
-    printf '\033[0;31m[ERROR]\033[0m License key required to download Rust plugin binary.\n' >&2
+    printf '\033[0;31m[ERROR]\033[0m Membership key required to download Rust plugin binary.\n' >&2
     return 1
   fi
 

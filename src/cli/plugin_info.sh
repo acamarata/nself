@@ -127,7 +127,7 @@ cmd_info() {
         log_error "Plugin '$plugin_name' not found. Run 'nself plugin list' to see available plugins."
         return 1
       fi
-      reg_desc="Pro plugin (requires license)"
+      reg_desc="Pro plugin (requires membership)"
       reg_ver="1.0.0"
       reg_cat="pro"
     fi

@@ -85,7 +85,7 @@ cmd_set() {
 
   local masked
   masked=$(_license_mask_key "$key")
-  log_success "License key saved: $masked"
+  log_success "Membership key saved: $masked"
   printf '\n'
   printf '  Run: nself license validate   — to verify the key against the server\n'
   printf '  Run: nself plugin install ai  — to install a paid plugin\n'
@@ -104,17 +104,17 @@ cmd_show() {
   fi
 
   if [ -z "$key" ]; then
-    log_warning "No license key configured."
+    log_warning "No membership key configured."
     printf '\n'
     printf '  Set one with: nself license set <key>\n'
-    printf '  Get a license at: %s\n' "$NSELF_PRICING_URL"
+    printf '  Get a membership at: %s\n' "$NSELF_PRICING_URL"
     return 0
   fi
 
   local masked
   masked=$(_license_mask_key "$key")
   printf '\n'
-  printf '  License key:  %s\n' "$masked"
+  printf '  Membership key:  %s\n' "$masked"
 
   # Try to read tier from local cache if available
   local cache_file="${HOME}/.nself/license/cache"
@@ -154,16 +154,16 @@ cmd_validate() {
   fi
 
   if [ -z "$key" ]; then
-    log_error "No license key configured. Run: nself license set <key>"
+    log_error "No membership key configured. Run: nself license set <key>"
     return 1
   fi
 
   if ! command -v curl >/dev/null 2>&1; then
-    log_error "curl is required for license validation"
+    log_error "curl is required for membership validation"
     return 1
   fi
 
-  log_info "Validating license with server..."
+  log_info "Validating membership with server..."
 
   local response http_status body
   response=$(curl -s -w '\n%{http_code}' \
@@ -195,14 +195,14 @@ cmd_validate() {
   if [ "$valid" != "true" ]; then
     local err_msg
     err_msg=$(printf '%s' "$body" | grep -o '"error":"[^"]*"' | cut -d'"' -f4)
-    log_error "License invalid: ${err_msg:-unknown error}"
+    log_error "Membership invalid: ${err_msg:-unknown error}"
     return 1
   fi
 
   local masked
   masked=$(_license_mask_key "$key")
 
-  log_success "License is valid"
+  log_success "Membership is valid"
   printf '\n'
   printf '  Key:          %s\n' "$masked"
   printf '  Tier:         %s\n' "${tier:-unknown}"
@@ -248,7 +248,7 @@ cmd_clear() {
   if [ -d "$key_dir" ]; then
     rm -f "$NSELF_LICENSE_KEY_FILE" "${key_dir}/cache" 2>/dev/null || true
   fi
-  log_success "License key cleared."
+  log_success "Membership key cleared."
 }
 
 # ---------------------------------------------------------------------------
@@ -279,13 +279,13 @@ cmd_upgrade() {
 # ---------------------------------------------------------------------------
 cmd_help() {
   cat <<'HELP'
-nself license — Manage your nself plugin license
+nself license — Manage your nself plugin membership
 
 Usage:
-  nself license set <key>    Save a license key
+  nself license set <key>    Save a membership key
   nself license show         Display current key (masked) and tier
   nself license validate     Validate key against the server
-  nself license clear        Remove saved license key
+  nself license clear        Remove saved membership key
   nself license upgrade      Open the upgrade page in your browser
 
 Environment:
@@ -297,7 +297,7 @@ Examples:
   nself license validate
   nself license upgrade
 
-Get a license at: https://nself.org/pricing
+Get a membership at: https://nself.org/pricing
 HELP
 }
 

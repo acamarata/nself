@@ -515,6 +515,11 @@ start_services() {
     project_name=$(grep "^PROJECT_NAME=" .env.runtime 2>/dev/null | cut -d= -f2- || echo "$project_name")
   fi
 
+  # Export COMPOSE_PROJECT_NAME so docker compose uses the correct project name
+  # for container naming, network creation, and volume naming. Without this,
+  # containers get directory-name prefixes and end up on wrong networks.
+  export COMPOSE_PROJECT_NAME="$project_name"
+
   # 9. Start services with progress tracking
   local compose_cmd="docker compose"
   local start_output=$(mktemp)
@@ -934,7 +939,7 @@ start_services() {
         # Per-project mode
         if [[ -s "$project_plugin_list" ]]; then
           printf "\n${COLOR_CYAN}Starting project plugins...${COLOR_RESET}\n"
-          start_all_plugins "$project_plugin_list"
+          start_all_plugins "$project_plugin_list" || true
         fi
         # Empty file → no plugins for this project; output nothing
       elif [[ -d "$plugin_dir" ]]; then
@@ -953,7 +958,7 @@ start_services() {
         done
         if [[ "$has_plugins" == "true" ]]; then
           printf "\n${COLOR_CYAN}Starting installed plugins...${COLOR_RESET}\n"
-          start_all_plugins
+          start_all_plugins || true
         fi
       fi
     fi

@@ -512,9 +512,9 @@ check_ssl_live() {
   fi
 }
 
-# Function to check license key configuration
+# Function to check membership key configuration
 check_license_key() {
-  start_spinner "Checking license key"
+  start_spinner "Checking membership key"
 
   # Check env var first, then key file
   local key="${NSELF_PLUGIN_LICENSE_KEY:-}"
@@ -525,16 +525,16 @@ check_license_key() {
   if [[ -n "$key" ]]; then
     # Confirm it looks like a real key (nself_pro_ prefix, minimum length)
     if printf '%s' "$key" | grep -q '^nself_pro_' && [[ ${#key} -ge 40 ]]; then
-      stop_spinner "success" "License key configured (${key:0:16}...)"
+      stop_spinner "success" "Membership key configured (${key:0:16}...)"
     else
-      stop_spinner "warning" "License key set but format looks unexpected"
+      stop_spinner "warning" "Membership key set but format looks unexpected"
       warning_found
     fi
   else
-    stop_spinner "warning" "License key not configured — pro plugins unavailable"
+    stop_spinner "warning" "Membership key not configured — pro plugins unavailable"
     warning_found
     printf "  Set your key: nself license set nself_pro_xxxx...\n"
-    printf "  Get a license: https://nself.org/pricing\n"
+    printf "  Get a membership: https://nself.org/pricing\n"
   fi
 }
 

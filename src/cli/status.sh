@@ -1624,7 +1624,7 @@ main() {
   local verbose_mode=false
   local detailed_mode=false
   local fast_mode=false
-  WATCH_MODE=false
+  WATCH_MODE="${WATCH_MODE:-false}"
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do

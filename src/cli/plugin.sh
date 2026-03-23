@@ -268,7 +268,7 @@ cmd_list() {
     local has_license=false
     if license_get_key >/dev/null 2>&1; then has_license=true; fi
 
-    printf "\n  --- Pro Plugins (license required — %s) ---\n\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
+    printf "\n  --- Pro Plugins (membership required — %s) ---\n\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
 
     for plugin in $NSELF_PRO_PLUGINS; do
       if [[ -n "$filter_category" ]]; then
@@ -282,7 +282,7 @@ cmd_list() {
       if [[ "$has_license" == "true" ]]; then
         printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "1.0.0" "-" "PRO" "Pro Plugin" "$suffix"
       else
-        printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "1.0.0" "-" "PRO" "License required" "$suffix"
+        printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "1.0.0" "-" "PRO" "Membership required" "$suffix"
       fi
       count=$((count + 1))
     done
@@ -295,7 +295,7 @@ cmd_list() {
   printf "\n  * = installed\n"
   printf "\nInstall free:  nself plugin install <name>\n"
   printf "Install pro:   nself plugin license set <key> && nself plugin install <name>\n"
-  printf "Get a license: %s\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
+  printf "Get a membership: %s\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
 }
 
 # Return space-separated direct dependencies for a plugin (hardcoded for offline/Bash 3.2).
@@ -1836,7 +1836,7 @@ _download_plugin_signed() {
   if [[ -n "$api_error" ]]; then
     log_error "Download authorization failed: $api_error"
     if [[ "$api_error" == *"expired"* ]] || [[ "$api_error" == *"Invalid license"* ]]; then
-      printf "Renew your license at: https://nself.org/commercial\n"
+      printf "Renew your membership at: https://nself.org/pricing\n"
     fi
     return 1
   fi
@@ -3104,45 +3104,45 @@ cmd_plugin_license() {
         return 1
       fi
       if ! license_validate_format "$key"; then
-        log_error "Invalid license key format."
+        log_error "Invalid membership key format."
         printf "Key must start with 'nself_pro_' and be at least 32 characters.\n"
         return 1
       fi
       license_save_key "$key"
-      log_success "License key saved to ~/.nself/license/key"
+      log_success "Membership key saved to ~/.nself/license/key"
       printf "Run 'nself plugin license validate' to verify with the server.\n"
       ;;
 
     clear | remove)
       license_clear_key
-      log_success "License key removed."
+      log_success "Membership key removed."
       ;;
 
     validate)
       local license_key
       license_key=$(license_get_key) || true
       if [[ -z "$license_key" ]]; then
-        log_error "No license key configured."
+        log_error "No membership key configured."
         printf "Set one with: nself plugin license set nself_pro_...\n"
-        printf "Get a license at: %s\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
+        printf "Get a membership at: %s\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
         return 1
       fi
       if ! license_validate_format "$license_key"; then
-        log_error "Invalid license key format."
+        log_error "Invalid membership key format."
         printf "Key must start with 'nself_pro_' and be at least 32 characters.\n"
         return 1
       fi
-      log_info "Validating license against server..."
+      log_info "Validating membership against server..."
       if license_validate_remote "$license_key"; then
-        log_success "License is valid."
+        log_success "Membership is valid."
       else
-        log_error "License validation failed. Check or renew at: ${NSELF_PRICING_URL:-https://nself.org/pricing}"
+        log_error "Membership validation failed. Check or renew at: ${NSELF_PRICING_URL:-https://nself.org/pricing}"
         return 1
       fi
       ;;
 
     plugins | list)
-      printf "\nPro Plugins (require license):\n\n"
+      printf "\nPro Plugins (require membership):\n\n"
       for plugin_name in $NSELF_PRO_PLUGINS; do
         printf "  %s\n" "$plugin_name"
       done
@@ -3153,17 +3153,17 @@ cmd_plugin_license() {
     help | --help | -h)
       printf "Usage: nself plugin license <subcommand>\n\n"
       printf "Subcommands:\n"
-      printf "  set <key>  Save your Pro Plugins license key\n"
-      printf "  clear      Remove saved license key\n"
-      printf "  show       Show current license key and status (default)\n"
-      printf "  validate   Force-validate license key against the API\n"
-      printf "  plugins    List all Pro Plugins covered by a license\n"
+      printf "  set <key>  Save your Pro Plugins membership key\n"
+      printf "  clear      Remove saved membership key\n"
+      printf "  show       Show current membership key and status (default)\n"
+      printf "  validate   Force-validate membership key against the API\n"
+      printf "  plugins    List all Pro Plugins covered by a membership\n"
       printf "\nQuick start:\n"
       printf "  nself plugin license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
       printf "  nself plugin install analytics\n"
       printf "\nOr add to your .env:\n"
       printf "  NSELF_PLUGIN_LICENSE_KEY=nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
-      printf "\nGet a license at: %s\n\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
+      printf "\nGet a membership at: %s\n\n" "${NSELF_PRICING_URL:-https://nself.org/pricing}"
       ;;
 
     *)
@@ -3842,12 +3842,12 @@ Commands:
 
   refresh                 Force refresh the plugin registry cache
 
-  license [subcommand]    Manage Pro Plugins license
-    set <key>               Save your license key persistently
-    clear                   Remove saved license key
-    show                    Show current license key and status (default)
-    validate                Force-validate license key against API
-    plugins                 List all 49 Pro Plugins covered by license
+  license [subcommand]    Manage Pro Plugins membership
+    set <key>               Save your membership key persistently
+    clear                   Remove saved membership key
+    show                    Show current membership key and status (default)
+    validate                Force-validate membership key against API
+    plugins                 List all Pro Plugins covered by membership
 
   config <name>           Interactive env var setup (reads plugin.json env_vars)
     --show                  Show current values (secrets masked as ****)
@@ -3948,8 +3948,8 @@ Examples:
   nself plugin channel ai stable             # Switch back to stable
   nself plugin channel --list                # Show channels for all plugins
 
-  # License
-  nself plugin license               # Show license status
+  # Membership
+  nself plugin license               # Show membership status
   nself plugin license validate      # Force-validate against API
   nself plugin license plugins       # List all Pro Plugins
 
@@ -3982,7 +3982,7 @@ Environment:
   NSELF_PLUGIN_REGISTRY     Custom registry URL (default: https://plugins.nself.org)
   NSELF_REGISTRY_CACHE_TTL  Registry cache TTL in seconds (default: 300)
   NSELF_PLUGIN_RUNTIME      Plugin runtime directory (~/.nself/runtime)
-  NSELF_PLUGIN_LICENSE_KEY  Pro Plugins license key (nself_pro_...)
+  NSELF_PLUGIN_LICENSE_KEY  Pro Plugins membership key (nself_pro_...)
 
 "
 }

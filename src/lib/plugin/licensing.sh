@@ -292,10 +292,10 @@ license_check_entitlement() {
   license_key=$(license_get_key) || true
   if [ -z "$license_key" ]; then
     printf '\n'
-    printf '  %s requires a Pro Plugins license.\n' "$plugin_name"
+    printf '  %s requires a Pro Plugins membership.\n' "$plugin_name"
     printf '\n'
-    printf '  License:  %s\n' "$NSELF_PRICING_URL"
-    printf '  Price:    $9.99/year — covers all 49 Pro Plugins\n'
+    printf '  Membership:  %s\n' "$NSELF_PRICING_URL"
+    printf '  Price:       $9/year — covers all Pro Plugins\n'
     printf '\n'
     printf '  Save your key:  nself plugin license set nself_pro_xxxx...\n'
     printf '  Or add to .env: NSELF_PLUGIN_LICENSE_KEY=nself_pro_xxxx...\n'
@@ -309,7 +309,7 @@ license_check_entitlement() {
   # Validate key format
   if ! license_validate_format "$license_key"; then
     printf '\n'
-    printf '  Invalid license key format.\n'
+    printf '  Invalid membership key format.\n'
     printf '  Key must start with "%s" and be at least 32 characters.\n' "$NSELF_LICENSE_KEY_PREFIX"
     printf '  Get a key at: %s\n' "$NSELF_PRICING_URL"
     printf '\n'
@@ -326,7 +326,7 @@ license_check_entitlement() {
       ;;
     invalid)
       printf '\n'
-      printf '  License key is invalid or expired.\n'
+      printf '  Membership key is invalid or expired.\n'
       printf '  Renew at: %s\n' "$NSELF_PRICING_URL"
       printf '\n'
       return 1
@@ -337,8 +337,8 @@ license_check_entitlement() {
         return 0
       else
         printf '\n'
-        printf '  License validation failed for plugin: %s\n' "$plugin_name"
-        printf '  Check or renew your license at: %s\n' "$NSELF_PRICING_URL"
+        printf '  Membership validation failed for plugin: %s\n' "$plugin_name"
+        printf '  Check or renew your membership at: %s\n' "$NSELF_PRICING_URL"
         printf '\n'
         return 1
       fi
@@ -360,11 +360,11 @@ license_show_status() {
     key_source="saved"
   fi
 
-  printf '\n  Pro Plugins License Status\n'
-  printf '  --------------------------\n'
+  printf '\n  Pro Plugins Membership Status\n'
+  printf '  -----------------------------\n'
 
   if [ -z "$license_key" ]; then
-    printf '  Status:   No license key configured\n'
+    printf '  Status:   No membership key configured\n'
     printf '  Set key:  nself plugin license set nself_pro_xxxx...\n'
     printf '  Get one:  %s\n' "$NSELF_PRICING_URL"
     printf '\n'
@@ -405,7 +405,7 @@ license_show_status() {
       ;;
   esac
 
-  printf '\n  Pro Plugins covered: 49 plugins\n'
+  printf '\n  Membership covers: all Pro Plugins\n'
   printf '  Details: %s\n\n' "$NSELF_PRICING_URL"
 }
 
