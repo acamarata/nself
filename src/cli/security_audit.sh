@@ -11,7 +11,7 @@ CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info()    { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
   log_error()   { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
@@ -499,7 +499,7 @@ _autofix() {
 
     # Disable PasswordAuthentication
     if grep -qiE '^[[:space:]]*PasswordAuthentication[[:space:]]+yes' "$sshd_config"; then
-      if declare -f safe_sed_inline >/dev/null 2>&1; then
+      if type safe_sed_inline >/dev/null 2>&1; then
         safe_sed_inline 's/^[[:space:]]*PasswordAuthentication[[:space:]]*yes/# PasswordAuthentication yes  # disabled by nself security audit/' "$sshd_config"
       else
         local tmp="${sshd_config}.tmp.$$"
@@ -518,7 +518,7 @@ _autofix() {
 
     # Disable PermitRootLogin
     if grep -qiE '^[[:space:]]*PermitRootLogin[[:space:]]+yes' "$sshd_config"; then
-      if declare -f safe_sed_inline >/dev/null 2>&1; then
+      if type safe_sed_inline >/dev/null 2>&1; then
         safe_sed_inline 's/^[[:space:]]*PermitRootLogin[[:space:]]*yes/# PermitRootLogin yes  # disabled by nself security audit/' "$sshd_config"
       else
         local tmp="${sshd_config}.tmp.$$"

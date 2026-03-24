@@ -13,7 +13,7 @@ source "$ERROR_LIB_DIR/handlers/ports.sh"
 source "$ERROR_LIB_DIR/handlers/docker.sh"
 
 # Source display utilities if not already loaded
-if ! declare -f log_info >/dev/null; then
+if ! type log_info >/dev/null; then
   source "$ERROR_LIB_DIR/../utils/display.sh"
 fi
 

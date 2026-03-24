@@ -229,7 +229,7 @@ test_rls_enforcement() {
   print_test "RLS Policy Enforcement Performance"
 
   # Define different RLS policy complexities
-  local -a policy_types=("simple" "moderate" "complex")
+  localpolicy_types=("simple" "moderate" "complex")
 
   for policy_type in "${policy_types[@]}"; do
     local start_time=$(date +%s.%N)

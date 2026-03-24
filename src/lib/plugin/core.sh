@@ -376,7 +376,7 @@ plugin_install_dependencies() {
 
     printf "  Installing dependency: %s@%s\n" "$dep_name" "$dep_version"
 
-    if declare -f cmd_install >/dev/null 2>&1; then
+    if type cmd_install >/dev/null 2>&1; then
       # Track this dep to prevent re-entrant loops
       local prev_deps="$_NSELF_INSTALLING_DEPS"
       _NSELF_INSTALLING_DEPS="${_NSELF_INSTALLING_DEPS}:${dep_name}"
@@ -521,7 +521,7 @@ plugin_resolve_conflicts() {
       printf "  Required by: %s\n" "$req_summary"
       printf "  Resolution:  nself plugin install %s@%s\n" "$dep_name" "$max_required"
 
-      if [[ "$fix_mode" == "true" ]] && declare -f cmd_install >/dev/null 2>&1; then
+      if [[ "$fix_mode" == "true" ]] && type cmd_install >/dev/null 2>&1; then
         printf "  Auto-fixing: installing %s@%s...\n" "$dep_name" "$max_required"
         local prev_deps="$_NSELF_INSTALLING_DEPS"
         _NSELF_INSTALLING_DEPS="${_NSELF_INSTALLING_DEPS}:${dep_name}"

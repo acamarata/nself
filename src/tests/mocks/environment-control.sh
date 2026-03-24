@@ -447,9 +447,9 @@ setup_test_environment() {
 # Check if we're in a mocked environment
 is_mocked_environment() {
   # Check if any mock functions are defined
-  if declare -f docker >/dev/null 2>&1; then
+  if type docker >/dev/null 2>&1; then
     # Check if it's our mock
-    if declare -f docker | grep -q "\[MOCK\]"; then
+    if type docker | grep -q "\[MOCK\]"; then
       return 0
     fi
   fi

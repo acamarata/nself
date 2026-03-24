@@ -13,7 +13,7 @@ mkdir -p "$TEST_DIR"
 cd "$TEST_DIR"
 
 # Define log_debug if not available (for testing)
-if ! declare -f log_debug >/dev/null 2>&1; then
+if ! type log_debug >/dev/null 2>&1; then
   log_debug() { :; } # No-op
 fi
 

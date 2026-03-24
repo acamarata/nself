@@ -12,13 +12,13 @@ CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 
 # Fallback logging
-if ! declare -f log_success >/dev/null 2>&1; then
+if ! type log_success >/dev/null 2>&1; then
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
 fi
 
@@ -359,11 +359,11 @@ generate_zsh() {
 # Add to ~/.zshrc: eval "$(nself completion zsh)"
 
 _nself() {
-    local -a commands db_commands env_commands sync_commands deploy_commands
-    local -a cloud_commands service_commands k8s_commands helm_commands
-    local -a perf_commands bench_commands scale_commands health_commands
-    local -a tenant_commands monitor_commands plugin_commands frontend_commands
-    local -a history_commands config_commands provider_commands
+    localcommands db_commands env_commands sync_commands deploy_commands
+    localcloud_commands service_commands k8s_commands helm_commands
+    localperf_commands bench_commands scale_commands health_commands
+    localtenant_commands monitor_commands plugin_commands frontend_commands
+    localhistory_commands config_commands provider_commands
 
     commands=(
         'init:Initialize a new nself project'
@@ -693,7 +693,7 @@ _nself() {
                     fi
                     ;;
                 doctor)
-                    local -a doctor_opts
+                    localdoctor_opts
                     doctor_opts=('--fix:Auto-fix detected issues' '--verbose:Verbose output' '--help:Show help')
                     _describe -t doctor_opts 'doctor option' doctor_opts
                     ;;
@@ -702,75 +702,75 @@ _nself() {
         subsubcommand)
             case "$words[2]-$words[3]" in
                 provider-info)
-                    local -a info_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'show:Show provider info')
+                    localinfo_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'show:Show provider info')
                     _describe -t info_cmds 'info command' info_cmds
                     ;;
                 provider-server)
-                    local -a server_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
+                    localserver_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
                     _describe -t server_cmds 'server command' server_cmds
                     ;;
                 provider-cost)
-                    local -a cost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
+                    localcost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
                     _describe -t cost_cmds 'cost command' cost_cmds
                     ;;
                 cloud-provider)
-                    local -a provider_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'info:Show provider info')
+                    localprovider_cmds=('list:List available providers' 'init:Initialize provider' 'validate:Validate configuration' 'info:Show provider info')
                     _describe -t provider_cmds 'provider command (deprecated)' provider_cmds
                     ;;
                 cloud-server)
-                    local -a server_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
+                    localserver_cmds=('create:Create server' 'destroy:Destroy server' 'list:List servers' 'status:Show status' 'ssh:SSH to server' 'add:Add existing server' 'remove:Remove server')
                     _describe -t server_cmds 'server command (deprecated)' server_cmds
                     ;;
                 cloud-cost)
-                    local -a cost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
+                    localcost_cmds=('estimate:Estimate costs' 'compare:Compare providers')
                     _describe -t cost_cmds 'cost command (deprecated)' cost_cmds
                     ;;
                 k8s-cluster)
-                    local -a cluster_cmds=('list:List clusters' 'connect:Connect to cluster' 'info:Show cluster info')
+                    localcluster_cmds=('list:List clusters' 'connect:Connect to cluster' 'info:Show cluster info')
                     _describe -t cluster_cmds 'cluster command' cluster_cmds
                     ;;
                 k8s-namespace)
-                    local -a ns_cmds=('list:List namespaces' 'create:Create namespace' 'delete:Delete namespace' 'switch:Switch namespace')
+                    localns_cmds=('list:List namespaces' 'create:Create namespace' 'delete:Delete namespace' 'switch:Switch namespace')
                     _describe -t ns_cmds 'namespace command' ns_cmds
                     ;;
                 helm-repo)
-                    local -a repo_cmds=('add:Add repository' 'remove:Remove repository' 'update:Update repositories' 'list:List repositories')
+                    localrepo_cmds=('add:Add repository' 'remove:Remove repository' 'update:Update repositories' 'list:List repositories')
                     _describe -t repo_cmds 'repo command' repo_cmds
                     ;;
                 service-email)
-                    local -a email_cmds=('test:Send test email' 'inbox:View inbox (MailPit)' 'config:Email configuration')
+                    localemail_cmds=('test:Send test email' 'inbox:View inbox (MailPit)' 'config:Email configuration')
                     _describe -t email_cmds 'email command' email_cmds
                     ;;
                 service-search)
-                    local -a search_cmds=('index:Reindex data' 'query:Run search query' 'stats:Show statistics')
+                    localsearch_cmds=('index:Reindex data' 'query:Run search query' 'stats:Show statistics')
                     _describe -t search_cmds 'search command' search_cmds
                     ;;
                 service-functions)
-                    local -a func_cmds=('deploy:Deploy function' 'invoke:Invoke function' 'logs:View logs' 'list:List functions')
+                    localfunc_cmds=('deploy:Deploy function' 'invoke:Invoke function' 'logs:View logs' 'list:List functions')
                     _describe -t func_cmds 'functions command' func_cmds
                     ;;
                 deploy-canary)
-                    local -a canary_cmds=('promote:Promote canary' 'rollback:Rollback canary' 'status:Show status')
+                    localcanary_cmds=('promote:Promote canary' 'rollback:Rollback canary' 'status:Show status')
                     _describe -t canary_cmds 'canary command' canary_cmds
                     ;;
                 deploy-blue-green)
-                    local -a bg_cmds=('switch:Switch traffic' 'rollback:Rollback' 'status:Show status')
+                    localbg_cmds=('switch:Switch traffic' 'rollback:Rollback' 'status:Show status')
                     _describe -t bg_cmds 'blue-green command' bg_cmds
                     ;;
                 tenant-billing)
-                    local -a billing_cmds=('usage:Usage tracking' 'invoices:Invoice management' 'quotas:Quota management' 'plans:Plan management' 'upgrade:Upgrade plan' 'downgrade:Downgrade plan')
+                    localbilling_cmds=('usage:Usage tracking' 'invoices:Invoice management' 'quotas:Quota management' 'plans:Plan management' 'upgrade:Upgrade plan' 'downgrade:Downgrade plan')
                     _describe -t billing_cmds 'billing command' billing_cmds
                     ;;
                 tenant-branding)
-                    local -a branding_cmds=('logo:Logo management' 'colors:Color customization' 'themes:Theme selection' 'css:Custom CSS' 'preview:Preview branding')
+                    localbranding_cmds=('logo:Logo management' 'colors:Color customization' 'themes:Theme selection' 'css:Custom CSS' 'preview:Preview branding')
                     _describe -t branding_cmds 'branding command' branding_cmds
                     ;;
                 tenant-domains)
-                    local -a domain_cmds=('add:Add domain' 'remove:Remove domain' 'list:List domains' 'verify:Verify domain' 'ssl:SSL management' 'status:Domain status')
+                    localdomain_cmds=('add:Add domain' 'remove:Remove domain' 'list:List domains' 'verify:Verify domain' 'ssl:SSL management' 'status:Domain status')
                     _describe -t domain_cmds 'domain command' domain_cmds
                     ;;
                 tenant-themes)
-                    local -a theme_cmds=('create:Create theme' 'edit:Edit theme' 'preview:Preview theme' 'activate:Activate theme' 'list:List themes')
+                    localtheme_cmds=('create:Create theme' 'edit:Edit theme' 'preview:Preview theme' 'activate:Activate theme' 'list:List themes')
                     _describe -t theme_cmds 'theme command' theme_cmds
                     ;;
             esac

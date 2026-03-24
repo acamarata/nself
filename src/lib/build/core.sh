@@ -943,7 +943,7 @@ FUNCEOF
 
           # Run with timeout to prevent hanging
           # Uses safe_timeout from platform-compat.sh for cross-platform compatibility
-          if safe_timeout 5 bash -c "$(declare -f setup_monitoring_configs); setup_monitoring_configs" >/dev/null 2>&1; then
+          if safe_timeout 5 bash -c "$(type setup_monitoring_configs | tail -n +2); setup_monitoring_configs" >/dev/null 2>&1; then
             printf "\r${COLOR_GREEN}✓${COLOR_RESET} Monitoring configs ready                     \n"
             CREATED_FILES+=("monitoring/*")
           else

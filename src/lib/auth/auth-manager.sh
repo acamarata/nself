@@ -18,11 +18,11 @@ set -euo pipefail
 NSELF_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Source dependencies
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   source "$NSELF_ROOT/src/lib/utils/display.sh" 2>/dev/null || true
 fi
 
-if ! declare -f detect_environment >/dev/null 2>&1; then
+if ! type detect_environment >/dev/null 2>&1; then
   source "$NSELF_ROOT/src/lib/utils/env-detection.sh" 2>/dev/null || true
 fi
 
@@ -1254,7 +1254,7 @@ _oauth_capture_callback() {
   # Source platform-compat for safe_timeout
   local _compat
   _compat="${NSELF_ROOT}/src/lib/utils/platform-compat.sh"
-  if [[ -f "$_compat" ]] && ! declare -f safe_timeout >/dev/null 2>&1; then
+  if [[ -f "$_compat" ]] && ! type safe_timeout >/dev/null 2>&1; then
     source "$_compat" 2>/dev/null || true
   fi
 
@@ -1288,12 +1288,12 @@ auth_login_oauth() {
 
   # Source platform-compat
   local _compat="${NSELF_ROOT}/src/lib/utils/platform-compat.sh"
-  if [[ -f "$_compat" ]] && ! declare -f safe_timeout >/dev/null 2>&1; then
+  if [[ -f "$_compat" ]] && ! type safe_timeout >/dev/null 2>&1; then
     source "$_compat" 2>/dev/null || true
   fi
 
   # Load environment
-  if declare -f load_env_with_priority >/dev/null 2>&1; then
+  if type load_env_with_priority >/dev/null 2>&1; then
     load_env_with_priority 2>/dev/null || true
   fi
 
@@ -1467,7 +1467,7 @@ auth_hash_password() {
   fi
 
   # Last resort: delegate to password-utils.sh hash_password if sourced
-  if declare -f hash_password >/dev/null 2>&1; then
+  if type hash_password >/dev/null 2>&1; then
     hash_password "$password"
     return $?
   fi
@@ -1498,7 +1498,7 @@ auth_verify_password() {
       return $result
     fi
     # bcrypt hash but no htpasswd — delegate to password-utils.sh if available
-    if declare -f verify_password >/dev/null 2>&1; then
+    if type verify_password >/dev/null 2>&1; then
       verify_password "$password" "$hash"
       return $?
     fi
@@ -1517,7 +1517,7 @@ auth_verify_password() {
   fi
 
   # Delegate to password-utils.sh verify_password for any other hash format
-  if declare -f verify_password >/dev/null 2>&1; then
+  if type verify_password >/dev/null 2>&1; then
     verify_password "$password" "$hash"
     return $?
   fi

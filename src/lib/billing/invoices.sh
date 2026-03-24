@@ -652,36 +652,9 @@ invoice_send_email() {
   fi
 
   if [[ "$_delivery_ok" -eq 0 ]]; then
-    # Fall back to direct SMTP via swaks
-    local smtp_host="${AUTH_SMTP_HOST:-}"
-    local smtp_port="${AUTH_SMTP_PORT:-587}"
-    local smtp_user="${AUTH_SMTP_USER:-}"
-    local smtp_pass="${AUTH_SMTP_PASS:-}"
-    local smtp_sender="${AUTH_SMTP_SENDER:-noreply@${BASE_DOMAIN:-localhost}}"
-
-    if [[ -z "$smtp_host" ]]; then
-      warn "SMTP not configured. Invoice PDF generated at: ${pdf_file}"
-      printf "%s" "$pdf_file"
-      return 0
-    fi
-
-    if command -v docker >/dev/null 2>&1; then
-      docker run --rm \
-        --network host \
-        boky/swaks \
-        --to "$recipient" \
-        --from "$smtp_sender" \
-        --server "${smtp_host}:${smtp_port}" \
-        --auth-user "$smtp_user" \
-        --auth-password "$smtp_pass" \
-        --tls \
-        --header "Subject: Invoice ${invoice_id}" \
-        --body "Your invoice ${invoice_id} is ready. PDF: ${pdf_file}" \
-        --timeout 30 2>&1 && success "Invoice emailed to: ${recipient}" \
-        || warn "SMTP delivery failed. Invoice PDF at: ${pdf_file}"
-    else
-      warn "Docker not available for SMTP. Invoice PDF at: ${pdf_file}"
-    fi
+    # Notify plugin not available — inform user
+    warn "Email delivery requires the notify plugin: nself plugin install notify"
+    warn "Invoice PDF generated at: ${pdf_file}"
   fi
 
   printf "%s" "$pdf_file"

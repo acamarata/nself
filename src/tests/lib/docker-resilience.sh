@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Source dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if ! declare -f detect_test_environment >/dev/null 2>&1; then
+if ! type detect_test_environment >/dev/null 2>&1; then
   source "$SCRIPT_DIR/environment-detection.sh"
 fi
 

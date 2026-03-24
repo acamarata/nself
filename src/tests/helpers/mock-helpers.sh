@@ -191,14 +191,14 @@ spy_function() {
   local original_func="original_$func_name"
 
   # Save original function
-  if declare -f "$func_name" >/dev/null; then
-    eval "$(declare -f "$func_name" | sed "1s/$func_name/$original_func/")"
+  if type "$func_name" >/dev/null 2>&1; then
+    eval "$(type "$func_name" | tail -n +2 | sed "1s/$func_name/$original_func/")"
   fi
 
   # Create spy wrapper
   eval "function $func_name() {
     FUNCTION_CALLS+=(\"$func_name:\$@\")
-    if declare -f $original_func >/dev/null; then
+    if type $original_func >/dev/null 2>&1; then
       $original_func \"\$@\"
     fi
   }"

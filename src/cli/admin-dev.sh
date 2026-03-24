@@ -27,7 +27,7 @@ COLOR_DIM=${COLOR_DIM:-$'\033[0;90m'}
 COLOR_BOLD=${COLOR_BOLD:-$'\033[1m'}
 
 # Simple logging functions if not already defined
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "${COLOR_BLUE}[INFO]${COLOR_RESET} %s\n" "$1"; }
   log_success() { printf "${COLOR_GREEN}[OK]${COLOR_RESET} %s\n" "$1"; }
   log_error() { printf "${COLOR_RED}[ERROR]${COLOR_RESET} %s\n" "$1" >&2; }

@@ -29,16 +29,16 @@ source "$CLI_SCRIPT_DIR/../lib/plugin/schema-isolation.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/cli-output.sh" 2>/dev/null || true
 
 # Fallbacks if display.sh didn't load
-if ! declare -f log_success >/dev/null 2>&1; then
+if ! type log_success >/dev/null 2>&1; then
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_warning >/dev/null 2>&1; then
+if ! type log_warning >/dev/null 2>&1; then
   log_warning() { printf "\033[0;33m[WARNING]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
 fi
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
 fi
 
@@ -216,7 +216,7 @@ cmd_list() {
       fi
 
       local tier="FREE"
-      if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin"; then
+      if type license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin"; then
         tier="PRO"
       fi
 
@@ -234,7 +234,7 @@ cmd_list() {
   # ── Available view (free + pro) ────────────────────────────────────────────
   local free_count=0
   local pro_count=0
-  if declare -f license_is_paid_plugin >/dev/null 2>&1; then
+  if type license_is_paid_plugin >/dev/null 2>&1; then
     pro_count=$(printf '%s' "$NSELF_PRO_PLUGINS" | wc -w | tr -d ' ')
   fi
   local free_plugins
@@ -264,7 +264,7 @@ cmd_list() {
   done
 
   # Pro plugins from hardcoded list (private registry — names only)
-  if declare -f license_is_paid_plugin >/dev/null 2>&1; then
+  if type license_is_paid_plugin >/dev/null 2>&1; then
     local has_license=false
     if license_get_key >/dev/null 2>&1; then has_license=true; fi
 
@@ -588,7 +588,7 @@ cmd_install() {
 
   # Determine if this is a pro plugin — if so, skip the free registry check
   local is_pro=false
-  if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+  if type license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
     is_pro=true
   fi
 
@@ -608,14 +608,14 @@ cmd_install() {
   fi
 
   # Check license entitlement before downloading
-  if declare -f license_check_entitlement >/dev/null 2>&1; then
+  if type license_check_entitlement >/dev/null 2>&1; then
     if ! license_check_entitlement "$plugin_name"; then
       return 1
     fi
   fi
 
   # Check tier entitlement — shows Max-tier upgrade prompt when needed
-  if declare -f license_check_tier_entitlement >/dev/null 2>&1; then
+  if type license_check_tier_entitlement >/dev/null 2>&1; then
     if ! license_check_tier_entitlement "$plugin_name"; then
       return 1
     fi
@@ -649,7 +649,7 @@ cmd_install() {
   printf '%s\n' "$install_channel" > "$PLUGIN_DIR/$plugin_name/.channel"
 
   # Create plugin PG schema + role (schema isolation — idempotent, non-blocking)
-  if declare -f create_plugin_schema >/dev/null 2>&1; then
+  if type create_plugin_schema >/dev/null 2>&1; then
     create_plugin_schema "$plugin_name" || true
   fi
 
@@ -657,7 +657,7 @@ cmd_install() {
   run_plugin_installer "$plugin_name"
 
   # Install plugin-to-plugin dependencies declared in plugin.json
-  if declare -f plugin_install_dependencies >/dev/null 2>&1; then
+  if type plugin_install_dependencies >/dev/null 2>&1; then
     plugin_install_dependencies "$plugin_name" || true
   fi
 
@@ -687,7 +687,7 @@ cmd_install() {
   fi
 
   # Check for system dependencies
-  if declare -f check_plugin_dependencies >/dev/null 2>&1; then
+  if type check_plugin_dependencies >/dev/null 2>&1; then
     printf "\n"
     if ! check_plugin_dependencies "$plugin_name" 2>/dev/null; then
       printf "Note: This plugin has system dependencies\n"
@@ -913,7 +913,7 @@ cmd_status() {
     else
       # Check for updates
       echo ""
-      if declare -f registry_check_updates_formatted >/dev/null 2>&1; then
+      if type registry_check_updates_formatted >/dev/null 2>&1; then
         registry_check_updates_formatted
       fi
     fi
@@ -960,7 +960,7 @@ show_plugin_status() {
   fi
 
   # Check system dependencies (if dependencies.sh is loaded)
-  if declare -f check_plugin_dependencies >/dev/null 2>&1; then
+  if type check_plugin_dependencies >/dev/null 2>&1; then
     printf "  Dependencies:\n"
 
     # Parse and show quick dependency status
@@ -1099,7 +1099,7 @@ run_builtin_init() {
   log_info "Initializing plugin: $plugin_name"
 
   # Load project environment
-  if declare -f plugin_load_env >/dev/null 2>&1; then
+  if type plugin_load_env >/dev/null 2>&1; then
     plugin_load_env "$plugin_name"
   fi
 
@@ -1110,7 +1110,7 @@ run_builtin_init() {
   for sql_file in "$plugin_dir/schema/tables.sql" "$plugin_dir/schema/schema.sql" "$plugin_dir/schema/init.sql"; do
     if [[ -f "$sql_file" ]]; then
       log_info "Applying schema: $(basename "$sql_file")"
-      if declare -f plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
+      if type plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
         log_success "Schema applied successfully"
         schema_applied=true
       else
@@ -1127,7 +1127,7 @@ run_builtin_init() {
     for sql_file in "$plugin_dir"/schema/*.sql; do
       if [[ -f "$sql_file" ]]; then
         log_info "Applying: $(basename "$sql_file")"
-        if declare -f plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
+        if type plugin_db_exec >/dev/null 2>&1 && plugin_db_exec "$(cat "$sql_file")"; then
           schema_applied=true
         else
           log_error "Failed to apply: $(basename "$sql_file")"
@@ -1192,7 +1192,7 @@ run_builtin_integrate() {
   port="${port:-3000}"
 
   # Load project env to find next CS_N slot
-  if declare -f plugin_load_env >/dev/null 2>&1; then
+  if type plugin_load_env >/dev/null 2>&1; then
     plugin_load_env "$plugin_name"
   fi
 
@@ -1507,7 +1507,7 @@ _pull_plugin_docker_image() {
   # Track version history so `nself plugin rollback` always has a previous version
   # Extract version tag from image_ref (everything after the last colon)
   local pulled_version="${image_ref##*:}"
-  if declare -f _plugin_update_version_files >/dev/null 2>&1; then
+  if type _plugin_update_version_files >/dev/null 2>&1; then
     _plugin_update_version_files "$plugin_name" "$pulled_version"
   fi
 
@@ -1767,13 +1767,13 @@ download_plugin() {
   # Use license_get_key() which checks both NSELF_PLUGIN_LICENSE_KEY env var
   # and the persisted ~/.nself/license/key file (set via `nself plugin license set`).
   local license_key=""
-  if declare -f license_get_key >/dev/null 2>&1; then
+  if type license_get_key >/dev/null 2>&1; then
     license_key=$(license_get_key 2>/dev/null || true)
   else
     license_key="${NSELF_PLUGIN_LICENSE_KEY:-}"
   fi
   local use_signed_url=false
-  if declare -f license_is_paid_plugin >/dev/null 2>&1; then
+  if type license_is_paid_plugin >/dev/null 2>&1; then
     if license_is_paid_plugin "$plugin_name" && [[ -n "$license_key" ]]; then
       use_signed_url=true
     fi
@@ -2327,7 +2327,7 @@ cmd_updates() {
 
   if [[ "$quiet" == "true" ]]; then
     # Quiet mode: just output update info
-    if declare -f registry_check_updates >/dev/null 2>&1; then
+    if type registry_check_updates >/dev/null 2>&1; then
       registry_check_updates 2>/dev/null
     fi
   else
@@ -2348,7 +2348,7 @@ cmd_updates() {
     log_info "Checking for updates ($installed_count plugins installed)..."
     echo ""
 
-    if declare -f registry_check_updates_formatted >/dev/null 2>&1; then
+    if type registry_check_updates_formatted >/dev/null 2>&1; then
       registry_check_updates_formatted
     else
       # Fallback if registry.sh not loaded
@@ -2361,12 +2361,12 @@ cmd_updates() {
 cmd_refresh() {
   log_info "Refreshing plugin registry..."
 
-  if declare -f registry_fetch >/dev/null 2>&1; then
+  if type registry_fetch >/dev/null 2>&1; then
     if registry_fetch "true" >/dev/null 2>&1; then
       log_success "Registry cache refreshed"
 
       # Show registry info
-      if declare -f registry_get_metadata >/dev/null 2>&1; then
+      if type registry_get_metadata >/dev/null 2>&1; then
         echo ""
         registry_get_metadata
       fi
@@ -2703,7 +2703,7 @@ cmd_plugin_rollback() {
   log_info "Stopping nself-${plugin_name}..."
   if [[ -f ".env" ]] && command -v docker >/dev/null 2>&1; then
     docker compose stop "nself-${plugin_name}" 2>/dev/null || true
-  elif declare -f stop_plugin >/dev/null 2>&1; then
+  elif type stop_plugin >/dev/null 2>&1; then
     stop_plugin "$plugin_name" 2>/dev/null || true
   fi
 
@@ -2719,7 +2719,7 @@ cmd_plugin_rollback() {
     fi
     docker compose up -d "nself-${plugin_name}" 2>/dev/null || \
       log_warning "Could not start nself-${plugin_name} — run: docker compose up -d nself-${plugin_name}"
-  elif declare -f start_plugin >/dev/null 2>&1; then
+  elif type start_plugin >/dev/null 2>&1; then
     start_plugin "$plugin_name" 2>/dev/null || true
   fi
 
@@ -2728,7 +2728,7 @@ cmd_plugin_rollback() {
   local healthy=false
   log_info "Waiting for health check..."
   while [[ $retries -gt 0 ]]; do
-    if declare -f health_check_plugin >/dev/null 2>&1 && health_check_plugin "$plugin_name" 2>/dev/null; then
+    if type health_check_plugin >/dev/null 2>&1 && health_check_plugin "$plugin_name" 2>/dev/null; then
       healthy=true
       break
     fi
@@ -3371,7 +3371,7 @@ cmd_plugin_info() {
     version=$(jq -r '.version // "unknown"' "$manifest" 2>/dev/null)
     docker_image=$(jq -r '.image // ""' "$manifest" 2>/dev/null)
     tier="Free"
-    if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+    if type license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
       tier="Pro"
     fi
   else
@@ -3379,7 +3379,7 @@ cmd_plugin_info() {
     version=$(grep '"version"' "$manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
     docker_image=$(grep '"image"' "$manifest" | head -1 | sed 's/.*"image"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
     tier="Free"
-    if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+    if type license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
       tier="Pro"
     fi
   fi
@@ -4256,7 +4256,7 @@ cmd_plugin_migrate_schema() {
   local table_prefix="${schema_name}_"
 
   # Load environment for DB connection details
-  if declare -f load_env_with_priority >/dev/null 2>&1; then
+  if type load_env_with_priority >/dev/null 2>&1; then
     load_env_with_priority true 2>/dev/null || true
   elif [[ -f ".env" ]]; then
     set -a
@@ -4347,7 +4347,7 @@ TBLS
 
   # Ensure target schema exists (idempotent)
   if [[ "$dry_run" == "false" ]]; then
-    if declare -f create_plugin_schema >/dev/null 2>&1; then
+    if type create_plugin_schema >/dev/null 2>&1; then
       create_plugin_schema "$plugin_name" 2>/dev/null || true
     else
       docker exec -i "$db_container" psql -U "$db_user" -d "$db_name" \
@@ -4454,7 +4454,7 @@ main() {
       ;;
     check-conflicts)
       local fix_flag="${1:-}"
-      if declare -f plugin_resolve_conflicts >/dev/null 2>&1; then
+      if type plugin_resolve_conflicts >/dev/null 2>&1; then
         plugin_resolve_conflicts "$fix_flag"
       else
         log_error "plugin_resolve_conflicts not available"

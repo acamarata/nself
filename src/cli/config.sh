@@ -593,7 +593,7 @@ cmd_config_env() {
       if command -v env::delete >/dev/null 2>&1; then
         env::delete "$name" "true"
       else
-        rm -rf ".environments/$name"
+        [[ -n "$name" ]] && rm -rf ".environments/$name"
         cli_success "Deleted: $name"
       fi
       ;;

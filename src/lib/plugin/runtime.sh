@@ -657,10 +657,10 @@ get_plugin_dependencies() {
 # Topological sort for plugin dependencies
 # Returns plugins in dependency order (dependencies first)
 topological_sort_plugins() {
-  local -a all_plugins=()
-  local -a sorted=()
-  local -a visiting=()
-  local -a visited=()
+  localall_plugins=()
+  localsorted=()
+  localvisiting=()
+  localvisited=()
 
   # Collect all plugin names
   for plugin_dir in "$PLUGIN_DIR"/*/; do

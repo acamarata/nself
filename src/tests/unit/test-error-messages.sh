@@ -31,7 +31,7 @@ assert_function_exists() {
   local func_name="$1"
   TESTS_RUN=$((TESTS_RUN + 1))
 
-  if declare -f "$func_name" >/dev/null 2>&1; then
+  if type "$func_name" >/dev/null 2>&1; then
     TESTS_PASSED=$((TESTS_PASSED + 1))
     printf "${GREEN}✓${NC} Function exists: %s\n" "$func_name"
     return 0

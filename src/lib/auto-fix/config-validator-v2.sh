@@ -122,7 +122,7 @@ validate_quotes() {
 # Enhanced: Detect duplicate variables
 validate_duplicates() {
   local env_file="$1"
-  local -a seen_keys=()
+  localseen_keys=()
   local has_duplicates=false
 
   while IFS= read -r line; do

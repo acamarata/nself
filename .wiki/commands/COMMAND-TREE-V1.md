@@ -1,104 +1,942 @@
-# nself Command Tree v1
+# nself Command Tree v1.0
 
-Authoritative list of all top-level commands. Maximum 31 top-level commands (see VISION.md non-goals).
+**Complete command hierarchy for nself v1.0**
 
-## Core Lifecycle (7)
+This is the authoritative command structure after consolidation from 79 → 31 top-level commands.
 
-| Command | Description |
-|---------|-------------|
-| `nself init` | Initialize a new nself project |
-| `nself build` | Generate docker-compose.yml, nginx configs, SSL from .env |
-| `nself start` | Start all services (alias: `nself up`) |
-| `nself stop` | Stop all services (alias: `nself down`) |
-| `nself restart` | Restart all services |
-| `nself destroy` | Remove all containers, volumes, and generated files |
-| `nself status` | Show service status and health |
+> **Note on backward-compatibility stubs**: ~38 deprecated command files exist alongside these 31 commands (e.g. `nself email`, `nself ssl`, `nself staging`, `nself helm`, `nself destroy`, `nself perf`, `nself backup`, `nself hasura`). They show a deprecation warning and delegate to the consolidated command. They are NOT part of the v1.0 command surface and will be removed in v1.0.0. If a command you use isn't listed here, check its wiki page for the replacement command.
 
-## Configuration (4)
+**New in v0.9.6:**
 
-| Command | Description |
-|---------|-------------|
-| `nself config` | View/edit project configuration |
-| `nself env` | Manage environment files and variables |
-| `nself secrets` | Manage secret values (.env.secrets) |
-| `nself validate` | Validate project configuration |
+- `infra destroy` - Safe infrastructure destruction with selective targeting (was standalone `nself destroy`)
+- `deploy server` - 10 new subcommands for complete VPS lifecycle management
+- `deploy sync` - 4 subcommands for environment synchronization
+- `infra provider k8s-*` - Unified Kubernetes management across 8 cloud providers
 
-## Database (2)
+**New in v0.9.9:**
 
-| Command | Description |
-|---------|-------------|
-| `nself db` | Database operations (backup, restore, migrate, shell) |
-| `nself migrate` | Run database migrations |
+- `nself mux` - Message routing and webhook delivery management (tokens import/list)
+- `nself ai` - AI plugin management (OAuth login, provider add/list/remove)
+- `nself license` - Pro license key management (set/show/validate/clear/upgrade)
+- `nself claw memories` - Per-user memory management (list/add/delete/clear/stats)
+- `nself claw proactive` - Proactive job scheduler management (status/enable/disable/run)
 
-## Services (5)
+---
 
-| Command | Description |
-|---------|-------------|
-| `nself service` | Manage individual services |
-| `nself nginx` | Nginx proxy management |
-| `nself ssl` | SSL certificate management |
-| `nself auth` | Authentication service management |
-| `nself hasura` | Hasura GraphQL console and metadata |
+## Core (5 commands)
 
-## Plugins (2)
+### init
+```
+nself init [--demo|--simple|--full]
+```
+Initialize a new nself project with configuration wizard.
 
-| Command | Description |
-|---------|-------------|
-| `nself plugin` | Install, remove, update, list plugins |
-| `nself license` | Manage plugin license key and tier |
+### build
+```
+nself build [--force|--clean]
+```
+Generate Docker Compose configs, Nginx configs, and service files.
 
-## Deployment (3)
+### start
+```
+nself start [service...]
+```
+Start all services or specific services.
 
-| Command | Description |
-|---------|-------------|
-| `nself deploy` | Deploy to staging or production |
-| `nself infra` | Infrastructure provisioning and management |
-| `nself cloud` | Cloud hosting operations |
+### stop
+```
+nself stop [service...]
+```
+Stop all services or specific services.
 
-## Multi-Tenancy (1)
+### restart
+```
+nself restart [service...]
+```
+Restart all services or specific services.
 
-| Command | Description |
-|---------|-------------|
-| `nself tenant` | Tenant CRUD, isolation, billing, branding |
+---
 
-## Development (3)
+## Utilities (16 commands)
 
-| Command | Description |
-|---------|-------------|
-| `nself dev` | Development mode with hot-reload |
-| `nself logs` | View service logs |
-| `nself exec` | Execute command in a service container |
+### status
+```
+nself status [service...]
+```
+Show health status of all services or specific services.
 
-## Operations (3)
+### logs
+```
+nself logs <service> [-f|--follow] [--tail N]
+```
+View logs for a specific service.
 
-| Command | Description |
-|---------|-------------|
-| `nself doctor` | Health check and diagnostics |
-| `nself backup` | Backup databases, volumes, configs |
-| `nself monitor` | Monitoring stack management |
+### help
+```
+nself help [command]
+```
+Show general help or help for a specific command.
 
-## Utility (1)
+### admin
+```
+nself admin [--dev]
+```
+Open the nself Admin UI.
 
-| Command | Description |
-|---------|-------------|
-| `nself version` | Show CLI version |
+### urls
+```
+nself urls [--json]
+```
+Display all service URLs and routes.
 
-## Total: 31 top-level commands
+### exec
+```
+nself exec <service> <command> [args...]
+```
+Execute a command inside a service container.
 
-Note: Several command files in `src/cli/` are subcommand implementations (e.g., `plugin_install.sh`, `plugin_config.sh`) or aliases (e.g., `up.sh` -> `start.sh`, `down.sh` -> `stop.sh`). These are NOT separate top-level commands.
+### doctor
+```
+nself doctor [--fix] [--verbose]
+```
+Run diagnostics and check for common issues.
 
-## Plugin-Provided Commands
+### monitor
+```
+nself monitor [dashboard]
+```
+Access monitoring dashboards (Grafana, Prometheus, etc.).
 
-These commands are available when the corresponding plugin is installed:
+### health
+```
+nself health [service...] [--deep]
+```
+Perform health checks on services.
 
-| Command | Plugin | Description |
-|---------|--------|-------------|
-| `nself ai` | nself-ai | AI provider management and routing |
-| `nself claw` | nself-claw | nClaw AI assistant management |
-| `nself mux` | nself-mux | Email/message multiplexer |
-| `nself voice` | nself-voice | Voice service management |
-| `nself browser` | nself-browser | Browser automation service |
-| `nself notify` | nself-notify | Push notification management |
-| `nself cron` | nself-cron | Scheduled task management |
-| `nself search` | nself-search | Full-text search (MeiliSearch) |
-| `nself email` | nself-mail | Email service management |
+### version
+```
+nself version [--check]
+```
+Show nself version and check for updates.
+
+### update
+```
+nself update [--preview] [--force]
+```
+Update nself CLI to the latest version.
+
+### completion
+```
+nself completion <bash|zsh|fish>
+```
+Generate shell completion scripts.
+
+### metrics
+```
+nself metrics [service] [--profile]
+```
+View metrics and performance data.
+
+### history
+```
+nself history [--limit N] [--filter TYPE]
+```
+View command history and audit trail.
+
+### audit
+```
+nself audit [--export] [--format json|csv]
+```
+View audit logs and security events.
+
+### harden
+```
+nself harden [--all] [--check]
+```
+Security hardening for nself infrastructure.
+
+---
+
+## Complex (10 commands)
+
+### 1. db - Database Operations
+```
+nself db <subcommand>
+
+Subcommands:
+  migrate <up|down|status|create|rollback>   # Migration management
+  checklist                                  # Database migration checklist
+  schema <dump|load|diff|validate>           # Schema operations
+  seed [dataset]                             # Seed data
+  mock <table> [--count N]                   # Generate mock data
+  backup [--output FILE]                     # Backup database
+  backup list                                # List available backups
+  restore <file>                             # Restore from backup
+  shell                                      # Interactive psql shell
+  query <sql>                                # Execute SQL query
+  types <language>                           # Generate type definitions
+  inspect [table]                            # Database inspection
+  data <import|export> [options]             # Data operations
+  hasura console                             # Open Hasura Console
+  hasura metadata apply                      # Apply Hasura metadata
+  hasura metadata export                     # Export Hasura metadata
+  hasura metadata reload                     # Reload metadata cache
+```
+
+**Total subcommands:** 17
+
+---
+
+### 2. tenant - Multi-Tenancy & Billing
+```
+nself tenant <subcommand>
+
+Core Tenant Management:
+  init                                       # Initialize multi-tenancy
+  create <name> [--plan PLAN]                # Create new tenant
+  list [--status STATUS]                     # List tenants
+  show <tenant-id>                           # Show tenant details
+  update <tenant-id> [options]               # Update tenant
+  suspend <tenant-id>                        # Suspend tenant
+  activate <tenant-id>                       # Activate tenant
+  delete <tenant-id>                         # Delete tenant
+
+Member Management:
+  member add <tenant-id> <email> <role>      # Add member
+  member remove <tenant-id> <user-id>        # Remove member
+  member list <tenant-id>                    # List members
+  member update <tenant-id> <user-id>        # Update member
+  member role <tenant-id> <user-id> <role>   # Change role
+  member invite <tenant-id> <email>          # Invite member
+  member accept <token>                      # Accept invitation
+
+Settings Management:
+  setting get <tenant-id> <key>              # Get setting
+  setting set <tenant-id> <key> <value>      # Set setting
+  setting list <tenant-id>                   # List settings
+  setting delete <tenant-id> <key>           # Delete setting
+  setting reset <tenant-id>                  # Reset to defaults
+
+Billing Management (consolidated from 'billing' command):
+  billing plans                              # Manage plans
+  billing subscribe <tenant-id> <plan>       # Subscribe to plan
+  billing cancel <tenant-id>                 # Cancel subscription
+  billing usage <tenant-id>                  # View usage
+  billing invoice <tenant-id>                # View invoices
+  billing payment <tenant-id>                # Payment methods
+  billing stripe                             # Stripe integration
+  billing test                               # Test billing
+
+Organization Management (consolidated from 'org' command):
+  org create <name>                          # Create organization
+  org list                                   # List organizations
+  org show <org-id>                          # Show details
+  org members <org-id>                       # Manage members
+  org delete <org-id>                        # Delete organization
+
+Branding:
+  branding logo <tenant-id> <file>           # Upload logo
+  branding colors <tenant-id> [options]      # Set brand colors
+  branding preview <tenant-id>               # Preview branding
+  branding reset <tenant-id>                 # Reset to defaults
+
+Custom Domains:
+  domains add <tenant-id> <domain>           # Add custom domain
+  domains remove <tenant-id> <domain>        # Remove domain
+  domains verify <tenant-id> <domain>        # Verify DNS
+  domains list <tenant-id>                   # List domains
+  domains ssl <tenant-id> <domain>           # SSL certificate
+  domains primary <tenant-id> <domain>       # Set primary domain
+
+Email Templates:
+  email list <tenant-id>                     # List templates
+  email edit <tenant-id> <template>          # Edit template
+  email preview <tenant-id> <template>       # Preview template
+  email reset <tenant-id> <template>         # Reset to default
+
+Themes:
+  themes list                                # List themes
+  themes apply <tenant-id> <theme>           # Apply theme
+  themes customize <tenant-id>               # Customize theme
+  themes preview <tenant-id>                 # Preview theme
+  themes reset <tenant-id>                   # Reset theme
+```
+
+**Total subcommands:** 50+
+
+---
+
+### 3. deploy - Deployment & Remote Environments
+```
+nself deploy <subcommand>
+
+Deployment:
+  staging [--auto-migrate]                   # Deploy to staging
+  production [--auto-migrate]                # Deploy to production
+  preview <branch>                           # Create preview environment
+  canary <percentage>                        # Canary deployment
+  blue-green                                 # Zero-downtime deployment
+  rollback [--version N]                     # Rollback deployment
+  upgrade [--zero-downtime]                  # Upgrade deployment (was: separate command)
+  status                                     # Deployment status
+  config <env>                               # Deployment config
+  logs <deployment>                          # Deployment logs
+  history                                    # Deployment history
+  promote <from> <to>                        # Promote environment
+
+Remote Server Management (consolidated from 'server', 'servers', 'provision'):
+  provision <provider> [options]             # Provision remote server (was: separate command)
+
+  server init <host> [--domain DOMAIN]       # Initialize VPS for nself (NEW v0.9.6)
+  server check <host>                        # Verify server readiness (NEW v0.9.6)
+  server status [server-id]                  # Quick status of all/specific servers (NEW v0.9.6)
+  server diagnose <env>                      # Comprehensive diagnostics (NEW v0.9.6)
+  server list                                # List all configured servers (NEW v0.9.6)
+  server add <name> --host <host> [options]  # Add server configuration (NEW v0.9.6)
+  server remove <name> [--force]             # Remove server configuration (NEW v0.9.6)
+  server ssh <name> [command]                # Quick SSH connection (NEW v0.9.6)
+  server info <name>                         # Display comprehensive server info (NEW v0.9.6)
+  server create <name> [options]             # Create server (legacy)
+  server destroy <server-id>                 # Destroy server (legacy)
+
+Synchronization (consolidated from 'sync' command):
+  sync pull <env> [--dry-run] [--force]      # Pull configuration from remote (NEW v0.9.6)
+  sync push <env> [--dry-run] [--force]      # Push configuration to remote (NEW v0.9.6)
+  sync status                                # Show synchronization status (NEW v0.9.6)
+  sync full <env> [--no-rebuild]             # Complete synchronization (NEW v0.9.6)
+```
+
+**Total subcommands:** 33 (10 new server subcommands + 4 sync subcommands)
+
+**New in v0.9.6 - Server Management:**
+- Complete VPS lifecycle management
+- Automated server initialization with security hardening
+- Comprehensive health checks and diagnostics
+- SSH connection management
+- Environment file synchronization
+
+**Related Documentation:** [Server Management Guide](../deployment/SERVER-MANAGEMENT.md)
+
+---
+
+### 4. infra - Infrastructure Management
+```
+nself infra <subcommand>
+
+Cloud Providers (consolidated from 'provider', 'cloud'):
+  provider list [--filter TYPE]              # List 26+ providers
+  provider init <provider>                   # Configure credentials
+  provider validate <provider>               # Validate configuration
+  provider info <provider>                   # Provider details
+  provider install <provider>                # Install provider CLI (NEW v0.9.6)
+  provider test <provider>                   # Test provider connection (NEW v0.9.6)
+  provider server create <provider> [opts]   # Provision server
+  provider server destroy <id>               # Destroy server
+  provider server list                       # List servers
+  provider server status <id>                # Server status
+  provider server ssh <id>                   # SSH to server
+  provider server add <host>                 # Add existing server
+  provider server remove <id>                # Remove server
+  provider cost estimate <provider>          # Estimate costs
+  provider cost compare                      # Compare providers
+  provider deploy quick <provider>           # Quick deploy
+  provider deploy full <provider>            # Full production setup
+
+  # Kubernetes Abstraction (NEW v0.9.6)
+  provider k8s-create <provider> <name> <region> <nodes> <size>  # Create managed K8s cluster
+  provider k8s-delete <provider> <name> [region]                 # Delete managed K8s cluster
+  provider k8s-kubeconfig <provider> <name> [region]             # Get kubeconfig credentials
+
+  # Supported K8s Providers (8 total):
+  # - aws (EKS)           - $73/month control plane
+  # - gcp (GKE)           - Free control plane
+  # - azure (AKS)         - Free control plane
+  # - digitalocean (DOKS) - $12/month
+  # - linode (LKE)        - Free control plane
+  # - vultr (VKE)         - Free control plane
+  # - hetzner             - Free control plane (manual setup via console)
+  # - scaleway (Kapsule)  - Free control plane
+
+Kubernetes (consolidated from 'k8s'):
+  k8s init [--provider PROVIDER]             # Initialize K8s config
+  k8s convert                                # Convert Compose to K8s
+  k8s apply                                  # Apply manifests
+  k8s deploy                                 # Full deployment
+  k8s status                                 # Deployment status
+  k8s logs <pod>                             # Pod logs
+  k8s scale <deployment> <replicas>          # Scale deployment
+  k8s rollback                               # Rollback deployment
+  k8s delete                                 # Delete deployment
+  k8s cluster <action>                       # Cluster management
+  k8s namespace <action>                     # Namespace management
+
+Helm (consolidated from 'helm'):
+  helm init                                  # Initialize Helm chart
+  helm generate                              # Generate/update chart
+  helm install <release>                     # Install to cluster
+  helm upgrade <release>                     # Upgrade release
+  helm rollback <release>                    # Rollback release
+  helm uninstall <release>                   # Remove release
+  helm list                                  # List releases
+  helm status <release>                      # Release status
+  helm values <release>                      # Show/edit values
+  helm template                              # Render locally
+  helm package                               # Package chart
+  helm repo <action>                         # Repository management
+
+Infrastructure Reset (consolidated from 'destroy', 'backup reset/clean'):
+  destroy [OPTIONS]                          # Safe infrastructure destruction (see DESTROY.md for options)
+  reset [--confirm]                          # Reset to clean state
+  clean [--age DAYS]                         # Clean old Docker resources
+```
+
+**Total subcommands:** 51 (added destroy, reset, clean; added 10 K8s abstraction commands)
+
+**New in v0.9.6 - Kubernetes Abstraction:**
+- Unified CLI across 8 cloud providers
+- Intelligent node size mapping (small/medium/large/xlarge)
+- Automatic kubeconfig configuration
+- Multi-cloud deployment support
+- Cost-optimized provider selection
+
+**K8s Node Sizes:**
+- `small` - Development (~2 vCPU, 4GB RAM)
+- `medium` - Production (~2-4 vCPU, 8-16GB RAM)
+- `large` - High-performance (~4-8 vCPU, 16-32GB RAM)
+- `xlarge` - Enterprise (~8-16 vCPU, 32-64GB RAM)
+
+**Related Documentation:** [Kubernetes Implementation Guide](../infrastructure/K8S-IMPLEMENTATION-GUIDE.md)
+
+---
+
+### 5. service - Service Management
+```
+nself service <subcommand>
+
+Core Service Operations:
+  list [--status STATUS]                     # List services
+  enable <service>                           # Enable service
+  disable <service>                          # Disable service
+  status <service>                           # Service status
+  restart <service>                          # Restart service
+  logs <service> [-f]                        # Service logs
+  init <service> [--template TYPE]           # Initialize from template
+  scaffold <name> <type>                     # Scaffold new service
+  wizard                                     # Service creation wizard
+  search <query>                             # Search services
+
+Admin Service (consolidated from 'admin', 'admin-dev'):
+  admin [--dev]                              # Start admin UI
+
+Storage Service (consolidated from 'storage'):
+  storage init                               # Initialize storage
+  storage upload <file>                      # Upload file
+  storage list [path]                        # List files
+  storage delete <file>                      # Delete file
+  storage config                             # Configure pipeline
+  storage status                             # Pipeline status
+  storage test                               # Test uploads
+  storage graphql-setup                      # Generate GraphQL integration
+
+Email Service (consolidated from 'email'):
+  email send <to> <subject> [options]        # Send email
+  email template <action>                    # Email templates
+  email test <provider>                      # Test email
+  email config <provider>                    # Configure provider
+
+Search Service (consolidated from 'search'):
+  search init <provider>                     # Initialize search
+  search index <action>                      # Manage indexes
+  search query <text>                        # Test queries
+  search config                              # Configure provider
+
+Redis Cache (consolidated from 'redis'):
+  redis init                                 # Initialize Redis
+  redis flush [pattern]                      # Flush cache
+  redis cli                                  # Redis CLI
+  redis stats                                # Cache statistics
+
+Functions (consolidated from 'functions'):
+  functions init                             # Initialize functions
+  functions deploy <function>                # Deploy function
+  functions list                             # List functions
+  functions logs <function>                  # Function logs
+  functions invoke <function>                # Invoke function
+
+MLflow (consolidated from 'mlflow'):
+  mlflow init                                # Initialize MLflow
+  mlflow ui                                  # Open MLflow UI
+  mlflow experiments                         # List experiments
+  mlflow models                              # Model registry
+
+Realtime (consolidated from 'realtime'):
+  realtime init                              # Initialize realtime
+  realtime events                            # Event management
+  realtime test                              # Test connections
+
+Performance (consolidated from 'perf'):
+  bench [service] [--duration N]             # Benchmark service performance
+  scale <service> <replicas>                 # Scale service replicas
+  profile [service] [--duration N]           # Profile service resource usage
+  optimize [--auto-fix]                      # Get optimization suggestions
+```
+
+**Total subcommands:** 47 (added bench, scale, profile, optimize)
+
+---
+
+### 6. config - Configuration Management
+```
+nself config <subcommand>
+
+Configuration:
+  show [key]                                 # Show configuration
+  edit [key]                                 # Edit configuration
+  validate                                   # Validate configuration
+  export <file>                              # Export configuration
+  import <file>                              # Import configuration
+  sync <action>                              # Sync configuration
+
+Environment Management (consolidated from 'env'):
+  env list                                   # List environments
+  env switch <env>                           # Switch environment
+  env create <name>                          # Create environment
+  env delete <name>                          # Delete environment
+  env sync <env>                             # Sync with environment
+
+Secrets Management (consolidated from 'secrets'):
+  secrets list                               # List secrets
+  secrets get <key>                          # Get secret
+  secrets set <key> <value>                  # Set secret
+  secrets delete <key>                       # Delete secret
+  secrets rotate [key]                       # Rotate secrets
+
+Vault Integration (consolidated from 'vault'):
+  vault init                                 # Initialize Vault
+  vault config                               # Configure Vault
+  vault status                               # Vault status
+```
+
+**Total subcommands:** 20
+
+---
+
+### 7. auth - Authentication & Security
+```
+nself auth <subcommand>
+
+Authentication:
+  login [--provider PROVIDER]                # User login
+  logout                                     # User logout
+  status                                     # Auth status
+
+MFA (consolidated from 'mfa'):
+  mfa enable                                 # Enable MFA
+  mfa disable                                # Disable MFA
+  mfa verify <code>                          # Verify MFA
+  mfa backup-codes                           # Generate backup codes
+
+Roles (consolidated from 'roles'):
+  roles list                                 # List roles
+  roles create <name> [permissions]          # Create role
+  roles assign <user> <role>                 # Assign role
+  roles remove <user> <role>                 # Remove role
+
+Devices (consolidated from 'devices'):
+  devices list                               # List devices
+  devices register <device>                  # Register device
+  devices revoke <device>                    # Revoke device
+  devices trust <device>                     # Trust device
+
+OAuth (consolidated from 'oauth'):
+  oauth install                              # Install OAuth service
+  oauth enable <provider>                    # Enable provider
+  oauth disable <provider>                   # Disable provider
+  oauth config <provider>                    # Configure credentials
+  oauth test <provider>                      # Test provider
+  oauth list                                 # List providers
+  oauth status                               # Service status
+
+Security (consolidated from 'security'):
+  security scan [--deep]                     # Security scan
+  security audit                             # Security audit
+  security report                            # Generate report
+
+SSL Management (consolidated from 'ssl', 'trust'):
+  ssl generate [domain]                      # Generate certificate
+  ssl install <cert>                         # Install certificate
+  ssl renew [domain]                         # Renew certificate
+  ssl info [domain]                          # Certificate info
+  ssl trust                                  # Trust local certificates
+
+Rate Limiting (consolidated from 'rate-limit'):
+  rate-limit config [options]                # Configure rate limits
+  rate-limit status                          # Rate limit status
+  rate-limit reset [ip]                      # Reset rate limits
+
+Webhooks (consolidated from 'webhooks'):
+  webhooks create <url> [events]             # Create webhook
+  webhooks list                              # List webhooks
+  webhooks delete <id>                       # Delete webhook
+  webhooks test <id>                         # Test webhook
+  webhooks logs <id>                         # Webhook logs
+```
+
+**Total subcommands:** 38
+
+---
+
+### 8. dev - Developer Tools
+
+```
+nself dev <subcommand>
+
+Developer Mode:
+  mode [on|off]                              # Enable/disable dev mode
+
+Frontend Management (consolidated from 'frontend'):
+  frontend add <name> <port>                 # Add frontend app
+  frontend remove <name>                     # Remove frontend app
+  frontend list                              # List frontend apps
+  frontend config <name>                     # Configure frontend
+
+CI/CD (consolidated from 'ci'):
+  ci generate [--provider PROVIDER]          # Generate CI config
+  ci update                                  # Update CI config
+  ci templates                               # List CI templates
+
+Documentation (consolidated from 'docs'):
+  docs generate                              # Generate documentation
+  docs serve                                 # Serve documentation
+  docs build                                 # Build documentation
+
+White-label (consolidated from 'whitelabel'):
+  whitelabel config [options]                # Configure white-label
+  whitelabel preview                         # Preview white-label
+  whitelabel deploy                          # Deploy white-label
+```
+
+**Total subcommands:** 16
+
+---
+
+### 9. plugin - Plugin System
+
+```
+nself plugin <subcommand>
+
+Plugin Management:
+  list [--filter TYPE]                       # List available plugins
+  install <plugin>                           # Install plugin
+  remove <plugin>                            # Remove plugin
+  update [plugin]                            # Update plugin(s)
+  updates                                    # Check for updates
+  refresh                                    # Refresh registry
+  status [plugin]                            # Plugin status
+  create <name>                              # Create new plugin
+
+Plugin License:
+  license                                    # Show Pro license status
+  license show                               # Show license key and status
+  license validate                           # Validate key against API
+  license plugins                            # List Pro Plugins covered
+
+Plugin Runtime:
+  start [plugin] [--all]                     # Start plugins
+  stop [plugin] [--all]                      # Stop plugins
+  restart <plugin>                           # Restart a plugin
+  logs <plugin> [-f|--follow]                # View plugin logs
+  ps                                         # List running plugins
+  running                                    # Alias for ps
+  health                                     # Health check all running plugins
+
+Plugin Actions:
+  <plugin> <action> [args...]                # Run plugin action
+```
+
+**Total subcommands:** 19+ (plugin-specific actions)
+
+---
+
+### 11. mux - Message Routing & Webhook Delivery
+
+```text
+nself mux <subcommand>
+
+Token Management:
+  tokens import --file <path.json>           # Bulk-import delivery auth tokens
+  tokens list                                # List stored tokens
+  tokens remove <name>                       # Remove a token
+```
+
+**Total subcommands:** 3
+Requires Basic membership ($0.99/mo). Manages delivery auth credentials for the mux webhook pipeline.
+
+---
+
+### 12. ai - AI Plugin Management
+
+```text
+nself ai <subcommand>
+
+Auth:
+  auth login --provider <anthropic|openai>   # OAuth2 PKCE login for subscription accounts
+  auth add --provider <p> --key <key>        # Add API key for a provider
+  auth list                                  # List configured providers
+  auth remove --provider <p>                 # Remove a provider
+  auth refresh [--provider <p>]              # Refresh OAuth tokens
+  auth test [--provider <p>]                 # Test provider connectivity
+
+Providers:
+  providers list                             # List all supported AI providers
+  providers status                           # Show rate-limit and availability status
+```
+
+**Total subcommands:** 8+
+Requires Pro membership ($1.99/mo). Manages AI provider credentials for the nself-ai plugin.
+
+---
+
+### 13. license - Pro License Management
+
+```text
+nself license <subcommand>
+
+  set <key>                                  # Save Pro license key
+  show                                       # Show license key (masked) and tier
+  validate                                   # Validate key against ping.nself.org
+  clear                                      # Remove saved license key
+  upgrade                                    # Open upgrade URL in browser
+```
+
+**Total subcommands:** 5
+Also accessible as `nself plugin license`. Manages the Pro license key used for gated plugin installs.
+
+---
+
+### 14. claw - ɳClaw AI Assistant Management
+
+```text
+nself claw <subcommand>
+
+Setup:
+  setup [--auto|--status|--reset]            Run onboarding wizard
+
+Models:
+  models list                                List available local AI models
+  models install [--auto|--model <name>]     Install a local AI model
+  models status                              Show model download/ready state
+  models remove <name>                       Remove a local model
+
+AI Accounts:
+  gemini add [chat_id]                       Add a Gemini account via OAuth
+  gemini list                                Show Gemini accounts + quota
+  gemini status                              Show Gemini quota summary
+  gemini remove <email>                      Remove a Gemini account
+
+Routing:
+  routing show                               Show current AI routing config
+  routing set <task_class> <tier_order>      Update routing for a task class
+
+Chat:
+  chat "<message>" [--model] [--tier]        Send a one-shot chat message
+
+Playbooks:
+  playbooks list                             List incident response playbooks
+  playbooks add --pattern <text> --steps-file <path>
+  playbooks test --id <uuid> [--dry-run]
+
+Memories:
+  memories list  --user <id>                 List stored memories for a user
+  memories add   --user <id> --content <text> Add an explicit memory
+  memories delete --id <uuid>                Delete a memory by ID
+  memories clear  --user <id>                Clear all memories for a user
+  memories stats  --user <id>                Show memory counts and limits
+
+Proactive Scheduler:
+  proactive status                           List all jobs and enabled state
+  proactive enable  <job_type>               Enable a job
+  proactive disable <job_type>               Disable a job
+  proactive run                              Preview next morning digest
+
+Usage / Stats:
+  usage [--today|--week|--month]             Show AI usage log
+  stats [--json]                             Show AI usage statistics
+
+Admin:
+  admin status                               Stack state snapshot
+  admin enable --session <id>                Enable admin mode for session
+  admin context [--session <id>]             Show admin context
+  admin refresh                              Force fresh snapshot
+
+Voice:
+  voice status                               Show voice feature status
+  voice enable                               Enable STT/TTS features
+  voice test [--text <text>]                 Test voice synthesis
+
+Knowledge Base:
+  knowledge search <query> [--category] [--top N]
+  knowledge list [<category>]
+  knowledge version
+  knowledge note add --chunk <id> --note <text>
+  knowledge note list [--chunk <id>]
+  knowledge note delete --id <uuid>
+
+API Gateway:
+  api keys list [--json]
+  api keys create --name <n> [--admin] [--rpm <N>]
+  api keys revoke <id>
+  api usage [--key <id>] [--json]
+  api test [--url] [--key] [--verbose]
+
+Email:
+  email-rules list
+  email-rules test-delegate --email <addr> --subject <text>
+  email-threads
+```
+
+**Total subcommands:** 45+
+Requires Pro membership ($1.99/mo). Manages the nself-claw AI assistant plugin including
+local models, Gemini accounts, AI routing, per-user memories, proactive scheduled jobs,
+voice features, knowledge base, and the OpenAI-compatible API gateway.
+
+---
+
+### 15. browser - Headless Browser Automation
+
+```text
+nself browser <subcommand>
+
+  status                                       Show browser service health
+  screenshot <url> [--output=<file>]           Capture full-page screenshot (PNG)
+  scrape <url>                                 Extract page text content
+  pdf <url> [--output=<file>]                  Render page as PDF
+  execute <url> "<javascript>"                 Execute JavaScript on a page
+  allowlist add <domain>                       Add domain to allowlist
+  allowlist remove <domain>                    Remove domain from allowlist
+  allowlist list                               List allowlisted domains
+```
+
+**Total subcommands:** 8
+Requires Pro license ($1.99/mo). Manages the nself-browser headless automation plugin.
+
+---
+
+### 10. nginx - Multi-Project Shared Nginx
+
+```bash
+nself nginx <subcommand>
+
+Project Registration:
+  register [--path PATH]                     # Register project with shared nginx
+  unregister [--path PATH]                   # Remove project from shared nginx
+
+Shared Container Management:
+  shared start                               # Start the shared nginx container
+  shared stop                                # Stop the shared nginx container
+  shared status                              # Show registered projects and routes
+  shared reload                              # Reload nginx configuration
+  shared logs [--tail N]                     # Tail shared nginx logs
+```
+
+**Total subcommands:** 7
+
+---
+
+## Command Consolidation Map
+
+**Commands that moved:**
+
+| Old Command | New Location | Notes |
+|-------------|--------------|-------|
+| `billing` | `tenant billing` | Billing is tenant-specific |
+| `org` | `tenant org` | Organizations are tenant containers |
+| `upgrade` | `deploy upgrade` | Upgrade is a deployment operation |
+| `staging` | `deploy staging` | Quick access to staging deployment |
+| `prod` | `deploy production` | Quick access to prod deployment |
+| `provision` | `deploy provision` | Provision for deployment |
+| `server` | `deploy server` | Server management for deployment |
+| `servers` | `deploy server list` | Alias for server listing |
+| `sync` | `deploy sync` or `config sync` | Context-dependent |
+| `provider` | `infra provider` | Cloud infrastructure |
+| `cloud` | `infra provider` | Deprecated, now provider |
+| `k8s` | `infra k8s` | Kubernetes infrastructure |
+| `helm` | `infra helm` | Helm infrastructure |
+| `storage` | `service storage` | Storage is a service |
+| `email` | `service email` | Email is a service |
+| `search` | `service search` | Search is a service |
+| `redis` | `service redis` | Redis is a service |
+| `functions` | `service functions` | Functions are a service |
+| `mlflow` | `service mlflow` | MLflow is a service |
+| `realtime` | `service realtime` | Realtime is a service |
+| `admin-dev` | `service admin --dev` | Dev mode flag |
+| `env` | `config env` | Environment configuration |
+| `secrets` | `config secrets` | Secrets are configuration |
+| `vault` | `config vault` | Vault is for secrets/config |
+| `validate` | `config validate` | Configuration validation |
+| `mfa` | `auth mfa` | MFA is authentication |
+| `roles` | `auth roles` | Roles are auth/security |
+| `devices` | `auth devices` | Device management is auth |
+| `oauth` | `auth oauth` | OAuth is authentication |
+| `security` | `auth security` | Security operations |
+| `ssl` | `auth ssl` | SSL is security |
+| `trust` | `auth ssl trust` | Trust local certificates |
+| `rate-limit` | `auth rate-limit` | Rate limiting is security |
+| `webhooks` | `auth webhooks` | Webhook security |
+| `destroy` | `infra destroy` | Destruction is infrastructure |
+| `bench` | `service bench` | Benchmarking is a service operation |
+| `scale` | `service scale` | Scaling is a service operation |
+| `migrate` | `db migrate` | Migrations are a DB operation |
+| `rollback` | `deploy rollback` | Rollback is a deploy operation |
+| `reset` | `infra reset` | Reset is infrastructure |
+| `clean` | `infra clean` | Cleanup is infrastructure |
+| `perf` | `service bench\|scale\|profile\|optimize` or `db migrate` | Distributed to service and db |
+| `backup` | `db backup\|restore`, `deploy rollback`, `infra reset\|clean` | Distributed across commands |
+| `hasura` | `db hasura` | Hasura management is database-adjacent |
+| `frontend` | `dev frontend` | Frontend is dev tooling |
+| `ci` | `dev ci` | CI/CD is dev tooling |
+| `docs` | `dev docs` | Documentation is dev tooling |
+| `whitelabel` | `dev whitelabel` | White-label is dev tooling |
+
+---
+
+## Summary Statistics
+
+- **Total Top-Level Commands:** 34 (was 79; 31 at v1.0 baseline + 3 added in v0.9.9)
+- **Total .sh files in src/cli/:** 101
+- **Deprecated redirect stubs:** 9 (email, k8s, prod, redis, search, servers, storage, validate, webhooks)
+- **Internal/subcommand helpers:** 58 (files that implement subcommands of the 34 top-level commands)
+- **Total Subcommands:** 323+
+- **Average Subcommands per TLC:** 9.5
+
+**Category Breakdown:**
+- Core: 5 commands (15%)
+- Utilities: 16 commands (47%)
+- Complex: 10 commands (29%)
+- Plugin shortcuts (v0.9.9): 3 commands (mux, ai, license)
+- **Total: 5 + 16 + 10 + 3 = 34**
+
+**Deprecated Redirect Stubs (9 files, will be removed in v1.0.0):**
+- `email.sh` -> `nself service email`
+- `k8s.sh` -> `nself infra k8s`
+- `prod.sh` -> `nself deploy production`
+- `redis.sh` -> `nself service redis`
+- `search.sh` -> `nself service search`
+- `servers.sh` -> `nself deploy server list`
+- `storage.sh` -> `nself service storage`
+- `validate.sh` -> `nself config validate`
+- `webhooks.sh` -> `nself auth webhooks`
+
+**Most Complex Commands (by subcommand count):**
+
+1. infra: 51 subcommands (added destroy, reset, clean)
+2. tenant: 50+ subcommands
+3. service: 47 subcommands (added bench, scale, profile, optimize)
+4. auth: 38 subcommands
+5. deploy: 33 subcommands
+
+---
+
+**Version:** 1.0.0 (Breaking)
+**Last updated:** 2026-03-24
+**Status:** Approved for implementation

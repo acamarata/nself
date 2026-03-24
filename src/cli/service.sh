@@ -2084,7 +2084,7 @@ cmd_service_wizard() {
   # Show templates
   printf "\nAvailable templates for %s:\n\n" "$language"
 
-  local -a template_array
+  localtemplate_array
   local i=1
 
   while read -r tmpl; do
@@ -2145,7 +2145,7 @@ cmd_service_redis() {
       ;;
     init | add | list | get | delete | test | health | pool)
       # Delegate to redis command functions
-      if declare -f cmd_redis >/dev/null 2>&1; then
+      if type cmd_redis >/dev/null 2>&1; then
         cmd_redis "$action" "$@"
       else
         log_error "Redis CLI not available"
@@ -2169,7 +2169,7 @@ cmd_service_realtime() {
   case "$action" in
     status)
       # Show realtime service status
-      if declare -f cmd_status >/dev/null 2>&1; then
+      if type cmd_status >/dev/null 2>&1; then
         cmd_status "$@"
       else
         log_info "Realtime service"

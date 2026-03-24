@@ -14,7 +14,7 @@ export OAUTH_PROVIDERS_SOURCED=1
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NSELF_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   source "$NSELF_ROOT/src/lib/utils/display.sh" 2>/dev/null || true
 fi
 

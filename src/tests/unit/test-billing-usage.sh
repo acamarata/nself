@@ -323,7 +323,7 @@ test_export_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -354,7 +354,7 @@ test_tracking_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -383,7 +383,7 @@ test_aggregation_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -412,7 +412,7 @@ test_alert_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -440,7 +440,7 @@ test_statistics_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -469,7 +469,7 @@ test_batch_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi
@@ -496,7 +496,7 @@ test_cleanup_functions() {
 
   local all_defined=true
   for func in "${functions[@]}"; do
-    if ! declare -f "$func" >/dev/null 2>&1; then
+    if ! type "$func" >/dev/null 2>&1; then
       all_defined=false
       break
     fi

@@ -747,7 +747,7 @@ usage_batch_flush() {
 
 # Batch insert multiple usage records at once
 usage_batch_insert() {
-  local -a records=("$@")
+  localrecords=("$@")
 
   local customer_id
   customer_id=$(billing_get_customer_id) || {

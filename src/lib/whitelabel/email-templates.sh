@@ -136,7 +136,7 @@ validate_email_subject() {
 validate_template_variables() {
   local template_content="$1"
   shift
-  local -a provided_vars=("$@")
+  localprovided_vars=("$@")
 
   # Extract all {{VAR_NAME}} patterns from template
   local template_vars
@@ -833,7 +833,7 @@ validate_template_content() {
 substitute_template_variables() {
   local template_content="$1"
   shift
-  local -a var_pairs=("$@")
+  localvar_pairs=("$@")
 
   local result="$template_content"
   local i
@@ -884,7 +884,7 @@ render_template() {
   local language="${2:-$DEFAULT_LANGUAGE}"
   local format="${3:-html}" # html or txt
   shift 3
-  local -a variables=("$@")
+  localvariables=("$@")
 
   # Validate template type
   validate_template_type "$template_type" || return 1
@@ -940,7 +940,7 @@ get_template_subject() {
   local template_type="$1"
   local language="${2:-$DEFAULT_LANGUAGE}"
   shift 2
-  local -a variables=("$@")
+  localvariables=("$@")
 
   local meta_file="${TEMPLATES_LANG_DIR}/${language}/${template_type}.json"
 
@@ -1138,7 +1138,7 @@ send_email_from_template() {
   local recipient_email="$2"
   local language="${3:-$DEFAULT_LANGUAGE}"
   shift 3
-  local -a variables=("$@")
+  localvariables=("$@")
 
   # Validate recipient email
   if [[ ! "$recipient_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
@@ -1509,7 +1509,7 @@ render_tenant_template() {
   local language="${3:-$DEFAULT_LANGUAGE}"
   local format="${4:-html}"
   shift 4
-  local -a variables=("$@")
+  localvariables=("$@")
 
   local tenant_dir
   tenant_dir=$(get_tenant_templates_dir "$tenant_id")
@@ -1563,7 +1563,7 @@ send_tenant_email() {
   local recipient_email="$3"
   local language="${4:-$DEFAULT_LANGUAGE}"
   shift 4
-  local -a variables=("$@")
+  localvariables=("$@")
 
   # Validate recipient email
   if [[ ! "$recipient_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
@@ -1582,11 +1582,11 @@ send_tenant_email() {
   # Overwrites env var defaults when a per-tenant config is found in the DB
   if [[ -n "$tenant_id" ]]; then
     local _db_lib="${NSELF_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}/src/lib/database/core.sh"
-    if [[ -f "$_db_lib" ]] && ! declare -f db_query_raw >/dev/null 2>&1; then
+    if [[ -f "$_db_lib" ]] && ! type db_query_raw >/dev/null 2>&1; then
       source "$_db_lib" 2>/dev/null || true
     fi
 
-    if declare -f db_query_raw >/dev/null 2>&1; then
+    if type db_query_raw >/dev/null 2>&1; then
       local _smtp_json
       _smtp_json=$(db_query_raw \
         "SELECT value::text FROM tenants.tenant_settings WHERE tenant_id = '${tenant_id}' AND key = 'smtp_config' LIMIT 1" \

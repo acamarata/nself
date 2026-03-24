@@ -20,11 +20,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NSELF_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Source dependencies
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   source "$NSELF_ROOT/src/lib/utils/display.sh" 2>/dev/null || true
 fi
 
-if ! declare -f detect_environment >/dev/null 2>&1; then
+if ! type detect_environment >/dev/null 2>&1; then
   source "$NSELF_ROOT/src/lib/utils/env-detection.sh" 2>/dev/null || true
 fi
 

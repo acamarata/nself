@@ -670,7 +670,7 @@ Token Management:
 ```
 
 **Total subcommands:** 3
-Requires Pro license ($9/yr). Manages delivery auth credentials for the mux webhook pipeline.
+Requires Basic membership ($0.99/mo). Manages delivery auth credentials for the mux webhook pipeline.
 
 ---
 
@@ -693,7 +693,7 @@ Providers:
 ```
 
 **Total subcommands:** 8+
-Requires Max license ($19/yr). Manages AI provider credentials for the nself-ai plugin.
+Requires Pro membership ($1.99/mo). Manages AI provider credentials for the nself-ai plugin.
 
 ---
 
@@ -796,9 +796,29 @@ Email:
 ```
 
 **Total subcommands:** 45+
-Requires Max Pro license ($19/yr). Manages the nself-claw AI assistant plugin including
+Requires Pro membership ($1.99/mo). Manages the nself-claw AI assistant plugin including
 local models, Gemini accounts, AI routing, per-user memories, proactive scheduled jobs,
 voice features, knowledge base, and the OpenAI-compatible API gateway.
+
+---
+
+### 15. browser - Headless Browser Automation
+
+```text
+nself browser <subcommand>
+
+  status                                       Show browser service health
+  screenshot <url> [--output=<file>]           Capture full-page screenshot (PNG)
+  scrape <url>                                 Extract page text content
+  pdf <url> [--output=<file>]                  Render page as PDF
+  execute <url> "<javascript>"                 Execute JavaScript on a page
+  allowlist add <domain>                       Add domain to allowlist
+  allowlist remove <domain>                    Remove domain from allowlist
+  allowlist list                               List allowlisted domains
+```
+
+**Total subcommands:** 8
+Requires Pro license ($1.99/mo). Manages the nself-browser headless automation plugin.
 
 ---
 

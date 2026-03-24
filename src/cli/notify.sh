@@ -27,16 +27,16 @@ source "$NSELF_ROOT/src/lib/utils/cli-output.sh" 2>/dev/null || true
 source "$NSELF_ROOT/src/lib/utils/display.sh" 2>/dev/null || true
 
 # Fallbacks if display helpers didn't load
-if ! declare -f cli_error >/dev/null 2>&1; then
+if ! type cli_error >/dev/null 2>&1; then
   cli_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
 fi
-if ! declare -f log_success >/dev/null 2>&1; then
+if ! type log_success >/dev/null 2>&1; then
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
 fi
 

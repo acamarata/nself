@@ -15,16 +15,16 @@ source "$CLI_SCRIPT_DIR/../lib/utils/env.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 
 # Fallback logging
-if ! declare -f log_success >/dev/null 2>&1; then
+if ! type log_success >/dev/null 2>&1; then
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_warning >/dev/null 2>&1; then
+if ! type log_warning >/dev/null 2>&1; then
   log_warning() { printf "\033[0;33m[WARNING]\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   log_error() { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
 fi
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
 fi
 

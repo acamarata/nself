@@ -140,7 +140,7 @@ show_section() {
 
 # Table formatting
 show_table_header() {
-  local -a headers=("$@")
+  localheaders=("$@")
 
   printf "┌"
   for header in "${headers[@]}"; do
@@ -172,7 +172,7 @@ show_table_row() {
 }
 
 show_table_footer() {
-  local -a headers=("$@")
+  localheaders=("$@")
   printf "└"
   for header in "${headers[@]}"; do
     printf "─%.0s" $(seq 1 $((${#header} + 2)))

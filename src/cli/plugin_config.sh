@@ -12,7 +12,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
 
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info()    { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
   log_error()   { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
@@ -83,7 +83,7 @@ _write_config_key() {
 
   if [[ -f "$config_file" ]] && grep -q "^${key}=" "$config_file" 2>/dev/null; then
     # Update existing key using platform-safe sed
-    if declare -f safe_sed_inline >/dev/null 2>&1; then
+    if type safe_sed_inline >/dev/null 2>&1; then
       safe_sed_inline "s|^${key}=.*|${key}=${value}|" "$config_file"
     else
       # Portable fallback: rewrite file
@@ -390,7 +390,7 @@ cmd_config() {
   fi
 
   # Validate plugin is installed
-  if ! declare -f is_plugin_installed >/dev/null 2>&1 || ! is_plugin_installed "$plugin_name"; then
+  if ! type is_plugin_installed >/dev/null 2>&1 || ! is_plugin_installed "$plugin_name"; then
     if [[ ! -d "$PLUGIN_DIR/$plugin_name" ]]; then
       log_error "Plugin '$plugin_name' is not installed"
       return 1

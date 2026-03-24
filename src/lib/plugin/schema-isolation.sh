@@ -13,7 +13,7 @@
 set -o pipefail
 
 # Source platform compatibility helpers if not already loaded
-if ! declare -f safe_sed_inline >/dev/null 2>&1; then
+if ! type safe_sed_inline >/dev/null 2>&1; then
   _SCHEMA_ISO_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   # shellcheck source=../utils/platform-compat.sh
   source "$_SCHEMA_ISO_SCRIPT_DIR/../utils/platform-compat.sh" 2>/dev/null || true

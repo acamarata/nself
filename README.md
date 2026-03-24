@@ -1,7 +1,7 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-0.9.9--rc4-blue.svg)](https://github.com/nself-org/cli/releases)
-[![Status](https://img.shields.io/badge/status-RC4-brightgreen.svg)](https://github.com/nself-org/cli/releases)
+[![Version](https://img.shields.io/badge/version-0.9.9--rc5-blue.svg)](https://github.com/nself-org/cli/releases)
+[![Status](https://img.shields.io/badge/status-RC5-brightgreen.svg)](https://github.com/nself-org/cli/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#-prerequisites)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/nself-org/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nself-org/cli/actions)

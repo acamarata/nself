@@ -98,7 +98,7 @@ verify_template_files() {
 
   if [[ ${#missing_files[@]} -gt 0 ]]; then
     # Use echo to stderr if log_error is not available
-    if declare -f log_error >/dev/null 2>&1; then
+    if type log_error >/dev/null 2>&1; then
       log_error "Template files not found in $templates_dir:"
     else
       echo "Error: Template files not found in $templates_dir:" >&2

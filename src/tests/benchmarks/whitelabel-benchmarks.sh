@@ -217,7 +217,7 @@ test_domain_routing() {
   local iterations=100
 
   # Create mock domain mapping
-  local -a domains=()
+  localdomains=()
   for i in $(seq 1 $TENANT_COUNT); do
     domains+=("tenant${i}.example.com")
   done

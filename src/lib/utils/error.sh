@@ -175,7 +175,7 @@ handle_error_trap() {
   log_error "Error on line $line_number: $command (exit: $exit_code)"
 
   # Cleanup if needed
-  if declare -f cleanup_on_error >/dev/null; then
+  if type cleanup_on_error >/dev/null; then
     cleanup_on_error
   fi
 

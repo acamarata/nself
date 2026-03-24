@@ -15,7 +15,7 @@ source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/licensing.sh" 2>/dev/null || true
 
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info()    { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
   log_error()   { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
@@ -237,7 +237,7 @@ _check_plugin_dependencies() {
   while IFS= read -r dep; do
     [[ -z "$dep" ]] && continue
     local dep_installed=false
-    if declare -f is_plugin_installed >/dev/null 2>&1 && is_plugin_installed "$dep"; then
+    if type is_plugin_installed >/dev/null 2>&1 && is_plugin_installed "$dep"; then
       dep_installed=true
     fi
 

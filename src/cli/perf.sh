@@ -146,7 +146,7 @@ source "$CLI_DIR/bench.sh" 2>/dev/null || true
 
 cmd_bench() {
   # Delegate to bench command
-  if declare -f cmd_bench >/dev/null 2>&1; then
+  if type cmd_bench >/dev/null 2>&1; then
     command cmd_bench "$@"
   else
     cli_error "Bench functionality not available"
@@ -163,7 +163,7 @@ source "$CLI_DIR/scale.sh" 2>/dev/null || true
 
 cmd_scale() {
   # Delegate to scale command
-  if declare -f cmd_scale >/dev/null 2>&1; then
+  if type cmd_scale >/dev/null 2>&1; then
     command cmd_scale "$@"
   else
     cli_error "Scale functionality not available"
@@ -180,7 +180,7 @@ source "$CLI_DIR/migrate.sh" 2>/dev/null || true
 
 cmd_migrate() {
   # Delegate to migrate command
-  if declare -f cmd_migrate >/dev/null 2>&1; then
+  if type cmd_migrate >/dev/null 2>&1; then
     command cmd_migrate "$@"
   else
     cli_error "Migrate functionality not available"

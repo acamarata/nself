@@ -158,7 +158,7 @@ source "$CLI_DIR/frontend.sh" 2>/dev/null || true
 
 cmd_frontend() {
   # Delegate to frontend command
-  if declare -f cmd_frontend >/dev/null 2>&1; then
+  if type cmd_frontend >/dev/null 2>&1; then
     command cmd_frontend "$@"
   else
     cli_error "Frontend functionality not available"
@@ -398,7 +398,7 @@ cmd_sdk() {
       cli_section "Generating $language SDK"
       printf "\n"
 
-      if declare -f generate_sdk >/dev/null 2>&1; then
+      if type generate_sdk >/dev/null 2>&1; then
         generate_sdk "$language" "$output"
       else
         cli_info "SDK generation not yet implemented"
@@ -462,7 +462,7 @@ cmd_test() {
       cli_section "Generating $count $entity fixtures"
       printf "\n"
 
-      if declare -f generate_fixtures >/dev/null 2>&1; then
+      if type generate_fixtures >/dev/null 2>&1; then
         generate_fixtures "$entity" "$count" ".nself/test/fixtures/${entity}.json"
       else
         cli_info "Fixture generation not yet implemented"

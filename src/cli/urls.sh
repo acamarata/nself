@@ -238,8 +238,8 @@ show_url_diff() {
 # Check for route conflicts
 check_route_conflicts() {
   # Use parallel arrays for bash 3.2 compatibility
-  local -a routes=()
-  local -a services=()
+  localroutes=()
+  localservices=()
   local has_conflicts=false
 
   # Helper function to add route
@@ -488,7 +488,7 @@ show_plugin_urls() {
 
       # Check if plugin is running
       local status_indicator=""
-      if declare -f is_plugin_running >/dev/null 2>&1 && is_plugin_running "$plugin_name" 2>/dev/null; then
+      if type is_plugin_running >/dev/null 2>&1 && is_plugin_running "$plugin_name" 2>/dev/null; then
         status_indicator="${COLOR_GREEN}●${COLOR_RESET} "
       else
         status_indicator="${COLOR_DIM}○${COLOR_RESET} "

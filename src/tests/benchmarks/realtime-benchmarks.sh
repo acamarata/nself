@@ -169,7 +169,7 @@ test_message_latency() {
   local iterations=100
 
   # Test different message sizes
-  local -a message_sizes=(100 1000 10000 100000)
+  localmessage_sizes=(100 1000 10000 100000)
 
   printf "\n  ${BLUE}Testing message sizes:${NC}\n"
 
@@ -259,7 +259,7 @@ test_channel_scaling() {
 
   printf "\n  ${BLUE}Testing channel subscriber counts:${NC}\n"
 
-  local -a subscriber_counts=(10 100 1000 10000)
+  localsubscriber_counts=(10 100 1000 10000)
 
   for subscribers in "${subscriber_counts[@]}"; do
     if [[ $subscribers -gt $CONNECTION_COUNT ]]; then

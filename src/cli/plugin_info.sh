@@ -15,7 +15,7 @@ source "$CLI_SCRIPT_DIR/../lib/plugin/registry.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/licensing.sh" 2>/dev/null || true
 
 # Fallback log functions
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info()    { printf "\033[0;34m[INFO]\033[0m %s\n" "$1"; }
   log_error()   { printf "\033[0;31m[ERROR]\033[0m %s\n" "$1" >&2; }
   log_success() { printf "\033[0;32m[SUCCESS]\033[0m %s\n" "$1"; }
@@ -120,7 +120,7 @@ cmd_info() {
     if [[ -z "$reg_ver" ]] && [[ -z "$reg_desc" ]]; then
       # Check pro list
       local found_pro=false
-      if declare -f license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
+      if type license_is_paid_plugin >/dev/null 2>&1 && license_is_paid_plugin "$plugin_name"; then
         found_pro=true
       fi
       if [[ "$found_pro" == "false" ]]; then
@@ -284,7 +284,7 @@ EOF
     while IFS= read -r dep; do
       [[ -z "$dep" ]] && continue
       local dep_status="\033[0;31mnot installed\033[0m"
-      if declare -f is_plugin_installed >/dev/null 2>&1 && is_plugin_installed "$dep"; then
+      if type is_plugin_installed >/dev/null 2>&1 && is_plugin_installed "$dep"; then
         dep_status="\033[0;32minstalled\033[0m"
       fi
       printf "    %-30s  %b\n" "$dep" "$dep_status"

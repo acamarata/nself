@@ -1,15 +1,16 @@
-# CLI Test Coverage — v1.0.0
+# CLI Test Coverage — v0.9.9
 
-Last updated: 2026-03-08
+Last updated: 2026-03-24
 
 ## Summary
 
 | Metric | Count |
 | --- | --- |
-| Total bats test files | 52 |
-| Total bats test cases | ~750 (estimated) |
-| Top-level commands covered | 30/30 |
-| Integration test files | 12 |
+| Total bats test files | 81 |
+| Total bats @test cases | ~1980 |
+| Total shell test functions | ~1370 |
+| Total test files (bats + sh) | 223 |
+| Top-level commands covered | 34/34 |
 | Commands with no test coverage | 0 |
 
 ## File Inventory

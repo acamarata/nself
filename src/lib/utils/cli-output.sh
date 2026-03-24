@@ -331,8 +331,8 @@ cli_box_detailed() {
 
 # Internal: Calculate column widths
 _cli_calc_column_widths() {
-  local -a headers=("$@")
-  local -a widths=()
+  localheaders=("$@")
+  localwidths=()
 
   for header in "${headers[@]}"; do
     widths+=("${#header}")
@@ -345,8 +345,8 @@ _cli_calc_column_widths() {
 # Print table header
 # Usage: cli_table_header "Column1" "Column2" "Column3"
 cli_table_header() {
-  local -a headers=("$@")
-  local -a widths
+  localheaders=("$@")
+  localwidths
 
   # Calculate column widths
   read -ra widths <<<"$(_cli_calc_column_widths "${headers[@]}")"
@@ -386,8 +386,8 @@ cli_table_header() {
 # Print table row
 # Usage: cli_table_row "Value1" "Value2" "Value3"
 cli_table_row() {
-  local -a values=("$@")
-  local -a widths
+  localvalues=("$@")
+  localwidths
 
   # Use stored widths from header
   read -ra widths <<<"${CLI_TABLE_WIDTHS:-}"
@@ -404,8 +404,8 @@ cli_table_row() {
 # Print table footer
 # Usage: cli_table_footer "Column1" "Column2" "Column3"
 cli_table_footer() {
-  local -a headers=("$@")
-  local -a widths
+  localheaders=("$@")
+  localwidths
 
   # Use stored widths from header
   read -ra widths <<<"${CLI_TABLE_WIDTHS:-}"
@@ -553,7 +553,7 @@ cli_spinner_stop() {
 cli_summary() {
   local title="$1"
   shift
-  local -a items=("$@")
+  localitems=("$@")
   local width=60
 
   printf "\n"

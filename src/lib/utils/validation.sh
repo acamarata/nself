@@ -37,7 +37,7 @@ is_valid_url() {
 is_valid_ip() {
   local ip="$1"
   local IFS='.'
-  local -a octets=($ip)
+  localoctets=($ip)
 
   [[ ${#octets[@]} -eq 4 ]] || return 1
 
@@ -91,7 +91,7 @@ validate_env_config() {
   source "$env_file"
 
   # Check required variables
-  local -a required_vars=(
+  localrequired_vars=(
     "PROJECT_NAME"
     "BASE_DOMAIN"
     "POSTGRES_PASSWORD"
@@ -166,7 +166,7 @@ validate_docker_prerequisites() {
 
 # Validate port availability
 validate_ports() {
-  local -a required_ports=(5432 8080 9000 6379 80 443)
+  localrequired_ports=(5432 8080 9000 6379 80 443)
   local errors=0
 
   for port in "${required_ports[@]}"; do
@@ -206,8 +206,48 @@ validate_permissions() {
   return $errors
 }
 
+# Safe rm -rf wrapper that validates paths before deletion
+# Usage: _safe_rm_rf "/some/path" [expected_prefix]
+# Guards: non-empty, not root, not $HOME, optionally must start with expected_prefix
+_safe_rm_rf() {
+  local target="$1"
+  local expected_prefix="${2:-}"
+
+  # Guard: path must be non-empty
+  if [[ -z "$target" ]]; then
+    printf "ERROR: _safe_rm_rf called with empty path\n" >&2
+    return 1
+  fi
+
+  # Guard: never delete root
+  if [[ "$target" = "/" ]]; then
+    printf "ERROR: _safe_rm_rf refusing to delete /\n" >&2
+    return 1
+  fi
+
+  # Guard: never delete $HOME
+  if [[ -n "${HOME:-}" ]] && [[ "$target" = "$HOME" ]]; then
+    printf "ERROR: _safe_rm_rf refusing to delete HOME directory\n" >&2
+    return 1
+  fi
+
+  # Guard: if expected prefix given, path must start with it
+  if [[ -n "$expected_prefix" ]]; then
+    case "$target" in
+      "$expected_prefix"*) ;; # OK
+      *)
+        printf "ERROR: _safe_rm_rf path '%s' does not start with expected prefix '%s'\n" "$target" "$expected_prefix" >&2
+        return 1
+        ;;
+    esac
+  fi
+
+  rm -rf "$target"
+}
+
 # Export all functions
 export -f is_valid_domain is_valid_email is_valid_port is_valid_url
 export -f is_valid_ip is_valid_json is_valid_yaml
 export -f validate_env_config validate_docker_prerequisites
 export -f validate_ports validate_permissions
+export -f _safe_rm_rf

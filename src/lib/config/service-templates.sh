@@ -104,15 +104,18 @@ set -euo pipefail
 # Format: name:framework:port or name:framework or just name
 parse_service_definition() {
   local service_def="$1"
-  local -n name_ref=$2
-  local -n framework_ref=$3
-  local -n port_ref=$4
+  local _psd_name_var="$2"
+  local _psd_fw_var="$3"
+  local _psd_port_var="$4"
 
-  IFS=':' read -ra PARTS <<<"$service_def"
+  local _psd_name _psd_fw _psd_port
+  IFS=':' read _psd_name _psd_fw _psd_port <<EOF
+${service_def}
+EOF
 
-  name_ref="${PARTS[0]}"
-  framework_ref="${PARTS[1]:-nest-ts}" # Default to nest-ts
-  port_ref="${PARTS[2]:-}"             # Port is optional
+  eval "$_psd_name_var=\"\${_psd_name}\""
+  eval "$_psd_fw_var=\"\${_psd_fw:-nest-ts}\""   # Default to nest-ts
+  eval "$_psd_port_var=\"\${_psd_port:-}\""       # Port is optional
 }
 
 # Get language from framework

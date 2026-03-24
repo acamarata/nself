@@ -11,16 +11,16 @@ source "${SCRIPT_DIR}/../lib/utils/display.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/../lib/utils/env.sh" 2>/dev/null || true
 
 # Fallback logging if display.sh failed to load
-if ! declare -f log_success >/dev/null 2>&1; then
+if ! type log_success >/dev/null 2>&1; then
   log_success() { printf "\033[0;32m✓\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_warning >/dev/null 2>&1; then
+if ! type log_warning >/dev/null 2>&1; then
   log_warning() { printf "\033[0;33m!\033[0m %s\n" "$1"; }
 fi
-if ! declare -f log_error >/dev/null 2>&1; then
+if ! type log_error >/dev/null 2>&1; then
   log_error() { printf "\033[0;31m✗\033[0m %s\n" "$1" >&2; }
 fi
-if ! declare -f log_info >/dev/null 2>&1; then
+if ! type log_info >/dev/null 2>&1; then
   log_info() { printf "\033[0;34mℹ\033[0m %s\n" "$1"; }
 fi
 

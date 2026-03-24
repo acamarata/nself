@@ -225,13 +225,13 @@ test_ssl_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f generate_ssl_certificates >/dev/null 2>&1; then
+  if type generate_ssl_certificates >/dev/null 2>&1; then
     test_result "pass" "generate_ssl_certificates function exists"
   else
     test_result "fail" "generate_ssl_certificates function missing"
   fi
 
-  if declare -f create_self_signed_cert >/dev/null 2>&1; then
+  if type create_self_signed_cert >/dev/null 2>&1; then
     test_result "pass" "create_self_signed_cert function exists"
   else
     test_result "fail" "create_self_signed_cert function missing"
@@ -259,19 +259,19 @@ test_nginx_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f generate_nginx_config >/dev/null 2>&1; then
+  if type generate_nginx_config >/dev/null 2>&1; then
     test_result "pass" "generate_nginx_config function exists"
   else
     test_result "fail" "generate_nginx_config function missing"
   fi
 
-  if declare -f generate_nginx_upstream >/dev/null 2>&1; then
+  if type generate_nginx_upstream >/dev/null 2>&1; then
     test_result "pass" "generate_nginx_upstream function exists"
   else
     test_result "fail" "generate_nginx_upstream function missing"
   fi
 
-  if declare -f generate_nginx_location >/dev/null 2>&1; then
+  if type generate_nginx_location >/dev/null 2>&1; then
     test_result "pass" "generate_nginx_location function exists"
   else
     test_result "fail" "generate_nginx_location function missing"
@@ -291,19 +291,19 @@ test_docker_compose_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f generate_docker_compose >/dev/null 2>&1; then
+  if type generate_docker_compose >/dev/null 2>&1; then
     test_result "pass" "generate_docker_compose function exists"
   else
     test_result "fail" "generate_docker_compose function missing"
   fi
 
-  if declare -f add_nginx_service >/dev/null 2>&1; then
+  if type add_nginx_service >/dev/null 2>&1; then
     test_result "pass" "add_nginx_service function exists"
   else
     test_result "fail" "add_nginx_service function missing"
   fi
 
-  if declare -f add_postgres_service >/dev/null 2>&1; then
+  if type add_postgres_service >/dev/null 2>&1; then
     test_result "pass" "add_postgres_service function exists"
   else
     test_result "fail" "add_postgres_service function missing"
@@ -323,13 +323,13 @@ test_database_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f create_database_initialization >/dev/null 2>&1; then
+  if type create_database_initialization >/dev/null 2>&1; then
     test_result "pass" "create_database_initialization function exists"
   else
     test_result "fail" "create_database_initialization function missing"
   fi
 
-  if declare -f generate_init_sql >/dev/null 2>&1; then
+  if type generate_init_sql >/dev/null 2>&1; then
     test_result "pass" "generate_init_sql function exists"
   else
     test_result "fail" "generate_init_sql function missing"
@@ -349,19 +349,19 @@ test_services_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f generate_services >/dev/null 2>&1; then
+  if type generate_services >/dev/null 2>&1; then
     test_result "pass" "generate_services function exists"
   else
     test_result "fail" "generate_services function missing"
   fi
 
-  if declare -f generate_frontend_service >/dev/null 2>&1; then
+  if type generate_frontend_service >/dev/null 2>&1; then
     test_result "pass" "generate_frontend_service function exists"
   else
     test_result "fail" "generate_frontend_service function missing"
   fi
 
-  if declare -f generate_backend_service >/dev/null 2>&1; then
+  if type generate_backend_service >/dev/null 2>&1; then
     test_result "pass" "generate_backend_service function exists"
   else
     test_result "fail" "generate_backend_service function missing"
@@ -381,19 +381,19 @@ test_core_module() {
   test_result "pass" "Module loads successfully"
 
   # Test function existence
-  if declare -f orchestrate_build >/dev/null 2>&1; then
+  if type orchestrate_build >/dev/null 2>&1; then
     test_result "pass" "orchestrate_build function exists"
   else
     test_result "fail" "orchestrate_build function missing"
   fi
 
-  if declare -f init_build_environment >/dev/null 2>&1; then
+  if type init_build_environment >/dev/null 2>&1; then
     test_result "pass" "init_build_environment function exists"
   else
     test_result "fail" "init_build_environment function missing"
   fi
 
-  if declare -f detect_app_port >/dev/null 2>&1; then
+  if type detect_app_port >/dev/null 2>&1; then
     test_result "pass" "detect_app_port function exists"
   else
     test_result "fail" "detect_app_port function missing"

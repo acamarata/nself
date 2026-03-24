@@ -69,7 +69,7 @@ assert_function_exists() {
 
   TESTS_RUN=$((TESTS_RUN + 1))
 
-  if declare -f "$func_name" >/dev/null 2>&1; then
+  if type "$func_name" >/dev/null 2>&1; then
     TESTS_PASSED=$((TESTS_PASSED + 1))
     printf "✓ %s\n" "$test_name"
     return 0

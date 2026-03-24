@@ -296,7 +296,7 @@ check_plugin_schema_isolation_all() {
     pname=$(basename "$(dirname "$plugin_path")")
     [[ "$pname" == "_shared" ]] && continue
 
-    if declare -f check_plugin_schema_isolation >/dev/null 2>&1; then
+    if type check_plugin_schema_isolation >/dev/null 2>&1; then
       check_plugin_schema_isolation "$pname" || issues=$((issues + 1))
     fi
   done

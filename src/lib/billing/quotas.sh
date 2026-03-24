@@ -1163,7 +1163,7 @@ quota_send_alert_notification() {
   # Notifications are handled by the notify plugin (nself plugin install notify).
   # When available, it supports email, webhook, SMS, Slack, Telegram, and more.
   # Check if notify plugin is installed and send alert through it; otherwise just log.
-  if declare -f plugin_notify_send >/dev/null 2>&1; then
+  if type plugin_notify_send >/dev/null 2>&1; then
     plugin_notify_send "quota_alert" \
       --customer "$customer_id" \
       --service "$service" \

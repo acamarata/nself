@@ -108,7 +108,7 @@ test_ssl() {
     test_result "pass" "SSL module loads"
 
     # Test certificate path function
-    if declare -f generate_ssl_certificates >/dev/null 2>&1; then
+    if type generate_ssl_certificates >/dev/null 2>&1; then
       test_result "pass" "SSL generation function exists"
     else
       test_result "fail" "SSL generation function missing"
@@ -127,7 +127,7 @@ test_nginx() {
   if source "$NSELF_ROOT/src/lib/build/nginx.sh" 2>/dev/null; then
     test_result "pass" "Nginx module loads"
 
-    if declare -f generate_nginx_config >/dev/null 2>&1; then
+    if type generate_nginx_config >/dev/null 2>&1; then
       test_result "pass" "Nginx generation function exists"
     else
       test_result "fail" "Nginx generation function missing"
@@ -146,7 +146,7 @@ test_docker_compose() {
   if source "$NSELF_ROOT/src/lib/build/docker-compose.sh" 2>/dev/null; then
     test_result "pass" "Docker Compose module loads"
 
-    if declare -f generate_docker_compose >/dev/null 2>&1; then
+    if type generate_docker_compose >/dev/null 2>&1; then
       test_result "pass" "Docker Compose generation function exists"
     else
       test_result "fail" "Docker Compose generation function missing"
@@ -165,13 +165,13 @@ test_core() {
   if source "$NSELF_ROOT/src/lib/build/core.sh" 2>/dev/null; then
     test_result "pass" "Core module loads"
 
-    if declare -f orchestrate_build >/dev/null 2>&1; then
+    if type orchestrate_build >/dev/null 2>&1; then
       test_result "pass" "Main orchestrate_build function exists"
     else
       test_result "fail" "Main orchestrate_build function missing"
     fi
 
-    if declare -f detect_app_port >/dev/null 2>&1; then
+    if type detect_app_port >/dev/null 2>&1; then
       test_result "pass" "Port detection function exists"
     else
       test_result "fail" "Port detection function missing"

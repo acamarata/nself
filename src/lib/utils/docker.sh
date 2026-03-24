@@ -152,12 +152,12 @@ sort_services() {
   local services=("$@")
 
   # Define priority order
-  local -a core=(postgres hasura auth nginx)
-  local -a optional=(nself-admin minio storage redis functions mailpit mailhog meilisearch typesense sonic mlflow)
-  local -a monitoring_priority=(prometheus grafana loki promtail tempo alertmanager)
-  local -a monitoring_exporters=(cadvisor node-exporter postgres-exporter redis-exporter)
+  localcore=(postgres hasura auth nginx)
+  localoptional=(nself-admin minio storage redis functions mailpit mailhog meilisearch typesense sonic mlflow)
+  localmonitoring_priority=(prometheus grafana loki promtail tempo alertmanager)
+  localmonitoring_exporters=(cadvisor node-exporter postgres-exporter redis-exporter)
 
-  local -a sorted=()
+  localsorted=()
 
   # 1. Core services (in order)
   for svc in "${core[@]}"; do
@@ -188,7 +188,7 @@ sort_services() {
   done
 
   # 5. Custom services (CS_*) - alphabetically
-  local -a custom=()
+  localcustom=()
   for svc in "${services[@]}"; do
     # Check if it's a custom service (not in any predefined list)
     if [[ ! " ${sorted[*]} " =~ " ${svc} " ]]; then

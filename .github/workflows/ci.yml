@@ -19,7 +19,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y shellcheck
           # BLOCKING: ShellCheck errors indicate real code quality issues
-          find . -type f -name "*.sh" -exec shellcheck -S error {} +
+          # Target Bash 3.2 for maximum portability (macOS ships Bash 3.2)
+          find . -type f -name "*.sh" -exec shellcheck -s bash -S error {} +
 
       - name: Check shell script formatting
         run: |

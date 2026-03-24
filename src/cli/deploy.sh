@@ -517,7 +517,7 @@ upgrade_perform() {
   printf "\n"
 
   # Use blue-green deployment if available
-  if declare -f perform_blue_green_deployment >/dev/null 2>&1; then
+  if type perform_blue_green_deployment >/dev/null 2>&1; then
     perform_blue_green_deployment "${SKIP_HEALTH:-false}"
   else
     cli_warning "Blue-green deployment not available"
@@ -526,7 +526,7 @@ upgrade_perform() {
 }
 
 upgrade_rolling() {
-  if declare -f perform_rolling_update >/dev/null 2>&1; then
+  if type perform_rolling_update >/dev/null 2>&1; then
     perform_rolling_update
   else
     cli_error "Rolling update not available"
@@ -535,7 +535,7 @@ upgrade_rolling() {
 }
 
 upgrade_status() {
-  if declare -f show_deployment_status >/dev/null 2>&1; then
+  if type show_deployment_status >/dev/null 2>&1; then
     show_deployment_status
   else
     cli_info "No deployment status available"
@@ -558,7 +558,7 @@ upgrade_switch() {
   show_command_header "nself deploy upgrade" "Switch Traffic"
   printf "\n"
 
-  if declare -f switch_traffic >/dev/null 2>&1; then
+  if type switch_traffic >/dev/null 2>&1; then
     switch_traffic "$target_color"
   else
     cli_error "Traffic switching not available"
@@ -567,7 +567,7 @@ upgrade_switch() {
 }
 
 upgrade_rollback() {
-  if declare -f rollback_deployment >/dev/null 2>&1; then
+  if type rollback_deployment >/dev/null 2>&1; then
     rollback_deployment
   else
     cli_error "Rollback not available"

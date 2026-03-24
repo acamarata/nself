@@ -172,7 +172,7 @@ autofix_service() {
       ;;
     NGINX_UPSTREAM_NOT_FOUND | NGINX_*)
       # Use comprehensive nginx fix function if available
-      if declare -f fix_nginx_restart_loop >/dev/null 2>&1; then
+      if type fix_nginx_restart_loop >/dev/null 2>&1; then
         fix_nginx_restart_loop "$service_name" "$verbose"
         fix_result=$?
         fix_description="Fixed nginx configuration issues"
@@ -192,7 +192,7 @@ autofix_service() {
       fix_description="Recreated $service_name container"
       ;;
     MISSING_HEALTHCHECK_TOOLS)
-      if declare -f fix_service_healthcheck >/dev/null 2>&1; then
+      if type fix_service_healthcheck >/dev/null 2>&1; then
         fix_service_healthcheck "$service_name"
         fix_result=$?
         fix_description=$(get_last_fix_description)
@@ -203,7 +203,7 @@ autofix_service() {
       fi
       ;;
     BULLMQ_MISSING_MODULES)
-      if declare -f fix_bullmq_worker >/dev/null 2>&1; then
+      if type fix_bullmq_worker >/dev/null 2>&1; then
         fix_bullmq_worker "$service_name" "MISSING_NODE_MODULES"
         fix_result=$?
         fix_description=$(get_last_fix_description)
@@ -214,7 +214,7 @@ autofix_service() {
       fi
       ;;
     BULLMQ_REDIS_CONNECTION)
-      if declare -f fix_bullmq_worker >/dev/null 2>&1; then
+      if type fix_bullmq_worker >/dev/null 2>&1; then
         fix_bullmq_worker "$service_name" "REDIS_CONNECTION"
         fix_result=$?
         fix_description=$(get_last_fix_description)
