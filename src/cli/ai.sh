@@ -1437,6 +1437,75 @@ cmd_ai_tokens() {
       fi
       ;;
 
+    rotate-key)
+      # Re-encrypt all saved OAuth tokens with a new key and update .env
+      # Usage: nself ai tokens rotate-key
+      local ai_url="${NSELF_AI_URL:-http://localhost:3101}"
+      local internal_secret="${PLUGIN_INTERNAL_SECRET:-}"
+
+      if [ -z "$internal_secret" ]; then
+        cli_error "PLUGIN_INTERNAL_SECRET not set. Source your .env file first."
+        return 1
+      fi
+
+      log_info "Generating new AI plugin encryption key..."
+      local new_key
+      new_key=$(openssl rand -base64 32)
+      
+      log_info "Instructing nself-ai server to re-encrypt stored OAuth tokens..."
+      local body="{\"new_key\":\"${new_key}\"}"
+      
+      local response=""
+      response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "x-internal-token: ${internal_secret}" \
+        -d "$body" \
+        "${ai_url}/tokens/rotate-key" 2>/dev/null)
+        
+      if [ -z "$response" ]; then
+        cli_error "No response from ai service at ${ai_url}. Is it running?"
+        return 1
+      fi
+
+      local ok="" rotated_count="0"
+      if command -v jq >/dev/null 2>&1; then
+        ok=$(printf '%s' "$response" | jq -r 'if .status == "success" then "true" else "false" end' 2>/dev/null)
+        rotated_count=$(printf '%s' "$response" | jq -r '.rotated_count // 0' 2>/dev/null)
+      else
+        if printf '%s' "$response" | grep -q '"status":"success"'; then
+          ok="true"
+        fi
+      fi
+      
+      if [ "$ok" = "true" ]; then
+        log_success "Tokens re-encrypted successfully ($rotated_count tokens rotated)."
+        
+        # Update .env
+        local env_file="$NSELF_ROOT/.env"
+        if [ -f "$env_file" ]; then
+          log_info "Updating PLUGIN_AI_ENCRYPTION_KEY in .env..."
+          if grep -q "^PLUGIN_AI_ENCRYPTION_KEY=" "$env_file"; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+              sed -i '' "s|^PLUGIN_AI_ENCRYPTION_KEY=.*|PLUGIN_AI_ENCRYPTION_KEY=\"$new_key\"|g" "$env_file"
+            else
+              sed -i "s|^PLUGIN_AI_ENCRYPTION_KEY=.*|PLUGIN_AI_ENCRYPTION_KEY=\"$new_key\"|g" "$env_file"
+            fi
+          else
+            echo "PLUGIN_AI_ENCRYPTION_KEY=\"$new_key\"" >> "$env_file"
+          fi
+          log_success "Key rotation complete! You MUST restart the AI service to apply the new key."
+          printf "\n  nself plugin restart ai\n"
+        else
+          cli_error "Could not find .env file at $env_file. You must manually set:"
+          printf "  PLUGIN_AI_ENCRYPTION_KEY=\"%s\"\n" "$new_key"
+        fi
+      else
+        cli_error "Key rotation failed."
+        printf '%s\n' "$response"
+        return 1
+      fi
+      ;;
+
     test)
       # Test whether a caller token is valid and show its permissions.
       # Usage: nself ai tokens test <token>
@@ -1488,7 +1557,8 @@ cmd_ai_tokens() {
       printf "                         Create a new caller token for a namespace\n"
       printf "  list                   List all namespaces and token metadata\n"
       printf "  remove <namespace>     Remove the caller token for a namespace\n"
-      printf "  test <token>           Verify a token is accepted by the AI service\n\n"
+      printf "  test <token>           Verify a token is accepted by the AI service\n"
+      printf "  rotate-key             Re-encrypt all stored OAuth tokens with a new key\n\n"
       printf "Options for create:\n"
       printf "  --classes <c1,c2>  Comma-separated allowed task classes (default: all)\n"
       printf "                     Classes: Classify, Summarize, Faq, Translate,\n"
@@ -1505,7 +1575,7 @@ cmd_ai_tokens() {
 
     *)
       cli_error "Unknown tokens action: $subcmd"
-      printf "Actions: create, list, remove, test\n"
+      printf "Actions: create, list, remove, test, rotate-key\n"
       exit 1
       ;;
 
