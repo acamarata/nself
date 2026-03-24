@@ -41,6 +41,8 @@ select_option() {
   local prompt="$1"
   local options_var="$2"
   local result_var="$3"
+  _validate_var_name "$options_var" || return 1
+  _validate_var_name "$result_var" || return 1
 
   # Use eval to handle array references (Bash 3.2 compatible)
   eval "local options=(\"\${${options_var}[@]}\")"
@@ -72,6 +74,8 @@ select_option() {
 multi_select() {
   local options_var="$1"
   local selected_var="$2"
+  _validate_var_name "$options_var" || return 1
+  _validate_var_name "$selected_var" || return 1
 
   # Use eval to handle array references (Bash 3.2 compatible)
   eval "local options=(\"\${${options_var}[@]}\")"
@@ -117,6 +121,7 @@ prompt_input() {
   local default="$2"
   local result_var="$3"
   local pattern="${4:-.*}"
+  _validate_var_name "$result_var" || return 1
 
   while true; do
     if [[ -n "$default" ]]; then

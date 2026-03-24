@@ -169,6 +169,9 @@ EOF
   else
     # Non-SSL configuration
     cat >>nginx/conf.d/default.conf <<'EOF'
+    # Security headers (HSTS excluded — SSL not enabled)
+    include /etc/nginx/includes/security-headers.conf;
+
     # Root location
     location / {
         root /usr/share/nginx/html;

@@ -12,6 +12,7 @@ set -euo pipefail
 # Simple project setup - only asks for project name and domain
 prompt_project_info_simple() {
   local config_array_name="${1:-config}"
+  _validate_var_name "$config_array_name" || return 1
 
   echo "Let's set up your project with smart defaults."
   echo ""

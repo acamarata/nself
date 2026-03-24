@@ -359,11 +359,122 @@ EOF
   echo "" >> docker-compose.yml
   echo "# End of generated docker-compose.yml" >> docker-compose.yml
 
+  # Post-processing: inject logging, graceful shutdown, and security hardening
+  postprocess_compose_logging
+  postprocess_compose_graceful_shutdown
+  postprocess_compose_security_hardening
+
   # Protect generated file: it may contain variable names for secrets
   chmod 600 docker-compose.yml 2>/dev/null || true
 
   # Explicitly return success
   return 0
+}
+
+# Post-process: Add JSON-file logging with rotation to every service
+# T-2461: Prevents Docker from consuming unbounded disk with container logs
+postprocess_compose_logging() {
+  local log_max_size="${DOCKER_LOG_MAX_SIZE:-10m}"
+  local log_max_file="${DOCKER_LOG_MAX_FILE:-3}"
+
+  if [[ ! -f docker-compose.yml ]]; then
+    return 0
+  fi
+
+  # Build the logging block (indented at service-property level = 4 spaces)
+  local logging_block
+  logging_block=$(printf '    logging:\n      driver: json-file\n      options:\n        max-size: "%s"\n        max-file: "%s"' \
+    "$log_max_size" "$log_max_file")
+
+  # Insert logging config after each "restart: unless-stopped" line
+  # This is the most reliable anchor present in every service
+  local tmpfile
+  tmpfile=$(mktemp)
+  while IFS= read -r line; do
+    printf '%s\n' "$line" >> "$tmpfile"
+    # Match "    restart: unless-stopped" (service-level indentation)
+    case "$line" in
+      *"restart: unless-stopped"*)
+        printf '%s\n' "$logging_block" >> "$tmpfile"
+        ;;
+    esac
+  done < docker-compose.yml
+  mv "$tmpfile" docker-compose.yml
+}
+
+# Post-process: Add stop_grace_period to all services for graceful shutdown
+# T-2466: Ensures containers get 30s to shut down cleanly
+postprocess_compose_graceful_shutdown() {
+  local grace_period="${DOCKER_STOP_GRACE_PERIOD:-30s}"
+
+  if [[ ! -f docker-compose.yml ]]; then
+    return 0
+  fi
+
+  local tmpfile
+  tmpfile=$(mktemp)
+  while IFS= read -r line; do
+    printf '%s\n' "$line" >> "$tmpfile"
+    case "$line" in
+      *"restart: unless-stopped"*)
+        printf '    stop_grace_period: %s\n' "$grace_period" >> "$tmpfile"
+        ;;
+    esac
+  done < docker-compose.yml
+  mv "$tmpfile" docker-compose.yml
+}
+
+# Post-process: Add Docker container security hardening
+# T-2465: Adds security_opt, cap_drop, cap_add per service
+postprocess_compose_security_hardening() {
+  local hardening="${SECURITY_HARDENING:-true}"
+
+  if [[ "$hardening" != "true" ]] || [[ ! -f docker-compose.yml ]]; then
+    return 0
+  fi
+
+  # Security block: drop all capabilities, add back only NET_BIND_SERVICE
+  # no-new-privileges prevents privilege escalation
+  local security_block
+  security_block=$(printf '    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    cap_add:\n      - NET_BIND_SERVICE')
+
+  local tmpfile
+  tmpfile=$(mktemp)
+  local in_postgres=false
+  local in_nginx=false
+  while IFS= read -r line; do
+    printf '%s\n' "$line" >> "$tmpfile"
+    # Track which service we are in for custom cap_add
+    case "$line" in
+      *"# PostgreSQL Database"*)
+        in_postgres=true
+        in_nginx=false
+        ;;
+      *"# Nginx"*|*"nginx:"*)
+        in_nginx=true
+        in_postgres=false
+        ;;
+      *"restart: unless-stopped"*)
+        if [[ "$in_postgres" == "true" ]]; then
+          # Postgres needs CHOWN, SETUID, SETGID, FOWNER for initdb
+          printf '    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - SETUID\n      - SETGID\n      - FOWNER\n' >> "$tmpfile"
+          in_postgres=false
+        elif [[ "$in_nginx" == "true" ]]; then
+          # Nginx needs NET_BIND_SERVICE for ports 80/443
+          printf '%s\n' "$security_block" >> "$tmpfile"
+          in_nginx=false
+        else
+          printf '%s\n' "$security_block" >> "$tmpfile"
+        fi
+        ;;
+      "  # "*)
+        # Reset service tracking on new service comment headers
+        in_postgres=false
+        in_nginx=false
+        ;;
+    esac
+  done < docker-compose.yml
+  mv "$tmpfile" docker-compose.yml
 }
 
 # Main execution

@@ -440,6 +440,92 @@ jwt_generate_access_token() {
   return 0
 }
 
+# Generate a JWT signed with HMAC-SHA256 using HASURA_GRAPHQL_JWT_SECRET.
+# This is a lightweight alternative to the RS256 jwt_generate_access_token
+# for environments where Hasura is configured with a symmetric HS256 secret.
+#
+# Usage: jwt_generate_hs256 <user_id> [claims_json]
+# Requires: HASURA_GRAPHQL_JWT_SECRET env var (the raw secret string or a
+#           JSON object with {"type":"HS256","key":"<secret>"}).
+jwt_generate_hs256() {
+  local user_id="$1"
+  local claims_json="${2:-{\}}"
+
+  if [[ -z "$user_id" ]]; then
+    printf "ERROR: user_id required\n" >&2
+    return 1
+  fi
+
+  # Extract the secret key from HASURA_GRAPHQL_JWT_SECRET
+  local jwt_secret="${HASURA_GRAPHQL_JWT_SECRET:-}"
+  if [[ -z "$jwt_secret" ]]; then
+    printf "ERROR: HASURA_GRAPHQL_JWT_SECRET not set\n" >&2
+    return 1
+  fi
+
+  # If the secret is a JSON object, extract the "key" field
+  local secret_key="$jwt_secret"
+  case "$jwt_secret" in
+    *'"key"'*)
+      if command -v jq >/dev/null 2>&1; then
+        secret_key=$(printf '%s' "$jwt_secret" | jq -r '.key // empty')
+      else
+        # Minimal extraction without jq: find "key":"<value>"
+        secret_key=$(printf '%s' "$jwt_secret" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+      fi
+      if [[ -z "$secret_key" ]]; then
+        printf "ERROR: Could not extract key from JWT secret JSON\n" >&2
+        return 1
+      fi
+      ;;
+  esac
+
+  # Build header (HS256)
+  local header='{"alg":"HS256","typ":"JWT"}'
+
+  # Build payload with standard claims
+  local now_epoch
+  now_epoch=$(date +%s)
+  local ttl="${JWT_ACCESS_TOKEN_TTL:-900}"
+  local exp=$((now_epoch + ttl))
+  local issuer="${JWT_ISSUER:-nself}"
+
+  local payload
+  if command -v jq >/dev/null 2>&1; then
+    payload=$(printf '%s' "$claims_json" | jq -c \
+      --arg sub "$user_id" \
+      --arg iss "$issuer" \
+      --argjson iat "$now_epoch" \
+      --argjson exp "$exp" \
+      '. + {sub: $sub, iss: $iss, iat: $iat, exp: $exp}')
+  else
+    # Fallback without jq: build simple JSON
+    payload=$(printf '{"sub":"%s","iss":"%s","iat":%s,"exp":%s}' \
+      "$user_id" "$issuer" "$now_epoch" "$exp")
+  fi
+
+  # Base64url encode header and payload
+  local header_b64 payload_b64
+  header_b64=$(printf '%s' "$header" | base64 | tr '+/' '-_' | tr -d '=\n')
+  payload_b64=$(printf '%s' "$payload" | base64 | tr '+/' '-_' | tr -d '=\n')
+
+  local signing_input="${header_b64}.${payload_b64}"
+
+  # Sign with HMAC-SHA256 using openssl
+  local sig_b64
+  sig_b64=$(printf '%s' "$signing_input" | \
+    openssl dgst -sha256 -hmac "$secret_key" -binary 2>/dev/null | \
+    base64 | tr '+/' '-_' | tr -d '=\n')
+
+  if [[ -z "$sig_b64" ]]; then
+    printf "ERROR: HMAC-SHA256 signing failed\n" >&2
+    return 1
+  fi
+
+  printf '%s.%s.%s' "$header_b64" "$payload_b64" "$sig_b64"
+  return 0
+}
+
 # Generate JWT refresh token
 # Usage: jwt_generate_refresh_token <user_id>
 jwt_generate_refresh_token() {
@@ -463,4 +549,5 @@ export -f jwt_get_active_key
 export -f jwt_rotate_key
 export -f jwt_list_keys
 export -f jwt_generate_access_token
+export -f jwt_generate_hs256
 export -f jwt_generate_refresh_token

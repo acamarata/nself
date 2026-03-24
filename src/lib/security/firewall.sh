@@ -97,6 +97,57 @@ firewall::iptables_status() {
   printf "    FORWARD: %s rules\n" "$(sudo iptables -L FORWARD -n 2>/dev/null | tail -n +3 | wc -l)"
 }
 
+# T-2464: Enable firewall with auto-install of UFW if needed
+# Called by: nself security firewall --enable
+firewall::enable() {
+  local dry_run="${1:-false}"
+  local ssh_port="${2:-22}"
+  local http_port="${3:-80}"
+  local https_port="${4:-443}"
+
+  local fw_type
+  fw_type=$(firewall::detect)
+
+  # If no firewall is installed, attempt to install UFW
+  if [[ "$fw_type" == "none" ]]; then
+    printf "No firewall detected. Attempting to install UFW...\n"
+
+    if [[ "$dry_run" == "true" ]]; then
+      printf "  DRY RUN: would run 'sudo apt-get install -y ufw'\n"
+    else
+      # Detect package manager and install UFW
+      if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -qq >/dev/null 2>&1
+        sudo apt-get install -y ufw >/dev/null 2>&1
+      elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y ufw >/dev/null 2>&1 || {
+          # UFW may not be in default RHEL repos, try EPEL
+          sudo yum install -y epel-release >/dev/null 2>&1 || true
+          sudo yum install -y ufw >/dev/null 2>&1
+        }
+      elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y ufw >/dev/null 2>&1
+      else
+        printf "\033[31m%s\033[0m Cannot install UFW: unsupported package manager\n" "ERROR" >&2
+        printf "  Install manually: sudo apt install ufw (Debian/Ubuntu)\n" >&2
+        return 1
+      fi
+
+      # Verify installation
+      if ! command -v ufw >/dev/null 2>&1; then
+        printf "\033[31m%s\033[0m UFW installation failed\n" "ERROR" >&2
+        return 1
+      fi
+      printf "\033[32m%s\033[0m UFW installed successfully\n" "SUCCESS"
+    fi
+
+    fw_type="ufw"
+  fi
+
+  # Now configure the detected/installed firewall
+  firewall::configure "$dry_run" "$ssh_port" "$http_port" "$https_port"
+}
+
 # Configure firewall for nself (production recommended rules)
 firewall::configure() {
   local dry_run="${1:-false}"
@@ -516,6 +567,7 @@ firewall::recommendations() {
 # Export functions
 export -f firewall::detect
 export -f firewall::status
+export -f firewall::enable
 export -f firewall::configure
 export -f firewall::configure_ufw
 export -f firewall::configure_firewalld

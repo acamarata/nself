@@ -825,17 +825,17 @@ test_cross_platform() {
   local test_dir="$TEST_TMP/compat-tests"
   mkdir -p "$test_dir"
 
-  # Scenario 116: No echo -e in lib files
+  # Scenario 116: No echo -e in lib files (excluding comment lines)
   scenario "No echo -e in lib files"
-  if grep -r 'echo -e' "$PROJECT_ROOT/src/lib/" 2>/dev/null | grep -v "^Binary" | grep -v ".bak" | head -1; then
+  if grep -r 'echo -e' "$PROJECT_ROOT/src/lib/" 2>/dev/null | grep -v "^Binary" | grep -v ".bak" | grep -v ':[[:space:]]*#' | head -1; then
     fail "Found echo -e"
   else
     pass
   fi
 
-  # Scenario 117: No Bash 4+ lowercase expansion
+  # Scenario 117: No Bash 4+ lowercase expansion (excluding comment lines)
   scenario "No Bash 4+ lowercase \${var,,}"
-  if grep -rE '\$\{[^}]*,,[^}]*\}' "$PROJECT_ROOT/src/lib/" 2>/dev/null | grep -v "^Binary" | head -1; then
+  if grep -rE '\$\{[^}]*,,[^}]*\}' "$PROJECT_ROOT/src/lib/" 2>/dev/null | grep -v "^Binary" | grep -v ':[[:space:]]*#' | head -1; then
     fail "Found lowercase expansion"
   else
     pass

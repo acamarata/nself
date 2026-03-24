@@ -245,9 +245,31 @@ _safe_rm_rf() {
   rm -rf "$target"
 }
 
+# Validate that a string is a safe shell variable name.
+# Only allows [A-Za-z_][A-Za-z0-9_]* — prevents injection via eval.
+# Usage: _validate_var_name "$var" || return 1
+_validate_var_name() {
+  local name="$1"
+  case "$name" in
+    [A-Za-z_]*) ;;
+    *)
+      printf "ERROR: invalid variable name: %s\n" "$name" >&2
+      return 1
+      ;;
+  esac
+  # Check remaining chars are alphanumeric or underscore
+  local cleaned
+  cleaned=$(printf '%s' "$name" | tr -cd 'A-Za-z0-9_')
+  if [ "$cleaned" != "$name" ]; then
+    printf "ERROR: invalid variable name (illegal chars): %s\n" "$name" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Export all functions
 export -f is_valid_domain is_valid_email is_valid_port is_valid_url
 export -f is_valid_ip is_valid_json is_valid_yaml
 export -f validate_env_config validate_docker_prerequisites
 export -f validate_ports validate_permissions
-export -f _safe_rm_rf
+export -f _safe_rm_rf _validate_var_name

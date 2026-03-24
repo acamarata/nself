@@ -508,7 +508,7 @@ auth_get_provider_config() {
 }
 
 # ============================================================================
-# Session Management (Placeholders for AUTH-004+)
+# Session Management
 # ============================================================================
 
 # Create a new session in auth.sessions and return the session token.
@@ -736,7 +736,7 @@ EOF_SESSIONS
 }
 
 # ============================================================================
-# Authentication Operations (Placeholders for AUTH-004+)
+# Authentication Operations
 # ============================================================================
 
 # Login with email/password

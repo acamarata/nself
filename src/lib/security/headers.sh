@@ -183,17 +183,8 @@ EOF
     fi
   done >>"$output_file"
 
-  # Add CORS headers placeholder
-  cat >>"$output_file" <<'EOF'
-
-# CORS Headers (configure as needed)
-# Uncomment and configure for your domains
-# add_header Access-Control-Allow-Origin "https://yourdomain.com" always;
-# add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
-# add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
-# add_header Access-Control-Allow-Credentials "true" always;
-# add_header Access-Control-Max-Age "3600" always;
-EOF
+  # Generate CORS headers from ALLOWED_ORIGINS env var
+  headers::generate_cors_nginx "$output_file"
 
   show_success "Exported security headers to $output_file"
   return 0
@@ -442,6 +433,82 @@ headers::report() {
   return 0
 }
 
+# Generate CORS nginx directives from ALLOWED_ORIGINS env var
+# If ALLOWED_ORIGINS is not set, defaults to same-origin only (no CORS header).
+# ALLOWED_ORIGINS is comma-separated, e.g. "https://app.example.com,https://admin.example.com"
+headers::generate_cors_nginx() {
+  local output_file="$1"
+  local allowed_origins="${ALLOWED_ORIGINS:-}"
+
+  if [[ -z "$allowed_origins" ]]; then
+    # Same-origin only: no Access-Control-Allow-Origin header needed
+    cat >>"$output_file" <<'EOF'
+
+# CORS: same-origin only (ALLOWED_ORIGINS not set)
+# To enable CORS, set ALLOWED_ORIGINS in your .env file:
+#   ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+EOF
+    return 0
+  fi
+
+  # Count origins by counting commas
+  local origin_count=1
+  local tmp_origins="$allowed_origins"
+  while true; do
+    case "$tmp_origins" in
+      *,*)
+        origin_count=$((origin_count + 1))
+        tmp_origins="${tmp_origins#*,}"
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  cat >>"$output_file" <<'EOF'
+
+# CORS Headers (generated from ALLOWED_ORIGINS)
+EOF
+
+  if [[ "$origin_count" -eq 1 ]]; then
+    # Single origin: static header
+    printf 'add_header Access-Control-Allow-Origin "%s" always;\n' "$allowed_origins" >>"$output_file"
+  else
+    # Multiple origins: use nginx map variable $cors_origin (must be defined
+    # in the http{} block or an included conf).  Generate the map block here
+    # so nginx can resolve the correct origin per-request.
+    printf '\n# Multi-origin CORS map — include this file inside the http{} block\n' >>"$output_file"
+    printf 'map $http_origin $cors_origin {\n' >>"$output_file"
+    printf '    default "";\n' >>"$output_file"
+
+    # Split ALLOWED_ORIGINS on commas using IFS (Bash 3.2 safe)
+    local saved_ifs="$IFS"
+    IFS=','
+    for origin in $allowed_origins; do
+      # Trim whitespace
+      origin=$(printf '%s' "$origin" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      if [[ -n "$origin" ]]; then
+        printf '    "%s" "%s";\n' "$origin" "$origin" >>"$output_file"
+      fi
+    done
+    IFS="$saved_ifs"
+
+    printf '}\n\n' >>"$output_file"
+    printf 'add_header Access-Control-Allow-Origin "$cors_origin" always;\n' >>"$output_file"
+  fi
+
+  # Common CORS headers
+  cat >>"$output_file" <<'EOF'
+add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS" always;
+add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, Accept, Origin" always;
+add_header Access-Control-Allow-Credentials "true" always;
+add_header Access-Control-Max-Age "3600" always;
+EOF
+
+  return 0
+}
+
 # Export functions
 export -f headers::generate_all
 export -f headers::generate_hsts
@@ -452,3 +519,4 @@ export -f headers::validate
 export -f headers::configure
 export -f headers::test
 export -f headers::report
+export -f headers::generate_cors_nginx

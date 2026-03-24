@@ -32,9 +32,9 @@ check "checklist --help exits 0" bash src/cli/checklist.sh --help
 check "help --help exits 0" bash src/cli/help.sh --help
 check "whitelabel --help exits 0" bash src/cli/whitelabel.sh --help
 check "Help contract file exists" test -f src/lib/help/HELP-CONTRACT.md
-check "No echo -e in CLI scripts" bash -c '! grep -r "echo -e" src/cli/*.sh'
-check "No Bash 4+ lowercase in CLI" bash -c '! grep -r "\${[^}]*,," src/cli/'
-check "No Bash 4+ uppercase in CLI" bash -c '! grep -r "\${[^}]*\\^\\^" src/cli/'
+check "No echo -e in CLI scripts" bash -c '! grep -r "echo -e" src/cli/*.sh | grep -v ":[[:space:]]*#"'
+check "No Bash 4+ lowercase in CLI" bash -c '! grep -r "\${[^}]*,," src/cli/ | grep -v ":[[:space:]]*#"'
+check "No Bash 4+ uppercase in CLI" bash -c '! grep -r "\${[^}]*\\^\\^" src/cli/ | grep -v ":[[:space:]]*#"'
 
 printf "\\nP1 Verification:\\n"
 check "Session state file exists" test -f .claude/SESSION_STATE.md

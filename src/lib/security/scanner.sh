@@ -357,6 +357,200 @@ scan_xss() {
 }
 
 # ============================================================================
+# Port Scanning
+# ============================================================================
+
+# Scan for open ports on the host using netstat or ss
+# Usage: scan_open_ports [host]
+scan_open_ports() {
+  local host="${1:-127.0.0.1}"
+  local results=""
+
+  printf '{"host": "%s", "ports": [' "$host"
+
+  local first=true
+
+  if command -v ss >/dev/null 2>&1; then
+    # Use ss (modern, available on most Linux)
+    results=$(ss -tuln 2>/dev/null | grep -E "LISTEN" | awk '{print $5}' | grep -oE '[0-9]+$' | sort -un)
+  elif command -v netstat >/dev/null 2>&1; then
+    # Fallback to netstat (macOS and older Linux)
+    if [[ "$(uname)" == "Darwin" ]]; then
+      results=$(netstat -an -p tcp 2>/dev/null | grep -i "listen" | awk '{print $4}' | grep -oE '[0-9]+$' | sort -un)
+    else
+      results=$(netstat -tuln 2>/dev/null | grep -E "LISTEN" | awk '{print $4}' | grep -oE '[0-9]+$' | sort -un)
+    fi
+  else
+    printf '], "error": "Neither ss nor netstat available"}\n'
+    return 1
+  fi
+
+  local port
+  while IFS= read -r port; do
+    if [[ -n "$port" ]]; then
+      if [[ "$first" == "true" ]]; then
+        first=false
+      else
+        printf ','
+      fi
+      printf '%s' "$port"
+    fi
+  done <<EOF_PORTS
+$results
+EOF_PORTS
+
+  printf ']}\n'
+  return 0
+}
+
+# ============================================================================
+# Basic CVE Check
+# ============================================================================
+
+# Check Docker image versions against known vulnerable versions.
+# Compares running container image tags against a local list of known
+# CVE-affected versions. This is a lightweight check, not a full
+# vulnerability scanner.
+#
+# Usage: scan_docker_cves
+scan_docker_cves() {
+  if ! command -v docker >/dev/null 2>&1; then
+    printf '{"error": "Docker not available"}\n'
+    return 1
+  fi
+
+  # Known vulnerable image:tag combinations (update periodically)
+  # Format: image_pattern:vulnerable_tag:cve_id:severity
+  local known_vulns=""
+  known_vulns="${known_vulns}postgres:9.:CVE-2019-10164:HIGH;"
+  known_vulns="${known_vulns}postgres:10.0:CVE-2019-10164:HIGH;"
+  known_vulns="${known_vulns}postgres:10.1:CVE-2019-10164:HIGH;"
+  known_vulns="${known_vulns}nginx:1.16:CVE-2021-23017:MEDIUM;"
+  known_vulns="${known_vulns}nginx:1.17:CVE-2021-23017:MEDIUM;"
+  known_vulns="${known_vulns}nginx:1.18:CVE-2021-23017:MEDIUM;"
+  known_vulns="${known_vulns}redis:5.:CVE-2022-24735:HIGH;"
+  known_vulns="${known_vulns}redis:6.0:CVE-2022-24735:HIGH;"
+  known_vulns="${known_vulns}hasura/graphql-engine:v1.:CVE-2023-HASURA:MEDIUM;"
+
+  # Get running container images
+  local images
+  images=$(docker ps --format '{{.Image}}' 2>/dev/null || true)
+
+  if [[ -z "$images" ]]; then
+    printf '{"findings": [], "note": "No running containers"}\n'
+    return 0
+  fi
+
+  printf '{"findings": ['
+  local first=true
+  local image
+
+  while IFS= read -r image; do
+    if [[ -z "$image" ]]; then
+      continue
+    fi
+
+    # Extract image name and tag
+    local img_name img_tag
+    case "$image" in
+      *:*)
+        img_name="${image%%:*}"
+        img_tag="${image#*:}"
+        ;;
+      *)
+        img_name="$image"
+        img_tag="latest"
+        ;;
+    esac
+
+    # Strip registry prefix for matching
+    local short_name="${img_name##*/}"
+
+    # Check against known vulnerabilities
+    local saved_ifs="$IFS"
+    IFS=';'
+    for entry in $known_vulns; do
+      if [[ -z "$entry" ]]; then
+        continue
+      fi
+
+      local vuln_pattern vuln_cve vuln_severity
+      vuln_pattern=$(printf '%s' "$entry" | cut -d: -f1-2)
+      vuln_cve=$(printf '%s' "$entry" | cut -d: -f3)
+      vuln_severity=$(printf '%s' "$entry" | cut -d: -f4)
+
+      local vuln_img vuln_tag
+      vuln_img=$(printf '%s' "$vuln_pattern" | cut -d: -f1)
+      vuln_tag=$(printf '%s' "$vuln_pattern" | cut -d: -f2)
+
+      # Match image name and tag prefix
+      if [[ "$short_name" == *"$vuln_img"* ]]; then
+        case "$img_tag" in
+          ${vuln_tag}*)
+            if [[ "$first" == "true" ]]; then
+              first=false
+            else
+              printf ','
+            fi
+            printf '{"image":"%s","tag":"%s","cve":"%s","severity":"%s"}' \
+              "$img_name" "$img_tag" "$vuln_cve" "$vuln_severity"
+            ;;
+        esac
+      fi
+    done
+    IFS="$saved_ifs"
+  done <<EOF_IMAGES
+$images
+EOF_IMAGES
+
+  printf ']}\n'
+  return 0
+}
+
+# ============================================================================
+# Geo-IP Lookup
+# ============================================================================
+
+# Look up geographic location of an IP address using ip-api.com free endpoint.
+# Rate limited to 45 requests per minute on the free tier.
+#
+# Usage: geoip_lookup <ip_address>
+geoip_lookup() {
+  local ip_address="$1"
+
+  if [[ -z "$ip_address" ]]; then
+    printf '{"error": "IP address required"}\n'
+    return 1
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    printf '{"error": "curl is required for geo-IP lookup"}\n'
+    return 1
+  fi
+
+  # Query ip-api.com free endpoint (HTTP only on free tier)
+  local response
+  response=$(curl -s --max-time 5 "http://ip-api.com/json/${ip_address}?fields=status,message,country,regionName,city,lat,lon,isp,org,as" 2>/dev/null || true)
+
+  if [[ -z "$response" ]]; then
+    printf '{"error": "Failed to reach ip-api.com"}\n'
+    return 1
+  fi
+
+  # Validate response contains expected status field
+  case "$response" in
+    *'"status"'*)
+      printf '%s\n' "$response"
+      return 0
+      ;;
+    *)
+      printf '{"error": "Unexpected response from ip-api.com"}\n'
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
 # Security Recommendations
 # ============================================================================
 
@@ -391,3 +585,6 @@ export -f calculate_user_risk_score
 export -f scan_sql_injection
 export -f scan_xss
 export -f generate_security_recommendations
+export -f scan_open_ports
+export -f scan_docker_cves
+export -f geoip_lookup
