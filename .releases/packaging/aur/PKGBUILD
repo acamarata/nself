@@ -1,6 +1,6 @@
 # Maintainer: Aric Camarata <aric.camarata@gmail.com>
 pkgname=nself
-pkgver=0.9.9
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="Self-hosted backend infrastructure CLI"
 arch=('any')

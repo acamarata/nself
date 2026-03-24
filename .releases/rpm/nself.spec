@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.9.9
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Self-hosted backend infrastructure CLI
 

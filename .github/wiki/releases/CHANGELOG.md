@@ -5,6 +5,21 @@ All notable changes to nself will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-03-24 (LTS)
+
+### nSelf v1.0.0 LTS
+
+**LTS:** 12 months full support, 24 months security patches.
+
+First stable release after 9 months of development. 30 CLI commands, 295+ subcommands,
+700+ tests. 16 free MIT plugins + 59 paid Pro plugins (75 total). 3 reference apps
+(nChat, nClaw, nTask). Full monitoring stack (Prometheus, Grafana, Loki, Tempo).
+Dog-fooded on nself.org.
+
+For details, see: [v1.0.0 Release Notes](v1.0.0.md)
+
+---
+
 ## [0.9.9-rc3] - 2026-03-18
 
 ### Release Candidate 3

@@ -1,7 +1,7 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-0.9.9--rc5-blue.svg)](https://github.com/nself-org/cli/releases)
-[![Status](https://img.shields.io/badge/status-RC5-brightgreen.svg)](https://github.com/nself-org/cli/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue-blue.svg)](https://github.com/nself-org/cli/releases)
+[![Status](https://img.shields.io/badge/status-LTS-brightgreen.svg)](https://github.com/nself-org/cli/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#-prerequisites)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/nself-org/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nself-org/cli/actions)
@@ -607,7 +607,7 @@ nself build --force     # Force rebuild
 - **[Migration from Firebase](.wiki/migrations/FROM-FIREBASE.md)** - Auth & Firestore
 
 ### Release Information
-- **[Release Notes](.wiki/releases/v0.9.9.md)** - What's new in v0.9.9
+- **[Release Notes](.wiki/releases/v1.0.0.md)** - What's new in v1.0.0
 - **[Roadmap](.wiki/releases/ROADMAP.md)** - Development roadmap
 - **[Changelog](.wiki/releases/CHANGELOG.md)** - Version history
 - **[All Releases](.wiki/releases/INDEX.md)** - Complete release history
@@ -688,7 +688,7 @@ See [LICENSE](LICENSE) for full terms.
 
 | Version | Date | Focus |
 |---------|------|-------|
-| **v0.9.9** | Feb 2026 | Production Ready (current) |
+| **v1.0.0** | Mar 2026 | v1.0 LTS (current) |
 | v0.9.7 | Jan 31, 2026 | Security & CI/CD Complete |
 | v0.9.6 | Jan 30, 2026 | Command Consolidation |
 | v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
@@ -701,9 +701,9 @@ See [LICENSE](LICENSE) for full terms.
 
 <div align="center">
 
-**ɳSelf v0.9.9** — Built by [nself](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
+**ɳSelf v1.0.0** — Built by [nself](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
 
-**Ready for v1.0 LTS** 🚀
+**v1.0 LTS** 🚀
 
 [Get Started](#-quick-start---3-commands-to-backend-bliss) • [Documentation](.wiki/Home.md) • [Roadmap](.wiki/releases/ROADMAP.md)
 

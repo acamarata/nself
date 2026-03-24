@@ -9,7 +9,7 @@ Vcs-Browser: https://github.com/nself-org/cli
 Vcs-Git: https://github.com/nself-org/cli.git
 
 Package: nself
-Version: 0.9.9
+Version: 1.0.0
 Architecture: all
 Depends: ${misc:Depends}, bash (>= 3.2), docker.io | docker-ce, curl, git
 Description: Self-hosted backend infrastructure CLI

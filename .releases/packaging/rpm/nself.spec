@@ -1,5 +1,5 @@
 Name:           nself
-Version:        0.9.9
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Self-hosted backend infrastructure CLI
 
@@ -50,7 +50,7 @@ cp LICENSE $RPM_BUILD_ROOT/usr/share/doc/nself/
 
 %post
 chmod +x /opt/nself/bin/nself
-echo "nself v0.9.9 installed successfully!"
+echo "nself v1.0.0 installed successfully!"
 echo "Run 'nself help' to get started."
 
 %preun
