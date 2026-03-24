@@ -585,7 +585,7 @@ delete_brand() {
 
   # Remove branding directory
   if [[ -d "$BRANDING_DIR" ]]; then
-    rm -rf "$BRANDING_DIR"
+    _safe_rm_rf "$BRANDING_DIR"
     printf "${GREEN}✓${NC} Brand deleted successfully\n"
   else
     printf "${YELLOW}No branding found to delete${NC}\n"
@@ -1497,7 +1497,7 @@ branding::cleanup_old_versions() {
 
 branding::list_versions() {
   printf "${CYAN}Available Branding Versions${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   if [[ ! -d "$VERSIONS_DIR" ]]; then
     printf "${YELLOW}No versions found${NC}\n"
@@ -1668,7 +1668,7 @@ EOF
 
 preview_branding() {
   printf "${CYAN}Branding Preview${NC}\n"
-  printf "%s\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n" "$(printf '%.s=' $(seq 1 60))"
 
   local config_file="${BRANDING_DIR}/config.json"
   if [[ ! -f "$config_file" ]]; then
@@ -1740,7 +1740,7 @@ branding::ensure_tenant_isolation() {
 
 list_tenants() {
   printf "${CYAN}Configured Tenants${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   # Default tenant
   printf "${GREEN}1.${NC} default (main)\n"
@@ -1777,7 +1777,7 @@ branding::get_asset_info() {
   fi
 
   printf "${CYAN}Asset Information${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   printf "Path: %s\n" "$asset_path"
 
@@ -1884,7 +1884,7 @@ initialize_whitelabel_system() {
 
 list_whitelabel_resources() {
   printf "${CYAN}White-Label Resources${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   printf "${BLUE}Brands:${NC}\n"
   preview_branding

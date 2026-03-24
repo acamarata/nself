@@ -45,7 +45,7 @@ detect_custom_services() {
   local cs_count=0
 
   # Check for CS_N variables (up to 20)
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 
@@ -89,7 +89,7 @@ detect_frontend_apps() {
   local app_count=0
 
   # Check for FRONTEND_APP_N variables (up to 10)
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     # Support both NAME and SYSTEM_NAME for compatibility
     local app_name_var="FRONTEND_APP_${i}_NAME"
     local app_system_name_var="FRONTEND_APP_${i}_SYSTEM_NAME"
@@ -124,7 +124,7 @@ detect_frontend_apps() {
   done
 
   # Also check legacy APP_N pattern for backward compatibility
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local app_var="APP_${i}"
     local app_value="${!app_var:-}"
 

@@ -967,7 +967,7 @@ list_email_templates() {
   local language="${1:-$DEFAULT_LANGUAGE}"
 
   printf "${CYAN}Email Templates (Language: %s)${NC}\n" "$language"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   local template_dir="${TEMPLATES_LANG_DIR}/${language}"
   if [[ ! -d "$template_dir" ]]; then
@@ -1013,7 +1013,7 @@ list_template_variables() {
   fi
 
   printf "${CYAN}Variables for template: %s${NC}\n" "$template_type"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   local variables
   variables=$(jq -r '.variables[]' "$meta_file" 2>/dev/null)
@@ -1075,7 +1075,7 @@ preview_email_template() {
   fi
 
   printf "${CYAN}Preview: %s.%s (Language: %s)${NC}\n" "$template_name" "$format" "$language"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   # Sample data for preview
   local sample_vars=(
@@ -1258,7 +1258,7 @@ test_email_template() {
 
 list_available_languages() {
   printf "${CYAN}Available Email Languages${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   if [[ ! -d "$TEMPLATES_LANG_DIR" ]]; then
     printf "${YELLOW}No languages configured${NC}\n"
@@ -1708,7 +1708,7 @@ list_tenant_templates() {
   fi
 
   printf "${CYAN}Email Templates - Tenant: %s (Language: %s)${NC}\n" "$tenant_id" "$language"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   local lang_dir="$tenant_dir/languages/$language"
 
@@ -1746,7 +1746,7 @@ validate_all_templates() {
   local language="${1:-$DEFAULT_LANGUAGE}"
 
   printf "${CYAN}Validating all templates (Language: %s)...${NC}\n" "$language"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   local lang_dir="${TEMPLATES_LANG_DIR}/${language}"
   local errors=0
@@ -1800,7 +1800,7 @@ validate_all_templates() {
     printf "\n"
   done
 
-  printf "%s\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n" "$(printf '%.s=' $(seq 1 60))"
   printf "Validation Summary:\n"
   printf "  ${GREEN}Validated: %s${NC}\n" "$validated"
   printf "  ${YELLOW}Warnings: %s${NC}\n" "$warnings"
@@ -1908,7 +1908,7 @@ import_all_templates() {
 
 show_template_stats() {
   printf "${CYAN}Email Template System Statistics${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   # Count languages
   local lang_count=0

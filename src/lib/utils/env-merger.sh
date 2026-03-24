@@ -321,7 +321,7 @@ extract_all_domains() {
   done
 
   # Custom service routes
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local route_var="CS_${i}_ROUTE"
     local public_var="CS_${i}_PUBLIC"
     local route="${!route_var:-}"
@@ -331,7 +331,7 @@ extract_all_domains() {
   done
 
   # Frontend app routes
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local route_var="FRONTEND_APP_${i}_ROUTE"
     local route="${!route_var:-}"
 

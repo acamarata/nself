@@ -18,6 +18,7 @@ source "$CLI_SCRIPT_DIR/../lib/utils/env.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/header.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/utils/platform-compat.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/validation.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/hooks/pre-command.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/hooks/post-command.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/plugin/core.sh" 2>/dev/null || true
@@ -776,7 +777,7 @@ cmd_remove() {
   fi
 
   # Remove plugin directory
-  rm -rf "$plugin_dir"
+  _safe_rm_rf "$plugin_dir" "$PLUGIN_DIR"
 
   log_success "Plugin '$plugin_name' removed"
 }
@@ -1467,6 +1468,7 @@ _pull_plugin_docker_image() {
       if [[ -z "$img_version" ]]; then
         local env_var_name
         env_var_name="PLUGIN_$(printf '%s' "$plugin_name" | tr '[:lower:]' '[:upper:]' | tr '-' '_')_VERSION"
+        _validate_var_name "$env_var_name" || return 1
         # Dereference the env var name portably (Bash 3.2 compatible)
         local env_var_val
         env_var_val=$(eval "printf '%s' \"\${${env_var_name}:-}\"" 2>/dev/null || true)
@@ -1817,7 +1819,7 @@ download_plugin() {
       return 1
     fi
 
-    rm -rf "$PLUGIN_DIR/$plugin_name"
+    _safe_rm_rf "$PLUGIN_DIR/$plugin_name" "$PLUGIN_DIR"
     cp -r "$plugin_src" "$PLUGIN_DIR/$plugin_name"
 
     if [[ -d "$temp_dir/nself-plugins-main/shared" ]]; then
@@ -1892,7 +1894,7 @@ _download_plugin_signed() {
     return 1
   fi
 
-  rm -rf "$PLUGIN_DIR/$plugin_name"
+  _safe_rm_rf "$PLUGIN_DIR/$plugin_name" "$PLUGIN_DIR"
   cp -r "$plugin_src" "$PLUGIN_DIR/$plugin_name"
 
   # Copy shared utilities bundled with the pro repo (if any)
@@ -2276,7 +2278,7 @@ install_local_plugin() {
   log_info "Installing local plugin: $plugin_name"
 
   mkdir -p "$PLUGIN_DIR"
-  rm -rf "$PLUGIN_DIR/$plugin_name"
+  _safe_rm_rf "$PLUGIN_DIR/$plugin_name" "$PLUGIN_DIR"
   cp -r "$plugin_path" "$PLUGIN_DIR/$plugin_name"
 
   run_plugin_installer "$plugin_name"
@@ -5124,6 +5126,7 @@ _plugin_resolve_internal_url() {
   local upper_name env_var_name url default_url
   upper_name=$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')
   env_var_name="PLUGIN_${upper_name}_INTERNAL_URL"
+  _validate_var_name "$env_var_name" || return 1
   default_url=$(_plugin_default_url "$name")
   # Bash 3.2 compatible indirect variable expansion via eval
   eval "url=\"\${${env_var_name}:-}\""

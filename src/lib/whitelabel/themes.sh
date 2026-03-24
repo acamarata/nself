@@ -779,7 +779,7 @@ preview_theme() {
   fi
 
   printf "${CYAN}${BOLD}Theme Preview: %s${NC}\n" "$theme_name"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   # Parse theme data
   IFS='|' read -r display_name description mode is_active <<<"$theme_data"
@@ -1030,7 +1030,7 @@ list_themes() {
   brand_id=$(get_brand_id_by_tenant "$tenant_id")
 
   printf "${CYAN}${BOLD}Available Themes${NC}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..60})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 60))"
 
   # Query themes from database
   local themes
@@ -1132,6 +1132,7 @@ delete_theme() {
   # Remove local cache
   local theme_dir="${THEMES_DIR}/${theme_name}"
   if [[ -d "$theme_dir" ]]; then
+    [ -n "$theme_dir" ] && [ "$theme_dir" != "/" ] || { printf "ERROR: invalid theme_dir\n" >&2; return 1; }
     rm -rf "$theme_dir"
   fi
 

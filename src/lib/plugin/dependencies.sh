@@ -321,11 +321,20 @@ install_plugin_dependencies() {
           custom_response=$(echo "$custom_response" | tr '[:upper:]' '[:lower:]')
 
           if [[ "$custom_response" != "n" && "$custom_response" != "no" ]]; then
-            eval "$custom_cmd"
-            if [[ $? -eq 0 ]]; then
-              printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+            # Validate custom_cmd contains only safe characters (no shell metacharacters)
+            local _safe_cmd
+            _safe_cmd=$(printf '%s' "$custom_cmd" | tr -cd 'A-Za-z0-9 _./:=-')
+            if [ "$_safe_cmd" != "$custom_cmd" ]; then
+              printf "${CLI_RED}✗${CLI_RESET} Refusing unsafe custom_install command: %s\n" "$custom_cmd" >&2
+            elif [ -z "$_safe_cmd" ]; then
+              printf "${CLI_RED}✗${CLI_RESET} Empty custom_install command\n" >&2
             else
-              printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+              eval "$_safe_cmd"
+              if [[ $? -eq 0 ]]; then
+                printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+              else
+                printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+              fi
             fi
           else
             printf "${CLI_YELLOW}⚠${CLI_RESET} Skipped: %s\n" "$current_dep"
@@ -377,11 +386,20 @@ install_plugin_dependencies() {
             custom_response=$(echo "$custom_response" | tr '[:upper:]' '[:lower:]')
 
             if [[ "$custom_response" == "y" || "$custom_response" == "yes" ]]; then
-              eval "$custom_cmd"
-              if [[ $? -eq 0 ]]; then
-                printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+              # Validate custom_cmd contains only safe characters (no shell metacharacters)
+              local _safe_cmd
+              _safe_cmd=$(printf '%s' "$custom_cmd" | tr -cd 'A-Za-z0-9 _./:=-')
+              if [ "$_safe_cmd" != "$custom_cmd" ]; then
+                printf "${CLI_RED}✗${CLI_RESET} Refusing unsafe custom_install command: %s\n" "$custom_cmd" >&2
+              elif [ -z "$_safe_cmd" ]; then
+                printf "${CLI_RED}✗${CLI_RESET} Empty custom_install command\n" >&2
               else
-                printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+                eval "$_safe_cmd"
+                if [[ $? -eq 0 ]]; then
+                  printf "${CLI_GREEN}✓${CLI_RESET} Custom install succeeded: %s\n" "$current_dep"
+                else
+                  printf "${CLI_RED}✗${CLI_RESET} Custom install failed: %s\n" "$current_dep"
+                fi
               fi
             else
               printf "${CLI_DIM}○${CLI_RESET} Skipped: %s\n" "$current_dep"

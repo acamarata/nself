@@ -179,7 +179,7 @@ get_parallel_log_summary() {
 
   printf "Service Log Summary (last %d lines)\n" "$tail_lines"
   printf "%-20s %8s %8s %8s\n" "Service" "Errors" "Warnings" "Total"
-  printf "%s\n" "$(printf '%.0s─' {1..50})"
+  printf "%s\n" "$(printf '%.0s─' $(seq 1 50))"
 
   for service in "${services[@]}"; do
     local container_name="${PROJECT_NAME:-nself}_${service//-/_}"

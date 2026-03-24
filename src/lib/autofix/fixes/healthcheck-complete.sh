@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Source platform-compat for safe_sed_inline
+_HC_FIX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_HC_FIX_DIR/../../utils/platform-compat.sh" 2>/dev/null || true
 
 # Complete healthcheck fixes - adds tools and endpoints
 
@@ -36,10 +39,10 @@ EOF
         # Check if HealthController is already imported
         if ! grep -q "HealthController" "$service_dir/src/app.module.ts"; then
           # Add import at the top
-          sed -i.bak "1s/^/import { HealthController } from '.\/health.controller';\n/" "$service_dir/src/app.module.ts" && rm "$service_dir/src/app.module.ts.bak"
+          safe_sed_inline "$service_dir/src/app.module.ts" "1s/^/import { HealthController } from '.\/health.controller';\n/"
 
           # Add to controllers array
-          sed -i.bak '/controllers:/s/\[/[HealthController, /' "$service_dir/src/app.module.ts" && rm "$service_dir/src/app.module.ts.bak"
+          safe_sed_inline "$service_dir/src/app.module.ts" '/controllers:/s/\[/[HealthController, /'
         fi
       fi
     fi
@@ -59,16 +62,16 @@ EOF
         # Add health endpoint based on framework
         if grep -q "express" "$main_file"; then
           # Express app - add before app.listen
-          sed -i.bak "/app\.listen/i\
+          safe_sed_inline "$main_file" "/app\.listen/i\
 app.get('/health', (req, res) => {\
   res.json({ status: 'ok', timestamp: new Date().toISOString() });\
-});" "$main_file"
+});"
         elif grep -q "fastify" "$main_file"; then
           # Fastify app
-          sed -i.bak "/fastify\.listen/i\
+          safe_sed_inline "$main_file" "/fastify\.listen/i\
 fastify.get('/health', async (request, reply) => {\
   return { status: 'ok', timestamp: new Date().toISOString() };\
-});" "$main_file"
+});"
         else
           # Generic Node.js http server
           echo "// Health check endpoint added by nself" >>"$main_file"
@@ -125,7 +128,7 @@ EOF
       # Add route to main.go
       if grep -q "mux.HandleFunc\|http.HandleFunc" "$main_file"; then
         # Add health route
-        sed -i.bak '/HandleFunc/a\    http.HandleFunc("/health", healthHandler)' "$main_file" && rm "${main_file}.bak"
+        safe_sed_inline "$main_file" '/HandleFunc/a\    http.HandleFunc("/health", healthHandler)'
       fi
     fi
   fi
@@ -164,7 +167,7 @@ async def health():
 EOF
         # Add datetime import if needed
         if ! grep -q "from datetime import" "$main_file"; then
-          sed -i.bak "1s/^/from datetime import datetime\n/" "$main_file" && rm "${main_file}.bak"
+          safe_sed_inline "$main_file" "1s/^/from datetime import datetime\n/"
         fi
       fi
     elif grep -q "Flask\|flask" "$main_file"; then
@@ -179,7 +182,7 @@ def health():
 EOF
         # Add datetime import if needed
         if ! grep -q "from datetime import" "$main_file"; then
-          sed -i.bak "1s/^/from datetime import datetime\n/" "$main_file" && rm "${main_file}.bak"
+          safe_sed_inline "$main_file" "1s/^/from datetime import datetime\n/"
         fi
       fi
     fi
@@ -203,30 +206,30 @@ update_dockerfile_with_healthtools() {
     if grep -q "alpine" "$dockerfile"; then
       if ! grep -q "apk.*wget\|apk.*curl" "$dockerfile"; then
         # Add wget after FROM
-        sed -i "/^FROM.*alpine/a\RUN apk add --no-cache wget curl" "$dockerfile"
+        safe_sed_inline "$dockerfile" "/^FROM.*alpine/a\RUN apk add --no-cache wget curl"
       fi
     else
       # Debian-based Node image
       if ! grep -q "apt-get.*wget\|apt-get.*curl" "$dockerfile"; then
-        sed -i "/^FROM/a\RUN apt-get update && apt-get install -y wget curl && rm -rf /var/lib/apt/lists/*" "$dockerfile"
+        safe_sed_inline "$dockerfile" "/^FROM/a\RUN apt-get update && apt-get install -y wget curl && rm -rf /var/lib/apt/lists/*"
       fi
     fi
   elif grep -q "FROM.*python" "$dockerfile"; then
     # Python image
     if grep -q "alpine" "$dockerfile"; then
       if ! grep -q "apk.*wget\|apk.*curl" "$dockerfile"; then
-        sed -i "/^FROM.*alpine/a\RUN apk add --no-cache wget curl" "$dockerfile"
+        safe_sed_inline "$dockerfile" "/^FROM.*alpine/a\RUN apk add --no-cache wget curl"
       fi
     else
       if ! grep -q "apt-get.*wget\|apt-get.*curl" "$dockerfile"; then
-        sed -i "/^FROM/a\RUN apt-get update && apt-get install -y wget curl && rm -rf /var/lib/apt/lists/*" "$dockerfile"
+        safe_sed_inline "$dockerfile" "/^FROM/a\RUN apt-get update && apt-get install -y wget curl && rm -rf /var/lib/apt/lists/*"
       fi
     fi
   elif grep -q "FROM.*golang" "$dockerfile"; then
     # Go image
     if grep -q "alpine" "$dockerfile"; then
       if ! grep -q "apk.*wget\|apk.*curl" "$dockerfile"; then
-        sed -i "/^FROM.*alpine/a\RUN apk add --no-cache wget curl" "$dockerfile"
+        safe_sed_inline "$dockerfile" "/^FROM.*alpine/a\RUN apk add --no-cache wget curl"
       fi
     fi
   fi
@@ -253,11 +256,11 @@ fix_auth_healthcheck() {
   local compose_file="docker-compose.yml"
 
   # Find auth service block and update healthcheck
-  sed -i '/^  auth:/,/^  [a-z_-]*:/{
+  safe_sed_inline "$compose_file" '/^  auth:/,/^  [a-z_-]*:/{
         /healthcheck:/,/test:/ {
             s|test:.*curl.*|test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/healthz"]|
         }
-    }' "$compose_file" 2>/dev/null || true
+    }' 2>/dev/null || true
 
   # The nhost/hasura-auth image should have wget, but let's ensure it (without using 'which')
   docker exec "${project_name}_auth" sh -c "command -v wget || test -x /usr/bin/wget" >/dev/null 2>&1 || {
@@ -277,11 +280,11 @@ fix_dashboard_healthcheck() {
   # Update docker-compose.yml
   local compose_file="docker-compose.yml"
 
-  sed -i '/^  dashboard:/,/^  [a-z_-]*:/{
+  safe_sed_inline "$compose_file" '/^  dashboard:/,/^  [a-z_-]*:/{
         /healthcheck:/,/test:/ {
             s|test:.*curl.*|test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]|
         }
-    }' "$compose_file" 2>/dev/null || true
+    }' 2>/dev/null || true
 
   # Install wget in container
   docker exec "${project_name}_dashboard" sh -c "apk add --no-cache wget 2>/dev/null || apt-get update && apt-get install -y wget 2>/dev/null" >/dev/null 2>&1 || true
@@ -305,11 +308,11 @@ fix_functions_healthcheck() {
   # Update docker-compose.yml
   local compose_file="docker-compose.yml"
 
-  sed -i '/^  functions:/,/^  [a-z_-]*:/{
+  safe_sed_inline "$compose_file" '/^  functions:/,/^  [a-z_-]*:/{
         /healthcheck:/,/test:/ {
             s|test:.*curl.*|test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]|
         }
-    }' "$compose_file" 2>/dev/null || true
+    }' 2>/dev/null || true
 
   return 0
 }
@@ -337,11 +340,11 @@ fix_all_healthchecks() {
       update_dockerfile_with_healthtools "$worker_dir"
 
       # Update docker-compose.yml for this worker
-      sed -i "/^  ${PROJECT_NAME:-nself}-bull-$worker_name:/,/^  [a-z_-]*:/{
+      safe_sed_inline docker-compose.yml "/^  ${PROJECT_NAME:-nself}-bull-$worker_name:/,/^  [a-z_-]*:/{
                 /healthcheck:/,/test:/ {
                     s|test:.*|test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:3200/health\"]|
                 }
-            }" docker-compose.yml 2>/dev/null || true
+            }" 2>/dev/null || true
     fi
   done
 
@@ -353,11 +356,11 @@ fix_all_healthchecks() {
       update_dockerfile_with_healthtools "$nest_dir"
 
       # Update docker-compose.yml
-      sed -i "/^  $service_name:/,/^  [a-z_-]*:/{
+      safe_sed_inline docker-compose.yml "/^  $service_name:/,/^  [a-z_-]*:/{
                 /healthcheck:/,/test:/ {
                     s|test:.*curl.*|test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:3000/health\"]|
                 }
-            }" docker-compose.yml 2>/dev/null || true
+            }" 2>/dev/null || true
     fi
   done
 
@@ -369,11 +372,11 @@ fix_all_healthchecks() {
       update_dockerfile_with_healthtools "$go_dir"
 
       # Update docker-compose.yml
-      sed -i "/^  $service_name:/,/^  [a-z_-]*:/{
+      safe_sed_inline docker-compose.yml "/^  $service_name:/,/^  [a-z_-]*:/{
                 /healthcheck:/,/test:/ {
                     s|test:.*curl.*|test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:8080/health\"]|
                 }
-            }" docker-compose.yml 2>/dev/null || true
+            }" 2>/dev/null || true
     fi
   done
 
@@ -385,11 +388,11 @@ fix_all_healthchecks() {
       update_dockerfile_with_healthtools "$py_dir"
 
       # Update docker-compose.yml
-      sed -i "/^  $service_name:/,/^  [a-z_-]*:/{
+      safe_sed_inline docker-compose.yml "/^  $service_name:/,/^  [a-z_-]*:/{
                 /healthcheck:/,/test:/ {
                     s|test:.*curl.*|test: [\"CMD\", \"wget\", \"--spider\", \"-q\", \"http://localhost:8000/health\"]|
                 }
-            }" docker-compose.yml 2>/dev/null || true
+            }" 2>/dev/null || true
     fi
   done
 

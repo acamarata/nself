@@ -175,7 +175,7 @@ validate_custom_services() {
   used_ports+=("${MINIO_CONSOLE_PORT:-9001}")
 
   # Validate CS_N variables
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 

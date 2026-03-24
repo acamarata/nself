@@ -245,11 +245,11 @@ Service
 
 ## Pro Plugins License
 
-Some plugins require a Pro Plugins license. These are the 49 production-grade integrations in the [plugins-pro](https://nself.org/pricing) collection.
+Some plugins require a Pro Plugins license. These are the 59 production-grade integrations in the [plugins-pro](https://nself.org/pricing) collection.
 
 ### Getting a License
 
-Get a license at [https://nself.org/pricing](https://nself.org/pricing). A single license covers all 49 Pro Plugins.
+Get a license at [https://nself.org/pricing](https://nself.org/pricing). A single license covers all 59 Pro Plugins.
 
 Once you have a key, add it to your `.env`:
 
@@ -265,7 +265,7 @@ Manage your Pro Plugins license.
 | ---------- | ----------- |
 | `show` | Show current license key and validation status (default) |
 | `validate` | Force-validate license key against the API |
-| `plugins` | List all 49 Pro Plugins covered by a license |
+| `plugins` | List all 59 Pro Plugins covered by a license |
 
 **Examples:**
 

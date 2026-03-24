@@ -218,7 +218,7 @@ remove_custom_domain() {
 
 list_custom_domains() {
   printf "${COLOR_CYAN}Custom Domains${COLOR_RESET}\n"
-  printf "%s\n\n" "$(printf '%.s=' {1..70})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 70))"
 
   if [[ ! -f "$DOMAINS_CONFIG" ]]; then
     log_warning "No domains configured"
@@ -295,7 +295,7 @@ list_custom_domains() {
     i=$((i + 1))
   done
 
-  printf "%s\n" "$(printf '%.s=' {1..70})"
+  printf "%s\n" "$(printf '%.s=' $(seq 1 70))"
   printf "Total domains: %d\n" "$domain_count"
 
   return 0
@@ -331,7 +331,7 @@ verify_domain() {
 
   # Display verification instructions
   printf "\n${COLOR_BLUE}DNS Verification Instructions:${COLOR_RESET}\n"
-  printf "%s\n\n" "$(printf '%.s-' {1..70})"
+  printf "%s\n\n" "$(printf '%.s-' $(seq 1 70))"
 
   if [[ "$method" == "txt" ]] || [[ "$method" == "auto" ]]; then
     printf "Option 1: Add TXT record (recommended):\n\n"
@@ -349,7 +349,7 @@ verify_domain() {
     printf "  TTL:        300 (or lowest available)\n\n"
   fi
 
-  printf "%s\n" "$(printf '%.s-' {1..70})"
+  printf "%s\n" "$(printf '%.s-' $(seq 1 70))"
 
   if [[ "$skip_wait" == "true" ]]; then
     log_info "Skipping automatic verification. Verify later with:"
@@ -1120,7 +1120,7 @@ check_domain_health() {
   local domain="$1"
 
   log_info "Checking domain health: $domain"
-  printf "%s\n\n" "$(printf '%.s=' {1..70})"
+  printf "%s\n\n" "$(printf '%.s=' $(seq 1 70))"
 
   local health_status="healthy"
   local issues=()

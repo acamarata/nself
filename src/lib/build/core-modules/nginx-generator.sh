@@ -802,7 +802,7 @@ generate_frontend_routes() {
   local ssl_dir
   ssl_dir=$(get_ssl_cert_dir)
 
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local app_name_var="FRONTEND_APP_${i}_NAME"
     local app_name="${!app_name_var:-}"
 
@@ -891,7 +891,7 @@ generate_custom_routes() {
   local ssl_dir
   ssl_dir=$(get_ssl_cert_dir)
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_name_var="CS_${i}_NAME"
     local cs_name="${!cs_name_var:-}"
 
@@ -1013,7 +1013,7 @@ CREATE EXTENSION IF NOT EXISTS citext;
 EOF
 
     # Add frontend app table creation
-    for i in {1..20}; do
+    for i in $(seq 1 20); do
       local app_name_var="FRONTEND_APP_${i}_NAME"
       local app_name="${!app_name_var:-}"
       local prefix_var="FRONTEND_APP_${i}_TABLE_PREFIX"

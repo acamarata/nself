@@ -13,6 +13,7 @@ CLI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source shared utilities
 source "$CLI_SCRIPT_DIR/../lib/utils/display.sh" 2>/dev/null || true
+source "$CLI_SCRIPT_DIR/../lib/utils/validation.sh" 2>/dev/null || true
 source "$CLI_SCRIPT_DIR/../lib/topological_sort.sh" 2>/dev/null || true
 
 # Fallback display functions if display.sh didn't load
@@ -71,6 +72,7 @@ normalise_suite_name() {
 plugin_suite_list() {
   printf "\nAvailable plugin suites:\n\n"
   for suite in $ALL_SUITES; do
+    _validate_var_name "$suite" || continue
     local display
     display=$(suite_display_name "$suite")
 
@@ -98,6 +100,7 @@ plugin_suite_install() {
   local raw_name="$1"
   local suite
   suite=$(normalise_suite_name "$raw_name")
+  _validate_var_name "$suite" || { log_error "Invalid suite name: $raw_name"; return 1; }
 
   # Validate suite exists
   local plugins_var="SUITE_PLUGINS_${suite}"
@@ -208,6 +211,7 @@ plugin_suite_help() {
   printf "\n"
   printf "Available suites:\n"
   for suite in $ALL_SUITES; do
+    _validate_var_name "$suite" || continue
     printf "  %-20s  " "$(suite_display_name "$suite")"
     local desc_var="SUITE_DESC_${suite}"
     local desc

@@ -636,6 +636,7 @@ plugin_post_uninstall() {
 
   # Cleanup cache
   if [[ -d "$PLUGIN_CACHE_DIR/$plugin_name" ]]; then
+    [ -n "$PLUGIN_CACHE_DIR" ] || { printf "ERROR: empty PLUGIN_CACHE_DIR\n" >&2; return 1; }
     rm -rf "$PLUGIN_CACHE_DIR/$plugin_name"
   fi
 

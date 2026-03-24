@@ -8,6 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../utils/cli-output.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/../utils/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../utils/validation.sh" 2>/dev/null || true
 
 # Rollback configuration
 ROLLBACK_DIR="${ROLLBACK_DIR:-.nself/rollback}"
@@ -331,7 +332,7 @@ cleanup_old_snapshots() {
 
   for ((i = retention; i < count; i++)); do
     local snapshot="${snapshots[$i]}"
-    rm -rf "$ROLLBACK_DIR/$snapshot"
+    _safe_rm_rf "$ROLLBACK_DIR/$snapshot" "$ROLLBACK_DIR"
     removed=$((removed + 1))
     cli_info "Removed old snapshot: $snapshot"
   done
@@ -353,7 +354,7 @@ delete_snapshot() {
     return 1
   fi
 
-  rm -rf "$ROLLBACK_DIR/$snapshot_name"
+  _safe_rm_rf "$ROLLBACK_DIR/$snapshot_name" "$ROLLBACK_DIR"
   cli_success "Deleted snapshot: $snapshot_name"
 }
 

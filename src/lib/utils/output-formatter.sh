@@ -265,11 +265,11 @@ format_summary() {
   local items=("$@")
 
   printf "\n%s\n" "${BOLD}📊 $title${RESET}"
-  printf "%s\n" "${DIM}$(printf '%.0s─' {1..40})${RESET}"
+  printf "%s\n" "${DIM}$(printf '%.0s─' $(seq 1 40))${RESET}"
 
   for item in "${items[@]}"; do
     printf "  • %s\n" "$item"
   done
 
-  printf "%s\n\n" "${DIM}$(printf '%.0s─' {1..40})${RESET}"
+  printf "%s\n\n" "${DIM}$(printf '%.0s─' $(seq 1 40))${RESET}"
 }

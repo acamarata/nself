@@ -227,7 +227,7 @@ tenant_list() {
       "SELECT json_agg(row_to_json(t)) FROM ($sql) t;"
   else
     printf "%-38s %-20s %-30s %-12s %-12s\n" "ID" "SLUG" "NAME" "STATUS" "PLAN"
-    printf "%.0s-" {1..120}
+    printf "%.0s-" $(seq 1 120)
     printf "\n"
 
     docker exec -i "$(docker_get_container_name postgres)" \

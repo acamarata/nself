@@ -99,7 +99,7 @@ check_sources_changed() {
 
   # Check custom service definitions if they exist
   if [[ $changed -eq 0 ]]; then
-    for i in {1..10}; do
+    for i in $(seq 1 10); do
       local cs_var="CS_${i}"
       local cs_val="${!cs_var:-}"
       if [[ -n "$cs_val" ]]; then

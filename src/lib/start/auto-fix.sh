@@ -105,7 +105,7 @@ generate_service_lock_files() {
   fi
 
   # Fix Python FastAPI exception handlers if needed
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_$i"
     local cs_value=$(eval "echo \${$cs_var:-}")
     if [[ -n "$cs_value" ]]; then
@@ -138,7 +138,7 @@ from fastapi.responses import JSONResponse/'
   done
 
   # Check all custom services
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_$i"
     local cs_value=$(eval "echo \${$cs_var:-}")
     if [[ -n "$cs_value" ]]; then
@@ -272,7 +272,7 @@ fix_custom_service_ports() {
   local env_file="${1:-.env.runtime}"
   local verbose="${2:-false}"
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_$i"
     if grep -q "^$cs_var=" "$env_file" 2>/dev/null; then
       local cs_value=$(grep "^$cs_var=" "$env_file" | cut -d= -f2-)

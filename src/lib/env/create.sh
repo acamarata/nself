@@ -13,6 +13,7 @@ LIB_ROOT="$(dirname "$ENV_LIB_DIR")"
 # Source dependencies
 source "$LIB_ROOT/utils/display.sh" 2>/dev/null || true
 source "$LIB_ROOT/utils/platform-compat.sh" 2>/dev/null || true
+source "$LIB_ROOT/utils/validation.sh" 2>/dev/null || true
 
 # Environment directory
 ENVIRONMENTS_DIR="${ENVIRONMENTS_DIR:-./.environments}"
@@ -431,7 +432,7 @@ env::delete() {
     fi
   fi
 
-  rm -rf "$env_dir"
+  _safe_rm_rf "$env_dir" "$ENVIRONMENTS_DIR"
   log_success "Deleted environment: $env_name"
 }
 

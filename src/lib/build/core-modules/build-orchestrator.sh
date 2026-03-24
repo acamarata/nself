@@ -158,7 +158,7 @@ detect_custom_services() {
   export CUSTOM_SERVICES=""
   export CUSTOM_SERVICE_COUNT=0
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 
@@ -214,7 +214,7 @@ detect_frontend_apps() {
   export FRONTEND_APPS=""
   export FRONTEND_APP_COUNT=0
 
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     # Support both NAME and SYSTEM_NAME
     local app_name_var="FRONTEND_APP_${i}_NAME"
     local app_system_var="FRONTEND_APP_${i}_SYSTEM_NAME"
@@ -396,7 +396,7 @@ copy_custom_service_templates() {
   local force="${1:-false}"
   local nself_root="${NSELF_ROOT:-/usr/local/lib/nself}"
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_name_var="CS_${i}_NAME"
     local cs_template_var="CS_${i}_TEMPLATE"
     local cs_port_var="CS_${i}_PORT"

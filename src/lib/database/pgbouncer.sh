@@ -30,7 +30,7 @@ calculate_pool_sizes() {
   [[ "${MLFLOW_ENABLED:-false}" == "true" ]] && service_count=$((service_count + 1))
 
   # Add custom services
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     [[ -n "${!CS_${i}:-}" ]] && service_count=$((service_count + 1))
   done
 

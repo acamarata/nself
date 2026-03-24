@@ -83,7 +83,7 @@ build_ssl_domains() {
   fi
 
   # Custom services (CS_1 through CS_10)
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local cs_route_var="CS_${i}_ROUTE"
     local cs_public_var="CS_${i}_PUBLIC"
@@ -94,7 +94,7 @@ build_ssl_domains() {
   done
 
   # Frontend apps (APP_1 through APP_10 or FRONTEND_APP_1 through FRONTEND_APP_10)
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local app_route_var="FRONTEND_APP_${i}_ROUTE"
     local alt_route_var="APP_${i}_ROUTE"
 

@@ -259,6 +259,7 @@ cmd_reset() {
 
   local removed_count=0
   for item in "${items_to_remove[@]}"; do
+    [ -n "$item" ] || continue
     if [[ -e "$item" ]]; then
       rm -rf "$item"
       removed_count=$((removed_count + 1))
@@ -284,6 +285,7 @@ cmd_reset() {
   done
 
   # Remove any project-prefixed directories (leftover from previous runs)
+  [ -n "$project" ] || { printf "ERROR: empty project name in reset\n" >&2; return 1; }
   for dir in ${project}-*; do
     if [[ -d "$dir" ]]; then
       rm -rf "$dir"

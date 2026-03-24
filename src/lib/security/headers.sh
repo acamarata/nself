@@ -413,18 +413,18 @@ headers::report() {
     printf "Security Headers Report\n"
     printf "Generated: %s\n" "$(date)"
     printf "="
-    printf "%.0s=" {1..60}
+    printf "%.0s=" $(seq 1 60)
     printf "\n\n"
 
     printf "Configuration\n"
     printf "="
-    printf "%.0s=" {1..60}
+    printf "%.0s=" $(seq 1 60)
     printf "\n"
     headers::show
 
     printf "\n\nGenerated Headers\n"
     printf "="
-    printf "%.0s=" {1..60}
+    printf "%.0s=" $(seq 1 60)
     printf "\n"
     headers::generate_all "$SECURITY_HEADERS_MODE" "true"
   } >"$output_file"

@@ -98,7 +98,7 @@ scrape_configs:
 EOF
 
       # Add custom services monitoring
-      for i in {1..20}; do
+      for i in $(seq 1 20); do
         local cs_var="CS_${i}"
         local cs_value="${!cs_var:-}"
 
