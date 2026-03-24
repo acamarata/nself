@@ -674,7 +674,7 @@ show_urls() {
 
   # Check for remote schemas
   local remote_schema_count=0
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local schema_name_var="REMOTE_SCHEMA_${i}_NAME"
     local schema_name="${!schema_name_var}"
     if [[ -n "$schema_name" ]]; then
@@ -1055,7 +1055,7 @@ show_detailed_status() {
   # === CORE SERVICES ===
   printf "\n═══ CORE SERVICES ═══════════════════════════════════════════════════════════\n\n"
   printf "%-16s %-22s %-38s %-6s %s\n" "Service" "Container" "URL" "HTTP" "Status"
-  printf "%s\n" "$(printf '%.0s─' {1..95})"
+  printf "%s\n" "$(printf '%.0s─' $(seq 1 95))"
 
   # PostgreSQL
   local pg_health=$(check_service_health "postgres")
@@ -1097,7 +1097,7 @@ show_detailed_status() {
 
   printf "\n═══ OPTIONAL SERVICES ═══════════════════════════════════════════════════════\n\n"
   printf "%-16s %-22s %-38s %-6s %s\n" "Service" "Container" "URL" "HTTP" "Status"
-  printf "%s\n" "$(printf '%.0s─' {1..95})"
+  printf "%s\n" "$(printf '%.0s─' $(seq 1 95))"
 
   # Admin
   if [[ "${NSELF_ADMIN_ENABLED:-false}" == "true" ]]; then
@@ -1203,7 +1203,7 @@ show_detailed_status() {
   if [[ "${MONITORING_ENABLED:-false}" == "true" ]]; then
     printf "\n═══ MONITORING STACK ════════════════════════════════════════════════════════\n\n"
     printf "%-16s %-22s %-38s %-6s %s\n" "Service" "Container" "URL" "HTTP" "Status"
-    printf "%s\n" "$(printf '%.0s─' {1..95})"
+    printf "%s\n" "$(printf '%.0s─' $(seq 1 95))"
 
     # Grafana
     local grafana_health=$(check_service_health "grafana")
@@ -1306,14 +1306,14 @@ show_detailed_status() {
   local cs_total=0
   local has_custom=false
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_def
     cs_def=$(eval echo "\${CS_${i}:-}")
     if [[ -n "$cs_def" ]]; then
       if [[ "$has_custom" == "false" ]]; then
         printf "\n═══ CUSTOM SERVICES ═════════════════════════════════════════════════════════\n\n"
         printf "%-16s %-22s %-38s %-6s %s\n" "Service" "Container" "URL" "HTTP" "Status"
-        printf "%s\n" "$(printf '%.0s─' {1..95})"
+        printf "%s\n" "$(printf '%.0s─' $(seq 1 95))"
         has_custom=true
       fi
 
@@ -1347,7 +1347,7 @@ show_detailed_status() {
   local fe_responding=0
   local has_frontend=false
 
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local fe_name fe_port fe_route
     fe_name=$(eval echo "\${FRONTEND_APP_${i}_NAME:-}")
     if [[ -z "$fe_name" ]]; then
@@ -1358,7 +1358,7 @@ show_detailed_status() {
       if [[ "$has_frontend" == "false" ]]; then
         printf "\n═══ FRONTEND APPS ═══════════════════════════════════════════════════════════\n\n"
         printf "%-16s %-8s %-38s %-6s %s\n" "App" "Port" "URL" "HTTP" "Status"
-        printf "%s\n" "$(printf '%.0s─' {1..95})"
+        printf "%s\n" "$(printf '%.0s─' $(seq 1 95))"
         has_frontend=true
       fi
 

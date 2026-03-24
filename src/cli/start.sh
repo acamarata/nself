@@ -5,6 +5,7 @@
 set -euo pipefail
 
 # Trap unexpected exits and print context so failures are never silent
+# shellcheck disable=SC2154  # _rc is assigned inside the trap string
 trap '_rc=$?; if [[ $_rc -ne 0 ]]; then printf "\n[nself start] unexpected exit (code %s) at line %s\n" "$_rc" "${LINENO:-?}" >&2; fi' EXIT
 
 

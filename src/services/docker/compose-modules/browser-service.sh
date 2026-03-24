@@ -60,7 +60,7 @@ YAML
       test: ["CMD", "wget", "-qO-", "http://localhost:3716/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 60s
 YAML
 }

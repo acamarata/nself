@@ -1,22 +1,23 @@
 Name:           nself
-Version:        0.4.7
+Version:        0.9.9
 Release:        1%{?dist}
-Summary:        Production-ready self-hosted backend infrastructure
+Summary:        Self-hosted backend infrastructure CLI
 
-License:        Source-Available
+License:        MIT
 URL:            https://nself.org
-Source0:        https://github.com/acamarata/nself/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/nself-org/cli/archive/refs/tags/v%{version}.tar.gz
 
 BuildArch:      noarch
 Requires:       bash >= 3.2
 Requires:       docker
-Requires:       docker-compose
+Requires:       curl
+Requires:       git
 
 %description
-nself is a production-ready infrastructure manager that helps developers
-deploy backend services including PostgreSQL, Hasura GraphQL, authentication,
-storage, email services, monitoring, and more with a single command. Includes
-40+ service templates, automated SSL, and comprehensive monitoring stack.
+nself is a self-hosted backend infrastructure CLI that spins up a complete
+production-grade stack (PostgreSQL, Hasura GraphQL, Auth, Storage, Nginx)
+in five minutes. Includes 40+ service templates, automated SSL, plugin
+ecosystem, and comprehensive monitoring. MIT licensed.
 
 %prep
 %autosetup -n %{name}-%{version}

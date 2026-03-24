@@ -73,7 +73,7 @@ EOF
       test: ["CMD", "wget", "-qO-", "http://localhost:${service_port}/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 30s
       disable: \${HEALTHCHECK_DISABLED:-false}
 EOF
@@ -94,7 +94,7 @@ generate_legacy_custom_services() {
   echo "  # Custom Services (Legacy Format)"
   echo "  # ============================================"
 
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 
@@ -128,7 +128,7 @@ generate_custom_services_OLD() {
 
   # Also check for legacy CS_ variables
   local has_legacy=false
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     [[ -n "${!cs_var:-}" ]] && has_legacy=true && break
   done

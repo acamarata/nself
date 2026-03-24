@@ -164,8 +164,6 @@ generate_docker_compose() {
 # Date: $(date '+%Y-%m-%d %H:%M:%S')
 # Version: $(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "unknown")
 
-version: '3.8'
-
 networks:
   ${DOCKER_NETWORK}:
     name: ${DOCKER_NETWORK}

@@ -443,7 +443,7 @@ is_service_running() {
 cmd_service_list() {
   printf "\n=== Optional Services Status ===\n\n"
   printf "%-15s %-10s %-10s %-30s\n" "SERVICE" "ENABLED" "RUNNING" "DESCRIPTION"
-  printf "%s\n" "$(printf '%.0s-' {1..70})"
+  printf "%s\n" "$(printf '%.0s-' $(seq 1 70))"
 
   _service_row "email" "MAILPIT_ENABLED" "Mail testing (MailPit)"
   _service_row "search" "MEILISEARCH_ENABLED" "Full-text search (MeiliSearch)"
@@ -1901,7 +1901,7 @@ cmd_service_list_templates() {
     if [[ "$tmpl_category" != "$current_category" ]]; then
       [[ -n "$current_category" ]] && printf "\n"
       printf "${COLOR_BOLD}%s${COLOR_RESET}\n" "$tmpl_category"
-      printf "%s\n" "$(printf '%.0s-' {1..60})"
+      printf "%s\n" "$(printf '%.0s-' $(seq 1 60))"
       current_category="$tmpl_category"
     fi
 
@@ -1977,7 +1977,7 @@ cmd_service_template_info() {
   category=$(get_template_category "$template")
 
   printf "\n${COLOR_CYAN}%s${COLOR_RESET}\n" "$display_name"
-  printf "%s\n" "$(printf '%.0s=' {1..60})"
+  printf "%s\n" "$(printf '%.0s=' $(seq 1 60))"
   printf "\n"
 
   printf "${COLOR_BOLD}Template ID:${COLOR_RESET}    %s\n" "$template"

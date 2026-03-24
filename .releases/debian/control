@@ -5,14 +5,15 @@ Maintainer: Aric Camarata <aric.camarata@gmail.com>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.0
 Homepage: https://nself.org
-Vcs-Browser: https://github.com/acamarata/nself
-Vcs-Git: https://github.com/acamarata/nself.git
+Vcs-Browser: https://github.com/nself-org/cli
+Vcs-Git: https://github.com/nself-org/cli.git
 
 Package: nself
+Version: 0.9.9
 Architecture: all
-Depends: ${misc:Depends}, bash (>= 4.0), docker.io | docker-ce, docker-compose
-Description: Production-ready self-hosted backend infrastructure
- nself is a production-ready infrastructure manager that helps developers
- deploy backend services including PostgreSQL, Hasura GraphQL, authentication,
- storage, email services, monitoring, and more with a single command. Includes
- 40+ service templates, automated SSL, and comprehensive monitoring stack.
+Depends: ${misc:Depends}, bash (>= 3.2), docker.io | docker-ce, curl, git
+Description: Self-hosted backend infrastructure CLI
+ nself is a self-hosted backend infrastructure CLI that spins up a complete
+ production-grade stack (PostgreSQL, Hasura GraphQL, Auth, Storage, Nginx)
+ in five minutes. Includes 40+ service templates, automated SSL, plugin
+ ecosystem, and comprehensive monitoring. MIT licensed.

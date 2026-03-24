@@ -39,7 +39,12 @@ generate_grafana_service() {
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${GRAFANA_MEM_LIMIT:-512m}
+          cpus: '\${GRAFANA_CPU_LIMIT:-1.0}'
 EOF
 }
 
@@ -76,7 +81,12 @@ generate_prometheus_service() {
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${PROMETHEUS_MEM_LIMIT:-512m}
+          cpus: '\${PROMETHEUS_CPU_LIMIT:-1.0}'
 EOF
 }
 
@@ -108,7 +118,12 @@ generate_loki_service() {
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${LOKI_MEM_LIMIT:-512m}
+          cpus: '\${LOKI_CPU_LIMIT:-1.0}'
 EOF
 }
 
@@ -136,9 +151,14 @@ generate_promtail_service() {
     healthcheck:
       test: ["CMD-SHELL", "kill -0 1"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: \${PROMTAIL_MEM_LIMIT:-256m}
+          cpus: '\${PROMTAIL_CPU_LIMIT:-0.5}'
 EOF
 }
 

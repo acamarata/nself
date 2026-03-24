@@ -6,6 +6,7 @@ set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034  # ROOT_DIR used by sourced build modules
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 LIB_DIR="$SCRIPT_DIR/../lib/build"
 SECURITY_LIB_DIR="$SCRIPT_DIR/../lib/security"

@@ -93,8 +93,11 @@ get_enabled_services() {
   fi
 
   # Custom services (CS_1 through CS_10)
-  for i in {1..10}; do
-    if [[ -n "${!CS_${i}:-}" ]]; then
+  # Bash 3.2 compatible: use seq instead of {1..10}
+  local _cs_i
+  for _cs_i in $(seq 1 10); do
+    local _cs_var="CS_${_cs_i}"
+    if [[ -n "${!_cs_var:-}" ]]; then
       services+=("custom")
     fi
   done

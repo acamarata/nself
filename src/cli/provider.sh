@@ -134,7 +134,7 @@ cmd_provider_list() {
   printf "\n=== Supported Providers ===\n\n"
 
   printf "%-15s %-12s %-12s %-15s\n" "PROVIDER" "CATEGORY" "K8S" "STATUS"
-  printf "%s\n" "$(printf '%.0s-' {1..55})"
+  printf "%s\n" "$(printf '%.0s-' $(seq 1 55))"
 
   # Major Cloud
   if [[ "$category" == "all" || "$category" == "major" ]]; then
@@ -483,7 +483,7 @@ cmd_server_list() {
 
   printf "\n=== Registered Servers ===\n\n"
   printf "%-20s %-15s %-15s %-12s %-10s\n" "NAME" "PROVIDER" "IP" "REGION" "SIZE"
-  printf "%s\n" "$(printf '%.0s-' {1..75})"
+  printf "%s\n" "$(printf '%.0s-' $(seq 1 75))"
 
   if [[ -f "$SERVERS_FILE" ]]; then
     local in_servers=0
@@ -653,7 +653,7 @@ cmd_cost_estimate() {
 
   printf "\n=== Monthly Cost Estimates (%s size) ===\n\n" "$size"
   printf "%-20s %-12s %-20s\n" "PROVIDER" "EST. COST" "NOTES"
-  printf "%s\n" "$(printf '%.0s-' {1..55})"
+  printf "%s\n" "$(printf '%.0s-' $(seq 1 55))"
 
   local providers_dir="${SCRIPT_DIR}/../lib/providers"
 

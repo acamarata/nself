@@ -84,7 +84,7 @@ generate_all_logrotate_configs() {
   fi
 
   # Custom services (CS_1 through CS_10)
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_$i"
     if [[ -n "${!cs_var:-}" ]]; then
       local service_name=$(echo "${!cs_var}" | cut -d':' -f1)
@@ -162,7 +162,7 @@ setup_log_directories() {
   [[ "${MONITORING_ENABLED:-false}" == "true" ]] && services+=("prometheus" "grafana" "loki" "tempo")
 
   # Custom services
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_$i"
     if [[ -n "${!cs_var:-}" ]]; then
       local service_name=$(echo "${!cs_var}" | cut -d':' -f1)

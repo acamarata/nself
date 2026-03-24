@@ -60,8 +60,13 @@ generate_mlflow_service_improved() {
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:\${MLFLOW_PORT:-5005}/health')"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: \${MLFLOW_MEM_LIMIT:-512m}
+          cpus: '\${MLFLOW_CPU_LIMIT:-1.0}'
 EOF
 }
 

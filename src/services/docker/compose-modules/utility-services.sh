@@ -46,7 +46,12 @@ EOF
       test: ["CMD", "nc", "-z", "localhost", "8025"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${MAILPIT_MEM_LIMIT:-256m}
+          cpus: '\${MAILPIT_CPU_LIMIT:-0.5}'
 EOF
 }
 
@@ -139,8 +144,13 @@ EOF
       test: ["CMD", "curl", "-f", "http://localhost:3021/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: \${NSELF_ADMIN_MEM_LIMIT:-512m}
+          cpus: '\${NSELF_ADMIN_CPU_LIMIT:-0.5}'
 EOF
 }
 
@@ -214,8 +224,13 @@ EOF
       test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:3000/healthz\", (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))' || curl -f http://localhost:3000/healthz || wget -q --spider http://localhost:3000/healthz"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: \${FUNCTIONS_MEM_LIMIT:-512m}
+          cpus: '\${FUNCTIONS_CPU_LIMIT:-1.0}'
 EOF
   fi
 }
@@ -316,8 +331,13 @@ DOCKERFILE
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:\${MLFLOW_PORT:-5005}/health\")' || wget --spider -q http://localhost:\${MLFLOW_PORT:-5005}/health || curl -f http://localhost:\${MLFLOW_PORT:-5005}/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: \${MLFLOW_MEM_LIMIT:-512m}
+          cpus: '\${MLFLOW_CPU_LIMIT:-1.0}'
 EOF
 }
 
@@ -411,7 +431,12 @@ generate_meilisearch_service() {
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${MEILISEARCH_MEM_LIMIT:-512m}
+          cpus: '\${MEILISEARCH_CPU_LIMIT:-1.0}'
 EOF
 }
 
@@ -443,8 +468,13 @@ generate_typesense_service() {
       test: ["CMD", "curl", "-f", "-H", "X-TYPESENSE-API-KEY: \${SEARCH_API_KEY:-\${TYPESENSE_API_KEY}}", "http://localhost:8108/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: \${TYPESENSE_MEM_LIMIT:-512m}
+          cpus: '\${TYPESENSE_CPU_LIMIT:-1.0}'
 EOF
 }
 

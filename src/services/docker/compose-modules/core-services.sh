@@ -137,7 +137,7 @@ EOF
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
 EOF
 
   # Resource limits (always applied with sensible defaults, overridable via env vars)
@@ -252,7 +252,7 @@ EOF
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/healthz"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
 EOF
 
   # Resource limits (always applied with sensible defaults, overridable via env vars)
@@ -325,7 +325,7 @@ generate_minio_service() {
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
-      timeout: 20s
+      timeout: 10s
       retries: 3
 EOF
 

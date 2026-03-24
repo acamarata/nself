@@ -179,7 +179,7 @@ routes::display_all() {
   echo "==============="
 
   local has_custom=false
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     # Use eval for Bash 3.2 compatibility
     eval "local cs_value=\${$cs_var:-}"

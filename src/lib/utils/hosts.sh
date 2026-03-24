@@ -58,7 +58,7 @@ ensure_hosts_entries() {
     [[ "${ALERTMANAGER_ENABLED:-false}" == "true" ]] && required_domains+=("alertmanager.localhost")
 
     # Custom service domains
-    for i in {1..10}; do
+    for i in $(seq 1 10); do
       local cs_var="CS_${i}"
       local cs_route_var="CS_${i}_ROUTE"
       local cs_public_var="CS_${i}_PUBLIC"
@@ -69,7 +69,7 @@ ensure_hosts_entries() {
     done
 
     # Frontend app domains
-    for i in {1..10}; do
+    for i in $(seq 1 10); do
       local app_route_var="FRONTEND_APP_${i}_ROUTE"
       local app_name_var="FRONTEND_APP_${i}_NAME"
 

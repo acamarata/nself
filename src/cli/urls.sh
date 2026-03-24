@@ -221,7 +221,7 @@ show_url_diff() {
   domain2="${domain2:-unknown}"
 
   printf "  %-20s %-35s %-35s\n" "Service" "$env1" "$env2"
-  printf "  %-20s %-35s %-35s\n" "-------" "$(printf '%0.s-' {1..30})" "$(printf '%0.s-' {1..30})"
+  printf "  %-20s %-35s %-35s\n" "-------" "$(printf '%0.s-' $(seq 1 30))" "$(printf '%0.s-' $(seq 1 30))"
 
   # Compare key services
   local services=("api" "auth" "admin" "storage" "grafana")
@@ -355,7 +355,7 @@ check_route_conflicts() {
   fi
 
   # Check custom services
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 
@@ -654,7 +654,7 @@ output_table() {
 
   # Custom Services
   local custom_count=0
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local cs_value="${!cs_var:-}"
 
@@ -691,7 +691,7 @@ output_table() {
   local has_frontend=false
 
   # Check for frontend apps (FRONTEND_APP_1, FRONTEND_APP_2, etc.)
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local route_var="FRONTEND_APP_${i}_ROUTE"
     local name_var="FRONTEND_APP_${i}_NAME"
     local port_var="FRONTEND_APP_${i}_PORT"
@@ -779,7 +779,7 @@ count_active_routes() {
   [[ "${NESTJS_ENABLED:-false}" == "true" ]] && count=$((count + 1))
 
   # Custom services with public routes
-  for i in {1..10}; do
+  for i in $(seq 1 10); do
     local cs_var="CS_${i}"
     local public_var="CS_${i}_PUBLIC"
     local cs_value="${!cs_var:-}"

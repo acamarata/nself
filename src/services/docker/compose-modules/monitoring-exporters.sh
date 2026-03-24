@@ -62,7 +62,12 @@ generate_alertmanager_service() {
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: \${ALERTMANAGER_MEM_LIMIT:-256m}
+          cpus: '\${ALERTMANAGER_CPU_LIMIT:-0.5}'
 EOF
 }
 
@@ -105,6 +110,11 @@ $volumes
     command:
       - '--housekeeping_interval=10s'
       - '--docker_only=true'
+    deploy:
+      resources:
+        limits:
+          memory: \${CADVISOR_MEM_LIMIT:-256m}
+          cpus: '\${CADVISOR_CPU_LIMIT:-0.5}'
 EOF
 
   # Add devices section only for Linux
@@ -146,9 +156,14 @@ generate_node_exporter_service() {
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: \${NODE_EXPORTER_MEM_LIMIT:-128m}
+          cpus: '\${NODE_EXPORTER_CPU_LIMIT:-0.5}'
 EOF
 }
 
@@ -179,9 +194,14 @@ generate_postgres_exporter_service() {
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: \${POSTGRES_EXPORTER_MEM_LIMIT:-128m}
+          cpus: '\${POSTGRES_EXPORTER_CPU_LIMIT:-0.5}'
 EOF
 }
 
@@ -216,9 +236,14 @@ generate_redis_exporter_service() {
     healthcheck:
       test: ["CMD", "/redis_exporter", "--version"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: \${REDIS_EXPORTER_MEM_LIMIT:-128m}
+          cpus: '\${REDIS_EXPORTER_CPU_LIMIT:-0.5}'
 EOF
 }
 

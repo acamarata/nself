@@ -183,7 +183,7 @@ routes::collect_all() {
   fi
 
   # CS_N services (Custom Services) - check both env vars and nginx configs
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_route_var="CS_${i}_ROUTE"
     local cs_route="${!cs_route_var:-}"
 
@@ -430,7 +430,7 @@ routes::get_frontend_apps() {
 routes::get_custom_services() {
   local base_domain="${BASE_DOMAIN:-localhost}"
 
-  for i in {1..20}; do
+  for i in $(seq 1 20); do
     local cs_var="CS_${i}"
     local cs_value
     cs_value="${!cs_var:-}"

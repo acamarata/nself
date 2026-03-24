@@ -3,8 +3,6 @@
 # This file shows how your service integrates with nself.
 # It's automatically included in the main docker-compose.yml
 #
-version: '3.8'
-
 services:
   {{SERVICE_NAME}}:
     build:
