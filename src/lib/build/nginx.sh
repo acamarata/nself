@@ -162,6 +162,9 @@ EOF
         add_header Content-Type text/plain;
     }
 
+    # T-2711: Block access to log files
+    location ~* \.log$ { deny all; return 404; }
+
     # Include service routes
     include /etc/nginx/sites/*.conf;
 }
@@ -185,6 +188,9 @@ EOF
         return 200 "OK\n";
         add_header Content-Type text/plain;
     }
+
+    # T-2711: Block access to log files
+    location ~* \.log$ { deny all; return 404; }
 
     # Include service routes
     include /etc/nginx/sites/*.conf;
