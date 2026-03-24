@@ -5,7 +5,7 @@ running the `nself-claw` plugin.
 
 ## Prerequisites
 
-- nSelf v0.9.9+ with `nself-claw` installed (Max tier license required)
+- nSelf v0.9.9+ with `nself-claw` installed (Pro tier license required)
 - The ɳClaw companion app installed on your device
 
 ```bash

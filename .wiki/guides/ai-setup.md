@@ -1,6 +1,6 @@
 # Setting Up nself-ai
 
-nself-ai is a Max tier plugin that provides a multi-provider AI gateway for your self-hosted backend. It routes requests to the best available model based on the task type, with fallback support and caller-level access control.
+nself-ai is a Pro tier plugin that provides a multi-provider AI gateway for your self-hosted backend. It routes requests to the best available model based on the task type, with fallback support and caller-level access control.
 
 ---
 

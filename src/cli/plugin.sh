@@ -277,13 +277,37 @@ cmd_list() {
       fi
 
       local suffix=""
-      if is_plugin_installed "$plugin"; then suffix=" *"; fi
-
-      if [[ "$has_license" == "true" ]]; then
-        printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "1.0.0" "-" "PRO" "Pro Plugin" "$suffix"
-      else
-        printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "1.0.0" "-" "PRO" "Membership required" "$suffix"
+      local pro_desc=""
+      local pro_version="1.0.0"
+      local pro_category="-"
+      if is_plugin_installed "$plugin"; then
+        suffix=" *"
+        # Read description from installed plugin.json when available
+        local pro_manifest="$PLUGIN_DIR/$plugin/plugin.json"
+        if [[ -f "$pro_manifest" ]]; then
+          if command -v jq >/dev/null 2>&1; then
+            pro_desc=$(jq -r '.description // ""' "$pro_manifest" 2>/dev/null)
+            pro_version=$(jq -r '.version // "1.0.0"' "$pro_manifest" 2>/dev/null)
+            pro_category=$(jq -r '.category // "-"' "$pro_manifest" 2>/dev/null)
+          else
+            pro_desc=$(grep '"description"' "$pro_manifest" | head -1 | sed 's/.*"description"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+            pro_version=$(grep '"version"' "$pro_manifest" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+            pro_category=$(grep '"category"' "$pro_manifest" | head -1 | sed 's/.*"category"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+          fi
+        fi
       fi
+      pro_version="${pro_version:-1.0.0}"
+      pro_category="${pro_category:--}"
+
+      if [[ -z "$pro_desc" ]]; then
+        if [[ "$has_license" == "true" ]]; then
+          pro_desc="Pro Plugin"
+        else
+          pro_desc="Membership required"
+        fi
+      fi
+
+      printf "%-20s %-10s %-12s %-6s %-30s%s\n" "$plugin" "$pro_version" "$pro_category" "PRO" "${pro_desc:0:30}" "$suffix"
       count=$((count + 1))
     done
   fi

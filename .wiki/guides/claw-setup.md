@@ -1,6 +1,6 @@
 # Setting Up nself-claw
 
-nself-claw is a Max tier plugin that adds a persistent, memory-backed AI assistant to your backend. It requires nself-ai. Install and configure ai first before following this guide.
+nself-claw is a Pro tier plugin that adds a persistent, memory-backed AI assistant to your backend. It requires nself-ai. Install and configure ai first before following this guide.
 
 ---
 

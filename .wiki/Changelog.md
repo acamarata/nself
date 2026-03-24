@@ -1,6 +1,46 @@
 # nself Changelog
 
-## v0.9.9+max (Max tier plugin suite)
+## v0.9.9-rc4 (2026-03-24)
+
+### Licensing & Pricing
+
+- 6-tier membership model: Free, Basic ($0.99/mo), Pro ($1.99/mo), Elite ($4.99/mo), Business ($9.99/mo), Business+ ($49.99/mo), Enterprise ($99.99/mo)
+- Annual pricing with ~17% discount on all paid tiers
+- Existing $9.99/yr keys grandfathered to Basic tier
+- Updated Stripe products, ping_api validation, and CLI tier entitlement checks
+- All pricing pages across nself.org, chat.nself.org, install.nself.org updated
+
+### Bug Fixes
+
+- Fixed `nself status` showing 0/10 running despite healthy containers
+- Fixed nself binary not in PATH after fresh install (T-2291)
+- Fixed mux stall detector skipping messages when history_id advances past them
+- Fixed plugin description display bug (all plugins showing same description)
+- Fixed stale pricing references across web properties
+
+### Quality
+
+- ShellCheck audit: zero errors across all CLI scripts
+- Bash 3.2 portability audit: no forbidden patterns
+- Hardcoded credentials audit: zero secrets in source
+- Consolidated redundant command reference docs
+- Created COMMAND-TREE-V1.md (authoritative command list)
+- Environment variable reference documentation
+- v0.9.x to v1.0 migration guide
+- LTS policy documentation
+
+### Plugins
+
+- Plugin IP protection decision resolved: Rust binaries + license-gated download
+- Marketplace status upgraded from Planned to Ready
+- Validated all 52 plugin.json manifests
+- Fixed voice plugin RPi audio capture and speaker embedding stubs
+- Fixed mux seed migration TODOs
+- Fixed auth and file-processing documentation TODOs
+
+---
+
+## v0.9.9+pro (Pro tier plugin suite)
 
 ### nself-ai v2
 

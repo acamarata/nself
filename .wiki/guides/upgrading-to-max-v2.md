@@ -1,4 +1,4 @@
-# Upgrading to Max v2
+# Upgrading to Pro Plugin Suite v2
 
 This guide covers upgrading nself-ai, nself-claw, nself-mux, nself-voice, and nself-browser from v1 to v2.
 

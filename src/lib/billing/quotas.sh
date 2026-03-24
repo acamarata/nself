@@ -1160,9 +1160,16 @@ quota_send_alert_notification() {
   local percent="$3"
   local severity="$4"
 
-  # TODO: Implement notification system (email, webhook, SMS)
-  # See: .ai/roadmap/v1.0/deferred-features.md (BILLING-002)
-  # For now, just log
+  # Notifications are handled by the notify plugin (nself plugin install notify).
+  # When available, it supports email, webhook, SMS, Slack, Telegram, and more.
+  # Check if notify plugin is installed and send alert through it; otherwise just log.
+  if declare -f plugin_notify_send >/dev/null 2>&1; then
+    plugin_notify_send "quota_alert" \
+      --customer "$customer_id" \
+      --service "$service" \
+      --severity "$severity" \
+      --message "Quota usage at ${percent}% for $service" 2>/dev/null || true
+  fi
   billing_log "NOTIFICATION" "quota_alert" "$service" "{\"severity\":\"$severity\",\"percent\":$percent}"
 }
 

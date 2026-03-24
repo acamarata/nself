@@ -1,20 +1,20 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-0.9.9-blue.svg)](https://github.com/nself-org/cli/releases)
-[![Status](https://img.shields.io/badge/status-production--ready-brightgreen.svg)](https://github.com/nself-org/cli/releases/tag/v0.9.9)
+[![Version](https://img.shields.io/badge/version-0.9.9--rc4-blue.svg)](https://github.com/nself-org/cli/releases)
+[![Status](https://img.shields.io/badge/status-RC4-brightgreen.svg)](https://github.com/nself-org/cli/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#-prerequisites)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/nself-org/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nself-org/cli/actions)
 [![Security Scan](https://github.com/nself-org/cli/actions/workflows/security-scan.yml/badge.svg)](https://github.com/nself-org/cli/actions/workflows/security-scan.yml)
 [![Test Coverage](https://codecov.io/gh/nself-org/cli/branch/main/graph/badge.svg)](https://codecov.io/gh/nself-org/cli)
-[![License](https://img.shields.io/badge/license-Personal%20Free%20%7C%20Commercial-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 
 <div align="center">
 
 **Deploy a production-ready backend in 5 minutes**
 
-Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Seamless local → staging → production workflow with automated SSL, intelligent defaults, and enterprise monitoring.
+Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 68+ plugins (16 free, 52 paid). MIT licensed core, forever.
 
 ```bash
 curl -sSL https://install.nself.org | bash

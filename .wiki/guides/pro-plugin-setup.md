@@ -240,11 +240,11 @@ See [Step 1](#1-apply-the-plugin-registry-migration) for details.
 
 ---
 
-### "This plugin requires Max tier" for an owner or enterprise license
+### "This plugin requires Pro tier" for an owner or enterprise license
 
-The license tier check is too strict. Owner licenses store tier as `enterprise` in the database, but some older versions checked only for `max` by name.
+The license tier check is too strict. Owner licenses store tier as `enterprise` in the database, but some older versions checked only for `pro` by name.
 
-Fix: update to nself v0.9.9+. The updated ping_api checks the `all_plugins` feature flag on the license record, which bypasses the Max-tier name check.
+Fix: update to nself v0.9.9+. The updated ping_api checks the `all_plugins` feature flag on the license record, which bypasses the tier name check.
 
 ---
 
