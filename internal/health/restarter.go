@@ -44,8 +44,13 @@ type RestartPolicy struct {
 	RestartDelay time.Duration // default: 5s
 }
 
-// defaultPolicy returns a RestartPolicy with sensible defaults, overridden by
-// the NSELF_HEALTH_POLL_INTERVAL and NSELF_HEALTH_MAX_RESTARTS env vars if set.
+// DefaultRestartPolicy returns a RestartPolicy with sensible defaults, overridden
+// by the NSELF_HEALTH_POLL_INTERVAL and NSELF_HEALTH_MAX_RESTARTS env vars if set.
+func DefaultRestartPolicy() RestartPolicy {
+	return defaultPolicy()
+}
+
+// defaultPolicy is the unexported implementation used internally and in tests.
 func defaultPolicy() RestartPolicy {
 	p := RestartPolicy{
 		MaxAttempts:  3,

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"nself/internal/config"
 	"nself/internal/license"
 	"nself/internal/plugin"
 	"nself/internal/version"
@@ -42,6 +43,8 @@ The Golden Path:
 func init() {
 	// Add --version / -v flag to root command (legacy CLI compatibility)
 	RootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
+	// --no-monorepo disables automatic monorepo backend detection globally.
+	RootCmd.PersistentFlags().Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
 	RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		v, _ := cmd.Flags().GetBool("version")
 		if v {
@@ -56,6 +59,19 @@ func init() {
 		if !isSourceSafeCommand(cmd.Name()) {
 			if err := checkNotInSourceRepo(); err != nil {
 				return err
+			}
+		}
+
+		// ── Monorepo detection ────────────────────────────────────────────────
+		// Run for all lifecycle commands so that stop, restart, logs, status,
+		// build, and exec work correctly from a monorepo root — not just start.
+		noMonorepo, _ := cmd.Flags().GetBool("no-monorepo")
+		if !noMonorepo && !isSourceSafeCommand(cmd.Name()) {
+			if cwd, err := os.Getwd(); err == nil {
+				if backendRoot := config.DetectMonorepoRoot(cwd); backendRoot != "" {
+					fmt.Printf("→ Detected monorepo layout. Using %s as project root.\n", filepath.Base(backendRoot))
+					_ = os.Chdir(backendRoot)
+				}
 			}
 		}
 

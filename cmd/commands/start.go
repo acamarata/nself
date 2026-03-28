@@ -54,7 +54,6 @@ func init() {
 	f.Bool("quick", false, "Quick start (timeout=30, required=60%)")
 	f.Bool("skip-port-check", false, "Skip port availability check")
 	f.Bool("skip-build", false, "Skip automatic rebuild detection")
-	f.Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
 	f.Bool("watch", false, "Enable health auto-restart: poll services and restart unhealthy containers")
 
 	RootCmd.AddCommand(startCmd)
@@ -128,18 +127,6 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
-	}
-
-	// ── Monorepo detection ────────────────────────────────────────────────
-	// Check before FindNSelfRoot so that users running nself start from the
-	// monorepo root (e.g. the nself-web Turborepo) are redirected into the
-	// correct backend sub-directory automatically.
-	noMonorepo, _ := cmd.Flags().GetBool("no-monorepo")
-	if !noMonorepo {
-		if backendRoot := config.DetectMonorepoRoot(cwd); backendRoot != "" {
-			fmt.Printf("→ Detected monorepo layout. Using %s as project root.\n", filepath.Base(backendRoot))
-			cwd = backendRoot
-		}
 	}
 
 	projectDir, err := config.FindNSelfRoot(cwd)
@@ -443,6 +430,21 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		defer cleanupCancel()
 		_ = docker.RunPostStartCleanup(cleanupCtx, cfg.ProjectName)
 	}()
+
+	// ── Health auto-restart (--watch) ────────────────────────────────
+	// Start the Restarter in a background goroutine. It polls running containers
+	// and automatically restarts any that become unhealthy, up to MaxAttempts.
+	if opts.watch {
+		restartPolicy := health.DefaultRestartPolicy()
+		dockerClient := health.NewShellDockerClient(cfg.ProjectName)
+		restarter := health.NewRestarter(dockerClient, restartPolicy)
+		if err := restarter.Start(cmd.Context()); err != nil {
+			ui.Warn(fmt.Sprintf("Health auto-restart could not start: %v", err))
+		} else {
+			ui.Info(fmt.Sprintf("Health auto-restart enabled (poll: %s, max attempts: %d)",
+				restartPolicy.PollInterval, restartPolicy.MaxAttempts))
+		}
+	}
 
 	// ── Step 7: Health checks ────────────────────────────────────────
 	currentStep++
