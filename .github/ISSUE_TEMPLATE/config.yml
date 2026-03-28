@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.nself.org
+    about: Check the docs first
+  - name: Discord
+    url: https://discord.gg/nself
+    about: Ask questions in Discord

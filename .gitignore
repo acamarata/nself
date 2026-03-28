@@ -1,0 +1,55 @@
+# Binary
+/nself
+/nself.exe
+nself-darwin-*
+nself-linux-*
+nself-windows-*
+
+# Go build
+*.test
+*.out
+
+# nSelf project files (if someone runs nself in this dir by mistake)
+docker-compose.yml
+.env
+.env.*
+!.env.example
+nginx/
+ssl/
+postgres/
+monitoring/
+services/
+.nself/
+backups/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Distribution artifacts
+dist/
+*.tar.gz
+
+# Claude working memory
+.claude/temp/
+
+# nSelf
+.env.local
+.env.*.local
+.env.secrets
+.volumes/
+logs/
+*.log
+node_modules/
+.vscode/*
+.claude/
+.codex/
+.cursor/
+.aider/
+.aider.chat.history.md
+.continue/
+.windsurf/
+.gemini/
+.codeium/
