@@ -24,7 +24,7 @@ func DetectServices(cfg *config.Config) []string {
 		services = append(services, "redis")
 	}
 	if cfg.Minio.Enabled {
-		services = append(services, "minio", "minio-init")
+		services = append(services, "minio")
 	}
 	if cfg.Mailpit.Enabled {
 		services = append(services, "mailpit")

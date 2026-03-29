@@ -55,6 +55,7 @@ func init() {
 	f.Bool("quick", false, "Quick start (timeout=30, required=60%)")
 	f.Bool("skip-port-check", false, "Skip port availability check")
 	f.Bool("skip-build", false, "Skip automatic rebuild detection")
+	f.Bool("skip-plugins", false, "Start base stack only, skip all plugin compose files")
 	f.Bool("watch", false, "Enable health auto-restart: poll services and restart unhealthy containers")
 
 	RootCmd.AddCommand(startCmd)
@@ -71,6 +72,7 @@ type startOpts struct {
 	quick            bool
 	skipPortCheck    bool
 	skipBuild        bool
+	skipPlugins      bool
 	watch            bool
 }
 
@@ -85,6 +87,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	quick, _ := cmd.Flags().GetBool("quick")
 	skipPortCheck, _ := cmd.Flags().GetBool("skip-port-check")
 	skipBuild, _ := cmd.Flags().GetBool("skip-build")
+	skipPlugins, _ := cmd.Flags().GetBool("skip-plugins")
 	watch, _ := cmd.Flags().GetBool("watch")
 
 	// --force-recreate is an alias for --fresh.
@@ -115,6 +118,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 		quick:            quick,
 		skipPortCheck:    skipPortCheck,
 		skipBuild:        skipBuild,
+		skipPlugins:      skipPlugins,
 		watch:            watch,
 	}, nil
 }
@@ -259,6 +263,12 @@ func runStart(cmd *cobra.Command, _ []string) error {
 			ui.Warn(fmt.Sprintf("Could not read compose manifest: %v (using defaults)", err))
 		}
 		composeFiles = nil
+	}
+
+	// --skip-plugins: keep only the first entry (base docker-compose.yml).
+	if opts.skipPlugins && len(composeFiles) > 1 {
+		ui.Info("Skipping plugin compose files (--skip-plugins)")
+		composeFiles = composeFiles[:1]
 	}
 
 	// ── Step 3: Port availability check ──────────────────────────────
@@ -427,7 +437,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 	svcSp.Success("All services started")
 
-	// Post-start cleanup: remove init containers (minio-init, meilisearch-init)
+	// Post-start cleanup: remove init containers (meilisearch-init)
 	// that completed and are sitting in exited state, plus zombie containers
 	// from interrupted starts.
 	go func() {

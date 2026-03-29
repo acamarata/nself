@@ -52,7 +52,6 @@ func (g *Generator) buildDockerCompose() *DockerCompose {
 		dc.AddService("redis", g.buildRedisService())
 	}
 	if g.cfg.Minio.Enabled {
-		dc.AddService("minio-init", g.buildMinioInitService())
 		dc.AddService("minio", g.buildMinioService())
 	}
 	if g.cfg.Mailpit.Enabled {

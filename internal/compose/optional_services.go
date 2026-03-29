@@ -67,26 +67,6 @@ func (g *Generator) buildRedisService() ServiceConfig {
 	}
 }
 
-// buildMinioInitService returns the MinIO initialization service configuration.
-// Uses busybox to chown the data directory before MinIO starts.
-func (g *Generator) buildMinioInitService() ServiceConfig {
-	return ServiceConfig{
-		Image:         "busybox:1.36",
-		ContainerName: fmt.Sprintf("%s_minio_init", g.cfg.ProjectName),
-		Restart:       "no",
-		User:          "root",
-		Networks:      []string{g.cfg.DockerNetwork},
-		Volumes:       []string{"minio_data:/data"},
-		Command:       `sh -c "chown -R 1000:1000 /data; chmod -R 755 /data"`,
-		Labels: map[string]string{
-			"nself.type":        "init-container",
-			"nself.service":     "minio",
-			"nself.auto-remove": "true",
-		},
-		// No Profiles — init containers must be visible to depends_on
-	}
-}
-
 // buildMinioService returns the MinIO object storage service configuration.
 func (g *Generator) buildMinioService() ServiceConfig {
 	mc := g.cfg.Minio
@@ -108,11 +88,7 @@ func (g *Generator) buildMinioService() ServiceConfig {
 		Image:         ResolveImage("minio", fmt.Sprintf("minio/minio:%s", version)),
 		ContainerName: fmt.Sprintf("%s_minio", g.cfg.ProjectName),
 		Restart:       "unless-stopped",
-		User:          "1000:1000",
 		Networks:      []string{g.cfg.DockerNetwork},
-		DependsOn: map[string]DepOn{
-			"minio-init": {Condition: "service_completed_successfully"},
-		},
 		Environment: map[string]string{
 			"MINIO_ROOT_USER":       mc.RootUser,
 			"MINIO_ROOT_PASSWORD":   mc.RootPassword,
