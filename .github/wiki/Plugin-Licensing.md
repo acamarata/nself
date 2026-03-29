@@ -12,7 +12,7 @@ nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 Accepted prefixes:
 - `nself_pro_` — Pro tier and above
-- `nself_max_` — Max tier
+- `nself_max_` — Pro tier
 - `nself_ent_` — Enterprise tier
 - `nself_owner_` — Owner/self-hosted tier
 

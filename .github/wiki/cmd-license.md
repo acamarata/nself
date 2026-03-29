@@ -16,7 +16,7 @@ Set your key once with `nself license set` and all subsequent `nself plugin inst
 
 **Key format:** One of four accepted prefixes followed by 32 or more characters:
 - `nself_pro_*` — Pro tier
-- `nself_max_*` — Max tier
+- `nself_max_*` — Pro tier
 - `nself_ent_*` — Enterprise tier
 - `nself_owner_*` — Owner tier
 
