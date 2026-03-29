@@ -54,14 +54,14 @@ Output:
 ```
 Service        URL
 ─────────────────────────────────────────
-Hasura         https://myapp.dev/hasura/
-Auth           https://myapp.dev/auth/
-GraphQL API    https://myapp.dev/v1/graphql
+Hasura         https://hasura.local.nself.org
+Auth           https://auth.local.nself.org
+GraphQL API    https://api.local.nself.org/v1/graphql
 ```
 
 ## Step 5 — Run a GraphQL Query
 
-Open the Hasura Console at `https://myapp.dev/hasura/` (or the URL shown by `nself urls`).
+Open the Hasura Console at `https://hasura.local.nself.org` (or the URL shown by `nself urls`).
 
 In the GraphQL Explorer, run:
 

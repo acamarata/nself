@@ -50,12 +50,10 @@ Project config lives in `.env` in your project directory. The CLI state and lice
 
 ## How do I add a custom service?
 
-Define `CS_1` through `CS_10` in your `.env`:
+Define `CS_1` through `CS_10` in your `.env`. Choose from 40+ templates or bring your own Docker image.
 
 ```bash
-CS_1_IMAGE=myorg/myservice:latest
-CS_1_PORT=8080
-CS_1_ROUTE=/myservice/
+CS_1=api:fastapi:3001
 ```
 
 Then run `nself build && nself restart`.

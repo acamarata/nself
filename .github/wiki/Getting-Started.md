@@ -15,8 +15,8 @@ Get nSelf running in under 5 minutes.
 
 - **Docker** 24+ with Docker Compose v2
 - **macOS** (Intel or Apple Silicon) or **Linux** (x86_64 or ARM64)
-- **1 GB RAM** minimum (2 GB recommended)
-- **1 GB disk** free space
+- **2 GB RAM** minimum (4 GB recommended)
+- **5 GB disk** free space (10 GB recommended)
 
 ## Quick Path
 
@@ -35,3 +35,10 @@ nself start
 That's it. You now have Postgres, Hasura GraphQL, Auth, and Nginx running locally with SSL.
 
 See [[Quick-Start]] for the full walkthrough with expected output.
+
+## What's Next
+
+- [[First-Project]] — Guided walkthrough building a real backend with tables, permissions, and auth
+- [[Plugin-Overview]] — Browse 84 plugins (25 free, 59 Pro) for AI, video, commerce, CMS, and more
+- [[Guide-Production-Deployment]] — Deploy your stack to a real server with SSL and backups
+- [[Commands]] — Full reference for all 295+ CLI commands

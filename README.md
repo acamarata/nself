@@ -13,7 +13,7 @@
 
 **Deploy a production-ready backend in 5 minutes**
 
-Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 84 plugins (25 free, 59 paid). MIT licensed core, forever.
+Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 75 plugins (16 free, 59 Pro). MIT licensed core, forever.
 
 ```bash
 curl -sSL https://install.nself.org | bash
@@ -72,8 +72,8 @@ From zero to production-ready backend in under 5 minutes. Really.
 
 **Developer Experience:**
 - **40+ Service Templates** - Express, FastAPI, Flask, Gin, Rust, NestJS, gRPC, and more
-- **295+ CLI Commands** - Complete control from the terminal
-- **Admin Dashboard** - Web-based management UI
+- **32 Commands, 295+ Subcommands** - Complete control from the terminal
+- **Admin GUI** (localhost) - Local management UI
 - **Email Management** - 16+ providers with zero-config development mode
 
 ### nSelf vs Others
@@ -209,11 +209,11 @@ All `*.local.nself.org` domains automatically resolve to `127.0.0.1` for zero-co
 
 ## Free vs Pro
 
-The core CLI and 25 free plugins are MIT-licensed, free forever, including commercial use. Pro plugins require a membership key.
+The core CLI and 16 free plugins are MIT-licensed, free forever, including commercial use. Pro plugins require a membership key.
 
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
-| Free | $0 | $0 | Core CLI + 25 free plugins |
+| Free | $0 | $0 | Core CLI + 16 free plugins |
 | Basic | $0.99/mo | $9.99/yr | All 59 Pro plugins |
 | Pro | $1.99/mo | $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | Elite | $4.99/mo | $49.99/yr | Pro + email support |
@@ -367,7 +367,7 @@ Run `nself help <command>` for subcommand details.
 
 ## Plugin System
 
-**25 free MIT plugins** - no key required:
+**16 free MIT plugins** - no key required:
 
 ```bash
 nself plugin install monitoring    # Prometheus + Grafana + Loki
@@ -395,30 +395,25 @@ See [Plugins](.github/wiki/Plugin-Architecture.md) for the full list.
 ## Architecture
 
 ```
-+-----------------------------------------------------+
-|                    nSelf CLI                         |
-|  nself init -> nself build -> nself start            |
-+------------------------+----------------------------+
-                         | generates
-                         v
-+-----------------------------------------------------+
-|              docker-compose.yml                      |
-|              nginx.conf                              |
-+------------------------+----------------------------+
-                         | starts
-                         v
-+----------+  +--------+  +------+  +-------+
-| Postgres |  | Hasura |  | Auth |  | Nginx |  <- core (always)
-+----------+  +--------+  +------+  +-------+
-     |              |          |         |
-     +--------------+----------+---------+
-                         |
-         +---------------+---------------+
-         v               v               v
-+--------------+ +----------+ +----------+
-| Redis/MinIO  | | Search/  | | Admin    |  <- optional
-| Email/Funcs  | | MLflow   | | GUI:3021 |
-+--------------+ +----------+ +----------+
+┌─────────────────────────────────────────────────────┐
+│                     nSelf CLI                       │
+│          init  →  build  →  start                   │
+└────────────────────────┬────────────────────────────┘
+                         │ generates
+                         ▼
+              docker-compose.yml + nginx.conf
+                         │ starts
+                         ▼
+┌──────────┐ ┌────────┐ ┌──────┐ ┌───────┐
+│ Postgres │ │ Hasura │ │ Auth │ │ Nginx │   ← always on
+└──────────┘ └────────┘ └──────┘ └───────┘
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+┌──────────────┐ ┌────────────┐ ┌──────────────┐
+│ Redis, MinIO │ │  Search,   │ │   Plugins    │ ← optional
+│ Email, Funcs │ │   MLflow   │ │  (75 total)  │
+└──────────────┘ └────────────┘ └──────────────┘
 ```
 
 All services bind to `127.0.0.1`. Nginx is the only external-facing process.
@@ -772,7 +767,7 @@ nSelf CLI is MIT licensed. The 59 Pro plugins are source-available under a separ
 
 <div align="center">
 
-**nSelf CLI v2** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
+**nSelf CLI v1.0.0** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 
