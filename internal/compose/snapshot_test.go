@@ -110,24 +110,24 @@ func TestSnapshot_PostgresCapAdd(t *testing.T) {
 	}
 }
 
-// TestSnapshot_AuthHealthcheckPort4000 verifies the auth healthcheck URL uses
-// port 4000 in the generated YAML output (not 8080 which belongs to Hasura).
-func TestSnapshot_AuthHealthcheckPort4000(t *testing.T) {
+// TestSnapshot_AuthHealthcheckPort4002 verifies the auth healthcheck URL uses
+// port 4002 in the generated YAML output (nhost/hasura-auth internal port).
+func TestSnapshot_AuthHealthcheckPort4002(t *testing.T) {
 	yaml := generateYAML(t, snapshotConfig())
 
-	// Find the auth service block.  We look for /health on port 4000.
-	if !strings.Contains(yaml, "http://localhost:4000/health") {
-		t.Errorf("snapshot: expected 'http://localhost:4000/health' in auth healthcheck, yaml excerpt:\n%s",
+	// nhost/hasura-auth listens on 4002 internally.
+	if !strings.Contains(yaml, "http://localhost:4002/health") {
+		t.Errorf("snapshot: expected 'http://localhost:4002/health' in auth healthcheck, yaml excerpt:\n%s",
 			extractServiceBlock(yaml, "auth"))
 	}
 }
 
-// TestSnapshot_AuthPort4000Mapping verifies auth port mapping uses 4000:4000.
-func TestSnapshot_AuthPort4000Mapping(t *testing.T) {
+// TestSnapshot_AuthPort4002Mapping verifies auth port mapping uses host:4000->container:4002.
+func TestSnapshot_AuthPort4002Mapping(t *testing.T) {
 	yaml := generateYAML(t, snapshotConfig())
 
-	if !strings.Contains(yaml, "127.0.0.1:4000:4000") {
-		t.Errorf("snapshot: expected auth port mapping '127.0.0.1:4000:4000' in YAML, auth block:\n%s",
+	if !strings.Contains(yaml, "127.0.0.1:4000:4002") {
+		t.Errorf("snapshot: expected auth port mapping '127.0.0.1:4000:4002' in YAML, auth block:\n%s",
 			extractServiceBlock(yaml, "auth"))
 	}
 }

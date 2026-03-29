@@ -48,8 +48,8 @@ func minimalConfig() *config.Config {
 	}
 }
 
-// TestAuthHealthcheckPort verifies T02: the healthcheck URL must use port 4000,
-// not 8080 (which belongs to Hasura).
+// TestAuthHealthcheckPort verifies T02: the healthcheck URL must use port 4002
+// (nhost/hasura-auth internal port), not 8080 (which belongs to Hasura).
 func TestAuthHealthcheckPort(t *testing.T) {
 	cfg := minimalConfig()
 	g := NewGenerator(cfg)
@@ -61,8 +61,8 @@ func TestAuthHealthcheckPort(t *testing.T) {
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
 
-	if !strings.Contains(hcStr, "4000") {
-		t.Errorf("expected healthcheck URL to contain '4000', got: %s", hcStr)
+	if !strings.Contains(hcStr, "4002") {
+		t.Errorf("expected healthcheck URL to contain '4002', got: %s", hcStr)
 	}
 	if strings.Contains(hcStr, "8080") {
 		t.Errorf("healthcheck URL must NOT contain '8080' (that is Hasura's port), got: %s", hcStr)
@@ -160,8 +160,8 @@ func TestAuthResourceLimits_IndependentFromHasura(t *testing.T) {
 }
 
 // TestAuthPortFromConfig verifies T04: cfg.Auth.Port sets the host-side port only.
-// nhost/hasura-auth always binds on 4000 internally, so the container side is fixed.
-// Setting Auth.Port = 4001 must produce "127.0.0.1:4001:4000".
+// nhost/hasura-auth always binds on 4002 internally, so the container side is fixed.
+// Setting Auth.Port = 4001 must produce "127.0.0.1:4001:4002".
 func TestAuthPortFromConfig(t *testing.T) {
 	cfg := minimalConfig()
 	cfg.Auth.Port = 4001
@@ -169,7 +169,7 @@ func TestAuthPortFromConfig(t *testing.T) {
 	g := NewGenerator(cfg)
 	svc := g.buildAuthService()
 
-	const wantPort = "127.0.0.1:4001:4000"
+	const wantPort = "127.0.0.1:4001:4002"
 	found := false
 	for _, p := range svc.Ports {
 		if p == wantPort {
@@ -182,15 +182,15 @@ func TestAuthPortFromConfig(t *testing.T) {
 	}
 }
 
-// TestAuthPortDefault verifies that the default port 4000 produces the expected mapping.
-// When Auth.Port equals 4000 (the default), host and container ports are both 4000.
+// TestAuthPortDefault verifies that the default host port 4000 produces the expected mapping.
+// nhost/hasura-auth binds on 4002 internally, so default mapping is 127.0.0.1:4000:4002.
 func TestAuthPortDefault(t *testing.T) {
 	cfg := minimalConfig() // Auth.Port = 4000
 
 	g := NewGenerator(cfg)
 	svc := g.buildAuthService()
 
-	const wantPort = "127.0.0.1:4000:4000"
+	const wantPort = "127.0.0.1:4000:4002"
 	found := false
 	for _, p := range svc.Ports {
 		if p == wantPort {
@@ -204,8 +204,8 @@ func TestAuthPortDefault(t *testing.T) {
 }
 
 // TestAuthHealthcheckUsesConfigPort verifies that the healthcheck URL always uses
-// the hardcoded container port 4000, regardless of cfg.Auth.Port.
-// nhost/hasura-auth always binds on 4000 internally — AUTH_PORT only affects host mapping.
+// the hardcoded container port 4002, regardless of cfg.Auth.Port.
+// nhost/hasura-auth always binds on 4002 internally — AUTH_PORT only affects host mapping.
 func TestAuthHealthcheckUsesConfigPort(t *testing.T) {
 	cfg := minimalConfig()
 	cfg.Auth.Port = 4001
@@ -218,8 +218,8 @@ func TestAuthHealthcheckUsesConfigPort(t *testing.T) {
 	}
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
-	if !strings.Contains(hcStr, "4000") {
-		t.Errorf("healthcheck URL must always use container port 4000, got: %s", hcStr)
+	if !strings.Contains(hcStr, "4002") {
+		t.Errorf("healthcheck URL must always use container port 4002, got: %s", hcStr)
 	}
 	if strings.Contains(hcStr, "4001") {
 		t.Errorf("healthcheck URL must NOT contain host AUTH_PORT 4001, got: %s", hcStr)

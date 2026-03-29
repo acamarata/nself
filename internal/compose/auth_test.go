@@ -251,31 +251,31 @@ func TestComputeAllowedRedirectURLs_FrontendApps(t *testing.T) {
 
 // ── buildAuthService integration ─────────────────────────────────────────────
 
-// TestBuildAuthService_Port4000 verifies that the auth service exposes port 4000
-// and not Hasura's port 8080.
+// TestBuildAuthService_Port4000 verifies that the auth service host mapping uses
+// Auth.Port and maps to the container's internal port 4002.
 func TestBuildAuthService_Port4000(t *testing.T) {
 	cfg := minimalConfig() // Auth.Port = 4000
 
 	g := NewGenerator(cfg)
 	svc := g.buildAuthService()
 
-	found4000 := false
+	found := false
 	for _, p := range svc.Ports {
-		if strings.Contains(p, "4000") {
-			found4000 = true
+		if strings.Contains(p, "4000") && strings.Contains(p, "4002") {
+			found = true
 		}
 		if strings.Contains(p, "8080") {
 			t.Errorf("auth service port mapping must not reference 8080 (Hasura port), got: %s", p)
 		}
 	}
-	if !found4000 {
-		t.Errorf("auth service Ports must contain 4000; got: %v", svc.Ports)
+	if !found {
+		t.Errorf("auth service Ports must map host 4000 to container 4002; got: %v", svc.Ports)
 	}
 }
 
-// TestBuildAuthService_HealthcheckPort4000 verifies that the healthcheck URL
-// uses port 4000 (the auth port) and not port 8080 (the Hasura port).
-func TestBuildAuthService_HealthcheckPort4000(t *testing.T) {
+// TestBuildAuthService_HealthcheckPort4002 verifies that the healthcheck URL
+// uses port 4002 (nhost/hasura-auth internal port) and not port 8080 (Hasura).
+func TestBuildAuthService_HealthcheckPort4002(t *testing.T) {
 	cfg := minimalConfig()
 
 	g := NewGenerator(cfg)
@@ -287,19 +287,19 @@ func TestBuildAuthService_HealthcheckPort4000(t *testing.T) {
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
 
-	if !strings.Contains(hcStr, "4000") {
-		t.Errorf("auth healthcheck must reference port 4000, got: %s", hcStr)
+	if !strings.Contains(hcStr, "4002") {
+		t.Errorf("auth healthcheck must reference port 4002, got: %s", hcStr)
 	}
 	if strings.Contains(hcStr, "8080") {
 		t.Errorf("auth healthcheck must not reference port 8080 (Hasura), got: %s", hcStr)
 	}
 }
 
-// TestBuildAuthService_HealthcheckHardcoded4000 verifies that the healthcheck
-// uses the hardcoded container port 4000 even when AUTH_PORT is set to a
-// different value. nhost/hasura-auth always binds on 4000 internally — the
+// TestBuildAuthService_HealthcheckHardcoded4002 verifies that the healthcheck
+// uses the hardcoded container port 4002 even when AUTH_PORT is set to a
+// different value. nhost/hasura-auth always binds on 4002 internally — the
 // AUTH_PORT env var controls only the host-side port mapping.
-func TestBuildAuthService_HealthcheckHardcoded4000(t *testing.T) {
+func TestBuildAuthService_HealthcheckHardcoded4002(t *testing.T) {
 	cfg := minimalConfig()
 	cfg.Auth.Port = 4001 // non-default host port
 
@@ -312,21 +312,21 @@ func TestBuildAuthService_HealthcheckHardcoded4000(t *testing.T) {
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
 
-	if !strings.Contains(hcStr, "4000") {
-		t.Errorf("auth healthcheck must always use container port 4000, got: %s", hcStr)
+	if !strings.Contains(hcStr, "4002") {
+		t.Errorf("auth healthcheck must always use container port 4002, got: %s", hcStr)
 	}
 	if strings.Contains(hcStr, "4001") {
 		t.Errorf("auth healthcheck must not use host AUTH_PORT 4001, got: %s", hcStr)
 	}
 
-	// Port mapping must be host:container = 4001:4000
+	// Port mapping must be host:container = 4001:4002
 	found := false
 	for _, p := range svc.Ports {
-		if strings.Contains(p, "4001") && strings.Contains(p, "4000") {
+		if strings.Contains(p, "4001") && strings.Contains(p, "4002") {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("auth port mapping must be host:4001->container:4000; got: %v", svc.Ports)
+		t.Errorf("auth port mapping must be host:4001->container:4002; got: %v", svc.Ports)
 	}
 }
