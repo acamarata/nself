@@ -1,12 +1,19 @@
 # Plugin Overview
 
+## Contents
+
+- [Plugin Tiers](#plugin-tiers)
+- [Plugin Categories](#plugin-categories)
+- [How Plugins Work](#how-plugins-work)
+- [Related Pages](#related-pages)
+
 nSelf plugins extend your backend stack with additional services and capabilities. Install them with a single command — no manual Docker configuration required.
 
 ## Plugin Tiers
 
 | Tier | Price | Includes |
 |------|-------|---------|
-| **Free** | $0 | Core CLI + 25 free plugins (MIT licensed) |
+| **Free** | $0 | Core CLI + 16 free plugins (MIT licensed) |
 | **Basic** | $0.99/mo or $9.99/yr | All 59 pro plugins |
 | **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | **Elite** | $4.99/mo or $49.99/yr | Pro + email support |
@@ -18,22 +25,20 @@ Annual plans save ~17% compared to monthly. Existing $9.99/yr keys are grandfath
 
 ## Plugin Categories
 
-### Free Plugins (25) — MIT Licensed
+### Free Plugins (16) — MIT Licensed
 
 No license key required. Install with `nself plugin install {name}`.
 
 | Category | Plugins |
 |----------|---------|
-| Monitoring | monitoring (10 sub-services) |
-| ML | mlflow |
-| Background Jobs | backup, cron, jobs |
-| Notifications | notify, notifications |
+| Background Jobs | jobs |
 | Search | search |
 | Feature Management | feature-flags, webhooks |
 | Identity | invitations, tokens |
-| Integrations | github, github-runner, donorbox |
+| Integrations | github, github-runner |
 | Content | content-acquisition, content-progress, torrent-manager, subtitle-manager |
 | Network | vpn, mdns, link-preview |
+| Notifications | notifications |
 
 ### Pro Plugins (59) — License Key Required
 
@@ -69,3 +74,6 @@ After installing any plugin, run `nself build` to regenerate your compose file.
 - [[Plugin-Licensing]] — License keys, tiers, and validation
 - [[Plugin-Dev-Guide]] — Build your own plugin
 - [[Plugin-Architecture]] — Technical internals
+
+---
+← [[Home]] | [[_Sidebar]]

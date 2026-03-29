@@ -1,16 +1,35 @@
 # FAQ
 
+## Contents
+
+- [What is nSelf?](#what-is-nself)
+- [Is nSelf free?](#is-nself-free)
+- [What is the difference between free and Pro plugins?](#what-is-the-difference-between-free-and-pro-plugins)
+- [Can I run multiple nSelf projects on one server?](#can-i-run-multiple-nself-projects-on-one-server)
+- [How does nSelf compare to Supabase or Nhost?](#how-does-nself-compare-to-supabase-or-nhost)
+- [Does nSelf require Docker?](#does-nself-require-docker)
+- [What ports does nSelf use?](#what-ports-does-nself-use)
+- [How do I update nSelf?](#how-do-i-update-nself)
+- [How do I back up my data?](#how-do-i-back-up-my-data)
+- [Where are config files stored?](#where-are-config-files-stored)
+- [How do I add a custom service?](#how-do-i-add-a-custom-service)
+- [Does nSelf support ARM / Apple Silicon?](#does-nself-support-arm--apple-silicon)
+- [How do I reset the Hasura admin password?](#how-do-i-reset-the-hasura-admin-password)
+- [Can I use nSelf in CI/CD?](#can-i-use-nself-in-cicd)
+- [How do I report a security issue?](#how-do-i-report-a-security-issue)
+- [How do I contribute a plugin?](#how-do-i-contribute-a-plugin)
+
 ## What is nSelf?
 
 nSelf is an open-source CLI that spins up a complete self-hosted backend stack — PostgreSQL, Hasura GraphQL, Auth, and Nginx — in five minutes. You run it on your own server or local machine; there is no cloud dependency.
 
 ## Is nSelf free?
 
-Yes. The core CLI and 25 free plugins are MIT licensed and free forever, including commercial use. Revenue comes from 59 paid Pro plugins starting at $9.99/year.
+Yes. The core CLI and 16 free plugins are MIT licensed and free forever, including commercial use. Revenue comes from 59 paid Pro plugins starting at $9.99/year.
 
 ## What is the difference between free and Pro plugins?
 
-Free plugins (25) handle foundational use cases: monitoring, backup, cron, search, notifications, and more. Pro plugins (59) add advanced capabilities: AI, live video (LiveKit), commerce, CMS, SSO/SAML, media transcoding, DRM, WAF, and more. Pro plugins require a license key from [nself.org](https://nself.org).
+Free plugins (16) handle foundational use cases: monitoring, backup, cron, search, notifications, and more. Pro plugins (59) add advanced capabilities: AI, live video (LiveKit), commerce, CMS, SSO/SAML, media transcoding, DRM, WAF, and more. Pro plugins require a license key from [nself.org](https://nself.org).
 
 ## Can I run multiple nSelf projects on one server?
 
@@ -83,3 +102,6 @@ Email `security@nself.org` or open a private advisory on GitHub. Do not file pub
 ## How do I contribute a plugin?
 
 Read [[Plugin-Dev-Guide]] for the plugin SDK and submission process. Free plugins are accepted via pull request to the `nself-org/plugins` repository. Pro plugins are reviewed privately.
+
+---
+← [[Home]] | [[_Sidebar]]

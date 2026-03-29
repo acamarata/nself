@@ -1,6 +1,15 @@
 # Features
 
-nSelf v1.0 ships a complete self-hosted backend stack with 24 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 25 free and 59 pro plugins.
+## Contents
+
+- [Core Stack](#core-stack)
+- [Optional Services](#optional-services)
+- [CLI](#cli)
+- [Plugin System](#plugin-system)
+- [Security](#security)
+- [Feature Details](#feature-details)
+
+nSelf v1.0 ships a complete self-hosted backend stack with 24 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 16 free and 59 Pro plugins.
 
 ## Core Stack
 
@@ -39,7 +48,7 @@ nSelf v1.0 ships a complete self-hosted backend stack with 24 CLI commands, 4 co
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Free plugins (25) | ✅ | MIT licensed, no key required |
+| Free plugins (16) | ✅ | MIT licensed, no key required |
 | Pro plugins (59) | ✅ | Tier-gated, license key required |
 | Compose overlay | ✅ | Plugins inject Docker services |
 | Nginx injection | ✅ | Plugins add location blocks |

@@ -1,6 +1,6 @@
 # Commands
 
-nSelf CLI v2 provides 24 top-level commands.
+nSelf CLI provides 24 top-level commands. Each command links to a dedicated page with full usage, flags, and examples.
 
 | Command | Description |
 |---------|-------------|
@@ -28,3 +28,6 @@ nSelf CLI v2 provides 24 top-level commands.
 | [[cmd-admin]] | Open the nSelf Admin dashboard in browser at `localhost:3021` |
 | [[cmd-completion]] | Generate shell completion scripts for bash, zsh, or fish |
 | [[cmd-license]] | Manage Pro membership license key — set, show, validate, clear, upgrade |
+
+---
+← [[Home]] | [[_Sidebar]]

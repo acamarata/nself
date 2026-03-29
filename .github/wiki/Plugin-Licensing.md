@@ -79,7 +79,7 @@ NSELF_LICENSE_SKIP_VERIFY=1 nself plugin install {name}
 
 | Tier | Monthly | Annual | Plugin Access |
 |------|---------|--------|--------------|
-| Free | $0 | $0 | 25 free plugins only |
+| Free | $0 | $0 | 16 free plugins only |
 | Basic | $0.99 | $9.99 | All 59 pro plugins |
 | Pro | $1.99 | $19.99 | Basic + full AI suite |
 | Elite | $4.99 | $49.99 | Pro + email support |

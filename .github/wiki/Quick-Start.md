@@ -1,5 +1,14 @@
 # Quick Start
 
+## Contents
+
+- [Step 1 — Initialize](#step-1--initialize)
+- [Step 2 — Build](#step-2--build)
+- [Step 3 — Start](#step-3--start)
+- [Step 4 — View URLs](#step-4--view-urls)
+- [Step 5 — Run a GraphQL Query](#step-5--run-a-graphql-query)
+- [Step 6 — Stop](#step-6--stop)
+
 Get a full backend running in under 5 minutes.
 
 ## Step 1 — Initialize
@@ -92,5 +101,4 @@ nself stop
 Gracefully shuts down all containers. Data is preserved in Docker volumes.
 
 ---
-
-Next: [[First-Project]] · [[Commands]]
+← [[Installation]] | [[Home]] | [[First-Project]] →

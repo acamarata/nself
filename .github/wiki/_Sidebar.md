@@ -1,59 +1,29 @@
-[[Home]]
+**[[Home]]**
+
+---
 
 **Getting Started**
-- [[Getting-Started]]
 - [[Installation]]
 - [[Quick-Start]]
 - [[First-Project]]
 - [[Upgrading-from-v1]]
+- [[FAQ]]
 
-**Command Reference**
-- [[Commands]]
-  - [[cmd-init]]
-  - [[cmd-build]]
-  - [[cmd-start]]
-  - [[cmd-stop]]
-  - [[cmd-restart]]
-  - [[cmd-status]]
-  - [[cmd-logs]]
-  - [[cmd-urls]]
-  - [[cmd-config]]
-  - [[cmd-service]]
-  - [[cmd-ssl]]
-  - [[cmd-db]]
-  - [[cmd-plugin]]
-  - [[cmd-doctor]]
-  - [[cmd-health]]
-  - [[cmd-exec]]
-  - [[cmd-clean]]
-  - [[cmd-reset]]
-  - [[cmd-update]]
-  - [[cmd-version]]
-  - [[cmd-migrate]]
-  - [[cmd-admin]]
-  - [[cmd-completion]]
-  - [[cmd-license]]
+---
 
-**Architecture**
-- [[Architecture]]
-- [[Service-Graph]]
-- [[Config-System]]
-- [[Compose-Generation]]
-- [[Nginx-Generation]]
-- [[Plugin-Architecture]]
+**Commands**
+- [[Commands]] — Overview
+- _Lifecycle:_ [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]]
+- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]]
+- _Data:_ [[cmd-db]]
+- _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-ssl]]
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]]
+- _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-completion]]
 
-**Configuration**
-- [[Configuration]]
-- [[Config-Env-Vars]]
-- [[Config-Postgres]]
-- [[Config-Hasura]]
-- [[Config-Auth]]
-- [[Config-Nginx]]
-- [[Config-Optional-Services]]
-- [[Config-Custom-Services]]
+---
 
 **Features**
-- [[Features]]
+- [[Features]] — Overview
 - [[Feature-Auth]]
 - [[Feature-Storage]]
 - [[Feature-Search]]
@@ -62,119 +32,146 @@
 - [[Feature-Monitoring]]
 - [[Feature-Plugins]]
 
-**Plugins**
+---
+
+**Configuration**
+- [[Configuration]] — Overview
+- [[Config-Env-Vars]]
+- [[Config-Postgres]]
+- [[Config-Hasura]]
+- [[Config-Auth]]
+- [[Config-Nginx]]
+- [[Config-Optional-Services]]
+- [[Config-Custom-Services]]
+- [[Config-System]]
+
+---
+
+**Plugins (75)**
 - [[Plugin-Overview]]
 - [[Plugin-Install]]
 - [[Plugin-Licensing]]
-- Free Plugins
-  - [[plugin-monitoring]]
-  - [[plugin-mlflow]]
-  - [[plugin-backup]]
-  - [[plugin-cron]]
-  - [[plugin-notify]]
-  - [[plugin-jobs]]
-  - [[plugin-feature-flags]]
-  - [[plugin-webhooks]]
-  - [[plugin-notifications]]
-  - [[plugin-search]]
-  - [[plugin-invitations]]
-  - [[plugin-link-preview]]
-  - [[plugin-github]]
-  - [[plugin-github-runner]]
+- [[Plugin-Architecture]]
+- [[Plugin-Dev-Guide]]
+
+<details><summary>Free (16)</summary>
+
   - [[plugin-content-acquisition]]
   - [[plugin-content-progress]]
-  - [[plugin-torrent-manager]]
+  - [[plugin-feature-flags]]
+  - [[plugin-github]]
+  - [[plugin-github-runner]]
+  - [[plugin-invitations]]
+  - [[plugin-jobs]]
+  - [[plugin-link-preview]]
+  - [[plugin-mdns]]
+  - [[plugin-notifications]]
+  - [[plugin-search]]
   - [[plugin-subtitle-manager]]
   - [[plugin-tokens]]
+  - [[plugin-torrent-manager]]
   - [[plugin-vpn]]
-  - [[plugin-mdns]]
-  - [[plugin-donorbox]]
-- Pro Plugins
+  - [[plugin-webhooks]]
+
+</details>
+
+<details><summary>Pro (59)</summary>
+
   - [[plugin-ai]]
   - [[plugin-claw]]
+  - [[plugin-claw-web]]
   - [[plugin-mux]]
   - [[plugin-voice]]
   - [[plugin-browser]]
-  - [[plugin-flow]]
+  - [[plugin-bots]]
+  - [[plugin-workflows]]
   - [[plugin-chat]]
   - [[plugin-livekit]]
-  - [[plugin-twilio]]
-  - [[plugin-sendgrid]]
-  - [[plugin-mailgun]]
-  - [[plugin-post]]
-  - [[plugin-postmark]]
+  - [[plugin-streaming]]
+  - [[plugin-realtime]]
+  - [[plugin-podcast]]
+  - [[plugin-meetings]]
+  - [[plugin-recording]]
   - [[plugin-commerce]]
   - [[plugin-stripe]]
+  - [[plugin-paypal]]
+  - [[plugin-shopify]]
   - [[plugin-subscription]]
   - [[plugin-checkout]]
+  - [[plugin-donorbox-pro]]
+  - [[plugin-entitlements]]
   - [[plugin-cms]]
   - [[plugin-blog]]
   - [[plugin-pages]]
-  - [[plugin-media]]
-  - [[plugin-analytics]]
-  - [[plugin-reports]]
-  - [[plugin-export]]
-  - [[plugin-import]]
+  - [[plugin-social]]
+  - [[plugin-activity-feed]]
+  - [[plugin-moderation]]
+  - [[plugin-knowledge-base]]
+  - [[plugin-support]]
+  - [[plugin-documents]]
+  - [[plugin-calendar]]
+  - [[plugin-post]]
+  - [[plugin-sendgrid]]
+  - [[plugin-mailgun]]
+  - [[plugin-postmark]]
+  - [[plugin-twilio]]
+  - [[plugin-auth]]
   - [[plugin-sso]]
   - [[plugin-saml]]
   - [[plugin-ldap]]
   - [[plugin-oauth-providers]]
-  - [[plugin-backup-pro]]
-  - [[plugin-cron-pro]]
-  - [[plugin-notify-pro]]
-  - [[plugin-scheduler]]
+  - [[plugin-access-controls]]
+  - [[plugin-idme]]
+  - [[plugin-compliance]]
+  - [[plugin-admin-api]]
+  - [[plugin-audit]]
+  - [[plugin-waf]]
+  - [[plugin-rate-limit]]
+  - [[plugin-google]]
+  - [[plugin-cloudflare]]
+  - [[plugin-object-storage]]
+  - [[plugin-cdn]]
+  - [[plugin-observability]]
+  - [[plugin-ddns]]
+  - [[plugin-devices]]
+  - [[plugin-vpn]]
+  - [[plugin-mdns]]
+  - [[plugin-media]]
+  - [[plugin-media-processing]]
+  - [[plugin-file-processing]]
+  - [[plugin-photos]]
+  - [[plugin-stream-gateway]]
+  - [[plugin-epg]]
   - [[plugin-transcoder]]
   - [[plugin-thumb]]
   - [[plugin-watermark]]
   - [[plugin-drm]]
-  - [[plugin-access-controls]]
-  - [[plugin-activity-feed]]
-  - [[plugin-admin-api]]
-  - [[plugin-auth]]
-  - [[plugin-bots]]
-  - [[plugin-calendar]]
-  - [[plugin-cdn]]
-  - [[plugin-claw-web]]
-  - [[plugin-cloudflare]]
-  - [[plugin-compliance]]
-  - [[plugin-ddns]]
-  - [[plugin-devices]]
-  - [[plugin-documents]]
-  - [[plugin-donorbox-pro]]
-  - [[plugin-entitlements]]
-  - [[plugin-epg]]
-  - [[plugin-file-processing]]
+  - [[plugin-cron-pro]]
+  - [[plugin-notify-pro]]
+  - [[plugin-scheduler]]
+  - [[plugin-backup-pro]]
+  - [[plugin-analytics]]
+  - [[plugin-reports]]
+  - [[plugin-export]]
+  - [[plugin-import]]
+  - [[plugin-tmdb]]
   - [[plugin-game-metadata]]
-  - [[plugin-geocoding]]
-  - [[plugin-geolocation]]
-  - [[plugin-google]]
-  - [[plugin-home]]
-  - [[plugin-idme]]
-  - [[plugin-knowledge-base]]
-  - [[plugin-media-processing]]
-  - [[plugin-meetings]]
-  - [[plugin-moderation]]
-  - [[plugin-object-storage]]
-  - [[plugin-observability]]
-  - [[plugin-paypal]]
-  - [[plugin-photos]]
-  - [[plugin-podcast]]
-  - [[plugin-realtime]]
-  - [[plugin-recording]]
   - [[plugin-retro-gaming]]
   - [[plugin-rom-discovery]]
-  - [[plugin-shopify]]
-  - [[plugin-social]]
   - [[plugin-sports]]
-  - [[plugin-stream-gateway]]
-  - [[plugin-streaming]]
-  - [[plugin-support]]
-  - [[plugin-tmdb]]
+  - [[plugin-geocoding]]
+  - [[plugin-geolocation]]
+  - [[plugin-home]]
   - [[plugin-web3]]
-  - [[plugin-workflows]]
-  - [[plugin-audit]]
-  - [[plugin-waf]]
-  - [[plugin-rate-limit]]
+  - [[plugin-flow]]
+  - [[plugin-content-acquisition]]
+  - [[plugin-content-progress]]
+  - [[plugin-torrent-manager]]
+  - [[plugin-subtitle-manager]]
+
+</details>
+
+---
 
 **Guides**
 - [[Guide-Production-Deployment]]
@@ -186,16 +183,23 @@
 - [[Guide-Custom-Services]]
 - [[Guide-Migration-from-v1]]
 
-**Contributing**
-- [[Contributing]]
-- [[Dev-Setup]]
-- [[Plugin-Dev-Guide]]
-- [[Release-Process]]
+---
+
+**Architecture**
+- [[Architecture]]
+- [[Service-Graph]]
+- [[Compose-Generation]]
+- [[Nginx-Generation]]
+- [[Plugin-Architecture]]
+
+---
 
 **Security**
 - [[Security-Policy]]
 - [[Security-Architecture]]
 - [[Security-Hardening]]
+
+---
 
 **Brand**
 - [[Branding]]
@@ -203,6 +207,14 @@
 - [[Logo-Usage]]
 - [[Color-Palette]]
 
-**Resources**
-- [[FAQ]]
-- [[Changelog]]
+---
+
+**Contributing**
+- [[Contributing]]
+- [[Dev-Setup]]
+- [[Plugin-Dev-Guide]]
+- [[Release-Process]]
+
+---
+
+[[Changelog]]

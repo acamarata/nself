@@ -1,5 +1,14 @@
 # Architecture
 
+## Contents
+
+- [System Overview](#system-overview)
+- [Core Services](#core-services)
+- [Data Flow](#data-flow)
+- [Service Isolation](#service-isolation)
+- [Optional Services](#optional-services)
+- [Custom Services](#custom-services)
+
 nSelf spins up a complete self-hosted backend in approximately five minutes. The CLI reads your project configuration, generates a Docker Compose file, and orchestrates all services automatically — you never write a compose file by hand. Postgres, Hasura, Auth, and Nginx are wired together and ready to accept connections the moment `nself start` completes.
 
 ## System Overview
@@ -91,4 +100,4 @@ CS_1=ping_api:rust-axum:8001:/ping
 Custom services follow the same isolation rules as built-in services: they bind to `127.0.0.1` and are only reachable externally through Nginx at the route you specify.
 
 ---
-**See also:** [[Service-Graph]] | [[Config-System]] | [[Compose-Generation]] | [[Home]]
+← [[Home]] | [[_Sidebar]]

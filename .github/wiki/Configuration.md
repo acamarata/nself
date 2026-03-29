@@ -1,5 +1,16 @@
 # Configuration
 
+## Contents
+
+- [Environment Files](#environment-files)
+- [Loading Cascade](#loading-cascade)
+- [Switching Environments](#switching-environments)
+- [Required vs. Auto-Generated Values](#required-vs-auto-generated-values)
+- [Validating Configuration](#validating-configuration)
+- [Setting Up a New Project](#setting-up-a-new-project)
+- [Security Notes](#security-notes)
+- [Sub-pages](#sub-pages)
+
 nSelf uses a layered `.env` file system for all configuration. Every service in your stack — Postgres, Hasura, Auth, Nginx, and any optional services — is driven entirely by environment variables. There is no YAML-based config format to learn; you set variables in `.env` files and the CLI generates the correct `docker-compose` output automatically.
 
 This page explains which files exist, what each one is for, how they stack together, and how to work with them day to day.

@@ -1,5 +1,14 @@
 # Installation
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [macOS](#macos)
+- [Linux](#linux)
+- [Manual Install](#manual-install)
+- [Verify Installation](#verify-installation)
+- [Uninstall](#uninstall)
+
 ## Prerequisites
 
 - **Docker** 24 or later
@@ -64,5 +73,4 @@ rm -rf ~/.nself
 This removes the CLI binary and the local state directory. Your project `.env` files and Docker volumes are not touched.
 
 ---
-
-Next: [[Quick-Start]]
+← [[Home]] | [[Quick-Start]] →
