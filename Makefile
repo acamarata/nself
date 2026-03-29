@@ -1,5 +1,5 @@
 BINARY := nself
-MODULE := nself
+MODULE := github.com/nself-org/cli
 DIST_DIR := dist
 VERSION := $(shell cat .github/VERSION 2>/dev/null || git describe --tags 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")

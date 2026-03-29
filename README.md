@@ -1,7 +1,7 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
 [![Go](https://img.shields.io/badge/go-1.25%2B-00ADD8.svg)](https://go.dev/)
-[![Status](https://img.shields.io/badge/status-pre--release-orange.svg)](https://github.com/nself-org/cli/releases)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/nself-org/cli/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#prerequisites)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/nself-org/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nself-org/cli/actions)
