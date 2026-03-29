@@ -1,6 +1,6 @@
 # nself migrate
 
-> Detect and migrate nSelf v1 artifacts to v2.
+> Detect and migrate nSelf v0.x artifacts to v1.0.0.
 
 ## Synopsis
 

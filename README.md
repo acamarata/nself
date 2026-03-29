@@ -352,7 +352,7 @@ nself db            # Database operations (migrate, seed, backup, restore, shell
 nself service       # Service management (enable, disable, list)
 nself config        # Configuration (show, get, set, list, validate, export, import)
 nself plugin        # Plugin system (install, remove, update, list, start, stop, status)
-nself ssl           # SSL certificate management (status, renew)
+nself ssl           # SSL certificate management (status, renew [domain])
 nself license       # Pro license management (set, show, validate, clear, upgrade)
 nself doctor        # System diagnostics (--fix for auto-repair)
 nself health        # Health checks (check, watch, history)
@@ -426,7 +426,6 @@ nSelf provides automatic SSL with green locks in browsers, no warnings.
 
 ```bash
 nself build              # Automatically generates SSL certificates
-nself auth ssl trust     # Install root CA for green locks (one-time)
 ```
 
 Your browser will show green locks for:
@@ -438,68 +437,33 @@ Your browser will show green locks for:
 1. **`*.localhost`** - Works offline, no DNS needed
 2. **`*.local.nself.org`** - Loopback domain (resolves to 127.0.0.1)
 
-### Public Wildcard Certificates
-
-For teams or CI/CD, get globally-trusted certificates:
+### SSL Commands
 
 ```bash
-# Add to .env
-DNS_PROVIDER=cloudflare        # or route53, digitalocean
-DNS_API_TOKEN=your_api_token
-
-# Generate public wildcard
-nself auth ssl generate
+nself ssl status         # Show certificate expiry, covered domains, and validity
+nself ssl renew          # Reload nginx with existing certificates
+nself ssl renew <domain> # Reload nginx and run certbot renewal for a domain
 ```
-
-Supported DNS providers: Cloudflare, AWS Route53, DigitalOcean, and more via acme.sh.
 
 ---
 
 ## Backup and Restore
 
-### Comprehensive Backup System
+### Database Backup and Restore
 
 ```bash
-# Create backups
-nself backup create              # Full backup (database, config, volumes)
-nself backup create database     # Database only
-nself backup create config       # Configuration only
+# Create a pg_dump backup (timestamped filename)
+nself db backup
 
-# Restore from backup
-nself backup restore backup_20260201_143022.tar.gz
+# Backup to a specific file
+nself db backup /tmp/mybackup.sql
 
-# List all backups
-nself backup list
+# List available backups
+nself db backup list
+
+# Restore from a backup
+nself db restore /tmp/mybackup.sql
 ```
-
-### Cloud Storage Support
-
-```bash
-nself backup cloud setup
-
-# Supported providers:
-# - Amazon S3 / MinIO
-# - Dropbox, Google Drive, OneDrive
-# - 40+ providers via rclone
-```
-
-### Automated Backups
-
-```bash
-nself backup schedule --daily --time "02:00"
-nself backup clean --age 30      # Remove backups older than 30 days
-```
-
-### What Gets Backed Up
-
-Full backup includes:
-- PostgreSQL databases (complete dump)
-- All environment files (.env.dev, .env.staging, .env.prod, .env.secrets)
-- Docker-compose configurations
-- Docker volumes (all project data)
-- SSL certificates
-- Hasura metadata
-- Nginx configurations
 
 ---
 
@@ -629,13 +593,18 @@ nself db update                     # Safely apply migrations
 
 ### Database Commands
 ```bash
-nself db                # Show all database commands
-nself db run            # Generate migrations from schema.dbml
-nself db update         # Apply pending migrations and seeds
-nself db seed           # Apply seed data (dev or prod based on ENV)
-nself db status         # Check database state
-nself db revert         # Restore from backup
-nself db sync           # Pull schema from dbdiagram.io
+nself db                    # Show all database commands
+nself db migrate up         # Apply pending migrations
+nself db migrate down       # Revert last migration
+nself db migrate status     # Show migration status
+nself db migrate create <name>  # Create new migration file
+nself db seed               # Apply seed data
+nself db backup             # Create pg_dump backup (timestamped)
+nself db backup list        # List available backups with size and date
+nself db restore <file>     # Restore database from backup file
+nself db shell              # Open interactive psql shell
+nself db drop               # Drop the project database (DESTRUCTIVE)
+nself db reset              # Drop and recreate database (DESTRUCTIVE)
 ```
 
 ---
@@ -685,7 +654,8 @@ nself build && nself restart
 
 **SSL certificate warnings?**
 ```bash
-nself auth ssl trust    # Install root CA (one-time)
+nself ssl status        # Check certificate status
+nself ssl renew         # Reload nginx with existing certificates
 ```
 
 **Email test not working?**

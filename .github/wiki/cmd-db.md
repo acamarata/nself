@@ -26,8 +26,10 @@ The `hasura` subgroup controls Hasura metadata — useful for applying tracked t
 | `migrate create <name>` | Create a new migration file |
 | `seed [file]` | Run seed data (default seed file if not specified) |
 | `backup [file]` | Create a `pg_dump` backup (timestamped filename if omitted) |
+| `backup list` | List available backups with size and date |
 | `restore <file>` | Restore database from a backup file |
 | `shell` | Open interactive `psql` shell in the PostgreSQL container |
+| `drop` | Drop the project database — **DESTRUCTIVE** |
 | `reset` | Drop and recreate the database — **DESTRUCTIVE** |
 | `hasura console` | Open the Hasura Console in browser |
 | `hasura metadata apply` | Apply Hasura metadata from files |
@@ -40,6 +42,9 @@ The `hasura` subgroup controls Hasura metadata — useful for applying tracked t
 |------|---------|-------------|
 | `--plugin` | `""` | Migrate a specific plugin schema (for `migrate` subcommands) |
 | `--force`, `-f` | false | Skip confirmation prompt (for `reset`) |
+| `--yes` | false | Skip confirmation prompt (for `drop`, `reset`, `restore`) |
+| `--overwrite` | false | Allow overwriting existing data (for `restore`) |
+| `--format` | `""` | Output format: `table` (default) or `json` (for `backup list`) |
 | `--help`, `-h` | — | Show help |
 
 ## Examples
@@ -78,11 +83,23 @@ nself db restore /tmp/backup-2026-03-28.sql
 # Open an interactive psql shell
 nself db shell
 
+# Drop the project database (interactive confirmation)
+nself db drop
+
+# Drop without confirmation (CI)
+nself db drop --yes
+
 # Drop and recreate database (interactive confirmation)
 nself db reset
 
 # Drop and recreate without confirmation (CI)
 nself db reset --force
+
+# List available backups (table format)
+nself db backup list
+
+# List available backups in JSON format
+nself db backup list --format json
 
 # Open Hasura Console
 nself db hasura console
