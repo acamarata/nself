@@ -96,15 +96,19 @@ func runStop(cmd *cobra.Command, args []string) error {
 
 	compose := docker.NewCompose(composeFiles...)
 
-	// Check running containers.
-	containers, err := compose.ComposePs(ctx, workdir)
-	if err != nil {
+	// Check running containers. If the query fails (e.g. docker compose ps
+	// exits non-zero on certain Debian/Docker combinations even when containers
+	// are running) we treat the state as unknown and proceed with the stop so
+	// that services are not left dangling. The early-return "nothing to do"
+	// path is only taken when the query succeeded and returned an empty list.
+	containers, psErr := compose.ComposePs(ctx, workdir)
+	if psErr != nil {
 		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: could not list containers: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: could not list containers: %v\n", psErr)
 		}
 	}
 
-	if len(containers) == 0 && len(args) == 0 {
+	if psErr == nil && len(containers) == 0 && len(args) == 0 {
 		fmt.Println("No running containers found.")
 		if volumes || rmi || removeOrphans {
 			fmt.Println("Running cleanup with requested flags...")
@@ -193,9 +197,13 @@ func runStop(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Summary.
-	runningCount := len(containers)
-	fmt.Printf("Stopped %d container(s).", runningCount)
+	// Summary. When psErr != nil we could not determine the container count
+	// beforehand, so report "stopped" generically rather than "0 container(s)".
+	if psErr != nil {
+		fmt.Print("Services stopped.")
+	} else {
+		fmt.Printf("Stopped %d container(s).", len(containers))
+	}
 	if volumes {
 		fmt.Print(" Volumes removed.")
 	}
