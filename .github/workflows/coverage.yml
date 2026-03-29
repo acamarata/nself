@@ -9,13 +9,15 @@ on:
 jobs:
   coverage:
     runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: Run tests with coverage
-        run: go test -coverprofile=coverage.out ./...
+        run: go test -mod=vendor -coverprofile=coverage.out ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:

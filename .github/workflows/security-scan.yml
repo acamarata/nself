@@ -17,6 +17,8 @@ jobs:
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Run govulncheck
+        env:
+          GOFLAGS: -mod=vendor
         run: govulncheck ./...
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
