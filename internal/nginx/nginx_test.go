@@ -486,6 +486,143 @@ func TestInternalRouteGenerated(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Bug #68 — nginx fails to start due to missing SSL certs on fresh install
+//
+// Root cause (v0.x): on fresh `nself init` + `nself build` + `nself start`,
+// nginx crashed because SSL cert files didn't exist yet. The nginx config
+// referenced ssl_certificate / ssl_certificate_key directives pointing to cert
+// files that the SSL generator hadn't created yet.
+//
+// Go rewrite fix: NewGenerator sets hasSSL=true only when SSL_MODE is "local"
+// (the default for local dev, where mkcert/OpenSSL generates certs as part of
+// `nself build`). For all other SSL modes (letsencrypt, custom, none) hasSSL
+// is false, so the generated nginx config omits ssl_certificate directives.
+// Nginx can then start without cert files, and certs are provisioned after.
+//
+// These tests verify:
+//  1. Local mode generates SSL directives (certs will be present from build).
+//  2. Non-local modes omit SSL directives so nginx starts without cert files.
+// ---------------------------------------------------------------------------
+
+// TestNginxGenerator_LocalSSLMode_HasSSLTrue verifies that NewGenerator with
+// SSL_MODE="" (empty, defaults to "local") sets hasSSL=true.
+// In local mode, `nself build` always generates self-signed certs first, so
+// it is safe for nginx to reference them.
+func TestNginxGenerator_LocalSSLMode_HasSSLTrue(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+		// SSLMode="" defaults to "local" in NewGenerator.
+	}
+	cfg = config.ApplyDefaults(cfg)
+	cfg.SSLMode = "" // explicit empty → local
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if !gen.hasSSL {
+		t.Error("Bug #68 regression: local SSL mode should set hasSSL=true")
+	}
+}
+
+// TestNginxGenerator_LetsEncryptMode_HasSSLFalse verifies that when SSL_MODE
+// is "letsencrypt", hasSSL is false so nginx does not reference cert files
+// that certbot has not yet provisioned.
+func TestNginxGenerator_LetsEncryptMode_HasSSLFalse(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+		SSLMode:    "letsencrypt",
+	}
+	cfg = config.ApplyDefaults(cfg)
+	cfg.SSLMode = "letsencrypt"
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if gen.hasSSL {
+		t.Error("Bug #68 regression: letsencrypt SSL mode must set hasSSL=false (no certs on first boot)")
+	}
+}
+
+// TestNginxGenerator_CustomSSLMode_HasSSLFalse verifies that SSL_MODE="custom"
+// does not inject ssl_certificate directives (user provides their own certs).
+func TestNginxGenerator_CustomSSLMode_HasSSLFalse(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+		SSLMode:    "custom",
+	}
+	cfg = config.ApplyDefaults(cfg)
+	cfg.SSLMode = "custom"
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if gen.hasSSL {
+		t.Error("Bug #68 regression: custom SSL mode must set hasSSL=false")
+	}
+}
+
+// TestNginxGenerator_NoneSSLMode_HasSSLFalse verifies that SSL_MODE="none"
+// produces nginx configs without any SSL directives.
+func TestNginxGenerator_NoneSSLMode_HasSSLFalse(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+		SSLMode:    "none",
+	}
+	cfg = config.ApplyDefaults(cfg)
+	cfg.SSLMode = "none"
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if gen.hasSSL {
+		t.Error("Bug #68 regression: SSL_MODE=none must set hasSSL=false")
+	}
+}
+
+// TestNginxDefaultServer_LetsEncryptOmitsSSLCertDirs verifies that the
+// generated default.conf does NOT contain ssl_certificate directives when
+// SSL_MODE is letsencrypt — nginx must be able to start before certbot runs.
+func TestNginxDefaultServer_LetsEncryptOmitsSSLCertDirs(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+	}
+	cfg = config.ApplyDefaults(cfg)
+	cfg.SSLMode = "letsencrypt"
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if err := gen.parseTemplates(); err != nil {
+		t.Fatalf("parseTemplates: %v", err)
+	}
+
+	out, err := gen.generateDefaultServer()
+	if err != nil {
+		t.Fatalf("generateDefaultServer: %v", err)
+	}
+
+	if strings.Contains(out, "ssl_certificate ") {
+		t.Errorf("Bug #68 regression: letsencrypt default.conf must not contain ssl_certificate directive\ngot:\n%s", out)
+	}
+}
+
+// TestNginxDefaultServer_LocalModeIncludesSSLCertDirs verifies that the
+// generated default.conf DOES contain ssl_certificate directives when
+// SSL_MODE is "local" — because `nself build` always generates the certs
+// before writing the compose stack.
+func TestNginxDefaultServer_LocalModeIncludesSSLCertDirs(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+	}
+	cfg = config.ApplyDefaults(cfg)
+	// Leave SSLMode="" to use local default.
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if err := gen.parseTemplates(); err != nil {
+		t.Fatalf("parseTemplates: %v", err)
+	}
+
+	out, err := gen.generateDefaultServer()
+	if err != nil {
+		t.Fatalf("generateDefaultServer: %v", err)
+	}
+
+	if !strings.Contains(out, "ssl_certificate") {
+		t.Errorf("local SSL mode default.conf should contain ssl_certificate directive\ngot:\n%s", out)
+	}
+}
+
 // TestAuthRateLimitOverride verifies that setting AUTH_RATE_LIMIT=10r/m causes
 // the generated rate-limits.conf to use "10r/m" for the auth zone.
 func TestAuthRateLimitOverride(t *testing.T) {

@@ -3,8 +3,213 @@ package plugin
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
+
+// ---------------------------------------------------------------------------
+// Bug #64 — nself plugin install fails with registry format error
+//
+// Root cause (v0.x): install command failed when the live registry returned
+// plugins as a JSON object map ({"plugin_name": {...}}) instead of an array
+// ([{...}]). Only the array format was handled.
+//
+// Go rewrite fix: parseRegistryJSON detects the first non-whitespace byte of
+// the plugins field. '[' → array format (pro registry), '{' → object format
+// (free / live registry). Both formats are parsed and normalised into
+// []PluginManifest.
+//
+// These tests verify that both formats parse correctly and that unknown formats
+// return a descriptive error — not a silent empty list.
+// ---------------------------------------------------------------------------
+
+// TestParseRegistryJSON_ArrayFormat verifies that the pro-registry array format
+// is parsed correctly and all plugin fields are preserved.
+func TestParseRegistryJSON_ArrayFormat(t *testing.T) {
+	input := `{
+		"version": "1.0.0",
+		"plugins": [
+			{
+				"name": "notify",
+				"version": "1.0.0",
+				"description": "Push notifications",
+				"category": "messaging",
+				"tier": "basic",
+				"license": "source-available",
+				"repository": "https://github.com/nself-org/plugins-pro",
+				"checksum": "abc123"
+			}
+		]
+	}`
+
+	reg, err := parseRegistryJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("parseRegistryJSON (array format): %v", err)
+	}
+	if len(reg.Plugins) != 1 {
+		t.Fatalf("expected 1 plugin, got %d", len(reg.Plugins))
+	}
+	if reg.Plugins[0].Name != "notify" {
+		t.Errorf("expected plugin name %q, got %q", "notify", reg.Plugins[0].Name)
+	}
+	if reg.Plugins[0].Tier != "basic" {
+		t.Errorf("expected tier %q, got %q", "basic", reg.Plugins[0].Tier)
+	}
+}
+
+// TestParseRegistryJSON_ObjectFormat verifies that the free/live-registry object
+// format is parsed correctly. This is the format returned by plugins.nself.org
+// (Cloudflare Worker). A missing "name" field in the object value must be
+// backfilled from the map key.
+func TestParseRegistryJSON_ObjectFormat(t *testing.T) {
+	input := `{
+		"version": "1.0.0",
+		"plugins": {
+			"redis": {
+				"version": "1.0.0",
+				"description": "Redis caching",
+				"category": "caching",
+				"tier": "free",
+				"license": "MIT",
+				"repository": "https://github.com/nself-org/plugins",
+				"checksum": "def456"
+			},
+			"search": {
+				"name": "search",
+				"version": "1.1.0",
+				"description": "MeiliSearch full-text search",
+				"category": "search",
+				"tier": "free",
+				"license": "MIT",
+				"repository": "https://github.com/nself-org/plugins",
+				"checksum": "ghi789"
+			}
+		}
+	}`
+
+	reg, err := parseRegistryJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("Bug #64 regression: parseRegistryJSON (object format) failed: %v", err)
+	}
+	if len(reg.Plugins) != 2 {
+		t.Fatalf("expected 2 plugins, got %d", len(reg.Plugins))
+	}
+
+	// Build a name → plugin map for deterministic lookup (map iteration order varies).
+	byName := make(map[string]PluginManifest, len(reg.Plugins))
+	for _, p := range reg.Plugins {
+		byName[p.Name] = p
+	}
+
+	redisPlugin, ok := byName["redis"]
+	if !ok {
+		t.Fatalf("expected plugin %q (backfilled from key), not found in: %v", "redis", byName)
+	}
+	if redisPlugin.Tier != "free" {
+		t.Errorf("expected tier %q for redis, got %q", "free", redisPlugin.Tier)
+	}
+
+	searchPlugin, ok := byName["search"]
+	if !ok {
+		t.Fatalf("expected plugin %q not found", "search")
+	}
+	if searchPlugin.Version != "1.1.0" {
+		t.Errorf("expected version %q for search, got %q", "1.1.0", searchPlugin.Version)
+	}
+}
+
+// TestParseRegistryJSON_ObjectFormat_NameBackfill verifies that when the plugin
+// value object does not include a "name" field, it is backfilled from the map key.
+func TestParseRegistryJSON_ObjectFormat_NameBackfill(t *testing.T) {
+	input := `{
+		"plugins": {
+			"myplugin": {
+				"version": "2.0.0",
+				"description": "A plugin without name in body",
+				"category": "utility",
+				"tier": "free",
+				"license": "MIT"
+			}
+		}
+	}`
+
+	reg, err := parseRegistryJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("parseRegistryJSON: %v", err)
+	}
+	if len(reg.Plugins) != 1 {
+		t.Fatalf("expected 1 plugin, got %d", len(reg.Plugins))
+	}
+	if reg.Plugins[0].Name != "myplugin" {
+		t.Errorf("name not backfilled from key: got %q, want %q", reg.Plugins[0].Name, "myplugin")
+	}
+}
+
+// TestParseRegistryJSON_EmptyPlugins verifies that an empty plugins field
+// (null or absent) returns an empty Registry without error.
+func TestParseRegistryJSON_EmptyPlugins(t *testing.T) {
+	inputs := []string{
+		`{"version":"1.0.0","plugins":[]}`,
+		`{"version":"1.0.0","plugins":null}`,
+		`{"version":"1.0.0"}`,
+	}
+	for _, input := range inputs {
+		reg, err := parseRegistryJSON([]byte(input))
+		if err != nil {
+			t.Errorf("parseRegistryJSON(%q): unexpected error: %v", input, err)
+			continue
+		}
+		if reg == nil {
+			t.Errorf("parseRegistryJSON(%q): returned nil registry", input)
+		}
+	}
+}
+
+// TestParseRegistryJSON_UnknownFormat verifies that an unrecognised plugins
+// field format (e.g. a bare number or string) returns a descriptive error
+// rather than silently returning an empty registry or panicking.
+func TestParseRegistryJSON_UnknownFormat(t *testing.T) {
+	input := `{"plugins": 42}`
+	_, err := parseRegistryJSON([]byte(input))
+	if err == nil {
+		t.Fatal("expected error for unknown registry format, got nil")
+	}
+	if !strings.Contains(err.Error(), "unexpected registry plugins format") {
+		t.Errorf("expected 'unexpected registry plugins format' in error, got: %v", err)
+	}
+}
+
+// TestParseAPIEndpoints_StringArray verifies that the legacy string-array
+// endpoint format is parsed without error.
+func TestParseAPIEndpoints_StringArray(t *testing.T) {
+	raw := mustMarshalJSON([]string{"/api/v1/foo", "/api/v1/bar"})
+	endpoints := parseAPIEndpoints(raw)
+	if len(endpoints) != 2 {
+		t.Fatalf("expected 2 endpoints, got %d: %v", len(endpoints), endpoints)
+	}
+	if endpoints[0] != "/api/v1/foo" {
+		t.Errorf("endpoint[0]: got %q, want %q", endpoints[0], "/api/v1/foo")
+	}
+}
+
+// TestParseAPIEndpoints_ObjectArray verifies that the live-registry
+// object-array endpoint format is normalised to []string of paths.
+func TestParseAPIEndpoints_ObjectArray(t *testing.T) {
+	raw, _ := json.Marshal([]pluginEndpointEntry{
+		{Method: "GET", Path: "/v1/health", Description: "health check"},
+		{Method: "POST", Path: "/v1/send", Description: "send notification"},
+	})
+	endpoints := parseAPIEndpoints(json.RawMessage(raw))
+	if len(endpoints) != 2 {
+		t.Fatalf("expected 2 endpoints, got %d: %v", len(endpoints), endpoints)
+	}
+	if endpoints[0] != "/v1/health" {
+		t.Errorf("endpoint[0]: got %q, want %q", endpoints[0], "/v1/health")
+	}
+	if endpoints[1] != "/v1/send" {
+		t.Errorf("endpoint[1]: got %q, want %q", endpoints[1], "/v1/send")
+	}
+}
 
 // mustMarshalJSON is a test helper that marshals v to json.RawMessage, panicking
 // on error (should never happen with well-formed test data).

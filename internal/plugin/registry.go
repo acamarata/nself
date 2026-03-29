@@ -286,7 +286,7 @@ func parseRegistryJSON(data []byte) (*Registry, error) {
 
 	// Detect format by the first non-whitespace byte.
 	trimmed := strings.TrimSpace(string(env.Plugins))
-	if len(trimmed) == 0 {
+	if len(trimmed) == 0 || trimmed == "null" {
 		return &Registry{}, nil
 	}
 
