@@ -29,11 +29,11 @@ func (g *Generator) collectDomains() []string {
 	}
 
 	// resolveRoute returns the FQDN for a route value. If the route already
-	// contains a dot it is assumed to be a full domain and returned as-is.
-	// Otherwise baseDomain is appended so that bare subdomain values like
-	// "api" (set by defaults.go) become "api.ummat.local".
+	// ends with ".{baseDomain}" it is returned as-is. Otherwise baseDomain is
+	// appended so that both bare values like "api" and namespace subdomains
+	// like "www.pro" become "api.ummat.local" / "www.pro.ummat.local".
 	resolveRoute := func(route, baseDomain string) string {
-		if strings.Contains(route, ".") {
+		if strings.HasSuffix(route, "."+baseDomain) {
 			return route
 		}
 		return route + "." + baseDomain
@@ -143,8 +143,8 @@ func (g *Generator) collectDomains() []string {
 		// Custom services (only if they have a public route).
 		for _, cs := range g.cfg.CustomServices {
 			if cs.Route != "" && cs.Public {
-				// Route may be a full domain or a subdomain prefix.
-				if strings.Contains(cs.Route, ".") {
+				// Route may be a full domain or a subdomain prefix (possibly with dots).
+				if strings.HasSuffix(cs.Route, "."+bd) {
 					add(cs.Route)
 				} else {
 					add(cs.Route + "." + bd)
@@ -155,7 +155,7 @@ func (g *Generator) collectDomains() []string {
 		// Frontend apps.
 		for _, fa := range g.cfg.FrontendApps {
 			if fa.Route != "" {
-				if strings.Contains(fa.Route, ".") {
+				if strings.HasSuffix(fa.Route, "."+bd) {
 					add(fa.Route)
 				} else {
 					add(fa.Route + "." + bd)
