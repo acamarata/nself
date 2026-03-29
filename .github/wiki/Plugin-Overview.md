@@ -13,8 +13,8 @@ nSelf plugins extend your backend stack with additional services and capabilitie
 
 | Tier | Price | Includes |
 |------|-------|---------|
-| **Free** | $0 | Core CLI + 16 free plugins (MIT licensed) |
-| **Basic** | $0.99/mo or $9.99/yr | All 59 pro plugins |
+| **Free** | $0 | Core CLI + 25 free plugins (MIT licensed) |
+| **Basic** | $0.99/mo or $9.99/yr | All 52 pro plugins |
 | **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | **Elite** | $4.99/mo or $49.99/yr | Pro + email support |
 | **Business** | $9.99/mo or $99.99/yr | Elite + 24h email support + priority feature requests |
@@ -25,22 +25,23 @@ Annual plans save ~17% compared to monthly. Existing $9.99/yr keys are grandfath
 
 ## Plugin Categories
 
-### Free Plugins (16) — MIT Licensed
+### Free Plugins (25) — MIT Licensed
 
 No license key required. Install with `nself plugin install {name}`.
 
 | Category | Plugins |
 |----------|---------|
-| Background Jobs | jobs |
+| Background Jobs | jobs, cron |
 | Search | search |
 | Feature Management | feature-flags, webhooks |
 | Identity | invitations, tokens |
-| Integrations | github, github-runner |
+| Integrations | github, github-runner, donorbox, paypal, shopify, stripe |
 | Content | content-acquisition, content-progress, torrent-manager, subtitle-manager |
 | Network | vpn, mdns, link-preview |
-| Notifications | notifications |
+| Notifications | notifications, notify |
+| Infrastructure | backup, monitoring, mlflow |
 
-### Pro Plugins (59) — License Key Required
+### Pro Plugins (52) — License Key Required
 
 Require a valid nSelf license key. See [[Plugin-Licensing]].
 
@@ -50,7 +51,7 @@ Require a valid nSelf license key. See [[Plugin-Licensing]].
 | Communication | 6 | chat, livekit, streaming, voice, podcast, realtime |
 | Media & Processing | 6 | media-processing, file-processing, epg, photos, recording, stream-gateway |
 | Content & Social | 8 | cms, social, activity-feed, moderation, knowledge-base, support, documents, calendar |
-| Commerce & Payments | 7 | stripe, paypal, shopify, donorbox-pro, entitlements, analytics, backup-pro |
+| Commerce & Payments | 4 | donorbox-pro, entitlements, analytics, backup-pro |
 | Authentication & Security | 5 | auth, access-controls, idme, compliance, admin-api |
 | Infrastructure | 8 | browser, google, cloudflare, object-storage, cdn, observability, ddns, devices |
 | Productivity | 2 | cron-pro, notify-pro |

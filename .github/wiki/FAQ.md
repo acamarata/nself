@@ -25,11 +25,11 @@ nSelf is an open-source CLI that spins up a complete self-hosted backend stack â
 
 ## Is nSelf free?
 
-Yes. The core CLI and 16 free plugins are MIT licensed and free forever, including commercial use. Revenue comes from 59 paid Pro plugins starting at $9.99/year.
+Yes. The core CLI and 25 free plugins are MIT licensed and free forever, including commercial use. Revenue comes from 52 paid Pro plugins starting at $9.99/year.
 
 ## What is the difference between free and Pro plugins?
 
-Free plugins (16) handle foundational use cases: monitoring, backup, cron, search, notifications, and more. Pro plugins (59) add advanced capabilities: AI, live video (LiveKit), commerce, CMS, SSO/SAML, media transcoding, DRM, WAF, and more. Pro plugins require a license key from [nself.org](https://nself.org).
+Free plugins (25) handle foundational use cases: monitoring, backup, cron, search, notifications, and more. Pro plugins (52) add advanced capabilities: AI, live video (LiveKit), commerce, CMS, SSO/SAML, media transcoding, DRM, WAF, and more. Pro plugins require a license key from [nself.org](https://nself.org).
 
 ## Can I run multiple nSelf projects on one server?
 

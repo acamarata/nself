@@ -13,7 +13,7 @@
 
 **Deploy a production-ready backend in 5 minutes**
 
-Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 75 plugins (16 free, 59 Pro). MIT licensed core, forever.
+Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 77 plugins (25 free, 52 Pro). MIT licensed core, forever.
 
 ```bash
 curl -sSL https://install.nself.org | bash
@@ -209,12 +209,12 @@ All `*.local.nself.org` domains automatically resolve to `127.0.0.1` for zero-co
 
 ## Free vs Pro
 
-The core CLI and 16 free plugins are MIT-licensed, free forever, including commercial use. Pro plugins require a membership key.
+The core CLI and 25 free plugins are MIT-licensed, free forever, including commercial use. Pro plugins require a membership key.
 
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
-| Free | $0 | $0 | Core CLI + 16 free plugins |
-| Basic | $0.99/mo | $9.99/yr | All 59 Pro plugins |
+| Free | $0 | $0 | Core CLI + 25 free plugins |
+| Basic | $0.99/mo | $9.99/yr | All 52 Pro plugins |
 | Pro | $1.99/mo | $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | Elite | $4.99/mo | $49.99/yr | Pro + email support |
 | Business | $9.99/mo | $99.99/yr | Elite + 24h support + priority feature requests |
@@ -367,7 +367,7 @@ Run `nself help <command>` for subcommand details.
 
 ## Plugin System
 
-**16 free MIT plugins** - no key required:
+**25 free MIT plugins** - no key required:
 
 ```bash
 nself plugin install monitoring    # Prometheus + Grafana + Loki
@@ -377,7 +377,7 @@ nself plugin install search        # MeiliSearch full-text
 nself plugin install commerce      # Stripe billing
 ```
 
-**59 Pro plugins** - requires a membership key (Basic tier, $9.99/yr):
+**52 Pro plugins** - requires a membership key (Basic tier, $9.99/yr):
 
 ```bash
 nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -412,7 +412,7 @@ See [Plugins](.github/wiki/Plugin-Architecture.md) for the full list.
          ▼               ▼               ▼
 ┌──────────────┐ ┌────────────┐ ┌──────────────┐
 │ Redis, MinIO │ │  Search,   │ │   Plugins    │ ← optional
-│ Email, Funcs │ │   MLflow   │ │  (75 total)  │
+│ Email, Funcs │ │   MLflow   │ │  (77 total)  │
 └──────────────┘ └────────────┘ └──────────────┘
 ```
 
@@ -751,7 +751,7 @@ The CLI is written in Go (1.25+). Tests live in `internal/` alongside the packag
 
 MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
-nSelf CLI is MIT licensed. The 59 Pro plugins are source-available under a separate commercial license.
+nSelf CLI is MIT licensed. The 52 Pro plugins are source-available under a separate commercial license.
 
 ---
 

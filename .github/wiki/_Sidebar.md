@@ -47,17 +47,20 @@
 
 ---
 
-**Plugins (75)**
+**Plugins (77)**
 - [[Plugin-Overview]]
 - [[Plugin-Install]]
 - [[Plugin-Licensing]]
 - [[Plugin-Architecture]]
 - [[Plugin-Dev-Guide]]
 
-<details><summary>Free (16)</summary>
+<details><summary>Free (25)</summary>
 
+  - [[plugin-backup]]
   - [[plugin-content-acquisition]]
   - [[plugin-content-progress]]
+  - [[plugin-cron]]
+  - [[plugin-donorbox]]
   - [[plugin-feature-flags]]
   - [[plugin-github]]
   - [[plugin-github-runner]]
@@ -65,8 +68,14 @@
   - [[plugin-jobs]]
   - [[plugin-link-preview]]
   - [[plugin-mdns]]
+  - [[plugin-mlflow]]
+  - [[plugin-monitoring]]
   - [[plugin-notifications]]
+  - [[plugin-notify]]
+  - [[plugin-paypal]]
   - [[plugin-search]]
+  - [[plugin-shopify]]
+  - [[plugin-stripe]]
   - [[plugin-subtitle-manager]]
   - [[plugin-tokens]]
   - [[plugin-torrent-manager]]
@@ -75,7 +84,7 @@
 
 </details>
 
-<details><summary>Pro (59)</summary>
+<details><summary>Pro (52)</summary>
 
   - [[plugin-ai]]
   - [[plugin-claw]]
@@ -93,9 +102,6 @@
   - [[plugin-meetings]]
   - [[plugin-recording]]
   - [[plugin-commerce]]
-  - [[plugin-stripe]]
-  - [[plugin-paypal]]
-  - [[plugin-shopify]]
   - [[plugin-subscription]]
   - [[plugin-checkout]]
   - [[plugin-donorbox-pro]]
@@ -134,8 +140,6 @@
   - [[plugin-observability]]
   - [[plugin-ddns]]
   - [[plugin-devices]]
-  - [[plugin-vpn]]
-  - [[plugin-mdns]]
   - [[plugin-media]]
   - [[plugin-media-processing]]
   - [[plugin-file-processing]]

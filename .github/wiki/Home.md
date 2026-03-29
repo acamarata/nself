@@ -2,7 +2,7 @@
 
 > **Self-hosted backend in five minutes.** Postgres, GraphQL, Auth, Nginx. No cloud required.
 
-nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 16 free plugins included, 59 Pro plugins available starting at $0.99/mo.
+nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 52 Pro plugins available starting at $0.99/mo.
 
 ```bash
 brew install nself-org/nself/nself   # or: curl -sSL https://install.nself.org | bash
@@ -114,7 +114,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 
 ## Plugins
 
-75 plugins extend your stack. 16 are free (MIT), 59 require a Pro license key.
+77 plugins extend your stack. 25 are free (MIT), 52 require a Pro license key.
 
 | Page | Covers |
 |------|--------|
@@ -125,7 +125,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 | [[Plugin-Dev-Guide]] | Build and publish your own plugin |
 
 <details>
-<summary><strong>Free Plugins (16)</strong> — MIT licensed, no key required</summary>
+<summary><strong>Free Plugins (25)</strong> — MIT licensed, no key required</summary>
 
 | Plugin | What it does |
 |--------|-------------|
@@ -149,7 +149,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 </details>
 
 <details>
-<summary><strong>Pro Plugins (59)</strong> — License key required, starting at $0.99/mo</summary>
+<summary><strong>Pro Plugins (52)</strong> — License key required, starting at $0.99/mo</summary>
 
 **AI and Automation:** [[plugin-ai]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
 

@@ -14,8 +14,8 @@ A plugin is a manifest + Docker Compose overlay + optional Nginx config. When yo
 
 | Tier | Price | Included |
 |------|-------|---------|
-| Free | $0 | 16 free plugins — no license key required |
-| Basic | $0.99/mo | All 59 pro plugins |
+| Free | $0 | 25 free plugins — no license key required |
+| Basic | $0.99/mo | All 52 pro plugins |
 | Pro | $1.99/mo | Basic + AI suite |
 | Elite | $4.99/mo | Pro + email support |
 | Business | $9.99/mo | Elite + 24h support |
@@ -24,9 +24,9 @@ See [[Plugin-Licensing]] for full tier details.
 
 ## Free Plugins (25)
 
-monitoring, mlflow, backup, cron, notify, jobs, feature-flags, webhooks, notifications, search, invitations, link-preview, github, github-runner, content-acquisition, content-progress, torrent-manager, subtitle-manager, tokens, vpn, mdns, donorbox (+ 3 pending naming)
+backup, content-acquisition, content-progress, cron, donorbox, feature-flags, github, github-runner, invitations, jobs, link-preview, mdns, mlflow, monitoring, notifications, notify, paypal, search, shopify, stripe, subtitle-manager, tokens, torrent-manager, vpn, webhooks
 
-## Pro Plugins (59)
+## Pro Plugins (52)
 
 Categories: AI & Automation, Communication, Media & Processing, Content & Social, Commerce & Payments, Auth & Security, Infrastructure & Integration, Productivity, Gaming & Specialised.
 
