@@ -1,85 +1,22 @@
-name: CLI Test Coverage (bashcov)
+name: Coverage
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
   coverage:
-    name: CLI bats Coverage
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - uses: actions/setup-go@v5
         with:
-          ruby-version: '3.2'
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y bats
-          gem install bashcov simplecov simplecov-cobertura --no-document
-
-      - name: Install nself binary
-        run: |
-          chmod +x "${{ github.workspace }}/bin/nself"
-          printf '%s\n' "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
-
-      - name: Run bats with bashcov (structured tests)
-        env:
-          NSELF_TEST_MODE: "1"
-        run: |
-          SKIP_DOCKER_TESTS=1 bashcov --skip-uncovered -- \
-            bats --tap src/tests/bats/ 2>&1 | tee /tmp/bats-structured.log | tail -80
-
-      - name: Run bats with bashcov (legacy tests)
-        env:
-          NSELF_TEST_MODE: "1"
-        run: |
-          if [ -d src/tests ] && ls src/tests/*.bats >/dev/null 2>&1; then
-            SKIP_DOCKER_TESTS=1 bashcov --skip-uncovered -- \
-              bats src/tests/*.bats 2>&1 | tee /tmp/bats-legacy.log | tail -80
-          fi
-        continue-on-error: true
-
-      - name: Enforce 80% minimum coverage
-        run: |
-          if [ ! -d coverage ]; then
-            printf 'ERROR: No coverage report generated. bashcov did not run successfully.\n' >&2
-            exit 1
-          fi
-          if [ -f coverage/index.html ]; then
-            pct=$(grep -o '[0-9]*\.[0-9]*%' coverage/index.html | head -1 | tr -d '%')
-            if [ -n "$pct" ]; then
-              printf 'Coverage: %s%%\n' "$pct"
-              awk -v pct="$pct" 'BEGIN {
-                if (pct + 0 < 80) {
-                  printf "FAIL: coverage %s%% is below 80%% minimum\n", pct > "/dev/stderr"
-                  exit 1
-                }
-                printf "PASS: coverage %s%% meets 80%% minimum\n", pct
-              }'
-            fi
-          fi
-
+          go-version-file: go.mod
+      - name: Run tests with coverage
+        run: go test -coverprofile=coverage.out ./...
       - name: Upload coverage to Codecov
-        if: always()
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage.xml
-          flags: cli-bats
-          fail_ci_if_error: false
-
-      - name: Upload coverage HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 14
+          file: coverage.out

@@ -1,0 +1,863 @@
+package commands
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"nself/internal/config"
+	"nself/internal/docker"
+	"nself/internal/plugin"
+	"nself/internal/ports"
+	"nself/internal/ui"
+
+	"github.com/spf13/cobra"
+)
+
+// doctorCheckResult holds the outcome of a single diagnostic check.
+type doctorCheckResult struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"` // "pass", "warn", "fail"
+	Message string `json:"message"`
+	Detail  string `json:"detail,omitempty"`
+}
+
+// doctorReport collects all check results for JSON output and exit code logic.
+type doctorReport struct {
+	Timestamp string              `json:"timestamp"`
+	Checks    []doctorCheckResult `json:"checks"`
+	Summary   doctorSummary       `json:"summary"`
+}
+
+type doctorSummary struct {
+	Total    int `json:"total"`
+	Passed   int `json:"passed"`
+	Warnings int `json:"warnings"`
+	Failed   int `json:"failed"`
+}
+
+var doctorCmd = &cobra.Command{
+	Use:   "doctor",
+	Short: "Run comprehensive system diagnostics",
+	Long: `Run comprehensive system diagnostics to validate your nSelf environment.
+
+Checks infrastructure requirements, Docker health, disk space, memory,
+network connectivity, configuration, running containers, and more.
+
+Exit codes:
+  0  All checks passed
+  1  One or more checks failed
+  2  Warnings only (no failures)`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		full, _ := cmd.Flags().GetBool("full")
+		fix, _ := cmd.Flags().GetBool("fix")
+		jsonOut, _ := cmd.Flags().GetBool("json")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		if !jsonOut {
+			ui.CommandHeader("nSelf Doctor", "System diagnostics")
+		}
+
+		var checks []doctorCheckResult
+
+		// 1. Infrastructure checks
+		if !jsonOut {
+			ui.Section("Infrastructure")
+		}
+		checks = append(checks, checkDockerInstalled(verbose))
+		checks = append(checks, checkDockerRunning(ctx, verbose))
+		checks = append(checks, checkDockerComposeVersion(ctx, verbose))
+		checks = append(checks, checkGitInstalled(verbose))
+
+		// 2. Disk space
+		if !jsonOut {
+			ui.Section("Disk Space")
+		}
+		checks = append(checks, checkDiskSpace(verbose))
+
+		// 3. Memory (full mode only — slower)
+		if full {
+			if !jsonOut {
+				ui.Section("Memory")
+			}
+			checks = append(checks, checkMemory(verbose))
+		}
+
+		// 4. Network (full mode only — slower)
+		if full {
+			if !jsonOut {
+				ui.Section("Network")
+			}
+			checks = append(checks, checkNetwork(ctx, verbose))
+		}
+
+		cwd, _ := os.Getwd()
+
+		// 5. Port availability
+		if !jsonOut {
+			ui.Section("Port Availability")
+		}
+		checks = append(checks, checkPorts(verbose)...)
+		checks = append(checks, checkServicePortConflicts(cwd, verbose)...)
+
+		// 6. Configuration
+		if !jsonOut {
+			ui.Section("Configuration")
+		}
+		checks = append(checks, checkEnvExists(cwd, verbose))
+		checks = append(checks, checkPasswordStrength(cwd, verbose, fix)...)
+
+		// 7. Route consistency + port range sanity + config validators
+		if !jsonOut {
+			ui.Section("Config Validation")
+		}
+		checks = append(checks, checkRouteConsistency(cwd, verbose)...)
+		checks = append(checks, checkPortRangeSanity(cwd, verbose)...)
+		checks = append(checks, checkConfigValidators(cwd, verbose))
+
+		// 8. License cache state
+		if !jsonOut {
+			ui.Section("License")
+		}
+		checks = append(checks, checkLicenseCache(verbose))
+
+		// 9. Container health
+		if !jsonOut {
+			ui.Section("Container Health")
+		}
+		checks = append(checks, checkContainerHealth(ctx, cwd, verbose)...)
+
+		// Build summary
+		report := buildDoctorReport(checks)
+
+		if jsonOut {
+			return printDoctorJSON(report)
+		}
+
+		// Print summary
+		printDoctorSummary(report)
+
+		// Exit code: 1=failures, 2=warnings only, 0=all pass
+		if report.Summary.Failed > 0 {
+			os.Exit(1)
+		}
+		if report.Summary.Warnings > 0 {
+			os.Exit(2)
+		}
+		return nil
+	},
+}
+
+// checkDockerInstalled verifies the docker binary is on PATH.
+func checkDockerInstalled(verbose bool) doctorCheckResult {
+	name := "Docker installed"
+	path, err := exec.LookPath("docker")
+	if err != nil {
+		printCheck("fail", name, "docker not found in PATH", verbose)
+		return doctorCheckResult{Name: name, Status: "fail", Message: "docker not found in PATH"}
+	}
+	detail := ""
+	if verbose {
+		detail = path
+	}
+	printCheck("pass", name, "docker found", verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: "docker found", Detail: detail}
+}
+
+// checkDockerRunning verifies the Docker daemon is responsive.
+func checkDockerRunning(ctx context.Context, verbose bool) doctorCheckResult {
+	name := "Docker daemon running"
+	cmd := exec.CommandContext(ctx, "docker", "info")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		printCheck("fail", name, "Docker daemon is not running", verbose)
+		return doctorCheckResult{Name: name, Status: "fail", Message: "Docker daemon is not running"}
+	}
+	detail := ""
+	if verbose {
+		// Extract server version from docker info output
+		for _, line := range strings.Split(string(out), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "Server Version:") {
+				detail = strings.TrimSpace(strings.TrimPrefix(trimmed, "Server Version:"))
+				break
+			}
+		}
+	}
+	printCheck("pass", name, "Docker daemon is responsive", verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: "Docker daemon is responsive", Detail: detail}
+}
+
+// checkDockerComposeVersion verifies docker compose v2 is available and reports its version.
+func checkDockerComposeVersion(ctx context.Context, verbose bool) doctorCheckResult {
+	name := "Docker Compose v2"
+	cmd := exec.CommandContext(ctx, "docker", "compose", "version", "--short")
+	out, err := cmd.Output()
+	if err != nil {
+		printCheck("fail", name, "docker compose not available", verbose)
+		return doctorCheckResult{Name: name, Status: "fail", Message: "docker compose not available"}
+	}
+	version := strings.TrimSpace(string(out))
+	msg := fmt.Sprintf("docker compose %s", version)
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg, Detail: version}
+}
+
+// checkGitInstalled verifies git is on PATH.
+func checkGitInstalled(verbose bool) doctorCheckResult {
+	name := "Git installed"
+	path, err := exec.LookPath("git")
+	if err != nil {
+		printCheck("warn", name, "git not found in PATH", verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: "git not found in PATH"}
+	}
+	detail := ""
+	if verbose {
+		detail = path
+	}
+	printCheck("pass", name, "git found", verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: "git found", Detail: detail}
+}
+
+// checkDiskSpace verifies at least 5 GB of free disk space.
+func checkDiskSpace(verbose bool) doctorCheckResult {
+	name := "Disk space"
+	freeGB, err := getFreeDiskGB()
+	if err != nil {
+		msg := fmt.Sprintf("unable to check disk space: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+	msg := fmt.Sprintf("%.1f GB free", freeGB)
+	if freeGB < 5.0 {
+		printCheck("warn", name, msg+" (recommended: 5 GB+)", verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg + " (recommended: 5 GB+)"}
+	}
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+}
+
+// checkMemory verifies at least 2 GB of total system memory.
+func checkMemory(verbose bool) doctorCheckResult {
+	name := "System memory"
+	totalMB, err := getTotalMemoryMB()
+	if err != nil {
+		msg := fmt.Sprintf("unable to check memory: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+	totalGB := float64(totalMB) / 1024.0
+	msg := fmt.Sprintf("%.1f GB total", totalGB)
+	if totalMB < 2048 {
+		printCheck("warn", name, msg+" (recommended: 2 GB+)", verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg + " (recommended: 2 GB+)"}
+	}
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+}
+
+// checkNetwork verifies internet connectivity by pinging Docker Hub.
+func checkNetwork(ctx context.Context, verbose bool) doctorCheckResult {
+	name := "Network / Docker Hub"
+	cmd := exec.CommandContext(ctx, "docker", "pull", "--quiet", "hello-world")
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		// Fallback: just try to reach the registry
+		cmd2 := exec.CommandContext(ctx, "docker", "manifest", "inspect", "hello-world")
+		_, err2 := cmd2.CombinedOutput()
+		if err2 != nil {
+			printCheck("warn", name, "Docker Hub unreachable", verbose)
+			return doctorCheckResult{Name: name, Status: "warn", Message: "Docker Hub unreachable"}
+		}
+	}
+	printCheck("pass", name, "Docker Hub reachable", verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: "Docker Hub reachable"}
+}
+
+// checkPorts probes all reserved ports and reports conflicts.
+func checkPorts(verbose bool) []doctorCheckResult {
+	var results []doctorCheckResult
+	conflicts, err := docker.CheckAllPorts(docker.ReservedPorts)
+	if err != nil {
+		name := "Port check"
+		msg := fmt.Sprintf("error checking ports: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	if len(conflicts) == 0 {
+		name := "Reserved ports"
+		msg := fmt.Sprintf("all %d reserved ports available", len(docker.ReservedPorts))
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+
+	// Report each conflicting port individually, with holder info when available.
+	for _, c := range conflicts {
+		name := fmt.Sprintf("Port %d", c.Port)
+		holder, _ := ports.WhoHoldsPort(c.Port)
+		msg := ports.FormatConflictMessage(c.Port, holder)
+		printCheck("warn", name, msg, verbose)
+		results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+	}
+	return results
+}
+
+// checkEnvExists verifies that a .env file (or .env.dev) exists in the project directory.
+func checkEnvExists(projectDir string, verbose bool) doctorCheckResult {
+	name := ".env exists"
+	envFiles := []string{".env", ".env.dev"}
+	for _, f := range envFiles {
+		path := filepath.Join(projectDir, f)
+		if _, err := os.Stat(path); err == nil {
+			msg := fmt.Sprintf("%s found", f)
+			if verbose {
+				printCheck("pass", name, msg, true)
+			} else {
+				printCheck("pass", name, msg, false)
+			}
+			return doctorCheckResult{Name: name, Status: "pass", Message: msg, Detail: path}
+		}
+	}
+	printCheck("fail", name, "no .env or .env.dev found (run 'nself init')", verbose)
+	return doctorCheckResult{Name: name, Status: "fail", Message: "no .env or .env.dev found (run 'nself init')"}
+}
+
+// checkPasswordStrength loads config and checks password fields for weakness.
+func checkPasswordStrength(projectDir string, verbose, fix bool) []doctorCheckResult {
+	var results []doctorCheckResult
+	cfg, err := config.Load(projectDir)
+	if err != nil {
+		// Config load failed — cannot check passwords.
+		name := "Password strength"
+		msg := fmt.Sprintf("cannot load config: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	// Check each critical password field
+	type pwField struct {
+		Name   string
+		Value  string
+		MinLen int
+	}
+
+	fields := []pwField{
+		{"POSTGRES_PASSWORD", cfg.Postgres.Password, 16},
+		{"HASURA_GRAPHQL_ADMIN_SECRET", cfg.Hasura.AdminSecret, 32},
+	}
+	if cfg.Redis.Enabled {
+		fields = append(fields, pwField{"REDIS_PASSWORD", cfg.Redis.Password, 16})
+	}
+	if cfg.Minio.Enabled {
+		fields = append(fields, pwField{"MINIO_ROOT_PASSWORD", cfg.Minio.RootPassword, 16})
+	}
+
+	for _, f := range fields {
+		name := fmt.Sprintf("Password: %s", f.Name)
+		if f.Value == "" {
+			printCheck("warn", name, "not set", verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: "not set"})
+			continue
+		}
+		if len(f.Value) < f.MinLen {
+			msg := fmt.Sprintf("too short (%d chars, need %d+)", len(f.Value), f.MinLen)
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+			continue
+		}
+		if isWeakPassword(f.Value) {
+			msg := "contains insecure pattern"
+			if fix {
+				msg += " (use 'nself init' to regenerate)"
+			}
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+			continue
+		}
+		printCheck("pass", name, "strong", verbose)
+		results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: "strong"})
+	}
+
+	return results
+}
+
+// isWeakPassword checks if a password contains common insecure substrings.
+func isWeakPassword(value string) bool {
+	insecure := []string{
+		"password", "changeme", "secret", "admin",
+		"12345", "qwerty", "default", "test",
+		"postgres", "minioadmin", "hasura",
+	}
+	lower := strings.ToLower(value)
+	for _, p := range insecure {
+		if strings.Contains(lower, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkContainerHealth inspects running containers and reports their health.
+func checkContainerHealth(ctx context.Context, projectDir string, verbose bool) []doctorCheckResult {
+	var results []doctorCheckResult
+	compose := docker.NewCompose()
+
+	containers, err := compose.ComposePs(ctx, projectDir)
+	if err != nil {
+		name := "Container health"
+		// No compose project here — not necessarily an error
+		msg := "no running containers found"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+
+	if len(containers) == 0 {
+		name := "Container health"
+		msg := "no running containers"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+
+	for _, c := range containers {
+		name := fmt.Sprintf("Container: %s", c.Name)
+		status := "pass"
+		msg := c.State
+
+		if c.Health != "" && c.Health != "none" {
+			msg = fmt.Sprintf("%s (%s)", c.State, c.Health)
+		}
+
+		switch {
+		case c.State != "running":
+			status = "fail"
+			msg = fmt.Sprintf("not running (state: %s)", c.State)
+		case c.Health == "unhealthy":
+			status = "fail"
+			msg = "unhealthy"
+			// Fetch recent logs for unhealthy containers when verbose
+			if verbose {
+				logs, logErr := docker.GetContainerLogs(ctx, c.Name, 5)
+				if logErr == nil && logs != "" {
+					msg += "\n    Recent logs:\n    " + strings.ReplaceAll(strings.TrimSpace(logs), "\n", "\n    ")
+				}
+			}
+		case c.Health == "starting":
+			status = "warn"
+			msg = "still starting"
+		}
+
+		printCheck(status, name, msg, verbose)
+		results = append(results, doctorCheckResult{Name: name, Status: status, Message: msg})
+	}
+
+	return results
+}
+
+// buildDoctorReport aggregates check results into a report with summary counts.
+func buildDoctorReport(checks []doctorCheckResult) *doctorReport {
+	report := &doctorReport{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Checks:    checks,
+	}
+	for _, c := range checks {
+		report.Summary.Total++
+		switch c.Status {
+		case "pass":
+			report.Summary.Passed++
+		case "warn":
+			report.Summary.Warnings++
+		case "fail":
+			report.Summary.Failed++
+		}
+	}
+	return report
+}
+
+// printDoctorJSON renders the full report as JSON to stdout.
+func printDoctorJSON(report *doctorReport) error {
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("json marshal: %w", err)
+	}
+	_, err = fmt.Fprintln(os.Stdout, string(data))
+	return err
+}
+
+// printDoctorSummary prints a final summary box.
+func printDoctorSummary(report *doctorReport) {
+	fmt.Println()
+	ui.Separator()
+
+	items := []string{
+		fmt.Sprintf("Total checks: %d", report.Summary.Total),
+		fmt.Sprintf("Passed: %d", report.Summary.Passed),
+	}
+	if report.Summary.Warnings > 0 {
+		items = append(items, fmt.Sprintf("Warnings: %d", report.Summary.Warnings))
+	}
+	if report.Summary.Failed > 0 {
+		items = append(items, fmt.Sprintf("Failed: %d", report.Summary.Failed))
+	}
+
+	if report.Summary.Failed > 0 {
+		ui.Error(fmt.Sprintf("Doctor found %d issue(s) that need attention", report.Summary.Failed))
+	} else if report.Summary.Warnings > 0 {
+		ui.Warn(fmt.Sprintf("Doctor found %d warning(s)", report.Summary.Warnings))
+	} else {
+		ui.Success("All checks passed")
+	}
+
+	for _, item := range items {
+		ui.Bullet(item)
+	}
+	fmt.Println()
+}
+
+// printCheck renders a single check result to the terminal using ui.Checked / ui.Unchecked.
+func printCheck(status, name, message string, verbose bool) {
+	line := fmt.Sprintf("%s: %s", name, message)
+	switch status {
+	case "pass":
+		ui.Checked(line)
+	case "warn":
+		fmt.Fprintf(os.Stderr, "  %s %s\n", ui.C(ui.Yellow, ui.IconWarning), line)
+	case "fail":
+		fmt.Fprintf(os.Stderr, "  %s %s\n", ui.C(ui.Red, ui.IconFailure), line)
+	}
+}
+
+// ── New checks: T06 ──────────────────────────────────────────────────────────
+
+// checkRouteConsistency verifies that ROUTE values for enabled services
+// do not contain uppercase letters, spaces, or leading slashes. A valid route
+// is a bare subdomain label like "api" or "auth-service".
+func checkRouteConsistency(projectDir string, verbose bool) []doctorCheckResult {
+	cfg, err := config.Load(projectDir)
+	if err != nil {
+		name := "Route consistency"
+		msg := fmt.Sprintf("cannot load config: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	type namedRoute struct {
+		label string
+		value string
+	}
+
+	// Collect all configured route values with their label.
+	routes := []namedRoute{
+		{"HASURA_ROUTE", cfg.Hasura.Route},
+		{"AUTH_ROUTE", cfg.Auth.Route},
+	}
+	if cfg.Minio.Enabled {
+		routes = append(routes, namedRoute{"STORAGE_ROUTE", cfg.Minio.StorageRoute})
+		routes = append(routes, namedRoute{"STORAGE_CONSOLE_ROUTE", cfg.Minio.ConsoleRoute})
+	}
+	if cfg.Admin.Enabled {
+		routes = append(routes, namedRoute{"NSELF_ADMIN_ROUTE", cfg.Admin.Route})
+	}
+	if cfg.Search.Enabled {
+		routes = append(routes, namedRoute{"SEARCH_ROUTE", cfg.Search.Route})
+	}
+	if cfg.Mailpit.Enabled {
+		routes = append(routes, namedRoute{"MAILPIT_ROUTE", cfg.Mailpit.Route})
+	}
+	if cfg.Functions.Enabled {
+		routes = append(routes, namedRoute{"FUNCTIONS_ROUTE", cfg.Functions.Route})
+	}
+	if cfg.MLflow.Enabled {
+		routes = append(routes, namedRoute{"MLFLOW_ROUTE", cfg.MLflow.Route})
+	}
+	for _, cs := range cfg.CustomServices {
+		if cs.Route != "" {
+			routes = append(routes, namedRoute{fmt.Sprintf("CS_%d_ROUTE", cs.Index), cs.Route})
+		}
+	}
+	for _, fa := range cfg.FrontendApps {
+		if fa.Route != "" {
+			routes = append(routes, namedRoute{fmt.Sprintf("FRONTEND_APP_%d_ROUTE", fa.Index), fa.Route})
+		}
+	}
+
+	var results []doctorCheckResult
+	for _, r := range routes {
+		if r.value == "" {
+			continue
+		}
+		name := fmt.Sprintf("Route: %s", r.label)
+		corrected := routeCorrect(r.value)
+		if corrected != r.value {
+			msg := fmt.Sprintf("%q has invalid format — suggested value: %q", r.value, corrected)
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+		} else {
+			msg := fmt.Sprintf("%q is valid", r.value)
+			printCheck("pass", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: msg})
+		}
+	}
+
+	if len(results) == 0 {
+		name := "Route consistency"
+		msg := "no routes configured"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+	return results
+}
+
+// routeCorrect returns a corrected form of a ROUTE value: lowercase, no
+// leading slashes, no spaces. This mirrors what RouteToFQDN would expect.
+func routeCorrect(route string) string {
+	corrected := strings.TrimLeft(route, "/")
+	corrected = strings.TrimSpace(corrected)
+	corrected = strings.ToLower(corrected)
+	corrected = strings.ReplaceAll(corrected, " ", "-")
+	return corrected
+}
+
+// checkPortRangeSanity warns when any configured port is below 1024
+// (privileged port) when the process is not running as root.
+func checkPortRangeSanity(projectDir string, verbose bool) []doctorCheckResult {
+	cfg, err := config.Load(projectDir)
+	if err != nil {
+		name := "Port range sanity"
+		msg := fmt.Sprintf("cannot load config: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	// Only warn when not running as root (uid != 0).
+	isRoot := os.Getuid() == 0
+
+	type namedPort struct {
+		label string
+		port  int
+	}
+
+	// Well-known ports 80 and 443 are expected privileged ports (Nginx) — skip them.
+	ports := []namedPort{
+		{"POSTGRES_PORT", cfg.Postgres.Port},
+		{"HASURA_PORT", cfg.Hasura.Port},
+		{"AUTH_PORT", cfg.Auth.Port},
+	}
+	if cfg.Redis.Enabled {
+		ports = append(ports, namedPort{"REDIS_PORT", cfg.Redis.Port})
+	}
+	if cfg.Minio.Enabled {
+		ports = append(ports, namedPort{"MINIO_PORT", cfg.Minio.Port})
+		ports = append(ports, namedPort{"MINIO_CONSOLE_PORT", cfg.Minio.ConsolePort})
+	}
+	if cfg.Search.Enabled {
+		ports = append(ports, namedPort{"SEARCH_PORT", cfg.Search.Port})
+	}
+	if cfg.Functions.Enabled {
+		ports = append(ports, namedPort{"FUNCTIONS_PORT", cfg.Functions.Port})
+	}
+	if cfg.MLflow.Enabled {
+		ports = append(ports, namedPort{"MLFLOW_PORT", cfg.MLflow.Port})
+	}
+	if cfg.Admin.Enabled {
+		ports = append(ports, namedPort{"NSELF_ADMIN_PORT", cfg.Admin.Port})
+	}
+	for _, cs := range cfg.CustomServices {
+		if cs.Port != 0 {
+			ports = append(ports, namedPort{fmt.Sprintf("CS_%d_PORT", cs.Index), cs.Port})
+		}
+	}
+
+	var results []doctorCheckResult
+	for _, p := range ports {
+		if p.port == 0 || p.port == 80 || p.port == 443 {
+			continue
+		}
+		name := fmt.Sprintf("Port range: %s", p.label)
+		if p.port < 1024 && !isRoot {
+			msg := fmt.Sprintf("port %d is privileged (<1024) and may require root to bind", p.port)
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+		} else {
+			msg := fmt.Sprintf("port %d OK", p.port)
+			printCheck("pass", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: msg})
+		}
+	}
+
+	if len(results) == 0 {
+		name := "Port range sanity"
+		msg := "all configured ports are in the unprivileged range"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+	return results
+}
+
+// checkConfigValidators runs config.Validate against the loaded configuration
+// and reports the result. T04 will wire Validate() to call RunAll() internally,
+// so this will automatically cover all registered validators after T04 lands.
+func checkConfigValidators(projectDir string, verbose bool) doctorCheckResult {
+	name := "Config validators"
+	cfg, err := config.Load(projectDir)
+	if err != nil {
+		msg := fmt.Sprintf("cannot load config: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	if err := config.Validate(cfg); err != nil {
+		msg := fmt.Sprintf("config validation failed: %v", err)
+		printCheck("fail", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "fail", Message: msg}
+	}
+
+	msg := "config validators passed"
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+}
+
+// licensestaleDays is the number of days after which the license cache is
+// considered stale.
+const licensestaleDays = 7
+
+// checkLicenseCache inspects the license entitlements cache. It reports the
+// cache age and tier when present, and warns if the cache is older than 7 days.
+func checkLicenseCache(verbose bool) doctorCheckResult {
+	name := "License cache"
+
+	// Use the public LicenseCacheDir helper so the path stays consistent
+	// with the plugin manager.
+	cacheDir := plugin.LicenseCacheDir()
+	entitlementsPath := filepath.Join(cacheDir, "entitlements.json")
+
+	data, err := os.ReadFile(entitlementsPath)
+	if os.IsNotExist(err) {
+		// No cache file — not an error, just informational.
+		msg := "no license cache found (run 'nself license validate' to populate)"
+		printCheck("pass", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+	if err != nil {
+		msg := fmt.Sprintf("cannot read license cache: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	// Parse the entitlements JSON (tier + cached_at).
+	var cache struct {
+		Tier     string `json:"tier"`
+		CachedAt string `json:"cached_at"`
+	}
+	if err := json.Unmarshal(data, &cache); err != nil {
+		msg := fmt.Sprintf("cannot parse license cache: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	cachedAt, err := time.Parse(time.RFC3339, cache.CachedAt)
+	if err != nil {
+		msg := fmt.Sprintf("cannot parse cache timestamp: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	age := time.Since(cachedAt)
+	ageDays := int(age.Hours() / 24)
+	tier := cache.Tier
+	if tier == "" {
+		tier = "unknown"
+	}
+
+	if ageDays >= licensestaleDays {
+		msg := fmt.Sprintf("tier=%s, cache age=%dd — license cache is stale — run 'nself license refresh'", tier, ageDays)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	msg := fmt.Sprintf("tier=%s, cache age=%dd", tier, ageDays)
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+}
+
+// checkServicePortConflicts probes configured service ports against enabled services.
+// It catches conflicts between nSelf services (Grafana on 3000, Admin on 3021, etc.)
+// and local dev servers that may already be listening.
+func checkServicePortConflicts(projectDir string, verbose bool) []doctorCheckResult {
+	cfg, err := config.Load(projectDir)
+	if err != nil {
+		name := "Service port conflicts"
+		msg := fmt.Sprintf("cannot load config: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	type servicePort struct {
+		name string
+		port int
+	}
+	var ports []servicePort
+
+	if cfg.Monitoring.GrafanaEnabled {
+		ports = append(ports, servicePort{"Grafana", cfg.Monitoring.GrafanaPort})
+	}
+	if cfg.Admin.Enabled {
+		ports = append(ports, servicePort{"nSelf Admin", cfg.Admin.Port})
+	}
+	if cfg.Mailpit.Enabled {
+		ports = append(ports, servicePort{"Mailpit UI", cfg.Mailpit.UIPort})
+	}
+	if cfg.Functions.Enabled {
+		ports = append(ports, servicePort{"Functions", cfg.Functions.Port})
+	}
+	if cfg.MLflow.Enabled {
+		ports = append(ports, servicePort{"MLflow", cfg.MLflow.Port})
+	}
+
+	if len(ports) == 0 {
+		name := "Service port conflicts"
+		msg := "no services with dev-port conflict risk enabled"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+
+	var results []doctorCheckResult
+	for _, sp := range ports {
+		if sp.port == 0 {
+			continue
+		}
+		name := fmt.Sprintf("Port %d (%s)", sp.port, sp.name)
+		inUse, err := docker.CheckPort(sp.port)
+		if err != nil {
+			printCheck("warn", name, fmt.Sprintf("cannot check port: %v", err), verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: fmt.Sprintf("cannot check port: %v", err)})
+			continue
+		}
+		if inUse {
+			msg := fmt.Sprintf("Warning: port %d (%s) is already in use by another process", sp.port, sp.name)
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+		} else {
+			msg := fmt.Sprintf("port %d (%s) is available", sp.port, sp.name)
+			printCheck("pass", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: msg})
+		}
+	}
+	return results
+}
+
+func init() {
+	doctorCmd.Flags().Bool("verbose", false, "Detailed diagnostics")
+	doctorCmd.Flags().Bool("full", false, "Run all checks including network and memory (slower)")
+	doctorCmd.Flags().Bool("fix", false, "Suggest auto-fix for common issues")
+	doctorCmd.Flags().Bool("json", false, "JSON output")
+	RootCmd.AddCommand(doctorCmd)
+}

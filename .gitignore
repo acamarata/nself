@@ -1,107 +1,59 @@
-# Environment files (sensitive)
+# Binary
+/nself
+/nself.exe
+nself-darwin-*
+nself-linux-*
+nself-windows-*
+
+# Go build
+*.test
+*.out
+
+# nSelf project files (if someone runs nself in this dir by mistake)
+docker-compose.yml
 .env
-.env.local
-.env.*.local
-.env.secrets
-
-# Backup folders from nself reset
-_backup*
-
-# Runtime directories (created by nself CLI - must never exist in source tree)
+.env.*
+!.env.example
+nginx/
+ssl/
+postgres/
+monitoring/
+services/
 .nself/
-.environments/
-certs/
-hasura/
-nself/
-types/
+backups/
 
-# Docker volumes
-.volumes/
-
-# Logs
-logs/
-*.log
-
-# Dependencies
-node_modules/
-__pycache__/
-*.pyc
-
-# System files
-.DS_Store
+# IDE
 .idea/
 .vscode/
 *.swp
-*.swo
-*~
+.DS_Store
 
-# Coverage reports (stored in .nself/coverage/)
-*.coverage
-
-# Build artifacts
+# Distribution artifacts
 dist/
-/build/
-*.pid
+*.tar.gz
 
-# Environment files should not be in CLI (except templates)
-.env
-.env.*
-*.env
-.env.backup.*
-# But DO include env templates
-!src/templates/envs/.env*
-!src/templates/demo/.env*
+# Claude working memory
+.claude/temp/
 
-# Release planning (local only)
-next.md
-NEXT.md
-TODO.md
-DONE.md
-FEEDBACK.md
-FEEDTV.md
-FEEDWEB.md
-FEEDP.md
+# Test coverage
+coverage.out
+coverage.html
 
-# Working documents (keep in hidden control folders before commit)
-*-SUMMARY.md
-*-INDEX.md
-*-UPDATES.md
-*-ADDITIONS.md
-*-COMPLETE.md
-*-VERIFICATION.md
-*-CHECKLIST.md
-*-ISSUES.md
-*-REPORT.md
-*-FIXES.md
-
-# AI agent directories (private)
-.ai/
+# nSelf
+.env.local
+.env.*.local
+.env.secrets
+.volumes/
+logs/
+*.log
+node_modules/
+.vscode/*
 .claude/
 .codex/
 .cursor/
-
-# Standard entries (added by global compliance)
-Thumbs.db
-.secrets/
-*.key
-*.pem
-/build/
-.cache/
-*.tmp
-*.temp
-tmp/
-coverage/
-test-results/
-TRACKING.md
-PLAN.md
-.allow-ai-terms
-.vscode/*
 .aider/
 .aider.chat.history.md
 .continue/
 .windsurf/
 .gemini/
 .codeium/
-
-# CLI generated exports
-config_export_*.json

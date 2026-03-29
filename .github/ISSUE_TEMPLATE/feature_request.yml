@@ -1,56 +1,26 @@
-name: Feature request
-description: Suggest a new command, flag, or behavior improvement
-title: "[feature] "
-labels: ["enhancement"]
+name: Feature Request
+description: Suggest an improvement
+labels: ["feature"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Check [GitHub Discussions](https://github.com/nself-org/cli/discussions) first — your idea may already be there.
-
   - type: textarea
-    id: use_case
+    id: problem
     attributes:
-      label: Use case
-      description: What problem does this solve? Who benefits?
-      placeholder: |
-        When deploying to multiple environments, I have to manually edit .env files between deploys.
-        This is error-prone and slows down CI pipelines.
+      label: What problem does this solve?
+      placeholder: Describe the problem you're trying to solve
     validations:
       required: true
-
   - type: textarea
-    id: proposed
+    id: solution
     attributes:
       label: Proposed solution
-      description: What would the command, flag, or behavior look like?
-      placeholder: |
-        `nself deploy --env staging --var DATABASE_URL=$CI_DB_URL`
-
-        Allows injecting env vars at deploy time without editing .env files.
     validations:
       required: true
-
   - type: textarea
-    id: scope
+    id: alternatives
     attributes:
-      label: Scope
-      description: Does this change existing behavior or add something new?
-      placeholder: |
-        New flag on the existing `nself deploy` command. No breaking changes.
-    validations:
-      required: true
-
+      label: Alternatives you've considered
   - type: textarea
-    id: workaround
+    id: context
     attributes:
-      label: Current workaround
-      description: How are you solving this today, if at all?
-      placeholder: Manually running `sed -i` on .env before each deploy.
-
-  - type: checkboxes
-    id: contribution
-    attributes:
-      label: Contribution
-      options:
-        - label: I am willing to submit a PR for this feature
+      label: Additional context
+      description: Any other context, screenshots, or references

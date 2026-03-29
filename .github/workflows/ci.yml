@@ -2,312 +2,43 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint Shell Scripts
+  ci:
+    name: Vet, Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      CGO_ENABLED: 0
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-          # BLOCKING: ShellCheck errors indicate real code quality issues
-          # Target Bash 3.2 for maximum portability (macOS ships Bash 3.2)
-          find . -type f -name "*.sh" -exec shellcheck -s bash -S error {} +
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Check shell script formatting
-        run: |
-          sudo apt-get install -y shfmt
-          # ADVISORY: Formatting is stylistic - warn but don't fail the build
-          shfmt -d -i 2 src/ || echo "::warning::Formatting issues found - run 'shfmt -w -i 2 src/' to fix"
-
-  test:
-    name: Run Tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            bash-version: default
-          - os: macos-latest  
-            bash-version: 3.2
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check Bash version compatibility
-        run: |
-          echo "Bash version: $(bash --version | head -1)"
-          # Verify we have Bash 3.2+ for compatibility
-          bash -c 'echo "Testing Bash compatibility features..."'
-          bash -c '[[ "test" == "test" ]] && echo "✓ [[ ]] syntax works"'
-          bash -c 'echo $BASH_VERSION | grep -E "^[3-9]\.[2-9]|^[4-9]" && echo "✓ Bash version acceptable"'
-      
-      - name: Setup Bats
-        run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y bats
-          else
-            brew install bats-core
-          fi
-
-      - name: Install nself binary
-        run: |
-          chmod +x "${{ github.workspace }}/bin/nself"
-          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
-          # Symlink as fallback for tests that resolve via /usr/local/bin
-          sudo ln -sf "${{ github.workspace }}/bin/nself" /usr/local/bin/nself 2>/dev/null || true
-
-      - name: Run unit tests
-        env:
-          NSELF_TEST_MODE: "1"
-        run: |
-          cd src/tests
-          # BLOCKING: Unit tests must pass - failures indicate real regressions
-          bats *.bats
-
-      - name: Run critical path tests
-        env:
-          NSELF_TEST_MODE: "1"
-        run: |
-          cd src/tests
-          # BLOCKING: Critical path tests (backup, deploy, storage, SSL, tenant) must pass
-          test_files=(backup_tests.bats deploy_tests.bats storage_tests.bats ssl_tests.bats tenant_tests.bats)
-          for test_file in "${test_files[@]}"; do
-            if [ -f "$test_file" ]; then
-              printf "\n=== Running %s ===\n" "$test_file"
-              bats "$test_file"
-            fi
-          done
-          
-  integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Docker
-        uses: docker/setup-buildx-action@v3
-        
-      - name: Install nself
-        run: |
-          # Use local code for testing (not released version)
-          mkdir -p "$HOME/.local/nself"
-          # Copy current code to installation directory
-          cp -r . "$HOME/.local/nself/"
-          # Make bin executable
-          chmod +x "$HOME/.local/nself/bin/nself"
-          echo "$HOME/.local/nself/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.local/nself/bin:$PATH"
-          
-      - name: Test nself init
-        run: |
-          # BLOCKING: init must succeed and produce required files
-          cd /tmp
-          mkdir -p test-project
-          cd test-project
-          $HOME/.local/nself/bin/nself init
-          test -f .env
-          test -f .env.example
-          test -f .gitignore
-
-      - name: Test nself build
-        run: |
-          cd /tmp/test-project
-          # Build should complete even without Docker - it generates config files
-          # Allow timeout but not silent failures
-          if timeout 120s $HOME/.local/nself/bin/nself build; then
-            echo "::notice::Build succeeded"
-          else
-            exit_code=$?
-            if [[ $exit_code -eq 124 ]]; then
-              echo "::warning::Build timed out after 120s (Docker pull latency in CI)"
-            else
-              echo "::warning::Build exited with code $exit_code (may be expected without Docker)"
-            fi
-          fi
-          # Check if files were created
-          ls -la
-          # These may not be created in CI (no Docker) - informational only
-          test -f docker-compose.yml || echo "::notice::docker-compose.yml not created (expected without Docker)"
-          test -d nginx || echo "::notice::nginx directory not created (expected without Docker)"
-          test -d postgres || echo "::notice::postgres directory not created (expected without Docker)"
-
-      - name: Test nself commands
-        run: |
-          # Run commands from temp directory to avoid repo detection
-          cd /tmp
-          $HOME/.local/nself/bin/nself version
-          $HOME/.local/nself/bin/nself help
-          $HOME/.local/nself/bin/nself service --help
-          $HOME/.local/nself/bin/nself auth --help
-          # Skip admin help - requires Docker/PostgreSQL running
-          echo "ℹ️  Skipping admin help test (requires Docker)"
-          
-      - name: Test service templates exist
-        run: |
-          # Verify service templates are present
-          test -d "$HOME/.local/nself/src/templates/services/js" || exit 1
-          test -d "$HOME/.local/nself/src/templates/services/py" || exit 1
-          test -d "$HOME/.local/nself/src/templates/services/go" || exit 1
-          # Count templates
-          template_count=$(find "$HOME/.local/nself/src/templates/services" -mindepth 2 -maxdepth 2 -type d | wc -l)
-          echo "Found $template_count service templates"
-          test $template_count -ge 35 || exit 1
-          
-      - name: Test environment configuration
-        run: |
-          cd /tmp/test-project
-          # Test environment variable handling
-          echo "SERVICES_ENABLED=true" >> .env
-          echo "CS_1=api:fastapi:3001:/api" >> .env
-          # Build with custom service - should handle missing Docker gracefully
-          if timeout 120s $HOME/.local/nself/bin/nself build; then
-            echo "::notice::Build with custom service succeeded"
-          else
-            exit_code=$?
-            if [[ $exit_code -eq 124 ]]; then
-              echo "::warning::Build with custom service timed out after 120s (Docker pull latency in CI)"
-            else
-              echo "::warning::Build exited with code $exit_code (may be expected without Docker)"
-            fi
-          fi
-
-      - name: Test doctor command
-        run: |
-          cd /tmp/test-project
-          # Doctor reports system status - exits 1 when required config (passwords) is missing
-          # This is correct behavior. Doctor is advisory in CI - we check it runs without crashing.
-          $HOME/.local/nself/bin/nself doctor || echo "::notice::Doctor reported issues (expected without full config)"
-        # ADVISORY: Doctor exit 1 means missing config, not a crash - don't block CI
-        continue-on-error: true
-
-      - name: Test validate command
-        run: |
-          cd /tmp/test-project
-          # Config validation checks env vars in current process (not from .env file)
-          # and Docker availability — both may be absent in a minimal CI project.
-          # Report issues as a notice but don't block CI.
-          $HOME/.local/nself/bin/nself config validate || echo "::notice::Config validation reported issues (expected without full env setup)"
-        # ADVISORY: Validation warnings are expected in a freshly-initialized project
-        continue-on-error: true
-          
-  portability-check:
-    name: Portability & Compatibility Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check for echo -e usage (portability issue)
-        run: |
-          printf "\033[34mChecking for echo -e usage...\033[0m\n"
-          if grep -r 'echo -e' src/lib/ src/cli/ --include="*.sh" \
-             | grep -v "test" | grep -v ':[[:space:]]*#'; then
-            printf "\033[31mERROR: Found echo -e usage (use printf instead)\033[0m\n"
-            exit 1
-          fi
-          printf "\033[32m✓ No echo -e found\033[0m\n"
-
-      - name: Check for Bash 4+ features
-        run: |
-          printf "\033[34mChecking for Bash 4+ features...\033[0m\n"
-          errors=0
-
-          # Check for lowercase expansion (skip comment lines — they document the constraint)
-          if grep -r '\${[^}]*,,[^}]*}' src/lib/ src/cli/ --include="*.sh" \
-             | grep -v ':[[:space:]]*#'; then
-            printf "\033[31mERROR: Found lowercase expansion (Bash 4+)\033[0m\n"
-            errors=$((errors + 1))
-          fi
-
-          # Check for uppercase expansion (skip comment lines)
-          if grep -r '\${[^}]*\^\^[^}]*}' src/lib/ src/cli/ --include="*.sh" \
-             | grep -v ':[[:space:]]*#'; then
-            printf "\033[31mERROR: Found uppercase expansion (Bash 4+)\033[0m\n"
-            errors=$((errors + 1))
-          fi
-
-          # Check for associative arrays (allowing files with proper Bash 4 fallback checks)
-          # Files with "declare -A __test" checks are considered compatible; skip comment lines
-          if grep -r 'declare -A' src/lib/ src/cli/ --include="*.sh" \
-             --exclude="ports.sh" --exclude="base.sh" --exclude="provision.sh" \
-             | grep -v "__test" | grep -v ':[[:space:]]*#'; then
-            printf "\033[31mERROR: Found associative arrays (Bash 4+) without fallback\033[0m\n"
-            errors=$((errors + 1))
-          fi
-
-          if [ $errors -eq 0 ]; then
-            printf "\033[32m✓ No Bash 4+ features found\033[0m\n"
-          else
-            exit 1
-          fi
-
-  basic-security:
-    name: Basic Security Checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
-        continue-on-error: true  # Policy decision pending: switch exit-code to '1' once user reviews findings
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+          go-version: '1.25'
 
-      - name: Check for common security issues
-        run: |
-          printf "\033[34mChecking for security issues...\033[0m\n"
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-1.25-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-1.25-
 
-          # Check for hardcoded passwords/secrets (basic check)
-          if grep -rE '(PASSWORD|SECRET|TOKEN)=["\047][a-zA-Z0-9]{8,}["\047]' src/ --include="*.sh" | grep -v "example\|template"; then
-            printf "\033[33mWARNING: Possible hardcoded secrets found\033[0m\n"
-          fi
+      - name: Vet
+        run: go vet -mod=vendor ./...
 
-          # Check for eval usage (security risk)
-          if grep -r '\beval\b' src/ --include="*.sh" | grep -v "test\|example"; then
-            printf "\033[33mWARNING: eval usage found (security risk)\033[0m\n"
-          fi
+      - name: Build
+        run: go build -mod=vendor ./...
 
-          printf "\033[32m✓ Basic security checks complete\033[0m\n"
-
-  bats-test-matrix:
-    name: Bats tests (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install bats-core
-        run: |
-          if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y bats
-          else
-            brew install bats-core
-          fi
-
-      - name: Install nself binary
-        run: |
-          chmod +x "${{ github.workspace }}/bin/nself"
-          echo "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
-          sudo ln -sf "${{ github.workspace }}/bin/nself" /usr/local/bin/nself 2>/dev/null || true
-
-      - name: Run full bats test suite
-        env:
-          NSELF_TEST_MODE: "1"
-        run: bats src/tests/*.bats --timing
+      - name: Test
+        run: go test -mod=vendor ./...

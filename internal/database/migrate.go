@@ -1,0 +1,296 @@
+package database
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"nself/internal/config"
+	"nself/internal/errs"
+)
+
+// MigrationStatus describes the state of a single migration file.
+type MigrationStatus struct {
+	Name      string
+	Applied   bool
+	Timestamp time.Time
+}
+
+// querySQL executes a SQL query inside the postgres container and returns stdout.
+// Unlike runSQL from init.go, this captures and returns the output text.
+func querySQL(ctx context.Context, cfg *config.Config, database string, sql string) (string, error) {
+	container := containerName(cfg)
+	user := cfg.Postgres.User
+	if user == "" {
+		user = "postgres"
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", "exec", container,
+		"psql", "-U", user, "-d", database, "-tAc", sql,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("psql: %s: %w", strings.TrimSpace(stderr.String()), err)
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
+
+// pipeSQLToContainer pipes raw SQL text into psql inside the postgres container.
+func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sql string) error {
+	container := containerName(cfg)
+	user := cfg.Postgres.User
+	if user == "" {
+		user = "postgres"
+	}
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+
+	args := []string{
+		"exec", "-i", container,
+		"psql",
+		"-U", user,
+		"-d", db,
+		"-v", "ON_ERROR_STOP=1",
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Stdin = strings.NewReader(sql)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("psql: %s: %w", strings.TrimSpace(stderr.String()), err)
+	}
+	return nil
+}
+
+// ensureSchemaVersions creates the np_common.schema_versions table if it does not exist.
+func ensureSchemaVersions(ctx context.Context, cfg *config.Config) error {
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+
+	sql := `CREATE SCHEMA IF NOT EXISTS np_common; CREATE TABLE IF NOT EXISTS np_common.schema_versions (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`
+	return runSQLOnDB(ctx, cfg, db, sql)
+}
+
+// migrationsDir returns the directory to scan for migration SQL files.
+// If plugin is non-empty, it uses the plugin-specific migrations path.
+func migrationsDir(cfg *config.Config, plugin string) string {
+	if plugin != "" {
+		pluginDir := cfg.PluginSystem.Dir
+		if pluginDir == "" {
+			home, _ := os.UserHomeDir()
+			pluginDir = filepath.Join(home, ".nself", "plugins")
+		}
+		return filepath.Join(pluginDir, plugin, "migrations")
+	}
+	return "migrations"
+}
+
+// scanMigrations returns sorted SQL file paths from the given directory.
+// Files ending in .down.sql are excluded.
+func scanMigrations(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("scan migrations dir %s: %w", dir, err)
+	}
+
+	var files []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if strings.HasSuffix(e.Name(), ".sql") && !strings.HasSuffix(e.Name(), ".down.sql") {
+			files = append(files, filepath.Join(dir, e.Name()))
+		}
+	}
+	sort.Strings(files)
+	return files, nil
+}
+
+// appliedMigrations returns the set of migration names already recorded.
+func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time.Time, error) {
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+
+	out, err := querySQL(ctx, cfg, db, "SELECT name || '|' || applied_at FROM np_common.schema_versions ORDER BY applied_at")
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]time.Time)
+	if out == "" {
+		return result, nil
+	}
+
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 2)
+		name := parts[0]
+		var ts time.Time
+		if len(parts) == 2 {
+			ts, _ = time.Parse(time.RFC3339, parts[1])
+		}
+		result[name] = ts
+	}
+	return result, nil
+}
+
+// MigrateUp applies all pending migrations from the migrations directory.
+// If plugin is non-empty, only that plugin's migrations are applied.
+// Each migration is executed within a transaction alongside its schema_versions
+// record, so a failure rolls back cleanly.
+func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) error {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return fmt.Errorf("ensure schema_versions: %w", err)
+	}
+
+	dir := migrationsDir(cfg, plugin)
+	files, err := scanMigrations(dir)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return nil
+	}
+
+	applied, err := appliedMigrations(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("check applied migrations: %w", err)
+	}
+
+	for _, f := range files {
+		name := filepath.Base(f)
+		if _, ok := applied[name]; ok {
+			continue
+		}
+
+		data, readErr := os.ReadFile(f)
+		if readErr != nil {
+			return fmt.Errorf("read migration %s: %w", name, readErr)
+		}
+
+		record := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
+			strings.ReplaceAll(name, "'", "''"))
+
+		txSQL := "BEGIN;\n" + string(data) + "\n" + record + "\nCOMMIT;\n"
+
+		if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
+			return fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+		}
+	}
+	return nil
+}
+
+// MigrateDown reverts the most recently applied migration.
+// It looks for a corresponding .down.sql file next to the original migration.
+func MigrateDown(ctx context.Context, cfg *config.Config) error {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return fmt.Errorf("ensure schema_versions: %w", err)
+	}
+
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+
+	// Find the most recent migration.
+	out, err := querySQL(ctx, cfg, db, "SELECT name FROM np_common.schema_versions ORDER BY applied_at DESC LIMIT 1")
+	if err != nil {
+		return fmt.Errorf("query latest migration: %w", err)
+	}
+	if out == "" {
+		return fmt.Errorf("no migrations to revert")
+	}
+	name := strings.TrimSpace(out)
+
+	// Derive the down file path: foo.sql -> foo.down.sql
+	downName := strings.TrimSuffix(name, ".sql") + ".down.sql"
+	downPath := filepath.Join("migrations", downName)
+
+	data, readErr := os.ReadFile(downPath)
+	if readErr != nil {
+		return fmt.Errorf("down migration not found: %s: %w", downPath, readErr)
+	}
+
+	remove := fmt.Sprintf("DELETE FROM np_common.schema_versions WHERE name = '%s';",
+		strings.ReplaceAll(name, "'", "''"))
+
+	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\nCOMMIT;\n"
+
+	if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
+		return fmt.Errorf("revert %s: %w: %v", name, errs.ErrMigrationFailed, err)
+	}
+	return nil
+}
+
+// MigrateStatus returns the status of all known migrations (applied and pending).
+// It merges on-disk migration files with the schema_versions table, so orphaned
+// migrations (applied but no longer on disk) are also reported.
+func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, error) {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return nil, fmt.Errorf("ensure schema_versions: %w", err)
+	}
+
+	files, err := scanMigrations("migrations")
+	if err != nil {
+		return nil, err
+	}
+
+	applied, err := appliedMigrations(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("check applied migrations: %w", err)
+	}
+
+	var statuses []MigrationStatus
+	onDisk := make(map[string]bool)
+
+	for _, f := range files {
+		name := filepath.Base(f)
+		onDisk[name] = true
+		ts, ok := applied[name]
+		statuses = append(statuses, MigrationStatus{
+			Name:      name,
+			Applied:   ok,
+			Timestamp: ts,
+		})
+	}
+
+	// Include any applied migrations not found on disk (orphans).
+	for name, ts := range applied {
+		if !onDisk[name] {
+			statuses = append(statuses, MigrationStatus{
+				Name:      name,
+				Applied:   true,
+				Timestamp: ts,
+			})
+		}
+	}
+
+	sort.Slice(statuses, func(i, j int) bool {
+		return statuses[i].Name < statuses[j].Name
+	})
+	return statuses, nil
+}

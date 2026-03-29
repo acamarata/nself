@@ -1,38 +1,13 @@
-# Gitleaks Configuration for nself
-# Ignores false positives from documentation and demo files
-
-title = "nself Security Scanning Configuration"
+title = "nSelf CLI gitleaks config"
 
 [extend]
-# Use default Gitleaks rules
 useDefault = true
 
-# Allowlist configuration (single map, not array)
-[allowlist]
-description = "Ignore example passwords and demo files"
-
-# Paths to ignore
+[[allowlist.paths]]
+description = "Test fixtures and example files"
 paths = [
-  '''docs/.*\.md$''',
-  '''docs/configuration/SECRETS-MANAGEMENT\.md''',
-  '''src/tests/.*demo\.sh$''',
-  '''src/tests/secrets-management-demo\.sh''',
-  '''\.env\.example$''',
-  '''\.env\.template$''',
-  '''\.template$''',
-  '''/templates/.*''',
-  '''\.github/workflows/.*\.yml$''',
-]
-
-# Regex patterns to ignore (example credentials)
-regexes = [
-  '''YOUR_SECURE_PASSWORD_HERE''',
-  '''example_password''',
-  '''demo_password''',
-  '''super_secret_password_123''',
-  '''demo_.*''',
-  '''test_.*''',
-  '''example_.*''',
-  '''nself_test_db''',
-  '''postgres:postgres''',
+  "testdata/",
+  ".env.example",
+  "*.example",
+  "*.example.env",
 ]

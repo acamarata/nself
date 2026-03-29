@@ -1,7 +1,0 @@
-#!/bin/bash
-set -e
-
-# Remove symlink
-if [ -L /usr/bin/nself ]; then
-    rm -f /usr/bin/nself
-fi

@@ -1,0 +1,30 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/wiki/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync to GitHub Wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          WIKI_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          if ! git ls-remote --exit-code "${WIKI_URL}" HEAD > /dev/null 2>&1; then
+            echo "Wiki not initialized. Enable it in repo Settings > Features > Wikis."
+            exit 0
+          fi
+          cd /tmp && git clone "${WIKI_URL}" wiki 2>&1
+          rsync -a --exclude='brand/' "$GITHUB_WORKSPACE/.github/wiki/" wiki/
+          cd wiki && git add -A
+          git diff --staged --quiet || git commit -m "docs: sync wiki from ${GITHUB_SHA::7}" && git push

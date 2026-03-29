@@ -1,20 +1,19 @@
 # ɳSelf - Complete Self-Hosted Backend Platform
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue-blue.svg)](https://github.com/nself-org/cli/releases)
-[![Status](https://img.shields.io/badge/status-LTS-brightgreen.svg)](https://github.com/nself-org/cli/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#-prerequisites)
+[![Go](https://img.shields.io/badge/go-1.25%2B-00ADD8.svg)](https://go.dev/)
+[![Status](https://img.shields.io/badge/status-pre--release-orange.svg)](https://github.com/nself-org/cli/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#prerequisites)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/get-started)
 [![CI Status](https://github.com/nself-org/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nself-org/cli/actions)
 [![Security Scan](https://github.com/nself-org/cli/actions/workflows/security-scan.yml/badge.svg)](https://github.com/nself-org/cli/actions/workflows/security-scan.yml)
 [![Test Coverage](https://codecov.io/gh/nself-org/cli/branch/main/graph/badge.svg)](https://codecov.io/gh/nself-org/cli)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-
 <div align="center">
 
 **Deploy a production-ready backend in 5 minutes**
 
-Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 75 plugins (16 free, 59 paid). MIT licensed core, forever.
+Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 84 plugins (25 free, 59 paid). MIT licensed core, forever.
 
 ```bash
 curl -sSL https://install.nself.org | bash
@@ -22,15 +21,15 @@ curl -sSL https://install.nself.org | bash
 
 **One command. Complete backend. Your infrastructure.**
 
-[Quick Start](#-quick-start---3-commands-to-backend-bliss) • [Features](#-why-nself) • [Documentation](.wiki/Home.md) • [Roadmap](.wiki/releases/ROADMAP.md)
+[Quick Start](#quick-start) • [Features](#why-nself) • [Documentation](#documentation) • [Roadmap](.github/wiki/releases/ROADMAP.md)
 
 </div>
 
 ---
 
-## What is ɳSelf?
+## What is nSelf?
 
-ɳSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same powerful features as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
+nSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same powerful features as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
 
 **Get the power of commercial BaaS, plus:**
 - **True Data Ownership** - Your data never leaves your infrastructure
@@ -42,15 +41,15 @@ curl -sSL https://install.nself.org | bash
 
 From zero to production-ready backend in under 5 minutes. Really.
 
-## 🚀 Why ɳSelf?
+## Why nSelf?
 
-### ⚡ Lightning Fast Setup
-- **Under 5 minutes** from zero to running backend
+### Fast Setup
+- Under 5 minutes from zero to running backend
 - One command installation, initialization, and deployment
-- Smart defaults that just work™
+- Smart defaults that work out of the box
 - Interactive wizard or quick setup mode
 
-### 🎯 Complete Feature Set
+### Complete Feature Set
 
 **Core Backend Stack:**
 - **PostgreSQL** - Production-ready database with pgvector, PostGIS, TimescaleDB
@@ -59,7 +58,7 @@ From zero to production-ready backend in under 5 minutes. Really.
 - **Storage (MinIO)** - S3-compatible object storage with CDN integration
 - **Real-Time** - WebSocket channels, database subscriptions (CDC), presence tracking
 
-**Enterprise Features (Unique to ɳSelf):**
+**Enterprise Features (Unique to nSelf):**
 - **Multi-Tenancy** - Complete tenant isolation, row-level security, org management
 - **Billing Integration** - Stripe/Paddle subscriptions, usage tracking, invoicing
 - **White-Label** - Custom domains, branding, email templates, legal documents
@@ -77,31 +76,28 @@ From zero to production-ready backend in under 5 minutes. Really.
 - **Admin Dashboard** - Web-based management UI
 - **Email Management** - 16+ providers with zero-config development mode
 
-### 💪 ɳSelf vs Others
+### nSelf vs Others
 
-| Feature | ɳSelf | Supabase | Nhost | DIY |
+| Feature | nSelf | Supabase | Nhost | DIY |
 |---------|-------|----------|-------|-----|
-| **Full Backend Stack** | ✅ | ✅ | ✅ | ⚠️ Manual |
-| **Self-Hosted** | ✅ | ✅ (limited) | ✅ (limited) | ✅ |
-| **Multi-Tenancy** | ✅ Built-in | ❌ | ❌ | 🛠️ DIY |
-| **Built-in Billing** | ✅ Stripe/Paddle | ❌ External | ❌ External | 🛠️ DIY |
-| **White-Label** | ✅ Complete | ❌ | ❌ | 🛠️ DIY |
-| **Deploy Anywhere** | ✅ Any infra | ⚠️ Cloud-first | ⚠️ Cloud-first | ✅ |
+| **Full Backend Stack** | Yes | Yes | Yes | Manual |
+| **Self-Hosted** | Yes | Limited | Limited | Yes |
+| **Multi-Tenancy** | Built-in | No | No | DIY |
+| **Built-in Billing** | Stripe/Paddle | External | External | DIY |
+| **White-Label** | Complete | No | No | DIY |
+| **Deploy Anywhere** | Any infra | Cloud-first | Cloud-first | Yes |
 | **Setup Time** | 5 minutes | 30+ minutes | 30+ minutes | Hours/Days |
-| **One Command Deploy** | ✅ | ❌ | ❌ | ❌ |
-| **Data Ownership** | ✅ Complete | ⚠️ Shared | ⚠️ Shared | ✅ |
-| **Pricing** | Free (personal) | Paid | Paid | Free |
+| **One Command Deploy** | Yes | No | No | No |
+| **Data Ownership** | Complete | Shared | Shared | Yes |
+| **Pricing** | Free core | Paid | Paid | Free |
 
-## 📋 Prerequisites
+## Prerequisites
 
-- **Bash 3.2+** (default on macOS and most Linux distributions)
-- **Linux, macOS, or Windows with WSL**
+- **macOS, Linux, or Windows with WSL**
 - **Docker and Docker Compose** (installer helps install if needed)
 - **curl** (for installation)
 
-**Note:** ɳSelf is fully compatible with Bash 3.2+, the default shell on macOS. No Bash upgrade needed!
-
-## 🔧 Installation
+## Installation
 
 ### Quick Install (Recommended)
 
@@ -110,12 +106,10 @@ curl -sSL https://install.nself.org | bash
 ```
 
 The installer will:
-- ✅ Auto-detect existing installations and offer updates
-- 📊 Show visual progress with loading spinners
-- 🔍 Check and help install Docker/Docker Compose if needed
-- 📦 Download nself CLI to `~/.nself/bin`
-- 🔗 Add nself to your PATH automatically
-- 🚀 Create a global `nself` command
+- Auto-detect existing installations and offer updates
+- Check and help install Docker/Docker Compose if needed
+- Download the nself binary to `~/.nself/bin`
+- Add nself to your PATH automatically
 
 ### Alternative Methods
 
@@ -130,25 +124,15 @@ brew install nself
 curl -fsSL https://raw.githubusercontent.com/nself-org/cli/main/install.sh | bash
 ```
 
-**Docker**
-```bash
-docker pull nself-org/cli:latest
-docker run -it nself-org/cli:latest version
-```
-
-### Updating ɳSelf
+### Updating nSelf
 
 ```bash
 nself update
 ```
 
-The updater will:
-- Check for new versions automatically
-- Show version comparison (current → latest)
-- Download and install updates seamlessly
-- Preserve your existing configurations
+Checks for new versions, shows a comparison, downloads and installs the update, and preserves your existing configurations.
 
-## 🏁 Quick Start - 3 Commands to Backend Bliss
+## Quick Start
 
 ```bash
 # 1. Create and enter project directory
@@ -162,16 +146,41 @@ nself init --wizard  # Interactive setup
 nself build && nself start
 ```
 
-**That's it!** Your complete backend is now running at:
-- 🚀 GraphQL API: https://api.local.nself.org
-- 🔐 Auth Service: https://auth.local.nself.org
-- 📦 Storage: https://storage.local.nself.org
-- 📧 Email UI (dev): https://mail.local.nself.org
-- 📊 Admin Dashboard: http://localhost:3021
+Your complete backend is now running at:
+- GraphQL API: https://api.local.nself.org
+- Auth Service: https://auth.local.nself.org
+- Storage: https://storage.local.nself.org
+- Email UI (dev): https://mail.local.nself.org
+- Admin Dashboard: http://localhost:3021
 
-All URLs work with automatic SSL (no browser warnings!).
+All URLs work with automatic SSL, no browser warnings.
 
-## 🌐 Default Service URLs
+---
+
+## What You Get
+
+Every `nself start` brings up a complete backend stack:
+
+**Core (always on):**
+- PostgreSQL - primary database
+- Hasura GraphQL - API and metadata engine
+- Auth (nHost) - user authentication and JWTs
+- Nginx - reverse proxy and SSL termination
+
+**Optional services (enable per project):**
+- Redis - caching, sessions, queues
+- MinIO - S3-compatible object storage
+- Search - full-text search (MeiliSearch or Typesense)
+- Functions - serverless runtime
+- Email - local mail (Mailpit in dev, your provider in prod)
+- MLflow - ML experiment tracking
+- Admin - local GUI at `localhost:3021`
+
+Run `nself service list` to see all available services and which are enabled.
+
+---
+
+## Default Service URLs
 
 When using the default `local.nself.org` domain (resolves to 127.0.0.1):
 
@@ -196,13 +205,39 @@ When using the default `local.nself.org` domain (resolves to 127.0.0.1):
 
 All `*.local.nself.org` domains automatically resolve to `127.0.0.1` for zero-config local development.
 
-## 📧 Email Configuration
+---
+
+## Free vs Pro
+
+The core CLI and 25 free plugins are MIT-licensed, free forever, including commercial use. Pro plugins require a membership key.
+
+| Tier | Monthly | Annual | What's included |
+|------|---------|--------|-----------------|
+| Free | $0 | $0 | Core CLI + 25 free plugins |
+| Basic | $0.99/mo | $9.99/yr | All 59 Pro plugins |
+| Pro | $1.99/mo | $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
+| Elite | $4.99/mo | $49.99/yr | Pro + email support |
+| Business | $9.99/mo | $99.99/yr | Elite + 24h support + priority feature requests |
+| Business+ | $49.99/mo | $499.99/yr | Business + dedicated support channel |
+| Enterprise | $99.99/mo | $999.99/yr | Business+ + managed DevOps |
+
+Annual pricing is ~17% cheaper than monthly. Existing `$9.99/yr` keys grandfather to the Basic tier.
+
+```bash
+nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+nself plugin install ai
+nself plugin install livekit
+```
+
+---
+
+## Email Configuration
 
 ### Development (Zero Config)
-Email works out of the box with MailPit - all emails are captured locally:
-- 📧 View emails: https://mail.local.nself.org
-- 🔧 No setup required
-- 📨 Perfect for testing auth flows
+Email works out of the box with MailPit. All emails are captured locally:
+- View emails: https://mail.local.nself.org
+- No setup required
+- Works for testing auth flows
 
 ### Production (2-Minute Setup)
 ```bash
@@ -216,16 +251,11 @@ Choose from 16+ providers:
 - **Postmark** - Transactional email specialist
 - **Gmail** - Use your personal/workspace account
 - **Postfix** - Full control self-hosted server
-- And 10+ more!
+- And 10+ more
 
-The wizard guides you through everything. Example for SendGrid:
-```bash
-nself service email config sendgrid
-# Add your API key to .env
-nself build && nself restart
-```
+---
 
-## 🎯 Customize Your Stack
+## Customize Your Stack
 
 Edit `.env` to enable additional services:
 
@@ -259,15 +289,14 @@ Then rebuild and restart:
 nself build && nself restart
 ```
 
-## 🚀 Service Templates - 40+ Ready-to-Use Microservices
+---
+
+## Service Templates - 40+ Ready-to-Use Microservices
 
 Add custom backend services with one line in your `.env`:
 
 ```bash
-# Enable custom services
 SERVICES_ENABLED=true
-
-# Add microservices
 CS_1=api:fastapi:3001           # Python FastAPI
 CS_2=auth:nest-ts:3002          # TypeScript NestJS
 CS_3=jobs:bullmq-ts:3003        # Background jobs (BullMQ)
@@ -278,24 +307,24 @@ CS_5=chat:socketio-ts:3005      # Real-time WebSocket
 ### Available Templates by Language
 
 - **JavaScript/TypeScript (19)**: Express, Fastify, NestJS, Hono, Socket.IO, BullMQ, Temporal, Bun, Deno, tRPC
-- **Python (7)**: Flask, FastAPI, Django REST, Celery, Ray, AI Agents (LLM & Data)
+- **Python (7)**: Flask, FastAPI, Django REST, Celery, Ray, AI Agents (LLM and Data)
 - **Go (4)**: Gin, Echo, Fiber, gRPC
 - **Other (10)**: Rust, Java, C#, C++, Ruby, Elixir, PHP, Kotlin, Swift
 
-📖 **[View Complete Service Templates Documentation](.wiki/reference/SERVICE_TEMPLATES.md)**
-
 Every template includes:
-- 🐳 Production Docker setup with multi-stage builds
-- 🛡️ Security headers and CORS configuration
-- 📊 Health checks and graceful shutdown
-- ⚡ Language-specific optimizations
-- 🔧 Template variables for customization
+- Production Docker setup with multi-stage builds
+- Security headers and CORS configuration
+- Health checks and graceful shutdown
+- Language-specific optimizations
+- Template variables for customization
 
-## 📚 Commands Overview
+---
 
-ɳSelf provides a **32-command canonical runtime surface** (**31 grouped domains + `destroy`**) with **295+ subcommands** organized by domain:
+## Command Reference
 
-### Core Commands (5)
+nSelf provides a **32-command canonical runtime surface** with **295+ subcommands** organized by domain:
+
+### Core Commands
 ```bash
 nself init          # Initialize project with wizard
 nself build         # Generate Docker configs
@@ -304,7 +333,7 @@ nself stop          # Stop services
 nself restart       # Restart services
 ```
 
-### Utilities (15)
+### Utilities
 ```bash
 nself status        # Service health status
 nself logs          # View service logs
@@ -317,7 +346,7 @@ nself version       # Version info
 nself update        # Update nself
 ```
 
-### Advanced Commands (11)
+### Advanced Commands
 ```bash
 nself db            # Database operations (11 subcommands)
 nself tenant        # Multi-tenancy (50+ subcommands)
@@ -326,36 +355,79 @@ nself infra         # Infrastructure (48 subcommands: K8s, cloud)
 nself service       # Service management (43 subcommands)
 nself config        # Configuration (20 subcommands)
 nself auth          # Security (38 subcommands: OAuth, SSL, MFA)
-nself backup        # Backup & recovery (6 subcommands)
+nself backup        # Backup and recovery (6 subcommands)
 nself dev           # Developer tools (16 subcommands)
 nself plugin        # Plugin system (8+ subcommands)
 nself destroy       # Safe infrastructure destruction
 ```
 
-📖 **[Complete Command Reference](.wiki/commands/COMMAND-TREE-V1.md)**
+Run `nself help <command>` for subcommand details.
 
-## 🎯 Admin Dashboard
+---
 
-Web-based monitoring and management interface:
+## Plugin System
+
+**25 free MIT plugins** - no key required:
 
 ```bash
-nself admin         # Open admin UI in browser
-nself admin --dev   # Open in development mode
+nself plugin install monitoring    # Prometheus + Grafana + Loki
+nself plugin install cron          # Scheduled jobs
+nself plugin install notify        # Push notifications
+nself plugin install search        # MeiliSearch full-text
+nself plugin install commerce      # Stripe billing
 ```
 
-**Features:**
-- **Service Health Monitoring** - Real-time status of all containers
-- **Docker Management** - Start, stop, restart containers from UI
-- **Database Query Interface** - Execute SQL queries directly
-- **Log Viewer** - Filter and search through service logs
-- **Backup Management** - Create and restore backups via UI
-- **Configuration Editor** - Modify settings without SSH
+**59 Pro plugins** - requires a membership key (Basic tier, $9.99/yr):
 
-Access at: http://localhost:3021
+```bash
+nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+nself plugin install ai            # LLM inference (OpenAI, Anthropic, local)
+nself plugin install claw          # AI assistant backend
+nself plugin install livekit       # Live video and audio
+nself plugin install mux           # Email pipeline with AI routing
+nself plugin install voice         # Voice synthesis and transcription
+```
 
-## 🔐 SSL/TLS Configuration
+See [Plugins](.github/wiki/Plugin-Architecture.md) for the full list.
 
-ɳSelf provides bulletproof SSL with green locks in browsers - no warnings!
+---
+
+## Architecture
+
+```
++-----------------------------------------------------+
+|                    nSelf CLI                         |
+|  nself init -> nself build -> nself start            |
++------------------------+----------------------------+
+                         | generates
+                         v
++-----------------------------------------------------+
+|              docker-compose.yml                      |
+|              nginx.conf                              |
++------------------------+----------------------------+
+                         | starts
+                         v
++----------+  +--------+  +------+  +-------+
+| Postgres |  | Hasura |  | Auth |  | Nginx |  <- core (always)
++----------+  +--------+  +------+  +-------+
+     |              |          |         |
+     +--------------+----------+---------+
+                         |
+         +---------------+---------------+
+         v               v               v
++--------------+ +----------+ +----------+
+| Redis/MinIO  | | Search/  | | Admin    |  <- optional
+| Email/Funcs  | | MLflow   | | GUI:3021 |
++--------------+ +----------+ +----------+
+```
+
+All services bind to `127.0.0.1`. Nginx is the only external-facing process.
+
+---
+
+## SSL/TLS Configuration
+
+nSelf provides automatic SSL with green locks in browsers, no warnings.
 
 ### Automatic Certificate Generation
 
@@ -364,16 +436,16 @@ nself build              # Automatically generates SSL certificates
 nself auth ssl trust     # Install root CA for green locks (one-time)
 ```
 
-That's it! Your browser will show green locks for:
+Your browser will show green locks for:
 - https://localhost, https://api.localhost
 - https://local.nself.org, https://api.local.nself.org
 
-### Two Domain Options (Both Work Perfectly)
+### Two Domain Options (Both Work)
 
 1. **`*.localhost`** - Works offline, no DNS needed
-2. **`*.local.nself.org`** - Our loopback domain (resolves to 127.0.0.1)
+2. **`*.local.nself.org`** - Loopback domain (resolves to 127.0.0.1)
 
-### Advanced: Public Wildcard Certificates
+### Public Wildcard Certificates
 
 For teams or CI/CD, get globally-trusted certificates:
 
@@ -386,9 +458,11 @@ DNS_API_TOKEN=your_api_token
 nself auth ssl generate
 ```
 
-Supported DNS providers: Cloudflare, AWS Route53, DigitalOcean, and more via acme.sh
+Supported DNS providers: Cloudflare, AWS Route53, DigitalOcean, and more via acme.sh.
 
-## 💾 Backup & Restore
+---
+
+## Backup and Restore
 
 ### Comprehensive Backup System
 
@@ -407,10 +481,7 @@ nself backup list
 
 ### Cloud Storage Support
 
-Configure automatic cloud uploads:
-
 ```bash
-# Interactive cloud setup wizard
 nself backup cloud setup
 
 # Supported providers:
@@ -422,16 +493,13 @@ nself backup cloud setup
 ### Automated Backups
 
 ```bash
-# Schedule backups
 nself backup schedule --daily --time "02:00"
-
-# Clean old backups
 nself backup clean --age 30      # Remove backups older than 30 days
 ```
 
 ### What Gets Backed Up
 
-**Full Backup includes:**
+Full backup includes:
 - PostgreSQL databases (complete dump)
 - All environment files (.env.dev, .env.staging, .env.prod, .env.secrets)
 - Docker-compose configurations
@@ -440,9 +508,58 @@ nself backup clean --age 30      # Remove backups older than 30 days
 - Hasura metadata
 - Nginx configurations
 
-## 🚀 Production Deployment
+---
 
-### Deploy to Production
+## Requirements
+
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| Docker | 24+ | latest |
+| macOS | 12 (Monterey) | 14+ |
+| Linux | Ubuntu 20.04 / Debian 11 | Ubuntu 22.04+ |
+| RAM | 2 GB | 4 GB |
+| Disk | 5 GB free | 10 GB free |
+
+Docker must be running before any `nself` command that starts services.
+
+---
+
+## Configuration
+
+Config lives in `.env` (dev), `.env.staging`, and `.env.prod`. The `nself build` command reads the active env file and generates `docker-compose.yml` and nginx config.
+
+Never hand-edit `docker-compose.yml` directly. All changes go through the env file, then `nself build`.
+
+```bash
+nself config show        # Show current config
+nself config set POSTGRES_PORT 5433
+nself config validate    # Validate before building
+```
+
+### Environment File Priority
+
+Files loaded in order (later files override earlier):
+1. `.env.dev` - Team defaults (always loaded)
+2. `.env.staging` - Staging environment (if ENV=staging)
+3. `.env.prod` - Production environment (if ENV=prod)
+4. `.env.secrets` - Production secrets (if ENV=prod)
+5. `.env` - Local overrides (highest priority)
+
+---
+
+## Environments
+
+| Environment | How to activate | Typical use |
+|-------------|----------------|-------------|
+| `dev` | default | Local development |
+| `staging` | `nself start --env staging` | Pre-production testing |
+| `prod` | `nself start --env prod` | Production server |
+
+Your `.env.prod` should never be checked into source control. Use your secrets manager to inject it on the server.
+
+---
+
+## Production Deployment
 
 ```bash
 # 1. Configure production environment
@@ -459,23 +576,16 @@ nself monitor
 ```
 
 ### Production Checklist
-1. ✅ Set `ENV=prod` (automatically configures security settings)
-2. ✅ Use strong passwords (12+ characters, auto-generated)
-3. ✅ Configure your custom domain
-4. ✅ Enable Let's Encrypt SSL
-5. ✅ Set up automated backups
-6. ✅ Configure monitoring alerts
+1. Set `ENV=prod` (automatically configures security settings)
+2. Use strong passwords (12+ characters, auto-generated)
+3. Configure your custom domain
+4. Enable Let's Encrypt SSL
+5. Set up automated backups
+6. Configure monitoring alerts
 
-### Environment File Priority
+---
 
-Files loaded in order (later files override earlier):
-1. `.env.dev` - Team defaults (always loaded)
-2. `.env.staging` - Staging environment (if ENV=staging)
-3. `.env.prod` - Production environment (if ENV=prod)
-4. `.env.secrets` - Production secrets (if ENV=prod)
-5. `.env` - Local overrides (highest priority)
-
-## 📁 Project Structure
+## Project Structure
 
 After running `nself build`:
 
@@ -503,37 +613,25 @@ my-backend/
     └── grpc/             # CS_3 service
 ```
 
-## 🗄️ Database Management
+---
 
-Comprehensive database tools for schema management and migrations:
+## Database Management
 
 ### For Lead Developers
 ```bash
-# Design your schema
-nano schema.dbml
-
-# Generate migrations from schema
-nself db run
-
-# Test migrations locally
-nself db migrate:up
-
-# Commit to Git
+nano schema.dbml                    # Design your schema
+nself db run                        # Generate migrations from schema
+nself db migrate:up                 # Test migrations locally
 git add schema.dbml hasura/migrations/
 git commit -m "Add new tables"
-git push
 ```
 
 ### For All Developers
 ```bash
-# Pull latest code
 git pull
-
-# Start services
 nself start
-
 # If you see "DATABASE MIGRATIONS PENDING" warning:
-nself db update  # Safely apply migrations with confirmation
+nself db update                     # Safely apply migrations
 ```
 
 ### Database Commands
@@ -547,9 +645,37 @@ nself db revert         # Restore from backup
 nself db sync           # Pull schema from dbdiagram.io
 ```
 
-## 🐛 Troubleshooting
+---
 
-### Common Issues
+## Admin GUI
+
+```bash
+nself admin start
+```
+
+Runs at `http://localhost:3021`. Features:
+- Service health monitoring with real-time status
+- Docker management: start, stop, restart containers
+- Database query interface
+- Log viewer with filtering and search
+- Backup management
+- Configuration editor
+
+Local only. Never deployed to a server.
+
+---
+
+## Migrating from v1
+
+```bash
+nself migrate detect   # Scan for v1 artifacts (read-only)
+nself migrate run      # Migrate with automatic backup
+nself migrate rollback # Restore the most recent backup
+```
+
+---
+
+## Troubleshooting
 
 **Services not starting?**
 ```bash
@@ -579,95 +705,44 @@ nself service email test recipient@example.com
 nself build --force     # Force rebuild
 ```
 
-📖 **[Complete Troubleshooting Guide](.wiki/guides/TROUBLESHOOTING.md)**
+---
 
-## 📚 Documentation
+## Documentation
 
 ### Getting Started
-- **[Quick Start Tutorial](.wiki/getting-started/Quick-Start.md)** - 5-minute tutorial
-- **[Installation Guide](.wiki/getting-started/Installation.md)** - Detailed installation
-- **[Configuration Reference](.wiki/configuration/README.md)** - Complete .env settings
-- **[Command Reference](.wiki/commands/COMMAND-TREE-V1.md)** - All 295+ commands
+- [Quick Start Tutorial](.github/wiki/getting-started/Quick-Start.md) - 5-minute tutorial
+- [Installation Guide](.github/wiki/getting-started/Installation.md) - Detailed installation
+- [Configuration Reference](.github/wiki/configuration/README.md) - Complete .env settings
+- [Command Reference](.github/wiki/commands/COMMAND-TREE.md) - All 295+ commands
 
-### Features & Services
-- **[Service Templates](.wiki/reference/SERVICE_TEMPLATES.md)** - 40+ microservice templates
-- **[Database Workflow](.wiki/guides/DATABASE-WORKFLOW.md)** - DBML to production
-- **[Multi-Tenancy](.wiki/architecture/MULTI-TENANCY.md)** - Enterprise SaaS features
-- **[Email Setup](.wiki/commands/EMAIL.md)** - 16+ provider configuration
+### Features and Services
+- [Service Templates](.github/wiki/reference/SERVICE_TEMPLATES.md) - 40+ microservice templates
+- [Database Workflow](.github/wiki/guides/DATABASE-WORKFLOW.md) - DBML to production
+- [Multi-Tenancy](.github/wiki/architecture/MULTI-TENANCY.md) - Enterprise SaaS features
+- [Email Setup](.github/wiki/commands/EMAIL.md) - 16+ provider configuration
 
-### Deployment & Operations
-- **[Production Deployment](.wiki/deployment/README.md)** - Production guide
-- **[Backup Guide](.wiki/guides/BACKUP_GUIDE.md)** - Comprehensive backup system
-- **[Monitoring Setup](.wiki/guides/MONITORING-COMPLETE.md)** - Grafana dashboards
-- **[Security Hardening](.wiki/security/README.md)** - Security best practices
+### Deployment and Operations
+- [Production Deployment](.github/wiki/deployment/README.md) - Production guide
+- [Backup Guide](.github/wiki/guides/BACKUP_GUIDE.md) - Comprehensive backup system
+- [Monitoring Setup](.github/wiki/guides/MONITORING-COMPLETE.md) - Grafana dashboards
+- [Security Hardening](.github/wiki/security/README.md) - Security best practices
 
-### Migration & Compatibility
-- **[Migration from Supabase](.wiki/migrations/FROM-SUPABASE.md)** - Step-by-step migration
-- **[Migration from Nhost](.wiki/migrations/FROM-NHOST.md)** - One-command migration
-- **[Migration from Firebase](.wiki/migrations/FROM-FIREBASE.md)** - Auth & Firestore
+### Migration and Compatibility
+- [Migration from Supabase](.github/wiki/migrations/FROM-SUPABASE.md) - Step-by-step migration
+- [Migration from Nhost](.github/wiki/migrations/FROM-NHOST.md) - One-command migration
+- [Migration from Firebase](.github/wiki/migrations/FROM-FIREBASE.md) - Auth and Firestore
 
-### Release Information
-- **[Release Notes](.wiki/releases/v1.0.0.md)** - What's new in v1.0.0
-- **[Roadmap](.wiki/releases/ROADMAP.md)** - Development roadmap
-- **[Changelog](.wiki/releases/CHANGELOG.md)** - Version history
-- **[All Releases](.wiki/releases/INDEX.md)** - Complete release history
+---
 
-## 🧪 Quality Assurance
+## Contributing
 
-### Test Coverage
+See [Contributing](.github/wiki/contributing/CONTRIBUTING.md).
 
-- **700+ Tests** - 80% code coverage
-- **Unit Tests** - 400+ tests for core functionality
-- **Integration Tests** - 200+ tests for multi-service workflows
-- **End-to-End Tests** - 100+ tests for complete user journeys
+The CLI is written in Go (1.25+). Tests live in `internal/` alongside the packages they test. Run `make test` from the repo root.
 
-### CI/CD Status
+---
 
-All GitHub Actions workflows passing:
-
-| Workflow | Status |
-|----------|--------|
-| CI | ✅ Passing (50+ checks) |
-| Security Scan | ✅ Passing (30+ checks) |
-| Tenant Isolation | ✅ Passing (20+ tests) |
-| Build Validation | ✅ Passing (40+ checks) |
-| Init Testing | ✅ Passing (25+ scenarios) |
-
-### Security
-
-Thoroughly audited for security vulnerabilities:
-
-| Category | Status |
-|----------|--------|
-| Hardcoded Credentials | ✅ PASS |
-| API Keys & Tokens | ✅ PASS |
-| Command Injection | ✅ PASS |
-| SQL Injection | ✅ PASS |
-| Docker Security | ✅ PASS |
-| Git History | ✅ PASS |
-
-📖 **[View Security Audit](.wiki/security/SECURITY-AUDIT.md)**
-
-## 🤝 Contributing
-
-Contributions are welcome! Whether it's bug reports, feature requests, documentation improvements, or code contributions.
-
-- **[Contributing Guide](.wiki/contributing/CONTRIBUTING.md)** - How to contribute
-- **[Development Setup](.wiki/contributing/README.md)** - Dev environment
-- **[Cross-Platform](.wiki/contributing/CROSS-PLATFORM-COMPATIBILITY.md)** - Compatibility requirements
-
-## 📄 License
-
-**Free for personal use. Commercial use requires a license.**
-
-- ✅ **Personal Projects** - Free forever
-- ✅ **Learning & Education** - Free forever
-- ✅ **Open Source Projects** - Free forever
-- 💼 **Commercial Use** - [Contact us for licensing](https://nself.org/commercial)
-
-See [LICENSE](LICENSE) for full terms.
-
-## 🎯 Perfect For
+## Perfect For
 
 - **Startups** - Get your backend up fast, scale when you need to
 - **Agencies** - Standardized backend setup for all client projects
@@ -675,36 +750,30 @@ See [LICENSE](LICENSE) for full terms.
 - **Side Projects** - Production-grade infrastructure without the complexity
 - **Learning** - See how modern backends work under the hood
 
-## 🔗 Links
+---
 
-- **[Official Website](https://nself.org)** - Project homepage
-- **[Documentation](https://github.com/nself-org/cli/wiki)** - Complete nself documentation
-- **[GitHub Repository](https://github.com/nself-org/cli)** - Source code
-- **[Report Issues](https://github.com/nself-org/cli/issues)** - We'd love your feedback!
-- **[Discussions](https://github.com/nself-org/cli/discussions)** - Community discussions
-- **[Commercial Licensing](https://nself.org/commercial)** - For business use
+## License
 
-## 🔄 Version History
+MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
-| Version | Date | Focus |
-|---------|------|-------|
-| **v1.0.0** | Mar 2026 | v1.0 LTS (current) |
-| v0.9.7 | Jan 31, 2026 | Security & CI/CD Complete |
-| v0.9.6 | Jan 30, 2026 | Command Consolidation |
-| v0.9.5 | Jan 30, 2026 | Feature Parity & Security |
-| v0.9.0 | Jan 30, 2026 | Multi-Tenant Platform |
-| v0.4.8 | Jan 24, 2026 | Plugin System & Registry |
+nSelf CLI is MIT licensed. The 59 Pro plugins are source-available under a separate commercial license.
 
-**[Full Roadmap](.wiki/releases/ROADMAP.md)** | **[Changelog](.wiki/releases/CHANGELOG.md)** | **[v1.0 Plan](.wiki/releases/v1.0.0-PLAN.md)**
+---
+
+## Links
+
+- [Official Website](https://nself.org) - Project homepage
+- [Documentation](https://docs.nself.org) - Complete documentation
+- [GitHub Repository](https://github.com/nself-org/cli) - Source code
+- [Report Issues](https://github.com/nself-org/cli/issues) - Bug reports and feedback
+- [Discussions](https://github.com/nself-org/cli/discussions) - Community discussions
 
 ---
 
 <div align="center">
 
-**ɳSelf v1.0.0** — Built by [nself](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
+**nSelf CLI v2** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
-**v1.0 LTS** 🚀
-
-[Get Started](#-quick-start---3-commands-to-backend-bliss) • [Documentation](.wiki/Home.md) • [Roadmap](.wiki/releases/ROADMAP.md)
+[Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 
 </div>

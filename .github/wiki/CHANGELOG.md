@@ -1,20 +1,18 @@
 # Changelog
 
-This is the wiki root changelog entrypoint for SPORT navigation.
+> See [CHANGELOG.md](../CHANGELOG.md) in the repo root for the full version history.
 
-## Canonical Release History
+## v1.0.0
 
-- [Full changelog (all versions)](releases/CHANGELOG.md)
-- [Release index](releases/INDEX.md)
-- [Roadmap](releases/ROADMAP.md)
+First stable release. Complete Go rewrite of the nSelf CLI (previously Bash-based v0.x).
 
-## Latest Releases
-
-- [v0.9.8](releases/v0.9.8.md)
-- [v0.9.9 plan](releases/v0.9.9-PLAN.md)
-- [v1.0.0 plan](releases/v1.0.0-PLAN.md)
-
-## Notes
-
-- Public documentation source of truth is `/.wiki`.
-- Keep release process notes private in control folders (`/.codex` and project-specific directories).
+**Highlights:**
+- 24 top-level commands with 295+ subcommands
+- Full Docker Compose v2 stack generation (Postgres, Hasura, Auth, Nginx)
+- Plugin system with 25 free plugins and 59 Pro plugins
+- `nself migrate` command for v1 → v2 migration with rollback
+- Interactive `nself init` wizard with multi-env support
+- `nself health watch` for continuous monitoring
+- Shell completion for bash, zsh, and fish
+- `nself doctor` comprehensive system diagnostics
+- License management for Pro plugins
