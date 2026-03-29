@@ -361,7 +361,7 @@ func (g *Generator) frontendRoutes(baseDomain, sslDir string) []routeEntry {
 	var entries []routeEntry
 
 	for _, fe := range g.cfg.FrontendApps {
-		if fe.Route == "" || fe.Port == 0 {
+		if fe.Route == "" || fe.Port == 0 || fe.SystemName == "" {
 			continue
 		}
 
@@ -373,6 +373,7 @@ func (g *Generator) frontendRoutes(baseDomain, sslDir string) []routeEntry {
 				Upstream:    fmt.Sprintf("host.docker.internal:%d", fe.Port),
 				SSLDir:      sslDir,
 				RateZone:    "static",
+				Burst:       10,
 				WebSocket:   true, // HMR needs WebSocket
 				LazyResolve: true,
 			},
