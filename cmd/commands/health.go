@@ -105,7 +105,7 @@ var healthWatchCmd = &cobra.Command{
 	Use:   "watch",
 	Short: "Continuous health monitoring",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadHealthConfig()
+		cfg, workdir, err := loadHealthConfig()
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ var healthWatchCmd = &cobra.Command{
 		defer cancel()
 
 		interval := time.Duration(healthInterval) * time.Second
-		ch, err := health.WatchHealth(ctx, cfg, interval)
+		ch, err := health.WatchHealth(ctx, cfg, workdir, interval)
 		if err != nil {
 			return fmt.Errorf("starting watch: %w", err)
 		}
@@ -200,7 +200,7 @@ var healthConfigCmd = &cobra.Command{
 
 // healthCheckRunE is the default action: run all service health checks.
 func healthCheckRunE(cmd *cobra.Command, args []string) error {
-	cfg, err := loadHealthConfig()
+	cfg, workdir, err := loadHealthConfig()
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func healthCheckRunE(cmd *cobra.Command, args []string) error {
 	var report *health.HealthReport
 	var lastErr error
 	for attempt := 0; attempt < healthRetries; attempt++ {
-		report, lastErr = health.RunAllChecks(ctx, cfg)
+		report, lastErr = health.RunAllChecks(ctx, cfg, workdir)
 		if lastErr == nil {
 			break
 		}
@@ -231,19 +231,20 @@ func healthCheckRunE(cmd *cobra.Command, args []string) error {
 }
 
 // loadHealthConfig loads the project config, optionally setting ENV from --env.
-func loadHealthConfig() (*config.Config, error) {
+// Returns the config and the project working directory.
+func loadHealthConfig() (*config.Config, string, error) {
 	if healthEnv != "" {
 		os.Setenv("ENV", healthEnv)
 	}
 	dir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("getting working directory: %w", err)
+		return nil, "", fmt.Errorf("getting working directory: %w", err)
 	}
 	cfg, err := config.Load(dir)
 	if err != nil {
-		return nil, fmt.Errorf("loading config: %w", err)
+		return nil, "", fmt.Errorf("loading config: %w", err)
 	}
-	return cfg, nil
+	return cfg, dir, nil
 }
 
 // healthHistoryDir returns the directory where health history is stored.

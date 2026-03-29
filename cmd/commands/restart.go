@@ -143,7 +143,7 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	}
 	time.Sleep(5 * time.Second)
 
-	report, err := health.RunAllChecks(ctx, cfg)
+	report, err := health.RunAllChecks(ctx, cfg, workdir)
 	if err != nil {
 		ui.Warn(fmt.Sprintf("Health check error: %v", err))
 	} else {

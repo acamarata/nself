@@ -36,6 +36,7 @@ type Container struct {
 type ContainerInfo struct {
 	ID        string
 	Name      string
+	Service   string // Docker Compose service name (e.g. "postgres", "hasura")
 	Image     string
 	State     string
 	Health    string

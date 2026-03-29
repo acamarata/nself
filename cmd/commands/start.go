@@ -466,7 +466,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 			requiredPct = cfg.HealthCheckRequired
 		}
 
-		report := runHealthCheckLoop(ctx, cfg, opts.timeout, requiredPct, opts.verbose)
+		report := runHealthCheckLoop(ctx, cfg, projectDir, opts.timeout, requiredPct, opts.verbose)
 		_ = report // Final report used inline by the loop for display.
 	}
 
@@ -516,7 +516,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 // runHealthCheckLoop polls service health until the required percentage is met
 // or the timeout expires. It updates a spinner with live progress and prints
 // per-service status on completion.
-func runHealthCheckLoop(ctx context.Context, cfg *config.Config, timeoutSec, requiredPct int, verbose bool) *health.HealthReport {
+func runHealthCheckLoop(ctx context.Context, cfg *config.Config, workdir string, timeoutSec, requiredPct int, verbose bool) *health.HealthReport {
 	timeout := time.Duration(timeoutSec) * time.Second
 	healthCtx, healthCancel := context.WithTimeout(ctx, timeout)
 	defer healthCancel()
@@ -529,7 +529,7 @@ func runHealthCheckLoop(ctx context.Context, cfg *config.Config, timeoutSec, req
 	hcSp.Start()
 
 	for {
-		report, err := health.RunAllChecks(healthCtx, cfg)
+		report, err := health.RunAllChecks(healthCtx, cfg, workdir)
 		if err != nil {
 			// Transient error: retry unless we are out of time.
 			select {

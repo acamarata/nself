@@ -83,7 +83,7 @@ Exit codes:
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		report, err := health.RunAllChecks(ctx, cfg)
+		report, err := health.RunAllChecks(ctx, cfg, cwd)
 		if err != nil {
 			return fmt.Errorf("failed to run health checks: %w", err)
 		}

@@ -129,12 +129,13 @@ func (c *Compose) ComposePs(ctx context.Context, workdir string) ([]ContainerInf
 			return nil, fmt.Errorf("parsing compose ps JSON: %w", err)
 		}
 		infos = append(infos, ContainerInfo{
-			ID:     entry.ID,
-			Name:   entry.Name,
-			Image:  entry.Image,
-			State:  entry.State,
-			Health: entry.Health,
-			Ports:  parsePorts(entry.Ports),
+			ID:      entry.ID,
+			Name:    entry.Name,
+			Service: entry.Service,
+			Image:   entry.Image,
+			State:   entry.State,
+			Health:  entry.Health,
+			Ports:   parsePorts(entry.Ports),
 		})
 	}
 	if err := scanner.Err(); err != nil {
