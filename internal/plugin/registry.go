@@ -192,25 +192,86 @@ type registryEnvelope struct {
 	Plugins     json.RawMessage `json:"plugins"`
 }
 
+// pluginImplementation holds the nested implementation block present in the
+// Cloudflare Worker registry format (plugins.nself.org).
+type pluginImplementation struct {
+	Language       string `json:"language"`
+	Runtime        string `json:"runtime"`
+	DefaultPort    int    `json:"defaultPort"`
+	EntryPoint     string `json:"entryPoint"`
+	CLI            string `json:"cli"`
+	PackageManager string `json:"packageManager"`
+	Framework      string `json:"framework"`
+}
+
+// pluginEndpointEntry holds the object form of an API endpoint as returned
+// by the Cloudflare Worker registry: {"method":"GET","path":"/v1/foo","description":"..."}.
+type pluginEndpointEntry struct {
+	Method      string `json:"method"`
+	Path        string `json:"path"`
+	Description string `json:"description"`
+}
+
 // pluginEntry matches the fields present in the array-format (pro)
 // registry as well as the object-format (free) registry.
+// APIEndpoints is kept as json.RawMessage because the live registry returns
+// it as an array of objects while older/local registries use an array of
+// strings. We normalise both into []string during entryToManifest conversion.
 type pluginEntry struct {
-	Name            string   `json:"name"`
-	Version         string   `json:"version"`
-	Description     string   `json:"description"`
-	Category        string   `json:"category"`
-	Tier            string   `json:"tier"`
-	License         string   `json:"license"`
-	LicenseType     string   `json:"licenseType"`
-	Repository      string   `json:"repository"`
-	Checksum        string   `json:"checksum"`
-	DownloadURL     string   `json:"download_url"`
-	RequiresLicense bool     `json:"requires_license"`
-	Tags            []string `json:"tags"`
-	Tables          []string `json:"tables,omitempty"`
-	Port            int      `json:"port,omitempty"`
-	Dependencies    []string `json:"dependencies,omitempty"`
-	APIEndpoints    []string `json:"apiEndpoints,omitempty"`
+	Name           string               `json:"name"`
+	Version        string               `json:"version"`
+	Description    string               `json:"description"`
+	Category       string               `json:"category"`
+	Tier           string               `json:"tier"`
+	License        string               `json:"license"`
+	LicenseType    string               `json:"licenseType"`
+	Repository     string               `json:"repository"`
+	Checksum       string               `json:"checksum"`
+	DownloadURL    string               `json:"download_url"`
+	RequiresLicense bool                `json:"requires_license"`
+	Tags            []string            `json:"tags"`
+	Tables          []string            `json:"tables,omitempty"`
+	Port            int                 `json:"port,omitempty"`
+	Dependencies    []string            `json:"dependencies,omitempty"`
+	// Implementation may appear as a nested object (Cloudflare Worker format)
+	// or as flat fields (older registry format).
+	Implementation *pluginImplementation `json:"implementation,omitempty"`
+	// APIEndpoints is raw JSON because the registry format is not stable:
+	// the live registry returns objects; older registries return strings.
+	APIEndpoints json.RawMessage `json:"apiEndpoints,omitempty"`
+}
+
+// parseAPIEndpoints converts the raw apiEndpoints JSON value from either the
+// string-array format (["path1","path2"]) or the object-array format
+// ([{"method":"GET","path":"/v1/foo"},...]) into a normalised []string.
+// Unknown/null values yield nil without error.
+func parseAPIEndpoints(raw json.RawMessage) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "null" || trimmed == "" {
+		return nil
+	}
+
+	// Try string array first (legacy format).
+	var strs []string
+	if err := json.Unmarshal(raw, &strs); err == nil {
+		return strs
+	}
+
+	// Fall back to object array (Cloudflare Worker / live registry format).
+	var objs []pluginEndpointEntry
+	if err := json.Unmarshal(raw, &objs); err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(objs))
+	for _, ep := range objs {
+		if ep.Path != "" {
+			out = append(out, ep.Path)
+		}
+	}
+	return out
 }
 
 func parseRegistryJSON(data []byte) (*Registry, error) {
@@ -276,6 +337,21 @@ func entryToManifest(e pluginEntry) PluginManifest {
 			tier = "free"
 		}
 	}
+
+	// Resolve port: prefer flat Port field, fall back to implementation.defaultPort.
+	port := e.Port
+	if port == 0 && e.Implementation != nil {
+		port = e.Implementation.DefaultPort
+	}
+
+	// Resolve implementation fields from the nested block when flat fields are absent.
+	language := ""
+	runtime := ""
+	if e.Implementation != nil {
+		language = e.Implementation.Language
+		runtime = e.Implementation.Runtime
+	}
+
 	return PluginManifest{
 		Name:            e.Name,
 		Version:         e.Version,
@@ -289,9 +365,11 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		Tags:            e.Tags,
 		RequiresLicense: e.RequiresLicense,
 		Tables:          e.Tables,
-		Port:            e.Port,
+		Port:            port,
 		Dependencies:    e.Dependencies,
-		APIEndpoints:    e.APIEndpoints,
+		APIEndpoints:    parseAPIEndpoints(e.APIEndpoints),
+		Language:        language,
+		Runtime:         runtime,
 	}
 }
 
@@ -356,11 +434,22 @@ func (c *registryHTTPClient) writeCache(reg *Registry) error {
 // round-trips through the array format consistently.
 func (r Registry) MarshalJSON() ([]byte, error) {
 	type envelope struct {
-		Version string         `json:"version"`
-		Plugins []pluginEntry  `json:"plugins"`
+		Version string        `json:"version"`
+		Plugins []pluginEntry `json:"plugins"`
 	}
 	entries := make([]pluginEntry, 0, len(r.Plugins))
 	for _, p := range r.Plugins {
+		// Re-serialise APIEndpoints ([]string) as a JSON string array so the
+		// cache file is always in the normalised string format, which
+		// parseAPIEndpoints can read back without ambiguity.
+		var rawEPs json.RawMessage
+		if len(p.APIEndpoints) > 0 {
+			b, err := json.Marshal(p.APIEndpoints)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling api endpoints for %q: %w", p.Name, err)
+			}
+			rawEPs = b
+		}
 		entries = append(entries, pluginEntry{
 			Name:         p.Name,
 			Version:      p.Version,
@@ -372,7 +461,7 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			Tables:       p.Tables,
 			Port:         p.Port,
 			Dependencies: p.Dependencies,
-			APIEndpoints: p.APIEndpoints,
+			APIEndpoints: rawEPs,
 		})
 	}
 	return json.Marshal(envelope{

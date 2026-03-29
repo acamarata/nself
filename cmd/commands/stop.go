@@ -54,7 +54,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
-	lifecycle.TrapSignals(ctx, cancel, func() {}, 10*time.Second)
+	lifecycle.TrapSignals(ctx, cancel, func() {}, 10*time.Second, os.Exit)
 
 	// Locate the nself project root (handles monorepo .backend/ layout).
 	cwd, err := os.Getwd()

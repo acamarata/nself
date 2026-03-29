@@ -1,8 +1,11 @@
 package docker
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -46,6 +49,95 @@ func CheckAllPorts(ports []int) ([]PortConflict, error) {
 			return nil, fmt.Errorf("checking port %d: %w", p, err)
 		}
 		if inUse {
+			conflicts = append(conflicts, PortConflict{Port: p, InUse: true})
+		}
+	}
+	return conflicts, nil
+}
+
+// OwnedHostPorts queries the running compose stack in workdir and returns the
+// set of host-side port numbers currently bound by nself's own containers.
+// These ports should not be reported as conflicts on startup — they are already
+// owned by nself and will be reused by docker compose up.
+//
+// If the query fails (e.g. no containers are running yet, Docker daemon
+// unreachable) the function returns an empty set and a nil error so that the
+// caller falls back to treating all in-use ports as conflicts.
+func OwnedHostPorts(ctx context.Context, workdir string, composeFiles ...string) (map[int]bool, error) {
+	c := NewCompose(composeFiles...)
+	containers, err := c.ComposePs(ctx, workdir)
+	if err != nil {
+		// Non-fatal: no running stack means no owned ports.
+		return map[int]bool{}, nil
+	}
+
+	owned := make(map[int]bool)
+	for _, info := range containers {
+		for _, p := range info.Ports {
+			// Port strings from ComposePs look like "0.0.0.0:5432->5432/tcp"
+			// or "127.0.0.1:5432->5432/tcp". Extract the host port number.
+			hostPort := extractComposeHostPort(p)
+			if hostPort > 0 {
+				owned[hostPort] = true
+			}
+		}
+	}
+	return owned, nil
+}
+
+// extractComposeHostPort parses a Docker Compose port string of the form
+// "[ip:]hostPort->containerPort[/proto]" and returns the host-side port
+// as an integer. Returns 0 if the string cannot be parsed.
+func extractComposeHostPort(s string) int {
+	// Strip protocol suffix: "5432/tcp" → "5432".
+	if idx := strings.LastIndex(s, "/"); idx >= 0 {
+		// Only strip if it looks like a proto suffix (after "->").
+		if arrowIdx := strings.Index(s, "->"); arrowIdx >= 0 && idx > arrowIdx {
+			s = s[:idx]
+		}
+	}
+
+	// Split on "->"; left side is [ip:]hostPort.
+	parts := strings.SplitN(s, "->", 2)
+	if len(parts) < 1 {
+		return 0
+	}
+	hostPart := parts[0]
+
+	// If the host part contains ":" it may be "ip:port" or just "port".
+	if colIdx := strings.LastIndex(hostPart, ":"); colIdx >= 0 {
+		hostPart = hostPart[colIdx+1:]
+	}
+
+	port, err := strconv.Atoi(strings.TrimSpace(hostPart))
+	if err != nil || port <= 0 || port > 65535 {
+		return 0
+	}
+	return port
+}
+
+// CheckAllPortsFiltered probes every port in the slice and returns only entries
+// where the port is in use by a process that is NOT part of nself's own running
+// compose stack. This prevents false positives where nself's own containers
+// (e.g. postgres bound to 127.0.0.1:5432) are reported as conflicts on restart.
+//
+// workdir and composeFiles are forwarded to OwnedHostPorts. If the compose query
+// fails the function falls back to unfiltered behaviour (all in-use ports are
+// conflicts) so startup never silently succeeds with a real conflict.
+func CheckAllPortsFiltered(ctx context.Context, ports []int, workdir string, composeFiles ...string) ([]PortConflict, error) {
+	owned, err := OwnedHostPorts(ctx, workdir, composeFiles...)
+	if err != nil {
+		// Defensive: owned is already empty on error, so fall through.
+		owned = map[int]bool{}
+	}
+
+	var conflicts []PortConflict
+	for _, p := range ports {
+		inUse, err := CheckPort(p)
+		if err != nil {
+			return nil, fmt.Errorf("checking port %d: %w", p, err)
+		}
+		if inUse && !owned[p] {
 			conflicts = append(conflicts, PortConflict{Port: p, InUse: true})
 		}
 	}

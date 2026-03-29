@@ -146,9 +146,6 @@ type licenseRequest struct {
 // ValidateLicenseRemote performs a remote license check by POSTing to the
 // given pingURL. It returns (true, nil) on HTTP 200, (false, nil) on
 // 401/403/404, and (false, error) on network or unexpected failures.
-//
-// If NSELF_LICENSE_SKIP_VERIFY=1 is set, the function returns (true, nil)
-// without contacting the server.
 func ValidateLicenseRemote(ctx context.Context, key string, pingURL string) (bool, error) {
 	valid, _, err := validateLicenseRemoteWithEntitlements(ctx, key, pingURL)
 	return valid, err

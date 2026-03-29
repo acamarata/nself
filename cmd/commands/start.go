@@ -137,7 +137,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
-	lifecycle.TrapSignals(ctx, cancel, func() {}, 10*time.Second)
+	lifecycle.TrapSignals(ctx, cancel, func() {}, 10*time.Second, os.Exit)
 
 	totalSteps := 7
 	currentStep := 0
@@ -250,6 +250,17 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		ui.Warn(fmt.Sprintf("TLS certificate expires in %d days — renew soon", days))
 	}
 
+	// ── Read compose manifest (needed for port-ownership check) ─────
+	// Read early — before the port check — so CheckAllPortsFiltered can
+	// query only nself's own containers and avoid flagging them as conflicts.
+	composeFiles, err := build.ReadComposeManifest(projectDir)
+	if err != nil {
+		if opts.verbose {
+			ui.Warn(fmt.Sprintf("Could not read compose manifest: %v (using defaults)", err))
+		}
+		composeFiles = nil
+	}
+
 	// ── Step 3: Port availability check ──────────────────────────────
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Checking port availability")
@@ -257,7 +268,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	if opts.skipPortCheck {
 		ui.Warn("Port check skipped (--skip-port-check)")
 	} else {
-		conflicts, err := docker.CheckAllPorts(docker.ReservedPorts)
+		conflicts, err := docker.CheckAllPortsFiltered(ctx, docker.ReservedPorts, projectDir, composeFiles...)
 		if err != nil {
 			ui.Warn(fmt.Sprintf("Port check error: %v", err))
 		} else if len(conflicts) > 0 {
@@ -318,17 +329,6 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	// ── Step 4: Start PostgreSQL (Phase 1) ──────────────────────────
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Starting PostgreSQL")
-
-	// Read compose file manifest for multi-file support.
-	// If .nself/compose-files.txt exists, pass the listed files to docker compose
-	// via -f flags. Otherwise fall back to Docker's default discovery.
-	composeFiles, err := build.ReadComposeManifest(projectDir)
-	if err != nil {
-		if opts.verbose {
-			ui.Warn(fmt.Sprintf("Could not read compose manifest: %v (using defaults)", err))
-		}
-		composeFiles = nil
-	}
 
 	compose := docker.NewCompose(composeFiles...)
 

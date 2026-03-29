@@ -1,9 +1,20 @@
 package plugin
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
+
+// mustMarshalJSON is a test helper that marshals v to json.RawMessage, panicking
+// on error (should never happen with well-formed test data).
+func mustMarshalJSON(v interface{}) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 func TestEntryToManifestLicenseType(t *testing.T) {
 	e := pluginEntry{
@@ -38,7 +49,7 @@ func TestEntryToManifestPopulatesRegistryFields(t *testing.T) {
 		Tables:          []string{"np_test_foo"},
 		Port:            9000,
 		Dependencies:    []string{"other"},
-		APIEndpoints:    []string{"/api/v1"},
+		APIEndpoints:    mustMarshalJSON([]string{"/api/v1"}),
 	}
 	m := entryToManifest(e)
 
@@ -80,7 +91,7 @@ func TestEntryToManifest_AllFieldsCopied(t *testing.T) {
 		Tables:       []string{"np_myplugin_items"},
 		Port:         8080,
 		Dependencies: []string{"redis"},
-		APIEndpoints: []string{"/api/v1"},
+		APIEndpoints: mustMarshalJSON([]string{"/api/v1"}),
 		Tags:         []string{"test"},
 	}
 

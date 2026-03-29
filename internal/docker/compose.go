@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -151,14 +152,18 @@ func (c *Compose) ComposeConfig(ctx context.Context, workdir string) error {
 }
 
 // Run executes a docker command with the given arguments, setting the working
-// directory and inheriting the context for cancellation.
+// directory and inheriting the context for cancellation. stdout and stderr are
+// streamed directly to the terminal so that Docker Compose can detect the TTY
+// and render progress correctly. This also ensures long-running operations like
+// "compose stop" and "compose down" are not silently killed by a hidden pipe.
 func (c *Compose) Run(ctx context.Context, workdir string, args ...string) error {
 	cmd := exec.CommandContext(ctx, c.dockerBin(), args...)
 	cmd.Dir = workdir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("docker %s: %w\n%s", strings.Join(args, " "), err, string(output))
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker %s: %w", strings.Join(args, " "), err)
 	}
 	return nil
 }

@@ -8,6 +8,16 @@ import (
 	"runtime"
 )
 
+// ExitCodeError is returned when a plugin process exits with a non-zero code.
+// The caller (main) should call os.Exit with Code.
+type ExitCodeError struct {
+	Code int
+}
+
+func (e *ExitCodeError) Error() string {
+	return fmt.Sprintf("plugin exited with code %d", e.Code)
+}
+
 // pluginBinDir returns the directory where plugin binaries are installed.
 // This is ~/.nself/plugins/bin/ (or /tmp/.nself/plugins/bin/ as fallback).
 func pluginBinDir() string {
@@ -37,7 +47,7 @@ func ProxyCommand(cmdName string, args []string) error {
 	if _, err := os.Stat(path); err != nil {
 		fmt.Printf("Command '%s' is not a built-in command and the plugin '%s' was not found.\n", cmdName, pluginBinary)
 		fmt.Printf("To install this plugin, run:\n  nself plugin install %s\n", cmdName)
-		os.Exit(1)
+		return fmt.Errorf("plugin binary not found: %s", pluginBinary)
 	}
 
 	// Prepare the command
@@ -49,7 +59,7 @@ func ProxyCommand(cmdName string, args []string) error {
 	// Run process
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			os.Exit(exitError.ExitCode())
+			return &ExitCodeError{Code: exitError.ExitCode()}
 		}
 		return fmt.Errorf("failed to execute plugin: %w", err)
 	}

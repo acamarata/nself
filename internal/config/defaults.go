@@ -763,7 +763,9 @@ func BuildServiceURL(subdomain, baseDomain string) string {
 func generateSecureRandom(length int) string {
 	// Allocate enough bytes to guarantee the encoded output is >= length.
 	b := make([]byte, length)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
 	encoded := base64.RawURLEncoding.EncodeToString(b)
 	if len(encoded) < length {
 		return encoded
