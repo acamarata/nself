@@ -159,6 +159,31 @@ func TestAuthResourceLimits_IndependentFromHasura(t *testing.T) {
 	}
 }
 
+// TestHasuraRemoteSchemaPassthrough verifies that REMOTE_SCHEMA_* and HASURA_EXTRA_*
+// vars from cfg.Passthrough are forwarded to the Hasura container environment.
+// These vars are required for Hasura's url_from_env Remote Schema feature.
+func TestHasuraRemoteSchemaPassthrough(t *testing.T) {
+	cfg := minimalConfig()
+	cfg.Passthrough = map[string]string{
+		"REMOTE_SCHEMA_UMMAPP_URL":   "http://host.docker.internal:3043/api/graphql",
+		"REMOTE_SCHEMA_UMMPRO_URL":   "http://host.docker.internal:3044/api/graphql",
+		"HASURA_EXTRA_FOO":           "bar",
+		"AUTH_PROVIDER_GITHUB_SECRET": "should-not-appear",
+	}
+
+	g := NewGenerator(cfg)
+	svc := g.buildHasuraService()
+
+	for _, key := range []string{"REMOTE_SCHEMA_UMMAPP_URL", "REMOTE_SCHEMA_UMMPRO_URL", "HASURA_EXTRA_FOO"} {
+		if _, ok := svc.Environment[key]; !ok {
+			t.Errorf("expected %q in Hasura environment, not found", key)
+		}
+	}
+	if _, ok := svc.Environment["AUTH_PROVIDER_GITHUB_SECRET"]; ok {
+		t.Errorf("AUTH_PROVIDER_* keys must not leak into Hasura environment")
+	}
+}
+
 // TestAuthPortFromConfig verifies T04: cfg.Auth.Port sets the host-side port only.
 // nhost/hasura-auth always binds on 4002 internally, so the container side is fixed.
 // Setting Auth.Port = 4001 must produce "127.0.0.1:4001:4002".

@@ -93,6 +93,22 @@ func (g *Generator) buildHasuraService() ServiceConfig {
 		env[k] = v
 	}
 
+	// Passthrough: forward REMOTE_SCHEMA_* and HASURA_EXTRA_* from .env to the container.
+	// Hasura's url_from_env feature reads Remote Schema URLs directly from the container
+	// environment, so these vars must be present at runtime.
+	if cfg.Passthrough != nil {
+		keys := make([]string, 0, len(cfg.Passthrough))
+		for k := range cfg.Passthrough {
+			if strings.HasPrefix(k, "REMOTE_SCHEMA_") || strings.HasPrefix(k, "HASURA_EXTRA_") {
+				keys = append(keys, k)
+			}
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			env[k] = cfg.Passthrough[k]
+		}
+	}
+
 	return ServiceConfig{
 		Image:         ResolveImage("hasura", fmt.Sprintf("hasura/graphql-engine:%s", cfg.Hasura.Version)),
 		ContainerName: fmt.Sprintf("%s_hasura", cfg.ProjectName),
