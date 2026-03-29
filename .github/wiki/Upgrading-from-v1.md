@@ -1,6 +1,6 @@
 # Upgrading from v1
 
-nSelf v2 is a complete rewrite in Go. The CLI interface is largely compatible but there are breaking changes you must address before running v2 against a v1 project.
+nSelf v1.0.0 is a complete rewrite in Go (replacing the legacy Bash CLI). The interface is largely compatible but there are breaking changes you must address before upgrading a v0.x project.
 
 ## Breaking Changes
 

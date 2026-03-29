@@ -38,7 +38,7 @@ Docker resource names also changed:
 
 ## Migration Steps
 
-### 1. Install nSelf v2
+### 1. Install nSelf v1.0.0 (Go rewrite)
 
 ```bash
 brew upgrade nself-org/nself/nself
