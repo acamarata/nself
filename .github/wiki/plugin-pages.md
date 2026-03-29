@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Pages Plugin
 
 > Landing page builder with page templates, sections, and form capture. **Pro plugin.**

@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Media Plugin
 
 > Media library with MinIO storage, image resizing, and video transcoding integration. **Pro plugin.**

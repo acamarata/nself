@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Scheduler Plugin
 
 > Advanced job scheduler — cron + delay + priority + workflow with visual timeline UI. **Pro plugin.**

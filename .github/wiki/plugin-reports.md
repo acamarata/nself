@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Reports Plugin
 
 > Automated report generation — scheduled queries to PDF/CSV/email delivery. **Pro plugin.**

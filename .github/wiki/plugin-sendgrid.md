@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # SendGrid Plugin
 
 > SendGrid transactional and marketing email with template management. **Pro plugin.**

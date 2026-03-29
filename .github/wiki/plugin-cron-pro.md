@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Cron Pro Plugin
 
 > Advanced cron scheduler — distributed locks, complex syntax, dashboard, and failure alerts. **Pro plugin.**

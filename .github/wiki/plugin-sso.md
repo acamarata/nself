@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # SSO Plugin
 
 > Single sign-on via SAML and OIDC for enterprise identity provider integration. **Pro plugin.**

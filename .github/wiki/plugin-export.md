@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Export Plugin
 
 > Data export service — table to CSV, JSON, and XLSX with async job queue. **Pro plugin.**

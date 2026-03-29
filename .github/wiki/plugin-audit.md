@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Audit Plugin
 
 > Tamper-evident audit trail — log all API calls, data changes, and user actions. **Pro plugin.**

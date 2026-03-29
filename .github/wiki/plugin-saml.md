@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # SAML Plugin
 
 > SAML 2.0 identity provider and service provider integration. **Pro plugin.**

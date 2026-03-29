@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Watermark Plugin
 
 > Image and video watermarking — text and image overlay with batch processing. **Pro plugin.**

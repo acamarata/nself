@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Commerce Plugin
 
 > E-commerce foundation — products, orders, cart, and inventory management. **Pro plugin.**

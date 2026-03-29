@@ -3,6 +3,7 @@
 ---
 
 **Getting Started**
+- [[Getting-Started]]
 - [[Installation]]
 - [[Quick-Start]]
 - [[First-Project]]

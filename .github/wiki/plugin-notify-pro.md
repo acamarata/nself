@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Notify Pro Plugin
 
 > 5-channel notifications — SMTP, Twilio SMS, FCM Push, Slack, and Telegram. **Pro plugin.**

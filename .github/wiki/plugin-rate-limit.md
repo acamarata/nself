@@ -1,3 +1,6 @@
+> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
+> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+
 # Rate Limit Plugin
 
 > API rate limiting — per-user, per-endpoint, per-tenant limits with Redis backing. **Pro plugin.**
