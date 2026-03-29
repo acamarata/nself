@@ -4,17 +4,29 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
 )
 
+// validSchemaChars matches only lowercase letters, digits, and underscores.
+var validSchemaChars = regexp.MustCompile(`^[a-z0-9_]+$`)
+
 // sanitizeSchemaName converts a plugin name to a valid Postgres identifier.
 // Lowercase, hyphens become underscores, prefixed with np_.
+// Only [a-z0-9_] characters are allowed after transformation; any input
+// containing other characters (quotes, semicolons, spaces, etc.) is rejected
+// to prevent SQL injection.
 func sanitizeSchemaName(pluginName string) string {
 	name := strings.ToLower(pluginName)
 	name = strings.ReplaceAll(name, "-", "_")
+	if !validSchemaChars.MatchString(name) {
+		// Return a safe fallback that will fail schema creation with a clear name
+		// rather than allowing SQL-significant characters through.
+		return "np_invalid"
+	}
 	return "np_" + name
 }
 

@@ -53,6 +53,8 @@ func newRegistryClient(registryURL, cacheDir string, cacheTTLSeconds int) Regist
 			registryURL = DefaultRegistryURL
 		}
 	}
+	// S-011: Reject non-HTTPS registry URLs except localhost for dev.
+	registryURL = enforceRegistryHTTPS(registryURL)
 	if cacheTTLSeconds <= 0 {
 		cacheTTLSeconds = DefaultCacheTTL
 	}
@@ -127,8 +129,26 @@ func FetchRegistry(ctx context.Context, registryURL string, cacheDir string) (*R
 			registryURL = envURL
 		}
 	}
+	if registryURL != "" {
+		registryURL = enforceRegistryHTTPS(registryURL)
+	}
 	client := newRegistryClient(registryURL, cacheDir, DefaultCacheTTL)
 	return client.Fetch(ctx)
+}
+
+// enforceRegistryHTTPS validates that a registry URL uses HTTPS.
+// HTTP is allowed only for localhost/127.0.0.1 (dev use). Non-HTTPS
+// URLs are replaced with the default secure registry URL.
+func enforceRegistryHTTPS(rawURL string) string {
+	if strings.HasPrefix(rawURL, "https://") {
+		return rawURL
+	}
+	// Allow plain HTTP for local development.
+	if strings.HasPrefix(rawURL, "http://localhost") || strings.HasPrefix(rawURL, "http://127.0.0.1") {
+		return rawURL
+	}
+	fmt.Fprintf(os.Stderr, "warning: rejecting non-HTTPS registry URL %q, using default\n", rawURL)
+	return DefaultRegistryURL
 }
 
 // --- HTTP fetch ---

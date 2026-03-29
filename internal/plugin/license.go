@@ -159,11 +159,6 @@ func ValidateLicenseRemote(ctx context.Context, key string, pingURL string) (boo
 // name and list of plugins the license is entitled to, which can be cached
 // locally to avoid repeated remote calls.
 func validateLicenseRemoteWithEntitlements(ctx context.Context, key string, pingURL string) (bool, *licenseValidateResponse, error) {
-	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" {
-		fmt.Fprintf(os.Stderr, "⚠ WARNING: License verification bypassed (NSELF_LICENSE_SKIP_VERIFY=1). Do not use in production.\n")
-		return true, nil, nil
-	}
-
 	// Owner keys skip machine fingerprint — they are not bound to a
 	// specific device.
 	mid := ""

@@ -4,16 +4,37 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 )
+
+// pluginBinDir returns the directory where plugin binaries are installed.
+// This is ~/.nself/plugins/bin/ (or /tmp/.nself/plugins/bin/ as fallback).
+func pluginBinDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join("/tmp", ".nself", "plugins", "bin")
+	}
+	return filepath.Join(home, ".nself", "plugins", "bin")
+}
 
 // ProxyCommand checks if a plugin binary exists and executes it.
 // If not, it instructs the user to install it.
+//
+// For security, the binary is looked up ONLY in the plugin bin directory,
+// never via the full system PATH. This prevents PATH hijacking attacks.
 func ProxyCommand(cmdName string, args []string) error {
 	pluginBinary := fmt.Sprintf("nself-%s", cmdName)
 
-	// Check if the binary is in PATH
-	path, err := exec.LookPath(pluginBinary)
-	if err != nil {
+	// S-002: Only look in the plugin bin directory, never the full PATH.
+	binDir := pluginBinDir()
+	candidate := filepath.Join(binDir, pluginBinary)
+	if runtime.GOOS == "windows" {
+		candidate += ".exe"
+	}
+
+	path := candidate
+	if _, err := os.Stat(path); err != nil {
 		fmt.Printf("Command '%s' is not a built-in command and the plugin '%s' was not found.\n", cmdName, pluginBinary)
 		fmt.Printf("To install this plugin, run:\n  nself plugin install %s\n", cmdName)
 		os.Exit(1)

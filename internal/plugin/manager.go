@@ -682,18 +682,22 @@ func extractTarGz(archivePath, destDir string) error {
 			return fmt.Errorf("tar slip detected: %q escapes destination directory", hdr.Name)
 		}
 
+		// S-014: Strip setuid, setgid, and sticky bits from tar entries
+		// to prevent privilege escalation from malicious plugin archives.
+		mode := os.FileMode(hdr.Mode) &^ (os.ModeSetuid | os.ModeSetgid | os.ModeSticky)
+
 		switch hdr.Typeflag {
 		case tar.TypeSymlink, tar.TypeLink:
 			return fmt.Errorf("unsafe tar entry: symlinks not allowed (%q → %q)", hdr.Name, hdr.Linkname)
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
+			if err := os.MkdirAll(target, mode); err != nil {
 				return fmt.Errorf("creating directory %s: %w", target, err)
 			}
 		case tar.TypeReg:
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("creating parent directory for %s: %w", target, err)
 			}
-			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
+			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 			if err != nil {
 				return fmt.Errorf("creating file %s: %w", target, err)
 			}
