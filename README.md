@@ -72,7 +72,7 @@ From zero to production-ready backend in under 5 minutes. Really.
 
 **Developer Experience:**
 - **40+ Service Templates** - Express, FastAPI, Flask, Gin, Rust, NestJS, gRPC, and more
-- **32 Commands, 295+ Subcommands** - Complete control from the terminal
+- **24 Commands, 295+ Subcommands** - Complete control from the terminal
 - **Admin GUI** (localhost) - Local management UI
 - **Email Management** - 16+ providers with zero-config development mode
 
@@ -322,7 +322,7 @@ Every template includes:
 
 ## Command Reference
 
-nSelf provides a **32-command canonical runtime surface** with **295+ subcommands** organized by domain:
+nSelf provides a **24-command canonical runtime surface** with **295+ subcommands** organized by domain:
 
 ### Core Commands
 ```bash
