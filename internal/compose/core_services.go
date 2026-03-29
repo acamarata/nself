@@ -260,8 +260,8 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 			"./ssl/certificates:/etc/nginx/ssl:ro",
 		},
 		Tmpfs: []string{
-			"/var/cache/nginx",
-			"/var/run",
+			"/var/cache/nginx:uid=101,gid=101",
+			"/var/run:uid=101,gid=101",
 		},
 		Healthcheck: &Healthcheck{
 			Test:        []string{"CMD-SHELL", "wget --no-check-certificate --no-verbose --tries=1 -O /dev/null https://127.0.0.1/health 2>/dev/null || exit 1"},
