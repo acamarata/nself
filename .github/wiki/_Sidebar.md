@@ -65,7 +65,6 @@
 **Plugins**
 - [[Plugin-Overview]]
 - [[Plugin-Install]]
-- [[Plugin-Development]]
 - [[Plugin-Licensing]]
 - Free Plugins
   - [[plugin-monitoring]]
@@ -90,9 +89,6 @@
   - [[plugin-vpn]]
   - [[plugin-mdns]]
   - [[plugin-donorbox]]
-  - [[plugin-tbd-1]]
-  - [[plugin-tbd-2]]
-  - [[plugin-tbd-3]]
 - Pro Plugins
   - [[plugin-ai]]
   - [[plugin-claw]]
@@ -105,6 +101,7 @@
   - [[plugin-twilio]]
   - [[plugin-sendgrid]]
   - [[plugin-mailgun]]
+  - [[plugin-post]]
   - [[plugin-postmark]]
   - [[plugin-commerce]]
   - [[plugin-stripe]]
