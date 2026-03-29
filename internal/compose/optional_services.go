@@ -93,6 +93,10 @@ func (g *Generator) buildMinioService() ServiceConfig {
 			"MINIO_ROOT_USER":       mc.RootUser,
 			"MINIO_ROOT_PASSWORD":   mc.RootPassword,
 			"MINIO_DEFAULT_BUCKETS": mc.DefaultBuckets,
+			// Disable extended attributes — required on Docker Desktop macOS
+			// (VirtioFS does not support xattrs and MinIO errors with
+			// "file access denied: Invalid arguments specified" without this).
+			"MINIO_DISABLE_XATTR": "on",
 		},
 		Command: `server /data --console-address ":9001"`,
 		Volumes: []string{"minio_data:/data"},

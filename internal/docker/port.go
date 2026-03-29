@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/ports"
 )
 
 // ReservedPorts lists ports used by the nSelf stack that must be checked
@@ -124,7 +126,7 @@ func extractComposeHostPort(s string) int {
 // workdir and composeFiles are forwarded to OwnedHostPorts. If the compose query
 // fails the function falls back to unfiltered behaviour (all in-use ports are
 // conflicts) so startup never silently succeeds with a real conflict.
-func CheckAllPortsFiltered(ctx context.Context, ports []int, workdir string, composeFiles ...string) ([]PortConflict, error) {
+func CheckAllPortsFiltered(ctx context.Context, portList []int, workdir string, composeFiles ...string) ([]PortConflict, error) {
 	owned, err := OwnedHostPorts(ctx, workdir, composeFiles...)
 	if err != nil {
 		// Defensive: owned is already empty on error, so fall through.
@@ -132,14 +134,43 @@ func CheckAllPortsFiltered(ctx context.Context, ports []int, workdir string, com
 	}
 
 	var conflicts []PortConflict
-	for _, p := range ports {
+	for _, p := range portList {
 		inUse, err := CheckPort(p)
 		if err != nil {
 			return nil, fmt.Errorf("checking port %d: %w", p, err)
 		}
-		if inUse && !owned[p] {
-			conflicts = append(conflicts, PortConflict{Port: p, InUse: true})
+		if !inUse || owned[p] {
+			continue
 		}
+		// Port is in use by something outside the current compose stack.
+		// On macOS, Docker Desktop holds ports briefly after container removal
+		// via com.docker.backend (the hypervisor process). These are transient
+		// Docker-internal holds — not real conflicts. Skip them so that
+		// stop→start and restart workflows don't false-positive.
+		holder, _ := ports.WhoHoldsPort(p)
+		if holder != nil && isDockerInternalHolder(holder.Name) {
+			continue
+		}
+		conflicts = append(conflicts, PortConflict{Port: p, InUse: true})
 	}
 	return conflicts, nil
+}
+
+// isDockerInternalHolder returns true when the process name belongs to Docker
+// Desktop's internal infrastructure on macOS. These processes hold port
+// reservations briefly after containers stop and should not be treated as
+// external conflicts.
+func isDockerInternalHolder(name string) bool {
+	dockerInternalNames := []string{
+		"com.docker.backend",
+		"com.docker.hyperkit",
+		"com.docker.vpnkit",
+		"vpnkit-bridge",
+	}
+	for _, n := range dockerInternalNames {
+		if strings.EqualFold(name, n) {
+			return true
+		}
+	}
+	return false
 }
