@@ -160,6 +160,16 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	filesGenerated += sslResult.Count * 2 // fullchain.pem + privkey.pem per cert set
 
 	// ── Step 7: Generate nginx configuration ────────────────────────
+	// Clear nginx/sites/ before regenerating so stale configs from a previous
+	// BASE_DOMAIN value don't persist. conf.d/ is hand-managed and is NOT cleared.
+	nginxSitesClearDir := filepath.Join(workdir, "nginx", "sites")
+	if entries, readErr := os.ReadDir(nginxSitesClearDir); readErr == nil {
+		for _, e := range entries {
+			if !e.IsDir() {
+				_ = os.Remove(filepath.Join(nginxSitesClearDir, e.Name()))
+			}
+		}
+	}
 	nginxGen := nginx.NewGenerator(cfg, workdir)
 	nginxFiles, err := nginxGen.Generate()
 	if err != nil {

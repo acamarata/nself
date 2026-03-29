@@ -201,10 +201,11 @@ func (g *Generator) buildAuthService() ServiceConfig {
 			fmt.Sprintf("127.0.0.1:%d:%d", cfg.Auth.Port, cfg.Auth.Port),
 		},
 		Healthcheck: &Healthcheck{
-			Test:     []string{"CMD", "curl", "-f", fmt.Sprintf("http://localhost:%d/health", cfg.Auth.Port)},
+			Test:     []string{"CMD-SHELL", "wget -qO- http://localhost:${AUTH_PORT}/healthz || curl -sf http://localhost:${AUTH_PORT}/health || exit 1"},
 			Interval: "30s",
 			Timeout:  "10s",
 			Retries:  3,
+			StartPeriod: "30s",
 		},
 		Deploy: &DeployConfig{
 			Resources: &Resources{
@@ -238,6 +239,7 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 		Image:         ResolveImage("nginx", "nginx:alpine"),
 		ContainerName: fmt.Sprintf("%s_nginx", cfg.ProjectName),
 		Restart:       "unless-stopped",
+		User:          "101:101",
 		Networks:      []string{cfg.DockerNetwork},
 		DependsOn:     dependsOn,
 		Environment: map[string]string{
