@@ -207,7 +207,9 @@ func (g *Generator) applyTrustAndHosts(domains []string, result *GenerateResult)
 // hostsManualNote builds a short note about what hosts entries need to be added manually.
 func hostsManualNote(hostnames []string) string {
 	var sb strings.Builder
-	sb.WriteString("Add to /etc/hosts:\n")
+	sb.WriteString("Run once to set up DNS:\n")
+	sb.WriteString("  sudo nself dns-setup\n\n")
+	sb.WriteString("Or add manually to /etc/hosts:\n")
 	for _, h := range hostnames {
 		sb.WriteString(fmt.Sprintf("  127.0.0.1\t%s\n", h))
 	}

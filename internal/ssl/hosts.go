@@ -25,6 +25,33 @@ const (
 // Returns ErrSudoRequired if the file cannot be written due to permissions.
 // Wildcard entries (e.g. *.example.com) are skipped because /etc/hosts does
 // not support wildcards.
+//
+// AddHosts is the exported form for use by the dns-setup command.
+func AddHosts(hostnames []string) (int, error) {
+	filtered := filterHostsEntries(hostnames)
+	if len(filtered) == 0 {
+		return 0, nil
+	}
+	existing, err := readHostsFile(hostsFile)
+	if err != nil {
+		return 0, err
+	}
+	present := buildPresentSet(existing)
+	var toAdd []string
+	for _, h := range filtered {
+		if !present[h] {
+			toAdd = append(toAdd, h)
+		}
+	}
+	if len(toAdd) == 0 {
+		return 0, nil
+	}
+	if err := addHosts(toAdd); err != nil {
+		return 0, err
+	}
+	return len(toAdd), nil
+}
+
 func addHosts(hostnames []string) error {
 	// Filter out entries that cannot go into /etc/hosts.
 	filtered := filterHostsEntries(hostnames)

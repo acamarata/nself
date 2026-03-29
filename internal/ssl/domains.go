@@ -6,6 +6,13 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
+// CollectDomains gathers all Subject Alternative Names (SANs) needed for the
+// project's SSL certificate. The list is deduplicated. It is exported for use
+// by the dns-setup command.
+func (g *Generator) CollectDomains() []string {
+	return g.collectDomains()
+}
+
 // collectDomains gathers all Subject Alternative Names (SANs) needed for the
 // project's SSL certificate. The list is deduplicated.
 func (g *Generator) collectDomains() []string {
