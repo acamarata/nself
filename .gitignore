@@ -14,9 +14,9 @@ docker-compose.yml
 .env
 .env.*
 !.env.example
-nginx/
-ssl/
-postgres/
+/nginx/
+/ssl/
+/postgres/
 monitoring/
 services/
 .nself/
