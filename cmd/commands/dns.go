@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -39,22 +40,37 @@ nself.org and localhost setups do not need this.`,
 
 func init() {
 	dnsSetupCmd.Flags().BoolP("dry-run", "n", false, "Print entries that would be added without writing")
+	dnsSetupCmd.Flags().StringP("project", "p", "", "Path to nself project directory (useful when running with sudo)")
 	RootCmd.AddCommand(dnsSetupCmd)
 }
 
 func runDNSSetup(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	projectFlag, _ := cmd.Flags().GetString("project")
 
 	ui.CommandHeader("nself dns-setup", "Add project domains to /etc/hosts")
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
-	}
-
-	workdir, err := config.FindNSelfRoot(cwd)
-	if err != nil {
-		return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+	var workdir string
+	if projectFlag != "" {
+		// User explicitly provided a path — resolve it and validate it's an nself project.
+		abs, err := filepath.Abs(projectFlag)
+		if err != nil {
+			return fmt.Errorf("resolving project path: %w", err)
+		}
+		if _, err := config.FindNSelfRoot(abs); err != nil {
+			return fmt.Errorf("no nself project found at %s", abs)
+		}
+		workdir = abs
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("getting working directory: %w", err)
+		}
+		root, err := config.FindNSelfRoot(cwd)
+		if err != nil {
+			return fmt.Errorf("no nself project found in current directory or parents — use --project /path/to/backend or cd to your project first")
+		}
+		workdir = root
 	}
 
 	cfg, err := config.Load(workdir)
@@ -103,9 +119,9 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		if errors.Is(err, ssl.ErrSudoRequired) {
 			if runtime.GOOS == "darwin" {
-				return rerunWithOsascript()
+				return rerunWithOsascript(workdir)
 			}
-			ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
+			ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 			return fmt.Errorf("permission denied writing /etc/hosts")
 		}
 		return fmt.Errorf("updating /etc/hosts: %w", err)
@@ -126,17 +142,18 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 
 // rerunWithOsascript re-executes the current binary with dns-setup via osascript,
 // which presents a native macOS password dialog for administrator privileges.
-func rerunWithOsascript() error {
+// workdir is passed via --project so the elevated process resolves the same project.
+func rerunWithOsascript(workdir string) error {
 	self, err := os.Executable()
 	if err != nil {
-		ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
+		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("permission denied writing /etc/hosts")
 	}
 	ui.Info("Requesting administrator access to update /etc/hosts...")
-	script := fmt.Sprintf(`do shell script "%s dns-setup" with administrator privileges`, self)
+	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, self, workdir)
 	out, err := exec.Command("osascript", "-e", script).CombinedOutput()
 	if err != nil {
-		ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
+		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("permission denied writing /etc/hosts")
 	}
 	if len(out) > 0 {
