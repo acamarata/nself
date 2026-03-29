@@ -31,11 +31,13 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 		ContainerName: fmt.Sprintf("%s_postgres", cfg.ProjectName),
 		Restart:       "unless-stopped",
 		Networks:      []string{cfg.DockerNetwork},
+		User: "999:999",
 		Environment: map[string]string{
 			"POSTGRES_USER":             cfg.Postgres.User,
 			"POSTGRES_PASSWORD":         cfg.Postgres.Password,
 			"POSTGRES_DB":               cfg.Postgres.DB,
 			"POSTGRES_HOST_AUTH_METHOD": "scram-sha-256",
+			"PGDATA":                    "/var/lib/postgresql/data/pgdata",
 		},
 		Volumes: []string{
 			"postgres_data:/var/lib/postgresql/data",
@@ -44,6 +46,7 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 		Ports: []string{
 			fmt.Sprintf("127.0.0.1:%d:5432", cfg.Postgres.Port),
 		},
+		ShmSize: "256mb",
 		Healthcheck: &Healthcheck{
 			Test:     []string{"CMD-SHELL", fmt.Sprintf("pg_isready -U %s", cfg.Postgres.User)},
 			Interval: "10s",
