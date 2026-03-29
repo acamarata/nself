@@ -519,17 +519,17 @@ Your `.env.prod` should never be checked into source control. Use your secrets m
 ## Production Deployment
 
 ```bash
-# 1. Configure production environment
-nself config env create production
+# 1. Copy your project to the server
+rsync -az --exclude .volumes/ ./ user@server:/opt/myapp/
 
-# 2. Deploy to production
-nself deploy production
+# 2. On the server: set production environment and start
+ssh user@server
+cd /opt/myapp
+nself start --env prod
 
-# 3. Check deployment status
-nself deploy status
-
-# 4. Monitor deployment
-nself monitor
+# 3. Check service health
+nself status
+nself health check
 ```
 
 ### Production Checklist
