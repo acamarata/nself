@@ -201,10 +201,10 @@ func (g *Generator) buildAuthService() ServiceConfig {
 			fmt.Sprintf("127.0.0.1:%d:4000", cfg.Auth.Port),
 		},
 		Healthcheck: &Healthcheck{
-			Test:     []string{"CMD-SHELL", "wget -qO- http://localhost:4000/healthz || curl -sf http://localhost:4000/health || exit 1"},
-			Interval: "30s",
-			Timeout:  "10s",
-			Retries:  3,
+			Test:        []string{"CMD", "wget", "-qO-", "http://localhost:4000/healthz"},
+			Interval:    "30s",
+			Timeout:     "10s",
+			Retries:     3,
 			StartPeriod: "30s",
 		},
 		Deploy: &DeployConfig{

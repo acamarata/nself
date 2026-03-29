@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
@@ -100,6 +102,9 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 	added, err := ssl.AddHosts(hostable)
 	if err != nil {
 		if errors.Is(err, ssl.ErrSudoRequired) {
+			if runtime.GOOS == "darwin" {
+				return rerunWithOsascript()
+			}
 			ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
 			return fmt.Errorf("permission denied writing /etc/hosts")
 		}
@@ -116,5 +121,26 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 		ui.Info("Remember to configure dnsmasq for wildcard domains (see above).")
 	}
 
+	return nil
+}
+
+// rerunWithOsascript re-executes the current binary with dns-setup via osascript,
+// which presents a native macOS password dialog for administrator privileges.
+func rerunWithOsascript() error {
+	self, err := os.Executable()
+	if err != nil {
+		ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
+		return fmt.Errorf("permission denied writing /etc/hosts")
+	}
+	ui.Info("Requesting administrator access to update /etc/hosts...")
+	script := fmt.Sprintf(`do shell script "%s dns-setup" with administrator privileges`, self)
+	out, err := exec.Command("osascript", "-e", script).CombinedOutput()
+	if err != nil {
+		ui.Error("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup")
+		return fmt.Errorf("permission denied writing /etc/hosts")
+	}
+	if len(out) > 0 {
+		fmt.Print(string(out))
+	}
 	return nil
 }

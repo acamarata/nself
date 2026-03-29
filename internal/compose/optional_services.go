@@ -124,6 +124,7 @@ func (g *Generator) buildMinioService() ServiceConfig {
 			fmt.Sprintf("127.0.0.1:%d:9000", port),
 			fmt.Sprintf("127.0.0.1:%d:9001", consolePort),
 		},
+		Tmpfs: []string{"/tmp"},
 		Healthcheck: &Healthcheck{
 			Test:     []string{"CMD", "curl", "-f", "http://localhost:9000/minio/health/live"},
 			Interval: "30s",
