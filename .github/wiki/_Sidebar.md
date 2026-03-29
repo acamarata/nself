@@ -140,6 +140,8 @@
   - [[plugin-observability]]
   - [[plugin-ddns]]
   - [[plugin-devices]]
+  - [[plugin-vpn]]
+  - [[plugin-mdns]]
   - [[plugin-media]]
   - [[plugin-media-processing]]
   - [[plugin-file-processing]]
