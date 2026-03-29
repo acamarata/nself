@@ -99,8 +99,14 @@ func runStop(cmd *cobra.Command, args []string) error {
 	// Check running containers. If the query fails (e.g. docker compose ps
 	// exits non-zero on certain Debian/Docker combinations even when containers
 	// are running) we treat the state as unknown and proceed with the stop so
-	// that services are not left dangling. The early-return "nothing to do"
-	// path is only taken when the query succeeded and returned an empty list.
+	// that services are not left dangling.
+	//
+	// NOTE: we do NOT early-return when containers == 0. docker compose ps only
+	// lists *running* containers; exited/stopped containers (not yet removed) are
+	// invisible to it. Those stopped containers still hold Docker Desktop port
+	// reservations on macOS (via com.docker.backend). Always running compose down
+	// ensures stopped containers are removed and ports are freed — compose down is
+	// a no-op when nothing exists.
 	containers, psErr := compose.ComposePs(ctx, workdir)
 	if psErr != nil {
 		if verbose {
@@ -109,12 +115,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 	}
 
 	if psErr == nil && len(containers) == 0 && len(args) == 0 {
-		fmt.Println("No running containers found.")
-		if volumes || rmi || removeOrphans {
-			fmt.Println("Running cleanup with requested flags...")
-		} else {
-			return nil
-		}
+		fmt.Println("No running containers found. Cleaning up any stopped containers...")
 	}
 
 	// If specific services are requested, stop only those.
@@ -154,9 +155,10 @@ func runStop(cmd *cobra.Command, args []string) error {
 	}
 
 	// Build compose down options.
+	// Always remove orphans — stale containers from old configs hold ports.
 	downOpts := docker.DownOptions{
 		RemoveVolumes: volumes,
-		RemoveOrphans: removeOrphans,
+		RemoveOrphans: true,
 		Timeout:       gracefulTimeout,
 	}
 
@@ -182,9 +184,8 @@ func runStop(cmd *cobra.Command, args []string) error {
 			downArgs = append(downArgs, "-v")
 		}
 		downArgs = append(downArgs, "--rmi", "all")
-		if removeOrphans {
-			downArgs = append(downArgs, "--remove-orphans")
-		}
+		// Always remove orphans to clean up stale containers.
+		downArgs = append(downArgs, "--remove-orphans")
 		if gracefulTimeout > 0 {
 			downArgs = append(downArgs, "-t", fmt.Sprintf("%d", gracefulTimeout))
 		}
@@ -197,9 +198,11 @@ func runStop(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Summary. When psErr != nil we could not determine the container count
-	// beforehand, so report "stopped" generically rather than "0 container(s)".
-	if psErr != nil {
+	// Summary. When psErr != nil we could not determine the running container
+	// count beforehand, so report "stopped" generically. When psErr == nil but
+	// containers == 0, stopped (exited) containers may have been cleaned up by
+	// compose down — report generically as well.
+	if psErr != nil || len(containers) == 0 {
 		fmt.Print("Services stopped.")
 	} else {
 		fmt.Printf("Stopped %d container(s).", len(containers))
