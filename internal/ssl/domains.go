@@ -28,6 +28,17 @@ func (g *Generator) collectDomains() []string {
 		domains = append(domains, d)
 	}
 
+	// resolveRoute returns the FQDN for a route value. If the route already
+	// contains a dot it is assumed to be a full domain and returned as-is.
+	// Otherwise baseDomain is appended so that bare subdomain values like
+	// "api" (set by defaults.go) become "api.ummat.local".
+	resolveRoute := func(route, baseDomain string) string {
+		if strings.Contains(route, ".") {
+			return route
+		}
+		return route + "." + baseDomain
+	}
+
 	// Always included: localhost, loopback addresses.
 	add("localhost")
 	add("127.0.0.1")
@@ -49,14 +60,14 @@ func (g *Generator) collectDomains() []string {
 	if bd != "" {
 		// Hasura
 		if route := g.cfg.Hasura.Route; route != "" {
-			add(route)
+			add(resolveRoute(route, bd))
 		} else {
 			add(strings.TrimPrefix(config.BuildServiceURL("api", bd), "https://"))
 		}
 
 		// Auth
 		if route := g.cfg.Auth.Route; route != "" {
-			add(route)
+			add(resolveRoute(route, bd))
 		} else {
 			add(strings.TrimPrefix(config.BuildServiceURL("auth", bd), "https://"))
 		}
@@ -64,12 +75,12 @@ func (g *Generator) collectDomains() []string {
 		// Storage (MinIO + nhost-storage)
 		if g.cfg.Minio.Enabled {
 			if route := g.cfg.Minio.StorageRoute; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("storage", bd), "https://"))
 			}
 			if route := g.cfg.Minio.ConsoleRoute; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("storage-console", bd), "https://"))
 			}
@@ -78,7 +89,7 @@ func (g *Generator) collectDomains() []string {
 		// Admin
 		if g.cfg.Admin.Enabled {
 			if route := g.cfg.Admin.Route; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("admin", bd), "https://"))
 			}
@@ -87,7 +98,7 @@ func (g *Generator) collectDomains() []string {
 		// Search
 		if g.cfg.Search.Enabled {
 			if route := g.cfg.Search.Route; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("search", bd), "https://"))
 			}
@@ -96,7 +107,7 @@ func (g *Generator) collectDomains() []string {
 		// Mailpit
 		if g.cfg.Mailpit.Enabled {
 			if route := g.cfg.Mailpit.Route; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("mail", bd), "https://"))
 			}
@@ -105,7 +116,7 @@ func (g *Generator) collectDomains() []string {
 		// Functions
 		if g.cfg.Functions.Enabled {
 			if route := g.cfg.Functions.Route; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("functions", bd), "https://"))
 			}
@@ -114,7 +125,7 @@ func (g *Generator) collectDomains() []string {
 		// MLflow
 		if g.cfg.MLflow.Enabled {
 			if route := g.cfg.MLflow.Route; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("mlflow", bd), "https://"))
 			}
@@ -123,7 +134,7 @@ func (g *Generator) collectDomains() []string {
 		// Monitoring (Grafana)
 		if g.cfg.Monitoring.Enabled && g.cfg.Monitoring.GrafanaEnabled {
 			if route := g.cfg.Monitoring.GrafanaRoute; route != "" {
-				add(route)
+				add(resolveRoute(route, bd))
 			} else {
 				add(strings.TrimPrefix(config.BuildServiceURL("grafana", bd), "https://"))
 			}
