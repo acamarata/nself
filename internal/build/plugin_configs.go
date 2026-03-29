@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // RenderPluginConfigs walks installed plugins' configs/ directories

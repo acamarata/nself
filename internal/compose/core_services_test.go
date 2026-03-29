@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // minimalAuthConfig returns a Config with the minimum required fields set so

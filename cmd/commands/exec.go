@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"nself/internal/docker"
+	"github.com/nself-org/cli/internal/docker"
 
 	"github.com/spf13/cobra"
 )

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // sanitizeSchemaName converts a plugin name to a valid Postgres identifier.

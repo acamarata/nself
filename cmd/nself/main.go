@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"nself/cmd/commands"
+	"github.com/nself-org/cli/cmd/commands"
 )
 
 func main() {

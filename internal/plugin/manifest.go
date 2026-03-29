@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // ParseManifest reads a plugin.json file at the given path and returns a

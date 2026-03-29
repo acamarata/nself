@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // baseDomainRe matches valid domain names: alphanumeric start/end, interior

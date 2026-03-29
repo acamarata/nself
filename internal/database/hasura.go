@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // metadataRequest is the JSON body sent to the Hasura metadata API.

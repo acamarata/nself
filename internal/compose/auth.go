@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // authPGAliasVars returns AUTH_DB_* alias vars that Nhost Auth uses

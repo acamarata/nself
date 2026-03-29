@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/config"
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // MigrationStatus describes the state of a single migration file.

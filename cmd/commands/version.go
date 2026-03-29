@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"nself/internal/ui"
-	"nself/internal/version"
+	"github.com/nself-org/cli/internal/ui"
+	"github.com/nself-org/cli/internal/version"
 
 	"github.com/spf13/cobra"
 )

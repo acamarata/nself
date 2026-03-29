@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"nself/internal/security"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/security"
+	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"

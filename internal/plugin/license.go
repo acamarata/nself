@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // validLicensePrefixes lists the accepted license key prefixes.

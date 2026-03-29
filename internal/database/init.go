@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/config"
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // waitForPostgres polls pg_isready inside the postgres container until it

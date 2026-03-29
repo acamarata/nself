@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/security"
+	"github.com/nself-org/cli/internal/security"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"nself/internal/license"
-	"nself/internal/plugin"
+	"github.com/nself-org/cli/internal/license"
+	"github.com/nself-org/cli/internal/plugin"
 
 	"github.com/spf13/cobra"
 )

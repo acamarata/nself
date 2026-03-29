@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"nself/internal/compose"
-	"nself/internal/config"
-	"nself/internal/nginx"
-	"nself/internal/postgres"
-	"nself/internal/setup"
-	"nself/internal/ssl"
-	"nself/internal/version"
+	"github.com/nself-org/cli/internal/compose"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/nginx"
+	"github.com/nself-org/cli/internal/postgres"
+	"github.com/nself-org/cli/internal/setup"
+	"github.com/nself-org/cli/internal/ssl"
+	"github.com/nself-org/cli/internal/version"
 )
 
 // BuildOptions controls build behavior via CLI flags.

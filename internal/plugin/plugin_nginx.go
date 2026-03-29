@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nself/internal/nginx"
+	"github.com/nself-org/cli/internal/nginx"
 )
 
 // CheckPluginRouteConflict checks whether the nginx route declared by plugin

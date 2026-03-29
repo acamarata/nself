@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // remoteSchemaEnvVars returns env var map for Hasura remote schema bootstrapping.

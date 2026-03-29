@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/build"
-	"nself/internal/config"
-	"nself/internal/docker"
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // HealthResult holds the outcome of a single service health check.

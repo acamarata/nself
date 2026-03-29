@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"nself/internal/ui"
-	"nself/internal/version"
+	"github.com/nself-org/cli/internal/ui"
+	"github.com/nself-org/cli/internal/version"
 
 	"github.com/spf13/cobra"
 )
@@ -97,7 +97,7 @@ without installing it.`,
 
 		if updateAdmin {
 			ui.Info("Pulling latest admin image: nself/nself-admin:latest")
-			pullCmd := exec.Command("docker", "pull", "nself/nself-admin:latest")
+			pullCmd := exec.Command("docker", "pull", "github.com/nself-org/cli/nself-admin:latest")
 			pullCmd.Stdout = os.Stdout
 			pullCmd.Stderr = os.Stderr
 			if err := pullCmd.Run(); err != nil {

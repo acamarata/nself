@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // writeCacheEntryWithAge writes a single cache line for key with status

@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"nself/internal/confirm"
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/confirm"
+	"github.com/nself-org/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )

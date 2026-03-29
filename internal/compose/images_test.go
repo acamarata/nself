@@ -19,8 +19,8 @@ func TestResolveImage_UnknownService(t *testing.T) {
 }
 
 func TestResolveImage_AdminIsLatest(t *testing.T) {
-	got := ResolveImage("admin", "nself/nself-admin:v1.0")
-	want := "nself/nself-admin:latest"
+	got := ResolveImage("admin", "github.com/nself-org/cli/nself-admin:v1.0")
+	want := "github.com/nself-org/cli/nself-admin:latest"
 	if got != want {
 		t.Errorf("ResolveImage(admin) = %q, want %q", got, want)
 	}

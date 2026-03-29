@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"nself/internal/build"
-	"nself/internal/config"
-	"nself/internal/docker"
-	"nself/internal/health"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/health"
+	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )

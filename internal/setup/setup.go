@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // Options holds all flags and settings for the init command.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // minimalConfigWithCS returns a Config set up for custom service testing.

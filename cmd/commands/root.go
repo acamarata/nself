@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"nself/internal/cmdlog"
-	"nself/internal/config"
-	"nself/internal/license"
-	"nself/internal/plugin"
-	"nself/internal/version"
+	"github.com/nself-org/cli/internal/cmdlog"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/license"
+	"github.com/nself-org/cli/internal/plugin"
+	"github.com/nself-org/cli/internal/version"
 
 	"github.com/spf13/cobra"
 )
@@ -191,7 +191,7 @@ func checkNotInSourceRepo() error {
 	if firstLine == "" {
 		return nil
 	}
-	for _, sig := range []string{"module nself", "nself/cmd", "nself/internal"} {
+	for _, sig := range []string{"module nself", "github.com/nself-org/cli/cmd", "github.com/nself-org/cli/internal"} {
 		if contains(firstLine, sig) {
 			return fmt.Errorf(`cannot run nself commands inside the CLI source repository
 

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 func TestServiceOrder(t *testing.T) {

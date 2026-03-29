@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"nself/internal/build"
-	"nself/internal/config"
-	"nself/internal/migration"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/migration"
+	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )

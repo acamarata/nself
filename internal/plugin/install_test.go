@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // --- Remove lifecycle tests (S10-T02) ---

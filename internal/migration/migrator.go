@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/build"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/ui"
 )
 
 // BackupManifest records what was backed up during a migration.

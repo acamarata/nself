@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"nself/internal/config"
-	"nself/internal/health"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/health"
 
 	"github.com/spf13/cobra"
 )

@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/ui"
 )
 
 // SignalMessage returns a human-readable message for a signal.

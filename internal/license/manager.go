@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // LicenseDirV1 is the v1 license directory name under $HOME.

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // snapshotConfig returns a fully-populated config suitable for snapshot tests.

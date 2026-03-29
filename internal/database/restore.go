@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"nself/internal/backup"
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/backup"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // Restore streams a pg_dump custom-format file into the project's postgres

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"nself/internal/migration"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/migration"
+	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )

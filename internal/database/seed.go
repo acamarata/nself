@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // Seed executes SQL seed files against the postgres database.

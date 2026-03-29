@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/errs"
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // validKey returns a valid nself_pro_ key of exactly 32 characters total.

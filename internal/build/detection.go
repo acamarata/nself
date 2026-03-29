@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // DetectServices returns the list of Docker service names that should be

@@ -207,7 +207,7 @@ func (g *Generator) buildAdminService() ServiceConfig {
 	}
 
 	return ServiceConfig{
-		Image:         ResolveImage("admin", fmt.Sprintf("nself/nself-admin:%s", version)),
+		Image:         ResolveImage("admin", fmt.Sprintf("github.com/nself-org/cli/nself-admin:%s", version)),
 		ContainerName: fmt.Sprintf("%s_admin", g.cfg.ProjectName),
 		Restart:       "unless-stopped",
 		User:          "1000:1000",

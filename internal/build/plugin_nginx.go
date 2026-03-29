@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // checkPluginRouteConflict checks if a plugin's nginx route config conflicts

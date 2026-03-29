@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nself/internal/version"
+	"github.com/nself-org/cli/internal/version"
 )
 
 // buildVersionFile is the path relative to workdir where the CLI version

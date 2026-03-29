@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // coreEnvVars returns the standard env vars injected into every custom service.

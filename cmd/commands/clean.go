@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )

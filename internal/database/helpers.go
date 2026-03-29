@@ -1,7 +1,7 @@
 package database
 
 import (
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // containerName returns the postgres container name for the project.

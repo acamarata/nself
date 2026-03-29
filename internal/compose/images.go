@@ -13,7 +13,7 @@ var DefaultImageVersions = map[string]string{
 	"mailpit":     "axllent/mailpit:v1.15",
 	"meilisearch": "getmeili/meilisearch:v1.6",
 	"typesense":   "typesense/typesense:0.25.2",
-	"admin":       "nself/nself-admin:latest", // intentionally latest — our own image
+	"admin":       "github.com/nself-org/cli/nself-admin:latest", // intentionally latest — our own image
 	"mlflow":      "ghcr.io/mlflow/mlflow:v2.10.0",
 }
 

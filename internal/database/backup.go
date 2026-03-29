@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"nself/internal/backup"
-	"nself/internal/config"
-	"nself/internal/errs"
-	"nself/internal/security"
+	"github.com/nself-org/cli/internal/backup"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/security"
 )
 
 // Backup runs pg_dump inside the project's postgres container and streams the

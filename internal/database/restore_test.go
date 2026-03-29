@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 )
 
 // newTestCfg returns a minimal Config with Backup.Dir set to backupDir.

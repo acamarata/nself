@@ -1,7 +1,7 @@
 package compose
 
 import (
-	"nself/internal/config"
+	"github.com/nself-org/cli/internal/config"
 
 	"gopkg.in/yaml.v3"
 )

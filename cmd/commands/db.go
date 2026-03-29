@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/config"
-	"nself/internal/database"
-	"nself/internal/docker"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/database"
+	"github.com/nself-org/cli/internal/docker"
 
 	"github.com/spf13/cobra"
 )

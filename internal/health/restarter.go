@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"nself/internal/docker"
-	"nself/internal/ui"
+	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/ui"
 )
 
 // DockerClient abstracts the Docker operations needed by Restarter for testability.

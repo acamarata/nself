@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"nself/internal/config"
-	"nself/internal/errs"
-	"nself/internal/nginx"
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/nginx"
 )
 
 // PluginInfo describes a plugin's identity and current state.
