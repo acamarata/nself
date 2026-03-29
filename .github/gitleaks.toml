@@ -7,7 +7,7 @@ useDefault = true
 description = "Test fixtures and example files"
 paths = [
   "testdata/",
-  ".env.example",
+  "internal/config/.env.example",
   "*.example",
   "*.example.env",
 ]

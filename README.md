@@ -79,17 +79,17 @@ From zero to production-ready backend in under 5 minutes. Really.
 ### nSelf vs Others
 
 | Feature | nSelf | Supabase | Nhost | DIY |
-|---------|-------|----------|-------|-----|
-| **Full Backend Stack** | Yes | Yes | Yes | Manual |
-| **Self-Hosted** | Yes | Limited | Limited | Yes |
-| **Multi-Tenancy** | Built-in | No | No | DIY |
-| **Built-in Billing** | Stripe/Paddle | External | External | DIY |
-| **White-Label** | Complete | No | No | DIY |
-| **Deploy Anywhere** | Any infra | Cloud-first | Cloud-first | Yes |
-| **Setup Time** | 5 minutes | 30+ minutes | 30+ minutes | Hours/Days |
-| **One Command Deploy** | Yes | No | No | No |
-| **Data Ownership** | Complete | Shared | Shared | Yes |
-| **Pricing** | Free core | Paid | Paid | Free |
+|---------|:-----:|:--------:|:-----:|:---:|
+| **Full Backend Stack** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :warning: Manual |
+| **Self-Hosted** | :white_check_mark: | :yellow_circle: Limited | :yellow_circle: Limited | :white_check_mark: |
+| **Multi-Tenancy** | :white_check_mark: Built-in | :x: | :x: | :warning: DIY |
+| **Built-in Billing** | :white_check_mark: Stripe/Paddle | :x: | :x: | :warning: DIY |
+| **White-Label** | :white_check_mark: Complete | :x: | :x: | :warning: DIY |
+| **Deploy Anywhere** | :white_check_mark: Any infra | :yellow_circle: Cloud-first | :yellow_circle: Cloud-first | :white_check_mark: |
+| **Setup Time** | :white_check_mark: 5 minutes | :yellow_circle: 30+ min | :yellow_circle: 30+ min | :x: Hours/Days |
+| **One Command Deploy** | :white_check_mark: | :x: | :x: | :x: |
+| **Data Ownership** | :white_check_mark: Complete | :yellow_circle: Shared | :yellow_circle: Shared | :white_check_mark: |
+| **Pricing** | :white_check_mark: Free core | :yellow_circle: Paid tiers | :yellow_circle: Paid tiers | :white_check_mark: Free |
 
 ## Prerequisites
 
@@ -121,7 +121,7 @@ brew install nself
 
 **Direct from GitHub**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nself-org/cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nself-org/cli/main/.github/install.sh | bash
 ```
 
 ### Updating nSelf
