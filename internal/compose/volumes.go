@@ -1,12 +1,11 @@
 package compose
 
 // buildVolumes returns the docker-compose volume definitions.
-// Core volumes (postgres_data, nginx_cache) are always included.
+// Core volumes (postgres_data) are always included.
 // Optional service volumes are added conditionally based on config.
 func (g *Generator) buildVolumes() map[string]VolumeConfig {
 	vols := map[string]VolumeConfig{
 		"postgres_data": {},
-		"nginx_cache":   {},
 	}
 
 	if g.cfg.Redis.Enabled {

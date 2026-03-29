@@ -115,6 +115,7 @@ type ServiceConfig struct {
 	Build         *BuildConfig        `yaml:"build,omitempty"`
 	ContainerName string              `yaml:"container_name,omitempty"`
 	Restart       string              `yaml:"restart,omitempty"`
+	ShmSize       string              `yaml:"shm_size,omitempty"`
 	User          string              `yaml:"user,omitempty"`
 	Networks      []string            `yaml:"networks,omitempty"`
 	DependsOn     map[string]DepOn    `yaml:"depends_on,omitempty"`
@@ -133,6 +134,7 @@ type ServiceConfig struct {
 	StopGrace     string              `yaml:"stop_grace_period,omitempty"`
 	Labels        map[string]string   `yaml:"labels,omitempty"`
 	Profiles      []string            `yaml:"profiles,omitempty"`
+	Tmpfs         []string            `yaml:"tmpfs,omitempty"`
 	Privileged    bool                `yaml:"privileged,omitempty"`
 	WorkingDir    string              `yaml:"working_dir,omitempty"`
 	StdinOpen     bool                `yaml:"stdin_open,omitempty"`

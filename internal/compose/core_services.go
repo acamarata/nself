@@ -258,7 +258,10 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 			fmt.Sprintf("./%s:/etc/nginx/sites:ro", NginxSitesDir),
 			"./nginx/includes:/etc/nginx/includes:ro",
 			"./ssl/certificates:/etc/nginx/ssl:ro",
-			"nginx_cache:/var/cache/nginx",
+		},
+		Tmpfs: []string{
+			"/var/cache/nginx",
+			"/var/run",
 		},
 		Healthcheck: &Healthcheck{
 			Test:        []string{"CMD-SHELL", "wget --no-check-certificate --no-verbose --tries=1 -O /dev/null https://127.0.0.1/health 2>/dev/null || exit 1"},
