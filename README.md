@@ -348,17 +348,15 @@ nself update        # Update nself
 
 ### Advanced Commands
 ```bash
-nself db            # Database operations (11 subcommands)
-nself tenant        # Multi-tenancy (50+ subcommands)
-nself deploy        # Deployment (33 subcommands)
-nself infra         # Infrastructure (48 subcommands: K8s, cloud)
-nself service       # Service management (43 subcommands)
-nself config        # Configuration (20 subcommands)
-nself auth          # Security (38 subcommands: OAuth, SSL, MFA)
-nself backup        # Backup and recovery (6 subcommands)
-nself dev           # Developer tools (16 subcommands)
-nself plugin        # Plugin system (8+ subcommands)
-nself destroy       # Safe infrastructure destruction
+nself db            # Database operations (migrate, seed, backup, restore, shell, reset)
+nself service       # Service management (enable, disable, list)
+nself config        # Configuration (show, get, set, list, validate, export, import)
+nself plugin        # Plugin system (install, remove, update, list, start, stop, status)
+nself ssl           # SSL certificate management (status, renew)
+nself license       # Pro license management (set, show, validate, clear, upgrade)
+nself doctor        # System diagnostics (--fix for auto-repair)
+nself health        # Health checks (check, watch, history)
+nself migrate       # Detect and migrate v0.x projects
 ```
 
 Run `nself help <command>` for subcommand details.

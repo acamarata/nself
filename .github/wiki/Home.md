@@ -129,8 +129,11 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 
 | Plugin | What it does |
 |--------|-------------|
+| [[plugin-backup]] | Automated backup with pruning and cloud storage |
 | [[plugin-content-acquisition]] | RSS monitoring, release calendars, download pipelines |
 | [[plugin-content-progress]] | Watch/read progress tracking |
+| [[plugin-cron]] | Scheduled job execution |
+| [[plugin-donorbox]] | Donorbox donation integration |
 | [[plugin-feature-flags]] | Feature flag management |
 | [[plugin-github]] | GitHub integration |
 | [[plugin-github-runner]] | Self-hosted GitHub Actions runner |
@@ -138,8 +141,14 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 | [[plugin-jobs]] | Background job queues |
 | [[plugin-link-preview]] | URL preview and metadata extraction |
 | [[plugin-mdns]] | mDNS/Bonjour service discovery |
+| [[plugin-mlflow]] | ML experiment tracking |
+| [[plugin-monitoring]] | Prometheus + Grafana + Loki + Tempo (10 services) |
 | [[plugin-notifications]] | Notification management |
+| [[plugin-notify]] | Push notifications |
+| [[plugin-paypal]] | PayPal payment integration |
 | [[plugin-search]] | MeiliSearch full-text search |
+| [[plugin-shopify]] | Shopify storefront integration |
+| [[plugin-stripe]] | Stripe payment and billing integration |
 | [[plugin-subtitle-manager]] | Subtitle download and management |
 | [[plugin-tokens]] | Token management |
 | [[plugin-torrent-manager]] | Torrent client integration |
