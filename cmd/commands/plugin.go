@@ -87,6 +87,20 @@ var pluginStopCmd = &cobra.Command{
 	RunE:  runPluginStop,
 }
 
+var pluginDisableCmd = &cobra.Command{
+	Use:   "disable <name>",
+	Short: "Disable a plugin (excluded from compose on next build)",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runPluginDisable,
+}
+
+var pluginEnableCmd = &cobra.Command{
+	Use:   "enable <name>",
+	Short: "Re-enable a previously disabled plugin",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runPluginEnable,
+}
+
 var pluginStatusCmd = &cobra.Command{
 	Use:   "status [name]",
 	Short: "Show plugin status",
@@ -126,6 +140,8 @@ func init() {
 	pluginCmd.AddCommand(pluginRefreshCmd)
 	pluginCmd.AddCommand(pluginStartCmd)
 	pluginCmd.AddCommand(pluginStopCmd)
+	pluginCmd.AddCommand(pluginDisableCmd)
+	pluginCmd.AddCommand(pluginEnableCmd)
 	pluginCmd.AddCommand(pluginStatusCmd)
 	pluginCmd.AddCommand(pluginInventoryCmd)
 
@@ -437,6 +453,32 @@ func runPluginInventory(cmd *cobra.Command, args []string) error {
 	}
 	tbl.Render()
 
+	return nil
+}
+
+func runPluginDisable(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	pluginDir := resolvePluginDir()
+
+	fmt.Fprintf(os.Stderr, "Disabling plugin %q...\n", name)
+	if err := plugin.DisablePlugin(name, pluginDir); err != nil {
+		return fmt.Errorf("disabling plugin %q: %w", name, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Plugin %q disabled. Run 'nself build' to update your stack.\n", name)
+	return nil
+}
+
+func runPluginEnable(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	pluginDir := resolvePluginDir()
+
+	fmt.Fprintf(os.Stderr, "Enabling plugin %q...\n", name)
+	if err := plugin.EnablePlugin(name, pluginDir); err != nil {
+		return fmt.Errorf("enabling plugin %q: %w", name, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Plugin %q enabled. Run 'nself build' to update your stack.\n", name)
 	return nil
 }
 

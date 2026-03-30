@@ -257,7 +257,10 @@ func TestBuildAuthService_Port4000(t *testing.T) {
 	cfg := minimalConfig() // Auth.Port = 4000
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	found := false
 	for _, p := range svc.Ports {
@@ -279,7 +282,10 @@ func TestBuildAuthService_HealthcheckPort4002(t *testing.T) {
 	cfg := minimalConfig()
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Healthcheck == nil {
 		t.Fatal("auth service has no healthcheck")
@@ -304,7 +310,10 @@ func TestBuildAuthService_HealthcheckHardcoded4002(t *testing.T) {
 	cfg.Auth.Port = 4001 // non-default host port
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Healthcheck == nil {
 		t.Fatal("auth service has no healthcheck")

@@ -197,6 +197,9 @@ func init() {
 	// --plugin flag on migrate and its subcommands
 	dbMigrateCmd.PersistentFlags().String("plugin", "", "Migrate specific plugin schema")
 
+	// --dry-run flag on migrate up
+	dbMigrateUpCmd.Flags().Bool("dry-run", false, "List pending migrations without applying them")
+
 	// Wire migrate subcommands
 	dbMigrateCmd.AddCommand(dbMigrateUpCmd)
 	dbMigrateCmd.AddCommand(dbMigrateDownCmd)
@@ -250,11 +253,46 @@ func runDBMigrateUp(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Verify PostgreSQL is running before attempting any migration.
+	container := cfg.ProjectName + "_postgres"
+	user := cfg.Postgres.User
+	if user == "" {
+		user = "postgres"
+	}
+	checkCmd := exec.CommandContext(cmd.Context(), "docker", "exec", container,
+		"pg_isready", "-U", user)
+	if err := checkCmd.Run(); err != nil {
+		return fmt.Errorf("PostgreSQL is not running. Start with 'nself start' first.")
+	}
+
 	plugin, _ := cmd.Flags().GetString("plugin")
-	if err := database.MigrateUp(cmd.Context(), cfg, plugin); err != nil {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if dryRun {
+		pending, err := database.PendingMigrations(cmd.Context(), cfg, plugin)
+		if err != nil {
+			return fmt.Errorf("pending migrations: %w", err)
+		}
+		if len(pending) == 0 {
+			fmt.Println("No pending migrations.")
+			return nil
+		}
+		for _, name := range pending {
+			fmt.Println(name)
+		}
+		return nil
+	}
+
+	count, err := database.MigrateUp(cmd.Context(), cfg, plugin)
+	if err != nil {
 		return fmt.Errorf("migrate up: %w", err)
 	}
-	fmt.Println("Migrations applied successfully.")
+	if count > 0 {
+		fmt.Printf("Applied %d migration(s).\n", count)
+	} else {
+		fmt.Println("No pending migrations.")
+	}
 	return nil
 }
 

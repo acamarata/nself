@@ -17,7 +17,10 @@ func TestGenerateBasicConfig(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 	files, err := gen.Generate()
@@ -67,7 +70,10 @@ func TestAuthRouteServerName(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	// Confirm the route is the bare subdomain.
 	if cfg.Auth.Route != "auth" {
@@ -170,7 +176,10 @@ func TestFrontendAppServerNameSafe(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 
@@ -227,7 +236,10 @@ func TestAllTemplatesRenderWithMinimalConfig(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 	if err := gen.parseTemplates(); err != nil {
@@ -293,7 +305,10 @@ func TestAuthRouteDefault(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "local.nself.org",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Auth.Route != "auth" {
 		t.Errorf("Auth.Route = %q, want %q", cfg.Auth.Route, "auth")
@@ -316,7 +331,10 @@ func TestAuthRouteNoDoubleDomain(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "local.nself.org",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	// Correct: bare subdomain produces one level of domain.
 	correct := cfg.Auth.Route + "." + cfg.BaseDomain
@@ -343,7 +361,10 @@ func TestAuthRateLimitDefault(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "local.nself.org",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Nginx.AuthRateLimit != "30r/m" {
 		t.Fatalf("AuthRateLimit = %q, want %q", cfg.Nginx.AuthRateLimit, "30r/m")
@@ -374,7 +395,10 @@ func TestOptionalRoutesGenerated(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	cfg.Admin.Enabled = true
 	cfg.Search.Enabled = true
@@ -405,7 +429,10 @@ func TestCustomServiceRouteGenerated(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	// Use a route that does not conflict with core routes (hasura defaults to "api").
 	cfg.CustomServices = []config.CustomService{
 		{Index: 1, Name: "myapi", Port: 8001, Route: "myapi"},
@@ -437,7 +464,10 @@ func TestCustomServiceRoute_SkippedWhenNoRoute(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.CustomServices = []config.CustomService{
 		{Index: 1, Name: "internal-worker", Port: 9000, Route: ""},
 	}
@@ -461,7 +491,10 @@ func TestInternalRouteGenerated(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.InternalRoutes = []config.InternalRoute{
 		{Index: 1, Name: "ping", Subdomain: "ping", Target: "http://ping-api:8001", RateZone: "general"},
 	}
@@ -514,7 +547,10 @@ func TestNginxGenerator_LocalSSLMode_HasSSLTrue(t *testing.T) {
 		BaseDomain: "example.com",
 		// SSLMode="" defaults to "local" in NewGenerator.
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.SSLMode = "" // explicit empty → local
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -531,7 +567,10 @@ func TestNginxGenerator_LetsEncryptMode_HasSSLFalse(t *testing.T) {
 		BaseDomain: "example.com",
 		SSLMode:    "letsencrypt",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.SSLMode = "letsencrypt"
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -547,7 +586,10 @@ func TestNginxGenerator_CustomSSLMode_HasSSLFalse(t *testing.T) {
 		BaseDomain: "example.com",
 		SSLMode:    "custom",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.SSLMode = "custom"
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -563,7 +605,10 @@ func TestNginxGenerator_NoneSSLMode_HasSSLFalse(t *testing.T) {
 		BaseDomain: "example.com",
 		SSLMode:    "none",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.SSLMode = "none"
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -579,7 +624,10 @@ func TestNginxDefaultServer_LetsEncryptOmitsSSLCertDirs(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	cfg.SSLMode = "letsencrypt"
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -605,7 +653,10 @@ func TestNginxDefaultServer_LocalModeIncludesSSLCertDirs(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	// Leave SSLMode="" to use local default.
 
 	gen := NewGenerator(cfg, t.TempDir())
@@ -635,7 +686,10 @@ func TestAuthRateLimitOverride(t *testing.T) {
 			AuthRateLimit: "10r/m", // simulates env var being loaded into config
 		},
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Nginx.AuthRateLimit != "10r/m" {
 		t.Fatalf("AuthRateLimit = %q, want %q", cfg.Nginx.AuthRateLimit, "10r/m")

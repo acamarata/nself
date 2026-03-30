@@ -53,7 +53,10 @@ func minimalConfig() *config.Config {
 func TestAuthHealthcheckPort(t *testing.T) {
 	cfg := minimalConfig()
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Healthcheck == nil {
 		t.Fatal("auth service has no healthcheck")
@@ -90,10 +93,17 @@ func TestAuthResourceLimits_Default(t *testing.T) {
 			JWTType:     "HS256",
 		},
 	}
-	cfg = config.ApplyDefaults(cfg)
+	var applyErr error
+	cfg, applyErr = config.ApplyDefaults(cfg)
+	if applyErr != nil {
+		t.Fatalf("ApplyDefaults() error: %v", applyErr)
+	}
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Deploy == nil || svc.Deploy.Resources == nil || svc.Deploy.Resources.Limits == nil {
 		t.Fatal("auth service has no deploy resource limits")
@@ -115,7 +125,10 @@ func TestAuthResourceLimits_Override(t *testing.T) {
 	cfg.Auth.MemLimit = "512m"
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Deploy == nil || svc.Deploy.Resources == nil || svc.Deploy.Resources.Limits == nil {
 		t.Fatal("auth service has no deploy resource limits")
@@ -134,8 +147,14 @@ func TestAuthResourceLimits_IndependentFromHasura(t *testing.T) {
 	cfg.Auth.MemLimit = "256m"
 
 	g := NewGenerator(cfg)
-	hasuraSvc := g.buildHasuraService()
-	authSvc := g.buildAuthService()
+	hasuraSvc, err := g.buildHasuraService()
+	if err != nil {
+		t.Fatalf("buildHasuraService() error: %v", err)
+	}
+	authSvc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if hasuraSvc.Deploy == nil || hasuraSvc.Deploy.Resources == nil || hasuraSvc.Deploy.Resources.Limits == nil {
 		t.Fatal("hasura service has no deploy resource limits")
@@ -172,7 +191,10 @@ func TestHasuraRemoteSchemaPassthrough(t *testing.T) {
 	}
 
 	g := NewGenerator(cfg)
-	svc := g.buildHasuraService()
+	svc, err := g.buildHasuraService()
+	if err != nil {
+		t.Fatalf("buildHasuraService() error: %v", err)
+	}
 
 	for _, key := range []string{"REMOTE_SCHEMA_UMMAPP_URL", "REMOTE_SCHEMA_UMMPRO_URL", "HASURA_EXTRA_FOO"} {
 		if _, ok := svc.Environment[key]; !ok {
@@ -192,7 +214,10 @@ func TestAuthPortFromConfig(t *testing.T) {
 	cfg.Auth.Port = 4001
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	const wantPort = "127.0.0.1:4001:4002"
 	found := false
@@ -213,7 +238,10 @@ func TestAuthPortDefault(t *testing.T) {
 	cfg := minimalConfig() // Auth.Port = 4000
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	const wantPort = "127.0.0.1:4000:4002"
 	found := false
@@ -236,7 +264,10 @@ func TestAuthHealthcheckUsesConfigPort(t *testing.T) {
 	cfg.Auth.Port = 4001
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	if svc.Healthcheck == nil {
 		t.Fatal("auth service has no healthcheck")
@@ -259,7 +290,10 @@ func TestAuthAllowedRedirectURLs_BaseDomain(t *testing.T) {
 	cfg.Auth.ClientURL = "http://localhost:3000"
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	redirectURLs, ok := svc.Environment["AUTH_ALLOWED_REDIRECT_URLS"]
 	if !ok {
@@ -282,7 +316,10 @@ func TestAuthAllowedRedirectURLs_ExtraURLs(t *testing.T) {
 	cfg.Auth.ExtraRedirectURLs = "https://myapp.com"
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	redirectURLs, ok := svc.Environment["AUTH_ALLOWED_REDIRECT_URLS"]
 	if !ok {
@@ -300,7 +337,10 @@ func TestAuthPGAliasVars(t *testing.T) {
 	cfg := minimalConfig()
 
 	g := NewGenerator(cfg)
-	svc := g.buildAuthService()
+	svc, err := g.buildAuthService()
+	if err != nil {
+		t.Fatalf("buildAuthService() error: %v", err)
+	}
 
 	required := []string{
 		"AUTH_DB_HOST",

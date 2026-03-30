@@ -133,7 +133,10 @@ func TestGetEnvBool_FalseValues(t *testing.T) {
 // TestApplyDefaults_CoreDefaults verifies that an empty Config gets the
 // expected project name, domain, and env defaults.
 func TestApplyDefaults_CoreDefaults(t *testing.T) {
-	cfg := ApplyDefaults(&Config{})
+	cfg, err := ApplyDefaults(&Config{})
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.ProjectName != "myproject" {
 		t.Errorf("ProjectName = %q, want %q", cfg.ProjectName, "myproject")
@@ -149,7 +152,10 @@ func TestApplyDefaults_CoreDefaults(t *testing.T) {
 // TestApplyDefaults_PostgresDefaults verifies that the postgres service gets
 // its canonical default port, user, and database.
 func TestApplyDefaults_PostgresDefaults(t *testing.T) {
-	cfg := ApplyDefaults(&Config{})
+	cfg, err := ApplyDefaults(&Config{})
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Postgres.Port != 5432 {
 		t.Errorf("Postgres.Port = %d, want %d", cfg.Postgres.Port, 5432)
@@ -168,7 +174,10 @@ func TestApplyDefaults_PostgresDefaults(t *testing.T) {
 // TestApplyDefaults_AuthDefaults verifies that the auth service gets port 4000
 // as its default (not Hasura's 8080).
 func TestApplyDefaults_AuthDefaults(t *testing.T) {
-	cfg := ApplyDefaults(&Config{})
+	cfg, err := ApplyDefaults(&Config{})
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Auth.Port != 4000 {
 		t.Errorf("Auth.Port = %d, want %d", cfg.Auth.Port, 4000)
@@ -177,7 +186,10 @@ func TestApplyDefaults_AuthDefaults(t *testing.T) {
 
 // TestApplyDefaults_NginxDefaults verifies HTTP and SSL port defaults.
 func TestApplyDefaults_NginxDefaults(t *testing.T) {
-	cfg := ApplyDefaults(&Config{})
+	cfg, err := ApplyDefaults(&Config{})
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	if cfg.Nginx.HTTPPort != 80 {
 		t.Errorf("Nginx.HTTPPort = %d, want %d", cfg.Nginx.HTTPPort, 80)
@@ -195,7 +207,11 @@ func TestApplyDefaults_DoesNotOverrideExistingValues(t *testing.T) {
 		BaseDomain:  "example.com",
 		Env:         "prod",
 	}
-	cfg = ApplyDefaults(cfg)
+	var applyErr error
+	cfg, applyErr = ApplyDefaults(cfg)
+	if applyErr != nil {
+		t.Fatalf("ApplyDefaults() error: %v", applyErr)
+	}
 
 	if cfg.ProjectName != "myapp" {
 		t.Errorf("ProjectName overwritten: got %q, want %q", cfg.ProjectName, "myapp")
@@ -211,7 +227,10 @@ func TestApplyDefaults_DoesNotOverrideExistingValues(t *testing.T) {
 // TestApplyDefaults_PostgresPasswordGenerated verifies that a missing
 // POSTGRES_PASSWORD is filled with a non-empty generated value.
 func TestApplyDefaults_PostgresPasswordGenerated(t *testing.T) {
-	cfg := ApplyDefaults(&Config{})
+	cfg, err := ApplyDefaults(&Config{})
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 	if cfg.Postgres.Password == "" {
 		t.Error("Postgres.Password should be auto-generated, got empty string")
 	}

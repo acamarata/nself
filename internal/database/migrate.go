@@ -67,7 +67,8 @@ func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sql string) err
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdin = strings.NewReader(sql)
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
@@ -89,6 +90,13 @@ func ensureSchemaVersions(ctx context.Context, cfg *config.Config) error {
 
 // migrationsDir returns the directory to scan for migration SQL files.
 // If plugin is non-empty, it uses the plugin-specific migrations path.
+// For non-plugin migrations, it detects the layout in order:
+//  1. hasura/migrations/default/ (standard Hasura layout)
+//  2. hasura/migrations/         (flat Hasura layout)
+//  3. migrations/                (legacy fallback)
+//
+// If none exist on disk, it returns "hasura/migrations/default/" so error
+// messages point the user at the canonical location.
 func migrationsDir(cfg *config.Config, plugin string) string {
 	if plugin != "" {
 		pluginDir := cfg.PluginSystem.Dir
@@ -98,16 +106,31 @@ func migrationsDir(cfg *config.Config, plugin string) string {
 		}
 		return filepath.Join(pluginDir, plugin, "migrations")
 	}
-	return "migrations"
+
+	candidates := []string{
+		"hasura/migrations/default",
+		"hasura/migrations",
+		"migrations",
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	return "hasura/migrations/default"
 }
 
 // scanMigrations returns sorted SQL file paths from the given directory.
-// Files ending in .down.sql are excluded.
+// It handles two layouts:
+//   - Flat: SQL files directly in dir (excludes *.down.sql)
+//   - Nested (Hasura): subdirectories each containing an up.sql file
+//
+// Returns an error if the directory does not exist.
 func scanMigrations(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, fmt.Errorf("migrations directory not found: %s", dir)
 		}
 		return nil, fmt.Errorf("scan migrations dir %s: %w", dir, err)
 	}
@@ -115,13 +138,20 @@ func scanMigrations(dir string) ([]string, error) {
 	var files []string
 	for _, e := range entries {
 		if e.IsDir() {
-			continue
-		}
-		if strings.HasSuffix(e.Name(), ".sql") && !strings.HasSuffix(e.Name(), ".down.sql") {
+			// Nested layout: look for <entry>/up.sql
+			upPath := filepath.Join(dir, e.Name(), "up.sql")
+			if _, statErr := os.Stat(upPath); statErr == nil {
+				files = append(files, upPath)
+			}
+		} else if strings.HasSuffix(e.Name(), ".sql") && !strings.HasSuffix(e.Name(), ".down.sql") {
+			// Flat layout: SQL file directly in dir
 			files = append(files, filepath.Join(dir, e.Name()))
 		}
 	}
-	sort.Strings(files)
+
+	sort.Slice(files, func(i, j int) bool {
+		return filepath.Base(files[i]) < filepath.Base(files[j])
+	})
 	return files, nil
 }
 
@@ -162,25 +192,27 @@ func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time
 // If plugin is non-empty, only that plugin's migrations are applied.
 // Each migration is executed within a transaction alongside its schema_versions
 // record, so a failure rolls back cleanly.
-func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) error {
+// Returns the count of migrations applied.
+func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, error) {
 	if err := ensureSchemaVersions(ctx, cfg); err != nil {
-		return fmt.Errorf("ensure schema_versions: %w", err)
+		return 0, fmt.Errorf("ensure schema_versions: %w", err)
 	}
 
 	dir := migrationsDir(cfg, plugin)
 	files, err := scanMigrations(dir)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(files) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	applied, err := appliedMigrations(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("check applied migrations: %w", err)
+		return 0, fmt.Errorf("check applied migrations: %w", err)
 	}
 
+	count := 0
 	for _, f := range files {
 		name := filepath.Base(f)
 		if _, ok := applied[name]; ok {
@@ -189,7 +221,7 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) error {
 
 		data, readErr := os.ReadFile(f)
 		if readErr != nil {
-			return fmt.Errorf("read migration %s: %w", name, readErr)
+			return count, fmt.Errorf("read migration %s: %w", name, readErr)
 		}
 
 		record := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
@@ -198,10 +230,11 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) error {
 		txSQL := "BEGIN;\n" + string(data) + "\n" + record + "\nCOMMIT;\n"
 
 		if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
-			return fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+			return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 		}
+		count++
 	}
-	return nil
+	return count, nil
 }
 
 // MigrateDown reverts the most recently applied migration.
@@ -228,7 +261,7 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 
 	// Derive the down file path: foo.sql -> foo.down.sql
 	downName := strings.TrimSuffix(name, ".sql") + ".down.sql"
-	downPath := filepath.Join("migrations", downName)
+	downPath := filepath.Join(migrationsDir(cfg, ""), downName)
 
 	data, readErr := os.ReadFile(downPath)
 	if readErr != nil {
@@ -246,6 +279,30 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
+// PendingMigrations returns the list of migration names that have not yet been applied.
+func PendingMigrations(ctx context.Context, cfg *config.Config, plugin string) ([]string, error) {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return nil, fmt.Errorf("ensure schema_versions: %w", err)
+	}
+	dir := migrationsDir(cfg, plugin)
+	files, err := scanMigrations(dir)
+	if err != nil {
+		return nil, err
+	}
+	applied, err := appliedMigrations(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("check applied migrations: %w", err)
+	}
+	var pending []string
+	for _, f := range files {
+		name := filepath.Base(f)
+		if _, ok := applied[name]; !ok {
+			pending = append(pending, name)
+		}
+	}
+	return pending, nil
+}
+
 // MigrateStatus returns the status of all known migrations (applied and pending).
 // It merges on-disk migration files with the schema_versions table, so orphaned
 // migrations (applied but no longer on disk) are also reported.
@@ -254,7 +311,7 @@ func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, 
 		return nil, fmt.Errorf("ensure schema_versions: %w", err)
 	}
 
-	files, err := scanMigrations("migrations")
+	files, err := scanMigrations(migrationsDir(cfg, ""))
 	if err != nil {
 		return nil, err
 	}

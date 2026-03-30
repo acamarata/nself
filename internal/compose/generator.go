@@ -1,6 +1,8 @@
 package compose
 
 import (
+	"fmt"
+
 	"github.com/nself-org/cli/internal/config"
 
 	"gopkg.in/yaml.v3"
@@ -27,12 +29,15 @@ func NewGenerator(cfg *config.Config) *Generator {
 // Generate produces the complete docker-compose.yml as YAML bytes.
 // It marshals a DockerCompose struct via gopkg.in/yaml.v3.
 func (g *Generator) Generate() ([]byte, error) {
-	dc := g.buildDockerCompose()
+	dc, err := g.buildDockerCompose()
+	if err != nil {
+		return nil, err
+	}
 	return yaml.Marshal(dc)
 }
 
 // buildDockerCompose constructs the full DockerCompose struct from config.
-func (g *Generator) buildDockerCompose() *DockerCompose {
+func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 	dc := &DockerCompose{
 		Name:     g.cfg.ProjectName,
 		Networks: g.buildNetworks(),
@@ -42,8 +47,18 @@ func (g *Generator) buildDockerCompose() *DockerCompose {
 
 	// Core services (always present) — postgres first, then dependents.
 	dc.AddService("postgres", g.buildPostgresService())
-	dc.AddService("hasura", g.buildHasuraService())
-	dc.AddService("auth", g.buildAuthService())
+
+	hasuraSvc, err := g.buildHasuraService()
+	if err != nil {
+		return nil, fmt.Errorf("building hasura service: %w", err)
+	}
+	dc.AddService("hasura", hasuraSvc)
+
+	authSvc, err := g.buildAuthService()
+	if err != nil {
+		return nil, fmt.Errorf("building auth service: %w", err)
+	}
+	dc.AddService("auth", authSvc)
 
 	// Optional services (conditional on config).
 	// Init containers are inserted BEFORE the service that depends on them
@@ -90,7 +105,7 @@ func (g *Generator) buildDockerCompose() *DockerCompose {
 	// Post-process: add logging, security, graceful shutdown to ALL services
 	g.postProcess(dc)
 
-	return dc
+	return dc, nil
 }
 
 // postProcess applies logging, security, and graceful shutdown to all services.

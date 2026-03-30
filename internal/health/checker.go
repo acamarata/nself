@@ -61,7 +61,7 @@ func RunAllChecks(ctx context.Context, cfg *config.Config, workdir string) (*Hea
 
 	for _, svc := range services {
 		result := resolveServiceHealth(ctx, cfg.ProjectName, svc, composeHealth)
-		if result.Status == "healthy" {
+		if result.Status == "healthy" || result.Status == "running" {
 			report.Healthy++
 		} else {
 			report.Unhealthy++

@@ -65,7 +65,7 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 }
 
 // buildHasuraService returns the Hasura GraphQL engine service configuration.
-func (g *Generator) buildHasuraService() ServiceConfig {
+func (g *Generator) buildHasuraService() (ServiceConfig, error) {
 	cfg := g.cfg
 	consoleStr := "false"
 	if cfg.Hasura.Console {
@@ -76,6 +76,11 @@ func (g *Generator) buildHasuraService() ServiceConfig {
 		devModeStr = "true"
 	}
 
+	jwtSecret, err := config.BuildJWTSecret(cfg)
+	if err != nil {
+		return ServiceConfig{}, fmt.Errorf("building hasura JWT secret: %w", err)
+	}
+
 	env := map[string]string{
 		"HASURA_GRAPHQL_DATABASE_URL":      cfg.DatabaseURL(),
 		"HASURA_GRAPHQL_ADMIN_SECRET":      cfg.Hasura.AdminSecret,
@@ -84,7 +89,7 @@ func (g *Generator) buildHasuraService() ServiceConfig {
 		"HASURA_GRAPHQL_ENABLE_TELEMETRY":  "false",
 		"HASURA_GRAPHQL_CORS_DOMAIN":       cfg.Hasura.CORSDomain,
 		"HASURA_GRAPHQL_LOG_LEVEL":         cfg.Hasura.LogLevel,
-		"HASURA_GRAPHQL_JWT_SECRET":        config.BuildJWTSecret(cfg),
+		"HASURA_GRAPHQL_JWT_SECRET":        jwtSecret,
 		"HASURA_GRAPHQL_UNAUTHORIZED_ROLE": "public",
 	}
 
@@ -137,12 +142,12 @@ func (g *Generator) buildHasuraService() ServiceConfig {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 // buildAuthService returns the authentication service configuration.
 // Auth depends on BOTH postgres (database) and hasura (metadata validation at startup).
-func (g *Generator) buildAuthService() ServiceConfig {
+func (g *Generator) buildAuthService() (ServiceConfig, error) {
 	cfg := g.cfg
 	smtpSecureStr := "false"
 	if cfg.Auth.SMTPSecure {
@@ -151,6 +156,11 @@ func (g *Generator) buildAuthService() ServiceConfig {
 	webAuthnStr := "false"
 	if cfg.Auth.WebAuthnEnabled {
 		webAuthnStr = "true"
+	}
+
+	jwtSecret, err := config.BuildJWTSecret(cfg)
+	if err != nil {
+		return ServiceConfig{}, fmt.Errorf("building auth JWT secret: %w", err)
 	}
 
 	env := map[string]string{
@@ -167,7 +177,7 @@ func (g *Generator) buildAuthService() ServiceConfig {
 		"AUTH_CLIENT_URL":                            cfg.Auth.ClientURL,
 		"AUTH_JWT_SECRET":                            cfg.Hasura.JWTKey,
 		"AUTH_JWT_TYPE":                              cfg.Hasura.JWTType,
-		"HASURA_GRAPHQL_JWT_SECRET":                  config.BuildJWTSecret(cfg),
+		"HASURA_GRAPHQL_JWT_SECRET":                  jwtSecret,
 		"HASURA_GRAPHQL_GRAPHQL_URL":                 "http://hasura:8080/v1/graphql",
 		"HASURA_GRAPHQL_ADMIN_SECRET":                cfg.Hasura.AdminSecret,
 		"AUTH_ACCESS_TOKEN_EXPIRES_IN":               fmt.Sprintf("%d", cfg.Auth.AccessTokenExpiry),
@@ -231,7 +241,7 @@ func (g *Generator) buildAuthService() ServiceConfig {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 // buildNginxService returns the Nginx reverse proxy service configuration.
@@ -273,7 +283,7 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 			fmt.Sprintf("./nginx/conf.d-%s:/etc/nginx/conf.d-%s:ro", cfg.Env, cfg.Env),
 			fmt.Sprintf("./%s:/etc/nginx/sites:ro", NginxSitesDir),
 			"./nginx/includes:/etc/nginx/includes:ro",
-			"./ssl/certificates:/etc/nginx/ssl:ro",
+			"./ssl:/etc/nginx/ssl:ro",
 		},
 		Tmpfs: []string{
 			"/var/cache/nginx:uid=101,gid=101",

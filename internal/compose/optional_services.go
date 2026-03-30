@@ -106,10 +106,11 @@ func (g *Generator) buildMinioService() ServiceConfig {
 		},
 		Tmpfs: []string{"/tmp"},
 		Healthcheck: &Healthcheck{
-			Test:     []string{"CMD", "curl", "-f", "http://localhost:9000/minio/health/live"},
-			Interval: "30s",
-			Timeout:  "10s",
-			Retries:  3,
+			Test:        []string{"CMD-SHELL", "wget -qO /dev/null http://localhost:9000/minio/health/live || exit 1"},
+			Interval:    "30s",
+			Timeout:     "10s",
+			Retries:     5,
+			StartPeriod: "30s",
 		},
 	}
 }

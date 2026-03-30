@@ -48,6 +48,11 @@ func DiscoverPluginComposeFiles(workdir, pluginDir string) ([]string, error) {
 		if !entry.IsDir() {
 			continue
 		}
+		// Skip disabled plugins (those with a .disabled marker file).
+		disabledPath := filepath.Join(pluginDir, entry.Name(), ".disabled")
+		if _, err := os.Stat(disabledPath); err == nil {
+			continue
+		}
 		composePath := filepath.Join(pluginDir, entry.Name(), pluginComposeFilename)
 		absPath, err := filepath.Abs(composePath)
 		if err != nil {

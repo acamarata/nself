@@ -25,22 +25,5 @@ func init() {
 		RunE:   stopCmd.RunE,
 	}
 
-	// TRAP-10: guard against duplicate registration if trust is ever added as
-	// a first-class command.
-	for _, c := range RootCmd.Commands() {
-		if c.Name() == "trust" {
-			RootCmd.AddCommand(upCmd, downCmd)
-			return
-		}
-	}
-
-	trustCmd := &cobra.Command{
-		Use:   "trust",
-		Short: "Alias for: nself dns-setup",
-		Long:  "trust is a convenience alias for dns-setup. See 'nself dns-setup --help' for full usage.",
-		RunE:  dnsSetupCmd.RunE,
-	}
-	trustCmd.Flags().BoolP("dry-run", "n", false, "Print entries that would be added without writing")
-
-	RootCmd.AddCommand(upCmd, downCmd, trustCmd)
+	RootCmd.AddCommand(upCmd, downCmd)
 }

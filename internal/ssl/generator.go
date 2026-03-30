@@ -91,6 +91,23 @@ func (g *Generator) GenerateWithResult(outputDir string) (*GenerateResult, error
 
 	result := &GenerateResult{}
 
+	// Check for pre-existing mkcert certs from `nself trust`.
+	// If ssl/fullchain.pem + ssl/privkey.pem exist at the top level of outputDir
+	// (put there by `nself trust`), use them instead of generating new certs.
+	topFullchain := filepath.Join(outputDir, "fullchain.pem")
+	topPrivkey := filepath.Join(outputDir, "privkey.pem")
+	if fileExists(topFullchain) && fileExists(topPrivkey) {
+		if days, err := CheckCertExpiry(topFullchain); err == nil && days >= 30 {
+			if copyErr := copyMkcertCerts(topFullchain, topPrivkey, certDir); copyErr == nil {
+				result.Count = 1
+				result.CAInstalled = true // mkcert certs are inherently trusted
+				g.applyTrustAndHosts(domains, result)
+				return result, nil
+			}
+			// Copy failed — fall through to normal generation.
+		}
+	}
+
 	// Skip generation if certs already exist, are valid, and have >30 days remaining.
 	if fileExists(fullchainPath) && fileExists(privkeyPath) {
 		days, err := CheckCertExpiry(fullchainPath)
@@ -267,4 +284,31 @@ func CheckCertExpiry(certPath string) (int, error) {
 	}
 
 	return daysRemaining, nil
+}
+
+// copyMkcertCerts copies a fullchain.pem and privkey.pem pair into destDir.
+// destDir is created if it does not exist. Both files are written with 0640
+// permissions so nginx can read them without world-readable exposure.
+func copyMkcertCerts(srcFullchain, srcPrivkey, destDir string) error {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
+		return fmt.Errorf("creating certificate directory %s: %w", destDir, err)
+	}
+
+	chainData, err := os.ReadFile(srcFullchain)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", srcFullchain, err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "fullchain.pem"), chainData, 0640); err != nil {
+		return fmt.Errorf("writing fullchain.pem to %s: %w", destDir, err)
+	}
+
+	keyData, err := os.ReadFile(srcPrivkey)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", srcPrivkey, err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "privkey.pem"), keyData, 0640); err != nil {
+		return fmt.Errorf("writing privkey.pem to %s: %w", destDir, err)
+	}
+
+	return nil
 }

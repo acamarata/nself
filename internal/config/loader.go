@@ -474,7 +474,10 @@ func Load(projectDir string) (*Config, error) {
 	cfg.Passthrough = collectPassthrough(os.Environ())
 
 	// 7. Apply smart defaults (fills every unset field).
-	cfg = ApplyDefaults(cfg)
+	cfg, err = ApplyDefaults(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("applying defaults: %w", err)
+	}
 
 	// 8. Sanitize user-supplied name and domain after defaults.
 	if cfg.ProjectName != "" {

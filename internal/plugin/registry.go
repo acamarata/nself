@@ -451,17 +451,21 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			rawEPs = b
 		}
 		entries = append(entries, pluginEntry{
-			Name:         p.Name,
-			Version:      p.Version,
-			Description:  p.Description,
-			Tier:         p.Tier,
-			Repository:   p.Repository,
-			Checksum:     p.Checksum,
-			Tags:         p.Tags,
-			Tables:       p.Tables,
-			Port:         p.Port,
-			Dependencies: p.Dependencies,
-			APIEndpoints: rawEPs,
+			Name:            p.Name,
+			Version:         p.Version,
+			Description:     p.Description,
+			Category:        p.Category,
+			License:         p.License,
+			LicenseType:     p.LicenseType,
+			RequiresLicense: p.RequiresLicense,
+			Tier:            p.Tier,
+			Repository:      p.Repository,
+			Checksum:        p.Checksum,
+			Tags:            p.Tags,
+			Tables:          p.Tables,
+			Port:            p.Port,
+			Dependencies:    p.Dependencies,
+			APIEndpoints:    rawEPs,
 		})
 	}
 	return json.Marshal(envelope{

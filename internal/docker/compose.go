@@ -99,8 +99,15 @@ type composePsEntry struct {
 }
 
 // ComposePs runs `docker compose ps --format json` and parses the output
-// into a slice of ContainerInfo. Docker Compose v2 emits one JSON object
-// per stdout line.
+// into a slice of ContainerInfo.
+//
+// Docker Compose v2 changed its JSON output format across versions:
+//   - v2.20 and earlier: one JSON object per stdout line (NDJSON)
+//   - v2.21 and later:   a single JSON array containing all objects
+//
+// Both formats are handled: the raw output is first attempted as a JSON array;
+// if that fails (or yields nothing), the output is re-scanned line by line as
+// NDJSON. This makes the function version-agnostic.
 func (c *Compose) ComposePs(ctx context.Context, workdir string) ([]ContainerInfo, error) {
 	args := c.buildBaseArgs()
 	args = append(args, "ps", "--format", "json")
@@ -117,6 +124,17 @@ func (c *Compose) ComposePs(ctx context.Context, workdir string) ([]ContainerInf
 		return nil, nil
 	}
 
+	// Attempt 1: JSON array format (Docker Compose v2.21+).
+	if strings.HasPrefix(raw, "[") {
+		var entries []composePsEntry
+		if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+			return nil, fmt.Errorf("parsing compose ps JSON array: %w", err)
+		}
+		return composePsEntriesToInfos(entries), nil
+	}
+
+	// Attempt 2: NDJSON format (Docker Compose v2.20 and earlier) —
+	// one JSON object per line.
 	var infos []ContainerInfo
 	scanner := bufio.NewScanner(strings.NewReader(raw))
 	for scanner.Scan() {
@@ -128,20 +146,34 @@ func (c *Compose) ComposePs(ctx context.Context, workdir string) ([]ContainerInf
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			return nil, fmt.Errorf("parsing compose ps JSON: %w", err)
 		}
-		infos = append(infos, ContainerInfo{
-			ID:      entry.ID,
-			Name:    entry.Name,
-			Service: entry.Service,
-			Image:   entry.Image,
-			State:   entry.State,
-			Health:  entry.Health,
-			Ports:   parsePorts(entry.Ports),
-		})
+		infos = append(infos, composePsEntryToInfo(entry))
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("reading compose ps output: %w", err)
 	}
 	return infos, nil
+}
+
+// composePsEntriesToInfos converts a slice of composePsEntry into ContainerInfo.
+func composePsEntriesToInfos(entries []composePsEntry) []ContainerInfo {
+	infos := make([]ContainerInfo, 0, len(entries))
+	for _, e := range entries {
+		infos = append(infos, composePsEntryToInfo(e))
+	}
+	return infos
+}
+
+// composePsEntryToInfo converts a single composePsEntry into ContainerInfo.
+func composePsEntryToInfo(e composePsEntry) ContainerInfo {
+	return ContainerInfo{
+		ID:      e.ID,
+		Name:    e.Name,
+		Service: e.Service,
+		Image:   e.Image,
+		State:   e.State,
+		Health:  e.Health,
+		Ports:   parsePorts(e.Ports),
+	}
 }
 
 // ComposeConfig runs `docker compose config` in the given workdir to validate

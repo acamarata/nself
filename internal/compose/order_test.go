@@ -13,7 +13,11 @@ func TestServiceOrder(t *testing.T) {
 		Minio:       config.MinioConfig{Enabled: true},
 		Search:      config.SearchConfig{Enabled: true, Engine: "meilisearch"},
 	}
-	cfg = config.ApplyDefaults(cfg)
+	var applyErr error
+	cfg, applyErr = config.ApplyDefaults(cfg)
+	if applyErr != nil {
+		t.Fatalf("ApplyDefaults() error: %v", applyErr)
+	}
 
 	gen := NewGenerator(cfg)
 	data, err := gen.Generate()

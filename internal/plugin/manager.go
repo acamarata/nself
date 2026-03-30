@@ -473,6 +473,53 @@ func tablePrefix(table string) string {
 	return parts[0] + "_" + parts[1] + "_"
 }
 
+// DisablePlugin creates a .disabled marker file in the plugin's directory,
+// causing it to be excluded from compose files on the next build.
+func DisablePlugin(name, pluginDir string) error {
+	destDir := filepath.Join(pluginDir, name)
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		return fmt.Errorf("plugin %q is not installed", name)
+	}
+
+	markerPath := filepath.Join(destDir, ".disabled")
+	if _, err := os.Stat(markerPath); err == nil {
+		return fmt.Errorf("plugin %q is already disabled", name)
+	}
+
+	f, err := os.Create(markerPath)
+	if err != nil {
+		return fmt.Errorf("creating disable marker: %w", err)
+	}
+	f.Close()
+	return nil
+}
+
+// EnablePlugin removes the .disabled marker file from the plugin's directory,
+// allowing it to be included in compose files on the next build.
+func EnablePlugin(name, pluginDir string) error {
+	destDir := filepath.Join(pluginDir, name)
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		return fmt.Errorf("plugin %q is not installed", name)
+	}
+
+	markerPath := filepath.Join(destDir, ".disabled")
+	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
+		return fmt.Errorf("plugin %q is not disabled", name)
+	}
+
+	if err := os.Remove(markerPath); err != nil {
+		return fmt.Errorf("removing disable marker: %w", err)
+	}
+	return nil
+}
+
+// IsDisabled returns true if the named plugin has a .disabled marker file.
+func IsDisabled(name, pluginDir string) bool {
+	markerPath := filepath.Join(pluginDir, name, ".disabled")
+	_, err := os.Stat(markerPath)
+	return err == nil
+}
+
 // --- internal helpers ---
 
 // verifyChecksum computes the SHA256 hash of the file at filePath and compares

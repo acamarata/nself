@@ -18,7 +18,7 @@ import (
 //
 // Environment-specific overrides (Console, DevMode, CORS, BindIP, SSL) are
 // applied after all static defaults.
-func ApplyDefaults(cfg *Config) *Config {
+func ApplyDefaults(cfg *Config) (*Config, error) {
 	// ── Core ──────────────────────────────────────────────────────────
 	if cfg.ProjectName == "" {
 		cfg.ProjectName = "myproject"
@@ -57,7 +57,11 @@ func ApplyDefaults(cfg *Config) *Config {
 		slog.Debug("default", "key", "POSTGRES_USER", "value", cfg.Postgres.User)
 	}
 	if cfg.Postgres.Password == "" {
-		cfg.Postgres.Password = generateSecureRandom(24)
+		secret, err := generateSecureRandom(24)
+		if err != nil {
+			return nil, fmt.Errorf("generating POSTGRES_PASSWORD: %w", err)
+		}
+		cfg.Postgres.Password = secret
 		slog.Debug("default", "key", "POSTGRES_PASSWORD", "value", "[generated]")
 	}
 	if len(cfg.Postgres.Extensions) == 0 {
@@ -83,11 +87,19 @@ func ApplyDefaults(cfg *Config) *Config {
 		slog.Debug("default", "key", "HASURA_VERSION", "value", cfg.Hasura.Version)
 	}
 	if cfg.Hasura.AdminSecret == "" {
-		cfg.Hasura.AdminSecret = generateSecureRandom(44)
+		secret, err := generateSecureRandom(44)
+		if err != nil {
+			return nil, fmt.Errorf("generating HASURA_GRAPHQL_ADMIN_SECRET: %w", err)
+		}
+		cfg.Hasura.AdminSecret = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_ADMIN_SECRET", "value", "[generated]")
 	}
 	if cfg.Hasura.JWTKey == "" {
-		cfg.Hasura.JWTKey = generateSecureRandom(44)
+		secret, err := generateSecureRandom(44)
+		if err != nil {
+			return nil, fmt.Errorf("generating HASURA_GRAPHQL_JWT_KEY: %w", err)
+		}
+		cfg.Hasura.JWTKey = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_KEY", "value", "[generated]")
 	}
 	if cfg.Hasura.JWTType == "" {
@@ -610,15 +622,27 @@ func ApplyDefaults(cfg *Config) *Config {
 		slog.Debug("default", "key", "PLUGIN_NOTIFY_PORT", "value", fmt.Sprintf("%d", cfg.PluginConfig.NotifyPort))
 	}
 	if cfg.PluginConfig.NotifySecret == "" {
-		cfg.PluginConfig.NotifySecret = generateSecureRandom(32)
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return nil, fmt.Errorf("generating NOTIFY_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginConfig.NotifySecret = secret
 		slog.Debug("default", "key", "NOTIFY_INTERNAL_SECRET", "value", "[generated]")
 	}
 	if cfg.PluginConfig.CronSecret == "" {
-		cfg.PluginConfig.CronSecret = generateSecureRandom(32)
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return nil, fmt.Errorf("generating CRON_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginConfig.CronSecret = secret
 		slog.Debug("default", "key", "CRON_INTERNAL_SECRET", "value", "[generated]")
 	}
 	if cfg.PluginSystem.InternalSecret == "" {
-		cfg.PluginSystem.InternalSecret = generateSecureRandom(32)
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return nil, fmt.Errorf("generating PLUGIN_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginSystem.InternalSecret = secret
 		slog.Debug("default", "key", "PLUGIN_INTERNAL_SECRET", "value", "[generated]")
 	}
 	if cfg.PluginConfig.NotifyRoute == "" {
@@ -698,7 +722,7 @@ func ApplyDefaults(cfg *Config) *Config {
 		slog.Debug("default", "key", "SMTP_PORT", "value", "587")
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 // BuildJWTSecret constructs the HASURA_GRAPHQL_JWT_SECRET JSON string.
@@ -707,10 +731,10 @@ func ApplyDefaults(cfg *Config) *Config {
 // cfg.Hasura.JWTKey and cfg.Hasura.JWTType. In dev mode, a missing
 // JWTKey is auto-generated. In non-dev modes, an empty JWTKey produces
 // an empty string (the caller must validate).
-func BuildJWTSecret(cfg *Config) string {
+func BuildJWTSecret(cfg *Config) (string, error) {
 	// If the full JSON is already set in the environment, use it as-is.
 	if existing := os.Getenv("HASURA_GRAPHQL_JWT_SECRET"); existing != "" {
-		return existing
+		return existing, nil
 	}
 
 	jwtType := cfg.Hasura.JWTType
@@ -723,13 +747,17 @@ func BuildJWTSecret(cfg *Config) string {
 		// Auto-generate if not provided in any environment.
 		// Staging/prod should ideally set this explicitly, but auto-gen
 		// is safer than failing — the user can always override in .env.
-		jwtKey = generateSecureRandom(44)
+		secret, err := generateSecureRandom(44)
+		if err != nil {
+			return "", fmt.Errorf("generating JWT key: %w", err)
+		}
+		jwtKey = secret
 		cfg.Hasura.JWTKey = jwtKey
 	}
 
 	obj := map[string]string{"type": jwtType, "key": jwtKey}
 	b, _ := json.Marshal(obj)
-	return string(b)
+	return string(b), nil
 }
 
 // DatabaseURL returns the computed PostgreSQL connection string using internal
@@ -760,15 +788,15 @@ func BuildServiceURL(subdomain, baseDomain string) string {
 
 // generateSecureRandom returns a crypto/rand base64url string of the given
 // length. Used for auto-generating JWT keys and other secrets in dev mode.
-func generateSecureRandom(length int) string {
+func generateSecureRandom(length int) (string, error) {
 	// Allocate enough bytes to guarantee the encoded output is >= length.
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand unavailable: " + err.Error())
+		return "", fmt.Errorf("generating secret: %w", err)
 	}
 	encoded := base64.RawURLEncoding.EncodeToString(b)
 	if len(encoded) < length {
-		return encoded
+		return encoded, nil
 	}
-	return encoded[:length]
+	return encoded[:length], nil
 }

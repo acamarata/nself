@@ -15,7 +15,10 @@ func TestServiceRouteSecurityHeaders(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 
@@ -56,7 +59,10 @@ func TestServiceRouteProxyHeaders(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 
@@ -92,7 +98,10 @@ func TestServiceRouteHideHeaders(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 
@@ -122,7 +131,10 @@ func TestGeneratedAuthConfSecurityHeaders(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 	files, err := gen.Generate()
@@ -152,7 +164,10 @@ func TestGeneratedAuthConfProxyHeaders(t *testing.T) {
 	cfg := &config.Config{
 		BaseDomain: "example.com",
 	}
-	cfg = config.ApplyDefaults(cfg)
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
 
 	gen := NewGenerator(cfg, t.TempDir())
 	files, err := gen.Generate()

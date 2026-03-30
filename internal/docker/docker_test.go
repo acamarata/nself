@@ -501,6 +501,94 @@ func parseContainerNameParts(name string) (project, service string) {
 }
 
 // ---------------------------------------------------------------------------
+// composePsEntryToInfo / composePsEntriesToInfos (compose.go)
+//
+// These helpers underpin ComposePs. We test them directly to verify that
+// health status fields are preserved correctly for both the JSON-array
+// (Docker Compose v2.21+) and NDJSON (v2.20 and earlier) code paths.
+//
+// Root cause of Bug #68: ComposePs only handled NDJSON. Docker Compose v2.21+
+// switched to a JSON array, so the line scanner encountered "[" as the first
+// character, json.Unmarshal returned an error, and buildComposeHealthMap silently
+// returned an empty map — causing 0/N healthy.
+// ---------------------------------------------------------------------------
+
+// TestComposePsEntryToInfo_HealthyService verifies that a composePsEntry with
+// Health="healthy" produces a ContainerInfo with Health="healthy".
+func TestComposePsEntryToInfo_HealthyService(t *testing.T) {
+	entry := composePsEntry{
+		ID:      "abc123",
+		Name:    "nclaw_postgres",
+		Service: "postgres",
+		State:   "running",
+		Health:  "healthy",
+		Image:   "postgres:15",
+	}
+	info := composePsEntryToInfo(entry)
+	if info.Health != "healthy" {
+		t.Errorf("expected Health %q, got %q", "healthy", info.Health)
+	}
+	if info.Service != "postgres" {
+		t.Errorf("expected Service %q, got %q", "postgres", info.Service)
+	}
+	if info.Name != "nclaw_postgres" {
+		t.Errorf("expected Name %q, got %q", "nclaw_postgres", info.Name)
+	}
+}
+
+// TestComposePsEntryToInfo_NoHealthcheck verifies that a composePsEntry with
+// Health="" (no healthcheck configured) preserves the empty string so that
+// buildComposeHealthMap can normalise it to "running".
+func TestComposePsEntryToInfo_NoHealthcheck(t *testing.T) {
+	entry := composePsEntry{
+		ID:      "def456",
+		Name:    "nclaw_nginx",
+		Service: "nginx",
+		State:   "running",
+		Health:  "",
+	}
+	info := composePsEntryToInfo(entry)
+	if info.Health != "" {
+		t.Errorf("expected empty Health to be preserved as-is, got %q", info.Health)
+	}
+}
+
+// TestComposePsEntriesToInfos_MultipleContainers verifies that the slice helper
+// converts every entry and preserves ordering and field values.
+func TestComposePsEntriesToInfos_MultipleContainers(t *testing.T) {
+	entries := []composePsEntry{
+		{Name: "nclaw_postgres", Service: "postgres", State: "running", Health: "healthy"},
+		{Name: "nclaw_hasura", Service: "hasura", State: "running", Health: "healthy"},
+		{Name: "nclaw_nginx", Service: "nginx", State: "running", Health: ""},
+	}
+	infos := composePsEntriesToInfos(entries)
+	if len(infos) != 3 {
+		t.Fatalf("expected 3 ContainerInfo entries, got %d", len(infos))
+	}
+	if infos[0].Service != "postgres" || infos[0].Health != "healthy" {
+		t.Errorf("entry[0]: got Service=%q Health=%q", infos[0].Service, infos[0].Health)
+	}
+	if infos[1].Service != "hasura" || infos[1].Health != "healthy" {
+		t.Errorf("entry[1]: got Service=%q Health=%q", infos[1].Service, infos[1].Health)
+	}
+	if infos[2].Service != "nginx" || infos[2].Health != "" {
+		t.Errorf("entry[2]: got Service=%q Health=%q", infos[2].Service, infos[2].Health)
+	}
+}
+
+// TestComposePsEntriesToInfos_Empty verifies that an empty slice input yields
+// an empty (non-nil) slice output.
+func TestComposePsEntriesToInfos_Empty(t *testing.T) {
+	infos := composePsEntriesToInfos([]composePsEntry{})
+	if infos == nil {
+		t.Fatal("expected non-nil empty slice, got nil")
+	}
+	if len(infos) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(infos))
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Docker version string parsing
 //
 // While the docker package doesn't currently expose a version parser, we

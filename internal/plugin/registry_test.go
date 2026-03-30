@@ -326,3 +326,64 @@ func TestEntryToManifest_AllFieldsCopied(t *testing.T) {
 		t.Errorf("Tier not set correctly: got %q, want %q", m.Tier, "free")
 	}
 }
+
+// TestRegistryMarshalJSON_CacheRoundTrip verifies that MarshalJSON preserves
+// Category, License, LicenseType, and RequiresLicense so that a cache write
+// followed by a read-back returns the same values. Previously these fields
+// were omitted from the cache envelope, causing nself plugin list to show
+// empty categories and incorrect tier derivation after the first cache write.
+func TestRegistryMarshalJSON_CacheRoundTrip(t *testing.T) {
+	original := Registry{
+		Plugins: []PluginManifest{
+			{
+				Name:            "stripe",
+				Version:         "1.0.0",
+				Description:     "Stripe payments",
+				Category:        "commerce",
+				License:         "MIT",
+				LicenseType:     "free",
+				RequiresLicense: false,
+				Tier:            "free",
+				Repository:      "https://github.com/nself-org/plugins",
+				Checksum:        "abc123",
+				Tags:            []string{"payments"},
+				Tables:          []string{"np_stripe_customers"},
+				Port:            3100,
+				Dependencies:    []string{"webhooks"},
+			},
+		},
+	}
+
+	// Serialize (simulates writeCache).
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+
+	// Deserialize (simulates readCache via parseRegistryJSON).
+	got, err := parseRegistryJSON(data)
+	if err != nil {
+		t.Fatalf("parseRegistryJSON after marshal: %v", err)
+	}
+	if len(got.Plugins) != 1 {
+		t.Fatalf("expected 1 plugin after round-trip, got %d", len(got.Plugins))
+	}
+
+	p := got.Plugins[0]
+
+	if p.Category != "commerce" {
+		t.Errorf("Category lost in cache round-trip: got %q, want %q", p.Category, "commerce")
+	}
+	if p.License != "MIT" {
+		t.Errorf("License lost in cache round-trip: got %q, want %q", p.License, "MIT")
+	}
+	if p.LicenseType != "free" {
+		t.Errorf("LicenseType lost in cache round-trip: got %q, want %q", p.LicenseType, "free")
+	}
+	if p.RequiresLicense != false {
+		t.Errorf("RequiresLicense lost in cache round-trip: got %v, want false", p.RequiresLicense)
+	}
+	if p.Tier != "free" {
+		t.Errorf("Tier lost in cache round-trip: got %q, want %q", p.Tier, "free")
+	}
+}

@@ -1,8 +1,10 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +22,7 @@ import (
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/ssl"
+	"github.com/nself-org/cli/internal/truststate"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -238,6 +241,39 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		ui.Info(fmt.Sprintf("Project: %s | Domain: %s | Env: %s", cfg.ProjectName, cfg.BaseDomain, cfg.Env))
 	}
 	ui.Success(fmt.Sprintf("Configuration loaded (%s)", cfg.Env))
+
+	// ── DNS resolution check ─────────────────────────────────────────────
+	dnsResolved := true
+	if cfg.BaseDomain != "" && cfg.BaseDomain != "localhost" && cfg.BaseDomain != "127.0.0.1" {
+		if _, err := net.LookupHost(cfg.BaseDomain); err != nil {
+			dnsResolved = false
+			ui.Warn(fmt.Sprintf("DNS not configured for %s — run 'nself dns-setup' or 'nself trust' to configure local DNS", cfg.BaseDomain))
+		}
+	}
+
+	// ── BASE_DOMAIN change detection ─────────────────────────────────────
+	if ts, err := truststate.Load(); err == nil {
+		if ts.TrustedDomain != "" && ts.TrustedDomain != cfg.BaseDomain {
+			ui.Warn(fmt.Sprintf("BASE_DOMAIN changed from %s to %s — SSL certificates need regeneration. Run 'nself trust' to reconfigure.", ts.TrustedDomain, cfg.BaseDomain))
+		}
+	}
+
+	// ── Auto-trust prompt ────────────────────────────────────────────────
+	if !dnsResolved {
+		if ts, _ := truststate.Load(); ts.TrustedDomain != cfg.BaseDomain && isTerminal() {
+			ui.Info("Would you like to run 'nself trust' now to configure local DNS? [Y/n]: ")
+			reader := bufio.NewReader(os.Stdin)
+			answer, _ := reader.ReadString('\n')
+			answer = strings.TrimSpace(answer)
+			if answer == "" || strings.ToLower(answer) == "y" || strings.ToLower(answer) == "yes" {
+				if err := runDNSSetup(cmd, nil); err != nil {
+					ui.Warn(fmt.Sprintf("DNS setup failed: %v", err))
+				} else {
+					_ = truststate.Save(truststate.TrustState{TrustedDomain: cfg.BaseDomain})
+				}
+			}
+		}
+	}
 
 	// ── License revalidation heartbeat ──────────────────────────────
 	// Soft check: warn on revoked/expired licenses but never block
@@ -633,6 +669,15 @@ func checkDockerAvailable(ctx context.Context) error {
 		return fmt.Errorf("docker info failed — start Docker and try again: %w", errs.ErrDockerNotRunning)
 	}
 	return nil
+}
+
+// isTerminal returns true when os.Stdin is an interactive terminal.
+func isTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
 // checkLicenseHeartbeat performs a soft license revalidation if the cached
