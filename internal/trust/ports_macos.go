@@ -74,7 +74,7 @@ func SetupPortsDarwin(cfg TrustConfig) (alreadyDone bool, err error) {
 	shellCmd := fmt.Sprintf(
 		"mkdir -p /etc/pf.anchors && "+
 			"printf '%%s' '%s' > %s && "+
-			"pfctl -ef %s && "+
+			"{ pfctl -ef %s; _pfrc=$?; [ \"$_pfrc\" -eq 0 ] || [ \"$_pfrc\" -eq 1 ]; } && "+
 			"mkdir -p /Library/LaunchDaemons && "+
 			"printf '%%s' '%s' > %s && "+
 			"launchctl load -w %s",

@@ -7,14 +7,15 @@ import (
 
 // TrustConfig holds runtime options for the trust setup.
 type TrustConfig struct {
-	WorkDir         string   // project root directory
-	BaseDomain      string   // e.g. "ummat.local"
-	NginxSSLPort    int      // e.g. 8443
-	NginxHTTPPort   int      // e.g. 8080
-	ExtraSSLDomains []string // from EXTRA_SSL_DOMAINS
-	SkipDNS         bool
-	SkipSSL         bool
-	SkipPorts       bool
+	WorkDir            string   // project root directory
+	BaseDomain         string   // e.g. "ummat.local"
+	NginxSSLPort       int      // e.g. 8443
+	NginxHTTPPort      int      // e.g. 8080
+	ExtraSSLDomains    []string // from EXTRA_SSL_DOMAINS
+	NamespacePrefixes  []string // subdomain namespaces extracted from ROUTES (e.g. "pro", "app", "dev")
+	SkipDNS            bool
+	SkipSSL            bool
+	SkipPorts          bool
 }
 
 // TrustResult holds the outcome of each setup step.

@@ -159,8 +159,12 @@ func buildDomainList(cfg TrustConfig) []string {
 		domains = append(domains,
 			cfg.BaseDomain,
 			"*."+cfg.BaseDomain,
-			"*.*."+cfg.BaseDomain,
 		)
+		// mkcert rejects double-wildcard SANs (*.*.domain). Generate per-namespace
+		// wildcards instead — one entry per namespace prefix extracted from ROUTES.
+		for _, prefix := range cfg.NamespacePrefixes {
+			domains = append(domains, "*."+prefix+"."+cfg.BaseDomain)
+		}
 	}
 
 	domains = append(domains, "127.0.0.1")

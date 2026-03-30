@@ -77,6 +77,9 @@ func SetupDNSDarwin(cfg TrustConfig) (dnsAlreadyDone bool, resolverAlreadyDone b
 		if err = setupResolver(); err != nil {
 			return dnsAlreadyDone || !dnsAlreadyDone, false, fmt.Errorf("configuring /etc/resolver/local: %w", err)
 		}
+		// Restart dnsmasq after writing the resolver so it is in sync regardless of
+		// whether the conf was already configured. Errors are non-fatal.
+		_ = restartDnsmasq()
 		if err = flushDNSCache(); err != nil {
 			// Non-fatal: warn but don't fail.
 			_ = err

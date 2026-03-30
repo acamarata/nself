@@ -184,7 +184,54 @@ func buildTrustConfig(opts trustOpts) trust.TrustConfig {
 		}
 	}
 
+	cfg.NamespacePrefixes = extractNamespacePrefixes(projectCfg, cfg.BaseDomain)
+
 	return cfg
+}
+
+// extractNamespacePrefixes parses FrontendApp and CustomService routes to find
+// namespace prefixes — intermediate subdomain segments between the service name
+// and BASE_DOMAIN. For example, a route of "www.pro.ummat.local" yields "pro".
+// These are used to generate per-namespace wildcard SANs (*.pro.ummat.local)
+// because mkcert does not support double-wildcard SANs (*.*.ummat.local).
+func extractNamespacePrefixes(projectCfg *config.Config, baseDomain string) []string {
+	seen := make(map[string]bool)
+	var prefixes []string
+
+	checkRoute := func(route string) {
+		if route == "" {
+			return
+		}
+		// Strip ".baseDomain" suffix to get the subdomain portion.
+		sub := strings.TrimSuffix(route, "."+baseDomain)
+		if sub == route {
+			// Route doesn't contain baseDomain — treat the whole value as a subdomain path.
+			sub = route
+		}
+		// If the subdomain has multiple dot-separated parts, the rightmost is the namespace.
+		// Example: "www.pro" → namespace "pro"; "chat" → no namespace (single level).
+		parts := strings.Split(sub, ".")
+		if len(parts) < 2 {
+			return
+		}
+		ns := parts[len(parts)-1]
+		if ns == "" || seen[ns] {
+			return
+		}
+		seen[ns] = true
+		prefixes = append(prefixes, ns)
+	}
+
+	for _, fa := range projectCfg.FrontendApps {
+		checkRoute(fa.Route)
+	}
+	for _, cs := range projectCfg.CustomServices {
+		if cs.Public {
+			checkRoute(cs.Route)
+		}
+	}
+
+	return prefixes
 }
 
 // printTrustPlan prints a summary of what the trust command will do.
