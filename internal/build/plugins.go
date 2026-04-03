@@ -2,6 +2,7 @@ package build
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -136,14 +137,39 @@ func ReadComposeManifest(workdir string) ([]string, error) {
 	return paths, nil
 }
 
+// pluginManifestMinimal holds the fields we need from plugin.json during build.
+type pluginManifestMinimal struct {
+	Name                 string   `json:"name"`
+	Port                 int      `json:"port"`
+	Dependencies         []string `json:"dependencies"`
+	OptionalDependencies []string `json:"optionalDependencies"`
+}
+
+// readPluginManifest reads the plugin.json from a plugin directory.
+// Returns nil (not an error) if the file is absent or unparseable — callers
+// should skip plugins whose manifests cannot be read.
+func readPluginManifest(pluginDir, name string) *pluginManifestMinimal {
+	path := filepath.Join(pluginDir, name, "plugin.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var m pluginManifestMinimal
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil
+	}
+	return &m
+}
+
 // ComputePluginEnvVars returns environment variables needed by plugin compose
 // files. These are written to .env.computed so that `docker compose` can
 // interpolate them in plugin compose fragments.
 //
 // Variables returned:
 //   - NSELF_PLUGIN_DIR: absolute path to the global plugin directory
-//   - DOCKER_NETWORK: the project's Docker network name (from config or
-//     computed as {project}_network)
+//   - PLUGIN_{NAME}_INTERNAL_URL: http://plugin-{name}:{port} for every
+//     declared dependency (required + optional) of every installed plugin.
+//     Only wired when the dependency plugin is also installed.
 func ComputePluginEnvVars(workdir, pluginDir string) map[string]string {
 	vars := make(map[string]string)
 
@@ -152,6 +178,47 @@ func ComputePluginEnvVars(workdir, pluginDir string) map[string]string {
 		absPluginDir = pluginDir
 	}
 	vars["NSELF_PLUGIN_DIR"] = absPluginDir
+
+	// Build a port map for all installed plugins so dependency resolution is O(1).
+	entries, err := os.ReadDir(pluginDir)
+	if err != nil {
+		return vars
+	}
+
+	portByName := make(map[string]int)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		m := readPluginManifest(pluginDir, entry.Name())
+		if m != nil && m.Port > 0 {
+			portByName[m.Name] = m.Port
+			if portByName[entry.Name()] == 0 {
+				portByName[entry.Name()] = m.Port // also index by dir name
+			}
+		}
+	}
+
+	// For each installed plugin, inject PLUGIN_{DEP}_INTERNAL_URL for every
+	// declared dependency that is also installed.
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		m := readPluginManifest(pluginDir, entry.Name())
+		if m == nil {
+			continue
+		}
+		allDeps := append(m.Dependencies, m.OptionalDependencies...)
+		for _, dep := range allDeps {
+			port, ok := portByName[dep]
+			if !ok || port == 0 {
+				continue // dep not installed or has no port
+			}
+			key := "PLUGIN_" + strings.ToUpper(strings.ReplaceAll(dep, "-", "_")) + "_INTERNAL_URL"
+			vars[key] = fmt.Sprintf("http://plugin-%s:%d", dep, port)
+		}
+	}
 
 	return vars
 }
