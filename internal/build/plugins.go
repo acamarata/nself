@@ -2,6 +2,7 @@ package build
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -59,12 +60,68 @@ func DiscoverPluginComposeFiles(workdir, pluginDir string) ([]string, error) {
 		if err != nil {
 			continue
 		}
-		if _, err := os.Stat(absPath); err == nil {
-			composePaths = append(composePaths, absPath)
+		if _, err := os.Stat(absPath); err != nil {
+			continue
 		}
+
+		// Normalize stale Dockerfile references in place. Installed compose
+		// files may predate the Rust→Go migration and reference "Dockerfile.go"
+		// or "Dockerfile.golang" that no longer exist. Fix them so `nself build`
+		// always produces a working docker-compose manifest without requiring
+		// manual docker-compose.override.yml edits.
+		if content, readErr := os.ReadFile(absPath); readErr == nil {
+			normalized := normalizeComposeDockerfile(content, pluginDir, entry.Name())
+			if !bytes.Equal(normalized, content) {
+				// Write the corrected file back so the manifest references a valid compose.
+				_ = os.WriteFile(absPath, normalized, 0644)
+			}
+		}
+
+		composePaths = append(composePaths, absPath)
 	}
 
 	return composePaths, nil
+}
+
+// canonicalDockerfile returns the correct Dockerfile name for a plugin.
+// Plugins that have been migrated from Rust to Go ship a single "Dockerfile"
+// (Go multi-stage). Legacy names "Dockerfile.go" and "Dockerfile.golang" were
+// used during the transition period. This function normalises to "Dockerfile"
+// whenever that file actually exists in the plugin directory, regardless of
+// what the installed docker-compose.plugin.yml references.
+func canonicalDockerfile(pluginDir, pluginName string) string {
+	canonical := filepath.Join(pluginDir, pluginName, "Dockerfile")
+	if _, err := os.Stat(canonical); err == nil {
+		return "Dockerfile"
+	}
+	return ""
+}
+
+// normalizeComposeDockerfile rewrites a plugin compose YAML in-memory so that
+// any "dockerfile:" directive that references a non-existent file is corrected
+// to point to "Dockerfile" when a canonical Dockerfile exists in the plugin dir.
+// Returns the (possibly unchanged) content.
+func normalizeComposeDockerfile(content []byte, pluginDir, pluginName string) []byte {
+	canonical := canonicalDockerfile(pluginDir, pluginName)
+	if canonical == "" {
+		return content // no canonical Dockerfile found — leave as-is
+	}
+
+	// Legacy dockerfile names produced during the Rust→Go migration.
+	legacy := []string{"Dockerfile.go", "Dockerfile.golang", "Dockerfile.rust"}
+
+	for _, old := range legacy {
+		// Only replace when the referenced file does NOT actually exist, to
+		// avoid clobbering plugins that legitimately ship multiple Dockerfiles.
+		oldPath := filepath.Join(pluginDir, pluginName, old)
+		if _, err := os.Stat(oldPath); err == nil {
+			continue // file exists — keep the reference as authored
+		}
+		needle := []byte("dockerfile: " + old)
+		replacement := []byte("dockerfile: " + canonical)
+		content = bytes.ReplaceAll(content, needle, replacement)
+	}
+	return content
 }
 
 // WriteComposeManifest writes .nself/compose-files.txt with one compose file
@@ -141,6 +198,7 @@ func ReadComposeManifest(workdir string) ([]string, error) {
 type pluginManifestMinimal struct {
 	Name                 string   `json:"name"`
 	Port                 int      `json:"port"`
+	Language             string   `json:"language"`
 	Dependencies         []string `json:"dependencies"`
 	OptionalDependencies []string `json:"optionalDependencies"`
 }
