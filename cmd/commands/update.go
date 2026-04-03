@@ -142,7 +142,8 @@ func selfUpdate(tag string) error {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 
-	archiveName := fmt.Sprintf("nself-%s-%s.tar.gz", goos, goarch)
+	version := strings.TrimPrefix(tag, "v")
+	archiveName := fmt.Sprintf("nself-%s-%s-%s.tar.gz", version, goos, goarch)
 	archiveURL := fmt.Sprintf("%s/%s/%s", githubDownloadBaseURL, tag, archiveName)
 	checksumURL := fmt.Sprintf("%s/%s/checksums.txt", githubDownloadBaseURL, tag)
 
