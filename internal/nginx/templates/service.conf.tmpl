@@ -29,6 +29,14 @@ server {
     proxy_hide_header X-Powered-By;
     proxy_hide_header Server;
 
+    # Block access to sensitive files and directories
+    location ~ /\.(env|git|svn|htaccess|htpasswd|dockerignore) {
+        return 404;
+    }
+    location ~ ^/(docker-compose|Dockerfile) {
+        return 404;
+    }
+
     location / {
         {{- if .RateZone}}
         limit_req zone={{.RateZone}} burst={{.Burst}} nodelay;

@@ -257,14 +257,15 @@ func ComputePluginEnvVars(workdir, pluginDir string) map[string]string {
 		}
 	}
 
-	// For each installed plugin, inject PLUGIN_{DEP}_INTERNAL_URL for every
-	// declared dependency that is also installed.
+	// For each installed Go plugin, inject PLUGIN_{DEP}_INTERNAL_URL for every
+	// declared dependency that is also installed. Only Go plugins communicate
+	// with sibling plugins over HTTP — non-Go plugins use other IPC mechanisms.
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		m := readPluginManifest(pluginDir, entry.Name())
-		if m == nil {
+		if m == nil || m.Language != "go" {
 			continue
 		}
 		allDeps := append(m.Dependencies, m.OptionalDependencies...)
