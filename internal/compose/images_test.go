@@ -4,7 +4,7 @@ import "testing"
 
 func TestResolveImage_KnownService(t *testing.T) {
 	got := ResolveImage("postgres", "postgres:15")
-	want := "postgres:16-alpine"
+	want := "pgvector/pgvector:pg16"
 	if got != want {
 		t.Errorf("ResolveImage(postgres) = %q, want %q", got, want)
 	}

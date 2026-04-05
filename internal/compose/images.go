@@ -3,7 +3,7 @@ package compose
 // DefaultImageVersions maps service name to pinned image:tag.
 // Update with each nSelf release.
 var DefaultImageVersions = map[string]string{
-	"postgres":    "postgres:16-alpine",
+	"postgres":    "pgvector/pgvector:pg16",
 	"hasura":      "hasura/graphql-engine:v2.44.0",
 	"auth":        "nhost/hasura-auth:0.36.0",
 	"nginx":       "nginx:1.25-alpine",
