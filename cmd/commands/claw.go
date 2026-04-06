@@ -40,6 +40,7 @@ var clawCmd = &cobra.Command{
 
 var clawPairQR bool
 var clawPairDirect bool
+var clawUnlockMinutes int
 
 var clawPairCmd = &cobra.Command{
 	Use:   "pair",
@@ -55,10 +56,27 @@ Use --qr to display a scannable QR code in the terminal.`,
 	RunE: runClawPair,
 }
 
+var clawUnlockCmd = &cobra.Command{
+	Use:   "unlock",
+	Short: "Temporarily unlock the web UI for first-time account setup",
+	Long: `Unlock the nClaw web UI so you can create your first account.
+
+The unlock window is time-limited (default 10 minutes) and single-use:
+once an account is created, the unlock is consumed. Only requests from
+localhost (the server itself) can trigger an unlock.
+
+Examples:
+  nself claw unlock              # unlock for 10 minutes
+  nself claw unlock --minutes 5  # unlock for 5 minutes`,
+	RunE: runClawUnlock,
+}
+
 func init() {
 	clawPairCmd.Flags().BoolVar(&clawPairQR, "qr", false, "Display QR code in terminal")
 	clawPairCmd.Flags().BoolVar(&clawPairDirect, "direct", false, "Skip cloud relay, local pairing only")
+	clawUnlockCmd.Flags().IntVar(&clawUnlockMinutes, "minutes", 10, "How many minutes the unlock lasts")
 	clawCmd.AddCommand(clawPairCmd)
+	clawCmd.AddCommand(clawUnlockCmd)
 	RootCmd.AddCommand(clawCmd)
 }
 
@@ -253,6 +271,73 @@ func runClawPair(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+}
+
+func runClawUnlock(cmd *cobra.Command, args []string) error {
+	if clawUnlockMinutes < 1 || clawUnlockMinutes > 60 {
+		return fmt.Errorf("--minutes must be between 1 and 60")
+	}
+
+	clawURL := os.Getenv("PLUGIN_CLAW_INTERNAL_URL")
+	if clawURL == "" {
+		clawURL = "http://claw:3720"
+	}
+
+	payload, err := json.Marshal(map[string]int{"duration_minutes": clawUnlockMinutes})
+	if err != nil {
+		return fmt.Errorf("marshal unlock request: %w", err)
+	}
+
+	ctx := cmd.Context()
+	req, err := http.NewRequestWithContext(ctx, "POST", clawURL+"/claw/auth/unlock", strings.NewReader(string(payload)))
+	if err != nil {
+		return fmt.Errorf("create unlock request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("unlock request failed: %w\nMake sure the claw plugin is running (nself plugin install claw && nself start)", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusForbidden {
+		return fmt.Errorf("unlock rejected: this command must be run on the server (localhost only)")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var body map[string]string
+		json.NewDecoder(resp.Body).Decode(&body)
+		msg := body["error"]
+		if msg == "" {
+			msg = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("unlock failed: %s", msg)
+	}
+
+	var result struct {
+		ExpiresAt string `json:"expires_at"`
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	expiresDisplay := result.ExpiresAt
+	if t, err := time.Parse(time.RFC3339, result.ExpiresAt); err == nil {
+		expiresDisplay = t.Local().Format("15:04:05")
+	}
+
+	serverURL := getServerURL()
+	fmt.Println()
+	fmt.Printf("  nClaw Web UI unlocked for %d minutes.\n", clawUnlockMinutes)
+	fmt.Println()
+	fmt.Printf("  Visit: %s/claw/ui\n", serverURL)
+	fmt.Println()
+	fmt.Println("  You will be able to:")
+	fmt.Println("    - Create an account (set display name + password)")
+	fmt.Println("    - Register a passkey (WebAuthn)")
+	fmt.Println()
+	fmt.Printf("  The unlock expires at %s or after first use.\n", expiresDisplay)
+	fmt.Println()
+
+	return nil
 }
 
 // printQRCode renders a QR code to the terminal using Unicode block characters.
