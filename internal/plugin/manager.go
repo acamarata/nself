@@ -204,14 +204,20 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	// their manifest on disk for the resolver. We call installLocked here
 	// (not Install) because the lock is already held by this goroutine.
 	deps := manifest.Dependencies
+	if len(deps) > 0 {
+		fmt.Fprintf(os.Stderr, "Installing %s (requires: %s)\n", name, strings.Join(deps, ", "))
+	}
 	for _, dep := range deps {
 		depDir := filepath.Join(pluginDir, dep)
 		if _, err := os.Stat(depDir); err == nil {
+			fmt.Fprintf(os.Stderr, "  ✓ %s (already installed)\n", dep)
 			continue // dependency already installed
 		}
+		fmt.Fprintf(os.Stderr, "  → Installing dependency %s...\n", dep)
 		if err := installLocked(ctx, cfg, dep, pluginDir); err != nil {
 			return fmt.Errorf("installing dependency %q: %w", dep, err)
 		}
+		fmt.Fprintf(os.Stderr, "  ✓ %s installed\n", dep)
 	}
 
 	// Step 4: Download the plugin archive.

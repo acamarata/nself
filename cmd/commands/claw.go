@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/spf13/cobra"
 )
@@ -255,14 +256,15 @@ func runClawPair(cmd *cobra.Command, args []string) error {
 }
 
 // printQRCode renders a QR code to the terminal using Unicode block characters.
-// This is a minimal implementation that works without external dependencies.
-// For better quality, the go-qrcode package can be added later.
 func printQRCode(data string) {
-	// Simple text fallback: print the URL prominently.
-	// A full QR implementation requires the go-qrcode dependency.
-	fmt.Println("  Scan or visit:")
+	qr, err := qrcode.New(data, qrcode.Medium)
+	if err != nil {
+		fmt.Println("  Scan or visit:")
+		fmt.Printf("  %s\n", data)
+		fmt.Println()
+		return
+	}
+	fmt.Println(qr.ToSmallString(false))
 	fmt.Printf("  %s\n", data)
-	fmt.Println()
-	fmt.Println("  (Install github.com/skip2/go-qrcode for terminal QR rendering)")
 	fmt.Println()
 }
