@@ -239,6 +239,11 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 	}
 
+	// ── Step 9.6: Verify Go plugin Dockerfiles have HEALTHCHECK ─────
+	for _, w := range CheckGoPluginDockerfiles(pluginDir) {
+		fmt.Printf("warning: %s\n", w)
+	}
+
 	// ── Step 10: Write .env.computed ────────────────────────────────
 	pluginEnvVars := ComputePluginEnvVars(workdir, pluginDir)
 	computedPath := filepath.Join(workdir, ".env.computed")

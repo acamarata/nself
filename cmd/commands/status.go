@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/build"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/health"
+	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -93,6 +95,20 @@ Exit codes:
 		}
 
 		printStatusTable(report, verbose, healthOnly, metrics)
+
+		// Show installed plugin versions below the service health table.
+		pluginDir := build.DefaultPluginDir()
+		if plugins, pluginErr := plugin.ListInstalled(pluginDir); pluginErr == nil && len(plugins) > 0 {
+			fmt.Println()
+			fmt.Println("Installed plugins:")
+			for _, p := range plugins {
+				ver := p.Version
+				if ver == "" {
+					ver = "unknown"
+				}
+				fmt.Printf("  %-20s %s\n", p.Name, ver)
+			}
+		}
 
 		// Exit code: 2 if any unhealthy, 1 if some in intermediate state.
 		if report.Unhealthy > 0 {

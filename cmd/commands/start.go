@@ -524,20 +524,25 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		domain = "localhost"
 	}
 
+	scheme := "https"
+	if cfg.Env == "dev" {
+		scheme = "http"
+	}
 	urls := []string{
-		fmt.Sprintf("GraphQL:  https://%s/v1/graphql", domain),
-		fmt.Sprintf("Console:  https://%s/console", domain),
-		fmt.Sprintf("Auth:     https://%s/v1/auth", domain),
+		fmt.Sprintf("API:      %s://%s", scheme, domain),
+		fmt.Sprintf("Hasura:   %s://%s/v1/graphql", scheme, domain),
+		fmt.Sprintf("Console:  %s://%s/console", scheme, domain),
+		fmt.Sprintf("Auth:     %s://%s/v1/auth", scheme, domain),
 	}
 
 	if cfg.Minio.Enabled {
-		urls = append(urls, fmt.Sprintf("Storage:  https://%s/v1/storage", domain))
+		urls = append(urls, fmt.Sprintf("Storage:  %s://%s/v1/storage", scheme, domain))
 	}
 	if cfg.Mailpit.Enabled {
-		urls = append(urls, fmt.Sprintf("Mail UI:  https://%s/mailpit", domain))
+		urls = append(urls, fmt.Sprintf("Mail UI:  %s://%s/mailpit", scheme, domain))
 	}
 	if cfg.Monitoring.GrafanaEnabled {
-		urls = append(urls, fmt.Sprintf("Grafana:  https://%s/grafana", domain))
+		urls = append(urls, fmt.Sprintf("Grafana:  %s://%s/grafana", scheme, domain))
 	}
 	if cfg.Admin.Enabled {
 		urls = append(urls, "Admin:    http://localhost:3021")

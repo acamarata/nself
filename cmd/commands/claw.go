@@ -232,6 +232,7 @@ func runClawPair(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display the pairing info.
+	pairURL := serverURL + "/login?code=" + code
 	fmt.Println()
 	fmt.Println("  nClaw Pairing Code")
 	fmt.Println("  ------------------")
@@ -239,10 +240,9 @@ func runClawPair(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Server: %s\n", serverURL)
 	fmt.Println()
 
-	if clawPairQR {
-		pairURL := serverURL + "/claw/pair?code=" + code
-		printQRCode(pairURL)
-	}
+	// Always print QR code so mobile users can scan without extra flags.
+	// --qr flag is kept for backward compatibility.
+	printQRCode(pairURL)
 
 	fmt.Printf("Waiting up to %s for a client to pair...\n", pairTimeout)
 	fmt.Println("Press Ctrl+C to cancel.")
