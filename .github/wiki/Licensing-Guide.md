@@ -1,0 +1,223 @@
+# Licensing Guide
+
+This page covers the full nSelf licensing model: the free core, per-product plugin bundles, the ɳSelf+ all-access subscription, key management, and upgrade/downgrade behavior.
+
+---
+
+## The Free Core
+
+The nSelf CLI and 25 free plugins are MIT licensed. Free forever, including commercial use. No license key needed.
+
+Free plugins include: backup, content-acquisition, content-progress, cron, donorbox, feature-flags, github, github-runner, invitations, jobs, link-preview, mdns, mlflow, monitoring, notifications, notify, paypal, search, shopify, stripe, subtitle-manager, tokens, torrent-manager, vpn, webhooks.
+
+You can run a full production stack (Postgres, Hasura, Auth, Nginx, monitoring, backups, search) without paying anything.
+
+---
+
+## Pro Plugins (62 total)
+
+Pro plugins are source-available Rust binaries distributed through the nSelf plugin system. They require a valid license key.
+
+### Seven-Tier Membership
+
+| Tier | Monthly | Annual | What You Get |
+|------|---------|--------|-------------|
+| **Free** | $0 | $0 | Core CLI + 25 free plugins |
+| **Basic** | $0.99/mo | $9.99/yr | All 62 Pro plugins |
+| **Pro** | $1.99/mo | $19.99/yr | Basic + full AI suite (ai, claw, claw-web, mux, voice, browser) |
+| **Elite** | $4.99/mo | $49.99/yr | Pro + email support |
+| **Business** | $9.99/mo | $99.99/yr | Elite + 24-hour email support + priority feature requests |
+| **Business+** | $49.99/mo | $499.99/yr | Business + dedicated support channel + custom plugin priority |
+| **Enterprise** | $99.99/mo | $999.99/yr | Business+ + managed DevOps |
+
+Annual pricing gives roughly 17% discount versus monthly. Existing $9.99/yr keys are grandfathered to the Basic tier.
+
+---
+
+## Per-Product Plugin Bundles
+
+Each nSelf product has a recommended plugin bundle. Bundles are not separate SKUs. They are a way to understand which plugins power each product. All plugins are available at the Basic tier and above.
+
+### ɳClaw Bundle
+AI personal assistant. Requires Pro tier (includes AI suite).
+
+| Plugin | Purpose |
+|--------|---------|
+| ai | Multi-provider LLM routing |
+| claw | Core assistant, threads, memory, tools |
+| claw-web | Svelte web dashboard |
+| claw-budget | Token spend limits and tracking |
+| mux | Email pipeline (Gmail, rules, auto-reply) |
+| voice | TTS, STT, phone calls |
+| browser | Web scraping and automation |
+| google | Gmail, Calendar, Drive, Sheets |
+| notify | Telegram and webhook notifications |
+| cron | Scheduled tasks |
+| post | Social media publishing |
+
+### nMedia Bundle
+Media server and player. Available at Basic tier.
+
+**Free plugins (4):** torrent-manager, content-acquisition, content-progress, subtitle-manager
+**Pro plugins (8):** media-processing, file-processing, streaming, stream-gateway, epg, tmdb, recording, transcoder
+
+### nChat Bundle
+Messaging. Available at Basic tier.
+
+| Plugin | Purpose |
+|--------|---------|
+| chat | Channels, DMs, threads, reactions |
+| livekit | Video and audio calls |
+| recording | Call recording |
+| moderation | Content filtering |
+| bots | Automated responses |
+| realtime | Enhanced WebSocket presence |
+| auth | SSO, SAML, LDAP |
+
+### nFamily Bundle (Planned)
+Private family social media. Will be available at Basic tier.
+
+| Plugin | Purpose |
+|--------|---------|
+| social | Activity feed, posts, reactions |
+| photos | Photo upload, organization |
+| activity-feed | Timeline aggregation |
+| moderation | Parental controls |
+| realtime | Live updates |
+| cms | Family pages |
+| chat | Family messaging |
+
+### ClawDE+ Bundle (Planned)
+AI dev environment cloud sync. Will require Pro tier.
+
+Remote/mobile sync via API for the ClawDE Flutter desktop and mobile app.
+
+---
+
+## ɳSelf+ ($49/yr)
+
+The all-access subscription. Includes every plugin bundle, every product, and priority support. One key unlocks the entire ecosystem.
+
+ɳSelf+ costs less than buying individual bundles if you use three or more products. It is planned but not yet available for purchase.
+
+---
+
+## Key Management
+
+### Setting Your Key
+
+```bash
+nself license set nself_pro_xxxxx...
+```
+
+The key is stored at `~/.nself/license/key` with chmod 600. It is also read from the `NSELF_PLUGIN_LICENSE_KEY` environment variable.
+
+### Checking Status
+
+```bash
+nself license status
+```
+
+Shows your current tier, expiry date, and which plugin categories you can install.
+
+### Removing Your Key
+
+```bash
+nself license remove
+```
+
+### Key Format
+
+Keys use a prefix format:
+
+| Prefix | Tier |
+|--------|------|
+| `nself_pro_` | Pro tier and above |
+| `nself_max_` | Pro tier |
+| `nself_ent_` | Enterprise tier |
+| `nself_owner_` | Owner/internal tier |
+
+Keys must be at least 32 characters total.
+
+---
+
+## License Validation
+
+Tier entitlement is checked server-side. The CLI never makes tier decisions locally.
+
+```
+POST https://ping.nself.org/license/validate
+{"license_key": "...", "product": "plugins-pro"}
+```
+
+| Response | Meaning |
+|----------|---------|
+| 200 | Valid key, plugin allowed |
+| 401/403/404 | Invalid key or insufficient tier |
+
+Validation results are cached locally for 24 hours at `~/.nself/license/cache`.
+
+### Runtime Revalidation
+
+Installed plugins revalidate on a 7-day cycle via libnclaw. If the network is down, a grace period allows continued operation. A Telegram alert fires on key expiry. Force revalidation:
+
+```bash
+nself license revalidate
+```
+
+### Offline Mode
+
+For air-gapped environments:
+
+```bash
+NSELF_LICENSE_SKIP_VERIFY=1 nself plugin install {name}
+```
+
+---
+
+## Upgrading and Downgrading
+
+### Upgrade
+1. Purchase a higher tier at nself.org/pricing.
+2. Run `nself license set {new-key}`.
+3. Install newly available plugins: `nself plugin install ai claw mux ...`
+4. Rebuild: `nself build && nself start`.
+
+Stripe handles proration automatically. You pay the difference for the remainder of your billing cycle.
+
+### Downgrade
+1. Change your tier in the Stripe customer portal (cloud.nself.org/license).
+2. Plugins above your new tier stop working at the next revalidation cycle (up to 7 days).
+3. The CLI does not forcibly remove plugins, but they will fail health checks and be excluded from the tool registry.
+
+### Cancellation
+1. Cancel via the Stripe portal.
+2. Free plugins continue working indefinitely.
+3. Pro plugins stop working at next revalidation.
+4. Your data is never deleted. You still have full access to your database and files.
+
+---
+
+## Stripe Integration
+
+All payment processing goes through Stripe:
+
+- Checkout at nself.org/pricing creates a Stripe subscription.
+- Webhook at ping.nself.org handles subscription lifecycle events.
+- Customer portal at cloud.nself.org/license for self-service billing management.
+- Invoices accessible in the portal.
+
+---
+
+## Related Pages
+
+- [[Plugin-Licensing]] -- technical details of the plugin license system
+- [[Plugin-Overview]] -- full plugin catalog
+- [[Plugin-Install]] -- how to install plugins
+- [[Feature-nClaw]] -- nClaw plugin bundle details
+- [[Feature-nTV]] -- nMedia plugin bundle details
+- [[Feature-nCloud]] -- managed hosting (separate from plugin licenses)
+
+---
+
+← [[Home]] | [[_Sidebar]]

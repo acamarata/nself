@@ -6,6 +6,11 @@
 
 Security hardening release with expanded plugin ecosystem.
 
+- [docs]: Added 6 feature wiki pages (nClaw, nChat, nTV, nFamily, nCloud, Licensing Guide)
+- [docs]: Added comprehensive API Reference covering all plugin REST endpoints
+- [docs]: Updated Configuration with plugin environment variables (inter-plugin auth, AI routing, nClaw behavior, resource limits)
+- [docs]: Expanded Security Architecture with JWT model, passkey auth, ACL system, plugin-to-plugin auth, browser/shell/email security
+
 **Highlights:**
 - **`nself security` command** — new top-level command with `audit`, `setup`, and `status` subcommands for automated security hardening. Checks UFW, fail2ban, SSH, Docker port exposure, `.env` permissions, and service binding. See [[cmd-security]]
 - **87 plugins** — the ecosystem now ships 25 free and 62 Pro plugins (up from 77 total in v1.0.0). New additions include **claw-budget** for AI token budget tracking and cost controls

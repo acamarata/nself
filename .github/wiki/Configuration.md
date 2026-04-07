@@ -163,15 +163,82 @@ nself start
 
 ---
 
+## Plugin Environment Variables (v1.0.3+)
+
+Pro plugins introduce additional environment variables. These are set in `.env.secrets` (for sensitive values) or `.env.dev` (for non-sensitive defaults).
+
+### Inter-Plugin Authentication
+
+| Variable | Purpose | Where |
+|----------|---------|-------|
+| `PLUGIN_INTERNAL_SECRET` | Shared secret for plugin-to-plugin HTTP calls (X-Internal-Token header) | `.env.secrets` |
+| `CLAW_WEB_SECRET` | Authentication secret for the claw-web plugin dashboard | `.env.secrets` |
+| `MUX_CLAW_SHARED_SECRET` | Auth token for mux-to-claw RPC calls (POST /internal/classify) | `.env.secrets` |
+| `NOTIFY_INTERNAL_SECRET` | Auth for notify plugin internal API | `.env.secrets` (auto-generated) |
+
+### AI and Model Routing
+
+| Variable | Purpose | Where |
+|----------|---------|-------|
+| `NCLAW_FAST_MODEL` | Default fast model for nClaw routing (e.g., `gemini-2.5-flash`) | `.env.dev` |
+| `NSELF_VOICE_LLM_PROVIDER` | Voice plugin LLM provider | `.env.dev` |
+| `NSELF_VOICE_LLM_MODEL` | Voice plugin LLM model | `.env.dev` |
+| `NSELF_VOICE_MODE` | Voice mode: `standard` or `realtime` | `.env.dev` |
+| `OLLAMA_BASE_URL` | Ollama endpoint. Default: `http://host.docker.internal:11434` | `.env.dev` |
+| `GEMINI_FREE_KEY_1`..`N` | Gemini API keys for tier-1 routing (round-robin) | `.env.secrets` |
+| `GEMINI_FLASH_KEY_1`..`N` | Gemini Flash keys for tier-2 routing | `.env.secrets` |
+| `GEMINI_FLASH_LITE_KEY_1`..`N` | Gemini Flash Lite keys for tier-1 | `.env.secrets` |
+| `AI_GOOGLE_API_KEY_1`..`N` | Alternative Google API key prefix (read alongside GEMINI_FREE_KEY_N) | `.env.secrets` |
+| `CLAUDE_OAUTH_REFRESH_*` | Claude OAuth refresh tokens for tier-3 routing | `.env.secrets` |
+| `GOOGLE_PRIMARY_USER_ID` | Primary Google account ID for google plugin | `.env.dev` |
+
+### nClaw Behavior
+
+| Variable | Purpose | Where |
+|----------|---------|-------|
+| `NCLAW_ALLOW_SHELL` | Enable shell_dispatch_vps tool (`true`/`false`) | `.env.dev` |
+| `NCLAW_QUIET_START` / `NCLAW_QUIET_END` | Quiet hours for proactive notifications (e.g., `22:00`/`07:00`) | `.env.dev` |
+| `NCLAW_DRAFT_APPROVAL` | Require Telegram approval for email drafts (`true` default) | `.env.dev` |
+| `CLAW_BLOCKED_RECIPIENTS` | Comma-separated email blocklist | `.env.dev` |
+| `CLAW_TG_ALLOWED_USERS` | Telegram user IDs allowed to interact with the claw bot | `.env.dev` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth for Gmail, Calendar, Drive | `.env.secrets` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications and claw chat | `.env.secrets` |
+| `GITHUB_TOKEN` | GitHub PAT for git_create_pr tool | `.env.secrets` |
+
+### Plugin Resource Limits
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `PLUGIN_{NAME}_MEMORY_LIMIT` | Docker memory limit for a specific plugin | varies |
+| `PLUGIN_{NAME}_CPU_LIMIT` | Docker CPU limit for a specific plugin | varies |
+| `PLUGIN_DEFAULT_MEMORY_LIMIT` | Default memory limit for all plugins | `512m` |
+| `PLUGIN_DEFAULT_CPU_LIMIT` | Default CPU limit for all plugins | `0.5` |
+
+The `plugin-ai` plugin defaults to `1g` memory and `1.0` CPU.
+
+### Mux Email Pipeline
+
+| Variable | Purpose | Where |
+|----------|---------|-------|
+| `MUX_WATCH_RENEWAL_EXTERNAL` | Suppress 404 warnings during Gmail watch renewal (`true`/`false`) | `.env.dev` |
+| `MUX_ALLOWED_INSERT_TABLES` | Tables the mux plugin can insert into (gates query_transactions tool) | `.env.dev` |
+
+### Auto-Generated Internal URLs
+
+When pro plugins are installed, `nself build` auto-generates `PLUGIN_{NAME}_INTERNAL_URL` variables for inter-plugin communication. See [[API-Reference]] for the full mapping.
+
+---
+
 ## Sub-pages
 
-- [[Config-Env-Vars]] — Complete environment variable reference for every service
-- [[Config-Postgres]] — PostgreSQL configuration in depth
-- [[Config-Hasura]] — Hasura GraphQL Engine configuration
-- [[Config-Auth]] — Authentication service configuration
-- [[Config-Nginx]] — Nginx reverse proxy and SSL configuration
-- [[Config-Optional-Services]] — Redis, MinIO, Functions, Search, Mail, MLflow, Admin
-- [[Config-Custom-Services]] — Custom service slots (CS_1 through CS_10)
+- [[Config-Env-Vars]] -- Complete environment variable reference for every service
+- [[Config-Postgres]] -- PostgreSQL configuration in depth
+- [[Config-Hasura]] -- Hasura GraphQL Engine configuration
+- [[Config-Auth]] -- Authentication service configuration
+- [[Config-Nginx]] -- Nginx reverse proxy and SSL configuration
+- [[Config-Optional-Services]] -- Redis, MinIO, Functions, Search, Mail, MLflow, Admin
+- [[Config-Custom-Services]] -- Custom service slots (CS_1 through CS_10)
+- [[API-Reference]] -- Plugin REST API endpoints
 
 ---
 
