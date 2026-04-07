@@ -17,7 +17,7 @@
 - _Lifecycle:_ [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]]
 - _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]]
 - _Data:_ [[cmd-db]]
-- _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-ssl]]
+- _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-ssl]] · [[cmd-security]]
 - _Plugins:_ [[cmd-plugin]] · [[cmd-license]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-completion]]
 

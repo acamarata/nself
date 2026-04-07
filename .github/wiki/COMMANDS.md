@@ -1,6 +1,6 @@
 # Commands
 
-nSelf CLI provides 24 top-level commands. Each command links to a dedicated page with full usage, flags, and examples.
+nSelf CLI provides 25 top-level commands. Each command links to a dedicated page with full usage, flags, and examples.
 
 | Command | Description |
 |---------|-------------|
@@ -15,6 +15,7 @@ nSelf CLI provides 24 top-level commands. Each command links to a dedicated page
 | [[cmd-config]] | Manage project configuration — show, get, set, list, validate, export, import |
 | [[cmd-service]] | Enable, disable, and list optional services (Redis, MinIO, email, search, monitoring) |
 | [[cmd-ssl]] | Manage SSL certificates — status and force renewal |
+| [[cmd-security]] | Security audit, setup, and status for hardening your deployment |
 | [[cmd-db]] | Database operations — migrate, seed, backup, restore, shell, reset, Hasura metadata |
 | [[cmd-plugin]] | Manage nSelf plugins — install, remove, update, list, start, stop, status |
 | [[cmd-doctor]] | Run comprehensive system diagnostics — infrastructure, Docker, config, network |

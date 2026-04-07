@@ -2,7 +2,7 @@
 
 > **Self-hosted backend in five minutes.** Postgres, GraphQL, Auth, Nginx. No cloud required.
 
-nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 52 Pro plugins available starting at $0.99/mo.
+nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available starting at $0.99/mo.
 
 ```bash
 brew install nself-org/nself/nself   # or: curl -sSL https://install.nself.org | bash
@@ -79,14 +79,14 @@ Optional services (enable per project): **Redis** | **MinIO** (S3 storage) | **S
 
 ## Commands
 
-nSelf provides **24 top-level commands** with **295+ subcommands**. Full reference:
+nSelf provides **25 top-level commands** with **300+ subcommands**. Full reference:
 
 | Category | Commands | Description |
 |----------|----------|-------------|
 | **Lifecycle** | [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]] | Create, build, and manage your stack |
 | **Monitoring** | [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] | Observe and diagnose services |
 | **Data** | [[cmd-db]] | Database operations, migrations, backup, restore |
-| **Config** | [[cmd-config]] · [[cmd-service]] · [[cmd-ssl]] | Environment, services, and certificates |
+| **Config** | [[cmd-config]] · [[cmd-service]] · [[cmd-ssl]] · [[cmd-security]] | Environment, services, certificates, and security hardening |
 | **Plugins** | [[cmd-plugin]] · [[cmd-license]] | Install, manage, and license plugins |
 | **Utilities** | [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-completion]] | Shell access, cleanup, updates, migrations |
 

@@ -66,13 +66,13 @@ From zero to production-ready backend in under 5 minutes. Really.
 
 **Production Infrastructure:**
 - **Monitoring Bundle** - Prometheus, Grafana, Loki, Tempo (10 services)
-- **Security Hardening** - SQL injection prevention, CSP framework, rate limiting
+- **Security Hardening** - `nself security` audit, setup, and status. SQL injection prevention, CSP framework, rate limiting
 - **Automated Backups** - Intelligent pruning, cloud storage, 3-2-1 rule verification
 - **SSL Automation** - Trusted certificates with zero configuration
 
 **Developer Experience:**
 - **40+ Service Templates** - Express, FastAPI, Flask, Gin, Rust, NestJS, gRPC, and more
-- **24 Commands, 295+ Subcommands** - Complete control from the terminal
+- **25 Commands, 300+ Subcommands** - Complete control from the terminal
 - **Admin GUI** (localhost) - Local management UI
 - **Email Management** - 16+ providers with zero-config development mode
 
@@ -214,7 +214,7 @@ The core CLI and 25 free plugins are MIT-licensed, free forever, including comme
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
 | Free | $0 | $0 | Core CLI + 25 free plugins |
-| Basic | $0.99/mo | $9.99/yr | All 52 Pro plugins |
+| Basic | $0.99/mo | $9.99/yr | All 62 Pro plugins |
 | Pro | $1.99/mo | $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | Elite | $4.99/mo | $49.99/yr | Pro + email support |
 | Business | $9.99/mo | $99.99/yr | Elite + 24h support + priority feature requests |
@@ -322,7 +322,7 @@ Every template includes:
 
 ## Command Reference
 
-nSelf provides a **24-command canonical runtime surface** with **295+ subcommands** organized by domain:
+nSelf provides a **25-command canonical runtime surface** with **300+ subcommands** organized by domain:
 
 ### Core Commands
 ```bash
@@ -353,6 +353,7 @@ nself service       # Service management (enable, disable, list)
 nself config        # Configuration (show, get, set, list, validate, export, import)
 nself plugin        # Plugin system (install, remove, update, list, start, stop, status)
 nself ssl           # SSL certificate management (status, renew [domain])
+nself security      # Security audit, setup, and status
 nself license       # Pro license management (set, show, validate, clear, upgrade)
 nself doctor        # System diagnostics (--fix for auto-repair)
 nself health        # Health checks (check, watch, history)
@@ -375,7 +376,7 @@ nself plugin install search        # MeiliSearch full-text
 nself plugin install commerce      # Stripe billing
 ```
 
-**52 Pro plugins** - requires a membership key (Basic tier, $9.99/yr):
+**62 Pro plugins** - requires a membership key (Basic tier, $9.99/yr):
 
 ```bash
 nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -676,7 +677,7 @@ nself build --force     # Force rebuild
 - [Quick Start Tutorial](.github/wiki/getting-started/Quick-Start.md) - 5-minute tutorial
 - [Installation Guide](.github/wiki/getting-started/Installation.md) - Detailed installation
 - [Configuration Reference](.github/wiki/configuration/README.md) - Complete .env settings
-- [Command Reference](.github/wiki/commands/COMMAND-TREE.md) - All 295+ commands
+- [Command Reference](.github/wiki/commands/COMMAND-TREE.md) - All 300+ commands
 
 ### Features and Services
 - [Service Templates](.github/wiki/reference/SERVICE_TEMPLATES.md) - 40+ microservice templates
@@ -719,7 +720,7 @@ The CLI is written in Go (1.25+). Tests live in `internal/` alongside the packag
 
 MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
-nSelf CLI is MIT licensed. The 52 Pro plugins are source-available under a separate commercial license.
+nSelf CLI is MIT licensed. The 62 Pro plugins are source-available under a separate commercial license.
 
 ---
 
@@ -735,7 +736,7 @@ nSelf CLI is MIT licensed. The 52 Pro plugins are source-available under a separ
 
 <div align="center">
 
-**nSelf CLI v1.0.0** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
+**nSelf CLI v1.0.3** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 
