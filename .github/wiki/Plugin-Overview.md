@@ -69,12 +69,23 @@ Plugins inject into your nSelf stack via Docker Compose overlays. When you run `
 
 After installing any plugin, run `nself build` to regenerate your compose file.
 
+## Plugin Bundles
+
+Bundles are groups of plugins that work together to provide a complete feature set.
+
+| Bundle | Plugins | Use Case |
+|--------|---------|----------|
+| [nMedia](bundle-nmedia) | 12 plugins (4 free + 8 pro) | Self-hosted media acquisition, processing, and streaming |
+| ɳClaw | 13 plugins | AI personal assistant |
+| nChat | 7 plugins | Messaging with video calls and moderation |
+
 ## Related Pages
 
 - [[Plugin-Install]] — How to install, remove, and update plugins
 - [[Plugin-Licensing]] — License keys, tiers, and validation
 - [[Plugin-Dev-Guide]] — Build your own plugin
 - [[Plugin-Architecture]] — Technical internals
+- [[bundle-nmedia]] — nMedia plugin bundle guide
 
 ---
 ← [[Home]] | [[_Sidebar]]

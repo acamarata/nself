@@ -118,14 +118,15 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	entries = append(entries, routeEntry{
 		filename: "hasura.conf",
 		data: ServiceRouteData{
-			Route:      hasuraRoute,
-			BaseDomain: baseDomain,
-			Upstream:   fmt.Sprintf("hasura:%d", hasuraPort),
-			SSLDir:     sslDir,
-			RateZone:   "graphql_api",
-			Burst:      20,
-			ConnLimit:  10,
-			WebSocket:  true,
+			Route:       hasuraRoute,
+			BaseDomain:  baseDomain,
+			Upstream:    fmt.Sprintf("hasura:%d", hasuraPort),
+			SSLDir:      sslDir,
+			RateZone:    "graphql_api",
+			Burst:       20,
+			ConnLimit:   10,
+			WebSocket:   true,
+			LazyResolve: true,
 		},
 	})
 
@@ -141,13 +142,14 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	entries = append(entries, routeEntry{
 		filename: "auth.conf",
 		data: ServiceRouteData{
-			Route:      authRoute,
-			BaseDomain: baseDomain,
-			Upstream:   fmt.Sprintf("auth:%d", authPort),
-			SSLDir:     sslDir,
-			RateZone:   "auth",
-			Burst:      5,
-			ConnLimit:  5,
+			Route:       authRoute,
+			BaseDomain:  baseDomain,
+			Upstream:    fmt.Sprintf("auth:%d", authPort),
+			SSLDir:      sslDir,
+			RateZone:    "auth",
+			Burst:       5,
+			ConnLimit:   5,
+			LazyResolve: true,
 		},
 	})
 

@@ -27,9 +27,9 @@ curl -sSL https://install.nself.org | bash
 
 ---
 
-## What is nSelf?
+## What is ɳSelf?
 
-nSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same powerful features as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
+ɳSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same powerful features as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
 
 **Get the power of commercial BaaS, plus:**
 - **True Data Ownership** - Your data never leaves your infrastructure
@@ -41,7 +41,7 @@ nSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you
 
 From zero to production-ready backend in under 5 minutes. Really.
 
-## Why nSelf?
+## Why ɳSelf?
 
 ### Fast Setup
 - Under 5 minutes from zero to running backend
@@ -58,7 +58,7 @@ From zero to production-ready backend in under 5 minutes. Really.
 - **Storage (MinIO)** - S3-compatible object storage with CDN integration
 - **Real-Time** - WebSocket channels, database subscriptions (CDC), presence tracking
 
-**Enterprise Features (Unique to nSelf):**
+**Enterprise Features (Unique to ɳSelf):**
 - **Multi-Tenancy** - Complete tenant isolation, row-level security, org management
 - **Billing Integration** - Stripe/Paddle subscriptions, usage tracking, invoicing
 - **White-Label** - Custom domains, branding, email templates, legal documents
@@ -76,9 +76,9 @@ From zero to production-ready backend in under 5 minutes. Really.
 - **Admin GUI** (localhost) - Local management UI
 - **Email Management** - 16+ providers with zero-config development mode
 
-### nSelf vs Others
+### ɳSelf vs Others
 
-| Feature | nSelf | Supabase | Nhost | DIY |
+| Feature | ɳSelf | Supabase | Nhost | DIY |
 |---------|:-----:|:--------:|:-----:|:---:|
 | **Full Backend Stack** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :warning: Manual |
 | **Self-Hosted** | :white_check_mark: | :yellow_circle: Limited | :yellow_circle: Limited | :white_check_mark: |
@@ -124,7 +124,7 @@ brew install nself
 curl -fsSL https://raw.githubusercontent.com/nself-org/cli/main/.github/install.sh | bash
 ```
 
-### Updating nSelf
+### Updating ɳSelf
 
 ```bash
 nself update
@@ -322,7 +322,7 @@ Every template includes:
 
 ## Command Reference
 
-nSelf provides a **25-command canonical runtime surface** with **300+ subcommands** organized by domain:
+ɳSelf provides a **25-command canonical runtime surface** with **300+ subcommands** organized by domain:
 
 ### Core Commands
 ```bash
@@ -395,7 +395,7 @@ See [Plugins](.github/wiki/Plugin-Architecture.md) for the full list.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                     nSelf CLI                       │
+│                     ɳSelf CLI                       │
 │          init  →  build  →  start                   │
 └────────────────────────┬────────────────────────────┘
                          │ generates
@@ -421,7 +421,7 @@ All services bind to `127.0.0.1`. Nginx is the only external-facing process.
 
 ## SSL/TLS Configuration
 
-nSelf provides automatic SSL with green locks in browsers, no warnings.
+ɳSelf provides automatic SSL with green locks in browsers, no warnings.
 
 ### Automatic Certificate Generation
 
@@ -720,7 +720,7 @@ The CLI is written in Go (1.25+). Tests live in `internal/` alongside the packag
 
 MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
-nSelf CLI is MIT licensed. The 62 Pro plugins are source-available under a separate commercial license.
+ɳSelf CLI is MIT licensed. The 62 Pro plugins are source-available under a separate commercial license.
 
 ---
 
@@ -736,7 +736,7 @@ nSelf CLI is MIT licensed. The 62 Pro plugins are source-available under a separ
 
 <div align="center">
 
-**nSelf CLI v1.0.3** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
+**ɳSelf CLI v1.0.3** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 

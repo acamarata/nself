@@ -558,14 +558,24 @@ func checkEntitlements(cacheDir string, pluginName string) (allowed bool, found 
 	return false, true
 }
 
-// licenseValidateResponse is the JSON body returned by the license validation
+// LicenseValidateResponse is the JSON body returned by the license validation
 // endpoint on HTTP 200. The Tier and Plugins fields are used to populate the
 // local entitlement cache.
-type licenseValidateResponse struct {
+type LicenseValidateResponse struct {
 	Valid   bool     `json:"valid"`
 	Reason  string   `json:"reason,omitempty"`
 	Tier    string   `json:"tier"`
 	Plugins []string `json:"plugins"`
+	Expires string   `json:"expires,omitempty"`
+}
+
+// licenseValidateResponse is an alias kept for internal use.
+type licenseValidateResponse = LicenseValidateResponse
+
+// ValidateLicenseRemoteWithDetails performs a remote license check and returns
+// the full response including tier, plugins, and expiry information.
+func ValidateLicenseRemoteWithDetails(ctx context.Context, key string, pingURL string) (bool, *LicenseValidateResponse, error) {
+	return validateLicenseRemoteWithEntitlements(ctx, key, pingURL)
 }
 
 // keyPrefix extracts the prefix portion of a license key (everything up to and

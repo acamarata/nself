@@ -16,6 +16,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/nginx"
 )
 
@@ -550,82 +551,96 @@ func verifyChecksum(filePath string, expectedHash string) error {
 }
 
 // checkLicense validates that a license key exists and is acceptable.
-// It checks the local entitlement cache first to avoid a remote call when the
-// tier-to-plugins mapping is already known and fresh (< 24h). On a cache miss
-// or expiry it falls through to remote validation and caches the result.
+// It checks all configured keys (multi-key support) against the local
+// entitlement cache first, then falls through to remote validation.
 func checkLicense(ctx context.Context, name string) error {
-	key := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")
-	if key == "" {
-		keyPath := licenseKeyPath()
-		data, err := os.ReadFile(keyPath)
-		if err != nil {
-			return fmt.Errorf("plugin %q requires a license key: set NSELF_PLUGIN_LICENSE_KEY or write key to %s", name, keyPath)
+	keys := license.CollectLicenseKeys()
+
+	// Fallback: try legacy single-key path if CollectLicenseKeys found nothing.
+	if len(keys) == 0 {
+		key := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")
+		if key == "" {
+			keyPath := licenseKeyPath()
+			data, err := os.ReadFile(keyPath)
+			if err != nil {
+				return fmt.Errorf("plugin %q requires a license key. Run 'nself license add <key>' or visit %s",
+					name, "nself.org/pricing")
+			}
+			key = strings.TrimSpace(string(data))
 		}
-		key = strings.TrimSpace(string(data))
+		if key != "" {
+			keys = []string{key}
+		}
 	}
 
-	if err := validateLicenseFormat(key); err != nil {
-		return fmt.Errorf("plugin %q: %w", name, err)
+	if len(keys) == 0 {
+		return fmt.Errorf("plugin %q requires a license key. Run 'nself license add <key>' or visit %s",
+			name, "nself.org/pricing")
 	}
 
 	cacheDir := licenseCacheDir()
 
 	// Fast path: check the entitlement cache before any network call.
 	if allowed, found := checkEntitlements(cacheDir, name); found {
-		if !allowed {
-			return fmt.Errorf("plugin %q: %w (cached)", name, errs.ErrLicenseTierTooLow)
+		if allowed {
+			return nil
 		}
-		return nil
+		// Cache says not allowed, but we might have a new key not yet cached.
+		// Fall through to check all keys.
 	}
 
-	// Check the per-key license cache before hitting the network.
-	if valid, found := checkLicenseCache(key, cacheDir); found {
-		if !valid {
-			return fmt.Errorf("plugin %q: cached license is invalid", name)
+	// Try each key. If any key covers this plugin, allow it.
+	var lastErr error
+	for _, key := range keys {
+		if err := validateLicenseFormat(key); err != nil {
+			continue
 		}
-		return nil
-	}
 
-	valid, lvr, err := validateLicenseRemoteWithEntitlements(ctx, key, pingAPIURL())
-	if err != nil {
-		// If the server returned a reason that indicates expiry, surface that
-		// specifically so callers can errors.Is(err, errs.ErrLicenseExpired).
-		if strings.Contains(err.Error(), "expired") {
-			return fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseExpired)
-		}
-		// Network unavailable: fall back to offline cache with extended
-		// grace period (7 days). Never silently proceed unvalidated.
-		if offlineValid, offlineFound := checkLicenseCacheOffline(key, cacheDir); offlineFound {
-			if offlineValid {
+		// Check the per-key license cache before hitting the network.
+		if valid, found := checkLicenseCache(key, cacheDir); found {
+			if valid {
 				return nil
 			}
-			return fmt.Errorf("plugin %q: cached license is invalid (offline)", name)
+			continue
 		}
-		return fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseNetworkUnavailable)
-	}
-	_ = CacheLicense(key, valid, cacheDir)
 
-	// Cache the entitlement list so subsequent installs in this session
-	// (and the next 24 hours) skip the remote call entirely.
-	if lvr != nil && len(lvr.Plugins) > 0 {
-		_ = cacheEntitlements(cacheDir, lvr.Tier, lvr.Plugins)
-		// If this tier does not include the requested plugin, report it.
-		allowed := false
-		for _, p := range lvr.Plugins {
-			if p == name {
-				allowed = true
-				break
+		valid, lvr, err := validateLicenseRemoteWithEntitlements(ctx, key, pingAPIURL())
+		if err != nil {
+			if strings.Contains(err.Error(), "expired") {
+				lastErr = fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseExpired)
+				continue
+			}
+			// Network unavailable: try offline cache.
+			if offlineValid, offlineFound := checkLicenseCacheOffline(key, cacheDir); offlineFound && offlineValid {
+				return nil
+			}
+			lastErr = fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseNetworkUnavailable)
+			continue
+		}
+		_ = CacheLicense(key, valid, cacheDir)
+
+		if lvr != nil && len(lvr.Plugins) > 0 {
+			_ = cacheEntitlements(cacheDir, lvr.Tier, lvr.Plugins)
+			for _, p := range lvr.Plugins {
+				if p == name {
+					return nil
+				}
 			}
 		}
-		if !allowed {
-			return fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseTierTooLow)
+
+		if valid {
+			// Key is valid but doesn't cover this specific plugin.
+			lastErr = fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseTierTooLow)
+			continue
 		}
+		lastErr = fmt.Errorf("plugin %q: license key is not valid", name)
 	}
 
-	if !valid {
-		return fmt.Errorf("plugin %q: license key is not valid", name)
+	// No key covered this plugin. Provide a helpful suggestion.
+	if lastErr != nil {
+		return lastErr
 	}
-	return nil
+	return fmt.Errorf("plugin %q requires a license key. Get one at %s", name, "nself.org/pricing")
 }
 
 // findPlugin locates a plugin in the registry by name (case-insensitive).
