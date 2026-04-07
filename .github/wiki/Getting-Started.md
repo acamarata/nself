@@ -39,6 +39,6 @@ See [[Quick-Start]] for the full walkthrough with expected output.
 ## What's Next
 
 - [[First-Project]] — Guided walkthrough building a real backend with tables, permissions, and auth
-- [[Plugin-Overview]] — Browse 77 plugins (25 free, 52 Pro) for AI, video, commerce, CMS, and more
+- [[Plugin-Overview]] — Browse 87 plugins (25 free, 62 Pro) for AI, video, commerce, CMS, and more
 - [[Guide-Production-Deployment]] — Deploy your stack to a real server with SSL and backups
 - [[Commands]] — Full reference for all 295+ CLI commands

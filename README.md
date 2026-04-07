@@ -13,7 +13,7 @@
 
 **Deploy a production-ready backend in 5 minutes**
 
-Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 77 plugins (25 free, 52 Pro). MIT licensed core, forever.
+Complete self-hosted Backend-as-a-Service with PostgreSQL, GraphQL API, Authentication, Storage, Real-time features, and unlimited custom services. Local to production workflow with automated SSL, intelligent defaults, and enterprise monitoring. 87 plugins (25 free, 62 Pro). MIT licensed core, forever.
 
 ```bash
 curl -sSL https://install.nself.org | bash

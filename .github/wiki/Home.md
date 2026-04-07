@@ -114,7 +114,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 
 ## Plugins
 
-77 plugins extend your stack. 25 are free (MIT), 52 require a Pro license key.
+87 plugins extend your stack. 25 are free (MIT), 62 require a Pro license key.
 
 | Page | Covers |
 |------|--------|
