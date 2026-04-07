@@ -14,7 +14,7 @@ nSelf plugins extend your backend stack with additional services and capabilitie
 | Tier | Price | Includes |
 |------|-------|---------|
 | **Free** | $0 | Core CLI + 25 free plugins (MIT licensed) |
-| **Basic** | $0.99/mo or $9.99/yr | All 52 pro plugins |
+| **Basic** | $0.99/mo or $9.99/yr | All 62 pro plugins |
 | **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
 | **Elite** | $4.99/mo or $49.99/yr | Pro + email support |
 | **Business** | $9.99/mo or $99.99/yr | Elite + 24h email support + priority feature requests |
@@ -41,13 +41,13 @@ No license key required. Install with `nself plugin install {name}`.
 | Notifications | notifications, notify |
 | Infrastructure | backup, monitoring, mlflow |
 
-### Pro Plugins (52) — License Key Required
+### Pro Plugins (62) — License Key Required
 
 Require a valid nSelf license key. See [[Plugin-Licensing]].
 
 | Category | Count | Plugins |
 |----------|-------|---------|
-| AI & Automation | 6 | ai, claw, claw-web, mux, workflows, bots |
+| AI & Automation | 7 | ai, claw, claw-web, claw-budget, mux, workflows, bots |
 | Communication | 6 | chat, livekit, streaming, voice, podcast, realtime |
 | Media & Processing | 6 | media-processing, file-processing, epg, photos, recording, stream-gateway |
 | Content & Social | 8 | cms, social, activity-feed, moderation, knowledge-base, support, documents, calendar |

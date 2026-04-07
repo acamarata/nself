@@ -2,6 +2,25 @@
 
 > See [CHANGELOG.md](../CHANGELOG.md) in the repo root for the full version history.
 
+## v1.0.3
+
+Security hardening release with expanded plugin ecosystem.
+
+**Highlights:**
+- **`nself security` command** — new top-level command with `audit`, `setup`, and `status` subcommands for automated security hardening. Checks UFW, fail2ban, SSH, Docker port exposure, `.env` permissions, and service binding. See [[cmd-security]]
+- **87 plugins** — the ecosystem now ships 25 free and 62 Pro plugins (up from 77 total in v1.0.0). New additions include **claw-budget** for AI token budget tracking and cost controls
+- **Security hardening** — container security improvements, stricter default `.env` permissions, and internal plugin authentication via `PLUGIN_INTERNAL_SECRET`
+- **New environment variables** — `CLAW_WEB_SECRET` for claw-web plugin authentication, `PLUGIN_INTERNAL_SECRET` for inter-plugin communication
+- **Bug fixes** — resolved edge cases in compose generation, improved error messages for license validation failures
+
+**Upgrade:**
+```bash
+nself update
+nself doctor    # verify stack health after upgrade
+```
+
+---
+
 ## v1.0.0
 
 First stable release. Complete Go rewrite of the nSelf CLI (previously Bash-based v0.x).

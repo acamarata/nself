@@ -42,11 +42,17 @@ Vulnerabilities in third-party images should be reported to their respective pro
 
 ## Security Updates
 
-Security patches are released as patch versions (e.g. `v1.0.1`). Update with:
+Security patches are released as patch versions (e.g. `v1.0.3`). Update with:
 
 ```bash
 nself update
 ```
+
+### Built-in Security Auditing (v1.0.3+)
+
+The `nself security` command provides automated security auditing and hardening for your deployment. Run `nself security audit` to check firewall status, SSH hardening, Docker port exposure, `.env` file permissions, and service binding. Run `nself security setup --apply` to apply recommended hardening steps automatically.
+
+See [[cmd-security]] for full usage and examples.
 
 Subscribe to [GitHub Release notifications](https://github.com/nself-org/cli/releases) to be notified of security updates.
 

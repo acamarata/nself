@@ -48,7 +48,7 @@
 
 ---
 
-**Plugins (77)**
+**Plugins (87)**
 - [[Plugin-Overview]]
 - [[Plugin-Install]]
 - [[Plugin-Licensing]]
@@ -85,11 +85,12 @@
 
 </details>
 
-<details><summary>Pro (52)</summary>
+<details><summary>Pro (62)</summary>
 
   - [[plugin-ai]]
   - [[plugin-claw]]
   - [[plugin-claw-web]]
+  - [[plugin-claw-budget]]
   - [[plugin-mux]]
   - [[plugin-voice]]
   - [[plugin-browser]]

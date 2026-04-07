@@ -49,7 +49,7 @@ nSelf v1.0.3 ships a complete self-hosted backend stack with 25 CLI commands, 4 
 | Feature | Status | Description |
 |---------|--------|-------------|
 | Free plugins (25) | ✅ | MIT licensed, no key required |
-| Pro plugins (52) | ✅ | Tier-gated, license key required |
+| Pro plugins (62) | ✅ | Tier-gated, license key required |
 | Compose overlay | ✅ | Plugins inject Docker services |
 | Nginx injection | ✅ | Plugins add location blocks |
 | Plugin config templating | ✅ | Env vars declared in manifest |
@@ -64,6 +64,7 @@ nSelf v1.0.3 ships a complete self-hosted backend stack with 25 CLI commands, 4 
 | Secret redaction | ✅ | Secrets never appear in output |
 | Plugin integrity | ✅ | Manifest validation + checksum |
 | File permissions | ✅ | .env 0600, backups 0700 |
+| Security audit CLI | ✅ | `nself security audit/setup/status` (v1.0.3) |
 
 ## Feature Details
 

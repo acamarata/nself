@@ -2,7 +2,7 @@
 
 > **Self-hosted backend in five minutes.** Postgres, GraphQL, Auth, Nginx. No cloud required.
 
-nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available starting at $0.99/mo.
+nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available (87 total) starting at $0.99/mo.
 
 ```bash
 brew install nself-org/nself/nself   # or: curl -sSL https://install.nself.org | bash
@@ -158,9 +158,9 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 </details>
 
 <details>
-<summary><strong>Pro Plugins (52)</strong> — License key required, starting at $0.99/mo</summary>
+<summary><strong>Pro Plugins (62)</strong> — License key required, starting at $0.99/mo</summary>
 
-**AI and Automation:** [[plugin-ai]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
+**AI and Automation:** [[plugin-ai]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-claw-budget]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
 
 **Communication:** [[plugin-chat]] · [[plugin-livekit]] · [[plugin-streaming]] · [[plugin-realtime]] · [[plugin-podcast]] · [[plugin-meetings]] · [[plugin-recording]]
 
