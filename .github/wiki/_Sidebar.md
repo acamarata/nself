@@ -37,6 +37,9 @@
 - [[Feature-nTV]] — Media Player
 - [[Feature-nFamily]] — Family Social
 - [[Feature-nCloud]] — Managed Hosting
+- [[Feature-Memory-Rooms]] — Knowledge Organization
+- [[Feature-Agent-Dashboard]] — Agent Metrics
+- [[Feature-Image-Generation]] — AI Image Generation
 
 ---
 

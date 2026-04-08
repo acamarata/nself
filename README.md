@@ -736,7 +736,7 @@ MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
 <div align="center">
 
-**ɳSelf CLI v1.0.3** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
+**ɳSelf CLI v1.0.4** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 

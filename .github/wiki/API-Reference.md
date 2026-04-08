@@ -165,6 +165,131 @@ Internal tokens are configured via `PLUGIN_INTERNAL_SECRET` in `.env.secrets`. P
 |--------|------|------------|
 | `POST` | `/claw/telegram/webhook` | Telegram bot webhook handler. Gated by CLAW_TG_ALLOWED_USERS. |
 
+### Memory Rooms (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/memory/rooms` | List memory rooms with counts and health scores. |
+| `POST` | `/claw/memory/rooms` | Create a named memory room. |
+| `PUT` | `/claw/memory/rooms/{id}` | Update room name or ordering. |
+| `DELETE` | `/claw/memory/rooms/{id}` | Delete room (memories return to default). |
+| `POST` | `/claw/memory/rooms/{id}/assign` | Assign memory IDs to a room. |
+
+### Knowledge (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/knowledge/health` | Brain health check report (stale, orphan, duplicate detection). |
+| `GET` | `/claw/knowledge/stats` | Knowledge graph statistics (node count, edges, avg connections). |
+| `GET` | `/claw/knowledge/export` | Export knowledge graph. Query param `format=obsidian` or `format=json`. |
+| `GET` | `/claw/ingestion/queue` | List ingestion pipeline jobs. |
+| `POST` | `/claw/ingestion/start` | Start ingestion from URL or file. |
+| `DELETE` | `/claw/ingestion/{id}` | Cancel an ingestion job. |
+
+### Decisions (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/decisions` | List recorded decisions. |
+| `POST` | `/claw/decisions` | Record a new decision with context. |
+| `PUT` | `/claw/decisions/{id}` | Update decision outcome. |
+
+### Routing Rules (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/routing/rules` | List smart routing rules. |
+| `POST` | `/claw/routing/rules` | Create a routing rule. |
+| `PUT` | `/claw/routing/rules/{id}` | Update a routing rule. |
+| `DELETE` | `/claw/routing/rules/{id}` | Delete a routing rule. |
+
+### Image Generation (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `POST` | `/claw/image/generate` | Generate image from text prompt. Supports provider override. |
+| `GET` | `/claw/image/jobs` | List image generation jobs and statuses. |
+| `GET` | `/claw/image/jobs/{id}` | Get specific job result with image URL. |
+
+### Model & Sessions (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/model/recommend` | Get model recommendation for a given query type. |
+| `POST` | `/claw/sessions/{id}/features` | Toggle session feature flags. |
+| `POST` | `/claw/sessions/{id}/summarize` | Compress and summarize session context. |
+
+### Marketplace (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/marketplace/personas` | Browse community personas (no auth required). |
+| `POST` | `/claw/marketplace/personas` | Publish a persona to the marketplace. |
+| `POST` | `/claw/marketplace/personas/{id}/install` | Install a marketplace persona. |
+
+### Agent Dashboard (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/agents/dashboard` | Agent metrics with sparkline data for all personas. |
+| `GET` | `/claw/agents/status` | Live per-agent status (active, idle, error). |
+| `GET` | `/claw/crews` | List agent crew configurations. |
+| `POST` | `/claw/crews` | Create an agent crew. |
+
+### Habits & Career (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/habits` | List habit definitions. |
+| `POST` | `/claw/habits` | Create a habit. |
+| `PUT` | `/claw/habits/{id}` | Update habit settings. |
+| `POST` | `/claw/habits/{id}/log` | Log daily habit completion. |
+| `GET` | `/claw/tutor/cards` | List tutor flashcards. |
+| `POST` | `/claw/tutor/quiz` | Start a quiz session. |
+| `GET` | `/claw/career/cv` | Get structured CV data. |
+| `PUT` | `/claw/career/cv` | Update CV data. |
+| `GET` | `/claw/career/suggestions` | Get career suggestions. |
+
+### Health Coach (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/health/checkin` | Health coach check-in. |
+| `GET` | `/claw/health/summary` | Health metrics summary. |
+
+### Reflections (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/reflections` | List daily reflections. |
+| `POST` | `/claw/reflections` | Create a reflection entry. |
+
+### Prompts & Workflows (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/prompts` | List prompt library templates. |
+| `POST` | `/claw/prompts` | Create a prompt template. |
+| `POST` | `/claw/prompts/{id}/chain` | Chain prompts for sequential execution. |
+| `GET` | `/claw/workflows/templates` | List workflow templates. |
+| `POST` | `/claw/workflows/templates` | Create a workflow template. |
+| `POST` | `/claw/workflows/run` | Execute a workflow. |
+
+### Project Files (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/projects/files` | List project files. |
+| `POST` | `/claw/projects/files` | Upload a project file. |
+| `DELETE` | `/claw/projects/files/{id}` | Delete a project file. |
+
+### History & Gallery (Phase 79)
+
+| Method | Path | Description |
+|--------|------|------------|
+| `GET` | `/claw/history` | Conversation history with search and date filters. |
+| `GET` | `/claw/gallery` | Image gallery with generated images. |
+
 ---
 
 ## nself-ai (LLM Routing)

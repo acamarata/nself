@@ -2,6 +2,21 @@
 
 > See [CHANGELOG.md](../CHANGELOG.md) in the repo root for the full version history.
 
+## v1.0.4
+
+ɳClaw production-ready release with knowledge graph, agent dashboard, and 30+ community features.
+
+**Highlights:**
+- **Session identity fix** -- resolved root cause of production session issues
+- **Knowledge graph** -- memory rooms, brain health scoring, Obsidian export
+- **Prompt library** -- 45+ templates with chaining support
+- **Agent dashboard** -- 8 personas with marketplace
+- **Image generation** -- multi-provider support (DALL-E, Stable Diffusion, etc.)
+- **Smart model routing** -- user-defined rules for model selection
+- **Chat UX overhaul** -- auto-titling, pinning, quick links, WebSocket streaming
+- **PWA with offline support** -- full progressive web app capabilities
+- **30 community-inspired features** -- voice input, keyboard shortcuts, conversation search, and more
+
 ## v1.0.3
 
 Security hardening release with expanded plugin ecosystem.
