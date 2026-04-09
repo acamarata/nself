@@ -44,13 +44,9 @@ server {
         {{- if .ConnLimit}}
         limit_conn conn_limit_per_ip {{.ConnLimit}};
         {{- end}}
-        {{- if .LazyResolve}}
         resolver 127.0.0.11 valid=10s;
         set $upstream http://{{.Upstream}};
         proxy_pass $upstream;
-        {{- else}}
-        proxy_pass http://{{.Upstream}};
-        {{- end}}
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
