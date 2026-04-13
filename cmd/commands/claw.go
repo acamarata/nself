@@ -31,8 +31,22 @@ const pairCloudURL = "https://pair.nself.org"
 
 var clawCmd = &cobra.Command{
 	Use:   "claw",
-	Short: "Manage nClaw AI assistant integration",
-	Long:  "Commands for pairing and managing nClaw AI assistant clients.",
+	Short: "Manage nClaw AI assistant",
+	Long: `Commands for interacting with and managing your nClaw AI assistant.
+
+Subcommands:
+  prompt    Send a single prompt and get a response
+  chat      Start an interactive chat session
+  config    View or modify CLI configuration
+  pair      Generate a pairing code for nClaw clients
+  unlock    Temporarily unlock the web UI for setup
+  topics    List or search topics
+  memories  List or search memories
+  keys      Manage API keys
+  status    Show server status and health
+  proxy     Start a local OpenAI-compatible proxy
+  mcp       Start an MCP server for AI tools
+  export    Export all data (JSON or CSV)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -77,6 +91,16 @@ func init() {
 	clawUnlockCmd.Flags().IntVar(&clawUnlockMinutes, "minutes", 10, "How many minutes the unlock lasts")
 	clawCmd.AddCommand(clawPairCmd)
 	clawCmd.AddCommand(clawUnlockCmd)
+	clawCmd.AddCommand(clawPromptCmd)
+	clawCmd.AddCommand(clawChatCmd)
+	clawCmd.AddCommand(clawConfigCmd)
+	clawCmd.AddCommand(clawTopicsCmd)
+	clawCmd.AddCommand(clawMemoriesCmd)
+	clawCmd.AddCommand(clawKeysCmd)
+	clawCmd.AddCommand(clawStatusCmd)
+	clawCmd.AddCommand(clawProxyCmd)
+	clawCmd.AddCommand(clawMCPCmd)
+	clawCmd.AddCommand(clawExportCmd)
 	RootCmd.AddCommand(clawCmd)
 }
 
