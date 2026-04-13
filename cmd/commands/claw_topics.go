@@ -49,8 +49,7 @@ type clawTopic struct {
 func runClawTopicsList(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(cmd.Context(), "GET", baseURL+"/claw/topics", nil)
@@ -88,8 +87,7 @@ func runClawTopicsList(cmd *cobra.Command, args []string) error {
 func runClawTopicsSearch(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	query := url.QueryEscape(args[0])

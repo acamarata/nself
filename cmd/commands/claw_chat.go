@@ -55,8 +55,7 @@ func init() {
 func runClawChat(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	// Ensure history directory exists
@@ -96,6 +95,11 @@ func runClawChat(cmd *cobra.Command, args []string) error {
 	fmt.Println("nClaw Interactive Chat")
 	fmt.Println("Type /help for commands, Ctrl+D to exit")
 	fmt.Println()
+
+	// Persistent signal channel for Ctrl+C — avoids Notify/Stop per iteration
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	defer signal.Stop(sigCh)
 
 	for {
 		line, err := rl.Readline()
@@ -152,16 +156,12 @@ func runClawChat(cmd *cobra.Command, args []string) error {
 		// Create cancellable context for Ctrl+C
 		ctx, cancel := context.WithCancel(cmd.Context())
 
-		// Handle Ctrl+C during generation
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt)
 		go func() {
 			select {
 			case <-sigCh:
 				cancel()
 			case <-ctx.Done():
 			}
-			signal.Stop(sigCh)
 		}()
 
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonBody))
@@ -252,13 +252,21 @@ func handleChatCommand(line string, topic, model *string, client *http.Client, b
 }
 
 // fetchMemories calls the server to get recent memories and prints them.
-func fetchMemories(client *http.Client, baseURL string) {
+func fetchMemories(_ *http.Client, baseURL string) {
+	authClient, authBaseURL, err := clawClient()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+	if authBaseURL != "" {
+		baseURL = authBaseURL
+	}
 	req, err := http.NewRequest("GET", baseURL+"/claw/v1/memories?limit=10", nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return
 	}
-	resp, err := client.Do(req)
+	resp, err := authClient.Do(req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not fetch memories: %v\n", err)
 		return
@@ -294,6 +302,7 @@ func fetchMemories(client *http.Client, baseURL string) {
 // streamChatResponse reads SSE and prints content, optionally rendering markdown.
 func streamChatResponse(resp *http.Response, renderer *glamour.TermRenderer, ctx context.Context) string {
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 1<<20), 1<<20)
 	var fullContent strings.Builder
 
 	for scanner.Scan() {
@@ -335,13 +344,14 @@ func streamChatResponse(resp *http.Response, renderer *glamour.TermRenderer, ctx
 
 	fmt.Println() // newline after stream
 
-	// If we got content and have a renderer, re-render the full response as markdown
+	// Render the full response as markdown if a renderer is available
 	full := fullContent.String()
 	if full != "" && renderer != nil {
-		// Move cursor up to overwrite raw output, render markdown
-		// For simplicity, we print raw during stream and skip re-render
-		// since re-rendering would require knowing line count
-		_ = renderer // renderer available for future use
+		rendered, err := renderer.Render(full)
+		if err == nil && rendered != "" {
+			fmt.Print("\r")
+			fmt.Print(rendered)
+		}
 	}
 
 	return full

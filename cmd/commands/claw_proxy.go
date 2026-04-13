@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -44,16 +43,27 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 
 	_, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	apiKey := clawAPIKey()
 
 	mux := http.NewServeMux()
 
+	// setCORS adds CORS headers to every response.
+	setCORS := func(w http.ResponseWriter) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	}
+
 	// Proxy handler for all /v1/* paths
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
+		setCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		// Build upstream URL
 		upstreamURL := baseURL + "/claw" + r.URL.Path
 		if r.URL.RawQuery != "" {
@@ -67,8 +77,19 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 			return
 		}
 
-		// Copy headers
+		// Copy headers, stripping hop-by-hop headers
+		hopByHop := map[string]bool{
+			"Connection":          true,
+			"Keep-Alive":          true,
+			"Transfer-Encoding":   true,
+			"Te":                  true,
+			"Trailer":             true,
+			"Upgrade":             true,
+		}
 		for key, vals := range r.Header {
+			if hopByHop[http.CanonicalHeaderKey(key)] {
+				continue
+			}
 			for _, val := range vals {
 				upReq.Header.Add(key, val)
 			}

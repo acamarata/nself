@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -47,8 +49,7 @@ func runClawExport(cmd *cobra.Command, args []string) error {
 
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	data := &clawExportData{}
@@ -96,45 +97,66 @@ func runClawExport(cmd *cobra.Command, args []string) error {
 }
 
 func fetchExportSection(cmd *cobra.Command, client *http.Client, urlStr, key string) ([]map[string]interface{}, error) {
-	req, err := http.NewRequestWithContext(cmd.Context(), "GET", urlStr, nil)
-	if err != nil {
-		return nil, err
-	}
+	var allItems []map[string]interface{}
+	limit := 100
+	offset := 0
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+	for {
+		sep := "?"
+		if strings.Contains(urlStr, "?") {
+			sep = "&"
+		}
+		pageURL := fmt.Sprintf("%s%slimit=%d&offset=%d", urlStr, sep, limit, offset)
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
-	}
+		req, err := http.NewRequestWithContext(cmd.Context(), "GET", pageURL, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
 
-	// Try to extract array from key
-	var wrapper map[string]json.RawMessage
-	if err := json.Unmarshal(body, &wrapper); err == nil {
-		if raw, ok := wrapper[key]; ok {
-			var items []map[string]interface{}
-			if json.Unmarshal(raw, &items) == nil {
-				return items, nil
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		var pageItems []map[string]interface{}
+
+		// Try to extract array from key
+		var wrapper map[string]json.RawMessage
+		if err := json.Unmarshal(body, &wrapper); err == nil {
+			if raw, ok := wrapper[key]; ok {
+				json.Unmarshal(raw, &pageItems)
 			}
 		}
+
+		// Try as direct array if key extraction failed
+		if pageItems == nil {
+			json.Unmarshal(body, &pageItems)
+		}
+
+		if len(pageItems) == 0 {
+			break
+		}
+
+		allItems = append(allItems, pageItems...)
+		if len(pageItems) < limit {
+			break
+		}
+		offset += limit
 	}
 
-	// Try as direct array
-	var items []map[string]interface{}
-	if err := json.Unmarshal(body, &items); err == nil {
-		return items, nil
-	}
-
-	return nil, fmt.Errorf("unexpected response format")
+	return allItems, nil
 }
 
 func fetchExportRaw(cmd *cobra.Command, client *http.Client, urlStr string) ([]byte, error) {
@@ -194,6 +216,7 @@ func exportCSV(data *clawExportData) error {
 		for k := range keySet {
 			keys = append(keys, k)
 		}
+		sort.Strings(keys)
 
 		// Header row
 		w.Write(keys)

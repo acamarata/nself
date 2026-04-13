@@ -60,8 +60,7 @@ func init() {
 func runClawPrompt(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 	client.Timeout = clawPromptTimeout
 
@@ -72,8 +71,7 @@ func runClawPrompt(cmd *cobra.Command, args []string) error {
 	if clawPromptFile != "" {
 		data, err := os.ReadFile(clawPromptFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("reading file: %w", err)
 		}
 		parts = append(parts, string(data))
 	}
@@ -83,8 +81,7 @@ func runClawPrompt(cmd *cobra.Command, args []string) error {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("reading stdin: %w", err)
 		}
 		if len(data) > 0 {
 			parts = append(parts, string(data))
@@ -97,8 +94,7 @@ func runClawPrompt(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(parts) == 0 {
-		fmt.Fprintln(os.Stderr, "Error: no prompt provided. Pass a question as argument, pipe stdin, or use -f.")
-		os.Exit(1)
+		return fmt.Errorf("no prompt provided; pass a question as argument, pipe stdin, or use -f")
 	}
 
 	prompt := strings.Join(parts, "\n\n")
@@ -132,34 +128,29 @@ func runClawPrompt(cmd *cobra.Command, args []string) error {
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error marshaling request: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("marshaling request: %w", err)
 	}
 
 	url := baseURL + "/claw/v1/chat/completions"
 	req, err := http.NewRequestWithContext(cmd.Context(), "POST", url, bytes.NewReader(jsonBody))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating request: %v\n", err)
-		os.Exit(3)
+		return fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Connection error: %v\n", err)
-		os.Exit(3)
+		return fmt.Errorf("connection error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		fmt.Fprintln(os.Stderr, "Error: authentication failed. Check your API key.")
-		os.Exit(2)
+		return fmt.Errorf("authentication failed; check your API key")
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		fmt.Fprintf(os.Stderr, "API error (HTTP %d): %s\n", resp.StatusCode, string(bodyBytes))
-		os.Exit(1)
+		return fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	if clawPromptNoStream {
@@ -171,8 +162,7 @@ func runClawPrompt(cmd *cobra.Command, args []string) error {
 func handleNonStreamResponse(resp *http.Response) error {
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading response: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("reading response: %w", err)
 	}
 
 	if clawPromptJSON {
@@ -188,8 +178,7 @@ func handleNonStreamResponse(resp *http.Response) error {
 		} `json:"choices"`
 	}
 	if err := json.Unmarshal(bodyBytes, &result); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing response: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("parsing response: %w", err)
 	}
 
 	if len(result.Choices) > 0 {
@@ -200,6 +189,7 @@ func handleNonStreamResponse(resp *http.Response) error {
 
 func handleStreamResponse(resp *http.Response) error {
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 1<<20), 1<<20)
 	var fullContent strings.Builder
 
 	for scanner.Scan() {

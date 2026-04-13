@@ -61,8 +61,7 @@ type clawAPIKeyEntry struct {
 func runClawKeysList(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(cmd.Context(), "GET", baseURL+"/claw/v1/api-keys", nil)
@@ -118,8 +117,7 @@ func runClawKeysList(cmd *cobra.Command, args []string) error {
 func runClawKeysCreate(cmd *cobra.Command, args []string) error {
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	body, _ := json.Marshal(map[string]string{"name": clawKeysCreateName})
@@ -173,8 +171,7 @@ func runClawKeysRevoke(cmd *cobra.Command, args []string) error {
 
 	client, baseURL, err := clawClient()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
+		return fmt.Errorf("auth error: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(cmd.Context(), "DELETE", baseURL+"/claw/v1/api-keys/"+keyID, nil)
