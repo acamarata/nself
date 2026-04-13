@@ -197,7 +197,7 @@ main() {
   mkdir -p "$install_dir" 2>/dev/null || true
 
   # Build download URL
-  local tarball="nself-${os}-${arch}.tar.gz"
+  local tarball="nself-${version}-${os}-${arch}.tar.gz"
   local url="https://github.com/${REPO}/releases/download/v${version}/${tarball}"
   info "Downloading..."
 
@@ -211,8 +211,9 @@ main() {
     error "Download failed. Check https://github.com/${REPO}/releases for available binaries."
   fi
 
-  # Extract binary from tarball
-  if ! tar -xzf "$tmptarball" -O nself > "$tmpfile" 2>/dev/null; then
+  # Extract binary from tarball — structure is nself-{version}-{os}-{arch}/nself
+  local dir_prefix="nself-${version}-${os}-${arch}"
+  if ! tar -xzf "$tmptarball" -O "${dir_prefix}/nself" > "$tmpfile" 2>/dev/null; then
     error "Failed to extract binary from tarball."
   fi
 
