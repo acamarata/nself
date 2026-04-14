@@ -56,6 +56,10 @@ Exit codes:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		full, _ := cmd.Flags().GetBool("full")
+		deep, _ := cmd.Flags().GetBool("deep")
+		if deep {
+			full = true
+		}
 		fix, _ := cmd.Flags().GetBool("fix")
 		jsonOut, _ := cmd.Flags().GetBool("json")
 
@@ -123,7 +127,13 @@ Exit codes:
 		checks = append(checks, checkPortRangeSanity(cwd, verbose)...)
 		checks = append(checks, checkConfigValidators(cwd, verbose))
 
-		// 8. License cache state
+		// 8. Plugin compatibility
+		if !jsonOut {
+			ui.Section("Plugins")
+		}
+		checks = append(checks, checkPluginCompatibility(cwd, verbose)...)
+
+		// 9. License cache state
 		if !jsonOut {
 			ui.Section("License")
 		}
@@ -788,6 +798,39 @@ func checkLicenseCache(verbose bool) doctorCheckResult {
 	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
 }
 
+// checkPluginCompatibility verifies installed plugins are compatible with the current CLI version.
+func checkPluginCompatibility(projectDir string, verbose bool) []doctorCheckResult {
+	pluginDir := resolvePluginDir()
+	plugins, err := plugin.ListInstalled(pluginDir)
+	if err != nil {
+		name := "Plugin compatibility"
+		msg := fmt.Sprintf("cannot list plugins: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "warn", Message: msg}}
+	}
+
+	if len(plugins) == 0 {
+		name := "Plugin compatibility"
+		msg := "no plugins installed"
+		printCheck("pass", name, msg, verbose)
+		return []doctorCheckResult{{Name: name, Status: "pass", Message: msg}}
+	}
+
+	var results []doctorCheckResult
+	for _, p := range plugins {
+		name := fmt.Sprintf("Plugin: %s", p.Name)
+		msg := fmt.Sprintf("v%s (%s)", p.Version, p.Status)
+		if p.Status == "error" || p.Status == "failed" {
+			printCheck("fail", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "fail", Message: msg})
+		} else {
+			printCheck("pass", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: msg})
+		}
+	}
+	return results
+}
+
 // checkServicePortConflicts probes configured service ports against enabled services.
 // It catches conflicts between nSelf services (Grafana on 3000, Admin on 3021, etc.)
 // and local dev servers that may already be listening.
@@ -857,7 +900,11 @@ func checkServicePortConflicts(projectDir string, verbose bool) []doctorCheckRes
 func init() {
 	doctorCmd.Flags().Bool("verbose", false, "Detailed diagnostics")
 	doctorCmd.Flags().Bool("full", false, "Run all checks including network and memory (slower)")
-	doctorCmd.Flags().Bool("fix", false, "Suggest auto-fix for common issues")
+	doctorCmd.Flags().Bool("deep", false, "Alias for --full (run all checks)")
+	doctorCmd.Flags().Bool("fix", false, "Auto-fix safe issues")
 	doctorCmd.Flags().Bool("json", false, "JSON output")
+	doctorCmd.Flags().String("section", "", "Run only a specific section (system, core, backups, license, plugins, monitoring, security)")
+	doctorCmd.Flags().StringSlice("skip", nil, "Skip specific check sections")
+	doctorCmd.Flags().Bool("alerts", false, "Check monitoring alert rules are loaded")
 	RootCmd.AddCommand(doctorCmd)
 }

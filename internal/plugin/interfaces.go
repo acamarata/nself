@@ -111,6 +111,9 @@ type PluginManifest struct {
 	// Permissions
 	Permissions []string `json:"permissions,omitempty"`
 
+	// Compatibility
+	Compat *CompatBlock `json:"compat,omitempty"`
+
 	// Registry-specific fields (not in plugin.json, populated by registry)
 	Tier     string `json:"tier,omitempty"`
 	Checksum string `json:"checksum,omitempty"`

@@ -1,5 +1,12 @@
 package compose
 
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
 // DefaultImageVersions maps service name to pinned image:tag.
 // Update with each nSelf release.
 var DefaultImageVersions = map[string]string{
@@ -17,11 +24,57 @@ var DefaultImageVersions = map[string]string{
 	"mlflow":      "ghcr.io/mlflow/mlflow:v2.10.0",
 }
 
-// ResolveImage returns the pinned image tag for a service.
-// Falls back to the image string as-is if not in DefaultImageVersions.
+// ImageDigests maps service name to sha256 digest for image pinning.
+// When a digest is available, ResolveImage appends @sha256:... to the tag.
+// Populated by LoadImageDigests from the project config directory.
+var ImageDigests = map[string]string{}
+
+// DigestConfigFile is the filename where image digests are stored.
+const DigestConfigFile = ".nself-image-digests.json"
+
+// ResolveImage returns the pinned image tag for a service, optionally with
+// a sha256 digest suffix when available. Falls back to the image string as-is
+// if not in DefaultImageVersions.
 func ResolveImage(service, image string) string {
+	resolved := image
 	if pinned, ok := DefaultImageVersions[service]; ok {
-		return pinned
+		resolved = pinned
 	}
-	return image
+	// Append digest if available for this service.
+	if digest, ok := ImageDigests[service]; ok && digest != "" {
+		resolved = resolved + "@sha256:" + digest
+	}
+	return resolved
+}
+
+// LoadImageDigests reads digest pins from the project config directory.
+// Missing file is not an error (digests are opt-in via `nself update images`).
+func LoadImageDigests(projectDir string) error {
+	path := filepath.Join(projectDir, DigestConfigFile)
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading image digests: %w", err)
+	}
+	var digests map[string]string
+	if err := json.Unmarshal(data, &digests); err != nil {
+		return fmt.Errorf("parsing image digests: %w", err)
+	}
+	ImageDigests = digests
+	return nil
+}
+
+// SaveImageDigests writes digest pins to the project config directory.
+func SaveImageDigests(projectDir string, digests map[string]string) error {
+	path := filepath.Join(projectDir, DigestConfigFile)
+	data, err := json.MarshalIndent(digests, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling image digests: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("writing image digests: %w", err)
+	}
+	return nil
 }

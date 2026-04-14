@@ -134,6 +134,7 @@ type ServiceConfig struct {
 	StopGrace     string              `yaml:"stop_grace_period,omitempty"`
 	Labels        map[string]string   `yaml:"labels,omitempty"`
 	Profiles      []string            `yaml:"profiles,omitempty"`
+	ReadOnly      bool                `yaml:"read_only,omitempty"`
 	Tmpfs         []string            `yaml:"tmpfs,omitempty"`
 	Privileged    bool                `yaml:"privileged,omitempty"`
 	WorkingDir    string              `yaml:"working_dir,omitempty"`
@@ -168,7 +169,8 @@ type DeployConfig struct {
 
 // Resources represents resource constraints.
 type Resources struct {
-	Limits *ResourceLimits `yaml:"limits,omitempty"`
+	Limits       *ResourceLimits `yaml:"limits,omitempty"`
+	Reservations *ResourceLimits `yaml:"reservations,omitempty"`
 }
 
 // ResourceLimits represents CPU and memory limits.

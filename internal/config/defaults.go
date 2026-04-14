@@ -243,6 +243,14 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		}
 		slog.Debug("default", "key", "SSL_MODE", "value", cfg.SSLMode)
 	}
+	if cfg.SSLProvider == "" {
+		cfg.SSLProvider = "cloudflare"
+		slog.Debug("default", "key", "SSL_PROVIDER", "value", cfg.SSLProvider)
+	}
+	if cfg.WAFMode == "" {
+		cfg.WAFMode = "off"
+		slog.Debug("default", "key", "WAF_MODE", "value", cfg.WAFMode)
+	}
 
 	// ── Redis ─────────────────────────────────────────────────────────
 	if cfg.Redis.Version == "" {
@@ -702,6 +710,30 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if cfg.Backup.Schedule == "" {
 		cfg.Backup.Schedule = "0 2 * * *"
 		slog.Debug("default", "key", "BACKUP_SCHEDULE", "value", cfg.Backup.Schedule)
+	}
+	if cfg.Backup.ScheduleFull == "" {
+		cfg.Backup.ScheduleFull = "0 3 * * *"
+		slog.Debug("default", "key", "BACKUP_SCHEDULE_FULL", "value", cfg.Backup.ScheduleFull)
+	}
+	if cfg.Backup.WALInterval == 0 {
+		cfg.Backup.WALInterval = 60
+		slog.Debug("default", "key", "BACKUP_WAL_INTERVAL_SECONDS", "value", "60")
+	}
+	if cfg.Backup.RetentionDaily == 0 {
+		cfg.Backup.RetentionDaily = 7
+		slog.Debug("default", "key", "BACKUP_RETENTION_DAILY", "value", "7")
+	}
+	if cfg.Backup.RetentionWeekly == 0 {
+		cfg.Backup.RetentionWeekly = 4
+		slog.Debug("default", "key", "BACKUP_RETENTION_WEEKLY", "value", "4")
+	}
+	if cfg.Backup.RetentionMonthly == 0 {
+		cfg.Backup.RetentionMonthly = 12
+		slog.Debug("default", "key", "BACKUP_RETENTION_MONTHLY", "value", "12")
+	}
+	if cfg.Backup.RestoreTestSchedule == "" {
+		cfg.Backup.RestoreTestSchedule = "0 5 * * 0"
+		slog.Debug("default", "key", "BACKUP_RESTORE_TEST_SCHEDULE", "value", cfg.Backup.RestoreTestSchedule)
 	}
 
 	// ── Email ─────────────────────────────────────────────────────────

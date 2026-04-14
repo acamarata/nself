@@ -228,6 +228,25 @@ var knownEnvVars = []string{
 	"BACKUP_SCHEDULE",
 	"BACKUP_RETENTION_DAYS",
 	"BACKUP_CLOUD_PROVIDER",
+	"BACKUP_REMOTE",
+	"BACKUP_ENCRYPTION",
+	"BACKUP_AGE_RECIPIENTS",
+	"BACKUP_SCHEDULE_FULL",
+	"BACKUP_WAL_INTERVAL_SECONDS",
+	"BACKUP_RETENTION_DAILY",
+	"BACKUP_RETENTION_WEEKLY",
+	"BACKUP_RETENTION_MONTHLY",
+	"BACKUP_RESTORE_TEST_SCHEDULE",
+	"BACKUP_ALERT_ON_FAILURE",
+	"BACKUP_S3_ACCESS_KEY_ID",
+	"BACKUP_S3_SECRET_ACCESS_KEY",
+	"BACKUP_S3_REGION",
+	"BACKUP_S3_ENDPOINT",
+
+	// Disaster Recovery
+	"DR_SECONDARY_REGION",
+	"DR_STANDBY_HOST",
+	"DR_DRILL_SCHEDULE",
 
 	// Plugin Pro
 	"NOTIFY_INTERNAL_SECRET",
@@ -587,11 +606,20 @@ func parseEnvToConfig() *Config {
 		MaxBody:       os.Getenv("NGINX_CLIENT_MAX_BODY_SIZE"),
 		BindIP:        os.Getenv("NGINX_BIND_IP"),
 		AuthRateLimit: os.Getenv("AUTH_RATE_LIMIT"),
+		RateLimitAPI:  os.Getenv("RATE_LIMIT_API_RPS"),
+		RateLimitAuth: os.Getenv("RATE_LIMIT_AUTH_RPS"),
+		RateLimitAI:   os.Getenv("RATE_LIMIT_AI_RPS"),
 	}
 
 	// ── SSL ──────────────────────────────────────────────────────────
 	cfg.SSLMode = os.Getenv("SSL_MODE")
+	cfg.SSLProvider = os.Getenv("SSL_PROVIDER")
+	cfg.SSLWildcardDomain = os.Getenv("SSL_WILDCARD_DOMAIN")
 	cfg.ExtraSSLDomains = os.Getenv("EXTRA_SSL_DOMAINS")
+	cfg.CloudflareAPIKey = os.Getenv("CLOUDFLARE_API_KEY")
+
+	// ── WAF ──────────────────────────────────────────────────────────
+	cfg.WAFMode = os.Getenv("WAF_MODE")
 
 	// ── Redis ────────────────────────────────────────────────────────
 	cfg.Redis = RedisConfig{
@@ -750,11 +778,31 @@ func parseEnvToConfig() *Config {
 
 	// ── Backup ───────────────────────────────────────────────────────
 	cfg.Backup = BackupConfig{
-		Enabled:       getEnvBool("BACKUP_ENABLED", false),
-		Dir:           os.Getenv("BACKUP_DIR"),
-		Schedule:      os.Getenv("BACKUP_SCHEDULE"),
-		RetentionDays: getEnvInt("BACKUP_RETENTION_DAYS", 0),
-		CloudProvider: os.Getenv("BACKUP_CLOUD_PROVIDER"),
+		Enabled:             getEnvBool("BACKUP_ENABLED", false),
+		Dir:                 os.Getenv("BACKUP_DIR"),
+		Schedule:            os.Getenv("BACKUP_SCHEDULE"),
+		RetentionDays:       getEnvInt("BACKUP_RETENTION_DAYS", 0),
+		CloudProvider:       os.Getenv("BACKUP_CLOUD_PROVIDER"),
+		Remote:              os.Getenv("BACKUP_REMOTE"),
+		Encryption:          getEnvBool("BACKUP_ENCRYPTION", false),
+		AgeRecipients:       os.Getenv("BACKUP_AGE_RECIPIENTS"),
+		ScheduleFull:        os.Getenv("BACKUP_SCHEDULE_FULL"),
+		WALInterval:         getEnvInt("BACKUP_WAL_INTERVAL_SECONDS", 0),
+		RetentionDaily:      getEnvInt("BACKUP_RETENTION_DAILY", 0),
+		RetentionWeekly:     getEnvInt("BACKUP_RETENTION_WEEKLY", 0),
+		RetentionMonthly:    getEnvInt("BACKUP_RETENTION_MONTHLY", 0),
+		RestoreTestSchedule: os.Getenv("BACKUP_RESTORE_TEST_SCHEDULE"),
+		AlertOnFailure:      getEnvBool("BACKUP_ALERT_ON_FAILURE", true),
+		S3AccessKeyID:       os.Getenv("BACKUP_S3_ACCESS_KEY_ID"),
+		S3SecretAccessKey:   os.Getenv("BACKUP_S3_SECRET_ACCESS_KEY"),
+		S3Region:            os.Getenv("BACKUP_S3_REGION"),
+		S3Endpoint:          os.Getenv("BACKUP_S3_ENDPOINT"),
+	}
+
+	cfg.DR = DRConfig{
+		SecondaryRegion: os.Getenv("DR_SECONDARY_REGION"),
+		StandbyHost:     os.Getenv("DR_STANDBY_HOST"),
+		DrillSchedule:   os.Getenv("DR_DRILL_SCHEDULE"),
 	}
 
 	// Plugin port defaults (3712=notify, 3713=cron) are set in ApplyDefaults() when port==0.

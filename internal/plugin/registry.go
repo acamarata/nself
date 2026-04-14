@@ -239,6 +239,8 @@ type pluginEntry struct {
 	// APIEndpoints is raw JSON because the registry format is not stable:
 	// the live registry returns objects; older registries return strings.
 	APIEndpoints json.RawMessage `json:"apiEndpoints,omitempty"`
+	// Compat holds CLI and service version constraints.
+	Compat *CompatBlock `json:"compat,omitempty"`
 }
 
 // parseAPIEndpoints converts the raw apiEndpoints JSON value from either the
@@ -370,6 +372,7 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		APIEndpoints:    parseAPIEndpoints(e.APIEndpoints),
 		Language:        language,
 		Runtime:         runtime,
+		Compat:          e.Compat,
 	}
 }
 
@@ -466,6 +469,7 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			Port:            p.Port,
 			Dependencies:    p.Dependencies,
 			APIEndpoints:    rawEPs,
+			Compat:          p.Compat,
 		})
 	}
 	return json.Marshal(envelope{

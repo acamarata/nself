@@ -20,8 +20,23 @@ package nginx
 //
 //	Status codes: limit_req_status 429, limit_conn_status 429
 func (g *Generator) generateRateLimits() (string, error) {
+	apiRPS := g.cfg.Nginx.RateLimitAPI
+	if apiRPS == "" {
+		apiRPS = "30"
+	}
+	authRPS := g.cfg.Nginx.RateLimitAuth
+	if authRPS == "" {
+		authRPS = "5"
+	}
+	aiRPS := g.cfg.Nginx.RateLimitAI
+	if aiRPS == "" {
+		aiRPS = "10"
+	}
 	data := map[string]string{
-		"AuthRateLimit": g.cfg.Nginx.AuthRateLimit,
+		"AuthRateLimit":  g.cfg.Nginx.AuthRateLimit,
+		"RateLimitAPI":   apiRPS,
+		"RateLimitAuth":  authRPS,
+		"RateLimitAI":    aiRPS,
 	}
 	return g.render("rate-limits.conf.tmpl", data)
 }

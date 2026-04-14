@@ -149,10 +149,29 @@ func DefaultFor(key string) string {
 		"AWS_REGION":      "us-east-1",
 
 		// Backup
-		"BACKUP_ENABLED":        "false",
-		"BACKUP_DIR":            "./backups",
-		"BACKUP_SCHEDULE":       "0 2 * * *",
-		"BACKUP_RETENTION_DAYS": "30",
+		"BACKUP_ENABLED":               "false",
+		"BACKUP_DIR":                   "./backups",
+		"BACKUP_SCHEDULE":              "0 2 * * *",
+		"BACKUP_RETENTION_DAYS":        "30",
+		"BACKUP_REMOTE":                "",
+		"BACKUP_ENCRYPTION":            "false",
+		"BACKUP_AGE_RECIPIENTS":        "",
+		"BACKUP_SCHEDULE_FULL":         "0 3 * * *",
+		"BACKUP_WAL_INTERVAL_SECONDS":  "60",
+		"BACKUP_RETENTION_DAILY":       "7",
+		"BACKUP_RETENTION_WEEKLY":      "4",
+		"BACKUP_RETENTION_MONTHLY":     "12",
+		"BACKUP_RESTORE_TEST_SCHEDULE": "0 5 * * 0",
+		"BACKUP_ALERT_ON_FAILURE":      "true",
+		"BACKUP_S3_ACCESS_KEY_ID":      "",
+		"BACKUP_S3_SECRET_ACCESS_KEY":  "",
+		"BACKUP_S3_REGION":             "",
+		"BACKUP_S3_ENDPOINT":           "",
+
+		// Disaster Recovery
+		"DR_SECONDARY_REGION": "",
+		"DR_STANDBY_HOST":     "",
+		"DR_DRILL_SCHEDULE":   "",
 
 		// Plugin Pro
 		"NOTIFY_PORT":          "3712",

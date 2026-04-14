@@ -188,15 +188,35 @@ func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time
 	return result, nil
 }
 
+// isNonTransactional checks if a migration SQL contains statements that cannot
+// run inside a transaction (e.g., CREATE INDEX CONCURRENTLY).
+func isNonTransactional(sql string) bool {
+	upper := strings.ToUpper(sql)
+	return strings.Contains(upper, "CREATE INDEX CONCURRENTLY") ||
+		strings.Contains(upper, "DROP INDEX CONCURRENTLY") ||
+		strings.Contains(upper, "REINDEX CONCURRENTLY") ||
+		strings.Contains(upper, "ALTER TYPE") // ADD VALUE in enums
+}
+
 // MigrateUp applies all pending migrations from the migrations directory.
 // If plugin is non-empty, only that plugin's migrations are applied.
-// Each migration is executed within a transaction alongside its schema_versions
-// record, so a failure rolls back cleanly.
+// Uses advisory locks to prevent concurrent runs, records SHA-256 checksums,
+// and detects non-transactional statements (CREATE INDEX CONCURRENTLY) to
+// run them outside a transaction.
 // Returns the count of migrations applied.
 func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, error) {
 	if err := ensureSchemaVersions(ctx, cfg); err != nil {
 		return 0, fmt.Errorf("ensure schema_versions: %w", err)
 	}
+	if err := ensureMigrationsTable(ctx, cfg); err != nil {
+		return 0, fmt.Errorf("ensure migrations table: %w", err)
+	}
+
+	// Acquire advisory lock to prevent concurrent migrations.
+	if err := acquireAdvisoryLock(ctx, cfg); err != nil {
+		return 0, err
+	}
+	defer releaseAdvisoryLock(ctx, cfg) //nolint:errcheck
 
 	dir := migrationsDir(cfg, plugin)
 	files, err := scanMigrations(dir)
@@ -224,13 +244,39 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 			return count, fmt.Errorf("read migration %s: %w", name, readErr)
 		}
 
-		record := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
+		// Compute checksum for the ops table.
+		checksum, _ := checksumBytes(data)
+		migrationID := extractMigrationID(f)
+
+		// Record in legacy schema_versions for backward compat.
+		legacyRecord := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
 			strings.ReplaceAll(name, "'", "''"))
 
-		txSQL := "BEGIN;\n" + string(data) + "\n" + record + "\nCOMMIT;\n"
+		// Record in nself_ops.migrations with checksum.
+		opsRecord := fmt.Sprintf(
+			"INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('%s', '%s', '%s') ON CONFLICT (id) DO NOTHING;",
+			strings.ReplaceAll(migrationID, "'", "''"),
+			strings.ReplaceAll(name, "'", "''"),
+			checksum,
+		)
 
-		if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
-			return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+		sqlContent := string(data)
+
+		if isNonTransactional(sqlContent) {
+			// Run non-transactional migrations outside a transaction.
+			if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
+				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+			}
+			// Record separately (these succeed independently).
+			recordSQL := legacyRecord + "\n" + opsRecord
+			if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
+				return count, fmt.Errorf("record migration %s: %w", name, err)
+			}
+		} else {
+			txSQL := "BEGIN;\n" + sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+			if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
+				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+			}
 		}
 		count++
 	}

@@ -218,7 +218,7 @@ To override (testing only): export NSELF_ALLOW_SOURCE_DIR=1`, cwd)
 func isSourceSafeCommand(name string) bool {
 	safe := map[string]bool{
 		"help": true, "version": true, "completion": true,
-		"update": true, "doctor": true, "nself": true,
+		"update": true, "upgrade": true, "doctor": true, "nself": true,
 	}
 	return safe[name]
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/nginx"
+	"github.com/nself-org/cli/internal/version"
 )
 
 // PluginInfo describes a plugin's identity and current state.
@@ -171,6 +172,11 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	manifest, found := findPlugin(reg, name)
 	if !found {
 		return errs.ErrPluginNotFound
+	}
+
+	// Compat check: verify CLI version satisfies the plugin's declared range.
+	if err := CheckCLICompat(manifest.Compat, version.GetVersion()); err != nil {
+		return fmt.Errorf("compatibility check failed for %q: %w", name, err)
 	}
 
 	// T21: Check for table prefix conflicts with already-installed plugins.

@@ -24,8 +24,14 @@ type Config struct {
 	Nginx NginxConfig
 
 	// SSL
-	SSLMode         string `env:"SSL_MODE"`          // local, letsencrypt, custom, none
-	ExtraSSLDomains string `env:"EXTRA_SSL_DOMAINS"` // comma-separated
+	SSLMode            string `env:"SSL_MODE"`              // local, letsencrypt, custom, none
+	SSLProvider        string `env:"SSL_PROVIDER"`          // cloudflare, route53, digitalocean, custom
+	SSLWildcardDomain  string `env:"SSL_WILDCARD_DOMAIN"`   // *.example.com
+	ExtraSSLDomains    string `env:"EXTRA_SSL_DOMAINS"`     // comma-separated
+	CloudflareAPIKey   string `env:"CLOUDFLARE_API_KEY"`    // DNS-01 challenge
+
+	// WAF
+	WAFMode string `env:"WAF_MODE"` // off, detection, blocking
 
 	// Optional Services
 	Redis      RedisConfig
@@ -44,6 +50,18 @@ type Config struct {
 
 	// Backup & Recovery
 	Backup BackupConfig
+
+	// Disaster Recovery
+	DR DRConfig
+
+	// Multi-Tenancy & Billing
+	Tenant TenantConfig
+
+	// License
+	License LicenseConfig
+
+	// Secrets Management
+	Secrets SecretsConfig
 
 	// Plugin Pro Configuration
 	PluginConfig PluginProConfig
@@ -144,7 +162,10 @@ type NginxConfig struct {
 	SSLPort       int    `env:"NGINX_HTTPS_PORT"`            // 443
 	MaxBody       string `env:"NGINX_CLIENT_MAX_BODY_SIZE"` // 100M
 	BindIP        string `env:"NGINX_BIND_IP"` // computed: 127.0.0.1 (dev) or 0.0.0.0 (prod) — overridable
-	AuthRateLimit string `env:"AUTH_RATE_LIMIT"` // 30r/m
+	AuthRateLimit  string `env:"AUTH_RATE_LIMIT"`          // 30r/m
+	RateLimitAPI   string `env:"RATE_LIMIT_API_RPS"`      // 30
+	RateLimitAuth  string `env:"RATE_LIMIT_AUTH_RPS"`     // 5
+	RateLimitAI    string `env:"RATE_LIMIT_AI_RPS"`       // 10
 }
 
 // RedisConfig holds Redis cache/queue configuration.
@@ -296,6 +317,25 @@ type MonitoringConfig struct {
 	PGExporterPort       int    `env:"POSTGRES_EXPORTER_PORT"`    // plugin-managed: populated by nself plugin install monitoring
 	RedisExporterEnabled bool   `env:"REDIS_EXPORTER_ENABLED"`    // plugin-managed: populated by nself plugin install monitoring
 	RedisExporterPort    int    `env:"REDIS_EXPORTER_PORT"`       // plugin-managed: populated by nself plugin install monitoring
+
+	// S34 additions
+	PrometheusRetention        string `env:"PROMETHEUS_RETENTION"`         // e.g. "30d"
+	LokiHotDays                int    `env:"LOKI_HOT_DAYS"`               // default 30
+	LokiColdDays               int    `env:"LOKI_COLD_DAYS"`              // default 365
+	AlertmanagerPagerdutyKey   string `env:"ALERTMANAGER_PAGERDUTY_KEY"`  // PagerDuty integration key
+
+	// Watchdog
+	WatchdogEnabled                bool   `env:"WATCHDOG_ENABLED"`
+	WatchdogCircuitBreakerAttempts int    `env:"WATCHDOG_CIRCUIT_BREAKER_ATTEMPTS"` // default 3
+	WatchdogCircuitBreakerWindow   string `env:"WATCHDOG_CIRCUIT_BREAKER_WINDOW"`   // default 10m
+	WatchdogEscalationWebhook      string `env:"WATCHDOG_ESCALATION_WEBHOOK"`
+
+	// Queue/Jobs
+	QueueWorkersPerQueue   int `env:"QUEUE_WORKERS_PER_QUEUE"`    // default 2
+	QueueDLQAlertThreshold int `env:"QUEUE_DLQ_ALERT_THRESHOLD"`  // default 100
+
+	// Promotion
+	PromoteRequiresTwoApprovers bool `env:"PROMOTE_REQUIRES_TWO_APPROVERS"`
 }
 
 // EmailConfig holds email provider configuration.
@@ -320,13 +360,61 @@ type EmailConfig struct {
 
 // BackupConfig holds backup and recovery configuration.
 // Dir is read by internal/database/backup.go and restore.go for ad-hoc pg_dump/pg_restore.
-// Scheduled, cloud, and retention features are plugin-managed: nself plugin install backup
+// Scheduled, cloud, and retention features are managed via BACKUP_* env vars.
 type BackupConfig struct {
 	Dir           string `env:"BACKUP_DIR"` // ./backups — read by database/backup.go and restore.go
-	Enabled       bool   `env:"BACKUP_ENABLED"`        // plugin-managed: populated by nself plugin install backup
-	Schedule      string `env:"BACKUP_SCHEDULE"`       // plugin-managed: populated by nself plugin install backup
-	RetentionDays int    `env:"BACKUP_RETENTION_DAYS"` // plugin-managed: populated by nself plugin install backup
-	CloudProvider string `env:"BACKUP_CLOUD_PROVIDER"` // plugin-managed: populated by nself plugin install backup
+	Enabled       bool   `env:"BACKUP_ENABLED"`
+	Schedule      string `env:"BACKUP_SCHEDULE"`       // legacy alias for BACKUP_SCHEDULE_FULL
+	RetentionDays int    `env:"BACKUP_RETENTION_DAYS"` // legacy — use Daily/Weekly/Monthly instead
+	CloudProvider string `env:"BACKUP_CLOUD_PROVIDER"` // legacy — use Remote instead
+
+	// Cloud/remote storage
+	Remote             string `env:"BACKUP_REMOTE"`                // rclone remote path, e.g. s3://bucket/path
+	Encryption         bool   `env:"BACKUP_ENCRYPTION"`            // enable age encryption
+	AgeRecipients      string `env:"BACKUP_AGE_RECIPIENTS"`        // age public key for encryption
+	ScheduleFull       string `env:"BACKUP_SCHEDULE_FULL"`         // cron expr for full backups (default: 0 3 * * *)
+	WALInterval        int    `env:"BACKUP_WAL_INTERVAL_SECONDS"`  // WAL archive interval (default: 60)
+	RetentionDaily     int    `env:"BACKUP_RETENTION_DAILY"`       // keep last N daily backups (default: 7)
+	RetentionWeekly    int    `env:"BACKUP_RETENTION_WEEKLY"`      // keep last N weekly backups (default: 4)
+	RetentionMonthly   int    `env:"BACKUP_RETENTION_MONTHLY"`     // keep last N monthly backups (default: 12)
+	RestoreTestSchedule string `env:"BACKUP_RESTORE_TEST_SCHEDULE"` // cron for restore tests (default: 0 5 * * 0)
+	AlertOnFailure     bool   `env:"BACKUP_ALERT_ON_FAILURE"`      // send alert on backup failure
+	S3AccessKeyID      string `env:"BACKUP_S3_ACCESS_KEY_ID"`
+	S3SecretAccessKey  string `env:"BACKUP_S3_SECRET_ACCESS_KEY"`
+	S3Region           string `env:"BACKUP_S3_REGION"`
+	S3Endpoint         string `env:"BACKUP_S3_ENDPOINT"`
+}
+
+// LicenseConfig holds license validation and grace period configuration.
+type LicenseConfig struct {
+	PingURL           string `env:"LICENSE_PING_URL"`              // https://ping.nself.org
+	CachePath         string `env:"LICENSE_CACHE_PATH"`            // ~/.cache/nself/license.json
+	GraceDays         int    `env:"LICENSE_GRACE_DAYS"`            // 7
+	CheckInterval     string `env:"LICENSE_CHECK_INTERVAL"`        // 6h
+	OfflineMode       bool   `env:"LICENSE_OFFLINE_MODE"`          // false
+	PublicKeyOverride string `env:"LICENSE_PUBLIC_KEY_OVERRIDE"`   // hex-encoded Ed25519 pubkey for testing
+}
+
+// SecretsConfig holds secrets management configuration.
+type SecretsConfig struct {
+	AgeKeyPath   string `env:"SECRETS_AGE_KEY_PATH"` // ~/.config/nself/age-key.txt
+	DeployAgeKey string `env:"DEPLOY_AGE_KEY"`       // raw age private key for CI/CD
+}
+
+// TenantConfig holds multi-tenancy and billing configuration.
+type TenantConfig struct {
+	DefaultPlan            string `env:"TENANT_DEFAULT_PLAN"`              // basic
+	DestroyBackupRetainDays int   `env:"TENANT_DESTROY_BACKUP_RETAIN_DAYS"` // 90
+	StripeSecretKey        string `env:"STRIPE_SECRET_KEY"`
+	StripeWebhookSecret    string `env:"STRIPE_WEBHOOK_SECRET"`
+	StripeAPIVersion       string `env:"STRIPE_API_VERSION"` // 2024-04-10
+}
+
+// DRConfig holds disaster recovery configuration.
+type DRConfig struct {
+	SecondaryRegion string `env:"DR_SECONDARY_REGION"` // Hetzner region for standby
+	StandbyHost     string `env:"DR_STANDBY_HOST"`     // IP/hostname of warm standby
+	DrillSchedule   string `env:"DR_DRILL_SCHEDULE"`   // cron for DR drills (default: off)
 }
 
 // PluginProConfig holds per-plugin configuration for Pro plugins.

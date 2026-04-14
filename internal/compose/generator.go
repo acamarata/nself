@@ -123,10 +123,24 @@ func (g *Generator) postProcess(dc *DockerCompose) {
 		// Graceful shutdown
 		svc.StopGrace = g.cfg.DockerStopGrace
 
-		// Security hardening — applied to all environments
-		if name == "postgres" {
+		// Resource reservations: 256M minimum for all services.
+		if svc.Deploy != nil && svc.Deploy.Resources != nil && svc.Deploy.Resources.Reservations == nil {
+			svc.Deploy.Resources.Reservations = &ResourceLimits{
+				Memory: "256m",
+			}
+		}
+
+		// Security hardening — per-service profiles
+		switch name {
+		case "postgres":
 			applySecurityToService(&svc, PostgresSecurity())
-		} else {
+		case "minio":
+			applySecurityToService(&svc, MinioSecurity())
+		case "nginx":
+			applySecurityToService(&svc, NginxSecurity())
+		case "redis":
+			applySecurityToService(&svc, RedisSecurity())
+		default:
 			applySecurityToService(&svc, DefaultSecurity())
 		}
 

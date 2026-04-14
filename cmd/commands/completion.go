@@ -8,7 +8,7 @@ import (
 )
 
 var completionCmd = &cobra.Command{
-	Use:       "completion [bash|zsh|fish]",
+	Use:       "completion [bash|zsh|fish|powershell]",
 	Short:     "Generate shell completion scripts",
 	Long: `Generate shell completion scripts for nself.
 
@@ -21,8 +21,11 @@ To load completions:
     eval "$(nself completion zsh)"
 
   Fish:
-    nself completion fish | source`,
-	ValidArgs: []string{"bash", "zsh", "fish"},
+    nself completion fish | source
+
+  PowerShell:
+    nself completion powershell | Out-String | Invoke-Expression`,
+	ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		switch args[0] {
@@ -32,6 +35,8 @@ To load completions:
 			return RootCmd.GenZshCompletion(os.Stdout)
 		case "fish":
 			return RootCmd.GenFishCompletion(os.Stdout, true)
+		case "powershell":
+			return RootCmd.GenPowerShellCompletionWithDesc(os.Stdout)
 		default:
 			return fmt.Errorf("unsupported shell: %s", args[0])
 		}

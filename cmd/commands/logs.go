@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -35,12 +36,19 @@ func (cw *countWriter) Write(p []byte) (n int, err error) {
 // LogsOptions holds parsed flag values for log filtering and formatting.
 type LogsOptions struct {
 	Search  string
+	Grep    string // regex pattern for --grep
 	Errors  bool
 	Level   string // debug|info|warn|error
 	Compact bool
 	Quiet   bool
 	Tail    int
 	Follow  bool
+	Since   string // relative (1h, 30m) or absolute RFC3339
+	Until   string // relative or absolute RFC3339
+	JSON    bool   // structured JSON output per line
+	NoColor bool
+	Plain   bool // disable highlighting for piping
+	Service []string
 }
 
 var timestampPrefixRE = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?\s*`)
@@ -128,6 +136,13 @@ func filterLogLine(line string, opts LogsOptions) (string, bool) {
 		}
 	}
 
+	if opts.Grep != "" {
+		re, err := regexp.Compile(opts.Grep)
+		if err == nil && !re.MatchString(line) {
+			return "", false
+		}
+	}
+
 	if opts.Errors {
 		detected := detectLineLevel(line)
 		if logLevelValue(detected) < logLevelValue("error") {
@@ -153,6 +168,33 @@ func formatLogLine(line, containerPrefix string, opts LogsOptions) string {
 		line = servicePrefixRE.ReplaceAllString(line, "")
 	}
 	return line
+}
+
+// logLineToJSON converts a log line into a JSON object with extracted fields.
+func logLineToJSON(line string) string {
+	entry := map[string]string{
+		"message": line,
+	}
+	if level := detectLineLevel(line); level != "" {
+		entry["level"] = level
+	}
+	// Extract timestamp if present
+	if loc := timestampPrefixRE.FindString(line); loc != "" {
+		entry["timestamp"] = strings.TrimSpace(loc)
+		entry["message"] = strings.TrimSpace(timestampPrefixRE.ReplaceAllString(line, ""))
+	}
+	// Extract service prefix if present
+	if loc := servicePrefixRE.FindString(line); loc != "" {
+		svc := strings.TrimSpace(strings.Trim(loc, "[]|"))
+		if svc != "" {
+			entry["service"] = svc
+		}
+	}
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return line
+	}
+	return string(data)
 }
 
 // streamFilteredLogs runs docker with composeArgs and streams filtered/formatted output to w.
@@ -181,8 +223,13 @@ func streamFilteredLogs(ctx context.Context, workdir string, composeArgs []strin
 		if !ok {
 			continue
 		}
-		formatted := formatLogLine(filtered, "", opts)
-		fmt.Fprintln(w, formatted)
+		if opts.JSON {
+			jsonLine := logLineToJSON(filtered)
+			fmt.Fprintln(w, jsonLine)
+		} else {
+			formatted := formatLogLine(filtered, "", opts)
+			fmt.Fprintln(w, formatted)
+		}
 	}
 
 	waitErr := dockerCmd.Wait()
@@ -333,17 +380,23 @@ var logsCmd = &cobra.Command{
 	Long: `View and filter Docker Compose service logs with color and formatting.
 
 Examples:
-  nself logs                  # Last 10 lines from all services
-  nself logs -f               # Follow all logs live
-  nself logs hasura            # Last 10 lines from hasura
-  nself logs -f postgres       # Follow postgres logs
-  nself logs --more            # Last 50 lines
-  nself logs --all             # Last 100 lines
-  nself logs -e                # Only error lines
-  nself logs -s "migration"   # Search for pattern
-  nself logs --status          # Service status overview
-  nself logs --summary         # Recent errors by service
-  nself logs --top             # Most active services`,
+  nself logs                           # Last 10 lines from all services
+  nself logs -f                        # Follow all logs live
+  nself logs hasura                    # Last 10 lines from hasura
+  nself logs -f postgres               # Follow postgres logs
+  nself logs --more                    # Last 50 lines
+  nself logs --all                     # Last 100 lines
+  nself logs -e                        # Only error lines
+  nself logs -s "migration"            # Search for pattern
+  nself logs --grep "error.*timeout"   # Regex filter
+  nself logs --since 1h                # Logs from last hour
+  nself logs --since 1h --until 30m    # Between 1h and 30m ago
+  nself logs -S hasura -S postgres     # Multiple services
+  nself logs --json                    # Structured JSON output
+  nself logs --plain | grep error      # Plain output for piping
+  nself logs --status                  # Service status overview
+  nself logs --summary                 # Recent errors by service
+  nself logs --top                     # Most active services`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runLogs,
 }
@@ -358,6 +411,13 @@ func init() {
 	logsCmd.Flags().BoolP("errors", "e", false, "Show only errors")
 	logsCmd.Flags().BoolP("compact", "c", false, "Compact output: [service] message")
 	logsCmd.Flags().BoolP("quiet", "q", false, "Filter out noise (healthchecks)")
+	logsCmd.Flags().String("grep", "", "Regex pattern filter")
+	logsCmd.Flags().String("since", "", "Show logs since (e.g. 1h, 30m, or RFC3339)")
+	logsCmd.Flags().String("until", "", "Show logs until (e.g. 1h or RFC3339)")
+	logsCmd.Flags().Bool("json", false, "Structured JSON output per line")
+	logsCmd.Flags().Bool("no-color", false, "Disable colored output")
+	logsCmd.Flags().Bool("plain", false, "Plain output (no highlighting, for piping)")
+	logsCmd.Flags().StringSliceP("service", "S", nil, "Filter by service name (repeatable)")
 	logsCmd.Flags().Bool("status", false, "Show service status overview")
 	logsCmd.Flags().Bool("summary", false, "Show recent errors by service")
 	logsCmd.Flags().Bool("top", false, "Show most active services")
@@ -371,10 +431,17 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	more, _ := cmd.Flags().GetBool("more")
 	all, _ := cmd.Flags().GetBool("all")
 	search, _ := cmd.Flags().GetString("search")
+	grepPattern, _ := cmd.Flags().GetString("grep")
 	level, _ := cmd.Flags().GetString("level")
 	errorsOnly, _ := cmd.Flags().GetBool("errors")
 	compact, _ := cmd.Flags().GetBool("compact")
 	quiet, _ := cmd.Flags().GetBool("quiet")
+	since, _ := cmd.Flags().GetString("since")
+	until, _ := cmd.Flags().GetString("until")
+	jsonOut, _ := cmd.Flags().GetBool("json")
+	noColor, _ := cmd.Flags().GetBool("no-color")
+	plain, _ := cmd.Flags().GetBool("plain")
+	services, _ := cmd.Flags().GetStringSlice("service")
 	status, _ := cmd.Flags().GetBool("status")
 	summary, _ := cmd.Flags().GetBool("summary")
 	top, _ := cmd.Flags().GetBool("top")
@@ -403,12 +470,19 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 	opts := LogsOptions{
 		Search:  search,
+		Grep:    grepPattern,
 		Errors:  errorsOnly,
 		Level:   level,
 		Compact: compact,
 		Quiet:   quiet,
 		Tail:    tail,
 		Follow:  follow,
+		Since:   since,
+		Until:   until,
+		JSON:    jsonOut,
+		NoColor: noColor,
+		Plain:   plain,
+		Service: services,
 	}
 
 	// Build docker compose logs arguments
@@ -420,13 +494,30 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 	composeArgs = append(composeArgs, "--tail", strconv.Itoa(tail))
 
+	if since != "" {
+		composeArgs = append(composeArgs, "--since", since)
+	}
+	if until != "" {
+		composeArgs = append(composeArgs, "--until", until)
+	}
+
 	if !follow {
 		composeArgs = append(composeArgs, "--no-log-prefix")
 	}
 
-	// If a specific service is requested, append it
+	// If --no-color or --plain, pass --no-color to docker compose
+	if noColor || plain {
+		composeArgs = append(composeArgs, "--no-color")
+	}
+
+	// Collect target services: --service flags + positional arg
+	var targetServices []string
+	targetServices = append(targetServices, services...)
 	if len(args) > 0 {
-		composeArgs = append(composeArgs, args[0])
+		targetServices = append(targetServices, args[0])
+	}
+	for _, svc := range targetServices {
+		composeArgs = append(composeArgs, svc)
 	}
 
 	rawCwd, err := os.Getwd()

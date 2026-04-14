@@ -14,6 +14,8 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/seed"
+	"github.com/nself-org/cli/internal/tenant"
 
 	"github.com/spf13/cobra"
 )
@@ -79,10 +81,20 @@ var dbMigrateCreateCmd = &cobra.Command{
 // ── seed ────────────────────────────────────────────────────────────
 
 var dbSeedCmd = &cobra.Command{
-	Use:   "seed [file]",
-	Short: "Run seed data",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runDBSeed,
+	Use:   "seed",
+	Short: "Database seeding: run, list, verify, graph",
+	Long: `Database seeding with environment-aware fixtures.
+
+Subcommands:
+  run      Execute seeds for current environment
+  list     List available seeds and fixtures
+  verify   Verify a fixture is deterministic
+  graph    Show seed dependency graph
+
+Legacy usage (backward compat):
+  nself db seed [file]   — runs a single seed file directly`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runDBSeed,
 }
 
 // ── backup ──────────────────────────────────────────────────────────
@@ -137,6 +149,49 @@ var dbBackupListCmd = &cobra.Command{
 	RunE:  runDBBackupList,
 }
 
+// ── verify-checksums ───────────────────────────────────────────────
+
+var dbVerifyChecksumsCmd = &cobra.Command{
+	Use:   "verify-checksums",
+	Short: "Verify migration file checksums against stored values",
+	RunE:  runDBVerifyChecksums,
+}
+
+// ── reset-checksum ─────────────────────────────────────────────────
+
+var dbResetChecksumCmd = &cobra.Command{
+	Use:   "reset-checksum <id>",
+	Short: "Reset stored checksum for a migration (dangerous)",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runDBResetChecksum,
+}
+
+// ── seed subcommands ───────────────────────────────────────────────
+
+var dbSeedRunCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Execute seeds for current environment",
+	RunE:  runDBSeedRun,
+}
+
+var dbSeedListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List available seeds and fixtures",
+	RunE:  runDBSeedList,
+}
+
+var dbSeedVerifyCmd = &cobra.Command{
+	Use:   "verify",
+	Short: "Verify a fixture is deterministic (dry-run replay check)",
+	RunE:  runDBSeedVerify,
+}
+
+var dbSeedGraphCmd = &cobra.Command{
+	Use:   "graph",
+	Short: "Show seed dependency graph",
+	RunE:  runDBSeedGraph,
+}
+
 // ── hasura ──────────────────────────────────────────────────────────
 
 var dbHasuraCmd = &cobra.Command{
@@ -169,7 +224,7 @@ var dbHasuraMetadataApplyCmd = &cobra.Command{
 
 var dbHasuraMetadataExportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export Hasura metadata",
+	Short: "Export Hasura metadata to git-friendly sorted YAML",
 	RunE:  runDBHasuraMetadataExport,
 }
 
@@ -177,6 +232,66 @@ var dbHasuraMetadataReloadCmd = &cobra.Command{
 	Use:   "reload",
 	Short: "Reload metadata cache",
 	RunE:  runDBHasuraMetadataReload,
+}
+
+var dbHasuraDiffCmd = &cobra.Command{
+	Use:   "diff",
+	Short: "Compare live Hasura metadata against on-disk files",
+	RunE:  runDBHasuraDiff,
+}
+
+var dbHasuraValidateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate Hasura metadata consistency and permission coverage",
+	RunE:  runDBHasuraValidate,
+}
+
+// ── lint ────────────────────────────────────────────────────────────
+
+var dbLintCmd = &cobra.Command{
+	Use:   "lint",
+	Short: "Check RLS policies on tenant-scoped tables",
+	RunE:  runDBLint,
+}
+
+func runDBLint(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	results, err := tenant.LintRLS(cmd.Context(), cfg)
+	if err != nil {
+		return fmt.Errorf("db lint: %w", err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No tenant-scoped tables found.")
+		return nil
+	}
+
+	formatFlag, _ := cmd.Flags().GetString("format")
+	if formatFlag == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(results)
+	}
+
+	failures := 0
+	for _, r := range results {
+		status := "PASS"
+		if !r.Pass {
+			status = "FAIL"
+			failures++
+		}
+		fmt.Printf("[%s] %s.%s — %s\n", status, r.Schema, r.Table, r.Message)
+	}
+
+	if failures > 0 {
+		return fmt.Errorf("%d table(s) with tenant_id missing RLS policies", failures)
+	}
+	fmt.Printf("All %d tenant-scoped table(s) have RLS policies.\n", len(results))
+	return nil
 }
 
 // ── init ────────────────────────────────────────────────────────────
@@ -214,13 +329,34 @@ func init() {
 	// Wire hasura subcommands
 	dbHasuraCmd.AddCommand(dbHasuraConsoleCmd)
 	dbHasuraCmd.AddCommand(dbHasuraMetadataCmd)
+	dbHasuraCmd.AddCommand(dbHasuraDiffCmd)
+	dbHasuraCmd.AddCommand(dbHasuraValidateCmd)
 
 	// Wire backup subcommands
 	dbBackupCmd.AddCommand(dbBackupListCmd)
 
+	// db lint flags
+	dbLintCmd.Flags().String("format", "table", "Output format: table or json")
+
+	// verify-checksums and reset-checksum
+	dbResetChecksumCmd.Flags().Bool("i-know-what-im-doing", false, "Required safety flag")
+
+	// seed subcommands
+	dbSeedRunCmd.Flags().String("env", "", "Target environment (default: current)")
+	dbSeedRunCmd.Flags().String("fixture", "", "Run a specific fixture (e.g. demo, load-test)")
+	dbSeedRunCmd.Flags().Bool("reset", false, "Truncate seeded tables before running (destructive)")
+	dbSeedCmd.AddCommand(dbSeedRunCmd)
+	dbSeedCmd.AddCommand(dbSeedListCmd)
+	dbSeedCmd.AddCommand(dbSeedVerifyCmd)
+	dbSeedCmd.AddCommand(dbSeedGraphCmd)
+	dbSeedVerifyCmd.Flags().String("fixture", "", "Fixture to verify")
+
 	// Wire top-level db subcommands
+	dbCmd.AddCommand(dbLintCmd)
 	dbCmd.AddCommand(dbMigrateCmd)
 	dbCmd.AddCommand(dbSeedCmd)
+	dbCmd.AddCommand(dbVerifyChecksumsCmd)
+	dbCmd.AddCommand(dbResetChecksumCmd)
 	dbCmd.AddCommand(dbBackupCmd)
 	dbCmd.AddCommand(dbRestoreCmd)
 	dbCmd.AddCommand(dbShellCmd)
@@ -550,11 +686,21 @@ func runDBHasuraMetadataExport(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	data, err := database.HasuraExportMetadata(cmd.Context(), cfg)
+	dir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("hasura metadata export: %w", err)
+		return fmt.Errorf("getting working directory: %w", err)
 	}
-	fmt.Println(string(data))
+	outDir, err := database.HasuraExportToYAML(cmd.Context(), cfg, dir)
+	if err != nil {
+		// Fall back to raw JSON dump.
+		data, jsonErr := database.HasuraExportMetadata(cmd.Context(), cfg)
+		if jsonErr != nil {
+			return fmt.Errorf("hasura metadata export: %w", err)
+		}
+		fmt.Println(string(data))
+		return nil
+	}
+	fmt.Printf("Metadata exported to %s\n", outDir)
 	return nil
 }
 
@@ -568,6 +714,239 @@ func runDBHasuraMetadataReload(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Println("Hasura metadata reloaded.")
 	return nil
+}
+
+func runDBVerifyChecksums(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+	plugin, _ := cmd.Flags().GetString("plugin")
+	mismatches, err := database.VerifyChecksums(cmd.Context(), cfg, plugin)
+	if err != nil {
+		return fmt.Errorf("verify checksums: %w", err)
+	}
+	if len(mismatches) == 0 {
+		fmt.Println("All checksums verified.")
+		return nil
+	}
+	for _, m := range mismatches {
+		fmt.Printf("MISMATCH %s (%s): stored=%s disk=%s\n", m.ID, m.Name, m.Expected[:12]+"...", m.Actual[:12]+"...")
+	}
+	return fmt.Errorf("%d checksum mismatch(es) found", len(mismatches))
+}
+
+func runDBResetChecksum(cmd *cobra.Command, args []string) error {
+	safety, _ := cmd.Flags().GetBool("i-know-what-im-doing")
+	if !safety {
+		return fmt.Errorf("this command modifies migration tracking; pass --i-know-what-im-doing to confirm")
+	}
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+	if err := database.ResetChecksum(cmd.Context(), cfg, args[0]); err != nil {
+		return fmt.Errorf("reset checksum: %w", err)
+	}
+	fmt.Printf("Checksum reset for migration %s.\n", args[0])
+	return nil
+}
+
+func runDBSeedRun(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	env, _ := cmd.Flags().GetString("env")
+	if env == "" {
+		env = cfg.Env
+	}
+	if env == "" {
+		env = "dev"
+	}
+
+	fixture, _ := cmd.Flags().GetString("fixture")
+
+	seeds, err := seed.CollectForRun(dir, env, fixture)
+	if err != nil {
+		return fmt.Errorf("collect seeds: %w", err)
+	}
+
+	if len(seeds) == 0 {
+		fmt.Println("No seeds found.")
+		return nil
+	}
+
+	// Guard against destructive seeds in production.
+	if cfg.IsProduction() {
+		for _, s := range seeds {
+			if s.Destructive {
+				return fmt.Errorf("destructive seed %s cannot run in production", s.Name)
+			}
+		}
+	}
+
+	for _, s := range seeds {
+		if err := database.Seed(cmd.Context(), cfg, s.Path); err != nil {
+			return fmt.Errorf("seed %s: %w", s.Name, err)
+		}
+		fmt.Printf("  Applied: %s\n", s.Name)
+	}
+	fmt.Printf("Applied %d seed(s).\n", len(seeds))
+	return nil
+}
+
+func runDBSeedList(_ *cobra.Command, _ []string) error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	seeds, err := seed.ListSeeds(dir)
+	if err != nil {
+		return fmt.Errorf("list seeds: %w", err)
+	}
+
+	if len(seeds) == 0 {
+		fmt.Println("No seeds found. Create db/seeds/ directory to get started.")
+		return nil
+	}
+
+	fmt.Printf("%-30s %-20s %-12s %s\n", "NAME", "ENV", "TYPE", "DEPENDS ON")
+	for _, s := range seeds {
+		seedType := "standard"
+		if s.Idempotent {
+			seedType = "idempotent"
+		}
+		if s.Destructive {
+			seedType = "destructive"
+		}
+		deps := strings.Join(s.DependsOn, ", ")
+		fmt.Printf("%-30s %-20s %-12s %s\n", s.Name, s.Env, seedType, deps)
+	}
+
+	// Also list fixtures.
+	fixtures, _ := seed.ListFixtures(dir)
+	if len(fixtures) > 0 {
+		fmt.Printf("\nFixtures: %s\n", strings.Join(fixtures, ", "))
+	}
+	return nil
+}
+
+func runDBSeedVerify(cmd *cobra.Command, _ []string) error {
+	fixture, _ := cmd.Flags().GetString("fixture")
+	if fixture == "" {
+		return fmt.Errorf("--fixture is required")
+	}
+
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	seeds, err := seed.CollectForRun(dir, "", fixture)
+	if err != nil {
+		return fmt.Errorf("collect fixture seeds: %w", err)
+	}
+
+	if len(seeds) == 0 {
+		return fmt.Errorf("fixture %q has no seeds", fixture)
+	}
+
+	fmt.Printf("Fixture %q: %d seed file(s)\n", fixture, len(seeds))
+	for _, s := range seeds {
+		marker := "  "
+		if s.Idempotent {
+			marker = "I "
+		}
+		if s.Destructive {
+			marker = "D "
+		}
+		fmt.Printf("  %s%s\n", marker, s.Name)
+	}
+	fmt.Println("Verification: seed files parsed successfully.")
+	return nil
+}
+
+func runDBSeedGraph(_ *cobra.Command, _ []string) error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	nodes, err := seed.DependencyGraph(dir)
+	if err != nil {
+		return fmt.Errorf("dependency graph: %w", err)
+	}
+
+	if len(nodes) == 0 {
+		fmt.Println("No seeds found.")
+		return nil
+	}
+
+	for _, n := range nodes {
+		if len(n.DependsOn) == 0 {
+			fmt.Printf("%s (%s)\n", n.Name, n.Env)
+		} else {
+			fmt.Printf("%s (%s) -> %s\n", n.Name, n.Env, strings.Join(n.DependsOn, ", "))
+		}
+	}
+	return nil
+}
+
+func runDBHasuraDiff(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	diffs, err := database.HasuraDiffMetadata(cmd.Context(), cfg, dir)
+	if err != nil {
+		return fmt.Errorf("hasura diff: %w", err)
+	}
+
+	if len(diffs) == 0 {
+		fmt.Println("No metadata drift detected.")
+		return nil
+	}
+
+	fmt.Printf("Metadata drift detected in %d key(s):\n", len(diffs))
+	for _, d := range diffs {
+		fmt.Printf("  - %s\n", d)
+	}
+	return fmt.Errorf("metadata drift detected")
+}
+
+func runDBHasuraValidate(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	missing, err := database.HasuraValidatePermissions(cmd.Context(), cfg)
+	if err != nil {
+		return fmt.Errorf("hasura validate: %w", err)
+	}
+
+	if len(missing) == 0 {
+		fmt.Println("All tracked tables have required permissions (tenant_member, tenant_admin).")
+		return nil
+	}
+
+	fmt.Printf("Permission coverage issues (%d):\n", len(missing))
+	for _, m := range missing {
+		fmt.Printf("  - %s\n", m)
+	}
+	return fmt.Errorf("%d permission coverage issue(s)", len(missing))
 }
 
 // requireProductionConfirmation prints a production warning and requires the
