@@ -10,10 +10,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/metrics"
 	"github.com/nself-org/cli/internal/security"
 )
 
@@ -60,12 +62,65 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 	}
 
 	for _, bt := range types {
-		if err := createSingle(ctx, cfg, bt, backupDir, opts); err != nil {
+		start := time.Now()
+		err := createSingle(ctx, cfg, bt, backupDir, opts)
+		emitMetric(cfg, bt, start, backupDir, opts, err == nil)
+		if err != nil {
 			return fmt.Errorf("backup %s: %w", bt, err)
 		}
 	}
 
 	return nil
+}
+
+// emitMetric writes a prometheus textfile record for the just-completed
+// backup run. Metric failures are logged but never fail the backup.
+func emitMetric(cfg *config.Config, bt BackupType, start time.Time, backupDir string, opts CreateOptions, success bool) {
+	// Best-effort: find the newest file for this type to report size.
+	var size int64
+	if entries, err := os.ReadDir(backupDir); err == nil {
+		var newest os.FileInfo
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			name := e.Name()
+			if !strings.Contains(name, "_"+string(bt)+"_") {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if newest == nil || info.ModTime().After(newest.ModTime()) {
+				newest = info
+			}
+		}
+		if newest != nil {
+			size = newest.Size()
+		}
+	}
+
+	encrypt := cfg.Backup.Encryption
+	if opts.Encrypt {
+		encrypt = true
+	}
+	if opts.NoEncrypt {
+		encrypt = false
+	}
+
+	rec := metrics.BackupRecord{
+		Env:         cfg.Env,
+		Type:        string(bt),
+		Success:     success,
+		DurationSec: time.Since(start).Seconds(),
+		Bytes:       size,
+		Encrypted:   encrypt && cfg.Backup.AgeRecipients != "",
+		Timestamp:   time.Now(),
+	}
+	if err := metrics.EmitBackup(rec); err != nil {
+		slog.Warn("emit backup metric", "error", err)
+	}
 }
 
 func createSingle(ctx context.Context, cfg *config.Config, bt BackupType, backupDir string, opts CreateOptions) error {

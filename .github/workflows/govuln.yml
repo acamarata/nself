@@ -1,0 +1,31 @@
+name: Go Vulnerability Check
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 8 * * *"
+  push:
+    branches: [main]
+
+jobs:
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        env:
+          GOFLAGS: -mod=vendor
+        run: govulncheck ./...

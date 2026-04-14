@@ -251,7 +251,18 @@ var dbHasuraValidateCmd = &cobra.Command{
 var dbLintCmd = &cobra.Command{
 	Use:   "lint",
 	Short: "Check RLS policies on tenant-scoped tables",
-	RunE:  runDBLint,
+	Long: `Audit Row-Level Security policies across all user-data tables.
+
+By default, checks tables with tenant_id columns. With --rls, performs an
+exhaustive audit of every np_* table and any table with user_id or tenant_id.
+
+Flags:
+  --rls       Exhaustive RLS audit (all np_* and user-data tables)
+  --metric    Emit Prometheus-compatible metric line (nself_rls_disabled_tables)
+  --matrix    Include table x role coverage matrix in output
+  --format    Output format: table (default) or json
+  --remediate Print remediation SQL for failing tables`,
+	RunE: runDBLint,
 }
 
 func runDBLint(cmd *cobra.Command, _ []string) error {
@@ -260,38 +271,171 @@ func runDBLint(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	results, err := tenant.LintRLS(cmd.Context(), cfg)
-	if err != nil {
-		return fmt.Errorf("db lint: %w", err)
-	}
+	rlsFlag, _ := cmd.Flags().GetBool("rls")
+	metricFlag, _ := cmd.Flags().GetBool("metric")
+	matrixFlag, _ := cmd.Flags().GetBool("matrix")
+	remediateFlag, _ := cmd.Flags().GetBool("remediate")
+	formatFlag, _ := cmd.Flags().GetString("format")
 
-	if len(results) == 0 {
-		fmt.Println("No tenant-scoped tables found.")
+	// Legacy path: no --rls flag uses the original tenant_id-only check.
+	if !rlsFlag && !metricFlag {
+		results, err := tenant.LintRLS(cmd.Context(), cfg)
+		if err != nil {
+			return fmt.Errorf("db lint: %w", err)
+		}
+		if len(results) == 0 {
+			fmt.Println("No tenant-scoped tables found.")
+			return nil
+		}
+		if formatFlag == "json" {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(results)
+		}
+		failures := 0
+		for _, r := range results {
+			status := "PASS"
+			if !r.Pass {
+				status = "FAIL"
+				failures++
+			}
+			fmt.Printf("[%s] %s.%s — %s\n", status, r.Schema, r.Table, r.Message)
+		}
+		if failures > 0 {
+			return fmt.Errorf("%d table(s) with tenant_id missing RLS policies", failures)
+		}
+		fmt.Printf("All %d tenant-scoped table(s) have RLS policies.\n", len(results))
 		return nil
 	}
 
-	formatFlag, _ := cmd.Flags().GetString("format")
-	if formatFlag == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(results)
+	// Full RLS audit path.
+	allowlist := loadAllowlist(cfg)
+	report, err := tenant.LintRLSFull(cmd.Context(), cfg, allowlist)
+	if err != nil {
+		return fmt.Errorf("db lint --rls: %w", err)
 	}
 
-	failures := 0
-	for _, r := range results {
+	// --metric: emit Prometheus text line and exit.
+	if metricFlag {
+		count := tenant.DisabledTableCount(report)
+		fmt.Printf("# HELP nself_rls_disabled_tables Number of user-data tables without RLS.\n")
+		fmt.Printf("# TYPE nself_rls_disabled_tables gauge\n")
+		fmt.Printf("nself_rls_disabled_tables %d\n", count)
+		return nil
+	}
+
+	if formatFlag == "json" {
+		if !matrixFlag {
+			report.CoverageMatrix = nil
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(report)
+	}
+
+	// Table output.
+	fmt.Printf("RLS Audit: %d tables checked, %d enabled, %d disabled, %d allowlisted, %d violations\n\n",
+		report.TotalTables, report.RLSEnabled, report.RLSDisabled, report.Allowlisted, report.Violations)
+
+	for _, r := range report.Tables {
 		status := "PASS"
 		if !r.Pass {
 			status = "FAIL"
-			failures++
 		}
-		fmt.Printf("[%s] %s.%s — %s\n", status, r.Schema, r.Table, r.Message)
+		if r.Allowlisted {
+			status = "SKIP"
+		}
+		fmt.Printf("[%s] %s.%s (policies: %d) — %s\n", status, r.Schema, r.Table, r.PolicyCount, r.Message)
 	}
 
-	if failures > 0 {
-		return fmt.Errorf("%d table(s) with tenant_id missing RLS policies", failures)
+	// Coverage matrix.
+	if matrixFlag && len(report.CoverageMatrix) > 0 {
+		fmt.Printf("\n--- Coverage Matrix (table x role) ---\n")
+		roles := []string{"anonymous", "user", "tenant_member", "tenant_admin", "admin", "service"}
+		fmt.Printf("%-40s", "TABLE")
+		for _, role := range roles {
+			fmt.Printf(" %-16s", role)
+		}
+		fmt.Println()
+		for _, entry := range report.CoverageMatrix {
+			fmt.Printf("%-40s", entry.Schema+"."+entry.Table)
+			for _, role := range roles {
+				pol := entry.Roles[role]
+				if pol == "" {
+					pol = "none"
+				}
+				if len(pol) > 15 {
+					pol = pol[:15]
+				}
+				fmt.Printf(" %-16s", pol)
+			}
+			fmt.Println()
+		}
 	}
-	fmt.Printf("All %d tenant-scoped table(s) have RLS policies.\n", len(results))
+
+	// Remediation SQL.
+	if remediateFlag {
+		sql := tenant.GenerateRemediationSQL(report)
+		if sql != "" {
+			fmt.Printf("\n--- Remediation SQL ---\n%s", sql)
+		} else {
+			fmt.Println("\nNo remediation needed.")
+		}
+	}
+
+	if report.Violations > 0 {
+		return fmt.Errorf("%d table(s) failing RLS audit", report.Violations)
+	}
 	return nil
+}
+
+// loadAllowlist reads the RLS allowlist from the project working directory.
+func loadAllowlist(_ *config.Config) []tenant.AllowlistEntry {
+	dir, _ := os.Getwd()
+	paths := []string{
+		filepath.Join(dir, "lint_allowlist.yaml"),
+		filepath.Join(dir, ".nself", "lint_allowlist.yaml"),
+	}
+	for _, p := range paths {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		return parseAllowlistYAML(data)
+	}
+	return nil
+}
+
+// parseAllowlistYAML parses a simple YAML allowlist. Format:
+//
+//	tables:
+//	  - schema: public
+//	    table: migrations
+//	    reason: "System metadata table"
+func parseAllowlistYAML(data []byte) []tenant.AllowlistEntry {
+	var entries []tenant.AllowlistEntry
+	lines := strings.Split(string(data), "\n")
+	var current *tenant.AllowlistEntry
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- schema:") {
+			if current != nil {
+				entries = append(entries, *current)
+			}
+			current = &tenant.AllowlistEntry{
+				Schema: strings.TrimSpace(strings.TrimPrefix(trimmed, "- schema:")),
+			}
+		} else if strings.HasPrefix(trimmed, "table:") && current != nil {
+			current.Table = strings.TrimSpace(strings.TrimPrefix(trimmed, "table:"))
+		} else if strings.HasPrefix(trimmed, "reason:") && current != nil {
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "reason:"))
+			current.Reason = strings.Trim(val, "\"'")
+		}
+	}
+	if current != nil {
+		entries = append(entries, *current)
+	}
+	return entries
 }
 
 // ── init ────────────────────────────────────────────────────────────
@@ -337,6 +481,10 @@ func init() {
 
 	// db lint flags
 	dbLintCmd.Flags().String("format", "table", "Output format: table or json")
+	dbLintCmd.Flags().Bool("rls", false, "Exhaustive RLS audit (all np_* and user-data tables)")
+	dbLintCmd.Flags().Bool("metric", false, "Emit Prometheus metric line (nself_rls_disabled_tables)")
+	dbLintCmd.Flags().Bool("matrix", false, "Include table x role coverage matrix")
+	dbLintCmd.Flags().Bool("remediate", false, "Print remediation SQL for failing tables")
 
 	// verify-checksums and reset-checksum
 	dbResetChecksumCmd.Flags().Bool("i-know-what-im-doing", false, "Required safety flag")

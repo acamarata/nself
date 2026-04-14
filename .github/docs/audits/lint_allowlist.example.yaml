@@ -1,0 +1,13 @@
+# RLS Lint Allowlist — place as lint_allowlist.yaml in your nSelf project root
+# Tables listed here are exempt from RLS enforcement checks.
+# Every entry MUST have a justification in the reason field.
+#
+# Usage: nself db lint --rls reads this file from the project root.
+
+tables:
+  # - schema: public
+  #   table: schema_migrations
+  #   reason: "Migration tracking metadata, no user data"
+  # - schema: hdb_catalog
+  #   table: hdb_metadata
+  #   reason: "Hasura internal metadata, not user-accessible"

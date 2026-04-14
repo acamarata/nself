@@ -220,6 +220,7 @@ func runBackupPrune(cmd *cobra.Command, _ []string) error {
 	keepDaily, _ := cmd.Flags().GetInt("keep-daily")
 	keepWeekly, _ := cmd.Flags().GetInt("keep-weekly")
 	keepMonthly, _ := cmd.Flags().GetInt("keep-monthly")
+	format, _ := cmd.Flags().GetString("format")
 
 	result, err := backup.Prune(cfg, backup.PruneOptions{
 		DryRun:      dryRun,
@@ -229,6 +230,10 @@ func runBackupPrune(cmd *cobra.Command, _ []string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("backup prune: %w", err)
+	}
+
+	if format == "json" {
+		return backup.FormatPruneJSON(result, keepDaily)
 	}
 
 	prefix := ""
@@ -251,6 +256,37 @@ func runBackupConfig(cmd *cobra.Command, _ []string) error {
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
+	}
+
+	installCron, _ := cmd.Flags().GetBool("install-cron")
+	if installCron {
+		fullAt, _ := cmd.Flags().GetString("full-at")
+		walEvery, _ := cmd.Flags().GetString("wal-every")
+		pruneAt, _ := cmd.Flags().GetString("prune-at")
+		verifyOn, _ := cmd.Flags().GetString("verify-on")
+		verifyAt, _ := cmd.Flags().GetString("verify-at")
+		remote, _ := cmd.Flags().GetString("remote")
+		unitDir, _ := cmd.Flags().GetString("unit-dir")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+		opts := backup.SystemdInstallOptions{
+			FullAt:      fullAt,
+			WALEvery:    walEvery,
+			PruneAt:     pruneAt,
+			VerifyOnDay: verifyOn,
+			VerifyAt:    verifyAt,
+			Remote:      remote,
+			UnitDir:     unitDir,
+			DryRun:      dryRun,
+		}
+		if err := backup.InstallSystemdUnits(cfg, opts); err != nil {
+			return fmt.Errorf("install-cron: %w", err)
+		}
+		if dryRun {
+			return nil
+		}
+		fmt.Println("Systemd timers installed and enabled: nself-backup-{full,wal,prune,verify}.timer")
+		return nil
 	}
 
 	format, _ := cmd.Flags().GetString("format")
@@ -350,9 +386,19 @@ func init() {
 	backupPruneCmd.Flags().Int("keep-daily", 7, "Keep last N daily backups")
 	backupPruneCmd.Flags().Int("keep-weekly", 4, "Keep last N weekly backups")
 	backupPruneCmd.Flags().Int("keep-monthly", 12, "Keep last N monthly backups")
+	backupPruneCmd.Flags().String("format", "", "Output format: json")
 
 	// backup config flags
 	backupConfigCmd.Flags().String("format", "", "Output format: json")
+	backupConfigCmd.Flags().Bool("install-cron", false, "Install systemd timers for backup/wal/prune/verify")
+	backupConfigCmd.Flags().String("full-at", "03:00", "Full backup time UTC (HH:MM) when --install-cron")
+	backupConfigCmd.Flags().String("wal-every", "15m", "WAL checkpoint interval when --install-cron")
+	backupConfigCmd.Flags().String("prune-at", "04:00", "Prune time UTC (HH:MM) when --install-cron")
+	backupConfigCmd.Flags().String("verify-on", "Sun", "Weekly restore-test day when --install-cron")
+	backupConfigCmd.Flags().String("verify-at", "05:00", "Weekly restore-test time UTC (HH:MM) when --install-cron")
+	backupConfigCmd.Flags().String("remote", "", "Override configured remote when --install-cron")
+	backupConfigCmd.Flags().String("unit-dir", "/etc/systemd/system", "Systemd unit directory when --install-cron")
+	backupConfigCmd.Flags().Bool("dry-run", false, "Print unit files without writing when --install-cron")
 
 	// backup status flags
 	backupStatusCmd.Flags().String("format", "", "Output format: json")

@@ -11,6 +11,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/metrics"
 )
 
 // VerifyOptions holds flags for `nself backup verify`.
@@ -68,6 +69,8 @@ func Verify(ctx context.Context, cfg *config.Config, opts VerifyOptions) (*Verif
 			result.Verified = false
 			result.Details = err.Error()
 			result.Duration = time.Since(start).String()
+			emitVerifyMetric(cfg, start, false)
+			slog.Error("restore-test failed", "id", opts.BackupID, "RESULT", "fail", "duration_sec", int(time.Since(start).Seconds()), "error", err)
 			return result, err
 		}
 	}
@@ -76,8 +79,26 @@ func Verify(ctx context.Context, cfg *config.Config, opts VerifyOptions) (*Verif
 	result.Details = fmt.Sprintf("file size: %d bytes", info.Size())
 	result.Duration = time.Since(start).String()
 
+	if opts.RestoreTest {
+		emitVerifyMetric(cfg, start, true)
+		// Emit the exact phrase the systemd/journalctl grep expects.
+		slog.Info("restore-test passed", "id", opts.BackupID, "RESULT", "pass", "duration_sec", int(time.Since(start).Seconds()))
+	}
+
 	slog.Info("backup verified", "id", opts.BackupID, "method", result.Method, "duration", result.Duration)
 	return result, nil
+}
+
+func emitVerifyMetric(cfg *config.Config, start time.Time, success bool) {
+	rec := metrics.VerifyRecord{
+		Env:         cfg.Env,
+		Success:     success,
+		DurationSec: time.Since(start).Seconds(),
+		Timestamp:   time.Now(),
+	}
+	if err := metrics.EmitVerify(rec); err != nil {
+		slog.Warn("emit verify metric", "error", err)
+	}
 }
 
 // runRestoreTest spins up a temporary postgres container, restores the backup,

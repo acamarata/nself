@@ -1,0 +1,119 @@
+package admin
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+)
+
+// ConnectOpts holds all parameters for an admin remote connection.
+type ConnectOpts struct {
+	Host       string
+	User       string
+	SSHPort    int
+	LocalPort  int
+	RemotePort int
+	// AllProjects opens the switcher with every registered project.
+	AllProjects bool
+	// AsUser overrides the authenticated identity (for ACL testing).
+	AsUser string
+}
+
+// VerifySSHKey checks that key-based SSH auth works for the given host.
+// Returns nil on success, an error describing the failure otherwise.
+func VerifySSHKey(ctx context.Context, user, host string, port int) error {
+	args := []string{
+		"-o", "BatchMode=yes",
+		"-o", "ConnectTimeout=10",
+		"-o", "ServerAliveInterval=30",
+		"-p", fmt.Sprintf("%d", port),
+		fmt.Sprintf("%s@%s", user, host),
+		"true",
+	}
+	cmd := exec.CommandContext(ctx, "ssh", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("SSH key auth failed for %s@%s:%d: %w", user, host, port, err)
+	}
+	return nil
+}
+
+// EnsureRemoteAdmin starts nself-admin on the remote host if it is not
+// already running, via systemctl --user.
+func EnsureRemoteAdmin(ctx context.Context, user, host string, port int) error {
+	sshCmd := exec.CommandContext(ctx, "ssh",
+		"-o", "ServerAliveInterval=30",
+		"-p", fmt.Sprintf("%d", port),
+		fmt.Sprintf("%s@%s", user, host),
+		"systemctl --user start nself-admin || true",
+	)
+	sshCmd.Stdout = os.Stdout
+	sshCmd.Stderr = os.Stderr
+	return sshCmd.Run()
+}
+
+// NewSessionToken generates a cryptographically random session token.
+func NewSessionToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate session token: %w", err)
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// OpenTunnel starts an SSH tunnel: -L localPort:127.0.0.1:remotePort.
+// It returns the started exec.Cmd so the caller can wait on it or kill it.
+func OpenTunnel(ctx context.Context, opts ConnectOpts) (*exec.Cmd, error) {
+	forward := fmt.Sprintf("%d:127.0.0.1:%d", opts.LocalPort, opts.RemotePort)
+	args := []string{
+		"-N",
+		"-o", "ServerAliveInterval=30",
+		"-o", "ExitOnForwardFailure=yes",
+		"-L", forward,
+		"-p", fmt.Sprintf("%d", opts.SSHPort),
+		fmt.Sprintf("%s@%s", opts.User, opts.Host),
+	}
+	cmd := exec.CommandContext(ctx, "ssh", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("ssh tunnel: %w", err)
+	}
+	return cmd, nil
+}
+
+// OpenBrowser opens the admin URL in the user's default browser.
+func OpenBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
+}
+
+// AdminURL builds the admin URL with the session token as query param.
+func AdminURL(localPort int, token string, project string) string {
+	u := fmt.Sprintf("http://localhost:%d", localPort)
+	params := []string{}
+	if token != "" {
+		params = append(params, "token="+token)
+	}
+	if project != "" {
+		params = append(params, "project="+project)
+	}
+	if len(params) > 0 {
+		u += "?" + strings.Join(params, "&")
+	}
+	return u
+}

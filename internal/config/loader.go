@@ -405,7 +405,11 @@ var knownEnvVars = []string{
 //
 // Cascade order (later overrides earlier):
 //
-//	.env.dev → .env.{ENV} → .env.secrets → .env.local → .env
+//	.env.dev → .env.{ENV} → .env.secrets → .env.local → .env → .env.ai
+//
+// .env.ai is loaded last so the AI tier configuration (generated once by
+// `nself init`, contains NSELF_MASTER_SECRET) always takes effect at plugin
+// startup without requiring a separate loader. Spec: p88 §8.4.
 //
 // Each file is optional. Missing files are silently skipped.
 func Load(projectDir string) (*Config, error) {
@@ -430,6 +434,9 @@ func Load(projectDir string) (*Config, error) {
 		filepath.Join(projectDir, ".env.secrets"),
 		filepath.Join(projectDir, ".env.local"),
 		filepath.Join(projectDir, ".env"),
+		// P88 Sprint 01 T-01-10: AI tier config is loaded last so AI_* vars
+		// always reach plugin-ai at startup. Contains NSELF_MASTER_SECRET.
+		filepath.Join(projectDir, ".env.ai"),
 	)
 
 	// 3. Load each file (skip if not exists, later overrides earlier).

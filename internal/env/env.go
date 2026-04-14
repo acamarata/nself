@@ -83,7 +83,7 @@ func List(projectDir string) []EnvInfo {
 		if strings.HasPrefix(e.Name(), ".env.") {
 			name := strings.TrimPrefix(e.Name(), ".env.")
 			// Skip known suffixes that aren't environments.
-			if name == "example" || name == "local" || name == "secrets" || name == "computed" {
+			if name == "example" || name == "local" || name == "secrets" || name == "computed" || name == "ai" {
 				continue
 			}
 			if !seen[name] {

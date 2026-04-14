@@ -145,6 +145,14 @@ func Initialize(opts Options) (*Result, error) {
 		filesCreated = append(filesCreated, fullFiles...)
 	}
 
+	// P88 Sprint 01 T-01-09: write .env.ai (AI tier config + master secret).
+	// O_EXCL: preserved across re-runs — the master secret must never rotate.
+	if created, err := writeEnvAI(opts.WorkDir); err != nil {
+		return nil, fmt.Errorf("writing .env.ai: %w", err)
+	} else if created {
+		filesCreated = append(filesCreated, ".env.ai")
+	}
+
 	// Append to .gitignore.
 	if err := ensureGitignore(opts.WorkDir); err != nil {
 		return nil, fmt.Errorf("updating .gitignore: %w", err)
@@ -551,6 +559,7 @@ var gitignoreEntries = []string{
 	".env.local",
 	".env.*.local",
 	".env.secrets",
+	".env.ai",
 	".volumes/",
 	"logs/",
 	"*.log",

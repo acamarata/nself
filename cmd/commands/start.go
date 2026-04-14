@@ -156,6 +156,25 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// ── AI auto-install (T-05-05) ──────────────────────────────────
+	// If AI_AUTO_INSTALL=true (default in .env.ai), run doctor --ai --yes
+	// --skip-pool to at least get Ollama running before the stack boots.
+	if aiAutoInstall := os.Getenv("AI_AUTO_INSTALL"); aiAutoInstall == "" || strings.EqualFold(aiAutoInstall, "true") {
+		envAIPath := filepath.Join(projectDir, ".env.ai")
+		if _, err := os.Stat(envAIPath); err == nil {
+			if !ollamaHealthy(ctx) {
+				ui.Info("AI_AUTO_INSTALL: setting up local AI...")
+				_ = runDoctorAI(ctx, doctorAIFlags{
+					yes:        true,
+					skipPool:   true,
+					skipOllama: false,
+					headless:   false,
+					jsonOut:    false,
+				})
+			}
+		}
+	}
+
 	// ── Auto-build detection ────────────────────────────────────────
 	// Run BEFORE the docker-compose.yml check because build creates it.
 	if !opts.skipBuild {

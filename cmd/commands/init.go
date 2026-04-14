@@ -178,7 +178,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Next steps.
 	ui.Section("Next steps")
-	fmt.Printf("  1. Edit %s to customize your project\n", ui.C(ui.Bold, ".env"))
+	fmt.Printf("  1. %s  %s Set up unlimited AI in 30 seconds\n", ui.C(ui.Bold, "nself doctor --ai"), ui.C(ui.Dim, ui.IconArrow))
 	fmt.Printf("  2. %s  %s Launch your backend\n", ui.C(ui.Bold, "nself start"), ui.C(ui.Dim, ui.IconArrow))
 	fmt.Println()
 

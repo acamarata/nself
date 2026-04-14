@@ -210,6 +210,14 @@ var secretsRotateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		dualWindow, _ := cmd.Flags().GetBool("dual-window")
+		if dualWindow {
+			if err := secrets.RotateDualWindow(cwd, secretsEnvFlag, args[0]); err != nil {
+				return err
+			}
+			fmt.Printf("Secret %s rotated with dual-key window. Both _CURRENT and _PREVIOUS are active.\n", args[0])
+			return nil
+		}
 		newValue, err := secrets.Rotate(cwd, secretsEnvFlag, args[0])
 		if err != nil {
 			return err
@@ -219,6 +227,60 @@ var secretsRotateCmd = &cobra.Command{
 		} else {
 			fmt.Printf("Secret %s rotated. New value: %s\n", args[0], newValue)
 		}
+		return nil
+	},
+}
+
+var secretsRetireCmd = &cobra.Command{
+	Use:   "retire <KEY>",
+	Short: "Retire the _PREVIOUS variant of a dual-window rotated secret",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		if err := secrets.RetireOldKey(cwd, secretsEnvFlag, args[0]); err != nil {
+			return err
+		}
+		fmt.Printf("Retired %s_PREVIOUS. Only the new key remains.\n", args[0])
+		return nil
+	},
+}
+
+var secretsScheduleCmd = &cobra.Command{
+	Use:   "schedule",
+	Short: "Show rotation schedule status for all tracked secrets",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		checks, err := secrets.CheckSchedule(cwd)
+		if err != nil {
+			return err
+		}
+		if len(checks) == 0 {
+			fmt.Println("No rotation schedules configured.")
+			return nil
+		}
+		tbl := ui.NewTable("Secret", "Cadence", "Window", "Next Due", "Due In", "Status")
+		for _, c := range checks {
+			dueIn := "-"
+			if c.DueInDays >= 0 {
+				dueIn = fmt.Sprintf("%dd", c.DueInDays)
+			}
+			nextDue := c.NextDue
+			if len(nextDue) > 10 {
+				nextDue = nextDue[:10]
+			}
+			if nextDue == "" {
+				nextDue = "-"
+			}
+			tbl.AddRow(c.SecretName, fmt.Sprintf("%dd", c.CadenceDays),
+				fmt.Sprintf("%dd", c.WindowDays), nextDue, dueIn, c.Status)
+		}
+		tbl.Render()
 		return nil
 	},
 }
@@ -313,6 +375,7 @@ func init() {
 	secretsCmd.PersistentFlags().StringVar(&secretsEnvFlag, "env", "dev", "Environment (dev, staging, prod)")
 
 	secretsRekeyCmd.Flags().String("remove", "", "Public key to remove from recipients")
+	secretsRotateCmd.Flags().Bool("dual-window", false, "Keep old key as _PREVIOUS during overlap window")
 
 	secretsCmd.AddCommand(secretsInitCmd)
 	secretsCmd.AddCommand(secretsSetCmd)
@@ -320,6 +383,8 @@ func init() {
 	secretsCmd.AddCommand(secretsListCmd)
 	secretsCmd.AddCommand(secretsEditCmd)
 	secretsCmd.AddCommand(secretsRotateCmd)
+	secretsCmd.AddCommand(secretsRetireCmd)
+	secretsCmd.AddCommand(secretsScheduleCmd)
 	secretsCmd.AddCommand(secretsDecryptOnDeployCmd)
 	secretsCmd.AddCommand(secretsAuditCmd)
 	secretsCmd.AddCommand(secretsLintCmd)

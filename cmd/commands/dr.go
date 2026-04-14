@@ -34,6 +34,41 @@ var drDrillCmd = &cobra.Command{
 }
 
 func runDRDrill(cmd *cobra.Command, _ []string) error {
+	// Ops-only flags short-circuit before loading project config: these are
+	// invoked on nclaw-prod (or any host with /etc/nself/dr.env) where the
+	// local working directory does not need to be a nSelf project root.
+	if renderCI, _ := cmd.Flags().GetBool("render-cloud-init"); renderCI {
+		yaml, err := dr.RenderCloudInit(dr.CloudInitParams{
+			DrillID:      "render-preview",
+			SSHPublicKey: "ssh-ed25519 AAAA...preview",
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Print(yaml)
+		return nil
+	}
+	if renderAlerts, _ := cmd.Flags().GetBool("render-alerts"); renderAlerts {
+		fmt.Print(dr.DrillAlertRuleYAML)
+		return nil
+	}
+	if installCron, _ := cmd.Flags().GetBool("install-cron"); installCron {
+		schedule, _ := cmd.Flags().GetString("schedule")
+		project, _ := cmd.Flags().GetString("hetzner-project")
+		vmType, _ := cmd.Flags().GetString("vm-type")
+		sshKey, _ := cmd.Flags().GetString("ssh-key")
+		region, _ := cmd.Flags().GetString("region")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		return dr.InstallSystemdUnits(dr.SystemdInstallOptions{
+			Schedule:       schedule,
+			HetznerProject: project,
+			VMType:         vmType,
+			SSHKey:         sshKey,
+			Region:         region,
+			DryRun:         dryRun,
+		})
+	}
+
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -41,6 +76,13 @@ func runDRDrill(cmd *cobra.Command, _ []string) error {
 
 	scenario, _ := cmd.Flags().GetString("scenario")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	now, _ := cmd.Flags().GetBool("now")
+
+	// --now is the cron/manual entrypoint for the full provision-restore-smoke
+	// lifecycle. It defaults to cold-start if no scenario is provided.
+	if now && scenario == "" {
+		scenario = string(dr.ScenarioColdStart)
+	}
 
 	result, err := dr.Drill(cmd.Context(), cfg, dr.DrillOptions{
 		Scenario: dr.Scenario(scenario),
@@ -162,6 +204,15 @@ func init() {
 	// dr drill flags
 	drDrillCmd.Flags().String("scenario", "cold-start", "Drill scenario: cold-start, region-failover, data-corruption")
 	drDrillCmd.Flags().Bool("dry-run", false, "Preview only")
+	drDrillCmd.Flags().Bool("now", false, "Run a full provision-restore-smoke-destroy drill immediately (cron entrypoint)")
+	drDrillCmd.Flags().Bool("install-cron", false, "Install the monthly drill systemd timer (nself-dr-drill.timer)")
+	drDrillCmd.Flags().String("schedule", "monthly", "Drill cadence for --install-cron (only \"monthly\" supported)")
+	drDrillCmd.Flags().String("hetzner-project", "", "Hetzner project name (e.g. camarata) used for drill VM")
+	drDrillCmd.Flags().String("vm-type", "cx22", "Hetzner server type for drill VM")
+	drDrillCmd.Flags().String("ssh-key", "/root/.config/nself/dr-key.pub", "Public SSH key path injected into drill VM")
+	drDrillCmd.Flags().String("region", "fsn1", "Hetzner location for drill VM provisioning")
+	drDrillCmd.Flags().Bool("render-cloud-init", false, "Print the cloud-init user-data template and exit")
+	drDrillCmd.Flags().Bool("render-alerts", false, "Print the Prometheus/Alertmanager DRDrillFailed rule and exit")
 
 	// dr promote-standby flags
 	drPromoteCmd.Flags().String("region", "", "Target region for promotion")

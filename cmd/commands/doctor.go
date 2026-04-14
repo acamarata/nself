@@ -12,6 +12,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/doctor"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/ui"
@@ -62,9 +63,76 @@ Exit codes:
 		}
 		fix, _ := cmd.Flags().GetBool("fix")
 		jsonOut, _ := cmd.Flags().GetBool("json")
+		formatFlag, _ := cmd.Flags().GetString("format")
+		onlySection, _ := cmd.Flags().GetString("only")
+		if formatFlag == "json" {
+			jsonOut = true
+		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		// ── AI wizard mode (T-05-01) ────────────────────────────────
+		aiMode, _ := cmd.Flags().GetBool("ai")
+		if aiMode {
+			yes, _ := cmd.Flags().GetBool("yes")
+			skipOllama, _ := cmd.Flags().GetBool("skip-ollama")
+			skipPool, _ := cmd.Flags().GetBool("skip-pool")
+			headless, _ := cmd.Flags().GetBool("headless")
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+			defer cancel()
+			return runDoctorAI(ctx, doctorAIFlags{
+				yes:        yes,
+				skipOllama: skipOllama,
+				skipPool:   skipPool,
+				headless:   headless,
+				jsonOut:    jsonOut,
+			})
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		defer cancel()
+
+		cwd, _ := os.Getwd()
+
+		// Deep mode: run all 12 subsystem checks via doctor package
+		if deep {
+			deepResults := doctor.DeepChecks(ctx, cwd, verbose)
+
+			// Apply --only filter
+			if onlySection != "" {
+				deepResults = doctor.FilterBySection(deepResults, onlySection)
+			}
+
+			// Apply fix-it engine
+			if fix {
+				doctor.FixItEngine(ctx, deepResults)
+			}
+
+			// Convert to doctorCheckResult
+			var checks []doctorCheckResult
+			for _, r := range deepResults {
+				checks = append(checks, doctorCheckResult{
+					Name:    fmt.Sprintf("[%s] %s", r.Section, r.Name),
+					Status:  r.Status,
+					Message: r.Message,
+					Detail:  r.FixCmd,
+				})
+			}
+
+			report := buildDoctorReport(checks)
+			if jsonOut {
+				return printDoctorJSON(report)
+			}
+			if !jsonOut {
+				ui.CommandHeader("nSelf Doctor (Deep)", "All 12 subsystem checks")
+			}
+			printDoctorSummary(report)
+			if report.Summary.Failed > 0 {
+				os.Exit(1)
+			}
+			if report.Summary.Warnings > 0 {
+				os.Exit(2)
+			}
+			return nil
+		}
 
 		if !jsonOut {
 			ui.CommandHeader("nSelf Doctor", "System diagnostics")
@@ -102,8 +170,6 @@ Exit codes:
 			}
 			checks = append(checks, checkNetwork(ctx, verbose))
 		}
-
-		cwd, _ := os.Getwd()
 
 		// 5. Port availability
 		if !jsonOut {
@@ -906,5 +972,13 @@ func init() {
 	doctorCmd.Flags().String("section", "", "Run only a specific section (system, core, backups, license, plugins, monitoring, security)")
 	doctorCmd.Flags().StringSlice("skip", nil, "Skip specific check sections")
 	doctorCmd.Flags().Bool("alerts", false, "Check monitoring alert rules are loaded")
+	doctorCmd.Flags().String("format", "", "Output format: json, text (default text)")
+	doctorCmd.Flags().String("only", "", "Run only a specific subsystem check (host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security)")
+	// AI wizard flags (T-05-01, T-05-02)
+	doctorCmd.Flags().Bool("ai", false, "Run the AI first-run wizard (install Ollama, setup Gemini pool, verify)")
+	doctorCmd.Flags().Bool("yes", false, "Non-interactive mode: accept all defaults (for CI/scripts)")
+	doctorCmd.Flags().Bool("skip-ollama", false, "Skip local Ollama installation step")
+	doctorCmd.Flags().Bool("skip-pool", false, "Skip Gemini pool setup step")
+	doctorCmd.Flags().Bool("headless", false, "Print OAuth URL instead of opening browser (for SSH/headless servers)")
 	RootCmd.AddCommand(doctorCmd)
 }

@@ -132,11 +132,37 @@ var watchdogHistoryCmd = &cobra.Command{
 	},
 }
 
+var watchdogTestAlertCmd = &cobra.Command{
+	Use:   "test-alert",
+	Short: "Send a test alert through all configured channels (TG + email)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		service, _ := cmd.Flags().GetString("service")
+		severity, _ := cmd.Flags().GetString("severity")
+
+		ui.CommandHeader("Watchdog Test Alert", "")
+		delivered, errs := watchdog.TestAlert(service, severity)
+
+		for _, ch := range delivered {
+			ui.Success(fmt.Sprintf("Delivered to %s", ch))
+		}
+		for _, err := range errs {
+			ui.Warn(fmt.Sprintf("Channel error: %v", err))
+		}
+
+		if len(delivered) == 0 {
+			return fmt.Errorf("no alerts delivered — check WATCHDOG_TG_BOT_TOKEN and SMTP env vars")
+		}
+		return nil
+	},
+}
+
 func init() {
 	watchdogStatusCmd.Flags().Bool("json", false, "JSON output")
 	watchdogHistoryCmd.Flags().String("since", "24h", "Show events since duration (e.g. 24h, 7d)")
 	watchdogHistoryCmd.Flags().Bool("json", false, "JSON output")
+	watchdogTestAlertCmd.Flags().String("service", "test-service", "Service name for the test alert")
+	watchdogTestAlertCmd.Flags().String("severity", "critical", "Severity level (warning, critical)")
 
-	watchdogCmd.AddCommand(watchdogStatusCmd, watchdogResetCmd, watchdogHistoryCmd)
+	watchdogCmd.AddCommand(watchdogStatusCmd, watchdogResetCmd, watchdogHistoryCmd, watchdogTestAlertCmd)
 	RootCmd.AddCommand(watchdogCmd)
 }

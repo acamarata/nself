@@ -1,0 +1,40 @@
+# Changelog
+
+All notable changes to the nSelf CLI are documented in this file. Format loosely
+follows Keep a Changelog, with Conventional Commit classification.
+
+## [1.0.5] — 2026-04-15
+
+### Highlights
+- Docker DNS fix: plugin-to-plugin resolution now works via explicit compose network aliases
+- Installer tarball path + filename alignment (fixes failed installs on some platforms)
+- CLI error model: `os.Exit` calls replaced with returned errors across the command tree
+- SSE buffer, signal handling, proxy CORS, and export pagination fixes
+- 10 new `claw` subcommands for direct nClaw interaction
+- Nginx resolver now uses the variable pattern everywhere, preventing Docker IP caching
+
+### Added
+- feat(claw): 10 CLI commands for interacting with nClaw (memory, topics, briefings,
+  audit, tool dispatch, and pool status)
+
+### Fixed
+- fix(build): plugin compose file emits a network alias for `plugin-<name>` so
+  other plugins can resolve it by short name (Docker DNS regression)
+- fix: installer tarball filename and extraction path mismatch that caused some
+  `curl | sh` installs to fail silently
+- fix(cli): replace `os.Exit` with returned errors; correct SSE buffer flush;
+  proper signal handling on shutdown; fix proxy CORS preflight; repair export
+  pagination cursor math
+- fix(nginx): always use the resolver variable pattern for upstreams so Docker
+  container IP changes are picked up without a reload
+
+### Changed
+- P87 MEGA CLI batch: assorted stability and correctness changes rolled up from
+  the ɳClaw P87 release
+
+### Breaking
+- (none)
+
+---
+
+Older entries are tracked in `.claude/docs/CHANGELOG.md` and in GitHub Releases.
