@@ -29,14 +29,11 @@ func Rollback(ctx context.Context, cfg *config.Config) error {
 
 	// Step 2: Reconfigure DNS back to original primary.
 	slog.Info("step 2: restoring DNS to original primary")
-	// Placeholder: would need the original primary IP.
-	slog.Warn("manual DNS restoration may be needed")
+	slog.Warn("automatic DNS restoration is not yet available — Cloudflare API integration is pending. Manually update DNS A records to point back to the original primary via the Cloudflare dashboard")
 
 	// Step 3: Resync standby from original primary using pg_basebackup.
 	slog.Info("step 3: resyncing standby from primary")
-
-	slog.Info("rollback complete")
-	return nil
+	return fmt.Errorf("%w: pg_basebackup resync is not yet automated — manually run pg_basebackup on %s to restore replication from the original primary", errs.ErrDRRollbackFailed, standbyHost)
 }
 
 // Fence sets a read-only flag in Redis for split-brain prevention.

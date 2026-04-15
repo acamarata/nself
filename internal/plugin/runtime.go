@@ -261,6 +261,12 @@ func Start(ctx context.Context, pluginDir string, name string) error {
 		return fmt.Errorf("setting running state for %s: %w", name, err)
 	}
 
+	// Check plugin interface contract compliance (non-blocking).
+	// Logs warnings for non-compliant plugins but does not prevent startup.
+	if manifest != nil && manifest.Port > 0 {
+		CheckCompliance(ctx, name, manifest.Port)
+	}
+
 	return nil
 }
 

@@ -61,10 +61,8 @@ var billingInvoicePreviewCmd = &cobra.Command{
 	RunE:  runBillingInvoicePreview,
 }
 
-func runBillingInvoicePreview(_ *cobra.Command, _ []string) error {
-	// Stripe API integration requires live STRIPE_SECRET_KEY.
-	// This is a placeholder that will be wired when Stripe SDK is added.
-	return fmt.Errorf("invoice-preview requires STRIPE_SECRET_KEY configuration. Not yet integrated with live Stripe API")
+func runBillingInvoicePreview(_ *cobra.Command, args []string) error {
+	return fmt.Errorf("billing invoice-preview is not yet available: Stripe API integration is pending. Use 'nself billing usage %s' for current usage data, or check your Stripe dashboard directly", args[0])
 }
 
 // ── billing report ─────────────────────────────────────────────────

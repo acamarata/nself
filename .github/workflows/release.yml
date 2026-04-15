@@ -55,5 +55,5 @@ jobs:
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/homebrew-nself
-          event-type: release
-          client-payload: '{"tag": "${{ github.ref_name }}"}'
+          event-type: cli-release
+          client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'

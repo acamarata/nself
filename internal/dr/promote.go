@@ -60,8 +60,5 @@ func ReconfigureDNS(ctx context.Context, cfg *config.Config, newIP string) error
 
 	slog.Info("updating Cloudflare DNS", "domain", domain, "new_ip", newIP)
 
-	// Use Cloudflare API via curl or cf CLI.
-	// This is a placeholder for the actual Cloudflare API integration.
-	slog.Warn("DNS reconfiguration requires manual Cloudflare API calls", "domain", domain, "ip", newIP)
-	return nil
+	return fmt.Errorf("DNS reconfiguration is not yet available: Cloudflare API integration is pending. Manually update the A record for %s to %s via the Cloudflare dashboard", domain, newIP)
 }
