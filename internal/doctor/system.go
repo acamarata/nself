@@ -155,6 +155,9 @@ func BackupChecks(_ context.Context, projectDir string) []CheckResult {
 func SecurityChecks(ctx context.Context, projectDir string) []CheckResult {
 	var results []CheckResult
 
+	// JWT secret presence — Hasura refuses to start without it.
+	results = append(results, CheckJWTSecretPresent(projectDir))
+
 	// Check for root containers
 	cmd := exec.CommandContext(ctx, "docker", "ps", "--format", "{{.Names}}")
 	out, err := cmd.Output()

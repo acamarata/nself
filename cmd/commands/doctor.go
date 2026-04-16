@@ -184,6 +184,7 @@ Exit codes:
 		}
 		checks = append(checks, checkEnvExists(cwd, verbose))
 		checks = append(checks, checkPasswordStrength(cwd, verbose, fix)...)
+		checks = append(checks, checkJWTSecretPresent(cwd, verbose))
 
 		// 7. Route consistency + port range sanity + config validators
 		if !jsonOut {
@@ -480,6 +481,15 @@ func isWeakPassword(value string) bool {
 		}
 	}
 	return false
+}
+
+// checkJWTSecretPresent reports whether HASURA_GRAPHQL_JWT_SECRET is defined
+// in the project's env files. Fails the command if absent everywhere.
+// Hasura is always a core service in nSelf, so this check runs unconditionally.
+func checkJWTSecretPresent(projectDir string, verbose bool) doctorCheckResult {
+	r := doctor.CheckJWTSecretPresent(projectDir)
+	printCheck(r.Status, r.Name, r.Message, verbose)
+	return doctorCheckResult{Name: r.Name, Status: r.Status, Message: r.Message, Detail: r.FixCmd}
 }
 
 // checkContainerHealth inspects running containers and reports their health.
