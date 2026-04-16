@@ -19,8 +19,14 @@ Subcommands:
   invoice-preview  Preview next Stripe invoice (requires STRIPE_SECRET_KEY)
   report           Generate billing report across tenants
   retry-event      Re-enqueue a failed Stripe outbox event`,
+	// Only run when invoked without a subcommand. Cobra dispatches known
+	// subcommands to their own RunE before reaching here. Unknown args bubble
+	// up as an error so users see "unknown command" rather than silent help.
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		return fmt.Errorf("unknown billing subcommand %q; run 'nself billing --help' for the list", args[0])
 	},
 }
 
