@@ -3,6 +3,20 @@
 All notable changes to the nSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.0.8] — 2026-04-16
+
+P92 quick-fix batch.
+
+### Fixed
+
+- **`nself ai` default plugin URL.** `nself ai pool list`, `nself ai local
+  status`, and the rest of the `ai` subcommands defaulted to
+  `http://ai:3680`, which matched neither the real plugin-ai port (3709)
+  nor the generated docker-compose service name (`plugin-ai`). Users had
+  to set `PLUGIN_AI_INTERNAL_URL` manually to reach the plugin from
+  inside compose. Default is now `http://plugin-ai:3709`; the env-var
+  override still wins for non-standard deployments.
+
 ## [1.0.7] — 2026-04-16
 
 P92 Wave 7 companion patch release. Three bugfixes on top of v1.0.6.
