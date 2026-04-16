@@ -224,10 +224,10 @@ func (g *Generator) buildAuthService() (ServiceConfig, error) {
 		},
 		Environment: env,
 		Ports: []string{
-			fmt.Sprintf("127.0.0.1:%d:4002", cfg.Auth.Port),
+			fmt.Sprintf("127.0.0.1:%d:%d", cfg.Auth.Port, cfg.Auth.Port),
 		},
 		Healthcheck: &Healthcheck{
-			Test:        []string{"CMD", "wget", "-qO-", "http://localhost:4002/healthz"},
+			Test:        []string{"CMD", "wget", "-qO-", fmt.Sprintf("http://localhost:%d/healthz", cfg.Auth.Port)},
 			Interval:    "30s",
 			Timeout:     "10s",
 			Retries:     3,

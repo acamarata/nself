@@ -251,8 +251,8 @@ func TestComputeAllowedRedirectURLs_FrontendApps(t *testing.T) {
 
 // ── buildAuthService integration ─────────────────────────────────────────────
 
-// TestBuildAuthService_Port4000 verifies that the auth service host mapping uses
-// Auth.Port and maps to the container's internal port 4002.
+// TestBuildAuthService_Port4000 verifies that the auth service port mapping uses
+// Auth.Port for both host and container sides (nhost/hasura-auth listens on AUTH_PORT).
 func TestBuildAuthService_Port4000(t *testing.T) {
 	cfg := minimalConfig() // Auth.Port = 4000
 
@@ -264,7 +264,7 @@ func TestBuildAuthService_Port4000(t *testing.T) {
 
 	found := false
 	for _, p := range svc.Ports {
-		if strings.Contains(p, "4000") && strings.Contains(p, "4002") {
+		if strings.Contains(p, "4000:4000") {
 			found = true
 		}
 		if strings.Contains(p, "8080") {
@@ -272,13 +272,14 @@ func TestBuildAuthService_Port4000(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("auth service Ports must map host 4000 to container 4002; got: %v", svc.Ports)
+		t.Errorf("auth service Ports must map host 4000 to container 4000; got: %v", svc.Ports)
 	}
 }
 
-// TestBuildAuthService_HealthcheckPort4002 verifies that the healthcheck URL
-// uses port 4002 (nhost/hasura-auth internal port) and not port 8080 (Hasura).
-func TestBuildAuthService_HealthcheckPort4002(t *testing.T) {
+// TestBuildAuthService_HealthcheckUsesAuthPort verifies that the healthcheck URL
+// uses Auth.Port (the port nhost/hasura-auth listens on via AUTH_PORT) and not
+// port 8080 (Hasura).
+func TestBuildAuthService_HealthcheckUsesAuthPort(t *testing.T) {
 	cfg := minimalConfig()
 
 	g := NewGenerator(cfg)
@@ -293,21 +294,21 @@ func TestBuildAuthService_HealthcheckPort4002(t *testing.T) {
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
 
-	if !strings.Contains(hcStr, "4002") {
-		t.Errorf("auth healthcheck must reference port 4002, got: %s", hcStr)
+	// Auth.Port defaults to 4000 — healthcheck must match the listening port.
+	if !strings.Contains(hcStr, "4000") {
+		t.Errorf("auth healthcheck must reference port 4000 (Auth.Port), got: %s", hcStr)
 	}
 	if strings.Contains(hcStr, "8080") {
 		t.Errorf("auth healthcheck must not reference port 8080 (Hasura), got: %s", hcStr)
 	}
 }
 
-// TestBuildAuthService_HealthcheckHardcoded4002 verifies that the healthcheck
-// uses the hardcoded container port 4002 even when AUTH_PORT is set to a
-// different value. nhost/hasura-auth always binds on 4002 internally — the
-// AUTH_PORT env var controls only the host-side port mapping.
-func TestBuildAuthService_HealthcheckHardcoded4002(t *testing.T) {
+// TestBuildAuthService_HealthcheckFollowsAuthPort verifies that when Auth.Port
+// is set to a non-default value, both the healthcheck and port mapping use that
+// value. nhost/hasura-auth binds on the port specified by AUTH_PORT env var.
+func TestBuildAuthService_HealthcheckFollowsAuthPort(t *testing.T) {
 	cfg := minimalConfig()
-	cfg.Auth.Port = 4001 // non-default host port
+	cfg.Auth.Port = 4001 // non-default port
 
 	g := NewGenerator(cfg)
 	svc, err := g.buildAuthService()
@@ -321,21 +322,18 @@ func TestBuildAuthService_HealthcheckHardcoded4002(t *testing.T) {
 
 	hcStr := strings.Join(svc.Healthcheck.Test, " ")
 
-	if !strings.Contains(hcStr, "4002") {
-		t.Errorf("auth healthcheck must always use container port 4002, got: %s", hcStr)
-	}
-	if strings.Contains(hcStr, "4001") {
-		t.Errorf("auth healthcheck must not use host AUTH_PORT 4001, got: %s", hcStr)
+	if !strings.Contains(hcStr, "4001") {
+		t.Errorf("auth healthcheck must use Auth.Port 4001, got: %s", hcStr)
 	}
 
-	// Port mapping must be host:container = 4001:4002
+	// Port mapping must be host:container = 4001:4001
 	found := false
 	for _, p := range svc.Ports {
-		if strings.Contains(p, "4001") && strings.Contains(p, "4002") {
+		if strings.Contains(p, "4001:4001") {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("auth port mapping must be host:4001->container:4002; got: %v", svc.Ports)
+		t.Errorf("auth port mapping must be host:4001->container:4001; got: %v", svc.Ports)
 	}
 }
