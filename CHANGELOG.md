@@ -3,6 +3,23 @@
 All notable changes to the nSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.0.6] — 2026-04-16
+
+### Highlights
+- P89 goreleaser configuration, homebrew release webhook fix, env variable documentation, monitoring compose wiring, compliance checker
+- P90 fixes + polish across the command tree
+- Coordinated release alongside plugins-pro v1.0.1 P92 (200-OK fixes, handler test coverage, AI/Google/Claw/Mux/Voice/Notify/Browser hardening, 8 Grafana dashboards, Alertmanager rules, Querier interface refactor, BaseURL injection, health tool wiring)
+
+### Added
+- P89: goreleaser config for cross-platform binaries
+- P89: monitoring docker-compose wiring for Prometheus/Grafana/Loki bundle
+- P89: compliance checker command
+- P89: expanded env var documentation across all generators
+
+### Fixed
+- P89: homebrew formula release webhook — correct sha256 computation and URL formatting on release
+- P90: assorted fixes and polish (see git log 5d232ec)
+
 ## [1.0.5] — 2026-04-15
 
 ### Highlights
