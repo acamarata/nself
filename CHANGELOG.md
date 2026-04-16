@@ -3,6 +3,34 @@
 All notable changes to the nSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.0.7] — 2026-04-16
+
+P92 Wave 7 companion patch release. Three bugfixes on top of v1.0.6.
+
+### Fixed
+
+- **Billing subcommands dispatch correctly.** `nself billing usage`, `nself
+  billing invoice-preview`, `nself billing report`, `nself billing retry-event`
+  now reach their handlers. The parent `billing` command was unconditionally
+  returning `cmd.Help()`, shadowing every subcommand. Parent `RunE` is now
+  conditional: help renders only when no subcommand was provided.
+  (`cli/cmd/commands/billing.go`)
+
+### Added
+
+- **JWT secret auto-persist on `nself build`.** When Hasura is enabled but
+  `HASURA_GRAPHQL_JWT_SECRET` is absent, the CLI generates a secure random
+  secret via `crypto/rand` and writes it to `.env.secrets` with mode `0600`.
+  Manual copy-from-wiki steps are no longer required for new projects.
+- **`nself doctor` JWT check.** Non-zero exit code when Hasura is enabled and
+  no JWT secret is found in either `.env` or `.env.secrets`.
+- **Doctor test coverage.** Report aggregation, env checks, password validation
+  paths now have unit tests.
+
+### Internal
+
+- Generated `.env.secrets` always chmod `0600` per decision D15.
+
 ## [1.0.6] — 2026-04-16
 
 ### Highlights
