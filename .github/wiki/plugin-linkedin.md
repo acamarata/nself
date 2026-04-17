@@ -1,67 +1,106 @@
 # LinkedIn Plugin
 
-> LinkedIn publishing integration. OAuth 2.0, post to feed with optional images, post history, Claw tool descriptor. **Pro plugin.**
+> LinkedIn publishing integration with OAuth 2.0 and post history. **Pro plugin. Requires license.**
 
-> **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
-> **Status:** beta
+## Tier required
+
+| Tier | Monthly | Annual | Includes this plugin? |
+|------|---------|--------|----------------------|
+| Free | $0 | $0 | No |
+| Basic | $0.99/mo | $9.99/yr | Yes |
+| Pro | $1.99/mo | $19.99/yr | Yes |
+| Elite | $4.99/mo | $49.99/yr | Yes |
+| Business | $9.99/mo | $99.99/yr | Yes |
+| Business+ | $49.99/mo | $499.99/yr | Yes |
+| Enterprise | $99.99/mo | $999.99/yr | Yes |
+
+**Minimum tier:** Basic (this is a `tier: pro` plugin per F07-PRICING-TIERS).
+
+## Bundle membership
+
+Not currently bundled. Purchase a tier subscription (Basic and up) for access.
+
+Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
 
 ## Install
 
 ```bash
-nself license set nself_pro_xxxxx...
+nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 nself plugin install linkedin
+nself build
 ```
 
-## What It Does
+The license is validated against `ping.nself.org/license/validate`. Tier is checked server-side; insufficient tier returns an error.
 
-Authenticates users via LinkedIn OAuth 2.0 and publishes posts to their feed with optional image attachments. Stores tokens per account and keeps a local post-history log. Exposes a Claw tool descriptor so the ɳClaw agent can compose and publish posts conversationally.
+## Description
+
+The LinkedIn plugin connects a LinkedIn account via OAuth 2.0, posts to a member's LinkedIn feed with optional image attachments, and tracks post history for later reference. It also exposes a Claw tool descriptor so ɳClaw can publish on the user's behalf.
+
+OAuth tokens are stored per `source_account_id`, so multi-tenant nSelf installs keep each user's LinkedIn credentials isolated. The plugin is currently in `beta` status.
 
 ## Configuration
 
-| Env Var | Required | Description |
-|---------|----------|-------------|
-| `DATABASE_URL` | Yes | Postgres connection string |
-| `LINKEDIN_CLIENT_ID` | Yes | LinkedIn OAuth app client ID |
-| `LINKEDIN_CLIENT_SECRET` | Yes | LinkedIn OAuth app client secret |
-| `LINKEDIN_REDIRECT_URI` | Yes | OAuth callback URL registered with LinkedIn |
-| `LINKEDIN_INTERNAL_SECRET` | Yes | Shared secret for internal API calls |
-| `PORT` | No | Override default port (3722) |
-| `BIND_ADDRESS` | No | Override bind address (default `127.0.0.1`) |
-| `NSELF_PLUGIN_LICENSE_KEY` | No | License key (usually inherited from global) |
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `DATABASE_URL` | — | Postgres connection string (required) |
+| `LINKEDIN_CLIENT_ID` | — | LinkedIn OAuth app client ID (required) |
+| `LINKEDIN_CLIENT_SECRET` | — | LinkedIn OAuth app client secret (required) |
+| `LINKEDIN_REDIRECT_URI` | — | OAuth callback URL (required) |
+| `LINKEDIN_INTERNAL_SECRET` | — | Internal request signing secret (required) |
+| `PORT` | `3722` | LinkedIn service port |
+| `BIND_ADDRESS` | `127.0.0.1` | Bind address for the service |
+| `NSELF_PLUGIN_LICENSE_KEY` | — | License key (read from CLI by default) |
 
 ## Ports
 
 | Port | Purpose |
 |------|---------|
-| 3722 | REST API + OAuth callback handler |
+| 3722 | LinkedIn service REST API |
 
-## Database Tables
+## Database Schema
 
-2 tables added to your Postgres database:
-- `np_linkedin_tokens` — per-account OAuth tokens (encrypted at rest)
-- `np_linkedin_posts` — published post history
+2 tables added to your Postgres database (prefix: `np_linkedin_`):
 
-## Capabilities
+- `np_linkedin_tokens` — OAuth access and refresh tokens per account
+- `np_linkedin_posts` — published post history with status
 
-- LinkedIn OAuth 2.0 (authorization code flow)
-- Publish text posts with optional image attachment
-- Per-account token storage with refresh
-- Post-history log for audit and analytics
-- Claw tool descriptor — ɳClaw can compose and publish posts
+## REST API
 
-## Multi-Tenant
+```
+GET  /health                       — Health check
+GET  /oauth/start                  — Begin OAuth connection
+GET  /oauth/callback               — Complete OAuth handshake
+POST /posts                        — Publish a post to the connected feed
+GET  /posts                        — List published posts
+```
 
-Supported via the `source_account_id` isolation column. Each app in a shared backend sees only its own tokens and post history.
+## Examples
 
-## Setup: LinkedIn OAuth App
+### Publish a text post
 
-1. Create an OAuth app at <https://www.linkedin.com/developers/apps>
-2. Configure the redirect URI to match `LINKEDIN_REDIRECT_URI`
-3. Request the `w_member_social` scope for publishing
-4. Copy the Client ID and Client Secret into your `.env.secrets`
+```bash
+curl -X POST http://localhost:3722/posts \
+  -H "Content-Type: application/json" \
+  -d '{"text":"New ɳSelf release shipping today.","visibility":"PUBLIC"}'
+```
 
-## Health Check
+### List recent posts
 
-`GET /health` — returns 200 when the database and LinkedIn API reachability are healthy.
+```bash
+curl http://localhost:3722/posts
+```
+
+## Source
+
+Source-available (license required to run): [`plugins-pro/paid/linkedin/`](https://github.com/nself-org/plugins-pro/tree/main/paid/linkedin)
+
+Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+ subscribers and Enterprise customers.
+
+## See Also
+
+- [[plugin-post]] — multi-platform publisher (includes LinkedIn as a target)
+- [[plugin-google]] — similar OAuth-driven integration pattern
+- [[Plugin-Licensing]] — tier comparison
+- [[Plugin-Overview]] — full plugin index
 
 ← [[Plugin-Overview]] | [[Home]] →

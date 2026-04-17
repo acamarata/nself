@@ -1,80 +1,113 @@
 # Claw News Plugin
 
-> News aggregation, AI summarization, and alerting for ɳClaw. **Pro plugin.**
+> News aggregation, AI summarization, and breaking-news alerts for ɳClaw. **Pro plugin. Requires license.**
 
-> **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
+## Tier required
+
+| Tier | Monthly | Annual | Includes this plugin? |
+|------|---------|--------|----------------------|
+| Free | $0 | $0 | No |
+| Basic | $0.99/mo | $9.99/yr | Yes |
+| Pro | $1.99/mo | $19.99/yr | Yes |
+| Elite | $4.99/mo | $49.99/yr | Yes |
+| Business | $9.99/mo | $99.99/yr | Yes |
+| Business+ | $49.99/mo | $499.99/yr | Yes |
+| Enterprise | $99.99/mo | $999.99/yr | Yes |
+
+**Minimum tier:** Basic (this is a `tier: pro` plugin per F07-PRICING-TIERS).
+
+## Bundle membership
+
+This plugin is included in the following bundles:
+
+- **ɳClaw Bundle** ($0.99/mo) — see [[bundle-nclaw]]
+
+Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
 
 ## Install
 
 ```bash
-nself license set nself_pro_xxxxx...
+nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 nself plugin install claw-news
+nself build
 ```
 
-## What It Does
+The license is validated against `ping.nself.org/license/validate`. Tier is checked server-side; insufficient tier returns an error.
 
-Polls RSS/Atom feeds, classifies articles by topic, runs AI summarization and sentiment analysis, and fires breaking-news alerts through the `notify` plugin. Generates scheduled digests on demand or via cron. Exposes a Claw tool descriptor so the agent can query articles, manage sources, and trigger digests conversationally.
+## Description
 
-## Dependencies
+The Claw News plugin polls RSS and Atom feeds, classifies incoming articles by topic, summarizes them with the `ai` plugin, generates daily digests, and fires breaking-news alerts via the `notify` plugin. It exposes article search, source management, and topic configuration through a REST API and through ɳClaw tools.
 
-Requires the `ai` plugin. Optional: `notify` for breaking-news delivery.
+Sentiment analysis runs alongside summarization so the assistant can answer questions like "what changed in the AI space this week" without re-reading every article. Multi-app isolation is supported via the `source_account_id` column, so multiple ɳClaw users on one nSelf instance see only their own subscriptions.
 
 ## Configuration
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `CLAW_NEWS_PORT` | `3718` | Claw News service port |
-| `PLUGIN_AI_INTERNAL_URL` | `http://plugin-ai:3709` | AI plugin URL for summarization |
-| `PLUGIN_NOTIFY_URL` | `http://plugin-notify:3715` | Notify plugin URL for alerts |
+| `DATABASE_URL` | — | Postgres connection string (required) |
+| `PORT` | `3718` | News service port |
+| `PLUGIN_AI_INTERNAL_URL` | — | Internal URL for the `ai` plugin (summarization) |
+| `PLUGIN_NOTIFY_URL` | — | Internal URL for the `notify` plugin (alerts) |
 
 ## Ports
 
 | Port | Purpose |
 |------|---------|
-| 3718 | REST API + Claw tool endpoint |
+| 3718 | News service REST API |
 
-## Database Tables
+## Database Schema
 
-4 tables added to your Postgres database:
-- `np_news_sources` — registered RSS/Atom feeds
-- `np_news_articles` — ingested articles with summaries
-- `np_news_topics` — topic keywords and classifiers
-- `np_news_alerts` — breaking-news alert rules
+4 tables added to your Postgres database (prefix: `np_news_`):
 
-## Webhooks
+- `np_news_sources` — RSS/Atom feed source registrations
+- `np_news_articles` — ingested articles with summaries and sentiment
+- `np_news_topics` — topic definitions and keyword filters
+- `np_news_alerts` — breaking-news alert rules and history
 
-| Event | Description |
-|-------|-------------|
-| `article.created` | New article ingested from a feed |
-| `article.summarized` | AI summary generated for an article |
-| `alert.fired` | Breaking-news alert triggered |
-| `digest.generated` | Scheduled digest produced |
+## REST API
 
-## Actions
+```
+GET  /health                     — Health check
+GET  /articles                   — List and search news articles
+POST /sources                    — Register an RSS feed source
+GET  /sources                    — List registered sources
+POST /topics                     — Create a topic with keyword filters
+GET  /topics                     — List topics
+POST /alerts                     — Configure a breaking-news alert
+POST /digest                     — Generate an AI digest on demand
+```
 
-| Action | Description |
-|--------|-------------|
-| `articles` | List and search ingested articles |
-| `sources` | Add, update, or remove feed sources |
-| `topics` | Manage topic keywords and classifiers |
-| `alerts` | Configure breaking-news alerts |
-| `digest` | Generate an AI news digest on demand |
+## Examples
 
-## Capabilities
+### Subscribe to a news feed
 
-- RSS/Atom polling with per-source intervals
-- AI summarization and sentiment scoring
-- Topic classification using configurable keyword sets
-- Breaking-news alerting via the `notify` plugin
-- Digest generation (daily/weekly or ad-hoc)
-- Claw tool descriptor — the ɳClaw agent can invoke news actions directly
+```bash
+curl -X POST http://localhost:3718/sources \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://hnrss.org/frontpage","title":"Hacker News"}'
+```
 
-## Multi-Tenant
+### Generate a daily digest
 
-Supported via the `source_account_id` isolation column. Each app in a shared backend sees only its own sources, articles, topics, and alerts.
+```bash
+curl -X POST http://localhost:3718/digest \
+  -H "Content-Type: application/json" \
+  -d '{"topics":["AI","Open Source"],"window_hours":24}'
+```
 
-## Health Check
+## Source
 
-`GET /health` — returns 200 when the ingestion loop and database connection are healthy.
+Source-available (license required to run): [`plugins-pro/paid/claw-news/`](https://github.com/nself-org/plugins-pro/tree/main/paid/claw-news)
+
+Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+ subscribers and Enterprise customers.
+
+## See Also
+
+- [[plugin-claw]] — ɳClaw assistant runtime that consumes news
+- [[plugin-ai]] — provides summarization for article ingestion
+- [[plugin-notify]] — delivers breaking-news alerts
+- [[bundle-nclaw]] — bundle that includes this plugin
+- [[Plugin-Licensing]] — tier comparison
+- [[Plugin-Overview]] — full plugin index
 
 ← [[Plugin-Overview]] | [[Home]] →

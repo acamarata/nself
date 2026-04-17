@@ -7,15 +7,15 @@
 - [How Plugins Work](#how-plugins-work)
 - [Related Pages](#related-pages)
 
-nSelf plugins extend your backend stack with additional services and capabilities. Install them with a single command — no manual Docker configuration required.
+nSelf plugins extend your backend stack with additional services and capabilities. Install them with a single command. No manual Docker configuration required.
 
 ## Plugin Tiers
 
 | Tier | Price | Includes |
 |------|-------|---------|
 | **Free** | $0 | Core CLI + 25 free plugins (MIT licensed) |
-| **Basic** | $0.99/mo or $9.99/yr | All 62 pro plugins |
-| **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, claw, mux, voice, browser) |
+| **Basic** | $0.99/mo or $9.99/yr | All 55 standard pro plugins (excludes Pro-tier AI suite) |
+| **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, browser, claw, claw-budget, claw-web, post, voice) |
 | **Elite** | $4.99/mo or $49.99/yr | Pro + email support |
 | **Business** | $9.99/mo or $99.99/yr | Elite + 24h email support + priority feature requests |
 | **Business+** | $49.99/mo or $499.99/yr | Business + dedicated support channel |
@@ -47,16 +47,16 @@ Require a valid nSelf license key. See [[Plugin-Licensing]].
 
 | Category | Count | Plugins |
 |----------|-------|---------|
-| AI & Automation | 7 | ai, claw, claw-web, claw-budget, mux, workflows, bots |
+| AI & Automation | 8 | ai, claw, claw-budget, claw-news, claw-web, mux, workflows, bots |
 | Communication | 6 | chat, livekit, streaming, voice, podcast, realtime |
 | Media & Processing | 6 | media-processing, file-processing, epg, photos, recording, stream-gateway |
 | Content & Social | 8 | cms, social, activity-feed, moderation, knowledge-base, support, documents, calendar |
-| Commerce & Payments | 4 | donorbox-pro, entitlements, analytics, backup-pro |
+| Commerce & Payments | 6 | donorbox-pro, paypal-pro, shopify-pro, stripe-pro, entitlements, analytics |
 | Authentication & Security | 5 | auth, access-controls, idme, compliance, admin-api |
 | Infrastructure | 8 | browser, google, cloudflare, object-storage, cdn, observability, ddns, devices |
-| Productivity | 2 | cron-pro, notify-pro |
+| Productivity | 3 | cron-pro, notify-pro, backup-pro |
 | Gaming & Specialized | 9 | tmdb, game-metadata, retro-gaming, rom-discovery, sports, geocoding, geolocation, home, web3 |
-| Social Automation | 2 | post, meetings |
+| Social Automation | 3 | post, meetings, linkedin |
 
 ## How Plugins Work
 
@@ -71,13 +71,21 @@ After installing any plugin, run `nself build` to regenerate your compose file.
 
 ## Plugin Bundles
 
-Bundles are groups of plugins that work together to provide a complete feature set.
+Bundles group plugins that work together to deliver a complete feature set. Per F06-BUNDLE-INVENTORY, the canonical bundles are:
 
-| Bundle | Plugins | Use Case |
-|--------|---------|----------|
-| [nMedia](bundle-nmedia) | 12 plugins (4 free + 8 pro) | Self-hosted media acquisition, processing, and streaming |
-| ɳClaw | 13 plugins | AI personal assistant |
-| nChat | 7 plugins | Messaging with video calls and moderation |
+| Bundle | Price | Plugins | Use Case |
+|--------|-------|---------|----------|
+| [[bundle-nclaw]] | $0.99/mo | ai, claw, claw-web, mux, voice, browser, google, notify, cron, claw-budget, claw-news | AI personal assistant: email, calendar, news, budget, tools |
+| [[bundle-clawde]] | $1.99/mo / $19.99/yr | TBD (cloud sync, premium models, team features) | ClawDE+ remote/mobile sync via API |
+| [[bundle-nmedia]] | $0.99/mo | media-processing, streaming, epg, tmdb, stream-gateway, podcast (+ free torrent-manager, content-acquisition) | Self-hosted media acquisition, processing, and streaming |
+| [[bundle-nfamily]] | $0.99/mo | social, photos, activity-feed, moderation, realtime, cms, chat | Private family social, photo sharing, activity feeds |
+| [[bundle-nchat]] | $0.99/mo | chat, livekit, recording, moderation, bots, realtime, auth | Messaging with video calls, bots, and moderation |
+
+Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
+
+### Monitoring Stack (10 services)
+
+The free `monitoring` plugin bundles 10 services in one install: alertmanager, glitchtip, grafana, loki, otel-collector, prometheus, promtail, status, synthetics, web-vitals.
 
 ## Related Pages
 

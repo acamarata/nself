@@ -1,6 +1,6 @@
 # nself doctor
 
-> Run comprehensive system diagnostics.
+> Run full system diagnostics.
 
 ## Synopsis
 
