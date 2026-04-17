@@ -54,7 +54,7 @@ nself version
 Expected output:
 
 ```
-nself v1.0.4 (linux/amd64)
+nself v1.0.8 (linux/amd64)
 ```
 
 ## Uninstall

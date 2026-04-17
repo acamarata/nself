@@ -79,7 +79,7 @@ Optional services (enable per project): **Redis** | **MinIO** (S3 storage) | **S
 
 ## Commands
 
-nSelf provides **25 top-level commands** with **300+ subcommands**. Full reference:
+nSelf provides **25 top-level commands** with **295+ subcommands**. Full reference:
 
 | Category | Commands | Description |
 |----------|----------|-------------|
