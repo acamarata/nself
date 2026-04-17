@@ -72,7 +72,7 @@ brew upgrade nself-org/nself/nself
 curl -sSL https://install.nself.org | bash
 ```
 
-Verify: `nself version` should show `v1.0.4` or later.
+Verify: `nself version` should show `v1.0.8` or later.
 
 ### 3. Run the Automated Migration
 
