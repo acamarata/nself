@@ -29,7 +29,7 @@ curl -sSL https://install.nself.org | bash
 
 ## What is ɳSelf?
 
-ɳSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same powerful features as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
+ɳSelf is a **complete self-hosted Backend-as-a-Service platform** that gives you the same capabilities as commercial services like Supabase and Nhost, but runs entirely on your own infrastructure.
 
 **Get the power of commercial BaaS, plus:**
 - **True Data Ownership** - Your data never leaves your infrastructure
@@ -322,7 +322,7 @@ Every template includes:
 
 ## Command Reference
 
-ɳSelf provides a **25-command canonical runtime surface** with **300+ subcommands** organized by domain:
+ɳSelf provides **46 top-level commands** with **300+ subcommands** organized by domain. Full reference: [wiki/Commands](https://github.com/nself-org/cli/wiki/Commands).
 
 ### Core Commands
 ```bash
@@ -687,7 +687,7 @@ nself build --force     # Force rebuild
 
 ### Deployment and Operations
 - [Production Deployment](.github/wiki/deployment/README.md) - Production guide
-- [Backup Guide](.github/wiki/guides/BACKUP_GUIDE.md) - Comprehensive backup system
+- [Backup Guide](.github/wiki/guides/BACKUP_GUIDE.md) - Full backup system reference
 - [Monitoring Setup](.github/wiki/guides/MONITORING-COMPLETE.md) - Grafana dashboards
 - [Security Hardening](.github/wiki/security/README.md) - Security best practices
 
@@ -736,7 +736,7 @@ MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
 <div align="center">
 
-**ɳSelf CLI v1.0.4** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
+**ɳSelf CLI v1.0.6 LTS** - Built by [nself](https://nself.org) - [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) - [Documentation](#documentation) - [Roadmap](.github/wiki/releases/ROADMAP.md)
 

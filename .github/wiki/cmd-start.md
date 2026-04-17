@@ -64,4 +64,8 @@ nself start --timeout 300
 nself start -v
 ```
 
+## Aliases
+
+`nself up` is a hidden alias for `nself start`. Same flags. Same behavior. Provided so docker-compose users can keep their muscle memory.
+
 ← [[Commands]] | [[Home]] →

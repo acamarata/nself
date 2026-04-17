@@ -1,0 +1,43 @@
+# nself dev
+
+> Start development environment.
+
+## Synopsis
+
+```
+nself dev [flags]
+```
+
+## Description
+
+`nself dev` brings up the project stack in development mode by running `docker compose up -d` from the project root. It is the lighter-weight counterpart to `nself start`: no orchestrated health checks, no automatic database init step, just a fast bring-up suited to inner-loop work.
+
+With `--hot`, the command stays attached, polls the `plugins/` directory every 2 seconds for source changes, and rebuilds only the changed plugin's container with `docker compose up -d --no-deps --build <plugin>`. Polling avoids a filesystem-watch dependency. Hot-reload exits cleanly on Ctrl+C and shuts down the watcher (containers keep running).
+
+Use `nself dev` when you want a minimal start. Use `nself start` (or its alias `nself up`) for the production-grade boot with health checks, port pre-flight, and automatic database initialization.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--hot` | false | Enable plugin hot-reload on source changes |
+| `--help`, `-h` | — | Show help |
+
+## Examples
+
+```bash
+# Start the dev stack
+nself dev
+
+# Start with plugin hot-reload (rebuilds changed plugins on the fly)
+nself dev --hot
+```
+
+## See Also
+
+- [[cmd-start]] — full boot with health checks and DB init
+- [[cmd-restart]] — smart restart with config change detection
+- [[cmd-build]] — regenerate compose and nginx config
+- [[Commands]] — full command index
+
+← [[Commands]] | [[Home]] →

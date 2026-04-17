@@ -164,21 +164,21 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 
 **Communication:** [[plugin-chat]] · [[plugin-livekit]] · [[plugin-streaming]] · [[plugin-realtime]] · [[plugin-podcast]] · [[plugin-meetings]] · [[plugin-recording]]
 
-**Commerce and Payments:** [[plugin-commerce]] · [[plugin-stripe]] · [[plugin-paypal]] · [[plugin-shopify]] · [[plugin-subscription]] · [[plugin-checkout]] · [[plugin-donorbox-pro]] · [[plugin-entitlements]]
+**Commerce and Payments:** `plugin-commerce` · [[plugin-stripe]] · [[plugin-paypal]] · [[plugin-shopify]] · `plugin-subscription` · `plugin-checkout` · [[plugin-donorbox-pro]] · [[plugin-entitlements]]
 
-**Content and Social:** [[plugin-cms]] · [[plugin-blog]] · [[plugin-pages]] · [[plugin-social]] · [[plugin-activity-feed]] · [[plugin-moderation]] · [[plugin-knowledge-base]] · [[plugin-support]] · [[plugin-documents]] · [[plugin-calendar]] · [[plugin-post]]
+**Content and Social:** [[plugin-cms]] · `plugin-blog` · `plugin-pages` · [[plugin-social]] · [[plugin-activity-feed]] · [[plugin-moderation]] · [[plugin-knowledge-base]] · [[plugin-support]] · [[plugin-documents]] · [[plugin-calendar]] · [[plugin-post]]
 
-**Email Providers:** [[plugin-sendgrid]] · [[plugin-mailgun]] · [[plugin-postmark]] · [[plugin-twilio]]
+**Email Providers:** `plugin-sendgrid` · `plugin-mailgun` · `plugin-postmark` · `plugin-twilio`
 
-**Security and Auth:** [[plugin-auth]] · [[plugin-sso]] · [[plugin-saml]] · [[plugin-ldap]] · [[plugin-oauth-providers]] · [[plugin-access-controls]] · [[plugin-idme]] · [[plugin-compliance]] · [[plugin-admin-api]] · [[plugin-audit]] · [[plugin-waf]] · [[plugin-rate-limit]]
+**Security and Auth:** [[plugin-auth]] · `plugin-sso` · `plugin-saml` · `plugin-ldap` · `plugin-oauth-providers` · [[plugin-access-controls]] · [[plugin-idme]] · [[plugin-compliance]] · [[plugin-admin-api]] · `plugin-audit` · `plugin-waf` · `plugin-rate-limit`
 
 **Infrastructure:** [[plugin-google]] · [[plugin-cloudflare]] · [[plugin-object-storage]] · [[plugin-cdn]] · [[plugin-observability]] · [[plugin-ddns]] · [[plugin-devices]] · [[plugin-vpn]] · [[plugin-mdns]]
 
-**Media:** [[plugin-media]] · [[plugin-media-processing]] · [[plugin-file-processing]] · [[plugin-photos]] · [[plugin-stream-gateway]] · [[plugin-epg]] · [[plugin-transcoder]] · [[plugin-thumb]] · [[plugin-watermark]] · [[plugin-drm]]
+**Media:** `plugin-media` · [[plugin-media-processing]] · [[plugin-file-processing]] · [[plugin-photos]] · [[plugin-stream-gateway]] · [[plugin-epg]] · `plugin-transcoder` · `plugin-thumb` · `plugin-watermark` · `plugin-drm`
 
-**Productivity:** [[plugin-cron-pro]] · [[plugin-notify-pro]] · [[plugin-scheduler]] · [[plugin-backup-pro]] · [[plugin-analytics]] · [[plugin-reports]] · [[plugin-export]] · [[plugin-import]]
+**Productivity:** [[plugin-cron-pro]] · [[plugin-notify-pro]] · `plugin-scheduler` · [[plugin-backup-pro]] · [[plugin-analytics]] · `plugin-reports` · `plugin-export` · `plugin-import`
 
-**Specialized:** [[plugin-tmdb]] · [[plugin-game-metadata]] · [[plugin-retro-gaming]] · [[plugin-rom-discovery]] · [[plugin-sports]] · [[plugin-geocoding]] · [[plugin-geolocation]] · [[plugin-home]] · [[plugin-web3]] · [[plugin-flow]] · [[plugin-content-acquisition]] · [[plugin-content-progress]] · [[plugin-torrent-manager]] · [[plugin-subtitle-manager]]
+**Specialized:** [[plugin-tmdb]] · [[plugin-game-metadata]] · [[plugin-retro-gaming]] · [[plugin-rom-discovery]] · [[plugin-sports]] · [[plugin-geocoding]] · [[plugin-geolocation]] · [[plugin-home]] · [[plugin-web3]] · `plugin-flow` · [[plugin-content-acquisition]] · [[plugin-content-progress]] · [[plugin-torrent-manager]] · [[plugin-subtitle-manager]]
 
 </details>
 
