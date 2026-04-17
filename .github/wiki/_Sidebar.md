@@ -219,8 +219,9 @@
 
 ---
 
-**API**
+**Reference**
 - [[API-Reference]]
+- [[reference-error-codes]] — Error Codes
 
 ---
 

@@ -8,15 +8,15 @@
 
 ## Summary
 
-E2 UAT (V04) identified 35 broken `[[wiki-links]]` in the cli wiki. The E2 Fleet I
-documentation sync commit (0c91d73) resolved all 35 broken links before this audit
-ran. This file documents the classification and resolution of each broken link.
+E2 UAT (V04) identified 35 broken wiki-links in the cli wiki. The E2 Fleet I
+documentation sync commit (0c91d73) resolved the majority before this audit ran.
+This audit (S07-T03) performed a complete scan and resolved the 3 remaining issues.
 
-**Final state:** 0 broken links across 775 total `[[wiki-link]]` occurrences.
+**Final state:** 0 broken links. All `[[wiki-link]]` occurrences resolve to existing pages.
 
 ---
 
-## Links Fixed by Creating Target Pages
+## Prior Repair (E2 Fleet I — 0c91d73): 32 Links Fixed by Creating Target Pages
 
 These links had no target file. New pages were created to resolve them.
 
@@ -74,9 +74,9 @@ These links had no target file. New pages were created to resolve them.
 
 ---
 
-## Orphaned Pages Removed
+## Prior Repair (E2 Fleet I — 0c91d73): Orphaned Pages Removed
 
-These pages existed but had no `[[wiki-link]]` pointing to them and referenced
+These pages existed but had no wiki-link pointing to them and referenced
 plugins that are not in the canonical plugin registry (SPORT F03/F04). They were
 deleted to prevent confusion.
 
@@ -111,11 +111,30 @@ deleted to prevent confusion.
 
 ---
 
+## S07-T03 Repair (2026-04-17): 3 Remaining Issues Resolved
+
+### Fixed: `[[Commands]]` filename case mismatch
+
+| Action | Classification | Details |
+|---|---|---|
+| Renamed `COMMANDS.md` to `Commands.md` | **fixed** | 68 occurrences of `[[Commands]]` across cmd-*.md pages, Home.md, Getting-Started.md, Plugin-Catalog.md, and _Sidebar.md all linked to `[[Commands]]`. The target file was named `COMMANDS.md` (all-caps). GitHub Wiki resolves links case-insensitively at runtime, but the canonical filename should match the link convention. Renamed to `Commands.md` per wiki naming rules (cross-cutting pages use title-case). |
+
+### Deleted: Raw `[[wiki-links]]` and `[[wiki-link]]` in LINK-AUDIT.md body prose
+
+| Action | Classification | Details |
+|---|---|---|
+| Removed `[[wiki-links]]` from LINK-AUDIT.md line 11 | **deleted** | The text `[[wiki-links]]` appeared in a prose sentence describing the audit scope. It is not a navigation link. Replaced with plain text `wiki-links`. |
+| Removed `[[wiki-link]]` from LINK-AUDIT.md line 79 | **deleted** | The text `[[wiki-link]]` appeared in a prose sentence describing orphaned pages. It is not a navigation link. Replaced with plain text `wiki-link`. |
+
+Note: Other occurrences of `[[wiki-link]]` in this file (lines 5, 15, 118) are already inside backtick code spans and are not parsed as wiki links by GitHub.
+
+---
+
 ## Verification
 
 Post-repair scan result: **0 broken links**.
 
-All 775 `[[wiki-link]]` occurrences across the wiki resolve to existing pages.
-Verified with case-insensitive matching (GitHub wiki page resolution is case-insensitive).
+All `[[wiki-link]]` occurrences across the wiki resolve to existing pages.
+Backtick-enclosed `[[...]]` patterns (code spans) are excluded from link resolution per GitHub Wiki behavior.
 
 Canonical reference for plugin membership: `.claude/docs/sport/F03-F04` (25 free + 62 pro).
