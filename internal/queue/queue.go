@@ -6,9 +6,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// queueNameRegex restricts queue names to characters safe for pg-boss and
+// SQL string literal contexts after escape. Names contain only letters,
+// digits, dots, underscores, and hyphens.
+var queueNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,128}$`)
+
+// jobIDRegex accepts UUID or similarly restricted job identifiers.
+var jobIDRegex = regexp.MustCompile(`^[a-zA-Z0-9-]{1,64}$`)
+
+// validateQueueName rejects queue names that could be used to break out of a
+// single-quoted SQL literal or contain control characters.
+func validateQueueName(q string) error {
+	if !queueNameRegex.MatchString(q) {
+		return fmt.Errorf("invalid queue name: %q", q)
+	}
+	return nil
+}
+
+// validateJobID rejects job IDs that could be used to inject SQL.
+func validateJobID(id string) error {
+	if !jobIDRegex.MatchString(id) {
+		return fmt.Errorf("invalid job id: %q", id)
+	}
+	return nil
+}
 
 // Job represents a queue job.
 type Job struct {
@@ -54,12 +80,23 @@ func ListQueues(ctx context.Context, dbURL string) ([]QueueInfo, error) {
 
 // ListJobs returns jobs for a queue, optionally filtered by state.
 func ListJobs(ctx context.Context, dbURL, queue, state string, limit int) ([]Job, error) {
+	if err := validateQueueName(queue); err != nil {
+		return nil, err
+	}
+	if limit < 0 || limit > 10000 {
+		return nil, fmt.Errorf("invalid limit: %d (must be 0-10000)", limit)
+	}
 	query := fmt.Sprintf(`SELECT id, name as queue, state, data, createdon as created_at,
 		startedon as started_at, completedon as done_at, retrycount as retry_count, output as error
 		FROM pgboss.job WHERE name = '%s'`, escapeSQLString(queue))
 
 	if state != "" {
 		sqlState := mapState(state)
+		// mapState returns a fixed set of known pgboss states or the raw
+		// input if unknown; guard the fallback path explicitly.
+		if !isKnownPGBossState(sqlState) {
+			return nil, fmt.Errorf("invalid state: %q", state)
+		}
 		query += fmt.Sprintf(` AND state = '%s'`, sqlState)
 	}
 
@@ -68,8 +105,20 @@ func ListJobs(ctx context.Context, dbURL, queue, state string, limit int) ([]Job
 	return queryJobs(ctx, dbURL, query)
 }
 
+// isKnownPGBossState returns true for states the pg-boss schema emits.
+func isKnownPGBossState(s string) bool {
+	switch s {
+	case "created", "active", "completed", "failed", "expired", "cancelled", "retry":
+		return true
+	}
+	return false
+}
+
 // RetryJob moves a failed/dead job back to pending state.
 func RetryJob(ctx context.Context, dbURL, jobID string) error {
+	if err := validateJobID(jobID); err != nil {
+		return err
+	}
 	query := fmt.Sprintf(`UPDATE pgboss.job SET state = 'created', retrycount = retrycount + 1,
 		completedon = NULL, output = NULL WHERE id = '%s' AND state IN ('failed', 'expired')`,
 		escapeSQLString(jobID))
@@ -79,6 +128,9 @@ func RetryJob(ctx context.Context, dbURL, jobID string) error {
 
 // PurgeQueue removes completed/dead jobs older than the specified duration.
 func PurgeQueue(ctx context.Context, dbURL, queue string, olderThan time.Duration) (int, error) {
+	if err := validateQueueName(queue); err != nil {
+		return 0, err
+	}
 	cutoff := time.Now().Add(-olderThan).Format(time.RFC3339)
 	query := fmt.Sprintf(`DELETE FROM pgboss.job WHERE name = '%s'
 		AND state IN ('completed', 'expired', 'cancelled')

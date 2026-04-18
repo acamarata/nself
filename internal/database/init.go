@@ -90,8 +90,16 @@ func createDatabase(ctx context.Context, cfg *config.Config) error {
 		user = "postgres"
 	}
 
+	// Validate database name before any SQL interpolation.
+	// Note: pg_database.datname check uses a string literal (safe to
+	// embed as a single-quoted literal after escape), but we still
+	// validate to fail fast on invalid names.
+	if _, err := SanitizeIdentifier(db); err != nil {
+		return fmt.Errorf("invalid database name in config: %w", err)
+	}
 	// Check if database already exists.
-	checkSQL := fmt.Sprintf("SELECT 1 FROM pg_database WHERE datname = '%s'", db)
+	checkSQL := fmt.Sprintf("SELECT 1 FROM pg_database WHERE datname = '%s'",
+		strings.ReplaceAll(db, "'", "''"))
 	cmd := exec.CommandContext(ctx, "docker", "exec", container,
 		"psql", "-U", user, "-d", "postgres", "-tAc", checkSQL,
 	)
@@ -109,8 +117,12 @@ func createDatabase(ctx context.Context, cfg *config.Config) error {
 		return nil
 	}
 
-	// Database does not exist; create it.
-	createSQL := fmt.Sprintf("CREATE DATABASE \"%s\"", db)
+	// Database does not exist; create it. Identifier already validated above.
+	quotedDB, err := SanitizeIdentifier(db)
+	if err != nil {
+		return fmt.Errorf("sanitize database name: %w", err)
+	}
+	createSQL := fmt.Sprintf("CREATE DATABASE %s", quotedDB)
 	if err := runSQLOnDB(ctx, cfg, "postgres", createSQL); err != nil {
 		return fmt.Errorf("create database %s: %w", db, err)
 	}
@@ -133,13 +145,20 @@ func createSchemas(ctx context.Context, cfg *config.Config) error {
 
 	schemas := []string{"auth", "storage", "public"}
 
+	// Validate user before interpolation. Schemas are compile-time constants.
+	quotedUser, err := SanitizeIdentifier(user)
+	if err != nil {
+		return fmt.Errorf("invalid postgres user name: %w", err)
+	}
+
 	for _, schema := range schemas {
-		createSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)
+		quotedSchema := MustSanitizeIdentifier(schema)
+		createSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", quotedSchema)
 		if err := runSQLOnDB(ctx, cfg, db, createSQL); err != nil {
 			return fmt.Errorf("create schema %s: %w", schema, err)
 		}
 
-		grantSQL := fmt.Sprintf("GRANT ALL ON SCHEMA %s TO \"%s\"", schema, user)
+		grantSQL := fmt.Sprintf("GRANT ALL ON SCHEMA %s TO %s", quotedSchema, quotedUser)
 		if err := runSQLOnDB(ctx, cfg, db, grantSQL); err != nil {
 			return fmt.Errorf("grant schema %s to %s: %w", schema, user, err)
 		}
@@ -160,7 +179,8 @@ func createExtensions(ctx context.Context, cfg *config.Config) error {
 	extensions := []string{"pgcrypto", "citext"}
 
 	for _, ext := range extensions {
-		sql := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s", ext)
+		quotedExt := MustSanitizeIdentifier(ext)
+		sql := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s", quotedExt)
 		if err := runSQLOnDB(ctx, cfg, db, sql); err != nil {
 			return fmt.Errorf("create extension %s: %w", ext, err)
 		}

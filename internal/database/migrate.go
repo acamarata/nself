@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -14,6 +15,20 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
 )
+
+// migrationNameRegex restricts migration filenames to safe characters.
+// Allows letters, digits, dots, underscores, and hyphens. Prevents
+// names with embedded quotes, semicolons, or control characters.
+var migrationNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,255}$`)
+
+// validateMigrationName fails closed on migration filenames that could
+// escape a SQL string literal even after escapeSQL doubling.
+func validateMigrationName(name string) error {
+	if !migrationNameRegex.MatchString(name) {
+		return fmt.Errorf("invalid migration name %q: only [a-zA-Z0-9._-] allowed", name)
+	}
+	return nil
+}
 
 // MigrationStatus describes the state of a single migration file.
 type MigrationStatus struct {
@@ -235,6 +250,9 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 	count := 0
 	for _, f := range files {
 		name := filepath.Base(f)
+		if err := validateMigrationName(name); err != nil {
+			return count, err
+		}
 		if _, ok := applied[name]; ok {
 			continue
 		}
@@ -247,6 +265,9 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 		// Compute checksum for the ops table.
 		checksum, _ := checksumBytes(data)
 		migrationID := extractMigrationID(f)
+		if err := validateMigrationName(migrationID); err != nil {
+			return count, fmt.Errorf("migration id from %s: %w", name, err)
+		}
 
 		// Record in legacy schema_versions for backward compat.
 		legacyRecord := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
@@ -304,6 +325,9 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("no migrations to revert")
 	}
 	name := strings.TrimSpace(out)
+	if err := validateMigrationName(name); err != nil {
+		return fmt.Errorf("migration name from schema_versions: %w", err)
+	}
 
 	// Derive the down file path: foo.sql -> foo.down.sql
 	downName := strings.TrimSuffix(name, ".sql") + ".down.sql"
