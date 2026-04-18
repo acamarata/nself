@@ -11,9 +11,9 @@
 
 ## What Is nChat
 
-nChat is the marketing name for the bundle of plugins that powers the [chat](https://github.com/nself-org/chat) reference app. It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains real-time messaging, video and audio calls, call recording, moderation, bots, and authentication — every feature of a modern team chat product.
+nChat is the marketing name for the bundle of plugins that powers the [chat](https://github.com/nself-org/nchat) reference app. It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains real-time messaging, video and audio calls, call recording, moderation, bots, and authentication — every feature of a modern team chat product.
 
-nChat pairs with the [chat](https://github.com/nself-org/chat) repo, an open-source self-hosted messaging app (Next.js + Capacitor + Electron + Tauri). Without the bundle the chat app still runs core messaging; pro features (video, recording, advanced moderation, bots) hide gracefully via runtime feature detection.
+nChat pairs with the [chat](https://github.com/nself-org/nchat) repo, an open-source self-hosted messaging app (Next.js + Capacitor + Electron + Tauri). Without the bundle the chat app still runs core messaging; pro features (video, recording, advanced moderation, bots) hide gracefully via runtime feature detection.
 
 ## Plugins Included
 
@@ -95,7 +95,7 @@ Set word lists and rate limits for `moderation`. See [plugin-moderation](plugin-
 
 ### Step 4: Connect the chat client
 
-Clone [nself-org/chat](https://github.com/nself-org/chat), copy `.backend.example/` to `.backend/`, set the license key, and run `nself build && nself start` from `.backend/`. Then `pnpm dev` in the frontend.
+Clone [nself-org/chat](https://github.com/nself-org/nchat), copy `.backend.example/` to `.backend/`, set the license key, and run `nself build && nself start` from `.backend/`. Then `pnpm dev` in the frontend.
 
 ### Troubleshooting
 

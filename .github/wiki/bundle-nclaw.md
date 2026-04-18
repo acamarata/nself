@@ -11,9 +11,9 @@
 
 ## What Is ɳClaw
 
-ɳClaw is the marketing name for the bundle of plugins that powers the [ɳClaw personal AI assistant](https://github.com/nself-org/claw). It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains the AI gateway, assistant runtime, voice I/O, browser tool, email and calendar integrations, scheduled jobs, and push notifications that the ɳClaw client app needs to operate.
+ɳClaw is the marketing name for the bundle of plugins that powers the [ɳClaw personal AI assistant](https://github.com/nself-org/nclaw). It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains the AI gateway, assistant runtime, voice I/O, browser tool, email and calendar integrations, scheduled jobs, and push notifications that the ɳClaw client app needs to operate.
 
-ɳClaw pairs with the [claw](https://github.com/nself-org/claw) repo (Flutter client for iOS, Android, macOS, web).
+ɳClaw pairs with the [claw](https://github.com/nself-org/nclaw) repo (Flutter client for iOS, Android, macOS, web).
 
 ## Plugins Included
 
@@ -100,7 +100,7 @@ Add Google OAuth credentials, push notification keys, and any other integration 
 
 ### Step 4: Connect a client
 
-Point the [claw](https://github.com/nself-org/claw) Flutter app at your nSelf backend's API URL. See the claw repo's README for setup.
+Point the [claw](https://github.com/nself-org/nclaw) Flutter app at your nSelf backend's API URL. See the claw repo's README for setup.
 
 ### Troubleshooting
 

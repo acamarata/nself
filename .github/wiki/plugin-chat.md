@@ -13,7 +13,7 @@ nself plugin install chat
 
 ## What It Does
 
-Adds a complete real-time chat backend to your nSelf stack. Supports group rooms, direct messages between users, message reactions, thread replies, and built-in moderation tools. Powers the [nSelf Chat](https://github.com/nself-org/chat) open-source client app. Exposes a REST API and WebSocket connections for real-time message delivery.
+Adds a complete real-time chat backend to your nSelf stack. Supports group rooms, direct messages between users, message reactions, thread replies, and built-in moderation tools. Powers the [nSelf Chat](https://github.com/nself-org/nchat) open-source client app. Exposes a REST API and WebSocket connections for real-time message delivery.
 
 ## Configuration
 

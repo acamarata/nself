@@ -3,7 +3,7 @@
 nChat is an open-source self-hosted messaging application built on nSelf. It provides real-time team and personal chat with video calls, bots, moderation, and white-label support.
 
 **Status:** Active
-**Repo:** nself-org/chat (Type C reference app)
+**Repo:** nself-org/nchat (Type C reference app)
 **Marketing site:** chat.nself.org (web/chat/)
 **Platforms:** Web (Next.js 15). Mobile (Capacitor) and Desktop (Electron, Tauri) are scaffolded but not shipped.
 
@@ -88,7 +88,7 @@ These are two different things:
 | | chat/ repo | chat.nself.org |
 |---|-----------|---------------|
 | **What** | Open-source chat client app | Marketing website |
-| **Code** | nself-org/chat | web/chat/ (in web monorepo) |
+| **Code** | nself-org/nchat | web/chat/ (in web monorepo) |
 | **Hosted by** | Users, on their own servers | nSelf, on nself.org |
 | **Purpose** | Production messaging app | Feature overview, download links |
 
