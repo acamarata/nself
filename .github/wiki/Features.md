@@ -9,7 +9,7 @@
 - [Security](#security)
 - [Feature Details](#feature-details)
 
-nSelf v1.0.8 ships a complete self-hosted backend stack with 46 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 25 free and 62 Pro plugins.
+nSelf v1.0.9 ships a complete self-hosted backend stack with 46 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 25 free and 62 Pro plugins.
 
 ## Core Stack
 
