@@ -2,6 +2,25 @@
 
 > See [CHANGELOG.md](../CHANGELOG.md) in the repo root for the full version history.
 
+## v1.0.9 LTS
+
+P93 ecosystem stabilization release. CLI/Admin lockstep, doc-drift zero, SPORT-locked versioning.
+
+**Highlights:**
+- CLI/Admin version lockstep (both at v1.0.9)
+- 46 commands, 25 free + 62 Pro plugins, 5 bundles, 7 pricing tiers (locked via SPORT F01-F15)
+- 189-page wiki refresh aligned to v1.0.9 reality
+- Ecosystem-wide banned-word sweep across all 11 repo READMEs
+- Doc-drift scanner integrated: zero TODO/FIXME/stub in shipped docs
+
+## v1.0.8
+
+Interim release with Homebrew formula fixes, install script refinements, and version banner updates.
+
+## v1.0.7
+
+Patch release with minor bug fixes and changelog corrections.
+
 ## v1.0.6
 
 P89/P90 + P92 coordinated release. Ships P87-P90 CLI accumulated work alongside plugins-pro v1.0.1.
