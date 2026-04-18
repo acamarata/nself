@@ -108,8 +108,28 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 	return dc, nil
 }
 
+// defaultMemLimit is the fallback memory cap applied to any generated service
+// that does not set an explicit Deploy.Resources.Limits.Memory. Ensures no
+// container can run unbounded in production.
+const defaultMemLimit = "512m"
+
+// defaultCPULimit is the fallback CPU cap applied to any generated service
+// that does not set an explicit Deploy.Resources.Limits.CPUs.
+const defaultCPULimit = "1.0"
+
+// defaultMemReservation is the soft memory reservation applied to every
+// service, guaranteeing a minimum allocation while the hard cap remains
+// Deploy.Resources.Limits.Memory.
+const defaultMemReservation = "256m"
+
 // postProcess applies logging, security, and graceful shutdown to all services.
 func (g *Generator) postProcess(dc *DockerCompose) {
+	// Init containers are short-lived by design and should not be capped
+	// by the service-wide resource policy (they exit before any limit matters).
+	initContainers := map[string]bool{
+		"meilisearch-init": true,
+	}
+
 	for name, svc := range dc.Services {
 		// Logging: json-file driver with configurable max-size and max-file
 		svc.Logging = &LoggingConfig{
@@ -123,10 +143,31 @@ func (g *Generator) postProcess(dc *DockerCompose) {
 		// Graceful shutdown
 		svc.StopGrace = g.cfg.DockerStopGrace
 
-		// Resource reservations: 256M minimum for all services.
-		if svc.Deploy != nil && svc.Deploy.Resources != nil && svc.Deploy.Resources.Reservations == nil {
-			svc.Deploy.Resources.Reservations = &ResourceLimits{
-				Memory: "256m",
+		// Resource limits: every long-running service gets CPU+memory caps.
+		// Services that already set Deploy.Resources.Limits (postgres, hasura,
+		// auth, nginx, redis, custom_services) keep their per-service value;
+		// others (minio, mailpit, admin, functions, meilisearch, typesense)
+		// inherit the platform default so no container runs unbounded.
+		if !initContainers[name] {
+			if svc.Deploy == nil {
+				svc.Deploy = &DeployConfig{}
+			}
+			if svc.Deploy.Resources == nil {
+				svc.Deploy.Resources = &Resources{}
+			}
+			if svc.Deploy.Resources.Limits == nil {
+				svc.Deploy.Resources.Limits = &ResourceLimits{}
+			}
+			if svc.Deploy.Resources.Limits.Memory == "" {
+				svc.Deploy.Resources.Limits.Memory = defaultMemLimit
+			}
+			if svc.Deploy.Resources.Limits.CPUs == "" {
+				svc.Deploy.Resources.Limits.CPUs = defaultCPULimit
+			}
+			if svc.Deploy.Resources.Reservations == nil {
+				svc.Deploy.Resources.Reservations = &ResourceLimits{
+					Memory: defaultMemReservation,
+				}
 			}
 		}
 
