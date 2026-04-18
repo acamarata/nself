@@ -6,7 +6,7 @@ type Config struct {
 	// Core
 	ProjectName        string `env:"PROJECT_NAME"`
 	BaseDomain         string `env:"BASE_DOMAIN"`
-	Env                string `env:"ENV"`                 // dev, staging, prod
+	Env                string `env:"ENV"` // dev, staging, prod
 	ProjectDescription string `env:"PROJECT_DESCRIPTION"`
 	AdminEmail         string `env:"ADMIN_EMAIL"`
 	DBEnvSeeds         bool   `env:"DB_ENV_SEEDS"`
@@ -24,11 +24,11 @@ type Config struct {
 	Nginx NginxConfig
 
 	// SSL
-	SSLMode            string `env:"SSL_MODE"`              // local, letsencrypt, custom, none
-	SSLProvider        string `env:"SSL_PROVIDER"`          // cloudflare, route53, digitalocean, custom
-	SSLWildcardDomain  string `env:"SSL_WILDCARD_DOMAIN"`   // *.example.com
-	ExtraSSLDomains    string `env:"EXTRA_SSL_DOMAINS"`     // comma-separated
-	CloudflareAPIKey   string `env:"CLOUDFLARE_API_KEY"`    // DNS-01 challenge
+	SSLMode           string `env:"SSL_MODE"`            // local, letsencrypt, custom, none
+	SSLProvider       string `env:"SSL_PROVIDER"`        // cloudflare, route53, digitalocean, custom
+	SSLWildcardDomain string `env:"SSL_WILDCARD_DOMAIN"` // *.example.com
+	ExtraSSLDomains   string `env:"EXTRA_SSL_DOMAINS"`   // comma-separated
+	CloudflareAPIKey  string `env:"CLOUDFLARE_API_KEY"`  // DNS-01 challenge
 
 	// WAF
 	WAFMode string `env:"WAF_MODE"` // off, detection, blocking
@@ -47,6 +47,9 @@ type Config struct {
 
 	// Email Provider
 	Email EmailConfig
+
+	// PgBouncer connection pooler
+	PgBouncer PgBouncerConfig
 
 	// Backup & Recovery
 	Backup BackupConfig
@@ -89,16 +92,16 @@ type Config struct {
 	DockerBuildTimeout int    `env:"NSELF_DOCKER_BUILD_TIMEOUT"` // 300
 
 	// Start/Stop behavior
-	StartMode           string `env:"NSELF_START_MODE"`            // smart, fresh, force
-	HealthCheckTimeout  int    `env:"NSELF_HEALTH_CHECK_TIMEOUT"`  // seconds
+	StartMode           string `env:"NSELF_START_MODE"`           // smart, fresh, force
+	HealthCheckTimeout  int    `env:"NSELF_HEALTH_CHECK_TIMEOUT"` // seconds
 	HealthCheckInterval int    `env:"NSELF_HEALTH_CHECK_INTERVAL"`
 	HealthCheckRequired int    `env:"NSELF_HEALTH_CHECK_REQUIRED"` // percentage
 	CleanupOnStart      string `env:"NSELF_CLEANUP_ON_START"`      // auto/always/never
 	AllowExposedPorts   bool   `env:"NSELF_ALLOW_EXPOSED_PORTS"`
-	ParallelLimit       int    `env:"NSELF_PARALLEL_LIMIT"`    // 5
-	LogLevel            string `env:"NSELF_LOG_LEVEL"`         // info
+	ParallelLimit       int    `env:"NSELF_PARALLEL_LIMIT"` // 5
+	LogLevel            string `env:"NSELF_LOG_LEVEL"`      // info
 	SkipHealthChecks    bool   `env:"NSELF_SKIP_HEALTH_CHECKS"`
-	StopTimeout         int    `env:"NSELF_STOP_TIMEOUT"`      // 30
+	StopTimeout         int    `env:"NSELF_STOP_TIMEOUT"` // 30
 
 	// Passthrough: arbitrary env vars matching patterns (AUTH_PROVIDER_*, REMOTE_SCHEMA_*, etc.)
 	Passthrough map[string]string
@@ -106,16 +109,32 @@ type Config struct {
 
 // PostgresConfig holds PostgreSQL database configuration.
 type PostgresConfig struct {
-	Version    string `env:"POSTGRES_VERSION"`    // 16-alpine
-	Host       string `env:"POSTGRES_HOST"`       // postgres (container name)
-	Port       int    `env:"POSTGRES_PORT"`       // 5432
-	DB         string `env:"POSTGRES_DB"`         // nself
-	User       string `env:"POSTGRES_USER"`       // postgres
-	Password   string `env:"POSTGRES_PASSWORD"`
-	Extensions []string `env:"POSTGRES_EXTENSIONS"` // comma-separated list
-	ExposePort string `env:"POSTGRES_EXPOSE_PORT"` // auto, true, false
-	MemLimit   string `env:"POSTGRES_MEM_LIMIT"`  // 2g
-	CPULimit   string `env:"POSTGRES_CPU_LIMIT"`  // 2.0
+	Version    string   `env:"POSTGRES_VERSION"` // 16-alpine
+	Host       string   `env:"POSTGRES_HOST"`    // postgres (container name)
+	Port       int      `env:"POSTGRES_PORT"`    // 5432
+	DB         string   `env:"POSTGRES_DB"`      // nself
+	User       string   `env:"POSTGRES_USER"`    // postgres
+	Password   string   `env:"POSTGRES_PASSWORD"`
+	Extensions []string `env:"POSTGRES_EXTENSIONS"`  // comma-separated list
+	ExposePort string   `env:"POSTGRES_EXPOSE_PORT"` // auto, true, false
+	MemLimit   string   `env:"POSTGRES_MEM_LIMIT"`   // 2g
+	CPULimit   string   `env:"POSTGRES_CPU_LIMIT"`   // 2.0
+}
+
+// PgBouncerConfig holds connection pooler configuration.
+type PgBouncerConfig struct {
+	Enabled           bool   `env:"PGBOUNCER_ENABLED"`
+	Port              int    `env:"PGBOUNCER_PORT"`                // 6432
+	PoolMode          string `env:"PGBOUNCER_POOL_MODE"`           // session, transaction, statement
+	MaxClientConn     int    `env:"PGBOUNCER_MAX_CLIENT_CONN"`     // 100
+	DefaultPoolSize   int    `env:"PGBOUNCER_DEFAULT_POOL_SIZE"`   // 25
+	MinPoolSize       int    `env:"PGBOUNCER_MIN_POOL_SIZE"`       // 5
+	ReservePoolSize   int    `env:"PGBOUNCER_RESERVE_POOL_SIZE"`   // 5
+	ServerIdleTimeout int    `env:"PGBOUNCER_SERVER_IDLE_TIMEOUT"` // 600
+	LogConnections    bool   `env:"PGBOUNCER_LOG_CONNECTIONS"`     // false
+	LogDisconnections bool   `env:"PGBOUNCER_LOG_DISCONNECTIONS"`  // false
+	AdminUsers        string `env:"PGBOUNCER_ADMIN_USERS"`         // postgres
+	StatsUsers        string `env:"PGBOUNCER_STATS_USERS"`         // postgres
 }
 
 // HasuraConfig holds Hasura GraphQL engine configuration.
@@ -148,8 +167,8 @@ type AuthConfig struct {
 	SMTPPass           string `env:"AUTH_SMTP_PASS"`
 	SMTPSecure         bool   `env:"AUTH_SMTP_SECURE"`
 	SMTPSender         string `env:"AUTH_SMTP_SENDER"`
-	MemLimit           string `env:"AUTH_MEM_LIMIT"` // 256m
-	CPULimit           string `env:"AUTH_CPU_LIMIT"` // 0.25
+	MemLimit           string `env:"AUTH_MEM_LIMIT"`           // 256m
+	CPULimit           string `env:"AUTH_CPU_LIMIT"`           // 0.25
 	ExtraRedirectURLs  string `env:"AUTH_EXTRA_REDIRECT_URLS"` // comma-separated extra redirect URLs
 	WebAuthnEnabled    bool   `env:"AUTH_WEBAUTHN_ENABLED"`
 	LogLevel           string `env:"AUTH_LOG_LEVEL"` // info
@@ -158,14 +177,14 @@ type AuthConfig struct {
 // NginxConfig holds Nginx reverse proxy configuration.
 type NginxConfig struct {
 	Version       string `env:"NGINX_VERSION"`              // alpine
-	HTTPPort      int    `env:"NGINX_HTTP_PORT"`             // 80
-	SSLPort       int    `env:"NGINX_HTTPS_PORT"`            // 443
+	HTTPPort      int    `env:"NGINX_HTTP_PORT"`            // 80
+	SSLPort       int    `env:"NGINX_HTTPS_PORT"`           // 443
 	MaxBody       string `env:"NGINX_CLIENT_MAX_BODY_SIZE"` // 100M
-	BindIP        string `env:"NGINX_BIND_IP"` // computed: 127.0.0.1 (dev) or 0.0.0.0 (prod) — overridable
-	AuthRateLimit  string `env:"AUTH_RATE_LIMIT"`          // 30r/m
-	RateLimitAPI   string `env:"RATE_LIMIT_API_RPS"`      // 30
-	RateLimitAuth  string `env:"RATE_LIMIT_AUTH_RPS"`     // 5
-	RateLimitAI    string `env:"RATE_LIMIT_AI_RPS"`       // 10
+	BindIP        string `env:"NGINX_BIND_IP"`              // computed: 127.0.0.1 (dev) or 0.0.0.0 (prod) — overridable
+	AuthRateLimit string `env:"AUTH_RATE_LIMIT"`            // 30r/m
+	RateLimitAPI  string `env:"RATE_LIMIT_API_RPS"`         // 30
+	RateLimitAuth string `env:"RATE_LIMIT_AUTH_RPS"`        // 5
+	RateLimitAI   string `env:"RATE_LIMIT_AI_RPS"`          // 10
 }
 
 // RedisConfig holds Redis cache/queue configuration.
@@ -190,12 +209,12 @@ type MinioConfig struct {
 	Region         string `env:"MINIO_REGION"`          // us-east-1
 	S3AccessKey    string `env:"S3_ACCESS_KEY"`
 	S3SecretKey    string `env:"S3_SECRET_KEY"`
-	S3Bucket       string `env:"S3_BUCKET"`            // nself
-	StorageVersion string `env:"STORAGE_VERSION"`      // 0.6.1
-	StorageRoute   string `env:"STORAGE_ROUTE"`        // storage.{BD}
+	S3Bucket       string `env:"S3_BUCKET"`             // nself
+	StorageVersion string `env:"STORAGE_VERSION"`       // 0.6.1
+	StorageRoute   string `env:"STORAGE_ROUTE"`         // storage.{BD}
 	ConsoleRoute   string `env:"STORAGE_CONSOLE_ROUTE"` // storage-console.{BD}
-	MemLimit       string `env:"MINIO_MEMORY"`         // 1G
-	CPULimit       string `env:"MINIO_CPU"`            // 0.5
+	MemLimit       string `env:"MINIO_MEMORY"`          // 1G
+	CPULimit       string `env:"MINIO_CPU"`             // 0.5
 }
 
 // MailpitConfig holds Mailpit local email testing configuration.
@@ -224,7 +243,7 @@ type FunctionsConfig struct {
 // All other fields are consumed exclusively by the nself-mlflow plugin at install time.
 type MLflowConfig struct {
 	Enabled         bool   `env:"MLFLOW_ENABLED"`
-	Route           string `env:"MLFLOW_ROUTE"` // mlflow.{BD} — read by ssl/domains.go, urls.go, doctor.go
+	Route           string `env:"MLFLOW_ROUTE"`            // mlflow.{BD} — read by ssl/domains.go, urls.go, doctor.go
 	Version         string `env:"MLFLOW_VERSION"`          // plugin-managed: populated by nself plugin install mlflow
 	Port            int    `env:"MLFLOW_PORT"`             // read by doctor.go for port-conflict checks; plugin-managed: populated by nself plugin install mlflow
 	DBName          string `env:"MLFLOW_DB_NAME"`          // plugin-managed: populated by nself plugin install mlflow
@@ -249,10 +268,10 @@ type AdminConfig struct {
 // SearchConfig holds search engine configuration (provider-agnostic).
 type SearchConfig struct {
 	Enabled     bool   `env:"SEARCH_ENABLED"`
-	Engine      string `env:"SEARCH_ENGINE"`       // meilisearch, typesense, etc.
-	Port        int    `env:"SEARCH_PORT"`         // auto from provider
-	APIKey      string `env:"SEARCH_API_KEY"`      // auto-generated if unset
-	Route       string `env:"SEARCH_ROUTE"`        // search.{BD}
+	Engine      string `env:"SEARCH_ENGINE"`  // meilisearch, typesense, etc.
+	Port        int    `env:"SEARCH_PORT"`    // auto from provider
+	APIKey      string `env:"SEARCH_API_KEY"` // auto-generated if unset
+	Route       string `env:"SEARCH_ROUTE"`   // search.{BD}
 	IndexPrefix string `env:"SEARCH_INDEX_PREFIX"`
 	AutoIndex   bool   `env:"SEARCH_AUTO_INDEX"` // true
 	Language    string `env:"SEARCH_LANGUAGE"`   // en
@@ -265,7 +284,7 @@ type SearchConfig struct {
 
 // MeiliSearchConfig holds MeiliSearch-specific configuration.
 type MeiliSearchConfig struct {
-	Version   string `env:"MEILISEARCH_VERSION"`    // v1.6
+	Version   string `env:"MEILISEARCH_VERSION"` // v1.6
 	MasterKey string `env:"MEILISEARCH_MASTER_KEY"`
 	Env       string `env:"MEILISEARCH_ENV"` // development
 }
@@ -296,33 +315,33 @@ type ElasticsearchConfig struct {
 type MonitoringConfig struct {
 	Enabled              bool   `env:"MONITORING_ENABLED"`
 	GrafanaEnabled       bool   `env:"GRAFANA_ENABLED"`
-	GrafanaRoute         string `env:"GRAFANA_ROUTE"`          // read by ssl/domains.go, urls.go, doctor.go
-	GrafanaAdminPassword string `env:"GRAFANA_ADMIN_PASSWORD"` // read by config/validator.go
-	PrometheusEnabled    bool   `env:"PROMETHEUS_ENABLED"`     // plugin-managed: populated by nself plugin install monitoring
-	PrometheusPort       int    `env:"PROMETHEUS_PORT"`        // plugin-managed: populated by nself plugin install monitoring
-	GrafanaPort          int    `env:"GRAFANA_PORT"`           // read by urls.go and doctor.go for port display; plugin-managed: populated by nself plugin install monitoring
-	GrafanaAdminUser     string `env:"GRAFANA_ADMIN_USER"`     // plugin-managed: populated by nself plugin install monitoring
-	LokiEnabled          bool   `env:"LOKI_ENABLED"`           // plugin-managed: populated by nself plugin install monitoring
-	LokiPort             int    `env:"LOKI_PORT"`              // plugin-managed: populated by nself plugin install monitoring
-	PromtailEnabled      bool   `env:"PROMTAIL_ENABLED"`       // plugin-managed: populated by nself plugin install monitoring
-	TempoEnabled         bool   `env:"TEMPO_ENABLED"`          // plugin-managed: populated by nself plugin install monitoring
-	TempoPort            int    `env:"TEMPO_PORT"`             // plugin-managed: populated by nself plugin install monitoring
-	AlertmanagerEnabled  bool   `env:"ALERTMANAGER_ENABLED"`   // plugin-managed: populated by nself plugin install monitoring
-	AlertmanagerPort     int    `env:"ALERTMANAGER_PORT"`      // plugin-managed: populated by nself plugin install monitoring
-	CadvisorEnabled      bool   `env:"CADVISOR_ENABLED"`       // plugin-managed: populated by nself plugin install monitoring
-	CadvisorPort         int    `env:"CADVISOR_PORT"`          // plugin-managed: populated by nself plugin install monitoring
-	NodeExporterEnabled  bool   `env:"NODE_EXPORTER_ENABLED"`  // plugin-managed: populated by nself plugin install monitoring
-	NodeExporterPort     int    `env:"NODE_EXPORTER_PORT"`     // plugin-managed: populated by nself plugin install monitoring
+	GrafanaRoute         string `env:"GRAFANA_ROUTE"`             // read by ssl/domains.go, urls.go, doctor.go
+	GrafanaAdminPassword string `env:"GRAFANA_ADMIN_PASSWORD"`    // read by config/validator.go
+	PrometheusEnabled    bool   `env:"PROMETHEUS_ENABLED"`        // plugin-managed: populated by nself plugin install monitoring
+	PrometheusPort       int    `env:"PROMETHEUS_PORT"`           // plugin-managed: populated by nself plugin install monitoring
+	GrafanaPort          int    `env:"GRAFANA_PORT"`              // read by urls.go and doctor.go for port display; plugin-managed: populated by nself plugin install monitoring
+	GrafanaAdminUser     string `env:"GRAFANA_ADMIN_USER"`        // plugin-managed: populated by nself plugin install monitoring
+	LokiEnabled          bool   `env:"LOKI_ENABLED"`              // plugin-managed: populated by nself plugin install monitoring
+	LokiPort             int    `env:"LOKI_PORT"`                 // plugin-managed: populated by nself plugin install monitoring
+	PromtailEnabled      bool   `env:"PROMTAIL_ENABLED"`          // plugin-managed: populated by nself plugin install monitoring
+	TempoEnabled         bool   `env:"TEMPO_ENABLED"`             // plugin-managed: populated by nself plugin install monitoring
+	TempoPort            int    `env:"TEMPO_PORT"`                // plugin-managed: populated by nself plugin install monitoring
+	AlertmanagerEnabled  bool   `env:"ALERTMANAGER_ENABLED"`      // plugin-managed: populated by nself plugin install monitoring
+	AlertmanagerPort     int    `env:"ALERTMANAGER_PORT"`         // plugin-managed: populated by nself plugin install monitoring
+	CadvisorEnabled      bool   `env:"CADVISOR_ENABLED"`          // plugin-managed: populated by nself plugin install monitoring
+	CadvisorPort         int    `env:"CADVISOR_PORT"`             // plugin-managed: populated by nself plugin install monitoring
+	NodeExporterEnabled  bool   `env:"NODE_EXPORTER_ENABLED"`     // plugin-managed: populated by nself plugin install monitoring
+	NodeExporterPort     int    `env:"NODE_EXPORTER_PORT"`        // plugin-managed: populated by nself plugin install monitoring
 	PGExporterEnabled    bool   `env:"POSTGRES_EXPORTER_ENABLED"` // plugin-managed: populated by nself plugin install monitoring
 	PGExporterPort       int    `env:"POSTGRES_EXPORTER_PORT"`    // plugin-managed: populated by nself plugin install monitoring
 	RedisExporterEnabled bool   `env:"REDIS_EXPORTER_ENABLED"`    // plugin-managed: populated by nself plugin install monitoring
 	RedisExporterPort    int    `env:"REDIS_EXPORTER_PORT"`       // plugin-managed: populated by nself plugin install monitoring
 
 	// S34 additions
-	PrometheusRetention        string `env:"PROMETHEUS_RETENTION"`         // e.g. "30d"
-	LokiHotDays                int    `env:"LOKI_HOT_DAYS"`               // default 30
-	LokiColdDays               int    `env:"LOKI_COLD_DAYS"`              // default 365
-	AlertmanagerPagerdutyKey   string `env:"ALERTMANAGER_PAGERDUTY_KEY"`  // PagerDuty integration key
+	PrometheusRetention      string `env:"PROMETHEUS_RETENTION"`       // e.g. "30d"
+	LokiHotDays              int    `env:"LOKI_HOT_DAYS"`              // default 30
+	LokiColdDays             int    `env:"LOKI_COLD_DAYS"`             // default 365
+	AlertmanagerPagerdutyKey string `env:"ALERTMANAGER_PAGERDUTY_KEY"` // PagerDuty integration key
 
 	// Watchdog
 	WatchdogEnabled                bool   `env:"WATCHDOG_ENABLED"`
@@ -331,8 +350,8 @@ type MonitoringConfig struct {
 	WatchdogEscalationWebhook      string `env:"WATCHDOG_ESCALATION_WEBHOOK"`
 
 	// Queue/Jobs
-	QueueWorkersPerQueue   int `env:"QUEUE_WORKERS_PER_QUEUE"`    // default 2
-	QueueDLQAlertThreshold int `env:"QUEUE_DLQ_ALERT_THRESHOLD"`  // default 100
+	QueueWorkersPerQueue   int `env:"QUEUE_WORKERS_PER_QUEUE"`   // default 2
+	QueueDLQAlertThreshold int `env:"QUEUE_DLQ_ALERT_THRESHOLD"` // default 100
 
 	// Promotion
 	PromoteRequiresTwoApprovers bool `env:"PROMOTE_REQUIRES_TWO_APPROVERS"`
@@ -340,22 +359,22 @@ type MonitoringConfig struct {
 
 // EmailConfig holds email provider configuration.
 type EmailConfig struct {
-	Provider               string `env:"EMAIL_PROVIDER"` // mailpit/elasticemail/sendgrid/postmark/mailgun/ses/smtp
-	From                   string `env:"EMAIL_FROM"`
-	ElasticEmailAPIKey     string `env:"ELASTIC_EMAIL_API_KEY"`
-	ElasticEmailAccount    string `env:"ELASTIC_EMAIL_ACCOUNT_EMAIL"`
-	SendGridAPIKey         string `env:"SENDGRID_API_KEY"`
-	PostmarkAPIKey         string `env:"POSTMARK_API_KEY"`
-	MailgunAPIKey          string `env:"MAILGUN_API_KEY"`
-	MailgunDomain          string `env:"MAILGUN_DOMAIN"`
-	AWSAccessKeyID         string `env:"AWS_ACCESS_KEY_ID"`
-	AWSSecretAccessKey     string `env:"AWS_SECRET_ACCESS_KEY"`
-	AWSRegion              string `env:"AWS_REGION"`
-	SMTPHost               string `env:"SMTP_HOST"`
-	SMTPPort               int    `env:"SMTP_PORT"`
-	SMTPUser               string `env:"SMTP_USER"`
-	SMTPPass               string `env:"SMTP_PASS"`
-	SMTPSecure             bool   `env:"SMTP_SECURE"`
+	Provider            string `env:"EMAIL_PROVIDER"` // mailpit/elasticemail/sendgrid/postmark/mailgun/ses/smtp
+	From                string `env:"EMAIL_FROM"`
+	ElasticEmailAPIKey  string `env:"ELASTIC_EMAIL_API_KEY"`
+	ElasticEmailAccount string `env:"ELASTIC_EMAIL_ACCOUNT_EMAIL"`
+	SendGridAPIKey      string `env:"SENDGRID_API_KEY"`
+	PostmarkAPIKey      string `env:"POSTMARK_API_KEY"`
+	MailgunAPIKey       string `env:"MAILGUN_API_KEY"`
+	MailgunDomain       string `env:"MAILGUN_DOMAIN"`
+	AWSAccessKeyID      string `env:"AWS_ACCESS_KEY_ID"`
+	AWSSecretAccessKey  string `env:"AWS_SECRET_ACCESS_KEY"`
+	AWSRegion           string `env:"AWS_REGION"`
+	SMTPHost            string `env:"SMTP_HOST"`
+	SMTPPort            int    `env:"SMTP_PORT"`
+	SMTPUser            string `env:"SMTP_USER"`
+	SMTPPass            string `env:"SMTP_PASS"`
+	SMTPSecure          bool   `env:"SMTP_SECURE"`
 }
 
 // BackupConfig holds backup and recovery configuration.
@@ -369,30 +388,30 @@ type BackupConfig struct {
 	CloudProvider string `env:"BACKUP_CLOUD_PROVIDER"` // legacy — use Remote instead
 
 	// Cloud/remote storage
-	Remote             string `env:"BACKUP_REMOTE"`                // rclone remote path, e.g. s3://bucket/path
-	Encryption         bool   `env:"BACKUP_ENCRYPTION"`            // enable age encryption
-	AgeRecipients      string `env:"BACKUP_AGE_RECIPIENTS"`        // age public key for encryption
-	ScheduleFull       string `env:"BACKUP_SCHEDULE_FULL"`         // cron expr for full backups (default: 0 3 * * *)
-	WALInterval        int    `env:"BACKUP_WAL_INTERVAL_SECONDS"`  // WAL archive interval (default: 60)
-	RetentionDaily     int    `env:"BACKUP_RETENTION_DAILY"`       // keep last N daily backups (default: 7)
-	RetentionWeekly    int    `env:"BACKUP_RETENTION_WEEKLY"`      // keep last N weekly backups (default: 4)
-	RetentionMonthly   int    `env:"BACKUP_RETENTION_MONTHLY"`     // keep last N monthly backups (default: 12)
+	Remote              string `env:"BACKUP_REMOTE"`                // rclone remote path, e.g. s3://bucket/path
+	Encryption          bool   `env:"BACKUP_ENCRYPTION"`            // enable age encryption
+	AgeRecipients       string `env:"BACKUP_AGE_RECIPIENTS"`        // age public key for encryption
+	ScheduleFull        string `env:"BACKUP_SCHEDULE_FULL"`         // cron expr for full backups (default: 0 3 * * *)
+	WALInterval         int    `env:"BACKUP_WAL_INTERVAL_SECONDS"`  // WAL archive interval (default: 60)
+	RetentionDaily      int    `env:"BACKUP_RETENTION_DAILY"`       // keep last N daily backups (default: 7)
+	RetentionWeekly     int    `env:"BACKUP_RETENTION_WEEKLY"`      // keep last N weekly backups (default: 4)
+	RetentionMonthly    int    `env:"BACKUP_RETENTION_MONTHLY"`     // keep last N monthly backups (default: 12)
 	RestoreTestSchedule string `env:"BACKUP_RESTORE_TEST_SCHEDULE"` // cron for restore tests (default: 0 5 * * 0)
-	AlertOnFailure     bool   `env:"BACKUP_ALERT_ON_FAILURE"`      // send alert on backup failure
-	S3AccessKeyID      string `env:"BACKUP_S3_ACCESS_KEY_ID"`
-	S3SecretAccessKey  string `env:"BACKUP_S3_SECRET_ACCESS_KEY"`
-	S3Region           string `env:"BACKUP_S3_REGION"`
-	S3Endpoint         string `env:"BACKUP_S3_ENDPOINT"`
+	AlertOnFailure      bool   `env:"BACKUP_ALERT_ON_FAILURE"`      // send alert on backup failure
+	S3AccessKeyID       string `env:"BACKUP_S3_ACCESS_KEY_ID"`
+	S3SecretAccessKey   string `env:"BACKUP_S3_SECRET_ACCESS_KEY"`
+	S3Region            string `env:"BACKUP_S3_REGION"`
+	S3Endpoint          string `env:"BACKUP_S3_ENDPOINT"`
 }
 
 // LicenseConfig holds license validation and grace period configuration.
 type LicenseConfig struct {
-	PingURL           string `env:"LICENSE_PING_URL"`              // https://ping.nself.org
-	CachePath         string `env:"LICENSE_CACHE_PATH"`            // ~/.cache/nself/license.json
-	GraceDays         int    `env:"LICENSE_GRACE_DAYS"`            // 7
-	CheckInterval     string `env:"LICENSE_CHECK_INTERVAL"`        // 6h
-	OfflineMode       bool   `env:"LICENSE_OFFLINE_MODE"`          // false
-	PublicKeyOverride string `env:"LICENSE_PUBLIC_KEY_OVERRIDE"`   // hex-encoded Ed25519 pubkey for testing
+	PingURL           string `env:"LICENSE_PING_URL"`            // https://ping.nself.org
+	CachePath         string `env:"LICENSE_CACHE_PATH"`          // ~/.cache/nself/license.json
+	GraceDays         int    `env:"LICENSE_GRACE_DAYS"`          // 7
+	CheckInterval     string `env:"LICENSE_CHECK_INTERVAL"`      // 6h
+	OfflineMode       bool   `env:"LICENSE_OFFLINE_MODE"`        // false
+	PublicKeyOverride string `env:"LICENSE_PUBLIC_KEY_OVERRIDE"` // hex-encoded Ed25519 pubkey for testing
 }
 
 // SecretsConfig holds secrets management configuration.
@@ -403,11 +422,11 @@ type SecretsConfig struct {
 
 // TenantConfig holds multi-tenancy and billing configuration.
 type TenantConfig struct {
-	DefaultPlan            string `env:"TENANT_DEFAULT_PLAN"`              // basic
-	DestroyBackupRetainDays int   `env:"TENANT_DESTROY_BACKUP_RETAIN_DAYS"` // 90
-	StripeSecretKey        string `env:"STRIPE_SECRET_KEY"`
-	StripeWebhookSecret    string `env:"STRIPE_WEBHOOK_SECRET"`
-	StripeAPIVersion       string `env:"STRIPE_API_VERSION"` // 2024-04-10
+	DefaultPlan             string `env:"TENANT_DEFAULT_PLAN"`               // basic
+	DestroyBackupRetainDays int    `env:"TENANT_DESTROY_BACKUP_RETAIN_DAYS"` // 90
+	StripeSecretKey         string `env:"STRIPE_SECRET_KEY"`
+	StripeWebhookSecret     string `env:"STRIPE_WEBHOOK_SECRET"`
+	StripeAPIVersion        string `env:"STRIPE_API_VERSION"` // 2024-04-10
 }
 
 // DRConfig holds disaster recovery configuration.
@@ -420,13 +439,13 @@ type DRConfig struct {
 // PluginProConfig holds per-plugin configuration for Pro plugins.
 type PluginProConfig struct {
 	NotifySecret    string `env:"NOTIFY_INTERNAL_SECRET"`
-	NotifyPort      int    `env:"NOTIFY_PORT"`             // 3712
+	NotifyPort      int    `env:"NOTIFY_PORT"` // 3712
 	NotifyVAPIDPub  string `env:"NOTIFY_VAPID_PUBLIC_KEY"`
 	NotifyVAPIDPriv string `env:"NOTIFY_VAPID_PRIVATE_KEY"`
 	NotifyRoute     string `env:"NOTIFY_ROUTE"`
 	CronSecret      string `env:"CRON_INTERNAL_SECRET"`
-	CronPort        int    `env:"CRON_PORT"`           // 3713
-	CronRetention   int    `env:"CRON_RETENTION_DAYS"` // 90
+	CronPort        int    `env:"CRON_PORT"`                   // 3713
+	CronRetention   int    `env:"CRON_RETENTION_DAYS"`         // 90
 	AIMemLimit      string `env:"PLUGIN_AI_MEMORY_LIMIT"`      // 1g
 	AICPULimit      string `env:"PLUGIN_AI_CPU_LIMIT"`         // 1.0
 	MuxMemLimit     string `env:"PLUGIN_MUX_MEMORY_LIMIT"`     // 512m
@@ -445,8 +464,8 @@ type PluginSystemConfig struct {
 	CacheTTL       int    `env:"NSELF_REGISTRY_CACHE_TTL"` // 300
 	LicenseKey     string `env:"NSELF_PLUGIN_LICENSE_KEY"`
 	SkipVerify     bool   `env:"NSELF_LICENSE_SKIP_VERIFY"`
-	PingURL        string `env:"NSELF_PING_API_URL"`    // https://ping.nself.org
-	PricingURL     string `env:"NSELF_PRICING_URL"`     // https://nself.org/pricing
+	PingURL        string `env:"NSELF_PING_API_URL"` // https://ping.nself.org
+	PricingURL     string `env:"NSELF_PRICING_URL"`  // https://nself.org/pricing
 	InternalSecret string `env:"PLUGIN_INTERNAL_SECRET"`
 }
 
