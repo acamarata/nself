@@ -583,3 +583,15 @@ func prependGeneratedHeader(composeYAML []byte) []byte {
 	out = append(out, composeYAML...)
 	return out
 }
+
+// collectOllamaEnv is a stub for Ollama environment collection.
+// Full implementation is pending (S32-T01). Returns empty map for now.
+func collectOllamaEnv() map[string]string {
+	return make(map[string]string)
+}
+
+// MergeOllamaSidecar is a stub for Ollama sidecar merging.
+// Full implementation is pending (S32-T01). Always returns original YAML with no injection.
+func MergeOllamaSidecar(composeYAML []byte, ollamaEnv map[string]string) ([]byte, bool, error) {
+	return composeYAML, false, nil
+}

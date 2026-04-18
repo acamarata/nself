@@ -4,8 +4,8 @@ import "testing"
 
 func TestIsValidDigest(t *testing.T) {
 	valid := []string{
-		"abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
-		"sha256:abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 	}
 	for _, d := range valid {
 		if !IsValidDigest(d) {
@@ -27,8 +27,8 @@ func TestIsValidDigest(t *testing.T) {
 }
 
 func TestNormalizeDigest(t *testing.T) {
-	hex := "ABC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCD"
-	want := "abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
+	hex := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+	want := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 	// Without prefix, upper-case.
 	got, err := NormalizeDigest(hex)
@@ -55,7 +55,7 @@ func TestNormalizeDigest(t *testing.T) {
 }
 
 func TestPinImage(t *testing.T) {
-	hex := "abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
+	hex := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 	cases := []struct {
 		image, digest, want string
@@ -64,7 +64,7 @@ func TestPinImage(t *testing.T) {
 		{"postgres:16", hex, "postgres:16@sha256:" + hex},
 		{"postgres:16", "sha256:" + hex, "postgres:16@sha256:" + hex},
 		// Already-pinned image should have its pin REPLACED.
-		{"postgres:16@sha256:0000000000000000000000000000000000000000000000000000000000000000", hex, "postgres:16@sha256:" + hex},
+		{"postgres:16@sha256:0000000000000000000000000000000000000000000000000000000000000000000", hex, "postgres:16@sha256:" + hex},
 		// Bad digest falls back to unpinned (safer than emitting junk).
 		{"postgres:16", "not-a-digest", "postgres:16"},
 	}
@@ -76,7 +76,7 @@ func TestPinImage(t *testing.T) {
 }
 
 func TestSplitImageRef(t *testing.T) {
-	hex := "abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
+	hex := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 	cases := []struct {
 		ref, name, tag, digest string
