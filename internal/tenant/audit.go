@@ -21,6 +21,14 @@ func Audit(ctx context.Context, cfg *config.Config, opts AuditOptions) ([]AuditE
 	if opts.TenantID == "" {
 		return nil, fmt.Errorf("tenant-id is required")
 	}
+	if err := validateUUID(opts.TenantID); err != nil {
+		return nil, err
+	}
+	if opts.Since != "" {
+		if err := validateDuration(opts.Since); err != nil {
+			return nil, err
+		}
+	}
 
 	container := cfg.ProjectName + "_postgres"
 	user := cfg.Postgres.User

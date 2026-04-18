@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
 )
+
+// sha256HexRegex matches a lowercase 64-character SHA-256 hex digest.
+var sha256HexRegex = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // checksumBytes computes the SHA-256 hex digest of a byte slice.
 func checksumBytes(data []byte) (string, error) {
@@ -186,6 +190,9 @@ type ChecksumMismatch struct {
 
 // ResetChecksum updates the stored checksum for a migration to match the current file on disk.
 func ResetChecksum(ctx context.Context, cfg *config.Config, migrationID string) error {
+	if err := validateMigrationName(migrationID); err != nil {
+		return fmt.Errorf("reset checksum: %w", err)
+	}
 	if err := ensureMigrationsTable(ctx, cfg); err != nil {
 		return err
 	}
@@ -201,6 +208,10 @@ func ResetChecksum(ctx context.Context, cfg *config.Config, migrationID string) 
 			cs, err := checksumFile(f)
 			if err != nil {
 				return err
+			}
+			// cs is SHA-256 hex; enforce defensively before interpolation.
+			if !sha256HexRegex.MatchString(cs) {
+				return fmt.Errorf("unexpected checksum format for %s", migrationID)
 			}
 			db := cfg.Postgres.DB
 			if db == "" {

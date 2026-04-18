@@ -264,6 +264,9 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 
 		// Compute checksum for the ops table.
 		checksum, _ := checksumBytes(data)
+		if !sha256HexRegex.MatchString(checksum) {
+			return count, fmt.Errorf("unexpected checksum format for %s", name)
+		}
 		migrationID := extractMigrationID(f)
 		if err := validateMigrationName(migrationID); err != nil {
 			return count, fmt.Errorf("migration id from %s: %w", name, err)

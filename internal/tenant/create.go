@@ -22,6 +22,9 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 	if opts.Slug == "" {
 		return fmt.Errorf("tenant slug is required")
 	}
+	if err := validateSlug(opts.Slug); err != nil {
+		return err
+	}
 	if !IsValidPlan(string(opts.Plan)) {
 		return fmt.Errorf("invalid plan %q; valid plans: basic, pro, elite, business, business-plus, enterprise", opts.Plan)
 	}
@@ -51,6 +54,9 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 	}
 
 	tenantID := trimOutput(out)
+	if err := validateUUID(tenantID); err != nil {
+		return fmt.Errorf("postgres returned invalid tenant id: %w", err)
+	}
 	slog.Info("tenant created", "slug", opts.Slug, "plan", opts.Plan, "id", tenantID)
 
 	// Write audit log entry.

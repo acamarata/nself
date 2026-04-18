@@ -21,6 +21,9 @@ func Upgrade(ctx context.Context, cfg *config.Config, opts UpgradeOptions) error
 	if opts.Slug == "" {
 		return fmt.Errorf("tenant slug is required")
 	}
+	if err := validateSlug(opts.Slug); err != nil {
+		return err
+	}
 	if !IsValidPlan(string(opts.Plan)) {
 		return fmt.Errorf("invalid plan %q", opts.Plan)
 	}
@@ -51,6 +54,9 @@ func Upgrade(ctx context.Context, cfg *config.Config, opts UpgradeOptions) error
 	tenantID := trimOutput(out)
 	if tenantID == "" {
 		return fmt.Errorf("tenant %q not found or not active", opts.Slug)
+	}
+	if err := validateUUID(tenantID); err != nil {
+		return fmt.Errorf("postgres returned invalid tenant id: %w", err)
 	}
 
 	slog.Info("tenant upgraded", "slug", opts.Slug, "plan", opts.Plan)

@@ -21,8 +21,14 @@ func Suspend(ctx context.Context, cfg *config.Config, opts SuspendOptions) error
 	if opts.Slug == "" {
 		return fmt.Errorf("tenant slug is required")
 	}
+	if err := validateSlug(opts.Slug); err != nil {
+		return err
+	}
 	if opts.Reason == "" {
 		return fmt.Errorf("suspension reason is required (--reason)")
+	}
+	if err := validateReason(opts.Reason); err != nil {
+		return err
 	}
 
 	container := cfg.ProjectName + "_postgres"
@@ -52,6 +58,9 @@ func Suspend(ctx context.Context, cfg *config.Config, opts SuspendOptions) error
 	tenantID := trimOutput(out)
 	if tenantID == "" {
 		return fmt.Errorf("tenant %q not found or not active", opts.Slug)
+	}
+	if err := validateUUID(tenantID); err != nil {
+		return fmt.Errorf("postgres returned invalid tenant id: %w", err)
 	}
 
 	slog.Info("tenant suspended", "slug", opts.Slug, "reason", opts.Reason)

@@ -21,6 +21,9 @@ func Destroy(ctx context.Context, cfg *config.Config, opts DestroyOptions) error
 	if opts.Slug == "" {
 		return fmt.Errorf("tenant slug is required")
 	}
+	if err := validateSlug(opts.Slug); err != nil {
+		return err
+	}
 	if opts.ConfirmName != opts.Slug {
 		return fmt.Errorf("confirmation failed: --confirm-name %q does not match slug %q", opts.ConfirmName, opts.Slug)
 	}
@@ -50,6 +53,9 @@ func Destroy(ctx context.Context, cfg *config.Config, opts DestroyOptions) error
 	tenantID := trimOutput(out)
 	if tenantID == "" {
 		return fmt.Errorf("tenant %q not found", opts.Slug)
+	}
+	if err := validateUUID(tenantID); err != nil {
+		return fmt.Errorf("postgres returned invalid tenant id: %w", err)
 	}
 
 	// Audit log BEFORE destruction.

@@ -38,15 +38,15 @@ func validateJobID(id string) error {
 
 // Job represents a queue job.
 type Job struct {
-	ID        string          `json:"id"`
-	Queue     string          `json:"queue"`
-	State     string          `json:"state"` // pending, active, completed, failed, dead
-	Data      json.RawMessage `json:"data"`
-	CreatedAt time.Time       `json:"created_at"`
-	StartedAt *time.Time      `json:"started_at,omitempty"`
-	DoneAt    *time.Time      `json:"done_at,omitempty"`
-	RetryCount int            `json:"retry_count"`
-	Error     string          `json:"error,omitempty"`
+	ID         string          `json:"id"`
+	Queue      string          `json:"queue"`
+	State      string          `json:"state"` // pending, active, completed, failed, dead
+	Data       json.RawMessage `json:"data"`
+	CreatedAt  time.Time       `json:"created_at"`
+	StartedAt  *time.Time      `json:"started_at,omitempty"`
+	DoneAt     *time.Time      `json:"done_at,omitempty"`
+	RetryCount int             `json:"retry_count"`
+	Error      string          `json:"error,omitempty"`
 }
 
 // QueueInfo holds summary information about a queue.
@@ -126,18 +126,41 @@ func RetryJob(ctx context.Context, dbURL, jobID string) error {
 	return execSQL(ctx, dbURL, query)
 }
 
+// purgeAdvisoryLockKey is the fixed key used for pg_advisory_xact_lock so that
+// concurrent PurgeQueue calls from multiple CLI hosts do not interleave DELETEs
+// against pgboss.job. The lock is transaction-scoped and released automatically.
+const purgeAdvisoryLockKey = "hashtext('nself:queue:purge')"
+
 // PurgeQueue removes completed/dead jobs older than the specified duration.
+// The DELETE runs inside a transaction that first takes a transaction-scoped
+// advisory lock so concurrent purges cannot fight over the same rows.
 func PurgeQueue(ctx context.Context, dbURL, queue string, olderThan time.Duration) (int, error) {
 	if err := validateQueueName(queue); err != nil {
 		return 0, err
 	}
-	cutoff := time.Now().Add(-olderThan).Format(time.RFC3339)
-	query := fmt.Sprintf(`DELETE FROM pgboss.job WHERE name = '%s'
+	// Reject absurd retention windows that would produce non-RFC3339 timestamps.
+	if olderThan < 0 {
+		return 0, fmt.Errorf("invalid retention window: %s", olderThan)
+	}
+	cutoff := time.Now().Add(-olderThan).UTC().Format(time.RFC3339)
+	// cutoff is a Go-formatted RFC3339 string; regex-validate before
+	// interpolation as belt-and-suspenders against any future refactor.
+	if !rfc3339Regex.MatchString(cutoff) {
+		return 0, fmt.Errorf("internal: generated cutoff has unexpected format: %q", cutoff)
+	}
+	query := fmt.Sprintf(`BEGIN;
+SELECT pg_advisory_xact_lock(%s);
+DELETE FROM pgboss.job WHERE name = '%s'
 		AND state IN ('completed', 'expired', 'cancelled')
-		AND completedon < '%s'`, escapeSQLString(queue), cutoff)
+		AND completedon < '%s';
+COMMIT;`, purgeAdvisoryLockKey, escapeSQLString(queue), cutoff)
 
 	return execSQLCount(ctx, dbURL, query)
 }
+
+// rfc3339Regex matches the canonical RFC3339 form that time.Format(time.RFC3339)
+// emits (always with timezone offset; no fractional seconds from the stdlib).
+var rfc3339Regex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$`)
 
 // ListCrons returns scheduled cron jobs.
 func ListCrons(ctx context.Context, dbURL string) ([]CronEntry, error) {

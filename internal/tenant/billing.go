@@ -32,9 +32,15 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 
 	where := "WHERE 1=1"
 	if opts.TenantSlug != "" {
+		if err := validateSlug(opts.TenantSlug); err != nil {
+			return "", err
+		}
 		where += fmt.Sprintf(" AND t.slug = '%s'", sanitize(opts.TenantSlug))
 	}
 	if opts.Month != "" {
+		if err := validateMonth(opts.Month); err != nil {
+			return "", err
+		}
 		where += fmt.Sprintf(" AND u.day >= '%s-01'::date AND u.day < ('%s-01'::date + interval '1 month')",
 			sanitize(opts.Month), sanitize(opts.Month))
 	}
@@ -86,6 +92,9 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 
 // RetryStripeEvent re-enqueues a failed Stripe outbox entry for retry.
 func RetryStripeEvent(ctx context.Context, cfg *config.Config, eventID string) error {
+	if err := validateEventID(eventID); err != nil {
+		return err
+	}
 	container := cfg.ProjectName + "_postgres"
 	user := cfg.Postgres.User
 	if user == "" {

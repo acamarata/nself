@@ -34,11 +34,17 @@ func CollectUsage(ctx context.Context, cfg *config.Config, opts CollectUsageOpti
 	if day == "" {
 		day = "CURRENT_DATE"
 	} else {
+		if err := validateDate(opts.Day); err != nil {
+			return err
+		}
 		day = fmt.Sprintf("'%s'::date", sanitize(opts.Day))
 	}
 
 	tenantFilter := ""
 	if opts.TenantID != "" {
+		if err := validateUUID(opts.TenantID); err != nil {
+			return err
+		}
 		tenantFilter = fmt.Sprintf(" AND t.id = '%s'", sanitize(opts.TenantID))
 	}
 
@@ -90,8 +96,14 @@ func QueryUsage(ctx context.Context, cfg *config.Config, tenantID, month, format
 		db = "nself"
 	}
 
+	if err := validateUUID(tenantID); err != nil {
+		return "", err
+	}
 	whereClause := fmt.Sprintf("WHERE tenant_id = '%s'", sanitize(tenantID))
 	if month != "" {
+		if err := validateMonth(month); err != nil {
+			return "", err
+		}
 		whereClause += fmt.Sprintf(" AND day >= '%s-01'::date AND day < ('%s-01'::date + interval '1 month')",
 			sanitize(month), sanitize(month))
 	}
