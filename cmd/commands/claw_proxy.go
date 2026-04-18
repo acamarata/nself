@@ -4,11 +4,41 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+// parseAllowedOrigins reads a CSV list of origins from the CLAW_PROXY_ALLOWED_ORIGINS
+// env var and returns the normalized set. An empty env var means no CORS headers
+// are added (browsers will block cross-origin requests).
+func parseAllowedOrigins(env string) map[string]bool {
+	set := make(map[string]bool)
+	for _, o := range strings.Split(env, ",") {
+		o = strings.TrimSpace(strings.ToLower(o))
+		if o == "" || o == "*" {
+			continue
+		}
+		set[o] = true
+	}
+	return set
+}
+
+// isLocalhostOrigin returns true for http(s)://localhost[:port] or 127.0.0.1.
+// The claw proxy always binds to 127.0.0.1 and is used by local-dev clients,
+// so localhost origins are allowed by default.
+func isLocalhostOrigin(origin string) bool {
+	lo := strings.ToLower(origin)
+	if idx := strings.Index(lo, "://"); idx != -1 {
+		lo = lo[idx+3:]
+	}
+	if idx := strings.LastIndexByte(lo, ':'); idx != -1 {
+		lo = lo[:idx]
+	}
+	return lo == "localhost" || lo == "127.0.0.1"
+}
 
 var clawProxyCmd = &cobra.Command{
 	Use:   "proxy [port]",
@@ -50,16 +80,31 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 
 	mux := http.NewServeMux()
 
-	// setCORS adds CORS headers to every response.
-	setCORS := func(w http.ResponseWriter) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	// allowedOrigins is populated from CLAW_PROXY_ALLOWED_ORIGINS (csv).
+	// localhost/127.0.0.1 is always allowed since the proxy binds to 127.0.0.1.
+	allowedOrigins := parseAllowedOrigins(os.Getenv("CLAW_PROXY_ALLOWED_ORIGINS"))
+
+	// setCORS echoes the request origin only if it is in the allowlist or is
+	// a localhost origin. Wildcards are never used. Vary: Origin is set so
+	// intermediary caches do not serve the response to a different origin.
+	setCORS := func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		w.Header().Set("Vary", "Origin")
+		if origin == "" {
+			return
+		}
+		lo := strings.ToLower(origin)
+		if !allowedOrigins[lo] && !isLocalhostOrigin(origin) {
+			return
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	}
 
 	// Proxy handler for all /v1/* paths
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
-		setCORS(w)
+		setCORS(w, r)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
