@@ -54,6 +54,15 @@ Exit codes:
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		healthOnly, _ := cmd.Flags().GetBool("health-only")
 		metrics, _ := cmd.Flags().GetBool("metrics")
+		deep, _ := cmd.Flags().GetBool("deep")
+
+		// --deep is a deep health aggregator: enables verbose + metrics and
+		// includes resource usage details. For full subsystem diagnostics,
+		// users should run `nself doctor --deep`.
+		if deep {
+			verbose = true
+			metrics = true
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -262,5 +271,6 @@ func init() {
 	statusCmd.Flags().Bool("verbose", false, "Show resource usage, uptime")
 	statusCmd.Flags().Bool("health-only", false, "Show only health status")
 	statusCmd.Flags().Bool("metrics", false, "Show performance metrics")
+	statusCmd.Flags().Bool("deep", false, "Deep health aggregator (verbose + metrics + resource usage)")
 	RootCmd.AddCommand(statusCmd)
 }
