@@ -25,6 +25,9 @@ func TestPlannedHardeningSteps(t *testing.T) {
 		"Allow HTTPS (443)",
 		"Enable ufw",
 		"Enable fail2ban",
+		"Enable netfilter-persistent",
+		"Save iptables rules (v4)",
+		"Save iptables rules (v6)",
 	}
 	for _, name := range expected {
 		if !names[name] {

@@ -80,6 +80,7 @@ type finding struct {
 func runChecks() []finding {
 	var out []finding
 	out = append(out, checkFirewall())
+	out = append(out, checkIptablesPersistent())
 	out = append(out, checkFail2ban())
 	out = append(out, checkSSHConfig())
 	out = append(out, checkRootLogin())
@@ -87,6 +88,24 @@ func runChecks() []finding {
 	out = append(out, checkDockerExposedPorts())
 	out = append(out, checkEnvFilePerms())
 	return out
+}
+
+// checkIptablesPersistent verifies that netfilter-persistent is installed and
+// enabled so firewall rules survive reboots (S32-T11).
+func checkIptablesPersistent() finding {
+	if runtime.GOOS != "linux" {
+		return finding{Name: "Iptables persistence", OK: true, Detail: "skipped (non-linux host)"}
+	}
+	if _, err := exec.LookPath("netfilter-persistent"); err != nil {
+		return finding{Name: "Iptables persistence", OK: false, Detail: "netfilter-persistent not installed — rules will not survive reboot"}
+	}
+	if err := exec.Command("systemctl", "is-enabled", "--quiet", "netfilter-persistent").Run(); err != nil {
+		return finding{Name: "Iptables persistence", OK: false, Detail: "netfilter-persistent installed but not enabled"}
+	}
+	if _, err := os.Stat("/etc/iptables/rules.v4"); err != nil {
+		return finding{Name: "Iptables persistence", OK: false, Detail: "/etc/iptables/rules.v4 missing — rules not saved"}
+	}
+	return finding{Name: "Iptables persistence", OK: true, Detail: "enabled, rules saved"}
 }
 
 func checkFirewall() finding {
@@ -260,13 +279,21 @@ type hardeningStep struct {
 }
 
 func plannedHardeningSteps() []hardeningStep {
+	// S32-T11: install iptables-persistent / netfilter-persistent so firewall
+	// rules (ufw + any custom iptables) survive reboots. On Debian/Ubuntu ufw
+	// rules persist via the ufw systemd unit, but raw iptables rules do not
+	// without netfilter-persistent. Install both packages + enable the service
+	// and save current rules to /etc/iptables/rules.v4 and rules.v6.
 	return []hardeningStep{
-		{Name: "Install ufw + fail2ban", Cmd: []string{"apt-get", "install", "-y", "ufw", "fail2ban"}},
+		{Name: "Install ufw + fail2ban + iptables-persistent", Cmd: []string{"apt-get", "install", "-y", "ufw", "fail2ban", "iptables-persistent", "netfilter-persistent"}},
 		{Name: "Allow SSH (22)", Cmd: []string{"ufw", "allow", "22/tcp"}},
 		{Name: "Allow HTTP (80)", Cmd: []string{"ufw", "allow", "80/tcp"}},
 		{Name: "Allow HTTPS (443)", Cmd: []string{"ufw", "allow", "443/tcp"}},
 		{Name: "Enable ufw", Cmd: []string{"ufw", "--force", "enable"}},
 		{Name: "Enable fail2ban", Cmd: []string{"systemctl", "enable", "--now", "fail2ban"}},
+		{Name: "Enable netfilter-persistent", Cmd: []string{"systemctl", "enable", "--now", "netfilter-persistent"}},
+		{Name: "Save iptables rules (v4)", Cmd: []string{"sh", "-c", "iptables-save > /etc/iptables/rules.v4"}},
+		{Name: "Save iptables rules (v6)", Cmd: []string{"sh", "-c", "ip6tables-save > /etc/iptables/rules.v6"}},
 		{Name: "Disable SSH password auth", Cmd: []string{"sed", "-i", "s/^#*PasswordAuthentication.*/PasswordAuthentication no/", "/etc/ssh/sshd_config"}},
 		{Name: "Disable SSH root login", Cmd: []string{"sed", "-i", "s/^#*PermitRootLogin.*/PermitRootLogin no/", "/etc/ssh/sshd_config"}},
 		{Name: "Reload sshd", Cmd: []string{"systemctl", "reload", "sshd"}},
