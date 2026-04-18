@@ -1,0 +1,115 @@
+name: Doc-Sync Ritual
+
+# Enforces the Doc-Sync Ritual (P93 Theme 27).
+# Doctrine: https://github.com/nself-org/ — ~/Sites/nself/.claude/docs/doctrines/doc-sync-ritual.md
+# Blocks any PR that changes a user-visible surface without matching doc updates.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  doc-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute PR diff
+        id: diff
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD || true)
+          echo "changed<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$changed" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "$changed"
+
+      - name: Doc-Sync matrix check
+        env:
+          CHANGED: ${{ steps.diff.outputs.changed }}
+        run: |
+          set -u
+          missing=0
+          rows=""
+
+          matches() {
+            echo "$CHANGED" | grep -qE "$1"
+          }
+
+          # Commands / flags
+          if matches '^cli/(cmd|internal/commands)/'; then
+            if ! matches '^(cli/\.wiki/commands/|\.claude/docs/sport/F02-COMMAND-INVENTORY\.md|\.claude/docs/reference/cli-commands\.md|web/docs/content/cli/)'; then
+              rows="${rows}- commands/flags changed without cli/.wiki/commands/ or F02-COMMAND-INVENTORY.md update\n"
+              missing=1
+            fi
+          fi
+
+          # Env vars
+          if matches '(^|/)\.env\.example$|^cli/internal/env/'; then
+            if ! matches '(\.claude/docs/sport/F09-ENV-VAR-INVENTORY\.md|cli/\.wiki/reference/env-vars\.md|web/docs/content/reference/env-vars)'; then
+              rows="${rows}- env vars changed without F09-ENV-VAR-INVENTORY.md or env-vars reference update\n"
+              missing=1
+            fi
+          fi
+
+          # API endpoints
+          if matches '^web/backend/services/|^web/backend/.*/metadata/'; then
+            if ! matches '(web/docs/content/api/|\.claude/docs/API-Reference\.md|\.claude/docs/sport/F08-SERVICE-INVENTORY\.md)'; then
+              rows="${rows}- API endpoints changed without web/docs/content/api/ or F08-SERVICE-INVENTORY.md update\n"
+              missing=1
+            fi
+          fi
+
+          # UI pages
+          if matches '^(admin/app/|web/[^/]+/src/app/)'; then
+            if ! matches '(admin/\.wiki/|web/docs/content/|\.github/docs/|\.github/wiki/)'; then
+              rows="${rows}- UI pages changed without matching .wiki/ or web/docs/content/ update\n"
+              missing=1
+            fi
+          fi
+
+          # Pricing / tiers
+          if matches '^(web/org/content/(pricing|membership)/|web/org/src/.*(pricing|tier)|plugins-pro/.*/tier)'; then
+            if ! matches '(\.claude/docs/sport/F07-PRICING-TIERS\.md|\.claude/docs/membership/|web/org/content/(pricing|membership)/)'; then
+              rows="${rows}- pricing/tiers changed without F07-PRICING-TIERS.md or membership docs update\n"
+              missing=1
+            fi
+          fi
+
+          # Plugins / bundles
+          if matches '^(plugins|plugins-pro)/[^/]+/'; then
+            if ! matches '(\.claude/docs/sport/F0[346]-|plugins/README\.md|plugins-pro/README\.md|web/org/content/plugins/|web/docs/content/plugins/)'; then
+              rows="${rows}- plugins/bundles changed without F03/F04/F06 or README or web/*/content/plugins/ update\n"
+              missing=1
+            fi
+          fi
+
+          # Ports / subdomains
+          if matches '^(nginx/|.*docker-compose\.ya?ml$)'; then
+            if ! matches '(\.claude/docs/sport/F10-PORT-REGISTRY\.md|\.claude/docs/sport/F11-SUBDOMAIN-MAP\.md|\.claude/CLAUDE\.md)'; then
+              rows="${rows}- ports/subdomains changed without F10-PORT-REGISTRY.md or F11-SUBDOMAIN-MAP.md update\n"
+              missing=1
+            fi
+          fi
+
+          # Versions
+          if matches '(^cli/VERSION$|pubspec\.yaml$|homebrew-nself/.*\.rb$|plugins-pro/VERSION$|^Cargo\.toml$)'; then
+            if ! matches '(\.claude/docs/MASTER-VERSIONS\.md|\.claude/docs/sport/F01-MASTER-VERSIONS\.md|web/org/content/changelog|homebrew-nself/Formula/)'; then
+              rows="${rows}- version files changed without MASTER-VERSIONS.md or F01 update\n"
+              missing=1
+            fi
+          fi
+
+          if [ "$missing" -eq 1 ]; then
+            echo "::error::Doc-Sync Ritual violations detected"
+            printf '%b' "$rows"
+            echo ""
+            echo "Doctrine: .claude/docs/doctrines/doc-sync-ritual.md"
+            echo "Matrix:   .claude/qa/pre-commit.md"
+            exit 1
+          fi
+
+          echo "Doc-Sync Ritual: all surface changes have matching doc updates."
