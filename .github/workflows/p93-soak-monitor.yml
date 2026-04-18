@@ -1,0 +1,119 @@
+name: P93 48h Soak Monitor
+
+# Continuous monitor for the P93 production soak gate.
+# Runs every 5 minutes while the soak clock is active. Any gate failure:
+#   1. Posts to Alertmanager
+#   2. Resets the soak clock
+#   3. Opens a GitHub issue tagged soak-regression
+#
+# Manual control:
+#   - Set repo variable SOAK_ACTIVE=true to enable polling.
+#   - Set repo secret SOAK_SSH_KEY to allow deploy/ssh into prod monitor host.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      run_t09:
+        description: 'Run T09 fresh-install smoke (expensive)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: p93-soak-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: ${{ vars.SOAK_ACTIVE == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_VERSION: ${{ vars.SOAK_TARGET_VERSION }}
+      PROM_URL: ${{ vars.SOAK_PROM_URL }}
+      ALERTMANAGER_URL: ${{ vars.SOAK_ALERTMANAGER_URL }}
+      MUX_BASE: ${{ vars.SOAK_MUX_BASE }}
+      POOL_BASE: ${{ vars.SOAK_POOL_BASE }}
+      PG_CONN: ${{ secrets.SOAK_PG_CONN }}
+      GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+      SOAK_GOOGLE_REFRESH_TOKEN: ${{ secrets.SOAK_GOOGLE_REFRESH_TOKEN }}
+      HETZNER_NSELF_TOKEN: ${{ secrets.HETZNER_NSELF_TOKEN }}
+      SOAK_RUN_T09: ${{ inputs.run_t09 == 'true' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl postgresql-client python3 jq openssh-client
+          # hcloud CLI for T09
+          curl -fsSL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar -xz
+          sudo mv hcloud /usr/local/bin/
+
+      - name: Make scripts executable
+        run: chmod +x scripts/soak/*.sh
+
+      - name: Fetch soak clock state from prod
+        run: |
+          # Clock file lives on the prod monitor host. Pull its value so
+          # CI-side gates can use the same elapsed time.
+          mkdir -p /var/lib/nself /var/log/nself 2>/dev/null || sudo mkdir -p /var/lib/nself /var/log/nself
+          if [ -n "${{ secrets.SOAK_SSH_KEY }}" ]; then
+            echo "${{ secrets.SOAK_SSH_KEY }}" > /tmp/soak_key
+            chmod 600 /tmp/soak_key
+            scp -i /tmp/soak_key -o StrictHostKeyChecking=no \
+              root@${{ vars.SOAK_MONITOR_HOST }}:/var/lib/nself/soak-clock \
+              /tmp/soak-clock 2>/dev/null || true
+            if [ -f /tmp/soak-clock ]; then
+              sudo cp /tmp/soak-clock /var/lib/nself/soak-clock
+            fi
+          fi
+
+      - name: Run all soak gates
+        id: gates
+        run: |
+          set +e
+          ./scripts/soak/run-all.sh | tee /tmp/soak-run.log
+          rc=$?
+          echo "rc=$rc" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Reset clock on failure
+        if: steps.gates.outputs.rc != '0'
+        run: |
+          echo "One or more gates failed. Resetting soak clock."
+          if [ -n "${{ secrets.SOAK_SSH_KEY }}" ]; then
+            ssh -i /tmp/soak_key -o StrictHostKeyChecking=no \
+              root@${{ vars.SOAK_MONITOR_HOST }} \
+              "/opt/nself/scripts/soak/02-clock.sh reset 'ci-gate-failure'"
+          fi
+
+      - name: Open issue on failure
+        if: steps.gates.outputs.rc != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/soak-run.log', 'utf8').slice(-4000);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[SOAK] P93 gate failure at ${new Date().toISOString()}`,
+              body: '```\n' + body + '\n```',
+              labels: ['soak-regression', 'p93', 'critical'],
+            });
+
+      - name: Report status
+        run: |
+          if [ "${{ steps.gates.outputs.rc }}" = "0" ]; then
+            echo "PASS — all P93 soak gates green"
+          else
+            echo "FAIL — at least one gate red; clock reset"
+            exit 1
+          fi
