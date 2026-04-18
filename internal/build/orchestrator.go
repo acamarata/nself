@@ -2,6 +2,7 @@ package build
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
@@ -584,14 +585,78 @@ func prependGeneratedHeader(composeYAML []byte) []byte {
 	return out
 }
 
-// collectOllamaEnv is a stub for Ollama environment collection.
-// Full implementation is pending (S32-T01). Returns empty map for now.
+// collectOllamaEnv reads Ollama-related env vars from the OS environment.
+// Returns a non-empty map only when AI_OLLAMA_ENABLED=true; callers use this
+// to decide whether to inject the Ollama sidecar into docker-compose.yml.
 func collectOllamaEnv() map[string]string {
-	return make(map[string]string)
+	if os.Getenv("AI_OLLAMA_ENABLED") != "true" {
+		return make(map[string]string)
+	}
+	env := map[string]string{
+		"AI_OLLAMA_ENABLED": "true",
+	}
+	for _, key := range []string{
+		"AI_OLLAMA_MODEL",
+		"AI_OLLAMA_GPU",
+		"AI_OLLAMA_HOST",
+		"AI_OLLAMA_KEEP_ALIVE",
+	} {
+		if v := os.Getenv(key); v != "" {
+			env[key] = v
+		}
+	}
+	return env
 }
 
-// MergeOllamaSidecar is a stub for Ollama sidecar merging.
-// Full implementation is pending (S32-T01). Always returns original YAML with no injection.
+// MergeOllamaSidecar injects an Ollama service into composeYAML when
+// AI_OLLAMA_ENABLED=true is present in ollamaEnv. The injected service runs
+// the official Ollama image on localhost:11434, which plugin-ai uses for
+// local LLM inference without an external API key.
 func MergeOllamaSidecar(composeYAML []byte, ollamaEnv map[string]string) ([]byte, bool, error) {
-	return composeYAML, false, nil
+	if ollamaEnv["AI_OLLAMA_ENABLED"] != "true" {
+		return composeYAML, false, nil
+	}
+
+	keepAlive := ollamaEnv["AI_OLLAMA_KEEP_ALIVE"]
+	if keepAlive == "" {
+		keepAlive = "24h"
+	}
+	enableGPU := ollamaEnv["AI_OLLAMA_GPU"] == "true"
+
+	// Build the ollama service snippet and append it to the services section.
+	snippet := buildOllamaSnippet(keepAlive, enableGPU)
+
+	// Locate the last non-empty line and append the snippet before the end.
+	// The compose YAML ends with a trailing newline; we insert before it.
+	merged := append(bytes.TrimRight(composeYAML, "\n"), []byte("\n"+snippet)...)
+	return merged, true, nil
+}
+
+// buildOllamaSnippet returns a YAML snippet for the ollama service and its
+// volume, ready to be appended to the services section of docker-compose.yml.
+func buildOllamaSnippet(keepAlive string, enableGPU bool) string {
+	var sb strings.Builder
+	sb.WriteString("  ollama:\n")
+	sb.WriteString("    image: ollama/ollama:0.1.38\n")
+	sb.WriteString("    container_name: nself_ollama\n")
+	sb.WriteString("    restart: unless-stopped\n")
+	sb.WriteString("    networks: [nself]\n")
+	sb.WriteString("    ports:\n")
+	sb.WriteString("      - \"127.0.0.1:11434:11434\"\n")
+	sb.WriteString("    volumes:\n")
+	sb.WriteString("      - ollama_models:/root/.ollama\n")
+	sb.WriteString("    environment:\n")
+	sb.WriteString("      OLLAMA_KEEP_ALIVE: \"" + keepAlive + "\"\n")
+	if enableGPU {
+		sb.WriteString("    deploy:\n")
+		sb.WriteString("      resources:\n")
+		sb.WriteString("        reservations:\n")
+		sb.WriteString("          devices:\n")
+		sb.WriteString("            - driver: nvidia\n")
+		sb.WriteString("              count: all\n")
+		sb.WriteString("              capabilities: [gpu]\n")
+	}
+	sb.WriteString("\nvolumes:\n")
+	sb.WriteString("  ollama_models:\n")
+	return sb.String()
 }

@@ -287,7 +287,7 @@ func domainToFilesafe(domain string) string {
 // writeCustomDomainConf generates an nginx server block for domain and writes
 // it to nginx/conf.d/custom-{domain-safe}.conf inside workdir.
 // When upstream is non-empty the server block proxy_passes to it; otherwise it
-// returns a 200 placeholder response.
+// returns a 200 informational response until --upstream is configured.
 func writeCustomDomainConf(workdir, domain, upstream string) error {
 	confDir := filepath.Join(workdir, "nginx", "conf.d")
 	if err := os.MkdirAll(confDir, 0750); err != nil {
