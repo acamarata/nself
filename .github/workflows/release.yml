@@ -5,13 +5,21 @@ on:
     tags:
       - 'v*'
 
-jobs:
-  release:
-    name: Build and Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+permissions:
+  contents: write
+  id-token: write   # required for Sigstore keyless signing (OIDC)
+  attestations: write  # required for SLSA provenance via actions/attest-build-provenance
 
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # Build the release artifacts (tarballs + checksums.txt) on ubuntu-latest.
+  # Outputs the checksum digest line so the provenance job can reference it.
+  # ────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hashes.outputs.hashes }}
     env:
       CGO_ENABLED: 0
 
@@ -42,18 +50,255 @@ jobs:
       - name: Build dist
         run: make dist
 
-      - name: Create GitHub Release
+      - name: Emit artifact hashes for provenance
+        id: hashes
+        working-directory: dist
+        run: |
+          # base64-encoded sha256-sums of every tarball, for slsa-github-generator
+          HASHES=$(sha256sum *.tar.gz | base64 -w0)
+          echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: dist/*.tar.gz
+          retention-days: 1
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-checksums
+          path: dist/checksums.txt
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Generate SPDX SBOM for every tarball (S34-T02).
+  # ────────────────────────────────────────────────────────────────────────
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: dist
+
+      - name: Generate SBOM for source tree
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Generate SBOM for each tarball
+        run: |
+          mkdir -p sboms
+          for tb in dist/*.tar.gz; do
+            name=$(basename "$tb" .tar.gz)
+            syft "$tb" -o spdx-json > "sboms/${name}.sbom.spdx.json"
+          done
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-sboms
+          path: |
+            sbom.spdx.json
+            sboms/
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────────────────────────
+  # SLSA L3 provenance for all tarballs (S34-T03).
+  # Uses the official slsa-github-generator reusable workflow.
+  # ────────────────────────────────────────────────────────────────────────
+  provenance:
+    name: Generate SLSA provenance
+    needs: build
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    with:
+      base64-subjects: ${{ needs.build.outputs.hashes }}
+      upload-assets: false
+      provenance-name: provenance.intoto.jsonl
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Sign every artifact with cosign keyless (S34-T01) and publish the release
+  # body auto-generated from the changelog + git log (S34-T09).
+  # ────────────────────────────────────────────────────────────────────────
+  sign-and-publish:
+    name: Sign and publish release
+    runs-on: ubuntu-latest
+    needs: [build, sbom, provenance]
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: dist
+
+      - name: Download checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: release-checksums
+          path: dist
+
+      - name: Download SBOMs
+        uses: actions/download-artifact@v4
+        with:
+          name: release-sboms
+          path: dist
+
+      - name: Download provenance
+        uses: actions/download-artifact@v4
+        with:
+          name: provenance.intoto.jsonl
+          path: dist
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Sign all artifacts (keyless)
+        working-directory: dist
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          for f in *.tar.gz checksums.txt sbom.spdx.json provenance.intoto.jsonl; do
+            if [ -f "$f" ]; then
+              cosign sign-blob --yes \
+                --bundle "${f}.sig" \
+                "$f"
+            fi
+          done
+
+      - name: Determine channel from tag
+        id: channel
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            *-rc*)   echo "channel=rc"     >> "$GITHUB_OUTPUT" ;;
+            *-edge*) echo "channel=edge"   >> "$GITHUB_OUTPUT" ;;
+            *)       echo "channel=stable" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Generate release body (S34-T09)
+        id: body
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          channel="${{ steps.channel.outputs.channel }}"
+
+          # Pull the matching changelog section if present.
+          changelog_section=""
+          if [ -f CHANGELOG.md ]; then
+            # extract from "## [version]" or "## vversion" to the next "## " heading
+            changelog_section=$(awk -v v="$version" '
+              BEGIN{found=0}
+              /^## / {
+                if (found) exit
+                if (index($0, v) > 0) { found=1; print; next }
+              }
+              found { print }
+            ' CHANGELOG.md)
+          fi
+
+          # Build the commit log since the previous tag.
+          prev_tag=$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || echo "")
+          if [ -n "$prev_tag" ]; then
+            commits=$(git log --pretty=format:'- %s (%h)' "$prev_tag..$tag")
+          else
+            commits=$(git log --pretty=format:'- %s (%h)' -n 50 "$tag")
+          fi
+
+          # Build the release body.
+          {
+            echo "## nSelf CLI $tag"
+            echo ""
+            echo "**Channel:** \`$channel\`"
+            echo ""
+            if [ -n "$changelog_section" ]; then
+              echo "### Changelog"
+              echo ""
+              echo "$changelog_section"
+              echo ""
+            fi
+            echo "### Commits since previous release"
+            echo ""
+            echo "$commits"
+            echo ""
+            echo "### Install"
+            echo ""
+            echo '```bash'
+            echo "brew install nself-org/nself/nself"
+            echo "# or download a tarball below for your platform"
+            echo '```'
+            echo ""
+            echo "### Verify (Sigstore keyless)"
+            echo ""
+            echo '```bash'
+            echo "cosign verify-blob \\"
+            echo "  --bundle <tarball>.tar.gz.sig \\"
+            echo "  --certificate-identity-regexp '^https://github.com/nself-org/cli/\\.github/workflows/release\\.yml@refs/tags/$tag\$' \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com \\"
+            echo "  <tarball>.tar.gz"
+            echo '```'
+            echo ""
+            echo "Full signing + verification details: [release-signing.md](https://github.com/nself-org/nself/blob/main/.claude/docs/operations/release-signing.md)"
+            echo ""
+            echo "### Artifacts"
+            echo ""
+            echo "- Platform tarballs (linux/darwin × amd64/arm64)"
+            echo "- \`checksums.txt\` — SHA-256 of all tarballs"
+            echo "- \`sbom.spdx.json\` + per-tarball SBOMs — SPDX software bill of materials"
+            echo "- \`provenance.intoto.jsonl\` — SLSA v1.0 provenance attestation"
+            echo "- \`*.sig\` — Sigstore cosign signature bundles for every artifact above"
+          } > release-body.md
+
+          echo "path=release-body.md" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          body_path: ${{ steps.body.outputs.path }}
+          prerelease: ${{ steps.channel.outputs.channel != 'stable' }}
           files: |
             dist/*.tar.gz
             dist/checksums.txt
+            dist/sbom.spdx.json
+            dist/provenance.intoto.jsonl
+            dist/*.sig
 
-      - name: Trigger homebrew tap update
+      - name: Trigger homebrew tap update (stable only)
+        if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/homebrew-nself
+          event-type: cli-release
+          client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable"}'
+
+      - name: Trigger admin Docker rebuild (stable only — CLI↔Admin lockstep per S34-T12)
+        if: steps.channel.outputs.channel == 'stable'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.ADMIN_REBUILD_TOKEN }}
+          repository: nself-org/admin
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'
