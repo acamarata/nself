@@ -700,7 +700,7 @@ nself build --force     # Force rebuild
 
 ## Contributing
 
-See [Contributing](.github/wiki/contributing/CONTRIBUTING.md).
+See [Contributing](.github/wiki/Contributing.md).
 
 The CLI is written in Go (1.25+). Tests live in `internal/` alongside the packages they test. Run `make test` from the repo root.
 

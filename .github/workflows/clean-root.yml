@@ -1,0 +1,85 @@
+name: Clean Working Tree
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Forbid disallowed files (root + tracked junk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Forbid markdown at repo root other than README.md
+        run: |
+          OFFENDERS=$(find . -maxdepth 1 -name '*.md' ! -name 'README.md' -type f | sort)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Disallowed markdown files at repo root:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Per the nSelf Sub-Repo Root Hygiene rule:"
+            echo "  - CONTRIBUTING.md  -> .github/wiki/Contributing.md  (or .github/docs/contributing.md)"
+            echo "  - CODE_OF_CONDUCT.md -> .github/wiki/Code-of-Conduct.md"
+            echo "  - CHANGELOG.md     -> .github/wiki/Changelog.md"
+            echo "  - SECURITY.md      -> .github/SECURITY.md"
+            echo "  - other .md        -> .github/wiki/ (or .github/docs/ for private repos)"
+            echo ""
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Repo Root - Hard Rule)"
+            echo "      ~/Sites/nself/.claude/CLAUDE.md (Sub-Repo Root Hygiene - Hard Rule)"
+            exit 1
+          fi
+          echo "Repo root markdown is clean (only README.md present)."
+
+      - name: Forbid tracked .DS_Store / OS junk anywhere in tree
+        run: |
+          OFFENDERS=$(git ls-files | grep -E '(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini)$|\.swp$|\.swo$' || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Tracked OS / editor junk in repository:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Run: git rm --cached <file> for each, then commit. Add to .gitignore."
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Working Tree - Hard Rule)"
+            exit 1
+          fi
+          echo "No tracked OS junk."
+
+      - name: Forbid tracked secret-bearing .env files
+        run: |
+          # Per nSelf env cascade convention (PPI):
+          #   ALLOWED tracked: .env.dev, .env.staging, .env.prod, .env.production,
+          #                    .env.example, .env.template, .env.sample,
+          #                    (.environments|environments)/<env>/.env  (web-specific variant)
+          #   FORBIDDEN tracked: .env (bare, anywhere not under .environments/<env>/),
+          #                      .env.local, .env.secrets, .env.computed
+          OFFENDERS=$(git ls-files \
+            | grep -E '(^|/)(\.env|\.env\.local|\.env\.secrets|\.env\.computed)$' \
+            | grep -vE '(^|/)(\.environments|environments)/[^/]+/\.env$' \
+            || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Tracked SECRET-BEARING .env file(s) found:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Per the nSelf env cascade convention, .env / .env.local / .env.secrets / .env.computed"
+            echo "must NEVER be tracked. They contain local overrides or production secrets."
+            echo "(Exception: .environments/<env>/.env is allowed — web-specific config-folder pattern.)"
+            echo ""
+            echo "If credentials are in any tracked file: ROTATE THEM and scrub git history."
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Working Tree) + ~/Sites/nself/.claude/CLAUDE.md (Env cascade)"
+            exit 1
+          fi
+          echo "No tracked secret-bearing .env files."
+
+      - name: Verify .gitignore baseline patterns present
+        run: |
+          REQUIRED=(.DS_Store .env node_modules)
+          MISSING=()
+          for pattern in "${REQUIRED[@]}"; do
+            if ! grep -qE "(^|/)${pattern//./\\.}(\$|/)" .gitignore 2>/dev/null && ! grep -qE "^${pattern//./\\.}\$" .gitignore 2>/dev/null; then
+              MISSING+=("$pattern")
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::warning::.gitignore missing baseline patterns: ${MISSING[*]}"
+            echo "See ~/.claude/CLAUDE.md (Clean Working Tree - Hard Rule) for full baseline."
+          fi

@@ -91,4 +91,4 @@ Anything users need to do when upgrading (migration commands, config changes, pl
 
 ---
 
-**Template usage:** Copy this file into `release-body.md` at release time, fill in every section, delete unused sections, paste into the GitHub Release body (or let the release workflow auto-generate from CHANGELOG.md — see `cli/.github/workflows/release.yml` S34-T09).
+**Template usage:** Copy this file into `release-body.md` at release time, fill in every section, delete unused sections, paste into the GitHub Release body (or let the release workflow auto-generate from `.github/wiki/Changelog.md`. see `cli/.github/workflows/release.yml` S34-T09).

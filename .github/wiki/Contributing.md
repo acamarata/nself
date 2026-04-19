@@ -39,17 +39,40 @@ git push origin feat/my-feature
 
 Open a pull request against the `main` branch. Fill in the PR template completely.
 
+## Local Dev Loop
+
+```bash
+make dev        # hot-reload dev server
+make test       # run all tests
+make lint       # run linters
+go vet ./...    # vet code
+```
+
 ## Code Style
 
-- **Format:** `gofmt` — run automatically via `make fmt`
+- **Format:** `gofmt` -- run automatically via `make fmt`
 - **Lint:** `golangci-lint run` must pass with zero warnings
 - **Tests:** all existing tests must pass; new features require new tests
 - **Errors:** return errors with context: `fmt.Errorf("doing X: %w", err)`
 - **I/O functions:** take `context.Context` as first parameter
 
+## Commit Style
+
+Use conventional commits:
+
+- `feat:` new feature
+- `fix:` bug fix
+- `chore:` maintenance
+- `docs:` documentation
+- `test:` tests only
+
 ## Commit Sign-off
 
 No AI tool attribution in commit messages or PR descriptions. Contributions must represent your own work.
+
+## Questions
+
+Open a [GitHub Discussion](https://github.com/nself-org/cli/discussions) or join the community at [nself.org](https://nself.org).
 
 ## Links
 

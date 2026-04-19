@@ -1,3 +1,11 @@
+# OS / editor junk (additions per Clean Working Tree rule)
+Thumbs.db
+*.swo
+*~
+
+# Build artifacts (additions per Clean Working Tree rule)
+coverage.txt
+
 # Binary
 /nself
 /nself.exe

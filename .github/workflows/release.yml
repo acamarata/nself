@@ -205,8 +205,15 @@ jobs:
           channel="${{ steps.channel.outputs.channel }}"
 
           # Pull the matching changelog section if present.
+          # Canonical changelog lives at .github/wiki/Changelog.md per Sub-Repo Root Hygiene rule.
           changelog_section=""
-          if [ -f CHANGELOG.md ]; then
+          changelog_path=""
+          if [ -f .github/wiki/Changelog.md ]; then
+            changelog_path=".github/wiki/Changelog.md"
+          elif [ -f CHANGELOG.md ]; then
+            changelog_path="CHANGELOG.md"
+          fi
+          if [ -n "$changelog_path" ]; then
             # extract from "## [version]" or "## vversion" to the next "## " heading
             changelog_section=$(awk -v v="$version" '
               BEGIN{found=0}
@@ -215,7 +222,7 @@ jobs:
                 if (index($0, v) > 0) { found=1; print; next }
               }
               found { print }
-            ' CHANGELOG.md)
+            ' "$changelog_path")
           fi
 
           # Build the commit log since the previous tag.
