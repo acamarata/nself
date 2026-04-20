@@ -1,0 +1,26 @@
+# CODEOWNERS — nSelf CLI
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Primary owner for all paths.
+# Delegation to additional CODEOWNERS is documented in .github/GOVERNANCE.md.
+
+# Default: all files
+* @aric-nself
+
+# Core CLI source
+/cmd/ @aric-nself
+/internal/ @aric-nself
+/pkg/ @aric-nself
+
+# Build system and release
+/Makefile @aric-nself
+/.goreleaser.yml @aric-nself
+
+# Governance, security, licensing
+/.github/GOVERNANCE.md @aric-nself
+/.github/ENFORCEMENT.md @aric-nself
+/.github/SECURITY.md @aric-nself
+/.github/CODEOWNERS @aric-nself
+
+# Documentation
+/.github/wiki/ @aric-nself

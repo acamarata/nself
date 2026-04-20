@@ -1,84 +1,156 @@
 # Contributing to nSelf CLI
 
-Thank you for your interest in contributing to nSelf. This guide covers bug reports, feature requests, and code contributions.
+Thank you for your interest in contributing to nSelf. This guide covers everything from filing a bug report to landing a complex feature.
+
+## Before You Start
+
+- Read the [Code of Conduct](Code-of-Conduct.md). All contributors are expected to follow it.
+- Read the [Governance model](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md) — it explains how decisions get made.
+- Check [open issues](https://github.com/nself-org/cli/issues) and [Discussions](https://github.com/nself-org/cli/discussions) before opening a new one.
 
 ## Reporting Bugs
 
-1. Search [existing issues](https://github.com/nself-org/cli/issues) first — your bug may already be reported.
+1. Search [existing issues](https://github.com/nself-org/cli/issues) first. Your bug may already be tracked.
 2. Open a new issue using the **Bug Report** template.
-3. Include: nSelf version (`nself version`), OS, steps to reproduce, expected vs actual behaviour.
+3. Include: nSelf version (`nself version`), OS, Docker version, exact steps to reproduce, and actual vs expected behaviour.
+4. Attach relevant logs: `nself logs` or `nself doctor`.
 
 ## Requesting Features
 
-1. Check the [issue tracker](https://github.com/nself-org/cli/issues) for existing feature requests.
+1. Check [existing feature requests](https://github.com/nself-org/cli/issues?q=label%3Afeature).
 2. Open a new issue using the **Feature Request** template.
-3. Describe the use case, not just the solution — this helps us find the best approach.
+3. Describe the use case, not just the solution. This helps evaluate alternatives.
+4. For significant changes, start a [Discussion](https://github.com/nself-org/cli/discussions) first.
+
+## Development Setup
+
+### Requirements
+
+- Go 1.22 or later (`go version`)
+- GNU Make
+- Docker + Docker Compose (for integration tests)
+- `golangci-lint` (optional but recommended: `brew install golangci-lint`)
+
+### First-time setup
+
+```bash
+git clone https://github.com/nself-org/cli.git
+cd cli
+make build          # builds ./nself binary
+make test           # runs all unit tests (no Docker required)
+make install        # installs binary to /usr/local/bin/nself
+```
+
+### Running integration tests
+
+Integration tests require a running Docker environment:
+
+```bash
+INTEGRATION=1 make test
+```
+
+### Vendored dependencies
+
+This repo vendors all Go dependencies. After changing `go.mod`:
+
+```bash
+go mod vendor
+git add vendor/
+```
+
+## Branching Model
+
+| Branch | Purpose |
+|---|---|
+| `main` | Latest stable release |
+| `feat/xxx` | New features |
+| `fix/xxx` | Bug fixes |
+| `chore/xxx` | Maintenance (deps, tooling) |
+| `docs/xxx` | Documentation only |
+
+Always branch from `main`. Target `main` in your PR.
 
 ## Pull Request Process
 
 ```bash
-# 1. Fork the repository on GitHub
-# 2. Clone your fork
+# 1. Fork and clone
 git clone https://github.com/YOUR-USERNAME/cli.git
 cd cli
 
-# 3. Create a feature branch
+# 2. Create a branch
 git checkout -b feat/my-feature
 
-# 4. Make your changes
-# 5. Run tests and linting (must pass)
+# 3. Make changes, then verify
 make test
-golangci-lint run
+make vet
+gofmt -l .          # must produce no output
 
-# 6. Commit
+# 4. Commit with a conventional message
 git commit -m "feat: add my feature"
 
-# 7. Push and open a PR
+# 5. Push and open a PR
 git push origin feat/my-feature
 ```
 
-Open a pull request against the `main` branch. Fill in the PR template completely.
-
-## Local Dev Loop
-
-```bash
-make dev        # hot-reload dev server
-make test       # run all tests
-make lint       # run linters
-go vet ./...    # vet code
-```
+- Fill in the PR template completely.
+- All CI checks must pass before review.
+- One review from a CODEOWNER is required to merge (see [CODEOWNERS](https://github.com/nself-org/cli/blob/main/.github/CODEOWNERS)).
 
 ## Code Style
 
-- **Format:** `gofmt` -- run automatically via `make fmt`
-- **Lint:** `golangci-lint run` must pass with zero warnings
-- **Tests:** all existing tests must pass; new features require new tests
-- **Errors:** return errors with context: `fmt.Errorf("doing X: %w", err)`
-- **I/O functions:** take `context.Context` as first parameter
+- **Format:** `gofmt` — run via `make fmt`. CI fails on unformatted code.
+- **Lint:** `golangci-lint run` must pass with zero warnings.
+- **Tests:** all existing tests must pass. New features need matching tests.
+- **Errors:** wrap with context — `fmt.Errorf("doing X: %w", err)`.
+- **Context:** accept `context.Context` as first parameter in I/O functions.
+- **No panics** in production code paths. No `os.Exit()` outside `main.go`.
+- **User output:** use `internal/ui` — not `fmt.Println` directly.
 
-## Commit Style
+## Commit Conventions
 
-Use conventional commits:
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` new feature
-- `fix:` bug fix
-- `chore:` maintenance
-- `docs:` documentation
-- `test:` tests only
+- `feat:` — new feature
+- `fix:` — bug fix
+- `chore:` — maintenance (deps, CI)
+- `docs:` — documentation only
+- `test:` — tests only
+- `refactor:` — no behaviour change
 
-## Commit Sign-off
+Breaking changes: add `!` after type (`feat!:`) and document in the PR body.
 
-No AI tool attribution in commit messages or PR descriptions. Contributions must represent your own work.
+## Plugin Development
+
+The CLI loads plugins from `plugins/` (free) and `plugins-pro/` (paid). To add or modify a plugin:
+
+1. Read `.claude/docs/PLUGIN_SYSTEM_SPEC.md` — plugin manifest schema and loader pipeline.
+2. Create or update the plugin directory with a valid `plugin.json` manifest.
+3. Add integration tests that verify `nself plugin install <name>` succeeds.
+4. File a PR to the `plugins` repo, not to `cli` (unless you are changing the plugin loader itself).
+
+See [Plugin Dev Guide](Plugin-Dev-Guide.md) for the complete walkthrough.
+
+## Security Disclosures
+
+Do not open a public issue for security vulnerabilities. Follow the process in [SECURITY.md](https://github.com/nself-org/cli/blob/main/.github/SECURITY.md).
+
+## Translations / Internationalisation
+
+The CLI's internationalisation strategy is under review. Translation contributions are deferred until the strategy decision is documented. Watch [Discussions](https://github.com/nself-org/cli/discussions) for updates.
 
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/nself-org/cli/discussions) or join the community at [nself.org](https://nself.org).
+- [GitHub Discussions](https://github.com/nself-org/cli/discussions) — preferred for questions
+- Community: [nself.org](https://nself.org)
 
-## Links
+## Related
 
-- [[Dev-Setup]] — set up your local development environment
+- [GOVERNANCE.md](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md) — decision model
+- [ENFORCEMENT.md](https://github.com/nself-org/cli/blob/main/.github/ENFORCEMENT.md) — code of conduct enforcement
+- [CODEOWNERS](https://github.com/nself-org/cli/blob/main/.github/CODEOWNERS) — who reviews what
+- [[Dev-Setup]] — local environment setup
 - [[Plugin-Dev-Guide]] — building a new plugin
-- [[Release-Process]] — how releases work
+- [[Release-Process]] — release workflow
 
 ---
 ← [[Home]] | [[_Sidebar]]
