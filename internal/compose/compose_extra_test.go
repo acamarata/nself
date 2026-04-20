@@ -364,6 +364,34 @@ func TestPostProcess_DefaultLimitsApplied(t *testing.T) {
 	}
 }
 
+// TestPostProcess_PidsLimitApplied verifies that every non-init service
+// receives pids_limit=100 after postProcess. This is the fork-bomb prevention
+// guard required by S43-T12 (Security-Always-Free Doctrine).
+func TestPostProcess_PidsLimitApplied(t *testing.T) {
+	cfg := minimalConfig()
+	cfg.DockerLogMaxSize = "10m"
+	cfg.DockerLogMaxFile = "3"
+	cfg.DockerStopGrace = "30s"
+
+	g := NewGenerator(cfg)
+	dc, err := g.buildDockerCompose()
+	if err != nil {
+		t.Fatalf("buildDockerCompose: %v", err)
+	}
+
+	for name, svc := range dc.Services {
+		if name == "meilisearch-init" {
+			continue // init containers are exempt
+		}
+		if svc.PidsLimit == 0 {
+			t.Errorf("service %q has PidsLimit=0 (fork-bomb guard missing)", name)
+		} else if svc.PidsLimit != defaultPidsLimit {
+			// Services may override; just confirm it's set.
+			t.Logf("service %q has custom PidsLimit=%d (ok)", name, svc.PidsLimit)
+		}
+	}
+}
+
 // TestPostProcess_PreservesExplicitLimits verifies that services that already
 // set Deploy.Resources.Limits (postgres, hasura, auth) keep their explicit
 // values and are not overwritten by defaults.

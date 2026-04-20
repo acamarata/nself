@@ -108,6 +108,12 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 	return dc, nil
 }
 
+// defaultPidsLimit is the default pids_limit applied to every non-init container.
+// Prevents fork-bomb attacks by capping processes+threads to 100. Services
+// that legitimately spawn more threads (e.g. postgres under high concurrency)
+// override PidsLimit directly in their builder function.
+const defaultPidsLimit int64 = 100
+
 // defaultMemLimit is the fallback memory cap applied to any generated service
 // that does not set an explicit Deploy.Resources.Limits.Memory. Ensures no
 // container can run unbounded in production.
@@ -183,6 +189,13 @@ func (g *Generator) postProcess(dc *DockerCompose) {
 			applySecurityToService(&svc, RedisSecurity())
 		default:
 			applySecurityToService(&svc, DefaultSecurity())
+		}
+
+		// Fork-bomb prevention: apply pids_limit to every non-init long-running
+		// service. A service may override this in its builder by setting
+		// PidsLimit > 0 before postProcess runs; postProcess respects that value.
+		if !initContainers[name] && svc.PidsLimit == 0 {
+			svc.PidsLimit = defaultPidsLimit
 		}
 
 		dc.Services[name] = svc

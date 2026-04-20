@@ -141,6 +141,10 @@ type ServiceConfig struct {
 	StdinOpen     bool                `yaml:"stdin_open,omitempty"`
 	Tty           bool                `yaml:"tty,omitempty"`
 
+	// PidsLimit caps the number of processes/threads inside the container.
+	// Default 100 prevents fork-bomb attacks. Per-plugin override via compose.
+	PidsLimit int64 `yaml:"pids_limit,omitempty"`
+
 	// CapDropComment is an optional comment injected into the generated YAML
 	// above cap_add when cap_drop is intentionally omitted. Not serialized as
 	// a YAML field — rendered as a comment via MarshalYAML.
