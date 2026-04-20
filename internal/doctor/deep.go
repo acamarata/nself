@@ -33,6 +33,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S69-T05: ai+moderation wiring gap check.
 	results = append(results, CheckModerationWired(ctx))
 
+	// S70-T06: Hasura introspection disabled in production.
+	results = append(results, CheckHasuraIntrospection(ctx))
+
 	return results
 }
 
