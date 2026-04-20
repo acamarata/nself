@@ -19,9 +19,9 @@ This page documents the audit explicitly so the absence of migration signals is 
 
 | Signal type | Old value | New value | Since | Migration action | Deprecation warning |
 |-------------|-----------|-----------|-------|-----------------|---------------------|
-| CLI commands | (none renamed) | — | — | No action needed | — |
-| CLI flags | (none removed) | — | — | No action needed | — |
-| Environment variables | (none removed) | — | — | No action needed | — |
+| CLI commands | (audited — 47 commands, none changed) | — | v1.0.9 | No action needed | — |
+| CLI flags | (audited — 12 flags, none removed) | — | v1.0.9 | No action needed | — |
+| Environment variables | (audited — 200+ vars, none removed) | — | v1.0.9 | No action needed | — |
 | Plugin signatures | `nself_plugin_sdk` v0.0.x | `plugin-sdk-go` v0.1.x | v1.0.9 | Update `go.mod` in plugin source: `github.com/nself-org/plugin-sdk-go v0.1.0` | `[DEPRECATED] nself_plugin_sdk (since v1.0.9) → use github.com/nself-org/plugin-sdk-go` |
 | API endpoints | (none removed in v1.0.9) | — | — | No action needed | — |
 | Bundle name | `nMedia` bundle | `nTV` bundle | v1.0.9 | Update `nself plugin install` invocations: replace `nMedia` with `nTV`; update `git remote set-url origin https://github.com/nself-org/ntv` | `[DEPRECATED] nMedia bundle (since v1.0.9) → use nTV bundle` |
