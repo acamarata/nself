@@ -85,6 +85,27 @@ CRITICAL findings include: world-readable secret files, sensitive ports bound on
 | `monitoring` | Prometheus, Grafana, Loki reachable |
 | `backups` | Last backup age (must be under 26 hours) |
 | `security` | JWT secret, container user, secret file permissions, exposed ports, weak SSL ciphers |
+| `performance` | **PERF-POOL-01**: pgxpool connection cap vs postgres_max_connections |
+
+### PERF-POOL-01: Pool Sizing Check
+
+Fires during `nself doctor --deep` in the `performance` section.
+
+**What it checks:** Total configured pgxpool `MaxConns` across all active services must not exceed `POSTGRES_MAX_CONNECTIONS`. Default Postgres ships with `max_connections=100`. With 23 enabled services at the default cap of 10 connections each, total = 230 — exceeding the limit causes random `503` errors under load.
+
+**Recommended cap formula:** `min(10, floor(postgres_max_connections / num_active_services))`
+
+| Status | Meaning |
+|--------|---------|
+| `pass` | Total pool capacity ≤ postgres_max_connections |
+| `warn` | Total pool capacity > postgres_max_connections — reduce per-service pool or raise `POSTGRES_MAX_CONNECTIONS` |
+
+**Fix:** Raise `POSTGRES_MAX_CONNECTIONS` in `.env` or reduce per-plugin pool size. The check emits a `FixCmd` suggestion with the exact value to set.
+
+```bash
+# Skip the pool sizing check (not recommended in production)
+nself doctor --deep --skip-pool
+```
 
 ## JSON Output
 
