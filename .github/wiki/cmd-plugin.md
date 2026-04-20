@@ -139,6 +139,14 @@ nself plugin list --show-eol
 nself plugin install old-plugin --allow-eol
 ```
 
+## Install telemetry
+
+After a successful `nself plugin install`, the CLI sends a single fire-and-forget event to `plugins.nself.org/plugins/:name/install-event`. This increments the public download counter shown in the plugin marketplace.
+
+The event body contains one field: `instanceId`, which is an opaque SHA-256 hash of a machine-local identifier. No hostname, IP address, username, or project name is transmitted. The event is deduplicated per (instance, plugin) per ISO week, so reinstalling the same plugin in the same week does not double-count. If the network is unavailable, the event is silently dropped with no retry.
+
+To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
+
 ## See also
 
 - [[cmd-plugin-compat-check]] — compatibility check reference
