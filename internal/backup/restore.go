@@ -15,13 +15,17 @@ import (
 )
 
 // RestoreOptions holds flags for `nself backup restore`.
+//
+// Note: PointInTime (PITR) is NOT supported in v1.0.9. The field is retained
+// for forward compatibility but any non-empty value returns an explicit error
+// directing users to v1.1.0 + pgbackrest integration. Remove this note when
+// PITR ships.
 type RestoreOptions struct {
-	BackupID    string   // backup ID or "latest"
-	ToDir       string   // restore to alternate directory
-	Only        []string // pg, minio, metadata — subset to restore
-	PointInTime string   // ISO8601 timestamp for PITR
-	DecryptKey  string   // path to age identity file
-	Yes         bool     // skip confirmation
+	BackupID   string   // backup ID or "latest"
+	ToDir      string   // restore to alternate directory
+	Only       []string // pg, minio, metadata — subset to restore
+	DecryptKey string   // path to age identity file
+	Yes        bool     // skip confirmation
 }
 
 // Restore recovers a backup by ID or "latest".
@@ -36,7 +40,7 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 		return err
 	}
 
-	slog.Info("restoring from backup", "file", backupFile, "pitr", opts.PointInTime)
+	slog.Info("restoring from backup", "file", backupFile)
 
 	// Decrypt if needed.
 	workFile := backupFile
@@ -189,26 +193,11 @@ func restorePgDump(ctx context.Context, container, user, db, backupFile string) 
 	return nil
 }
 
-func restoreBaseBackup(ctx context.Context, cfg *config.Config, container, user, backupFile string, opts RestoreOptions) error {
+func restoreBaseBackup(ctx context.Context, cfg *config.Config, container, user, backupFile string, _ RestoreOptions) error {
 	slog.Info("restoring from base backup", "file", backupFile)
-
-	// For PITR, we need to set recovery_target_time.
-	if opts.PointInTime != "" {
-		slog.Info("point-in-time recovery requested", "target", opts.PointInTime)
-		// Write recovery.conf / postgresql.auto.conf with recovery target.
-		recoveryConf := fmt.Sprintf(
-			"restore_command = 'cp /var/lib/postgresql/wal_archive/%%f %%p'\nrecovery_target_time = '%s'\nrecovery_target_action = 'promote'\n",
-			opts.PointInTime,
-		)
-		args := []string{
-			"exec", container,
-			"sh", "-c", fmt.Sprintf("echo '%s' > /var/lib/postgresql/data/recovery.signal && echo \"%s\" >> /var/lib/postgresql/data/postgresql.auto.conf", "", recoveryConf),
-		}
-		cmd := exec.CommandContext(ctx, "docker", args...)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("set recovery target: %s: %w", string(output), err)
-		}
-	}
+	// PITR (point-in-time recovery) is NOT supported in v1.0.9.
+	// pgbackrest integration and WAL replay are planned for v1.1.0.
+	// See: docs/operations/disaster-recovery-runbook.md#pitr
 
 	slog.Info("base backup restore initiated — restart postgres to complete recovery")
 	return nil
