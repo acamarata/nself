@@ -8,6 +8,8 @@ nself plugin install {name}
 
 For free plugins, no setup required. For pro plugins, set your license key first — see [[Plugin-Licensing]].
 
+Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available — the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
+
 After installing any plugin, regenerate your stack:
 
 ```bash
@@ -90,4 +92,5 @@ Then run `nself build` to pick up the new configuration.
 
 - [[Plugin-Overview]] — What plugins are and pricing tiers
 - [[Plugin-Licensing]] — License keys for pro plugins
+- [[Plugin-Status-Badges]] — stable, beta, and planned behavior at install time
 - [[Plugin-Dev-Guide]] — Build your own plugin

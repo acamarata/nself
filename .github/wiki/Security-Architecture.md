@@ -83,6 +83,20 @@ Plugin manifests are decoded with `DisallowUnknownFields` to prevent field injec
 - Version strings must match anchored semver
 - Plugin download URLs must use HTTPS from allowed domains
 - Checksums are verified (SHA-256) before installation
+- Ed25519 signatures are verified against the publisher key pinned in the registry when present
+
+### Plugin Signature Verification (S47-T09)
+
+When the registry entry for a plugin includes `author_public_key` and `signature` fields, the CLI performs Ed25519 signature verification after the SHA-256 checksum passes:
+
+1. Decode the hex-encoded 32-byte public key from the registry.
+2. Compute SHA-256 of the downloaded tarball.
+3. Verify the Ed25519 signature over that digest using `crypto/ed25519`.
+4. If verification fails, install is aborted with: `plugin signature verification failed: tarball does not match registry signature (possible tampering)`.
+
+This protects against supply-chain attacks where an attacker replaces a tarball on the distribution server but cannot forge a valid signature without the plugin author's private key.
+
+The verification step is skippable only in offline/development mode via `NSELF_LICENSE_SKIP_VERIFY=1` (requires `--force` flag). It is never skipped in production installs. Per the Security-Always-Free Doctrine, this verification is free, automatic, and applies to all plugin tiers.
 
 ## File Permissions
 

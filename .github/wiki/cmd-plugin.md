@@ -20,11 +20,11 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 
 | Subcommand | Description |
 |------------|-------------|
-| `install <plugin> [plugin...]` | Install one or more plugins (license check enforced for pro plugins) |
+| `install <plugin> [plugin...]` | Install one or more plugins (license check enforced for pro plugins; planned plugins are rejected) |
 | `remove <name>` | Remove a plugin |
 | `update [name]` | Update a specific plugin, or all installed plugins if no name given |
 | `updates` | Check for available updates across all installed plugins |
-| `list` | List available and installed plugins |
+| `list` | List available and installed plugins (beta and planned plugins show status badges) |
 | `inventory` | List installed plugins with version, tier, and status |
 | `refresh` | Force refresh the remote registry cache |
 | `start <name>` | Start a plugin service container |
@@ -43,6 +43,24 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 | `--category` | `""` | Filter by category (for `list`) |
 | `--detailed` | false | Show detailed information |
 | `--help`, `-h` | — | Show help |
+
+## Plugin Status Badges
+
+Plugins carry a status field in the registry. The `list` subcommand shows badges for non-stable plugins:
+
+```
+ai                  [installed]
+browser             [beta]
+nfamily             [planned]
+```
+
+Install behavior by status:
+
+- **stable** — installs without warnings (default for most plugins)
+- **beta** — prints a warning to stderr, then installs
+- **planned** — install is rejected with a "coming soon" message and a link to the release timeline
+
+See [[Plugin-Status-Badges]] for the full reference.
 
 ## Examples
 
