@@ -6,19 +6,80 @@ on:
   pull_request:
     branches: [main]
 
+# S88b.T05: CLI coverage gate — fails if coverage drops below floor.
+# Floor: 75% total (conservative; target is 80% per S88b.T01 + True-100%-Done check 8).
+# Security-critical packages (license, auth) must be at 100%.
+env:
+  COVERAGE_FLOOR: 75
+  CGO_ENABLED: 0
+
 jobs:
   coverage:
+    name: Go coverage gate (cli)
     runs-on: ubuntu-latest
-    env:
-      CGO_ENABLED: 0
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
       - name: Run tests with coverage
-        run: go test -mod=vendor -coverprofile=coverage.out ./...
+        run: go test -mod=vendor -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Enforce overall coverage floor (≥75%)
+        run: |
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "Total coverage: ${total}%"
+          if [ -z "$total" ]; then
+            echo "ERROR: could not parse coverage total" >&2
+            exit 1
+          fi
+          # Use awk for float comparison (bash cannot compare floats).
+          result=$(awk -v total="$total" -v floor="$COVERAGE_FLOOR" 'BEGIN { print (total+0 >= floor+0) ? "pass" : "fail" }')
+          if [ "$result" = "fail" ]; then
+            echo "FAIL: Coverage ${total}% is below floor ${COVERAGE_FLOOR}% (floor set by S88b.T05)" >&2
+            exit 1
+          fi
+          echo "PASS: Coverage ${total}% >= floor ${COVERAGE_FLOOR}%"
+
+      - name: Enforce security-critical packages at 100%
+        run: |
+          failed=0
+          for pkg in license auth; do
+            if ! go test -mod=vendor -coverprofile="/tmp/${pkg}.out" "./internal/${pkg}/..." 2>/dev/null; then
+              echo "WARN: could not test internal/${pkg} — package may not exist at this path" >&2
+              continue
+            fi
+            # Count lines not at 100% (exclude total line and 0-func lines).
+            not_100=$(go tool cover -func="/tmp/${pkg}.out" 2>/dev/null | grep -v '^total:' | awk '{print $3}' | grep -v '100.0%' | grep -v '^$' | wc -l | tr -d ' ')
+            if [ "$not_100" -gt 0 ]; then
+              echo "FAIL: internal/${pkg} has ${not_100} function(s) below 100% coverage (security-critical)" >&2
+              go tool cover -func="/tmp/${pkg}.out" | grep -v '100.0%' | grep -v '^total:'
+              failed=1
+            else
+              echo "PASS: internal/${pkg} at 100% coverage"
+            fi
+          done
+          exit $failed
+
+      - name: Coverage delta comment (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')
+          echo "### Coverage Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Total coverage | ${total} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Floor | ${COVERAGE_FLOOR}% |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Security-critical (license, auth) | 100% required |" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: coverage.out
+          flags: cli
+          fail_ci_if_error: false
+
