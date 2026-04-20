@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -321,6 +322,18 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return fmt.Errorf("creating schema for plugin %q: %w", name, err)
 	}
 
+	// S71-T02: Emit structured audit log for the granted permission set.
+	// One line per install, consumable by Loki. Never logs secret values —
+	// only the permission strings declared in the manifest.
+	slog.Info("plugin.install.permissions",
+		"plugin", name,
+		"version", manifest.Version,
+		"permissions", manifest.Permissions,
+	)
+
+	// S71-T02: Warn via doctor when dangerous permissions are present.
+	logDangerousPermissions(name, manifest.Permissions)
+
 	fmt.Fprintf(os.Stderr, "\nℹ Run 'nself build' to include %s in your stack.\n", name)
 
 	// S68-T02: Fire-and-forget install-event to plugins.nself.org registry.
@@ -329,6 +342,28 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	go postInstallEvent(name)
 
 	return nil
+}
+
+// dangerousPermissions lists permission strings that warrant a visible warning
+// on install. system:exec and network:internet are the two highest-risk grants.
+// S71-T02.
+var dangerousPermissions = map[string]bool{
+	"system:exec":      true,
+	"network:internet": true,
+}
+
+// logDangerousPermissions emits a stderr warning for any dangerous permissions
+// held by the named plugin. Called immediately after schema creation so the
+// warning appears before the "Run nself build" footer line. S71-T02.
+func logDangerousPermissions(pluginName string, permissions []string) {
+	for _, perm := range permissions {
+		if dangerousPermissions[perm] {
+			fmt.Fprintf(os.Stderr,
+				"warning: plugin %q holds elevated permission %q — review with 'nself plugin info %s'\n",
+				pluginName, perm, pluginName,
+			)
+		}
+	}
 }
 
 // postInstallEvent POSTs an anonymous install count event to the registry worker.
