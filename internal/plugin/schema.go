@@ -30,6 +30,15 @@ func sanitizeSchemaName(pluginName string) string {
 	return "np_" + name
 }
 
+// quoteIdent double-quotes a SQL identifier that has already been validated
+// by sanitizeSchemaName (pure [a-z0-9_]). This adds an extra layer of
+// defence in depth: even if the regex contract ever changes, the double-quoted
+// form prevents identifier injection in CREATE/DROP/GRANT/ALTER DDL.
+// Embedded double-quotes are escaped as "" per the SQL standard.
+func quoteIdent(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
 // execPSQL runs a SQL statement inside the Postgres container via docker exec.
 func execPSQL(ctx context.Context, cfg *config.Config, sql string) error {
 	containerName := cfg.ProjectName + "-postgres-1"
@@ -106,6 +115,11 @@ const schemaVersion = 1
 func createPluginSchema(ctx context.Context, cfg *config.Config, pluginName string) error {
 	schema := sanitizeSchemaName(pluginName)
 	role := schema + "_role"
+	// Double-quoted identifiers prevent injection even if the regex contract
+	// ever changes. Validated identifiers are [a-z0-9_] only, but quoting is
+	// applied as defence in depth (SEC-SQL-01).
+	qSchema := quoteIdent(schema)
+	qRole := quoteIdent(role)
 
 	// Ensure np_common schema and schema_versions tracking table exist first,
 	// so the version check below has a table to query.
@@ -131,18 +145,20 @@ CREATE TABLE IF NOT EXISTS np_common.schema_versions (
 	}
 
 	// Create role if it does not exist (idempotent via DO block).
+	// rolname in pg_roles is an unquoted system column; the quoteIdent form is
+	// used in the CREATE ROLE statement only.
 	roleSQL := fmt.Sprintf(`DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '%s') THEN
     CREATE ROLE %s NOLOGIN;
   END IF;
-END $$;`, role, role)
+END $$;`, role, qRole)
 
 	if err := execPSQL(ctx, cfg, roleSQL); err != nil {
 		return fmt.Errorf("creating role %s: %w", role, err)
 	}
 
 	// Create schema if it does not exist.
-	schemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", schema)
+	schemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", qSchema)
 	if err := execPSQL(ctx, cfg, schemaSQL); err != nil {
 		return fmt.Errorf("creating schema %s: %w", schema, err)
 	}
@@ -150,14 +166,14 @@ END $$;`, role, role)
 	// Grant usage and create permissions on the schema to the role.
 	grantSQL := fmt.Sprintf(
 		"GRANT USAGE ON SCHEMA %s TO %s; GRANT CREATE ON SCHEMA %s TO %s;",
-		schema, role, schema, role,
+		qSchema, qRole, qSchema, qRole,
 	)
 	if err := execPSQL(ctx, cfg, grantSQL); err != nil {
 		return fmt.Errorf("granting permissions on %s: %w", schema, err)
 	}
 
 	// Set the role's default search_path to its own schema plus public.
-	pathSQL := fmt.Sprintf("ALTER ROLE %s SET search_path = %s, public;", role, schema)
+	pathSQL := fmt.Sprintf("ALTER ROLE %s SET search_path = %s, public;", qRole, qSchema)
 	if err := execPSQL(ctx, cfg, pathSQL); err != nil {
 		return fmt.Errorf("setting search_path for %s: %w", role, err)
 	}
@@ -175,13 +191,15 @@ END $$;`, role, role)
 func dropPluginSchema(ctx context.Context, cfg *config.Config, pluginName string) error {
 	schema := sanitizeSchemaName(pluginName)
 	role := schema + "_role"
+	qSchema := quoteIdent(schema)
+	qRole := quoteIdent(role)
 
-	dropSchemaSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", schema)
+	dropSchemaSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", qSchema)
 	if err := execPSQL(ctx, cfg, dropSchemaSQL); err != nil {
 		return fmt.Errorf("dropping schema %s: %w", schema, err)
 	}
 
-	dropRoleSQL := fmt.Sprintf("DROP ROLE IF EXISTS %s;", role)
+	dropRoleSQL := fmt.Sprintf("DROP ROLE IF EXISTS %s;", qRole)
 	if err := execPSQL(ctx, cfg, dropRoleSQL); err != nil {
 		return fmt.Errorf("dropping role %s: %w", role, err)
 	}
