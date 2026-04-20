@@ -10,9 +10,11 @@ nself service <subcommand> [flags]
 
 ## Description
 
-`nself service` manages the optional services in your nSelf stack. The four core services (PostgreSQL, Hasura, Auth, Nginx) are always included. Everything else — Redis, MinIO, Mailpit, Functions, MeiliSearch, MLflow, Monitoring, and Admin — is optional and controlled through this command.
+`nself service` manages the optional services in your nSelf stack. The four core services (PostgreSQL, Hasura, Auth, Nginx) are always included. The six optional services — Redis, MinIO, Email, Functions, Search, and Admin — are controlled through this command.
 
 Enabling or disabling a service writes to your `.env` file. After changing service state, run `nself build` to regenerate `docker-compose.yml` with the updated service set, then `nself restart` to apply the changes.
+
+**MLflow** is no longer an optional service. Use `nself plugin install mlflow` instead.
 
 ## Subcommands
 
@@ -21,17 +23,18 @@ Enabling or disabling a service writes to your `.env` file. After changing servi
 | `enable <name>` | Enable an optional service |
 | `disable <name>` | Disable an optional service |
 | `list` | List all optional services with enabled/disabled status |
+| `upgrade <name> <version>` | Pin a service to a specific image version |
+| `configure <service>` | Configure a service (e.g. email provider presets) |
 
-## Available Services
+## Available Services (6)
 
 | Service | Env Var | Aliases |
 |---------|---------|---------|
 | `redis` | `REDIS_ENABLED` | — |
 | `minio` | `MINIO_ENABLED` | `storage` |
-| `mailpit` | `MAILPIT_ENABLED` | `email` |
+| `email` | `MAILPIT_ENABLED` | `mail`, `mailpit` |
 | `functions` | `FUNCTIONS_ENABLED` | — |
 | `search` | `SEARCH_ENABLED` | `meilisearch` |
-| `mlflow` | `MLFLOW_ENABLED` | — |
 | `monitoring` | `MONITORING_ENABLED` | — |
 | `admin` | `NSELF_ADMIN_ENABLED` | — |
 
