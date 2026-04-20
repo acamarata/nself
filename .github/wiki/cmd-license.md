@@ -31,6 +31,61 @@ Keys are validated with a POST request to `https://ping.nself.org/license/valida
 | `validate` | Validate the saved key against `ping.nself.org` |
 | `clear` | Remove the saved license key |
 | `upgrade` | Open the pricing page in your browser |
+| `tail` | Stream live license validation events from ping_api |
+
+---
+
+## nself license tail
+
+Stream live license validation events from `ping.nself.org` in real time.
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--filter <field=value>` | — | Filter events (repeatable) |
+| `--ping-url <url>` | `$NSELF_PING_URL` or `https://ping.nself.org` | ping_api base URL |
+
+### Filters
+
+| Filter | Example | Description |
+|---|---|---|
+| `result=<value>` | `result=denied` | Show only `allow`, `deny`, or `rate_limit` events |
+| `key=<prefix>` | `key=nself_pro_abc` | Show events for a specific key (first 12 chars matched) |
+| `plugin=<name>` | `plugin=ai` | Show events for a specific plugin |
+
+### Color coding
+
+| Color | Meaning |
+|---|---|
+| Green | `allow` |
+| Red | `deny` |
+| Yellow | `rate_limit` |
+
+Colors are only shown when output is a terminal. Piped output is plain text.
+
+### Behavior
+
+- Starts streaming within 2s of invocation
+- Reconnects automatically on connection loss (exponential backoff, max 30s)
+- Ctrl-C exits cleanly with no goroutine leak
+- License key values are never shown in full — only the first 12 characters (key prefix) are displayed
+
+### Examples
+
+```bash
+# Stream all validation events
+nself license tail
+
+# Show only denied validations
+nself license tail --filter result=denied
+
+# Show events for a specific key prefix
+nself license tail --filter key=nself_pro_abc123
+
+# Combine filters
+nself license tail --filter result=denied --filter plugin=ai
+```
 
 ## Examples
 
