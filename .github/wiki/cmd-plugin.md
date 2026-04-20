@@ -20,7 +20,7 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 
 | Subcommand | Description |
 |------------|-------------|
-| `install <name>` | Install a plugin (license check enforced for pro plugins) |
+| `install <plugin> [plugin...]` | Install one or more plugins (license check enforced for pro plugins) |
 | `remove <name>` | Remove a plugin |
 | `update [name]` | Update a specific plugin, or all installed plugins if no name given |
 | `updates` | Check for available updates across all installed plugins |
@@ -58,6 +58,9 @@ nself plugin list --category ai
 
 # Install a free plugin
 nself plugin install notify
+
+# Install multiple plugins in one command
+nself plugin install ai claw mux
 
 # Install a pro plugin (uses saved license key)
 nself plugin install ai

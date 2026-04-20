@@ -35,6 +35,19 @@ full doc-sync ritual. CLI and admin now ship in lockstep (same version, same cad
   surface requires matching wiki + docs changes per the `pre-commit.md`
   change-type matrix (S42).
 
+### Fixed (P94 patch fixes)
+
+- **Plugin install now accepts multiple plugin names.** `nself plugin install ai claw mux`
+  installs all three in dependency order. A failure on one plugin does not abort the others;
+  the final exit code reflects any partial failure (S01.T01).
+- **Plugin conflict error now names both competing plugins.** Route conflicts report
+  `route conflict: /api claimed by <pluginA> and <pluginB>` instead of a generic
+  server_name message (S01.T02).
+- **Plugin install no longer false-positive conflicts with base service routes.**
+  On a clean `nself init`, installing any plugin no longer reports phantom conflicts on
+  `/api` (Hasura), `/auth`, or `/storage`. Plugins that genuinely claim those paths
+  still error with the owning base service named (S01.T03).
+
 ### Fixed
 
 - **Plugin registry drift.** SPORT F04 pinned at 62 pro plugins (filesystem +
