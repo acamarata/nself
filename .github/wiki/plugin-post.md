@@ -1,6 +1,6 @@
 # Post Plugin
 
-> Social media posting automation for multiple platforms. Credentials encrypted with AES-256-GCM at rest. **Pro plugin.**
+> Multi-platform content publishing with optional scheduling. Credentials encrypted with AES-256-GCM at rest. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -13,15 +13,30 @@ nself plugin install post
 
 ## What It Does
 
-The post plugin automates social media publishing across Twitter/X, LinkedIn, Mastodon, and Bluesky from a single queue. Platform credentials are encrypted with AES-256-GCM before being stored, and posts can be scheduled, retried on failure, or fanned out to multiple accounts simultaneously.
+The post plugin publishes content to multiple platforms from a single queue. Posts can be scheduled, retried on failure, or published simultaneously to several destinations. Platform credentials are encrypted with AES-256-GCM before being stored in `np_post_accounts` — do not set them as plain env vars.
+
+## Supported Platforms
+
+| Platform | Status |
+|----------|--------|
+| WordPress | Working |
+| Ghost | Working |
+| Telegram | Working |
+| Dev.to | Working |
+| Hashnode | Working |
+| Twitter/X | Planned (v1.1.x) |
+| LinkedIn | Planned (v1.1.x) |
+| Mastodon | Planned (v1.1.x) |
+| Bluesky | Planned (v1.1.x) |
+| Facebook | Planned (v1.1.x) |
+| Instagram | Planned (v1.1.x) |
+| Threads | Planned (v1.1.x) |
 
 ## Configuration
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
 | `POST_PORT` | `3129` | Port the service listens on |
-
-Supported platforms: Twitter/X, LinkedIn, Mastodon, Bluesky. Per-account credentials are stored encrypted in `np_post_accounts` and managed via the API — do not set them as plain env vars.
 
 ## Ports
 
