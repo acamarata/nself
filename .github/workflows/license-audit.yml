@@ -1,0 +1,29 @@
+name: License Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  go-licenses:
+    name: Check Go dependency licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+
+      - name: Check for disallowed licenses
+        env:
+          GOFLAGS: -mod=vendor
+        run: |
+          go-licenses check ./... \
+            --allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0 \
+            --ignore=github.com/nself-org/cli
