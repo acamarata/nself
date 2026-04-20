@@ -128,13 +128,73 @@ jobs:
       provenance-name: provenance.intoto.jsonl
 
   # ────────────────────────────────────────────────────────────────────────
+  # Verify Homebrew formula lockstep (S06-T02).
+  # Reads the formula version from nself-org/homebrew-nself via gh api and
+  # compares against the tag being cut. Fails with a clear message if they
+  # differ — prevents the P92/P93 drift where CLI shipped without homebrew sync.
+  # Uses GITHUB_TOKEN (read-only) — does NOT need HOMEBREW_TAP_DISPATCH_TOKEN.
+  # ────────────────────────────────────────────────────────────────────────
+  verify-homebrew-lockstep:
+    name: Verify Homebrew formula lockstep
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Check formula version matches tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Strip leading 'v' to match the bare version string in the formula.
+          TAG_VERSION="${TAG#v}"
+
+          echo "Cutting tag: ${TAG} (version: ${TAG_VERSION})"
+
+          # Fetch Formula/nself.rb from homebrew-nself via the GitHub Contents API.
+          # GITHUB_TOKEN has read access to all public repos in the same org.
+          FORMULA_CONTENT=$(gh api \
+            repos/nself-org/homebrew-nself/contents/Formula/nself.rb \
+            --jq '.content' | base64 -d)
+
+          if [ -z "$FORMULA_CONTENT" ]; then
+            echo "ERROR: Could not fetch Formula/nself.rb from nself-org/homebrew-nself"
+            echo "  Check that the repo is accessible and the file exists."
+            exit 1
+          fi
+
+          # Extract the version line: matches 'version "X.Y.Z"'
+          FORMULA_VERSION=$(printf '%s' "$FORMULA_CONTENT" \
+            | grep -E '^\s*version\s+"[0-9]+\.[0-9]+\.[0-9]+"' \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+            | head -1)
+
+          if [ -z "$FORMULA_VERSION" ]; then
+            echo "ERROR: Could not parse version from Formula/nself.rb"
+            echo "  Formula content excerpt:"
+            printf '%s' "$FORMULA_CONTENT" | head -20
+            exit 1
+          fi
+
+          echo "Formula version: ${FORMULA_VERSION}"
+
+          if [ "${FORMULA_VERSION}" != "${TAG_VERSION}" ]; then
+            echo "LOCKSTEP GATE FAILED"
+            echo "  Homebrew formula is at v${FORMULA_VERSION}, but cutting tag ${TAG}"
+            echo "  Bump Formula/nself.rb to version \"${TAG_VERSION}\" first, then re-push the tag."
+            echo "  See: https://github.com/nself-org/homebrew-nself/blob/main/Formula/nself.rb"
+            exit 1
+          fi
+
+          echo "Lockstep verified: formula v${FORMULA_VERSION} == tag ${TAG}"
+
+  # ────────────────────────────────────────────────────────────────────────
   # Sign every artifact with cosign keyless (S34-T01) and publish the release
   # body auto-generated from the changelog + git log (S34-T09).
   # ────────────────────────────────────────────────────────────────────────
   sign-and-publish:
     name: Sign and publish release
     runs-on: ubuntu-latest
-    needs: [build, sbom, provenance]
+    needs: [build, sbom, provenance, verify-homebrew-lockstep]
     permissions:
       contents: write
       id-token: write
@@ -296,7 +356,7 @@ jobs:
         if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.HOMEBREW_TAP_DISPATCH_TOKEN }}
           repository: nself-org/homebrew-nself
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable"}'
