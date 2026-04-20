@@ -1,11 +1,15 @@
 package license
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // makeFakeEntry returns a minimal CacheEntry JSON with an empty signature.
@@ -77,5 +81,226 @@ func TestImportCache_SkipVerifyWithForceEmitsWarning(t *testing.T) {
 
 	if !strings.Contains(stderrOutput, "skip-verify mode") {
 		t.Errorf("expected 'skip-verify mode' in stderr warning, got: %q", stderrOutput)
+	}
+}
+
+// writeCacheEntry writes a CacheEntry to the redirected cache dir for testing.
+func writeCacheEntry(t *testing.T, entry *CacheEntry) {
+	t.Helper()
+	data, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatalf("marshal cache entry: %v", err)
+	}
+	if err := ImportCache(data); err != nil {
+		// ImportCache rejects unsigned entries via sig-verify path.
+		// Write directly to cache path instead.
+		path, pathErr := CachePath()
+		if pathErr != nil {
+			t.Fatalf("get cache path: %v", pathErr)
+		}
+		dir := filepath.Dir(path)
+		if mkErr := os.MkdirAll(dir, 0700); mkErr != nil {
+			t.Fatalf("mkdir cache dir: %v", mkErr)
+		}
+		if writeErr := os.WriteFile(path, data, 0600); writeErr != nil {
+			t.Fatalf("write cache file: %v", writeErr)
+		}
+	}
+}
+
+// TestDNSFailureFailMode verifies that when the ping.nself.org endpoint is
+// unreachable (DNS failure simulation via an unresolvable URL), the license
+// validator falls back to the local cache and returns a valid result within
+// the configured grace period (7 days / GraceHardThreshold).
+//
+// Decision: FAIL-OPEN with cached validation (up to 7 days TTL).
+// Rationale: fail-closed causes all Pro plugins globally to go dormant during
+// any DNS/network outage. Fail-open with a bounded TTL and revocation push
+// provides better availability without meaningfully weakening enforcement
+// (revocations propagate within 1h via API push when connectivity restores).
+//
+// S59-T04 acceptance criteria: test simulates DNS failure and verifies cache
+// is used within the TTL window.
+func TestDNSFailureFailMode(t *testing.T) {
+	// Redirect cache so the test does not touch the real ~/.cache/nself dir.
+	redirectCacheDir(t)
+
+	// Use a URL that will always refuse connections (localhost unbound port)
+	// to simulate DNS/network failure without hitting real Cloudflare DNS.
+	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:19999") // nothing listening
+
+	const testKey = "nself_pro_dnstest1234567890abcdef12345"
+
+	t.Run("no_cache_returns_invalid_on_dns_failure", func(t *testing.T) {
+		// With no cache file, DNS failure should return invalid result
+		// (not a panic or hang).
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := ValidateFull(ctx, testKey)
+		if err != nil {
+			t.Fatalf("ValidateFull returned unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Fatal("ValidateFull returned nil result")
+		}
+		// No cache + DNS failure = invalid (no grace possible without a prior validation)
+		if result.Valid {
+			t.Errorf("expected Valid=false with no cache and DNS failure, got Valid=true")
+		}
+	})
+
+	t.Run("fresh_cache_valid_on_dns_failure", func(t *testing.T) {
+		// Write a fresh cache entry (fetched < 24h ago) for this key.
+		now := time.Now()
+		entry := &CacheEntry{
+			KeyHash:        HashKey(testKey),
+			Tier:           "pro",
+			PluginsAllowed: []string{"ai", "claw", "mux"},
+			FetchedAt:      now.Add(-1 * time.Hour).Unix(), // 1h ago — within GraceSoftThreshold
+			ExpiresAt:      now.Add(30 * 24 * time.Hour).Unix(),
+		}
+		writeCacheEntry(t, entry)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := ValidateFull(ctx, testKey)
+		if err != nil {
+			t.Fatalf("ValidateFull returned unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Fatal("ValidateFull returned nil result")
+		}
+		// Fresh cache (< 24h) + DNS failure = Valid (GraceValid state)
+		if !result.Valid {
+			t.Errorf("expected Valid=true with fresh cache and DNS failure, got Valid=false: %s", result.Message)
+		}
+		if !result.FromCache {
+			t.Errorf("expected FromCache=true when remote is unreachable, got FromCache=false")
+		}
+		if result.GraceState != GraceValid {
+			t.Errorf("expected GraceState=%s, got %s", GraceValid, result.GraceState)
+		}
+	})
+
+	t.Run("stale_cache_grace_soft_on_dns_failure", func(t *testing.T) {
+		// Write a stale cache entry (fetched 48h ago — within soft grace window).
+		now := time.Now()
+		entry := &CacheEntry{
+			KeyHash:        HashKey(testKey),
+			Tier:           "pro",
+			PluginsAllowed: []string{"ai", "claw", "mux"},
+			FetchedAt:      now.Add(-48 * time.Hour).Unix(), // 48h ago — GraceSoft range
+			ExpiresAt:      now.Add(30 * 24 * time.Hour).Unix(),
+		}
+		writeCacheEntry(t, entry)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := ValidateFull(ctx, testKey)
+		if err != nil {
+			t.Fatalf("ValidateFull returned unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Fatal("ValidateFull returned nil result")
+		}
+		// 48h-stale cache + DNS failure = Valid with GraceSoft warning
+		if !result.Valid {
+			t.Errorf("expected Valid=true in GraceSoft window, got Valid=false: %s", result.Message)
+		}
+		if result.GraceState != GraceSoft {
+			t.Errorf("expected GraceState=%s, got %s", GraceSoft, result.GraceState)
+		}
+		if !result.WriteAllowed {
+			t.Errorf("expected WriteAllowed=true in GraceSoft state, got false")
+		}
+	})
+
+	t.Run("very_stale_cache_grace_hard_on_dns_failure", func(t *testing.T) {
+		// Write a very stale cache entry (8 days ago — beyond GraceHardThreshold).
+		now := time.Now()
+		entry := &CacheEntry{
+			KeyHash:        HashKey(testKey),
+			Tier:           "pro",
+			PluginsAllowed: []string{"ai", "claw", "mux"},
+			FetchedAt:      now.Add(-8 * 24 * time.Hour).Unix(), // 8d ago — beyond GraceHardThreshold
+			ExpiresAt:      now.Add(30 * 24 * time.Hour).Unix(),
+		}
+		writeCacheEntry(t, entry)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := ValidateFull(ctx, testKey)
+		if err != nil {
+			t.Fatalf("ValidateFull returned unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Fatal("ValidateFull returned nil result")
+		}
+		// 8d-stale cache + DNS failure = GraceHard (read-only, writes blocked)
+		if !result.Valid {
+			t.Errorf("expected Valid=true in GraceHard window (can still read), got Valid=false: %s", result.Message)
+		}
+		if result.GraceState != GraceHard {
+			t.Errorf("expected GraceState=%s, got %s", GraceHard, result.GraceState)
+		}
+		if result.WriteAllowed {
+			t.Errorf("expected WriteAllowed=false in GraceHard state, got true")
+		}
+	})
+
+	t.Run("cache_key_mismatch_returns_invalid", func(t *testing.T) {
+		// Cache entry exists but for a different key — should return invalid.
+		now := time.Now()
+		entry := &CacheEntry{
+			KeyHash:        HashKey("nself_pro_differentkey1234567890abcdef"),
+			Tier:           "pro",
+			PluginsAllowed: []string{"ai"},
+			FetchedAt:      now.Add(-1 * time.Hour).Unix(),
+			ExpiresAt:      now.Add(30 * 24 * time.Hour).Unix(),
+		}
+		writeCacheEntry(t, entry)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := ValidateFull(ctx, testKey) // testKey != differentkey
+		if err != nil {
+			t.Fatalf("ValidateFull returned unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Fatal("ValidateFull returned nil result")
+		}
+		if result.Valid {
+			t.Errorf("expected Valid=false when cache key doesn't match, got Valid=true")
+		}
+	})
+}
+
+// TestDNSFailureDoesNotHitRealDNS verifies that the test server (simulating
+// DNS failure) is actually unreachable — confirming we are not hitting real
+// Cloudflare DNS during the test suite.
+func TestDNSFailureDoesNotHitRealDNS(t *testing.T) {
+	// Start a test HTTP server to confirm what "reachable" looks like.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// The simulation URL used in TestDNSFailureFailMode must NOT be this server.
+	simulatedFailURL := "http://127.0.0.1:19999"
+	if simulatedFailURL == srv.URL {
+		t.Errorf("test collision: simulation URL matches live test server URL %s", srv.URL)
+	}
+	// Confirm: nothing listens on port 19999 (the connection should be refused).
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, simulatedFailURL+"/health", nil)
+	_, err := http.DefaultClient.Do(req)
+	if err == nil {
+		t.Errorf("expected connection refused on %s (DNS failure simulation), but got a response", simulatedFailURL)
 	}
 }

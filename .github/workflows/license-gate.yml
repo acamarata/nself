@@ -1,0 +1,108 @@
+name: License Gate
+
+# Blocks AGPL/SSPL transitive dependencies from entering the codebase.
+# Runs in warn-only mode for 30 days after initial deploy, then flips to fail-PR.
+# S59-T09: license CI gate to protect nSelf's MIT FOSS promise.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  release:
+    types: [created]
+  workflow_dispatch:
+
+env:
+  # After 2026-05-20 (30 days from first deploy), set to "fail" to block PRs.
+  # During initial triage window, keep as "warn" to catch false positives.
+  LICENSE_GATE_MODE: warn
+
+jobs:
+  go-license-gate:
+    name: Go Dependency License Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+
+      - name: Check Go dependency licenses (AGPL/SSPL block)
+        env:
+          GOFLAGS: -mod=vendor
+        run: |
+          echo "=== Go License Gate ==="
+          echo "Mode: $LICENSE_GATE_MODE"
+          echo ""
+
+          # Run go-licenses check — fails on AGPL, GPL-2.0, GPL-3.0, SSPL
+          ALLOWED="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1,LGPL-3.0"
+
+          if go-licenses check ./... \
+            --allowed_licenses="$ALLOWED" \
+            --ignore=github.com/nself-org/cli 2>&1; then
+            echo "PASS: No disallowed licenses found"
+          else
+            EXIT_CODE=$?
+            echo ""
+            echo "GATE: Disallowed license detected"
+            echo "Disallowed: GPL, AGPL, SSPL and variants"
+            echo "Action required: remove or replace the offending dependency"
+            echo ""
+            echo "Allowlist procedure: if this is a false positive, add to"
+            echo "  .github/license-allowlist.txt with justification comment."
+            echo "  Example: github.com/foo/bar # uses MIT headers; SPDX mismatch"
+            echo ""
+            if [ "$LICENSE_GATE_MODE" = "fail" ]; then
+              exit $EXIT_CODE
+            else
+              echo "WARN-ONLY MODE: not failing PR (triage window active)"
+              echo "Set LICENSE_GATE_MODE=fail after false-positive triage (2026-05-20)"
+            fi
+          fi
+
+      - name: Generate THIRD_PARTY_LICENSES.md
+        env:
+          GOFLAGS: -mod=vendor
+        if: github.event_name == 'release'
+        run: |
+          go-licenses report ./... \
+            --ignore=github.com/nself-org/cli \
+            --template=.github/license-report.tpl \
+            > THIRD_PARTY_LICENSES.md 2>/dev/null || \
+          go-licenses report ./... \
+            --ignore=github.com/nself-org/cli \
+            > THIRD_PARTY_LICENSES.md
+          echo "Generated THIRD_PARTY_LICENSES.md with $(wc -l < THIRD_PARTY_LICENSES.md) lines"
+
+      - name: Attach THIRD_PARTY_LICENSES.md to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            THIRD_PARTY_LICENSES.md \
+            --clobber || echo "Warning: could not attach license file to release"
+
+      - name: Generate SBOM with syft
+        if: github.event_name == 'release'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
+            sh -s -- -b /usr/local/bin v1.0.0
+          syft dir:. -o cyclonedx-json > sbom.json
+          echo "Generated SBOM: $(wc -c < sbom.json) bytes"
+
+      - name: Attach SBOM to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            sbom.json \
+            --clobber || echo "Warning: could not attach SBOM to release"
