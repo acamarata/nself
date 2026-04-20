@@ -1,0 +1,47 @@
+name: Multi-Arch Check
+
+# Asserts multi-architecture build compatibility.
+# Repo type: Go CLI binary (nself-org/cli)
+# Authority: S30-T05, STORM-CROSS-PLATFORM
+# Template: .claude/docs/doctrines/multi-arch-check.workflow.yml
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  go-multi-arch:
+    name: Go multi-arch smoke build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Smoke build (${{ matrix.goos }}/${{ matrix.goarch }})
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -mod=vendor -ldflags='-s -w' -o /dev/null ./cmd/nself/
+          echo "PASS: $GOOS/$GOARCH build succeeded"
+

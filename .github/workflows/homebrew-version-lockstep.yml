@@ -1,0 +1,84 @@
+name: Homebrew Version Lockstep
+
+# Standalone gate: fires on every v*.*.* tag push to nself-org/cli.
+# Asserts that the Homebrew formula version already matches the tag being cut.
+# The release.yml workflow also has this check embedded; this standalone workflow
+# fires earlier and provides a clear red status without requiring the full build.
+#
+# If this gate fails: update Formula/nself.rb in nself-org/homebrew-nself first,
+# then re-push (or re-tag) on cli.
+#
+# Authority: S30-T02, doc-sync-ritual.md#release-gates
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  verify-homebrew-lockstep:
+    name: Verify Homebrew formula version matches CLI tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract tag version
+        id: tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          # Strip leading 'v' for comparison with formula version field
+          TAG_VER="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "tag_ver=${TAG_VER}" >> "$GITHUB_OUTPUT"
+          echo "CLI tag: ${TAG} (version string: ${TAG_VER})"
+
+      - name: Read Homebrew formula version via GH API
+        id: formula
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FORMULA_CONTENT=$(gh api \
+            repos/nself-org/homebrew-nself/contents/Formula/nself.rb \
+            --jq '.content' | base64 -d)
+
+          if [ -z "$FORMULA_CONTENT" ]; then
+            echo "ERROR: Could not fetch Formula/nself.rb from nself-org/homebrew-nself"
+            echo "  Check that the repo exists and GITHUB_TOKEN has read access."
+            exit 1
+          fi
+
+          # Extract version from line like: version "1.0.9"
+          FORMULA_VER=$(echo "$FORMULA_CONTENT" | grep -E '^\s*version\s+"' | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+          if [ -z "$FORMULA_VER" ]; then
+            echo "ERROR: Could not parse version from Formula/nself.rb"
+            echo "  Expected a line matching: version \"X.Y.Z\""
+            exit 1
+          fi
+
+          echo "formula_ver=${FORMULA_VER}" >> "$GITHUB_OUTPUT"
+          echo "Homebrew formula version: ${FORMULA_VER}"
+
+      - name: Assert tag version matches formula version
+        env:
+          TAG_VER: ${{ steps.tag.outputs.tag_ver }}
+          FORMULA_VER: ${{ steps.formula.outputs.formula_ver }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [ "$TAG_VER" != "$FORMULA_VER" ]; then
+            echo "LOCKSTEP GATE FAILED"
+            echo "  CLI tag ${TAG} does not match Homebrew formula version ${FORMULA_VER}."
+            echo ""
+            echo "  CLI tag v${TAG_VER} does not match Homebrew formula version ${FORMULA_VER}."
+            echo "  Run S14 (formula bump) before cutting this tag."
+            echo ""
+            echo "  Steps to fix:"
+            echo "    1. Update Formula/nself.rb in nself-org/homebrew-nself:"
+            echo "       - Set: version \"${TAG_VER}\""
+            echo "       - Update sha256 for the new release archive"
+            echo "    2. Commit and push to homebrew-nself main"
+            echo "    3. Delete this tag: git tag -d ${TAG} && git push origin :${TAG}"
+            echo "    4. Re-tag cli at the same commit: git tag ${TAG} && git push origin ${TAG}"
+            exit 1
+          fi
+
+          echo "LOCKSTEP VERIFIED: CLI ${TAG} == Homebrew formula v${FORMULA_VER}"

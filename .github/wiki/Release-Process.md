@@ -52,6 +52,8 @@ The workflow:
 
 The `homebrew-nself` tap auto-updates when a new GitHub Release is published. No manual action required — the formula reads the latest release tag from GitHub.
 
+**Homebrew lockstep gate:** The workflow `.github/workflows/homebrew-version-lockstep.yml` runs on every `v*.*.*` tag push. It reads the Homebrew formula version from `nself-org/homebrew-nself/Formula/nself.rb` via the GitHub API and fails if the formula version does not match the tag being cut. If the gate fails: update the formula in `homebrew-nself` first (version string + sha256), then re-tag on `cli`. Never cut a CLI tag while the formula is behind. This gate closes the gap that allowed v1.0.6/v1.0.7/v1.0.8 to ship without Homebrew formula sync (S30-T02).
+
 ## install.sh
 
 The installer at `install.nself.org` is hosted in a separate repo. Update the version reference in `install.sh` after the GitHub Release is live.
