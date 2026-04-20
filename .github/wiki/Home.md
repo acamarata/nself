@@ -251,6 +251,8 @@ Step-by-step guides for common workflows.
 |----------|------|
 | [[Changelog]] | Version history and release notes |
 | [[FAQ]] | Common questions and answers |
+| [[Migration-Roadmap]] | v0.9 → v1.0.9 → v1.1.0 migration roadmap |
+| [[Migration-Signals-v1.0.9]] | v1.0.8 → v1.0.9 migration signals |
 | [GitHub Repository](https://github.com/nself-org/cli) | Source code |
 | [Report Issues](https://github.com/nself-org/cli/issues) | Bug reports and feature requests |
 | [Discussions](https://github.com/nself-org/cli/discussions) | Community conversations |

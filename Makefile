@@ -9,10 +9,13 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
 
-.PHONY: build clean test vet install cross dist verify-prod
+.PHONY: build clean test vet install cross dist verify-prod sport-f21
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
+
+sport-f21:
+	@bash scripts/sport/generate-f21.sh
 
 build:
 	CGO_ENABLED=0 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/nself/

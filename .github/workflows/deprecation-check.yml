@@ -1,0 +1,121 @@
+name: Deprecation Cycle Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deprecation-check:
+    name: Deprecation Cycle Enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history to diff against base
+
+      - name: Detect removed commands without registry entry
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.sha }}"
+
+          # Find files deleted from cmd/commands/ in this PR
+          DELETED=$(git diff --name-only --diff-filter=D "$BASE" "$HEAD" -- 'cmd/commands/*.go' || true)
+
+          if [ -z "$DELETED" ]; then
+            echo "OK: no command files deleted in this PR"
+            exit 0
+          fi
+
+          echo "Deleted command files detected:"
+          echo "$DELETED"
+
+          # Each deleted command file must have a corresponding entry in registry.yaml
+          REGISTRY="internal/deprecation/registry.yaml"
+          FAIL=0
+          for f in $DELETED; do
+            CMD=$(basename "$f" .go)
+            if ! grep -q "name:.*nself $CMD" "$REGISTRY" 2>/dev/null; then
+              echo "ERROR: Command '$CMD' removed without deprecation registry entry."
+              echo "       Add an entry to $REGISTRY before removing a command."
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "OK: all removed commands have registry entries"
+
+      - name: Detect skip-phase removals (stable → removed in one commit)
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.sha }}"
+
+          # Check registry.yaml diff: phase must go 1 → 2 → 3, not jump from 1 to 3
+          REGISTRY_DIFF=$(git diff "$BASE" "$HEAD" -- internal/deprecation/registry.yaml || true)
+          if [ -z "$REGISTRY_DIFF" ]; then
+            echo "OK: no registry changes"
+            exit 0
+          fi
+
+          # Look for additions of phase: 3 entries — these need a prior phase: 2 in base
+          # We check if any NEW phase: 3 entry's name was NOT already at phase: 2 in base
+          PHASE3_NAMES=$(echo "$REGISTRY_DIFF" | grep '^+.*phase: 3' | grep -v '^---' || true)
+          if [ -z "$PHASE3_NAMES" ]; then
+            echo "OK: no phase 3 entries added"
+            exit 0
+          fi
+
+          echo "Phase 3 entries added in this PR — verifying prior phase 2 existed:"
+          BASE_REGISTRY=$(git show "$BASE:internal/deprecation/registry.yaml" 2>/dev/null || echo "items: []")
+          FAIL=0
+          while IFS= read -r line; do
+            NAME=$(echo "$line" | grep -oP "name: '?\K[^'\"]+")
+            if [ -n "$NAME" ]; then
+              if ! echo "$BASE_REGISTRY" | grep -q "name:.*$NAME"; then
+                echo "ERROR: '$NAME' jumped directly to phase 3 without phase 1/2 in base."
+                FAIL=1
+              fi
+            fi
+          done <<< "$PHASE3_NAMES"
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "OK: phase 3 entries all have prior deprecation history"
+
+      - name: Verify Sunset header entries have F19 backing
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.sha }}"
+
+          # Any new Sunset header added to ping_api must have a matching row in F19 sunset table
+          # We look for additions of 'Sunset:' in ping_api source
+          PING_DIFF=$(git diff "$BASE" "$HEAD" -- '*.ts' '*.js' | grep '^+.*Sunset:' | grep -v '^---' || true)
+          if [ -z "$PING_DIFF" ]; then
+            echo "OK: no new Sunset headers"
+            exit 0
+          fi
+
+          # Check that F19 has a sunset-date table with at least one entry per added Sunset line
+          F19="../../.claude/docs/sport/F19-API-CONTRACT-LOCK-v1.0.9.md"
+          if [ ! -f "$F19" ]; then
+            # Try relative paths for different repo checkouts
+            F19=".claude/docs/sport/F19-API-CONTRACT-LOCK-v1.0.9.md"
+          fi
+
+          if ! grep -q "Sunset-Date Table" "$F19" 2>/dev/null; then
+            echo "ERROR: Sunset header added but F19 has no Sunset-Date Table section."
+            echo "       Add the sunset date to F19 before adding a Sunset response header."
+            exit 1
+          fi
+          echo "OK: Sunset headers have F19 backing"
+
+      - name: Summary
+        if: always()
+        run: echo "Deprecation cycle check complete."

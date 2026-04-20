@@ -1,0 +1,34 @@
+# nSelf CLI Deprecation Registry
+# This file is read at startup by internal/deprecation.LoadRegistry().
+# Add entries here when a CLI command or flag enters Phase 1 deprecation.
+#
+# Schema:
+#   items:
+#     - name:        string   # CLI command/flag name (e.g. "nself old-cmd" or "--old-flag")
+#       type:        string   # "command" | "flag" | "env"
+#       since:       string   # Version when deprecation started (e.g. "v1.0.9")
+#       replacement: string   # What to use instead (e.g. "nself new-cmd")
+#       docs_url:    string   # Docs link for migration
+#       phase:       integer  # 1 = warning, 2 = strong warning, 3 = removed
+#
+# v1.0.8 → v1.0.9 audit: no CLI commands were renamed or removed.
+# All 47 commands in F19 Surface 1 are stable.
+# This file is populated as commands enter Phase 1 deprecation in future releases.
+
+items:
+  # nMedia bundle → nTV bundle (bundle name change, not a CLI command — listed here for reference)
+  - name: "nMedia bundle"
+    type: env
+    since: "v1.0.9"
+    replacement: "nTV bundle — run: nself plugin install nTV"
+    docs_url: "https://docs.nself.org/migrate/v1-0-8-to-v1-0-9"
+    phase: 1
+
+# Example entry for future CLI command deprecations:
+# items:
+#   - name: "nself old-cmd"
+#     type: command
+#     since: "v1.1.0"
+#     replacement: "nself new-cmd"
+#     docs_url: "https://docs.nself.org/migrate/v1-1-0"
+#     phase: 1
