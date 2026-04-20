@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -155,6 +156,113 @@ func runCLISelf(ctx context.Context, workdir string, args ...string) error {
 
 // ── runDeploy ────────────────────────────────────────────────────────────────
 
+// notYetImplementedStrategies lists strategies that fall back to rolling with
+// an explicit warning. Tracked for v1.1.0.
+var notYetImplementedStrategies = map[string]bool{
+	"blue-green": true,
+	"canary":     true,
+	"preview":    true,
+}
+
+// deployServiceOrder defines the sequenced restart order for the rolling
+// strategy. Services are restarted in dependency order so each layer is
+// healthy before the next layer comes up.
+var deployServiceOrder = []string{
+	"postgres",
+	"hasura",
+	"auth",
+	"storage",
+	"plugins",
+}
+
+// runRollingRestart performs a per-service sequenced restart with health-
+// gating between each service. It iterates over deployServiceOrder, calling
+// "docker compose up -d <service>" per entry and waiting up to 60s for
+// service_healthy before continuing. The deploy halts on first unhealthy
+// service with a clear error and a pointer to nself logs.
+func runRollingRestart(ctx context.Context, workdir string, jsonOut bool) ([]deployStep, error) {
+	steps := []deployStep{}
+	for _, svc := range deployServiceOrder {
+		if !jsonOut {
+			fmt.Printf("  [running] Restart %s (sequenced rolling)\n", svc)
+		}
+		// Restart the service.
+		c := exec.CommandContext(ctx, "docker", "compose", "up", "-d", "--no-deps", svc)
+		c.Dir = workdir
+		c.Env = os.Environ()
+		if out, err := c.CombinedOutput(); err != nil {
+			steps = append(steps, deployStep{Name: fmt.Sprintf("Restart %s", svc), Status: "failed"})
+			return steps, fmt.Errorf("rolling restart: service %s restart failed: %w\nOutput: %s\nRun 'nself logs %s' for details", svc, err, strings.TrimSpace(string(out)), svc)
+		}
+
+		// Health-gate: poll for service_healthy up to 60s.
+		if !jsonOut {
+			fmt.Printf("  [waiting] Waiting for service_healthy: %s (max 60s)\n", svc)
+		}
+		deadline := time.Now().Add(60 * time.Second)
+		healthy := false
+		for time.Now().Before(deadline) {
+			out, err := exec.CommandContext(ctx, "docker", "compose", "ps", "--format", "{{.Name}}\t{{.Health}}", svc).Output()
+			if err == nil {
+				line := strings.TrimSpace(string(out))
+				if strings.Contains(line, "healthy") && !strings.Contains(line, "unhealthy") {
+					healthy = true
+					break
+				}
+			}
+			time.Sleep(2 * time.Second)
+		}
+		if !healthy {
+			steps = append(steps, deployStep{Name: fmt.Sprintf("Restart %s", svc), Status: "unhealthy"})
+			return steps, fmt.Errorf("rolling restart: service %s did not become healthy within 60s. Run 'nself logs %s' for details", svc, svc)
+		}
+		steps = append(steps, deployStep{Name: fmt.Sprintf("Restart %s", svc), Status: "done"})
+		if !jsonOut {
+			fmt.Printf("  [done] %s healthy\n", svc)
+		}
+	}
+	return steps, nil
+}
+
+// runDeployHealthCheck calls nself doctor and gates the deploy result.
+// Returns an error with the failed service name when any service is unhealthy.
+func runDeployHealthCheck(ctx context.Context, workdir string, jsonOut bool) (deployStep, error) {
+	if !jsonOut {
+		fmt.Println("  [running] Health checks (calling nself health)")
+	}
+	bin, err := os.Executable()
+	if err != nil || bin == "" {
+		bin, _ = exec.LookPath("nself")
+	}
+	if bin == "" {
+		return deployStep{Name: "Health checks", Status: "failed"}, fmt.Errorf("unable to locate nself binary for health check")
+	}
+	c := exec.CommandContext(ctx, bin, "doctor")
+	c.Dir = workdir
+	c.Env = os.Environ()
+	out, err := c.CombinedOutput()
+	if err != nil {
+		output := strings.TrimSpace(string(out))
+		// Try to extract the failing service from doctor output.
+		failedSvc := "unknown"
+		for _, line := range strings.Split(output, "\n") {
+			if strings.Contains(line, "unhealthy") || strings.Contains(line, "failed") {
+				parts := strings.Fields(line)
+				if len(parts) > 0 {
+					failedSvc = parts[0]
+					break
+				}
+			}
+		}
+		return deployStep{Name: "Health checks", Status: "failed"},
+			fmt.Errorf("health check failed (service: %s). Run 'nself doctor --verbose' for details", failedSvc)
+	}
+	if !jsonOut {
+		fmt.Println("  [done] Health checks passed")
+	}
+	return deployStep{Name: "Health checks", Status: "done"}, nil
+}
+
 func runDeploy(cmd *cobra.Command, args []string) error {
 	target, err := resolveTarget(args[0])
 	if err != nil {
@@ -169,10 +277,22 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid strategy %q (allowed: rolling, blue-green, canary, preview)", strategy)
 	}
 
+	// Strategies other than rolling are not yet implemented. Fall back to
+	// rolling with an explicit warning so users know the flag was accepted but
+	// has no effect yet.
+	if notYetImplementedStrategies[strategy] {
+		if !func() bool { v, _ := cmd.Flags().GetBool("json"); return v }() {
+			ui.Warn(fmt.Sprintf("Strategy %q is not yet implemented in v1.0.9. Tracked for v1.1.0; falling back to rolling. See .claude/docs/operations/deploy-strategies.md", strategy))
+		}
+		strategy = "rolling"
+	}
+
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
 	skipHealth, _ := cmd.Flags().GetBool("skip-health")
 	jsonOut, _ := cmd.Flags().GetBool("json")
+	includeFrontends, _ := cmd.Flags().GetBool("include-frontends")
+	excludeFrontends, _ := cmd.Flags().GetBool("exclude-frontends")
 
 	workdir, err := projectRoot()
 	if err != nil {
@@ -180,7 +300,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	if !jsonOut {
-		ui.CommandHeader(fmt.Sprintf("nself deploy %s", target), fmt.Sprintf("strategy=%s dry-run=%v", strategy, dryRun))
+		ui.CommandHeader(fmt.Sprintf("nself deploy %s", target), fmt.Sprintf("strategy=%s dry-run=%v include-frontends=%v exclude-frontends=%v", strategy, dryRun, includeFrontends, excludeFrontends))
 	}
 
 	// Production safety gate: require --force (or a "prod" confirm) when not in dry-run.
@@ -208,15 +328,21 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	// Target-specific action
 	switch target {
 	case "local":
-		if !dryRun {
+		if dryRun {
 			if !jsonOut {
-				fmt.Println("  [running] Start local stack")
+				fmt.Printf("  [dry-run] Would: docker compose up -d (rolling: %v, frontends: include=%v exclude=%v)\n", strategy, includeFrontends, excludeFrontends)
 			}
-			if err := runCLISelf(cmd.Context(), workdir, "start"); err != nil {
-				return finalize(jsonOut, target, strategy, start, append(steps, deployStep{Name: "Start local stack", Status: "failed"}), err)
+			steps = append(steps, deployStep{Name: "Start local stack", Status: "pending"})
+		} else {
+			if !jsonOut {
+				fmt.Println("  [running] Start local stack (rolling sequenced restart)")
+			}
+			restartSteps, restartErr := runRollingRestart(cmd.Context(), workdir, jsonOut)
+			steps = append(steps, restartSteps...)
+			if restartErr != nil {
+				return finalize(jsonOut, target, strategy, start, steps, restartErr)
 			}
 		}
-		steps = append(steps, deployStep{Name: "Start local stack", Status: stepStatus(dryRun, "done")})
 
 	case "staging", "prod":
 		host := os.Getenv("NSELF_DEPLOY_HOST_" + strings.ToUpper(target))
@@ -224,34 +350,146 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 			// Fall back to common env-var name patterns
 			host = os.Getenv(strings.ToUpper(target) + "_DEPLOY_HOST")
 		}
-		if host == "" && !dryRun {
-			// No host configured: treat as local build-and-start (matches the v0.9 Bash behaviour
-			// when run on the target machine itself).
-			if err := runCLISelf(cmd.Context(), workdir, "start"); err != nil {
-				return finalize(jsonOut, target, strategy, start, append(steps, deployStep{Name: "Start stack", Status: "failed"}), err)
+
+		if dryRun {
+			if host != "" {
+				if !jsonOut {
+					fmt.Printf("  [dry-run] Would: ssh+rsync to %s then docker compose pull + rolling restart\n", host)
+					fmt.Printf("  [dry-run] SSH key: %s\n", sshKeyPath())
+					fmt.Printf("  [dry-run] Rolling restart order: %s\n", strings.Join(deployServiceOrder, " → "))
+					fmt.Printf("  [dry-run] Frontends: include=%v exclude=%v\n", includeFrontends, excludeFrontends)
+				}
+				steps = append(steps, deployStep{Name: fmt.Sprintf("Push artefacts to %s", host), Status: "pending"})
+				steps = append(steps, deployStep{Name: "Rolling restart (sequenced)", Status: "pending"})
+			} else {
+				if !jsonOut {
+					fmt.Printf("  [dry-run] No NSELF_DEPLOY_HOST_%s set; would run locally\n", strings.ToUpper(target))
+					fmt.Printf("  [dry-run] Set NSELF_DEPLOY_HOST_%s=user@host:/path to enable remote push\n", strings.ToUpper(target))
+				}
+				steps = append(steps, deployStep{Name: "Start stack (local host)", Status: "pending"})
 			}
-			steps = append(steps, deployStep{Name: "Start stack (local host)", Status: "done"})
-		} else if host != "" && !dryRun {
-			// Remote push via existing rsync/ssh helpers if available; otherwise signal a skip.
-			steps = append(steps, deployStep{Name: fmt.Sprintf("Push artefacts to %s", host), Status: "skipped"})
+		} else if host != "" {
+			// Remote push: rsync compose file + env + migrations, then pull images
+			// and run the rolling restart on the remote host via ssh.
 			if !jsonOut {
-				ui.Warn(fmt.Sprintf("Remote push to %s is not configured in this CLI build. Run the build + start on the target host, or configure a push helper.", host))
+				fmt.Printf("  [running] Remote push to %s\n", host)
 			}
+			pushErr := remoteDeployPush(cmd.Context(), workdir, host, target, jsonOut)
+			if pushErr != nil {
+				steps = append(steps, deployStep{Name: fmt.Sprintf("Push artefacts to %s", host), Status: "failed"})
+				return finalize(jsonOut, target, strategy, start, steps, pushErr)
+			}
+			steps = append(steps, deployStep{Name: fmt.Sprintf("Push artefacts to %s", host), Status: "done"})
 		} else {
-			steps = append(steps, deployStep{Name: "Start stack", Status: "skipped"})
+			// No host configured: run locally (matches v0.9.x behaviour when
+			// deploy is triggered from a session on the target machine itself).
+			if !jsonOut {
+				fmt.Println("  [running] Start stack (rolling sequenced restart, local host)")
+			}
+			restartSteps, restartErr := runRollingRestart(cmd.Context(), workdir, jsonOut)
+			steps = append(steps, restartSteps...)
+			if restartErr != nil {
+				return finalize(jsonOut, target, strategy, start, steps, restartErr)
+			}
 		}
 
-		if !skipHealth && !dryRun {
-			steps = append(steps, deployStep{Name: "Health checks", Status: "done"})
+		// Health gate (post-restart).
+		if skipHealth {
 			if !jsonOut {
-				fmt.Println("  [done] Health checks")
+				ui.Warn("Skipping health checks (--skip-health). Stack state unverified.")
 			}
-		} else if skipHealth {
 			steps = append(steps, deployStep{Name: "Health checks", Status: "skipped"})
+		} else if !dryRun {
+			healthStep, healthErr := runDeployHealthCheck(cmd.Context(), workdir, jsonOut)
+			steps = append(steps, healthStep)
+			if healthErr != nil {
+				return finalize(jsonOut, target, strategy, start, steps, healthErr)
+			}
+		} else {
+			steps = append(steps, deployStep{Name: "Health checks", Status: "pending"})
 		}
 	}
 
 	return finalize(jsonOut, target, strategy, start, steps, nil)
+}
+
+// sshKeyPath returns the SSH key path from NSELF_DEPLOY_SSH_KEY env or the
+// default ~/.ssh/id_ed25519.
+func sshKeyPath() string {
+	if k := os.Getenv("NSELF_DEPLOY_SSH_KEY"); k != "" {
+		return k
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".ssh", "id_ed25519")
+}
+
+// remoteDeployPush rsyncs the compose file and env to the remote host, then
+// pulls new images and runs a rolling restart via SSH.
+// host format: "user@host:/remote/path"
+func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut bool) error {
+	sshKey := sshKeyPath()
+
+	// Split user@host:/path into ssh-target and remote-path.
+	colonIdx := strings.LastIndex(host, ":")
+	if colonIdx < 0 {
+		return fmt.Errorf("NSELF_DEPLOY_HOST_%s format must be user@host:/remote/path (got %q)", strings.ToUpper(target), host)
+	}
+	sshTarget := host[:colonIdx]
+	remotePath := host[colonIdx+1:]
+	if remotePath == "" {
+		return fmt.Errorf("NSELF_DEPLOY_HOST_%s remote path is empty (got %q)", strings.ToUpper(target), host)
+	}
+
+	// rsync compose + env files to the remote.
+	rsyncArgs := []string{
+		"-az", "--no-agent-forwarding",
+		"-e", fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=accept-new -o ForwardAgent=no", sshKey),
+		"docker-compose.yml",
+		fmt.Sprintf(".env.%s", target),
+		fmt.Sprintf("%s:%s/", sshTarget, remotePath),
+	}
+	if !jsonOut {
+		fmt.Printf("  [running] rsync compose + env to %s:%s\n", sshTarget, remotePath)
+	}
+	rc := exec.CommandContext(ctx, "rsync", rsyncArgs...)
+	rc.Dir = workdir
+	rc.Env = os.Environ()
+	if out, err := rc.CombinedOutput(); err != nil {
+		return fmt.Errorf("rsync to %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
+	}
+
+	// Pull new images on the remote.
+	sshPull := fmt.Sprintf("cd %s && docker compose pull", remotePath)
+	if !jsonOut {
+		fmt.Printf("  [running] docker compose pull on %s\n", sshTarget)
+	}
+	pc := exec.CommandContext(ctx, "ssh",
+		"-i", sshKey,
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "ForwardAgent=no",
+		sshTarget, sshPull)
+	pc.Env = os.Environ()
+	if out, err := pc.CombinedOutput(); err != nil {
+		return fmt.Errorf("remote pull on %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
+	}
+
+	// Rolling restart on the remote: sequence the services via SSH.
+	for _, svc := range deployServiceOrder {
+		restartCmd := fmt.Sprintf("cd %s && docker compose up -d --no-deps %s", remotePath, svc)
+		if !jsonOut {
+			fmt.Printf("  [running] Rolling restart: %s on %s\n", svc, sshTarget)
+		}
+		sc := exec.CommandContext(ctx, "ssh",
+			"-i", sshKey,
+			"-o", "StrictHostKeyChecking=accept-new",
+			"-o", "ForwardAgent=no",
+			sshTarget, restartCmd)
+		sc.Env = os.Environ()
+		if out, err := sc.CombinedOutput(); err != nil {
+			return fmt.Errorf("remote rolling restart of %s failed: %w\n%s\nRun 'nself logs %s' on the remote host for details", svc, err, strings.TrimSpace(string(out)), svc)
+		}
+	}
+	return nil
 }
 
 // ── subcommands ──────────────────────────────────────────────────────────────
