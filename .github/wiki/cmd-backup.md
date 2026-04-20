@@ -122,6 +122,10 @@ nself backup verify latest --restore-test
 sudo nself backup config --install-cron --full-at 02:30
 ```
 
+## Archive Format
+
+`nself backup` creates archives that follow the `nself-backup-v1` spec. The spec covers the archive filename pattern, `manifest.json` structure, `checksums.sha256` format, encryption contract, and the exact extraction order used by `restore`. See `.claude/docs/operations/BACKUP-FORMAT.md`.
+
 ## See Also
 
 - [[cmd-dr]] — disaster recovery operations
