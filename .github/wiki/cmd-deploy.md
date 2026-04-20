@@ -43,10 +43,28 @@ Targets accept both short and long forms:
 ## Subcommands
 
 - `nself deploy status` — report current deploy state for a target
-- `nself deploy rollback [target]` — roll back the last deployment (promotions use `nself promote rollback`)
+- `nself deploy rollback [target]` — roll back the last deployment by restoring the pre-promotion backup snapshot written by `nself promote`. Reads the most recent record from `<projectDir>/.nself/promotions/` and calls `nself backup restore` against that snapshot. Returns a clear error if no promote history is found.
 - `nself deploy logs [target]` — tail the last 200 lines of Docker logs on the target host
 - `nself deploy health [target]` — run `nself doctor` against the deployment
 - `nself deploy check-access` — verify `NSELF_DEPLOY_HOST_*` values resolve
+
+### How rollback works
+
+`nself deploy rollback` is wired to the last `nself promote` tag. Every `nself promote <src> <target>` call creates a backup snapshot tagged `pre-promote-<target>-<unix>` and saves a promotion record to `.nself/promotions/<id>.json`. Rollback reads the most recent record and restores that snapshot:
+
+```bash
+# After a failed or unwanted production promotion:
+nself deploy rollback prod
+# → Finds last pre-promote-prod-* backup tag
+# → Runs: nself backup restore --tag pre-promote-prod-<ts>
+# → Prints: Rollback for prod completed — prior promote state restored
+```
+
+When no promote history exists:
+
+```
+Error: rollback failed: find backup: no promotion records found
+```
 
 ## Examples
 
@@ -65,6 +83,9 @@ nself deploy prod --force --skip-health
 
 # Inspect a target
 nself deploy status --env staging
+
+# Roll back to the last promoted state
+nself deploy rollback prod
 ```
 
 ## Output format

@@ -216,6 +216,23 @@ Pro plugins introduce additional environment variables. These are set in `.env.s
 
 The `plugin-ai` plugin defaults to `1g` memory and `1.0` CPU.
 
+### Plugin Shutdown Grace Period
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `DOCKER_STOP_GRACE_PERIOD` | SIGTERM-to-SIGKILL window for plugin shutdown | `30s` |
+
+`DOCKER_STOP_GRACE_PERIOD` controls how long the CLI waits for a plugin process to shut down cleanly after receiving SIGTERM before sending SIGKILL. Set this in your `.env.dev` or as a shell export to match your compose layer's `stop_grace_period` setting:
+
+```bash
+# In .env.dev (or export before running nself plugin stop):
+DOCKER_STOP_GRACE_PERIOD=30s   # default — matches compose stop_grace_period
+DOCKER_STOP_GRACE_PERIOD=10s   # faster teardown in CI
+DOCKER_STOP_GRACE_PERIOD=60s   # extra time for plugins with long-poll connections
+```
+
+Allowed range: `1s` to `120s`. Values outside this range are clamped. Invalid values fall back to `30s`.
+
 ### Mux Email Pipeline
 
 | Variable | Purpose | Where |
