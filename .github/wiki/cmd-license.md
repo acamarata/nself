@@ -22,6 +22,22 @@ Set your key once with `nself license set` and all subsequent `nself plugin inst
 
 Keys are validated with a POST request to `https://ping.nself.org/license/validate`.
 
+### AI Budget Auto-Seed (S69-T04)
+
+When the ɳClaw plugin is running and `NSELF_LICENSE_TIER` is configured, the claw service automatically seeds a per-user AI spending budget on startup based on your license tier:
+
+| Tier | Monthly AI budget cap |
+|------|----------------------|
+| Free | $1.00 |
+| Basic | $5.00 |
+| Pro | $10.00 |
+| Elite | $25.00 |
+| Business | $50.00 |
+| Business+ | $100.00 |
+| Enterprise | Unlimited |
+
+The budget is seeded with `source='tier_default'`. If you have manually set a budget via `nself ai budget set --cap <amount>`, the manual override is preserved and the tier default is NOT applied. Set `NSELF_LICENSE_TIER` in your `.env.dev` or `.env.prod` to enable this behavior.
+
 ## Subcommands
 
 | Subcommand | Description |

@@ -85,7 +85,37 @@ CRITICAL findings include: world-readable secret files, sensitive ports bound on
 | `monitoring` | Prometheus, Grafana, Loki reachable |
 | `backups` | Last backup age (must be under 26 hours) |
 | `security` | JWT secret, container user, secret file permissions, exposed ports, weak SSL ciphers |
+| `ai-safety` | AI plugin moderation wire-up gap (see below) |
 | `performance` | **PERF-POOL-01**: pgxpool connection cap vs postgres_max_connections |
+
+### AI-SAFETY-01: ai+moderation Wire-Up Gap (S69-T05)
+
+Fires during `nself doctor --deep` in the `ai-safety` section.
+
+**What it checks:** If the `ai` plugin is loaded AND the deployment binds on a non-loopback address (e.g., `0.0.0.0`) AND the `moderation` plugin is NOT loaded, emit a `WARN`.
+
+Self-hosted single-user deployments on loopback are explicitly exempted — this is a legitimate use case.
+
+| Status | Meaning |
+|--------|---------|
+| `pass` | ai not loaded, or deployment is loopback-bound, or moderation is wired |
+| `warn` | ai loaded on public-bound deployment without moderation — consider installing the moderation plugin |
+
+**Fix:**
+```bash
+nself plugin install moderation
+nself build && nself start
+```
+
+The check reads `NSELF_AI_LOADED`, `PLUGIN_AI_INTERNAL_URL`, `NSELF_MODERATION_LOADED`, `PLUGIN_MODERATION_INTERNAL_URL`, and `NSELF_BIND_ADDRESS` from the environment.
+
+**Detection fixture:**
+```bash
+nself doctor --deep --config-file test/fixtures/ai-public-no-mod.env
+# Emits: "moderation not wired on public-bound deployment with ai loaded"
+```
+
+---
 
 ### PERF-POOL-01: Pool Sizing Check
 
