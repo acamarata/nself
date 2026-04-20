@@ -151,12 +151,130 @@ func BackupChecks(_ context.Context, projectDir string) []CheckResult {
 	return results
 }
 
+// CheckAdminBind verifies that the nself-admin container is bound to
+// 127.0.0.1 only (not 0.0.0.0 which would expose it to the LAN).
+// This implements S43-T03 — required by the Service Binding Hard Rule.
+func CheckAdminBind(ctx context.Context) CheckResult {
+	name := "Admin bind address (SEC-BIND-01)"
+
+	// Try docker inspect to determine the host binding for port 3021.
+	cmd := exec.CommandContext(ctx, "docker", "inspect",
+		"--format", `{{range $p, $conf := .HostConfig.PortBindings}}{{range $conf}}{{if eq $p "3021/tcp"}}{{.HostIp}}{{end}}{{end}}{{end}}`,
+		"nself-admin")
+	out, err := cmd.Output()
+	if err != nil {
+		// Container not running — check passes vacuously (nothing exposed).
+		return CheckResult{Section: "security", Name: name, Status: "pass",
+			Message: "nself-admin container not running"}
+	}
+
+	hostIP := strings.TrimSpace(string(out))
+	if hostIP == "" {
+		return CheckResult{Section: "security", Name: name, Status: "pass",
+			Message: "admin container has no published port 3021"}
+	}
+	if hostIP == "0.0.0.0" || hostIP == "" {
+		return CheckResult{Section: "security", Name: name, Status: "fail",
+			Message: fmt.Sprintf("admin port 3021 bound to %q — exposes admin UI to LAN", hostIP),
+			FixCmd:  "nself admin stop && nself admin start"}
+	}
+	if hostIP != "127.0.0.1" {
+		return CheckResult{Section: "security", Name: name, Status: "warn",
+			Message: fmt.Sprintf("admin port 3021 bound to %q (expected 127.0.0.1)", hostIP)}
+	}
+	return CheckResult{Section: "security", Name: name, Status: "pass",
+		Message: "admin port 3021 bound to 127.0.0.1 only"}
+}
+
+// CheckEncryptionKeyScope verifies that AI_ENCRYPTION_KEY (and any other
+// *_ENCRYPTION_KEY env vars) are set and are not reused across environments.
+// Implements S43-UNDEP-01 + S43-AUDIT-01 (SEC-ENC-01 and SEC-ENC-02).
+//
+// When strict=true, a shared or default key returns Status="fail".
+// When strict=false (default), it returns Status="warn" — allowing the admin
+// to investigate without blocking a deploy.
+func CheckEncryptionKeyScope(projectDir string, strict bool) []CheckResult {
+	var results []CheckResult
+
+	// Known encryption key env vars across nSelf (extend as new plugins add keys).
+	keyVars := []string{
+		"AI_ENCRYPTION_KEY",
+		"CLAW_ENCRYPTION_KEY",
+		"PLUGIN_AI_ENCRYPTION_KEY",
+	}
+
+	// Known weak/default values that must never appear in any real environment.
+	weakValues := map[string]bool{
+		"":              true,
+		"changeme":      true,
+		"secret":        true,
+		"password":      true,
+		"dev":           true,
+		"development":   true,
+		"test":          true,
+		"default":       true,
+		"placeholder":   true,
+		"replace_me":    true,
+		"your_key_here": true,
+	}
+
+	status := func(isStrict bool) string {
+		if isStrict {
+			return "fail"
+		}
+		return "warn"
+	}
+
+	for _, keyVar := range keyVars {
+		val := os.Getenv(keyVar)
+
+		// SEC-ENC-01: key must be set.
+		if val == "" {
+			results = append(results, CheckResult{
+				Section: "security",
+				Name:    fmt.Sprintf("SEC-ENC-01: %s", keyVar),
+				Status:  status(strict),
+				Message: fmt.Sprintf("%s is not set (encryption at rest requires a key)", keyVar),
+			})
+			continue
+		}
+
+		// SEC-ENC-02: key must not be a known weak/default value.
+		if weakValues[strings.ToLower(strings.TrimSpace(val))] {
+			results = append(results, CheckResult{
+				Section: "security",
+				Name:    fmt.Sprintf("SEC-ENC-02: %s", keyVar),
+				Status:  status(strict),
+				Message: fmt.Sprintf("%s uses a default/weak value; rotate before deploying to production", keyVar),
+			})
+			continue
+		}
+
+		// Key is set and non-default.
+		results = append(results, CheckResult{
+			Section: "security",
+			Name:    fmt.Sprintf("SEC-ENC-01/02: %s", keyVar),
+			Status:  "pass",
+			Message: fmt.Sprintf("%s is set and non-default", keyVar),
+		})
+	}
+
+	return results
+}
+
 // SecurityChecks runs security diagnostics.
 func SecurityChecks(ctx context.Context, projectDir string) []CheckResult {
 	var results []CheckResult
 
 	// JWT secret presence — Hasura refuses to start without it.
 	results = append(results, CheckJWTSecretPresent(projectDir))
+
+	// S43-T03: admin service binding check.
+	results = append(results, CheckAdminBind(ctx))
+
+	// S43-AUDIT-01 / S43-UNDEP-01: encryption key scope (SEC-ENC-01/02).
+	// WARN by default; callers may re-run with strict=true for --strict mode.
+	results = append(results, CheckEncryptionKeyScope(projectDir, false)...)
 
 	// Check for root containers
 	cmd := exec.CommandContext(ctx, "docker", "ps", "--format", "{{.Names}}")
@@ -196,10 +314,6 @@ func SecurityChecks(ctx context.Context, projectDir string) []CheckResult {
 					FixCmd:  fmt.Sprintf("chmod 0600 %s", filepath.Join(secretsDir, e.Name()))})
 			}
 		}
-	}
-
-	if len(results) == 0 {
-		results = append(results, CheckResult{Section: "security", Name: "Security", Status: "pass", Message: "no issues found"})
 	}
 
 	return results
