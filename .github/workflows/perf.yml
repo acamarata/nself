@@ -1,0 +1,228 @@
+name: CLI Performance — Binary Size Gate + Benchmarks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Monday 06:00 UTC baseline run
+  workflow_dispatch:
+
+# Hard limits per S51-T07 spec:
+#   darwin/arm64 uncompressed: 35 MB
+#   darwin/arm64 compressed:    6 MB
+#   Regression threshold:       10% growth without size-grow-approved label
+env:
+  BINARY_SIZE_LIMIT_MB: "35"
+  COMPRESSED_SIZE_LIMIT_MB: "6"
+  REGRESSION_THRESHOLD_PCT: "10"
+
+jobs:
+  # ── Job 1: Binary size check ─────────────────────────────────────
+  binary-size-check:
+    name: Binary Size Gate
+    runs-on: macos-latest   # darwin/arm64 is the canonical size target
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history to compare with base branch
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Build darwin/arm64 binary
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 \
+            go build -mod=vendor \
+              -ldflags='-s -w' \
+              -o nself-darwin-arm64 \
+              ./cmd/nself/
+          ls -lh nself-darwin-arm64
+
+      - name: Check uncompressed binary size
+        id: size_check
+        run: |
+          SIZE_BYTES=$(stat -f%z nself-darwin-arm64)
+          SIZE_MB=$(echo "$SIZE_BYTES / 1048576" | bc -l | awk '{printf "%.2f", $1}')
+          LIMIT_MB="${{ env.BINARY_SIZE_LIMIT_MB }}"
+
+          echo "Binary size: ${SIZE_MB} MB (limit: ${LIMIT_MB} MB)"
+          echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=${SIZE_BYTES}" >> "$GITHUB_OUTPUT"
+
+          if awk "BEGIN{exit !($SIZE_MB > $LIMIT_MB)}"; then
+            echo "FAIL: binary ${SIZE_MB} MB exceeds hard limit ${LIMIT_MB} MB" >&2
+            echo "size_exceeded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PASS: binary ${SIZE_MB} MB within limit ${LIMIT_MB} MB"
+            echo "size_exceeded=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check compressed binary size
+        id: compressed_check
+        run: |
+          gzip -9 -c nself-darwin-arm64 > nself-darwin-arm64.gz
+          COMPRESSED_BYTES=$(stat -f%z nself-darwin-arm64.gz)
+          COMPRESSED_MB=$(echo "$COMPRESSED_BYTES / 1048576" | bc -l | awk '{printf "%.2f", $1}')
+          LIMIT_MB="${{ env.COMPRESSED_SIZE_LIMIT_MB }}"
+
+          echo "Compressed size: ${COMPRESSED_MB} MB (limit: ${LIMIT_MB} MB)"
+          echo "compressed_mb=${COMPRESSED_MB}" >> "$GITHUB_OUTPUT"
+
+          if awk "BEGIN{exit !($COMPRESSED_MB > $LIMIT_MB)}"; then
+            echo "FAIL: compressed ${COMPRESSED_MB} MB exceeds hard limit ${LIMIT_MB} MB" >&2
+            echo "compressed_exceeded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PASS: compressed ${COMPRESSED_MB} MB within limit ${LIMIT_MB} MB"
+            echo "compressed_exceeded=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compare against base branch size (regression check)
+        id: regression_check
+        if: github.event_name == 'pull_request'
+        run: |
+          # Build the base branch binary to get a comparison size.
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git stash
+
+          BASE_SHA=$(git rev-parse "origin/${{ github.base_ref }}")
+          git checkout "$BASE_SHA" -- go.mod go.sum cmd/ internal/ pkg/ vendor/ 2>/dev/null || true
+
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 \
+            go build -mod=vendor \
+              -ldflags='-s -w' \
+              -o nself-base-darwin-arm64 \
+              ./cmd/nself/ 2>/dev/null || {
+            echo "Could not build base branch — skipping regression check"
+            echo "regression_pct=0" >> "$GITHUB_OUTPUT"
+            echo "regression_exceeded=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          git stash pop 2>/dev/null || true
+
+          BASE_BYTES=$(stat -f%z nself-base-darwin-arm64)
+          HEAD_BYTES=${{ steps.size_check.outputs.size_bytes }}
+          THRESHOLD="${{ env.REGRESSION_THRESHOLD_PCT }}"
+
+          DELTA_PCT=$(awk "BEGIN{printf \"%.1f\", ($HEAD_BYTES - $BASE_BYTES) / $BASE_BYTES * 100}")
+          echo "Size delta: ${DELTA_PCT}% (threshold: ${THRESHOLD}%)"
+          echo "regression_pct=${DELTA_PCT}" >> "$GITHUB_OUTPUT"
+
+          if awk "BEGIN{exit !($DELTA_PCT > $THRESHOLD)}"; then
+            echo "REGRESSION: binary grew by ${DELTA_PCT}% — exceeds ${THRESHOLD}% threshold" >&2
+            echo "regression_exceeded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PASS: size delta ${DELTA_PCT}% within ${THRESHOLD}% threshold"
+            echo "regression_exceeded=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for size-grow-approved override label
+        id: label_check
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const approved = labels.includes('size-grow-approved');
+            console.log(`Labels: ${labels.join(', ')}`);
+            console.log(`size-grow-approved: ${approved}`);
+            return approved ? 'true' : 'false';
+
+      - name: Post PR comment with size report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sizeMB        = '${{ steps.size_check.outputs.size_mb }}';
+            const compressedMB  = '${{ steps.compressed_check.outputs.compressed_mb }}';
+            const sizeExceeded  = '${{ steps.size_check.outputs.size_exceeded }}' === 'true';
+            const compExceeded  = '${{ steps.compressed_check.outputs.compressed_exceeded }}' === 'true';
+            const regPct        = '${{ steps.regression_check.outputs.regression_pct }}' || '0';
+            const regExceeded   = '${{ steps.regression_check.outputs.regression_exceeded }}' === 'true';
+            const labelApproved = '${{ steps.label_check.outputs.result }}' === 'true';
+
+            const sizeIcon  = sizeExceeded  ? '❌' : '✅';
+            const compIcon  = compExceeded  ? '❌' : '✅';
+            const regIcon   = regExceeded   ? (labelApproved ? '⚠️ (override)' : '❌') : '✅';
+
+            const body = [
+              '## Binary Size Report (darwin/arm64)',
+              '',
+              `| Metric | Value | Limit | Status |`,
+              `|---|---|---|---|`,
+              `| Uncompressed | ${sizeMB} MB | ${{ env.BINARY_SIZE_LIMIT_MB }} MB | ${sizeIcon} |`,
+              `| Compressed | ${compressedMB} MB | ${{ env.COMPRESSED_SIZE_LIMIT_MB }} MB | ${compIcon} |`,
+              `| Growth vs base | ${regPct}% | ${{ env.REGRESSION_THRESHOLD_PCT }}% | ${regIcon} |`,
+              '',
+              labelApproved
+                ? '_Override label `size-grow-approved` detected. Growth regression bypassed. **Reason must be documented in PR description.**_'
+                : '_To bypass size growth check: add label `size-grow-approved` to this PR with justification in the description._',
+              '',
+              '_Generated by cli/perf.yml binary-size-check (S51-T07)_',
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Fail on size limit exceeded
+        # No continue-on-error allowed per CI/CD Green Hard Rule.
+        if: |
+          steps.size_check.outputs.size_exceeded == 'true' ||
+          steps.compressed_check.outputs.compressed_exceeded == 'true'
+        run: |
+          echo "FAIL: Binary size limits exceeded. See PR comment for details." >&2
+          exit 1
+
+      - name: Fail on regression without override label
+        if: |
+          github.event_name == 'pull_request' &&
+          steps.regression_check.outputs.regression_exceeded == 'true' &&
+          steps.label_check.outputs.result != 'true'
+        run: |
+          echo "FAIL: Binary grew by ${{ steps.regression_check.outputs.regression_pct }}% (threshold: ${{ env.REGRESSION_THRESHOLD_PCT }}%)." >&2
+          echo "Add label 'size-grow-approved' to override — justification required in PR description." >&2
+          exit 1
+
+  # ── Job 2: CLI Go benchmarks ──────────────────────────────────────
+  cli-benchmarks:
+    name: CLI Go Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Run benchmarks
+        run: |
+          go test \
+            -mod=vendor \
+            -bench='BenchmarkVersion$|BenchmarkVersionJSON$|BenchmarkInit$|BenchmarkBuild$|BenchmarkBuildCheck$|BenchmarkPluginInstallCached$|BenchmarkPluginList$|BenchmarkDoctor$|BenchmarkDoctorDeep$' \
+            -benchtime=3s \
+            -benchmem \
+            -count=3 \
+            ./cmd/commands/ \
+            | tee bench-output.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-bench-output
+          path: bench-output.txt
+          if-no-files-found: warn
+          retention-days: 30

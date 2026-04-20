@@ -149,13 +149,18 @@ func runBackupRestore(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// pitr is read from flags but PointInTime was removed from RestoreOptions in v1.0.9
+	// (PITR ships in v1.1.0 via pgbackrest integration). Guard against non-empty value.
+	if pitr != "" {
+		return fmt.Errorf("point-in-time restore is not available in this version; upgrade to v1.1.0 when released")
+	}
+
 	opts := backup.RestoreOptions{
-		BackupID:    args[0],
-		ToDir:       toDir,
-		Only:        only,
-		PointInTime: pitr,
-		DecryptKey:  decryptKey,
-		Yes:         yes,
+		BackupID:   args[0],
+		ToDir:      toDir,
+		Only:       only,
+		DecryptKey: decryptKey,
+		Yes:        yes,
 	}
 
 	if err := backup.Restore(cmd.Context(), cfg, opts); err != nil {
