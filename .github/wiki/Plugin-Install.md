@@ -88,6 +88,20 @@ nself plugin info {name}   # shows required env vars
 
 Then run `nself build` to pick up the new configuration.
 
+## Download Source
+
+Free plugin tarballs are served via the `plugins.nself.org` registry worker, which redirects
+to Cloudflare R2 as the primary CDN (free global egress). GitHub Releases is the automatic
+fallback when R2 is unavailable. Both mirrors hold identical content and SHA-256 checksums are
+verified between them on every release. The CLI follows the 302 redirect transparently.
+
+To override the registry URL for private testing:
+
+```bash
+export NSELF_PLUGIN_REGISTRY=https://your-registry-mirror.example.com
+nself plugin install {name}
+```
+
 ## Related Pages
 
 - [[Plugin-Overview]] — What plugins are and pricing tiers

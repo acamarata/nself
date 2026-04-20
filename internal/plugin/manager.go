@@ -873,9 +873,32 @@ func findPlugin(reg *Registry, name string) (*PluginManifest, bool) {
 }
 
 // downloadPlugin fetches the plugin tarball to a temporary file.
+// For free plugins, it tries the R2-backed worker URL first and falls back to
+// GitHub Releases on 5xx responses (S67-T03).
 func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) {
-	url := buildDownloadURL(name, version, repository)
+	primaryURL := buildDownloadURL(name, version, repository)
+	tmp, err := downloadFromURL(ctx, primaryURL)
+	if err == nil {
+		return tmp, nil
+	}
 
+	// If not a paid plugin, attempt GitHub Releases fallback on primary failure.
+	if !isPaidPlugin(name) {
+		fallbackURL := buildFallbackDownloadURL(name, version, repository)
+		if fallbackURL != primaryURL {
+			tmp2, fallbackErr := downloadFromURL(ctx, fallbackURL)
+			if fallbackErr == nil {
+				return tmp2, nil
+			}
+			return "", fmt.Errorf("download failed: primary %s: %w; fallback %s: %v", primaryURL, err, fallbackURL, fallbackErr)
+		}
+	}
+
+	return "", err
+}
+
+// downloadFromURL fetches a single URL to a temp file and returns the file path.
+func downloadFromURL(ctx context.Context, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating download request: %w", err)
@@ -908,23 +931,31 @@ func downloadPlugin(ctx context.Context, name, version, repository string) (stri
 }
 
 // buildDownloadURL constructs the tarball URL for a plugin. Pro plugins use
-// the ping API download endpoint; free plugins use the repository's GitHub
-// release URL.
+// the ping API download endpoint; free plugins use the plugins.nself.org worker
+// which 302-redirects to R2 (primary) with GitHub Releases as fallback.
 func buildDownloadURL(name, version, repository string) string {
 	if isPaidPlugin(name) {
 		base := pingAPIURL()
 		return fmt.Sprintf("%s/plugins/%s/download", base, name)
 	}
-	// Free plugins: derive from GitHub repository or default registry.
-	if repository != "" {
-		repo := strings.TrimSuffix(repository, ".git")
-		return fmt.Sprintf("%s/releases/download/v%s/%s-v%s.tar.gz", repo, version, name, version)
-	}
+	// Free plugins: S67-T03 — use plugins.nself.org worker tarball endpoint.
+	// The worker 302-redirects to R2 (primary CDN, free egress) or falls back
+	// to GitHub Releases on R2 5xx. Override via NSELF_PLUGIN_REGISTRY env var.
 	base := "https://plugins.nself.org"
 	if envURL := os.Getenv("NSELF_PLUGIN_REGISTRY"); envURL != "" {
 		base = strings.TrimRight(envURL, "/")
 	}
-	return fmt.Sprintf("%s/downloads/%s/%s-v%s.tar.gz", base, name, name, version)
+	return fmt.Sprintf("%s/plugins/%s/tarball", base, name)
+}
+
+// buildFallbackDownloadURL constructs the GitHub Releases fallback URL for a
+// free plugin. Used when the primary R2/worker download fails.
+func buildFallbackDownloadURL(name, version, repository string) string {
+	if repository != "" {
+		repo := strings.TrimSuffix(repository, ".git")
+		return fmt.Sprintf("%s/releases/download/v%s/%s-v%s.tar.gz", repo, version, name, version)
+	}
+	return fmt.Sprintf("https://github.com/nself-org/plugins/releases/download/v%s/%s-v%s.tar.gz", version, name, version)
 }
 
 // extractTarGz extracts a gzipped tarball into destDir.
