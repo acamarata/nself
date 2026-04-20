@@ -6,7 +6,7 @@
 set -euo pipefail
 
 TARGET="${1:-v1.0.9}"
-REPOS="cli admin web chat claw task ntv clawde plugins plugins-pro homebrew-nself"
+REPOS="cli admin web nchat nclaw ntask ntv clawde plugins plugins-pro homebrew-nself"
 ROOT="${NSELF_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 
 printf "P93 soak pre-flight — target=%s root=%s\n" "$TARGET" "$ROOT"

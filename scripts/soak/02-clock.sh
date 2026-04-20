@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # T02 — 48h clock manager. Starts, shows, resets the soak clock.
-# Clock state lives in $CLOCK_FILE (default /var/lib/nself/soak-clock).
+# Clock state lives in $CLOCK_FILE (default $SOAK_STATE_DIR/soak-clock).
+# SOAK_STATE_DIR defaults to /var/lib/nself but can be overridden to avoid
+# requiring root (e.g. export SOAK_STATE_DIR=$HOME/.nself/soak).
 # Usage:
 #   02-clock.sh start       -> write now() to clock file; fails if already running
-#   02-clock.sh status      -> print hours elapsed, exit 0 if ≥48h, 1 if still running
+#   02-clock.sh status      -> print hours elapsed, exit 0 if >=48h, 1 if still running
 #   02-clock.sh reset "why" -> reset clock, append reason to event log
 #   02-clock.sh elapsed     -> print hours elapsed as float
 
 set -euo pipefail
 
-CLOCK_FILE="${CLOCK_FILE:-/var/lib/nself/soak-clock}"
+# SOAK_STATE_DIR lets non-root users override /var/lib/nself.
+SOAK_STATE_DIR="${SOAK_STATE_DIR:-/var/lib/nself}"
+CLOCK_FILE="${CLOCK_FILE:-${SOAK_STATE_DIR}/soak-clock}"
 EVENT_LOG="${EVENT_LOG:-/var/log/nself/soak-events.jsonl}"
 TARGET_HOURS="${TARGET_HOURS:-48}"
 
@@ -18,6 +22,19 @@ mkdir -p "$(dirname "$CLOCK_FILE")" "$(dirname "$EVENT_LOG")" 2>/dev/null || tru
 cmd="${1:-status}"
 
 now_epoch() { date +%s; }
+
+# epoch_to_human: portable epoch->human-readable date, works on Linux and macOS.
+epoch_to_human() {
+  epoch="$1"
+  # Try GNU date first (Linux), then BSD date (macOS), then fallback to raw epoch.
+  if date -d "@${epoch}" 2>/dev/null; then
+    return
+  elif date -r "${epoch}" 2>/dev/null; then
+    return
+  else
+    printf "%s" "$epoch"
+  fi
+}
 
 elapsed_hours() {
   if [ ! -f "$CLOCK_FILE" ]; then
@@ -32,7 +49,7 @@ elapsed_hours() {
 case "$cmd" in
   start)
     if [ -f "$CLOCK_FILE" ]; then
-      printf "ERROR: clock already running since %s\n" "$(date -r "$(cat "$CLOCK_FILE")" 2>/dev/null || cat "$CLOCK_FILE")"
+      printf "ERROR: clock already running since %s\n" "$(epoch_to_human "$(cat "$CLOCK_FILE")")"
       exit 2
     fi
     now_epoch > "$CLOCK_FILE"

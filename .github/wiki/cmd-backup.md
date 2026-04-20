@@ -69,6 +69,28 @@ Subcommands include `create` (one-shot full or incremental), `list` (filter by r
 | `--cleanup` | true | Remove test container after verify |
 | `--keep` | false | Keep test container for inspection |
 
+#### `--restore-test` deep restore verification
+
+When `--restore-test` is set, `backup verify` goes beyond the default checksum check:
+
+1. Spins up an ephemeral Postgres container on a random local port.
+2. Restores the target `.dump` file via `pg_restore` into the container.
+3. Runs sanity queries: table count from `information_schema`, and row counts in 3 critical tables (`np_claw_conversations`, `np_claw_embeddings`, `np_mux_emails` — or their equivalents in the project schema).
+4. Reports pass/fail with JSON output suitable for cron consumption.
+5. Tears down the container and volume via `defer` — cleanup happens even on failure.
+
+Exit code 0 = restore verified. Non-zero = verify failed. JSON output:
+
+```json
+{"backup_id":"latest","verified":true,"started_at":"2026-04-20T02:00:01Z","duration":"47.3s","method":"restore-test","details":"file size: 104857600 bytes"}
+```
+
+Use `--keep` to inspect the restored database before teardown (useful for debugging silent data corruption).
+
+Note: `--restore-test` is the correct flag (not `--test-restore`). This is verified in `cli/internal/backup/verify.go` field `RestoreTest`.
+
+Cross-link: [DR Runbook](operations/dr-runbook.md) uses `backup verify --restore-test` as the weekly automated integrity check.
+
 ### `backup prune`
 
 | Flag | Default | Description |
