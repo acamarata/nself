@@ -322,7 +322,41 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	}
 
 	fmt.Fprintf(os.Stderr, "\nℹ Run 'nself build' to include %s in your stack.\n", name)
+
+	// S68-T02: Fire-and-forget install-event to plugins.nself.org registry.
+	// Silent, 1s timeout, never blocks the install. Sends only an opaque
+	// SHA-256 hash of the machine fingerprint — no PII in the payload.
+	go postInstallEvent(name)
+
 	return nil
+}
+
+// postInstallEvent POSTs an anonymous install count event to the registry worker.
+// It is always called in a goroutine and swallows all errors silently.
+// The instanceId is a SHA-256 hex hash of the machineID — opaque, no PII.
+func postInstallEvent(pluginName string) {
+	mid := machineID() // 16-char hex
+	// SHA-256 of the machineID to produce the required 64-char hex instanceId
+	h := sha256.Sum256([]byte(mid))
+	instanceID := hex.EncodeToString(h[:])
+
+	body := `{"instanceId":"` + instanceID + `"}`
+	url := "https://plugins.nself.org/plugins/" + pluginName + "/install-event"
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+	if err != nil {
+		return // silent
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return // silent
+	}
+	_ = resp.Body.Close()
 }
 
 // checkReverseDependencies scans all installed plugins in pluginDir and returns
