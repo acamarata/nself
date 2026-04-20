@@ -297,7 +297,14 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 				return count, fmt.Errorf("record migration %s: %w", name, err)
 			}
 		} else {
-			txSQL := "BEGIN;\n" + sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+			// DEP-02: Set lock_timeout and statement_timeout at session start to prevent
+			// long-blocking schema changes from stalling production deployments.
+			// lock_timeout=5s aborts if the migration cannot acquire the lock quickly.
+			// statement_timeout=60s aborts runaway DDL statements.
+			txSQL := "BEGIN;\n" +
+				"SET LOCAL lock_timeout = '5s';\n" +
+				"SET LOCAL statement_timeout = '60s';\n" +
+				sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 			if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
 				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 			}

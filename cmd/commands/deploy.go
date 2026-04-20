@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/promote"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -297,8 +298,25 @@ func runDeployRollback(cmd *cobra.Command, args []string) error {
 		}
 		target = t
 	}
-	ui.Info(fmt.Sprintf("Rollback requested for %s", target))
-	ui.Warn("Automated rollback is not yet wired for every target. Use 'nself promote rollback' for env promotions.")
+
+	workdir, err := projectRoot()
+	if err != nil {
+		return err
+	}
+
+	ui.Info(fmt.Sprintf("Rolling back last deployment for target: %s", target))
+
+	// DEP-04: wire to last promote tag written by nself promote.
+	// promote.Rollback with an empty tag reads the latest promote record from
+	// <projectDir>/.nself/promotions/ and restores the backup snapshot created
+	// before that promotion was applied. This ensures rollback always targets
+	// the last honest production-change surface (nself promote), not an
+	// arbitrary git tag or manual state.
+	if err := promote.Rollback(cmd.Context(), workdir, ""); err != nil {
+		return fmt.Errorf("rollback failed: %w", err)
+	}
+
+	ui.Success(fmt.Sprintf("Rollback for %s completed — prior promote state restored", target))
 	return nil
 }
 

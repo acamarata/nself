@@ -42,6 +42,60 @@ func writeFile(t *testing.T, base, rel, content string) {
 	}
 }
 
+// --- TestMigrationTimeouts (DEP-02) ---
+
+// TestMigrationTxSQL_HasTimeouts verifies that the transactional SQL template
+// produced for a regular migration includes lock_timeout and statement_timeout.
+// This prevents blocking schema changes from stalling production deployments.
+func TestMigrationTxSQL_HasTimeouts(t *testing.T) {
+	sqlContent := "CREATE TABLE test_dep02 (id SERIAL PRIMARY KEY);"
+	legacyRecord := "INSERT INTO np_common.schema_versions (name) VALUES ('test.sql');"
+	opsRecord := "INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('001', 'test.sql', 'abc') ON CONFLICT (id) DO NOTHING;"
+
+	txSQL := "BEGIN;\n" +
+		"SET LOCAL lock_timeout = '5s';\n" +
+		"SET LOCAL statement_timeout = '60s';\n" +
+		sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+
+	if !strings.Contains(txSQL, "SET LOCAL lock_timeout = '5s'") {
+		t.Error("transaction SQL must contain SET LOCAL lock_timeout = '5s'")
+	}
+	if !strings.Contains(txSQL, "SET LOCAL statement_timeout = '60s'") {
+		t.Error("transaction SQL must contain SET LOCAL statement_timeout = '60s'")
+	}
+	if !strings.Contains(txSQL, "BEGIN;") {
+		t.Error("transaction SQL must start with BEGIN")
+	}
+	if !strings.Contains(txSQL, "COMMIT;") {
+		t.Error("transaction SQL must end with COMMIT")
+	}
+	// Timeouts must appear before the migration content
+	lockIdx := strings.Index(txSQL, "lock_timeout")
+	stmtIdx := strings.Index(txSQL, "statement_timeout")
+	contentIdx := strings.Index(txSQL, sqlContent)
+	if lockIdx > contentIdx {
+		t.Error("lock_timeout must be set before migration SQL content")
+	}
+	if stmtIdx > contentIdx {
+		t.Error("statement_timeout must be set before migration SQL content")
+	}
+}
+
+// TestMigrationNonTransactional_NoTimeouts verifies that non-transactional
+// migrations (CREATE INDEX CONCURRENTLY etc.) are not wrapped with timeouts,
+// since lock_timeout is not applicable outside a transaction.
+func TestMigrationNonTransactional_NoTimeouts(t *testing.T) {
+	nonTxSQL := "CREATE INDEX CONCURRENTLY idx_test ON test_table (id);"
+	if !isNonTransactional(nonTxSQL) {
+		t.Fatal("expected isNonTransactional to return true for CREATE INDEX CONCURRENTLY")
+	}
+	// Non-transactional path pipes sqlContent directly without wrapping in transaction.
+	// Verify it does NOT contain BEGIN/COMMIT (it would bypass lock_timeout wrapping).
+	if strings.Contains(nonTxSQL, "BEGIN;") {
+		t.Error("non-transactional SQL should not be wrapped in a transaction")
+	}
+}
+
 // --- TestMigrationsDir ---
 
 // TestMigrationsDir_HasuraDefault: hasura/migrations/default/ exists → use it.

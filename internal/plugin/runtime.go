@@ -270,9 +270,40 @@ func Start(ctx context.Context, pluginDir string, name string) error {
 	return nil
 }
 
+// gracePeriod returns the SIGTERM-to-SIGKILL grace window for plugin shutdown.
+// It reads DOCKER_STOP_GRACE_PERIOD env var (e.g. "30s", "10s") to match the
+// compose layer's stop_grace_period setting. Defaults to 30s if unset or invalid.
+// Bounded to [1s, 120s] to prevent accidental runaway or instant-kill values.
+// DEP-03: fixes hardcoded 5s that conflicted with compose 30s stop_grace_period.
+func gracePeriod() time.Duration {
+	const defaultGrace = 30 * time.Second
+	const maxGrace = 120 * time.Second
+	const minGrace = 1 * time.Second
+
+	raw := strings.TrimSpace(os.Getenv("DOCKER_STOP_GRACE_PERIOD"))
+	if raw == "" {
+		return defaultGrace
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		// Invalid value: fall back to default with a silent warning.
+		// The caller will apply the default; misconfiguration is non-fatal.
+		return defaultGrace
+	}
+	if d < minGrace {
+		return minGrace
+	}
+	if d > maxGrace {
+		return maxGrace
+	}
+	return d
+}
+
 // Stop gracefully shuts down a running plugin. It sends SIGTERM first, waits
-// up to 5 seconds for the process to exit, then sends SIGKILL if it is still
-// alive. PID and state files are cleaned up.
+// up to gracePeriod() for the process to exit, then sends SIGKILL if it is
+// still alive. The grace window respects DOCKER_STOP_GRACE_PERIOD env var
+// to match the compose layer's stop_grace_period (default 30s). PID and
+// state files are cleaned up.
 func Stop(ctx context.Context, name string) error {
 	pid, err := readPID(name)
 	if err != nil {
@@ -295,8 +326,9 @@ func Stop(ctx context.Context, name string) error {
 	}
 	_ = syscall.Kill(-pgid, syscall.SIGTERM)
 
-	// Wait up to 5 seconds for graceful shutdown.
-	deadline := time.Now().Add(5 * time.Second)
+	// Wait up to gracePeriod() for graceful shutdown.
+	// DEP-03: reads DOCKER_STOP_GRACE_PERIOD env var; defaults to 30s.
+	deadline := time.Now().Add(gracePeriod())
 	for time.Now().Before(deadline) {
 		if !isProcessRunning(pid) {
 			break
@@ -358,7 +390,6 @@ func Status(name string) (*PluginStatus, error) {
 		PID:   pid,
 	}, nil
 }
-
 
 // health performs an HTTP health check against a plugin by sending a GET
 // request to http://localhost:{port}/health. It returns true if the response
