@@ -48,6 +48,20 @@ type SystemDependencies struct {
 	Recommended []SystemDependency `json:"recommended,omitempty"`
 }
 
+// DeprecationBlock carries the required deprecation metadata when a plugin's
+// status is "deprecated". All five fields must be present (S58-T02).
+// announcedDate and eolDate are ISO 8601 date strings (YYYY-MM-DD).
+// replacedBy is the name of the replacement plugin (optional but recommended).
+// migrationGuide is a URL that must resolve with HTTP 200 at CI time.
+// migrationScript is a repo-relative path to an automated migration script (optional).
+type DeprecationBlock struct {
+	AnnouncedDate   string `json:"announcedDate"`
+	EOLDate         string `json:"eolDate"`
+	ReplacedBy      string `json:"replacedBy,omitempty"`
+	MigrationGuide  string `json:"migrationGuide"`
+	MigrationScript string `json:"migrationScript,omitempty"`
+}
+
 // MultiApp describes multi-tenancy configuration for a plugin.
 type MultiApp struct {
 	Supported       bool   `json:"supported"`
@@ -127,11 +141,25 @@ type PluginManifest struct {
 	Tier     string `json:"tier,omitempty"`
 	Checksum string `json:"checksum,omitempty"`
 
-	// PublishStatus is the plugin's availability status from the registry.
-	// Valid values: "stable" | "beta" | "planned"
-	// "planned" plugins are rejected at install time with a friendly message.
-	// "beta" plugins install with a warning.
+	// PublishStatus is the plugin's lifecycle status from the registry (S58-T01).
+	// Valid values: "experimental" | "planned" | "beta" | "stable" | "deprecated" | "eol"
+	// Missing status defaults to "stable" for backwards compatibility (CR-A).
+	// "planned"     — not yet installable; rejected at install time.
+	// "experimental"— early-access; installs with a prominent warning.
+	// "beta"        — pre-stable; installs with a warning.
+	// "stable"      — default production-ready state; no warning.
+	// "deprecated"  — install warns and offers replacedBy alternative if set.
+	//                 Requires a Deprecation block in the manifest.
+	// "eol"         — install blocked by default; --allow-eol override required.
 	PublishStatus string `json:"status,omitempty"`
+
+	// Deprecation carries the required metadata when status == "deprecated". (S58-T02)
+	// All five fields are required when the block is present.
+	Deprecation *DeprecationBlock `json:"deprecation,omitempty"`
+
+	// MaxNselfVersion is the last CLI version this plugin is compatible with. (S58-T06)
+	// Empty means "no upper bound". compat-check reads this field.
+	MaxNselfVersion string `json:"maxNselfVersion,omitempty"`
 
 	// AuthorPublicKey is the hex-encoded Ed25519 public key of the plugin
 	// publisher, pinned in the registry. Used to verify Signature.

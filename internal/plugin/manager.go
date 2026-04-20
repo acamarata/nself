@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,7 +30,7 @@ type PluginInfo struct {
 	Category      string
 	Installed     bool
 	Running       bool
-	PublishStatus string // "stable", "beta", "planned" — from registry
+	PublishStatus string // S58-T01: "experimental"|"planned"|"beta"|"stable"|"deprecated"|"eol" — from registry
 }
 
 // InstalledPluginInfo is a richer view of an installed plugin used by the
@@ -176,7 +177,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return errs.ErrPluginNotFound
 	}
 
-	// Status check: reject planned plugins; warn on beta.
+	// Status check: lifecycle policy enforcement (S58-T01, S58-T02, S58-T03).
 	// "stable" and "" (legacy, no status field) proceed silently.
 	switch manifest.PublishStatus {
 	case "planned":
@@ -184,8 +185,35 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 			"plugin %q is not yet available — coming soon.\nSee https://nself.org/plugins/%s for the release timeline.\nRun 'nself plugin list' to see available plugins.",
 			name, name,
 		)
+	case "experimental":
+		fmt.Fprintf(os.Stderr, "warning: %s is experimental — API and behavior may change without notice\n", name)
 	case "beta":
-		fmt.Fprintf(os.Stderr, "[beta] %s is in beta — use in production at your own risk\n", name)
+		fmt.Fprintf(os.Stderr, "warning: %s is in beta — use in production at your own risk\n", name)
+	case "deprecated":
+		d := manifest.Deprecation
+		if d != nil {
+			fmt.Fprintf(os.Stderr, "warning: %s is deprecated (EOL: %s). %s\n", name, d.EOLDate, d.MigrationGuide)
+			if d.ReplacedBy != "" {
+				fmt.Fprintf(os.Stderr, "  A replacement is available: %s\n", d.ReplacedBy)
+				fmt.Fprintf(os.Stderr, "  Install the replacement instead? Run: nself plugin install %s\n", d.ReplacedBy)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: %s is deprecated\n", name)
+		}
+	case "eol":
+		// EOL blocking is enforced at the command layer via --allow-eol.
+		// By the time we reach installLocked the caller has already verified
+		// the flag; emit a prominent warning so the risk acknowledgment is
+		// logged even in non-interactive contexts.
+		fmt.Fprintf(os.Stderr, "warning: %s has reached end-of-life and is no longer maintained\n", name)
+	}
+
+	// S58-T09: Author CRL check. Blocks install if the plugin's declared author
+	// key appears in the revocation list at plugins.nself.org. Network errors
+	// are non-fatal (logged to stderr) so installs are not bricked by a
+	// transient CRL outage.
+	if err := checkAuthorRevocation(ctx, manifest.Author); err != nil {
+		return err
 	}
 
 	// Compat check: verify CLI version satisfies the plugin's declared range.
@@ -740,6 +768,100 @@ func checkLicense(ctx context.Context, name string) error {
 	return fmt.Errorf("plugin %q requires a license key. Get one at %s", name, "nself.org/pricing")
 }
 
+// CheckEOLBlock fetches the registry entry for name and returns an error if
+// the plugin's status is "eol" and allowEOL is false. (S58-T03)
+// If the registry cannot be reached or the plugin is not found, this function
+// returns nil (install will fail downstream with a more specific error).
+// This is intentionally a pre-flight check: it does not install anything.
+func CheckEOLBlock(ctx context.Context, name string, allowEOL bool) error {
+	cacheDir := defaultCacheDir()
+	reg, err := FetchRegistry(ctx, "", cacheDir)
+	if err != nil {
+		// Registry unreachable — defer failure to Install proper.
+		return nil
+	}
+	manifest, found := findPlugin(reg, name)
+	if !found {
+		return nil
+	}
+	if manifest.PublishStatus == "eol" && !allowEOL {
+		return fmt.Errorf(
+			"plugin %q has reached end-of-life and cannot be installed.\n"+
+				"Use --allow-eol to override (not recommended).\n"+
+				"Run 'nself plugin info %s' for details.",
+			name, name,
+		)
+	}
+	return nil
+}
+
+// checkAuthorRevocation fetches the author CRL from plugins.nself.org and
+// returns an error if the plugin author appears in the revocation list. (S58-T09)
+// Short-circuits on any network / parse error — install proceeds and the
+// full install step will catch other issues. Revocation is security-critical
+// so errors are logged but not fatal (to avoid bricking installs during a
+// transient outage).
+func checkAuthorRevocation(ctx context.Context, author string) error {
+	if author == "" {
+		return nil // no author field — nothing to check
+	}
+
+	url := "https://plugins.nself.org/.well-known/revoked-authors.json"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil // construction failure — do not block install
+	}
+	req.Header.Set("User-Agent", "nself-cli")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		// Network failure — do not block install. CLI warns instead.
+		fmt.Fprintf(os.Stderr, "warning: could not fetch author revocation list (offline?): %v\n", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Non-200 — registry side issue, do not block.
+		return nil
+	}
+
+	type revokedEntry struct {
+		AuthorKey string `json:"authorKey"`
+		RevokedAt string `json:"revokedAt"`
+		Reason    string `json:"reason,omitempty"`
+	}
+	type crlResponse struct {
+		RevokedAuthors []revokedEntry `json:"revokedAuthors"`
+	}
+
+	var crl crlResponse
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 512*1024)) // 512 KB max
+	if err != nil {
+		return nil
+	}
+	if err := json.Unmarshal(body, &crl); err != nil {
+		return nil
+	}
+
+	for _, entry := range crl.RevokedAuthors {
+		if strings.EqualFold(entry.AuthorKey, author) {
+			msg := fmt.Sprintf(
+				"plugin author %q has been revoked and cannot be installed (revoked: %s).\n"+
+					"Remove any plugins from this author and contact support@nself.org.\n"+
+					"See https://nself.org/security/revocations for details.",
+				author, entry.RevokedAt,
+			)
+			if entry.Reason != "" {
+				msg += "\nReason: " + entry.Reason
+			}
+			return fmt.Errorf("%s", msg)
+		}
+	}
+	return nil
+}
+
 // findPlugin locates a plugin in the registry by name (case-insensitive).
 func findPlugin(reg *Registry, name string) (*PluginManifest, bool) {
 	for i := range reg.Plugins {
@@ -1031,6 +1153,20 @@ func collectInstalledPluginRoutes(pluginDir, skipPlugin string) []nginx.NginxRou
 }
 
 // --- path helpers ---
+
+// DefaultCacheDir is the exported alias of defaultCacheDir for use by
+// commands that need to call FetchRegistry directly. (S58-T06)
+func DefaultCacheDir() string { return defaultCacheDir() }
+
+// FindPluginByName is the exported wrapper around findPlugin for use by
+// commands outside the plugin package. (S58-T06)
+func FindPluginByName(reg *Registry, name string) (*PluginManifest, bool) {
+	return findPlugin(reg, name)
+}
+
+// CompareVersions compares two semver strings a and b.
+// Returns -1 if a < b, 0 if a == b, +1 if a > b. (S58-T06)
+func CompareVersions(a, b string) int { return compareSemver(a, b) }
 
 // defaultCacheDir returns the default plugin cache directory.
 func defaultCacheDir() string {

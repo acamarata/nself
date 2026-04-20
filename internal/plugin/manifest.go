@@ -68,6 +68,17 @@ var (
 	versionPattern = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$`)
 )
 
+// validPluginStatuses enumerates the 6 canonical lifecycle values (S58-T01).
+// Absent status defaults to "stable" (backwards compatible — CR-A).
+var validPluginStatuses = map[string]bool{
+	"experimental": true,
+	"planned":      true,
+	"beta":         true,
+	"stable":       true,
+	"deprecated":   true,
+	"eol":          true,
+}
+
 // validLanguages lists allowed values for the Language field.
 var validLanguages = map[string]bool{
 	"go":         true,
@@ -101,6 +112,28 @@ func validateManifest(m *PluginManifest) error {
 
 	if m.Language != "" && !validLanguages[m.Language] {
 		return fmt.Errorf("language must be one of: go, rust, typescript, python, bash: %w", errs.ErrPluginManifest)
+	}
+
+	// Validate status field (S58-T01): 6 valid values; absent defaults to stable.
+	if m.PublishStatus != "" && !validPluginStatuses[m.PublishStatus] {
+		validList := "experimental, planned, beta, stable, deprecated, eol"
+		return fmt.Errorf("invalid plugin status %q: must be one of: %s: %w", m.PublishStatus, validList, errs.ErrPluginManifest)
+	}
+
+	// Validate deprecation block (S58-T02): required when status == "deprecated".
+	if m.PublishStatus == "deprecated" {
+		if m.Deprecation == nil {
+			return fmt.Errorf("status \"deprecated\" requires a deprecation block with announcedDate, eolDate, and migrationGuide: %w", errs.ErrPluginManifest)
+		}
+		if m.Deprecation.AnnouncedDate == "" {
+			return fmt.Errorf("deprecation.announcedDate is required: %w", errs.ErrPluginManifest)
+		}
+		if m.Deprecation.EOLDate == "" {
+			return fmt.Errorf("deprecation.eolDate is required: %w", errs.ErrPluginManifest)
+		}
+		if m.Deprecation.MigrationGuide == "" {
+			return fmt.Errorf("deprecation.migrationGuide is required: %w", errs.ErrPluginManifest)
+		}
 	}
 
 	// Validate consumes/provides entries: each must be a valid plugin name.

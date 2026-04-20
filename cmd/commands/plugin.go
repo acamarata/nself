@@ -119,11 +119,16 @@ func init() {
 	pluginListCmd.Flags().Bool("installed", false, "Show only installed plugins")
 	pluginListCmd.Flags().Bool("detailed", false, "Show detailed information")
 	pluginListCmd.Flags().String("category", "", "Filter by category")
+	pluginListCmd.Flags().Bool("show-eol", false, "Include EOL plugins in listing (hidden by default)") // S58-T03
 
 	// Flags on install.
 	pluginInstallCmd.Flags().String("key", "", "License key for pro plugins")
 	pluginInstallCmd.Flags().String("version", "", "Install a specific version")
 	pluginInstallCmd.Flags().Bool("force", false, "Required when using NSELF_LICENSE_SKIP_VERIFY; explicit acknowledgment of skipped validation")
+	pluginInstallCmd.Flags().Bool("allow-eol", false, "Allow installing an EOL plugin (not recommended)") // S58-T03
+
+	// Flags on update.
+	pluginUpdateCmd.Flags().Bool("allow-eol", false, "Allow updating to/from an EOL plugin (not recommended)") // S58-T03
 
 	// Flags on remove.
 	pluginRemoveCmd.Flags().Bool("keep-data", false, "Preserve database data on remove")
@@ -182,6 +187,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	installed, _ := cmd.Flags().GetBool("installed")
 	detailed, _ := cmd.Flags().GetBool("detailed")
 	category, _ := cmd.Flags().GetString("category")
+	showEOL, _ := cmd.Flags().GetBool("show-eol") // S58-T03
 
 	pluginDir := resolvePluginDir()
 
@@ -200,6 +206,10 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, p := range plugins {
+		// S58-T03: EOL plugins are hidden from listing unless --show-eol is set.
+		if p.PublishStatus == "eol" && !showEOL {
+			continue
+		}
 		if category != "" && !strings.EqualFold(p.Category, category) {
 			continue
 		}
@@ -209,12 +219,19 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		} else if p.Installed {
 			stateTag = " [installed]"
 		}
+		// S58-T03: Full status badge for all 6 lifecycle values.
 		statusBadge := ""
 		switch p.PublishStatus {
+		case "experimental":
+			statusBadge = " [experimental]"
 		case "planned":
 			statusBadge = " [planned]"
 		case "beta":
 			statusBadge = " [beta]"
+		case "deprecated":
+			statusBadge = " [DEPRECATED]"
+		case "eol":
+			statusBadge = " [EOL]"
 		// "stable" and "" show no badge — clean install signal
 		}
 		if detailed {
@@ -230,6 +247,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 func runPluginInstall(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
 	force, _ := cmd.Flags().GetBool("force")
+	allowEOL, _ := cmd.Flags().GetBool("allow-eol") // S58-T03
 
 	// Security gate: NSELF_LICENSE_SKIP_VERIFY=1 requires --force as explicit acknowledgment.
 	// Standalone skip (without --force) is rejected to prevent accidental bypass in scripts.
@@ -265,6 +283,13 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	// one plugin does not abort the remaining installs.
 	var failures []string
 	for _, name := range args {
+		// S58-T03: EOL gate — check status before attempting install.
+		if eolErr := plugin.CheckEOLBlock(ctx, name, allowEOL); eolErr != nil {
+			fmt.Fprintf(os.Stderr, "  %v\n", eolErr)
+			failures = append(failures, name)
+			continue
+		}
+
 		fmt.Fprintf(os.Stderr, "Installing plugin %q...\n", name)
 		if err := plugin.Install(ctx, cfg, name, pluginDir); err != nil {
 			fmt.Fprintf(os.Stderr, "  error installing %q: %v\n", name, err)

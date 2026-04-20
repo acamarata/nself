@@ -5,6 +5,140 @@ import (
 	"testing"
 )
 
+// baseManifest returns a valid minimal PluginManifest for use in tests.
+func baseManifest() *PluginManifest {
+	return &PluginManifest{
+		Name:        "my-plugin",
+		Version:     "1.0.0",
+		Description: "test plugin",
+		Category:    "utility",
+		License:     "MIT",
+	}
+}
+
+// --- S58-T01: TestParseStatus — 6 valid values + 1 invalid ---
+
+func TestParseStatus_Experimental(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "experimental"
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected experimental to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_Planned(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "planned"
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected planned to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_Beta(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "beta"
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected beta to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_Stable(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "stable"
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected stable to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_Deprecated(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "deprecated"
+	m.Deprecation = &DeprecationBlock{
+		AnnouncedDate:  "2026-04-01",
+		EOLDate:        "2027-04-01",
+		MigrationGuide: "https://docs.nself.org/migrate/my-plugin",
+	}
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected deprecated with full block to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_EOL(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "eol"
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected eol to be valid, got: %v", err)
+	}
+}
+
+func TestParseStatus_Invalid(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "removed" // 7th value — must be rejected
+	err := validateManifest(m)
+	if err == nil {
+		t.Fatal("expected error for invalid status 'removed', got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid plugin status") {
+		t.Errorf("expected 'invalid plugin status' in error, got: %v", err)
+	}
+}
+
+// TestParseStatus_AbsentDefaultsToStable verifies that a missing status field
+// does not trigger an error (backwards-compatible default). (S58-T01 CR-A)
+func TestParseStatus_AbsentDefaultsToStable(t *testing.T) {
+	m := baseManifest()
+	// PublishStatus intentionally left empty
+	if err := validateManifest(m); err != nil {
+		t.Errorf("expected absent status to be valid (defaults to stable), got: %v", err)
+	}
+}
+
+// --- S58-T02: Deprecation block validation tests ---
+
+func TestDeprecationBlock_MissingWhenDeprecated(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "deprecated"
+	// No deprecation block
+	err := validateManifest(m)
+	if err == nil {
+		t.Fatal("expected error when deprecated status has no deprecation block")
+	}
+	if !strings.Contains(err.Error(), "deprecation block") {
+		t.Errorf("expected 'deprecation block' in error, got: %v", err)
+	}
+}
+
+func TestDeprecationBlock_MissingRequiredFields(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "deprecated"
+	m.Deprecation = &DeprecationBlock{
+		// announcedDate and migrationGuide missing
+		EOLDate: "2027-04-01",
+	}
+	err := validateManifest(m)
+	if err == nil {
+		t.Fatal("expected error when deprecation block is missing required fields")
+	}
+}
+
+func TestDeprecationBlock_ReplacedByPromptFires(t *testing.T) {
+	m := baseManifest()
+	m.PublishStatus = "deprecated"
+	m.Deprecation = &DeprecationBlock{
+		AnnouncedDate:  "2026-04-01",
+		EOLDate:        "2027-04-01",
+		MigrationGuide: "https://docs.nself.org/migrate/my-plugin",
+		ReplacedBy:     "my-plugin-v2",
+	}
+	if err := validateManifest(m); err != nil {
+		t.Errorf("valid deprecated manifest with replacedBy should pass: %v", err)
+	}
+	// Verify replacedBy is accessible for UI prompt logic.
+	if m.Deprecation.ReplacedBy != "my-plugin-v2" {
+		t.Errorf("expected replacedBy='my-plugin-v2', got %q", m.Deprecation.ReplacedBy)
+	}
+}
+
 // TestValidateManifest_ConsumesValid verifies that valid plugin names in
 // Consumes pass manifest validation. S43-T17.
 func TestValidateManifest_ConsumesValid(t *testing.T) {
