@@ -14,6 +14,14 @@ func sanitize(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
 }
 
+// quoteIdent double-quotes a SQL identifier for safe DDL interpolation.
+// Embedded double-quotes are escaped as "" per the SQL standard.
+// Use for schema names, table names, column names, role names — any identifier
+// that appears in an unparameterized DDL statement. SEC-SQL-01.
+func quoteIdent(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
 // trimOutput trims whitespace and newlines from command output.
 func trimOutput(b []byte) string {
 	return strings.TrimSpace(string(b))

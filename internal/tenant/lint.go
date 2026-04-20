@@ -294,10 +294,12 @@ func GenerateRemediationSQL(report *LintRLSReport) string {
 		if t.Pass || t.Allowlisted {
 			continue
 		}
+		qSchema := quoteIdent(t.Schema)
+		qTable := quoteIdent(t.Table)
 		sb.WriteString("-- Remediation for " + t.Schema + "." + t.Table + "\n")
 		if !t.HasRLS {
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", t.Schema, t.Table))
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s FORCE ROW LEVEL SECURITY;\n", t.Schema, t.Table))
+			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", qSchema, qTable))
+			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s FORCE ROW LEVEL SECURITY;\n", qSchema, qTable))
 		}
 		if !t.HasPolicy {
 			idCol := "tenant_id"
@@ -309,21 +311,26 @@ func GenerateRemediationSQL(report *LintRLSReport) string {
 				idCol = "tenant_id"
 				setting = "hasura.user"
 			}
+			qIDCol := quoteIdent(idCol)
+			// Policy name is a safe SQL identifier derived from table name;
+			// replace any dots or special chars before quoting.
 			safeName := strings.ReplaceAll(t.Table, ".", "_")
+			policyOwner := quoteIdent(safeName + "_owner")
+			policyAdmin := quoteIdent(safeName + "_admin")
 			if idCol == "tenant_id" {
 				sb.WriteString(fmt.Sprintf(
-					"CREATE POLICY %s_owner ON %s.%s USING (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid) WITH CHECK (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid);\n",
-					safeName, t.Schema, t.Table, idCol, setting, idCol, setting,
+					"CREATE POLICY %s ON %s.%s USING (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid) WITH CHECK (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid);\n",
+					policyOwner, qSchema, qTable, qIDCol, setting, qIDCol, setting,
 				))
 			} else {
 				sb.WriteString(fmt.Sprintf(
-					"CREATE POLICY %s_owner ON %s.%s USING (%s = current_setting('hasura.user.id', true)::uuid) WITH CHECK (%s = current_setting('hasura.user.id', true)::uuid);\n",
-					safeName, t.Schema, t.Table, idCol, idCol,
+					"CREATE POLICY %s ON %s.%s USING (%s = current_setting('hasura.user.id', true)::uuid) WITH CHECK (%s = current_setting('hasura.user.id', true)::uuid);\n",
+					policyOwner, qSchema, qTable, qIDCol, qIDCol,
 				))
 			}
 			sb.WriteString(fmt.Sprintf(
-				"CREATE POLICY %s_admin ON %s.%s FOR ALL TO nself_admin USING (true) WITH CHECK (true);\n",
-				safeName, t.Schema, t.Table,
+				"CREATE POLICY %s ON %s.%s FOR ALL TO nself_admin USING (true) WITH CHECK (true);\n",
+				policyAdmin, qSchema, qTable,
 			))
 		}
 		sb.WriteString("\n")
