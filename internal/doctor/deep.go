@@ -36,6 +36,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S70-T06: Hasura introspection disabled in production.
 	results = append(results, CheckHasuraIntrospection(ctx))
 
+	// S77-T08: orphaned Hasura remote schemas after plugin uninstall.
+	results = append(results, CheckOrphanRemoteSchemas(ctx))
+
 	return results
 }
 

@@ -1,0 +1,120 @@
+name: API Contract Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cmd/commands/**'
+      - 'internal/**'
+      - '.github/workflows/api-contract-check.yml'
+
+jobs:
+  api-contract-check:
+    name: API Contract Check (vs F19 baseline)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR HEAD
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Build CLI
+        run: make build
+
+      - name: Run CLI command surface snapshot
+        run: |
+          ./nself --help 2>&1 > /tmp/cli-surface-snapshot.txt || true
+          ./nself completion bash 2>&1 >> /tmp/cli-surface-snapshot.txt || true
+
+      - name: Check for breaking changes in command tree
+        id: check_breaking
+        run: |
+          # Extract known stable commands from F19 baseline (commands that existed at v1.0.9)
+          # This is a semantic check: verify commands that were in F19 still exist in HEAD
+          KNOWN_COMMANDS="admin ai alerts aliases audit backup billing build claw clean completion config db deploy dev dlq dns doctor dogfood dr env exec flag functions health init license logs migrate monitor nginx oauth plugin postgres promote queue reset restart secrets security service ssl start status stop telemetry tenant trust update upgrade urls version waf watchdog webhooks api"
+
+          MISSING=""
+          for cmd in $KNOWN_COMMANDS; do
+            if ! ./nself "$cmd" --help > /dev/null 2>&1; then
+              MISSING="$MISSING $cmd"
+            fi
+          done
+
+          if [ -n "$MISSING" ]; then
+            echo "breaking_found=true" >> "$GITHUB_OUTPUT"
+            echo "missing_commands=$MISSING" >> "$GITHUB_OUTPUT"
+          else
+            echo "breaking_found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for BREAKING-CHANGE-OK annotation
+        id: check_annotation
+        if: steps.check_breaking.outputs.breaking_found == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if echo "$PR_BODY" | grep -q "BREAKING-CHANGE-OK:"; then
+            echo "annotation_present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "annotation_present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for maintainer approval label
+        id: check_label
+        if: steps.check_breaking.outputs.breaking_found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABELS=$(gh pr view "${{ github.event.pull_request.number }}" --json labels -q '.labels[].name' 2>/dev/null || echo "")
+          if echo "$LABELS" | grep -q "approved-breaking-change"; then
+            echo "label_present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "label_present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if breaking change without approval
+        if: >
+          steps.check_breaking.outputs.breaking_found == 'true' &&
+          (steps.check_annotation.outputs.annotation_present != 'true' ||
+           steps.check_label.outputs.label_present != 'true')
+        run: |
+          echo ""
+          echo "API CONTRACT VIOLATION"
+          echo "======================"
+          echo ""
+          echo "This PR removes or renames the following commands that were stable in the"
+          echo "v1.0.9 LTS baseline (F19-API-CONTRACT-LOCK-v1.0.9.md):"
+          echo ""
+          echo "  Missing: ${{ steps.check_breaking.outputs.missing_commands }}"
+          echo ""
+          echo "The v1.0.9 LTS commitment runs through 2027-04-17."
+          echo "Field-deployed CLIs at v1.0.9 will break without these commands."
+          echo ""
+          echo "To proceed with this breaking change:"
+          echo "  1. Add to PR description: BREAKING-CHANGE-OK: <reason with migration path>"
+          echo "  2. Get a maintainer (not the PR author) to apply 'approved-breaking-change' label"
+          echo ""
+          echo "See: .claude/docs/operations/breaking-change-policy.md"
+          exit 1
+
+      - name: Report clean
+        if: steps.check_breaking.outputs.breaking_found == 'false'
+        run: |
+          echo "API contract check passed. No breaking changes detected vs F19 baseline."
+
+      - name: Report approved breaking change
+        if: >
+          steps.check_breaking.outputs.breaking_found == 'true' &&
+          steps.check_annotation.outputs.annotation_present == 'true' &&
+          steps.check_label.outputs.label_present == 'true'
+        run: |
+          echo "Breaking change detected but approved via BREAKING-CHANGE-OK annotation + label."
+          echo "Affected commands: ${{ steps.check_breaking.outputs.missing_commands }}"
+          echo "Proceeding with merge (LTS deprecation registered)."
