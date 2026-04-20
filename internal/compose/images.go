@@ -7,6 +7,11 @@ import (
 	"path/filepath"
 )
 
+// AdminImagePath is the Docker Hub image name for the nSelf Admin GUI service.
+// It uses the Docker Hub nself/ namespace (NOT GitHub Container Registry).
+// Intentionally referencing nself/nself-admin (Docker Hub) — never github.com/nself-org/ paths.
+const AdminImagePath = "nself/nself-admin"
+
 // DefaultImageVersions maps service name to pinned image:tag.
 // Update with each nSelf release.
 var DefaultImageVersions = map[string]string{
@@ -20,7 +25,7 @@ var DefaultImageVersions = map[string]string{
 	"mailpit":     "axllent/mailpit:v1.15",
 	"meilisearch": "getmeili/meilisearch:v1.6",
 	"typesense":   "typesense/typesense:0.25.2",
-	"admin":       "nself/nself-admin:latest", // intentionally latest — our own image
+	"admin":       AdminImagePath + ":latest", // intentionally latest — our own image
 	"mlflow":      "ghcr.io/mlflow/mlflow:v2.10.0",
 }
 
