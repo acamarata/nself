@@ -674,6 +674,86 @@ func TestNginxDefaultServer_LocalModeIncludesSSLCertDirs(t *testing.T) {
 	}
 }
 
+// ── TLS + HSTS verification (S43-T05) ────────────────────────────────────────
+
+// TestNginxConf_TLSProtocols verifies that the generated nginx.conf contains
+// ssl_protocols TLSv1.2 TLSv1.3 and explicitly excludes older protocols.
+// Acceptance criterion for S43-T05.
+func TestNginxConf_TLSProtocols(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+	}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if err := gen.parseTemplates(); err != nil {
+		t.Fatalf("parseTemplates: %v", err)
+	}
+	out, err := gen.generateMainConf()
+	if err != nil {
+		t.Fatalf("generateMainConf: %v", err)
+	}
+
+	// Must contain TLS 1.2 and 1.3.
+	if !strings.Contains(out, "TLSv1.2") {
+		t.Errorf("nginx.conf missing TLSv1.2 in ssl_protocols directive\ngot:\n%s", out)
+	}
+	if !strings.Contains(out, "TLSv1.3") {
+		t.Errorf("nginx.conf missing TLSv1.3 in ssl_protocols directive\ngot:\n%s", out)
+	}
+
+	// Must NOT enable legacy protocols.
+	for _, bad := range []string{"SSLv3", "TLSv1.0", "TLSv1.1", "TLSv1 "} {
+		if strings.Contains(out, bad) {
+			t.Errorf("nginx.conf contains legacy protocol %q — must be excluded", bad)
+		}
+	}
+}
+
+// TestServiceConf_HSTS verifies that the generated service.conf (HTTPS vhost)
+// contains a Strict-Transport-Security header with max-age >= 31536000.
+// Uses local SSL mode (SSLMode="") so the generator's hasSSL=true, which
+// causes the HSTS directive to be emitted. Acceptance criterion for S43-T05.
+func TestServiceConf_HSTS(t *testing.T) {
+	cfg := &config.Config{
+		BaseDomain: "example.com",
+		// SSLMode="" defaults to "local" in NewGenerator → hasSSL=true.
+	}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+
+	// Leave SSLMode empty — local mode sets hasSSL=true, emitting HSTS.
+	cfg.SSLMode = ""
+
+	gen := NewGenerator(cfg, t.TempDir())
+	if err := gen.parseTemplates(); err != nil {
+		t.Fatalf("parseTemplates: %v", err)
+	}
+
+	data := ServiceRouteData{
+		Route:      "api",
+		BaseDomain: "example.com",
+		Upstream:   "hasura:8080",
+		SSLDir:     "example-com",
+	}
+	out, err := gen.RenderServiceRoute(data)
+	if err != nil {
+		t.Fatalf("RenderServiceRoute: %v", err)
+	}
+
+	if !strings.Contains(out, "Strict-Transport-Security") {
+		t.Errorf("service.conf missing Strict-Transport-Security header when hasSSL=true\ngot:\n%s", out)
+	}
+	if !strings.Contains(out, "includeSubDomains") {
+		t.Errorf("service.conf HSTS missing includeSubDomains\ngot:\n%s", out)
+	}
+}
+
 // TestAuthRateLimitOverride verifies that setting AUTH_RATE_LIMIT=10r/m causes
 // the generated rate-limits.conf to use "10r/m" for the auth zone.
 func TestAuthRateLimitOverride(t *testing.T) {
