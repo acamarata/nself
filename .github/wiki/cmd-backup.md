@@ -12,7 +12,9 @@ nself backup <subcommand> [flags] [args]
 
 `nself backup` covers the full life cycle of project backups: full Postgres dumps, write-ahead-log (WAL) checkpoints, MinIO object snapshots, configuration metadata, and combined backups. Backups can be encrypted with age (one keypair per project) and pruned by retention policy.
 
-Subcommands include `create` (one-shot full or incremental), `list` (filter by remote, environment, age), `restore` (from any backup ID or `latest`, with point-in-time recovery and partial restore options), `verify` (checksum or full restore-test in a disposable container), and `prune` (apply daily/weekly/monthly retention).
+Subcommands include `create` (one-shot full or incremental), `list` (filter by remote, environment, age), `restore` (from any backup ID or `latest`, with partial restore options), `verify` (checksum or full restore-test in a disposable container), and `prune` (apply daily/weekly/monthly retention).
+
+Note: Point-in-time recovery (PITR) is not supported in v1.0.9. The `--point-in-time` flag has been removed. pgbackrest-based WAL replay is planned for v1.1.0.
 
 `backup config --install-cron` installs systemd timers for full backups, WAL checkpoints, prune cycles, and weekly verify drills so an operator can hand off to automation.
 
@@ -57,9 +59,10 @@ Subcommands include `create` (one-shot full or incremental), `list` (filter by r
 |------|---------|-------------|
 | `--to` | `""` | Restore to alternate directory |
 | `--only` | `""` | Restore subset: `pg`, `minio`, `metadata` (comma-separated) |
-| `--point-in-time` | `""` | ISO8601 timestamp for PITR |
 | `--decrypt-key` | `""` | Path to age identity file |
 | `--yes` | false | Skip confirmation |
+
+Note: `--point-in-time` (PITR) is not available in v1.0.9 and has been removed. See v1.1.0 release notes for pgbackrest PITR support.
 
 ### `backup verify <backup-id\|latest>`
 
@@ -75,9 +78,10 @@ When `--restore-test` is set, `backup verify` goes beyond the default checksum c
 
 1. Spins up an ephemeral Postgres container on a random local port.
 2. Restores the target `.dump` file via `pg_restore` into the container.
-3. Runs sanity queries: table count from `information_schema`, and row counts in 3 critical tables (`np_claw_conversations`, `np_claw_embeddings`, `np_mux_emails` — or their equivalents in the project schema).
-4. Reports pass/fail with JSON output suitable for cron consumption.
-5. Tears down the container and volume via `defer` — cleanup happens even on failure.
+3. Runs the full smoke-query catalog (5+ system tables): user table count, live tuple count, `auth.users` presence, `hdb_catalog.hdb_metadata` presence, and `np_claw_conversations` presence. A zero user-table count triggers an explicit "row count mismatch — schema-only restore detected" failure.
+4. Runs a sentinel CRUD round-trip: creates a temp schema, inserts a sentinel row, reads it back, and drops the schema. Completes in under 2 seconds. Cleaned up in defer even on panic.
+5. Reports pass/fail with JSON output suitable for cron consumption.
+6. Tears down the container and volume via `defer` — cleanup happens even on failure.
 
 Exit code 0 = restore verified. Non-zero = verify failed. JSON output:
 

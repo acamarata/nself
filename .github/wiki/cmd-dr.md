@@ -10,9 +10,14 @@ nself dr <subcommand> [flags]
 
 ## Description
 
-`nself dr` runs disaster recovery procedures. It covers planned drills (cold-start a fresh VM from latest backup, region failover, data corruption rehearsal), promoting a warm standby to primary, rewriting DNS records to a new primary IP, rolling back a promotion, and fencing the cluster (Redis read-only flag) to prevent split-brain writes during failover.
+`nself dr` runs disaster recovery procedures. It covers planned drills, promoting a warm standby to primary, rewriting DNS records to a new primary IP, rolling back a promotion, and fencing the cluster (Redis read-only flag) to prevent split-brain writes during failover.
 
-`dr drill` is the primary verification command. With `--scenario cold-start`, it provisions a Hetzner VM via cloud-init, restores the latest backup, runs a smoke test, and tears down. `--install-cron` installs the monthly drill systemd timer (`nself-dr-drill.timer`). `--render-cloud-init` and `--render-alerts` print the templates the drill would use without executing.
+`dr drill` is the primary verification command. In v1.0.9, only `--scenario cold-start` is supported. Cold-start provisions a Hetzner VM via hcloud, restores the latest backup via ssh, runs the full smoke-query catalog, records RTO, and writes a dated report to `~/.claude/backups/nself-staging/dr/`. `--install-cron` installs the monthly drill systemd timer (`nself-dr-drill.timer`).
+
+**v1.0.9 scenario support:**
+- `cold-start` — fully implemented; provisions VM, restores, verifies, records RTO
+- `region-failover` — NOT supported in v1.0.9 (single-region by design); returns a deprecation error directing to v1.1.0 and the DR runbook
+- `data-corruption` — NOT supported in v1.0.9 (PITR via pgbackrest is planned for v1.1.0); returns a deprecation error
 
 `dr promote-standby` requires production confirmation unless `--yes` is passed. `dr reconfigure-dns --ip <new-ip>` updates DNS to point traffic at the new primary. `dr rollback` demotes the promoted standby and resyncs from the original primary. `dr fence` sets a `read_only=true` flag in Redis that the application layer must honor.
 
@@ -32,7 +37,7 @@ nself dr <subcommand> [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--scenario` | `cold-start` | Drill scenario: `cold-start`, `region-failover`, `data-corruption` |
+| `--scenario` | `cold-start` | Drill scenario: `cold-start` (only supported in v1.0.9; `region-failover` and `data-corruption` planned for v1.1.0) |
 | `--dry-run` | false | Preview only |
 | `--now` | false | Run a full provision-restore-smoke-destroy drill immediately |
 | `--install-cron` | false | Install the monthly drill systemd timer |
