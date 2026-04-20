@@ -39,6 +39,9 @@ backups/
 # Distribution artifacts
 dist/
 *.tar.gz
+*.tar.gz.bak
+*.tar.bz2
+.releases/
 
 # Claude working memory
 .claude/temp/
