@@ -880,16 +880,33 @@ func listFromRegistry(pluginDir string) ([]PluginInfo, error) {
 	return plugins, nil
 }
 
+// baseServiceRoutes lists the always-on nSelf service routes that are present
+// on any clean init. Plugins must not claim these paths — they are owned by
+// core infrastructure and seeded into the conflict-detection set before any
+// plugin routes are evaluated.
+var baseServiceRoutes = []nginx.NginxRoute{
+	{ServerName: "api", Location: "/", PluginName: "hasura"},
+	{ServerName: "auth", Location: "/", PluginName: "auth"},
+	{ServerName: "storage", Location: "/", PluginName: "storage"},
+}
+
 // collectInstalledPluginRoutes scans pluginDir and returns the nginx routes
 // declared by all installed plugins except the one named skipPlugin (the plugin
-// being installed, so reinstalls are permitted).
+// being installed, so reinstalls are permitted). Base service routes (Hasura,
+// Auth, Storage) are seeded first so plugins that claim those paths are
+// rejected with a clear conflict message naming the base service as owner.
 func collectInstalledPluginRoutes(pluginDir, skipPlugin string) []nginx.NginxRoute {
+	// Seed with always-on base service routes. This prevents false-positive
+	// "clean install succeeded" for plugins that try to claim /api, /auth, or
+	// /storage — and produces a clear "claimed by hasura/auth/storage" message.
+	routes := make([]nginx.NginxRoute, len(baseServiceRoutes))
+	copy(routes, baseServiceRoutes)
+
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
-		return nil
+		return routes
 	}
 
-	var routes []nginx.NginxRoute
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -914,6 +931,7 @@ func collectInstalledPluginRoutes(pluginDir, skipPlugin string) []nginx.NginxRou
 			routes = append(routes, nginx.NginxRoute{
 				ServerName: serverName,
 				Location:   location,
+				PluginName: m.Name,
 			})
 		}
 	}

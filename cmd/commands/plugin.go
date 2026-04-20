@@ -41,9 +41,9 @@ var pluginListCmd = &cobra.Command{
 }
 
 var pluginInstallCmd = &cobra.Command{
-	Use:   "install <name>",
-	Short: "Install a plugin (license check for pro)",
-	Args:  cobra.ExactArgs(1),
+	Use:   "install <plugin> [plugin...]",
+	Short: "Install one or more plugins (license check for pro)",
+	Args:  cobra.MinimumNArgs(1),
 	RunE:  runPluginInstall,
 }
 
@@ -220,7 +220,6 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 }
 
 func runPluginInstall(cmd *cobra.Command, args []string) error {
-	name := args[0]
 	key, _ := cmd.Flags().GetString("key")
 
 	// If a license key is provided via flag, set it in the environment
@@ -244,12 +243,22 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 
 	pluginDir := resolvePluginDir()
 
-	fmt.Fprintf(os.Stderr, "Installing plugin %q...\n", name)
-	if err := plugin.Install(ctx, cfg, name, pluginDir); err != nil {
-		return fmt.Errorf("installing plugin %q: %w", name, err)
+	// Install each named plugin. Collect per-plugin errors so that a failure on
+	// one plugin does not abort the remaining installs.
+	var failures []string
+	for _, name := range args {
+		fmt.Fprintf(os.Stderr, "Installing plugin %q...\n", name)
+		if err := plugin.Install(ctx, cfg, name, pluginDir); err != nil {
+			fmt.Fprintf(os.Stderr, "  error installing %q: %v\n", name, err)
+			failures = append(failures, name)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "Plugin %q installed successfully.\n", name)
 	}
 
-	fmt.Fprintf(os.Stderr, "Plugin %q installed successfully.\n", name)
+	if len(failures) > 0 {
+		return fmt.Errorf("failed to install: %s", strings.Join(failures, ", "))
+	}
 	return nil
 }
 

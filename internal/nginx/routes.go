@@ -15,20 +15,33 @@ import (
 type NginxRoute struct {
 	ServerName string // e.g. "auth.example.com"
 	Location   string // e.g. "/" (always "/" in current templates)
+	PluginName string // owning plugin name — used in conflict error messages
 }
 
 // HasDomainConflict detects when two or more routes share the same
 // server_name + location combination. Returns true and a list of
 // conflict description strings if conflicts are found.
+//
+// When NginxRoute.PluginName is set on both the current and previously-seen
+// route, the conflict message uses the format:
+//
+//	route conflict: /api claimed by <pluginA> and <pluginB>
 func HasDomainConflict(routes []NginxRoute) (bool, []string) {
-	seen := make(map[string]string) // key -> first route description
+	// seen maps (serverName+location) -> the NginxRoute that first claimed it,
+	// so we can surface both plugin names in conflict messages.
+	seen := make(map[string]NginxRoute)
 	var conflicts []string
 	for _, r := range routes {
 		key := r.ServerName + r.Location
 		if prev, exists := seen[key]; exists {
-			conflicts = append(conflicts, fmt.Sprintf("%s conflicts with %s (same server_name+location: %s%s)", r.ServerName, prev, r.ServerName, r.Location))
+			// Produce a named-plugin conflict message when plugin names are available.
+			if r.PluginName != "" && prev.PluginName != "" {
+				conflicts = append(conflicts, fmt.Sprintf("route conflict: %s%s claimed by %s and %s", r.ServerName, r.Location, prev.PluginName, r.PluginName))
+			} else {
+				conflicts = append(conflicts, fmt.Sprintf("%s conflicts with %s (same server_name+location: %s%s)", r.ServerName, prev.ServerName, r.ServerName, r.Location))
+			}
 		} else {
-			seen[key] = r.ServerName
+			seen[key] = r
 		}
 	}
 	return len(conflicts) > 0, conflicts

@@ -19,6 +19,7 @@ func checkPluginRouteConflict(plugin *PluginManifest, existingRoutes []nginx.Ngi
 	// Build plugin's routes from its API endpoints.
 	// APIEndpoints are full paths like "/api/v1" or subdomain.example.com/path.
 	// We derive server_name from plugin name and location from each endpoint.
+	// PluginName is set so conflict messages can name both competing plugins.
 	var pluginRoutes []nginx.NginxRoute
 	for _, endpoint := range plugin.APIEndpoints {
 		// Normalize: strip http(s):// prefix if present
@@ -34,6 +35,7 @@ func checkPluginRouteConflict(plugin *PluginManifest, existingRoutes []nginx.Ngi
 		pluginRoutes = append(pluginRoutes, nginx.NginxRoute{
 			ServerName: serverName,
 			Location:   location,
+			PluginName: plugin.Name,
 		})
 	}
 
