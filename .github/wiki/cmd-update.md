@@ -16,6 +16,17 @@ By default, `nself update` updates both the CLI binary and the admin Docker imag
 
 If you are running an active nSelf project and update the CLI, you may want to run `nself build --force && nself restart` afterward to regenerate `docker-compose.yml` with any new defaults from the updated version.
 
+## v0.9 legacy detection
+
+When running on a v0.9 CLI (any `0.x.y` binary), `nself update --check` queries `ping.nself.org/version`, receives a migration block in the response, and surfaces the migration guide URL directly in the terminal:
+
+```
+WARNING: You are running a legacy v0.9 CLI. Migration to v1.0.9 is required.
+Upgrade guide: https://docs.nself.org/migrate/from-v0.9
+```
+
+The check is read-only and non-destructive. It does not install anything. See [[Upgrade-From-v0.9]] for the full migration guide.
+
 ## Flags
 
 | Flag | Default | Description |

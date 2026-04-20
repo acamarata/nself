@@ -13,6 +13,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/doctor"
+	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/ui"
@@ -55,6 +56,14 @@ Exit codes:
   1  One or more checks failed
   2  Warnings only (no failures)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// ── Legacy global scan (S60-T03) ─────────────────────────────
+		// --check-legacy scans for v0.9 stale paths on the host (NOT per-project).
+		// Returns 0 on clean install, non-zero with structured output when found.
+		checkLegacy, _ := cmd.Flags().GetBool("check-legacy")
+		if checkLegacy {
+			return runDoctorCheckLegacy()
+		}
+
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		full, _ := cmd.Flags().GetBool("full")
 		deep, _ := cmd.Flags().GetBool("deep")
@@ -990,5 +999,29 @@ func init() {
 	doctorCmd.Flags().Bool("skip-ollama", false, "Skip local Ollama installation step")
 	doctorCmd.Flags().Bool("skip-pool", false, "Skip Gemini pool setup step")
 	doctorCmd.Flags().Bool("headless", false, "Print OAuth URL instead of opening browser (for SSH/headless servers)")
+	doctorCmd.Flags().Bool("check-legacy", false, "Scan host for v0.9 stale paths (global scan, not per-project)")
 	RootCmd.AddCommand(doctorCmd)
+}
+
+// runDoctorCheckLegacy implements `nself doctor --check-legacy`.
+// It scans global host paths for v0.9 stale artifacts (NOT per-project).
+// Returns exit code 0 on clean install, non-zero with structured output on findings.
+func runDoctorCheckLegacy() error {
+	artifacts := migration.ScanLegacyPaths()
+
+	if len(artifacts) == 0 {
+		ui.Success("No v0.9 global artifacts detected. Clean install.")
+		return nil
+	}
+
+	ui.Warn(fmt.Sprintf("Found %d v0.9 stale artifact(s) on this host:", len(artifacts)))
+	fmt.Println()
+	for i, a := range artifacts {
+		fmt.Printf("  %d. %s\n", i+1, a.Path)
+		fmt.Printf("     Kind: %s\n", a.Kind)
+		fmt.Printf("     Fix:  %s\n", a.Hint)
+		fmt.Println()
+	}
+	fmt.Println("Run the cleanup commands above, then re-run `nself doctor --check-legacy` to verify.")
+	return fmt.Errorf("v0.9 stale artifacts found (%d path(s))", len(artifacts))
 }

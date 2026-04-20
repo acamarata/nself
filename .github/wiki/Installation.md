@@ -1,5 +1,7 @@
 # Installation
 
+> **Upgrading from v0.9?** See the [[Upgrade-From-v0.9]] guide for step-by-step migration instructions.
+
 ## OS Support
 
 | Platform | Architecture | Status | Guide |

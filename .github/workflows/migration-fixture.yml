@@ -1,0 +1,92 @@
+name: Migration Fixture
+
+on:
+  push:
+    branches: [main, rc3]
+    paths:
+      - 'internal/migration/**'
+      - 'cmd/commands/migrate.go'
+      - 'cmd/commands/start.go'
+      - 'cmd/commands/build.go'
+      - 'cmd/commands/doctor.go'
+  pull_request:
+    paths:
+      - 'internal/migration/**'
+      - 'cmd/commands/migrate.go'
+      - 'cmd/commands/start.go'
+      - 'cmd/commands/build.go'
+      - 'cmd/commands/doctor.go'
+  schedule:
+    # Nightly at 02:00 UTC — catches environment drift
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  migration-fixture:
+    name: Migration fixture regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build CLI binary
+        run: make build
+
+      - name: Verify fixture — detect step
+        working-directory: internal/migration/testdata/v0.9-fixture
+        run: |
+          result=$(../../../../nself migrate detect 2>&1 || true)
+          echo "$result"
+          if ! echo "$result" | grep -q "artifact"; then
+            echo "ERROR: nself migrate detect did not report v0.9 artifacts in the fixture"
+            exit 1
+          fi
+
+      - name: Verify fixture — e2e Go tests
+        run: go test -mod=vendor -v -run TestE2E_ ./internal/migration/...
+
+      - name: Verify start blocks on fixture
+        working-directory: internal/migration/testdata/v0.9-fixture
+        run: |
+          result=$(../../../../nself start 2>&1 || true)
+          exit_code=$?
+          echo "$result"
+          # start must fail (non-zero) on a v0.9 fixture with ≥2 artifacts
+          if echo "$result" | grep -q "v0.9 project detected"; then
+            echo "OK: start correctly blocked on v0.9 fixture"
+          else
+            echo "ERROR: start did not block on v0.9 fixture"
+            exit 1
+          fi
+
+      - name: Verify --allow-legacy bypasses block
+        working-directory: internal/migration/testdata/v0.9-fixture
+        run: |
+          result=$(../../../../nself start --allow-legacy 2>&1 || true)
+          echo "$result"
+          if echo "$result" | grep -q "WARNING.*allow-legacy"; then
+            echo "OK: --allow-legacy produced WARNING as expected"
+          else
+            echo "ERROR: --allow-legacy did not produce expected WARNING"
+            exit 1
+          fi
+
+      - name: Verify build blocks on fixture
+        working-directory: internal/migration/testdata/v0.9-fixture
+        run: |
+          result=$(../../../../nself build 2>&1 || true)
+          echo "$result"
+          if echo "$result" | grep -q "v0.9 project detected"; then
+            echo "OK: build correctly blocked on v0.9 fixture"
+          else
+            echo "ERROR: build did not block on v0.9 fixture"
+            exit 1
+          fi

@@ -1,0 +1,4 @@
+.nself/cache/
+.nself/backup/
+.env.local
+.env.secrets

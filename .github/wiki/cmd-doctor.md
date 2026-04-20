@@ -26,6 +26,7 @@ The `--deep` flag runs all 12 subsystem checks including open port analysis, wea
 | `--json` | false | JSON output |
 | `--fix` | false | Auto-fix safe issues where a fix command is available |
 | `--only <section>` | — | Run only one subsystem check section (see Subsections below) |
+| `--check-legacy` | false | Scan this host for stale v0.9 global paths and print cleanup instructions. Exits with non-zero if any are found. See below. |
 | `--ai` | false | Run the AI first-run wizard: install Ollama, set up Gemini pool, verify |
 | `--yes` | false | Non-interactive mode: accept all defaults (for CI/scripts, used with `--ai`) |
 | `--skip-ollama` | false | Skip local Ollama installation step (used with `--ai`) |
@@ -182,6 +183,32 @@ nself doctor --deep --only security
 **See also:** [multi-tenant conventions](https://docs.nself.org/multi-tenancy/conventions) for the canonical wall doc on `source_account_id` vs `tenant_id`.
 
 ---
+
+## --check-legacy: v0.9 global host scan
+
+`nself doctor --check-legacy` scans the host machine for stale v0.9 global paths that persist after migration:
+
+| Path scanned | What it indicates |
+|---|---|
+| `~/.nself/` | v0.9 global config directory |
+| `~/.nself/plugins/` | v0.9 plugin install directory |
+| `~/.config/nself` | v0.9 XDG config file (v1 uses a directory) |
+| `/usr/local/share/nself` | v0.9 shared data directory |
+
+For each path found, the output shows the path, its type, and a cleanup hint. The check is read-only: it never deletes anything automatically.
+
+```
+$ nself doctor --check-legacy
+WARNING: Found 2 v0.9 stale artifact(s) on this host:
+  [dir]  /Users/me/.nself  — safe to remove: rm -rf ~/.nself (after verifying no custom config)
+  [file] /usr/local/share/nself  — safe to remove: sudo rm -f /usr/local/share/nself
+
+Run the cleanup commands above, then re-run `nself doctor --check-legacy` to confirm.
+```
+
+If no stale paths are found, the command exits 0 with `No v0.9 global artifacts detected. Clean install.`
+
+This flag exits early without running any other doctor checks. Combine with other checks by running them separately.
 
 ## JSON Output
 

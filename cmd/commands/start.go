@@ -14,6 +14,7 @@ import (
 	"github.com/nself-org/cli/internal/build"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
+	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/health"
@@ -22,6 +23,7 @@ import (
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/ssl"
+	"github.com/nself-org/cli/internal/telemetry"
 	"github.com/nself-org/cli/internal/truststate"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -61,6 +63,7 @@ func init() {
 	f.Bool("skip-plugins", false, "Start base stack only, skip all plugin compose files")
 	f.Bool("watch", false, "Enable health auto-restart: poll services and restart unhealthy containers")
 	f.Bool("quiet", false, "Suppress progress output (for CI; preserves --json output)")
+	f.Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -130,13 +133,79 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	}, nil
 }
 
+// isFirstStart returns true when ~/.config/nself/onboarding.json does not yet
+// contain a "start_completed" entry. It writes the marker on first call.
+func isFirstStart() bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	markerPath := filepath.Join(home, ".config", "nself", "onboarding.json")
+	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
+		// First start: write the marker before returning true.
+		if mkErr := os.MkdirAll(filepath.Dir(markerPath), 0o700); mkErr == nil {
+			_ = os.WriteFile(markerPath, []byte(`{"start_completed":true}`), 0o600)
+		}
+		return true
+	}
+	return false
+}
+
+// classifyStartError maps a start error to a categorical string safe for telemetry.
+func classifyStartError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	switch {
+	case containsAny(msg, "port", "already in use", "bind: address"):
+		return "port-collision"
+	case containsAny(msg, "docker", "Docker", "cannot connect to the Docker", "docker not found", "docker info"):
+		return "docker-not-running"
+	case containsAny(msg, "pull", "image", "manifest", "registry"):
+		return "image-pull-failed"
+	case containsAny(msg, "health", "timeout", "deadline exceeded", "context deadline"):
+		return "healthcheck-timeout"
+	default:
+		return "other"
+	}
+}
+
 func runStart(cmd *cobra.Command, _ []string) error {
 	opts, err := resolveStartOpts(cmd)
 	if err != nil {
 		return err
 	}
 
-	cwd, err := os.Getwd()
+	// Telemetry: capture start time and first-run state before execution.
+	startTime := time.Now()
+	firstRun := isFirstStart()
+
+	// Telemetry: emit start_attempt immediately (opt-in only).
+	if telemetry.IsOptedIn() {
+		telemetry.Send("start_attempt", map[string]any{
+			"first_run": firstRun,
+		})
+	}
+
+	// Telemetry: deferred start_result emits on all exit paths (success or failure).
+	var startErr error
+	defer func() {
+		if !telemetry.IsOptedIn() {
+			return
+		}
+		props := map[string]any{
+			"first_run":   firstRun,
+			"duration_ms": time.Since(startTime).Milliseconds(),
+			"success":     startErr == nil,
+		}
+		if startErr != nil {
+			props["failure_category"] = classifyStartError(startErr)
+		}
+		telemetry.Send("start_result", props)
+	}()
+
+	cwd, startErr := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
@@ -144,6 +213,23 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	projectDir, err := config.FindNSelfRoot(cwd)
 	if err != nil {
 		return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+	}
+
+	// ── v0.9 artifact detection (S60-T02) ────────────────────────────────
+	// Requires ≥2 of 5 heuristics to trigger (prevents false positives).
+	// A single artifact warns but proceeds. ≥2 artifacts fail unless --allow-legacy.
+	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
+	if count, names := migration.CheckLegacyProject(projectDir); count >= migration.DetectionThreshold {
+		if allowLegacy {
+			ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
+		} else {
+			ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
+			fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+			startErr = fmt.Errorf("v0.9 project detected — run `nself migrate` first")
+			return startErr
+		}
+	} else if count == 1 {
+		ui.Warn(fmt.Sprintf("One possible v0.9 artifact found (%s). Proceeding — run `nself migrate` if this is a v0.9 project.", names[0]))
 	}
 
 	ctx, cancel := context.WithCancel(cmd.Context())
@@ -604,6 +690,14 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		ui.Dimmed(fmt.Sprintf("  Quick mode:   %v", opts.quick))
 		ui.Dimmed(fmt.Sprintf("  Fresh:        %v", opts.fresh))
 		ui.Dimmed(fmt.Sprintf("  Clean start:  %v", opts.cleanStart))
+	}
+
+	// Telemetry: emit start_success (opt-in only).
+	if telemetry.IsOptedIn() {
+		telemetry.Send("start_success", map[string]any{
+			"first_run":   firstRun,
+			"duration_ms": time.Since(startTime).Milliseconds(),
+		})
 	}
 
 	return nil

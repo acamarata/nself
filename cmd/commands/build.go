@@ -39,6 +39,7 @@ func init() {
 	buildCmd.Flags().BoolP("quiet", "q", false, "Suppress non-error output (for CI use)")
 	buildCmd.Flags().Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
 	buildCmd.Flags().Bool("no-migration-check", false, "Skip v1 artifact detection (for automation/CI)")
+	buildCmd.Flags().Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 
 	RootCmd.AddCommand(buildCmd)
 }
@@ -54,6 +55,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	quiet, _ := cmd.Flags().GetBool("quiet")
 	noMonorepo, _ := cmd.Flags().GetBool("no-monorepo")
 	noMigrationCheck, _ := cmd.Flags().GetBool("no-migration-check")
+	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
 
 	if !quiet {
 		ui.CommandHeader("nself build", "Generate project infrastructure")
@@ -96,11 +98,22 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		ui.Info(fmt.Sprintf("Force: %t | No-cache: %t | Check: %t", force, noCache, check))
 	}
 
-	// ── v1 artifact detection ─────────────────────────────────────────────
-	if !noMigrationCheck && !quiet {
-		if artifacts := migration.Detect(workdir); len(artifacts) > 0 {
-			ui.Warn("v1 artifacts detected. Run `nself migrate run` before building to ensure compatibility.")
-			fmt.Println("Continuing with build...")
+	// ── v0.9 artifact detection (S60-T02) ────────────────────────────────
+	// Requires ≥2 of 5 heuristics to trigger (prevents false positives).
+	// --no-migration-check bypasses entirely (CI/automation). --allow-legacy warns but proceeds.
+	if !noMigrationCheck {
+		if count, names := migration.CheckLegacyProject(workdir); count >= migration.DetectionThreshold {
+			if allowLegacy {
+				if !quiet {
+					ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
+				}
+			} else {
+				ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
+				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+				return fmt.Errorf("v0.9 project detected — run `nself migrate` first")
+			}
+		} else if count == 1 && !quiet {
+			ui.Warn(fmt.Sprintf("One possible v0.9 artifact found (%s). Proceeding — run `nself migrate` if this is a v0.9 project.", names[0]))
 		}
 	}
 

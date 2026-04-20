@@ -28,9 +28,14 @@ By default, `nself build` is smart-cached: it compares `.env` modification time 
 | `--debug` | false | Enable debug mode |
 | `--allow-insecure` | false | Allow insecure configuration (dev only) |
 | `--security-report` | false | Generate a security analysis after build |
-| `--no-migration-check` | false | Skip v1 artifact detection (automation/CI) |
+| `--no-migration-check` | false | Skip v0.9 artifact detection (automation/CI) |
+| `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
 | `--help`, `-h` | — | Show help |
+
+## v0.9 project detection
+
+`nself build` scans for v0.9 project artifacts before generating any files. Two or more detected artifacts trigger a hard error pointing to the migration guide. A single artifact produces a non-blocking warning. Use `--no-migration-check` in automation (CI) where you are certain no v0.9 projects exist. Use `--allow-legacy` only as a temporary workaround while running `nself migrate`. See [[Upgrade-From-v0.9]].
 
 ## Examples
 
