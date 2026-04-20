@@ -12,6 +12,65 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
+// --- validateConsumes tests (S43-T17) ---
+
+// TestValidateConsumes_AllInstalled verifies that no warning is emitted
+// (and no error returned) when all consumed plugins are already installed.
+func TestValidateConsumes_AllInstalled(t *testing.T) {
+	pluginDir := t.TempDir()
+
+	// Create installed plugin directories with plugin.json.
+	for _, dep := range []string{"ai", "notify"} {
+		dir := filepath.Join(pluginDir, dep)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("setup mkdir %s: %v", dep, err)
+		}
+		manifest := `{"name":"` + dep + `","version":"1.0.0","description":"dep","category":"utility","license":"MIT"}`
+		if err := os.WriteFile(filepath.Join(dir, "plugin.json"), []byte(manifest), 0644); err != nil {
+			t.Fatalf("setup write %s: %v", dep, err)
+		}
+	}
+
+	err := validateConsumes(pluginDir, "my-plugin", []string{"ai", "notify"})
+	if err != nil {
+		t.Errorf("validateConsumes with all deps installed: unexpected error: %v", err)
+	}
+}
+
+// TestValidateConsumes_MissingPlugin verifies that a warning is printed to
+// stderr when a consumed plugin is not installed, but no error is returned
+// (modular installs must not be blocked). S43-T17.
+func TestValidateConsumes_MissingPlugin(t *testing.T) {
+	pluginDir := t.TempDir()
+	// "ai" is not installed — no directory created.
+
+	err := validateConsumes(pluginDir, "my-plugin", []string{"ai"})
+	// Must return nil — missing consumers are a warning, not a hard error.
+	if err != nil {
+		t.Errorf("validateConsumes with missing dep must not return error, got: %v", err)
+	}
+}
+
+// TestValidateConsumes_EmptyConsumes verifies that an empty Consumes list
+// produces no error. S43-T17.
+func TestValidateConsumes_EmptyConsumes(t *testing.T) {
+	pluginDir := t.TempDir()
+	err := validateConsumes(pluginDir, "my-plugin", nil)
+	if err != nil {
+		t.Errorf("validateConsumes with empty list: unexpected error: %v", err)
+	}
+}
+
+// TestValidateConsumes_SelfReference verifies that a plugin listing itself in
+// Consumes does not trigger a warning or error. S43-T17.
+func TestValidateConsumes_SelfReference(t *testing.T) {
+	pluginDir := t.TempDir()
+	err := validateConsumes(pluginDir, "my-plugin", []string{"my-plugin"})
+	if err != nil {
+		t.Errorf("validateConsumes self-reference: unexpected error: %v", err)
+	}
+}
+
 // --- Remove lifecycle tests (S10-T02) ---
 
 // TestRemove_NonExistentPlugin verifies that Remove() returns a descriptive

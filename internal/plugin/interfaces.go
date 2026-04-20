@@ -105,6 +105,15 @@ type PluginManifest struct {
 	OptionalDependencies []string           `json:"optionalDependencies,omitempty"`
 	SystemDependencies   SystemDependencies `json:"systemDependencies,omitempty"`
 
+	// Inter-plugin communication contract (S43-T17).
+	// Consumes lists the plugin names whose HTTP APIs this plugin may call via
+	// X-Source-Plugin. Every entry must be installed for this plugin to work
+	// correctly; install-time validation enforces this.
+	// Provides lists the API services this plugin exposes for other plugins to
+	// consume. Both fields use plugin name format (lowercase-with-hyphens).
+	Consumes []string `json:"consumes,omitempty"`
+	Provides []string `json:"provides,omitempty"`
+
 	// Multi-tenancy
 	MultiApp MultiApp `json:"multiApp,omitempty"`
 

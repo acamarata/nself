@@ -1,6 +1,66 @@
 package plugin
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+// TestValidateManifest_ConsumesValid verifies that valid plugin names in
+// Consumes pass manifest validation. S43-T17.
+func TestValidateManifest_ConsumesValid(t *testing.T) {
+	m := &PluginManifest{
+		Name:        "my-plugin",
+		Version:     "1.0.0",
+		Description: "test",
+		Category:    "utility",
+		License:     "MIT",
+		Consumes:    []string{"ai", "cron", "notify"},
+		Provides:    []string{"my-plugin"},
+	}
+	if err := validateManifest(m); err != nil {
+		t.Errorf("validateManifest with valid Consumes/Provides: unexpected error: %v", err)
+	}
+}
+
+// TestValidateManifest_ConsumesInvalidName verifies that an invalid plugin
+// name in Consumes is rejected with a descriptive error. S43-T17.
+func TestValidateManifest_ConsumesInvalidName(t *testing.T) {
+	m := &PluginManifest{
+		Name:        "my-plugin",
+		Version:     "1.0.0",
+		Description: "test",
+		Category:    "utility",
+		License:     "MIT",
+		Consumes:    []string{"INVALID_NAME"},
+	}
+	err := validateManifest(m)
+	if err == nil {
+		t.Fatal("expected error for invalid Consumes name, got nil")
+	}
+	if !strings.Contains(err.Error(), "consumes entry") {
+		t.Errorf("expected 'consumes entry' in error, got: %v", err)
+	}
+}
+
+// TestValidateManifest_ProvidesInvalidName verifies that an invalid plugin
+// name in Provides is rejected. S43-T17.
+func TestValidateManifest_ProvidesInvalidName(t *testing.T) {
+	m := &PluginManifest{
+		Name:        "my-plugin",
+		Version:     "1.0.0",
+		Description: "test",
+		Category:    "utility",
+		License:     "MIT",
+		Provides:    []string{"Bad Name!"},
+	}
+	err := validateManifest(m)
+	if err == nil {
+		t.Fatal("expected error for invalid Provides name, got nil")
+	}
+	if !strings.Contains(err.Error(), "provides entry") {
+		t.Errorf("expected 'provides entry' in error, got: %v", err)
+	}
+}
 
 // TestVersionPattern_Valid verifies that a well-formed semver string matches.
 func TestVersionPattern_Valid(t *testing.T) {

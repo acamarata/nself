@@ -103,5 +103,17 @@ func validateManifest(m *PluginManifest) error {
 		return fmt.Errorf("language must be one of: go, rust, typescript, python, bash: %w", errs.ErrPluginManifest)
 	}
 
+	// Validate consumes/provides entries: each must be a valid plugin name.
+	for _, dep := range m.Consumes {
+		if !namePattern.MatchString(dep) {
+			return fmt.Errorf("consumes entry %q is not a valid plugin name (lowercase-with-hyphens): %w", dep, errs.ErrPluginManifest)
+		}
+	}
+	for _, dep := range m.Provides {
+		if !namePattern.MatchString(dep) {
+			return fmt.Errorf("provides entry %q is not a valid plugin name (lowercase-with-hyphens): %w", dep, errs.ErrPluginManifest)
+		}
+	}
+
 	return nil
 }

@@ -219,6 +219,15 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 	}
 
+	// S43-T17: Validate inter-plugin communication contract (Consumes).
+	// Every plugin listed in manifest.Consumes must be installed (or will be
+	// installed as a dependency below). A plugin declaring X in Consumes will
+	// send X-Source-Plugin: <name> requests to X's HTTP API; if X is not
+	// installed there is no service to receive those calls.
+	if err := validateConsumes(pluginDir, name, manifest.Consumes); err != nil {
+		return err
+	}
+
 	// Step 3: Resolve dependencies. The resolver reads manifests from
 	// pluginDir, so already-installed plugins are picked up automatically.
 	// For plugins not yet installed we install them first, which places
