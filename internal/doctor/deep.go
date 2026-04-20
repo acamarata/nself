@@ -39,6 +39,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S77-T08: orphaned Hasura remote schemas after plugin uninstall.
 	results = append(results, CheckOrphanRemoteSchemas(ctx))
 
+	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
+	results = append(results, CheckRLSEnforcement(ctx, false)...)
+
 	return results
 }
 
