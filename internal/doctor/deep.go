@@ -30,6 +30,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	results = append(results, BackupChecks(ctx, projectDir)...)
 	results = append(results, SecurityChecks(ctx, projectDir)...)
 
+	// S69-T05: ai+moderation wiring gap check.
+	results = append(results, CheckModerationWired(ctx))
+
 	return results
 }
 
