@@ -218,21 +218,29 @@ type pluginEndpointEntry struct {
 // it as an array of objects while older/local registries use an array of
 // strings. We normalise both into []string during entryToManifest conversion.
 type pluginEntry struct {
-	Name           string               `json:"name"`
-	Version        string               `json:"version"`
-	Description    string               `json:"description"`
-	Category       string               `json:"category"`
-	Tier           string               `json:"tier"`
-	License        string               `json:"license"`
-	LicenseType    string               `json:"licenseType"`
-	Repository     string               `json:"repository"`
-	Checksum       string               `json:"checksum"`
-	DownloadURL    string               `json:"download_url"`
-	RequiresLicense bool                `json:"requires_license"`
-	Tags            []string            `json:"tags"`
-	Tables          []string            `json:"tables,omitempty"`
-	Port            int                 `json:"port,omitempty"`
-	Dependencies    []string            `json:"dependencies,omitempty"`
+	Name            string               `json:"name"`
+	Version         string               `json:"version"`
+	Description     string               `json:"description"`
+	Category        string               `json:"category"`
+	Tier            string               `json:"tier"`
+	License         string               `json:"license"`
+	LicenseType     string               `json:"licenseType"`
+	Repository      string               `json:"repository"`
+	Checksum        string               `json:"checksum"`
+	DownloadURL     string               `json:"download_url"`
+	RequiresLicense bool                 `json:"requires_license"`
+	Tags            []string             `json:"tags"`
+	Tables          []string             `json:"tables,omitempty"`
+	Port            int                  `json:"port,omitempty"`
+	Dependencies    []string             `json:"dependencies,omitempty"`
+	// PublishStatus is "stable", "beta", or "planned". Planned plugins are
+	// rejected at install time; beta plugins install with a warning.
+	PublishStatus string `json:"status,omitempty"`
+	// AuthorPublicKey is the hex-encoded Ed25519 public key pinned in the
+	// registry for signature verification (T09).
+	AuthorPublicKey string `json:"author_public_key,omitempty"`
+	// Signature is the hex-encoded Ed25519 signature of the tarball checksum.
+	Signature string `json:"signature,omitempty"`
 	// Implementation may appear as a nested object (Cloudflare Worker format)
 	// or as flat fields (older registry format).
 	Implementation *pluginImplementation `json:"implementation,omitempty"`
@@ -373,6 +381,9 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		Language:        language,
 		Runtime:         runtime,
 		Compat:          e.Compat,
+		PublishStatus:   e.PublishStatus,
+		AuthorPublicKey: e.AuthorPublicKey,
+		Signature:       e.Signature,
 	}
 }
 

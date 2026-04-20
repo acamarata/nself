@@ -203,17 +203,24 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		if category != "" && !strings.EqualFold(p.Category, category) {
 			continue
 		}
-		status := ""
-		if p.Installed {
-			status = " [installed]"
-		}
+		stateTag := ""
 		if p.Running {
-			status = " [running]"
+			stateTag = " [running]"
+		} else if p.Installed {
+			stateTag = " [installed]"
+		}
+		statusBadge := ""
+		switch p.PublishStatus {
+		case "planned":
+			statusBadge = " [planned]"
+		case "beta":
+			statusBadge = " [beta]"
+		// "stable" and "" show no badge — clean install signal
 		}
 		if detailed {
-			fmt.Printf("%-20s %-10s %-12s%s\n", p.Name, p.Version, p.Category, status)
+			fmt.Printf("%-20s %-10s %-12s%s%s\n", p.Name, p.Version, p.Category, stateTag, statusBadge)
 		} else {
-			fmt.Printf("%-20s%s\n", p.Name, status)
+			fmt.Printf("%-20s%s%s\n", p.Name, stateTag, statusBadge)
 		}
 	}
 

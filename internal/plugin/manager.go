@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -23,11 +24,12 @@ import (
 
 // PluginInfo describes a plugin's identity and current state.
 type PluginInfo struct {
-	Name      string
-	Version   string
-	Category  string
-	Installed bool
-	Running   bool
+	Name          string
+	Version       string
+	Category      string
+	Installed     bool
+	Running       bool
+	PublishStatus string // "stable", "beta", "planned" — from registry
 }
 
 // InstalledPluginInfo is a richer view of an installed plugin used by the
@@ -174,6 +176,18 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return errs.ErrPluginNotFound
 	}
 
+	// Status check: reject planned plugins; warn on beta.
+	// "stable" and "" (legacy, no status field) proceed silently.
+	switch manifest.PublishStatus {
+	case "planned":
+		return fmt.Errorf(
+			"plugin %q is not yet available — coming soon.\nSee https://nself.org/plugins/%s for the release timeline.\nRun 'nself plugin list' to see available plugins.",
+			name, name,
+		)
+	case "beta":
+		fmt.Fprintf(os.Stderr, "[beta] %s is in beta — use in production at your own risk\n", name)
+	}
+
 	// Compat check: verify CLI version satisfies the plugin's declared range.
 	if err := CheckCLICompat(manifest.Compat, version.GetVersion()); err != nil {
 		return fmt.Errorf("compatibility check failed for %q: %w", name, err)
@@ -242,6 +256,20 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "warning: no checksum in registry for plugin %q, skipping verification\n", name)
+	}
+
+	// Step 5b: Verify Ed25519 signature (T09 — Security-Always-Free).
+	// The signature is computed over the raw SHA-256 digest of the tarball.
+	// Public key is pinned in the registry; never fetched at verify time (TOCTOU).
+	// Skip flag requires --force co-flag; standalone skip emits WARN to stderr.
+	skipVerify := os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1"
+	if skipVerify {
+		fmt.Fprintf(os.Stderr, "WARNING: plugin signature verification skipped (NSELF_LICENSE_SKIP_VERIFY=1)\n")
+	} else {
+		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature); err != nil {
+			os.Remove(archivePath)
+			return fmt.Errorf("signature verification for plugin %q: %w", name, err)
+		}
 	}
 
 	// Step 6: Extract to pluginDir/{name}/.
@@ -552,6 +580,60 @@ func verifyChecksum(filePath string, expectedHash string) error {
 	actual := hex.EncodeToString(h.Sum(nil))
 	if !strings.EqualFold(actual, expectedHash) {
 		return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHash, actual)
+	}
+	return nil
+}
+
+// verifyPluginSignature verifies that the Ed25519 signature stored in the
+// plugin's registry manifest matches the SHA-256 hash of the downloaded
+// tarball. The public key is pinned in the registry (never fetched at verify
+// time, preventing TOCTOU attacks).
+//
+// The signed message is the raw 32-byte SHA-256 digest of the tarball —
+// consistent with how release tarballs are signed on the publisher side.
+//
+// If authorPublicKeyHex or signatureHex is empty the function returns nil
+// (verification is skipped with a warning — callers should already warn the
+// user via the checksum warning path).
+func verifyPluginSignature(archivePath, authorPublicKeyHex, signatureHex string) error {
+	if authorPublicKeyHex == "" || signatureHex == "" {
+		return nil // no signature to verify
+	}
+
+	// Decode the hex-encoded Ed25519 public key.
+	pkBytes, err := hex.DecodeString(authorPublicKeyHex)
+	if err != nil {
+		return fmt.Errorf("decoding author public key: %w", err)
+	}
+	if len(pkBytes) != ed25519.PublicKeySize {
+		return fmt.Errorf("author public key has wrong length: expected %d bytes, got %d", ed25519.PublicKeySize, len(pkBytes))
+	}
+	pubKey := ed25519.PublicKey(pkBytes)
+
+	// Decode the hex-encoded signature.
+	sigBytes, err := hex.DecodeString(signatureHex)
+	if err != nil {
+		return fmt.Errorf("decoding plugin signature: %w", err)
+	}
+	if len(sigBytes) != ed25519.SignatureSize {
+		return fmt.Errorf("plugin signature has wrong length: expected %d bytes, got %d", ed25519.SignatureSize, len(sigBytes))
+	}
+
+	// Compute the SHA-256 digest of the tarball.
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("opening archive for signature verification: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("hashing archive for signature verification: %w", err)
+	}
+	digest := h.Sum(nil) // 32-byte raw digest
+
+	if !ed25519.Verify(pubKey, digest, sigBytes) {
+		return fmt.Errorf("plugin signature verification failed: tarball does not match registry signature (possible tampering)")
 	}
 	return nil
 }
@@ -869,11 +951,12 @@ func listFromRegistry(pluginDir string) ([]PluginInfo, error) {
 			}
 		}
 		plugins = append(plugins, PluginInfo{
-			Name:      m.Name,
-			Version:   m.Version,
-			Category:  m.Category,
-			Installed: installed,
-			Running:   running,
+			Name:          m.Name,
+			Version:       m.Version,
+			Category:      m.Category,
+			Installed:     installed,
+			Running:       running,
+			PublishStatus: m.PublishStatus,
 		})
 	}
 

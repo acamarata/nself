@@ -117,4 +117,19 @@ type PluginManifest struct {
 	// Registry-specific fields (not in plugin.json, populated by registry)
 	Tier     string `json:"tier,omitempty"`
 	Checksum string `json:"checksum,omitempty"`
+
+	// PublishStatus is the plugin's availability status from the registry.
+	// Valid values: "stable" | "beta" | "planned"
+	// "planned" plugins are rejected at install time with a friendly message.
+	// "beta" plugins install with a warning.
+	PublishStatus string `json:"status,omitempty"`
+
+	// AuthorPublicKey is the hex-encoded Ed25519 public key of the plugin
+	// publisher, pinned in the registry. Used to verify Signature.
+	AuthorPublicKey string `json:"author_public_key,omitempty"`
+
+	// Signature is the hex-encoded Ed25519 signature of the tarball checksum.
+	// Format: Ed25519Sign(privateKey, sha256(tarball)).
+	// Pinned in registry alongside AuthorPublicKey.
+	Signature string `json:"signature,omitempty"`
 }
