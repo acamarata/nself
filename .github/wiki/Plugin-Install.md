@@ -10,6 +10,14 @@ For free plugins, no setup required. For pro plugins, set your license key first
 
 Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available — the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
 
+### Permission Validation
+
+Every plugin manifest may declare a `permissions` array. The CLI validates each permission against the canonical allowlist at install time and rejects unknown permission strings (fail-closed). A structured audit log line is emitted after a successful install listing the granted permissions.
+
+Plugins holding elevated permissions (`system:exec`, `network:internet`) print a visible warning to stderr. Use `nself plugin info <name>` to review the permission set before installing.
+
+See [[Plugin-Permissions]] for the full permission catalog and tier roadmap.
+
 After installing any plugin, regenerate your stack:
 
 ```bash
