@@ -110,7 +110,7 @@ This command will exit 0 with "no deprecations" at baseline.`,
 				})
 				fmt.Println(string(out))
 			} else {
-				ui.PrintSuccess("0 deprecations found. Your install is clean against the v1.0.9 LTS baseline.")
+				fmt.Println("0 deprecations found. Your install is clean against the v1.0.9 LTS baseline.")
 				fmt.Println()
 				fmt.Println("  Registry: .claude/docs/api-deprecations.md (no entries at v1.0.9)")
 				fmt.Println("  LTS window: 2026-04-17 → 2027-04-17")
@@ -257,13 +257,13 @@ func probeHTTPHeader(client *http.Client, url, header string) string {
 func probeInstalledPluginSDKVersions() []apiVersionRow {
 	rows := []apiVersionRow{}
 
-	cfg, err := config.LoadProjectConfig(".")
+	cfg, err := config.Load(".")
 	if err != nil {
 		// Not in an nself project directory — skip
 		return rows
 	}
 
-	pluginsDir := cfg.PluginsDir
+	pluginsDir := cfg.PluginSystem.Dir
 	if pluginsDir == "" {
 		return rows
 	}
