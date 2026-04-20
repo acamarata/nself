@@ -60,6 +60,7 @@ func init() {
 	f.Bool("skip-build", false, "Skip automatic rebuild detection")
 	f.Bool("skip-plugins", false, "Start base stack only, skip all plugin compose files")
 	f.Bool("watch", false, "Enable health auto-restart: poll services and restart unhealthy containers")
+	f.Bool("quiet", false, "Suppress progress output (for CI; preserves --json output)")
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -77,6 +78,7 @@ type startOpts struct {
 	skipBuild        bool
 	skipPlugins      bool
 	watch            bool
+	quiet            bool
 }
 
 func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
@@ -92,6 +94,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	skipBuild, _ := cmd.Flags().GetBool("skip-build")
 	skipPlugins, _ := cmd.Flags().GetBool("skip-plugins")
 	watch, _ := cmd.Flags().GetBool("watch")
+	quiet, _ := cmd.Flags().GetBool("quiet")
 
 	// --force-recreate is an alias for --fresh.
 	if forceRecreate {
@@ -123,6 +126,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 		skipBuild:        skipBuild,
 		skipPlugins:      skipPlugins,
 		watch:            watch,
+		quiet:            quiet,
 	}, nil
 }
 
@@ -396,6 +400,28 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	ui.Step(currentStep, totalSteps, "Starting PostgreSQL")
 
 	compose := docker.NewCompose(composeFiles...)
+
+	// ── First-run image pull ─────────────────────────────────────────
+	// Detect first run via the .nself/.first-run-complete marker.
+	// On first run, docker compose pull can take 1-3 minutes; show progress.
+	firstRunMarker := filepath.Join(projectDir, ".nself", ".first-run-complete")
+	if _, err := os.Stat(firstRunMarker); os.IsNotExist(err) {
+		if !opts.quiet {
+			ui.Info("First run detected — pulling Docker images (this takes 1-3 minutes on slow connections)...")
+		}
+		donePull := ui.FirstRunProgress(opts.quiet)
+		pullCtx, pullCancel := context.WithTimeout(ctx, 10*time.Minute)
+		_ = compose.ComposePull(pullCtx, projectDir)
+		pullCancel()
+		donePull()
+		// Write the first-run marker so subsequent starts skip this step.
+		if mkErr := os.MkdirAll(filepath.Dir(firstRunMarker), 0o700); mkErr == nil {
+			f, fErr := os.OpenFile(firstRunMarker, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+			if fErr == nil {
+				_ = f.Close()
+			}
+		}
+	}
 
 	// Clean start: remove all containers first.
 	if opts.cleanStart {

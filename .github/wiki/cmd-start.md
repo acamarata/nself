@@ -31,6 +31,9 @@ Database initialization is automatic and idempotent — nSelf creates the databa
 | `--skip-port-check` | false | Skip port availability check |
 | `--quick` | false | Quick start (timeout=30s, required=60%) |
 | `--timeout` | `120` | Health check timeout in seconds (range: 30–600) |
+| `--quiet` | false | Suppress progress output (for CI). Preserves `--json` output. |
+| `--watch` | false | Enable health auto-restart: poll services and restart unhealthy containers |
+| `--skip-plugins` | false | Start base stack only, skipping plugin compose files |
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
 | `--debug`, `-d` | false | Show debug information |
 | `--verbose`, `-v` | false | Show detailed Docker output |
@@ -62,7 +65,31 @@ nself start --timeout 300
 
 # Verbose output to debug startup issues
 nself start -v
+
+# Suppress progress output for CI pipelines
+nself start --quiet
 ```
+
+## First-run transcript
+
+On the very first `nself start` in a project directory, the CLI detects that Docker images have not been pulled yet and streams progress to avoid a silent terminal during the 1-3 minute pull:
+
+```
+[1/7] Checking docker-compose.yml ✓
+[2/7] Loading configuration ✓
+[3/7] Checking port availability ✓
+[4/7] Starting PostgreSQL
+First run detected — pulling Docker images (this takes 1-3 minutes on slow connections)...
+⚙ Pulling images [12s elapsed] — first run takes 1-3 minutes...
+⚙ Pulling images [16s elapsed] — first run takes 1-3 minutes...
+⚙ Pulling images [24s elapsed] — first run takes 1-3 minutes...
+✓ Docker images ready
+...
+```
+
+The progress line updates every 4 seconds. Once all images are pulled, the marker file `.nself/.first-run-complete` is written and subsequent starts skip the pull step entirely.
+
+Pass `--quiet` to suppress all progress output. Useful in CI where the log is captured elsewhere.
 
 ## Aliases
 
