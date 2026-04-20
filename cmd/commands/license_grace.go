@@ -57,8 +57,23 @@ var licenseExportCmd = &cobra.Command{
 var licenseImportCmd = &cobra.Command{
 	Use:   "import <file>",
 	Short: "Import a previously exported license cache file",
-	Args:  cobra.ExactArgs(1),
+	Long: `Import a previously exported license cache file.
+
+Pass --force when importing an unsigned cache entry while NSELF_LICENSE_SKIP_VERIFY=1
+is set. Without --force, the skip-verify mode is rejected to prevent accidental bypass.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		force, _ := cmd.Flags().GetBool("force")
+
+		// Signal --force acknowledgment to the library layer via env var.
+		// This is the approved path for NSELF_LICENSE_SKIP_VERIFY in the import command.
+		if force && os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" {
+			if err := os.Setenv("NSELF_LICENSE_SKIP_VERIFY_FORCE", "1"); err != nil {
+				return fmt.Errorf("setting skip-verify force flag: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "warning: skip-verify mode active (--force acknowledged)\n")
+		}
+
 		data, err := os.ReadFile(args[0])
 		if err != nil {
 			return fmt.Errorf("reading cache file: %w", err)
@@ -72,6 +87,7 @@ var licenseImportCmd = &cobra.Command{
 }
 
 func init() {
+	licenseImportCmd.Flags().Bool("force", false, "Required when NSELF_LICENSE_SKIP_VERIFY=1; explicit acknowledgment of skipped signature verification")
 	licenseCmd.AddCommand(licenseRefreshCmd)
 	licenseCmd.AddCommand(licenseExportCmd)
 	licenseCmd.AddCommand(licenseImportCmd)

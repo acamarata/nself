@@ -35,9 +35,9 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--key` | `""` | License key for pro plugins |
-| `--version` | `""` | Install a specific version |
-| `--force` | false | Remove even if other plugins depend on this one |
+| `--key` | `""` | License key for pro plugins (`install`) |
+| `--version` | `""` | Install a specific version (`install`) |
+| `--force` | false | `install`: required when `NSELF_LICENSE_SKIP_VERIFY=1` is set; `remove`: remove even if dependents exist |
 | `--keep-data` | false | Preserve database data when removing |
 | `--installed` | false | Show only installed plugins (for `list`) |
 | `--category` | `""` | Filter by category (for `list`) |

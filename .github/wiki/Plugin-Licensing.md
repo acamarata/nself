@@ -69,10 +69,24 @@ Validation results are cached locally for 24 hours at `~/.nself/license/cache`.
 
 ## Offline Mode
 
-To skip remote validation (e.g., air-gapped environments):
+To skip remote validation (e.g., air-gapped environments), `NSELF_LICENSE_SKIP_VERIFY=1`
+requires `--force` as explicit acknowledgment. Standalone skip without `--force` is rejected.
 
 ```bash
-NSELF_LICENSE_SKIP_VERIFY=1 nself plugin install {name}
+NSELF_LICENSE_SKIP_VERIFY=1 nself plugin install {name} --force
+```
+
+A warning is printed to stderr when `--force` is used. Without `--force`, the command
+exits with a non-zero status and the message:
+
+```
+NSELF_LICENSE_SKIP_VERIFY requires --force flag; standalone skip is not permitted
+```
+
+The same requirement applies to `nself license import` when importing unsigned cache entries:
+
+```bash
+NSELF_LICENSE_SKIP_VERIFY=1 nself license import cache.json --force
 ```
 
 ## Tier Entitlements

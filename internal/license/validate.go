@@ -180,11 +180,16 @@ func ImportCache(data []byte) error {
 		return fmt.Errorf("cache file is missing required fields")
 	}
 	if !entry.VerifySignature() {
-		// In dev mode (no real keys), accept unsigned entries with a warning.
+		// NSELF_LICENSE_SKIP_VERIFY=1 allows importing unsigned cache entries for offline/dev use,
+		// but requires explicit --force acknowledgment (signalled by NSELF_LICENSE_SKIP_VERIFY_FORCE=1
+		// set by the caller after flag parsing). Standalone skip without --force is rejected.
 		if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") != "1" {
 			return fmt.Errorf("cache file signature verification failed")
 		}
-		fmt.Fprintf(os.Stderr, "warning: accepting unsigned cache entry (skip-verify mode)\n")
+		if os.Getenv("NSELF_LICENSE_SKIP_VERIFY_FORCE") != "1" {
+			return fmt.Errorf("NSELF_LICENSE_SKIP_VERIFY requires --force flag; standalone skip is not permitted")
+		}
+		fmt.Fprintf(os.Stderr, "warning: accepting unsigned cache entry (skip-verify mode, --force acknowledged)\n")
 	}
 	return WriteCache(&entry)
 }

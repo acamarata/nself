@@ -123,6 +123,7 @@ func init() {
 	// Flags on install.
 	pluginInstallCmd.Flags().String("key", "", "License key for pro plugins")
 	pluginInstallCmd.Flags().String("version", "", "Install a specific version")
+	pluginInstallCmd.Flags().Bool("force", false, "Required when using NSELF_LICENSE_SKIP_VERIFY; explicit acknowledgment of skipped validation")
 
 	// Flags on remove.
 	pluginRemoveCmd.Flags().Bool("keep-data", false, "Preserve database data on remove")
@@ -221,6 +222,16 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 
 func runPluginInstall(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
+	force, _ := cmd.Flags().GetBool("force")
+
+	// Security gate: NSELF_LICENSE_SKIP_VERIFY=1 requires --force as explicit acknowledgment.
+	// Standalone skip (without --force) is rejected to prevent accidental bypass in scripts.
+	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" && !force {
+		return fmt.Errorf("NSELF_LICENSE_SKIP_VERIFY requires --force flag; standalone skip is not permitted")
+	}
+	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" && force {
+		fmt.Fprintf(os.Stderr, "warning: license verification bypassed via NSELF_LICENSE_SKIP_VERIFY (--force acknowledged)\n")
+	}
 
 	// If a license key is provided via flag, set it in the environment
 	// so the plugin manager's license check picks it up.
