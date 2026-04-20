@@ -235,6 +235,14 @@ type FunctionsConfig struct {
 	Version string `env:"FUNCTIONS_VERSION"` // latest
 	Port    int    `env:"FUNCTIONS_PORT"`    // 3008
 	Route   string `env:"FUNCTIONS_ROUTE"`   // functions.{BD}
+
+	// Runtime selects the container image: node (default), deno, python.
+	Runtime string `env:"FUNCTIONS_RUNTIME"` // node|deno|python
+
+	// Resource limits for the functions container.
+	Memory  string `env:"FUNCTIONS_MEMORY"`  // 256M
+	CPU     string `env:"FUNCTIONS_CPU"`     // 0.5
+	Timeout string `env:"FUNCTIONS_TIMEOUT"` // 30s
 }
 
 // MLflowConfig holds MLflow experiment tracking configuration.

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/nself-org/cli/internal/security"
@@ -13,6 +14,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// versionPattern validates service version strings: semver, tags like "latest",
+// "alpine", "16.3", "v2.40.0", and simple numeric versions.
+var versionPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._\-]*$`)
+
 // serviceEntry describes a single optional service and its governing env var.
 type serviceEntry struct {
 	Name   string
@@ -21,13 +26,13 @@ type serviceEntry struct {
 }
 
 // knownServices is the ordered list of optional services managed by `nself service`.
+// MLflow was reclassified to a free plugin in v1.1.0 — use `nself plugin install mlflow`.
 var knownServices = []serviceEntry{
 	{Name: "redis", EnvVar: "REDIS_ENABLED", Port: 6379},
 	{Name: "minio", EnvVar: "MINIO_ENABLED", Port: 9000},
-	{Name: "mailpit", EnvVar: "MAILPIT_ENABLED", Port: 8025},
+	{Name: "email", EnvVar: "MAILPIT_ENABLED", Port: 8025},
 	{Name: "functions", EnvVar: "FUNCTIONS_ENABLED", Port: 3008},
 	{Name: "search", EnvVar: "SEARCH_ENABLED", Port: 7700},
-	{Name: "mlflow", EnvVar: "MLFLOW_ENABLED", Port: 5000},
 	{Name: "monitoring", EnvVar: "MONITORING_ENABLED", Port: 0},
 	{Name: "admin", EnvVar: "NSELF_ADMIN_ENABLED", Port: 3021},
 }
@@ -35,7 +40,8 @@ var knownServices = []serviceEntry{
 // serviceAliases maps alternate names to canonical service names.
 var serviceAliases = map[string]string{
 	"storage":     "minio",
-	"email":       "mailpit",
+	"mail":        "email",
+	"mailpit":     "email",
 	"meilisearch": "search",
 }
 
@@ -50,17 +56,18 @@ var serviceDependents = map[string][]string{
 var serviceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Manage optional services",
-	Long: `Enable, disable, and list optional nSelf services.
+	Long: `Enable, disable, and list optional nSelf services (6 total).
 
 Available services:
   redis        Cache and queue (REDIS_ENABLED)
   minio        S3-compatible storage (MINIO_ENABLED), alias: storage
-  mailpit      Local email testing (MAILPIT_ENABLED), alias: email
+  email        Email testing via Mailpit (MAILPIT_ENABLED), aliases: mail, mailpit
   functions    Serverless runtime (FUNCTIONS_ENABLED)
-  search       Full-text search (SEARCH_ENABLED), alias: meilisearch
-  mlflow       ML experiment tracking (MLFLOW_ENABLED)
+  search       Full-text search via MeiliSearch (SEARCH_ENABLED), alias: meilisearch
   monitoring   Prometheus/Grafana stack (MONITORING_ENABLED)
   admin        nSelf Admin GUI (NSELF_ADMIN_ENABLED)
+
+MLflow is now a free plugin: run 'nself plugin install mlflow'
 
 After enabling or disabling a service, run 'nself build' to apply changes.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,6 +95,34 @@ var serviceDisableCmd = &cobra.Command{
 	RunE:  runServiceDisable,
 }
 
+// serviceVersionKeys maps a canonical service name to its .env version key.
+var serviceVersionKeys = map[string]string{
+	"postgres":  "POSTGRES_VERSION",
+	"hasura":    "HASURA_VERSION",
+	"auth":      "AUTH_VERSION",
+	"nginx":     "NGINX_VERSION",
+	"redis":     "REDIS_VERSION",
+	"minio":     "MINIO_VERSION",
+	"email":     "MAILPIT_VERSION",
+	"functions": "FUNCTIONS_VERSION",
+	"search":    "MEILISEARCH_VERSION",
+	"admin":     "NSELF_ADMIN_VERSION",
+}
+
+var serviceUpgradeCmd = &cobra.Command{
+	Use:   "upgrade <name> <version>",
+	Short: "Pin a service to a specific image version",
+	Long: `Write the version tag for the named service into your .env file and prompt
+you to run 'nself build' to apply the change.
+
+Examples:
+  nself service upgrade postgres 16.3
+  nself service upgrade hasura v2.40.0
+  nself service upgrade auth latest`,
+	Args: cobra.ExactArgs(2),
+	RunE: runServiceUpgrade,
+}
+
 func init() {
 	serviceCmd.PersistentFlags().String("env", "", "Target environment (reads .env.{env})")
 	serviceListCmd.Flags().Bool("json", false, "Output as JSON array")
@@ -95,8 +130,60 @@ func init() {
 	serviceCmd.AddCommand(serviceListCmd)
 	serviceCmd.AddCommand(serviceEnableCmd)
 	serviceCmd.AddCommand(serviceDisableCmd)
+	serviceCmd.AddCommand(serviceUpgradeCmd)
+	serviceCmd.AddCommand(serviceConfigureCmd)
 
 	RootCmd.AddCommand(serviceCmd)
+}
+
+// runServiceUpgrade writes <NAME>_VERSION=<ver> into the .env file.
+func runServiceUpgrade(cmd *cobra.Command, args []string) error {
+	name := strings.ToLower(strings.TrimSpace(args[0]))
+	version := strings.TrimSpace(args[1])
+
+	// Resolve aliases (e.g. "mailpit" → "email", "meilisearch" → "search").
+	if canonical, ok := serviceAliases[name]; ok {
+		name = canonical
+	}
+
+	// Validate: "mailpit" also maps to email via reverse lookup in knownServices.
+	// For core services (postgres, hasura, auth, nginx) accept them directly.
+	envKey, knownVersion := serviceVersionKeys[name]
+	if !knownVersion {
+		return fmt.Errorf("unknown service %q; upgradeable services: %s",
+			name, strings.Join(upgradeableServiceNames(), ", "))
+	}
+
+	// Sanitize version string: alphanumeric plus ., -, _ only.
+	if !versionPattern.MatchString(version) {
+		return fmt.Errorf("invalid version string %q: only alphanumeric, dots, hyphens, and underscores are allowed", version)
+	}
+	if len(version) > 128 {
+		return fmt.Errorf("version string too long (max 128 chars)")
+	}
+
+	envFlag, _ := cmd.Flags().GetString("env")
+	envFile, err := resolveEnvFile(envFlag)
+	if err != nil {
+		return err
+	}
+
+	if err := setEnvKeyInFile(envFile, envKey, version); err != nil {
+		return fmt.Errorf("setting version for %s: %w", name, err)
+	}
+
+	fmt.Printf("%s version pinned to %s (%s=%s)\n", name, version, envKey, version)
+	fmt.Println("Run `nself build` to apply the change.")
+	return nil
+}
+
+// upgradeableServiceNames returns a sorted list of services that support version pinning.
+func upgradeableServiceNames() []string {
+	names := make([]string, 0, len(serviceVersionKeys))
+	for k := range serviceVersionKeys {
+		names = append(names, k)
+	}
+	return names
 }
 
 // --- helpers ---
@@ -115,10 +202,21 @@ func resolveEnvFile(envFlag string) (string, error) {
 	return cwd + "/" + filename, nil
 }
 
+// mlflowRedirectMsg is returned when a user tries to enable/disable mlflow via
+// the service command after the v1.1.0 reclassification.
+const mlflowRedirectMsg = "mlflow is now a plugin: run `nself plugin install mlflow`\n" +
+	"To uninstall: `nself plugin uninstall mlflow`"
+
 // canonicalServiceName resolves aliases and validates the service name.
 // Returns the canonical name and the serviceEntry, or an error if unknown.
+// Returns a special errMLflowRedirect sentinel for the mlflow redirect case.
 func canonicalServiceName(input string) (string, serviceEntry, error) {
 	lower := strings.ToLower(strings.TrimSpace(input))
+
+	// MLflow redirect: was an optional service, now a free plugin.
+	if lower == "mlflow" {
+		return "", serviceEntry{}, fmt.Errorf("%s", mlflowRedirectMsg)
+	}
 
 	// Resolve alias to canonical name.
 	if canonical, ok := serviceAliases[lower]; ok {
@@ -229,6 +327,16 @@ func runServiceList(cmd *cobra.Command, args []string) error {
 	values, err := readEnvValues(envFile)
 	if err != nil {
 		return err
+	}
+
+	// Emit deprecation warnings for legacy env vars.
+	if v, ok := values["MAIL_ENABLED"]; ok && strings.ToLower(strings.TrimSpace(v)) == "true" {
+		fmt.Fprintln(os.Stderr, "DEPRECATED: MAIL_ENABLED is deprecated; use EMAIL_ENABLED (or MAILPIT_ENABLED)")
+	}
+	if v, ok := values["MLFLOW_ENABLED"]; ok && strings.ToLower(strings.TrimSpace(v)) == "true" {
+		fmt.Fprintln(os.Stderr, "DEPRECATED: MLFLOW_ENABLED is no longer an optional service. Run:")
+		fmt.Fprintln(os.Stderr, "  nself plugin install mlflow")
+		fmt.Fprintln(os.Stderr, "Then remove MLFLOW_ENABLED from your .env")
 	}
 
 	rows := make([]serviceStatusRow, 0, len(knownServices))
@@ -354,5 +462,122 @@ func runServiceDisable(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("%s disabled. Run `nself build` to apply changes.\n", canonName)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// service configure (email provider presets)
+// ---------------------------------------------------------------------------
+
+// emailProviderPreset holds the SMTP env var values for a known email provider.
+type emailProviderPreset struct {
+	Host string
+	Port string
+	// User and Pass are intentionally empty — users must supply credentials.
+}
+
+// emailProviderPresets maps provider names to their SMTP relay settings.
+var emailProviderPresets = map[string]emailProviderPreset{
+	"postmark":      {Host: "smtp.postmarkapp.com", Port: "587"},
+	"sendgrid":      {Host: "smtp.sendgrid.net", Port: "587"},
+	"resend":        {Host: "smtp.resend.com", Port: "465"},
+	"mailgun":       {Host: "smtp.mailgun.org", Port: "587"},
+	"ses":           {Host: "email-smtp.us-east-1.amazonaws.com", Port: "587"},
+	"sparkpost":     {Host: "smtp.sparkpostmail.com", Port: "587"},
+	"smtp-generic":  {Host: "", Port: "587"},
+	"mailchimp":     {Host: "smtp.mandrillapp.com", Port: "587"},
+	"brevo":         {Host: "smtp-relay.brevo.com", Port: "587"},
+	"mailersend":    {Host: "smtp.mailersend.net", Port: "587"},
+	"smtp2go":       {Host: "mail.smtp2go.com", Port: "2525"},
+	"zoho":          {Host: "smtp.zoho.com", Port: "587"},
+	"outlook":       {Host: "smtp.office365.com", Port: "587"},
+	"gmail":         {Host: "smtp.gmail.com", Port: "587"},
+	"elasticemail": {Host: "smtp.elasticemail.com", Port: "2525"},
+	"socketlabs":   {Host: "smtp.socketlabs.com", Port: "587"},
+}
+
+var serviceConfigureCmd = &cobra.Command{
+	Use:   "configure <service>",
+	Short: "Configure service settings (e.g. email provider presets)",
+	Long: `Configure service-specific settings.
+
+Currently supports email provider presets:
+
+  nself service configure email --provider postmark
+  nself service configure email --provider sendgrid
+  nself service configure email --provider resend
+  nself service configure email --provider mailgun
+  nself service configure email --provider ses
+  nself service configure email --provider sparkpost
+  nself service configure email --provider smtp-generic
+
+The command writes AUTH_SMTP_HOST and AUTH_SMTP_PORT to your .env file.
+You must also set AUTH_SMTP_USER and AUTH_SMTP_PASS (credentials not stored here).`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceConfigure,
+}
+
+func init() {
+	serviceConfigureCmd.Flags().String("provider", "", "Email provider preset name")
+}
+
+func runServiceConfigure(cmd *cobra.Command, args []string) error {
+	svcName := strings.ToLower(strings.TrimSpace(args[0]))
+
+	// Resolve aliases.
+	if canonical, ok := serviceAliases[svcName]; ok {
+		svcName = canonical
+	}
+
+	if svcName != "email" {
+		return fmt.Errorf("configure only supports the 'email' service currently; got %q", svcName)
+	}
+
+	provider, _ := cmd.Flags().GetString("provider")
+	if provider == "" {
+		// List available providers and exit.
+		fmt.Println("Available email providers:")
+		for name := range emailProviderPresets {
+			p := emailProviderPresets[name]
+			if p.Host != "" {
+				fmt.Printf("  %-16s  host: %s  port: %s\n", name, p.Host, p.Port)
+			} else {
+				fmt.Printf("  %-16s  (custom SMTP — set AUTH_SMTP_HOST manually)\n", name)
+			}
+		}
+		fmt.Println("\nUsage: nself service configure email --provider <name>")
+		return nil
+	}
+
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	preset, ok := emailProviderPresets[provider]
+	if !ok {
+		return fmt.Errorf("unknown provider %q; run without --provider to list all providers", provider)
+	}
+
+	envFlag, _ := cmd.Flags().GetString("env")
+	envFile, err := resolveEnvFile(envFlag)
+	if err != nil {
+		return err
+	}
+
+	if preset.Host != "" {
+		if err := setEnvKeyInFile(envFile, "AUTH_SMTP_HOST", preset.Host); err != nil {
+			return fmt.Errorf("writing AUTH_SMTP_HOST: %w", err)
+		}
+	}
+	if err := setEnvKeyInFile(envFile, "AUTH_SMTP_PORT", preset.Port); err != nil {
+		return fmt.Errorf("writing AUTH_SMTP_PORT: %w", err)
+	}
+
+	fmt.Printf("Email provider '%s' configured:\n", provider)
+	if preset.Host != "" {
+		fmt.Printf("  AUTH_SMTP_HOST=%s\n", preset.Host)
+	}
+	fmt.Printf("  AUTH_SMTP_PORT=%s\n", preset.Port)
+	fmt.Println("\nNext steps:")
+	fmt.Println("  Set AUTH_SMTP_USER=<your-username>")
+	fmt.Println("  Set AUTH_SMTP_PASS=<your-password>")
+	fmt.Println("  Run `nself build` to apply changes.")
 	return nil
 }

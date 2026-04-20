@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nself-org/cli/internal/build"
 	"github.com/nself-org/cli/internal/config"
@@ -100,6 +101,17 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		if artifacts := migration.Detect(workdir); len(artifacts) > 0 {
 			ui.Warn("v1 artifacts detected. Run `nself migrate run` before building to ensure compatibility.")
 			fmt.Println("Continuing with build...")
+		}
+	}
+
+	// ── MLflow deprecation notice ─────────────────────────────────────────
+	// MLFLOW_ENABLED=true was an optional service flag before v1.1.0. MLflow
+	// is now a free plugin. Warn but continue — backward compat for 1 minor version.
+	if envVals, readErr := readEnvValues(workdir + "/.env"); readErr == nil {
+		if v := envVals["MLFLOW_ENABLED"]; strings.EqualFold(strings.TrimSpace(v), "true") {
+			ui.Warn("DEPRECATED: MLFLOW_ENABLED is no longer an optional service. Run:")
+			fmt.Fprintln(os.Stderr, "  nself plugin install mlflow")
+			fmt.Fprintln(os.Stderr, "Then remove MLFLOW_ENABLED from your .env")
 		}
 	}
 
