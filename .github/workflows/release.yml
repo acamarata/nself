@@ -50,6 +50,15 @@ jobs:
       - name: Build dist
         run: make dist
 
+      # S49-T05: verify each tarball's embedded binary arch matches the tarball filename.
+      # Catches cross-compile errors where wrong GOOS/GOARCH sneaks into a release asset.
+      # Uses scripts/verify-tarball-arch.sh — works on macOS BSD file and Linux file.
+      - name: Verify tarball arch matches filename (S49-T05)
+        run: |
+          chmod +x scripts/verify-tarball-arch.sh
+          bash scripts/verify-tarball-arch.sh dist/
+          echo "Tarball arch verification passed"
+
       - name: Emit artifact hashes for provenance
         id: hashes
         working-directory: dist
