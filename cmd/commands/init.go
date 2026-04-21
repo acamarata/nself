@@ -51,6 +51,7 @@ func init() {
 	f.Bool("quiet", false, "Suppress output messages")
 	f.String("name", "", "Project name (sets PROJECT_NAME in generated .env)")
 	f.String("domain", "", "Base domain (skips interactive domain selection, e.g. myapp.dev)")
+	f.String("profile", "", "Resource profile: 'tiny' for small VPS (Postgres+nginx only)")
 
 	RootCmd.AddCommand(initCmd)
 }
@@ -114,6 +115,26 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	if !quiet {
 		ui.CommandHeader("nself init", "Initialize a new nSelf project")
+	}
+
+	// Tiny-VPS preflight: warn when available RAM is below the recommended
+	// minimum (1 GB). Detection failure is non-fatal — we warn-and-continue.
+	if ramMB, ramErr := getTotalMemoryMB(); ramErr == nil {
+		const tinyThresholdMB = 1024
+		const warnThresholdMB = 512
+		if ramMB < warnThresholdMB {
+			fmt.Fprintf(os.Stderr,
+				"\n%s Detected %d MB RAM. nself default stack needs 1 GB+.\n"+
+					"   For small VPS, run: nself init --profile=tiny\n"+
+					"   The tiny profile starts Postgres + nginx only; Hasura/Auth are opt-in.\n"+
+					"   See: https://github.com/nself-org/cli/wiki/install/tiny-vps\n\n",
+				ui.C(ui.Yellow, ui.IconWarning), ramMB)
+		} else if ramMB < tinyThresholdMB {
+			fmt.Fprintf(os.Stderr,
+				"\n%s Detected %d MB RAM. 1 GB+ recommended for the full stack.\n"+
+					"   For small VPS, run: nself init --profile=tiny\n\n",
+				ui.C(ui.Yellow, ui.IconWarning), ramMB)
+		}
 	}
 
 	// Resolve domain: --domain flag takes precedence; otherwise prompt
