@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -78,6 +79,12 @@ func TestLoginCmd_AlreadyLoggedIn(t *testing.T) {
 // TestLoginCmd_DeviceCodeFlow verifies the happy-path device code flow.
 func TestLoginCmd_DeviceCodeFlow(t *testing.T) {
 	home := isolateHome(t)
+
+	// Reset loginCmd's ctx. If a prior test (e.g., the error harness) invoked
+	// RootCmd.ExecuteContext with a bounded/cancelled context, cobra retains
+	// that ctx on the parent + child tree. Explicitly reset to a fresh
+	// Background so login's internal 6-minute timeout is the only deadline.
+	loginCmd.SetContext(context.Background())
 
 	dcResp := auth.DeviceCodeResponse{
 		DeviceCode:      "test-device-code",

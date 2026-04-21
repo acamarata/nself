@@ -353,10 +353,20 @@ func runErrorHarnessCmd(t *testing.T, args []string) error {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	// Re-register all commands from the global root.
-	for _, c := range RootCmd.Commands() {
+	// Re-register all commands from the global root. AddCommand transfers the
+	// parent pointer, so the per-case ctx we set below will be inherited by
+	// every child command. On cleanup we restore a fresh Background context
+	// on every child so a deadline-cancelled ctx cannot leak into a
+	// subsequent test that invokes the command's RunE directly.
+	children := RootCmd.Commands()
+	for _, c := range children {
 		root.AddCommand(c)
 	}
+	t.Cleanup(func() {
+		for _, c := range children {
+			c.SetContext(context.Background())
+		}
+	})
 
 	var buf bytes.Buffer
 	root.SetOut(&buf)
