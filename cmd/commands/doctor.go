@@ -135,10 +135,10 @@ Exit codes:
 			}
 			printDoctorSummary(report)
 			if report.Summary.Failed > 0 {
-				os.Exit(1)
+				return &plugin.ExitCodeError{Code: 1}
 			}
 			if report.Summary.Warnings > 0 {
-				os.Exit(2)
+				return &plugin.ExitCodeError{Code: 2}
 			}
 			return nil
 		}
@@ -233,10 +233,10 @@ Exit codes:
 
 		// Exit code: 1=failures, 2=warnings only, 0=all pass
 		if report.Summary.Failed > 0 {
-			os.Exit(1)
+			return &plugin.ExitCodeError{Code: 1}
 		}
 		if report.Summary.Warnings > 0 {
-			os.Exit(2)
+			return &plugin.ExitCodeError{Code: 2}
 		}
 		return nil
 	},
