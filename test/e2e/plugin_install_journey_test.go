@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -45,9 +44,9 @@ func pluginPingServer(t *testing.T, tier string, allowedPlugins []string) *httpt
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"valid":   true,
-				"tier":    tier,
-				"plugins": allowedPlugins,
+				"valid":      true,
+				"tier":       tier,
+				"plugins":    allowedPlugins,
 				"expires_at": time.Now().Add(30 * 24 * time.Hour).Format(time.RFC3339),
 			})
 
@@ -180,13 +179,13 @@ func TestPluginInstallJourney_FreePlugin(t *testing.T) {
 	// Free plugins do not go through license validation at all.
 	// This test verifies the free plugin manifest format is recognizable.
 	freePluginManifest := map[string]interface{}{
-		"name":          "webhooks",
-		"version":       "1.0.9",
-		"description":   "Outbound webhook dispatcher",
-		"category":      "utility",
-		"license":       "MIT",
-		"isCommercial":  false,
-		"requiredTier":  "",
+		"name":         "webhooks",
+		"version":      "1.0.9",
+		"description":  "Outbound webhook dispatcher",
+		"category":     "utility",
+		"license":      "MIT",
+		"isCommercial": false,
+		"requiredTier": "",
 	}
 
 	// Free plugins must have isCommercial: false.
