@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/setup"
+	"github.com/nself-org/cli/internal/telemetry"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -149,7 +151,38 @@ func runInit(cmd *cobra.Command, args []string) error {
 		DomainComment:  selectedDomainComment,
 	}
 
+	// Telemetry: record start time for duration measurement.
+	initStart := time.Now()
+
 	result, err := setup.Initialize(opts)
+
+	// Telemetry: emit init_complete event (opt-in only; silently no-ops when unset).
+	if telemetry.IsOptedIn() {
+		wizardMode := "default"
+		switch {
+		case fast:
+			wizardMode = "fast"
+		case wizard:
+			wizardMode = "wizard"
+		case demo:
+			wizardMode = "demo"
+		case nonInteractive:
+			wizardMode = "non-interactive"
+		}
+
+		errCategory := ""
+		if err != nil {
+			errCategory = classifyInitError(err)
+		}
+
+		telemetry.Send("init_complete", map[string]any{
+			"wizard_mode": wizardMode,
+			"duration_ms": time.Since(initStart).Milliseconds(),
+			"success":     err == nil,
+			"err_category": errCategory,
+		})
+	}
+
 	if err != nil {
 		if !quiet {
 			ui.Error(fmt.Sprintf("Init failed: %v", err))
@@ -183,6 +216,36 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	return nil
+}
+
+// classifyInitError maps an init error to a categorical string safe for telemetry.
+// Enumerated values: timeout, permission-denied, docker-not-found, other.
+// Must never include the error message text (may contain file paths).
+func classifyInitError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	switch {
+	case containsAny(msg, "timeout", "deadline exceeded", "context deadline"):
+		return "timeout"
+	case containsAny(msg, "permission denied", "access denied", "EACCES"):
+		return "permission-denied"
+	case containsAny(msg, "docker", "Docker", "cannot connect to the Docker"):
+		return "docker-not-found"
+	default:
+		return "other"
+	}
+}
+
+// containsAny reports whether s contains any of the given substrings.
+func containsAny(s string, subs ...string) bool {
+	for _, sub := range subs {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
 }
 
 // domainOption represents a single selectable domain pattern in the wizard.
