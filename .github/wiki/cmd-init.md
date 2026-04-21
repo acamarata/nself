@@ -62,4 +62,31 @@ nself init --name myapp --domain myapp.dev
 nself init --template go --name myapi --domain myapi.local
 ```
 
+## Telemetry
+
+`nself init` emits a single anonymous `init_complete` event when `NSELF_TELEMETRY_OPT_IN=1` is set. The event is sent in a background goroutine with a 1-second timeout and is silently dropped on failure.
+
+**Opt-in only.** No data is collected unless you explicitly set the environment variable. Absence of the variable means zero network calls.
+
+Fields collected:
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `wizard_mode` | string | `fast`, `wizard`, `demo`, `non-interactive`, `default` | Which init mode was used |
+| `duration_ms` | integer | `312` | Time from command start to completion |
+| `success` | bool | `true` | Whether init completed without error |
+| `err_category` | string | `docker-not-found` | Error bucket; one of `timeout`, `permission-denied`, `docker-not-found`, `other` |
+| `install_source` | string | `hn` | Source tag from `?ref=` in install.sh (nullable) |
+| `install_method` | string | `brew` | How nself was installed: `brew`, `curl`, `docker`, `other` (nullable) |
+| `app_context` | string | `nclaw` | Which Type-C app initiated this install (nullable) |
+
+**No PII is collected.** Email addresses, file paths, project names, and license keys are never included. All values are categorical or numeric.
+
+To opt in:
+
+```bash
+export NSELF_TELEMETRY_OPT_IN=1
+nself init --fast
+```
+
 ← [[Commands]] | [[Home]] →
