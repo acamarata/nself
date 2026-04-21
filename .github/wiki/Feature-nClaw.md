@@ -276,7 +276,7 @@ nself build && nself start
 # Configure (minimum required)
 # In .env.secrets:
 NCLAW_FAST_MODEL=gemini-2.5-flash
-TELEGRAM_BOT_TOKEN=your-bot-token
+CLAW_TG_BOT_TOKEN=your-bot-token
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
