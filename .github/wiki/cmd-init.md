@@ -30,6 +30,7 @@ After `nself init` completes, run `nself build` to generate `docker-compose.yml`
 | `--template` | `""` | Use a specific template: `express`, `fastapi`, `go`, `rust` |
 | `--name` | `""` | Project name (sets `PROJECT_NAME` in generated `.env`) |
 | `--domain` | `""` | Base domain (skips interactive domain prompt, e.g. `myapp.dev`) |
+| `--profile` | `""` | Resource profile: `tiny` for small VPS (starts Postgres and nginx only; Hasura and Auth are opt-in). Recommended for servers with less than 1 GB RAM. See [[install/tiny-vps]]. |
 | `--skip-validation` | false | Skip configuration validation |
 | `--quiet` | false | Suppress output messages |
 | `--help`, `-h` | — | Show help |
@@ -54,6 +55,9 @@ nself init --fast
 
 # Non-interactive — all defaults, safe for CI
 nself init --non-interactive
+
+# Small VPS (512 MB–1 GB RAM): start with Postgres + nginx only
+nself init --profile=tiny
 
 # Skip prompts by supplying name and domain directly
 nself init --name myapp --domain myapp.dev
