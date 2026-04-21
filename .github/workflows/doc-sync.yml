@@ -88,7 +88,15 @@ jobs:
           fi
 
           # Ports / subdomains
-          if matches '^(nginx/|.*docker-compose\.ya?ml$)'; then
+          # Exclude test fixtures + templates — they are test scaffolding, not
+          # user-facing surface. The canonical matcher is production nginx/
+          # config and generated docker-compose.yml, not testdata fixtures.
+          ports_hit=$(echo "$CHANGED" \
+            | grep -E '^(nginx/|.*docker-compose\.ya?ml$)' \
+            | grep -vE '(^|/)testdata/' \
+            | grep -vE '(^|/)templates/' \
+            || true)
+          if [ -n "$ports_hit" ]; then
             if ! matches '(\.claude/docs/sport/F10-PORT-REGISTRY\.md|\.claude/docs/sport/F11-SUBDOMAIN-MAP\.md|\.claude/CLAUDE\.md)'; then
               rows="${rows}- ports/subdomains changed without F10-PORT-REGISTRY.md or F11-SUBDOMAIN-MAP.md update\n"
               missing=1
