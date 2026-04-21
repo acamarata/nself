@@ -146,7 +146,11 @@ jobs:
       - name: Smoke — nself init
         run: |
           TMPDIR=$(mktemp -d)
-          ./nself init --project-name smoke-test --dir "$TMPDIR" || {
+          # CLI v1.0.9+: the init command takes --name (not --project-name) and
+          # writes into the current working directory (there is no --dir flag).
+          NSELF_BIN="$(pwd)/nself"
+          cd "$TMPDIR"
+          "$NSELF_BIN" init --name smoke-test --non-interactive || {
             echo "FAIL: nself init failed"
             exit 1
           }
@@ -155,10 +159,11 @@ jobs:
       - name: Smoke — nself build
         run: |
           TMPDIR=$(mktemp -d)
-          ./nself init --project-name smoke-build --dir "$TMPDIR"
+          NSELF_BIN="$(pwd)/nself"
           cd "$TMPDIR"
+          "$NSELF_BIN" init --name smoke-build --non-interactive
           # build generates docker-compose.yml without starting containers
-          ../nself build || {
+          "$NSELF_BIN" build || {
             echo "FAIL: nself build failed"
             exit 1
           }
