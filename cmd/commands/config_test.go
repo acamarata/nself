@@ -386,21 +386,26 @@ func TestSetEnvFileLine_PreservesComments(t *testing.T) {
 }
 
 // TestEnvFileName verifies that envFileName returns the expected file path for
-// both the default (empty) and named environment cases.
+// both the default (empty) and named environment cases. Uses filepath.Join
+// in the expectation so Windows (\) and Unix (/) path separators are both
+// accepted natively — envFileName itself uses filepath.Join.
 func TestEnvFileName(t *testing.T) {
+	want := filepath.Join("/project", ".env")
 	got := envFileName("/project", "")
-	if got != "/project/.env" {
-		t.Errorf("envFileName('', '') = %q, want /project/.env", got)
+	if got != want {
+		t.Errorf("envFileName('/project', '') = %q, want %q", got, want)
 	}
 
+	want = filepath.Join("/project", ".env.dev")
 	got = envFileName("/project", "dev")
-	if got != "/project/.env.dev" {
-		t.Errorf("envFileName('', 'dev') = %q, want /project/.env.dev", got)
+	if got != want {
+		t.Errorf("envFileName('/project', 'dev') = %q, want %q", got, want)
 	}
 
+	want = filepath.Join("/project", ".env.prod")
 	got = envFileName("/project", "prod")
-	if got != "/project/.env.prod" {
-		t.Errorf("envFileName('', 'prod') = %q, want /project/.env.prod", got)
+	if got != want {
+		t.Errorf("envFileName('/project', 'prod') = %q, want %q", got, want)
 	}
 }
 

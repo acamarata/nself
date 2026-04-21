@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -99,16 +98,18 @@ func runAdmin(cmd *cobra.Command, args []string) error {
 	port := adminPort()
 	adminURL := "http://localhost:" + port
 
-	ctx := cmd.Context()
+	// Skip the browser launch in test / CI / headless contexts. Launching
+	// Safari or xdg-open here during `go test` caused orphan GUI processes
+	// that pushed the macos-14 CI job past its 10-minute timeout.
+	if !shouldOpenBrowser() {
+		fmt.Printf("Admin UI: %s\n", adminURL)
+		return nil
+	}
 
-	var openCmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		openCmd = exec.CommandContext(ctx, "open", adminURL)
-	case "windows":
-		openCmd = exec.CommandContext(ctx, "cmd", "/c", "start", adminURL)
-	default:
-		openCmd = exec.CommandContext(ctx, "xdg-open", adminURL)
+	openCmd := openBrowserCmd(cmd.Context(), adminURL)
+	if openCmd == nil {
+		fmt.Printf("Admin UI: %s\n", adminURL)
+		return nil
 	}
 
 	if err := openCmd.Start(); err != nil {
