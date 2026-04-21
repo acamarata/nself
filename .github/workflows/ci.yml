@@ -10,7 +10,12 @@ jobs:
   ci:
     name: Vet, Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    # 10-min job timeout was too tight for cold-cache Windows / macOS runs:
+    # windows-2022 + macOS spend ~2-3 minutes on vet alone (unlike Linux ~15s)
+    # and 5-7 minutes on -short tests when Go module/build cache is empty.
+    # 20 minutes gives cold-cache headroom; warm-cache passes typically finish
+    # in under 5 minutes across all OSes.
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
