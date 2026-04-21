@@ -180,7 +180,8 @@ func Start(ctx context.Context, pluginDir string, name string) error {
 	cmd.Stderr = logFile
 
 	// Start the process in a new process group so we can kill children later.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// setNewProcessGroup is OS-specific (see runtime_unix.go / runtime_windows.go).
+	setNewProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
 		logFile.Close()
@@ -319,12 +320,9 @@ func Stop(ctx context.Context, name string) error {
 
 	_ = writeState(name, "stopping")
 
-	// Send SIGTERM to the process group.
-	pgid, err := syscall.Getpgid(pid)
-	if err != nil {
-		pgid = pid
-	}
-	_ = syscall.Kill(-pgid, syscall.SIGTERM)
+	// Send graceful stop signal to the process group (SIGTERM on Unix,
+	// taskkill /T on Windows). Implementation is OS-specific.
+	_ = terminateProcessGroup(pid)
 
 	// Wait up to gracePeriod() for graceful shutdown.
 	// DEP-03: reads DOCKER_STOP_GRACE_PERIOD env var; defaults to 30s.
@@ -337,7 +335,7 @@ func Stop(ctx context.Context, name string) error {
 		select {
 		case <-ctx.Done():
 			// Force kill on context cancellation.
-			_ = syscall.Kill(-pgid, syscall.SIGKILL)
+			_ = killProcessGroup(pid)
 			_ = os.Remove(pidPath(name))
 			_ = writeState(name, "stopped")
 			return ctx.Err()
@@ -346,10 +344,10 @@ func Stop(ctx context.Context, name string) error {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// If still running after graceful timeout, send SIGKILL.
+	// If still running after graceful timeout, hard kill.
 	if isProcessRunning(pid) {
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-		// Brief wait for SIGKILL to take effect.
+		_ = killProcessGroup(pid)
+		// Brief wait for the kill signal to take effect.
 		time.Sleep(200 * time.Millisecond)
 	}
 
