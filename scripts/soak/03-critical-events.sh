@@ -6,7 +6,8 @@
 set -euo pipefail
 
 ALERTMANAGER_URL="${ALERTMANAGER_URL:-https://alertmanager.nself.org/api/v2/alerts}"
-CLOCK_FILE="${CLOCK_FILE:-/var/lib/nself/soak-clock}"
+SOAK_STATE_DIR="${SOAK_STATE_DIR:-/var/lib/nself}"
+CLOCK_FILE="${CLOCK_FILE:-${SOAK_STATE_DIR}/soak-clock}"
 
 if [ ! -f "$CLOCK_FILE" ]; then
   printf "ERROR: clock not started — run 02-clock.sh start\n"
