@@ -17,7 +17,10 @@ package commands
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -334,6 +337,13 @@ var errorHarnessCases = []errorHarnessCase{
 
 // runErrorHarnessCmd executes the given args against a fresh RootCmd clone
 // and returns any error. It does not touch real filesystem state.
+//
+// A 5-second per-case ctx deadline prevents any single RunE from hanging the
+// whole harness. Some commands (dns-setup, admin, db) shell out or touch
+// slow I/O paths — without the deadline, one such case can exhaust the Go
+// test-timeout budget (observed: dns-setup took 5m44s on macos-14). The
+// deadline propagates through cmd.Context() inside RunE so any well-behaved
+// exec.CommandContext or HTTP client inside the command will abort.
 func runErrorHarnessCmd(t *testing.T, args []string) error {
 	t.Helper()
 
@@ -352,7 +362,26 @@ func runErrorHarnessCmd(t *testing.T, args []string) error {
 	root.SetOut(&buf)
 	root.SetErr(&buf)
 	root.SetArgs(args)
-	return root.Execute()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Run the cobra execution in a goroutine so the test can enforce its own
+	// wall-clock cap even when the command does not honour ctx (e.g., Go code
+	// using exec.Command rather than exec.CommandContext).
+	done := make(chan error, 1)
+	go func() {
+		done <- root.ExecuteContext(ctx)
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		// Treat deadline as an error outcome — exactly what the harness expects
+		// from misbehaving commands in a no-project-dir context.
+		return fmt.Errorf("harness deadline exceeded for args %v: %w", args, ctx.Err())
+	}
 }
 
 // TestErrorHarness_AllCommandsReturnError verifies that every entry in the
