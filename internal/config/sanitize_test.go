@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -129,8 +130,11 @@ func TestSanitizePath(t *testing.T) {
 				t.Errorf("sanitizePath(%q) unexpected error: %v", tt.input, err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("sanitizePath(%q) = %q, want %q", tt.input, got, tt.want)
+			// Normalize to forward slashes so the test asserts semantic equality
+			// across POSIX and Windows (filepath.Clean uses OS-native separators).
+			gotNorm := filepath.ToSlash(got)
+			if gotNorm != tt.want {
+				t.Errorf("sanitizePath(%q) = %q, want %q", tt.input, gotNorm, tt.want)
 			}
 		})
 	}
