@@ -8,9 +8,30 @@ on:
 
 jobs:
   ci:
-    name: Vet, Build & Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    name: Vet, Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # 10-min job timeout was too tight for cold-cache Windows / macOS runs:
+    # windows-2022 + macOS spend ~2-3 minutes on vet alone (unlike Linux ~15s)
+    # and 5-7 minutes on -short tests when Go module/build cache is empty.
+    # 20 minutes gives cold-cache headroom; warm-cache passes typically finish
+    # in under 5 minutes across all OSes.
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm   # linux/arm64 — first execution test before ship
+          - macos-13           # macOS Intel (darwin/amd64)
+          - macos-14           # Apple Silicon (darwin/arm64)
+          - windows-2022       # Windows — pure-Go only; Docker tests skipped
+        include:
+          # Windows: skip Docker-dependent integration tests.
+          # Docker Desktop on windows-2022 runners is unavailable by default.
+          # Covered by WSL2 docs (S49-T04). Native Windows binary deferred to v1.1.0.
+          - os: windows-2022
+            skip_docker_tests: "true"
 
     env:
       CGO_ENABLED: 0
@@ -35,10 +56,121 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Vet
+        if: matrix.skip_docker_tests != 'true'
         run: go vet -mod=vendor ./...
 
+      - name: Vet (Windows — pure-Go packages only)
+        if: matrix.skip_docker_tests == 'true'
+        run: go vet -mod=vendor ./...
+        shell: cmd
+
       - name: Build
+        if: matrix.skip_docker_tests != 'true'
         run: go build -mod=vendor ./...
 
+      - name: Build (Windows)
+        if: matrix.skip_docker_tests == 'true'
+        run: go build -mod=vendor ./...
+        shell: cmd
+
       - name: Test
+        if: matrix.skip_docker_tests != 'true'
         run: go test -mod=vendor ./...
+
+      - name: Test (Windows — pure-Go packages; Docker integration tests skipped)
+        if: matrix.skip_docker_tests == 'true'
+        # Docker integration tests require Docker Desktop which is not available
+        # on windows-2022 GitHub-hosted runners. Only pure-Go packages run here.
+        run: go test -mod=vendor -short ./...
+        shell: cmd
+
+  # S49-T06: Apple Silicon (darwin/arm64) smoke test.
+  # The darwin/arm64 binary is cross-compiled on ubuntu-latest but never tested natively
+  # before this job was added. This job runs on macos-14 (Apple Silicon runner) and
+  # executes the binary smoke sequence: version + doctor + init + build.
+  #
+  # nself start is intentionally NOT run — Docker on macOS runners is unreliable.
+  # build generates docker-compose.yml without running containers.
+  apple-silicon-smoke:
+    name: Apple Silicon smoke (darwin/arm64)
+    runs-on: macos-14
+    timeout-minutes: 10
+
+    env:
+      CGO_ENABLED: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.mod') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build darwin/arm64 binary
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+        run: |
+          go build -mod=vendor -ldflags='-s -w' -o ./nself ./cmd/nself/
+          echo "PASS: darwin/arm64 build succeeded"
+
+      - name: Verify binary is native arm64
+        run: |
+          file ./nself
+          file ./nself | grep -q "arm64" || {
+            echo "FAIL: binary is not arm64"
+            exit 1
+          }
+          echo "PASS: binary is native darwin/arm64"
+
+      - name: Smoke — nself version
+        run: |
+          ./nself version
+          echo "PASS: nself version"
+
+      - name: Smoke — nself doctor
+        run: |
+          # Doctor checks Docker + system dependencies.
+          # Docker is not available on macos-14 runners — skip Docker checks.
+          # Verify the command exits cleanly (even with Docker missing).
+          ./nself doctor || true
+          echo "INFO: nself doctor ran (Docker may not be available on runner)"
+
+      - name: Smoke — nself init
+        run: |
+          TMPDIR=$(mktemp -d)
+          # CLI v1.0.9+: the init command takes --name (not --project-name) and
+          # writes into the current working directory (there is no --dir flag).
+          NSELF_BIN="$(pwd)/nself"
+          cd "$TMPDIR"
+          "$NSELF_BIN" init --name smoke-test --non-interactive || {
+            echo "FAIL: nself init failed"
+            exit 1
+          }
+          echo "PASS: nself init succeeded in $TMPDIR"
+
+      - name: Smoke — nself build
+        run: |
+          TMPDIR=$(mktemp -d)
+          NSELF_BIN="$(pwd)/nself"
+          cd "$TMPDIR"
+          "$NSELF_BIN" init --name smoke-build --non-interactive
+          # build generates docker-compose.yml without starting containers
+          "$NSELF_BIN" build || {
+            echo "FAIL: nself build failed"
+            exit 1
+          }
+          echo "PASS: nself build succeeded"
+          # nself start intentionally NOT run — Docker on macos-14 is unreliable

@@ -25,6 +25,7 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 | `update [name]` | Update a specific plugin, or all installed plugins if no name given |
 | `updates` | Check for available updates across all installed plugins |
 | `list` | List available and installed plugins (beta and planned plugins show status badges) |
+| `compat-check` | Check installed plugins for CLI version compatibility (exits 1 on any incompatible plugin) |
 | `inventory` | List installed plugins with version, tier, and status |
 | `refresh` | Force refresh the remote registry cache |
 | `start <name>` | Start a plugin service container |
@@ -40,6 +41,8 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 | `--force` | false | `install`: required when `NSELF_LICENSE_SKIP_VERIFY=1` is set; `remove`: remove even if dependents exist |
 | `--keep-data` | false | Preserve database data when removing |
 | `--installed` | false | Show only installed plugins (for `list`) |
+| `--show-eol` | false | Include end-of-life plugins in `list` output (hidden by default) |
+| `--allow-eol` | false | Allow installing or updating an EOL plugin (not recommended) |
 | `--category` | `""` | Filter by category (for `list`) |
 | `--detailed` | false | Show detailed information |
 | `--help`, `-h` | — | Show help |
@@ -57,8 +60,13 @@ nfamily             [planned]
 Install behavior by status:
 
 - **stable** — installs without warnings (default for most plugins)
+- **experimental** — prints a warning to stderr, then installs
 - **beta** — prints a warning to stderr, then installs
+- **deprecated** — prints a deprecation warning with EOL date and migration guide, then installs
+- **eol** — install is blocked; use `--allow-eol` to override (not recommended)
 - **planned** — install is rejected with a "coming soon" message and a link to the release timeline
+
+EOL plugins are hidden from `nself plugin list` by default. Use `--show-eol` to include them.
 
 See [[Plugin-Status-Badges]] for the full reference.
 
@@ -120,6 +128,29 @@ nself plugin stop ai
 # Show plugin status
 nself plugin status
 nself plugin status ai --detailed
+
+# Check compatibility after a CLI upgrade
+nself plugin compat-check
+
+# List all plugins including EOL ones
+nself plugin list --show-eol
+
+# Install an EOL plugin (not recommended — use only when a replacement is unavailable)
+nself plugin install old-plugin --allow-eol
 ```
+
+## Install telemetry
+
+After a successful `nself plugin install`, the CLI sends a single fire-and-forget event to `plugins.nself.org/plugins/:name/install-event`. This increments the public download counter shown in the plugin marketplace.
+
+The event body contains one field: `instanceId`, which is an opaque SHA-256 hash of a machine-local identifier. No hostname, IP address, username, or project name is transmitted. The event is deduplicated per (instance, plugin) per ISO week, so reinstalling the same plugin in the same week does not double-count. If the network is unavailable, the event is silently dropped with no retry.
+
+To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
+
+## See also
+
+- [[cmd-plugin-compat-check]] — compatibility check reference
+- [[Plugin-Status-Badges]] — lifecycle status reference
+- [[Plugin-Licensing]] — license tiers and key format
 
 ← [[Commands]] | [[Home]] →

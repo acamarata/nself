@@ -10,6 +10,14 @@ For free plugins, no setup required. For pro plugins, set your license key first
 
 Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available — the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
 
+### Permission Validation
+
+Every plugin manifest may declare a `permissions` array. The CLI validates each permission against the canonical allowlist at install time and rejects unknown permission strings (fail-closed). A structured audit log line is emitted after a successful install listing the granted permissions.
+
+Plugins holding elevated permissions (`system:exec`, `network:internet`) print a visible warning to stderr. Use `nself plugin info <name>` to review the permission set before installing.
+
+See [[Plugin-Permissions]] for the full permission catalog and tier roadmap.
+
 After installing any plugin, regenerate your stack:
 
 ```bash
@@ -87,6 +95,20 @@ nself plugin info {name}   # shows required env vars
 ```
 
 Then run `nself build` to pick up the new configuration.
+
+## Download Source
+
+Free plugin tarballs are served via the `plugins.nself.org` registry worker, which redirects
+to Cloudflare R2 as the primary CDN (free global egress). GitHub Releases is the automatic
+fallback when R2 is unavailable. Both mirrors hold identical content and SHA-256 checksums are
+verified between them on every release. The CLI follows the 302 redirect transparently.
+
+To override the registry URL for private testing:
+
+```bash
+export NSELF_PLUGIN_REGISTRY=https://your-registry-mirror.example.com
+nself plugin install {name}
+```
 
 ## Related Pages
 

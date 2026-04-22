@@ -7,12 +7,17 @@ import (
 
 	"github.com/nself-org/cli/internal/cmdlog"
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/deprecation"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/version"
 
 	"github.com/spf13/cobra"
 )
+
+// deprecationRegistry is loaded once at startup from registry.yaml.
+// A nil registry (load failure) is silently skipped — never crashes.
+var deprecationRegistry *deprecation.Registry
 
 // contextKey is an unexported type for context keys in this package.
 type contextKey int
@@ -42,11 +47,36 @@ The Golden Path:
 }
 
 func init() {
+	// Load deprecation registry at startup (≤5ms; cached in memory).
+	// Resolve path relative to the executable so it works after `make install`.
+	// Missing or malformed registry is logged in debug mode only — never crashes.
+	var regErr error
+	regPath := resolveRegistryPath()
+	deprecationRegistry, regErr = deprecation.LoadRegistry(regPath)
+	if regErr != nil && os.Getenv("NSELF_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "debug: deprecation registry: %v\n", regErr)
+	}
+
 	// Add --version / -v flag to root command (legacy CLI compatibility)
 	RootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
 	// --no-monorepo disables automatic monorepo backend detection globally.
 	RootCmd.PersistentFlags().Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
+	// --no-deprecation-warnings suppresses deprecation output (for scripted use).
+	RootCmd.PersistentFlags().Bool("no-deprecation-warnings", false, "Suppress deprecation warnings (for scripted use)")
 	RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// ── Deprecation warning ───────────────────────────────────────────────
+		// Emit before any other output so the warning is the first thing seen.
+		// Written to stderr so piped stdout output is never polluted.
+		if deprecationRegistry != nil {
+			noWarn, _ := cmd.Flags().GetBool("no-deprecation-warnings")
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			if !noWarn && !quiet {
+				cmdPath := cmd.CommandPath() // e.g. "nself old-cmd"
+				if item, ok := deprecationRegistry.Lookup(cmdPath); ok {
+					deprecationRegistry.Warn(os.Stderr, item)
+				}
+			}
+		}
 		// ── Command execution log ─────────────────────────────────────────────
 		// Use the working directory as the log root. After monorepo detection
 		// (below) chdir may change, but we capture cwd here for the log path.
@@ -241,4 +271,26 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// resolveRegistryPath returns the path to the deprecation registry YAML.
+// It looks next to the executable first (installed binary), then falls back
+// to a development-tree path relative to the working directory.
+func resolveRegistryPath() string {
+	// Option 1: next to the installed binary (production)
+	if exe, err := os.Executable(); err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "internal", "deprecation", "registry.yaml")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	// Option 2: relative to cwd (development / `make build` in repo root)
+	if cwd, err := os.Getwd(); err == nil {
+		candidate := filepath.Join(cwd, "internal", "deprecation", "registry.yaml")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	// Fallback: let LoadRegistry return a "not found" error gracefully
+	return filepath.Join("internal", "deprecation", "registry.yaml")
 }

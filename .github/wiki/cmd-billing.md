@@ -1,5 +1,7 @@
 # nself billing
 
+> **PREVIEW (v1.0.9) — invoice-preview stub:** `billing invoice-preview` returns a stub error. The Stripe billing integration is PLANNED for v1.1.0+. Use `billing usage` and the Stripe dashboard for v1.0.9 billing data.
+
 > Billing operations: usage, invoice-preview, report, retry-event.
 
 ## Synopsis

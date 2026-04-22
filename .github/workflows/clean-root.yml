@@ -55,6 +55,7 @@ jobs:
           OFFENDERS=$(git ls-files \
             | grep -E '(^|/)(\.env|\.env\.local|\.env\.secrets|\.env\.computed)$' \
             | grep -vE '(^|/)(\.environments|environments)/[^/]+/\.env$' \
+            | grep -vE '(^|/)testdata/[^/]*(-|_|^)fixture[^/]*/\.env$' \
             || true)
           if [ -n "$OFFENDERS" ]; then
             echo "::error::Tracked SECRET-BEARING .env file(s) found:"

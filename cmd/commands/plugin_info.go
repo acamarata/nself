@@ -110,6 +110,15 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 
 	tbl.Render()
 
+	// S71-T03: Display declared permissions (one per line, with risk tier prefix).
+	if len(manifest.Permissions) > 0 {
+		fmt.Println("\nPermissions:")
+		for _, perm := range manifest.Permissions {
+			fmt.Printf("  %s %s\n", permissionRiskPrefix(perm), perm)
+		}
+		fmt.Println("  (v1.0.9: informational only; v1.1.0 will require explicit confirmation)")
+	}
+
 	// Check if installed locally.
 	pluginDir := resolvePluginDir()
 	installed, err := plugin.ListInstalled(pluginDir)
@@ -126,6 +135,25 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Install:     nself plugin install %s\n", name)
 
 	return nil
+}
+
+// permissionRiskPrefix returns a short risk label for a permission string.
+// Color coding mirrors the admin UI badge classification (S71-T03):
+//   - [green]  safe / scoped: db:read, network:plugin:*
+//   - [yellow] moderate risk: network:internet, fs:write:*
+//   - [red]    high risk: system:exec
+//
+// Plain-text prefixes are used here (no ANSI) so the output is pipe-safe.
+func permissionRiskPrefix(perm string) string {
+	switch {
+	case perm == "system:exec":
+		return "[high]"
+	case perm == "network:internet",
+		strings.HasPrefix(perm, "fs:write:"):
+		return "[med] "
+	default:
+		return "[low] "
+	}
 }
 
 // openURL opens the given URL in the default browser.

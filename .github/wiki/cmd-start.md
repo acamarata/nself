@@ -35,9 +35,21 @@ Database initialization is automatic and idempotent — nSelf creates the databa
 | `--watch` | false | Enable health auto-restart: poll services and restart unhealthy containers |
 | `--skip-plugins` | false | Start base stack only, skipping plugin compose files |
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
+| `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
 | `--debug`, `-d` | false | Show debug information |
 | `--verbose`, `-v` | false | Show detailed Docker output |
 | `--help`, `-h` | — | Show help |
+
+## v0.9 project detection
+
+`nself start` scans the current directory for v0.9 project artifacts before launching any containers. Detection uses five heuristics (v0.9 `docker-compose.yml` header, `NSELF_VERSION=0.x` in `.env`, flat `nginx/` layout, `.nself/config` as a plain file, and `nself.sh` bootstrap script). Two or more hits trigger a hard error:
+
+```
+error: v0.9 project detected. Found 3 legacy artifact(s): docker-compose.yml, .env, nginx/nginx.conf
+Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9
+```
+
+A single hit produces a non-blocking warning. Use `nself migrate detect` to see all detected artifacts before running the migration. See [[Upgrade-From-v0.9]] for the full migration guide.
 
 ## Examples
 

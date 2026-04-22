@@ -30,6 +30,7 @@ After `nself init` completes, run `nself build` to generate `docker-compose.yml`
 | `--template` | `""` | Use a specific template: `express`, `fastapi`, `go`, `rust` |
 | `--name` | `""` | Project name (sets `PROJECT_NAME` in generated `.env`) |
 | `--domain` | `""` | Base domain (skips interactive domain prompt, e.g. `myapp.dev`) |
+| `--profile` | `""` | Resource profile: `tiny` for small VPS (starts Postgres and nginx only; Hasura and Auth are opt-in). Recommended for servers with less than 1 GB RAM. See [[install/tiny-vps]]. |
 | `--skip-validation` | false | Skip configuration validation |
 | `--quiet` | false | Suppress output messages |
 | `--help`, `-h` | — | Show help |
@@ -55,11 +56,41 @@ nself init --fast
 # Non-interactive — all defaults, safe for CI
 nself init --non-interactive
 
+# Small VPS (512 MB–1 GB RAM): start with Postgres + nginx only
+nself init --profile=tiny
+
 # Skip prompts by supplying name and domain directly
 nself init --name myapp --domain myapp.dev
 
 # Start from a Go project template
 nself init --template go --name myapi --domain myapi.local
+```
+
+## Telemetry
+
+`nself init` emits a single anonymous `init_complete` event when `NSELF_TELEMETRY_OPT_IN=1` is set. The event is sent in a background goroutine with a 1-second timeout and is silently dropped on failure.
+
+**Opt-in only.** No data is collected unless you explicitly set the environment variable. Absence of the variable means zero network calls.
+
+Fields collected:
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `wizard_mode` | string | `fast`, `wizard`, `demo`, `non-interactive`, `default` | Which init mode was used |
+| `duration_ms` | integer | `312` | Time from command start to completion |
+| `success` | bool | `true` | Whether init completed without error |
+| `err_category` | string | `docker-not-found` | Error bucket; one of `timeout`, `permission-denied`, `docker-not-found`, `other` |
+| `install_source` | string | `hn` | Source tag from `?ref=` in install.sh (nullable) |
+| `install_method` | string | `brew` | How nself was installed: `brew`, `curl`, `docker`, `other` (nullable) |
+| `app_context` | string | `nclaw` | Which Type-C app initiated this install (nullable) |
+
+**No PII is collected.** Email addresses, file paths, project names, and license keys are never included. All values are categorical or numeric.
+
+To opt in:
+
+```bash
+export NSELF_TELEMETRY_OPT_IN=1
+nself init --fast
 ```
 
 ← [[Commands]] | [[Home]] →

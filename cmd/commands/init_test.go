@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -366,6 +367,105 @@ func TestInitCmd_TemplateFlag_Invalid(t *testing.T) {
 	// The .env file must NOT be created when the template is rejected.
 	if _, statErr := os.Stat(".env"); !os.IsNotExist(statErr) {
 		t.Error("expected .env NOT to be created for invalid template")
+	}
+}
+
+// ── classifyInitError — unit tests ───────────────────────────────────────────
+
+// TestClassifyInitError_Nil verifies that a nil error returns an empty string.
+func TestClassifyInitError_Nil(t *testing.T) {
+	got := classifyInitError(nil)
+	if got != "" {
+		t.Errorf("classifyInitError(nil) = %q, want %q", got, "")
+	}
+}
+
+// TestClassifyInitError_Timeout verifies that timeout-like errors are classified
+// as "timeout".
+func TestClassifyInitError_Timeout(t *testing.T) {
+	cases := []string{
+		"context deadline exceeded",
+		"operation timeout",
+		"deadline exceeded: connection refused",
+	}
+	for _, msg := range cases {
+		got := classifyInitError(fmt.Errorf("%s", msg))
+		if got != "timeout" {
+			t.Errorf("classifyInitError(%q) = %q, want %q", msg, got, "timeout")
+		}
+	}
+}
+
+// TestClassifyInitError_PermissionDenied verifies that permission-related errors
+// are classified as "permission-denied".
+func TestClassifyInitError_PermissionDenied(t *testing.T) {
+	cases := []string{
+		"permission denied: /etc/nself",
+		"access denied writing config",
+		"EACCES: no permission",
+	}
+	for _, msg := range cases {
+		got := classifyInitError(fmt.Errorf("%s", msg))
+		if got != "permission-denied" {
+			t.Errorf("classifyInitError(%q) = %q, want %q", msg, got, "permission-denied")
+		}
+	}
+}
+
+// TestClassifyInitError_DockerNotFound verifies that Docker-related errors are
+// classified as "docker-not-found".
+func TestClassifyInitError_DockerNotFound(t *testing.T) {
+	cases := []string{
+		"cannot connect to the Docker daemon",
+		"Docker daemon is not running",
+		"docker: command not found",
+	}
+	for _, msg := range cases {
+		got := classifyInitError(fmt.Errorf("%s", msg))
+		if got != "docker-not-found" {
+			t.Errorf("classifyInitError(%q) = %q, want %q", msg, got, "docker-not-found")
+		}
+	}
+}
+
+// TestClassifyInitError_Other verifies that unrecognised errors fall back to
+// "other" and that no file paths or user text leak into the category string.
+func TestClassifyInitError_Other(t *testing.T) {
+	cases := []string{
+		"unexpected EOF",
+		"disk full",
+		"some completely unknown failure",
+	}
+	for _, msg := range cases {
+		got := classifyInitError(fmt.Errorf("%s", msg))
+		if got != "other" {
+			t.Errorf("classifyInitError(%q) = %q, want %q", msg, got, "other")
+		}
+	}
+}
+
+// TestClassifyInitError_CategoryIsEnum verifies that classifyInitError only
+// ever returns one of the four documented enum values.
+func TestClassifyInitError_CategoryIsEnum(t *testing.T) {
+	allowed := map[string]bool{
+		"":                 true, // nil case
+		"timeout":          true,
+		"permission-denied": true,
+		"docker-not-found": true,
+		"other":            true,
+	}
+	inputs := []error{
+		nil,
+		fmt.Errorf("timeout"),
+		fmt.Errorf("permission denied"),
+		fmt.Errorf("docker not running"),
+		fmt.Errorf("some unknown error xyz"),
+	}
+	for _, err := range inputs {
+		got := classifyInitError(err)
+		if !allowed[got] {
+			t.Errorf("classifyInitError returned undocumented category %q for error %v", got, err)
+		}
 	}
 }
 

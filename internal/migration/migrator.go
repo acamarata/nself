@@ -91,7 +91,12 @@ func Run(ctx context.Context, projectDir string) error {
 	}
 	ui.Success("v2 configuration generated")
 
-	// 6. Print summary
+	// 6. Print plugin re-install warning (S60-T05)
+	// v0.9 plugin code is incompatible with v1 signed bundles — hard break.
+	// Parse the backed-up .env for PLUGIN_* entries and surface the re-install chain.
+	pluginWarning(projectDir, backupDir)
+
+	// 7. Print summary
 	printRunSummary(manifest, timestamp)
 	return nil
 }
@@ -382,6 +387,119 @@ func copyPath(src, dst string) error {
 		return copyDir(src, dst)
 	}
 	return copyFile(src, dst)
+}
+
+// pluginWarning parses the v0.9 .env backup for PLUGIN_* entries and prints
+// a loud, ANSI-highlighted warning telling the user to re-install each plugin.
+// It is display-only — it never executes any commands.
+// Gracefully handles a missing or malformed .env (warns with empty plugin list).
+func pluginWarning(projectDir, backupDir string) {
+	// Try the backed-up .env first; fall back to the project dir.
+	envPath := filepath.Join(backupDir, ".env")
+	if _, err := os.Stat(envPath); err != nil {
+		envPath = filepath.Join(projectDir, ".env")
+	}
+
+	plugins := parseV09Plugins(envPath)
+
+	// Box-drawing characters for visibility.
+	const (
+		bold  = "\033[1m"
+		reset = "\033[0m"
+		red   = "\033[31m"
+	)
+	fmt.Println()
+	fmt.Println(bold + "┌─────────────────────────────────────────────────────────┐" + reset)
+	fmt.Println(bold + "│  PLUGINS MUST BE RE-INSTALLED                           │" + reset)
+	fmt.Println(bold + "│                                                          │" + reset)
+	fmt.Println(bold + "│  v0.9 plugin code is not compatible with v1.0.9 signed  │" + reset)
+	fmt.Println(bold + "│  bundles. Re-install each plugin after migration.        │" + reset)
+	fmt.Println(bold + "└─────────────────────────────────────────────────────────┘" + reset)
+	fmt.Println()
+
+	fmt.Println("  Step 1: Re-enter your license key")
+	fmt.Println(bold + "    nself license set <your-key>" + reset)
+	fmt.Println()
+
+	if len(plugins) > 0 {
+		fmt.Printf("  Step 2: Re-install your %d plugin(s) (detected from v0.9 .env)\n", len(plugins))
+		installCmd := "nself plugin install"
+		for _, p := range plugins {
+			installCmd += " " + p
+		}
+		fmt.Println(bold + "    " + installCmd + reset)
+	} else {
+		fmt.Println("  Step 2: Re-install your plugins")
+		fmt.Println(bold + "    nself plugin install <plugin1> <plugin2> ..." + reset)
+		fmt.Println(red + "    (Could not detect plugin list from .env — check manually)" + reset)
+	}
+
+	fmt.Println()
+	fmt.Println("  See: https://docs.nself.org/migrate/from-v0.9#step-3-re-install-plugins")
+	fmt.Println()
+}
+
+// parseV09Plugins reads a v0.9 .env file and returns the list of enabled plugins.
+// v0.9 format: PLUGIN_<NAME>=true (case-insensitive value check).
+// Returns nil (not an error) on any file read or parse failure.
+func parseV09Plugins(envPath string) []string {
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		return nil
+	}
+
+	// v0.9 → v1.0.9 plugin name mapping (strips "nself-" prefix if present).
+	// Keys are the v0.9 env var suffix (uppercase); values are v1 plugin names.
+	nameMap := map[string]string{
+		"AI":               "ai",
+		"MUX":              "mux",
+		"CLAW":             "claw",
+		"VOICE":            "voice",
+		"BROWSER":          "browser",
+		"GOOGLE":           "google",
+		"NOTIFY":           "notify",
+		"CRON":             "cron",
+		"CHAT":             "chat",
+		"LIVEKIT":          "livekit",
+		"RECORDING":        "recording",
+		"MODERATION":       "moderation",
+		"BOTS":             "bots",
+		"REALTIME":         "realtime",
+		"MEDIA_PROCESSING": "media-processing",
+		"STREAMING":        "streaming",
+		"EPG":              "epg",
+		"TMDB":             "tmdb",
+		"PODCAST":          "podcast",
+		"SOCIAL":           "social",
+	}
+
+	var plugins []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if !strings.HasPrefix(key, "PLUGIN_") {
+			continue
+		}
+		if !strings.EqualFold(val, "true") && val != "1" {
+			continue
+		}
+		suffix := strings.TrimPrefix(key, "PLUGIN_")
+		if v1Name, ok := nameMap[suffix]; ok {
+			plugins = append(plugins, v1Name)
+		} else {
+			// Unknown plugin — use lowercase suffix as best-guess v1 name.
+			plugins = append(plugins, strings.ToLower(strings.ReplaceAll(suffix, "_", "-")))
+		}
+	}
+	return plugins
 }
 
 // printRunSummary prints a human-readable migration summary.

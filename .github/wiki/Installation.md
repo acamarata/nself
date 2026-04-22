@@ -1,44 +1,67 @@
 # Installation
 
-## Contents
+> **Upgrading from v0.9?** See the [[Upgrade-From-v0.9]] guide for step-by-step migration instructions.
 
-- [Prerequisites](#prerequisites)
-- [macOS](#macos)
-- [Linux](#linux)
-- [Windows (WSL2)](#windows-wsl2)
-- [Manual Install](#manual-install)
-- [Verify Installation](#verify-installation)
-- [Uninstall](#uninstall)
+## OS Support
+
+| Platform | Architecture | Status | Guide |
+|---|---|---|---|
+| macOS | Apple Silicon (arm64) | Supported | [macOS Apple Silicon](install/macos-apple-silicon) |
+| macOS | Intel (amd64) | Supported | [macOS Intel](install/macos-intel) |
+| Linux | x86_64 (amd64) | Supported | [Linux x86_64](install/linux-x86_64) |
+| Linux | arm64 (aarch64) | Supported | [Linux arm64](install/linux-arm64) |
+| Windows | WSL2 | Supported (WSL2 only) | [Windows WSL2](install/windows-wsl2) |
+| Windows | Native (win64) | Planned v1.1.0 | — |
+| Raspberry Pi | arm64 | Supported | [Raspberry Pi](install/raspberry-pi) |
+
+**Windows native binary** (`windows-amd64.zip` + `install.ps1`) is planned for v1.1.0.
+WSL2 + Docker Desktop is the supported path until then. See [[install/windows-wsl2]] for setup.
+
+## Platform Guides
+
+| Platform | Architecture | Description |
+|---|---|---|
+| [macOS Apple Silicon](install/macos-apple-silicon) | darwin/arm64 | M1/M2/M3/M4 — OrbStack vs Docker Desktop, VirtioFS |
+| [macOS Intel](install/macos-intel) | darwin/amd64 | Intel Mac — Homebrew, binary download |
+| [Linux x86_64](install/linux-x86_64) | linux/amd64 | Ubuntu, Debian, Fedora, Rocky, Amazon Linux |
+| [Linux arm64](install/linux-arm64) | linux/arm64 | Graviton, Ampere Altra, Hetzner CAX, Pi |
+| [Windows WSL2](install/windows-wsl2) | linux/amd64 | WSL2 + Docker Desktop; native Windows v1.1.0 |
+| [Raspberry Pi](install/raspberry-pi) | linux/arm64 | Pi 4/5; RAM budgeting; minimal preset |
 
 ## Prerequisites
 
 - **Docker** 24 or later
 - **Docker Compose** v2 (included with Docker Desktop)
-- **curl** and **bash** (for Linux installer)
+- **curl** and **bash** (for Linux/macOS installer)
 
-## macOS
+## Quick Install
 
-Install via Homebrew using the official tap:
+### macOS
 
 ```bash
 brew install nself-org/nself/nself
 ```
 
-This installs the latest stable release and keeps it up to date with `brew upgrade`.
+See [[install/macos-apple-silicon]] or [[install/macos-intel]] for platform-specific notes.
 
-## Linux
-
-Install with the official installer script:
+### Linux
 
 ```bash
 curl -sSL https://install.nself.org | bash
 ```
 
-The script detects your architecture (amd64 or arm64), downloads the appropriate binary, and places it in `/usr/local/bin`.
+The script detects your architecture (amd64 or arm64) and downloads the correct binary.
+See [[install/linux-x86_64]] or [[install/linux-arm64]] for manual install and verification.
 
-## Windows (WSL2)
+### Windows (WSL2)
 
-Windows requires WSL2. See [[windows-wsl2]] for the full step-by-step guide covering WSL2 setup, Docker integration, Linuxbrew install, and troubleshooting.
+Windows requires WSL2. See [[install/windows-wsl2]] for the full step-by-step guide
+covering WSL2 setup, Docker integration, and troubleshooting.
+
+### Raspberry Pi
+
+See [[install/raspberry-pi]] for RAM budgeting, SSD recommendations, and the minimal
+services preset.
 
 ## Manual Install
 
@@ -50,9 +73,7 @@ chmod +x nself-linux-amd64
 sudo mv nself-linux-amd64 /usr/local/bin/nself
 ```
 
-## Verify your install
-
-Run these two commands after installation to confirm everything is working:
+## Verify Your Install
 
 ```bash
 nself version
@@ -95,7 +116,8 @@ sudo rm /usr/local/bin/nself
 rm -rf ~/.nself
 ```
 
-This removes the CLI binary and local state. Your project `.env` files and Docker volumes are preserved.
+This removes the CLI binary and local state. Your project `.env` files and Docker volumes
+are preserved.
 
 ---
 ← [[Home]] | [[Quick-Start]] →

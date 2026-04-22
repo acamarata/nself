@@ -33,6 +33,15 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S69-T05: ai+moderation wiring gap check.
 	results = append(results, CheckModerationWired(ctx))
 
+	// S70-T06: Hasura introspection disabled in production.
+	results = append(results, CheckHasuraIntrospection(ctx))
+
+	// S77-T08: orphaned Hasura remote schemas after plugin uninstall.
+	results = append(results, CheckOrphanRemoteSchemas(ctx))
+
+	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
+	results = append(results, CheckRLSEnforcement(ctx, false)...)
+
 	return results
 }
 
@@ -437,10 +446,20 @@ func PluginHealthChecks(ctx context.Context, projectDir string, verbose bool) []
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		parts := strings.SplitN(line, "\t", 2)
 		name := parts[0]
-		// Try common health endpoint on localhost
-		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:0/health")) // placeholder; real port from inspect
-		_ = resp
-		_ = err
+		// Resolve the host port from docker inspect (HostPort on first exposed port).
+		// If unavailable or zero, skip the HTTP probe and fall through to the docker
+		// healthcheck status check below.
+		portCmd := exec.CommandContext(ctx, "docker", "inspect",
+			"--format", `{{range $p, $b := .NetworkSettings.Ports}}{{if $b}}{{(index $b 0).HostPort}}{{end}}{{end}}`,
+			name)
+		portOut, portErr := portCmd.Output()
+		hostPort := strings.TrimSpace(string(portOut))
+		if portErr == nil && hostPort != "" && hostPort != "0" {
+			resp, httpErr := client.Get(fmt.Sprintf("http://127.0.0.1:%s/health", hostPort))
+			if httpErr == nil {
+				resp.Body.Close()
+			}
+		}
 		// Fallback: docker exec health check
 		hcCmd := exec.CommandContext(ctx, "docker", "inspect", "--format", "{{.State.Health.Status}}", name)
 		hcOut, hcErr := hcCmd.Output()

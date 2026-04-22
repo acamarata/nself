@@ -13,7 +13,24 @@ type LegacyArtifact struct {
 	Action      string // what the user should do
 }
 
-// Detect scans the given directory for v1 artifacts.
+// DetectionThreshold is the minimum number of v0.9 artifacts required to
+// trigger a hard failure in start/build/up. A single artifact causes a warning
+// but proceeds; two or more artifacts block the command until migrated.
+// This prevents false positives from projects that happen to share one artifact name.
+const DetectionThreshold = 2
+
+// CheckLegacyProject inspects the given directory and returns (count, artifact names).
+// If count >= DetectionThreshold the caller should fail; if count == 1 it should warn.
+// If count == 0 the project is clean. Reuses Detect() internals.
+func CheckLegacyProject(projectDir string) (count int, names []string) {
+	artifacts := Detect(projectDir)
+	for _, a := range artifacts {
+		names = append(names, a.Path)
+	}
+	return len(artifacts), names
+}
+
+// Detect scans the given directory for v0.9 artifacts.
 // Returns an empty slice if no artifacts are found (clean v2 project or new project).
 // No os.Exit calls — errors from file reads are treated as absent artifacts.
 func Detect(projectDir string) []LegacyArtifact {

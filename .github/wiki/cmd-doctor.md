@@ -26,6 +26,7 @@ The `--deep` flag runs all 12 subsystem checks including open port analysis, wea
 | `--json` | false | JSON output |
 | `--fix` | false | Auto-fix safe issues where a fix command is available |
 | `--only <section>` | — | Run only one subsystem check section (see Subsections below) |
+| `--check-legacy` | false | Scan this host for stale v0.9 global paths and print cleanup instructions. Exits with non-zero if any are found. See below. |
 | `--ai` | false | Run the AI first-run wizard: install Ollama, set up Gemini pool, verify |
 | `--yes` | false | Non-interactive mode: accept all defaults (for CI/scripts, used with `--ai`) |
 | `--skip-ollama` | false | Skip local Ollama installation step (used with `--ai`) |
@@ -87,6 +88,7 @@ CRITICAL findings include: world-readable secret files, sensitive ports bound on
 | `security` | JWT secret, container user, secret file permissions, exposed ports, weak SSL ciphers |
 | `ai-safety` | AI plugin moderation wire-up gap (see below) |
 | `performance` | **PERF-POOL-01**: pgxpool connection cap vs postgres_max_connections |
+| `security` | **PERM-RLS-01**: RLS enforcement for np_* tables (see below) |
 
 ### AI-SAFETY-01: ai+moderation Wire-Up Gap (S69-T05)
 
@@ -136,6 +138,77 @@ Fires during `nself doctor --deep` in the `performance` section.
 # Skip the pool sizing check (not recommended in production)
 nself doctor --deep --skip-pool
 ```
+
+---
+
+### PERM-RLS-01: RLS Enforcement Check (S74-T02 + S74-T-PERM-01)
+
+Fires during `nself doctor --deep` in the `security` section.
+
+**What it checks:**
+
+1. For every `np_*` table: `pg_class.relrowsecurity = true` (RLS enabled) and at least one policy exists.
+2. For every `np_*` table with a `tenant_id` column: `pg_class.relforcerowsecurity = true` (FORCE RLS — prevents table owner from bypassing policies).
+3. For every `np_*` table with a `tenant_id` column: Hasura metadata has a `select` permission for the `user` role with a `tenant_id` row filter (`{"tenant_id": {"_eq": "X-Hasura-Tenant-Id"}}`).
+
+Security-Always-Free Doctrine: this check runs without a license key.
+
+| Status | Meaning |
+|--------|---------|
+| `pass` | All np_* tables have RLS enabled, at least one policy, and Hasura tenant_id filters where applicable |
+| `warn` | Violation found (default); use `--strict` to escalate to `fail` |
+| `fail` | Violation found with `--strict` flag |
+
+**Violation output format:**
+```
+RLS-DISABLED table=np_chat_messages
+RLS-FORCE-MISSING table=np_claw_cost_events role=user
+HASURA-FILTER-MISSING table=np_claw_cost_events role=user
+```
+
+**Env vars read:**
+- `NSELF_DB_URL` or `DATABASE_URL` — Postgres connection string
+- `HASURA_GRAPHQL_URL` — Hasura endpoint (default: `http://127.0.0.1:8080`)
+- `HASURA_GRAPHQL_ADMIN_SECRET` — required for Hasura metadata query; if absent, Hasura filter check is skipped with a warning
+
+**Fix:**
+```bash
+# Fix missing FORCE RLS on a table
+nself migrate apply --rls-force np_chat_messages
+
+# Re-run the check after fixing
+nself doctor --deep --only security
+```
+
+**See also:** [multi-tenant conventions](https://docs.nself.org/multi-tenancy/conventions) for the canonical wall doc on `source_account_id` vs `tenant_id`.
+
+---
+
+## --check-legacy: v0.9 global host scan
+
+`nself doctor --check-legacy` scans the host machine for stale v0.9 global paths that persist after migration:
+
+| Path scanned | What it indicates |
+|---|---|
+| `~/.nself/` | v0.9 global config directory |
+| `~/.nself/plugins/` | v0.9 plugin install directory |
+| `~/.config/nself` | v0.9 XDG config file (v1 uses a directory) |
+| `/usr/local/share/nself` | v0.9 shared data directory |
+
+For each path found, the output shows the path, its type, and a cleanup hint. The check is read-only: it never deletes anything automatically.
+
+```
+$ nself doctor --check-legacy
+WARNING: Found 2 v0.9 stale artifact(s) on this host:
+  [dir]  /Users/me/.nself  — safe to remove: rm -rf ~/.nself (after verifying no custom config)
+  [file] /usr/local/share/nself  — safe to remove: sudo rm -f /usr/local/share/nself
+
+Run the cleanup commands above, then re-run `nself doctor --check-legacy` to confirm.
+```
+
+If no stale paths are found, the command exits 0 with `No v0.9 global artifacts detected. Clean install.`
+
+This flag exits early without running any other doctor checks. Combine with other checks by running them separately.
 
 ## JSON Output
 

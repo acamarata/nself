@@ -204,7 +204,7 @@ Pro plugins introduce additional environment variables. These are set in `.env.s
 | `CLAW_BLOCKED_RECIPIENTS` | Comma-separated email blocklist | `.env.dev` |
 | `CLAW_TG_ALLOWED_USERS` | Telegram user IDs allowed to interact with the claw bot | `.env.dev` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth for Gmail, Calendar, Drive | `.env.secrets` |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications and claw chat | `.env.secrets` |
+| `CLAW_TG_BOT_TOKEN` | Telegram bot token for the claw plugin TG bridge | `.env.secrets` |
 | `GITHUB_TOKEN` | GitHub PAT for git_create_pr tool | `.env.secrets` |
 
 ### Plugin Resource Limits
