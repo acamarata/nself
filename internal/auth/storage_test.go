@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -15,6 +16,10 @@ func withTempHome(t *testing.T) (tempDir string) {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	if runtime.GOOS == "windows" {
+		// os.UserHomeDir() reads USERPROFILE on Windows, not HOME.
+		t.Setenv("USERPROFILE", dir)
+	}
 	// On macOS os.UserHomeDir() reads $HOME first.
 	return dir
 }
@@ -60,6 +65,9 @@ func TestWriteReadAuthFile_RoundTrip(t *testing.T) {
 // ─── File permissions ─────────────────────────────────────────────────────────
 
 func TestWriteAuthFile_Permissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file permission bits not supported on Windows")
+	}
 	withTempHome(t)
 
 	af := &AuthFile{
@@ -89,6 +97,9 @@ func TestWriteAuthFile_Permissions(t *testing.T) {
 }
 
 func TestWriteAuthFile_DirectoryPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file permission bits not supported on Windows")
+	}
 	withTempHome(t)
 
 	if err := WriteAuthFile(&AuthFile{AccessToken: "tok"}); err != nil {

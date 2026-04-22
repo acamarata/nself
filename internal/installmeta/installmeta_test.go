@@ -3,6 +3,7 @@ package installmeta_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/nself-org/cli/internal/installmeta"
@@ -39,6 +40,9 @@ func TestWriteAndRead(t *testing.T) {
 	// Use a temp home dir so we don't pollute the real one
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpHome)
+	}
 
 	if err := installmeta.Write("hn"); err != nil {
 		t.Fatalf("Write returned error: %v", err)
@@ -83,6 +87,9 @@ func TestWriteAndRead(t *testing.T) {
 func TestInstallSourceNoFile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpHome)
+	}
 
 	src := installmeta.InstallSource()
 	if src != "unknown" {
@@ -95,6 +102,9 @@ func TestInstallSourceNoFile(t *testing.T) {
 func TestNoPII(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpHome)
+	}
 
 	if err := installmeta.Write("test-ref"); err != nil {
 		t.Fatal(err)

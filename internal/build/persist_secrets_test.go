@@ -3,6 +3,7 @@ package build
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -63,6 +64,9 @@ func TestPersistGeneratedSecrets_JWTWrittenWhenMissing(t *testing.T) {
 // TestPersistGeneratedSecrets_EnvSecretsIsChmod0600 verifies the file ends
 // up owner-only (0600) even when it existed with looser perms beforehand.
 func TestPersistGeneratedSecrets_EnvSecretsIsChmod0600(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file permission bits not supported on Windows")
+	}
 	t.Setenv("HASURA_GRAPHQL_JWT_SECRET", "")
 
 	dir := t.TempDir()
