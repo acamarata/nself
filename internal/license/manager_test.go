@@ -3,6 +3,7 @@ package license
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -71,6 +72,9 @@ func TestValidateFormat_EntPrefix(t *testing.T) {
 func TestSetKey_GetKey_Roundtrip(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	// Ensure env override is not active
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
@@ -93,6 +97,9 @@ func TestSetKey_GetKey_Roundtrip(t *testing.T) {
 func TestGetKey_EnvOverride(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 
 	envKey := "nself_pro_" + strings.Repeat("z", 22)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", envKey)
@@ -111,6 +118,9 @@ func TestGetKey_EnvOverride(t *testing.T) {
 func TestClearKey_RemovesKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	key := validProKey()
@@ -135,6 +145,9 @@ func TestClearKey_RemovesKey(t *testing.T) {
 func TestShowKey_ValidKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	key := validProKey()
@@ -169,6 +182,9 @@ func TestShowKey_ValidKey(t *testing.T) {
 func TestShowKey_NoKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	masked, tier, err := ShowKey()
@@ -186,6 +202,9 @@ func TestShowKey_NoKey(t *testing.T) {
 func TestShowKey_OwnerTier(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	key := validOwnerKey()

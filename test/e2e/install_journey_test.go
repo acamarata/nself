@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -27,7 +28,7 @@ import (
 func TestInstallJourney_BinaryPresent(t *testing.T) {
 	// Look for the binary in standard build locations.
 	candidates := []string{
-		"../../nself",           // repo root (make build output)
+		"../../nself",          // repo root (make build output)
 		"../../dist/nself",     // dist/ (make dist output)
 		"/usr/local/bin/nself", // system install
 	}
@@ -107,6 +108,9 @@ func TestInstallJourney_ConfigDirCreated(t *testing.T) {
 	})
 
 	t.Run("env_file_permissions_0600", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Unix file permission bits not supported on Windows")
+		}
 		info, err := os.Stat(filepath.Join(projectDir, ".env.dev"))
 		if err != nil {
 			t.Fatalf("cannot stat .env.dev: %v", err)
@@ -117,6 +121,9 @@ func TestInstallJourney_ConfigDirCreated(t *testing.T) {
 	})
 
 	t.Run("config_dir_permissions_0750", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Unix file permission bits not supported on Windows")
+		}
 		info, err := os.Stat(configDir)
 		if err != nil {
 			t.Fatalf("cannot stat config dir: %v", err)

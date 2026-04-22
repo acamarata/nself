@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -64,6 +65,9 @@ func TestCollectLicenseKeys_EmptySkipped(t *testing.T) {
 	// Temporarily override home to avoid reading real key files.
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpDir)
+	}
 
 	keys := CollectLicenseKeys()
 	if len(keys) != 0 {
@@ -121,6 +125,9 @@ func TestDetectProduct(t *testing.T) {
 func TestAddAndRemoveKeys(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpDir)
+	}
 
 	key1 := "nself_claw_abcdefghijklmnopqrstuvwxyz1234"
 	key2 := "nself_chat_abcdefghijklmnopqrstuvwxyz1234"
@@ -161,6 +168,9 @@ func TestAddAndRemoveKeys(t *testing.T) {
 func TestSetKeyReplaceAll(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpDir)
+	}
 
 	key1 := "nself_claw_abcdefghijklmnopqrstuvwxyz1234"
 	key2 := "nself_chat_abcdefghijklmnopqrstuvwxyz1234"
@@ -189,6 +199,9 @@ func TestSetKeyReplaceAll(t *testing.T) {
 func TestGapRenumbering(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpDir)
+	}
 
 	key1 := "nself_claw_abcdefghijklmnopqrstuvwxyz1234"
 	key2 := "nself_chat_abcdefghijklmnopqrstuvwxyz1234"

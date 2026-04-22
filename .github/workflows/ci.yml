@@ -81,7 +81,7 @@ jobs:
         if: matrix.skip_docker_tests == 'true'
         # Docker integration tests require Docker Desktop which is not available
         # on windows-2022 GitHub-hosted runners. Only pure-Go packages run here.
-        run: go test -mod=vendor -short ./...
+        run: go test -mod=vendor -short -timeout 20m ./...
         shell: cmd
 
   # S49-T06: Apple Silicon (darwin/arm64) smoke test.

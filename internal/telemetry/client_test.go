@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -141,6 +142,9 @@ func TestInstallSourceOneShot(t *testing.T) {
 
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmpHome)
+	}
 	os.Unsetenv("NSELF_INSTALL_SOURCE")
 	os.Unsetenv("NSELF_INSTALL_APP")
 	os.Unsetenv("NSELF_INSTALL_METHOD")

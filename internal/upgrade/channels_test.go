@@ -3,6 +3,7 @@ package upgrade
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -93,15 +94,10 @@ func TestPingAPIEndpoint(t *testing.T) {
 // ~/.config/nself/channel.json of whoever runs the test.
 func TestSaveAndLoadChannel(t *testing.T) {
 	tmp := t.TempDir()
-	origHome, had := os.LookupEnv("HOME")
-	_ = os.Setenv("HOME", tmp)
-	t.Cleanup(func() {
-		if had {
-			_ = os.Setenv("HOME", origHome)
-		} else {
-			_ = os.Unsetenv("HOME")
-		}
-	})
+	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 
 	// Before anything is saved, LoadChannel must return the default.
 	if got := LoadChannel(); got != DefaultChannel {
@@ -140,15 +136,10 @@ func TestSaveAndLoadChannel(t *testing.T) {
 // falls back to DefaultChannel without panicking.
 func TestLoadChannel_CorruptFileFallsBack(t *testing.T) {
 	tmp := t.TempDir()
-	origHome, had := os.LookupEnv("HOME")
-	_ = os.Setenv("HOME", tmp)
-	t.Cleanup(func() {
-		if had {
-			_ = os.Setenv("HOME", origHome)
-		} else {
-			_ = os.Unsetenv("HOME")
-		}
-	})
+	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 
 	// Write garbage to the config file.
 	dir := filepath.Join(tmp, ".config", "nself")
