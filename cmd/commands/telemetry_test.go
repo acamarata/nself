@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/nself-org/cli/internal/config"
@@ -13,15 +14,12 @@ import (
 func setupTelemetryTestHome(t *testing.T) (homeDir string, cleanup func()) {
 	t.Helper()
 	dir := t.TempDir()
-	old := os.Getenv("HOME")
 	t.Setenv("HOME", dir) // os.UserHomeDir reads $HOME on Unix
-	return dir, func() {
-		if old == "" {
-			os.Unsetenv("HOME")
-		} else {
-			os.Setenv("HOME", old)
-		}
+	if runtime.GOOS == "windows" {
+		// os.UserHomeDir() reads USERPROFILE on Windows, not HOME.
+		t.Setenv("USERPROFILE", dir)
 	}
+	return dir, func() {} // t.Setenv handles cleanup automatically
 }
 
 // TestTelemetryStatusShowsCorrectState verifies that status command reports the right state.

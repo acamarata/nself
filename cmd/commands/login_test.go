@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/nself-org/cli/internal/auth"
@@ -21,11 +22,16 @@ func setAuthServer(t *testing.T, h http.HandlerFunc) {
 	t.Cleanup(srv.Close)
 }
 
-// isolateHome redirects HOME to a temp dir so auth.json writes are isolated.
+// isolateHome redirects HOME (and USERPROFILE on Windows) to a temp dir so
+// auth.json writes are isolated regardless of platform.
 func isolateHome(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		// os.UserHomeDir() reads USERPROFILE on Windows, not HOME.
+		t.Setenv("USERPROFILE", tmp)
+	}
 	return tmp
 }
 
@@ -144,13 +150,15 @@ func TestLoginCmd_DeviceCodeFlow(t *testing.T) {
 		t.Errorf("saved tier: got %q, want %q", saved.Tier, tokenResp.Tier)
 	}
 
-	// Verify 0600 permissions.
-	fi, statErr := os.Stat(authPath)
-	if statErr != nil {
-		t.Fatalf("stat auth.json: %v", statErr)
-	}
-	if fi.Mode().Perm() != 0600 {
-		t.Errorf("auth.json permissions: got %o, want 0600", fi.Mode().Perm())
+	// Verify 0600 permissions (Unix only — Windows does not honour permission bits).
+	if runtime.GOOS != "windows" {
+		fi, statErr := os.Stat(authPath)
+		if statErr != nil {
+			t.Fatalf("stat auth.json: %v", statErr)
+		}
+		if fi.Mode().Perm() != 0600 {
+			t.Errorf("auth.json permissions: got %o, want 0600", fi.Mode().Perm())
+		}
 	}
 }
 
