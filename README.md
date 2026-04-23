@@ -1,6 +1,6 @@
 # ɳSelf CLI
 
-[![Version](https://img.shields.io/badge/version-v1.0.9_LTS-blue.svg)](https://github.com/nself-org/cli/releases/tag/v1.0.9)
+[![Version](https://img.shields.io/github/v/release/nself-org/cli?label=version)](https://github.com/nself-org/cli/releases/latest)
 [![Go](https://img.shields.io/badge/go-1.22%2B-00ADD8.svg)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)](#prerequisites)
