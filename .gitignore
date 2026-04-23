@@ -25,7 +25,7 @@ docker-compose.yml
 /nginx/
 /ssl/
 /postgres/
-monitoring/
+/monitoring/
 services/
 .nself/
 backups/
