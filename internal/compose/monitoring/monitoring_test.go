@@ -82,7 +82,7 @@ func TestRenderLokiYAMLDefaults(t *testing.T) {
 	s := string(out)
 
 	wants := []string{
-		"retention_period: 360h",
+		"retention_period: 168h",
 		"auth_enabled: false",
 		"ruler:",
 		"enable_api: true",
