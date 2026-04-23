@@ -259,6 +259,212 @@ func GetLicenses(accessToken string) ([]LicenseInfo, error) {
 	return result.Licenses, nil
 }
 
+// ─── Team ─────────────────────────────────────────────────────────────────────
+
+// TeamMember represents one member of an account's team.
+type TeamMember struct {
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	JoinedAt  string `json:"joined_at"`
+}
+
+// GetTeamMembers returns the list of team members for the account.
+func GetTeamMembers(accessToken string) ([]TeamMember, error) {
+	url := fmt.Sprintf("%s/account/team", AuthServerURL())
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("getting team: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, parseAPIError(resp)
+	}
+
+	var result struct {
+		Members []TeamMember `json:"members"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("parsing team response: %w", err)
+	}
+	return result.Members, nil
+}
+
+// InviteTeamMember sends a team invitation to the given email.
+func InviteTeamMember(accessToken, email string) error {
+	url := fmt.Sprintf("%s/account/team/invite", AuthServerURL())
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("inviting team member: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+// RemoveTeamMember removes a member from the account's team.
+func RemoveTeamMember(accessToken, email string) error {
+	url := fmt.Sprintf("%s/account/team/%s", AuthServerURL(), email)
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("removing team member: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+// SetTeamMemberRole updates a member's role on the account's team.
+func SetTeamMemberRole(accessToken, email, role string) error {
+	url := fmt.Sprintf("%s/account/team/%s/role", AuthServerURL(), email)
+	body, _ := json.Marshal(map[string]string{"role": role})
+	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("setting team member role: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+// ─── Licenses (extended) ──────────────────────────────────────────────────────
+
+// ActivateLicense activates a license key on the current device.
+func ActivateLicense(accessToken, licenseID string) error {
+	url := fmt.Sprintf("%s/account/licenses/%s/activate", AuthServerURL(), licenseID)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("activating license: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+// ─── Devices ──────────────────────────────────────────────────────────────────
+
+// DeviceEntry represents one registered device for an account.
+type DeviceEntry struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	OS         string `json:"os"`
+	LastActive string `json:"last_active"`
+	IsCurrent  bool   `json:"is_current"`
+}
+
+// GetDevices returns the list of registered devices for the account.
+func GetDevices(accessToken string) ([]DeviceEntry, error) {
+	url := fmt.Sprintf("%s/account/devices", AuthServerURL())
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("getting devices: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, parseAPIError(resp)
+	}
+
+	var result struct {
+		Devices []DeviceEntry `json:"devices"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("parsing devices response: %w", err)
+	}
+	return result.Devices, nil
+}
+
+// RevokeDevice revokes a specific device session.
+func RevokeDevice(accessToken, deviceID string) error {
+	url := fmt.Sprintf("%s/account/devices/%s", AuthServerURL(), deviceID)
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("revoking device: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+// ─── Transfer ─────────────────────────────────────────────────────────────────
+
+// TransferLicense transfers a license from the current account to another email.
+func TransferLicense(accessToken, licenseID, toEmail string) error {
+	url := fmt.Sprintf("%s/account/licenses/%s/transfer", AuthServerURL(), licenseID)
+	body, _ := json.Marshal(map[string]string{"to_email": toEmail})
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("nself_auth_token=%s", accessToken))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("transferring license: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func parseAPIError(resp *http.Response) error {
