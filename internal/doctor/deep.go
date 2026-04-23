@@ -429,52 +429,204 @@ func PingChecks(ctx context.Context, verbose bool) []CheckResult {
 	return results
 }
 
+// verifyDockerRunning checks that the Docker daemon is reachable.
+// Returns a non-nil error if Docker is not available.
+func verifyDockerRunning(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "docker", "info", "--format", "{{.ServerVersion}}")
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("docker daemon unreachable: %w", err)
+	}
+	if strings.TrimSpace(string(out)) == "" {
+		return fmt.Errorf("docker daemon returned empty server version")
+	}
+	return nil
+}
+
+// resolveHostPort returns the first mapped host port for containerName using
+// docker inspect. Returns ("", nil) when no port binding is found, and
+// ("", err) on inspect failure.
+func resolveHostPort(ctx context.Context, containerName string) (string, error) {
+	portCmd := exec.CommandContext(ctx, "docker", "inspect",
+		"--format", `{{range $p, $b := .NetworkSettings.Ports}}{{if $b}}{{(index $b 0).HostPort}}{{end}}{{end}}`,
+		containerName)
+	portOut, err := portCmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("docker inspect %s: %w", containerName, err)
+	}
+	return strings.TrimSpace(string(portOut)), nil
+}
+
+// probePluginHTTP attempts GET /health and, on 404, GET /healthz against
+// http://127.0.0.1:<port>. Returns the CheckResult for this plugin.
+func probePluginHTTP(client *http.Client, pluginName string, port int) CheckResult {
+	checkID := fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName)
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+
+	for _, path := range []string{"/health", "/healthz"} {
+		resp, err := client.Get(base + path)
+		if err != nil {
+			// connection refused or timeout
+			return CheckResult{
+				Section: "plugins",
+				Name:    checkID,
+				Status:  "fail",
+				Message: fmt.Sprintf("plugin %s: not running (%v)", pluginName, err),
+				FixCmd:  fmt.Sprintf("nself start --plugin %s", pluginName),
+			}
+		}
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			return CheckResult{
+				Section: "plugins",
+				Name:    checkID,
+				Status:  "pass",
+				Message: fmt.Sprintf("plugin %s: healthy (HTTP 200 %s)", pluginName, path),
+			}
+		}
+		if resp.StatusCode == http.StatusNotFound && path == "/health" {
+			// Try /healthz next iteration.
+			continue
+		}
+		return CheckResult{
+			Section: "plugins",
+			Name:    checkID,
+			Status:  "fail",
+			Message: fmt.Sprintf("plugin %s: HTTP %d on %s", pluginName, resp.StatusCode, path),
+			FixCmd:  fmt.Sprintf("docker restart %s", pluginName),
+		}
+	}
+
+	return CheckResult{
+		Section: "plugins",
+		Name:    checkID,
+		Status:  "warn",
+		Message: fmt.Sprintf("plugin %s: /health and /healthz both returned 404", pluginName),
+	}
+}
+
 // PluginHealthChecks verifies every installed plugin's health endpoint.
 func PluginHealthChecks(ctx context.Context, projectDir string, verbose bool) []CheckResult {
 	var results []CheckResult
 
-	// List plugin containers and probe /health
-	cmd := exec.CommandContext(ctx, "docker", "ps", "--filter", "label=nself.plugin", "--format", "{{.Names}}\t{{.Ports}}")
-	out, err := cmd.Output()
-	if err != nil || strings.TrimSpace(string(out)) == "" {
-		results = append(results, CheckResult{Section: "plugins", Name: "Plugin health", Status: "pass",
-			Message: "no plugin containers found"})
+	// Step 1: verify Docker daemon is reachable.
+	if err := verifyDockerRunning(ctx); err != nil {
+		fixCmd := "sudo systemctl start docker"
+		if runtime.GOOS == "darwin" {
+			fixCmd = "open -a Docker"
+		}
+		results = append(results, CheckResult{
+			Section: "plugins",
+			Name:    "PLUGIN-HEALTH-docker",
+			Status:  "fail",
+			Message: fmt.Sprintf("Docker not running: %v", err),
+			FixCmd:  fixCmd,
+		})
 		return results
 	}
 
-	client := &http.Client{Timeout: 3 * time.Second}
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		parts := strings.SplitN(line, "\t", 2)
-		name := parts[0]
-		// Resolve the host port from docker inspect (HostPort on first exposed port).
-		// If unavailable or zero, skip the HTTP probe and fall through to the docker
-		// healthcheck status check below.
-		portCmd := exec.CommandContext(ctx, "docker", "inspect",
-			"--format", `{{range $p, $b := .NetworkSettings.Ports}}{{if $b}}{{(index $b 0).HostPort}}{{end}}{{end}}`,
-			name)
-		portOut, portErr := portCmd.Output()
-		hostPort := strings.TrimSpace(string(portOut))
-		if portErr == nil && hostPort != "" && hostPort != "0" {
-			resp, httpErr := client.Get(fmt.Sprintf("http://127.0.0.1:%s/health", hostPort))
-			if httpErr == nil {
-				resp.Body.Close()
+	// Step 2: list running nself plugin containers.
+	cmd := exec.CommandContext(ctx, "docker", "ps", "--filter", "label=nself.plugin", "--format", "{{.Names}}\t{{.Ports}}")
+	out, err := cmd.Output()
+	running := strings.TrimSpace(string(out))
+
+	if err != nil || running == "" {
+		// Step 3: distinguish installed-but-stopped from not-installed.
+		listCmd := exec.CommandContext(ctx, "nself", "plugin", "list", "--installed", "--json")
+		listOut, listErr := listCmd.Output()
+		expectedCount := 0
+		if listErr == nil && strings.TrimSpace(string(listOut)) != "" && strings.TrimSpace(string(listOut)) != "[]" {
+			// Count newlines as a rough plugin count; each JSON line = one plugin.
+			for _, ln := range strings.Split(strings.TrimSpace(string(listOut)), "\n") {
+				if strings.TrimSpace(ln) != "" && strings.TrimSpace(ln) != "[" && strings.TrimSpace(ln) != "]" {
+					expectedCount++
+				}
 			}
 		}
-		// Fallback: docker exec health check
-		hcCmd := exec.CommandContext(ctx, "docker", "inspect", "--format", "{{.State.Health.Status}}", name)
+		if expectedCount > 0 {
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    "PLUGIN-HEALTH-containers",
+				Status:  "fail",
+				Message: fmt.Sprintf("%d plugin(s) installed but no containers running", expectedCount),
+				FixCmd:  "nself start",
+			})
+		} else {
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    "PLUGIN-HEALTH-containers",
+				Status:  "pass",
+				Message: "no plugins installed",
+			})
+		}
+		return results
+	}
+
+	// Step 4: probe each running plugin container.
+	client := &http.Client{Timeout: 5 * time.Second}
+	for _, line := range strings.Split(running, "\n") {
+		parts := strings.SplitN(line, "\t", 2)
+		containerName := strings.TrimSpace(parts[0])
+		if containerName == "" {
+			continue
+		}
+
+		// Strip "nself_" prefix to derive the plugin name for the check ID.
+		pluginName := strings.TrimPrefix(containerName, "nself_")
+
+		hostPort, portErr := resolveHostPort(ctx, containerName)
+		if portErr != nil || hostPort == "" || hostPort == "0" {
+			// No host port exposed: emit warn, fall through to docker healthcheck.
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName),
+				Status:  "warn",
+				Message: fmt.Sprintf("plugin %s: cannot probe health (no host port exposed)", pluginName),
+			})
+			// Still fall through to docker healthcheck below.
+		} else {
+			portNum, convErr := strconv.Atoi(hostPort)
+			if convErr != nil || portNum < 1024 || portNum > 65535 {
+				results = append(results, CheckResult{
+					Section: "plugins",
+					Name:    fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName),
+					Status:  "warn",
+					Message: fmt.Sprintf("plugin %s: invalid host port %s", pluginName, hostPort),
+				})
+			} else {
+				results = append(results, probePluginHTTP(client, pluginName, portNum))
+				continue // HTTP probe result is authoritative; skip docker healthcheck.
+			}
+		}
+
+		// Fallback: docker healthcheck status (when no valid host port).
+		hcCmd := exec.CommandContext(ctx, "docker", "inspect", "--format", "{{.State.Health.Status}}", containerName)
 		hcOut, hcErr := hcCmd.Output()
 		if hcErr != nil {
-			results = append(results, CheckResult{Section: "plugins", Name: fmt.Sprintf("Plugin: %s", name),
-				Status: "warn", Message: "cannot inspect health"})
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName),
+				Status:  "warn",
+				Message: fmt.Sprintf("plugin %s: cannot inspect docker health", pluginName),
+			})
 			continue
 		}
 		hStatus := strings.TrimSpace(string(hcOut))
-		if hStatus == "healthy" {
-			results = append(results, CheckResult{Section: "plugins", Name: fmt.Sprintf("Plugin: %s", name),
-				Status: "pass", Message: "healthy"})
+		if hStatus == "healthy" || hStatus == "" {
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName),
+				Status:  "pass",
+				Message: fmt.Sprintf("plugin %s: healthy (docker healthcheck)", pluginName),
+			})
 		} else {
-			results = append(results, CheckResult{Section: "plugins", Name: fmt.Sprintf("Plugin: %s", name),
-				Status: "fail", Message: hStatus, FixCmd: fmt.Sprintf("docker restart %s", name)})
+			results = append(results, CheckResult{
+				Section: "plugins",
+				Name:    fmt.Sprintf("PLUGIN-HEALTH-%s", pluginName),
+				Status:  "fail",
+				Message: fmt.Sprintf("plugin %s: docker health status: %s", pluginName, hStatus),
+				FixCmd:  fmt.Sprintf("docker restart %s", containerName),
+			})
 		}
 	}
 
