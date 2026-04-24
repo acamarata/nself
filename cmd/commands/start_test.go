@@ -251,7 +251,9 @@ func TestStartCmd_WithProjectDirNoDocker(t *testing.T) {
 
 	t.Chdir(dir)
 
-	root := newStartCmd()
+	// Use 3-second timeout: this test intentionally hits checkDockerAvailable,
+	// which hangs on runners without Docker. Same guard as other start tests.
+	root := startCmdWithTimeout(t, 3*time.Second)
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)

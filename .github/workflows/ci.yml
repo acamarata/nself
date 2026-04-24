@@ -75,7 +75,7 @@ jobs:
 
       - name: Test
         if: matrix.skip_docker_tests != 'true'
-        run: go test -mod=vendor ./...
+        run: go test -mod=vendor -timeout 10m ./...
 
       - name: Test (Windows — pure-Go packages; Docker integration tests skipped)
         if: matrix.skip_docker_tests == 'true'
