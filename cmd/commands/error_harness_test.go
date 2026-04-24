@@ -35,7 +35,7 @@ type errorHarnessCase struct {
 	desc string
 }
 
-// errorHarnessCases is the exhaustive table of error scenarios for all 48 commands.
+// errorHarnessCases is the exhaustive table of error scenarios for all registered commands.
 // Three entries per command: (a) missing-context, (b) invalid-flag, (c) unknown-sub.
 //
 // "missing-context" always produces a non-nil error because nself requires a
@@ -182,6 +182,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"migrate", []string{"migrate"}, "(a) no project dir"},
 	{"migrate", []string{"migrate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"migrate", []string{"migrate", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── model ──────────────────────────────────────────────────────────────
+	{"model", []string{"model"}, "(a) shows help (no project required)"},
+	{"model", []string{"model", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"model", []string{"model", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── monitor ────────────────────────────────────────────────────────────
 	{"monitor", []string{"monitor"}, "(a) no project dir"},
@@ -333,6 +338,90 @@ var errorHarnessCases = []errorHarnessCase{
 	{"soak", []string{"soak"}, "(a) no project dir"},
 	{"soak", []string{"soak", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"soak", []string{"soak", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── ai-studio ──────────────────────────────────────────────────────────
+	// ai-studio root returns cmd.Help() (nil) — same pattern as model.
+	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
+	{"ai-studio", []string{"ai-studio", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"ai-studio", []string{"ai-studio", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── encryption ─────────────────────────────────────────────────────────
+	{"encryption", []string{"encryption"}, "(a) no project dir"},
+	{"encryption", []string{"encryption", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"encryption", []string{"encryption", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── federation ─────────────────────────────────────────────────────────
+	{"federation", []string{"federation"}, "(a) no project dir"},
+	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"federation", []string{"federation", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── gdpr ───────────────────────────────────────────────────────────────
+	{"gdpr", []string{"gdpr"}, "(a) no project dir"},
+	{"gdpr", []string{"gdpr", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"gdpr", []string{"gdpr", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── generate ───────────────────────────────────────────────────────────
+	{"generate", []string{"generate"}, "(a) no project dir"},
+	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"generate", []string{"generate", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── infra ──────────────────────────────────────────────────────────────
+	// infra root returns cmd.Help() (nil) — soft case.
+	{"infra", []string{"infra"}, "(a) shows help (no project required)"},
+	{"infra", []string{"infra", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"infra", []string{"infra", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── k8s ────────────────────────────────────────────────────────────────
+	// k8s root returns cmd.Help() (nil) — soft case.
+	{"k8s", []string{"k8s"}, "(a) shows help (no project required)"},
+	{"k8s", []string{"k8s", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"k8s", []string{"k8s", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── maintenance ────────────────────────────────────────────────────────
+	// maintenance root returns cmd.Help() (nil) — soft case.
+	{"maintenance", []string{"maintenance"}, "(a) shows help (no project required)"},
+	{"maintenance", []string{"maintenance", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"maintenance", []string{"maintenance", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── mcp ────────────────────────────────────────────────────────────────
+	{"mcp", []string{"mcp"}, "(a) no project dir"},
+	{"mcp", []string{"mcp", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"mcp", []string{"mcp", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── ollama ─────────────────────────────────────────────────────────────
+	// ollama root returns cmd.Help() (nil) — soft case.
+	{"ollama", []string{"ollama"}, "(a) shows help (no project required)"},
+	{"ollama", []string{"ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"ollama", []string{"ollama", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── pentest-kit ────────────────────────────────────────────────────────
+	// pentest-kit root returns cmd.Help() (nil) — soft case.
+	{"pentest-kit", []string{"pentest-kit"}, "(a) shows help (no project required)"},
+	{"pentest-kit", []string{"pentest-kit", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"pentest-kit", []string{"pentest-kit", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── pitr ───────────────────────────────────────────────────────────────
+	// pitr root returns cmd.Help() (nil) — soft case.
+	{"pitr", []string{"pitr"}, "(a) shows help (no project required)"},
+	{"pitr", []string{"pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"pitr", []string{"pitr", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── region ─────────────────────────────────────────────────────────────
+	// region root returns cmd.Help() (nil) — soft case.
+	{"region", []string{"region"}, "(a) shows help (no project required)"},
+	{"region", []string{"region", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"region", []string{"region", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── template ───────────────────────────────────────────────────────────
+	// template root returns cmd.Help() (nil) — soft case.
+	{"template", []string{"template"}, "(a) shows help (no project required)"},
+	{"template", []string{"template", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"template", []string{"template", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── verify-sbom ────────────────────────────────────────────────────────
+	{"verify-sbom", []string{"verify-sbom"}, "(a) no project dir"},
+	{"verify-sbom", []string{"verify-sbom", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"verify-sbom", []string{"verify-sbom", "unknownsub_xyz"}, "(c) unknown sub"},
 }
 
 // runErrorHarnessCmd executes the given args against a fresh RootCmd clone

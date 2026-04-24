@@ -260,25 +260,20 @@ func TestValidateTemplate_Valid(t *testing.T) {
 	}
 }
 
-// TestValidateTemplate_Invalid verifies that an unrecognised template name is
-// rejected and the error message lists available templates.
-func TestValidateTemplate_Invalid(t *testing.T) {
-	err := validateTemplate("laravel")
-	if err == nil {
-		t.Fatal("expected an error for unknown template 'laravel', got nil")
-	}
-	if !strings.Contains(err.Error(), "laravel") {
-		t.Errorf("expected error to mention the bad template name, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "Available templates") {
-		t.Errorf("expected error to mention 'Available templates', got: %v", err)
+// TestValidateTemplate_MarketplaceSlug verifies that an unrecognised template
+// name is accepted as a marketplace slug (validation deferred to registry lookup).
+func TestValidateTemplate_MarketplaceSlug(t *testing.T) {
+	// "laravel" is not a built-in but is a valid marketplace slug — must not error.
+	if err := validateTemplate("laravel"); err != nil {
+		t.Fatalf("validateTemplate(%q) should accept marketplace slugs, got: %v", "laravel", err)
 	}
 }
 
-// TestValidateTemplate_Empty verifies that an empty string is rejected.
-func TestValidateTemplate_Empty(t *testing.T) {
-	if err := validateTemplate(""); err == nil {
-		t.Fatal("expected an error for empty template name, got nil")
+// TestValidateTemplate_EmptyAccepted verifies that validateTemplate does not
+// reject empty strings — the caller guards against empty before invoking it.
+func TestValidateTemplate_EmptyAccepted(t *testing.T) {
+	if err := validateTemplate(""); err != nil {
+		t.Fatalf("validateTemplate(%q) should return nil (caller guards empty), got: %v", "", err)
 	}
 }
 
