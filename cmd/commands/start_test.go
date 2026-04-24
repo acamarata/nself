@@ -437,7 +437,8 @@ func TestStartCmd_ComposeFileNotFound(t *testing.T) {
 
 	t.Chdir(dir)
 
-	root := newStartCmd()
+	// Use 3-second timeout to avoid hanging on Docker check (same as other start tests).
+	root := startCmdWithTimeout(t, 3*time.Second)
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)
