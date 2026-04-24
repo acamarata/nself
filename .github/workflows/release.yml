@@ -95,12 +95,27 @@ jobs:
           name: release-binaries
           path: dist
 
-      - name: Generate SBOM for source tree
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOM — SPDX (source tree)
         uses: anchore/sbom-action@v0
         with:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
+
+      - name: Generate SBOM — CycloneDX 1.5 (source tree, Q04)
+        run: |
+          syft packages . --output cyclonedx-json=sbom.cdx.json
+          echo "CycloneDX SBOM generated: $(wc -c < sbom.cdx.json) bytes"
+
+      - name: SHA-256 CycloneDX SBOM (Q04 — append to checksums.txt)
+        working-directory: dist
+        run: |
+          sha256sum ../sbom.cdx.json >> checksums.txt
+          sha256sum ../sbom.spdx.json >> checksums.txt
+          echo "SBOM digests appended to checksums.txt"
 
       - name: Generate SBOM for each tarball
         run: |
@@ -108,6 +123,7 @@ jobs:
           for tb in dist/*.tar.gz; do
             name=$(basename "$tb" .tar.gz)
             syft "$tb" -o spdx-json > "sboms/${name}.sbom.spdx.json"
+            syft "$tb" -o cyclonedx-json > "sboms/${name}.sbom.cdx.json"
           done
 
       - name: Upload SBOMs
@@ -116,6 +132,7 @@ jobs:
           name: release-sboms
           path: |
             sbom.spdx.json
+            sbom.cdx.json
             sboms/
           retention-days: 1
 
@@ -248,13 +265,20 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          for f in *.tar.gz checksums.txt sbom.spdx.json provenance.intoto.jsonl; do
+          for f in *.tar.gz checksums.txt sbom.spdx.json sbom.cdx.json provenance.intoto.jsonl; do
             if [ -f "$f" ]; then
               cosign sign-blob --yes \
                 --bundle "${f}.sig" \
                 "$f"
             fi
           done
+          # Q04: dedicated cosign bundle for CycloneDX SBOM (consumer-verifiable)
+          if [ -f sbom.cdx.json ]; then
+            cosign sign-blob --yes \
+              --bundle sbom.cdx.json.bundle \
+              sbom.cdx.json
+            echo "CycloneDX SBOM cosign bundle written: sbom.cdx.json.bundle"
+          fi
 
       - name: Determine channel from tag
         id: channel
@@ -358,6 +382,8 @@ jobs:
             dist/*.tar.gz
             dist/checksums.txt
             dist/sbom.spdx.json
+            dist/sbom.cdx.json
+            dist/sbom.cdx.json.bundle
             dist/provenance.intoto.jsonl
             dist/*.sig
 
@@ -365,7 +391,7 @@ jobs:
         if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.HOMEBREW_TAP_DISPATCH_TOKEN }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/homebrew-nself
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable"}'
@@ -374,7 +400,7 @@ jobs:
         if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.ADMIN_REBUILD_TOKEN }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/admin
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'
