@@ -156,7 +156,7 @@ func TestServiceUpgrade_WritesEnvVar(t *testing.T) {
 
 // containsLine reports whether the given text contains the given line.
 func containsLine(text, line string) bool {
-	for _, l := range splitLines(text) {
+	for _, l := range testSplitLines(text) {
 		if l == line {
 			return true
 		}
@@ -164,7 +164,7 @@ func containsLine(text, line string) bool {
 	return false
 }
 
-func splitLines(s string) []string {
+func testSplitLines(s string) []string {
 	var lines []string
 	for _, l := range filepath.SplitList(s) {
 		lines = append(lines, l)
