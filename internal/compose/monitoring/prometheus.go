@@ -117,6 +117,16 @@ func BuiltinTargets() []ScrapeTarget {
 			Interval:    "30s",
 			Labels:      map[string]string{"service": "auth"},
 		},
+		// Tempo distributed tracing backend metrics.
+		// Requires MONITORING_TRACING_ENABLED=true (tempo + otel-collector in stack).
+		{
+			JobName:     "tempo",
+			ServiceName: "tempo",
+			Port:        3200,
+			Path:        "/metrics",
+			Interval:    "30s",
+			Labels:      map[string]string{"service": "tempo"},
+		},
 	}
 }
 
