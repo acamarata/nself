@@ -20,12 +20,12 @@ type LokiConfig struct {
 	RuleEngineEnabled bool
 }
 
-// DefaultLokiConfig returns the settings nSelf uses out of the box: 7-day
-// retention, single-tenant, rule engine on. Matches the "5-minute first
-// dashboard" onboarding promise while keeping disk usage bounded on small VPS.
+// DefaultLokiConfig returns the settings nSelf uses out of the box: 30-day
+// retention (720h), single-tenant, rule engine on. Retention was extended from
+// 168h (7d) to 720h (30d) in S224 to satisfy production debugging requirements.
 func DefaultLokiConfig() *LokiConfig {
 	return &LokiConfig{
-		RetentionPeriod:    "168h",
+		RetentionPeriod:    "720h",
 		MaxChunkAge:        "1h",
 		MultiTenantEnabled: false,
 		RuleEngineEnabled:  true,

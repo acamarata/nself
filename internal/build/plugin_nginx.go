@@ -2,7 +2,7 @@ package build
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -101,7 +101,7 @@ func InjectPluginNginxRoutes(workdir, pluginDir string, cfg *config.Config) (int
 			// Warn on route conflicts but do not block — plugin may be
 			// replacing its own config on update.
 			if err := checkPluginRouteConflict(workdir, pluginName, destName); err != nil {
-				log.Printf("warning: %s (plugin %s) — proceeding anyway", err, pluginName)
+				slog.Warn("plugin nginx route conflict — proceeding anyway", "plugin", pluginName, "err", err)
 			}
 
 			if err := os.WriteFile(destPath, []byte(rendered), 0644); err != nil {

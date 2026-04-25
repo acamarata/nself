@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -80,10 +80,10 @@ func CheckCompliance(ctx context.Context, name string, port int) *ComplianceResu
 	}
 
 	if !result.Compliant {
-		log.Printf("WARNING: plugin %q does not implement the standard interface contract", name)
+		slog.Warn("plugin does not implement the standard interface contract", "plugin", name)
 		for _, ep := range result.Endpoints {
 			if !ep.Available {
-				log.Printf("  missing endpoint: %s", ep.Path)
+				slog.Warn("plugin missing required endpoint", "plugin", name, "endpoint", ep.Path)
 			}
 		}
 	}

@@ -39,6 +39,10 @@ type ScrapeTarget struct {
 	// Labels are additional static labels attached to every scraped series.
 	// Common use: {"plugin": "ai", "tier": "pro"}.
 	Labels map[string]string
+
+	// BearerToken, when set, is sent as an Authorization: Bearer header.
+	// Used by Hasura /v1/metrics which requires HASURA_GRAPHQL_METRICS_SECRET.
+	BearerToken string
 }
 
 // PrometheusConfig captures everything needed to render prometheus.yml.
@@ -72,7 +76,8 @@ func Defaults() *PrometheusConfig {
 }
 
 // BuiltinTargets returns the monitoring targets that ship with every nSelf
-// stack: Prometheus itself, node-exporter, cadvisor, postgres-exporter, etc.
+// stack: Prometheus itself, node-exporter, cadvisor, postgres-exporter, plus
+// Hasura /v1/metrics, MinIO cluster metrics, and Auth /metrics.
 // Plugin targets are appended by the caller.
 func BuiltinTargets() []ScrapeTarget {
 	return []ScrapeTarget{
@@ -82,6 +87,36 @@ func BuiltinTargets() []ScrapeTarget {
 		{JobName: "postgres", ServiceName: "postgres-exporter", Port: 9187, Path: "/metrics"},
 		{JobName: "redis", ServiceName: "redis-exporter", Port: 9121, Path: "/metrics"},
 		{JobName: "nginx", ServiceName: "nginx", Port: 9113, Path: "/metrics"},
+		// Hasura GraphQL Engine Prometheus metrics endpoint.
+		// Requires HASURA_GRAPHQL_METRICS_SECRET set in the hasura service env.
+		// The bearer token is injected at build time from that env var.
+		{
+			JobName:     "hasura",
+			ServiceName: "hasura",
+			Port:        8080,
+			Path:        "/v1/metrics",
+			Interval:    "30s",
+			Labels:      map[string]string{"service": "hasura"},
+			BearerToken: "${HASURA_GRAPHQL_METRICS_SECRET}",
+		},
+		// MinIO S3-compatible storage cluster metrics.
+		{
+			JobName:     "minio",
+			ServiceName: "minio",
+			Port:        9000,
+			Path:        "/minio/v2/metrics/cluster",
+			Interval:    "30s",
+			Labels:      map[string]string{"service": "minio"},
+		},
+		// Auth service Prometheus metrics.
+		{
+			JobName:     "auth",
+			ServiceName: "auth",
+			Port:        4000,
+			Path:        "/metrics",
+			Interval:    "30s",
+			Labels:      map[string]string{"service": "auth"},
+		},
 	}
 }
 
@@ -134,6 +169,10 @@ scrape_configs:
     scrape_interval: {{.Interval}}
 {{- end}}
     metrics_path: {{if .Path}}{{.Path}}{{else}}/metrics{{end}}
+{{- if .BearerToken}}
+    authorization:
+      credentials: {{.BearerToken}}
+{{- end}}
     static_configs:
       - targets:
           - {{.ServiceName}}:{{.Port}}

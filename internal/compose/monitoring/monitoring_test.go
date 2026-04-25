@@ -19,13 +19,36 @@ func TestRenderPrometheusYAMLIncludesBuiltins(t *testing.T) {
 		"job_name: node",
 		"job_name: postgres",
 		"job_name: nginx",
+		"job_name: hasura",
+		"job_name: minio",
+		"job_name: auth",
 		"scrape_interval: 15s",
 		"alertmanager:9093",
+		// Hasura metrics path and bearer token placeholder
+		"/v1/metrics",
+		"HASURA_GRAPHQL_METRICS_SECRET",
+		// MinIO cluster metrics path
+		"/minio/v2/metrics/cluster",
 	}
 	for _, w := range wants {
 		if !strings.Contains(s, w) {
 			t.Fatalf("expected rendered config to contain %q\n---\n%s", w, s)
 		}
+	}
+}
+
+func TestRenderPrometheusYAMLBearerToken(t *testing.T) {
+	cfg := Defaults()
+	out, err := RenderPrometheusYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "authorization:") {
+		t.Fatalf("expected authorization block for hasura target\n---\n%s", s)
+	}
+	if !strings.Contains(s, "credentials: ${HASURA_GRAPHQL_METRICS_SECRET}") {
+		t.Fatalf("expected bearer token placeholder in authorization block\n---\n%s", s)
 	}
 }
 
@@ -82,7 +105,7 @@ func TestRenderLokiYAMLDefaults(t *testing.T) {
 	s := string(out)
 
 	wants := []string{
-		"retention_period: 168h",
+		"retention_period: 720h",
 		"auth_enabled: false",
 		"ruler:",
 		"enable_api: true",
