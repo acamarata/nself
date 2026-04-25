@@ -128,6 +128,8 @@ func init() {
 	pluginInstallCmd.Flags().String("version", "", "Install a specific version")
 	pluginInstallCmd.Flags().Bool("force", false, "Required when using NSELF_LICENSE_SKIP_VERIFY; explicit acknowledgment of skipped validation")
 	pluginInstallCmd.Flags().Bool("allow-eol", false, "Allow installing an EOL plugin (not recommended)") // S58-T03
+	pluginInstallCmd.Flags().Bool("preview", false, "Preview the dependency tree without installing")
+	pluginInstallCmd.Flags().Bool("with-optional", false, "Include optional dependencies in --preview output")
 
 	// Flags on update.
 	pluginUpdateCmd.Flags().Bool("allow-eol", false, "Allow updating to/from an EOL plugin (not recommended)") // S58-T03
@@ -250,6 +252,8 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
 	force, _ := cmd.Flags().GetBool("force")
 	allowEOL, _ := cmd.Flags().GetBool("allow-eol") // S58-T03
+	preview, _ := cmd.Flags().GetBool("preview")
+	withOptional, _ := cmd.Flags().GetBool("with-optional")
 
 	// Security gate: NSELF_LICENSE_SKIP_VERIFY=1 requires --force as explicit acknowledgment.
 	// Standalone skip (without --force) is rejected to prevent accidental bypass in scripts.
@@ -272,6 +276,11 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	registryURL := os.Getenv("NSELF_PLUGIN_REGISTRY")
 	if err := plugin.ValidateNetworkAccess(ctx, registryURL); err != nil {
 		return err
+	}
+
+	// --preview: resolve and print the dependency tree, then exit without installing.
+	if preview {
+		return runPluginInstallPreview(ctx, args, registryURL, withOptional)
 	}
 
 	cfg, err := loadConfig()
@@ -685,6 +694,117 @@ func runPluginStatus(cmd *cobra.Command, args []string) error {
 		} else {
 			fmt.Printf("%-20s %s\n", st.Name, st.State)
 		}
+	}
+
+	return nil
+}
+
+// runPluginInstallPreview resolves and prints the full dependency tree for the
+// requested plugins without performing any installation. Called when
+// `nself plugin install --preview` is set.
+//
+// Output format:
+//
+//	Installing <name> will also install:
+//	  ├── ai (required)
+//	  ├── mux (required)
+//	  │   └── ai (already required)
+//	  └── notify (required)
+//	Optional dependencies (not installed):
+//	  ├── voice
+//	  └── browser
+//	Use --with-optional to include these.
+func runPluginInstallPreview(ctx context.Context, names []string, registryURL string, withOptional bool) error {
+	cacheDir := os.Getenv("NSELF_PLUGIN_CACHE")
+	if cacheDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			cacheDir = "/tmp/.nself/cache/plugins"
+		} else {
+			cacheDir = home + "/.nself/cache/plugins"
+		}
+	}
+
+	reg, err := plugin.FetchRegistry(ctx, registryURL, cacheDir)
+	if err != nil {
+		return fmt.Errorf("fetching registry: %w", err)
+	}
+
+	// Build a lookup map: plugin name → manifest.
+	byName := make(map[string]*plugin.PluginManifest, len(reg.Plugins))
+	for i := range reg.Plugins {
+		byName[strings.ToLower(reg.Plugins[i].Name)] = &reg.Plugins[i]
+	}
+
+	// For each requested plugin, print the dep tree.
+	for _, name := range names {
+		lname := strings.ToLower(name)
+		manifest, ok := byName[lname]
+		if !ok {
+			fmt.Printf("Plugin %q not found in registry.\n", name)
+			continue
+		}
+
+		// Traverse required deps, collecting tree lines.
+		seen := map[string]bool{lname: true}
+		expanded := map[string]bool{}
+		var requiredLines []string
+
+		var collectDeps func(m *plugin.PluginManifest, childPrefix string)
+		collectDeps = func(m *plugin.PluginManifest, childPrefix string) {
+			deps := m.Dependencies
+			for i, dep := range deps {
+				dl := strings.ToLower(dep)
+				isLast := i == len(deps)-1
+				connector := "├──"
+				nextChildPrefix := childPrefix + "│   "
+				if isLast {
+					connector = "└──"
+					nextChildPrefix = childPrefix + "    "
+				}
+				note := ""
+				alreadySeen := seen[dl]
+				if alreadySeen {
+					note = " (already required)"
+				} else {
+					seen[dl] = true
+				}
+				requiredLines = append(requiredLines, fmt.Sprintf("%s%s %s (required)%s", childPrefix, connector, dep, note))
+				// Recurse into this dep's own deps if not yet expanded.
+				if !alreadySeen && !expanded[dl] {
+					if child, ok2 := byName[dl]; ok2 {
+						expanded[dl] = true
+						collectDeps(child, nextChildPrefix)
+					}
+				}
+			}
+		}
+
+		fmt.Printf("Installing %s will also install:\n", manifest.Name)
+		if len(manifest.Dependencies) == 0 {
+			fmt.Println("  (no required dependencies)")
+		} else {
+			collectDeps(manifest, "  ")
+			for _, l := range requiredLines {
+				fmt.Println(l)
+			}
+		}
+
+		// Optional deps.
+		if len(manifest.OptionalDependencies) > 0 {
+			fmt.Println("Optional dependencies (not installed):")
+			for i, dep := range manifest.OptionalDependencies {
+				connector := "├──"
+				if i == len(manifest.OptionalDependencies)-1 {
+					connector = "└──"
+				}
+				fmt.Printf("  %s %s\n", connector, dep)
+			}
+			if !withOptional {
+				fmt.Println("  Use --with-optional to include these.")
+			}
+		}
+		fmt.Println()
 	}
 
 	return nil
