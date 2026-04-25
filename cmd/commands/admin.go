@@ -47,10 +47,23 @@ Subcommands:
 	RunE: runAdmin,
 }
 
+var adminStartFlags struct {
+	exposeNetwork bool
+}
+
 var adminStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the Admin service",
-	RunE:  runAdminStart,
+	Long: `Start the nSelf Admin service.
+
+By default the Admin UI is bound to 127.0.0.1:3021 and is only reachable from
+the local machine. Use --expose-network to bind to 0.0.0.0:3021 and make it
+reachable from other hosts on your network.
+
+WARNING: --expose-network must only be used behind a TLS-terminating reverse
+proxy with authentication enabled. Never expose the Admin UI to the public
+internet without additional protection.`,
+	RunE: runAdminStart,
 }
 
 var adminStopFlags struct {
@@ -81,6 +94,7 @@ var adminHealthCmd = &cobra.Command{
 }
 
 func init() {
+	adminStartCmd.Flags().BoolVar(&adminStartFlags.exposeNetwork, "expose-network", false, "Bind to 0.0.0.0 instead of 127.0.0.1 (WARNING: only use behind a TLS reverse proxy)")
 	adminStopCmd.Flags().BoolVar(&adminStopFlags.force, "force", false, "Skip graceful drain and force-stop")
 	adminLogsCmd.Flags().BoolVar(&adminLogsFlags.follow, "follow", false, "Stream logs continuously")
 	adminLogsCmd.Flags().IntVar(&adminLogsFlags.tail, "tail", 100, "Number of recent lines to show")
@@ -129,6 +143,15 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 	port := adminPort()
 	adminURL := "http://localhost:" + port + "/health"
 
+	// --expose-network warning banner. Admin is a local-only tool; binding to
+	// 0.0.0.0 exposes credentials and sensitive operations to the network.
+	if adminStartFlags.exposeNetwork {
+		fmt.Println("WARNING: --expose-network binds Admin to 0.0.0.0:" + port)
+		fmt.Println("         Only use this behind a TLS reverse proxy with authentication.")
+		fmt.Println("         Never expose Admin directly to the public internet.")
+		fmt.Println()
+	}
+
 	// Check if already running.
 	probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	resp, err := http.Get(adminURL) //nolint:noctx // intentional quick probe
@@ -149,6 +172,17 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 	}
 	if err2 := setEnvKeyInFile(envFile, "NSELF_ADMIN_ENABLED", "true"); err2 != nil {
 		return fmt.Errorf("enabling admin: %w", err2)
+	}
+
+	// Set network binding. Default is 127.0.0.1 (loopback only). When
+	// --expose-network is passed, set to 0.0.0.0 so the admin is reachable
+	// from other hosts on the network (use with caution, see warning above).
+	adminBindHost := "127.0.0.1"
+	if adminStartFlags.exposeNetwork {
+		adminBindHost = "0.0.0.0"
+	}
+	if err2 := setEnvKeyInFile(envFile, "NSELF_ADMIN_BIND_HOST", adminBindHost); err2 != nil {
+		return fmt.Errorf("setting admin bind host: %w", err2)
 	}
 
 	// Rebuild.
@@ -175,7 +209,8 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("Admin started at http://localhost:" + port)
+	listenAddr := adminBindHost + ":" + port
+	fmt.Printf("Admin started. Listening on %s\n", listenAddr)
 	return nil
 }
 
