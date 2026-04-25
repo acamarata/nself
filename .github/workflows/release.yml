@@ -14,12 +14,14 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   # Build the release artifacts (tarballs + checksums.txt) on ubuntu-latest.
   # Outputs the checksum digest line so the provenance job can reference it.
+  # Also computes the SHA256 of the source tarball for the Homebrew formula.
   # ────────────────────────────────────────────────────────────────────────
   build:
     name: Build release artifacts
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hashes.outputs.hashes }}
+      source_sha256: ${{ steps.source_sha256.outputs.sha256 }}
     env:
       CGO_ENABLED: 0
 
@@ -82,6 +84,19 @@ jobs:
           chmod +x scripts/verify-tarball-arch.sh
           bash scripts/verify-tarball-arch.sh dist/
           echo "Tarball arch verification passed"
+
+      - name: Compute source tarball SHA256 for Homebrew formula
+        id: source_sha256
+        run: |
+          # The Homebrew formula references the GitHub source archive, not the dist tarballs.
+          # Compute its SHA256 here so the dispatch payload carries it — the formula update
+          # workflow can skip its own download/compute step and use this value directly.
+          TAG="${GITHUB_REF_NAME}"
+          TARBALL_URL="https://github.com/nself-org/cli/archive/refs/tags/${TAG}.tar.gz"
+          echo "Computing SHA256 for ${TARBALL_URL} ..."
+          SHA256=$(curl -fsSL "${TARBALL_URL}" | sha256sum | awk '{print $1}')
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "Source tarball SHA256: ${SHA256}"
 
       - name: Emit artifact hashes for provenance
         id: hashes
@@ -418,7 +433,7 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/homebrew-nself
           event-type: cli-release
-          client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable"}'
+          client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable", "sha256": "${{ needs.build.outputs.source_sha256 }}"}'
 
       - name: Trigger admin Docker rebuild (stable only — CLI↔Admin lockstep per S34-T12)
         if: steps.channel.outputs.channel == 'stable'
