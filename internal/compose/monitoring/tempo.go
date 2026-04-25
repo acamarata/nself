@@ -225,6 +225,19 @@ func TempoComposeService(cfg *TempoConfig) map[string]interface{} {
 			"nself.service":              "tempo",
 			"nself.monitoring":           "true",
 		},
+		// CPU limits prevent Tempo's trace ingestion from starving other services
+		// under load. 0.5 CPU cap with 0.1 reservation matches the nSelf default
+		// for optional services (M-03, P96 W1G MEDIUM fix).
+		"deploy": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"limits": map[string]interface{}{
+					"cpus": "0.5",
+				},
+				"reservations": map[string]interface{}{
+					"cpus": "0.1",
+				},
+			},
+		},
 	}
 }
 
@@ -257,6 +270,18 @@ func OTELCollectorComposeService(cfg *OTELCollectorConfig) map[string]interface{
 			"com.docker.compose.project": "${NSELF_PROJECT_NAME}",
 			"nself.service":              "otel-collector",
 			"nself.monitoring":           "true",
+		},
+		// CPU limits prevent the OTEL Collector's batch processor from consuming
+		// unbounded CPU during trace bursts (M-03, P96 W1G MEDIUM fix).
+		"deploy": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"limits": map[string]interface{}{
+					"cpus": "0.5",
+				},
+				"reservations": map[string]interface{}{
+					"cpus": "0.1",
+				},
+			},
 		},
 	}
 }
