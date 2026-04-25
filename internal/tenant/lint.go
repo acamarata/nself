@@ -128,18 +128,35 @@ func LintRLSFull(ctx context.Context, cfg *config.Config, allowlist []AllowlistE
 		return &LintRLSReport{}, nil
 	}
 
-	var rows []struct {
-		Schema      string `json:"schema"`
-		Table       string `json:"table"`
-		HasRLS      bool   `json:"has_rls"`
-		PolicyCount int    `json:"policy_count"`
-		HasUserID   bool   `json:"has_user_id"`
-		HasTenantID bool   `json:"has_tenant_id"`
-	}
+	var rows []lintRow
 	if err := json.Unmarshal([]byte(raw), &rows); err != nil {
 		return nil, fmt.Errorf("parsing RLS lint results: %w", err)
 	}
 
+	report := buildLintReport(rows, allowlist)
+
+	// Fetch coverage matrix (table x role).
+	matrix, err := fetchCoverageMatrix(ctx, container, user, db, rows)
+	if err == nil {
+		report.CoverageMatrix = matrix
+	}
+
+	return report, nil
+}
+
+// lintRow is the JSON shape returned by the RLS audit query.
+type lintRow struct {
+	Schema      string `json:"schema"`
+	Table       string `json:"table"`
+	HasRLS      bool   `json:"has_rls"`
+	PolicyCount int    `json:"policy_count"`
+	HasUserID   bool   `json:"has_user_id"`
+	HasTenantID bool   `json:"has_tenant_id"`
+}
+
+// buildLintReport converts raw query rows + allowlist into a LintRLSReport.
+// Extracted for testability — no I/O, pure deterministic logic.
+func buildLintReport(rows []lintRow, allowlist []AllowlistEntry) *LintRLSReport {
 	// Build allowlist lookup.
 	allowed := make(map[string]string) // "schema.table" -> reason
 	for _, a := range allowlist {
@@ -185,25 +202,11 @@ func LintRLSFull(ctx context.Context, cfg *config.Config, allowlist []AllowlistE
 		report.Tables = append(report.Tables, lr)
 	}
 	report.TotalTables = len(report.Tables)
-
-	// Fetch coverage matrix (table x role).
-	matrix, err := fetchCoverageMatrix(ctx, container, user, db, rows)
-	if err == nil {
-		report.CoverageMatrix = matrix
-	}
-
-	return report, nil
+	return report
 }
 
 // fetchCoverageMatrix queries pg_policies to build a table x role matrix.
-func fetchCoverageMatrix(ctx context.Context, container, user, db string, tables []struct {
-	Schema      string `json:"schema"`
-	Table       string `json:"table"`
-	HasRLS      bool   `json:"has_rls"`
-	PolicyCount int    `json:"policy_count"`
-	HasUserID   bool   `json:"has_user_id"`
-	HasTenantID bool   `json:"has_tenant_id"`
-}) ([]CoverageEntry, error) {
+func fetchCoverageMatrix(ctx context.Context, container, user, db string, tables []lintRow) ([]CoverageEntry, error) {
 	sql := `SELECT json_agg(row_to_json(t)) FROM (
 		SELECT schemaname AS schema, tablename AS table,
 		       policyname AS policy, roles

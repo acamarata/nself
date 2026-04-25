@@ -29,7 +29,10 @@ const (
 // Pre-expiry warning thresholds (S132-T01 / T02).
 const (
 	// PreExpiryWarnStart is when the "N day(s) to expire" warning starts.
-	PreExpiryWarnStart = 7 * 24 * time.Hour
+	// Must be shorter than the shortest paid TTL (Pro = 7 days) so that a
+	// freshly-fetched Pro cache does not immediately trigger the warning.
+	// A 2-day window gives enough runway without false positives.
+	PreExpiryWarnStart = 2 * 24 * time.Hour
 
 	// PreExpiryWarnEnd is when the warning stops (cache has expired).
 	PreExpiryWarnEnd = 0
