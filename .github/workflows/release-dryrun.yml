@@ -1,0 +1,201 @@
+name: Release Dry-Run Gate
+
+# Runs on release/vX.Y.Z branches BEFORE a tag is cut.
+# Validates that the full release pipeline would succeed: build, arch verification,
+# homebrew lockstep, SBOM generation, and version-lockstep (CLI ↔ Admin).
+#
+# Purpose: catch release failures before they appear on a published tag.
+# After all checks pass, the engineer cuts the tag manually (or automation cuts it).
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+  pull_request:
+    branches:
+      - 'release/v*'
+
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # Extract the intended version from the branch name (release/vX.Y.Z).
+  # All subsequent jobs reference this output to validate consistency.
+  # ────────────────────────────────────────────────────────────────────────
+  extract-version:
+    name: Extract release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+    steps:
+      - id: ver
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          # branch is "release/vX.Y.Z" — strip the prefix
+          tag="${branch#release/}"
+          version="${tag#v}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Branch: ${branch} → tag: ${tag}, version: ${version}"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Full build matrix dry-run: compiles all platforms, verifies arch labels.
+  # Mirrors the `build` job in release.yml exactly so there are no surprises.
+  # ────────────────────────────────────────────────────────────────────────
+  build-dryrun:
+    name: Build dry-run (all platforms)
+    runs-on: ubuntu-latest
+    needs: extract-version
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-1.25-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-1.25-
+
+      - name: Stamp version from branch
+        run: echo "${{ needs.extract-version.outputs.version }}" > .github/VERSION
+
+      - name: Build dist
+        run: make dist
+
+      - name: Verify tarball arch matches filename
+        run: |
+          chmod +x scripts/verify-tarball-arch.sh
+          bash scripts/verify-tarball-arch.sh dist/
+          echo "Arch verification passed"
+
+      - name: Emit checksums preview
+        working-directory: dist
+        run: |
+          sha256sum *.tar.gz | tee checksums-preview.txt
+          echo "Total tarballs: $(ls *.tar.gz | wc -l)"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Version lockstep: CLI version.go must match admin/package.json.
+  # Runs the same check as scripts/check-version-lockstep.sh.
+  # ────────────────────────────────────────────────────────────────────────
+  version-lockstep:
+    name: Version lockstep check (CLI ↔ Admin)
+    runs-on: ubuntu-latest
+    needs: extract-version
+    steps:
+      - name: Checkout CLI repo
+        uses: actions/checkout@v4
+
+      - name: Checkout Admin repo
+        uses: actions/checkout@v4
+        with:
+          repository: nself-org/admin
+          path: admin-repo
+          token: ${{ github.token }}
+
+      - name: Check version lockstep
+        env:
+          EXPECTED_VERSION: ${{ needs.extract-version.outputs.version }}
+        run: |
+          chmod +x scripts/check-version-lockstep.sh
+          # Pass admin path as override
+          ADMIN_PKG_JSON="admin-repo/package.json" bash scripts/check-version-lockstep.sh
+          echo "Lockstep: CLI and Admin both at $EXPECTED_VERSION"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Homebrew formula lockstep: formula version must already match the branch.
+  # Warns rather than blocks — the formula may be updated in the same PR.
+  # ────────────────────────────────────────────────────────────────────────
+  homebrew-lockstep-dryrun:
+    name: Homebrew formula lockstep (dry-run)
+    runs-on: ubuntu-latest
+    needs: extract-version
+    steps:
+      - name: Check formula version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_VERSION: ${{ needs.extract-version.outputs.version }}
+        run: |
+          echo "Expected version: ${EXPECTED_VERSION}"
+
+          FORMULA_CONTENT=$(gh api \
+            repos/nself-org/homebrew-nself/contents/Formula/nself.rb \
+            --jq '.content' | base64 -d 2>/dev/null || echo "")
+
+          if [ -z "$FORMULA_CONTENT" ]; then
+            echo "WARNING: Could not fetch Formula/nself.rb — skipping lockstep check"
+            echo "  (This is acceptable in dry-run; the real release gate will fail hard)"
+            exit 0
+          fi
+
+          FORMULA_VERSION=$(printf '%s' "$FORMULA_CONTENT" \
+            | grep -E '^\s*version\s+"[0-9]+\.[0-9]+\.[0-9]+"' \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+            | head -1)
+
+          echo "Formula version: ${FORMULA_VERSION}"
+
+          if [ "${FORMULA_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "WARNING: Homebrew formula is at v${FORMULA_VERSION}, branch targets v${EXPECTED_VERSION}"
+            echo "  Update Formula/nself.rb before cutting the tag."
+            echo "  (This is a warning here; release.yml will fail hard on tag push.)"
+            # Non-fatal in dry-run — formula may land in same batch
+            exit 0
+          fi
+
+          echo "Homebrew lockstep confirmed: ${FORMULA_VERSION} == ${EXPECTED_VERSION}"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # SBOM dry-run: ensure syft generates successfully on the branch.
+  # ────────────────────────────────────────────────────────────────────────
+  sbom-dryrun:
+    name: SBOM generation dry-run
+    runs-on: ubuntu-latest
+    needs: extract-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOM — SPDX
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom-dryrun.spdx.json
+
+      - name: Generate SBOM — CycloneDX
+        run: |
+          syft packages . --output cyclonedx-json=sbom-dryrun.cdx.json
+          echo "SPDX size:    $(wc -c < sbom-dryrun.spdx.json) bytes"
+          echo "CycloneDX size: $(wc -c < sbom-dryrun.cdx.json) bytes"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Summary gate: all dry-run checks must pass before a tag may be cut.
+  # ────────────────────────────────────────────────────────────────────────
+  dryrun-gate:
+    name: Dry-run gate (all checks passed)
+    runs-on: ubuntu-latest
+    needs: [build-dryrun, version-lockstep, homebrew-lockstep-dryrun, sbom-dryrun]
+    steps:
+      - name: Gate passed
+        run: |
+          echo "All release dry-run checks passed for ${{ needs.extract-version.outputs.tag || github.ref_name }}"
+          echo "Safe to cut the tag when homebrew lockstep is also confirmed."
