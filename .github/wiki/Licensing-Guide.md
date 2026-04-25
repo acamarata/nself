@@ -18,19 +18,15 @@ You can run a full production stack (Postgres, Hasura, Auth, Nginx, monitoring, 
 
 Pro plugins are source-available Rust binaries distributed through the nSelf plugin system. They require a valid license key.
 
-### Seven-Tier Membership
+### Per-Bundle Pricing
 
-| Tier | Monthly | Annual | What You Get |
-|------|---------|--------|-------------|
+| Option | Monthly | Annual | What You Get |
+|--------|---------|--------|-------------|
 | **Free** | $0 | $0 | Core CLI + 25 free plugins |
-| **Basic** | $0.99/mo | $9.99/yr | All 62 Pro plugins |
-| **Pro** | $1.99/mo | $19.99/yr | Basic + full AI suite (ai, claw, claw-web, mux, voice, browser) |
-| **Elite** | $4.99/mo | $49.99/yr | Pro + email support |
-| **Business** | $9.99/mo | $99.99/yr | Elite + 24-hour email support + priority feature requests |
-| **Business+** | $49.99/mo | $499.99/yr | Business + dedicated support channel + custom plugin priority |
-| **Enterprise** | $99.99/mo | $999.99/yr | Business+ + managed DevOps |
+| **Any single bundle** | $0.99/mo | $9.99/yr | All plugins in that bundle (nClaw, nChat, nTV, nFamily, or ClawDE) |
+| **ɳSelf+** | $3.99/mo | $39.99/yr | All 5 bundles + all apps + support |
 
-Annual pricing gives roughly 17% discount versus monthly. Existing $9.99/yr keys are grandfathered to the Basic tier.
+Annual gives roughly 16% savings versus monthly (about 2 months free).
 
 ---
 
@@ -55,8 +51,8 @@ AI personal assistant. Requires Pro tier (includes AI suite).
 | cron | Scheduled tasks |
 | post | Social media publishing |
 
-### nMedia Bundle
-Media server and player. Available at Basic tier.
+### nTV Bundle
+Media server and player. Available at $0.99/mo or $9.99/yr.
 
 **Free plugins (4):** torrent-manager, content-acquisition, content-progress, subtitle-manager
 **Pro plugins (8):** media-processing, file-processing, streaming, stream-gateway, epg, tmdb, recording, transcoder
@@ -87,18 +83,18 @@ Private family social media. Will be available at Basic tier.
 | cms | Family pages |
 | chat | Family messaging |
 
-### ClawDE+ Bundle (Planned)
-AI dev environment cloud sync. Will require Pro tier.
+### ClawDE Bundle
+AI dev environment cloud sync. Available at $0.99/mo or $9.99/yr.
 
-Remote/mobile sync via API for the ClawDE Flutter desktop and mobile app.
+Remote and mobile sync via API for the ClawDE Flutter desktop and mobile app.
 
 ---
 
-## ɳSelf+ ($49/yr)
+## ɳSelf+ ($3.99/mo or $39.99/yr)
 
-The all-access subscription. Includes every plugin bundle, every product, and priority support. One key unlocks the entire ecosystem.
+The all-access subscription. Includes every plugin bundle, every product, and support via chat.nself.org or the nChat app. One key unlocks the entire ecosystem.
 
-ɳSelf+ costs less than buying individual bundles if you use three or more products. It is planned but not yet available for purchase.
+ɳSelf+ costs less than buying individual bundles if you use three or more products.
 
 ---
 

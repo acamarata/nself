@@ -1,19 +1,19 @@
-# ClawDE+ Plugin Bundle
+# ClawDE Plugin Bundle
 
 ## Contents
 
-- [What Is ClawDE+](#what-is-clawde)
+- [What Is ClawDE](#what-is-clawde)
 - [Plugins Included](#plugins-included)
 - [How They Work Together](#how-they-work-together)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Related Pages](#related-pages)
 
-## What Is ClawDE+
+## What Is ClawDE
 
-ClawDE+ is the marketing name for the bundle of plugins that adds cloud sync, mobile twin, premium models, and team features to [ClawDE](https://github.com/nself-org/clawde) — the AI dev environment (Flutter desktop + mobile).
+ClawDE is the marketing name for the bundle of plugins that adds cloud sync, mobile twin, premium models, and team features to [ClawDE](https://github.com/nself-org/clawde) — the AI dev environment (Flutter desktop + mobile).
 
-ClawDE itself runs free locally with limited functionality. The ClawDE+ bundle unlocks server-side sync between desktop and mobile, premium model access, and team workspaces.
+ClawDE itself runs free locally with limited functionality. The ClawDE bundle unlocks server-side sync between desktop and mobile, premium model access, and team workspaces.
 
 **Status note:** Bundle membership is provisional pending user verification (see [F06-BUNDLE-INVENTORY](https://github.com/nself-org/nself/blob/main/.claude/docs/sport/F06-BUNDLE-INVENTORY.md)). The plugin list below is the candidate set per F06's open question.
 
@@ -58,7 +58,7 @@ ClawDE Desktop ↔ realtime ↔ ClawDE Mobile
 ## Installation
 
 ```bash
-# Basic tier or higher (all ClawDE+ plugins are tier: pro)
+# Basic tier or higher (all ClawDE plugins are tier: pro)
 nself license set nself_pro_xxxxx...
 nself plugin install realtime auth cms notify
 
@@ -66,7 +66,7 @@ nself plugin install realtime auth cms notify
 nself build && nself start
 ```
 
-ClawDE+ subscription is $1.99/mo or $19.99/yr (separately bundled — see [Plugin-Licensing](Plugin-Licensing)).
+ClawDE subscription is $0.99/mo or $9.99/yr (separately bundled — see [Plugin-Licensing](Plugin-Licensing)).
 
 ## Getting Started
 
@@ -74,7 +74,7 @@ ClawDE+ subscription is $1.99/mo or $19.99/yr (separately bundled — see [Plugi
 
 - nSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
-- ClawDE+ subscription
+- ClawDE subscription
 - ClawDE desktop installed locally; ClawDE mobile installed on at least one device
 
 ### Step 1: Install the plugins

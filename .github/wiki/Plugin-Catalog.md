@@ -86,7 +86,7 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 | [[plugin-photos]] | Photo library |
 | [[plugin-social]] | Private social feed |
 
-### nMedia bundle ($0.99/mo)
+### nTV bundle ($0.99/mo)
 
 | Plugin | Description |
 |--------|-------------|
