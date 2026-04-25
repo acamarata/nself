@@ -301,3 +301,33 @@ P94 Wave 5 patch. Unified auth complete (O01-O08), Claw BIOS Layers 1+2, plugin-
 - **48h soak harness** (R01-T05) — `cli/.github/workflows/soak.yml` canary traffic replay + latency regression gate.
 - **CI status badges** (R01-T06) — All repos updated via `.github/workflows/badges.yml`.
 
+
+
+---
+
+## [1.0.12] - 2026-04-25
+
+P96 CRUNCH phase — golden-path E2E, release CLI, security hardening, plugin SDK migration, doctor/trust idempotency, and ship-readiness fixes.
+
+### Added
+
+- **`nself release` subcommand**: full 12-step release cascade automation — validates semver, coordinates CLI + admin + homebrew + ping_api + Docker Hub + registries in a single command (P96 T9).
+- **Golden-path E2E test suite**: end-to-end scenario covering `nself init → build → start → plugin install → doctor → update → release` on a clean machine. Blocks CI on regression (P96 T10).
+- **`nself doctor` coverage push**: 80%+ branch coverage on all doctor check functions; 100% on security-critical paths (P96 T10).
+- **plugin-sdk-go migration**: all built-in plugin scaffolding and generated plugin stubs now reference the public `plugin-sdk-go` package (P96).
+- **sport.json regen**: `nself release` triggers SPORT regeneration to keep F01-F15 ground-truth files in sync with the new binary (P96).
+
+### Changed
+
+- **Version bumped to v1.0.12** (lockstep with admin v1.0.12).
+- **`cli/.github/VERSION`** updated from `1.0.10` to `1.0.12`.
+
+### Fixed
+
+- **`nself trust` / `nself dns-setup` / `nself ssl` idempotency**: state checks now bypass `osascript` entirely when target state is already configured. Eliminates stacked macOS admin dialogs in batch/CRUNCH contexts (P96 idempotency fix — see GCI Admin Prompt Hygiene).
+- **License integrity validation**: `nself license verify` now checks Ed25519 signature against the bundled public key; tampered license files fail deterministically (P96 T4).
+- **`nself install` UX**: progress output now streams line-by-line; spinner shows step name; error messages include remediation hint (P96 T9).
+
+### Security
+
+- **`nself doctor --security` hardening sweep** added to golden-path E2E. Runs SSRF guard, RLS audit, JWT key rotation check, and WAF config check — free tier, no license required.
