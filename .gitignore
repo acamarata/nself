@@ -68,3 +68,6 @@ node_modules/
 .windsurf/
 .gemini/
 .codeium/
+
+# Vercel CLI artifacts (accidental link — cli is Go binary, not a Vercel project)
+.vercel/
