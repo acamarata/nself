@@ -7,6 +7,7 @@ import (
 
 	"github.com/nself-org/cli/cmd/commands"
 	"github.com/nself-org/cli/internal/plugin"
+	"github.com/nself-org/cli/internal/ux"
 )
 
 func main() {
@@ -15,7 +16,15 @@ func main() {
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.Code)
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
+		// Route structured UXErrors through the rich renderer.
+		// Plain errors fall back to the simple "Error: ..." format.
+		var uxErr *ux.UXError
+		if errors.As(err, &uxErr) {
+			uxErr.Print()
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }

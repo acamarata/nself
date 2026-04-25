@@ -175,7 +175,14 @@ main() {
     custom) install_dir="$custom_dir" ;;
   esac
 
-  printf "\n${BOLD}nSelf CLI Installer${RESET}\n\n"
+  # ASCII banner
+  printf "\n${BOLD}"
+  printf "  ___  _____ ___ _  __ \n"
+  printf " | _ \/ ____|  _| |/ _|\n"
+  printf " |  _/\__ \| |_| |  _| \n"
+  printf " |_|  |____/|___|_|_|  \n"
+  printf "${RESET}\n"
+  printf "  ${BOLD}nSelf CLI Installer${RESET}\n\n"
 
   # Detect platform
   local os arch version
@@ -242,6 +249,36 @@ main() {
     ensure_in_path "$install_dir"
   fi
 
+  # Post-install smoke test
+  printf "\n${BOLD}Running post-install checks...${RESET}\n"
+  local smoke_ok=true
+
+  # Smoke 1: version
+  if "$install_path" version --short > /dev/null 2>&1; then
+    local installed_ver
+    installed_ver=$("$install_path" version --short 2>/dev/null || echo "unknown")
+    success "nself --version: ${installed_ver}"
+  else
+    warn "nself --version check failed — binary may not be executable"
+    smoke_ok=false
+  fi
+
+  # Smoke 2: quick doctor (non-fatal; informational)
+  if "$install_path" doctor --quick > /dev/null 2>&1; then
+    success "nself doctor --quick: OK"
+  else
+    warn "nself doctor --quick: one or more checks failed (run manually for details)"
+    smoke_ok=false
+  fi
+
+  if [ "$smoke_ok" = "false" ]; then
+    printf "\n${YELLOW}⚠${RESET}  Some checks failed. Run ${BOLD}nself doctor${RESET} for details.\n"
+    printf "   If issues persist, enable diagnostics:\n"
+    printf "   ${DIM}NSELF_DIAG=1 nself doctor --deep 2>&1 | tee /tmp/nself-diag.txt${RESET}\n"
+    printf "   Then share /tmp/nself-diag.txt when reporting an issue:\n"
+    printf "   ${DIM}https://github.com/${REPO}/issues/new${RESET}\n\n"
+  fi
+
   # Verify installed version
   printf "\n"
   "$install_path" version
@@ -254,10 +291,22 @@ main() {
   printf "  nself start\n"
   printf "\n"
 
-  # Homebrew hint for macOS
+  # Homebrew hint for macOS — with Postgres conflict warning
   if [ "$os" = "darwin" ]; then
     printf "${DIM}Tip: You can also install via Homebrew:${RESET}\n"
     printf "${DIM}  brew install ${HOMEBREW_TAP}/nself${RESET}\n\n"
+
+    # Homebrew Postgres conflict hint
+    if command -v brew > /dev/null 2>&1; then
+      if brew list postgresql@14 > /dev/null 2>&1 || brew list postgresql@15 > /dev/null 2>&1 || brew list postgresql > /dev/null 2>&1; then
+        printf "${YELLOW}⚠${RESET}  Homebrew Postgres detected.\n"
+        printf "   nSelf runs its own Postgres in Docker — port 5432 may conflict.\n"
+        printf "   Stop Homebrew Postgres before running nself start:\n"
+        printf "     ${DIM}brew services stop postgresql@15${RESET}\n"
+        printf "   Or configure a different port in your .env (POSTGRES_PORT=5433).\n"
+        printf "   Run ${BOLD}nself doctor${RESET} after init to check for port conflicts.\n\n"
+      fi
+    fi
   fi
 }
 

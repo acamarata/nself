@@ -202,6 +202,7 @@ Exit codes:
 		}
 		checks = append(checks, checkPorts(verbose)...)
 		checks = append(checks, checkServicePortConflicts(cwd, verbose)...)
+		checks = append(checks, checkHomebrewPostgres(verbose)...)
 
 		// 6. Configuration
 		if !jsonOut {

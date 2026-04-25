@@ -119,6 +119,9 @@ Exit codes:
 			}
 		}
 
+		// State-aware suggestions.
+		printStatusSuggestions(report)
+
 		// Exit code: 2 if any unhealthy, 1 if some in intermediate state.
 		if report.Unhealthy > 0 {
 			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
@@ -264,6 +267,47 @@ func wrapDockerError(err error, containerName string) error {
 		return fmt.Errorf("container %s is not running — try: nself start", containerName)
 	}
 	return fmt.Errorf("failed to inspect container %s: %w", containerName, err)
+}
+
+// printStatusSuggestions prints state-aware next-step hints based on the
+// health report. All-healthy gets a positive nudge; partial/unhealthy gets
+// targeted fix commands.
+func printStatusSuggestions(report *health.HealthReport) {
+	if report.Unhealthy == 0 && report.Healthy == report.Total {
+		// All healthy — encourage next action.
+		fmt.Println()
+		fmt.Printf("  %s All services healthy. Try: %s\n",
+			ui.C(ui.Green, ui.IconSuccess),
+			ui.C(ui.Cyan, "nself plugin list"),
+		)
+		return
+	}
+
+	// Collect names of unhealthy services.
+	var unhealthyNames []string
+	for _, r := range report.Results {
+		if r.Status != "healthy" {
+			unhealthyNames = append(unhealthyNames, r.Service)
+		}
+	}
+	if len(unhealthyNames) == 0 {
+		return
+	}
+
+	fmt.Println()
+	fmt.Printf("  %s %d service(s) not healthy: %s\n",
+		ui.C(ui.Yellow, ui.IconWarning),
+		len(unhealthyNames),
+		strings.Join(unhealthyNames, ", "),
+	)
+	fmt.Printf("  %s Run %s for diagnostics\n",
+		ui.C(ui.Blue, ui.IconArrow),
+		ui.C(ui.Cyan, "nself doctor"),
+	)
+	fmt.Printf("  %s Run %s to see service logs\n",
+		ui.C(ui.Blue, ui.IconArrow),
+		ui.C(ui.Cyan, "nself logs "+unhealthyNames[0]),
+	)
 }
 
 func init() {

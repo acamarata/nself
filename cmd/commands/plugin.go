@@ -317,6 +317,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(os.Stderr, "Plugin %q installed successfully.\n", name)
 		installedCount++
+		printPluginPostInstallHint(name)
 
 		// S20: Fire install telemetry for free-tier keys (non-blocking).
 		currentKey := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")

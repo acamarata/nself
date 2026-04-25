@@ -4,10 +4,12 @@ DIST_DIR := dist
 VERSION := $(shell cat .github/VERSION 2>/dev/null || git describe --tags 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+NSELF_LICENSE_PUBKEY_HEX ?=
 LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.Version=$(VERSION) \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
-	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
+	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE) \
+	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 
 .PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom
 

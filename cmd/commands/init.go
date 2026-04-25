@@ -64,6 +64,8 @@ func init() {
 	f.String("domain", "", "Base domain (skips interactive domain selection, e.g. myapp.dev)")
 	f.String("profile", "", "Resource profile: 'tiny' for small VPS (Postgres+nginx only)")
 	f.Bool("no-pgvector", false, "Skip pgvector extension and RAG scaffold tables (sets PGVECTOR_ENABLED=false)")
+	f.String("preset", "", "Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting")
+	f.Bool("list-presets", false, "List all available project presets and exit")
 
 	RootCmd.AddCommand(initCmd)
 }
@@ -82,6 +84,23 @@ func runInit(cmd *cobra.Command, args []string) error {
 	name, _ := cmd.Flags().GetString("name")
 	domainFlag, _ := cmd.Flags().GetString("domain")
 	noPgvector, _ := cmd.Flags().GetBool("no-pgvector")
+	preset, _ := cmd.Flags().GetString("preset")
+	listPresets, _ := cmd.Flags().GetBool("list-presets")
+
+	// --list-presets: print preset catalog and exit.
+	if listPresets {
+		listInitPresets()
+		return nil
+	}
+
+	// Validate --preset if given.
+	if preset != "" {
+		if _, ok := initPresets[preset]; !ok {
+			fmt.Fprintf(os.Stderr, "%s Unknown preset %q.\n", ui.C(ui.Yellow, ui.IconWarning), preset)
+			listInitPresets()
+			return fmt.Errorf("unknown preset %q — see presets above", preset)
+		}
+	}
 
 	// Sanitize user-supplied --name before it enters the config system.
 	if name != "" {
@@ -266,9 +285,24 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Next steps.
 	ui.Section("Next steps")
-	fmt.Printf("  1. %s  %s Set up unlimited AI in 30 seconds\n", ui.C(ui.Bold, "nself doctor --ai"), ui.C(ui.Dim, ui.IconArrow))
-	fmt.Printf("  2. %s  %s Launch your backend\n", ui.C(ui.Bold, "nself start"), ui.C(ui.Dim, ui.IconArrow))
+	fmt.Printf("  1. %s  %s Verify environment (Docker, ports, config)\n",
+		ui.C(ui.Bold, "nself doctor"), ui.C(ui.Dim, ui.IconArrow))
+	fmt.Printf("  2. %s  %s Launch your backend stack\n",
+		ui.C(ui.Bold, "nself start"), ui.C(ui.Dim, ui.IconArrow))
+	fmt.Printf("  3. %s  %s Live health dashboard\n",
+		ui.C(ui.Bold, "nself status"), ui.C(ui.Dim, ui.IconArrow))
+	fmt.Printf("  4. %s  %s Browse available plugins\n",
+		ui.C(ui.Bold, "nself plugin list"), ui.C(ui.Dim, ui.IconArrow))
+	if result.Demo {
+		fmt.Printf("  5. %s  %s Open the admin panel (demo mode)\n",
+			ui.C(ui.Bold, "nself admin start"), ui.C(ui.Dim, ui.IconArrow))
+	}
 	fmt.Println()
+
+	// Preset-specific next steps.
+	if preset != "" {
+		printPresetPostInit(preset)
+	}
 
 	return nil
 }

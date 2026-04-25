@@ -339,12 +339,12 @@ func fetchMigrationInfo(ctx context.Context, key string, pingURL string) (*migra
 
 func productDisplayName(product string) string {
 	names := map[string]string{
-		"claw":   "ηClaw ($0.99/mo)",
-		"chat":   "ηChat ($0.99/mo)",
-		"media":  "nMedia ($0.99/mo)",
+		"claw":   "ɳClaw ($0.99/mo)",
+		"chat":   "ɳChat ($0.99/mo)",
+		"media":  "nTV ($0.99/mo)",
 		"family": "nFamily ($0.99/mo)",
-		"clawde": "ClawDE+ ($0.99/mo)",
-		"plus":   "ηSelf+ ($3.99/mo)",
+		"clawde": "ClawDE ($0.99/mo)",
+		"plus":   "ɳSelf+ ($3.99/mo)",
 		"owner":  "Owner (all access)",
 	}
 	if n, ok := names[product]; ok {

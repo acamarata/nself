@@ -17,6 +17,7 @@ builds:
       - -X github.com/nself-org/cli/internal/version.Version={{ .Version }}
       - -X github.com/nself-org/cli/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/nself-org/cli/internal/version.BuildDate={{ .Date }}
+      - -X github.com/nself-org/cli/internal/license.licensePubKeyHex={{ .Env.NSELF_LICENSE_PUBKEY_HEX }}
     goos:
       - linux
       - darwin

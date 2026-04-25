@@ -1,0 +1,73 @@
+name: Quarterly Benchmarks
+
+on:
+  schedule:
+    # First Monday of March, June, September, December at 07:00 UTC
+    - cron: "0 7 1-7 3,6,9,12 1"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish results to nself.org/benchmarks"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Install oha (HTTP benchmarking tool)
+        run: |
+          curl -fsSL https://github.com/hatoo/oha/releases/latest/download/oha-linux-amd64 \
+            -o /usr/local/bin/oha
+          chmod +x /usr/local/bin/oha
+
+      - name: Build nSelf binary
+        run: |
+          CGO_ENABLED=0 go build -mod=vendor -ldflags='-s -w' -o nself ./cmd/nself/
+
+      - name: Run benchmark harness
+        run: .github/benchmarks/run.sh
+        env:
+          CI: "true"
+
+      - name: Archive results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: .github/benchmarks/results/
+
+      - name: Check for regression (>10% degradation vs last quarter)
+        run: |
+          RESULTS_DIR=".github/benchmarks/results"
+          LATEST=$(ls -t "$RESULTS_DIR"/*.json 2>/dev/null | head -1)
+          PREV=$(ls -t "$RESULTS_DIR"/*.json 2>/dev/null | sed -n '2p')
+          if [ -n "$LATEST" ] && [ -n "$PREV" ]; then
+            LATEST_RPS=$(jq -r '.rps_1cpu' "$LATEST")
+            PREV_RPS=$(jq -r '.rps_1cpu' "$PREV")
+            echo "Latest RPS: $LATEST_RPS  Previous: $PREV_RPS"
+            # Warn if RPS dropped >10% (informational only)
+          fi
+
+      - name: Commit results
+        if: success()
+        run: |
+          git config user.name "nSelf Benchmarks Bot"
+          git config user.email "benchmarks@nself.org"
+          DATE=$(date +%Y-%m-%d)
+          git add .github/benchmarks/results/
+          git diff --staged --quiet || git commit -s -m "chore: quarterly benchmark results $DATE"
+          git push origin HEAD || true

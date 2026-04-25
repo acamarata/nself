@@ -28,7 +28,7 @@ var validProductPrefixes = []ProductPrefix{
 	{"nself_owner_", "owner", "ɳSelf Owner"},
 	{"nself_plus_", "plus", "ɳSelf+"},
 	{"nself_claw_", "claw", "ɳClaw"},
-	{"nself_clawde_", "clawde", "ClawDE+"},
+	{"nself_clawde_", "clawde", "ClawDE"},
 	{"nself_chat_", "chat", "ɳChat"},
 	{"nself_media_", "media", "nTV"},
 	{"nself_family_", "family", "nFamily"},
@@ -99,6 +99,19 @@ func DetectProduct(key string) *ProductPrefix {
 // characters. Delegates to the existing maskKey function.
 func MaskKey(key string) string {
 	return maskKey(key)
+}
+
+// DetectTierFromKey returns the human-readable tier name for a key based on
+// its prefix (e.g. "nself_owner_" → "Owner"). Returns "Unknown" when the
+// prefix is not recognised. Public wrapper for the unexported detectTier in
+// manager.go.
+func DetectTierFromKey(key string) string {
+	for _, pp := range validProductPrefixes {
+		if strings.HasPrefix(key, pp.Prefix) {
+			return pp.DisplayName
+		}
+	}
+	return "Unknown"
 }
 
 // AddKey stores an additional license key. If no keys exist yet, it writes to

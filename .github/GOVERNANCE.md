@@ -22,6 +22,19 @@ Under the maintainer council model, a small group of trusted maintainers (3-7 pe
 
 A lightweight RFC (Request for Comments) process for significant changes is planned for a future release. Until then, major proposals should be opened as GitHub issues with the `proposal` label and discussed before implementation begins. The founder or a CODEOWNER will tag the issue `accepted`, `needs-revision`, or `declined` after discussion.
 
+
+## DCO Sign-Off
+
+nSelf uses the [Developer Certificate of Origin (DCO)](https://developercertificate.org/) instead of a CLA. All contributors must sign off on their commits:
+
+```bash
+git commit -s -m "feat: your change description"
+```
+
+The `-s` flag appends `Signed-off-by: Your Name <you@example.com>` to your commit message.
+
+The DCO is lighter-weight than a CLA: you are certifying that you have the right to submit the contribution and that it can be distributed under the project's MIT license. No paperwork, no corporate approval needed.
+
 ## Community Standards
 
 - All contributors are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
