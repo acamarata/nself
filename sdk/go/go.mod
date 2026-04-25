@@ -1,10 +1,10 @@
 module github.com/nself-org/cli/sdk/go
 
-go 1.23.0
+go 1.25.0
 
 require (
-	github.com/go-chi/chi/v5 v5.2.1
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/go-chi/chi/v5 v5.2.2
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/prometheus/client_golang v1.20.5
 )
 
@@ -20,9 +20,8 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.61.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 )
