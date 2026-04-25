@@ -47,6 +47,30 @@ jobs:
       - name: Stamp version from tag
         run: echo "${GITHUB_REF_NAME#v}" > .github/VERSION
 
+      - name: Version lockstep pre-flight (CLI ↔ Admin)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Fetch admin/package.json via GitHub Contents API (same org, GITHUB_TOKEN has read access)
+          ADMIN_PKG=$(gh api repos/nself-org/admin/contents/package.json \
+            --jq '.content' | base64 -d 2>/dev/null || echo "")
+          if [ -z "${ADMIN_PKG}" ]; then
+            echo "WARNING: Could not fetch admin/package.json — skipping lockstep pre-flight"
+            echo "  (Non-fatal: admin repo may be private with restricted access)"
+            exit 0
+          fi
+          ADMIN_VERSION=$(printf '%s' "${ADMIN_PKG}" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['version'])" 2>/dev/null || echo "")
+          CLI_VERSION="${GITHUB_REF_NAME#v}"
+          echo "CLI version (tag):  ${CLI_VERSION}"
+          echo "Admin version:      ${ADMIN_VERSION}"
+          if [ -n "${ADMIN_VERSION}" ] && [ "${CLI_VERSION}" != "${ADMIN_VERSION}" ]; then
+            echo "VERSION LOCKSTEP FAILED: CLI tag is ${CLI_VERSION} but Admin is at ${ADMIN_VERSION}"
+            echo "Bump admin/package.json to ${CLI_VERSION} before cutting this tag."
+            exit 1
+          fi
+          echo "Lockstep: CLI == Admin == ${CLI_VERSION}"
+
       - name: Build dist
         run: make dist
 
