@@ -84,3 +84,28 @@ jobs:
             echo "::warning::.gitignore missing baseline patterns: ${MISSING[*]}"
             echo "See ~/.claude/CLAUDE.md (Clean Working Tree - Hard Rule) for full baseline."
           fi
+
+      - name: Verify cli/sdk/ contains the 4 language SDK modules (S33-T09)
+        run: |
+          # Sanity check: canonical SDK dirs must exist under cli/sdk/
+          # Canonical location per P96 S33: sdk/{go,py,ts,flutter}
+          MISSING_SDK=()
+          for lang in go py ts flutter; do
+            if [ ! -d "sdk/$lang" ]; then
+              MISSING_SDK+=("sdk/$lang")
+            fi
+          done
+          if [ ${#MISSING_SDK[@]} -gt 0 ]; then
+            echo "::error::cli/sdk/ is missing canonical SDK modules: ${MISSING_SDK[*]}"
+            echo ""
+            echo "All 4 SDK language modules must live under cli/sdk/:"
+            echo "  sdk/go       — Go plugin SDK (github.com/nself-org/cli/sdk/go)"
+            echo "  sdk/py       — Python plugin SDK (nself-plugin-sdk on PyPI)"
+            echo "  sdk/ts       — TypeScript plugin SDK (@nself/plugin-sdk on npm)"
+            echo "  sdk/flutter  — Flutter plugin SDK (nself_plugin_sdk on pub.dev)"
+            echo ""
+            echo "These must NOT be re-created at the project-folder root or as separate repos."
+            echo "Spec: ~/Sites/nself/.claude/CLAUDE.md (Project Folder Hygiene - Hard Rule)"
+            exit 1
+          fi
+          echo "cli/sdk/ sanity check passed: go, py, ts, flutter all present."

@@ -1,0 +1,25 @@
+name: SDK Cross-Import Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  sdk-cross-import-check:
+    name: Verify cli/cmd + cli/internal do not import cli/sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for cross-imports
+        run: |
+          if grep -rE "github.com/nself-org/cli/sdk/" cli/cmd/ cli/internal/ 2>/dev/null; then
+            echo "VIOLATION: cli/cmd or cli/internal imports cli/sdk — isolation boundary broken"
+            exit 1
+          fi
+          echo "OK: no cross-imports found"
