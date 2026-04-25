@@ -1,0 +1,33 @@
+# Build outputs
+*.exe
+*.test
+*.prof
+/dist/
+
+# Coverage
+coverage.out
+coverage.html
+
+# Test cache
+.testcache/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/*.local.*
+
+# Go workspace
+go.work
+go.work.sum
+.vscode/*
+.claude/
+.codex/
+.cursor/
+.aider/
+.aider.chat.history.md
+.continue/
+.windsurf/
+.gemini/
+.codeium/
