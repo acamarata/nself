@@ -1,0 +1,131 @@
+name: E2E Golden Path
+
+on:
+  schedule:
+    # Every Monday 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip real installs)'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: e2e-golden-path
+  cancel-in-progress: false
+
+jobs:
+  golden-path:
+    name: 13-step golden path smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # Docker-in-Docker so nself start can spin up containers
+      docker:
+        image: docker:24-dind
+        options: --privileged
+        env:
+          DOCKER_TLS_CERTDIR: ''
+        ports:
+          - 2375:2375
+
+    env:
+      DOCKER_HOST: tcp://localhost:2375
+      DOCKER_TLS_VERIFY: ''
+      GOLDEN_PATH_SKIP_CLEANUP: '0'
+      GOLDEN_PATH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go (for any CLI build steps)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Homebrew (Linux)
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo "/home/linuxbrew/.linuxbrew/bin" >> "${GITHUB_PATH}"
+          echo "/home/linuxbrew/.linuxbrew/sbin" >> "${GITHUB_PATH}"
+
+      - name: Wait for Docker daemon
+        run: |
+          for i in $(seq 1 15); do
+            docker info >/dev/null 2>&1 && echo "Docker ready" && break
+            echo "Waiting for Docker... (${i}/15)"
+            sleep 2
+          done
+          docker info
+
+      - name: Run golden-path smoke
+        env:
+          NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}
+        run: bash scripts/golden-path.sh
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-path-report-${{ github.run_id }}
+          path: /tmp/golden-path-report.json
+          retention-days: 90
+
+      - name: Archive result to .github/golden-path-results/
+        if: always()
+        run: |
+          mkdir -p .github/golden-path-results
+          RUN_DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+          RESULT_FILE=".github/golden-path-results/${RUN_DATE}.json"
+          if [ -f /tmp/golden-path-report.json ]; then
+            # Inject run metadata
+            python3 - <<PYEOF
+          import json, os
+          with open("/tmp/golden-path-report.json") as f:
+              report = json.load(f)
+          report["run_id"]   = os.environ.get("GITHUB_RUN_ID", "")
+          report["run_date"] = "${RUN_DATE}"
+          report["sha"]      = os.environ.get("GITHUB_SHA", "")[:12]
+          with open("${RESULT_FILE}", "w") as f:
+              json.dump(report, f, indent=2)
+          PYEOF
+          else
+            echo '{"overall":"unknown","run_date":"'"${RUN_DATE}"'"}' > "${RESULT_FILE}"
+          fi
+          echo "Archived: ${RESULT_FILE}"
+          cat "${RESULT_FILE}"
+
+      - name: Commit archived result
+        if: always() && github.event_name == 'schedule'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/golden-path-results/
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "chore(e2e): archive golden-path result $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Summarise result
+        if: always()
+        run: |
+          if [ -f /tmp/golden-path-report.json ]; then
+            echo "### Golden Path Result" >> "${GITHUB_STEP_SUMMARY}"
+            python3 - <<PYEOF
+          import json
+          with open("/tmp/golden-path-report.json") as f:
+              r = json.load(f)
+          icon = "✅" if r.get("overall") == "pass" else "❌"
+          print(f"| Overall | {icon} {r.get('overall','?').upper()} |")
+          print(f"| Pass    | {r.get('pass',0)} |")
+          print(f"| Fail    | {r.get('fail',0)} |")
+          print(f"| Warn    | {r.get('warn',0)} |")
+          PYEOF
+          fi
