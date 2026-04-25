@@ -16,6 +16,29 @@ import (
 	"time"
 )
 
+// licensePubKeyHex is injected via -X ldflag at goreleaser build time.
+// In dev builds without ldflags, it remains empty — license verification is
+// disabled and nself version prints a warning banner.
+//
+//nolint:gochecknoglobals
+var licensePubKeyHex = "" //nolint:unused // set via -X github.com/nself-org/cli/internal/license.licensePubKeyHex=<hex>
+
+// IsZeroPubKey reports whether the build was made without an ldflags-injected
+// signing key. Returns true when licensePubKeyHex is empty OR consists entirely
+// of '0' characters (e.g., a placeholder 64-char zero string).
+// goreleaser injects a real non-zero Ed25519 pubkey hex; dev builds leave it empty.
+func IsZeroPubKey() bool {
+	if licensePubKeyHex == "" {
+		return true
+	}
+	for _, ch := range licensePubKeyHex {
+		if ch != '0' {
+			return false
+		}
+	}
+	return true
+}
+
 // CacheEntry represents a cached license validation response with Ed25519
 // signature from the server.
 type CacheEntry struct {

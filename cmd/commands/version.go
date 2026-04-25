@@ -2,8 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
+	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/nself-org/cli/internal/version"
 
@@ -16,6 +18,15 @@ var versionCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		short, _ := cmd.Flags().GetBool("short")
 		jsonOut, _ := cmd.Flags().GetBool("json")
+
+		// Dev-build warning: print before any output so it is always visible.
+		// Goreleaser-built binaries inject a real Ed25519 pubkey via -X ldflag,
+		// so IsZeroPubKey() returns false and the banner is suppressed.
+		if license.IsZeroPubKey() {
+			fmt.Fprintln(os.Stderr, "⚠️  WARN: dev build with no signing key — license verification is DISABLED")
+			fmt.Fprintln(os.Stderr, "         Use a goreleaser-built binary in production.")
+			fmt.Fprintln(os.Stderr, "")
+		}
 
 		ver := version.GetVersion()
 		commit := version.GetCommit()
