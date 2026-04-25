@@ -1,0 +1,31 @@
+name: SDK Flutter Tests
+
+on:
+  push:
+    paths:
+      - 'sdk/flutter/**'
+  pull_request:
+    paths:
+      - 'sdk/flutter/**'
+
+jobs:
+  sdk-flutter:
+    name: Flutter SDK Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          cd sdk/flutter
+          flutter pub get
+
+      - name: Run tests
+        run: |
+          cd sdk/flutter
+          flutter test
