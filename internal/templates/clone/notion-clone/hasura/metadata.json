@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "tables": [
+        {
+          "table": {"schema": "public", "name": "np_workspaces"},
+          "array_relationships": [{"name": "pages", "using": {"foreign_key_constraint_on": {"column": "workspace_id", "table": {"schema": "public", "name": "np_pages"}}}}],
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {"owner_id": {"_eq": "X-Hasura-User-Id"}}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["name","icon"], "check": {"owner_id": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_pages"},
+          "array_relationships": [{"name": "blocks", "using": {"foreign_key_constraint_on": {"column": "page_id", "table": {"schema": "public", "name": "np_blocks"}}}}],
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["workspace_id","parent_id","title","icon","cover_url"], "check": {"created_by": {"_eq": "X-Hasura-User-Id"}}}}],
+          "update_permissions": [{"role": "user", "permission": {"columns": ["title","icon","cover_url","is_archived","position"], "filter": {"created_by": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_blocks"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["page_id","type","content","position"], "check": {}}}],
+          "update_permissions": [{"role": "user", "permission": {"columns": ["type","content","position"], "filter": {}}}],
+          "delete_permissions": [{"role": "user", "permission": {"filter": {}}}]
+        }
+      ]
+    }
+  ]
+}

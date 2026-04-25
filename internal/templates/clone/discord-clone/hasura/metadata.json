@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "tables": [
+        {
+          "table": {"schema": "public", "name": "np_servers"},
+          "array_relationships": [
+            {"name": "channels", "using": {"foreign_key_constraint_on": {"column": "server_id", "table": {"schema": "public", "name": "np_channels"}}}},
+            {"name": "members", "using": {"foreign_key_constraint_on": {"column": "server_id", "table": {"schema": "public", "name": "np_members"}}}}
+          ],
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["name","icon_url"], "check": {"owner_id": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_channels"},
+          "array_relationships": [
+            {"name": "messages", "using": {"foreign_key_constraint_on": {"column": "channel_id", "table": {"schema": "public", "name": "np_messages"}}}}
+          ],
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_messages"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["channel_id","content","attachments"], "check": {"author_id": {"_eq": "X-Hasura-User-Id"}}}}],
+          "update_permissions": [{"role": "user", "permission": {"columns": ["content","is_edited"], "filter": {"author_id": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_members"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}]
+        }
+      ]
+    }
+  ]
+}

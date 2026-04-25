@@ -3,6 +3,23 @@
 All notable changes to the nSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.0.10] - 2026-04-22
+
+SP-01 Wave-0+1 patch release. Version bump, ping_api env var update, and plugin
+tarball pipeline fix. No new CLI commands or breaking flag changes.
+
+### Fixed
+
+- **CLI version bump v1.0.9 to v1.0.10** (SP-01.R01-T01). `nself version` now
+  reports `1.0.10`.
+- **ping_api `LATEST_CLI_VERSION` env var updated to `1.0.10`** (SP-01.R01-T03).
+  `nself update --check` and `nself doctor` resolve against the correct version.
+- **plugins-pro tarball release pipeline** repaired (SP-01.Y32). Switched CI
+  runner from `macos-latest` to `ubuntu-latest`; `build-tarballs.sh` now
+  produces correct release artifacts on every tag push.
+
+---
+
 ## [1.0.9] - 2026-04-18
 
 P93 LTS release. 50-sprint phase covering CLI stabilization, admin parity, plugin
@@ -268,3 +285,19 @@ First stable release. Complete Go rewrite of the nSelf CLI (previously Bash-base
 Older entries are tracked in GitHub Releases.
 
 [[Home]] | [[_Sidebar]]
+
+## [1.0.10] - 2026-04-23 (Wave 5)
+
+P94 Wave 5 patch. Unified auth complete (O01-O08), Claw BIOS Layers 1+2, plugin-sdk-go, audit log, rate-limit middleware, Let's Encrypt zero-config, pgvector default, self-healing schema, Ollama one-click, soak harness + badges + webhook outbox.
+
+### Added
+
+- **`nself account` top-level command** (O06) — 7 subcommands: `login`, `logout`, `status`, `team`, `licenses`, `devices`, `transfer`. Manages nSelf account, sessions, licenses, team members, and devices.
+- **`nself ollama` top-level command** (B38) — 4 subcommands: `install`, `status`, `pull <model>`, `remove <model>`. One-click Ollama install wires `OLLAMA_BASE_URL` for the ai plugin automatically.
+- **Zero-config Let's Encrypt** (B14) — `nself build` auto-provisions Let's Encrypt cert on first deploy. Certbot renewal cron integrated.
+- **pgvector default-on** (B23) — `nself init` runs `CREATE EXTENSION IF NOT EXISTS vector`. `NSELF_PGVECTOR_ENABLED` defaults true.
+- **Self-healing schema** (B37) — `NSELF_SCHEMA_HEAL_ENABLED` flag. On `nself start`, diffs and auto-applies non-destructive migrations. Dry-run by default.
+- **Webhook outbox** (R01-T07) — `NSELF_WEBHOOK_OUTBOX_DIR` env var. Transactional webhook delivery via outbox table.
+- **48h soak harness** (R01-T05) — `cli/.github/workflows/soak.yml` canary traffic replay + latency regression gate.
+- **CI status badges** (R01-T06) — All repos updated via `.github/workflows/badges.yml`.
+

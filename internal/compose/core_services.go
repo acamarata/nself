@@ -67,14 +67,14 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 // buildHasuraService returns the Hasura GraphQL engine service configuration.
 func (g *Generator) buildHasuraService() (ServiceConfig, error) {
 	cfg := g.cfg
-	consoleStr := "false"
-	if cfg.Hasura.Console {
-		consoleStr = "true"
-	}
-	devModeStr := "false"
-	if cfg.Hasura.DevMode {
-		devModeStr = "true"
-	}
+	// Use env substitution with safe defaults so that if docker-compose is invoked
+	// before the .env file is written (e.g. during initial server setup), Hasura
+	// starts with console and dev mode OFF rather than exposing them publicly.
+	// The config booleans still control the .env.* values written by nself build.
+	_ = cfg.Hasura.Console  // value written to .env; docker-compose reads it via substitution
+	_ = cfg.Hasura.DevMode  // value written to .env; docker-compose reads it via substitution
+	consoleStr := "${HASURA_GRAPHQL_ENABLE_CONSOLE:-false}"
+	devModeStr := "${HASURA_GRAPHQL_DEV_MODE:-false}"
 
 	jwtSecret, err := config.BuildJWTSecret(cfg)
 	if err != nil {

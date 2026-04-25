@@ -1,0 +1,7 @@
+name: my-workspace
+template: notion-clone
+template_version: "1.0.0"
+plugins:
+  - auth
+  - cms
+  - realtime

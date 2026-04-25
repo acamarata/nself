@@ -6,7 +6,23 @@
 nself plugin install {name}
 ```
 
-For free plugins, no setup required. For pro plugins, set your license key first — see [[Plugin-Licensing]].
+For free plugins, the CLI may prompt you to create a free account the first time:
+
+```
+Create a free account? [Y/n]
+```
+
+This generates a `nself_free_<uuid>` key stored on your device. The key enables install telemetry and conversion tracking. No email or payment is required. Declining the prompt still allows the install to proceed.
+
+To persist your free key across sessions:
+
+```bash
+nself license set nself_free_<uuid>
+```
+
+After installing 3 free plugins, the CLI displays a one-line prompt about nSelf+.
+
+For pro plugins, set your license key first — see [[Plugin-Licensing]].
 
 Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available — the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
 

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-hasura
+  labels:
+    app.kubernetes.io/name: hasura
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app.kubernetes.io/name: hasura
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http

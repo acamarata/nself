@@ -1,0 +1,6 @@
+{
+  "name": "airbnb-clone",
+  "version": "1.0.0",
+  "description": "Rental marketplace with listings, bookings, and reviews",
+  "required_plugins": ["auth", "notify", "photos"]
+}

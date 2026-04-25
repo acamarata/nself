@@ -50,12 +50,16 @@ func MkcertCAPath() (string, error) {
 
 // SetupMkcert ensures mkcert is installed, the CA is trusted, and wildcard
 // certificates are generated for the project's base domain. Returns
-// alreadyDone=true when certs exist and are valid (>30 days remaining).
+// alreadyDone=true when both the CA is trusted AND the certs exist and are
+// valid (>30 days remaining) — i.e. nothing was done.
+//
+// Idempotency: each sub-step (CA trust, cert generation) is checked
+// independently before any admin-privilege operation is attempted.
 func SetupMkcert(cfg TrustConfig) (alreadyDone bool, err error) {
-	_, _, certsValid := CheckMkcert(cfg)
+	_, caInstalled, certsValid := CheckMkcert(cfg)
 
-	// If certs are valid, nothing to do.
-	if certsValid {
+	// If both CA is trusted and certs are valid, nothing to do.
+	if caInstalled && certsValid {
 		return true, nil
 	}
 
@@ -66,22 +70,23 @@ func SetupMkcert(cfg TrustConfig) (alreadyDone bool, err error) {
 		}
 	}
 
-	// Ensure CA is trusted.
+	// Ensure CA is trusted — only if it isn't already.
 	caPath, pathErr := ssl.MkcertCACertPath()
 	if pathErr != nil {
 		return false, fmt.Errorf("locating mkcert CA: %w", pathErr)
 	}
 
-	trusted, _ := ssl.IsCAInstalled(caPath)
-	if !trusted {
+	if !caInstalled {
 		if err = installMkcertCA(caPath); err != nil {
 			return false, fmt.Errorf("trusting mkcert CA: %w", err)
 		}
 	}
 
-	// Generate certificates.
-	if err = generateCerts(cfg); err != nil {
-		return false, fmt.Errorf("generating certificates: %w", err)
+	// Generate certificates only if they are missing or expiring.
+	if !certsValid {
+		if err = generateCerts(cfg); err != nil {
+			return false, fmt.Errorf("generating certificates: %w", err)
+		}
 	}
 
 	return false, nil

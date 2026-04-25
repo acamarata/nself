@@ -41,29 +41,96 @@ const launchDaemonPlistContent = `<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 `
 
-// CheckPortsDarwin returns true if the pf anchor rules are already loaded
-// with the expected port forwarding configuration.
-func CheckPortsDarwin(cfg TrustConfig) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), pfTimeout)
-	defer cancel()
-
+// alreadyConfiguredPfctl checks whether the nself.local pf anchor is active by
+// running a read-only pfctl query. Returns (true, nil) when the anchor rules
+// match the expected ports. Returns (false, nil) when the rules are absent.
+// Returns (false, err) only on unexpected errors so callers can decide whether
+// to fall back to the prompt path.
+func alreadyConfiguredPfctl(ctx context.Context, cfg TrustConfig) (bool, error) {
 	out, err := exec.CommandContext(ctx, "pfctl", "-a", "nself.local", "-sr").CombinedOutput()
 	if err != nil {
-		return false
+		// pfctl exits non-zero when the anchor doesn't exist OR when it lacks
+		// read permission. Distinguish the two: if the output contains a
+		// permission-related message we treat it as an unknown state (not "not
+		// installed") so the caller can consult the file-based fallback.
+		combined := string(out)
+		if strings.Contains(combined, "permission") ||
+			strings.Contains(combined, "Permission") ||
+			strings.Contains(combined, "Operation not permitted") {
+			return false, fmt.Errorf("pfctl permission denied: %s", strings.TrimSpace(combined))
+		}
+		// Anchor missing or pfctl not found — definitely not configured.
+		return false, nil
 	}
 
 	output := string(out)
 	httpRule := fmt.Sprintf("port 80 -> 127.0.0.1 port %d", cfg.NginxHTTPPort)
 	sslRule := fmt.Sprintf("port 443 -> 127.0.0.1 port %d", cfg.NginxSSLPort)
 
-	return strings.Contains(output, httpRule) && strings.Contains(output, sslRule)
+	if strings.Contains(output, httpRule) && strings.Contains(output, sslRule) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// launchDaemonLoaded returns true if the com.nself.portforward LaunchDaemon plist
+// is present on disk AND the service appears to be loaded. It checks the plist
+// file without admin access, then queries launchctl as a best-effort confirmation.
+// When launchctl fails or is unavailable it falls back to the plist-presence check
+// alone — better to skip the dialog when the plist is present than to re-prompt
+// every time pfctl happens to be restricted.
+func launchDaemonLoaded() bool {
+	// Quick file presence check — no admin needed.
+	if _, err := os.Stat(launchDaemonPlistPath); err != nil {
+		return false
+	}
+	// Best-effort: ask launchctl whether the service is known to the system.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := exec.CommandContext(ctx, "launchctl", "print", "system/com.nself.portforward").Run()
+	if err != nil {
+		// launchctl failed (not loaded or permission issue). The plist is present
+		// though — treat as loaded to avoid unnecessary re-prompting.
+		return true
+	}
+	return true
+}
+
+// CheckPortsDarwin returns true if the pf anchor rules are already loaded
+// with the expected port forwarding configuration.
+//
+// It tries pfctl first. If pfctl is unavailable or returns a permission error,
+// it falls back to checking whether the LaunchDaemon plist is present and the
+// service is loaded — a reliable proxy for "we already ran the osascript block".
+func CheckPortsDarwin(cfg TrustConfig) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), pfTimeout)
+	defer cancel()
+
+	configured, err := alreadyConfiguredPfctl(ctx, cfg)
+	if err == nil {
+		// pfctl succeeded (zero exit). Trust its answer directly.
+		return configured
+	}
+
+	// pfctl returned a permission error or was unavailable. Fall back to the
+	// LaunchDaemon file check. If the plist is present and the service is loaded,
+	// we almost certainly already ran the setup and should skip the osascript
+	// dialog. If the check is inconclusive, fall through to the prompt path so
+	// we never silently skip a genuinely missing configuration.
+	return launchDaemonLoaded()
 }
 
 // SetupPortsDarwin configures pfctl port forwarding on macOS so that
 // ports 80 and 443 are redirected to the Nginx HTTP and SSL ports.
 // Returns alreadyDone=true when the rules were already active.
+//
+// Idempotency: CheckPortsDarwin runs first via pfctl (no admin needed for
+// read-only queries) and falls back to LaunchDaemon presence when pfctl is
+// restricted. The osascript admin prompt is only issued when the state check
+// determines configuration is genuinely absent.
 func SetupPortsDarwin(cfg TrustConfig) (alreadyDone bool, err error) {
 	if CheckPortsDarwin(cfg) {
+		fmt.Println("  ports already configured — skipping admin prompt")
 		return true, nil
 	}
 

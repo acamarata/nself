@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"net/smtp"
 	"os"
 	"time"
 )
@@ -85,12 +87,16 @@ func SendEmailAlert(cfg EscalationConfig, subject, body string) error {
 		return fmt.Errorf("SMTP not configured (missing host, from, or to)")
 	}
 
-	// Use the Alertmanager SMTP relay if configured, otherwise skip.
-	// For production use, Alertmanager handles email. This is a fallback.
+	// Send via SMTP (STARTTLS on port 587, plain auth).
+	addr := fmt.Sprintf("%s:%s", cfg.SMTPHost, cfg.SMTPPort)
+	auth := smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
 		cfg.SMTPFrom, cfg.SMTPTo, subject, body)
-	_ = msg // Actual send deferred to Alertmanager integration
-	return fmt.Errorf("direct SMTP send not implemented — use Alertmanager routing")
+	if err := smtp.SendMail(addr, auth, cfg.SMTPFrom, []string{cfg.SMTPTo}, []byte(msg)); err != nil {
+		slog.Warn("watchdog: SMTP send failed", "err", err)
+		return fmt.Errorf("smtp send: %w", err)
+	}
+	return nil
 }
 
 // Escalate sends alerts through all configured channels.

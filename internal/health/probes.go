@@ -133,7 +133,7 @@ func ProbeNginxHTTP(ctx context.Context, host string, port int) *HealthResult {
 			Details:  err.Error(),
 		}
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	// Any HTTP response (200, 301, 302, 403...) means Nginx is up.
 	return &HealthResult{

@@ -1,0 +1,22 @@
+apiVersion: v2
+name: nself
+description: nSelf — self-hosted backend infrastructure stack
+type: application
+version: 1.0.9
+appVersion: "1.0.9"
+home: https://nself.org
+sources:
+  - https://github.com/nself-org/cli
+maintainers:
+  - name: nSelf
+    email: hello@nself.org
+    url: https://nself.org
+keywords:
+  - nself
+  - postgres
+  - hasura
+  - graphql
+  - self-hosted
+  - backend
+annotations:
+  artifacthub.io/license: MIT

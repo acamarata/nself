@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
@@ -277,11 +279,28 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// S20: Free-plugin account flow.
+	// If no license key is set and all requested plugins are free, prompt the
+	// user to create a nself_free_ account for rate-limiting + upsell tracking.
+	// Skip when NSELF_LICENSE_SKIP_VERIFY=1 (offline/CI) or when a key already exists.
+	pingURL := os.Getenv("NSELF_PING_URL")
+	if pingURL == "" {
+		pingURL = "https://ping.nself.org"
+	}
+	existingKey := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")
+	if existingKey == "" && os.Getenv("NSELF_LICENSE_SKIP_VERIFY") != "1" {
+		if err := maybeRegisterFreeAccount(ctx, pingURL, args); err != nil {
+			// Non-fatal: free account creation failure never blocks plugin install.
+			fmt.Fprintf(os.Stderr, "note: could not create free account (%v); continuing without one\n", err)
+		}
+	}
+
 	pluginDir := resolvePluginDir()
 
 	// Install each named plugin. Collect per-plugin errors so that a failure on
 	// one plugin does not abort the remaining installs.
 	var failures []string
+	installedCount := 0
 	for _, name := range args {
 		// S58-T03: EOL gate — check status before attempting install.
 		if eolErr := plugin.CheckEOLBlock(ctx, name, allowEOL); eolErr != nil {
@@ -297,12 +316,104 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 			continue
 		}
 		fmt.Fprintf(os.Stderr, "Plugin %q installed successfully.\n", name)
+		installedCount++
+
+		// S20: Fire install telemetry for free-tier keys (non-blocking).
+		currentKey := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")
+		if plugin.IsFreeKey(currentKey) {
+			plugin.SendFreeInstallTelemetry(pingURL, currentKey, name)
+		}
+	}
+
+	// S20: Upsell prompt after 3rd successful free-plugin install.
+	if installedCount > 0 {
+		maybeShowFreeUpsell(installedCount)
 	}
 
 	if len(failures) > 0 {
 		return fmt.Errorf("failed to install: %s", strings.Join(failures, ", "))
 	}
 	return nil
+}
+
+// maybeRegisterFreeAccount prompts the user to create a free account if they
+// do not yet have a license key and are installing only free plugins.
+// The generated key is stored in NSELF_PLUGIN_LICENSE_KEY for this session.
+func maybeRegisterFreeAccount(ctx context.Context, pingURL string, pluginNames []string) error {
+	// Only prompt when all requested plugins are free (not in paidPlugins).
+	// If any pro plugin is in the list, the normal license flow handles it.
+	allFree := true
+	for _, name := range pluginNames {
+		if plugin.IsPaidPlugin(name) {
+			allFree = false
+			break
+		}
+	}
+	if !allFree {
+		return nil
+	}
+
+	ui.Info("To track your installs and enable usage insights, nSelf uses a free account key.")
+	fmt.Fprintf(os.Stderr, "Create a free account? [Y/n] ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return nil // EOF or no tty — skip silently
+	}
+	answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+	if answer != "" && answer != "y" && answer != "yes" {
+		return nil // user declined
+	}
+
+	key, err := plugin.RegisterFreeAccount(ctx, pingURL)
+	if err != nil {
+		return err
+	}
+
+	// Store for this session.
+	if err := os.Setenv("NSELF_PLUGIN_LICENSE_KEY", key); err != nil {
+		return fmt.Errorf("storing free key in env: %w", err)
+	}
+
+	ui.Success("Free account created. Run `nself license set " + key + "` to persist it.")
+	return nil
+}
+
+// freeInstallCounterFile returns the path to the file tracking how many free
+// plugins this device has installed (for upsell threshold).
+func freeInstallCounterFile() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".nself", "free_install_count")
+}
+
+// maybeShowFreeUpsell increments the free-install counter and shows a one-line
+// upsell prompt when the 3rd install is reached (items 679/686 from S20).
+func maybeShowFreeUpsell(justInstalled int) {
+	counterPath := freeInstallCounterFile()
+
+	// Read existing count.
+	existing := 0
+	if data, err := os.ReadFile(counterPath); err == nil {
+		if n, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
+			existing = n
+		}
+	}
+
+	newCount := existing + justInstalled
+
+	// Write updated count (best-effort; log at debug if it fails).
+	_ = os.MkdirAll(filepath.Dir(counterPath), 0700)
+	if err := os.WriteFile(counterPath, []byte(strconv.Itoa(newCount)), 0600); err != nil {
+		ui.Warn("plugin counter write failed: " + err.Error())
+	}
+
+	// Show upsell on reaching (or crossing) the threshold.
+	if existing < 3 && newCount >= 3 {
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "You've installed 3 free plugins. Unlock all 87 plugins with nSelf+ for $3.99/mo.")
+		fmt.Fprintln(os.Stderr, "  nself.org/plus")
+		fmt.Fprintln(os.Stderr, "")
+	}
 }
 
 func runPluginRemove(cmd *cobra.Command, args []string) error {

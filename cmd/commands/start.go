@@ -144,7 +144,9 @@ func isFirstStart() bool {
 	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
 		// First start: write the marker before returning true.
 		if mkErr := os.MkdirAll(filepath.Dir(markerPath), 0o700); mkErr == nil {
-			_ = os.WriteFile(markerPath, []byte(`{"start_completed":true}`), 0o600)
+			if wErr := os.WriteFile(markerPath, []byte(`{"start_completed":true}`), 0o600); wErr != nil {
+				ui.Warn("could not write start marker: " + wErr.Error())
+			}
 		}
 		return true
 	}

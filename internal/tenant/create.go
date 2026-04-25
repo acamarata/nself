@@ -39,14 +39,20 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 		db = "nself"
 	}
 
-	// Insert tenant row.
-	insertSQL := fmt.Sprintf(
-		"INSERT INTO public.tenants (slug, plan, status) VALUES ('%s', '%s', 'active') RETURNING id;",
-		sanitize(opts.Slug), sanitize(string(opts.Plan)),
-	)
+	// Insert tenant row using parameterized query via psql \set + placeholders
+	// to avoid SQL injection. psql does not support $1/$2 bind parameters
+	// directly via -c, so we use a JSON-escaped literal approach: values are
+	// passed as environment-variable placeholders via psql --variable and
+	// referenced with :'varname' (server-side quoting).
+	//
+	// Equivalent parameterized intent: INSERT INTO public.tenants
+	// (slug, plan, status) VALUES ($1, $2, 'active') RETURNING id
+	insertSQL := "INSERT INTO public.tenants (slug, plan, status) VALUES (:'slug', :'plan', 'active') RETURNING id;"
 
 	cmd := exec.CommandContext(ctx, "docker", "exec", container,
 		"psql", "-U", user, "-d", db, "-tAc", insertSQL,
+		"--variable=slug="+opts.Slug,
+		"--variable=plan="+string(opts.Plan),
 	)
 	out, err := cmd.Output()
 	if err != nil {
@@ -59,14 +65,13 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 	}
 	slog.Info("tenant created", "slug", opts.Slug, "plan", opts.Plan, "id", tenantID)
 
-	// Write audit log entry.
-	auditSQL := fmt.Sprintf(
-		"INSERT INTO nself_ops.audit_log (tenant_id, action, resource_type, resource_id) "+
-			"VALUES ('%s', 'tenant.create', 'tenant', '%s');",
-		sanitize(tenantID), sanitize(tenantID),
-	)
+	// Write audit log entry using parameterized :'varname' quoting.
+	// Equivalent intent: INSERT INTO nself_ops.audit_log
+	// (tenant_id, action, resource_type, resource_id) VALUES ($1, 'tenant.create', 'tenant', $2)
+	auditSQL := "INSERT INTO nself_ops.audit_log (tenant_id, action, resource_type, resource_id) VALUES (:'tid', 'tenant.create', 'tenant', :'tid');"
 	auditCmd := exec.CommandContext(ctx, "docker", "exec", container,
 		"psql", "-U", user, "-d", db, "-c", auditSQL,
+		"--variable=tid="+tenantID,
 	)
 	if err := auditCmd.Run(); err != nil {
 		slog.Warn("failed to write audit log for tenant creation", "error", err)

@@ -1,0 +1,116 @@
+package commands
+
+// verify_sbom.go — `nself verify-sbom`
+//
+// Downloads the CycloneDX SBOM for a given CLI release from GitHub Releases
+// and verifies the cosign bundle signature. Prints VERIFIED on success.
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
+)
+
+const sbomGitHubRepo = "nself-org/cli"
+
+var verifySBOMCmd = &cobra.Command{
+	Use:   "verify-sbom",
+	Short: "Verify the SBOM signature for a CLI release",
+	Long: `Download and verify the CycloneDX SBOM attached to a GitHub Release.
+
+The command downloads sbom-cli-{version}.cdx.json and its cosign bundle from
+GitHub Releases, then runs cosign verify-blob to confirm the signature.
+
+Requirements:
+  - cosign must be installed and in PATH (brew install cosign)
+  - version must correspond to a published GitHub Release
+
+Examples:
+  nself verify-sbom --version v1.0.9
+  nself verify-sbom --version v1.0.10 --repo nself-org/cli`,
+	RunE: runVerifySBOM,
+}
+
+func runVerifySBOM(cmd *cobra.Command, args []string) error {
+	version, _ := cmd.Flags().GetString("version")
+	if version == "" {
+		return fmt.Errorf("--version is required (e.g. --version v1.0.9)")
+	}
+	repo, _ := cmd.Flags().GetString("repo")
+	if repo == "" {
+		repo = sbomGitHubRepo
+	}
+
+	// Check cosign is available.
+	if _, err := exec.LookPath("cosign"); err != nil {
+		return fmt.Errorf("cosign not found in PATH — install with: brew install cosign")
+	}
+
+	baseURL := fmt.Sprintf("https://github.com/%s/releases/download/%s", repo, version)
+	sbomFile := fmt.Sprintf("sbom-cli-%s.cdx.json", version)
+	bundleFile := fmt.Sprintf("sbom-cli-%s.cdx.json.bundle", version)
+
+	tmpDir, err := os.MkdirTemp("", "nself-sbom-verify-*")
+	if err != nil {
+		return fmt.Errorf("creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	sbomPath := filepath.Join(tmpDir, sbomFile)
+	bundlePath := filepath.Join(tmpDir, bundleFile)
+
+	fmt.Printf("Downloading SBOM for %s...\n", version)
+	if err := sbomDownloadFile(baseURL+"/"+sbomFile, sbomPath); err != nil {
+		return fmt.Errorf("downloading SBOM: %w", err)
+	}
+	if err := sbomDownloadFile(baseURL+"/"+bundleFile, bundlePath); err != nil {
+		return fmt.Errorf("downloading cosign bundle: %w", err)
+	}
+
+	fmt.Println("Verifying cosign bundle signature...")
+	c := exec.Command("cosign", "verify-blob",
+		sbomPath,
+		"--bundle", bundlePath,
+		"--certificate-identity-regexp", fmt.Sprintf("^https://github.com/%s/", repo),
+		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
+	)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	if err := c.Run(); err != nil {
+		return fmt.Errorf("cosign verification FAILED: %w", err)
+	}
+
+	fmt.Printf("\nSBOM for %s: VERIFIED\n", version)
+	return nil
+}
+
+// sbomDownloadFile fetches url and writes to dest.
+func sbomDownloadFile(url, dest string) error {
+	resp, err := http.Get(url) //nolint:noctx // short-lived CLI op
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, url)
+	}
+	f, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
+func init() {
+	verifySBOMCmd.Flags().String("version", "", "Release version to verify (e.g. v1.0.9)")
+	verifySBOMCmd.Flags().String("repo", sbomGitHubRepo, "GitHub repo (owner/name)")
+
+	RootCmd.AddCommand(verifySBOMCmd)
+}

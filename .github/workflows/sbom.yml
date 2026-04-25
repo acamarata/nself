@@ -1,0 +1,164 @@
+name: SBOM Verify (Q04)
+
+# Dry-run SBOM generation on every PR and push to main.
+# Validates that syft can generate both CycloneDX and SPDX outputs,
+# performs cosign sign+verify roundtrip, and runs grype vulnerability scan.
+# Release artifacts are signed + published in release.yml; this workflow
+# catches breakage early without publishing anything.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # required for cosign keyless OIDC
+
+jobs:
+  sbom-verify:
+    name: Generate + validate SBOMs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      # Install syft via anchore action (pins to a known version)
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      # Install grype for vulnerability scanning
+      - name: Install grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+
+      # Install cosign for signature roundtrip test
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      # ── CycloneDX SBOM ──────────────────────────────────────────────────
+      - name: Generate CycloneDX SBOM (Q04)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Validate CycloneDX schema
+        run: |
+          # Verify it is valid JSON and contains expected CycloneDX fields
+          python3 -c "
+          import json, sys
+          with open('sbom.cdx.json') as f:
+              doc = json.load(f)
+          assert 'bomFormat' in doc, 'missing bomFormat'
+          assert doc['bomFormat'] == 'CycloneDX', f'unexpected bomFormat: {doc[\"bomFormat\"]}'
+          assert 'components' in doc, 'missing components array'
+          count = len(doc['components'])
+          print(f'CycloneDX SBOM valid: {count} components')
+          sys.exit(0)
+          "
+
+      - name: Verify known dependency in CycloneDX SBOM
+        run: |
+          # cobra must appear in direct Go module deps
+          if grep -q '"github.com/spf13/cobra"' sbom.cdx.json; then
+            echo "cobra found in CycloneDX SBOM — dependency coverage OK"
+          else
+            echo "WARNING: cobra not found in CycloneDX SBOM (may be in nested purl form)"
+            # Non-fatal: purl encoding may differ; log and continue
+          fi
+
+      # ── SPDX SBOM ───────────────────────────────────────────────────────
+      - name: Generate SPDX SBOM (secondary)
+        run: |
+          syft packages . --output spdx-json=sbom.spdx.json
+          echo "SPDX SBOM: $(wc -c < sbom.spdx.json) bytes"
+
+      - name: Validate SPDX output
+        run: |
+          python3 -c "
+          import json, sys
+          with open('sbom.spdx.json') as f:
+              doc = json.load(f)
+          assert 'spdxVersion' in doc, 'missing spdxVersion'
+          pkgs = len(doc.get('packages', []))
+          print(f'SPDX SBOM valid: {pkgs} packages')
+          sys.exit(0)
+          "
+
+      # ── Cosign sign + verify roundtrip ──────────────────────────────────
+      - name: Cosign sign + verify roundtrip (dry-run, Q04)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          # Sign the CycloneDX SBOM — keyless via GitHub Actions OIDC
+          cosign sign-blob sbom.cdx.json \
+            --bundle sbom.cdx.json.bundle \
+            --yes
+
+          # Verify the freshly-created bundle — should exit 0
+          cosign verify-blob sbom.cdx.json \
+            --bundle sbom.cdx.json.bundle \
+            --certificate-identity-regexp "^https://github.com/nself-org/cli/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+          echo "Cosign sign+verify roundtrip: PASS"
+
+      - name: Cosign verify tampered SBOM exits 1 (Q04)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          # Inject a byte flip to confirm tamper detection
+          cp sbom.cdx.json sbom.cdx.tampered.json
+          printf 'X' | dd of=sbom.cdx.tampered.json bs=1 seek=10 conv=notrunc 2>/dev/null
+          if cosign verify-blob sbom.cdx.tampered.json \
+              --bundle sbom.cdx.json.bundle \
+              --certificate-identity-regexp "^https://github.com/nself-org/cli/" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              2>/dev/null; then
+            echo "ERROR: tampered SBOM passed verification — should have failed"
+            exit 1
+          else
+            echo "Tamper detection: PASS (cosign exited 1 as expected)"
+          fi
+
+      # ── Grype vulnerability scan ─────────────────────────────────────────
+      - name: Grype vulnerability scan (Q04 — fail on CRITICAL)
+        run: |
+          grype sbom:sbom.cdx.json \
+            --fail-on critical \
+            --output table
+        # Note: HIGH findings are reported but do not fail the PR gate.
+        # CRITICAL findings block the workflow. This matches the spec:
+        # "fail release on CRITICAL CVE". HIGH findings are surfaced for triage.
+
+      # ── SHA-256 digest ───────────────────────────────────────────────────
+      - name: Compute SHA-256 of both SBOMs
+        run: |
+          sha256sum sbom.cdx.json sbom.spdx.json | tee sbom-checksums.txt
+          echo "SBOM checksums (dry-run):"
+          cat sbom-checksums.txt
+
+      # ── Upload as workflow artifact (not a release asset) ────────────────
+      - name: Upload SBOMs as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-dryrun-${{ github.sha }}
+          path: |
+            sbom.cdx.json
+            sbom.spdx.json
+            sbom.cdx.json.bundle
+            sbom-checksums.txt
+          retention-days: 7

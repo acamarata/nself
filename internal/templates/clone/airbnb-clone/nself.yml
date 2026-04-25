@@ -1,0 +1,7 @@
+name: my-rental-app
+template: airbnb-clone
+template_version: "1.0.0"
+plugins:
+  - auth
+  - notify
+  - photos

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,9 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/doctor"
+	"github.com/nself-org/cli/internal/maintenance"
 	"github.com/nself-org/cli/internal/migration"
+	"github.com/nself-org/cli/internal/onboarding"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/ui"
@@ -62,6 +65,19 @@ Exit codes:
 		checkLegacy, _ := cmd.Flags().GetBool("check-legacy")
 		if checkLegacy {
 			return runDoctorCheckLegacy()
+		}
+
+		// ── Onboarding funnel check (Q08) ────────────────────────────
+		// --install-check runs 6-stage onboarding funnel check.
+		// Invoked automatically by Homebrew post-install hook; safe to run at any time.
+		installCheck, _ := cmd.Flags().GetBool("install-check")
+		if installCheck {
+			jsonOut2, _ := cmd.Flags().GetBool("json")
+			format2, _ := cmd.Flags().GetString("format")
+			if format2 == "json" {
+				jsonOut2 = true
+			}
+			return runInstallCheck(jsonOut2)
 		}
 
 		verbose, _ := cmd.Flags().GetBool("verbose")
@@ -214,6 +230,7 @@ Exit codes:
 			ui.Section("License")
 		}
 		checks = append(checks, checkLicenseCache(verbose))
+		checks = append(checks, checkLicenseMigrationRate(verbose))
 
 		// 9. Container health
 		if !jsonOut {
@@ -314,6 +331,8 @@ func checkGitInstalled(verbose bool) doctorCheckResult {
 }
 
 // checkDiskSpace verifies at least 5 GB of free disk space.
+// When --deep is active and disk usage exceeds 70%, it also appends a
+// suggestion to enable the daily maintenance timer.
 func checkDiskSpace(verbose bool) doctorCheckResult {
 	name := "Disk space"
 	freeGB, err := getFreeDiskGB()
@@ -324,8 +343,20 @@ func checkDiskSpace(verbose bool) doctorCheckResult {
 	}
 	msg := fmt.Sprintf("%.1f GB free", freeGB)
 	if freeGB < 5.0 {
+		// Also check used-percent so we can surface the maintenance suggestion.
+		if usage, uerr := maintenance.GetDiskUsage(); uerr == nil && usage.UsedPercent > 70 {
+			detail := fmt.Sprintf("disk is %d%% full — run `nself maintenance schedule --daily` to enable automatic daily cleanup", usage.UsedPercent)
+			printCheck("warn", name, msg+" (recommended: 5 GB+) — "+detail, verbose)
+			return doctorCheckResult{Name: name, Status: "warn", Message: msg + " (recommended: 5 GB+)", Detail: detail}
+		}
 		printCheck("warn", name, msg+" (recommended: 5 GB+)", verbose)
 		return doctorCheckResult{Name: name, Status: "warn", Message: msg + " (recommended: 5 GB+)"}
+	}
+	// Even when free space is adequate, warn if disk is >70% full.
+	if usage, uerr := maintenance.GetDiskUsage(); uerr == nil && usage.UsedPercent > 70 {
+		detail := fmt.Sprintf("disk is %d%% full — run `nself maintenance schedule --daily` to enable automatic daily cleanup", usage.UsedPercent)
+		printCheck("warn", name, msg+" — "+detail, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg, Detail: detail}
 	}
 	printCheck("pass", name, msg, verbose)
 	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
@@ -883,6 +914,95 @@ func checkLicenseCache(verbose bool) doctorCheckResult {
 	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
 }
 
+// checkLicenseMigrationRate implements the LIC-MIGRATION-01 doctor check (SP-04.O11 T11).
+//
+// After migration has been running for 60+ days, warns if more than 10% of
+// daily license validations are still using unmigrated (legacy) keys.
+// Data is read from the ping_api telemetry endpoint if NSELF_PING_API_URL is set,
+// otherwise the check is skipped (non-fatal — only prod infra exposes telemetry).
+func checkLicenseMigrationRate(verbose bool) doctorCheckResult {
+	name := "LIC-MIGRATION-01: License migration rate"
+
+	pingURL := os.Getenv("NSELF_PING_API_URL")
+	if pingURL == "" {
+		pingURL = defaultPingURL
+	}
+
+	// Query the migration telemetry summary endpoint (admin-only, only available
+	// when DATABASE_URL is configured on the server — not reachable from end-user CLI).
+	// We attempt a HEAD to confirm the endpoint exists; if unreachable we skip.
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(pingURL + "/admin/migration/status")
+	if err != nil {
+		// Unreachable — not an error for end-user CLI, skip silently.
+		msg := "migration telemetry endpoint unreachable — skipped"
+		if verbose {
+			printCheck("pass", name, msg, verbose)
+		}
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		// Endpoint exists but requires admin auth — skip (not an error for end-user).
+		msg := "migration telemetry requires admin access — skipped"
+		if verbose {
+			printCheck("pass", name, msg, verbose)
+		}
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+
+	if resp.StatusCode != 200 {
+		msg := fmt.Sprintf("migration telemetry returned HTTP %d — skipped", resp.StatusCode)
+		if verbose {
+			printCheck("pass", name, msg, verbose)
+		}
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+
+	var telemetry struct {
+		TotalHits          int    `json:"total_hits"`
+		PendingHits        int    `json:"pending_hits"`
+		MigratedHits       int    `json:"migrated_hits"`
+		MigrationStartDate string `json:"migration_start_date"`
+		PendingRatioPct    float64 `json:"pending_ratio_pct"`
+		DaysSinceMigration int    `json:"days_since_migration"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&telemetry); err != nil {
+		msg := fmt.Sprintf("cannot parse migration telemetry: %v", err)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	// Only alert after 60 days since migration start (spec: acceptance criterion 7).
+	if telemetry.DaysSinceMigration < 60 {
+		msg := fmt.Sprintf("migration running for %d days — alert threshold not yet reached (60 days)", telemetry.DaysSinceMigration)
+		if verbose {
+			printCheck("pass", name, msg, verbose)
+		}
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+
+	if telemetry.TotalHits == 0 {
+		msg := "no validation hits recorded today"
+		if verbose {
+			printCheck("pass", name, msg, verbose)
+		}
+		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+	}
+
+	ratio := telemetry.PendingRatioPct
+	if ratio > 10.0 {
+		msg := fmt.Sprintf("%.1f%% of daily license validations are still using unmigrated keys (threshold: 10%%) — run: nself license migrate --account-id <uuid>", ratio)
+		printCheck("warn", name, msg, verbose)
+		return doctorCheckResult{Name: name, Status: "warn", Message: msg}
+	}
+
+	msg := fmt.Sprintf("%.1f%% pending ratio — within threshold", ratio)
+	printCheck("pass", name, msg, verbose)
+	return doctorCheckResult{Name: name, Status: "pass", Message: msg}
+}
+
 // checkPluginCompatibility verifies installed plugins are compatible with the current CLI version.
 func checkPluginCompatibility(projectDir string, verbose bool) []doctorCheckResult {
 	pluginDir := resolvePluginDir()
@@ -1000,6 +1120,7 @@ func init() {
 	doctorCmd.Flags().Bool("skip-pool", false, "Skip Gemini pool setup step")
 	doctorCmd.Flags().Bool("headless", false, "Print OAuth URL instead of opening browser (for SSH/headless servers)")
 	doctorCmd.Flags().Bool("check-legacy", false, "Scan host for v0.9 stale paths (global scan, not per-project)")
+	doctorCmd.Flags().Bool("install-check", false, "Run 6-stage onboarding funnel check (used by Homebrew post-install hook)")
 	RootCmd.AddCommand(doctorCmd)
 }
 
@@ -1024,4 +1145,100 @@ func runDoctorCheckLegacy() error {
 	}
 	fmt.Println("Run the cleanup commands above, then re-run `nself doctor --check-legacy` to verify.")
 	return fmt.Errorf("v0.9 stale artifacts found (%d path(s))", len(artifacts))
+}
+
+// ── Onboarding funnel check (Q08) ────────────────────────────────────────────
+
+// installCheckJSONReport is the machine-readable shape for --install-check --json.
+type installCheckJSONReport struct {
+	Stages   []installCheckJSONStage `json:"stages"`
+	Position int                     `json:"funnel_position"`
+	Next     string                  `json:"next_action"`
+}
+
+type installCheckJSONStage struct {
+	ID          int                    `json:"id"`
+	Name        string                 `json:"name"`
+	Status      string                 `json:"status"`
+	Message     string                 `json:"message"`
+	Remediation string                 `json:"remediation,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// runInstallCheck implements `nself doctor --install-check`.
+//
+// It runs the 6-stage onboarding funnel check, prints a friendly checklist,
+// fires telemetry events for each passing stage (opt-in), and exits:
+//
+//	0 — all 6 stages pass
+//	1 — one or more stages fail
+func runInstallCheck(jsonOut bool) error {
+	report := onboarding.RunFunnel()
+
+	if jsonOut {
+		return printInstallCheckJSON(report)
+	}
+
+	// ── Human-readable output ────────────────────────────────────────────────
+	ui.CommandHeader("nSelf Doctor — Onboarding Funnel", "6-stage install readiness check")
+	fmt.Println()
+
+	for _, s := range report.Stages {
+		label := fmt.Sprintf("Stage %d — %-12s", s.ID, s.Name)
+		switch s.Status {
+		case onboarding.StatusPass:
+			fmt.Printf("  %s %s  %s\n", ui.C(ui.Green, ui.IconSuccess), label, s.Message)
+		case onboarding.StatusFail:
+			fmt.Fprintf(os.Stderr, "  %s %s  %s\n", ui.C(ui.Red, ui.IconFailure), label, s.Message)
+			if s.Remediation != "" {
+				fmt.Fprintf(os.Stderr, "    %s %s\n", ui.C(ui.Cyan, "→"), s.Remediation)
+			}
+		case onboarding.StatusUnknown:
+			fmt.Fprintf(os.Stderr, "  %s %s  %s\n", ui.C(ui.Yellow, ui.IconWarning), label, s.Message)
+		case onboarding.StatusSkipped:
+			fmt.Printf("  %s %s  %s\n", ui.C(ui.Dim, "—"), label, s.Message)
+		}
+	}
+
+	fmt.Println()
+	ui.Separator()
+	posStr := fmt.Sprintf("Funnel position: Stage %d/6.", report.Position)
+	if report.Position == 6 {
+		ui.Success(posStr + " Onboarding complete.")
+	} else {
+		ui.Info(posStr + " Next: " + report.Next)
+	}
+	fmt.Println()
+
+	// Exit 1 if any stage failed (skipped does not count as failure for exit code).
+	for _, s := range report.Stages {
+		if s.Status == onboarding.StatusFail {
+			return &plugin.ExitCodeError{Code: 1}
+		}
+	}
+	return nil
+}
+
+// printInstallCheckJSON renders the funnel report as JSON.
+func printInstallCheckJSON(report onboarding.FunnelReport) error {
+	out := installCheckJSONReport{
+		Position: report.Position,
+		Next:     report.Next,
+	}
+	for _, s := range report.Stages {
+		out.Stages = append(out.Stages, installCheckJSONStage{
+			ID:          s.ID,
+			Name:        s.Name,
+			Status:      string(s.Status),
+			Message:     s.Message,
+			Remediation: s.Remediation,
+			Metadata:    s.Metadata,
+		})
+	}
+	data, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return fmt.Errorf("json marshal: %w", err)
+	}
+	_, err = fmt.Fprintln(os.Stdout, string(data))
+	return err
 }

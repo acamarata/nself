@@ -1,0 +1,7 @@
+# CI test values for 'helm lint' and 'helm template' validation.
+domain: test.nself.example.com
+tls:
+  enabled: false
+  certManager: false
+postgres:
+  storage: 1Gi

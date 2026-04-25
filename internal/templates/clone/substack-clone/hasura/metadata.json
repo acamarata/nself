@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "tables": [
+        {
+          "table": {"schema": "public", "name": "np_newsletters"},
+          "array_relationships": [
+            {"name": "posts", "using": {"foreign_key_constraint_on": {"column": "newsletter_id", "table": {"schema": "public", "name": "np_posts"}}}},
+            {"name": "subscribers", "using": {"foreign_key_constraint_on": {"column": "newsletter_id", "table": {"schema": "public", "name": "np_subscribers"}}}},
+            {"name": "tiers", "using": {"foreign_key_constraint_on": {"column": "newsletter_id", "table": {"schema": "public", "name": "np_tiers"}}}}
+          ],
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["name","slug","description","logo_url"], "check": {"owner_id": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_posts"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {"status": {"_eq": "published"}, "is_paywalled": {"_eq": false}}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["newsletter_id","title","subtitle","content","is_paywalled","status"], "check": {"author_id": {"_eq": "X-Hasura-User-Id"}}}}],
+          "update_permissions": [{"role": "user", "permission": {"columns": ["title","subtitle","content","is_paywalled","status","published_at"], "filter": {"author_id": {"_eq": "X-Hasura-User-Id"}}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_subscribers"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}],
+          "insert_permissions": [{"role": "user", "permission": {"columns": ["newsletter_id","email","tier_id"], "check": {}}}]
+        },
+        {
+          "table": {"schema": "public", "name": "np_tiers"},
+          "select_permissions": [{"role": "user", "permission": {"columns": "*", "filter": {}}}]
+        }
+      ]
+    }
+  ]
+}

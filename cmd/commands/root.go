@@ -78,14 +78,16 @@ func init() {
 			}
 		}
 		// ── Command execution log ─────────────────────────────────────────────
-		// Use the working directory as the log root. After monorepo detection
-		// (below) chdir may change, but we capture cwd here for the log path.
-		// Fallback to os.TempDir() if cwd is unavailable.
-		logBase, err := os.Getwd()
-		if err != nil {
-			logBase = os.TempDir()
+		// Write to ~/.nself/logs/ — a fixed, user-scoped path independent of
+		// the working directory. Using cwd caused stray logs/ directories to
+		// appear in arbitrary project folders (cross-project pollution).
+		// Fallback to os.TempDir() if the home dir is unavailable.
+		var logDir string
+		if home, err := os.UserHomeDir(); err == nil {
+			logDir = filepath.Join(home, ".nself", "logs")
+		} else {
+			logDir = filepath.Join(os.TempDir(), "nself", "logs")
 		}
-		logDir := filepath.Join(logBase, "logs")
 		finishLog := cmdlog.New(logDir).Begin(os.Args)
 		defer func() { finishLog(0, nil) }()
 

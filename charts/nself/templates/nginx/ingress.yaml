@@ -1,0 +1,50 @@
+{{- if .Values.tls.certManager }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-tls
+spec:
+  secretName: {{ .Release.Name }}-tls
+  issuerRef:
+    name: {{ .Values.tls.issuerName }}
+    kind: ClusterIssuer
+  dnsNames:
+    - {{ .Values.domain }}
+    - api.{{ .Values.domain }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {{- if .Values.tls.enabled }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+spec:
+  {{- if .Values.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.domain }}
+      secretName: {{ .Release.Name }}-tls
+  {{- end }}
+  rules:
+    - host: {{ .Values.domain }}
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-hasura
+                port:
+                  number: 8080
+          - path: /v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-auth
+                port:
+                  number: 4000

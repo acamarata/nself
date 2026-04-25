@@ -7,15 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/deploy/bluegreen"
 	"github.com/nself-org/cli/internal/promote"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )
+
+// remotePathRe allows safe remote path characters: alphanumeric, slash, hyphen, underscore, dot.
+var remotePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
 
 // Deploy targets accepted by the CLI. Admin UI sends "production" instead of "prod".
 var deployTargets = map[string]string{
@@ -87,6 +92,19 @@ var deployCheckAccessCmd = &cobra.Command{
 	RunE:  runDeployCheckAccess,
 }
 
+// deployPromoteCmd promotes a canary deploy to 100% green traffic.
+var deployPromoteCmd = &cobra.Command{
+	Use:   "promote",
+	Short: "Promote a canary deploy to 100% green traffic",
+	Long: `Flip Nginx upstream weights from the current canary split to 100% green.
+Use after manual inspection of a canary deploy.
+
+Example:
+  nself deploy --canary 10   # start canary at 10%
+  nself deploy promote       # flip to 100% green after review`,
+	RunE: runDeployPromote,
+}
+
 func init() {
 	f := deployCmd.Flags()
 	f.String("strategy", "rolling", "Deploy strategy: rolling|blue-green|canary|preview")
@@ -99,14 +117,21 @@ func init() {
 	f.String("env", "", "Override environment (alias for the target arg)")
 	f.Bool("json", false, "Emit JSON output")
 
+	// Blue/green canary flags (Y17 — blue_green_deploy feature flag).
+	f.Int("canary", 0, "Start a canary deploy at N%% traffic to green (0 = full flip)")
+	f.Bool("skip-canary", false, "Skip canary phase and flip directly to 100% green")
+	f.Bool("force-migration", false, "Force deploy even with backward-incompatible migrations (disables canary)")
+
 	deployStatusCmd.Flags().String("env", "", "Environment to check")
 	deployStatusCmd.Flags().Bool("json", false, "Emit JSON output")
+	deployStatusCmd.Flags().Bool("blue-green", false, "Show blue/green state alongside deployment status")
 
 	deployCmd.AddCommand(deployStatusCmd)
 	deployCmd.AddCommand(deployRollbackCmd)
 	deployCmd.AddCommand(deployLogsCmd)
 	deployCmd.AddCommand(deployHealthCmd)
 	deployCmd.AddCommand(deployCheckAccessCmd)
+	deployCmd.AddCommand(deployPromoteCmd)
 
 	RootCmd.AddCommand(deployCmd)
 }
@@ -158,6 +183,9 @@ func runCLISelf(ctx context.Context, workdir string, args ...string) error {
 
 // notYetImplementedStrategies lists strategies that fall back to rolling with
 // an explicit warning. Tracked for v1.1.0.
+// Note: blue-green and canary are now implemented via --canary N when the
+// blue_green_deploy feature flag (Y17) is ON. The --strategy=blue-green/canary
+// path still falls back to rolling for backwards compat with existing scripts.
 var notYetImplementedStrategies = map[string]bool{
 	"blue-green": true,
 	"canary":     true,
@@ -293,10 +321,53 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	jsonOut, _ := cmd.Flags().GetBool("json")
 	includeFrontends, _ := cmd.Flags().GetBool("include-frontends")
 	excludeFrontends, _ := cmd.Flags().GetBool("exclude-frontends")
+	canaryPct, _ := cmd.Flags().GetInt("canary")
+	skipCanary, _ := cmd.Flags().GetBool("skip-canary")
+	forceMigration, _ := cmd.Flags().GetBool("force-migration")
 
 	workdir, err := projectRoot()
 	if err != nil {
 		return err
+	}
+
+	// Blue/green canary path (Y17 — blue_green_deploy feature flag).
+	// When --canary N is passed and the flag is ON, route to the bluegreen package.
+	// The feature flag check is intentionally lightweight: the env var
+	// NSELF_FEATURE_BLUE_GREEN_DEPLOY=true mirrors what the feature-flags plugin
+	// would return (nself flag list | grep blue_green_deploy). In production the
+	// flag plugin is the authoritative source; the env var is the fallback for
+	// environments without the flags plugin running.
+	bgEnabled := os.Getenv("NSELF_FEATURE_BLUE_GREEN_DEPLOY") == "true"
+	if (canaryPct > 0 || skipCanary) && bgEnabled {
+		if !jsonOut {
+			label := fmt.Sprintf("canary=%d%% skip-canary=%v force-migration=%v dry-run=%v", canaryPct, skipCanary, forceMigration, dryRun)
+			ui.CommandHeader(fmt.Sprintf("nself deploy %s (blue/green)", target), label)
+		}
+		if target == "prod" && !dryRun && !force {
+			return fmt.Errorf("production blue/green deploy requires --force. Re-run with --force once ready")
+		}
+		cfg := bluegreen.DeployConfig{
+			ProjectRoot:    workdir,
+			CanaryPercent:  canaryPct,
+			SkipCanary:     skipCanary,
+			ForceMigration: forceMigration,
+			DryRun:         dryRun,
+		}
+		result := bluegreen.Deploy(cmd.Context(), cfg)
+		if jsonOut {
+			b, _ := json.MarshalIndent(result, "", "  ")
+			fmt.Println(string(b))
+		} else if result.RolledBack {
+			ui.Error("Canary auto-rolled back: " + result.Error)
+		} else if !result.Success {
+			ui.Error("Blue/green deploy failed: " + result.Error)
+		} else {
+			ui.Success(fmt.Sprintf("Blue/green deploy complete in %s", result.Duration.Round(time.Millisecond)))
+		}
+		if !result.Success {
+			return fmt.Errorf("%s", result.Error)
+		}
+		return nil
 	}
 
 	if !jsonOut {
@@ -439,6 +510,9 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 	if remotePath == "" {
 		return fmt.Errorf("NSELF_DEPLOY_HOST_%s remote path is empty (got %q)", strings.ToUpper(target), host)
 	}
+	if !remotePathRe.MatchString(remotePath) {
+		return fmt.Errorf("NSELF_DEPLOY_HOST_%s remote path contains unsafe characters (got %q): only [a-zA-Z0-9/_.-] allowed", strings.ToUpper(target), remotePath)
+	}
 
 	// rsync compose + env files to the remote.
 	rsyncArgs := []string{
@@ -542,6 +616,19 @@ func runDeployRollback(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Blue/green rollback path (Y17).
+	bgEnabled := os.Getenv("NSELF_FEATURE_BLUE_GREEN_DEPLOY") == "true"
+	if bgEnabled {
+		ui.Info(fmt.Sprintf("Rolling back blue/green deploy for target: %s", target))
+		cfg := bluegreen.DeployConfig{ProjectRoot: workdir}
+		result := bluegreen.Rollback(cmd.Context(), cfg)
+		if !result.Success {
+			return fmt.Errorf("blue/green rollback failed: %s", result.Error)
+		}
+		ui.Success(fmt.Sprintf("Blue/green rollback complete in %s — all traffic restored to blue", result.Duration.Round(time.Millisecond)))
+		return nil
+	}
+
 	ui.Info(fmt.Sprintf("Rolling back last deployment for target: %s", target))
 
 	// DEP-04: wire to last promote tag written by nself promote.
@@ -555,6 +642,28 @@ func runDeployRollback(cmd *cobra.Command, args []string) error {
 	}
 
 	ui.Success(fmt.Sprintf("Rollback for %s completed — prior promote state restored", target))
+	return nil
+}
+
+// runDeployPromote flips Nginx to 100% green after a manual canary review.
+func runDeployPromote(cmd *cobra.Command, args []string) error {
+	workdir, err := projectRoot()
+	if err != nil {
+		return err
+	}
+
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	ui.Info("Promoting canary to 100% green traffic...")
+	cfg := bluegreen.DeployConfig{
+		ProjectRoot: workdir,
+		DryRun:      dryRun,
+	}
+	result := bluegreen.Promote(cmd.Context(), cfg)
+	if !result.Success {
+		return fmt.Errorf("promote failed: %s", result.Error)
+	}
+	ui.Success(fmt.Sprintf("Promoted to 100%% green in %s", result.Duration.Round(time.Millisecond)))
 	return nil
 }
 

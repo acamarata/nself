@@ -250,7 +250,70 @@ var secretsRetireCmd = &cobra.Command{
 
 var secretsScheduleCmd = &cobra.Command{
 	Use:   "schedule",
-	Short: "Show rotation schedule status for all tracked secrets",
+	Short: "Add a rotation schedule or show all schedule statuses",
+	Long: `Add a named rotation schedule, or show the status of all tracked schedules.
+
+If --secret and --every are provided, the schedule is created or updated.
+Otherwise, the current schedule table is printed.
+
+Examples:
+  nself secrets schedule --secret JWT_SIGNING_KEY --every 90d
+  nself secrets schedule`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		secretName, _ := cmd.Flags().GetString("secret")
+		everyFlag, _ := cmd.Flags().GetString("every")
+
+		// If both --secret and --every are supplied, create/update the schedule.
+		if secretName != "" && everyFlag != "" {
+			var cadenceDays int
+			if _, err := fmt.Sscanf(everyFlag, "%dd", &cadenceDays); err != nil {
+				return fmt.Errorf("--every must be in format <N>d (e.g. 90d): %w", err)
+			}
+			if err := secrets.AddSchedule(cwd, secretName, cadenceDays, 7); err != nil {
+				return err
+			}
+			fmt.Printf("Rotation schedule set: %s every %dd.\n", secretName, cadenceDays)
+			return nil
+		}
+
+		// Default: show schedule table.
+		checks, err := secrets.CheckSchedule(cwd)
+		if err != nil {
+			return err
+		}
+		if len(checks) == 0 {
+			fmt.Println("No rotation schedules configured.")
+			return nil
+		}
+		tbl := ui.NewTable("Secret", "Cadence", "Window", "Next Due", "Due In", "Status")
+		for _, c := range checks {
+			dueIn := "-"
+			if c.DueInDays >= 0 {
+				dueIn = fmt.Sprintf("%dd", c.DueInDays)
+			}
+			nextDue := c.NextDue
+			if len(nextDue) > 10 {
+				nextDue = nextDue[:10]
+			}
+			if nextDue == "" {
+				nextDue = "-"
+			}
+			tbl.AddRow(c.SecretName, fmt.Sprintf("%dd", c.CadenceDays),
+				fmt.Sprintf("%dd", c.WindowDays), nextDue, dueIn, c.Status)
+		}
+		tbl.Render()
+		return nil
+	},
+}
+
+// secretsListSchedulesCmd is an alias for schedule (show only) per the F08 spec.
+var secretsListSchedulesCmd = &cobra.Command{
+	Use:   "list-schedules",
+	Short: "List all rotation schedule statuses (alias for: secrets schedule)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -281,6 +344,68 @@ var secretsScheduleCmd = &cobra.Command{
 				fmt.Sprintf("%dd", c.WindowDays), nextDue, dueIn, c.Status)
 		}
 		tbl.Render()
+		return nil
+	},
+}
+
+// secretsVerifyCmd checks that a named secret is present in the store.
+var secretsVerifyCmd = &cobra.Command{
+	Use:   "verify <KEY>",
+	Short: "Verify that a named secret exists in the store",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		if err := secrets.VerifySecretExists(cwd, secretsEnvFlag, args[0]); err != nil {
+			return err
+		}
+		fmt.Printf("Secret %s: PRESENT in %s environment.\n", args[0], secretsEnvFlag)
+		return nil
+	},
+}
+
+// secretsRotationLogCmd prints the rotation event log.
+var secretsRotationLogCmd = &cobra.Command{
+	Use:   "rotation-log",
+	Short: "Show rotation event log",
+	Long: `Display the history of rotation events recorded for this project.
+
+Optionally filter by secret name with --secret.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		filterSecret, _ := cmd.Flags().GetString("secret")
+		log, err := secrets.LoadRotationLog(cwd)
+		if err != nil {
+			return err
+		}
+		if len(log.Events) == 0 {
+			fmt.Println("No rotation events recorded.")
+			return nil
+		}
+		tbl := ui.NewTable("Secret", "Rotated At", "Status", "Note")
+		count := 0
+		for _, e := range log.Events {
+			if filterSecret != "" && e.SecretName != filterSecret {
+				continue
+			}
+			rotatedAt := e.RotatedAt
+			if len(rotatedAt) > 19 {
+				rotatedAt = rotatedAt[:19]
+			}
+			tbl.AddRow(e.SecretName, rotatedAt, e.Status, e.Note)
+			count++
+		}
+		if count == 0 {
+			fmt.Printf("No events for secret %q.\n", filterSecret)
+			return nil
+		}
+		tbl.Render()
+		fmt.Printf("\n%d event(s).\n", count)
 		return nil
 	},
 }
@@ -377,6 +502,13 @@ func init() {
 	secretsRekeyCmd.Flags().String("remove", "", "Public key to remove from recipients")
 	secretsRotateCmd.Flags().Bool("dual-window", false, "Keep old key as _PREVIOUS during overlap window")
 
+	// schedule: optional flags for creating a named schedule.
+	secretsScheduleCmd.Flags().String("secret", "", "Secret name to schedule (requires --every)")
+	secretsScheduleCmd.Flags().String("every", "", "Rotation interval in days, e.g. 90d (requires --secret)")
+
+	// rotation-log: optional filter flag.
+	secretsRotationLogCmd.Flags().String("secret", "", "Filter log to a specific secret name")
+
 	secretsCmd.AddCommand(secretsInitCmd)
 	secretsCmd.AddCommand(secretsSetCmd)
 	secretsCmd.AddCommand(secretsGetCmd)
@@ -385,6 +517,9 @@ func init() {
 	secretsCmd.AddCommand(secretsRotateCmd)
 	secretsCmd.AddCommand(secretsRetireCmd)
 	secretsCmd.AddCommand(secretsScheduleCmd)
+	secretsCmd.AddCommand(secretsListSchedulesCmd)
+	secretsCmd.AddCommand(secretsVerifyCmd)
+	secretsCmd.AddCommand(secretsRotationLogCmd)
 	secretsCmd.AddCommand(secretsDecryptOnDeployCmd)
 	secretsCmd.AddCommand(secretsAuditCmd)
 	secretsCmd.AddCommand(secretsLintCmd)

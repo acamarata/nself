@@ -1,19 +1,31 @@
-# nSelf CLI Deprecation Registry
-# This file is read at startup by internal/deprecation.LoadRegistry().
-# Add entries here when a CLI command or flag enters Phase 1 deprecation.
+# nSelf CLI + Plugin Deprecation Registry
+# Read at startup by internal/deprecation.LoadRegistry() (CLI items)
+# and internal/deprecation.LoadPluginRegistry() (plugin API items).
 #
-# Schema:
-#   items:
-#     - name:        string   # CLI command/flag name (e.g. "nself old-cmd" or "--old-flag")
-#       type:        string   # "command" | "flag" | "env"
-#       since:       string   # Version when deprecation started (e.g. "v1.0.9")
-#       replacement: string   # What to use instead (e.g. "nself new-cmd")
-#       docs_url:    string   # Docs link for migration
-#       phase:       integer  # 1 = warning, 2 = strong warning, 3 = removed
+# CLI Schema (items[]):
+#   name:        string   # CLI command/flag name (e.g. "nself old-cmd" or "--old-flag")
+#   type:        string   # "command" | "flag" | "env"
+#   since:       string   # Version when deprecation started (e.g. "v1.0.9")
+#   replacement: string   # What to use instead
+#   docs_url:    string   # Docs link for migration
+#   phase:       integer  # 1 = warning, 2 = strong warning, 3 = removed
 #
-# v1.0.8 → v1.0.9 audit: no CLI commands were renamed or removed.
-# All 47 commands in F19 Surface 1 are stable.
-# This file is populated as commands enter Phase 1 deprecation in future releases.
+# Plugin API Schema (plugins[]):
+#   name:               string   # plugin name (e.g. "ai")
+#   api_version:        string   # current SemVer of the plugin's HTTP API (G2)
+#   deprecated_endpoints[]:      # (G4) may be empty []
+#     path:             string   # e.g. /v1/complete
+#     deprecated_in:    string   # SemVer when this path was deprecated
+#     removed_in:       string   # SemVer when this path will be removed
+#     replacement:      string   # path or description of replacement
+#     reason:           string   # human-readable rationale
+#
+# v1.0.9 LTS baseline: no CLI command deprecations.
+# v1.0.9 LTS baseline: no plugin endpoint deprecations (all paths are current).
+
+# =============================================================================
+# CLI deprecations
+# =============================================================================
 
 items:
   # nMedia bundle → nTV bundle (bundle name change, not a CLI command — listed here for reference)
@@ -24,11 +36,321 @@ items:
     docs_url: "https://docs.nself.org/migrate/v1-0-8-to-v1-0-9"
     phase: 1
 
-# Example entry for future CLI command deprecations:
-# items:
-#   - name: "nself old-cmd"
-#     type: command
-#     since: "v1.1.0"
-#     replacement: "nself new-cmd"
-#     docs_url: "https://docs.nself.org/migrate/v1-1-0"
-#     phase: 1
+# =============================================================================
+# Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
+# =============================================================================
+#
+# All 74 plugins in plugins-pro/paid/ are listed below.
+# api_version reflects the current stable API version as of v1.0.9 LTS.
+# deprecated_endpoints is empty for all plugins at v1.0.9 baseline (no removals planned).
+#
+# IMPORTANT: when adding a new deprecated endpoint, follow the lifecycle:
+#   1. Add entry with deprecated_in = current_version, removed_in = next major
+#   2. The plugin HTTP handler must inject Deprecation + Sunset headers (G5)
+#   3. Bump api_version (MINOR if adding replacement, MAJOR if removing)
+#   4. Update the public registry at ping.nself.org/api/deprecation-registry.json (G8)
+# =============================================================================
+
+plugins:
+  - name: access-controls
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: activity-feed
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: admin-api
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: ai
+    api_version: "1.3.0"
+    deprecated_endpoints:
+      # Example: /v1/complete was deprecated when we adopted OpenAI-compatible paths.
+      # Uncomment when the grace period starts (target: v1.4.0 → removal v2.0.0).
+      # - path: /v1/complete
+      #   deprecated_in: "1.4.0"
+      #   removed_in: "2.0.0"
+      #   replacement: /v1/chat/completions
+      #   reason: "Align with OpenAI-compatible path"
+
+  - name: analytics
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: auth
+    api_version: "1.1.0"
+    deprecated_endpoints: []
+
+  - name: backup
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: bots
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: browser
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: calendar
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: cdn
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: chat
+    api_version: "1.1.0"
+    deprecated_endpoints: []
+
+  - name: claw
+    api_version: "1.2.0"
+    deprecated_endpoints: []
+
+  - name: claw-budget
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: claw-news
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: claw-web
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: cloudflare
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: cms
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: compliance
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: cron
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: ddns
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: devices
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: documents
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: donorbox
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: entitlements
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: epg
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family-ancestry
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family-familysearch
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family-geni
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family-myheritage
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: family-wikitree
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: file-processing
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: functions-v8
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: game-metadata
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: geocoding
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: geolocation
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: google
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: home
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: idme
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: knowledge-base
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: linkedin
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: livekit
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: mcp
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: media-processing
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: meetings
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: moderation
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: mux
+    api_version: "1.1.0"
+    deprecated_endpoints: []
+
+  - name: notify
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: object-storage
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: observability
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: ollama
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: payments
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: paypal
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: photos
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: podcast
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: post
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: realtime
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: recording
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: retro-gaming
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: rom-discovery
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: shared
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: shopify
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: social
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: sports
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: storage-transform
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: stream-gateway
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: streaming
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: stripe
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: support
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: tmdb
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: voice
+    api_version: "1.1.0"
+    deprecated_endpoints: []
+
+  - name: web3
+    api_version: "1.0.0"
+    deprecated_endpoints: []
+
+  - name: workflows
+    api_version: "1.0.0"
+    deprecated_endpoints: []

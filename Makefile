@@ -9,13 +9,39 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
 
 sport-f21:
 	@bash scripts/sport/generate-f21.sh
+
+## Q04 — SBOM generation (local dev target)
+## Requires: syft (https://github.com/anchore/syft)
+## Generates sbom.spdx.json (SPDX) and sbom.cdx.json (CycloneDX 1.5) from the source tree.
+## Run `make sbom` before a release to verify SBOM generation works locally.
+sbom:
+	@echo "Checking for syft..."
+	@if ! command -v syft >/dev/null 2>&1; then \
+		echo "syft not found. Install via:"; \
+		echo "  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin"; \
+		exit 1; \
+	fi
+	@echo "Generating SPDX SBOM..."
+	@syft packages . --output spdx-json=sbom.spdx.json
+	@echo "Generating CycloneDX 1.5 SBOM (Q04)..."
+	@syft packages . --output cyclonedx-json=sbom.cdx.json
+	@echo ""
+	@echo "SBOMs written:"
+	@echo "  sbom.spdx.json  (SPDX 2.3)        $$(wc -c < sbom.spdx.json) bytes"
+	@echo "  sbom.cdx.json   (CycloneDX 1.5)   $$(wc -c < sbom.cdx.json) bytes"
+	@echo ""
+	@echo "Verify a release SBOM signature:"
+	@echo "  bash tools/sbom/verify.sh v$(VERSION)"
+	@echo ""
+	@echo "Query SBOM for a package:"
+	@echo "  bash tools/sbom/query.sh --local sbom.cdx.json --pkg cobra"
 
 build:
 	CGO_ENABLED=0 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/nself/

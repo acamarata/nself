@@ -1,11 +1,12 @@
-// Package telemetry — opt-in anonymous CLI telemetry client (S65.T01).
+// Package telemetry — opt-in anonymous CLI telemetry client (S65.T01 / Q07).
 //
-// All events are gated by NSELF_TELEMETRY_OPT_IN=1. When the env var is unset
-// or empty, Send is a strict no-op: no HTTP is initiated, no DNS is resolved.
+// Two send paths exist for backward compatibility:
+//   - Send(event, props) — legacy strict opt-in via NSELF_TELEMETRY_OPT_IN=1.
+//   - SendEvent(eventType, metadata) — v1.1.0+ path, opt-out model via IsEnabled().
 //
 // Events POST to ping.nself.org/telemetry as JSON. Network failures are silently
 // dropped (logged at DEBUG level). The CLI never blocks: each Send call dispatches
-// a goroutine with a 1-second context deadline.
+// a goroutine with a 3-second context deadline.
 //
 // Privacy invariant: payloads MUST NOT contain email addresses, file paths, project
 // names, license keys, or any user-identifying string. Only anonymous IDs and
@@ -20,8 +21,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
+
+	"github.com/nself-org/cli/internal/version"
 )
 
 const (
@@ -29,7 +33,8 @@ const (
 	pingAPIEndpoint = "https://ping.nself.org/telemetry"
 
 	// sendTimeout is the maximum time allowed for a single telemetry POST.
-	sendTimeout = 1 * time.Second
+	// 3 seconds per Q07 spec (CLI must exit within 3.1 s when ping_api unreachable).
+	sendTimeout = 3 * time.Second
 
 	// installSourceFile is a one-shot file that carries the install source from
 	// the install script into the first nself init invocation.
@@ -212,4 +217,68 @@ func sanitizeInstallMethod(s string) string {
 		return s
 	}
 	return ""
+}
+
+// eventPayload is the JSON body for the v1.1.0+ telemetry endpoint (Q07).
+// Fields map 1:1 to the np_telemetry_events table in ping_api.
+type eventPayload struct {
+	InstallID  string         `json:"install_id"`
+	Event      string         `json:"event"`
+	CLIVersion string         `json:"version"`
+	OS         string         `json:"os"`
+	Arch       string         `json:"arch"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+}
+
+// SendEvent dispatches one of the T01-T05 catalog events to ping.nself.org/telemetry
+// using the v1.1.0+ opt-out model. It is a fire-and-forget goroutine with a 3-second
+// hard deadline. Network failures are silently dropped.
+//
+// Gate: returns immediately without dispatching if IsEnabled() is false.
+//
+// Privacy: metadata values MUST be categorical or numeric only — never free-form
+// user text, file paths, license keys, or any personally-identifying data.
+func SendEvent(eventType string, metadata map[string]any) {
+	if !IsEnabled() {
+		return
+	}
+
+	installID := LoadOrCreateInstallID()
+	p := eventPayload{
+		InstallID:  installID,
+		Event:      eventType,
+		CLIVersion: version.GetVersion(),
+		OS:         runtime.GOOS,
+		Arch:       runtime.GOARCH,
+		Metadata:   metadata,
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
+		defer cancel()
+
+		data, err := json.Marshal(p)
+		if err != nil {
+			return // never blocks
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, pingAPIEndpoint, bytes.NewReader(data))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", "nself-cli/telemetry")
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			if os.Getenv("NSELF_TELEMETRY_DEBUG") == "1" {
+				fmt.Fprintf(os.Stderr, "[telemetry DEBUG] SendEvent %s failed: %v\n", eventType, err)
+			}
+			return
+		}
+		defer resp.Body.Close()
+
+		if os.Getenv("NSELF_TELEMETRY_DEBUG") == "1" && resp.StatusCode >= 400 {
+			fmt.Fprintf(os.Stderr, "[telemetry DEBUG] SendEvent %s: server %d\n", eventType, resp.StatusCode)
+		}
+	}()
 }

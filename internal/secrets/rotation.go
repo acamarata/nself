@@ -233,6 +233,111 @@ func RetireOldKey(projectRoot, env, key string) error {
 	return saveStore(projectRoot, env, store)
 }
 
+// RotationLogEntry is a single event in the rotation event log.
+type RotationLogEntry struct {
+	SecretName string `json:"secret_name"`
+	RotatedAt  string `json:"rotated_at"`
+	Status     string `json:"status"` // ok|failed|rolled_back
+	Note       string `json:"note,omitempty"`
+}
+
+// RotationLog represents all recorded rotation events.
+type RotationLog struct {
+	Events    []RotationLogEntry `json:"events"`
+	UpdatedAt string             `json:"updated_at"`
+}
+
+// rotationLogPath returns the path to the rotation event log file.
+func rotationLogPath(projectRoot string) string {
+	return filepath.Join(projectRoot, SecretsDir, "rotation-log.json")
+}
+
+// LoadRotationLog reads the rotation event log from disk.
+func LoadRotationLog(projectRoot string) (*RotationLog, error) {
+	path := rotationLogPath(projectRoot)
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return &RotationLog{Events: []RotationLogEntry{}}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading rotation log: %w", err)
+	}
+	var log RotationLog
+	if err := json.Unmarshal(data, &log); err != nil {
+		return nil, fmt.Errorf("parsing rotation log: %w", err)
+	}
+	return &log, nil
+}
+
+// AppendRotationEvent adds a rotation event to the log.
+func AppendRotationEvent(projectRoot, secretName, status, note string) error {
+	log, err := LoadRotationLog(projectRoot)
+	if err != nil {
+		return err
+	}
+	log.Events = append(log.Events, RotationLogEntry{
+		SecretName: secretName,
+		RotatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Status:     status,
+		Note:       note,
+	})
+	log.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	data, err := json.MarshalIndent(log, "", "  ")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(rotationLogPath(projectRoot))
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	return os.WriteFile(rotationLogPath(projectRoot), data, 0600)
+}
+
+// AddSchedule adds or updates a named rotation schedule entry.
+func AddSchedule(projectRoot, secretName string, cadenceDays, windowDays int) error {
+	state, err := LoadRotationState(projectRoot)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	entry := RotationSchedule{
+		SecretName:  secretName,
+		CadenceDays: cadenceDays,
+		WindowDays:  windowDays,
+		LastRotated: now.Format(time.RFC3339),
+	}
+	if cadenceDays > 0 {
+		entry.NextDue = now.AddDate(0, 0, cadenceDays).Format(time.RFC3339)
+	}
+
+	found := false
+	for i, s := range state.Schedules {
+		if s.SecretName == secretName {
+			state.Schedules[i] = entry
+			found = true
+			break
+		}
+	}
+	if !found {
+		state.Schedules = append(state.Schedules, entry)
+	}
+	return SaveRotationState(projectRoot, state)
+}
+
+// VerifySecretExists checks whether a named secret is present in the store for an environment.
+// It returns nil when the secret is found; an error when it is missing or the store cannot be read.
+// This provides a lightweight "verify" surface (value check without decrypting to stdout).
+func VerifySecretExists(projectRoot, env, secretName string) error {
+	store, err := loadStore(projectRoot, env)
+	if err != nil {
+		return err
+	}
+	if _, ok := store.Secrets[secretName]; !ok {
+		return fmt.Errorf("secret %q not found in %s environment", secretName, env)
+	}
+	return nil
+}
+
 // InitSchedules ensures all default schedules are present in the rotation state,
 // computing NextDue from LastRotated or setting to now if never rotated.
 func InitSchedules(projectRoot string) error {

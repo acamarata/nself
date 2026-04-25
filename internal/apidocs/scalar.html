@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{.Title}}</title>
+    <style>
+      body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <!-- Scalar API Reference — served offline, no CDN. -->
+    <script
+      id="api-reference"
+      data-url="/api-docs"
+      data-configuration='{"theme":"{{.Theme}}","authentication":{"preferredSecurityScheme":"bearerAuth"},"hideDownloadButton":false,"layout":"modern"}'
+    ></script>
+    <!--
+      The Scalar bundle is vendored inside the CLI binary via go:embed.
+      This file is served at /docs by nginx (generated conf api-docs.conf).
+      No external network requests are made at runtime.
+    -->
+    <script src="/api-docs-assets/scalar.js"></script>
+  </body>
+</html>

@@ -30,7 +30,7 @@ var validProductPrefixes = []ProductPrefix{
 	{"nself_claw_", "claw", "ɳClaw"},
 	{"nself_clawde_", "clawde", "ClawDE+"},
 	{"nself_chat_", "chat", "ɳChat"},
-	{"nself_media_", "media", "nMedia"},
+	{"nself_media_", "media", "nTV"},
 	{"nself_family_", "family", "nFamily"},
 	{"nself_pro_", "pro", "ɳSelf Pro"},
 	{"nself_ent_", "enterprise", "ɳSelf Enterprise"},

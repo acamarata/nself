@@ -70,6 +70,34 @@ type MultiApp struct {
 	DefaultValue    string `json:"defaultValue,omitempty"`
 }
 
+// PluginGraphQLEntityKey describes a single Apollo Federation entity type
+// that a plugin subgraph owns. Used for cross-subgraph entity resolution.
+type PluginGraphQLEntityKey struct {
+	// Type is the GraphQL type name (e.g. "User").
+	Type string `json:"type" yaml:"type"`
+	// Key is the @key field used for entity resolution (e.g. "id").
+	Key string `json:"key" yaml:"key"`
+}
+
+// PluginGraphQLBlock is the graphql: block in a plugin manifest.
+// When Enabled is true and NSELF_FEDERATION=true, nself build registers
+// this plugin as a subgraph in the Apollo Router supergraph (G05).
+type PluginGraphQLBlock struct {
+	// Enabled must be true for this plugin to register as a subgraph.
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// SubgraphName is the unique lowercase subgraph identifier.
+	// Must not be "hasura" (reserved). Format: [a-z][a-z0-9_]*.
+	SubgraphName string `json:"subgraph_name" yaml:"subgraph_name"`
+	// SubgraphURL is the HTTP endpoint serving the subgraph SDL.
+	// ${PORT} is substituted with the plugin's declared Port field.
+	SubgraphURL string `json:"subgraph_url" yaml:"subgraph_url"`
+	// SchemaPath is a repo-relative path to the static SDL file.
+	// Used by rover supergraph compose. Optional when SubgraphURL is live.
+	SchemaPath string `json:"schema_path,omitempty" yaml:"schema_path,omitempty"`
+	// Entities lists Apollo Federation entity types this subgraph owns.
+	Entities []PluginGraphQLEntityKey `json:"entities,omitempty" yaml:"entities,omitempty"`
+}
+
 // PluginManifest describes a single plugin, parsed from plugin.json.
 type PluginManifest struct {
 	// Required fields
@@ -156,6 +184,12 @@ type PluginManifest struct {
 	// Deprecation carries the required metadata when status == "deprecated". (S58-T02)
 	// All five fields are required when the block is present.
 	Deprecation *DeprecationBlock `json:"deprecation,omitempty"`
+
+	// GraphQL carries the Apollo Federation subgraph registration for this
+	// plugin. When graphql.enabled is true and NSELF_FEDERATION=true, the
+	// build pipeline includes this plugin as a subgraph in the Apollo Router
+	// supergraph. The field is ignored in non-federation deployments (G05).
+	GraphQL *PluginGraphQLBlock `json:"graphql,omitempty"`
 
 	// MaxNselfVersion is the last CLI version this plugin is compatible with. (S58-T06)
 	// Empty means "no upper bound". compat-check reads this field.

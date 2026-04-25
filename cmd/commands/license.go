@@ -25,7 +25,7 @@ const pricingURL = "https://nself.org/pricing"
 var licenseCmd = &cobra.Command{
 	Use:   "license",
 	Short: "Manage license keys for nSelf product bundles",
-	Long: `Manage license keys for nSelf product bundles (ɳClaw, ɳChat, nMedia, etc.).
+	Long: `Manage license keys for nSelf product bundles (ɳClaw, ɳChat, nTV, etc.).
 
 Supports multiple keys for different product bundles. Keys can also be set via
 environment variables: NSELF_PLUGIN_LICENSE_KEY (legacy) or NSELF_LICENSE_KEY_1
@@ -240,7 +240,7 @@ func runLicenseStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	if !hasPlus {
-		fmt.Printf("\nUpgrade to ɳSelf+ ($49/yr) for all plugins: %s\n", pricingURL)
+		fmt.Printf("\nUpgrade to ɳSelf+ ($3.99/mo or $39.99/yr) for all plugins: %s\n", pricingURL)
 	}
 
 	return nil

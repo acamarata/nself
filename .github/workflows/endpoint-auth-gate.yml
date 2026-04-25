@@ -1,0 +1,56 @@
+name: Endpoint Auth Gate
+
+on:
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - 'plugins-pro/**'
+      - 'web/backend/**'
+      - 'tools/endpoint-auth-checker/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins/**'
+      - 'plugins-pro/**'
+      - 'web/backend/**'
+      - 'tools/endpoint-auth-checker/**'
+
+jobs:
+  auth-gate:
+    name: Endpoint Auth Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # allows inline PR annotations
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run unit tests
+        working-directory: tools/endpoint-auth-checker
+        run: go test ./... -count=1
+
+      - name: Build checker
+        run: go build -o bin/endpoint-auth-checker ./tools/endpoint-auth-checker/
+
+      - name: Run auth gate (report-only — baseline scan)
+        # First pass: always runs in text mode so we see all violations in the log.
+        run: |
+          ./bin/endpoint-auth-checker \
+            --dirs plugins/,plugins-pro/paid/,web/backend/ \
+            --annotation-format text \
+          || true
+
+      - name: Run auth gate (fail-on-unknown with GHA annotations)
+        # Second pass: emits inline PR annotations and fails CI on violations.
+        run: |
+          ./bin/endpoint-auth-checker \
+            --dirs plugins/,plugins-pro/paid/,web/backend/ \
+            --annotation-format github \
+            --fail-on-unknown

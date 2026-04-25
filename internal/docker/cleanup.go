@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ func RunPostStartCleanup(ctx context.Context, projectName string) error {
 	for i := 0; i < 3; i++ {
 		if err := cleanupInitContainers(ctx); err != nil {
 			// Non-fatal: continue with remaining passes.
-			_ = err
+			slog.Debug("cleanup init containers (non-fatal)", "pass", i+1, "err", err)
 		}
 		if i < 2 {
 			select {
@@ -67,7 +68,7 @@ func RunPostStartCleanup(ctx context.Context, projectName string) error {
 	// Clean up zombie containers from interrupted starts.
 	if err := cleanupZombieContainers(ctx, projectName); err != nil {
 		// Non-fatal: best effort.
-		_ = err
+		slog.Debug("cleanup zombie containers (non-fatal)", "project", projectName, "err", err)
 	}
 
 	return nil

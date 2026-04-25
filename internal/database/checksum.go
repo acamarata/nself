@@ -209,17 +209,20 @@ func ResetChecksum(ctx context.Context, cfg *config.Config, migrationID string) 
 			if err != nil {
 				return err
 			}
-			// cs is SHA-256 hex; enforce defensively before interpolation.
+			// cs is SHA-256 hex; enforce defensively before use.
 			if !sha256HexRegex.MatchString(cs) {
 				return fmt.Errorf("unexpected checksum format for %s", migrationID)
 			}
-			db := cfg.Postgres.DB
-			if db == "" {
-				db = "nself"
+			// Use a parameterized query to avoid any SQL injection risk.
+			conn, err := Open(ctx, cfg)
+			if err != nil {
+				return fmt.Errorf("open database for checksum update: %w", err)
 			}
-			sql := fmt.Sprintf("UPDATE nself_ops.migrations SET checksum = '%s' WHERE id = '%s'",
-				cs, strings.ReplaceAll(migrationID, "'", "''"))
-			return runSQLOnDB(ctx, cfg, db, sql)
+			defer conn.Close()
+			_, err = conn.ExecContext(ctx,
+				"UPDATE nself_ops.migrations SET checksum = $1 WHERE id = $2",
+				cs, migrationID)
+			return err
 		}
 	}
 	return fmt.Errorf("migration %s not found on disk", migrationID)

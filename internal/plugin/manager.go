@@ -93,6 +93,34 @@ func ListInstalled(pluginDir string) ([]InstalledPluginInfo, error) {
 	return plugins, nil
 }
 
+// LoadManifestsFromDir scans pluginDir and returns the full PluginManifest for
+// every installed plugin. It is the full-manifest counterpart to ListInstalled,
+// used by features that need manifest fields beyond name/version/tier/status
+// (e.g., federation's GraphQL block). Directories without a valid plugin.json
+// are silently skipped. If pluginDir does not exist, nil is returned.
+func LoadManifestsFromDir(pluginDir string) ([]*PluginManifest, error) {
+	entries, err := os.ReadDir(pluginDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading plugin directory: %w", err)
+	}
+	var manifests []*PluginManifest
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		manifestPath := filepath.Join(pluginDir, entry.Name(), "plugin.json")
+		m, err := parseManifest(manifestPath)
+		if err != nil {
+			continue // skip directories without a valid manifest
+		}
+		manifests = append(manifests, m)
+	}
+	return manifests, nil
+}
+
 // installLockPath returns the path to the install lock file for pluginDir.
 func installLockPath(pluginDir string) string {
 	return filepath.Join(pluginDir, ".install.lock")
@@ -299,10 +327,14 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	// Step 5b: Verify Ed25519 signature (T09 — Security-Always-Free).
 	// The signature is computed over the raw SHA-256 digest of the tarball.
 	// Public key is pinned in the registry; never fetched at verify time (TOCTOU).
-	// Skip flag requires --force co-flag; standalone skip emits WARN to stderr.
-	skipVerify := os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1"
-	if skipVerify {
-		fmt.Fprintf(os.Stderr, "WARNING: plugin signature verification skipped (NSELF_LICENSE_SKIP_VERIFY=1)\n")
+	// Skip requires BOTH NSELF_LICENSE_SKIP_VERIFY=1 AND NSELF_LICENSE_SKIP_VERIFY_FORCE=1.
+	// Either var alone is insufficient — standalone skip is not permitted (matches license/validate.go).
+	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" {
+		if os.Getenv("NSELF_LICENSE_SKIP_VERIFY_FORCE") != "1" {
+			os.Remove(archivePath)
+			return fmt.Errorf("NSELF_LICENSE_SKIP_VERIFY requires NSELF_LICENSE_SKIP_VERIFY_FORCE=1; standalone skip is not permitted")
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: plugin signature verification skipped (NSELF_LICENSE_SKIP_VERIFY=1 + FORCE)\n")
 	} else {
 		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature); err != nil {
 			os.Remove(archivePath)
@@ -320,6 +352,31 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	if err := createPluginSchema(ctx, cfg, name); err != nil {
 		rollbackInstall(ctx, cfg, name, destDir)
 		return fmt.Errorf("creating schema for plugin %q: %w", name, err)
+	}
+
+	// Step 7b (Q01): Generate per-plugin Ed25519 identity keypair and register
+	// the public key with ping_api. This is a best-effort step — a failure is
+	// logged as a warning but does not roll back the install, because the plugin
+	// will still function without JWT auth until Phase B-3 strict mode.
+	// The key is only generated when PLUGIN_INTERNAL_SECRET is set (i.e., the
+	// operator has opted into the inter-plugin JWT system).
+	if os.Getenv("PLUGIN_INTERNAL_SECRET") != "" {
+		// pluginDir doubles as the identity data root — each plugin's keypair
+		// is stored at pluginDir/<name>/identity.key alongside its manifest.
+		if !IdentityKeyExists(pluginDir, name) {
+			pubKey, idErr := GenerateEd25519Keypair(pluginDir, name)
+			if idErr != nil {
+				slog.Warn("plugin identity key generation failed — inter-plugin JWT auth unavailable until resolved",
+					"plugin", name, "error", idErr)
+			} else {
+				if regErr := RegisterIdentity(ctx, name, pubKey); regErr != nil {
+					slog.Warn("plugin identity registration with ping_api failed — JWT auth unavailable until resolved",
+						"plugin", name, "error", regErr)
+				} else {
+					slog.Info("plugin.identity.registered", "plugin", name)
+				}
+			}
+		}
 	}
 
 	// S71-T02: Emit structured audit log for the granted permission set.

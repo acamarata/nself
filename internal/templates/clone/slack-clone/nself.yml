@@ -1,0 +1,9 @@
+name: my-team-chat
+template: slack-clone
+template_version: "1.0.0"
+plugins:
+  - auth
+  - chat
+  - livekit
+  - realtime
+  - notify

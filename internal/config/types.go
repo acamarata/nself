@@ -72,6 +72,9 @@ type Config struct {
 	// Plugin System
 	PluginSystem PluginSystemConfig
 
+	// API Docs (Scalar)
+	ApiDocs ApiDocsConfig
+
 	// Custom Services
 	CustomServices []CustomService // CS_1..CS_10
 
@@ -102,6 +105,11 @@ type Config struct {
 	LogLevel            string `env:"NSELF_LOG_LEVEL"`      // info
 	SkipHealthChecks    bool   `env:"NSELF_SKIP_HEALTH_CHECKS"`
 	StopTimeout         int    `env:"NSELF_STOP_TIMEOUT"` // 30
+
+	// Federation — GraphQL Federation via Apollo Router (G05).
+	// When true, nself build injects Apollo Router (CS_7) and composes a
+	// supergraph schema from installed plugin subgraphs. Default: false.
+	FederationEnabled bool `env:"NSELF_FEDERATION"`
 
 	// Passthrough: arbitrary env vars matching patterns (AUTH_PROVIDER_*, REMOTE_SCHEMA_*, etc.)
 	Passthrough map[string]string
@@ -519,6 +527,19 @@ type InternalRoute struct {
 	Target    string // INTERNAL_ROUTE_N_TARGET (e.g., hasura:8080)
 	RateZone  string // INTERNAL_ROUTE_N_RATE_ZONE (default: general)
 	WebSocket bool   // INTERNAL_ROUTE_N_WEBSOCKET
+}
+
+// ApiDocsConfig holds the api_docs section from nself.yaml.
+// Controls generation of the OpenAPI 3.1 spec and Scalar interactive docs page.
+type ApiDocsConfig struct {
+	Enabled       bool     `env:"API_DOCS_ENABLED"`      // default: true
+	Path          string   `env:"API_DOCS_PATH"`         // serve path, default: /docs
+	Title         string   `env:"API_DOCS_TITLE"`        // defaults to "<ProjectName> API"
+	Theme         string   `env:"API_DOCS_THEME"`        // default | moon | purple | solarized
+	AuthEnvVar    string   `env:"API_DOCS_AUTH_ENV_VAR"` // env var with bearer token for try-out
+	HideEndpoints []string // paths to exclude from the spec
+	GraphQLEnabled  bool   `env:"API_DOCS_GRAPHQL_ENABLED"`  // default: true
+	GraphQLEndpoint string `env:"API_DOCS_GRAPHQL_ENDPOINT"` // default: /v1/graphql
 }
 
 // IsProduction reports whether the project environment is production.

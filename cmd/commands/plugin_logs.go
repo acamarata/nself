@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -74,6 +75,11 @@ func runPluginLogs(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Validate the grep pattern before use so we get a helpful error on invalid regex.
+	if _, err := regexp.Compile(grepPattern); err != nil {
+		return fmt.Errorf("invalid --grep pattern %q: %w", grepPattern, err)
+	}
+
 	// With grep: pipe docker logs output through grep.
 	dockerCmd := exec.Command("docker", dockerArgs...)
 	grepCmd := exec.Command("grep", "-E", grepPattern)
@@ -96,7 +102,14 @@ func runPluginLogs(cmd *cobra.Command, args []string) error {
 
 	// Wait for docker to finish, then grep will EOF.
 	_ = dockerCmd.Wait()
-	_ = grepCmd.Wait()
+	// grep exits 1 on "no match" (normal) and 2+ on error. Only surface errors.
+	if err := grepCmd.Wait(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			// No lines matched — not an error.
+			return nil
+		}
+		return fmt.Errorf("grep error: %w", err)
+	}
 	return nil
 }
 

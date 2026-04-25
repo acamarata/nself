@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/deprecation"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/nself-org/cli/internal/version"
 
@@ -17,10 +18,10 @@ import (
 
 // apiVersionRow represents one surface's version info for the api version command.
 type apiVersionRow struct {
-	Surface     string `json:"surface"`
-	Version     string `json:"version"`
-	Deprecated  bool   `json:"deprecated"`
-	EOLDate     string `json:"eol_date,omitempty"`
+	Surface    string `json:"surface"`
+	Version    string `json:"version"`
+	Deprecated bool   `json:"deprecated"`
+	EOLDate    string `json:"eol_date,omitempty"`
 }
 
 // apiCmd is the root command for API versioning operator tooling.
@@ -42,7 +43,7 @@ var apiVersionCmd = &cobra.Command{
   - CLI binary version (this binary)
   - ping_api version (probed via HTTP)
   - Marketplace Worker version (probed via HTTP)
-  - Per-installed-plugin SDK version (from plugin.json apiVersion if declared)
+  - Per-installed-plugin SDK version (from plugin.json api_version if declared)
   - Hasura schema version (if nself is running locally)
 
 Deprecation status is cross-referenced against the central deprecation registry.`,
@@ -57,7 +58,6 @@ Deprecation status is cross-referenced against the central deprecation registry.
 			return ui.PrintJSON(rows)
 		}
 
-		// Table output
 		fmt.Printf("\n%-30s %-15s %-12s %s\n", "Surface", "Version", "Deprecated", "EOL Date")
 		fmt.Println(strings.Repeat("-", 72))
 		for _, row := range rows {
@@ -76,70 +76,182 @@ Deprecation status is cross-referenced against the central deprecation registry.
 	},
 }
 
-// apiDeprecationCheckCmd walks installed plugins and surfaces consuming deprecated APIs.
+// apiDeprecationCheckCmd checks installed plugins for deprecated API usage (G6).
+// --plugin <name> scopes the check to one plugin.
+// --strict exits 1 if any BREAKING (no grace period) entry is found (G11 CI gate).
 var apiDeprecationCheckCmd = &cobra.Command{
 	Use:   "deprecation-check",
 	Short: "Check for deprecated API usage in this install",
-	Long: `Walk installed plugins and CLI command tree to find any deprecated API
-usage. Cross-references the central deprecation registry at:
-  .claude/docs/api-deprecations.md
+	Long: `Walk the plugin deprecation registry to find deprecated endpoints.
 
-At v1.0.9 LTS baseline, the registry is empty — no deprecations exist.
-This command will exit 0 with "no deprecations" at baseline.`,
+Cross-references internal/deprecation/registry.yaml. Use --plugin <name> to
+check a specific plugin. Use --strict to fail CI when a BREAKING entry is found.
+
+At v1.0.9 LTS baseline, the registry has no active endpoint deprecations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		jsonOut, _ := cmd.Flags().GetBool("json")
-		_ = jsonOut
+		pluginFilter, _ := cmd.Flags().GetString("plugin")
+		strict, _ := cmd.Flags().GetBool("strict")
 
-		// At v1.0.9 LTS baseline, the deprecation registry is empty.
-		// This command provides the operator tooling infrastructure for
-		// future deprecations. When Surface 1-8 entries are added to
-		// .claude/docs/api-deprecations.md, this command will parse them
-		// and cross-reference against:
-		//   1. Installed plugin versions (from nself plugin list --json)
-		//   2. cobra.Command.Deprecated fields in the command tree
-		//   3. ping_api + Worker Sunset response headers (probed via HTTP)
+		items := scanDeprecations(pluginFilter)
 
-		deprecations := scanDeprecations()
-
-		if len(deprecations) == 0 {
+		if len(items) == 0 {
+			label := "install"
+			if pluginFilter != "" {
+				label = fmt.Sprintf("plugin '%s'", pluginFilter)
+			}
 			if jsonOut {
 				out, _ := json.Marshal(map[string]interface{}{
 					"deprecations_found": 0,
+					"plugin_filter":      pluginFilter,
 					"registry_version":   "v1.0.9-baseline",
 					"status":             "clean",
 				})
 				fmt.Println(string(out))
 			} else {
-				fmt.Println("0 deprecations found. Your install is clean against the v1.0.9 LTS baseline.")
-				fmt.Println()
-				fmt.Println("  Registry: .claude/docs/api-deprecations.md (no entries at v1.0.9)")
+				fmt.Printf("0 deprecations found. Your %s is clean against the v1.0.9 LTS baseline.\n\n", label)
+				fmt.Println("  Registry: internal/deprecation/registry.yaml")
 				fmt.Println("  LTS window: 2026-04-17 → 2027-04-17")
 				fmt.Println()
 			}
 			return nil
 		}
 
-		// Future: format and display deprecation findings
+		// Detect BREAKING entries — those with no deprecated_in grace period.
+		hasBreaking := false
+		for _, d := range items {
+			if d["deprecated_in"] == "" {
+				hasBreaking = true
+				break
+			}
+		}
+
 		if jsonOut {
+			status := "warnings"
+			if hasBreaking {
+				status = "BREAKING"
+			}
 			out, _ := json.Marshal(map[string]interface{}{
-				"deprecations_found": len(deprecations),
-				"items":              deprecations,
+				"deprecations_found": len(items),
+				"status":             status,
+				"items":              items,
 			})
 			fmt.Println(string(out))
 		} else {
-			fmt.Printf("Found %d deprecated API usage(s):\n\n", len(deprecations))
-			for _, d := range deprecations {
-				fmt.Printf("  [%s] %s (deprecated since %s, EOL %s)\n",
-					d["surface"], d["item"], d["deprecated_since"], d["eol_date"])
-				if migration, ok := d["migration_link"]; ok && migration != "" {
-					fmt.Printf("    Migration: %s\n", migration)
+			fmt.Printf("Found %d deprecated API usage(s):\n\n", len(items))
+			for _, d := range items {
+				tag := "DEPRECATED"
+				if d["deprecated_in"] == "" {
+					tag = "BREAKING"
+				}
+				fmt.Printf("  [%s] %s: %s (deprecated in v%s, removed in v%s)\n",
+					tag, d["plugin"], d["path"], d["deprecated_in"], d["removed_in"])
+				if d["replacement"] != "" {
+					fmt.Printf("    Replacement: %s\n", d["replacement"])
+				}
+				if d["sunset_header"] != "" {
+					fmt.Printf("    Sunset: %s\n", d["sunset_header"])
 				}
 			}
 			fmt.Println()
 		}
+
+		if strict && hasBreaking {
+			return fmt.Errorf("BREAKING: %d endpoint(s) lack a deprecation grace period — add 'deprecated_in' before merging",
+				countBreaking(items))
+		}
 		return nil
 	},
 }
+
+// apiChangelogCmd prints the deprecation sunset calendar for a named plugin (G9).
+var apiChangelogCmd = &cobra.Command{
+	Use:   "changelog <plugin>",
+	Short: "Print the deprecation sunset calendar for a plugin",
+	Long: `Print a date-sorted list of deprecated endpoints for a plugin, including
+sunset dates, replacements, and migration links.
+
+Example:
+  nself api changelog ai`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		pluginName := args[0]
+		jsonOut, _ := cmd.Flags().GetBool("json")
+
+		reg, err := deprecation.LoadPluginRegistry(resolveRegistryPath())
+		if err != nil {
+			return fmt.Errorf("loading plugin registry: %w", err)
+		}
+
+		entry, ok := reg.LookupPlugin(pluginName)
+		if !ok {
+			return fmt.Errorf("plugin %q not found in deprecation registry", pluginName)
+		}
+
+		calEntries := reg.SunsetDate(pluginName)
+
+		if jsonOut {
+			type jsonEntry struct {
+				Plugin       string `json:"plugin"`
+				APIVersion   string `json:"api_version"`
+				Path         string `json:"path"`
+				DeprecatedIn string `json:"deprecated_in"`
+				RemovedIn    string `json:"removed_in"`
+				Replacement  string `json:"replacement"`
+				Reason       string `json:"reason"`
+				SunsetHeader string `json:"sunset_header"`
+			}
+			rows := make([]jsonEntry, 0, len(calEntries))
+			for _, e := range calEntries {
+				rows = append(rows, jsonEntry{
+					Plugin:       pluginName,
+					APIVersion:   entry.APIVersion,
+					Path:         e.Path,
+					DeprecatedIn: e.DeprecatedIn,
+					RemovedIn:    e.RemovedIn,
+					Replacement:  e.Replacement,
+					Reason:       e.Reason,
+					SunsetHeader: deprecation.HTTPSunsetHeader(e.RemovedIn),
+				})
+			}
+			out, _ := json.Marshal(map[string]interface{}{
+				"plugin":      pluginName,
+				"api_version": entry.APIVersion,
+				"changelog":   rows,
+			})
+			fmt.Println(string(out))
+			return nil
+		}
+
+		fmt.Printf("\nAPI Deprecation Calendar — plugin: %s  (current API version: %s)\n\n",
+			pluginName, entry.APIVersion)
+
+		if len(calEntries) == 0 {
+			fmt.Println("  No deprecated endpoints. All paths are current.")
+			fmt.Println()
+			return nil
+		}
+
+		fmt.Printf("  %-35s %-14s %-12s %s\n", "Path", "Deprecated In", "Removed In", "Replacement")
+		fmt.Println("  " + strings.Repeat("-", 82))
+		for _, e := range calEntries {
+			fmt.Printf("  %-35s %-14s %-12s %s\n", e.Path, e.DeprecatedIn, e.RemovedIn, e.Replacement)
+			if e.Reason != "" {
+				fmt.Printf("  %s  Reason: %s\n", strings.Repeat(" ", 35), e.Reason)
+			}
+			sunset := deprecation.HTTPSunsetHeader(e.RemovedIn)
+			if sunset != "" {
+				fmt.Printf("  %s  Sunset: %s\n", strings.Repeat(" ", 35), sunset)
+			}
+		}
+		fmt.Println()
+		return nil
+	},
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 // collectAPIVersions probes all reachable API surfaces and returns version rows.
 func collectAPIVersions(filterSurface string, timeoutSec int) []apiVersionRow {
@@ -147,9 +259,8 @@ func collectAPIVersions(filterSurface string, timeoutSec int) []apiVersionRow {
 		Timeout: time.Duration(timeoutSec) * time.Second,
 	}
 
-	rows := []apiVersionRow{}
+	var rows []apiVersionRow
 
-	// Surface: CLI binary
 	if filterSurface == "" || strings.EqualFold(filterSurface, "cli") {
 		rows = append(rows, apiVersionRow{
 			Surface: "cli",
@@ -157,7 +268,6 @@ func collectAPIVersions(filterSurface string, timeoutSec int) []apiVersionRow {
 		})
 	}
 
-	// Surface: ping_api (probe via HTTP)
 	if filterSurface == "" || strings.EqualFold(filterSurface, "ping_api") {
 		pingVersion := probeHTTPVersion(client, "https://ping.nself.org/version", "latestCliVersion")
 		if pingVersion == "" {
@@ -166,37 +276,23 @@ func collectAPIVersions(filterSurface string, timeoutSec int) []apiVersionRow {
 		if pingVersion == "" {
 			pingVersion = "unreachable"
 		}
-		rows = append(rows, apiVersionRow{
-			Surface: "ping_api",
-			Version: pingVersion,
-		})
+		rows = append(rows, apiVersionRow{Surface: "ping_api", Version: pingVersion})
 	}
 
-	// Surface: Marketplace Worker (probe via HTTP)
 	if filterSurface == "" || strings.EqualFold(filterSurface, "marketplace") {
 		marketVersion := probeHTTPHeader(client, "https://plugins.nself.org/health", "X-API-Version")
 		if marketVersion == "" {
-			marketVersion = "v1" // Worker doesn't expose version body, infer from LTS
+			marketVersion = "v1"
 		}
-		rows = append(rows, apiVersionRow{
-			Surface: "marketplace",
-			Version: marketVersion,
-		})
+		rows = append(rows, apiVersionRow{Surface: "marketplace", Version: marketVersion})
 	}
 
-	// Surface: SDK (per installed plugin)
 	if filterSurface == "" || strings.EqualFold(filterSurface, "sdk") {
-		sdkRows := probeInstalledPluginSDKVersions()
-		rows = append(rows, sdkRows...)
+		rows = append(rows, probeInstalledPluginSDKVersions()...)
 	}
 
-	// Surface: Hasura (local introspection if running)
 	if filterSurface == "" || strings.EqualFold(filterSurface, "hasura") {
-		hasuraVersion := probeLocalHasura(client)
-		rows = append(rows, apiVersionRow{
-			Surface: "hasura",
-			Version: hasuraVersion,
-		})
+		rows = append(rows, apiVersionRow{Surface: "hasura", Version: probeLocalHasura(client)})
 	}
 
 	return rows
@@ -229,7 +325,6 @@ func probeHTTPVersion(client *http.Client, url, field string) string {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return ""
 	}
-
 	if val, ok := data[field]; ok {
 		return fmt.Sprintf("%v", val)
 	}
@@ -249,74 +344,99 @@ func probeHTTPHeader(client *http.Client, url, header string) string {
 		return ""
 	}
 	defer resp.Body.Close()
-
 	return resp.Header.Get(header)
 }
 
-// probeInstalledPluginSDKVersions reads installed plugin manifests for apiVersion fields.
+// probeInstalledPluginSDKVersions reads installed plugin manifests for api_version fields.
 func probeInstalledPluginSDKVersions() []apiVersionRow {
-	rows := []apiVersionRow{}
-
 	cfg, err := config.Load(".")
 	if err != nil {
-		// Not in an nself project directory — skip
-		return rows
+		return nil
 	}
-
 	pluginsDir := cfg.PluginSystem.Dir
 	if pluginsDir == "" {
-		return rows
+		return nil
 	}
-
 	// Future: walk pluginsDir, read plugin.json for each installed plugin,
-	// extract apiVersion field if present.
-	// At v1.0.9 LTS, apiVersion is optional in the manifest — most plugins
-	// don't declare it yet.
+	// extract api_version field if present. At v1.0.9 most plugins don't declare it yet.
 	_ = pluginsDir
-	return rows
+	return nil
 }
 
-// probeLocalHasura attempts to determine the Hasura version from a running local stack.
+// probeLocalHasura attempts to determine if Hasura is running locally.
 func probeLocalHasura(client *http.Client) string {
-	// Try the standard local Hasura health endpoint
 	resp, err := client.Get("http://localhost:8080/healthz")
 	if err != nil {
 		return "unreachable"
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == 200 {
-		// Hasura doesn't expose version in /healthz; use a placeholder
 		return "running (version via `nself status --json`)"
 	}
 	return "unreachable"
 }
 
-// scanDeprecations reads the deprecation registry and returns any entries.
-// At v1.0.9 LTS baseline, this returns an empty slice.
-func scanDeprecations() []map[string]string {
-	// Future implementation will:
-	// 1. Read .claude/docs/api-deprecations.md (parse markdown table rows)
-	// 2. For each entry, check if the installed CLI version >= deprecated_since
-	// 3. For each entry, check if installed plugins match the deprecated surface
-	// 4. Probe ping_api + Worker for Sunset headers on their known endpoints
-	// At v1.0.9 baseline, registry is empty, so always return []
-	return []map[string]string{}
+// scanDeprecations loads the plugin registry and returns deprecated endpoint entries.
+// pluginFilter scopes results to a single plugin name when non-empty.
+func scanDeprecations(pluginFilter string) []map[string]string {
+	reg, err := deprecation.LoadPluginRegistry(resolveRegistryPath())
+	if err != nil {
+		return nil
+	}
+
+	var results []map[string]string
+	for _, p := range reg.AllPlugins() {
+		if pluginFilter != "" && p.Name != pluginFilter {
+			continue
+		}
+		for _, ep := range p.DeprecatedEndpoints {
+			results = append(results, map[string]string{
+				"plugin":        p.Name,
+				"api_version":   p.APIVersion,
+				"path":          ep.Path,
+				"deprecated_in": ep.DeprecatedIn,
+				"removed_in":    ep.RemovedIn,
+				"replacement":   ep.Replacement,
+				"reason":        ep.Reason,
+				"sunset_header": deprecation.HTTPSunsetHeader(ep.RemovedIn),
+			})
+		}
+	}
+	return results
 }
 
+// countBreaking returns the number of entries without a deprecated_in grace period.
+func countBreaking(items []map[string]string) int {
+	n := 0
+	for _, d := range items {
+		if d["deprecated_in"] == "" {
+			n++
+		}
+	}
+	return n
+}
+
+// =============================================================================
+// Registration
+// =============================================================================
+
 func init() {
-	// Register subcommands
 	apiCmd.AddCommand(apiVersionCmd)
 	apiCmd.AddCommand(apiDeprecationCheckCmd)
+	apiCmd.AddCommand(apiChangelogCmd)
 
-	// Flags for api version
+	// api version flags
 	apiVersionCmd.Flags().Bool("json", false, "Output as JSON")
 	apiVersionCmd.Flags().String("surface", "", "Filter to a single surface (cli, ping_api, marketplace, sdk, hasura)")
 	apiVersionCmd.Flags().Int("timeout", 5, "HTTP probe timeout in seconds")
 
-	// Flags for api deprecation-check
+	// api deprecation-check flags (G6: --plugin, --strict for G11)
 	apiDeprecationCheckCmd.Flags().Bool("json", false, "Output as JSON")
+	apiDeprecationCheckCmd.Flags().String("plugin", "", "Check a specific plugin by name (e.g. --plugin ai)")
+	apiDeprecationCheckCmd.Flags().Bool("strict", false, "Exit 1 if any BREAKING entries exist (used by CI gate, G11)")
 
-	// Register api command at root
+	// api changelog flags
+	apiChangelogCmd.Flags().Bool("json", false, "Output as JSON")
+
 	RootCmd.AddCommand(apiCmd)
 }

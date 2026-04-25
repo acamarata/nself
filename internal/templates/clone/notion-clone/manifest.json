@@ -1,0 +1,6 @@
+{
+  "name": "notion-clone",
+  "version": "1.0.0",
+  "description": "Collaborative workspace with pages and block editor",
+  "required_plugins": ["cms", "auth", "realtime"]
+}

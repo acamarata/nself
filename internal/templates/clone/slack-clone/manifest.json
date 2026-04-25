@@ -1,0 +1,6 @@
+{
+  "name": "slack-clone",
+  "version": "1.0.0",
+  "description": "Team messaging with channels, threads, and huddles",
+  "required_plugins": ["chat", "livekit", "realtime", "auth", "notify"]
+}

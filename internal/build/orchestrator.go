@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/apidocs"
 	"github.com/nself-org/cli/internal/compose"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/nginx"
@@ -317,6 +318,45 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		return nil, fmt.Errorf("writing build version: %w", err)
 	}
 	filesGenerated++
+
+	// ── Step 11.6: Generate OpenAPI 3.1 spec + Scalar HTML page ─────
+	// Only runs when api_docs.enabled is true (default). Writes two files:
+	//   .nself/dist/openapi.json   — served at /api-docs by nginx
+	//   .nself/dist/scalar.html    — served at /docs (or custom path)
+	// Also writes nginx/conf.d/api-docs.conf with the location blocks.
+	apiDocsCfg := apidocs.ApiDocsConfig{
+		Enabled:         cfg.ApiDocs.Enabled,
+		Path:            cfg.ApiDocs.Path,
+		Title:           cfg.ApiDocs.Title,
+		Theme:           cfg.ApiDocs.Theme,
+		AuthEnvVar:      cfg.ApiDocs.AuthEnvVar,
+		HideEndpoints:   cfg.ApiDocs.HideEndpoints,
+		GraphQLEnabled:  cfg.ApiDocs.GraphQLEnabled,
+		GraphQLEndpoint: cfg.ApiDocs.GraphQLEndpoint,
+	}
+	// Default-fill when the config section was left empty.
+	if !apiDocsCfg.Enabled && cfg.ApiDocs.Path == "" {
+		apiDocsCfg = apidocs.DefaultApiDocsConfig()
+	}
+	if apiDocsCfg.Enabled {
+		pluginDir := DefaultPluginDir()
+		pluginRoutes, err := apidocs.CollectPluginRoutes(pluginDir)
+		if err != nil {
+			slog.Warn("collecting plugin API routes", "err", err)
+		}
+		if _, err := apidocs.Generate(workdir, cfg.ProjectName, cfg.BaseDomain, apiDocsCfg, pluginRoutes); err != nil {
+			return nil, fmt.Errorf("generating api docs: %w", err)
+		}
+		filesGenerated += 2 // openapi.json + scalar.html
+
+		// Write the nginx conf.d fragment.
+		apiDocsNginxConf := apidocs.NginxConf(apiDocsCfg.Path)
+		apiDocsConfPath := filepath.Join(workdir, "nginx", "conf.d", "api-docs.conf")
+		if err := os.WriteFile(apiDocsConfPath, []byte(apiDocsNginxConf), 0644); err != nil {
+			return nil, fmt.Errorf("writing api-docs nginx conf: %w", err)
+		}
+		filesGenerated++
+	}
 
 	// ── Step 11.5: Post-build validation ────────────────────────────
 	nginxSitesDir := filepath.Join(workdir, "nginx", "sites")

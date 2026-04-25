@@ -1,0 +1,8 @@
+name: my-community
+template: discord-clone
+template_version: "1.0.0"
+plugins:
+  - auth
+  - chat
+  - realtime
+  - moderation

@@ -357,6 +357,173 @@ func runBackupInitKey(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
+// ── backup stream ──────────────────────────────────────────────────
+
+var backupStreamCmd = &cobra.Command{
+	Use:   "stream",
+	Short: "Stream an encrypted backup directly to a remote destination",
+	Long: `Stream a live backup directly to S3, R2, B2, GCS, or Azure Blob Storage.
+
+The pipeline runs three concurrent stages with no temp files:
+
+  pg_dump (streaming) | age (encrypt) | rclone rcat (multipart upload)
+
+Encryption recipients may be age public keys, SSH public keys, or
+GitHub user keys (e.g. github:username).
+
+Examples:
+
+  nself backup stream --to s3:bucket/path --recipient age1xxxxx
+  nself backup stream --to r2:bucket/path --recipient github:username
+  nself backup stream --to b2:bucket/path   # uses NSELF_BACKUP_RECIPIENT env`,
+	RunE: runBackupStream,
+}
+
+func runBackupStream(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	to, _ := cmd.Flags().GetString("to")
+	recipients, _ := cmd.Flags().GetStringArray("recipient")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	result, err := backup.Stream(cmd.Context(), cfg, backup.StreamOptions{
+		To:        to,
+		Recipients: recipients,
+		DryRun:    dryRun,
+	})
+	if err != nil {
+		return fmt.Errorf("backup stream: %w", err)
+	}
+
+	if dryRun {
+		fmt.Printf("(dry-run) Would stream backup to: %s (encrypted: %v)\n",
+			result.Destination, result.Encrypted)
+		return nil
+	}
+
+	fmt.Printf("Streaming backup complete.\n")
+	fmt.Printf("  Destination: %s\n", result.Destination)
+	fmt.Printf("  Backup ID:   %s\n", result.BackupID)
+	fmt.Printf("  Encrypted:   %v\n", result.Encrypted)
+	fmt.Printf("  Duration:    %s\n", result.Duration)
+	return nil
+}
+
+// ── backup resume ──────────────────────────────────────────────────
+
+var backupResumeCmd = &cobra.Command{
+	Use:   "resume <backup-id>",
+	Short: "Resume an interrupted streaming backup",
+	Long: `Resume a previously interrupted streaming backup.
+
+Since rclone rcat uploads are not resumable at the protocol level, resume
+re-streams the full backup from pg_dump and overwrites the partial remote
+object. Resume state is stored in ~/.nself/backup-state/.`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBackupResume,
+}
+
+func runBackupResume(cmd *cobra.Command, args []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	result, err := backup.Resume(cmd.Context(), cfg, backup.ResumeOptions{
+		BackupID: args[0],
+	})
+	if err != nil {
+		return fmt.Errorf("backup resume: %w", err)
+	}
+
+	fmt.Printf("Resume complete.\n")
+	fmt.Printf("  Destination: %s\n", result.Destination)
+	fmt.Printf("  Duration:    %s\n", result.Duration)
+	return nil
+}
+
+// ── backup schedule ────────────────────────────────────────────────
+
+var backupScheduleCmd = &cobra.Command{
+	Use:   "schedule",
+	Short: "Schedule recurring streaming backups via systemd timers",
+	Long: `Install a systemd timer to run 'nself backup stream' on a cron schedule.
+
+Examples:
+
+  nself backup schedule --cron "0 2 * * *" --to s3:bucket/path
+  nself backup schedule --cron "0 2 * * *" --to r2:bucket --recipient age1xxx --dry-run`,
+	RunE: runBackupSchedule,
+}
+
+func runBackupSchedule(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	cron, _ := cmd.Flags().GetString("cron")
+	to, _ := cmd.Flags().GetString("to")
+	recipient, _ := cmd.Flags().GetString("recipient")
+	unitDir, _ := cmd.Flags().GetString("unit-dir")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if err := backup.ScheduleStream(cfg, cron, to, recipient, unitDir, dryRun); err != nil {
+		return fmt.Errorf("backup schedule: %w", err)
+	}
+
+	if !dryRun {
+		fmt.Printf("Streaming backup scheduled (cron: %s, destination: %s).\n", cron, to)
+		fmt.Println("Run 'nself backup status' to see next scheduled run.")
+	}
+	return nil
+}
+
+// ── backup restore-remote ──────────────────────────────────────────
+
+var backupRestoreRemoteCmd = &cobra.Command{
+	Use:   "restore-remote",
+	Short: "Restore a backup directly from a remote URL",
+	Long: `Stream and restore a backup from a remote destination without writing to disk.
+
+The pipeline runs three concurrent stages:
+
+  rclone cat <from> | age --decrypt | pg_restore
+
+Examples:
+
+  nself backup restore-remote --from s3:bucket/backup.sql.age --key ~/.age/key.txt
+  nself backup restore-remote --from r2:bucket/backup.sql  # unencrypted`,
+	RunE: runBackupRestoreRemote,
+}
+
+func runBackupRestoreRemote(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	from, _ := cmd.Flags().GetString("from")
+	keyPath, _ := cmd.Flags().GetString("key")
+	yes, _ := cmd.Flags().GetBool("yes")
+
+	if cfg.IsProduction() && !yes {
+		if err := requireProductionConfirmation(cfg.ProjectName); err != nil {
+			return err
+		}
+	}
+
+	if err := backup.RestoreFromRemote(cmd.Context(), cfg, from, keyPath); err != nil {
+		return fmt.Errorf("restore-remote: %w", err)
+	}
+
+	fmt.Println("Remote restore complete.")
+	return nil
+}
+
 // ── init ────────────────────────────────────────────────────────────
 
 func init() {
@@ -408,6 +575,25 @@ func init() {
 	// backup status flags
 	backupStatusCmd.Flags().String("format", "", "Output format: json")
 
+	// backup stream flags
+	backupStreamCmd.Flags().String("to", "", "Destination URL (rclone remote path, e.g. s3:bucket/prefix)")
+	backupStreamCmd.Flags().StringArray("recipient", nil, "Encryption recipient: age key, SSH key, or github:<username> (repeatable)")
+	backupStreamCmd.Flags().Bool("dry-run", false, "Preview without running")
+
+	// backup resume flags (no extra flags beyond the positional backup-id)
+
+	// backup schedule flags
+	backupScheduleCmd.Flags().String("cron", "", "Cron expression (e.g. '0 2 * * *')")
+	backupScheduleCmd.Flags().String("to", "", "Destination URL (rclone remote path)")
+	backupScheduleCmd.Flags().String("recipient", "", "Default encryption recipient")
+	backupScheduleCmd.Flags().String("unit-dir", "/etc/systemd/system", "Systemd unit directory")
+	backupScheduleCmd.Flags().Bool("dry-run", false, "Print unit files without writing")
+
+	// backup restore-remote flags
+	backupRestoreRemoteCmd.Flags().String("from", "", "Source URL (rclone remote path)")
+	backupRestoreRemoteCmd.Flags().String("key", "", "Path to age identity file for decryption")
+	backupRestoreRemoteCmd.Flags().Bool("yes", false, "Skip confirmation on production")
+
 	// Wire subcommands
 	backupCmd.AddCommand(backupCreateCmd)
 	backupCmd.AddCommand(backupListCmd)
@@ -417,6 +603,10 @@ func init() {
 	backupCmd.AddCommand(backupConfigCmd)
 	backupCmd.AddCommand(backupStatusCmd)
 	backupCmd.AddCommand(backupInitKeyCmd)
+	backupCmd.AddCommand(backupStreamCmd)
+	backupCmd.AddCommand(backupResumeCmd)
+	backupCmd.AddCommand(backupScheduleCmd)
+	backupCmd.AddCommand(backupRestoreRemoteCmd)
 
 	RootCmd.AddCommand(backupCmd)
 }

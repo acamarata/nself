@@ -27,6 +27,7 @@ The `--deep` flag runs all 12 subsystem checks including open port analysis, wea
 | `--fix` | false | Auto-fix safe issues where a fix command is available |
 | `--only <section>` | — | Run only one subsystem check section (see Subsections below) |
 | `--check-legacy` | false | Scan this host for stale v0.9 global paths and print cleanup instructions. Exits with non-zero if any are found. See below. |
+| `--install-check` | false | Run the 6-stage onboarding funnel check. Invoked automatically by the Homebrew post-install hook; safe to run at any time. Exits 0 when all 6 stages pass. See below. |
 | `--ai` | false | Run the AI first-run wizard: install Ollama, set up Gemini pool, verify |
 | `--yes` | false | Non-interactive mode: accept all defaults (for CI/scripts, used with `--ai`) |
 | `--skip-ollama` | false | Skip local Ollama installation step (used with `--ai`) |
@@ -183,6 +184,44 @@ nself doctor --deep --only security
 **See also:** [multi-tenant conventions](https://docs.nself.org/multi-tenancy/conventions) for the canonical wall doc on `source_account_id` vs `tenant_id`.
 
 ---
+
+## --install-check: 6-stage onboarding funnel
+
+`nself doctor --install-check` runs a focused readiness check that maps to the 6-stage onboarding funnel. It is invoked automatically by the Homebrew `post_install` hook after `brew install nself`. You can also run it manually at any time.
+
+```
+$ nself doctor --install-check
+
+Onboarding Funnel Check
+  Stage 1 — Install       v1.0.9 (darwin/arm64)
+  Stage 2 — Activation    2 projects initialized
+  Stage 3 — First-use     first start 3 days ago
+  Stage 4 — First-plugin  no plugins installed
+    → Run: nself plugin install ai  (or any plugin)
+  Stage 5 — First-value   (skipped, prior stage failed)
+  Stage 6 — Habit         (skipped, prior stage failed)
+
+Funnel position: Stage 3/6. Next: nself plugin install ai  (or any plugin)
+```
+
+Each stage prints PASS, FAIL, UNKNOWN, or SKIPPED:
+
+| Status | Meaning |
+|--------|---------|
+| PASS | Stage completed |
+| FAIL | Not yet reached — remediation hint shown |
+| UNKNOWN | Cannot determine (e.g. Stage 5 when Hasura telemetry hook is not wired) |
+| SKIPPED | A prior stage failed; this stage was not evaluated |
+
+Stage 5 shows UNKNOWN (not FAIL) when the `query-count` file is absent. This avoids penalising self-hosters who have not wired the optional Hasura telemetry hook.
+
+Pass `--json` for machine-readable output:
+
+```bash
+nself doctor --install-check --json
+```
+
+Exit codes: 0 = all 6 stages pass; 1 = one or more stages fail.
 
 ## --check-legacy: v0.9 global host scan
 

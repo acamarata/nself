@@ -1,0 +1,93 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "tables": [
+        {
+          "table": {"schema": "public", "name": "np_listings"},
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": "*",
+                "filter": {"is_active": {"_eq": true}}
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["title","description","location","price_per_night","max_guests","photos","amenities"],
+                "check": {"host_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["title","description","location","price_per_night","max_guests","photos","amenities","is_active"],
+                "filter": {"host_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {"host_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ]
+        },
+        {
+          "table": {"schema": "public", "name": "np_bookings"},
+          "object_relationships": [
+            {
+              "name": "listing",
+              "using": {"foreign_key_constraint_on": "listing_id"}
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": "*",
+                "filter": {"guest_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["listing_id","check_in","check_out","total_price"],
+                "check": {"guest_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ]
+        },
+        {
+          "table": {"schema": "public", "name": "np_reviews"},
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {"columns": "*", "filter": {}}
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["booking_id","listing_id","rating","comment"],
+                "check": {"reviewer_id": {"_eq": "X-Hasura-User-Id"}}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

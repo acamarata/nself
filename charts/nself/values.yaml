@@ -1,0 +1,60 @@
+# nSelf Helm chart default values.
+# Override with --set or a custom values file.
+
+# domain is required: the base domain for your nSelf deployment.
+domain: ""
+
+postgres:
+  image: postgres:15-alpine
+  storage: 10Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+hasura:
+  image: hasura/graphql-engine:v2.36.0
+  replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+auth:
+  image: nhost/hasura-auth:0.21.4
+  replicas: 1
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+nginx:
+  image: nginx:1.25-alpine
+
+tls:
+  enabled: true
+  # certManager uses cert-manager to issue Let's Encrypt certificates.
+  # cert-manager must be installed in the cluster.
+  certManager: true
+  issuerName: letsencrypt-prod
+
+plugins:
+  # List of plugin names to install at boot.
+  install: []
+
+license:
+  # NSELF_PLUGIN_LICENSE_KEY — set this to install pro plugins.
+  key: ""
+
+# storageClass is used for the Postgres PVC.
+# Leave empty to use the cluster default.
+storageClass: ""

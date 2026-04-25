@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/nself-org/cli/internal/ui"
 
@@ -72,6 +73,16 @@ func runPluginDev(cmd *cobra.Command, args []string) error {
 		return debugCmd.Run()
 	}
 
+	// Validate entrypoint is within the plugin directory (defense-in-depth).
+	// filepath.Clean collapses ../ sequences; the HasPrefix check then prevents
+	// path traversal (e.g. --entrypoint ../../../../etc/hook.sh).
+	cleanEntrypoint := filepath.Clean(entrypoint)
+	resolvedEntrypoint := filepath.Join(pluginPath, cleanEntrypoint)
+	if !strings.HasPrefix(resolvedEntrypoint, pluginPath+string(filepath.Separator)) &&
+		resolvedEntrypoint != pluginPath {
+		return fmt.Errorf("plugin dev: entrypoint %q must be within the plugin directory %q", entrypoint, pluginPath)
+	}
+
 	// Find dev-watch.sh in the SDK devkit or fall back to bundled copy.
 	watchScript, err := findDevWatchScript()
 	if err != nil {
@@ -79,11 +90,11 @@ func runPluginDev(cmd *cobra.Command, args []string) error {
 	}
 
 	uiDimmedf("Using watch script: %s", watchScript)
-	uiDimmedf("Entrypoint: %s", entrypoint)
+	uiDimmedf("Entrypoint: %s", cleanEntrypoint)
 	ui.Info("Watching for changes — press Ctrl+C to stop.")
 
 	// Run dev-watch.sh from the plugin's source directory.
-	devCmd := exec.Command("bash", watchScript, entrypoint)
+	devCmd := exec.Command("bash", watchScript, cleanEntrypoint)
 	devCmd.Dir = pluginPath
 	devCmd.Stdout = os.Stdout
 	devCmd.Stderr = os.Stderr

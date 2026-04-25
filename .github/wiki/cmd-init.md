@@ -27,7 +27,9 @@ After `nself init` completes, run `nself build` to generate `docker-compose.yml`
 | `--demo` | false | Auto-configure with all services enabled |
 | `--full` | false | Create `.env.dev`, `.env.staging`, `.env.prod`, `.env.secrets` |
 | `--force` | false | Overwrite existing configuration |
-| `--template` | `""` | Use a specific template: `express`, `fastapi`, `go`, `rust` |
+| `--template` | `""` | Use a specific template: `express`, `fastapi`, `go`, `rust`, or any bundled clone template |
+| `--no-seed` | false | Skip seed data when scaffolding a clone template (omits `002_seed.sql`) |
+| `--dry-run` | false | Print files that would be written without writing them (clone templates only) |
 | `--name` | `""` | Project name (sets `PROJECT_NAME` in generated `.env`) |
 | `--domain` | `""` | Base domain (skips interactive domain prompt, e.g. `myapp.dev`) |
 | `--profile` | `""` | Resource profile: `tiny` for small VPS (starts Postgres and nginx only; Hasura and Auth are opt-in). Recommended for servers with less than 1 GB RAM. See [[install/tiny-vps]]. |
@@ -65,6 +67,66 @@ nself init --name myapp --domain myapp.dev
 # Start from a Go project template
 nself init --template go --name myapi --domain myapi.local
 ```
+
+## Clone Templates
+
+Clone templates are full-stack app starters embedded in the CLI binary. They include a Postgres schema with RLS policies, Hasura metadata, seed data, and a Flutter UI starter. No network access is needed to scaffold them.
+
+### Available clone templates
+
+| Template | Tables | Required plugins |
+|---|---|---|
+| `airbnb-clone` | `np_listings`, `np_bookings`, `np_reviews` | `auth`, `notify`, `photos` |
+| `discord-clone` | `np_servers`, `np_channels`, `np_messages`, `np_members`, `np_roles` | `chat`, `realtime`, `auth`, `moderation` |
+| `notion-clone` | `np_workspaces`, `np_pages`, `np_blocks`, `np_page_members` | `cms`, `auth`, `realtime` |
+| `slack-clone` | `np_workspaces`, `np_channels`, `np_messages`, `np_threads`, `np_reactions` | `chat`, `livekit`, `realtime`, `auth`, `notify` |
+| `substack-clone` | `np_newsletters`, `np_posts`, `np_subscribers`, `np_tiers` | `cms`, `notify`, `auth` |
+| `zoom-clone` | `np_meetings`, `np_participants`, `np_recordings` | `livekit`, `recording`, `auth`, `notify` |
+
+### Usage
+
+```bash
+# Scaffold a clone template into the current directory
+nself init --template airbnb-clone
+
+# Scaffold into a named directory
+nself init --template discord-clone ./my-discord
+
+# Skip seed data (schema only)
+nself init --template notion-clone --no-seed
+
+# Preview files without writing
+nself init --template slack-clone --dry-run
+
+# Scaffold and immediately install required plugins
+nself init --template substack-clone ./my-newsletter
+cd my-newsletter
+nself plugin install cms notify auth
+nself start
+nself db migrate
+nself hasura metadata apply --file hasura/metadata.json
+```
+
+### What gets scaffolded
+
+Each clone template writes:
+
+```
+<dest>/
+  migrations/
+    001_schema.sql   — CREATE TABLE np_* statements with RLS policies
+    002_seed.sql     — demo data (omitted with --no-seed)
+  hasura/
+    metadata.json    — Hasura permissions and relationships
+  flutter/
+    pubspec.yaml
+    lib/main.dart    — starter app with GraphQL client and skeleton screens
+  nself.yml          — project config with required plugins list
+  .env.example       — environment variable template
+  README.md          — getting started guide
+```
+
+Use `nself template list` to see all bundled and marketplace templates together.
 
 ## Telemetry
 

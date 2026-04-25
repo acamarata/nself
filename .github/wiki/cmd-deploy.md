@@ -6,8 +6,9 @@
 
 ```
 nself deploy <target> [flags]
-nself deploy status [--env <target>]
+nself deploy status [--env <target>] [--blue-green]
 nself deploy rollback [target]
+nself deploy promote
 nself deploy logs [target]
 nself deploy health [target]
 nself deploy check-access
@@ -36,18 +37,77 @@ Targets accept both short and long forms:
 
 | Strategy | Status | Behavior |
 |---|---|---|
-| `rolling` | **Implemented (v1.0.9)** | Per-service sequenced restart with health-gating. Each service waits up to 60s for `service_healthy` before the next restarts. |
-| `blue-green` | Not yet implemented. v1.1.0 target | Falls back to rolling with an explicit warning. |
-| `canary` | Not yet implemented. v1.1.0 target | Falls back to rolling with an explicit warning. |
-| `preview` | Not yet implemented. v1.1.0 target | Falls back to rolling with an explicit warning. |
+| `rolling` | **Default (v1.0.9)** | Per-service sequenced restart with health-gating. Each service waits up to 60s for `service_healthy` before the next restarts. |
+| `blue-green / canary` | **Available via `--canary N` (Y17)** | Zero-downtime: green containers run alongside blue, Nginx shifts N% traffic to green during soak, then promotes to 100%. Requires `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true`. |
+| `preview` | Not yet implemented | Falls back to rolling with an explicit warning. |
 
-When `--strategy=blue-green` (or canary/preview) is passed, the CLI emits:
-
-```
-WARN: Strategy "blue-green" is not yet implemented in v1.0.9. Tracked for v1.1.0; falling back to rolling.
-```
+The `--strategy=blue-green` and `--strategy=canary` flags still fall back to rolling for backwards
+compatibility with existing scripts. Use `--canary N` to activate the implemented blue/green path.
 
 See [[deploy-strategies]] for the full per-strategy behavior spec and downtime expectations.
+
+## Blue/Green Canary Deploy (Y17)
+
+Enable with `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true` (feature flag `blue_green_deploy` via `nself flag list`).
+
+### How it works
+
+```
+1. Pull new images tagged as green
+2. Start green containers (docker compose -p nself-green up -d)
+3. Health check green (30s timeout)
+4. Nginx upstream: route N% to green (via upstream weights)
+5. Canary soak period (default 5 min)
+   - Monitor error rate from green containers
+   - If error_rate > NSELF_CANARY_ERROR_THRESHOLD (default 1%) → auto-rollback
+6. Promote Nginx upstream to 100% green
+7. Health check green at 100%
+8. Stop and remove blue containers
+9. Green becomes blue for the next deploy
+```
+
+### Port assignment
+
+| Color | Port offset | Example (Hasura) |
+|---|---|---|
+| Blue | 0 (base ports) | 8080 |
+| Green | +100 | 8180 |
+
+### Examples
+
+```bash
+# Canary at 10% (requires NSELF_FEATURE_BLUE_GREEN_DEPLOY=true)
+nself deploy local --canary 10
+
+# Canary at 25%
+nself deploy staging --canary 25 --force
+
+# Skip canary — flip directly to 100% green
+nself deploy local --skip-canary
+
+# Promote a canary to 100% after manual review
+nself deploy promote
+
+# Rollback to blue in < 5 seconds
+nself deploy rollback local
+```
+
+### Backward-incompatible migrations
+
+If a pending migration is not safe to run during canary (DROP COLUMN, DROP TABLE, RENAME COLUMN,
+ALTER COLUMN TYPE, NOT NULL without DEFAULT), the deploy is blocked:
+
+```
+ERROR: Migration 0042_drop_column_old_name.sql is not backward-compatible.
+Run with --force-migration to apply (disables canary, full downtime deploy).
+```
+
+Use `--force-migration` to proceed with a full downtime deploy.
+
+### State file
+
+Blue/green state is persisted to `.nself/bluegreen/state.json`. Run `nself deploy status --blue-green`
+to inspect the current active environment and canary traffic split.
 
 ## Rolling Restart — Service Order and Downtime
 
@@ -103,12 +163,16 @@ Agent forwarding is disabled by default. The CLI uses
 | `--exclude-frontends` | false | Exclude frontend apps from the deploy |
 | `--json` | false | Emit structured JSON output |
 | `--env` | — | Override target (alias for the positional argument) |
+| `--canary` | `0` | Start a canary deploy at N% traffic to green (Y17; requires `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true`) |
+| `--skip-canary` | false | Skip canary phase and flip directly to 100% green |
+| `--force-migration` | false | Force deploy even with backward-incompatible migrations (disables canary) |
 | `--help`, `-h` | — | Show help |
 
 ## Subcommands
 
-- `nself deploy status` — report current deploy state for a target
+- `nself deploy status [--blue-green]` — report current deploy state; `--blue-green` adds blue/green slot info
 - `nself deploy rollback [target]` — roll back the last deployment (see below)
+- `nself deploy promote` — flip Nginx to 100% green after a manual canary review
 - `nself deploy logs [target]` — tail the last 200 lines of Docker logs on the target host
 - `nself deploy health [target]` — run `nself doctor` against the deployment
 - `nself deploy check-access` — verify `NSELF_DEPLOY_HOST_*` values resolve
@@ -211,14 +275,22 @@ a separate protocol.
 
 ## Environment variables
 
-| Var | Purpose |
-|---|---|
-| `NSELF_DEPLOY_HOST_STAGING` | SSH/rsync target for staging: `user@host:/path` |
-| `NSELF_DEPLOY_HOST_PROD` | SSH/rsync target for production: `user@host:/path` |
-| `STAGING_DEPLOY_HOST` | Fallback alias for `NSELF_DEPLOY_HOST_STAGING` |
-| `PROD_DEPLOY_HOST` | Fallback alias for `NSELF_DEPLOY_HOST_PROD` |
-| `NSELF_DEPLOY_SSH_KEY` | SSH key path (default: `~/.ssh/id_ed25519`) |
-| `HEALTHCHECK_TIMEOUT_<SERVICE>` | Per-service health-check timeout (default: 60s) |
+| Var | Default | Purpose |
+|---|---|---|
+| `NSELF_DEPLOY_HOST_STAGING` | — | SSH/rsync target for staging: `user@host:/path` |
+| `NSELF_DEPLOY_HOST_PROD` | — | SSH/rsync target for production: `user@host:/path` |
+| `STAGING_DEPLOY_HOST` | — | Fallback alias for `NSELF_DEPLOY_HOST_STAGING` |
+| `PROD_DEPLOY_HOST` | — | Fallback alias for `NSELF_DEPLOY_HOST_PROD` |
+| `NSELF_DEPLOY_SSH_KEY` | `~/.ssh/id_ed25519` | SSH key path |
+| `HEALTHCHECK_TIMEOUT_<SERVICE>` | `60s` | Per-service health-check timeout |
+| `NSELF_FEATURE_BLUE_GREEN_DEPLOY` | `false` | Enable blue/green canary path (Y17). Set to `true` to activate. |
+| `NSELF_DEPLOY_STRATEGY` | `canary` | Deploy strategy when blue/green is active: `canary`, `blue-green`, `direct` |
+| `NSELF_CANARY_PERCENT` | `10` | Initial canary traffic % (used when `--canary` is not passed) |
+| `NSELF_CANARY_SOAK_MINUTES` | `5` | Soak duration before auto-promote |
+| `NSELF_CANARY_ERROR_THRESHOLD` | `1.0` | Error rate % that triggers auto-rollback |
+| `NSELF_DEPLOY_HEALTH_TIMEOUT` | `30` | Seconds to wait for green container health |
+| `NSELF_BLUE_PORT_OFFSET` | `0` | Port offset for blue containers |
+| `NSELF_GREEN_PORT_OFFSET` | `100` | Port offset for green containers |
 
 When no host is configured, the CLI deploys to the current host. This is the v1.0.9 LTS
 single-region model. Multi-region is deferred to v1.1.0.

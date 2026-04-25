@@ -1,0 +1,6 @@
+{
+  "name": "substack-clone",
+  "version": "1.0.0",
+  "description": "Newsletter and subscription publishing platform",
+  "required_plugins": ["cms", "notify", "auth"]
+}

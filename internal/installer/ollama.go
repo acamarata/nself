@@ -87,7 +87,7 @@ func Install(ctx context.Context, opts InstallOptions) (*InstallResult, error) {
 	res := &InstallResult{Bind: bind}
 
 	// Step 2: systemd status.
-	systemdActive := systemctlActive("ollama")
+	systemdActive := systemctlActiveContext(ctx, "ollama")
 	if systemdActive {
 		log("info", "ollama already running; skipping install", nil)
 		res.AlreadyInstalled = true
@@ -103,16 +103,16 @@ func Install(ctx context.Context, opts InstallOptions) (*InstallResult, error) {
 		}
 
 		// Step 5: daemon-reload + enable --now.
-		if err := systemctl("daemon-reload"); err != nil {
+		if err := systemctlContext(ctx, "daemon-reload"); err != nil {
 			return nil, errf(ErrSystemdUnavailable, "systemctl daemon-reload", err)
 		}
-		if err := systemctl("enable", "--now", "ollama"); err != nil {
+		if err := systemctlContext(ctx, "enable", "--now", "ollama"); err != nil {
 			return nil, errf(ErrSystemdUnavailable, "systemctl enable --now ollama", err)
 		}
 	}
 
 	// Step 6: iptables / ufw.
-	if err := configureFirewall(); err != nil {
+	if err := configureFirewall(ctx); err != nil {
 		// Non-fatal by default — we surface the coded error but continue probe.
 		log("warn", "firewall configuration failed", map[string]any{"err": err.Error()})
 	}
@@ -157,14 +157,22 @@ func Install(ctx context.Context, opts InstallOptions) (*InstallResult, error) {
 // ---- Helpers ----
 
 func systemctl(args ...string) error {
-	cmd := exec.Command("systemctl", args...)
+	return systemctlContext(context.Background(), args...)
+}
+
+func systemctlContext(ctx context.Context, args ...string) error {
+	cmd := exec.CommandContext(ctx, "systemctl", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func systemctlActive(unit string) bool {
-	cmd := exec.Command("systemctl", "is-active", "--quiet", unit)
+	return systemctlActiveContext(context.Background(), unit)
+}
+
+func systemctlActiveContext(ctx context.Context, unit string) bool {
+	cmd := exec.CommandContext(ctx, "systemctl", "is-active", "--quiet", unit)
 	return cmd.Run() == nil
 }
 
@@ -225,11 +233,11 @@ Environment="OLLAMA_KEEP_ALIVE=5m"
 	return os.WriteFile(systemdOverridePath, []byte(content), 0o644)
 }
 
-func configureFirewall() error {
+func configureFirewall(ctx context.Context) error {
 	// Prefer ufw if active.
-	if exec.Command("ufw", "status").Run() == nil {
+	if exec.CommandContext(ctx, "ufw", "status").Run() == nil {
 		// ufw exists; try allow rule.
-		cmd := exec.Command("ufw", "allow", "from", "172.16.0.0/12", "to", "any", "port", "11434")
+		cmd := exec.CommandContext(ctx, "ufw", "allow", "from", "172.16.0.0/12", "to", "any", "port", "11434")
 		if err := cmd.Run(); err == nil {
 			return nil
 		}
@@ -240,12 +248,12 @@ func configureFirewall() error {
 		{"-I", "INPUT", "-s", "172.16.0.0/12", "-p", "tcp", "--dport", "11434", "-j", "ACCEPT"},
 	}
 	for _, r := range rules {
-		if err := exec.Command("iptables", r...).Run(); err != nil {
+		if err := exec.CommandContext(ctx, "iptables", r...).Run(); err != nil {
 			return errf(ErrIptablesNoPermission, "iptables rule", err)
 		}
 	}
 	// Persist via iptables-save (best-effort).
-	_ = exec.Command("sh", "-c", "iptables-save > /etc/iptables/rules.v4 2>/dev/null || true").Run()
+	_ = exec.CommandContext(ctx, "sh", "-c", "iptables-save > /etc/iptables/rules.v4 2>/dev/null || true").Run()
 	return nil
 }
 

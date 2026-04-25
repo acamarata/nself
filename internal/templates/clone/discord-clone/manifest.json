@@ -1,0 +1,6 @@
+{
+  "name": "discord-clone",
+  "version": "1.0.0",
+  "description": "Community chat platform with servers, channels, and roles",
+  "required_plugins": ["chat", "realtime", "auth", "moderation"]
+}
