@@ -418,6 +418,38 @@ var errorHarnessCases = []errorHarnessCase{
 	{"template", []string{"template", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"template", []string{"template", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── help-topics ────────────────────────────────────────────────────────
+	// help-topics returns help output (nil) — soft case.
+	{"help-topics", []string{"help-topics"}, "(a) shows help (no project required)"},
+	{"help-topics", []string{"help-topics", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"help-topics", []string{"help-topics", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── release ────────────────────────────────────────────────────────────
+	// release requires a project dir and performs external operations; no-project-dir is an error.
+	{"release", []string{"release"}, "(a) no project dir"},
+	{"release", []string{"release", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release", []string{"release", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── release-check ──────────────────────────────────────────────────────
+	{"release-check", []string{"release-check"}, "(a) no project dir"},
+	{"release-check", []string{"release-check", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release-check", []string{"release-check", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── release-rollback ───────────────────────────────────────────────────
+	{"release-rollback", []string{"release-rollback"}, "(a) no project dir"},
+	{"release-rollback", []string{"release-rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release-rollback", []string{"release-rollback", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── release-status ─────────────────────────────────────────────────────
+	{"release-status", []string{"release-status"}, "(a) no project dir"},
+	{"release-status", []string{"release-status", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release-status", []string{"release-status", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── uninstall ──────────────────────────────────────────────────────────
+	{"uninstall", []string{"uninstall"}, "(a) no project dir"},
+	{"uninstall", []string{"uninstall", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"uninstall", []string{"uninstall", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── verify-sbom ────────────────────────────────────────────────────────
 	{"verify-sbom", []string{"verify-sbom"}, "(a) no project dir"},
 	{"verify-sbom", []string{"verify-sbom", "--no-such-flag-xyz"}, "(b) invalid flag"},
