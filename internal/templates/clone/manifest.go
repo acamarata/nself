@@ -73,7 +73,8 @@ type ScaffoldOptions struct {
 // Scaffold writes all template files for name into opts.TargetDir.
 // Returns the list of files written (or that would be written on dry run).
 func Scaffold(name string, opts ScaffoldOptions) ([]string, error) {
-	root := name + "/"
+	root := name // no trailing slash — embed.FS WalkDir requires exact dir name
+	prefix := name + "/"
 	var written []string
 
 	err := fs.WalkDir(templateFS, root, func(path string, d fs.DirEntry, err error) error {
@@ -84,7 +85,7 @@ func Scaffold(name string, opts ScaffoldOptions) ([]string, error) {
 			return nil
 		}
 
-		rel := strings.TrimPrefix(path, root)
+		rel := strings.TrimPrefix(path, prefix)
 
 		// Skip seed SQL when --no-seed is set.
 		if opts.NoSeed && filepath.Base(rel) == "002_seed.sql" {

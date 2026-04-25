@@ -18,7 +18,10 @@ import (
 )
 
 // SlugRE is the valid plugin name regexp.
-var SlugRE = regexp.MustCompile(`^[a-z][a-z0-9-]{1,40}$`)
+// A slug must start with a lowercase letter, be at least 2 chars, at most 41
+// chars total, contain only lowercase letters, digits, and internal hyphens,
+// and must NOT end with a hyphen.
+var SlugRE = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}[a-z0-9]$`)
 
 // Params carries all values available inside scaffold templates.
 type Params struct {
@@ -413,7 +416,7 @@ const tmplCompose = `# docker-compose.plugin.yml for {{.Name}}
 # Merged into the generated stack by ` + "`nself build`" + `. Do not hand-edit.
 services:
   {{.Name}}:
-    image: nself/{{.Name}}:${{{.EnvPrefix}}_VERSION:-latest}
+    image: nself/{{.Name}}:${{"{"}}{{.EnvPrefix}}_VERSION:-latest}
     container_name: ${PROJECT_NAME:-nself}_{{.Name}}
     restart: unless-stopped
     environment:
