@@ -1,0 +1,90 @@
+name: CI Green Rate Dashboard
+
+# S204-T03: Track green rate per repo, last 30 days.
+# Runs daily and on workflow_dispatch. Produces a summary for all 11 nSelf repos.
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  green-rate:
+    name: Green rate — all repos (last 30 days)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
+          owner: nself-org
+
+      - name: Compute green rate per repo
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SINCE: ${{ fromJSON('{}') }}
+        run: |
+          REPOS=(
+            "nself-org/cli"
+            "nself-org/admin"
+            "nself-org/nchat"
+            "nself-org/nclaw"
+            "nself-org/ntask"
+            "nself-org/ntv"
+            "nself-org/nfamily"
+            "nself-org/clawde"
+            "nself-org/plugins"
+            "nself-org/plugins-pro"
+            "nself-org/web"
+          )
+
+          SINCE=$(date -u -d '30 days ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+            || date -u -v-30d '+%Y-%m-%dT%H:%M:%SZ')  # macOS fallback
+
+          echo "# CI Green Rate Dashboard — last 30 days" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Repo | Total Runs | Green | Red | Green Rate |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----------|-------|-----|-----------|" >> "$GITHUB_STEP_SUMMARY"
+
+          OVERALL_TOTAL=0
+          OVERALL_GREEN=0
+
+          for REPO in "${REPOS[@]}"; do
+            TOTAL=$(gh run list --repo "$REPO" \
+              --created ">=$SINCE" \
+              --json conclusion \
+              --limit 200 \
+              --jq 'length' 2>/dev/null || echo "0")
+            GREEN=$(gh run list --repo "$REPO" \
+              --created ">=$SINCE" \
+              --json conclusion \
+              --limit 200 \
+              --jq '[.[] | select(.conclusion == "success")] | length' 2>/dev/null || echo "0")
+
+            if [ "$TOTAL" -gt 0 ]; then
+              RATE=$(awk -v g="$GREEN" -v t="$TOTAL" 'BEGIN { printf "%.0f%%", (g/t)*100 }')
+            else
+              RATE="N/A"
+            fi
+
+            RED=$((TOTAL - GREEN))
+            echo "| $REPO | $TOTAL | $GREEN | $RED | $RATE |" >> "$GITHUB_STEP_SUMMARY"
+
+            OVERALL_TOTAL=$((OVERALL_TOTAL + TOTAL))
+            OVERALL_GREEN=$((OVERALL_GREEN + GREEN))
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OVERALL_TOTAL" -gt 0 ]; then
+            OVERALL_RATE=$(awk -v g="$OVERALL_GREEN" -v t="$OVERALL_TOTAL" \
+              'BEGIN { printf "%.0f%%", (g/t)*100 }')
+          else
+            OVERALL_RATE="N/A"
+          fi
+          echo "**Overall green rate: $OVERALL_RATE** ($OVERALL_GREEN/$OVERALL_TOTAL runs green)" \
+            >> "$GITHUB_STEP_SUMMARY"

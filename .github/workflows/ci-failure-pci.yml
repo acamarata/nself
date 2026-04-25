@@ -1,0 +1,99 @@
+name: CI Failure Auto-PCI
+
+# S204-T05: Auto-open PCI via CRD on workflow failure.
+# Triggers when any CI workflow on main fails, opens a bug PCI in
+# nself PPI inbox for CRD to pick up and auto-triage.
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Test
+      - Release
+      - Flutter CI
+      - Android Build & Play Store
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  open-pci:
+    name: Open bug PCI on main failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
+          repositories: cli
+
+      - name: Checkout (for pci-send)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Install nself CLI (for pci-send script)
+        run: |
+          curl -fsSL https://install.nself.org | bash || true
+          echo "$HOME/.nself/bin" >> $GITHUB_PATH
+
+      - name: Write PCI inbox message
+        env:
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          SLUG="ci-fail-$(echo "$REPO" | tr '/' '-')-$RUN_ID"
+          TIMESTAMP=$(date -u '+%Y-%m-%d')
+          MSG_FILE="msg-${TIMESTAMP}-${SLUG}.md"
+
+          mkdir -p /tmp/pci-out
+          cat > "/tmp/pci-out/${MSG_FILE}" <<BODY
+          ---
+          subject: CI FAILURE: ${WORKFLOW_NAME} on ${REPO}@${HEAD_BRANCH}
+          from: ci-failure-pci@nself-org
+          to: nself-ppi
+          date: $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          priority: high
+          type: bug
+          ---
+
+          ## Context
+
+          Automated CI failure report. Workflow **${WORKFLOW_NAME}** failed on \`${HEAD_BRANCH}\`
+          in repo \`${REPO}\`.
+
+          ## Request
+
+          Triage and fix the CI failure. This is a P1 per the CI-CD-Green Hard Rule.
+
+          ## Details
+
+          - **Repo:** ${REPO}
+          - **Workflow:** ${WORKFLOW_NAME}
+          - **Branch:** ${HEAD_BRANCH}
+          - **SHA:** ${HEAD_SHA}
+          - **Run ID:** ${RUN_ID}
+          - **Run URL:** ${WORKFLOW_URL}
+
+          ## Impact
+
+          main is red. New PRs cannot merge until this is resolved.
+          BODY
+
+          # Copy to nself PPI inbox
+          cp "/tmp/pci-out/${MSG_FILE}" \
+            "${GITHUB_WORKSPACE}/../../../nself/.claude/inbox/${MSG_FILE}" 2>/dev/null || true
+
+          echo "PCI written: ${MSG_FILE}"
+          cat "/tmp/pci-out/${MSG_FILE}"

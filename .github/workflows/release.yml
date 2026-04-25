@@ -426,11 +426,20 @@ jobs:
             dist/provenance.intoto.jsonl
             dist/*.sig
 
+      - name: Generate GitHub App token for cross-repo dispatch
+        if: steps.channel.outputs.channel == 'stable'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
+          repositories: homebrew-nself,admin
+
       - name: Trigger homebrew tap update (stable only)
         if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           repository: nself-org/homebrew-nself
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable", "sha256": "${{ needs.build.outputs.source_sha256 }}"}'
@@ -439,7 +448,7 @@ jobs:
         if: steps.channel.outputs.channel == 'stable'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           repository: nself-org/admin
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'

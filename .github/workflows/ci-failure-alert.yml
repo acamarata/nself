@@ -1,0 +1,62 @@
+name: CI Failure Alert
+
+# S204-T04: Send Slack alert when main goes red on any of the 11 nSelf repos.
+# Each repo must add this workflow (or call this one via workflow_call).
+# This instance guards cli/main only. Other repos get their own copy via T04.
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Test
+      - Release
+      - Flutter CI
+      - Android Build & Play Store
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  alert-on-failure:
+    name: Alert — main CI failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Send Slack alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          custom_payload: |
+            {
+              "text": ":red_circle: *CI failure on main*",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {
+                      "title": "Repo",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "${{ github.event.workflow_run.name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Run",
+                      "value": "<${{ github.event.workflow_run.html_url }}|View run>",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.event.workflow_run.head_branch }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
