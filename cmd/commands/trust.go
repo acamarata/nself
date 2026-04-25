@@ -1,13 +1,17 @@
 package commands
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/ssl"
 	"github.com/nself-org/cli/internal/trust"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -43,6 +47,26 @@ Undo all changes:
 	RunE: runTrust,
 }
 
+// trustStatusCmd is the `nself trust status` subcommand.
+var trustStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show trusted cert CAs, last rotation date, and expiry warnings",
+	Long: `Show the current state of all local dev trust components.
+
+Lists trusted certificate authorities, SSL certificate expiry dates, and warns
+when any certificate expires within 30 days.
+
+Exit codes:
+  0 — all trust components configured and no expiry warnings
+  2 — one or more components missing or cert expiry <30 days`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		project, _ := cmd.Flags().GetString("project")
+		opts := trustOpts{Project: project}
+		cfg := buildTrustConfig(opts)
+		return runTrustStatusDetailed(cfg)
+	},
+}
+
 func init() {
 	trustCmd.Flags().Bool("skip-dns", false, "Skip dnsmasq and /etc/resolver setup")
 	trustCmd.Flags().Bool("skip-ssl", false, "Skip mkcert CA and certificate generation")
@@ -50,6 +74,10 @@ func init() {
 	trustCmd.Flags().Bool("status", false, "Show current trust status and exit")
 	trustCmd.Flags().Bool("undo", false, "Print instructions to undo all trust changes")
 	trustCmd.Flags().StringP("project", "p", "", "Path to nself project directory (allows running from any cwd)")
+
+	trustStatusCmd.Flags().StringP("project", "p", "", "Path to nself project directory")
+
+	trustCmd.AddCommand(trustStatusCmd)
 	RootCmd.AddCommand(trustCmd)
 }
 
@@ -436,4 +464,138 @@ func launchDaemonPath() string {
 // undo instructions. Returns empty string on error (graceful degradation).
 func getMkcertCAPathForUndo() (string, error) {
 	return trust.MkcertCAPath()
+}
+
+// runTrustStatusDetailed shows trusted cert CAs with expiry dates and warns
+// on certificates expiring within 30 days. Returns exit code 2 via error when
+// any component is missing or a cert is near-expiry.
+func runTrustStatusDetailed(cfg trust.TrustConfig) error {
+	status := trust.CheckStatus(cfg)
+
+	fmt.Println()
+	ui.Section("Trust status — certificate authorities")
+
+	hasWarning := false
+
+	// mkcert CA info.
+	if !status.MkcertInstalled {
+		fmt.Println("  ✗ mkcert — not installed")
+		hasWarning = true
+	} else {
+		caPath, caErr := ssl.MkcertCACertPath()
+		if caErr != nil {
+			fmt.Println("  ✗ mkcert CA — path unavailable")
+			hasWarning = true
+		} else {
+			caInfo := parseCACertInfo(caPath)
+			if caInfo == nil {
+				if status.CAInstalled {
+					fmt.Printf("  ✓ mkcert CA — trusted (expiry unreadable)\n")
+				} else {
+					fmt.Printf("  ✗ mkcert CA — not trusted  path: %s\n", caPath)
+					hasWarning = true
+				}
+			} else {
+				daysLeft := int(time.Until(caInfo.NotAfter).Hours()) / 24
+				mark := "✓"
+				if !status.CAInstalled {
+					mark = "✗"
+					hasWarning = true
+				}
+				if daysLeft < 30 {
+					hasWarning = true
+					fmt.Printf("  %s mkcert CA %-32s  expires: %s  WARN: %d days remaining\n",
+						mark, caInfo.Subject.CommonName,
+						caInfo.NotAfter.Format("2006-01-02"), daysLeft)
+				} else {
+					fmt.Printf("  %s mkcert CA %-32s  expires: %s  (%d days)\n",
+						mark, caInfo.Subject.CommonName,
+						caInfo.NotAfter.Format("2006-01-02"), daysLeft)
+				}
+			}
+		}
+	}
+
+	// Project SSL cert (if WorkDir is set).
+	fmt.Println()
+	ui.Section("Trust status — project certificates")
+
+	if cfg.WorkDir == "" {
+		fmt.Println("  (no project directory — run from a project root or pass -p)")
+	} else {
+		certPath := filepath.Join(cfg.WorkDir, "ssl", "fullchain.pem")
+		if _, err := os.Stat(certPath); os.IsNotExist(err) {
+			fmt.Println("  ✗ project cert — not found (run 'nself trust' to generate)")
+			hasWarning = true
+		} else {
+			certInfo := parseCACertInfo(certPath)
+			if certInfo == nil {
+				fmt.Printf("  ? project cert — found but unreadable: %s\n", certPath)
+				hasWarning = true
+			} else {
+				daysLeft := int(time.Until(certInfo.NotAfter).Hours()) / 24
+				if daysLeft < 0 {
+					fmt.Printf("  ✗ project cert %-30s  EXPIRED %d days ago\n",
+						certInfo.Subject.CommonName, -daysLeft)
+					hasWarning = true
+				} else if daysLeft < 30 {
+					fmt.Printf("  ⚠ project cert %-30s  expires: %s  WARN: %d days remaining\n",
+						certInfo.Subject.CommonName,
+						certInfo.NotAfter.Format("2006-01-02"), daysLeft)
+					hasWarning = true
+				} else {
+					fmt.Printf("  ✓ project cert %-30s  expires: %s  (%d days)\n",
+						certInfo.Subject.CommonName,
+						certInfo.NotAfter.Format("2006-01-02"), daysLeft)
+				}
+			}
+		}
+	}
+
+	// Other trust components.
+	fmt.Println()
+	ui.Section("Trust status — components")
+
+	check := func(ok bool) string {
+		if ok {
+			return "✓"
+		}
+		return "✗"
+	}
+
+	fmt.Printf("  %s DNS (.local wildcard)\n", check(status.DNSRunning))
+	fmt.Printf("  %s /etc/resolver configured\n", check(status.ResolverConfigured))
+	fmt.Printf("  %s port forwarding (80/443)\n", check(status.PortsForwarding))
+	fmt.Println()
+
+	if !status.DNSRunning || !status.ResolverConfigured || !status.PortsForwarding {
+		hasWarning = true
+	}
+
+	if hasWarning {
+		ui.Warn("Some trust components need attention. Run 'nself trust' to fix.")
+		// Return a sentinel that produces exit code 2 (warning, not hard error).
+		return fmt.Errorf("trust warnings present (exit code 2)")
+	}
+
+	ui.Success("All trust components configured — no expiry warnings.")
+	return nil
+}
+
+// parseCACertInfo reads and parses the first PEM certificate in path.
+// Returns nil if the file cannot be read or parsed (graceful degradation).
+func parseCACertInfo(path string) *x509.Certificate {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil
+	}
+	return cert
 }
