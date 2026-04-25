@@ -397,6 +397,9 @@ func init() {
 	// kill flags
 	flagKillCmd.Flags().String("reason", "", "Reason for kill-switch (required)")
 	if err := flagKillCmd.MarkFlagRequired("reason"); err != nil {
+		// Programming error: MarkFlagRequired only returns an error when the named
+		// flag does not exist. Since "reason" is registered on the line above,
+		// this fires only if this code is misedited. Bug-in-our-code guard.
 		panic(fmt.Sprintf("flag kill: mark required: %v", err))
 	}
 

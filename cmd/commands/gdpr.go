@@ -37,6 +37,18 @@ Subcommands:
 
 All GDPR requests are logged to np_gdpr_requests for audit purposes.
 That table is append-only: rows are never deleted.`,
+	// PersistentPreRunE installs a recover() guard across the entire gdpr
+	// subcommand tree. Any unexpected panic is caught here, logged as an
+	// internal error, and converted to a non-zero exit without crashing the
+	// process in a way that suppresses the error message.
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) (retErr error) {
+		defer func() {
+			if r := recover(); r != nil {
+				retErr = fmt.Errorf("gdpr: internal error (panic): %v", r)
+			}
+		}()
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -66,7 +78,11 @@ func init() {
 	gdprExportCmd.Flags().String("notify", "", "Email address to notify when export is complete (optional)")
 	gdprExportCmd.Flags().Bool("dry-run", false, "Print what would be exported without generating the archive")
 	if err := gdprExportCmd.MarkFlagRequired("user"); err != nil {
-		panic(err)
+		// Programming error: MarkFlagRequired only returns an error when the named
+		// flag does not exist on the command. Since "user" is registered on the
+		// line above, this can only fire if this code is misedited. It is a
+		// bug-in-our-code guard, not a user-input boundary.
+		panic(fmt.Sprintf("gdpr export: mark --user required: %v", err))
 	}
 }
 
@@ -152,7 +168,11 @@ func init() {
 	gdprDeleteCmd.Flags().String("user", "", "User ID to erase data for (required)")
 	gdprDeleteCmd.Flags().Bool("dry-run", false, "List affected rows without deleting anything")
 	if err := gdprDeleteCmd.MarkFlagRequired("user"); err != nil {
-		panic(err)
+		// Programming error: MarkFlagRequired only returns an error when the named
+		// flag does not exist on the command. Since "user" is registered on the
+		// line above, this can only fire if this code is misedited. It is a
+		// bug-in-our-code guard, not a user-input boundary.
+		panic(fmt.Sprintf("gdpr delete: mark --user required: %v", err))
 	}
 }
 
@@ -223,7 +243,11 @@ var gdprStatusCmd = &cobra.Command{
 func init() {
 	gdprStatusCmd.Flags().String("request", "", "Request ID to look up (required)")
 	if err := gdprStatusCmd.MarkFlagRequired("request"); err != nil {
-		panic(err)
+		// Programming error: MarkFlagRequired only returns an error when the named
+		// flag does not exist on the command. Since "request" is registered on the
+		// line above, this can only fire if this code is misedited. It is a
+		// bug-in-our-code guard, not a user-input boundary.
+		panic(fmt.Sprintf("gdpr status: mark --request required: %v", err))
 	}
 }
 

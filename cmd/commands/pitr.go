@@ -106,6 +106,9 @@ func init() {
 	pitrRestoreCmd.Flags().String("identity", "", "Path to age identity file for decrypting encrypted archives")
 	pitrRestoreCmd.Flags().Bool("auto-promote", true, "Automatically promote Postgres after recovery")
 	if err := pitrRestoreCmd.MarkFlagRequired("to"); err != nil {
+		// Programming error: MarkFlagRequired only returns an error when the named
+		// flag does not exist. Since "--to" is registered on the line above,
+		// this fires only if this code is misedited. Bug-in-our-code guard.
 		panic("pitr restore: mark --to required: " + err.Error())
 	}
 
