@@ -1,0 +1,76 @@
+# Gitleaks configuration for nSelf ecosystem
+# P96 S102 — canonical credential scanner rules
+title = "nSelf Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "stripe-live-key"
+description = "Stripe Live Secret Key"
+regex = '''sk_live_[a-zA-Z0-9]{24,}'''
+tags = ["stripe", "secret"]
+
+[[rules]]
+id = "github-pat-classic"
+description = "GitHub Personal Access Token (classic)"
+regex = '''ghp_[a-zA-Z0-9]{36,}'''
+tags = ["github", "pat"]
+
+[[rules]]
+id = "github-pat-fine-grained"
+description = "GitHub Fine-Grained Personal Access Token"
+regex = '''github_pat_[a-zA-Z0-9_]{82,}'''
+tags = ["github", "pat"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''AKIA[A-Z0-9]{16}'''
+tags = ["aws", "secret"]
+
+[[rules]]
+id = "google-api-key"
+description = "Google API Key"
+regex = '''AIza[A-Za-z0-9_\-]{35}'''
+tags = ["google", "secret"]
+
+[[rules]]
+id = "rsa-private-key"
+description = "RSA Private Key Header"
+regex = '''-----BEGIN RSA PRIVATE KEY-----'''
+tags = ["ssh", "secret"]
+
+[[rules]]
+id = "ec-private-key"
+description = "EC Private Key Header"
+regex = '''-----BEGIN EC PRIVATE KEY-----'''
+tags = ["ssh", "secret"]
+
+[[rules]]
+id = "openssh-private-key"
+description = "OpenSSH Private Key Header"
+regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
+tags = ["ssh", "secret"]
+
+[[rules]]
+id = "nself-license-key"
+description = "nSelf Pro Plugin License Key"
+regex = '''nself_pro_[a-zA-Z0-9]{32,}'''
+tags = ["nself", "license", "secret"]
+
+[allowlist]
+description = "Allow known test fixtures and documentation examples"
+paths = [
+  '''.gitleaks.toml''',
+  '''\.claude/qa/gitleaks-acceptance-test\.md''',
+  '''testdata/.*''',
+  '''test/.*fixtures.*''',
+  '''\.github/workflows/gitleaks\.yml''',
+]
+regexes = [
+  '''sk_live_FAKE_TEST_FOR_CI_GATE''',
+  '''AKIA_FAKE_TEST_KEY_DO_NOT_USE''',
+  '''AIza_FAKE_GOOGLE_KEY_DO_NOT_USE''',
+  '''nself_pro_FAKE_TEST_KEY_DO_NOT_USE''',
+]
