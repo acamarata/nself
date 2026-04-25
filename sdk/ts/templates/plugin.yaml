@@ -1,0 +1,11 @@
+name: my-plugin
+version: 1.0.0
+description: My nSelf plugin built with @nself/plugin-sdk
+tier: free
+port: 3850
+
+# Required environment variables (checked at install time)
+requiredEnv: []
+
+# Nginx routes this plugin exposes (populated by the CLI at build time)
+routes: []

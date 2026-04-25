@@ -1,0 +1,35 @@
+name: SDK TypeScript Tests
+
+on:
+  push:
+    paths:
+      - 'sdk/ts/**'
+  pull_request:
+    paths:
+      - 'sdk/ts/**'
+
+jobs:
+  sdk-ts:
+    name: TypeScript SDK Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd sdk/ts
+          pnpm install --frozen-lockfile=false
+
+      - name: Run tests
+        run: |
+          cd sdk/ts
+          pnpm test

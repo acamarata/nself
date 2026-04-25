@@ -1,0 +1,22 @@
+name: SDK Python Publish
+
+on:
+  push:
+    tags:
+      - 'cli-sdk-py/v*'
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and publish
+        run: |
+          cd sdk/py
+          pip install build twine
+          python -m build
+          twine upload dist/* -u __token__ -p ${{ secrets.PYPI_TOKEN }}
