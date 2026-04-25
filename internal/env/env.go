@@ -97,6 +97,15 @@ func List(projectDir string) []EnvInfo {
 		}
 	}
 
+	// Ensure the active environment is always included, even if no .env file exists yet.
+	if !seen[active] {
+		envs = append(envs, EnvInfo{
+			Name:   active,
+			Active: true,
+			File:   filepath.Join(projectDir, fmt.Sprintf(".env.%s", active)),
+		})
+	}
+
 	sort.Slice(envs, func(i, j int) bool {
 		return envs[i].Name < envs[j].Name
 	})
