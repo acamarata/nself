@@ -63,7 +63,7 @@ tags = ["nself", "license", "secret"]
 description = "Allow known test fixtures and documentation examples"
 paths = [
   '''.gitleaks.toml''',
-  '''\.claude/qa/gitleaks-acceptance-test\.md''',
+  '''qa/gitleaks-acceptance-test\.md''',
   '''testdata/.*''',
   '''test/.*fixtures.*''',
   '''\.github/workflows/gitleaks\.yml''',
