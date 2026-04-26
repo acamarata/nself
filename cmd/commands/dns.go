@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,12 +9,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/ssl"
 	"github.com/nself-org/cli/internal/ui"
-
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var dnsSetupCmd = &cobra.Command{
@@ -115,11 +117,17 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Bail out before any blocking admin-privilege operation if the context
+	// has already been cancelled (e.g. test harness deadline).
+	if err := cmd.Context().Err(); err != nil {
+		return fmt.Errorf("dns-setup: %w", err)
+	}
+
 	added, err := ssl.AddHosts(hostable)
 	if err != nil {
 		if errors.Is(err, ssl.ErrSudoRequired) {
 			if runtime.GOOS == "darwin" {
-				return rerunWithOsascript(workdir)
+				return rerunWithOsascript(cmd.Context(), workdir)
 			}
 			ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 			return fmt.Errorf("permission denied writing /etc/hosts")
@@ -143,7 +151,33 @@ func runDNSSetup(cmd *cobra.Command, args []string) error {
 // rerunWithOsascript re-executes the current binary with dns-setup via osascript,
 // which presents a native macOS password dialog for administrator privileges.
 // workdir is passed via --project so the elevated process resolves the same project.
-func rerunWithOsascript(workdir string) error {
+//
+// ctx is the cobra command context. If ctx is already done before we can show
+// the dialog, the function returns a context error immediately rather than
+// blocking on a native OS auth dialog. This prevents test harnesses from
+// hanging when they cancel the context via a deadline.
+//
+// WaitDelay bounds how long we wait for I/O to drain after the context fires,
+// preventing "exec: WaitDelay expired before I/O complete" orphan reports.
+//
+// Only an interactive TTY session shows the native macOS admin dialog. In
+// non-TTY contexts (tests, CI, piped output) the dialog would block
+// indefinitely — return the sudo hint message instead.
+func rerunWithOsascript(ctx context.Context, workdir string) error {
+	// Refuse to launch a blocking OS dialog if the context is already done.
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("dns-setup: %w", ctx.Err())
+	default:
+	}
+
+	// In non-interactive contexts (CI, tests, piped output) skip the blocking
+	// macOS password dialog and return a clear sudo hint instead.
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
+		return fmt.Errorf("permission denied writing /etc/hosts")
+	}
+
 	self, err := os.Executable()
 	if err != nil {
 		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
@@ -151,7 +185,9 @@ func rerunWithOsascript(workdir string) error {
 	}
 	ui.Info("Requesting administrator access to update /etc/hosts...")
 	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, self, workdir)
-	out, err := exec.Command("osascript", "-e", script).CombinedOutput()
+	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
+	cmd.WaitDelay = 5 * time.Second
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("permission denied writing /etc/hosts")

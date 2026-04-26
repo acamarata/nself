@@ -245,6 +245,34 @@ func TestSnapshot_ResourceLimitsPresent(t *testing.T) {
 	}
 }
 
+// TestSnapshot_ComposeV5PidsLimitAbsent verifies that the generated YAML contains
+// NO top-level pids_limit keys for any service. Docker Compose v5 treats
+// service-level pids_limit as a canonical alias for deploy.resources.limits.pids,
+// and rejects the compose file as "conflicting" when both forms are present.
+// This test is the primary regression guard for G0-T13 (CRITICAL hotfix).
+func TestSnapshot_ComposeV5PidsLimitAbsent(t *testing.T) {
+	yaml := generateYAML(t, snapshotConfig())
+
+	if strings.Contains(yaml, "pids_limit:") {
+		t.Errorf("snapshot (Compose v5 compat): generated YAML contains top-level 'pids_limit:' field — "+
+			"this causes 'can't set distinct values on pids_limit and deploy.resources.limits.pids' on Compose v5+. "+
+			"All pids limits must use the deploy.resources.limits.pids form only.")
+	}
+}
+
+// TestSnapshot_ComposeV5PidsLimitInDeploy verifies that deploy.resources.limits.pids
+// is emitted in the generated YAML. This is the modern Docker Compose syntax (v3.4+)
+// that works on both Compose v4 and v5 without conflict.
+func TestSnapshot_ComposeV5PidsLimitInDeploy(t *testing.T) {
+	yaml := generateYAML(t, snapshotConfig())
+
+	// The pids field must appear under deploy.resources.limits (emitted as "pids:" by yaml.v3).
+	if !strings.Contains(yaml, "pids:") {
+		t.Errorf("snapshot (Compose v5 compat): generated YAML does not contain 'pids:' field under "+
+			"deploy.resources.limits — fork-bomb prevention is missing. Expected: deploy.resources.limits.pids: 100")
+	}
+}
+
 // extractServiceBlock is a debug helper that returns the lines in the YAML that
 // start at "  <name>:" and continue until the next top-level-indented service.
 // Used only for test failure messages — not part of the assertion logic.

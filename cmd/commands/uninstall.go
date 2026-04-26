@@ -2,11 +2,14 @@ package commands
 
 import (
 	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
@@ -97,7 +100,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	// Confirmation.
 	if !yes {
-		if !confirmPrompt("Continue with uninstall? [y/N] ") {
+		if !confirmPrompt(cmd, "Continue with uninstall? [y/N] ") {
 			fmt.Println("Aborted.")
 			return nil
 		}
@@ -108,7 +111,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 		fmt.Printf("  %s DANGER: This will permanently delete your database.\n",
 			ui.C(ui.Red, ui.IconWarning))
-		if !confirmPrompt("Type 'purge' to confirm: ") {
+		if !confirmPrompt(cmd, "Type 'purge' to confirm: ") {
 			fmt.Println("Aborted.")
 			return nil
 		}
@@ -131,8 +134,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	steps.Next() // Stopping containers
-	if err := runDockerComposeDown(cwd, purge); err != nil {
-		fmt.Fprintf(os.Stderr, "  %s docker compose down: %v (continuing)\n",
+	if err := runDockerComposeDown(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cwd, purge); err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "  %s docker compose down: %v (continuing)\n",
 			ui.C(ui.Yellow, ui.IconWarning), err)
 	}
 
@@ -162,7 +165,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 // runDockerComposeDown stops and removes containers for the project.
 // If purge is true it also removes volumes.
-func runDockerComposeDown(projectDir string, purge bool) error {
+// ctx is used to cancel the docker subprocess if the command context fires
+// (e.g. test harness deadline), preventing orphan I/O after the test exits.
+func runDockerComposeDown(ctx context.Context, stdout, stderr io.Writer, projectDir string, purge bool) error {
 	composeFile := filepath.Join(projectDir, "docker-compose.yml")
 	if _, err := os.Stat(composeFile); os.IsNotExist(err) {
 		return nil // nothing to stop
@@ -172,17 +177,22 @@ func runDockerComposeDown(projectDir string, purge bool) error {
 	if purge {
 		dockerArgs = append(dockerArgs, "--volumes")
 	}
-	cmd := exec.Command("docker", dockerArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	dcmd := exec.CommandContext(ctx, "docker", dockerArgs...)
+	dcmd.Stdout = stdout
+	dcmd.Stderr = stderr
+	dcmd.WaitDelay = 5 * time.Second
+	return dcmd.Run()
 }
 
 // confirmPrompt prints the given prompt and returns true if the user typed
 // "y", "yes", or "purge" (for the purge confirmation).
-func confirmPrompt(prompt string) bool {
-	fmt.Print(prompt)
-	scanner := bufio.NewScanner(os.Stdin)
+//
+// cmd is the cobra.Command whose InOrStdin() is used as the input source.
+// This allows tests to inject a closed reader (EOF) via root.SetIn() rather
+// than blocking forever on the real os.Stdin.
+func confirmPrompt(cmd *cobra.Command, prompt string) bool {
+	fmt.Fprint(cmd.OutOrStdout(), prompt)
+	scanner := bufio.NewScanner(cmd.InOrStdin())
 	if !scanner.Scan() {
 		return false
 	}

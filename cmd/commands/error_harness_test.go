@@ -18,7 +18,7 @@ package commands
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -468,6 +468,14 @@ var errorHarnessCases = []errorHarnessCase{
 func runErrorHarnessCmd(t *testing.T, args []string) error {
 	t.Helper()
 
+	// Run from a temp dir that has no .env or .env.dev so that commands which
+	// call config.Load(cwd) fail at config loading rather than proceeding to
+	// external I/O (HTTP calls to Hasura, docker subprocesses, etc.). Without
+	// this, the package test dir's .env causes generate, mcp, and other commands
+	// to reach blocking network calls, which stall the harness for the full
+	// context-deadline duration.
+	t.Chdir(t.TempDir())
+
 	// Clone root so parallel subtests don't race on global state.
 	root := &cobra.Command{
 		Use:           RootCmd.Use,
@@ -492,27 +500,24 @@ func runErrorHarnessCmd(t *testing.T, args []string) error {
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)
+	// Provide an empty stdin so any command that reads os.Stdin via
+	// cmd.InOrStdin() (e.g. confirmPrompt in uninstall) gets EOF immediately
+	// rather than blocking forever and leaking I/O past the test deadline.
+	root.SetIn(strings.NewReader(""))
 	root.SetArgs(args)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Run the cobra execution in a goroutine so the test can enforce its own
-	// wall-clock cap even when the command does not honour ctx (e.g., Go code
-	// using exec.Command rather than exec.CommandContext).
-	done := make(chan error, 1)
-	go func() {
-		done <- root.ExecuteContext(ctx)
-	}()
-
-	select {
-	case err := <-done:
-		return err
-	case <-ctx.Done():
-		// Treat deadline as an error outcome — exactly what the harness expects
-		// from misbehaving commands in a no-project-dir context.
-		return fmt.Errorf("harness deadline exceeded for args %v: %w", args, ctx.Err())
-	}
+	// Run directly (not in a goroutine). We rely on the context deadline to
+	// terminate any well-behaved exec.CommandContext or http.Client inside the
+	// command. Commands that use exec.Command without a context may block longer
+	// than the 5s deadline, but that is an acceptable trade-off: the overall test
+	// timeout (120s) is the hard cap, and the "Test I/O incomplete" failure only
+	// occurs when a background goroutine outlives the test BINARY — which cannot
+	// happen here because we wait for ExecuteContext to return before this
+	// function exits.
+	return root.ExecuteContext(ctx)
 }
 
 // TestErrorHarness_AllCommandsReturnError verifies that every entry in the

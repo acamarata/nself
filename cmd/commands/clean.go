@@ -89,31 +89,32 @@ func runClean(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. Docker build cache (non-fatal if docker not available)
-	fmt.Println("Pruning Docker build cache...")
-	pruneCmd := exec.Command("docker", "builder", "prune",
+	fmt.Fprintln(cmd.OutOrStdout(), "Pruning Docker build cache...")
+	pruneCmd := exec.CommandContext(cmd.Context(), "docker", "builder", "prune",
 		"--filter", "type=exec.cachemount",
 		"--force",
 	)
 	pruneOut, pruneErr := pruneCmd.CombinedOutput()
 	if pruneErr != nil {
-		fmt.Fprintf(os.Stderr, "Warning: docker builder prune failed (Docker may not be running): %v\n", pruneErr)
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker builder prune failed (Docker may not be running): %v\n", pruneErr)
 	} else {
 		trimmed := strings.TrimSpace(string(pruneOut))
 		if trimmed != "" {
-			fmt.Println(trimmed)
+			fmt.Fprintln(cmd.OutOrStdout(), trimmed)
 		}
 	}
 
 	// Summary
-	fmt.Println()
+	out := cmd.OutOrStdout()
+	fmt.Fprintln(out)
 	if len(removed) == 0 {
-		fmt.Println("Nothing to remove — already clean.")
+		fmt.Fprintln(out, "Nothing to remove — already clean.")
 	} else {
-		fmt.Printf("Removed %d file(s):\n", len(removed))
+		fmt.Fprintf(out, "Removed %d file(s):\n", len(removed))
 		for _, r := range removed {
-			fmt.Printf("  - %s\n", r)
+			fmt.Fprintf(out, "  - %s\n", r)
 		}
-		fmt.Println("\nRun 'nself build' to regenerate.")
+		fmt.Fprintln(out, "\nRun 'nself build' to regenerate.")
 	}
 
 	return nil

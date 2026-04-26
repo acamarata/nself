@@ -5,9 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
+
+	"golang.org/x/term"
 )
 
 // Compose shells out to `docker compose` for lifecycle operations.
@@ -185,18 +190,79 @@ func (c *Compose) ComposeConfig(ctx context.Context, workdir string) error {
 }
 
 // Run executes a docker command with the given arguments, setting the working
-// directory and inheriting the context for cancellation. stdout and stderr are
-// streamed directly to the terminal so that Docker Compose can detect the TTY
-// and render progress correctly. This also ensures long-running operations like
-// "compose stop" and "compose down" are not silently killed by a hidden pipe.
+// directory and inheriting the context for cancellation. Output is forwarded to
+// os.Stdout/os.Stderr via goroutine-owned pipes rather than direct fd inheritance.
+//
+// Direct fd inheritance (cmd.Stdout = os.Stdout) passes the test binary's stdout
+// file descriptor to docker compose and all its children. The docker daemon, which
+// is a separate long-lived process, may hold that fd open via IPC even after the
+// docker compose process is killed — causing "*** Test I/O incomplete N s after
+// exiting" in the Go test harness. Piped copying breaks the inheritance chain: the
+// subprocess gets the write end of a pipe; our goroutine owns the read end and
+// copies to os.Stdout. When the subprocess exits (or is killed), it closes the
+// write end, the goroutine finishes, and the test binary's stdout fd is never
+// held by any docker process.
+//
+// WaitDelay gives the subprocess up to 5 seconds to drain pending I/O after the
+// context is cancelled and the process is killed.
+//
+// Setpgid places docker compose in its own process group so SIGKILL from the
+// Cancel hook propagates to all spawned child processes, not just the top-level
+// docker process.
 func (c *Compose) Run(ctx context.Context, workdir string, args ...string) error {
 	cmd := exec.CommandContext(ctx, c.dockerBin(), args...)
 	cmd.Dir = workdir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.WaitDelay = 5 * time.Second
 
-	if err := cmd.Run(); err != nil {
+	// Put docker compose and all its spawned children in a new process group so
+	// Cancel can kill the entire group with a single signal.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		if cmd.Process != nil {
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
+		return cmd.Process.Kill()
+	}
+
+	// Use pipe-based I/O forwarding instead of direct fd inheritance. This ensures
+	// the test binary's stdout/stderr fds are never held open by docker processes.
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("docker %s: stdout pipe: %w", strings.Join(args, " "), err)
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("docker %s: stderr pipe: %w", strings.Join(args, " "), err)
+	}
+
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("docker %s: %w", strings.Join(args, " "), err)
+	}
+
+	// In interactive TTY sessions forward output to the real terminal so Docker
+	// Compose can render progress correctly. In non-TTY contexts (tests, CI,
+	// piped output) discard subprocess output — the test harness captures output
+	// via cobra's SetOut/SetErr and does not need raw docker progress lines.
+	// Using io.Discard here prevents the goroutines from ever touching os.Stdout
+	// after the subprocess exits, which eliminates "Test I/O incomplete" failures
+	// caused by goroutines writing to os.Stdout past the test deadline.
+	outSink := io.Writer(os.Stdout)
+	errSink := io.Writer(os.Stderr)
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		outSink = io.Discard
+		errSink = io.Discard
+	}
+
+	done := make(chan struct{}, 2)
+	go func() { io.Copy(outSink, stdoutPipe); done <- struct{}{} }() //nolint:errcheck
+	go func() { io.Copy(errSink, stderrPipe); done <- struct{}{} }() //nolint:errcheck
+
+	waitErr := cmd.Wait()
+	<-done
+	<-done
+
+	if waitErr != nil {
+		return fmt.Errorf("docker %s: %w", strings.Join(args, " "), waitErr)
 	}
 	return nil
 }
