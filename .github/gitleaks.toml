@@ -3,33 +3,21 @@ title = "nSelf CLI gitleaks config"
 [extend]
 useDefault = true
 
-[[allowlist.paths]]
-description = "Test files — mock credentials are intentional test vectors"
+[allowlist]
 paths = [
+  # Test files — mock credentials are intentional test vectors
   '''.*_test\.go''',
   '''test/''',
   '''testdata/''',
-]
-
-[[allowlist.paths]]
-description = "Example and template env files — placeholder values only"
-paths = [
+  # Example and template env files — placeholder values only
   '''internal/config/\.env\.example''',
   '''cmd/commands/\.env\.example''',
   '''\.env\.example$''',
   '''\.example\.env$''',
   '''\.env\.template$''',
-]
-
-[[allowlist.paths]]
-description = "Migration fixtures — test database state"
-paths = [
+  # Migration fixtures — test database state
   '''internal/migration/testdata/''',
-]
-
-[[allowlist.paths]]
-description = "Wiki and documentation — example values in docs"
-paths = [
+  # Wiki and documentation — example values in docs
   '''\.github/wiki/''',
   '''\.github/docs/''',
   '''\.claude/''',
