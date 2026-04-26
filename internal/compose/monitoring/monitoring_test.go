@@ -325,6 +325,143 @@ func TestRenderAlertmanagerYAMLNilConfig(t *testing.T) {
 	}
 }
 
+// --- G6-T08: on-call routing stub (info route + maintenance window + parent inhibit) ---
+
+func TestRenderAlertmanagerYAMLInfoRoutePresent(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// Info severity must have an explicit route to null-receiver.
+	if !strings.Contains(s, "severity = info") {
+		t.Fatalf("expected 'severity = info' route in alertmanager.yml\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLMaintenanceWindowPresent(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// Maintenance window must appear in time_intervals.
+	if !strings.Contains(s, "maintenance-window") {
+		t.Fatalf("expected maintenance-window time interval in alertmanager.yml\n---\n%s", s)
+	}
+	if !strings.Contains(s, "time_intervals:") {
+		t.Fatalf("expected time_intervals block in alertmanager.yml\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLMaintenanceWindowConfigurable(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	cfg.MaintenanceWindowStart = "03:00"
+	cfg.MaintenanceWindowEnd = "05:00"
+	cfg.MaintenanceWindowDay = "sunday"
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "03:00") {
+		t.Fatalf("expected custom start time '03:00' in maintenance window\n---\n%s", s)
+	}
+	if !strings.Contains(s, "05:00") {
+		t.Fatalf("expected custom end time '05:00' in maintenance window\n---\n%s", s)
+	}
+	if !strings.Contains(s, "sunday") {
+		t.Fatalf("expected 'sunday' weekday in maintenance window\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLMaintenanceWindowDefaultsToSaturday(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "saturday") {
+		t.Fatalf("expected default maintenance window on saturday\n---\n%s", s)
+	}
+	if !strings.Contains(s, "02:00") {
+		t.Fatalf("expected default start time '02:00'\n---\n%s", s)
+	}
+	if !strings.Contains(s, "04:00") {
+		t.Fatalf("expected default end time '04:00'\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLParentServiceInhibitPresent(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// Two inhibit rules must be present: job-level and service_group-level.
+	if count := strings.Count(s, "source_matchers:"); count < 2 {
+		t.Fatalf("expected at least 2 inhibit rules (got %d source_matchers)\n---\n%s", count, s)
+	}
+	if !strings.Contains(s, "service_group = core") {
+		t.Fatalf("expected parent-service inhibit rule with 'service_group = core'\n---\n%s", s)
+	}
+	if !strings.Contains(s, "service_group = plugin") {
+		t.Fatalf("expected parent-service inhibit rule targeting 'service_group = plugin'\n---\n%s", s)
+	}
+	if !strings.Contains(s, "nself_project") {
+		t.Fatalf("expected 'nself_project' equal constraint in parent-service inhibit\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLWarningMutedDuringMaintenance(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// Warning route must reference mute_time_intervals pointing to maintenance-window.
+	if !strings.Contains(s, "mute_time_intervals:") {
+		t.Fatalf("expected mute_time_intervals in warning route\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLCriticalNeverMuted(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// The critical block must NOT contain mute_time_intervals.
+	// Find the critical route section and verify it ends before any mute reference.
+	critIdx := strings.Index(s, "severity = critical")
+	muteIdx := strings.Index(s, "mute_time_intervals:")
+	// mute_time_intervals must appear AFTER the critical block in the file
+	// (i.e. in the warning route, not the critical route).
+	if muteIdx > 0 && muteIdx < critIdx {
+		t.Fatalf("mute_time_intervals must not appear before the critical route block; "+
+			"critical at %d, mute at %d\n---\n%s", critIdx, muteIdx, s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLP98CommentPresent(t *testing.T) {
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	// Multiple P98 references: rotation stub note, provider placeholders.
+	if count := strings.Count(s, "P98"); count < 2 {
+		t.Fatalf("expected at least 2 P98 comments (rotation + window), got %d\n---\n%s", count, s)
+	}
+}
+
 func TestPrometheusDefaultsIncludeOtelcolTarget(t *testing.T) {
 	cfg := Defaults()
 	out, err := RenderPrometheusYAML(cfg)

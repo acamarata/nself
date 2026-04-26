@@ -125,16 +125,54 @@ See `runbooks/otel-collector-down.md` and `runbooks/tempo-down.md` for response 
 
 ## Alertmanager Routing
 
-Critical alerts route to the `oncall-stub` receiver (email). Warnings are logged but generate no notification.
+The routing tree is severity-based:
 
-Configure the email destination via environment variable before running `nself build`:
+| Severity | Receiver | Notes |
+|---|---|---|
+| `critical` | `oncall-stub` (email) | Pages immediately; never silenced |
+| `warning` | `null-receiver` | Logged; silenced during maintenance window |
+| `info` | `null-receiver` | Always ignored; informational only |
+| default | `null-receiver` | Catch-all for unlabelled alerts |
+
+Configure the email destination before running `nself build`:
 
 ```bash
 export ALERTMANAGER_ONCALL_EMAIL="ops@your-domain.com"
 nself build
 ```
 
-The on-call stub is a placeholder. Replace it with a PagerDuty or Opsgenie integration in P98 when an on-call rotation is in place. See the `# P98:` comment in `alertmanager.yml`.
+### Inhibit Rules
+
+Two inhibit rules prevent alert storms:
+
+1. **Job-level**: a `critical` alert for a job silences all `warning` alerts for the same job. Stops cascading notifications when a whole service is down.
+2. **Parent-service-down**: a `critical` alert on a `service_group=core` service (Postgres, Hasura, Auth) silences `warning` and `info` alerts on `service_group=plugin` services within the same `nself_project`. Plugin warnings that are downstream consequences of a core outage are not independently actionable. Alert rules must set the `service_group` label for this to activate. P98 will populate `service_group` on plugin alert rules.
+
+### Maintenance Window
+
+Non-critical alerts are silenced on **Saturday 02:00–04:00 UTC** (weekly maintenance window). Critical alerts are never silenced. Adjust the window in `alertmanager.yml` under `time_intervals`.
+
+P98: replace this stub with the production on-call schedule when a rotation is in place.
+
+### On-Call Integration (P98)
+
+The `oncall-stub` receiver is an email placeholder. To wire a real on-call provider:
+
+**PagerDuty:**
+```yaml
+pagerduty_configs:
+  - routing_key: ${ALERTMANAGER_PD_ROUTING_KEY}
+    severity: '{{ .Labels.severity }}'
+```
+
+**Opsgenie:**
+```yaml
+opsgenie_configs:
+  - api_key: ${ALERTMANAGER_OG_API_KEY}
+    tags: 'nself,{{ .Labels.severity }}'
+```
+
+Replace the `email_configs` block under `oncall-stub` in `alertmanager.yml` with the relevant provider config once the on-call rotation is established in P98.
 
 ## Sampling Strategy (G6-T07)
 

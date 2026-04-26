@@ -1,0 +1,115 @@
+# nSelf Alertmanager configuration — static reference copy.
+# nself build generates the final version into your project's monitoring/ directory.
+#
+# Routing tree (severity-based):
+#   critical → oncall-stub (email to ALERTMANAGER_ONCALL_EMAIL)
+#   warning  → null-receiver (logged, no notification)
+#   info     → null-receiver (logged, no notification)
+#   default  → null-receiver (catch-all)
+#
+# Inhibit rules:
+#   1. Critical suppresses warnings for the same job (prevents alert storms).
+#   2. Service-level critical suppresses instance-level warnings (parent-down inhibit).
+#
+# Maintenance window: non-critical alerts are silenced on saturdays
+# 02:00–04:00 UTC (weekly planned maintenance).
+# P98: ratify actual on-call schedule and replace this stub window.
+#
+# On-call integration:
+# P98: replace oncall-stub receiver with PagerDuty/Opsgenie when an on-call
+# rotation is established. Set ALERTMANAGER_PD_ROUTING_KEY or
+# ALERTMANAGER_OG_API_KEY env vars and add the provider's receiver block.
+# See monitoring/runbooks/ for per-alert runbooks.
+#
+# Environment variables:
+#   ALERTMANAGER_SMTP_HOST    — SMTP relay host:port (default: localhost:25)
+#   ALERTMANAGER_SMTP_FROM    — envelope-from address (default: alertmanager@nself.org)
+#   ALERTMANAGER_ONCALL_EMAIL — critical alert destination (default: support@nself.org)
+#   ALERTMANAGER_PD_ROUTING_KEY — PagerDuty routing key (P98, not active)
+#   ALERTMANAGER_OG_API_KEY     — Opsgenie API key (P98, not active)
+
+global:
+  smtp_smarthost: ${ALERTMANAGER_SMTP_HOST:-localhost:25}
+  smtp_from: ${ALERTMANAGER_SMTP_FROM:-alertmanager@nself.org}
+  smtp_require_tls: false
+
+# Time intervals define windows when non-critical alerts are suppressed.
+# The maintenance window silences warning/info alerts during planned downtime.
+# P98: replace with the production on-call rotation schedule.
+time_intervals:
+  - name: maintenance-window
+    time_intervals:
+      - weekdays: ['saturday']
+        times:
+          - start_time: '02:00'
+            end_time: '04:00'
+
+route:
+  receiver: null-receiver
+  group_by: [alertname, job]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical: page the on-call stub immediately; never muted.
+    - matchers:
+        - severity = critical
+      receiver: oncall-stub
+      continue: false
+
+    # Warning: log only; silence during the maintenance window.
+    - matchers:
+        - severity = warning
+      receiver: null-receiver
+      active_time_intervals: []
+      mute_time_intervals:
+        - maintenance-window
+      continue: false
+
+    # Info: always ignore — informational events are not actionable.
+    - matchers:
+        - severity = info
+      receiver: null-receiver
+      continue: false
+
+receivers:
+  - name: oncall-stub
+    email_configs:
+      - to: ${ALERTMANAGER_ONCALL_EMAIL:-support@nself.org}
+        send_resolved: true
+        # P98: replace with PagerDuty/Opsgenie integration when on-call rotation exists.
+        # PagerDuty example:
+        #   pagerduty_configs:
+        #     - routing_key: ${ALERTMANAGER_PD_ROUTING_KEY}
+        #       severity: '{{ .Labels.severity }}'
+        # Opsgenie example:
+        #   opsgenie_configs:
+        #     - api_key: ${ALERTMANAGER_OG_API_KEY}
+        #       tags: 'nself,{{ .Labels.severity }}'
+
+  - name: null-receiver
+    # Warnings and info events are logged by Alertmanager but generate no
+    # notification. Adjust routing above to promote specific alerts to
+    # oncall-stub when needed (e.g. a warning that should page after 30m).
+
+inhibit_rules:
+  # Rule 1: Silence all warnings when a critical alert is already firing for the
+  # same job. Prevents alert storms when a service is completely down.
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: [job]
+
+  # Rule 2: Parent-service-down inhibit. When a core service (Postgres, Hasura,
+  # Auth) fires a critical alert, suppress downstream plugin/app warnings that
+  # are consequences of the same outage rather than independent faults.
+  # The 'service_group' label must be set in alert rules for this to match.
+  # P98: populate service_group labels in plugin alert rules when they exist.
+  - source_matchers:
+      - severity = critical
+      - service_group = core
+    target_matchers:
+      - severity =~ "warning|info"
+      - service_group = plugin
+    equal: [nself_project]
