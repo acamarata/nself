@@ -27,4 +27,4 @@ jobs:
       - name: Configure git for gitleaks
         run: git config diff.renameLimit 1861
       - name: Scan for secrets
-        run: gitleaks detect --source=. --log-level=warn --redact
+        run: gitleaks detect --source=. --log-level=warn --redact --config .github/gitleaks.toml
