@@ -1,0 +1,316 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_TEMPO",
+      "label": "Tempo",
+      "description": "Grafana Tempo datasource",
+      "type": "datasource",
+      "pluginId": "tempo",
+      "pluginName": "Tempo"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "tempo",
+      "name": "Tempo",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "heatmap",
+      "name": "Heatmap",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Browse distributed traces scoped to a specific tenant. Shows slowest endpoints, request duration heatmap, and per-tenant error rate.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Top Slowest Spans",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+      "description": "The 10 slowest root spans for $tenant_id in the selected time range, grouped by service and HTTP route.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "left",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "orange", "value": 250 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Duration (ms)" },
+            "properties": [
+              { "id": "custom.width", "value": 140 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Trace ID" },
+            "properties": [
+              { "id": "custom.width", "value": 230 },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open in Tempo",
+                    "url": "/explore?orgId=1&left={\"datasource\":\"${DS_TEMPO}\",\"queries\":[{\"refId\":\"A\",\"query\":\"${__value.raw}\",\"queryType\":\"traceId\"}],\"range\":{\"from\":\"${__from}\",\"to\":\"${__to}\"}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Duration (ms)" }]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+          "filters": [
+            {
+              "id": "tenant_id",
+              "operator": "=",
+              "scope": "resource",
+              "tag": "tenant.id",
+              "value": "$tenant_id",
+              "valueType": "string"
+            }
+          ],
+          "limit": 10,
+          "queryType": "traceql",
+          "query": "{ resource.tenant.id = \"$tenant_id\" } | select(rootName, rootServiceName, duration) | sort(duration desc) | limit(10)",
+          "refId": "A",
+          "tableType": "traces"
+        }
+      ],
+      "title": "Top 10 Slowest Spans — $tenant_id (last $__range)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "traceID": "Trace ID",
+              "rootName": "Operation",
+              "rootServiceName": "Service",
+              "duration": "Duration (ms)"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
+      "id": 101,
+      "title": "Request Duration Distribution",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+      "description": "Heatmap of root span durations for $tenant_id. Darker cells indicate higher request volume at that latency bucket.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "scheme" },
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "scaleDistribution": { "type": "linear" }
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "id": 2,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Oranges",
+          "steps": 64
+        },
+        "exemplars": { "color": "rgba(255,0,255,0.7)" },
+        "filterValues": { "le": 1e-9 },
+        "legend": { "show": true },
+        "rowsFrame": { "layout": "auto" },
+        "tooltip": { "mode": "single", "showColorScale": false, "yHistogram": false },
+        "yAxis": {
+          "axisLabel": "Duration bucket (ms)",
+          "axisPlacement": "left",
+          "decimals": 0,
+          "reverse": false,
+          "unit": "ms"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+          "queryType": "traceql",
+          "query": "{ resource.tenant.id = \"$tenant_id\" } | histogram_over_time(duration)",
+          "refId": "A"
+        }
+      ],
+      "title": "Request Duration Heatmap — $tenant_id",
+      "type": "heatmap"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "id": 102,
+      "title": "Error Rate",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+      "description": "Error rate over time for traces belonging to $tenant_id. Spikes indicate service-level issues scoped to this tenant.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Error rate",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "dashed" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.05 }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 23 },
+      "id": 3,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+          "queryType": "traceql",
+          "query": "{ resource.tenant.id = \"$tenant_id\" && status = error } | rate()",
+          "refId": "A",
+          "legendFormat": "Error rate"
+        }
+      ],
+      "title": "Error Rate — $tenant_id",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nself", "traces", "tempo", "observability"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+        "definition": "label_values(tenant.id)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Tenant ID",
+        "multi": false,
+        "name": "tenant_id",
+        "options": [],
+        "query": {
+          "label": "tenant.id",
+          "query": "label_values(tenant.id)",
+          "refId": "StandardVariableQuery",
+          "stream": "",
+          "type": 5
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nSelf — Tenant Trace Browser",
+  "uid": "nself-tenant-trace-browser",
+  "version": 1,
+  "weekStart": ""
+}
