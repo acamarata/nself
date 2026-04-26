@@ -191,9 +191,21 @@ type PublicKeyEntry struct {
 var bundledPublicKeys []PublicKeyEntry
 
 func init() {
-	// Default placeholder key (replaced at build time or by server).
-	// This is a valid Ed25519 public key used for development/testing.
-	// Production builds embed the real public key via ldflags.
+	// D3-T01: load the Ed25519 public key injected at goreleaser build time via
+	// -X github.com/nself-org/cli/internal/license.licensePubKeyHex=<hex>.
+	// Dev builds leave licensePubKeyHex empty → zero key → IsZeroPubKey() returns true
+	// → license signature verification is skipped (CLI falls back to bare validation).
+	if licensePubKeyHex != "" && !IsZeroPubKey() {
+		if keyBytes, err := hex.DecodeString(licensePubKeyHex); err == nil &&
+			len(keyBytes) == ed25519.PublicKeySize {
+			bundledPublicKeys = []PublicKeyEntry{
+				{ID: 1, Key: ed25519.PublicKey(keyBytes)},
+			}
+			return
+		}
+	}
+	// Fallback: zero key (dev builds without ldflags). Signature verification
+	// will always return false for this key, which IsZeroPubKey() signals to callers.
 	devKey := make(ed25519.PublicKey, ed25519.PublicKeySize)
 	bundledPublicKeys = []PublicKeyEntry{
 		{ID: 1, Key: devKey},
@@ -210,4 +222,12 @@ func GetPublicKeys() []PublicKeyEntry {
 		}
 	}
 	return bundledPublicKeys
+}
+
+// GetEmbeddedPubKeyHex returns the hex-encoded Ed25519 public key that was
+// injected at build time via goreleaser ldflags (NSELF_LICENSE_PUBKEY_HEX).
+// Returns an empty string in dev builds without ldflags.
+// D3-T01: used by `nself license pubkey` and pubkey-refresh flow (D3-T10).
+func GetEmbeddedPubKeyHex() string {
+	return licensePubKeyHex
 }
