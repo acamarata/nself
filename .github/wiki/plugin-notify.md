@@ -50,3 +50,19 @@ POST /notifications/sms   — Send SMS
 POST /notifications/push  — Send push notification
 GET  /notifications       — List notification history
 ```
+
+## Mobile Push Notifications
+
+For APNs (iOS) and FCM (Android) push delivery, install the dedicated `push` plugin:
+
+```bash
+nself plugin install push
+```
+
+The `push` plugin provides first-class mobile push delivery with Hasura event-trigger fan-out, delivery state tracking per outbox row, exponential backoff retry, and APNs JWT signing. It is the recommended approach for any consumer app (nChat, nClaw, nFamily, nTV).
+
+See: [[plugin-push]] for full setup, credential management, and Hasura event trigger configuration.
+
+---
+
+[[Home]] | [[Plugin-Overview]] | [[plugin-push]]

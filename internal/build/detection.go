@@ -13,7 +13,7 @@ import (
 // auto-enables Redis and the compose generator emits a redis block.
 //
 // Mirrors the serviceDependents["redis"] entry in cmd/commands/service.go.
-var pluginsNeedingRedis = []string{"ai", "claw", "mux", "cron", "notify"}
+var pluginsNeedingRedis = []string{"ai", "claw", "mux", "cron", "notify", "push"}
 
 // DetectServices returns the list of Docker service names that should be
 // generated in docker-compose.yml based on the current configuration.
