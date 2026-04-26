@@ -164,7 +164,6 @@ func printHelpTopic(name string) error {
 	name = strings.ToLower(strings.TrimSpace(name))
 	t, ok := helpTopics[name]
 	if !ok {
-		fmt.Fprintf(nil, "") // satisfy vet; intentional no-op
 		_ = printHelpTopicIndex()
 		return fmt.Errorf("unknown topic %q — see list above", name)
 	}
