@@ -338,17 +338,24 @@ func runReleaseStatus(cmd *cobra.Command, args []string) error {
 		checkArtifactVercel(ctx, latest),
 	}
 
+	out := cmd.OutOrStdout()
+
 	if jsonOut {
-		return ui.PrintJSON(map[string]interface{}{
+		data, err := json.Marshal(map[string]interface{}{
 			"latest":    latest,
 			"artifacts": statuses,
 			"checked":   time.Now().UTC().Format(time.RFC3339),
 		})
+		if err != nil {
+			return fmt.Errorf("json marshal: %w", err)
+		}
+		fmt.Fprintln(out, string(data))
+		return nil
 	}
 
-	fmt.Printf("%s Release Status  (latest: %s)\n\n", ui.C(ui.Bold, "nSelf"), ui.C(ui.Cyan, latest))
-	fmt.Printf("  %-16s %-12s %-12s %s\n", "Artifact", "Running", "Latest", "Status")
-	fmt.Printf("  %s\n", strings.Repeat("─", 56))
+	fmt.Fprintf(out, "%s Release Status  (latest: %s)\n\n", ui.C(ui.Bold, "nSelf"), ui.C(ui.Cyan, latest))
+	fmt.Fprintf(out, "  %-16s %-12s %-12s %s\n", "Artifact", "Running", "Latest", "Status")
+	fmt.Fprintf(out, "  %s\n", strings.Repeat("─", 56))
 	for _, s := range statuses {
 		statusStr := s.Status
 		color := ui.Green
@@ -358,7 +365,7 @@ func runReleaseStatus(cmd *cobra.Command, args []string) error {
 		case "unknown":
 			color = ui.Dim
 		}
-		fmt.Printf("  %-16s %-12s %-12s %s\n", s.Artifact, s.Running, s.Latest, ui.C(color, statusStr))
+		fmt.Fprintf(out, "  %-16s %-12s %-12s %s\n", s.Artifact, s.Running, s.Latest, ui.C(color, statusStr))
 	}
 	return nil
 }

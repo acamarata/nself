@@ -16,6 +16,40 @@ Use `--check` to inspect current version, install method, and channel without in
 
 Before swapping the binary, the command warns about installed Pro plugins that may be incompatible with the new version. After a successful upgrade, the previous binary is preserved for one-shot rollback.
 
+### --binary-url: install from a specific URL
+
+Operators running air-gapped environments, staging mirrors, or custom build pipelines can use `--binary-url` to bypass the GitHub releases API entirely and install a specific binary directly.
+
+```bash
+nself upgrade --binary-url https://install.nself.org/builds/v1.0.13-rc1/nself-linux-amd64.tar.gz
+```
+
+The command:
+
+1. Validates the URL is HTTPS and the host is on the allowed list (see below).
+2. Derives the checksum file URL from the same directory (`checksums.txt` in the same path).
+3. Downloads the binary or archive.
+4. Verifies the SHA-256 checksum against `checksums.txt`. The install is aborted if the checksum does not match.
+5. Backs up the current binary to `~/.nself/bin/nself.prev`.
+6. Atomically swaps the running binary with the new one.
+
+If the install fails for any reason, run `nself upgrade --rollback` to restore the previous binary.
+
+**Allowed hosts for `--binary-url`:**
+
+- `github.com` and subdomains
+- `objects.githubusercontent.com` and subdomains
+- `install.nself.org` and subdomains
+- `ping.nself.org` and subdomains
+
+URLs from any other host are rejected. Plain `http://` URLs are never accepted, only `https://`.
+
+**Checksum file convention:** the checksum file must live in the same URL directory as the binary and be named `checksums.txt`. Each line follows the standard `sha256sum` format:
+
+```
+<sha256hex>  <filename>
+```
+
 ## Flags
 
 | Flag | Default | Description |
@@ -24,6 +58,7 @@ Before swapping the binary, the command warns about installed Pro plugins that m
 | `--channel` | `""` | Release channel: `stable` or `canary` |
 | `--version` | `""` | Upgrade to a specific version (e.g. `1.2.3`) |
 | `--rollback` | false | Revert to the previously installed version |
+| `--binary-url` | `""` | Install from a specific HTTPS binary URL (operator use) |
 | `--help`, `-h` | — | Show help |
 
 ## Examples
@@ -43,6 +78,12 @@ nself upgrade --version 1.0.6
 
 # Roll back to the previously installed binary
 nself upgrade --rollback
+
+# Install a specific binary from a staging mirror (operator)
+nself upgrade --binary-url https://install.nself.org/builds/v1.0.13-rc1/nself-linux-amd64.tar.gz
+
+# Install a specific binary from a GitHub release asset
+nself upgrade --binary-url https://github.com/nself-org/cli/releases/download/v1.0.13/nself-darwin-arm64.tar.gz
 ```
 
 ## See Also

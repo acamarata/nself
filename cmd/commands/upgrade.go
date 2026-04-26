@@ -15,6 +15,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// executablePath is a package-level hook so tests can override which binary
+// path selfUpdateFromURL (and the upgrade command's binary-url path) targets.
+// In production it always delegates to os.Executable.
+var executablePath = os.Executable
+
 // channelConfig persists the user's chosen release channel.
 type channelConfig struct {
 	Channel string `json:"channel"` // "stable" or "canary"
@@ -155,25 +160,116 @@ func rollbackBinary() error {
 	return nil
 }
 
+// validateBinaryURL returns an error if url is not safe to use as a binary
+// download target.  Only HTTPS is accepted (plain HTTP is forbidden — all
+// downloads must be encrypted in transit).  The host must be on the operator
+// allowlist so that an accidental or injected URL cannot redirect the binary
+// swap to an arbitrary server.
+func validateBinaryURL(url string) error {
+	if !strings.HasPrefix(url, "https://") {
+		return fmt.Errorf("--binary-url must use HTTPS (got %q)", url)
+	}
+	allowed := []string{
+		"github.com",
+		"objects.githubusercontent.com",
+		"install.nself.org",
+		"ping.nself.org",
+	}
+	// Strip the scheme, then extract the host (everything up to the first /).
+	rest := strings.TrimPrefix(url, "https://")
+	host := rest
+	if idx := strings.IndexByte(rest, '/'); idx != -1 {
+		host = rest[:idx]
+	}
+	// Strip port if present.
+	if idx := strings.LastIndexByte(host, ':'); idx != -1 {
+		host = host[:idx]
+	}
+	for _, a := range allowed {
+		if host == a || strings.HasSuffix(host, "."+a) {
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		"--binary-url host %q is not on the allowed list; accepted hosts: %s",
+		host,
+		strings.Join(allowed, ", "),
+	)
+}
+
+// checksumURLFromBinaryURL derives the expected checksums.txt URL from a
+// binary or archive URL.  The convention follows the goreleaser layout:
+//
+//	https://example.com/path/to/nself-linux-amd64          -> .../checksums.txt
+//	https://example.com/path/to/v1.0.9/nself-1.0.9-linux.tar.gz -> .../checksums.txt
+//
+// The checksum file is expected to live in the same directory as the binary.
+func checksumURLFromBinaryURL(binaryURL string) string {
+	idx := strings.LastIndexByte(binaryURL, '/')
+	if idx == -1 {
+		return binaryURL + "/checksums.txt"
+	}
+	return binaryURL[:idx+1] + "checksums.txt"
+}
+
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade the nSelf CLI (detects install method)",
 	Long: `Upgrade the nSelf CLI binary. Detects install method (Homebrew, direct download,
 system package) and uses the appropriate upgrade strategy.
 
-  nself upgrade              # Upgrade to latest stable
-  nself upgrade --check      # Check without installing
-  nself upgrade --channel canary  # Switch to canary channel
-  nself upgrade --version 1.2.3   # Pin to specific version
-  nself upgrade --rollback   # Revert to previous version`,
+  nself upgrade                          # Upgrade to latest stable
+  nself upgrade --check                  # Check without installing
+  nself upgrade --channel canary         # Switch to canary channel
+  nself upgrade --version 1.2.3         # Pin to specific version
+  nself upgrade --rollback               # Revert to previous version
+  nself upgrade --binary-url <url>       # Install from a specific URL (operators)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		check, _ := cmd.Flags().GetBool("check")
 		channel, _ := cmd.Flags().GetString("channel")
 		targetVersion, _ := cmd.Flags().GetString("version")
 		doRollback, _ := cmd.Flags().GetBool("rollback")
+		binaryURL, _ := cmd.Flags().GetString("binary-url")
 
 		if doRollback {
 			return rollbackBinary()
+		}
+
+		// --binary-url: operator-pinned direct download path.
+		// Skips the GitHub releases API entirely and downloads from the
+		// provided URL.  All other upgrade guards (backup, checksum,
+		// atomic swap) still apply.
+		if binaryURL != "" {
+			if err := validateBinaryURL(binaryURL); err != nil {
+				return err
+			}
+
+			method := detectInstallMethod()
+			if method == "homebrew" {
+				ui.Warn("This nSelf binary was installed via Homebrew.")
+				ui.Warn("Using --binary-url with a Homebrew install may break Homebrew's tracking of the formula.")
+				ui.Warn("Consider upgrading through Homebrew instead unless you have a specific reason to bypass it.")
+			}
+
+			// Backup before swapping.
+			if backupPath, err := backupBinary(); err != nil {
+				ui.Warn(fmt.Sprintf("Could not backup current binary: %v", err))
+			} else {
+				ui.Dimmed(fmt.Sprintf("Backup saved to %s", backupPath))
+			}
+
+			checksumURL := checksumURLFromBinaryURL(binaryURL)
+			ui.Info(fmt.Sprintf("Downloading binary from %s", binaryURL))
+			ui.Info(fmt.Sprintf("Fetching checksum from %s", checksumURL))
+
+			if err := selfUpdateFromURL(binaryURL, checksumURL); err != nil {
+				ui.Error(fmt.Sprintf("Upgrade failed: %v", err))
+				ui.Info("Run 'nself upgrade --rollback' to restore the previous version")
+				return err
+			}
+
+			ui.Success("Binary installed from custom URL")
+			return nil
 		}
 
 		// Persist channel choice if provided
@@ -274,5 +370,6 @@ func init() {
 	upgradeCmd.Flags().String("channel", "", "Release channel: stable or canary")
 	upgradeCmd.Flags().String("version", "", "Upgrade to a specific version (e.g. 1.2.3)")
 	upgradeCmd.Flags().Bool("rollback", false, "Revert to the previously installed version")
+	upgradeCmd.Flags().String("binary-url", "", "Install from a specific binary URL (HTTPS only; operator use)")
 	RootCmd.AddCommand(upgradeCmd)
 }

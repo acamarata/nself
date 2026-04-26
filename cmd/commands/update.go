@@ -135,6 +135,105 @@ func (e *alreadyLatestError) Error() string {
 	return fmt.Sprintf("Already on latest version (%s)", e.version)
 }
 
+// selfUpdateFromURL downloads a binary directly from binaryURL, verifies its
+// SHA-256 checksum using checksumURL (the URL to a checksums.txt file), and
+// atomically replaces the running executable.
+//
+// This is the --binary-url path used by operators who need to pin to a
+// specific build URL rather than always pulling the latest GitHub release.
+// The same backup, checksum, and atomic-swap logic as selfUpdate applies.
+func selfUpdateFromURL(binaryURL, checksumURL string) error {
+	archiveName := filepath.Base(binaryURL)
+
+	// Download checksum file.
+	expectedSum, err := fetchExpectedChecksum(checksumURL, archiveName)
+	if err != nil {
+		return fmt.Errorf("fetching checksum for %s: %w", archiveName, err)
+	}
+
+	// Download binary/archive to a temp file.
+	tmpFile, err := os.CreateTemp("", "nself-binary-url-*")
+	if err != nil {
+		return fmt.Errorf("creating temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	if err := downloadFile(binaryURL, tmpFile); err != nil {
+		return fmt.Errorf("downloading %s: %w", binaryURL, err)
+	}
+
+	// Verify checksum.
+	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("seeking temp file: %w", err)
+	}
+	if err := verifyChecksum(tmpFile, expectedSum); err != nil {
+		return fmt.Errorf("checksum mismatch for downloaded binary: %w", err)
+	}
+
+	// If it looks like a tar.gz, extract the binary; otherwise treat the
+	// downloaded file itself as the binary.
+	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("seeking temp file for extraction: %w", err)
+	}
+	var tmpBinary string
+	if strings.HasSuffix(strings.ToLower(archiveName), ".tar.gz") ||
+		strings.HasSuffix(strings.ToLower(archiveName), ".tgz") {
+		extracted, err := extractBinary(tmpFile, "nself")
+		if err != nil {
+			return fmt.Errorf("extracting binary from archive: %w", err)
+		}
+		defer os.Remove(extracted)
+		tmpBinary = extracted
+	} else {
+		// Raw binary: copy to a new temp file so we can chmod it independently.
+		rawTmp, err := os.CreateTemp("", "nself-raw-*")
+		if err != nil {
+			return fmt.Errorf("creating raw binary temp file: %w", err)
+		}
+		defer os.Remove(rawTmp.Name())
+		if _, err := io.Copy(rawTmp, tmpFile); err != nil {
+			rawTmp.Close()
+			return fmt.Errorf("copying binary data: %w", err)
+		}
+		if err := rawTmp.Close(); err != nil {
+			return fmt.Errorf("closing raw binary temp file: %w", err)
+		}
+		tmpBinary = rawTmp.Name()
+	}
+
+	// Determine the path of the running executable.
+	// executablePath is the package-level hook (upgrade.go) so tests can
+	// redirect the swap to a temp file rather than the real binary.
+	exePath, err := executablePath()
+	if err != nil {
+		return fmt.Errorf("resolving executable path: %w", err)
+	}
+	exePath, err = filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return fmt.Errorf("evaluating symlinks for executable: %w", err)
+	}
+
+	// Make the new binary executable.
+	if err := os.Chmod(tmpBinary, 0755); err != nil {
+		return fmt.Errorf("chmod on new binary: %w", err)
+	}
+
+	// Atomic replace (EXDEV-aware fallback, same as selfUpdate).
+	if err := os.Rename(tmpBinary, exePath); err != nil {
+		var linkErr *os.LinkError
+		if errors.As(err, &linkErr) && errors.Is(linkErr.Err, syscall.EXDEV) {
+			if copyErr := copyAndReplace(tmpBinary, exePath); copyErr != nil {
+				return fmt.Errorf("replacing binary (copy fallback): %w", copyErr)
+			}
+		} else {
+			return fmt.Errorf("replacing binary: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // selfUpdate downloads the release archive for the current OS/arch, verifies
 // its SHA-256 checksum, extracts the binary, and atomically replaces the
 // running executable.
