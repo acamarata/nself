@@ -247,6 +247,15 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	}
 	filesGenerated++
 
+	// ── Step 7.6: Auto-enable Redis when a BullMQ plugin is installed ─
+	// If Redis is not explicitly enabled but a plugin that needs it (ai, claw,
+	// mux, cron, notify) is installed, set cfg.Redis.Enabled = true so that
+	// both DetectServices and compose.Generator emit a redis block.
+	if !cfg.Redis.Enabled && ShouldAutoEnableRedis(DefaultPluginDir()) {
+		cfg.Redis.Enabled = true
+		slog.Info("Note: Redis auto-enabled because a BullMQ-backed plugin (cron, notify, ai, claw, or mux) was detected.")
+	}
+
 	// ── Step 8: Generate docker-compose.yml ─────────────────────────
 	composeGen := compose.NewGenerator(cfg)
 	composeYAML, err := composeGen.Generate()

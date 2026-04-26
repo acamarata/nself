@@ -190,11 +190,16 @@ func TestDetectServices_OptionalRedis(t *testing.T) {
 }
 
 func TestDetectServices_RedisNotIncludedWhenDisabled(t *testing.T) {
+	// Use an empty HOME so DefaultPluginDir() returns a path with no plugins,
+	// ensuring the auto-enable path does not fire.
+	home := t.TempDir()
+	setHomeForTest(t, home)
+
 	cfg := &config.Config{Redis: config.RedisConfig{Enabled: false}}
 	services := DetectServices(cfg)
 	for _, s := range services {
 		if s == "redis" {
-			t.Errorf("DetectServices: redis should not appear when disabled")
+			t.Errorf("DetectServices: redis should not appear when disabled and no BullMQ plugins installed")
 		}
 	}
 }
@@ -313,6 +318,133 @@ func TestDetectServices_Mailpit(t *testing.T) {
 	}
 }
 
+// ── DetectServices — Redis auto-enable via plugin detection ───────────────────
+
+// setHomeForTest overrides $HOME to a temporary directory for the duration of
+// the test. DetectServices calls DefaultPluginDir() which uses os.UserHomeDir().
+// By redirecting HOME we control which plugins appear to be installed.
+func setHomeForTest(t *testing.T, home string) {
+	t.Helper()
+	original, set := os.LookupEnv("HOME")
+	if err := os.Setenv("HOME", home); err != nil {
+		t.Fatalf("setHomeForTest: Setenv HOME: %v", err)
+	}
+	t.Cleanup(func() {
+		if set {
+			os.Setenv("HOME", original)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	})
+}
+
+// plantPlugin creates a plugin.json manifest at <home>/.nself/plugins/<name>/plugin.json.
+func plantPlugin(t *testing.T, home, name string) {
+	t.Helper()
+	dir := filepath.Join(home, ".nself", "plugins", name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("plantPlugin MkdirAll %s: %v", name, err)
+	}
+	writeFile(t, filepath.Join(dir, "plugin.json"), `{"name":"`+name+`"}`)
+}
+
+func TestDetectServices_AutoEnablesRedis_CronPlugin(t *testing.T) {
+	home := t.TempDir()
+	setHomeForTest(t, home)
+	plantPlugin(t, home, "cron")
+
+	cfg := &config.Config{Redis: config.RedisConfig{Enabled: false}}
+	services := DetectServices(cfg)
+
+	found := false
+	for _, s := range services {
+		if s == "redis" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DetectServices: redis should be auto-enabled when cron plugin is installed; got %v", services)
+	}
+}
+
+func TestDetectServices_AutoEnablesRedis_NotifyPlugin(t *testing.T) {
+	home := t.TempDir()
+	setHomeForTest(t, home)
+	plantPlugin(t, home, "notify")
+
+	cfg := &config.Config{Redis: config.RedisConfig{Enabled: false}}
+	services := DetectServices(cfg)
+
+	found := false
+	for _, s := range services {
+		if s == "redis" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DetectServices: redis should be auto-enabled when notify plugin is installed; got %v", services)
+	}
+}
+
+func TestDetectServices_AutoEnablesRedis_CronAndNotify(t *testing.T) {
+	home := t.TempDir()
+	setHomeForTest(t, home)
+	plantPlugin(t, home, "cron")
+	plantPlugin(t, home, "notify")
+
+	cfg := &config.Config{Redis: config.RedisConfig{Enabled: false}}
+	services := DetectServices(cfg)
+
+	count := 0
+	for _, s := range services {
+		if s == "redis" {
+			count++
+		}
+	}
+	if count == 0 {
+		t.Errorf("DetectServices: redis should be auto-enabled when cron+notify installed; got %v", services)
+	}
+	if count > 1 {
+		t.Errorf("DetectServices: redis should appear exactly once; got %d times in %v", count, services)
+	}
+}
+
+func TestDetectServices_NoAutoEnableRedis_NoPlugins(t *testing.T) {
+	home := t.TempDir()
+	setHomeForTest(t, home)
+	// No plugins planted — .nself/plugins dir is empty.
+
+	cfg := &config.Config{Redis: config.RedisConfig{Enabled: false}}
+	services := DetectServices(cfg)
+
+	for _, s := range services {
+		if s == "redis" {
+			t.Errorf("DetectServices: redis should NOT appear when Redis.Enabled=false and no BullMQ plugins installed; got %v", services)
+		}
+	}
+}
+
+func TestDetectServices_NoDoubleRedis_WhenEnabledAndPluginInstalled(t *testing.T) {
+	home := t.TempDir()
+	setHomeForTest(t, home)
+	plantPlugin(t, home, "cron")
+
+	cfg := &config.Config{Redis: config.RedisConfig{Enabled: true}}
+	services := DetectServices(cfg)
+
+	count := 0
+	for _, s := range services {
+		if s == "redis" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("DetectServices: redis should appear exactly once when both cfg.Redis.Enabled=true and cron plugin installed; got %d times in %v", count, services)
+	}
+}
+
 // ── ShouldAutoEnableRedis ─────────────────────────────────────────────────────
 
 func TestShouldAutoEnableRedis_NoPlugins(t *testing.T) {
@@ -324,15 +456,56 @@ func TestShouldAutoEnableRedis_NoPlugins(t *testing.T) {
 
 func TestShouldAutoEnableRedis_NonRedisPlugin(t *testing.T) {
 	dir := t.TempDir()
-	// Plant a plugin that does NOT trigger Redis.
+	// Plant a plugin that does NOT trigger Redis (health-check plugin has no BullMQ dep).
+	pluginDir := filepath.Join(dir, "health")
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeFile(t, filepath.Join(pluginDir, "plugin.json"), `{"name":"health"}`)
+
+	if ShouldAutoEnableRedis(dir) {
+		t.Error("ShouldAutoEnableRedis: want false for non-redis plugin (health)")
+	}
+}
+
+func TestShouldAutoEnableRedis_CronPlugin(t *testing.T) {
+	dir := t.TempDir()
+	pluginDir := filepath.Join(dir, "cron")
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeFile(t, filepath.Join(pluginDir, "plugin.json"), `{"name":"cron"}`)
+
+	if !ShouldAutoEnableRedis(dir) {
+		t.Error("ShouldAutoEnableRedis: want true when cron plugin is installed (BullMQ-backed)")
+	}
+}
+
+func TestShouldAutoEnableRedis_NotifyPlugin(t *testing.T) {
+	dir := t.TempDir()
 	pluginDir := filepath.Join(dir, "notify")
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
 	writeFile(t, filepath.Join(pluginDir, "plugin.json"), `{"name":"notify"}`)
 
-	if ShouldAutoEnableRedis(dir) {
-		t.Error("ShouldAutoEnableRedis: want false for non-redis plugin")
+	if !ShouldAutoEnableRedis(dir) {
+		t.Error("ShouldAutoEnableRedis: want true when notify plugin is installed (BullMQ-backed)")
+	}
+}
+
+func TestShouldAutoEnableRedis_CronAndNotify(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"cron", "notify"} {
+		pluginDir := filepath.Join(dir, name)
+		if err := os.MkdirAll(pluginDir, 0755); err != nil {
+			t.Fatalf("MkdirAll %s: %v", name, err)
+		}
+		writeFile(t, filepath.Join(pluginDir, "plugin.json"), `{"name":"`+name+`"}`)
+	}
+
+	if !ShouldAutoEnableRedis(dir) {
+		t.Error("ShouldAutoEnableRedis: want true when both cron and notify plugins are installed")
 	}
 }
 

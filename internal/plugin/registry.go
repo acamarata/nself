@@ -232,7 +232,15 @@ type pluginEntry struct {
 	Tags            []string             `json:"tags"`
 	Tables          []string             `json:"tables,omitempty"`
 	Port            int                  `json:"port,omitempty"`
-	Dependencies    []string             `json:"dependencies,omitempty"`
+	// Dependencies is raw JSON because the registry format is not stable.
+	// Accepted shapes:
+	//   ["redis","auth"]                            (legacy string array)
+	//   {"required":[...], "optional":[...]}        (Cloudflare Worker schema)
+	//   {"plugins":[...]}                           (plugin-only dependencies)
+	//   {"npm":[...], "system":[...], "python":[...]} (system/package deps — ignored
+	//                                                  here; system deps are handled
+	//                                                  separately by the loader)
+	Dependencies json.RawMessage `json:"dependencies,omitempty"`
 	// PublishStatus is "stable", "beta", or "planned". Planned plugins are
 	// rejected at install time; beta plugins install with a warning.
 	PublishStatus string `json:"status,omitempty"`
@@ -280,6 +288,60 @@ func parseAPIEndpoints(raw json.RawMessage) []string {
 		if ep.Path != "" {
 			out = append(out, ep.Path)
 		}
+	}
+	return out
+}
+
+// parseDependencies extracts the list of plugin-name dependencies from the
+// raw `dependencies` JSON value. The registry has shipped several shapes over
+// time, so we accept all of them and ignore non-plugin keys (npm/system/python)
+// since system-level deps are handled by a separate loader step.
+//
+// Accepted shapes:
+//
+//	null / missing                          → nil
+//	["redis","auth"]                        → ["redis","auth"]
+//	{"required":[...], "optional":[...]}    → required ++ optional
+//	{"plugins":[...]}                       → plugins
+//	{"npm":[...]} / {"system":[...]}        → nil (system deps, not plugin deps)
+//
+// Unknown shapes return nil rather than erroring — a stricter manifest schema
+// is the right place to reject malformed registries; this parser exists so a
+// schema drift never bricks `nself plugin install`.
+func parseDependencies(raw json.RawMessage) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" {
+		return nil
+	}
+
+	// Legacy: plain string array.
+	var strs []string
+	if err := json.Unmarshal(raw, &strs); err == nil {
+		if len(strs) == 0 {
+			return nil
+		}
+		return strs
+	}
+
+	// Object form. Pull out plugin-name keys; ignore system/package-manager keys.
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	out := []string{}
+	for _, key := range []string{"required", "plugins", "optional"} {
+		if v, ok := obj[key]; ok {
+			var list []string
+			if err := json.Unmarshal(v, &list); err == nil {
+				out = append(out, list...)
+			}
+		}
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }
@@ -376,7 +438,7 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		RequiresLicense: e.RequiresLicense,
 		Tables:          e.Tables,
 		Port:            port,
-		Dependencies:    e.Dependencies,
+		Dependencies:    parseDependencies(e.Dependencies),
 		APIEndpoints:    parseAPIEndpoints(e.APIEndpoints),
 		Language:        language,
 		Runtime:         runtime,
@@ -464,6 +526,14 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			}
 			rawEPs = b
 		}
+		var rawDeps json.RawMessage
+		if len(p.Dependencies) > 0 {
+			b, err := json.Marshal(p.Dependencies)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling dependencies for %q: %w", p.Name, err)
+			}
+			rawDeps = b
+		}
 		entries = append(entries, pluginEntry{
 			Name:            p.Name,
 			Version:         p.Version,
@@ -478,7 +548,7 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			Tags:            p.Tags,
 			Tables:          p.Tables,
 			Port:            p.Port,
-			Dependencies:    p.Dependencies,
+			Dependencies:    rawDeps,
 			APIEndpoints:    rawEPs,
 			Compat:          p.Compat,
 		})

@@ -211,6 +211,75 @@ func TestParseAPIEndpoints_ObjectArray(t *testing.T) {
 	}
 }
 
+// TestParseDependencies_AllShapes verifies that the registry's various
+// `dependencies` shapes are all normalised to a flat []string of plugin names.
+// Regression: chain-b705583a — v1.0.9 client crashed on the live registry's
+// {"required":[],"optional":[]} object form because dependencies was typed
+// as []string.
+func TestParseDependencies_AllShapes(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{"empty", ``, nil},
+		{"null", `null`, nil},
+		{"empty array", `[]`, nil},
+		{"string array", `["redis","auth"]`, []string{"redis", "auth"}},
+		{"required+optional", `{"required":["a","b"],"optional":["c"]}`, []string{"a", "b", "c"}},
+		{"required only", `{"required":["a"]}`, []string{"a"}},
+		{"empty required+optional", `{"required":[],"optional":[]}`, nil},
+		{"plugins key", `{"plugins":["family","photos"]}`, []string{"family", "photos"}},
+		{"npm only ignored", `{"npm":["axios"]}`, nil},
+		{"system only ignored", `{"system":["ffmpeg"]}`, nil},
+		{"mixed npm+required", `{"required":["a"],"npm":["axios"]}`, []string{"a"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseDependencies(json.RawMessage(tc.in))
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("parseDependencies(%q): got %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestParseRegistryJSON_LiveRegistryDependencyShapes verifies that the full
+// registry parse pipeline accepts a payload mixing every dependency shape the
+// live registry has shipped, without erroring.
+func TestParseRegistryJSON_LiveRegistryDependencyShapes(t *testing.T) {
+	payload := []byte(`{
+		"version": "1.0.0",
+		"plugins": [
+			{"name":"a","version":"1.0.0","dependencies":[]},
+			{"name":"b","version":"1.0.0","dependencies":{"required":[],"optional":[]}},
+			{"name":"c","version":"1.0.0","dependencies":{"npm":["axios","pg"]}},
+			{"name":"d","version":"1.0.0","dependencies":{"plugins":["family","photos"]}},
+			{"name":"e","version":"1.0.0","dependencies":{"required":["redis"]}}
+		]
+	}`)
+	reg, err := parseRegistryJSON(payload)
+	if err != nil {
+		t.Fatalf("parseRegistryJSON: unexpected error: %v", err)
+	}
+	if len(reg.Plugins) != 5 {
+		t.Fatalf("got %d plugins, want 5", len(reg.Plugins))
+	}
+	byName := map[string][]string{}
+	for _, p := range reg.Plugins {
+		byName[p.Name] = p.Dependencies
+	}
+	if got := byName["d"]; !reflect.DeepEqual(got, []string{"family", "photos"}) {
+		t.Errorf("d.Dependencies: got %v, want [family photos]", got)
+	}
+	if got := byName["e"]; !reflect.DeepEqual(got, []string{"redis"}) {
+		t.Errorf("e.Dependencies: got %v, want [redis]", got)
+	}
+	if got := byName["c"]; got != nil {
+		t.Errorf("c.Dependencies: got %v, want nil (npm-only)", got)
+	}
+}
+
 // mustMarshalJSON is a test helper that marshals v to json.RawMessage, panicking
 // on error (should never happen with well-formed test data).
 func mustMarshalJSON(v interface{}) json.RawMessage {
@@ -253,7 +322,7 @@ func TestEntryToManifestPopulatesRegistryFields(t *testing.T) {
 		Tags:            []string{"test"},
 		Tables:          []string{"np_test_foo"},
 		Port:            9000,
-		Dependencies:    []string{"other"},
+		Dependencies:    mustMarshalJSON([]string{"other"}),
 		APIEndpoints:    mustMarshalJSON([]string{"/api/v1"}),
 	}
 	m := entryToManifest(e)
@@ -295,7 +364,7 @@ func TestEntryToManifest_AllFieldsCopied(t *testing.T) {
 		Checksum:     "abc123",
 		Tables:       []string{"np_myplugin_items"},
 		Port:         8080,
-		Dependencies: []string{"redis"},
+		Dependencies: mustMarshalJSON([]string{"redis"}),
 		APIEndpoints: mustMarshalJSON([]string{"/api/v1"}),
 		Tags:         []string{"test"},
 	}

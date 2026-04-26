@@ -9,6 +9,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
+
 // ── ResolveImage ──────────────────────────────────────────────────────────────
 
 func TestResolveImage_WithDigest(t *testing.T) {
@@ -317,6 +318,43 @@ func TestBuildTypesenseService_HasDataVolume(t *testing.T) {
 
 	if len(svc.Volumes) == 0 {
 		t.Error("Typesense service should have volumes")
+	}
+}
+
+// ── G14-T02: cron plugin docker-compose.plugin.yml passthrough ───────────────
+
+// TestBuildCronPluginComposePassthrough verifies that the cron plugin's
+// docker-compose.plugin.yml declares CRON_JOB_* env vars so they are
+// passed from the host environment into the cron container.
+// This is the key property that enables rebuild-safe env-driven schedule bootstrap:
+// if the env vars are not declared in the compose service, Docker Compose drops
+// them even if they are set in the operator's .env file.
+func TestBuildCronPluginComposePassthrough(t *testing.T) {
+	// Read the cron plugin's docker-compose.plugin.yml relative to the repo root.
+	// The file is located at plugins/free/cron/docker-compose.plugin.yml.
+	// We verify it contains CRON_JOB_* passthrough entries.
+	const cronComposeRelPath = "../../../plugins/free/cron/docker-compose.plugin.yml"
+
+	data, err := os.ReadFile(cronComposeRelPath)
+	if err != nil {
+		// File may not be reachable in this test context — log and skip rather than fail.
+		t.Skipf("cron plugin compose file not found at %s (skip in isolated CLI test run): %v",
+			cronComposeRelPath, err)
+	}
+
+	content := string(data)
+
+	// Must declare at least CRON_JOB_1_SCHEDULE and CRON_JOB_1_COMMAND passthrough.
+	checks := []string{
+		"CRON_JOB_1_SCHEDULE",
+		"CRON_JOB_1_COMMAND",
+		"CRON_JOB_2_SCHEDULE",
+		"CRON_JOB_2_COMMAND",
+	}
+	for _, check := range checks {
+		if !strings.Contains(content, check) {
+			t.Errorf("cron docker-compose.plugin.yml missing env passthrough for %q", check)
+		}
 	}
 }
 
