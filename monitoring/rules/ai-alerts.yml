@@ -1,0 +1,59 @@
+# nSelf AI Observability alert rules — G6-T09 (Amendment 4 Decision #22).
+#
+# These rules alert on degraded AI retrieval latency and complement the OTEL/Tempo
+# alerts in otel-alerts.yml.  They apply to the nself_hybrid_retrieval_p95_ms and
+# nself_rerank_p95_ms histograms exported by the ai plugin.
+#
+# SLO targets (from G1-T16 / G1-T23 acceptance criteria):
+#   - Hybrid retrieval:  p95 < 250 ms
+#   - Reranker (bge):    p95 < 350 ms
+#
+# Runbooks:
+#   HybridRetrievalSlow → monitoring/runbooks/ann-fts-failure.md
+#   RerankerSlow        → monitoring/runbooks/ann-fts-failure.md
+
+groups:
+  - name: ai_observability
+    rules:
+
+      # WARNING: Hybrid retrieval p95 latency exceeds 250 ms SLO target.
+      # Check ANN index health and FTS query planner.
+      # Runbook: monitoring/runbooks/ann-fts-failure.md
+      - alert: HybridRetrievalSlow
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(nself_hybrid_retrieval_p95_ms_bucket[5m])) by (le)
+          ) > 250
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "Hybrid retrieval p95 latency above 250 ms SLO"
+          description: >
+            The p95 hybrid retrieval latency has been above the 250 ms SLO target
+            for {{ $value | humanizeDuration }}.
+            Investigate ANN index health (pgvector HNSW), FTS query planner, and
+            the RRF merge step.
+          runbook_url: "https://github.com/nself-org/cli/wiki/Runbook-ANN-FTS-Failure"
+
+      # WARNING: bge-reranker p95 latency exceeds 350 ms SLO target.
+      # Check reranker service load and batch size.
+      # Runbook: monitoring/runbooks/ann-fts-failure.md
+      - alert: RerankerSlow
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(nself_rerank_p95_ms_bucket[5m])) by (le)
+          ) > 350
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "Reranker p95 latency above 350 ms SLO"
+          description: >
+            The p95 bge-reranker latency has been above the 350 ms SLO target
+            for {{ $value | humanizeDuration }}.
+            Check reranker container resource limits, batch size configuration,
+            and model cache warm-up state.
+          runbook_url: "https://github.com/nself-org/cli/wiki/Runbook-ANN-FTS-Failure"
