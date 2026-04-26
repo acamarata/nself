@@ -9,6 +9,8 @@ paths = [
   '''.*_test\.go''',
   '''test/''',
   '''testdata/''',
+  '''src/tests/''',
+  '''\.bats$''',
   # Example and template env files — placeholder values only
   '''internal/config/\.env\.example''',
   '''cmd/commands/\.env\.example''',
@@ -17,8 +19,16 @@ paths = [
   '''\.env\.template$''',
   # Migration fixtures — test database state
   '''internal/migration/testdata/''',
-  # Wiki and documentation — example values in docs
+  # Documentation and reference files — contain example credentials and API keys
+  '''docs/''',
+  '''\.wiki/''',
   '''\.github/wiki/''',
   '''\.github/docs/''',
+  '''\.github/workflows/''',
   '''\.claude/''',
+  # Template certificates and audit scripts
+  '''bin/certs/''',
+  '''src/templates/certs/''',
+  '''src/lib/''',
+  '''src/cli/security_audit\.sh$''',
 ]
