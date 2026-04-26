@@ -10,7 +10,7 @@ nself claw <subcommand> [flags] [args]
 
 ## Description
 
-`nself claw` is the operator and end-user control plane for ɳClaw, the self-hosted AI assistant. It covers pairing client apps to a server, unlocking the web UI for first-time setup, sending one-shot prompts, opening interactive chats, browsing topics and memories, managing API keys, exposing an OpenAI-compatible local proxy, running an MCP server for tool integrations, and exporting all data.
+`nself claw` is the operator and end-user control plane for ɳClaw, the self-hosted AI assistant. It covers pairing client apps to a server, unlocking the web UI for first-time setup, sending one-shot prompts, opening interactive chats, browsing topics and memories, managing API keys, exposing an OpenAI-compatible local proxy, running an MCP server for tool integrations, exporting all data, and applying claw schema migrations.
 
 The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API key (env `NSELF_CLAW_API_KEY` or `~/.nself/claw/config.yaml`). For first-time setup, run `nself claw unlock` on the server to open a 10-minute window for account creation, then `nself claw pair --qr` to connect a mobile client.
 
@@ -37,6 +37,7 @@ The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API k
 | `proxy [port]` | Start a local OpenAI-compatible proxy |
 | `mcp` | Start an MCP server for nClaw |
 | `export` | Export all nClaw data |
+| `migrate` | Apply pending claw schema migrations |
 
 ## Flags
 
@@ -95,6 +96,13 @@ The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API k
 |------|---------|-------------|
 | `--format` | `json` | Output format: `json` or `csv` |
 
+### `claw migrate`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--from` | `""` | Skip migrations at or before this version (e.g. `003_add_index.sql`) |
+| `--to` | current nself version | Stop after applying this version |
+
 `claw config`, `claw config set`, `claw topics`, `claw topics search`, `claw memories`, `claw memories search`, `claw keys`, `claw keys revoke`, `claw status`, and `claw proxy` accept no flags beyond positional arguments.
 
 ## Examples
@@ -130,6 +138,12 @@ nself claw proxy 9000
 
 # Back up all nClaw data
 nself claw export > claw-backup.json
+
+# Apply all pending claw schema migrations
+nself claw migrate
+
+# Apply only migrations 003 through 005
+nself claw migrate --from 002_add_topics.sql --to 005_index.sql
 ```
 
 ## See Also
