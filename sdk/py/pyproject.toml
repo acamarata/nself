@@ -41,6 +41,9 @@ testpaths = ["tests"]
 strict = true
 python_version = "3.11"
 
+[tool.hatch.build.targets.wheel]
+packages = ["nself_plugin"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
