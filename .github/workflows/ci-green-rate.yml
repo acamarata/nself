@@ -27,7 +27,6 @@ jobs:
       - name: Compute green rate per repo
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          SINCE: ${{ fromJSON('{}') }}
         run: |
           REPOS=(
             "nself-org/cli"
