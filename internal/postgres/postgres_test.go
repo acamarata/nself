@@ -73,6 +73,67 @@ func TestDedupStrings_RemovesDuplicates(t *testing.T) {
 	}
 }
 
+// TestGenerateInitScript_CreatesNpPluginsScript verifies that GenerateInitScript
+// writes the 04-np-plugins.sql file alongside the main init script.
+func TestGenerateInitScript_CreatesNpPluginsScript(t *testing.T) {
+	dir := t.TempDir()
+	if err := GenerateInitScript(dir); err != nil {
+		t.Fatalf("GenerateInitScript: %v", err)
+	}
+
+	pluginsPath := filepath.Join(dir, "postgres", "init", "04-np-plugins.sql")
+	data, err := os.ReadFile(pluginsPath)
+	if err != nil {
+		t.Fatalf("04-np-plugins.sql not created: %v", err)
+	}
+
+	content := string(data)
+	// Must use CREATE TABLE IF NOT EXISTS for idempotency.
+	if !strings.Contains(content, "CREATE TABLE IF NOT EXISTS np_plugins") {
+		t.Errorf("04-np-plugins.sql missing CREATE TABLE IF NOT EXISTS np_plugins; got:\n%s", content)
+	}
+	// Must include the index with IF NOT EXISTS for idempotency.
+	if !strings.Contains(content, "CREATE INDEX IF NOT EXISTS") {
+		t.Errorf("04-np-plugins.sql missing CREATE INDEX IF NOT EXISTS; got:\n%s", content)
+	}
+}
+
+// TestGenerateInitScript_NpPluginsIdempotent verifies that calling
+// GenerateInitScript twice in a row on the same directory does not error.
+// This models the "nself build run twice" scenario from the spec.
+func TestGenerateInitScript_NpPluginsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	if err := GenerateInitScript(dir); err != nil {
+		t.Fatalf("first GenerateInitScript: %v", err)
+	}
+	// Second call must not error — simulates re-running nself build.
+	if err := GenerateInitScript(dir); err != nil {
+		t.Fatalf("second GenerateInitScript (idempotency check): %v", err)
+	}
+
+	// Verify the file is still present and well-formed after the second call.
+	pluginsPath := filepath.Join(dir, "postgres", "init", "04-np-plugins.sql")
+	data, err := os.ReadFile(pluginsPath)
+	if err != nil {
+		t.Fatalf("04-np-plugins.sql missing after second call: %v", err)
+	}
+	if !strings.Contains(string(data), "CREATE TABLE IF NOT EXISTS np_plugins") {
+		t.Errorf("04-np-plugins.sql content wrong after second call")
+	}
+}
+
+// TestEnsureNpPluginsTable_ContainsIfNotExists verifies EnsureNpPluginsTable
+// returns SQL that is unconditionally safe to execute more than once.
+func TestEnsureNpPluginsTable_ContainsIfNotExists(t *testing.T) {
+	sql := EnsureNpPluginsTable()
+	if !strings.Contains(sql, "CREATE TABLE IF NOT EXISTS np_plugins") {
+		t.Errorf("EnsureNpPluginsTable SQL missing IF NOT EXISTS guard; got:\n%s", sql)
+	}
+	if !strings.Contains(sql, "CREATE INDEX IF NOT EXISTS") {
+		t.Errorf("EnsureNpPluginsTable SQL missing IF NOT EXISTS index guard; got:\n%s", sql)
+	}
+}
+
 // TestDefaultExtensions_NonEmpty verifies DefaultExtensions contains at least
 // the minimum required extensions.
 func TestDefaultExtensions_NonEmpty(t *testing.T) {
