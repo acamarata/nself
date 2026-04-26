@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -86,7 +87,18 @@ func EnableRLSOnTable(ctx context.Context, cfg *config.Config, schema, table str
 		`ALTER TABLE %s ENABLE ROW LEVEL SECURITY; ALTER TABLE %s FORCE ROW LEVEL SECURITY;`,
 		quoted, quoted,
 	)
+	slog.InfoContext(ctx, "rls_enable",
+		"table_schema", schema,
+		"table_name", table,
+		"operation", "enable_rls",
+	)
 	if err := pipeSQLToContainer(ctx, cfg, sql); err != nil {
+		slog.ErrorContext(ctx, "rls_enable_failed",
+			"table_schema", schema,
+			"table_name", table,
+			"operation", "enable_rls",
+			"error", err.Error(),
+		)
 		return fmt.Errorf("enable rls on %s.%s: %w", schema, table, err)
 	}
 	return nil
@@ -182,7 +194,19 @@ func ApplyDefaultRLSPolicies(ctx context.Context, cfg *config.Config, schema, ta
 		))
 	}
 
+	slog.InfoContext(ctx, "rls_policies_apply",
+		"table_schema", schema,
+		"table_name", table,
+		"operation", "apply_policies",
+		"has_user_id", hasUserID,
+	)
 	if err := pipeSQLToContainer(ctx, cfg, sb.String()); err != nil {
+		slog.ErrorContext(ctx, "rls_policies_apply_failed",
+			"table_schema", schema,
+			"table_name", table,
+			"operation", "apply_policies",
+			"error", err.Error(),
+		)
 		return fmt.Errorf("apply default rls policies on %s.%s: %w", schema, table, err)
 	}
 	return nil
@@ -212,5 +236,11 @@ func ApplyRLSBatch(ctx context.Context, cfg *config.Config, tables []RLSTableInf
 
 		applied++
 	}
+	slog.InfoContext(ctx, "rls_batch_complete",
+		"operation", "batch_apply",
+		"applied", applied,
+		"skipped", skipped,
+		"error_count", len(errs),
+	)
 	return applied, skipped, errs
 }
