@@ -1,6 +1,6 @@
 # Tokens Plugin
 
-> HLS encryption keys, content delivery tokens, and entitlement checks. **Free — MIT licensed.**
+> HLS encryption keys, content delivery tokens, and entitlement checks. **Free, MIT licensed.**
 
 ## Install
 
@@ -30,11 +30,11 @@ Manages HLS encryption keys for video delivery, issues time-limited content deli
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_tokens_tokens` — issued token records
-- `np_tokens_hls_keys` — HLS encryption key archive
-- `np_tokens_entitlements` — user content entitlements
-- `np_tokens_revocations` — revoked tokens
-- `np_tokens_audit` — token issuance audit log
+- `np_tokens_tokens`, issued token records
+- `np_tokens_hls_keys`, HLS encryption key archive
+- `np_tokens_entitlements`, user content entitlements
+- `np_tokens_revocations`, revoked tokens
+- `np_tokens_audit`, token issuance audit log
 
 ## Nginx Routes
 

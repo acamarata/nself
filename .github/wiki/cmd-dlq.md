@@ -1,6 +1,6 @@
 # nself dlq
 
-> Manage dead-letter queues for nSelf plugins.
+> Manage dead-letter queues for ɳSelf plugins.
 
 ## Synopsis
 
@@ -11,7 +11,7 @@ nself dlq replay <plugin> [flags]
 
 ## Description
 
-`nself dlq` manages dead-letter queues (DLQ) for nSelf plugins. DLQs accumulate
+`nself dlq` manages dead-letter queues (DLQ) for ɳSelf plugins. DLQs accumulate
 rows that failed processing (e.g. mux gmail rows that could not be delivered).
 
 Use `nself dlq replay` after fixing the upstream bug to re-enqueue failed rows
@@ -36,7 +36,7 @@ Re-enqueue dead-letter queue rows for the named plugin.
 | `--max-rows <n>` | 100 | Maximum rows to replay (prevents accidental floods) |
 | `--filter <field=value>` | — | Filter rows (repeatable: `--filter status=quarantined`) |
 | `--dry-run` | false | Preview replay without executing |
-| `--base-url <url>` | `$NSELF_API_URL` | nSelf API base URL |
+| `--base-url <url>` | `$NSELF_API_URL` | ɳSelf API base URL |
 
 ### WARNING
 
@@ -48,7 +48,7 @@ before executing.
 
 - Queries the plugin's DLQ endpoint: `GET /api/plugins/<plugin>/dlq?max=<n>&<filters>`
 - Re-enqueues each row via: `POST /api/plugins/<plugin>/dlq/<id>/replay`
-- Reports success/failure **per row** — failures are not aggregated
+- Reports success/failure **per row**, failures are not aggregated
 - Exits non-zero if any row fails
 
 ### Examples
@@ -72,9 +72,9 @@ nself dlq replay mux --filter status=quarantined --max-rows 50
 | Code | Meaning |
 |---|---|
 | 0 | All rows replayed successfully |
-| 1 | One or more rows failed — see per-row output |
+| 1 | One or more rows failed , see per-row output |
 
 ### See Also
 
-- [Observability](https://docs.nself.org/operations/observability) — DLQ metrics (S41-T02)
-- [mux plugin](https://docs.nself.org/plugins/mux) — mux DLQ schema
+- [Observability](https://docs.nself.org/operations/observability), DLQ metrics (S41-T02)
+- [mux plugin](https://docs.nself.org/plugins/mux), mux DLQ schema

@@ -1,6 +1,6 @@
 # backup
 
-Backup, restore, verify, and schedule nSelf project data.
+Backup, restore, verify, and schedule ɳSelf project data.
 
 ## Synopsis
 
@@ -253,5 +253,5 @@ Outputs the public key to add to `.env` as `BACKUP_AGE_RECIPIENTS`.
 
 ## Related
 
-- [[cmd-pitr]] — point-in-time recovery via WAL archiving
+- [[cmd-pitr]], point-in-time recovery via WAL archiving
 - [[Home]]

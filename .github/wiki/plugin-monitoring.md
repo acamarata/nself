@@ -1,6 +1,6 @@
 # Monitoring Plugin
 
-> Full observability stack with Prometheus, Grafana, and Loki. **Free — MIT licensed.**
+> Full observability stack with Prometheus, Grafana, and Loki. **Free, MIT licensed.**
 
 ## Install
 
@@ -10,7 +10,7 @@ nself plugin install monitoring
 
 ## What It Does
 
-Installs 10 monitoring sub-services that provide metrics collection, log aggregation, distributed tracing, and alerting. Grafana dashboards are pre-configured for Postgres, Redis, and all nSelf core services. Access dashboards via subdomains on your base domain.
+Installs 10 monitoring sub-services that provide metrics collection, log aggregation, distributed tracing, and alerting. Grafana dashboards are pre-configured for Postgres, Redis, and all ɳSelf core services. Access dashboards via subdomains on your base domain.
 
 ## Sub-Services
 
@@ -50,7 +50,7 @@ Installs 10 monitoring sub-services that provide metrics collection, log aggrega
 
 ## Database Tables
 
-0 tables — monitoring services store data in their own volumes.
+0 tables, monitoring services store data in their own volumes.
 
 ## Nginx Routes
 

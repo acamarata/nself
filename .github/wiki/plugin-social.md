@@ -1,6 +1,6 @@
 # Social Plugin
 
-> Social features — posts, comments, reactions, follows, and bookmarks. **Pro plugin.**
+> Social features, posts, comments, reactions, follows, and bookmarks. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -33,13 +33,13 @@ Adds a complete social layer to your application. Users can post content, commen
 ## Database Tables
 
 7 tables added to your Postgres database:
-- `np_social_posts` — post content
-- `np_social_comments` — comment threads
-- `np_social_reactions` — emoji reactions
-- `np_social_follows` — follow relationships
-- `np_social_bookmarks` — saved/bookmarked content
-- `np_social_shares` — reshare records
-- `np_social_mentions` — @mention records
+- `np_social_posts`, post content
+- `np_social_comments`, comment threads
+- `np_social_reactions`, emoji reactions
+- `np_social_follows`, follow relationships
+- `np_social_bookmarks`, saved/bookmarked content
+- `np_social_shares`, reshare records
+- `np_social_mentions`, @mention records
 
 ## Nginx Routes
 

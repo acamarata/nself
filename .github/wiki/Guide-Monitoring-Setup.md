@@ -1,6 +1,6 @@
 # Guide: Monitoring Setup
 
-nSelf's monitoring stack provides metrics, logs, and alerting for your entire backend.
+ɳSelf's monitoring stack provides metrics, logs, and alerting for your entire backend.
 
 ## Install the Monitoring Plugin
 
@@ -36,10 +36,10 @@ Default credentials are in `.env` as `GRAFANA_USER` / `GRAFANA_PASSWORD`. Change
 
 Grafana comes pre-loaded with dashboards for:
 
-- **Container metrics** — CPU, memory, network per container (cAdvisor)
-- **Host metrics** — disk, CPU, memory, load (Node Exporter)
-- **PostgreSQL** — connections, query rates, cache hit ratio (Postgres Exporter)
-- **Nginx** — request rates, error rates, response times
+- **Container metrics**, CPU, memory, network per container (cAdvisor)
+- **Host metrics**, disk, CPU, memory, load (Node Exporter)
+- **PostgreSQL**, connections, query rates, cache hit ratio (Postgres Exporter)
+- **Nginx**, request rates, error rates, response times
 
 ## Log Aggregation with Loki
 
@@ -69,9 +69,9 @@ Pre-built alert rules cover:
 
 ## See Also
 
-- [[Guide-Production-Deployment]] — initial server setup
-- [[plugin-monitoring]] — monitoring plugin reference
-- [[Feature-Monitoring]] — monitoring feature overview
+- [[Guide-Production-Deployment]], initial server setup
+- [[plugin-monitoring]], monitoring plugin reference
+- [[Feature-Monitoring]], monitoring feature overview
 
 ---
 ← [[Home]] | [[_Sidebar]]

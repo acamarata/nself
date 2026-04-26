@@ -1,6 +1,6 @@
 # nself soak
 
-> Manage soak testing lifecycle for nSelf environments.
+> Manage soak testing lifecycle for ɳSelf environments.
 
 ## Synopsis
 
@@ -39,8 +39,8 @@ Abort an active soak on a target environment and roll back to the specified vers
 
 ### Behavior
 
-1. Validates environment gate — production requires `--prod-i-mean-it`
-2. Checks idempotency — if the environment is already at the target version, exits with a clear message (no-op)
+1. Validates environment gate, production requires `--prod-i-mean-it`
+2. Checks idempotency, if the environment is already at the target version, exits with a clear message (no-op)
 3. Prompts for interactive confirmation unless `--yes` is passed
 4. Tags current state with a timestamp for post-mortem (`pre-abort-<env>-<ts>`)
 5. Executes deploy rollback to the target version
@@ -70,9 +70,9 @@ nself soak abort --rollback v1.0.8 --env prod --prod-i-mean-it --yes
 | Code | Meaning |
 |---|---|
 | 0 | Success or idempotent no-op |
-| 1 | Rollback failed — see error output for details |
+| 1 | Rollback failed , see error output for details |
 
 ### See Also
 
-- [nself deploy rollback](cmd-deploy.md) — underlying rollback mechanism
-- [Observability](https://docs.nself.org/operations/observability) — post-rollback metrics
+- [nself deploy rollback](cmd-deploy.md), underlying rollback mechanism
+- [Observability](https://docs.nself.org/operations/observability), post-rollback metrics

@@ -1,6 +1,6 @@
 # Plugin Status Badges
 
-Every plugin in the nSelf registry carries a status field that reflects its production readiness. The CLI displays status badges in `nself plugin list` output and enforces install-time behavior based on that status.
+Every plugin in the ɳSelf registry carries a status field that reflects its production readiness. The CLI displays status badges in `nself plugin list` output and enforces install-time behavior based on that status.
 
 ## Status Values
 
@@ -25,7 +25,7 @@ Plugin ai installed.
 
 ### beta
 
-Installs with a warning printed to stderr. The install proceeds normally — you can use the plugin, but exercise caution in production environments.
+Installs with a warning printed to stderr. The install proceeds normally, you can use the plugin, but exercise caution in production environments.
 
 ```
 $ nself plugin install records
@@ -84,8 +84,8 @@ Valid values: `stable`, `beta`, `planned`. Omitting the field defaults to `stabl
 
 ## Related Pages
 
-- [[Plugin-Overview]] — Plugin tiers and pricing
-- [[Plugin-Install]] — Full install workflow
-- [[cmd-plugin]] — `nself plugin` command reference
+- [[Plugin-Overview]], Plugin tiers and pricing
+- [[Plugin-Install]], Full install workflow
+- [[cmd-plugin]], `nself plugin` command reference
 
 ← [[Plugin-Overview]] | [[Home]] →

@@ -56,7 +56,7 @@ nself secrets rotation-log --secret JWT_SIGNING_KEY
 | `ok` | Rotation is not due yet (>7 days away) |
 | `warning` | Rotation due within 7 days |
 | `overdue` | Rotation is past due |
-| `missing` | No NextDue timestamp set — run `nself secrets schedule` |
+| `missing` | No NextDue timestamp set , run `nself secrets schedule` |
 
 ## Rollback on Failure
 
@@ -67,12 +67,12 @@ If the rotation plugin cannot verify service health after rotation, it:
 
 ## Compliance References
 
-- SOC 2 CC6.1 — Logical access controls
-- PCI-DSS 8.3.9 — 90-day rotation for service accounts
-- NIST SP 800-63B — Authentication credential management
+- SOC 2 CC6.1, Logical access controls
+- PCI-DSS 8.3.9, 90-day rotation for service accounts
+- NIST SP 800-63B, Authentication credential management
 
 ## Related
 
-- [[cmd-secrets]] — full secrets command reference
-- [[security/Supply-Chain]] — supply-chain security baseline
+- [[cmd-secrets]], full secrets command reference
+- [[security/Supply-Chain]], supply-chain security baseline
 - [[Home]]

@@ -1,6 +1,6 @@
 # Feature: Image Generation
 
-nClaw supports multi-provider image generation. You can generate images from text prompts through the chat interface or the API, and browse results in the image gallery.
+ɳClaw supports multi-provider image generation. You can generate images from text prompts through the chat interface or the API, and browse results in the image gallery.
 
 **Route:** `/gallery` in claw-web
 **API:** `POST /claw/image/generate`
@@ -71,5 +71,5 @@ The `/gallery` route in claw-web shows all generated images as cards. Each card 
 
 ## Related
 
-- [[Feature-nClaw]] -- nClaw overview
+- [[Feature-ɳClaw]] -- ɳClaw overview
 - [[Feature-Agent-Dashboard]] -- Agent metrics

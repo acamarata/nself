@@ -64,9 +64,9 @@ nself alerts test HighErrorRate
 
 ## See Also
 
-- [[cmd-monitor]] — monitoring stack management
-- [[cmd-watchdog]] — self-healing container watchdog
-- [[cmd-health]] — health checks
-- [[Commands]] — full command index
+- [[cmd-monitor]], monitoring stack management
+- [[cmd-watchdog]], self-healing container watchdog
+- [[cmd-health]], health checks
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

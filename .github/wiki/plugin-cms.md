@@ -13,7 +13,7 @@ nself plugin install cms
 
 ## What It Does
 
-Adds a full headless CMS to your nSelf backend. Define custom content types (articles, products, events, etc.), manage posts with rich text, organize content with categories and tags, and publish through a versioned workflow. All content is accessible via Hasura GraphQL for any frontend. Supports media management via MinIO.
+Adds a full headless CMS to your ɳSelf backend. Define custom content types (articles, products, events, etc.), manage posts with rich text, organize content with categories and tags, and publish through a versioned workflow. All content is accessible via Hasura GraphQL for any frontend. Supports media management via MinIO.
 
 ## Configuration
 
@@ -34,14 +34,14 @@ Adds a full headless CMS to your nSelf backend. Define custom content types (art
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_cms_content_types` — content type definitions
-- `np_cms_posts` — content items
-- `np_cms_post_versions` — version history
-- `np_cms_categories` — category tree
-- `np_cms_tags` — tag definitions
-- `np_cms_post_tags` — post-tag relationships
-- `np_cms_media` — media library records
-- `np_cms_locales` — locale configurations
+- `np_cms_content_types`, content type definitions
+- `np_cms_posts`, content items
+- `np_cms_post_versions`, version history
+- `np_cms_categories`, category tree
+- `np_cms_tags`, tag definitions
+- `np_cms_post_tags`, post-tag relationships
+- `np_cms_media`, media library records
+- `np_cms_locales`, locale configurations
 
 ## Nginx Routes
 

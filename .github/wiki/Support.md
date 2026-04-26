@@ -1,14 +1,14 @@
 # Support
 
-Ways to get help when the nSelf CLI does not behave as expected.
+Ways to get help when the ɳSelf CLI does not behave as expected.
 
 ---
 
 ## Self-service (fastest)
 
-1. **Run `nself doctor`** — diagnoses common issues automatically and prints actionable fixes.
-2. **Check the [[Errors]] page** — every bracketed error code has a dedicated entry with cause and fix.
-3. **Search the [[FAQ]]** — common setup questions are answered there.
+1. **Run `nself doctor`**, diagnoses common issues automatically and prints actionable fixes.
+2. **Check the [[Errors]] page**, every bracketed error code has a dedicated entry with cause and fix.
+3. **Search the [[FAQ]]**, common setup questions are answered there.
 
 ---
 
@@ -17,7 +17,7 @@ Ways to get help when the nSelf CLI does not behave as expected.
 | Channel | Link | Best for |
 |---------|------|----------|
 | GitHub Discussions | https://github.com/orgs/nself-org/discussions | Questions, feature ideas, general help |
-| Discord | https://discord.gg/nself | Real-time chat with the community and maintainers |
+| Community chat | https://chat.nself.org | Real-time chat with the community and maintainers |
 | GitHub Issues | https://github.com/nself-org/cli/issues | Bug reports (include `nself version` + `nself doctor` output) |
 
 ---
@@ -52,10 +52,10 @@ Paste the full terminal output. Redact any secrets before posting.
 
 ## Related pages
 
-- [[Errors]] — error code catalog
-- [[cmd-doctor]] — automated diagnostics
-- [[FAQ]] — common questions
-- [[Plugin-Licensing]] — license key issues
+- [[Errors]], error code catalog
+- [[cmd-doctor]], automated diagnostics
+- [[FAQ]], common questions
+- [[Plugin-Licensing]], license key issues
 
 ---
 

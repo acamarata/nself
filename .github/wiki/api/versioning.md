@@ -1,14 +1,14 @@
-# API Versioning — Plugin Stability Framework (G2–G11)
+# API Versioning, Plugin Stability Framework (G2–G11)
 
-> This page covers the plugin API stability framework shipped at v1.0.9 LTS. Each plugin exposes
+> This page covers the plugin API stability framework shipped at v1.0.9. Each plugin exposes
 > a versioned HTTP API governed by the policies described here.
 
 ## Overview
 
-Every nSelf plugin uses SemVer for its HTTP API surface. The version lives in two canonical places:
+Every ɳSelf plugin uses SemVer for its HTTP API surface. The version lives in two canonical places:
 
-1. `plugin.json` — the `"api_version"` field in the plugin manifest.
-2. `cli/internal/deprecation/registry.yaml` — the ecosystem-wide plugin registry used by the CLI.
+1. `plugin.json`, the `"api_version"` field in the plugin manifest.
+2. `cli/internal/deprecation/registry.yaml`, the ecosystem-wide plugin registry used by the CLI.
 
 The public deprecation registry is also available as a JSON endpoint at:
 
@@ -95,7 +95,7 @@ Response shape:
 
 ## See Also
 
-- [[cmd-api]] — `nself api` CLI reference
-- [[cmd-api#nself-api-deprecation-check]] — deprecation-check flags
-- [[cmd-api#nself-api-changelog]] — changelog subcommand
-- [Admin UI API Versioning Panel](http://localhost:3021/api/versioning) — local Admin GUI
+- [[cmd-api]], `nself api` CLI reference
+- [[cmd-api#nself-api-deprecation-check]], deprecation-check flags
+- [[cmd-api#nself-api-changelog]], changelog subcommand
+- [Admin UI API Versioning Panel](http://localhost:3021/api/versioning), local Admin GUI

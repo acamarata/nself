@@ -6,7 +6,7 @@ Start a secure Google AI Studio bridge via Cloudflare Tunnel.
 
 ## Summary
 
-Opens a local HTTP reverse proxy and exposes it to Google AI Studio through an ephemeral Cloudflare Tunnel (trycloudflare.com — no account required). Gemini can query your local Postgres schema and run GraphQL reads against your nSelf instance without any cloud deployment.
+Opens a local HTTP reverse proxy and exposes it to Google AI Studio through an ephemeral Cloudflare Tunnel (trycloudflare.com, no account required). Gemini can query your local Postgres schema and run GraphQL reads against your ɳSelf instance without any cloud deployment.
 
 ---
 
@@ -49,7 +49,7 @@ nself ai-studio bridge [flags]
 1. `cloudflared` is downloaded automatically to `~/.nself/bin/cloudflared` if not present.
 2. A local HTTP proxy starts on `--port` (default 8890).
 3. Cloudflare Tunnel connects the proxy to a `*.trycloudflare.com` URL.
-4. Every GraphQL request is forwarded to Hasura using the `ai_studio_read` role — mutations and DDL are blocked at the proxy layer.
+4. Every GraphQL request is forwarded to Hasura using the `ai_studio_read` role, mutations and DDL are blocked at the proxy layer.
 5. The `X-Nself-Schema-Context` response header carries a base64-encoded JSON snapshot of your table structure so Gemini can understand your schema without a round-trip.
 6. The tunnel auto-closes after the idle timeout (default 30 minutes).
 
@@ -100,5 +100,5 @@ After starting the bridge:
 
 ## Related
 
-- [[cmd-ai]] — `nself ai` — Manage the AI plugin and local LLM stack
+- [[cmd-ai]], `nself ai`, Manage the AI plugin and local LLM stack
 - [[Home]]

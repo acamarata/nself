@@ -1,6 +1,6 @@
 # Torrent Manager Plugin
 
-> Torrent client with Transmission/qBittorrent compatibility and VPN enforcement. **Free — MIT licensed.**
+> Torrent client with Transmission/qBittorrent compatibility and VPN enforcement. **Free, MIT licensed.**
 
 ## Install
 
@@ -32,15 +32,15 @@ Manages torrent downloads via a Transmission or qBittorrent-compatible API. Enfo
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_torrent_manager_torrents` — torrent records
-- `np_torrent_manager_files` — per-torrent file catalog
-- `np_torrent_manager_trackers` — tracker list
-- `np_torrent_manager_categories` — download categories
-- `np_torrent_manager_labels` — torrent labels
-- `np_torrent_manager_stats` — download statistics
-- `np_torrent_manager_rules` — auto-download rules
-- `np_torrent_manager_feeds` — RSS feed sources
-- `np_torrent_manager_history` — completed download history
+- `np_torrent_manager_torrents`, torrent records
+- `np_torrent_manager_files`, per-torrent file catalog
+- `np_torrent_manager_trackers`, tracker list
+- `np_torrent_manager_categories`, download categories
+- `np_torrent_manager_labels`, torrent labels
+- `np_torrent_manager_stats`, download statistics
+- `np_torrent_manager_rules`, auto-download rules
+- `np_torrent_manager_feeds`, RSS feed sources
+- `np_torrent_manager_history`, completed download history
 
 ## Nginx Routes
 

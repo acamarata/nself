@@ -1,6 +1,6 @@
 # MLflow Plugin
 
-> ML experiment tracking, model registry, and artifact storage. **Free — MIT licensed.**
+> ML experiment tracking, model registry, and artifact storage. **Free, MIT licensed.**
 
 ## Install
 
@@ -27,7 +27,7 @@ Runs an MLflow tracking server backed by your Postgres database. Track experimen
 
 ## Database Tables
 
-0 plugin-managed tables — MLflow manages its own schema in Postgres directly via SQLAlchemy.
+0 plugin-managed tables, MLflow manages its own schema in Postgres directly via SQLAlchemy.
 
 ## Nginx Routes
 
@@ -37,4 +37,4 @@ Runs an MLflow tracking server backed by your Postgres database. Track experimen
 
 ## Dependencies
 
-Requires Postgres (always running in nSelf). Optionally uses MinIO for artifact storage — set `MLFLOW_ARTIFACT_ROOT=s3://...` and configure MinIO credentials.
+Requires Postgres (always running in ɳSelf). Optionally uses MinIO for artifact storage, set `MLFLOW_ARTIFACT_ROOT=s3://...` and configure MinIO credentials.

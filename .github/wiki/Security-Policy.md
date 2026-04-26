@@ -27,16 +27,16 @@ We follow coordinated disclosure. We ask that you do not publicly disclose the v
 ## Scope
 
 **In scope:**
-- nSelf CLI binary (`nself`)
+- ɳSelf CLI binary (`nself`)
 - Core service configuration generation (Compose, Nginx)
 - Plugin installation and validation system
 - License validation
 
 **Out of scope:**
 - Third-party Docker images (Postgres, Hasura, Auth, MinIO, etc.)
-- User application code deployed on nSelf
+- User application code deployed on ɳSelf
 - nself.org website infrastructure
-- Plugins not maintained by nSelf (community plugins)
+- Plugins not maintained by ɳSelf (community plugins)
 
 Vulnerabilities in third-party images should be reported to their respective projects.
 
@@ -58,9 +58,9 @@ Subscribe to [GitHub Release notifications](https://github.com/nself-org/cli/rel
 
 ## See Also
 
-- [[Security-Architecture]] — how nSelf is designed for security
-- [[Security-Hardening]] — production hardening checklist
-- [[Guide-Security-Hardening]] — step-by-step security guide
+- [[Security-Architecture]], how ɳSelf is designed for security
+- [[Security-Hardening]], production hardening checklist
+- [[Guide-Security-Hardening]], step-by-step security guide
 
 ---
 ← [[Home]] | [[_Sidebar]]

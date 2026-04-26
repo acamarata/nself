@@ -1,6 +1,6 @@
 # nself security
 
-Security audit, setup, and status commands for hardening your nSelf deployment.
+Security audit, setup, and status commands for hardening your ɳSelf deployment.
 
 ## Usage
 
@@ -78,8 +78,8 @@ Security: 5/6 checks passing | Last audit: 2 hours ago
 
 ## See Also
 
-- [[Security-Policy]] — security disclosure and patching policy
-- [[Guide-Production-Deployment]] — production hardening guide
+- [[Security-Policy]], security disclosure and patching policy
+- [[Guide-Production-Deployment]], production hardening guide
 
 ---
 ← [[Commands]] | [[cmd-ssl]] | [[_Sidebar]]

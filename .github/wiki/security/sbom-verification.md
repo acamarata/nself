@@ -1,6 +1,6 @@
 # SBOM Verification
 
-Every nSelf CLI release ships with a Software Bill of Materials (SBOM) in both
+Every ɳSelf CLI release ships with a Software Bill of Materials (SBOM) in both
 CycloneDX and SPDX formats, signed with cosign via GitHub Actions OIDC.
 
 ## Verifying a Release SBOM
@@ -26,7 +26,7 @@ SBOM for v1.0.9: VERIFIED
 1. The CycloneDX SBOM (`sbom-cli-{version}.cdx.json`) is downloaded from the GitHub Release.
 2. Its cosign bundle (`sbom-cli-{version}.cdx.json.bundle`) is downloaded.
 3. `cosign verify-blob` confirms the bundle was signed by a GitHub Actions workflow
-   in the `nself-org/cli` repository.
+ in the `nself-org/cli` repository.
 4. Any tampering with the SBOM file will cause verification to fail.
 
 ## Manual Verification (Without the CLI)
@@ -61,12 +61,12 @@ A dry-run validation runs on every PR via the `sbom.yml` (Q04) workflow.
 
 ## Compliance References
 
-- Executive Order 14028 — US federal software supply chain
+- Executive Order 14028, US federal software supply chain
 - EU CRA (Cyber Resilience Act, effective 2027)
 - NTIA Minimum SBOM Elements
 
 ## Related
 
-- [[cmd-verify-sbom]] — CLI reference for SBOM verification
-- [[security/Supply-Chain]] — full supply-chain security baseline
+- [[cmd-verify-sbom]], CLI reference for SBOM verification
+- [[security/Supply-Chain]], full supply-chain security baseline
 - [[Home]]

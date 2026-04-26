@@ -13,7 +13,7 @@ nself plugin install post
 
 ## What It Does
 
-The post plugin publishes content to multiple platforms from a single queue. Posts can be scheduled, retried on failure, or published simultaneously to several destinations. Platform credentials are encrypted with AES-256-GCM before being stored in `np_post_accounts` — do not set them as plain env vars.
+The post plugin publishes content to multiple platforms from a single queue. Posts can be scheduled, retried on failure, or published simultaneously to several destinations. Platform credentials are encrypted with AES-256-GCM before being stored in `np_post_accounts`, do not set them as plain env vars.
 
 ## Supported Platforms
 

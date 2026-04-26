@@ -1,6 +1,6 @@
 # Notify Plugin
 
-> Multi-channel notification dispatch — SMTP, SMS, and push. **Free — MIT licensed.**
+> Multi-channel notification dispatch, SMTP, SMS, and push. **Free, MIT licensed.**
 
 ## Install
 
@@ -34,12 +34,12 @@ Provides a unified API for sending notifications across SMTP email, SMS, and pus
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_notify_queue` — queued notifications
-- `np_notify_log` — delivery history and status
+- `np_notify_queue`, queued notifications
+- `np_notify_log`, delivery history and status
 
 ## Nginx Routes
 
-None — notify service is internal only.
+None, notify service is internal only.
 
 ## API
 
@@ -59,7 +59,7 @@ For APNs (iOS) and FCM (Android) push delivery, install the dedicated `push` plu
 nself plugin install push
 ```
 
-The `push` plugin provides first-class mobile push delivery with Hasura event-trigger fan-out, delivery state tracking per outbox row, exponential backoff retry, and APNs JWT signing. It is the recommended approach for any consumer app (nChat, nClaw, nFamily, nTV).
+The `push` plugin provides first-class mobile push delivery with Hasura event-trigger fan-out, delivery state tracking per outbox row, exponential backoff retry, and APNs JWT signing. It is the recommended approach for any consumer app (ɳChat, ɳClaw, ɳFamily, ɳTV).
 
 See: [[plugin-push]] for full setup, credential management, and Hasura event trigger configuration.
 

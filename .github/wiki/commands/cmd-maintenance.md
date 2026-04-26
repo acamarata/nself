@@ -2,7 +2,7 @@
 
 **Free disk space and schedule automatic daily cleanup.**
 
-The `maintenance` command group provides tools for keeping your nSelf host
+The `maintenance` command group provides tools for keeping your ɳSelf host
 healthy over time. Use it to reclaim disk space consumed by stale Docker
 images, old log archives, and journal entries, and to install a timer that
 runs the same cleanup automatically every night.
@@ -114,7 +114,7 @@ Enable the daily timer to keep the warning from recurring.
 
 ## See also
 
-- [[cmd-doctor.md]] — full system diagnostics
-- [[cmd-plugin-logs.md]] — view plugin log output
+- [[cmd-doctor.md]], full system diagnostics
+- [[cmd-plugin-logs.md]], view plugin log output
 
 [[Home]]

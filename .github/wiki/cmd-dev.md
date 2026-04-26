@@ -35,9 +35,9 @@ nself dev --hot
 
 ## See Also
 
-- [[cmd-start]] — full boot with health checks and DB init
-- [[cmd-restart]] — smart restart with config change detection
-- [[cmd-build]] — regenerate compose and nginx config
-- [[Commands]] — full command index
+- [[cmd-start]], full boot with health checks and DB init
+- [[cmd-restart]], smart restart with config change detection
+- [[cmd-build]], regenerate compose and nginx config
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

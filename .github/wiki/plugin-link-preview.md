@@ -1,6 +1,6 @@
 # Link Preview Plugin
 
-> URL metadata extraction — Open Graph, Twitter Card, and oEmbed with caching. **Free — MIT licensed.**
+> URL metadata extraction, Open Graph, Twitter Card, and oEmbed with caching. **Free, MIT licensed.**
 
 ## Install
 
@@ -30,7 +30,7 @@ Extracts rich metadata from URLs for link preview cards. Fetches Open Graph tags
 ## Database Tables
 
 1 table added to your Postgres database:
-- `np_link_preview_cache` — cached URL metadata (title, description, image, favicon)
+- `np_link_preview_cache`, cached URL metadata (title, description, image, favicon)
 
 ## Nginx Routes
 

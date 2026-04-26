@@ -14,7 +14,7 @@ Builds the named plugin with debug symbols disabled (`-gcflags=all=-N -l`), then
 it under `dlv exec --headless`. Auto-allocates a port from the 2345-2399 range and prints
 a VS Code `launch.json` snippet you can paste directly.
 
-Multiple plugins can be debugged simultaneously — each gets its own port from the range.
+Multiple plugins can be debugged simultaneously, each gets its own port from the range.
 
 ## Flags
 
@@ -91,10 +91,10 @@ nself plugin debug myplugin --port-only   # prints :2345
 ## Security Note
 
 `--accept-multiclient` is a development-only flag and is NOT enabled in production builds.
-The debugger only listens on `127.0.0.1` — never exposed to external networks.
+The debugger only listens on `127.0.0.1`, never exposed to external networks.
 
 ## See Also
 
-- [[cmd-plugin-dev]] — hot-reload watcher (includes `--debug` shortcut)
-- [[cmd-plugin-test]] — automated test suite
+- [[cmd-plugin-dev]], hot-reload watcher (includes `--debug` shortcut)
+- [[cmd-plugin-test]], automated test suite
 - [[Home]]

@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as contributors and maintainers pledge to make participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We as contributors and maintainers pledge to make participation in our project and our community a harassment-free workflow for everyone, regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, level of workflow, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 ## Our Standards
 

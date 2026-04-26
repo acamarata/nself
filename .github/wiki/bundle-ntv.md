@@ -1,19 +1,19 @@
-# nTV Plugin Bundle
+# ɳTV Plugin Bundle
 
 ## Contents
 
-- [What Is nTV](#what-is-ntv)
+- [What Is ɳTV](#what-is-ntv)
 - [Plugins Included](#plugins-included)
 - [How They Work Together](#how-they-work-together)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Related Pages](#related-pages)
 
-## What Is nTV
+## What Is ɳTV
 
-nTV is the bundle of 12 plugins that together provide a complete self-hosted media management system. It is not a repo or a single plugin. When all 12 are installed, you get a pipeline from content discovery through transcoding to streaming playback.
+ɳTV is the bundle of 12 plugins that together provide a complete self-hosted media management system. It is not a repo or a single plugin. When all 12 are installed, you get a pipeline from content discovery through transcoding to streaming playback.
 
-nTV pairs with the [nTV app](https://github.com/nself-org/ntv), a Flutter media player that connects to a nSelf backend running these plugins.
+ɳTV pairs with the [ɳTV app](https://github.com/nself-org/ntv), a Flutter media player that connects to a ɳSelf backend running these plugins.
 
 ## Plugins Included
 
@@ -91,13 +91,13 @@ nself build && nself start
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
-- nTV bundle license ($0.99/mo or $9.99/yr)
+- ɳTV bundle license ($0.99/mo or $9.99/yr)
 
 ### Step 1: Install the plugins
 
-Install all 12 nTV plugins as shown above.
+Install all 12 ɳTV plugins as shown above.
 
 ### Step 2: Configure media sources
 
@@ -113,7 +113,7 @@ Configure stream-gateway with your preferred HLS segment duration and adaptive b
 
 ### Step 5: Connect a player
 
-Point the nTV app (or any HLS/DASH-compatible player) at your nSelf backend's streaming endpoint.
+Point the ɳTV app (or any HLS/DASH-compatible player) at your ɳSelf backend's streaming endpoint.
 
 ### Troubleshooting
 
@@ -124,7 +124,7 @@ Point the nTV app (or any HLS/DASH-compatible player) at your nSelf backend's st
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
 - Individual plugin pages: [torrent-manager](plugin-torrent-manager), [content-acquisition](plugin-content-acquisition), [media-processing](plugin-media-processing), [file-processing](plugin-file-processing), [subtitle-manager](plugin-subtitle-manager), [vpn](plugin-vpn), [epg](plugin-epg), [tmdb](plugin-tmdb), [game-metadata](plugin-game-metadata), [recording](plugin-recording), [stream-gateway](plugin-stream-gateway), [streaming](plugin-streaming)

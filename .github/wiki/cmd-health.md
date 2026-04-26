@@ -10,11 +10,11 @@ nself health [subcommand] [flags]
 
 ## Description
 
-`nself health` runs health checks against running nSelf services and HTTP endpoints. Running `nself health` without a subcommand executes all health checks, the same as `nself health check`.
+`nself health` runs health checks against running ɳSelf services and HTTP endpoints. Running `nself health` without a subcommand executes all health checks, the same as `nself health check`.
 
 Each service is checked using its native health method: `pg_isready` for PostgreSQL, HTTP `/healthz` for Hasura and Auth, `PING` for Redis, and `/health` for Nginx. Response times are shown alongside the health status.
 
-The `watch` subcommand provides continuous monitoring — it re-runs all checks every `--interval` seconds until you press Ctrl+C. Use `--quiet` to suppress output when all services are healthy and only print on failure, suitable for monitoring scripts.
+The `watch` subcommand provides continuous monitoring, it re-runs all checks every `--interval` seconds until you press Ctrl+C. Use `--quiet` to suppress output when all services are healthy and only print on failure, suitable for monitoring scripts.
 
 ## Subcommands
 

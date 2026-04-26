@@ -1,6 +1,6 @@
 # Guide: Migrating from v1 (Bash CLI) to v2 (Go CLI)
 
-nSelf v1 was a Bash-based CLI. v2 is a complete Go rewrite with a new configuration format, Docker naming conventions, and improved safety. This guide walks you through the upgrade process.
+ɳSelf v1 was a Bash-based CLI. v2 is a complete Go rewrite with a new configuration format, Docker naming conventions, and improved safety. This guide walks you through the upgrade process.
 
 For a summary of breaking changes, see [[Upgrading-from-v1]].
 
@@ -11,7 +11,7 @@ For a summary of breaking changes, see [[Upgrading-from-v1]].
   # On your v1 installation
   nself db dump
   ```
-- Know your current `.env` values — especially `POSTGRES_PASSWORD`, `HASURA_GRAPHQL_ADMIN_SECRET`, and `HASURA_JWT_KEY`.
+- Know your current `.env` values, especially `POSTGRES_PASSWORD`, `HASURA_GRAPHQL_ADMIN_SECRET`, and `HASURA_JWT_KEY`.
 
 ## Breaking Changes
 
@@ -38,7 +38,7 @@ Docker resource names also changed:
 
 ## Migration Steps
 
-### 1. Install nSelf v1.0.0 (Go rewrite)
+### 1. Install ɳSelf v1.0.0 (Go rewrite)
 
 ```bash
 brew upgrade nself-org/nself/nself
@@ -89,9 +89,9 @@ Rollback restores your `.env` files, `docker-compose.yml`, and project state, th
 
 ## See Also
 
-- [[Upgrading-from-v1]] — breaking changes summary
-- [[cmd-migrate]] — migrate command reference
-- [[Installation]] — fresh v2 install
+- [[Upgrading-from-v1]], breaking changes summary
+- [[cmd-migrate]], migrate command reference
+- [[Installation]], fresh v2 install
 
 ---
 ← [[Home]] | [[_Sidebar]]

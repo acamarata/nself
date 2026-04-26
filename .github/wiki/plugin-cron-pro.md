@@ -3,7 +3,7 @@
 
 # Cron Pro Plugin
 
-> Advanced cron scheduler — distributed locks, complex syntax, dashboard, and failure alerts. **Pro plugin.**
+> Advanced cron scheduler, distributed locks, complex syntax, dashboard, and failure alerts. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -16,7 +16,7 @@ nself plugin install cron-pro
 
 ## What It Does
 
-Extends the free `cron` plugin with production-grade scheduling features: distributed locking to prevent duplicate runs across multiple nSelf instances, support for complex cron syntax including intervals and human-readable schedules, a visual dashboard for job monitoring, failure alerts via email and Slack, and a full job run history with timing analytics.
+Extends the free `cron` plugin with production-grade scheduling features: distributed locking to prevent duplicate runs across multiple ɳSelf instances, support for complex cron syntax including intervals and human-readable schedules, a visual dashboard for job monitoring, failure alerts via email and Slack, and a full job run history with timing analytics.
 
 ## Note on Free Tier
 
@@ -47,8 +47,8 @@ The free `cron` plugin handles standard cron syntax with HTTP callbacks. This pr
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_cron_pro_jobs` — job definitions with complex schedules
-- `np_cron_pro_runs` — detailed execution history with timings
+- `np_cron_pro_jobs`, job definitions with complex schedules
+- `np_cron_pro_runs`, detailed execution history with timings
 
 ## Nginx Routes
 

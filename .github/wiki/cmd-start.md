@@ -1,6 +1,6 @@
 # nself start
 
-> Boot the nSelf stack with health checks and automatic database initialization.
+> Boot the ɳSelf stack with health checks and automatic database initialization.
 
 ## Synopsis
 
@@ -13,11 +13,11 @@ nself up [flags]
 
 ## Description
 
-`nself start` brings up the entire nSelf stack in the correct order: PostgreSQL first, then automatic database initialization (schemas, extensions, permissions), then Hasura, Auth, Nginx, optional services, monitoring, and custom services. Each service is health-checked before the next group starts.
+`nself start` brings up the entire ɳSelf stack in the correct order: PostgreSQL first, then automatic database initialization (schemas, extensions, permissions), then Hasura, Auth, Nginx, optional services, monitoring, and custom services. Each service is health-checked before the next group starts.
 
 Before launching containers, `nself start` validates that `docker-compose.yml` exists (run `nself build` first), the Docker daemon is running, and all required ports are available. A pre-flight port check scans for conflicts on ports 80, 443, 5432, 8080, 4000, 6379, and 9000 and reports the conflicting process name if a port is in use.
 
-Database initialization is automatic and idempotent — nSelf creates the database, schemas (`auth`, `storage`, `public`), and extensions (`pgcrypto`, `citext`, `uuid-ossp`) if they do not already exist. After all services are healthy, the console prints all service URLs.
+Database initialization is automatic and idempotent, ɳSelf creates the database, schemas (`auth`, `storage`, `public`), and extensions (`pgcrypto`, `citext`, `uuid-ossp`) if they do not already exist. After all services are healthy, the console prints all service URLs.
 
 ## Flags
 

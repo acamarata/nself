@@ -1,6 +1,6 @@
 # DDNS Plugin
 
-> Dynamic DNS with Cloudflare IP monitoring — automatically updates DNS records when your server's public IP changes. **Pro plugin.**
+> Dynamic DNS with Cloudflare IP monitoring, automatically updates DNS records when your server's public IP changes. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -13,7 +13,7 @@ nself plugin install ddns
 
 ## What It Does
 
-Monitors your server's public IPv4 and IPv6 addresses on a configurable interval and automatically updates Cloudflare DNS A and AAAA records when a change is detected. Operates in graceful degraded mode if the Cloudflare API is unreachable — retrying on the next interval rather than crashing. All IP changes and update attempts are persisted to the database for audit and debugging.
+Monitors your server's public IPv4 and IPv6 addresses on a configurable interval and automatically updates Cloudflare DNS A and AAAA records when a change is detected. Operates in graceful degraded mode if the Cloudflare API is unreachable, retrying on the next interval rather than crashing. All IP changes and update attempts are persisted to the database for audit and debugging.
 
 ## Configuration
 
@@ -35,8 +35,8 @@ Monitors your server's public IPv4 and IPv6 addresses on a configurable interval
 
 2 tables added to your Postgres database.
 
-- `np_ddns_records` — Tracked DNS records and last known IP values
-- `np_ddns_update_log` — History of IP change detections and DNS update results
+- `np_ddns_records`, Tracked DNS records and last known IP values
+- `np_ddns_update_log`, History of IP change detections and DNS update results
 
 ## Nginx Routes
 

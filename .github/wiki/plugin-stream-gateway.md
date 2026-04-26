@@ -1,6 +1,6 @@
 # Stream Gateway Plugin
 
-> Stream admission control — viewer authentication, analytics, and family controls. **Pro plugin.**
+> Stream admission control, viewer authentication, analytics, and family controls. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -33,10 +33,10 @@ Acts as a gatekeeper between viewers and your streaming server. Validates viewer
 ## Database Tables
 
 4 tables added to your Postgres database:
-- `np_stream_gateway_sessions` — active viewer sessions
-- `np_stream_gateway_analytics` — per-viewer quality metrics
-- `np_stream_gateway_profiles` — family member profiles
-- `np_stream_gateway_restrictions` — content access restrictions
+- `np_stream_gateway_sessions`, active viewer sessions
+- `np_stream_gateway_analytics`, per-viewer quality metrics
+- `np_stream_gateway_profiles`, family member profiles
+- `np_stream_gateway_restrictions`, content access restrictions
 
 ## Nginx Routes
 

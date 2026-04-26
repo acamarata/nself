@@ -1,19 +1,19 @@
-# nChat Plugin Bundle
+# ɳChat Plugin Bundle
 
 ## Contents
 
-- [What Is nChat](#what-is-nchat)
+- [What Is ɳChat](#what-is-nchat)
 - [Plugins Included](#plugins-included)
 - [How They Work Together](#how-they-work-together)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Related Pages](#related-pages)
 
-## What Is nChat
+## What Is ɳChat
 
-nChat is the marketing name for the bundle of plugins that powers the [chat](https://github.com/nself-org/nchat) reference app. It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains real-time messaging, video and audio calls, call recording, moderation, bots, and authentication — every feature of a modern team chat product.
+ɳChat is the marketing name for the bundle of plugins that powers the [chat](https://github.com/nself-org/nchat) reference app. It is not a repo or a single plugin. When the bundle is installed, your ɳSelf backend gains real-time messaging, video and audio calls, call recording, moderation, bots, and authentication, every feature of a modern team chat product.
 
-nChat pairs with the [chat](https://github.com/nself-org/nchat) repo, an open-source self-hosted messaging app (Next.js + Capacitor + Electron + Tauri). Without the bundle the chat app still runs core messaging; pro features (video, recording, advanced moderation, bots) hide gracefully via runtime feature detection.
+ɳChat pairs with the [chat](https://github.com/nself-org/nchat) repo, an open-source self-hosted messaging app (Next.js + Capacitor + Electron + Tauri). Without the bundle the chat app still runs core messaging; pro features (video, recording, advanced moderation, bots) hide gracefully via runtime feature detection.
 
 ## Plugins Included
 
@@ -75,15 +75,15 @@ Basic tier is $0.99/mo or $9.99/yr. See [Plugin-Licensing](Plugin-Licensing) for
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
 - Basic tier license key or higher
 - TURN/STUN credentials for `livekit` if running across NAT
-- Object storage configured for `recording` (MinIO comes free with the nSelf stack)
+- Object storage configured for `recording` (MinIO comes free with the ɳSelf stack)
 
 ### Step 1: Install the plugins
 
-Install all 7 nChat plugins with the command above.
+Install all 7 ɳChat plugins with the command above.
 
 ### Step 2: Configure LiveKit
 
@@ -105,8 +105,8 @@ Clone [nself-org/chat](https://github.com/nself-org/nchat), copy `.backend.examp
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
-- [Feature-nChat](Feature-nChat) — feature overview
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
+- [Feature-ɳChat](Feature-ɳChat), feature overview
 - Individual plugin pages: [chat](plugin-chat), [livekit](plugin-livekit), [recording](plugin-recording), [moderation](plugin-moderation), [bots](plugin-bots), [realtime](plugin-realtime), [auth](plugin-auth)

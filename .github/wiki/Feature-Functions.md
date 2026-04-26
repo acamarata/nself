@@ -1,6 +1,6 @@
 # Feature: Functions
 
-nSelf includes a serverless runtime for running custom backend logic close to your data.
+ɳSelf includes a serverless runtime for running custom backend logic close to your data.
 
 ## What's Included
 
@@ -32,7 +32,7 @@ FUNCTIONS_ENABLED=true
 
 ## Deploying Functions
 
-Place function files in your project's `functions/` directory. nSelf mounts this directory into the Functions container automatically.
+Place function files in your project's `functions/` directory. ɳSelf mounts this directory into the Functions container automatically.
 
 ```
 my-project/
@@ -49,9 +49,9 @@ Configure event triggers in the Hasura console or via Hasura migrations to call 
 
 ## See Also
 
-- [[cmd-service]] — enable/disable functions
-- [[Config-Env-Vars]] — full env var reference
-- [[Architecture]] — how functions integrate with the stack
+- [[cmd-service]], enable/disable functions
+- [[Config-Env-Vars]], full env var reference
+- [[Architecture]], how functions integrate with the stack
 
 ---
 ← [[Home]] | [[_Sidebar]]

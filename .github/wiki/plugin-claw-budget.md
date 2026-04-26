@@ -8,14 +8,14 @@ The claw-budget plugin sits between your AI plugins and the LLM providers, inter
 
 ## Features
 
-- **Per-user budgets** — set monthly or daily token/cost limits per user
-- **Per-session budgets** — cap individual conversation sessions to prevent runaway costs
-- **Per-tenant budgets** — enforce organization-level spending ceilings in multi-tenant deployments
-- **Real-time dashboard** — token usage, cost breakdown by model, and budget utilization via Hasura subscriptions
-- **Configurable actions** — warn, throttle (rate limit), or hard-block when thresholds are hit
-- **Model cost mapping** — built-in cost tables for OpenAI, Anthropic, Mistral, and Gemini models with custom overrides
-- **Historical reporting** — query usage by user, tenant, session, model, or time range via GraphQL
-- **Webhook alerts** — fire webhooks when budgets reach configurable percentage thresholds (50%, 80%, 100%)
+- **Per-user budgets**, set monthly or daily token/cost limits per user
+- **Per-session budgets**, cap individual conversation sessions to prevent runaway costs
+- **Per-tenant budgets**, enforce organization-level spending ceilings in multi-tenant deployments
+- **Real-time dashboard**, token usage, cost breakdown by model, and budget utilization via Hasura subscriptions
+- **Configurable actions**, warn, throttle (rate limit), or hard-block when thresholds are hit
+- **Model cost mapping**, built-in cost tables for OpenAI, Anthropic, Mistral, and Gemini models with custom overrides
+- **Historical reporting**, query usage by user, tenant, session, model, or time range via GraphQL
+- **Webhook alerts**, fire webhooks when budgets reach configurable percentage thresholds (50%, 80%, 100%)
 
 ## Installation
 
@@ -69,10 +69,10 @@ If claw-budget is installed without plugin-ai, it operates in tracking-only mode
 
 ## See Also
 
-- [[plugin-ai]] — LLM gateway with provider rotation
-- [[plugin-claw]] — autonomous AI assistant engine
-- [[Plugin-Licensing]] — license tiers and pricing
-- [[Plugin-Overview]] — all plugins by category
+- [[plugin-ai]], LLM gateway with provider rotation
+- [[plugin-claw]], autonomous AI assistant engine
+- [[Plugin-Licensing]], license tiers and pricing
+- [[Plugin-Overview]], all plugins by category
 
 ---
 ← [[Plugin-Overview]] | [[_Sidebar]]

@@ -86,9 +86,9 @@ nself secrets rekey --remove "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 ## See Also
 
-- [[cmd-env]] — multi-environment management
-- [[cmd-backup]] — encrypted backups
-- [[cmd-license]] — license keys
-- [[Commands]] — full command index
+- [[cmd-env]], multi-environment management
+- [[cmd-backup]], encrypted backups
+- [[cmd-license]], license keys
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

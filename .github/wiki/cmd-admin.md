@@ -1,6 +1,6 @@
 # nself admin
 
-> Manage the nSelf Admin UI: open, start, stop, inspect logs, or health-check.
+> Manage the ɳSelf Admin UI: open, start, stop, inspect logs, or health-check.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ nself admin [subcommand] [flags]
 
 ## Description
 
-`nself admin` manages the local nSelf Admin dashboard at `http://localhost:3021`. With no subcommand, it opens the dashboard in your default browser. Use subcommands to control the Admin container lifecycle directly.
+`nself admin` manages the local ɳSelf Admin dashboard at `http://localhost:3021`. With no subcommand, it opens the dashboard in your default browser. Use subcommands to control the Admin container lifecycle directly.
 
 The Admin UI is a local-only web interface (Docker container) on your machine. It is not a hosted service.
 

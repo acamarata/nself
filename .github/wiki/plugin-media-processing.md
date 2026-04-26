@@ -33,15 +33,15 @@ Provides a Rust-based FFmpeg wrapper service for video encoding and transcoding.
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_media_processing_jobs` — transcode job records
-- `np_media_processing_profiles` — encoding profile definitions
-- `np_media_processing_outputs` — completed output file records
-- `np_media_processing_segments` — HLS/DASH segment metadata
-- `np_media_processing_manifests` — adaptive streaming manifests
-- `np_media_processing_thumbnails` — generated thumbnail records
-- `np_media_processing_uploads` — upload pipeline state
-- `np_media_processing_progress` — real-time job progress tracking
-- `np_media_processing_errors` — transcode error log
+- `np_media_processing_jobs`, transcode job records
+- `np_media_processing_profiles`, encoding profile definitions
+- `np_media_processing_outputs`, completed output file records
+- `np_media_processing_segments`, HLS/DASH segment metadata
+- `np_media_processing_manifests`, adaptive streaming manifests
+- `np_media_processing_thumbnails`, generated thumbnail records
+- `np_media_processing_uploads`, upload pipeline state
+- `np_media_processing_progress`, real-time job progress tracking
+- `np_media_processing_errors`, transcode error log
 
 ## Nginx Routes
 

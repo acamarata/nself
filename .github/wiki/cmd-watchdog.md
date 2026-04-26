@@ -68,9 +68,9 @@ nself watchdog test-alert --severity warning
 
 ## See Also
 
-- [[cmd-alerts]] — Prometheus alert rules
-- [[cmd-health]] — health checks
-- [[cmd-status]] — service health
-- [[Commands]] — full command index
+- [[cmd-alerts]], Prometheus alert rules
+- [[cmd-health]], health checks
+- [[cmd-status]], service health
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

@@ -1,6 +1,6 @@
 # Feature: Memory Rooms
 
-Memory Rooms let you organize nClaw's knowledge into named collections. Think of them as folders for your AI's memory. You can drag and drop memories between rooms, and each room tracks its own health metrics.
+Memory Rooms let you organize ɳClaw's knowledge into named collections. Think of them as folders for your AI's memory. You can drag and drop memories between rooms, and each room tracks its own health metrics.
 
 **Route:** `/settings/memory` in claw-web
 **API:** Memory rooms CRUD under `/claw/memory/rooms`
@@ -9,7 +9,7 @@ Memory Rooms let you organize nClaw's knowledge into named collections. Think of
 
 ## How It Works
 
-Every memory in nClaw belongs to a room. The default room holds unorganized memories. You create named rooms for topics you care about (work, health, projects, people) and assign memories to them.
+Every memory in ɳClaw belongs to a room. The default room holds unorganized memories. You create named rooms for topics you care about (work, health, projects, people) and assign memories to them.
 
 The room view shows:
 - Memory count per room
@@ -93,6 +93,6 @@ Export your knowledge graph in two formats:
 
 ## Related
 
-- [[Feature-nClaw]] -- nClaw overview
+- [[Feature-ɳClaw]] -- ɳClaw overview
 - [[Feature-Agent-Dashboard]] -- Agent metrics
 - [[Feature-Image-Generation]] -- Image generation

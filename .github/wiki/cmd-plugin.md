@@ -1,6 +1,6 @@
 # nself plugin
 
-> Install, remove, update, and manage nSelf plugins.
+> Install, remove, update, and manage ɳSelf plugins.
 
 ## Synopsis
 
@@ -10,11 +10,11 @@ nself plugin <subcommand> [flags]
 
 ## Description
 
-`nself plugin` manages the nSelf plugin ecosystem. Plugins extend the CLI and your backend stack with new capabilities. Free plugins (MIT licensed) install without a key. Pro plugins require a valid membership license key — set one with `nself license set`.
+`nself plugin` manages the ɳSelf plugin ecosystem. Plugins extend the CLI and your backend stack with new capabilities. Free plugins (MIT licensed) install without a key. Pro plugins require a valid membership license key, set one with `nself license set`.
 
-When you install a plugin, nSelf checks your license tier against the plugin's requirements, downloads the plugin binary and Docker image, registers the plugin with the stack, and prepares database migrations. Run `nself build` and `nself restart` after installing plugins to include them in the generated `docker-compose.yml`.
+When you install a plugin, ɳSelf checks your license tier against the plugin's requirements, downloads the plugin binary and Docker image, registers the plugin with the stack, and prepares database migrations. Run `nself build` and `nself restart` after installing plugins to include them in the generated `docker-compose.yml`.
 
-Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai <action>` calls `nself-ai <action>`. This allows installed plugins to expose their own subcommands through the nSelf CLI namespace.
+Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai <action>` calls `nself-ai <action>`. This allows installed plugins to expose their own subcommands through the ɳSelf CLI namespace.
 
 ## Subcommands
 
@@ -59,12 +59,12 @@ nfamily             [planned]
 
 Install behavior by status:
 
-- **stable** — installs without warnings (default for most plugins)
-- **experimental** — prints a warning to stderr, then installs
-- **beta** — prints a warning to stderr, then installs
-- **deprecated** — prints a deprecation warning with EOL date and migration guide, then installs
-- **eol** — install is blocked; use `--allow-eol` to override (not recommended)
-- **planned** — install is rejected with a "coming soon" message and a link to the release timeline
+- **stable**, installs without warnings (default for most plugins)
+- **experimental**, prints a warning to stderr, then installs
+- **beta**, prints a warning to stderr, then installs
+- **deprecated**, prints a deprecation warning with EOL date and migration guide, then installs
+- **eol**, install is blocked; use `--allow-eol` to override (not recommended)
+- **planned**, install is rejected with a "coming soon" message and a link to the release timeline
 
 EOL plugins are hidden from `nself plugin list` by default. Use `--show-eol` to include them.
 
@@ -149,8 +149,8 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 
 ## See also
 
-- [[cmd-plugin-compat-check]] — compatibility check reference
-- [[Plugin-Status-Badges]] — lifecycle status reference
-- [[Plugin-Licensing]] — license tiers and key format
+- [[cmd-plugin-compat-check]], compatibility check reference
+- [[Plugin-Status-Badges]], lifecycle status reference
+- [[Plugin-Licensing]], license tiers and key format
 
 ← [[Commands]] | [[Home]] →

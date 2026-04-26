@@ -58,9 +58,9 @@ nself promote rollback --tag pre-promote-2026-04-17T03:00Z
 
 ## See Also
 
-- [[cmd-env]] — multi-environment management
-- [[cmd-dr]] — disaster recovery
-- [[cmd-backup]] — backup operations
-- [[Commands]] — full command index
+- [[cmd-env]], multi-environment management
+- [[cmd-dr]], disaster recovery
+- [[cmd-backup]], backup operations
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

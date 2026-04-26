@@ -1,6 +1,6 @@
 # Subtitle Manager Plugin
 
-> Subtitle search and download via OpenSubtitles with transcoder integration. **Free — MIT licensed.**
+> Subtitle search and download via OpenSubtitles with transcoder integration. **Free, MIT licensed.**
 
 ## Install
 
@@ -30,10 +30,10 @@ Searches for and downloads subtitles for your media library via the OpenSubtitle
 ## Database Tables
 
 3 tables added to your Postgres database:
-- `np_subtitle_manager_subtitles` — downloaded subtitle records
-- `np_subtitle_manager_searches` — search history
-- `np_subtitle_manager_language_prefs` — per-content language preferences
+- `np_subtitle_manager_subtitles`, downloaded subtitle records
+- `np_subtitle_manager_searches`, search history
+- `np_subtitle_manager_language_prefs`, per-content language preferences
 
 ## Nginx Routes
 
-None — subtitle service is internal only.
+None, subtitle service is internal only.

@@ -1,10 +1,10 @@
 # Logo Usage
 
-Guidelines for using the nSelf logo and ɳ mark correctly.
+Guidelines for using the ɳSelf logo and ɳ mark correctly.
 
 ## The ɳSelf Mark
 
-The **ɳ** character is the nSelf logo icon. It can be used:
+The **ɳ** character is the ɳSelf logo icon. It can be used:
 - Standalone as an icon (app icon, favicon)
 - Combined with the wordmark "Self" as the full logo
 
@@ -24,7 +24,7 @@ Always maintain minimum clearspace around the logo equal to **the height of the 
 
 | Background | Colour | Use |
 |-----------|--------|-----|
-| Dark | `#0F0F1A` | Preferred — matches nSelf UI |
+| Dark | `#0F0F1A` | Preferred , matches ɳSelf UI |
 | Light | `#FFFFFF` | For light-mode contexts |
 
 Always use the logo variant designed for its background (dark logo on light, light logo on dark).
@@ -40,16 +40,16 @@ Always use the logo variant designed for its background (dark logo on light, lig
 
 ## Co-branding
 
-When combining the nSelf logo with another brand, maintain equal visual weight and clearspace between logos.
+When combining the ɳSelf logo with another brand, maintain equal visual weight and clearspace between logos.
 
 ## Questions
 
-For licensing questions or custom use cases, contact the nSelf team.
+For licensing questions or custom use cases, contact the ɳSelf team.
 
 ## See Also
 
-- [[Brand-Assets]] — download logo files
-- [[Color-Palette]] — official colour values
+- [[Brand-Assets]], download logo files
+- [[Color-Palette]], official colour values
 
 ---
 ← [[Home]] | [[_Sidebar]]

@@ -1,4 +1,4 @@
-# Third-Party Notices — nSelf CLI
+# Third-Party Notices, ɳSelf CLI
 
 This project uses the following third-party open-source libraries. Their licenses require attribution.
 

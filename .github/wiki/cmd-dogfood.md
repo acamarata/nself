@@ -56,9 +56,9 @@ nself dogfood report --json
 
 ## See Also
 
-- [[cmd-doctor]] — system diagnostics
-- [[cmd-security]] — security audit
-- [[cmd-watchdog]] — self-healing watchdog
-- [[Commands]] — full command index
+- [[cmd-doctor]], system diagnostics
+- [[cmd-security]], security audit
+- [[cmd-watchdog]], self-healing watchdog
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

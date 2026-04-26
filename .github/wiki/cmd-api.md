@@ -10,7 +10,7 @@ nself api <subcommand> [flags]
 
 ## Description
 
-`nself api` provides tooling to inspect and validate API version state across all observable surfaces in a running nSelf install. Operators use it to check API surface versions before upgrades and to detect deprecated API usage before clients are affected.
+`nself api` provides tooling to inspect and validate API version state across all observable surfaces in a running ɳSelf install. Operators use it to check API surface versions before upgrades and to detect deprecated API usage before clients are affected.
 
 ## Subcommands
 
@@ -28,7 +28,7 @@ nself api <subcommand> [flags]
 nself api version [flags]
 ```
 
-Reports the current API version for every observable surface (Hasura, Auth, Storage, Functions, etc.) in the running nSelf stack. Use this after an upgrade to confirm all surfaces are on the expected version.
+Reports the current API version for every observable surface (Hasura, Auth, Storage, Functions, etc.) in the running ɳSelf stack. Use this after an upgrade to confirm all surfaces are on the expected version.
 
 **Flags:**
 
@@ -145,6 +145,6 @@ Deprecated endpoints: 1
 
 ## See Also
 
-- [[cmd-version]] — CLI version information
-- [[cmd-doctor]] — Comprehensive system diagnostics
-- [[cmd-status]] — Live service health
+- [[cmd-version]], CLI version information
+- [[cmd-doctor]], Full system diagnostics
+- [[cmd-status]], Live service health

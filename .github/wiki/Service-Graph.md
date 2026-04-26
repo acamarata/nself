@@ -1,6 +1,6 @@
 # Service Graph
 
-The nSelf stack is composed of a small set of required core services and a growing collection of optional services, plugins, and user-defined custom services. This page documents how those services relate to each other, the order in which they start, and the health checks that gate each transition.
+The ɳSelf stack is composed of a small set of required core services and a growing collection of optional services, plugins, and user-defined custom services. This page documents how those services relate to each other, the order in which they start, and the health checks that gate each transition.
 
 Understanding the dependency graph is useful when debugging startup failures, designing custom services, or reasoning about what breaks when a single service is unhealthy.
 
@@ -23,9 +23,9 @@ graph LR
   postgres -.optional.-> monitoring[Monitoring]
 ```
 
-Solid arrows are hard dependencies — Docker Compose `depends_on: condition: service_healthy`. Dashed arrows are soft dependencies that only apply when the relevant optional services or plugins are enabled.
+Solid arrows are hard dependencies, Docker Compose `depends_on: condition: service_healthy`. Dashed arrows are soft dependencies that only apply when the relevant optional services or plugins are enabled.
 
-The practical consequence: **PostgreSQL is the root of the dependency tree.** If Postgres does not become healthy, nothing else starts. Hasura and Auth both wait on Postgres independently; Auth additionally waits on Hasura because it uses Hasura's metadata API at boot. Nginx is the last core service to start, only after both Hasura and Auth are healthy.
+The practical consequence: **PostgreSQL is the root of the dependency tree.** If Postgres does not become healthy, nothing else starts. Hasura and Auth both wait on Postgres independently; Auth Also waits on Hasura because it uses Hasura's metadata API at boot. Nginx is the last core service to start, only after both Hasura and Auth are healthy.
 
 ---
 
@@ -37,7 +37,7 @@ These services are always present. They cannot be disabled.
 |---------|-------|---------------|--------------|---------|
 | PostgreSQL | `postgres:16-alpine` | 5432 | `pg_isready` (interval: 10s) | Primary database for all project data |
 | Hasura GraphQL | `hasura/graphql-engine:v2.44.0` | 8080 | `GET /healthz` (interval: 10s) | GraphQL API and metadata engine |
-| Auth | `nhost/hasura-auth:0.36.0` | 4000 | `GET /healthz` on port 4000 (interval: 30s) | Authentication — JWT issuance, sessions, OAuth providers |
+| Auth | `nhost/hasura-auth:0.36.0` | 4000 | `GET /healthz` on port 4000 (interval: 30s) | Authentication , JWT issuance, sessions, OAuth providers |
 | Nginx | `nginx:alpine` | 80 / 443 | `GET /health` (interval: 30s) | Reverse proxy, SSL termination, subdomain routing |
 
 All internal services bind to `127.0.0.1`. External traffic reaches them exclusively through Nginx.
@@ -46,13 +46,13 @@ All internal services bind to `127.0.0.1`. External traffic reaches them exclusi
 
 ## Optional Services
 
-Optional services are enabled by setting the corresponding environment variable to `true` in your `.env` file (or `.env.local` for local overrides). When disabled, the service is entirely absent from the generated Compose file — there is no stopped container, no port binding, and no resource usage.
+Optional services are enabled by setting the corresponding environment variable to `true` in your `.env` file (or `.env.local` for local overrides). When disabled, the service is entirely absent from the generated Compose file, there is no stopped container, no port binding, and no resource usage.
 
 | Service | Toggle | Image | Internal Port | Purpose |
 |---------|--------|-------|---------------|---------|
 | Redis | `REDIS_ENABLED=true` | `redis:7-alpine` | 6379 | Caching, session storage, job queues |
 | Storage (MinIO) | `MINIO_ENABLED=true` | `minio/minio:latest` | 9000 (API), 9001 (console) | S3-compatible object storage |
-| Email | `MAILPIT_ENABLED=true` | `axllent/mailpit:latest` | 1025 (SMTP), 8025 (UI) | Email testing in development — not for production use |
+| Email | `MAILPIT_ENABLED=true` | `axllent/mailpit:latest` | 1025 (SMTP), 8025 (UI) | Email testing in development , not for production use |
 | Search | `SEARCH_ENABLED=true` | varies | 7700 (MeiliSearch) or 8108 (Typesense) | Full-text search indexing and querying |
 | Functions | `FUNCTIONS_ENABLED=true` | `nhost/functions:latest` | 3008 | Serverless function runtime |
 | Admin | `NSELF_ADMIN_ENABLED=true` | `nself/nself-admin:latest` | 3021 | Local GUI dashboard |
@@ -63,7 +63,7 @@ Optional services are enabled by setting the corresponding environment variable 
 
 ## Custom Services (CS_1..CS_10)
 
-nSelf supports up to 10 user-defined services per project. These are declared in your `.env` file using the `CS_N` variable format:
+ɳSelf supports up to 10 user-defined services per project. These are declared in your `.env` file using the `CS_N` variable format:
 
 ```
 CS_N=name:template:port:route
@@ -81,11 +81,11 @@ The `route` field controls the Nginx subdomain that maps to the service. The `te
 
 Available templates include:
 
-- `express-ts` — Express with TypeScript
-- `bullmq-ts` — BullMQ worker with TypeScript
-- `fastify-ts` — Fastify with TypeScript
-- `go-http` — Go HTTP service
-- `python-fastapi` — Python with FastAPI
+- `express-ts`, Express with TypeScript
+- `bullmq-ts`, BullMQ worker with TypeScript
+- `fastify-ts`, Fastify with TypeScript
+- `go-http`, Go HTTP service
+- `python-fastapi`, Python with FastAPI
 - additional templates listed in `nself generate --list`
 
 Custom services receive the same Compose health-check wiring and Nginx routing as built-in services. They can declare their own `depends_on` relationships via env vars if they require Postgres or Redis to be healthy before starting.

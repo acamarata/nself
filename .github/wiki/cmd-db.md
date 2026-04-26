@@ -10,11 +10,11 @@ nself db <subcommand> [flags]
 
 ## Description
 
-`nself db` provides a complete interface for interacting with the PostgreSQL database in your nSelf stack. It covers the full database lifecycle: migrations, seeding, backup and restore, an interactive shell, and Hasura metadata management.
+`nself db` provides a complete interface for interacting with the PostgreSQL database in your ɳSelf stack. It covers the full database lifecycle: migrations, seeding, backup and restore, an interactive shell, and Hasura metadata management.
 
-All operations target the PostgreSQL container managed by nSelf. The `shell` subcommand opens an interactive `psql` session inside the container. The `backup` and `restore` subcommands use `pg_dump` and `pg_restore` and produce SQL dump files that are compatible with standard PostgreSQL tooling.
+All operations target the PostgreSQL container managed by ɳSelf. The `shell` subcommand opens an interactive `psql` session inside the container. The `backup` and `restore` subcommands use `pg_dump` and `pg_restore` and produce SQL dump files that are compatible with standard PostgreSQL tooling.
 
-The `hasura` subgroup controls Hasura metadata — useful for applying tracked tables and permissions from version-controlled metadata files without opening the Hasura Console.
+The `hasura` subgroup controls Hasura metadata, useful for applying tracked tables and permissions from version-controlled metadata files without opening the Hasura Console.
 
 ## Subcommands
 
@@ -29,8 +29,8 @@ The `hasura` subgroup controls Hasura metadata — useful for applying tracked t
 | `backup list` | List available backups with size and date |
 | `restore <file>` | Restore database from a backup file |
 | `shell` | Open interactive `psql` shell in the PostgreSQL container |
-| `drop` | Drop the project database — **DESTRUCTIVE** |
-| `reset` | Drop and recreate the database — **DESTRUCTIVE** |
+| `drop` | Drop the project database , **DESTRUCTIVE** |
+| `reset` | Drop and recreate the database , **DESTRUCTIVE** |
 | `hasura console` | Open the Hasura Console in browser |
 | `hasura metadata apply` | Apply Hasura metadata from files |
 | `hasura metadata export` | Export Hasura metadata to files |

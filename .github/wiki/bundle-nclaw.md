@@ -11,7 +11,7 @@
 
 ## What Is ɳClaw
 
-ɳClaw is the marketing name for the bundle of plugins that powers the [ɳClaw personal AI assistant](https://github.com/nself-org/nclaw). It is not a repo or a single plugin. When the bundle is installed, your nSelf backend gains the AI gateway, assistant runtime, voice I/O, browser tool, email and calendar integrations, scheduled jobs, and push notifications that the ɳClaw client app needs to operate.
+ɳClaw is the marketing name for the bundle of plugins that powers the [ɳClaw personal AI assistant](https://github.com/nself-org/nclaw). It is not a repo or a single plugin. When the bundle is installed, your ɳSelf backend gains the AI gateway, assistant runtime, voice I/O, browser tool, email and calendar integrations, scheduled jobs, and push notifications that the ɳClaw client app needs to operate.
 
 ɳClaw pairs with the [claw](https://github.com/nself-org/nclaw) repo (Flutter client for iOS, Android, macOS, web).
 
@@ -33,7 +33,7 @@
 | [notify](plugin-notify) | pro | Go | Push notifications across iOS, Android, web |
 | [cron](plugin-cron) | pro | Go | Scheduled jobs and recurring tasks |
 
-`claw-budget` and `claw-news` membership pending user verification (TRAP 10) — see [F06-BUNDLE-INVENTORY](https://github.com/nself-org/nself/blob/main/.claude/docs/sport/F06-BUNDLE-INVENTORY.md).
+`claw-budget` and `claw-news` membership pending user verification (TRAP 10), see [F06-BUNDLE-INVENTORY](https://github.com/nself-org/nself/blob/main/.claude/docs/sport/F06-BUNDLE-INVENTORY.md).
 
 ## How They Work Together
 
@@ -80,7 +80,7 @@ Pro tier is $1.99/mo or $19.99/yr. See [Plugin-Licensing](Plugin-Licensing) for 
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
 - Pro tier license key (Basic does not include `tier: max` plugins)
 - Provider API keys (Anthropic, OpenAI, etc.) for the `ai` plugin
@@ -100,7 +100,7 @@ Add Google OAuth credentials, push notification keys, and any other integration 
 
 ### Step 4: Connect a client
 
-Point the [claw](https://github.com/nself-org/nclaw) Flutter app at your nSelf backend's API URL. See the claw repo's README for setup.
+Point the [claw](https://github.com/nself-org/nclaw) Flutter app at your ɳSelf backend's API URL. See the claw repo's README for setup.
 
 ### Troubleshooting
 
@@ -110,7 +110,7 @@ Point the [claw](https://github.com/nself-org/nclaw) Flutter app at your nSelf b
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
 - Individual plugin pages: [ai](plugin-ai), [claw](plugin-claw), [claw-web](plugin-claw-web), [claw-budget](plugin-claw-budget), [claw-news](plugin-claw-news), [voice](plugin-voice), [browser](plugin-browser), [google](plugin-google), [mux](plugin-mux), [notify](plugin-notify), [cron](plugin-cron)

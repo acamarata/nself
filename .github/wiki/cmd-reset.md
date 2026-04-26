@@ -14,7 +14,7 @@ nself reset [flags]
 
 After `nself reset`, run `nself build` to regenerate configuration and `nself start` to restart the stack. This is the recommended way to apply a fresh build after making significant configuration changes.
 
-**Hard reset** (`--hard --confirm`) goes further and also removes `.env` itself. This is a complete project teardown — use it only when you intend to run `nself init` again from scratch.
+**Hard reset** (`--hard --confirm`) goes further and also removes `.env` itself. This is a complete project teardown, use it only when you intend to run `nself init` again from scratch.
 
 ## Flags
 

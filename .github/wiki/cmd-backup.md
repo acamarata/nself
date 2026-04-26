@@ -78,10 +78,10 @@ When `--restore-test` is set, `backup verify` goes beyond the default checksum c
 
 1. Spins up an ephemeral Postgres container on a random local port.
 2. Restores the target `.dump` file via `pg_restore` into the container.
-3. Runs the full smoke-query catalog (5+ system tables): user table count, live tuple count, `auth.users` presence, `hdb_catalog.hdb_metadata` presence, and `np_claw_conversations` presence. A zero user-table count triggers an explicit "row count mismatch — schema-only restore detected" failure.
+3. Runs the full smoke-query catalog (5+ system tables): user table count, live tuple count, `auth.users` presence, `hdb_catalog.hdb_metadata` presence, and `np_claw_conversations` presence. A zero user-table count triggers an explicit "row count mismatch, schema-only restore detected" failure.
 4. Runs a sentinel CRUD round-trip: creates a temp schema, inserts a sentinel row, reads it back, and drops the schema. Completes in under 2 seconds. Cleaned up in defer even on panic.
 5. Reports pass/fail with JSON output suitable for cron consumption.
-6. Tears down the container and volume via `defer` — cleanup happens even on failure.
+6. Tears down the container and volume via `defer`, cleanup happens even on failure.
 
 Exit code 0 = restore verified. Non-zero = verify failed. JSON output:
 
@@ -154,9 +154,9 @@ sudo nself backup config --install-cron --full-at 02:30
 
 ## See Also
 
-- [[cmd-dr]] — disaster recovery operations
-- [[cmd-secrets]] — manage encryption keys
-- [[cmd-db]] — database operations
-- [[Commands]] — full command index
+- [[cmd-dr]], disaster recovery operations
+- [[cmd-secrets]], manage encryption keys
+- [[cmd-db]], database operations
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

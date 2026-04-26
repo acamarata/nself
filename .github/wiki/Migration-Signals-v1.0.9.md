@@ -1,6 +1,6 @@
 # Migration Signals: v1.0.8 to v1.0.9
 
-This page documents every signal that could affect users upgrading from v1.0.8 to v1.0.9 LTS.
+This page documents every signal that could affect users upgrading from v1.0.8 to v1.0.9.
 
 For users upgrading from v0.9, see [[Upgrade-From-v0.9]] first, then return here.
 
@@ -8,7 +8,7 @@ For users upgrading from v0.9, see [[Upgrade-From-v0.9]] first, then return here
 
 ## Summary
 
-v1.0.9 is a **non-breaking LTS release**. No CLI commands were renamed or removed.
+v1.0.9 is a **non-breaking long-term support release**. No CLI commands were renamed or removed.
 No env vars were deleted. All 47 commands remain stable.
 
 This page documents the audit explicitly so the absence of migration signals is itself a documented finding.
@@ -19,14 +19,14 @@ This page documents the audit explicitly so the absence of migration signals is 
 
 | Signal type | Old value | New value | Since | Migration action | Deprecation warning |
 |-------------|-----------|-----------|-------|-----------------|---------------------|
-| CLI commands | (audited — 47 commands, none changed) | — | v1.0.9 | No action needed | — |
-| CLI flags | (audited — 12 flags, none removed) | — | v1.0.9 | No action needed | — |
-| Environment variables | (audited — 200+ vars, none removed) | — | v1.0.9 | No action needed | — |
+| CLI commands | (audited , 47 commands, none changed) | — | v1.0.9 | No action needed | — |
+| CLI flags | (audited , 12 flags, none removed) | — | v1.0.9 | No action needed | — |
+| Environment variables | (audited , 200+ vars, none removed) | — | v1.0.9 | No action needed | — |
 | Plugin signatures | `nself_plugin_sdk` v0.0.x | `plugin-sdk-go` v0.1.x | v1.0.9 | Update `go.mod` in plugin source: `github.com/nself-org/plugin-sdk-go v0.1.0` | `[DEPRECATED] nself_plugin_sdk (since v1.0.9) → use github.com/nself-org/plugin-sdk-go` |
 | API endpoints | (none removed in v1.0.9) | — | — | No action needed | — |
 | Bundle name | `nMedia` bundle | `nTV` bundle | v1.0.9 | Update `nself plugin install` invocations: replace `nMedia` with `nTV`; update `git remote set-url origin https://github.com/nself-org/ntv` | `[DEPRECATED] nMedia bundle (since v1.0.9) → use nTV bundle` |
 | Repo name | `nself-org/ntv` path was `ntv/` | same path (renamed in place) | v1.0.9 | Run: `git remote set-url origin https://github.com/nself-org/ntv` | — |
-| Hasura column | `nself_sessions.user_agent` | use `device_type` + `device_name` | v1.0.9 | GraphQL queries: replace `user_agent` with `device_type` and `device_name`; EOL: 2027-04-17 | `@deprecated(reason: "use device_type and device_name instead — will be removed in v1.2.0")` |
+| Hasura column | `nself_sessions.user_agent` | use `device_type` + `device_name` | v1.0.9 | GraphQL queries: replace `user_agent` with `device_type` and `device_name`; EOL: 2027-04-17 | `@deprecated(reason: "use device_type and device_name instead , will be removed in v1.2.0")` |
 
 ---
 
@@ -55,7 +55,7 @@ import "github.com/nself-org/nself_plugin_sdk"
 import sdk "github.com/nself-org/plugin-sdk-go"
 ```
 
-### nMedia bundle renamed to nTV
+### nMedia bundle renamed to ɳTV
 
 Users who installed the `nMedia` bundle should reinstall using the new name:
 
@@ -79,7 +79,7 @@ query { nself_sessions { user_agent } }
 query { nself_sessions { device_type device_name } }
 ```
 
-The `user_agent` column returns data through 2027-04-17 (LTS window) then is removed in v1.2.0.
+The `user_agent` column returns data through 2027-04-17 (long-term support window) then is removed in v1.2.0.
 
 ---
 
@@ -100,8 +100,8 @@ The following were audited and confirmed unchanged in v1.0.8 → v1.0.9:
 
 ## Related Pages
 
-- [[Upgrade-From-v0.9]] — full upgrade path from v0.9
-- [[Migration-Roadmap]] — three-version migration roadmap including upcoming v1.1.0 signals
-- [[Changelog]] — full v1.0.9 release notes
+- [[Upgrade-From-v0.9]], full upgrade path from v0.9
+- [[Migration-Roadmap]], three-version migration roadmap including upcoming v1.1.0 signals
+- [[Changelog]], full v1.0.9 release notes
 
 [[Home]]

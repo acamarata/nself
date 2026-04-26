@@ -1,19 +1,19 @@
-# nFamily Plugin Bundle
+# ɳFamily Plugin Bundle
 
 ## Contents
 
-- [What Is nFamily](#what-is-nfamily)
+- [What Is ɳFamily](#what-is-nfamily)
 - [Plugins Included](#plugins-included)
 - [How They Work Together](#how-they-work-together)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Related Pages](#related-pages)
 
-## What Is nFamily
+## What Is ɳFamily
 
-nFamily is the marketing name for the bundle of plugins that powers a private family social platform: shared photo timelines, activity feeds, group chat, and a moderated content layer. It is not a repo or a single plugin. The frontend client is planned (TBD).
+ɳFamily is the marketing name for the bundle of plugins that powers a private family social platform: shared photo timelines, activity feeds, group chat, and a moderated content layer. It is not a repo or a single plugin. The frontend client is planned (TBD).
 
-When the bundle is installed, your nSelf backend gains social posts, photo storage and timelines, an activity feed engine, real-time updates, a CMS layer for shared family content, group chat, and moderation tools.
+When the bundle is installed, your ɳSelf backend gains social posts, photo storage and timelines, an activity feed engine, real-time updates, a CMS layer for shared family content, group chat, and moderation tools.
 
 ## Plugins Included
 
@@ -27,9 +27,9 @@ When the bundle is installed, your nSelf backend gains social posts, photo stora
 | [moderation](plugin-moderation) | pro | Go | Auto-moderation, word filters, user reports |
 | [realtime](plugin-realtime) | pro | Go | WebSocket presence, live updates |
 | [cms](plugin-cms) | pro | Go | Shared content (announcements, events, recipes) |
-| [chat](plugin-chat) | pro | Go | Channels, DMs, threads (shared with nChat bundle) |
+| [chat](plugin-chat) | pro | Go | Channels, DMs, threads (shared with ɳChat bundle) |
 
-`moderation`, `realtime`, and `chat` are also part of the [nChat bundle](bundle-nchat) — install once, used by both.
+`moderation`, `realtime`, and `chat` are also part of the [ɳChat bundle](bundle-nchat), install once, used by both.
 
 ## How They Work Together
 
@@ -78,14 +78,14 @@ Basic tier is $0.99/mo or $9.99/yr. See [Plugin-Licensing](Plugin-Licensing) for
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
 - Basic tier license key or higher
-- Object storage (MinIO ships with the nSelf stack) for `photos`
+- Object storage (MinIO ships with the ɳSelf stack) for `photos`
 
 ### Step 1: Install the plugins
 
-Install all 7 nFamily plugins with the command above.
+Install all 7 ɳFamily plugins with the command above.
 
 ### Step 2: Configure storage and limits
 
@@ -97,7 +97,7 @@ Set word lists, rate limits, and report routing. See [plugin-moderation](plugin-
 
 ### Step 4: Build a client
 
-The official nFamily frontend is planned. Until then, the plugin APIs (REST and GraphQL via Hasura) are documented on each plugin page and can drive a custom Next.js or Flutter client.
+The official ɳFamily frontend is planned. Until then, the plugin APIs (REST and GraphQL via Hasura) are documented on each plugin page and can drive a custom Next.js or Flutter client.
 
 ### Troubleshooting
 
@@ -107,9 +107,9 @@ The official nFamily frontend is planned. Until then, the plugin APIs (REST and 
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
-- [bundle-nchat](bundle-nchat) — shares moderation, realtime, chat
-- [Feature-nFamily](Feature-nFamily) — feature overview
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
+- [bundle-nchat](bundle-nchat), shares moderation, realtime, chat
+- [Feature-ɳFamily](Feature-ɳFamily), feature overview
 - Individual plugin pages: [social](plugin-social), [photos](plugin-photos), [activity-feed](plugin-activity-feed), [moderation](plugin-moderation), [realtime](plugin-realtime), [cms](plugin-cms), [chat](plugin-chat)

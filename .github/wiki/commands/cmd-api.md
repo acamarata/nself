@@ -2,8 +2,8 @@
 
 **API versioning and deprecation tooling for operators.**
 
-Operator commands for the nSelf API versioning baseline (v1.0.9 LTS).
-The LTS contract guarantees backward compatibility through 2027-04-17.
+Operator commands for the ɳSelf API versioning baseline (v1.0.9).
+The long-term support contract guarantees backward compatibility through 2027-04-17.
 
 ## Synopsis
 
@@ -29,11 +29,11 @@ nself api version [--surface <name>] [--json] [--timeout <seconds>]
 ```
 
 **What it probes:**
-- `cli` — this binary's version
-- `ping_api` — version probed from `ping.nself.org/version`
-- `marketplace` — version probed from `plugins.nself.org/health` headers
-- `sdk` — per-installed-plugin SDK version from `plugin.json` `apiVersion` field
-- `hasura` — local Hasura running status (if stack is running)
+- `cli`, this binary's version
+- `ping_api`, version probed from `ping.nself.org/version`
+- `marketplace`, version probed from `plugins.nself.org/health` headers
+- `sdk`, per-installed-plugin SDK version from `plugin.json` `apiVersion` field
+- `hasura`, local Hasura running status (if stack is running)
 
 ### Flags
 
@@ -80,7 +80,7 @@ nself api deprecation-check [--json]
 Cross-references the central deprecation registry at `.claude/docs/api-deprecations.md`
 (mirrored publicly at `docs.nself.org/api/deprecations/`).
 
-At v1.0.9 LTS baseline, the registry is empty. This command exits 0 with "0 deprecations
+At v1.0.9 baseline, the registry is empty. This command exits 0 with "0 deprecations
 found" at baseline.
 
 When future deprecations are added, this command will report:
@@ -117,9 +117,9 @@ nself api deprecation-check --json
 
 ---
 
-## LTS Commitment
+## long-term support Commitment
 
-nSelf v1.0.9 is an LTS release. Every surface listed in `nself api version` is
+ɳSelf v1.0.9 is an long-term support release. Every surface listed in `nself api version` is
 backward-compatible through 2027-04-17. Breaking changes during this window require:
 
 1. A `BREAKING-CHANGE-OK` annotation in the PR

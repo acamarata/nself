@@ -1,6 +1,6 @@
 # Moderation Plugin
 
-> Content moderation — profanity, toxicity, AI review, rule policies, appeals, and reports. **Pro plugin.**
+> Content moderation, profanity, toxicity, AI review, rule policies, appeals, and reports. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -34,14 +34,14 @@ Provides a multi-layer content moderation system for user-generated content. Fil
 ## Database Tables
 
 18 tables added to your Postgres database:
-- `np_moderation_items` — content pending review
-- `np_moderation_decisions` — moderation decisions
-- `np_moderation_policies` — auto-moderation rules
-- `np_moderation_word_lists` — profanity word lists
-- `np_moderation_appeals` — user appeals
-- `np_moderation_reports` — user-submitted reports
-- `np_moderation_reviewers` — moderator assignments
-- `np_moderation_queue` — review queue state
+- `np_moderation_items`, content pending review
+- `np_moderation_decisions`, moderation decisions
+- `np_moderation_policies`, auto-moderation rules
+- `np_moderation_word_lists`, profanity word lists
+- `np_moderation_appeals`, user appeals
+- `np_moderation_reports`, user-submitted reports
+- `np_moderation_reviewers`, moderator assignments
+- `np_moderation_queue`, review queue state
 - And 10 more for audit, stats, actions, exemptions, etc.
 
 ## Nginx Routes

@@ -33,10 +33,10 @@ Orchestrates recording of live streams and scheduled broadcasts. Triggered by th
 ## Database Tables
 
 3 tables added to your Postgres database:
-- `np_recording_jobs` — recording job queue and status
-- `np_recording_archives` — completed recording archive index
-- `np_recording_schedules` — scheduled recording configurations
+- `np_recording_jobs`, recording job queue and status
+- `np_recording_archives`, completed recording archive index
+- `np_recording_schedules`, scheduled recording configurations
 
 ## Nginx Routes
 
-None — recording is an internal orchestration service.
+None, recording is an internal orchestration service.

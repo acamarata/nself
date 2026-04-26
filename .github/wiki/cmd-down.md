@@ -1,6 +1,6 @@
 # nself down
 
-> Alias for `nself stop`. Shuts down the nSelf stack.
+> Alias for `nself stop`. Shuts down the ɳSelf stack.
 
 ## Synopsis
 
@@ -37,9 +37,9 @@ nself down --volumes
 
 ## See Also
 
-- [[cmd-stop]] — canonical command (this page redirects to it)
-- [[cmd-start]] — boot the stack
-- [[cmd-up]] — alias for start
-- [[Commands]] — full command index
+- [[cmd-stop]], canonical command (this page redirects to it)
+- [[cmd-start]], boot the stack
+- [[cmd-up]], alias for start
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

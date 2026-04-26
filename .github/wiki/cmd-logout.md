@@ -1,6 +1,6 @@
 # nself logout
 
-> Log out of your nSelf account.
+> Log out of your ɳSelf account.
 
 ## Synopsis
 
@@ -29,5 +29,5 @@ nself logout
 
 ## See Also
 
-- [[cmd-login]] — Log in to your nSelf account
-- [[cmd-license]] — Manage plugin license keys
+- [[cmd-login]], Log in to your ɳSelf account
+- [[cmd-license]], Manage plugin license keys

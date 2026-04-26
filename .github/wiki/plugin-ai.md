@@ -38,12 +38,12 @@ Runs a unified AI inference service supporting 7 providers: OpenAI, Anthropic, G
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_ai_providers` — provider configurations and status
-- `np_ai_prompts` — prompt marketplace entries
-- `np_ai_requests` — inference request log
-- `np_ai_responses` — response cache and audit log
-- `np_ai_pipeline_configs` — 3-layer pipeline configurations
-- `np_ai_shadow_tests` — shadow testing results
+- `np_ai_providers`, provider configurations and status
+- `np_ai_prompts`, prompt marketplace entries
+- `np_ai_requests`, inference request log
+- `np_ai_responses`, response cache and audit log
+- `np_ai_pipeline_configs`, 3-layer pipeline configurations
+- `np_ai_shadow_tests`, shadow testing results
 
 ## Nginx Routes
 
@@ -66,9 +66,9 @@ GET  /prompts               — Browse marketplace
 
 ## Used By
 
-- `claw` — AI agent reasoning
-- `mux` — Email/message classification
-- `voice` — Speech transcription and synthesis
+- `claw`, AI agent reasoning
+- `mux`, Email/message classification
+- `voice`, Speech transcription and synthesis
 
 ## Gemini OAuth
 

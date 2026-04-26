@@ -1,6 +1,6 @@
 # nself mcp serve
 
-Start a Model Context Protocol (MCP) server for the local nSelf instance. Enables Claude Code and other MCP-compliant IDEs to introspect your nSelf project with zero configuration.
+Start a Model Context Protocol (MCP) server for the local ɳSelf instance. Enables Claude Code and other MCP-compliant IDEs to introspect your ɳSelf project with zero configuration.
 
 ## Synopsis
 
@@ -11,7 +11,7 @@ nself mcp status
 
 ## Description
 
-`nself mcp serve` starts the MCP server in **stdio mode** by default — the native transport that Claude Code expects. When `--port` is supplied (or `NSELF_MCP_PORT` is set), it also starts an HTTP/SSE transport for web IDEs and API access.
+`nself mcp serve` starts the MCP server in **stdio mode** by default, the native transport that Claude Code expects. When `--port` is supplied (or `NSELF_MCP_PORT` is set), it also starts an HTTP/SSE transport for web IDEs and API access.
 
 On startup the server:
 
@@ -38,7 +38,7 @@ On startup the server:
 | `NSELF_MCP_MDNS_ENABLED` | `true` | Broadcast via mDNS |
 | `NSELF_MCP_ALLOW_MUTATIONS` | `false` | Enable `nself_migration_apply` tool |
 | `NSELF_MCP_ALLOW_SECRETS` | `false` | Allow `nself_env_get` to return secret keys |
-| `NSELF_FEATURE_MCP` | `false` | Feature flag — set to `true` to enable auto-start with `nself start` |
+| `NSELF_FEATURE_MCP` | `false` | Feature flag , set to `true` to enable auto-start with `nself start` |
 
 ## Claude Code integration
 
@@ -57,7 +57,7 @@ Add to `.claude/settings.json` in your project root:
 
 Claude Code will start the server automatically and expose all 9 tools in its tool context. You can then ask Claude Code questions like:
 
-- "What tables does this nSelf project have?"
+- "What tables does this ɳSelf project have?"
 - "Show me the schema for np_ai_usage"
 - "Which plugins are installed?"
 - "Tail the hasura logs"
@@ -73,7 +73,7 @@ Claude Code will start the server automatically and expose all 9 tools in its to
 | `nself_migration_apply` | Apply a SQL migration (requires `NSELF_MCP_ALLOW_MUTATIONS=true`) |
 | `nself_permission_list` | List Hasura permissions for a Hasura role |
 | `nself_log_tail` | Tail recent logs from a Docker service container |
-| `nself_plugin_list` | List installed nSelf plugins |
+| `nself_plugin_list` | List installed ɳSelf plugins |
 | `nself_plugin_describe` | Full details for a specific plugin |
 | `nself_env_get` | Read an env var (secret keys redacted unless `NSELF_MCP_ALLOW_SECRETS=true`) |
 
@@ -96,8 +96,8 @@ Reports the configured port, whether it is in use (server likely running), mDNS 
 
 `nself doctor` reports MCP server status:
 
-- `MCP-01` — MCP server process running (info)
-- `MCP-02` — Port 3825 not in conflict (warning)
+- `MCP-01`, MCP server process running (info)
+- `MCP-02`, Port 3825 not in conflict (warning)
 
 ## Examples
 

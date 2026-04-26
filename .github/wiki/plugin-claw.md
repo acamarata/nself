@@ -13,7 +13,7 @@ nself plugin install claw
 
 ## What It Does
 
-Provides the backend for nSelf Claw, an AI assistant that can use tools, browse the web, run code, and interact with your data. Implements a ReAct (Reasoning + Acting) loop where the agent plans steps, executes tools, and observes results iteratively. Streams responses via SSE for real-time display. Connects to any chat interface or the companion `claw-web` Next.js frontend.
+Provides the backend for ɳSelf Claw, an AI assistant that can use tools, browse the web, run code, and interact with your data. Implements a ReAct (Reasoning + Acting) loop where the agent plans steps, executes tools, and observes results iteratively. Streams responses via SSE for real-time display. Connects to any chat interface or the companion `claw-web` Next.js frontend.
 
 ## Dependencies
 
@@ -37,12 +37,12 @@ Requires the `ai` plugin.
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_claw_sessions` — conversation sessions
-- `np_claw_messages` — message history
-- `np_claw_tool_calls` — tool invocation log
-- `np_claw_tools` — registered tool definitions
-- `np_claw_contexts` — injected context sources
-- `np_claw_feedback` — user feedback on responses
+- `np_claw_sessions`, conversation sessions
+- `np_claw_messages`, message history
+- `np_claw_tool_calls`, tool invocation log
+- `np_claw_tools`, registered tool definitions
+- `np_claw_contexts`, injected context sources
+- `np_claw_feedback`, user feedback on responses
 
 ## Nginx Routes
 

@@ -1,6 +1,6 @@
-# Feature: nCloud
+# Feature: ɳCloud
 
-nCloud is the managed hosting service for nSelf. Instead of setting up your own server, you pay a monthly fee and get a dedicated Hetzner VPS with the full nSelf stack pre-installed, monitored, and maintained.
+ɳCloud is the managed hosting service for ɳSelf. Instead of setting up your own server, you pay a monthly fee and get a dedicated Hetzner VPS with the full ɳSelf stack pre-installed, monitored, and maintained.
 
 **Status:** Pricing page and provisioning flow implemented. Full managed service planned.
 **Console:** cloud.nself.org
@@ -15,9 +15,9 @@ nCloud is the managed hosting service for nSelf. Instead of setting up your own 
 3. Pay via Stripe.
 4. A dedicated Hetzner VPS is provisioned automatically (under 3 minutes).
 5. You receive root SSH access, a Hasura console URL, a GraphQL endpoint, and an admin panel.
-6. nSelf monitors the server. You build your app.
+6. ɳSelf monitors the server. You build your app.
 
-Every nCloud customer gets a dedicated server. There is no shared hosting, no noisy neighbors, no resource contention. Your data stays on your server.
+Every ɳCloud customer gets a dedicated server. There is no shared hosting, no noisy neighbors, no resource contention. Your data stays on your server.
 
 ---
 
@@ -25,7 +25,7 @@ Every nCloud customer gets a dedicated server. There is no shared hosting, no no
 
 Pricing follows a transparent model: Hetzner's cost plus a $2/month management fee. All servers are in Falkenstein, Germany (fsn1).
 
-| Tier | Hetzner Type | vCPU | RAM | Disk | Hetzner Cost | nCloud Price |
+| Tier | Hetzner Type | vCPU | RAM | Disk | Hetzner Cost | ɳCloud Price |
 |------|-------------|------|-----|------|-------------|-------------|
 | **Starter** | CX23 | 2 | 4 GB | 40 GB | ~$4/mo | **~$6/mo** |
 | **Standard** | CX33 | 4 | 8 GB | 80 GB | ~$7/mo | **~$9/mo** |
@@ -34,15 +34,15 @@ Pricing follows a transparent model: Hetzner's cost plus a $2/month management f
 
 Upgrades and downgrades happen any time via the Hetzner API. Resize takes under 5 minutes.
 
-Plugin licenses are billed separately through the existing nSelf licensing system.
+Plugin licenses are billed separately through the existing ɳSelf licensing system.
 
 ---
 
 ## What's Included
 
-Every nCloud server comes with:
+Every ɳCloud server comes with:
 
-- **Full nSelf stack.** PostgreSQL, Hasura GraphQL, Auth, Nginx with SSL.
+- **Full ɳSelf stack.** PostgreSQL, Hasura GraphQL, Auth, Nginx with SSL.
 - **Your plugin tier.** Plugins matching your license key are pre-installed.
 - **Server hardening.** fail2ban, UFW, SSH key-only access, security headers.
 - **Monitoring.** Prometheus, Grafana, Loki, and the full monitoring bundle.
@@ -60,14 +60,14 @@ The web console is a Next.js app in the web/ monorepo (`web/cloud`). It provides
 |---------|------------|
 | **Dashboard** | Server status, resource usage (CPU, RAM, disk), uptime |
 | **Server management** | Start, stop, restart, resize, rebuild |
-| **Plugin management** | Install and remove plugins (delegates to nSelf CLI via SSH) |
+| **Plugin management** | Install and remove plugins (delegates to ɳSelf CLI via SSH) |
 | **Logs** | Real-time log streaming from your server |
 | **Backups** | Schedule and restore from Hetzner snapshots |
 | **DNS** | Add custom domains, auto-configure SSL |
 | **Billing** | Current plan, usage history, invoices, upgrade/downgrade |
 | **License** | Key display (masked), tier badge, Stripe customer portal |
 
-All management actions execute via SSH to your server. The console queues actions through a job system that connects to your VPS and runs nSelf CLI commands. No management agent runs on your server.
+All management actions execute via SSH to your server. The console queues actions through a job system that connects to your VPS and runs ɳSelf CLI commands. No management agent runs on your server.
 
 ---
 
@@ -76,7 +76,7 @@ All management actions execute via SSH to your server. The console queues action
 When a new server is ordered, a cloud-init script runs on first boot:
 
 1. System updates and hardening (fail2ban, UFW, SSH key-only)
-2. Install nSelf CLI (`curl -fsSL install.nself.org | bash`)
+2. Install ɳSelf CLI (`curl -fsSL install.nself.org | bash`)
 3. `nself init --full` with pre-configured environment
 4. Install plugins matching the user's license tier
 5. `nself build && nself start`
@@ -108,24 +108,24 @@ ncloud_servers table:
 
 ## Monitoring Relay
 
-Each nCloud server runs the nSelf monitoring bundle. A lightweight relay pushes key metrics to the central nSelf monitoring system:
+Each ɳCloud server runs the ɳSelf monitoring bundle. A lightweight relay pushes key metrics to the central ɳSelf monitoring system:
 
 - Server health (CPU, RAM, disk, network)
 - Docker container status for all services
 - SSL certificate expiry warnings
 - Disk usage alerts
 
-Alerts route to the nSelf ops channel and to the customer's configured notification channels (email, Telegram, webhook).
+Alerts route to the ɳSelf ops channel and to the customer's configured notification channels (email, Telegram, webhook).
 
 ---
 
 ## Custom Domains
 
-Users can map their own domains to their nCloud server:
+Users can map their own domains to their ɳCloud server:
 
 1. Add domain in the cloud console.
 2. Follow DNS instructions (A record pointing to server IP).
-3. nSelf verifies DNS propagation.
+3. ɳSelf verifies DNS propagation.
 4. The CLI on the server runs `nself domain add {domain}` to configure Nginx and Let's Encrypt.
 
 The default `{username}.ncloud.nself.org` subdomain is always available, managed via Cloudflare API.
@@ -136,7 +136,7 @@ The default `{username}.ncloud.nself.org` subdomain is always available, managed
 
 A future lower-cost tier for users who do not need a dedicated server:
 
-| | nCloud | Cloud Light |
+| | ɳCloud | Cloud Light |
 |---|--------|------------|
 | **Price** | $6-16/mo | $1-2/mo |
 | **Server** | Dedicated Hetzner VPS | Shared Docker host |
@@ -153,7 +153,7 @@ Cloud Light uses per-user schema isolation in a shared PostgreSQL instance and s
 
 - Servers are hardened on provisioning: SSH key-only, fail2ban, UFW.
 - Root access is the customer's responsibility after provisioning.
-- nSelf does not store customer SSH private keys.
+- ɳSelf does not store customer SSH private keys.
 - Management SSH uses a deploy key pair (public key injected at provisioning).
 - All management actions are logged and auditable.
 - Each customer gets a dedicated VPS with no shared resources.
@@ -172,14 +172,14 @@ All server lifecycle operations use the Hetzner Cloud API:
 | Rebuild | `POST /servers/{id}/actions/rebuild` | Disaster recovery |
 | Snapshot | `POST /servers/{id}/actions/create_image` | Backup |
 
-A single nCloud Hetzner API token manages all customer servers. All servers live in the nSelf Hetzner project.
+A single ɳCloud Hetzner API token manages all customer servers. All servers live in the ɳSelf Hetzner project.
 
 ---
 
 ## Related Pages
 
 - [[Plugin-Licensing]] -- plugin pricing (separate from hosting)
-- [[Guide-Production-Deployment]] -- self-hosting alternative to nCloud
+- [[Guide-Production-Deployment]] -- self-hosting alternative to ɳCloud
 - [[Guide-SSL-Setup]] -- SSL for self-hosted deployments
 - [[Security-Architecture]] -- security model
 

@@ -1,6 +1,6 @@
 # Error Codes Reference
 
-Every user-facing error in the nSelf CLI includes a stable code, a plain-language explanation, and a suggested fix. This page is the catalog for all registered error codes.
+Every user-facing error in the ɳSelf CLI includes a stable code, a plain-language explanation, and a suggested fix. This page is the catalog for all registered error codes.
 
 ---
 
@@ -159,11 +159,11 @@ fi
 
 ## Related pages
 
-- [[cmd-doctor]] — run diagnostics to identify and resolve common errors
-- [[cmd-config]] — view and edit configuration values
-- [[Plugin-Licensing]] — license key format and tier details
-- [[Guide-SSL-Setup]] — SSL certificate setup
-- [[Config-Env-Vars]] — all environment variable reference
+- [[cmd-doctor]], run diagnostics to identify and resolve common errors
+- [[cmd-config]], view and edit configuration values
+- [[Plugin-Licensing]], license key format and tier details
+- [[Guide-SSL-Setup]], SSL certificate setup
+- [[Config-Env-Vars]], all environment variable reference
 
 ---
 

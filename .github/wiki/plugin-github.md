@@ -1,6 +1,6 @@
 # GitHub Plugin
 
-> GitHub integration — repos, issues, PRs, workflow events, and OAuth. **Free — MIT licensed.**
+> GitHub integration, repos, issues, PRs, workflow events, and OAuth. **Free, MIT licensed.**
 
 ## Install
 
@@ -31,12 +31,12 @@ Syncs GitHub data into your Postgres database: repositories, issues, pull reques
 ## Database Tables
 
 23 tables added to your Postgres database, including:
-- `np_github_repos` — repository metadata
-- `np_github_issues` — issues and comments
-- `np_github_pull_requests` — PRs and reviews
-- `np_github_commits` — commit history
-- `np_github_workflow_runs` — CI/CD run history
-- `np_github_webhook_events` — raw webhook event log
+- `np_github_repos`, repository metadata
+- `np_github_issues`, issues and comments
+- `np_github_pull_requests`, PRs and reviews
+- `np_github_commits`, commit history
+- `np_github_workflow_runs`, CI/CD run history
+- `np_github_webhook_events`, raw webhook event log
 - And 17 more for stars, labels, milestones, etc.
 
 ## Nginx Routes

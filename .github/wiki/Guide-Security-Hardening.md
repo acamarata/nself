@@ -1,6 +1,6 @@
 # Guide: Security Hardening
 
-Follow this guide after deploying nSelf to production. For a quick checklist, see [[Security-Hardening]].
+Follow this guide after deploying ɳSelf to production. For a quick checklist, see [[Security-Hardening]].
 
 ## Firewall
 
@@ -76,9 +76,9 @@ See [[Guide-Monitoring-Setup]] for step-by-step instructions. Set up CPU, memory
 
 ## See Also
 
-- [[Security-Hardening]] — production checklist
-- [[Security-Architecture]] — how nSelf is secured by design
-- [[Guide-Monitoring-Setup]] — enable alerts
+- [[Security-Hardening]], production checklist
+- [[Security-Architecture]], how ɳSelf is secured by design
+- [[Guide-Monitoring-Setup]], enable alerts
 
 ---
 ← [[Home]] | [[_Sidebar]]

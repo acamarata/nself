@@ -13,7 +13,7 @@ nself plugin install streaming
 
 ## What It Does
 
-Adds a live streaming platform to your nSelf stack. Accepts RTMP ingest from OBS, mobile apps, or encoders, and distributes as HLS to viewers. Includes DVR (time-shifting / replay), real-time viewer analytics, chat moderation integration, and stream key management per user or channel.
+Adds a live streaming platform to your ɳSelf stack. Accepts RTMP ingest from OBS, mobile apps, or encoders, and distributes as HLS to viewers. Includes DVR (time-shifting / replay), real-time viewer analytics, chat moderation integration, and stream key management per user or channel.
 
 ## Configuration
 
@@ -36,16 +36,16 @@ Adds a live streaming platform to your nSelf stack. Accepts RTMP ingest from OBS
 ## Database Tables
 
 10 tables added to your Postgres database:
-- `np_streaming_streams` — stream channel definitions
-- `np_streaming_stream_keys` — per-user stream keys
-- `np_streaming_sessions` — live session records
-- `np_streaming_viewers` — concurrent viewer tracking
-- `np_streaming_analytics` — viewer event analytics
-- `np_streaming_dvr_segments` — DVR segment index
-- `np_streaming_recordings` — VOD archive records
-- `np_streaming_thumbnails` — stream preview thumbnails
-- `np_streaming_moderation` — moderation actions
-- `np_streaming_chat_links` — linked chat room associations
+- `np_streaming_streams`, stream channel definitions
+- `np_streaming_stream_keys`, per-user stream keys
+- `np_streaming_sessions`, live session records
+- `np_streaming_viewers`, concurrent viewer tracking
+- `np_streaming_analytics`, viewer event analytics
+- `np_streaming_dvr_segments`, DVR segment index
+- `np_streaming_recordings`, VOD archive records
+- `np_streaming_thumbnails`, stream preview thumbnails
+- `np_streaming_moderation`, moderation actions
+- `np_streaming_chat_links`, linked chat room associations
 
 ## Nginx Routes
 

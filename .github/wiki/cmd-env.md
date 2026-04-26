@@ -53,9 +53,9 @@ nself env use qa
 
 ## See Also
 
-- [[cmd-build]] — regenerate compose for the active environment
-- [[cmd-promote]] — promote one environment to another
-- [[cmd-secrets]] — environment-scoped secrets
-- [[Commands]] — full command index
+- [[cmd-build]], regenerate compose for the active environment
+- [[cmd-promote]], promote one environment to another
+- [[cmd-secrets]], environment-scoped secrets
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

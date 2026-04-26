@@ -11,7 +11,7 @@
 
 ## What Is ClawDE
 
-ClawDE is the marketing name for the bundle of plugins that adds cloud sync, mobile twin, premium models, and team features to [ClawDE](https://github.com/nself-org/clawde) — the AI dev environment (Flutter desktop + mobile).
+ClawDE is the marketing name for the bundle of plugins that adds cloud sync, mobile twin, premium models, and team features to [ClawDE](https://github.com/nself-org/clawde), the AI dev environment (Flutter desktop + mobile).
 
 ClawDE itself runs free locally with limited functionality. The ClawDE bundle unlocks server-side sync between desktop and mobile, premium model access, and team workspaces.
 
@@ -28,7 +28,7 @@ Candidate set (4 pro plugins, all `tier: pro`).
 | [cms](plugin-cms) | pro | Go | Project / workspace storage and team-shared configs |
 | [notify](plugin-notify) | pro | Go | Push notifications for build status and team events |
 
-Final membership pending user verification — TRAP 10 in [F06-BUNDLE-INVENTORY](https://github.com/nself-org/nself/blob/main/.claude/docs/sport/F06-BUNDLE-INVENTORY.md).
+Final membership pending user verification, TRAP 10 in [F06-BUNDLE-INVENTORY](https://github.com/nself-org/nself/blob/main/.claude/docs/sport/F06-BUNDLE-INVENTORY.md).
 
 ## How They Work Together
 
@@ -66,13 +66,13 @@ nself plugin install realtime auth cms notify
 nself build && nself start
 ```
 
-ClawDE subscription is $0.99/mo or $9.99/yr (separately bundled — see [Plugin-Licensing](Plugin-Licensing)).
+ClawDE subscription is $0.99/mo or $9.99/yr (separately bundled, see [Plugin-Licensing](Plugin-Licensing)).
 
 ## Getting Started
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
 - ClawDE subscription
 - ClawDE desktop installed locally; ClawDE mobile installed on at least one device
@@ -101,8 +101,8 @@ Set push credentials for each platform. See [plugin-notify](plugin-notify).
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
-- [ClawDE repo](https://github.com/nself-org/clawde) — the AI dev environment client
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
+- [ClawDE repo](https://github.com/nself-org/clawde), the AI dev environment client
 - Individual plugin pages: [realtime](plugin-realtime), [auth](plugin-auth), [cms](plugin-cms), [notify](plugin-notify)

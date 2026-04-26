@@ -1,6 +1,6 @@
 # Plugin Licensing
 
-Pro plugins (62 total) require a valid nSelf license key. Free plugins (25 total) are MIT licensed and require no key.
+Pro plugins (62 total) require a valid ɳSelf license key. Free plugins (25 total) are MIT licensed and require no key.
 
 ## Key Format
 
@@ -11,10 +11,10 @@ nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Accepted prefixes:
-- `nself_pro_` — Pro tier and above
-- `nself_max_` — Pro tier
-- `nself_ent_` — Enterprise tier
-- `nself_owner_` — Owner/self-hosted tier
+- `nself_pro_`, Pro tier and above
+- `nself_max_`, Pro tier
+- `nself_ent_`, Enterprise tier
+- `nself_owner_`, Owner/self-hosted tier
 
 Keys must be at least 32 characters total.
 
@@ -62,8 +62,8 @@ POST https://ping.nself.org/license/validate
 ```
 
 Response codes:
-- `200` — Valid, allowed
-- `401/403/404` — Invalid or insufficient tier
+- `200`, Valid, allowed
+- `401/403/404`, Invalid or insufficient tier
 
 Validation results are cached locally for 24 hours at `~/.nself/license/cache`.
 
@@ -105,5 +105,5 @@ Existing $9.99/yr keys are grandfathered to the Basic tier.
 
 ## Related Pages
 
-- [[Plugin-Overview]] — Tier comparison and plugin categories
-- [[Plugin-Install]] — How to install plugins
+- [[Plugin-Overview]], Tier comparison and plugin categories
+- [[Plugin-Install]], How to install plugins

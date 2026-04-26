@@ -1,6 +1,6 @@
 # API Reference
 
-This page documents the REST API endpoints exposed by nSelf plugins. These endpoints are internal to your nSelf stack and accessed via Nginx reverse proxy. All endpoints require authentication unless noted otherwise.
+This page documents the REST API endpoints exposed by ɳSelf plugins. These endpoints are internal to your ɳSelf stack and accessed via Nginx reverse proxy. All endpoints require authentication unless noted otherwise.
 
 **Base URL:** `https://api.yourdomain.com` (or `http://localhost` in development)
 
@@ -467,7 +467,7 @@ Error body format:
 
 ## Related Pages
 
-- [[Feature-nClaw]] -- nClaw feature overview
+- [[Feature-ɳClaw]] -- ɳClaw feature overview
 - [[Plugin-Architecture]] -- how plugins are structured
 - [[Security-Architecture]] -- auth model and rate limiting
 - [[Config-Env-Vars]] -- environment variable reference

@@ -1,6 +1,6 @@
 # Feature: Agent Dashboard
 
-The Agent Dashboard gives you a real-time view of all 8 nClaw personas and their activity. It shows live metrics, sparkline trends, and per-agent status so you can see what your AI assistant is doing at a glance.
+The Agent Dashboard gives you a real-time view of all 8 ɳClaw personas and their activity. It shows live metrics, sparkline trends, and per-agent status so you can see what your AI assistant is doing at a glance.
 
 **Route:** `/agents` in claw-web
 **API:** `GET /claw/agents/dashboard` and `GET /claw/agents/status`
@@ -29,7 +29,7 @@ The dashboard updates in real time via WebSocket. No manual refresh needed.
 | Daily Mentor | Reflections, goal nudges, journaling |
 | Domain Expert | Configurable expertise (coding, finance, law, etc.) |
 | Job Hunter | CV management, career suggestions, job search |
-| nChat Persona | Chat-specific behaviors |
+| ɳChat Persona | Chat-specific behaviors |
 | Custom | User-defined via persona marketplace |
 
 ## Agent Crews
@@ -48,6 +48,6 @@ No special configuration needed. The dashboard reads from the existing persona s
 
 ## Related
 
-- [[Feature-nClaw]] -- nClaw overview
+- [[Feature-ɳClaw]] -- ɳClaw overview
 - [[Feature-Memory-Rooms]] -- Memory organization
 - [[Feature-Image-Generation]] -- Image generation

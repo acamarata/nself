@@ -1,6 +1,6 @@
 # Plugin Catalog
 
-nSelf ships with **87 plugins** total: 25 free (MIT) and 62 pro (license-gated). Each plugin adds a self-contained backend capability to the stack.
+ɳSelf ships with **87 plugins** total: 25 free (MIT) and 62 pro (license-gated). Each plugin adds a self-contained backend capability to the stack.
 
 Free plugins install with no license. Pro plugins require a valid `nself_pro_*` key set via [[cmd-license]].
 
@@ -49,16 +49,16 @@ MIT licensed. No license key required. Source: `plugins/free/` in the `plugins` 
 
 License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid/` in the `plugins-pro` repo.
 
-### nClaw bundle ($0.99/mo)
+### ɳClaw bundle ($0.99/mo)
 
 | Plugin | Description |
 |--------|-------------|
 | [[plugin-ai]] | LLM gateway and model routing |
 | [[plugin-browser]] | Headless browser as a service |
-| [[plugin-claw]] | Core nClaw assistant runtime |
+| [[plugin-claw]] | Core ɳClaw assistant runtime |
 | [[plugin-claw-budget]] | Budget, ledger, and financial memory |
 | [[plugin-claw-news]] | News aggregation for the assistant |
-| [[plugin-claw-web]] | Web dashboard for nClaw |
+| [[plugin-claw-web]] | Web dashboard for ɳClaw |
 | [[plugin-cron]] | Named cron scheduler |
 | [[plugin-google]] | Google API adapter (Gmail, Calendar, Drive) |
 | [[plugin-mux]] | Email pipeline and classification |
@@ -66,7 +66,7 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 | [[plugin-post]] | Post-processing workers |
 | [[plugin-voice]] | Speech-to-text and text-to-speech |
 
-### nChat bundle ($0.99/mo)
+### ɳChat bundle ($0.99/mo)
 
 | Plugin | Description |
 |--------|-------------|
@@ -77,7 +77,7 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 | [[plugin-realtime]] | WebSocket broadcast layer |
 | [[plugin-recording]] | Call and stream recording |
 
-### nFamily bundle ($0.99/mo)
+### ɳFamily bundle ($0.99/mo)
 
 | Plugin | Description |
 |--------|-------------|
@@ -86,7 +86,7 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 | [[plugin-photos]] | Photo library |
 | [[plugin-social]] | Private social feed |
 
-### nTV bundle ($0.99/mo)
+### ɳTV bundle ($0.99/mo)
 
 | Plugin | Description |
 |--------|-------------|
@@ -134,8 +134,8 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 
 ## See Also
 
-- [[cmd-plugin]] — plugin CLI reference
-- [[cmd-license]] — license key management
-- [[Commands]] — full command index
+- [[cmd-plugin]], plugin CLI reference
+- [[cmd-license]], license key management
+- [[Commands]], full command index
 
 ← [[Home]]

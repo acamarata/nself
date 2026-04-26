@@ -20,7 +20,7 @@
 
 This plugin is included in the following bundles:
 
-- **ɳClaw Bundle** ($0.99/mo) — see [[bundle-nclaw]]
+- **ɳClaw Bundle** ($0.99/mo), see [[bundle-nclaw]]
 
 Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
 
@@ -38,7 +38,7 @@ The license is validated against `ping.nself.org/license/validate`. Tier is chec
 
 The Claw News plugin polls RSS and Atom feeds, classifies incoming articles by topic, summarizes them with the `ai` plugin, generates daily digests, and fires breaking-news alerts via the `notify` plugin. It exposes article search, source management, and topic configuration through a REST API and through ɳClaw tools.
 
-Sentiment analysis runs alongside summarization so the assistant can answer questions like "what changed in the AI space this week" without re-reading every article. Multi-app isolation is supported via the `source_account_id` column, so multiple ɳClaw users on one nSelf instance see only their own subscriptions.
+Sentiment analysis runs alongside summarization so the assistant can answer questions like "what changed in the AI space this week" without re-reading every article. Multi-app isolation is supported via the `source_account_id` column, so multiple ɳClaw users on one ɳSelf instance see only their own subscriptions.
 
 ## Configuration
 
@@ -59,10 +59,10 @@ Sentiment analysis runs alongside summarization so the assistant can answer ques
 
 4 tables added to your Postgres database (prefix: `np_news_`):
 
-- `np_news_sources` — RSS/Atom feed source registrations
-- `np_news_articles` — ingested articles with summaries and sentiment
-- `np_news_topics` — topic definitions and keyword filters
-- `np_news_alerts` — breaking-news alert rules and history
+- `np_news_sources`, RSS/Atom feed source registrations
+- `np_news_articles`, ingested articles with summaries and sentiment
+- `np_news_topics`, topic definitions and keyword filters
+- `np_news_alerts`, breaking-news alert rules and history
 
 ## REST API
 
@@ -103,11 +103,11 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 ## See Also
 
-- [[plugin-claw]] — ɳClaw assistant runtime that consumes news
-- [[plugin-ai]] — provides summarization for article ingestion
-- [[plugin-notify]] — delivers breaking-news alerts
-- [[bundle-nclaw]] — bundle that includes this plugin
-- [[Plugin-Licensing]] — tier comparison
-- [[Plugin-Overview]] — full plugin index
+- [[plugin-claw]], ɳClaw assistant runtime that consumes news
+- [[plugin-ai]], provides summarization for article ingestion
+- [[plugin-notify]], delivers breaking-news alerts
+- [[bundle-nclaw]], bundle that includes this plugin
+- [[Plugin-Licensing]], tier comparison
+- [[Plugin-Overview]], full plugin index
 
 ← [[Plugin-Overview]] | [[Home]] →

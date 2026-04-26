@@ -1,6 +1,6 @@
 # Upgrading from v1
 
-nSelf v1.0.0 is a complete rewrite in Go (replacing the legacy Bash CLI). The interface is largely compatible but there are breaking changes you must address before upgrading a v0.x project.
+ɳSelf v1.0.0 is a complete rewrite in Go (replacing the legacy Bash CLI). The interface is largely compatible but there are breaking changes you must address before upgrading a v0.x project.
 
 ## Breaking Changes
 
@@ -31,7 +31,7 @@ v1 used nHost-style env vars. v2 uses normalized names:
 | v1 Variable | v2 Variable |
 |-------------|-------------|
 | `NHOST_SUBDOMAIN` | `PROJECT_NAME` |
-| `NHOST_REGION` | _(dropped — no cloud regions in v2)_ |
+| `NHOST_REGION` | _(dropped , no cloud regions in v2)_ |
 | `NHOST_BACKEND_URL` | `BASE_DOMAIN` |
 | `STORAGE_ENABLED` | `MINIO_ENABLED` |
 | `S3_BUCKET` | `MINIO_DEFAULT_BUCKET` |

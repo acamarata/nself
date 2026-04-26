@@ -1,6 +1,6 @@
 # nself claw
 
-> Manage nClaw AI assistant.
+> Manage ɳClaw AI assistant.
 
 ## Synopsis
 
@@ -14,17 +14,17 @@ nself claw <subcommand> [flags] [args]
 
 The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API key (env `NSELF_CLAW_API_KEY` or `~/.nself/claw/config.yaml`). For first-time setup, run `nself claw unlock` on the server to open a 10-minute window for account creation, then `nself claw pair --qr` to connect a mobile client.
 
-`nself claw mcp` exposes nClaw memory, topics, and chat as Model Context Protocol tools so any MCP-aware client (Claude Code, IDEs) can read and write nClaw context. `nself claw proxy` exposes an OpenAI-compatible local endpoint so any client expecting OpenAI can route through nClaw without code changes.
+`nself claw mcp` exposes ɳClaw memory, topics, and chat as Model Context Protocol tools so any MCP-aware client (Claude Code, IDEs) can read and write ɳClaw context. `nself claw proxy` exposes an OpenAI-compatible local endpoint so any client expecting OpenAI can route through ɳClaw without code changes.
 
 ## Subcommands
 
 | Name | Description |
 |------|-------------|
-| `pair` | Generate a pairing code for nClaw clients |
-| `unlock` | Temporarily unlock the web UI for first-time account setup |
+| `pair` | Generate a pairing code for ɳClaw clients |
+| `unlock` | Temporarily enable the web UI for first-time account setup |
 | `prompt [question]` | Send a single prompt and print the response |
 | `chat` | Start an interactive chat session |
-| `config` | Show or modify nClaw CLI configuration |
+| `config` | Show or modify ɳClaw CLI configuration |
 | `config set <key> <value>` | Set a configuration value (`api-key`, `server`) |
 | `topics` | List topics |
 | `topics search <query>` | Search topics by name |
@@ -33,10 +33,10 @@ The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API k
 | `keys` | List API keys |
 | `keys create` | Create a new API key |
 | `keys revoke <id>` | Revoke an API key |
-| `status` | Show nClaw server status and health |
+| `status` | Show ɳClaw server status and health |
 | `proxy [port]` | Start a local OpenAI-compatible proxy |
-| `mcp` | Start an MCP server for nClaw |
-| `export` | Export all nClaw data |
+| `mcp` | Start an MCP server for ɳClaw |
+| `export` | Export all ɳClaw data |
 | `migrate` | Apply pending claw schema migrations |
 
 ## Flags
@@ -52,7 +52,7 @@ The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API k
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--minutes` | `10` | Minutes the unlock lasts (1-60) |
+| `--minutes` | `10` | Minutes the enable lasts (1-60) |
 
 ### `claw prompt [question]`
 
@@ -148,9 +148,9 @@ nself claw migrate --from 002_add_topics.sql --to 005_index.sql
 
 ## See Also
 
-- [[cmd-ai]] — AI plugin and local LLM stack
-- [[cmd-plugin]] — install or update the claw plugin
-- [[cmd-status]] — full stack status
-- [[Commands]] — full command index
+- [[cmd-ai]], AI plugin and local LLM stack
+- [[cmd-plugin]], install or update the claw plugin
+- [[cmd-status]], full stack status
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

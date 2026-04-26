@@ -1,6 +1,6 @@
 # Upgrading to v1.0.12
 
-> Step-by-step guide for upgrading an nSelf installation from v1.0.11 to v1.0.12.
+> Step-by-step guide for upgrading an ɳSelf installation from v1.0.11 to v1.0.12.
 
 ## Contents
 
@@ -210,10 +210,10 @@ nself license verify
 
 See also:
 
-- [[cmd-upgrade]] — full `nself upgrade` command reference
-- [[Changelog]] — full release history
-- [[Installation]] — fresh install guide
-- [[Upgrade-From-v0.9]] — migrating from the legacy Bash CLI
-- [[Upgrading]] — upgrade guide index
+- [[cmd-upgrade]], full `nself upgrade` command reference
+- [[Changelog]], full release history
+- [[Installation]], fresh install guide
+- [[Upgrade-From-v0.9]], migrating from the legacy Bash CLI
+- [[Upgrading]], upgrade guide index
 
 ← [[Installation]] | [[Home]] →

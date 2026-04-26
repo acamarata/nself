@@ -10,7 +10,7 @@ nself functions <subcommand> [flags]
 
 ## Description
 
-`nself functions` manages serverless functions running inside the nSelf functions service. Functions are deployed from local TypeScript, JavaScript, Deno, or Python files and are served at `http://localhost:3008/v1/<name>`.
+`nself functions` manages serverless functions running inside the ɳSelf functions service. Functions are deployed from local TypeScript, JavaScript, Deno, or Python files and are served at `http://localhost:3008/v1/<name>`.
 
 The functions service must be enabled before use:
 
@@ -130,8 +130,8 @@ Resource limits are controlled by `FUNCTIONS_MEMORY` (default `256M`) and `FUNCT
 
 ## Related
 
-- [[Feature-Functions]] — functions service overview and configuration
-- [[Config-Optional-Services]] — FUNCTIONS_RUNTIME, FUNCTIONS_MEMORY, FUNCTIONS_CPU, FUNCTIONS_TIMEOUT
-- [[cmd-service]] — `nself service enable functions`
+- [[Feature-Functions]], functions service overview and configuration
+- [[Config-Optional-Services]], FUNCTIONS_RUNTIME, FUNCTIONS_MEMORY, FUNCTIONS_CPU, FUNCTIONS_TIMEOUT
+- [[cmd-service]], `nself service enable functions`
 
 ← [[Commands]] | [[Home]] →

@@ -12,9 +12,9 @@ nself plugin test <name> [flags]
 
 Runs three test phases against a linked plugin:
 
-1. **Unit** — `go test ./...` inside the plugin source (in container or on host)
-2. **Smoke install** — installs the plugin via `nself plugin install` and verifies `/healthz` returns 200
-3. **Smoke uninstall** — removes the plugin via `nself plugin remove` and verifies clean removal
+1. **Unit**, `go test ./...` inside the plugin source (in container or on host)
+2. **Smoke install**, installs the plugin via `nself plugin install` and verifies `/healthz` returns 200
+3. **Smoke uninstall**, removes the plugin via `nself plugin remove` and verifies clean removal
 
 All three phases must pass for the command to exit 0. Any failure identifies which phase failed.
 
@@ -76,13 +76,13 @@ All test phases passed.
 
 ## Notes
 
-- Smoke install/uninstall has side effects on your local nSelf stack. Use a scratch project
-  or `--no-cleanup` for debugging. The cookbook recommends a dedicated test project.
+- Smoke install/uninstall has side effects on your local ɳSelf stack. Use a scratch project
+ or `--no-cleanup` for debugging. The cookbook recommends a dedicated test project.
 - Unit tests run in a `golang:1.22-alpine` container by default. Pass `--host` to skip Docker.
 
 ## See Also
 
-- [[cmd-plugin-link]] — link a plugin directory first
-- [[cmd-plugin-dev]] — hot-reload watcher
-- [[cmd-plugin-logs]] — inspect logs during smoke test
+- [[cmd-plugin-link]], link a plugin directory first
+- [[cmd-plugin-dev]], hot-reload watcher
+- [[cmd-plugin-logs]], inspect logs during smoke test
 - [[Home]]

@@ -1,6 +1,6 @@
 # Content Progress Plugin
 
-> Playback progress tracking — continue watching, watchlists, and favorites. **Free — MIT licensed.**
+> Playback progress tracking, continue watching, watchlists, and favorites. **Free, MIT licensed.**
 
 ## Install
 
@@ -28,11 +28,11 @@ Tracks where users left off in video content, maintains watchlists and favorites
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_content_progress_progress` — per-user playback position
-- `np_content_progress_watchlist` — user watchlists
-- `np_content_progress_favorites` — user favorites
-- `np_content_progress_history` — view history
-- `np_content_progress_ratings` — user ratings
+- `np_content_progress_progress`, per-user playback position
+- `np_content_progress_watchlist`, user watchlists
+- `np_content_progress_favorites`, user favorites
+- `np_content_progress_history`, view history
+- `np_content_progress_ratings`, user ratings
 
 ## Nginx Routes
 

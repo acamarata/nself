@@ -3,7 +3,7 @@
 
 # Notify Pro Plugin
 
-> 5-channel notifications — SMTP, Twilio SMS, FCM Push, Slack, and Telegram. **Pro plugin.**
+> 5-channel notifications, SMTP, Twilio SMS, FCM Push, Slack, and Telegram. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -50,9 +50,9 @@ The free `notify` plugin provides basic SMTP, SMS, and push dispatch. This pro v
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_notify_pro_queue` — queued notifications with channel and schedule
-- `np_notify_pro_log` — delivery history and A/B test results
+- `np_notify_pro_queue`, queued notifications with channel and schedule
+- `np_notify_pro_log`, delivery history and A/B test results
 
 ## Nginx Routes
 
-None — notify pro is an internal service.
+None, notify pro is an internal service.

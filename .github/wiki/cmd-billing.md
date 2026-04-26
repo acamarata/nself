@@ -1,6 +1,6 @@
 # nself billing
 
-> **PREVIEW (v1.0.9) — invoice-preview stub:** `billing invoice-preview` returns a stub error. The Stripe billing integration is PLANNED for v1.1.0+. Use `billing usage` and the Stripe dashboard for v1.0.9 billing data.
+> **PREVIEW (v1.0.9), invoice-preview stub:** `billing invoice-preview` returns a stub error. The Stripe billing integration is PLANNED for v1.1.0+. Use `billing usage` and the Stripe dashboard for v1.0.9 billing data.
 
 > Billing operations: usage, invoice-preview, report, retry-event.
 
@@ -12,7 +12,7 @@ nself billing <subcommand> [flags] [args]
 
 ## Description
 
-`nself billing` exposes per-tenant billing and usage metering for multi-tenant nSelf deployments. It reports usage metrics, generates billing reports across tenants, and retries failed Stripe outbox events.
+`nself billing` exposes per-tenant billing and usage metering for multi-tenant ɳSelf deployments. It reports usage metrics, generates billing reports across tenants, and retries failed Stripe outbox events.
 
 `billing usage` queries the metering store for a single tenant and a month, optionally as CSV or JSON. `billing report` rolls usage up across tenants for a billing period and is suitable for accounting export. `billing retry-event` re-enqueues a failed Stripe outbox event by ID, useful when transient API errors leave events stuck.
 
@@ -62,8 +62,8 @@ nself billing retry-event evt_1JxYXz2eZvKYlo2C
 
 ## See Also
 
-- [[cmd-tenant]] — tenant lifecycle management
-- [[cmd-license]] — license keys
-- [[Commands]] — full command index
+- [[cmd-tenant]], tenant lifecycle management
+- [[cmd-license]], license keys
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

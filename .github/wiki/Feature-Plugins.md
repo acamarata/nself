@@ -1,20 +1,20 @@
 # Feature: Plugins
 
-The nSelf plugin system extends your stack with additional services, API routes, and capabilities — without writing infrastructure code.
+The ɳSelf plugin system extends your stack with additional services, API routes, and capabilities, without writing infrastructure code.
 
 ## How Plugins Work
 
 A plugin is a manifest + Docker Compose overlay + optional Nginx config. When you install and build:
 
-1. `nself plugin install <name>` — downloads and caches the plugin
-2. `nself build` — merges the plugin's compose overlay into `docker-compose.yml` and injects Nginx routes
-3. `nself start` / `nself restart` — runs the updated stack
+1. `nself plugin install <name>`, downloads and caches the plugin
+2. `nself build`, merges the plugin's compose overlay into `docker-compose.yml` and injects Nginx routes
+3. `nself start` / `nself restart`, runs the updated stack
 
 ## Plugin Tiers
 
 | Tier | Price | Included |
 |------|-------|---------|
-| Free | $0 | 25 free plugins — no license key required |
+| Free | $0 | 25 free plugins , no license key required |
 | Basic | $0.99/mo | All 62 pro plugins |
 | Pro | $1.99/mo | Basic + AI suite |
 | Elite | $4.99/mo | Pro + email support |
@@ -48,10 +48,10 @@ See [[Plugin-Dev-Guide]] to build and publish a custom plugin.
 
 ## See Also
 
-- [[Plugin-Overview]] — browse all plugins
-- [[Plugin-Architecture]] — technical details
-- [[Plugin-Licensing]] — tier and pricing details
-- [[Plugin-Dev-Guide]] — build a plugin
+- [[Plugin-Overview]], browse all plugins
+- [[Plugin-Architecture]], technical details
+- [[Plugin-Licensing]], tier and pricing details
+- [[Plugin-Dev-Guide]], build a plugin
 
 ---
 ← [[Home]] | [[_Sidebar]]

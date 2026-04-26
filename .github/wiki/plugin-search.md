@@ -1,6 +1,6 @@
 # Search Plugin
 
-> Full-text search with PostgreSQL FTS and MeiliSearch. **Free — MIT licensed.**
+> Full-text search with PostgreSQL FTS and MeiliSearch. **Free, MIT licensed.**
 
 ## Install
 
@@ -10,7 +10,7 @@ nself plugin install search
 
 ## What It Does
 
-Adds full-text search to your nSelf backend with two engines: built-in PostgreSQL FTS for simple search, and MeiliSearch for typo-tolerant, faceted search. Provides an index management API to define which Postgres tables and columns to index, and a unified search API that queries either engine.
+Adds full-text search to your ɳSelf backend with two engines: built-in PostgreSQL FTS for simple search, and MeiliSearch for typo-tolerant, faceted search. Provides an index management API to define which Postgres tables and columns to index, and a unified search API that queries either engine.
 
 ## Configuration
 
@@ -32,11 +32,11 @@ Adds full-text search to your nSelf backend with two engines: built-in PostgreSQ
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_search_indices` — index definitions
-- `np_search_index_fields` — indexed fields per index
-- `np_search_documents` — cached document store
-- `np_search_queries` — query analytics
-- `np_search_synonyms` — search synonym mappings
+- `np_search_indices`, index definitions
+- `np_search_index_fields`, indexed fields per index
+- `np_search_documents`, cached document store
+- `np_search_queries`, query analytics
+- `np_search_synonyms`, search synonym mappings
 
 ## Nginx Routes
 

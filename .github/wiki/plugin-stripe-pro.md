@@ -1,6 +1,6 @@
 # Stripe Pro Plugin
 
-> Advanced Stripe integration with full webhook coverage, customer portal, and 24-table Hasura GraphQL access. **Pro plugin — requires license.**
+> Advanced Stripe integration with full webhook coverage, customer portal, and 24-table Hasura GraphQL access. **Pro plugin, requires license.**
 
 ## Tier required
 
@@ -57,17 +57,17 @@ The plugin tracks customers, subscriptions, invoices, payment intents, products,
 
 24 tables prefixed `np_stripe_`. Key tables:
 
-- `np_stripe_customers` — customer records
-- `np_stripe_subscriptions` — subscription state
-- `np_stripe_invoices` — invoice history
-- `np_stripe_payment_intents` — payment records
-- `np_stripe_products` — product catalog
-- `np_stripe_prices` — pricing tiers
-- `np_stripe_refunds` — refund records
-- `np_stripe_disputes` — dispute and chargeback records
-- `np_stripe_coupons` — discount coupons
-- `np_stripe_tax_rates` — tax rate definitions
-- `np_stripe_webhook_events` — raw incoming webhook payloads
+- `np_stripe_customers`, customer records
+- `np_stripe_subscriptions`, subscription state
+- `np_stripe_invoices`, invoice history
+- `np_stripe_payment_intents`, payment records
+- `np_stripe_products`, product catalog
+- `np_stripe_prices`, pricing tiers
+- `np_stripe_refunds`, refund records
+- `np_stripe_disputes`, dispute and chargeback records
+- `np_stripe_coupons`, discount coupons
+- `np_stripe_tax_rates`, tax rate definitions
+- `np_stripe_webhook_events`, raw incoming webhook payloads
 
 Plus 13 more tables for trials, payment methods, charges, transfers, and balance transactions.
 
@@ -118,10 +118,10 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 ## See Also
 
-- [plugin-paypal-pro](plugin-paypal-pro) — PayPal payment sync
-- [plugin-shopify-pro](plugin-shopify-pro) — Shopify store sync
-- [plugin-donorbox-pro](plugin-donorbox-pro) — Donorbox donation sync
-- [Plugin-Overview](Plugin-Overview) — full plugin index
-- [Plugin-Licensing](Plugin-Licensing) — tier comparison
+- [plugin-paypal-pro](plugin-paypal-pro), PayPal payment sync
+- [plugin-shopify-pro](plugin-shopify-pro), Shopify store sync
+- [plugin-donorbox-pro](plugin-donorbox-pro), Donorbox donation sync
+- [Plugin-Overview](Plugin-Overview), full plugin index
+- [Plugin-Licensing](Plugin-Licensing), tier comparison
 
 ← [Plugin-Overview](Plugin-Overview) | [Home](Home) →

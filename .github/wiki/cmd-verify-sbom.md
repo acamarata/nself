@@ -38,6 +38,6 @@ nself verify-sbom --version v1.0.9
 
 ## Related
 
-- [[cmd-secrets]] — secret management and rotation
-- [[security/Supply-Chain]] — supply-chain security baseline
+- [[cmd-secrets]], secret management and rotation
+- [[security/Supply-Chain]], supply-chain security baseline
 - [[Home]]

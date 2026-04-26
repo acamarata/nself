@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-nSelf's plugin system extends the base stack with additional services — communication tools, AI engines, media pipelines, commerce systems, and more. Free plugins are MIT licensed and install without any key. Pro plugins require a valid license key, but otherwise follow exactly the same architecture. The install pipeline, schema isolation, compose overlay, and Nginx route injection work identically for both tiers; the only difference is a license check gate before the download proceeds.
+ɳSelf's plugin system extends the base stack with additional services, communication tools, AI engines, media pipelines, commerce systems, and more. Free plugins are MIT licensed and install without any key. Pro plugins require a valid license key, but otherwise follow exactly the same architecture. The install pipeline, schema isolation, compose overlay, and Nginx route injection work identically for both tiers; the only difference is a license check gate before the download proceeds.
 
 ---
 
@@ -46,7 +46,7 @@ A minimal manifest looks like this:
 
 ## Schema Isolation
 
-Every plugin gets its own Postgres schema. This ensures plugins never collide with each other or with the base nSelf schema, and makes it trivial to identify which objects belong to which plugin.
+Every plugin gets its own Postgres schema. This ensures plugins never collide with each other or with the base ɳSelf schema, and makes it trivial to identify which objects belong to which plugin.
 
 The naming conventions are strict and enforced by the CLI:
 
@@ -55,7 +55,7 @@ The naming conventions are strict and enforced by the CLI:
 - **Tables:** `np_{plugin_name}_{table}` (e.g., `np_chat_messages`, `np_chat_rooms`)
 - **Version tracking:** all plugin schema versions are recorded in `np_common.schema_versions`
 
-Schema creation is idempotent — the CLI uses `CREATE SCHEMA IF NOT EXISTS` and migration guards throughout, so it is always safe to re-run. This means `nself plugin install` can be repeated without corrupting existing data, and upgrades apply only the missing migration steps.
+Schema creation is idempotent, the CLI uses `CREATE SCHEMA IF NOT EXISTS` and migration guards throughout, so it is always safe to re-run. This means `nself plugin install` can be repeated without corrupting existing data, and upgrades apply only the missing migration steps.
 
 Hasura automatically tracks tables in `np_*` schemas so plugin data is immediately queryable through the GraphQL API without manual configuration.
 
@@ -67,9 +67,9 @@ When a plugin is installed, it ships a `docker-compose.plugin.yml` overlay file 
 
 Plugins can contribute:
 
-- **New service definitions** — the primary plugin container and any sidecar processes it needs
-- **New named volumes** — persistent storage scoped to the plugin
-- **New network connections** — attaching the plugin service to the shared `nself` bridge network
+- **New service definitions**, the primary plugin container and any sidecar processes it needs
+- **New named volumes**, persistent storage scoped to the plugin
+- **New network connections**, attaching the plugin service to the shared `nself` bridge network
 
 Plugins **cannot** remove, rename, or override existing base services. The merge is additive only. If a plugin overlay attempts to redefine a service that already exists in the base configuration, the build step rejects it with a validation error.
 
@@ -99,11 +99,11 @@ Plugins declare their Nginx routes in the manifest. During `nself build`, the CL
 
 Plugins can declare three kinds of routes:
 
-- **Subdomain routes** — map `chat.{BASE_DOMAIN}` to the plugin service running on its declared port (e.g., the chat plugin proxies `chat.example.com` → `127.0.0.1:3401`)
-- **Webhook endpoints** — available at `webhooks.{BASE_DOMAIN}/{plugin-name}` for inbound HTTP callbacks from third-party services
-- **Custom domain routes** — if `PLUGIN_{NAME}_WEBHOOK_DOMAIN` is set in the environment, the plugin can serve traffic on that custom domain instead of the default subdomain pattern
+- **Subdomain routes**, map `chat.{BASE_DOMAIN}` to the plugin service running on its declared port (e.g., the chat plugin proxies `chat.example.com` → `127.0.0.1:3401`)
+- **Webhook endpoints**, available at `webhooks.{BASE_DOMAIN}/{plugin-name}` for inbound HTTP callbacks from third-party services
+- **Custom domain routes**, if `PLUGIN_{NAME}_WEBHOOK_DOMAIN` is set in the environment, the plugin can serve traffic on that custom domain instead of the default subdomain pattern
 
-All plugin routes are managed entirely through `nself build`. Never hand-edit files under `nginx/routes/` — they are regenerated on every build and manual changes will be overwritten.
+All plugin routes are managed entirely through `nself build`. Never hand-edit files under `nginx/routes/`, they are regenerated on every build and manual changes will be overwritten.
 
 ---
 
@@ -111,9 +111,9 @@ All plugin routes are managed entirely through `nself build`. Never hand-edit fi
 
 Plugins declare their required and optional environment variables in the manifest `envVars` array. During `nself plugin install`, the CLI processes each declared variable:
 
-1. **Required vars with no default** — the CLI prompts the user to enter a value interactively. The install will not proceed until all required vars are satisfied.
-2. **Optional vars with defaults** — written to `.env.dev` automatically without prompting.
-3. **All plugin env vars** — written to a plugin-scoped env file at `~/.nself/plugins/{name}/.env` with permissions `600`. This file is mounted into the plugin container at runtime.
+1. **Required vars with no default**, the CLI prompts the user to enter a value interactively. The install will not proceed until all required vars are satisfied.
+2. **Optional vars with defaults**, written to `.env.dev` automatically without prompting.
+3. **All plugin env vars**, written to a plugin-scoped env file at `~/.nself/plugins/{name}/.env` with permissions `600`. This file is mounted into the plugin container at runtime.
 
 This means plugin configuration is always traceable: every value either came from user input at install time or from a manifest default. There are no hidden side-effects.
 
@@ -137,7 +137,7 @@ nself plugin install ai
   └── 6. If valid: proceed with download + install
 ```
 
-The cache has a 24-hour TTL so repeated installs in a session do not hit the network every time. On a network error, the CLI fails open with a warning rather than blocking the install — this is intentional so that air-gapped or offline environments are not broken by transient connectivity issues.
+The cache has a 24-hour TTL so repeated installs in a session do not hit the network every time. On a network error, the CLI fails open with a warning rather than blocking the install, this is intentional so that air-gapped or offline environments are not broken by transient connectivity issues.
 
 License keys are stored at `~/.nself/license/key` with `chmod 600`. Set your key with:
 
@@ -145,7 +145,7 @@ License keys are stored at `~/.nself/license/key` with `chmod 600`. Set your key
 nself license set nself_pro_xxxxxxxx...
 ```
 
-The key format encodes the tier in its prefix. Tier enforcement is server-side — the `ping.nself.org/license/validate` endpoint determines which plugins a given key is permitted to install.
+The key format encodes the tier in its prefix. Tier enforcement is server-side, the `ping.nself.org/license/validate` endpoint determines which plugins a given key is permitted to install.
 
 ---
 
@@ -180,7 +180,7 @@ nself plugin remove <name>              # Remove plugin + drop schema (destroys 
 nself plugin remove <name> --keep-data  # Remove plugin, keep schema and all data intact
 ```
 
-The `--keep-data` flag is the safer default for production use — it pulls the plugin service out of compose and Nginx while preserving everything in Postgres. You can reinstall the plugin later and it will resume with the existing data.
+The `--keep-data` flag is the safer default for production use, it pulls the plugin service out of compose and Nginx while preserving everything in Postgres. You can reinstall the plugin later and it will resume with the existing data.
 
 After removing a plugin, run `nself build` and `nself restart` to apply the changes.
 

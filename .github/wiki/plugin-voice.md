@@ -36,9 +36,9 @@ Provides a unified REST API for voice processing: transcribes audio to text (STT
 ## Database Tables
 
 3 tables added to your Postgres database:
-- `np_voice_sessions` — voice session records
-- `np_voice_transcripts` — STT transcription results
-- `np_voice_recordings` — stored audio references
+- `np_voice_sessions`, voice session records
+- `np_voice_transcripts`, STT transcription results
+- `np_voice_recordings`, stored audio references
 
 ## Nginx Routes
 

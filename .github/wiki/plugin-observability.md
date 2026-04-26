@@ -33,9 +33,9 @@ Runs configurable health probes against all registered services and exposes a un
 
 3 tables added to your Postgres database.
 
-- `np_observability_probes` — Health probe definitions and latest results
-- `np_observability_events` — Watchdog and state-change event log
-- `np_observability_service_registry` — Registered services for discovery and probing
+- `np_observability_probes`, Health probe definitions and latest results
+- `np_observability_events`, Watchdog and state-change event log
+- `np_observability_service_registry`, Registered services for discovery and probing
 
 ## Nginx Routes
 

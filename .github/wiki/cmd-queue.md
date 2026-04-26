@@ -75,9 +75,9 @@ nself queue cron list
 
 ## See Also
 
-- [[cmd-webhooks]] — webhook outbox
-- [[cmd-watchdog]] — self-healing watchdog
-- [[cmd-status]] — service health
-- [[Commands]] — full command index
+- [[cmd-webhooks]], webhook outbox
+- [[cmd-watchdog]], self-healing watchdog
+- [[cmd-status]], service health
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

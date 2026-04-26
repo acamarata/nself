@@ -21,7 +21,7 @@ By default, `nself build` is smart-cached: it compares `.env` modification time 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--force`, `-f` | false | Force rebuild all components, ignore cache |
-| `--check` | false | Validate configuration only — do not write any files |
+| `--check` | false | Validate configuration only , do not write any files |
 | `--verbose`, `-v` | false | Show environment cascade during build |
 | `--quiet`, `-q` | false | Suppress non-error output (CI use) |
 | `--no-cache` | false | Disable build cache |

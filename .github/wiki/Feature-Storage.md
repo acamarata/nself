@@ -1,6 +1,6 @@
 # Feature: Storage
 
-nSelf uses MinIO as its S3-compatible object storage layer, available as an optional service.
+ɳSelf uses MinIO as its S3-compatible object storage layer, available as an optional service.
 
 ## What's Included
 
@@ -51,8 +51,8 @@ For multi-provider S3 storage (AWS S3, Cloudflare R2, Backblaze B2), see the **o
 
 ## See Also
 
-- [[cmd-service]] — enable/disable storage
-- [[Config-Env-Vars]] — full env var reference
+- [[cmd-service]], enable/disable storage
+- [[Config-Env-Vars]], full env var reference
 
 ---
 ← [[Home]] | [[_Sidebar]]

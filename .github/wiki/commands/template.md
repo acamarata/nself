@@ -1,6 +1,6 @@
 # nself template
 
-> Browse, install, and publish full-stack app templates from the nSelf Template Marketplace.
+> Browse, install, and publish full-stack app templates from the ɳSelf Template Marketplace.
 
 ## Synopsis
 
@@ -11,11 +11,11 @@ nself init --template <slug> [dest-dir]
 
 ## Description
 
-Templates are full-stack app packages that include a Postgres schema, Hasura metadata, seed data, and an optional Flutter starter. They follow the same manifest format as `nself init` language scaffolds but are community-authored and distributed through the nSelf Template Marketplace at `nself.org/templates`.
+Templates are full-stack app packages that include a Postgres schema, Hasura metadata, seed data, and an optional Flutter starter. They follow the same manifest format as `nself init` language scaffolds but are community-authored and distributed through the ɳSelf Template Marketplace at `nself.org/templates`.
 
 Use `nself template list` to browse from the CLI, `nself template info <slug>` to inspect a specific template, and `nself init --template <slug>` to install one into a new project directory.
 
-Authors publish via `nself template publish` and receive 80% revenue share on paid templates (requires a KYC-approved author account — see [B55 plugin-author-revenue-share](https://docs.nself.org/developers/revenue-share)).
+Authors publish via `nself template publish` and receive 80% revenue share on paid templates (requires a KYC-approved author account, see [B55 plugin-author-revenue-share](https://docs.nself.org/developers/revenue-share)).
 
 ## Subcommands
 
@@ -128,7 +128,7 @@ nself template publish [flags]
 
 | Flag | Default | Description |
 |---|---|---|
-| `--tarball` | | Path to the compiled template archive (.tar.gz) — required |
+| `--tarball` | | Path to the compiled template archive (.tar.gz) , required |
 | `--manifest` | template.yml | Path to the template manifest file |
 
 The command validates the `template.yml` manifest, computes the SHA256 of the tarball, and prints submission instructions. Final upload and review happen through the author portal at `nself.org/developers/templates`.
@@ -165,7 +165,7 @@ nself template update [flags]
 
 | Flag | Default | Description |
 |---|---|---|
-| `--force` | false | Allow destructive migrations (DROP, TRUNCATE) — requires confirmation |
+| `--force` | false | Allow destructive migrations (DROP, TRUNCATE) , requires confirmation |
 | `--dry-run` | false | Print pending migrations without applying them |
 
 Runs incremental `.sql` files from the project's `migrations/` directory. Only additive changes are applied without flags. Destructive migrations require `--force` plus an explicit prompt.
@@ -183,13 +183,13 @@ nself template update --force
 | Variable | Description |
 |---|---|
 | `NSELF_TEMPLATE_REGISTRY_URL` | Override the default template registry URL (`https://nself.org/api/templates`) |
-| `NSELF_LICENSE_KEY` | License key — required for paid template downloads |
+| `NSELF_LICENSE_KEY` | License key , required for paid template downloads |
 
 ## Related
 
-- [[nself init]] — Project initialisation including built-in language scaffolds
-- [[nself plugin]] — Plugin management
-- [Template Marketplace](https://nself.org/templates) — Browse templates in the browser
-- [Publish a template](https://docs.nself.org/templates/publish-template) — Author guide
+- [[nself init]], Project initialisation including built-in language scaffolds
+- [[nself plugin]], Plugin management
+- [Template Marketplace](https://nself.org/templates), Browse templates in the browser
+- [Publish a template](https://docs.nself.org/templates/publish-template), Author guide
 
 [[Home]]

@@ -11,7 +11,7 @@ nself plugin dev <name> [flags]
 ## Description
 
 Wraps the plugin SDK's `dev-watch.sh` script to give plugin authors a first-class
-inner development loop. On first run, auto-links the plugin directory into the nSelf
+inner development loop. On first run, auto-links the plugin directory into the ɳSelf
 shadow registry so changes are picked up immediately on the next `nself build`.
 
 Prefers `air` for hot-reload. Falls back to `fswatch` polling if `air` is not installed.
@@ -55,7 +55,7 @@ Watching for changes — press Ctrl+C to stop.
 
 ## Prerequisites
 
-Install `air` for the best hot-reload experience:
+Install `air` for the best hot-reload workflow:
 
 ```bash
 go install github.com/air-verse/air@latest
@@ -69,8 +69,8 @@ brew install fswatch
 
 ## See Also
 
-- [[cmd-plugin-link]] — link a local plugin directory
-- [[cmd-plugin-debug]] — attach dlv debugger
-- [[cmd-plugin-test]] — run plugin test suite
-- [[cmd-plugin-logs]] — tail plugin container logs
+- [[cmd-plugin-link]], link a local plugin directory
+- [[cmd-plugin-debug]], attach dlv debugger
+- [[cmd-plugin-test]], run plugin test suite
+- [[cmd-plugin-logs]], tail plugin container logs
 - [[Home]]

@@ -33,12 +33,12 @@ A full-featured calendar backend. Create single and recurring events (daily, wee
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_calendar_calendars` — calendar definitions
-- `np_calendar_events` — event records
-- `np_calendar_recurrences` — RRULE recurrence definitions
-- `np_calendar_attendees` — RSVP records
-- `np_calendar_reminders` — reminder configurations
-- `np_calendar_subscriptions` — external calendar subscriptions
+- `np_calendar_calendars`, calendar definitions
+- `np_calendar_events`, event records
+- `np_calendar_recurrences`, RRULE recurrence definitions
+- `np_calendar_attendees`, RSVP records
+- `np_calendar_reminders`, reminder configurations
+- `np_calendar_subscriptions`, external calendar subscriptions
 
 ## Nginx Routes
 

@@ -1,6 +1,6 @@
 # Compliance Plugin
 
-> GDPR, CCPA, HIPAA, SOC 2, and PCI compliance — DSARs, consent, and audit logging. **Pro plugin.**
+> GDPR, CCPA, HIPAA, SOC 2, and PCI compliance, DSARs, consent, and audit logging. **Pro plugin.**
 
 > **Requires:** Business license tier or higher. `nself license set nself_pro_...`
 
@@ -34,13 +34,13 @@ Adds a compliance management layer covering GDPR, CCPA, HIPAA, SOC 2, and PCI-DS
 ## Database Tables
 
 17 tables added to your Postgres database:
-- `np_compliance_consent_records` — user consent decisions
-- `np_compliance_consent_versions` — consent version history
-- `np_compliance_dsar_requests` — DSAR request queue
-- `np_compliance_data_exports` — exported user data packages
-- `np_compliance_erasure_requests` — right-to-erasure requests
-- `np_compliance_audit_log` — immutable compliance events
-- `np_compliance_retention_policies` — data retention rules
+- `np_compliance_consent_records`, user consent decisions
+- `np_compliance_consent_versions`, consent version history
+- `np_compliance_dsar_requests`, DSAR request queue
+- `np_compliance_data_exports`, exported user data packages
+- `np_compliance_erasure_requests`, right-to-erasure requests
+- `np_compliance_audit_log`, immutable compliance events
+- `np_compliance_retention_policies`, data retention rules
 - And 10 more for regulations, reports, violations, etc.
 
 ## Nginx Routes

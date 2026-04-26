@@ -111,7 +111,7 @@ nself completion powershell > $PROFILE.CurrentUserAllHosts
 
 ## See Also
 
-- [[Commands]] — full command index
-- [[cmd-version]] — display the current CLI version
+- [[Commands]], full command index
+- [[cmd-version]], display the current CLI version
 
 ← [[Commands]] | [[Home]] →

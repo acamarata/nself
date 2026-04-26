@@ -16,7 +16,7 @@ Use `--no-deprecation-warnings` only in scripted environments where the warning 
 
 ## Currently Deprecated Items
 
-### v1.0.9 LTS (April 2026)
+### v1.0.9 (April 2026)
 
 | Item | Type | Since | Replacement | Phase | EOL |
 |------|------|-------|-------------|-------|-----|
@@ -27,16 +27,16 @@ No CLI commands or flags are deprecated at v1.0.9.
 
 ## Deprecation Cycle
 
-nSelf uses a 3-phase deprecation cycle across all surfaces:
+ɳSelf uses a 3-phase deprecation cycle across all surfaces:
 
-**Phase 1 — Warning:** Item works. Every invocation prints:
+**Phase 1, Warning:** Item works. Every invocation prints:
 ```
 [DEPRECATED] 'nself old-cmd' (since v1.0.9) → use 'nself new-cmd'. Docs: https://docs.nself.org/...
 ```
 
-**Phase 2 — Deprecated:** Item still works. Warning includes removal timeline.
+**Phase 2, Deprecated:** Item still works. Warning includes removal timeline.
 
-**Phase 3 — Removed:** Item gone. Clear error with migration guide link.
+**Phase 3, Removed:** Item gone. Clear error with migration guide link.
 
 Emergency removals (security CVEs only) skip phases. See the full doctrine at
 `docs.nself.org/deprecation-cycle`.
@@ -46,7 +46,7 @@ Emergency removals (security CVEs only) skip phases. See the full doctrine at
 To deprecate a CLI command or flag:
 
 1. Add an entry to `cli/internal/deprecation/registry.yaml`.
-2. Open a PR — the `deprecation-check.yml` CI gate verifies the entry is present.
+2. Open a PR, the `deprecation-check.yml` CI gate verifies the entry is present.
 3. Update this page.
 
 ```yaml

@@ -35,10 +35,10 @@ Manages CDN configuration across Cloudflare, Bunny, and Fastly from a single API
 
 4 tables added to your Postgres database.
 
-- `np_cdn_configs` — CDN provider configuration records
-- `np_cdn_purge_log` — Cache purge request history
-- `np_cdn_signed_urls` — Issued signed URL audit log
-- `np_cdn_analytics` — Cached CDN analytics snapshots
+- `np_cdn_configs`, CDN provider configuration records
+- `np_cdn_purge_log`, Cache purge request history
+- `np_cdn_signed_urls`, Issued signed URL audit log
+- `np_cdn_analytics`, Cached CDN analytics snapshots
 
 ## Nginx Routes
 

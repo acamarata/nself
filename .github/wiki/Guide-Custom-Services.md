@@ -1,10 +1,10 @@
 # Guide: Custom Services
 
-Add up to 10 custom Docker services (CS_1 through CS_10) to your nSelf stack. Use this for app-specific services that aren't covered by the plugin ecosystem.
+Add up to 10 custom Docker services (CS_1 through CS_10) to your ɳSelf stack. Use this for app-specific services that aren't covered by the plugin ecosystem.
 
 ## How Custom Services Work
 
-Custom services are defined via environment variables. nSelf reads `CS_1_*` through `CS_10_*` variables and generates the corresponding `docker-compose` service block automatically on `nself build`.
+Custom services are defined via environment variables. ɳSelf reads `CS_1_*` through `CS_10_*` variables and generates the corresponding `docker-compose` service block automatically on `nself build`.
 
 ## Adding a Custom Service
 
@@ -72,9 +72,9 @@ CS_2_ENV_CELERY_BROKER_URL=redis://redis:6379/0
 
 ## See Also
 
-- [[Config-Custom-Services]] — full env var reference
-- [[cmd-service]] — service command reference
-- [[Architecture]] — how custom services fit the stack
+- [[Config-Custom-Services]], full env var reference
+- [[cmd-service]], service command reference
+- [[Architecture]], how custom services fit the stack
 
 ---
 ← [[Home]] | [[_Sidebar]]

@@ -149,8 +149,8 @@ A successful response confirms the pool is routing correctly.
 
 ## See Also
 
-- [[cmd-ai]] — full `nself ai` command reference, including `pool` subcommands
-- [[cmd-oauth]] — `nself oauth refresh` for non-Gemini OAuth token refresh
-- [[plugin-ai]] — AI plugin configuration and supported providers
+- [[cmd-ai]], full `nself ai` command reference, including `pool` subcommands
+- [[cmd-oauth]], `nself oauth refresh` for non-Gemini OAuth token refresh
+- [[plugin-ai]], AI plugin configuration and supported providers
 
 ← [[plugin-ai]] | [[Home]] →

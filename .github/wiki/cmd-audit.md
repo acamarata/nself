@@ -10,7 +10,7 @@ nself audit <subcommand> [flags]
 
 ## Description
 
-`nself audit` runs structured audits across the nSelf ecosystem. Each subcommand targets a specific audit surface.
+`nself audit` runs structured audits across the ɳSelf ecosystem. Each subcommand targets a specific audit surface.
 
 The `docs` subcommand checks documentation coverage against code reality: command pages against registered cobra commands, wiki pages against plugin registry, env var references against `.env.example`. It is the same check the CI doc-sync gate runs on every PR. Running it locally surfaces drift before it reaches CI.
 
@@ -51,8 +51,8 @@ nself audit docs --format json --fail-on-drift
 
 ## See Also
 
-- [[cmd-doctor]] — system diagnostics
-- [[cmd-security]] — security audit
-- [[Commands]] — full command index
+- [[cmd-doctor]], system diagnostics
+- [[cmd-security]], security audit
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

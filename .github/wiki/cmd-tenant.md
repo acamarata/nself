@@ -12,7 +12,7 @@ nself tenant <subcommand> [flags] <slug-or-tenant-id>
 
 ## Description
 
-`nself tenant` manages tenant lifecycle in multi-tenant nSelf deployments. Each tenant has a slug, a plan (`basic`, `pro`, `elite`, `business`, `business-plus`, `enterprise`), and an audit trail.
+`nself tenant` manages tenant lifecycle in multi-tenant ɳSelf deployments. Each tenant has a slug, a plan (`basic`, `pro`, `elite`, `business`, `business-plus`, `enterprise`), and an audit trail.
 
 `tenant create` provisions a new tenant with a starting plan. `tenant upgrade` changes the plan in place. `tenant suspend` halts a tenant's access while preserving data; a `--reason` is required so the audit trail explains why. `tenant destroy` is the hard-delete path and requires `--confirm-name <slug>` to proceed. `tenant audit` queries the per-tenant audit log, optionally filtered by `--since` time window and rendered as table or JSON.
 
@@ -88,9 +88,9 @@ nself tenant audit acme-corp --since 30d --format json
 
 ## See Also
 
-- [[cmd-billing]] — usage and invoicing
-- [[cmd-license]] — license keys
-- [[cmd-secrets]] — environment-scoped secrets
-- [[Commands]] — full command index
+- [[cmd-billing]], usage and invoicing
+- [[cmd-license]], license keys
+- [[cmd-secrets]], environment-scoped secrets
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

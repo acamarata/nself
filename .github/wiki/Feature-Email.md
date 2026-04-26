@@ -1,6 +1,6 @@
 # Feature: Email
 
-nSelf supports email delivery through built-in SMTP configuration and a growing list of provider integrations.
+ɳSelf supports email delivery through built-in SMTP configuration and a growing list of provider integrations.
 
 ## What's Included
 
@@ -56,8 +56,8 @@ nself plugin install sendgrid
 
 ## See Also
 
-- [[Config-Env-Vars]] — full env var reference
-- [[Feature-Auth]] — how auth uses email for magic links
+- [[Config-Env-Vars]], full env var reference
+- [[Feature-Auth]], how auth uses email for magic links
 
 ---
 ← [[Home]] | [[_Sidebar]]

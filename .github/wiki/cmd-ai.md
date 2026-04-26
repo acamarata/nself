@@ -1,6 +1,6 @@
 # nself ai
 
-> Manage the nSelf AI plugin and local LLM stack.
+> Manage the ɳSelf AI plugin and local LLM stack.
 
 ## Synopsis
 
@@ -176,9 +176,9 @@ nself ai pool status --verbose
 
 ## See Also
 
-- [[cmd-claw]] — nClaw assistant control plane
-- [[cmd-doctor]] — diagnose AI runtime issues
-- [[cmd-plugin]] — install or update the AI plugin
-- [[Commands]] — full command index
+- [[cmd-claw]], ɳClaw assistant control plane
+- [[cmd-doctor]], diagnose AI runtime issues
+- [[cmd-plugin]], install or update the AI plugin
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

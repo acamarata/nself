@@ -15,9 +15,9 @@ nself dr <subcommand> [flags]
 `dr drill` is the primary verification command. In v1.0.9, only `--scenario cold-start` is supported. Cold-start provisions a Hetzner VM via hcloud, restores the latest backup via ssh, runs the full smoke-query catalog, records RTO, and writes a dated report to `~/.claude/backups/nself-staging/dr/`. `--install-cron` installs the monthly drill systemd timer (`nself-dr-drill.timer`).
 
 **v1.0.9 scenario support:**
-- `cold-start` — fully implemented; provisions VM, restores, verifies, records RTO
-- `region-failover` — NOT supported in v1.0.9 (single-region by design); returns a deprecation error directing to v1.1.0 and the DR runbook
-- `data-corruption` — NOT supported in v1.0.9 (PITR via pgbackrest is planned for v1.1.0); returns a deprecation error
+- `cold-start`, fully implemented; provisions VM, restores, verifies, records RTO
+- `region-failover`, NOT supported in v1.0.9 (single-region by design); returns a deprecation error directing to v1.1.0 and the DR runbook
+- `data-corruption`, NOT supported in v1.0.9 (PITR via pgbackrest is planned for v1.1.0); returns a deprecation error
 
 `dr promote-standby` requires production confirmation unless `--yes` is passed. `dr reconfigure-dns --ip <new-ip>` updates DNS to point traffic at the new primary. `dr rollback` demotes the promoted standby and resyncs from the original primary. `dr fence` sets a `read_only=true` flag in Redis that the application layer must honor.
 
@@ -89,9 +89,9 @@ nself dr fence
 
 ## See Also
 
-- [[cmd-backup]] — backup operations
-- [[cmd-promote]] — environment promotion
-- [[cmd-watchdog]] — self-healing watchdog
-- [[Commands]] — full command index
+- [[cmd-backup]], backup operations
+- [[cmd-promote]], environment promotion
+- [[cmd-watchdog]], self-healing watchdog
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

@@ -33,10 +33,10 @@ Generates personalized activity feeds by fanning out social events to follower f
 ## Database Tables
 
 4 tables added to your Postgres database:
-- `np_activity_feed_activities` — activity event log
-- `np_activity_feed_feeds` — per-user feed items
-- `np_activity_feed_aggregations` — grouped activity aggregations
-- `np_activity_feed_subscriptions` — real-time subscription records
+- `np_activity_feed_activities`, activity event log
+- `np_activity_feed_feeds`, per-user feed items
+- `np_activity_feed_aggregations`, grouped activity aggregations
+- `np_activity_feed_subscriptions`, real-time subscription records
 
 ## Nginx Routes
 

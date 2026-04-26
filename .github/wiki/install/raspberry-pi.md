@@ -1,6 +1,6 @@
 # Raspberry Pi
 
-Install the nSelf CLI on Raspberry Pi. Tested on Raspberry Pi 4B and Pi 5 running
+Install the ɳSelf CLI on Raspberry Pi. Tested on Raspberry Pi 4B and Pi 5 running
 Raspberry Pi OS 64-bit (Debian Bookworm).
 
 ## Prerequisites
@@ -16,7 +16,7 @@ Raspberry Pi OS 64-bit (Debian Bookworm).
 
 ### RAM budgeting
 
-Full nSelf stack at idle:
+Full ɳSelf stack at idle:
 
 | Service set | RAM usage |
 |---|---|
@@ -31,7 +31,7 @@ Use the **minimal services preset** on Pi 4B 2GB or 4GB:
 nself init --preset minimal
 ```
 
-Do not install the monitoring bundle on Pi — it adds 10 services and exceeds the 2 GB model's capacity.
+Do not install the monitoring bundle on Pi, it adds 10 services and exceeds the 2 GB model's capacity.
 
 ## Step 1: Install Docker
 
@@ -48,7 +48,7 @@ docker --version        # 24+
 docker compose version  # v2+
 ```
 
-## Step 2: Install nSelf CLI
+## Step 2: Install ɳSelf CLI
 
 ```bash
 curl -sSL https://install.nself.org | bash
@@ -127,21 +127,21 @@ vcgencmd get_throttled
 
 ### Plugin Docker requirements
 
-All nSelf plugin images ship with `linux/arm64` manifests. Docker pulls the arm64
-variant automatically — no flags needed.
+All ɳSelf plugin images ship with `linux/arm64` manifests. Docker pulls the arm64
+variant automatically, no flags needed.
 
 ### Not supported on Pi
 
-- Monitoring bundle (10 extra services) — exceeds 2 GB and 4 GB models' comfortable RAM
-- armv7 (32-bit) OS — use Raspberry Pi OS 64-bit (Pi 4/5 only)
+- Monitoring bundle (10 extra services), exceeds 2 GB and 4 GB models' comfortable RAM
+- armv7 (32-bit) OS, use Raspberry Pi OS 64-bit (Pi 4/5 only)
 
 ## Common Pitfalls
 
 | Problem | Fix |
 |---|---|
-| `exec format error` | Downloaded the amd64 binary — re-download `nself-linux-arm64.tar.gz` |
+| `exec format error` | Downloaded the amd64 binary , re-download `nself-linux-arm64.tar.gz` |
 | Stack OOM | Use `nself init --preset minimal`; skip monitoring bundle |
-| Slow first `nself start` | Normal — first pull caches images. Subsequent starts: 10–30 seconds |
+| Slow first `nself start` | Normal , first pull caches images. Subsequent starts: 10–30 seconds |
 | SD card I/O slow | Move the project and Docker data root to an SSD |
 | Docker pull fails | Ensure Pi is connected to internet; try `docker pull hello-world` as a test |
 

@@ -13,7 +13,7 @@ nself plugin install devices
 
 ## What It Does
 
-Handles IoT device enrollment, identity trust, and lifecycle management via a token-based registration flow. Once enrolled, devices can receive commands dispatched from the API and submit telemetry data for storage and querying. All device events — enrollment, command acknowledgement, disconnection — are recorded in a structured event log with configurable telemetry retention.
+Handles IoT device enrollment, identity trust, and lifecycle management via a token-based registration flow. Once enrolled, devices can receive commands dispatched from the API and submit telemetry data for storage and querying. All device events, enrollment, command acknowledgement, disconnection, are recorded in a structured event log with configurable telemetry retention.
 
 ## Configuration
 
@@ -33,11 +33,11 @@ Handles IoT device enrollment, identity trust, and lifecycle management via a to
 
 5 tables added to your Postgres database.
 
-- `np_devices_registry` — Enrolled device records and metadata
-- `np_devices_trust` — Device trust certificates and enrollment tokens
-- `np_devices_commands` — Queued and acknowledged commands per device
-- `np_devices_telemetry` — Ingested telemetry data points
-- `np_devices_events` — Device lifecycle and connection event log
+- `np_devices_registry`, Enrolled device records and metadata
+- `np_devices_trust`, Device trust certificates and enrollment tokens
+- `np_devices_commands`, Queued and acknowledged commands per device
+- `np_devices_telemetry`, Ingested telemetry data points
+- `np_devices_events`, Device lifecycle and connection event log
 
 ## Nginx Routes
 

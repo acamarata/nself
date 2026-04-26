@@ -1,6 +1,6 @@
 # System Requirements
 
-This page lists the minimum requirements to install and run the nSelf CLI correctly across all supported platforms.
+This page lists the minimum requirements to install and run the ɳSelf CLI correctly across all supported platforms.
 
 ---
 
@@ -8,12 +8,12 @@ This page lists the minimum requirements to install and run the nSelf CLI correc
 
 | Platform | Minimum Version | Architectures | Notes |
 |---|---|---|---|
-| **macOS** | 11 (Big Sur) | arm64, x86_64 | Apple Silicon (M1/M2/M3) natively supported — see [macos-apple-silicon.md](macos-apple-silicon.md) |
-| **Ubuntu** | 20.04 LTS | x86_64, arm64 | 22.04 LTS and 24.04 LTS also fully supported |
+| **macOS** | 11 (Big Sur) | arm64, x86_64 | Apple Silicon (M1/M2/M3) natively supported , see [macos-apple-silicon.md](macos-apple-silicon.md) |
+| **Ubuntu** | 20.04 long-term support | x86_64, arm64 | 22.04 long-term support and 24.04 long-term support also fully supported |
 | **Debian** | 11 (Bullseye) | x86_64, arm64 | Bookworm (12) also supported |
 | **Fedora** | 36 | x86_64, arm64 | Tested on current stable releases |
 | **Arch Linux** | Rolling | x86_64, arm64 | Latest rolling release; no minimum pinned |
-| **Windows** | 10 22H2 / 11 | x86_64 | **WSL2 required** — see [windows-wsl2.md](windows-wsl2.md) |
+| **Windows** | 10 22H2 / 11 | x86_64 | **WSL2 required** , see [windows-wsl2.md](windows-wsl2.md) |
 
 > **Windows note:** Native Windows execution is not supported. All CLI commands must run inside a WSL2 environment. Docker Desktop for Windows with WSL2 backend satisfies the Docker requirement automatically.
 
@@ -49,8 +49,8 @@ The CLI uses `docker compose` (v2 plugin syntax). The legacy `docker-compose` (v
 
 | Destination | Protocol | Purpose |
 |---|---|---|
-| `ghcr.io` | HTTPS (443) | GitHub Container Registry — CLI and service images |
-| `docker.io` | HTTPS (443) | Docker Hub — base images |
+| `ghcr.io` | HTTPS (443) | GitHub Container Registry , CLI and service images |
+| `docker.io` | HTTPS (443) | Docker Hub , base images |
 | `plugins.nself.org` | HTTPS (443) | Plugin registry API |
 | `ping.nself.org` | HTTPS (443) | License validation and telemetry |
 
@@ -82,7 +82,7 @@ These tools are not required to run the CLI but are useful for advanced workflow
 
 ## Cross-References
 
-- **Apple Silicon (M1/M2/M3):** [macos-apple-silicon.md](macos-apple-silicon.md) — Rosetta considerations, native arm64 images, known issues
-- **Windows / WSL2 setup:** [windows-wsl2.md](windows-wsl2.md) — WSL2 installation, Docker Desktop WSL2 backend, file-system path notes
-- **Installation:** [Installation.md](Installation.md) — step-by-step install for each platform
-- **Quick Start:** [Quick-Start.md](Quick-Start.md) — first project after install
+- **Apple Silicon (M1/M2/M3):** [macos-apple-silicon.md](macos-apple-silicon.md), Rosetta considerations, native arm64 images, known issues
+- **Windows / WSL2 setup:** [windows-wsl2.md](windows-wsl2.md), WSL2 installation, Docker Desktop WSL2 backend, file-system path notes
+- **Installation:** [Installation.md](Installation.md), step-by-step install for each platform
+- **Quick Start:** [Quick-Start.md](Quick-Start.md), first project after install

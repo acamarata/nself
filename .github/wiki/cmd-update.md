@@ -1,6 +1,6 @@
 # nself update
 
-> Update the nSelf CLI binary and admin UI.
+> Update the ɳSelf CLI binary and admin UI.
 
 ## Synopsis
 
@@ -10,11 +10,11 @@ nself update [flags]
 
 ## Description
 
-`nself update` checks for new releases of the nSelf CLI on GitHub (`nself-org/cli`) and installs the latest version. It replaces the current binary in-place and optionally restarts running services after the update.
+`nself update` checks for new releases of the ɳSelf CLI on GitHub (`nself-org/cli`) and installs the latest version. It replaces the current binary in-place and optionally restarts running services after the update.
 
 By default, `nself update` updates both the CLI binary and the admin Docker image. Use `--cli` or `--admin` to update only one component. Use `--check` to see if an update is available without installing anything.
 
-If you are running an active nSelf project and update the CLI, you may want to run `nself build --force && nself restart` afterward to regenerate `docker-compose.yml` with any new defaults from the updated version.
+If you are running an active ɳSelf project and update the CLI, you may want to run `nself build --force && nself restart` afterward to regenerate `docker-compose.yml` with any new defaults from the updated version.
 
 ## v0.9 legacy detection
 

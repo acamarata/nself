@@ -1,8 +1,8 @@
 # nself controller
 
-Manage the nCloud multi-tenant master controller.
+Manage the ɳCloud multi-tenant master controller.
 
-The controller manages N isolated nSelf project instances on a single server. Each project gets its own Postgres schema, Hasura metadata source, Nginx virtual host, JWT secret, Redis key prefix, and MinIO bucket.
+The controller manages N isolated ɳSelf project instances on a single server. Each project gets its own Postgres schema, Hasura metadata source, Nginx virtual host, JWT secret, Redis key prefix, and MinIO bucket.
 
 **Requires:** `NSELF_FLAG_MULTI_TENANT_CONTROLLER=true`
 
@@ -66,5 +66,5 @@ clientb      clientb.myserver.com      active  0      512 KB  true
 
 ## See Also
 
-- [`nself project`](project.md) — Manage individual projects
+- [`nself project`](project.md), Manage individual projects
 - [Multi-Tenant Hosting Guide](../../docs/guides/multi-tenant-hosting.md)

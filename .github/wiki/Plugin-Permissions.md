@@ -1,6 +1,6 @@
 # Plugin Permissions
 
-Plugins declare required permissions in the `permissions` array of their `plugin.json` manifest. The nSelf CLI validates every declared permission against a canonical allowlist at install time and rejects unknown strings with a descriptive error (fail-closed semantics).
+Plugins declare required permissions in the `permissions` array of their `plugin.json` manifest. The ɳSelf CLI validates every declared permission against a canonical allowlist at install time and rejects unknown strings with a descriptive error (fail-closed semantics).
 
 ## Viewing Plugin Permissions
 

@@ -16,7 +16,7 @@ This audit (S07-T03) performed a complete scan and resolved the 3 remaining issu
 
 ---
 
-## Prior Repair (E2 Fleet I — 0c91d73): 32 Links Fixed by Creating Target Pages
+## Prior Repair (E2 Fleet I, 0c91d73): 32 Links Fixed by Creating Target Pages
 
 These links had no target file. New pages were created to resolve them.
 
@@ -25,9 +25,9 @@ These links had no target file. New pages were created to resolve them.
 | Link | File Created | Notes |
 |---|---|---|
 | `[[bundle-clawde]]` | `bundle-clawde.md` | ClawDE+ bundle reference |
-| `[[bundle-nchat]]` | `bundle-nchat.md` | nChat bundle reference |
-| `[[bundle-nclaw]]` | `bundle-nclaw.md` | nClaw bundle reference |
-| `[[bundle-nfamily]]` | `bundle-nfamily.md` | nFamily bundle reference |
+| `[[bundle-nchat]]` | `bundle-nchat.md` | ɳChat bundle reference |
+| `[[bundle-nclaw]]` | `bundle-nclaw.md` | ɳClaw bundle reference |
+| `[[bundle-nfamily]]` | `bundle-nfamily.md` | ɳFamily bundle reference |
 
 ### Command pages (22 created)
 
@@ -74,7 +74,7 @@ These links had no target file. New pages were created to resolve them.
 
 ---
 
-## Prior Repair (E2 Fleet I — 0c91d73): Orphaned Pages Removed
+## Prior Repair (E2 Fleet I, 0c91d73): Orphaned Pages Removed
 
 These pages existed but had no wiki-link pointing to them and referenced
 plugins that are not in the canonical plugin registry (SPORT F03/F04). They were

@@ -1,6 +1,6 @@
 # macOS Apple Silicon (arm64) Install Guide
 
-Install the nSelf CLI natively on Apple M-series Macs (M1, M2, M3, M4). No Rosetta required.
+Install the ɳSelf CLI natively on Apple M-series Macs (M1, M2, M3, M4). No Rosetta required.
 
 ## Contents
 
@@ -17,7 +17,7 @@ Install the nSelf CLI natively on Apple M-series Macs (M1, M2, M3, M4). No Roset
 
 ## Why arm64-native matters
 
-The nSelf CLI ships a dedicated `darwin-arm64` binary in every release. Running the arm64 build on Apple Silicon gives you:
+The ɳSelf CLI ships a dedicated `darwin-arm64` binary in every release. Running the arm64 build on Apple Silicon gives you:
 
 - Full use of the M-series performance and efficiency cores with no translation overhead
 - Correct `file` output: `Mach-O 64-bit executable arm64` (not `x86_64`)
@@ -31,24 +31,24 @@ If you previously installed an `x86_64` build under Rosetta, uninstall it first 
 ## Prerequisites
 
 - **macOS 11 Big Sur or later** (macOS 12 Monterey or later recommended)
-- **Apple M-series chip** (M1, M2, M3, or M4 — any variant)
+- **Apple M-series chip** (M1, M2, M3, or M4, any variant)
 - **Homebrew** installed for Apple Silicon (prefix `/opt/homebrew`). If you are unsure, run:
 
   ```bash
   brew --prefix
   ```
 
-  The output must be `/opt/homebrew`. If it is `/usr/local`, your Homebrew is running under Rosetta. Reinstall Homebrew natively before continuing.
+ The output must be `/opt/homebrew`. If it is `/usr/local`, your Homebrew is running under Rosetta. Reinstall Homebrew natively before continuing.
 
 - **Docker Desktop for Apple Silicon** 4.x or later, with the Apple Silicon build selected at installation. Download from [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/).
 
-  After installing Docker Desktop, confirm it is running and that the engine is reachable:
+ After installing Docker Desktop, confirm it is running and that the engine is reachable:
 
   ```bash
   docker info --format '{{.Architecture}}'
   ```
 
-  Expected output: `aarch64`
+ Expected output: `aarch64`
 
 ---
 
@@ -58,7 +58,7 @@ If you previously installed an `x86_64` build under Rosetta, uninstall it first 
 brew tap nself-org/nself
 ```
 
-This registers the official nSelf tap. You only need to do this once per machine.
+This registers the official ɳSelf tap. You only need to do this once per machine.
 
 ---
 
@@ -122,7 +122,7 @@ Once started, `nself urls` shows the local endpoints for your project.
 
 ### Docker Desktop memory and CPU for M-series
 
-Docker Desktop on Apple Silicon shares the macOS unified memory pool. The default allocation may be too low for a full nSelf stack.
+Docker Desktop on Apple Silicon shares the macOS unified memory pool. The default allocation may be too low for a full ɳSelf stack.
 
 Recommended settings (Docker Desktop Preferences > Resources):
 
@@ -169,8 +169,8 @@ If Docker is running but `nself start` still hangs, increase the memory allocati
 
 ## Related
 
-- [[Installation]] — all platforms overview
-- [[windows-wsl2]] — Windows WSL2 install guide
-- [[Quick-Start]] — first project walkthrough
-- [[FAQ]] — common setup questions
+- [[Installation]], all platforms overview
+- [[windows-wsl2]], Windows WSL2 install guide
+- [[Quick-Start]], first project walkthrough
+- [[FAQ]], common setup questions
 - [[Home]]

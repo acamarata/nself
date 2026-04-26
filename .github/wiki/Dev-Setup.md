@@ -1,6 +1,6 @@
 # Dev Setup
 
-Set up a local development environment for the nSelf CLI.
+Set up a local development environment for the ɳSelf CLI.
 
 ## Prerequisites
 
@@ -82,9 +82,9 @@ make cross
 
 ## See Also
 
-- [[Contributing]] — contribution guidelines
-- [[Release-Process]] — how releases are built and published
-- [[Architecture]] — codebase structure
+- [[Contributing]], contribution guidelines
+- [[Release-Process]], how releases are built and published
+- [[Architecture]], codebase structure
 
 ---
 ← [[Home]] | [[_Sidebar]]

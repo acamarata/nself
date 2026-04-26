@@ -1,6 +1,6 @@
 # Security Architecture
 
-nSelf is designed with security as a core concern, not an afterthought. This document describes the security model and key protections built into the CLI and generated infrastructure.
+ɳSelf is designed with security as a core concern, not an afterthought. This document describes the security model and key protections built into the CLI and generated infrastructure.
 
 ## Container Security
 
@@ -13,14 +13,14 @@ cap_drop:
   - ALL
 ```
 
-- **`no-new-privileges`** — prevents privilege escalation via setuid binaries
-- **`cap_drop: ALL`** — removes all Linux capabilities from containers by default
+- **`no-new-privileges`**, prevents privilege escalation via setuid binaries
+- **`cap_drop: ALL`**, removes all Linux capabilities from containers by default
 
 Nginx is the only service that retains `NET_BIND_SERVICE` (required for ports 80/443).
 
 ## Network Isolation
 
-All internal services bind to `127.0.0.1` only. The Docker bridge network (`{project}_default`) is internal — services communicate via Docker DNS names (e.g., `hasura:8080`).
+All internal services bind to `127.0.0.1` only. The Docker bridge network (`{project}_default`) is internal, services communicate via Docker DNS names (e.g., `hasura:8080`).
 
 Only Nginx exposes external ports (80 and 443). All external traffic flows through Nginx, which handles TLS termination and proxying to internal services.
 
@@ -35,7 +35,7 @@ Only Nginx exposes external ports (80 and 443). All external traffic flows throu
 
 Secrets (passwords, API keys, JWT secrets) are managed through the `.env` cascade:
 
-- `.env.secrets` — sensitive values, **never committed to git**
+- `.env.secrets`, sensitive values, **never committed to git**
 - Secrets are passed to containers as environment variables, not files
 - `.env.secrets` must be in `.gitignore` (verified by `nself doctor`)
 - Secret values are **redacted** from all CLI output (`***REDACTED***`)
@@ -45,7 +45,7 @@ Secret env vars matching these patterns are automatically redacted:
 
 ## Security Headers
 
-nSelf's Nginx configuration includes security headers on all server blocks:
+ɳSelf's Nginx configuration includes security headers on all server blocks:
 
 ```nginx
 add_header X-Frame-Options "SAMEORIGIN" always;
@@ -100,7 +100,7 @@ The verification step is skippable only in offline/development mode via `NSELF_L
 
 ## File Permissions
 
-nSelf applies least-privilege file permissions:
+ɳSelf applies least-privilege file permissions:
 
 | File/Dir | Permission |
 |----------|-----------|
@@ -111,11 +111,11 @@ nSelf applies least-privilege file permissions:
 
 ## TLS
 
-The nSelf CLI itself enforces TLS 1.2 minimum for all outbound HTTPS connections (registry, license validation, update checks). Weaker protocol versions are rejected.
+The ɳSelf CLI itself enforces TLS 1.2 minimum for all outbound HTTPS connections (registry, license validation, update checks). Weaker protocol versions are rejected.
 
 ## Authentication Model
 
-nSelf uses a layered authentication system:
+ɳSelf uses a layered authentication system:
 
 ### JWT Authentication
 The Auth service (nHost) issues JWTs on login. Tokens carry user ID, roles, and tenant claims. Hasura validates JWTs on every GraphQL request using a shared JWT secret (`HASURA_JWT_KEY`, minimum 32 characters).
@@ -126,7 +126,7 @@ Token lifecycle:
 - Token rotation: refresh tokens are single-use; each refresh issues a new refresh token
 
 ### Passkey Authentication (WebAuthn)
-nClaw supports passkey-based authentication via `ASWebAuthenticationSession` on Apple platforms and WebAuthn on web. The pairing flow uses:
+ɳClaw supports passkey-based authentication via `ASWebAuthenticationSession` on Apple platforms and WebAuthn on web. The pairing flow uses:
 - Pair codes with TTL (410 Gone on expiry)
 - Direct pairing via HMAC-SHA256 4-word phrases
 - Pair attempt rate limiting: 10 failures per 15 minutes triggers 429 + Telegram alert
@@ -141,7 +141,7 @@ Auth supports 13+ OAuth providers (GitHub, Google, Apple, Microsoft, etc.). OAut
 Auth endpoints: 30 requests/minute per IP (burst: 5). Configurable via `AUTH_RATE_LIMIT`.
 
 ### Plugin Rate Limiting
-- nClaw pairing: 10 failed attempts per 15 minutes per IP, then 429 + Telegram alert
+- ɳClaw pairing: 10 failed attempts per 15 minutes per IP, then 429 + Telegram alert
 - AI caller tokens: per-namespace rate limiting with configurable limits per token
 - Mux stall detector: exponential backoff on repeated failures (3 same-error cycles triggers stop + Telegram alert)
 
@@ -159,7 +159,7 @@ Row-level security (RLS) enforced at the GraphQL layer. Each table defines inser
 Each plugin gets its own PostgreSQL schema (`np_{plugin_name}`) with a dedicated role. Row-level security applies per schema. Zero cross-plugin data leakage by design.
 
 ### Tool Gating
-nClaw persona `tools_allowed` whitelists restrict which tools each persona can invoke. Shell access requires explicit `NCLAW_ALLOW_SHELL=true`. Browser automation requires user consent (`NClaw_BrowserEnabled` user default).
+ɳClaw persona `tools_allowed` whitelists restrict which tools each persona can invoke. Shell access requires explicit `NCLAW_ALLOW_SHELL=true`. Browser automation requires user consent (`NClaw_BrowserEnabled` user default).
 
 ### Telegram User Gating
 `CLAW_TG_ALLOWED_USERS` restricts which Telegram user IDs can interact with the claw bot. Messages from unauthorized users are silently dropped.

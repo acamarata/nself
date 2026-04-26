@@ -1,15 +1,15 @@
 # Guide: Multi-Tenancy
 
-Run multiple independent nSelf projects on a single server. Each project is fully isolated with its own containers, network, and port range.
+Run multiple independent ɳSelf projects on a single server. Each project is fully isolated with its own containers, network, and port range.
 
 ## How It Works
 
 Each `nself init` call creates a named project. Projects share the host OS but are separated by:
 
-- **Docker network isolation** — each project gets its own bridge network (`{project}_default`)
-- **Port separation** — each project is assigned a unique port range for internal services
-- **Nginx isolation** — separate virtual host configs under `nginx/sites/`
-- **Data isolation** — separate Postgres instance and volume per project
+- **Docker network isolation**, each project gets its own bridge network (`{project}_default`)
+- **Port separation**, each project is assigned a unique port range for internal services
+- **Nginx isolation**, separate virtual host configs under `nginx/sites/`
+- **Data isolation**, separate Postgres instance and volume per project
 
 ## Setting Up Multiple Projects
 
@@ -29,14 +29,14 @@ nself build && nself start
 
 ## Port Allocation
 
-nSelf assigns unique ports per project to avoid conflicts. Check assigned ports:
+ɳSelf assigns unique ports per project to avoid conflicts. Check assigned ports:
 
 ```bash
 nself urls        # shows all service URLs for the current project
 nself status      # shows running services and their ports
 ```
 
-If you initialise projects in separate directories, nSelf handles port selection automatically.
+If you initialise projects in separate directories, ɳSelf handles port selection automatically.
 
 ## DNS Configuration
 
@@ -55,9 +55,9 @@ Each project runs its own Postgres, Hasura, and Auth containers. On a 4 GB serve
 
 ## See Also
 
-- [[Guide-Production-Deployment]] — single-project setup
-- [[Guide-Security-Hardening]] — firewall rules per project
-- [[Config-System]] — project configuration reference
+- [[Guide-Production-Deployment]], single-project setup
+- [[Guide-Security-Hardening]], firewall rules per project
+- [[Config-System]], project configuration reference
 
 ---
 ← [[Home]] | [[_Sidebar]]

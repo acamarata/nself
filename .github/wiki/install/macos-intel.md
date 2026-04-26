@@ -1,6 +1,6 @@
 # macOS Intel (x86_64)
 
-Install the nSelf CLI on macOS with an Intel processor (darwin/amd64).
+Install the ɳSelf CLI on macOS with an Intel processor (darwin/amd64).
 Tested on macOS 12 Monterey through macOS 14 Sonoma.
 
 ## Prerequisites
@@ -14,7 +14,7 @@ Tested on macOS 12 Monterey through macOS 14 Sonoma.
 ### Docker Desktop on Intel Mac
 
 Use the Intel/AMD installer from `docs.docker.com/desktop/install/mac-install/`.
-Do NOT install the Apple Silicon build — it requires Rosetta and is slower.
+Do NOT install the Apple Silicon build, it requires Rosetta and is slower.
 
 Enable VirtioFS in Docker Desktop settings for better I/O performance:
 `Docker Desktop → Settings → General → Use VirtioFS`.
@@ -75,10 +75,10 @@ Expected output:
 ## Plugin Docker Requirements
 
 Plugin containers run as `linux/amd64`. Docker Desktop handles the Linux VM
-automatically — you do not need to configure anything.
+automatically, you do not need to configure anything.
 
-All official nSelf plugin images include `linux/amd64` manifests. If `docker pull`
-complains about architecture, the plugin has a bug — file a report at
+All official ɳSelf plugin images include `linux/amd64` manifests. If `docker pull`
+complains about architecture, the plugin has a bug, file a report at
 `github.com/nself-org/plugins`.
 
 ## Common Pitfalls

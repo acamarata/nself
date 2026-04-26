@@ -1,6 +1,6 @@
 # Feature Flags Plugin
 
-> Feature flag service with targeting rules, user segments, and evaluation engine. **Free — MIT licensed.**
+> Feature flag service with targeting rules, user segments, and evaluation engine. **Free, MIT licensed.**
 
 ## Install
 
@@ -28,8 +28,8 @@ Enables toggling features per user, tenant, or custom segment without redeployin
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_feature_flags_flags` — flag definitions and targeting rules
-- `np_feature_flags_segments` — user segment definitions
+- `np_feature_flags_flags`, flag definitions and targeting rules
+- `np_feature_flags_segments`, user segment definitions
 
 ## Nginx Routes
 

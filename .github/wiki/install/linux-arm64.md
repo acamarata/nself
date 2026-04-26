@@ -1,10 +1,10 @@
 # Linux arm64 (aarch64)
 
-Install the nSelf CLI on 64-bit ARM Linux (linux/arm64). Tested on AWS Graviton2/3,
+Install the ɳSelf CLI on 64-bit ARM Linux (linux/arm64). Tested on AWS Graviton2/3,
 Ampere Altra (Hetzner CAX), Raspberry Pi 4/5 (64-bit OS), Oracle Ampere, and
 Scaleway EM-A210R-HDD.
 
-> The nSelf CI suite runs build + unit tests on `ubuntu-24.04-arm` runners for
+> The ɳSelf CI suite runs build + unit tests on `ubuntu-24.04-arm` runners for
 > every release, verifying the arm64 binary before it ships.
 
 ## Prerequisites
@@ -15,7 +15,7 @@ Scaleway EM-A210R-HDD.
 | Docker Engine | 24.0 | See install steps |
 | Docker Compose | v2.20+ | Bundled with Docker Engine v24+ |
 | CPU | 64-bit ARM (aarch64) | 32-bit ARM (armv7) is NOT supported |
-| RAM | 2 GB minimum | 4 GB+ recommended for a full nSelf stack |
+| RAM | 2 GB minimum | 4 GB+ recommended for a full ɳSelf stack |
 
 ### Verify your CPU supports 64-bit
 
@@ -50,7 +50,7 @@ docker --version        # Docker version 24+
 docker compose version  # Docker Compose version v2+
 ```
 
-## Install nSelf CLI
+## Install ɳSelf CLI
 
 ### Option 1: Installer script
 
@@ -88,8 +88,8 @@ nself doctor
 
 ## Plugin Docker Requirements
 
-All official nSelf plugin images ship with `linux/amd64 + linux/arm64` manifests.
-Docker automatically pulls the `linux/arm64` variant on arm64 hosts — no flags needed.
+All official ɳSelf plugin images ship with `linux/amd64 + linux/arm64` manifests.
+Docker automatically pulls the `linux/arm64` variant on arm64 hosts, no flags needed.
 
 If any plugin image produces a platform mismatch warning:
 
@@ -129,7 +129,7 @@ cgroups v2 is fully supported and preferred. No action needed on Ubuntu 22.04+.
 
 **AWS Graviton: IMDSv2 required**
 
-If your instance uses IMDSv2, Docker Hub pulls work normally. nSelf does not call
+If your instance uses IMDSv2, Docker Hub pulls work normally. ɳSelf does not call
 the EC2 metadata service directly.
 
 ---

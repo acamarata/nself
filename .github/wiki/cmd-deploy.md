@@ -109,7 +109,7 @@ Use `--force-migration` to proceed with a full downtime deploy.
 Blue/green state is persisted to `.nself/bluegreen/state.json`. Run `nself deploy status --blue-green`
 to inspect the current active environment and canary traffic split.
 
-## Rolling Restart — Service Order and Downtime
+## Rolling Restart, Service Order and Downtime
 
 The rolling strategy restarts services in dependency order. Each service restart is health-gated
 (max 60s wait). If a service does not become healthy within 60s, the deploy halts and reports
@@ -170,12 +170,12 @@ Agent forwarding is disabled by default. The CLI uses
 
 ## Subcommands
 
-- `nself deploy status [--blue-green]` — report current deploy state; `--blue-green` adds blue/green slot info
-- `nself deploy rollback [target]` — roll back the last deployment (see below)
-- `nself deploy promote` — flip Nginx to 100% green after a manual canary review
-- `nself deploy logs [target]` — tail the last 200 lines of Docker logs on the target host
-- `nself deploy health [target]` — run `nself doctor` against the deployment
-- `nself deploy check-access` — verify `NSELF_DEPLOY_HOST_*` values resolve
+- `nself deploy status [--blue-green]`, report current deploy state; `--blue-green` adds blue/green slot info
+- `nself deploy rollback [target]`, roll back the last deployment (see below)
+- `nself deploy promote`, flip Nginx to 100% green after a manual canary review
+- `nself deploy logs [target]`, tail the last 200 lines of Docker logs on the target host
+- `nself deploy health [target]`, run `nself doctor` against the deployment
+- `nself deploy check-access`, verify `NSELF_DEPLOY_HOST_*` values resolve
 
 ## Rollback
 
@@ -292,7 +292,7 @@ a separate protocol.
 | `NSELF_BLUE_PORT_OFFSET` | `0` | Port offset for blue containers |
 | `NSELF_GREEN_PORT_OFFSET` | `100` | Port offset for green containers |
 
-When no host is configured, the CLI deploys to the current host. This is the v1.0.9 LTS
+When no host is configured, the CLI deploys to the current host. This is the v1.0.9
 single-region model. Multi-region is deferred to v1.1.0.
 
 ## Maintenance Banner
@@ -307,12 +307,12 @@ configure an nginx static page via `nginx/conf.d/`.
 - Agent forwarding is disabled by default for all SSH connections
 - SSH keys are never logged
 - `--rollback` validates the promote tag's env against current code before applying; drift
-  causes an explicit error rather than a silent misapply
+ causes an explicit error rather than a silent misapply
 
 ## Cross-references
 
-- [[cmd-build|nself build]] — generates `docker-compose.yml` and nginx configs
-- [[cmd-start|nself start]] — boot the stack with health checks
-- [[cmd-promote|nself promote]] — promote env-to-env with rollback support
-- [[deploy-strategies]] — full per-strategy spec and downtime expectations
+- [[cmd-build|nself build]], generates `docker-compose.yml` and nginx configs
+- [[cmd-start|nself start]], boot the stack with health checks
+- [[cmd-promote|nself promote]], promote env-to-env with rollback support
+- [[deploy-strategies]], full per-strategy spec and downtime expectations
 - [[Home]]

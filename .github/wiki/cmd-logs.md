@@ -10,7 +10,7 @@ nself logs [SERVICE] [flags]
 
 ## Description
 
-`nself logs` streams or displays logs from one or all nSelf services. Without a service name, it interleaves logs from all running services. Pass a service name as a positional argument to filter to that service. Use `--service` (repeatable) to target multiple specific services.
+`nself logs` streams or displays logs from one or all ɳSelf services. Without a service name, it interleaves logs from all running services. Pass a service name as a positional argument to filter to that service. Use `--service` (repeatable) to target multiple specific services.
 
 Output is colorized by level: errors in red, warnings in yellow, info in green. Use `--follow` for live streaming; press Ctrl+C to exit cleanly. Use `--quiet` to suppress healthcheck noise and focus on application-level events. Use `--plain` or redirect stdout to a file when piping output to other tools.
 
@@ -123,15 +123,15 @@ nself logs --top
 | Code | Meaning |
 |------|---------|
 | `0` | Success |
-| `1` | No nSelf project found in current directory or parents |
+| `1` | No ɳSelf project found in current directory or parents |
 | `1` | No containers running (stack not started) |
 | `1` | Docker compose error |
 
 ## See Also
 
-- [[cmd-status]] — check stack health and service states
-- [[cmd-health]] — run health checks against all services
-- [[cmd-restart]] — restart one or more services
-- [[Commands]] — full command index
+- [[cmd-status]], check stack health and service states
+- [[cmd-health]], run health checks against all services
+- [[cmd-restart]], restart one or more services
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

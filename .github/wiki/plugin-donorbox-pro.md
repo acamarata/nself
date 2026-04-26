@@ -38,13 +38,13 @@ Extends the free `donorbox` plugin (port 3074) with full webhook processing, a d
 ## Database Tables
 
 7 tables added to your Postgres database:
-- `np_donorbox_campaigns` — campaign definitions and metadata
-- `np_donorbox_donors` — donor CRM records
-- `np_donorbox_donations` — individual donation records
-- `np_donorbox_recurring` — recurring donation plans and status
-- `np_donorbox_analytics` — campaign performance analytics
-- `np_donorbox_webhooks` — raw incoming webhook payloads
-- `np_donorbox_sync_log` — sync and processing log
+- `np_donorbox_campaigns`, campaign definitions and metadata
+- `np_donorbox_donors`, donor CRM records
+- `np_donorbox_donations`, individual donation records
+- `np_donorbox_recurring`, recurring donation plans and status
+- `np_donorbox_analytics`, campaign performance analytics
+- `np_donorbox_webhooks`, raw incoming webhook payloads
+- `np_donorbox_sync_log`, sync and processing log
 
 ## Nginx Routes
 

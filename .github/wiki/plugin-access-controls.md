@@ -13,7 +13,7 @@ nself plugin install access-controls
 
 ## What It Does
 
-Extends nSelf Auth with fine-grained access control. Implements both Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC). Define roles, permissions, and policy rules that evaluate user attributes, resource properties, and context. Results are cached in Redis for fast permission checks on every request. Integrates with Hasura's permission system.
+Extends ɳSelf Auth with fine-grained access control. Implements both Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC). Define roles, permissions, and policy rules that evaluate user attributes, resource properties, and context. Results are cached in Redis for fast permission checks on every request. Integrates with Hasura's permission system.
 
 ## Configuration
 
@@ -33,12 +33,12 @@ Extends nSelf Auth with fine-grained access control. Implements both Role-Based 
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_access_controls_roles` — role definitions
-- `np_access_controls_permissions` — permission definitions
-- `np_access_controls_role_permissions` — role-permission mappings
-- `np_access_controls_policies` — ABAC policy rules
-- `np_access_controls_assignments` — user-role assignments
-- `np_access_controls_audit` — permission decision log
+- `np_access_controls_roles`, role definitions
+- `np_access_controls_permissions`, permission definitions
+- `np_access_controls_role_permissions`, role-permission mappings
+- `np_access_controls_policies`, ABAC policy rules
+- `np_access_controls_assignments`, user-role assignments
+- `np_access_controls_audit`, permission decision log
 
 ## Nginx Routes
 

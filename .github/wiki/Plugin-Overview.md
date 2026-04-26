@@ -7,7 +7,7 @@
 - [How Plugins Work](#how-plugins-work)
 - [Related Pages](#related-pages)
 
-nSelf plugins extend your backend stack with additional services and capabilities. Install them with a single command. No manual Docker configuration required.
+ɳSelf plugins extend your backend stack with additional services and capabilities. Install them with a single command. No manual Docker configuration required.
 
 ## Plugin Tiers
 
@@ -25,7 +25,7 @@ Annual plans save ~17% compared to monthly. Existing $9.99/yr keys are grandfath
 
 ## Plugin Categories
 
-### Free Plugins (25) — MIT Licensed
+### Free Plugins (25), MIT Licensed
 
 No license key required. Install with `nself plugin install {name}`.
 
@@ -41,9 +41,9 @@ No license key required. Install with `nself plugin install {name}`.
 | Notifications | notifications, notify |
 | Infrastructure | backup, monitoring, mlflow |
 
-### Pro Plugins (62) — License Key Required
+### Pro Plugins (62), License Key Required
 
-Require a valid nSelf license key. See [[Plugin-Licensing]].
+Require a valid ɳSelf license key. See [[Plugin-Licensing]].
 
 | Category | Count | Plugins |
 |----------|-------|---------|
@@ -60,7 +60,7 @@ Require a valid nSelf license key. See [[Plugin-Licensing]].
 
 ## How Plugins Work
 
-Plugins inject into your nSelf stack via Docker Compose overlays. When you run `nself build`, all installed plugins are merged into a single `docker-compose.yml`. Each plugin:
+Plugins inject into your ɳSelf stack via Docker Compose overlays. When you run `nself build`, all installed plugins are merged into a single `docker-compose.yml`. Each plugin:
 
 - Runs as its own container(s) on a dedicated port
 - Gets its own Postgres schema (`np_{name}`) with isolated tables
@@ -89,11 +89,11 @@ The free `monitoring` plugin bundles 10 services in one install: alertmanager, g
 
 ## Related Pages
 
-- [[Plugin-Install]] — How to install, remove, and update plugins
-- [[Plugin-Licensing]] — License keys, tiers, and validation
-- [[Plugin-Dev-Guide]] — Build your own plugin
-- [[Plugin-Architecture]] — Technical internals
-- [[bundle-nmedia]] — nMedia plugin bundle guide
+- [[Plugin-Install]], How to install, remove, and update plugins
+- [[Plugin-Licensing]], License keys, tiers, and validation
+- [[Plugin-Dev-Guide]], Build your own plugin
+- [[Plugin-Architecture]], Technical internals
+- [[bundle-nmedia]], nMedia plugin bundle guide
 
 ---
 ← [[Home]] | [[_Sidebar]]

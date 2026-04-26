@@ -1,6 +1,6 @@
 # Claw Web Plugin
 
-> Self-hosted browser UI for the nSelf Claw AI assistant. **Pro plugin.**
+> Self-hosted browser UI for the ɳSelf Claw AI assistant. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -13,7 +13,7 @@ nself plugin install claw-web
 
 ## What It Does
 
-Provides a full-featured web interface for conversations, tool results, and agent history powered by the nSelf Claw AI assistant. Built on Next.js, it renders SSE-streamed responses in real time and displays tool call traces alongside assistant replies. Requires the `claw` plugin to supply the agent backend.
+Provides a full-featured web interface for conversations, tool results, and agent history powered by the ɳSelf Claw AI assistant. Built on Next.js, it renders SSE-streamed responses in real time and displays tool call traces alongside assistant replies. Requires the `claw` plugin to supply the agent backend.
 
 ## Dependencies
 

@@ -11,7 +11,7 @@ nself plugin logs <name> [flags]
 ## Description
 
 Wraps `docker logs` with plugin-aware container name resolution. Resolves the container
-from the plugin name using the nSelf naming convention (`nself-plugin-<name>`) then falls
+from the plugin name using the ɳSelf naming convention (`nself-plugin-<name>`) then falls
 back to a `docker compose ps` lookup.
 
 Supports live streaming, line limits, time filters, and regex filtering.
@@ -61,7 +61,7 @@ If no container is found, the command exits with a descriptive error.
 
 ## Production Debugging
 
-For production log analysis, use the Grafana/Loki stack included in the nSelf monitoring
+For production log analysis, use the Grafana/Loki stack included in the ɳSelf monitoring
 bundle. Equivalent Loki query:
 
 ```logql
@@ -72,7 +72,7 @@ See [Observability guide](https://docs.nself.org/observability) for the Grafana 
 
 ## See Also
 
-- [[cmd-plugin-dev]] — hot-reload watcher
-- [[cmd-plugin-debug]] — attach Delve debugger
-- [[cmd-plugin-status]] — check plugin runtime state
+- [[cmd-plugin-dev]], hot-reload watcher
+- [[cmd-plugin-debug]], attach Delve debugger
+- [[cmd-plugin-status]], check plugin runtime state
 - [[Home]]

@@ -1,6 +1,6 @@
 # Push Plugin
 
-> APNs + FCM push notification relay for iOS and Android. **Free — MIT licensed.**
+> APNs + FCM push notification relay for iOS and Android. **Free, MIT licensed.**
 
 ## Install
 
@@ -27,11 +27,11 @@ No per-app APNs/FCM bridge needed. One plugin handles all apps on the stack.
 |---------|---------|-------------|
 | `PUSH_APNS_TEAM_ID` | | Apple Developer Team ID (10-char string) |
 | `PUSH_APNS_KEY_ID` | | APNs Auth Key ID (10-char string from developer.apple.com) |
-| `PUSH_APNS_KEY_PEM` | | APNs Auth Key content (raw PEM or file path — see Credentials) |
+| `PUSH_APNS_KEY_PEM` | | APNs Auth Key content (raw PEM or file path , see Credentials) |
 | `PUSH_APNS_BUNDLE_ID` | | App Bundle ID (e.g. `com.example.myapp`) |
 | `PUSH_APNS_SANDBOX` | `0` | Set to `1` for APNs sandbox (development) |
 | `PUSH_FCM_PROJECT_ID` | | Firebase project ID |
-| `PUSH_FCM_SERVICE_ACCOUNT_JSON` | | FCM service account JSON (raw JSON or file path — see Credentials) |
+| `PUSH_FCM_SERVICE_ACCOUNT_JSON` | | FCM service account JSON (raw JSON or file path , see Credentials) |
 | `PUSH_RETRY_MAX_ATTEMPTS` | `3` | Maximum delivery attempts before marking a message failed |
 | `PUSH_RETRY_BACKOFF_BASE_MS` | `500` | Base backoff in ms (doubles each retry, capped at 30s) |
 
@@ -195,14 +195,14 @@ APNs keys and FCM service accounts rotate on your security schedule. To rotate:
 
 The plugin reloads credentials from env on every startup. No cache to flush.
 
-**Expired APNs key:** the plugin logs a clear error (`apns: credential error — ExpiredProviderToken`) and marks affected outbox rows as `failed`. No silent delivery loss.
+**Expired APNs key:** the plugin logs a clear error (`apns: credential error, ExpiredProviderToken`) and marks affected outbox rows as `failed`. No silent delivery loss.
 
 ## Security Notes
 
 - Device tokens are stored in plain text in `np_push_devices`. They are semi-public identifiers, not secrets. The real secrets (APNs PEM, FCM JSON) are in env vars only, never in the database.
 - FCM service account JSON is never logged. APNs JWT signing uses the loaded EC key without exposing it in any log line.
 - The `/push/dispatch` endpoint validates that `device_token` is not a URL (SSRF guard). Tokens that look like `http://...` are rejected and the outbox row is marked failed.
-- APNs uses JWT signing (ES256) with a fresh token per request — no stale-token risk.
+- APNs uses JWT signing (ES256) with a fresh token per request, no stale-token risk.
 
 ## Relationship to notify Plugin
 

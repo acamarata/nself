@@ -1,6 +1,6 @@
 # Upgrading
 
-Upgrade guides for moving between nSelf CLI versions.
+Upgrade guides for moving between ɳSelf CLI versions.
 
 ## Current release
 

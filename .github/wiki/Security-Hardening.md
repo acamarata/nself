@@ -39,7 +39,7 @@ Use this checklist before going live in production. For step-by-step instruction
 - [ ] Backup destination (local or S3) verified
 
 ### Updates
-- [ ] nSelf CLI at latest version (`nself update`)
+- [ ] ɳSelf CLI at latest version (`nself update`)
 - [ ] Schedule for regular updates established
 
 ## Ongoing Maintenance
@@ -64,16 +64,16 @@ Check current TLS certificate:
 nself ssl status
 ```
 
-Run the nSelf health check:
+Run the ɳSelf health check:
 ```bash
 nself health
 ```
 
 ## See Also
 
-- [[Guide-Security-Hardening]] — step-by-step instructions for each item above
-- [[Security-Architecture]] — how nSelf security is designed
-- [[Security-Policy]] — reporting vulnerabilities
+- [[Guide-Security-Hardening]], step-by-step instructions for each item above
+- [[Security-Architecture]], how ɳSelf security is designed
+- [[Security-Policy]], reporting vulnerabilities
 
 ---
 ← [[Home]] | [[_Sidebar]]

@@ -1,6 +1,6 @@
 # Notifications Plugin
 
-> In-app notification system with templates, delivery tracking, and GraphQL subscriptions. **Free — MIT licensed.**
+> In-app notification system with templates, delivery tracking, and GraphQL subscriptions. **Free, MIT licensed.**
 
 ## Install
 
@@ -30,9 +30,9 @@ Adds a complete in-app notification system to your Hasura backend. Supports mult
 ## Database Tables
 
 3 tables added to your Postgres database:
-- `np_notifications_notifications` — notification records
-- `np_notifications_templates` — message templates per channel
-- `np_notifications_preferences` — per-user channel preferences
+- `np_notifications_notifications`, notification records
+- `np_notifications_templates`, message templates per channel
+- `np_notifications_preferences`, per-user channel preferences
 
 ## Nginx Routes
 

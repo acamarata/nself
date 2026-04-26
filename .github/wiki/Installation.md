@@ -24,8 +24,8 @@ See [[install/windows-native]] for native install and [[install/windows-wsl2]] f
 
 | Platform | Architecture | Description |
 |---|---|---|
-| [macOS Apple Silicon](install/macos-apple-silicon) | darwin/arm64 | M1/M2/M3/M4 — OrbStack vs Docker Desktop, VirtioFS |
-| [macOS Intel](install/macos-intel) | darwin/amd64 | Intel Mac — Homebrew, binary download |
+| [macOS Apple Silicon](install/macos-apple-silicon) | darwin/arm64 | M1/M2/M3/M4 , OrbStack vs Docker Desktop, VirtioFS |
+| [macOS Intel](install/macos-intel) | darwin/amd64 | Intel Mac , Homebrew, binary download |
 | [Linux x86_64](install/linux-x86_64) | linux/amd64 | Ubuntu, Debian, Fedora, Rocky, Amazon Linux |
 | [Linux arm64](install/linux-arm64) | linux/arm64 | Graviton, Ampere Altra, Hetzner CAX, Pi |
 | [Windows WSL2](install/windows-wsl2) | linux/amd64 | WSL2 + Docker Desktop |
@@ -57,7 +57,7 @@ curl -sSL https://install.nself.org | bash
 The script detects your architecture (amd64 or arm64) and downloads the correct binary.
 See [[install/linux-x86_64]] or [[install/linux-arm64]] for manual install and verification.
 
-### Windows (Native — v1.1.0+)
+### Windows (Native, v1.1.0+)
 
 Download `nself-<version>-windows-amd64.zip` from [GitHub Releases](https://github.com/nself-org/cli/releases/latest),
 extract, and add the directory to your `PATH`. Or use the PowerShell installer:

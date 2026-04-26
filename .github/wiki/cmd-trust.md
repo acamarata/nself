@@ -10,7 +10,7 @@ nself trust [flags]
 
 ## Description
 
-`nself trust` configures everything needed for `*.local` projects to work locally with HTTPS: dnsmasq for wildcard DNS resolution, mkcert for trusted SSL certificates, and pfctl/iptables for port 80→8080 and 443→8443 forwarding. One run covers every nSelf project on the machine, not per project.
+`nself trust` configures everything needed for `*.local` projects to work locally with HTTPS: dnsmasq for wildcard DNS resolution, mkcert for trusted SSL certificates, and pfctl/iptables for port 80→8080 and 443→8443 forwarding. One run covers every ɳSelf project on the machine, not per project.
 
 The command auto-detects the OS (macOS or Linux) and chooses the right toolchain. On macOS it uses Homebrew dnsmasq, `/etc/resolver/local`, and pfctl; on Linux it uses systemd-resolved or raw dnsmasq plus iptables. Steps that need elevation prompt for sudo (or trigger the macOS native admin dialog).
 
@@ -49,9 +49,9 @@ nself trust --project /Users/me/projects/myapp
 
 ## See Also
 
-- [[cmd-dns-setup]] — `/etc/hosts` entries (alternative to dnsmasq)
-- [[cmd-ssl]] — manage SSL certificates
-- [[cmd-doctor]] — diagnose connectivity issues
-- [[Commands]] — full command index
+- [[cmd-dns-setup]], `/etc/hosts` entries (alternative to dnsmasq)
+- [[cmd-ssl]], manage SSL certificates
+- [[cmd-doctor]], diagnose connectivity issues
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

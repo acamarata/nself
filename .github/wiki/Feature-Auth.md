@@ -1,6 +1,6 @@
 # Feature: Auth
 
-nSelf includes nHost Auth as a built-in service, providing a full authentication backend out of the box.
+ɳSelf includes nHost Auth as a built-in service, providing a full authentication backend out of the box.
 
 ## What's Included
 
@@ -15,7 +15,7 @@ nSelf includes nHost Auth as a built-in service, providing a full authentication
 
 ## How to Enable
 
-Auth is a core service — it is always enabled. No plugin required.
+Auth is a core service, it is always enabled. No plugin required.
 
 ## Key Configuration Variables
 
@@ -39,9 +39,9 @@ AUTH_PROVIDER_GITHUB_CLIENT_SECRET=your-secret
 
 ## See Also
 
-- [[Config-Auth]] — full auth configuration reference
-- [[cmd-service]] — enable/disable auth
-- [[Feature-Plugins]] — extend auth with the pro auth plugin
+- [[Config-Auth]], full auth configuration reference
+- [[cmd-service]], enable/disable auth
+- [[Feature-Plugins]], extend auth with the pro auth plugin
 
 ---
 ← [[Home]] | [[_Sidebar]]

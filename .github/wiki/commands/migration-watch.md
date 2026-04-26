@@ -65,7 +65,7 @@ Press `Ctrl+C` to stop the watcher.
 
 # `nself migrate generate`
 
-Generate a SQL migration from a natural-language description using the nSelf AI plugin.
+Generate a SQL migration from a natural-language description using the ɳSelf AI plugin.
 
 ## Summary
 
@@ -90,7 +90,7 @@ nself migrate generate "<description>"
 | `--dry-run` | `false` | Preview the generated SQL without writing any files |
 | `--confidence` | `0.75` | Minimum AI confidence to accept the proposal (0.0-1.0) |
 | `--migrations-dir` | `migrations` | Directory to write the migration file into |
-| `--ai-endpoint` | `$NSELF_AI_ENDPOINT` or `http://localhost:3001` | nSelf AI plugin endpoint |
+| `--ai-endpoint` | `$NSELF_AI_ENDPOINT` or `http://localhost:3001` | ɳSelf AI plugin endpoint |
 
 ## Examples
 
@@ -162,7 +162,7 @@ nself db migrate up
 
 ## See Also
 
-- [[cmd-db]] — `nself db migrate` — apply, revert, and list migrations
-- [[cmd-migrate]] — `nself migrate` — v1 to v2 project migration
+- [[cmd-db]], `nself db migrate`, apply, revert, and list migrations
+- [[cmd-migrate]], `nself migrate`, v1 to v2 project migration
 
 [[Home]]

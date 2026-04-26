@@ -1,13 +1,13 @@
 # Getting Started
 
-Get nSelf running in under 5 minutes.
+Get ɳSelf running in under 5 minutes.
 
 ## Pages
 
 | Page | What you'll learn |
 |------|------------------|
 | [[Installation]] | Install via Homebrew, curl, or from source |
-| [[Quick-Start]] | init, build, start — your first stack in 2 minutes |
+| [[Quick-Start]] | init, build, start , your first stack in 2 minutes |
 | [[First-Project]] | Guided walkthrough building a real backend |
 | [[Upgrading-from-v1]] | Migration guide from the legacy Bash CLI |
 
@@ -38,7 +38,7 @@ See [[Quick-Start]] for the full walkthrough with expected output.
 
 ## What's Next
 
-- [[First-Project]] — Guided walkthrough building a real backend with tables, permissions, and auth
-- [[Plugin-Overview]] — Browse 87 plugins (25 free, 62 Pro) for AI, video, commerce, CMS, and more
-- [[Guide-Production-Deployment]] — Deploy your stack to a real server with SSL and backups
-- [[Commands]] — Full reference for all 25 top-level commands (295+ subcommands)
+- [[First-Project]], Guided walkthrough building a real backend with tables, permissions, and auth
+- [[Plugin-Overview]], Browse 87 plugins (25 free, 62 Pro) for AI, video, commerce, CMS, and more
+- [[Guide-Production-Deployment]], Deploy your stack to a real server with SSL and backups
+- [[Commands]], Full reference for all 25 top-level commands (295+ subcommands)

@@ -10,7 +10,7 @@ nself restart [SERVICES...] [flags]
 
 ## Description
 
-`nself restart` restarts the nSelf stack with intelligent change detection. In the default smart mode, it compares `.env` and `docker-compose.yml` modification times against container start times. Only services whose configuration has changed are rebuilt and restarted — services with no config changes get a quick `docker compose restart` instead of a full rebuild.
+`nself restart` restarts the ɳSelf stack with intelligent change detection. In the default smart mode, it compares `.env` and `docker-compose.yml` modification times against container start times. Only services whose configuration has changed are rebuilt and restarted, services with no config changes get a quick `docker compose restart` instead of a full rebuild.
 
 For a full stop-and-start cycle (e.g., after major config changes or to clear runtime state), use `--all`. This performs a complete `nself stop` followed by `nself start`.
 

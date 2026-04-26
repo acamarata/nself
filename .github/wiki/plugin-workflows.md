@@ -13,7 +13,7 @@ nself plugin install workflows
 
 ## What It Does
 
-Enables trigger-action workflow automation without writing code. Define conditional logic, connect services with event-driven flows, and schedule automated tasks across your nSelf stack. Supports branching conditions, parallel steps, and secret injection for third-party service credentials.
+Enables trigger-action workflow automation without writing code. Define conditional logic, connect services with event-driven flows, and schedule automated tasks across your ɳSelf stack. Supports branching conditions, parallel steps, and secret injection for third-party service credentials.
 
 ## Configuration
 
@@ -31,15 +31,15 @@ Enables trigger-action workflow automation without writing code. Define conditio
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_workflows_definitions` — workflow definitions
-- `np_workflows_triggers` — trigger configurations
-- `np_workflows_actions` — action step definitions
-- `np_workflows_conditions` — conditional logic rules
-- `np_workflows_runs` — workflow execution runs
-- `np_workflows_steps` — individual step execution records
-- `np_workflows_logs` — execution log entries
-- `np_workflows_schedules` — cron and time-based schedules
-- `np_workflows_secrets` — encrypted secrets for workflow actions
+- `np_workflows_definitions`, workflow definitions
+- `np_workflows_triggers`, trigger configurations
+- `np_workflows_actions`, action step definitions
+- `np_workflows_conditions`, conditional logic rules
+- `np_workflows_runs`, workflow execution runs
+- `np_workflows_steps`, individual step execution records
+- `np_workflows_logs`, execution log entries
+- `np_workflows_schedules`, cron and time-based schedules
+- `np_workflows_secrets`, encrypted secrets for workflow actions
 
 ## Nginx Routes
 

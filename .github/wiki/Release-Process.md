@@ -1,6 +1,6 @@
 # Release Process
 
-How nSelf CLI releases are built, tagged, and distributed.
+How ɳSelf CLI releases are built, tagged, and distributed.
 
 ## Version Files
 
@@ -50,7 +50,7 @@ The workflow:
 
 ## Homebrew Formula
 
-The `homebrew-nself` tap auto-updates when a new GitHub Release is published. No manual action required — the formula reads the latest release tag from GitHub.
+The `homebrew-nself` tap auto-updates when a new GitHub Release is published. No manual action required, the formula reads the latest release tag from GitHub.
 
 **Homebrew lockstep gate:** The workflow `.github/workflows/homebrew-version-lockstep.yml` runs on every `v*.*.*` tag push. It reads the Homebrew formula version from `nself-org/homebrew-nself/Formula/nself.rb` via the GitHub API and fails if the formula version does not match the tag being cut. If the gate fails: update the formula in `homebrew-nself` first (version string + sha256), then re-tag on `cli`. Never cut a CLI tag while the formula is behind. This gate closes the gap that allowed v1.0.6/v1.0.7/v1.0.8 to ship without Homebrew formula sync (S30-T02).
 
@@ -63,13 +63,13 @@ The installer at `install.nself.org` is hosted in a separate repo. Update the ve
 After the release:
 1. Write GitHub Release notes highlighting new features and breaking changes
 2. Update [[Changelog]] with the release summary
-3. Post to nSelf community channels
+3. Post to ɳSelf community channels
 
 ## See Also
 
-- [[Contributing]] — how to contribute code
-- [[Dev-Setup]] — local development setup
-- [[Changelog]] — version history
+- [[Contributing]], how to contribute code
+- [[Dev-Setup]], local development setup
+- [[Changelog]], version history
 
 ---
 ← [[Home]] | [[_Sidebar]]

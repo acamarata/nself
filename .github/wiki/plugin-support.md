@@ -33,15 +33,15 @@ A complete helpdesk ticketing system for managing customer support. Users submit
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_support_tickets` — ticket records
-- `np_support_replies` — ticket replies
-- `np_support_teams` — support team definitions
-- `np_support_routing_rules` — ticket routing rules
-- `np_support_canned_responses` — reusable reply templates
-- `np_support_sla_policies` — SLA policy definitions
-- `np_support_escalations` — escalation records
-- `np_support_csat` — customer satisfaction responses
-- `np_support_notes` — internal agent notes
+- `np_support_tickets`, ticket records
+- `np_support_replies`, ticket replies
+- `np_support_teams`, support team definitions
+- `np_support_routing_rules`, ticket routing rules
+- `np_support_canned_responses`, reusable reply templates
+- `np_support_sla_policies`, SLA policy definitions
+- `np_support_escalations`, escalation records
+- `np_support_csat`, customer satisfaction responses
+- `np_support_notes`, internal agent notes
 
 ## Nginx Routes
 

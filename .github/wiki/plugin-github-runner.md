@@ -1,6 +1,6 @@
 # GitHub Runner Plugin
 
-> Self-hosted GitHub Actions runner — register your nSelf host as a CI runner. **Free — MIT licensed.**
+> Self-hosted GitHub Actions runner, register your ɳSelf host as a CI runner. **Free, MIT licensed.**
 
 ## Install
 
@@ -10,7 +10,7 @@ nself plugin install github-runner
 
 ## What It Does
 
-Registers your nSelf server as a self-hosted GitHub Actions runner. Runs CI/CD workflows on your own infrastructure instead of GitHub-hosted runners. Supports runner groups, custom labels, and multiple runner instances.
+Registers your ɳSelf server as a self-hosted GitHub Actions runner. Runs CI/CD workflows on your own infrastructure instead of GitHub-hosted runners. Supports runner groups, custom labels, and multiple runner instances.
 
 ## Configuration
 
@@ -24,11 +24,11 @@ Registers your nSelf server as a self-hosted GitHub Actions runner. Runs CI/CD w
 
 ## Ports
 
-None — this plugin runs as a background process, not an HTTP server.
+None, this plugin runs as a background process, not an HTTP server.
 
 ## Database Tables
 
-0 tables — runner state is managed by GitHub and local files.
+0 tables, runner state is managed by GitHub and local files.
 
 ## Nginx Routes
 

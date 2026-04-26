@@ -1,6 +1,6 @@
 # Guide: Production Deployment
 
-This guide covers deploying nSelf to a production VPS from scratch.
+This guide covers deploying ɳSelf to a production VPS from scratch.
 
 ## Server Requirements
 
@@ -9,7 +9,7 @@ This guide covers deploying nSelf to a production VPS from scratch.
 | CPU | 2 vCPU | 4 vCPU |
 | RAM | 4 GB | 8 GB |
 | Disk | 40 GB SSD | 80 GB SSD |
-| OS | Ubuntu 22.04 LTS | Ubuntu 22.04 LTS |
+| OS | Ubuntu 22.04 long-term support | Ubuntu 22.04 long-term support |
 
 Tested providers: Hetzner CX23 (2 vCPU / 4 GB) meets the minimum for a standard stack.
 
@@ -23,7 +23,7 @@ Open only the ports your server needs:
 | 443 | Inbound | HTTPS |
 | 22 | Inbound | SSH admin access |
 
-**Close to external access:** 5432 (Postgres), 8080 (Hasura), 4000 (Auth), and all other internal service ports. nSelf routes all external traffic through Nginx on 80/443.
+**Close to external access:** 5432 (Postgres), 8080 (Hasura), 4000 (Auth), and all other internal service ports. ɳSelf routes all external traffic through Nginx on 80/443.
 
 Example with `ufw`:
 
@@ -94,10 +94,10 @@ nself urls
 
 ## See Also
 
-- [[Guide-SSL-Setup]] — TLS certificate configuration
-- [[Guide-Security-Hardening]] — post-deployment security checklist
-- [[Guide-Monitoring-Setup]] — enable metrics and alerting
-- [[Guide-Backup-Restore]] — set up automated backups
+- [[Guide-SSL-Setup]], TLS certificate configuration
+- [[Guide-Security-Hardening]], post-deployment security checklist
+- [[Guide-Monitoring-Setup]], enable metrics and alerting
+- [[Guide-Backup-Restore]], set up automated backups
 
 ---
 ← [[Home]] | [[_Sidebar]]

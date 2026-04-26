@@ -1,6 +1,6 @@
 # Stripe Plugin
 
-> Full Stripe billing integration — subscriptions, webhooks, and customer portal. **Pro plugin.**
+> Full Stripe billing integration, subscriptions, webhooks, and customer portal. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -33,14 +33,14 @@ Syncs your complete Stripe account state into Postgres in real time: customers, 
 ## Database Tables
 
 24 tables added to your Postgres database, including:
-- `np_stripe_customers` — customer records
-- `np_stripe_subscriptions` — subscription state
-- `np_stripe_invoices` — invoice history
-- `np_stripe_payment_intents` — payment records
-- `np_stripe_products` — product catalog
-- `np_stripe_prices` — pricing tiers
-- `np_stripe_refunds` — refund records
-- `np_stripe_disputes` — dispute/chargeback records
+- `np_stripe_customers`, customer records
+- `np_stripe_subscriptions`, subscription state
+- `np_stripe_invoices`, invoice history
+- `np_stripe_payment_intents`, payment records
+- `np_stripe_products`, product catalog
+- `np_stripe_prices`, pricing tiers
+- `np_stripe_refunds`, refund records
+- `np_stripe_disputes`, dispute/chargeback records
 - And 16 more for coupons, trials, tax rates, etc.
 
 ## Nginx Routes

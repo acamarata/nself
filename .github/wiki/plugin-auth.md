@@ -13,7 +13,7 @@ nself plugin install auth
 
 ## What It Does
 
-Extends nSelf core authentication with advanced flows not included in the base stack. Adds WebAuthn passkey registration and assertion, TOTP-based multi-factor authentication, OAuth device code grants, and magic link email flows. All flows are audited to a persistent log for compliance and investigation.
+Extends ɳSelf core authentication with advanced flows not included in the base stack. Adds WebAuthn passkey registration and assertion, TOTP-based multi-factor authentication, OAuth device code grants, and magic link email flows. All flows are audited to a persistent log for compliance and investigation.
 
 ## Configuration
 
@@ -33,13 +33,13 @@ Extends nSelf core authentication with advanced flows not included in the base s
 ## Database Tables
 
 7 tables added to your Postgres database:
-- `np_auth_sessions` — extended session records
-- `np_auth_passkeys` — registered WebAuthn passkey credentials
-- `np_auth_mfa_configs` — per-user MFA configuration
-- `np_auth_device_codes` — OAuth device code grants
-- `np_auth_magic_links` — issued magic link tokens
-- `np_auth_audit_log` — authentication event audit trail
-- `np_auth_trusted_devices` — user-trusted device records
+- `np_auth_sessions`, extended session records
+- `np_auth_passkeys`, registered WebAuthn passkey credentials
+- `np_auth_mfa_configs`, per-user MFA configuration
+- `np_auth_device_codes`, OAuth device code grants
+- `np_auth_magic_links`, issued magic link tokens
+- `np_auth_audit_log`, authentication event audit trail
+- `np_auth_trusted_devices`, user-trusted device records
 
 ## Nginx Routes
 

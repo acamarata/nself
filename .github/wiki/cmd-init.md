@@ -1,6 +1,6 @@
 # nself init
 
-> Initialize a new nSelf project with an interactive configuration wizard.
+> Initialize a new ɳSelf project with an interactive configuration wizard.
 
 ## Synopsis
 
@@ -10,9 +10,9 @@ nself init [flags]
 
 ## Description
 
-`nself init` launches an interactive setup wizard that creates a pristine `.env` configuration for a new nSelf project. It prompts for your project name, base domain, and email, then auto-generates cryptographically secure secrets (Postgres password, Hasura admin secret, JWT key).
+`nself init` launches an interactive setup wizard that creates a pristine `.env` configuration for a new ɳSelf project. It prompts for your project name, base domain, and email, then auto-generates cryptographically secure secrets (Postgres password, Hasura admin secret, JWT key).
 
-You can choose which optional services to enable during init (Redis, MinIO, MeiliSearch, Mailpit, Monitoring). Each selection updates the generated `.env` accordingly. All values are validated before being written — domain format, password strength, and required fields are all checked.
+You can choose which optional services to enable during init (Redis, MinIO, MeiliSearch, Mailpit, Monitoring). Each selection updates the generated `.env` accordingly. All values are validated before being written, domain format, password strength, and required fields are all checked.
 
 After `nself init` completes, run `nself build` to generate `docker-compose.yml` and nginx configs, then `nself start` to boot the stack.
 

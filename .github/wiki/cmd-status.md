@@ -10,7 +10,7 @@ nself status [SERVICE] [flags]
 
 ## Description
 
-`nself status` displays the running/stopped state of every service in the nSelf stack. For each service it shows the health status (healthy, unhealthy, starting), container name, and response time from the health endpoint. A summary line at the bottom shows the overall healthy count.
+`nself status` displays the running/stopped state of every service in the ɳSelf stack. For each service it shows the health status (healthy, unhealthy, starting), container name, and response time from the health endpoint. A summary line at the bottom shows the overall healthy count.
 
 You can pass a single service name to show detailed status for that service only. Use `--verbose` to include resource usage (CPU, memory) and uptime. Use `--json` to get machine-readable output suitable for monitoring scripts or dashboards.
 

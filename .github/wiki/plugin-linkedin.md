@@ -36,7 +36,7 @@ The license is validated against `ping.nself.org/license/validate`. Tier is chec
 
 The LinkedIn plugin connects a LinkedIn account via OAuth 2.0, posts to a member's LinkedIn feed with optional image attachments, and tracks post history for later reference. It also exposes a Claw tool descriptor so ɳClaw can publish on the user's behalf.
 
-OAuth tokens are stored per `source_account_id`, so multi-tenant nSelf installs keep each user's LinkedIn credentials isolated. The plugin is currently in `beta` status.
+OAuth tokens are stored per `source_account_id`, so multi-tenant ɳSelf installs keep each user's LinkedIn credentials isolated. The plugin is currently in `beta` status.
 
 ## Configuration
 
@@ -61,8 +61,8 @@ OAuth tokens are stored per `source_account_id`, so multi-tenant nSelf installs 
 
 2 tables added to your Postgres database (prefix: `np_linkedin_`):
 
-- `np_linkedin_tokens` — OAuth access and refresh tokens per account
-- `np_linkedin_posts` — published post history with status
+- `np_linkedin_tokens`, OAuth access and refresh tokens per account
+- `np_linkedin_posts`, published post history with status
 
 ## REST API
 
@@ -98,9 +98,9 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 ## See Also
 
-- [[plugin-post]] — multi-platform publisher (includes LinkedIn as a target)
-- [[plugin-google]] — similar OAuth-driven integration pattern
-- [[Plugin-Licensing]] — tier comparison
-- [[Plugin-Overview]] — full plugin index
+- [[plugin-post]], multi-platform publisher (includes LinkedIn as a target)
+- [[plugin-google]], similar OAuth-driven integration pattern
+- [[Plugin-Licensing]], tier comparison
+- [[Plugin-Overview]], full plugin index
 
 ← [[Plugin-Overview]] | [[Home]] →

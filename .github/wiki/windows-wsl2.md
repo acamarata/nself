@@ -1,10 +1,10 @@
 # Windows: WSL2 Install Guide
 
-nSelf CLI requires WSL2 on Windows. The CLI depends on Docker socket activation, POSIX path semantics, and systemd-style service management, none of which are natively available on Win32.
+ɳSelf CLI requires WSL2 on Windows. The CLI depends on Docker socket activation, POSIX path semantics, and systemd-style service management, none of which are natively available on Win32.
 
 ## Why WSL2 is Required
 
-- **Docker socket:** nSelf drives Docker via `/var/run/docker.sock`. Docker Desktop exposes this socket inside WSL2 only.
+- **Docker socket:** ɳSelf drives Docker via `/var/run/docker.sock`. Docker Desktop exposes this socket inside WSL2 only.
 - **POSIX paths:** `nself build` generates `docker-compose.yml` with Linux-style volume mounts. Windows paths break compose volume resolution.
 - **Linuxbrew:** the official `brew tap nself-org/nself` distribution requires Linuxbrew (runs inside WSL2 Ubuntu).
 
@@ -26,7 +26,7 @@ Reboot when prompted.
 wsl --install -d Ubuntu-22.04
 ```
 
-Or install **Ubuntu 22.04 LTS** from the Microsoft Store. Launch it once to complete the initial user setup (username + password).
+Or install **Ubuntu 22.04 long-term support** from the Microsoft Store. Launch it once to complete the initial user setup (username + password).
 
 ## Step 3: Install Docker Inside WSL2
 
@@ -50,7 +50,7 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-## Step 4: Install nSelf via Linuxbrew
+## Step 4: Install ɳSelf via Linuxbrew
 
 Inside the Ubuntu 22.04 terminal:
 
@@ -85,7 +85,7 @@ cd my-project
 nself start
 ```
 
-nSelf boots Postgres, Hasura, Auth, and Nginx. When all services show `healthy`, the stack is ready.
+ɳSelf boots Postgres, Hasura, Auth, and Nginx. When all services show `healthy`, the stack is ready.
 
 ## Troubleshooting
 
@@ -95,7 +95,7 @@ If using Docker Desktop, verify WSL2 integration is toggled on for Ubuntu-22.04 
 
 **Network: cannot reach `localhost` from Windows browser**
 
-WSL2 uses a virtual network adapter. Access nSelf services via the WSL2 IP:
+WSL2 uses a virtual network adapter. Access ɳSelf services via the WSL2 IP:
 
 ```bash
 ip addr show eth0 | grep 'inet '

@@ -33,8 +33,8 @@ Runs a managed pool of headless Chromium instances accessible via a REST API. Ca
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_browser_sessions` — browser session log
-- `np_browser_results` — cached task results
+- `np_browser_sessions`, browser session log
+- `np_browser_results`, cached task results
 
 ## Nginx Routes
 

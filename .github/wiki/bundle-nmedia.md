@@ -1,6 +1,6 @@
-# nTV Plugin Bundle
+# ɳTV Plugin Bundle
 
-> **Note:** This bundle was renamed from nMedia to nTV on 2026-04-18. The canonical page is [bundle-ntv](bundle-ntv). This page is preserved for search continuity and will be removed in a future cleanup.
+> **Note:** This bundle was renamed from nMedia to ɳTV on 2026-04-18. The canonical page is [bundle-ntv](bundle-ntv). This page is preserved for search continuity and will be removed in a future cleanup.
 
 ## Contents
 
@@ -15,7 +15,7 @@
 
 nMedia is the marketing name for a set of 12 plugins that together provide a complete self-hosted media management system. It is not a repo or a single plugin. When all 12 are installed, you get a pipeline from content discovery through transcoding to streaming playback.
 
-nMedia pairs with [nTV](https://github.com/nself-org/ntv) (planned), a Flutter media player that connects to a nSelf backend running these plugins.
+nMedia pairs with [ɳTV](https://github.com/nself-org/ntv) (planned), a Flutter media player that connects to a ɳSelf backend running these plugins.
 
 ## Plugins Included
 
@@ -93,7 +93,7 @@ nself build && nself start
 
 ### Prerequisites
 
-- nSelf CLI installed and a project initialized (`nself init`)
+- ɳSelf CLI installed and a project initialized (`nself init`)
 - Backend running (`nself start`)
 - Basic tier license or above (for pro plugins)
 
@@ -115,7 +115,7 @@ Configure stream-gateway with your preferred HLS segment duration and adaptive b
 
 ### Step 5: Connect a player
 
-Point nTV (or any HLS/DASH-compatible player) at your nSelf backend's streaming endpoint.
+Point ɳTV (or any HLS/DASH-compatible player) at your ɳSelf backend's streaming endpoint.
 
 ### Troubleshooting
 
@@ -126,7 +126,7 @@ Point nTV (or any HLS/DASH-compatible player) at your nSelf backend's streaming 
 
 ## Related Pages
 
-- [Plugin Overview](Plugin-Overview) — all plugins and tiers
-- [Plugin Install](Plugin-Install) — how to install plugins
-- [Plugin Licensing](Plugin-Licensing) — license keys and tiers
+- [Plugin Overview](Plugin-Overview), all plugins and tiers
+- [Plugin Install](Plugin-Install), how to install plugins
+- [Plugin Licensing](Plugin-Licensing), license keys and tiers
 - Individual plugin pages: [torrent-manager](plugin-torrent-manager), [content-acquisition](plugin-content-acquisition), [media-processing](plugin-media-processing), [file-processing](plugin-file-processing), [subtitle-manager](plugin-subtitle-manager), [vpn](plugin-vpn), [epg](plugin-epg), [tmdb](plugin-tmdb), [game-metadata](plugin-game-metadata), [recording](plugin-recording), [stream-gateway](plugin-stream-gateway), [streaming](plugin-streaming)

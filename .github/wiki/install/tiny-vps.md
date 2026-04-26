@@ -1,6 +1,6 @@
 # Tiny VPS Setup
 
-Running nSelf on a server with less than 1 GB of RAM requires the tiny profile.
+Running ɳSelf on a server with less than 1 GB of RAM requires the tiny profile.
 The tiny profile starts Postgres and nginx only. Hasura and Auth are opt-in.
 
 ---
@@ -13,7 +13,7 @@ The tiny profile starts Postgres and nginx only. Hasura and Auth are opt-in.
 | 512 MB – 1 GB | Tiny profile recommended |
 | 1 GB + | Standard profile works |
 
-nSelf detects available RAM at init time and prints a warning when it is below 512 MB.
+ɳSelf detects available RAM at init time and prints a warning when it is below 512 MB.
 
 ---
 
@@ -91,9 +91,9 @@ nself start
 
 ## Related pages
 
-- [[cmd-init]] — full `nself init` reference
-- [[Errors]] — troubleshooting guide
-- [[Support]] — get help
+- [[cmd-init]], full `nself init` reference
+- [[Errors]], troubleshooting guide
+- [[Support]], get help
 
 ---
 

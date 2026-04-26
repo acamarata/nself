@@ -1,10 +1,10 @@
 # Color Palette
 
-Official nSelf brand colours.
+Official ɳSelf brand colours.
 
 ## Primary Colours
 
-### Indigo — Primary
+### Indigo, Primary
 Used for: buttons, links, highlights, active states, the ɳ mark.
 
 | Format | Value |
@@ -24,7 +24,7 @@ Used for: app background, dark surfaces, cards.
 
 ## Complementary Colours
 
-These colours are used in the nSelf UI alongside the primary palette:
+These colours are used in the ɳSelf UI alongside the primary palette:
 
 | Name | HEX | Use |
 |------|-----|-----|
@@ -44,8 +44,8 @@ These colours are used in the nSelf UI alongside the primary palette:
 
 ## See Also
 
-- [[Brand-Assets]] — download logo files
-- [[Logo-Usage]] — logo clearspace and usage rules
+- [[Brand-Assets]], download logo files
+- [[Logo-Usage]], logo clearspace and usage rules
 
 ---
 ← [[Home]] | [[_Sidebar]]

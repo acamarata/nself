@@ -1,6 +1,6 @@
 # CLI Benchmarks
 
-The nSelf CLI ships with Go benchmark tests for the top-5 commands. These benchmarks measure cobra dispatch overhead, flag-parsing cost, and early business-logic traversal — not external I/O (Docker, network, filesystem beyond a temp dir).
+The ɳSelf CLI ships with Go benchmark tests for the top-5 commands. These benchmarks measure cobra dispatch overhead, flag-parsing cost, and early business-logic traversal, not external I/O (Docker, network, filesystem beyond a temp dir).
 
 ## Running Benchmarks
 

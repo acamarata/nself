@@ -5,7 +5,7 @@ Point-in-time recovery (PITR) via continuous WAL archiving.
 PITR archives PostgreSQL write-ahead log segments so that any second within the
 retention window can be used as a restore target. A scheduled base backup
 (`pg_basebackup`) combined with a stream of WAL segments lets you recover to
-any point in the past — not just the last full backup.
+any point in the past, not just the last full backup.
 
 ---
 
@@ -35,7 +35,7 @@ nself pitr enable --to s3://my-bucket/pitr --encrypt-recipient age1abc... --rete
 
 Writes `.nself/pitr/postgresql.conf.d/pitr.conf`. Mount this file into the
 PostgreSQL container to activate WAL archiving. Sets `wal_level = logical`
-(satisfies both PITR and CDC logical replication — no separate setting needed).
+(satisfies both PITR and CDC logical replication, no separate setting needed).
 
 **Flags:**
 
@@ -44,7 +44,7 @@ PostgreSQL container to activate WAL archiving. Sets `wal_level = logical`
 | `--to` | (required) | Destination URL for WAL archives (s3://, r2://, gcs://, etc.) |
 | `--encrypt-recipient` | — | age public key to encrypt WAL segments |
 | `--retention-days` | 7 | Number of days to retain WAL segments |
-| `--wal-timeout` | 60 | `archive_timeout` in seconds — flush WAL segment at most this often |
+| `--wal-timeout` | 60 | `archive_timeout` in seconds , flush WAL segment at most this often |
 
 ---
 
@@ -183,8 +183,8 @@ and full restore orchestration.
 
 ## See also
 
-- [[cmd-backup]] — full and metadata backups
-- [[cmd-restore]] — restore from a pg_dump backup
+- [[cmd-backup]], full and metadata backups
+- [[cmd-restore]], restore from a pg_dump backup
 - [Point-in-Time Recovery Guide](https://docs.nself.org/guides/point-in-time-recovery)
 
 [[Home]]

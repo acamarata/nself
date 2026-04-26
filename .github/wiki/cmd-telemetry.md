@@ -79,11 +79,11 @@ Preferences are stored in `~/.nself/config.toml`:
 enabled = false
 ```
 
-This file is shared with other nSelf user-level settings. It is created automatically when you run `nself telemetry off` or `nself telemetry on`.
+This file is shared with other ɳSelf user-level settings. It is created automatically when you run `nself telemetry off` or `nself telemetry on`.
 
 ## Privacy
 
-All security features in nSelf are free. When telemetry ships in v1.1.0, it will be:
+All security features in ɳSelf are free. When telemetry ships in v1.1.0, it will be:
 
 - Opt-in only
 - Anonymous (no personal data, no project names, no IP addresses stored)

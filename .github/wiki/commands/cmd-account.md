@@ -1,6 +1,6 @@
 # nself login / logout / account
 
-**Authenticate with your nSelf account and manage credentials.**
+**Authenticate with your ɳSelf account and manage credentials.**
 
 These three commands handle the full CLI authentication lifecycle: log in,
 view account details, manage licenses, and log out.
@@ -13,7 +13,7 @@ testing or self-hosted deployments.
 
 ## nself login
 
-Log in to your nSelf account using the device authorization flow.
+Log in to your ɳSelf account using the device authorization flow.
 
 ```
 nself login [--no-browser] [--force]
@@ -172,7 +172,7 @@ nself account licenses list
 
 ## Related commands
 
-- `nself license set <key>` — activate a plugin license key (existing flow)
-- `nself license list` — list locally configured license keys
+- `nself license set <key>`, activate a plugin license key (existing flow)
+- `nself license list`, list locally configured license keys
 
 [[Home]] | [[Commands]] | [[Plugin-Overview]]

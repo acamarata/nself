@@ -33,11 +33,11 @@ Manages documents stored in MinIO with metadata, versioning, and access control.
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_documents_documents` — document metadata
-- `np_documents_versions` — version history
-- `np_documents_templates` — document templates
-- `np_documents_shares` — share token records
-- `np_documents_access_log` — document access log
+- `np_documents_documents`, document metadata
+- `np_documents_versions`, version history
+- `np_documents_templates`, document templates
+- `np_documents_shares`, share token records
+- `np_documents_access_log`, document access log
 
 ## Nginx Routes
 

@@ -2,7 +2,7 @@
 
 > **Self-hosted backend in five minutes.** Postgres, GraphQL, Auth, Nginx. No cloud required.
 
-nSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available (87 total) starting at $0.99/mo.
+ɳSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available (87 total) starting at $0.99/mo.
 
 ```bash
 brew install nself-org/nself/nself   # or: curl -sSL https://install.nself.org | bash
@@ -33,7 +33,7 @@ nself start
 
 ## Getting Started
 
-New to nSelf? Start here.
+New to ɳSelf? Start here.
 
 | Page | Description |
 |------|-------------|
@@ -47,7 +47,7 @@ New to nSelf? Start here.
 
 ## Core Stack
 
-Every nSelf project runs these four services. No configuration required.
+Every ɳSelf project runs these four services. No configuration required.
 
 | Service | Version | What it does |
 |---------|---------|-------------|
@@ -79,7 +79,7 @@ Optional services (enable per project): **Redis** | **MinIO** (S3 storage) | **S
 
 ## Commands
 
-nSelf provides **25 top-level commands** with **295+ subcommands**. Full reference:
+ɳSelf provides **25 top-level commands** with **295+ subcommands**. Full reference:
 
 | Category | Commands | Description |
 |----------|----------|-------------|
@@ -96,7 +96,7 @@ nSelf provides **25 top-level commands** with **295+ subcommands**. Full referen
 
 ## Configuration
 
-nSelf uses a layered `.env` file system. No YAML, no config files to learn.
+ɳSelf uses a layered `.env` file system. No YAML, no config files to learn.
 
 | Page | Covers |
 |------|--------|
@@ -125,7 +125,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 | [[Plugin-Dev-Guide]] | Build and publish your own plugin |
 
 <details>
-<summary><strong>Free Plugins (25)</strong> — MIT licensed, no key required</summary>
+<summary><strong>Free Plugins (25)</strong>, MIT licensed, no key required</summary>
 
 | Plugin | What it does |
 |--------|-------------|
@@ -158,7 +158,7 @@ nSelf uses a layered `.env` file system. No YAML, no config files to learn.
 </details>
 
 <details>
-<summary><strong>Pro Plugins (62)</strong> — License key required, starting at $0.99/mo</summary>
+<summary><strong>Pro Plugins (62)</strong>, License key required, starting at $0.99/mo</summary>
 
 **AI and Automation:** [[plugin-ai]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-claw-budget]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
 
@@ -218,7 +218,7 @@ Step-by-step guides for common workflows.
 | Page | Covers |
 |------|--------|
 | [[Security-Policy]] | Responsible disclosure and reporting |
-| [[Security-Architecture]] | How nSelf isolates and hardens services |
+| [[Security-Architecture]] | How ɳSelf isolates and hardens services |
 | [[Security-Hardening]] | Production hardening checklist |
 
 ---
@@ -238,7 +238,7 @@ Step-by-step guides for common workflows.
 
 | Page | Covers |
 |------|--------|
-| [[Contributing]] | How to contribute to nSelf |
+| [[Contributing]] | How to contribute to ɳSelf |
 | [[Dev-Setup]] | Set up a local development environment |
 | [[Plugin-Dev-Guide]] | Build and publish your own plugin |
 | [[Release-Process]] | How releases are built and published |

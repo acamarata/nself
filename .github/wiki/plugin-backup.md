@@ -1,6 +1,6 @@
 # Backup Plugin
 
-> Automated PostgreSQL backups with scheduling and optional cloud upload. **Free — MIT licensed.**
+> Automated PostgreSQL backups with scheduling and optional cloud upload. **Free, MIT licensed.**
 
 ## Install
 
@@ -31,12 +31,12 @@ Runs scheduled `pg_dump` backups of your Postgres database with configurable ret
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_backup_jobs` — backup job history and status
-- `np_backup_schedules` — configured backup schedules
+- `np_backup_jobs`, backup job history and status
+- `np_backup_schedules`, configured backup schedules
 
 ## Nginx Routes
 
-None — backup service is internal only.
+None, backup service is internal only.
 
 ## API
 

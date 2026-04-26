@@ -1,6 +1,6 @@
 # Webhooks Plugin
 
-> Outbound webhook dispatcher with retry, HMAC signing, and dead-letter queue. **Free — MIT licensed.**
+> Outbound webhook dispatcher with retry, HMAC signing, and dead-letter queue. **Free, MIT licensed.**
 
 ## Install
 
@@ -30,12 +30,12 @@ Delivers outbound HTTP webhooks to external URLs based on Hasura event triggers.
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_webhooks_endpoints` — registered webhook destinations
-- `np_webhooks_deliveries` — delivery log and dead-letter queue
+- `np_webhooks_endpoints`, registered webhook destinations
+- `np_webhooks_deliveries`, delivery log and dead-letter queue
 
 ## Nginx Routes
 
-None — webhooks service is internal only.
+None, webhooks service is internal only.
 
 ## API
 

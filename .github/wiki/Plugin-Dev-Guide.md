@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-Build a new nSelf plugin. Plugins extend the nSelf stack with additional Docker services, Nginx routes, and CLI commands.
+Build a new ɳSelf plugin. Plugins extend the ɳSelf stack with additional Docker services, Nginx routes, and CLI commands.
 
 ## Plugin Structure
 
@@ -44,7 +44,7 @@ my-plugin/
 
 ## Compose Overlay
 
-The `compose.yml` defines Docker services to add to the stack. nSelf merges this into the generated `docker-compose.yml` at build time:
+The `compose.yml` defines Docker services to add to the stack. ɳSelf merges this into the generated `docker-compose.yml` at build time:
 
 ```yaml
 services:
@@ -76,11 +76,11 @@ location /my-plugin/ {
 }
 ```
 
-nSelf appends this block to the generated Nginx server config for your domain.
+ɳSelf appends this block to the generated Nginx server config for your domain.
 
 ## Env Var Declaration
 
-All env vars your plugin needs must be declared in the manifest. nSelf:
+All env vars your plugin needs must be declared in the manifest. ɳSelf:
 1. Validates required vars are present before build
 2. Auto-generates secret vars (if `"secret": true` and not already set)
 3. Injects declared vars into the compose overlay
@@ -111,13 +111,13 @@ Before submitting a PR to the plugins repository:
 - [ ] `README.md` covers: what it does, env vars, usage
 
 **Free plugins:** submit a PR to [nself-org/plugins](https://github.com/nself-org/plugins).
-**Pro plugins:** contact the nSelf team.
+**Pro plugins:** contact the ɳSelf team.
 
 ## See Also
 
-- [[Plugin-Architecture]] — how plugins integrate with the core
-- [[Plugin-Overview]] — existing plugin catalogue
-- [[Contributing]] — general contribution guidelines
+- [[Plugin-Architecture]], how plugins integrate with the core
+- [[Plugin-Overview]], existing plugin catalogue
+- [[Contributing]], general contribution guidelines
 
 ---
 ← [[Home]] | [[_Sidebar]]

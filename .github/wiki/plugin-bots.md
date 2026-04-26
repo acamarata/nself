@@ -1,6 +1,6 @@
 # Bots Plugin
 
-> Bot framework for chat — commands, subscriptions, and bot marketplace. **Pro plugin.**
+> Bot framework for chat, commands, subscriptions, and bot marketplace. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -32,15 +32,15 @@ A framework for building and deploying chat bots that integrate with the `chat` 
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_bots_bots` — registered bot definitions
-- `np_bots_commands` — slash command registrations
-- `np_bots_subscriptions` — event subscriptions
-- `np_bots_webhooks` — webhook delivery configs
-- `np_bots_marketplace` — marketplace listings
-- `np_bots_installs` — bot install records
-- `np_bots_tokens` — bot authentication tokens
-- `np_bots_events` — event delivery log
-- `np_bots_responses` — bot response cache
+- `np_bots_bots`, registered bot definitions
+- `np_bots_commands`, slash command registrations
+- `np_bots_subscriptions`, event subscriptions
+- `np_bots_webhooks`, webhook delivery configs
+- `np_bots_marketplace`, marketplace listings
+- `np_bots_installs`, bot install records
+- `np_bots_tokens`, bot authentication tokens
+- `np_bots_events`, event delivery log
+- `np_bots_responses`, bot response cache
 
 ## Nginx Routes
 

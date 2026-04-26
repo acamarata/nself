@@ -1,8 +1,8 @@
-# Config — Custom Services
+# Config, Custom Services
 
-Custom services are user-defined Docker containers that nSelf manages alongside the core stack. They live in numbered slots — `CS_1` through `CS_10` — and are treated as first-class citizens: nSelf generates their `docker-compose` config, injects core service credentials, routes them through Nginx, and exposes them in `nself status` and `nself logs`.
+Custom services are user-defined Docker containers that ɳSelf manages alongside the core stack. They live in numbered slots, `CS_1` through `CS_10`, and are treated as first-class citizens: ɳSelf generates their `docker-compose` config, injects core service credentials, routes them through Nginx, and exposes them in `nself status` and `nself logs`.
 
-Use custom services to run any application your project needs — a REST API, a background worker, a webhook processor, an AI inference service — without leaving the nSelf config system.
+Use custom services to run any application your project needs, a REST API, a background worker, a webhook processor, an AI inference service, without leaving the ɳSelf config system.
 
 ---
 
@@ -19,13 +19,13 @@ nSelf stack
         └── managed by nself start / stop / logs / status
 ```
 
-Up to **10 custom service slots** are available per project. Slots are independent — you can use `CS_1` and `CS_3` without defining `CS_2`.
+Up to **10 custom service slots** are available per project. Slots are independent, you can use `CS_1` and `CS_3` without defining `CS_2`.
 
 ---
 
 ## Defining a Custom Service
 
-### Option 1 — Shorthand (CS_N)
+### Option 1, Shorthand (CS_N)
 
 The `CS_N` variable accepts a single definition string that encodes the most common settings:
 
@@ -40,16 +40,16 @@ CS_N=name:template[:port][:route]
 | `port` | No | Port the service listens on. Auto-assigned if omitted. |
 | `route` | No | Nginx subdomain. If omitted, the service is internal-only. |
 
-**Example — a Go service on port 8001 exposed at `ping.{BASE_DOMAIN}`:**
+**Example, a Go service on port 8001 exposed at `ping.{BASE_DOMAIN}`:**
 
 ```bash
 # .env
 CS_1=ping_api:go:8001:ping
 ```
 
-nSelf parses this and derives the individual `CS_1_*` variables automatically. You only need the individual vars if you want to override a specific field.
+ɳSelf parses this and derives the individual `CS_1_*` variables automatically. You only need the individual vars if you want to override a specific field.
 
-### Option 2 — Individual Variables
+### Option 2, Individual Variables
 
 For full control, set each variable explicitly. Individual vars always take precedence over parsed values from `CS_N`.
 
@@ -74,12 +74,12 @@ All variables use the pattern `CS_N_*` where `N` is the slot number (1–10). Va
 | `CS_N_NAME` | string | parsed from CS_N | Service name used in container labels and Nginx routing |
 | `CS_N_TEMPLATE` | string | parsed from CS_N | Framework template (see [Language Templates](#language-templates)) |
 | `CS_N_PORT` | int | parsed from CS_N or auto | Port the service listens on inside the Docker network |
-| `CS_N_ROUTE` | string | parsed from CS_N | Nginx subdomain — set this to expose the service externally |
+| `CS_N_ROUTE` | string | parsed from CS_N | Nginx subdomain , set this to expose the service externally |
 | `CS_N_PUBLIC` | bool | `false` | When `true`, Nginx routes `{CS_N_ROUTE}.{BASE_DOMAIN}` to this service |
 | `CS_N_MEMORY` | string | `256m` | Docker memory limit |
 | `CS_N_CPU` | string | `0.5` | Docker CPU limit (fractional cores) |
 | `CS_N_REPLICAS` | int | `1` | Number of container instances to run |
-| `CS_N_HEALTHCHECK` | string | `/health` | Health endpoint path — used by Docker healthcheck and `nself status` |
+| `CS_N_HEALTHCHECK` | string | `/health` | Health endpoint path , used by Docker healthcheck and `nself status` |
 | `CS_N_TABLE_PREFIX` | string | *(empty)* | Database table prefix for this service's migrations |
 | `CS_N_ENV` | string | *(empty)* | Additional env vars to inject, in `KEY=VALUE,KEY=VALUE` format |
 
@@ -89,7 +89,7 @@ All `CS_*` variables are automatically exempt from "unknown env var" warnings.
 
 ## Env Var Injection
 
-When a custom service container starts, nSelf automatically injects the following variables:
+When a custom service container starts, ɳSelf automatically injects the following variables:
 
 | Variable | Value | Description |
 |----------|-------|-------------|
@@ -102,7 +102,7 @@ When a custom service container starts, nSelf automatically injects the followin
 
 All variables from the project's `.env` that do not conflict with injected vars are also forwarded into the container. This means your service can read any project-level config it needs without extra wiring.
 
-**Example — reading injected vars in a Go service:**
+**Example, reading injected vars in a Go service:**
 
 ```go
 dbURL := os.Getenv("DATABASE_URL")            // injected by nSelf
@@ -123,7 +123,7 @@ CS_2_ENV=QUEUE_SIZE=100,WORKER_TIMEOUT=30,LOG_FORMAT=json
 
 ## Language Templates
 
-nSelf ships with 40+ language and framework templates that scaffold a production-ready service with a Dockerfile, health endpoint, and example database connection.
+ɳSelf ships with 40+ language and framework templates that scaffold a production-ready service with a Dockerfile, health endpoint, and example database connection.
 
 ```bash
 nself service templates          # list all available templates
@@ -146,13 +146,13 @@ nself service templates --filter go   # filter by name
 | **Deno** | `deno`, `deno-fresh` |
 | **Other** | `elixir`, `phoenix`, `clojure`, `scala`, and more |
 
-Each template includes a `/health` endpoint that returns `200 OK`, which nSelf uses for container health checks and `nself status`.
+Each template includes a `/health` endpoint that returns `200 OK`, which ɳSelf uses for container health checks and `nself status`.
 
 ---
 
-## Real-World Example — ping_api (web/backend CS_1)
+## Real-World Example, ping_api (web/backend CS_1)
 
-The nSelf infrastructure itself (`web/backend`) uses `CS_1` to run **ping_api** — a Go service on port 8001 that handles telemetry and license validation for the CLI. It is accessible at `ping.nself.org`.
+The ɳSelf infrastructure itself (`web/backend`) uses `CS_1` to run **ping_api**, a Go service on port 8001 that handles telemetry and license validation for the CLI. It is accessible at `ping.nself.org`.
 
 ```bash
 # web/backend/.env
@@ -218,7 +218,7 @@ Your service is now live at `https://api.{BASE_DOMAIN}` and accessible internall
 
 ## Multiple Custom Services
 
-You can define up to 10 slots simultaneously. Slots are independent — gaps are fine.
+You can define up to 10 slots simultaneously. Slots are independent, gaps are fine.
 
 ```bash
 # .env
@@ -237,9 +237,9 @@ CS_2_REPLICAS=3
 
 ## Notes
 
-- Custom service images are built from the scaffolded Dockerfile in `./services/{name}/`. To use a pre-built image instead, set `CS_N_IMAGE` directly (advanced usage — see [[Guide-Custom-Services]]).
+- Custom service images are built from the scaffolded Dockerfile in `./services/{name}/`. To use a pre-built image instead, set `CS_N_IMAGE` directly (advanced usage, see [[Guide-Custom-Services]]).
 - The `CS_N_TABLE_PREFIX` variable is used by `nself migrate` to scope migrations to a subdirectory, keeping custom service migrations separate from core schema changes.
-- Custom services participate in `nself backup` — the backup bundle includes a dump of any tables matching the `CS_N_TABLE_PREFIX`.
+- Custom services participate in `nself backup`, the backup bundle includes a dump of any tables matching the `CS_N_TABLE_PREFIX`.
 - Logs from all custom service slots are included in `nself logs --all`.
 
 ---

@@ -1,6 +1,6 @@
 # nself gdpr
 
-Manage GDPR data portability (Art. 20) and right-to-erasure (Art. 17) requests for your nSelf instance.
+Manage GDPR data portability (Art. 20) and right-to-erasure (Art. 17) requests for your ɳSelf instance.
 
 All operations write an entry to `np_gdpr_requests`, which is the append-only audit trail required by GDPR Art. 30. That table is never deleted.
 
@@ -30,7 +30,7 @@ The archive contains one file per plugin/table. Each file lists the rows belongi
 
 ### nself gdpr delete
 
-Delete or anonymize all data for a user across every plugin-registered table and core nSelf tables.
+Delete or anonymize all data for a user across every plugin-registered table and core ɳSelf tables.
 
 ```bash
 nself gdpr delete --user <user_id> [--dry-run]

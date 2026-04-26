@@ -1,6 +1,6 @@
 # nself service
 
-> Enable, disable, and list optional nSelf services.
+> Enable, disable, and list optional ɳSelf services.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ nself service <subcommand> [flags]
 
 ## Description
 
-`nself service` manages the optional services in your nSelf stack. The four core services (PostgreSQL, Hasura, Auth, Nginx) are always included. The six optional services — Redis, MinIO, Email, Functions, Search, and Admin — are controlled through this command.
+`nself service` manages the optional services in your ɳSelf stack. The four core services (PostgreSQL, Hasura, Auth, Nginx) are always included. The six optional services, Redis, MinIO, Email, Functions, Search, and Admin, are controlled through this command.
 
 Enabling or disabling a service writes to your `.env` file. After changing service state, run `nself build` to regenerate `docker-compose.yml` with the updated service set, then `nself restart` to apply the changes.
 

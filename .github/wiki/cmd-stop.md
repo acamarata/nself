@@ -13,9 +13,9 @@ nself down [SERVICES...] [flags]
 
 ## Description
 
-`nself stop` shuts down the nSelf stack gracefully. By default it sends SIGTERM to running containers and waits for them to exit cleanly before running `docker compose down`. The graceful shutdown timeout is 30 seconds by default and can be adjusted with `--graceful`.
+`nself stop` shuts down the ɳSelf stack gracefully. By default it sends SIGTERM to running containers and waits for them to exit cleanly before running `docker compose down`. The graceful shutdown timeout is 30 seconds by default and can be adjusted with `--graceful`.
 
-You can stop specific services by passing their names as positional arguments. When stopping individual services, only those containers are affected — the rest of the stack remains running.
+You can stop specific services by passing their names as positional arguments. When stopping individual services, only those containers are affected, the rest of the stack remains running.
 
 Data is always preserved. Volumes are only removed when `--volumes` is explicitly passed (this is destructive and will delete your database and all stored data). When `--volumes` or `--rmi` is set, the graceful stop phase is skipped for speed.
 
@@ -24,7 +24,7 @@ Data is always preserved. Volumes are only removed when `--volumes` is explicitl
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--graceful` | `30` | Graceful shutdown timeout in seconds |
-| `--volumes`, `-v` | false | Remove volumes — **WARNING: deletes all data** |
+| `--volumes`, `-v` | false | Remove volumes , **WARNING: deletes all data** |
 | `--rmi` | false | Remove Docker images after stopping |
 | `--remove-images` | false | Alias for `--rmi` |
 | `--remove-orphans` | false | Remove orphaned containers |

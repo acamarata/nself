@@ -10,7 +10,7 @@ nself config <subcommand> [flags]
 
 ## Description
 
-`nself config` provides a complete interface for reading and writing nSelf configuration values. Config is stored in `.env` files — `nself config` reads and writes them safely, preserving comments and formatting.
+`nself config` provides a complete interface for reading and writing ɳSelf configuration values. Config is stored in `.env` files, `nself config` reads and writes them safely, preserving comments and formatting.
 
 Secret keys (any key containing `SECRET`, `PASSWORD`, `KEY`, or `TOKEN`) are masked as `***` in output by default. Pass `--reveal` to show plaintext values. Use `--env` to target a specific environment file (e.g., `--env staging` reads `.env.staging`).
 

@@ -1,6 +1,6 @@
 # Invitations Plugin
 
-> User invitation system with email/SMS delivery and token-based join links. **Free — MIT licensed.**
+> User invitation system with email/SMS delivery and token-based join links. **Free, MIT licensed.**
 
 ## Install
 
@@ -10,7 +10,7 @@ nself plugin install invitations
 
 ## What It Does
 
-Manages user invitations for your application. Generate token-based invite links, deliver them via email or SMS, track acceptance status, and enforce expiry. Integrates with nSelf Auth so accepted invitations automatically provision user accounts.
+Manages user invitations for your application. Generate token-based invite links, deliver them via email or SMS, track acceptance status, and enforce expiry. Integrates with ɳSelf Auth so accepted invitations automatically provision user accounts.
 
 ## Configuration
 
@@ -30,11 +30,11 @@ Manages user invitations for your application. Generate token-based invite links
 ## Database Tables
 
 1 table added to your Postgres database:
-- `np_invitations_invitations` — invitation records, tokens, and status
+- `np_invitations_invitations`, invitation records, tokens, and status
 
 ## Nginx Routes
 
-None — invitations service is internal only.
+None, invitations service is internal only.
 
 ## API
 

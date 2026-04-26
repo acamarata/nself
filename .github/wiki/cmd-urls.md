@@ -10,7 +10,7 @@ nself urls [flags]
 
 ## Description
 
-`nself urls` prints all URLs that the nSelf stack exposes, grouped by type: Required Services, Optional Services, Custom Services, and Frontend Apps. URLs are computed from `BASE_DOMAIN` and each service's route configuration — no services need to be running.
+`nself urls` prints all URLs that the ɳSelf stack exposes, grouped by type: Required Services, Optional Services, Custom Services, and Frontend Apps. URLs are computed from `BASE_DOMAIN` and each service's route configuration, no services need to be running.
 
 Internal-only services (PostgreSQL, Redis) are shown with their `127.0.0.1` binding and labeled as internal. Publicly routed services show their full HTTPS URL. Use `--all` to include internal routes alongside public ones.
 

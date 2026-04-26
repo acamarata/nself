@@ -1,6 +1,6 @@
 # PayPal Pro Plugin
 
-> Advanced PayPal integration with full webhook processing, dispute automation, and recurring subscription management. **Pro plugin — requires license.**
+> Advanced PayPal integration with full webhook processing, dispute automation, and recurring subscription management. **Pro plugin, requires license.**
 
 ## Tier required
 
@@ -58,20 +58,20 @@ The plugin tracks orders, captures, refunds, disputes, subscriptions, plans, pay
 
 14 tables prefixed `np_paypal_`:
 
-- `np_paypal_orders` — order records
-- `np_paypal_captures` — payment captures
-- `np_paypal_authorizations` — payment authorizations
-- `np_paypal_refunds` — refund records
-- `np_paypal_disputes` — dispute and chargeback records
-- `np_paypal_subscriptions` — subscription state
-- `np_paypal_subscription_plans` — subscription plan definitions
-- `np_paypal_products` — product catalog
-- `np_paypal_payouts` — payout records
-- `np_paypal_invoices` — invoice history
-- `np_paypal_payers` — payer (customer) records
-- `np_paypal_balances` — account balance snapshots
-- `np_paypal_transactions` — transaction log
-- `np_paypal_webhook_events` — raw incoming webhook payloads
+- `np_paypal_orders`, order records
+- `np_paypal_captures`, payment captures
+- `np_paypal_authorizations`, payment authorizations
+- `np_paypal_refunds`, refund records
+- `np_paypal_disputes`, dispute and chargeback records
+- `np_paypal_subscriptions`, subscription state
+- `np_paypal_subscription_plans`, subscription plan definitions
+- `np_paypal_products`, product catalog
+- `np_paypal_payouts`, payout records
+- `np_paypal_invoices`, invoice history
+- `np_paypal_payers`, payer (customer) records
+- `np_paypal_balances`, account balance snapshots
+- `np_paypal_transactions`, transaction log
+- `np_paypal_webhook_events`, raw incoming webhook payloads
 
 ## Nginx Routes
 
@@ -112,10 +112,10 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 ## See Also
 
-- [plugin-stripe-pro](plugin-stripe-pro) — Stripe billing integration
-- [plugin-shopify-pro](plugin-shopify-pro) — Shopify store sync
-- [plugin-donorbox-pro](plugin-donorbox-pro) — Donorbox donation sync
-- [Plugin-Overview](Plugin-Overview) — full plugin index
-- [Plugin-Licensing](Plugin-Licensing) — tier comparison
+- [plugin-stripe-pro](plugin-stripe-pro), Stripe billing integration
+- [plugin-shopify-pro](plugin-shopify-pro), Shopify store sync
+- [plugin-donorbox-pro](plugin-donorbox-pro), Donorbox donation sync
+- [Plugin-Overview](Plugin-Overview), full plugin index
+- [Plugin-Licensing](Plugin-Licensing), tier comparison
 
 ← [Plugin-Overview](Plugin-Overview) | [Home](Home) →

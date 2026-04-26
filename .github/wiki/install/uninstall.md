@@ -1,6 +1,6 @@
-# Uninstalling nSelf
+# Uninstalling ɳSelf
 
-This page covers how to fully remove nSelf from your machine, including the CLI binary, local state, Docker containers, volumes, networks, and images.
+This page covers how to fully remove ɳSelf from your machine, including the CLI binary, local state, Docker containers, volumes, networks, and images.
 
 ## Contents
 
@@ -31,7 +31,7 @@ rm -rf ~/.nself
 
 ### 3. Stop and remove Docker resources
 
-Stop any running nSelf stack first:
+Stop any running ɳSelf stack first:
 
 ```bash
 # Inside your project directory
@@ -42,13 +42,13 @@ cd /path/to/your/project
 docker compose down --volumes --remove-orphans
 ```
 
-Remove nSelf Docker images:
+Remove ɳSelf Docker images:
 
 ```bash
 docker images | grep nself | awk '{print $3}' | xargs docker rmi -f
 ```
 
-Remove any nSelf Docker networks:
+Remove any ɳSelf Docker networks:
 
 ```bash
 docker network ls | grep nself | awk '{print $1}' | xargs docker network rm
@@ -107,7 +107,7 @@ rm -rf /path/to/your/nself/project
 
 ## Windows (WSL2)
 
-nSelf runs inside WSL2. The uninstall steps are the same as Linux, run inside your WSL2 terminal.
+ɳSelf runs inside WSL2. The uninstall steps are the same as Linux, run inside your WSL2 terminal.
 
 ### 1. Remove the CLI binary (inside WSL2)
 

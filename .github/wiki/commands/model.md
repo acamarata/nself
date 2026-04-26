@@ -232,7 +232,7 @@ Benchmarking gemma-3-4b  (5 runs)...
 
 ## See also
 
-- [[nself ollama]] — manage the Ollama service container (install, status)
-- [[nself ai local]] — manage models via the `plugin-ai` registry
-- [[nself plugin]] — install and manage nSelf plugins
+- [[nself ollama]], manage the Ollama service container (install, status)
+- [[nself ai local]], manage models via the `plugin-ai` registry
+- [[nself plugin]], install and manage ɳSelf plugins
 - [[Home]]

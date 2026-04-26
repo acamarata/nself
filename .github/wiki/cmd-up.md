@@ -1,6 +1,6 @@
 # nself up
 
-> Alias for `nself start`. Boots the nSelf stack.
+> Alias for `nself start`. Boots the ɳSelf stack.
 
 ## Synopsis
 
@@ -32,9 +32,9 @@ nself up --verbose
 
 ## See Also
 
-- [[cmd-start]] — canonical command (this page redirects to it)
-- [[cmd-stop]] — shut the stack down
-- [[cmd-down]] — alias for stop
-- [[Commands]] — full command index
+- [[cmd-start]], canonical command (this page redirects to it)
+- [[cmd-stop]], shut the stack down
+- [[cmd-down]], alias for stop
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

@@ -2,16 +2,16 @@
 
 ## Contents
 
-- [Step 1 — Initialize](#step-1--initialize)
-- [Step 2 — Build](#step-2--build)
-- [Step 3 — Start](#step-3--start)
-- [Step 4 — View URLs](#step-4--view-urls)
-- [Step 5 — Run a GraphQL Query](#step-5--run-a-graphql-query)
-- [Step 6 — Stop](#step-6--stop)
+- [Step 1, Initialize](#step-1--initialize)
+- [Step 2, Build](#step-2--build)
+- [Step 3, Start](#step-3--start)
+- [Step 4, View URLs](#step-4--view-urls)
+- [Step 5, Run a GraphQL Query](#step-5--run-a-graphql-query)
+- [Step 6, Stop](#step-6--stop)
 
 Get a full backend running in under 5 minutes.
 
-## Step 1 — Initialize
+## Step 1, Initialize
 
 ```bash
 nself init myapp
@@ -21,15 +21,15 @@ The interactive wizard asks:
 
 | Prompt | What it sets |
 |--------|-------------|
-| Project name | `PROJECT_NAME` in `.env` — used as Docker network prefix |
-| Base domain | `BASE_DOMAIN` — e.g. `myapp.dev` or `localhost` |
+| Project name | `PROJECT_NAME` in `.env` , used as Docker network prefix |
+| Base domain | `BASE_DOMAIN` , e.g. `myapp.dev` or `localhost` |
 | Services to enable | Redis, MinIO storage, email, search, monitoring |
 | Postgres password | Auto-generated secure password (accept or override) |
 | Hasura admin secret | Auto-generated (accept or override) |
 
 Accept defaults for a fast local setup. Run `nself init --fast` to skip all prompts.
 
-## Step 2 — Build
+## Step 2, Build
 
 ```bash
 nself build
@@ -37,7 +37,7 @@ nself build
 
 Generates `docker-compose.yml`, Nginx config, and SSL certificates from your `.env`. Takes a few seconds.
 
-## Step 3 — Start
+## Step 3, Start
 
 ```bash
 nself start
@@ -52,7 +52,7 @@ Boots the stack in order: PostgreSQL first, then Hasura, Auth, Nginx. You'll see
 ✓ nginx      healthy (1s)
 ```
 
-## Step 4 — View URLs
+## Step 4, View URLs
 
 ```bash
 nself urls
@@ -68,7 +68,7 @@ Auth           https://auth.local.nself.org
 GraphQL API    https://api.local.nself.org/v1/graphql
 ```
 
-## Step 5 — Run a GraphQL Query
+## Step 5, Run a GraphQL Query
 
 Open the Hasura Console at `https://hasura.local.nself.org` (or the URL shown by `nself urls`).
 
@@ -92,7 +92,7 @@ Expected response:
 
 Your GraphQL API is live.
 
-## Step 6 — Stop
+## Step 6, Stop
 
 ```bash
 nself stop

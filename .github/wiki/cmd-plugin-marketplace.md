@@ -1,6 +1,6 @@
 # nself plugin marketplace
 
-> Browse and search plugins from the nSelf marketplace.
+> Browse and search plugins from the ɳSelf marketplace.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ nself plugin marketplace <subcommand> [flags]
 
 ## Description
 
-`nself plugin marketplace` queries the nSelf plugin registry at `plugins.nself.org` and lets you browse, search, and inspect plugins before installing them. Use it to explore what is available, filter by tier or bundle, and copy install commands.
+`nself plugin marketplace` queries the ɳSelf plugin registry at `plugins.nself.org` and lets you browse, search, and inspect plugins before installing them. Use it to explore what is available, filter by tier or bundle, and copy install commands.
 
 Free plugins install without a license key. Pro plugins require a valid key set with `nself license set`.
 
@@ -98,8 +98,8 @@ nself plugin install ai
 
 ## See also
 
-- [[cmd-plugin]] — full plugin management reference
-- [[Plugin-Licensing]] — license tiers and key format
-- [[Plugin-Catalog]] — full catalog of all 87 plugins
+- [[cmd-plugin]], full plugin management reference
+- [[Plugin-Licensing]], license tiers and key format
+- [[Plugin-Catalog]], full catalog of all 87 plugins
 
 ← [[Commands]] | [[Home]] →

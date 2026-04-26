@@ -10,7 +10,7 @@ nself doctor [flags]
 
 ## Description
 
-`nself doctor` checks everything nSelf needs to function correctly and reports issues with actionable fix suggestions. It covers infrastructure prerequisites (Docker, Docker Compose, Git), Docker daemon health and permissions, disk and memory availability, network connectivity, configuration correctness, running container health, and plugin schema placement.
+`nself doctor` checks everything ɳSelf needs to function correctly and reports issues with actionable fix suggestions. It covers infrastructure prerequisites (Docker, Docker Compose, Git), Docker daemon health and permissions, disk and memory availability, network connectivity, configuration correctness, running container health, and plugin schema placement.
 
 Run `nself doctor` when something is not working as expected, before deploying to a new environment, or as part of an automated health check pipeline. The `--fix` flag enables automatic remediation of common problems.
 
@@ -97,12 +97,12 @@ Fires during `nself doctor --deep` in the `ai-safety` section.
 
 **What it checks:** If the `ai` plugin is loaded AND the deployment binds on a non-loopback address (e.g., `0.0.0.0`) AND the `moderation` plugin is NOT loaded, emit a `WARN`.
 
-Self-hosted single-user deployments on loopback are explicitly exempted — this is a legitimate use case.
+Self-hosted single-user deployments on loopback are explicitly exempted, this is a legitimate use case.
 
 | Status | Meaning |
 |--------|---------|
 | `pass` | ai not loaded, or deployment is loopback-bound, or moderation is wired |
-| `warn` | ai loaded on public-bound deployment without moderation — consider installing the moderation plugin |
+| `warn` | ai loaded on public-bound deployment without moderation , consider installing the moderation plugin |
 
 **Fix:**
 ```bash
@@ -124,14 +124,14 @@ nself doctor --deep --config-file test/fixtures/ai-public-no-mod.env
 
 Fires during `nself doctor --deep` in the `performance` section.
 
-**What it checks:** Total configured pgxpool `MaxConns` across all active services must not exceed `POSTGRES_MAX_CONNECTIONS`. Default Postgres ships with `max_connections=100`. With 23 enabled services at the default cap of 10 connections each, total = 230 — exceeding the limit causes random `503` errors under load.
+**What it checks:** Total configured pgxpool `MaxConns` across all active services must not exceed `POSTGRES_MAX_CONNECTIONS`. Default Postgres ships with `max_connections=100`. With 23 enabled services at the default cap of 10 connections each, total = 230, exceeding the limit causes random `503` errors under load.
 
 **Recommended cap formula:** `min(10, floor(postgres_max_connections / num_active_services))`
 
 | Status | Meaning |
 |--------|---------|
 | `pass` | Total pool capacity ≤ postgres_max_connections |
-| `warn` | Total pool capacity > postgres_max_connections — reduce per-service pool or raise `POSTGRES_MAX_CONNECTIONS` |
+| `warn` | Total pool capacity > postgres_max_connections , reduce per-service pool or raise `POSTGRES_MAX_CONNECTIONS` |
 
 **Fix:** Raise `POSTGRES_MAX_CONNECTIONS` in `.env` or reduce per-plugin pool size. The check emits a `FixCmd` suggestion with the exact value to set.
 
@@ -149,7 +149,7 @@ Fires during `nself doctor --deep` in the `security` section.
 **What it checks:**
 
 1. For every `np_*` table: `pg_class.relrowsecurity = true` (RLS enabled) and at least one policy exists.
-2. For every `np_*` table with a `tenant_id` column: `pg_class.relforcerowsecurity = true` (FORCE RLS — prevents table owner from bypassing policies).
+2. For every `np_*` table with a `tenant_id` column: `pg_class.relforcerowsecurity = true` (FORCE RLS, prevents table owner from bypassing policies).
 3. For every `np_*` table with a `tenant_id` column: Hasura metadata has a `select` permission for the `user` role with a `tenant_id` row filter (`{"tenant_id": {"_eq": "X-Hasura-Tenant-Id"}}`).
 
 Security-Always-Free Doctrine: this check runs without a license key.
@@ -168,9 +168,9 @@ HASURA-FILTER-MISSING table=np_claw_cost_events role=user
 ```
 
 **Env vars read:**
-- `NSELF_DB_URL` or `DATABASE_URL` — Postgres connection string
-- `HASURA_GRAPHQL_URL` — Hasura endpoint (default: `http://127.0.0.1:8080`)
-- `HASURA_GRAPHQL_ADMIN_SECRET` — required for Hasura metadata query; if absent, Hasura filter check is skipped with a warning
+- `NSELF_DB_URL` or `DATABASE_URL`, Postgres connection string
+- `HASURA_GRAPHQL_URL`, Hasura endpoint (default: `http://127.0.0.1:8080`)
+- `HASURA_GRAPHQL_ADMIN_SECRET`, required for Hasura metadata query; if absent, Hasura filter check is skipped with a warning
 
 **Fix:**
 ```bash
@@ -209,7 +209,7 @@ Each stage prints PASS, FAIL, UNKNOWN, or SKIPPED:
 | Status | Meaning |
 |--------|---------|
 | PASS | Stage completed |
-| FAIL | Not yet reached — remediation hint shown |
+| FAIL | Not yet reached , remediation hint shown |
 | UNKNOWN | Cannot determine (e.g. Stage 5 when Hasura telemetry hook is not wired) |
 | SKIPPED | A prior stage failed; this stage was not evaluated |
 

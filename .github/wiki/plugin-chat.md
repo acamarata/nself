@@ -13,7 +13,7 @@ nself plugin install chat
 
 ## What It Does
 
-Adds a complete real-time chat backend to your nSelf stack. Supports group rooms, direct messages between users, message reactions, thread replies, and built-in moderation tools. Powers the [nSelf Chat](https://github.com/nself-org/nchat) open-source client app. Exposes a REST API and WebSocket connections for real-time message delivery.
+Adds a complete real-time chat backend to your ɳSelf stack. Supports group rooms, direct messages between users, message reactions, thread replies, and built-in moderation tools. Powers the [ɳSelf Chat](https://github.com/nself-org/nchat) open-source client app. Exposes a REST API and WebSocket connections for real-time message delivery.
 
 ## Configuration
 
@@ -34,12 +34,12 @@ Adds a complete real-time chat backend to your nSelf stack. Supports group rooms
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_chat_rooms` — room definitions and settings
-- `np_chat_participants` — room membership
-- `np_chat_messages` — message content and metadata
-- `np_chat_reactions` — message reactions
-- `np_chat_threads` — threaded reply chains
-- `np_chat_moderation` — moderation actions and bans
+- `np_chat_rooms`, room definitions and settings
+- `np_chat_participants`, room membership
+- `np_chat_messages`, message content and metadata
+- `np_chat_reactions`, message reactions
+- `np_chat_threads`, threaded reply chains
+- `np_chat_moderation`, moderation actions and bans
 
 ## Nginx Routes
 

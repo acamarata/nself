@@ -36,10 +36,10 @@ Requires the `minio` plugin.
 ## Database Tables
 
 4 tables added to your Postgres database:
-- `np_photos_albums` — album records
-- `np_photos_photos` — photo records with storage references
-- `np_photos_tags` — tag definitions
-- `np_photos_exif` — extracted EXIF metadata per photo
+- `np_photos_albums`, album records
+- `np_photos_photos`, photo records with storage references
+- `np_photos_tags`, tag definitions
+- `np_photos_exif`, extracted EXIF metadata per photo
 
 ## Nginx Routes
 

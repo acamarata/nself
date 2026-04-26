@@ -20,11 +20,11 @@ To persist your free key across sessions:
 nself license set nself_free_<uuid>
 ```
 
-After installing 3 free plugins, the CLI displays a one-line prompt about nSelf+.
+After installing 3 free plugins, the CLI displays a one-line prompt about ɳSelf+.
 
-For pro plugins, set your license key first — see [[Plugin-Licensing]].
+For pro plugins, set your license key first, see [[Plugin-Licensing]].
 
-Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available — the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
+Plugins marked `beta` install with a warning printed to stderr. Plugins marked `planned` are not yet available, the install command returns an error with a link to the release timeline. See [[Plugin-Status-Badges]] for details.
 
 ### Permission Validation
 
@@ -98,7 +98,7 @@ nself build
 
 ## Plugin Dependencies
 
-Some plugins require others to be installed first. nSelf resolves dependencies automatically during install. If a required plugin isn't installed, nSelf installs it for you.
+Some plugins require others to be installed first. ɳSelf resolves dependencies automatically during install. If a required plugin isn't installed, ɳSelf installs it for you.
 
 Example: `claw` requires `ai`. Installing `claw` automatically installs `ai` if missing.
 
@@ -128,7 +128,7 @@ nself plugin install {name}
 
 ## Related Pages
 
-- [[Plugin-Overview]] — What plugins are and pricing tiers
-- [[Plugin-Licensing]] — License keys for pro plugins
-- [[Plugin-Status-Badges]] — stable, beta, and planned behavior at install time
-- [[Plugin-Dev-Guide]] — Build your own plugin
+- [[Plugin-Overview]], What plugins are and pricing tiers
+- [[Plugin-Licensing]], License keys for pro plugins
+- [[Plugin-Status-Badges]], stable, beta, and planned behavior at install time
+- [[Plugin-Dev-Guide]], Build your own plugin

@@ -1,6 +1,6 @@
 # nself project
 
-Manage nSelf projects under the multi-tenant master controller.
+Manage ɳSelf projects under the multi-tenant master controller.
 
 Each project is fully isolated: dedicated Postgres schema, Hasura metadata source, Nginx virtual host, JWT secret, Redis key prefix, and MinIO bucket.
 
@@ -148,10 +148,10 @@ nself project rotate-credentials --slug <slug>
 
 ## Multi-Tenant Convention Wall
 
-B46 uses `tenant_id UUID` for Cloud SaaS isolation — NOT `source_account_id`. These are distinct mechanisms. See the [Multi-Tenant Convention Wall](../../docs/architecture/multi-tenant-conventions.md).
+B46 uses `tenant_id UUID` for Cloud SaaS isolation, NOT `source_account_id`. These are distinct mechanisms. See the [Multi-Tenant Convention Wall](../../docs/architecture/multi-tenant-conventions.md).
 
 ## See Also
 
-- [`nself controller`](controller.md) — Daemon management
+- [`nself controller`](controller.md), Daemon management
 - [Multi-Tenant Hosting Guide](../../docs/guides/multi-tenant-hosting.md)
 - [Agency Setup Guide](../../docs/guides/agency-setup.md)

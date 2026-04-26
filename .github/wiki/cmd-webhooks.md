@@ -42,9 +42,9 @@ nself webhooks outbox status --format json
 
 ## See Also
 
-- [[cmd-queue]] — async job queues
-- [[cmd-watchdog]] — self-healing watchdog
-- [[cmd-status]] — service health
-- [[Commands]] — full command index
+- [[cmd-queue]], async job queues
+- [[cmd-watchdog]], self-healing watchdog
+- [[cmd-status]], service health
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

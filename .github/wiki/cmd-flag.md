@@ -28,10 +28,10 @@ nself flag <subcommand> [flags]
 
 | Type | Purpose |
 |---|---|
-| `release` | New feature rollout — percentage-based canary |
+| `release` | New feature rollout , percentage-based canary |
 | `ops` | Operational toggle (rate limits, cache, circuit breakers) |
 | `experiment` | A/B test variant |
-| `kill_switch` | Emergency disable — never auto-enables |
+| `kill_switch` | Emergency disable , never auto-enables |
 
 ## Rule Types (Evaluation)
 
@@ -141,8 +141,8 @@ nself status
 
 ## Related
 
-- [[cmd-license]] — License management (triggers AI cost budget seeding)
-- [[Plugin-Overview]] — All free plugins
+- [[cmd-license]], License management (triggers AI cost budget seeding)
+- [[Plugin-Overview]], All free plugins
 - [Feature Flags Ops Doc](../.claude/docs/operations/feature-flags.md)
 
 [[Home]]

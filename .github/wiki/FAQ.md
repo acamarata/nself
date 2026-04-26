@@ -2,28 +2,28 @@
 
 ## Contents
 
-- [What is nSelf?](#what-is-nself)
-- [Is nSelf free?](#is-nself-free)
+- [What is ɳSelf?](#what-is-nself)
+- [Is ɳSelf free?](#is-nself-free)
 - [What is the difference between free and Pro plugins?](#what-is-the-difference-between-free-and-pro-plugins)
-- [Can I run multiple nSelf projects on one server?](#can-i-run-multiple-nself-projects-on-one-server)
-- [How does nSelf compare to Supabase or Nhost?](#how-does-nself-compare-to-supabase-or-nhost)
-- [Does nSelf require Docker?](#does-nself-require-docker)
-- [What ports does nSelf use?](#what-ports-does-nself-use)
-- [How do I update nSelf?](#how-do-i-update-nself)
+- [Can I run multiple ɳSelf projects on one server?](#can-i-run-multiple-nself-projects-on-one-server)
+- [How does ɳSelf compare to Supabase or Nhost?](#how-does-nself-compare-to-supabase-or-nhost)
+- [Does ɳSelf require Docker?](#does-nself-require-docker)
+- [What ports does ɳSelf use?](#what-ports-does-nself-use)
+- [How do I update ɳSelf?](#how-do-i-update-nself)
 - [How do I back up my data?](#how-do-i-back-up-my-data)
 - [Where are config files stored?](#where-are-config-files-stored)
 - [How do I add a custom service?](#how-do-i-add-a-custom-service)
-- [Does nSelf support ARM / Apple Silicon?](#does-nself-support-arm--apple-silicon)
+- [Does ɳSelf support ARM / Apple Silicon?](#does-nself-support-arm--apple-silicon)
 - [How do I reset the Hasura admin password?](#how-do-i-reset-the-hasura-admin-password)
-- [Can I use nSelf in CI/CD?](#can-i-use-nself-in-cicd)
+- [Can I use ɳSelf in CI/CD?](#can-i-use-nself-in-cicd)
 - [How do I report a security issue?](#how-do-i-report-a-security-issue)
 - [How do I contribute a plugin?](#how-do-i-contribute-a-plugin)
 
-## What is nSelf?
+## What is ɳSelf?
 
-nSelf is an open-source CLI that spins up a complete self-hosted backend stack — PostgreSQL, Hasura GraphQL, Auth, and Nginx — in five minutes. You run it on your own server or local machine; there is no cloud dependency.
+ɳSelf is an open-source CLI that spins up a complete self-hosted backend stack, PostgreSQL, Hasura GraphQL, Auth, and Nginx, in five minutes. You run it on your own server or local machine; there is no cloud dependency.
 
-## Is nSelf free?
+## Is ɳSelf free?
 
 Yes. The core CLI and 25 free plugins are MIT licensed and free forever, including commercial use. Revenue comes from 62 paid Pro plugins starting at $9.99/year.
 
@@ -31,23 +31,23 @@ Yes. The core CLI and 25 free plugins are MIT licensed and free forever, includi
 
 Free plugins (25) handle foundational use cases: monitoring, backup, cron, search, notifications, and more. Pro plugins (52) add advanced capabilities: AI, live video (LiveKit), commerce, CMS, SSO/SAML, media transcoding, DRM, WAF, and more. Pro plugins require a license key from [nself.org](https://nself.org).
 
-## Can I run multiple nSelf projects on one server?
+## Can I run multiple ɳSelf projects on one server?
 
 Yes. Each project runs in its own Docker network and uses a different `BASE_DOMAIN`. Run `nself init` in separate directories, each with a unique `PROJECT_NAME` and `BASE_DOMAIN`, and start them independently.
 
-## How does nSelf compare to Supabase or Nhost?
+## How does ɳSelf compare to Supabase or Nhost?
 
-nSelf gives you the same Postgres + Hasura + Auth stack as Supabase/Nhost, but self-hosted on your infrastructure with no vendor lock-in. You own your data, choose your server, and pay nothing per row or API call. The tradeoff is that you manage your own server.
+ɳSelf gives you the same Postgres + Hasura + Auth stack as Supabase/Nhost, but self-hosted on your infrastructure with no vendor lock-in. You own your data, choose your server, and pay nothing per row or API call. The tradeoff is that you manage your own server.
 
-## Does nSelf require Docker?
+## Does ɳSelf require Docker?
 
-Yes. Docker 24+ with Docker Compose v2 is required. nSelf generates and manages a `docker-compose.yml` for your stack.
+Yes. Docker 24+ with Docker Compose v2 is required. ɳSelf generates and manages a `docker-compose.yml` for your stack.
 
-## What ports does nSelf use?
+## What ports does ɳSelf use?
 
 Nginx binds to ports 80 and 443. All internal services bind to `127.0.0.1` only and are not directly exposed. Admin UI runs on `localhost:3021`.
 
-## How do I update nSelf?
+## How do I update ɳSelf?
 
 ```bash
 nself update
@@ -77,15 +77,15 @@ CS_1=api:fastapi:3001
 
 Then run `nself build && nself restart`.
 
-## Does nSelf support ARM / Apple Silicon?
+## Does ɳSelf support ARM / Apple Silicon?
 
-Yes. Binaries are published for `linux/amd64`, `linux/arm64`, `darwin/amd64`, and `darwin/arm64`. All base Docker images used by nSelf support ARM64.
+Yes. Binaries are published for `linux/amd64`, `linux/arm64`, `darwin/amd64`, and `darwin/arm64`. All base Docker images used by ɳSelf support ARM64.
 
 ## How do I reset the Hasura admin password?
 
 The Hasura admin secret is stored as `HASURA_GRAPHQL_ADMIN_SECRET` in your `.env`. Change it there, then run `nself build && nself restart`. Hasura picks up the new value on restart.
 
-## Can I use nSelf in CI/CD?
+## Can I use ɳSelf in CI/CD?
 
 Yes. Use `--non-interactive` and `--quiet` flags for CI:
 

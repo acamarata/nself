@@ -34,11 +34,11 @@ Provides a unified S3-compatible object storage API across multiple providers in
 
 5 tables added to your Postgres database.
 
-- `np_object_storage_buckets` — Bucket metadata and configuration
-- `np_object_storage_objects` — Object index and metadata
-- `np_object_storage_presigned` — Presigned URL issuance log
-- `np_object_storage_multipart` — In-progress and completed multipart uploads
-- `np_object_storage_access_log` — Object access and operation audit log
+- `np_object_storage_buckets`, Bucket metadata and configuration
+- `np_object_storage_objects`, Object index and metadata
+- `np_object_storage_presigned`, Presigned URL issuance log
+- `np_object_storage_multipart`, In-progress and completed multipart uploads
+- `np_object_storage_access_log`, Object access and operation audit log
 
 ## Nginx Routes
 

@@ -3,7 +3,7 @@
 
 # Backup Pro Plugin
 
-> Advanced PostgreSQL backup — multi-destination, encryption, and point-in-time recovery. **Pro plugin.**
+> Advanced PostgreSQL backup, multi-destination, encryption, and point-in-time recovery. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -42,10 +42,10 @@ The free `backup` plugin handles standard scheduled pg_dump. This pro version ad
 ## Database Tables
 
 4 tables added to your Postgres database:
-- `np_backup_pro_jobs` — backup job history
-- `np_backup_pro_destinations` — configured storage destinations
-- `np_backup_pro_wal_segments` — WAL segment archive index (for PITR)
-- `np_backup_pro_verifications` — test restore verification log
+- `np_backup_pro_jobs`, backup job history
+- `np_backup_pro_destinations`, configured storage destinations
+- `np_backup_pro_wal_segments`, WAL segment archive index (for PITR)
+- `np_backup_pro_verifications`, test restore verification log
 
 ## Nginx Routes
 

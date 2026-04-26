@@ -1,19 +1,19 @@
-# Feature: nClaw (ɳClaw)
+# Feature: ɳClaw (ɳClaw)
 
-nClaw is a self-hosted AI personal assistant built on nSelf. It combines multi-provider LLM routing, a knowledge graph, email management, calendar integration, browser automation, voice interaction, and 19+ tools into a single system that runs on your own server.
+ɳClaw is a self-hosted AI personal assistant built on ɳSelf. It combines multi-provider LLM routing, a knowledge graph, email management, calendar integration, browser automation, voice interaction, and 19+ tools into a single system that runs on your own server.
 
 **Status:** Active (shipping since Phase 223)
 **Repos:** nself-org/nclaw (client apps), plugins-pro (server plugins)
 **Marketing site:** claw.nself.org
 **Client platforms:** iOS, Android, macOS, Web
-**Admin interface:** nself-admin nClaw tab (localhost:3021)
+**Admin interface:** nself-admin ɳClaw tab (localhost:3021)
 **Web dashboard:** claw-web (Svelte, served by plugin-claw-web)
 
 ---
 
 ## Core Architecture
 
-nClaw is built from multiple nSelf plugins working together:
+ɳClaw is built from multiple ɳSelf plugins working together:
 
 | Plugin | Role |
 |--------|------|
@@ -33,7 +33,7 @@ nClaw is built from multiple nSelf plugins working together:
 
 ## Multi-Model Routing
 
-nClaw routes every request to the best model based on privacy, complexity, and cost:
+ɳClaw routes every request to the best model based on privacy, complexity, and cost:
 
 ### Privacy Classification
 The routing engine scans each message for sensitive patterns (dollar amounts, credentials, health data, banking). Messages flagged as private route to local models or privacy-respecting providers.
@@ -62,7 +62,7 @@ Every AI call records model, tokens, and cost in `np_claw.model_usage`. The budg
 
 ## ReAct Tool System
 
-nClaw uses a ReAct (Reason + Act) loop. The LLM reasons about the user's request, decides which tools to invoke, executes them, observes the results, and continues reasoning until the task is complete.
+ɳClaw uses a ReAct (Reason + Act) loop. The LLM reasons about the user's request, decides which tools to invoke, executes them, observes the results, and continues reasoning until the task is complete.
 
 ### 19+ Built-in Tools
 
@@ -82,9 +82,9 @@ nClaw uses a ReAct (Reason + Act) loop. The LLM reasons about the user's request
 **System:**
 - `shell_dispatch_vps` -- execute shell commands on the server (gated by NCLAW_ALLOW_SHELL)
 - `git_create_pr` -- create GitHub pull requests
-- `get_service_status` -- check nSelf service health
+- `get_service_status` -- check ɳSelf service health
 - `get_env_vars` -- read environment configuration (secrets masked)
-- `install_plugin` / `restart_services` -- manage nSelf plugins
+- `install_plugin` / `restart_services` -- manage ɳSelf plugins
 - `list_cron_jobs` / `create_cron_job` / `delete_cron_job` / `run_cron_job` -- cron management
 
 **Browser:**
@@ -110,7 +110,7 @@ Native tools (google, cron, notify, shell, git, nself) are always available. Plu
 
 ## Knowledge Graph (3-Layer Memory)
 
-nClaw maintains persistent memory across conversations using a three-layer system:
+ɳClaw maintains persistent memory across conversations using a three-layer system:
 
 ### Layer 1: Recent Context (800 tokens)
 The last few messages in the current thread. Provides immediate conversational context.
@@ -138,7 +138,7 @@ Memory retrieval uses pgvector cosine similarity (0.7 threshold) with HNSW index
 
 ## Persona System
 
-Personas customize nClaw's identity, behavior, and available tools:
+Personas customize ɳClaw's identity, behavior, and available tools:
 
 ```
 ClawPersona {
@@ -156,7 +156,7 @@ ClawPersona {
 - `schedule_cron` activates the persona on a schedule
 - Custom `onboarding_questions` per persona
 
-Built-in personas: CamClaw (personal assistant), nChat (messaging), ChatIslam (Islamic Q&A).
+Built-in personas: CamClaw (personal assistant), ɳChat (messaging), ChatIslam (Islamic Q&A).
 
 ---
 
@@ -184,10 +184,10 @@ The mux plugin processes Gmail in real-time via Google Pub/Sub:
 1. **Watch registration.** Registers a Gmail push watch. Google sends notifications on new emails.
 2. **Metadata fetch.** Retrieves email headers and body on notification.
 3. **Rule evaluation.** YAML-defined rules match on from/to/subject/body with 16 action types:
-   - `TelegramNotify`, `AiSummarize`, `AiClassify`, `AiExtract`
-   - `CompanionNotify`, `VoiceCall`, `VoiceTts`
-   - `SheetsLog`, `CalendarSync`, `Forward`
-   - `MarkRead`, `ContinueEvaluation`, and more
+ - `TelegramNotify`, `AiSummarize`, `AiClassify`, `AiExtract`
+ - `CompanionNotify`, `VoiceCall`, `VoiceTts`
+ - `SheetsLog`, `CalendarSync`, `Forward`
+ - `MarkRead`, `ContinueEvaluation`, and more
 4. **AI pre-screening.** Ollama tier-0 model screens emails before expensive summarization (eliminates ~60% of Gemini calls).
 5. **Auto-reply.** Draft replies with AI, subject to guard rails and approval via Telegram.
 6. **DLQ.** Failed metadata fetches go to a dead letter queue with 3-attempt retry.
@@ -199,7 +199,7 @@ Background AI classifies emails into: `action_required`, `time_sensitive`, `fyi`
 
 ## Proactive Intelligence
 
-nClaw does not just respond to requests. It proactively notifies you:
+ɳClaw does not just respond to requests. It proactively notifies you:
 
 - **Morning briefing.** Daily cron sends email count + server CPU summary via Telegram.
 - **Server health.** Polls Prometheus every 5 minutes. Alerts on CPU >80%, disk >85%, or service down. 1-hour dedup cooldown.
@@ -211,7 +211,7 @@ nClaw does not just respond to requests. It proactively notifies you:
 ## Companion Apps
 
 ### macOS Daemon
-A native macOS daemon (port 7432) that gives nClaw awareness of your local environment:
+A native macOS daemon (port 7432) that gives ɳClaw awareness of your local environment:
 - Active file watcher (Accessibility API)
 - Terminal buffer capture
 - Clipboard monitoring
@@ -251,7 +251,7 @@ The web app at `claw/apps/web/` is a thin redirect shell. It reads `NEXT_PUBLIC_
 
 ## claw-web Dashboard (Svelte)
 
-The primary interface for interacting with nClaw. Served by the `claw-web` plugin.
+The primary interface for interacting with ɳClaw. Served by the `claw-web` plugin.
 
 **Pages:**
 - Chat (threaded conversations, model badge, code copy, uncertainty chips)
@@ -288,7 +288,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 ## Environment Variables
 
-See [[Config-Env-Vars]] for core variables. nClaw-specific variables are documented on each plugin's wiki page. Key variables:
+See [[Config-Env-Vars]] for core variables. ɳClaw-specific variables are documented on each plugin's wiki page. Key variables:
 
 | Variable | Purpose |
 |----------|---------|
@@ -305,7 +305,7 @@ See [[Config-Env-Vars]] for core variables. nClaw-specific variables are documen
 
 ## Related Pages
 
-- [[Plugin-Licensing]] -- tier requirements for nClaw plugins
+- [[Plugin-Licensing]] -- tier requirements for ɳClaw plugins
 - [[Feature-Plugins]] -- plugin system overview
 - [[Security-Architecture]] -- authentication and authorization model
 - [[API-Reference]] -- REST endpoints for claw, ai, mux plugins

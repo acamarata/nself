@@ -1,12 +1,12 @@
 # AWS Graviton (arm64) Install Guide
 
-Install the nSelf CLI on AWS Graviton instances (Graviton2 `m6g`, Graviton3 `m7g`, `c7g`, etc.). The nSelf CLI ships a native `linux-arm64` binary — no emulation or cross-compilation needed.
+Install the ɳSelf CLI on AWS Graviton instances (Graviton2 `m6g`, Graviton3 `m7g`, `c7g`, etc.). The ɳSelf CLI ships a native `linux-arm64` binary, no emulation or cross-compilation needed.
 
 ## Supported Instances
 
 Any Graviton2/3/4 instance family works: `m6g`, `m6gd`, `c6g`, `r6g`, `t4g`, `m7g`, `c7g`, `r7g`, etc.
 
-Recommended for a full nSelf stack:
+Recommended for a full ɳSelf stack:
 - **Development:** `t4g.medium` (2 vCPU, 4 GB RAM)
 - **Production:** `m6g.large` or higher (2 vCPU, 8 GB RAM)
 
@@ -43,7 +43,7 @@ docker --version
 docker compose version
 ```
 
-## Step 2: Download the nSelf CLI
+## Step 2: Download the ɳSelf CLI
 
 ```bash
 curl -L https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-arm64.tar.gz -o nself.tar.gz
@@ -76,13 +76,13 @@ nself start
 
 ## Graviton-Specific Notes
 
-**glibc vs musl:** The nSelf release binary is dynamically linked against glibc (standard for AL2023/Ubuntu/Debian). It does not run on Alpine Linux (musl). If you need Alpine compatibility, build from source with `CGO_ENABLED=0`.
+**glibc vs musl:** The ɳSelf release binary is dynamically linked against glibc (standard for AL2023/Ubuntu/Debian). It does not run on Alpine Linux (musl). If you need Alpine compatibility, build from source with `CGO_ENABLED=0`.
 
-**Docker image compatibility:** nSelf uses official multi-arch Docker images for Postgres, Hasura, Redis, etc. All have arm64 variants — no custom image builds needed.
+**Docker image compatibility:** ɳSelf uses official multi-arch Docker images for Postgres, Hasura, Redis, etc. All have arm64 variants, no custom image builds needed.
 
 **EBS IOPS:** For production Postgres on Graviton, use `gp3` EBS with at least 3000 IOPS. Default `gp2` can bottleneck on write-heavy workloads.
 
-**Security groups:** nSelf binds all services to `127.0.0.1` internally. Expose ports via Nginx (80/443). Open port 22 (SSH) and 80/443 only to public; leave internal ports (5432, 8080, 4000, 3021) closed externally.
+**Security groups:** ɳSelf binds all services to `127.0.0.1` internally. Expose ports via Nginx (80/443). Open port 22 (SSH) and 80/443 only to public; leave internal ports (5432, 8080, 4000, 3021) closed externally.
 
 **ARM spot instances:** `t4g.medium` spot instances are very cost-effective for development/staging. Use on-demand for production (`m6g.large` or `m6g.xlarge`).
 

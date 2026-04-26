@@ -1,12 +1,12 @@
 # Branding
 
-nSelf brand identity and assets.
+ɳSelf brand identity and assets.
 
 ## Brand Pages
 
 | Page | Contents |
 |------|----------|
-| [[Brand-Assets]] | Full asset inventory — icons, logos, favicons |
+| [[Brand-Assets]] | Full asset inventory , icons, logos, favicons |
 | [[Logo-Usage]] | Logo usage guidelines and restrictions |
 | [[Color-Palette]] | Primary and secondary colors, background |
 

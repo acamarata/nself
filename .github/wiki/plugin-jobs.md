@@ -1,6 +1,6 @@
 # Jobs Plugin
 
-> Background job queue with BullMQ-style dispatch and a built-in dashboard. **Free — MIT licensed.**
+> Background job queue with BullMQ-style dispatch and a built-in dashboard. **Free, MIT licensed.**
 
 ## Install
 
@@ -34,8 +34,8 @@ Requires Redis (`REDIS_ENABLED=true` in your `.env`).
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_jobs_definitions` — registered job types
-- `np_jobs_history` — completed/failed job records
+- `np_jobs_definitions`, registered job types
+- `np_jobs_history`, completed/failed job records
 
 ## Nginx Routes
 

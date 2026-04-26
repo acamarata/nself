@@ -36,9 +36,9 @@ Requires `minio` or a compatible storage provider configured via `FILE_PROCESSIN
 ## Database Tables
 
 3 tables added to your Postgres database:
-- `np_file_processing_jobs` — thumbnail generation job records
-- `np_file_processing_outputs` — generated thumbnail output records
-- `np_file_processing_errors` — processing error log
+- `np_file_processing_jobs`, thumbnail generation job records
+- `np_file_processing_outputs`, generated thumbnail output records
+- `np_file_processing_errors`, processing error log
 
 ## Nginx Routes
 

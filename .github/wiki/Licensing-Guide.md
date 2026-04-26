@@ -1,12 +1,12 @@
 # Licensing Guide
 
-This page covers the full nSelf licensing model: the free core, per-product plugin bundles, the ɳSelf+ all-access subscription, key management, and upgrade/downgrade behavior.
+This page covers the full ɳSelf licensing model: the free core, per-product plugin bundles, the ɳSelf+ all-access subscription, key management, and upgrade/downgrade behavior.
 
 ---
 
 ## The Free Core
 
-The nSelf CLI and 25 free plugins are MIT licensed. Free forever, including commercial use. No license key needed.
+The ɳSelf CLI and 25 free plugins are MIT licensed. Free forever, including commercial use. No license key needed.
 
 Free plugins include: backup, content-acquisition, content-progress, cron, donorbox, feature-flags, github, github-runner, invitations, jobs, link-preview, mdns, mlflow, monitoring, notifications, notify, paypal, search, shopify, stripe, subtitle-manager, tokens, torrent-manager, vpn, webhooks.
 
@@ -16,14 +16,14 @@ You can run a full production stack (Postgres, Hasura, Auth, Nginx, monitoring, 
 
 ## Pro Plugins (62 total)
 
-Pro plugins are source-available Rust binaries distributed through the nSelf plugin system. They require a valid license key.
+Pro plugins are source-available Rust binaries distributed through the ɳSelf plugin system. They require a valid license key.
 
 ### Per-Bundle Pricing
 
 | Option | Monthly | Annual | What You Get |
 |--------|---------|--------|-------------|
 | **Free** | $0 | $0 | Core CLI + 25 free plugins |
-| **Any single bundle** | $0.99/mo | $9.99/yr | All plugins in that bundle (nClaw, nChat, nTV, nFamily, or ClawDE) |
+| **Any single bundle** | $0.99/mo | $9.99/yr | All plugins in that bundle (ɳClaw, ɳChat, ɳTV, ɳFamily, or ClawDE) |
 | **ɳSelf+** | $3.99/mo | $39.99/yr | All 5 bundles + all apps + support |
 
 Annual gives roughly 16% savings versus monthly (about 2 months free).
@@ -32,7 +32,7 @@ Annual gives roughly 16% savings versus monthly (about 2 months free).
 
 ## Per-Product Plugin Bundles
 
-Each nSelf product has a recommended plugin bundle. Bundles are not separate SKUs. They are a way to understand which plugins power each product. All plugins are available at the Basic tier and above.
+Each ɳSelf product has a recommended plugin bundle. Bundles are not separate SKUs. They are a way to understand which plugins power each product. All plugins are available at the Basic tier and above.
 
 ### ɳClaw Bundle
 AI personal assistant. Requires Pro tier (includes AI suite).
@@ -51,13 +51,13 @@ AI personal assistant. Requires Pro tier (includes AI suite).
 | cron | Scheduled tasks |
 | post | Social media publishing |
 
-### nTV Bundle
+### ɳTV Bundle
 Media server and player. Available at $0.99/mo or $9.99/yr.
 
 **Free plugins (4):** torrent-manager, content-acquisition, content-progress, subtitle-manager
 **Pro plugins (8):** media-processing, file-processing, streaming, stream-gateway, epg, tmdb, recording, transcoder
 
-### nChat Bundle
+### ɳChat Bundle
 Messaging. Available at Basic tier.
 
 | Plugin | Purpose |
@@ -70,7 +70,7 @@ Messaging. Available at Basic tier.
 | realtime | Enhanced WebSocket presence |
 | auth | SSO, SAML, LDAP |
 
-### nFamily Bundle (Planned)
+### ɳFamily Bundle (Planned)
 Private family social media. Will be available at Basic tier.
 
 | Plugin | Purpose |
@@ -92,7 +92,7 @@ Remote and mobile sync via API for the ClawDE Flutter desktop and mobile app.
 
 ## ɳSelf+ ($3.99/mo or $39.99/yr)
 
-The all-access subscription. Includes every plugin bundle, every product, and support via chat.nself.org or the nChat app. One key unlocks the entire ecosystem.
+The all-access subscription. Includes every plugin bundle, every product, and support via chat.nself.org or the ɳChat app. One key unlocks the entire ecosystem.
 
 ɳSelf+ costs less than buying individual bundles if you use three or more products.
 
@@ -210,9 +210,9 @@ All payment processing goes through Stripe:
 - [[Plugin-Licensing]] -- technical details of the plugin license system
 - [[Plugin-Overview]] -- full plugin catalog
 - [[Plugin-Install]] -- how to install plugins
-- [[Feature-nClaw]] -- nClaw plugin bundle details
-- [[Feature-nTV]] -- nMedia plugin bundle details
-- [[Feature-nCloud]] -- managed hosting (separate from plugin licenses)
+- [[Feature-ɳClaw]] -- ɳClaw plugin bundle details
+- [[Feature-ɳTV]] -- nMedia plugin bundle details
+- [[Feature-ɳCloud]] -- managed hosting (separate from plugin licenses)
 
 ---
 

@@ -63,9 +63,9 @@ The restore command:
 
 ## See Also
 
-- [[plugin-backup]] — backup plugin reference
-- [[cmd-db]] — db command reference
-- [[Guide-Production-Deployment]] — server setup
+- [[plugin-backup]], backup plugin reference
+- [[cmd-db]], db command reference
+- [[Guide-Production-Deployment]], server setup
 
 ---
 ← [[Home]] | [[_Sidebar]]

@@ -1,6 +1,6 @@
 # nself migrate
 
-> Detect and migrate nSelf v0.9.x projects to v1.0.9.
+> Detect and migrate ɳSelf v0.9.x projects to v1.0.9.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ nself migrate [subcommand] [flags]
 
 ## Description
 
-`nself migrate` detects and migrates v0.9.x project artifacts to the v1.0.9 format. Running `nself migrate` without a subcommand performs a detection scan — the same as `nself migrate detect` — and reports which v0.9 artifacts are present.
+`nself migrate` detects and migrates v0.9.x project artifacts to the v1.0.9 format. Running `nself migrate` without a subcommand performs a detection scan, the same as `nself migrate detect`, and reports which v0.9 artifacts are present.
 
 The `run` subcommand performs the full automated migration: it stops running containers, backs up the current project state to `.nself/backup/{timestamp}/`, moves nginx configs from the flat `nginx/` layout to `nginx/sites/` (v1 layout), regenerates `docker-compose.yml`, and prints a summary of every change made. The migration is idempotent: running it on an already-migrated project exits cleanly with no changes.
 

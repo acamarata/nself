@@ -33,14 +33,14 @@ Manages what each user or tenant can access based on their subscription plan. De
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_entitlements_plans` — subscription plan definitions
-- `np_entitlements_features` — feature flag definitions
-- `np_entitlements_plan_features` — plan-feature mappings
-- `np_entitlements_subscriptions` — user plan assignments
-- `np_entitlements_quotas` — quota definitions
-- `np_entitlements_usage` — metered usage counters
-- `np_entitlements_overages` — quota overage records
-- `np_entitlements_grants` — manual feature grants
+- `np_entitlements_plans`, subscription plan definitions
+- `np_entitlements_features`, feature flag definitions
+- `np_entitlements_plan_features`, plan-feature mappings
+- `np_entitlements_subscriptions`, user plan assignments
+- `np_entitlements_quotas`, quota definitions
+- `np_entitlements_usage`, metered usage counters
+- `np_entitlements_overages`, quota overage records
+- `np_entitlements_grants`, manual feature grants
 
 ## Nginx Routes
 

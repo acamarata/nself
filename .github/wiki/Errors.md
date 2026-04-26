@@ -1,6 +1,6 @@
 # Errors
 
-Quick reference for user-journey errors from the nSelf CLI. Every error printed
+Quick reference for user-journey errors from the ɳSelf CLI. Every error printed
 to your terminal includes a stable code, a plain-language explanation, and steps
 to fix it.
 
@@ -110,7 +110,7 @@ The code in brackets is stable across CLI versions. Search this page (Ctrl+F / C
 
 | Field | Value |
 |-------|-------|
-| Why | No plugin with that name is registered in the nSelf plugin registry. |
+| Why | No plugin with that name is registered in the ɳSelf plugin registry. |
 | Fix | Run `nself plugin list` to see available plugins. Check spelling. |
 
 ### ERR-PLUGIN-002
@@ -179,7 +179,7 @@ The code in brackets is stable across CLI versions. Search this page (Ctrl+F / C
 ## Need help?
 
 - Support portal: https://nself.org/support
-- Community Discord: https://discord.gg/nself
+- Community the community chat: https://chat.nself.org
 - GitHub Discussions: https://github.com/orgs/nself-org/discussions
 
 For the legacy E001-E399 Docker/config/plugin error codes, see [[error-codes]].

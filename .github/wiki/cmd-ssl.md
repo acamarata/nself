@@ -1,6 +1,6 @@
 # nself ssl
 
-> Manage SSL certificates for nSelf services and custom domains.
+> Manage SSL certificates for ɳSelf services and custom domains.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ nself ssl <subcommand>
 
 ## Description
 
-`nself ssl` manages the SSL certificates used by nginx to serve HTTPS traffic for all nSelf services. Certificates are generated automatically during `nself build`, but you can use this command to check their status or force regeneration without a full rebuild.
+`nself ssl` manages the SSL certificates used by nginx to serve HTTPS traffic for all ɳSelf services. Certificates are generated automatically during `nself build`, but you can use this command to check their status or force regeneration without a full rebuild.
 
 Use `nself ssl setup` to provision wildcard certificates via DNS-01 challenge for the configured base domain. Use `nself ssl add` to provision a certificate for a single external custom domain and generate the corresponding nginx server block automatically.
 
@@ -117,8 +117,8 @@ Certificate: ssl/cert.pem
 
 ## See Also
 
-- [[Guide-SSL-Setup]] — full SSL setup walkthrough
-- [[Config-Nginx]] — nginx configuration reference
-- [[Guide-Production-Deployment]] — production server setup
+- [[Guide-SSL-Setup]], full SSL setup walkthrough
+- [[Config-Nginx]], nginx configuration reference
+- [[Guide-Production-Deployment]], production server setup
 
 ← [[Commands]] | [[Home]] →

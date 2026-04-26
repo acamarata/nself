@@ -13,7 +13,7 @@ nself plugin install realtime
 
 ## What It Does
 
-Adds a production-grade WebSocket server to your nSelf stack. Clients connect and subscribe to named channels or rooms. The server broadcasts presence events (who's online), typing indicators, and custom events. Redis pub/sub handles fan-out across multiple server instances. Use it to add real-time features to any application without building WebSocket infrastructure.
+Adds a production-grade WebSocket server to your ɳSelf stack. Clients connect and subscribe to named channels or rooms. The server broadcasts presence events (who's online), typing indicators, and custom events. Redis pub/sub handles fan-out across multiple server instances. Use it to add real-time features to any application without building WebSocket infrastructure.
 
 ## Dependencies
 
@@ -37,12 +37,12 @@ Requires Redis (`REDIS_ENABLED=true`).
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_realtime_rooms` — room definitions
-- `np_realtime_channels` — channel definitions
-- `np_realtime_presence` — current presence state
-- `np_realtime_subscriptions` — active subscriptions
-- `np_realtime_events` — event log
-- `np_realtime_connections` — connection audit log
+- `np_realtime_rooms`, room definitions
+- `np_realtime_channels`, channel definitions
+- `np_realtime_presence`, current presence state
+- `np_realtime_subscriptions`, active subscriptions
+- `np_realtime_events`, event log
+- `np_realtime_connections`, connection audit log
 
 ## Nginx Routes
 

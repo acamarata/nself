@@ -10,7 +10,7 @@ nself dns-setup [flags]
 
 ## Description
 
-`nself dns-setup` reads the current project's `.env`, collects every domain that nSelf generates nginx config for, and appends missing entries to `/etc/hosts` so local `*.<custom-domain>` URLs resolve to `127.0.0.1`. Because writing `/etc/hosts` requires root, run the command once with `sudo`.
+`nself dns-setup` reads the current project's `.env`, collects every domain that ɳSelf generates nginx config for, and appends missing entries to `/etc/hosts` so local `*.<custom-domain>` URLs resolve to `127.0.0.1`. Because writing `/etc/hosts` requires root, run the command once with `sudo`.
 
 Wildcard subdomains (e.g. `*.pro.ummat.local`) cannot live in `/etc/hosts`. The command prints the wildcard entries separately so you can configure dnsmasq with lines like `address=/.pro.ummat.local/127.0.0.1`. For a fully wildcard-friendly local trust setup, see `nself trust`.
 
@@ -42,9 +42,9 @@ nself urls
 
 ## See Also
 
-- [[cmd-trust]] — full local dev trust (DNS, SSL, port forwarding)
-- [[cmd-urls]] — list all service URLs
-- [[cmd-ssl]] — manage SSL certificates
-- [[Commands]] — full command index
+- [[cmd-trust]], full local dev trust (DNS, SSL, port forwarding)
+- [[cmd-urls]], list all service URLs
+- [[cmd-ssl]], manage SSL certificates
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

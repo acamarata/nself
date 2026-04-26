@@ -1,6 +1,6 @@
 # Feature: Monitoring
 
-The nSelf monitoring stack provides metrics, logs, traces, and alerting for your entire backend infrastructure.
+The ɳSelf monitoring stack provides metrics, logs, traces, and alerting for your entire backend infrastructure.
 
 ## What's Included
 
@@ -35,7 +35,7 @@ nself urls    # get Grafana URL
 | Host Metrics | Node Exporter |
 | PostgreSQL | Postgres Exporter |
 | Nginx | Nginx logs via Promtail |
-| nSelf Overview | Combined |
+| ɳSelf Overview | Combined |
 
 ## Log Aggregation
 
@@ -57,8 +57,8 @@ Configure notification channels (Slack, PagerDuty, email) in `monitoring/alertma
 
 ## See Also
 
-- [[Guide-Monitoring-Setup]] — step-by-step setup guide
-- [[plugin-monitoring]] — monitoring plugin reference
+- [[Guide-Monitoring-Setup]], step-by-step setup guide
+- [[plugin-monitoring]], monitoring plugin reference
 
 ---
 ← [[Home]] | [[_Sidebar]]

@@ -9,7 +9,7 @@
 - [Security](#security)
 - [Feature Details](#feature-details)
 
-nSelf v1.0.9 ships a complete self-hosted backend stack with 46 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 25 free and 62 Pro plugins.
+ɳSelf v1.0.9 ships a complete self-hosted backend stack with 46 CLI commands, 4 core services, 6 optional services, and a plugin ecosystem with 25 free and 62 Pro plugins.
 
 ## Core Stack
 
@@ -68,13 +68,13 @@ nSelf v1.0.9 ships a complete self-hosted backend stack with 46 CLI commands, 4 
 
 ## Feature Details
 
-- [[Feature-Auth]] — authentication and authorisation
-- [[Feature-Storage]] — object storage with MinIO
-- [[Feature-Search]] — full-text search with MeiliSearch
-- [[Feature-Functions]] — serverless runtime
-- [[Feature-Email]] — email delivery integrations
-- [[Feature-Monitoring]] — metrics, logs, and alerting
-- [[Feature-Plugins]] — plugin system overview
+- [[Feature-Auth]], authentication and authorisation
+- [[Feature-Storage]], object storage with MinIO
+- [[Feature-Search]], full-text search with MeiliSearch
+- [[Feature-Functions]], serverless runtime
+- [[Feature-Email]], email delivery integrations
+- [[Feature-Monitoring]], metrics, logs, and alerting
+- [[Feature-Plugins]], plugin system overview
 
 ---
 ← [[Home]] | [[_Sidebar]]

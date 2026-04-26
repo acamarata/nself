@@ -1,6 +1,6 @@
 # Upgrade From v0.9
 
-> Step-by-step guide for upgrading an nSelf v0.9.x project to v1.0.9 LTS.
+> Step-by-step guide for upgrading an ɳSelf v0.9.x project to v1.0.9.
 
 ## Contents
 
@@ -350,8 +350,8 @@ the expected output in `testdata/v0.9-fixture-expected/`.
 
 See also:
 
-- [[cmd-migrate]] — full `nself migrate` command reference
-- [[Installation]] — fresh install guide
-- [[Plugin-Install]] — plugin management reference
+- [[cmd-migrate]], full `nself migrate` command reference
+- [[Installation]], fresh install guide
+- [[Plugin-Install]], plugin management reference
 
 ← [[Commands]] | [[Home]] →

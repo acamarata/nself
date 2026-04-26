@@ -4,9 +4,9 @@
 
 ---
 
-All nSelf project configuration lives in `.env` (and optionally `.env.local` for local overrides). This page documents every supported environment variable, grouped by service.
+All ɳSelf project configuration lives in `.env` (and optionally `.env.local` for local overrides). This page documents every supported environment variable, grouped by service.
 
-**Auto-generated vars:** A set of derived variables (e.g. `DATABASE_URL`, `DOCKER_NETWORK`) are written to `.env.computed` by the orchestration layer. Never hand-edit `.env.computed` — it is overwritten on every `nself build` and `nself start`.
+**Auto-generated vars:** A set of derived variables (e.g. `DATABASE_URL`, `DOCKER_NETWORK`) are written to `.env.computed` by the orchestration layer. Never hand-edit `.env.computed`, it is overwritten on every `nself build` and `nself start`.
 
 **Plugin-managed vars:** Plugins that require additional configuration (e.g. `nself-ai`, `nself-notify`, `nself-livekit`) inject their own `*_ENABLED`, `*_KEY`, and `*_PORT` vars into `.env` when installed. Those are documented in each plugin's own wiki page. Only core CLI vars appear here.
 
@@ -19,7 +19,7 @@ All nSelf project configuration lives in `.env` (and optionally `.env.local` for
 - [Hasura (GraphQL API)](#hasura-graphql-api)
 - [Auth](#auth)
 - [Nginx and SSL](#nginx-and-ssl)
-- [nSelf Admin](#nself-admin)
+- [ɳSelf Admin](#nself-admin)
 - [Optional Service Toggles](#optional-service-toggles)
 - [Custom Services (CS\_N)](#custom-services-cs_n)
 - [Computed Variables](#computed-variables)
@@ -143,9 +143,9 @@ All OAuth provider vars are optional. Set client ID and secret for each provider
 
 ---
 
-## nSelf Admin
+## ɳSelf Admin
 
-The nSelf Admin dashboard is an optional local GUI companion that runs at `localhost:3021`. It is not deployed to any server.
+The ɳSelf Admin dashboard is an optional local GUI companion that runs at `localhost:3021`. It is not deployed to any server.
 
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
@@ -174,7 +174,7 @@ These boolean flags enable optional bundled services. Each defaults to `false`. 
 
 ## Custom Services (CS\_N)
 
-nSelf supports up to 10 user-defined services, numbered `CS_1` through `CS_10`. Each slot uses a consistent set of vars with `N` replaced by the slot number.
+ɳSelf supports up to 10 user-defined services, numbered `CS_1` through `CS_10`. Each slot uses a consistent set of vars with `N` replaced by the slot number.
 
 ### Definition var
 
@@ -193,7 +193,7 @@ nSelf supports up to 10 user-defined services, numbered `CS_1` through `CS_10`. 
 | `CS_N_PUBLIC` | bool | `false` | No | When `true`, the service is reachable from outside the Docker network via Nginx. |
 | `CS_N_REPLICAS` | int | `1` | No | Number of container instances to run. |
 
-**Example** (from `web/` — `nself.org` infrastructure):
+**Example** (from `web/`, `nself.org` infrastructure):
 
 ```
 CS_1=ping_api:node:8001:ping
@@ -211,7 +211,7 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 
 ## Computed Variables
 
-The following variables are derived automatically and written to `.env.computed` on every `nself build` and `nself start`. Do not set these manually — they will be overwritten.
+The following variables are derived automatically and written to `.env.computed` on every `nself build` and `nself start`. Do not set these manually, they will be overwritten.
 
 | Variable | Derived From | Description |
 |---|---|---|

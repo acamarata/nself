@@ -1,6 +1,6 @@
 # Donorbox Plugin
 
-> Donation data sync from Donorbox with webhook support. **Free — MIT licensed.**
+> Donation data sync from Donorbox with webhook support. **Free, MIT licensed.**
 
 ## Install
 
@@ -29,13 +29,13 @@ Syncs donation and donor data from Donorbox into your Postgres database in real 
 ## Database Tables
 
 7 tables added to your Postgres database:
-- `np_donorbox_campaigns` — donation campaigns
-- `np_donorbox_donors` — donor profiles
-- `np_donorbox_donations` — donation records
-- `np_donorbox_recurring_plans` — recurring donation plans
-- `np_donorbox_refunds` — refund records
-- `np_donorbox_questions` — custom campaign questions
-- `np_donorbox_webhook_events` — raw webhook event log
+- `np_donorbox_campaigns`, donation campaigns
+- `np_donorbox_donors`, donor profiles
+- `np_donorbox_donations`, donation records
+- `np_donorbox_recurring_plans`, recurring donation plans
+- `np_donorbox_refunds`, refund records
+- `np_donorbox_questions`, custom campaign questions
+- `np_donorbox_webhook_events`, raw webhook event log
 
 ## Nginx Routes
 

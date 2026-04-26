@@ -1,6 +1,6 @@
 # Supply Chain Security
 
-Every nSelf CLI release publishes a signed Software Bill of Materials (SBOM) alongside the release tarballs. This page explains what is shipped, how to verify it, and how to query it for dependency exposure.
+Every ɳSelf CLI release publishes a signed Software Bill of Materials (SBOM) alongside the release tarballs. This page explains what is shipped, how to verify it, and how to query it for dependency exposure.
 
 ---
 
@@ -31,7 +31,7 @@ The signature is bound to the GitHub Actions OIDC token issued during the releas
 | OIDC issuer | `https://token.actions.githubusercontent.com` |
 | Identity | `https://github.com/nself-org/cli/.github/workflows/release.yml@refs/tags/v*` |
 | Transparency log | [Rekor](https://rekor.sigstore.dev) (public, immutable) |
-| Key rotation | None required (keyless — OIDC token is the ephemeral key) |
+| Key rotation | None required (keyless , OIDC token is the ephemeral key) |
 
 ---
 
@@ -60,7 +60,7 @@ cosign verify-blob sbom.cdx.json \
   --rekor-url "https://rekor.sigstore.dev"
 ```
 
-A successful verify prints `Verified OK`. Failure prints `Error: verifying blob` and exits 1 — this means the SBOM was tampered or was not produced by the nSelf release CI.
+A successful verify prints `Verified OK`. Failure prints `Error: verifying blob` and exits 1, this means the SBOM was tampered or was not produced by the ɳSelf release CI.
 
 ### Install cosign
 
@@ -120,7 +120,7 @@ sha256sum --check --ignore-missing checksums.txt
 
 ## SLSA compliance status
 
-SBOM + cosign keyless signing moves nSelf CLI toward SLSA Level 2:
+SBOM + cosign keyless signing moves ɳSelf CLI toward SLSA Level 2:
 
 | SLSA requirement | Status |
 |---|---|
@@ -135,7 +135,7 @@ SBOM + cosign keyless signing moves nSelf CLI toward SLSA Level 2:
 
 ## Related pages
 
-- [[Security-Architecture]] — threat model and hardening decisions
-- [[Security-Hardening]] — operator hardening guide
-- [[Security-Policy]] — reporting vulnerabilities
+- [[Security-Architecture]], threat model and hardening decisions
+- [[Security-Hardening]], operator hardening guide
+- [[Security-Policy]], reporting vulnerabilities
 - [[Home]]

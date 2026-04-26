@@ -1,18 +1,18 @@
-# Contributing to nSelf CLI
+# Contributing to ɳSelf CLI
 
-Thank you for your interest in contributing to nSelf. This guide covers everything from filing a bug report to landing a complex feature.
+Thank you for your interest in contributing to ɳSelf. This guide covers everything from filing a bug report to landing a complex feature.
 
 ## Before You Start
 
 - Read the [Code of Conduct](Code-of-Conduct.md). All contributors are expected to follow it.
-- Read the [Governance model](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md) — it explains how decisions get made.
+- Read the [Governance model](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md), it explains how decisions get made.
 - Check [open issues](https://github.com/nself-org/cli/issues) and [Discussions](https://github.com/nself-org/cli/discussions) before opening a new one.
 
 ## Reporting Bugs
 
 1. Search [existing issues](https://github.com/nself-org/cli/issues) first. Your bug may already be tracked.
 2. Open a new issue using the **Bug Report** template.
-3. Include: nSelf version (`nself version`), OS, Docker version, exact steps to reproduce, and actual vs expected behaviour.
+3. Include: ɳSelf version (`nself version`), OS, Docker version, exact steps to reproduce, and actual vs expected behaviour.
 4. Attach relevant logs: `nself logs` or `nself doctor`.
 
 ## Requesting Features
@@ -98,24 +98,24 @@ git push origin feat/my-feature
 
 ## Code Style
 
-- **Format:** `gofmt` — run via `make fmt`. CI fails on unformatted code.
+- **Format:** `gofmt`, run via `make fmt`. CI fails on unformatted code.
 - **Lint:** `golangci-lint run` must pass with zero warnings.
 - **Tests:** all existing tests must pass. New features need matching tests.
-- **Errors:** wrap with context — `fmt.Errorf("doing X: %w", err)`.
+- **Errors:** wrap with context, `fmt.Errorf("doing X: %w", err)`.
 - **Context:** accept `context.Context` as first parameter in I/O functions.
 - **No panics** in production code paths. No `os.Exit()` outside `main.go`.
-- **User output:** use `internal/ui` — not `fmt.Println` directly.
+- **User output:** use `internal/ui`, not `fmt.Println` directly.
 
 ## Commit Conventions
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` — new feature
-- `fix:` — bug fix
-- `chore:` — maintenance (deps, CI)
-- `docs:` — documentation only
-- `test:` — tests only
-- `refactor:` — no behaviour change
+- `feat:`, new feature
+- `fix:`, bug fix
+- `chore:`, maintenance (deps, CI)
+- `docs:`, documentation only
+- `test:`, tests only
+- `refactor:`, no behaviour change
 
 Breaking changes: add `!` after type (`feat!:`) and document in the PR body.
 
@@ -123,7 +123,7 @@ Breaking changes: add `!` after type (`feat!:`) and document in the PR body.
 
 The CLI loads plugins from `plugins/` (free) and `plugins-pro/` (paid). To add or modify a plugin:
 
-1. Read `.claude/docs/PLUGIN_SYSTEM_SPEC.md` — plugin manifest schema and loader pipeline.
+1. Read `.claude/docs/PLUGIN_SYSTEM_SPEC.md`, plugin manifest schema and loader pipeline.
 2. Create or update the plugin directory with a valid `plugin.json` manifest.
 3. Add integration tests that verify `nself plugin install <name>` succeeds.
 4. File a PR to the `plugins` repo, not to `cli` (unless you are changing the plugin loader itself).
@@ -140,17 +140,17 @@ The CLI's internationalisation strategy is under review. Translation contributio
 
 ## Questions
 
-- [GitHub Discussions](https://github.com/nself-org/cli/discussions) — preferred for questions
+- [GitHub Discussions](https://github.com/nself-org/cli/discussions), preferred for questions
 - Community: [nself.org](https://nself.org)
 
 ## Related
 
-- [GOVERNANCE.md](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md) — decision model
-- [ENFORCEMENT.md](https://github.com/nself-org/cli/blob/main/.github/ENFORCEMENT.md) — code of conduct enforcement
-- [CODEOWNERS](https://github.com/nself-org/cli/blob/main/.github/CODEOWNERS) — who reviews what
-- [[Dev-Setup]] — local environment setup
-- [[Plugin-Dev-Guide]] — building a new plugin
-- [[Release-Process]] — release workflow
+- [GOVERNANCE.md](https://github.com/nself-org/cli/blob/main/.github/GOVERNANCE.md), decision model
+- [ENFORCEMENT.md](https://github.com/nself-org/cli/blob/main/.github/ENFORCEMENT.md), code of conduct enforcement
+- [CODEOWNERS](https://github.com/nself-org/cli/blob/main/.github/CODEOWNERS), who reviews what
+- [[Dev-Setup]], local environment setup
+- [[Plugin-Dev-Guide]], building a new plugin
+- [[Release-Process]], release workflow
 
 ---
 ← [[Home]] | [[_Sidebar]]

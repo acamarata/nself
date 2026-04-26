@@ -1,6 +1,6 @@
-# Feature: nChat
+# Feature: ɳChat
 
-nChat is an open-source self-hosted messaging application built on nSelf. It provides real-time team and personal chat with video calls, bots, moderation, and white-label support.
+ɳChat is an open-source self-hosted messaging application built on ɳSelf. It provides real-time team and personal chat with video calls, bots, moderation, and white-label support.
 
 **Status:** Active
 **Repo:** nself-org/nchat (Type C reference app)
@@ -9,9 +9,9 @@ nChat is an open-source self-hosted messaging application built on nSelf. It pro
 
 ---
 
-## What nChat Does
+## What ɳChat Does
 
-nChat is a self-hosted Slack/Discord alternative. You run it on your own nSelf server, and your team connects via web browser or (eventually) native apps. All messages, files, and call recordings stay on your hardware.
+ɳChat is a self-hosted Slack/the community chat alternative. You run it on your own ɳSelf server, and your team connects via web browser or (eventually) native apps. All messages, files, and call recordings stay on your hardware.
 
 ### Current Features
 
@@ -24,7 +24,7 @@ nChat is a self-hosted Slack/Discord alternative. You run it on your own nSelf s
 
 ### With Pro Plugin Bundle
 
-The nChat plugin bundle adds:
+The ɳChat plugin bundle adds:
 
 | Plugin | What It Adds |
 |--------|-------------|
@@ -40,7 +40,7 @@ The nChat plugin bundle adds:
 
 ## Architecture
 
-nChat follows the standard nSelf reference app pattern:
+ɳChat follows the standard ɳSelf reference app pattern:
 
 ```
 ┌──────────────────────────────────┐
@@ -89,14 +89,14 @@ These are two different things:
 |---|-----------|---------------|
 | **What** | Open-source chat client app | Marketing website |
 | **Code** | nself-org/nchat | web/chat/ (in web monorepo) |
-| **Hosted by** | Users, on their own servers | nSelf, on nself.org |
+| **Hosted by** | Users, on their own servers | ɳSelf, on nself.org |
 | **Purpose** | Production messaging app | Feature overview, download links |
 
 ---
 
 ## Pricing
 
-nChat itself is free and open-source (MIT). The nChat plugin bundle for advanced features costs $0.99/mo or $9.99/yr. The ɳSelf+ subscription ($49/yr) includes the nChat bundle along with everything else.
+ɳChat itself is free and open-source (MIT). The ɳChat plugin bundle for advanced features costs $0.99/mo or $9.99/yr. The ɳSelf+ subscription ($49/yr) includes the ɳChat bundle along with everything else.
 
 ---
 
@@ -104,7 +104,7 @@ nChat itself is free and open-source (MIT). The nChat plugin bundle for advanced
 
 - **Mobile apps.** Capacitor (iOS/Android) shells are scaffolded. Native push notifications planned.
 - **Desktop apps.** Electron and Tauri shells are scaffolded.
-- **React Native.** Not started. Under consideration for native mobile experience.
+- **React Native.** Not started. Under consideration for native mobile workflow.
 - **End-to-end encryption.** Planned for DMs and private channels.
 - **Federation.** Planned exploration of Matrix protocol compatibility for cross-server messaging.
 

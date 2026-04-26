@@ -34,12 +34,12 @@ Integrates with the Cloudflare API to manage DNS zones and records, interact wit
 
 6 tables added to your Postgres database.
 
-- `np_cloudflare_zones` — Synced zone records
-- `np_cloudflare_dns_records` — DNS A/AAAA/CNAME/MX/TXT records
-- `np_cloudflare_r2_buckets` — R2 bucket metadata
-- `np_cloudflare_cache_rules` — Cache purge rules and history
-- `np_cloudflare_analytics` — Retrieved analytics snapshots
-- `np_cloudflare_webhooks` — Incoming Cloudflare webhook events
+- `np_cloudflare_zones`, Synced zone records
+- `np_cloudflare_dns_records`, DNS A/AAAA/CNAME/MX/TXT records
+- `np_cloudflare_r2_buckets`, R2 bucket metadata
+- `np_cloudflare_cache_rules`, Cache purge rules and history
+- `np_cloudflare_analytics`, Retrieved analytics snapshots
+- `np_cloudflare_webhooks`, Incoming Cloudflare webhook events
 
 ## Nginx Routes
 

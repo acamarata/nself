@@ -1,6 +1,6 @@
 # Linux x86_64 (amd64)
 
-Install the nSelf CLI on 64-bit Linux (linux/amd64). Tested on Ubuntu 22.04/24.04,
+Install the ɳSelf CLI on 64-bit Linux (linux/amd64). Tested on Ubuntu 22.04/24.04,
 Debian 12, Fedora 39/40, Rocky Linux 9, and Amazon Linux 2023.
 
 ## Prerequisites
@@ -38,7 +38,7 @@ docker --version        # Docker version 24+
 docker compose version  # Docker Compose version v2+
 ```
 
-## Install nSelf CLI
+## Install ɳSelf CLI
 
 ### Option 1: Installer script (recommended)
 
@@ -111,9 +111,9 @@ sudo apt-get install docker-compose-plugin
 
 **Firewall blocks inter-container networking**
 
-nSelf services communicate over Docker bridge networks. If containers cannot reach each
+ɳSelf services communicate over Docker bridge networks. If containers cannot reach each
 other, check `iptables` or `nftables` rules. Docker typically manages bridge rules
-automatically — ensure `iptables-legacy` or `nftables` compatibility is configured.
+automatically, ensure `iptables-legacy` or `nftables` compatibility is configured.
 
 **SELinux (Fedora / RHEL / Rocky) blocks volume mounts**
 

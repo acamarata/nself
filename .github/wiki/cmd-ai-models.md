@@ -160,6 +160,6 @@ The registry ships with the plugin binary. It is never fetched at runtime, so `n
 
 ## See also
 
-- [`nself ai local install`](cmd-ai.md#ai-local-install) — Install Ollama runtime
-- [`nself ai local health`](cmd-ai.md#ai-local-health) — Check Ollama and plugin health
-- [`plugin-ai`](plugin-ai.md) — AI plugin reference
+- [`nself ai local install`](cmd-ai.md#ai-local-install), Install Ollama runtime
+- [`nself ai local health`](cmd-ai.md#ai-local-health), Check Ollama and plugin health
+- [`plugin-ai`](plugin-ai.md), AI plugin reference

@@ -1,6 +1,6 @@
 # Cron Plugin
 
-> Cron job scheduler with HTTP callbacks and Postgres-backed job queue. **Free — MIT licensed.**
+> Cron job scheduler with HTTP callbacks and Postgres-backed job queue. **Free, MIT licensed.**
 
 ## Install
 
@@ -12,12 +12,12 @@ Redis is auto-enabled when the cron plugin is installed (BullMQ dependency). If 
 
 ## What It Does
 
-Schedules recurring tasks using standard cron syntax. Jobs fire HTTP POST callbacks to any endpoint in your stack. Job history, status, and failures are stored in Postgres — no external scheduler or systemd timers needed.
+Schedules recurring tasks using standard cron syntax. Jobs fire HTTP POST callbacks to any endpoint in your stack. Job history, status, and failures are stored in Postgres, no external scheduler or systemd timers needed.
 
 Two ways to declare jobs:
 
-- **Env-driven bootstrap** — declare jobs as `CRON_JOB_<N>_*` env vars. Upserted into Postgres on container start. Survives `nself rebuild`. Recommended for operator-owned infra tasks.
-- **API** — create jobs via REST (`POST /v1/jobs`). Stored in Postgres, persisted across restarts. Recommended for application-created jobs.
+- **Env-driven bootstrap**, declare jobs as `CRON_JOB_<N>_*` env vars. Upserted into Postgres on container start. Survives `nself rebuild`. Recommended for operator-owned infra tasks.
+- **API**, create jobs via REST (`POST /v1/jobs`). Stored in Postgres, persisted across restarts. Recommended for application-created jobs.
 
 ## Configuration
 
@@ -30,7 +30,7 @@ Two ways to declare jobs:
 
 ## Env-Driven Schedule Bootstrap
 
-Declare jobs as infrastructure-as-code in your `.env` file. The cron container upserts them into Postgres on every start — schedules survive `nself rebuild` without API calls.
+Declare jobs as infrastructure-as-code in your `.env` file. The cron container upserts them into Postgres on every start, schedules survive `nself rebuild` without API calls.
 
 ```bash
 # Format
@@ -52,7 +52,7 @@ CRON_JOB_1_COMMAND=http://backup:8080/backup/run
 CRON_JOB_1_NAME=nightly-pg-backup
 ```
 
-**ICS feed regen — prayer times, events (midnight UTC):**
+**ICS feed regen, prayer times, events (midnight UTC):**
 
 ```bash
 CRON_JOB_2_SCHEDULE=0 0 * * *
@@ -81,15 +81,15 @@ CRON_JOB_4_NAME=hasura-health-probe
 
 Jobs declared via `CRON_JOB_<N>_*` env vars are stored in Postgres (`np_cron_jobs`). Because Postgres data persists in a named Docker volume (`postgres_data`), jobs survive:
 
-- `nself rebuild` — regenerates `docker-compose.yml`; the cron container restarts with the same env vars and re-seeds the same jobs (upsert — no duplicates)
-- Server restart — Postgres volume is preserved; jobs reload from DB immediately
-- Plugin reinstall — migration is idempotent; existing data is untouched
+- `nself rebuild`, regenerates `docker-compose.yml`; the cron container restarts with the same env vars and re-seeds the same jobs (upsert, no duplicates)
+- Server restart, Postgres volume is preserved; jobs reload from DB immediately
+- Plugin reinstall, migration is idempotent; existing data is untouched
 
 Jobs created via the REST API also persist in Postgres and survive rebuilds.
 
-## nSelf-First Guard
+## ɳSelf-First Guard
 
-The cron container is defined by `nself build` from the plugin's `docker-compose.plugin.yml`. Never add a cron service to a hand-written compose file — it will be overwritten on the next `nself build`.
+The cron container is defined by `nself build` from the plugin's `docker-compose.plugin.yml`. Never add a cron service to a hand-written compose file, it will be overwritten on the next `nself build`.
 
 ```bash
 # Correct
@@ -109,7 +109,7 @@ The cron plugin requires Redis (BullMQ queue for job overlap detection and retry
 Note: Redis auto-enabled because cron/notify plugin detected.
 ```
 
-You can also declare `REDIS_ENABLED=true` explicitly in `.env` — the result is the same.
+You can also declare `REDIS_ENABLED=true` explicitly in `.env`, the result is the same.
 
 ## Ports
 
@@ -121,10 +121,10 @@ You can also declare `REDIS_ENABLED=true` explicitly in `.env` — the result is
 
 Two tables added to your Postgres database:
 
-- `np_cron_jobs` — job definitions and schedules
-- `np_cron_runs` — execution history and status
+- `np_cron_jobs`, job definitions and schedules
+- `np_cron_runs`, execution history and status
 
-The `np_cron_jobs.name` column has a unique index — used as the natural key for env-driven upserts.
+The `np_cron_jobs.name` column has a unique index, used as the natural key for env-driven upserts.
 
 ## API
 
@@ -154,12 +154,12 @@ curl -X POST http://plugin-cron:3051/v1/jobs \
 
 ## Nginx Routes
 
-None — cron service is internal only. Not exposed on the public domain.
+None, cron service is internal only. Not exposed on the public domain.
 
 ## Related
 
-- [[plugin-cron-pro]] — distributed locks, visual dashboard, failure alerts, Slack/email notifications
-- [[plugin-backup]] — backup plugin that pairs well with a nightly cron job
-- [[plugin-notify]] — notification plugin; both cron and notify auto-enable Redis together
+- [[plugin-cron-pro]], distributed locks, visual dashboard, failure alerts, Slack/email notifications
+- [[plugin-backup]], backup plugin that pairs well with a nightly cron job
+- [[plugin-notify]], notification plugin; both cron and notify auto-enable Redis together
 
 [[Home]]

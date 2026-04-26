@@ -1,6 +1,6 @@
-# Feature: nTV
+# Feature: ɳTV
 
-nTV is an open-source media player and server built on nSelf. It runs on six platforms (iOS, Android, macOS, Windows, Linux, Web) using Flutter and connects to a self-hosted nSelf backend for media management, streaming, and metadata.
+ɳTV is an open-source media player and server built on ɳSelf. It runs on six platforms (iOS, Android, macOS, Windows, Linux, Web) using Flutter and connects to a self-hosted ɳSelf backend for media management, streaming, and metadata.
 
 **Status:** Planned
 **Repo:** nself-org/ntv (Type C reference app)
@@ -8,9 +8,9 @@ nTV is an open-source media player and server built on nSelf. It runs on six pla
 
 ---
 
-## What nTV Does
+## What ɳTV Does
 
-nTV turns your nSelf server into a personal media system. You store your media library on your own hardware, and nTV clients on any device play it back with transcoding, metadata, and EPG support. Think Jellyfin or Plex, but built on the nSelf stack so it shares authentication, storage, and infrastructure with your other nSelf apps.
+ɳTV turns your ɳSelf server into a personal media system. You store your media library on your own hardware, and ɳTV clients on any device play it back with transcoding, metadata, and EPG support. Think Jellyfin or Plex, but built on the ɳSelf stack so it shares authentication, storage, and infrastructure with your other ɳSelf apps.
 
 Key capabilities:
 
@@ -26,7 +26,7 @@ Key capabilities:
 
 ## nMedia Plugin Bundle
 
-nTV requires the **nMedia** plugin bundle on the server side. nMedia is a marketing name for a collection of 12 plugins in the nSelf plugin ecosystem. It is not a separate repository.
+ɳTV requires the **nMedia** plugin bundle on the server side. nMedia is a marketing name for a collection of 12 plugins in the ɳSelf plugin ecosystem. It is not a separate repository.
 
 ### Plugins in the nMedia Bundle
 
@@ -52,7 +52,7 @@ nTV requires the **nMedia** plugin bundle on the server side. nMedia is a market
 | `recording` | DVR-style recording from live streams |
 | `transcoder` | Hardware-accelerated video transcoding (NVENC, VAAPI, QSV) |
 
-Additional media-adjacent Pro plugins that work with nTV but are not part of the core bundle:
+Additional media-adjacent Pro plugins that work with ɳTV but are not part of the core bundle:
 
 | Plugin | Purpose |
 |--------|---------|
@@ -99,7 +99,7 @@ The Flutter client communicates with Hasura for library data and user preference
 
 ## Setup
 
-nTV is not yet released. When available, setup will follow this pattern:
+ɳTV is not yet released. When available, setup will follow this pattern:
 
 ```bash
 # 1. Install nMedia plugins on your nSelf server
@@ -120,7 +120,7 @@ nself build && nself start
 
 ## Pricing
 
-nTV itself is free and open-source (MIT). The nMedia plugin bundle costs $0.99/mo or $9.99/yr as part of the nSelf Pro plugin tier. The 4 free plugins (torrent-manager, content-acquisition, content-progress, subtitle-manager) work without a license key.
+ɳTV itself is free and open-source (MIT). The nMedia plugin bundle costs $0.99/mo or $9.99/yr as part of the ɳSelf Pro plugin tier. The 4 free plugins (torrent-manager, content-acquisition, content-progress, subtitle-manager) work without a license key.
 
 ---
 

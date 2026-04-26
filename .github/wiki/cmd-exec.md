@@ -10,9 +10,9 @@ nself exec [flags] <SERVICE> [COMMAND...]
 
 ## Description
 
-`nself exec` runs a command inside a running service container. It is a thin wrapper around `docker compose exec` with nSelf-aware defaults: if no command is given, it opens a sensible interactive shell for the service (`psql` for postgres, `redis-cli` for redis, `/bin/sh` for everything else).
+`nself exec` runs a command inside a running service container. It is a thin wrapper around `docker compose exec` with ɳSelf-aware defaults: if no command is given, it opens a sensible interactive shell for the service (`psql` for postgres, `redis-cli` for redis, `/bin/sh` for everything else).
 
-The command supports piping — you can feed SQL files or other input through stdin using shell pipes. Allocate a pseudo-TTY by default for interactive sessions; pass `--no-tty` when piping input.
+The command supports piping, you can feed SQL files or other input through stdin using shell pipes. Allocate a pseudo-TTY by default for interactive sessions; pass `--no-tty` when piping input.
 
 ## Flags
 

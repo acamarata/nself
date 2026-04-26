@@ -34,8 +34,8 @@ Provides Google OAuth2 token management and proxy APIs for Gmail, Drive, Calenda
 
 2 tables added to your Postgres database.
 
-- `np_google_tokens` — OAuth2 access and refresh tokens per user
-- `np_google_sync_log` — Sync event log for Google API operations
+- `np_google_tokens`, OAuth2 access and refresh tokens per user
+- `np_google_sync_log`, Sync event log for Google API operations
 
 ## Nginx Routes
 

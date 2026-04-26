@@ -1,6 +1,6 @@
 # VPN Plugin
 
-> Multi-provider VPN management with kill switch and leak protection. **Free — MIT licensed.**
+> Multi-provider VPN management with kill switch and leak protection. **Free, MIT licensed.**
 
 ## Install
 
@@ -10,7 +10,7 @@ nself plugin install vpn
 
 ## What It Does
 
-Manages VPN connections to multiple providers (NordVPN, PIA, Mullvad, and others) directly from your nSelf instance. Provides a kill-switch that blocks all traffic if the VPN drops. Monitors for DNS and IP leaks. Used alongside the torrent-manager plugin to enforce VPN on all downloads.
+Manages VPN connections to multiple providers (NordVPN, PIA, Mullvad, and others) directly from your ɳSelf instance. Provides a kill-switch that blocks all traffic if the VPN drops. Monitors for DNS and IP leaks. Used alongside the torrent-manager plugin to enforce VPN on all downloads.
 
 ## Configuration
 
@@ -32,15 +32,15 @@ Manages VPN connections to multiple providers (NordVPN, PIA, Mullvad, and others
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_vpn_connections` — connection history
-- `np_vpn_servers` — server catalog
-- `np_vpn_providers` — provider configurations
-- `np_vpn_profiles` — VPN configuration profiles
-- `np_vpn_status` — current connection state
-- `np_vpn_leak_tests` — leak test results
-- `np_vpn_rules` — traffic routing rules
-- `np_vpn_audit` — connection audit log
+- `np_vpn_connections`, connection history
+- `np_vpn_servers`, server catalog
+- `np_vpn_providers`, provider configurations
+- `np_vpn_profiles`, VPN configuration profiles
+- `np_vpn_status`, current connection state
+- `np_vpn_leak_tests`, leak test results
+- `np_vpn_rules`, traffic routing rules
+- `np_vpn_audit`, connection audit log
 
 ## Nginx Routes
 
-None — VPN service is internal only.
+None, VPN service is internal only.

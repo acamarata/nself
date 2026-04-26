@@ -40,12 +40,12 @@ Requires Redis (`REDIS_ENABLED=true`). Optionally uses the `ai` plugin for AI cl
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_mux_messages` — ingested messages
-- `np_mux_routes` — routing rules
-- `np_mux_handlers` — message handlers
-- `np_mux_replies` — auto-reply templates
-- `np_mux_dlq` — dead-letter queue
-- `np_mux_audit` — processing audit log
+- `np_mux_messages`, ingested messages
+- `np_mux_routes`, routing rules
+- `np_mux_handlers`, message handlers
+- `np_mux_replies`, auto-reply templates
+- `np_mux_dlq`, dead-letter queue
+- `np_mux_audit`, processing audit log
 
 ## Nginx Routes
 

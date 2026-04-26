@@ -14,7 +14,7 @@ Post-repair scan: **0 broken links** across 205 unique `[[wiki-link]]` targets i
 
 ---
 
-## Phase 1: E2 Fleet I (commit 0c91d73) — 32 links resolved before S07-T03 ran
+## Phase 1: E2 Fleet I (commit 0c91d73), 32 links resolved before S07-T03 ran
 
 ### Bundle pages created (4 fixed)
 
@@ -72,13 +72,13 @@ Note: `[[bundle-nmedia]]` was also created in this phase but was not in the orig
 
 ---
 
-## Phase 2: S07-T03 (2026-04-17) — 3 remaining issues resolved
+## Phase 2: S07-T03 (2026-04-17), 3 remaining issues resolved
 
 | Broken link / issue | File | Action | Reason |
 |---|---|---|---|
-| `[[Commands]]` case mismatch — target was `COMMANDS.md` | 68 occurrences across cmd-*.md, Home.md, Getting-Started.md, Plugin-Catalog.md, _Sidebar.md | **fixed** — renamed `COMMANDS.md` to `Commands.md` | GitHub Wiki resolves case-insensitively at runtime, but canonical filename must match link convention |
-| `[[wiki-links]]` in LINK-AUDIT.md prose (line 11) | LINK-AUDIT.md | **deleted** — replaced with plain text | Not a nav link; appeared in a prose description sentence |
-| `[[wiki-link]]` in LINK-AUDIT.md prose (line 79) | LINK-AUDIT.md | **deleted** — replaced with plain text | Not a nav link; appeared in a prose description sentence |
+| `[[Commands]]` case mismatch , target was `COMMANDS.md` | 68 occurrences across cmd-*.md, Home.md, Getting-Started.md, Plugin-Catalog.md, _Sidebar.md | **fixed** , renamed `COMMANDS.md` to `Commands.md` | GitHub Wiki resolves case-insensitively at runtime, but canonical filename must match link convention |
+| `[[wiki-links]]` in LINK-AUDIT.md prose (line 11) | LINK-AUDIT.md | **deleted** , replaced with plain text | Not a nav link; appeared in a prose description sentence |
+| `[[wiki-link]]` in LINK-AUDIT.md prose (line 79) | LINK-AUDIT.md | **deleted** , replaced with plain text | Not a nav link; appeared in a prose description sentence |
 
 ---
 

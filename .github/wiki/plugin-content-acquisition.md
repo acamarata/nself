@@ -1,6 +1,6 @@
 # Content Acquisition Plugin
 
-> RSS monitoring, release calendar, and automated download pipeline. **Free — MIT licensed.**
+> RSS monitoring, release calendar, and automated download pipeline. **Free, MIT licensed.**
 
 ## Install
 
@@ -29,14 +29,14 @@ Monitors RSS feeds and release calendars for new content, then automatically tri
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_content_acquisition_feeds` — RSS/Atom feed subscriptions
-- `np_content_acquisition_feed_items` — discovered feed items
-- `np_content_acquisition_releases` — release calendar entries
-- `np_content_acquisition_download_jobs` — queued downloads
-- `np_content_acquisition_download_history` — completed downloads
-- `np_content_acquisition_filters` — content filtering rules
-- `np_content_acquisition_categories` — content categories
-- `np_content_acquisition_indexers` — indexer configurations
+- `np_content_acquisition_feeds`, RSS/Atom feed subscriptions
+- `np_content_acquisition_feed_items`, discovered feed items
+- `np_content_acquisition_releases`, release calendar entries
+- `np_content_acquisition_download_jobs`, queued downloads
+- `np_content_acquisition_download_history`, completed downloads
+- `np_content_acquisition_filters`, content filtering rules
+- `np_content_acquisition_categories`, content categories
+- `np_content_acquisition_indexers`, indexer configurations
 
 ## Nginx Routes
 

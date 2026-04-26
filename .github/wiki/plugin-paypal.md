@@ -34,13 +34,13 @@ Syncs PayPal payment data into your Postgres database via the PayPal REST API an
 ## Database Tables
 
 14 tables added to your Postgres database, including:
-- `np_paypal_orders` — order records
-- `np_paypal_captures` — payment captures
-- `np_paypal_refunds` — refund records
-- `np_paypal_disputes` — dispute/chargeback records
-- `np_paypal_subscriptions` — subscription state
-- `np_paypal_plans` — subscription plan definitions
-- `np_paypal_webhook_events` — raw event log
+- `np_paypal_orders`, order records
+- `np_paypal_captures`, payment captures
+- `np_paypal_refunds`, refund records
+- `np_paypal_disputes`, dispute/chargeback records
+- `np_paypal_subscriptions`, subscription state
+- `np_paypal_plans`, subscription plan definitions
+- `np_paypal_webhook_events`, raw event log
 - And 7 more for customers, invoices, payouts, etc.
 
 ## Nginx Routes

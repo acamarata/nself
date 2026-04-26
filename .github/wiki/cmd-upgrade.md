@@ -1,6 +1,6 @@
 # nself upgrade
 
-> Upgrade the nSelf CLI (detects install method).
+> Upgrade the ɳSelf CLI (detects install method).
 
 ## Synopsis
 
@@ -88,9 +88,9 @@ nself upgrade --binary-url https://github.com/nself-org/cli/releases/download/v1
 
 ## See Also
 
-- [[cmd-update]] — update CLI and admin Docker image
-- [[cmd-version]] — show current version and system info
-- [[cmd-doctor]] — diagnose CLI/install issues
-- [[Commands]] — full command index
+- [[cmd-update]], update CLI and admin Docker image
+- [[cmd-version]], show current version and system info
+- [[cmd-doctor]], diagnose CLI/install issues
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

@@ -1,6 +1,6 @@
 # Feature: Search
 
-nSelf integrates MeiliSearch for fast, typo-tolerant full-text search.
+ɳSelf integrates MeiliSearch for fast, typo-tolerant full-text search.
 
 ## What's Included
 
@@ -52,9 +52,9 @@ nself plugin install search
 
 ## See Also
 
-- [[plugin-search]] — search plugin reference
-- [[cmd-service]] — enable/disable search
-- [[Config-Env-Vars]] — full env var reference
+- [[plugin-search]], search plugin reference
+- [[cmd-service]], enable/disable search
+- [[Config-Env-Vars]], full env var reference
 
 ---
 ← [[Home]] | [[_Sidebar]]

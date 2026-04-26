@@ -34,13 +34,13 @@ Enriches your media library with rich metadata from multiple sources: The Movie 
 ## Database Tables
 
 7 tables added to your Postgres database:
-- `np_tmdb_movies` — movie metadata
-- `np_tmdb_tv_shows` — TV show metadata
-- `np_tmdb_episodes` — TV episode metadata
-- `np_tmdb_people` — cast and crew
-- `np_tmdb_match_queue` — pending metadata match jobs
-- `np_tmdb_artwork` — poster, backdrop, and logo references
-- `np_tmdb_sync_log` — metadata sync history
+- `np_tmdb_movies`, movie metadata
+- `np_tmdb_tv_shows`, TV show metadata
+- `np_tmdb_episodes`, TV episode metadata
+- `np_tmdb_people`, cast and crew
+- `np_tmdb_match_queue`, pending metadata match jobs
+- `np_tmdb_artwork`, poster, backdrop, and logo references
+- `np_tmdb_sync_log`, metadata sync history
 
 ## Nginx Routes
 

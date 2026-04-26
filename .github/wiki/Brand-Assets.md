@@ -1,6 +1,6 @@
 # Brand Assets
 
-Official nSelf brand assets for use in integrations, articles, and community content.
+Official ɳSelf brand assets for use in integrations, articles, and community content.
 
 ## Asset Location
 
@@ -42,8 +42,8 @@ Full wordmark with ɳSelf text, available in dark and light variants.
 
 ### File Formats
 
-- **PNG** — raster masters (preferred for most uses)
-- **SVG** — vector source files (for print and large-format use)
+- **PNG**, raster masters (preferred for most uses)
+- **SVG**, vector source files (for print and large-format use)
 
 ## Download
 

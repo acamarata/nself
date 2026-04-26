@@ -1,6 +1,6 @@
-# First Project — Build a Todo API
+# First Project, Build a Todo API
 
-This guide builds a simple Todo API end-to-end using nSelf. No frontend — pure backend API with GraphQL and JWT auth.
+This guide builds a simple Todo API end-to-end using ɳSelf. No frontend, pure backend API with GraphQL and JWT auth.
 
 ## 1. Initialize the Project
 
@@ -39,10 +39,10 @@ In the Hasura Console:
 1. Click **Data** → **Create Table**
 2. Table name: `todos`
 3. Add columns:
-   - `id` — UUID, primary key, default: `gen_random_uuid()`
-   - `title` — Text, not null
-   - `done` — Boolean, not null, default: `false`
-   - `created_at` — Timestamptz, default: `now()`
+ - `id`, UUID, primary key, default: `gen_random_uuid()`
+ - `title`, Text, not null
+ - `done`, Boolean, not null, default: `false`
+ - `created_at`, Timestamptz, default: `now()`
 4. Click **Add Table**
 
 ## 5. Track the Table

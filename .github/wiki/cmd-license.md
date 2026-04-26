@@ -1,6 +1,6 @@
 # nself license
 
-> Manage your nSelf Pro membership license key.
+> Manage your ɳSelf Pro membership license key.
 
 ## Synopsis
 
@@ -12,13 +12,13 @@ nself license <subcommand>
 
 `nself license` manages the Pro membership license key used to install paid plugins. The key is stored locally at `~/.nself/license/key` with permissions `0600` (readable only by the current user).
 
-Set your key once with `nself license set` and all subsequent `nself plugin install` commands for Pro plugins will use it automatically. The key is validated server-side against `ping.nself.org` — the CLI does not decode or verify the key locally.
+Set your key once with `nself license set` and all subsequent `nself plugin install` commands for Pro plugins will use it automatically. The key is validated server-side against `ping.nself.org`, the CLI does not decode or verify the key locally.
 
 **Key format:** One of four accepted prefixes followed by 32 or more characters:
-- `nself_pro_*` — Pro tier
-- `nself_max_*` — Pro tier
-- `nself_ent_*` — Enterprise tier
-- `nself_owner_*` — Owner tier
+- `nself_pro_*`, Pro tier
+- `nself_max_*`, Pro tier
+- `nself_ent_*`, Enterprise tier
+- `nself_owner_*`, Owner tier
 
 Keys are validated with a POST request to `https://ping.nself.org/license/validate`.
 
@@ -85,7 +85,7 @@ Colors are only shown when output is a terminal. Piped output is plain text.
 - Starts streaming within 2s of invocation
 - Reconnects automatically on connection loss (exponential backoff, max 30s)
 - Ctrl-C exits cleanly with no goroutine leak
-- License key values are never shown in full — only the first 12 characters (key prefix) are displayed
+- License key values are never shown in full, only the first 12 characters (key prefix) are displayed
 
 ### Examples
 

@@ -1,6 +1,6 @@
 # Shopify Plugin
 
-> Shopify store sync — orders, products, customers, and inventory. **Pro plugin.**
+> Shopify store sync, orders, products, customers, and inventory. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -34,15 +34,15 @@ Syncs your Shopify store data into Postgres in real time via webhooks and the Sh
 ## Database Tables
 
 9 tables added to your Postgres database:
-- `np_shopify_products` — product catalog
-- `np_shopify_variants` — product variants
-- `np_shopify_collections` — product collections
-- `np_shopify_customers` — customer records
-- `np_shopify_orders` — order records
-- `np_shopify_line_items` — order line items
-- `np_shopify_fulfillments` — fulfillment records
-- `np_shopify_inventory` — inventory levels
-- `np_shopify_webhook_events` — raw event log
+- `np_shopify_products`, product catalog
+- `np_shopify_variants`, product variants
+- `np_shopify_collections`, product collections
+- `np_shopify_customers`, customer records
+- `np_shopify_orders`, order records
+- `np_shopify_line_items`, order line items
+- `np_shopify_fulfillments`, fulfillment records
+- `np_shopify_inventory`, inventory levels
+- `np_shopify_webhook_events`, raw event log
 
 ## Nginx Routes
 

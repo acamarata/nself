@@ -13,7 +13,7 @@ nself plugin install idme
 
 ## What It Does
 
-Integrates with the ID.me identity verification platform to confirm user attributes such as age, military service, student enrollment, and first responder status. Verification results gate access controls or unlock discounts within your application. All verification events are recorded to an audit log for compliance.
+Integrates with the ID.me identity verification platform to confirm user attributes such as age, military service, student enrollment, and first responder status. Verification results gate access controls or enable discounts within your application. All verification events are recorded to an audit log for compliance.
 
 ## Configuration
 
@@ -34,11 +34,11 @@ Integrates with the ID.me identity verification platform to confirm user attribu
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_idme_verifications` — user verification records
-- `np_idme_tokens` — OAuth token storage
-- `np_idme_groups` — ID.me group/community memberships
-- `np_idme_affiliations` — verified user affiliations
-- `np_idme_audit_log` — verification event audit trail
+- `np_idme_verifications`, user verification records
+- `np_idme_tokens`, OAuth token storage
+- `np_idme_groups`, ID.me group/community memberships
+- `np_idme_affiliations`, verified user affiliations
+- `np_idme_audit_log`, verification event audit trail
 
 ## Nginx Routes
 

@@ -13,7 +13,7 @@ nself plugin install livekit
 
 ## What It Does
 
-Integrates a LiveKit server into your nSelf stack for WebRTC video and audio conferencing. Create rooms, generate participant tokens, record sessions to MinIO or S3, stream egress to RTMP endpoints, and monitor per-participant quality metrics. Used by the nSelf Chat and Claw client apps for voice and video calling.
+Integrates a LiveKit server into your ɳSelf stack for WebRTC video and audio conferencing. Create rooms, generate participant tokens, record sessions to MinIO or S3, stream egress to RTMP endpoints, and monitor per-participant quality metrics. Used by the ɳSelf Chat and Claw client apps for voice and video calling.
 
 ## Configuration
 
@@ -38,12 +38,12 @@ Integrates a LiveKit server into your nSelf stack for WebRTC video and audio con
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_livekit_rooms` — room definitions and settings
-- `np_livekit_participants` — participant session records
-- `np_livekit_recordings` — recording archives
-- `np_livekit_egress` — egress stream configurations
-- `np_livekit_quality_metrics` — per-session quality data
-- `np_livekit_tokens` — issued participant tokens
+- `np_livekit_rooms`, room definitions and settings
+- `np_livekit_participants`, participant session records
+- `np_livekit_recordings`, recording archives
+- `np_livekit_egress`, egress stream configurations
+- `np_livekit_quality_metrics`, per-session quality data
+- `np_livekit_tokens`, issued participant tokens
 
 ## Nginx Routes
 

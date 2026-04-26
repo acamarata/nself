@@ -1,6 +1,6 @@
 # Shopify Pro Plugin
 
-> Advanced Shopify integration with full webhook coverage, multi-location inventory, and Hasura GraphQL access. **Pro plugin — requires license.**
+> Advanced Shopify integration with full webhook coverage, multi-location inventory, and Hasura GraphQL access. **Pro plugin, requires license.**
 
 ## Tier required
 
@@ -58,15 +58,15 @@ The plugin tracks products, variants, collections, customers, orders, line items
 
 9 tables prefixed `np_shopify_`:
 
-- `np_shopify_products` — product catalog
-- `np_shopify_variants` — product variants
-- `np_shopify_collections` — product collections
-- `np_shopify_customers` — customer records
-- `np_shopify_orders` — order records
-- `np_shopify_line_items` — order line items
-- `np_shopify_fulfillments` — fulfillment records
-- `np_shopify_inventory` — inventory levels per location
-- `np_shopify_webhook_events` — raw incoming webhook payloads
+- `np_shopify_products`, product catalog
+- `np_shopify_variants`, product variants
+- `np_shopify_collections`, product collections
+- `np_shopify_customers`, customer records
+- `np_shopify_orders`, order records
+- `np_shopify_line_items`, order line items
+- `np_shopify_fulfillments`, fulfillment records
+- `np_shopify_inventory`, inventory levels per location
+- `np_shopify_webhook_events`, raw incoming webhook payloads
 
 ## Nginx Routes
 
@@ -108,10 +108,10 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 ## See Also
 
-- [plugin-stripe-pro](plugin-stripe-pro) — Stripe billing integration
-- [plugin-paypal-pro](plugin-paypal-pro) — PayPal payment sync
-- [plugin-donorbox-pro](plugin-donorbox-pro) — Donorbox donation sync
-- [Plugin-Overview](Plugin-Overview) — full plugin index
-- [Plugin-Licensing](Plugin-Licensing) — tier comparison
+- [plugin-stripe-pro](plugin-stripe-pro), Stripe billing integration
+- [plugin-paypal-pro](plugin-paypal-pro), PayPal payment sync
+- [plugin-donorbox-pro](plugin-donorbox-pro), Donorbox donation sync
+- [Plugin-Overview](Plugin-Overview), full plugin index
+- [Plugin-Licensing](Plugin-Licensing), tier comparison
 
 ← [Plugin-Overview](Plugin-Overview) | [Home](Home) →

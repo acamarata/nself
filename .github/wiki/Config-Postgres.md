@@ -1,22 +1,22 @@
 # PostgreSQL Configuration
 
-PostgreSQL is the foundation of every nSelf stack. It stores all application data and is the backing store for Hasura GraphQL, Auth, and any custom services you add. This page covers every `POSTGRES_*` environment variable, how the connection string is computed, and how to connect external database tools during development.
+PostgreSQL is the foundation of every ɳSelf stack. It stores all application data and is the backing store for Hasura GraphQL, Auth, and any custom services you add. This page covers every `POSTGRES_*` environment variable, how the connection string is computed, and how to connect external database tools during development.
 
 ---
 
 ## Environment Variables
 
-All Postgres variables are optional except `POSTGRES_PASSWORD`, which must be set explicitly because nSelf will never generate a default database password for you.
+All Postgres variables are optional except `POSTGRES_PASSWORD`, which must be set explicitly because ɳSelf will never generate a default database password for you.
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `POSTGRES_VERSION` | `16-alpine` | No | Docker image tag for the Postgres container. Change this to pin a specific version, e.g. `15-alpine` or `16.2-alpine`. |
 | `POSTGRES_HOST` | `postgres` | No | Internal hostname used by other containers (Hasura, Auth, Functions) to reach Postgres. This is a Docker network name and should almost never be changed. |
-| `POSTGRES_INTERNAL_PORT` | `5432` | No | Port Postgres listens on inside the container. Always `5432`. Do not change this — it is the standard Postgres port expected by all dependent services. |
+| `POSTGRES_INTERNAL_PORT` | `5432` | No | Port Postgres listens on inside the container. Always `5432`. Do not change this , it is the standard Postgres port expected by all dependent services. |
 | `POSTGRES_PORT` | `5432` | No | Port exposed to the host machine. Change this if you have a port conflict with another local Postgres instance (e.g., set to `5433`). |
 | `POSTGRES_DB` | `nself` | No | Name of the default database created on first start. |
 | `POSTGRES_USER` | `postgres` | No | Superuser account name for the database. |
-| `POSTGRES_PASSWORD` | *(none)* | **Yes** | Superuser password. Must be at least 16 characters. nSelf enforces a minimum length and rejects common insecure patterns (e.g., `postgres`, `password`, `changeme`). |
+| `POSTGRES_PASSWORD` | *(none)* | **Yes** | Superuser password. Must be at least 16 characters. ɳSelf enforces a minimum length and rejects common insecure patterns (e.g., `postgres`, `password`, `changeme`). |
 | `POSTGRES_EXTENSIONS` | `uuid-ossp` | No | Comma-separated list of extensions to install automatically at startup. The extensions `uuid-ossp`, `pgcrypto`, and `pg_trgm` are always installed regardless of this value. Add additional extensions here as needed. |
 | `POSTGRES_EXPOSE_PORT` | `auto` | No | Controls whether `POSTGRES_PORT` is bound on the host. `auto` exposes the port in dev and hides it in prod. Set to `true` to always expose, or `false` to always hide. |
 | `POSTGRES_MEM_LIMIT` | `2g` | No | Docker memory limit for the Postgres container. Uses Docker format: `512m`, `1g`, `4g`, etc. |
@@ -30,19 +30,19 @@ All Postgres variables are optional except `POSTGRES_PASSWORD`, which must be se
 | `true` | Port exposed to host | Port exposed to host |
 | `false` | Port hidden from host | Port hidden from host |
 
-In development you almost always want `auto` (the default) so you can connect TablePlus, DBeaver, or `psql` directly. In production the default `auto` hides the port, which is the safe behaviour — external access goes through Hasura GraphQL over Nginx instead.
+In development you almost always want `auto` (the default) so you can connect TablePlus, DBeaver, or `psql` directly. In production the default `auto` hides the port, which is the safe behaviour, external access goes through Hasura GraphQL over Nginx instead.
 
 ---
 
 ## Computed Variable: DATABASE_URL
 
-nSelf computes `DATABASE_URL` automatically from the Postgres variables above. You do not set this manually.
+ɳSelf computes `DATABASE_URL` automatically from the Postgres variables above. You do not set this manually.
 
 ```
 DATABASE_URL=postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}
 ```
 
-Note the hostname is always `postgres` (the internal Docker network name), not `localhost`. This URL is used by Hasura, Auth, Functions, and any custom service that needs a direct database connection. The password component is URL-encoded automatically — you do not need to encode special characters yourself.
+Note the hostname is always `postgres` (the internal Docker network name), not `localhost`. This URL is used by Hasura, Auth, Functions, and any custom service that needs a direct database connection. The password component is URL-encoded automatically, you do not need to encode special characters yourself.
 
 With default values and a password of `my-secure-password-here`, the computed URL would be:
 
@@ -70,7 +70,7 @@ postgresql://postgres:your-password@localhost:5432/nself
 
 ## Connecting External Tools
 
-During development, Postgres is exposed on your host machine at `localhost:{POSTGRES_PORT}`. You can connect any standard Postgres client — TablePlus, DBeaver, DataGrip, pgAdmin, or the `psql` CLI.
+During development, Postgres is exposed on your host machine at `localhost:{POSTGRES_PORT}`. You can connect any standard Postgres client, TablePlus, DBeaver, DataGrip, pgAdmin, or the `psql` CLI.
 
 ### Connection parameters
 
@@ -99,7 +99,7 @@ PGPASSWORD=your-password psql -h localhost -p 5432 -U postgres -d nself
 
 1. Create a new connection, choose **PostgreSQL**
 2. Fill in the fields from the table above
-3. Click **Test** — you should see a green success indicator
+3. Click **Test**, you should see a green success indicator
 4. Click **Connect**
 
 ### DBeaver
@@ -123,7 +123,7 @@ Then connect your external tool to port `5433` instead.
 
 ## Default Extensions
 
-The following extensions are installed automatically on every nSelf Postgres instance regardless of the `POSTGRES_EXTENSIONS` setting:
+The following extensions are installed automatically on every ɳSelf Postgres instance regardless of the `POSTGRES_EXTENSIONS` setting:
 
 | Extension | Purpose |
 |-----------|---------|
@@ -138,18 +138,18 @@ To install additional extensions, add them to the `POSTGRES_EXTENSIONS` variable
 POSTGRES_EXTENSIONS=uuid-ossp,postgis,hstore
 ```
 
-Extensions are installed via `CREATE EXTENSION IF NOT EXISTS` at container startup, so adding an extension to an existing project is safe — it will be created on the next restart.
+Extensions are installed via `CREATE EXTENSION IF NOT EXISTS` at container startup, so adding an extension to an existing project is safe, it will be created on the next restart.
 
 ---
 
 ## Security Notes
 
-**Postgres is not directly reachable from the internet.** The container binds to `127.0.0.1` inside Docker and is only accessible within the Docker network (by other containers) or from the host machine via the exposed port. There is no path from the public internet to Postgres directly — all external database access in production goes through Hasura GraphQL over Nginx.
+**Postgres is not directly reachable from the internet.** The container binds to `127.0.0.1` inside Docker and is only accessible within the Docker network (by other containers) or from the host machine via the exposed port. There is no path from the public internet to Postgres directly, all external database access in production goes through Hasura GraphQL over Nginx.
 
 Additional hardening applied to every Postgres container:
 
-- `cap_drop: ALL` — all Linux capabilities are dropped
-- `cap_add: IPC_LOCK` — only the minimum capability required for shared memory is re-added
+- `cap_drop: ALL`, all Linux capabilities are dropped
+- `cap_add: IPC_LOCK`, only the minimum capability required for shared memory is re-added
 - `POSTGRES_EXPOSE_PORT=auto` defaults to hidden in production, so the host port is not bound unless you explicitly opt in
 
 **Password requirements:**

@@ -81,6 +81,6 @@ Links are stored in `~/.nself/plugin-links.json` with `0600` permissions:
 
 ## See Also
 
-- [[cmd-plugin-dev]] — start hot-reload watcher
-- [[cmd-plugin-test]] — run plugin test suite
+- [[cmd-plugin-dev]], start hot-reload watcher
+- [[cmd-plugin-test]], run plugin test suite
 - [[Home]]

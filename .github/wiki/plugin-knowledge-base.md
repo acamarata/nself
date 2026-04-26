@@ -33,14 +33,14 @@ A structured knowledge base for documentation and FAQs. Organize content into ca
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_knowledge_base_categories` — content categories
-- `np_knowledge_base_articles` — article content
-- `np_knowledge_base_versions` — article version history
-- `np_knowledge_base_translations` — per-locale translations
-- `np_knowledge_base_feedback` — article helpfulness ratings
-- `np_knowledge_base_search_index` — search index metadata
-- `np_knowledge_base_tags` — article tags
-- `np_knowledge_base_related` — related article links
+- `np_knowledge_base_categories`, content categories
+- `np_knowledge_base_articles`, article content
+- `np_knowledge_base_versions`, article version history
+- `np_knowledge_base_translations`, per-locale translations
+- `np_knowledge_base_feedback`, article helpfulness ratings
+- `np_knowledge_base_search_index`, search index metadata
+- `np_knowledge_base_tags`, article tags
+- `np_knowledge_base_related`, related article links
 
 ## Nginx Routes
 

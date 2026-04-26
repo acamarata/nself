@@ -5,7 +5,7 @@
 > Native Windows binary (`windows-amd64.zip` + `install.ps1`) is planned for v1.1.0.
 > See the [OS support matrix](../Installation.md#os-support) for details.
 
-This guide covers installing nSelf CLI on Windows using WSL2 (Windows Subsystem for Linux).
+This guide covers installing ɳSelf CLI on Windows using WSL2 (Windows Subsystem for Linux).
 Tested on Windows 10 (22H2+) and Windows 11.
 
 ## Prerequisites
@@ -29,7 +29,7 @@ If disabled, reboot into BIOS/UEFI:
 - Intel: enable **VT-x** (Intel Virtualization Technology)
 - AMD: enable **AMD-V** or **SVM Mode**
 
-The setting location varies by motherboard vendor — search your model + "enable virtualization BIOS".
+The setting location varies by motherboard vendor, search your model + "enable virtualization BIOS".
 
 ## Step 2: Install WSL2
 
@@ -81,7 +81,7 @@ docker --version        # Docker version 24+
 docker compose version  # Docker Compose version v2+
 ```
 
-## Step 5: Install nSelf CLI Inside WSL
+## Step 5: Install ɳSelf CLI Inside WSL
 
 Open the Ubuntu terminal (Start → Ubuntu) and run:
 
@@ -111,7 +111,7 @@ nself doctor
 
 ## PowerShell Completion (optional)
 
-Generate nSelf tab-completion for PowerShell (run nSelf commands from PowerShell via WSL):
+Generate ɳSelf tab-completion for PowerShell (run ɳSelf commands from PowerShell via WSL):
 
 ```powershell
 nself completion powershell | Out-String | Invoke-Expression
@@ -143,19 +143,19 @@ Run `netstat -aon | findstr :<port>` in PowerShell to find the process.
 
 **Slow file I/O on Windows-mounted paths**
 
-Keep your nSelf project inside the WSL filesystem (e.g., `/home/user/projects/`),
+Keep your ɳSelf project inside the WSL filesystem (e.g., `/home/user/projects/`),
 NOT on the Windows drive (`/mnt/c/`). Cross-filesystem I/O is significantly slower.
 
 ---
 
-## Native Windows — v1.1.0 Planned
+## Native Windows, v1.1.0 Planned
 
 Native Windows binary (`windows-amd64.zip` + `install.ps1`) is planned for v1.1.0.
 
 Known requirements before v1.1.0 ships:
-- Path-separator audit (all `filepath.Join` calls — no hardcoded `/`)
+- Path-separator audit (all `filepath.Join` calls, no hardcoded `/`)
 - Windows code-signing certificate ($300+/yr EV cert for SmartScreen bypass)
-- `nself completion powershell` (already implemented — see above)
+- `nself completion powershell` (already implemented, see above)
 - Windows CI runner testing (added to CI in v1.0.9 via S49-T01)
 
 Track progress: [github.com/nself-org/cli/issues](https://github.com/nself-org/cli/issues)

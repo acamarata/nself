@@ -33,11 +33,11 @@ A complete podcast backend for hosting and distributing podcast episodes. Manage
 ## Database Tables
 
 5 tables added to your Postgres database:
-- `np_podcast_shows` — podcast show definitions
-- `np_podcast_episodes` — episode records
-- `np_podcast_chapters` — episode chapter markers
-- `np_podcast_progress` — per-device playback progress
-- `np_podcast_subscriptions` — subscriber records
+- `np_podcast_shows`, podcast show definitions
+- `np_podcast_episodes`, episode records
+- `np_podcast_chapters`, episode chapter markers
+- `np_podcast_progress`, per-device playback progress
+- `np_podcast_subscriptions`, subscriber records
 
 ## Nginx Routes
 

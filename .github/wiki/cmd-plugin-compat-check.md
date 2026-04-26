@@ -75,8 +75,8 @@ Plugins that have reached end-of-life (`status: eol`) are also flagged if they d
 
 ## See also
 
-- [[cmd-plugin]] — full plugin management reference
-- [[cmd-plugin-list]] — list installed plugins with status badges
-- [[Plugin-Compatibility]] — full compatibility matrix
+- [[cmd-plugin]], full plugin management reference
+- [[cmd-plugin-list]], list installed plugins with status badges
+- [[Plugin-Compatibility]], full compatibility matrix
 
 ← [[Commands]] | [[Home]] →

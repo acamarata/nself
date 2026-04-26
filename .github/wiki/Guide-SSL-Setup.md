@@ -1,16 +1,16 @@
 # Guide: SSL / TLS Setup
 
-nSelf manages TLS certificates through nginx. Three certificate modes are supported.
+ɳSelf manages TLS certificates through nginx. Three certificate modes are supported.
 
 ## Self-Signed Certificates (Default)
 
-nSelf auto-generates a self-signed certificate when you first run `nself build`. This is appropriate for local development and internal networks.
+ɳSelf auto-generates a self-signed certificate when you first run `nself build`. This is appropriate for local development and internal networks.
 
 ```bash
 nself ssl status    # check certificate details and expiry
 ```
 
-Browsers will show a security warning for self-signed certs — expected behaviour for local dev.
+Browsers will show a security warning for self-signed certs, expected behaviour for local dev.
 
 ## Base Domain Certificates (DNS-01)
 
@@ -33,7 +33,7 @@ Certificates land in `ssl/{domain}/` inside the project directory. nginx reads t
 
 ## Custom Domain Certificates (HTTP-01)
 
-Use `nself ssl add` to provision a certificate for an external custom domain (e.g., a white-labelled subdomain or a partner's domain). This uses HTTP-01 challenge — no DNS provider configuration needed.
+Use `nself ssl add` to provision a certificate for an external custom domain (e.g., a white-labelled subdomain or a partner's domain). This uses HTTP-01 challenge, no DNS provider configuration needed.
 
 ```bash
 # Add certificate and proxy traffic to a backend container
@@ -86,9 +86,9 @@ If you have a certificate from a commercial CA (DigiCert, Sectigo, etc.):
 
 ## See Also
 
-- [[cmd-ssl]] — ssl command reference
-- [[Guide-Production-Deployment]] — full server setup
-- [[Guide-Security-Hardening]] — ensure TLS is properly configured
+- [[cmd-ssl]], ssl command reference
+- [[Guide-Production-Deployment]], full server setup
+- [[Guide-Security-Hardening]], ensure TLS is properly configured
 
 ---
 ← [[Home]] | [[_Sidebar]]

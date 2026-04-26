@@ -1,6 +1,6 @@
 # Optional Services Configuration
 
-nSelf ships with four required services (PostgreSQL, Hasura, Auth, Nginx) that always run. Everything else is optional — you enable only what your project needs. This page covers all seven optional services: their toggle variables, ports, and the additional configuration each one requires.
+ɳSelf ships with four required services (PostgreSQL, Hasura, Auth, Nginx) that always run. Everything else is optional, you enable only what your project needs. This page covers all seven optional services: their toggle variables, ports, and the additional configuration each one requires.
 
 ---
 
@@ -50,7 +50,7 @@ nself service enable redis
 ### Notes
 
 - Redis is accessed internally by other containers at `redis:6379`.
-- There is no Nginx route for Redis — it is never exposed to the internet directly.
+- There is no Nginx route for Redis, it is never exposed to the internet directly.
 - If you are not using any AI plugins but your application needs Redis directly, set `REDIS_ENABLED=true` in your `.env.dev`.
 - In production, always set a strong `REDIS_PASSWORD` (16+ characters).
 
@@ -66,7 +66,7 @@ MinIO provides S3-compatible object storage. Use it to store file uploads, stati
 nself service enable minio
 ```
 
-`MINIO_ENABLED` and `STORAGE_ENABLED` are aliases — either will enable the service.
+`MINIO_ENABLED` and `STORAGE_ENABLED` are aliases, either will enable the service.
 
 ### Environment Variables
 
@@ -131,13 +131,13 @@ AUTH_SMTP_PASS=your-sendgrid-api-key
 AUTH_SMTP_SENDER=noreply@yourdomain.com
 ```
 
-The `AUTH_SMTP_*` variables configure the Auth service to deliver email via your chosen provider. Any provider that supports standard SMTP works — SendGrid, Postmark, Mailgun, Resend, AWS SES, and others.
+The `AUTH_SMTP_*` variables configure the Auth service to deliver email via your chosen provider. Any provider that supports standard SMTP works, SendGrid, Postmark, Mailgun, Resend, AWS SES, and others.
 
 ---
 
 ## Search
 
-nSelf supports multiple search engines. The default is MeiliSearch, but you can switch to Typesense, Elasticsearch, OpenSearch, Zinc, or Sonic by changing `SEARCH_ENGINE`.
+ɳSelf supports multiple search engines. The default is MeiliSearch, but you can switch to Typesense, Elasticsearch, OpenSearch, Zinc, or Sonic by changing `SEARCH_ENGINE`.
 
 ### Enable
 
@@ -151,7 +151,7 @@ nself service enable search
 |----------|---------|----------|-------------|
 | `SEARCH_ENABLED` | `false` | No | Enable the search service. |
 | `SEARCH_ENGINE` / `SEARCH_PROVIDER` | `meilisearch` | No | Search engine to use. Supported values: `meilisearch`, `typesense`, `elasticsearch`, `opensearch`, `zinc`, `sonic`. |
-| `SEARCH_PORT` | `7700` | No | Service port. Automatically set based on the chosen engine — override only if you have a port conflict. |
+| `SEARCH_PORT` | `7700` | No | Service port. Automatically set based on the chosen engine , override only if you have a port conflict. |
 | `SEARCH_API_KEY` | *(auto-generated)* | No | Primary API key. Generated automatically if not set. |
 | `SEARCH_ROUTE` | `search` | No | Nginx subdomain prefix for the search API. |
 
@@ -208,7 +208,7 @@ nself service enable functions
 
 ### Project Structure
 
-When Functions is enabled, nSelf mounts `./functions/` from your project root into the container:
+When Functions is enabled, ɳSelf mounts `./functions/` from your project root into the container:
 
 ```
 your-project/
@@ -247,7 +247,7 @@ nself service enable mlflow
 
 ### Dependency on MinIO
 
-MLflow stores experiment artifacts (model files, plots, datasets) in object storage. When `MLFLOW_ENABLED=true` and `MINIO_ENABLED=true`, nSelf automatically creates the `MLFLOW_ARTIFACTS_BUCKET` bucket in MinIO and configures MLflow to use it.
+MLflow stores experiment artifacts (model files, plots, datasets) in object storage. When `MLFLOW_ENABLED=true` and `MINIO_ENABLED=true`, ɳSelf automatically creates the `MLFLOW_ARTIFACTS_BUCKET` bucket in MinIO and configures MLflow to use it.
 
 If MinIO is not enabled, MLflow falls back to local filesystem artifact storage, which is only appropriate for single-node development use.
 
@@ -261,7 +261,7 @@ If MinIO is not enabled, MLflow falls back to local filesystem artifact storage,
 
 ## Admin Dashboard
 
-The nSelf Admin dashboard is a local GUI companion for your nSelf stack. It runs at `localhost:3021` on your own machine. It is never deployed to a server and is never accessible from the internet.
+The ɳSelf Admin dashboard is a local GUI companion for your ɳSelf stack. It runs at `localhost:3021` on your own machine. It is never deployed to a server and is never accessible from the internet.
 
 ### Enable
 
@@ -288,9 +288,9 @@ nself admin start
 ### Important Constraints
 
 - Admin is **localhost-only**. It binds to `127.0.0.1` and is not reachable from outside your machine.
-- Admin is **not a hosted service**. nSelf does not run Admin on any server. Each developer runs it locally alongside their stack.
+- Admin is **not a hosted service**. ɳSelf does not run Admin on any server. Each developer runs it locally alongside their stack.
 - Admin is distributed as the `nself/nself-admin` Docker image and is pulled automatically when enabled.
-- Do not add an Nginx route for Admin — it is intentionally isolated to your local machine.
+- Do not add an Nginx route for Admin, it is intentionally isolated to your local machine.
 
 ---
 

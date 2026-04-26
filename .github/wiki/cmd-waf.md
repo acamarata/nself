@@ -53,9 +53,9 @@ nself waf report --since 1h
 
 ## See Also
 
-- [[cmd-security]] — security audit and setup
-- [[cmd-alerts]] — alert rules
-- [[cmd-monitor]] — Grafana dashboards
-- [[Commands]] — full command index
+- [[cmd-security]], security audit and setup
+- [[cmd-alerts]], alert rules
+- [[cmd-monitor]], Grafana dashboards
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →

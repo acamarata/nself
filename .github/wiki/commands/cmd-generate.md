@@ -2,7 +2,7 @@
 
 **Generate type-safe client SDK types from the live Hasura schema.**
 
-Introspects the running nSelf Hasura GraphQL endpoint and emits typed client code
+Introspects the running ɳSelf Hasura GraphQL endpoint and emits typed client code
 for TypeScript, Dart, Swift, Kotlin, and Python. One command keeps all SDK consumers
 in sync with the database schema. No hand-maintained type files.
 
@@ -53,7 +53,7 @@ generated/
 
 ## Prerequisites
 
-The nSelf stack must be running before generating against `--env local`:
+The ɳSelf stack must be running before generating against `--env local`:
 
 ```bash
 nself start
@@ -108,7 +108,7 @@ Done in 0.9s. Output: ./generated
 
 ## Integration with SDKs
 
-Use generated types with the nSelf SDK packages:
+Use generated types with the ɳSelf SDK packages:
 
 | Language | Package | Import |
 |----------|---------|--------|

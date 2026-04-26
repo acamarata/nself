@@ -1,9 +1,9 @@
 # macOS Apple Silicon (M1/M2/M3/M4)
 
-Install the nSelf CLI on macOS with an Apple Silicon processor (darwin/arm64).
+Install the ɳSelf CLI on macOS with an Apple Silicon processor (darwin/arm64).
 Tested on M1, M2, M3, and M4 chips.
 
-> The nSelf CI suite runs a smoke test on `macos-14` runners for every release,
+> The ɳSelf CI suite runs a smoke test on `macos-14` runners for every release,
 > verifying `nself version`, `nself doctor`, `nself init`, and `nself build` pass
 > natively on Apple Silicon before any binary ships.
 
@@ -28,9 +28,9 @@ Both work. OrbStack is recommended on Apple Silicon:
 | Price | Free for personal use | Free with limits |
 
 **Enable VirtioFS in Docker Desktop** (if you use Docker Desktop):
-`Docker Desktop → Settings → General → VirtioFS` — this halves bind-mount latency on Apple Silicon.
+`Docker Desktop → Settings → General → VirtioFS`, this halves bind-mount latency on Apple Silicon.
 
-Do NOT use `osxfs` — it causes significant I/O slowdowns for Postgres data volumes.
+Do NOT use `osxfs`, it causes significant I/O slowdowns for Postgres data volumes.
 
 ## Install via Homebrew (recommended)
 
@@ -79,9 +79,9 @@ nself doctor
 
 Plugins run as Docker containers. On Apple Silicon:
 
-- All nSelf plugin images are multi-arch (`linux/amd64 + linux/arm64`).
-  No Rosetta translation is used for plugin containers.
-- OrbStack and Docker Desktop both use QEMU or native arm64 layer — either works.
+- All ɳSelf plugin images are multi-arch (`linux/amd64 + linux/arm64`).
+ No Rosetta translation is used for plugin containers.
+- OrbStack and Docker Desktop both use QEMU or native arm64 layer, either works.
 - Plugin images use `linux/arm64` natively when available.
 
 If you see `WARNING: The requested image's platform (linux/amd64) does not match

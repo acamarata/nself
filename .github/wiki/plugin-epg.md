@@ -1,6 +1,6 @@
 # EPG Plugin
 
-> Electronic Program Guide — XMLTV import, channels, schedules, and recording rules. **Pro plugin.**
+> Electronic Program Guide, XMLTV import, channels, schedules, and recording rules. **Pro plugin.**
 
 > **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
 
@@ -33,12 +33,12 @@ Manages an Electronic Program Guide for IPTV and broadcast TV applications. Impo
 ## Database Tables
 
 6 tables added to your Postgres database:
-- `np_epg_sources` — XMLTV source configurations
-- `np_epg_channels` — channel definitions
-- `np_epg_programs` — program schedule
-- `np_epg_categories` — program categories
-- `np_epg_recording_rules` — scheduled recording rules
-- `np_epg_sync_log` — XMLTV sync history
+- `np_epg_sources`, XMLTV source configurations
+- `np_epg_channels`, channel definitions
+- `np_epg_programs`, program schedule
+- `np_epg_categories`, program categories
+- `np_epg_recording_rules`, scheduled recording rules
+- `np_epg_sync_log`, XMLTV sync history
 
 ## Nginx Routes
 
