@@ -71,6 +71,14 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
 
+	// Require an nSelf project directory before attempting any external I/O
+	// (Hasura introspection, schema fetch). Without this guard the command
+	// proceeds to FetchSchema even from an empty directory, because config.Load
+	// fills in defaults from os.Getenv rather than failing.
+	if _, findErr := config.FindNSelfRoot(cwd); findErr != nil {
+		return fmt.Errorf("no nself project found in %s — run 'nself init' first", cwd)
+	}
+
 	cfg, err := config.Load(cwd)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)

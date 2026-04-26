@@ -16,6 +16,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/nself-org/cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -67,6 +68,17 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 	port, _ := cmd.Flags().GetInt("port")
 	noMDNS, _ := cmd.Flags().GetBool("no-mdns")
 
+	// Require an nSelf project directory. Without this guard the server starts
+	// even from an empty directory, spawning a persistent mDNS goroutine that
+	// outlives the test deadline.
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+	if _, findErr := config.FindNSelfRoot(cwd); findErr != nil {
+		return fmt.Errorf("no nself project found in %s — run 'nself init' first", cwd)
+	}
+
 	s := server.NewMCPServer(
 		"nSelf MCP Server",
 		"1.0.0",
@@ -76,8 +88,9 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 	registerMCPTools(s)
 
 	// Start mDNS advertising in background (best-effort, never fatal).
+	// Pass the command context so the goroutine stops when the server is shut down.
 	if !noMDNS {
-		go advertiseMDNS(port)
+		go advertiseMDNS(cmd.Context(), port)
 	}
 
 	switch transport {
@@ -376,7 +389,11 @@ func mcpApplyMigrationDirect(ctx context.Context, sql string) (string, error) {
 // advertiseMDNS sends a minimal mDNS announcement for _nself._tcp.local on port 3825.
 // This is a best-effort, single-shot DNS-SD advertisement via the standard mDNS multicast.
 // It never crashes the main server if it fails.
-func advertiseMDNS(port int) {
+//
+// ctx is used to stop the re-announcement loop when the server shuts down. Without
+// context cancellation the ticker goroutine would run indefinitely, which causes
+// "Test I/O incomplete" failures in the test harness.
+func advertiseMDNS(ctx context.Context, port int) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "localhost"
@@ -403,11 +420,17 @@ func advertiseMDNS(port int) {
 	}
 
 	// Re-announce every 60 seconds (RFC 6762 recommendation for long-lived services).
+	// Select on ctx.Done() so the goroutine exits cleanly when the server stops.
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		if _, err := conn.WriteTo([]byte(announcement), dst); err != nil {
-			slog.Debug("mcp mdns re-announcement failed", "err", err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := conn.WriteTo([]byte(announcement), dst); err != nil {
+				slog.Debug("mcp mdns re-announcement failed", "err", err)
+			}
 		}
 	}
 }

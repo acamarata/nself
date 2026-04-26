@@ -428,17 +428,17 @@ var errorHarnessCases = []errorHarnessCase{
 	// release requires a project dir and performs external operations; no-project-dir is an error.
 	{"release", []string{"release"}, "(a) no project dir"},
 	{"release", []string{"release", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release", []string{"release", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"release", []string{"release", "1.0.0", "extra-arg"}, "(c) wrong arity"},	// ExactArgs(1) rejects before RunE; avoids slow subprocess cascade
 
 	// ── release-check ──────────────────────────────────────────────────────
 	{"release-check", []string{"release-check"}, "(a) no project dir"},
 	{"release-check", []string{"release-check", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-check", []string{"release-check", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"release-check", []string{"release-check", "1.0.0", "extra-arg"}, "(c) wrong arity"},	// ExactArgs(1) rejects before RunE; avoids slow gate suite
 
 	// ── release-rollback ───────────────────────────────────────────────────
 	{"release-rollback", []string{"release-rollback"}, "(a) no project dir"},
 	{"release-rollback", []string{"release-rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-rollback", []string{"release-rollback", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"release-rollback", []string{"release-rollback", "1.0.0", "0.9.0", "extra-arg"}, "(c) wrong arity"},	// ExactArgs(2) rejects before RunE
 
 	// ── release-status ─────────────────────────────────────────────────────
 	{"release-status", []string{"release-status"}, "(a) no project dir"},
