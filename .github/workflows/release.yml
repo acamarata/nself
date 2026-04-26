@@ -428,42 +428,30 @@ jobs:
             dist/provenance.intoto.jsonl
             dist/*.sig
 
-      # Guard: skip all cross-repo dispatch steps with a visible warning when the
-      # GitHub App secrets are not yet configured in this repo.  The release
-      # artifacts are already published at this point — not dispatching is safe;
-      # the operator just needs to update Homebrew + Admin manually for this tag.
-      # To enable: create a GitHub App with `contents:write` + `workflows:write`
-      # on nself-org/homebrew-nself and nself-org/admin, install it on both repos,
-      # then add these two secrets to nself-org/cli:
-      #   NSELF_DISPATCH_APP_ID       — numeric App ID (Settings → Developer settings → GitHub Apps)
-      #   NSELF_DISPATCH_APP_PRIVATE_KEY — PEM private key generated for the App
-      - name: Check cross-repo dispatch secrets are configured
+      # Guard: skip cross-repo dispatch with a visible warning if HOMEBREW_TAP_TOKEN
+      # is not configured.  The release artifacts are already published at this point;
+      # skipping dispatch is safe — operator can manually trigger the workflows below.
+      # To enable: add HOMEBREW_TAP_TOKEN (a PAT with contents:write + actions:write
+      # scoped to nself-org/homebrew-nself and nself-org/admin) as a repo secret in
+      # nself-org/cli Settings → Secrets → Actions.
+      - name: Check cross-repo dispatch token is configured
         if: steps.channel.outputs.channel == 'stable'
         id: dispatch-check
         env:
-          APP_ID: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          if [ -z "${APP_ID}" ]; then
+          if [ -z "${TAP_TOKEN}" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Cross-repo dispatch skipped::NSELF_DISPATCH_APP_ID secret is not configured in nself-org/cli — homebrew tap and admin Docker rebuild were NOT triggered for ${{ github.ref_name }}. Add NSELF_DISPATCH_APP_ID + NSELF_DISPATCH_APP_PRIVATE_KEY secrets to enable automatic post-release dispatch."
+            echo "::warning title=Cross-repo dispatch skipped::HOMEBREW_TAP_TOKEN secret is not configured in nself-org/cli — homebrew tap and admin Docker rebuild were NOT triggered for ${{ github.ref_name }}. Add HOMEBREW_TAP_TOKEN to enable automatic post-release dispatch."
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Generate GitHub App token for cross-repo dispatch
-        if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.configured == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
-          private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
-          repositories: homebrew-nself,admin
 
       - name: Trigger homebrew tap update (stable only)
         if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.configured == 'true'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/homebrew-nself
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable", "sha256": "${{ needs.build.outputs.source_sha256 }}"}'
@@ -472,7 +460,7 @@ jobs:
         if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.configured == 'true'
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: nself-org/admin
           event-type: cli-release
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'
