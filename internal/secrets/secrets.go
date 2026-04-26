@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"os/exec"
@@ -240,7 +241,12 @@ func Set(projectRoot, env, key, value string) error {
 	entry.Value = value
 	entry.UpdatedAt = now
 	store.Secrets[key] = entry
-	return saveStore(projectRoot, env, store)
+	if saveErr := saveStore(projectRoot, env, store); saveErr != nil {
+		slog.Error("secrets_set_failed", "key_name", key, "env", env, "error", saveErr)
+		return saveErr
+	}
+	slog.Info("secrets_set", "key_name", key, "env", env)
+	return nil
 }
 
 // Get retrieves a secret value.
@@ -294,8 +300,10 @@ func Rotate(projectRoot, env, key string) (string, error) {
 		RotatedAt: now,
 	}
 	if err := saveStore(projectRoot, env, store); err != nil {
+		slog.Error("secrets_rotate_failed", "key_name", key, "env", env, "error", err)
 		return "", err
 	}
+	slog.Info("secrets_rotated", "key_name", key, "env", env)
 	return newValue, nil
 }
 

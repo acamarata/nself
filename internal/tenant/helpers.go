@@ -1,10 +1,19 @@
 package tenant
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"regexp"
 	"strings"
 )
+
+// hashTenantID returns the first 8 hex characters of the SHA-256 of the raw
+// tenant UUID. This is used in slog fields so that the full UUID (PII) never
+// appears in structured logs while still providing a correlatable identifier.
+func hashTenantID(id string) string {
+	h := sha256.Sum256([]byte(id))
+	return fmt.Sprintf("%x", h[:4]) // 8 hex chars = 4 bytes
+}
 
 // sanitize escapes single quotes for safe SQL interpolation via psql -c.
 // This is NOT a substitute for parameterized queries; callers must also

@@ -84,7 +84,7 @@ func Destroy(ctx context.Context, cfg *config.Config, opts DestroyOptions) error
 		return fmt.Errorf("destroying tenant %q: %w", opts.Slug, err)
 	}
 
-	slog.Info("tenant destroyed", "slug", opts.Slug, "id", tenantID)
+	slog.Info("tenant destroyed", "slug", opts.Slug, "tenant_id_hash", hashTenantID(tenantID))
 	fmt.Printf("Tenant %q destroyed (id: %s). Data retained in backup per retention policy.\n", opts.Slug, tenantID)
 	return nil
 }

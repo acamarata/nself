@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -121,12 +122,15 @@ func WritePITRConfig(cfg *config.Config, projectDir string, pitrCfg PITRConfig) 
 	content := GeneratePITRPostgresConf(cfg, pitrCfg)
 
 	if err := os.WriteFile(confPath, []byte(content), 0600); err != nil {
+		slog.Error("pitr_write_config_failed", "path", confPath, "error", err)
 		return fmt.Errorf("write PITR config %s: %w", confPath, err)
 	}
 	if err := os.Chmod(confPath, 0600); err != nil {
+		slog.Error("pitr_chmod_config_failed", "path", confPath, "error", err)
 		return fmt.Errorf("chmod PITR config %s: %w", confPath, err)
 	}
 
+	slog.Info("pitr_config_written", "path", confPath, "backup_type", "wal_archive", "archive_dir", pitrCfg.ArchiveDir)
 	return nil
 }
 
@@ -186,6 +190,7 @@ func PITRRestore(ctx context.Context, cfg *config.Config, targetTime string) err
 		return fmt.Errorf("invalid targetTime %q, expected RFC3339 format: %w", targetTime, err)
 	}
 
+	slog.Info("pitr_restore_started", "backup_type", "pitr", "timestamp", targetTime)
 	container := containerName(cfg)
 
 	// Stop the postgres container.
@@ -247,9 +252,11 @@ restore_command = 'cp %s/%%f %%p'
 		out = strings.TrimSpace(out)
 		if out == "f" || out == "false" {
 			// Recovery complete — postgres is in normal operating mode.
+			slog.Info("pitr_restore_complete", "backup_type", "pitr", "timestamp", targetTime)
 			return nil
 		}
 	}
 
+	slog.Error("pitr_restore_timeout", "backup_type", "pitr", "timestamp", targetTime)
 	return fmt.Errorf("PITR recovery did not complete within 5 minutes")
 }

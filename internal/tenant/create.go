@@ -63,7 +63,7 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 	if err := validateUUID(tenantID); err != nil {
 		return fmt.Errorf("postgres returned invalid tenant id: %w", err)
 	}
-	slog.Info("tenant created", "slug", opts.Slug, "plan", opts.Plan, "id", tenantID)
+	slog.Info("tenant created", "slug", opts.Slug, "plan", opts.Plan, "tenant_id_hash", hashTenantID(tenantID))
 
 	// Write audit log entry using parameterized :'varname' quoting.
 	// Equivalent intent: INSERT INTO nself_ops.audit_log
