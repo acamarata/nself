@@ -191,11 +191,13 @@ func (g *Generator) postProcess(dc *DockerCompose) {
 			applySecurityToService(&svc, DefaultSecurity())
 		}
 
-		// Fork-bomb prevention: apply pids_limit to every non-init long-running
-		// service. A service may override this in its builder by setting
-		// PidsLimit > 0 before postProcess runs; postProcess respects that value.
-		if !initContainers[name] && svc.PidsLimit == 0 {
-			svc.PidsLimit = defaultPidsLimit
+		// Fork-bomb prevention: apply pids limit via deploy.resources.limits.pids
+		// to every non-init long-running service. Uses modern Docker Compose syntax
+		// (deploy.resources.limits.pids) instead of legacy pids_limit field.
+		if !initContainers[name] {
+			if svc.Deploy.Resources.Limits.Pids == 0 {
+				svc.Deploy.Resources.Limits.Pids = defaultPidsLimit
+			}
 		}
 
 		dc.Services[name] = svc

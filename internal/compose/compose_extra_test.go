@@ -383,11 +383,11 @@ func TestPostProcess_PidsLimitApplied(t *testing.T) {
 		if name == "meilisearch-init" {
 			continue // init containers are exempt
 		}
-		if svc.PidsLimit == 0 {
-			t.Errorf("service %q has PidsLimit=0 (fork-bomb guard missing)", name)
-		} else if svc.PidsLimit != defaultPidsLimit {
+		if svc.Deploy == nil || svc.Deploy.Resources == nil || svc.Deploy.Resources.Limits == nil || svc.Deploy.Resources.Limits.Pids == 0 {
+			t.Errorf("service %q has missing or zero pids limit (fork-bomb guard missing)", name)
+		} else if svc.Deploy.Resources.Limits.Pids != defaultPidsLimit {
 			// Services may override; just confirm it's set.
-			t.Logf("service %q has custom PidsLimit=%d (ok)", name, svc.PidsLimit)
+			t.Logf("service %q has custom pids limit=%d (ok)", name, svc.Deploy.Resources.Limits.Pids)
 		}
 	}
 }
