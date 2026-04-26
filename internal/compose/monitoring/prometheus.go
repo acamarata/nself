@@ -70,7 +70,10 @@ func Defaults() *PrometheusConfig {
 		EvaluationInterval: "15s",
 		ExternalLabels:     map[string]string{"cluster": "nself"},
 		AlertmanagerURL:    "alertmanager:9093",
-		RuleFiles:          []string{"/etc/prometheus/alerts.yml"},
+		RuleFiles: []string{
+			"/etc/prometheus/alerts.yml",
+			"/etc/prometheus/rules/otel-alerts.yml",
+		},
 		Targets:            BuiltinTargets(),
 	}
 }
@@ -126,6 +129,17 @@ func BuiltinTargets() []ScrapeTarget {
 			Path:        "/metrics",
 			Interval:    "30s",
 			Labels:      map[string]string{"service": "tempo"},
+		},
+		// OTEL Collector internal metrics.
+		// The collector exposes its own health and pipeline metrics at /metrics.
+		// Requires MONITORING_TRACING_ENABLED=true (same condition as tempo).
+		{
+			JobName:     "otelcol",
+			ServiceName: "otel-collector",
+			Port:        8888,
+			Path:        "/metrics",
+			Interval:    "30s",
+			Labels:      map[string]string{"service": "otel-collector"},
 		},
 	}
 }

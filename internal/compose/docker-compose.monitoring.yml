@@ -19,6 +19,7 @@ services:
       - prometheus_data:/prometheus
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
