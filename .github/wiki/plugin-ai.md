@@ -69,3 +69,7 @@ GET  /prompts               — Browse marketplace
 - `claw` — AI agent reasoning
 - `mux` — Email/message classification
 - `voice` — Speech transcription and synthesis
+
+## Gemini OAuth
+
+The AI plugin supports a Gemini Free Pool (GFP) for routing requests across multiple OAuth-connected Google accounts. If a token expires or a scope change occurs, re-authorization is required. See [[Plugins-AI-OAuth]] for the full re-auth procedure, token rotation details, and troubleshooting.
