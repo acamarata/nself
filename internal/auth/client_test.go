@@ -436,6 +436,250 @@ func TestCLIAuthBaseURL_Override(t *testing.T) {
 	}
 }
 
+// ─── GetTeamMembers ───────────────────────────────────────────────────────────
+
+func TestGetTeamMembers_Success(t *testing.T) {
+	want := []TeamMember{
+		{Email: "alice@example.com", Role: "admin"},
+		{Email: "bob@example.com", Role: "member"},
+	}
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/account/team" {
+			http.NotFound(w, r)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"members": want})
+	})
+	defer cleanup()
+
+	got, err := GetTeamMembers("tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 members, got %d", len(got))
+	}
+	if got[0].Email != "alice@example.com" {
+		t.Errorf("member[0].Email: got %q", got[0].Email)
+	}
+}
+
+func TestGetTeamMembers_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized", "message": "bad token"})
+	})
+	defer cleanup()
+
+	_, err := GetTeamMembers("bad-tok")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── InviteTeamMember ─────────────────────────────────────────────────────────
+
+func TestInviteTeamMember_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/account/team/invite" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+	defer cleanup()
+
+	if err := InviteTeamMember("tok", "newuser@example.com"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestInviteTeamMember_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "already_member", "message": "already in team"})
+	})
+	defer cleanup()
+
+	if err := InviteTeamMember("tok", "existing@example.com"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── RemoveTeamMember ─────────────────────────────────────────────────────────
+
+func TestRemoveTeamMember_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/account/team/bob@example.com" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	if err := RemoveTeamMember("tok", "bob@example.com"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRemoveTeamMember_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found", "message": "member not found"})
+	})
+	defer cleanup()
+
+	if err := RemoveTeamMember("tok", "ghost@example.com"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── SetTeamMemberRole ────────────────────────────────────────────────────────
+
+func TestSetTeamMemberRole_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != "/account/team/alice@example.com/role" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	defer cleanup()
+
+	if err := SetTeamMemberRole("tok", "alice@example.com", "admin"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetTeamMemberRole_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_role", "message": "unknown role"})
+	})
+	defer cleanup()
+
+	if err := SetTeamMemberRole("tok", "alice@example.com", "superuser"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── ActivateLicense ──────────────────────────────────────────────────────────
+
+func TestActivateLicense_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/account/licenses/lic-123/activate" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	defer cleanup()
+
+	if err := ActivateLicense("tok", "lic-123"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActivateLicense_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "already_activated", "message": "license in use"})
+	})
+	defer cleanup()
+
+	if err := ActivateLicense("tok", "lic-bad"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── GetDevices ───────────────────────────────────────────────────────────────
+
+func TestGetDevices_Success(t *testing.T) {
+	want := []DeviceEntry{
+		{ID: "dev-1", Name: "MacBook Pro", OS: "darwin", IsCurrent: true},
+	}
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/account/devices" {
+			http.NotFound(w, r)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"devices": want})
+	})
+	defer cleanup()
+
+	got, err := GetDevices("tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "dev-1" {
+		t.Errorf("unexpected devices: %+v", got)
+	}
+}
+
+func TestGetDevices_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized", "message": "bad token"})
+	})
+	defer cleanup()
+
+	_, err := GetDevices("bad")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── RevokeDevice ─────────────────────────────────────────────────────────────
+
+func TestRevokeDevice_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/account/devices/dev-1" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	if err := RevokeDevice("tok", "dev-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRevokeDevice_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found", "message": "device not found"})
+	})
+	defer cleanup()
+
+	if err := RevokeDevice("tok", "dev-ghost"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// ─── TransferLicense ──────────────────────────────────────────────────────────
+
+func TestTransferLicense_Success(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/account/licenses/lic-123/transfer" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	defer cleanup()
+
+	if err := TransferLicense("tok", "lic-123", "newowner@example.com"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTransferLicense_Error(t *testing.T) {
+	cleanup := newAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "transfer_denied", "message": "cannot transfer"})
+	})
+	defer cleanup()
+
+	if err := TransferLicense("tok", "lic-bad", "other@example.com"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 // ─── helpers (test-internal) ──────────────────────────────────────────────────
 
 func containsString(s, sub string) bool {

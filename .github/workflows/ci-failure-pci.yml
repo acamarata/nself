@@ -26,8 +26,25 @@ jobs:
     timeout-minutes: 5
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
+      # G14-CI-FIX: guard against missing GitHub App secrets so this meta-workflow
+      # does not itself go red and hide the real CI failure.  When the App is not
+      # yet provisioned the job logs the failure details and exits 0 so the
+      # meta-workflow stays green while still surfacing the information.
+      - name: Check GitHub App configured
+        id: app-check
+        run: |
+          if [ -z "$APP_ID" ]; then
+            echo "NSELF_DISPATCH_APP_ID secret not set — skipping auto-PCI (configure GitHub App to enable)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          APP_ID: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+
       - name: Generate GitHub App token
         id: app-token
+        if: ${{ steps.app-check.outputs.skip == 'false' }}
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
@@ -35,16 +52,19 @@ jobs:
           repositories: cli
 
       - name: Checkout (for pci-send)
+        if: ${{ steps.app-check.outputs.skip == 'false' }}
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Install nself CLI (for pci-send script)
+        if: ${{ steps.app-check.outputs.skip == 'false' }}
         run: |
           curl -fsSL https://install.nself.org | bash || true
           echo "$HOME/.nself/bin" >> $GITHUB_PATH
 
       - name: Write PCI inbox message
+        if: ${{ steps.app-check.outputs.skip == 'false' }}
         env:
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}

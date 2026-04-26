@@ -23,7 +23,24 @@ jobs:
     timeout-minutes: 5
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
+      # G14-CI-FIX: guard against missing SLACK_WEBHOOK secret so the workflow
+      # itself does not go red when Slack is not yet configured.  When the
+      # secret is absent the step is skipped with a clear notice instead of
+      # failing the workflow and hiding the real CI failure underneath.
+      - name: Check Slack webhook configured
+        id: slack-check
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK secret not set — skipping Slack alert (set secrets.SLACK_WEBHOOK to enable)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
       - name: Send Slack alert
+        if: ${{ steps.slack-check.outputs.skip == 'false' }}
         uses: 8398a7/action-slack@v3
         with:
           status: failure
