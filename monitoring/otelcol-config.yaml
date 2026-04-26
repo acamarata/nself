@@ -1,0 +1,222 @@
+# nSelf OTEL Collector configuration — static reference copy.
+# nself build generates the final version into your project's monitoring/ directory.
+#
+# This file configures the OpenTelemetry Collector with:
+#   - OTLP receivers (gRPC + HTTP) for spans, metrics, and logs from instrumented services
+#   - Tail-based sampling: 100% errors, 1% high-volume endpoints, 10% default
+#   - Prometheus metrics exporter (scrape endpoint on :8888)
+#   - Tempo exporter for distributed trace storage
+#   - Loki exporter for structured log ingestion with trace_id labels
+#
+# Sampling strategy (G6-T07):
+#   error-policy    → 100% — all error spans kept; critical for debugging
+#   high-volume-policy → 1%  — /health, /healthz, /metrics, /ping, /readyz, /livez
+#   default-policy  → 10% — probabilistic baseline for all other requests
+#
+# Policy evaluation order: error-policy first (highest priority).
+# If a policy matches, subsequent policies are not evaluated for that trace.
+#
+# Environment variables read at runtime (via nself build substitution):
+#   TEMPO_ENDPOINT   — Tempo push endpoint (default: http://tempo:4317)
+#   LOKI_ENDPOINT    — Loki push endpoint  (default: http://loki:3100)
+#   OTELCOL_LOG_LEVEL — Collector log level (default: warn)
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 127.0.0.1:1777
+  zpages:
+    endpoint: 127.0.0.1:55679
+
+receivers:
+  # OTLP gRPC receiver — instrumented services push spans here.
+  # Default nSelf instrumented services connect to: otel-collector:4317
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Prometheus receiver — scrapes the collector's own internal metrics.
+  # Used by Prometheus to track collector health (OtelCollectorDown / OtelSpanIngestDrop alerts).
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: otelcol
+          scrape_interval: 30s
+          static_configs:
+            - targets: [localhost:8888]
+
+processors:
+  # ---------------------------------------------------------------------------
+  # Batch processor — buffers telemetry before exporting for throughput.
+  # Applied after sampling to avoid batching spans that will be dropped.
+  # ---------------------------------------------------------------------------
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # ---------------------------------------------------------------------------
+  # Memory limiter — prevents OOM under burst load.
+  # The collector will drop excess telemetry rather than crash.
+  # ---------------------------------------------------------------------------
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # ---------------------------------------------------------------------------
+  # Tail sampling processor (G6-T07)
+  #
+  # decision_wait: 10s — collector buffers all spans in a trace for 10 seconds
+  # before making a sampling decision. This ensures the error-policy sees all
+  # spans (including late-arriving child spans) before deciding.
+  #
+  # num_traces: 50000 — maximum traces held in memory during the decision window.
+  # Adjust based on your request rate and decision_wait duration.
+  #
+  # Policy evaluation order matters: the first matching policy wins.
+  # ---------------------------------------------------------------------------
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+
+    policies:
+      # Policy 1 — error-policy (HIGHEST PRIORITY)
+      # Sample 100% of traces containing at least one ERROR span.
+      # Ensures complete error trace capture for debugging and alerting.
+      # Covers: gRPC status ERROR, HTTP 5xx, application-level errors.
+      - name: error-policy
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+
+      # Policy 2 — high-volume-policy
+      # Sample only 1% of traces for high-frequency health/observability endpoints.
+      # These endpoints generate the majority of span volume but carry minimal
+      # diagnostic value — they are almost always successful no-ops.
+      # Routes covered:
+      #   /health, /healthz, /readyz, /livez — Kubernetes and nSelf health probes
+      #   /metrics                           — Prometheus scrape endpoint
+      #   /ping                              — nSelf ping_api telemetry probe
+      - name: high-volume-policy
+        type: and
+        and:
+          and_sub_policy:
+            - name: high-volume-routes
+              type: string_attribute
+              string_attribute:
+                key: "http.route"
+                values:
+                  - "/health"
+                  - "/healthz"
+                  - "/readyz"
+                  - "/livez"
+                  - "/metrics"
+                  - "/ping"
+                # enable_regex: false (exact match is sufficient and cheaper)
+            - name: high-volume-rate
+              type: probabilistic
+              probabilistic:
+                sampling_percentage: 1
+
+      # Policy 3 — default-policy (CATCH-ALL)
+      # Sample 10% of all other traces probabilistically.
+      # Provides a statistically representative baseline without storing every span.
+      - name: default-policy
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+exporters:
+  # ---------------------------------------------------------------------------
+  # Tempo exporter — ships sampled traces to Grafana Tempo via OTLP gRPC.
+  # Loki → Tempo click-through uses the trace_id injected by the slog handler.
+  # ---------------------------------------------------------------------------
+  otlp/tempo:
+    endpoint: ${TEMPO_ENDPOINT:-http://tempo:4317}
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
+
+  # ---------------------------------------------------------------------------
+  # Loki exporter — ships structured logs with trace_id labels.
+  # The Grafana Loki datasource uses trace_id to generate Tempo deep-links.
+  # See: cli/monitoring/loki.yaml for the label extraction pipeline.
+  # ---------------------------------------------------------------------------
+  loki:
+    endpoint: ${LOKI_ENDPOINT:-http://loki:3100}/loki/api/v1/push
+    tls:
+      insecure: true
+    default_labels_enabled:
+      exporter: false
+      job: true
+      instance: true
+      level: true
+    # Extract trace_id and span_id as Loki stream labels for Tempo click-through.
+    # These fields are injected by cli/internal/observability/log_handler.go.
+    labels:
+      attributes:
+        trace_id: "trace_id"
+        span_id: "span_id"
+        service.name: "service"
+
+  # ---------------------------------------------------------------------------
+  # Prometheus exporter — exposes collector's own telemetry for scraping.
+  # The OtelCollectorDown alert monitors this scrape endpoint (port 8888).
+  # ---------------------------------------------------------------------------
+  prometheus:
+    endpoint: 0.0.0.0:8888
+    namespace: otelcol
+
+  # ---------------------------------------------------------------------------
+  # Debug exporter — development/troubleshooting only; disabled in production.
+  # Enable by adding "debug" to the pipeline exporters list below.
+  # ---------------------------------------------------------------------------
+  debug:
+    verbosity: basic
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  extensions: [health_check, pprof, zpages]
+
+  pipelines:
+    # Traces pipeline: receive → memory limit → tail sample → batch → export
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, tail_sampling, batch]
+      exporters: [otlp/tempo]
+
+    # Metrics pipeline: receive collector's own metrics → batch → export to Prometheus scrape endpoint
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+
+    # Logs pipeline: receive → memory limit → batch → export to Loki
+    # trace_id / span_id labels are already set by the slog handler before export.
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [loki]
+
+  telemetry:
+    logs:
+      level: ${OTELCOL_LOG_LEVEL:-warn}
+      output_paths: [stdout]
+    metrics:
+      level: basic
+      address: 0.0.0.0:8888

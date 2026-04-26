@@ -84,6 +84,42 @@ services:
     ports:
       - "127.0.0.1:3200:3200"
 
+  # OTEL Collector — receives spans/metrics/logs from instrumented services,
+  # applies tail sampling, and exports to Tempo (traces) + Loki (logs) + Prometheus (metrics).
+  # Sampling policy: 100% errors, 1% health/metrics/ping, 10% default.
+  # Config: monitoring/otelcol-config.yaml
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.0
+    container_name: ${PROJECT_NAME}_otel_collector
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/otelcol-config.yaml:/etc/otelcol/config.yaml:ro
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      - TEMPO_ENDPOINT=http://tempo:4317
+      - LOKI_ENDPOINT=http://loki:3100
+      - OTELCOL_LOG_LEVEL=warn
+    networks:
+      - nself_network
+    ports:
+      # OTLP gRPC — instrumented services send spans here
+      - "127.0.0.1:4317:4317"
+      # OTLP HTTP — alternative receiver for HTTP-based exporters
+      - "127.0.0.1:4318:4318"
+      # Prometheus metrics — Prometheus scrapes the collector's own metrics here
+      # (monitored by OtelCollectorDown alert in monitoring/rules/otel-alerts.yml)
+      - "127.0.0.1:8888:8888"
+      # Health check endpoint — used by Docker for container health probes
+      - "127.0.0.1:13133:13133"
+    depends_on:
+      - tempo
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: ${PROJECT_NAME}_alertmanager
