@@ -104,15 +104,17 @@ jobs:
         id: hashes
         working-directory: dist
         run: |
-          # base64-encoded sha256-sums of every tarball, for slsa-github-generator
-          HASHES=$(sha256sum *.tar.gz | base64 -w0)
+          # base64-encoded sha256-sums of every tarball and zip, for slsa-github-generator
+          HASHES=$(sha256sum *.tar.gz *.zip | base64 -w0)
           echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-binaries
-          path: dist/*.tar.gz
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
           retention-days: 1
 
       - name: Upload checksums
@@ -306,7 +308,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          for f in *.tar.gz checksums.txt sbom.spdx.json sbom.cdx.json provenance.intoto.jsonl; do
+          for f in *.tar.gz *.zip checksums.txt sbom.spdx.json sbom.cdx.json provenance.intoto.jsonl; do
             if [ -f "$f" ]; then
               cosign sign-blob --yes \
                 --bundle "${f}.sig" \
@@ -404,7 +406,7 @@ jobs:
             echo ""
             echo "### Artifacts"
             echo ""
-            echo "- Platform tarballs (linux/darwin × amd64/arm64)"
+            echo "- Platform tarballs (linux/darwin × amd64/arm64) + Windows zips (amd64/arm64)"
             echo "- \`checksums.txt\` — SHA-256 of all tarballs"
             echo "- \`sbom.spdx.json\` + per-tarball SBOMs — SPDX software bill of materials"
             echo "- \`provenance.intoto.jsonl\` — SLSA v1.0 provenance attestation"
@@ -421,6 +423,7 @@ jobs:
           prerelease: ${{ steps.channel.outputs.channel != 'stable' }}
           files: |
             dist/*.tar.gz
+            dist/*.zip
             dist/checksums.txt
             dist/sbom.spdx.json
             dist/sbom.cdx.json

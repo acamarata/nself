@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"golang.org/x/term"
@@ -216,11 +215,11 @@ func (c *Compose) Run(ctx context.Context, workdir string, args ...string) error
 
 	// Put docker compose and all its spawned children in a new process group so
 	// Cancel can kill the entire group with a single signal.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// setProcGroupAttr and killProcessGroup are implemented per-OS in
+	// compose_unix.go (darwin/linux) and compose_windows.go (windows).
+	setProcGroupAttr(cmd)
 	cmd.Cancel = func() error {
-		if cmd.Process != nil {
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		}
+		killProcessGroup(cmd)
 		return cmd.Process.Kill()
 	}
 

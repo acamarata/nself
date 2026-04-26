@@ -21,13 +21,17 @@ builds:
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
 
 archives:
   - id: default
-    format: tar.gz
+    # Windows releases ship as zip; linux and darwin as tar.gz.
+    format_overrides:
+      - goos: windows
+        format: zip
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     files:
       - README.md

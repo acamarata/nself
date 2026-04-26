@@ -10,12 +10,15 @@
 | macOS | Intel (amd64) | Supported | [macOS Intel](install/macos-intel) |
 | Linux | x86_64 (amd64) | Supported | [Linux x86_64](install/linux-x86_64) |
 | Linux | arm64 (aarch64) | Supported | [Linux arm64](install/linux-arm64) |
-| Windows | WSL2 | Supported (WSL2 only) | [Windows WSL2](install/windows-wsl2) |
-| Windows | Native (win64) | Planned v1.1.0 | — |
+| Windows | WSL2 | Supported | [Windows WSL2](install/windows-wsl2) |
+| Windows | Native amd64 | Supported v1.1.0+ | [Windows Native](install/windows-native) |
+| Windows | Native arm64 | Supported v1.1.0+ | [Windows Native](install/windows-native) |
 | Raspberry Pi | arm64 | Supported | [Raspberry Pi](install/raspberry-pi) |
 
-**Windows native binary** (`windows-amd64.zip` + `install.ps1`) is planned for v1.1.0.
-WSL2 + Docker Desktop is the supported path until then. See [[install/windows-wsl2]] for setup.
+**Windows native binaries** (`windows-amd64.zip`, `windows-arm64.zip`) ship from v1.1.0 onward.
+Download from [GitHub Releases](https://github.com/nself-org/cli/releases/latest) or use the
+PowerShell installer. WSL2 remains the simplest path if Docker Desktop is already running.
+See [[install/windows-native]] for native install and [[install/windows-wsl2]] for WSL2.
 
 ## Platform Guides
 
@@ -25,7 +28,8 @@ WSL2 + Docker Desktop is the supported path until then. See [[install/windows-ws
 | [macOS Intel](install/macos-intel) | darwin/amd64 | Intel Mac — Homebrew, binary download |
 | [Linux x86_64](install/linux-x86_64) | linux/amd64 | Ubuntu, Debian, Fedora, Rocky, Amazon Linux |
 | [Linux arm64](install/linux-arm64) | linux/arm64 | Graviton, Ampere Altra, Hetzner CAX, Pi |
-| [Windows WSL2](install/windows-wsl2) | linux/amd64 | WSL2 + Docker Desktop; native Windows v1.1.0 |
+| [Windows WSL2](install/windows-wsl2) | linux/amd64 | WSL2 + Docker Desktop |
+| [Windows Native](install/windows-native) | windows/amd64, windows/arm64 | Native `.exe` via PowerShell installer or manual download |
 | [Raspberry Pi](install/raspberry-pi) | linux/arm64 | Pi 4/5; RAM budgeting; minimal preset |
 
 ## Prerequisites
@@ -53,10 +57,21 @@ curl -sSL https://install.nself.org | bash
 The script detects your architecture (amd64 or arm64) and downloads the correct binary.
 See [[install/linux-x86_64]] or [[install/linux-arm64]] for manual install and verification.
 
+### Windows (Native — v1.1.0+)
+
+Download `nself-<version>-windows-amd64.zip` from [GitHub Releases](https://github.com/nself-org/cli/releases/latest),
+extract, and add the directory to your `PATH`. Or use the PowerShell installer:
+
+```powershell
+irm https://install.nself.org/install.ps1 | iex
+```
+
+See [[install/windows-native]] for the full guide including SHA-256 verification and PATH setup.
+
 ### Windows (WSL2)
 
-Windows requires WSL2. See [[install/windows-wsl2]] for the full step-by-step guide
-covering WSL2 setup, Docker integration, and troubleshooting.
+WSL2 + Docker Desktop is the simplest Windows path. See [[install/windows-wsl2]] for the
+full step-by-step guide covering WSL2 setup, Docker integration, and troubleshooting.
 
 ### Raspberry Pi
 

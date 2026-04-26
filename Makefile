@@ -84,9 +84,18 @@ dist:
 		tar -czf $(DIST_DIR)/$$name.tar.gz -C $(DIST_DIR) $$name; \
 		rm -rf $(DIST_DIR)/$$name; \
 	done
+	@for arch in amd64 arm64; do \
+		name=$(BINARY)-$(VERSION)-windows-$$arch; \
+		echo "Building windows/$$arch..."; \
+		mkdir -p $(DIST_DIR)/$$name; \
+		CGO_ENABLED=0 GOOS=windows GOARCH=$$arch go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$$name/$(BINARY).exe ./cmd/nself/; \
+		cp README.md LICENSE $(DIST_DIR)/$$name/; \
+		cd $(DIST_DIR) && zip -qr $$name.zip $$name && cd ..; \
+		rm -rf $(DIST_DIR)/$$name; \
+	done
 	@cd $(DIST_DIR) && if command -v sha256sum >/dev/null 2>&1; then \
-		sha256sum *.tar.gz > checksums.txt; \
+		sha256sum *.tar.gz *.zip > checksums.txt; \
 	else \
-		shasum -a 256 *.tar.gz > checksums.txt; \
+		shasum -a 256 *.tar.gz *.zip > checksums.txt; \
 	fi
 	@echo "dist/ ready."
