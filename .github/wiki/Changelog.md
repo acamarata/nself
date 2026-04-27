@@ -3,6 +3,25 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [Unreleased] — v1.0.13
+
+P97 Wave 11. CLI coverage gates extended past the 75% per-package floor.
+
+### Changed
+
+- **Coverage gate (`.github/workflows/coverage.yml`) extended** to enforce 75% per-package floor on `internal/trust`, `internal/ui`, `internal/watchdog` alongside `internal/auth` + `internal/license` (G0-T11). Path A fix per CI/CD 100% Green Hard Rule: root-cause coverage authoring, not gate lowering.
+- **`internal/trust` coverage 20% → 76.2%**. Adds testability seams: `currentOS()` drives the cross-platform switch; `findDnsmasqConfFunc` redirects `configureDnsmasqConf` at a temp path; `setup{DNSDarwin,Mkcert,PortsDarwin,DNSLinux,PortsLinux}Func` drives `setupDarwin` / `setupLinux` success and error branches without admin prompts. Platform guards via `t.Skip` only (G0-T11).
+- **`internal/ui` coverage 10% → 97.5%**. Adds `stdoutIsTerminalFunc` to drive TTY-only goroutine paths in `Spinner.Start`, `FirstRunProgress`, `DockerPullProgress`, `ProgressBar.render` (G0-T11).
+- **`internal/watchdog` coverage 51% → 94.3%** (G0-T11).
+- **`Contributing.md` documents the new per-package coverage floors** (G0-T11).
+
+### Notes
+
+- No skip mechanisms added (no `continue-on-error`, no `.skip()`).
+- No production behavior change. Refactors are testability seams only.
+
+---
+
 ## [1.0.10] - 2026-04-22
 
 SP-01 Wave-0+1 patch release. Version bump, ping_api env var update, and plugin
