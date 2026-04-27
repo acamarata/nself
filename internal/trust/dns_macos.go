@@ -18,14 +18,24 @@ const resolverContent = "nameserver 127.0.0.1\n"
 // dnsmasqConfPaths returns candidate paths for dnsmasq.conf in preference order.
 func dnsmasqConfPaths() []string {
 	return []string{
-		"/opt/homebrew/etc/dnsmasq.conf",  // Apple Silicon
-		"/usr/local/etc/dnsmasq.conf",     // Intel Mac
+		"/opt/homebrew/etc/dnsmasq.conf", // Apple Silicon
+		"/usr/local/etc/dnsmasq.conf",    // Intel Mac
 	}
 }
+
+// findDnsmasqConfFunc is the function used to locate dnsmasq.conf. Production
+// always uses the disk-scanning helper below; tests may override this seam to
+// point configureDnsmasqConf at a controllable temp path.
+var findDnsmasqConfFunc = findDnsmasqConfReal
 
 // findDnsmasqConf returns the first dnsmasq.conf path that exists.
 // Falls back to the Apple Silicon default if none exist.
 func findDnsmasqConf() string {
+	return findDnsmasqConfFunc()
+}
+
+// findDnsmasqConfReal is the production implementation of findDnsmasqConf.
+func findDnsmasqConfReal() string {
 	for _, p := range dnsmasqConfPaths() {
 		if _, err := os.Stat(p); err == nil {
 			return p

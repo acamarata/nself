@@ -7,15 +7,15 @@ import (
 
 // TrustConfig holds runtime options for the trust setup.
 type TrustConfig struct {
-	WorkDir            string   // project root directory
-	BaseDomain         string   // e.g. "ummat.local"
-	NginxSSLPort       int      // e.g. 8443
-	NginxHTTPPort      int      // e.g. 8080
-	ExtraSSLDomains    []string // from EXTRA_SSL_DOMAINS
-	NamespacePrefixes  []string // subdomain namespaces extracted from ROUTES (e.g. "pro", "app", "dev")
-	SkipDNS            bool
-	SkipSSL            bool
-	SkipPorts          bool
+	WorkDir           string   // project root directory
+	BaseDomain        string   // e.g. "ummat.local"
+	NginxSSLPort      int      // e.g. 8443
+	NginxHTTPPort     int      // e.g. 8080
+	ExtraSSLDomains   []string // from EXTRA_SSL_DOMAINS
+	NamespacePrefixes []string // subdomain namespaces extracted from ROUTES (e.g. "pro", "app", "dev")
+	SkipDNS           bool
+	SkipSSL           bool
+	SkipPorts         bool
 }
 
 // TrustResult holds the outcome of each setup step.
@@ -31,6 +31,11 @@ type TrustResult struct {
 	Errors              []error
 }
 
+// currentOS returns the OS name to dispatch on. Production always returns
+// runtime.GOOS; tests may override this var to drive the cross-platform
+// switch without rebuilding for a different GOOS.
+var currentOS = func() string { return runtime.GOOS }
+
 // Setup orchestrates the full local dev trust setup for the current OS.
 // Steps run in order: DNS → SSL → Ports. Each step is skipped if the
 // corresponding SkipXxx flag is set in cfg. Steps are idempotent —
@@ -39,21 +44,32 @@ type TrustResult struct {
 func Setup(cfg TrustConfig) (*TrustResult, error) {
 	result := &TrustResult{}
 
-	switch runtime.GOOS {
+	switch currentOS() {
 	case "darwin":
 		return setupDarwin(cfg, result)
 	case "linux":
 		return setupLinux(cfg, result)
 	default:
-		return nil, fmt.Errorf("unsupported OS: %s — nself trust supports macOS and Linux", runtime.GOOS)
+		return nil, fmt.Errorf("unsupported OS: %s — nself trust supports macOS and Linux", currentOS())
 	}
 }
+
+// Step-function seams for testability. Production wires to the real OS-specific
+// implementations; tests may override to drive the success and error branches
+// of setupDarwin / setupLinux without needing real admin privileges or brew.
+var (
+	setupDNSDarwinFunc   = SetupDNSDarwin
+	setupMkcertFunc      = SetupMkcert
+	setupPortsDarwinFunc = SetupPortsDarwin
+	setupDNSLinuxFunc    = SetupDNSLinux
+	setupPortsLinuxFunc  = SetupPortsLinux
+)
 
 // setupDarwin runs the macOS-specific trust setup pipeline.
 func setupDarwin(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 	// Step 1: DNS
 	if !cfg.SkipDNS {
-		dnsAlready, resolverAlready, err := SetupDNSDarwin(cfg)
+		dnsAlready, resolverAlready, err := setupDNSDarwinFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("dns setup: %w", err))
 			// Continue — DNS failure is non-fatal for SSL + port steps.
@@ -67,7 +83,7 @@ func setupDarwin(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 
 	// Step 2: SSL / mkcert
 	if !cfg.SkipSSL {
-		certsAlready, err := SetupMkcert(cfg)
+		certsAlready, err := setupMkcertFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("ssl setup: %w", err))
 		} else {
@@ -78,7 +94,7 @@ func setupDarwin(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 
 	// Step 3: Port forwarding
 	if !cfg.SkipPorts {
-		portsAlready, err := SetupPortsDarwin(cfg)
+		portsAlready, err := setupPortsDarwinFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("port forwarding setup: %w", err))
 		} else {
@@ -94,7 +110,7 @@ func setupDarwin(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 func setupLinux(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 	// Step 1: DNS
 	if !cfg.SkipDNS {
-		dnsAlready, err := SetupDNSLinux(cfg)
+		dnsAlready, err := setupDNSLinuxFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("dns setup: %w", err))
 		} else {
@@ -106,7 +122,7 @@ func setupLinux(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 
 	// Step 2: SSL / mkcert
 	if !cfg.SkipSSL {
-		certsAlready, err := SetupMkcert(cfg)
+		certsAlready, err := setupMkcertFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("ssl setup: %w", err))
 		} else {
@@ -117,7 +133,7 @@ func setupLinux(cfg TrustConfig, result *TrustResult) (*TrustResult, error) {
 
 	// Step 3: Port forwarding
 	if !cfg.SkipPorts {
-		portsAlready, err := SetupPortsLinux(cfg)
+		portsAlready, err := setupPortsLinuxFunc(cfg)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("port forwarding setup: %w", err))
 		} else {

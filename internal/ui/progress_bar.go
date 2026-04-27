@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"golang.org/x/term"
 )
 
 // ProgressBar renders a terminal progress bar with percentage and elapsed time.
@@ -29,7 +27,7 @@ func NewProgressBar(label string, total int, quiet bool) *ProgressBar {
 		total:   total,
 		width:   40,
 		quiet:   quiet,
-		isTTY:   term.IsTerminal(int(os.Stdout.Fd())),
+		isTTY:   stdoutIsTerminal(),
 		started: time.Now(),
 	}
 }
@@ -80,7 +78,7 @@ func (p *ProgressBar) render() {
 // DockerPullProgress prints an animated Docker pull progress indicator.
 // It returns a done-func that, when called, clears the line and prints completion.
 func DockerPullProgress(quiet bool) func(error) {
-	if quiet || !term.IsTerminal(int(os.Stdout.Fd())) {
+	if quiet || !stdoutIsTerminal() {
 		fmt.Println("Pulling Docker images — first run takes 1-3 minutes...")
 		return func(err error) {
 			if err == nil {

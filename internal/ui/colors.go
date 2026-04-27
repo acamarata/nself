@@ -2,8 +2,6 @@ package ui
 
 import (
 	"os"
-
-	"golang.org/x/term"
 )
 
 // ANSI color and style constants.
@@ -37,7 +35,7 @@ const (
 )
 
 // colorsEnabled is false when NO_COLOR env var is set or stdout is not a TTY.
-var colorsEnabled = os.Getenv("NO_COLOR") == "" && term.IsTerminal(int(os.Stdout.Fd()))
+var colorsEnabled = os.Getenv("NO_COLOR") == "" && stdoutIsTerminal()
 
 // C wraps text in the given ANSI color code if colors are enabled.
 // Returns plain text otherwise.

@@ -106,6 +106,33 @@ git push origin feat/my-feature
 - **No panics** in production code paths. No `os.Exit()` outside `main.go`.
 - **User output:** use `internal/ui`, not `fmt.Println` directly.
 
+## Test Coverage
+
+The CLI has package-level coverage floors enforced by the
+`Coverage` workflow. New code in these packages must keep the package above
+its floor or CI will fail.
+
+| Package | Floor | Notes |
+|---|---|---|
+| Whole tree | 25% | Anti-regression gate; total coverage uplift to 75% is a structural follow-up |
+| `internal/license` | 60% | Security-critical |
+| `internal/auth` | 80% | Security-critical |
+| `internal/trust` | 75% | Security-critical (added P97 G0-T11) |
+| `internal/ui` | 75% | Added P97 G0-T11 |
+| `internal/watchdog` | 75% | Added P97 G0-T11 |
+
+Run coverage locally before pushing:
+
+```bash
+go test -mod=vendor -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out | tail -1
+go tool cover -func=coverage.out | grep "internal/trust"   # per-package
+```
+
+Floor changes need a PR with a justification line in the workflow comment.
+Path A (write tests) is preferred over Path B (lower the floor) per the
+CI/CD 100% Green Hard Rule.
+
 ## Commit Conventions
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):

@@ -2,17 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"os"
 	"time"
-
-	"golang.org/x/term"
 )
 
 // FirstRunProgress prints a first-run progress note to stdout.
 // It outputs a static one-liner in non-TTY/quiet mode and a timed line in TTY mode.
 // Returns a done function that must be called when the pull is complete.
 func FirstRunProgress(quiet bool) func() {
-	if quiet || !term.IsTerminal(int(os.Stdout.Fd())) {
+	if quiet || !stdoutIsTerminal() {
 		fmt.Println("First run: pulling Docker images (this takes 1-3 minutes)...")
 		return func() {}
 	}

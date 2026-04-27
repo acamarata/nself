@@ -58,19 +58,36 @@ jobs:
           echo "PASS: Coverage ${total}% >= floor ${COVERAGE_FLOOR}%"
 
       - name: Enforce security-critical packages coverage floor
-        # Per-package floors for internal/license and internal/auth.
+        # Per-package floors for internal/license, internal/auth, internal/trust,
+        # internal/ui, and internal/watchdog.
         # Policy (P94 S58, 2026-04-21): the prior per-function 100% bar did not
         # match the currently shipped reality (license 67%, auth 83%). Switch
         # to package-level floors that anti-regress current measurements:
         #   - internal/license: floor 60% total (observed 67%)
         #   - internal/auth:    floor 80% total (observed 83%)
+        # Policy (P97 G0-T11, 2026-04-26): three additional packages were
+        # under-covered when CI run 24950859633 failed. Per PCI
+        # msg-2026-04-26-ci-cli-coverage-test-fail-20260426 the floors below
+        # were added to anti-regress the new tests:
+        #   - internal/trust:    floor 75% total (observed 76%, security-critical)
+        #   - internal/ui:       floor 75% total (observed 97%)
+        #   - internal/watchdog: floor 75% total (observed 94%)
         # Per-function 100% is the long-term target tracked as a structural
         # follow-up; raising it requires test authorship in cache.go,
         # grace.go, validate.go, tail.go, storage.go (see coverage report).
         run: |
           failed=0
-          declare_floor() { case "$1" in license) echo 60;; auth) echo 80;; *) echo 0;; esac; }
-          for pkg in license auth; do
+          declare_floor() {
+            case "$1" in
+              license) echo 60;;
+              auth) echo 80;;
+              trust) echo 75;;
+              ui) echo 75;;
+              watchdog) echo 75;;
+              *) echo 0;;
+            esac
+          }
+          for pkg in license auth trust ui watchdog; do
             floor=$(declare_floor "$pkg")
             if ! go test -mod=vendor -coverprofile="/tmp/${pkg}.out" "./internal/${pkg}/..." 2>/dev/null; then
               echo "WARN: could not test internal/${pkg} — package may not exist at this path" >&2
@@ -83,7 +100,7 @@ jobs:
             fi
             result=$(awk -v total="$total" -v floor="$floor" 'BEGIN { print (total+0 >= floor+0) ? "pass" : "fail" }')
             if [ "$result" = "fail" ]; then
-              echo "FAIL: internal/${pkg} coverage ${total}% below floor ${floor}% (security-critical)" >&2
+              echo "FAIL: internal/${pkg} coverage ${total}% below floor ${floor}%" >&2
               failed=1
             else
               echo "PASS: internal/${pkg} coverage ${total}% >= floor ${floor}%"

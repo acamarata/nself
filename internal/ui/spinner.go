@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"golang.org/x/term"
 )
 
 // spinnerFrames contains the braille animation characters (0.1s per frame).
@@ -38,7 +36,7 @@ func (s *Spinner) Start() {
 	}
 
 	// Non-TTY: print static message and return without goroutine.
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
+	if !stdoutIsTerminal() {
 		fmt.Printf("... %s\n", s.message)
 		return
 	}
