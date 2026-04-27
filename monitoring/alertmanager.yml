@@ -22,16 +22,21 @@
 # See monitoring/runbooks/ for per-alert runbooks.
 #
 # Environment variables:
-#   ALERTMANAGER_SMTP_HOST    — SMTP relay host:port (default: localhost:25)
-#   ALERTMANAGER_SMTP_FROM    — envelope-from address (default: alertmanager@nself.org)
-#   ALERTMANAGER_ONCALL_EMAIL — critical alert destination (default: support@nself.org)
-#   ALERTMANAGER_PD_ROUTING_KEY — PagerDuty routing key (P98, not active)
-#   ALERTMANAGER_OG_API_KEY     — Opsgenie API key (P98, not active)
+#   ALERTMANAGER_SMTP_HOST       — SMTP relay host:port (default: localhost:25)
+#   ALERTMANAGER_SMTP_FROM       — envelope-from address (default: alertmanager@nself.org)
+#   ALERTMANAGER_SMTP_USER       — SMTP auth username (optional; required for relays)
+#   ALERTMANAGER_SMTP_PASS       — SMTP auth password (optional; required for relays)
+#   ALERTMANAGER_SMTP_REQUIRE_TLS — enforce STARTTLS on the relay (default: true)
+#   ALERTMANAGER_ONCALL_EMAIL    — critical alert destination (default: support@nself.org)
+#   ALERTMANAGER_PD_ROUTING_KEY  — PagerDuty routing key (P98, not active)
+#   ALERTMANAGER_OG_API_KEY      — Opsgenie API key (P98, not active)
 
 global:
   smtp_smarthost: ${ALERTMANAGER_SMTP_HOST:-localhost:25}
   smtp_from: ${ALERTMANAGER_SMTP_FROM:-alertmanager@nself.org}
-  smtp_require_tls: false
+  smtp_auth_username: ${ALERTMANAGER_SMTP_USER:-}
+  smtp_auth_password: ${ALERTMANAGER_SMTP_PASS:-}
+  smtp_require_tls: ${ALERTMANAGER_SMTP_REQUIRE_TLS:-true}
 
 # Time intervals define windows when non-critical alerts are suppressed.
 # The maintenance window silences warning/info alerts during planned downtime.
@@ -76,16 +81,27 @@ receivers:
   - name: oncall-stub
     email_configs:
       - to: ${ALERTMANAGER_ONCALL_EMAIL:-support@nself.org}
+        from: ${ALERTMANAGER_SMTP_FROM:-alertmanager@nself.org}
         send_resolved: true
-        # P98: replace with PagerDuty/Opsgenie integration when on-call rotation exists.
-        # PagerDuty example:
+        require_tls: ${ALERTMANAGER_SMTP_REQUIRE_TLS:-true}
+        headers:
+          subject: '[CRITICAL] {{ .CommonLabels.alertname }} — {{ .CommonLabels.job }}'
+        # P98 (TODO — owner: see .claude/docs/operations/bus-factor.md):
+        # When the on-call rotation is established, replace this email-only
+        # receiver with a PagerDuty or Opsgenie integration. The blocks below
+        # are pre-shaped — uncomment and set the matching env var in vault.env.
+        #
+        # PagerDuty:
         #   pagerduty_configs:
         #     - routing_key: ${ALERTMANAGER_PD_ROUTING_KEY}
         #       severity: '{{ .Labels.severity }}'
-        # Opsgenie example:
+        #       description: '{{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        #
+        # Opsgenie:
         #   opsgenie_configs:
         #     - api_key: ${ALERTMANAGER_OG_API_KEY}
         #       tags: 'nself,{{ .Labels.severity }}'
+        #       priority: '{{ if eq .Labels.severity "critical" }}P1{{ else }}P3{{ end }}'
 
   - name: null-receiver
     # Warnings and info events are logged by Alertmanager but generate no

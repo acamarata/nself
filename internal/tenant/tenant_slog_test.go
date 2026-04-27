@@ -27,7 +27,7 @@ func (h *slogCapture) Handle(_ context.Context, r slog.Record) error {
 }
 
 func (h *slogCapture) WithAttrs(attrs []slog.Attr) slog.Handler { return h }
-func (h *slogCapture) WithGroup(name string) slog.Handler        { return h }
+func (h *slogCapture) WithGroup(name string) slog.Handler       { return h }
 
 // slogAttrMap extracts key-value pairs from a slog.Record into a flat string map.
 func slogAttrMap(r slog.Record) map[string]string {
