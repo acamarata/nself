@@ -15,9 +15,9 @@ import (
 type WAFMode string
 
 const (
-	WAFModeOff        WAFMode = "off"
-	WAFModeDetection  WAFMode = "detection"
-	WAFModeBlocking   WAFMode = "blocking"
+	WAFModeOff       WAFMode = "off"
+	WAFModeDetection WAFMode = "detection"
+	WAFModeBlocking  WAFMode = "blocking"
 )
 
 // WAFEvent holds a single parsed WAF audit log entry.

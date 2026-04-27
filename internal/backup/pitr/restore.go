@@ -3,6 +3,7 @@ package pitr
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -123,9 +124,12 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 		return fmt.Errorf("chmod PITR recovery config: %w", err)
 	}
 
-	fmt.Printf("Base backup: %s (timestamp %s)\n", bbLocal, bb.Timestamp.Format(time.RFC3339))
-	fmt.Printf("Recovery config written to: %s\n", destRecovery)
-	fmt.Printf("Target time: %s\n", opts.TargetTime.Format(time.RFC3339))
+	slog.Info("pitr_restore_prepared",
+		"base_backup_path", bbLocal,
+		"base_backup_timestamp", bb.Timestamp.Format(time.RFC3339),
+		"recovery_config_path", destRecovery,
+		"target_time", opts.TargetTime.Format(time.RFC3339),
+	)
 
 	// Restart Postgres container.
 	startCmd := exec.CommandContext(ctx, "docker", "start", container)
@@ -138,7 +142,10 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 		return fmt.Errorf("recovery poll: %w", err)
 	}
 
-	fmt.Println("PITR restore complete.")
+	slog.Info("pitr_restore_complete",
+		"container", container,
+		"target_time", opts.TargetTime.Format(time.RFC3339),
+	)
 	return nil
 }
 
