@@ -95,18 +95,22 @@ func overrideExecutablePath(t *testing.T, path string) {
 
 // TestValidateBinaryURL_HTTPSOnly verifies that plain HTTP URLs are rejected
 // and HTTPS URLs on allowed hosts are accepted.
+//
+// Updated 2026-04-27 (G0-T09): the contract now requires the URL path to end
+// in .tar.gz or .tgz. Earlier raw-binary URLs are no longer valid by design;
+// the operator-facing flag accepts archive uploads only.
 func TestValidateBinaryURL_HTTPSOnly(t *testing.T) {
 	cases := []struct {
 		url     string
 		wantErr bool
 	}{
-		{"http://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-amd64", true},
-		{"ftp://github.com/file", true},
-		{"github.com/file", true},
-		{"https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-amd64", false},
-		{"https://objects.githubusercontent.com/v1.0.9/nself-linux-amd64", false},
-		{"https://install.nself.org/nself-linux-amd64", false},
-		{"https://ping.nself.org/release/stable/nself-linux-amd64", false},
+		{"http://github.com/nself-org/cli/releases/download/v1.0.9/nself-1.0.9-linux-amd64.tar.gz", true},
+		{"ftp://github.com/file.tar.gz", true},
+		{"github.com/file.tar.gz", true},
+		{"https://github.com/nself-org/cli/releases/download/v1.0.9/nself-1.0.9-linux-amd64.tar.gz", false},
+		{"https://objects.githubusercontent.com/v1.0.9/nself-linux-amd64.tar.gz", false},
+		{"https://install.nself.org/nself-linux-amd64.tar.gz", false},
+		{"https://ping.nself.org/release/stable/nself.tgz", false},
 	}
 	for _, tc := range cases {
 		err := validateBinaryURL(tc.url)
@@ -120,13 +124,13 @@ func TestValidateBinaryURL_HTTPSOnly(t *testing.T) {
 }
 
 // TestValidateBinaryURL_AllowlistEnforced verifies that arbitrary HTTPS hosts
-// are rejected.
+// are rejected even when the URL points at a valid .tar.gz archive.
 func TestValidateBinaryURL_AllowlistEnforced(t *testing.T) {
 	blocked := []string{
-		"https://evil.example.com/nself-linux-amd64",
-		"https://notgithub.com/nself-org/cli/releases/download/v1.0.9/nself-linux-amd64",
-		"https://github.com.evil.example.com/nself",
-		"https://mygithub.com/nself",
+		"https://evil.example.com/nself-linux-amd64.tar.gz",
+		"https://notgithub.com/nself-org/cli/releases/download/v1.0.9/nself-linux-amd64.tar.gz",
+		"https://github.com.evil.example.com/nself.tar.gz",
+		"https://mygithub.com/nself.tar.gz",
 	}
 	for _, url := range blocked {
 		if err := validateBinaryURL(url); err == nil {
@@ -136,11 +140,11 @@ func TestValidateBinaryURL_AllowlistEnforced(t *testing.T) {
 }
 
 // TestValidateBinaryURL_AllowlistSubdomain verifies that subdomains of allowed
-// hosts are accepted.
+// hosts are accepted when the URL points at a .tar.gz/.tgz archive.
 func TestValidateBinaryURL_AllowlistSubdomain(t *testing.T) {
 	allowed := []string{
-		"https://releases.install.nself.org/nself-linux-amd64",
-		"https://cdn.objects.githubusercontent.com/file",
+		"https://releases.install.nself.org/nself-linux-amd64.tar.gz",
+		"https://cdn.objects.githubusercontent.com/file.tar.gz",
 	}
 	for _, url := range allowed {
 		if err := validateBinaryURL(url); err != nil {
@@ -333,5 +337,119 @@ func TestUpgradeCmd_DefaultBehaviourUnchanged(t *testing.T) {
 		if f := upgradeCmd.Flags().Lookup(flag); f == nil {
 			t.Errorf("--%s flag missing from upgradeCmd", flag)
 		}
+	}
+}
+
+// TestUpgradeCmd_BinarySHA256FlagRegistered verifies the operator-supplied
+// SHA flag is registered alongside --binary-url.
+func TestUpgradeCmd_BinarySHA256FlagRegistered(t *testing.T) {
+	f := upgradeCmd.Flags().Lookup("binary-sha256")
+	if f == nil {
+		t.Fatal("--binary-sha256 flag not registered on upgradeCmd")
+	}
+	if f.DefValue != "" {
+		t.Errorf("--binary-sha256 default value = %q, want empty string", f.DefValue)
+	}
+}
+
+// TestValidateBinaryURL_RejectsNonTarGz ensures we reject any --binary-url
+// whose path does not end in .tar.gz or .tgz, even when the host is on the
+// allowlist. The current operator-facing contract supports only those two
+// archive formats.
+func TestValidateBinaryURL_RejectsNonTarGz(t *testing.T) {
+	cases := []struct {
+		name string
+		url  string
+		ok   bool
+	}{
+		{"raw binary on allowed host", "https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-amd64", false},
+		{"zip on allowed host", "https://github.com/nself-org/cli/releases/download/v1.0.9/nself.zip", false},
+		{"tar.gz on allowed host", "https://github.com/nself-org/cli/releases/download/v1.0.9/nself-1.0.9-linux-amd64.tar.gz", true},
+		{"tgz on allowed host", "https://install.nself.org/mirror/v1.0.9/nself.tgz", true},
+		{"tar.gz with query string", "https://install.nself.org/mirror/v1.0.9/nself.tar.gz?token=abc", true},
+		{"tar.gz on disallowed host", "https://evil.example.com/nself.tar.gz", false},
+		{"http rejected", "http://github.com/nself-org/cli/releases/download/v1.0.9/nself.tar.gz", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateBinaryURL(tc.url)
+			if tc.ok && err != nil {
+				t.Errorf("validateBinaryURL(%q) = %v, want nil", tc.url, err)
+			}
+			if !tc.ok && err == nil {
+				t.Errorf("validateBinaryURL(%q) = nil, want error", tc.url)
+			}
+		})
+	}
+}
+
+// TestValidateBinarySHA256 covers length, character class, and accepted-hex
+// validation for the operator-supplied digest flag.
+func TestValidateBinarySHA256(t *testing.T) {
+	cases := []struct {
+		name string
+		sum  string
+		ok   bool
+	}{
+		{"valid 64-char lowercase hex", strings.Repeat("a", 64), true},
+		{"valid mixed digits + hex", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", true},
+		{"empty rejected", "", false},
+		{"too short", strings.Repeat("a", 63), false},
+		{"too long", strings.Repeat("a", 65), false},
+		{"uppercase rejected (caller normalises)", strings.Repeat("A", 64), false},
+		{"non-hex rejected", strings.Repeat("g", 64), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateBinarySHA256(tc.sum)
+			if tc.ok && err != nil {
+				t.Errorf("validateBinarySHA256(%q) = %v, want nil", tc.sum, err)
+			}
+			if !tc.ok && err == nil {
+				t.Errorf("validateBinarySHA256(%q) = nil, want error", tc.sum)
+			}
+		})
+	}
+}
+
+// TestSelfUpdateFromURLWithSHA verifies the operator-supplied SHA path
+// downloads, verifies, and atomically swaps without consulting any
+// checksums.txt URL. A bad SHA must fail the swap.
+func TestSelfUpdateFromURLWithSHA(t *testing.T) {
+	binaryContent := makeFakeBinary()
+	archive := makeTarGzArchive(t, "nself", binaryContent)
+	expectedSum := fmt.Sprintf("%x", sha256.Sum256(archive))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "checksums.txt") {
+			t.Errorf("checksums.txt was fetched even though --binary-sha256 was provided (path=%s)", r.URL.Path)
+			http.Error(w, "should not be called", http.StatusBadRequest)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, ".tar.gz") {
+			w.Write(archive)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	tmpDir := t.TempDir()
+	fakeBin := filepath.Join(tmpDir, "nself")
+	if err := os.WriteFile(fakeBin, []byte("old binary"), 0755); err != nil {
+		t.Fatalf("seeding fake binary: %v", err)
+	}
+	prev := executablePath
+	executablePath = func() (string, error) { return fakeBin, nil }
+	defer func() { executablePath = prev }()
+
+	if err := selfUpdateFromURLWithSHA(srv.URL+"/nself.tar.gz", expectedSum); err != nil {
+		t.Fatalf("selfUpdateFromURLWithSHA: %v", err)
+	}
+
+	// Bad SHA must fail.
+	badSum := strings.Repeat("0", 64)
+	if err := selfUpdateFromURLWithSHA(srv.URL+"/nself.tar.gz", badSum); err == nil {
+		t.Fatal("selfUpdateFromURLWithSHA expected checksum mismatch error, got nil")
 	}
 }

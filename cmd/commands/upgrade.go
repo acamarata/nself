@@ -164,7 +164,9 @@ func rollbackBinary() error {
 // download target.  Only HTTPS is accepted (plain HTTP is forbidden — all
 // downloads must be encrypted in transit).  The host must be on the operator
 // allowlist so that an accidental or injected URL cannot redirect the binary
-// swap to an arbitrary server.
+// swap to an arbitrary server.  The path must end in .tar.gz or .tgz so the
+// extractor knows how to handle it; raw-binary downloads are rejected here
+// to keep the operator-facing contract narrow.
 func validateBinaryURL(url string) error {
 	if !strings.HasPrefix(url, "https://") {
 		return fmt.Errorf("--binary-url must use HTTPS (got %q)", url)
@@ -178,23 +180,59 @@ func validateBinaryURL(url string) error {
 	// Strip the scheme, then extract the host (everything up to the first /).
 	rest := strings.TrimPrefix(url, "https://")
 	host := rest
+	pathPart := ""
 	if idx := strings.IndexByte(rest, '/'); idx != -1 {
 		host = rest[:idx]
+		pathPart = rest[idx:]
 	}
 	// Strip port if present.
 	if idx := strings.LastIndexByte(host, ':'); idx != -1 {
 		host = host[:idx]
 	}
+	hostOK := false
 	for _, a := range allowed {
 		if host == a || strings.HasSuffix(host, "."+a) {
-			return nil
+			hostOK = true
+			break
 		}
 	}
-	return fmt.Errorf(
-		"--binary-url host %q is not on the allowed list; accepted hosts: %s",
-		host,
-		strings.Join(allowed, ", "),
-	)
+	if !hostOK {
+		return fmt.Errorf(
+			"--binary-url host %q is not on the allowed list; accepted hosts: %s",
+			host,
+			strings.Join(allowed, ", "),
+		)
+	}
+	// Strip query string before extension check so URLs with auth tokens or
+	// signed-URL params still pass.
+	cleanPath := pathPart
+	if idx := strings.IndexAny(cleanPath, "?#"); idx != -1 {
+		cleanPath = cleanPath[:idx]
+	}
+	lower := strings.ToLower(cleanPath)
+	if !strings.HasSuffix(lower, ".tar.gz") && !strings.HasSuffix(lower, ".tgz") {
+		return fmt.Errorf(
+			"--binary-url path must end in .tar.gz or .tgz (got %q)",
+			pathPart,
+		)
+	}
+	return nil
+}
+
+// validateBinarySHA256 returns nil when sum is a 64-char lowercase hex
+// SHA-256 digest. Operators may pass it with or without surrounding
+// whitespace; uppercase is normalized at the call site.
+func validateBinarySHA256(sum string) error {
+	if len(sum) != 64 {
+		return fmt.Errorf("--binary-sha256 must be a 64-char hex digest (got length %d)", len(sum))
+	}
+	for _, r := range sum {
+		isHex := (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')
+		if !isHex {
+			return fmt.Errorf("--binary-sha256 must be lowercase hex (got %q)", sum)
+		}
+	}
+	return nil
 }
 
 // checksumURLFromBinaryURL derives the expected checksums.txt URL from a
@@ -230,6 +268,7 @@ system package) and uses the appropriate upgrade strategy.
 		targetVersion, _ := cmd.Flags().GetString("version")
 		doRollback, _ := cmd.Flags().GetBool("rollback")
 		binaryURL, _ := cmd.Flags().GetString("binary-url")
+		binarySHA, _ := cmd.Flags().GetString("binary-sha256")
 
 		if doRollback {
 			return rollbackBinary()
@@ -242,6 +281,13 @@ system package) and uses the appropriate upgrade strategy.
 		if binaryURL != "" {
 			if err := validateBinaryURL(binaryURL); err != nil {
 				return err
+			}
+
+			binarySHA = strings.TrimSpace(strings.ToLower(binarySHA))
+			if binarySHA != "" {
+				if err := validateBinarySHA256(binarySHA); err != nil {
+					return err
+				}
 			}
 
 			method := detectInstallMethod()
@@ -258,18 +304,29 @@ system package) and uses the appropriate upgrade strategy.
 				ui.Dimmed(fmt.Sprintf("Backup saved to %s", backupPath))
 			}
 
-			checksumURL := checksumURLFromBinaryURL(binaryURL)
 			ui.Info(fmt.Sprintf("Downloading binary from %s", binaryURL))
-			ui.Info(fmt.Sprintf("Fetching checksum from %s", checksumURL))
-
-			if err := selfUpdateFromURL(binaryURL, checksumURL); err != nil {
-				ui.Error(fmt.Sprintf("Upgrade failed: %v", err))
+			var upgradeErr error
+			if binarySHA != "" {
+				ui.Info("Verifying with operator-supplied --binary-sha256")
+				upgradeErr = selfUpdateFromURLWithSHA(binaryURL, binarySHA)
+			} else {
+				checksumURL := checksumURLFromBinaryURL(binaryURL)
+				ui.Info(fmt.Sprintf("Fetching checksum from %s", checksumURL))
+				upgradeErr = selfUpdateFromURL(binaryURL, checksumURL)
+			}
+			if upgradeErr != nil {
+				ui.Error(fmt.Sprintf("Upgrade failed: %v", upgradeErr))
 				ui.Info("Run 'nself upgrade --rollback' to restore the previous version")
-				return err
+				return upgradeErr
 			}
 
 			ui.Success("Binary installed from custom URL")
 			return nil
+		}
+
+		// --binary-sha256 without --binary-url is a misuse; reject early.
+		if binarySHA != "" {
+			return fmt.Errorf("--binary-sha256 requires --binary-url")
 		}
 
 		// Persist channel choice if provided
@@ -370,6 +427,7 @@ func init() {
 	upgradeCmd.Flags().String("channel", "", "Release channel: stable or canary")
 	upgradeCmd.Flags().String("version", "", "Upgrade to a specific version (e.g. 1.2.3)")
 	upgradeCmd.Flags().Bool("rollback", false, "Revert to the previously installed version")
-	upgradeCmd.Flags().String("binary-url", "", "Install from a specific binary URL (HTTPS only; operator use)")
+	upgradeCmd.Flags().String("binary-url", "", "Install from a specific binary URL (HTTPS only; .tar.gz/.tgz; operator use)")
+	upgradeCmd.Flags().String("binary-sha256", "", "Operator-supplied SHA-256 digest for --binary-url (skips checksums.txt fetch)")
 	RootCmd.AddCommand(upgradeCmd)
 }

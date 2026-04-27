@@ -151,6 +151,26 @@ func selfUpdateFromURL(binaryURL, checksumURL string) error {
 		return fmt.Errorf("fetching checksum for %s: %w", archiveName, err)
 	}
 
+	return selfUpdateFromURLInner(binaryURL, expectedSum)
+}
+
+// selfUpdateFromURLWithSHA is the same as selfUpdateFromURL but uses an
+// operator-supplied SHA-256 digest instead of fetching a checksums.txt
+// alongside the binary. Used when the mirror cannot host a checksums file
+// (e.g. signed-URL mirror, air-gapped distribution channel) and the
+// operator already has the digest from an out-of-band source.
+func selfUpdateFromURLWithSHA(binaryURL, expectedSum string) error {
+	return selfUpdateFromURLInner(binaryURL, expectedSum)
+}
+
+// selfUpdateFromURLInner is the shared implementation used by
+// selfUpdateFromURL (checksums.txt path) and selfUpdateFromURLWithSHA
+// (operator-supplied SHA path). It downloads, verifies, and atomically
+// swaps the binary. The expectedSum must already be a 64-char lowercase
+// hex digest; callers are responsible for validation.
+func selfUpdateFromURLInner(binaryURL, expectedSum string) error {
+	archiveName := filepath.Base(binaryURL)
+
 	// Download binary/archive to a temp file.
 	tmpFile, err := os.CreateTemp("", "nself-binary-url-*")
 	if err != nil {

@@ -247,6 +247,15 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	}
 	filesGenerated++
 
+	// ── Step 7.5a: Seed np_plugins with one row per installed plugin ─
+	// Idempotent: INSERT ... ON CONFLICT (name) DO NOTHING. Rerunning
+	// `nself build` produces byte-equal SQL on the same install set, so
+	// docker-compose volume hashes don't churn. (P97 G0-T04.)
+	if _, err := GenerateNpPluginsSeed(workdir, DefaultPluginDir()); err != nil {
+		return nil, fmt.Errorf("generating np_plugins seed: %w", err)
+	}
+	filesGenerated++
+
 	// ── Step 7.6: Auto-enable Redis when a BullMQ plugin is installed ─
 	// If Redis is not explicitly enabled but a plugin that needs it (ai, claw,
 	// mux, cron, notify) is installed, set cfg.Redis.Enabled = true so that
