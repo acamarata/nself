@@ -94,7 +94,9 @@ func ReadCache() (*CacheEntry, error) {
 	return &entry, nil
 }
 
-// WriteCache writes the cache entry to disk with 0600 permissions.
+// WriteCache writes the cache entry to disk with 0600 permissions using an
+// atomic tmpfile + rename pattern so partial writes never corrupt an existing
+// cache. (D3-T10: prevent torn writes that would otherwise force fail-closed.)
 func WriteCache(entry *CacheEntry) error {
 	path, err := CachePath()
 	if err != nil {
@@ -108,7 +110,41 @@ func WriteCache(entry *CacheEntry) error {
 	if err != nil {
 		return fmt.Errorf("marshalling cache entry: %w", err)
 	}
-	return os.WriteFile(path, data, 0600)
+
+	// Atomic write: write to a sibling tmpfile, then rename. Rename is atomic
+	// on POSIX filesystems for paths within the same directory.
+	tmp, err := os.CreateTemp(dir, ".license.json.tmp.*")
+	if err != nil {
+		return fmt.Errorf("creating temp cache file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	// Best-effort cleanup if anything below fails before rename.
+	cleanup := func() { _ = os.Remove(tmpPath) }
+
+	if err := tmp.Chmod(0600); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return fmt.Errorf("chmod temp cache file: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return fmt.Errorf("writing temp cache file: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return fmt.Errorf("syncing temp cache file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return fmt.Errorf("closing temp cache file: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		cleanup()
+		return fmt.Errorf("renaming temp cache file: %w", err)
+	}
+	return nil
 }
 
 // DeleteCache removes the license cache file.
