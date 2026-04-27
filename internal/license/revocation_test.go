@@ -446,6 +446,186 @@ func TestCanonicalEncoder_SigningRoundTrip(t *testing.T) {
 	}
 }
 
+// ─── D3-T08a: ETag conditional-GET tests ─────────────────────────────────────
+
+// TestRefreshRevocationList_CapturesETagOn200 — a 200 response's ETag header
+// must be persisted into the cache so subsequent calls can send INM.
+func TestRefreshRevocationList_CapturesETagOn200(t *testing.T) {
+	pub, priv := genTestKeypair(t)
+	defer installTestPubKey(t, pub)()
+	withTempCachePath(t)
+
+	now := time.Now().UTC().Truncate(time.Second)
+	list := signList(t, RevocationList{
+		IssuedAt:   now.Format(time.RFC3339Nano),
+		ValidUntil: now.Add(time.Hour).Format(time.RFC3339Nano),
+		Kid:        "primary",
+		Revoked:    []RevocationEntry{{Type: "jti", ID: "j1", Reason: "x", RevokedAt: now.Format(time.RFC3339Nano)}},
+	}, priv)
+
+	const wantEtag = "sha256:abcd1234deadbeef"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/license/revocation-list") {
+			http.NotFound(w, r)
+			return
+		}
+		body, _ := json.Marshal(list)
+		w.Header().Set("ETag", wantEtag)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("LICENSE_PING_URL", srv.URL)
+
+	cache, err := RefreshRevocationList(context.Background())
+	if err != nil {
+		t.Fatalf("RefreshRevocationList: %v", err)
+	}
+	if cache.ETag != wantEtag {
+		t.Errorf("returned cache ETag = %q, want %q", cache.ETag, wantEtag)
+	}
+	read, err := ReadRevocationCache()
+	if err != nil {
+		t.Fatalf("ReadRevocationCache: %v", err)
+	}
+	if read.ETag != wantEtag {
+		t.Errorf("persisted ETag = %q, want %q", read.ETag, wantEtag)
+	}
+}
+
+// TestRefreshRevocationList_SendsIfNoneMatchWhenCached — when a cache with an
+// ETag exists, the next refresh must include `If-None-Match: <etag>`.
+func TestRefreshRevocationList_SendsIfNoneMatchWhenCached(t *testing.T) {
+	pub, _ := genTestKeypair(t)
+	defer installTestPubKey(t, pub)()
+	withTempCachePath(t)
+
+	const seedEtag = "sha256:cafef00d"
+	seed := &RevocationCache{
+		List:      RevocationList{Kid: "primary"},
+		FetchedAt: time.Now().Unix(),
+		ETag:      seedEtag,
+	}
+	if err := WriteRevocationCache(seed); err != nil {
+		t.Fatalf("WriteRevocationCache: %v", err)
+	}
+
+	var gotINM string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotINM = r.Header.Get("If-None-Match")
+		// Respond 304 to short-circuit; we only care about the request header.
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("LICENSE_PING_URL", srv.URL)
+
+	if _, err := RefreshRevocationList(context.Background()); err != nil {
+		t.Fatalf("RefreshRevocationList: %v", err)
+	}
+	if gotINM != seedEtag {
+		t.Errorf("If-None-Match header = %q, want %q", gotINM, seedEtag)
+	}
+}
+
+// TestRefreshRevocationList_HandlesNotModified — a 304 response must skip the
+// payload parse, refresh FetchedAt, and preserve the existing ETag and list.
+func TestRefreshRevocationList_HandlesNotModified(t *testing.T) {
+	pub, _ := genTestKeypair(t)
+	defer installTestPubKey(t, pub)()
+	withTempCachePath(t)
+
+	const seedEtag = "sha256:1234"
+	originalFetched := time.Now().Add(-30 * time.Minute).Unix()
+	seed := &RevocationCache{
+		List: RevocationList{
+			Kid:     "primary",
+			Revoked: []RevocationEntry{{Type: "jti", ID: "j1"}},
+		},
+		FetchedAt: originalFetched,
+		ETag:      seedEtag,
+	}
+	if err := WriteRevocationCache(seed); err != nil {
+		t.Fatalf("WriteRevocationCache: %v", err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("If-None-Match") == "" {
+			t.Errorf("expected If-None-Match header to be set")
+		}
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("LICENSE_PING_URL", srv.URL)
+
+	cache, err := RefreshRevocationList(context.Background())
+	if err != nil {
+		t.Fatalf("RefreshRevocationList: %v", err)
+	}
+	if cache == nil {
+		t.Fatal("expected cache return on 304")
+	}
+	if cache.FetchedAt <= originalFetched {
+		t.Errorf("FetchedAt should advance on 304: was %d, got %d", originalFetched, cache.FetchedAt)
+	}
+	if cache.ETag != seedEtag {
+		t.Errorf("ETag should survive 304: got %q, want %q", cache.ETag, seedEtag)
+	}
+	if len(cache.List.Revoked) != 1 || cache.List.Revoked[0].ID != "j1" {
+		t.Errorf("list contents should survive 304: %+v", cache.List.Revoked)
+	}
+}
+
+// TestRefreshRevocationList_NoETagSkipsConditional — when the cache predates
+// D3-T08a (or was written by an older binary), ETag is empty. The refresh
+// must NOT send a stale or empty If-None-Match header.
+func TestRefreshRevocationList_NoETagSkipsConditional(t *testing.T) {
+	pub, priv := genTestKeypair(t)
+	defer installTestPubKey(t, pub)()
+	withTempCachePath(t)
+
+	// Seed a cache with no ETag (legacy).
+	seed := &RevocationCache{
+		List:      RevocationList{Kid: "primary"},
+		FetchedAt: time.Now().Unix(),
+		// ETag intentionally empty.
+	}
+	if err := WriteRevocationCache(seed); err != nil {
+		t.Fatalf("WriteRevocationCache: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	list := signList(t, RevocationList{
+		IssuedAt:   now.Format(time.RFC3339Nano),
+		ValidUntil: now.Add(time.Hour).Format(time.RFC3339Nano),
+		Kid:        "primary",
+		Revoked:    []RevocationEntry{{Type: "jti", ID: "j1", Reason: "x", RevokedAt: now.Format(time.RFC3339Nano)}},
+	}, priv)
+
+	var hadINM bool
+	var hadIMS bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, hadINM = r.Header["If-None-Match"]
+		_, hadIMS = r.Header["If-Modified-Since"]
+		body, _ := json.Marshal(list)
+		w.Header().Set("ETag", "sha256:fresh")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("LICENSE_PING_URL", srv.URL)
+
+	if _, err := RefreshRevocationList(context.Background()); err != nil {
+		t.Fatalf("RefreshRevocationList: %v", err)
+	}
+	if hadINM {
+		t.Error("legacy cache (no ETag) should NOT send If-None-Match")
+	}
+	if hadIMS {
+		t.Error("If-Modified-Since must not be sent (server does not honour it)")
+	}
+}
+
 // Catch-all sanity: ensure ErrRevocationSignatureInvalid is the precise
 // error returned (callers may type-assert).
 func TestErrRevocationSignatureInvalid_Identity(t *testing.T) {

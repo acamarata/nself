@@ -81,9 +81,14 @@ type LicenseRecord struct {
 
 // RevocationCache is the on-disk cache wrapper around RevocationList.
 // FetchedAt is set by the CLI whenever a successful refresh completes.
+// ETag is captured from the most recent 200 response so subsequent refreshes
+// can send `If-None-Match` and let the server short-circuit with 304.
+// Older caches (pre-D3-T08a) without an ETag field decode with ETag=""
+// and simply skip the conditional-GET header — fully backward compatible.
 type RevocationCache struct {
 	List      RevocationList `json:"list"`
-	FetchedAt int64          `json:"fetched_at"` // unix seconds
+	FetchedAt int64          `json:"fetched_at"`     // unix seconds
+	ETag      string         `json:"etag,omitempty"` // server-emitted strong ETag (sha256 hex)
 }
 
 // ─── Disk I/O ────────────────────────────────────────────────────────────────
@@ -306,14 +311,12 @@ func RefreshRevocationList(ctx context.Context) (*RevocationCache, error) {
 	if err != nil {
 		return nil, fmt.Errorf("building request: %w", err)
 	}
-	// Send conditional GET when we have a stored cache to allow 304s.
-	if existing, _ := ReadRevocationCache(); existing != nil {
-		// We don't currently persist the ETag, but If-Modified-Since on
-		// FetchedAt is a cheap optimisation that nginx + CF respect.
-		req.Header.Set(
-			"If-Modified-Since",
-			time.Unix(existing.FetchedAt, 0).UTC().Format(http.TimeFormat),
-		)
+	// Send conditional GET when we have a stored cache + ETag to allow 304s.
+	// The server (revocation-list.ts) honours If-None-Match against a strong
+	// sha256-hex ETag; If-Modified-Since is NOT honoured. Cold-start caches
+	// (no ETag yet) simply skip the conditional header and pull a full 200.
+	if existing, _ := ReadRevocationCache(); existing != nil && existing.ETag != "" {
+		req.Header.Set("If-None-Match", existing.ETag)
 	}
 
 	resp, err := revocationHTTPClient.Do(req)
@@ -368,7 +371,11 @@ func RefreshRevocationList(ctx context.Context) (*RevocationCache, error) {
 		}
 	}
 
-	cache := &RevocationCache{List: list, FetchedAt: time.Now().Unix()}
+	cache := &RevocationCache{
+		List:      list,
+		FetchedAt: time.Now().Unix(),
+		ETag:      resp.Header.Get("ETag"),
+	}
 	if err := WriteRevocationCache(cache); err != nil {
 		return nil, fmt.Errorf("persisting revocation cache: %w", err)
 	}
