@@ -21,6 +21,8 @@ jobs:
     name: 13-step golden path smoke
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     services:
       # Docker-in-Docker so nself start can spin up containers
