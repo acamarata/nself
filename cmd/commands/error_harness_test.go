@@ -178,10 +178,20 @@ var errorHarnessCases = []errorHarnessCase{
 	{"logs", []string{"logs", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"logs", []string{"logs", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── mail ───────────────────────────────────────────────────────────────
+	{"mail", []string{"mail"}, "(a) no project dir"},
+	{"mail", []string{"mail", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"mail", []string{"mail", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── migrate ────────────────────────────────────────────────────────────
 	{"migrate", []string{"migrate"}, "(a) no project dir"},
 	{"migrate", []string{"migrate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"migrate", []string{"migrate", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── migrate-from-v099 ──────────────────────────────────────────────────
+	{"migrate-from-v099", []string{"migrate-from-v099"}, "(a) no project dir"},
+	{"migrate-from-v099", []string{"migrate-from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"migrate-from-v099", []string{"migrate-from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── model ──────────────────────────────────────────────────────────────
 	{"model", []string{"model"}, "(a) shows help (no project required)"},
