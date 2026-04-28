@@ -1,0 +1,136 @@
+name: Monthly Go Module Updates Scan
+
+# G8-T05 P97 W37 — vendor security supplement.
+# Runs `go list -u -m all` on the first of every month to surface
+# major-version updates available in any direct or transitive dep.
+# Opens a tracking issue (does not fail the build) so the maintainer
+# can review proactively rather than reactively.
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    name: go list -u -m all
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Scan for available updates
+        id: scan
+        env:
+          GOFLAGS: -mod=mod
+        run: |
+          set -e
+          go list -u -m -json all > updates.json
+
+          # Filter to modules where Update exists; produce a markdown table.
+          jq -r '
+            select(.Update != null and .Indirect != true)
+            | "| \(.Path) | \(.Version) | \(.Update.Version) |"
+          ' updates.json > direct-updates.md
+
+          jq -r '
+            select(.Update != null and .Indirect == true)
+            | "| \(.Path) | \(.Version) | \(.Update.Version) |"
+          ' updates.json > indirect-updates.md
+
+          DIRECT_COUNT=$(wc -l < direct-updates.md | tr -d ' ')
+          INDIRECT_COUNT=$(wc -l < indirect-updates.md | tr -d ' ')
+
+          echo "direct=$DIRECT_COUNT" >> "$GITHUB_OUTPUT"
+          echo "indirect=$INDIRECT_COUNT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Direct dependency updates ($DIRECT_COUNT)"
+            echo ""
+            if [ "$DIRECT_COUNT" -gt 0 ]; then
+              echo "| Module | Current | Available |"
+              echo "|--------|---------|-----------|"
+              cat direct-updates.md
+            else
+              echo "_No direct updates available — all current._"
+            fi
+            echo ""
+            echo "## Indirect dependency updates ($INDIRECT_COUNT)"
+            echo ""
+            if [ "$INDIRECT_COUNT" -gt 0 ]; then
+              echo "| Module | Current | Available |"
+              echo "|--------|---------|-----------|"
+              cat indirect-updates.md
+            else
+              echo "_No indirect updates available._"
+            fi
+          } > report.md
+
+          cat report.md
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-updates-${{ github.run_id }}
+          path: |
+            updates.json
+            report.md
+          retention-days: 90
+
+      - name: Open or update tracking issue
+        if: steps.scan.outputs.direct != '0' || steps.scan.outputs.indirect != '0'
+        uses: actions/github-script@v7
+        env:
+          DIRECT: ${{ steps.scan.outputs.direct }}
+          INDIRECT: ${{ steps.scan.outputs.indirect }}
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('report.md', 'utf8');
+            const direct = process.env.DIRECT;
+            const indirect = process.env.INDIRECT;
+            const month = new Date().toISOString().slice(0, 7);
+            const title = `Monthly Go updates ${month}: ${direct} direct, ${indirect} indirect`;
+            const body = [
+              `Monthly \`go list -u -m all\` scan from ${month}.`,
+              ``,
+              report,
+              ``,
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ``,
+              `Action: triage updates against govulncheck output. Bump direct deps in \`go.mod\`, run \`go mod tidy && go mod vendor\`, run \`make test\`.`,
+            ].join('\n');
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'maintenance,go-updates',
+            });
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['maintenance', 'go-updates'],
+            });

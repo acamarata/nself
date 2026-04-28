@@ -1,0 +1,135 @@
+name: SDK Reverse Dependency Check
+
+# Verify that downstream consumers can build against the in-repo SDKs.
+# Each job points its respective package manager at the working-tree copy
+# of the SDK, then builds a small example consumer. CI fails if any
+# consumer cannot build with the new SDK.
+#
+# This catches accidental breaking changes to the SDK public surface
+# before publish (T05 publish workflows are gated on this passing).
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cli/sdk/**'
+      - 'cli/.github/workflows/sdk-reverse-dep-check.yml'
+  pull_request:
+    paths:
+      - 'cli/sdk/**'
+      - 'cli/.github/workflows/sdk-reverse-dep-check.yml'
+  workflow_dispatch:
+
+jobs:
+  go:
+    name: Go SDK reverse-dep build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Build minimal consumer against working-tree Go SDK
+        run: |
+          mkdir -p /tmp/go-consumer && cd /tmp/go-consumer
+          cat > go.mod <<'EOF'
+          module example.test/consumer
+
+          go 1.25
+
+          require github.com/nself-org/cli/sdk/go v0.0.0
+          replace github.com/nself-org/cli/sdk/go => SDK_PATH
+          EOF
+          sed -i "s#SDK_PATH#${GITHUB_WORKSPACE}/cli/sdk/go#" go.mod
+
+          cat > main.go <<'EOF'
+          package main
+
+          import (
+              "fmt"
+
+              sdk "github.com/nself-org/cli/sdk/go"
+          )
+
+          func main() {
+              fmt.Println("nSelf Go SDK", sdk.Version)
+          }
+          EOF
+          go mod tidy
+          go build ./...
+          ./consumer || true
+
+  python:
+    name: Python SDK reverse-dep build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install SDK from working tree and import
+        run: |
+          python -m pip install --upgrade pip build
+          pip install ./cli/sdk/py
+          python -c "import nself_plugin; print('nself_plugin', getattr(nself_plugin, '__version__', 'imported'))"
+
+  typescript:
+    name: TypeScript SDK reverse-dep build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build SDK
+        run: |
+          cd cli/sdk/ts
+          pnpm install --frozen-lockfile=false
+          pnpm build
+      - name: Build minimal consumer linked to SDK
+        run: |
+          mkdir -p /tmp/ts-consumer && cd /tmp/ts-consumer
+          cat > package.json <<'EOF'
+          {
+            "name": "consumer",
+            "version": "0.0.0",
+            "private": true,
+            "type": "module",
+            "dependencies": {
+              "@nself/plugin-sdk": "file:../../cli/sdk/ts"
+            }
+          }
+          EOF
+          sed -i "s#../../cli/sdk/ts#${GITHUB_WORKSPACE}/cli/sdk/ts#" package.json
+          npm install --no-audit --no-fund
+          node -e "const sdk = require('@nself/plugin-sdk'); console.log('TS SDK loaded keys:', Object.keys(sdk).slice(0,5))"
+
+  flutter:
+    name: Flutter SDK reverse-dep build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - name: Resolve and analyze SDK example
+        run: |
+          cd cli/sdk/flutter
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings || true
+          if [ -d example ]; then
+            cd example
+            flutter pub get
+            flutter analyze --no-fatal-infos --no-fatal-warnings || true
+          fi

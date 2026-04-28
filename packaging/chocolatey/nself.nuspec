@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Chocolatey package stub for the ɳSelf CLI on Windows.
+
+  STATUS: stub only — publish target is v1.1.0.
+  Until publish, the canonical Windows install path is install.ps1
+  (https://install.nself.org/install.ps1) and WSL2 + Linuxbrew.
+
+  Build: choco pack nself.nuspec (after filling version + URL + SHA256).
+  Push:  choco push nself.VERSION.nupkg (source push.chocolatey.org)
+-->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>nself</id>
+    <version>0.0.0</version>
+    <title>ɳSelf CLI</title>
+    <authors>nSelf Org</authors>
+    <owners>nself-org</owners>
+    <projectUrl>https://nself.org</projectUrl>
+    <projectSourceUrl>https://github.com/nself-org/cli</projectSourceUrl>
+    <docsUrl>https://docs.nself.org</docsUrl>
+    <bugTrackerUrl>https://github.com/nself-org/cli/issues</bugTrackerUrl>
+    <licenseUrl>https://github.com/nself-org/cli/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <iconUrl>https://nself.org/favicon-512.png</iconUrl>
+    <description>
+ɳSelf is a self-hosted backend infrastructure CLI. Spin up Postgres,
+Hasura GraphQL, Auth, Storage, and Nginx in five minutes, with
+multi-tenancy, billing, and 87 paid plugins.
+
+The Windows binary supports configuration commands (init, build,
+plugin) and ships from nself v1.0.12. Trust subsystem (DNS, mkcert,
+port forwarding) is WSL2-only. For local dev, install via Linuxbrew
+inside WSL2 — see https://github.com/nself-org/cli/wiki/windows-wsl2.
+    </description>
+    <summary>Self-hosted backend infrastructure CLI</summary>
+    <releaseNotes>https://github.com/nself-org/cli/releases</releaseNotes>
+    <copyright>Copyright (c) nSelf Org</copyright>
+    <tags>nself cli golang backend postgres hasura docker self-hosted</tags>
+  </metadata>
+  <files>
+    <!-- Populated by tools/chocolatey-package.ps1 at release time. -->
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

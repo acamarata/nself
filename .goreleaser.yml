@@ -18,6 +18,10 @@ builds:
       - -X github.com/nself-org/cli/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/nself-org/cli/internal/version.BuildDate={{ .Date }}
       - -X github.com/nself-org/cli/internal/license.licensePubKeyHex={{ .Env.NSELF_LICENSE_PUBKEY_HEX }}
+    # Windows binaries (amd64 + arm64) ship from v1.0.12 (P97 G3-T01).
+    # Native Windows is best-effort: the trust subsystem (DNS / pfctl / mkcert)
+    # falls through to "unsupported OS" at runtime — Windows users should run
+    # nself inside WSL2 (see .github/wiki/windows-wsl2.md).
     goos:
       - linux
       - darwin

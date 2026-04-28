@@ -1,0 +1,107 @@
+name: Windows Smoke
+
+# Manual smoke test for the Windows build of the nself CLI binary.
+# Triggered on demand only — Windows CI minutes are billed at 2x Linux,
+# and the standard CI workflow already runs the full Windows test matrix.
+#
+# Use this workflow before cutting a release that includes Windows binaries
+# (G3-T04, P97 Wave 37) to confirm that:
+#   1. The current main builds on windows-2022 (amd64)
+#      and windows-11-arm (arm64).
+#   2. `nself --version` runs end-to-end on the produced binary.
+#   3. The zip archive that goreleaser would ship is well-formed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target arch (amd64, arm64, or both)"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - amd64
+          - arm64
+          - both
+
+jobs:
+  build:
+    name: Build & Smoke (windows / ${{ matrix.goarch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goarch: amd64
+            runner: windows-2022
+          - goarch: arm64
+            runner: windows-2022   # cross-compile from amd64 host until arm64 runners GA
+
+    env:
+      CGO_ENABLED: 0
+      GOOS: windows
+      GOARCH: ${{ matrix.goarch }}
+
+    steps:
+      - name: Skip arch (manual filter)
+        if: ${{ inputs.arch != 'both' && inputs.arch != matrix.goarch }}
+        run: |
+          Write-Host "Skipping ${{ matrix.goarch }} (input arch = ${{ inputs.arch }})"
+          exit 0
+
+      - name: Checkout
+        if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Go modules
+        if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\go-build
+            ~\go\pkg\mod
+          key: ${{ runner.os }}-go-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.goarch }}-
+
+      - name: Build nself.exe
+        if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
+        shell: bash
+        run: |
+          mkdir -p dist
+          go build -mod=vendor -trimpath \
+            -ldflags="-s -w -X github.com/nself-org/cli/internal/version.Version=smoke" \
+            -o dist/nself.exe ./cmd/nself/
+
+      - name: Smoke run --version (amd64 only — arm64 cross-build cannot execute on amd64 host)
+        if: ${{ matrix.goarch == 'amd64' && (inputs.arch == 'both' || inputs.arch == 'amd64') }}
+        shell: pwsh
+        run: |
+          .\dist\nself.exe --version
+          .\dist\nself.exe --help | Select-Object -First 20
+
+      - name: Verify binary metadata (arm64 — file present, header valid)
+        if: ${{ matrix.goarch == 'arm64' && (inputs.arch == 'both' || inputs.arch == 'arm64') }}
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .\dist\nself.exe)) { exit 1 }
+          $header = [System.IO.File]::ReadAllBytes(".\dist\nself.exe")[0..1]
+          if ($header[0] -ne 0x4D -or $header[1] -ne 0x5A) {
+            Write-Host "Not a PE binary"; exit 1
+          }
+          Write-Host "arm64 PE binary present and valid"
+
+      - name: Upload artifact
+        if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nself-windows-${{ matrix.goarch }}-smoke
+          path: dist/nself.exe
+          retention-days: 7

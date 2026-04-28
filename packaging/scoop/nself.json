@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json",
+  "version": "0.0.0",
+  "description": "Self-hosted backend infrastructure CLI. Postgres, Hasura, Auth, Storage, Nginx in five minutes.",
+  "homepage": "https://nself.org",
+  "license": "MIT",
+  "notes": [
+    "STUB MANIFEST — publish target is v1.1.0.",
+    "Native Windows binary supports init/build/plugin commands.",
+    "Trust subsystem (DNS, mkcert, ports) requires WSL2.",
+    "Full local-dev: brew tap nself-org/nself && brew install nself (inside WSL2)."
+  ],
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/nself-org/cli/releases/download/v0.0.0/nself-0.0.0-windows-amd64.zip",
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "extract_dir": "."
+    },
+    "arm64": {
+      "url": "https://github.com/nself-org/cli/releases/download/v0.0.0/nself-0.0.0-windows-arm64.zip",
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "extract_dir": "."
+    }
+  },
+  "bin": "nself.exe",
+  "checkver": {
+    "github": "https://github.com/nself-org/cli"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/nself-org/cli/releases/download/v$version/nself-$version-windows-amd64.zip"
+      },
+      "arm64": {
+        "url": "https://github.com/nself-org/cli/releases/download/v$version/nself-$version-windows-arm64.zip"
+      }
+    },
+    "hash": {
+      "url": "$baseurl/checksums.txt"
+    }
+  }
+}
