@@ -42,6 +42,14 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
 
+	// G-DOGFOOD (P97 W37/W38): nself.org-specific checks. Gated on
+	// NSELF_DOGFOOD=1 so end-user `nself doctor --deep` runs are not slowed
+	// by HTTP probes against nself.org subdomains. CI workflow at
+	// web/.github/workflows/dogfood-check.yml exports NSELF_DOGFOOD=1.
+	if os.Getenv("NSELF_DOGFOOD") == "1" {
+		results = append(results, DogfoodChecks(ctx, projectDir, verbose)...)
+	}
+
 	return results
 }
 

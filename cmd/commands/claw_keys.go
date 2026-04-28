@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -140,6 +141,10 @@ func runClawKeysList(cmd *cobra.Command, args []string) error {
 }
 
 func runClawKeysCreate(cmd *cobra.Command, args []string) error {
+	if clawKeysCreateBootstrap {
+		return runClawKeysCreateBootstrap(cmd)
+	}
+
 	client, baseURL, err := clawClient()
 	if err != nil {
 		return fmt.Errorf("auth error: %w", err)
@@ -179,6 +184,102 @@ func runClawKeysCreate(cmd *cobra.Command, args []string) error {
 	fmt.Println("  Save this key now. It will not be shown again.")
 	fmt.Println()
 
+	return nil
+}
+
+// validBootstrapTiers is the set of tiers accepted by --bootstrap. Mirrors the
+// server-side enum; kept small and explicit so a typo on the CI command line
+// fails fast with exit code 2 rather than reaching the server.
+var validBootstrapTiers = map[string]bool{
+	"owner":      true,
+	"plus":       true,
+	"claw":       true,
+	"chat":       true,
+	"media":      true,
+	"family":     true,
+	"pro":        true,
+	"enterprise": true,
+}
+
+// bootstrapExitCode signals invalid arguments specifically — distinct from the
+// generic non-zero exit on RunE error. CI scripts can branch on it.
+const bootstrapExitCode = 2
+
+// runClawKeysCreateBootstrap is the headless code path: no prompts, no
+// human-readable banner, no clawClient() pre-auth requirement. Validates the
+// three required flags up front and emits only the raw key on stdout. On
+// validation failure: writes a one-line message to stderr and exits with
+// status 2 so a CI runner can detect "you forgot a flag" vs "the request
+// failed."
+func runClawKeysCreateBootstrap(cmd *cobra.Command) error {
+	owner := strings.TrimSpace(clawKeysCreateOwner)
+	tier := strings.TrimSpace(clawKeysCreateTier)
+	machineID := strings.TrimSpace(clawKeysCreateMachineID)
+
+	var missing []string
+	if owner == "" {
+		missing = append(missing, "--owner-email")
+	}
+	if tier == "" {
+		missing = append(missing, "--tier")
+	}
+	if machineID == "" {
+		missing = append(missing, "--machine-id")
+	}
+	if len(missing) > 0 {
+		fmt.Fprintf(os.Stderr, "error: --bootstrap requires %s\n", strings.Join(missing, ", "))
+		os.Exit(bootstrapExitCode)
+	}
+	if !validBootstrapTiers[tier] {
+		fmt.Fprintf(os.Stderr, "error: invalid --tier %q (allowed: owner|plus|claw|chat|media|family|pro|enterprise)\n", tier)
+		os.Exit(bootstrapExitCode)
+	}
+	if !strings.Contains(owner, "@") {
+		fmt.Fprintf(os.Stderr, "error: --owner-email must be a valid email address\n")
+		os.Exit(bootstrapExitCode)
+	}
+
+	baseURL := clawServerURL()
+	if baseURL == "" {
+		fmt.Fprintf(os.Stderr, "error: no server URL configured. Set NSELF_CLAW_SERVER or run 'nself claw config set server <url>'\n")
+		os.Exit(bootstrapExitCode)
+	}
+
+	body, _ := json.Marshal(map[string]string{
+		"name":        clawKeysCreateName,
+		"owner_email": owner,
+		"tier":        tier,
+		"machine_id":  machineID,
+	})
+	req, err := http.NewRequestWithContext(cmd.Context(), "POST", baseURL+"/claw/v1/api-keys/bootstrap", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("creating bootstrap request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("bootstrap request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("server returned HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Key string `json:"key"`
+		ID  string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("parsing response: %w", err)
+	}
+
+	// Headless contract: ONE line on stdout, just the key. Captureable in CI
+	// as KEY=$(nself claw keys create --bootstrap ...).
+	fmt.Println(result.Key)
 	return nil
 }
 

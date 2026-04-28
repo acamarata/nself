@@ -74,8 +74,13 @@ func clawAPIKey() string {
 	return cfg.APIKey
 }
 
-// clawServerURL returns the server URL from config.
+// clawServerURL returns the server URL, checking env first then config file.
+// Mirrors clawAPIKey()'s env-first cascade so headless flows (CI, Docker)
+// can override without writing to ~/.nself/claw/config.yaml.
 func clawServerURL() string {
+	if url := os.Getenv("NSELF_CLAW_SERVER"); url != "" {
+		return strings.TrimRight(url, "/")
+	}
 	cfg, err := loadClawConfig()
 	if err != nil {
 		return ""
