@@ -5,7 +5,7 @@ name: SDK Version Sync
 # Fails CI if any SDK manifest version does not match the CLI VERSION file
 # (or, on a tag push, the tag value).
 #
-# Source of truth: cli/.github/VERSION
+# Source of truth: .github/VERSION
 # Manifests checked:
 #   sdk/go/doc.go                        (const Version = "X.Y.Z")
 #   sdk/py/pyproject.toml                (version = "X.Y.Z")
@@ -20,12 +20,12 @@ on:
       - 'v*'
   pull_request:
     paths:
-      - 'cli/.github/VERSION'
-      - 'cli/sdk/**/pyproject.toml'
-      - 'cli/sdk/**/package.json'
-      - 'cli/sdk/**/pubspec.yaml'
-      - 'cli/sdk/go/doc.go'
-      - 'cli/.github/workflows/sdk-version-sync.yml'
+      - '.github/VERSION'
+      - 'sdk/**/pyproject.toml'
+      - 'sdk/**/package.json'
+      - 'sdk/**/pubspec.yaml'
+      - 'sdk/go/doc.go'
+      - '.github/workflows/sdk-version-sync.yml'
 
 jobs:
   version-sync:
@@ -40,12 +40,12 @@ jobs:
         id: target
         run: |
           # On tag push, take version from the tag (strip leading "v").
-          # Otherwise, take version from cli/.github/VERSION.
+          # Otherwise, take version from .github/VERSION.
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             TARGET="${GITHUB_REF#refs/tags/v}"
             echo "Source: tag ${GITHUB_REF}"
           else
-            TARGET="$(cat cli/.github/VERSION 2>/dev/null || cat .github/VERSION)"
+            TARGET="$(cat .github/VERSION)"
             echo "Source: VERSION file"
           fi
           echo "target=${TARGET}" >> "$GITHUB_OUTPUT"
@@ -54,7 +54,7 @@ jobs:
       - name: Verify Go SDK version (sdk/go/doc.go)
         run: |
           TARGET='${{ steps.target.outputs.target }}'
-          GO_V=$(grep -E '^const Version = "[^"]+"' cli/sdk/go/doc.go | sed -E 's/.*"([^"]+)".*/\1/')
+          GO_V=$(grep -E '^const Version = "[^"]+"' sdk/go/doc.go | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Go SDK declared: ${GO_V}"
           if [ "${GO_V}" != "${TARGET}" ]; then
             echo "MISMATCH: Go SDK is ${GO_V}, expected ${TARGET}"
@@ -64,7 +64,7 @@ jobs:
       - name: Verify Python SDK version (sdk/py/pyproject.toml)
         run: |
           TARGET='${{ steps.target.outputs.target }}'
-          PY_V=$(grep -E '^version = "[^"]+"' cli/sdk/py/pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          PY_V=$(grep -E '^version = "[^"]+"' sdk/py/pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Python SDK declared: ${PY_V}"
           if [ "${PY_V}" != "${TARGET}" ]; then
             echo "MISMATCH: Python SDK is ${PY_V}, expected ${TARGET}"
@@ -74,7 +74,7 @@ jobs:
       - name: Verify TypeScript SDK version (sdk/ts/package.json)
         run: |
           TARGET='${{ steps.target.outputs.target }}'
-          TS_V=$(node -p "require('./cli/sdk/ts/package.json').version")
+          TS_V=$(node -p "require('./sdk/ts/package.json').version")
           echo "TS SDK declared: ${TS_V}"
           if [ "${TS_V}" != "${TARGET}" ]; then
             echo "MISMATCH: TS SDK is ${TS_V}, expected ${TARGET}"
@@ -84,7 +84,7 @@ jobs:
       - name: Verify Flutter SDK version (sdk/flutter/pubspec.yaml)
         run: |
           TARGET='${{ steps.target.outputs.target }}'
-          FL_V=$(grep -E '^version: ' cli/sdk/flutter/pubspec.yaml | head -1 | sed -E 's/^version: *([^ ]+).*/\1/')
+          FL_V=$(grep -E '^version: ' sdk/flutter/pubspec.yaml | head -1 | sed -E 's/^version: *([^ ]+).*/\1/')
           echo "Flutter SDK declared: ${FL_V}"
           if [ "${FL_V}" != "${TARGET}" ]; then
             echo "MISMATCH: Flutter SDK is ${FL_V}, expected ${TARGET}"

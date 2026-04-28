@@ -35,7 +35,10 @@ func TestObserveRequest(t *testing.T) {
 
 	ts := httptest.NewServer(r.Handler())
 	t.Cleanup(ts.Close)
-	resp, _ := http.Get(ts.URL)
+	resp, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatalf("GET /metrics: %v", err)
+	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	out := string(body)
