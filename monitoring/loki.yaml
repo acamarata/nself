@@ -1,0 +1,153 @@
+# nSelf Loki configuration — static reference copy.
+# nself build generates the final version into your project's monitoring/ directory.
+#
+# This file configures Grafana Loki for structured JSON log ingestion from
+# nSelf services. The pipeline extracts trace_id and span_id as indexed Loki
+# labels so that Grafana can generate automatic Tempo click-through links from
+# any log entry that was emitted while an OTEL span was active.
+#
+# Loki → Tempo click-through requires:
+#   1. The nSelf slog handler injects trace_id/span_id (cli/internal/observability/log_handler.go).
+#   2. Promtail (or the OTEL Collector log pipeline) ships logs to Loki.
+#   3. This pipeline_stages block extracts trace_id and span_id as Loki labels.
+#   4. The Grafana datasource for Loki has a "Derived fields" rule linking
+#      trace_id to the Tempo datasource URL: /explore?...&traceId=${__value.raw}
+#
+# Environment variables read at runtime (via nself build substitution):
+#   LOKI_ENDPOINT    — HTTP push endpoint (default: http://localhost:3100)
+#   LOKI_TENANT_ID   — X-Scope-OrgID header value (default: nself)
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /var/loki
+  storage:
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Retain logs for 30 days by default. nself cloud may override per tenant.
+  retention_period: 720h
+  # Allow trace_id and span_id labels (they have high cardinality but are
+  # required for Tempo click-through; keep them indexed).
+  max_label_names_per_series: 20
+
+# compactor.retention_enabled=true is REQUIRED for retention_period to take
+# effect. Without this block Loki stores chunks forever, causing unbounded
+# disk growth. The retention_delete_delay gives the compactor 2h to finish
+# a deletion pass before the next GC sweep starts.
+compactor:
+  working_directory: /var/loki/compactor
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+# ---------------------------------------------------------------------------
+# Promtail scrape / pipeline configuration
+#
+# This section is used when deploying Promtail as the log shipper. If you are
+# using the OTEL Collector log pipeline instead, configure the equivalent
+# json_parser + label_extract stages in otelcol-config.yaml.
+# ---------------------------------------------------------------------------
+promtail:
+  server:
+    http_listen_port: 9080
+    grpc_listen_port: 0
+
+  positions:
+    filename: /var/promtail/positions.yaml
+
+  clients:
+    - url: ${LOKI_ENDPOINT:-http://localhost:3100}/loki/api/v1/push
+      tenant_id: ${LOKI_TENANT_ID:-nself}
+
+  scrape_configs:
+    - job_name: nself-services
+      static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: nself
+            __path__: /var/log/nself/*.log
+
+      pipeline_stages:
+        # Stage 1: parse the JSON log line emitted by the nSelf slog handler.
+        # Every nSelf log line is a JSON object with at minimum: ts, level, msg,
+        # service, env, version, caller. Error/warn lines produced while an OTEL
+        # span is active also include trace_id and span_id.
+        - json:
+            expressions:
+              trace_id: trace_id
+              span_id: span_id
+              level: level
+              service: service
+              tenant: tenant
+
+        # Stage 2: promote extracted values to Loki stream labels.
+        # trace_id and span_id are promoted so Grafana can auto-link to Tempo.
+        # service and level are standard stream dimensions for log querying.
+        # tenant enables per-tenant log isolation in multi-tenant deployments.
+        - labels:
+            trace_id:
+            span_id:
+            level:
+            service:
+            tenant:
+
+        # Stage 3: drop logs below warn in production to reduce ingestion cost.
+        # Set LOKI_DROP_DEBUG=false to keep debug logs in dev/staging.
+        - match:
+            selector: '{job="nself",level=~"debug|info"}'
+            action: drop
+            drop_counter_reason: below_warn_threshold
+
+        # Stage 4: set the log timestamp from the "ts" field in the JSON body.
+        - timestamp:
+            source: ts
+            format: RFC3339Nano
+            fallback_formats:
+              - RFC3339
+              - UnixMs
+
+# ---------------------------------------------------------------------------
+# Grafana datasource derived fields for Loki → Tempo click-through
+#
+# Configure this in Grafana under Configuration → Data Sources → Loki →
+# Derived fields. These settings cannot be expressed in loki.yaml itself;
+# they are documented here as the companion configuration that operators
+# must apply in the Grafana UI or via the Grafana provisioning API.
+#
+# Field name:   trace_id
+# Regex:        trace_id=(\w+)   OR leave empty (label value is used directly)
+# Query:        ${__value.raw}
+# URL:          http://localhost:3200/explore?orgId=1&left=["now-1h","now","Tempo",{"query":"${__value.raw}"}]
+# Internal link: true  (select "Tempo" datasource from the dropdown)
+#
+# With this configuration, every Loki log line that carries a trace_id label
+# shows a clickable "Tempo" link that opens the correlated trace directly.
+# ---------------------------------------------------------------------------
