@@ -41,10 +41,10 @@ jobs:
       - name: Override version (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         run: |
-          sed -i "s/^version = .*/version = \"${{ inputs.version }}\"/" cli/sdk/py/pyproject.toml
+          sed -i "s/^version = .*/version = \"${{ inputs.version }}\"/" sdk/py/pyproject.toml
       - name: Build
         run: |
-          cd cli/sdk/py
+          cd sdk/py
           pip install --upgrade pip build twine
           python -m build
       - name: Publish to PyPI (OIDC, retry up to 3x)
@@ -52,7 +52,7 @@ jobs:
         # Falls through to twine retry loop only on transient failure.
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: cli/sdk/py/dist/
+          packages-dir: sdk/py/dist/
           skip-existing: true
       - name: Retry publish if action failed (bounded, exponential backoff)
         if: failure()
@@ -60,7 +60,7 @@ jobs:
           TWINE_USERNAME: __token__
         run: |
           # Bounded retry: up to 2 additional attempts (total 3), 30s/60s backoff.
-          cd cli/sdk/py
+          cd sdk/py
           attempt=1
           delay=30
           until python -m twine upload --skip-existing dist/*; do

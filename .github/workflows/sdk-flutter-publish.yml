@@ -39,25 +39,25 @@ jobs:
       - name: Override version (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           # Update version field in pubspec.yaml
           sed -i "s/^version: .*/version: ${{ inputs.version }}/" pubspec.yaml
 
       - name: Install dependencies
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           flutter pub get
 
       - name: Dry run (analyzer + publish check)
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           flutter pub publish --dry-run
 
       - name: Publish to pub.dev (retry up to 3x, exponential backoff starting 30s)
         env:
           PUB_DEV_CREDENTIALS_JSON: ${{ secrets.PUB_DEV_CREDENTIALS_JSON }}
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           attempt=1
           delay=30
           until flutter pub publish --force; do
