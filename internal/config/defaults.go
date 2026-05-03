@@ -269,6 +269,14 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Redis.CPU = "0.5"
 		slog.Debug("default", "key", "REDIS_CPU", "value", cfg.Redis.CPU)
 	}
+	if cfg.Redis.PoolSize == 0 {
+		if cfg.Env == "dev" {
+			cfg.Redis.PoolSize = 20
+		} else {
+			cfg.Redis.PoolSize = 50
+		}
+		slog.Debug("default", "key", "REDIS_POOL_SIZE", "value", fmt.Sprintf("%d", cfg.Redis.PoolSize))
+	}
 
 	// ── MinIO / Storage ───────────────────────────────────────────────
 	if cfg.Minio.Version == "" {

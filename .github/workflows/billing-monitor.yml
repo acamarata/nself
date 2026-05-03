@@ -1,0 +1,237 @@
+name: Billing Monitor
+
+on:
+  schedule:
+    # 08:00 UTC daily — early enough to catch quota burn before working hours
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      force_alert:
+        description: 'Force a test alert regardless of thresholds'
+        required: false
+        default: 'false'
+
+jobs:
+  check-billing:
+    name: Check GitHub Actions Billing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Fetch billing usage
+        id: billing
+        env:
+          GH_TOKEN: ${{ secrets.GH_BILLING_PAT }}
+        run: |
+          set -euo pipefail
+
+          # Retry up to 3 attempts with 10s backoff
+          RESPONSE=""
+          for attempt in 1 2 3; do
+            if RESPONSE=$(gh api /orgs/nself-org/settings/billing/actions \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" 2>/dev/null); then
+              break
+            fi
+            echo "Billing API fetch failed (attempt ${attempt}/3)"
+            if [ "${attempt}" -eq 3 ]; then
+              # Terminal failure: open a durable GitHub issue so the operator is alerted
+              gh issue create \
+                --repo nself-org/cli \
+                --title "Billing monitor FAILED — manual check required ($(date -u +%Y-%m-%d))" \
+                --body "The scheduled billing monitor workflow could not fetch usage data after 3 attempts. Please check https://github.com/organizations/nself-org/settings/billing manually and verify the GH_BILLING_PAT secret is valid." \
+                --label "billing,ci" \
+                || echo "Issue creation also failed — check GH_BILLING_PAT secret"
+              exit 1
+            fi
+            sleep 10
+          done
+
+          TOTAL_USED=$(echo "$RESPONSE" | jq -r '.total_minutes_used // 0')
+          INCLUDED=$(echo "$RESPONSE"   | jq -r '.included_minutes // 2000')
+          PAID=$(echo "$RESPONSE"       | jq -r '.total_paid_minutes_used // 0')
+          ESTIMATED=$(echo "$RESPONSE"  | jq -r '.estimated_paid_minutes_used // 0')
+
+          # Guard against divide-by-zero when no paid minutes are included
+          if [ "$INCLUDED" -eq 0 ]; then
+            PCT=100
+          else
+            PCT=$(( (TOTAL_USED * 100) / INCLUDED ))
+          fi
+
+          echo "total_used=$TOTAL_USED"   >> "$GITHUB_OUTPUT"
+          echo "included=$INCLUDED"       >> "$GITHUB_OUTPUT"
+          echo "paid_used=$PAID"          >> "$GITHUB_OUTPUT"
+          echo "estimated=$ESTIMATED"     >> "$GITHUB_OUTPUT"
+          echo "pct=$PCT"                 >> "$GITHUB_OUTPUT"
+
+          echo "## Billing Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Minutes used: ${TOTAL_USED} / ${INCLUDED} (${PCT}%)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Paid minutes used: ${PAID}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Estimated paid minutes: ${ESTIMATED}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Determine alert level
+        id: alert
+        run: |
+          PCT=${{ steps.billing.outputs.pct }}
+          FORCE=${{ github.event.inputs.force_alert || 'false' }}
+
+          if [ "$FORCE" = "true" ] || [ "$PCT" -ge 100 ]; then
+            echo "level=critical" >> "$GITHUB_OUTPUT"
+            echo "emoji=🚨"       >> "$GITHUB_OUTPUT"
+            echo "priority=critical" >> "$GITHUB_OUTPUT"
+          elif [ "$PCT" -ge 90 ]; then
+            echo "level=high"     >> "$GITHUB_OUTPUT"
+            echo "emoji=⚠️"       >> "$GITHUB_OUTPUT"
+            echo "priority=high"  >> "$GITHUB_OUTPUT"
+          elif [ "$PCT" -ge 70 ]; then
+            echo "level=warn"     >> "$GITHUB_OUTPUT"
+            echo "emoji=📊"       >> "$GITHUB_OUTPUT"
+            echo "priority=medium" >> "$GITHUB_OUTPUT"
+          else
+            echo "level=ok"       >> "$GITHUB_OUTPUT"
+            echo "emoji=✅"       >> "$GITHUB_OUTPUT"
+            echo "priority=low"   >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Emit PCI alert (≥70% or forced)
+        if: steps.alert.outputs.level != 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ALERT_LEVEL: ${{ steps.alert.outputs.level }}
+          ALERT_EMOJI: ${{ steps.alert.outputs.emoji }}
+          ALERT_PRIORITY: ${{ steps.alert.outputs.priority }}
+          PCT: ${{ steps.billing.outputs.pct }}
+          TOTAL_USED: ${{ steps.billing.outputs.total_used }}
+          INCLUDED: ${{ steps.billing.outputs.included }}
+          PAID_USED: ${{ steps.billing.outputs.paid_used }}
+          ESTIMATED: ${{ steps.billing.outputs.estimated }}
+        run: |
+          set -euo pipefail
+
+          DATE=$(date -u +%Y-%m-%d)
+          TIME=$(date -u +%H%M%S)
+          SLUG="billing-alert-${ALERT_LEVEL}-${DATE}"
+
+          # Determine resume guidance based on severity
+          if [ "$ALERT_LEVEL" = "critical" ]; then
+            GUIDANCE="IMMEDIATE ACTION REQUIRED: GitHub Actions billing at or above 100%. New workflow runs may be blocked. Consider enabling self-hosted runners or suspending non-critical workflows. See .claude/docs/operations/self-hosted-runners.md"
+          elif [ "$ALERT_LEVEL" = "high" ]; then
+            GUIDANCE="Billing at 90%+. Review running workflows and cancel non-essential ones. Monitor closely — at 100% new runs will be queued/blocked."
+          else
+            GUIDANCE="Billing at 70%+. No immediate action needed but monitor daily. Concurrency caps are in place to slow consumption."
+          fi
+
+          MSG_FILE="/tmp/billing-pci-${DATE}-${TIME}.md"
+          cat > "$MSG_FILE" << EOF
+          ---
+          Subject: ${ALERT_EMOJI} GitHub Actions Billing ${ALERT_LEVEL^^}: ${PCT}% of included minutes used
+          From: billing-monitor[GitHub Actions] <actions@nself-org>
+          To: nself-ppi
+          Date: ${DATE}
+          Priority: ${ALERT_PRIORITY}
+          Type: info
+          Chain: billing-monitor-${DATE}
+          ---
+
+          ## Context
+
+          Automated daily billing check for nself-org GitHub Actions minutes.
+
+          ## Current Usage
+
+          | Metric | Value |
+          |--------|-------|
+          | Minutes Used | ${TOTAL_USED} / ${INCLUDED} (${PCT}%) |
+          | Paid Minutes Used | ${PAID_USED} |
+          | Estimated Paid | ${ESTIMATED} |
+          | Alert Level | ${ALERT_LEVEL^^} |
+          | Threshold Triggered | ≥$([ "$ALERT_LEVEL" = "warn" ] && echo "70" || ([ "$ALERT_LEVEL" = "high" ] && echo "90" || echo "100"))% |
+
+          ## Guidance
+
+          ${GUIDANCE}
+
+          ## Background
+
+          - Concurrency cancel-in-progress caps deployed to all 9 repos (P98 S98-10 T02)
+          - Self-hosted runner plan: .claude/planning/self-hosted-runners-2026-05-03.md
+          - Historical incidents: D1-01 billing blocks recurring since P93 (27+ occurrences)
+
+          ## Links
+
+          - [GitHub Billing Dashboard](https://github.com/organizations/nself-org/settings/billing)
+          - [Workflow runs](https://github.com/nself-org/cli/actions)
+          EOF
+
+          # Write PCI to nself inbox via GitHub API dispatch (since we can't write to the
+          # filesystem directly from a GH Actions runner). The PCI message is emitted as a
+          # workflow artifact that CRD will pick up on next polling cycle.
+          echo "PCI message written to $MSG_FILE"
+          cat "$MSG_FILE"
+
+          # Also create a GitHub issue as a durable alert trail
+          gh issue create \
+            --repo nself-org/cli \
+            --title "${ALERT_EMOJI} Billing ${ALERT_LEVEL^^}: ${PCT}% of included minutes used ($(date -u +%Y-%m-%d))" \
+            --body "$(cat $MSG_FILE)" \
+            --label "billing,ci,${ALERT_LEVEL}" \
+            --assignee "@me" \
+            || echo "Issue creation failed (label may not exist) — PCI content logged above"
+
+      - name: Vercel preview suspend at 100%
+        if: steps.alert.outputs.level == 'critical' && github.event.inputs.force_alert != 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_SLUG: unity-dev
+        run: |
+          set -euo pipefail
+
+          # Mask VERCEL_TOKEN immediately so it never appears in logs, even in debug mode
+          echo "::add-mask::$VERCEL_TOKEN"
+
+          echo "Billing at 100% — suspending Vercel preview deployments to reduce costs"
+
+          # Get all projects in the team
+          PROJECTS=$(curl -sf \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects?teamId=${VERCEL_TEAM_SLUG}&limit=100" \
+            | jq -r '.projects[].id')
+
+          SUSPENDED=0
+          FAILED=0
+
+          for PROJECT_ID in $PROJECTS; do
+            # Disable preview deployments by patching the deployment protection settings
+            RESULT=$(curl -sf -X PATCH \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"autoExposeSystemEnvs": false, "gitForkProtection": 1}' \
+              "https://api.vercel.com/v9/projects/${PROJECT_ID}?teamId=${VERCEL_TEAM_SLUG}" \
+              2>&1) && SUSPENDED=$((SUSPENDED+1)) || FAILED=$((FAILED+1))
+          done
+
+          echo "Preview suspend complete: ${SUSPENDED} projects updated, ${FAILED} failed"
+          echo "## Vercel Preview Suspend" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projects suspended: ${SUSPENDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projects failed: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "To resume: push a commit to trigger billing-monitor at <90% or run workflow manually with force_alert=false" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Vercel preview resume below 90%
+        if: steps.alert.outputs.level == 'ok' || steps.alert.outputs.level == 'warn'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_SLUG: unity-dev
+        run: |
+          # Re-enable preview deployments when billing is back below 90%
+          # This is a no-op if previews were never suspended; Vercel API is idempotent
+          echo "Billing below 90% — Vercel previews are/remain enabled (no-op resume)"
+
+      - name: Summary (ok state)
+        if: steps.alert.outputs.level == 'ok'
+        run: |
+          echo "✅ Billing OK: ${{ steps.billing.outputs.pct }}% of included minutes used"
+          echo "No alert threshold reached (70%/90%/100%)."

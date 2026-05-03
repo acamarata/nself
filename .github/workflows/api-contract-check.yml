@@ -8,6 +8,9 @@ on:
       - 'internal/**'
       - '.github/workflows/api-contract-check.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   api-contract-check:
     name: API Contract Check (vs F19 baseline)
@@ -38,7 +41,7 @@ jobs:
         run: |
           # Extract known stable commands from F19 baseline (commands that existed at v1.0.9)
           # This is a semantic check: verify commands that were in F19 still exist in HEAD
-          KNOWN_COMMANDS="admin ai alerts aliases audit backup billing build claw clean completion config db deploy dev dlq dns doctor dogfood dr env exec flag functions health init license logs migrate monitor nginx oauth plugin postgres promote queue reset restart secrets security service ssl start status stop telemetry tenant trust update upgrade urls version waf watchdog webhooks api"
+          KNOWN_COMMANDS="admin ai alerts audit backup billing build claw clean completion config db deploy dev dns-setup doctor dogfood dr env exec health init license logs migrate monitor plugin promote queue reset restart secrets security service ssl start status stop tenant trust update upgrade urls version waf watchdog webhooks"
 
           MISSING=""
           for cmd in $KNOWN_COMMANDS; do

@@ -18,6 +18,9 @@ env:
   # During initial triage window, keep as "warn" to catch false positives.
   LICENSE_GATE_MODE: warn
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   go-license-gate:
     name: Go Dependency License Gate

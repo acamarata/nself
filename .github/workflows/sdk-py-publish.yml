@@ -3,6 +3,11 @@ name: SDK Python Publish
 # Triggers on:
 #   - cli release tag (v*)             — publishes SDK in lockstep with CLI
 #   - sdk-scoped tag (cli-sdk-py/v*)   — publishes SDK only (out-of-band patches)
+#   - workflow_dispatch                — manual publish with explicit version input
+#
+# Auth: PyPI Trusted Publisher OIDC — no PYPI_API_TOKEN secret required.
+# Configure the trusted publisher at https://pypi.org/manage/account/publishing/
+# with: owner=nself-org, repo=cli, workflow=sdk-py-publish.yml
 
 on:
   push:
@@ -10,26 +15,61 @@ on:
       - 'v*'
       - 'cli-sdk-py/v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 1.0.12). Leave blank to use sdk/py version.'
+        required: false
+        type: string
+
+permissions:
+  id-token: write  # required for OIDC token exchange with PyPI
+  contents: read
 
 jobs:
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: pypi
+      url: https://pypi.org/p/nself-sdk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Override version (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: |
+          sed -i "s/^version = .*/version = \"${{ inputs.version }}\"/" cli/sdk/py/pyproject.toml
       - name: Build
         run: |
           cd cli/sdk/py
           pip install --upgrade pip build twine
           python -m build
-      - name: Publish to PyPI
+      - name: Publish to PyPI (OIDC, retry up to 3x)
+        # Use the official action for first attempt (handles OIDC token exchange).
+        # Falls through to twine retry loop only on transient failure.
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: cli/sdk/py/dist/
+          skip-existing: true
+      - name: Retry publish if action failed (bounded, exponential backoff)
+        if: failure()
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |
+          # Bounded retry: up to 2 additional attempts (total 3), 30s/60s backoff.
           cd cli/sdk/py
-          twine upload --skip-existing dist/*
+          attempt=1
+          delay=30
+          until python -m twine upload --skip-existing dist/*; do
+            if [ "$attempt" -ge 2 ]; then
+              echo "Retry publish failed after $attempt additional attempts."
+              exit 1
+            fi
+            echo "Retry attempt $attempt failed. Waiting ${delay}s..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+          done

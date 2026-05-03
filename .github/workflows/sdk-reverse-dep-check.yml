@@ -21,6 +21,9 @@ on:
       - 'cli/.github/workflows/sdk-reverse-dep-check.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   go:
     name: Go SDK reverse-dep build

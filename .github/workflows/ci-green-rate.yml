@@ -16,17 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
-          private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
-          owner: nself-org
-
       - name: Compute green rate per repo
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPOS=(
             "nself-org/cli"

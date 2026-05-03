@@ -246,6 +246,17 @@
 
 ---
 
+**Operations**
+- [[operations/release-cascade]], Release Cascade
+- [[operations/self-healing]], Self-Healing Schema
+- [[operations/redis-tuning]], Redis Pool Tuning
+- [[operations/meilisearch-warmup]], MeiliSearch Warm-Up
+- [[operations/jwt-rotation]], JWT Key Rotation
+- [[operations/windows-wsl2-setup]], Windows / WSL2 Setup
+- [[operations/gemini-oauth-reauth]], Gemini OAuth Reauth
+
+---
+
 **Contributing**
 - [[Contributing]]
 - [[Dev-Setup]]

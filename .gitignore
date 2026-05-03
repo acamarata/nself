@@ -22,6 +22,9 @@ docker-compose.yml
 .env
 .env.*
 !.env.example
+# Test fixtures: .env is intentionally NOT tracked (kept as .env.example instead).
+# Regenerated at test runtime by copyDirForTest from the .env.example counterpart.
+internal/migration/testdata/v0.9-fixture/.env
 /nginx/
 /ssl/
 /postgres/

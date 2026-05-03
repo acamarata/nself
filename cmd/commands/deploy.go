@@ -13,6 +13,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deploy/bluegreen"
+	"github.com/nself-org/cli/internal/maintenance"
 	"github.com/nself-org/cli/internal/promote"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -478,6 +479,15 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 			}
 		} else {
 			steps = append(steps, deployStep{Name: "Health checks", Status: "pending"})
+		}
+	}
+
+	// Auto-install daily disk-cleanup timer after successful staging/prod deploy (P98 T10.T07).
+	// Non-fatal: a failure here warns but does not roll back the deploy.
+	if !dryRun && (target == "staging" || target == "prod") {
+		if timerErr := maintenance.InstallDailyTimer(); timerErr != nil {
+			ui.Warn(fmt.Sprintf("daily maintenance timer install failed (non-fatal): %v", timerErr))
+			ui.Warn("Run `nself maintenance schedule --daily` manually to enable disk-cleanup cron")
 		}
 	}
 

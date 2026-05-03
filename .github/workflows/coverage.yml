@@ -26,6 +26,9 @@ env:
   COVERAGE_FLOOR: 25
   CGO_ENABLED: 0
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   coverage:
     name: Go coverage gate (cli)

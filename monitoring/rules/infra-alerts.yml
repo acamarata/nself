@@ -1,0 +1,53 @@
+# nSelf infrastructure alert rules — disk, memory, CPU.
+# This file is the static reference copy bundled with the nSelf CLI.
+# nself build generates the final version into your project's monitoring/rules/ directory.
+#
+# Runbooks:
+#   HostDiskPressure → monitoring/runbooks/disk-pressure.md
+#   HostDiskFull     → monitoring/runbooks/disk-pressure.md
+
+groups:
+  - name: infrastructure
+    rules:
+
+      # WARNING: Host disk usage has exceeded 75%.
+      # At the default +1%/day growth rate this gives ~2 weeks before critical.
+      # Runbook: monitoring/runbooks/disk-pressure.md
+      - alert: HostDiskPressure
+        expr: >
+          (node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"}
+          - node_filesystem_free_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"})
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"}
+          > 0.75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host disk usage above 75%"
+          description: >
+            Disk on {{ $labels.instance }} (/) is {{ $value | humanizePercentage }} full.
+            Run 'docker system prune -f' and verify Loki/Tempo retention policies are
+            enforced. See monitoring/runbooks/disk-pressure.md.
+          runbook_url: "https://github.com/nself-org/cli/wiki/Runbook-Disk-Pressure"
+
+      # CRITICAL: Host disk usage has exceeded 85%.
+      # Postgres and Loki writes will begin failing above ~90%.
+      # Runbook: monitoring/runbooks/disk-pressure.md
+      - alert: HostDiskFull
+        expr: >
+          (node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"}
+          - node_filesystem_free_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"})
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint="/"}
+          > 0.85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host disk critically full (>85%)"
+          description: >
+            Disk on {{ $labels.instance }} (/) is {{ $value | humanizePercentage }} full.
+            Postgres and Loki writes will fail above ~90%. Immediate action required:
+            1. docker system prune -f
+            2. Verify Loki compactor retention_enabled=true
+            3. Check /opt/<project>/data/* for oversized volumes
+          runbook_url: "https://github.com/nself-org/cli/wiki/Runbook-Disk-Pressure"

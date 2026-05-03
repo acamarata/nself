@@ -198,11 +198,12 @@ type NginxConfig struct {
 // RedisConfig holds Redis cache/queue configuration.
 type RedisConfig struct {
 	Enabled  bool   `env:"REDIS_ENABLED"`
-	Version  string `env:"REDIS_VERSION"`  // 7-alpine
-	Port     int    `env:"REDIS_PORT"`     // 6379
-	Password string `env:"REDIS_PASSWORD"` // empty = no auth
-	Memory   string `env:"REDIS_MEMORY"`   // 512M
-	CPU      string `env:"REDIS_CPU"`      // 0.5
+	Version  string `env:"REDIS_VERSION"`   // 7-alpine
+	Port     int    `env:"REDIS_PORT"`      // 6379
+	Password string `env:"REDIS_PASSWORD"`  // empty = no auth
+	Memory   string `env:"REDIS_MEMORY"`    // 512M
+	CPU      string `env:"REDIS_CPU"`       // 0.5
+	PoolSize int    `env:"REDIS_POOL_SIZE"` // 50 (prod default); use 20 for dev
 }
 
 // MinioConfig holds MinIO S3-compatible object storage configuration.

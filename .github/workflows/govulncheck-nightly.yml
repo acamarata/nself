@@ -19,6 +19,9 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   govulncheck:
     name: govulncheck (HIGH/CRITICAL gate)

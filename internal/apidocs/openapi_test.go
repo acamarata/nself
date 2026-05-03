@@ -139,7 +139,13 @@ func TestOperationID(t *testing.T) {
 }
 
 func TestNginxConf(t *testing.T) {
-	conf := NginxConf("/docs")
+	conf := NginxConf("/docs", "example.com")
+	if !strings.Contains(conf, "server {") {
+		t.Error("nginx conf must wrap location blocks in a server { } stanza")
+	}
+	if !strings.Contains(conf, "server_name docs.example.com") {
+		t.Error("nginx conf must serve on docs.<baseDomain>")
+	}
 	if !strings.Contains(conf, "location /api-docs") {
 		t.Error("nginx conf must contain /api-docs location")
 	}
@@ -151,6 +157,9 @@ func TestNginxConf(t *testing.T) {
 	}
 	if !strings.Contains(conf, "scalar.html") {
 		t.Error("nginx conf must reference scalar.html")
+	}
+	if !strings.Contains(conf, "/etc/nginx/ssl/certificates/example-com/fullchain.pem") {
+		t.Error("nginx conf must reference the per-domain SSL cert directory")
 	}
 }
 

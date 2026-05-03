@@ -73,6 +73,7 @@ func Defaults() *PrometheusConfig {
 		RuleFiles: []string{
 			"/etc/prometheus/alerts.yml",
 			"/etc/prometheus/rules/otel-alerts.yml",
+			"/etc/prometheus/rules/infra-alerts.yml",
 		},
 		Targets:            BuiltinTargets(),
 	}

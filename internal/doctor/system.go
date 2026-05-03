@@ -148,7 +148,75 @@ func BackupChecks(_ context.Context, projectDir string) []CheckResult {
 			Message: fmt.Sprintf("last backup %s ago", age.Round(time.Minute))})
 	}
 
+	// BACKUP-METADATA-01: verify a Hasura metadata backup exists and is < 36h old.
+	results = append(results, CheckHasuraMetadataBackup(backupDir))
+
 	return results
+}
+
+// CheckHasuraMetadataBackup verifies that a hasura-metadata-*.json file exists
+// in backupDir and is less than 36 hours old (implements BACKUP-METADATA-01).
+func CheckHasuraMetadataBackup(backupDir string) CheckResult {
+	const checkName = "Hasura metadata backup (BACKUP-METADATA-01)"
+	const maxAge = 36 * time.Hour
+
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		return CheckResult{
+			Section: "backups",
+			Name:    checkName,
+			Status:  "warn",
+			Message: "backup directory not found; run nself backup hasura-metadata",
+			FixCmd:  "nself backup hasura-metadata",
+		}
+	}
+
+	var newest time.Time
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		// Match files like hasura-metadata-2026-04-30.json
+		if len(name) < len("hasura-metadata-") || name[:len("hasura-metadata-")] != "hasura-metadata-" {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(newest) {
+			newest = info.ModTime()
+		}
+	}
+
+	if newest.IsZero() {
+		return CheckResult{
+			Section: "backups",
+			Name:    checkName,
+			Status:  "fail",
+			Message: "no Hasura metadata backup found",
+			FixCmd:  "nself backup hasura-metadata",
+		}
+	}
+
+	age := time.Since(newest)
+	if age > maxAge {
+		return CheckResult{
+			Section: "backups",
+			Name:    checkName,
+			Status:  "fail",
+			Message: fmt.Sprintf("last Hasura metadata backup is %s old (>36h)", age.Round(time.Minute)),
+			FixCmd:  "nself backup hasura-metadata",
+		}
+	}
+
+	return CheckResult{
+		Section: "backups",
+		Name:    checkName,
+		Status:  "pass",
+		Message: fmt.Sprintf("last Hasura metadata backup %s ago", age.Round(time.Minute)),
+	}
 }
 
 // CheckAdminBind verifies that the nself-admin container is bound to

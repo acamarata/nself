@@ -1,0 +1,186 @@
+name: SDK Version Coherence
+
+# 03.T05 P98 W2 — nightly + manual check that all 4 SDK packages
+# (TypeScript, Python, Flutter, Go) match cli/.github/VERSION.
+#
+# Fails when any SDK lags the master version OR is ahead of it.
+# Also runnable on workflow_dispatch for ad-hoc verification.
+#
+# Authority: 03.T05, sdk-coherence.md
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC nightly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk-coherence:
+    name: Verify all SDK versions match CLI VERSION
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read master version
+        id: master
+        run: |
+          VER="$(cat cli/.github/VERSION 2>/dev/null || cat .github/VERSION)"
+          VER="${VER#v}"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+          echo "Master CLI version: ${VER}"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-index tool
+        run: pip install pip-tools --quiet
+
+      - name: Check TypeScript SDK (@nself/sdk on npm)
+        id: ts
+        env:
+          MASTER_VER: ${{ steps.master.outputs.version }}
+        run: |
+          set +e
+          TS_VER=$(npm view @nself/sdk version 2>/dev/null)
+          if [ -z "${TS_VER}" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "detail=@nself/sdk not found on npm (not yet published)" >> "$GITHUB_OUTPUT"
+            echo "WARN: @nself/sdk not found on npm"
+            exit 0
+          fi
+          echo "TypeScript SDK version: ${TS_VER}"
+          if [ "${TS_VER}" != "${MASTER_VER}" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "detail=@nself/sdk@${TS_VER} != master ${MASTER_VER}" >> "$GITHUB_OUTPUT"
+            echo "FAIL: @nself/sdk@${TS_VER} != ${MASTER_VER}"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "detail=@nself/sdk@${TS_VER} matches master" >> "$GITHUB_OUTPUT"
+            echo "PASS: @nself/sdk@${TS_VER}"
+          fi
+
+      - name: Check Python SDK (nself-sdk on PyPI)
+        id: py
+        env:
+          MASTER_VER: ${{ steps.master.outputs.version }}
+        run: |
+          set +e
+          PY_VER=$(pip index versions nself-sdk 2>/dev/null | grep -oP 'nself-sdk \(\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          if [ -z "${PY_VER}" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "detail=nself-sdk not found on PyPI (not yet published)" >> "$GITHUB_OUTPUT"
+            echo "WARN: nself-sdk not found on PyPI"
+            exit 0
+          fi
+          echo "Python SDK version: ${PY_VER}"
+          if [ "${PY_VER}" != "${MASTER_VER}" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "detail=nself-sdk@${PY_VER} != master ${MASTER_VER}" >> "$GITHUB_OUTPUT"
+            echo "FAIL: nself-sdk@${PY_VER} != ${MASTER_VER}"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "detail=nself-sdk@${PY_VER} matches master" >> "$GITHUB_OUTPUT"
+            echo "PASS: nself-sdk@${PY_VER}"
+          fi
+
+      - name: Check Flutter SDK (nself_sdk on pub.dev)
+        id: flutter
+        env:
+          MASTER_VER: ${{ steps.master.outputs.version }}
+        run: |
+          set +e
+          FLUTTER_VER=$(curl -sf "https://pub.dev/api/packages/nself_sdk" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('latest',{}).get('version',''))" 2>/dev/null)
+          if [ -z "${FLUTTER_VER}" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "detail=nself_sdk not found on pub.dev (not yet published)" >> "$GITHUB_OUTPUT"
+            echo "WARN: nself_sdk not found on pub.dev"
+            exit 0
+          fi
+          echo "Flutter SDK version: ${FLUTTER_VER}"
+          if [ "${FLUTTER_VER}" != "${MASTER_VER}" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "detail=nself_sdk@${FLUTTER_VER} != master ${MASTER_VER}" >> "$GITHUB_OUTPUT"
+            echo "FAIL: nself_sdk@${FLUTTER_VER} != ${MASTER_VER}"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "detail=nself_sdk@${FLUTTER_VER} matches master" >> "$GITHUB_OUTPUT"
+            echo "PASS: nself_sdk@${FLUTTER_VER}"
+          fi
+
+      - name: Check Go SDK (github.com/nself-org/sdk on pkg.go.dev)
+        id: go
+        env:
+          MASTER_VER: ${{ steps.master.outputs.version }}
+        run: |
+          set +e
+          GO_VER=$(go list -m -json github.com/nself-org/sdk@latest 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Version','').lstrip('v'))" 2>/dev/null)
+          if [ -z "${GO_VER}" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "detail=github.com/nself-org/sdk not found on Go module proxy (not yet published)" >> "$GITHUB_OUTPUT"
+            echo "WARN: github.com/nself-org/sdk not found on Go module proxy"
+            exit 0
+          fi
+          echo "Go SDK version: ${GO_VER}"
+          if [ "${GO_VER}" != "${MASTER_VER}" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "detail=go-sdk@${GO_VER} != master ${MASTER_VER}" >> "$GITHUB_OUTPUT"
+            echo "FAIL: go-sdk@${GO_VER} != ${MASTER_VER}"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "detail=go-sdk@${GO_VER} matches master" >> "$GITHUB_OUTPUT"
+            echo "PASS: go-sdk@${GO_VER}"
+          fi
+
+      - name: Report summary
+        env:
+          MASTER_VER: ${{ steps.master.outputs.version }}
+          TS_STATUS: ${{ steps.ts.outputs.status }}
+          TS_DETAIL: ${{ steps.ts.outputs.detail }}
+          PY_STATUS: ${{ steps.py.outputs.status }}
+          PY_DETAIL: ${{ steps.py.outputs.detail }}
+          FLUTTER_STATUS: ${{ steps.flutter.outputs.status }}
+          FLUTTER_DETAIL: ${{ steps.flutter.outputs.detail }}
+          GO_STATUS: ${{ steps.go.outputs.status }}
+          GO_DETAIL: ${{ steps.go.outputs.detail }}
+        run: |
+          echo "## SDK Version Coherence Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "Master CLI version: **${MASTER_VER}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SDK | Status | Detail |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| TypeScript (@nself/sdk) | ${TS_STATUS} | ${TS_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Python (nself-sdk) | ${PY_STATUS} | ${PY_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Flutter (nself_sdk) | ${FLUTTER_STATUS} | ${FLUTTER_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Go (github.com/nself-org/sdk) | ${GO_STATUS} | ${GO_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on any SDK version drift
+        env:
+          TS_STATUS: ${{ steps.ts.outputs.status }}
+          PY_STATUS: ${{ steps.py.outputs.status }}
+          FLUTTER_STATUS: ${{ steps.flutter.outputs.status }}
+          GO_STATUS: ${{ steps.go.outputs.status }}
+        run: |
+          FAILED=0
+          for STATUS in "${TS_STATUS}" "${PY_STATUS}" "${FLUTTER_STATUS}" "${GO_STATUS}"; do
+            if [ "${STATUS}" = "fail" ]; then
+              FAILED=1
+            fi
+          done
+          if [ "${FAILED}" = "1" ]; then
+            echo "One or more SDK versions do not match the master CLI version."
+            echo "Run 'nself sdk release' to synchronise, or check the individual SDK repos."
+            exit 1
+          fi
+          echo "All SDK versions match (or are not yet published)."

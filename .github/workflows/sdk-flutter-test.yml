@@ -8,6 +8,9 @@ on:
     paths:
       - 'sdk/flutter/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sdk-flutter:
     name: Flutter SDK Tests

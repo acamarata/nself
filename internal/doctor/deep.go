@@ -42,6 +42,21 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
 
+	// S98-02-T11: JWT key rotation check (JWT-ROT-01).
+	results = append(results, CheckJWTRotation(projectDir))
+
+	// S98-02-T12: SSRF guard verification (SSRF-01).
+	results = append(results, CheckSSRF(projectDir))
+
+	// P98 S98-02-T10: CI token rotation check (CI-TOKEN-01).
+	results = append(results, CheckCIToken(projectDir))
+
+	// P98 S98-02-T14: CI vault sync check (CI-VAULT-SYNC-01).
+	results = append(results, CheckCIVaultSync(projectDir))
+
+	// S03-T06: SDK version coherence check (SDK-VERSION-01).
+	results = append(results, CheckSDKVersions(ctx)...)
+
 	// G-DOGFOOD (P97 W37/W38): nself.org-specific checks. Gated on
 	// NSELF_DOGFOOD=1 so end-user `nself doctor --deep` runs are not slowed
 	// by HTTP probes against nself.org subdomains. CI workflow at

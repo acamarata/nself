@@ -36,21 +36,21 @@ func TestMigrationJourney_FixtureExists(t *testing.T) {
 // fixture directory contains the legacy artifacts that Detect() should find:
 //   - docker-compose.yml at root
 //   - .nself/ directory with v0.9 structure
-//   - legacy backup/ directory
-//   - plugin.json at old location
-//   - .env with legacy keys
+//   - .env.example (stored as .env.example per Clean Working Tree rule;
+//     restored as .env in temp copies by copyDirForTest / copyDirRecursiveWithEnv)
 func TestMigrationJourney_FixtureContainsExpectedArtifacts(t *testing.T) {
 	if _, err := os.Stat(migrationFixturePath); os.IsNotExist(err) {
 		t.Skipf("v0.9 fixture not found")
 	}
 
-	expectedArtifacts := []string{
+	// Artifacts that are literally committed in the fixture directory.
+	committedArtifacts := []string{
 		"docker-compose.yml",
 		".nself",
-		".env",
+		".env.example", // stored as .env.example; restored as .env at test runtime
 	}
 
-	for _, artifact := range expectedArtifacts {
+	for _, artifact := range committedArtifacts {
 		path := filepath.Join(migrationFixturePath, artifact)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected v0.9 artifact missing: %q", path)

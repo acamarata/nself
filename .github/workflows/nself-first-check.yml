@@ -12,6 +12,9 @@ on:
       - '**/docker-compose*.yml'
       - '**/docker-compose*.yaml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   compose-header-check:
     runs-on: ubuntu-latest

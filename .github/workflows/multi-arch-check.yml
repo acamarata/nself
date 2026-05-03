@@ -12,6 +12,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   go-multi-arch:
     name: Go multi-arch smoke build

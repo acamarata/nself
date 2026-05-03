@@ -485,3 +485,15 @@ func TestPrometheusDefaultsIncludeOtelAlertRulesFile(t *testing.T) {
 		t.Fatalf("expected otel-alerts.yml in default prometheus rule_files\n---\n%s", s)
 	}
 }
+
+func TestPrometheusDefaultsIncludeInfraAlertRulesFile(t *testing.T) {
+	cfg := Defaults()
+	out, err := RenderPrometheusYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "infra-alerts.yml") {
+		t.Fatalf("expected infra-alerts.yml in default prometheus rule_files\n---\n%s", s)
+	}
+}

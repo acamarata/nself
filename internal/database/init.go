@@ -97,14 +97,13 @@ func createDatabase(ctx context.Context, cfg *config.Config) error {
 	if _, err := SanitizeIdentifier(db); err != nil {
 		return fmt.Errorf("invalid database name in config: %w", err)
 	}
-	// Check if database already exists using psql :'varname' parameterization
-	// to avoid SQL injection. The datname column is a text literal (safe to
-	// compare with a server-side quoted variable).
-	// Equivalent parameterized intent: SELECT 1 FROM pg_database WHERE datname = $1
-	checkSQL := "SELECT 1 FROM pg_database WHERE datname = :'dbname'"
+	// Check if database already exists. The :'varname' substitution does NOT
+	// fire when psql is invoked via -c/-tAc — the literal reaches the server
+	// and breaks. Inline the validated identifier instead. Safe because db has
+	// already passed SanitizeIdentifier above.
+	checkSQL := fmt.Sprintf("SELECT 1 FROM pg_database WHERE datname = '%s'", db)
 	cmd := exec.CommandContext(ctx, "docker", "exec", container,
 		"psql", "-U", user, "-d", "postgres", "-tAc", checkSQL,
-		"--variable=dbname="+db,
 	)
 
 	var stdout, stderr bytes.Buffer

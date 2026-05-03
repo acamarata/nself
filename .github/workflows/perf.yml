@@ -23,6 +23,9 @@ env:
   COMPRESSED_SIZE_LIMIT_MB: "8"
   REGRESSION_THRESHOLD_PCT: "10"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   # ── Job 1: Binary size check ─────────────────────────────────────
   binary-size-check:

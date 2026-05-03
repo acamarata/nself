@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/nself-org/cli/internal/auth"
 )
 
 // jwtSecretEnvKey is the env var Hasura reads to validate signed JWTs.
@@ -64,6 +67,95 @@ func CheckJWTSecretPresent(projectDir string) CheckResult {
 			Status:  "pass",
 			Message: fmt.Sprintf("%s is present in .env", jwtSecretEnvKey),
 		}
+	}
+}
+
+// CheckJWTRotation implements the JWT-ROT-01 deep doctor check. It verifies:
+//
+//  1. HASURA_GRAPHQL_JWT_SECRET is set (delegates to CheckJWTSecretPresent for
+//     the precise fail/warn/pass logic on where the key lives).
+//  2. A rotation log exists at the configured path.
+//  3. The last recorded rotation is within the configured window (default 90d).
+//
+// This check is only included in --deep mode.
+func CheckJWTRotation(projectDir string) CheckResult {
+	const checkName = "JWT-ROT-01"
+	section := "security"
+
+	// (a) JWT secret env var must be set (any env file satisfies this).
+	secretCheck := CheckJWTSecretPresent(projectDir)
+	if secretCheck.Status == "fail" {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "fail",
+			Message: "JWT-ROT-01: " + secretCheck.Message,
+			FixCmd:  secretCheck.FixCmd,
+		}
+	}
+
+	// (b) Rotation log must exist.
+	logPath := auth.RotationLogPath()
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "warn",
+			Message: fmt.Sprintf("JWT-ROT-01: rotation log not found at %s — run 'nself self-heal --jwt' to initialise", logPath),
+			FixCmd:  "nself self-heal --jwt",
+		}
+	}
+
+	// (c) Last rotation must be within the configured window.
+	last, err := auth.LastRotationTime(logPath)
+	if err != nil {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "warn",
+			Message: fmt.Sprintf("JWT-ROT-01: cannot read rotation log (%v)", err),
+		}
+	}
+
+	windowDays := auth.RotationWindowDays()
+	hardDays := auth.RotationHardDays()
+
+	if last.IsZero() {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "warn",
+			Message: fmt.Sprintf("JWT-ROT-01: no rotation recorded in %s — JWT key has never been rotated", logPath),
+			FixCmd:  "nself self-heal --jwt",
+		}
+	}
+
+	age := time.Since(last)
+	ageDays := int(age.Hours() / 24)
+	if ageDays >= hardDays {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "fail",
+			Message: fmt.Sprintf("JWT-ROT-01: last rotation was %d days ago — exceeds hard limit of %dd (NSELF_JWT_ROTATION_HARD_DAYS). Rotate immediately with 'nself self-heal --jwt'", ageDays, hardDays),
+			FixCmd:  "nself self-heal --jwt",
+		}
+	}
+	if ageDays >= windowDays {
+		return CheckResult{
+			Section: section,
+			Name:    checkName,
+			Status:  "warn",
+			Message: fmt.Sprintf("JWT-ROT-01: last rotation was %d days ago (window=%dd) — rotate with 'nself self-heal --jwt'", ageDays, windowDays),
+			FixCmd:  "nself self-heal --jwt",
+		}
+	}
+
+	return CheckResult{
+		Section: section,
+		Name:    checkName,
+		Status:  "pass",
+		Message: fmt.Sprintf("JWT-ROT-01: last rotation %d days ago (window=%dd)", ageDays, windowDays),
 	}
 }
 

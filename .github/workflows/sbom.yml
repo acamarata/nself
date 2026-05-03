@@ -17,6 +17,9 @@ permissions:
   contents: read
   id-token: write  # required for cosign keyless OIDC
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sbom-verify:
     name: Generate + validate SBOMs

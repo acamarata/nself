@@ -16,12 +16,21 @@ const expectedDir = "testdata/v0.9-fixture-expected"
 
 // TestE2E_FixtureDetect verifies that nself migrate detect finds all 5 v0.9
 // artifacts in the committed fixture. This catches regressions in Detect().
+//
+// The fixture stores the env file as .env.example (per Clean Working Tree rule).
+// copyDirForTest restores it as .env in the temp copy so Detect() can find it.
 func TestE2E_FixtureDetect(t *testing.T) {
 	if _, err := os.Stat(fixtureDir); err != nil {
 		t.Skipf("fixture not found at %s: %v", fixtureDir, err)
 	}
 
-	artifacts := migration.Detect(fixtureDir)
+	// Copy to temp so Detect() sees .env (restored from .env.example by copyDirForTest).
+	tmp := t.TempDir()
+	if err := copyDirForTest(t, fixtureDir, tmp); err != nil {
+		t.Fatalf("copying fixture to temp: %v", err)
+	}
+
+	artifacts := migration.Detect(tmp)
 	if len(artifacts) != 5 {
 		t.Errorf("expected 5 v0.9 artifacts in fixture, got %d", len(artifacts))
 		for _, a := range artifacts {
@@ -33,12 +42,19 @@ func TestE2E_FixtureDetect(t *testing.T) {
 
 // TestE2E_CheckLegacyProject_Fixture verifies that CheckLegacyProject returns count≥2
 // for the committed fixture, triggering the hard-fail threshold.
+//
+// Uses a temp copy so .env.example is restored as .env by copyDirForTest.
 func TestE2E_CheckLegacyProject_Fixture(t *testing.T) {
 	if _, err := os.Stat(fixtureDir); err != nil {
 		t.Skipf("fixture not found at %s: %v", fixtureDir, err)
 	}
 
-	count, names := migration.CheckLegacyProject(fixtureDir)
+	tmp := t.TempDir()
+	if err := copyDirForTest(t, fixtureDir, tmp); err != nil {
+		t.Fatalf("copying fixture to temp: %v", err)
+	}
+
+	count, names := migration.CheckLegacyProject(tmp)
 	if count < migration.DetectionThreshold {
 		t.Errorf("expected count >= %d, got %d (artifacts: %v)", migration.DetectionThreshold, count, names)
 	}
@@ -146,6 +162,9 @@ func migrateNginxLayoutForTest(t *testing.T, dir string) (int, error) {
 }
 
 // copyDirForTest recursively copies src into dst for test isolation.
+// .env.example files are copied twice: once as-is, and once as .env so that
+// the Detect() function (which looks for a literal ".env") still finds the
+// fixture artifact in the temp directory.
 func copyDirForTest(t *testing.T, src, dst string) error {
 	t.Helper()
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
@@ -167,6 +186,17 @@ func copyDirForTest(t *testing.T, src, dst string) error {
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, info.Mode())
+		if err := os.WriteFile(target, data, info.Mode()); err != nil {
+			return err
+		}
+		// If this is a .env.example fixture file, also write it as .env so
+		// Detect() can find the legacy artifact during migration tests.
+		if filepath.Base(path) == ".env.example" {
+			envTarget := filepath.Join(filepath.Dir(target), ".env")
+			if err := os.WriteFile(envTarget, data, 0o600); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

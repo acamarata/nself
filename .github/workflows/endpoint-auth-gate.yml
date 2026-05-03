@@ -16,6 +16,9 @@ on:
       - 'web/backend/**'
       - 'tools/endpoint-auth-checker/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   auth-gate:
     name: Endpoint Auth Gate

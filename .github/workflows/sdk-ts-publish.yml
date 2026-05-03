@@ -1,15 +1,22 @@
+---
 name: Publish TypeScript SDK to npm
 
 # Triggers on:
-#   - cli release tag (v*)             — publishes SDK in lockstep with CLI
-#   - sdk-scoped tag (cli-sdk-ts/v*)   — publishes SDK only (out-of-band patches)
+#   - cli release tag (v*)            -- publishes SDK in lockstep with CLI
+#   - sdk-scoped tag (cli-sdk-ts/v*)  -- publishes SDK only (out-of-band)
+#   - workflow_dispatch               -- manual publish with version input
 
-on:
+"on":
   push:
     tags:
       - 'v*'
       - 'cli-sdk-ts/v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish version (e.g. 1.0.13). Blank = use package.json.'
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -41,7 +48,7 @@ jobs:
           cd cli/sdk/ts
           pnpm build
 
-      - name: Publish to npm (with provenance, skip-existing)
+      - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -53,4 +60,16 @@ jobs:
             echo "${PKG}@${VER} already published, skipping."
             exit 0
           fi
-          pnpm publish --access public --no-git-checks --provenance
+          # Bounded retry: 3 attempts, exponential backoff starting at 30s.
+          attempt=1
+          delay=30
+          until pnpm publish --access public --no-git-checks --provenance; do
+            if [ "$attempt" -ge 3 ]; then
+              echo "Publish failed after $attempt attempts."
+              exit 1
+            fi
+            echo "Attempt $attempt failed. Retrying in ${delay}s..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+          done
