@@ -74,3 +74,10 @@ node_modules/
 
 # Vercel CLI artifacts (accidental link — cli is Go binary, not a Vercel project)
 .vercel/
+
+# TLS/SSL cert and key files — never track private keys
+*.key
+*.pem
+bin/certs/
+src/templates/certs/**/*.key
+src/templates/certs/**/*.pem
