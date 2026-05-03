@@ -485,6 +485,10 @@ if [ "${DRY_RUN}" -eq 0 ]; then
   fi
 
   ok "Branch protection relaxed (HTTP ${HTTP})."
+  # Also disable enforce_admins via dedicated endpoint (PUT /protection sets field but
+  # the separate /enforce_admins endpoint is the authoritative toggle on some repo configs)
+  gh api "repos/${TARGET_REPO}/branches/main/protection/enforce_admins" \
+    -X DELETE > /dev/null 2>&1 || true
   touch "${RELAX_MARKER}"
   # Write post-relax epoch for watchdog deadline reset (FIX3)
   date '+%s' > "${RELAX_TS_MARKER}"
@@ -501,8 +505,8 @@ if [ "${DRY_RUN}" -eq 0 ]; then
   if gh pr merge "${PR_NUMBER}" \
       --repo "${TARGET_REPO}" \
       --squash \
-      --delete-branch \
-      --auto 2>&1; then
+      --admin \
+      --delete-branch 2>&1; then
     MERGE_SUCCESS=1
     ok "PR #${PR_NUMBER} merged."
     audit "MERGE  pr=${PR_NUMBER}  result=success"
