@@ -60,11 +60,12 @@ func DefaultFor(key string) string {
 		"SSL_MODE": "local (dev) / letsencrypt (prod)",
 
 		// Redis
-		"REDIS_ENABLED":  "false",
-		"REDIS_VERSION":  "7-alpine",
-		"REDIS_PORT":     "6379",
-		"REDIS_MEMORY":   "512M",
-		"REDIS_CPU":      "0.5",
+		"REDIS_ENABLED":   "false",
+		"REDIS_VERSION":   "7-alpine",
+		"REDIS_PORT":      "6379",
+		"REDIS_MEMORY":    "512M",
+		"REDIS_CPU":       "0.5",
+		"REDIS_POOL_SIZE": "50 (prod) / 20 (dev)",
 
 		// MinIO
 		"MINIO_ENABLED":          "false",
@@ -128,6 +129,7 @@ func DefaultFor(key string) string {
 		"ELASTICSEARCH_VERSION": "8.11.3",
 		"ELASTICSEARCH_PORT":    "9200",
 		"ELASTICSEARCH_MEMORY":  "1Gi",
+		"MEILISEARCH_WARMUP_QUERIES": "",
 
 		// Monitoring
 		"MONITORING_ENABLED":        "false",

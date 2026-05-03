@@ -22,6 +22,7 @@ import (
 	"github.com/nself-org/cli/internal/lifecycle"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
+	"github.com/nself-org/cli/internal/search"
 	"github.com/nself-org/cli/internal/ssl"
 	"github.com/nself-org/cli/internal/telemetry"
 	"github.com/nself-org/cli/internal/truststate"
@@ -647,6 +648,29 @@ func runStart(cmd *cobra.Command, _ []string) error {
 
 		report := runHealthCheckLoop(ctx, cfg, projectDir, opts.timeout, requiredPct, opts.verbose)
 		_ = report // Final report used inline by the loop for display.
+	}
+
+	// ── MeiliSearch index warm-up ────────────────────────────────────
+	// Runs asynchronously so it never delays the startup sequence.
+	// Activated only when MEILISEARCH_WARMUP_QUERIES is set and the
+	// Search engine is meilisearch.
+	if cfg.Search.Enabled && strings.EqualFold(cfg.Search.Engine, "meilisearch") {
+		if warmupQueries := search.QueriesFromEnv(); len(warmupQueries) > 0 {
+			go func() {
+				warmupCfg := search.WarmupConfig{
+					Host:        "localhost",
+					Port:        cfg.Search.Port,
+					MasterKey:   cfg.Search.MeiliSearch.MasterKey,
+					IndexPrefix: cfg.Search.IndexPrefix,
+					Queries:     warmupQueries,
+				}
+				result, _ := search.Warmup(context.Background(), warmupCfg)
+				if opts.verbose {
+					ui.Dimmed(fmt.Sprintf("  MeiliSearch warm-up: %d/%d queries succeeded",
+						result.QueriesSucceeded, result.QueriesAttempted))
+				}
+			}()
+		}
 	}
 
 	// ── Display URLs ─────────────────────────────────────────────────

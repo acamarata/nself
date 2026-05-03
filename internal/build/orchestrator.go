@@ -367,12 +367,15 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 		filesGenerated += 2 // openapi.json + scalar.html
 
-		// Write the nginx conf.d fragment.
-		apiDocsNginxConf := apidocs.NginxConf(apiDocsCfg.Path)
-		apiDocsConfPath := filepath.Join(workdir, "nginx", "conf.d", "api-docs.conf")
+		// Write the nginx site config (full server block, served on docs.<base>).
+		apiDocsNginxConf := apidocs.NginxConf(apiDocsCfg.Path, cfg.BaseDomain)
+		apiDocsConfPath := filepath.Join(workdir, "nginx", "sites", "api-docs.conf")
 		if err := os.WriteFile(apiDocsConfPath, []byte(apiDocsNginxConf), 0644); err != nil {
 			return nil, fmt.Errorf("writing api-docs nginx conf: %w", err)
 		}
+		// Best-effort cleanup of the legacy bare-location file, if present from a
+		// prior build with the broken layout.
+		_ = os.Remove(filepath.Join(workdir, "nginx", "conf.d", "api-docs.conf"))
 		filesGenerated++
 	}
 

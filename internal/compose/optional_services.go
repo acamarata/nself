@@ -26,18 +26,25 @@ func (g *Generator) buildRedisService() ServiceConfig {
 	if cpu == "" {
 		cpu = "0.5"
 	}
+	poolSize := rc.PoolSize
+	if poolSize == 0 {
+		poolSize = 50
+	}
 
 	var command interface{}
 	var healthTest []string
 
 	if rc.Password != "" {
 		command = fmt.Sprintf(
-			"redis-server --appendonly yes --protected-mode yes --requirepass %s",
-			rc.Password,
+			"redis-server --appendonly yes --protected-mode yes --requirepass %s --maxclients %d",
+			rc.Password, poolSize,
 		)
 		healthTest = []string{"CMD", "redis-cli", "-a", rc.Password, "ping"}
 	} else {
-		command = "redis-server --appendonly yes --protected-mode no"
+		command = fmt.Sprintf(
+			"redis-server --appendonly yes --protected-mode no --maxclients %d",
+			poolSize,
+		)
 		healthTest = []string{"CMD", "redis-cli", "ping"}
 	}
 

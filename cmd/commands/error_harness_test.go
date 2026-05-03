@@ -309,6 +309,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"watchdog", []string{"watchdog", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"watchdog", []string{"watchdog", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── self-heal ──────────────────────────────────────────────────────────
+	{"self-heal", []string{"self-heal"}, "(a) no routine selected (shows help)"},
+	{"self-heal", []string{"self-heal", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"self-heal", []string{"self-heal", "--dry-run"}, "(c) dry-run no flags (shows help)"},
+
 	// ── webhooks ───────────────────────────────────────────────────────────
 	{"webhooks", []string{"webhooks"}, "(a) no project dir"},
 	{"webhooks", []string{"webhooks", "--no-such-flag-xyz"}, "(b) invalid flag"},
