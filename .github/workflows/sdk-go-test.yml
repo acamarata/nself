@@ -10,6 +10,9 @@ on:
     paths:
       - 'sdk/go/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sdk-go:
     name: Build & Test (Go SDK)

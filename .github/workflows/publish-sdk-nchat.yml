@@ -1,26 +1,24 @@
----
-name: Publish TypeScript SDK to npm
+name: Publish nChat SDK to npm
 
 # Triggers on:
-#   - cli release tag (v*)            -- publishes SDK in lockstep with CLI
-#   - sdk-scoped tag (cli-sdk-ts/v*)  -- publishes SDK only (out-of-band)
-#   - workflow_dispatch               -- manual publish with version input
+#   - cli release tag (v*)             — publishes SDK in lockstep with CLI
+#   - sdk-scoped tag (cli-sdk-nchat/v*) — publishes SDK only (out-of-band patches)
 
-"on":
+on:
   push:
     tags:
       - 'v*'
-      - 'cli-sdk-ts/v*'
+      - 'cli-sdk-nchat/v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Publish version (e.g. 1.0.13). Blank = use package.json.'
+        description: 'Version to publish (e.g. 1.0.13). Overrides package.json if set.'
         required: false
         type: string
 
 jobs:
   publish:
-    name: Publish @nself/plugin-sdk to npm
+    name: Publish @nself/nchat to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -38,21 +36,32 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Override version (workflow_dispatch only)
+        if: ${{ inputs.version != '' }}
+        run: |
+          cd nchat
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ inputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
       - name: Install dependencies
         run: |
-          cd cli/sdk/ts
+          cd nchat
           pnpm install --no-frozen-lockfile
 
       - name: Build
         run: |
-          cd cli/sdk/ts
+          cd nchat
           pnpm build
 
       - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         run: |
-          cd cli/sdk/ts
+          cd nchat
           # If the version on npm already matches, skip without failing.
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")

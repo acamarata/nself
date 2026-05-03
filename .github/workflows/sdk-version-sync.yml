@@ -27,6 +27,9 @@ on:
       - 'sdk/go/doc.go'
       - '.github/workflows/sdk-version-sync.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   version-sync:
     name: Verify SDK versions match CLI tag

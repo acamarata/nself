@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sdk-cross-import-check:
     name: Verify cli/cmd + cli/internal do not import cli/sdk

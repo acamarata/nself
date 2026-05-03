@@ -8,6 +8,9 @@ on:
     paths:
       - 'sdk/py/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sdk-py:
     name: Python SDK Tests

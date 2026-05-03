@@ -8,6 +8,9 @@ on:
     paths:
       - 'sdk/ts/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sdk-ts:
     name: TypeScript SDK Tests

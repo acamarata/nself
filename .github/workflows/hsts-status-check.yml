@@ -1,0 +1,44 @@
+name: HSTS Preload Status Check
+
+on:
+  schedule:
+    # Run every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-hsts:
+    name: Check nself.org HSTS Preload Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check HSTS preload API
+        id: hsts_check
+        run: |
+          DOMAIN="nself.org"
+          API_URL="https://hstspreload.org/api/v2/status?domain=${DOMAIN}"
+          echo "Checking HSTS preload status for ${DOMAIN}..."
+          RESPONSE=$(curl -sf "${API_URL}" || echo '{"status":"check_failed"}')
+          STATUS=$(echo "${RESPONSE}" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','unknown'))")
+          echo "HSTS preload status for ${DOMAIN}: ${STATUS}"
+          echo "status=${STATUS}" >> "$GITHUB_OUTPUT"
+          echo "Full response: ${RESPONSE}"
+
+      - name: Check live HSTS header
+        run: |
+          DOMAIN="nself.org"
+          echo "Checking live HSTS header on https://${DOMAIN}..."
+          HEADER=$(curl -sI "https://${DOMAIN}" | grep -i strict-transport || echo "NOT FOUND")
+          echo "Strict-Transport-Security header: ${HEADER}"
+          if echo "${HEADER}" | grep -qi "preload"; then
+            echo "HSTS preload directive: PRESENT"
+          else
+            echo "HSTS preload directive: MISSING — run submission steps in .claude/docs/operations/hsts-status.md"
+          fi
+
+      - name: Summary
+        run: |
+          echo "### HSTS Preload Check Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Domain:** nself.org" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Preload API status:** ${{ steps.hsts_check.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Check date:** $(date -u '+%Y-%m-%d')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Docs:** .claude/docs/operations/hsts-status.md" >> "$GITHUB_STEP_SUMMARY"

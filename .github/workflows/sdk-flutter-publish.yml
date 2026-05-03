@@ -15,6 +15,11 @@ on:
       - 'v*'
       - 'cli-sdk-flutter/v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 1.0.13). Leave blank to use pubspec.yaml version.'
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -31,6 +36,13 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Override version (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: |
+          cd cli/sdk/flutter
+          # Update version field in pubspec.yaml
+          sed -i "s/^version: .*/version: ${{ inputs.version }}/" pubspec.yaml
+
       - name: Install dependencies
         run: |
           cd cli/sdk/flutter
@@ -41,9 +53,20 @@ jobs:
           cd cli/sdk/flutter
           flutter pub publish --dry-run
 
-      - name: Publish to pub.dev
+      - name: Publish to pub.dev (retry up to 3x, exponential backoff starting 30s)
         env:
-          PUB_DEV_PUBLISH_ACCESS_TOKEN: ${{ secrets.PUB_DEV_TOKEN }}
+          PUB_DEV_CREDENTIALS_JSON: ${{ secrets.PUB_DEV_CREDENTIALS_JSON }}
         run: |
           cd cli/sdk/flutter
-          flutter pub publish --force
+          attempt=1
+          delay=30
+          until flutter pub publish --force; do
+            if [ "$attempt" -ge 3 ]; then
+              echo "Publish failed after $attempt attempts."
+              exit 1
+            fi
+            echo "Attempt $attempt failed. Retrying in ${delay}s..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+          done
