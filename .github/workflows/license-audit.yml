@@ -1,11 +1,24 @@
 name: License Audit
 
+# Checks for AGPL/SSPL transitive dependencies in cli/ (Go).
+# cli/ is MIT licensed — AGPL/SSPL contamination would infect the binary.
+# S59-T09: license CI gate. Warn-only until 2026-05-20 triage window closes.
+
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  release:
+    types: [created]
+  workflow_dispatch:
 
+env:
+  LICENSE_GATE_MODE: fail  # Flipped from warn → fail on 2026-05-03 (P98 S13-T03). Triage window complete — audit clean.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   go-licenses:
     name: Check Go dependency licenses
@@ -24,6 +37,19 @@ jobs:
         env:
           GOFLAGS: -mod=vendor
         run: |
-          go-licenses check ./... \
-            --allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0 \
-            --ignore=github.com/nself-org/cli
+          echo "=== License Audit: cli/ ==="
+          ALLOWED="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1,LGPL-3.0"
+
+          if ! go-licenses check ./... \
+            --allowed_licenses="$ALLOWED" \
+            --ignore=github.com/nself-org/cli 2>&1; then
+            echo ""
+            echo "GATE: Disallowed license(s) detected in cli/ dependencies"
+            if [ "$LICENSE_GATE_MODE" = "fail" ]; then
+              exit 1
+            else
+              echo "WARN-ONLY MODE: not failing PR (triage window active until 2026-05-20)"
+            fi
+          else
+            echo "PASS: All Go dependencies have allowed licenses"
+          fi

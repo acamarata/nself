@@ -8,6 +8,9 @@ on:
       - 'internal/**'
       - '.github/workflows/api-contract-check.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   api-contract-check:
     name: API Contract Check (vs F19 baseline)
