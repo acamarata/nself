@@ -6,7 +6,7 @@ name: Flutter SDK PR Gate
 on:
   pull_request:
     paths:
-      - 'cli/sdk/flutter/**'
+      - 'sdk/flutter/**'
   workflow_dispatch:
 
 concurrency:

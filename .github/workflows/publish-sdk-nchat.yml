@@ -18,6 +18,9 @@ on:
 
 jobs:
   publish:
+    # Skip gracefully when the nchat SDK directory does not yet exist in this repo.
+    # Remove this guard once sdk/chat/ (or nchat/) is scaffolded.
+    if: hashFiles('nchat/package.json') != ''
     name: Publish @nself/nchat to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
