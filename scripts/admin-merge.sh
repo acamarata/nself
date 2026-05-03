@@ -243,14 +243,15 @@ restore_protection() {
       allow_deletions: false
     }')
 
-  HTTP_STATUS=$(gh api "repos/${repo}/branches/main/protection" \
+  if gh api "repos/${repo}/branches/main/protection" \
     -X PUT \
     --input - \
     -H "Accept: application/vnd.github.v3+json" \
-    --timeout 30 \
-    -w '%{http_code}' \
-    -o /dev/null \
-    <<< "${PAYLOAD}" 2>/dev/null || printf '000')
+    <<< "${PAYLOAD}" > /dev/null 2>&1; then
+    HTTP_STATUS="200"
+  else
+    HTTP_STATUS="000"
+  fi
 
   if [ "${HTTP_STATUS}" = "200" ] || [ "${HTTP_STATUS}" = "201" ]; then
     printf '[RESTORE] Protection restored successfully (HTTP %s).\n' "${HTTP_STATUS}" >&2
@@ -400,9 +401,13 @@ restore_protection() {
       allow_force_pushes: false,
       allow_deletions: false
     }')
-  HTTP=\$(gh api "repos/\${repo}/branches/main/protection" -X PUT \
+  if gh api "repos/\${repo}/branches/main/protection" -X PUT \
     --input - -H "Accept: application/vnd.github.v3+json" \
-    -w '%{http_code}' -o /dev/null <<< "\${PAYLOAD}" 2>/dev/null || printf '000')
+    <<< "\${PAYLOAD}" > /dev/null 2>&1; then
+    HTTP="200"
+  else
+    HTTP="000"
+  fi
   printf '[WATCHDOG-RESTORE] HTTP %s\n' "\${HTTP}"
   printf '%s  WATCHDOG_RESTORE  repo=%s  reason=%s  http=%s\n' "\$(date '+%Y-%m-%dT%H:%M:%S%z')" "\${repo}" "\${reason}" "\${HTTP}" \
     >> "\${AUDIT_LOG}" 2>/dev/null || true
@@ -464,16 +469,16 @@ RELAX_PAYLOAD=$(jq -n \
   }')
 
 if [ "${DRY_RUN}" -eq 0 ]; then
-  # --timeout 30: if relax hangs, abort immediately WITHOUT writing RELAX_MARKER
-  # (watchdog also exits cleanly because it never sees the relax marker)
-  HTTP=$(gh api "repos/${TARGET_REPO}/branches/main/protection" \
+  # gh api does not support -w or --timeout flags; use exit code to determine success
+  if gh api "repos/${TARGET_REPO}/branches/main/protection" \
     -X PUT \
     --input - \
     -H "Accept: application/vnd.github.v3+json" \
-    --timeout 30 \
-    -w '%{http_code}' \
-    -o /dev/null \
-    <<< "${RELAX_PAYLOAD}" 2>/dev/null || printf '000')
+    <<< "${RELAX_PAYLOAD}" > /dev/null 2>&1; then
+    HTTP="200"
+  else
+    HTTP="000"
+  fi
 
   if [ "${HTTP}" != "200" ] && [ "${HTTP}" != "201" ]; then
     die "Failed to relax branch protection (HTTP ${HTTP}). Aborting — protection unchanged."
