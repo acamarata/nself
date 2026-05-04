@@ -1,4 +1,4 @@
-name: Publish nChat SDK to npm
+name: Publish nSelf TypeScript SDK to npm
 
 # Triggers on:
 #   - cli release tag (v*)             — publishes SDK in lockstep with CLI
@@ -18,10 +18,9 @@ on:
 
 jobs:
   publish:
-    # Skip gracefully when the nchat SDK directory does not yet exist in this repo.
-    # Remove this guard once sdk/chat/ (or nchat/) is scaffolded.
-    if: hashFiles('nchat/package.json') != ''
-    name: Publish @nself/nchat to npm
+    # Skip gracefully when the TypeScript SDK directory does not yet exist in this repo.
+    if: hashFiles('sdk/ts/package.json') != ''
+    name: Publish @nself/sdk-ts to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -42,7 +41,7 @@ jobs:
       - name: Override version (workflow_dispatch only)
         if: ${{ inputs.version != '' }}
         run: |
-          cd nchat
+          cd sdk/ts
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -52,19 +51,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd nchat
+          cd sdk/ts
           pnpm install --no-frozen-lockfile
 
       - name: Build
         run: |
-          cd nchat
+          cd sdk/ts
           pnpm build
 
       - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         run: |
-          cd nchat
+          cd sdk/ts
           # If the version on npm already matches, skip without failing.
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
