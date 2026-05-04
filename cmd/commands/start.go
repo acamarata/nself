@@ -213,15 +213,30 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
 
+	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
+
 	projectDir, err := config.FindNSelfRoot(cwd)
 	if err != nil {
-		return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+		// Before reporting "no project found", check if this is a v0.9 directory.
+		// FindNSelfRoot won't find a .env marker in a v0.9 project, so we must
+		// probe cwd directly first.
+		if count, names := migration.CheckLegacyProject(cwd); count >= migration.DetectionThreshold {
+			if allowLegacy {
+				ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
+				projectDir = cwd
+			} else {
+				ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
+				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+				return fmt.Errorf("v0.9 project detected — run `nself migrate` first")
+			}
+		} else {
+			return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+		}
 	}
 
 	// ── v0.9 artifact detection (S60-T02) ────────────────────────────────
 	// Requires ≥2 of 5 heuristics to trigger (prevents false positives).
 	// A single artifact warns but proceeds. ≥2 artifacts fail unless --allow-legacy.
-	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
 	if count, names := migration.CheckLegacyProject(projectDir); count >= migration.DetectionThreshold {
 		if allowLegacy {
 			ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))

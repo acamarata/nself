@@ -90,7 +90,22 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 	workdir, err := config.FindNSelfRoot(cwd)
 	if err != nil {
-		return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+		// Before reporting "no project found", check if this is a v0.9 directory.
+		if !noMigrationCheck {
+			if count, names := migration.CheckLegacyProject(cwd); count >= migration.DetectionThreshold {
+				if allowLegacy {
+					ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
+					workdir = cwd
+				} else {
+					ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
+					fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+					return fmt.Errorf("v0.9 project detected — run `nself migrate` first")
+				}
+			}
+		}
+		if workdir == "" {
+			return fmt.Errorf("no nself project found in current directory or parents. Run 'nself init' to create a project")
+		}
 	}
 
 	if verbose && !quiet {
