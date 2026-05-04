@@ -47,6 +47,8 @@ jobs:
 
       - name: Verify fixture — detect step
         working-directory: internal/migration/testdata/v0.9-fixture
+        env:
+          NSELF_DEV_BUILD: "1"
         run: |
           result=$(../../../../nself migrate detect 2>&1 || true)
           echo "$result"
@@ -56,10 +58,14 @@ jobs:
           fi
 
       - name: Verify fixture — e2e Go tests
+        env:
+          NSELF_DEV_BUILD: "1"
         run: go test -mod=vendor -v -run TestE2E_ ./internal/migration/...
 
       - name: Verify start blocks on fixture
         working-directory: internal/migration/testdata/v0.9-fixture
+        env:
+          NSELF_DEV_BUILD: "1"
         run: |
           result=$(../../../../nself start 2>&1 || true)
           exit_code=$?
@@ -74,6 +80,8 @@ jobs:
 
       - name: Verify --allow-legacy bypasses block
         working-directory: internal/migration/testdata/v0.9-fixture
+        env:
+          NSELF_DEV_BUILD: "1"
         run: |
           result=$(../../../../nself start --allow-legacy 2>&1 || true)
           echo "$result"
@@ -86,6 +94,8 @@ jobs:
 
       - name: Verify build blocks on fixture
         working-directory: internal/migration/testdata/v0.9-fixture
+        env:
+          NSELF_DEV_BUILD: "1"
         run: |
           result=$(../../../../nself build 2>&1 || true)
           echo "$result"
