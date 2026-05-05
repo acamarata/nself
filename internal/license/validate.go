@@ -23,14 +23,14 @@ const DefaultCheckInterval = 6 * time.Hour
 
 // ValidationResult holds the outcome of a full license validation.
 type ValidationResult struct {
-	Valid          bool
-	Tier           string
-	Plugins        []string
-	ExpiresAt      time.Time
-	GraceState     GraceState
-	Message        string
-	FromCache      bool
-	WriteAllowed   bool
+	Valid        bool
+	Tier         string
+	Plugins      []string
+	ExpiresAt    time.Time
+	GraceState   GraceState
+	Message      string
+	FromCache    bool
+	WriteAllowed bool
 }
 
 // ValidateResponse is the JSON body returned by /license/validate on HTTP 200.

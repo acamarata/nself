@@ -13,5 +13,5 @@ func registerRoutes(r interface{ Handle(string, ...interface{}) }) {
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {}
-func handleData(w http.ResponseWriter, r *http.Request) {}
-func RequirePluginJWT(next http.Handler) http.Handler { return next }
+func handleData(w http.ResponseWriter, r *http.Request)   {}
+func RequirePluginJWT(next http.Handler) http.Handler     { return next }

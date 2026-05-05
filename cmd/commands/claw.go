@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/httptimeout"
 	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/spf13/cobra"
@@ -156,7 +157,7 @@ func registerPairCloud(ctx context.Context, code, serverURL string) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("pair registration failed: %w", err)
 	}
@@ -191,7 +192,7 @@ func registerPairLocal(ctx context.Context, code, serverURL string) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Nself-Internal", "true")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("local pair registration failed: %w", err)
 	}
@@ -216,7 +217,7 @@ func pollPairStatus(ctx context.Context, code string) (bool, error) {
 	}
 	req.Header.Set("X-Nself-Internal", "true")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -321,7 +322,7 @@ func runClawUnlock(cmd *cobra.Command, args []string) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("unlock request failed: %w\nMake sure the claw plugin is running (nself plugin install claw && nself start)", err)
 	}

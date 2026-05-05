@@ -79,4 +79,3 @@ func DiskCleanup() CleanupResult {
 
 	return result
 }
-

@@ -18,8 +18,8 @@ func TestTrustConfigDefaults(t *testing.T) {
 // test the UnsupportedOS path + the SkipXxx flag fields here.
 func TestTrustConfigSkipFlags(t *testing.T) {
 	cfg := TrustConfig{
-		SkipDNS:  true,
-		SkipSSL:  true,
+		SkipDNS:   true,
+		SkipSSL:   true,
 		SkipPorts: true,
 	}
 	if !cfg.SkipDNS {
@@ -80,9 +80,9 @@ func TestSetupAllSkipOnLinux(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "test.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := Setup(cfg)
 	if err != nil {
@@ -106,9 +106,9 @@ func TestSetupAllSkipOnDarwin(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "test.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := Setup(cfg)
 	if err != nil {

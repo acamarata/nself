@@ -14,10 +14,10 @@ import (
 
 // SchemaContext is the payload injected in X-Nself-Schema-Context.
 type SchemaContext struct {
-	Tables      []TableInfo `json:"tables"`
-	ActiveRole  string      `json:"active_role"`
-	SchemaHash  string      `json:"schema_hash,omitempty"`
-	CapturedAt  string      `json:"captured_at"`
+	Tables     []TableInfo `json:"tables"`
+	ActiveRole string      `json:"active_role"`
+	SchemaHash string      `json:"schema_hash,omitempty"`
+	CapturedAt string      `json:"captured_at"`
 }
 
 // TableInfo holds minimal schema information for one table.

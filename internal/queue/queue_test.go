@@ -28,12 +28,12 @@ func TestValidateQueueName_Valid(t *testing.T) {
 // TestValidateQueueName_Invalid verifies malformed queue names are rejected.
 func TestValidateQueueName_Invalid(t *testing.T) {
 	invalid := []string{
-		"",                      // empty
+		"",                       // empty
 		strings.Repeat("a", 129), // too long
-		"has space",             // space
-		"has/slash",             // slash
-		"has$dollar",            // dollar sign
-		"inject'; DROP TABLE",   // SQL injection attempt
+		"has space",              // space
+		"has/slash",              // slash
+		"has$dollar",             // dollar sign
+		"inject'; DROP TABLE",    // SQL injection attempt
 	}
 	for _, name := range invalid {
 		t.Run(name, func(t *testing.T) {

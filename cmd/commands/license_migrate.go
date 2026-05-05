@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
 )
-
 
 // licenseMigrateCmd — SP-04.O11 T11: dual-mode license migration.
 //
@@ -67,13 +67,13 @@ type migrateResponse struct {
 }
 
 type migrationStatusResponse struct {
-	Migrated              bool   `json:"migrated"`
-	MigrationStatus       string `json:"migration_status"`
-	MigratedToAccountID   string `json:"migrated_to_account_id"`
-	GraceExpiresAt        string `json:"grace_expires_at"`
-	DaysRemaining         int    `json:"days_remaining"`
-	CutoverEnforced       bool   `json:"cutover_enforced"`
-	Error                 string `json:"error"`
+	Migrated            bool   `json:"migrated"`
+	MigrationStatus     string `json:"migration_status"`
+	MigratedToAccountID string `json:"migrated_to_account_id"`
+	GraceExpiresAt      string `json:"grace_expires_at"`
+	DaysRemaining       int    `json:"days_remaining"`
+	CutoverEnforced     bool   `json:"cutover_enforced"`
+	Error               string `json:"error"`
 }
 
 func runLicenseMigrate(cmd *cobra.Command, args []string) error {
@@ -252,7 +252,7 @@ func sendMigrateRequest(ctx context.Context, licenseKey, accountID, pingURL stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.License.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func fetchMigrationStatus(ctx context.Context, key string, pingURL string) (*mig
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.License.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func fetchMigrationInfo(ctx context.Context, key string, pingURL string) (*migra
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.License.Do(req)
 	if err != nil {
 		return nil, err
 	}

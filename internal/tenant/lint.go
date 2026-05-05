@@ -28,13 +28,13 @@ type LintResult struct {
 
 // LintRLSReport is the top-level report returned by LintRLSFull.
 type LintRLSReport struct {
-	Tables           []LintResult     `json:"tables"`
-	TotalTables      int              `json:"total_tables"`
-	RLSEnabled       int              `json:"rls_enabled"`
-	RLSDisabled      int              `json:"rls_disabled"`
-	Allowlisted      int              `json:"allowlisted"`
-	Violations       int              `json:"violations"`
-	CoverageMatrix   []CoverageEntry  `json:"coverage_matrix,omitempty"`
+	Tables         []LintResult    `json:"tables"`
+	TotalTables    int             `json:"total_tables"`
+	RLSEnabled     int             `json:"rls_enabled"`
+	RLSDisabled    int             `json:"rls_disabled"`
+	Allowlisted    int             `json:"allowlisted"`
+	Violations     int             `json:"violations"`
+	CoverageMatrix []CoverageEntry `json:"coverage_matrix,omitempty"`
 }
 
 // CoverageEntry maps a table to its per-role RLS policy coverage.

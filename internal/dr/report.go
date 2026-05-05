@@ -12,16 +12,16 @@ import (
 // authenticated API call, and is also the payload posted to the #ops-dr
 // Telegram channel. Field names match the spec in p88-block-g section 4.4.
 type DrillReport struct {
-	DrillID       string          `json:"drill_id"`
-	StartedAt     time.Time       `json:"started_at"`
-	FinishedAt    time.Time       `json:"finished_at"`
-	VMID          string          `json:"vm_id"`
-	BackupID      string          `json:"backup_id"`
-	RTOActualSec  int64           `json:"rto_actual_sec"`
-	RPOActualSec  int64           `json:"rpo_actual_sec"`
-	Result        string          `json:"result"` // pass | fail
-	Scenarios     DrillScenarios  `json:"scenarios"`
-	CostEUR       float64         `json:"cost_eur"`
+	DrillID      string         `json:"drill_id"`
+	StartedAt    time.Time      `json:"started_at"`
+	FinishedAt   time.Time      `json:"finished_at"`
+	VMID         string         `json:"vm_id"`
+	BackupID     string         `json:"backup_id"`
+	RTOActualSec int64          `json:"rto_actual_sec"`
+	RPOActualSec int64          `json:"rpo_actual_sec"`
+	Result       string         `json:"result"` // pass | fail
+	Scenarios    DrillScenarios `json:"scenarios"`
+	CostEUR      float64        `json:"cost_eur"`
 }
 
 // DrillScenarios captures per-check pass/fail across the smoke suite. All

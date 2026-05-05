@@ -46,14 +46,14 @@ func ConfigView(cfg *config.Config, format string) (string, error) {
 
 // StatusInfo holds backup subsystem status.
 type StatusInfo struct {
-	LastRun     string `json:"last_run"`
-	NextRun     string `json:"next_run"`
-	Health      string `json:"health"` // healthy, warning, error
-	TotalSize   string `json:"total_size"`
-	BackupCount int    `json:"backup_count"`
-	RetentionDaily   int `json:"retention_daily"`
-	RetentionWeekly  int `json:"retention_weekly"`
-	RetentionMonthly int `json:"retention_monthly"`
+	LastRun          string `json:"last_run"`
+	NextRun          string `json:"next_run"`
+	Health           string `json:"health"` // healthy, warning, error
+	TotalSize        string `json:"total_size"`
+	BackupCount      int    `json:"backup_count"`
+	RetentionDaily   int    `json:"retention_daily"`
+	RetentionWeekly  int    `json:"retention_weekly"`
+	RetentionMonthly int    `json:"retention_monthly"`
 }
 
 // Status computes and returns the current backup subsystem status.

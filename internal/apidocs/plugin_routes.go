@@ -22,7 +22,7 @@ type PluginRoute struct {
 
 // pluginManifest mirrors the subset of plugin.yaml we need for REST routes.
 type pluginManifest struct {
-	Name      string        `json:"name"`
+	Name       string          `json:"name"`
 	RestRoutes []manifestRoute `json:"rest_routes"`
 }
 

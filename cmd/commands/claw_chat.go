@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/chzyer/readline"
 	"github.com/charmbracelet/glamour"
+	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
 )
 

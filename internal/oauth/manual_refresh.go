@@ -42,7 +42,7 @@ type ProviderResult struct {
 
 // RefreshResult aggregates all per-provider results.
 type RefreshResult struct {
-	Results  []ProviderResult
+	Results   []ProviderResult
 	FailCount int
 }
 

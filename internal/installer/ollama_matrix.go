@@ -18,14 +18,14 @@ type ModelRec struct {
 type TierKey string
 
 const (
-	TierNone     TierKey = "none"      // <4 GB
-	TierTiny     TierKey = "tiny"      // 4-6 GB
-	TierSmall    TierKey = "small"     // 6-8 GB
-	TierBalanced TierKey = "balanced"  // 8-12 GB
-	TierMedium   TierKey = "medium"    // 12-16 GB
-	TierLarge    TierKey = "large"     // 16-24 GB
-	TierXL       TierKey = "xl"        // 24-32 GB
-	TierXXL      TierKey = "xxl"       // >32 GB
+	TierNone     TierKey = "none"     // <4 GB
+	TierTiny     TierKey = "tiny"     // 4-6 GB
+	TierSmall    TierKey = "small"    // 6-8 GB
+	TierBalanced TierKey = "balanced" // 8-12 GB
+	TierMedium   TierKey = "medium"   // 12-16 GB
+	TierLarge    TierKey = "large"    // 16-24 GB
+	TierXL       TierKey = "xl"       // 24-32 GB
+	TierXXL      TierKey = "xxl"      // >32 GB
 )
 
 // RecommendationMatrix is keyed by nSelf CLI version. Only the current version

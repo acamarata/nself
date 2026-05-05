@@ -52,8 +52,8 @@ func TestDeadlineDays(t *testing.T) {
 // TestAnonymizedUserID verifies deterministic pseudonymisation and prefix.
 func TestAnonymizedUserID(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantHas  string
+		input   string
+		wantHas string
 	}{
 		{"user-abc123xyz", "gdpr-erased-"},
 		{"short", "gdpr-erased-"},

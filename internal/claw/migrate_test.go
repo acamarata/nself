@@ -73,13 +73,13 @@ func TestScanClawMigrationsNotExist(t *testing.T) {
 // lower-level filter via applyOrdered directly.
 func TestApplyOrdered(t *testing.T) {
 	tests := []struct {
-		name         string
-		all          []string
-		applied      map[string]bool
-		fromVersion  string
-		toVersion    string
-		wantApplied  []string
-		wantSkipped  []string
+		name        string
+		all         []string
+		applied     map[string]bool
+		fromVersion string
+		toVersion   string
+		wantApplied []string
+		wantSkipped []string
 	}{
 		{
 			name:        "apply all pending",

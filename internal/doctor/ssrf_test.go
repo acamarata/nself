@@ -33,11 +33,11 @@ func makeSSRFPaidDir(t *testing.T, root string, files map[string]string) string 
 // services with strong guard symbols, producing a PASS result.
 func allServiceFiles() map[string]string {
 	return map[string]string{
-		"ai/go/internal/providers/ssrf.go":         guardContentWithSymbol("ValidateOllamaURL"),
-		"mux/internal/safety/url_guard.go":          guardContentWithSymbol("IsBlockedIP"),
-		"browser/internal/safety/urlcheck.go":       guardContentWithSymbol("isBlockedIP"),
-		"claw/internal/tools/browser/client.go":     guardContentWithSymbol("checkSSRF"),
-		"notify/go/internal/push/ssrf.go":           guardContentWithSymbol("DialContext"),
+		"ai/go/internal/providers/ssrf.go":      guardContentWithSymbol("ValidateOllamaURL"),
+		"mux/internal/safety/url_guard.go":      guardContentWithSymbol("IsBlockedIP"),
+		"browser/internal/safety/urlcheck.go":   guardContentWithSymbol("isBlockedIP"),
+		"claw/internal/tools/browser/client.go": guardContentWithSymbol("checkSSRF"),
+		"notify/go/internal/push/ssrf.go":       guardContentWithSymbol("DialContext"),
 	}
 }
 

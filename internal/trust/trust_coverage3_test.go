@@ -138,9 +138,9 @@ func TestSetupDarwin_DNSNotSkipped(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "dns-test.local",
-		SkipDNS:   false, // will attempt DNS setup
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    false, // will attempt DNS setup
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := setupDarwin(cfg, &TrustResult{})
 	// err is always nil from setupDarwin (DNS failure is non-fatal, appended to Errors).
@@ -163,9 +163,9 @@ func TestSetupDarwin_SSLNotSkipped(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "ssl-test.local",
-		SkipDNS:   true,
-		SkipSSL:   false, // will attempt SSL setup
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    false, // will attempt SSL setup
+		SkipPorts:  true,
 	}
 	result, err := setupDarwin(cfg, &TrustResult{})
 	if err != nil {
@@ -184,11 +184,11 @@ func TestSetupDarwin_PortsNotSkipped(t *testing.T) {
 		t.Skip("darwin-only")
 	}
 	cfg := TrustConfig{
-		WorkDir:    t.TempDir(),
-		BaseDomain: "ports-test.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: false, // will attempt port forwarding setup
+		WorkDir:       t.TempDir(),
+		BaseDomain:    "ports-test.local",
+		SkipDNS:       true,
+		SkipSSL:       true,
+		SkipPorts:     false, // will attempt port forwarding setup
 		NginxHTTPPort: 8080,
 		NginxSSLPort:  8443,
 	}
@@ -272,9 +272,9 @@ func TestSetupLinux_DNSNotSkipped_OnDarwin(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "linux-stub.local",
-		SkipDNS:   false, // will call SetupDNSLinux (stub on macOS)
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    false, // will call SetupDNSLinux (stub on macOS)
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := setupLinux(cfg, &TrustResult{})
 	// The stub returns an error → appended to result.Errors. top-level err is nil.
@@ -299,11 +299,11 @@ func TestSetupLinux_PortsNotSkipped_OnDarwin(t *testing.T) {
 		t.Skip("exercising setupLinux stub on darwin only")
 	}
 	cfg := TrustConfig{
-		WorkDir:    t.TempDir(),
-		BaseDomain: "linux-ports.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: false, // calls SetupPortsLinux (stub on macOS)
+		WorkDir:       t.TempDir(),
+		BaseDomain:    "linux-ports.local",
+		SkipDNS:       true,
+		SkipSSL:       true,
+		SkipPorts:     false, // calls SetupPortsLinux (stub on macOS)
 		NginxHTTPPort: 8080,
 		NginxSSLPort:  8443,
 	}
@@ -328,9 +328,9 @@ func TestSetupLinux_SSLNotSkipped_OnDarwin(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "linux-ssl.local",
-		SkipDNS:   true,
-		SkipSSL:   false, // calls SetupMkcert
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    false, // calls SetupMkcert
+		SkipPorts:  true,
 	}
 	result, err := setupLinux(cfg, &TrustResult{})
 	if err != nil {
@@ -407,7 +407,7 @@ func TestCheckStatus_PortsBranch(t *testing.T) {
 		t.Skip("darwin-only")
 	}
 	cfg := TrustConfig{
-		WorkDir:      t.TempDir(),
+		WorkDir:       t.TempDir(),
 		NginxHTTPPort: 8080,
 		NginxSSLPort:  8443,
 	}

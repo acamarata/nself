@@ -40,12 +40,12 @@ const GraceHardThreshold = 7 * 24 * time.Hour
 
 // GraceCheckResult contains the outcome of a grace period check.
 type GraceCheckResult struct {
-	State       GraceState
-	CacheAge    time.Duration
-	ExpiresAt   time.Time
-	Tier        string
-	Message     string
-	CanProceed  bool
+	State        GraceState
+	CacheAge     time.Duration
+	ExpiresAt    time.Time
+	Tier         string
+	Message      string
+	CanProceed   bool
 	WriteAllowed bool
 }
 
@@ -91,10 +91,10 @@ func DetermineGraceState(entry *CacheEntry) GraceCheckResult {
 		}
 	case cacheAge < GraceHardThreshold:
 		return GraceCheckResult{
-			State:    GraceSoft,
-			CacheAge: cacheAge,
+			State:     GraceSoft,
+			CacheAge:  cacheAge,
 			ExpiresAt: expiresAt,
-			Tier:     entry.Tier,
+			Tier:      entry.Tier,
 			Message: fmt.Sprintf(
 				"License validation is %s old. Connect to the internet to refresh.\n"+
 					"Offline grace period expires in %s.",
@@ -106,10 +106,10 @@ func DetermineGraceState(entry *CacheEntry) GraceCheckResult {
 		}
 	default:
 		return GraceCheckResult{
-			State:    GraceHard,
-			CacheAge: cacheAge,
+			State:     GraceHard,
+			CacheAge:  cacheAge,
 			ExpiresAt: expiresAt,
-			Tier:     entry.Tier,
+			Tier:      entry.Tier,
 			Message: fmt.Sprintf(
 				"License validation expired (%s offline). "+
 					"Paid plugins are in read-only mode. Connect to refresh.",

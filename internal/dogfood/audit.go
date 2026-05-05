@@ -21,13 +21,13 @@ type AuditCheck struct {
 
 // AuditReport holds the complete dogfood audit results.
 type AuditReport struct {
-	ID         string       `json:"id"`
-	RanAt      time.Time    `json:"ran_at"`
-	Checks     []AuditCheck `json:"checks"`
-	PassCount  int          `json:"pass_count"`
-	FailCount  int          `json:"fail_count"`
-	WarnCount  int          `json:"warn_count"`
-	SkipCount  int          `json:"skip_count"`
+	ID        string       `json:"id"`
+	RanAt     time.Time    `json:"ran_at"`
+	Checks    []AuditCheck `json:"checks"`
+	PassCount int          `json:"pass_count"`
+	FailCount int          `json:"fail_count"`
+	WarnCount int          `json:"warn_count"`
+	SkipCount int          `json:"skip_count"`
 }
 
 // RunAudit executes all 21 dogfood checks against the current environment.

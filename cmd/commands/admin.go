@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/spf13/cobra"
 )
 
@@ -268,7 +269,7 @@ func runAdminHealth(cmd *cobra.Command, args []string) error {
 	}
 
 	start := time.Now()
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	elapsed := time.Since(start)
 
 	if err != nil {

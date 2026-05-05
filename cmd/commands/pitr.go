@@ -141,9 +141,9 @@ func runPITREnable(cmd *cobra.Command, _ []string) error {
 	}
 
 	pitrCfg := pitr.EnableConfig{
-		Destination:      destination,
-		EncryptRecipient: encRecipient,
-		RetentionDays:    retentionDays,
+		Destination:       destination,
+		EncryptRecipient:  encRecipient,
+		RetentionDays:     retentionDays,
 		WALArchiveTimeout: walTimeout,
 	}
 

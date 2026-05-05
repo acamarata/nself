@@ -149,7 +149,7 @@ var destructiveKeywords = []string{
 	"DROP ",
 	"TRUNCATE ",
 	"DELETE ",
-	"ALTER TABLE",  // only DROP COLUMN variant is blocked; ADD COLUMN is safe
+	"ALTER TABLE", // only DROP COLUMN variant is blocked; ADD COLUMN is safe
 }
 
 // filterDestructive splits sql into safe and blocked sections. Any statement that

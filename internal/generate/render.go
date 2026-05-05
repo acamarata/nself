@@ -58,8 +58,8 @@ func renderToFile(tmpl *template.Template, data interface{}, path string) error 
 type RenderOptions struct {
 	Langs    []string // subset of: typescript dart swift kotlin python
 	OutDir   string
-	NoHooks  bool   // TypeScript: skip hooks.ts
-	Pydantic bool   // Python: Pydantic v2 (always true per spec)
+	NoHooks  bool // TypeScript: skip hooks.ts
+	Pydantic bool // Python: Pydantic v2 (always true per spec)
 }
 
 // GenerateSummary reports counts for the diff summary line.

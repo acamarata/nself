@@ -3,6 +3,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,7 +32,7 @@ func CLIAuthBaseURL() string {
 // DeviceCodeResponse is returned by the device authorization endpoint.
 type DeviceCodeResponse struct {
 	DeviceCode      string `json:"device_code"`
-	UserCode        string `json:"user_code"`       // XXXX-YYYY format shown to user
+	UserCode        string `json:"user_code"`        // XXXX-YYYY format shown to user
 	VerificationURL string `json:"verification_url"` // nself.org/auth/cli?code=...
 	ExpiresInSec    int    `json:"expires_in"`
 	IntervalSec     int    `json:"interval"`
@@ -39,13 +40,13 @@ type DeviceCodeResponse struct {
 
 // TokenResponse is returned when the device code is exchanged for a token.
 type TokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	SessionToken string `json:"session_token"`
-	Email        string `json:"email"`
-	Tier         string `json:"tier"`
-	DisplayName  string `json:"display_name,omitempty"`
+	AccessToken  string   `json:"access_token"`
+	SessionToken string   `json:"session_token"`
+	Email        string   `json:"email"`
+	Tier         string   `json:"tier"`
+	DisplayName  string   `json:"display_name,omitempty"`
 	Bundles      []string `json:"bundles,omitempty"`
-	ExpiresAt    string `json:"expires_at"`
+	ExpiresAt    string   `json:"expires_at"`
 }
 
 // AccountInfo is the response from GET /auth/session.
@@ -64,15 +65,15 @@ type AccountInfo struct {
 
 // LicenseInfo represents a single license entry.
 type LicenseInfo struct {
-	ID             string   `json:"id"`
-	Product        string   `json:"product"`
-	Tier           string   `json:"tier"`
-	Bundles        []string `json:"bundles"`
-	SeatsIncluded  int      `json:"seats_included"`
-	SeatsUsed      int      `json:"seats_used"`
-	IsActive       bool     `json:"is_active"`
-	ActivatedAt    string   `json:"activated_at"`
-	ExpiresAt      string   `json:"expires_at"`
+	ID            string   `json:"id"`
+	Product       string   `json:"product"`
+	Tier          string   `json:"tier"`
+	Bundles       []string `json:"bundles"`
+	SeatsIncluded int      `json:"seats_included"`
+	SeatsUsed     int      `json:"seats_used"`
+	IsActive      bool     `json:"is_active"`
+	ActivatedAt   string   `json:"activated_at"`
+	ExpiresAt     string   `json:"expires_at"`
 }
 
 // AuthAPIError is returned when the auth server returns a non-2xx response.
@@ -93,10 +94,15 @@ var httpClient = &http.Client{
 
 // DeviceAuthorize initiates the device code flow.
 // Returns a DeviceCodeResponse with the code to display to the user.
-func DeviceAuthorize() (*DeviceCodeResponse, error) {
+func DeviceAuthorize(ctx context.Context) (*DeviceCodeResponse, error) {
 	url := fmt.Sprintf("%s/auth/device/authorize", AuthServerURL())
 
-	resp, err := httpClient.Post(url, "application/json", bytes.NewBufferString(`{}`))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBufferString(`{}`))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("contacting auth server: %w", err)
 	}
@@ -117,11 +123,16 @@ func DeviceAuthorize() (*DeviceCodeResponse, error) {
 // PollToken polls the auth server for the device code exchange result.
 // Returns (nil, nil) if the user hasn't authorized yet (authorization_pending).
 // Returns an error on timeout or other failure.
-func PollToken(deviceCode string) (*TokenResponse, error) {
+func PollToken(ctx context.Context, deviceCode string) (*TokenResponse, error) {
 	url := fmt.Sprintf("%s/auth/device/token", AuthServerURL())
 
 	body, _ := json.Marshal(map[string]string{"device_code": deviceCode})
-	resp, err := httpClient.Post(url, "application/json", bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("polling token: %w", err)
 	}
@@ -144,10 +155,10 @@ func PollToken(deviceCode string) (*TokenResponse, error) {
 }
 
 // RefreshToken exchanges an existing session for a new access token.
-func RefreshToken(accessToken string) (*TokenResponse, error) {
+func RefreshToken(ctx context.Context, accessToken string) (*TokenResponse, error) {
 	url := fmt.Sprintf("%s/auth/refresh", AuthServerURL())
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +183,13 @@ func RefreshToken(accessToken string) (*TokenResponse, error) {
 }
 
 // RevokeSession calls POST /auth/signout to revoke the session server-side.
-func RevokeSession(accessToken string, all bool) error {
+func RevokeSession(ctx context.Context, accessToken string, all bool) error {
 	url := fmt.Sprintf("%s/auth/signout", AuthServerURL())
 	if all {
 		url += "?all=true"
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return err
 	}
@@ -198,10 +209,10 @@ func RevokeSession(accessToken string, all bool) error {
 }
 
 // GetSession returns the account info for the given access token.
-func GetSession(accessToken string) (*AccountInfo, error) {
+func GetSession(ctx context.Context, accessToken string) (*AccountInfo, error) {
 	url := fmt.Sprintf("%s/auth/session", AuthServerURL())
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -230,10 +241,10 @@ func GetSession(accessToken string) (*AccountInfo, error) {
 }
 
 // GetLicenses returns the list of active licenses for the account.
-func GetLicenses(accessToken string) ([]LicenseInfo, error) {
+func GetLicenses(ctx context.Context, accessToken string) ([]LicenseInfo, error) {
 	url := fmt.Sprintf("%s/account/licenses", AuthServerURL())
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -263,16 +274,16 @@ func GetLicenses(accessToken string) ([]LicenseInfo, error) {
 
 // TeamMember represents one member of an account's team.
 type TeamMember struct {
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	JoinedAt  string `json:"joined_at"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	JoinedAt string `json:"joined_at"`
 }
 
 // GetTeamMembers returns the list of team members for the account.
-func GetTeamMembers(accessToken string) ([]TeamMember, error) {
+func GetTeamMembers(ctx context.Context, accessToken string) ([]TeamMember, error) {
 	url := fmt.Sprintf("%s/account/team", AuthServerURL())
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -298,10 +309,10 @@ func GetTeamMembers(accessToken string) ([]TeamMember, error) {
 }
 
 // InviteTeamMember sends a team invitation to the given email.
-func InviteTeamMember(accessToken, email string) error {
+func InviteTeamMember(ctx context.Context, accessToken, email string) error {
 	url := fmt.Sprintf("%s/account/team/invite", AuthServerURL())
 	body, _ := json.Marshal(map[string]string{"email": email})
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -320,9 +331,9 @@ func InviteTeamMember(accessToken, email string) error {
 }
 
 // RemoveTeamMember removes a member from the account's team.
-func RemoveTeamMember(accessToken, email string) error {
+func RemoveTeamMember(ctx context.Context, accessToken, email string) error {
 	url := fmt.Sprintf("%s/account/team/%s", AuthServerURL(), email)
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
 	}
@@ -340,10 +351,10 @@ func RemoveTeamMember(accessToken, email string) error {
 }
 
 // SetTeamMemberRole updates a member's role on the account's team.
-func SetTeamMemberRole(accessToken, email, role string) error {
+func SetTeamMemberRole(ctx context.Context, accessToken, email, role string) error {
 	url := fmt.Sprintf("%s/account/team/%s/role", AuthServerURL(), email)
 	body, _ := json.Marshal(map[string]string{"role": role})
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -364,9 +375,9 @@ func SetTeamMemberRole(accessToken, email, role string) error {
 // ─── Licenses (extended) ──────────────────────────────────────────────────────
 
 // ActivateLicense activates a license key on the current device.
-func ActivateLicense(accessToken, licenseID string) error {
+func ActivateLicense(ctx context.Context, accessToken, licenseID string) error {
 	url := fmt.Sprintf("%s/account/licenses/%s/activate", AuthServerURL(), licenseID)
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return err
 	}
@@ -395,9 +406,9 @@ type DeviceEntry struct {
 }
 
 // GetDevices returns the list of registered devices for the account.
-func GetDevices(accessToken string) ([]DeviceEntry, error) {
+func GetDevices(ctx context.Context, accessToken string) ([]DeviceEntry, error) {
 	url := fmt.Sprintf("%s/account/devices", AuthServerURL())
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -422,9 +433,9 @@ func GetDevices(accessToken string) ([]DeviceEntry, error) {
 }
 
 // RevokeDevice revokes a specific device session.
-func RevokeDevice(accessToken, deviceID string) error {
+func RevokeDevice(ctx context.Context, accessToken, deviceID string) error {
 	url := fmt.Sprintf("%s/account/devices/%s", AuthServerURL(), deviceID)
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
 	}
@@ -444,10 +455,10 @@ func RevokeDevice(accessToken, deviceID string) error {
 // ─── Transfer ─────────────────────────────────────────────────────────────────
 
 // TransferLicense transfers a license from the current account to another email.
-func TransferLicense(accessToken, licenseID, toEmail string) error {
+func TransferLicense(ctx context.Context, accessToken, licenseID, toEmail string) error {
 	url := fmt.Sprintf("%s/account/licenses/%s/transfer", AuthServerURL(), licenseID)
 	body, _ := json.Marshal(map[string]string{"to_email": toEmail})
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}

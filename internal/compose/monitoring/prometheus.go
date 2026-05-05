@@ -75,7 +75,7 @@ func Defaults() *PrometheusConfig {
 			"/etc/prometheus/rules/otel-alerts.yml",
 			"/etc/prometheus/rules/infra-alerts.yml",
 		},
-		Targets:            BuiltinTargets(),
+		Targets: BuiltinTargets(),
 	}
 }
 

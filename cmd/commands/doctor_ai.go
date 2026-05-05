@@ -20,11 +20,11 @@ import (
 
 // doctorAIFlags holds the flags for `nself doctor --ai`.
 type doctorAIFlags struct {
-	yes         bool // --yes: non-interactive, accept defaults
-	skipOllama  bool // --skip-ollama: skip local AI setup
-	skipPool    bool // --skip-pool: skip Gemini pool setup
-	headless    bool // --headless: print OAuth URL, don't open browser
-	jsonOut     bool // --json: machine output
+	yes        bool // --yes: non-interactive, accept defaults
+	skipOllama bool // --skip-ollama: skip local AI setup
+	skipPool   bool // --skip-pool: skip Gemini pool setup
+	headless   bool // --headless: print OAuth URL, don't open browser
+	jsonOut    bool // --json: machine output
 }
 
 // wizardStepResult tracks one wizard step outcome.

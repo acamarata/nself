@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	defaultTokenIssuer    = "https://ping.nself.org"
-	defaultTokenTTL       = 300
-	tokenRequestTimeout   = 10 * time.Second
+	defaultTokenIssuer  = "https://ping.nself.org"
+	defaultTokenTTL     = 300
+	tokenRequestTimeout = 10 * time.Second
 )
 
 // tokenRequest is the JSON body sent to POST /plugin/token.

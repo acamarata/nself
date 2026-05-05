@@ -39,10 +39,10 @@ var ErrTerraformNotFound = fmt.Errorf("infra: terraform binary not found; instal
 
 // PlanOptions holds parameters for terraform plan.
 type PlanOptions struct {
-	Provider   Provider
-	Domain     string
+	Provider    Provider
+	Domain      string
 	StateBucket string
-	ModulesDir string // defaults to terraform/modules/<provider>
+	ModulesDir  string // defaults to terraform/modules/<provider>
 }
 
 // ApplyOptions holds parameters for terraform apply.

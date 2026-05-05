@@ -46,6 +46,8 @@ type Flag struct {
 	RolloutPct   *int            `json:"rollout_pct"`
 	DefaultValue json.RawMessage `json:"default_value"`
 	Rules        json.RawMessage `json:"rules"`
+	SunsetAt     *time.Time      `json:"sunset_at,omitempty"`
+	RemovalDate  *time.Time      `json:"removal_date,omitempty"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }

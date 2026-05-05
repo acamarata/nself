@@ -224,9 +224,9 @@ only downloads layers that have changed.`,
 // ---------------------------------------------------------------------------
 
 var (
-	modelBenchPrompt  string
-	modelBenchRuns    int
-	modelBenchJSON    bool
+	modelBenchPrompt string
+	modelBenchRuns   int
+	modelBenchJSON   bool
 )
 
 // benchResult holds metrics for one model benchmark run.

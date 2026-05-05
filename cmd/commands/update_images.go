@@ -143,4 +143,3 @@ func fetchImageDigest(ctx context.Context, image string) (string, error) {
 
 	return "", fmt.Errorf("no digest found in manifest for %s", image)
 }
-

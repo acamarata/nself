@@ -185,9 +185,9 @@ func TestAuthResourceLimits_IndependentFromHasura(t *testing.T) {
 func TestHasuraRemoteSchemaPassthrough(t *testing.T) {
 	cfg := minimalConfig()
 	cfg.Passthrough = map[string]string{
-		"REMOTE_SCHEMA_UMMAPP_URL":   "http://host.docker.internal:3043/api/graphql",
-		"REMOTE_SCHEMA_UMMPRO_URL":   "http://host.docker.internal:3044/api/graphql",
-		"HASURA_EXTRA_FOO":           "bar",
+		"REMOTE_SCHEMA_UMMAPP_URL":    "http://host.docker.internal:3043/api/graphql",
+		"REMOTE_SCHEMA_UMMPRO_URL":    "http://host.docker.internal:3044/api/graphql",
+		"HASURA_EXTRA_FOO":            "bar",
 		"AUTH_PROVIDER_GITHUB_SECRET": "should-not-appear",
 	}
 

@@ -29,6 +29,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // maxClockSkew is the maximum tolerated difference between the JWT iat and the
@@ -180,7 +182,7 @@ func getPublicKey(ctx context.Context, kid string) (ed25519.PublicKey, error) {
 		return nil, fmt.Errorf("creating public-key request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.License.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching public key: %w", err)
 	}

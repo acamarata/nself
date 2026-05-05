@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/nself-org/cli/internal/confirm"
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/confirm"
 
 	"github.com/spf13/cobra"
 )
@@ -145,4 +145,3 @@ func removeFile(path string, removed, notFound []string) ([]string, []string) {
 	removed = append(removed, filepath.Base(path))
 	return removed, notFound
 }
-

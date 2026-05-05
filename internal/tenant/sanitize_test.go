@@ -25,7 +25,7 @@ func TestSanitize_TableDriven(t *testing.T) {
 		{"semicolon", "foo; DROP TABLE", "foo; DROP TABLE"}, // semicolons not escaped (belt-and-suspenders)
 		{"sql_injection_classic", "' OR '1'='1", "'' OR ''1''=''1"},
 		{"null_byte_passthrough", "foo\x00bar", "foo\x00bar"}, // sanitize doesn't strip nulls
-		{"unicode_quotes", "’s", "’s"},              // curly apostrophe — no escaping needed
+		{"unicode_quotes", "’s", "’s"},                        // curly apostrophe — no escaping needed
 		{"only_quotes", "''''", "''''''''"},
 		{"long_value", strings.Repeat("a", 256), strings.Repeat("a", 256)},
 	}
@@ -102,7 +102,7 @@ func TestValidateUUID_TableDriven(t *testing.T) {
 	invalid := []string{
 		"",
 		"not-a-uuid",
-		"550e8400-e29b-41d4-a716-44665544000",  // too short
+		"550e8400-e29b-41d4-a716-44665544000",   // too short
 		"550e8400-e29b-41d4-a716-4466554400001", // too long
 		"550e8400_e29b_41d4_a716_446655440000",  // underscores not dashes
 		"gg000000-0000-0000-0000-000000000000",  // non-hex char
@@ -165,14 +165,14 @@ func TestValidateDate_TableDriven(t *testing.T) {
 	}
 	invalid := []string{
 		"",
-		"2026-4-24",      // missing zero pad
-		"2026/04/24",     // slashes
-		"24-04-2026",     // wrong order
-		"2026-04-24T00",  // with time
-		"2026-130-1",     // wrong digit count in month field
+		"2026-4-24",     // missing zero pad
+		"2026/04/24",    // slashes
+		"24-04-2026",    // wrong order
+		"2026-04-24T00", // with time
+		"2026-130-1",    // wrong digit count in month field
 		"' OR '1'='1",   // SQL injection
-		"2026-04",        // missing day
-		"abcd-ef-gh",     // non-digits
+		"2026-04",       // missing day
+		"abcd-ef-gh",    // non-digits
 	}
 	for _, v := range valid {
 		if err := validateDate(v); err != nil {
@@ -311,7 +311,7 @@ func TestSanitize_UnicodeAndNullBytes(t *testing.T) {
 		{"null_byte", "foo\x00bar"},
 		{"unicode_smp", "𝕳𝖊𝖑𝖑𝖔"}, // supplementary plane chars
 		{"rtl_text", "مرحبا"},
-		{"zero_width", "a​b"},   // zero-width space
+		{"zero_width", "a​b"},        // zero-width space
 		{"bom", "\xef\xbb\xbfhello"}, // byte order mark (UTF-8 BOM)
 		{"sql_metachar_mix", "'; UPDATE tenants SET plan='enterprise' WHERE '1'='1"},
 		{"newline_in_value", "line1\nline2"},

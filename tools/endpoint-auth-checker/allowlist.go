@@ -6,13 +6,13 @@ package main
 // AllowedAuthMiddleware maps middleware function name to its source package.
 // Any route whose middleware chain contains at least one of these passes the gate.
 var AllowedAuthMiddleware = map[string]string{
-	"RequirePluginJWT":      "plugins/shared/go/auth",     // Q01 per-plugin JWT
-	"RequireLicenseKey":     "plugins/shared/go/auth",     // existing license middleware
+	"RequirePluginJWT":      "plugins/shared/go/auth", // Q01 per-plugin JWT
+	"RequireLicenseKey":     "plugins/shared/go/auth", // existing license middleware
 	"RequireHasuraAdminKey": "plugins/shared/go/auth",
-	"RequireInternalSecret": "plugins/shared/go/auth",     // deprecated — allowed until Phase B-3 cutover
+	"RequireInternalSecret": "plugins/shared/go/auth", // deprecated — allowed until Phase B-3 cutover
 	"RequireUserJWT":        "plugins/shared/go/auth",
 	"AdminOnly":             "admin/pkg/middleware",
-	"InternalNetworkOnly":   "web/backend/pkg/middleware",  // IP allowlist for internal-only routes
+	"InternalNetworkOnly":   "web/backend/pkg/middleware", // IP allowlist for internal-only routes
 }
 
 // ExemptRoute describes an HTTP path pattern that is explicitly allowed to have no auth,

@@ -242,4 +242,3 @@ func runSSLRenew(cmd *cobra.Command, args []string) error {
 	fmt.Println("SSL renew complete.")
 	return nil
 }
-

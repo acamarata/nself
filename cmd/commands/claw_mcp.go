@@ -12,6 +12,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/spf13/cobra"
 )
 
@@ -139,7 +140,7 @@ func mcpDoRequest(ctx context.Context, method, urlStr, apiKey string, body inter
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

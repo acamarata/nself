@@ -24,8 +24,8 @@ type proxyConfig struct {
 	ListenPort   int
 	HasuraURL    string
 	AdminSecret  string
-	AuthToken    string    // optional pre-shared token
-	InjectSchema bool      // whether to add X-Nself-Schema-Context
+	AuthToken    string         // optional pre-shared token
+	InjectSchema bool           // whether to add X-Nself-Schema-Context
 	IPAllowlist  []netip.Prefix // empty = no restriction
 	IdleTimeout  time.Duration
 }
@@ -33,7 +33,7 @@ type proxyConfig struct {
 // proxyServer is the HTTP reverse proxy that sits in front of Hasura.
 type proxyServer struct {
 	cfg          proxyConfig
-	schemaCtx    string       // base64-encoded schema context (refreshed periodically)
+	schemaCtx    string // base64-encoded schema context (refreshed periodically)
 	lastActivity time.Time
 	mux          *http.ServeMux
 }

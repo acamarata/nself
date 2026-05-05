@@ -22,6 +22,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
+	saferecover "github.com/nself-org/cli/internal/recover"
 )
 
 const freeLicensePrefix = "nself_free_"
@@ -85,7 +88,7 @@ type pluginInstallTelemetryPayload struct {
 // SendFreeInstallTelemetry fires a non-blocking install event to ping_api.
 // Errors are silently discarded — telemetry must never block installs.
 func SendFreeInstallTelemetry(pingURL string, licenseKey string, pluginName string) {
-	go func() {
+	saferecover.SafeGo("plugin_free_install_telemetry", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -105,11 +108,11 @@ func SendFreeInstallTelemetry(pingURL string, licenseKey string, pluginName stri
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 5 * time.Second}
-		resp, err := client.Do(req)
+		// httptimeout.Health (5s) matches the prior client timeout for fire-and-forget telemetry.
+		resp, err := httptimeout.Health.Do(req)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
-	}()
+	})
 }

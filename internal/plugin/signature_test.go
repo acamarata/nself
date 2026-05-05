@@ -98,9 +98,9 @@ func TestVerifyPluginSignature_EmptyInputsSkip(t *testing.T) {
 	archivePath := writeTempFile(t, content)
 
 	cases := []struct {
-		name    string
-		pubKey  string
-		sigHex  string
+		name   string
+		pubKey string
+		sigHex string
 	}{
 		{"empty public key", "", "aabbcc"},
 		{"empty signature", "aabbcc", ""},

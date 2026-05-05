@@ -37,8 +37,8 @@ type SecretEntry struct {
 // SecretStore is the full set of secrets for one environment.
 type SecretStore struct {
 	Secrets    map[string]SecretEntry `json:"secrets"`
-	Recipients []string              `json:"recipients"`
-	UpdatedAt  string                `json:"updated_at"`
+	Recipients []string               `json:"recipients"`
+	UpdatedAt  string                 `json:"updated_at"`
 }
 
 // ageKeyPath returns the default path for the age private key.
@@ -348,8 +348,8 @@ func Audit(projectRoot, env string) ([]AuditFinding, error) {
 		}
 		if lastRotated == "" {
 			findings = append(findings, AuditFinding{
-				Key:     key,
-				Issue:   "no creation or rotation timestamp",
+				Key:      key,
+				Issue:    "no creation or rotation timestamp",
 				Severity: "high",
 			})
 			continue

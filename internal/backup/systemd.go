@@ -12,17 +12,17 @@ import (
 
 // SystemdInstallOptions controls install of nself-backup systemd units.
 type SystemdInstallOptions struct {
-	FullAt        string // "HH:MM" UTC, e.g. "03:00"
-	WALEvery      string // e.g. "15m"
-	PruneAt       string // "HH:MM" UTC, default "04:00"
-	VerifyOnDay   string // systemd OnCalendar day name (Sun..Sat), default "Sun"
-	VerifyAt      string // "HH:MM", default "05:00"
-	UnitDir       string // default /etc/systemd/system
-	EnvFile       string // default /etc/nself/backup.env
-	BinaryPath    string // default /usr/local/bin/nself
-	ProjectDir    string // working directory for nself commands
-	Remote        string // e.g. b2-nclaw
-	DryRun        bool
+	FullAt      string // "HH:MM" UTC, e.g. "03:00"
+	WALEvery    string // e.g. "15m"
+	PruneAt     string // "HH:MM" UTC, default "04:00"
+	VerifyOnDay string // systemd OnCalendar day name (Sun..Sat), default "Sun"
+	VerifyAt    string // "HH:MM", default "05:00"
+	UnitDir     string // default /etc/systemd/system
+	EnvFile     string // default /etc/nself/backup.env
+	BinaryPath  string // default /usr/local/bin/nself
+	ProjectDir  string // working directory for nself commands
+	Remote      string // e.g. b2-nclaw
+	DryRun      bool
 }
 
 // SystemdUnitFiles maps filename -> unit contents.

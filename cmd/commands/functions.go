@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/spf13/cobra"
 )
 
@@ -41,8 +42,8 @@ The functions service must be enabled and running:
 // ---------------------------------------------------------------------------
 
 var functionsDeployFlags struct {
-	name    string
-	runtime string
+	name     string
+	runtime  string
 	envPairs []string
 }
 
@@ -282,7 +283,7 @@ func probeFunctionHealth(ctx context.Context, port int, name string) string {
 	if err != nil {
 		return "unknown"
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return "unreachable"
 	}
@@ -358,7 +359,7 @@ func runFunctionsInvoke(cmd *cobra.Command, args []string) error {
 		req.Header.Set("Authorization", "Bearer "+functionsInvokeFlags.auth)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("invoking %s: %w", name, err)
 	}

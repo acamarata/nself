@@ -19,6 +19,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/nginx"
 	"github.com/nself-org/cli/internal/version"
@@ -444,7 +445,7 @@ func postInstallEvent(pluginName string) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Plugin.Do(req)
 	if err != nil {
 		return // silent
 	}

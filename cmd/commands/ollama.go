@@ -19,7 +19,7 @@ var ollamaCmd = &cobra.Command{
 	Short: "Manage local Ollama LLM stack",
 	Long: `Manage the local Ollama container and its model library.
 
-After installing the ollama plugin (`+"`nself plugin install ollama`"+`), Ollama
+After installing the ollama plugin (` + "`nself plugin install ollama`" + `), Ollama
 runs as a service alongside the nSelf stack. Use these commands to pull, list,
 and remove models, and to check Ollama status.
 

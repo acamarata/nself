@@ -34,11 +34,11 @@ type CrossRegionBackupStatus struct {
 
 // rcloneFile represents a single entry in rclone's lsjson output.
 type rcloneFile struct {
-	Path     string `json:"Path"`
-	Name     string `json:"Name"`
-	Size     int64  `json:"Size"`
-	ModTime  string `json:"ModTime"`
-	IsDir    bool   `json:"IsDir"`
+	Path    string `json:"Path"`
+	Name    string `json:"Name"`
+	Size    int64  `json:"Size"`
+	ModTime string `json:"ModTime"`
+	IsDir   bool   `json:"IsDir"`
 }
 
 // SyncBackupToRemote syncs local backups to the remote location using rclone.

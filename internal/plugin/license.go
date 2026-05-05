@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // validLicensePrefixes lists the accepted license key prefixes.
@@ -36,15 +37,15 @@ var paidPlugins = map[string]bool{
 	"compliance":      true,
 	"entitlements":    true,
 	// Content
-	"activity-feed":   true,
-	"cms":             true,
-	"documents":       true,
-	"knowledge-base":  true,
-	"moderation":      true,
-	"photos":          true,
-	"social":          true,
-	"support":         true,
-	"calendar":        true,
+	"activity-feed":  true,
+	"cms":            true,
+	"documents":      true,
+	"knowledge-base": true,
+	"moderation":     true,
+	"photos":         true,
+	"social":         true,
+	"support":        true,
+	"calendar":       true,
 	// AI & Automation
 	"ai":        true,
 	"claw":      true,
@@ -179,7 +180,7 @@ func validateLicenseRemoteWithEntitlements(ctx context.Context, key string, ping
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.License.Do(req)
 	if err != nil {
 		return false, nil, fmt.Errorf("license validation request failed: %w", err)
 	}

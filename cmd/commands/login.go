@@ -46,7 +46,7 @@ func runLogin(cmd *cobra.Command, _ []string) error {
 
 	// Step 1: request device code.
 	ui.Info("Contacting nSelf auth server...")
-	dcResp, err := auth.DeviceAuthorize()
+	dcResp, err := auth.DeviceAuthorize(cmdCtx(cmd))
 	if err != nil {
 		return fmt.Errorf("login: %w", err)
 	}
@@ -117,4 +117,3 @@ func runLogin(cmd *cobra.Command, _ []string) error {
 
 	return nil
 }
-

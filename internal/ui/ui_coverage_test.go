@@ -328,7 +328,7 @@ func TestPadRight_exactPadding(t *testing.T) {
 		want  int // minimum expected len of result
 	}{
 		{"hello", 10, 10},
-		{"hello", 3, 5},  // already longer — returns styled as-is
+		{"hello", 3, 5}, // already longer — returns styled as-is
 		{"", 5, 5},
 	}
 	for _, tc := range cases {

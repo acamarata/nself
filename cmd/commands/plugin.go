@@ -236,7 +236,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			statusBadge = " [DEPRECATED]"
 		case "eol":
 			statusBadge = " [EOL]"
-		// "stable" and "" show no badge — clean install signal
+			// "stable" and "" show no badge — clean install signal
 		}
 		if detailed {
 			fmt.Printf("%-20s %-10s %-12s%s%s\n", p.Name, p.Version, p.Category, stateTag, statusBadge)

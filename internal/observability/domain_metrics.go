@@ -6,16 +6,16 @@ import (
 
 // ClawMetrics holds the 10 claw-specific metrics per spec §1.7.
 type ClawMetrics struct {
-	MessagesTotal              *prometheus.CounterVec
-	ExtractionsTotal           *prometheus.CounterVec
-	ExtractionDuration         *prometheus.HistogramVec
-	DedupRatio                 prometheus.Histogram
+	MessagesTotal                 *prometheus.CounterVec
+	ExtractionsTotal              *prometheus.CounterVec
+	ExtractionDuration            *prometheus.HistogramVec
+	DedupRatio                    prometheus.Histogram
 	TopicClassificationConfidence prometheus.Histogram
-	TopicsActive               prometheus.Gauge
-	MemoryBytes                prometheus.Gauge
-	GraphEdgesTotal            prometheus.Counter
-	SearchLatency              *prometheus.HistogramVec
-	EmbeddingDim               prometheus.Gauge
+	TopicsActive                  prometheus.Gauge
+	MemoryBytes                   prometheus.Gauge
+	GraphEdgesTotal               prometheus.Counter
+	SearchLatency                 *prometheus.HistogramVec
+	EmbeddingDim                  prometheus.Gauge
 }
 
 // NewClawMetrics creates and registers claw domain metrics.
@@ -161,11 +161,11 @@ func NewMuxMetrics(reg *prometheus.Registry) *MuxMetrics {
 
 // PingMetrics holds the 5 ping_api/license metrics per spec §1.9.
 type PingMetrics struct {
-	LicenseChecksTotal    *prometheus.CounterVec
-	LicenseCheckDuration  *prometheus.HistogramVec
-	PluginInstallsTotal   *prometheus.CounterVec
-	PluginUptimeSeconds   *prometheus.GaugeVec
-	PluginVersionInfo     *prometheus.GaugeVec
+	LicenseChecksTotal   *prometheus.CounterVec
+	LicenseCheckDuration *prometheus.HistogramVec
+	PluginInstallsTotal  *prometheus.CounterVec
+	PluginUptimeSeconds  *prometheus.GaugeVec
+	PluginVersionInfo    *prometheus.GaugeVec
 }
 
 // NewPingMetrics creates and registers ping_api metrics.

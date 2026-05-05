@@ -164,9 +164,9 @@ func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, ta
 		"exec", container,
 		"pg_basebackup",
 		"-U", user,
-		"-Ft", // tar format
-		"-Xf", // fetch WAL files
-		"-z",  // gzip compression
+		"-Ft",     // tar format
+		"-Xf",     // fetch WAL files
+		"-z",      // gzip compression
 		"-D", "-", // stream to stdout
 	}
 

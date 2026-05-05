@@ -443,11 +443,11 @@ func TestClassifyInitError_Other(t *testing.T) {
 // ever returns one of the four documented enum values.
 func TestClassifyInitError_CategoryIsEnum(t *testing.T) {
 	allowed := map[string]bool{
-		"":                 true, // nil case
-		"timeout":          true,
+		"":                  true, // nil case
+		"timeout":           true,
 		"permission-denied": true,
-		"docker-not-found": true,
-		"other":            true,
+		"docker-not-found":  true,
+		"other":             true,
 	}
 	inputs := []error{
 		nil,

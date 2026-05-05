@@ -22,12 +22,12 @@ type HealthChecker interface {
 
 // Options configures the default server.
 type Options struct {
-	Plugin    string
-	Version   string
-	Metrics   *metrics.Registry // optional; if nil, a new one is created
-	Ready     HealthChecker     // optional; used by /readyz
-	Timeout   time.Duration     // request timeout; default 30s
-	Routes    func(r chi.Router, m *metrics.Registry)
+	Plugin  string
+	Version string
+	Metrics *metrics.Registry // optional; if nil, a new one is created
+	Ready   HealthChecker     // optional; used by /readyz
+	Timeout time.Duration     // request timeout; default 30s
+	Routes  func(r chi.Router, m *metrics.Registry)
 }
 
 // New returns a *chi.Mux with the default nSelf plugin stack mounted:

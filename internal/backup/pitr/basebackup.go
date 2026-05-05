@@ -13,7 +13,6 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
-
 // TakeBaseBackup runs pg_basebackup against the project's Postgres container
 // and stores the resulting tar archive at destDir. If encryptRecipient is
 // non-empty the archive is encrypted with age before writing.
@@ -48,8 +47,8 @@ func TakeBaseBackup(ctx context.Context, cfg *config.Config, destDir, encryptRec
 		"-h", host,
 		"-p", strconv.Itoa(port),
 		"-U", user,
-		"-F", "t",  // tar format
-		"-z",       // gzip compress
+		"-F", "t", // tar format
+		"-z",           // gzip compress
 		"-X", "stream", // stream WAL during backup
 		"--checkpoint=fast",
 		"-f", tarPath,

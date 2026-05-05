@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 const probeTimeout = 5 * time.Second
@@ -182,7 +184,7 @@ func probeHTTP(ctx context.Context, service, url string, decide func(int, []byte
 		}
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Health.Do(req)
 	elapsed := time.Since(start)
 	if err != nil {
 		return &HealthResult{

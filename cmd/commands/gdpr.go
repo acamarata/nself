@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/nself-org/cli/internal/gdpr"
 	"github.com/nself-org/cli/internal/ui"
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 )
 

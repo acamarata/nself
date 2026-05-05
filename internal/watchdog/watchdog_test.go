@@ -39,7 +39,7 @@ func TestWatchdogCircuitBreaker(t *testing.T) {
 	}
 
 	cfg := Config{
-		Enabled:               true,
+		Enabled:                true,
 		CircuitBreakerAttempts: 3,
 		CircuitBreakerWindow:   10 * time.Minute,
 		PollInterval:           50 * time.Millisecond,

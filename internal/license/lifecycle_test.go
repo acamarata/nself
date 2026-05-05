@@ -4,15 +4,15 @@
 // Sprint D3 T09 — security-critical E2E (Weight: M).
 //
 // Coverage (≥10 cases):
-//   1. happy path: server up → ValidateFull populates cache → ValidationResult.Valid=true
-//   2. fresh cache (1h) + server down → fail-open, GraceValid, FromCache=true
-//   3. soft-grace cache (48h) + server down → fail-open with GraceSoft warning
-//   4. hard-grace cache (8d, > 7d) + server down → still proceeds but WriteAllowed=false
-//   5. expired license + server down → fail-closed, Valid=false
-//   6. server reconnect after offline → cache refreshes, GraceValid restored
-//   7. server reports invalid (revoked) → CLI blocks (Valid=false)
-//   8. cache key mismatch → blocks (cached entry was for different key)
-//   9. ping URL via env override (LICENSE_PING_URL) is honoured
+//  1. happy path: server up → ValidateFull populates cache → ValidationResult.Valid=true
+//  2. fresh cache (1h) + server down → fail-open, GraceValid, FromCache=true
+//  3. soft-grace cache (48h) + server down → fail-open with GraceSoft warning
+//  4. hard-grace cache (8d, > 7d) + server down → still proceeds but WriteAllowed=false
+//  5. expired license + server down → fail-closed, Valid=false
+//  6. server reconnect after offline → cache refreshes, GraceValid restored
+//  7. server reports invalid (revoked) → CLI blocks (Valid=false)
+//  8. cache key mismatch → blocks (cached entry was for different key)
+//  9. ping URL via env override (LICENSE_PING_URL) is honoured
 //  10. tampered cache field (key_hash mismatch with current key) blocks validation
 //  11. RefreshCache fails when server unreachable (no cache update on error)
 //  12. ImportCache rejects unsigned cache without skip-verify

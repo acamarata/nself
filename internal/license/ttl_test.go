@@ -97,7 +97,10 @@ func TestPreExpiryWarning_NilEntry(t *testing.T) {
 }
 
 func TestItoa(t *testing.T) {
-	cases := []struct{ n int; want string }{{0, "0"}, {1, "1"}, {7, "7"}, {30, "30"}, {365, "365"}}
+	cases := []struct {
+		n    int
+		want string
+	}{{0, "0"}, {1, "1"}, {7, "7"}, {30, "30"}, {365, "365"}}
 	for _, c := range cases {
 		if got := itoa(c.n); got != c.want {
 			t.Errorf("itoa(%d) = %q, want %q", c.n, got, c.want)

@@ -15,7 +15,7 @@ import (
 
 // Config holds watchdog configuration.
 type Config struct {
-	Enabled               bool
+	Enabled                bool
 	CircuitBreakerAttempts int           // default 3
 	CircuitBreakerWindow   time.Duration // default 10m
 	EscalationWebhook      string
@@ -25,7 +25,7 @@ type Config struct {
 // DefaultConfig returns watchdog configuration with defaults.
 func DefaultConfig() Config {
 	return Config{
-		Enabled:               true,
+		Enabled:                true,
 		CircuitBreakerAttempts: 3,
 		CircuitBreakerWindow:   10 * time.Minute,
 		PollInterval:           30 * time.Second,
@@ -36,18 +36,18 @@ func DefaultConfig() Config {
 type CircuitState string
 
 const (
-	CircuitClosed  CircuitState = "closed"  // healthy, restarts allowed
-	CircuitOpen    CircuitState = "open"    // tripped, restarts blocked
+	CircuitClosed CircuitState = "closed" // healthy, restarts allowed
+	CircuitOpen   CircuitState = "open"   // tripped, restarts blocked
 )
 
 // ServiceCircuit tracks circuit breaker state for one service.
 type ServiceCircuit struct {
-	Service      string       `json:"service"`
-	State        CircuitState `json:"state"`
-	Attempts     int          `json:"attempts"`
-	LastRestart  time.Time    `json:"last_restart"`
-	WindowStart  time.Time    `json:"window_start"`
-	TrippedAt    time.Time    `json:"tripped_at,omitempty"`
+	Service     string       `json:"service"`
+	State       CircuitState `json:"state"`
+	Attempts    int          `json:"attempts"`
+	LastRestart time.Time    `json:"last_restart"`
+	WindowStart time.Time    `json:"window_start"`
+	TrippedAt   time.Time    `json:"tripped_at,omitempty"`
 }
 
 // Event records a watchdog action.

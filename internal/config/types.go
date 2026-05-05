@@ -179,7 +179,8 @@ type AuthConfig struct {
 	CPULimit           string `env:"AUTH_CPU_LIMIT"`           // 0.25
 	ExtraRedirectURLs  string `env:"AUTH_EXTRA_REDIRECT_URLS"` // comma-separated extra redirect URLs
 	WebAuthnEnabled    bool   `env:"AUTH_WEBAUTHN_ENABLED"`
-	LogLevel           string `env:"AUTH_LOG_LEVEL"` // info
+	MFATOTPEnabled     bool   `env:"AUTH_MFA_TOTP_ENABLED"` // false
+	LogLevel           string `env:"AUTH_LOG_LEVEL"`        // info
 }
 
 // NginxConfig holds Nginx reverse proxy configuration.
@@ -533,14 +534,14 @@ type InternalRoute struct {
 // ApiDocsConfig holds the api_docs section from nself.yaml.
 // Controls generation of the OpenAPI 3.1 spec and Scalar interactive docs page.
 type ApiDocsConfig struct {
-	Enabled       bool     `env:"API_DOCS_ENABLED"`      // default: true
-	Path          string   `env:"API_DOCS_PATH"`         // serve path, default: /docs
-	Title         string   `env:"API_DOCS_TITLE"`        // defaults to "<ProjectName> API"
-	Theme         string   `env:"API_DOCS_THEME"`        // default | moon | purple | solarized
-	AuthEnvVar    string   `env:"API_DOCS_AUTH_ENV_VAR"` // env var with bearer token for try-out
-	HideEndpoints []string // paths to exclude from the spec
-	GraphQLEnabled  bool   `env:"API_DOCS_GRAPHQL_ENABLED"`  // default: true
-	GraphQLEndpoint string `env:"API_DOCS_GRAPHQL_ENDPOINT"` // default: /v1/graphql
+	Enabled         bool     `env:"API_DOCS_ENABLED"`      // default: true
+	Path            string   `env:"API_DOCS_PATH"`         // serve path, default: /docs
+	Title           string   `env:"API_DOCS_TITLE"`        // defaults to "<ProjectName> API"
+	Theme           string   `env:"API_DOCS_THEME"`        // default | moon | purple | solarized
+	AuthEnvVar      string   `env:"API_DOCS_AUTH_ENV_VAR"` // env var with bearer token for try-out
+	HideEndpoints   []string // paths to exclude from the spec
+	GraphQLEnabled  bool     `env:"API_DOCS_GRAPHQL_ENABLED"`  // default: true
+	GraphQLEndpoint string   `env:"API_DOCS_GRAPHQL_ENDPOINT"` // default: /v1/graphql
 }
 
 // IsProduction reports whether the project environment is production.

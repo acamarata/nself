@@ -111,42 +111,41 @@ func (dc *DockerCompose) MarshalYAML() (interface{}, error) {
 
 // ServiceConfig represents a single service in docker-compose.yml.
 type ServiceConfig struct {
-	Image         string              `yaml:"image,omitempty"`
-	Build         *BuildConfig        `yaml:"build,omitempty"`
-	ContainerName string              `yaml:"container_name,omitempty"`
-	Restart       string              `yaml:"restart,omitempty"`
-	ShmSize       string              `yaml:"shm_size,omitempty"`
-	User          string              `yaml:"user,omitempty"`
-	Networks      []string            `yaml:"networks,omitempty"`
-	DependsOn     map[string]DepOn    `yaml:"depends_on,omitempty"`
-	Environment   map[string]string   `yaml:"environment,omitempty"`
-	Volumes       []string            `yaml:"volumes,omitempty"`
-	Ports         []string            `yaml:"ports,omitempty"`
-	Expose        []string            `yaml:"expose,omitempty"`
-	Command       interface{}         `yaml:"command,omitempty"`
-	Entrypoint    interface{}         `yaml:"entrypoint,omitempty"`
-	Healthcheck   *Healthcheck        `yaml:"healthcheck,omitempty"`
-	Deploy        *DeployConfig       `yaml:"deploy,omitempty"`
-	Logging       *LoggingConfig      `yaml:"logging,omitempty"`
-	SecurityOpt   []string            `yaml:"security_opt,omitempty"`
-	CapDrop       []string            `yaml:"cap_drop,omitempty"`
-	CapAdd        []string            `yaml:"cap_add,omitempty"`
-	StopGrace     string              `yaml:"stop_grace_period,omitempty"`
-	Labels        map[string]string   `yaml:"labels,omitempty"`
-	Profiles      []string            `yaml:"profiles,omitempty"`
-	ReadOnly      bool                `yaml:"read_only,omitempty"`
-	Tmpfs         []string            `yaml:"tmpfs,omitempty"`
-	Privileged    bool                `yaml:"privileged,omitempty"`
-	WorkingDir    string              `yaml:"working_dir,omitempty"`
-	StdinOpen     bool                `yaml:"stdin_open,omitempty"`
-	Tty           bool                `yaml:"tty,omitempty"`
+	Image         string            `yaml:"image,omitempty"`
+	Build         *BuildConfig      `yaml:"build,omitempty"`
+	ContainerName string            `yaml:"container_name,omitempty"`
+	Restart       string            `yaml:"restart,omitempty"`
+	ShmSize       string            `yaml:"shm_size,omitempty"`
+	User          string            `yaml:"user,omitempty"`
+	Networks      []string          `yaml:"networks,omitempty"`
+	DependsOn     map[string]DepOn  `yaml:"depends_on,omitempty"`
+	Environment   map[string]string `yaml:"environment,omitempty"`
+	Volumes       []string          `yaml:"volumes,omitempty"`
+	Ports         []string          `yaml:"ports,omitempty"`
+	Expose        []string          `yaml:"expose,omitempty"`
+	Command       interface{}       `yaml:"command,omitempty"`
+	Entrypoint    interface{}       `yaml:"entrypoint,omitempty"`
+	Healthcheck   *Healthcheck      `yaml:"healthcheck,omitempty"`
+	Deploy        *DeployConfig     `yaml:"deploy,omitempty"`
+	Logging       *LoggingConfig    `yaml:"logging,omitempty"`
+	SecurityOpt   []string          `yaml:"security_opt,omitempty"`
+	CapDrop       []string          `yaml:"cap_drop,omitempty"`
+	CapAdd        []string          `yaml:"cap_add,omitempty"`
+	StopGrace     string            `yaml:"stop_grace_period,omitempty"`
+	Labels        map[string]string `yaml:"labels,omitempty"`
+	Profiles      []string          `yaml:"profiles,omitempty"`
+	ReadOnly      bool              `yaml:"read_only,omitempty"`
+	Tmpfs         []string          `yaml:"tmpfs,omitempty"`
+	Privileged    bool              `yaml:"privileged,omitempty"`
+	WorkingDir    string            `yaml:"working_dir,omitempty"`
+	StdinOpen     bool              `yaml:"stdin_open,omitempty"`
+	Tty           bool              `yaml:"tty,omitempty"`
 
 	// CapDropComment is an optional comment injected into the generated YAML
 	// above cap_add when cap_drop is intentionally omitted. Not serialized as
 	// a YAML field — rendered as a comment via MarshalYAML.
 	CapDropComment string `yaml:"-"`
 }
-
 
 // DepOn represents a service dependency with a condition.
 type DepOn struct {

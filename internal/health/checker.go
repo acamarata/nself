@@ -11,6 +11,8 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/httptimeout"
+	saferecover "github.com/nself-org/cli/internal/recover"
 )
 
 // HealthResult holds the outcome of a single service health check.
@@ -228,7 +230,7 @@ func CheckEndpoint(ctx context.Context, url string) (*HealthResult, error) {
 	}
 
 	start := time.Now()
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Health.Do(req)
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -264,7 +266,7 @@ func WatchHealth(ctx context.Context, cfg *config.Config, workdir string, interv
 
 	ch := make(chan *HealthReport)
 
-	go func() {
+	saferecover.SafeGo("health_watch", func() {
 		defer close(ch)
 
 		ticker := time.NewTicker(interval)
@@ -295,7 +297,7 @@ func WatchHealth(ctx context.Context, cfg *config.Config, workdir string, interv
 				}
 			}
 		}
-	}()
+	})
 
 	return ch, nil
 }

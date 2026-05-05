@@ -28,6 +28,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	saferecover "github.com/nself-org/cli/internal/recover"
 	"sort"
 	"strings"
 	"sync"
@@ -490,7 +492,7 @@ func ResetFailOpenWarning() {
 // before ctx is cancelled.
 func StartRevocationRefresher(ctx context.Context) (stop func()) {
 	loopCtx, cancel := context.WithCancel(ctx)
-	go func() {
+	saferecover.SafeGo("license_revocation_refresh", func() {
 		// Initial best-effort refresh on startup.
 		if _, err := RefreshRevocationList(loopCtx); err != nil {
 			fmt.Fprintf(os.Stderr,
@@ -509,6 +511,6 @@ func StartRevocationRefresher(ctx context.Context) (stop func()) {
 				}
 			}
 		}
-	}()
+	})
 	return cancel
 }

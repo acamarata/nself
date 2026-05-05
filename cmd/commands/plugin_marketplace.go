@@ -51,10 +51,10 @@ type marketplaceStats struct {
 
 // marketplaceResponse is the top-level shape of GET /marketplace.
 type marketplaceResponse struct {
-	Plugins    []marketplacePlugin      `json:"plugins"`
-	Bundles    []json.RawMessage        `json:"bundles"`
-	Categories []json.RawMessage        `json:"categories"`
-	Stats      marketplaceStats         `json:"stats"`
+	Plugins    []marketplacePlugin `json:"plugins"`
+	Bundles    []json.RawMessage   `json:"bundles"`
+	Categories []json.RawMessage   `json:"categories"`
+	Stats      marketplaceStats    `json:"stats"`
 }
 
 // resolveMarketplaceURL returns the marketplace base URL, respecting the
