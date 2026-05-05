@@ -43,6 +43,9 @@ jobs:
       - name: Build CLI binary
         run: make build
 
+      - name: Set up fixture — generate .env from .env.example
+        run: cp internal/migration/testdata/v0.9-fixture/.env.example internal/migration/testdata/v0.9-fixture/.env
+
       - name: Verify fixture — detect step
         working-directory: internal/migration/testdata/v0.9-fixture
         run: |
