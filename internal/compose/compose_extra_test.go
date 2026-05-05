@@ -9,7 +9,6 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
-
 // ── ResolveImage ──────────────────────────────────────────────────────────────
 
 func TestResolveImage_WithDigest(t *testing.T) {
@@ -292,9 +291,9 @@ func TestBuildAdminService_ContainerName(t *testing.T) {
 func TestBuildFunctionsService_HasImage(t *testing.T) {
 	cfg := minimalCfg()
 	cfg.Functions = config.FunctionsConfig{
-		Enabled:  true,
-		Version:  "latest",
-		Port:     3008,
+		Enabled: true,
+		Version: "latest",
+		Port:    3008,
 	}
 	g := NewGenerator(cfg)
 	svc := g.buildFunctionsService()

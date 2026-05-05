@@ -32,7 +32,7 @@ const (
 type SeedFile struct {
 	Path        string
 	Name        string
-	Env         string   // _common, dev, staging, prod, or fixture name
+	Env         string // _common, dev, staging, prod, or fixture name
 	Idempotent  bool
 	Destructive bool
 	DependsOn   []string

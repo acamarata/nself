@@ -28,20 +28,21 @@ const (
 
 // rlsTableInfo describes a single np_* table's RLS state from pg_class.
 type rlsTableInfo struct {
-	TableName          string
-	RLSEnabled         bool // pg_class.relrowsecurity
-	RLSForced          bool // pg_class.relforcerowsecurity
-	PolicyCount        int
-	HasTenantIDColumn  bool
+	TableName         string
+	RLSEnabled        bool // pg_class.relrowsecurity
+	RLSForced         bool // pg_class.relforcerowsecurity
+	PolicyCount       int
+	HasTenantIDColumn bool
 }
 
 // CheckRLSEnforcement implements PERM-RLS-01.
 //
 // It queries Postgres pg_class for every np_* table and verifies:
-//   (a) RLS is enabled (relrowsecurity = true)
-//   (b) at least one policy exists
-//   (c) PatternTenantScoped tables have FORCE RLS (relforcerowsecurity = true)
-//   (d) tables with tenant_id column have Hasura row filter for that column
+//
+//	(a) RLS is enabled (relrowsecurity = true)
+//	(b) at least one policy exists
+//	(c) PatternTenantScoped tables have FORCE RLS (relforcerowsecurity = true)
+//	(d) tables with tenant_id column have Hasura row filter for that column
 //
 // Violations are WARN by default. Pass strict=true to escalate to fail.
 //

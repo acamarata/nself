@@ -19,8 +19,8 @@ type IR struct {
 
 // IRTable represents one database table / GraphQL object type.
 type IRTable struct {
-	TypeName string    // PascalCase type name (e.g. UserProfile)
-	OrigName string    // original name from Hasura (e.g. user_profile)
+	TypeName string // PascalCase type name (e.g. UserProfile)
+	OrigName string // original name from Hasura (e.g. user_profile)
 	Columns  []IRColumn
 }
 
@@ -46,11 +46,11 @@ type IREnum struct {
 
 // IROperation is one .graphql operation (query / mutation / subscription).
 type IROperation struct {
-	Name        string // PascalCase name
-	ConstName   string // camelCase const (TS), variable name (others)
-	Kind        string // query | mutation | subscription
-	Document    string // raw GraphQL text
-	Variables   []IRColumn
+	Name         string // PascalCase name
+	ConstName    string // camelCase const (TS), variable name (others)
+	Kind         string // query | mutation | subscription
+	Document     string // raw GraphQL text
+	Variables    []IRColumn
 	ResultFields []IRColumn
 }
 

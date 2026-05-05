@@ -118,11 +118,11 @@ func TestValidateProjectName_Valid(t *testing.T) {
 func TestValidateProjectName_Invalid(t *testing.T) {
 	invalid := []string{
 		"",
-		"a",               // single char
-		"My-Project",      // uppercase
-		"-start",          // starts with dash
-		"end-",            // ends with dash
-		"has_underscore",  // underscore
+		"a",                     // single char
+		"My-Project",            // uppercase
+		"-start",                // starts with dash
+		"end-",                  // ends with dash
+		"has_underscore",        // underscore
 		strings.Repeat("a", 31), // too long
 	}
 	for _, name := range invalid {

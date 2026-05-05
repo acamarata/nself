@@ -283,10 +283,10 @@ func TestCanonicalServiceName_Valid(t *testing.T) {
 	}{
 		{"redis", "redis", "REDIS_ENABLED"},
 		{"minio", "minio", "MINIO_ENABLED"},
-		{"storage", "minio", "MINIO_ENABLED"},  // alias
-		{"email", "email", "MAILPIT_ENABLED"},    // canonical name (was "mailpit" before T05 rename)
-		{"mailpit", "email", "MAILPIT_ENABLED"},   // alias
-		{"mail", "email", "MAILPIT_ENABLED"},      // alias
+		{"storage", "minio", "MINIO_ENABLED"},   // alias
+		{"email", "email", "MAILPIT_ENABLED"},   // canonical name (was "mailpit" before T05 rename)
+		{"mailpit", "email", "MAILPIT_ENABLED"}, // alias
+		{"mail", "email", "MAILPIT_ENABLED"},    // alias
 		{"search", "search", "SEARCH_ENABLED"},
 		{"meilisearch", "search", "SEARCH_ENABLED"}, // alias
 		{"monitoring", "monitoring", "MONITORING_ENABLED"},

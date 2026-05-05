@@ -20,8 +20,8 @@ type ClientOptions struct {
 
 // Client wraps http.Client with retry + timeout defaults.
 type Client struct {
-	HTTP       *http.Client
-	opts       ClientOptions
+	HTTP *http.Client
+	opts ClientOptions
 }
 
 // New builds a Client with defaults applied.

@@ -11,13 +11,13 @@ import (
 
 // Warning is a single compatibility warning emitted by CheckPluginCompat.
 type Warning struct {
-	Plugin      string
+	Plugin           string
 	InstalledVersion string
-	Path        string
-	DeprecatedIn string
-	RemovedIn   string
-	Replacement string
-	Docs        string
+	Path             string
+	DeprecatedIn     string
+	RemovedIn        string
+	Replacement      string
+	Docs             string
 }
 
 // String returns the human-readable warning line.

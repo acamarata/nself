@@ -33,9 +33,9 @@ type ApiDocsConfig struct {
 
 // OpenAPISpec is the top-level OpenAPI 3.1 document.
 type OpenAPISpec struct {
-	OpenAPI    string                    `json:"openapi"`
-	Info       OpenAPIInfo               `json:"info"`
-	Servers    []OpenAPIServer           `json:"servers"`
+	OpenAPI    string                     `json:"openapi"`
+	Info       OpenAPIInfo                `json:"info"`
+	Servers    []OpenAPIServer            `json:"servers"`
 	Paths      map[string]OpenAPIPathItem `json:"paths"`
 	Components OpenAPIComponents          `json:"components"`
 }
@@ -59,19 +59,19 @@ type OpenAPIPathItem map[string]*OpenAPIOperation
 
 // OpenAPIOperation is one HTTP operation.
 type OpenAPIOperation struct {
-	Summary     string                   `json:"summary"`
-	OperationID string                   `json:"operationId"`
-	Tags        []string                 `json:"tags,omitempty"`
-	RequestBody *OpenAPIRequestBody       `json:"requestBody,omitempty"`
+	Summary     string                     `json:"summary"`
+	OperationID string                     `json:"operationId"`
+	Tags        []string                   `json:"tags,omitempty"`
+	RequestBody *OpenAPIRequestBody        `json:"requestBody,omitempty"`
 	Responses   map[string]OpenAPIResponse `json:"responses"`
-	Security    []map[string][]string     `json:"security,omitempty"`
+	Security    []map[string][]string      `json:"security,omitempty"`
 	// x-nself-websocket marks subscription operations.
 	XNselfWebsocket bool `json:"x-nself-websocket,omitempty"`
 }
 
 // OpenAPIRequestBody describes the request payload.
 type OpenAPIRequestBody struct {
-	Required bool                       `json:"required"`
+	Required bool                        `json:"required"`
 	Content  map[string]OpenAPIMediaType `json:"content"`
 }
 
@@ -82,23 +82,23 @@ type OpenAPIMediaType struct {
 
 // OpenAPISchemaRef is a JSON Schema reference or inline schema.
 type OpenAPISchemaRef struct {
-	Ref        string                    `json:"$ref,omitempty"`
-	Type       string                    `json:"type,omitempty"`
+	Ref        string                      `json:"$ref,omitempty"`
+	Type       string                      `json:"type,omitempty"`
 	Properties map[string]OpenAPISchemaRef `json:"properties,omitempty"`
-	Items      *OpenAPISchemaRef          `json:"items,omitempty"`
-	Nullable   bool                       `json:"nullable,omitempty"`
+	Items      *OpenAPISchemaRef           `json:"items,omitempty"`
+	Nullable   bool                        `json:"nullable,omitempty"`
 }
 
 // OpenAPIResponse describes one response.
 type OpenAPIResponse struct {
-	Description string                     `json:"description"`
+	Description string                      `json:"description"`
 	Content     map[string]OpenAPIMediaType `json:"content,omitempty"`
 }
 
 // OpenAPIComponents holds reusable schemas and security schemes.
 type OpenAPIComponents struct {
 	SecuritySchemes map[string]OpenAPISecurityScheme `json:"securitySchemes,omitempty"`
-	Schemas         map[string]OpenAPISchemaRef       `json:"schemas,omitempty"`
+	Schemas         map[string]OpenAPISchemaRef      `json:"schemas,omitempty"`
 }
 
 // OpenAPISecurityScheme defines an auth method.

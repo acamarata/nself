@@ -14,13 +14,13 @@ import (
 
 // DiffResult holds the comparison between two environments.
 type DiffResult struct {
-	Source      string       `json:"source"`
-	Target      string       `json:"target"`
-	Migrations  []DiffEntry  `json:"migrations"`
-	EnvVars     []DiffEntry  `json:"env_vars"`
-	Images      []DiffEntry  `json:"images"`
-	Metadata    []DiffEntry  `json:"metadata"`
-	Timestamp   time.Time    `json:"timestamp"`
+	Source     string      `json:"source"`
+	Target     string      `json:"target"`
+	Migrations []DiffEntry `json:"migrations"`
+	EnvVars    []DiffEntry `json:"env_vars"`
+	Images     []DiffEntry `json:"images"`
+	Metadata   []DiffEntry `json:"metadata"`
+	Timestamp  time.Time   `json:"timestamp"`
 }
 
 // DiffEntry represents a single difference between environments.

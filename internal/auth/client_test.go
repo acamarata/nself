@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,7 +51,7 @@ func TestDeviceAuthorize_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	got, err := DeviceAuthorize()
+	got, err := DeviceAuthorize(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestDeviceAuthorize_ServerError(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := DeviceAuthorize()
+	_, err := DeviceAuthorize(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -84,7 +85,7 @@ func TestDeviceAuthorize_MalformedJSON(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := DeviceAuthorize()
+	_, err := DeviceAuthorize(context.Background())
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
@@ -102,7 +103,7 @@ func TestPollToken_Pending(t *testing.T) {
 	})
 	defer cleanup()
 
-	tok, err := PollToken("test-device-code")
+	tok, err := PollToken(context.Background(), "test-device-code")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,7 +129,7 @@ func TestPollToken_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	tok, err := PollToken("test-device-code")
+	tok, err := PollToken(context.Background(), "test-device-code")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -152,7 +153,7 @@ func TestPollToken_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := PollToken("expired-code")
+	_, err := PollToken(context.Background(), "expired-code")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -165,7 +166,7 @@ func TestPollToken_MalformedSuccess(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := PollToken("any")
+	_, err := PollToken(context.Background(), "any")
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
@@ -194,7 +195,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	tok, err := RefreshToken("old.token")
+	tok, err := RefreshToken(context.Background(), "old.token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,7 +213,7 @@ func TestRefreshToken_Unauthorized(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := RefreshToken("revoked.token")
+	_, err := RefreshToken(context.Background(), "revoked.token")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -230,7 +231,7 @@ func TestRevokeSession_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RevokeSession("valid.token", false); err != nil {
+	if err := RevokeSession(context.Background(), "valid.token", false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -243,7 +244,7 @@ func TestRevokeSession_AllSessions(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RevokeSession("valid.token", true); err != nil {
+	if err := RevokeSession(context.Background(), "valid.token", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if gotURL != "/auth/signout?all=true" {
@@ -260,7 +261,7 @@ func TestRevokeSession_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RevokeSession("bad.token", false); err == nil {
+	if err := RevokeSession(context.Background(), "bad.token", false); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -281,7 +282,7 @@ func TestGetSession_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	info, err := GetSession("valid.token")
+	info, err := GetSession(context.Background(), "valid.token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -299,7 +300,7 @@ func TestGetSession_Unauthorized(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := GetSession("expired.token")
+	_, err := GetSession(context.Background(), "expired.token")
 	if err == nil {
 		t.Fatal("expected ErrNotLoggedIn, got nil")
 	}
@@ -317,7 +318,7 @@ func TestGetSession_ServerError(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := GetSession("any.token")
+	_, err := GetSession(context.Background(), "any.token")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -328,10 +329,10 @@ func TestGetSession_ServerError(t *testing.T) {
 func TestGetLicenses_Success(t *testing.T) {
 	licenses := []LicenseInfo{
 		{
-			ID:      "lic-001",
-			Product: "nself",
-			Tier:    "basic",
-			Bundles: []string{"nChat", "nClaw"},
+			ID:       "lic-001",
+			Product:  "nself",
+			Tier:     "basic",
+			Bundles:  []string{"nChat", "nClaw"},
 			IsActive: true,
 		},
 	}
@@ -344,7 +345,7 @@ func TestGetLicenses_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	got, err := GetLicenses("valid.token")
+	got, err := GetLicenses(context.Background(), "valid.token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -362,7 +363,7 @@ func TestGetLicenses_Empty(t *testing.T) {
 	})
 	defer cleanup()
 
-	got, err := GetLicenses("valid.token")
+	got, err := GetLicenses(context.Background(), "valid.token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -380,7 +381,7 @@ func TestGetLicenses_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := GetLicenses("expired.token")
+	_, err := GetLicenses(context.Background(), "expired.token")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -452,7 +453,7 @@ func TestGetTeamMembers_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	got, err := GetTeamMembers("tok")
+	got, err := GetTeamMembers(context.Background(), "tok")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -470,7 +471,7 @@ func TestGetTeamMembers_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := GetTeamMembers("bad-tok")
+	_, err := GetTeamMembers(context.Background(), "bad-tok")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -488,7 +489,7 @@ func TestInviteTeamMember_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := InviteTeamMember("tok", "newuser@example.com"); err != nil {
+	if err := InviteTeamMember(context.Background(), "tok", "newuser@example.com"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -499,7 +500,7 @@ func TestInviteTeamMember_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := InviteTeamMember("tok", "existing@example.com"); err == nil {
+	if err := InviteTeamMember(context.Background(), "tok", "existing@example.com"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -516,7 +517,7 @@ func TestRemoveTeamMember_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RemoveTeamMember("tok", "bob@example.com"); err != nil {
+	if err := RemoveTeamMember(context.Background(), "tok", "bob@example.com"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -527,7 +528,7 @@ func TestRemoveTeamMember_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RemoveTeamMember("tok", "ghost@example.com"); err == nil {
+	if err := RemoveTeamMember(context.Background(), "tok", "ghost@example.com"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -544,7 +545,7 @@ func TestSetTeamMemberRole_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := SetTeamMemberRole("tok", "alice@example.com", "admin"); err != nil {
+	if err := SetTeamMemberRole(context.Background(), "tok", "alice@example.com", "admin"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -555,7 +556,7 @@ func TestSetTeamMemberRole_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := SetTeamMemberRole("tok", "alice@example.com", "superuser"); err == nil {
+	if err := SetTeamMemberRole(context.Background(), "tok", "alice@example.com", "superuser"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -572,7 +573,7 @@ func TestActivateLicense_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := ActivateLicense("tok", "lic-123"); err != nil {
+	if err := ActivateLicense(context.Background(), "tok", "lic-123"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -583,7 +584,7 @@ func TestActivateLicense_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := ActivateLicense("tok", "lic-bad"); err == nil {
+	if err := ActivateLicense(context.Background(), "tok", "lic-bad"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -603,7 +604,7 @@ func TestGetDevices_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	got, err := GetDevices("tok")
+	got, err := GetDevices(context.Background(), "tok")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -618,7 +619,7 @@ func TestGetDevices_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := GetDevices("bad")
+	_, err := GetDevices(context.Background(), "bad")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -636,7 +637,7 @@ func TestRevokeDevice_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RevokeDevice("tok", "dev-1"); err != nil {
+	if err := RevokeDevice(context.Background(), "tok", "dev-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -647,7 +648,7 @@ func TestRevokeDevice_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := RevokeDevice("tok", "dev-ghost"); err == nil {
+	if err := RevokeDevice(context.Background(), "tok", "dev-ghost"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -664,7 +665,7 @@ func TestTransferLicense_Success(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := TransferLicense("tok", "lic-123", "newowner@example.com"); err != nil {
+	if err := TransferLicense(context.Background(), "tok", "lic-123", "newowner@example.com"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -675,7 +676,7 @@ func TestTransferLicense_Error(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := TransferLicense("tok", "lic-bad", "other@example.com"); err == nil {
+	if err := TransferLicense(context.Background(), "tok", "lic-bad", "other@example.com"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }

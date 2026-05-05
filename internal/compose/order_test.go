@@ -40,7 +40,7 @@ func TestServiceOrder(t *testing.T) {
 	} else {
 		t.Logf("✅ postgres (pos %d) appears BEFORE hasura (pos %d)", pgIdx, haIdx)
 	}
-	
+
 	// Print first few service names
 	lines := strings.Split(yaml, "\n")
 	t.Log("Service order:")

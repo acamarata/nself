@@ -40,19 +40,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd cli/sdk/ts
+          cd sdk/ts
           pnpm install --no-frozen-lockfile
 
       - name: Build
         run: |
-          cd cli/sdk/ts
+          cd sdk/ts
           pnpm build
 
       - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd cli/sdk/ts
+          cd sdk/ts
           # If the version on npm already matches, skip without failing.
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")

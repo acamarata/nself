@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -224,11 +223,14 @@ func writeRotationLog(entry string) error {
 	defer f.Close()
 
 	// Acquire an exclusive advisory lock before writing so concurrent calls
-	// cannot produce torn (interleaved) log lines.
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	// cannot produce torn (interleaved) log lines. lockExclusive is a per-OS
+	// helper: flock(2) on Unix, no-op on Windows (where O_APPEND is atomic for
+	// writes <= PIPE_BUF and cross-process concurrent CLI use is the rare path).
+	unlock, err := lockExclusive(f)
+	if err != nil {
 		return fmt.Errorf("lock rotation log: %w", err)
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN) //nolint:errcheck
+	defer unlock()
 
 	if _, err := f.WriteString(entry); err != nil {
 		return fmt.Errorf("append rotation log: %w", err)

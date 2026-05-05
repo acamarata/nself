@@ -218,20 +218,20 @@ type pluginEndpointEntry struct {
 // it as an array of objects while older/local registries use an array of
 // strings. We normalise both into []string during entryToManifest conversion.
 type pluginEntry struct {
-	Name            string               `json:"name"`
-	Version         string               `json:"version"`
-	Description     string               `json:"description"`
-	Category        string               `json:"category"`
-	Tier            string               `json:"tier"`
-	License         string               `json:"license"`
-	LicenseType     string               `json:"licenseType"`
-	Repository      string               `json:"repository"`
-	Checksum        string               `json:"checksum"`
-	DownloadURL     string               `json:"download_url"`
-	RequiresLicense bool                 `json:"requires_license"`
-	Tags            []string             `json:"tags"`
-	Tables          []string             `json:"tables,omitempty"`
-	Port            int                  `json:"port,omitempty"`
+	Name            string   `json:"name"`
+	Version         string   `json:"version"`
+	Description     string   `json:"description"`
+	Category        string   `json:"category"`
+	Tier            string   `json:"tier"`
+	License         string   `json:"license"`
+	LicenseType     string   `json:"licenseType"`
+	Repository      string   `json:"repository"`
+	Checksum        string   `json:"checksum"`
+	DownloadURL     string   `json:"download_url"`
+	RequiresLicense bool     `json:"requires_license"`
+	Tags            []string `json:"tags"`
+	Tables          []string `json:"tables,omitempty"`
+	Port            int      `json:"port,omitempty"`
 	// Dependencies is raw JSON because the registry format is not stable.
 	// Accepted shapes:
 	//   ["redis","auth"]                            (legacy string array)

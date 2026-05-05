@@ -40,13 +40,13 @@ Subcommands:
 // ──────────────────────────────────────────────────────────────────────────
 
 var (
-	encProviderFlag    string
-	encKeyIDFlag       string
-	encKeyNameFlag     string
-	encKeyPathFlag     string
-	encEndpointFlag    string
-	encRegionFlag      string
-	encCredRefFlag     string
+	encProviderFlag string
+	encKeyIDFlag    string
+	encKeyNameFlag  string
+	encKeyPathFlag  string
+	encEndpointFlag string
+	encRegionFlag   string
+	encCredRefFlag  string
 )
 
 var encryptionConfigureCmd = &cobra.Command{

@@ -173,4 +173,3 @@ func (g *Generator) collectDomains() []string {
 
 	return domains
 }
-

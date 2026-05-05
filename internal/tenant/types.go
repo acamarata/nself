@@ -34,14 +34,14 @@ func IsValidPlan(p string) bool {
 
 // Tenant represents a row in the tenants table.
 type Tenant struct {
-	ID               string    `json:"id"`
-	Slug             string    `json:"slug"`
-	Plan             Plan      `json:"plan"`
-	Status           string    `json:"status"` // active, suspended, destroyed
-	StripeCustomerID string    `json:"stripe_customer_id,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               string     `json:"id"`
+	Slug             string     `json:"slug"`
+	Plan             Plan       `json:"plan"`
+	Status           string     `json:"status"` // active, suspended, destroyed
+	StripeCustomerID string     `json:"stripe_customer_id,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
 	SuspendedAt      *time.Time `json:"suspended_at,omitempty"`
-	SuspendReason    string    `json:"suspend_reason,omitempty"`
+	SuspendReason    string     `json:"suspend_reason,omitempty"`
 	DestroyedAt      *time.Time `json:"destroyed_at,omitempty"`
 }
 

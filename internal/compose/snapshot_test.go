@@ -254,8 +254,8 @@ func TestSnapshot_ComposeV5PidsLimitAbsent(t *testing.T) {
 	yaml := generateYAML(t, snapshotConfig())
 
 	if strings.Contains(yaml, "pids_limit:") {
-		t.Errorf("snapshot (Compose v5 compat): generated YAML contains top-level 'pids_limit:' field — "+
-			"this causes 'can't set distinct values on pids_limit and deploy.resources.limits.pids' on Compose v5+. "+
+		t.Errorf("snapshot (Compose v5 compat): generated YAML contains top-level 'pids_limit:' field — " +
+			"this causes 'can't set distinct values on pids_limit and deploy.resources.limits.pids' on Compose v5+. " +
 			"All pids limits must use the deploy.resources.limits.pids form only.")
 	}
 }
@@ -268,7 +268,7 @@ func TestSnapshot_ComposeV5PidsLimitInDeploy(t *testing.T) {
 
 	// The pids field must appear under deploy.resources.limits (emitted as "pids:" by yaml.v3).
 	if !strings.Contains(yaml, "pids:") {
-		t.Errorf("snapshot (Compose v5 compat): generated YAML does not contain 'pids:' field under "+
+		t.Errorf("snapshot (Compose v5 compat): generated YAML does not contain 'pids:' field under " +
 			"deploy.resources.limits — fork-bomb prevention is missing. Expected: deploy.resources.limits.pids: 100")
 	}
 }

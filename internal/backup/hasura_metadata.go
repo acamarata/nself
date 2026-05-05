@@ -15,6 +15,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // HasuraMetadataOptions holds parameters for BackupHasuraMetadata.
@@ -89,7 +91,7 @@ func exportMetadata(ctx context.Context, hasuraURL, adminSecret string) ([]byte,
 		req.Header.Set("X-Hasura-Admin-Secret", adminSecret)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Backup.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

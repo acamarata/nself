@@ -242,11 +242,11 @@ func TestLicenseRevokeJourney_CacheIgnoredAfterRevoke(t *testing.T) {
 // validateResponse is a minimal subset of the ping.nself.org /license/validate
 // response used in these journey tests.
 type validateResponse struct {
-	Valid      bool     `json:"valid"`
-	Reason     string   `json:"reason,omitempty"`
-	Tier       string   `json:"tier"`
-	Plugins    []string `json:"plugins"`
-	ExpiresAt  string   `json:"expires_at,omitempty"`
+	Valid     bool     `json:"valid"`
+	Reason    string   `json:"reason,omitempty"`
+	Tier      string   `json:"tier"`
+	Plugins   []string `json:"plugins"`
+	ExpiresAt string   `json:"expires_at,omitempty"`
 }
 
 // validateRemoteForJourney is a thin HTTP call that mirrors the CLI's

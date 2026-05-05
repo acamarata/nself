@@ -152,9 +152,9 @@ func TestSetupDarwin_SkipSSLOnly(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "partial.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := setupDarwin(cfg, &TrustResult{})
 	if err != nil {
@@ -173,9 +173,9 @@ func TestSetupDarwin_SkipPortsOnly(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "ports.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := setupDarwin(cfg, &TrustResult{})
 	if err != nil {
@@ -338,9 +338,9 @@ func TestSetup_AllSkipCurrentOS(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "setup.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	result, err := Setup(cfg)
 	if err != nil {

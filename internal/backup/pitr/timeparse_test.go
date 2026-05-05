@@ -66,10 +66,10 @@ func TestParseTargetTimeEmpty(t *testing.T) {
 func TestParseTargetTimeInvalid(t *testing.T) {
 	cases := []string{
 		"not a time",
-		"2026-04-22",        // date only (no time)
-		"yesterday",         // unsupported relative form
-		"foo hours ago",     // non-numeric
-		"5 fortnights ago",  // unknown unit
+		"2026-04-22",       // date only (no time)
+		"yesterday",        // unsupported relative form
+		"foo hours ago",    // non-numeric
+		"5 fortnights ago", // unknown unit
 	}
 	for _, c := range cases {
 		_, err := ParseTargetTime(c)

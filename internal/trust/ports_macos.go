@@ -168,7 +168,7 @@ func SetupPortsDarwin(cfg TrustConfig) (alreadyDone bool, err error) {
 
 // escapeForOsascript escapes a string for safe embedding inside an osascript
 // double-quoted shell string. Single quotes inside the shell command are the
-// main concern; we replace them with '\\'' to break out of single-quoting
+// main concern; we replace them with '\\” to break out of single-quoting
 // used by printf.
 func escapeForOsascript(s string) string {
 	// Escape backslashes first, then double-quotes (osascript outer quotes),

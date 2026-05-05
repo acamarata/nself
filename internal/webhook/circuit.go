@@ -29,11 +29,11 @@ const (
 // Circuit is a per-endpoint circuit breaker.
 // All methods are safe for concurrent use.
 type Circuit struct {
-	mu             sync.Mutex
-	state          CircuitState
+	mu              sync.Mutex
+	state           CircuitState
 	consecutiveFail int
-	successProbes  int
-	openedAt       time.Time
+	successProbes   int
+	openedAt        time.Time
 }
 
 // NewCircuit returns a circuit in the Closed state.

@@ -13,17 +13,17 @@ import (
 
 // PruneOptions holds flags for `nself backup prune`.
 type PruneOptions struct {
-	DryRun       bool
-	KeepDaily    int
-	KeepWeekly   int
-	KeepMonthly  int
+	DryRun      bool
+	KeepDaily   int
+	KeepWeekly  int
+	KeepMonthly int
 }
 
 // PruneResult summarizes what was (or would be) pruned.
 type PruneResult struct {
-	Kept    []string
-	Pruned  []string
-	DryRun  bool
+	Kept   []string
+	Pruned []string
+	DryRun bool
 }
 
 // Prune removes old backups according to the retention policy.

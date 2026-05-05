@@ -21,11 +21,11 @@ type Registry struct {
 	Reg    *prometheus.Registry
 
 	// Universal metrics — every plugin gets these for free.
-	RequestsTotal     *prometheus.CounterVec   // by route, method, status
-	RequestDuration   *prometheus.HistogramVec // by route, method
-	InFlightRequests  prometheus.Gauge
-	ErrorsTotal       *prometheus.CounterVec // by kind
-	BuildInfo         *prometheus.GaugeVec   // labels: version, go_version
+	RequestsTotal    *prometheus.CounterVec   // by route, method, status
+	RequestDuration  *prometheus.HistogramVec // by route, method
+	InFlightRequests prometheus.Gauge
+	ErrorsTotal      *prometheus.CounterVec // by kind
+	BuildInfo        *prometheus.GaugeVec   // labels: version, go_version
 
 	// Consumers can register their own metrics via Reg.MustRegister().
 }

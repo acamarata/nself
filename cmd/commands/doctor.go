@@ -962,12 +962,12 @@ func checkLicenseMigrationRate(verbose bool) doctorCheckResult {
 	}
 
 	var telemetry struct {
-		TotalHits          int    `json:"total_hits"`
-		PendingHits        int    `json:"pending_hits"`
-		MigratedHits       int    `json:"migrated_hits"`
-		MigrationStartDate string `json:"migration_start_date"`
+		TotalHits          int     `json:"total_hits"`
+		PendingHits        int     `json:"pending_hits"`
+		MigratedHits       int     `json:"migrated_hits"`
+		MigrationStartDate string  `json:"migration_start_date"`
 		PendingRatioPct    float64 `json:"pending_ratio_pct"`
-		DaysSinceMigration int    `json:"days_since_migration"`
+		DaysSinceMigration int     `json:"days_since_migration"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&telemetry); err != nil {
 		msg := fmt.Sprintf("cannot parse migration telemetry: %v", err)

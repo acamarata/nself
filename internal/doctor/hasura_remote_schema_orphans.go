@@ -32,6 +32,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // CheckOrphanRemoteSchemas implements S77-T08.
@@ -137,7 +139,7 @@ func exportRemoteSchemas(ctx context.Context, hasuraURL, adminSecret string) ([]
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hasura-Admin-Secret", adminSecret)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("metadata API unreachable: %w", err)
 	}

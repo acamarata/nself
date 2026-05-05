@@ -12,7 +12,7 @@ import (
 type RequiredColumn struct {
 	Name        string
 	DataType    string
-	Required    bool   // if false, column is recommended but not required
+	Required    bool // if false, column is recommended but not required
 	Description string
 }
 

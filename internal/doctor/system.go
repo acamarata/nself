@@ -142,7 +142,7 @@ func BackupChecks(_ context.Context, projectDir string) []CheckResult {
 	if age > 26*time.Hour {
 		results = append(results, CheckResult{Section: "backups", Name: "Last backup", Status: "fail",
 			Message: fmt.Sprintf("last backup is %s old (>26h)", age.Round(time.Minute)),
-			FixCmd: "nself backup create"})
+			FixCmd:  "nself backup create"})
 	} else {
 		results = append(results, CheckResult{Section: "backups", Name: "Last backup", Status: "pass",
 			Message: fmt.Sprintf("last backup %s ago", age.Round(time.Minute))})

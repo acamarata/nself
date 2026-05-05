@@ -26,13 +26,13 @@ var (
 	ErrServiceNotFound  = errors.New("service not found")
 
 	// Plugin
-	ErrInvalidLicenseKey        = errors.New("invalid license key format")
-	ErrLicenseTierTooLow        = errors.New("license tier does not include this plugin")
-	ErrLicenseExpired           = errors.New("license key is expired")
+	ErrInvalidLicenseKey         = errors.New("invalid license key format")
+	ErrLicenseTierTooLow         = errors.New("license tier does not include this plugin")
+	ErrLicenseExpired            = errors.New("license key is expired")
 	ErrLicenseNetworkUnavailable = errors.New("cannot validate license: network unavailable and no valid cache")
-	ErrPluginNotFound           = errors.New("plugin not found in registry")
-	ErrPluginManifest           = errors.New("invalid plugin manifest")
-	ErrCircularDependency       = errors.New("circular plugin dependency detected")
+	ErrPluginNotFound            = errors.New("plugin not found in registry")
+	ErrPluginManifest            = errors.New("invalid plugin manifest")
+	ErrCircularDependency        = errors.New("circular plugin dependency detected")
 
 	// SSL
 	ErrMkcertNotFound      = errors.New("mkcert not installed — falling back to OpenSSL")
@@ -46,11 +46,11 @@ var (
 	ErrInvalidPort   = errors.New("invalid port number")
 
 	// Database
-	ErrDatabaseNotRunning = errors.New("database is not running")
-	ErrMigrationFailed    = errors.New("database migration failed")
-	ErrBackupFailed       = errors.New("database backup failed")
-	ErrBackupNotFound     = errors.New("backup not found")
-	ErrBackupVerifyFailed = errors.New("backup verification failed")
+	ErrDatabaseNotRunning  = errors.New("database is not running")
+	ErrMigrationFailed     = errors.New("database migration failed")
+	ErrBackupFailed        = errors.New("database backup failed")
+	ErrBackupNotFound      = errors.New("backup not found")
+	ErrBackupVerifyFailed  = errors.New("backup verification failed")
 	ErrBackupRestoreFailed = errors.New("backup restore failed")
 	ErrBackupEncryptFailed = errors.New("backup encryption failed")
 	ErrBackupDecryptFailed = errors.New("backup decryption failed")
@@ -59,8 +59,8 @@ var (
 	ErrWALArchiveFailed    = errors.New("WAL archive failed")
 
 	// Disaster Recovery
-	ErrDRDrillFailed     = errors.New("DR drill failed")
-	ErrDRPromoteFailed   = errors.New("standby promotion failed")
-	ErrDRRollbackFailed  = errors.New("DR rollback failed")
-	ErrDRFenceFailed     = errors.New("split-brain fence failed")
+	ErrDRDrillFailed    = errors.New("DR drill failed")
+	ErrDRPromoteFailed  = errors.New("standby promotion failed")
+	ErrDRRollbackFailed = errors.New("DR rollback failed")
+	ErrDRFenceFailed    = errors.New("split-brain fence failed")
 )

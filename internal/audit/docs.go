@@ -15,23 +15,23 @@ import (
 
 // Finding represents a single doc-audit finding.
 type Finding struct {
-	Category string `json:"category"`           // "banned_word" | "dead_link" | "missing_file" | "stale_version" | "broken_section"
-	Severity string `json:"severity"`           // "low" | "medium" | "high"
+	Category string `json:"category"` // "banned_word" | "dead_link" | "missing_file" | "stale_version" | "broken_section"
+	Severity string `json:"severity"` // "low" | "medium" | "high"
 	File     string `json:"file"`
 	Line     int    `json:"line,omitempty"`
 	Match    string `json:"match,omitempty"`
 	Message  string `json:"message"`
-	AutoFix  bool   `json:"auto_fix"`           // true if a safe auto-fix is available
+	AutoFix  bool   `json:"auto_fix"` // true if a safe auto-fix is available
 }
 
 // DocReport aggregates the findings from one audit run.
 type DocReport struct {
-	Timestamp   string    `json:"timestamp"`
-	Quarter     string    `json:"quarter"`     // e.g. "2026-Q3"
-	ScanRoots   []string  `json:"scan_roots"`
-	FilesScan   int       `json:"files_scanned"`
-	Findings    []Finding `json:"findings"`
-	Summary     Summary   `json:"summary"`
+	Timestamp string    `json:"timestamp"`
+	Quarter   string    `json:"quarter"` // e.g. "2026-Q3"
+	ScanRoots []string  `json:"scan_roots"`
+	FilesScan int       `json:"files_scanned"`
+	Findings  []Finding `json:"findings"`
+	Summary   Summary   `json:"summary"`
 }
 
 // Summary groups findings by category.

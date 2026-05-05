@@ -82,7 +82,7 @@ func TestVerifySignature_KeyIDMismatch(t *testing.T) {
 		FetchedAt:      time.Now().Unix(),
 		ExpiresAt:      time.Now().Add(30 * 24 * time.Hour).Unix(),
 		Signature:      strings.Repeat("ab", 32), // 64 hex chars but invalid sig
-		SignatureKeyID: 9999,                      // non-existent key ID
+		SignatureKeyID: 9999,                     // non-existent key ID
 	}
 	// Must not panic and must return false (no matching key).
 	if entry.VerifySignature() {
@@ -262,7 +262,7 @@ func TestRevocation_ExpiredLicenseBlocksAccess(t *testing.T) {
 		KeyHash:        HashKey("nself_pro_revoked1234567890abcdef12"),
 		Tier:           "pro",
 		PluginsAllowed: []string{"ai"},
-		FetchedAt:      time.Now().Add(-1 * time.Hour).Unix(), // fresh cache
+		FetchedAt:      time.Now().Add(-1 * time.Hour).Unix(),  // fresh cache
 		ExpiresAt:      time.Now().Add(-24 * time.Hour).Unix(), // expired yesterday
 	}
 	result := DetermineGraceState(entry)

@@ -25,6 +25,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // StreamConfig holds parameters for a streaming encrypted backup.
@@ -48,9 +49,9 @@ type StreamConfig struct {
 
 // StreamOptions holds CLI flag values for `nself backup stream`.
 type StreamOptions struct {
-	To        string   // destination URL (rclone remote path)
+	To         string   // destination URL (rclone remote path)
 	Recipients []string // --recipient flags (may be specified multiple times)
-	DryRun    bool
+	DryRun     bool
 }
 
 // StreamResult is returned by Stream on success.
@@ -451,7 +452,7 @@ func fetchGitHubKeys(ctx context.Context, username string) ([]string, error) {
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Backup.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("GitHub API request: %w", err)
 	}

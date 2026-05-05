@@ -120,8 +120,8 @@ func removeSystemdTimer() error {
 	exec.Command("systemctl", "disable", "--now", systemdServiceName+".timer").Run() //nolint:errcheck
 	serviceFile := filepath.Join(systemdUnitDir, systemdServiceName+".service")
 	timerFile := filepath.Join(systemdUnitDir, systemdServiceName+".timer")
-	os.Remove(serviceFile) //nolint:errcheck
-	os.Remove(timerFile)   //nolint:errcheck
+	os.Remove(serviceFile)                           //nolint:errcheck
+	os.Remove(timerFile)                             //nolint:errcheck
 	exec.Command("systemctl", "daemon-reload").Run() //nolint:errcheck
 	return nil
 }
@@ -188,7 +188,7 @@ func installLaunchDaemon() error {
 func removeLaunchDaemon() error {
 	plistFile := filepath.Join(launchDaemonDir, launchDaemonLabel+".plist")
 	exec.Command("launchctl", "unload", "-w", plistFile).Run() //nolint:errcheck
-	os.Remove(plistFile)                                        //nolint:errcheck
+	os.Remove(plistFile)                                       //nolint:errcheck
 	return nil
 }
 

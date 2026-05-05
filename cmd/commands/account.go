@@ -91,7 +91,7 @@ func runAccountLogin(cmd *cobra.Command, _ []string) error {
 
 	// Step 1: request device code.
 	ui.Info("Contacting nSelf auth server...")
-	dcResp, err := auth.DeviceAuthorize()
+	dcResp, err := auth.DeviceAuthorize(cmdCtx(cmd))
 	if err != nil {
 		return fmt.Errorf("cannot reach nself.org — check your connection: %w", err)
 	}
@@ -113,7 +113,7 @@ func runAccountLogin(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Step 3: poll for the token.
-	baseCtx := cmd.Context()
+	baseCtx := cmdCtx(cmd)
 	if baseCtx == nil {
 		baseCtx = context.Background()
 	}
@@ -196,7 +196,7 @@ func runAccountLogout(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Revoke on server (best-effort — still delete local file on failure).
-	if revokeErr := auth.RevokeSession(af.AccessToken, all); revokeErr != nil {
+	if revokeErr := auth.RevokeSession(cmdCtx(cmd), af.AccessToken, all); revokeErr != nil {
 		ui.Warn(fmt.Sprintf("Could not revoke session on server: %v", revokeErr))
 		ui.Warn("Deleting local credentials anyway.")
 	}
@@ -242,7 +242,7 @@ func runAccountStatus(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("account status: %w", err)
 	}
 
-	info, infoErr := auth.GetSession(af.AccessToken)
+	info, infoErr := auth.GetSession(cmdCtx(cmd), af.AccessToken)
 	if infoErr != nil {
 		// Fall back to cached data.
 		if jsonOut {
@@ -388,7 +388,7 @@ func runAccountTeam(cmd *cobra.Command, _ []string) error {
 
 	// --invite
 	if invite != "" {
-		if err := auth.InviteTeamMember(af.AccessToken, invite); err != nil {
+		if err := auth.InviteTeamMember(cmdCtx(cmd), af.AccessToken, invite); err != nil {
 			return handleAuthError(err)
 		}
 		ui.Success(fmt.Sprintf("Invite sent to %s.", invite))
@@ -401,7 +401,7 @@ func runAccountTeam(cmd *cobra.Command, _ []string) error {
 			fmt.Println("Canceled.")
 			return nil
 		}
-		if err := auth.RemoveTeamMember(af.AccessToken, remove); err != nil {
+		if err := auth.RemoveTeamMember(cmdCtx(cmd), af.AccessToken, remove); err != nil {
 			return handleAuthError(err)
 		}
 		ui.Success(fmt.Sprintf("Removed %s from team.", remove))
@@ -412,7 +412,7 @@ func runAccountTeam(cmd *cobra.Command, _ []string) error {
 	if len(roleArgs) >= 2 {
 		email := roleArgs[0]
 		role := roleArgs[1]
-		if err := auth.SetTeamMemberRole(af.AccessToken, email, role); err != nil {
+		if err := auth.SetTeamMemberRole(cmdCtx(cmd), af.AccessToken, email, role); err != nil {
 			return handleAuthError(err)
 		}
 		ui.Success(fmt.Sprintf("Role for %s set to %s.", email, role))
@@ -420,7 +420,7 @@ func runAccountTeam(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Default: list members.
-	members, err := auth.GetTeamMembers(af.AccessToken)
+	members, err := auth.GetTeamMembers(cmdCtx(cmd), af.AccessToken)
 	if err != nil {
 		return handleAuthError(err)
 	}
@@ -484,7 +484,7 @@ func runAccountLicenses(cmd *cobra.Command, _ []string) error {
 			fmt.Println("Canceled.")
 			return nil
 		}
-		if err := auth.ActivateLicense(af.AccessToken, activate); err != nil {
+		if err := auth.ActivateLicense(cmdCtx(cmd), af.AccessToken, activate); err != nil {
 			return handleAuthError(err)
 		}
 		ui.Success(fmt.Sprintf("License %s activated.", activate))
@@ -492,7 +492,7 @@ func runAccountLicenses(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Default: list licenses.
-	licenses, err := auth.GetLicenses(af.AccessToken)
+	licenses, err := auth.GetLicenses(cmdCtx(cmd), af.AccessToken)
 	if err != nil {
 		return handleAuthError(err)
 	}
@@ -563,7 +563,7 @@ func runAccountDevices(cmd *cobra.Command, _ []string) error {
 	// --revoke
 	if revoke != "" {
 		// Check if this is the current device without --force.
-		devices, listErr := auth.GetDevices(af.AccessToken)
+		devices, listErr := auth.GetDevices(cmdCtx(cmd), af.AccessToken)
 		if listErr == nil {
 			for _, d := range devices {
 				if d.ID == revoke && d.IsCurrent && !force {
@@ -576,7 +576,7 @@ func runAccountDevices(cmd *cobra.Command, _ []string) error {
 			fmt.Println("Canceled.")
 			return nil
 		}
-		if err := auth.RevokeDevice(af.AccessToken, revoke); err != nil {
+		if err := auth.RevokeDevice(cmdCtx(cmd), af.AccessToken, revoke); err != nil {
 			return handleAuthError(err)
 		}
 		ui.Success(fmt.Sprintf("Device %s revoked.", revoke))
@@ -584,7 +584,7 @@ func runAccountDevices(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Default: list devices.
-	devices, err := auth.GetDevices(af.AccessToken)
+	devices, err := auth.GetDevices(cmdCtx(cmd), af.AccessToken)
 	if err != nil {
 		return handleAuthError(err)
 	}
@@ -652,7 +652,7 @@ func runAccountTransfer(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err := auth.TransferLicense(af.AccessToken, keyID, toEmail); err != nil {
+	if err := auth.TransferLicense(cmdCtx(cmd), af.AccessToken, keyID, toEmail); err != nil {
 		return handleAuthError(err)
 	}
 
@@ -661,6 +661,15 @@ func runAccountTransfer(cmd *cobra.Command, args []string) error {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// cmdCtx returns cmd.Context() or context.Background() if the command was
+// invoked outside the normal cobra Execute() path (e.g. unit tests).
+func cmdCtx(cmd *cobra.Command) context.Context {
+	if c := cmd.Context(); c != nil {
+		return c
+	}
+	return context.Background()
+}
 
 // requireLogin reads the auth file and returns it, or prints a friendly error.
 func requireLogin() (*auth.AuthFile, error) {

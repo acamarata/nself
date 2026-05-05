@@ -139,7 +139,7 @@ func Execute() error {
 	// Intercept unknown commands for the plugin router
 	if len(os.Args) > 1 {
 		cmdName := os.Args[1]
-		
+
 		// Ignore global flags or root help
 		if cmdName != "" && cmdName != "help" && cmdName[0] != '-' {
 			// Check if the command is known to Cobra

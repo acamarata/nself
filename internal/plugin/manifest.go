@@ -25,19 +25,19 @@ import (
 // S71-T01.
 var canonicalPermissions = map[string]bool{
 	// Network permissions
-	"network:internet":    true, // unrestricted outbound internet access
-	"network:plugin":      false, // parameterized: network:plugin:<target-plugin-name>
+	"network:internet": true,  // unrestricted outbound internet access
+	"network:plugin":   false, // parameterized: network:plugin:<target-plugin-name>
 	// Database permissions
-	"db:read":             true, // read-only SELECT on plugin-owned tables
-	"db:write":            true, // INSERT/UPDATE/DELETE on plugin-owned tables
+	"db:read":  true, // read-only SELECT on plugin-owned tables
+	"db:write": true, // INSERT/UPDATE/DELETE on plugin-owned tables
 	// Secret permissions
-	"secrets:env":         false, // parameterized: secrets:env:<VAR_NAME>
+	"secrets:env": false, // parameterized: secrets:env:<VAR_NAME>
 	// Filesystem permissions
-	"fs:write":            false, // parameterized: fs:write:<volume-name>
+	"fs:write": false, // parameterized: fs:write:<volume-name>
 	// System permissions
-	"system:exec":         true, // execute arbitrary subprocess commands
+	"system:exec": true, // execute arbitrary subprocess commands
 	// AI provider permissions
-	"ai:provider":         false, // parameterized: ai:provider:<provider-name>
+	"ai:provider": false, // parameterized: ai:provider:<provider-name>
 }
 
 // validatePermissions validates that every permission declared in m.Permissions

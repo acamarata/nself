@@ -1,13 +1,13 @@
 package dlq
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"bytes"
 )
 
 // buildTestServer creates an httptest server with 5 mock DLQ rows for pluginName.

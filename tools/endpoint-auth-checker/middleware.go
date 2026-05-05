@@ -5,9 +5,9 @@ package main
 // CheckResult holds the outcome of checking one route.
 type CheckResult struct {
 	Route      RouteRegistration
-	Passed     bool   // true = has an allowed middleware or is exempt
-	Exempt     bool   // true = path matched an ExemptRoute
-	MatchedMW  string // which allowlisted middleware matched (empty if exempt)
+	Passed     bool     // true = has an allowed middleware or is exempt
+	Exempt     bool     // true = path matched an ExemptRoute
+	MatchedMW  string   // which allowlisted middleware matched (empty if exempt)
 	UnknownMWs []string // middlewares that are not in the allowlist and not exempt
 }
 

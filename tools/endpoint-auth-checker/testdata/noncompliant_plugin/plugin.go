@@ -14,4 +14,4 @@ func registerRoutes(r interface{ Handle(string, ...interface{}) }) {
 
 func handleSafe(w http.ResponseWriter, r *http.Request) {}
 func handleLeak(w http.ResponseWriter, r *http.Request) {}
-func RequirePluginJWT(next http.Handler) http.Handler { return next }
+func RequirePluginJWT(next http.Handler) http.Handler   { return next }

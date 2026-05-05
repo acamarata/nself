@@ -1,10 +1,13 @@
 // Package license — owner.go implements owner-key separation.
 //
 // S133-T01: Owner license stored at ~/.nself/owner.license (separate from
-//           regular license.json / license/key). --owner flag required for
-//           owner-key plugin installs.
+//
+//	regular license.json / license/key). --owner flag required for
+//	owner-key plugin installs.
+//
 // S133-T02: Refuse owner key from being set when NSELF_ENV=dev. Print error
-//           message and return without saving.
+//
+//	message and return without saving.
 package license
 
 import (

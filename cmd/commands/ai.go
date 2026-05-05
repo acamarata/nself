@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/installer"
 	"github.com/spf13/cobra"
 )
@@ -384,7 +385,7 @@ func ollamaBaseURL() string {
 
 func ollamaListInstalled(ctx context.Context) ([]ollamaTag, error) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", ollamaBaseURL()+"/api/tags", nil)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +431,7 @@ func ollamaDelete(ctx context.Context, name string) error {
 	req, _ := http.NewRequestWithContext(ctx, "DELETE",
 		ollamaBaseURL()+"/api/delete", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return err
 	}
@@ -465,7 +466,7 @@ func aiPluginRequest(ctx context.Context, method, path string, body []byte) ([]b
 	if tok := os.Getenv("PLUGIN_INTERNAL_SECRET"); tok != "" {
 		req.Header.Set("X-Internal-Token", tok)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, 0, err
 	}

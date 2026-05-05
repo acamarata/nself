@@ -1005,7 +1005,7 @@ func TestStop_PsErrorDoesNotPreventStop(t *testing.T) {
 // TestStop_EmptyContainersWithNoPsError verifies that the early-return "nothing
 // to do" path is only taken when ps succeeded AND returned an empty list.
 func TestStop_EmptyContainersWithNoPsError(t *testing.T) {
-	var psErr error   // nil = ps succeeded
+	var psErr error // nil = ps succeeded
 	containers := []ContainerInfo{}
 	args := []string{}
 

@@ -47,7 +47,7 @@ func PollDeviceCode(ctx context.Context, deviceCode string, onPoll func(elapsed 
 			onPoll(time.Since(start))
 		}
 
-		token, err := PollToken(deviceCode)
+		token, err := PollToken(ctx, deviceCode)
 		if err != nil {
 			return nil, fmt.Errorf("polling for authorization: %w", err)
 		}

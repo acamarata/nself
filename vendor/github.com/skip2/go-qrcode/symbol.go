@@ -20,7 +20,6 @@ package qrcode
 // For ease of implementation, the functions to set/get bits ignore the border,
 // so (0,0)=a, (0,1)=b, (1,0)=c, and (1,1)=d. The entire symbol (including the
 // border) is returned by bitmap().
-//
 type symbol struct {
 	// Value of module at [y][x]. True is set.
 	module [][]bool

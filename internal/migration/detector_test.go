@@ -35,9 +35,9 @@ func TestDetect_EmptyDir(t *testing.T) {
 
 func TestDetect_ComposeFile(t *testing.T) {
 	tests := []struct {
-		name        string
-		content     string
-		wantDetect  bool
+		name       string
+		content    string
+		wantDetect bool
 	}{
 		{
 			name:       "v1 generated compose",

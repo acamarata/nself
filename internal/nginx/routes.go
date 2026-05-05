@@ -175,14 +175,14 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 		entries = append(entries, routeEntry{
 			filename: "storage.conf",
 			data: ServiceRouteData{
-				Route:      storageRoute,
-				BaseDomain: baseDomain,
+				Route:       storageRoute,
+				BaseDomain:  baseDomain,
 				Upstream:    fmt.Sprintf("minio:%d", g.cfg.Minio.Port),
-			LazyResolve: true,
-				SSLDir:     sslDir,
-				RateZone:   "uploads",
-				Burst:      2,
-				ConnLimit:  5,
+				LazyResolve: true,
+				SSLDir:      sslDir,
+				RateZone:    "uploads",
+				Burst:       2,
+				ConnLimit:   5,
 			},
 		})
 
@@ -402,7 +402,7 @@ func (g *Generator) frontendRoutes(baseDomain, sslDir string) []routeEntry {
 // http://host:port or https://host:port URL with no nginx-unsafe characters.
 func validateInternalRouteTarget(target string) error {
 	// Reject injection characters before URL parsing.
-	for _, ch := range []rune{'\n', '\r', ';', '{', '}' } {
+	for _, ch := range []rune{'\n', '\r', ';', '{', '}'} {
 		if strings.ContainsRune(target, ch) {
 			return fmt.Errorf("target contains forbidden character %q", ch)
 		}
@@ -516,4 +516,3 @@ func minioConsolePort(cfg *config.Config) int {
 	}
 	return 9001
 }
-

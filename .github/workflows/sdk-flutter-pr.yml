@@ -6,7 +6,7 @@ name: Flutter SDK PR Gate
 on:
   pull_request:
     paths:
-      - 'cli/sdk/flutter/**'
+      - 'sdk/flutter/**'
   workflow_dispatch:
 
 concurrency:
@@ -29,10 +29,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           flutter pub get
 
       - name: Dry run publish check
         run: |
-          cd cli/sdk/flutter
+          cd sdk/flutter
           dart pub publish --dry-run

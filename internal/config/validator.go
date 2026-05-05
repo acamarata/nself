@@ -373,4 +373,3 @@ func validatePort(name, value string) error {
 	}
 	return nil
 }
-

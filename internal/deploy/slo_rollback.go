@@ -2,7 +2,8 @@
 // This file implements the SLO-triggered rollback path (S88d.T05).
 //
 // The SLO watcher (slo-watcher.ts in ping_api) calls:
-//   nself deploy --rollback --service <service> --key <deploy-key>
+//
+//	nself deploy --rollback --service <service> --key <deploy-key>
 //
 // This package handles that invocation: validates the deploy key,
 // logs to np_auditlog_events, runs the rollback, and returns exit 0 on
@@ -72,26 +73,26 @@ type RollbackResult struct {
 type RollbackUIState string
 
 const (
-	UIStateLoading        RollbackUIState = "loading"         // rollback in progress
-	UIStateEmpty          RollbackUIState = "empty"           // no prior version to roll back to
-	UIStateError          RollbackUIState = "error"           // rollback command failed
-	UIStatePopulated      RollbackUIState = "populated"       // rollback complete + verified
-	UIStateOffline        RollbackUIState = "offline"         // no staging connection
-	UIStatePermDenied     RollbackUIState = "permission-denied" // no deploy key
-	UIStateRateLimited    RollbackUIState = "rate-limited"    // circuit breaker engaged
+	UIStateLoading     RollbackUIState = "loading"           // rollback in progress
+	UIStateEmpty       RollbackUIState = "empty"             // no prior version to roll back to
+	UIStateError       RollbackUIState = "error"             // rollback command failed
+	UIStatePopulated   RollbackUIState = "populated"         // rollback complete + verified
+	UIStateOffline     RollbackUIState = "offline"           // no staging connection
+	UIStatePermDenied  RollbackUIState = "permission-denied" // no deploy key
+	UIStateRateLimited RollbackUIState = "rate-limited"      // circuit breaker engaged
 )
 
 // AuditEvent is written to np_auditlog_events on rollback.
 type AuditEvent struct {
-	EventType   string    `json:"event_type"`
-	Service     string    `json:"service"`
-	Environment string    `json:"environment"`
-	Reason      string    `json:"reason"`
-	Outcome     string    `json:"outcome"`
-	PriorVersion string   `json:"prior_version,omitempty"`
-	Error       string    `json:"error,omitempty"`
-	TriggeredBy string    `json:"triggered_by"`
-	Timestamp   time.Time `json:"timestamp"`
+	EventType    string    `json:"event_type"`
+	Service      string    `json:"service"`
+	Environment  string    `json:"environment"`
+	Reason       string    `json:"reason"`
+	Outcome      string    `json:"outcome"`
+	PriorVersion string    `json:"prior_version,omitempty"`
+	Error        string    `json:"error,omitempty"`
+	TriggeredBy  string    `json:"triggered_by"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
 // ExecuteRollback performs a service rollback. It:

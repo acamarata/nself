@@ -27,4 +27,3 @@ func Open(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
 	}
 	return db, nil
 }
-

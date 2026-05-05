@@ -56,9 +56,9 @@ func runClawExport(cmd *cobra.Command, args []string) error {
 
 	// Fetch all data sections
 	endpoints := []struct {
-		path  string
-		key   string
-		dest  *[]map[string]interface{}
+		path string
+		key  string
+		dest *[]map[string]interface{}
 	}{
 		{"/claw/v1/messages", "messages", &data.Messages},
 		{"/claw/memories", "memories", &data.Memories},

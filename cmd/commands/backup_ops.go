@@ -390,9 +390,9 @@ func runBackupStream(cmd *cobra.Command, _ []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	result, err := backup.Stream(cmd.Context(), cfg, backup.StreamOptions{
-		To:        to,
+		To:         to,
 		Recipients: recipients,
-		DryRun:    dryRun,
+		DryRun:     dryRun,
 	})
 	if err != nil {
 		return fmt.Errorf("backup stream: %w", err)

@@ -166,13 +166,13 @@ func TestListInstalled_MixedFreeAndPro(t *testing.T) {
 
 	// Free plugin.
 	freeDir := filepath.Join(pluginDir, "webhooks")
-	os.MkdirAll(freeDir, 0755) //nolint:errcheck
+	os.MkdirAll(freeDir, 0755)                          //nolint:errcheck
 	os.WriteFile(filepath.Join(freeDir, "plugin.json"), //nolint:errcheck
 		[]byte(`{"name":"webhooks","version":"1.0.0","description":"Webhooks","category":"communication","license":"MIT"}`), 0644)
 
 	// Pro plugin.
 	proDir := filepath.Join(pluginDir, "ai")
-	os.MkdirAll(proDir, 0755) //nolint:errcheck
+	os.MkdirAll(proDir, 0755)                          //nolint:errcheck
 	os.WriteFile(filepath.Join(proDir, "plugin.json"), //nolint:errcheck
 		[]byte(`{"name":"ai","version":"1.0.0","description":"AI","category":"ai","license":"source-available","requires_license":true}`), 0644)
 

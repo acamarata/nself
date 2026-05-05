@@ -17,29 +17,35 @@ type RLSPolicy struct {
 // The table must have a tenant_id UUID column. Two policies are created:
 //   - {table}_tenant_isolation: restricts rows to the JWT tenant_id claim
 //   - {table}_admin_bypass: allows nself_admin role full access
+//
+// Identifiers are double-quoted via quoteIdent (SEC-17) so callers passing
+// SQL meta-characters cannot break out of the identifier context.
 func GenerateRLS(schema, table string) *RLSPolicy {
-	qualified := schema + "." + table
+	qualifiedRaw := schema + "." + table
+	qualified := quoteIdent(schema) + "." + quoteIdent(table)
 	safeName := strings.ReplaceAll(table, ".", "_")
+	isolationPolicy := quoteIdent(safeName + "_tenant_isolation")
+	adminPolicy := quoteIdent(safeName + "_admin_bypass")
 
 	return &RLSPolicy{
-		TableName: qualified,
+		TableName: qualifiedRaw,
 		EnableSQL: fmt.Sprintf(
 			"ALTER TABLE %s ENABLE ROW LEVEL SECURITY;\n"+
 				"ALTER TABLE %s FORCE ROW LEVEL SECURITY;",
 			qualified, qualified,
 		),
 		IsolationSQL: fmt.Sprintf(
-			"CREATE POLICY %s_tenant_isolation ON %s\n"+
+			"CREATE POLICY %s ON %s\n"+
 				"  USING (tenant_id = (current_setting('hasura.user')::jsonb->>'x-hasura-tenant-id')::uuid);",
-			safeName, qualified,
+			isolationPolicy, qualified,
 		),
 		AdminBypassSQL: fmt.Sprintf(
-			"CREATE POLICY %s_admin_bypass ON %s\n"+
+			"CREATE POLICY %s ON %s\n"+
 				"  FOR ALL\n"+
 				"  TO nself_admin\n"+
 				"  USING (true)\n"+
 				"  WITH CHECK (true);",
-			safeName, qualified,
+			adminPolicy, qualified,
 		),
 	}
 }
@@ -58,15 +64,17 @@ func GenerateRLSSQL(schema, table string) string {
 }
 
 // GenerateTenantColumnSQL returns SQL to add tenant_id column, index, and FK
-// to an existing table that does not yet have one.
+// to an existing table that does not yet have one. Identifiers are
+// double-quoted via quoteIdent (SEC-17).
 func GenerateTenantColumnSQL(schema, table string) string {
-	qualified := schema + "." + table
+	qualified := quoteIdent(schema) + "." + quoteIdent(table)
 	safeName := strings.ReplaceAll(table, ".", "_")
+	indexName := quoteIdent("idx_" + safeName + "_tenant_id")
 
 	return fmt.Sprintf(
 		"ALTER TABLE %s ADD COLUMN tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE RESTRICT;\n"+
-			"CREATE INDEX idx_%s_tenant_id ON %s (tenant_id);",
-		qualified, safeName, qualified,
+			"CREATE INDEX %s ON %s (tenant_id);",
+		qualified, indexName, qualified,
 	)
 }
 
@@ -96,8 +104,8 @@ func JWTClaimsSchema() map[string]string {
 // HasuraRolePermissions returns the permission inheritance model for all 6 roles.
 func HasuraRolePermissions() map[string][]string {
 	return map[string][]string{
-		RoleAnonymous:    {"select"},                                // public read-only
-		RoleUser:         {"select"},                                // authenticated, no tenant context
+		RoleAnonymous:    {"select"},                               // public read-only
+		RoleUser:         {"select"},                               // authenticated, no tenant context
 		RoleTenantMember: {"select", "insert"},                     // tenant read + create
 		RoleTenantAdmin:  {"select", "insert", "update", "delete"}, // tenant full CRUD
 		RoleAdmin:        {"select", "insert", "update", "delete"}, // platform admin, no RLS

@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	saferecover "github.com/nself-org/cli/internal/recover"
 )
 
 // retryDelays is the exponential backoff schedule per attempt (1-indexed).
 // After attempt 8 the delivery is moved to the DLQ.
 var retryDelays = []time.Duration{
-	0,               // attempt 0 — unused sentinel
+	0,                // attempt 0 — unused sentinel
 	1 * time.Second,  // attempt 1
 	5 * time.Second,  // attempt 2
 	30 * time.Second, // attempt 3
@@ -31,13 +33,13 @@ const dispatchTimeout = 10 * time.Second
 
 // Delivery represents a queued outbound webhook delivery.
 type Delivery struct {
-	ID           string
-	EndpointID   string
-	EndpointURL  string
+	ID            string
+	EndpointID    string
+	EndpointURL   string
 	SigningSecret string // may be empty for unsigned endpoints
-	EventName    string
-	Payload      []byte
-	AttemptCount int
+	EventName     string
+	Payload       []byte
+	AttemptCount  int
 	// Delivered is set by the store when a prior attempt succeeded.
 	// Dispatcher skips any delivery where Delivered is true (idempotency guard).
 	Delivered bool
@@ -57,9 +59,9 @@ type DeliveryStore interface {
 
 // DispatcherConfig controls Dispatcher concurrency and polling.
 type DispatcherConfig struct {
-	Workers    int // goroutine pool size (default 8)
-	BatchSize  int // max deliveries fetched per tick (default 32)
-	PollTick   time.Duration // how often to poll for pending deliveries (default 5s)
+	Workers   int           // goroutine pool size (default 8)
+	BatchSize int           // max deliveries fetched per tick (default 32)
+	PollTick  time.Duration // how often to poll for pending deliveries (default 5s)
 }
 
 func (c *DispatcherConfig) defaults() {
@@ -76,10 +78,10 @@ func (c *DispatcherConfig) defaults() {
 
 // Dispatcher is the goroutine pool that picks up pending deliveries and sends them.
 type Dispatcher struct {
-	cfg     DispatcherConfig
-	store   DeliveryStore
-	dlq     *DLQManager
-	client  *http.Client
+	cfg      DispatcherConfig
+	store    DeliveryStore
+	dlq      *DLQManager
+	client   *http.Client
 	circuits sync.Map // endpointID -> *Circuit
 }
 
@@ -87,9 +89,9 @@ type Dispatcher struct {
 func NewDispatcher(cfg DispatcherConfig, store DeliveryStore, dlq *DLQManager) *Dispatcher {
 	cfg.defaults()
 	return &Dispatcher{
-		cfg:   cfg,
-		store: store,
-		dlq:   dlq,
+		cfg:    cfg,
+		store:  store,
+		dlq:    dlq,
 		client: &http.Client{Timeout: dispatchTimeout},
 	}
 }
@@ -98,16 +100,19 @@ func NewDispatcher(cfg DispatcherConfig, store DeliveryStore, dlq *DLQManager) *
 func (d *Dispatcher) Run(ctx context.Context) {
 	work := make(chan Delivery, d.cfg.BatchSize)
 
-	// Start worker pool.
+	// Start worker pool. Each worker is wrapped with SafeGo so a panic in
+	// d.dispatch (e.g. malformed payload, transport bug) does not take down
+	// the CLI process.  The wg.Done is registered inside SafeGo so the panic
+	// recovery still releases the wait group.
 	var wg sync.WaitGroup
 	for i := 0; i < d.cfg.Workers; i++ {
 		wg.Add(1)
-		go func() {
+		saferecover.SafeGo("webhook_dispatch_worker", func() {
 			defer wg.Done()
 			for delivery := range work {
 				d.dispatch(ctx, delivery)
 			}
-		}()
+		})
 	}
 
 	// Poll loop.

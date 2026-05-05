@@ -12,9 +12,9 @@ func registerRoutes(r interface{ Handle(string, ...interface{}) }) {
 	r.Handle("/api/license", RequireLicenseKey, handleLicense)
 }
 
-func handleData(w http.ResponseWriter, r *http.Request) {}
-func handleAdmin(w http.ResponseWriter, r *http.Request) {}
+func handleData(w http.ResponseWriter, r *http.Request)    {}
+func handleAdmin(w http.ResponseWriter, r *http.Request)   {}
 func handleLicense(w http.ResponseWriter, r *http.Request) {}
-func RequirePluginJWT(next http.Handler) http.Handler { return next }
+func RequirePluginJWT(next http.Handler) http.Handler      { return next }
 func RequireHasuraAdminKey(next http.Handler) http.Handler { return next }
-func RequireLicenseKey(next http.Handler) http.Handler { return next }
+func RequireLicenseKey(next http.Handler) http.Handler     { return next }

@@ -17,6 +17,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/spf13/cobra"
 )
 
@@ -350,7 +351,7 @@ func mcpPostJSON(ctx context.Context, url, adminSecret string, payload interface
 		req.Header.Set("X-Hasura-Admin-Secret", adminSecret)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

@@ -13,6 +13,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // introspectionQuery is the standard GraphQL introspection query.
@@ -114,11 +116,11 @@ type introType struct {
 }
 
 type introField struct {
-	Name              string     `json:"name"`
-	Description       string     `json:"description"`
-	Type              introRef   `json:"type"`
-	IsDeprecated      bool       `json:"isDeprecated"`
-	DeprecationReason string     `json:"deprecationReason"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description"`
+	Type              introRef     `json:"type"`
+	IsDeprecated      bool         `json:"isDeprecated"`
+	DeprecationReason string       `json:"deprecationReason"`
 	Args              []introInput `json:"args"`
 }
 
@@ -172,7 +174,7 @@ func FetchSchema(ctx context.Context, hasuraURL, adminSecret string) (*introspec
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hasura-Admin-Secret", adminSecret)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("introspection request failed: %w", err)
 	}

@@ -16,6 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // metadataRequest is the JSON body sent to the Hasura metadata API.
@@ -49,7 +50,7 @@ func postMetadata(ctx context.Context, cfg *config.Config, payload metadataReque
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hasura-Admin-Secret", cfg.Hasura.AdminSecret)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("hasura metadata request failed: %w", err)
 	}

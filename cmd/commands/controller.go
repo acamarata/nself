@@ -1,14 +1,15 @@
 // Package commands: controller + project subcommands for B46 multi-tenant master controller.
 //
 // CLI surface:
-//   nself controller start | stop | status | init
-//   nself project create --slug <slug> --domain <domain>
-//   nself project delete --slug <slug> [--force]
-//   nself project list
-//   nself project status --slug <slug>
-//   nself project migrate --slug <slug>
-//   nself project shell --slug <slug>
-//   nself project rotate-credentials --slug <slug>
+//
+//	nself controller start | stop | status | init
+//	nself project create --slug <slug> --domain <domain>
+//	nself project delete --slug <slug> [--force]
+//	nself project list
+//	nself project status --slug <slug>
+//	nself project migrate --slug <slug>
+//	nself project shell --slug <slug>
+//	nself project rotate-credentials --slug <slug>
 //
 // Feature flag: NSELF_FLAG_MULTI_TENANT_CONTROLLER must be true.
 // When OFF, all commands print 503 Multi-tenant controller not enabled.
@@ -253,7 +254,9 @@ var projectCreateCmd = &cobra.Command{
 			return fmt.Errorf("controller error: %w", err)
 		}
 		if code != http.StatusCreated {
-			var e struct{ Error string `json:"error"` }
+			var e struct {
+				Error string `json:"error"`
+			}
 			_ = json.Unmarshal(body, &e)
 			return fmt.Errorf("create failed (%d): %s", code, e.Error)
 		}
@@ -295,7 +298,9 @@ var projectDeleteCmd = &cobra.Command{
 			return fmt.Errorf("controller error: %w", err)
 		}
 		if code != http.StatusNoContent {
-			var e struct{ Error string `json:"error"` }
+			var e struct {
+				Error string `json:"error"`
+			}
 			_ = json.Unmarshal(body, &e)
 			return fmt.Errorf("delete failed (%d): %s", code, e.Error)
 		}
@@ -480,4 +485,3 @@ func RegisterControllerCommands(root *cobra.Command) {
 	projectCmd.AddCommand(projectRotateCredsCmd)
 	root.AddCommand(projectCmd)
 }
-

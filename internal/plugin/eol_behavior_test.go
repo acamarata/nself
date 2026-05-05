@@ -10,13 +10,14 @@ import (
 // TestEOLMatrix exercises the 7 EOL behavior-matrix rows defined in S58-T03.
 //
 // Row | Command        | EOL status      | --allow-eol | Expected outcome
-//  1  | install <eol>  | eol             | false       | error (blocked)
-//  2  | install <eol>  | eol             | true        | warning only (allowed)
-//  3  | update <eol>   | eol             | false       | error (blocked)
-//  4  | update <eol>   | eol             | true        | warning only (allowed)
-//  5  | remove <eol>   | eol             | N/A         | always allowed
-//  6  | list           | eol, show=false | N/A         | hidden from output
-//  7  | info <eol>     | eol             | N/A         | shown with banner
+//
+//	1  | install <eol>  | eol             | false       | error (blocked)
+//	2  | install <eol>  | eol             | true        | warning only (allowed)
+//	3  | update <eol>   | eol             | false       | error (blocked)
+//	4  | update <eol>   | eol             | true        | warning only (allowed)
+//	5  | remove <eol>   | eol             | N/A         | always allowed
+//	6  | list           | eol, show=false | N/A         | hidden from output
+//	7  | info <eol>     | eol             | N/A         | shown with banner
 func TestEOLMatrix(t *testing.T) {
 	// Row 1: install blocked when status=eol and allowEOL=false.
 	t.Run("Row1_InstallEOL_Blocked", func(t *testing.T) {

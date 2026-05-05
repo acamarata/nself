@@ -86,9 +86,9 @@ func TestSetupDarwin_SkipAllFields(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "fields.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	r := &TrustResult{}
 	result, err := setupDarwin(cfg, r)
@@ -111,9 +111,9 @@ func TestSetupLinux_SkipAllFields(t *testing.T) {
 	cfg := TrustConfig{
 		WorkDir:    t.TempDir(),
 		BaseDomain: "fields.local",
-		SkipDNS:   true,
-		SkipSSL:   true,
-		SkipPorts: true,
+		SkipDNS:    true,
+		SkipSSL:    true,
+		SkipPorts:  true,
 	}
 	r := &TrustResult{}
 	result, err := setupLinux(cfg, r)

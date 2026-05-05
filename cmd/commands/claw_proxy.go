@@ -124,12 +124,12 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 
 		// Copy headers, stripping hop-by-hop headers
 		hopByHop := map[string]bool{
-			"Connection":          true,
-			"Keep-Alive":          true,
-			"Transfer-Encoding":   true,
-			"Te":                  true,
-			"Trailer":             true,
-			"Upgrade":             true,
+			"Connection":        true,
+			"Keep-Alive":        true,
+			"Transfer-Encoding": true,
+			"Te":                true,
+			"Trailer":           true,
+			"Upgrade":           true,
 		}
 		for key, vals := range r.Header {
 			if hopByHop[http.CanonicalHeaderKey(key)] {

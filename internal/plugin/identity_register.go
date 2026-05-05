@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 const registrationTimeout = 15 * time.Second
@@ -74,7 +76,7 @@ func RegisterIdentity(ctx context.Context, pluginName string, pubKey ed25519.Pub
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Plugin-Internal-Secret", secret)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Plugin.Do(req)
 	if err != nil {
 		return fmt.Errorf("posting identity registration to %s: %w", url, err)
 	}
@@ -113,7 +115,7 @@ func RevokeIdentity(ctx context.Context, pluginName string) error {
 		req.Header.Set("Authorization", "Bearer "+licenseKey)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Plugin.Do(req)
 	if err != nil {
 		return fmt.Errorf("revoking identity for %q: %w", pluginName, err)
 	}

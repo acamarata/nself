@@ -31,7 +31,7 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 		ContainerName: fmt.Sprintf("%s_postgres", cfg.ProjectName),
 		Restart:       "unless-stopped",
 		Networks:      []string{cfg.DockerNetwork},
-		User: "999:999",
+		User:          "999:999",
 		Environment: map[string]string{
 			"POSTGRES_USER":             cfg.Postgres.User,
 			"POSTGRES_PASSWORD":         cfg.Postgres.Password,
@@ -71,8 +71,8 @@ func (g *Generator) buildHasuraService() (ServiceConfig, error) {
 	// before the .env file is written (e.g. during initial server setup), Hasura
 	// starts with console and dev mode OFF rather than exposing them publicly.
 	// The config booleans still control the .env.* values written by nself build.
-	_ = cfg.Hasura.Console  // value written to .env; docker-compose reads it via substitution
-	_ = cfg.Hasura.DevMode  // value written to .env; docker-compose reads it via substitution
+	_ = cfg.Hasura.Console // value written to .env; docker-compose reads it via substitution
+	_ = cfg.Hasura.DevMode // value written to .env; docker-compose reads it via substitution
 	consoleStr := "${HASURA_GRAPHQL_ENABLE_CONSOLE:-false}"
 	devModeStr := "${HASURA_GRAPHQL_DEV_MODE:-false}"
 
@@ -164,31 +164,31 @@ func (g *Generator) buildAuthService() (ServiceConfig, error) {
 	}
 
 	env := map[string]string{
-		"AUTH_HOST":                                  "0.0.0.0",
-		"AUTH_PORT":                                  fmt.Sprintf("%d", cfg.Auth.Port),
-		"AUTH_LOG_LEVEL":                             cfg.Auth.LogLevel,
-		"AUTH_WEBAUTHN_ENABLED":                      webAuthnStr,
-		"DATABASE_URL":                               cfg.DatabaseURL(),
-		"AUTH_DATABASE_URL":                          cfg.DatabaseURL(),
-		"HASURA_GRAPHQL_DATABASE_URL":                cfg.DatabaseURL(),
-		"POSTGRES_HOST":                              cfg.Postgres.Host,
-		"POSTGRES_PORT":                              "5432",
-		"AUTH_SERVER_URL":                            fmt.Sprintf("http://localhost:%d", cfg.Auth.Port),
-		"AUTH_CLIENT_URL":                            cfg.Auth.ClientURL,
-		"AUTH_JWT_SECRET":                            cfg.Hasura.JWTKey,
-		"AUTH_JWT_TYPE":                              cfg.Hasura.JWTType,
-		"HASURA_GRAPHQL_JWT_SECRET":                  jwtSecret,
-		"HASURA_GRAPHQL_GRAPHQL_URL":                 "http://hasura:8080/v1/graphql",
-		"HASURA_GRAPHQL_ADMIN_SECRET":                cfg.Hasura.AdminSecret,
-		"AUTH_ACCESS_TOKEN_EXPIRES_IN":               fmt.Sprintf("%d", cfg.Auth.AccessTokenExpiry),
-		"AUTH_REFRESH_TOKEN_EXPIRES_IN":              fmt.Sprintf("%d", cfg.Auth.RefreshTokenExpiry),
-		"AUTH_SMTP_HOST":                             cfg.Auth.SMTPHost,
-		"AUTH_SMTP_PORT":                             fmt.Sprintf("%d", cfg.Auth.SMTPPort),
-		"AUTH_SMTP_USER":                             cfg.Auth.SMTPUser,
-		"AUTH_SMTP_PASS":                             cfg.Auth.SMTPPass,
-		"AUTH_SMTP_SECURE":                           smtpSecureStr,
-		"AUTH_SMTP_SENDER":                           cfg.Auth.SMTPSender,
-		"AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED":  "false",
+		"AUTH_HOST":                                 "0.0.0.0",
+		"AUTH_PORT":                                 fmt.Sprintf("%d", cfg.Auth.Port),
+		"AUTH_LOG_LEVEL":                            cfg.Auth.LogLevel,
+		"AUTH_WEBAUTHN_ENABLED":                     webAuthnStr,
+		"DATABASE_URL":                              cfg.DatabaseURL(),
+		"AUTH_DATABASE_URL":                         cfg.DatabaseURL(),
+		"HASURA_GRAPHQL_DATABASE_URL":               cfg.DatabaseURL(),
+		"POSTGRES_HOST":                             cfg.Postgres.Host,
+		"POSTGRES_PORT":                             "5432",
+		"AUTH_SERVER_URL":                           fmt.Sprintf("http://localhost:%d", cfg.Auth.Port),
+		"AUTH_CLIENT_URL":                           cfg.Auth.ClientURL,
+		"AUTH_JWT_SECRET":                           cfg.Hasura.JWTKey,
+		"AUTH_JWT_TYPE":                             cfg.Hasura.JWTType,
+		"HASURA_GRAPHQL_JWT_SECRET":                 jwtSecret,
+		"HASURA_GRAPHQL_GRAPHQL_URL":                "http://hasura:8080/v1/graphql",
+		"HASURA_GRAPHQL_ADMIN_SECRET":               cfg.Hasura.AdminSecret,
+		"AUTH_ACCESS_TOKEN_EXPIRES_IN":              fmt.Sprintf("%d", cfg.Auth.AccessTokenExpiry),
+		"AUTH_REFRESH_TOKEN_EXPIRES_IN":             fmt.Sprintf("%d", cfg.Auth.RefreshTokenExpiry),
+		"AUTH_SMTP_HOST":                            cfg.Auth.SMTPHost,
+		"AUTH_SMTP_PORT":                            fmt.Sprintf("%d", cfg.Auth.SMTPPort),
+		"AUTH_SMTP_USER":                            cfg.Auth.SMTPUser,
+		"AUTH_SMTP_PASS":                            cfg.Auth.SMTPPass,
+		"AUTH_SMTP_SECURE":                          smtpSecureStr,
+		"AUTH_SMTP_SENDER":                          cfg.Auth.SMTPSender,
+		"AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED": "false",
 	}
 
 	// T06: Add AUTH_DB_* alias vars required by Nhost Auth.

@@ -16,7 +16,7 @@ import (
 type noopExporter struct{}
 
 func (noopExporter) ExportSpans(_ context.Context, _ []sdktrace.ReadOnlySpan) error { return nil }
-func (noopExporter) Shutdown(_ context.Context) error                                { return nil }
+func (noopExporter) Shutdown(_ context.Context) error                               { return nil }
 
 // captureHandler is a minimal slog.Handler that captures records for assertion.
 type captureHandler struct {

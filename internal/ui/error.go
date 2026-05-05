@@ -17,4 +17,3 @@ func UXError(problem, context string, solutions []string) {
 	}
 	fmt.Fprintf(os.Stderr, "\n%s Run 'nself doctor' for more diagnostics\n\n", C(Blue, IconInfo))
 }
-

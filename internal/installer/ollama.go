@@ -14,16 +14,18 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // Error codes (per spec §3.2.1).
 const (
-	ErrOllamaInstallFailed   = "OLLAMA_INSTALL_FAILED"
-	ErrSystemdUnavailable    = "SYSTEMD_UNAVAILABLE"
-	ErrIptablesNoPermission  = "IPTABLES_NO_PERMISSION"
-	ErrPortBindConflict      = "PORT_BIND_CONFLICT"
-	ErrRAMInsufficient       = "RAM_INSUFFICIENT"
-	ErrUnsupportedOS         = "UNSUPPORTED_OS"
+	ErrOllamaInstallFailed  = "OLLAMA_INSTALL_FAILED"
+	ErrSystemdUnavailable   = "SYSTEMD_UNAVAILABLE"
+	ErrIptablesNoPermission = "IPTABLES_NO_PERMISSION"
+	ErrPortBindConflict     = "PORT_BIND_CONFLICT"
+	ErrRAMInsufficient      = "RAM_INSUFFICIENT"
+	ErrUnsupportedOS        = "UNSUPPORTED_OS"
 )
 
 // InstallerError wraps a coded installer error.
@@ -181,7 +183,7 @@ func downloadAndRunInstaller(ctx context.Context, log func(string, string, map[s
 	if err != nil {
 		return errf(ErrOllamaInstallFailed, "new request", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Installer.Do(req)
 	if err != nil {
 		return errf(ErrOllamaInstallFailed, "download install.sh", err)
 	}
@@ -266,7 +268,7 @@ func probeUntilReady(ctx context.Context, url string, total time.Duration) error
 		default:
 		}
 		req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httptimeout.Installer.Do(req)
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == 200 {
@@ -280,7 +282,7 @@ func probeUntilReady(ctx context.Context, url string, total time.Duration) error
 
 func probeOllamaVersion(ctx context.Context) string {
 	req, _ := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:11434/api/version", nil)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Installer.Do(req)
 	if err != nil {
 		return ""
 	}

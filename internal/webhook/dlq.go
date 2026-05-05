@@ -8,13 +8,13 @@ import (
 
 // DLQEntry represents a row in the np_webhook_dlq table.
 type DLQEntry struct {
-	ID           string     `json:"id"`
-	EndpointID   string     `json:"endpoint_id"`
-	DeliveryID   string     `json:"delivery_id"`
-	Payload      []byte     `json:"payload"`
-	FinalError   string     `json:"final_error"`
-	QuarantinedAt time.Time `json:"quarantined_at"`
-	ReEnqueuedAt *time.Time `json:"re_enqueued_at,omitempty"`
+	ID            string     `json:"id"`
+	EndpointID    string     `json:"endpoint_id"`
+	DeliveryID    string     `json:"delivery_id"`
+	Payload       []byte     `json:"payload"`
+	FinalError    string     `json:"final_error"`
+	QuarantinedAt time.Time  `json:"quarantined_at"`
+	ReEnqueuedAt  *time.Time `json:"re_enqueued_at,omitempty"`
 }
 
 // DLQStore defines the persistence contract for DLQ operations.

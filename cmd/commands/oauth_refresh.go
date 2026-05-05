@@ -67,12 +67,12 @@ func runOAuthRefresh(cmd *cobra.Command, args []string) error {
 	}
 
 	_, err := oauth.Refresh(cmd.Context(), oauth.RefreshOptions{
-		Provider:   provider,
-		AccountID:  accountID,
-		All:        all,
-		BaseURL:    baseURL,
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
+		Provider:  provider,
+		AccountID: accountID,
+		All:       all,
+		BaseURL:   baseURL,
+		Stdout:    os.Stdout,
+		Stderr:    os.Stderr,
 	})
 	return err
 }

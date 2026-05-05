@@ -33,10 +33,10 @@ func (g *Generator) generateRateLimits() (string, error) {
 		aiRPS = "10"
 	}
 	data := map[string]string{
-		"AuthRateLimit":  g.cfg.Nginx.AuthRateLimit,
-		"RateLimitAPI":   apiRPS,
-		"RateLimitAuth":  authRPS,
-		"RateLimitAI":    aiRPS,
+		"AuthRateLimit": g.cfg.Nginx.AuthRateLimit,
+		"RateLimitAPI":  apiRPS,
+		"RateLimitAuth": authRPS,
+		"RateLimitAI":   aiRPS,
 	}
 	return g.render("rate-limits.conf.tmpl", data)
 }

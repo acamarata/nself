@@ -456,13 +456,13 @@ var licenseUpgradeCmd = &cobra.Command{
 
 // licenseHealthJSON is the structured output for `nself license health --json`.
 type licenseHealthJSON struct {
-	FormatOK       bool   `json:"format_ok"`
-	ServerReachable bool  `json:"server_reachable"`
-	ServerValid    bool   `json:"server_valid"`
-	CacheIntegrity bool   `json:"cache_integrity"`
-	HealthScore    int    `json:"health_score"`
-	Status         string `json:"status"`
-	Message        string `json:"message,omitempty"`
+	FormatOK        bool   `json:"format_ok"`
+	ServerReachable bool   `json:"server_reachable"`
+	ServerValid     bool   `json:"server_valid"`
+	CacheIntegrity  bool   `json:"cache_integrity"`
+	HealthScore     int    `json:"health_score"`
+	Status          string `json:"status"`
+	Message         string `json:"message,omitempty"`
 }
 
 var licenseHealthCmd = &cobra.Command{

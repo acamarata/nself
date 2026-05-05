@@ -118,8 +118,8 @@ func removeHasuraMetadataSystemdTimer() error {
 	exec.Command("systemctl", "disable", "--now", hasuraMetaServiceName+".timer").Run() //nolint:errcheck
 	serviceFile := filepath.Join(systemdUnitDir, hasuraMetaServiceName+".service")
 	timerFile := filepath.Join(systemdUnitDir, hasuraMetaServiceName+".timer")
-	os.Remove(serviceFile) //nolint:errcheck
-	os.Remove(timerFile)   //nolint:errcheck
+	os.Remove(serviceFile)                           //nolint:errcheck
+	os.Remove(timerFile)                             //nolint:errcheck
 	exec.Command("systemctl", "daemon-reload").Run() //nolint:errcheck
 	return nil
 }
@@ -206,7 +206,7 @@ func installHasuraMetadataLaunchDaemon() error {
 func removeHasuraMetadataLaunchDaemon() error {
 	plistFile := filepath.Join(launchDaemonDir, hasuraMetaDaemonLabel+".plist")
 	exec.Command("launchctl", "unload", "-w", plistFile).Run() //nolint:errcheck
-	os.Remove(plistFile)                                        //nolint:errcheck
+	os.Remove(plistFile)                                       //nolint:errcheck
 	return nil
 }
 

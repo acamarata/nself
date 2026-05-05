@@ -30,12 +30,12 @@ func TestSlugRE_ValidNames(t *testing.T) {
 func TestSlugRE_InvalidNames(t *testing.T) {
 	invalid := []string{
 		"",
-		"a",               // too short (min 2 chars after first letter)
-		"MyPlugin",        // uppercase
-		"my_plugin",       // underscore
-		"1plugin",         // starts with digit
-		"-plugin",         // starts with dash
-		"plugin-",         // ends with dash (no rule against it but a safeguard)
+		"a",                     // too short (min 2 chars after first letter)
+		"MyPlugin",              // uppercase
+		"my_plugin",             // underscore
+		"1plugin",               // starts with digit
+		"-plugin",               // starts with dash
+		"plugin-",               // ends with dash (no rule against it but a safeguard)
 		strings.Repeat("a", 43), // too long (>41 chars total)
 	}
 	for _, name := range invalid {

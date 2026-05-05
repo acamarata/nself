@@ -17,14 +17,14 @@ const DefaultTextfileDir = "/var/lib/node_exporter/textfile_collector"
 
 // BackupRecord is the signal set emitted on every nself backup create exit.
 type BackupRecord struct {
-	Env            string        // prod, staging, dev
-	Type           string        // full, wal, metadata, minio
-	Success        bool          // completion result
-	DurationSec    float64       // total wall-clock seconds
-	Bytes          int64         // archive size on disk
-	Encrypted      bool          // whether age encryption was applied
-	Timestamp      time.Time     // completion time
-	TextfileDir    string        // overrides DefaultTextfileDir when non-empty
+	Env         string    // prod, staging, dev
+	Type        string    // full, wal, metadata, minio
+	Success     bool      // completion result
+	DurationSec float64   // total wall-clock seconds
+	Bytes       int64     // archive size on disk
+	Encrypted   bool      // whether age encryption was applied
+	Timestamp   time.Time // completion time
+	TextfileDir string    // overrides DefaultTextfileDir when non-empty
 }
 
 // VerifyRecord is emitted by the weekly restore-test verify cycle.
