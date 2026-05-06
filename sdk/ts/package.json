@@ -1,6 +1,6 @@
 {
   "name": "@nself/plugin-sdk",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "TypeScript/Node.js plugin authoring SDK for nSelf",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
