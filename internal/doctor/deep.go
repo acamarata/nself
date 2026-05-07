@@ -60,6 +60,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S03-T06: SDK version coherence check (SDK-VERSION-01).
 	results = append(results, CheckSDKVersions(ctx)...)
 
+	// S10.T06: SEC-HARDENING-01..08 — Security-Always-Free hardening checks.
+	results = append(results, HardeningChecks(ctx, projectDir)...)
+
 	// G-DOGFOOD (P97 W37/W38): nself.org-specific checks. Gated on
 	// NSELF_DOGFOOD=1 so end-user `nself doctor --deep` runs are not slowed
 	// by HTTP probes against nself.org subdomains. CI workflow at
