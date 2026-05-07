@@ -42,6 +42,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
 
+	// S1.T10: Hasura metadata YAML row-filter check for np_* tables (PERM-HASURA-01).
+	results = append(results, CheckHasuraMetadataYAML(ctx, projectDir, false)...)
+
 	// S98-02-T11: JWT key rotation check (JWT-ROT-01).
 	results = append(results, CheckJWTRotation(projectDir))
 
