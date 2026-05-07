@@ -99,19 +99,23 @@ var initPresets = map[string]initPreset{
 	},
 }
 
-// listInitPresets prints all available presets to stdout.
+// listInitPresets prints all available presets as a formatted table to stdout.
 func listInitPresets() {
 	fmt.Println()
 	ui.Section("Available presets (--preset <name>)")
 	fmt.Println()
+
+	tbl := ui.NewTable("Preset", "Description", "Suggested plugins")
 	for _, name := range []string{"b2b-saas", "mobile-backend", "ai-assistant", "community-forum", "media-hosting", "dev", "nclaw-app"} {
 		p := initPresets[name]
-		fmt.Printf("  %s%-20s%s  %s\n", ui.Bold, p.Name, ui.Reset, p.Description)
+		plugins := "(none)"
 		if len(p.SuggestedPlugins) > 0 {
-			fmt.Printf("    %sPlugins:%s %s\n", ui.Dim, ui.Reset, strings.Join(p.SuggestedPlugins, ", "))
+			plugins = strings.Join(p.SuggestedPlugins, ", ")
 		}
-		fmt.Println()
+		tbl.AddRow(p.Name, p.Description, plugins)
 	}
+	tbl.Render()
+	fmt.Println()
 }
 
 // printPresetPostInit prints preset-specific post-init notes.

@@ -225,10 +225,38 @@ func runInit(cmd *cobra.Command, args []string) error {
 		NoPgvector:     noPgvector,
 	}
 
+	// Wizard progress: show step-by-step display when --wizard is active.
+	var wizardSteps *ui.InitSteps
+	if wizard && !quiet {
+		wizardSteps = ui.NewInitSteps(false,
+			"Validate inputs",
+			"Generate secrets",
+			"Write .env files",
+			"Write .env.example",
+			"Update .gitignore",
+			"Create .nself/ directory",
+		)
+		fmt.Println()
+		ui.Section("Wizard — initializing your nSelf project")
+		fmt.Println()
+		wizardSteps.Next() // step 1: inputs already validated above
+		wizardSteps.Next() // step 2: generating secrets (happens inside Initialize)
+	}
+
 	// Telemetry: record start time for duration measurement.
 	initStart := time.Now()
 
 	result, err := setup.Initialize(opts)
+
+	if wizardSteps != nil {
+		// Advance remaining steps to reflect work completed inside Initialize.
+		wizardSteps.Next() // step 3: .env files
+		wizardSteps.Next() // step 4: .env.example
+		wizardSteps.Next() // step 5: .gitignore
+		wizardSteps.Next() // step 6: .nself/
+		wizardSteps.Done()
+		fmt.Println()
+	}
 
 	// Telemetry: emit init_complete event (opt-in only; silently no-ops when unset).
 	if telemetry.IsOptedIn() {
