@@ -40,6 +40,7 @@ func init() {
 	buildCmd.Flags().Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
 	buildCmd.Flags().Bool("no-migration-check", false, "Skip v1 artifact detection (for automation/CI)")
 	buildCmd.Flags().Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
+	buildCmd.Flags().Bool("no-auto-redis", false, "Disable automatic Redis enablement when a BullMQ-backed plugin is detected")
 
 	RootCmd.AddCommand(buildCmd)
 }
@@ -56,6 +57,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	noMonorepo, _ := cmd.Flags().GetBool("no-monorepo")
 	noMigrationCheck, _ := cmd.Flags().GetBool("no-migration-check")
 	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
+	noAutoRedis, _ := cmd.Flags().GetBool("no-auto-redis")
 
 	if !quiet {
 		ui.CommandHeader("nself build", "Generate project infrastructure")
@@ -133,6 +135,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		Verbose:        verbose,
 		Check:          check,
 		SecurityReport: securityReport,
+		NoAutoRedis:    noAutoRedis,
 	}
 
 	result, err := build.Build(workdir, opts)

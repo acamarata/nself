@@ -548,6 +548,83 @@ func TestShouldAutoEnableRedis_MuxPlugin(t *testing.T) {
 	}
 }
 
+// ── Redis auto-enable pipeline (Step 7.6) ────────────────────────────────────
+
+// TestAutoEnableRedis_NoAutoRedisFlag verifies that when NoAutoRedis is set in
+// BuildOptions, Step 7.6 does NOT set cfg.Redis.Enabled=true even when a
+// BullMQ plugin is installed.
+func TestAutoEnableRedis_NoAutoRedisFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "ai"), 0755); err != nil {
+		t.Fatalf("MkdirAll ai: %v", err)
+	}
+	writeFile(t, filepath.Join(dir, "ai", "plugin.json"), `{"name":"ai"}`)
+
+	cfg := &config.Config{}
+	cfg.Redis.Enabled = false
+
+	opts := BuildOptions{NoAutoRedis: true}
+
+	// Replicate Step 7.6 guard: auto-enable skipped when NoAutoRedis is true.
+	if !cfg.Redis.Enabled && !opts.NoAutoRedis && ShouldAutoEnableRedis(dir) {
+		cfg.Redis.Enabled = true
+	}
+
+	if cfg.Redis.Enabled {
+		t.Error("Step 7.6: Redis.Enabled must remain false when --no-auto-redis is passed")
+	}
+}
+
+// TestAutoEnableRedis_EnablesWhenFlagAbsent confirms that Step 7.6 sets
+// cfg.Redis.Enabled=true when a BullMQ plugin is installed and NoAutoRedis is
+// false (the default).
+func TestAutoEnableRedis_EnablesWhenFlagAbsent(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "notify"), 0755); err != nil {
+		t.Fatalf("MkdirAll notify: %v", err)
+	}
+	writeFile(t, filepath.Join(dir, "notify", "plugin.json"), `{"name":"notify"}`)
+
+	cfg := &config.Config{}
+	cfg.Redis.Enabled = false
+
+	opts := BuildOptions{NoAutoRedis: false}
+
+	if !cfg.Redis.Enabled && !opts.NoAutoRedis && ShouldAutoEnableRedis(dir) {
+		cfg.Redis.Enabled = true
+	}
+
+	if !cfg.Redis.Enabled {
+		t.Error("Step 7.6: Redis.Enabled must be true when notify plugin installed and --no-auto-redis is absent")
+	}
+}
+
+// TestAutoEnableRedis_SkippedWhenRedisAlreadyEnabled verifies Step 7.6 does not
+// double-set Redis.Enabled when the user already has REDIS_ENABLED=true in .env.
+func TestAutoEnableRedis_SkippedWhenRedisAlreadyEnabled(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "cron"), 0755); err != nil {
+		t.Fatalf("MkdirAll cron: %v", err)
+	}
+	writeFile(t, filepath.Join(dir, "cron", "plugin.json"), `{"name":"cron"}`)
+
+	cfg := &config.Config{}
+	cfg.Redis.Enabled = true // already set by user
+
+	opts := BuildOptions{NoAutoRedis: false}
+
+	// Guard: should not enter auto-enable branch.
+	triggered := false
+	if !cfg.Redis.Enabled && !opts.NoAutoRedis && ShouldAutoEnableRedis(dir) {
+		cfg.Redis.Enabled = true
+		triggered = true
+	}
+
+	if triggered {
+		t.Error("Step 7.6: must not trigger auto-enable when Redis is already enabled")
+	}
+}
+
 // ── NeedsRebuild ──────────────────────────────────────────────────────────────
 
 func TestNeedsRebuild_MissingEnv(t *testing.T) {

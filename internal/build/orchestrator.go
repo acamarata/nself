@@ -30,6 +30,10 @@ type BuildOptions struct {
 	Check bool
 	// SecurityReport prints a detailed security audit after validation.
 	SecurityReport bool
+	// NoAutoRedis disables automatic Redis enablement when a BullMQ-backed
+	// plugin (ai, claw, mux, cron, notify, push) is detected. Pass
+	// --no-auto-redis from the CLI to opt out of this behaviour.
+	NoAutoRedis bool
 }
 
 // BuildResult summarizes what the build produced.
@@ -258,11 +262,13 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 
 	// ── Step 7.6: Auto-enable Redis when a BullMQ plugin is installed ─
 	// If Redis is not explicitly enabled but a plugin that needs it (ai, claw,
-	// mux, cron, notify) is installed, set cfg.Redis.Enabled = true so that
-	// both DetectServices and compose.Generator emit a redis block.
-	if !cfg.Redis.Enabled && ShouldAutoEnableRedis(DefaultPluginDir()) {
+	// mux, cron, notify, push) is installed, set cfg.Redis.Enabled = true so
+	// that both DetectServices and compose.Generator emit a redis block.
+	// Skipped when opts.NoAutoRedis is set (--no-auto-redis flag).
+	if !cfg.Redis.Enabled && !opts.NoAutoRedis && ShouldAutoEnableRedis(DefaultPluginDir()) {
 		cfg.Redis.Enabled = true
-		slog.Info("Note: Redis auto-enabled because a BullMQ-backed plugin (cron, notify, ai, claw, or mux) was detected.")
+		fmt.Println("Note: Redis auto-enabled — a BullMQ-backed plugin (ai, claw, mux, cron, notify, or push) is installed.")
+		fmt.Println("      To disable this behaviour, pass --no-auto-redis.")
 	}
 
 	// ── Step 8: Generate docker-compose.yml ─────────────────────────
