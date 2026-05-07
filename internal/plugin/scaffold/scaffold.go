@@ -23,6 +23,23 @@ import (
 // and must NOT end with a hyphen.
 var SlugRE = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}[a-z0-9]$`)
 
+// TenancyMode controls which multi-tenant column(s) the scaffold emits.
+// Matches the --tenancy flag and the interactive prompt choices.
+type TenancyMode string
+
+const (
+	// TenancyNone omits all tenancy columns. Use for plugins with no per-user Postgres tables.
+	TenancyNone TenancyMode = "none"
+	// TenancyAppIsolation emits source_account_id TEXT NOT NULL DEFAULT 'primary'.
+	// Correct for multi-app isolation within one nSelf deploy.
+	TenancyAppIsolation TenancyMode = "app-isolation"
+	// TenancyCloudTenant emits tenant_id UUID (nullable) + Hasura row filter.
+	// Correct for Cloud SaaS where each paying customer is isolated.
+	TenancyCloudTenant TenancyMode = "cloud-tenant"
+	// TenancyBoth emits both columns. Use when unsure — the developer can remove one later.
+	TenancyBoth TenancyMode = "both"
+)
+
 // Params carries all values available inside scaffold templates.
 type Params struct {
 	Name        string // plugin slug, e.g. "mywidget"
@@ -40,6 +57,7 @@ type Params struct {
 	Category    string
 	Port        int
 	Year        int
+	Tenancy     TenancyMode // multi-tenant column choice; empty == TenancyNone
 }
 
 // Options configures a scaffold run.
@@ -68,6 +86,9 @@ type Options struct {
 	OutDir string
 	// Force allows overwriting an existing directory.
 	Force bool
+	// Tenancy controls multi-tenant column scaffolding. Default TenancyNone.
+	// When empty string it is treated as TenancyNone.
+	Tenancy TenancyMode
 }
 
 // Result describes what was emitted.
@@ -106,6 +127,14 @@ func Run(opts Options) (*Result, error) {
 	if opts.Description == "" {
 		opts.Description = fmt.Sprintf("nSelf %s plugin.", opts.Name)
 	}
+	if opts.Tenancy == "" {
+		opts.Tenancy = TenancyNone
+	}
+	switch opts.Tenancy {
+	case TenancyNone, TenancyAppIsolation, TenancyCloudTenant, TenancyBoth:
+	default:
+		return nil, fmt.Errorf("--tenancy must be none, app-isolation, cloud-tenant, or both; got %q", opts.Tenancy)
+	}
 
 	repoBucket := "paid"
 	if opts.Tier == "free" {
@@ -140,6 +169,7 @@ func Run(opts Options) (*Result, error) {
 		MinSDK:      opts.MinSDK,
 		Port:        opts.Port,
 		Year:        time.Now().Year(),
+		Tenancy:     opts.Tenancy,
 	}
 
 	fileList := buildFiles(params)
@@ -168,28 +198,8 @@ func buildFiles(p Params) map[string]string {
 	files := map[string]string{}
 
 	// plugin.json — canonical manifest.
-	files["plugin.json"] = render(`{
-  "name": "{{.Name}}",
-  "version": "0.1.0",
-  "description": "{{.Description}}",
-  "author": "{{.Author}}",
-  "license": {{if eq .Tier "pro"}}"Source-Available"{{else}}"MIT"{{end}},
-  "isCommercial": {{if eq .Tier "pro"}}true{{else}}false{{end}},
-  {{- if eq .Tier "pro"}}
-  "licenseType": "pro",
-  "requiredEntitlements": ["pro"],
-  "requires_license": true,
-  {{- end}}
-  "homepage": "https://nself.org/plugins",
-  "minNselfVersion": "{{.MinCLI}}",
-  "minSdkVersion": "{{.MinSDK}}",
-  "category": "{{.Category}}",
-  {{- if .Bundle}}
-  "bundle": "{{.Bundle}}",
-  {{- end}}
-  "tags": ["{{.Name}}"]
-}
-`, p)
+	// multiApp section is always present; values depend on Tenancy choice.
+	files["plugin.json"] = renderPluginJSON(p)
 
 	// Language-specific files.
 	switch p.Language {
@@ -203,6 +213,9 @@ func buildFiles(p Params) map[string]string {
 		addStaticFiles(files, p)
 	}
 
+	// Tenancy artifacts — migration stub + Hasura metadata stub.
+	addTenancyFiles(files, p)
+
 	// Common files present in every scaffold.
 	files["Dockerfile"] = buildDockerfile(p)
 	files["docker-compose.plugin.yml"] = render(tmplCompose, p)
@@ -212,6 +225,50 @@ func buildFiles(p Params) map[string]string {
 	files[".github/workflows/ci.yml"] = render(tmplCI, p)
 
 	return files
+}
+
+// addTenancyFiles emits migration.sql and hasura_metadata.json stubs whose
+// content depends on the tenancy mode selected by the developer.
+// TenancyNone produces an empty (comment-only) migration so there is always a
+// predictable file for tooling to consume.
+func addTenancyFiles(files map[string]string, p Params) {
+	switch p.Tenancy {
+	case TenancyAppIsolation:
+		files["migrations/001_init.sql"] = render(tmplMigrationAppIsolation, p)
+		files["hasura/metadata.json"] = render(tmplHasuraNoFilter, p)
+	case TenancyCloudTenant:
+		files["migrations/001_init.sql"] = render(tmplMigrationCloudTenant, p)
+		files["hasura/metadata.json"] = render(tmplHasuraCloudFilter, p)
+	case TenancyBoth:
+		files["migrations/001_init.sql"] = render(tmplMigrationBoth, p)
+		files["hasura/metadata.json"] = render(tmplHasuraCloudFilter, p)
+	default: // TenancyNone or empty
+		files["migrations/001_init.sql"] = render(tmplMigrationNone, p)
+		files["hasura/metadata.json"] = render(tmplHasuraNoFilter, p)
+	}
+}
+
+// renderPluginJSON renders plugin.json with multiApp fields that reflect the
+// chosen tenancy mode.
+func renderPluginJSON(p Params) string {
+	// Determine multiApp field values from tenancy choice.
+	multiAppSupported := p.Tenancy == TenancyAppIsolation || p.Tenancy == TenancyBoth
+	isolationColumn := ""
+	if multiAppSupported {
+		isolationColumn = "source_account_id"
+	}
+
+	type jsonParams struct {
+		Params
+		MultiAppSupported bool
+		IsolationColumn   string
+	}
+	jp := jsonParams{
+		Params:            p,
+		MultiAppSupported: multiAppSupported,
+		IsolationColumn:   isolationColumn,
+	}
+	return renderAny(tmplPluginJSON, jp)
 }
 
 func addGoFiles(files map[string]string, p Params) {
@@ -386,6 +443,20 @@ func render(tmpl string, p Params) string {
 	return buf.String()
 }
 
+// renderAny is like render but accepts any data value, not just Params.
+// Used when the template data is a struct that embeds Params with extra fields.
+func renderAny(tmpl string, data any) string {
+	t, err := template.New("").Parse(tmpl)
+	if err != nil {
+		panic(fmt.Sprintf("scaffold: template parse error: %v", err))
+	}
+	var buf strings.Builder
+	if err := t.Execute(&buf, data); err != nil {
+		panic(fmt.Sprintf("scaffold: template execute error: %v", err))
+	}
+	return buf.String()
+}
+
 // --- helpers ---
 
 func toPascal(s string) string {
@@ -409,6 +480,161 @@ func licenseForTier(tier string) string {
 	}
 	return "MIT"
 }
+
+// --- tenancy + plugin.json templates ---
+
+// tmplPluginJSON is the plugin.json template. It requires a struct with all
+// Params fields plus MultiAppSupported (bool) and IsolationColumn (string).
+const tmplPluginJSON = `{
+  "name": "{{.Name}}",
+  "version": "0.1.0",
+  "description": "{{.Description}}",
+  "author": "{{.Author}}",
+  "license": {{if eq .Tier "pro"}}"Source-Available"{{else}}"MIT"{{end}},
+  "isCommercial": {{if eq .Tier "pro"}}true{{else}}false{{end}},
+  {{- if eq .Tier "pro"}}
+  "licenseType": "pro",
+  "requiredEntitlements": ["pro"],
+  "requires_license": true,
+  {{- end}}
+  "homepage": "https://nself.org/plugins",
+  "minNselfVersion": "{{.MinCLI}}",
+  "minSdkVersion": "{{.MinSDK}}",
+  "category": "{{.Category}}",
+  {{- if .Bundle}}
+  "bundle": "{{.Bundle}}",
+  {{- end}}
+  "multiApp": {
+    "supported": {{.MultiAppSupported}},
+    "isolationColumn": "{{.IsolationColumn}}"
+  },
+  "tags": ["{{.Name}}"]
+}
+`
+
+// tmplMigrationNone is emitted when the plugin stores no per-user Postgres data.
+const tmplMigrationNone = `-- {{.Name}} initial migration
+-- No multi-tenancy columns required for this plugin.
+-- Add your schema here.
+
+CREATE TABLE IF NOT EXISTS np_{{.Name}}_items (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+`
+
+// tmplMigrationAppIsolation is emitted for multi-app isolation within one nSelf deploy.
+// Uses source_account_id per the Multi-Tenant Convention Wall.
+const tmplMigrationAppIsolation = `-- {{.Name}} initial migration
+-- Multi-app isolation: source_account_id separates independent consumer apps
+-- within one nSelf deploy. See: docs/architecture/multi-tenant-conventions.md
+
+CREATE TABLE IF NOT EXISTS np_{{.Name}}_items (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_account_id  TEXT NOT NULL DEFAULT 'primary',
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Row-level security: each app sees only its own rows.
+ALTER TABLE np_{{.Name}}_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY np_{{.Name}}_items_isolation ON np_{{.Name}}_items
+    USING (source_account_id = current_setting('app.source_account_id', true));
+`
+
+// tmplMigrationCloudTenant is emitted for Cloud SaaS tenancy.
+// Uses tenant_id UUID per the Multi-Tenant Convention Wall.
+const tmplMigrationCloudTenant = `-- {{.Name}} initial migration
+-- Cloud multi-tenancy: tenant_id separates paying customers in nSelf Cloud SaaS.
+-- See: docs/architecture/multi-tenant-conventions.md
+-- NEVER use tenant_id for per-app isolation within one deploy — use the app-isolation column instead.
+
+CREATE TABLE IF NOT EXISTS np_{{.Name}}_items (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id   UUID,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Row-level security: each tenant sees only its own rows.
+ALTER TABLE np_{{.Name}}_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY np_{{.Name}}_items_tenant ON np_{{.Name}}_items
+    USING (tenant_id = current_setting('app.tenant_id', true)::UUID);
+`
+
+// tmplMigrationBoth emits both columns for developers who are unsure which
+// convention they need. Remove the unused column before going to production.
+const tmplMigrationBoth = `-- {{.Name}} initial migration
+-- Both multi-tenancy columns included. Remove the one you do not need before
+-- going to production. See: docs/architecture/multi-tenant-conventions.md
+--
+--   source_account_id: per-app isolation within one nSelf deploy
+--   tenant_id:         Cloud SaaS paying-customer isolation
+
+CREATE TABLE IF NOT EXISTS np_{{.Name}}_items (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_account_id  TEXT NOT NULL DEFAULT 'primary',
+    tenant_id          UUID,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE np_{{.Name}}_items ENABLE ROW LEVEL SECURITY;
+
+-- Choose ONE of the two policies below and delete the other.
+CREATE POLICY np_{{.Name}}_items_isolation ON np_{{.Name}}_items
+    USING (source_account_id = current_setting('app.source_account_id', true));
+
+-- CREATE POLICY np_{{.Name}}_items_tenant ON np_{{.Name}}_items
+--     USING (tenant_id = current_setting('app.tenant_id', true)::UUID);
+`
+
+// tmplHasuraNoFilter is the Hasura metadata stub for plugins that use
+// source_account_id (app isolation) or no tenancy at all. No tenant row filter
+// is required because isolation is handled at the Postgres RLS layer.
+const tmplHasuraNoFilter = `{
+  "table": {
+    "schema": "public",
+    "name": "np_{{.Name}}_items"
+  },
+  "select_permissions": [
+    {
+      "role": "user",
+      "permission": {
+        "columns": "*",
+        "filter": {}
+      }
+    }
+  ]
+}
+`
+
+// tmplHasuraCloudFilter is the Hasura metadata stub for Cloud multi-tenant
+// plugins. The row filter enforces that each tenant only sees its own rows via
+// the X-Hasura-Tenant-Id session variable.
+const tmplHasuraCloudFilter = `{
+  "table": {
+    "schema": "public",
+    "name": "np_{{.Name}}_items"
+  },
+  "select_permissions": [
+    {
+      "role": "user",
+      "permission": {
+        "columns": "*",
+        "filter": {
+          "tenant_id": {
+            "_eq": "X-Hasura-Tenant-Id"
+          }
+        }
+      }
+    }
+  ]
+}
+`
 
 // --- template strings ---
 

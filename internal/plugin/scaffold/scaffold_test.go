@@ -148,3 +148,213 @@ func TestRun_InvalidTier(t *testing.T) {
 		t.Fatal("expected error for invalid tier, got nil")
 	}
 }
+
+// TestRun_InvalidTenancy verifies that an unrecognized tenancy mode returns an error.
+func TestRun_InvalidTenancy(t *testing.T) {
+	dir := t.TempDir()
+	opts := Options{
+		Name:    "mytenancy",
+		Tenancy: TenancyMode("cloud-only"), // invalid
+		OutDir:  filepath.Join(dir, "mytenancy"),
+	}
+	_, err := Run(opts)
+	if err == nil {
+		t.Fatal("expected error for invalid tenancy, got nil")
+	}
+}
+
+// TestRun_TenancyNone verifies that TenancyNone emits a comment-only migration
+// and a no-filter Hasura stub.
+func TestRun_TenancyNone(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "tnone")
+	result, err := Run(Options{
+		Name:    "tnone",
+		Tenancy: TenancyNone,
+		OutDir:  outDir,
+		Force:   true,
+	})
+	if err != nil {
+		t.Fatalf("Run(TenancyNone): %v", err)
+	}
+
+	migration := readFile(t, filepath.Join(outDir, "migrations/001_init.sql"))
+	if strings.Contains(migration, "source_account_id") {
+		t.Error("TenancyNone: migration should not contain source_account_id")
+	}
+	if strings.Contains(migration, "tenant_id") {
+		t.Error("TenancyNone: migration should not contain tenant_id")
+	}
+
+	hasura := readFile(t, filepath.Join(outDir, "hasura/metadata.json"))
+	if strings.Contains(hasura, "X-Hasura-Tenant-Id") {
+		t.Error("TenancyNone: Hasura metadata should not contain tenant row filter")
+	}
+
+	pluginJSON := readFile(t, filepath.Join(outDir, "plugin.json"))
+	if !strings.Contains(pluginJSON, `"supported": false`) {
+		t.Error("TenancyNone: plugin.json multiApp.supported should be false")
+	}
+
+	_ = result
+}
+
+// TestRun_TenancyAppIsolation verifies that TenancyAppIsolation emits
+// source_account_id and no Hasura tenant filter.
+func TestRun_TenancyAppIsolation(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "tapp")
+	result, err := Run(Options{
+		Name:    "tapp",
+		Tenancy: TenancyAppIsolation,
+		OutDir:  outDir,
+		Force:   true,
+	})
+	if err != nil {
+		t.Fatalf("Run(TenancyAppIsolation): %v", err)
+	}
+
+	migration := readFile(t, filepath.Join(outDir, "migrations/001_init.sql"))
+	if !strings.Contains(migration, "source_account_id") {
+		t.Error("TenancyAppIsolation: migration missing source_account_id")
+	}
+	if strings.Contains(migration, "tenant_id") {
+		t.Error("TenancyAppIsolation: migration should not contain tenant_id")
+	}
+
+	hasura := readFile(t, filepath.Join(outDir, "hasura/metadata.json"))
+	if strings.Contains(hasura, "X-Hasura-Tenant-Id") {
+		t.Error("TenancyAppIsolation: Hasura metadata should not have tenant filter")
+	}
+
+	pluginJSON := readFile(t, filepath.Join(outDir, "plugin.json"))
+	if !strings.Contains(pluginJSON, `"supported": true`) {
+		t.Error("TenancyAppIsolation: plugin.json multiApp.supported should be true")
+	}
+	if !strings.Contains(pluginJSON, `"isolationColumn": "source_account_id"`) {
+		t.Error("TenancyAppIsolation: plugin.json isolationColumn should be source_account_id")
+	}
+
+	_ = result
+}
+
+// TestRun_TenancyCloudTenant verifies that TenancyCloudTenant emits
+// tenant_id and the Hasura X-Hasura-Tenant-Id row filter.
+func TestRun_TenancyCloudTenant(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "tcloud")
+	result, err := Run(Options{
+		Name:    "tcloud",
+		Tenancy: TenancyCloudTenant,
+		OutDir:  outDir,
+		Force:   true,
+	})
+	if err != nil {
+		t.Fatalf("Run(TenancyCloudTenant): %v", err)
+	}
+
+	migration := readFile(t, filepath.Join(outDir, "migrations/001_init.sql"))
+	if !strings.Contains(migration, "tenant_id") {
+		t.Error("TenancyCloudTenant: migration missing tenant_id")
+	}
+	if strings.Contains(migration, "source_account_id") {
+		t.Error("TenancyCloudTenant: migration should not contain source_account_id")
+	}
+
+	hasura := readFile(t, filepath.Join(outDir, "hasura/metadata.json"))
+	if !strings.Contains(hasura, "X-Hasura-Tenant-Id") {
+		t.Error("TenancyCloudTenant: Hasura metadata missing tenant row filter")
+	}
+
+	pluginJSON := readFile(t, filepath.Join(outDir, "plugin.json"))
+	if !strings.Contains(pluginJSON, `"supported": false`) {
+		t.Error("TenancyCloudTenant: plugin.json multiApp.supported should be false (cloud-tenant uses tenant_id, not source_account_id)")
+	}
+
+	_ = result
+}
+
+// TestRun_TenancyBoth verifies that TenancyBoth emits both columns and the
+// Hasura cloud tenant filter.
+func TestRun_TenancyBoth(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "tboth")
+	result, err := Run(Options{
+		Name:    "tboth",
+		Tenancy: TenancyBoth,
+		OutDir:  outDir,
+		Force:   true,
+	})
+	if err != nil {
+		t.Fatalf("Run(TenancyBoth): %v", err)
+	}
+
+	migration := readFile(t, filepath.Join(outDir, "migrations/001_init.sql"))
+	if !strings.Contains(migration, "source_account_id") {
+		t.Error("TenancyBoth: migration missing source_account_id")
+	}
+	if !strings.Contains(migration, "tenant_id") {
+		t.Error("TenancyBoth: migration missing tenant_id")
+	}
+
+	hasura := readFile(t, filepath.Join(outDir, "hasura/metadata.json"))
+	if !strings.Contains(hasura, "X-Hasura-Tenant-Id") {
+		t.Error("TenancyBoth: Hasura metadata should have tenant filter (both mode uses cloud filter)")
+	}
+
+	pluginJSON := readFile(t, filepath.Join(outDir, "plugin.json"))
+	if !strings.Contains(pluginJSON, `"supported": true`) {
+		t.Error("TenancyBoth: plugin.json multiApp.supported should be true")
+	}
+
+	_ = result
+}
+
+// TestPluginJSON_TenancyFields verifies that plugin.json multiApp fields are
+// correct for all four tenancy modes without creating a full scaffold.
+func TestPluginJSON_TenancyFields(t *testing.T) {
+	cases := []struct {
+		tenancy           TenancyMode
+		wantSupported     string
+		wantIsolationCol  string
+	}{
+		{TenancyNone, `"supported": false`, `"isolationColumn": ""`},
+		{TenancyAppIsolation, `"supported": true`, `"isolationColumn": "source_account_id"`},
+		{TenancyCloudTenant, `"supported": false`, `"isolationColumn": ""`},
+		{TenancyBoth, `"supported": true`, `"isolationColumn": "source_account_id"`},
+	}
+	for _, tc := range cases {
+		t.Run(string(tc.tenancy), func(t *testing.T) {
+			p := Params{
+				Name:       "myplugin",
+				PascalName: "Myplugin",
+				EnvPrefix:  "MYPLUGIN",
+				Tier:       "free",
+				RepoBucket: "free",
+				MinCLI:     "1.0.9",
+				MinSDK:     "0.1.0",
+				Category:   "custom",
+				Port:       8080,
+				Year:       2026,
+				Tenancy:    tc.tenancy,
+			}
+			got := renderPluginJSON(p)
+			if !strings.Contains(got, tc.wantSupported) {
+				t.Errorf("tenancy %s: want %q in plugin.json, got:\n%s", tc.tenancy, tc.wantSupported, got)
+			}
+			if !strings.Contains(got, tc.wantIsolationCol) {
+				t.Errorf("tenancy %s: want %q in plugin.json, got:\n%s", tc.tenancy, tc.wantIsolationCol, got)
+			}
+		})
+	}
+}
+
+// readFile is a test helper that reads a file and returns its content as string.
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("readFile(%s): %v", path, err)
+	}
+	return string(b)
+}
