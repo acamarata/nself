@@ -7,6 +7,7 @@
 //
 //	nself gdpr export --user <id>         Build an export archive for a user
 //	nself gdpr delete --user <id>         Cascade-delete/anonymize a user's data
+//	nself gdpr forget --user <id>         Alias for delete (Art. 17 "right to be forgotten")
 //	nself gdpr status --request <id>      Show status of a GDPR request
 //	nself gdpr list-requests              List all GDPR requests
 package commands
@@ -323,9 +324,38 @@ func runGDPRList(cmd *cobra.Command, _ []string) error {
 
 // ---------- helpers ----------
 
+// ---------- forget (alias for delete, GDPR Art. 17 "right to be forgotten") ----------
+
+// gdprForgetCmd is a user-friendly alias for gdprDeleteCmd.
+// The GDPR "right to be forgotten" (Art. 17) is commonly expressed as "forget" in
+// consumer-facing products. This alias keeps the interface familiar without duplicating
+// the underlying implementation.
+var gdprForgetCmd = &cobra.Command{
+	Use:   "forget",
+	Short: "Alias for 'delete' — right to be forgotten (GDPR Art. 17)",
+	Long: `Same as 'nself gdpr delete'. Provided as a user-friendly alias because
+the GDPR Art. 17 right-to-erasure is commonly described as the "right to be
+forgotten" in consumer-facing products.
+
+Example:
+  nself gdpr forget --user abc123
+  nself gdpr forget --user abc123 --dry-run`,
+	RunE: runGDPRDelete,
+}
+
+func init() {
+	// Copy flags from gdprDeleteCmd so forget is a true interface alias.
+	gdprForgetCmd.Flags().String("user", "", "User ID to erase data for (required)")
+	gdprForgetCmd.Flags().Bool("dry-run", false, "List affected rows without deleting anything")
+	if err := gdprForgetCmd.MarkFlagRequired("user"); err != nil {
+		panic(fmt.Sprintf("gdpr forget: mark --user required: %v", err))
+	}
+}
+
 func init() {
 	gdprCmd.AddCommand(gdprExportCmd)
 	gdprCmd.AddCommand(gdprDeleteCmd)
+	gdprCmd.AddCommand(gdprForgetCmd)
 	gdprCmd.AddCommand(gdprStatusCmd)
 	gdprCmd.AddCommand(gdprListCmd)
 	RootCmd.AddCommand(gdprCmd)
