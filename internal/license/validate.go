@@ -7,8 +7,11 @@ package license
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -195,6 +198,10 @@ func ImportCache(data []byte) error {
 }
 
 // validateRemote performs the HTTP POST to /license/validate.
+// S10.T03: After reading the body it verifies the X-NSelf-License-Sig Ed25519
+// header. A missing or invalid signature causes the call to return an error so
+// the caller falls through to the cached license.  Dev builds (IsZeroPubKey)
+// skip the check gracefully.
 func validateRemote(ctx context.Context, key string, pingURL string) (*ValidateResponse, error) {
 	type request struct {
 		LicenseKey string `json:"license_key"`
@@ -226,8 +233,38 @@ func validateRemote(ctx context.Context, key string, pingURL string) (*ValidateR
 		return nil, fmt.Errorf("server returned %d", resp.StatusCode)
 	}
 
+	// Read the raw body so we can verify the signature against it.
+	rawBody, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	// S10.T03: verify Ed25519 response signature before trusting tier/plugins.
+	// Skip in dev builds where the public key is not embedded (IsZeroPubKey).
+	if !IsZeroPubKey() {
+		sigHex := resp.Header.Get("X-NSelf-License-Sig")
+		if sigHex == "" {
+			return nil, fmt.Errorf("response signature missing (X-NSelf-License-Sig header absent) — falling back to cache")
+		}
+		sigBytes, decErr := hex.DecodeString(sigHex)
+		if decErr != nil {
+			return nil, fmt.Errorf("response signature malformed: %w — falling back to cache", decErr)
+		}
+		keys := GetPublicKeys()
+		var verified bool
+		for _, pk := range keys {
+			if ed25519.Verify(ed25519.PublicKey(pk.Key), rawBody, sigBytes) {
+				verified = true
+				break
+			}
+		}
+		if !verified {
+			return nil, fmt.Errorf("response signature invalid — possible MITM or tampered response; falling back to cache")
+		}
+	}
+
 	var vr ValidateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&vr); err != nil {
+	if err := json.Unmarshal(rawBody, &vr); err != nil {
 		return nil, fmt.Errorf("decoding response: %w", err)
 	}
 	return &vr, nil

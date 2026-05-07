@@ -27,7 +27,23 @@ var licensePubKeyHex = "" //nolint:unused // set via -X github.com/nself-org/cli
 // signing key. Returns true when licensePubKeyHex is empty OR consists entirely
 // of '0' characters (e.g., a placeholder 64-char zero string).
 // goreleaser injects a real non-zero Ed25519 pubkey hex; dev builds leave it empty.
+//
+// Exception: when LICENSE_PUBLIC_KEY_OVERRIDE is set to a valid non-zero Ed25519
+// public key hex, IsZeroPubKey returns false so that tests can exercise the
+// production signature-verification code path without goreleaser ldflags.
 func IsZeroPubKey() bool {
+	// Check override first — allows tests to exercise the sig-verify path.
+	if override := os.Getenv("LICENSE_PUBLIC_KEY_OVERRIDE"); override != "" {
+		keyBytes, err := hex.DecodeString(override)
+		if err == nil && len(keyBytes) == ed25519.PublicKeySize {
+			// Non-zero override key supplied: treat as "real key embedded".
+			for _, b := range keyBytes {
+				if b != 0 {
+					return false
+				}
+			}
+		}
+	}
 	if licensePubKeyHex == "" {
 		return true
 	}
