@@ -70,8 +70,31 @@ var initPresets = map[string]initPreset{
 		SuggestedPlugins: []string{"media-processing", "streaming", "file-processing", "subtitle-manager"},
 		EnabledServices:  []string{"minio"},
 		Notes: []string{
-			"MinIO (S3-compatible storage) is enabled — configure MINIO_ACCESS_KEY in .env",
+			"MinIO (S3-compatible storage) is enabled. Configure MINIO_ACCESS_KEY in .env",
 			"Install nTV bundle: nself plugin install media-processing streaming",
+		},
+	},
+	"dev": {
+		Name:             "dev",
+		Description:      "Lightweight development environment: Postgres + Hasura + Auth only, no monitoring stack",
+		SuggestedPlugins: []string{},
+		EnabledServices:  []string{},
+		Notes: []string{
+			"Monitoring stack is disabled for fast cold-start",
+			"Add services later: nself service enable redis",
+			"Install free plugins as needed: nself plugin install <name>",
+		},
+	},
+	"nclaw-app": {
+		Name:             "nclaw-app",
+		Description:      "Pre-configured backend for ɳClaw: AI memory, multi-model routing, email, and OAuth",
+		SuggestedPlugins: []string{"ai", "claw", "claw-web", "mux", "voice", "browser", "google", "notify", "cron", "claw-budget", "claw-news"},
+		EnabledServices:  []string{"redis", "search"},
+		Notes: []string{
+			"Set ANTHROPIC_API_KEY in .env.secrets",
+			"Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET in .env.secrets",
+			"Install nClaw bundle: nself plugin install ai claw mux",
+			"pgvector is pre-enabled for vector search (required by the claw plugin)",
 		},
 	},
 }
@@ -81,7 +104,7 @@ func listInitPresets() {
 	fmt.Println()
 	ui.Section("Available presets (--preset <name>)")
 	fmt.Println()
-	for _, name := range []string{"b2b-saas", "mobile-backend", "ai-assistant", "community-forum", "media-hosting"} {
+	for _, name := range []string{"b2b-saas", "mobile-backend", "ai-assistant", "community-forum", "media-hosting", "dev", "nclaw-app"} {
 		p := initPresets[name]
 		fmt.Printf("  %s%-20s%s  %s\n", ui.Bold, p.Name, ui.Reset, p.Description)
 		if len(p.SuggestedPlugins) > 0 {
