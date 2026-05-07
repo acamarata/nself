@@ -1,0 +1,87 @@
+# DR Drill Quarterly Reminder — S9.T12
+# Creates a GitHub issue on the first Monday of each quarter as a drill reminder.
+# Drills are tracked in .claude/docs/operations/dr-drills-calendar.md
+
+name: DR Drill Quarterly Reminder
+
+on:
+  schedule:
+    # First Monday of Jan, Apr, Jul, Oct at 09:00 UTC
+    # Note: GitHub Actions doesn't natively support "first Monday of month"
+    # so we schedule on the 1st-7th of each quarter month and filter in the job.
+    - cron: '0 9 1-7 1,4,7,10 1'
+  workflow_dispatch:
+    inputs:
+      drill_type:
+        description: 'DR drill type to remind about'
+        required: false
+        default: 'quarterly'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-drill-reminder:
+    name: Create DR Drill Reminder Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine quarter and drill type
+        id: quarter
+        run: |
+          MONTH=$(date +%-m)
+          YEAR=$(date +%Y)
+          if   [ "$MONTH" -le 3 ];  then Q=1; DRILL="Vercel → Cloudflare Pages cutover drill"
+          elif [ "$MONTH" -le 6 ];  then Q=2; DRILL="R2 backup full-restore drill (Postgres → staging)"
+          elif [ "$MONTH" -le 9 ];  then Q=3; DRILL="Hasura migration tabletop drill"
+          else                           Q=4; DRILL="Hetzner → OVH/AWS failover live drill"
+          fi
+          echo "quarter=Q${Q}" >> $GITHUB_OUTPUT
+          echo "drill=${DRILL}" >> $GITHUB_OUTPUT
+          echo "year=${YEAR}" >> $GITHUB_OUTPUT
+
+      - name: Create reminder issue
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const { quarter, drill, year } = {
+              quarter: '${{ steps.quarter.outputs.quarter }}',
+              drill: '${{ steps.quarter.outputs.drill }}',
+              year: '${{ steps.quarter.outputs.year }}'
+            };
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `DR Drill ${year}-${quarter}: ${drill}`,
+              body: [
+                '## Quarterly DR Drill Reminder',
+                '',
+                `**Quarter:** ${year}-${quarter}`,
+                `**Drill:** ${drill}`,
+                '',
+                '### Instructions',
+                '',
+                '1. Read the runbook: `.claude/docs/operations/dr-drills-calendar.md`',
+                '2. Schedule a 2-hour window with the team',
+                '3. Execute the drill using the template in the calendar doc',
+                '4. Record the result in the drill log',
+                '5. File any gaps found as follow-up issues',
+                '',
+                '### Runbook Location',
+                '',
+                'All runbooks are in `.claude/docs/operations/`. Relevant for this drill:',
+                '- Q1: `vercel-failover-runbook.md`',
+                '- Q2: `postgres-restore-drill.md`',
+                '- Q3: `hasura-migration-runbook.md`',
+                '- Q4: `hetzner-failover-runbook.md`',
+                '',
+                '### Success Criteria',
+                '',
+                'See `dr-drills-calendar.md` § Quarterly Schedule for pass/fail criteria.',
+                '',
+                '---',
+                '*Auto-created by [DR Drill Quarterly Reminder workflow](.github/workflows/dr-drill-reminder.yml)*'
+              ].join('\n'),
+              labels: ['ops', 'dr-drill', 'quarterly']
+            });

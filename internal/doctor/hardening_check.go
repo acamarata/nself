@@ -393,6 +393,15 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 
 // ─── SEC-HARDENING-07: Audit log enabled ─────────────────────────────────────
 
+// auditTableName is the canonical table created by the nself-audit plugin migration
+// (plugins-pro/paid/nself-audit/migrations/001_init.sql). The previous check
+// erroneously referenced "np_audit_log" — the correct table is "np_audit_events".
+const auditTableName = "np_audit_events"
+
+// auditTriggerName is the append-only trigger installed by 001_init.sql that
+// blocks UPDATE and DELETE on np_audit_events to ensure tamper-evidence.
+const auditTriggerName = "trg_audit_immutable"
+
 func checkHardeningAuditLog(ctx context.Context, projectDir string) CheckResult {
 	const checkID = "SEC-HARDENING-07"
 
@@ -400,32 +409,56 @@ func checkHardeningAuditLog(ctx context.Context, projectDir string) CheckResult 
 	listCmd := exec.CommandContext(ctx, "nself", "plugin", "list", "--installed")
 	listOut, listErr := listCmd.Output()
 	if listErr == nil && strings.Contains(string(listOut), "nself-audit") {
+		// Plugin is installed; also verify the append-only trigger is present
+		// to confirm the tamper-evident guarantee is actually in place.
+		triggerCheck := checkAuditTrigger(ctx)
+		if triggerCheck == "pass" {
+			return CheckResult{
+				Section: hardeningSection,
+				Name:    checkID,
+				Status:  "pass",
+				Message: fmt.Sprintf("SEC-HARDENING-07: nself-audit plugin installed, %s present with %s append-only trigger", auditTableName, auditTriggerName),
+			}
+		}
 		return CheckResult{
 			Section: hardeningSection,
 			Name:    checkID,
-			Status:  "pass",
-			Message: "SEC-HARDENING-07: nself-audit plugin is installed",
+			Status:  "warn",
+			Message: fmt.Sprintf("SEC-HARDENING-07: nself-audit plugin installed but %s trigger not found — migration may not have run", auditTriggerName),
+			FixCmd:  "nself plugin run nself-audit migrate",
 		}
 	}
 
-	// Check 2: np_audit_log table exists and is writable (INSERT privilege check).
-	query := `SELECT has_table_privilege(current_user, 'np_audit_log', 'INSERT')::text;`
+	// Check 2: np_audit_events table exists and is writable (INSERT privilege check).
+	// The table is INSERT+SELECT only — UPDATE and DELETE are blocked by trigger.
+	query := fmt.Sprintf(`SELECT has_table_privilege(current_user, '%s', 'INSERT')::text;`, auditTableName)
 	cmd := exec.CommandContext(ctx,
 		"docker", "exec", "nself_postgres",
 		"psql", "-U", "postgres", "-t", "-c", query,
 	)
 	out, err := cmd.Output()
 	if err == nil && strings.TrimSpace(string(out)) == "t" {
+		// Table writable — also verify append-only trigger.
+		triggerCheck := checkAuditTrigger(ctx)
+		if triggerCheck == "pass" {
+			return CheckResult{
+				Section: hardeningSection,
+				Name:    checkID,
+				Status:  "pass",
+				Message: fmt.Sprintf("SEC-HARDENING-07: %s present, writable, and append-only trigger active", auditTableName),
+			}
+		}
 		return CheckResult{
 			Section: hardeningSection,
 			Name:    checkID,
-			Status:  "pass",
-			Message: "SEC-HARDENING-07: np_audit_log table is present and writable",
+			Status:  "warn",
+			Message: fmt.Sprintf("SEC-HARDENING-07: %s writable but %s trigger missing — audit events not tamper-evident", auditTableName, auditTriggerName),
+			FixCmd:  "nself plugin run nself-audit migrate",
 		}
 	}
 
-	// Also check for the table's existence even without INSERT privilege.
-	existsQuery := `SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='np_audit_log')::text;`
+	// Check 3: table exists but INSERT privilege not confirmed.
+	existsQuery := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='%s')::text;`, auditTableName)
 	existsCmd := exec.CommandContext(ctx,
 		"docker", "exec", "nself_postgres",
 		"psql", "-U", "postgres", "-t", "-c", existsQuery,
@@ -436,7 +469,7 @@ func checkHardeningAuditLog(ctx context.Context, projectDir string) CheckResult 
 			Section: hardeningSection,
 			Name:    checkID,
 			Status:  "warn",
-			Message: "SEC-HARDENING-07: np_audit_log table exists but INSERT privilege not confirmed — verify write access",
+			Message: fmt.Sprintf("SEC-HARDENING-07: %s table exists but INSERT privilege not confirmed — verify write access", auditTableName),
 		}
 	}
 
@@ -444,9 +477,27 @@ func checkHardeningAuditLog(ctx context.Context, projectDir string) CheckResult 
 		Section: hardeningSection,
 		Name:    checkID,
 		Status:  "warn",
-		Message: "SEC-HARDENING-07: audit log not detected — install nself-audit plugin or create np_audit_log table",
+		Message: fmt.Sprintf("SEC-HARDENING-07: audit log not detected — install nself-audit plugin (table: %s)", auditTableName),
 		FixCmd:  "nself plugin install nself-audit",
 	}
+}
+
+// checkAuditTrigger verifies that the append-only trigger trg_audit_immutable
+// exists on np_audit_events. Returns "pass" if confirmed, "fail" otherwise.
+func checkAuditTrigger(ctx context.Context) string {
+	triggerQuery := fmt.Sprintf(
+		`SELECT EXISTS(SELECT 1 FROM information_schema.triggers WHERE trigger_name='%s' AND event_object_table='%s')::text;`,
+		auditTriggerName, auditTableName,
+	)
+	triggerCmd := exec.CommandContext(ctx,
+		"docker", "exec", "nself_postgres",
+		"psql", "-U", "postgres", "-t", "-c", triggerQuery,
+	)
+	triggerOut, triggerErr := triggerCmd.Output()
+	if triggerErr == nil && strings.TrimSpace(string(triggerOut)) == "t" {
+		return "pass"
+	}
+	return "fail"
 }
 
 // ─── SEC-HARDENING-08: Encryption at rest ────────────────────────────────────

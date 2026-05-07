@@ -11,7 +11,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE) \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -44,6 +44,12 @@ sbom:
 	@echo ""
 	@echo "Query SBOM for a package:"
 	@echo "  bash tools/sbom/query.sh --local sbom.cdx.json --pkg cobra"
+
+## man — generate man pages for all nself commands into ./man/
+man: build
+	@mkdir -p man
+	@./$(BINARY) man --output man
+	@echo "Man pages written to man/"
 
 build:
 	CGO_ENABLED=0 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/nself/
