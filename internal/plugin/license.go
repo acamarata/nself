@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,6 +20,26 @@ import (
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/httptimeout"
 )
+
+// ErrRateLimited is returned when the license validation server responds with
+// HTTP 429 Too Many Requests. RetryAfter holds the value of the Retry-After
+// header (in seconds) as a string, defaulting to "60" when the header is absent.
+type ErrRateLimited struct {
+	RetryAfter string
+}
+
+func (e *ErrRateLimited) Error() string {
+	return fmt.Sprintf("rate limited — retry after %ss", e.RetryAfter)
+}
+
+// IsRateLimited reports whether err is (or wraps) an ErrRateLimited.
+func IsRateLimited(err error) (retryAfter string, ok bool) {
+	var e *ErrRateLimited
+	if errors.As(err, &e) {
+		return e.RetryAfter, true
+	}
+	return "", false
+}
 
 // validLicensePrefixes lists the accepted license key prefixes.
 var validLicensePrefixes = []string{
@@ -200,6 +221,12 @@ func validateLicenseRemoteWithEntitlements(ctx context.Context, key string, ping
 			return false, nil, fmt.Errorf("license invalid")
 		}
 		return true, &lvr, nil
+	case http.StatusTooManyRequests:
+		retryAfter := resp.Header.Get("Retry-After")
+		if retryAfter != "" {
+			return false, nil, &ErrRateLimited{RetryAfter: retryAfter}
+		}
+		return false, nil, &ErrRateLimited{RetryAfter: "60"}
 	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
 		return false, nil, nil
 	default:

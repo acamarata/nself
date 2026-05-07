@@ -159,7 +159,12 @@ Examples:
 var licenseStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show all configured licenses and plugin coverage",
-	RunE:  runLicenseStatus,
+	Long: `Show all configured license keys, their status, and plugin coverage.
+
+Use --plugin <name> to check whether a specific plugin is accessible with the
+current license. Rate limiting is surfaced as a distinct status line so it is
+never confused with a network outage or invalid key.`,
+	RunE: runLicenseStatus,
 }
 
 var licenseListCmd = &cobra.Command{
@@ -169,6 +174,8 @@ var licenseListCmd = &cobra.Command{
 }
 
 func runLicenseStatus(cmd *cobra.Command, args []string) error {
+	pluginFilter, _ := cmd.Flags().GetString("plugin")
+
 	keys := license.CollectLicenseKeys()
 	if len(keys) == 0 {
 		fmt.Println("No license keys configured.")
@@ -207,11 +214,16 @@ func runLicenseStatus(cmd *cobra.Command, args []string) error {
 		expires := "-"
 		plugins := "-"
 
+		if retryAfter, isRL := plugin.IsRateLimited(err); isRL {
+			status = fmt.Sprintf("RATE LIMITED — retry after %ss", retryAfter)
+			err = nil // already handled; fall through to row render
+		}
+
 		if err != nil {
 			status = "Error"
-		} else if !valid {
+		} else if status == "Unknown" && !valid {
 			status = "Invalid"
-		} else {
+		} else if status == "Unknown" {
 			status = "Active"
 			if lvr != nil {
 				if lvr.Tier != "" {
@@ -253,6 +265,17 @@ func runLicenseStatus(cmd *cobra.Command, args []string) error {
 
 	if !hasPlus {
 		fmt.Printf("\nUpgrade to ɳSelf+ ($3.99/mo or $39.99/yr) for all plugins: %s\n", pricingURL)
+	}
+
+	// Per-plugin access check (--plugin flag).
+	if pluginFilter != "" {
+		fmt.Printf("\nPlugin access check: %s\n", pluginFilter)
+		if allPlugins[pluginFilter] {
+			fmt.Printf("  Access: granted (covered by active license)\n")
+		} else {
+			fmt.Printf("  Access: denied (not in any active license)\n")
+			fmt.Printf("  Get access: nself.org/bundles\n")
+		}
 	}
 
 	return nil
@@ -714,6 +737,8 @@ func init() {
 	licenseHealthCmd.Flags().Bool("json", false, "Output as JSON")
 	licenseRevokeCmd.Flags().Bool("yes", false, "Confirm revocation without interactive prompt")
 	licenseRestoreCmd.Flags().String("key", "", "New license key to restore with")
+	licenseStatusCmd.Flags().String("plugin", "", "Check access for a specific plugin by name")
+	licenseListCmd.Flags().String("plugin", "", "Check access for a specific plugin by name")
 
 	licenseCmd.AddCommand(licenseSetCmd)
 	licenseCmd.AddCommand(licenseAddCmd)
