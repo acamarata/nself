@@ -28,6 +28,7 @@ var canonicalBundles = map[string]Bundle{
 		Plugins: []string{
 			"ai", "claw", "claw-web", "mux", "voice", "browser",
 			"google", "notify", "cron", "claw-budget", "claw-news",
+			"mcp", "knowledge-base",
 		},
 	},
 	"nchat": {
@@ -35,6 +36,7 @@ var canonicalBundles = map[string]Bundle{
 		Price: "$0.99/mo or $9.99/yr",
 		Plugins: []string{
 			"chat", "livekit", "recording", "moderation", "bots", "realtime", "auth",
+			"support",
 		},
 	},
 	"nfamily": {
@@ -42,6 +44,7 @@ var canonicalBundles = map[string]Bundle{
 		Price: "$0.99/mo or $9.99/yr",
 		Plugins: []string{
 			"social", "photos", "activity-feed", "moderation", "realtime", "cms", "chat",
+			"geolocation", "calendar",
 		},
 	},
 	"ntv": {
@@ -57,6 +60,7 @@ var canonicalBundles = map[string]Bundle{
 		Price: "$0.99/mo or $9.99/yr",
 		Plugins: []string{
 			"claw", "ai", "realtime", "auth", "notify", "cms",
+			"mcp", "knowledge-base",
 		},
 	},
 	"nsentry": {
