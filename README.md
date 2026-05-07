@@ -176,6 +176,24 @@ make install  # copies nself to /usr/local/bin
 
 Requires Go 1.22+ and GNU make.
 
+### Secure install (recommended for CI and production)
+
+The installer always fetches `checksums.txt` from the same GitHub release and verifies the SHA-256 of the downloaded tarball before extracting. Installation aborts loudly on any mismatch.
+
+For the most paranoid setups, pin the expected SHA-256 in your shell or CI config:
+
+```bash
+# Obtain the expected checksum for a specific release:
+curl -fsSL https://github.com/nself-org/cli/releases/download/v1.0.16/checksums.txt
+
+# Install with a pinned version and pinned SHA-256:
+NSELF_VERSION=v1.0.16 \
+NSELF_INSTALL_PIN_SHA256=<sha256-from-checksums.txt> \
+curl -fsSL https://install.nself.org | bash
+```
+
+This defends against a compromised release page: even if the tarball at the release URL is replaced, the pinned SHA will not match and the install fails.
+
 ### Update
 
 ```bash
