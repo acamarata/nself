@@ -1,0 +1,70 @@
+# Built-in feature flag registry for nSelf CLI.
+#
+# This file is COMPILED IN via go:embed (registry.go). It is the canonical
+# enumeration of release-gating feature flags shipped with the CLI binary.
+#
+# Distinct from the runtime feature-flags PLUGIN (port 3305, internal/flags/),
+# this registry covers CLI-level toggles that ship/unship code paths between
+# point releases. Plugin flags are for runtime experiments and rollouts;
+# registry flags are for build-time / install-time capability gates.
+#
+# Schema: each entry MUST contain key, type, surface, description, default,
+# introduced. Optional: auto_kill (ISO-8601 date), owner, docs_url.
+#
+# Naming convention: NSELF_FF_<SURFACE>_<FEATURE> in environment;
+# kebab-case <surface>-<feature> as the registry key.
+#
+# Source of truth aligned with .claude/docs/sport/F23-FEATURE-FLAG-REGISTRY.md
+# (P100 S12.T15). Edits must keep both in sync.
+
+version: 1
+flags:
+  - key: nsentry-enabled
+    type: release
+    surface: nsentry
+    description: Enable ɳSentry bundle plugins (uptime-monitor, status-page, incident-mgmt, alert-router, slo-tracker, synthetic-monitor, rum).
+    default: false
+    introduced: "1.1.0"
+    owner: nsentry-team
+    auto_kill: "2026-12-31"
+
+  - key: nfamily-coppa-strict
+    type: ops
+    surface: nfamily
+    description: Enforce strict COPPA age-gate and parental consent verification on web/nfamily signup flow.
+    default: true
+    introduced: "1.1.0"
+    owner: nfamily-team
+
+  - key: cloud-multi-tenant-strict
+    type: ops
+    surface: cloud
+    description: Enforce strict tenant_id row-filter on all np_* tables when nSelf Cloud SaaS mode is detected.
+    default: true
+    introduced: "1.1.0"
+    owner: cloud-team
+
+  - key: clawde-telemetry-opt-in
+    type: release
+    surface: clawde
+    description: Send anonymized build/activation telemetry from ClawDE desktop app. Opt-in only.
+    default: false
+    introduced: "1.1.0"
+    owner: clawde-team
+
+  - key: ntv-platform-binaries
+    type: release
+    surface: ntv
+    description: Enable Roku/AppleTV/AndroidTV/Samsung/LG platform binary builds in ɳTV release cascade.
+    default: false
+    introduced: "1.1.0"
+    owner: ntv-team
+    auto_kill: "2026-12-31"
+
+  - key: i18n-multi-locale
+    type: release
+    surface: web
+    description: Enable EN+DE+ES+FR locale routing on web/cloud and web/base (DeepL machine-translated, human spot-checked).
+    default: false
+    introduced: "1.1.0"
+    owner: web-team

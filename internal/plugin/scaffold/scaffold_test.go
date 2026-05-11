@@ -314,9 +314,9 @@ func TestRun_TenancyBoth(t *testing.T) {
 // correct for all four tenancy modes without creating a full scaffold.
 func TestPluginJSON_TenancyFields(t *testing.T) {
 	cases := []struct {
-		tenancy           TenancyMode
-		wantSupported     string
-		wantIsolationCol  string
+		tenancy          TenancyMode
+		wantSupported    string
+		wantIsolationCol string
 	}{
 		{TenancyNone, `"supported": false`, `"isolationColumn": ""`},
 		{TenancyAppIsolation, `"supported": true`, `"isolationColumn": "source_account_id"`},

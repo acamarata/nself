@@ -68,10 +68,10 @@ type AuthUser struct {
 
 // StorageBucket is a Supabase Storage bucket.
 type StorageBucket struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Public   bool   `json:"public"`
-	FileSizeLimit int `json:"file_size_limit"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Public        bool   `json:"public"`
+	FileSizeLimit int    `json:"file_size_limit"`
 }
 
 // PullResult contains everything pulled from a Supabase project.

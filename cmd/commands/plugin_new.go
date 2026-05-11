@@ -218,4 +218,3 @@ func promptTenancy() (scaffold.TenancyMode, error) {
 		return scaffold.TenancyNone, nil
 	}
 }
-

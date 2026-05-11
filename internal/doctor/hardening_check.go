@@ -512,8 +512,8 @@ var encryptionEnvKeys = []string{
 // encryptedDiskMarkers are filesystem paths whose presence signals
 // the volume is backed by an encrypted disk (dm-crypt, LUKS, FileVault, etc.).
 var encryptedDiskMarkers = []string{
-	"/etc/crypttab",             // LUKS-managed volumes (Linux)
-	"/sys/block/dm-0/dm/name",  // device-mapper (dm-crypt) present
+	"/etc/crypttab",           // LUKS-managed volumes (Linux)
+	"/sys/block/dm-0/dm/name", // device-mapper (dm-crypt) present
 }
 
 func checkHardeningEncryptionAtRest(projectDir string) CheckResult {

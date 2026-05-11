@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/nself-org/cli/internal/bundle"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/plugin"
 
@@ -289,10 +291,83 @@ func checkPluginInstalled(pluginName string) bool {
 	return false
 }
 
+// ── bundle install ──────────────────────────────────────────────────
+
+var bundleInstallCmd = &cobra.Command{
+	Use:   "install <bundle>",
+	Short: "Install every plugin in a bundle (license-gated, atomic rollback on failure)",
+	Long: `Install all plugins in the named bundle in a single transaction.
+
+License validation runs for every plugin BEFORE any filesystem change.
+On any per-plugin install failure, every plugin installed in this invocation
+is rolled back so the system is left in a clean state.
+
+Examples:
+  nself bundle install nsentry
+  nself bundle install nclaw --channel beta
+  nself bundle install nchat --dry-run`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBundleInstall,
+}
+
+var bundleRemoveCmd = &cobra.Command{
+	Use:   "remove <bundle>",
+	Short: "Remove every plugin in a bundle",
+	Long: `Remove all plugins in the named bundle. Plugin data is dropped by default;
+pass --keep-data to preserve schema/tables for later reinstall.
+
+Examples:
+  nself bundle remove nsentry
+  nself bundle remove nclaw --keep-data
+  nself bundle remove nchat --dry-run`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBundleRemove,
+}
+
+func runBundleInstall(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	force, _ := cmd.Flags().GetBool("force")
+	strict, _ := cmd.Flags().GetBool("strict")
+	channelStr, _ := cmd.Flags().GetString("channel")
+
+	opts := bundle.InstallOpts{
+		DryRun:  dryRun,
+		Force:   force,
+		Strict:  strict,
+		Channel: bundle.Channel(channelStr),
+	}
+	_, err := bundle.Install(context.Background(), args[0], opts)
+	return err
+}
+
+func runBundleRemove(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	keepData, _ := cmd.Flags().GetBool("keep-data")
+
+	opts := bundle.RemoveOpts{
+		DryRun:   dryRun,
+		KeepData: keepData,
+	}
+	_, err := bundle.Remove(context.Background(), args[0], opts)
+	return err
+}
+
 // ── Registration ─────────────────────────────────────────────────────
 
 func init() {
+	// install flags
+	bundleInstallCmd.Flags().Bool("dry-run", false, "Print the planned actions without installing")
+	bundleInstallCmd.Flags().Bool("force", false, "Bypass license validation (logged as license-bypass)")
+	bundleInstallCmd.Flags().Bool("strict", false, "Fail if any plugin in the bundle is missing from the registry")
+	bundleInstallCmd.Flags().String("channel", "stable", "Release channel: stable | beta | canary")
+
+	// remove flags
+	bundleRemoveCmd.Flags().Bool("dry-run", false, "Print the planned actions without removing")
+	bundleRemoveCmd.Flags().Bool("keep-data", false, "Preserve plugin data (schema/tables) on remove")
+
 	bundleCmd.AddCommand(bundleListCmd)
 	bundleCmd.AddCommand(bundleInfoCmd)
+	bundleCmd.AddCommand(bundleInstallCmd)
+	bundleCmd.AddCommand(bundleRemoveCmd)
 	RootCmd.AddCommand(bundleCmd)
 }
