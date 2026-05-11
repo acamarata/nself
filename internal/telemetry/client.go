@@ -96,6 +96,11 @@ func Send(event string, props map[string]any) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "[telemetry] goroutine panic: %v\n", r)
+			}
+		}()
 		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
 		defer cancel()
 
@@ -254,6 +259,11 @@ func SendEvent(eventType string, metadata map[string]any) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "[telemetry] goroutine panic: %v\n", r)
+			}
+		}()
 		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
 		defer cancel()
 

@@ -784,6 +784,11 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errCh <- fmt.Errorf("server goroutine panic: %v", r)
+			}
+		}()
 		log.Info("{{.Name}} listening", "addr", cfg.ListenAddr)
 		errCh <- httpSrv.ListenAndServe()
 	}()

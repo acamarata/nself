@@ -4,7 +4,6 @@
 // Package bitset implements an append only bit array.
 //
 // To create a Bitset and append some bits:
-//
 //	                                  // Bitset Contents
 //	b := bitset.New()                 // {}
 //	b.AppendBools(true, true, false)  // {1, 1, 0}
