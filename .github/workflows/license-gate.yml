@@ -14,9 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  # After 2026-05-20 (30 days from first deploy), set to "fail" to block PRs.
-  # During initial triage window, keep as "warn" to catch false positives.
-  LICENSE_GATE_MODE: warn
+  LICENSE_GATE_MODE: fail  # Flipped from warn → fail on 2026-05-11 (P97 deadline 2026-05-20). Triage window complete — audit clean.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
