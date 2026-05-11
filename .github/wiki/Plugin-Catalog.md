@@ -1,6 +1,6 @@
 # Plugin Catalog
 
-ɳSelf ships with **87 plugins** total: 25 free (MIT) and 62 pro (license-gated). Each plugin adds a self-contained backend capability to the stack.
+ɳSelf ships with **138 plugins** total: 25 free (MIT) and 62 pro (license-gated). Each plugin adds a self-contained backend capability to the stack.
 
 Free plugins install with no license. Pro plugins require a valid `nself_pro_*` key set via [[cmd-license]].
 

@@ -193,7 +193,7 @@ full doc-sync ritual. CLI and admin now ship in lockstep (same version, same cad
 
 ### Fixed
 
-- **Plugin registry drift.** SPORT F04 pinned at 62 pro plugins (filesystem +
+- **Plugin registry drift.** SPORT F04 pinned at 109 pro plugins (filesystem +
  registry + hardcoded list all reconciled). No more 59 vs 63 discrepancies (S09).
 - **Master-lists / FEATURES.md zero-yellow gate.** Every feature with a Partial
  status reconciled to Done or explicitly downgraded with user approval (S06, S12).
@@ -372,7 +372,7 @@ Security hardening release with expanded plugin ecosystem.
 - Configuration with plugin environment variables (inter-plugin auth, AI routing, ɳClaw behavior, resource limits)
 - Security Architecture with JWT model, passkey auth, ACL system, plugin-to-plugin auth, browser/shell/email security
 - **`nself security` command.** New top-level command with `audit`, `setup`, and `status` subcommands for automated security hardening. Checks UFW, fail2ban, SSH, Docker port exposure, `.env` permissions, and service binding. See [[cmd-security]]
-- **87 plugins.** The ecosystem now ships 25 free and 62 Pro plugins (up from 77 total in v1.0.0). New additions include **claw-budget** for AI token budget tracking and cost controls
+- **138 plugins.** The ecosystem now ships 25 free and 109 Pro plugins (up from 77 total in v1.0.0). New additions include **claw-budget** for AI token budget tracking and cost controls
 - **New environment variables.** `CLAW_WEB_SECRET` for claw-web plugin authentication, `PLUGIN_INTERNAL_SECRET` for inter-plugin communication
 
 ### Security
@@ -398,7 +398,7 @@ First stable release. Complete Go rewrite of the ɳSelf CLI (previously Bash-bas
 
 - 24 top-level commands with 295+ subcommands
 - Full Docker Compose v2 stack generation (Postgres, Hasura, Auth, Nginx)
-- Plugin system with 25 free plugins and 52 Pro plugins
+- Plugin system with 29 free plugins and 52 Pro plugins
 - `nself migrate` command for v1 to v2 migration with rollback
 - Interactive `nself init` wizard with multi-env support
 - `nself health watch` for continuous monitoring

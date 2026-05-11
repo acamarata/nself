@@ -137,4 +137,4 @@ Post-repair scan result: **0 broken links**.
 All `[[wiki-link]]` occurrences across the wiki resolve to existing pages.
 Backtick-enclosed `[[...]]` patterns (code spans) are excluded from link resolution per GitHub Wiki behavior.
 
-Canonical reference for plugin membership: `.claude/docs/sport/F03-F04` (25 free + 62 pro).
+Canonical reference for plugin membership: `.claude/docs/sport/F03-F04` (29 free + 109 pro).

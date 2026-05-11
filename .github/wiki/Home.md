@@ -2,7 +2,7 @@
 
 > **Self-hosted backend in five minutes.** Postgres, GraphQL, Auth, Nginx. No cloud required.
 
-ɳSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 25 free plugins included, 62 Pro plugins available (87 total) starting at $0.99/mo.
+ɳSelf is an open-source CLI that spins up a production-grade backend stack on any server or local machine. PostgreSQL, Hasura GraphQL, Auth, and Nginx reverse-proxy out of the box. MIT licensed, no vendor lock-in, no cloud dependency. 29 free plugins included, 109 Pro plugins available (138 total) starting at $0.99/mo.
 
 ```bash
 brew install nself-org/nself/nself   # or: curl -sSL https://install.nself.org | bash
