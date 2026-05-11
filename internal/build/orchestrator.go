@@ -12,6 +12,7 @@ import (
 
 	"github.com/nself-org/cli/internal/apidocs"
 	"github.com/nself-org/cli/internal/compose"
+	"github.com/nself-org/cli/internal/compose/monitoring"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/nginx"
 	"github.com/nself-org/cli/internal/postgres"
@@ -325,6 +326,58 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	// ── Step 9.6: Verify Go plugin Dockerfiles have HEALTHCHECK ─────
 	for _, w := range CheckGoPluginDockerfiles(pluginDir) {
 		fmt.Printf("warning: %s\n", w)
+	}
+
+	// ── Step 9.7: Wire ɳSentry scrape targets + Loki configs ────────
+	// When the monitoring bundle is enabled (MONITORING_ENABLED=true), emit
+	// monitoring/prometheus.yml with builtin targets + any installed ɳSentry
+	// plugin targets (S12.T01) and monitoring/loki.yml + promtail.yml (S9.T08).
+	//
+	// Both writes are idempotent: identical inputs produce byte-identical files.
+	// When monitoring is disabled, this step is a no-op so projects that opt out
+	// don't acquire stray monitoring/*.yml files.
+	if cfg.Monitoring.Enabled {
+		// Prometheus: build PrometheusConfig with builtin targets, append any
+		// installed ɳSentry plugin targets, render and write to disk.
+		promCfg := monitoring.Defaults()
+		nsentryAdded := AppendNSentryTargets(promCfg, pluginDir)
+		promYAML, err := monitoring.RenderPrometheusYAML(promCfg)
+		if err != nil {
+			return nil, fmt.Errorf("rendering monitoring/prometheus.yml: %w", err)
+		}
+		monDir := filepath.Join(workdir, "monitoring")
+		if err := os.MkdirAll(monDir, 0o755); err != nil {
+			return nil, fmt.Errorf("creating monitoring dir: %w", err)
+		}
+		promPath := filepath.Join(monDir, "prometheus.yml")
+		if err := atomicWrite(promPath, promYAML, 0o644); err != nil {
+			return nil, fmt.Errorf("writing monitoring/prometheus.yml: %w", err)
+		}
+		filesGenerated++
+		if opts.Verbose {
+			if nsentryAdded > 0 {
+				fmt.Printf("Generated monitoring/prometheus.yml (with %d ɳSentry target(s))\n", nsentryAdded)
+			} else {
+				fmt.Println("Generated monitoring/prometheus.yml (no ɳSentry plugins installed)")
+			}
+		}
+
+		// Loki: render loki.yml + promtail.yml with project-name + retention
+		// taken from the monitoring config (env-cascade applied).
+		lokiOpts := LokiBuildOptions{
+			ProjectName: cfg.ProjectName,
+		}
+		if r := strings.TrimSpace(os.Getenv("LOKI_RETENTION_PERIOD")); r != "" {
+			lokiOpts.RetentionPeriod = r
+		}
+		nLoki, err := WriteLokiConfigs(workdir, lokiOpts)
+		if err != nil {
+			return nil, fmt.Errorf("writing Loki configs: %w", err)
+		}
+		filesGenerated += nLoki
+		if opts.Verbose {
+			fmt.Printf("Generated monitoring/loki.yml + promtail.yml (%d file(s))\n", nLoki)
+		}
 	}
 
 	// ── Step 10: Write .env.computed ────────────────────────────────

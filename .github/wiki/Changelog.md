@@ -3,6 +3,40 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [Unreleased] — v1.1.0
+
+Minor release. ɳSentry bundle (13 plugins), ClawDE bundle buyable, ɳFamily ratified, nCloud waitlist mode.
+
+### Added
+
+- **`nself bundle install sentry`** — install all 13 ɳSentry plugins in one command. Requires ɳSelf+ or ɳSentry bundle license.
+- **`nself bundle install family`** — install all 9 ɳFamily plugins.
+- **`nself bundle install clawde`** — install all 8 ClawDE plugins.
+- **`nself bundle status <name>`** — show install status and version for all plugins in a bundle.
+- **`nself sentry status`** — surface ɳSentry health dashboard (uptime, incidents, SLOs, alerts) at a glance.
+- **`nself cloud provision`** — stub provisioning command for nCloud managed hosting; returns waitlist enrollment response.
+- **`nself cloud status`** — check provisioning and plan status for nCloud-managed instances.
+- **`nself family status`** — show ɳFamily plugin status and CSAM scan health.
+- **`nself tenant create`** — create a Cloud multi-tenancy tenant record (`tenant_id` UUID).
+- **`nself tenant list`** — list tenants for a Cloud deployment.
+- **Bundle `nself bundle` top-level command** with subcommands: `install`, `uninstall`, `status`, `list`, `upgrade`.
+- **Multi-Tenant Convention Wall enforcement** — `nself doctor --deep` now checks `PERM-RLS-01` (tenant_id Hasura row filter present on every `np_*` table that carries `tenant_id`).
+- **nSelf-First CI gate updated** — added ɳSentry, ɳFamily, nCloud plugin directories to nself-first-check.yml.
+- **13 new CLI commands for ɳSentry plugins**: `sentry uptime`, `sentry status-page`, `sentry incident`, `sentry alert-router`, `sentry slo`, `sentry synthetic`, `sentry rum`, `sentry errors`, `sentry cron-monitor`, `sentry oncall`, `sentry crash`, `sentry anomaly`, `sentry audit`.
+
+### Changed
+
+- **License gate** updated: `nself plugin install` now checks ɳSentry bundle entitlements for all 13 ɳSentry plugins.
+- **`nself bundle list`** now shows 7 bundles (6 paid + 1 free ɳTask) vs 6 at v1.0.x.
+- **`nself doctor`** new check: multi-tenant RLS wall (PERM-RLS-01).
+- **Minimum nSelf CLI version requirement** for ɳSentry, ɳFamily, nCloud features: v1.1.0.
+
+### Fixed
+
+- Port collision resolution: ports 3820–3843 block fully documented and enforced in `nself doctor --ports`.
+
+---
+
 ## [Unreleased] — v1.0.14
 
 P98 Batch 1. Performance hardening and operational documentation.
