@@ -184,10 +184,10 @@ For the most paranoid setups, pin the expected SHA-256 in your shell or CI confi
 
 ```bash
 # Obtain the expected checksum for a specific release:
-curl -fsSL https://github.com/nself-org/cli/releases/download/v1.0.16/checksums.txt
+curl -fsSL https://github.com/nself-org/cli/releases/download/v1.1.0/checksums.txt
 
 # Install with a pinned version and pinned SHA-256:
-NSELF_VERSION=v1.0.16 \
+NSELF_VERSION=v1.1.0 \
 NSELF_INSTALL_PIN_SHA256=<sha256-from-checksums.txt> \
 curl -fsSL https://install.nself.org | bash
 ```
