@@ -123,4 +123,4 @@ These pages existed but had no `[[wiki-link]]` pointing to them. They referenced
 - Total unique `[[wiki-link]]` targets scanned: 205
 - Broken links remaining: **0**
 - Script: no `./scripts/link-check.sh` present (N/A)
-- Canonical plugin registry: `.claude/docs/sport/F03-F04` (25 free + 62 pro plugins)
+- Canonical plugin registry: `.claude/docs/sport/F03-F04` (25 free + 109 pro plugins)

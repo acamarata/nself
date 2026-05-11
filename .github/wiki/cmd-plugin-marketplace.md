@@ -100,6 +100,6 @@ nself plugin install ai
 
 - [[cmd-plugin]], full plugin management reference
 - [[Plugin-Licensing]], license tiers and key format
-- [[Plugin-Catalog]], full catalog of all 87 plugins
+- [[Plugin-Catalog]], full catalog of all 138 plugins
 
 ← [[Commands]] | [[Home]] →

@@ -14,8 +14,8 @@ A plugin is a manifest + Docker Compose overlay + optional Nginx config. When yo
 
 | Tier | Price | Included |
 |------|-------|---------|
-| Free | $0 | 25 free plugins , no license key required |
-| Basic | $0.99/mo | All 62 pro plugins |
+| Free | $0 | 29 free plugins , no license key required |
+| Basic | $0.99/mo | All 109 pro plugins |
 | Pro | $1.99/mo | Basic + AI suite |
 | Elite | $4.99/mo | Pro + email support |
 | Business | $9.99/mo | Elite + 24h support |

@@ -13,7 +13,7 @@
 
 | Tier | Price | Includes |
 |------|-------|---------|
-| **Free** | $0 | Core CLI + 25 free plugins (MIT licensed) |
+| **Free** | $0 | Core CLI + 29 free plugins (MIT licensed) |
 | **Basic** | $0.99/mo or $9.99/yr | All 55 standard pro plugins (excludes Pro-tier AI suite) |
 | **Pro** | $1.99/mo or $19.99/yr | Basic + AI suite (ai, browser, claw, claw-budget, claw-web, post, voice) |
 | **Elite** | $4.99/mo or $49.99/yr | Pro + email support |

@@ -6,7 +6,7 @@ This page covers the full ɳSelf licensing model: the free core, per-product plu
 
 ## The Free Core
 
-The ɳSelf CLI and 25 free plugins are MIT licensed. Free forever, including commercial use. No license key needed.
+The ɳSelf CLI and 29 free plugins are MIT licensed. Free forever, including commercial use. No license key needed.
 
 Free plugins include: backup, content-acquisition, content-progress, cron, donorbox, feature-flags, github, github-runner, invitations, jobs, link-preview, mdns, mlflow, monitoring, notifications, notify, paypal, search, shopify, stripe, subtitle-manager, tokens, torrent-manager, vpn, webhooks.
 
@@ -22,7 +22,7 @@ Pro plugins are source-available Rust binaries distributed through the ɳSelf pl
 
 | Option | Monthly | Annual | What You Get |
 |--------|---------|--------|-------------|
-| **Free** | $0 | $0 | Core CLI + 25 free plugins |
+| **Free** | $0 | $0 | Core CLI + 29 free plugins |
 | **Any single bundle** | $0.99/mo | $9.99/yr | All plugins in that bundle (ɳClaw, ɳChat, ɳTV, ɳFamily, or ClawDE) |
 | **ɳSelf+** | $3.99/mo | $39.99/yr | All 5 bundles + all apps + support |
 
