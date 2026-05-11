@@ -15,6 +15,8 @@
 
 Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 138 plugins (29 free, 109 paid). MIT licensed core, forever.
 
+**v1.1.0 is out.** 6-bundle parity GA: ɳSentry (13 plugins), ClawDE buyable, Multi-Tenant Wall hardened. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.0)
+
 ```bash
 brew install nself-org/nself/nself
 ```
