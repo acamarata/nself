@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -35,6 +36,11 @@ func TrapSignals(ctx context.Context, cancel context.CancelFunc, cleanupFn func(
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "signal handler goroutine panic: %v\n", r)
+			}
+		}()
 		select {
 		case sig := <-sigCh:
 			ui.Warn(SignalMessage(sig))

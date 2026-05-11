@@ -6,6 +6,7 @@ package commands
 // and verifies the cosign bundle signature. Prints VERIFIED on success.
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/spf13/cobra"
 )
 
@@ -65,10 +67,10 @@ func runVerifySBOM(cmd *cobra.Command, args []string) error {
 	bundlePath := filepath.Join(tmpDir, bundleFile)
 
 	fmt.Printf("Downloading SBOM for %s...\n", version)
-	if err := sbomDownloadFile(baseURL+"/"+sbomFile, sbomPath); err != nil {
+	if err := sbomDownloadFile(cmd.Context(), baseURL+"/"+sbomFile, sbomPath); err != nil {
 		return fmt.Errorf("downloading SBOM: %w", err)
 	}
-	if err := sbomDownloadFile(baseURL+"/"+bundleFile, bundlePath); err != nil {
+	if err := sbomDownloadFile(cmd.Context(), baseURL+"/"+bundleFile, bundlePath); err != nil {
 		return fmt.Errorf("downloading cosign bundle: %w", err)
 	}
 
@@ -90,8 +92,12 @@ func runVerifySBOM(cmd *cobra.Command, args []string) error {
 }
 
 // sbomDownloadFile fetches url and writes to dest.
-func sbomDownloadFile(url, dest string) error {
-	resp, err := http.Get(url) //nolint:noctx // short-lived CLI op
+func sbomDownloadFile(ctx context.Context, url, dest string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("building request: %w", err)
+	}
+	resp, err := httptimeout.Installer.Do(req)
 	if err != nil {
 		return err
 	}

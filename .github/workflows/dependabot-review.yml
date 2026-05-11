@@ -1,0 +1,60 @@
+# Dependabot PR Review Gate — S9.T04
+# Deadline: 2026-05-20
+#
+# BLOCK-PR MODE: Dependabot PRs require at least 1 review before merge.
+# - Patch-level security/dep updates: auto-approved by this workflow (safe to merge)
+# - Minor updates: require manual review (could break APIs)
+# - Major updates: require manual review + milestone approval
+#
+# To enable the branch protection requirement:
+#   GitHub repo → Settings → Branches → main → Require pull request reviews → 1 required
+#
+# This workflow implements the safe auto-approval half of block-PR mode.
+
+name: Dependabot Review Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependabot-review:
+    name: Dependabot PR Gate
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@d7e4feee17f2c3e63c16f3bec7e1b5c9a5e8e4a8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve patch updates
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on minor/major updates
+        if: |
+          steps.meta.outputs.update-type == 'version-update:semver-minor' ||
+          steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body "**Manual review required.** This Dependabot PR bumps a \`${{ steps.meta.outputs.update-type }}\` dependency. Please review the changelog before approving."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Flag security updates for priority merge
+        if: steps.meta.outputs.ghsa-ids != ''
+        run: |
+          gh pr comment "$PR_URL" --body "**Security update** (GHSA: ${{ steps.meta.outputs.ghsa-ids }}). Patch approved automatically. Merge this PR promptly."
+          gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

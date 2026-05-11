@@ -39,8 +39,21 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S77-T08: orphaned Hasura remote schemas after plugin uninstall.
 	results = append(results, CheckOrphanRemoteSchemas(ctx))
 
+	// S12.T01: ɳSentry Prometheus scrape config (OBS-SCRAPE-01).
+	// pluginDir defaults to ~/.nself/plugins; projectDir is the caller's --project-dir.
+	if home, herr := os.UserHomeDir(); herr == nil {
+		pluginDir := filepath.Join(home, ".nself", "plugins")
+		results = append(results, CheckOBSScrape(ctx, projectDir, pluginDir))
+	}
+
+	// S12.T09: telemetry redaction coverage audit (OBS-REDACT-01).
+	results = append(results, CheckRedactionCoverage(ctx))
+
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
+
+	// S1.T10: Hasura metadata YAML row-filter check for np_* tables (PERM-HASURA-01).
+	results = append(results, CheckHasuraMetadataYAML(ctx, projectDir, false)...)
 
 	// S98-02-T11: JWT key rotation check (JWT-ROT-01).
 	results = append(results, CheckJWTRotation(projectDir))
@@ -56,6 +69,21 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 
 	// S03-T06: SDK version coherence check (SDK-VERSION-01).
 	results = append(results, CheckSDKVersions(ctx)...)
+
+	// S10.T06: SEC-HARDENING-01..08 — Security-Always-Free hardening checks.
+	results = append(results, HardeningChecks(ctx, projectDir)...)
+
+	// S9.T03 + S9.T15: OPS-DRILL-01 — verify a successful `nself backup drill`
+	// ran within the last 7 days. Read-only check against .nself/drill-log.json.
+	results = append(results, CheckOPSDrill(ctx, projectDir))
+
+	// S12.T06: LEGAL-COPPA-01 — verify COPPA parental-consent flow wiring
+	// (migration on disk, FAMILY_CONSENT_HMAC_SECRET set, TTL within policy).
+	results = append(results, CheckLegalCOPPA(projectDir))
+
+	// S12.T07: LEGAL-GDPR-A9-01 — verify GDPR Article 9 special-category
+	// consent flow (migration on disk, privacy disclosure section, DPO contact).
+	results = append(results, CheckLegalGDPRA9(projectDir))
 
 	// G-DOGFOOD (P97 W37/W38): nself.org-specific checks. Gated on
 	// NSELF_DOGFOOD=1 so end-user `nself doctor --deep` runs are not slowed

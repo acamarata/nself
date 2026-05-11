@@ -76,9 +76,10 @@ func LoadOrCreateInstallID() string {
 // used in v1.0.9 by IsOptedIn). That gate is preserved for backward compatibility
 // but IsEnabled is the canonical check for the v1.1.0+ telemetry client.
 func IsEnabled() bool {
-	// 1. New env var override.
+	// 1. New env var override. Accepts 0/false/off/no/disabled as disable.
 	if v := os.Getenv("NSELF_TELEMETRY"); v != "" {
-		return v != "0" && v != "false"
+		lv := strings.ToLower(v)
+		return lv != "0" && lv != "false" && lv != "off" && lv != "no" && lv != "disabled"
 	}
 
 	// 2. Legacy opt-out env var.

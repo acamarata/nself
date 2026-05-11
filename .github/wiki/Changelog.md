@@ -3,6 +3,65 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.1.0] - 2026-05-15
+
+Minor release. ɳSentry bundle (13 plugins), ClawDE bundle buyable, ɳFamily ratified, nCloud waitlist mode. Observability auto-wiring (Prometheus scrape, Loki/Promtail, Grafana dashboards), backup drill, env migration tooling, idempotent admin trust install.
+
+### Added
+
+- **`nself bundle install <name>`** (S13.T11) — install all plugins in a bundle in one command. Supported: `sentry` (13 plugins), `family` (9 plugins), `clawde` (8 plugins), `claw`, `chat`, `tv`, `task`. Requires bundle or ɳSelf+ entitlement.
+- **`nself bundle remove <name>`** (S13.T11) — uninstall every plugin in a bundle, reverse dependency order.
+- **`nself bundle list`** (S13.T11) — show all 7 bundles (6 paid + ɳTask free) with install state, plugin counts, license tier.
+- **`nself bundle info <name>`** (S13.T11) — print bundle membership, plugin versions, ports, entitlement requirements.
+- **`nself feature list`** (S13.T12) — list all feature flags (cloud-waitlist, sentry-rum-cdn, family-csam-strict, etc.) with current state.
+- **`nself feature enable <flag>`** (S13.T12) — flip a feature flag on at runtime; persisted in `.env.features`.
+- **`nself feature disable <flag>`** (S13.T12) — flip a feature flag off.
+- **`nself feature status <flag>`** (S13.T12) — show one flag's state plus the source (env, file, default).
+- **`nself backup drill`** (S13.T13) — run the full backup → restore → verify cycle against a scratch DB; reports RTO/RPO measured timings. Wired into `OPS-DRILL-01` doctor check.
+- **`nself man`** (S13.T14) — generate man pages from cobra command tree; installs to `$prefix/share/man/man1/nself*.1`.
+- **`nself costs`** (S13.T15) — estimate monthly infrastructure cost (Hetzner sizing × VPS class × plugin storage); reads `costs.yaml` plugin annotations.
+- **`nself migrate firebase`** (S13.T16) — assisted import from Firebase: Auth users → nHost Auth, Firestore → Postgres + Hasura, Storage → MinIO. Dry-run by default; `--apply` to commit.
+- **`nself migrate supabase`** (S13.T16) — assisted import from Supabase: pg_dump → restore, Storage → MinIO, Edge Functions → nself Functions.
+- **`nself sentry status`** (S13.T11) — surface ɳSentry health (uptime, incidents, SLOs, alerts) at a glance.
+- **`nself cloud provision`** (S12.T07) — stub provisioning command for nCloud managed hosting; returns waitlist enrollment response.
+- **`nself cloud status`** (S12.T07) — check provisioning and plan status for nCloud-managed instances.
+- **`nself family status`** (S11.T04) — show ɳFamily plugin status and CSAM scan health.
+- **`nself tenant create`** / **`nself tenant list`** (S12.T08) — Cloud multi-tenancy tenant record management (`tenant_id` UUID per Convention Wall).
+- **13 new CLI commands for ɳSentry plugins** (S10.T01..T13): `sentry uptime`, `sentry status-page`, `sentry incident`, `sentry alert-router`, `sentry slo`, `sentry synthetic`, `sentry rum`, `sentry errors`, `sentry cron-monitor`, `sentry oncall`, `sentry crash`, `sentry anomaly`, `sentry audit`.
+- **ɳSentry Prometheus auto-scrape** (S10.T16) — `nself build` emits scrape_configs targeting every installed ɳSentry plugin endpoint; no manual prometheus.yml edits.
+- **Loki + Promtail build wiring** (S10.T17) — `nself build` provisions Loki on port 3100 and Promtail tail rules for plugin containers; structured log ingest by default.
+- **ɳSentry Grafana dashboards** (S10.T18) — 13 pre-built dashboards (uptime, incidents, SLO burn, RUM CWV, anomaly) auto-imported on `nself start` when Grafana is enabled.
+- **Alertmanager nsentry receiver** (S10.T19) — alert routing config block generated when ɳSentry bundle is installed; routes critical alerts to alert-router plugin.
+- **Doctor check `OBS-SCRAPE-01`** (S10.T16) — verifies every ɳSentry plugin endpoint is scraped by Prometheus.
+- **Doctor check `OPS-DRILL-01`** (S13.T13) — verifies backup drill has run in the last 7 days; warns at 14d, fails at 30d.
+- **Doctor check `OBS-REDACT-01`** (S10.T20) — verifies log/metric redaction rules are present in Promtail config for PII fields.
+- **Doctor check `LEGAL-COPPA-01`** (S11.T08) — verifies COPPA age-gate is enabled when ɳFamily social plugin is installed.
+- **Doctor check `LEGAL-GDPR-A9-01`** (S11.T09) — verifies GDPR Article 9 special-category-data consent flow is wired when family medical plugins are installed.
+
+### Changed
+
+- **License gate** (S08.T03) — `nself plugin install` now checks ɳSentry bundle entitlements for all 13 ɳSentry plugins.
+- **`nself doctor`** (S10.T16, S13.T13, S10.T20, S11.T08, S11.T09) — five new checks added (OBS-SCRAPE-01, OPS-DRILL-01, OBS-REDACT-01, LEGAL-COPPA-01, LEGAL-GDPR-A9-01).
+- **Minimum nSelf CLI version requirement** for ɳSentry, ɳFamily, nCloud features: v1.1.0.
+- **Brand display** updated in command help text — ɳSelf eta marks now render in non-ASCII-stripped help (S13.T22).
+
+### Fixed
+
+- **Idempotent macOS trust install** (S13.T05) — `nself trust install`, `nself dns-setup`, `nself ports`, `nself ssl install` now state-check before invoking `osascript with administrator privileges`. Eliminates the 24-prompt burst incident (Admin Prompt Hygiene Hard Rule). Calls return immediately when target state is already configured.
+- Port collision resolution (S13.T06): ports 3820–3849 block fully documented and enforced in `nself doctor --ports`.
+- `nself build` no longer emits stale `prometheus.yml` blocks when bundles are removed (S10.T16).
+
+### Deprecated
+
+- **Legacy `nself monitor` subcommands** (S10.T21) — `nself monitor uptime` and `nself monitor status` are superseded by `nself sentry uptime` / `nself sentry status-page`. Wrappers remain for one minor cycle; will be removed in v1.2.0.
+
+### Security
+
+- Trust install state-checks (S13.T05) close the burst-prompt vector where 30 parallel agents could stack 24 macOS auth dialogs in <30s — see Admin Prompt Hygiene Hard Rule in PPI.
+- Log redaction (OBS-REDACT-01, S10.T20) ensures PII fields (email, phone, full-name) are redacted at ingest time, never persisted in Loki.
+
+---
+
 ## [Unreleased] — v1.0.14
 
 P98 Batch 1. Performance hardening and operational documentation.

@@ -20,7 +20,9 @@ name: Publish TypeScript SDK to npm
 
 jobs:
   publish:
-    name: Publish @nself/plugin-sdk to npm
+    # Skip gracefully when the TypeScript SDK directory does not yet exist.
+    if: hashFiles('sdk/ts/package.json') != ''
+    name: Publish @nself/sdk-ts to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -37,6 +39,17 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Override version (workflow_dispatch only)
+        if: ${{ inputs.version != '' }}
+        run: |
+          cd sdk/ts
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ inputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
 
       - name: Install dependencies
         run: |

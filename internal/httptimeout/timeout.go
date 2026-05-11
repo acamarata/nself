@@ -13,6 +13,7 @@
 //	NSELF_HTTP_TIMEOUT_LICENSE    (default 10s)
 //	NSELF_HTTP_TIMEOUT_PLUGIN     (default 15s)
 //	NSELF_HTTP_TIMEOUT_BACKUP     (default 600s)
+//	NSELF_HTTP_TIMEOUT_CLOUD      (default 30s)
 //
 // Values are integer seconds. Invalid or non-positive values fall back to the
 // hard-coded default. Env vars are read at package init time.
@@ -60,6 +61,9 @@ var (
 
 	// Backup is for long-running backup uploads/downloads (600s).
 	Backup = &http.Client{Timeout: envDuration("NSELF_HTTP_TIMEOUT_BACKUP", 600*time.Second)}
+
+	// Cloud is for cloud.nself.org and Hetzner API calls (30s).
+	Cloud = &http.Client{Timeout: envDuration("NSELF_HTTP_TIMEOUT_CLOUD", 30*time.Second)}
 )
 
 // WithTimeout returns a fresh *http.Client with the given timeout. Use sparingly;

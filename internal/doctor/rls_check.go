@@ -28,11 +28,12 @@ const (
 
 // rlsTableInfo describes a single np_* table's RLS state from pg_class.
 type rlsTableInfo struct {
-	TableName         string
-	RLSEnabled        bool // pg_class.relrowsecurity
-	RLSForced         bool // pg_class.relforcerowsecurity
-	PolicyCount       int
-	HasTenantIDColumn bool
+	TableName                string
+	RLSEnabled               bool // pg_class.relrowsecurity
+	RLSForced                bool // pg_class.relforcerowsecurity
+	PolicyCount              int
+	HasTenantIDColumn        bool
+	HasSourceAccountIDColumn bool
 }
 
 // CheckRLSEnforcement implements PERM-RLS-01.
@@ -169,7 +170,13 @@ func queryNPTables(ctx context.Context, db *sql.DB) ([]rlsTableInfo, error) {
 				WHERE ic.table_name = c.relname
 				  AND ic.column_name = 'tenant_id'
 				  AND ic.table_schema = 'public'
-			) AS has_tenant_id
+			) AS has_tenant_id,
+			EXISTS(
+				SELECT 1 FROM information_schema.columns ic2
+				WHERE ic2.table_name = c.relname
+				  AND ic2.column_name = 'source_account_id'
+				  AND ic2.table_schema = 'public'
+			) AS has_source_account_id
 		FROM pg_class c
 		LEFT JOIN pg_policy p ON p.polrelid = c.oid
 		WHERE c.relkind = 'r'
@@ -188,7 +195,7 @@ func queryNPTables(ctx context.Context, db *sql.DB) ([]rlsTableInfo, error) {
 	var tables []rlsTableInfo
 	for rows.Next() {
 		var t rlsTableInfo
-		if err := rows.Scan(&t.TableName, &t.RLSEnabled, &t.RLSForced, &t.PolicyCount, &t.HasTenantIDColumn); err != nil {
+		if err := rows.Scan(&t.TableName, &t.RLSEnabled, &t.RLSForced, &t.PolicyCount, &t.HasTenantIDColumn, &t.HasSourceAccountIDColumn); err != nil {
 			return nil, fmt.Errorf("scan pg_class row: %w", err)
 		}
 		tables = append(tables, t)
@@ -279,8 +286,9 @@ func checkHasuraRowFilters(ctx context.Context, tables []rlsTableInfo, warnStatu
 
 	// Build a lookup: table_name -> select permission filter for "user" role.
 	type hasuraTablePerms struct {
-		hasUserRole  bool
-		filterHasTID bool // filter JSON references tenant_id
+		hasUserRole   bool
+		filterHasTID  bool // filter JSON references tenant_id
+		filterHasSAID bool // filter JSON references source_account_id
 	}
 	perms := make(map[string]hasuraTablePerms)
 	for _, src := range meta.Sources {
@@ -297,6 +305,9 @@ func checkHasuraRowFilters(ctx context.Context, tables []rlsTableInfo, warnStatu
 					if strings.Contains(filterStr, "tenant_id") {
 						p.filterHasTID = true
 					}
+					if strings.Contains(filterStr, "source_account_id") {
+						p.filterHasSAID = true
+					}
 				}
 			}
 			perms[name] = p
@@ -305,12 +316,34 @@ func checkHasuraRowFilters(ctx context.Context, tables []rlsTableInfo, warnStatu
 
 	var results []CheckResult
 	for _, t := range tables {
-		if !t.HasTenantIDColumn {
+		needsTID := t.HasTenantIDColumn
+		needsSAID := t.HasSourceAccountIDColumn
+		// Tables with no isolation column are exempt from the Hasura filter check.
+		if !needsTID && !needsSAID {
 			continue
 		}
 		p, found := perms[t.TableName]
-		if !found || !p.hasUserRole || !p.filterHasTID {
-			msg := fmt.Sprintf("HASURA-FILTER-MISSING table=%s role=user: np_* table has tenant_id column but Hasura select permission for 'user' role is missing or has no tenant_id row filter", t.TableName)
+		if !found || !p.hasUserRole {
+			msg := fmt.Sprintf("HASURA-FILTER-MISSING table=%s role=user: np_* table has isolation column but Hasura select permission for 'user' role is missing or has no row filter", t.TableName)
+			results = append(results, CheckResult{
+				Section: "security",
+				Name:    fmt.Sprintf("%s: HASURA-FILTER-MISSING table=%s", RLSCheckID, t.TableName),
+				Status:  warnStatus,
+				Message: msg,
+			})
+			continue
+		}
+		if needsTID && !p.filterHasTID {
+			msg := fmt.Sprintf("HASURA-FILTER-MISSING table=%s role=user: has tenant_id column but Hasura 'user' row filter does not reference tenant_id", t.TableName)
+			results = append(results, CheckResult{
+				Section: "security",
+				Name:    fmt.Sprintf("%s: HASURA-FILTER-MISSING table=%s", RLSCheckID, t.TableName),
+				Status:  warnStatus,
+				Message: msg,
+			})
+		}
+		if needsSAID && !p.filterHasSAID {
+			msg := fmt.Sprintf("HASURA-FILTER-MISSING table=%s role=user: has source_account_id column but Hasura 'user' row filter does not reference source_account_id", t.TableName)
 			results = append(results, CheckResult{
 				Section: "security",
 				Name:    fmt.Sprintf("%s: HASURA-FILTER-MISSING table=%s", RLSCheckID, t.TableName),

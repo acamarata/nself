@@ -1,0 +1,373 @@
+package commands
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/nself-org/cli/internal/bundle"
+	"github.com/nself-org/cli/internal/license"
+	"github.com/nself-org/cli/internal/plugin"
+
+	"github.com/spf13/cobra"
+)
+
+// Bundle describes a canonical nSelf plugin bundle.
+type Bundle struct {
+	Name        string
+	Price       string
+	Description string
+	Plugins     []string
+}
+
+// canonicalBundles is the authoritative bundle membership map (mirrors F06-BUNDLE-INVENTORY.md).
+// Keys are the system names used as CLI arguments.
+var canonicalBundles = map[string]Bundle{
+	"nclaw": {
+		Name:  "ɳClaw",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"ai", "claw", "claw-web", "mux", "voice", "browser",
+			"google", "notify", "cron", "claw-budget", "claw-news",
+			"mcp", "knowledge-base",
+		},
+	},
+	"nchat": {
+		Name:  "ɳChat",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"chat", "livekit", "recording", "moderation", "bots", "realtime", "auth",
+			"support",
+		},
+	},
+	"nfamily": {
+		Name:  "ɳFamily",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"social", "photos", "activity-feed", "moderation", "realtime", "cms", "chat",
+			"geolocation", "calendar",
+		},
+	},
+	"ntv": {
+		Name:  "ɳTV",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"media-processing", "streaming", "epg", "tmdb", "podcast", "recording",
+			"game-metadata", "file-processing", "subtitle-manager", "vpn", "stream-gateway",
+		},
+	},
+	"clawde": {
+		Name:  "ClawDE",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"claw", "ai", "realtime", "auth", "notify", "cms",
+			"mcp", "knowledge-base",
+		},
+	},
+	"nsentry": {
+		Name:  "ɳSentry",
+		Price: "$0.99/mo or $9.99/yr",
+		Plugins: []string{
+			"nself-uptime-monitor", "nself-status-page", "nself-incident-mgmt",
+			"nself-alert-router", "nself-slo-tracker", "nself-synthetic-monitor",
+			"nself-rum", "nself-errors", "nself-cron-monitor", "nself-oncall",
+			"nself-crash", "nself-anomaly", "nself-audit",
+		},
+	},
+	"nself-plus": {
+		Name:        "ɳSelf+",
+		Price:       "$3.99/mo or $39.99/yr",
+		Description: "All 6 paid bundles + all apps + support",
+		Plugins:     nil, // meta-bundle — no individual plugin list
+	},
+	"ntask": {
+		Name:        "ɳTask",
+		Price:       "FREE",
+		Description: "Free bundle — uses free plugins only",
+		Plugins:     []string{"(free plugins only — see: nself plugin list)"},
+	},
+}
+
+// bundleDisplayOrder sets the print order for bundle list.
+var bundleDisplayOrder = []string{
+	"nclaw", "nchat", "nfamily", "ntv", "clawde", "nsentry", "ntask", "nself-plus",
+}
+
+// ── Parent command ──────────────────────────────────────────────────
+
+var bundleCmd = &cobra.Command{
+	Use:   "bundle",
+	Short: "Manage and inspect nSelf plugin bundles",
+	Long: `Bundle information and management.
+
+Subcommands:
+  list         List all available bundles with pricing
+  info <name>  Show bundle details, plugins, and license status`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		return fmt.Errorf("unknown bundle subcommand %q; run 'nself bundle --help' for the list", args[0])
+	},
+}
+
+// ── bundle list ─────────────────────────────────────────────────────
+
+var bundleListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all available nSelf plugin bundles",
+	Long: `Display every bundle — name, price, and plugin count.
+
+Paid bundles require a license key set via: nself license set <key>
+Buy or manage subscriptions at: https://nself.org/pricing`,
+	Args: cobra.NoArgs,
+	RunE: runBundleList,
+}
+
+func runBundleList(_ *cobra.Command, _ []string) error {
+	fmt.Println("nSelf Plugin Bundles")
+	fmt.Println(strings.Repeat("─", 60))
+
+	for _, key := range bundleDisplayOrder {
+		b, ok := canonicalBundles[key]
+		if !ok {
+			continue
+		}
+
+		pluginCount := ""
+		if b.Plugins != nil {
+			n := len(b.Plugins)
+			pluginCount = fmt.Sprintf("  (%d plugins)", n)
+		}
+
+		desc := b.Description
+		if desc == "" && b.Plugins != nil {
+			// Summarize the first few plugins for inline preview
+			preview := b.Plugins
+			if len(preview) > 4 {
+				preview = append(preview[:4], "...")
+			}
+			desc = strings.Join(preview, ", ")
+		}
+
+		fmt.Printf("  %-14s  %-26s  %s%s\n", key, b.Name, b.Price, pluginCount)
+		if desc != "" {
+			fmt.Printf("  %-14s  %s\n", "", desc)
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("Run 'nself bundle info <name>' for full plugin membership.")
+	fmt.Println("Buy at: https://nself.org/pricing")
+	return nil
+}
+
+// ── bundle info ─────────────────────────────────────────────────────
+
+var bundleInfoCmd = &cobra.Command{
+	Use:   "info <name>",
+	Short: "Show bundle details, plugins, and license status",
+	Long: `Display the full plugin membership, pricing, and your current license status for a bundle.
+
+Examples:
+  nself bundle info nclaw
+  nself bundle info nself-plus`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBundleInfo,
+}
+
+func runBundleInfo(_ *cobra.Command, args []string) error {
+	key := strings.ToLower(strings.TrimSpace(args[0]))
+	b, ok := canonicalBundles[key]
+	if !ok {
+		// Collect valid names for the error hint.
+		var names []string
+		for k := range canonicalBundles {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		return fmt.Errorf("unknown bundle %q\n\nAvailable bundles: %s", key, strings.Join(names, ", "))
+	}
+
+	fmt.Printf("Bundle: %s (%s)\n", b.Name, key)
+	fmt.Printf("Price:  %s\n", b.Price)
+	if b.Description != "" {
+		fmt.Printf("Note:   %s\n", b.Description)
+	}
+
+	// ── License status ─────────────────────────────────────────────
+	licenseStatus := resolveBundleLicenseStatus(key)
+	fmt.Printf("License: %s\n", licenseStatus)
+
+	// ── Plugin membership ──────────────────────────────────────────
+	fmt.Println()
+	if key == "nself-plus" {
+		fmt.Println("Includes all 6 paid bundles (nclaw, nchat, nfamily, ntv, clawde, nsentry)")
+		fmt.Println("+ all nSelf apps + support via chat.nself.org or the nChat app")
+	} else if b.Plugins != nil {
+		fmt.Printf("Plugins (%d):\n", len(b.Plugins))
+		for _, p := range b.Plugins {
+			installed := checkPluginInstalled(p)
+			marker := " "
+			if installed {
+				marker = "✓"
+			}
+			fmt.Printf("  [%s] %s\n", marker, p)
+		}
+		fmt.Println()
+		fmt.Println("  ✓ = installed on this machine")
+	}
+
+	// ── Install hint ───────────────────────────────────────────────
+	fmt.Println()
+	if key == "ntask" {
+		fmt.Println("Install: nself plugin install <plugin-name>  (no license required)")
+	} else if key == "nself-plus" {
+		fmt.Println("Activate: nself license set <key>")
+		fmt.Println("Buy:      https://nself.org/pricing")
+	} else {
+		fmt.Println("Activate: nself license set <key>")
+		fmt.Printf("Install:  nself plugin install %s\n", b.Plugins[0])
+		fmt.Println("Buy:      https://nself.org/pricing")
+	}
+
+	return nil
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+// resolveBundleLicenseStatus returns a human-readable license status string
+// for the given bundle key. Reads the local license cache — no network call.
+func resolveBundleLicenseStatus(bundleKey string) string {
+	if bundleKey == "ntask" {
+		return "active (free)"
+	}
+
+	cache, err := license.ReadCache()
+	if err != nil || cache == nil {
+		return "not activated (run: nself license set <key>)"
+	}
+
+	tier := strings.ToLower(cache.Tier)
+
+	// ɳSelf+ (owner / enterprise / plus tiers) covers all bundles.
+	if tier == "plus" || tier == "enterprise" || tier == "owner" {
+		return fmt.Sprintf("active via ɳSelf+ (%s tier)", cache.Tier)
+	}
+
+	// Check if the specific bundle is in PluginsAllowed.
+	// The license server populates PluginsAllowed with all plugin names
+	// included in the licensed bundle(s).
+	b, ok := canonicalBundles[bundleKey]
+	if ok && len(b.Plugins) > 0 {
+		for _, allowed := range cache.PluginsAllowed {
+			for _, bp := range b.Plugins {
+				if strings.EqualFold(allowed, bp) {
+					return fmt.Sprintf("active (%s tier)", cache.Tier)
+				}
+			}
+		}
+	}
+
+	return fmt.Sprintf("not included in current license (%s tier — run: nself license set <key>)", cache.Tier)
+}
+
+// checkPluginInstalled returns true if the plugin appears to be installed locally.
+func checkPluginInstalled(pluginName string) bool {
+	if strings.HasPrefix(pluginName, "(") {
+		return false // placeholder entry
+	}
+	pluginDir := resolvePluginDir()
+	installed, err := plugin.ListInstalled(pluginDir)
+	if err != nil {
+		return false
+	}
+	for _, p := range installed {
+		if strings.EqualFold(p.Name, pluginName) {
+			return true
+		}
+	}
+	return false
+}
+
+// ── bundle install ──────────────────────────────────────────────────
+
+var bundleInstallCmd = &cobra.Command{
+	Use:   "install <bundle>",
+	Short: "Install every plugin in a bundle (license-gated, atomic rollback on failure)",
+	Long: `Install all plugins in the named bundle in a single transaction.
+
+License validation runs for every plugin BEFORE any filesystem change.
+On any per-plugin install failure, every plugin installed in this invocation
+is rolled back so the system is left in a clean state.
+
+Examples:
+  nself bundle install nsentry
+  nself bundle install nclaw --channel beta
+  nself bundle install nchat --dry-run`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBundleInstall,
+}
+
+var bundleRemoveCmd = &cobra.Command{
+	Use:   "remove <bundle>",
+	Short: "Remove every plugin in a bundle",
+	Long: `Remove all plugins in the named bundle. Plugin data is dropped by default;
+pass --keep-data to preserve schema/tables for later reinstall.
+
+Examples:
+  nself bundle remove nsentry
+  nself bundle remove nclaw --keep-data
+  nself bundle remove nchat --dry-run`,
+	Args: cobra.ExactArgs(1),
+	RunE: runBundleRemove,
+}
+
+func runBundleInstall(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	force, _ := cmd.Flags().GetBool("force")
+	strict, _ := cmd.Flags().GetBool("strict")
+	channelStr, _ := cmd.Flags().GetString("channel")
+
+	opts := bundle.InstallOpts{
+		DryRun:  dryRun,
+		Force:   force,
+		Strict:  strict,
+		Channel: bundle.Channel(channelStr),
+	}
+	_, err := bundle.Install(context.Background(), args[0], opts)
+	return err
+}
+
+func runBundleRemove(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	keepData, _ := cmd.Flags().GetBool("keep-data")
+
+	opts := bundle.RemoveOpts{
+		DryRun:   dryRun,
+		KeepData: keepData,
+	}
+	_, err := bundle.Remove(context.Background(), args[0], opts)
+	return err
+}
+
+// ── Registration ─────────────────────────────────────────────────────
+
+func init() {
+	// install flags
+	bundleInstallCmd.Flags().Bool("dry-run", false, "Print the planned actions without installing")
+	bundleInstallCmd.Flags().Bool("force", false, "Bypass license validation (logged as license-bypass)")
+	bundleInstallCmd.Flags().Bool("strict", false, "Fail if any plugin in the bundle is missing from the registry")
+	bundleInstallCmd.Flags().String("channel", "stable", "Release channel: stable | beta | canary")
+
+	// remove flags
+	bundleRemoveCmd.Flags().Bool("dry-run", false, "Print the planned actions without removing")
+	bundleRemoveCmd.Flags().Bool("keep-data", false, "Preserve plugin data (schema/tables) on remove")
+
+	bundleCmd.AddCommand(bundleListCmd)
+	bundleCmd.AddCommand(bundleInfoCmd)
+	bundleCmd.AddCommand(bundleInstallCmd)
+	bundleCmd.AddCommand(bundleRemoveCmd)
+	RootCmd.AddCommand(bundleCmd)
+}

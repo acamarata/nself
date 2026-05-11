@@ -76,10 +76,32 @@ func TestPackageVarsHaveTimeouts(t *testing.T) {
 		"License":   {License.Timeout},
 		"Plugin":    {Plugin.Timeout},
 		"Backup":    {Backup.Timeout},
+		"Cloud":     {Cloud.Timeout},
 	}
 	for name, c := range clients {
 		if c.Timeout <= 0 {
 			t.Errorf("%s.Timeout = %v, want > 0", name, c.Timeout)
 		}
+	}
+}
+
+func TestCloudDefaultTimeout(t *testing.T) {
+	// Cloud defaults to 30s when NSELF_HTTP_TIMEOUT_CLOUD is unset.
+	// envDuration is tested in isolation; here we verify the Cloud var has
+	// a reasonable positive value consistent with its documented default.
+	if Cloud.Timeout <= 0 {
+		t.Fatalf("Cloud.Timeout = %v, want > 0", Cloud.Timeout)
+	}
+}
+
+func TestEnvDurationCloudOverride(t *testing.T) {
+	got := envDuration("NSELF_HTTP_TIMEOUT_CLOUD_TEST", 30*time.Second)
+	if got != 30*time.Second {
+		t.Fatalf("got %v, want 30s", got)
+	}
+	t.Setenv("NSELF_HTTP_TIMEOUT_CLOUD_TEST", "45")
+	got = envDuration("NSELF_HTTP_TIMEOUT_CLOUD_TEST", 30*time.Second)
+	if got != 45*time.Second {
+		t.Fatalf("after set: got %v, want 45s", got)
 	}
 }

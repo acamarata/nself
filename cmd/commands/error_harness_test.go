@@ -78,6 +78,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"build", []string{"build", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"build", []string{"build", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── bundle ─────────────────────────────────────────────────────────────
+	{"bundle", []string{"bundle"}, "(a) no project dir"},
+	{"bundle", []string{"bundle", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"bundle", []string{"bundle", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── claw ───────────────────────────────────────────────────────────────
 	{"claw", []string{"claw"}, "(a) no project dir"},
 	{"claw", []string{"claw", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -92,6 +97,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"completion", []string{"completion", "invalidshell_xyz"}, "(a) unknown shell"},
 	{"completion", []string{"completion", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"completion", []string{"completion", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── costs ──────────────────────────────────────────────────────────────
+	{"costs", []string{"costs"}, "(a) no project dir — costs reads plugin dir; succeeds gracefully"},
+	{"costs", []string{"costs", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"costs", []string{"costs", "--format", "badformat_xyz"}, "(c) unknown format"},
 
 	// ── config ─────────────────────────────────────────────────────────────
 	{"config", []string{"config"}, "(a) no project dir"},
@@ -179,6 +189,10 @@ var errorHarnessCases = []errorHarnessCase{
 	{"logs", []string{"logs", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── mail ───────────────────────────────────────────────────────────────
+	{"man", []string{"man", "--output", "/tmp/nself_man_harness_test_xyz"}, "(a) write to temp dir"},
+	{"man", []string{"man", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"man", []string{"man", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	{"mail", []string{"mail"}, "(a) no project dir"},
 	{"mail", []string{"mail", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"mail", []string{"mail", "unknownsub_xyz"}, "(c) unknown sub"},

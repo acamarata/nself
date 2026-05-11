@@ -2,6 +2,7 @@ package watchdog
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,8 @@ import (
 	"net/smtp"
 	"os"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // Incident records a watchdog incident for persistence.
@@ -69,7 +72,14 @@ func SendTelegramAlert(cfg EscalationConfig, message string) error {
 	}
 	data, _ := json.Marshal(body)
 
-	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("building Telegram request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("sending Telegram alert: %w", err)
 	}

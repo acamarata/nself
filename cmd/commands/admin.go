@@ -155,8 +155,9 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 
 	// Check if already running.
 	probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	resp, err := http.Get(adminURL) //nolint:noctx // intentional quick probe
-	cancel()
+	defer cancel()
+	probeReq, _ := http.NewRequestWithContext(probeCtx, http.MethodGet, adminURL, nil)
+	resp, err := httptimeout.Health.Do(probeReq)
 	if err == nil {
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
@@ -164,7 +165,6 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 	}
-	_ = probeCtx
 
 	// Enable admin in .env.
 	envFile, err2 := resolveEnvFile("")

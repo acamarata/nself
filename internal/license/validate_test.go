@@ -2,6 +2,8 @@ package license
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -302,5 +304,184 @@ func TestDNSFailureDoesNotHitRealDNS(t *testing.T) {
 	_, err := http.DefaultClient.Do(req)
 	if err == nil {
 		t.Errorf("expected connection refused on %s (DNS failure simulation), but got a response", simulatedFailURL)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// S10.T03: Ed25519 response signature verification tests
+// ---------------------------------------------------------------------------
+
+// makeTestEd25519Keypair generates a fresh Ed25519 keypair for tests and
+// injects the public key hex into LICENSE_PUBLIC_KEY_OVERRIDE so GetPublicKeys()
+// returns it. Returns the private key (for signing) and a cleanup func.
+func makeTestEd25519Keypair(t *testing.T) (privKey ed25519.PrivateKey, pubHex string) {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate ed25519 keypair: %v", err)
+	}
+	pubHex = hex.EncodeToString(pub)
+	t.Setenv("LICENSE_PUBLIC_KEY_OVERRIDE", pubHex)
+	return priv, pubHex
+}
+
+// makeValidateResponse builds a minimal ValidateResponse JSON body.
+func makeValidateResponse(t *testing.T) []byte {
+	t.Helper()
+	resp := ValidateResponse{
+		Valid:   true,
+		Tier:    "pro",
+		Plugins: []string{"ai", "claw"},
+	}
+	data, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("marshal ValidateResponse: %v", err)
+	}
+	return data
+}
+
+// TestValidateRemote_ValidSignature asserts that a response with a correct
+// Ed25519 signature in X-NSelf-License-Sig is accepted and parsed. (S10.T03)
+func TestValidateRemote_ValidSignature(t *testing.T) {
+	redirectCacheDir(t)
+	privKey, _ := makeTestEd25519Keypair(t)
+
+	body := makeValidateResponse(t)
+	sig := ed25519.Sign(privKey, body)
+	sigHex := hex.EncodeToString(sig)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-NSelf-License-Sig", sigHex)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	t.Setenv("LICENSE_PING_URL", srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := validateRemote(ctx, "nself_pro_testedkey1234567890abcdef12", srv.URL)
+	if err != nil {
+		t.Fatalf("validateRemote with valid signature returned error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("validateRemote returned nil result")
+	}
+	if !result.Valid {
+		t.Errorf("expected Valid=true, got false; reason=%q", result.Reason)
+	}
+	if result.Tier != "pro" {
+		t.Errorf("expected Tier=pro, got %q", result.Tier)
+	}
+}
+
+// TestValidateRemote_MissingSignatureRejectsInProdBuild asserts that when the
+// X-NSelf-License-Sig header is absent and a real public key is embedded
+// (simulated via LICENSE_PUBLIC_KEY_OVERRIDE), validateRemote returns an error
+// causing fallback to cache. (S10.T03)
+func TestValidateRemote_MissingSignatureRejectsInProdBuild(t *testing.T) {
+	redirectCacheDir(t)
+	// Inject a real (non-zero) public key so IsZeroPubKey() returns false.
+	_, _ = makeTestEd25519Keypair(t)
+
+	body := makeValidateResponse(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Deliberately omit X-NSelf-License-Sig header.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := validateRemote(ctx, "nself_pro_testedkey1234567890abcdef12", srv.URL)
+	if err == nil {
+		t.Fatal("expected error when X-NSelf-License-Sig is absent, got nil")
+	}
+	if result != nil {
+		t.Errorf("expected nil result on sig failure, got: %+v", result)
+	}
+	if !strings.Contains(err.Error(), "signature missing") {
+		t.Errorf("expected 'signature missing' in error, got: %q", err.Error())
+	}
+}
+
+// TestValidateRemote_TamperedBodyRejectsInProdBuild asserts that when the
+// response body is tampered after signing, validateRemote returns an error.
+// This confirms that the signature covers the exact bytes returned. (S10.T03)
+func TestValidateRemote_TamperedBodyRejectsInProdBuild(t *testing.T) {
+	redirectCacheDir(t)
+	privKey, _ := makeTestEd25519Keypair(t)
+
+	originalBody := makeValidateResponse(t)
+	sig := ed25519.Sign(privKey, originalBody)
+	sigHex := hex.EncodeToString(sig)
+
+	// Tampered: promote tier to "enterprise" without re-signing.
+	tamperedResp := ValidateResponse{
+		Valid:   true,
+		Tier:    "enterprise", // different from what was signed
+		Plugins: []string{"ai", "claw"},
+	}
+	tamperedBody, _ := json.Marshal(tamperedResp)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-NSelf-License-Sig", sigHex) // sig for original body
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(tamperedBody) // different body
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := validateRemote(ctx, "nself_pro_testedkey1234567890abcdef12", srv.URL)
+	if err == nil {
+		t.Fatal("expected error when response body is tampered, got nil")
+	}
+	if result != nil {
+		t.Errorf("expected nil result on tamper detection, got: %+v", result)
+	}
+	if !strings.Contains(err.Error(), "signature invalid") {
+		t.Errorf("expected 'signature invalid' in error, got: %q", err.Error())
+	}
+}
+
+// TestValidateRemote_DevBuildSkipsSignatureCheck asserts that when IsZeroPubKey()
+// is true (no LICENSE_PUBLIC_KEY_OVERRIDE and empty licensePubKeyHex from ldflags),
+// the signature header is not checked — the dev build can talk to any server. (S10.T03)
+func TestValidateRemote_DevBuildSkipsSignatureCheck(t *testing.T) {
+	redirectCacheDir(t)
+	// Do NOT set LICENSE_PUBLIC_KEY_OVERRIDE — IsZeroPubKey() will return true.
+	t.Setenv("LICENSE_PUBLIC_KEY_OVERRIDE", "")
+
+	body := makeValidateResponse(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// No sig header — would normally fail in prod builds.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := validateRemote(ctx, "nself_pro_testedkey1234567890abcdef12", srv.URL)
+	if err != nil {
+		t.Fatalf("dev build should skip sig check but got error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("validateRemote returned nil result in dev build")
+	}
+	if !result.Valid {
+		t.Errorf("expected Valid=true in dev build without sig check, got false")
 	}
 }

@@ -8,9 +8,10 @@
 #   curl ... | bash -s -- --dir /path    # Custom directory
 #
 # Environment variables:
-#   NSELF_VERSION      — Specific version (default: latest release)
-#   NSELF_INSTALL_DIR  — Override install directory
-#   FORCE_REINSTALL    — Set to "true" to overwrite existing install
+#   NSELF_VERSION           — Specific version (default: latest release)
+#   NSELF_INSTALL_DIR       — Override install directory
+#   FORCE_REINSTALL         — Set to "true" to overwrite existing install
+#   NSELF_INSTALL_PIN_SHA256 — Expected SHA-256 of the tarball (paranoid mode)
 
 set -euo pipefail
 
@@ -159,8 +160,21 @@ main() {
         printf "  --dir PATH   Install to custom directory\n"
         printf "  --force      Overwrite existing installation\n"
         printf "\nEnvironment:\n"
-        printf "  NSELF_VERSION=x.y.z    Install specific version\n"
-        printf "  FORCE_REINSTALL=true   Overwrite existing\n"
+        printf "  NSELF_VERSION=x.y.z              Install specific version\n"
+        printf "  FORCE_REINSTALL=true             Overwrite existing\n"
+        printf "\nSecurity:\n"
+        printf "  NSELF_INSTALL_PIN_SHA256=<sha>   Pin the expected SHA-256 of the downloaded\n"
+        printf "                                   tarball. If the checksum does not match,\n"
+        printf "                                   installation aborts immediately.\n"
+        printf "\n"
+        printf "  SHA-256 verification is always enabled. The installer fetches checksums.txt\n"
+        printf "  from the same GitHub release and aborts loudly on mismatch.\n"
+        printf "\n"
+        printf "  Paranoid install (recommended for CI / production):\n"
+        printf "    NSELF_VERSION=v1.0.16 NSELF_INSTALL_PIN_SHA256=<sha> curl -fsSL https://install.nself.org | bash\n"
+        printf "\n"
+        printf "  To obtain the expected SHA-256 for a release:\n"
+        printf "    curl -fsSL https://github.com/nself-org/cli/releases/download/v<VERSION>/checksums.txt\n"
         exit 0
         ;;
       *) shift ;;
@@ -216,6 +230,70 @@ main() {
 
   if ! curl -fsSL --progress-bar -o "$tmptarball" "$url"; then
     error "Download failed. Check https://github.com/${REPO}/releases for available binaries."
+  fi
+
+  # ── SHA-256 Verification ───────────────────────────────────────────
+  # Always fetch checksums.txt from the same release and verify the tarball.
+  # Additionally, if NSELF_INSTALL_PIN_SHA256 is set, verify against that pinned
+  # value (defense against a compromised release page).
+  verify_sha256() {
+    local file="$1"
+    local expected="$2"
+    local actual
+
+    if command -v sha256sum > /dev/null 2>&1; then
+      actual=$(sha256sum "$file" | awk '{print $1}')
+    elif command -v shasum > /dev/null 2>&1; then
+      actual=$(shasum -a 256 "$file" | awk '{print $1}')
+    else
+      warn "No sha256sum or shasum found — skipping checksum verification"
+      return 0
+    fi
+
+    if [ "$actual" != "$expected" ]; then
+      printf "${RED}✗${RESET} SHA-256 mismatch!\n" >&2
+      printf "  expected: %s\n" "$expected" >&2
+      printf "  actual:   %s\n" "$actual" >&2
+      return 1
+    fi
+    return 0
+  }
+
+  info "Verifying SHA-256..."
+  local checksums_url="https://github.com/${REPO}/releases/download/v${version}/checksums.txt"
+  local tmp_checksums
+  tmp_checksums=$(mktemp /tmp/nself-checksums-XXXXXX.txt)
+  trap "rm -f '$tmptarball' '$tmpfile' '$tmp_checksums'" EXIT
+
+  if curl -fsSL -o "$tmp_checksums" "$checksums_url" 2>/dev/null; then
+    # Extract the expected checksum for this tarball from checksums.txt
+    local expected_sha
+    expected_sha=$(grep -F "${tarball}" "$tmp_checksums" 2>/dev/null | awk '{print $1}')
+
+    if [ -z "$expected_sha" ]; then
+      error "Could not find checksum for ${tarball} in checksums.txt. Aborting for security."
+    fi
+
+    if ! verify_sha256 "$tmptarball" "$expected_sha"; then
+      error "SHA-256 verification failed for ${tarball}. The download may be corrupt or tampered with. Aborting."
+    fi
+    success "SHA-256 verified (release checksum)"
+  else
+    # checksums.txt not available — fail unless user explicitly skips (legacy releases only)
+    if [ "${NSELF_SKIP_CHECKSUM:-false}" = "true" ]; then
+      warn "checksums.txt not found for v${version} — skipping verification (NSELF_SKIP_CHECKSUM=true)"
+    else
+      error "Could not fetch checksums.txt from the release. Set NSELF_SKIP_CHECKSUM=true to bypass (not recommended). Aborting."
+    fi
+  fi
+
+  # Pinned-mode: extra verification against caller-supplied SHA-256
+  if [ -n "${NSELF_INSTALL_PIN_SHA256:-}" ]; then
+    info "Verifying pinned SHA-256..."
+    if ! verify_sha256 "$tmptarball" "${NSELF_INSTALL_PIN_SHA256}"; then
+      error "Pinned SHA-256 mismatch — aborting. The release page or download may be compromised."
+    fi
+    success "SHA-256 verified (pinned)"
   fi
 
   # Extract binary from tarball — structure is nself-{version}-{os}-{arch}/nself
