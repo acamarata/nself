@@ -95,12 +95,13 @@ func TestInstall_AtomicRollbackOnFailure(t *testing.T) {
 	}
 
 	res, err := Install(context.Background(), "nsentry", InstallOpts{
-		Out:       &buf,
-		Channel:   ChannelStable,
-		Force:     true, // bypass license pre-flight (no real key in test env)
-		PluginDir: pluginDir,
-		installer: installFn,
-		remover:   removeFn,
+		Out:                   &buf,
+		Channel:               ChannelStable,
+		PluginDir:             pluginDir,
+		bundleEntitledChecker: func(_ context.Context, _, _ string) (bool, error) { return true, nil }, // test: pass phase 1
+		licenseChecker:        func(_ context.Context, _ []string) error { return nil },                // test: pass phase 2
+		installer:             installFn,
+		remover:               removeFn,
 	})
 	if err == nil {
 		t.Fatalf("expected install failure; got nil err. output:\n%s", buf.String())
@@ -120,18 +121,20 @@ func TestInstall_AtomicRollbackOnFailure(t *testing.T) {
 	}
 }
 
-func TestInstall_LicenseBypassWithForce(t *testing.T) {
+// TestInstall_ForceStillValidatesLicense verifies that --force does NOT bypass
+// license validation. It skips same-version checks (repair path) but license
+// is always enforced. Introduced in S2.T03 CR-C fix (P100).
+func TestInstall_ForceStillValidatesLicense(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
 	defer os.RemoveAll(dir)
 
 	pluginDir := t.TempDir()
 	var buf bytes.Buffer
 
-	// Ensure license check is NOT called when --force is set.
-	licenseCalled := false
+	// License checker that returns an error — with --force, install must still
+	// fail because force never bypasses the license gate.
 	licenseFn := func(ctx context.Context, plugins []string) error {
-		licenseCalled = true
-		return errors.New("would have failed")
+		return errors.New("no license key configured")
 	}
 	installFn := func(ctx context.Context, cfg *config.Config, name, pd string) error {
 		return os.MkdirAll(filepath.Join(pd, name), 0700)
@@ -140,26 +143,28 @@ func TestInstall_LicenseBypassWithForce(t *testing.T) {
 		return nil
 	}
 
-	res, err := Install(context.Background(), "nsentry", InstallOpts{
-		Force:          true,
-		Out:            &buf,
-		Channel:        ChannelStable,
-		PluginDir:      pluginDir,
+	_, err := Install(context.Background(), "nsentry", InstallOpts{
+		Force:   true,
+		Out:     &buf,
+		Channel: ChannelStable,
+		PluginDir: pluginDir,
+		// Phase 1: bundle entitled check returns false (simulates no key).
+		bundleEntitledChecker: func(_ context.Context, _, _ string) (bool, error) {
+			return false, errors.New("no license key configured")
+		},
 		licenseChecker: licenseFn,
 		installer:      installFn,
 		remover:        removeFn,
 	})
-	if err != nil {
-		t.Fatalf("install with --force failed: %v\noutput:\n%s", err, buf.String())
+	if err == nil {
+		t.Fatal("expected license validation failure even with --force; got nil")
 	}
-	if licenseCalled {
-		t.Error("license checker was called despite --force")
+	if !strings.Contains(err.Error(), "license validation failed") {
+		t.Errorf("unexpected error (want 'license validation failed'): %v", err)
 	}
-	if !res.LicenseBypass {
-		t.Error("result.LicenseBypass = false; want true")
-	}
-	if !strings.Contains(buf.String(), "bypassed license validation") {
-		t.Errorf("output missing license-bypass warning: %s", buf.String())
+	// Output must NOT claim license was bypassed.
+	if strings.Contains(buf.String(), "bypassed license validation") {
+		t.Error("output incorrectly claims license was bypassed with --force")
 	}
 }
 

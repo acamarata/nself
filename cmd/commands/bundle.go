@@ -480,7 +480,7 @@ func init() {
 
 	// install flags
 	bundleInstallCmd.Flags().Bool("dry-run", false, "Print the planned actions without installing")
-	bundleInstallCmd.Flags().Bool("force", false, "Bypass license validation (logged as license-bypass)")
+	bundleInstallCmd.Flags().Bool("force", false, "Re-install even if already installed; skips same-version check (repair/upgrade path). License is still validated.")
 	bundleInstallCmd.Flags().Bool("strict", false, "Fail if any plugin in the bundle is missing from the registry")
 	bundleInstallCmd.Flags().String("channel", "stable", "Release channel: stable | beta | canary")
 

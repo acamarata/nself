@@ -6,7 +6,9 @@
 // that were already on disk before the call are left untouched.
 //
 // --dry-run    prints the planned actions and exits without filesystem changes.
-// --force      bypasses the license pre-flight (logged as "license-bypass").
+// --force      re-installs even if the same version is already installed
+//              (repair/upgrade path). License is ALWAYS validated regardless of
+//              --force; --force NEVER bypasses the license check.
 // --strict     fails if any plugin in the bundle is missing from the registry
 //
 //	(default: skip missing with a warning).
@@ -48,11 +50,14 @@ type InstallOpts struct {
 	// caller-loaded cfg is used by Install via cfg arg.
 	Config *config.Config
 
-	// licenseChecker is an internal hook for tests to bypass the real
-	// license validator. Production code leaves this nil and the installer
-	// uses checkBundleLicenses, which delegates to plugin.checkLicense via
-	// a dry install probe.
+	// licenseChecker is an internal hook for tests to replace the Phase 2
+	// (plugin-level) license validator. Production code leaves this nil.
 	licenseChecker func(ctx context.Context, plugins []string) error
+
+	// bundleEntitledChecker is an internal hook for tests to replace the Phase 1
+	// (bundle-level) entitlement check that calls ping_api. Production code
+	// leaves this nil and the installer uses license.BundleEntitled.
+	bundleEntitledChecker func(ctx context.Context, key, bundleSlug string) (bool, error)
 
 	// installer/remover are internal hooks for tests. Production code leaves
 	// these nil and the installer uses plugin.Install / plugin.Remove.
@@ -69,7 +74,7 @@ type InstallResult struct {
 	Skipped       []string // plugins skipped because missing from registry (non-strict)
 	Installed     []string // plugins successfully installed in this call
 	RolledBack    []string // plugins removed during rollback after a failure
-	LicenseBypass bool     // true when --force was used
+	LicenseBypass bool     // reserved — always false; --force never bypasses license
 	DryRun        bool
 }
 
@@ -92,7 +97,7 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 	result := &InstallResult{
 		Bundle:        b.Slug,
 		Channel:       normalizeChannel(opts.Channel),
-		LicenseBypass: opts.Force,
+		LicenseBypass: false, // --force never bypasses license; this field is reserved for future internal-use audit
 		DryRun:        opts.DryRun,
 	}
 
@@ -134,18 +139,20 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		return result, nil
 	}
 
-	// License pre-flight: two-phase check.
-	//   Phase 1 (bundle-level): call ping_api /license/validate?bundle=<slug> to
-	//   verify the operator's key grants access to THIS bundle as a unit. A key
-	//   with individual plugin entitlements does NOT satisfy a bundle purchase.
+	// License pre-flight: two-phase check. Always runs — --force does NOT bypass.
+	//   Phase 1 (bundle-level): call ping_api /bundle/entitled to verify the
+	//   operator's key grants access to THIS bundle as a unit.
 	//   Phase 2 (plugin-level fallback): per-plugin registry/license probe via
 	//   defaultLicenseChecker to catch obvious missing-key cases before any FS
 	//   change (mirrors existing plugin install behavior).
-	// --force bypasses both phases with an audit log entry.
-	if !opts.Force {
-		// Phase 1: bundle-level entitlement via ping_api.
+	{
+		// Phase 1: bundle-level entitlement via ping_api (or test hook).
 		key := license.CollectLicenseKey()
-		entitled, entitleErr := license.BundleEntitled(ctx, key, b.Slug)
+		entitledFn := opts.bundleEntitledChecker
+		if entitledFn == nil {
+			entitledFn = license.BundleEntitled
+		}
+		entitled, entitleErr := entitledFn(ctx, key, b.Slug)
 		if entitleErr != nil || !entitled {
 			msg := fmt.Sprintf("bundle %q: not entitled", b.Slug)
 			if entitleErr != nil {
@@ -162,8 +169,6 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		if err := check(ctx, planned); err != nil {
 			return result, fmt.Errorf("license validation failed for bundle %q: %w", b.Slug, err)
 		}
-	} else {
-		fmt.Fprintf(out, "WARNING: --force bypassed license validation for bundle %q (logged as license-bypass)\n", b.Slug)
 	}
 
 	pluginDir := opts.PluginDir
@@ -314,7 +319,7 @@ func printPlan(out io.Writer, b Bundle, ch Channel, planned []string, pins Versi
 		fmt.Fprintf(out, "  skipped (not in registry, non-strict): %s\n", strings.Join(skipped, ", "))
 	}
 	if opts.Force {
-		fmt.Fprintln(out, "  license: bypass (--force)")
+		fmt.Fprintln(out, "  license: will validate (--force only skips same-version check)")
 	} else {
 		fmt.Fprintln(out, "  license: will validate each plugin before any FS change")
 	}
