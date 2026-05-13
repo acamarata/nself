@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deploy/bluegreen"
 	"github.com/nself-org/cli/internal/maintenance"
@@ -317,6 +318,14 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Load the env file cascade for the resolved target into the current process
+	// so that downstream helpers (build, health checks, SSH env) pick up the
+	// correct environment variables. NSELF_DEPLOY_ENV is also set for subprocesses.
+	// workdir may not be known yet; use a best-effort lookup here.
+	if wd, wdErr := projectRoot(); wdErr == nil {
+		loadDeployEnvCascade(wd, target)
+	}
+
 	strategy, _ := cmd.Flags().GetString("strategy")
 	if rolling, _ := cmd.Flags().GetBool("rolling"); rolling {
 		strategy = "rolling"
@@ -562,6 +571,48 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// loadDeployEnvCascade loads the env file cascade for the given deploy target
+// into the current process environment. Later files override earlier ones.
+//
+// Cascade per target:
+//
+//	local      → .env.dev + .env.local
+//	staging    → .env.dev + .env.staging + .env.secrets
+//	prod       → .env.dev + .env.prod   + .env.secrets
+//
+// Missing files are silently skipped. The NSELF_DEPLOY_ENV env var is set
+// to the canonical target name so downstream helpers can introspect it.
+func loadDeployEnvCascade(workdir, target string) {
+	var files []string
+	switch target {
+	case "local":
+		files = []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.local"),
+		}
+	case "staging":
+		files = []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.staging"),
+			filepath.Join(workdir, ".env.secrets"),
+		}
+	default: // "prod"
+		files = []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.prod"),
+			filepath.Join(workdir, ".env.secrets"),
+		}
+	}
+	for _, f := range files {
+		if _, err := os.Stat(f); err == nil {
+			// Overload merges into os.Environ — missing files already skipped above.
+			_ = godotenv.Overload(f)
+		}
+	}
+	// Expose the resolved target so subprocesses and plugins can read it.
+	_ = os.Setenv("NSELF_DEPLOY_ENV", target)
 }
 
 // sshKeyPath returns the SSH key path from NSELF_DEPLOY_SSH_KEY env or the

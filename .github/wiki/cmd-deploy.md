@@ -313,6 +313,7 @@ a separate protocol.
 | `NSELF_DEPLOY_HEALTH_TIMEOUT` | `30` | Seconds to wait for green container health |
 | `NSELF_BLUE_PORT_OFFSET` | `0` | Port offset for blue containers |
 | `NSELF_GREEN_PORT_OFFSET` | `100` | Port offset for green containers |
+| `NSELF_DEPLOY_ENV` | `production` | Deploy target environment set by `nself deploy` after resolving `--env` / positional argument. Values: `local`, `staging`, `production`. Exposed for subprocesses and plugins. |
 
 When no host is configured, the CLI deploys to the current host. This is the v1.0.9
 single-region model. Multi-region is deferred to v1.1.0.
