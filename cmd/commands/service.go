@@ -134,16 +134,17 @@ var serviceAddCmd = &cobra.Command{
 The command:
   1. Finds the next available CS_N slot (1-10) in .env.dev
   2. Creates a services/<name>/ directory with starter files
-  3. Writes CS_N=<name>:<lang>:<port> and <NAME>_PORT=<port> into .env.dev
+  3. Writes CS_N=<name>:<template>:<port> and <NAME>_PORT=<port> into .env.dev
 
 Run 'nself build' after adding a service to regenerate docker-compose.yml.
 
-Supported languages: go (default), node, python, rust, other
+Supported templates: go (default), node, python, static, rust, other
 
 Examples:
   nself service add myapi
-  nself service add myapi --lang python
-  nself service add myapi --lang node --dry-run`,
+  nself service add myapi --template python
+  nself service add myapi --template node --dry-run
+  nself service add mysite --template static`,
 	Args: cobra.ExactArgs(1),
 	RunE: runServiceAdd,
 }
@@ -153,7 +154,9 @@ func init() {
 	serviceListCmd.Flags().Bool("json", false, "Output as JSON array")
 
 	// service add flags
-	serviceAddCmd.Flags().String("lang", "go", "Language template: go, node, python, rust, other")
+	serviceAddCmd.Flags().String("template", "go", "Service template: go, node, python, static, rust, other")
+	serviceAddCmd.Flags().String("lang", "", "Alias for --template (deprecated, use --template)")
+	serviceAddCmd.Flags().MarkHidden("lang")
 	serviceAddCmd.Flags().Bool("force", false, "Overwrite existing service directory")
 	serviceAddCmd.Flags().Bool("dry-run", false, "Print what would be done without writing files")
 
@@ -170,7 +173,11 @@ func init() {
 // runServiceAdd implements 'nself service add <name>'.
 func runServiceAdd(cmd *cobra.Command, args []string) error {
 	name := strings.ToLower(strings.TrimSpace(args[0]))
-	lang, _ := cmd.Flags().GetString("lang")
+	// --template is the canonical flag; --lang is a hidden backward-compat alias.
+	lang, _ := cmd.Flags().GetString("template")
+	if legacyLang, _ := cmd.Flags().GetString("lang"); legacyLang != "" {
+		lang = legacyLang
+	}
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 

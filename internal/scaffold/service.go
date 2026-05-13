@@ -11,7 +11,7 @@ import (
 
 // supportedLangs is the ordered list of language templates available for
 // custom service scaffolding.
-var supportedLangs = []string{"go", "node", "python", "rust", "other"}
+var supportedLangs = []string{"go", "node", "python", "static", "rust", "other"}
 
 // IsValidLang reports whether lang is a supported template language.
 func IsValidLang(lang string) bool {
@@ -226,6 +226,8 @@ func scaffoldFileList(name, lang string) []string {
 		return append(base, "package.json", "src/index.ts", "tsconfig.json")
 	case "python":
 		return append(base, "requirements.txt", "main.py")
+	case "static":
+		return append(base, "index.html", "nginx.conf")
 	case "rust":
 		return append(base, "Cargo.toml", "src/main.rs")
 	default:
@@ -339,6 +341,31 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE %d
 CMD ["python", "main.py"]
+`, port), 0644},
+		)
+	case "static":
+		specs = append(specs,
+			fileSpec{"index.html", fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>%s</title></head>
+<body><h1>%s</h1><p>Served by nSelf custom service on port %d.</p></body>
+</html>
+`, name, name, port), 0644},
+			fileSpec{"nginx.conf", fmt.Sprintf(`# nSelf custom service — static nginx snippet
+# Include this from your nginx conf.d/ directory.
+server {
+    listen %d;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    location / { try_files $uri $uri/ =404; }
+}
+`, port), 0644},
+			fileSpec{"Dockerfile", fmt.Sprintf(`FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/index.html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE %d
+CMD ["nginx", "-g", "daemon off;"]
 `, port), 0644},
 		)
 	case "rust":
