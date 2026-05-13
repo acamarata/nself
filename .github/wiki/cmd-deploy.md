@@ -5,7 +5,8 @@
 ## Synopsis
 
 ```
-nself deploy <target> [flags]
+nself deploy [target] [flags]
+nself deploy --env <target> [flags]
 nself deploy status [--env <target>] [--blue-green]
 nself deploy rollback [target]
 nself deploy promote
@@ -20,6 +21,10 @@ nself deploy check-access
 sequenced rolling restart. It chains `nself build` then restarts services in dependency order
 (postgres → hasura → auth → storage → plugins), waiting for each service to pass a health check
 before restarting the next.
+
+The target environment can be supplied as a positional argument or via `--env`. The flag takes
+priority when both are given. The three supported values are `local`, `staging`, and `prod`
+(also accepted as `production`).
 
 When `NSELF_DEPLOY_HOST_STAGING` or `NSELF_DEPLOY_HOST_PROD` is set, the CLI rsyncs the compose
 file and env to the remote host, pulls updated images, then runs the rolling restart via SSH.
@@ -162,7 +167,9 @@ Agent forwarding is disabled by default. The CLI uses
 | `--include-frontends` | false | Include frontend apps in the deploy |
 | `--exclude-frontends` | false | Exclude frontend apps from the deploy |
 | `--json` | false | Emit structured JSON output |
-| `--env` | — | Override target (alias for the positional argument) |
+| `--env` | — | Target environment: `local`, `staging`, or `prod`. Takes priority over the positional argument. Required env vars for remote targets: `NSELF_DEPLOY_HOST`, `NSELF_DEPLOY_USER`, `NSELF_DEPLOY_KEY_PATH` |
+| `--follow` | false | Stream container logs after deploy until Ctrl-C (staging and prod only) |
+| `--yes` | false | Skip the production confirmation prompt (alias for `--force`) |
 | `--canary` | `0` | Start a canary deploy at N% traffic to green (Y17; requires `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true`) |
 | `--skip-canary` | false | Skip canary phase and flip directly to 100% green |
 | `--force-migration` | false | Force deploy even with backward-incompatible migrations (disables canary) |
@@ -225,17 +232,29 @@ Use `--skip-health` as a break-glass escape hatch. A visible warning is always e
 ## Examples
 
 ```bash
-# Local build + rolling restart
+# Local build + rolling restart (positional form)
 nself deploy local
 
-# Staging dry-run (shows what would happen)
+# Local build + rolling restart (flag form)
+nself deploy --env local
+
+# Staging dry-run — shows what would happen without executing
 nself deploy staging --dry-run
+
+# Staging dry-run using --env flag
+nself deploy --env staging --dry-run
 
 # Staging deploy with JSON output
 nself deploy staging --json
 
 # Production deploy (rolling)
 nself deploy production --force
+
+# Production deploy using --env, skipping the confirmation prompt via --yes
+nself deploy --env prod --yes
+
+# Production deploy and stream logs until Ctrl-C
+nself deploy --env prod --force --follow
 
 # Production deploy with explicit strategy (blue-green falls back to rolling with warning)
 nself deploy production --strategy=blue-green --force
@@ -279,9 +298,12 @@ a separate protocol.
 |---|---|---|
 | `NSELF_DEPLOY_HOST_STAGING` | — | SSH/rsync target for staging: `user@host:/path` |
 | `NSELF_DEPLOY_HOST_PROD` | — | SSH/rsync target for production: `user@host:/path` |
+| `NSELF_DEPLOY_HOST` | — | Generic remote host used when target-specific vars are unset: `user@host:/path` |
+| `NSELF_DEPLOY_USER` | — | SSH user for remote deployments (used when host is specified without a user prefix) |
+| `NSELF_DEPLOY_KEY_PATH` | `~/.ssh/id_ed25519` | SSH private key path for remote deployments (alias: `NSELF_DEPLOY_SSH_KEY`) |
 | `STAGING_DEPLOY_HOST` | — | Fallback alias for `NSELF_DEPLOY_HOST_STAGING` |
 | `PROD_DEPLOY_HOST` | — | Fallback alias for `NSELF_DEPLOY_HOST_PROD` |
-| `NSELF_DEPLOY_SSH_KEY` | `~/.ssh/id_ed25519` | SSH key path |
+| `NSELF_DEPLOY_SSH_KEY` | `~/.ssh/id_ed25519` | SSH key path (superseded by `NSELF_DEPLOY_KEY_PATH`; both accepted) |
 | `HEALTHCHECK_TIMEOUT_<SERVICE>` | `60s` | Per-service health-check timeout |
 | `NSELF_FEATURE_BLUE_GREEN_DEPLOY` | `false` | Enable blue/green canary path (Y17). Set to `true` to activate. |
 | `NSELF_DEPLOY_STRATEGY` | `canary` | Deploy strategy when blue/green is active: `canary`, `blue-green`, `direct` |

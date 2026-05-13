@@ -40,7 +40,7 @@ var deployStrategies = map[string]bool{
 }
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy <target>",
+	Use:   "deploy [target]",
 	Short: "Deploy the stack to a target environment",
 	Long: `Deploy the nSelf stack to local, staging, or production.
 
@@ -51,12 +51,18 @@ Targets:
   staging     Deploy to the staging environment (NSELF_DEPLOY_HOST_STAGING)
   production  Deploy to production (NSELF_DEPLOY_HOST_PROD, requires confirmation)
 
+The target can be specified as a positional argument or via --env:
+  nself deploy staging
+  nself deploy --env staging
+
 Examples:
   nself deploy local
+  nself deploy --env staging --dry-run
   nself deploy staging --dry-run
   nself deploy production --strategy=blue-green
+  nself deploy --env prod --force --follow
   nself deploy production --rolling --skip-health`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	RunE: runDeploy,
 }
 
@@ -115,7 +121,9 @@ func init() {
 	f.Bool("skip-health", false, "Skip post-deploy health checks")
 	f.Bool("include-frontends", false, "Include frontend apps in the deploy")
 	f.Bool("exclude-frontends", false, "Exclude frontend apps from the deploy")
-	f.String("env", "", "Override environment (alias for the target arg)")
+	f.String("env", "", "Target environment: local|staging|prod (overrides positional arg; required env vars: NSELF_DEPLOY_HOST, NSELF_DEPLOY_USER, NSELF_DEPLOY_KEY_PATH)")
+	f.Bool("follow", false, "Stream container logs after deploy until Ctrl-C (staging/prod only)")
+	f.Bool("yes", false, "Skip prod confirmation prompt (alias for --force)")
 	f.Bool("json", false, "Emit JSON output")
 
 	// Blue/green canary flags (Y17 — blue_green_deploy feature flag).
@@ -293,7 +301,18 @@ func runDeployHealthCheck(ctx context.Context, workdir string, jsonOut bool) (de
 }
 
 func runDeploy(cmd *cobra.Command, args []string) error {
-	target, err := resolveTarget(args[0])
+	// Resolve target: --env flag takes priority over the positional argument.
+	envFlag, _ := cmd.Flags().GetString("env")
+	var rawTarget string
+	switch {
+	case envFlag != "":
+		rawTarget = envFlag
+	case len(args) == 1:
+		rawTarget = args[0]
+	default:
+		return fmt.Errorf("target environment required: pass it as an argument (nself deploy staging) or via --env (nself deploy --env staging)")
+	}
+	target, err := resolveTarget(rawTarget)
 	if err != nil {
 		return err
 	}
@@ -318,6 +337,11 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
+	yes, _ := cmd.Flags().GetBool("yes")
+	if yes {
+		force = true
+	}
+	follow, _ := cmd.Flags().GetBool("follow")
 	skipHealth, _ := cmd.Flags().GetBool("skip-health")
 	jsonOut, _ := cmd.Flags().GetBool("json")
 	includeFrontends, _ := cmd.Flags().GetBool("include-frontends")
@@ -491,7 +515,53 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return finalize(jsonOut, target, strategy, start, steps, nil)
+	if err := finalize(jsonOut, target, strategy, start, steps, nil); err != nil {
+		return err
+	}
+
+	// --follow: stream container logs until Ctrl-C (staging/prod only).
+	// Not supported for dry-run or local (local already has foreground start).
+	if follow && !dryRun && (target == "staging" || target == "prod") {
+		if !jsonOut {
+			ui.Info("Following container logs (Ctrl-C to stop)...")
+		}
+		host := os.Getenv("NSELF_DEPLOY_HOST_" + strings.ToUpper(target))
+		if host == "" {
+			host = os.Getenv(strings.ToUpper(target) + "_DEPLOY_HOST")
+		}
+		if host != "" {
+			// Remote follow: tail logs on the remote host via SSH.
+			colonIdx := strings.LastIndex(host, ":")
+			sshTarget := host
+			remotePath := ""
+			if colonIdx >= 0 {
+				sshTarget = host[:colonIdx]
+				remotePath = host[colonIdx+1:]
+			}
+			sshKey := sshKeyPath()
+			logsCmd := "docker compose logs -f --tail=50"
+			if remotePath != "" {
+				logsCmd = fmt.Sprintf("cd %s && docker compose logs -f --tail=50", remotePath)
+			}
+			sc := exec.CommandContext(cmd.Context(), "ssh",
+				"-i", sshKey,
+				"-o", "StrictHostKeyChecking=accept-new",
+				"-o", "ForwardAgent=no",
+				sshTarget, logsCmd)
+			sc.Stdout = os.Stdout
+			sc.Stderr = os.Stderr
+			_ = sc.Run() // Ctrl-C exits; non-zero exit is not an error from user perspective.
+		} else {
+			// Local host: stream logs directly.
+			lc := exec.CommandContext(cmd.Context(), "docker", "compose", "logs", "-f", "--tail=50")
+			lc.Dir = workdir
+			lc.Stdout = os.Stdout
+			lc.Stderr = os.Stderr
+			_ = lc.Run()
+		}
+	}
+
+	return nil
 }
 
 // sshKeyPath returns the SSH key path from NSELF_DEPLOY_SSH_KEY env or the
