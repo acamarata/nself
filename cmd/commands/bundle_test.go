@@ -154,8 +154,61 @@ func TestBundleInfo_UnknownBundle(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unknown bundle, got nil")
 	}
-	if !strings.Contains(err.Error(), "unknown bundle") {
-		t.Errorf("error message should mention 'unknown bundle', got: %v", err)
+	if !strings.Contains(err.Error(), "bundle not found") {
+		t.Errorf("error message should mention 'bundle not found', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "nself bundle list") {
+		t.Errorf("error message should suggest 'nself bundle list', got: %v", err)
+	}
+}
+
+func TestBundleInfo_UnknownBundle_ExitCode(t *testing.T) {
+	root := newBundleTestCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"bundle", "info", "does-not-exist"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected non-nil error for unknown bundle name via cobra")
+	}
+}
+
+func TestBundleInfo_JSONFlag(t *testing.T) {
+	root := newBundleTestCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"bundle", "info", "nclaw", "--json"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("bundle info nclaw --json returned error: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{`"slug"`, `"nclaw"`, `"name"`, `"price"`, `"plugins"`, `"license_status"`, `"install_hint"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("--json output missing key %q\nfull:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(out, "$0.99") {
+		t.Errorf("--json output missing price $0.99\nfull:\n%s", out)
+	}
+}
+
+func TestBundleInfo_JSON_AllFields(t *testing.T) {
+	root := newBundleTestCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"bundle", "info", "ntask", "--json"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("bundle info ntask --json returned error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `"FREE"`) {
+		t.Errorf("--json ntask output missing FREE price\nfull:\n%s", out)
+	}
+	if !strings.Contains(out, `"plugin_count"`) {
+		t.Errorf("--json output missing plugin_count\nfull:\n%s", out)
 	}
 }
 

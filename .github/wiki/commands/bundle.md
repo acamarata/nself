@@ -58,7 +58,7 @@ Show full details for one bundle: plugin membership, pricing, and your current
 license status.
 
 ```
-nself bundle info <name>
+nself bundle info <name> [--json]
 ```
 
 ### Arguments
@@ -67,13 +67,51 @@ nself bundle info <name>
 |----------|-------------|
 | `name` | Bundle slug (nclaw, nchat, ntv, nfamily, clawde, nsentry, ntask, nself-plus) |
 
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output a machine-readable JSON object with all fields |
+
+### Output fields (table mode)
+
+- **Bundle / Price:** display name and pricing tier
+- **License:** active, inactive, or not-set based on local license cache (no network call)
+- **Plugins:** full member list with installed marker (`✓`)
+- **Install:** one-line hint to activate and install
+
+### JSON output fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slug` | string | CLI identifier |
+| `name` | string | Display name |
+| `price` | string | Human-readable price |
+| `description` | string | Optional note (omitted when empty) |
+| `plugins` | array | Plugin slug list |
+| `plugin_count` | int | Number of plugins |
+| `license_status` | string | Current license status |
+| `install_hint` | string | One-line install instruction |
+
 ### Examples
 
 ```bash
+# Human-readable output
 nself bundle info nclaw
-nself bundle info nsentry
-nself bundle info nself-plus
+
+# Machine-readable JSON
+nself bundle info nclaw --json
+
+# Unknown bundle exits 1 and suggests nself bundle list
+nself bundle info bad-name
 ```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Bundle not found — run `nself bundle list` for valid names |
 
 ---
 

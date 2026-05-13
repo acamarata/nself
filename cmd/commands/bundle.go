@@ -236,6 +236,18 @@ func runBundleList(cmd *cobra.Command, _ []string) error {
 
 // ── bundle info ─────────────────────────────────────────────────────
 
+// bundleInfoJSON is the JSON-serialisable form of `nself bundle info --json`.
+type bundleInfoJSON struct {
+	Slug          string   `json:"slug"`
+	Name          string   `json:"name"`
+	Price         string   `json:"price"`
+	Description   string   `json:"description,omitempty"`
+	Plugins       []string `json:"plugins"`
+	PluginCount   int      `json:"plugin_count"`
+	LicenseStatus string   `json:"license_status"`
+	InstallHint   string   `json:"install_hint"`
+}
+
 var bundleInfoCmd = &cobra.Command{
 	Use:   "info <name>",
 	Short: "Show bundle details, plugins, and license status",
@@ -243,12 +255,13 @@ var bundleInfoCmd = &cobra.Command{
 
 Examples:
   nself bundle info nclaw
+  nself bundle info nclaw --json
   nself bundle info nself-plus`,
 	Args: cobra.ExactArgs(1),
 	RunE: runBundleInfo,
 }
 
-func runBundleInfo(_ *cobra.Command, args []string) error {
+func runBundleInfo(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(strings.TrimSpace(args[0]))
 	b, ok := canonicalBundles[key]
 	if !ok {
@@ -258,7 +271,49 @@ func runBundleInfo(_ *cobra.Command, args []string) error {
 			names = append(names, k)
 		}
 		sort.Strings(names)
-		return fmt.Errorf("unknown bundle %q\n\nAvailable bundles: %s", key, strings.Join(names, ", "))
+		return fmt.Errorf("bundle not found: %q\n\nRun 'nself bundle list' for available bundles.\nAvailable: %s", key, strings.Join(names, ", "))
+	}
+
+	asJSON := false
+	if cmd != nil {
+		asJSON, _ = cmd.Flags().GetBool("json")
+	}
+
+	licenseStatus := resolveBundleLicenseStatus(key)
+
+	// Build install hint string.
+	var installHint string
+	switch key {
+	case "ntask":
+		installHint = "nself plugin install <plugin-name>  (no license required)"
+	case "nself-plus":
+		installHint = "nself license set <key>  |  Buy: https://nself.org/pricing"
+	default:
+		if len(b.Plugins) > 0 {
+			installHint = fmt.Sprintf("nself license set <key> && nself plugin install %s  |  Buy: https://nself.org/pricing", b.Plugins[0])
+		} else {
+			installHint = "nself license set <key>  |  Buy: https://nself.org/pricing"
+		}
+	}
+
+	if asJSON {
+		plugins := b.Plugins
+		if plugins == nil {
+			plugins = []string{}
+		}
+		row := bundleInfoJSON{
+			Slug:          key,
+			Name:          b.Name,
+			Price:         b.Price,
+			Description:   b.Description,
+			Plugins:       plugins,
+			PluginCount:   len(plugins),
+			LicenseStatus: licenseStatus,
+			InstallHint:   installHint,
+		}
+		enc := json.NewEncoder(cmd.OutOrStdout())
+		enc.SetIndent("", "  ")
+		return enc.Encode(row)
 	}
 
 	fmt.Printf("Bundle: %s (%s)\n", b.Name, key)
@@ -268,7 +323,6 @@ func runBundleInfo(_ *cobra.Command, args []string) error {
 	}
 
 	// ── License status ─────────────────────────────────────────────
-	licenseStatus := resolveBundleLicenseStatus(key)
 	fmt.Printf("License: %s\n", licenseStatus)
 
 	// ── Plugin membership ──────────────────────────────────────────
@@ -292,16 +346,7 @@ func runBundleInfo(_ *cobra.Command, args []string) error {
 
 	// ── Install hint ───────────────────────────────────────────────
 	fmt.Println()
-	if key == "ntask" {
-		fmt.Println("Install: nself plugin install <plugin-name>  (no license required)")
-	} else if key == "nself-plus" {
-		fmt.Println("Activate: nself license set <key>")
-		fmt.Println("Buy:      https://nself.org/pricing")
-	} else {
-		fmt.Println("Activate: nself license set <key>")
-		fmt.Printf("Install:  nself plugin install %s\n", b.Plugins[0])
-		fmt.Println("Buy:      https://nself.org/pricing")
-	}
+	fmt.Printf("Install: %s\n", installHint)
 
 	return nil
 }
@@ -429,6 +474,9 @@ func init() {
 	// list flags
 	bundleListCmd.Flags().Bool("installed", false, "Show only bundles with at least one active plugin")
 	bundleListCmd.Flags().Bool("json", false, "Output machine-readable JSON array")
+
+	// info flags
+	bundleInfoCmd.Flags().Bool("json", false, "Output machine-readable JSON object")
 
 	// install flags
 	bundleInstallCmd.Flags().Bool("dry-run", false, "Print the planned actions without installing")
