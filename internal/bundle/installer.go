@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/plugin"
 )
 
@@ -132,9 +134,27 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		return result, nil
 	}
 
-	// License pre-flight: validate every plugin's license up front BEFORE we
-	// touch the filesystem. --force bypasses with a logged warning.
+	// License pre-flight: two-phase check.
+	//   Phase 1 (bundle-level): call ping_api /license/validate?bundle=<slug> to
+	//   verify the operator's key grants access to THIS bundle as a unit. A key
+	//   with individual plugin entitlements does NOT satisfy a bundle purchase.
+	//   Phase 2 (plugin-level fallback): per-plugin registry/license probe via
+	//   defaultLicenseChecker to catch obvious missing-key cases before any FS
+	//   change (mirrors existing plugin install behavior).
+	// --force bypasses both phases with an audit log entry.
 	if !opts.Force {
+		// Phase 1: bundle-level entitlement via ping_api.
+		key := license.CollectLicenseKey()
+		entitled, entitleErr := license.BundleEntitled(ctx, key, b.Slug)
+		if entitleErr != nil || !entitled {
+			msg := fmt.Sprintf("bundle %q: not entitled", b.Slug)
+			if entitleErr != nil {
+				msg = entitleErr.Error()
+			}
+			return result, fmt.Errorf("license validation failed: %s\n\nBuy at: https://nself.org/pricing or run 'nself license set <key>'", msg)
+		}
+
+		// Phase 2: plugin-level pre-flight (catches no-key-at-all cases for free).
 		check := opts.licenseChecker
 		if check == nil {
 			check = defaultLicenseChecker
@@ -173,26 +193,64 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		cfg = loaded
 	}
 
+	// Build a lookup of currently installed plugin versions for downgrade detection.
+	existingVersions := buildInstalledVersionMap(pluginDir)
+
 	// Sequential install with rollback on failure.
 	for _, name := range planned {
-		if isAlreadyInstalled(pluginDir, name) {
-			fmt.Fprintf(out, "  ✓ %s (already installed)\n", name)
-			continue
+		targetVer := string(pins[name])
+		existingVer, alreadyExists := existingVersions[strings.ToLower(name)]
+
+		if alreadyExists {
+			cmp := plugin.CompareVersions(existingVer, targetVer)
+			if cmp == 0 {
+				// Same version: skip silently.
+				fmt.Fprintf(out, "  ✓ %s@%s (already installed, same version)\n", name, targetVer)
+				continue
+			}
+			if cmp > 0 {
+				// Existing is HIGHER than what the bundle pins.
+				if opts.Strict {
+					// --strict: fail if any plugin already at a higher version.
+					result.RolledBack = rollbackInstalled(ctx, cfg, removeFn, pluginDir, result.Installed, out)
+					return result, fmt.Errorf("--strict: plugin %q is at %s (higher than bundle pin %s); use without --strict to skip", name, existingVer, targetVer)
+				}
+				// Default: skip with warning, no silent downgrade.
+				fmt.Fprintf(out, "  ⚠ %s: installed at %s (higher than bundle pin %s) — skipping to avoid downgrade\n", name, existingVer, targetVer)
+				continue
+			}
+			// cmp < 0: existing is lower → upgrade, fall through to install.
+			fmt.Fprintf(out, "  ↑ upgrading %s: %s → %s\n", name, existingVer, targetVer)
+		} else {
+			fmt.Fprintf(out, "  → installing %s@%s...\n", name, targetVer)
 		}
-		fmt.Fprintf(out, "  → installing %s...\n", name)
+
 		if err := installFn(ctx, cfg, name, pluginDir); err != nil {
 			fmt.Fprintf(out, "  ✗ %s install failed: %v\n", name, err)
 			result.RolledBack = rollbackInstalled(ctx, cfg, removeFn, pluginDir, result.Installed, out)
 			return result, fmt.Errorf("bundle %q install failed at plugin %q: %w", b.Slug, name, err)
 		}
 		result.Installed = append(result.Installed, name)
-		fmt.Fprintf(out, "  ✓ %s installed\n", name)
+		fmt.Fprintf(out, "  ✓ %s@%s installed\n", name, targetVer)
 	}
 
 	fmt.Fprintf(out, "\nBundle %q (%s) installed: %d plugins.\n", b.Name, b.Slug, len(result.Installed))
 	if len(result.Skipped) > 0 {
 		fmt.Fprintf(out, "Skipped (missing from registry): %s\n", strings.Join(result.Skipped, ", "))
 	}
+
+	// Trigger a single nself build to regenerate docker-compose.yml and nginx
+	// configs with the newly installed plugins. This must happen ONCE at the
+	// very end — not per-plugin. Skip when no plugins were actually installed.
+	if len(result.Installed) > 0 {
+		if err := triggerBuild(ctx, out); err != nil {
+			// Build failure is non-fatal: plugins are on disk; user can run
+			// nself build manually. Surface as a warning, not a hard error.
+			fmt.Fprintf(out, "\nWARNING: nself build failed after bundle install: %v\n", err)
+			fmt.Fprintln(out, "Run 'nself build' manually to apply the new plugins.")
+		}
+	}
+
 	return result, nil
 }
 
@@ -334,10 +392,45 @@ func hasAnyLicenseKey() bool {
 }
 
 // isAlreadyInstalled reports whether the plugin's directory exists in pluginDir.
-// We use a directory-existence probe to match plugin.Install's own check.
+// Used by both installer and remover for a fast existence probe.
 func isAlreadyInstalled(pluginDir, name string) bool {
 	_, err := os.Stat(filepath.Join(pluginDir, name))
 	return err == nil
+}
+
+// buildInstalledVersionMap returns a map of lowercase plugin name → installed
+// version string for all plugins found in pluginDir. Plugins with no version
+// information get an empty string (treated as "0.0.0" by callers).
+func buildInstalledVersionMap(pluginDir string) map[string]string {
+	m := make(map[string]string)
+	installed, err := plugin.ListInstalled(pluginDir)
+	if err != nil {
+		return m
+	}
+	for _, p := range installed {
+		m[strings.ToLower(p.Name)] = p.Version
+	}
+	return m
+}
+
+// triggerBuild invokes `nself build` once at the end of a bundle install so
+// docker-compose.yml and nginx configs are regenerated with the new plugins.
+// This is a subprocess call matching the pattern in internal/promote/promote.go.
+func triggerBuild(ctx context.Context, out io.Writer) error {
+	fmt.Fprintln(out, "\nRunning 'nself build' to apply installed plugins...")
+	nself, err := exec.LookPath("nself")
+	if err != nil {
+		// nself binary not found — likely running in tests or a non-standard PATH.
+		// Allow callers to detect this via the error message.
+		return fmt.Errorf("nself binary not found in PATH: %w", err)
+	}
+	cmd := exec.CommandContext(ctx, nself, "build", "--quiet")
+	cmd.Stdout = out
+	cmd.Stderr = out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("nself build: %w", err)
+	}
+	return nil
 }
 
 // defaultPluginDir resolves the standard plugin install directory. Mirrors
