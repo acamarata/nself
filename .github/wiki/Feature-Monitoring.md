@@ -1,10 +1,12 @@
 # Feature: Monitoring
 
-The ɳSelf monitoring stack provides metrics, logs, traces, and alerting for your entire backend infrastructure.
+The ɳSelf monitoring stack provides metrics, logs, traces, and alerting for your entire backend infrastructure. It is a **free, first-class bundle** included in every nSelf install. No license key is required.
+
+See [[bundle-monitoring]] for the full bundle reference including the difference from the paid ɳSentry bundle.
 
 ## What's Included
 
-Install with `nself plugin install monitoring`. Adds 10 services:
+The Monitoring bundle ships with 10 services, configured automatically by `nself build`:
 
 | Service | Port | Purpose |
 |---------|------|---------|
@@ -22,9 +24,9 @@ Install with `nself plugin install monitoring`. Adds 10 services:
 ## Quick Start
 
 ```bash
-nself plugin install monitoring
-nself build && nself restart
-nself urls    # get Grafana URL
+nself monitoring start     # start all 10 monitoring services
+nself monitoring status    # verify running state + URLs
+nself urls                 # get Grafana URL
 ```
 
 ## Pre-Built Dashboards
@@ -57,8 +59,8 @@ Configure notification channels (Slack, PagerDuty, email) in `monitoring/alertma
 
 ## See Also
 
+- [[bundle-monitoring]], Monitoring bundle reference (free, always included, no license required)
 - [[Guide-Monitoring-Setup]], step-by-step setup guide
-- [[plugin-monitoring]], monitoring plugin reference
 
 ---
 ← [[Home]] | [[_Sidebar]]
