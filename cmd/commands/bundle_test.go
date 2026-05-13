@@ -226,6 +226,37 @@ func TestResolveBundleLicenseStatus_NoCache(t *testing.T) {
 
 // ── bundleDisplayOrder ────────────────────────────────────────────────
 
+func TestBundleList_JSONFlag(t *testing.T) {
+	root := newBundleTestCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"bundle", "list", "--json"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("bundle list --json returned error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `"slug"`) {
+		t.Errorf("--json output missing 'slug' key: %s", out)
+	}
+	if !strings.Contains(out, `"nclaw"`) {
+		t.Errorf("--json output missing nclaw entry: %s", out)
+	}
+}
+
+func TestBundleList_InstalledFlag_NoPlugins(t *testing.T) {
+	// With no plugins installed the --installed flag should produce empty output
+	// (just the header and footer lines, no bundle rows).
+	root := newBundleTestCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"bundle", "list", "--installed"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("bundle list --installed returned error: %v", err)
+	}
+}
+
 func TestBundleDisplayOrder_AllKeysValid(t *testing.T) {
 	for _, key := range bundleDisplayOrder {
 		if _, ok := canonicalBundles[key]; !ok {
