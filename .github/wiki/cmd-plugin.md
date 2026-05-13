@@ -25,6 +25,9 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 | `update [name]` | Update a specific plugin, or all installed plugins if no name given |
 | `updates` | Check for available updates across all installed plugins |
 | `list` | List available and installed plugins (beta and planned plugins show status badges) |
+| `init <name>` | Scaffold a new plugin project (see [[cmd-plugin-init]]) |
+| `scaffold <name>` | Alias for `init` |
+| `new <name>` | Deprecated alias for `init`; prints a deprecation warning |
 | `compat-check` | Check installed plugins for CLI version compatibility (exits 1 on any incompatible plugin) |
 | `inventory` | List installed plugins with version, tier, and status |
 | `refresh` | Force refresh the remote registry cache |
