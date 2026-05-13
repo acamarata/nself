@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/nself-org/cli/internal/scaffold"
 	"github.com/nself-org/cli/internal/security"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -123,17 +124,111 @@ Examples:
 	RunE: runServiceUpgrade,
 }
 
+// serviceAddCmd scaffolds a new CS_N custom service into the current nSelf project.
+var serviceAddCmd = &cobra.Command{
+	Use:   "add <name>",
+	Short: "Scaffold a custom service (CS_N slot) into the current project",
+	Long: `Scaffold a new custom service into the current nSelf project.
+
+The command:
+  1. Finds the next available CS_N slot (1-10) in .env.dev
+  2. Creates a services/<name>/ directory with starter files
+  3. Writes CS_N=<name>:<lang>:<port> and <NAME>_PORT=<port> into .env.dev
+
+Run 'nself build' after adding a service to regenerate docker-compose.yml.
+
+Supported languages: go (default), node, python, rust, other
+
+Examples:
+  nself service add myapi
+  nself service add myapi --lang python
+  nself service add myapi --lang node --dry-run`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceAdd,
+}
+
 func init() {
 	serviceCmd.PersistentFlags().String("env", "", "Target environment (reads .env.{env})")
 	serviceListCmd.Flags().Bool("json", false, "Output as JSON array")
+
+	// service add flags
+	serviceAddCmd.Flags().String("lang", "go", "Language template: go, node, python, rust, other")
+	serviceAddCmd.Flags().Bool("force", false, "Overwrite existing service directory")
+	serviceAddCmd.Flags().Bool("dry-run", false, "Print what would be done without writing files")
 
 	serviceCmd.AddCommand(serviceListCmd)
 	serviceCmd.AddCommand(serviceEnableCmd)
 	serviceCmd.AddCommand(serviceDisableCmd)
 	serviceCmd.AddCommand(serviceUpgradeCmd)
 	serviceCmd.AddCommand(serviceConfigureCmd)
+	serviceCmd.AddCommand(serviceAddCmd)
 
 	RootCmd.AddCommand(serviceCmd)
+}
+
+// runServiceAdd implements 'nself service add <name>'.
+func runServiceAdd(cmd *cobra.Command, args []string) error {
+	name := strings.ToLower(strings.TrimSpace(args[0]))
+	lang, _ := cmd.Flags().GetString("lang")
+	force, _ := cmd.Flags().GetBool("force")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if name == "" {
+		return fmt.Errorf("service name must not be empty")
+	}
+
+	// Validate name: reuse the same rules as CS_N parsing (lowercase alphanumeric + hyphens/underscores, 2-63 chars).
+	csNameRe := regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,61}[a-z0-9]$`)
+	if !csNameRe.MatchString(name) {
+		return fmt.Errorf("invalid service name %q: must be lowercase alphanumeric with hyphens/underscores, 2-63 chars", name)
+	}
+
+	if !scaffold.IsValidLang(lang) {
+		return fmt.Errorf("unsupported language %q; choose one of: %s",
+			lang, strings.Join(scaffold.SupportedLangs(), ", "))
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	opts := scaffold.Options{
+		Name:       name,
+		Lang:       lang,
+		ProjectDir: cwd,
+		Force:      force,
+		DryRun:     dryRun,
+	}
+
+	result, err := scaffold.Run(opts)
+	if err != nil {
+		return err
+	}
+
+	if dryRun {
+		ui.Info(fmt.Sprintf("Dry run — no files written. Would scaffold service %q (%s):", name, lang))
+		fmt.Printf("  Slot:     %s (port %d)\n", result.EnvKey, 8000+result.Slot)
+		fmt.Printf("  Env:      %s=%s\n", result.EnvKey, result.EnvValue)
+		fmt.Printf("  EnvFile:  %s\n", result.EnvFile)
+		fmt.Printf("  Dir:      %s\n", result.ServiceDir)
+		fmt.Printf("  Files:\n")
+		for _, f := range result.Files {
+			fmt.Printf("    %s\n", f)
+		}
+		return nil
+	}
+
+	ui.Success(fmt.Sprintf("Custom service %q scaffolded.", name))
+	fmt.Printf("  Slot:    %s = %s\n", result.EnvKey, result.EnvValue)
+	fmt.Printf("  Dir:     %s\n", result.ServiceDir)
+	fmt.Printf("  EnvFile: %s (updated)\n", result.EnvFile)
+	fmt.Println()
+	fmt.Printf("Next steps:\n")
+	fmt.Printf("  Edit %s and implement your service\n", result.ServiceDir)
+	fmt.Printf("  Run 'nself build' to regenerate docker-compose.yml\n")
+	fmt.Printf("  Run 'nself start' to launch the full stack\n")
+	return nil
 }
 
 // runServiceUpgrade writes <NAME>_VERSION=<ver> into the .env file.

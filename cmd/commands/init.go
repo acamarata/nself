@@ -17,6 +17,7 @@ import (
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/migration"
+	"github.com/nself-org/cli/internal/scaffold"
 	"github.com/nself-org/cli/internal/setup"
 	"github.com/nself-org/cli/internal/telemetry"
 	clonetemplate "github.com/nself-org/cli/internal/templates/clone"
@@ -66,6 +67,7 @@ func init() {
 	f.Bool("no-pgvector", false, "Skip pgvector extension and RAG scaffold tables (sets PGVECTOR_ENABLED=false)")
 	f.String("preset", "", "Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting, dev, nclaw-app")
 	f.Bool("list-presets", false, "List all available project presets and exit")
+	f.String("cs-template", "", "Scaffold a custom service at init time: specify language (go, node, python, rust, other)")
 
 	RootCmd.AddCommand(initCmd)
 }
@@ -86,11 +88,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 	noPgvector, _ := cmd.Flags().GetBool("no-pgvector")
 	preset, _ := cmd.Flags().GetString("preset")
 	listPresets, _ := cmd.Flags().GetBool("list-presets")
+	csTemplate, _ := cmd.Flags().GetString("cs-template")
 
 	// --list-presets: print preset catalog and exit.
 	if listPresets {
 		listInitPresets()
 		return nil
+	}
+
+	// Validate --cs-template if given.
+	if csTemplate != "" && !scaffold.IsValidLang(csTemplate) {
+		return fmt.Errorf("--cs-template %q is not a supported language; choose one of: %s",
+			csTemplate, strings.Join(scaffold.SupportedLangs(), ", "))
 	}
 
 	// Validate --preset if given.
@@ -330,6 +339,32 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Preset-specific next steps.
 	if preset != "" {
 		printPresetPostInit(preset)
+	}
+
+	// --cs-template: scaffold a custom service into the newly initialised project.
+	if csTemplate != "" {
+		svcName := "myservice"
+		if name != "" {
+			svcName = name
+		}
+		svcOpts := scaffold.Options{
+			Name:       svcName,
+			Lang:       csTemplate,
+			ProjectDir: cwd,
+		}
+		if !quiet {
+			ui.Section(fmt.Sprintf("Scaffolding custom service %q (%s)", svcName, csTemplate))
+		}
+		csResult, csErr := scaffold.Run(svcOpts)
+		if csErr != nil {
+			// Non-fatal: report but do not fail init.
+			fmt.Fprintf(os.Stderr, "Warning: --cs-template scaffold failed: %v\n", csErr)
+			fmt.Fprintln(os.Stderr, "Run 'nself service add <name> --lang "+csTemplate+"' to retry.")
+		} else if !quiet {
+			fmt.Printf("  Service %q scaffolded at %s\n", svcName, csResult.ServiceDir)
+			fmt.Printf("  %s=%s written to %s\n", csResult.EnvKey, csResult.EnvValue, csResult.EnvFile)
+			fmt.Printf("  Run 'nself build' then 'nself start' to launch.\n\n")
+		}
 	}
 
 	return nil
