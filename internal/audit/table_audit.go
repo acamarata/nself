@@ -7,6 +7,7 @@ package audit
 // Detects:
 //   - np_* tables missing source_account_id (isolation unknown)
 //   - multi-account contamination (rows from >1 source_account_id)
+//   - tables missing Hasura select_permissions filter on source_account_id
 //
 // This command is read-only. It never modifies DB state.
 // Security-Always-Free Doctrine: runs without a license.
@@ -16,9 +17,24 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq" // postgres driver (pure Go, CGO_ENABLED=0 compatible)
+	"gopkg.in/yaml.v3"
+)
+
+// HasuraFilterStatus represents the result of checking Hasura metadata.
+type HasuraFilterStatus string
+
+const (
+	// HasuraFilterPresent means source_account_id filter was found in select_permissions.
+	HasuraFilterPresent HasuraFilterStatus = "present"
+	// HasuraFilterMissing means no source_account_id filter was found.
+	HasuraFilterMissing HasuraFilterStatus = "missing"
+	// HasuraFilterUnknown means Hasura metadata was not found or could not be parsed.
+	HasuraFilterUnknown HasuraFilterStatus = "unknown"
 )
 
 // TableAuditResult holds the audit result for a single table.
@@ -27,6 +43,9 @@ type TableAuditResult struct {
 	Table string `json:"table"`
 	// HasSourceAccountID reports whether source_account_id exists in the table.
 	HasSourceAccountID bool `json:"has_source_account_id"`
+	// HasHasuraFilter reports whether Hasura metadata contains a source_account_id
+	// filter for this table. "present", "missing", or "unknown" (metadata not found).
+	HasHasuraFilter HasuraFilterStatus `json:"has_hasura_filter"`
 	// TotalRows is the row count across all source_account_id values.
 	TotalRows int64 `json:"total_rows"`
 	// Accounts maps source_account_id → row count. Nil when HasSourceAccountID is false.
@@ -43,12 +62,26 @@ type AuditReport struct {
 	Tables []TableAuditResult `json:"tables"`
 }
 
+// AuditConfig configures a RunTableAudit call.
+type AuditConfig struct {
+	// ProjectRoot is the nSelf project directory. When empty, RunTableAudit walks
+	// up from cwd looking for .nself/ or docker-compose.yml.
+	ProjectRoot string
+	// FilterTable, when non-empty, audits only the named table.
+	FilterTable string
+}
+
 // RunTableAudit connects to Postgres using NSELF_DB_URL (fallback: DATABASE_URL)
 // and returns an AuditReport for every np_* table in the public schema.
 //
 // ctx is forwarded to every DB call. The function adds a 30-second timeout
 // around the total audit run to keep the doctor check bounded.
 func RunTableAudit(ctx context.Context) (*AuditReport, error) {
+	return RunTableAuditWithConfig(ctx, AuditConfig{})
+}
+
+// RunTableAuditWithConfig is RunTableAudit with an explicit AuditConfig.
+func RunTableAuditWithConfig(ctx context.Context, cfg AuditConfig) (*AuditReport, error) {
 	dbURL := os.Getenv("NSELF_DB_URL")
 	if dbURL == "" {
 		dbURL = os.Getenv("DATABASE_URL")
@@ -70,9 +103,23 @@ func RunTableAudit(ctx context.Context) (*AuditReport, error) {
 		return nil, fmt.Errorf("ping DB: %w", err)
 	}
 
-	tables, err := listNPTables(auditCtx, db)
-	if err != nil {
-		return nil, err
+	// Resolve project root for Hasura metadata lookup.
+	projectRoot := cfg.ProjectRoot
+	if projectRoot == "" {
+		projectRoot, _ = findProjectRoot() // best-effort; empty = metadata unknown
+	}
+
+	// Load Hasura table filter index (table name → has source_account_id filter).
+	hasuraFilters := loadHasuraFilters(projectRoot)
+
+	var tables []string
+	if cfg.FilterTable != "" {
+		tables = []string{cfg.FilterTable}
+	} else {
+		tables, err = listNPTables(auditCtx, db)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	report := &AuditReport{
@@ -85,11 +132,13 @@ func RunTableAudit(ctx context.Context) (*AuditReport, error) {
 		if err != nil {
 			// Non-fatal: record the error as a warning and continue.
 			report.Tables = append(report.Tables, TableAuditResult{
-				Table:   tbl,
-				Warning: fmt.Sprintf("audit failed: %v", err),
+				Table:           tbl,
+				HasHasuraFilter: hasuraFilterStatus(hasuraFilters, tbl),
+				Warning:         fmt.Sprintf("audit failed: %v", err),
 			})
 			continue
 		}
+		result.HasHasuraFilter = hasuraFilterStatus(hasuraFilters, tbl)
 		report.Tables = append(report.Tables, result)
 	}
 
@@ -193,4 +242,101 @@ func auditTable(ctx context.Context, db *sql.DB, table string) (TableAuditResult
 	}
 
 	return result, nil
+}
+
+// --- Hasura metadata helpers ---
+
+// hasuraTableYAML is the minimal shape of a Hasura table YAML file we need.
+type hasuraTableYAML struct {
+	Table struct {
+		Schema string `yaml:"schema"`
+		Name   string `yaml:"name"`
+	} `yaml:"table"`
+	SelectPermissions []struct {
+		Role       string `yaml:"role"`
+		Permission struct {
+			Filter map[string]interface{} `yaml:"filter"`
+		} `yaml:"permission"`
+	} `yaml:"select_permissions"`
+}
+
+// loadHasuraFilters reads every YAML file under {projectRoot}/hasura/metadata/tables/
+// and returns a map of table name → true when any select_permissions entry has a
+// filter containing "source_account_id". Returns nil when metadata is not found.
+func loadHasuraFilters(projectRoot string) map[string]bool {
+	if projectRoot == "" {
+		return nil
+	}
+	metaDir := filepath.Join(projectRoot, "hasura", "metadata", "tables")
+	entries, err := os.ReadDir(metaDir)
+	if err != nil {
+		return nil // metadata directory not present
+	}
+
+	result := make(map[string]bool)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(metaDir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		var tbl hasuraTableYAML
+		if err := yaml.Unmarshal(data, &tbl); err != nil {
+			continue
+		}
+		tableName := tbl.Table.Name
+		if tableName == "" {
+			continue
+		}
+		for _, perm := range tbl.SelectPermissions {
+			if _, ok := perm.Permission.Filter["source_account_id"]; ok {
+				result[tableName] = true
+				break
+			}
+		}
+		// Mark explicitly as false if not already set (table found but no filter).
+		if _, exists := result[tableName]; !exists {
+			result[tableName] = false
+		}
+	}
+	return result
+}
+
+// hasuraFilterStatus maps a loaded filter index into a HasuraFilterStatus value.
+// When filterIndex is nil, the metadata was not found and the status is unknown.
+func hasuraFilterStatus(filterIndex map[string]bool, table string) HasuraFilterStatus {
+	if filterIndex == nil {
+		return HasuraFilterUnknown
+	}
+	if v, ok := filterIndex[table]; ok {
+		if v {
+			return HasuraFilterPresent
+		}
+		return HasuraFilterMissing
+	}
+	// Table not mentioned in metadata = no filter defined.
+	return HasuraFilterMissing
+}
+
+// findProjectRoot walks up from cwd looking for .nself/ or docker-compose.yml.
+func findProjectRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".nself")); err == nil {
+			return dir, nil
+		}
+		if _, err := os.Stat(filepath.Join(dir, "docker-compose.yml")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("project root not found")
+		}
+		dir = parent
+	}
 }

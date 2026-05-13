@@ -497,6 +497,13 @@ func MigrateUpDir(ctx context.Context, cfg *config.Config, dir string) (int, err
 	return count, nil
 }
 
+// ApplyDir is an alias for MigrateUpDir with the name expected by the task spec
+// (G-008). Both functions apply all .sql files in the given directory in
+// lexicographic order, skipping files already recorded in schema_versions.
+func ApplyDir(ctx context.Context, cfg *config.Config, dirPath string) (int, error) {
+	return MigrateUpDir(ctx, cfg, dirPath)
+}
+
 // MigrateStatus returns the status of all known migrations (applied and pending).
 // It merges on-disk migration files with the schema_versions table, so orphaned
 // migrations (applied but no longer on disk) are also reported.

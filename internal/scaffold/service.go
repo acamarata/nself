@@ -146,6 +146,13 @@ func Run(opts Options) (*Result, error) {
 	}, nil
 }
 
+// NextCSSlot returns the next CS_N slot number (1-10) not already set in .env.dev.
+// Returns an error if all 10 slots are in use.
+// This is the exported variant of the internal nextFreeSlot helper (G-006).
+func NextCSSlot(projectRoot string) (int, error) {
+	return nextFreeSlot(projectRoot)
+}
+
 // nextFreeSlot returns the next CS_N slot (1-10) not already set in .env.dev.
 // Returns an error if all 10 slots are in use.
 func nextFreeSlot(projectDir string) (int, error) {
