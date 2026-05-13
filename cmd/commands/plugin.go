@@ -130,6 +130,7 @@ func init() {
 	pluginInstallCmd.Flags().Bool("allow-eol", false, "Allow installing an EOL plugin (not recommended)") // S58-T03
 	pluginInstallCmd.Flags().Bool("preview", false, "Preview the dependency tree without installing")
 	pluginInstallCmd.Flags().Bool("with-optional", false, "Include optional dependencies in --preview output")
+	pluginInstallCmd.Flags().Bool("skip-sbom-check", false, "Skip SBOM verification (air-gapped installs only — sets NSELF_SKIP_SBOM_CHECK=1)") // S2.T12
 
 	// Flags on update.
 	pluginUpdateCmd.Flags().Bool("allow-eol", false, "Allow updating to/from an EOL plugin (not recommended)") // S58-T03
@@ -251,9 +252,19 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 func runPluginInstall(cmd *cobra.Command, args []string) error {
 	key, _ := cmd.Flags().GetString("key")
 	force, _ := cmd.Flags().GetBool("force")
-	allowEOL, _ := cmd.Flags().GetBool("allow-eol") // S58-T03
+	allowEOL, _ := cmd.Flags().GetBool("allow-eol")       // S58-T03
+	skipSBOM, _ := cmd.Flags().GetBool("skip-sbom-check") // S2.T12
 	preview, _ := cmd.Flags().GetBool("preview")
 	withOptional, _ := cmd.Flags().GetBool("with-optional")
+
+	// S2.T12: --skip-sbom-check sets the env var read by plugin.installLocked.
+	// Air-gapped installs only — emit a prominent warning when used.
+	if skipSBOM {
+		fmt.Fprintf(os.Stderr, "WARNING: SBOM verification disabled (--skip-sbom-check). For air-gapped installs only.\n")
+		if err := os.Setenv("NSELF_SKIP_SBOM_CHECK", "1"); err != nil {
+			return fmt.Errorf("setting NSELF_SKIP_SBOM_CHECK: %w", err)
+		}
+	}
 
 	// Security gate: NSELF_LICENSE_SKIP_VERIFY=1 requires --force as explicit acknowledgment.
 	// Standalone skip (without --force) is rejected to prevent accidental bypass in scripts.

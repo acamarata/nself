@@ -22,6 +22,7 @@ import (
 	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/nginx"
+	"github.com/nself-org/cli/internal/plugin/verify"
 	"github.com/nself-org/cli/internal/version"
 )
 
@@ -341,6 +342,18 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 			os.Remove(archivePath)
 			return fmt.Errorf("signature verification for plugin %q: %w", name, err)
 		}
+	}
+
+	// Step 5c: Verify SBOM (S2.T12). Downloads sbom-{version}.cdx.json from the
+	// GitHub Release and validates CycloneDX schema. 404 = pre-SBOM release (warn,
+	// don't fail). Skip via --skip-sbom-check for air-gapped installs only.
+	sbomSkip := os.Getenv("NSELF_SKIP_SBOM_CHECK") == "1"
+	if err := verify.VerifySBOM(ctx, name, manifest.Version, verify.SBOMCheckOptions{
+		SkipCheck: sbomSkip,
+		Version:   manifest.Version,
+	}); err != nil {
+		os.Remove(archivePath)
+		return fmt.Errorf("sbom verification for plugin %q: %w", name, err)
 	}
 
 	// Step 6: Extract to pluginDir/{name}/.
