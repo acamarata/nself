@@ -383,6 +383,120 @@ func PendingMigrations(ctx context.Context, cfg *config.Config, plugin string) (
 	return pending, nil
 }
 
+// ApplyFile applies a single external SQL migration file and records it in
+// schema_versions by filename + SHA-256 checksum (G-008).
+//
+// Double-apply protection: if a file with the same filename is already present
+// in schema_versions, the function logs the skip and returns (true, nil).
+// The checksum is stored in nself_ops.migrations for audit purposes.
+//
+// This enables plugin-claw external RLS migrations to be applied via CLI
+// without requiring 'nself db shell' as a workaround.
+func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skipped bool, err error) {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return false, fmt.Errorf("ensure schema_versions: %w", err)
+	}
+	if err := ensureMigrationsTable(ctx, cfg); err != nil {
+		return false, fmt.Errorf("ensure migrations table: %w", err)
+	}
+
+	name := filepath.Base(filePath)
+	if err := validateMigrationName(name); err != nil {
+		return false, err
+	}
+
+	data, readErr := os.ReadFile(filePath)
+	if readErr != nil {
+		return false, fmt.Errorf("read migration file %s: %w", name, readErr)
+	}
+
+	checksum, csErr := checksumBytes(data)
+	if csErr != nil {
+		return false, fmt.Errorf("compute checksum for %s: %w", name, csErr)
+	}
+	if !sha256HexRegex.MatchString(checksum) {
+		return false, fmt.Errorf("unexpected checksum format for %s", name)
+	}
+
+	// Check if this filename is already in schema_versions.
+	applied, err := appliedMigrations(ctx, cfg)
+	if err != nil {
+		return false, fmt.Errorf("check applied migrations: %w", err)
+	}
+	if _, ok := applied[name]; ok {
+		// Already applied — warn and skip (do not error).
+		return true, nil
+	}
+
+	migrationID := extractMigrationID(filePath)
+	if migrationID == "" {
+		// Fall back to the full filename as ID when no timestamp prefix is found.
+		migrationID = name
+	}
+	if err := validateMigrationName(migrationID); err != nil {
+		return false, fmt.Errorf("migration id from %s: %w", name, err)
+	}
+
+	legacyRecord := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
+		strings.ReplaceAll(name, "'", "''"))
+	opsRecord := fmt.Sprintf(
+		"INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('%s', '%s', '%s') ON CONFLICT (id) DO NOTHING;",
+		strings.ReplaceAll(migrationID, "'", "''"),
+		strings.ReplaceAll(name, "'", "''"),
+		checksum,
+	)
+
+	sqlContent := string(data)
+
+	if isNonTransactional(sqlContent) {
+		if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
+			return false, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+		}
+		recordSQL := legacyRecord + "\n" + opsRecord
+		if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
+			return false, fmt.Errorf("record migration %s: %w", name, err)
+		}
+	} else {
+		txSQL := "BEGIN;\n" +
+			"SET LOCAL lock_timeout = '5s';\n" +
+			"SET LOCAL statement_timeout = '60s';\n" +
+			sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+		if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
+			return false, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
+		}
+	}
+	return false, nil
+}
+
+// MigrateUpDir applies all .sql files in the given directory in lexicographic
+// order, skipping any already recorded in schema_versions (idempotent).
+// This is the --migration-dir companion to ApplyFile (G-008).
+func MigrateUpDir(ctx context.Context, cfg *config.Config, dir string) (int, error) {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return 0, fmt.Errorf("ensure schema_versions: %w", err)
+	}
+	if err := ensureMigrationsTable(ctx, cfg); err != nil {
+		return 0, fmt.Errorf("ensure migrations table: %w", err)
+	}
+
+	files, err := scanMigrations(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, f := range files {
+		skipped, applyErr := ApplyFile(ctx, cfg, f)
+		if applyErr != nil {
+			return count, applyErr
+		}
+		if !skipped {
+			count++
+		}
+	}
+	return count, nil
+}
+
 // MigrateStatus returns the status of all known migrations (applied and pending).
 // It merges on-disk migration files with the schema_versions table, so orphaned
 // migrations (applied but no longer on disk) are also reported.

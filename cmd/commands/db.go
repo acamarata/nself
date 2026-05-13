@@ -78,6 +78,20 @@ var dbMigrateCreateCmd = &cobra.Command{
 	RunE:  runDBMigrateCreate,
 }
 
+var dbMigrateApplyCmd = &cobra.Command{
+	Use:   "apply",
+	Short: "Apply a specific migration file (G-008)",
+	Long: `Apply a single SQL migration file by path.
+
+The file is validated to exist before execution. If the migration is
+already recorded in schema_versions (matched by filename + SHA-256
+checksum), the command warns and exits cleanly without re-applying.
+
+This closes G-008: plugin-claw external RLS migrations can be applied
+via CLI without requiring 'nself db shell' as a workaround.`,
+	RunE: runDBMigrateApply,
+}
+
 // ── seed ────────────────────────────────────────────────────────────
 
 var dbSeedCmd = &cobra.Command{
@@ -458,12 +472,19 @@ func init() {
 
 	// --dry-run flag on migrate up
 	dbMigrateUpCmd.Flags().Bool("dry-run", false, "List pending migrations without applying them")
+	// --migration-dir flag on migrate up (G-008)
+	dbMigrateUpCmd.Flags().String("migration-dir", "", "Apply all .sql files in this directory in lexicographic order (skips already-applied)")
+
+	// --file flag on migrate apply (G-008)
+	dbMigrateApplyCmd.Flags().String("file", "", "Path to the SQL migration file to apply")
+	_ = dbMigrateApplyCmd.MarkFlagRequired("file")
 
 	// Wire migrate subcommands
 	dbMigrateCmd.AddCommand(dbMigrateUpCmd)
 	dbMigrateCmd.AddCommand(dbMigrateDownCmd)
 	dbMigrateCmd.AddCommand(dbMigrateStatusCmd)
 	dbMigrateCmd.AddCommand(dbMigrateCreateCmd)
+	dbMigrateCmd.AddCommand(dbMigrateApplyCmd)
 
 	// Wire hasura metadata subcommands
 	dbHasuraMetadataCmd.AddCommand(dbHasuraMetadataApplyCmd)
@@ -552,6 +573,21 @@ func runDBMigrateUp(cmd *cobra.Command, _ []string) error {
 
 	plugin, _ := cmd.Flags().GetString("plugin")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	migrationDir, _ := cmd.Flags().GetString("migration-dir")
+
+	// --migration-dir: apply all .sql files in the given directory (G-008).
+	if migrationDir != "" {
+		count, err := database.MigrateUpDir(cmd.Context(), cfg, migrationDir)
+		if err != nil {
+			return fmt.Errorf("migrate up dir: %w", err)
+		}
+		if count > 0 {
+			fmt.Printf("Applied %d migration(s) from %s.\n", count, migrationDir)
+		} else {
+			fmt.Println("No pending migrations in directory.")
+		}
+		return nil
+	}
 
 	if dryRun {
 		pending, err := database.PendingMigrations(cmd.Context(), cfg, plugin)
@@ -649,6 +685,41 @@ func runDBMigrateCreate(_ *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Created migration files:\n  %s\n  %s\n", upFile, downFile)
+	return nil
+}
+
+// runDBMigrateApply implements 'nself db migrate apply --file <path>' (G-008).
+// It applies a single SQL migration file and records it in schema_versions by
+// filename + SHA-256 checksum. If the migration is already recorded, it warns
+// and exits cleanly without re-applying (double-apply protection).
+func runDBMigrateApply(cmd *cobra.Command, _ []string) error {
+	filePath, _ := cmd.Flags().GetString("file")
+	if filePath == "" {
+		return fmt.Errorf("--file is required")
+	}
+
+	// Validate the file exists before loading config or touching the database.
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("migration file not found: %s", filePath)
+		}
+		return fmt.Errorf("stat migration file: %w", err)
+	}
+
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+
+	skipped, err := database.ApplyFile(cmd.Context(), cfg, filePath)
+	if err != nil {
+		return fmt.Errorf("apply migration: %w", err)
+	}
+	if skipped {
+		fmt.Printf("already applied: %s (skipped)\n", filepath.Base(filePath))
+	} else {
+		fmt.Printf("Applied: %s\n", filepath.Base(filePath))
+	}
 	return nil
 }
 
