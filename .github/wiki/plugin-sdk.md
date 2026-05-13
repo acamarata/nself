@@ -1,52 +1,126 @@
 # Plugin SDK
 
-## Overview
-The nSelf Plugin SDK provides language bindings for building plugins. SDKs are available in Go, Python, TypeScript, and Flutter (Dart).
+The nSelf Plugin SDK is available in four languages. Each SDK provides the same core contracts — lifecycle hooks, schema migration helpers, metrics, health checks, and structured logging — adapted to the idioms of its language.
 
-| SDK | Module path | Registry | Stable |
-|-----|-------------|----------|--------|
-| Go | github.com/nself-org/cli/sdk/go/v2 | Go module proxy | ✅ |
-| Python | nself-sdk | PyPI | ✅ |
-| TypeScript | @nself/sdk | npm | ✅ |
-| Flutter | nself_sdk | pub.dev | ✅ |
+All four SDKs are MIT-licensed and published to their respective registries.
 
-## Breaking Change Policy
+---
 
-### Versioning
-All SDKs follow semantic versioning (semver):
-- **Patch** (x.y.Z): bug fixes, no API changes
-- **Minor** (x.Y.z): new features, backwards-compatible additions
-- **Major** (X.y.z): breaking changes — existing plugins may require updates
+## Language SDKs
 
-### What constitutes a breaking change
-- Removing or renaming a function, method, type, or constant from a public API
-- Changing a function signature (parameters, return types)
-- Changing the wire format of plugin RPC messages
-- Changing required environment variables
-- Changing the plugin manifest schema in a backwards-incompatible way
+| Language | Package | Registry | Import |
+|---|---|---|---|
+| **Go** | `github.com/nself-org/cli/sdk/go/v2` | pkg.go.dev | `"github.com/nself-org/cli/sdk/go/v2/plugin"` |
+| **TypeScript** | `@nself/plugin-sdk` | npm | `import { Plugin } from '@nself/plugin-sdk'` |
+| **Python** | `nself-plugin-sdk` | PyPI | `from nself_plugin import Plugin` |
+| **Flutter/Dart** | `nself_plugin_sdk` | pub.dev | `package:nself_plugin_sdk/nself_plugin_sdk.dart` |
 
-### Migration path requirements
-Every major version bump MUST include:
-1. A migration guide in `.github/wiki/sdk-migration-vX.md`
-2. A deprecation period of at least one minor version where both old and new API exist
-3. Deprecation warnings emitted at plugin load time for old API usage
-4. Updated examples in all SDK repos
+### Go — v2
 
-### Deprecation process
-1. Mark symbol as deprecated in current minor version (comment + `//Deprecated:` in Go; `@deprecated` JSDoc in TS)
-2. Emit runtime warning when deprecated symbol is used
-3. Remove in next major version
+Go is the reference implementation. All other SDKs maintain behavioral parity with the Go SDK.
 
-### SDK + CLI compatibility matrix
-Plugin SDKs are versioned independently of the CLI. A plugin SDK version is compatible with all CLI versions that share the same major plugin protocol version.
+```bash
+go get github.com/nself-org/cli/sdk/go/v2
+```
 
-| CLI version | Plugin protocol | Compatible SDK versions |
-|-------------|-----------------|------------------------|
-| v1.0.x      | v1              | SDK Go v1.x, SDK TS v1.x, SDK Py v1.x |
-| v1.1.x      | v1              | SDK Go v1.x or v2.x (v2 = Go module path bump only) |
+Source: `cli/sdk/go/` — published automatically when a `sdk-go/v*` tag is pushed.
 
-### Submitting SDK changes
-PRs that modify public SDK APIs must:
-- Update the compatibility matrix above
-- Add a changelog entry in the relevant SDK's CHANGELOG
-- If breaking: create the migration guide before merging
+### TypeScript — 2.0
+
+Targets Node.js 18+ with ESM and CJS exports. Full TypeScript types included.
+
+```bash
+npm install @nself/plugin-sdk
+```
+
+Source: `cli/sdk/ts/` — published automatically when a `sdk-ts/v*` tag is pushed.
+
+### Python — 2.0
+
+Targets Python 3.11+. Built on FastAPI and asyncpg. Published as a wheel and sdist.
+
+```bash
+pip install nself-plugin-sdk
+# with optional Postgres support:
+pip install nself-plugin-sdk[db]
+```
+
+Source: `cli/sdk/py/` — published automatically when a `sdk-py/v*` tag is pushed.
+
+### Flutter/Dart — 2.0
+
+Targets Flutter 3.19+ and Dart 3.0+. Provides auth, GraphQL, storage, realtime, push, and functions helpers.
+
+```yaml
+dependencies:
+  nself_plugin_sdk: ^2.0.0
+```
+
+Source: `cli/sdk/flutter/` — published automatically when a `sdk-flutter/v*` tag is pushed.
+
+---
+
+## Version Policy
+
+All four SDKs follow [Semantic Versioning](https://semver.org/).
+
+| Bump | When |
+|---|---|
+| **MAJOR** | Breaking changes to public API, hook signatures, or wire formats |
+| **MINOR** | New optional fields, new hooks with defaults, new helper utilities |
+| **PATCH** | Bug fixes with no API changes |
+
+MAJOR versions are synchronized across all four SDKs. When one SDK ships a breaking change, all four bump to the same MAJOR in the same release cycle. MINOR and PATCH versions may diverge.
+
+---
+
+## Breaking Change Process
+
+Before any breaking change ships:
+
+1. **Deprecation notice** — mark the old API deprecated in the current MINOR release. Keep the old API working. Use `//Deprecated:` in Go, `@deprecated` JSDoc in TypeScript, Python deprecation warnings, and Dart `@Deprecated`.
+2. **Migration guide** — commit `MIGRATION.md` to the SDK directory before the MAJOR release tag.
+3. **30-day minimum notice** — publish a deprecation notice in the changelog and announce to plugin authors at least 30 days before the MAJOR release.
+4. **RC tags required** — tag at least one release candidate (e.g. `sdk-go/v3.0.0-rc.1`) and allow a two-week soak window before promoting to final.
+
+Full policy: [[sdk/breaking-change-policy]]
+
+---
+
+## Publishing Workflows
+
+Each SDK publishes via a dedicated GitHub Actions workflow triggered by a scoped tag:
+
+| SDK | Tag pattern | Workflow |
+|---|---|---|
+| Go | `sdk-go/vX.Y.Z` | `cli/sdk/go/.github/workflows/sdk-go-publish.yml` |
+| TypeScript | `sdk-ts/vX.Y.Z` | `cli/sdk/ts/.github/workflows/sdk-ts-publish.yml` |
+| Python | `sdk-py/vX.Y.Z` | `cli/sdk/py/.github/workflows/sdk-py-publish.yml` |
+| Flutter | `sdk-flutter/vX.Y.Z` | `cli/sdk/flutter/.github/workflows/sdk-flutter-publish.yml` |
+
+Required repository secrets:
+
+| Secret | Used by |
+|---|---|
+| `NPM_TOKEN` | TypeScript SDK — npm publish |
+| `PUB_DEV_CREDENTIALS` | Flutter SDK — pub.dev publish |
+
+Go and Python publish via OIDC Trusted Publisher — no long-lived secret required.
+
+---
+
+## SDK + CLI Compatibility
+
+Plugin SDKs version independently of the CLI. Compatibility is determined by the plugin protocol major version, not the CLI version.
+
+| CLI version | Plugin protocol | Compatible SDK major |
+|---|---|---|
+| v1.0.x | v1 | SDK v1.x |
+| v1.1.x | v1 | SDK v1.x or v2.x |
+
+---
+
+## See Also
+
+- [[sdk/breaking-change-policy]] — full deprecation cycle, migration guide requirements, RC process
+- [[Home]]

@@ -1,0 +1,94 @@
+---
+name: Publish TypeScript SDK
+
+# Triggers on:
+#   - sdk-scoped tag (sdk-ts/v*)  -- publishes @nself/plugin-sdk to npm
+#   - workflow_dispatch           -- manual publish with version input
+#
+# Publishes to https://www.npmjs.com/package/@nself/plugin-sdk
+# Requires NPM_TOKEN secret with publish access to the @nself org.
+# Uses npm provenance (OIDC) for supply-chain attestation.
+
+"on":
+  push:
+    tags:
+      - 'sdk-ts/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish version (e.g. 2.0.0). Used for release notes only.'
+        required: false
+        type: string
+
+permissions:
+  id-token: write   # required for npm provenance via OIDC
+  contents: write   # required to create GitHub release
+
+jobs:
+  publish:
+    name: Publish @nself/plugin-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/sdk-ts/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/sdk-ts/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        working-directory: sdk/ts
+        run: npm ci
+
+      - name: Type-check
+        working-directory: sdk/ts
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: sdk/ts
+        run: npm test
+
+      - name: Build
+        working-directory: sdk/ts
+        run: npm run build
+
+      - name: Verify package version matches tag
+        working-directory: sdk/ts
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "v${PKG_VERSION}" != "${TAG}" ]; then
+            echo "ERROR: package.json version 'v${PKG_VERSION}' does not match tag '${TAG}'"
+            exit 1
+          fi
+          echo "Version check passed: ${TAG}"
+
+      - name: Publish to npm
+        working-directory: sdk/ts
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          FULL_TAG="sdk-ts/${TAG}"
+          NOTES=$(git tag -l --format='%(contents)' "${FULL_TAG}" 2>/dev/null || echo "TypeScript SDK ${TAG} release.")
+          gh release create "${FULL_TAG}" \
+            --title "TypeScript SDK ${TAG}" \
+            --notes "${NOTES}" \
+            --verify-tag

@@ -1,0 +1,99 @@
+---
+name: Publish Python SDK
+
+# Triggers on:
+#   - sdk-scoped tag (sdk-py/v*)  -- publishes nself-plugin-sdk to PyPI
+#   - workflow_dispatch           -- manual publish with version input
+#
+# Publishes to https://pypi.org/project/nself-plugin-sdk/
+# Uses PyPI Trusted Publisher (OIDC) -- no API token required.
+# Configure the trusted publisher at https://pypi.org/manage/project/nself-plugin-sdk/settings/publishing/
+
+"on":
+  push:
+    tags:
+      - 'sdk-py/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish version (e.g. 2.0.0). Used for release notes only.'
+        required: false
+        type: string
+
+permissions:
+  id-token: write   # required for PyPI Trusted Publisher (OIDC)
+  contents: write   # required to create GitHub release
+
+jobs:
+  publish:
+    name: Publish nself-plugin-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/sdk-py/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/sdk-py/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Install dev dependencies
+        working-directory: sdk/py
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        working-directory: sdk/py
+        run: ruff check .
+
+      - name: Type-check
+        working-directory: sdk/py
+        run: mypy nself_plugin
+
+      - name: Test
+        working-directory: sdk/py
+        run: pytest -v
+
+      - name: Verify package version matches tag
+        working-directory: sdk/py
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          PKG_VERSION=$(python -c "import tomllib; f=open('pyproject.toml','rb'); d=tomllib.load(f); print(d['project']['version'])")
+          if [ "v${PKG_VERSION}" != "${TAG}" ]; then
+            echo "ERROR: pyproject.toml version 'v${PKG_VERSION}' does not match tag '${TAG}'"
+            exit 1
+          fi
+          echo "Version check passed: ${TAG}"
+
+      - name: Build distribution
+        working-directory: sdk/py
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/py/dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          FULL_TAG="sdk-py/${TAG}"
+          NOTES=$(git tag -l --format='%(contents)' "${FULL_TAG}" 2>/dev/null || echo "Python SDK ${TAG} release.")
+          gh release create "${FULL_TAG}" \
+            --title "Python SDK ${TAG}" \
+            --notes "${NOTES}" \
+            --verify-tag
