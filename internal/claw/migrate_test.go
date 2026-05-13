@@ -156,6 +156,59 @@ func TestApplyOrdered(t *testing.T) {
 	}
 }
 
+// TestMigrationDirection verifies that forward migrations are included and all
+// rollback/down variants are excluded from the scan result.
+//
+// This is the regression test for the HG-12 data-loss bug where _rollback.sql
+// and _down.sql (underscore) files were applied as forward migrations.
+func TestMigrationDirection(t *testing.T) {
+	dir := t.TempDir()
+
+	// Forward migrations — must be included.
+	writeMigration(t, dir, "001_init.sql", "CREATE TABLE np_claw_foo (id bigserial PRIMARY KEY);")
+	writeMigration(t, dir, "002_add_col.sql", "ALTER TABLE np_claw_foo ADD COLUMN name TEXT;")
+
+	// Rollback variants — must ALL be excluded regardless of naming convention.
+	writeMigration(t, dir, "001_init.down.sql", "DROP TABLE IF EXISTS np_claw_foo;")
+	writeMigration(t, dir, "002_add_col_rollback.sql", "ALTER TABLE np_claw_foo DROP COLUMN IF EXISTS name;")
+	writeMigration(t, dir, "002_add_col_down.sql", "ALTER TABLE np_claw_foo DROP COLUMN IF EXISTS name;")
+	writeMigration(t, dir, "000_rollback_all.sql", "DROP SCHEMA IF EXISTS np_claw CASCADE;")
+
+	names, err := scanClawMigrations(dir)
+	if err != nil {
+		t.Fatalf("scanClawMigrations: %v", err)
+	}
+
+	want := []string{"001_init.sql", "002_add_col.sql"}
+	if len(names) != len(want) {
+		t.Fatalf("got %d migration(s) %v, want only forward migrations %v", len(names), names, want)
+	}
+	for i, name := range names {
+		if name != want[i] {
+			t.Errorf("names[%d] = %q, want %q", i, name, want[i])
+		}
+	}
+
+	// Verify isRollbackSQL explicitly for each convention.
+	cases := []struct {
+		file     string
+		rollback bool
+	}{
+		{"001_init.sql", false},
+		{"002_add_col.sql", false},
+		{"001_init.down.sql", true},
+		{"002_add_col_rollback.sql", true},
+		{"002_add_col_down.sql", true},
+		{"000_rollback_all.sql", true},
+	}
+	for _, c := range cases {
+		got := isRollbackSQL(c.file)
+		if got != c.rollback {
+			t.Errorf("isRollbackSQL(%q) = %v, want %v", c.file, got, c.rollback)
+		}
+	}
+}
+
 // assertStringSlice compares two string slices, treating nil and empty as equal.
 func assertStringSlice(t *testing.T, label string, got, want []string) {
 	t.Helper()

@@ -48,8 +48,25 @@ func clawMigrationsDir(cfg *config.Config) string {
 	return installed // return canonical path so error messages are actionable
 }
 
+// isRollbackSQL reports whether the filename is a rollback/down migration that
+// must never be applied as a forward migration.
+//
+// Canonical forward migrations end in exactly ".sql" (e.g. "001_init.sql").
+// Rollback variants use several conventions found in this codebase:
+//   - "*.down.sql"         — canonical down suffix (dot-separated)
+//   - "*_down.sql"         — alternate naming used in older files
+//   - "*_rollback.sql"     — explicit rollback suffix
+//   - "*_rollback_*.sql"   — rollback with additional qualifier (e.g. 000_rollback_all.sql)
+func isRollbackSQL(name string) bool {
+	return strings.HasSuffix(name, ".down.sql") ||
+		strings.HasSuffix(name, "_down.sql") ||
+		strings.HasSuffix(name, "_rollback.sql") ||
+		strings.Contains(name, "_rollback_")
+}
+
 // scanClawMigrations returns SQL filenames from dir, sorted lexicographically.
-// Only .sql files are included; .down.sql files are excluded.
+// Only forward migration .sql files are included; rollback/down variants are
+// excluded (see isRollbackSQL for the naming patterns that are rejected).
 func scanClawMigrations(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -65,7 +82,7 @@ func scanClawMigrations(dir string) ([]string, error) {
 			continue
 		}
 		n := e.Name()
-		if strings.HasSuffix(n, ".sql") && !strings.HasSuffix(n, ".down.sql") {
+		if strings.HasSuffix(n, ".sql") && !isRollbackSQL(n) {
 			names = append(names, n)
 		}
 	}
