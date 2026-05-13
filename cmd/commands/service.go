@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/scaffold"
 	"github.com/nself-org/cli/internal/security"
 	"github.com/nself-org/cli/internal/ui"
@@ -375,14 +376,14 @@ func setEnvKeyInFile(filename, key, value string) error {
 		trimmed := strings.TrimSpace(line)
 		// Match KEY=... lines (skip comments).
 		if strings.HasPrefix(trimmed, prefix) || trimmed == key {
-			lines[i] = key + "=" + value
+			lines[i] = key + "=" + config.QuoteEnvValue(value)
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		lines = append(lines, key+"="+value)
+		lines = append(lines, key+"="+config.QuoteEnvValue(value))
 	}
 
 	// Write back. Env files must be 0600 (user-readable only).

@@ -550,7 +550,7 @@ func persistGeneratedSecrets(workdir string, cfg *config.Config) error {
 	defer f.Close()
 
 	for _, s := range toWrite {
-		if _, err := fmt.Fprintf(f, "%s=%s\n", s.envKey, s.value); err != nil {
+		if _, err := fmt.Fprintf(f, "%s=%s\n", s.envKey, config.QuoteEnvValue(s.value)); err != nil {
 			return fmt.Errorf("writing %s: %w", s.envKey, err)
 		}
 		slog.Info("Persisted auto-generated secret to .env.secrets", "key", s.envKey)
