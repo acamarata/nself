@@ -52,13 +52,18 @@ func coreEnvVars(cfg *config.Config, svc config.CustomService) map[string]string
 
 // buildCustomService returns the service configuration for a user-defined
 // custom service (CS_1..CS_10). Each custom service is built from a Dockerfile
-// in ./services/{name}/ and exposes a single port with a /health endpoint.
+// in ./services/{name}/ by default, or from CS_N_PATH when set.
 func (g *Generator) buildCustomService(cs config.CustomService) ServiceConfig {
 	cfg := g.cfg
 
+	buildContext := cs.BuildPath
+	if buildContext == "" {
+		buildContext = fmt.Sprintf("./services/%s", cs.Name)
+	}
+
 	return ServiceConfig{
 		Build: &BuildConfig{
-			Context:    fmt.Sprintf("./services/%s", cs.Name),
+			Context:    buildContext,
 			Dockerfile: "Dockerfile",
 		},
 		ContainerName: fmt.Sprintf("%s_%s", cfg.ProjectName, cs.Name),

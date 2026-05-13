@@ -499,6 +499,7 @@ type CustomService struct {
 	CPU         string
 	TablePrefix string // CS_N_TABLE_PREFIX
 	ExtraEnv    string // CS_N_ENV (raw key=val pairs, comma-separated)
+	BuildPath   string // CS_N_PATH: overrides default ./services/{name} build context
 }
 
 // FrontendApp represents a frontend application (FRONTEND_APP_1..FRONTEND_APP_20).

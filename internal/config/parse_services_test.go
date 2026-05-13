@@ -82,6 +82,57 @@ func TestCustomServicesSanitization_PathTraversal(t *testing.T) {
 	}
 }
 
+// TestCustomServicesBuildPath_Valid verifies that CS_N_PATH sets BuildPath
+// when the value is a clean relative path.
+func TestCustomServicesBuildPath_Valid(t *testing.T) {
+	t.Setenv("CS_1", "myservice:go")
+	t.Setenv("CS_1_PATH", "./backend/services/myservice")
+	for i := 2; i <= 10; i++ {
+		t.Setenv("CS_"+itoa(i), "")
+	}
+
+	services, err := parseCustomServices()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(services) == 0 {
+		t.Fatal("expected at least one custom service")
+	}
+	if got := services[0].BuildPath; got != "./backend/services/myservice" {
+		t.Errorf("BuildPath = %q, want %q", got, "./backend/services/myservice")
+	}
+}
+
+// TestCustomServicesBuildPath_AbsoluteRejected verifies that an absolute path
+// in CS_N_PATH is rejected.
+func TestCustomServicesBuildPath_AbsoluteRejected(t *testing.T) {
+	t.Setenv("CS_1", "myservice:go")
+	t.Setenv("CS_1_PATH", "/etc/secrets")
+	for i := 2; i <= 10; i++ {
+		t.Setenv("CS_"+itoa(i), "")
+	}
+
+	_, err := parseCustomServices()
+	if err == nil {
+		t.Fatal("expected error for absolute CS_N_PATH, got nil")
+	}
+}
+
+// TestCustomServicesBuildPath_TraversalRejected verifies that a path containing
+// '..' in CS_N_PATH is rejected.
+func TestCustomServicesBuildPath_TraversalRejected(t *testing.T) {
+	t.Setenv("CS_1", "myservice:go")
+	t.Setenv("CS_1_PATH", "../../outside")
+	for i := 2; i <= 10; i++ {
+		t.Setenv("CS_"+itoa(i), "")
+	}
+
+	_, err := parseCustomServices()
+	if err == nil {
+		t.Fatal("expected error for traversal CS_N_PATH, got nil")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // T07 — Frontend apps sanitization
 // ---------------------------------------------------------------------------

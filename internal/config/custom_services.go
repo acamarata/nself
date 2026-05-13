@@ -68,6 +68,20 @@ func parseCustomServices() ([]CustomService, error) {
 		cs.TablePrefix = os.Getenv(fmt.Sprintf("CS_%d_TABLE_PREFIX", i))
 		cs.ExtraEnv = os.Getenv(fmt.Sprintf("CS_%d_ENV", i))
 
+		// Optional build context path override. Rejects absolute paths and
+		// path traversal so a misconfigured env can't escape the project root.
+		if p := os.Getenv(fmt.Sprintf("CS_%d_PATH", i)); p != "" {
+			if strings.HasPrefix(p, "/") {
+				return nil, fmt.Errorf("CS_%d_PATH must be a relative path, got %q", i, p)
+			}
+			for _, seg := range strings.Split(p, "/") {
+				if seg == ".." {
+					return nil, fmt.Errorf("CS_%d_PATH must not contain '..', got %q", i, p)
+				}
+			}
+			cs.BuildPath = p
+		}
+
 		// Override port/route if explicitly set
 		if p := getEnvInt(fmt.Sprintf("CS_%d_PORT", i), 0); p != 0 {
 			cs.Port = p
