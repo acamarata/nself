@@ -137,6 +137,17 @@ func Remove(ctx context.Context, bundleSlug string, opts RemoveOpts) (*RemoveRes
 
 	fmt.Fprintf(out, "\nBundle %q (%s) remove summary: %d removed, %d failed, %d already absent.\n",
 		b.Name, b.Slug, len(result.Removed), len(result.Failed), len(result.NotInstalled))
+
+	// Trigger a single nself build to regenerate docker-compose.yml and nginx
+	// configs without the removed plugins. Only when at least one plugin was
+	// actually removed — mirrors the install path in installer.go.
+	if len(result.Removed) > 0 {
+		if err := triggerBuild(ctx, out); err != nil {
+			fmt.Fprintf(out, "\nWARNING: nself build failed after bundle remove: %v\n", err)
+			fmt.Fprintln(out, "Run 'nself build' manually to apply the changes.")
+		}
+	}
+
 	if len(result.Failed) > 0 {
 		return result, fmt.Errorf("bundle %q remove had failures: %s", b.Slug, strings.Join(result.Failed, ", "))
 	}
