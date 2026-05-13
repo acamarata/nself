@@ -4,7 +4,7 @@
 // # Overview
 //
 // The nSelf Go SDK is a self-contained module under
-// github.com/nself-org/cli/sdk/go. It is consumed by every Go-based plugin
+// github.com/nself-org/cli/sdk/go/v2. It is consumed by every Go-based plugin
 // service in the nSelf ecosystem (ai, claw, mux, voice, browser, notify,
 // cron, chat, livekit, recording, bots) and by external integrators who
 // build against the public nSelf surface.
@@ -97,4 +97,4 @@ package sdk
 //
 // This value is updated by the sdk-version-sync workflow on every CLI tag
 // to keep SDK and CLI versions in lockstep.
-const Version = "1.1.0"
+const Version = "2.0.0"

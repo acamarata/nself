@@ -7,6 +7,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.0.0] - 2026-05-13
+
+### Changed
+
+- **Breaking:** module path updated to `github.com/nself-org/cli/sdk/go/v2` per Go modules major-version convention.
+  Update import paths in all plugins from `github.com/nself-org/cli/sdk/go` to `github.com/nself-org/cli/sdk/go/v2`.
+- `doc.go` `Version` constant bumped to `"2.0.0"`.
+
+### Added
+
+- Publish workflow (`.github/workflows/sdk-go-publish.yml`): triggers on `sdk-go/v*` tag, runs `go mod tidy`, `go vet ./...`, `go test ./...`, verifies module path vs tag major version, triggers proxy index, and creates a GitHub release.
+
+---
+
 ## [0.1.0] - 2026-04-23
 
 ### Added

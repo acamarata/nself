@@ -1,4 +1,4 @@
-module github.com/nself-org/cli/sdk/go
+module github.com/nself-org/cli/sdk/go/v2
 
 go 1.25.0
 

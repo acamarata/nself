@@ -1,0 +1,99 @@
+---
+name: Publish Go SDK
+
+# Triggers on:
+#   - sdk-scoped tag (sdk-go/v*)  -- publishes Go SDK module
+#   - workflow_dispatch           -- manual publish with version input
+#
+# Go modules are published via the public Go module proxy (proxy.golang.org).
+# No credentials are required: pushing a tag to a public GitHub repo is
+# sufficient for pkg.go.dev to index the module.
+
+"on":
+  push:
+    tags:
+      - 'sdk-go/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish version (e.g. 2.0.0). Used for release notes only.'
+        required: false
+        type: string
+
+jobs:
+  publish:
+    name: Publish github.com/nself-org/cli/sdk/go
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # needed to create GitHub release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: sdk/go/go.sum
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/sdk-go/* ]]; then
+            # strip "sdk-go/" prefix → v2.0.0
+            echo "tag=${GITHUB_REF#refs/tags/sdk-go/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tidy
+        working-directory: sdk/go
+        run: go mod tidy
+
+      - name: Vet
+        working-directory: sdk/go
+        run: go vet ./...
+
+      - name: Test
+        working-directory: sdk/go
+        run: go test -race -count=1 -timeout 5m ./...
+
+      - name: Verify go.mod version tag
+        working-directory: sdk/go
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          MODULE=$(go mod edit -json | jq -r '.Module.Path')
+          echo "Module: $MODULE  Tag: $TAG"
+          # Major version in tag must match /vN suffix (if N >= 2) in module path
+          MAJOR=$(echo "$TAG" | sed 's/v\([0-9]*\).*/\1/')
+          if [ "$MAJOR" -ge 2 ]; then
+            EXPECTED_SUFFIX="/v${MAJOR}"
+            if ! echo "$MODULE" | grep -q "${EXPECTED_SUFFIX}$"; then
+              echo "ERROR: go.mod module path '$MODULE' missing '$EXPECTED_SUFFIX' suffix for major version $MAJOR"
+              exit 1
+            fi
+          fi
+          echo "Module path and tag are consistent."
+
+      - name: Trigger Go proxy index
+        working-directory: sdk/go
+        run: |
+          MODULE=$(go mod edit -json | jq -r '.Module.Path')
+          TAG="${{ steps.version.outputs.tag }}"
+          # GOPROXY fetch triggers pkg.go.dev indexing; 404 on first call is normal
+          # (the proxy fetches from GitHub after the tag is visible).
+          curl -sfo /dev/null "https://proxy.golang.org/${MODULE}/@v/${TAG}.info" || true
+          echo "Proxy fetch requested for ${MODULE}@${TAG}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          FULL_TAG="sdk-go/${TAG}"
+          NOTES=$(git tag -l --format='%(contents)' "${FULL_TAG}" 2>/dev/null || echo "Go SDK ${TAG} release.")
+          gh release create "${FULL_TAG}" \
+            --title "Go SDK ${TAG}" \
+            --notes "${NOTES}" \
+            --verify-tag
