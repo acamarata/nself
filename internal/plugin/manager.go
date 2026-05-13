@@ -73,6 +73,17 @@ func ListInstalled(pluginDir string) ([]InstalledPluginInfo, error) {
 		if st, stErr := Status(m.Name); stErr == nil {
 			status = st.State
 		}
+		// Overlay lifecycle state: dormant/expired beats runtime state.
+		if store, lcErr := LoadLifecycleStore(); lcErr == nil {
+			if rec, ok := store.Records[m.Name]; ok {
+				switch rec.State {
+				case StateDormant:
+					status = "dormant"
+				case StateExpired:
+					status = "expired"
+				}
+			}
+		}
 
 		tier := m.Tier
 		if tier == "" {

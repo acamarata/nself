@@ -208,6 +208,10 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		telemetry.Send("start_result", props)
 	}()
 
+	// ── Plugin lifecycle: dormant banners (read-only — auto-removal is build-only) ──
+	// Show warnings for dormant plugins so operators know to renew or rebuild.
+	showDormantBannersOnStart(opts.quiet)
+
 	cwd, startErr := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
@@ -902,5 +906,24 @@ func checkLicenseHeartbeat(ctx context.Context, cfg *config.Config, verbose bool
 		ui.Warn("License validation failed — your license may be revoked or expired")
 		ui.Warn("Existing services will continue running. New plugin installs may be blocked.")
 		ui.Warn("Visit https://nself.org/pricing to check your subscription status.")
+	}
+}
+
+// showDormantBannersOnStart reads the lifecycle store and prints a warning for
+// every dormant plugin. It does NOT auto-remove (build-only) and does NOT save
+// the store — this is a read-only diagnostic pass to inform operators.
+func showDormantBannersOnStart(quiet bool) {
+	if quiet {
+		return
+	}
+	store, err := plugin.LoadLifecycleStore()
+	if err != nil {
+		return // non-fatal: lifecycle is advisory
+	}
+	now := time.Now()
+	for _, rec := range store.Records {
+		if rec.State == plugin.StateDormant {
+			ui.Warn(plugin.DormantBanner(rec, now))
+		}
 	}
 }
