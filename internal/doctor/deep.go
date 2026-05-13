@@ -52,6 +52,14 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
 
+	// S4.T23 (P100 v1.1.0): ɳSentry-specific RLS checks (NSENTRY-RLS-01..07).
+	// Runs only when one or more of the 7 ɳSentry baseline plugins is installed.
+	// Severity is CRITICAL (fail) — ɳSentry tables hold cross-tenant observability data.
+	if home, herr := os.UserHomeDir(); herr == nil {
+		nsentryPluginDir := filepath.Join(home, ".nself", "plugins")
+		results = append(results, CheckNSentryRLS(ctx, nsentryPluginDir)...)
+	}
+
 	// S1.T10: Hasura metadata YAML row-filter check for np_* tables (PERM-HASURA-01).
 	results = append(results, CheckHasuraMetadataYAML(ctx, projectDir, false)...)
 
