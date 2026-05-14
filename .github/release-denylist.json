@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Release denylist rules for the nself CLI. Any rule that triggers blocks `gh release create` unless --skip-denylist is provided with a logged justification. Maintained under P101 S8.T05.",
+  "owner": "nself-org/cli release engineering",
+  "last_updated": "2026-05-13",
+  "enforcement": {
+    "tag_guard_workflow": ".github/workflows/pre-release-gate.yml",
+    "wrapper_script": "scripts/release-create.sh",
+    "retract_script": "scripts/release-retract.sh",
+    "audit_log": "audit/release-overrides.log"
+  },
+  "rules": [
+    {
+      "id": "DENY-001",
+      "name": "signature-check",
+      "severity": "critical",
+      "rationale": "Unsigned release artifacts cannot be verified by downstream consumers (Homebrew tap, supply-chain auditors). Sigstore keyless signing via OIDC is required (release.yml step `Sign artifacts with cosign`).",
+      "check": "cosign verify-blob --bundle <artifact>.cosign.bundle <artifact>",
+      "failure_action": "block",
+      "remediation": "Re-run the release workflow with `id-token: write` permission and ensure cosign step completes for every dist tarball + checksums.txt."
+    },
+    {
+      "id": "DENY-002",
+      "name": "missing-sbom",
+      "severity": "critical",
+      "rationale": "Each release MUST publish SPDX + CycloneDX SBOMs (Q04 requirement). Without them, vulnerability scanners cannot resolve transitive dependencies, and supply-chain audits fail.",
+      "check": "ls sbom.spdx.json sbom.cdx.json",
+      "failure_action": "block",
+      "remediation": "Confirm the `sbom` job in release.yml completed and uploaded both artifacts before tagging."
+    },
+    {
+      "id": "DENY-003",
+      "name": "zero-commits-since-prior-tag",
+      "severity": "critical",
+      "rationale": "Releasing with no commits since the previous tag is almost always a mistake (accidental re-tag, fat-finger). Real releases have at least one commit (version bump).",
+      "check": "test \"$(git rev-list <prior-tag>..HEAD --count)\" -gt 0",
+      "failure_action": "block",
+      "remediation": "Confirm the version bump commit is present. If intentionally retagging (rare), use --skip-denylist with an explicit justification."
+    },
+    {
+      "id": "DENY-004",
+      "name": "failed-license-scan",
+      "severity": "critical",
+      "rationale": "AGPL/SSPL/GPL-3-only dependencies are forbidden in the MIT-licensed CLI. The license-audit workflow must pass before release to avoid shipping incompatible licenses to end users.",
+      "check": "gh run list --workflow license-audit.yml --branch <tag> --limit 1 --json conclusion -q '.[0].conclusion' | grep -q success",
+      "failure_action": "block",
+      "remediation": "Address all flagged licenses in the latest license-audit.yml run. See `.claude/docs/operations/agpl-sspl-policy.md`."
+    },
+    {
+      "id": "DENY-005",
+      "name": "no-milestone-closed",
+      "severity": "high",
+      "rationale": "Every release must correspond to a closed GitHub milestone documenting the user-visible changes. Releases without a milestone leave operators blind to what changed.",
+      "check": "gh api repos/{owner}/{repo}/milestones --jq '.[] | select(.title==\"<version>\" and .state==\"closed\")' | grep -q .",
+      "failure_action": "block",
+      "remediation": "Create or close the milestone matching the release version (e.g., `v1.0.13`). Attach all relevant issues + PRs before retrying."
+    }
+  ],
+  "override": {
+    "flag": "--skip-denylist",
+    "interactive_confirm": true,
+    "reason_required": true,
+    "audit_log_path": "audit/release-overrides.log",
+    "logged_fields": [
+      "iso_timestamp_utc",
+      "git_sha",
+      "tag",
+      "operator",
+      "denylist_rule_ids_skipped",
+      "justification_text"
+    ]
+  },
+  "retraction": {
+    "script": "scripts/release-retract.sh",
+    "behaviors": [
+      "Mark GitHub release as draft (gh release edit <tag> --draft)",
+      "Append RETRACTED notice + reason to release notes",
+      "Optionally delete the git tag locally + remote (with --delete-tag flag and confirm prompt)",
+      "Log retraction event to audit/release-retractions.log",
+      "Emit follow-up PCI to plugins-pro + admin + homebrew-nself inboxes for cascade rollback"
+    ]
+  }
+}

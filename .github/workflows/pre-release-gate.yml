@@ -1,0 +1,130 @@
+name: Pre-Release Gate
+
+# Tag-guard CI workflow: runs the release denylist on every tag push
+# (matching v*) and on workflow_dispatch. Blocks release if any denylist
+# rule triggers and no override is recorded.
+#
+# Source: .github/release-denylist.json
+# Wrapper: scripts/release-create.sh
+# Owner: P101 S8.T05
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to evaluate (e.g. v1.0.13). Defaults to the current ref.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  denylist-gate:
+    name: Evaluate release denylist
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history for DENY-003 commits-since-prior-tag
+
+      - name: Resolve tag
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            echo "ERROR: no tag context (not a tag push and no input.tag)" >&2
+            exit 2
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Evaluating denylist for: ${TAG}"
+
+      - name: Verify denylist file exists
+        run: |
+          test -f .github/release-denylist.json || {
+            echo "FAIL: .github/release-denylist.json missing" >&2
+            exit 1
+          }
+          echo "denylist found, rule count:"
+          jq '.rules | length' .github/release-denylist.json
+
+      - name: Install gh CLI helpers
+        run: |
+          which gh
+          gh --version
+          which jq
+          jq --version
+
+      - name: Run denylist gate (DENY-003 + DENY-004 + DENY-005)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          TRIGGERED=()
+
+          # DENY-003: zero-commits-since-prior-tag
+          PRIOR_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1 || true)
+          if [ -n "${PRIOR_TAG}" ]; then
+            COUNT=$(git rev-list "${PRIOR_TAG}..${TAG}" --count 2>/dev/null || echo "0")
+            if [ "${COUNT}" -eq 0 ]; then
+              TRIGGERED+=("DENY-003 zero-commits-since-prior-tag (prior=${PRIOR_TAG})")
+            fi
+          else
+            echo "no prior tag; first release - DENY-003 skipped"
+          fi
+
+          # DENY-004: failed-license-scan
+          LIC_STATUS=$(gh run list --workflow license-audit.yml --limit 1 \
+            --json conclusion -q '.[0].conclusion' 2>/dev/null || echo "")
+          if [ "${LIC_STATUS}" != "success" ] && [ "${LIC_STATUS}" != "" ]; then
+            TRIGGERED+=("DENY-004 failed-license-scan (last=${LIC_STATUS})")
+          fi
+
+          # DENY-005: no-milestone-closed
+          MILESTONE=$(gh api "repos/${{ github.repository }}/milestones?state=closed" \
+            --jq ".[] | select(.title==\"${TAG}\") | .state" 2>/dev/null || echo "")
+          if [ "${MILESTONE}" != "closed" ]; then
+            TRIGGERED+=("DENY-005 no-milestone-closed")
+          fi
+
+          # DENY-001 + DENY-002 are evaluated post-build inside release.yml
+          # (artifacts don't exist at tag-push time). Recorded here as informational.
+
+          if [ ${#TRIGGERED[@]} -gt 0 ]; then
+            echo "::error::Denylist triggered ${#TRIGGERED[@]} rule(s):"
+            for r in "${TRIGGERED[@]}"; do
+              echo "::error::  - ${r}"
+            done
+            echo "## Pre-Release Gate: BLOCKED" >> "${GITHUB_STEP_SUMMARY}"
+            printf "Triggered rules:\n" >> "${GITHUB_STEP_SUMMARY}"
+            for r in "${TRIGGERED[@]}"; do
+              printf -- "- %s\n" "${r}" >> "${GITHUB_STEP_SUMMARY}"
+            done
+            printf "\nOverride via: \`bash scripts/release-create.sh %s --skip-denylist\`\n" "${TAG}" \
+              >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
+
+          echo "## Pre-Release Gate: PASS" >> "${GITHUB_STEP_SUMMARY}"
+          echo "All evaluable denylist rules passed for ${TAG}." >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Check override audit log (informational)
+        if: always()
+        run: |
+          if [ -f audit/release-overrides.log ]; then
+            echo "Recent overrides:"
+            tail -5 audit/release-overrides.log || true
+          else
+            echo "No override audit log (audit/release-overrides.log not present)."
+          fi

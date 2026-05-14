@@ -1,0 +1,21 @@
+{
+  "$schema": "https://nself.org/schemas/push-protection-allowlist-v1.json",
+  "version": "1.0",
+  "_comment": "Push-protection bypass allowlist. Every entry MUST have security review + approval. Entries auto-expire 6 months after addition. See https://github.com/nself-org/cli/blob/main/.github/SECURITY.md and .claude/docs/operations/push-protection-allowlist.md for canonical rules. Ticket: P101 S8.T02.",
+  "entries": [
+    {
+      "pattern": "^internal/doctor/redact_audit\\.go$",
+      "reason": "Synthetic test fixtures for credential-redaction audit tests; not real credentials",
+      "approved_by": "aric.camarata",
+      "expires": "2026-11-13",
+      "ticket_ref": "P101.S2.T03"
+    },
+    {
+      "pattern": "^scripts/test/.*$",
+      "reason": "Test fixtures for plugin-install-e2e and related CLI test harnesses; mock credentials only",
+      "approved_by": "aric.camarata",
+      "expires": "2026-11-13",
+      "ticket_ref": "P101.S8.T02"
+    }
+  ]
+}

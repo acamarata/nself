@@ -19,6 +19,8 @@ paths = [
   '''\.env\.template$''',
   # Migration fixtures — test database state
   '''internal/migration/testdata/''',
+  # Doctor checks — redact_audit.go contains synthetic test fixtures, not real credentials
+  '''internal/doctor/redact_audit\.go''',
   # Documentation and reference files — contain example credentials and API keys
   '''docs/''',
   '''\.wiki/''',

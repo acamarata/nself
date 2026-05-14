@@ -11,12 +11,12 @@
 #
 # Files updated (11 + 1 optional homebrew):
 #   1.  cli/.github/VERSION
-#   2.  cli/internal/version/version.go       Version = "x.y.z"
+#   2.  cli/internal/version/version.go       Version string = "x.y.z" (type-annotated)
 #   3.  cli/sdk/go/doc.go                     const Version = "x.y.z"
-#   4.  cli/sdk/ts/package.json               "version": "x.y.z"
+#   4.  cli/sdk/ts/package.json               "version": "x.y.z"   (via jq)
 #   5.  cli/sdk/py/pyproject.toml             version = "x.y.z" under [project]
 #   6.  cli/sdk/flutter/pubspec.yaml          version: x.y.z
-#   7.  admin/package.json                    "version": "x.y.z"
+#   7.  admin/package.json                    "version": "x.y.z"   (via jq)
 #   8.  admin/src/lib/cli-version.ts          CLI_VERSION = 'x.y.z'
 #   9.  admin/Dockerfile                      ARG NSELF_VERSION=x.y.z
 #   10. admin/Dockerfile                      ENV ADMIN_VERSION=x.y.z
@@ -29,9 +29,15 @@
 #
 # Hard rules:
 #   - Atomic writes: all file writes use tmp+rename, cleaned on EXIT
-#   - Line-anchored regex: patterns match exact field, not arbitrary occurrences
+#   - Portable patterns: POSIX BRE only (no GNU \s); jq for JSON files
 #   - Idempotent: skip files already at the target version
 #   - shellcheck-clean (no echo -e, no ${var,,}, no declare -A)
+#
+# L-P98-06 fix (2026-05-13):
+#   - Replaced GNU \s with POSIX [[:space:]] in all regex
+#   - Routed JSON edits through jq to handle nested/contextual "version" fields
+#   - Added Go type-annotated form: Version<spaces>string<spaces>=<spaces>"..."
+#   - Added scripts/bump-version_test.sh with fixtures for all 11 line shapes
 
 set -euo pipefail
 
@@ -71,12 +77,19 @@ if [ -z "${RAW_VERSION}" ]; then
   exit 1
 fi
 
-# Strip leading 'v'
 NEW_VERSION="${RAW_VERSION#v}"
 
 if ! printf '%s' "${NEW_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
   printf 'ERROR: Invalid semver: "%s"\n' "${RAW_VERSION}" >&2
   printf '  Expected X.Y.Z (e.g. 1.0.14) or vX.Y.Z (e.g. v1.0.14)\n' >&2
+  exit 1
+fi
+
+# ── Tool availability checks ──────────────────────────────────────────────────
+
+if ! command -v jq >/dev/null 2>&1; then
+  printf 'ERROR: jq is required for JSON file bumps (sdk/ts/package.json, admin/package.json)\n' >&2
+  printf '  Install: brew install jq  (macOS)  |  apt-get install jq  (Linux)\n' >&2
   exit 1
 fi
 
@@ -106,8 +119,6 @@ trap cleanup_tmpfiles EXIT
 # ── Helper functions ──────────────────────────────────────────────────────────
 
 # atomic_write <dest> <content-via-stdin>
-#   Writes stdin to dest atomically using a tmp+rename pair.
-#   In dry-run mode, writes to a scratch tmp and diffs, then removes.
 atomic_write() {
   local dest="$1"
   local tmp="${dest}.bumpver.tmp"
@@ -124,15 +135,37 @@ atomic_write() {
   mv "${tmp}" "${dest}"
 }
 
-# already_at <file> <pattern>
-#   Returns 0 if the file already contains the exact target pattern.
-already_at() {
-  grep -qF "$2" "$1"
-}
-
 # report <file> <old> <new>
 report() {
   printf '  %-60s  %s -> %s\n' "$1" "$2" "$3"
+}
+
+# extract_semver <file>
+#   Extract the first X.Y.Z occurrence on any line matching a given grep pattern.
+#   Args: file, grep-pattern
+extract_semver() {
+  grep -E "$2" "$1" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
+}
+
+# update_json_version <file>
+#   Top-level .version field replacement via jq. Atomic via tmp+rename.
+update_json_version() {
+  local f="$1"
+  if [ ! -f "${f}" ]; then
+    printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
+  fi
+  local old
+  old="$(jq -r '.version // ""' "${f}")"
+  if [ "${old}" = "${NEW_VERSION}" ]; then
+    printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
+    return
+  fi
+  if [ -z "${old}" ]; then
+    printf 'ERROR: %s has no top-level "version" field\n' "${f}" >&2
+    exit 1
+  fi
+  jq --arg v "${NEW_VERSION}" '.version = $v' "${f}" | atomic_write "${f}"
+  report "${f}" "${old}" "${NEW_VERSION}"
 }
 
 # ── Per-file update functions ─────────────────────────────────────────────────
@@ -152,29 +185,41 @@ update_version_file() {
   report "${f}" "${old}" "${NEW_VERSION}"
 }
 
+# version.go shape: `\tVersion   string = "1.0.13"` (tab/spaces, type annotation)
 update_version_go() {
   local f="${VERSION_GO}"
   if [ ! -f "${f}" ]; then
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old
-  old="$(grep -E '^\s+Version\s+string\s*=' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  old="$(extract_semver "${f}" '^[[:space:]]+Version[[:space:]]+string[[:space:]]*=')"
+  if [ -z "${old}" ]; then
+    printf 'ERROR: %s has no matching "Version<sp>string<sp>=" line\n' "${f}" >&2
+    exit 1
+  fi
   if [ "${old}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
     return
   fi
-  sed "s/^\(\s*Version\s*string\s*=\s*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" "${f}" \
+  # POSIX BRE — explicit [[:space:]]+, no \s
+  sed "s/^\([[:space:]]*Version[[:space:]][[:space:]]*string[[:space:]]*=[[:space:]]*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" "${f}" \
     | atomic_write "${f}"
   report "${f}" "${old}" "${NEW_VERSION}"
 }
 
+# sdk/go/doc.go shape: `const Version = "2.0.0"`
 update_sdk_go_doc() {
   local f="${SDK_GO}"
   if [ ! -f "${f}" ]; then
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old
-  old="$(grep -E '^const Version = ' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  old="$(extract_semver "${f}" '^const Version = ')"
+  if [ -z "${old}" ]; then
+    # doc.go may not declare a const Version; treat as soft-skip
+    printf '  SKIP  %s  (no const Version declaration)\n' "${f}"
+    return
+  fi
   if [ "${old}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
     return
@@ -185,68 +230,78 @@ update_sdk_go_doc() {
 }
 
 update_sdk_ts_pkg() {
-  local f="${SDK_TS}"
+  update_json_version "${SDK_TS}"
+}
+
+# pyproject.toml shape: `version = "2.0.0"` under [project]
+# Also handles Cargo.toml shape: `version = "X.Y.Z"` under [package]
+# Uses awk to scope replacement to the FIRST matching version line after the
+# expected [project] or [package] section header — safer than naive sed on
+# files with [dependencies.foo] sub-tables containing their own version fields.
+update_toml_version() {
+  local f="$1"
+  local section="${2:-project}"  # default [project] for pyproject; pass "package" for Cargo
   if [ ! -f "${f}" ]; then
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old
-  old="$(grep -E '^\s*"version"\s*:' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  # Extract: first version = "X.Y.Z" line inside [section]…(next section or EOF)
+  old="$(awk -v sect="[${section}]" '
+    $0 == sect { in_section = 1; next }
+    in_section && /^\[/ { in_section = 0 }
+    in_section && /^[[:space:]]*version[[:space:]]*=[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"/ {
+      match($0, /[0-9]+\.[0-9]+\.[0-9]+/)
+      print substr($0, RSTART, RLENGTH); exit
+    }
+  ' "${f}")"
+  if [ -z "${old}" ]; then
+    printf 'ERROR: %s has no "version = X.Y.Z" line under [%s]\n' "${f}" "${section}" >&2
+    exit 1
+  fi
   if [ "${old}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
     return
   fi
-  sed "s/^\(\s*\"version\"\s*:\s*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" "${f}" \
-    | atomic_write "${f}"
+  awk -v sect="[${section}]" -v newv="${NEW_VERSION}" '
+    $0 == sect { in_section = 1; print; next }
+    in_section && /^\[/ { in_section = 0 }
+    in_section && !replaced && /^[[:space:]]*version[[:space:]]*=[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"/ {
+      sub(/[0-9]+\.[0-9]+\.[0-9]+/, newv)
+      replaced = 1
+    }
+    { print }
+  ' "${f}" | atomic_write "${f}"
   report "${f}" "${old}" "${NEW_VERSION}"
 }
 
 update_sdk_py_pyproject() {
-  local f="${SDK_PY}"
-  if [ ! -f "${f}" ]; then
-    printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
-  fi
-  local old
-  old="$(grep -E '^version = ' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-  if [ "${old}" = "${NEW_VERSION}" ]; then
-    printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
-    return
-  fi
-  # Only the top-level [project] version line (^version = "..."), not build-system vars
-  sed "s/^version = \"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\"/version = \"${NEW_VERSION}\"/" "${f}" \
-    | atomic_write "${f}"
-  report "${f}" "${old}" "${NEW_VERSION}"
+  update_toml_version "${SDK_PY}" project
 }
 
+# pubspec.yaml shape: `version: 2.0.0` (may have +build_number suffix in Flutter apps)
 update_sdk_flutter_pubspec() {
   local f="${SDK_FLUTTER}"
   if [ ! -f "${f}" ]; then
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old
-  old="$(grep -E '^version: ' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  old="$(extract_semver "${f}" '^version:[[:space:]]')"
+  if [ -z "${old}" ]; then
+    printf 'ERROR: %s has no matching "version:" line\n' "${f}" >&2
+    exit 1
+  fi
   if [ "${old}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
     return
   fi
-  sed "s/^version: [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/version: ${NEW_VERSION}/" "${f}" \
+  # Match optional +build_number suffix and preserve it
+  sed "s/^version:[[:space:]][[:space:]]*[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/version: ${NEW_VERSION}/" "${f}" \
     | atomic_write "${f}"
   report "${f}" "${old}" "${NEW_VERSION}"
 }
 
 update_admin_pkg() {
-  local f="${ADMIN_PKG}"
-  if [ ! -f "${f}" ]; then
-    printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
-  fi
-  local old
-  old="$(grep -E '^\s*"version"\s*:' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-  if [ "${old}" = "${NEW_VERSION}" ]; then
-    printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
-    return
-  fi
-  sed "s/^\(\s*\"version\"\s*:\s*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" "${f}" \
-    | atomic_write "${f}"
-  report "${f}" "${old}" "${NEW_VERSION}"
+  update_json_version "${ADMIN_PKG}"
 }
 
 update_admin_cliver() {
@@ -255,7 +310,11 @@ update_admin_cliver() {
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old
-  old="$(grep -E "^export const CLI_VERSION = '" "${f}" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" | head -1)"
+  old="$(extract_semver "${f}" "^export const CLI_VERSION = '")"
+  if [ -z "${old}" ]; then
+    printf 'ERROR: %s has no matching "export const CLI_VERSION = " line\n' "${f}" >&2
+    exit 1
+  fi
   if [ "${old}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
     return
@@ -271,24 +330,23 @@ update_admin_dockerfile() {
     printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
   fi
   local old_nself old_admin old_label
-  old_nself="$(grep -E '^ARG NSELF_VERSION=' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-  old_admin="$(grep -E '^ENV ADMIN_VERSION=' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-  old_label="$(grep -E '^LABEL org.opencontainers.image.version=' "${f}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  old_nself="$(extract_semver "${f}" '^ARG NSELF_VERSION=')"
+  old_admin="$(extract_semver "${f}" '^ENV ADMIN_VERSION=')"
+  old_label="$(extract_semver "${f}" '^LABEL org\.opencontainers\.image\.version=')"
 
   if [ "${old_nself}" = "${NEW_VERSION}" ] && [ "${old_admin}" = "${NEW_VERSION}" ] && [ "${old_label}" = "${NEW_VERSION}" ]; then
     printf '  SKIP  %s  (all three lines already %s)\n' "${f}" "${NEW_VERSION}"
     return
   fi
 
-  # Update all three lines in one pass
   sed \
     -e "s/^ARG NSELF_VERSION=[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/ARG NSELF_VERSION=${NEW_VERSION}/" \
     -e "s/^ENV ADMIN_VERSION=[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/ENV ADMIN_VERSION=${NEW_VERSION}/" \
     -e "s/^LABEL org\.opencontainers\.image\.version=\"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\"/LABEL org.opencontainers.image.version=\"${NEW_VERSION}\"/" \
     "${f}" | atomic_write "${f}"
-  report "${f} (ARG NSELF_VERSION)" "${old_nself}" "${NEW_VERSION}"
-  report "${f} (ENV ADMIN_VERSION)" "${old_admin}" "${NEW_VERSION}"
-  report "${f} (LABEL image.version)" "${old_label}" "${NEW_VERSION}"
+  report "${f} (ARG NSELF_VERSION)" "${old_nself:-?}" "${NEW_VERSION}"
+  report "${f} (ENV ADMIN_VERSION)" "${old_admin:-?}" "${NEW_VERSION}"
+  report "${f} (LABEL image.version)" "${old_label:-?}" "${NEW_VERSION}"
 }
 
 update_homebrew_formula() {
@@ -325,14 +383,13 @@ update_homebrew_formula() {
   printf '  SHA256: %s\n' "${sha256}"
 
   local old_ver
-  old_ver="$(grep -E '^\s*version\s+"' "${f}" | sed 's/.*"\(.*\)".*/\1/' | head -1)"
+  old_ver="$(grep -E '^[[:space:]]*version[[:space:]]+"' "${f}" | sed 's/.*"\(.*\)".*/\1/' | head -1)"
 
-  # Update url, sha256 comment, sha256 value, and version
   sed \
     -e "s|url \"https://github.com/nself-org/cli/archive/refs/tags/v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.tar\.gz\"|url \"https://github.com/nself-org/cli/archive/refs/tags/v${NEW_VERSION}.tar.gz\"|" \
     -e "s|# sha256 computed from https://github.com/nself-org/cli/archive/refs/tags/v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.tar\.gz|# sha256 computed from https://github.com/nself-org/cli/archive/refs/tags/v${NEW_VERSION}.tar.gz|" \
-    -e "s/^\(\s*sha256\s*\"\)[0-9a-f]*/\1${sha256}/" \
-    -e "s/^\(\s*version\s*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" \
+    -e "s/^\([[:space:]]*sha256[[:space:]]*\"\)[0-9a-f]*/\1${sha256}/" \
+    -e "s/^\([[:space:]]*version[[:space:]]*\"\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1${NEW_VERSION}/" \
     "${f}" | atomic_write "${f}"
   report "${f}" "${old_ver}" "${NEW_VERSION}"
 }
