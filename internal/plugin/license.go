@@ -249,7 +249,7 @@ func pruneExpiredCacheEntries(cachePath string, maxAge time.Duration) error {
 	}
 	defer f.Close()
 
-	machineKey := machineID()
+	hmacKey := loadHMACKeyOrFallback()
 	now := time.Now()
 	var kept []string
 
@@ -269,7 +269,7 @@ func pruneExpiredCacheEntries(cachePath string, maxAge time.Duration) error {
 		sig := line[lastPipe+1:]
 
 		// Drop tampered entries silently during pruning.
-		if !hmacVerify(data, sig, machineKey) {
+		if !hmacVerify(data, sig, hmacKey) {
 			continue
 		}
 
@@ -302,7 +302,9 @@ func pruneExpiredCacheEntries(cachePath string, maxAge time.Duration) error {
 // CacheLicense writes the validation result for a license key to a cache file
 // inside cacheDir. The cache format is: {data}|{hmac_hex}
 // where data is {key_prefix}|{status}|{timestamp} and hmac_hex is the
-// HMAC-SHA256 of data keyed by machineID().
+// HMAC-SHA256 of data keyed by the random 32-byte key persisted at
+// ~/.nself/license/.hmac-key (SIEGE V03-F02 fix — replaces observable-derived
+// machineID key).
 //
 // Before writing, it prunes any cache entries older than 30 days.
 func CacheLicense(key string, valid bool, cacheDir string) error {
@@ -323,7 +325,7 @@ func CacheLicense(key string, valid bool, cacheDir string) error {
 		status = "valid"
 	}
 	data := fmt.Sprintf("%s|%s|%d", prefix, status, time.Now().Unix())
-	sig := hmacSign(data, machineID())
+	sig := hmacSign(data, loadHMACKeyOrFallback())
 	line := data + "|" + sig + "\n"
 
 	return os.WriteFile(cachePath, []byte(line), 0600)
@@ -342,7 +344,7 @@ func checkLicenseCache(key string, cacheDir string) (valid bool, found bool) {
 	}
 	defer f.Close()
 
-	machineKey := machineID()
+	hmacKey := loadHMACKeyOrFallback()
 	prefix := keyPrefix(key)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -357,7 +359,7 @@ func checkLicenseCache(key string, cacheDir string) (valid bool, found bool) {
 		sig := line[lastPipe+1:]
 
 		// Verify HMAC before trusting anything in the entry.
-		if !hmacVerify(data, sig, machineKey) {
+		if !hmacVerify(data, sig, hmacKey) {
 			// Tampered or unsigned entry — nuke cache file.
 			f.Close()
 			os.Remove(cachePath)
@@ -400,7 +402,7 @@ func checkLicenseCacheOffline(key string, cacheDir string) (valid bool, found bo
 	}
 	defer f.Close()
 
-	machineKey := machineID()
+	hmacKey := loadHMACKeyOrFallback()
 	prefix := keyPrefix(key)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -415,7 +417,7 @@ func checkLicenseCacheOffline(key string, cacheDir string) (valid bool, found bo
 		sig := line[lastPipe+1:]
 
 		// Verify HMAC before trusting anything in the entry.
-		if !hmacVerify(data, sig, machineKey) {
+		if !hmacVerify(data, sig, hmacKey) {
 			f.Close()
 			os.Remove(cachePath)
 			return false, false
@@ -480,7 +482,7 @@ func NeedsRevalidation(key string, cacheDir string) bool {
 	sig := line[lastPipe+1:]
 
 	// Verify HMAC before trusting the timestamp.
-	if !hmacVerify(data, sig, machineID()) {
+	if !hmacVerify(data, sig, loadHMACKeyOrFallback()) {
 		return true
 	}
 
@@ -498,23 +500,38 @@ func NeedsRevalidation(key string, cacheDir string) bool {
 	return time.Since(time.Unix(ts, 0)) > revalidationInterval
 }
 
-// hmacSign returns the HMAC-SHA256 of data using key, encoded as a hex string.
-func hmacSign(data string, key string) string {
-	mac := hmac.New(sha256.New, []byte(key))
+// hmacSign returns the HMAC-SHA256 of data using key (raw bytes), encoded as a
+// hex string.
+func hmacSign(data string, key []byte) string {
+	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(data))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // hmacVerify checks that expectedHMAC matches the HMAC-SHA256 of data using
-// key. The comparison is timing-safe.
-func hmacVerify(data string, expectedHMAC string, key string) bool {
+// key (raw bytes). The comparison is timing-safe.
+func hmacVerify(data string, expectedHMAC string, key []byte) bool {
 	expected, err := hex.DecodeString(expectedHMAC)
 	if err != nil {
 		return false
 	}
-	mac := hmac.New(sha256.New, []byte(key))
+	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(data))
 	return hmac.Equal(mac.Sum(nil), expected)
+}
+
+// loadHMACKeyOrFallback returns the persisted random HMAC key. On any error it
+// falls back to a zero-length key, which causes all HMAC verifications to fail
+// and forces a remote re-validation. This is always safer than exposing the
+// observable-derived machineID as the HMAC key.
+func loadHMACKeyOrFallback() []byte {
+	key, err := loadHMACKey()
+	if err != nil {
+		// Return empty key — callers treat a failed HMAC as a cache miss and
+		// re-validate remotely, which is the correct fail-safe behavior.
+		return []byte{}
+	}
+	return key
 }
 
 // isOwnerKey returns true if the license key has the nself_owner_ prefix.

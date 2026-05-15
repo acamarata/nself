@@ -1,0 +1,118 @@
+name: Registry Performance Benchmark
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  registry-perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Build CLI
+        run: go build -o nself ./cmd/nself
+
+      - name: Load baseline metrics
+        id: baseline
+        run: |
+          if [ -f ".github/registry-perf-baseline.json" ]; then
+            echo "baseline=$(cat .github/registry-perf-baseline.json)" >> $GITHUB_OUTPUT
+          else
+            echo "baseline={}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run plugin search benchmark (p95 <100ms)
+        id: search
+        run: |
+          start=$(date +%s%N)
+          timeout 5 ./nself plugin search --json > /dev/null || true
+          end=$(date +%s%N)
+          ms=$(( (end - start) / 1000000 ))
+          echo "search_ms=$ms" >> $GITHUB_OUTPUT
+          echo "Plugin search: ${ms}ms"
+
+      - name: Run single plugin install benchmark (cold cache <30s)
+        id: single
+        run: |
+          start=$(date +%s%N)
+          timeout 60 ./nself plugin info ai --json > /dev/null || true
+          end=$(date +%s%N)
+          ms=$(( (end - start) / 1000000 ))
+          echo "single_ms=$ms" >> $GITHUB_OUTPUT
+          echo "Single plugin info: ${ms}ms"
+
+      - name: Run bundle install benchmark (13 plugins <60s)
+        id: bundle
+        run: |
+          start=$(date +%s%N)
+          timeout 120 ./nself plugin list --bundle nsentry --json > /dev/null || true
+          end=$(date +%s%N)
+          ms=$(( (end - start) / 1000000 ))
+          echo "bundle_ms=$ms" >> $GITHUB_OUTPUT
+          echo "Bundle list (13 plugins): ${ms}ms"
+
+      - name: Measure registry parse + index
+        id: parse
+        run: |
+          go test -bench=BenchmarkRegistryParse -benchtime=10x ./internal/plugin -run=^$ 2>&1 | tee bench.txt
+          ns_per_op=$(grep "BenchmarkRegistryParse" bench.txt | awk '{print $3}' | sed 's/ns\/op//')
+          ms=$(echo "scale=2; $ns_per_op / 1000000" | bc)
+          echo "parse_ms=$ms" >> $GITHUB_OUTPUT
+          echo "Registry parse: ${ms}ms"
+
+      - name: Check regression thresholds
+        env:
+          SEARCH_MS: ${{ steps.search.outputs.search_ms }}
+          SINGLE_MS: ${{ steps.single.outputs.single_ms }}
+          BUNDLE_MS: ${{ steps.bundle.outputs.bundle_ms }}
+          PARSE_MS: ${{ steps.parse.outputs.parse_ms }}
+        run: |
+          echo "=== Registry Performance Results ==="
+          echo "search_ms: $SEARCH_MS (target: <100ms, threshold: <120ms)"
+          echo "single_ms: $SINGLE_MS (target: <30s, threshold: <36s)"
+          echo "bundle_ms: $BUNDLE_MS (target: <60s, threshold: <72s)"
+          echo "parse_ms: $PARSE_MS (target: <50ms, threshold: <60ms)"
+
+          # Fail if >20% regression from targets
+          if [ "$SEARCH_MS" -gt 120 ]; then
+            echo "❌ search regression: ${SEARCH_MS}ms > 120ms" && exit 1
+          fi
+          if [ "$SINGLE_MS" -gt 36 ]; then
+            echo "❌ single install regression: ${SINGLE_MS}ms > 36s" && exit 1
+          fi
+          if [ "$BUNDLE_MS" -gt 72 ]; then
+            echo "❌ bundle install regression: ${BUNDLE_MS}ms > 72s" && exit 1
+          fi
+          if [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
+            echo "❌ registry parse regression: ${PARSE_MS}ms > 60ms" && exit 1
+          fi
+          echo "✅ All perf targets passed"
+
+      - name: Update baseline
+        if: success()
+        run: |
+          cat > .github/registry-perf-baseline.json <<EOF
+          {
+            "search_ms": ${{ steps.search.outputs.search_ms }},
+            "single_ms": ${{ steps.single.outputs.single_ms }},
+            "bundle_ms": ${{ steps.bundle.outputs.bundle_ms }},
+            "parse_ms": ${{ steps.parse.outputs.parse_ms }},
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          git add .github/registry-perf-baseline.json
+          git -c user.email="ci@nself.org" -c user.name="nself-ci" commit -m "perf: update registry baseline" || true
+          git push
+
+      - name: Alert on regression
+        if: failure()
+        run: |
+          echo "⚠️ Registry performance regression detected in nightly benchmark"
+          echo "Targets: search <100ms, single <30s, bundle <60s, parse <50ms"
+          echo "Review baseline at .github/registry-perf-baseline.json"

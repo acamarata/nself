@@ -1,0 +1,42 @@
+# branch-protection.yaml
+#
+# Canonical branch-protection baseline for every nself-org repo.
+# Single source of truth — never hand-edit GitHub branch protection.
+#
+# Applied by cli/scripts/branch-protection-toggle.sh --on
+# Authority: P101 S8.T01-B (V8-02)
+#
+# Required status checks: every PR must pass these before merge.
+# strict=true means the branch must be up-to-date with main.
+
+required_status_checks:
+  strict: true
+  contexts:
+    - "Clean Working Tree"
+    - "nself-first-check"
+    - "doc-sync"
+
+enforce_admins: true
+
+required_pull_request_reviews:
+  required_approving_review_count: 1
+  dismiss_stale_reviews: true
+  require_code_owner_reviews: false
+
+# null = no restrictions on who can push (any collaborator with write access)
+restrictions: null
+
+allow_force_pushes: false
+allow_deletions: false
+required_linear_history: false
+required_conversation_resolution: true
+
+# Per-repo overrides — repos that ship without one of the standard checks.
+# Use sparingly; document reason in inline comment.
+repos:
+  # plugins-pro: private repo, doc-sync workflow not yet wired
+  # nself-org/plugins-pro:
+  #   required_status_checks:
+  #     contexts:
+  #       - "Clean Working Tree"
+  #       - "nself-first-check"

@@ -4,7 +4,7 @@ package version
 //
 //	go build -ldflags "-X nself/internal/version.Version=1.0.0 -X nself/internal/version.Commit=abc123 -X nself/internal/version.BuildDate=2026-01-01"
 var (
-	Version   string = "1.1.1"
+	Version   string = "1.1.2"
 	Commit    string = "unknown"
 	BuildDate string = "unknown"
 )

@@ -193,7 +193,7 @@ nself doctor --deep --only security
 $ nself doctor --install-check
 
 Onboarding Funnel Check
-  Stage 1 — Install       v1.0.9 (darwin/arm64)
+  Stage 1 — Install       v1.1.1 (darwin/arm64)
   Stage 2 — Activation    2 projects initialized
   Stage 3 — First-use     first start 3 days ago
   Stage 4 — First-plugin  no plugins installed

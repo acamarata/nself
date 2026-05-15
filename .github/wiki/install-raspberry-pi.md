@@ -30,7 +30,7 @@ docker compose version
 **64-bit (arm64, Raspberry Pi OS 64-bit, Pi 4/5):**
 
 ```bash
-curl -L https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-arm64.tar.gz -o nself.tar.gz
+curl -L https://github.com/nself-org/cli/releases/download/v1.1.1/nself-linux-arm64.tar.gz -o nself.tar.gz
 tar -xzf nself.tar.gz
 sudo mv nself-linux-arm64 /usr/local/bin/nself
 sudo chmod +x /usr/local/bin/nself
@@ -39,7 +39,7 @@ sudo chmod +x /usr/local/bin/nself
 **32-bit (armv7, Raspberry Pi OS 32-bit):**
 
 ```bash
-curl -L https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-arm.tar.gz -o nself.tar.gz
+curl -L https://github.com/nself-org/cli/releases/download/v1.1.1/nself-linux-arm.tar.gz -o nself.tar.gz
 tar -xzf nself.tar.gz
 sudo mv nself-linux-arm /usr/local/bin/nself
 sudo chmod +x /usr/local/bin/nself
@@ -49,7 +49,7 @@ sudo chmod +x /usr/local/bin/nself
 
 ```bash
 nself version
-# nself v1.0.9
+# nself v1.1.1
 
 nself doctor
 ```

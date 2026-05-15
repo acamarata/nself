@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -223,9 +225,20 @@ func (c *CacheEntry) VerifySignature() bool {
 
 // signablePayload produces the deterministic byte sequence that was signed by
 // the server. This must match the server's signing format exactly.
+//
+// Canonical format: key_hash|tier|fetched_at|expires_at|plugins_allowed_sorted_joined
+//
+// PluginsAllowed is sorted alphabetically and joined with commas before being
+// included in the payload. This prevents an attacker with home-directory write
+// access from injecting arbitrary plugin names into the cached JSON while the
+// Ed25519 signature still passes (SIEGE V03-F01).
 func (c *CacheEntry) signablePayload() []byte {
-	// Canonical format: key_hash|tier|fetched_at|expires_at
-	return []byte(fmt.Sprintf("%s|%s|%d|%d", c.KeyHash, c.Tier, c.FetchedAt, c.ExpiresAt))
+	sorted := make([]string, len(c.PluginsAllowed))
+	copy(sorted, c.PluginsAllowed)
+	sort.Strings(sorted)
+	pluginsField := strings.Join(sorted, ",")
+	return []byte(fmt.Sprintf("%s|%s|%d|%d|%s",
+		c.KeyHash, c.Tier, c.FetchedAt, c.ExpiresAt, pluginsField))
 }
 
 // PublicKeyEntry holds a versioned Ed25519 public key.

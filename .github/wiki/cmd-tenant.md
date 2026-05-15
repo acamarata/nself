@@ -1,6 +1,6 @@
 # nself tenant
 
-> **PREVIEW (v1.0.9):** tenant CLI works at the data and RLS layer. Provisioning automation, Stripe billing charges, license revocation on destroy, and runtime suspension are PLANNED for v1.1.0+. Do NOT use for paying-customer onboarding in v1.0.9 production deployments.
+> **PREVIEW (v1.1.1):** tenant CLI works at the data and RLS layer. Provisioning automation, Stripe billing charges, license revocation on destroy, and runtime suspension are still being hardened. Do NOT use for paying-customer onboarding in production deployments without manual verification of the full lifecycle.
 
 > Tenant management: create, upgrade, suspend, destroy, audit.
 

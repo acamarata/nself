@@ -155,17 +155,22 @@ else
   log_err "cli/.github/VERSION" "(missing)" "${REFERENCE_VERSION:-?}"
 fi
 
-# 3. cli/sdk/go/doc.go
+# 3-6. SDK files — WARN-ONLY (independent lifecycle from CLI per P102 W18 strategic decision)
+#       SDKs under cli/sdk/{go,ts,py,flutter} ship at their own semver cadence
+#       (currently v2.0.0). They are NOT lockstep-bound to CLI version. A mismatch
+#       logs a WARN, never blocks release. See PPI § SDK lifecycle.
+
+# 3. cli/sdk/go/doc.go (warn-only)
 FILE3="${CLI_ROOT}/sdk/go/doc.go"
 if [ -f "${FILE3}" ]; then
   V3=$(grep -E 'const Version\s*=' "${FILE3}" \
         | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
-  check_version "cli/sdk/go/doc.go" "${V3}" 1
+  check_version "cli/sdk/go/doc.go" "${V3}" 0
 else
-  log_err "cli/sdk/go/doc.go" "(missing)" "${REFERENCE_VERSION:-?}"
+  log_warn "cli/sdk/go/doc.go" "(missing)"
 fi
 
-# 4. cli/sdk/ts/package.json
+# 4. cli/sdk/ts/package.json (warn-only)
 FILE4="${CLI_ROOT}/sdk/ts/package.json"
 if [ -f "${FILE4}" ]; then
   if command -v python3 >/dev/null 2>&1; then
@@ -174,29 +179,29 @@ if [ -f "${FILE4}" ]; then
     V4=$(grep -E '"version"\s*:' "${FILE4}" \
           | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
   fi
-  check_version "cli/sdk/ts/package.json" "${V4}" 1
+  check_version "cli/sdk/ts/package.json" "${V4}" 0
 else
-  log_err "cli/sdk/ts/package.json" "(missing)" "${REFERENCE_VERSION:-?}"
+  log_warn "cli/sdk/ts/package.json" "(missing)"
 fi
 
-# 5. cli/sdk/py/pyproject.toml
+# 5. cli/sdk/py/pyproject.toml (warn-only)
 FILE5="${CLI_ROOT}/sdk/py/pyproject.toml"
 if [ -f "${FILE5}" ]; then
   V5=$(grep -E '^version\s*=' "${FILE5}" \
         | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
-  check_version "cli/sdk/py/pyproject.toml" "${V5}" 1
+  check_version "cli/sdk/py/pyproject.toml" "${V5}" 0
 else
-  log_err "cli/sdk/py/pyproject.toml" "(missing)" "${REFERENCE_VERSION:-?}"
+  log_warn "cli/sdk/py/pyproject.toml" "(missing)"
 fi
 
-# 6. cli/sdk/flutter/pubspec.yaml
+# 6. cli/sdk/flutter/pubspec.yaml (warn-only)
 FILE6="${CLI_ROOT}/sdk/flutter/pubspec.yaml"
 if [ -f "${FILE6}" ]; then
   V6=$(grep -E '^version:' "${FILE6}" \
         | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-  check_version "cli/sdk/flutter/pubspec.yaml" "${V6}" 1
+  check_version "cli/sdk/flutter/pubspec.yaml" "${V6}" 0
 else
-  log_err "cli/sdk/flutter/pubspec.yaml" "(missing)" "${REFERENCE_VERSION:-?}"
+  log_warn "cli/sdk/flutter/pubspec.yaml" "(missing)"
 fi
 
 # 7. admin/package.json

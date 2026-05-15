@@ -328,18 +328,26 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	defer os.Remove(archivePath)
 
 	// Step 5: Verify checksum before extraction.
+	// For stable plugins a missing checksum is a hard error (V06-F2).
+	// For non-stable plugins an absent checksum emits a warning and continues.
 	if manifest.Checksum != "" {
-		if err := verifyChecksum(archivePath, manifest.Checksum); err != nil {
+		if err := verifyChecksum(archivePath, manifest.Checksum, manifest.PublishStatus); err != nil {
 			os.Remove(archivePath)
 			return fmt.Errorf("checksum verification for plugin %q: %w", name, err)
 		}
 	} else {
+		if err := verifyChecksum(archivePath, "", manifest.PublishStatus); err != nil {
+			// stable plugin — hard fail returned by verifyChecksum
+			os.Remove(archivePath)
+			return fmt.Errorf("checksum verification for plugin %q: %w", name, err)
+		}
 		fmt.Fprintf(os.Stderr, "warning: no checksum in registry for plugin %q, skipping verification\n", name)
 	}
 
 	// Step 5b: Verify Ed25519 signature (T09 — Security-Always-Free).
 	// The signature is computed over the raw SHA-256 digest of the tarball.
 	// Public key is pinned in the registry; never fetched at verify time (TOCTOU).
+	// For stable plugins a missing signature is a hard error (V06-F2).
 	// Skip requires BOTH NSELF_LICENSE_SKIP_VERIFY=1 AND NSELF_LICENSE_SKIP_VERIFY_FORCE=1.
 	// Either var alone is insufficient — standalone skip is not permitted (matches license/validate.go).
 	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" {
@@ -349,7 +357,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 		fmt.Fprintf(os.Stderr, "WARNING: plugin signature verification skipped (NSELF_LICENSE_SKIP_VERIFY=1 + FORCE)\n")
 	} else {
-		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature); err != nil {
+		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature, manifest.PublishStatus); err != nil {
 			os.Remove(archivePath)
 			return fmt.Errorf("signature verification for plugin %q: %w", name, err)
 		}
@@ -753,7 +761,22 @@ func IsDisabled(name, pluginDir string) bool {
 
 // verifyChecksum computes the SHA256 hash of the file at filePath and compares
 // it to expectedHash (hex-encoded). Returns an error if the hashes differ.
-func verifyChecksum(filePath string, expectedHash string) error {
+//
+// publishStatus is the plugin's lifecycle status from the registry
+// ("stable", "beta", "alpha", "experimental", etc.). When publishStatus is
+// "stable" and expectedHash is empty, the function returns
+// errs.ErrPluginMissingChecksum — install is refused. For non-stable plugins
+// an empty expectedHash is permitted (a warning is emitted to stderr).
+func verifyChecksum(filePath string, expectedHash string, publishStatus string) error {
+	if expectedHash == "" {
+		if publishStatus == "stable" {
+			return fmt.Errorf("plugin %q is missing required checksum for stable publishStatus — install refused: %w",
+				filepath.Base(filepath.Dir(filePath)), errs.ErrPluginMissingChecksum)
+		}
+		// Non-stable: permissive, warning only (handled by caller).
+		return nil
+	}
+
 	f, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("opening file for checksum: %w", err)
@@ -780,12 +803,20 @@ func verifyChecksum(filePath string, expectedHash string) error {
 // The signed message is the raw 32-byte SHA-256 digest of the tarball —
 // consistent with how release tarballs are signed on the publisher side.
 //
-// If authorPublicKeyHex or signatureHex is empty the function returns nil
-// (verification is skipped with a warning — callers should already warn the
-// user via the checksum warning path).
-func verifyPluginSignature(archivePath, authorPublicKeyHex, signatureHex string) error {
+// publishStatus is the plugin's lifecycle status from the registry
+// ("stable", "beta", "alpha", "experimental", etc.). When publishStatus is
+// "stable" and either authorPublicKeyHex or signatureHex is empty, the
+// function returns errs.ErrPluginUnsigned — install is refused. For
+// non-stable plugins an empty key or signature skips verification with a
+// warning (development workflow).
+func verifyPluginSignature(archivePath, authorPublicKeyHex, signatureHex, publishStatus string) error {
 	if authorPublicKeyHex == "" || signatureHex == "" {
-		return nil // no signature to verify
+		if publishStatus == "stable" {
+			return fmt.Errorf("plugin is missing required signature for stable publishStatus — install refused: %w",
+				errs.ErrPluginUnsigned)
+		}
+		// Non-stable: permissive, skip verification (development workflow).
+		return nil
 	}
 
 	// Decode the hex-encoded Ed25519 public key.

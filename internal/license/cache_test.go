@@ -1,6 +1,8 @@
 package license
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -122,5 +124,77 @@ func TestWriteCache_AtomicOverwritePreservesContent(t *testing.T) {
 	}
 	if got.Tier != "enterprise" || got.KeyHash != HashKey("k2") {
 		t.Errorf("overwrite did not take effect: got %+v", got)
+	}
+}
+
+// newTestKeyPair generates a fresh Ed25519 keypair for use in signature tests.
+func newTestKeyPair(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("ed25519.GenerateKey: %v", err)
+	}
+	return pub, priv
+}
+
+// signEntry signs the entry's canonical payload with the given private key and
+// stores the hex-encoded signature + keyID=1 on the entry.
+func signEntry(t *testing.T, entry *CacheEntry, priv ed25519.PrivateKey) {
+	t.Helper()
+	sig := ed25519.Sign(priv, entry.signablePayload())
+	entry.Signature = hex.EncodeToString(sig)
+	entry.SignatureKeyID = 1
+}
+
+// TestSignablePayload_MutatedPluginsAllowed_FailsVerification verifies that
+// mutating PluginsAllowed after signing causes VerifySignature to return false.
+// This is the regression test for SIEGE V03-F01: previously PluginsAllowed was
+// excluded from the signed payload, allowing injection of arbitrary plugin
+// names without invalidating the Ed25519 signature.
+func TestSignablePayload_MutatedPluginsAllowed_FailsVerification(t *testing.T) {
+	pub, priv := newTestKeyPair(t)
+	t.Setenv("LICENSE_PUBLIC_KEY_OVERRIDE", hex.EncodeToString(pub))
+
+	entry := &CacheEntry{
+		KeyHash:        HashKey("nself_pro_testkey_v03f01"),
+		Tier:           "pro",
+		PluginsAllowed: []string{"ai", "claw", "notify"},
+		FetchedAt:      1_700_000_000,
+		ExpiresAt:      1_700_086_400,
+	}
+	signEntry(t, entry, priv)
+
+	// Sanity: valid entry must verify.
+	if !entry.VerifySignature() {
+		t.Fatal("expected valid signature before mutation; got false")
+	}
+
+	// Inject an extra plugin — simulates an attacker editing ~/.cache/nself/license.json.
+	entry.PluginsAllowed = append(entry.PluginsAllowed, "media-processing")
+
+	// After mutation the signature must NOT verify.
+	if entry.VerifySignature() {
+		t.Error("SIEGE V03-F01: VerifySignature returned true after PluginsAllowed mutation — payload does not cover plugins_allowed")
+	}
+}
+
+// TestSignablePayload_ValidCacheVerifies confirms that a correctly signed cache
+// entry still passes VerifySignature after the plugins_allowed field is
+// included in the signed payload (no regression on the happy path).
+func TestSignablePayload_ValidCacheVerifies(t *testing.T) {
+	pub, priv := newTestKeyPair(t)
+	t.Setenv("LICENSE_PUBLIC_KEY_OVERRIDE", hex.EncodeToString(pub))
+
+	entry := &CacheEntry{
+		KeyHash:        HashKey("nself_pro_happypath_key"),
+		Tier:           "enterprise",
+		PluginsAllowed: []string{"voice", "google", "ai", "mcp"},
+		FetchedAt:      1_700_100_000,
+		ExpiresAt:      1_700_186_400,
+	}
+	signEntry(t, entry, priv)
+
+	if !entry.VerifySignature() {
+		t.Error("VerifySignature returned false for a correctly signed entry — regression in happy path")
 	}
 }

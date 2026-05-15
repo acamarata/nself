@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -131,6 +132,8 @@ func init() {
 	pluginInstallCmd.Flags().Bool("preview", false, "Preview the dependency tree without installing")
 	pluginInstallCmd.Flags().Bool("with-optional", false, "Include optional dependencies in --preview output")
 	pluginInstallCmd.Flags().Bool("skip-sbom-check", false, "Skip SBOM verification (air-gapped installs only — sets NSELF_SKIP_SBOM_CHECK=1)") // S2.T12
+	pluginInstallCmd.Flags().Bool("dry-run", false, "Show what would be installed without making changes")
+	pluginInstallCmd.Flags().Bool("show-graph", false, "Show dependency graph with topological sort order")
 
 	// Flags on update.
 	pluginUpdateCmd.Flags().Bool("allow-eol", false, "Allow updating to/from an EOL plugin (not recommended)") // S58-T03
@@ -255,7 +258,9 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	allowEOL, _ := cmd.Flags().GetBool("allow-eol")       // S58-T03
 	skipSBOM, _ := cmd.Flags().GetBool("skip-sbom-check") // S2.T12
 	preview, _ := cmd.Flags().GetBool("preview")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	withOptional, _ := cmd.Flags().GetBool("with-optional")
+	showGraph, _ := cmd.Flags().GetBool("show-graph")
 
 	// S2.T12: --skip-sbom-check sets the env var read by plugin.installLocked.
 	// Air-gapped installs only — emit a prominent warning when used.
@@ -292,6 +297,16 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	// --preview: resolve and print the dependency tree, then exit without installing.
 	if preview {
 		return runPluginInstallPreview(ctx, args, registryURL, withOptional)
+	}
+
+	// --show-graph: resolve deps, detect cycles, print topo-sorted DAG, exit without installing.
+	if showGraph {
+		return runPluginInstallShowGraph(ctx, args, registryURL)
+	}
+
+	// --dry-run: show what would be installed and checkpoint without making changes.
+	if dryRun {
+		return runPluginInstallDryRun(ctx, args, registryURL)
 	}
 
 	cfg, err := loadConfig()
@@ -353,6 +368,58 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 
 	if len(failures) > 0 {
 		return fmt.Errorf("failed to install: %s", strings.Join(failures, ", "))
+	}
+	return nil
+}
+
+// runPluginInstallDryRun simulates bundle installation and shows what would change
+// without making any modifications. Resolves deps, checks licenses, reports changes.
+func runPluginInstallDryRun(ctx context.Context, pluginNames []string, registryURL string) error {
+	fmt.Fprintf(os.Stderr, "[DRY RUN] Simulating bundle install for: %s\n", strings.Join(pluginNames, ", "))
+
+	cacheDir := plugin.DefaultCacheDir()
+	reg, err := plugin.FetchRegistry(ctx, registryURL, cacheDir)
+	if err != nil {
+		return fmt.Errorf("fetching registry: %w", err)
+	}
+
+	var toInstall []string
+	seen := make(map[string]bool)
+
+	// Collect all plugins + dependencies
+	var collect func(string) error
+	collect = func(name string) error {
+		if seen[name] {
+			return nil
+		}
+		seen[name] = true
+
+		m, found := plugin.FindPluginByName(reg, name)
+		if !found {
+			return fmt.Errorf("plugin %q not found", name)
+		}
+
+		// Recurse on dependencies
+		for _, dep := range m.Dependencies {
+			if err := collect(dep); err != nil {
+				return err
+			}
+		}
+
+		toInstall = append(toInstall, name)
+		return nil
+	}
+
+	for _, name := range pluginNames {
+		if err := collect(name); err != nil {
+			return err
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "[DRY RUN] Would install %d plugin(s):\n", len(toInstall))
+	for _, name := range toInstall {
+		m, _ := plugin.FindPluginByName(reg, name)
+		fmt.Fprintf(os.Stderr, "  • %s v%s\n", name, m.Version)
 	}
 	return nil
 }
@@ -705,6 +772,140 @@ func runPluginStatus(cmd *cobra.Command, args []string) error {
 		} else {
 			fmt.Printf("%-20s %s\n", st.Name, st.State)
 		}
+	}
+
+	return nil
+}
+
+// runPluginInstallShowGraph resolves plugin dependencies, detects cycles,
+// builds a DAG, topologically sorts it, and prints the install order with depth.
+// S3.T14: --show-graph flag for `nself plugin install --bundle`.
+func runPluginInstallShowGraph(ctx context.Context, pluginNames []string, registryURL string) error {
+	cacheDir := os.Getenv("NSELF_PLUGIN_CACHE")
+	if cacheDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			cacheDir = "/tmp/.nself/cache/plugins"
+		} else {
+			cacheDir = home + "/.nself/cache/plugins"
+		}
+	}
+
+	reg, err := plugin.FetchRegistry(ctx, registryURL, cacheDir)
+	if err != nil {
+		return fmt.Errorf("fetching registry: %w", err)
+	}
+
+	// Build manifest lookup
+	byName := make(map[string]*plugin.PluginManifest, len(reg.Plugins))
+	for i := range reg.Plugins {
+		byName[strings.ToLower(reg.Plugins[i].Name)] = &reg.Plugins[i]
+	}
+
+	// Collect all plugins + deps via DFS, detect cycles
+	depGraph := make(map[string][]string)
+	visited := make(map[string]bool)
+	var visited_stack []string
+
+	var collectAll func(string) error
+	collectAll = func(name string) error {
+		lname := strings.ToLower(name)
+		if visited[lname] {
+			return nil
+		}
+
+		// Check for cycle: is lname in the current recursion stack?
+		for _, v := range visited_stack {
+			if v == lname {
+				return fmt.Errorf("dependency cycle detected: %s -> ... -> %s", name, name)
+			}
+		}
+
+		visited_stack = append(visited_stack, lname)
+		defer func() { visited_stack = visited_stack[:len(visited_stack)-1] }()
+
+		m, found := byName[lname]
+		if !found {
+			return fmt.Errorf("plugin %q not found", name)
+		}
+
+		depGraph[lname] = m.Dependencies
+		for _, dep := range m.Dependencies {
+			if err := collectAll(dep); err != nil {
+				return err
+			}
+		}
+
+		visited[lname] = true
+		return nil
+	}
+
+	// Collect from all requested plugins
+	for _, name := range pluginNames {
+		if err := collectAll(name); err != nil {
+			return err
+		}
+	}
+
+	// Topological sort (Kahn's algorithm)
+	inDeg := make(map[string]int)
+	for node := range depGraph {
+		if inDeg[node] == 0 {
+			inDeg[node] = 0
+		}
+	}
+	for node := range depGraph {
+		for _, dep := range depGraph[node] {
+			inDeg[dep]++
+		}
+	}
+
+	queue := []string{}
+	for node, deg := range inDeg {
+		if deg == 0 {
+			queue = append(queue, node)
+		}
+	}
+	sort.Strings(queue)
+
+	var topoOrder []string
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+		topoOrder = append(topoOrder, node)
+
+		neighbors := depGraph[node]
+		sort.Strings(neighbors)
+		for _, neighbor := range neighbors {
+			inDeg[neighbor]--
+			if inDeg[neighbor] == 0 {
+				queue = append(queue, neighbor)
+				sort.Strings(queue)
+			}
+		}
+	}
+
+	// Print install order with depth
+	depth := make(map[string]int)
+	for _, node := range topoOrder {
+		maxDepth := 0
+		for _, dep := range depGraph[node] {
+			if depth[dep] > maxDepth {
+				maxDepth = depth[dep]
+			}
+		}
+		depth[node] = maxDepth + 1
+	}
+
+	fmt.Println("Install order (topologically sorted):")
+	for _, name := range topoOrder {
+		indent := strings.Repeat("  ", depth[name]-1)
+		deps := depGraph[name]
+		depStr := ""
+		if len(deps) > 0 {
+			depStr = fmt.Sprintf(" → %s", strings.Join(deps, ", "))
+		}
+		fmt.Printf("%s├─ %s (depth %d)%s\n", indent, name, depth[name], depStr)
 	}
 
 	return nil

@@ -28,7 +28,7 @@ priority when both are given. The three supported values are `local`, `staging`,
 
 When `NSELF_DEPLOY_HOST_STAGING` or `NSELF_DEPLOY_HOST_PROD` is set, the CLI rsyncs the compose
 file and env to the remote host, pulls updated images, then runs the rolling restart via SSH.
-When no host is configured, the deploy runs on the current host (the v1.0.9 single-region model).
+When no host is configured, the deploy runs on the current host (single-region model).
 
 Targets accept both short and long forms:
 
@@ -42,7 +42,7 @@ Targets accept both short and long forms:
 
 | Strategy | Status | Behavior |
 |---|---|---|
-| `rolling` | **Default (v1.0.9)** | Per-service sequenced restart with health-gating. Each service waits up to 60s for `service_healthy` before the next restarts. |
+| `rolling` | **Default (v1.1.1)** | Per-service sequenced restart with health-gating. Each service waits up to 60s for `service_healthy` before the next restarts. |
 | `blue-green / canary` | **Available via `--canary N` (Y17)** | Zero-downtime: green containers run alongside blue, Nginx shifts N% traffic to green during soak, then promotes to 100%. Requires `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true`. |
 | `preview` | Not yet implemented | Falls back to rolling with an explicit warning. |
 
@@ -315,12 +315,12 @@ a separate protocol.
 | `NSELF_GREEN_PORT_OFFSET` | `100` | Port offset for green containers |
 | `NSELF_DEPLOY_ENV` | `production` | Deploy target environment set by `nself deploy` after resolving `--env` / positional argument. Values: `local`, `staging`, `production`. Exposed for subprocesses and plugins. |
 
-When no host is configured, the CLI deploys to the current host. This is the v1.0.9
-single-region model. Multi-region is deferred to v1.1.0.
+When no host is configured, the CLI deploys to the current host. This is the
+single-region model. Multi-region orchestration is available via the dedicated `nself region` command (`list`, `add`, `status`, `promote`).
 
 ## Maintenance Banner
 
-`--maintenance-banner` is deferred to v1.1.0 (DEP-07). To show a maintenance page manually,
+`--maintenance-banner` is deferred to a future release (DEP-07). To show a maintenance page manually,
 configure an nginx static page via `nginx/conf.d/`.
 
 ## Safety

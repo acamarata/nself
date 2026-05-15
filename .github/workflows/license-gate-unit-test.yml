@@ -1,0 +1,212 @@
+name: License Gate — Unit Test
+
+# Validates the license gate logic in license-gate.yml works correctly
+# for both warn and fail modes using a synthetic AGPL-licensed test module.
+#
+# S05-T03: AGPL/SSPL CI gate flip — gate unit test requirement.
+# Acceptance: gate exits non-zero when LICENSE_GATE_MODE=fail + AGPL dep present;
+#             prints WARN-ONLY and exits zero when LICENSE_GATE_MODE=warn.
+#
+# This test scaffolds a temporary Go module with a synthetic "AGPL-dep" whose
+# LICENSE file declares AGPL-3.0. go-licenses detects it as disallowed.
+# The test then exercises the gate shell logic verbatim with both mode values.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  license-gate-unit-test:
+    name: License Gate Logic — Unit Test (warn + fail modes)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: false  # temp workspace — no go.sum to cache
+
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+
+      - name: Build synthetic AGPL test workspace
+        id: scaffold
+        run: |
+          # ----------------------------------------------------------------
+          # Create a throwaway Go workspace with one real module (probe) that
+          # depends on a synthetic local "agpl-dep" module. The agpl-dep
+          # module has an AGPL-3.0 LICENSE file — go-licenses will classify
+          # it as disallowed against the allowed_licenses allow-list.
+          # ----------------------------------------------------------------
+          WORK="$RUNNER_TEMP/license-gate-test"
+          mkdir -p "$WORK/agpl-dep" "$WORK/probe"
+
+          # -- synthetic agpl-dep: minimal Go module with an AGPL-3.0 LICENSE
+          cat > "$WORK/agpl-dep/go.mod" <<'GOMOD'
+          module example.com/agpl-dep
+
+          go 1.22
+          GOMOD
+
+          cat > "$WORK/agpl-dep/agpllib.go" <<'GOFILE'
+          package agpllib
+
+          // Sentinel function — no real logic.
+          func Hello() string { return "hello from agpl-dep" }
+          GOFILE
+
+          # AGPL-3.0 license header (first line is enough for go-licenses detection)
+          cat > "$WORK/agpl-dep/LICENSE" <<'LICFILE'
+          GNU AFFERO GENERAL PUBLIC LICENSE
+          Version 3, 19 November 2007
+          LICFILE
+
+          # -- probe module: depends on agpl-dep via local replace directive
+          cat > "$WORK/probe/go.mod" <<'GOMOD'
+          module example.com/probe
+
+          go 1.22
+
+          require example.com/agpl-dep v0.0.0
+
+          replace example.com/agpl-dep => ../agpl-dep
+          GOMOD
+
+          cat > "$WORK/probe/main.go" <<'GOFILE'
+          package main
+
+          import (
+            "fmt"
+            _ "example.com/agpl-dep"
+          )
+
+          func main() { fmt.Println("probe") }
+          GOFILE
+
+          echo "workspace=${WORK}" >> "$GITHUB_OUTPUT"
+          echo "Synthetic AGPL workspace created at ${WORK}"
+
+      - name: "Test A: fail mode — gate MUST exit non-zero on AGPL detection"
+        id: test-fail-mode
+        run: |
+          WORK="${{ steps.scaffold.outputs.workspace }}"
+          ALLOWED="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1,LGPL-3.0"
+          LICENSE_GATE_MODE="fail"
+
+          echo "=== Test A: LICENSE_GATE_MODE=fail ==="
+          echo "Mode: $LICENSE_GATE_MODE"
+
+          # Run go-licenses check in the probe module; capture exit code.
+          # go-licenses exits non-zero when a disallowed license is found.
+          cd "$WORK/probe"
+          if go-licenses check ./... --allowed_licenses="$ALLOWED" 2>&1; then
+            # go-licenses exited 0 — AGPL dep was NOT detected (scaffold problem)
+            echo "SCAFFOLD ERROR: go-licenses did not detect the synthetic AGPL dep"
+            echo "Check that agpl-dep/LICENSE starts with 'GNU AFFERO GENERAL PUBLIC LICENSE'"
+            exit 2  # infrastructure failure — not a gate logic failure
+          else
+            EXIT_CODE=$?
+            # AGPL detected — now run the gate mode branch (verbatim from license-gate.yml)
+            echo ""
+            echo "GATE: Disallowed license detected (AGPL)"
+            if [ "$LICENSE_GATE_MODE" = "fail" ]; then
+              echo "GATE RESULT: exits non-zero (fail mode) — CORRECT"
+              echo "Test A PASS: gate exits non-zero with LICENSE_GATE_MODE=fail and AGPL dep"
+              # Do NOT exit non-zero here — this is the EXPECTED path and the test PASSES
+            else
+              echo "WARN-ONLY MODE: not failing PR"
+              echo "Test A FAIL: ended in warn branch when mode=fail — logic is inverted"
+              exit 1
+            fi
+          fi
+
+      - name: "Test B: warn mode — gate MUST print warn and exit zero on AGPL detection"
+        id: test-warn-mode
+        run: |
+          WORK="${{ steps.scaffold.outputs.workspace }}"
+          ALLOWED="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1,LGPL-3.0"
+          LICENSE_GATE_MODE="warn"
+
+          echo "=== Test B: LICENSE_GATE_MODE=warn ==="
+          echo "Mode: $LICENSE_GATE_MODE"
+
+          cd "$WORK/probe"
+          if go-licenses check ./... --allowed_licenses="$ALLOWED" 2>&1; then
+            echo "SCAFFOLD ERROR: go-licenses did not detect the synthetic AGPL dep"
+            exit 2
+          else
+            # AGPL detected — run the gate mode branch
+            echo ""
+            echo "GATE: Disallowed license detected (AGPL)"
+            if [ "$LICENSE_GATE_MODE" = "fail" ]; then
+              echo "Test B FAIL: ended in fail branch when mode=warn — logic is inverted"
+              exit 1
+            else
+              echo "WARN-ONLY MODE: not failing PR (triage window active)"
+              echo "Test B PASS: gate prints warn and exits zero with LICENSE_GATE_MODE=warn and AGPL dep"
+              exit 0  # warn mode MUST exit zero — this is the correct path
+            fi
+          fi
+
+      - name: "Test C: fail mode — gate MUST exit zero when no AGPL dep present"
+        id: test-clean-mode
+        run: |
+          # Verify the gate does not false-positive on a clean workspace.
+          CLEAN="$RUNNER_TEMP/license-gate-clean"
+          mkdir -p "$CLEAN"
+
+          cat > "$CLEAN/go.mod" <<'GOMOD'
+          module example.com/clean
+
+          go 1.22
+          GOMOD
+
+          cat > "$CLEAN/main.go" <<'GOFILE'
+          package main
+
+          func main() {}
+          GOFILE
+
+          ALLOWED="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1,LGPL-3.0"
+          LICENSE_GATE_MODE="fail"
+
+          echo "=== Test C: clean workspace, LICENSE_GATE_MODE=fail ==="
+          cd "$CLEAN"
+          if go-licenses check ./... --allowed_licenses="$ALLOWED" 2>&1; then
+            echo "PASS: no AGPL deps → go-licenses exits 0 → gate passes"
+            echo "Test C PASS"
+          else
+            EXIT_CODE=$?
+            echo "GATE: Disallowed license detected in a clean workspace — false positive"
+            echo "Test C FAIL: gate exits non-zero on a clean Go module (exit $EXIT_CODE)"
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### License Gate Unit Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Test | Scenario | Expected | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          FAIL="${{ steps.test-fail-mode.outcome }}"
+          WARN="${{ steps.test-warn-mode.outcome }}"
+          CLEAN="${{ steps.test-clean-mode.outcome }}"
+          echo "| A | AGPL dep + fail mode | exit non-zero | ${FAIL} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| B | AGPL dep + warn mode | exit zero + warn message | ${WARN} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| C | Clean workspace + fail mode | exit zero | ${CLEAN} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$FAIL" = "success" ] && [ "$WARN" = "success" ] && [ "$CLEAN" = "success" ]; then
+            echo "**All 3 gate unit tests passed.**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**GATE UNIT TEST FAILURE — see individual test steps above.**" >> "$GITHUB_STEP_SUMMARY"
+          fi

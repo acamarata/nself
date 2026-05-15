@@ -20,9 +20,7 @@ nself telemetry <subcommand> [flags]
 
 `nself telemetry` manages your preference for CLI usage telemetry.
 
-**v1.0.9 ships no telemetry client.** No data is collected or transmitted by the CLI at this version. This command exists so you can set your preference now, before the v1.1.0 client ships.
-
-When the v1.1.0 telemetry client ships, it will collect only anonymous aggregate data (CLI version, platform, architecture) for usage analysis. All collection is opt-in, and your stored preference is respected.
+**v1.1.1 ships the opt-in telemetry client.** Collection is OFF by default; you must explicitly opt in. The client collects only anonymous aggregate data (CLI version, platform, architecture, command counts) for usage analysis. All collection respects your stored preference.
 
 See [Privacy Policy](https://nself.org/legal/privacy) for full details.
 
@@ -30,7 +28,7 @@ See [Privacy Policy](https://nself.org/legal/privacy) for full details.
 
 1. `NSELF_TELEMETRY_OPT_OUT=1` environment variable (highest priority)
 2. `~/.nself/config.toml` `[telemetry]` section
-3. Default: enabled (no effect at v1.0.9)
+3. Default: disabled (opt-in)
 
 The environment variable always wins. Use it for CI/CD pipelines or shared servers where you do not want to modify the config file.
 
@@ -53,20 +51,20 @@ NSELF_TELEMETRY_OPT_OUT=1 nself telemetry status
 **Sample output (status):**
 
 ```
-Telemetry: enabled
+Telemetry: disabled (default)
 Source:    default
 
-v1.0.9: no telemetry client ships. This preference will take effect in v1.1.0.
+v1.1.1: opt-in telemetry client. Run 'nself telemetry on' to enable.
 Privacy policy: https://nself.org/legal/privacy
 ```
 
-**After running `nself telemetry off`:**
+**After running `nself telemetry on`:**
 
 ```
-Telemetry: disabled (opt-out)
+Telemetry: enabled (opt-in)
 Source:    config
 
-v1.0.9: no telemetry client ships. This preference will take effect in v1.1.0.
+v1.1.1: opt-in telemetry client active. Anonymous aggregate data only.
 Privacy policy: https://nself.org/legal/privacy
 ```
 
