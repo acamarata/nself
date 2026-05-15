@@ -3,6 +3,13 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [Unreleased] — v1.2.0
+
+### Security
+
+- **CWE-214 Hasura secret exposure fixed** — `hasuraMetadataExportCmd()` in `internal/backup/create.go` previously passed the Hasura admin secret as `--admin-secret=<value>` in argv. Any local user with access to `/proc/<pid>/cmdline` or `ps aux` could read it during a backup run. The secret is now passed exclusively through the child process environment (`cmd.Env`). Docker exec receives `-e HASURA_GRAPHQL_ADMIN_SECRET` (no value on the command line). Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
+- **Supply-chain installer verification added** — the Ollama installer previously piped `curl` output directly to `sh` without content verification. `DownloadAndVerify()` in the new `internal/installer/verify.go` downloads to a 0700 owner-only temp directory, opens the file with `O_EXCL` (closes TOCTOU window), caps the body at 2 MiB, and verifies SHA-256 against the pinned checksum from `ExpectedOllamaInstallChecksum()` before execution. Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
+
 ## [1.1.2] - 2026-05-15
 
 Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelope, LlamaCpp real backend, sqlite-vec cross-compile matrix, throttle retries, nself-audit baseline rules. Security hardening across signing, vault revocation, license HMAC, and Argon2id KAT. Doc-truth corrections to SPORT (F01/F02/F04/F09) and PPI plugin counts.

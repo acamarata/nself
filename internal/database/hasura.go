@@ -132,6 +132,22 @@ func applyYAMLMetadata(ctx context.Context, cfg *config.Config, hasuraDir, metad
 // applyViaHasuraCLI shells out to the hasura CLI binary. The binary handles
 // !include resolution and all YAML features natively.
 func applyViaHasuraCLI(ctx context.Context, cfg *config.Config, hasuraBin, hasuraDir string) error {
+	cmd := hasuraMetadataApplyCmd(ctx, cfg, hasuraBin, hasuraDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("hasura metadata apply: %w\n%s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// hasuraMetadataApplyCmd constructs the hasura-cli metadata apply command.
+//
+// The admin secret is injected into the child process environment via cmd.Env
+// (not visible in the host process table) and consumed by hasura-cli via the
+// HASURA_GRAPHQL_ADMIN_SECRET environment variable, which it reads natively.
+// No --admin-secret argv element is used, preventing CWE-214 process table
+// exposure.
+func hasuraMetadataApplyCmd(ctx context.Context, cfg *config.Config, hasuraBin, hasuraDir string) *exec.Cmd {
 	port := cfg.Hasura.Port
 	if port == 0 {
 		port = 8080
@@ -141,14 +157,10 @@ func applyViaHasuraCLI(ctx context.Context, cfg *config.Config, hasuraBin, hasur
 	cmd := exec.CommandContext(ctx, hasuraBin,
 		"metadata", "apply",
 		"--endpoint", endpoint,
-		"--admin-secret", cfg.Hasura.AdminSecret,
 		"--project", hasuraDir,
 	)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("hasura metadata apply: %w\n%s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	cmd.Env = append(os.Environ(), "HASURA_GRAPHQL_ADMIN_SECRET="+cfg.Hasura.AdminSecret)
+	return cmd
 }
 
 // applyViaIncludeResolver resolves !include directives in Go, assembles the

@@ -2,8 +2,6 @@ package installer
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +15,13 @@ import (
 
 	"github.com/nself-org/cli/internal/httptimeout"
 )
+
+// downloadAndRunInstaller downloads the Ollama install script, verifies its
+// SHA-256 against the pinned checksum, and executes it via sh.
+//
+// DownloadAndVerify places the script in a private 0700 owner-only directory
+// to close the TOCTOU window between file close and exec. The entire directory
+// is removed with os.RemoveAll after execution (not just the file).
 
 // Error codes (per spec §3.2.1).
 const (
@@ -179,38 +184,25 @@ func systemctlActiveContext(ctx context.Context, unit string) bool {
 }
 
 func downloadAndRunInstaller(ctx context.Context, log func(string, string, map[string]any)) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://ollama.com/install.sh", nil)
-	if err != nil {
-		return errf(ErrOllamaInstallFailed, "new request", err)
-	}
-	resp, err := httptimeout.Installer.Do(req)
-	if err != nil {
-		return errf(ErrOllamaInstallFailed, "download install.sh", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return errf(ErrOllamaInstallFailed,
-			fmt.Sprintf("install.sh download HTTP %d", resp.StatusCode), nil)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
-	if err != nil {
-		return errf(ErrOllamaInstallFailed, "read install.sh", err)
-	}
+	const installerURL = "https://ollama.com/install.sh"
 
-	// Verify checksum if pinned.
-	if expected := ExpectedOllamaInstallChecksum(); expected != "" {
-		sum := sha256.Sum256(body)
-		got := hex.EncodeToString(sum[:])
-		if got != expected {
-			return errf(ErrOllamaInstallFailed,
-				fmt.Sprintf("install.sh checksum mismatch: got %s want %s", got, expected), nil)
-		}
-		log("info", "install.sh checksum verified", map[string]any{"sha256": got})
+	// Download and verify checksum unconditionally. The pinned SHA is always
+	// non-empty; any mismatch aborts installation before execution.
+	//
+	// DownloadAndVerify returns a path inside a private 0700 temporary
+	// directory. We must clean up the directory (not just the file) on exit.
+	tmpPath, err := DownloadAndVerify(ctx, installerURL, ExpectedOllamaInstallChecksum())
+	if err != nil {
+		return err
 	}
+	defer os.RemoveAll(filepath.Dir(tmpPath))
 
-	// Execute via sh -s.
-	cmd := exec.CommandContext(ctx, "sh", "-s")
-	cmd.Stdin = strings.NewReader(string(body))
+	log("info", "install.sh checksum verified", map[string]any{"sha256": ExpectedOllamaInstallChecksum()})
+
+	// Execute the verified script via sh. The script lives in a private 0700
+	// directory; the path cannot be replaced by a same-uid process between the
+	// checksum verification above and this exec call.
+	cmd := exec.CommandContext(ctx, "sh", tmpPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

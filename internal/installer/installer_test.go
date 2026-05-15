@@ -53,12 +53,17 @@ func TestInstallerError_Codes(t *testing.T) {
 	}
 }
 
-// TestExpectedOllamaInstallChecksum_NonPanic verifies that reading the pinned
-// checksum does not panic and returns a string (may be empty for dev builds).
-func TestExpectedOllamaInstallChecksum_NonPanic(t *testing.T) {
+// TestExpectedOllamaInstallChecksum_NonEmpty verifies that the pinned checksum
+// is always a non-empty hex string. An empty value disables integrity
+// verification and is a supply-chain security risk.
+func TestExpectedOllamaInstallChecksum_NonEmpty(t *testing.T) {
 	checksum := ExpectedOllamaInstallChecksum()
-	// Empty is valid for dev builds (checksum not enforced).
-	_ = checksum
+	if checksum == "" {
+		t.Error("ExpectedOllamaInstallChecksum() returned empty string: checksum pinning is required")
+	}
+	if len(checksum) != 64 {
+		t.Errorf("ExpectedOllamaInstallChecksum() returned %q (len=%d), want a 64-char SHA-256 hex string", checksum, len(checksum))
+	}
 }
 
 // TestDefaultChecksumVersion_NonEmpty verifies the version constant is set.

@@ -12,16 +12,17 @@ package installer
 // OLLAMA_INSTALL_FAILED.
 var PinnedOllamaInstallSHA256 = map[string]string{
 	// key: nSelf CLI version that validated this checksum.
-	// value: SHA256 of install.sh content.
-	// Empty string means "checksum not enforced" — only used in dev builds.
-	"1.0.3": "",
+	// value: SHA256 of install.sh content, pinned to the Ollama installer
+	// validated at the time this CLI version shipped. Update this entry
+	// whenever Ollama releases a new installer and nSelf re-validates it.
+	"1.0.3": "25f64b810b947145095956533e1bdf56eacea2673c55a7e586be4515fc882c9f",
 }
 
 // DefaultChecksumVersion is the CLI version whose pinned checksum we use.
 const DefaultChecksumVersion = "1.0.3"
 
 // ExpectedOllamaInstallChecksum returns the pinned SHA256 for the current CLI
-// version, or empty string if not pinned (non-enforcing).
+// version. The returned value is always non-empty; verification is mandatory.
 func ExpectedOllamaInstallChecksum() string {
 	return PinnedOllamaInstallSHA256[DefaultChecksumVersion]
 }

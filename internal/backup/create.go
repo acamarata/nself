@@ -250,16 +250,16 @@ func createMetadataBackup(ctx context.Context, cfg *config.Config, backupDir, ts
 		return fmt.Errorf("create backup directory: %w", err)
 	}
 
-	// Export Hasura metadata via API.
-	container := cfg.ProjectName + "_hasura"
-	args := []string{
-		"exec", container,
-		"hasura-cli", "metadata", "export", "--admin-secret", cfg.Hasura.AdminSecret,
-	}
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	// Export Hasura metadata.  The admin secret is passed through the child
+	// process environment, not as an argv element, to prevent CWE-214 process
+	// table exposure.
+	cmd := hasuraMetadataExportCmd(ctx, cfg)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// Do NOT persist output on failure: hasura-cli error messages may echo
+		// connection details or contain fragments of the admin secret.
 		slog.Warn("hasura metadata export failed, skipping metadata component", "error", err)
+		return nil
 	}
 
 	if err := os.WriteFile(outputPath, output, 0600); err != nil {
@@ -268,6 +268,26 @@ func createMetadataBackup(ctx context.Context, cfg *config.Config, backupDir, ts
 
 	slog.Info("metadata backup created", "path", outputPath)
 	return nil
+}
+
+// hasuraMetadataExportCmd constructs the docker exec command that runs
+// hasura-cli metadata export inside the project's Hasura container.
+//
+// The admin secret is injected into the child process environment via cmd.Env
+// (not visible in the host process table) and forwarded to the container using
+// a bare "-e HASURA_GRAPHQL_ADMIN_SECRET" flag (no "=value"; docker reads the
+// value from the client process environment).  hasura-cli reads this variable
+// natively, so no --admin-secret argv element is needed.
+func hasuraMetadataExportCmd(ctx context.Context, cfg *config.Config) *exec.Cmd {
+	container := cfg.ProjectName + "_hasura"
+	cmd := exec.CommandContext(ctx, "docker",
+		"exec",
+		"-e", "HASURA_GRAPHQL_ADMIN_SECRET",
+		container,
+		"hasura-cli", "metadata", "export",
+	)
+	cmd.Env = append(os.Environ(), "HASURA_GRAPHQL_ADMIN_SECRET="+cfg.Hasura.AdminSecret)
+	return cmd
 }
 
 // createMinioBackup uses mc mirror to back up MinIO buckets.
