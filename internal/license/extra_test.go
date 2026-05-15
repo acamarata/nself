@@ -732,19 +732,39 @@ func TestCacheAge_Accuracy(t *testing.T) {
 	}
 }
 
-// TestSignablePayload_Format verifies signablePayload produces the canonical format.
+// TestSignablePayload_Format verifies signablePayload produces the canonical format
+// including the sorted plugins_allowed field (SIEGE V03-F01 extension).
 func TestSignablePayload_Format(t *testing.T) {
-	entry := &CacheEntry{
-		KeyHash:   "keyhash",
-		Tier:      "pro",
-		FetchedAt: 1000,
-		ExpiresAt: 2000,
-	}
-	payload := entry.signablePayload()
-	want := "keyhash|pro|1000|2000"
-	if string(payload) != want {
-		t.Errorf("signablePayload = %q, want %q", string(payload), want)
-	}
+	t.Run("no plugins", func(t *testing.T) {
+		entry := &CacheEntry{
+			KeyHash:   "keyhash",
+			Tier:      "pro",
+			FetchedAt: 1000,
+			ExpiresAt: 2000,
+		}
+		payload := entry.signablePayload()
+		// Empty PluginsAllowed → trailing empty field after final pipe.
+		want := "keyhash|pro|1000|2000|"
+		if string(payload) != want {
+			t.Errorf("signablePayload = %q, want %q", string(payload), want)
+		}
+	})
+
+	t.Run("plugins sorted in payload", func(t *testing.T) {
+		entry := &CacheEntry{
+			KeyHash:        "keyhash",
+			Tier:           "pro",
+			FetchedAt:      1000,
+			ExpiresAt:      2000,
+			PluginsAllowed: []string{"voice", "ai", "claw"}, // unsorted input
+		}
+		payload := entry.signablePayload()
+		// Must be sorted alphabetically: ai,claw,voice.
+		want := "keyhash|pro|1000|2000|ai,claw,voice"
+		if string(payload) != want {
+			t.Errorf("signablePayload = %q, want %q", string(payload), want)
+		}
+	})
 }
 
 // --- Fuzz target: FuzzLicenseKeyParser ---

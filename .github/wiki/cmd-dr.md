@@ -12,12 +12,12 @@ nself dr <subcommand> [flags]
 
 `nself dr` runs disaster recovery procedures. It covers planned drills, promoting a warm standby to primary, rewriting DNS records to a new primary IP, rolling back a promotion, and fencing the cluster (Redis read-only flag) to prevent split-brain writes during failover.
 
-`dr drill` is the primary verification command. In v1.0.9, only `--scenario cold-start` is supported. Cold-start provisions a Hetzner VM via hcloud, restores the latest backup via ssh, runs the full smoke-query catalog, records RTO, and writes a dated report to `~/.claude/backups/nself-staging/dr/`. `--install-cron` installs the monthly drill systemd timer (`nself-dr-drill.timer`).
+`dr drill` is the primary verification command (v1.1.1). Supported scenarios: `cold-start`, `region-failover`, `data-corruption`. Cold-start provisions a Hetzner VM via hcloud, restores the latest backup via ssh, runs the full smoke-query catalog, records RTO, and writes a dated report to `~/.claude/backups/nself-staging/dr/`. `--install-cron` installs the monthly drill systemd timer (`nself-dr-drill.timer`).
 
-**v1.0.9 scenario support:**
+**Scenario support (v1.1.1):**
 - `cold-start`, fully implemented; provisions VM, restores, verifies, records RTO
-- `region-failover`, NOT supported in v1.0.9 (single-region by design); returns a deprecation error directing to v1.1.0 and the DR runbook
-- `data-corruption`, NOT supported in v1.0.9 (PITR via pgbackrest is planned for v1.1.0); returns a deprecation error
+- `region-failover`, coordinates with `nself region` (`list`, `add`, `promote`) for multi-region failover drills
+- `data-corruption`, exercises `nself pitr restore` (pgbackrest WAL replay) on a clone
 
 `dr promote-standby` requires production confirmation unless `--yes` is passed. `dr reconfigure-dns --ip <new-ip>` updates DNS to point traffic at the new primary. `dr rollback` demotes the promoted standby and resyncs from the original primary. `dr fence` sets a `read_only=true` flag in Redis that the application layer must honor.
 
@@ -37,7 +37,7 @@ nself dr <subcommand> [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--scenario` | `cold-start` | Drill scenario: `cold-start` (only supported in v1.0.9; `region-failover` and `data-corruption` planned for v1.1.0) |
+| `--scenario` | `cold-start` | Drill scenario: `cold-start`, `region-failover`, `data-corruption` (v1.1.1) |
 | `--dry-run` | false | Preview only |
 | `--now` | false | Run a full provision-restore-smoke-destroy drill immediately |
 | `--install-cron` | false | Install the monthly drill systemd timer |

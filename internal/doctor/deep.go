@@ -81,6 +81,11 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S10.T06: SEC-HARDENING-01..08 — Security-Always-Free hardening checks.
 	results = append(results, HardeningChecks(ctx, projectDir)...)
 
+	// P102 W10-T5 follow-up: NSCAN-001..010 baseline scan via the nself-audit
+	// plugin's POST /scan/run endpoint. Skipped gracefully if the plugin is
+	// not installed/running. Security-Always-Free: no license required.
+	results = append(results, CheckNSelfAuditScan(ctx, projectDir)...)
+
 	// S9.T03 + S9.T15: OPS-DRILL-01 — verify a successful `nself backup drill`
 	// ran within the last 7 days. Read-only check against .nself/drill-log.json.
 	results = append(results, CheckOPSDrill(ctx, projectDir))

@@ -3,6 +3,61 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.1.2] - 2026-05-15
+
+Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelope, LlamaCpp real backend, sqlite-vec cross-compile matrix, throttle retries, nself-audit baseline rules. Security hardening across signing, vault revocation, license HMAC, and Argon2id KAT. Doc-truth corrections to SPORT (F01/F02/F04/F09) and PPI plugin counts.
+
+### Added
+
+- **nself-sync server** — push, subscribe, ack, and snapshot handlers wired end-to-end.
+- **nself-vault KEK envelope encryption** — root-key wrapping with documented rotation procedure.
+- **LlamaCpp real backend** — GPU offload, sampling, streaming, and memory guards.
+- **sqlite-vec cross-compile CI matrix** — 5 target combinations covered.
+- **Throttle retries with full jitter** — honors `Retry-After` headers when present.
+- **nself-audit baseline rules** — 10 baseline scan rules integrated into `nself doctor --deep`.
+- **@nself/config workspace package** — scaffold for shared configuration.
+- **F09 ENV-VAR-INVENTORY** — 992-line catalog covering v1.2.0 forward-looking vars.
+
+### Fixed
+
+- **Cross-language signing material** — Rust and Go produce byte-identical signing bytes. 119-byte golden test locked.
+- **nself-vault REVOKE** now invalidates immediately. JWT `aud="nself-vault"` enforced. Cross-ownership reads return 404 (not 403).
+- **Plugin signing** uses canonical SHA-256 of tarball bytes. Worker and CLI aligned.
+- **License HMAC key** randomized at provisioning. No longer derived from an observable value.
+- **Argon2id KAT test mismatch** — test was wrong, production `derive_key` was always correct.
+- **Tauri 2 updater chain** — plugin declared in Cargo.toml, Ed25519 minisign signing, real public key, downgrade_guard.
+- **nclaw/desktop Tauri 2 API drift** — 7 compile errors cleared.
+- **nclaw/core test surface** — 16 compile errors plus 15 surfaced runtime failures fixed.
+- **WebSocket goroutine leak** — no fd exhaustion on aggressive context cancellation.
+- **TODO / stub / unimplemented! markers** — removed from all production paths.
+
+### Security
+
+- All TLS, WAF, and hardening rules ship free at install, update, deploy, and daily scan (Security-Always-Free).
+- AGPL/SSPL gate active in fail mode across cli, admin, plugins, plugins-pro, web.
+- `nself doctor --deep` runs without a license. Critical findings exit 1.
+
+### Changed
+
+- SPORT F01 / F02 / F04 / F09 regenerated against code reality.
+- PPI corrections: 87 → 112 paid plugins. 25 → 29 free plugins.
+- ɳ branding enforced across user-visible prose for products, bundles, pricing.
+
+### Docs
+
+- 11 CLI wiki `cmd-*.md` pages promoted from v1.0.9 PREVIEW to v1.1.1 SHIPPED status.
+- README versions bumped (cli, admin, clawde).
+- Tauri updater signing procedure documented.
+- KEK rotation procedure documented.
+- Mobile platform encryption matrix published — iOS, Android, macOS encrypted; Linux, Windows, web unsupported.
+- ADR-003 records admin Next.js permanent exception.
+
+### Known limitations (carry-forward to v1.1.3)
+
+- Integration test API drift: httpmock 0.7 → 0.8, nclaw_core → libnclaw rename. Separate sprint.
+- 22 CLI commands still need dedicated wiki pages.
+- Throttle retry orchestrator integration deferred to S17.T07.
+
 ## [1.1.0] - 2026-05-15
 
 Minor release. ɳSentry bundle (13 plugins), ClawDE bundle buyable, ɳFamily ratified, nCloud waitlist mode. Observability auto-wiring (Prometheus scrape, Loki/Promtail, Grafana dashboards), backup drill, env migration tooling, idempotent admin trust install.

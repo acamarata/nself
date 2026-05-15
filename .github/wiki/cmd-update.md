@@ -21,7 +21,7 @@ If you are running an active ɳSelf project and update the CLI, you may want to 
 When running on a v0.9 CLI (any `0.x.y` binary), `nself update --check` queries `ping.nself.org/version`, receives a migration block in the response, and surfaces the migration guide URL directly in the terminal:
 
 ```
-WARNING: You are running a legacy v0.9 CLI. Migration to v1.0.9 is required.
+WARNING: You are running a legacy v0.9 CLI. Migration to v1.1.1 is required.
 Upgrade guide: https://docs.nself.org/migrate/from-v0.9
 ```
 

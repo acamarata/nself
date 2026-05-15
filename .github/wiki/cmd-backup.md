@@ -14,7 +14,7 @@ nself backup <subcommand> [flags] [args]
 
 Subcommands include `create` (one-shot full or incremental), `list` (filter by remote, environment, age), `restore` (from any backup ID or `latest`, with partial restore options), `verify` (checksum or full restore-test in a disposable container), and `prune` (apply daily/weekly/monthly retention).
 
-Note: Point-in-time recovery (PITR) is not supported in v1.0.9. The `--point-in-time` flag has been removed. pgbackrest-based WAL replay is planned for v1.1.0.
+Note: Point-in-time recovery (PITR) ships as a dedicated `nself pitr` command (`enable`, `disable`, `status`, `base-backup`, `restore`) in v1.1.1. The `--point-in-time` flag on `backup` itself was removed; use `nself pitr restore` for WAL replay.
 
 `backup config --install-cron` installs systemd timers for full backups, WAL checkpoints, prune cycles, and weekly verify drills so an operator can hand off to automation.
 
@@ -62,7 +62,7 @@ Note: Point-in-time recovery (PITR) is not supported in v1.0.9. The `--point-in-
 | `--decrypt-key` | `""` | Path to age identity file |
 | `--yes` | false | Skip confirmation |
 
-Note: `--point-in-time` (PITR) is not available in v1.0.9 and has been removed. See v1.1.0 release notes for pgbackrest PITR support.
+Note: `--point-in-time` is not a flag on `backup restore`. Use `nself pitr restore` (v1.1.1) for WAL-replay point-in-time recovery via pgbackrest.
 
 ### `backup verify <backup-id\|latest>`
 

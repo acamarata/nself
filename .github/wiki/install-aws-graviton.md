@@ -46,7 +46,7 @@ docker compose version
 ## Step 2: Download the ɳSelf CLI
 
 ```bash
-curl -L https://github.com/nself-org/cli/releases/download/v1.0.9/nself-linux-arm64.tar.gz -o nself.tar.gz
+curl -L https://github.com/nself-org/cli/releases/download/v1.1.1/nself-linux-arm64.tar.gz -o nself.tar.gz
 tar -xzf nself.tar.gz
 sudo mv nself-linux-arm64 /usr/local/bin/nself
 sudo chmod +x /usr/local/bin/nself
@@ -57,7 +57,7 @@ rm nself.tar.gz
 
 ```bash
 nself version
-# nself v1.0.9
+# nself v1.1.1
 
 file $(which nself)
 # /usr/local/bin/nself: ELF 64-bit LSB executable, ARM aarch64

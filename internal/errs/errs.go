@@ -33,6 +33,8 @@ var (
 	ErrPluginNotFound            = errors.New("plugin not found in registry")
 	ErrPluginManifest            = errors.New("invalid plugin manifest")
 	ErrCircularDependency        = errors.New("circular plugin dependency detected")
+	ErrPluginUnsigned            = errors.New("stable plugin is missing required signature — install refused")
+	ErrPluginMissingChecksum     = errors.New("stable plugin is missing required checksum — install refused")
 
 	// SSL
 	ErrMkcertNotFound      = errors.New("mkcert not installed — falling back to OpenSSL")

@@ -34,7 +34,7 @@ func writeCacheEntryWithAge(t *testing.T, cacheDir string, key string, status st
 	ts := time.Now().Add(-age).Unix()
 	prefix := keyPrefix(key)
 	data := fmt.Sprintf("%s|%s|%d", prefix, status, ts)
-	sig := hmacSign(data, machineID())
+	sig := hmacSign(data, loadHMACKeyOrFallback())
 	line := data + "|" + sig + "\n"
 	cachePath := filepath.Join(cacheDir, "cache")
 	if err := os.WriteFile(cachePath, []byte(line), 0600); err != nil {

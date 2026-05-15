@@ -12,7 +12,7 @@ nself verify-sbom --version <v>
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--version` | required | Release version to verify (e.g. `v1.0.9`) |
+| `--version` | required | Release version to verify (e.g. `v1.1.1`) |
 | `--repo` | `nself-org/cli` | GitHub repo (`owner/name`) |
 
 ## What It Does
@@ -30,10 +30,10 @@ nself verify-sbom --version <v>
 ## Example
 
 ```bash
-nself verify-sbom --version v1.0.9
-# Downloading SBOM for v1.0.9...
+nself verify-sbom --version v1.1.1
+# Downloading SBOM for v1.1.1...
 # Verifying cosign bundle signature...
-# SBOM for v1.0.9: VERIFIED
+# SBOM for v1.1.1: VERIFIED
 ```
 
 ## Related

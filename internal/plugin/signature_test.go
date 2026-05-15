@@ -5,9 +5,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"testing"
+
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // generateTestKeyPair generates a fresh Ed25519 key pair for testing.
@@ -50,7 +53,7 @@ func TestVerifyPluginSignature_ValidSignature(t *testing.T) {
 	archivePath := writeTempFile(t, content)
 	sigHex := signFileContent(t, content, priv)
 
-	if err := verifyPluginSignature(archivePath, pubKeyHex, sigHex); err != nil {
+	if err := verifyPluginSignature(archivePath, pubKeyHex, sigHex, "stable"); err != nil {
 		t.Fatalf("valid signature should pass verification: %v", err)
 	}
 }
@@ -68,7 +71,7 @@ func TestVerifyPluginSignature_TamperedContent(t *testing.T) {
 		t.Fatalf("WriteFile tamper: %v", err)
 	}
 
-	err := verifyPluginSignature(archivePath, pubKeyHex, sigHex)
+	err := verifyPluginSignature(archivePath, pubKeyHex, sigHex, "stable")
 	if err == nil {
 		t.Fatal("tampered archive should fail verification, got nil error")
 	}
@@ -85,15 +88,16 @@ func TestVerifyPluginSignature_WrongKey(t *testing.T) {
 	archivePath := writeTempFile(t, content)
 	sigHex := signFileContent(t, content, privB) // signed with B
 
-	err := verifyPluginSignature(archivePath, pubKeyHexA, sigHex) // verify with A
+	err := verifyPluginSignature(archivePath, pubKeyHexA, sigHex, "stable") // verify with A
 	if err == nil {
 		t.Fatal("wrong public key should fail verification, got nil error")
 	}
 }
 
-// TestVerifyPluginSignature_EmptyInputsSkip verifies that empty key or signature
-// causes the function to return nil (skip verification, not error).
-func TestVerifyPluginSignature_EmptyInputsSkip(t *testing.T) {
+// TestVerifyPluginSignature_EmptyInputsStableHardFail verifies that stable
+// plugins with a missing key or signature are refused with ErrPluginUnsigned.
+// V06-F2: stable publishStatus + missing signature = hard error.
+func TestVerifyPluginSignature_EmptyInputsStableHardFail(t *testing.T) {
 	content := []byte("plugin content")
 	archivePath := writeTempFile(t, content)
 
@@ -108,8 +112,28 @@ func TestVerifyPluginSignature_EmptyInputsSkip(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := verifyPluginSignature(archivePath, tc.pubKey, tc.sigHex); err != nil {
-				t.Errorf("empty inputs should skip verification (return nil), got: %v", err)
+			err := verifyPluginSignature(archivePath, tc.pubKey, tc.sigHex, "stable")
+			if err == nil {
+				t.Errorf("stable plugin with empty inputs should return ErrPluginUnsigned, got nil")
+			}
+			if !errors.Is(err, errs.ErrPluginUnsigned) {
+				t.Errorf("expected ErrPluginUnsigned, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestVerifyPluginSignature_EmptyInputsNonStableSkip verifies that alpha/beta
+// plugins with missing signature skip verification (permissive dev workflow).
+// V06-F2: non-stable publishStatus + missing signature = warning, not error.
+func TestVerifyPluginSignature_EmptyInputsNonStableSkip(t *testing.T) {
+	content := []byte("plugin content")
+	archivePath := writeTempFile(t, content)
+
+	for _, status := range []string{"alpha", "beta", "experimental", ""} {
+		t.Run("status="+status, func(t *testing.T) {
+			if err := verifyPluginSignature(archivePath, "", "", status); err != nil {
+				t.Errorf("non-stable plugin with empty signature should skip (return nil), got: %v", err)
 			}
 		})
 	}
@@ -121,7 +145,7 @@ func TestVerifyPluginSignature_MalformedKey(t *testing.T) {
 	content := []byte("plugin content")
 	archivePath := writeTempFile(t, content)
 
-	err := verifyPluginSignature(archivePath, "not-valid-hex!!!", "aabbcc")
+	err := verifyPluginSignature(archivePath, "not-valid-hex!!!", "aabbcc", "stable")
 	if err == nil {
 		t.Fatal("malformed public key hex should return error, got nil")
 	}
@@ -138,7 +162,7 @@ func TestVerifyPluginSignature_WrongKeyLength(t *testing.T) {
 	_, _, _, priv := generateTestKeyPair(t)
 	sigHex := signFileContent(t, content, priv)
 
-	err := verifyPluginSignature(archivePath, shortKey, sigHex)
+	err := verifyPluginSignature(archivePath, shortKey, sigHex, "stable")
 	if err == nil {
 		t.Fatal("wrong key length should return error, got nil")
 	}
@@ -150,7 +174,7 @@ func TestVerifyPluginSignature_MissingArchive(t *testing.T) {
 	pubKeyHex, _, _, priv := generateTestKeyPair(t)
 	sigHex := signFileContent(t, []byte("data"), priv)
 
-	err := verifyPluginSignature("/nonexistent/path/archive.tar.gz", pubKeyHex, sigHex)
+	err := verifyPluginSignature("/nonexistent/path/archive.tar.gz", pubKeyHex, sigHex, "stable")
 	if err == nil {
 		t.Fatal("missing archive should return error, got nil")
 	}
@@ -169,7 +193,52 @@ func TestVerifyPluginSignature_LargeFile(t *testing.T) {
 	archivePath := writeTempFile(t, content)
 	sigHex := signFileContent(t, content, priv)
 
-	if err := verifyPluginSignature(archivePath, pubKeyHex, sigHex); err != nil {
+	if err := verifyPluginSignature(archivePath, pubKeyHex, sigHex, "stable"); err != nil {
 		t.Fatalf("large file signature verification failed: %v", err)
+	}
+}
+
+// TestVerifyChecksum_StableMissingChecksumHardFail verifies that a stable plugin
+// with an empty checksum is refused with ErrPluginMissingChecksum.
+// V06-F2: stable publishStatus + missing checksum = hard error.
+func TestVerifyChecksum_StableMissingChecksumHardFail(t *testing.T) {
+	content := []byte("plugin archive content")
+	archivePath := writeTempFile(t, content)
+
+	err := verifyChecksum(archivePath, "", "stable")
+	if err == nil {
+		t.Fatal("stable plugin with empty checksum should return ErrPluginMissingChecksum, got nil")
+	}
+	if !errors.Is(err, errs.ErrPluginMissingChecksum) {
+		t.Errorf("expected ErrPluginMissingChecksum, got: %v", err)
+	}
+}
+
+// TestVerifyChecksum_NonStableMissingChecksumPermissive verifies that alpha/beta
+// plugins with a missing checksum return nil (permissive dev workflow).
+func TestVerifyChecksum_NonStableMissingChecksumPermissive(t *testing.T) {
+	content := []byte("plugin archive content")
+	archivePath := writeTempFile(t, content)
+
+	for _, status := range []string{"alpha", "beta", "experimental", ""} {
+		t.Run("status="+status, func(t *testing.T) {
+			if err := verifyChecksum(archivePath, "", status); err != nil {
+				t.Errorf("non-stable plugin with empty checksum should return nil, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestVerifyChecksum_ValidChecksum verifies correct checksum passes.
+func TestVerifyChecksum_ValidChecksum(t *testing.T) {
+	content := []byte("plugin archive content for checksum test")
+	archivePath := writeTempFile(t, content)
+
+	h := sha256.New()
+	h.Write(content)
+	expectedHex := hex.EncodeToString(h.Sum(nil))
+
+	if err := verifyChecksum(archivePath, expectedHex, "stable"); err != nil {
+		t.Fatalf("valid checksum should pass: %v", err)
 	}
 }

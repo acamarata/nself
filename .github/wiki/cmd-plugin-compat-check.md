@@ -45,7 +45,7 @@ nself plugin compat-check || { echo "Incompatible plugins found — resolve befo
 Example output when all plugins are compatible:
 
 ```
-All 12 installed plugins are compatible with nself v1.0.9.
+All 12 installed plugins are compatible with nself v1.1.1.
 ```
 
 Example output when an incompatibility is found:
@@ -53,7 +53,7 @@ Example output when an incompatibility is found:
 ```
 Incompatible plugins (1):
 
-  claw  — maxNselfVersion "1.0.8" is below current CLI v1.0.9
+  claw  — maxNselfVersion "1.0.8" is below current CLI v1.1.1
     Reinstall: nself plugin install claw
 
 Run 'nself plugin install <name>' for each plugin listed above.
