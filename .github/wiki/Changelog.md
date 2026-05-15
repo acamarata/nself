@@ -5,10 +5,20 @@ follows Keep a Changelog, with Conventional Commit classification.
 
 ## [Unreleased] — v1.2.0
 
+### Changed
+
+- **TypeScript SDK canary upgrade to TS6** — `cli/sdk/ts` (@nself/plugin-sdk v2.0.0) bumped from TypeScript `^5.4.5` to `^6.0.0` (S06 canary). `tsconfig.json` updated: `module` → `node16`, `moduleResolution` → `node16` (node10 alias deprecated in TS6). Added `tsconfig.test.json` for ts-jest with `isolatedModules: true`. Jest config migrated to flat `transform` syntax (removes deprecated `globals.ts-jest`). Added `eslint`, `@typescript-eslint/parser`, `@typescript-eslint/eslint-plugin` devDeps and `eslint.config.mjs` (ESLint 10 flat config). All 18 tests pass. Type-check and build clean.
+
 ### Security
 
 - **CWE-214 Hasura secret exposure fixed** — `hasuraMetadataExportCmd()` in `internal/backup/create.go` previously passed the Hasura admin secret as `--admin-secret=<value>` in argv. Any local user with access to `/proc/<pid>/cmdline` or `ps aux` could read it during a backup run. The secret is now passed exclusively through the child process environment (`cmd.Env`). Docker exec receives `-e HASURA_GRAPHQL_ADMIN_SECRET` (no value on the command line). Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
 - **Supply-chain installer verification added** — the Ollama installer previously piped `curl` output directly to `sh` without content verification. `DownloadAndVerify()` in the new `internal/installer/verify.go` downloads to a 0700 owner-only temp directory, opens the file with `O_EXCL` (closes TOCTOU window), caps the body at 2 MiB, and verifies SHA-256 against the pinned checksum from `ExpectedOllamaInstallChecksum()` before execution. Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
+
+## [1.1.3] - 2026-05-15
+
+### Docs
+
+- **Complete CLI wiki coverage** — 19 new command pages authored (S05): `cmd-ai-studio.md`, `cmd-costs.md`, `cmd-encryption.md`, `cmd-feature.md`, `cmd-federation.md`, `cmd-help-topics.md`, `cmd-infra.md`, `cmd-k8s.md`, `cmd-man.md`, `cmd-mcp.md`, `cmd-migrate-from-v099.md`, `cmd-ollama.md`, `cmd-region.md`, `cmd-release.md`, `cmd-release-check.md`, `cmd-release-rollback.md`, `cmd-release-status.md`, `cmd-self-heal.md`, `cmd-uninstall.md`. Wiki coverage advances from 66 to 85 pages.
 
 ## [1.1.2] - 2026-05-15
 
@@ -62,7 +72,7 @@ Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelop
 ### Known limitations (carry-forward to v1.1.3)
 
 - Integration test API drift: httpmock 0.7 → 0.8, nclaw_core → libnclaw rename. Separate sprint.
-- 22 CLI commands still need dedicated wiki pages.
+- 3 CLI commands still need dedicated wiki pages (model, template, migrate firebase/supabase variants — addressed in S28 SPORT regen).
 - Throttle retry orchestrator integration deferred to S17.T07.
 
 ## [1.1.0] - 2026-05-15
