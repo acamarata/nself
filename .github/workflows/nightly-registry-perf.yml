@@ -80,17 +80,20 @@ jobs:
           echo "parse_ms: $PARSE_MS (target: <50ms, threshold: <60ms)"
 
           # Fail if >20% regression from targets
+          # NOTE: SEARCH_MS, SINGLE_MS, BUNDLE_MS are all in milliseconds
           if [ "$SEARCH_MS" -gt 120 ]; then
             echo "❌ search regression: ${SEARCH_MS}ms > 120ms" && exit 1
           fi
-          if [ "$SINGLE_MS" -gt 36 ]; then
-            echo "❌ single install regression: ${SINGLE_MS}ms > 36s" && exit 1
+          if [ "$SINGLE_MS" -gt 36000 ]; then
+            echo "❌ single install regression: ${SINGLE_MS}ms > 36000ms (36s)" && exit 1
           fi
-          if [ "$BUNDLE_MS" -gt 72 ]; then
-            echo "❌ bundle install regression: ${BUNDLE_MS}ms > 72s" && exit 1
+          if [ "$BUNDLE_MS" -gt 72000 ]; then
+            echo "❌ bundle install regression: ${BUNDLE_MS}ms > 72000ms (72s)" && exit 1
           fi
-          if [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
+          if [ -n "$PARSE_MS" ] && [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
             echo "❌ registry parse regression: ${PARSE_MS}ms > 60ms" && exit 1
+          elif [ -z "$PARSE_MS" ]; then
+            echo "⚠️ parse_ms not captured (BenchmarkRegistryParse may be missing or test binary not found)"
           fi
           echo "✅ All perf targets passed"
 
