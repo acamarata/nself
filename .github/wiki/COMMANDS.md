@@ -1,6 +1,6 @@
 # Commands
 
-ɳSelf CLI provides 46 top-level commands. Each command links to a dedicated page with full usage, flags, and examples.
+ɳSelf CLI provides 58 documented commands with wiki pages. Each command links to a dedicated page with full usage, flags, and examples.
 
 ## Lifecycle
 
@@ -45,8 +45,11 @@
 |---------|-------------|
 | [[cmd-config]] | Manage project configuration , show, get, set, list, validate, export, import |
 | [[cmd-env]] | Multi-environment management: switch, list, diff, copy |
-| [[cmd-service]] | Enable, disable, and list optional services (Redis, MinIO, email, search, monitoring) |
+| [[cmd-federation]] | Manage GraphQL Federation for multi-service nSelf deployments |
+| [[cmd-infra]] | Provision nSelf infrastructure on cloud providers via Terraform |
 | [[cmd-promote]] | Promote one environment to another (e.g. staging to prod) |
+| [[cmd-region]] | Manage multi-region Postgres replicas for a self-hosted nSelf deployment |
+| [[cmd-service]] | Enable, disable, and list optional services (Redis, MinIO, email, search, monitoring) |
 
 ## Networking & SSL
 
@@ -60,8 +63,9 @@
 
 | Command | Description |
 |---------|-------------|
-| [[cmd-security]] | Security audit, setup, and status for hardening your deployment |
+| [[cmd-encryption]] | Manage BYOK per-tenant encryption for nSelf Cloud (Enterprise tier only) |
 | [[cmd-secrets]] | Manage encrypted project secrets (age encryption) |
+| [[cmd-security]] | Security audit, setup, and status for hardening your deployment |
 | [[cmd-waf]] | Manage the Web Application Firewall (Coraza + OWASP CRS) |
 
 ## Multi-tenancy & Billing
@@ -78,24 +82,44 @@
 | [[cmd-plugin]] | Manage ɳSelf plugins , install, remove, update, list, start, stop, status |
 | [[cmd-license]] | Manage Pro membership license key , set, show, validate, clear, upgrade |
 
+## Release
+
+| Command | Description |
+|---------|-------------|
+| [[cmd-release]] | Orchestrate a full versioned release across all nSelf distribution surfaces |
+| [[cmd-release-check]] | Run pre-flight validation before a release |
+| [[cmd-release-rollback]] | Roll back distribution surfaces to a prior release version |
+| [[cmd-release-status]] | View the live deployment status of all release distribution surfaces |
+
 ## AI & ɳClaw
 
 | Command | Description |
 |---------|-------------|
 | [[cmd-ai]] | Manage the ɳSelf AI plugin and local LLM stack |
+| [[cmd-ai-studio]] | Google AI Studio integration for local nSelf instances via a secure Cloudflare Tunnel |
 | [[cmd-claw]] | Manage ɳClaw AI assistant |
+| [[cmd-mcp]] | Start the nSelf MCP server and expose infrastructure tools to Claude Code and other MCP clients |
+| [[cmd-ollama]] | Deprecated alias — use `nself model --provider ollama` instead |
 
 ## Utilities
 
 | Command | Description |
 |---------|-------------|
-| [[cmd-exec]] | Execute a command inside a running service container |
 | [[cmd-admin]] | Open the ɳSelf Admin dashboard in browser at `localhost:3021` |
 | [[cmd-completion]] | Generate shell completion scripts for bash, zsh, fish, or PowerShell |
+| [[cmd-costs]] | Show an itemized breakdown of estimated monthly operational costs for your nSelf install |
+| [[cmd-exec]] | Execute a command inside a running service container |
+| [[cmd-feature]] | Manage CLI-built-in feature flags for build-time and install-time capability gates |
+| [[cmd-help-topics]] | Browse built-in help topics for common nSelf tasks |
+| [[cmd-k8s]] | Deploy and manage nSelf on any Kubernetes cluster using the official Helm chart |
+| [[cmd-man]] | Generate man pages for all nself commands |
+| [[cmd-migrate]] | Detect and migrate v1 (Bash CLI) artifacts to v2 |
+| [[cmd-migrate-from-v099]] | Migrate v0.9.9 home-level state (license key, update channel, SSH keys) to the v1.x layout |
+| [[cmd-self-heal]] | Run targeted repair routines for nSelf components without a full stack rebuild |
+| [[cmd-uninstall]] | Remove nSelf-generated files and containers from the current project directory |
 | [[cmd-update]] | Update the ɳSelf CLI binary and admin Docker image |
 | [[cmd-upgrade]] | Upgrade the ɳSelf CLI (detects install method) |
 | [[cmd-version]] | Show version and system information |
-| [[cmd-migrate]] | Detect and migrate v1 (Bash CLI) artifacts to v2 |
 
 ---
 ← [[Home]] | [[_Sidebar]]
