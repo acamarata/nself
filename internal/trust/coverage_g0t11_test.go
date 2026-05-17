@@ -201,87 +201,8 @@ func TestSetupLinux_NoSkipsViaSetupForceLinux(t *testing.T) {
 	})
 }
 
-// TestConfigureDnsmasqConf_TempPath drives configureDnsmasqConf against a
-// temp path by overriding the findDnsmasqConfFunc seam. Exercises the create-
-// and-append branch end-to-end without requiring /opt/homebrew permissions.
-func TestConfigureDnsmasqConf_TempPath(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("dns_macos.go is darwin-only")
-	}
-	tmp := t.TempDir()
-	confPath := tmp + "/dnsmasq.conf"
-
-	orig := findDnsmasqConfFunc
-	findDnsmasqConfFunc = func() string { return confPath }
-	defer func() { findDnsmasqConfFunc = orig }()
-
-	if err := configureDnsmasqConf(); err != nil {
-		t.Fatalf("configureDnsmasqConf failed: %v", err)
-	}
-
-	// Second call should be idempotent — line is already present.
-	if err := configureDnsmasqConf(); err != nil {
-		t.Fatalf("second configureDnsmasqConf failed: %v", err)
-	}
-
-	// Verify the file contents.
-	data, err := readSmallFile(confPath)
-	if err != nil {
-		t.Fatalf("reading temp dnsmasq.conf: %v", err)
-	}
-	if !containsStr(data, dnsmasqConfLine) {
-		t.Errorf("conf missing magic line: %q", data)
-	}
-	// Line should appear exactly once (idempotent).
-	count := countOccurrences(data, dnsmasqConfLine)
-	if count != 1 {
-		t.Errorf("expected 1 occurrence, got %d", count)
-	}
-}
-
-// TestFindDnsmasqConfSeam_RoundTrip verifies the seam restoration behaviour.
-func TestFindDnsmasqConfSeam_RoundTrip(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("darwin-only")
-	}
-	orig := findDnsmasqConfFunc
-	findDnsmasqConfFunc = func() string { return "/tmp/test-only-dnsmasq.conf" }
-	got := findDnsmasqConf()
-	if got != "/tmp/test-only-dnsmasq.conf" {
-		t.Errorf("seam override not honoured: got %q", got)
-	}
-	findDnsmasqConfFunc = orig
-	// After restore, must return one of the real candidates.
-	got = findDnsmasqConf()
-	candidates := dnsmasqConfPaths()
-	found := false
-	for _, c := range candidates {
-		if got == c {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("after restore, findDnsmasqConf returned %q, not in candidates", got)
-	}
-}
-
-// TestFindDnsmasqConfReal_FallbackPath verifies that when no candidate exists
-// (CI environment), the function returns the documented Apple Silicon fallback.
-func TestFindDnsmasqConfReal_FallbackPath(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("darwin-only")
-	}
-	// findDnsmasqConfReal probes real paths. In CI both /opt/homebrew/etc/...
-	// and /usr/local/etc/... usually don't exist — fallback returns
-	// /opt/homebrew/etc/dnsmasq.conf.
-	got := findDnsmasqConfReal()
-	if got == "" {
-		t.Error("findDnsmasqConfReal must return non-empty path")
-	}
-}
-
-// readSmallFile reads a file fully.
+// readSmallFile reads a file fully. Used by darwin-gated tests in
+// coverage_g0t11_darwin_test.go.
 func readSmallFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	return string(data), err

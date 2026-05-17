@@ -1,3 +1,5 @@
+//go:build cgo
+
 package embedded
 
 // CGO_ENABLED=1 is required for this file. The sprint spec (S17 T02) provides

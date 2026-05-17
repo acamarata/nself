@@ -507,6 +507,10 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	// When embedded PG is requested, boot pglite via wasmtime instead of
 	// the Docker postgres container. The WASM module listens on a Unix
 	// domain socket; a wire-protocol bridge proxies Hasura's TCP traffic.
+	//
+	// startEmbeddedPGRuntime is conditionally compiled: the real implementation
+	// lives in start_embedded_cgo.go (//go:build cgo) and a stub that returns
+	// an error lives in start_embedded_nocgo.go (//go:build !cgo).
 	if opts.embeddedPG {
 		epgSp := ui.NewSpinner("Starting embedded PostgreSQL (pglite/wasmtime)...")
 		epgSp.Start()
@@ -532,35 +536,20 @@ func runStart(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("embedded-pg: fetch wasm: %w", fetchErr)
 		}
 
-		epgRuntime, runtimeErr := embedded.NewEmbeddedPGRuntime(runtimeDir, wasmPath)
-		if runtimeErr != nil {
-			epgSp.Fail(fmt.Sprintf("Failed to create embedded PG runtime: %v", runtimeErr))
-			return fmt.Errorf("embedded-pg: new runtime: %w", runtimeErr)
-		}
-
-		if bootErr := epgRuntime.Start(ctx); bootErr != nil {
-			epgSp.Fail(fmt.Sprintf("Embedded PG failed to boot: %v", bootErr))
+		epgCleanup, bridgeSockPath, epgErr := startEmbeddedPGRuntime(ctx, runtimeDir, wasmPath)
+		if epgErr != nil {
+			epgSp.Fail(fmt.Sprintf("Embedded PG failed to start: %v", epgErr))
 			ui.UXError(
-				"Embedded PG boot failed",
-				bootErr.Error(),
+				"Embedded PG start failed",
+				epgErr.Error(),
 				[]string{
 					"Check that wasmtime CGO support is available",
 					"Try without embedded PG: nself start (without --embedded-pg)",
 				},
 			)
-			return fmt.Errorf("embedded-pg: start runtime: %w", bootErr)
+			return epgErr
 		}
-
-		// Stop the embedded runtime when the command exits.
-		defer func() { _ = epgRuntime.Stop() }()
-
-		bridge := &embedded.PGSocketBridge{}
-		bridgeSockPath := epgRuntime.SockPath() + ".bridge"
-		if bridgeErr := bridge.Listen(ctx, bridgeSockPath, epgRuntime); bridgeErr != nil {
-			epgSp.Fail(fmt.Sprintf("Socket bridge failed to start: %v", bridgeErr))
-			return fmt.Errorf("embedded-pg: start bridge: %w", bridgeErr)
-		}
-		defer func() { _ = bridge.Close() }()
+		defer epgCleanup()
 
 		epgSp.Success(fmt.Sprintf("Embedded PostgreSQL ready (pglite v%s / wasmtime v25.x)", embedded.DefaultPGliteVersion))
 		ui.Info(fmt.Sprintf("  Socket: %s", bridgeSockPath))

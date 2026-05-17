@@ -12,10 +12,9 @@ import (
 	"time"
 )
 
-const dnsmasqConfLine = "address=/.local/127.0.0.1"
+// dnsmasqConfLine, resolverContent, and resolverPath are defined in
+// dns_common.go (shared across platforms so tests compile everywhere).
 const dnsmasqTimeout = 60 * time.Second
-const resolverPath = "/etc/resolver/local"
-const resolverContent = "nameserver 127.0.0.1\n"
 
 // dnsmasqConfPaths returns candidate paths for dnsmasq.conf in preference order.
 func dnsmasqConfPaths() []string {
