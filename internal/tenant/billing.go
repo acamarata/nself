@@ -2,10 +2,11 @@ package tenant
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
-	"os/exec"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
@@ -19,69 +20,84 @@ type BillingReportOptions struct {
 }
 
 // BillingReport generates a usage and billing summary for a tenant or all tenants.
+// Uses a direct database/sql connection with $N parameterized queries (Path A).
 func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOptions) (string, error) {
-	container := cfg.ProjectName + "_postgres"
-	user := cfg.Postgres.User
-	if user == "" {
-		user = "postgres"
-	}
-	db := cfg.Postgres.DB
-	if db == "" {
-		db = "nself"
-	}
-
-	where := "WHERE 1=1"
 	if opts.TenantSlug != "" {
 		if err := validateSlug(opts.TenantSlug); err != nil {
 			return "", err
 		}
-		where += fmt.Sprintf(" AND t.slug = '%s'", sanitize(opts.TenantSlug))
 	}
 	if opts.Month != "" {
 		if err := validateMonth(opts.Month); err != nil {
 			return "", err
 		}
-		where += fmt.Sprintf(" AND u.day >= '%s-01'::date AND u.day < ('%s-01'::date + interval '1 month')",
-			sanitize(opts.Month), sanitize(opts.Month))
 	}
 
-	sql := fmt.Sprintf(`SELECT json_agg(row_to_json(r)) FROM (
-		SELECT t.slug, t.plan, u.metric, sum(u.value) as total
-		FROM public.tenants t
-		JOIN nself_ops.usage_daily u ON u.tenant_id = t.id
-		%s
-		GROUP BY t.slug, t.plan, u.metric
-		ORDER BY t.slug, u.metric
-	) r;`, where)
-
-	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", db, "-tAc", sql,
-	)
-	out, err := cmd.Output()
+	sqlDB, err := openTenantDB(ctx, cfg)
 	if err != nil {
 		return "", fmt.Errorf("generating billing report: %w", err)
 	}
+	defer sqlDB.Close()
 
-	raw := strings.TrimSpace(string(out))
-	if raw == "" || raw == "null" {
-		return "No usage data found.", nil
+	// Build query with $N placeholders. Filters are applied only when provided.
+	args := []interface{}{}
+	query := `
+		SELECT t.slug, t.plan, u.metric, sum(u.value) AS total
+		FROM public.tenants t
+		JOIN nself_ops.usage_daily u ON u.tenant_id = t.id
+		WHERE 1=1`
+
+	if opts.TenantSlug != "" {
+		args = append(args, opts.TenantSlug)
+		query += fmt.Sprintf(" AND t.slug = $%d", len(args))
 	}
-
-	if opts.Format == "json" {
-		return raw, nil
+	if opts.Month != "" {
+		args = append(args, opts.Month)
+		// month is YYYY-MM; cast to date range server-side, never interpolated.
+		query += fmt.Sprintf(
+			" AND u.day >= ($%[1]d || '-01')::date AND u.day < (($%[1]d || '-01')::date + interval '1 month')",
+			len(args),
+		)
 	}
+	query += " GROUP BY t.slug, t.plan, u.metric ORDER BY t.slug, u.metric"
 
-	// Format as table.
-	var rows []struct {
+	dbRows, err := sqlDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return "", fmt.Errorf("generating billing report: %w", err)
+	}
+	defer dbRows.Close()
+
+	type reportRow struct {
 		Slug   string  `json:"slug"`
 		Plan   string  `json:"plan"`
 		Metric string  `json:"metric"`
 		Total  float64 `json:"total"`
 	}
-	if err := json.Unmarshal([]byte(raw), &rows); err != nil {
-		return "", fmt.Errorf("parsing report: %w", err)
+	var rows []reportRow
+	for dbRows.Next() {
+		var r reportRow
+		if err := dbRows.Scan(&r.Slug, &r.Plan, &r.Metric, &r.Total); err != nil {
+			return "", fmt.Errorf("scanning billing row: %w", err)
+		}
+		rows = append(rows, r)
+	}
+	if err := dbRows.Err(); err != nil {
+		return "", fmt.Errorf("iterating billing rows: %w", err)
 	}
 
+	if len(rows) == 0 {
+		return "No usage data found.", nil
+	}
+
+	if opts.Format == "json" {
+		enc, err := json.Marshal(rows)
+		if err != nil {
+			return "", fmt.Errorf("marshalling billing json: %w", err)
+		}
+		return string(enc), nil
+	}
+
+	// Format as table.
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("%-20s %-12s %-25s %15s\n", "TENANT", "PLAN", "METRIC", "TOTAL"))
 	for _, r := range rows {
@@ -91,36 +107,28 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 }
 
 // RetryStripeEvent re-enqueues a failed Stripe outbox entry for retry.
+// Uses a direct database/sql connection with $1 parameterized query (Path A).
 func RetryStripeEvent(ctx context.Context, cfg *config.Config, eventID string) error {
 	if err := validateEventID(eventID); err != nil {
 		return err
 	}
-	container := cfg.ProjectName + "_postgres"
-	user := cfg.Postgres.User
-	if user == "" {
-		user = "postgres"
-	}
-	db := cfg.Postgres.DB
-	if db == "" {
-		db = "nself"
-	}
 
-	sql := fmt.Sprintf(
-		"UPDATE nself_ops.stripe_outbox SET processed_at = NULL, attempts = 0, last_error = NULL "+
-			"WHERE id = '%s' RETURNING id;",
-		sanitize(eventID),
-	)
-
-	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", db, "-tAc", sql,
-	)
-	out, err := cmd.Output()
+	sqlDB, err := openTenantDB(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("retrying stripe event: %w", err)
 	}
+	defer sqlDB.Close()
 
-	if strings.TrimSpace(string(out)) == "" {
-		return fmt.Errorf("stripe outbox entry %q not found", eventID)
+	var returnedID string
+	err = sqlDB.QueryRowContext(ctx,
+		"UPDATE nself_ops.stripe_outbox SET processed_at = NULL, attempts = 0, last_error = NULL WHERE id = $1 RETURNING id",
+		eventID,
+	).Scan(&returnedID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("stripe outbox entry %q not found", eventID)
+		}
+		return fmt.Errorf("retrying stripe event: %w", err)
 	}
 
 	slog.Info("stripe event re-enqueued", "id", eventID)

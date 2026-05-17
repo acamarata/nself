@@ -1,6 +1,6 @@
 // Package doctor — rls_check_nsentry.go
 //
-// S4.T23 (P100 v1.1.0): ɳSentry-specific RLS checks (NSENTRY-RLS-01..07).
+// ɳSentry-specific RLS checks (NSENTRY-RLS-01..07).
 //
 // When any of the 7 ɳSentry baseline plugins is installed, nself doctor --deep
 // verifies that its np_* tables have:

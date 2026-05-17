@@ -220,6 +220,8 @@ func (s *mockDLQStore) ReEnqueue(_ context.Context, id string) error {
 }
 
 func TestDispatcher_SuccessfulDelivery(t *testing.T) {
+	// Allow loopback so httptest.NewServer (127.0.0.1) passes the SSRF guard.
+	t.Setenv("SSRF_ALLOWED_HOSTS", "127.0.0.1")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify required headers are present.
 		if r.Header.Get("X-Nself-Delivery") == "" {
@@ -264,6 +266,8 @@ func TestDispatcher_SuccessfulDelivery(t *testing.T) {
 }
 
 func TestDispatcher_MovesToDLQAfterMaxAttempts(t *testing.T) {
+	// Allow loopback so httptest.NewServer (127.0.0.1) passes the SSRF guard.
+	t.Setenv("SSRF_ALLOWED_HOSTS", "127.0.0.1")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))

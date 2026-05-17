@@ -2,10 +2,12 @@ package doctor
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -285,8 +287,9 @@ func TestHardeningChecks_ReturnsEightResults(t *testing.T) {
 	ctx := context.Background()
 
 	results := HardeningChecks(ctx, dir)
-	if len(results) != 8 {
-		t.Errorf("HardeningChecks returned %d results, want 8", len(results))
+	// 8 SEC-HARDENING-* + 1 SEC-CORS-01 + 1 SEC-OFFLINE-01 + 1 SEC-DEVMODE-01 + 1 SEC-METRICS-01 = 12 total.
+	if len(results) != 12 {
+		t.Errorf("HardeningChecks returned %d results, want 12", len(results))
 	}
 
 	for _, r := range results {
@@ -317,5 +320,302 @@ func TestHardeningChecks_CheckIDsDistinct(t *testing.T) {
 			t.Errorf("duplicate check ID: %q", r.Name)
 		}
 		seen[r.Name] = true
+	}
+}
+
+// ─── SEC-CORS-01: CORS domain ────────────────────────────────────────────────
+
+func TestCheckCORSDomain_NonProd(t *testing.T) {
+	dir := t.TempDir()
+	// No NSELF_ENV / NODE_ENV set → non-prod → skip check → pass.
+	writeEnvFile(t, dir, ".env.dev", "HASURA_GRAPHQL_CORS_DOMAIN=*")
+
+	res := checkCORSDomain(dir)
+	if res.Status != "pass" {
+		t.Errorf("non-prod with wildcard: status=%q, want pass (skip); msg=%s", res.Status, res.Message)
+	}
+}
+
+func TestCheckCORSDomain_ProdBareWildcard(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod",
+		"NSELF_ENV=production",
+		"HASURA_GRAPHQL_CORS_DOMAIN=*",
+	)
+
+	res := checkCORSDomain(dir)
+	if res.Status != "fail" {
+		t.Errorf("prod bare wildcard: status=%q, want fail; msg=%s", res.Status, res.Message)
+	}
+	if !strings.Contains(res.Message, "SEC-CORS-01") {
+		t.Errorf("message missing SEC-CORS-01: %s", res.Message)
+	}
+}
+
+func TestCheckCORSDomain_ProdSubdomainWildcard(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod",
+		"NSELF_ENV=production",
+		`HASURA_GRAPHQL_CORS_DOMAIN=https://*.example.com`,
+	)
+
+	res := checkCORSDomain(dir)
+	if res.Status != "warn" {
+		t.Errorf("prod subdomain wildcard: status=%q, want warn; msg=%s", res.Status, res.Message)
+	}
+}
+
+func TestCheckCORSDomain_ProdExplicit(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod",
+		"NSELF_ENV=staging",
+		`HASURA_GRAPHQL_CORS_DOMAIN=https://app.example.com`,
+	)
+
+	res := checkCORSDomain(dir)
+	if res.Status != "pass" {
+		t.Errorf("prod explicit domain: status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+}
+
+func TestCheckCORSDomain_ProdNotSet(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod", "NSELF_ENV=prod")
+
+	res := checkCORSDomain(dir)
+	if res.Status != "warn" {
+		t.Errorf("prod no CORS domain: status=%q, want warn; msg=%s", res.Status, res.Message)
+	}
+}
+
+// ─── SEC-OFFLINE-01: license cache freshness ─────────────────────────────────
+
+// TestCheckLicenseOffline_NoCache verifies that a missing cache is a pass (fresh install).
+func TestCheckLicenseOffline_NoCache(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("LICENSE_CACHE_PATH", filepath.Join(tmp, "does-not-exist.json"))
+
+	res := checkLicenseOffline()
+	if res.Status != "pass" {
+		t.Errorf("no cache: status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+	if res.Name != "SEC-OFFLINE-01" {
+		t.Errorf("Name=%q, want SEC-OFFLINE-01", res.Name)
+	}
+}
+
+// TestCheckLicenseOffline_FreshCache verifies that a recently-fetched cache is a pass.
+func TestCheckLicenseOffline_FreshCache(t *testing.T) {
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "license.json")
+	t.Setenv("LICENSE_CACHE_PATH", cachePath)
+
+	// fetched_at = 1 hour ago
+	fetchedAt := timeNowForTest().Add(-1 * time.Hour).Unix()
+	content := []byte(`{"fetched_at":` + itoa(fetchedAt) + `}`)
+	if err := os.WriteFile(cachePath, content, 0o600); err != nil {
+		t.Fatalf("writing cache: %v", err)
+	}
+
+	res := checkLicenseOffline()
+	if res.Status != "pass" {
+		t.Errorf("fresh cache (1h): status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+}
+
+// TestCheckLicenseOffline_StaleCache verifies that a cache >24h old is a warn.
+func TestCheckLicenseOffline_StaleCache(t *testing.T) {
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "license.json")
+	t.Setenv("LICENSE_CACHE_PATH", cachePath)
+
+	// fetched_at = 36 hours ago
+	fetchedAt := timeNowForTest().Add(-36 * time.Hour).Unix()
+	content := []byte(`{"fetched_at":` + itoa(fetchedAt) + `}`)
+	if err := os.WriteFile(cachePath, content, 0o600); err != nil {
+		t.Fatalf("writing cache: %v", err)
+	}
+
+	res := checkLicenseOffline()
+	if res.Status != "warn" {
+		t.Errorf("stale cache (36h): status=%q, want warn; msg=%s", res.Status, res.Message)
+	}
+	if !strings.Contains(res.Message, "unreachable") {
+		t.Errorf("message missing 'unreachable': %s", res.Message)
+	}
+}
+
+// TestCheckLicenseOffline_CorruptCache verifies that an unreadable cache is a warn.
+func TestCheckLicenseOffline_CorruptCache(t *testing.T) {
+	tmp := t.TempDir()
+	cachePath := filepath.Join(tmp, "license.json")
+	t.Setenv("LICENSE_CACHE_PATH", cachePath)
+
+	if err := os.WriteFile(cachePath, []byte("not-json"), 0o600); err != nil {
+		t.Fatalf("writing cache: %v", err)
+	}
+
+	res := checkLicenseOffline()
+	if res.Status != "warn" {
+		t.Errorf("corrupt cache: status=%q, want warn; msg=%s", res.Status, res.Message)
+	}
+}
+
+// timeNowForTest returns time.Now — a thin wrapper so test helpers are readable.
+func timeNowForTest() time.Time { return time.Now() }
+
+// itoa converts an int64 to its decimal string representation without importing strconv.
+func itoa(n int64) string { return fmt.Sprintf("%d", n) }
+
+// ─── SEC-DEVMODE-01: Hasura dev-mode not in staging/prod ─────────────────────
+
+func TestCheckHasuraDevMode_NonProd_Skipped(t *testing.T) {
+	dir := t.TempDir()
+	// No NSELF_ENV set → non-prod → skip.
+	res := checkHasuraDevMode(dir)
+	if res.Status != "pass" {
+		t.Errorf("no env set (non-prod): status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+	if res.Name != "SEC-DEVMODE-01" {
+		t.Errorf("Name=%q, want SEC-DEVMODE-01", res.Name)
+	}
+}
+
+func TestCheckHasuraDevMode_DevEnv_Skipped(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.dev", "ENV=dev", "HASURA_GRAPHQL_DEV_MODE=true")
+	res := checkHasuraDevMode(dir)
+	// dev env → skipped, even if dev-mode=true.
+	if res.Status != "pass" {
+		t.Errorf("dev env with dev-mode=true: status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+}
+
+func TestCheckHasuraDevMode_ProdDevModeTrue_Fails(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod",
+		"ENV=prod",
+		"HASURA_GRAPHQL_DEV_MODE=true",
+	)
+	res := checkHasuraDevMode(dir)
+	if res.Status != "fail" {
+		t.Errorf("prod dev-mode=true: status=%q, want fail; msg=%s", res.Status, res.Message)
+	}
+	if !strings.Contains(res.Message, "SEC-DEVMODE-01") {
+		t.Errorf("message missing SEC-DEVMODE-01: %s", res.Message)
+	}
+	if res.FixCmd == "" {
+		t.Error("FixCmd should be non-empty")
+	}
+}
+
+func TestCheckHasuraDevMode_ProdDevModeFalse_Passes(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.prod",
+		"ENV=prod",
+		"HASURA_GRAPHQL_DEV_MODE=false",
+	)
+	res := checkHasuraDevMode(dir)
+	if res.Status != "pass" {
+		t.Errorf("prod dev-mode=false: status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+}
+
+func TestCheckHasuraDevMode_StagingDevModeTrue_Fails(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvFile(t, dir, ".env.staging",
+		"ENV=staging",
+		"HASURA_GRAPHQL_DEV_MODE=true",
+	)
+	res := checkHasuraDevMode(dir)
+	if res.Status != "fail" {
+		t.Errorf("staging dev-mode=true: status=%q, want fail; msg=%s", res.Status, res.Message)
+	}
+}
+
+// ─── SEC-METRICS-01: Prometheus port binding ─────────────────────────────────
+
+// TestCheckMetricsPortBinding_LoopbackInCompose verifies that a docker-compose.yml
+// with 127.0.0.1:9090 returns pass.
+func TestCheckMetricsPortBinding_LoopbackInCompose(t *testing.T) {
+	dir := t.TempDir()
+	content := `services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "127.0.0.1:9090:9090"
+`
+	if err := os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := checkMetricsPortBinding(dir)
+	if res.Status != "pass" {
+		t.Errorf("loopback binding: status=%q, want pass; msg=%s", res.Status, res.Message)
+	}
+	if res.Name != "SEC-METRICS-01" {
+		t.Errorf("Name=%q, want SEC-METRICS-01", res.Name)
+	}
+}
+
+// TestCheckMetricsPortBinding_WildcardInCompose verifies that a docker-compose.yml
+// with 0.0.0.0:9090 returns fail.
+func TestCheckMetricsPortBinding_WildcardInCompose(t *testing.T) {
+	dir := t.TempDir()
+	content := `services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "0.0.0.0:9090:9090"
+`
+	if err := os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := checkMetricsPortBinding(dir)
+	if res.Status != "fail" {
+		t.Errorf("wildcard binding: status=%q, want fail; msg=%s", res.Status, res.Message)
+	}
+	if !strings.Contains(res.Message, "0.0.0.0") {
+		t.Errorf("message missing '0.0.0.0': %s", res.Message)
+	}
+	if res.FixCmd == "" {
+		t.Error("FixCmd should be non-empty for fail status")
+	}
+}
+
+// TestCheckMetricsPortBinding_NoPrometheus verifies that a compose file without
+// a prometheus service does not incorrectly fail.
+func TestCheckMetricsPortBinding_NoPrometheus(t *testing.T) {
+	dir := t.TempDir()
+	content := `services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+`
+	if err := os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := checkMetricsPortBinding(dir)
+	// No prometheus block → falls through to docker exec check (will fail to connect)
+	// and then returns pass (monitoring not deployed).
+	validStatuses := map[string]bool{"pass": true, "warn": true}
+	if !validStatuses[res.Status] {
+		t.Errorf("no prometheus: status=%q, want pass or warn; msg=%s", res.Status, res.Message)
+	}
+}
+
+// TestCheckMetricsPortBinding_NoComposeFile verifies graceful handling when
+// docker-compose.yml is absent (monitoring not deployed).
+func TestCheckMetricsPortBinding_NoComposeFile(t *testing.T) {
+	dir := t.TempDir()
+	// No docker-compose.yml — monitoring stack not present.
+	res := checkMetricsPortBinding(dir)
+	// Without compose file and without docker running, result should be pass.
+	validStatuses := map[string]bool{"pass": true, "warn": true}
+	if !validStatuses[res.Status] {
+		t.Errorf("no compose file: status=%q, want pass or warn; msg=%s", res.Status, res.Message)
 	}
 }

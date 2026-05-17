@@ -15,6 +15,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/docker"
+	"github.com/nself-org/cli/internal/embedded"
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/health"
 	"github.com/nself-org/cli/internal/license"
@@ -65,6 +66,7 @@ func init() {
 	f.Bool("watch", false, "Enable health auto-restart: poll services and restart unhealthy containers")
 	f.Bool("quiet", false, "Suppress progress output (for CI; preserves --json output)")
 	f.Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
+	f.Bool("embedded-pg", false, "Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required; pgvector included")
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -83,6 +85,7 @@ type startOpts struct {
 	skipPlugins      bool
 	watch            bool
 	quiet            bool
+	embeddedPG       bool
 }
 
 func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
@@ -99,6 +102,11 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	skipPlugins, _ := cmd.Flags().GetBool("skip-plugins")
 	watch, _ := cmd.Flags().GetBool("watch")
 	quiet, _ := cmd.Flags().GetBool("quiet")
+	embeddedPG, _ := cmd.Flags().GetBool("embedded-pg")
+	// NSELF_EMBEDDED_PG env var is the fallback when the flag is not set.
+	if !embeddedPG && os.Getenv("NSELF_EMBEDDED_PG") == "true" {
+		embeddedPG = true
+	}
 
 	// --force-recreate is an alias for --fresh.
 	if forceRecreate {
@@ -131,6 +139,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 		skipPlugins:      skipPlugins,
 		watch:            watch,
 		quiet:            quiet,
+		embeddedPG:       embeddedPG,
 	}, nil
 }
 
@@ -494,72 +503,138 @@ func runStart(cmd *cobra.Command, _ []string) error {
 
 	compose := docker.NewCompose(composeFiles...)
 
-	// ── First-run image pull ─────────────────────────────────────────
-	// Detect first run via the .nself/.first-run-complete marker.
-	// On first run, docker compose pull can take 1-3 minutes; show progress.
-	firstRunMarker := filepath.Join(projectDir, ".nself", ".first-run-complete")
-	if _, err := os.Stat(firstRunMarker); os.IsNotExist(err) {
-		if !opts.quiet {
-			ui.Info("First run detected — pulling Docker images (this takes 1-3 minutes on slow connections)...")
+	// ── Embedded PG path (--embedded-pg / NSELF_EMBEDDED_PG=true) ───
+	// When embedded PG is requested, boot pglite via wasmtime instead of
+	// the Docker postgres container. The WASM module listens on a Unix
+	// domain socket; a wire-protocol bridge proxies Hasura's TCP traffic.
+	if opts.embeddedPG {
+		epgSp := ui.NewSpinner("Starting embedded PostgreSQL (pglite/wasmtime)...")
+		epgSp.Start()
+
+		runtimeDir := filepath.Join(projectDir, ".nself", "embedded-pg")
+		if mkErr := os.MkdirAll(runtimeDir, 0o700); mkErr != nil {
+			epgSp.Fail(fmt.Sprintf("Could not create embedded PG runtime dir: %v", mkErr))
+			return fmt.Errorf("embedded-pg: mkdir runtime dir: %w", mkErr)
 		}
-		donePull := ui.FirstRunProgress(opts.quiet)
-		pullCtx, pullCancel := context.WithTimeout(ctx, 10*time.Minute)
-		_ = compose.ComposePull(pullCtx, projectDir)
-		pullCancel()
-		donePull()
-		// Write the first-run marker so subsequent starts skip this step.
-		if mkErr := os.MkdirAll(filepath.Dir(firstRunMarker), 0o700); mkErr == nil {
-			f, fErr := os.OpenFile(firstRunMarker, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-			if fErr == nil {
-				_ = f.Close()
+
+		wasmPath, fetchErr := embedded.FetchOrCached(ctx, embedded.DefaultPGliteVersion)
+		if fetchErr != nil {
+			epgSp.Fail(fmt.Sprintf("Failed to fetch pglite WASM: %v", fetchErr))
+			ui.UXError(
+				"Embedded PG: pglite fetch failed",
+				fetchErr.Error(),
+				[]string{
+					"Check network connectivity to ping.nself.org",
+					"Try clearing the cache: rm -rf ~/.nself/cache/pglite",
+					"Use standard PostgreSQL instead: remove --embedded-pg flag",
+				},
+			)
+			return fmt.Errorf("embedded-pg: fetch wasm: %w", fetchErr)
+		}
+
+		epgRuntime, runtimeErr := embedded.NewEmbeddedPGRuntime(runtimeDir, wasmPath)
+		if runtimeErr != nil {
+			epgSp.Fail(fmt.Sprintf("Failed to create embedded PG runtime: %v", runtimeErr))
+			return fmt.Errorf("embedded-pg: new runtime: %w", runtimeErr)
+		}
+
+		if bootErr := epgRuntime.Start(ctx); bootErr != nil {
+			epgSp.Fail(fmt.Sprintf("Embedded PG failed to boot: %v", bootErr))
+			ui.UXError(
+				"Embedded PG boot failed",
+				bootErr.Error(),
+				[]string{
+					"Check that wasmtime CGO support is available",
+					"Try without embedded PG: nself start (without --embedded-pg)",
+				},
+			)
+			return fmt.Errorf("embedded-pg: start runtime: %w", bootErr)
+		}
+
+		// Stop the embedded runtime when the command exits.
+		defer func() { _ = epgRuntime.Stop() }()
+
+		bridge := &embedded.PGSocketBridge{}
+		bridgeSockPath := epgRuntime.SockPath() + ".bridge"
+		if bridgeErr := bridge.Listen(ctx, bridgeSockPath, epgRuntime); bridgeErr != nil {
+			epgSp.Fail(fmt.Sprintf("Socket bridge failed to start: %v", bridgeErr))
+			return fmt.Errorf("embedded-pg: start bridge: %w", bridgeErr)
+		}
+		defer func() { _ = bridge.Close() }()
+
+		epgSp.Success(fmt.Sprintf("Embedded PostgreSQL ready (pglite v%s / wasmtime v25.x)", embedded.DefaultPGliteVersion))
+		ui.Info(fmt.Sprintf("  Socket: %s", bridgeSockPath))
+		ui.Info("  Hasura will connect via UDS bridge — no Docker postgres container required")
+	} else {
+		// ── Standard Docker postgres path ───────────────────────────
+
+		// ── First-run image pull ─────────────────────────────────────────
+		// Detect first run via the .nself/.first-run-complete marker.
+		// On first run, docker compose pull can take 1-3 minutes; show progress.
+		firstRunMarker := filepath.Join(projectDir, ".nself", ".first-run-complete")
+		if _, err := os.Stat(firstRunMarker); os.IsNotExist(err) {
+			if !opts.quiet {
+				ui.Info("First run detected — pulling Docker images (this takes 1-3 minutes on slow connections)...")
+			}
+			donePull := ui.FirstRunProgress(opts.quiet)
+			pullCtx, pullCancel := context.WithTimeout(ctx, 10*time.Minute)
+			_ = compose.ComposePull(pullCtx, projectDir)
+			pullCancel()
+			donePull()
+			// Write the first-run marker so subsequent starts skip this step.
+			if mkErr := os.MkdirAll(filepath.Dir(firstRunMarker), 0o700); mkErr == nil {
+				f, fErr := os.OpenFile(firstRunMarker, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+				if fErr == nil {
+					_ = f.Close()
+				}
 			}
 		}
-	}
 
-	// Clean start: remove all containers first.
-	if opts.cleanStart {
-		sp := ui.NewSpinner("Removing existing containers...")
-		sp.Start()
-		if err := compose.ComposeDown(ctx, projectDir, docker.DownOptions{
-			RemoveOrphans: true,
-		}); err != nil {
-			sp.Fail(fmt.Sprintf("Cleanup failed: %v", err))
-			// Non-fatal: continue with startup.
-		} else {
-			sp.Success("Existing containers removed")
+		// Clean start: remove all containers first.
+		if opts.cleanStart {
+			sp := ui.NewSpinner("Removing existing containers...")
+			sp.Start()
+			if err := compose.ComposeDown(ctx, projectDir, docker.DownOptions{
+				RemoveOrphans: true,
+			}); err != nil {
+				sp.Fail(fmt.Sprintf("Cleanup failed: %v", err))
+				// Non-fatal: continue with startup.
+			} else {
+				sp.Success("Existing containers removed")
+			}
 		}
-	}
 
-	// Fresh mode: force recreate by running down first.
-	if opts.fresh && !opts.cleanStart {
-		sp := ui.NewSpinner("Forcing container recreation...")
-		sp.Start()
-		if err := compose.ComposeDown(ctx, projectDir, docker.DownOptions{}); err != nil {
-			sp.Fail(fmt.Sprintf("Recreation cleanup failed: %v", err))
-			// Non-fatal: continue with startup.
-		} else {
-			sp.Success("Containers cleared for fresh start")
+		// Fresh mode: force recreate by running down first.
+		if opts.fresh && !opts.cleanStart {
+			sp := ui.NewSpinner("Forcing container recreation...")
+			sp.Start()
+			if err := compose.ComposeDown(ctx, projectDir, docker.DownOptions{}); err != nil {
+				sp.Fail(fmt.Sprintf("Recreation cleanup failed: %v", err))
+				// Non-fatal: continue with startup.
+			} else {
+				sp.Success("Containers cleared for fresh start")
+			}
 		}
-	}
 
-	// Phase 1: Start only postgres so schemas can be created before auth starts.
-	sp := ui.NewSpinner("Starting PostgreSQL...")
-	sp.Start()
-	if err := compose.ComposeUp(ctx, projectDir, "postgres"); err != nil {
-		sp.Fail("Failed to start PostgreSQL")
-		ui.UXError(
-			"Failed to start PostgreSQL",
-			err.Error(),
-			[]string{
-				"Check Docker is running: docker info",
-				"Review logs: nself logs postgres",
-				"Try a clean start: nself start --clean-start",
-				"Rebuild: nself build --force",
-			},
-		)
-		return fmt.Errorf("compose up postgres: %w", err)
+		// Phase 1: Start only postgres so schemas can be created before auth starts.
+		sp := ui.NewSpinner("Starting PostgreSQL...")
+		sp.Start()
+		if err := compose.ComposeUp(ctx, projectDir, "postgres"); err != nil {
+			sp.Fail("Failed to start PostgreSQL")
+			ui.UXError(
+				"Failed to start PostgreSQL",
+				err.Error(),
+				[]string{
+					"Check Docker is running: docker info",
+					"Review logs: nself logs postgres",
+					"Try a clean start: nself start --clean-start",
+					"Rebuild: nself build --force",
+				},
+			)
+			return fmt.Errorf("compose up postgres: %w", err)
+		}
+		sp.Success("PostgreSQL container started")
 	}
-	sp.Success("PostgreSQL container started")
 
 	// ── Step 5: Database initialization (Phase 2) ───────────────────
 	// Run BEFORE other services start. The auth service requires the auth

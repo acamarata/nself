@@ -8,8 +8,7 @@
 // underlying operation. Errors are logged via stderr fallback (slog when
 // available in callers).
 //
-// Introduced: P99 Sprint 2.5 T12 (initial wiring).
-// Verified + completed: P99 Sprint 1.22 T02.
+// Initial wiring and completion verified via integration test suite.
 package plugin
 
 import (

@@ -103,8 +103,17 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_KEY", "value", "[generated]")
 	}
 	if cfg.Hasura.JWTType == "" {
-		cfg.Hasura.JWTType = "HS256"
+		// SEC-JWT-01: RS256 is the default for new installs (asymmetric — private key
+		// never leaves the auth service; public key shared with Hasura).
+		// HS256 is still supported for existing deployments but emits a deprecation
+		// warning at startup. Migrate guide: docs.nself.org/security/jwt-migration.
+		cfg.Hasura.JWTType = "RS256"
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_TYPE", "value", cfg.Hasura.JWTType)
+	} else if strings.EqualFold(cfg.Hasura.JWTType, "HS256") {
+		// SEC-JWT-01: HS256 uses a shared secret — if the secret leaks, all tokens
+		// are forgeable. Upgrade to RS256 for new deployments.
+		slog.Warn("SEC-JWT-01: HASURA_JWT_TYPE=HS256 is deprecated and will be removed in v2.0. " +
+			"Migrate to RS256. See docs.nself.org/security/jwt-migration.")
 	}
 	if cfg.Hasura.Route == "" {
 		cfg.Hasura.Route = "api"
@@ -779,7 +788,10 @@ func BuildJWTSecret(cfg *Config) (string, error) {
 
 	jwtType := cfg.Hasura.JWTType
 	if jwtType == "" {
-		jwtType = "HS256"
+		jwtType = "RS256" // SEC-JWT-01: RS256 is the new default
+	}
+	if strings.EqualFold(jwtType, "HS256") {
+		slog.Warn("SEC-JWT-01: HASURA_JWT_TYPE=HS256 is deprecated. Migrate to RS256. See docs.nself.org/security/jwt-migration.")
 	}
 
 	jwtKey := cfg.Hasura.JWTKey
@@ -811,6 +823,22 @@ func (cfg *Config) DatabaseURL() string {
 		cfg.Postgres.Host,
 		cfg.Postgres.DB,
 	)
+}
+
+// EmbeddedPGDatabaseURL returns a PostgreSQL DSN that connects via the
+// Unix-domain socket bridge created by the pglite/wasmtime embedded runtime.
+// The host field is the runtimeDir path; sslmode=disable is required because
+// the embedded runtime does not perform TLS termination.
+//
+// Use this DSN only when cfg.EmbeddedPG is true and runtimeDir is the
+// directory passed to embedded.NewEmbeddedPGRuntime.
+func (cfg *Config) EmbeddedPGDatabaseURL(runtimeDir string) string {
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+	// The host= DSN key accepts a directory path for UDS connections in libpq.
+	return fmt.Sprintf("host=%s dbname=%s sslmode=disable", runtimeDir, db)
 }
 
 // BuildServiceURL constructs a full HTTPS URL for a service subdomain against

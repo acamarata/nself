@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// P99 Sprint 1.32 T05 — service_toggle tests.
+// service_toggle tests: compose-aware plugin enable/disable.
 
 const sampleCompose = `services:
   postgres:

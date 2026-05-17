@@ -1,6 +1,6 @@
 // Package compose: service toggle helper.
 //
-// P99 Sprint 1.32 T05 — compose-aware plugin enable/disable for Model A.
+// Compose-aware plugin enable/disable for Model A.
 //
 // For Model A plugins (compose-managed services), enable/disable means
 // commenting or uncommenting the service block in docker-compose.yml.

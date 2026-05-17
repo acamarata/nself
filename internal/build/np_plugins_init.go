@@ -1,4 +1,4 @@
-// np_plugins_init.go — P97 G0-T04
+// np_plugins_init.go — np_plugins seed SQL generator.
 //
 // Writes an idempotent SQL seed script that ensures one row exists in
 // np_plugins for every plugin installed under pluginDir. The script is named

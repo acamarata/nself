@@ -278,13 +278,13 @@ func main() {
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
-	fmt.Printf("%s listening on :%s\n", "%s", port)
+	fmt.Println("%s listening on :" + port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
-`, upperName, port, "%s", name), 0644},
+`, upperName, port, name), 0644},
 			fileSpec{"Dockerfile", fmt.Sprintf(`FROM golang:1.23-alpine AS build
 WORKDIR /src
 COPY go.mod ./

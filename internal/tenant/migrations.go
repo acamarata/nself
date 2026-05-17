@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS nself_ops.audit_log (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_audit_log_tenant_id ON nself_ops.audit_log (tenant_id);
-CREATE INDEX idx_audit_log_created_at ON nself_ops.audit_log (created_at);
-CREATE INDEX idx_audit_log_action ON nself_ops.audit_log (action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_tenant_id ON nself_ops.audit_log (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON nself_ops.audit_log (created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON nself_ops.audit_log (action);
 
 -- INSERT-only: revoke UPDATE and DELETE from all roles
 REVOKE UPDATE, DELETE ON nself_ops.audit_log FROM PUBLIC;
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS nself_ops.usage_daily (
     PRIMARY KEY (tenant_id, day, metric)
 );
 
-CREATE INDEX idx_usage_daily_day ON nself_ops.usage_daily (day);
+CREATE INDEX IF NOT EXISTS idx_usage_daily_day ON nself_ops.usage_daily (day);
 
 COMMENT ON TABLE nself_ops.usage_daily IS 'Per-tenant daily usage metrics for billing metering.';`
 }
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS nself_ops.stripe_outbox (
     processed_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_stripe_outbox_pending ON nself_ops.stripe_outbox (created_at)
+CREATE INDEX IF NOT EXISTS idx_stripe_outbox_pending ON nself_ops.stripe_outbox (created_at)
     WHERE processed_at IS NULL;
 
 COMMENT ON TABLE nself_ops.stripe_outbox IS 'Transactional outbox for Stripe usage record pushes. Retried every 5 minutes.';`
@@ -87,6 +87,6 @@ CREATE TABLE IF NOT EXISTS public.tenants (
     CONSTRAINT tenants_plan_check CHECK (plan IN ('basic', 'pro', 'elite', 'business', 'business-plus', 'enterprise'))
 );
 
-CREATE INDEX idx_tenants_slug ON public.tenants (slug);
-CREATE INDEX idx_tenants_status ON public.tenants (status);`
+CREATE INDEX IF NOT EXISTS idx_tenants_slug ON public.tenants (slug);
+CREATE INDEX IF NOT EXISTS idx_tenants_status ON public.tenants (status);`
 }

@@ -1,12 +1,11 @@
 // Package build — prometheus.go: Auto-generates Prometheus scrape config for
 // the ɳSentry plugin bundle.
 //
-// S12.T01 (P100 v1.1.0): When the ɳSentry bundle is licensed and any of its
-// 7 baseline plugins are installed, `nself build` must emit scrape-target
-// blocks for each one in monitoring/prometheus.yml so Prometheus can pull
-// /metrics from each plugin. This file owns ɳSentry detection + scrape-target
-// generation; the actual prometheus.yml render lives in
-// internal/compose/monitoring/prometheus.go.
+// When the ɳSentry bundle is licensed and any of its 7 baseline plugins are
+// installed, `nself build` must emit scrape-target blocks for each one in
+// monitoring/prometheus.yml so Prometheus can pull /metrics from each plugin.
+// This file owns ɳSentry detection + scrape-target generation; the actual
+// prometheus.yml render lives in internal/compose/monitoring/prometheus.go.
 //
 // Behavior:
 //   - Detects which of the 7 ɳSentry plugins (uptime-monitor, status-page,

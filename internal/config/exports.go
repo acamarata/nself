@@ -31,7 +31,7 @@ func DefaultFor(key string) string {
 
 		// Hasura
 		"HASURA_VERSION":   "v2.44.0",
-		"HASURA_JWT_TYPE":  "HS256",
+		"HASURA_JWT_TYPE":  "RS256", // SEC-JWT-01: RS256 default; HS256 warned at startup
 		"HASURA_ROUTE":     "api",
 		"HASURA_PORT":      "8080",
 		"HASURA_MEM_LIMIT": "1g",

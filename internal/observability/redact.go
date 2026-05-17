@@ -10,10 +10,9 @@ import (
 
 // PII redaction patterns.
 //
-// S12.T09 (P100 v1.1.0): expanded coverage to include IPs, JWTs, SSNs,
-// license keys, additional Stripe/Cloudflare token shapes, AWS keys, and
-// generic UUIDs. Patterns are documented in
-// .claude/docs/operations/telemetry-privacy.md § "Redaction patterns".
+// Expanded coverage includes IPs, JWTs, SSNs, license keys, additional
+// Stripe/Cloudflare token shapes, AWS keys, and generic UUIDs. Patterns are
+// documented in .claude/docs/operations/telemetry-privacy.md § "Redaction patterns".
 var (
 	// Communication identifiers.
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)

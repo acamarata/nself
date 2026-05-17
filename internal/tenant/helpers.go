@@ -1,10 +1,47 @@
+// Package tenant manages multi-tenant lifecycle operations for a self-hosted nSelf deployment.
+//
+// # SQL Injection Defense — SEC-SQL-02
+//
+// SEC-SQL-02 has two execution paths:
+//
+// Path A — direct database/sql connection (query functions):
+//
+//	QueryUsage, BillingReport, RetryStripeEvent, and Audit use openTenantDB to
+//	obtain a *sql.DB connection to Postgres and execute queries with $1/$2…
+//	positional-parameter binding via db.QueryContext/ExecContext. No value from
+//	user input is ever interpolated into the SQL string on this path.
+//
+// Path B — docker exec psql (write/collection functions):
+//
+//	CollectUsage and upsertUsage drive Postgres via
+//	`docker exec <container> psql -c <sql>` because they perform multi-statement
+//	INSERTs that reference CURRENT_DATE and Prometheus results unavailable over a
+//	direct connection from the host. Values on this path are guarded by a two-layer
+//	defence:
+//	  1. Strict whitelist validation (validate* functions) — primary defence.
+//	  2. sanitize() — belt-and-suspenders quote-doubling for the docker exec path
+//	     only. It is intentionally kept for Path B; it is NOT used on Path A.
+//
+// sanitize() is deprecated for SQL use. It exists only for the docker exec Path B
+// functions that cannot migrate to direct connections. Do not add new callers.
+//
+// Static analysis gate: CI runs the sec-lint.sh SQL-injection rule which fails if
+// fmt.Sprintf with SQL keywords appears outside of caller-validated whitelist paths.
+// See .github/workflows/sec-sqli-gate.yml.
 package tenant
 
 import (
+	"context"
 	"crypto/sha256"
+	"database/sql"
 	"fmt"
 	"regexp"
 	"strings"
+
+	// pq registers the "postgres" driver for the tenant direct-connection path.
+	_ "github.com/lib/pq"
+
+	"github.com/nself-org/cli/internal/config"
 )
 
 // hashTenantID returns the first 8 hex characters of the SHA-256 of the raw
@@ -15,10 +52,30 @@ func hashTenantID(id string) string {
 	return fmt.Sprintf("%x", h[:4]) // 8 hex chars = 4 bytes
 }
 
-// sanitize escapes single quotes for safe SQL interpolation via psql -c.
-// This is NOT a substitute for parameterized queries; callers must also
-// validate inputs against a strict whitelist (see assertSafeValue) before
-// interpolation. Kept as a belt-and-suspenders defence.
+// openTenantDB opens a direct database/sql connection to the project Postgres
+// instance using the connection URL from cfg. The caller must call db.Close().
+// This is used by query functions (QueryUsage, BillingReport, RetryStripeEvent,
+// Audit) so they can use $N parameterized queries instead of docker exec psql.
+func openTenantDB(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
+	url := cfg.DatabaseURL()
+	if url == "" {
+		return nil, fmt.Errorf("database URL is empty — check POSTGRES_* env vars in your .env")
+	}
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		return nil, fmt.Errorf("open tenant db: %w", err)
+	}
+	if err := db.PingContext(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("connect to tenant db: %w (is the postgres container running?)", err)
+	}
+	return db, nil
+}
+
+// sanitize escapes single quotes for the docker exec psql execution path (Path B).
+//
+// Deprecated: only use in CollectUsage/upsertUsage (docker exec path). Do NOT
+// add new callers. All new query functions must use openTenantDB with $N params.
 func sanitize(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
 }

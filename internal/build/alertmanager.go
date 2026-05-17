@@ -1,12 +1,11 @@
 // Package build — alertmanager.go: Build-pipeline integration for the
 // Alertmanager routing config, with ɳSentry-aware receiver + route generation.
 //
-// S12.T03 (P100 v1.1.0): `nself build` must produce a complete
-// monitoring/alertmanager.yml that includes a dedicated `nsentry` receiver
-// plus one routing rule per installed ɳSentry plugin. This file owns the
-// build-time stitching — the base AlertmanagerConfig template lives in
-// internal/compose/monitoring/alerts.go and is reused here so we never
-// fork the YAML schema.
+// `nself build` must produce a complete monitoring/alertmanager.yml that
+// includes a dedicated `nsentry` receiver plus one routing rule per installed
+// ɳSentry plugin. This file owns the build-time stitching — the base
+// AlertmanagerConfig template lives in internal/compose/monitoring/alerts.go
+// and is reused here so we never fork the YAML schema.
 //
 // Behavior:
 //   - WriteAlertmanagerConfig renders alertmanager.yml + appends ɳSentry

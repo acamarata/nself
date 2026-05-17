@@ -80,5 +80,5 @@ node_modules/
 *.key
 *.pem
 bin/certs/
-src/templates/certs/**/*.key
-src/templates/certs/**/*.pem
+!src/templates/certs/**/*.key
+!src/templates/certs/**/*.pem

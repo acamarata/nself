@@ -17,6 +17,9 @@ github.com/aymerick/douceur/parser
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
+# github.com/bytecodealliance/wasmtime-go/v25 v25.0.0
+## explicit; go 1.18
+github.com/bytecodealliance/wasmtime-go/v25
 # github.com/cenkalti/backoff/v5 v5.0.3
 ## explicit; go 1.23
 github.com/cenkalti/backoff/v5

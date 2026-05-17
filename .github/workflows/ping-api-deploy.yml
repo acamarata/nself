@@ -1,0 +1,69 @@
+name: Deploy ping_api (CS_1)
+
+# Deploys the ping_api custom service (web/backend CS_1) to Hetzner prod.
+# Gate: requires PING_API_DEPLOY_AUTHORIZED org secret to be set (UA-02).
+# Without the secret this workflow is a no-op — safe to merge to main.
+#
+# Trigger: push to main (conditional) or manual dispatch.
+# prod IP: 5.75.235.42  port: 8001
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force deploy even if no ping_api changes detected'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ping_api to prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Skip entirely when UA-02 authorization secret is absent.
+    # This keeps the workflow inert on PRs, forks, and pre-authorization pushes.
+    if: ${{ secrets.PING_API_DEPLOY_AUTHORIZED != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify ping_api service directory exists
+        run: |
+          if [ ! -d "web/backend/services/ping_api" ]; then
+            echo "::error::web/backend/services/ping_api not found — aborting deploy"
+            exit 1
+          fi
+
+      - name: Deploy to Hetzner prod (SSH)
+        env:
+          HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_NSELF_SSH_PRIVATE_KEY }}
+          PROD_HOST: 5.75.235.42
+          PING_API_DEPLOY_AUTHORIZED: ${{ secrets.PING_API_DEPLOY_AUTHORIZED }}
+        run: |
+          # Write SSH key
+          mkdir -p ~/.ssh
+          echo "$HETZNER_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 0600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Deploy via nself CLI on the remote host
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "deploy@${PROD_HOST}" \
+            "cd /srv/nself && nself deploy --service ping_api --env prod"
+
+      - name: Health check ping_api
+        run: |
+          # Wait for service to become healthy (max 60s)
+          for i in $(seq 1 12); do
+            if curl -sf "https://ping.nself.org/health" | grep -q '"status":"ok"'; then
+              echo "ping_api healthy after $((i * 5))s"
+              exit 0
+            fi
+            echo "Waiting... attempt $i/12"
+            sleep 5
+          done
+          echo "::error::ping_api health check failed after 60s"
+          exit 1

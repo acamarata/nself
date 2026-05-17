@@ -11,8 +11,7 @@
 //   - State (per-flag enabled/disabled overrides) lives in `.nself/features.json`
 //     inside the project working directory.
 //
-// Spec source: P100 Sprint 12 (S12.T15) — see
-// .claude/phases/current/p100-storm/sprints/sprint-12-obs-legal-i18n.md.
+// Spec source: .claude/docs/ARCHITECTURE.md § Feature Flags.
 package featureflags
 
 import (

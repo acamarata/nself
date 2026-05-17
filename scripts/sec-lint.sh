@@ -114,6 +114,63 @@ EOF
   fi
 done < <(find "$ROOT" -name "*.go" -print)
 
+# ── Rule 4: SQL string interpolation with data values in tenant/ (SEC-SQL-02) ─
+# Flag fmt.Sprintf calls in internal/tenant/ that embed a SQL keyword alongside
+# a string-value verb (%s, %q, %v) — the precise pattern of data-value injection.
+# Allowed: fmt.Sprintf with only integer verbs (%d, %[N]d) building $N indices.
+# Allowed (Path B docker-exec belt-and-suspenders): any fmt.Sprintf wrapping sanitize().
+#
+# Rule 4 catches both the old-style '%s' literal and the more general %s/%q/%v
+# pattern so that regressions introduced in future patches are caught at lint time.
+
+TENANT_DIR="$ROOT/tenant"
+if [ -d "$TENANT_DIR" ]; then
+  while IFS= read -r gofile; do
+    # Match: fmt.Sprintf on a line that also contains a SQL keyword AND a string
+    # verb (%s, %q, %v, %[N]s etc.) — but NOT solely integer-positional verbs.
+    # Exclude lines that are comment-only or wrap sanitize() (Path B intent).
+    hits=$(command grep -n "fmt\.Sprintf" "$gofile" \
+      | command grep -E '(SELECT|INSERT|UPDATE|DELETE|WHERE|FROM|JOIN|SET|INTO|VALUES|RETURNING)' \
+      | command grep -E '%(\[[0-9]+\])?[sqv]' \
+      | command grep -v "sanitize(" \
+      | awk -F: '{rest=$0; sub(/^[0-9]+:/, "", rest); if (rest !~ /^[[:space:]]*\/\//) print}' \
+      || true)
+    if [ -n "$hits" ]; then
+      while IFS= read -r hit; do
+        fail "Rule 4 (SEC-SQL-02 data-value interpolation in SQL — use \$N bound params): ${gofile}:${hit}"
+      done <<EOF
+$hits
+EOF
+    fi
+  done < <(find "$TENANT_DIR" -name "*.go" ! -name "*_test.go" -print)
+fi
+
+# ── Rule 5: plain &http.Client{} in webhook package (SEC-SSRF-01) ─────────
+# All outbound HTTP in internal/webhook/ must use NewWebhookClient() (SSRF-safe
+# transport). A bare &http.Client{} bypasses the safeDialContext guard.
+
+WEBHOOK_DIR="$ROOT/webhook"
+if [ -d "$WEBHOOK_DIR" ]; then
+  while IFS= read -r gofile; do
+    # ssrf.go is the SSRF guard implementation — it is allowed to construct
+    # &http.Client{} inside NewWebhookClient(). All other webhook files must
+    # use NewWebhookClient() instead.
+    if [[ "$gofile" == */ssrf.go ]]; then
+      continue
+    fi
+    hits=$(command grep -n '&http\.Client{' "$gofile" \
+      | awk -F: '{rest=$0; sub(/^[0-9]+:/, "", rest); if (rest !~ /^[[:space:]]*\/\//) print}' \
+      || true)
+    if [ -n "$hits" ]; then
+      while IFS= read -r hit; do
+        fail "Rule 5 (SEC-SSRF-01 plain http.Client in webhook/): ${gofile}:${hit}"
+      done <<EOF
+$hits
+EOF
+    fi
+  done < <(find "$WEBHOOK_DIR" -name "*.go" ! -name "*_test.go" -print)
+fi
+
 # ── Result ──────────────────────────────────────────────────────────────────
 
 if [ "$FAIL" -eq 0 ]; then

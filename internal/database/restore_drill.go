@@ -53,19 +53,24 @@ func RestoreDrill(ctx context.Context, cfg *config.Config, backupFile string) (R
 	}
 	drillDB := db + "_drilltest"
 
+	// Validate and double-quote the drill DB identifier before any DDL. SEC-SQL-01.
+	quotedDrillDB, err := SanitizeIdentifier(drillDB)
+	if err != nil {
+		return result, fmt.Errorf("invalid drill database name %q: %w", drillDB, err)
+	}
+
 	// Ensure drill database does not already exist (clean state).
-	_ = runSQLOnDB(ctx, cfg, "postgres", fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, drillDB))
+	_ = runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB)
 
 	// Create the temporary drill database.
-	createSQL := fmt.Sprintf(`CREATE DATABASE "%s"`, drillDB)
-	if err := runSQLOnDB(ctx, cfg, "postgres", createSQL); err != nil {
+	if err := runSQLOnDB(ctx, cfg, "postgres", "CREATE DATABASE "+quotedDrillDB); err != nil {
 		return result, fmt.Errorf("create drill database %s: %w", drillDB, err)
 	}
 
 	// Restore backup into the drill database.
 	// We build a restore-like command targeting drillDB directly.
 	if err := restoreToDB(ctx, cfg, backupFile, drillDB); err != nil {
-		_ = runSQLOnDB(ctx, cfg, "postgres", fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, drillDB))
+		_ = runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB)
 		result.ErrorMessage = err.Error()
 		result.CompletedAt = time.Now()
 		result.Duration = result.CompletedAt.Sub(result.StartedAt)
@@ -76,7 +81,7 @@ func RestoreDrill(ctx context.Context, cfg *config.Config, backupFile string) (R
 	// Verify the restored database.
 	tables, rows, err := VerifyRestoredDatabase(ctx, cfg, drillDB)
 	if err != nil {
-		_ = runSQLOnDB(ctx, cfg, "postgres", fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, drillDB))
+		_ = runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB)
 		result.ErrorMessage = err.Error()
 		result.CompletedAt = time.Now()
 		result.Duration = result.CompletedAt.Sub(result.StartedAt)
@@ -88,7 +93,7 @@ func RestoreDrill(ctx context.Context, cfg *config.Config, backupFile string) (R
 	result.RowsVerified = rows
 
 	// Drop the drill database.
-	if err := runSQLOnDB(ctx, cfg, "postgres", fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, drillDB)); err != nil {
+	if err := runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB); err != nil {
 		return result, fmt.Errorf("drop drill database %s: %w", drillDB, err)
 	}
 
@@ -133,7 +138,26 @@ func VerifyRestoredDatabase(ctx context.Context, cfg *config.Config, drillDB str
 		if tableLine == "" {
 			continue
 		}
-		countSQL := fmt.Sprintf("SELECT count(*) FROM %s", tableLine)
+		// tableLine is "schema.table_name" returned by information_schema.
+		// Sanitize each component individually to produce a safe qualified identifier.
+		// SEC-SQL-01: never interpolate DB-sourced identifiers without quoting.
+		parts := strings.SplitN(tableLine, ".", 2)
+		var qualifiedTable string
+		if len(parts) == 2 {
+			quotedSchema, schErr := SanitizeIdentifier(parts[0])
+			quotedTable, tblErr := SanitizeIdentifier(parts[1])
+			if schErr != nil || tblErr != nil {
+				continue // skip unquotable identifiers
+			}
+			qualifiedTable = quotedSchema + "." + quotedTable
+		} else {
+			quoted, qErr := SanitizeIdentifier(tableLine)
+			if qErr != nil {
+				continue
+			}
+			qualifiedTable = quoted
+		}
+		countSQL := "SELECT count(*) FROM " + qualifiedTable
 		rowOut, rowErr := querySQL(ctx, cfg, drillDB, countSQL)
 		if rowErr != nil {
 			continue

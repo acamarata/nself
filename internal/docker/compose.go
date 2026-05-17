@@ -82,10 +82,39 @@ func (c *Compose) ComposeRestart(ctx context.Context, workdir string, services .
 	return c.Run(ctx, workdir, args...)
 }
 
-// ComposePull runs `docker compose pull` in the given workdir.
+// ComposePull runs `docker compose pull` in the given workdir, pulling images
+// for all services defined in the compose file.
 func (c *Compose) ComposePull(ctx context.Context, workdir string) error {
 	args := c.buildBaseArgs()
 	args = append(args, "pull")
+	return c.Run(ctx, workdir, args...)
+}
+
+// ComposePullService runs `docker compose pull <service>` in the given workdir,
+// pulling a fresh image only for the named service.
+func (c *Compose) ComposePullService(ctx context.Context, workdir, service string) error {
+	args := c.buildBaseArgs()
+	args = append(args, "pull", service)
+	return c.Run(ctx, workdir, args...)
+}
+
+// ComposeStop runs `docker compose stop [services...]` in the given workdir.
+// Unlike ComposeDown, this stops containers without removing them, preserving
+// their state for a subsequent ComposeUp.
+func (c *Compose) ComposeStop(ctx context.Context, workdir string, services ...string) error {
+	args := c.buildBaseArgs()
+	args = append(args, "stop")
+	args = append(args, services...)
+	return c.Run(ctx, workdir, args...)
+}
+
+// ComposeScale runs `docker compose up -d --scale <service>=<n>` in the given
+// workdir, adjusting the replica count for the named service.
+func (c *Compose) ComposeScale(ctx context.Context, workdir, service string, replicas int) error {
+	args := c.buildBaseArgs()
+	args = append(args, "up", "-d", "--no-deps",
+		fmt.Sprintf("--scale=%s=%d", service, replicas), service,
+	)
 	return c.Run(ctx, workdir, args...)
 }
 

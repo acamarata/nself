@@ -2,9 +2,9 @@ package tenant
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"os/exec"
+	"time"
 
 	"github.com/nself-org/cli/internal/config"
 )
@@ -17,6 +17,7 @@ type AuditOptions struct {
 }
 
 // Audit queries nself_ops.audit_log for a specific tenant.
+// Uses a direct database/sql connection with $N parameterized queries (Path A).
 func Audit(ctx context.Context, cfg *config.Config, opts AuditOptions) ([]AuditEntry, error) {
 	if opts.TenantID == "" {
 		return nil, fmt.Errorf("tenant-id is required")
@@ -30,46 +31,58 @@ func Audit(ctx context.Context, cfg *config.Config, opts AuditOptions) ([]AuditE
 		}
 	}
 
-	container := cfg.ProjectName + "_postgres"
-	user := cfg.Postgres.User
-	if user == "" {
-		user = "postgres"
-	}
-	db := cfg.Postgres.DB
-	if db == "" {
-		db = "nself"
-	}
-
-	sinceClause := ""
-	if opts.Since != "" {
-		sinceClause = fmt.Sprintf(" AND created_at >= now() - interval '%s'", sanitize(parseDuration(opts.Since)))
-	}
-
-	sql := fmt.Sprintf(
-		"SELECT json_agg(row_to_json(t)) FROM ("+
-			"SELECT id, tenant_id, user_id, action, resource_type, resource_id, "+
-			"ip::text, user_agent, payload_sha256, reason, created_at "+
-			"FROM nself_ops.audit_log WHERE tenant_id = '%s'%s "+
-			"ORDER BY created_at DESC LIMIT 1000) t;",
-		sanitize(opts.TenantID), sinceClause,
-	)
-
-	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", db, "-tAc", sql,
-	)
-	out, err := cmd.Output()
+	sqlDB, err := openTenantDB(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("querying audit log: %w", err)
 	}
+	defer sqlDB.Close()
 
-	raw := trimOutput(out)
-	if raw == "" || raw == "null" {
-		return nil, nil
+	// Build query with $N placeholders. The since interval is passed as a
+	// PostgreSQL interval string derived from parseDuration (digits+unit only,
+	// validated by validateDuration — no user-controlled characters remain).
+	// The interval value itself is also bound as $2 to avoid any interpolation.
+	args := []interface{}{opts.TenantID}
+	query := `SELECT id, tenant_id::text, user_id::text, action, resource_type,
+		resource_id, ip::text, user_agent, payload_sha256, reason, created_at
+		FROM nself_ops.audit_log WHERE tenant_id = $1`
+
+	if opts.Since != "" {
+		// parseDuration converts e.g. "7d" -> "7 days"; validateDuration ensures
+		// the input is digits+unit only, so the resulting string is safe. It is
+		// still passed as a bound parameter ($2) for defence-in-depth.
+		args = append(args, parseDuration(opts.Since))
+		query += fmt.Sprintf(" AND created_at >= now() - $%d::interval", len(args))
 	}
+	query += " ORDER BY created_at DESC LIMIT 1000"
+
+	rows, err := sqlDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying audit log: %w", err)
+	}
+	defer rows.Close()
 
 	var entries []AuditEntry
-	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
-		return nil, fmt.Errorf("parsing audit log: %w", err)
+	for rows.Next() {
+		var e AuditEntry
+		var userID, resourceID, ipText, userAgent, payloadSHA, reason sql.NullString
+		var createdAt time.Time
+		if err := rows.Scan(
+			&e.ID, &e.TenantID, &userID, &e.Action, &e.ResourceType,
+			&resourceID, &ipText, &userAgent, &payloadSHA, &reason, &createdAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning audit row: %w", err)
+		}
+		e.UserID = userID.String
+		e.ResourceID = resourceID.String
+		e.IP = ipText.String
+		e.UserAgent = userAgent.String
+		e.PayloadSHA256 = payloadSHA.String
+		e.Reason = reason.String
+		e.CreatedAt = createdAt
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating audit rows: %w", err)
 	}
 
 	return entries, nil

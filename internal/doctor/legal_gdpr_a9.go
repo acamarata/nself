@@ -1,8 +1,8 @@
 // legal_gdpr_a9.go implements the LEGAL-GDPR-A9-01 deep doctor check.
 //
 // LEGAL-GDPR-A9-01 verifies that the GDPR Article 9 special-category
-// consent flow shipped in the family plugin (P100 Wave 2D) is wired
-// correctly before the nFamily product can be marked production-ready.
+// consent flow shipped in the family plugin is wired correctly before
+// the nFamily product can be marked production-ready.
 //
 // The check is layered:
 //

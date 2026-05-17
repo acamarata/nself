@@ -1,8 +1,8 @@
 // Package build — grafana_nsentry.go: Auto-provisions Grafana datasource +
 // dashboards for the ɳSentry plugin bundle.
 //
-// S12.T02 + S12.T04 (P100 v1.1.0): When the ɳSentry bundle is licensed and any
-// of its plugins are installed, `nself build` must emit:
+// When the ɳSentry bundle is licensed and any of its plugins are installed,
+// `nself build` must emit:
 //   - monitoring/grafana/provisioning/datasources/nsentry.yaml — datasource
 //     entry referencing the existing Prometheus datasource so panels resolve.
 //   - monitoring/grafana/provisioning/dashboards/nsentry.yaml — dashboard

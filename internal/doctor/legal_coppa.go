@@ -1,8 +1,8 @@
 // legal_coppa.go implements the LEGAL-COPPA-01 deep doctor check.
 //
 // LEGAL-COPPA-01 verifies that the COPPA parental-consent flow shipped in the
-// family plugin (P100 Wave 2D) is wired correctly before the nFamily product
-// can be marked production-ready.
+// family plugin is wired correctly before the nFamily product can be marked
+// production-ready.
 //
 // The check is layered:
 //

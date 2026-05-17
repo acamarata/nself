@@ -278,7 +278,7 @@ func TestRenderOTELAlertsYAMLOtelcolJobSelector(t *testing.T) {
 	}
 }
 
-func TestRenderAlertmanagerYAMLContainsOncallStub(t *testing.T) {
+func TestRenderAlertmanagerYAMLContainsOncallReceiver(t *testing.T) {
 	cfg := DefaultAlertmanagerConfig()
 	out, err := RenderAlertmanagerYAML(cfg)
 	if err != nil {
@@ -286,14 +286,14 @@ func TestRenderAlertmanagerYAMLContainsOncallStub(t *testing.T) {
 	}
 	s := string(out)
 
+	// Core structural requirements for the rendered alertmanager.yml.
 	wants := []string{
-		"oncall-stub",
-		"null-receiver",
-		"severity = critical",
-		"severity = warning",
-		"P98",
-		"email_configs:",
-		"send_resolved: true",
+		"receiver: oncall",    // critical route references the oncall receiver
+		"name: oncall",        // oncall receiver declared in receivers list
+		"null-receiver",       // null receiver present
+		"severity = critical", // critical route matcher
+		"severity = warning",  // warning route matcher
+		"send_resolved: true", // oncall receiver sends resolved notifications
 		"group_wait: 30s",
 		"group_interval: 5m",
 		"repeat_interval: 4h",
@@ -303,6 +303,64 @@ func TestRenderAlertmanagerYAMLContainsOncallStub(t *testing.T) {
 		if !strings.Contains(s, w) {
 			t.Fatalf("expected alertmanager.yml to contain %q\n---\n%s", w, s)
 		}
+	}
+}
+
+func TestRenderAlertmanagerYAMLDefaultProviderIsEmail(t *testing.T) {
+	// With no NSELF_ONCALL_PROVIDER set, the default is email.
+	t.Setenv("NSELF_ONCALL_PROVIDER", "")
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "email_configs:") {
+		t.Fatalf("expected email_configs block for default (email) provider\n---\n%s", s)
+	}
+	if strings.Contains(s, "pagerduty_configs:") {
+		t.Fatalf("unexpected pagerduty_configs in default email provider output\n---\n%s", s)
+	}
+	if strings.Contains(s, "opsgenie_configs:") {
+		t.Fatalf("unexpected opsgenie_configs in default email provider output\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLPagerDutyProvider(t *testing.T) {
+	t.Setenv("NSELF_ONCALL_PROVIDER", "pagerduty")
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "pagerduty_configs:") {
+		t.Fatalf("expected pagerduty_configs block for pagerduty provider\n---\n%s", s)
+	}
+	if !strings.Contains(s, "ALERTMANAGER_PD_ROUTING_KEY") {
+		t.Fatalf("expected ALERTMANAGER_PD_ROUTING_KEY placeholder in pagerduty config\n---\n%s", s)
+	}
+	if !strings.Contains(s, "send_resolved: true") {
+		t.Fatalf("expected send_resolved: true in pagerduty config\n---\n%s", s)
+	}
+}
+
+func TestRenderAlertmanagerYAMLOpsgenieProvider(t *testing.T) {
+	t.Setenv("NSELF_ONCALL_PROVIDER", "opsgenie")
+	cfg := DefaultAlertmanagerConfig()
+	out, err := RenderAlertmanagerYAML(cfg)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "opsgenie_configs:") {
+		t.Fatalf("expected opsgenie_configs block for opsgenie provider\n---\n%s", s)
+	}
+	if !strings.Contains(s, "ALERTMANAGER_OG_API_KEY") {
+		t.Fatalf("expected ALERTMANAGER_OG_API_KEY placeholder in opsgenie config\n---\n%s", s)
+	}
+	if !strings.Contains(s, "send_resolved: true") {
+		t.Fatalf("expected send_resolved: true in opsgenie config\n---\n%s", s)
 	}
 }
 
@@ -449,16 +507,24 @@ func TestRenderAlertmanagerYAMLCriticalNeverMuted(t *testing.T) {
 	}
 }
 
-func TestRenderAlertmanagerYAMLP98CommentPresent(t *testing.T) {
+func TestRenderAlertmanagerYAMLOncallIntegrationDocs(t *testing.T) {
 	cfg := DefaultAlertmanagerConfig()
 	out, err := RenderAlertmanagerYAML(cfg)
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	s := string(out)
-	// Multiple P98 references: rotation stub note, provider placeholders.
-	if count := strings.Count(s, "P98"); count < 2 {
-		t.Fatalf("expected at least 2 P98 comments (rotation + window), got %d\n---\n%s", count, s)
+	// The rendered YAML must document the on-call integration env vars
+	// so operators know how to enable PagerDuty or Opsgenie.
+	wants := []string{
+		"NSELF_ONCALL_PROVIDER",
+		"ALERTMANAGER_PD_ROUTING_KEY",
+		"ALERTMANAGER_OG_API_KEY",
+	}
+	for _, w := range wants {
+		if !strings.Contains(s, w) {
+			t.Fatalf("expected on-call integration env var %q documented in alertmanager.yml\n---\n%s", w, s)
+		}
 	}
 }
 

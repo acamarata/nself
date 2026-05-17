@@ -1,0 +1,105 @@
+name: Embedded PG Integration
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/embedded/**'
+      - 'internal/backup/embedded*.go'
+      - 'internal/database/migrate_embedded*.go'
+      - 'cmd/commands/start.go'
+      - '.github/workflows/embedded-pg-matrix.yml'
+  pull_request:
+    paths:
+      - 'internal/embedded/**'
+      - 'internal/backup/embedded*.go'
+      - 'internal/database/migrate_embedded*.go'
+      - 'cmd/commands/start.go'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  embedded-pg-unit:
+    name: Unit tests — embedded package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-14          # Apple Silicon (darwin/arm64) — primary wasmtime target
+          - macos-13          # Intel (darwin/amd64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Unit tests (embedded package — CGO)
+        env:
+          CGO_ENABLED: 1
+        run: |
+          go test -mod=vendor -count=1 -timeout 60s \
+            ./internal/embedded/... \
+            ./internal/backup/... \
+            ./internal/database/...
+
+  embedded-pg-integration:
+    name: Integration — pglite boot (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    # Only run on push to main or when explicitly triggered; skip on PRs from
+    # forks (no write access to cache).
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Cache pglite WASM
+        uses: actions/cache@v4
+        with:
+          path: ~/.nself/cache/pglite
+          key: pglite-wasm-${{ runner.os }}-0.2.17
+          restore-keys: pglite-wasm-${{ runner.os }}-
+
+      - name: Fetch pglite WASM
+        env:
+          CGO_ENABLED: 1
+          PGLITE_VERSION: "0.2.17"
+        run: |
+          mkdir -p ~/.nself/cache/pglite/${PGLITE_VERSION}
+          WASM_PATH=~/.nself/cache/pglite/${PGLITE_VERSION}/pglite.wasm
+          if [ ! -f "$WASM_PATH" ]; then
+            curl -fsSL \
+              "https://ping.nself.org/assets/pglite/${PGLITE_VERSION}/pglite.wasm" \
+              -o "$WASM_PATH"
+          fi
+          echo "PGLITE_WASM_PATH=$WASM_PATH" >> "$GITHUB_ENV"
+
+      - name: Integration tests (pglite boot, socket bridge, migration, cold-start)
+        env:
+          CGO_ENABLED: 1
+          INTEGRATION: 1
+        run: |
+          go test -mod=vendor -tags integration -count=1 -timeout 120s \
+            -v ./internal/embedded/...

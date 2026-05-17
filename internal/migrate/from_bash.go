@@ -166,7 +166,7 @@ type MigrationStep struct {
 	Commands []string
 	// Notes is optional additional context.
 	Notes string
-	// P98Scope marks steps that are deferred to P98 automated migration.
+	// P98Scope marks steps handled by the automated migration path.
 	P98Scope bool
 }
 

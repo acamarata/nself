@@ -123,7 +123,7 @@ func TestInstall_AtomicRollbackOnFailure(t *testing.T) {
 
 // TestInstall_ForceStillValidatesLicense verifies that --force does NOT bypass
 // license validation. It skips same-version checks (repair path) but license
-// is always enforced. Introduced in S2.T03 CR-C fix (P100).
+// is always enforced.
 func TestInstall_ForceStillValidatesLicense(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
 	defer os.RemoveAll(dir)

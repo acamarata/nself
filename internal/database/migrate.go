@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	// pq registers the "postgres" driver used by the embedded-PG SQL path.
+	_ "github.com/lib/pq"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
@@ -37,9 +41,60 @@ type MigrationStatus struct {
 	Timestamp time.Time
 }
 
+// querySQLEmbedded executes a query against the embedded pglite instance via its
+// Unix-domain socket. Returns the first column of the first row as a
+// newline-joined string (mirrors the `-tAc` psql output format).
+func querySQLEmbedded(ctx context.Context, dsn string, query string) (string, error) {
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return "", fmt.Errorf("embedded sql.Open: %w", err)
+	}
+	defer db.Close() //nolint:errcheck
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return "", fmt.Errorf("embedded query: %w", err)
+	}
+	defer rows.Close() //nolint:errcheck
+
+	var lines []string
+	for rows.Next() {
+		var val string
+		if scanErr := rows.Scan(&val); scanErr != nil {
+			return "", fmt.Errorf("embedded row scan: %w", scanErr)
+		}
+		lines = append(lines, val)
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("embedded rows: %w", err)
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// pipeSQLEmbedded executes raw SQL text against the embedded pglite instance
+// via its Unix-domain socket. Mirrors pipeSQLToContainer for the embedded path.
+func pipeSQLEmbedded(ctx context.Context, dsn string, sqlText string) error {
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return fmt.Errorf("embedded sql.Open: %w", err)
+	}
+	defer db.Close() //nolint:errcheck
+
+	if _, err := db.ExecContext(ctx, sqlText); err != nil {
+		return fmt.Errorf("embedded exec: %w", err)
+	}
+	return nil
+}
+
 // querySQL executes a SQL query inside the postgres container and returns stdout.
 // Unlike runSQL from init.go, this captures and returns the output text.
-func querySQL(ctx context.Context, cfg *config.Config, database string, sql string) (string, error) {
+// When cfg.EmbeddedPG is true, the query is routed through the pglite UDS instead.
+func querySQL(ctx context.Context, cfg *config.Config, database string, sqlText string) (string, error) {
+	if cfg.EmbeddedPG {
+		dsn := cfg.EmbeddedPGDatabaseURL(embeddedPGRuntimeDir(cfg))
+		return querySQLEmbedded(ctx, dsn, sqlText)
+	}
+
 	container := containerName(cfg)
 	user := cfg.Postgres.User
 	if user == "" {
@@ -47,7 +102,7 @@ func querySQL(ctx context.Context, cfg *config.Config, database string, sql stri
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", database, "-tAc", sql,
+		"psql", "-U", user, "-d", database, "-tAc", sqlText,
 	)
 
 	var stdout, stderr bytes.Buffer
@@ -61,7 +116,13 @@ func querySQL(ctx context.Context, cfg *config.Config, database string, sql stri
 }
 
 // pipeSQLToContainer pipes raw SQL text into psql inside the postgres container.
-func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sql string) error {
+// When cfg.EmbeddedPG is true, the SQL is executed against the pglite UDS instead.
+func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sqlText string) error {
+	if cfg.EmbeddedPG {
+		dsn := cfg.EmbeddedPGDatabaseURL(embeddedPGRuntimeDir(cfg))
+		return pipeSQLEmbedded(ctx, dsn, sqlText)
+	}
+
 	container := containerName(cfg)
 	user := cfg.Postgres.User
 	if user == "" {
@@ -81,7 +142,7 @@ func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sql string) err
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
-	cmd.Stdin = strings.NewReader(sql)
+	cmd.Stdin = strings.NewReader(sqlText)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -90,6 +151,18 @@ func pipeSQLToContainer(ctx context.Context, cfg *config.Config, sql string) err
 		return fmt.Errorf("psql: %s: %w", strings.TrimSpace(stderr.String()), err)
 	}
 	return nil
+}
+
+// embeddedPGRuntimeDir returns the runtime directory used by the pglite/wasmtime
+// embedded runtime. It reads NSELF_RUNTIME_DIR first (set by `nself start --embedded-pg`)
+// then falls back to the project-local default.
+func embeddedPGRuntimeDir(cfg *config.Config) string {
+	if dir := os.Getenv("NSELF_RUNTIME_DIR"); dir != "" {
+		return dir
+	}
+	// Fall back to project-local default: $PWD/.nself/embedded-pg
+	wd, _ := os.Getwd()
+	return wd + "/.nself/embedded-pg"
 }
 
 // ensureSchemaVersions creates the np_common.schema_versions table if it does not exist.

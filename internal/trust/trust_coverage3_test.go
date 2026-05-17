@@ -87,16 +87,15 @@ func TestRestartDnsmasq_Direct(t *testing.T) {
 
 // --- setupResolver direct call ---
 
-// TestSetupResolver_Direct exercises the osascript path for /etc/resolver/local.
-// On non-root CI: osascript will fail with user-declined or timeout.
-// Must not panic.
+// TestSetupResolver_Direct documents why setupResolver cannot be called in automated tests.
+// unreachable: setupResolver calls osascript "with administrator privileges" with a
+// 30-second timeout; in headless/CI environments this blocks until timeout, causing the
+// test binary to exhaust its timeout budget. Coverage requires an interactive admin session.
 func TestSetupResolver_Direct(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("darwin-only")
 	}
-	// This will attempt osascript with admin privileges. On CI: will fail.
-	// Verify no panic.
-	_ = setupResolver()
+	t.Skip("setupResolver invokes osascript with admin privileges — hangs in headless environments")
 }
 
 // --- flushDNSCache direct call ---

@@ -46,17 +46,37 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 	}
 
 	// Core services (always present) — postgres first, then dependents.
-	dc.AddService("postgres", g.buildPostgresService())
+	// When NSELF_EMBEDDED_PG=true, the Docker postgres container is omitted;
+	// the embedded pglite/wasmtime runtime is booted by `nself start --embedded-pg`
+	// and Hasura connects via a Unix-domain socket bridge.
+	if !g.cfg.EmbeddedPG {
+		dc.AddService("postgres", g.buildPostgresService())
+	}
 
 	hasuraSvc, err := g.buildHasuraService()
 	if err != nil {
 		return nil, fmt.Errorf("building hasura service: %w", err)
+	}
+	// When embedded PG is active, add the UDS socket volume mount so Hasura
+	// can reach the pglite bridge at /var/run/postgres/pglite.sock.
+	if g.cfg.EmbeddedPG {
+		runtimeDirEnv := "${NSELF_RUNTIME_DIR:-.nself/embedded-pg}"
+		hasuraSvc.Volumes = append(hasuraSvc.Volumes,
+			runtimeDirEnv+"/pglite.sock.bridge:/var/run/postgres/pglite.sock",
+		)
+		// Remove the postgres health-check dependency — there is no postgres container.
+		delete(hasuraSvc.DependsOn, "postgres")
 	}
 	dc.AddService("hasura", hasuraSvc)
 
 	authSvc, err := g.buildAuthService()
 	if err != nil {
 		return nil, fmt.Errorf("building auth service: %w", err)
+	}
+	// When embedded PG is active, remove the postgres health-check dependency
+	// from auth — there is no postgres container.
+	if g.cfg.EmbeddedPG {
+		delete(authSvc.DependsOn, "postgres")
 	}
 	dc.AddService("auth", authSvc)
 
