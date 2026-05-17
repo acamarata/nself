@@ -14,6 +14,9 @@ server {
 {{if .HasSSL}}
     ssl_certificate /etc/nginx/ssl/certificates/{{.SSLDir}}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/certificates/{{.SSLDir}}/privkey.pem;
+    ssl_trusted_certificate /etc/nginx/ssl/certificates/{{.SSLDir}}/chain.pem;
+    ssl_stapling on;
+    ssl_stapling_verify on;
 {{end}}
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -35,6 +38,17 @@ server {
     }
     location ~ ^/(docker-compose|Dockerfile) {
         return 404;
+    }
+
+    location = /healthz {
+        proxy_pass http://{{.Upstream}};
+        proxy_method GET;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location / {
