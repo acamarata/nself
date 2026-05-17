@@ -153,6 +153,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"exec", []string{"exec", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"exec", []string{"exec", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── feature ────────────────────────────────────────────────────────────
+	{"feature", []string{"feature"}, "(a) no project dir"},
+	{"feature", []string{"feature", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"feature", []string{"feature", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── functions ──────────────────────────────────────────────────────────
 	{"functions", []string{"functions"}, "(a) no project dir"},
 	{"functions", []string{"functions", "--no-such-flag-xyz"}, "(b) invalid flag"},
