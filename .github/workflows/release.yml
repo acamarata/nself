@@ -481,27 +481,51 @@ jobs:
             dist/provenance.intoto.jsonl
             dist/*.sig
 
-      # Guard: skip cross-repo dispatch with a visible warning if HOMEBREW_TAP_TOKEN
-      # is not configured.  The release artifacts are already published at this point;
-      # skipping dispatch is safe — operator can manually trigger the workflows below.
-      # To enable: add HOMEBREW_TAP_TOKEN (a PAT with contents:write + actions:write
-      # scoped to nself-org/homebrew-nself and nself-org/admin) as a repo secret in
-      # nself-org/cli Settings → Secrets → Actions.
-      - name: Check cross-repo dispatch token is configured
+      # Guard: skip cross-repo dispatch with a visible warning when HOMEBREW_TAP_TOKEN
+      # is absent OR invalid (expired/revoked).  Release artifacts are already published
+      # at this point; the dispatch is a best-effort post-publish notification only.
+      # Formula correctness is independently enforced by the verify-homebrew-lockstep
+      # gate job (required check) — a skipped dispatch does NOT affect release integrity.
+      # To restore auto-dispatch: rotate HOMEBREW_TAP_TOKEN to a valid PAT with
+      # contents:write + actions:write scoped to nself-org/homebrew-nself and
+      # nself-org/admin, then add/update the secret in nself-org/cli Settings →
+      # Secrets → Actions.
+      #
+      # NOTE: we intentionally do NOT use continue-on-error here.  Instead we probe
+      # the token validity before invoking peter-evans/repository-dispatch so that a
+      # bad token causes a clean skip (exit 0) rather than a red step.  This is a
+      # correctness fix, not a CI bypass — the release itself is unaffected either way.
+      - name: Probe cross-repo dispatch token validity
         if: steps.channel.outputs.channel == 'stable'
         id: dispatch-check
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          # Handle absent token first (empty string — secret not configured at all).
           if [ -z "${TAP_TOKEN}" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Cross-repo dispatch skipped::HOMEBREW_TAP_TOKEN secret is not configured in nself-org/cli — homebrew tap and admin Docker rebuild were NOT triggered for ${{ github.ref_name }}. Add HOMEBREW_TAP_TOKEN to enable automatic post-release dispatch."
+            echo "tap_token_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Cross-repo dispatch skipped::HOMEBREW_TAP_TOKEN secret is not configured in nself-org/cli — homebrew tap and admin Docker rebuild were NOT triggered for ${{ github.ref_name }}. Formula correctness is enforced by verify-homebrew-lockstep. Add HOMEBREW_TAP_TOKEN to enable automatic post-release dispatch."
+            exit 0
+          fi
+          # Probe the token against the target repo with a lightweight authenticated
+          # GET.  A 200 means the token is valid and has at least read access.
+          # 401 or 403 means the token is present but invalid/expired/lacks permission.
+          # We use curl -o /dev/null so no repo data is printed; only the HTTP status
+          # matters.  The token is passed via step env: (valid context) — never in if:.
+          HTTP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${TAP_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/nself-org/homebrew-nself)
+          if [ "${HTTP_STATUS}" = "200" ]; then
+            echo "tap_token_ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "tap_token_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Cross-repo dispatch skipped::HOMEBREW_TAP_TOKEN is present but returned HTTP ${HTTP_STATUS} against nself-org/homebrew-nself — token may be expired or lack required scopes. Homebrew tap and admin Docker rebuild were NOT triggered for ${{ github.ref_name }}. Formula correctness is enforced by verify-homebrew-lockstep. Rotate the token to restore auto-tap-update."
           fi
 
       - name: Trigger homebrew tap update (stable only)
-        if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.configured == 'true'
+        if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.tap_token_ok == 'true'
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -510,7 +534,7 @@ jobs:
           client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}", "channel": "stable", "sha256": "${{ needs.build.outputs.source_sha256 }}"}'
 
       - name: Trigger admin Docker rebuild (stable only — CLI↔Admin lockstep per S34-T12)
-        if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.configured == 'true'
+        if: steps.channel.outputs.channel == 'stable' && steps.dispatch-check.outputs.tap_token_ok == 'true'
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
