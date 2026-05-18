@@ -1,10 +1,13 @@
 name: Deploy ping_api (CS_1)
 
 # Deploys the ping_api custom service (web/backend CS_1) to Hetzner prod.
-# Gate: requires PING_API_DEPLOY_AUTHORIZED org secret to be set (UA-02).
-# Without the secret this workflow is a no-op — safe to merge to main.
+# Gate: deploy runs ONLY on manual workflow_dispatch. Pushes to main run a
+# no-op job that always succeeds, so main CI stays green and the prod SSH
+# deploy is never triggered automatically. The PING_API_DEPLOY_AUTHORIZED
+# org secret (UA-02) is consumed inside the deploy steps at dispatch time.
+# secrets context is NOT valid in a job-level `if:` (github/needs/vars/inputs
+# only) — gating is by github.event_name, which is valid.
 #
-# Trigger: push to main (conditional) or manual dispatch.
 # prod IP: 5.75.235.42  port: 8001
 
 on:
@@ -22,9 +25,9 @@ permissions:
   contents: read
 
 jobs:
-  # No-op guard: exits success on branch pushes so GitHub never records a failure
-  # run for push events when the deploy job is skipped (secret absent).
-  # This job is always skipped on workflow_dispatch, where the real deploy runs.
+  # No-op guard: exits success on branch pushes so GitHub never records a
+  # failure run for push events. Always skipped on workflow_dispatch, where
+  # the real deploy runs instead.
   branch-push-noop:
     name: No-op (branch push — deploy requires workflow_dispatch)
     if: github.event_name == 'push'
@@ -37,9 +40,9 @@ jobs:
     name: Deploy ping_api to prod
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Skip entirely when UA-02 authorization secret is absent.
-    # This keeps the workflow inert on PRs, forks, and pre-authorization pushes.
-    if: ${{ secrets.PING_API_DEPLOY_AUTHORIZED != '' }}
+    # Dispatch-only. Never runs on push (branch-push-noop handles push).
+    # Valid job-level `if:` (github context only — no secrets reference).
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
@@ -49,6 +52,16 @@ jobs:
             echo "::error::web/backend/services/ping_api not found — aborting deploy"
             exit 1
           fi
+
+      - name: Verify deploy authorization (UA-02)
+        env:
+          PING_API_DEPLOY_AUTHORIZED: ${{ secrets.PING_API_DEPLOY_AUTHORIZED }}
+        run: |
+          if [ -z "${PING_API_DEPLOY_AUTHORIZED}" ]; then
+            echo "::error::PING_API_DEPLOY_AUTHORIZED secret absent — deploy not authorized (UA-02, P104-held)."
+            exit 1
+          fi
+          echo "Deploy authorized."
 
       - name: Deploy to Hetzner prod (SSH)
         env:
