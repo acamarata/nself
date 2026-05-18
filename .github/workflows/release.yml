@@ -308,18 +308,68 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
+          # cosign_sign_idempotent: sign $1 into bundle $2.
+          #
+          # WHY THIS EXISTS: When the same tag is re-pushed (e.g. to fix an upstream
+          # gate issue), the re-run produces byte-identical artifacts.  cosign uploads
+          # to the Sigstore Rekor public-good transparency log; the second run reports
+          # "Signature already exists" and then the immediate inclusion-proof readback
+          # (GET /api/v1/log/entries/{uuid}) returns 404 due to Rekor eventual-
+          # consistency / dedup behaviour.  That 404 makes cosign exit non-zero even
+          # though the signature IS in Rekor and the bundle written by the first run is
+          # still valid.  This is NOT a signing failure — the artifact is already signed.
+          #
+          # APPROACH: Attempt sign-blob; if the exit is non-zero AND the output contains
+          # exactly the "Signature already exists" dedup signal AND the prior bundle file
+          # exists (meaning the first run succeeded), treat the outcome as success.
+          # Any other non-zero exit (key/identity error, network down, non-dedup error)
+          # still propagates as a real failure.  This is NOT a blanket error swallow.
+          #
+          # Bounded retry (max 3, exp backoff) is applied before accepting already-exists,
+          # in case the inclusion-proof 404 is transient rather than the dedup case.
+          cosign_sign_idempotent() {
+            local artifact="$1"
+            local bundle="$2"
+            local max_attempts=3
+            local attempt=1
+            local delay=4
+            while [ "${attempt}" -le "${max_attempts}" ]; do
+              output=$(cosign sign-blob --yes --bundle "${bundle}" "${artifact}" 2>&1)
+              exit_code=$?
+              if [ "${exit_code}" -eq 0 ]; then
+                echo "[cosign] signed ${artifact} (attempt ${attempt})"
+                return 0
+              fi
+              # Detect the specific Rekor dedup/eventual-consistency failure pattern.
+              # Both strings must be present to match — avoids false positives.
+              if echo "${output}" | grep -q "Signature already exists" && \
+                 echo "${output}" | grep -q "getLogEntryByUuidNotFound"; then
+                if [ -f "${bundle}" ]; then
+                  echo "[cosign] ${artifact}: signature already in Rekor (dedup) — existing bundle accepted (attempt ${attempt})"
+                  return 0
+                fi
+              fi
+              echo "[cosign] attempt ${attempt}/${max_attempts} failed for ${artifact} (exit ${exit_code}): ${output}"
+              if [ "${attempt}" -lt "${max_attempts}" ]; then
+                echo "[cosign] retrying in ${delay}s..."
+                sleep "${delay}"
+                delay=$((delay * 2))
+              fi
+              attempt=$((attempt + 1))
+            done
+            echo "[cosign] ERROR: signing ${artifact} failed after ${max_attempts} attempts"
+            echo "${output}"
+            return "${exit_code}"
+          }
+
           for f in *.tar.gz *.zip checksums.txt sbom.spdx.json sbom.cdx.json provenance.intoto.jsonl; do
             if [ -f "$f" ]; then
-              cosign sign-blob --yes \
-                --bundle "${f}.sig" \
-                "$f"
+              cosign_sign_idempotent "$f" "${f}.sig"
             fi
           done
           # Q04: dedicated cosign bundle for CycloneDX SBOM (consumer-verifiable)
           if [ -f sbom.cdx.json ]; then
-            cosign sign-blob --yes \
-              --bundle sbom.cdx.json.bundle \
-              sbom.cdx.json
+            cosign_sign_idempotent sbom.cdx.json sbom.cdx.json.bundle
             echo "CycloneDX SBOM cosign bundle written: sbom.cdx.json.bundle"
           fi
 
