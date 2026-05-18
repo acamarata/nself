@@ -152,6 +152,10 @@ sudo nself backup config --install-cron --full-at 02:30
 
 `nself backup` creates archives that follow the `nself-backup-v1` spec. The spec covers the archive filename pattern, `manifest.json` structure, `checksums.sha256` format, encryption contract, and the exact extraction order used by `restore`. See `.claude/docs/operations/BACKUP-FORMAT.md`.
 
+## Security
+
+`backup create --type metadata` exports Hasura metadata by running `hasura-cli` inside the `_hasura` container. The Hasura admin secret is passed to `docker exec` via the `-e HASURA_GRAPHQL_ADMIN_SECRET=<value>` flag. This keeps the secret in the container's environment and out of the process-table argv, which would otherwise be readable by any local user via `ps aux` (CWE-214). No user-facing change is required; this is an internal implementation detail.
+
 ## See Also
 
 - [[cmd-dr]], disaster recovery operations

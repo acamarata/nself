@@ -177,3 +177,94 @@ jobs:
           }
           echo "PASS: nself build succeeded"
           # nself start intentionally NOT run — Docker on macos-14 is unreliable
+
+  # UA-07: Meta-monitoring and dispatch-dashboard steps.
+  # These steps require three org secrets that are NOT provisioned by default:
+  #   GITHUB_APP_PRIVATE_KEY  — GitHub App private key for installation token auth
+  #   SLACK_WEBHOOK           — Incoming Webhook URL for build-status notifications
+  #   NSELF_DISPATCH_APP_ID   — GitHub App ID for repository_dispatch triggers
+  #
+  # Each step uses `if: ${{ secrets.X != '' }}` so absent secrets produce a clean
+  # skip rather than a workflow failure. See .github/wiki/USER-ACTION-QUEUE.md § UA-07
+  # for provisioning instructions.
+  dispatch-monitor:
+    name: Dispatch monitor (skipped when secrets absent)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Notify build status via Slack
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          # Skip gracefully when secret is absent (UA-07: provision SLACK_WEBHOOK to enable)
+          if [ -z "${SLACK_WEBHOOK}" ]; then
+            echo "INFO: SLACK_WEBHOOK not configured — skipping (see UA-07)"
+            exit 0
+          fi
+          PAYLOAD="{\"text\":\"CLI CI passed on \`${GITHUB_REF_NAME}\` (${GITHUB_SHA:0:7}).\",\"username\":\"nself-ci\"}"
+          curl -fsS -X POST -H 'Content-type: application/json' \
+            --data "$PAYLOAD" "$SLACK_WEBHOOK"
+          echo "INFO: Slack notification sent"
+
+      - name: Generate GitHub App installation token
+        id: app-token
+        env:
+          APP_ID: ${{ secrets.NSELF_DISPATCH_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          # Skip gracefully when secrets are absent (UA-07: provision both secrets to enable)
+          if [ -z "${APP_ID}" ] || [ -z "${APP_PRIVATE_KEY}" ]; then
+            echo "INFO: NSELF_DISPATCH_APP_ID or GITHUB_APP_PRIVATE_KEY not configured — skipping (see UA-07)"
+            echo "token=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Generate a short-lived JWT for the GitHub App, then exchange it for
+          # an installation token scoped to this repository.
+          NOW=$(date +%s)
+          EXP=$((NOW + 540))
+          HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 -w0 | tr '+/' '-_' | tr -d '=')
+          PAYLOAD_JWT=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$NOW" "$EXP" "$APP_ID" \
+            | base64 -w0 | tr '+/' '-_' | tr -d '=')
+          UNSIGNED="${HEADER}.${PAYLOAD_JWT}"
+          SIG=$(printf '%s' "$UNSIGNED" \
+            | openssl dgst -sha256 -sign <(printf '%s' "$APP_PRIVATE_KEY") \
+            | base64 -w0 | tr '+/' '-_' | tr -d '=')
+          JWT="${UNSIGNED}.${SIG}"
+          INSTALL_ID=$(curl -fsS -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations" \
+            | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+          TOKEN=$(curl -fsS -X POST -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/${INSTALL_ID}/access_tokens" \
+            | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "INFO: installation token generated"
+
+      - name: Trigger downstream dispatch (plugins registry sync)
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          # Skip gracefully when app token was not generated (UA-07: provision secrets to enable)
+          if [ -z "${TOKEN}" ]; then
+            echo "INFO: App token not available — skipping dispatch (see UA-07)"
+            exit 0
+          fi
+          # repository_dispatch to nself-org/plugins triggers the registry sync
+          # workflow when CLI ships a new release. Skipped on PRs (only runs on main).
+          if [ "${GITHUB_EVENT_NAME}" != "push" ] || [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "INFO: Not a main-branch push — skipping dispatch"
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/nself-org/plugins/dispatches" \
+            --data '{"event_type":"cli-release","client_payload":{"sha":"'"${GITHUB_SHA}"'"}}'
+          echo "INFO: repository_dispatch sent to nself-org/plugins"

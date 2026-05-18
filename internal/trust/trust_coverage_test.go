@@ -219,6 +219,9 @@ func TestBuildDomainList_OnlyExtra(t *testing.T) {
 
 // TestPfAnchorContent_CustomPorts verifies custom port values appear correctly.
 func TestPfAnchorContent_CustomPorts(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{NginxHTTPPort: 9080, NginxSSLPort: 9443}
 	content := pfAnchorContent(cfg)
 	if !containsStr(content, "9080") {
@@ -231,6 +234,9 @@ func TestPfAnchorContent_CustomPorts(t *testing.T) {
 
 // TestPfAnchorContent_ContainsRdr verifies the output is a valid rdr rule.
 func TestPfAnchorContent_ContainsRdr(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{NginxHTTPPort: 8080, NginxSSLPort: 8443}
 	content := pfAnchorContent(cfg)
 	if !containsStr(content, "rdr") {
@@ -246,6 +252,9 @@ func TestPfAnchorContent_ContainsRdr(t *testing.T) {
 // TestEscapeForOsascript_PercentSign verifies percent signs are NOT escaped
 // (callers use %% in fmt.Sprintf).
 func TestEscapeForOsascript_PercentSign(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := "100% done"
 	got := escapeForOsascript(input)
 	if got != input {
@@ -256,6 +265,9 @@ func TestEscapeForOsascript_PercentSign(t *testing.T) {
 // TestEscapeForOsascript_MixedSpecialChars verifies both backslash and quote
 // escaping happen in the correct order.
 func TestEscapeForOsascript_MixedSpecialChars(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	// Input: a\"b — backslash then quote
 	input := `a\"b`
 	got := escapeForOsascript(input)
@@ -269,6 +281,9 @@ func TestEscapeForOsascript_MixedSpecialChars(t *testing.T) {
 
 // TestEscapeForOsascript_MultipleQuotes verifies multiple quotes are all escaped.
 func TestEscapeForOsascript_MultipleQuotes(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := `"a" "b"`
 	got := escapeForOsascript(input)
 	want := `\"a\" \"b\"`
@@ -481,25 +496,26 @@ func TestLaunchDaemonPlistContent_ContainsLabel(t *testing.T) {
 
 // --- installMkcert branches ---
 
-// TestInstallMkcert_ReturnsErrorWhenAbsent verifies that on macOS or Linux,
-// installMkcert returns some error or nil — it must not panic.
+// TestInstallMkcert_NoPanic verifies the linux branch of installMkcert returns
+// an informative error. The darwin branch (brew install mkcert) has a 5-minute
+// timeout and cannot be tested in unit tests — it is documented as unreachable.
+// unreachable (darwin): installMkcert calls "brew install mkcert" with a 5-minute
+// timeout; even when mkcert is already installed, brew takes 30-60 seconds to
+// check and exit, making it unsuitable for unit test execution.
 func TestInstallMkcert_NoPanic(t *testing.T) {
-	// On macOS: would run `brew install mkcert` which may succeed or fail.
-	// On Linux: always returns an instruction error.
-	// Either way, no panic.
-	err := installMkcert()
-	if runtime.GOOS == "linux" {
-		if err == nil {
-			// mkcert may already be installed.
-			return
-		}
-		// Must mention mkcert in the instruction error.
-		if !containsStr(err.Error(), "mkcert") {
-			t.Errorf("linux installMkcert error should mention mkcert: %v", err)
-		}
+	if runtime.GOOS == "darwin" {
+		t.Skip("darwin installMkcert branch calls brew install with 5-minute timeout — not safe for unit tests")
 	}
-	// darwin: depends on environment. Just verify no panic occurred.
-	_ = err
+	// Linux branch: returns an instruction error.
+	err := installMkcert()
+	if err == nil {
+		// mkcert may already be installed on this Linux machine.
+		return
+	}
+	// Must mention mkcert in the instruction error.
+	if !containsStr(err.Error(), "mkcert") {
+		t.Errorf("linux installMkcert error should mention mkcert: %v", err)
+	}
 }
 
 // --- installMkcertCA linux branch ---

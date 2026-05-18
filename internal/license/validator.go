@@ -1,11 +1,11 @@
 // Package license — validator.go implements the FAIL-OPEN license validation
-// policy per memory/decisions.md (D3-T10, P97).
+// policy per memory/decisions.md (D3-T10).
 //
 // Policy summary:
 //   - Cache valid + within TTL              → Valid
 //   - Cache valid + remote 200 (verified)   → Valid
-//   - Cache valid + remote unreachable + age ≤ 7d   → Valid (FAIL-OPEN, silent)
-//   - Cache valid + remote unreachable + age 7-14d  → Valid (FAIL-OPEN, warning)
+//   - Cache valid + remote unreachable + age ≤ 72h  → Valid (FAIL-OPEN, silent)
+//   - Cache valid + remote unreachable + age 72h-14d → Valid (FAIL-OPEN, warning)
 //   - Cache valid + remote unreachable + age > 14d  → FailClosed
 //   - Cache signature invalid OR tampered           → FailClosed (NEVER fail-open)
 //   - Cache absent + remote unreachable             → FailClosed
@@ -52,8 +52,10 @@ const (
 )
 
 // FailOpenSoftTTL is the silent-fail-open window. ≤ this value, no warning.
-// Configurable for tests via the validator's clock; default 7 days.
-const FailOpenSoftTTL = 7 * 24 * time.Hour
+// Configurable for tests via the validator's clock; default 72 hours (3 days).
+// Reduced from 7 days (S39.T07) to limit exposure if the license server is
+// unreachable due to network misconfiguration or DNS issues.
+const FailOpenSoftTTL = 72 * time.Hour
 
 // FailOpenHardTTL is the absolute fail-open ceiling. Beyond this, fail-closed.
 // Default 14 days.

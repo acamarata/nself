@@ -6,10 +6,12 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/scaffold"
 	"github.com/nself-org/cli/internal/security"
+	"github.com/nself-org/cli/internal/service"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/joho/godotenv"
@@ -125,6 +127,95 @@ Examples:
 	RunE: runServiceUpgrade,
 }
 
+// serviceStartCmd starts a named nSelf service via `docker compose up -d --no-deps`.
+var serviceStartCmd = &cobra.Command{
+	Use:   "start <name>",
+	Short: "Start a named nSelf service",
+	Long: `Start a named nSelf service using the existing docker-compose.yml.
+
+The service must already be configured in the stack (run 'nself build' first).
+This command is equivalent to 'docker compose up -d --no-deps <service>'.
+
+Examples:
+  nself service start redis
+  nself service start minio
+  nself service start search`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceStart,
+}
+
+// serviceStopCmd stops a named nSelf service (container preserved).
+var serviceStopCmd = &cobra.Command{
+	Use:   "stop <name>",
+	Short: "Stop a named nSelf service (container preserved)",
+	Long: `Stop a named nSelf service without removing its container.
+
+The container state is preserved so 'nself service start <name>' can resume it
+without re-creating volumes or losing data.
+
+Examples:
+  nself service stop redis
+  nself service stop minio`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceStop,
+}
+
+// serviceRestartCmd restarts a named nSelf service.
+var serviceRestartCmd = &cobra.Command{
+	Use:   "restart <name>",
+	Short: "Restart a named nSelf service",
+	Long: `Restart a running nSelf service. Equivalent to 'docker compose restart <service>'.
+
+Examples:
+  nself service restart redis
+  nself service restart hasura`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceRestart,
+}
+
+// servicePsCmd shows current status of all nSelf stack services.
+var servicePsCmd = &cobra.Command{
+	Use:   "ps",
+	Short: "Show status of all nSelf stack services",
+	Long: `Show the current status of every service in the running nSelf stack.
+
+Reads live container state from 'docker compose ps'. Run 'nself start' first
+if no services appear.`,
+	RunE: runServicePs,
+}
+
+// serviceUpdateCmd pulls the latest image for a service and restarts it.
+var serviceUpdateCmd = &cobra.Command{
+	Use:   "update <name>",
+	Short: "Pull the latest image for a service and restart it",
+	Long: `Pull the latest image for a named service and restart it.
+
+Equivalent to:
+  docker compose pull <service>
+  docker compose up -d --no-deps <service>
+
+Examples:
+  nself service update redis
+  nself service update hasura`,
+	Args: cobra.ExactArgs(1),
+	RunE: runServiceUpdate,
+}
+
+// serviceScaleCmd adjusts the replica count for a named service.
+var serviceScaleCmd = &cobra.Command{
+	Use:   "scale <name> <replicas>",
+	Short: "Set the replica count for a named service",
+	Long: `Set the number of replicas for a named nSelf service.
+
+Replicas must be at least 1. This wraps 'docker compose up -d --scale <service>=<n>'.
+
+Examples:
+  nself service scale functions 3
+  nself service scale redis 1`,
+	Args: cobra.ExactArgs(2),
+	RunE: runServiceScale,
+}
+
 // serviceAddCmd scaffolds a new CS_N custom service into the current nSelf project.
 var serviceAddCmd = &cobra.Command{
 	Use:   "add <name>",
@@ -166,6 +257,12 @@ func init() {
 	serviceCmd.AddCommand(serviceUpgradeCmd)
 	serviceCmd.AddCommand(serviceConfigureCmd)
 	serviceCmd.AddCommand(serviceAddCmd)
+	serviceCmd.AddCommand(serviceStartCmd)
+	serviceCmd.AddCommand(serviceStopCmd)
+	serviceCmd.AddCommand(serviceRestartCmd)
+	serviceCmd.AddCommand(servicePsCmd)
+	serviceCmd.AddCommand(serviceUpdateCmd)
+	serviceCmd.AddCommand(serviceScaleCmd)
 
 	RootCmd.AddCommand(serviceCmd)
 }
@@ -683,4 +780,50 @@ func runServiceConfigure(cmd *cobra.Command, args []string) error {
 	fmt.Println("  Set AUTH_SMTP_PASS=<your-password>")
 	fmt.Println("  Run `nself build` to apply changes.")
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// service start / stop / restart / ps / update / scale
+// ---------------------------------------------------------------------------
+
+func runServiceStart(cmd *cobra.Command, args []string) error {
+	return service.Start(cmd.Context(), args[0])
+}
+
+func runServiceStop(cmd *cobra.Command, args []string) error {
+	return service.Stop(cmd.Context(), args[0])
+}
+
+func runServiceRestart(cmd *cobra.Command, args []string) error {
+	return service.Restart(cmd.Context(), args[0])
+}
+
+func runServicePs(cmd *cobra.Command, args []string) error {
+	entries, err := service.PS(cmd.Context())
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 {
+		fmt.Println("No services running. Run `nself start` to boot the stack.")
+		return nil
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "NAME\tSERVICE\tSTATUS\tHEALTH\tID")
+	for _, e := range entries {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			e.Name, e.Service, e.Status, e.Health, e.ID)
+	}
+	return w.Flush()
+}
+
+func runServiceUpdate(cmd *cobra.Command, args []string) error {
+	return service.Update(cmd.Context(), args[0])
+}
+
+func runServiceScale(cmd *cobra.Command, args []string) error {
+	var replicas int
+	if _, err := fmt.Sscanf(args[1], "%d", &replicas); err != nil {
+		return fmt.Errorf("replicas must be an integer, got %q", args[1])
+	}
+	return service.Scale(cmd.Context(), args[0], replicas)
 }

@@ -6,8 +6,6 @@ import (
 
 // TestAuthConfig_MFATOTPEnabled_default_false verifies that when
 // AUTH_MFA_TOTP_ENABLED is unset, AuthConfig.MFATOTPEnabled defaults to false.
-//
-// P99 Sprint 1.9 T06 — TOTP-based MFA toggle.
 func TestAuthConfig_MFATOTPEnabled_default_false(t *testing.T) {
 	// Ensure the env var is unset for this subtest (t.Setenv("", "") is invalid;
 	// use a sentinel + explicit unset via the test helper). Go's testing package
@@ -31,8 +29,6 @@ func TestAuthConfig_MFATOTPEnabled_default_false(t *testing.T) {
 // TestAuthConfig_MFATOTPEnabled_env_override verifies that setting
 // AUTH_MFA_TOTP_ENABLED=true causes the loader-equivalent getEnvBool path
 // to return true.
-//
-// P99 Sprint 1.9 T06 — TOTP-based MFA toggle.
 func TestAuthConfig_MFATOTPEnabled_env_override(t *testing.T) {
 	t.Setenv("AUTH_MFA_TOTP_ENABLED", "true")
 

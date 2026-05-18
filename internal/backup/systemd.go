@@ -12,9 +12,9 @@ import (
 
 // SystemdInstallOptions controls install of nself-backup systemd units.
 type SystemdInstallOptions struct {
-	FullAt      string // "HH:MM" UTC, e.g. "03:00"
+	FullAt      string // "HH:MM" UTC, e.g. "02:00"
 	WALEvery    string // e.g. "15m"
-	PruneAt     string // "HH:MM" UTC, default "04:00"
+	PruneAt     string // "HH:MM" UTC, default "04:30"
 	VerifyOnDay string // systemd OnCalendar day name (Sun..Sat), default "Sun"
 	VerifyAt    string // "HH:MM", default "05:00"
 	UnitDir     string // default /etc/systemd/system
@@ -33,13 +33,13 @@ type SystemdUnitFiles map[string]string
 // writing into /etc/systemd/system.
 func RenderSystemdUnits(cfg *config.Config, opts SystemdInstallOptions) (SystemdUnitFiles, error) {
 	if opts.FullAt == "" {
-		opts.FullAt = "03:00"
+		opts.FullAt = "02:00"
 	}
 	if opts.WALEvery == "" {
 		opts.WALEvery = "15m"
 	}
 	if opts.PruneAt == "" {
-		opts.PruneAt = "04:00"
+		opts.PruneAt = "04:30"
 	}
 	if opts.VerifyOnDay == "" {
 		opts.VerifyOnDay = "Sun"

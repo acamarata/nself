@@ -8,7 +8,6 @@
 // which must edit compose files for Model A but only flip the .disabled
 // marker for Model B.
 //
-// P99 Sprint 3.8 T01.
 package model
 
 import (

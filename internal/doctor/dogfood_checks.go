@@ -2,11 +2,10 @@ package doctor
 
 // dogfood_checks.go — dogfood-only checks for nSelf's own backend (web/backend).
 //
-// G-DOGFOOD ticket (P97 Wave 37): extra deep checks that run against the
-// nself.org production stack to catch drift between what we ship and what
-// users get. Invoked by `nself doctor --deep` when run inside a repo that
-// declares itself a dogfood target via NSELF_DOGFOOD=1 OR by the dogfood-check
-// CI workflow at web/.github/workflows/dogfood-check.yml.
+// Extra deep checks that run against the nself.org production stack to catch
+// drift between what we ship and what users get. Invoked by `nself doctor --deep`
+// when run inside a repo that declares itself a dogfood target via NSELF_DOGFOOD=1
+// OR by the dogfood-check CI workflow at web/.github/workflows/dogfood-check.yml.
 //
 // All checks here are read-only and never modify state. Per the
 // Security-Always-Free Doctrine, these checks run without a license.

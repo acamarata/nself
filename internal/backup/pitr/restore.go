@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/backup/destinations"
 	"github.com/nself-org/cli/internal/config"
 )
 
@@ -82,7 +83,7 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 		workDir = d
 	}
 
-	// Download base backup (stub: in production this calls the B44 destination driver).
+	// Download base backup (local copy or remote download via rclone).
 	bbLocal, err := fetchBaseBackup(ctx, bb, workDir, opts.IdentityPath)
 	if err != nil {
 		return fmt.Errorf("fetch base backup: %w", err)
@@ -159,29 +160,46 @@ restore_command = 'cp /var/lib/postgresql/wal_archive/%%f %%p'
 }
 
 // fetchBaseBackup downloads (or copies) the base backup to workDir.
-// If encrypted and identityPath is provided, it decrypts first.
-// This is a stub that currently copies from local paths; in production it
-// would use the B44 destination driver.
+// If encrypted and identityPath is provided, it decrypts the downloaded file
+// before returning.
+//
+// Supported key formats:
+//   - Local absolute path (/var/backups/base.tar.gz) — used directly.
+//   - Remote URI (s3://, r2://, minio://, b2://, gcs://, az://) — downloaded
+//     via the destinations package using rclone.
 func fetchBaseBackup(ctx context.Context, bb BaseBackup, workDir, identityPath string) (string, error) {
-	// If remote key is a local path (starts with /), use it directly.
-	if strings.HasPrefix(bb.RemoteKey, "/") {
-		src := bb.RemoteKey
-		if strings.HasSuffix(src, ".age") {
-			if identityPath == "" {
-				return "", fmt.Errorf("base backup is encrypted but no identity key provided (use --identity)")
-			}
-			dst := filepath.Join(workDir, "base.tar.gz")
-			if err := ageDecryptFile(ctx, src, dst, identityPath); err != nil {
-				return "", err
-			}
-			return dst, nil
+	var localPath string
+
+	switch {
+	case strings.HasPrefix(bb.RemoteKey, "/"):
+		// Local filesystem path — use directly.
+		localPath = bb.RemoteKey
+
+	case destinations.IsRemoteKey(bb.RemoteKey):
+		// Remote URI — download via rclone.
+		downloaded, err := destinations.FetchRemote(ctx, bb.RemoteKey, workDir)
+		if err != nil {
+			return "", fmt.Errorf("download base backup from %s: %w", bb.RemoteKey, err)
 		}
-		return src, nil
+		localPath = downloaded
+
+	default:
+		return "", fmt.Errorf("unsupported base backup key format %q: must be an absolute local path or a remote URI (s3://, r2://, minio://, b2://, gcs://, az://)", bb.RemoteKey)
 	}
 
-	// For remote keys (s3://, r2://, etc.) we would call the B44 driver here.
-	// For now, return a descriptive error pointing at the integration point.
-	return "", fmt.Errorf("remote destination fetch not yet implemented for key %q: ensure B44 destination drivers are configured", bb.RemoteKey)
+	// Decrypt if encrypted.
+	if strings.HasSuffix(localPath, ".age") {
+		if identityPath == "" {
+			return "", fmt.Errorf("base backup is encrypted but no identity key provided (use --identity)")
+		}
+		dst := filepath.Join(workDir, "base.tar.gz")
+		if err := ageDecryptFile(ctx, localPath, dst, identityPath); err != nil {
+			return "", err
+		}
+		return dst, nil
+	}
+
+	return localPath, nil
 }
 
 // pollRecoveryComplete waits until Postgres exits recovery mode.

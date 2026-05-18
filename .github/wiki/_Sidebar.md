@@ -22,8 +22,9 @@
 - _Security:_ [[cmd-security]] · [[cmd-secrets]] · [[cmd-waf]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
 - _Plugins:_ [[cmd-plugin]] · [[cmd-license]]
-- _AI:_ [[cmd-ai]] · [[cmd-claw]]
-- _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-completion]]
+- _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
+- _Templates:_ [[cmd-template]]
+- _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
 
 ---
 
@@ -262,6 +263,11 @@
 - [[Dev-Setup]]
 - [[Plugin-Dev-Guide]]
 - [[Release-Process]]
+
+---
+
+**Admin**
+- [[USER-ACTION-QUEUE]], Pending Admin Actions
 
 ---
 

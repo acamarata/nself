@@ -272,17 +272,124 @@ func coalesceType(t, format string) string {
 }
 
 // ---------------------------------------------------------------------------
-// RLS pull — stubbed: returns empty slice with a note
+// RLS pull — queries pg_policies via Supabase Management API
 // ---------------------------------------------------------------------------
 
-// PullRLSPolicies fetches RLS policies. Because PostgREST does not expose the
-// pg_policies view over its standard REST layer, we return a placeholder entry
-// so callers always get a valid slice; the generated migration file includes a
-// comment reminding the operator to add RLS manually.
-func (c *Client) PullRLSPolicies(_ context.Context) ([]RLSPolicy, error) {
-	// Direct pg_catalog access is not available via PostgREST without granting
-	// service_role read on pg_policies. Return an advisory stub.
-	return []RLSPolicy{}, nil
+// pgPoliciesSQL is the query executed against pg_policies.
+// The Supabase Management API executes it with service_role privileges,
+// giving access to pg_catalog views.
+const pgPoliciesSQL = `
+SELECT
+    schemaname        AS table_schema,
+    tablename         AS table_name,
+    policyname        AS policy_name,
+    cmd               AS command,
+    permissive        AS permissive,
+    COALESCE(roles::text, '{}') AS roles,
+    COALESCE(qual, '')          AS using_expr,
+    COALESCE(with_check, '')    AS check_expr
+FROM pg_policies
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage', 'realtime', 'supabase_functions')
+ORDER BY schemaname, tablename, policyname;
+`
+
+// rlsPolicyRow is the JSON shape returned by the Management API SQL endpoint.
+type rlsPolicyRow struct {
+	TableSchema string `json:"table_schema"`
+	TableName   string `json:"table_name"`
+	PolicyName  string `json:"policy_name"`
+	Command     string `json:"command"`
+	Permissive  string `json:"permissive"` // "PERMISSIVE" or "RESTRICTIVE"
+	Roles       string `json:"roles"`      // array literal: {user,anon} or {}
+	UsingExpr   string `json:"using_expr"`
+	CheckExpr   string `json:"check_expr"`
+}
+
+// PullRLSPolicies fetches RLS policies from the Supabase project by executing
+// a query against pg_policies via the Supabase Management API SQL endpoint.
+//
+// The Management API endpoint is:
+//
+//	POST https://api.supabase.com/v1/projects/{ref}/database/query
+//	Authorization: Bearer <service_role_key>
+//	Content-Type: application/json
+//	{"query": "<SQL>"}
+//
+// If the Management API is unreachable or returns an auth error, an empty
+// slice is returned along with an informational error so the caller can
+// include a manual-review note in the generated migration SQL.
+func (c *Client) PullRLSPolicies(ctx context.Context) ([]RLSPolicy, error) {
+	url := fmt.Sprintf("https://api.supabase.com/v1/projects/%s/database/query", c.cfg.ProjectRef)
+
+	payload := fmt.Sprintf(`{"query":%q}`, pgPoliciesSQL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url,
+		strings.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("building RLS query request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.cfg.ServiceKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		// Network error — return empty + advisory so callers can still generate
+		// an artifact with a manual-review note.
+		return nil, fmt.Errorf("RLS policy fetch network error (check connectivity): %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading RLS policy response: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, fmt.Errorf("RLS policy fetch unauthorized (HTTP %d): verify the service_role key has Management API access", resp.StatusCode)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("RLS policy fetch failed (HTTP %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var rows []rlsPolicyRow
+	if err := json.Unmarshal(body, &rows); err != nil {
+		return nil, fmt.Errorf("parsing RLS policy response: %w", err)
+	}
+
+	policies := make([]RLSPolicy, 0, len(rows))
+	for _, row := range rows {
+		policies = append(policies, RLSPolicy{
+			TableSchema: row.TableSchema,
+			TableName:   row.TableName,
+			PolicyName:  row.PolicyName,
+			Command:     row.Command,
+			Permissive:  row.Permissive != "RESTRICTIVE",
+			Roles:       parsePostgresArray(row.Roles),
+			Using:       row.UsingExpr,
+			WithCheck:   row.CheckExpr,
+		})
+	}
+	return policies, nil
+}
+
+// parsePostgresArray converts a Postgres array literal like "{user,anon}" into
+// a Go string slice.
+func parsePostgresArray(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "{}" {
+		return nil
+	}
+	// Strip surrounding braces.
+	s = strings.TrimPrefix(strings.TrimSuffix(s, "}"), "{")
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // ---------------------------------------------------------------------------

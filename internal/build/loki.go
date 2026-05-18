@@ -1,12 +1,11 @@
 // Package build — loki.go: Programmatic Loki + Promtail YAML rendering for the
 // monitoring bundle.
 //
-// S9.T08-T10 (P100 v1.1.0): When the monitoring bundle is enabled, `nself build`
-// must emit monitoring/loki.yml + monitoring/promtail.yml with a configurable
-// retention period (default 30d / 720h, Loki retention min per S9.T10), optional
-// S3-backed chunk storage, and per-project tenant labels. This file owns the
-// build-pipeline integration — the actual YAML templates live in
-// internal/compose/monitoring/loki.go and are reused here.
+// When the monitoring bundle is enabled, `nself build` must emit
+// monitoring/loki.yml + monitoring/promtail.yml with a configurable retention
+// period (default 30d / 720h), optional S3-backed chunk storage, and per-project
+// tenant labels. This file owns the build-pipeline integration — the actual YAML
+// templates live in internal/compose/monitoring/loki.go and are reused here.
 //
 // Behavior:
 //   - LokiBuildOptions wraps the monitoring.LokiConfig + monitoring.PromtailConfig

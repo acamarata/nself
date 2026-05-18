@@ -13,8 +13,8 @@
 //	  "_p95_note": "install_source included in ping_api telemetry from v1.1.0 (S54-T05)"
 //	}
 //
-// P95 integration point: the telemetry package reads InstallSource() and sends it
-// in the ping_api telemetry payload as "install_source" (S54-T05, v1.1.0).
+// The telemetry package reads InstallSource() and sends it
+// in the ping_api telemetry payload as "install_source".
 //
 // S57-T11 — 2026-04-20
 package installmeta

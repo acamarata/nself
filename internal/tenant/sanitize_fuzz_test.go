@@ -1,7 +1,7 @@
 // Package tenant -- sanitize_fuzz_test.go
 //
 // FuzzSanitizeIdentifier covers the 7 SQL injection attack-vector classes
-// documented in P99 Sprint 1.3 T03 (DB-01). This file targets both sanitize()
+// for DB-01. This file targets both sanitize()
 // and quoteIdent() -- the two functions that accept tenant-controlled input and
 // flow into schema-construction SQL.
 //

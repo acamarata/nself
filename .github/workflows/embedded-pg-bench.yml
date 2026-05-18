@@ -1,0 +1,81 @@
+name: Embedded PG Benchmarks
+
+on:
+  # Run on explicit workflow dispatch or when benchmark code changes land on main.
+  workflow_dispatch:
+    inputs:
+      benchtime:
+        description: 'Benchmark time per run (e.g. 3x or 5s)'
+        default: '3x'
+        required: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/embedded/**'
+      - '.github/workflows/embedded-pg-bench.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    name: Benchmark — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-14          # Apple Silicon — primary deployment target
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Cache pglite WASM
+        uses: actions/cache@v4
+        with:
+          path: ~/.nself/cache/pglite
+          key: pglite-wasm-${{ runner.os }}-0.2.17
+          restore-keys: pglite-wasm-${{ runner.os }}-
+
+      - name: Fetch pglite WASM
+        env:
+          PGLITE_VERSION: "0.2.17"
+        run: |
+          mkdir -p ~/.nself/cache/pglite/${PGLITE_VERSION}
+          WASM_PATH=~/.nself/cache/pglite/${PGLITE_VERSION}/pglite.wasm
+          if [ ! -f "$WASM_PATH" ]; then
+            curl -fsSL \
+              "https://ping.nself.org/assets/pglite/${PGLITE_VERSION}/pglite.wasm" \
+              -o "$WASM_PATH"
+          fi
+          echo "PGLITE_WASM_PATH=$WASM_PATH" >> "$GITHUB_ENV"
+
+      - name: Run benchmarks
+        env:
+          CGO_ENABLED: 1
+          BENCHTIME: ${{ inputs.benchtime || '3x' }}
+        run: |
+          go test -mod=vendor -tags bench \
+            -bench=BenchmarkEmbeddedPG \
+            -benchtime="${BENCHTIME}" \
+            -benchmem \
+            -timeout 300s \
+            ./internal/embedded/... \
+            | tee bench-results-${{ matrix.os }}.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-results-${{ matrix.os }}
+          path: bench-results-${{ matrix.os }}.txt

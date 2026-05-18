@@ -52,7 +52,7 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S74-T02 + S74-T-PERM-01: RLS enforcement for np_* tables (PERM-RLS-01).
 	results = append(results, CheckRLSEnforcement(ctx, false)...)
 
-	// S4.T23 (P100 v1.1.0): ɳSentry-specific RLS checks (NSENTRY-RLS-01..07).
+	// ɳSentry-specific RLS checks (NSENTRY-RLS-01..07).
 	// Runs only when one or more of the 7 ɳSentry baseline plugins is installed.
 	// Severity is CRITICAL (fail) — ɳSentry tables hold cross-tenant observability data.
 	if home, herr := os.UserHomeDir(); herr == nil {
@@ -69,10 +69,10 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S98-02-T12: SSRF guard verification (SSRF-01).
 	results = append(results, CheckSSRF(projectDir))
 
-	// P98 S98-02-T10: CI token rotation check (CI-TOKEN-01).
+	// CI token rotation check (CI-TOKEN-01).
 	results = append(results, CheckCIToken(projectDir))
 
-	// P98 S98-02-T14: CI vault sync check (CI-VAULT-SYNC-01).
+	// CI vault sync check (CI-VAULT-SYNC-01).
 	results = append(results, CheckCIVaultSync(projectDir))
 
 	// S03-T06: SDK version coherence check (SDK-VERSION-01).
@@ -81,9 +81,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// S10.T06: SEC-HARDENING-01..08 — Security-Always-Free hardening checks.
 	results = append(results, HardeningChecks(ctx, projectDir)...)
 
-	// P102 W10-T5 follow-up: NSCAN-001..010 baseline scan via the nself-audit
-	// plugin's POST /scan/run endpoint. Skipped gracefully if the plugin is
-	// not installed/running. Security-Always-Free: no license required.
+	// NSCAN-001..010 baseline scan via the nself-audit plugin's POST /scan/run
+	// endpoint. Skipped gracefully if the plugin is not installed/running.
+	// Security-Always-Free: no license required.
 	results = append(results, CheckNSelfAuditScan(ctx, projectDir)...)
 
 	// S9.T03 + S9.T15: OPS-DRILL-01 — verify a successful `nself backup drill`
@@ -98,10 +98,10 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	// consent flow (migration on disk, privacy disclosure section, DPO contact).
 	results = append(results, CheckLegalGDPRA9(projectDir))
 
-	// G-DOGFOOD (P97 W37/W38): nself.org-specific checks. Gated on
-	// NSELF_DOGFOOD=1 so end-user `nself doctor --deep` runs are not slowed
-	// by HTTP probes against nself.org subdomains. CI workflow at
-	// web/.github/workflows/dogfood-check.yml exports NSELF_DOGFOOD=1.
+	// nself.org-specific checks. Gated on NSELF_DOGFOOD=1 so end-user
+	// `nself doctor --deep` runs are not slowed by HTTP probes against nself.org
+	// subdomains. CI workflow at web/.github/workflows/dogfood-check.yml exports
+	// NSELF_DOGFOOD=1.
 	if os.Getenv("NSELF_DOGFOOD") == "1" {
 		results = append(results, DogfoodChecks(ctx, projectDir, verbose)...)
 	}

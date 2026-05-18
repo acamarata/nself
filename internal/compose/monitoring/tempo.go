@@ -227,7 +227,7 @@ func TempoComposeService(cfg *TempoConfig) map[string]interface{} {
 		},
 		// CPU limits prevent Tempo's trace ingestion from starving other services
 		// under load. 0.5 CPU cap with 0.1 reservation matches the nSelf default
-		// for optional services (M-03, P96 W1G MEDIUM fix).
+		// for optional services.
 		"deploy": map[string]interface{}{
 			"resources": map[string]interface{}{
 				"limits": map[string]interface{}{
@@ -272,7 +272,7 @@ func OTELCollectorComposeService(cfg *OTELCollectorConfig) map[string]interface{
 			"nself.monitoring":           "true",
 		},
 		// CPU limits prevent the OTEL Collector's batch processor from consuming
-		// unbounded CPU during trace bursts (M-03, P96 W1G MEDIUM fix).
+		// unbounded CPU during trace bursts.
 		"deploy": map[string]interface{}{
 			"resources": map[string]interface{}{
 				"limits": map[string]interface{}{

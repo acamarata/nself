@@ -1,10 +1,9 @@
 // Package doctor — ops_drill.go: OPS-DRILL-01 check.
 //
-// S9.T03 + S9.T15 (P100 v1.1.0): Verifies that a successful `nself backup
-// drill` ran within the last 7 days. The drill log lives at
-// <projectDir>/.nself/drill-log.json (JSON Lines format, written by
-// internal/backup.Drill). The check is read-only and never invokes the drill
-// itself — that would be a privileged operation gated by SSH.
+// Verifies that a successful `nself backup drill` ran within the last 7 days.
+// The drill log lives at <projectDir>/.nself/drill-log.json (JSON Lines format,
+// written by internal/backup.Drill). The check is read-only and never invokes
+// the drill itself — that would be a privileged operation gated by SSH.
 //
 // Status semantics:
 //   - PASS: most recent successful drill within 7 days

@@ -1,5 +1,5 @@
 // Package license — validator_test.go covers the FAIL-OPEN policy
-// implementation in validator.go (D3-T10, P97).
+// implementation in validator.go (D3-T10).
 //
 // Boundary conditions:
 //   - cache age 1d  + remote 200            → Valid (live)

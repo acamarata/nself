@@ -51,7 +51,7 @@ func SetActiveEnv(projectDir, env string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create state dir: %w", err)
 	}
-	return os.WriteFile(filepath.Join(dir, stateFile), []byte(env+"\n"), 0o644)
+	return os.WriteFile(filepath.Join(dir, stateFile), []byte(env+"\n"), 0o600)
 }
 
 // List returns all available environments for a project by scanning for
@@ -229,7 +229,7 @@ func Copy(projectDir, fromEnv, toEnv string) error {
 		return fmt.Errorf("read .env.%s: %w", fromEnv, err)
 	}
 
-	return os.WriteFile(dst, data, 0o644)
+	return os.WriteFile(dst, data, 0o600)
 }
 
 // loadEnvMap reads an .env.{name} file into a map.

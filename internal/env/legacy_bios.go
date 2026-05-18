@@ -1,4 +1,4 @@
-// legacy_bios.go — P97 G0-T02
+// legacy_bios.go — BIOS legacy env-var compatibility shim.
 //
 // nSelf was internally referred to as "BIOS" in pre-v1.0 (alpha) builds. A
 // handful of long-running self-hosted deployments still ship .env files with

@@ -392,7 +392,8 @@ func resolveBundleLicenseStatus(bundleKey string) string {
 // checkPluginInstalled returns true if the plugin appears to be installed locally.
 func checkPluginInstalled(pluginName string) bool {
 	if strings.HasPrefix(pluginName, "(") {
-		return false // placeholder entry
+		// Catalog entries like "(soon)" are display-only, not real plugin names.
+		return false
 	}
 	pluginDir := resolvePluginDir()
 	installed, err := plugin.ListInstalled(pluginDir)

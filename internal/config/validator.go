@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -277,6 +279,9 @@ func ValidateRedisPassword(cfg *Config) error {
 }
 
 // ValidateHasuraDevMode returns an error if HASURA_GRAPHQL_DEV_MODE=true in prod.
+// When the block fires it emits a structured slog.Error so that operators with
+// centralised log aggregation (Loki/Datadog) can alert on accidental dev-mode
+// exposure. The error is always returned; the log is a side effect.
 func ValidateHasuraDevMode(cfg *Config) error {
 	if cfg.Env != "prod" && cfg.Env != "production" {
 		return nil
@@ -284,6 +289,15 @@ func ValidateHasuraDevMode(cfg *Config) error {
 	if !cfg.Hasura.DevMode {
 		return nil
 	}
+	// Emit structured audit log before returning the blocking error.
+	// Fields: env, hostname (best-effort), and timestamp are included
+	// automatically by slog's default handler.
+	hostname, _ := os.Hostname()
+	slog.Error("SEC-DEVMODE-01: HASURA_GRAPHQL_DEV_MODE=true blocked in production",
+		"env", cfg.Env,
+		"hostname", hostname,
+		"remediation", "set HASURA_GRAPHQL_DEV_MODE=false in .env.prod",
+	)
 	return fmt.Errorf("HASURA_GRAPHQL_DEV_MODE must not be enabled in production.\nSet HASURA_GRAPHQL_DEV_MODE=false in your .env.prod file.")
 }
 

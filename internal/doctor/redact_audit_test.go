@@ -1,4 +1,4 @@
-// S12.T09 (P100 v1.1.0) — tests for OBS-REDACT-01 redaction audit check.
+// Package doctor — tests for OBS-REDACT-01 redaction audit check.
 package doctor
 
 import (

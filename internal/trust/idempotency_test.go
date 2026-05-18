@@ -60,6 +60,9 @@ func TestLaunchDaemonLoaded_PlistAbsent(t *testing.T) {
 // TestPfAnchorContent_PortsMatchConfig verifies that pfAnchorContent produces
 // rules referencing the configured HTTP and SSL ports.
 func TestPfAnchorContent_PortsMatchConfig(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{
 		NginxHTTPPort: 8080,
 		NginxSSLPort:  8443,
@@ -80,6 +83,9 @@ func TestPfAnchorContent_PortsMatchConfig(t *testing.T) {
 
 // TestPfAnchorContent_ZeroPorts verifies the function handles zero-value ports without panic.
 func TestPfAnchorContent_ZeroPorts(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{}
 	content := pfAnchorContent(cfg)
 	if content == "" {
@@ -89,6 +95,9 @@ func TestPfAnchorContent_ZeroPorts(t *testing.T) {
 
 // TestEscapeForOsascript_Backslashes verifies backslash escaping.
 func TestEscapeForOsascript_Backslashes(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := `path\to\file`
 	got := escapeForOsascript(input)
 	want := `path\\to\\file`
@@ -99,6 +108,9 @@ func TestEscapeForOsascript_Backslashes(t *testing.T) {
 
 // TestEscapeForOsascript_DoubleQuotes verifies double-quote escaping.
 func TestEscapeForOsascript_DoubleQuotes(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := `say "hello"`
 	got := escapeForOsascript(input)
 	want := `say \"hello\"`
@@ -109,6 +121,9 @@ func TestEscapeForOsascript_DoubleQuotes(t *testing.T) {
 
 // TestEscapeForOsascript_Empty verifies empty string is returned unchanged.
 func TestEscapeForOsascript_Empty(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	if got := escapeForOsascript(""); got != "" {
 		t.Errorf("escapeForOsascript(%q) = %q, want %q", "", got, "")
 	}
@@ -116,6 +131,9 @@ func TestEscapeForOsascript_Empty(t *testing.T) {
 
 // TestEscapeForOsascript_NoSpecialChars verifies plain strings pass through unchanged.
 func TestEscapeForOsascript_NoSpecialChars(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := "hello world 123"
 	if got := escapeForOsascript(input); got != input {
 		t.Errorf("escapeForOsascript(%q) = %q, want unchanged", input, got)

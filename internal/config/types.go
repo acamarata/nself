@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // Config is the top-level configuration struct for an nSelf project.
 // All fields are populated from the .env cascade and environment variables.
 type Config struct {
@@ -110,6 +112,12 @@ type Config struct {
 	// When true, nself build injects Apollo Router (CS_7) and composes a
 	// supergraph schema from installed plugin subgraphs. Default: false.
 	FederationEnabled bool `env:"NSELF_FEDERATION"`
+
+	// EmbeddedPG — when true, nself build omits the Docker postgres service
+	// and instead relies on the pglite/wasmtime embedded runtime started by
+	// `nself start --embedded-pg`. Hasura is wired via a Unix-domain socket
+	// bridge. Default: false.
+	EmbeddedPG bool `env:"NSELF_EMBEDDED_PG"`
 
 	// Passthrough: arbitrary env vars matching patterns (AUTH_PROVIDER_*, REMOTE_SCHEMA_*, etc.)
 	Passthrough map[string]string
@@ -424,12 +432,13 @@ type BackupConfig struct {
 
 // LicenseConfig holds license validation and grace period configuration.
 type LicenseConfig struct {
-	PingURL           string `env:"LICENSE_PING_URL"`            // https://ping.nself.org
-	CachePath         string `env:"LICENSE_CACHE_PATH"`          // ~/.cache/nself/license.json
-	GraceDays         int    `env:"LICENSE_GRACE_DAYS"`          // 7
-	CheckInterval     string `env:"LICENSE_CHECK_INTERVAL"`      // 6h
-	OfflineMode       bool   `env:"LICENSE_OFFLINE_MODE"`        // false
-	PublicKeyOverride string `env:"LICENSE_PUBLIC_KEY_OVERRIDE"` // hex-encoded Ed25519 pubkey for testing
+	PingURL           string    `env:"LICENSE_PING_URL"`            // https://ping.nself.org
+	CachePath         string    `env:"LICENSE_CACHE_PATH"`          // ~/.cache/nself/license.json
+	GraceDays         int       `env:"LICENSE_GRACE_DAYS"`          // 7
+	CheckInterval     string    `env:"LICENSE_CHECK_INTERVAL"`      // 6h
+	OfflineMode       bool      `env:"LICENSE_OFFLINE_MODE"`        // false
+	PublicKeyOverride string    `env:"LICENSE_PUBLIC_KEY_OVERRIDE"` // hex-encoded Ed25519 pubkey for testing
+	SunsetAt          time.Time `env:"LICENSE_SUNSET_AT"`           // optional hard cutoff; zero = no sunset
 }
 
 // SecretsConfig holds secrets management configuration.

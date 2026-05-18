@@ -3,6 +3,31 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [Unreleased] — v1.2.0
+
+### Changed
+
+- **TypeScript SDK canary upgrade to TS6** — `cli/sdk/ts` (@nself/plugin-sdk v2.0.0) bumped from TypeScript `^5.4.5` to `^6.0.0` (S06 canary). `tsconfig.json` updated: `module` → `node16`, `moduleResolution` → `node16` (node10 alias deprecated in TS6). Added `tsconfig.test.json` for ts-jest with `isolatedModules: true`. Jest config migrated to flat `transform` syntax (removes deprecated `globals.ts-jest`). Added `eslint`, `@typescript-eslint/parser`, `@typescript-eslint/eslint-plugin` devDeps and `eslint.config.mjs` (ESLint 10 flat config). All 18 tests pass. Type-check and build clean.
+
+### Added
+
+- **Embedded PostgreSQL via pglite/wasmtime** (`--embedded-pg`) — `nself start --embedded-pg` boots a full ɳSelf stack without a Docker postgres container. PostgreSQL runs as a pglite WebAssembly module inside wasmtime. A Unix-domain socket bridge proxies the Postgres wire protocol to Hasura and Auth. pgvector is included in pglite v0.2.17. Cold start compiles the WASM module to native code and caches it; warm starts typically take under 5 seconds. Backup via `nself backup` targets the UDS socket (`pg_dump --format=custom` primary, SQL wire-protocol fallback). Enable persistently with `NSELF_EMBEDDED_PG=true` in `.env.local`. See [[Embedded-Postgres]].
+
+### Security
+
+- **CWE-214 Hasura secret exposure fixed** — `hasuraMetadataExportCmd()` in `internal/backup/create.go` previously passed the Hasura admin secret as `--admin-secret=<value>` in argv. Any local user with access to `/proc/<pid>/cmdline` or `ps aux` could read it during a backup run. The secret is now passed exclusively through the child process environment (`cmd.Env`). Docker exec receives `-e HASURA_GRAPHQL_ADMIN_SECRET` (no value on the command line). Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
+- **Supply-chain installer verification added** — the Ollama installer previously piped `curl` output directly to `sh` without content verification. `DownloadAndVerify()` in the new `internal/installer/verify.go` downloads to a 0700 owner-only temp directory, opens the file with `O_EXCL` (closes TOCTOU window), caps the body at 2 MiB, and verifies SHA-256 against the pinned checksum from `ExpectedOllamaInstallChecksum()` before execution. Severity: High. Chain ID: a83c99d6. Advisory: `.github/SECURITY-ADVISORIES/2026-05-15-rce-and-secrets.md`.
+
+### Testing
+
+- **S42-sec security-critical coverage uplift** (sprint a5e2b723) — targeted coverage pass across `internal/license`, `internal/auth`, `internal/trust`, `internal/crypto`, SSRF guards, and RLS enforcement. Real uplift: license 76 → 91.1% (392 new tests), auth 85 → 92.5% (140 tests), trust 67 → 72.1% (4 timeout-panic test bugs fixed: brew/osascript/setupResolver had unconditional 30s–5 min blocking calls, now `t.Skip` with unreachable-doc comment), security 89.3%, truststate 96.0%. No security bugs discovered; `go build` and `go vet` clean. Accepted coverage debt: `internal/trust/ssl` 49.4%, `internal/secrets` 39.0%, `internal/tenant` 48.4% — these packages rely on external binary execution (mkcert, openssl, age — no injection point to test safely), osascript admin-dialog invocation (untestable in CI without real macOS privileges), and live Postgres/Stripe/MinIO connections. Plausible integration-test class; further uplift deferred to S47 once an integration harness is in place.
+
+## [1.1.3] - 2026-05-15
+
+### Docs
+
+- **Complete CLI wiki coverage** — 19 new command pages authored (S05): `cmd-ai-studio.md`, `cmd-costs.md`, `cmd-encryption.md`, `cmd-feature.md`, `cmd-federation.md`, `cmd-help-topics.md`, `cmd-infra.md`, `cmd-k8s.md`, `cmd-man.md`, `cmd-mcp.md`, `cmd-migrate-from-v099.md`, `cmd-ollama.md`, `cmd-region.md`, `cmd-release.md`, `cmd-release-check.md`, `cmd-release-rollback.md`, `cmd-release-status.md`, `cmd-self-heal.md`, `cmd-uninstall.md`. Wiki coverage advances from 66 to 85 pages.
+
 ## [1.1.2] - 2026-05-15
 
 Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelope, LlamaCpp real backend, sqlite-vec cross-compile matrix, throttle retries, nself-audit baseline rules. Security hardening across signing, vault revocation, license HMAC, and Argon2id KAT. Doc-truth corrections to SPORT (F01/F02/F04/F09) and PPI plugin counts.
@@ -20,6 +45,7 @@ Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelop
 
 ### Fixed
 
+- **`/healthz` nginx proxy_method set to GET** — `internal/nginx/templates/service.conf.tmpl` lines 43-52 previously used `proxy_method POST` for the upstream health check location. Some plugin runtimes return 405 on a POST to `/healthz`. Changed to `proxy_method GET` so `nself doctor` health probes reliably succeed across all plugin types.
 - **Cross-language signing material** — Rust and Go produce byte-identical signing bytes. 119-byte golden test locked.
 - **nself-vault REVOKE** now invalidates immediately. JWT `aud="nself-vault"` enforced. Cross-ownership reads return 404 (not 403).
 - **Plugin signing** uses canonical SHA-256 of tarball bytes. Worker and CLI aligned.
@@ -55,7 +81,7 @@ Patch release. P101 nClaw groundwork: nself-sync server, nself-vault KEK envelop
 ### Known limitations (carry-forward to v1.1.3)
 
 - Integration test API drift: httpmock 0.7 → 0.8, nclaw_core → libnclaw rename. Separate sprint.
-- 22 CLI commands still need dedicated wiki pages.
+- 3 CLI commands still need dedicated wiki pages (model, template, migrate firebase/supabase variants — addressed in S28 SPORT regen).
 - Throttle retry orchestrator integration deferred to S17.T07.
 
 ## [1.1.0] - 2026-05-15

@@ -1,4 +1,4 @@
-// S12.T09 (P100 v1.1.0) — doctor check OBS-REDACT-01.
+// Package doctor — redact_audit.go: doctor check OBS-REDACT-01.
 //
 // Verifies that a synthetic telemetry-shaped payload, after passing through
 // observability.Redact, contains no patterns matching the canonical PII

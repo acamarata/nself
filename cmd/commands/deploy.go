@@ -8,11 +8,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/controlplane"
 	"github.com/nself-org/cli/internal/deploy/bluegreen"
 	"github.com/nself-org/cli/internal/maintenance"
 	"github.com/nself-org/cli/internal/promote"
@@ -96,8 +98,16 @@ var deployHealthCmd = &cobra.Command{
 
 var deployCheckAccessCmd = &cobra.Command{
 	Use:   "check-access",
-	Short: "Verify access to configured deploy targets",
-	RunE:  runDeployCheckAccess,
+	Short: "Verify access to configured deploy targets (deprecated: use 'nself env target probe')",
+	Long: `Check SSH capability for all configured deploy environments.
+
+Deprecated: this command performs a shallow env-var check for backward compatibility.
+For full per-server SSH capability resolution use:
+
+  nself env target probe [env]
+
+The output format and exit code semantics are preserved for backward compatibility.`,
+	RunE: runDeployCheckAccess,
 }
 
 // deployPromoteCmd promotes a canary deploy to 100% green traffic.
@@ -111,6 +121,43 @@ Example:
   nself deploy --canary 10   # start canary at 10%
   nself deploy promote       # flip to 100% green after review`,
 	RunE: runDeployPromote,
+}
+
+// deployEnvironmentsCmd lists environments and their servers with resolved
+// capability.  This is the contract that the nSelf Admin companion consumes;
+// absence of this endpoint caused Admin 500 errors (T04).
+var deployEnvironmentsCmd = &cobra.Command{
+	Use:   "environments",
+	Short: "List configured deploy environments and server capabilities",
+	Long: `List every environment defined in .nself/control-plane.yaml (or synthesized
+from NSELF_DEPLOY_HOST_<TARGET> env vars) together with the resolved SSH
+capability of each server.
+
+Output is always JSON:
+
+  {
+    "environments": [
+      {
+        "name": "staging",
+        "kind": "remote",
+        "servers": [
+          {
+            "name": "staging-app",
+            "role": "app",
+            "capability": "manage",
+            "reason": ""
+          }
+        ]
+      }
+    ]
+  }
+
+No SSH keys or credential material appear in the output.
+
+Examples:
+  nself deploy environments
+  nself deploy environments | jq '.environments[].name'`,
+	RunE: runDeployEnvironments,
 }
 
 func init() {
@@ -136,12 +183,25 @@ func init() {
 	deployStatusCmd.Flags().Bool("json", false, "Emit JSON output")
 	deployStatusCmd.Flags().Bool("blue-green", false, "Show blue/green state alongside deployment status")
 
+	// T05: --server selects a subset of servers for the pipeline.
+	f.String("server", "", "Deploy to a specific server only (name from control-plane inventory)")
+
+	deployStatusCmd.Flags().String("server", "", "Filter status output to a specific server")
+
+	deployLogsCmd.Flags().String("server", "", "Stream logs from a specific server via SSH")
+
+	deployHealthCmd.Flags().String("server", "", "Run health check on a specific server via SSH")
+	deployHealthCmd.Flags().Bool("json", false, "Emit JSON output")
+
+	deployCheckAccessCmd.Flags().Bool("json", false, "Emit JSON output (deprecated alias: use 'nself env target probe')")
+
 	deployCmd.AddCommand(deployStatusCmd)
 	deployCmd.AddCommand(deployRollbackCmd)
 	deployCmd.AddCommand(deployLogsCmd)
 	deployCmd.AddCommand(deployHealthCmd)
 	deployCmd.AddCommand(deployCheckAccessCmd)
 	deployCmd.AddCommand(deployPromoteCmd)
+	deployCmd.AddCommand(deployEnvironmentsCmd)
 
 	RootCmd.AddCommand(deployCmd)
 }
@@ -187,6 +247,101 @@ func runCLISelf(ctx context.Context, workdir string, args ...string) error {
 	c.Stderr = os.Stderr
 	c.Env = os.Environ()
 	return c.Run()
+}
+
+// ── T04: deploy environments ──────────────────────────────────────────────────
+
+// envServerRow is the stable JSON schema for one server entry returned by
+// "nself deploy environments". No secrets: SSHKeyRef value is never emitted.
+type envServerRow struct {
+	Name       string `json:"name"`
+	Role       string `json:"role"`
+	Capability string `json:"capability"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// envEnvironmentRow is the stable JSON schema for one environment entry.
+type envEnvironmentRow struct {
+	Name    string         `json:"name"`
+	Kind    string         `json:"kind"`
+	Servers []envServerRow `json:"servers"`
+}
+
+// deployEnvironmentsOutput is the top-level JSON response consumed by Admin.
+type deployEnvironmentsOutput struct {
+	Environments []envEnvironmentRow `json:"environments"`
+}
+
+// runDeployEnvironments resolves the inventory and capability of every server,
+// then emits the Admin-contract JSON.  No secret values are included.
+func runDeployEnvironments(cmd *cobra.Command, _ []string) error {
+	root, err := projectRoot()
+	if err != nil {
+		return err
+	}
+
+	inv, err := controlplane.Load(root)
+	if err != nil {
+		return fmt.Errorf("deploy environments: %w", err)
+	}
+
+	prober := controlplane.NewSSHProber(root, false)
+	statuses := controlplane.Resolve(inv, prober)
+
+	// Build a fast lookup: env/server → TargetStatus.
+	type envServerKey struct{ env, server string }
+	lookup := make(map[envServerKey]controlplane.TargetStatus, len(statuses))
+	for _, ts := range statuses {
+		lookup[envServerKey{ts.Env, ts.Server}] = ts
+	}
+
+	// Sort environments: local first, then alphabetically.
+	envNames := make([]string, 0, len(inv.Environments))
+	for name := range inv.Environments {
+		envNames = append(envNames, name)
+	}
+	sort.Slice(envNames, func(i, j int) bool {
+		if envNames[i] == "local" {
+			return true
+		}
+		if envNames[j] == "local" {
+			return false
+		}
+		return envNames[i] < envNames[j]
+	})
+
+	out := deployEnvironmentsOutput{
+		Environments: make([]envEnvironmentRow, 0, len(envNames)),
+	}
+	for _, envName := range envNames {
+		env := inv.Environments[envName]
+		row := envEnvironmentRow{
+			Name:    env.Name,
+			Kind:    env.Kind,
+			Servers: make([]envServerRow, 0, len(env.Servers)),
+		}
+		for _, srv := range env.Servers {
+			ts := lookup[envServerKey{envName, srv.Name}]
+			cap := string(ts.Capability)
+			if cap == "" {
+				cap = string(controlplane.CapHidden)
+			}
+			row.Servers = append(row.Servers, envServerRow{
+				Name:       srv.Name,
+				Role:       string(srv.Role),
+				Capability: cap,
+				Reason:     ts.Reason,
+			})
+		}
+		out.Environments = append(out.Environments, row)
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return fmt.Errorf("deploy environments: marshal: %w", err)
+	}
+	fmt.Println(string(b))
+	return nil
 }
 
 // ── runDeploy ────────────────────────────────────────────────────────────────
@@ -358,6 +513,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	canaryPct, _ := cmd.Flags().GetInt("canary")
 	skipCanary, _ := cmd.Flags().GetBool("skip-canary")
 	forceMigration, _ := cmd.Flags().GetBool("force-migration")
+	serverFilter, _ := cmd.Flags().GetString("server")
 
 	workdir, err := projectRoot()
 	if err != nil {
@@ -411,6 +567,107 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	// Production safety gate: require --force (or a "prod" confirm) when not in dry-run.
 	if target == "prod" && !dryRun && !force {
 		return fmt.Errorf("production deploy requires --force (or --dry-run). Re-run with --force once ready")
+	}
+
+	// T05: Control-plane pipeline path.
+	// Active when .nself/control-plane.yaml exists OR when --server is specified.
+	// When neither condition is true the legacy single-host path runs unchanged
+	// (back-compat byte-identical guarantee per sprint spec).
+	cpYamlPath := filepath.Join(workdir, ".nself", "control-plane.yaml")
+	_, cpYamlErr := os.Stat(cpYamlPath)
+	usePipeline := cpYamlErr == nil || serverFilter != ""
+
+	if usePipeline {
+		inv, loadErr := controlplane.Load(workdir)
+		if loadErr != nil {
+			return fmt.Errorf("deploy: load inventory: %w", loadErr)
+		}
+
+		// Apply server filter: remove all servers that do not match the requested name.
+		if serverFilter != "" {
+			inv = filterInventoryByServer(inv, serverFilter)
+			if totalServers(inv) == 0 {
+				return fmt.Errorf("deploy: --server %q not found in inventory", serverFilter)
+			}
+		}
+
+		// --dry-run: print topology plan and exit without executing.
+		if dryRun {
+			prober := controlplane.NewSSHProber(workdir, false)
+			statuses := controlplane.Resolve(inv, prober)
+			if !jsonOut {
+				fmt.Printf("  [dry-run] Topology plan for target %q:\n", target)
+				for _, ts := range statuses {
+					if ts.Capability == controlplane.CapHidden {
+						continue
+					}
+					fmt.Printf("    %s/%s role=%-15s capability=%s", ts.Env, ts.Server, "", string(ts.Capability))
+					if ts.Reason != "" {
+						fmt.Printf(" reason=%q", ts.Reason)
+					}
+					fmt.Println()
+				}
+			} else {
+				type dryRow struct {
+					Env        string `json:"env"`
+					Server     string `json:"server"`
+					Capability string `json:"capability"`
+					Reason     string `json:"reason,omitempty"`
+				}
+				var rows []dryRow
+				for _, ts := range statuses {
+					if ts.Capability == controlplane.CapHidden {
+						continue
+					}
+					rows = append(rows, dryRow{Env: ts.Env, Server: ts.Server, Capability: string(ts.Capability), Reason: ts.Reason})
+				}
+				b, _ := json.MarshalIndent(map[string]interface{}{"dry_run": true, "topology": rows}, "", "  ")
+				fmt.Println(string(b))
+			}
+			return nil
+		}
+
+		// Execute via topology-aware pipeline.
+		prober := controlplane.NewSSHProber(workdir, false)
+		composePath := filepath.Join(workdir, "docker-compose.yml")
+
+		if !jsonOut {
+			ui.CommandHeader(fmt.Sprintf("nself deploy %s (pipeline)", target), fmt.Sprintf("strategy=%s server=%s", strategy, serverFilter))
+		}
+
+		result, pipeErr := controlplane.Run(cmd.Context(), inv, prober, composePath)
+		if pipeErr != nil {
+			return fmt.Errorf("deploy pipeline: %w", pipeErr)
+		}
+
+		// Primary-skip gate: non-zero exit when primary was skipped.
+		if result.PrimarySkipped {
+			if !jsonOut {
+				ui.Warn("Primary server was skipped (read-only capability) — deploy incomplete")
+			} else {
+				b, _ := json.MarshalIndent(result.Servers, "", "  ")
+				fmt.Println(string(b))
+			}
+			return fmt.Errorf("deploy: primary server skipped (read-only capability); re-run once SSH access is restored")
+		}
+
+		if jsonOut {
+			b, _ := json.MarshalIndent(result.Servers, "", "  ")
+			fmt.Println(string(b))
+		} else {
+			for _, sr := range result.Servers {
+				switch sr.Status {
+				case "ok":
+					ui.Success(fmt.Sprintf("  [ok] %s/%s", sr.Env, sr.Server))
+				case "skipped":
+					ui.Warn(fmt.Sprintf("  [skipped] %s/%s (read-only)", sr.Env, sr.Server))
+				case "failed":
+					ui.Error(fmt.Sprintf("  [failed] %s/%s: %v", sr.Env, sr.Server, sr.Err))
+				}
+			}
+			ui.Success(fmt.Sprintf("Deploy %s (pipeline) complete", target))
+		}
+		return nil
 	}
 
 	steps := []deployStep{}
@@ -573,6 +830,41 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// filterInventoryByServer returns a shallow copy of inv retaining only the
+// server whose Name matches serverName across all environments.
+func filterInventoryByServer(inv *controlplane.Inventory, serverName string) *controlplane.Inventory {
+	filtered := &controlplane.Inventory{
+		SchemaVersion: inv.SchemaVersion,
+		Project:       inv.Project,
+		Environments:  make(map[string]controlplane.Environment, len(inv.Environments)),
+	}
+	for envName, env := range inv.Environments {
+		var kept []controlplane.Server
+		for _, srv := range env.Servers {
+			if srv.Name == serverName {
+				kept = append(kept, srv)
+			}
+		}
+		if len(kept) > 0 {
+			filtered.Environments[envName] = controlplane.Environment{
+				Name:    env.Name,
+				Kind:    env.Kind,
+				Servers: kept,
+			}
+		}
+	}
+	return filtered
+}
+
+// totalServers returns the total number of servers across all environments.
+func totalServers(inv *controlplane.Inventory) int {
+	n := 0
+	for _, env := range inv.Environments {
+		n += len(env.Servers)
+	}
+	return n
+}
+
 // loadDeployEnvCascade loads the env file cascade for the given deploy target
 // into the current process environment. Later files override earlier ones.
 //
@@ -702,27 +994,100 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 func runDeployStatus(cmd *cobra.Command, args []string) error {
 	env, _ := cmd.Flags().GetString("env")
 	jsonOut, _ := cmd.Flags().GetBool("json")
+	serverFilter, _ := cmd.Flags().GetString("server")
 
-	status := map[string]string{
-		"target": env,
-		"state":  "unknown",
-	}
+	// Determine base state from docker ps (local stack indicator).
+	state := "unknown"
 	if env == "" {
-		status["state"] = "no-target"
+		state = "no-target"
 	} else if _, err := resolveTarget(env); err != nil {
 		return err
 	}
-
-	// A running nSelf stack on localhost is inferred from docker ps existence.
 	if _, err := exec.LookPath("docker"); err == nil {
 		out, derr := exec.CommandContext(cmd.Context(), "docker", "ps", "--format", "{{.Names}}").Output()
 		if derr == nil && strings.Contains(string(out), "postgres") {
-			status["state"] = "running"
-		} else {
-			status["state"] = "not-running"
+			state = "running"
+		} else if state != "no-target" {
+			state = "not-running"
 		}
 	}
 
+	// T06: If control-plane inventory exists, enrich with per-server capability.
+	root, rootErr := projectRoot()
+	if rootErr == nil {
+		cpYaml := filepath.Join(root, ".nself", "control-plane.yaml")
+		if _, err := os.Stat(cpYaml); err == nil {
+			inv, loadErr := controlplane.Load(root)
+			if loadErr == nil {
+				prober := controlplane.NewSSHProber(root, false)
+				statuses := controlplane.Resolve(inv, prober)
+
+				type serverStatus struct {
+					Env        string `json:"env"`
+					Server     string `json:"server"`
+					Role       string `json:"role"`
+					Capability string `json:"capability"`
+					Reason     string `json:"reason,omitempty"`
+					LatencyMS  int    `json:"latency_ms,omitempty"`
+				}
+				var rows []serverStatus
+				for _, ts := range statuses {
+					if ts.Capability == controlplane.CapHidden {
+						continue
+					}
+					if serverFilter != "" && ts.Server != serverFilter {
+						continue
+					}
+					// Determine role from inventory.
+					role := ""
+					if envDef, ok := inv.Environments[ts.Env]; ok {
+						for _, srv := range envDef.Servers {
+							if srv.Name == ts.Server {
+								role = string(srv.Role)
+								break
+							}
+						}
+					}
+					rows = append(rows, serverStatus{
+						Env:        ts.Env,
+						Server:     ts.Server,
+						Role:       role,
+						Capability: string(ts.Capability),
+						Reason:     ts.Reason,
+						LatencyMS:  ts.LatencyMS,
+					})
+				}
+
+				if jsonOut {
+					b, _ := json.MarshalIndent(map[string]interface{}{
+						"target":  env,
+						"state":   state,
+						"servers": rows,
+					}, "", "  ")
+					fmt.Println(string(b))
+					return nil
+				}
+				fmt.Printf("target=%s state=%s\n", env, state)
+				for _, row := range rows {
+					fmt.Printf("  server=%s/%s role=%-15s capability=%s", row.Env, row.Server, row.Role, row.Capability)
+					if row.LatencyMS > 0 {
+						fmt.Printf(" latency=%dms", row.LatencyMS)
+					}
+					if row.Reason != "" {
+						fmt.Printf(" reason=%q", row.Reason)
+					}
+					fmt.Println()
+				}
+				return nil
+			}
+		}
+	}
+
+	// Fallback: legacy single-host output.
+	status := map[string]string{
+		"target": env,
+		"state":  state,
+	}
 	if jsonOut {
 		b, _ := json.MarshalIndent(status, "", "  ")
 		fmt.Println(string(b))
@@ -803,6 +1168,45 @@ func runDeployLogs(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	serverFilter, _ := cmd.Flags().GetString("server")
+	if serverFilter != "" {
+		// T06: Stream logs from a specific remote server via SSH.
+		inv, loadErr := controlplane.Load(workdir)
+		if loadErr != nil {
+			return fmt.Errorf("deploy logs: load inventory: %w", loadErr)
+		}
+		for _, env := range inv.Environments {
+			for _, srv := range env.Servers {
+				if srv.Name != serverFilter {
+					continue
+				}
+				if srv.Host == "" {
+					// Local server: fall through to docker compose logs below.
+					break
+				}
+				keyPath := os.Getenv(srv.SSHKeyRef)
+				remotePath := srv.RemotePath
+				if remotePath == "" {
+					remotePath = "/opt/nself"
+				}
+				logsCmd := fmt.Sprintf("cd %s && docker compose logs --tail=200 -f", remotePath)
+				sshTarget := srv.Host
+				sc := exec.CommandContext(cmd.Context(), "ssh",
+					"-i", keyPath,
+					"-o", "BatchMode=yes",
+					"-o", "ForwardAgent=no",
+					"-o", "StrictHostKeyChecking=accept-new",
+					sshTarget, logsCmd)
+				sc.Stdout = os.Stdout
+				sc.Stderr = os.Stderr
+				return sc.Run()
+			}
+		}
+		return fmt.Errorf("deploy logs: --server %q not found in inventory", serverFilter)
+	}
+
+	// Default: local docker compose logs.
 	c := exec.CommandContext(cmd.Context(), "docker", "compose", "logs", "--tail=200")
 	c.Dir = workdir
 	c.Stdout = os.Stdout
@@ -815,10 +1219,116 @@ func runDeployHealth(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	serverFilter, _ := cmd.Flags().GetString("server")
+	jsonOut, _ := cmd.Flags().GetBool("json")
+
+	if serverFilter != "" {
+		// T06: Run doctor over SSH on the specified remote server.
+		inv, loadErr := controlplane.Load(workdir)
+		if loadErr != nil {
+			return fmt.Errorf("deploy health: load inventory: %w", loadErr)
+		}
+		for _, env := range inv.Environments {
+			for _, srv := range env.Servers {
+				if srv.Name != serverFilter {
+					continue
+				}
+				if srv.Host == "" {
+					// Local: fall through to local doctor.
+					break
+				}
+				keyPath := os.Getenv(srv.SSHKeyRef)
+				remotePath := srv.RemotePath
+				if remotePath == "" {
+					remotePath = "/opt/nself"
+				}
+				// doctor-over-ssh: invoke 'nself doctor' on the remote host.
+				doctorCmd := fmt.Sprintf("cd %s && nself doctor", remotePath)
+				if jsonOut {
+					doctorCmd = fmt.Sprintf("cd %s && nself doctor --json", remotePath)
+				}
+				sshTarget := srv.Host
+				sc := exec.CommandContext(cmd.Context(), "ssh",
+					"-i", keyPath,
+					"-o", "BatchMode=yes",
+					"-o", "ForwardAgent=no",
+					"-o", "StrictHostKeyChecking=accept-new",
+					sshTarget, doctorCmd)
+				sc.Stdout = os.Stdout
+				sc.Stderr = os.Stderr
+				return sc.Run()
+			}
+		}
+		return fmt.Errorf("deploy health: --server %q not found in inventory", serverFilter)
+	}
+
 	return runCLISelf(cmd.Context(), workdir, "doctor")
 }
 
 func runDeployCheckAccess(cmd *cobra.Command, args []string) error {
+	jsonOut, _ := cmd.Flags().GetBool("json")
+
+	// T07: Re-point to controlplane probe path when inventory is present.
+	root, rootErr := projectRoot()
+	if rootErr == nil {
+		cpYaml := filepath.Join(root, ".nself", "control-plane.yaml")
+		if _, err := os.Stat(cpYaml); err == nil {
+			inv, loadErr := controlplane.Load(root)
+			if loadErr == nil {
+				prober := controlplane.NewSSHProber(root, false)
+				statuses := controlplane.Resolve(inv, prober)
+
+				if !jsonOut {
+					ui.Warn("'nself deploy check-access' is deprecated. Use 'nself env target probe' for full per-server capability details.")
+					fmt.Println()
+				}
+
+				type accessRow struct {
+					Env        string `json:"env"`
+					Server     string `json:"server"`
+					Capability string `json:"capability"`
+					Reason     string `json:"reason,omitempty"`
+				}
+				var rows []accessRow
+				allOK := true
+				for _, ts := range statuses {
+					if ts.Capability == controlplane.CapHidden {
+						continue
+					}
+					rows = append(rows, accessRow{
+						Env:        ts.Env,
+						Server:     ts.Server,
+						Capability: string(ts.Capability),
+						Reason:     ts.Reason,
+					})
+					if ts.Capability != controlplane.CapManage {
+						allOK = false
+					}
+				}
+
+				if jsonOut {
+					b, _ := json.MarshalIndent(map[string]interface{}{"servers": rows, "all_ok": allOK}, "", "  ")
+					fmt.Println(string(b))
+					return nil
+				}
+
+				for _, row := range rows {
+					if row.Capability == string(controlplane.CapManage) {
+						ui.Success(fmt.Sprintf("%s/%s: %s", row.Env, row.Server, row.Capability))
+					} else {
+						ui.Warn(fmt.Sprintf("%s/%s: %s — %s", row.Env, row.Server, row.Capability, row.Reason))
+					}
+				}
+				if allOK {
+					ui.Success("All deploy targets reachable")
+				}
+				return nil
+			}
+		}
+	}
+
+	// Legacy fallback: shallow env-var check (back-compat for no-yaml installs).
 	ok := true
 	for _, name := range []string{"NSELF_DEPLOY_HOST_STAGING", "NSELF_DEPLOY_HOST_PROD"} {
 		v := os.Getenv(name)

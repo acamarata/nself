@@ -56,7 +56,15 @@ func waitForPostgres(ctx context.Context, cfg *config.Config) error {
 // runSQLOnDB executes a SQL statement inside the postgres container via psql,
 // targeting a specific database. This is needed for init operations that must
 // connect to the "postgres" admin database (e.g., CREATE DATABASE).
+// When cfg.EmbeddedPG is true, the statement is executed against the pglite UDS
+// instance instead (pipeSQLEmbedded handles the UDS connection).
 func runSQLOnDB(ctx context.Context, cfg *config.Config, database string, sql string) error {
+	if cfg.EmbeddedPG {
+		// Embedded pglite: route through pipeSQLEmbedded (defined in migrate.go).
+		// The "database" parameter is ignored — pglite boots a single DB.
+		return pipeSQLEmbedded(ctx, cfg.EmbeddedPGDatabaseURL(embeddedPGRuntimeDir(cfg)), sql)
+	}
+
 	container := containerName(cfg)
 	user := cfg.Postgres.User
 	if user == "" {
@@ -204,6 +212,21 @@ func createExtensions(ctx context.Context, cfg *config.Config) error {
 //  5. CREATE EXTENSION IF NOT EXISTS pgcrypto, citext
 func InitializeDatabase(ctx context.Context, cfg *config.Config) error {
 	slog.Info("initializing database")
+
+	// When the embedded PG runtime is active, the postgres socket is already
+	// ready (the runtime's Start() waits for the socket before returning), so
+	// we skip the container-based waitForPostgres / createDatabase / createSchemas /
+	// createExtensions steps that rely on `docker exec psql`.
+	//
+	// The embedded pglite runtime boots with an empty database that already
+	// supports pgvector. Schemas and extensions that the stack needs at startup
+	// are applied by Hasura on first connection (catalog tracking) and by the
+	// migration runner via the UDS DSN (cfg.EmbeddedPGDatabaseURL). No separate
+	// Docker container initialization is required.
+	if cfg.EmbeddedPG {
+		slog.Info("embedded PG active — skipping container-based database initialization")
+		return nil
+	}
 
 	if err := waitForPostgres(ctx, cfg); err != nil {
 		return err

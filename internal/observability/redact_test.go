@@ -69,7 +69,7 @@ func TestRedactAPIKeyPrefixes(t *testing.T) {
 	}
 }
 
-// S12.T09 (P100 v1.1.0) — expanded PII coverage tests.
+// Expanded PII coverage tests.
 
 func TestRedactSSN(t *testing.T) {
 	in := "subject SSN 123-45-6789 on file"

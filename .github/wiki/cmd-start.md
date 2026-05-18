@@ -36,6 +36,7 @@ Database initialization is automatic and idempotent, ɳSelf creates the database
 | `--skip-plugins` | false | Start base stack only, skipping plugin compose files |
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
 | `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
+| `--embedded-pg` | false | Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required. pgvector is included. See [[Embedded-Postgres]] for details. |
 | `--debug`, `-d` | false | Show debug information |
 | `--verbose`, `-v` | false | Show detailed Docker output |
 | `--help`, `-h` | — | Show help |
@@ -80,6 +81,9 @@ nself start -v
 
 # Suppress progress output for CI pipelines
 nself start --quiet
+
+# Boot without a Docker postgres container (embedded pglite/wasmtime)
+nself start --embedded-pg
 ```
 
 ## First-run transcript

@@ -92,7 +92,7 @@ func NewDispatcher(cfg DispatcherConfig, store DeliveryStore, dlq *DLQManager) *
 		cfg:    cfg,
 		store:  store,
 		dlq:    dlq,
-		client: &http.Client{Timeout: dispatchTimeout},
+		client: NewWebhookClient(dispatchTimeout),
 	}
 }
 
@@ -164,6 +164,14 @@ func (d *Dispatcher) dispatch(ctx context.Context, del Delivery) {
 		// Endpoint is open — reschedule without incrementing attempt count.
 		next := time.Now().Add(probeInterval)
 		_ = d.store.ScheduleRetry(ctx, del.ID, del.AttemptCount, next)
+		return
+	}
+
+	// SSRF guard: validate endpoint URL before opening any outbound connection.
+	// Blocks RFC-1918, loopback, link-local, cloud-metadata, and CGNAT addresses.
+	// DNS-rebinding protection is a second layer inside NewWebhookClient's safeDialContext.
+	if err := ValidateWebhookURL(del.EndpointURL); err != nil {
+		d.handleFailure(ctx, del, fmt.Sprintf("ssrf: %v", err), circ)
 		return
 	}
 

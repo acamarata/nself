@@ -1,8 +1,8 @@
 // Package database — drill.go: high-level DR drill orchestration.
 //
-// S9.T03 + S9.T15-T16 (P100 v1.1.0): The `nself backup drill` command wraps
-// the existing RestoreDrill primitive (restore_drill.go) with three production
-// concerns the bare drill primitive does not address:
+// The `nself backup drill` command wraps the existing RestoreDrill primitive
+// (restore_drill.go) with three production concerns the bare drill primitive
+// does not address:
 //
 //  1. RTO measurement: total wall-clock from "drill start" to "smoke checks
 //     pass", broken into download / decrypt / restore / verify phases. The

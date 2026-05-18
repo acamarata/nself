@@ -1,3 +1,5 @@
+//go:build darwin
+
 package trust
 
 import (
@@ -9,9 +11,9 @@ import (
 	"time"
 )
 
-const pfAnchorPath = "/etc/pf.anchors/nself.local"
-const launchDaemonPlistPath = "/Library/LaunchDaemons/com.nself.portforward.plist"
-const pfTimeout = 30 * time.Second
+// pfAnchorPath, launchDaemonPlistPath, pfTimeout, and launchDaemonPlistContent
+// are defined in ports_common.go (no build tag) so tests on all platforms can
+// reference them.
 
 // pfAnchorContent returns the pf anchor rules for the given config.
 func pfAnchorContent(cfg TrustConfig) string {
@@ -22,24 +24,6 @@ func pfAnchorContent(cfg TrustConfig) string {
 		cfg.NginxSSLPort,
 	)
 }
-
-const launchDaemonPlistContent = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.nself.portforward</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/sbin/pfctl</string>
-        <string>-ef</string>
-        <string>/etc/pf.anchors/nself.local</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>
-`
 
 // alreadyConfiguredPfctl checks whether the nself.local pf anchor is active by
 // running a read-only pfctl query. Returns (true, nil) when the anchor rules
