@@ -203,7 +203,7 @@ const tmplGoMod = `module github.com/nself-org/{{.RepoBucket}}/{{.Name}}
 
 go 1.23.0
 
-require github.com/nself-org/cli/sdk/go v0.1.0
+require github.com/nself-org/cli/sdk/go/v2 v2.0.0
 `
 
 const tmplMain = `// Package main is the entrypoint for the {{.Name}} plugin.
@@ -221,7 +221,7 @@ import (
 	"github.com/nself-org/{{.RepoBucket}}/{{.Name}}/internal/config"
 	"github.com/nself-org/{{.RepoBucket}}/{{.Name}}/internal/server"
 
-	"github.com/nself-org/cli/sdk/go/logger"
+	"github.com/nself-org/cli/sdk/go/v2/logger"
 )
 
 // Version is stamped at build time via -ldflags.
@@ -324,8 +324,8 @@ import (
 
 	"github.com/nself-org/{{.RepoBucket}}/{{.Name}}/internal/config"
 
-	sdkmetrics "github.com/nself-org/cli/sdk/go/metrics"
-	sdkserver "github.com/nself-org/cli/sdk/go/server"
+	sdkmetrics "github.com/nself-org/cli/sdk/go/v2/metrics"
+	sdkserver "github.com/nself-org/cli/sdk/go/v2/server"
 )
 
 // Deps wires runtime dependencies.
@@ -501,7 +501,7 @@ air
 
 ## Plugin SDK
 
-Uses [plugin-sdk-go](https://github.com/nself-org/cli/sdk/go) for metrics,
+Uses [plugin-sdk-go](https://github.com/nself-org/cli/tree/main/sdk/go) for metrics,
 logging, server boilerplate, and license helpers. Run ` + "`go mod tidy`" + ` to sync.
 
 ## License
