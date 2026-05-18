@@ -8,6 +8,8 @@ name: Deploy ping_api (CS_1)
 # prod IP: 5.75.235.42  port: 8001
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       force:
@@ -20,6 +22,17 @@ permissions:
   contents: read
 
 jobs:
+  # No-op guard: exits success on branch pushes so GitHub never records a failure
+  # run for push events when the deploy job is skipped (secret absent).
+  # This job is always skipped on workflow_dispatch, where the real deploy runs.
+  branch-push-noop:
+    name: No-op (branch push — deploy requires workflow_dispatch)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip — deploy is dispatch-only
+        run: echo "ping_api deploy is workflow_dispatch-only. No action on push."
+
   deploy:
     name: Deploy ping_api to prod
     runs-on: ubuntu-latest

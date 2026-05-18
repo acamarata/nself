@@ -18,10 +18,30 @@ name: Publish TypeScript SDK to npm
         required: false
         type: string
 
+permissions:
+  contents: read
+
 jobs:
+  # No-op guard: runs (and succeeds) when the npm auth token is absent, which
+  # means the real publish job will be skipped.  This prevents GitHub from
+  # recording a "no jobs ran" failure for the run.
+  #
+  # WHY: NPM_TOKEN is a P104-held secret — absent in CI by design until the
+  # SDK publish feature is fully wired.  When the token is absent, `publish`
+  # is guarded off and this job records a green success instead so the workflow
+  # run itself is not counted as a failure.
+  tag-push-noop:
+    name: No-op (npm auth absent — publish deferred, P104-held token required)
+    if: ${{ secrets.NPM_TOKEN == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip — SDK publish deferred (npm auth secret absent, P104-held)
+        run: echo "SDK publish deferred — NPM_TOKEN absent (P104-held). No-op."
+
   publish:
-    # Skip gracefully when the TypeScript SDK directory does not yet exist.
-    if: hashFiles('sdk/ts/package.json') != ''
+    # Skip gracefully when the TypeScript SDK directory does not yet exist
+    # OR when the npm auth token is absent (P104-held, not yet wired in CI).
+    if: ${{ hashFiles('sdk/ts/package.json') != '' && secrets.NPM_TOKEN != '' }}
     name: Publish @nself/sdk-ts to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
