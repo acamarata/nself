@@ -38,7 +38,7 @@ jobs:
         run: CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o nself ./cmd/nself/
 
       - name: Trivy filesystem scan (source + deps)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -48,7 +48,7 @@ jobs:
           exit-code: "0"
 
       - name: Check for critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
