@@ -120,8 +120,11 @@ run_step() {
   local baseline="${STEP_BASELINE[$step_num]}"
   local warn_limit
   local fail_limit
-  warn_limit=$(echo "${baseline} * ${WARN_MULT}" | bc 2>/dev/null || echo $((baseline * 2)))
-  fail_limit=$(echo "${baseline} * ${FAIL_MULT}" | bc 2>/dev/null || echo $((baseline * 4)))
+  # Use awk for integer-safe multiplication — bc returns floats (e.g. 45.0) which
+  # bash arithmetic (( )) cannot handle, causing "syntax error: invalid arithmetic
+  # operator" on every step.  awk printf "%.0f" rounds to nearest integer.
+  warn_limit=$(awk "BEGIN { printf \"%.0f\", ${baseline} * ${WARN_MULT} }")
+  fail_limit=$(awk "BEGIN { printf \"%.0f\", ${baseline} * ${FAIL_MULT} }")
 
   log "Step ${step_num}/13: ${step_label}"
 
