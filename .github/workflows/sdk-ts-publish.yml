@@ -5,6 +5,16 @@ name: Publish TypeScript SDK to npm
 #   - cli release tag (v*)            -- publishes SDK in lockstep with CLI
 #   - sdk-scoped tag (cli-sdk-ts/v*)  -- publishes SDK only (out-of-band)
 #   - workflow_dispatch               -- manual publish with version input
+#
+# No branch-push trigger: a push to main never starts this workflow, so main
+# CI is unaffected by SDK publishing.
+#
+# NPM_TOKEN is P104-held (absent in CI by design until SDK publish is wired).
+# secrets context is NOT valid in a job-level `if:` — instead the publish job
+# always starts on a tag, an early `run:` step reads the token via step `env:`
+# (valid) and the heavy steps are gated on that step's output. When the token
+# is absent the job still SUCCEEDS (publish steps are skipped, not failed), so
+# the v* tag run is green.
 
 "on":
   push:
@@ -22,26 +32,11 @@ permissions:
   contents: read
 
 jobs:
-  # No-op guard: runs (and succeeds) when the npm auth token is absent, which
-  # means the real publish job will be skipped.  This prevents GitHub from
-  # recording a "no jobs ran" failure for the run.
-  #
-  # WHY: NPM_TOKEN is a P104-held secret — absent in CI by design until the
-  # SDK publish feature is fully wired.  When the token is absent, `publish`
-  # is guarded off and this job records a green success instead so the workflow
-  # run itself is not counted as a failure.
-  tag-push-noop:
-    name: No-op (npm auth absent — publish deferred, P104-held token required)
-    if: ${{ secrets.NPM_TOKEN == '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip — SDK publish deferred (npm auth secret absent, P104-held)
-        run: echo "SDK publish deferred — NPM_TOKEN absent (P104-held). No-op."
-
   publish:
-    # Skip gracefully when the TypeScript SDK directory does not yet exist
-    # OR when the npm auth token is absent (P104-held, not yet wired in CI).
-    if: ${{ hashFiles('sdk/ts/package.json') != '' && secrets.NPM_TOKEN != '' }}
+    # Skip gracefully when the TypeScript SDK directory does not yet exist.
+    # hashFiles + literal only — no secrets reference (job-level if must not
+    # use the secrets context).
+    if: ${{ hashFiles('sdk/ts/package.json') != '' }}
     name: Publish @nself/sdk-ts to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -60,8 +55,25 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      # Read NPM_TOKEN via step env (the only valid place to reference the
+      # secrets context here) and expose presence as a step output. When the
+      # token is absent (P104-held), downstream publish steps are skipped and
+      # the job still succeeds — keeping the v* tag run green.
+      - name: Check npm auth (P104-held NPM_TOKEN)
+        id: auth
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN absent (P104-held). SDK publish deferred — no-op success."
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "NPM_TOKEN present. Proceeding with SDK publish."
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Override version (workflow_dispatch only)
-        if: ${{ inputs.version != '' }}
+        if: ${{ steps.auth.outputs.has == 'true' && inputs.version != '' }}
         run: |
           cd sdk/ts
           node -e "
@@ -72,16 +84,19 @@ jobs:
           "
 
       - name: Install dependencies
+        if: ${{ steps.auth.outputs.has == 'true' }}
         run: |
           cd sdk/ts
           pnpm install --no-frozen-lockfile
 
       - name: Build
+        if: ${{ steps.auth.outputs.has == 'true' }}
         run: |
           cd sdk/ts
           pnpm build
 
       - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
+        if: ${{ steps.auth.outputs.has == 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
