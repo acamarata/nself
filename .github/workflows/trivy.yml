@@ -35,7 +35,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build binary for container context
-        run: CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o nself ./apps/nself/
+        run: CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o nself ./cmd/nself/
 
       - name: Trivy filesystem scan (source + deps)
         uses: aquasecurity/trivy-action@0.35.0
