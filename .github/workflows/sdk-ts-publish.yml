@@ -1,4 +1,3 @@
----
 name: Publish TypeScript SDK to npm
 
 # Triggers on:
@@ -6,17 +5,17 @@ name: Publish TypeScript SDK to npm
 #   - sdk-scoped tag (cli-sdk-ts/v*)  -- publishes SDK only (out-of-band)
 #   - workflow_dispatch               -- manual publish with version input
 #
-# No branch-push trigger: a push to main never starts this workflow, so main
-# CI is unaffected by SDK publishing.
+# No branch-push trigger: a push to main never starts this workflow.
+# No leading `---` and `on:` unquoted, mirroring the repo's other workflows
+# (a leading `---` made GitHub's parser phantom-fail this file on every push).
 #
 # NPM_TOKEN is P104-held (absent in CI by design until SDK publish is wired).
-# secrets context is NOT valid in a job-level `if:` — instead the publish job
-# always starts on a tag, an early `run:` step reads the token via step `env:`
-# (valid) and the heavy steps are gated on that step's output. When the token
-# is absent the job still SUCCEEDS (publish steps are skipped, not failed), so
-# the v* tag run is green.
+# secrets context is not valid in job-level / step-level `if:`; instead the
+# first step reads the token via step `env:` and the sdk/ts dir existence,
+# emitting `proceed`. All heavy steps gate on that output, so a v* tag run is
+# green (publish steps skipped, not failed) when the token is absent.
 
-"on":
+on:
   push:
     tags:
       - 'v*'
@@ -33,10 +32,6 @@ permissions:
 
 jobs:
   publish:
-    # Skip gracefully when the TypeScript SDK directory does not yet exist.
-    # hashFiles + literal only — no secrets reference (job-level if must not
-    # use the secrets context).
-    if: ${{ hashFiles('sdk/ts/package.json') != '' }}
     name: Publish @nself/sdk-ts to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -46,34 +41,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Preflight: proceed only when the SDK dir exists AND the npm token is
+      # present. NPM_TOKEN is read via step env (the valid place to reference
+      # the secrets context). When absent (P104-held) downstream steps skip
+      # and the job still succeeds, keeping the v* tag run green.
+      - name: Preflight (sdk/ts present + npm auth)
+        id: preflight
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ ! -f sdk/ts/package.json ]; then
+            echo "sdk/ts/package.json absent — nothing to publish. No-op success."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN absent (P104-held). SDK publish deferred — no-op success."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "sdk/ts present and NPM_TOKEN set. Proceeding with publish."
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: pnpm/action-setup@v3
+        if: steps.preflight.outputs.proceed == 'true'
         with:
           version: 9
 
       - uses: actions/setup-node@v4
+        if: steps.preflight.outputs.proceed == 'true'
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      # Read NPM_TOKEN via step env (the only valid place to reference the
-      # secrets context here) and expose presence as a step output. When the
-      # token is absent (P104-held), downstream publish steps are skipped and
-      # the job still succeeds — keeping the v* tag run green.
-      - name: Check npm auth (P104-held NPM_TOKEN)
-        id: auth
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "${NPM_TOKEN}" ]; then
-            echo "NPM_TOKEN absent (P104-held). SDK publish deferred — no-op success."
-            echo "has=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "NPM_TOKEN present. Proceeding with SDK publish."
-            echo "has=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Override version (workflow_dispatch only)
-        if: ${{ steps.auth.outputs.has == 'true' && inputs.version != '' }}
+        if: steps.preflight.outputs.proceed == 'true' && inputs.version != ''
         run: |
           cd sdk/ts
           node -e "
@@ -84,19 +84,19 @@ jobs:
           "
 
       - name: Install dependencies
-        if: ${{ steps.auth.outputs.has == 'true' }}
+        if: steps.preflight.outputs.proceed == 'true'
         run: |
           cd sdk/ts
           pnpm install --no-frozen-lockfile
 
       - name: Build
-        if: ${{ steps.auth.outputs.has == 'true' }}
+        if: steps.preflight.outputs.proceed == 'true'
         run: |
           cd sdk/ts
           pnpm build
 
       - name: Publish to npm (with provenance, skip-existing, retry up to 3x)
-        if: ${{ steps.auth.outputs.has == 'true' }}
+        if: steps.preflight.outputs.proceed == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
