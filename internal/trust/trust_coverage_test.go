@@ -219,6 +219,9 @@ func TestBuildDomainList_OnlyExtra(t *testing.T) {
 
 // TestPfAnchorContent_CustomPorts verifies custom port values appear correctly.
 func TestPfAnchorContent_CustomPorts(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{NginxHTTPPort: 9080, NginxSSLPort: 9443}
 	content := pfAnchorContent(cfg)
 	if !containsStr(content, "9080") {
@@ -231,6 +234,9 @@ func TestPfAnchorContent_CustomPorts(t *testing.T) {
 
 // TestPfAnchorContent_ContainsRdr verifies the output is a valid rdr rule.
 func TestPfAnchorContent_ContainsRdr(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("pfAnchorContent is darwin-only")
+	}
 	cfg := TrustConfig{NginxHTTPPort: 8080, NginxSSLPort: 8443}
 	content := pfAnchorContent(cfg)
 	if !containsStr(content, "rdr") {
@@ -246,6 +252,9 @@ func TestPfAnchorContent_ContainsRdr(t *testing.T) {
 // TestEscapeForOsascript_PercentSign verifies percent signs are NOT escaped
 // (callers use %% in fmt.Sprintf).
 func TestEscapeForOsascript_PercentSign(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := "100% done"
 	got := escapeForOsascript(input)
 	if got != input {
@@ -256,6 +265,9 @@ func TestEscapeForOsascript_PercentSign(t *testing.T) {
 // TestEscapeForOsascript_MixedSpecialChars verifies both backslash and quote
 // escaping happen in the correct order.
 func TestEscapeForOsascript_MixedSpecialChars(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	// Input: a\"b — backslash then quote
 	input := `a\"b`
 	got := escapeForOsascript(input)
@@ -269,6 +281,9 @@ func TestEscapeForOsascript_MixedSpecialChars(t *testing.T) {
 
 // TestEscapeForOsascript_MultipleQuotes verifies multiple quotes are all escaped.
 func TestEscapeForOsascript_MultipleQuotes(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("escapeForOsascript is darwin-only")
+	}
 	input := `"a" "b"`
 	got := escapeForOsascript(input)
 	want := `\"a\" \"b\"`
