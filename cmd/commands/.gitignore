@@ -17,3 +17,6 @@ ssl/
 monitoring/
 services/
 docker-compose.yml
+
+# nSelf
+.env.ai

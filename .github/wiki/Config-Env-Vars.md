@@ -209,6 +209,22 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 
 ---
 
+## Remote Deploy
+
+| Variable | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `NSELF_DEPLOY_KEY_PATH` | string | *(empty)* | No | Path to the SSH private key used for remote deploys. Overrides `NSELF_DEPLOY_SSH_KEY` when set. Example: `~/.ssh/nself_deploy_ed25519`. |
+
+---
+
+## Embedded PostgreSQL (pglite/wasmtime)
+
+| Variable | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `NSELF_EMBEDDED_PG` | bool | `false` | No | When `true`, uses embedded PostgreSQL via pglite/wasmtime instead of a Docker Postgres container. Hasura connects via a Unix-domain socket bridge. Requires a `CGO_ENABLED=1` build of the CLI. Pass `--embedded-pg` to `nself start` as well. |
+
+---
+
 ## Computed Variables
 
 The following variables are derived automatically and written to `.env.computed` on every `nself build` and `nself start`. Do not set these manually, they will be overwritten.

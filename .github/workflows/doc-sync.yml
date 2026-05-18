@@ -52,7 +52,7 @@ jobs:
 
           # Env vars
           if matches '(^|/)\.env\.example$|^cli/internal/env/'; then
-            if ! matches '(\.claude/docs/sport/F09-ENV-VAR-INVENTORY\.md|cli/\.wiki/reference/env-vars\.md|web/docs/content/reference/env-vars)'; then
+            if ! matches '(\.claude/docs/sport/F09-ENV-VAR-INVENTORY\.md|cli/\.wiki/reference/env-vars\.md|\.github/wiki/reference/env-vars\.md|\.github/wiki/Config-Env-Vars\.md|web/docs/content/reference/env-vars)'; then
               rows="${rows}- env vars changed without F09-ENV-VAR-INVENTORY.md or env-vars reference update\n"
               missing=1
             fi
@@ -107,8 +107,16 @@ jobs:
           fi
 
           # Versions
-          if matches '(^cli/VERSION$|pubspec\.yaml$|homebrew-nself/.*\.rb$|plugins-pro/VERSION$|^Cargo\.toml$)'; then
-            if ! matches '(\.claude/docs/MASTER-VERSIONS\.md|\.claude/docs/sport/F01-MASTER-VERSIONS\.md|web/org/content/changelog|homebrew-nself/Formula/)'; then
+          # Exclude sdk/{flutter,py,ts,go} version files — SDK libraries have independent
+          # versioning tracked separately from the nSelf product version.
+          # Exclude vendor/modules.txt — generated dependency file, not a version manifest.
+          version_hit=$(echo "$CHANGED" \
+            | grep -E '(^cli/VERSION$|pubspec\.yaml$|homebrew-nself/.*\.rb$|plugins-pro/VERSION$|^Cargo\.toml$)' \
+            | grep -vE '^sdk/' \
+            | grep -vE '^vendor/' \
+            || true)
+          if [ -n "$version_hit" ]; then
+            if ! matches '(\.claude/docs/MASTER-VERSIONS\.md|\.claude/docs/sport/F01-MASTER-VERSIONS\.md|\.github/wiki/Changelog\.md|web/org/content/changelog|homebrew-nself/Formula/)'; then
               rows="${rows}- version files changed without MASTER-VERSIONS.md or F01 update\n"
               missing=1
             fi
