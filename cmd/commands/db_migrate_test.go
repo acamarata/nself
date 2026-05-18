@@ -140,8 +140,8 @@ func TestDBMigrateApply_FileNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error for non-existent file, got nil")
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Errorf("expected 'not found' in error message, got: %v", err)
+	if !strings.Contains(err.Error(), "migration file not found") {
+		t.Errorf("expected 'migration file not found' in error message, got: %v", err)
 	}
 }
 
@@ -164,8 +164,11 @@ func TestDBMigrateApply_ExistingFile_ReachesConfigLoad(t *testing.T) {
 	}
 	err := runDBMigrateApply(cmd, nil)
 	// A config-load error means the file guard passed and we reached DB territory.
-	// A "not found" error means the guard failed — that would be a regression.
-	if err != nil && strings.Contains(err.Error(), "not found") {
+	// A "migration file not found" error means the os.Stat guard failed — that
+	// would be a regression. Docker-not-available errors (which also contain
+	// "not found" as "executable file not found") are intentionally excluded here
+	// since they indicate control advanced past the file guard successfully.
+	if err != nil && strings.Contains(err.Error(), "migration file not found") {
 		t.Errorf("file guard failed for a file that exists: %v", err)
 	}
 }

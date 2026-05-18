@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nself-org/cli/sdk/go/internal/deprecation"
+	"github.com/nself-org/cli/sdk/go/v2/internal/deprecation"
 )
 
 func TestMark_EmitsWarn(t *testing.T) {
