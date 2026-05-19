@@ -108,19 +108,24 @@ jobs:
       - name: Update baseline on perf/baseline branch
         if: success()
         run: |
+          SEARCH_VAL="${{ steps.search.outputs.search_ms }}"
+          SINGLE_VAL="${{ steps.single.outputs.single_ms }}"
+          BUNDLE_VAL="${{ steps.bundle.outputs.bundle_ms }}"
           PARSE_VAL="${{ steps.parse.outputs.parse_ms }}"
           PARSE_VAL="${PARSE_VAL:-0}"
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git fetch origin perf/baseline
           git checkout -B perf/baseline FETCH_HEAD
           mkdir -p .github
-          printf '{
-  "search_ms": %s,
-  "single_ms": %s,
-  "bundle_ms": %s,
-  "parse_ms": %s,
-  "timestamp": "%s"
-}
-'             "${{ steps.search.outputs.search_ms }}"             "${{ steps.single.outputs.single_ms }}"             "${{ steps.bundle.outputs.bundle_ms }}"             "${PARSE_VAL}"             "$(date -u +%Y-%m-%dT%H:%M:%SZ)"             > .github/registry-perf-baseline.json
+          cat > .github/registry-perf-baseline.json << JSONEOF
+          {
+            "search_ms": $SEARCH_VAL,
+            "single_ms": $SINGLE_VAL,
+            "bundle_ms": $BUNDLE_VAL,
+            "parse_ms": $PARSE_VAL,
+            "timestamp": "$TIMESTAMP"
+          }
+          JSONEOF
           git add .github/registry-perf-baseline.json
           git -c user.email="ci@nself.org" -c user.name="nself-ci" commit -m "perf: update registry baseline [skip ci]" || true
           git push origin perf/baseline
