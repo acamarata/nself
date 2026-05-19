@@ -8,6 +8,8 @@ on:
 jobs:
   registry-perf:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +64,11 @@ jobs:
         run: |
           go test -bench=BenchmarkRegistryParse -benchtime=10x ./internal/plugin -run=^$ 2>&1 | tee bench.txt
           ns_per_op=$(grep "BenchmarkRegistryParse" bench.txt | awk '{print $3}' | sed 's/ns\/op//')
-          ms=$(echo "scale=2; $ns_per_op / 1000000" | bc)
+          if [ -z "$ns_per_op" ]; then
+            ms=0
+          else
+            ms=$(echo "scale=2; $ns_per_op / 1000000" | bc)
+          fi
           echo "parse_ms=$ms" >> $GITHUB_OUTPUT
           echo "Registry parse: ${ms}ms"
 
