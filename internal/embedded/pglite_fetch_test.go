@@ -64,6 +64,26 @@ func useMockServer(t *testing.T, payload []byte, requestCounter *int) *httptest.
 	return srv
 }
 
+// use404Server registers an httptest.Server that always returns 404 and
+// overrides pgliteBaseURLOverride for the duration of t. Use this to simulate
+// primary CDN outage so the fallback path is exercised.
+func use404Server(t *testing.T, requestCounter *int) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if requestCounter != nil {
+			*requestCounter++
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	old := pgliteBaseURLOverride
+	pgliteBaseURLOverride = srv.URL
+	t.Cleanup(func() { pgliteBaseURLOverride = old })
+
+	return srv
+}
+
 // TestFetchOrCached_HappyPath verifies that FetchOrCached downloads the WASM
 // artifact from a mock HTTP server, writes it to the cache, and returns the
 // correct absolute path.
@@ -174,5 +194,74 @@ func TestFetchOrCached_StaleCache(t *testing.T) {
 	}
 	if reqCount == 0 {
 		t.Error("expected HTTP request for stale cache, got none")
+	}
+}
+
+// TestFetchOrCached_FallbackOnPrimary404 verifies that when the primary CDN
+// returns 404, FetchOrCached falls back to the upstream npm CDN and succeeds
+// when that source provides the correct artifact.
+//
+// This test uses a 404 primary server and overrides pgliteFallbackURL to point
+// at a second local httptest server serving the correct payload.
+func TestFetchOrCached_FallbackOnPrimary404(t *testing.T) {
+	withTestPin(t)
+	useTempHome(t)
+
+	// Primary CDN: always 404.
+	var primary404Count int
+	use404Server(t, &primary404Count)
+
+	// Fallback CDN: serves correct payload.
+	var fallbackCount int
+	fallbackSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fallbackCount++
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(testWASMContent)
+	}))
+	t.Cleanup(fallbackSrv.Close)
+
+	// Override the fallback URL builder to point at our test server.
+	origFallbackFn := pgliteFallbackURLOverride
+	pgliteFallbackURLOverride = func(_ string) string { return fallbackSrv.URL + "/pglite.wasm" }
+	t.Cleanup(func() { pgliteFallbackURLOverride = origFallbackFn })
+
+	path, err := FetchOrCached(context.Background(), testVersion)
+	if err != nil {
+		t.Fatalf("FetchOrCached returned error on fallback path: %v", err)
+	}
+	if path == "" {
+		t.Error("expected non-empty path from fallback fetch")
+	}
+	if primary404Count == 0 {
+		t.Error("expected at least one request to primary (404) server")
+	}
+	if fallbackCount == 0 {
+		t.Error("expected at least one request to fallback server")
+	}
+}
+
+// TestFetchOrCached_BothSourcesFail verifies that when both primary and fallback
+// CDNs are unreachable, FetchOrCached returns a non-nil error containing context
+// from both failures.
+func TestFetchOrCached_BothSourcesFail(t *testing.T) {
+	withTestPin(t)
+	useTempHome(t)
+
+	// Primary CDN: 404.
+	use404Server(t, nil)
+
+	// Fallback CDN: also 404.
+	fallbackSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(fallbackSrv.Close)
+
+	origFallbackFn := pgliteFallbackURLOverride
+	pgliteFallbackURLOverride = func(_ string) string { return fallbackSrv.URL + "/pglite.wasm" }
+	t.Cleanup(func() { pgliteFallbackURLOverride = origFallbackFn })
+
+	_, err := FetchOrCached(context.Background(), testVersion)
+	if err == nil {
+		t.Fatal("expected error when both CDNs fail, got nil")
 	}
 }
