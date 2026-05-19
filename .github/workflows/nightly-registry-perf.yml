@@ -23,8 +23,8 @@ jobs:
       - name: Load baseline metrics
         id: baseline
         run: |
-          if [ -f ".github/registry-perf-baseline.json" ]; then
-            echo "baseline=$(cat .github/registry-perf-baseline.json)" >> $GITHUB_OUTPUT
+          if git fetch origin perf/baseline 2>/dev/null && git show FETCH_HEAD:.github/registry-perf-baseline.json > /tmp/baseline.json 2>/dev/null; then
+            echo "baseline=$(cat /tmp/baseline.json)" >> $GITHUB_OUTPUT
           else
             echo "baseline={}" >> $GITHUB_OUTPUT
           fi
@@ -105,25 +105,29 @@ jobs:
           fi
           echo "OK All perf targets passed"
 
-      - name: Update baseline
+      - name: Update baseline on perf/baseline branch
         if: success()
         run: |
           PARSE_VAL="${{ steps.parse.outputs.parse_ms }}"
           PARSE_VAL="${PARSE_VAL:-0}"
-          printf '{\n  "search_ms": %s,\n  "single_ms": %s,\n  "bundle_ms": %s,\n  "parse_ms": %s,\n  "timestamp": "%s"\n}\n' \
-            "${{ steps.search.outputs.search_ms }}" \
-            "${{ steps.single.outputs.single_ms }}" \
-            "${{ steps.bundle.outputs.bundle_ms }}" \
-            "${PARSE_VAL}" \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            > .github/registry-perf-baseline.json
+          git fetch origin perf/baseline
+          git checkout -B perf/baseline FETCH_HEAD
+          mkdir -p .github
+          printf '{
+  "search_ms": %s,
+  "single_ms": %s,
+  "bundle_ms": %s,
+  "parse_ms": %s,
+  "timestamp": "%s"
+}
+'             "${{ steps.search.outputs.search_ms }}"             "${{ steps.single.outputs.single_ms }}"             "${{ steps.bundle.outputs.bundle_ms }}"             "${PARSE_VAL}"             "$(date -u +%Y-%m-%dT%H:%M:%SZ)"             > .github/registry-perf-baseline.json
           git add .github/registry-perf-baseline.json
-          git -c user.email="ci@nself.org" -c user.name="nself-ci" commit -m "perf: update registry baseline" || true
-          git push
+          git -c user.email="ci@nself.org" -c user.name="nself-ci" commit -m "perf: update registry baseline [skip ci]" || true
+          git push origin perf/baseline
 
       - name: Alert on regression
         if: failure()
         run: |
           echo "Registry performance regression detected in nightly benchmark"
           echo "Targets: search <100ms, single <30s, bundle <60s, parse <50ms"
-          echo "Review baseline at .github/registry-perf-baseline.json"
+          echo "Review baseline at .github/registry-perf-baseline.json on perf/baseline branch"
