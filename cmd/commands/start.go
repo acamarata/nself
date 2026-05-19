@@ -543,8 +543,10 @@ func runStart(cmd *cobra.Command, _ []string) error {
 				"Embedded PG start failed",
 				epgErr.Error(),
 				[]string{
-					"Check that wasmtime CGO support is available",
-					"Try without embedded PG: nself start (without --embedded-pg)",
+					"Embedded PostgreSQL (pglite/wasmtime) is EXPERIMENTAL and not yet functional — " +
+						"the wasmtime shim does not yet implement the ~113 Emscripten host imports required.",
+					"Use standard PostgreSQL instead: omit the --embedded-pg flag (nself start).",
+					"Status: tracked in P104 residue; see FEATURES.md for details.",
 				},
 			)
 			return epgErr
