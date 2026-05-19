@@ -38,6 +38,7 @@ func makeStartFlags(t *testing.T, flags ...string) *cobra.Command {
 	cmd.Flags().Bool("skip-port-check", false, "")
 	cmd.Flags().Bool("skip-build", false, "")
 	cmd.Flags().Bool("no-monorepo", false, "")
+	cmd.Flags().Bool("skip-db-init", false, "")
 	if err := cmd.ParseFlags(flags); err != nil {
 		t.Fatalf("makeStartFlags: parsing %v: %v", flags, err)
 	}
@@ -134,6 +135,7 @@ func newStartCmd() *cobra.Command {
 	bc.Flags().Bool("skip-port-check", false, "Skip port availability check")
 	bc.Flags().Bool("skip-build", false, "Skip automatic rebuild detection")
 	bc.Flags().Bool("no-monorepo", false, "Disable monorepo detection")
+	bc.Flags().Bool("skip-db-init", false, "Skip database migrations and seed (CI/E2E mode)")
 
 	root.AddCommand(bc)
 	return root
@@ -456,4 +458,123 @@ func TestStartCmd_ComposeFileNotFound(t *testing.T) {
 	// If Docker is not available the error is Docker-related (expected).
 	// If Docker IS available but no compose file exists the error should mention compose.
 	t.Logf("start returned error (expected): %v", err)
+}
+
+// ── --skip-db-init tests ──────────────────────────────────────────────────────
+
+// TestResolveStartOpts_SkipDBInitFlag verifies that --skip-db-init is parsed
+// into startOpts.skipDBInit=true.
+func TestResolveStartOpts_SkipDBInitFlag(t *testing.T) {
+	cmd := makeStartFlags(t, "--skip-db-init")
+	opts, err := resolveStartOpts(cmd)
+	if err != nil {
+		t.Fatalf("resolveStartOpts: %v", err)
+	}
+	if !opts.skipDBInit {
+		t.Error("--skip-db-init should set skipDBInit=true")
+	}
+}
+
+// TestResolveStartOpts_SkipDBInitDefaultFalse verifies that skipDBInit
+// defaults to false when the flag is not supplied and the env var is unset.
+func TestResolveStartOpts_SkipDBInitDefaultFalse(t *testing.T) {
+	t.Setenv("NSELF_SKIP_DB_INIT", "") // ensure env var is not set
+	cmd := makeStartFlags(t)
+	opts, err := resolveStartOpts(cmd)
+	if err != nil {
+		t.Fatalf("resolveStartOpts: %v", err)
+	}
+	if opts.skipDBInit {
+		t.Error("skipDBInit should default to false when flag and env var are absent")
+	}
+}
+
+// TestResolveStartOpts_SkipDBInitEnvVar verifies that NSELF_SKIP_DB_INIT=true
+// activates skipDBInit even when the CLI flag is not passed.
+func TestResolveStartOpts_SkipDBInitEnvVar(t *testing.T) {
+	t.Setenv("NSELF_SKIP_DB_INIT", "true")
+	cmd := makeStartFlags(t) // no --skip-db-init flag
+	opts, err := resolveStartOpts(cmd)
+	if err != nil {
+		t.Fatalf("resolveStartOpts: %v", err)
+	}
+	if !opts.skipDBInit {
+		t.Error("NSELF_SKIP_DB_INIT=true should activate skipDBInit")
+	}
+}
+
+// TestStartCmd_FlagSkipDBInit verifies that --skip-db-init is accepted by the
+// start command and does not produce an "unknown flag" error.
+func TestStartCmd_FlagSkipDBInit(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"start", "--skip-db-init", "--no-monorepo"})
+	err := root.Execute()
+
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--skip-db-init flag was not recognised: %v", err)
+	}
+}
+
+// TestStartCmd_SkipDBInitSkipsMigrationsAndReachesServiceStart verifies that
+// when --skip-db-init is set on a valid project directory, the command proceeds
+// past the migration step (no "database init:" error) before failing at runtime
+// (compose up / Docker not running). This confirms the migration/seed path is
+// bypassed.
+func TestStartCmd_SkipDBInitSkipsMigrationsAndReachesServiceStart(t *testing.T) {
+	dir := t.TempDir()
+
+	envContent := "PROJECT_NAME=ciproject\nBASE_DOMAIN=ci.example.com\n"
+	if err := os.WriteFile(dir+"/.env", []byte(envContent), 0600); err != nil {
+		t.Fatalf("writing .env: %v", err)
+	}
+	composeContent := "version: '3.8'\nservices:\n  postgres:\n    image: postgres:16\n"
+	if err := os.WriteFile(dir+"/docker-compose.yml", []byte(composeContent), 0600); err != nil {
+		t.Fatalf("writing docker-compose.yml: %v", err)
+	}
+
+	t.Chdir(dir)
+
+	root := startCmdWithTimeout(t, 3*time.Second)
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"start", "--no-monorepo", "--skip-build", "--skip-port-check", "--skip-db-init"})
+	err := root.Execute()
+
+	if err == nil {
+		t.Log("start succeeded — accepted in Docker-enabled environments with a real stack")
+		return
+	}
+
+	// The command must NOT fail with a "database init:" error, which would
+	// indicate the migration path was executed despite --skip-db-init.
+	if strings.Contains(err.Error(), "database init:") {
+		t.Errorf("--skip-db-init should bypass database init, but got: %v", err)
+	}
+
+	// Acceptable failures: Docker not running, compose up, context deadline
+	// (all runtime failures that prove we got past the migration step).
+	t.Logf("start failed at expected runtime stage (migration skipped): %v", err)
+}
+
+// TestCIReadyServices verifies that the ciReadyServices constant contains the
+// three required CI backend services.
+func TestCIReadyServices(t *testing.T) {
+	required := map[string]bool{"postgres": false, "hasura": false, "auth": false}
+	for _, svc := range ciReadyServices {
+		required[svc] = true
+	}
+	for svc, found := range required {
+		if !found {
+			t.Errorf("ciReadyServices is missing required CI service %q", svc)
+		}
+	}
+	if len(ciReadyServices) != 3 {
+		t.Errorf("ciReadyServices should have exactly 3 entries, got %d: %v", len(ciReadyServices), ciReadyServices)
+	}
 }

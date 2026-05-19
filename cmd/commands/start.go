@@ -67,6 +67,7 @@ func init() {
 	f.Bool("quiet", false, "Suppress progress output (for CI; preserves --json output)")
 	f.Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 	f.Bool("embedded-pg", false, "Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required; pgvector included")
+	f.Bool("skip-db-init", false, "Skip database migrations and seed; bring up Postgres+Hasura+hasura-auth only. Intended for CI/E2E environments.")
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -86,6 +87,7 @@ type startOpts struct {
 	watch            bool
 	quiet            bool
 	embeddedPG       bool
+	skipDBInit       bool
 }
 
 func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
@@ -106,6 +108,11 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	// NSELF_EMBEDDED_PG env var is the fallback when the flag is not set.
 	if !embeddedPG && os.Getenv("NSELF_EMBEDDED_PG") == "true" {
 		embeddedPG = true
+	}
+	skipDBInit, _ := cmd.Flags().GetBool("skip-db-init")
+	// NSELF_SKIP_DB_INIT env var allows CI pipelines to set this without modifying scripts.
+	if !skipDBInit && os.Getenv("NSELF_SKIP_DB_INIT") == "true" {
+		skipDBInit = true
 	}
 
 	// --force-recreate is an alias for --fresh.
@@ -140,6 +147,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 		watch:            watch,
 		quiet:            quiet,
 		embeddedPG:       embeddedPG,
+		skipDBInit:       skipDBInit,
 	}, nil
 }
 
@@ -629,29 +637,35 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	// Run BEFORE other services start. The auth service requires the auth
 	// schema to exist in PostgreSQL, so schemas and extensions must be
 	// created while only postgres is running.
+	// When --skip-db-init is set (CI/E2E mode) this entire step is bypassed:
+	// migrations and seed are skipped, and the stack boots to a bare schema state.
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Initializing database")
 
-	dbSp := ui.NewSpinner("Waiting for PostgreSQL ready and initializing schemas...")
-	dbSp.Start()
+	if opts.skipDBInit {
+		ui.Warn("Database initialization skipped (--skip-db-init / CI mode)")
+	} else {
+		dbSp := ui.NewSpinner("Waiting for PostgreSQL ready and initializing schemas...")
+		dbSp.Start()
 
-	dbCtx, dbCancel := context.WithTimeout(ctx, 90*time.Second)
-	defer dbCancel()
+		dbCtx, dbCancel := context.WithTimeout(ctx, 90*time.Second)
+		defer dbCancel()
 
-	if err := database.InitializeDatabase(dbCtx, cfg); err != nil {
-		dbSp.Fail("Database initialization failed")
-		ui.UXError(
-			"Database initialization failed",
-			err.Error(),
-			[]string{
-				"Check PostgreSQL logs: nself logs postgres",
-				"Verify POSTGRES_USER and POSTGRES_PASSWORD in .env",
-				"Try restarting: nself restart",
-			},
-		)
-		return fmt.Errorf("database init: %w", err)
+		if err := database.InitializeDatabase(dbCtx, cfg); err != nil {
+			dbSp.Fail("Database initialization failed")
+			ui.UXError(
+				"Database initialization failed",
+				err.Error(),
+				[]string{
+					"Check PostgreSQL logs: nself logs postgres",
+					"Verify POSTGRES_USER and POSTGRES_PASSWORD in .env",
+					"Try restarting: nself restart",
+				},
+			)
+			return fmt.Errorf("database init: %w", err)
+		}
+		dbSp.Success("Database initialized (schemas, extensions, grants)")
 	}
-	dbSp.Success("Database initialized (schemas, extensions, grants)")
 
 	// ── Step 6: Start remaining services (Phase 3) ──────────────────
 	currentStep++
@@ -703,7 +717,15 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Running health checks")
 
-	if opts.skipHealthChecks {
+	if opts.skipDBInit {
+		// CI/E2E mode: wait only for the backend triad (postgres, hasura,
+		// hasura-auth) to be healthy, then exit 0. Migrations and seed are
+		// intentionally absent — the test suite manages schema state itself.
+		if waitErr := waitCIReady(ctx, cfg, projectDir, opts.timeout, opts.verbose); waitErr != nil {
+			startErr = fmt.Errorf("CI readiness gate failed: %w", waitErr)
+			return startErr
+		}
+	} else if opts.skipHealthChecks {
 		ui.Warn("Health checks skipped (--skip-health-checks)")
 	} else {
 		requiredPct := 80
@@ -970,6 +992,61 @@ func checkLicenseHeartbeat(ctx context.Context, cfg *config.Config, verbose bool
 		ui.Warn("License validation failed — your license may be revoked or expired")
 		ui.Warn("Existing services will continue running. New plugin installs may be blocked.")
 		ui.Warn("Visit https://nself.org/pricing to check your subscription status.")
+	}
+}
+
+// ciReadyServices is the fixed set of backend services that must be healthy
+// before --skip-db-init mode considers the stack ready for CI/E2E use.
+// Postgres must be running so tests can connect directly; hasura and hasura-auth
+// (the "auth" compose service) are required for GraphQL and JWT flows.
+var ciReadyServices = []string{"postgres", "hasura", "auth"}
+
+// waitCIReady polls until all three CI backend services (postgres, hasura,
+// hasura-auth) report a healthy status, or until the timeout expires.
+// It returns nil when the readiness gate is satisfied, or a non-nil error
+// that causes nself start to exit non-zero (so CI jobs fail deterministically).
+func waitCIReady(ctx context.Context, cfg *config.Config, workdir string, timeoutSec int, verbose bool) error {
+	timeout := time.Duration(timeoutSec) * time.Second
+	ciCtx, ciCancel := context.WithTimeout(ctx, timeout)
+	defer ciCancel()
+
+	const pollInterval = 3 * time.Second
+
+	sp := ui.NewSpinner(fmt.Sprintf("CI mode: waiting for backend triad (postgres, hasura, auth) — timeout %ds", timeoutSec))
+	sp.Start()
+
+	for {
+		report, err := health.RunAllChecks(ciCtx, cfg, workdir)
+		if err == nil && report != nil {
+			// Check only the three CI-critical services.
+			healthyCount := 0
+			for _, r := range report.Results {
+				for _, want := range ciReadyServices {
+					if r.Service == want && (r.Status == "healthy" || r.Status == "running") {
+						healthyCount++
+					}
+				}
+			}
+			if healthyCount >= len(ciReadyServices) {
+				sp.Success(fmt.Sprintf("CI backend triad ready (postgres, hasura, auth) — %d/%d healthy", healthyCount, len(ciReadyServices)))
+				if verbose {
+					for _, r := range report.Results {
+						ui.Dimmed(fmt.Sprintf("  %s: %s", r.Service, r.Status))
+					}
+				}
+				return nil
+			}
+		}
+
+		// Not ready yet: wait or bail on context expiry.
+		select {
+		case <-ciCtx.Done():
+			sp.Fail(fmt.Sprintf("CI readiness gate timed out after %ds: backend triad not healthy", timeoutSec))
+			return fmt.Errorf("backend triad not healthy after %ds (postgres+hasura+auth required for CI): %w",
+				timeoutSec, errs.ErrHealthTimeout)
+		case <-time.After(pollInterval):
+			// Continue polling.
+		}
 	}
 }
 
