@@ -13,8 +13,15 @@ import (
 )
 
 const (
-	// pgliteBaseURL is the CDN endpoint served by ping_api (CS_1).
+	// pgliteBaseURL is the primary CDN endpoint served by ping.nself.org (CS_1).
 	pgliteBaseURL = "https://ping.nself.org/assets/pglite"
+
+	// pgliteFallbackBaseURL is the upstream npm CDN used when ping.nself.org is
+	// unreachable. The npm package ships the artifact as postgres.wasm; the
+	// fallback URL maps it to the same pglite.wasm filename convention.
+	// Pattern: https://registry.npmjs.org/@electric-sql/pglite/-/pglite-<ver>.tgz
+	// We use the direct unpkg path which resolves the same content without tarball extraction.
+	pgliteFallbackBaseURL = "https://registry.npmjs.org/@electric-sql/pglite/-/pglite"
 
 	// cacheMaxAge is how long a cached WASM file is trusted without re-verifying
 	// its SHA-256 digest against the pinned value.
@@ -24,11 +31,15 @@ const (
 	downloadTimeout = 120 * time.Second
 )
 
-// pgliteBaseURLOverride can be set by tests to redirect downloads to a local
-// httptest.Server without modifying the pgliteBaseURL constant.
+// pgliteBaseURLOverride can be set by tests to redirect primary CDN downloads to
+// a local httptest.Server without modifying the pgliteBaseURL constant.
 var pgliteBaseURLOverride string
 
-// activePgliteBaseURL returns the effective CDN base URL.
+// pgliteFallbackURLOverride can be set by tests to redirect fallback CDN
+// downloads to a local httptest.Server. When nil, pgliteFallbackURL is used.
+var pgliteFallbackURLOverride func(version string) string
+
+// activePgliteBaseURL returns the effective CDN base URL (primary).
 func activePgliteBaseURL() string {
 	if pgliteBaseURLOverride != "" {
 		return pgliteBaseURLOverride
@@ -36,18 +47,34 @@ func activePgliteBaseURL() string {
 	return pgliteBaseURL
 }
 
+// pgliteFallbackURL returns the upstream npm CDN URL for a given version.
+// The npm package ships the artifact as postgres.wasm; the content is identical
+// to the pglite.wasm artifact served by ping.nself.org.
+func pgliteFallbackURL(version string) string {
+	if pgliteFallbackURLOverride != nil {
+		return pgliteFallbackURLOverride(version)
+	}
+	// unpkg resolves package internals without client-side tarball extraction.
+	return fmt.Sprintf("https://unpkg.com/@electric-sql/pglite@%s/dist/postgres.wasm", version)
+}
+
 // FetchOrCached returns the absolute path to the pglite.wasm artifact for the
 // given version. It checks the local cache first; if the artifact is absent or
 // its digest does not match the pinned value it downloads and re-caches it.
 //
+// Download order:
+//  1. ping.nself.org/assets/pglite/<ver>/pglite.wasm (primary CDN)
+//  2. unpkg.com/@electric-sql/pglite@<ver>/dist/postgres.wasm (upstream fallback)
+//
+// Both sources are verified against the same pinned SHA-256 before caching.
 // The cache directory is ~/.nself/cache/pglite/<version>/.
-// The artifact is written atomically (tmp → rename) so partial downloads never
+// The artifact is written atomically (tmp -> rename) so partial downloads never
 // leave a corrupt cached copy.
 //
 // FetchOrCached returns an error if:
 //   - version is not in sha256Pins
-//   - the downloaded artifact's SHA-256 does not match the pin
-//   - any I/O or network operation fails
+//   - neither source yields an artifact whose SHA-256 matches the pin
+//   - any non-network I/O operation fails
 func FetchOrCached(ctx context.Context, version string) (string, error) {
 	pin, ok := sha256Pins[version]
 	if !ok {
@@ -66,14 +93,22 @@ func FetchOrCached(ctx context.Context, version string) (string, error) {
 		return cachedPath, nil
 	}
 
-	// Slow path: download from CDN.
+	// Slow path: download from primary CDN with fallback.
 	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
 		return "", fmt.Errorf("embedded/pglite: create cache dir: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/%s/pglite.wasm", activePgliteBaseURL(), version)
-	if err := downloadAndVerify(ctx, url, cachedPath, pin); err != nil {
-		return "", err
+	primaryURL := fmt.Sprintf("%s/%s/pglite.wasm", activePgliteBaseURL(), version)
+	primaryErr := downloadAndVerify(ctx, primaryURL, cachedPath, pin)
+	if primaryErr == nil {
+		return cachedPath, nil
+	}
+
+	// Primary CDN unreachable or returned wrong content — try upstream npm CDN.
+	fallbackURL := pgliteFallbackURL(version)
+	if fallbackErr := downloadAndVerify(ctx, fallbackURL, cachedPath, pin); fallbackErr != nil {
+		// Return the primary error as it is the expected source; include fallback error for context.
+		return "", fmt.Errorf("embedded/pglite: primary CDN failed (%w); fallback also failed: %v", primaryErr, fallbackErr)
 	}
 
 	return cachedPath, nil

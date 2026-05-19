@@ -37,6 +37,7 @@ Database initialization is automatic and idempotent, ɳSelf creates the database
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
 | `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
 | `--embedded-pg` | false | Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required. pgvector is included. See [[Embedded-Postgres]] for details. |
+| `--skip-db-init` | false | Skip database migrations and seed; bring up Postgres, Hasura, and hasura-auth only. Exits 0 when all three backend services are healthy. Intended for CI/E2E environments that manage schema state themselves. Equivalent to setting `NSELF_SKIP_DB_INIT=true`. |
 | `--debug`, `-d` | false | Show debug information |
 | `--verbose`, `-v` | false | Show detailed Docker output |
 | `--help`, `-h` | — | Show help |
@@ -69,6 +70,12 @@ nself start --clean-start
 
 # Fast mode for CI — lower timeout, 60% health threshold
 nself start --quick
+
+# CI/E2E mode: skip migrations and seed; block until postgres+hasura+auth are healthy
+nself start --skip-db-init
+
+# CI/E2E mode via environment variable (no script changes needed)
+NSELF_SKIP_DB_INIT=true nself start
 
 # Skip health checks (not recommended for production)
 nself start --skip-health-checks
