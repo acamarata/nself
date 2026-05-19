@@ -24,9 +24,9 @@ jobs:
         id: baseline
         run: |
           if git fetch origin perf/baseline 2>/dev/null && git show FETCH_HEAD:.github/registry-perf-baseline.json > /tmp/baseline.json 2>/dev/null; then
-            echo "baseline=$(cat /tmp/baseline.json)" >> $GITHUB_OUTPUT
+            echo "baseline_loaded=true" >> $GITHUB_OUTPUT
           else
-            echo "baseline={}" >> $GITHUB_OUTPUT
+            echo "baseline_loaded=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Run plugin search benchmark (p95 <100ms)
