@@ -7,9 +7,13 @@ on:
       - "Dockerfile*"
       - "go.mod"
       - "go.sum"
+      - ".github/workflows/trivy.yml"
   pull_request:
     paths:
       - "Dockerfile*"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/trivy.yml"
 
 permissions:
   contents: read
