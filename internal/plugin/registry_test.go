@@ -456,3 +456,53 @@ func TestRegistryMarshalJSON_CacheRoundTrip(t *testing.T) {
 		t.Errorf("Tier lost in cache round-trip: got %q, want %q", p.Tier, "free")
 	}
 }
+
+// BenchmarkRegistryParse measures the time to parse a registry JSON payload
+// representative of the free plugin registry (~29 entries). This benchmark
+// is used by the nightly-registry-perf workflow to track parse latency.
+func BenchmarkRegistryParse(b *testing.B) {
+	// Build a realistic registry JSON with multiple plugins (object format).
+	const registryPayload = `{
+		"version": "1.0.0",
+		"plugins": {
+			"ai": {"name": "ai", "version": "1.2.0", "description": "AI plugin", "category": "ai", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc001"},
+			"claw": {"name": "claw", "version": "1.0.0", "description": "Claw memory plugin", "category": "ai", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc002"},
+			"mux": {"name": "mux", "version": "1.1.0", "description": "Email routing plugin", "category": "messaging", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc003"},
+			"notify": {"name": "notify", "version": "1.0.3", "description": "Push notifications", "category": "messaging", "tier": "basic", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc004"},
+			"voice": {"name": "voice", "version": "1.0.1", "description": "Voice synthesis", "category": "ai", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc005"},
+			"browser": {"name": "browser", "version": "1.0.0", "description": "Browser automation", "category": "tools", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc006"},
+			"google": {"name": "google", "version": "1.2.1", "description": "Google Workspace integration", "category": "integration", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc007"},
+			"cron": {"name": "cron", "version": "1.0.0", "description": "Scheduled tasks", "category": "automation", "tier": "basic", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc008"},
+			"chat": {"name": "chat", "version": "1.1.0", "description": "Messaging plugin", "category": "messaging", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc009"},
+			"livekit": {"name": "livekit", "version": "1.0.2", "description": "Live video/audio", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc010"},
+			"recording": {"name": "recording", "version": "1.0.0", "description": "Call recording", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc011"},
+			"moderation": {"name": "moderation", "version": "1.0.0", "description": "Content moderation", "category": "safety", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc012"},
+			"media-processing": {"name": "media-processing", "version": "1.1.0", "description": "Media transcoding", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc013"},
+			"streaming": {"name": "streaming", "version": "1.0.0", "description": "IPTV streaming", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc014"},
+			"epg": {"name": "epg", "version": "1.0.0", "description": "Electronic program guide", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc015"},
+			"social": {"name": "social", "version": "1.0.0", "description": "Social feed plugin", "category": "social", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc016"},
+			"photos": {"name": "photos", "version": "1.0.0", "description": "Photo sharing", "category": "social", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc017"},
+			"geolocation": {"name": "geolocation", "version": "1.0.0", "description": "Location services", "category": "tools", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc018"},
+			"calendar": {"name": "calendar", "version": "1.0.0", "description": "Calendar integration", "category": "productivity", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc019"},
+			"realtime": {"name": "realtime", "version": "1.1.0", "description": "WebSocket realtime", "category": "infrastructure", "tier": "basic", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc020"},
+			"auth": {"name": "auth", "version": "2.0.0", "description": "Authentication", "category": "security", "tier": "free", "license": "MIT", "repository": "https://github.com/nself-org/plugins", "checksum": "abc021"},
+			"scan": {"name": "scan", "version": "1.0.0", "description": "Security scanning", "category": "security", "tier": "free", "license": "MIT", "repository": "https://github.com/nself-org/plugins", "checksum": "abc022"},
+			"cms": {"name": "cms", "version": "1.0.0", "description": "Content management", "category": "content", "tier": "basic", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc023"},
+			"stripe": {"name": "stripe", "version": "1.0.0", "description": "Stripe payments", "category": "commerce", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc024"},
+			"sms": {"name": "sms", "version": "1.0.0", "description": "SMS messaging", "category": "messaging", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc025"},
+			"image": {"name": "image", "version": "1.0.0", "description": "Image processing", "category": "media", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc026"},
+			"pdf": {"name": "pdf", "version": "1.0.0", "description": "PDF generation", "category": "documents", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc027"},
+			"knowledge-base": {"name": "knowledge-base", "version": "1.0.0", "description": "Vector knowledge base", "category": "ai", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc028"},
+			"mcp": {"name": "mcp", "version": "1.0.0", "description": "Model Context Protocol", "category": "ai", "tier": "pro", "license": "source-available", "repository": "https://github.com/nself-org/plugins-pro", "checksum": "abc029"}
+		}
+	}`
+
+	data := []byte(registryPayload)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := parseRegistryJSON(data)
+		if err != nil {
+			b.Fatalf("parseRegistryJSON: %v", err)
+		}
+	}
+}
