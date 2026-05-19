@@ -61,7 +61,7 @@ http {
         ''      close;
     }
 
-    include /etc/nginx/includes/rate-limits.conf;
+    include includes/rate-limits.conf;
     include /etc/nginx/conf.d/*.conf;
     include /etc/nginx/conf.d-{{.Env}}/*.conf;
     include /etc/nginx/sites/*.conf;
