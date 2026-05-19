@@ -8,6 +8,8 @@ on:
 jobs:
   registry-perf:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +64,13 @@ jobs:
         run: |
           go test -bench=BenchmarkRegistryParse -benchtime=10x ./internal/plugin -run=^$ 2>&1 | tee bench.txt
           ns_per_op=$(grep "BenchmarkRegistryParse" bench.txt | awk '{print $3}' | sed 's/ns\/op//')
-          ms=$(echo "scale=2; $ns_per_op / 1000000" | bc)
+          ns_per_op="${ns_per_op:-0}"
+          if [ "$ns_per_op" = "0" ]; then
+            ms="0"
+          else
+            ms=$(echo "scale=2; $ns_per_op / 1000000" | bc)
+            ms="${ms:-0}"
+          fi
           echo "parse_ms=$ms" >> $GITHUB_OUTPUT
           echo "Registry parse: ${ms}ms"
 
@@ -82,33 +90,33 @@ jobs:
           # Fail if >20% regression from targets
           # NOTE: SEARCH_MS, SINGLE_MS, BUNDLE_MS are all in milliseconds
           if [ "$SEARCH_MS" -gt 120 ]; then
-            echo "❌ search regression: ${SEARCH_MS}ms > 120ms" && exit 1
+            echo "FAIL search regression: ${SEARCH_MS}ms > 120ms" && exit 1
           fi
           if [ "$SINGLE_MS" -gt 36000 ]; then
-            echo "❌ single install regression: ${SINGLE_MS}ms > 36000ms (36s)" && exit 1
+            echo "FAIL single install regression: ${SINGLE_MS}ms > 36000ms (36s)" && exit 1
           fi
           if [ "$BUNDLE_MS" -gt 72000 ]; then
-            echo "❌ bundle install regression: ${BUNDLE_MS}ms > 72000ms (72s)" && exit 1
+            echo "FAIL bundle install regression: ${BUNDLE_MS}ms > 72000ms (72s)" && exit 1
           fi
-          if [ -n "$PARSE_MS" ] && [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
-            echo "❌ registry parse regression: ${PARSE_MS}ms > 60ms" && exit 1
-          elif [ -z "$PARSE_MS" ]; then
-            echo "⚠️ parse_ms not captured (BenchmarkRegistryParse may be missing or test binary not found)"
+          if [ -n "$PARSE_MS" ] && [ "$PARSE_MS" != "0" ] && [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
+            echo "FAIL registry parse regression: ${PARSE_MS}ms > 60ms" && exit 1
+          elif [ -z "$PARSE_MS" ] || [ "$PARSE_MS" = "0" ]; then
+            echo "WARN parse_ms is 0 -- BenchmarkRegistryParse ran but produced no timing output"
           fi
-          echo "✅ All perf targets passed"
+          echo "OK All perf targets passed"
 
       - name: Update baseline
         if: success()
         run: |
-          cat > .github/registry-perf-baseline.json <<EOF
-          {
-            "search_ms": ${{ steps.search.outputs.search_ms }},
-            "single_ms": ${{ steps.single.outputs.single_ms }},
-            "bundle_ms": ${{ steps.bundle.outputs.bundle_ms }},
-            "parse_ms": ${{ steps.parse.outputs.parse_ms }},
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
+          PARSE_VAL="${{ steps.parse.outputs.parse_ms }}"
+          PARSE_VAL="${PARSE_VAL:-0}"
+          printf '{\n  "search_ms": %s,\n  "single_ms": %s,\n  "bundle_ms": %s,\n  "parse_ms": %s,\n  "timestamp": "%s"\n}\n' \
+            "${{ steps.search.outputs.search_ms }}" \
+            "${{ steps.single.outputs.single_ms }}" \
+            "${{ steps.bundle.outputs.bundle_ms }}" \
+            "${PARSE_VAL}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > .github/registry-perf-baseline.json
           git add .github/registry-perf-baseline.json
           git -c user.email="ci@nself.org" -c user.name="nself-ci" commit -m "perf: update registry baseline" || true
           git push
@@ -116,6 +124,6 @@ jobs:
       - name: Alert on regression
         if: failure()
         run: |
-          echo "⚠️ Registry performance regression detected in nightly benchmark"
+          echo "Registry performance regression detected in nightly benchmark"
           echo "Targets: search <100ms, single <30s, bundle <60s, parse <50ms"
           echo "Review baseline at .github/registry-perf-baseline.json"
