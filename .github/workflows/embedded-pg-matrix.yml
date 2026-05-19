@@ -86,14 +86,73 @@ jobs:
         env:
           CGO_ENABLED: 1
           PGLITE_VERSION: "0.2.17"
+          # SHA-256 of @electric-sql/pglite@0.2.17 dist/postgres.wasm (identical
+          # content served as pglite.wasm). Verified via:
+          #   npm pack @electric-sql/pglite@0.2.17
+          #   tar -xOzf electric-sql-pglite-0.2.17.tgz package/dist/postgres.wasm | sha256sum
+          PGLITE_SHA256: "545a6e035b7cef40b0feaf912477616ceb43d0334efb0251a3dd8a652e8a58a3"
         run: |
+          set -euo pipefail
           mkdir -p ~/.nself/cache/pglite/${PGLITE_VERSION}
           WASM_PATH=~/.nself/cache/pglite/${PGLITE_VERSION}/pglite.wasm
-          if [ ! -f "$WASM_PATH" ]; then
-            curl -fsSL \
-              "https://ping.nself.org/assets/pglite/${PGLITE_VERSION}/pglite.wasm" \
-              -o "$WASM_PATH"
+
+          # Verify helper: fail closed if checksum does not match.
+          verify_sha256() {
+            local file="$1"
+            local want="$2"
+            local got
+            if command -v sha256sum >/dev/null 2>&1; then
+              got=$(sha256sum "$file" | cut -d' ' -f1)
+            else
+              got=$(shasum -a 256 "$file" | cut -d' ' -f1)
+            fi
+            if [ "$got" != "$want" ]; then
+              echo "ERROR: sha256 mismatch for $file" >&2
+              echo "  want: $want" >&2
+              echo "  got:  $got" >&2
+              rm -f "$file"
+              return 1
+            fi
+            echo "sha256 OK: $got"
+          }
+
+          # Skip download if cache already holds a valid artifact.
+          if [ -f "$WASM_PATH" ]; then
+            if verify_sha256 "$WASM_PATH" "$PGLITE_SHA256" 2>/dev/null; then
+              echo "Cache hit — using cached pglite.wasm"
+              echo "PGLITE_WASM_PATH=$WASM_PATH" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            echo "Cached file failed checksum — re-downloading"
+            rm -f "$WASM_PATH"
           fi
+
+          PRIMARY_URL="https://ping.nself.org/assets/pglite/${PGLITE_VERSION}/pglite.wasm"
+          FALLBACK_URL="https://unpkg.com/@electric-sql/pglite@${PGLITE_VERSION}/dist/postgres.wasm"
+
+          download_and_verify() {
+            local url="$1"
+            local dest="$2"
+            echo "Fetching: $url"
+            if curl -fsSL --max-time 120 "$url" -o "$dest"; then
+              if verify_sha256 "$dest" "$PGLITE_SHA256"; then
+                return 0
+              fi
+            else
+              echo "curl failed for $url" >&2
+            fi
+            return 1
+          }
+
+          if download_and_verify "$PRIMARY_URL" "$WASM_PATH"; then
+            echo "Downloaded from primary CDN"
+          elif download_and_verify "$FALLBACK_URL" "$WASM_PATH"; then
+            echo "Downloaded from upstream npm CDN (fallback)"
+          else
+            echo "ERROR: failed to fetch pglite.wasm from both primary and fallback CDNs" >&2
+            exit 1
+          fi
+
           echo "PGLITE_WASM_PATH=$WASM_PATH" >> "$GITHUB_ENV"
 
       - name: Integration tests (pglite boot, socket bridge, migration, cold-start)
