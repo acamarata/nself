@@ -201,29 +201,58 @@ write_report() {
   local overall="pass"
   [ "${FAIL}" -gt 0 ] && overall="fail"
 
-  python3 - <<PYEOF
-import json, sys
+  # Serialize step data via a temp env-style file the python helper reads.
+  # The prior version inlined "${STEP_STATUS[$k]:-unknown}" inside the heredoc
+  # where $k was meant to be a Python loop variable — but bash expands shell
+  # vars in the heredoc before Python sees it. With "set -u" enabled, $k is
+  # unbound and the script aborts ("scripts/golden-path.sh: line 201: k:
+  # unbound variable") whenever any step actually fails.
+  local steps_data
+  steps_data=$(mktemp)
+  for i in $(seq 1 13); do
+    local s="${STEP_STATUS[$i]:-skipped}"
+    local d="${STEP_DURATION[$i]:-0}"
+    local n="${STEP_NOTE[$i]:-}"
+    printf '%s\t%s\t%s\t%s\n' "$i" "$s" "$d" "$n" >>"$steps_data"
+  done
+
+  REPORT_FILE="${REPORT_FILE}" \
+  STEPS_DATA="$steps_data" \
+  OVERALL="${overall}" \
+  PASS="${PASS}" \
+  FAIL="${FAIL}" \
+  WARN_COUNT="${WARN_COUNT}" \
+  python3 - <<'PYEOF'
+import json, os
+
 steps = {}
-statuses = """${!STEP_STATUS[*]}""".split() if """${!STEP_STATUS[*]}""" else []
-for k in range(1, 14):
-    steps[str(k)] = {
-        "status":   "${STEP_STATUS[$k]:-unknown}" if str(k) in steps else "skipped",
-        "duration": int("${STEP_DURATION[$k]:-0}" or 0),
-        "note":     "${STEP_NOTE[$k]:-}",
-    }
+with open(os.environ["STEPS_DATA"]) as fh:
+    for line in fh:
+        parts = line.rstrip("\n").split("\t")
+        if len(parts) < 4:
+            continue
+        idx, status, duration, note = parts[0], parts[1], parts[2], parts[3]
+        try:
+            duration = int(duration)
+        except ValueError:
+            duration = 0
+        steps[idx] = {"status": status, "duration": duration, "note": note}
+
 report = {
-    "overall": "${overall}",
-    "pass":    ${PASS},
-    "fail":    ${FAIL},
-    "warn":    ${WARN_COUNT},
+    "overall": os.environ["OVERALL"],
+    "pass":    int(os.environ["PASS"]),
+    "fail":    int(os.environ["FAIL"]),
+    "warn":    int(os.environ["WARN_COUNT"]),
     "steps":   steps,
 }
-with open("${REPORT_FILE}", "w") as f:
+with open(os.environ["REPORT_FILE"], "w") as f:
     json.dump(report, f, indent=2)
 PYEOF
+  local py_rc=$?
+  rm -f "$steps_data"
 
-  # Fallback pure-bash JSON if python3 unavailable
-  if [ $? -ne 0 ]; then
+  # Fallback pure-bash JSON if python3 unavailable.
+  if [ "$py_rc" -ne 0 ]; then
     {
       printf '{"overall":"%s","pass":%d,"fail":%d,"warn":%d,"steps":{}}\n' \
         "${overall}" "${PASS}" "${FAIL}" "${WARN_COUNT}"
