@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: write
 
     steps:
       - name: Fetch billing usage
@@ -27,10 +28,30 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Graceful skip if secret is not configured (soft monitor — never fail CI)
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::GH_BILLING_PAT secret not configured — billing monitor skipped (soft no-op)"
+            echo "total_used=0"  >> "$GITHUB_OUTPUT"
+            echo "included=2000" >> "$GITHUB_OUTPUT"
+            echo "paid_used=0"   >> "$GITHUB_OUTPUT"
+            echo "estimated=0"   >> "$GITHUB_OUTPUT"
+            echo "pct=0"         >> "$GITHUB_OUTPUT"
+            echo "skipped=true"  >> "$GITHUB_OUTPUT"
+            echo "## Billing Monitor SKIPPED" >> "$GITHUB_STEP_SUMMARY"
+            echo "GH_BILLING_PAT secret is not set. Set it via:" >> "$GITHUB_STEP_SUMMARY"
+            echo '`gh auth token | gh secret set GH_BILLING_PAT --repo nself-org/cli --body -`' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # The /settings/billing/actions endpoint was deprecated (HTTP 410) in 2025.
+          # Use the new enhanced billing platform endpoint /orgs/{org}/settings/billing/usage
+          # which returns usageItems[] with per-month, per-SKU breakdown.
+          # Docs: https://docs.github.com/en/rest/billing/enhanced-billing
+          #
           # Retry up to 3 attempts with 10s backoff
           RESPONSE=""
           for attempt in 1 2 3; do
-            if RESPONSE=$(gh api /orgs/nself-org/settings/billing/actions \
+            if RESPONSE=$(gh api "/orgs/nself-org/settings/billing/usage" \
               --header "Accept: application/vnd.github+json" \
               --header "X-GitHub-Api-Version: 2022-11-28" 2>/dev/null); then
               break
@@ -49,10 +70,31 @@ jobs:
             sleep 10
           done
 
-          TOTAL_USED=$(echo "$RESPONSE" | jq -r '.total_minutes_used // 0')
-          INCLUDED=$(echo "$RESPONSE"   | jq -r '.included_minutes // 2000')
-          PAID=$(echo "$RESPONSE"       | jq -r '.total_paid_minutes_used // 0')
-          ESTIMATED=$(echo "$RESPONSE"  | jq -r '.estimated_paid_minutes_used // 0')
+          # Current month in YYYY-MM-01T00:00:00Z form for matching usageItems[].date
+          CURRENT_MONTH=$(date -u +%Y-%m-01T00:00:00Z)
+
+          # Sum Actions Minutes used this month (Linux + Windows + macOS + ARM — all SKUs containing "Actions" and unitType=Minutes)
+          TOTAL_USED=$(echo "$RESPONSE" | jq -r --arg m "$CURRENT_MONTH" '
+            [.usageItems[]
+              | select(.product=="actions" and .unitType=="Minutes" and .date==$m)
+              | .quantity] | add // 0 | floor')
+
+          # Enhanced billing API does not expose included_minutes directly; nself-org plan baseline is 3000/mo (Team plan)
+          # If you upgrade plan, update INCLUDED accordingly.
+          INCLUDED=${BILLING_INCLUDED_MINUTES:-3000}
+
+          # Paid minutes = (TOTAL_USED - INCLUDED) when positive, else 0
+          if [ "$TOTAL_USED" -gt "$INCLUDED" ]; then
+            PAID=$((TOTAL_USED - INCLUDED))
+          else
+            PAID=0
+          fi
+
+          # Estimated paid = sum of netAmount this month (post-discount), in dollars
+          ESTIMATED=$(echo "$RESPONSE" | jq -r --arg m "$CURRENT_MONTH" '
+            [.usageItems[]
+              | select(.product=="actions" and .date==$m)
+              | .netAmount] | add // 0')
 
           # Guard against divide-by-zero when no paid minutes are included
           if [ "$INCLUDED" -eq 0 ]; then
