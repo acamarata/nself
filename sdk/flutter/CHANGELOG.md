@@ -1,3 +1,7 @@
+## 1.1.4
+
+- Version bump to stay in lockstep with nSelf CLI v1.1.4.
+
 ## 1.1.3
 
 - Fix package name to `nself_sdk` to match import convention.

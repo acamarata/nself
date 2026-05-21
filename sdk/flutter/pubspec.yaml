@@ -1,6 +1,6 @@
 name: nself_sdk
 description: "Flutter plugin authoring SDK for nSelf. Auth, GraphQL, storage, realtime, functions, and push."
-version: 1.1.3
+version: 1.1.4
 
 homepage: https://nself.org
 repository: https://github.com/nself-org/cli
