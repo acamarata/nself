@@ -82,3 +82,4 @@ node_modules/
 bin/certs/
 !src/templates/certs/**/*.key
 !src/templates/certs/**/*.pem
+endpoint-auth-checker
