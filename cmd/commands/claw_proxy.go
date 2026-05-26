@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,6 +11,20 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// clawProxyRecover is an HTTP middleware that catches handler panics and
+// returns a 500 instead of letting them crash the claw proxy process.
+func clawProxyRecover(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("claw proxy handler panic", "panic", rec, "path", r.URL.Path)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
 
 // parseAllowedOrigins reads a CSV list of origins from the CLAW_PROXY_ALLOWED_ORIGINS
 // env var and returns the normalized set. An empty env var means no CORS headers
@@ -207,7 +222,7 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 
 	server := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: clawProxyRecover(mux),
 	}
 
 	// Handle shutdown on context cancellation
