@@ -1,6 +1,7 @@
 package database
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -47,6 +48,30 @@ func TestSanitizeIdentifier_invalid(t *testing.T) {
 		if err == nil {
 			t.Errorf("SanitizeIdentifier(%q): expected error, got %q", s, got)
 		}
+	}
+}
+
+// TestSanitizeIdentifier_lengthBoundary verifies that identifiers at and
+// beyond the PostgreSQL 63-byte NAMEDATALEN-1 limit are handled correctly.
+// Boundary cases: 63-char (valid), 64-char (rejected), 65-char (rejected).
+// This is an ADR-009 SQL-safety requirement (T01 — sql-allowlist-audit-cli).
+func TestSanitizeIdentifier_lengthBoundary(t *testing.T) {
+	// Exactly 63 characters — valid (PostgreSQL NAMEDATALEN-1 limit).
+	exactly63 := strings.Repeat("a", 63)
+	if _, err := SanitizeIdentifier(exactly63); err != nil {
+		t.Errorf("SanitizeIdentifier(63-char): unexpected error: %v", err)
+	}
+
+	// 64 characters — must be rejected.
+	over64 := strings.Repeat("a", 64)
+	if _, err := SanitizeIdentifier(over64); err == nil {
+		t.Errorf("SanitizeIdentifier(64-char): expected error for oversized identifier, got nil")
+	}
+
+	// 65 characters — must be rejected.
+	over65 := strings.Repeat("a", 65)
+	if _, err := SanitizeIdentifier(over65); err == nil {
+		t.Errorf("SanitizeIdentifier(65-char): expected error for oversized identifier, got nil")
 	}
 }
 
