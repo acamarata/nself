@@ -103,8 +103,14 @@ func coreUserTables() []TableStrategy {
 
 // queryTableForUser runs a SELECT * FROM <table> WHERE <user_col> = $1 and
 // returns results as a slice of string-keyed maps.
+// Table and column identifiers are validated via validateTableStrategy before
+// interpolation to prevent SQL injection from plugin-registered table names.
 func queryTableForUser(ctx context.Context, db *sql.DB, tbl TableStrategy, userID string) ([]map[string]interface{}, error) {
-	q := fmt.Sprintf("SELECT * FROM %s WHERE %s = $1", tbl.Table, tbl.UserCol)
+	qtbl, qcol, err := validateTableStrategy(tbl)
+	if err != nil {
+		return nil, fmt.Errorf("unsafe identifier in registry: %w", err)
+	}
+	q := fmt.Sprintf("SELECT * FROM %s WHERE %s = $1", qtbl, qcol)
 	rows, err := db.QueryContext(ctx, q, userID)
 	if err != nil {
 		return nil, fmt.Errorf("query %s: %w", tbl.Table, err)
