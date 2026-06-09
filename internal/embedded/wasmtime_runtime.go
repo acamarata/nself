@@ -145,25 +145,13 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: define WASI: %w", err)
 	}
 
-	// pglite v0.2.17 is compiled with Emscripten and imports `env::exit(i32)`
-	// in addition to WASI preview-1 imports. wasmtime's DefineWasi() only
-	// provides WASI; we must define the env module imports manually or
-	// instantiation fails with "unknown import: env::exit has not been defined".
-	//
-	// env::exit(code i32) — clean process exit. We treat any non-zero code as
-	// a hard stop by returning an unconditional Trap so wasmtime surfaces it as
-	// an error rather than silently continuing. Zero exits are treated as
-	// success (no-op return).
-	if err := linker.DefineFunc(store, "env", "exit", func(code int32) {
-		// pglite calls env::exit(0) on graceful shutdown. Non-zero codes are
-		// unexpected; surfacing them as traps lets the caller detect the failure.
-		if code != 0 {
-			panic(fmt.Sprintf("pglite exited with code %d", code))
-		}
-		// code == 0: normal exit. The goroutine running _start will return;
-		// no further action required here.
-	}); err != nil {
-		return fmt.Errorf("embedded/runtime: define env::exit: %w", err)
+	// pglite v0.2.17 is compiled with Emscripten and requires all 113 env::
+	// host imports to be defined before instantiation. DefineWasi() only covers
+	// WASI preview-1; defineEmscriptenABI defines the remaining Emscripten
+	// symbols (env::exit, invoke_* trampolines, __syscall_* stubs, globals,
+	// memory, and the indirect function table).
+	if err := defineEmscriptenABI(linker, store); err != nil {
+		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
 	r.linker = linker
