@@ -54,14 +54,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: nself-org/admin
-          token: ${{ secrets.NSELF_CI_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: admin
 
       - name: Checkout homebrew-nself
         uses: actions/checkout@v4
         with:
           repository: nself-org/homebrew-nself
-          token: ${{ secrets.NSELF_CI_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: homebrew-nself
 
       - name: Resolve target version
