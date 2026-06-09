@@ -66,10 +66,10 @@ func (o AlertmanagerBuildOptions) validate() error {
 func resolveAlertmanagerConfig(opts AlertmanagerBuildOptions) *monitoring.AlertmanagerConfig {
 	cfg := monitoring.DefaultAlertmanagerConfig()
 
-	// Override oncall email on the existing oncall receiver.
+	// Override oncall email on the existing oncall-stub receiver.
 	if opts.OncallEmail != "" {
 		for i := range cfg.Receivers {
-			if cfg.Receivers[i].Name == "oncall" {
+			if cfg.Receivers[i].Name == "oncall-stub" {
 				cfg.Receivers[i].EmailTo = opts.OncallEmail
 			}
 		}

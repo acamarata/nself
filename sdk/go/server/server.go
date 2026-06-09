@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/nself-org/cli/sdk/go/v2/metrics"
+	"github.com/nself-org/cli/sdk/go/metrics"
 )
 
 // HealthChecker is any type that can report readiness. Plugins typically pass
