@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/database"
 )
 
 // DryRunResult lists what would be deleted/anonymized without making changes.
@@ -29,7 +31,12 @@ func DryRunUserDelete(ctx context.Context, db *sql.DB, userID string) ([]DryRunR
 	var results []DryRunResult
 	for pluginName, tables := range strategies {
 		for _, tbl := range tables {
-			q := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s = $1", tbl.Table, tbl.UserCol)
+			qtbl, qcol, err := validateTableStrategy(tbl)
+			if err != nil {
+				// Reject registry entries with invalid identifiers — do not silently skip.
+				return nil, fmt.Errorf("gdpr dry-run: plugin %s: %w", pluginName, err)
+			}
+			q := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s = $1", qtbl, qcol)
 			var n int64
 			if err := db.QueryRowContext(ctx, q, userID).Scan(&n); err != nil {
 				// Table may not exist in this deployment; skip gracefully.
@@ -60,8 +67,12 @@ func DeleteUserData(ctx context.Context, db *sql.DB, userID string) (processed i
 	}
 	strategies["core"] = coreUserErasureTables()
 
-	for _, tables := range strategies {
+	for pluginName, tables := range strategies {
 		for _, tbl := range tables {
+			if _, _, err := validateTableStrategy(tbl); err != nil {
+				errs = append(errs, fmt.Errorf("gdpr delete: plugin %s: %w", pluginName, err))
+				continue
+			}
 			if err := applyErasure(ctx, db, tbl, userID); err != nil {
 				errs = append(errs, err)
 				continue
@@ -72,17 +83,55 @@ func DeleteUserData(ctx context.Context, db *sql.DB, userID string) (processed i
 	return processed, errs
 }
 
-// applyErasure executes a single table's delete or anonymize strategy.
-func applyErasure(ctx context.Context, db *sql.DB, tbl TableStrategy, userID string) error {
-	tx, err := db.BeginTx(ctx, nil)
+// validateTableStrategy validates that a TableStrategy's Table and UserCol
+// fields are safe SQL identifiers before they are interpolated into queries.
+// Table names registered by plugins come from the database (attacker-influenced
+// if a malicious plugin inserts to np_gdpr_plugin_registry directly), so they
+// MUST be validated against the identifier allowlist.
+//
+// Returns the double-quoted, injection-safe forms of the table and column, or
+// an error if either value is not a valid SQL identifier.
+//
+// Inputs:  tbl — the TableStrategy read from the plugin registry
+// Outputs: qtbl, qcol — double-quoted safe identifiers; err on invalid input
+// Constraints: rejects empty string, SQL metacharacters, values >64 chars per
+//              RFC PostgreSQL identifier limit, and any char outside [a-zA-Z0-9_]
+// SPORT: MASTER-FEATURES.md — SQL injection hardening — cli
+func validateTableStrategy(tbl TableStrategy) (qtbl, qcol string, err error) {
+	qtbl, err = database.SanitizeIdentifier(tbl.Table)
 	if err != nil {
-		return fmt.Errorf("gdpr erase %s: begin tx: %w", tbl.Table, err)
+		return "", "", fmt.Errorf("unsafe table identifier from registry: %w", err)
+	}
+	qcol, err = database.SanitizeIdentifier(tbl.UserCol)
+	if err != nil {
+		return "", "", fmt.Errorf("unsafe column identifier from registry: %w", err)
+	}
+	return qtbl, qcol, nil
+}
+
+// applyErasure executes a single table's delete or anonymize strategy.
+// Callers MUST have already validated tbl via validateTableStrategy before
+// calling this function. applyErasure uses the raw tbl values for identifier
+// quoting but re-validates defensively via validateTableStrategy so the
+// function is safe even if called directly in tests.
+func applyErasure(ctx context.Context, db *sql.DB, tbl TableStrategy, userID string) error {
+	// Defensive re-validation — identifiers were checked by callers but this
+	// ensures applyErasure is safe even when called directly (e.g. from tests
+	// or future callers that skip the outer loop validation).
+	qtbl, qcol, err := validateTableStrategy(tbl)
+	if err != nil {
+		return fmt.Errorf("gdpr erase: %w", err)
+	}
+
+	tx, txErr := db.BeginTx(ctx, nil)
+	if txErr != nil {
+		return fmt.Errorf("gdpr erase %s: begin tx: %w", tbl.Table, txErr)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	switch strings.ToLower(tbl.Strategy) {
 	case "delete":
-		q := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", tbl.Table, tbl.UserCol)
+		q := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", qtbl, qcol)
 		if _, err := tx.ExecContext(ctx, q, userID); err != nil {
 			return fmt.Errorf("gdpr erase %s (delete): %w", tbl.Table, err)
 		}
@@ -100,11 +149,11 @@ UPDATE %s SET
   first_name = CASE WHEN first_name IS NOT NULL THEN 'Deleted' ELSE NULL END,
   last_name  = CASE WHEN last_name  IS NOT NULL THEN 'User' ELSE NULL END
 WHERE %s = $1
-`, tbl.Table, tbl.UserCol, tbl.UserCol)
+`, qtbl, qcol, qcol)
 		if _, err := tx.ExecContext(ctx, q, userID, anon); err != nil {
 			// Fallback: some tables may not have all four PII columns.
 			// Try a minimal anonymization.
-			qMin := fmt.Sprintf("UPDATE %s SET %s = $2 WHERE %s = $1", tbl.Table, tbl.UserCol, tbl.UserCol)
+			qMin := fmt.Sprintf("UPDATE %s SET %s = $2 WHERE %s = $1", qtbl, qcol, qcol)
 			if _, err2 := tx.ExecContext(ctx, qMin, userID, anon); err2 != nil {
 				return fmt.Errorf("gdpr erase %s (anonymize): %w", tbl.Table, err2)
 			}

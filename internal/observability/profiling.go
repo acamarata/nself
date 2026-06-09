@@ -64,7 +64,7 @@ func ServeProfiling(cfg ProfilingConfig) {
 	mux.Handle("/debug/pprof/trace", wrap(pprof.Trace))
 
 	slog.Info("serving pprof profiles", "addr", cfg.BindAddr)
-	if err := http.ListenAndServe(cfg.BindAddr, mux); err != nil {
+	if err := http.ListenAndServe(cfg.BindAddr, Recoverer(mux)); err != nil {
 		slog.Error("pprof server failed", "error", err)
 	}
 }
@@ -93,5 +93,21 @@ func tokenAuth(token string, next http.HandlerFunc) http.Handler {
 			return
 		}
 		next(w, r)
+	})
+}
+
+// Recoverer is an HTTP middleware that catches panics from handlers, logs the
+// panic value, and returns a 500 Internal Server Error instead of letting the
+// panic propagate and kill the process. Apply it as the outermost middleware
+// on every http.ServeMux to provide a process-wide safety net.
+func Recoverer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("http handler panic", "panic", rec, "path", r.URL.Path, "method", r.Method)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
 	})
 }

@@ -92,7 +92,7 @@ func ServeMetrics(registry *prometheus.Registry, bindAddr string) {
 		EnableOpenMetrics: true,
 	}))
 	slog.Info("serving prometheus metrics", "addr", bindAddr)
-	if err := http.ListenAndServe(bindAddr, mux); err != nil {
+	if err := http.ListenAndServe(bindAddr, Recoverer(mux)); err != nil {
 		slog.Error("metrics server failed", "error", err)
 	}
 }

@@ -1,0 +1,398 @@
+package config
+
+// loader_known_vars.go — authoritative list of known environment variable names.
+//
+// Purpose: Enumerate every env var name that the nSelf config loader and
+//          ApplyDefaults recognise. Used by warnUnknownEnvVars to surface
+//          typos in user .env files (any key not in this list and not matching
+//          a dynamic prefix emits a slog.Warn — it never fails the load).
+// Inputs:  none (package-level var, referenced by loader.go and defaults.go).
+// Outputs: knownEnvVars []string — consumed by warnUnknownEnvVars in warn.go.
+// Constraints: Keep in sync with parseEnvToConfig (loader_parse_env.go) and
+//              ApplyDefaults (defaults.go). Plugin-managed vars that the CLI
+//              loader does NOT read are included at the bottom to suppress false
+//              "unknown env var" warnings from compose-injected config.
+// SPORT:   cli/internal/config — decomposed from loader.go (T-E2-06).
+
+var knownEnvVars = []string{
+	// Core
+	"PROJECT_NAME",
+	"BASE_DOMAIN",
+	"PROJECT_DOMAIN",
+	"ENV",
+	"PROJECT_DESCRIPTION",
+	"ADMIN_EMAIL",
+	"DB_ENV_SEEDS",
+
+	// PostgreSQL
+	"POSTGRES_VERSION",
+	"POSTGRES_HOST",
+	"POSTGRES_PORT",
+	"POSTGRES_DB",
+	"POSTGRES_USER",
+	"POSTGRES_PASSWORD",
+	"POSTGRES_EXTENSIONS",
+	"POSTGRES_EXPOSE_PORT",
+	"POSTGRES_MEM_LIMIT",
+	"POSTGRES_CPU_LIMIT",
+
+	// Hasura
+	"HASURA_VERSION",
+	"HASURA_GRAPHQL_ADMIN_SECRET",
+	"HASURA_JWT_KEY",
+	"HASURA_JWT_TYPE",
+	"HASURA_GRAPHQL_ENABLE_CONSOLE",
+	"HASURA_GRAPHQL_DEV_MODE",
+	"HASURA_DEV_MODE",
+	"HASURA_GRAPHQL_CORS_DOMAIN",
+	"HASURA_GRAPHQL_JWT_SECRET",
+	"HASURA_ROUTE",
+	"HASURA_PORT",
+	"HASURA_MEM_LIMIT",
+	"HASURA_CPU_LIMIT",
+	"HASURA_GRAPHQL_LOG_LEVEL",
+
+	// Auth
+	"AUTH_VERSION",
+	"AUTH_PORT",
+	"AUTH_CLIENT_URL",
+	"AUTH_ACCESS_TOKEN_EXPIRES_IN",
+	"AUTH_REFRESH_TOKEN_EXPIRES_IN",
+	"AUTH_ROUTE",
+	"AUTH_SMTP_HOST",
+	"AUTH_SMTP_PORT",
+	"AUTH_SMTP_USER",
+	"AUTH_SMTP_PASS",
+	"AUTH_SMTP_SECURE",
+	"AUTH_SMTP_SENDER",
+	"AUTH_MEM_LIMIT",
+	"AUTH_CPU_LIMIT",
+	"AUTH_EXTRA_REDIRECT_URLS",
+	"AUTH_RATE_LIMIT",
+	"AUTH_WEBAUTHN_ENABLED",
+	"AUTH_LOG_LEVEL",
+
+	// Nginx
+	"NGINX_VERSION",
+	"NGINX_HTTP_PORT",
+	"NGINX_PORT",
+	"NGINX_HTTPS_PORT",
+	"NGINX_SSL_PORT",
+	"NGINX_CLIENT_MAX_BODY_SIZE",
+	"NGINX_BIND_IP",
+
+	// SSL
+	"SSL_MODE",
+	"EXTRA_SSL_DOMAINS",
+
+	// Redis
+	"REDIS_ENABLED",
+	"REDIS_VERSION",
+	"REDIS_PORT",
+	"REDIS_PASSWORD",
+	"REDIS_MEMORY",
+	"REDIS_CPU",
+
+	// MinIO / Storage
+	"MINIO_ENABLED",
+	"STORAGE_ENABLED",
+	"MINIO_VERSION",
+	"MINIO_PORT",
+	"MINIO_CONSOLE_PORT",
+	"MINIO_ROOT_USER",
+	"MINIO_ROOT_PASSWORD",
+	"MINIO_DEFAULT_BUCKETS",
+	"MINIO_REGION",
+	"S3_ACCESS_KEY",
+	"S3_SECRET_KEY",
+	"S3_BUCKET",
+	"STORAGE_VERSION",
+	"STORAGE_ROUTE",
+	"STORAGE_CONSOLE_ROUTE",
+	"MINIO_MEMORY",
+	"MINIO_CPU",
+
+	// Mailpit
+	"MAILPIT_ENABLED",
+	"MAILPIT_VERSION",
+	"MAILPIT_SMTP_PORT",
+	"MAILPIT_UI_PORT",
+	"MAILPIT_MAX_MESSAGES",
+	"MAILPIT_ROUTE",
+	"MAIL_ROUTE",
+	"MAILPIT_UI_USER",
+	"MAILPIT_UI_PASSWORD",
+
+	// Functions
+	"FUNCTIONS_ENABLED",
+	"FUNCTIONS_VERSION",
+	"FUNCTIONS_PORT",
+	"FUNCTIONS_ROUTE",
+
+	// MLflow
+	"MLFLOW_ENABLED",
+	"MLFLOW_VERSION",
+	"MLFLOW_PORT",
+	"MLFLOW_ROUTE",
+	"MLFLOW_DB_NAME",
+	"MLFLOW_ARTIFACTS_BUCKET",
+	"MLFLOW_AUTH_ENABLED",
+	"MLFLOW_AUTH_USERNAME",
+	"MLFLOW_AUTH_PASSWORD",
+
+	// Admin
+	"NSELF_ADMIN_ENABLED",
+	"NSELF_ADMIN_VERSION",
+	"NSELF_ADMIN_PORT",
+	"NSELF_ADMIN_ROUTE",
+	"NSELF_ADMIN_DEV",
+	"NSELF_ADMIN_DEV_PORT",
+	"ADMIN_SECRET_KEY",
+	"ADMIN_PASSWORD_HASH",
+
+	// Search
+	"SEARCH_ENABLED",
+	"SEARCH_ENGINE",
+	"SEARCH_PROVIDER",
+	"SEARCH_PORT",
+	"SEARCH_API_KEY",
+	"SEARCH_ROUTE",
+	"SEARCH_INDEX_PREFIX",
+	"SEARCH_AUTO_INDEX",
+	"SEARCH_LANGUAGE",
+	"MEILISEARCH_VERSION",
+	"MEILISEARCH_MASTER_KEY",
+	"MEILISEARCH_ENV",
+	"MEILISEARCH_WARMUP_QUERIES",
+	"MEILI_ENV",
+	"TYPESENSE_VERSION",
+	"TYPESENSE_API_KEY",
+	"TYPESENSE_ENABLE_CORS",
+	"TYPESENSE_LOG_LEVEL",
+	"TYPESENSE_NUM_MEMORY_SHARDS",
+	"TYPESENSE_SNAPSHOT_INTERVAL_SECONDS",
+	"ELASTICSEARCH_VERSION",
+	"ELASTICSEARCH_PORT",
+	"ELASTICSEARCH_PASSWORD",
+	"ELASTICSEARCH_MEMORY",
+
+	// Monitoring
+	"MONITORING_ENABLED",
+	"PROMETHEUS_ENABLED",
+	"PROMETHEUS_PORT",
+	"GRAFANA_ENABLED",
+	"GRAFANA_PORT",
+	"GRAFANA_ADMIN_USER",
+	"GRAFANA_ADMIN_PASSWORD",
+	"GRAFANA_ROUTE",
+	"LOKI_ENABLED",
+	"LOKI_PORT",
+	"PROMTAIL_ENABLED",
+	"TEMPO_ENABLED",
+	"TEMPO_PORT",
+	"ALERTMANAGER_ENABLED",
+	"ALERTMANAGER_PORT",
+	"CADVISOR_ENABLED",
+	"CADVISOR_PORT",
+	"NODE_EXPORTER_ENABLED",
+	"NODE_EXPORTER_PORT",
+	"POSTGRES_EXPORTER_ENABLED",
+	"POSTGRES_EXPORTER_PORT",
+	"REDIS_EXPORTER_ENABLED",
+	"REDIS_EXPORTER_PORT",
+
+	// Email
+	"EMAIL_PROVIDER",
+	"EMAIL_FROM",
+	"ELASTIC_EMAIL_API_KEY",
+	"ELASTIC_EMAIL_ACCOUNT_EMAIL",
+	"SENDGRID_API_KEY",
+	"POSTMARK_API_KEY",
+	"MAILGUN_API_KEY",
+	"MAILGUN_DOMAIN",
+	"AWS_ACCESS_KEY_ID",
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_REGION",
+	"SMTP_HOST",
+	"SMTP_PORT",
+	"SMTP_USER",
+	"SMTP_PASS",
+	"SMTP_SECURE",
+
+	// Backup
+	"BACKUP_ENABLED",
+	"BACKUP_DIR",
+	"BACKUP_SCHEDULE",
+	"BACKUP_RETENTION_DAYS",
+	"BACKUP_CLOUD_PROVIDER",
+	"BACKUP_REMOTE",
+	"BACKUP_ENCRYPTION",
+	"BACKUP_AGE_RECIPIENTS",
+	"BACKUP_SCHEDULE_FULL",
+	"BACKUP_WAL_INTERVAL_SECONDS",
+	"BACKUP_RETENTION_DAILY",
+	"BACKUP_RETENTION_WEEKLY",
+	"BACKUP_RETENTION_MONTHLY",
+	"BACKUP_RESTORE_TEST_SCHEDULE",
+	"BACKUP_ALERT_ON_FAILURE",
+	"BACKUP_S3_ACCESS_KEY_ID",
+	"BACKUP_S3_SECRET_ACCESS_KEY",
+	"BACKUP_S3_REGION",
+	"BACKUP_S3_ENDPOINT",
+
+	// Disaster Recovery
+	"DR_SECONDARY_REGION",
+	"DR_STANDBY_HOST",
+	"DR_DRILL_SCHEDULE",
+
+	// Plugin Pro
+	"NOTIFY_INTERNAL_SECRET",
+	"NOTIFY_PORT",
+	"NOTIFY_VAPID_PUBLIC_KEY",
+	"NOTIFY_VAPID_PRIVATE_KEY",
+	"NOTIFY_ROUTE",
+	"CRON_INTERNAL_SECRET",
+	"CRON_PORT",
+	"CRON_RETENTION_DAYS",
+	"PLUGIN_AI_MEMORY_LIMIT",
+	"PLUGIN_AI_CPU_LIMIT",
+	"PLUGIN_MUX_MEMORY_LIMIT",
+	"PLUGIN_MUX_CPU_LIMIT",
+	"PLUGIN_CLAW_MEMORY_LIMIT",
+	"PLUGIN_CLAW_CPU_LIMIT",
+	"PLUGIN_DEFAULT_MEMORY_LIMIT",
+	"PLUGIN_DEFAULT_CPU_LIMIT",
+	"PLUGIN_INTERNAL_SECRET",
+
+	// Plugin System
+	"NSELF_PLUGIN_DIR",
+	"NSELF_PLUGIN_CACHE",
+	"NSELF_PLUGIN_REGISTRY",
+	"NSELF_REGISTRY_CACHE_TTL",
+	"NSELF_PLUGIN_LICENSE_KEY",
+	"NSELF_LICENSE_SKIP_VERIFY",
+	"NSELF_PING_API_URL",
+	"NSELF_PRICING_URL",
+
+	// Docker
+	"DOCKER_NETWORK",
+	"DOCKER_LOG_MAX_SIZE",
+	"DOCKER_LOG_MAX_FILE",
+	"DOCKER_STOP_GRACE_PERIOD",
+	"NSELF_DOCKER_BUILD_TIMEOUT",
+
+	// Start/Stop
+	"NSELF_START_MODE",
+	"NSELF_HEALTH_CHECK_TIMEOUT",
+	"NSELF_HEALTH_CHECK_INTERVAL",
+	"NSELF_HEALTH_CHECK_REQUIRED",
+	"NSELF_CLEANUP_ON_START",
+	"NSELF_ALLOW_EXPOSED_PORTS",
+	"NSELF_PARALLEL_LIMIT",
+	"NSELF_LOG_LEVEL",
+	"NSELF_SKIP_HEALTH_CHECKS",
+	"NSELF_STOP_TIMEOUT",
+
+	// Plugin-managed: compose-injected vars that users may set in .env.
+	// The CLI loader does not read these; they are listed here only to suppress
+	// false "unknown env var" warnings from WarnUnknownEnvVars.
+	// Auth service (nHost auth container) — passed through compose template.
+	"AUTH_HOST",
+	"AUTH_SERVER_URL",
+	"AUTH_JWT_SECRET",
+	"AUTH_REFRESH_TOKEN_SECRET",
+	"AUTH_ACCESS_TOKEN_EXPIRY",
+	"AUTH_REFRESH_TOKEN_EXPIRY",
+	"AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED",
+	// Hasura container — passed through compose template.
+	"HASURA_GRAPHQL_ENABLE_TELEMETRY",
+	"HASURA_GRAPHQL_UNAUTHORIZED_ROLE",
+	"HASURA_CONSOLE_PORT",
+	"HASURA_GRAPHQL_JWT_SECRET",
+	"HASURA_GRAPHQL_DATABASE_URL",
+	"HASURA_METADATA_DATABASE_URL",
+	// Nginx compose template vars.
+	"NGINX_GZIP_ENABLED",
+	"NGINX_MODE",
+	"NGINX_MEM_LIMIT",
+	// MinIO/Storage — compose-computed.
+	"S3_ENDPOINT",
+	"STORAGE_PORT",
+	"FILES_ROUTE",
+	// nSelf Admin container.
+	"NSELF_ADMIN_USER",
+	"NSELF_ADMIN_PASSWORD",
+	// Typesense search provider (partial: TYPESENSE_PORT/ROUTE not in knownEnvVars struct).
+	"TYPESENSE_PORT",
+	"TYPESENSE_ROUTE",
+	// Notify plugin.
+	"NOTIFY_VAPID_SUBJECT",
+	// Docker Compose runtime vars (exported by shell wrapper, not read by loader).
+	"COMPOSE_PROJECT_NAME",
+	"DOCKER_BUILDKIT",
+	// Phase 14 CLI-command vars (read by cmd handlers, not by loader).
+	"NSELF_AUTO_TRUST_CA",
+	"NSELF_AUTO_HOSTS_ENTRIES",
+	"NSELF_MKCERT_CAROOT",
+	"NSELF_NO_MONOREPO",
+	// CLI tool behavior vars (read by main binary, not by loader).
+	"DEBUG",
+	"NO_COLOR",
+	// Postgres internal port (documentation-only; always 5432).
+	"POSTGRES_INTERNAL_PORT",
+	// MeiliSearch search engine (plugin-managed: injected into search compose template).
+	"MEILISEARCH_ENABLED",
+	"MEILISEARCH_PORT",
+	"MEILISEARCH_ROUTE",
+	"MEILI_NO_ANALYTICS",
+	// OpenSearch search provider (plugin-managed: opensearch plugin compose template).
+	"OPENSEARCH_VERSION",
+	"OPENSEARCH_PORT",
+	"OPENSEARCH_PASSWORD",
+	"OPENSEARCH_MEMORY",
+	// Zinc search provider (plugin-managed: zinc plugin compose template).
+	"ZINC_VERSION",
+	"ZINC_PORT",
+	"ZINC_ADMIN_USER",
+	"ZINC_ADMIN_PASSWORD",
+	// Sonic search provider (plugin-managed: sonic plugin compose template).
+	"SONIC_VERSION",
+	"SONIC_PORT",
+	"SONIC_PASSWORD",
+	// Dashboard plugin (plugin-managed: dashboard plugin compose template).
+	"DASHBOARD_ENABLED",
+	"DASHBOARD_VERSION",
+	"DASHBOARD_ROUTE",
+	"DASHBOARD_PORT",
+	// Legacy microservice system (plugin-managed: pre-CS_N system; may appear in old .env files).
+	"SERVICES_ENABLED",
+	"NESTJS_ENABLED",
+	"NESTJS_SERVICES",
+	"NESTJS_USE_TYPESCRIPT",
+	"NESTJS_PORT_START",
+	"BULLMQ_ENABLED",
+	"BULLMQ_WORKERS",
+	"BULLMQ_DASHBOARD_ENABLED",
+	"BULLMQ_DASHBOARD_PORT",
+	"BULLMQ_DASHBOARD_ROUTE",
+	"GOLANG_ENABLED",
+	"GOLANG_SERVICES",
+	"GOLANG_PORT_START",
+	"PYTHON_ENABLED",
+	"PYTHON_SERVICES",
+	"PYTHON_FRAMEWORK",
+	"PYTHON_PORT_START",
+	// Plugin integration vars (plugin-managed: stripe, github, shopify plugin compose templates).
+	"STRIPE_API_KEY",
+	"STRIPE_WEBHOOK_SECRET",
+	"STRIPE_SYNC_INTERVAL",
+	"GITHUB_TOKEN",
+	"GITHUB_WEBHOOK_SECRET",
+	"GITHUB_ORG",
+	"GITHUB_REPOS",
+	"SHOPIFY_STORE",
+	"SHOPIFY_ACCESS_TOKEN",
+	"SHOPIFY_API_VERSION",
+	"SHOPIFY_WEBHOOK_SECRET",
+	"SHOPIFY_SYNC_INTERVAL",
+}

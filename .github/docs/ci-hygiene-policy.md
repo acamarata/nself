@@ -1,0 +1,171 @@
+# CI Hygiene Enforcement Policy
+
+**Applies to:** All 11 nSelf sub-repos (cli, admin, nchat, nclaw, ntask, ntv, clawde, plugins,
+plugins-pro, homebrew-nself, web)
+
+**Authority:** GCI § Clean Repo Root, Clean Working Tree, Doc-Sync Ritual, nSelf-First Doctrine
+(PPI), CI/CD 100% Green Hard Rule (PPI)
+
+**Last updated:** 2026-06-01 (P1 E1 W2 S02 T03)
+
+---
+
+## Overview
+
+Three CI workflows enforce structural hygiene across every nSelf sub-repo. Each workflow fires
+on every push to main and every pull request. Failures block merge via branch protection.
+
+| Workflow | File | Trigger | Block-on-fail |
+|---|---|---|---|
+| Clean Working Tree | `clean-root.yml` | push main, PR | YES — CRITICAL violations |
+| Doc-Sync Ritual | `doc-sync.yml` | PR only | YES — user-visible surface changes |
+| nSelf-First Check | `nself-first-check.yml` | PR (compose paths) | YES — unauthorized compose files |
+
+---
+
+## Workflow 1: Clean Working Tree (`clean-root.yml`)
+
+**Purpose:** Prevent tracked secrets, OS junk, stray markdown, and build artifacts from
+entering the repository.
+
+### Checks and Enforcement Levels
+
+| Check | Condition | Severity | Action |
+|---|---|---|---|
+| Stray .md at root | Any `.md` at root except `README.md` | **CRITICAL** | Workflow fails (exit 1), PR blocked |
+| Tracked OS junk | `.DS_Store`, `Thumbs.db`, `desktop.ini`, `*.swp` | **CRITICAL** | Workflow fails, PR blocked |
+| Tracked secret .env | `.env`, `.env.local`, `.env.secrets`, `.env.computed` tracked | **CRITICAL** | Workflow fails, PR blocked; credentials must be rotated |
+| Missing .gitignore baseline | `.DS_Store`, `.env`, `node_modules` not in `.gitignore` | **MEDIUM** | Warning only (`::warning::`) — does not block |
+| Tracked build artifacts | `target/`, `.next/`, Flutter `build/` tracked | **CRITICAL** | Workflow fails, PR blocked |
+
+### Allowed Exceptions
+
+The following are NOT violations per the nSelf env cascade convention (PPI):
+
+- `.env.dev`, `.env.staging`, `.env.prod`, `.env.production` — tracked team defaults (no live secrets)
+- `.env.example`, `.env.template`, `.env.sample` — placeholder files only
+- `.environments/<env>/.env` — web/backend folder-organized variant
+- `Cargo.toml`, `Cargo.lock` at nclaw root — Rust workspace manifest (legitimate monorepo exception)
+- Tool-required root files: `Makefile`, `go.mod`, `go.sum`, `vendor/`, `.goreleaser.yml` in cli;
+  `Formula/`, `tests/` in homebrew-nself (declared per-repo in PRIs)
+
+### Remediation Guidance
+
+| Violation | Fix |
+|---|---|
+| Stray `.md` at root | Move to `.github/wiki/` (public) or `.github/docs/` (private) |
+| Tracked `.DS_Store` | `git rm --cached .DS_Store`, add to `.gitignore`, commit |
+| Tracked secret `.env` | ROTATE credentials first, then `git rm --cached`, scrub history if needed |
+| Tracked build artifact | `git rm --cached -r <path>`, add to `.gitignore`, commit |
+
+---
+
+## Workflow 2: Doc-Sync Ritual (`doc-sync.yml`)
+
+**Purpose:** Enforce that any PR touching a user-visible surface (CLI commands, env vars,
+plugins, pricing, endpoints, UI pages) also updates the corresponding documentation.
+
+### Change-Type Matrix
+
+| Changed paths | Required doc update | Severity |
+|---|---|---|
+| `cli/cmd/commands/`, `cli/internal/commands/` | `cli/.github/wiki/commands/` or F02-COMMAND-INVENTORY.md | **CRITICAL** — blocks PR |
+| `.env.example`, `cli/internal/env/` | F09-ENV-VAR-INVENTORY.md or env-vars reference | **CRITICAL** — blocks PR |
+| `plugins-pro/paid/*/plugin.json`, `plugins/free/*/plugin.json` | F03 or F04 PLUGIN-INVENTORY, bundle docs | **CRITICAL** — blocks PR |
+| `web/org/src/` pricing pages | F07-PRICING-TIERS.md | **CRITICAL** — blocks PR |
+| Source files `**/*.ts`, `**/*.go`, `**/*.dart` | Any `.github/wiki/` or `.github/docs/` change in same PR | **MEDIUM** — warning |
+
+### Exclusions
+
+The following path changes do NOT require doc updates:
+
+- `.claude/**` — AI-only working memory; not human-visible
+- `vendor/`, `node_modules/`, `target/` — dependency trees
+- `*.test.ts`, `*_test.go`, `flutter_test/` — test code (unless API changes)
+- CI workflow files (`.github/workflows/`) — operational, not user-facing
+- Config files that have no user-facing impact
+
+### What Counts as a Doc Update
+
+A PR satisfies the doc-sync check if at least one of these files is also modified:
+
+- `.github/wiki/**` (public repos) or `.github/docs/**` (private repos)
+- `.claude/docs/sport/F0*.md` (SPORT master lists)
+- `web/docs/content/**` (docs.nself.org content)
+- `README.md` (when the change directly affects the readme content)
+
+---
+
+## Workflow 3: nSelf-First Check (`nself-first-check.yml`)
+
+**Purpose:** Detect and block unauthorized side-channel Docker Compose files that bypass the
+nSelf CLI stack.
+
+### What It Checks
+
+On every PR that modifies `docker-compose*.yml` or `docker-compose*.yaml`:
+
+- Every compose file must have one of these approved headers in the first 5 lines:
+  - `# GENERATED BY nself build — DO NOT HAND EDIT` — canonical generated file
+  - `# NSELF-FIRST EXCEPTION: <reason>` — declared exception class (see below)
+  - `# DEPRECATED — side-channel compose, removal tracked in nself-first-cli-gaps.md`
+
+### Approved Exception Classes
+
+| Exception tag | When to use |
+|---|---|
+| `plugin-fragment` | Compose fragment for plugin dev; merged by nself build |
+| `d6-any-stack` | ntask/ any-stack allowance (superseded by nSelf-First, tracked for removal) |
+| `b-type-distribution` | admin/ Docker distribution image (not a backend service) |
+| `cli-internal-template` | cli/ 40+ language templates — these ARE the template library |
+
+### What Is NOT Checked
+
+- Compose files with the GENERATED header — the check passes them
+- Files in `ntask/backend/` — D6 exception (whitelisted globally in the workflow)
+- Files named `docker-compose.plugin.yml` — plugin fragment pattern
+
+### Severity
+
+Any compose file without an approved header: **CRITICAL** — workflow fails, PR blocked.
+
+---
+
+## Repo Coverage Matrix
+
+| Repo | `clean-root.yml` | `doc-sync.yml` | `nself-first-check.yml` |
+|---|---|---|---|
+| cli | ✅ | ✅ | ✅ |
+| admin | ✅ | ✅ | ✅ |
+| nchat | ✅ | ✅ | ✅ |
+| nclaw | ✅ | ✅ | ✅ |
+| ntask | ✅ | ✅ | ✅ |
+| ntv | ✅ | ✅ | ✅ |
+| clawde | ✅ | ✅ | ✅ |
+| plugins | ✅ | ✅ | ✅ |
+| plugins-pro | ✅ | ✅ | ✅ |
+| homebrew-nself | ✅ | ✅ | ✅ |
+| web | ✅ | ✅ | ✅ |
+
+**Coverage:** 11/11 repos for all three workflows as of 2026-06-01.
+
+---
+
+## Enforcement Tiers
+
+| Tier | Condition | Merge allowed? |
+|---|---|---|
+| **CRITICAL** | Tracked `.env` secrets, unauthorized compose, stray root .md | No — workflow exits 1 |
+| **HIGH** | Missing doc update for user-visible surface change | No — workflow exits 1 |
+| **MEDIUM** | Missing .gitignore baseline pattern | Yes — warning only (`::warning::`) |
+| **LOW** | Style/cosmetic issues | Not checked by CI |
+
+---
+
+## See Also
+
+- GCI `~/.claude/CLAUDE.md` § Clean Repo Root, Clean Working Tree
+- PPI `~/Sites/nself/.claude/CLAUDE.md` § Sub-Repo Root Hygiene, Doc-Sync Ritual, nSelf-First Doctrine
+- Template: `.claude/docs/templates/T11-clean-root-workflow.yml`
+- Doctrine: `.claude/docs/doctrines/nself-first.md`, `doc-sync-ritual.md`
+- Evidence: `.claude/phases/current/p1/evidence/ci-hygiene-gate.md`

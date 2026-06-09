@@ -82,4 +82,10 @@ node_modules/
 bin/certs/
 !src/templates/certs/**/*.key
 !src/templates/certs/**/*.pem
+
+# Binary exclusions (Mega P1 T-E3-03 hardening)
+*.exe
+*.dll
+*.so
+*.dylib
 endpoint-auth-checker
