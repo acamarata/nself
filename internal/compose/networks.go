@@ -7,6 +7,9 @@ func (g *Generator) buildNetworks() map[string]NetworkConfig {
 	return map[string]NetworkConfig{
 		name: {
 			Driver: "bridge",
+			// Explicit Name prevents compose from prefixing the project name,
+			// keeping the network identical across regenerations and upgrades.
+			Name: name,
 		},
 	}
 }

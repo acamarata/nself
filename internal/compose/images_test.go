@@ -6,10 +6,19 @@ import (
 )
 
 func TestResolveImage_KnownService(t *testing.T) {
+	// Explicit caller-supplied image (env/config driven) wins over the pin.
+	// Pins overriding configured versions force-migrated existing deployments
+	// (P1 EOP staging incident 2026-06-10).
 	got := ResolveImage("postgres", "postgres:15")
-	want := "pgvector/pgvector:pg16"
+	want := "postgres:15"
 	if got != want {
-		t.Errorf("ResolveImage(postgres) = %q, want %q", got, want)
+		t.Errorf("ResolveImage(postgres, explicit) = %q, want %q", got, want)
+	}
+	// Pin applies only when no image is supplied.
+	got = ResolveImage("postgres", "")
+	want = "pgvector/pgvector:pg16"
+	if got != want {
+		t.Errorf("ResolveImage(postgres, empty) = %q, want %q", got, want)
 	}
 }
 
@@ -22,10 +31,16 @@ func TestResolveImage_UnknownService(t *testing.T) {
 }
 
 func TestResolveImage_AdminIsLatest(t *testing.T) {
+	// Explicit image wins; the :latest pin applies only for empty input.
 	got := ResolveImage("admin", AdminImagePath+":v1.0")
-	want := AdminImagePath + ":latest"
+	want := AdminImagePath + ":v1.0"
 	if got != want {
-		t.Errorf("ResolveImage(admin) = %q, want %q", got, want)
+		t.Errorf("ResolveImage(admin, explicit) = %q, want %q", got, want)
+	}
+	got = ResolveImage("admin", "")
+	want = AdminImagePath + ":latest"
+	if got != want {
+		t.Errorf("ResolveImage(admin, empty) = %q, want %q", got, want)
 	}
 }
 

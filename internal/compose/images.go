@@ -37,13 +37,20 @@ var ImageDigests = map[string]string{}
 // DigestConfigFile is the filename where image digests are stored.
 const DigestConfigFile = ".nself-image-digests.json"
 
-// ResolveImage returns the pinned image tag for a service, optionally with
-// a sha256 digest suffix when available. Falls back to the image string as-is
-// if not in DefaultImageVersions.
+// ResolveImage returns the image tag for a service, optionally with a sha256
+// digest suffix when available.
+//
+// Precedence: a non-empty caller-supplied image (built from env/config such as
+// POSTGRES_VERSION / HASURA_VERSION) ALWAYS wins. The DefaultImageVersions pin
+// applies only when the caller supplies no image. Pins overriding configured
+// versions force-migrated existing deployments on upgrade (P1 EOP staging
+// incident 2026-06-10: postgres:16-alpine volume recreated as pgvector pg16).
 func ResolveImage(service, image string) string {
 	resolved := image
-	if pinned, ok := DefaultImageVersions[service]; ok {
-		resolved = pinned
+	if resolved == "" {
+		if pinned, ok := DefaultImageVersions[service]; ok {
+			resolved = pinned
+		}
 	}
 	// Append digest if available for this service.
 	if digest, ok := ImageDigests[service]; ok && digest != "" {

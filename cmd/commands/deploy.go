@@ -938,8 +938,10 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 	}
 
 	// rsync compose + env files to the remote.
+	// Agent forwarding is disabled via ForwardAgent=no in the -e ssh command —
+	// it is an ssh option and must never appear in rsync argv (breaks rsync 3.x).
 	rsyncArgs := []string{
-		"-az", "--no-agent-forwarding",
+		"-az",
 		"-e", fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=accept-new -o ForwardAgent=no", sshKey),
 		"docker-compose.yml",
 		fmt.Sprintf(".env.%s", target),
@@ -970,8 +972,33 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 		return fmt.Errorf("remote pull on %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
 	}
 
+	// Discover which services exist in the pushed compose so the rolling order
+	// only restarts real services (e.g. generated composes name object storage
+	// "minio", not "storage" — restarting a nonexistent service aborts deploys).
+	lsCmd := fmt.Sprintf("cd %s && docker compose config --services", remotePath)
+	lc := exec.CommandContext(ctx, "ssh",
+		"-i", sshKey,
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "ForwardAgent=no",
+		sshTarget, lsCmd)
+	lc.Env = os.Environ()
+	remoteServices := map[string]bool{}
+	if out, err := lc.CombinedOutput(); err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			if s := strings.TrimSpace(line); s != "" {
+				remoteServices[s] = true
+			}
+		}
+	}
+
 	// Rolling restart on the remote: sequence the services via SSH.
 	for _, svc := range deployServiceOrder {
+		if len(remoteServices) > 0 && !remoteServices[svc] {
+			if !jsonOut {
+				fmt.Printf("  [skip] %s not in remote compose — skipping\n", svc)
+			}
+			continue
+		}
 		restartCmd := fmt.Sprintf("cd %s && docker compose up -d --no-deps %s", remotePath, svc)
 		if !jsonOut {
 			fmt.Printf("  [running] Rolling restart: %s on %s\n", svc, sshTarget)

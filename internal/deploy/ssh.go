@@ -75,7 +75,9 @@ func DeployViaSsh(ctx context.Context, cfg SSHConfig, composePath string) error 
 
 	// 1. rsync compose file to remote.
 	rsyncArgs := []string{
-		"-az", "--no-agent-forwarding",
+		// Agent forwarding is disabled via ForwardAgent=no in sshBaseArgs (the -e
+		// command below) — it is an ssh option and must never appear in rsync argv.
+		"-az",
 		"-e", "ssh " + strings.Join(sshArgs, " "),
 		composePath,
 		fmt.Sprintf("%s:%s", sshTarget, remoteCompose),

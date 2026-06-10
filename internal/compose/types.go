@@ -194,6 +194,11 @@ type BuildConfig struct {
 // NetworkConfig represents a docker-compose network definition.
 type NetworkConfig struct {
 	Driver string `yaml:"driver,omitempty"`
+	// Name pins the real Docker network name. Without it, compose prefixes the
+	// project name (e.g. key "myproj_network" becomes "myproj_myproj_network"),
+	// which split recreated services onto a new network on existing deployments
+	// (P1 EOP prod incident 2026-06-10: nginx 502 on api.nself.org).
+	Name string `yaml:"name,omitempty"`
 }
 
 // VolumeConfig represents a docker-compose volume definition.

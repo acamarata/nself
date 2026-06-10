@@ -26,19 +26,31 @@ func remoteSchemaEnvVars(schemas []config.RemoteSchema) map[string]string {
 // buildPostgresService returns the PostgreSQL service configuration.
 func (g *Generator) buildPostgresService() ServiceConfig {
 	cfg := g.cfg
+	image := ResolveImage("postgres", fmt.Sprintf("postgres:%s", cfg.Postgres.Version))
+	// Image-aware runtime identity: alpine postgres images run as uid 70 and
+	// existing alpine volumes are initialized directly at /var/lib/postgresql/data.
+	// Debian-family images (incl. pgvector/pgvector) run as uid 999 with a pgdata
+	// subdir. Mismatching these against an existing data volume crash-loops the
+	// container (P1 EOP staging incident 2026-06-10).
+	user := "999:999"
+	env := map[string]string{
+		"POSTGRES_USER":             cfg.Postgres.User,
+		"POSTGRES_PASSWORD":         cfg.Postgres.Password,
+		"POSTGRES_DB":               cfg.Postgres.DB,
+		"POSTGRES_HOST_AUTH_METHOD": "scram-sha-256",
+		"PGDATA":                    "/var/lib/postgresql/data/pgdata",
+	}
+	if strings.Contains(image, "alpine") {
+		user = "70:70"
+		delete(env, "PGDATA")
+	}
 	return ServiceConfig{
-		Image:         ResolveImage("postgres", fmt.Sprintf("postgres:%s", cfg.Postgres.Version)),
+		Image:         image,
 		ContainerName: fmt.Sprintf("%s_postgres", cfg.ProjectName),
 		Restart:       "unless-stopped",
 		Networks:      []string{cfg.DockerNetwork},
-		User:          "999:999",
-		Environment: map[string]string{
-			"POSTGRES_USER":             cfg.Postgres.User,
-			"POSTGRES_PASSWORD":         cfg.Postgres.Password,
-			"POSTGRES_DB":               cfg.Postgres.DB,
-			"POSTGRES_HOST_AUTH_METHOD": "scram-sha-256",
-			"PGDATA":                    "/var/lib/postgresql/data/pgdata",
-		},
+		User:          user,
+		Environment:   env,
 		Volumes: []string{
 			"postgres_data:/var/lib/postgresql/data",
 			"./postgres/init:/docker-entrypoint-initdb.d:ro",
