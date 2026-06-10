@@ -222,6 +222,7 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `NSELF_EMBEDDED_PG` | bool | `false` | No | When `true`, uses embedded PostgreSQL via pglite/wasmtime instead of a Docker Postgres container. Hasura connects via a Unix-domain socket bridge. Requires a `CGO_ENABLED=1` build of the CLI. Pass `--embedded-pg` to `nself start` as well. |
+| `NSELF_POSTGRES_MODE` | string | `docker` | No | Selects the Postgres runtime. `docker` runs the standard Postgres container (default, fully supported). `wasm` runs the experimental embedded pglite/wasmtime lane. The `wasm` mode is gated behind the Emscripten ABI shim and is not yet production ready. |
 
 ---
 
