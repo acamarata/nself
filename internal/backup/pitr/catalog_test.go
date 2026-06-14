@@ -3,6 +3,7 @@ package pitr
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -166,12 +167,14 @@ func TestCatalogAtomicWrite(t *testing.T) {
 		t.Error("temp file should not exist after successful write")
 	}
 
-	// Verify the main file has correct perms.
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat catalog: %v", err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("expected 0600 permissions, got %04o", info.Mode().Perm())
+	// Verify the main file has correct perms (Unix only — Windows always returns 0666).
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat catalog: %v", err)
+		}
+		if info.Mode().Perm() != 0600 {
+			t.Errorf("expected 0600 permissions, got %04o", info.Mode().Perm())
+		}
 	}
 }

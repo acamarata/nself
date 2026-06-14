@@ -65,6 +65,7 @@ func TestCollectLicenseKeys_EmptySkipped(t *testing.T) {
 	// Temporarily override home to avoid reading real key files.
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpDir)
 	}
@@ -125,6 +126,7 @@ func TestDetectProduct(t *testing.T) {
 func TestAddAndRemoveKeys(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpDir)
 	}
@@ -168,6 +170,7 @@ func TestAddAndRemoveKeys(t *testing.T) {
 func TestSetKeyReplaceAll(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpDir)
 	}
@@ -199,6 +202,7 @@ func TestSetKeyReplaceAll(t *testing.T) {
 func TestGapRenumbering(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpDir)
 	}

@@ -16,6 +16,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,7 @@ func TestIsOwnerKey(t *testing.T) {
 func TestSetOwnerKey_RoundTrip(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "")
 	t.Setenv("NSELF_OWNER_LICENSE_KEY", "")
 
@@ -56,14 +58,16 @@ func TestSetOwnerKey_RoundTrip(t *testing.T) {
 		t.Errorf("GetOwnerKey returned %q, want %q", got, key)
 	}
 
-	// File mode must be 0600.
-	path := filepath.Join(tmp, ".nself", "owner.license")
-	st, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat owner.license: %v", err)
-	}
-	if st.Mode().Perm() != 0600 {
-		t.Errorf("owner.license mode = %o, want 0600", st.Mode().Perm())
+	// File mode must be 0600 (Unix only — Windows always reports 0666).
+	if runtime.GOOS != "windows" {
+		path := filepath.Join(tmp, ".nself", "owner.license")
+		st, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat owner.license: %v", err)
+		}
+		if st.Mode().Perm() != 0600 {
+			t.Errorf("owner.license mode = %o, want 0600", st.Mode().Perm())
+		}
 	}
 }
 
@@ -71,6 +75,7 @@ func TestSetOwnerKey_RoundTrip(t *testing.T) {
 func TestSetOwnerKey_RejectsNonOwnerPrefix(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "")
 
 	err := SetOwnerKey("nself_pro_notanowner1234567890abcdef1234")
@@ -86,6 +91,7 @@ func TestSetOwnerKey_RejectsNonOwnerPrefix(t *testing.T) {
 func TestSetOwnerKey_RefusedInDevEnv(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "dev")
 
 	err := SetOwnerKey("nself_owner_devblocked1234567890abcdef12")
@@ -107,6 +113,7 @@ func TestSetOwnerKey_RefusedInDevEnv(t *testing.T) {
 func TestGetOwnerKey_EnvVarPrecedence(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "")
 	envKey := "nself_owner_fromenv1234567890abcdef123456"
 	t.Setenv("NSELF_OWNER_LICENSE_KEY", envKey)
@@ -124,6 +131,7 @@ func TestGetOwnerKey_EnvVarPrecedence(t *testing.T) {
 func TestGetOwnerKey_NoFile_NoEnv(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_OWNER_LICENSE_KEY", "")
 
 	got, err := GetOwnerKey()
@@ -139,6 +147,7 @@ func TestGetOwnerKey_NoFile_NoEnv(t *testing.T) {
 func TestClearOwnerKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "")
 	t.Setenv("NSELF_OWNER_LICENSE_KEY", "")
 
@@ -169,6 +178,7 @@ func TestClearOwnerKey(t *testing.T) {
 func TestIsRevoked_FalseWhenAbsent(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	if IsRevoked() {
 		t.Error("IsRevoked() should be false when marker file is absent")
@@ -179,6 +189,7 @@ func TestIsRevoked_FalseWhenAbsent(t *testing.T) {
 func TestRevokeLicense_FullFlow(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 	cachePath := filepath.Join(tmp, "license.json")
 	t.Setenv("LICENSE_CACHE_PATH", cachePath)
@@ -226,6 +237,7 @@ func TestRevokeLicense_FullFlow(t *testing.T) {
 func TestClearRevokedMarker(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	// No-op when absent.
 	if err := ClearRevokedMarker(); err != nil {
@@ -256,6 +268,7 @@ func TestClearRevokedMarker(t *testing.T) {
 func TestRestoreWithKey_InvalidKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	err := RestoreWithKey("not_a_valid_key")
 	if err == nil {
@@ -270,6 +283,7 @@ func TestRestoreWithKey_InvalidKey(t *testing.T) {
 func TestRestoreWithKey_HappyPath(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 	t.Setenv("LICENSE_CACHE_PATH", filepath.Join(tmp, "license.json"))
 
@@ -364,6 +378,7 @@ func TestDetectTierFromKey(t *testing.T) {
 func TestAddKey_FillsAllSlots(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	for i := 1; i <= 10; i++ {
@@ -383,6 +398,7 @@ func TestAddKey_FillsAllSlots(t *testing.T) {
 func TestAddKey_InvalidFormat(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	if err := AddKey("too_short"); err == nil {
 		t.Error("AddKey should reject too-short key")
 	}
@@ -392,6 +408,7 @@ func TestAddKey_InvalidFormat(t *testing.T) {
 func TestRemoveKey_NoMatch(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	// Add one key.
@@ -409,6 +426,7 @@ func TestRemoveKey_NoMatch(t *testing.T) {
 func TestRemoveKey_ByProductName(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	if err := AddKey("nself_pro_byprod1234567890abcdef12345678"); err != nil {
@@ -429,6 +447,7 @@ func TestRemoveKey_ByProductName(t *testing.T) {
 func TestSetKeyReplaceAll_TooShortRejected(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	_, err := SetKeyReplaceAll("short")
 	if err == nil {
@@ -440,6 +459,7 @@ func TestSetKeyReplaceAll_TooShortRejected(t *testing.T) {
 func TestGetAllStoredKeys(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	// Empty initially.
@@ -706,6 +726,7 @@ func TestTailStream_FilterParamsInURL(t *testing.T) {
 func TestRefreshCache_Success(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	cachePath := filepath.Join(tmp, "license.json")
 	t.Setenv("LICENSE_CACHE_PATH", cachePath)
 
@@ -856,6 +877,7 @@ func TestValidateRemote_BadContext(t *testing.T) {
 func TestSetKey_TooShortRejected(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	if err := SetKey("short"); err == nil {
@@ -867,6 +889,7 @@ func TestSetKey_TooShortRejected(t *testing.T) {
 func TestClearKey_NoOpWhenAbsent(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	if err := ClearKey(); err != nil {
@@ -880,6 +903,7 @@ func TestClearKey_NoOpWhenAbsent(t *testing.T) {
 func TestShowKey_NoKey_NoFile(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	masked, tier, err := ShowKey()
@@ -1069,6 +1093,7 @@ func TestRevocationCachePath_DefaultHome(t *testing.T) {
 	t.Setenv("LICENSE_REVOCATION_CACHE_PATH", "")
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	got, err := RevocationCachePath()
 	if err != nil {
@@ -1094,6 +1119,7 @@ func TestCachePath_DefaultHome(t *testing.T) {
 	t.Setenv("LICENSE_CACHE_PATH", "")
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	got, err := CachePath()
 	if err != nil {
@@ -1217,6 +1243,7 @@ func TestDetectProduct_AllKnownPrefixes(t *testing.T) {
 func TestSetKey_TrimsWhitespace(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	if err := SetKey("  nself_pro_trimmed1234567890abcdef12345678  "); err != nil {
@@ -1372,12 +1399,15 @@ func TestWriteRevocationCache_HappyPath(t *testing.T) {
 		t.Fatalf("WriteRevocationCache: %v", err)
 	}
 
-	st, err := os.Stat(cachePath)
-	if err != nil {
-		t.Fatalf("Stat: %v", err)
-	}
-	if st.Mode().Perm() != 0600 {
-		t.Errorf("rev.json mode = %o, want 0600", st.Mode().Perm())
+	// File perms check is Unix only — Windows always reports 0666.
+	if runtime.GOOS != "windows" {
+		st, err := os.Stat(cachePath)
+		if err != nil {
+			t.Fatalf("Stat: %v", err)
+		}
+		if st.Mode().Perm() != 0600 {
+			t.Errorf("rev.json mode = %o, want 0600", st.Mode().Perm())
+		}
 	}
 
 	// Roundtrip read.
@@ -1434,6 +1464,7 @@ func TestCanonicalJSON_AllTypes(t *testing.T) {
 func TestRemoveKey_ByExactKey(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	key := "nself_pro_exactmatch1234567890abcdef1234"
@@ -1454,6 +1485,7 @@ func TestRemoveKey_ByExactKey(t *testing.T) {
 func TestSetKeyReplaceAll_NoExisting(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	n, err := SetKeyReplaceAll("nself_pro_replace1234567890abcdef12345678")
@@ -1478,6 +1510,7 @@ func TestSetKeyReplaceAll_NoExisting(t *testing.T) {
 func TestSetKeyReplaceAll_WithExisting(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	if err := AddKey("nself_pro_old1234567890abcdef1234567890aa"); err != nil {
@@ -1500,6 +1533,9 @@ func TestSetKeyReplaceAll_WithExisting(t *testing.T) {
 
 // TestRevokeLicense_MkdirFails_ParentIsFile creates an obstacle so MkdirAll fails.
 func TestRevokeLicense_MkdirFails_ParentIsFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: .cache file blocker does not prevent MkdirAll reliably")
+	}
 	tmp := t.TempDir()
 	// Make $HOME/.cache a regular FILE so $HOME/.cache/nself MkdirAll fails.
 	cacheParent := filepath.Join(tmp, ".cache")
@@ -1507,6 +1543,7 @@ func TestRevokeLicense_MkdirFails_ParentIsFile(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	err := RevokeLicense()
 	if err == nil {
@@ -1520,6 +1557,7 @@ func TestRestoreWithKey_ClearMarker_NoOp(t *testing.T) {
 	// Confirms clear-marker is safe even when no marker exists.
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_PLUGIN_LICENSE_KEY", "")
 
 	// No prior revocation — RestoreWithKey still works.
@@ -1557,12 +1595,16 @@ func TestWriteRevocationCache_MkdirFails_ParentIsFile(t *testing.T) {
 
 // TestAddKey_MkdirFails sets HOME to a regular file path.
 func TestAddKey_MkdirFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: file-as-directory blocker behaves differently")
+	}
 	tmp := t.TempDir()
 	// Make $HOME/.nself a file so $HOME/.nself/license MkdirAll fails.
 	if err := os.WriteFile(filepath.Join(tmp, ".nself"), []byte("x"), 0600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	err := AddKey("nself_pro_mkdirfail12345678901234567890ab")
 	if err == nil {
@@ -1572,11 +1614,15 @@ func TestAddKey_MkdirFails(t *testing.T) {
 
 // TestSetKey_MkdirFails.
 func TestSetKey_MkdirFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: file-as-directory blocker behaves differently")
+	}
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, ".nself"), []byte("x"), 0600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	err := SetKey("nself_pro_setmkdirfail123456789012345678ab")
 	if err == nil {
@@ -1586,11 +1632,15 @@ func TestSetKey_MkdirFails(t *testing.T) {
 
 // TestSetOwnerKey_MkdirFails.
 func TestSetOwnerKey_MkdirFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: file-as-directory blocker behaves differently")
+	}
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, ".nself"), []byte("x"), 0600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	t.Setenv("NSELF_ENV", "")
 
 	err := SetOwnerKey("nself_owner_mkdirfail1234567890abcdef12345")
@@ -1601,11 +1651,15 @@ func TestSetOwnerKey_MkdirFails(t *testing.T) {
 
 // TestSetKeyReplaceAll_MkdirFails.
 func TestSetKeyReplaceAll_MkdirFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: file-as-directory blocker behaves differently")
+	}
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, ".nself"), []byte("x"), 0600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	_, err := SetKeyReplaceAll("nself_pro_replmkdir123456789012345678901234")
 	if err == nil {
@@ -1617,11 +1671,14 @@ func TestSetKeyReplaceAll_MkdirFails(t *testing.T) {
 
 // --- HOME-unset error paths (forces os.UserHomeDir to fail) ---
 
-// homeUnsetUnix unsets HOME so os.UserHomeDir returns an error.
-// On Unix, UserHomeDir reads $HOME and returns an error when it's empty.
+// unsetHome unsets all env vars that os.UserHomeDir reads so it returns an error.
+// On Unix: HOME. On Windows: USERPROFILE, HOMEDRIVE, HOMEPATH.
 func unsetHome(t *testing.T) {
 	t.Helper()
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 }
 
 func TestCachePath_HomeUnset(t *testing.T) {

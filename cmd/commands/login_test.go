@@ -28,6 +28,7 @@ func isolateHome(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	if runtime.GOOS == "windows" {
 		// os.UserHomeDir() reads USERPROFILE on Windows, not HOME.
 		t.Setenv("USERPROFILE", tmp)

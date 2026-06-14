@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -39,8 +40,13 @@ func (p *pipelineStubProber) KeyState(s Server) (bool, string) {
 // fakeDeploy installs fake SSH and rsync binaries that always exit 0, sets up
 // a fake key, and returns the compose path. deploy.DeployViaSsh calls rsync
 // (step 1) before SSH, so both must be faked for the deploy to succeed.
+// On Windows, shebang scripts cannot be executed directly, so callers must
+// skip the test before calling fakeDeploy.
 func fakeDeploy(t *testing.T) (composePath string) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: requires Unix shell-script PATH override")
+	}
 	dir := t.TempDir()
 
 	// Fake SSH binary exits 0.

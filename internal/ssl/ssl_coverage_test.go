@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -223,6 +224,9 @@ func TestFilterHostsEntries_InternalStar(t *testing.T) {
 // ─── readHostsFile error branches ────────────────────────────────────────────
 
 func TestReadHostsFile_PermissionError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0000 is not enforced")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("running as root — permission test meaningless")
 	}
@@ -454,6 +458,9 @@ func TestCopyMkcertCerts_ReadPrivkeyFail(t *testing.T) {
 }
 
 func TestCopyMkcertCerts_WriteFullchainFail(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0555 does not restrict writes")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("running as root — permission test meaningless")
 	}

@@ -3,6 +3,7 @@ package region
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -82,13 +83,15 @@ func TestSaveLoad(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	// Verify mode is 0600.
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat: %v", err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Fatalf("expected mode 0600, got %v", info.Mode().Perm())
+	// Verify mode is 0600 (Unix only — Windows always reports 0666).
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if info.Mode().Perm() != 0600 {
+			t.Fatalf("expected mode 0600, got %v", info.Mode().Perm())
+		}
 	}
 
 	loaded, err := Load()

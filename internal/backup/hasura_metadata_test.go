@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"runtime"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -80,13 +81,15 @@ func TestBackupHasuraMetadata_WritesFile(t *testing.T) {
 		t.Errorf("backup file is not valid JSON: %v\ncontent: %s", err, string(data))
 	}
 
-	// File must be mode 0600.
-	info, err := os.Stat(dest)
-	if err != nil {
-		t.Fatalf("stat: %v", err)
-	}
-	if perm := info.Mode().Perm(); perm != 0600 {
-		t.Errorf("file mode = %o, want 0600", perm)
+	// File must be mode 0600 (Unix only — Windows always returns 0666).
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(dest)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if perm := info.Mode().Perm(); perm != 0600 {
+			t.Errorf("file mode = %o, want 0600", perm)
+		}
 	}
 }
 
