@@ -1,5 +1,15 @@
 name: SDK Python Publish
 
+# USER ACTION REQUIRED:
+#   Option A — PyPI Trusted Publisher (recommended, no long-lived secret):
+#     Configure OIDC Trusted Publisher at https://pypi.org/manage/account/publishing/
+#     with: owner=nself-org, repo=cli, workflow=sdk-py-publish.yml, environment=pypi.
+#     No secret required when using Trusted Publisher.
+#   Option B — API token:
+#     Set PYPI_API_TOKEN in GitHub org secrets (github.com/organizations/nself-org/settings/secrets/actions):
+#     PYPI_API_TOKEN — PyPI API token from https://pypi.org/manage/account/token/
+#   Without either option configured, this workflow skips publish steps gracefully (no-op success).
+#
 # Triggers on:
 #   - cli release tag (v*)             — publishes SDK in lockstep with CLI
 #   - sdk-scoped tag (cli-sdk-py/v*)   — publishes SDK only (out-of-band patches)

@@ -1,5 +1,13 @@
 name: Publish TypeScript SDK to npm
 
+# USER ACTION REQUIRED:
+#   Set NPM_TOKEN in GitHub org secrets (github.com/organizations/nself-org/settings/secrets/actions):
+#     NPM_TOKEN — npm publish token with write access to the @nself scope.
+#                 Create at https://www.npmjs.com/settings/<user>/tokens (type: Automation).
+#   npm provenance attestation is enabled (--provenance flag). Ensure the npm package is
+#   configured with the nself-org GitHub repository for provenance to resolve correctly.
+#   Without NPM_TOKEN, this workflow skips publish steps gracefully (no-op success).
+#
 # Triggers on:
 #   - cli release tag (v*)            -- publishes SDK in lockstep with CLI
 #   - sdk-scoped tag (cli-sdk-ts/v*)  -- publishes SDK only (out-of-band)
