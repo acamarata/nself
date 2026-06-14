@@ -308,6 +308,12 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Minio.RootPassword = "minioadmin"
 		slog.Debug("default", "key", "MINIO_ROOT_PASSWORD", "value", "[default]")
 	}
+	// Guard: reject minioadmin defaults in staging/prod immediately after
+	// they are set so that nself start exits non-zero with a clear message
+	// before any container is started. Dev is intentionally unblocked.
+	if err := ValidateMinioCredentials(cfg); err != nil {
+		return nil, err
+	}
 	if cfg.Minio.DefaultBuckets == "" {
 		cfg.Minio.DefaultBuckets = "uploads,public,private,temp"
 		slog.Debug("default", "key", "MINIO_DEFAULT_BUCKETS", "value", cfg.Minio.DefaultBuckets)

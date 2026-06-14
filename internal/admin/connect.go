@@ -1,14 +1,17 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
+	"time"
 )
 
 // ConnectOpts holds all parameters for an admin remote connection.
@@ -102,18 +105,42 @@ func OpenBrowser(url string) error {
 	return cmd.Start()
 }
 
-// AdminURL builds the admin URL with the session token as query param.
-func AdminURL(localPort int, token string, project string) string {
+// AdminURL builds the admin URL without embedding the session token.
+// The token is delivered via BootstrapSession (POST /auth/bootstrap) before the
+// browser is opened, so the URL itself never carries a credential.
+func AdminURL(localPort int, project string) string {
 	u := fmt.Sprintf("http://localhost:%d", localPort)
-	params := []string{}
-	if token != "" {
-		params = append(params, "token="+token)
-	}
 	if project != "" {
-		params = append(params, "project="+project)
-	}
-	if len(params) > 0 {
-		u += "?" + strings.Join(params, "&")
+		u += "?project=" + project
 	}
 	return u
+}
+
+// bootstrapPayload is the JSON body sent to /auth/bootstrap.
+type bootstrapPayload struct {
+	Token string `json:"token"`
+}
+
+// BootstrapSession delivers the session token to the admin server via a
+// localhost-only POST to /auth/bootstrap. The server stores the token in memory
+// and responds with an HttpOnly session cookie. Call this BEFORE OpenBrowser so
+// the browser already has the cookie when it loads the admin UI.
+func BootstrapSession(localPort int, token string) error {
+	payload, err := json.Marshal(bootstrapPayload{Token: token})
+	if err != nil {
+		return fmt.Errorf("bootstrap session: marshal payload: %w", err)
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/api/auth/bootstrap", localPort)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(url, "application/json", bytes.NewReader(payload)) //nolint:noctx
+	if err != nil {
+		return fmt.Errorf("bootstrap session: POST %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bootstrap session: server returned %d", resp.StatusCode)
+	}
+	return nil
 }

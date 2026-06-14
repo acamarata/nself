@@ -15,6 +15,7 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func init() {
 		// flag does not exist on the command. Since "user" is registered on the
 		// line above, this can only fire if this code is misedited. It is a
 		// bug-in-our-code guard, not a user-input boundary.
-		panic(fmt.Sprintf("gdpr export: mark --user required: %v", err))
+		log.Fatalf("gdpr export: mark --user required: %v — this is a code bug, not a config error", err)
 	}
 }
 
@@ -173,7 +174,7 @@ func init() {
 		// flag does not exist on the command. Since "user" is registered on the
 		// line above, this can only fire if this code is misedited. It is a
 		// bug-in-our-code guard, not a user-input boundary.
-		panic(fmt.Sprintf("gdpr delete: mark --user required: %v", err))
+		log.Fatalf("gdpr delete: mark --user required: %v — this is a code bug, not a config error", err)
 	}
 }
 
@@ -248,7 +249,7 @@ func init() {
 		// flag does not exist on the command. Since "request" is registered on the
 		// line above, this can only fire if this code is misedited. It is a
 		// bug-in-our-code guard, not a user-input boundary.
-		panic(fmt.Sprintf("gdpr status: mark --request required: %v", err))
+		log.Fatalf("gdpr status: mark --request required: %v — this is a code bug, not a config error", err)
 	}
 }
 
@@ -348,7 +349,7 @@ func init() {
 	gdprForgetCmd.Flags().String("user", "", "User ID to erase data for (required)")
 	gdprForgetCmd.Flags().Bool("dry-run", false, "List affected rows without deleting anything")
 	if err := gdprForgetCmd.MarkFlagRequired("user"); err != nil {
-		panic(fmt.Sprintf("gdpr forget: mark --user required: %v", err))
+		log.Fatalf("gdpr forget: mark --user required: %v — this is a code bug, not a config error", err)
 	}
 }
 

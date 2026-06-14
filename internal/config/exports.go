@@ -68,6 +68,9 @@ func DefaultFor(key string) string {
 		"REDIS_POOL_SIZE": "50 (prod) / 20 (dev)",
 
 		// MinIO
+		// WARNING: MINIO_ROOT_USER and MINIO_ROOT_PASSWORD below are dev-only defaults.
+		// Both MUST be overridden with strong unique values in staging/prod .env files.
+		// nself start will exit non-zero if either is 'minioadmin' in staging/prod.
 		"MINIO_ENABLED":         "false",
 		"MINIO_VERSION":         "latest",
 		"MINIO_PORT":            "9000",

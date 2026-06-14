@@ -1,6 +1,10 @@
 package admin
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -82,17 +86,60 @@ func TestNewSessionToken(t *testing.T) {
 }
 
 func TestAdminURL(t *testing.T) {
-	u := AdminURL(3021, "abc123", "")
-	if u != "http://localhost:3021?token=abc123" {
-		t.Errorf("unexpected URL: %s", u)
-	}
-	u = AdminURL(3021, "tok", "nself")
-	if u != "http://localhost:3021?token=tok&project=nself" {
-		t.Errorf("unexpected URL with project: %s", u)
-	}
-	u = AdminURL(3021, "", "")
+	// Token must never appear in the URL (moved to BootstrapSession POST).
+	u := AdminURL(3021, "")
 	if u != "http://localhost:3021" {
 		t.Errorf("unexpected bare URL: %s", u)
+	}
+	u = AdminURL(3021, "nself")
+	if u != "http://localhost:3021?project=nself" {
+		t.Errorf("unexpected URL with project: %s", u)
+	}
+	// Verify no token appears regardless of the project value.
+	if contains(u, "token=") {
+		t.Errorf("AdminURL must not contain token=, got: %s", u)
+	}
+}
+
+func TestBootstrapSession(t *testing.T) {
+	var receivedToken string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/auth/bootstrap" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var body struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode body: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		receivedToken = body.Token
+		w.Header().Set("Set-Cookie", "nself-session="+body.Token+"; HttpOnly; SameSite=Strict; Path=/")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// srv.URL is http://127.0.0.1:<port> — extract port for BootstrapSession.
+	var port int
+	if _, err := fmt.Sscanf(srv.URL, "http://127.0.0.1:%d", &port); err != nil {
+		t.Fatalf("could not parse server port from %s: %v", srv.URL, err)
+	}
+
+	token := "deadbeef01234567deadbeef01234567deadbeef01234567deadbeef01234567"
+	if err := BootstrapSession(port, token); err != nil {
+		t.Fatalf("BootstrapSession returned error: %v", err)
+	}
+	if receivedToken != token {
+		t.Errorf("server received token %q, want %q", receivedToken, token)
 	}
 }
 

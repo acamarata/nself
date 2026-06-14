@@ -45,8 +45,9 @@ Steps performed:
   2. Start nself-admin on the server if not running
   3. Open local forward: -L localPort:127.0.0.1:remotePort
   4. Generate per-session token
-  5. Open browser to http://localhost:<localPort>?token=<token>
-  6. Tear down on Ctrl+C or UI disconnect`,
+  5. POST token to /api/auth/bootstrap (sets HttpOnly session cookie)
+  6. Open browser to http://localhost:<localPort>
+  7. Tear down on Ctrl+C or UI disconnect`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		allFlag, _ := cmd.Flags().GetBool("all")
@@ -134,8 +135,13 @@ func connectSingle(ctx context.Context, host, user string, port, localPort, remo
 		return err
 	}
 
-	// Step 5: Open browser
-	adminURL := admin.AdminURL(localPort, token, "")
+	// Step 5: Bootstrap session token via localhost POST (token never goes in URL)
+	if bsErr := admin.BootstrapSession(localPort, token); bsErr != nil {
+		ui.Warn(fmt.Sprintf("Could not bootstrap session: %v", bsErr))
+	}
+
+	// Step 6: Open browser — URL carries no token
+	adminURL := admin.AdminURL(localPort, "")
 	ui.Success(fmt.Sprintf("Connected. Admin UI: %s", adminURL))
 	if openErr := admin.OpenBrowser(adminURL); openErr != nil {
 		ui.Warn(fmt.Sprintf("Could not open browser: %v (open manually: %s)", openErr, adminURL))

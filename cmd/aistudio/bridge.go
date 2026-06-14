@@ -19,6 +19,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// maskToken returns a masked token showing only the first 8 characters followed by ****.
+// If the token is 8 characters or shorter, returns ****.
+// If NSELF_DEBUG=1, returns the full token.
+func maskToken(t string) string {
+	if os.Getenv("NSELF_DEBUG") == "1" {
+		return t
+	}
+	if len(t) <= 8 {
+		return "****"
+	}
+	return t[:8] + "****"
+}
+
 // BridgeSession holds runtime state for one active tunnel session.
 type BridgeSession struct {
 	TunnelURL  string    `json:"tunnel_url"`
@@ -178,14 +191,15 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("\nAI Studio bridge ready: %s\n", tunnelURL)
-	fmt.Printf("Auth token:             %s\n", authToken)
+	fmt.Printf("Auth token:             %s\n", maskToken(authToken))
 	fmt.Printf("Schema context:         %v\n", !bridgeFlagValues.noContext)
 	fmt.Printf("Idle timeout:           %v\n", idleTimeout)
 	if bridgeFlagValues.ipAllowlist != "" {
 		fmt.Printf("IP allowlist:           %s\n", bridgeFlagValues.ipAllowlist)
 	}
+	fmt.Printf("(Full token shown only with NSELF_DEBUG=1)\n")
 	fmt.Printf("\nIn AI Studio → Custom connector → URL: %s/v1/graphql\n", tunnelURL)
-	fmt.Printf("Authorization header:   Bearer %s\n", authToken)
+	fmt.Printf("Authorization header:   Bearer %s\n", maskToken(authToken))
 	fmt.Printf("\nPress Ctrl-C to stop.\n\n")
 
 	// Idle timeout watcher.

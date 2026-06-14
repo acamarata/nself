@@ -206,6 +206,12 @@ func TestApplyDefaults_DoesNotOverrideExistingValues(t *testing.T) {
 		ProjectName: "myapp",
 		BaseDomain:  "example.com",
 		Env:         "prod",
+		// Provide strong MinIO credentials to satisfy the prod guard; the test
+		// is only asserting that ProjectName/BaseDomain/Env are not overwritten.
+		Minio: MinioConfig{
+			RootUser:     "prod-minio-user",
+			RootPassword: "str0ngProdP@ssword!!",
+		},
 	}
 	var applyErr error
 	cfg, applyErr = ApplyDefaults(cfg)
