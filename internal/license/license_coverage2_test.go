@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -217,6 +218,7 @@ func TestBundleEntitled_NetworkErrorWithFailOpenNoCacheHit(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1 but no cache file → should error (cache miss).
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	refuseSrv := newRefusingServer(t)
 	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
@@ -235,6 +237,7 @@ func TestBundleEntitled_NetworkErrorWithFailOpenWrongKey(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache exists but for a different key.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	refuseSrv := newRefusingServer(t)
 	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
@@ -266,6 +269,7 @@ func TestBundleEntitled_NetworkErrorWithFailOpenTierPlus(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache with tier "plus" → should succeed.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	refuseSrv := newRefusingServer(t)
 	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
@@ -292,6 +296,7 @@ func TestBundleEntitled_NetworkErrorWithFailOpenBundleSentinel(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache with bundle:<name> sentinel.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	refuseSrv := newRefusingServer(t)
 	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
@@ -440,6 +445,7 @@ func TestCollectLicenseKey_NoEnvFallsToGetKey(t *testing.T) {
 	// GetKey() reads from ~/.nself/license/key; in a clean HOME it'll be empty.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	got := CollectLicenseKey()
 	// We just assert no panic; empty string is fine when no key file exists.
 	_ = got
@@ -450,6 +456,7 @@ func TestCollectLicenseKey_NoEnvFallsToGetKey(t *testing.T) {
 func TestRevokeLicense_MkdirAllFail(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	// revokedMarkerPath() returns ~/.cache/nself/license.revoked.
 	// Place a plain file at ~/.cache/nself so MkdirAll on it fails.
@@ -475,8 +482,12 @@ func TestRevokeLicense_MkdirAllFail(t *testing.T) {
 // We can't mock os.File.Chmod directly without replacing the file creation,
 // so we verify the happy path and that chmod 0600 is applied.
 func TestWriteCache_HappyPathPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	// Use LICENSE_CACHE_PATH to control exactly where the cache lands.
 	cachePath := filepath.Join(home, "cache", "license.json")
 	t.Setenv("LICENSE_CACHE_PATH", cachePath)

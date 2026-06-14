@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
@@ -221,13 +222,15 @@ func TestLoadOrCreatePersistsAndLoads(t *testing.T) {
 		t.Fatal("LoadOrCreate returned nil identity")
 	}
 
-	// Verify file was written with restrictive permissions.
-	fi, err := os.Stat(keyPath)
-	if err != nil {
-		t.Fatalf("key file not created: %v", err)
-	}
-	if fi.Mode().Perm() != 0600 {
-		t.Errorf("key file mode: got %o want 0600", fi.Mode().Perm())
+	// Verify file was written with restrictive permissions (Unix only).
+	if runtime.GOOS != "windows" {
+		fi, err := os.Stat(keyPath)
+		if err != nil {
+			t.Fatalf("key file not created: %v", err)
+		}
+		if fi.Mode().Perm() != 0600 {
+			t.Errorf("key file mode: got %o want 0600", fi.Mode().Perm())
+		}
 	}
 
 	// Second call: file exists — loads the same identity.

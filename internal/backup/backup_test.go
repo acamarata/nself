@@ -234,7 +234,7 @@ func TestHasuraMetadataExportCmd_FailureNoOutputFile(t *testing.T) {
 	cmd := hasuraMetadataExportCmd(t.Context(), cfg)
 
 	// Verify cmd.Path is "docker" (or a resolved path to docker).
-	if !strings.HasSuffix(cmd.Path, "docker") {
+	if !strings.HasSuffix(cmd.Path, "docker") && !strings.HasSuffix(cmd.Path, "docker.exe") {
 		t.Errorf("expected docker binary in cmd.Path, got %q", cmd.Path)
 	}
 

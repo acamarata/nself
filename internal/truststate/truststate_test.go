@@ -11,6 +11,7 @@ func overrideHome(t *testing.T, dir string) {
 	t.Helper()
 	orig := os.Getenv("HOME")
 	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 	_ = orig // keep for clarity
 }
 

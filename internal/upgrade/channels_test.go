@@ -95,6 +95,7 @@ func TestPingAPIEndpoint(t *testing.T) {
 func TestSaveAndLoadChannel(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmp)
 	}
@@ -137,6 +138,7 @@ func TestSaveAndLoadChannel(t *testing.T) {
 func TestLoadChannel_CorruptFileFallsBack(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmp)
 	}

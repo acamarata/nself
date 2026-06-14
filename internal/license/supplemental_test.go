@@ -19,6 +19,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -266,6 +267,9 @@ func TestPrintEvent_UnknownResultNoColor(t *testing.T) {
 // when the cache file exists but os.Remove fails (e.g., the directory is
 // read-only). This covers the non-IsNotExist error branch.
 func TestDeleteCache_PermissionDenied(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod does not restrict file removal")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("test requires non-root: root can remove files in read-only dirs")
 	}

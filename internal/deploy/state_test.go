@@ -3,6 +3,7 @@ package deploy
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -179,6 +180,9 @@ func TestSaveDeployState_atomicWrite(t *testing.T) {
 // TestSaveDeployState_filePerms verifies that the state file is written with
 // 0600 permissions (deploy state contains hostnames and error context).
 func TestSaveDeployState_filePerms(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	tmp := t.TempDir()
 
 	state := StrategyState{Strategy: StrategyBlueGreen, Target: "prod", Success: true}

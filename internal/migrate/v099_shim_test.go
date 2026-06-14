@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -148,6 +149,9 @@ func TestRunV099Migration_IsIdempotent(t *testing.T) {
 }
 
 func TestRunV099Migration_LicenseFilePerm0600(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	home := seedV099Home(t)
 	if _, err := RunV099Migration(home); err != nil {
 		t.Fatalf("RunV099Migration: %v", err)

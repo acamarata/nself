@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -378,8 +379,11 @@ func TestRun_WritesFiles(t *testing.T) {
 			t.Errorf("expected file %s to exist: %v", p, err)
 			continue
 		}
-		if info.Mode().Perm() != 0600 {
-			t.Errorf("file %s has perm %o, want 0600", p, info.Mode().Perm())
+		// Perm check is Unix only — Windows always reports 0666.
+		if runtime.GOOS != "windows" {
+			if info.Mode().Perm() != 0600 {
+				t.Errorf("file %s has perm %o, want 0600", p, info.Mode().Perm())
+			}
 		}
 	}
 }

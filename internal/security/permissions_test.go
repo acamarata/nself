@@ -3,12 +3,16 @@ package security
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 // TestEnforceFilePermissions_Success verifies that a file's permissions are
 // updated to the requested mode.
 func TestEnforceFilePermissions_Success(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.env")
 	if err := os.WriteFile(path, []byte("KEY=val"), 0o644); err != nil {
@@ -42,6 +46,9 @@ func TestEnforceFilePermissions_MissingFile(t *testing.T) {
 // TestEnforceFilePermissions_MultipleFiles verifies correct handling of
 // multiple files with different required modes.
 func TestEnforceFilePermissions_MultipleFiles(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 
 	cases := []struct {
@@ -84,6 +91,9 @@ func TestAuditProjectPermissions_EmptyDir(t *testing.T) {
 // TestAuditProjectPermissions_DetectsOverPermissive verifies that a .env file
 // with mode 0644 (world-readable) is flagged as a finding.
 func TestAuditProjectPermissions_DetectsOverPermissive(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix file permission bits are not enforced")
+	}
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
 	if err := os.WriteFile(envPath, []byte("SECRET=abc"), 0o644); err != nil {
