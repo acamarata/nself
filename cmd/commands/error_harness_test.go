@@ -93,6 +93,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"clean", []string{"clean", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"clean", []string{"clean", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── ci ─────────────────────────────────────────────────────────────────
+	{"ci", []string{"ci", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"ci", []string{"ci", "--check", "/nonexistent-path-xyz"}, "(a) nonexistent repo path"},
+	{"ci", []string{"ci", "unknownsub_xyz"}, "(c) nonexistent repo-root path — no stack detected"},
+
 	// ── completion ─────────────────────────────────────────────────────────
 	{"completion", []string{"completion", "invalidshell_xyz"}, "(a) unknown shell"},
 	{"completion", []string{"completion", "--no-such-flag-xyz"}, "(b) invalid flag"},
