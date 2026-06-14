@@ -220,7 +220,7 @@ func TestDefineEmscriptenABI_SyscallStubs(t *testing.T) {
 	}
 }
 
-// TestDefineEmscriptenABI_InvokeStubs verifies that all 47 invoke_* trampolines
+// TestDefineEmscriptenABI_InvokeStubs verifies that all 48 invoke_* trampolines
 // are registered as functions.
 func TestDefineEmscriptenABI_InvokeStubs(t *testing.T) {
 	linker, store, _ := newTestLinkerWithABI(t)

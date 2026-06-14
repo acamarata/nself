@@ -34,6 +34,7 @@ package embedded
 // See also: wasmtime_runtime.go (boot function that calls defineEmscriptenABI).
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,6 +43,68 @@ import (
 
 // enosys is the standard "function not implemented" errno for stub syscalls.
 const enosys = int32(-38)
+
+// errIndirectCallNotFound is returned by invoke_* trampolines when the
+// __indirect_function_table slot at the requested index is empty (null funcref)
+// or out of bounds.
+var errIndirectCallNotFound = errors.New("embedded/abi: indirect call: function not found in table")
+
+// tableGet retrieves the *Func at index idx from the __indirect_function_table.
+//
+// Returns (nil, errIndirectCallNotFound) when the slot is out of bounds or
+// holds a null funcref, so callers can return a typed zero value safely.
+func tableGet(tbl *wasmtime.Table, store wasmtime.Storelike, idx int32) (*wasmtime.Func, error) {
+	if idx < 0 {
+		return nil, errIndirectCallNotFound
+	}
+	val, err := tbl.Get(store, uint32(idx))
+	if err != nil {
+		// Out-of-bounds index.
+		return nil, errIndirectCallNotFound
+	}
+	fn := val.Funcref()
+	if fn == nil {
+		return nil, errIndirectCallNotFound
+	}
+	return fn, nil
+}
+
+// defineGOTNamespaces registers all imports from the GOT.mem and GOT.func
+// namespace modules required by pglite v0.2.17.
+//
+// Emscripten's dynamic-linking ABI uses Global Offset Table (GOT) globals for
+// position-independent addressing. The WASM binary imports mutable i32 globals
+// from the "GOT.mem" namespace; the runtime dynamic linker writes the resolved
+// addresses before calling _start. "GOT.func" imports are not present in
+// pglite v0.2.17 (verified via WebAssembly.Module.imports in Node.js).
+//
+// Enumerated GOT.mem imports (1 total, confirmed from pglite v0.2.17 binary):
+//
+//	GOT.mem::__heap_base — mutable i32; address of the start of the free heap.
+//
+// Mutability: GOT.mem globals MUST be mutable so the dynamic linker can write
+// the final relocated address. Initial value 0 is correct — the linker writes
+// the real address during module initialisation.
+//
+// Must be called after DefineWasi() and defineEmscriptenABI(), before Instantiate().
+func defineGOTNamespaces(linker *wasmtime.Linker, store *wasmtime.Store) error {
+	// All GOT.mem globals are mutable i32.
+	i32Mut := wasmtime.NewGlobalType(wasmtime.NewValType(wasmtime.KindI32), true)
+
+	gotMemGlobals := []string{
+		"__heap_base",
+	}
+	for _, name := range gotMemGlobals {
+		g, err := wasmtime.NewGlobal(store, i32Mut, wasmtime.ValI32(0))
+		if err != nil {
+			return fmt.Errorf("embedded/abi: GOT.mem::%s create: %w", name, err)
+		}
+		if err := linker.Define(store, "GOT.mem", name, g); err != nil {
+			return fmt.Errorf("embedded/abi: GOT.mem::%s define: %w", name, err)
+		}
+	}
+	return nil
+}
 
 // defineEmscriptenABI registers all 113 env:: imports required by pglite v0.2.17
 // with Emscripten. It must be called after DefineWasi() and before Instantiate().
@@ -390,84 +453,730 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	// ── 4h. invoke_* trampolines ─────────────────────────────────────────
 	//
 	// Emscripten uses invoke_<sig> helpers for indirect calls through the
-	// function table when exceptions/longjmp are in play. Each trampoline:
-	//  1. Reads the function reference from __indirect_function_table[tableIdx].
-	//  2. Calls it with the remaining arguments.
+	// function table when exceptions/longjmp are in play.
 	//
 	// Signature encoding (Emscripten convention):
 	//   v = void, i = i32, j = i64, d = f64, f = f32
 	//
-	// pglite v0.2.17 imports 49 distinct invoke_* signatures. All are defined
-	// here as no-op stubs that return the zero value for the return type.
-	// The unconditional skip in integration_test.go (embeddedPGExperimentalSkip)
-	// ensures these stubs are never called at runtime until the full invoke_*
-	// dispatch is implemented (P104 residue).
+	// pglite v0.2.17 imports 48 distinct invoke_* signatures. Each trampoline:
+	//  1. Reads the funcref at __indirect_function_table[tableIdx] via tableGet.
+	//  2. Calls it with the trailing typed arguments via wasmtime.Func.Call.
+	//  3. Returns the typed result (or zero on null/OOB slot; never panics).
+	//
+	// The *wasmtime.Caller first parameter is provided by wasmtime and acts as
+	// the Storelike context; it is NOT counted as a wasm parameter. The last
+	// *wasmtime.Trap return is the conventional "host trap" return; nil = ok.
 
-	invokeStubs := []struct {
-		name string
-		fn   interface{}
-	}{
-		// void return
-		{"invoke_v", func(idx int32) {}},
-		{"invoke_vi", func(idx, a0 int32) {}},
-		{"invoke_vii", func(idx, a0, a1 int32) {}},
-		{"invoke_viii", func(idx, a0, a1, a2 int32) {}},
-		{"invoke_viiii", func(idx, a0, a1, a2, a3 int32) {}},
-		{"invoke_viiiii", func(idx, a0, a1, a2, a3, a4 int32) {}},
-		{"invoke_viiiiii", func(idx, a0, a1, a2, a3, a4, a5 int32) {}},
-		{"invoke_viiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6 int32) {}},
-		{"invoke_viiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) {}},
-		{"invoke_viiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8 int32) {}},
-		{"invoke_viiiiiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 int32) {}},
-		{"invoke_vid", func(idx int32, a0 float64) {}},
-		// void + i64 variants
-		{"invoke_viiij", func(idx, a0, a1, a2 int32, a3 int64) {}},
-		{"invoke_viij", func(idx, a0, a1 int32, a2 int64) {}},
-		{"invoke_viiji", func(idx, a0, a1 int32, a2 int64, a3 int32) {}},
-		{"invoke_viijii", func(idx, a0, a1 int32, a2 int64, a3, a4 int32) {}},
-		{"invoke_viijiiii", func(idx, a0, a1 int32, a2 int64, a3, a4, a5, a6 int32) {}},
-		{"invoke_vij", func(idx, a0 int32, a1 int64) {}},
-		{"invoke_viji", func(idx, a0 int32, a1 int64, a2 int32) {}},
-		{"invoke_vijiji", func(idx, a0 int32, a1 int64, a2 int32, a3 int64, a4 int32) {}},
-		{"invoke_vj", func(idx int32, a0 int64) {}},
-		{"invoke_vji", func(idx int32, a0 int64, a1 int32) {}},
-		// i32 return
-		{"invoke_i", func(idx int32) int32 { return 0 }},
-		{"invoke_ii", func(idx, a0 int32) int32 { return 0 }},
-		{"invoke_iii", func(idx, a0, a1 int32) int32 { return 0 }},
-		{"invoke_iiii", func(idx, a0, a1, a2 int32) int32 { return 0 }},
-		{"invoke_iiiii", func(idx, a0, a1, a2, a3 int32) int32 { return 0 }},
-		{"invoke_iiiiii", func(idx, a0, a1, a2, a3, a4 int32) int32 { return 0 }},
-		{"invoke_iiiiiii", func(idx, a0, a1, a2, a3, a4, a5 int32) int32 { return 0 }},
-		{"invoke_iiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6 int32) int32 { return 0 }},
-		{"invoke_iiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) int32 { return 0 }},
-		{"invoke_iiiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8 int32) int32 { return 0 }},
-		{"invoke_iiiiiiiiiiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15 int32) int32 { return 0 }},
-		// i32 return + i64 variants
-		{"invoke_iiij", func(idx, a0, a1 int32, a2 int64) int32 { return 0 }},
-		{"invoke_iiiiiji", func(idx, a0, a1, a2, a3 int32, a4 int64, a5 int32) int32 { return 0 }},
-		{"invoke_iiiij", func(idx, a0, a1, a2 int32, a3 int64) int32 { return 0 }},
-		{"invoke_iiiijii", func(idx, a0, a1, a2 int32, a3 int64, a4, a5 int32) int32 { return 0 }},
-		{"invoke_iiji", func(idx, a0 int32, a1 int64, a2 int32) int32 { return 0 }},
-		{"invoke_ij", func(idx int32, a0 int64) int32 { return 0 }},
-		{"invoke_ijiiiii", func(idx int32, a0 int64, a1, a2, a3, a4, a5 int32) int32 { return 0 }},
-		{"invoke_ijiiiiii", func(idx int32, a0 int64, a1, a2, a3, a4, a5, a6 int32) int32 { return 0 }},
-		// i64 return
-		{"invoke_ji", func(idx, a0 int32) int64 { return 0 }},
-		{"invoke_jii", func(idx, a0, a1 int32) int64 { return 0 }},
-		{"invoke_jiiii", func(idx, a0, a1, a2, a3 int32) int64 { return 0 }},
-		{"invoke_jiiiii", func(idx, a0, a1, a2, a3, a4 int32) int64 { return 0 }},
-		{"invoke_jiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) int64 { return 0 }},
-		// f64 return
-		{"invoke_di", func(idx, a0 int32) float64 { return 0 }},
-		{"invoke_id", func(idx int32, a0 float64) int32 { return 0 }},
+	type invokeError = *wasmtime.Trap
+
+	// ── void return ──────────────────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_v",
+		func(c *wasmtime.Caller, idx int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_v[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_v: %w", err)
 	}
 
-	for _, s := range invokeStubs {
-		stub := s // capture
-		if err := linker.DefineFunc(store, "env", stub.name, stub.fn); err != nil {
-			return fmt.Errorf("embedded/abi: %s: %w", stub.name, err)
-		}
+	if err := linker.DefineFunc(store, "env", "invoke_vi",
+		func(c *wasmtime.Caller, idx, a0 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vi[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vi: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vii",
+		func(c *wasmtime.Caller, idx, a0, a1 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5, a6); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiiiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7, a8 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7, a8); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiiiiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiiiiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiiiiiiiiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiiiiiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vid",
+		func(c *wasmtime.Caller, idx int32, a0 float64) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vid[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vid: %w", err)
+	}
+
+	// ── void + i64 variants ───────────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiij",
+		func(c *wasmtime.Caller, idx, a0, a1, a2 int32, a3 int64) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiij[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viij",
+		func(c *wasmtime.Caller, idx, a0, a1 int32, a2 int64) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viij[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viiji",
+		func(c *wasmtime.Caller, idx, a0, a1 int32, a2 int64, a3 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viiji[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viiji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viijii",
+		func(c *wasmtime.Caller, idx, a0, a1 int32, a2 int64, a3, a4 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viijii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viijii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viijiiii",
+		func(c *wasmtime.Caller, idx, a0, a1 int32, a2 int64, a3, a4, a5, a6 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4, a5, a6); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viijiiii[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viijiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vij",
+		func(c *wasmtime.Caller, idx, a0 int32, a1 int64) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vij[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_viji",
+		func(c *wasmtime.Caller, idx, a0 int32, a1 int64, a2 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_viji[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_viji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vijiji",
+		func(c *wasmtime.Caller, idx, a0 int32, a1 int64, a2 int32, a3 int64, a4 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1, a2, a3, a4); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vijiji[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vijiji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vj",
+		func(c *wasmtime.Caller, idx int32, a0 int64) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vj[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vj: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_vji",
+		func(c *wasmtime.Caller, idx int32, a0 int64, a1 int32) invokeError {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return nil
+			}
+			if _, e := fn.Call(c, a0, a1); e != nil {
+				return wasmtime.NewTrap(fmt.Sprintf("invoke_vji[%d]: %v", idx, e))
+			}
+			return nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_vji: %w", err)
+	}
+
+	// ── i32 return ────────────────────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_i",
+		func(c *wasmtime.Caller, idx int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_i[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_i: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_ii",
+		func(c *wasmtime.Caller, idx, a0 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_ii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_ii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iii",
+		func(c *wasmtime.Caller, idx, a0, a1 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7, a8 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7, a8)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiiiiiiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiiiiiiiiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiiiiiiiiiiiii: %w", err)
+	}
+
+	// ── i32 return + i64 variants ─────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiij",
+		func(c *wasmtime.Caller, idx, a0, a1 int32, a2 int64) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiij[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiiiji",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3 int32, a4 int64, a5 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiiiji[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiiiji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiij",
+		func(c *wasmtime.Caller, idx, a0, a1, a2 int32, a3 int64) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiij[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiiijii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2 int32, a3 int64, a4, a5 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiiijii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiiijii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_iiji",
+		func(c *wasmtime.Caller, idx, a0 int32, a1 int64, a2 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_iiji[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_iiji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_ij",
+		func(c *wasmtime.Caller, idx int32, a0 int64) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_ij[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_ij: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_ijiiiii",
+		func(c *wasmtime.Caller, idx int32, a0 int64, a1, a2, a3, a4, a5 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_ijiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_ijiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_ijiiiiii",
+		func(c *wasmtime.Caller, idx int32, a0 int64, a1, a2, a3, a4, a5, a6 int32) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_ijiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_ijiiiiii: %w", err)
+	}
+
+	// ── i64 return ────────────────────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_ji",
+		func(c *wasmtime.Caller, idx, a0 int32) (int64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_ji[%d]: %v", idx, e2))
+			}
+			return ret.(int64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_ji: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_jii",
+		func(c *wasmtime.Caller, idx, a0, a1 int32) (int64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_jii[%d]: %v", idx, e2))
+			}
+			return ret.(int64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_jii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_jiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3 int32) (int64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_jiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_jiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_jiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4 int32) (int64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_jiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_jiiiii: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_jiiiiiiii",
+		func(c *wasmtime.Caller, idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) (int64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0, a1, a2, a3, a4, a5, a6, a7)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_jiiiiiiii[%d]: %v", idx, e2))
+			}
+			return ret.(int64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_jiiiiiiii: %w", err)
+	}
+
+	// ── f64 return ────────────────────────────────────────────────────────────
+
+	if err := linker.DefineFunc(store, "env", "invoke_di",
+		func(c *wasmtime.Caller, idx, a0 int32) (float64, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_di[%d]: %v", idx, e2))
+			}
+			return ret.(float64), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_di: %w", err)
+	}
+
+	if err := linker.DefineFunc(store, "env", "invoke_id",
+		func(c *wasmtime.Caller, idx int32, a0 float64) (int32, invokeError) {
+			fn, e := tableGet(tbl, c, idx)
+			if e != nil {
+				return 0, nil
+			}
+			ret, e2 := fn.Call(c, a0)
+			if e2 != nil {
+				return 0, wasmtime.NewTrap(fmt.Sprintf("invoke_id[%d]: %v", idx, e2))
+			}
+			return ret.(int32), nil
+		}); err != nil {
+		return fmt.Errorf("embedded/abi: invoke_id: %w", err)
 	}
 
 	return nil

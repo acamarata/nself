@@ -154,6 +154,14 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
+	// pglite v0.2.17 also imports GOT.mem namespace globals used by
+	// Emscripten's dynamic-linking GOT relocation. These are mutable i32
+	// globals whose values are written by the dynamic linker at startup.
+	// Confirmed imports (via WebAssembly.Module.imports): GOT.mem::__heap_base.
+	if err := defineGOTNamespaces(linker, store); err != nil {
+		return fmt.Errorf("embedded/runtime: GOT namespaces: %w", err)
+	}
+
 	r.linker = linker
 
 	// Configure WASI: preopened filesystem, environment.
