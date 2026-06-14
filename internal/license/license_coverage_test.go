@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -51,6 +52,9 @@ func TestWriteCache_MkdirAllFail(t *testing.T) {
 // TestWriteCache_CreateTempFail uses a read-only directory: MkdirAll succeeds
 // (dir already exists) but CreateTemp inside it fails.
 func TestWriteCache_CreateTempFail(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod read-only dirs are not enforced")
+	}
 	tmp := t.TempDir()
 	cacheDir := filepath.Join(tmp, "nself")
 	if err := os.MkdirAll(cacheDir, 0700); err != nil {
@@ -174,6 +178,9 @@ func TestMigrateLicenseFromV1_MkdirAllFail(t *testing.T) {
 // TestMigrateLicenseFromV1_OpenFileFail exercises the os.OpenFile O_EXCL failure
 // when v2 directory exists but a directory sits at the license.json path.
 func TestMigrateLicenseFromV1_OpenFileFail(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0555 does not restrict file creation")
+	}
 	home := t.TempDir()
 
 	// Create valid v1 license file.

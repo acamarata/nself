@@ -3,6 +3,7 @@ package truststate
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -11,6 +12,7 @@ import (
 func TestLoad_ReadError(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	// Create a directory at the path where the state file would live.
 	// Reading a directory triggers a non-NotExist error.
@@ -28,8 +30,12 @@ func TestLoad_ReadError(t *testing.T) {
 // TestSave_MkdirAllFail covers the Save branch where MkdirAll fails.
 // We create a regular file at the directory path to block MkdirAll.
 func TestSave_MkdirAllFail(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: file-as-directory blocker behaves differently")
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	// Create a file at ~/.nself so MkdirAll on it will fail.
 	nselfPath := filepath.Join(home, ".nself")
@@ -45,8 +51,12 @@ func TestSave_MkdirAllFail(t *testing.T) {
 
 // TestSave_FilePermissions verifies the saved file is written with mode 0600.
 func TestSave_FilePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	if err := Save(TrustState{TrustedDomain: "perm.test"}); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -68,6 +78,9 @@ func TestSave_FilePermissions(t *testing.T) {
 // the "statePath() fails" branches in Load and Save as well.
 func TestLoad_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 	_, err := Load()
 	if err == nil {
 		t.Error("Load should error when HOME is empty, got nil")
@@ -76,6 +89,9 @@ func TestLoad_StatePathError(t *testing.T) {
 
 func TestSave_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 	err := Save(TrustState{TrustedDomain: "no-home.test"})
 	if err == nil {
 		t.Error("Save should error when HOME is empty, got nil")
@@ -87,6 +103,7 @@ func TestSave_StatePathError(t *testing.T) {
 func TestLoad_UnmarshalError(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	// Create the .nself directory and write invalid JSON to trust-state.json.
 	nselfDir := filepath.Join(home, ".nself")
@@ -107,8 +124,12 @@ func TestLoad_UnmarshalError(t *testing.T) {
 // TestSave_WriteFileError covers the os.WriteFile error branch in Save.
 // We make the .nself directory read-only so the file cannot be created inside it.
 func TestSave_WriteFileError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0555 does not restrict writes")
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	// Create ~/.nself with mode 0555 (no write). MkdirAll succeeds (dir exists) but
 	// WriteFile inside it fails with EACCES.
@@ -131,6 +152,7 @@ func TestSave_WriteFileError(t *testing.T) {
 func TestLoad_EmptyDomain(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 
 	if err := Save(TrustState{TrustedDomain: ""}); err != nil {
 		t.Fatalf("Save empty domain: %v", err)

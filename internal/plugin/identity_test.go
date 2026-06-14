@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -22,14 +23,16 @@ func TestGenerateAndLoadKeypair(t *testing.T) {
 		t.Fatalf("expected %d-byte public key, got %d", ed25519.PublicKeySize, len(pubKey))
 	}
 
-	// Key file must exist with 0600 permissions.
+	// Key file must exist with 0600 permissions (Unix only).
 	keyPath := filepath.Join(dir, pluginName, identityKeyFile)
 	info, err := os.Stat(keyPath)
 	if err != nil {
 		t.Fatalf("key file not found: %v", err)
 	}
-	if info.Mode() != 0o600 {
-		t.Errorf("expected mode 0600, got %o", info.Mode())
+	if runtime.GOOS != "windows" {
+		if info.Mode() != 0o600 {
+			t.Errorf("expected mode 0600, got %o", info.Mode())
+		}
 	}
 
 	// Load must recover the same keypair.

@@ -40,6 +40,7 @@ func TestWriteAndRead(t *testing.T) {
 	// Use a temp home dir so we don't pollute the real one
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpHome)
 	}
@@ -87,6 +88,7 @@ func TestWriteAndRead(t *testing.T) {
 func TestInstallSourceNoFile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpHome)
 	}
@@ -102,6 +104,7 @@ func TestInstallSourceNoFile(t *testing.T) {
 func TestNoPII(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpHome)
 	}

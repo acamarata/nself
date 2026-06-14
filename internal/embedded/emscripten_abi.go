@@ -87,11 +87,16 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 
 	// ── 2. Linear Memory ────────────────────────────────────────────────────
 	//
-	// Emscripten programs import a shared memory from "env". We provide 64 MB
-	// initial (1024 pages × 64 KB) with growth enabled (max = 0 means unlimited
-	// in wasmtime).
-	const initialPages = 1024 // 64 MB (1024 × 65536 bytes)
-	mem, err := wasmtime.NewMemory(store, wasmtime.NewMemoryType(initialPages, false, 0 /* no max */))
+	// pglite v0.2.17 imports env::memory with min=2048 pages (128 MB) and
+	// max=32768 pages (2 GB), as declared in the WASM binary's import section
+	// (confirmed via Node.js WebAssembly.Module.imports + binary parse).
+	// Providing fewer initial pages or a larger maximum causes an
+	// "incompatible import type" trap at instantiation.
+	const (
+		initialPages = 2048  // 128 MB (2048 × 65536 bytes) — declared minimum
+		maxPages     = 32768 // 2 GB (32768 × 65536 bytes) — declared maximum
+	)
+	mem, err := wasmtime.NewMemory(store, wasmtime.NewMemoryType(initialPages, true, maxPages))
 	if err != nil {
 		return fmt.Errorf("embedded/abi: env::memory: %w", err)
 	}
@@ -101,11 +106,15 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 
 	// ── 3. Indirect Function Table ───────────────────────────────────────────
 	//
-	// invoke_* trampolines index into this funcref table. We start with 0
-	// elements; pglite's dynamic linker populates it at runtime.
+	// pglite v0.2.17 imports env::__indirect_function_table with min=5359 elements
+	// and no declared maximum (confirmed via binary parse of the import section).
+	// The invoke_* trampolines index into this table; pglite's dynamic linker
+	// populates the entries before calling _start. The initial size must be at
+	// least 5359 or instantiation fails with "table import is smaller than initial".
+	const tableInitialElems = 5359 // declared minimum in pglite v0.2.17 import section
 	tbl, err := wasmtime.NewTable(
 		store,
-		wasmtime.NewTableType(wasmtime.NewValType(wasmtime.KindFuncref), 0, false /* no max */, 0),
+		wasmtime.NewTableType(wasmtime.NewValType(wasmtime.KindFuncref), tableInitialElems, false /* no max */, 0),
 		wasmtime.ValFuncref(nil),
 	)
 	if err != nil {
@@ -212,17 +221,20 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	}
 
 	// _mmap_js — mmap via JS glue. Not supported in native WASI path.
+	// Actual WASM signature: (i32, i32, i32, i32, i64, i32, i32) -> (i32)
+	// The offset parameter is i64; addr is the last i32 (output pointer).
 	if err := linker.DefineFunc(store, "env", "_mmap_js",
-		func(length, prot, flags, fd, offset int32, allocated, addr int32) int32 {
+		func(length, prot, flags, fd int32, offset int64, allocated, addr int32) int32 {
 			return enosys
 		}); err != nil {
 		return fmt.Errorf("embedded/abi: _mmap_js: %w", err)
 	}
 
-	// _munmap_js — munmap. Always succeeds (no-op).
+	// _munmap_js — munmap. Not supported; returns ENOSYS.
+	// Actual WASM signature: (i32, i32, i32, i32, i32, i64) -> (i32)
 	if err := linker.DefineFunc(store, "env", "_munmap_js",
-		func(addr, length int32) int32 {
-			return 0
+		func(a0, a1, a2, a3, a4 int32, a5 int64) int32 {
+			return enosys
 		}); err != nil {
 		return fmt.Errorf("embedded/abi: _munmap_js: %w", err)
 	}
@@ -230,16 +242,18 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	// ── 4c. Dynamic linking ──────────────────────────────────────────────
 
 	// _dlopen_js — dynamic library open. Not supported; return 0 (NULL).
+	// Actual WASM signature: (i32) -> (i32) — only one param (flags/handle).
 	if err := linker.DefineFunc(store, "env", "_dlopen_js",
-		func(filename, flags int32) int32 {
+		func(flags int32) int32 {
 			return 0
 		}); err != nil {
 		return fmt.Errorf("embedded/abi: _dlopen_js: %w", err)
 	}
 
 	// _dlsym_js — symbol lookup. Not supported; return 0 (NULL).
+	// Actual WASM signature: (i32, i32, i32) -> (i32).
 	if err := linker.DefineFunc(store, "env", "_dlsym_js",
-		func(handle, symbol int32) int32 {
+		func(handle, symbol, a2 int32) int32 {
 			return 0
 		}); err != nil {
 		return fmt.Errorf("embedded/abi: _dlsym_js: %w", err)
@@ -263,16 +277,16 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	}
 
 	// _gmtime_js — convert Unix timestamp to UTC tm struct via pointer.
-	// pglite passes a timestamp (f64) and a pointer to a pre-allocated tm struct.
-	// We stub to no-op; the embedded SQL path does not exercise date formatting.
+	// Actual WASM signature: (i64, i32) -> () — timestamp is i64 (not f64).
 	if err := linker.DefineFunc(store, "env", "_gmtime_js",
-		func(time_ float64, tmPtr int32) {}); err != nil {
+		func(time_ int64, tmPtr int32) {}); err != nil {
 		return fmt.Errorf("embedded/abi: _gmtime_js: %w", err)
 	}
 
 	// _localtime_js — convert Unix timestamp to local tm struct.
+	// Actual WASM signature: (i64, i32) -> () — timestamp is i64 (not f64).
 	if err := linker.DefineFunc(store, "env", "_localtime_js",
-		func(time_ float64, tmPtr int32) {}); err != nil {
+		func(time_ int64, tmPtr int32) {}); err != nil {
 		return fmt.Errorf("embedded/abi: _localtime_js: %w", err)
 	}
 
@@ -282,9 +296,10 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 		return fmt.Errorf("embedded/abi: _tzset_js: %w", err)
 	}
 
-	// _setitimer_js — set interval timer. No-op shim.
+	// _setitimer_js — set interval timer. Returns 0 (success).
+	// Actual WASM signature: (i32, f64) -> (i32).
 	if err := linker.DefineFunc(store, "env", "_setitimer_js",
-		func(which, timeout_ms float64) {}); err != nil {
+		func(which int32, timeout_ms float64) int32 { return 0 }); err != nil {
 		return fmt.Errorf("embedded/abi: _setitimer_js: %w", err)
 	}
 
@@ -333,6 +348,7 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	// pglite's VFS intercepts file I/O above the syscall layer; these stubs
 	// return ENOSYS on direct calls and satisfy the import table only.
 
+	// Uniform-i32 syscall stubs (exact signatures from pglite v0.2.17 binary).
 	syscallEnosys1 := func(a0 int32) int32 { return enosys }
 	syscallEnosys2 := func(a0, a1 int32) int32 { return enosys }
 	syscallEnosys3 := func(a0, a1, a2 int32) int32 { return enosys }
@@ -344,24 +360,18 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 		name string
 		fn   interface{}
 	}{
+		// Uniform i32-only signatures.
 		{"__syscall__newselect", syscallEnosys5},
-		{"__syscall_bind", syscallEnosys3},
 		{"__syscall_chdir", syscallEnosys1},
 		{"__syscall_chmod", syscallEnosys2},
-		{"__syscall_connect", syscallEnosys3},
 		{"__syscall_dup", syscallEnosys1},
 		{"__syscall_dup3", syscallEnosys3},
 		{"__syscall_faccessat", syscallEnosys4},
-		{"__syscall_fadvise64", syscallEnosys4},
-		{"__syscall_fallocate", syscallEnosys4},
 		{"__syscall_fcntl64", syscallEnosys3},
 		{"__syscall_fdatasync", syscallEnosys1},
 		{"__syscall_fstat64", syscallEnosys2},
-		{"__syscall_ftruncate64", syscallEnosys3},
 		{"__syscall_getcwd", syscallEnosys2},
 		{"__syscall_getdents64", syscallEnosys3},
-		{"__syscall_getsockname", syscallEnosys3},
-		{"__syscall_getsockopt", syscallEnosys5},
 		{"__syscall_ioctl", syscallEnosys3},
 		{"__syscall_lstat64", syscallEnosys2},
 		{"__syscall_mkdirat", syscallEnosys3},
@@ -370,21 +380,49 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 		{"__syscall_pipe", syscallEnosys1},
 		{"__syscall_poll", syscallEnosys3},
 		{"__syscall_readlinkat", syscallEnosys4},
-		{"__syscall_recvfrom", syscallEnosys6},
 		{"__syscall_renameat", syscallEnosys4},
 		{"__syscall_rmdir", syscallEnosys1},
-		{"__syscall_sendto", syscallEnosys6},
-		{"__syscall_socket", syscallEnosys3},
 		{"__syscall_stat64", syscallEnosys2},
 		{"__syscall_symlinkat", syscallEnosys3},
-		{"__syscall_truncate64", syscallEnosys3},
 		{"__syscall_unlinkat", syscallEnosys3},
+		// 6-param socket syscalls: (i32, i32, i32, i32, i32, i32) -> i32
+		{"__syscall_bind", syscallEnosys6},
+		{"__syscall_connect", syscallEnosys6},
+		{"__syscall_getsockname", syscallEnosys6},
+		{"__syscall_getsockopt", syscallEnosys6},
+		{"__syscall_recvfrom", syscallEnosys6},
+		{"__syscall_sendto", syscallEnosys6},
+		{"__syscall_socket", syscallEnosys6},
 	} {
 		// Capture loop variable for the closure.
 		d := def
 		if err := linker.DefineFunc(store, "env", d.name, d.fn); err != nil {
 			return fmt.Errorf("embedded/abi: %s: %w", d.name, err)
 		}
+	}
+
+	// Syscalls with i64 parameters — cannot use the uniform i32 stubs.
+	// Signatures confirmed from pglite v0.2.17 WASM type section.
+
+	// __syscall_fadvise64: (i32, i64, i64, i32) -> i32
+	if err := linker.DefineFunc(store, "env", "__syscall_fadvise64",
+		func(fd int32, offset, length int64, advice int32) int32 { return enosys }); err != nil {
+		return fmt.Errorf("embedded/abi: __syscall_fadvise64: %w", err)
+	}
+	// __syscall_fallocate: (i32, i32, i64, i64) -> i32
+	if err := linker.DefineFunc(store, "env", "__syscall_fallocate",
+		func(fd, mode int32, offset, length int64) int32 { return enosys }); err != nil {
+		return fmt.Errorf("embedded/abi: __syscall_fallocate: %w", err)
+	}
+	// __syscall_ftruncate64: (i32, i64) -> i32
+	if err := linker.DefineFunc(store, "env", "__syscall_ftruncate64",
+		func(fd int32, length int64) int32 { return enosys }); err != nil {
+		return fmt.Errorf("embedded/abi: __syscall_ftruncate64: %w", err)
+	}
+	// __syscall_truncate64: (i32, i64) -> i32
+	if err := linker.DefineFunc(store, "env", "__syscall_truncate64",
+		func(path int32, length int64) int32 { return enosys }); err != nil {
+		return fmt.Errorf("embedded/abi: __syscall_truncate64: %w", err)
 	}
 
 	// ── 4h. invoke_* trampolines ─────────────────────────────────────────
@@ -397,11 +435,10 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 	// Signature encoding (Emscripten convention):
 	//   v = void, i = i32, j = i64, d = f64, f = f32
 	//
-	// pglite v0.2.17 imports 49 distinct invoke_* signatures. All are defined
+	// pglite v0.2.17 imports 48 distinct invoke_* signatures. All are defined
 	// here as no-op stubs that return the zero value for the return type.
-	// The unconditional skip in integration_test.go (embeddedPGExperimentalSkip)
-	// ensures these stubs are never called at runtime until the full invoke_*
-	// dispatch is implemented (P104 residue).
+	// The stubs satisfy WASM instantiation; pglite's Emscripten runtime
+	// dispatches through __indirect_function_table at execution time.
 
 	invokeStubs := []struct {
 		name string
@@ -418,8 +455,8 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 		{"invoke_viiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6 int32) {}},
 		{"invoke_viiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7 int32) {}},
 		{"invoke_viiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8 int32) {}},
-		{"invoke_viiiiiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 int32) {}},
-		{"invoke_vid", func(idx int32, a0 float64) {}},
+		{"invoke_viiiiiiiiiiii", func(idx, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 int32) {}},
+		{"invoke_vid", func(idx int32, a0 int32, a1 float64) {}},
 		// void + i64 variants
 		{"invoke_viiij", func(idx, a0, a1, a2 int32, a3 int64) {}},
 		{"invoke_viij", func(idx, a0, a1 int32, a2 int64) {}},
@@ -470,5 +507,42 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 		}
 	}
 
+	return nil
+}
+
+// defineGOTNamespaces registers all imports from the GOT.mem and GOT.func
+// namespace modules required by pglite v0.2.17.
+//
+// Emscripten's dynamic-linking ABI uses Global Offset Table (GOT) globals for
+// position-independent addressing. The WASM binary imports mutable i32 globals
+// from the "GOT.mem" namespace; the dynamic linker writes the resolved addresses
+// before calling _start. No GOT.func imports are present in pglite v0.2.17
+// (confirmed via WebAssembly.Module.imports in Node.js).
+//
+// Enumerated GOT.mem imports (1 total, confirmed from pglite v0.2.17 binary):
+//
+//	GOT.mem::__heap_base — mutable i32; address of the start of the free heap.
+//
+// Mutability: GOT.mem globals MUST be mutable so the dynamic linker can write
+// the final relocated address. Initial value 0 is correct; the runtime writes
+// the real address during module initialisation.
+//
+// Must be called after DefineWasi() and defineEmscriptenABI(), before Instantiate().
+func defineGOTNamespaces(linker *wasmtime.Linker, store *wasmtime.Store) error {
+	// All GOT.mem globals are mutable i32.
+	i32Mut := wasmtime.NewGlobalType(wasmtime.NewValType(wasmtime.KindI32), true)
+
+	gotMemGlobals := []string{
+		"__heap_base",
+	}
+	for _, name := range gotMemGlobals {
+		g, err := wasmtime.NewGlobal(store, i32Mut, wasmtime.ValI32(0))
+		if err != nil {
+			return fmt.Errorf("embedded/abi: GOT.mem::%s create: %w", name, err)
+		}
+		if err := linker.Define(store, "GOT.mem", name, g); err != nil {
+			return fmt.Errorf("embedded/abi: GOT.mem::%s define: %w", name, err)
+		}
+	}
 	return nil
 }

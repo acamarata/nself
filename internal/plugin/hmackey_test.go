@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -45,13 +46,15 @@ func TestLoadHMACKey_MissingFile_GeneratesAndPersistsKey(t *testing.T) {
 		t.Error("generated key is all zeros — crypto/rand likely failed")
 	}
 
-	// File must now exist with 0600 permissions.
+	// File must now exist with 0600 permissions (Unix only).
 	info, err := os.Stat(keyPath)
 	if err != nil {
 		t.Fatalf("key file not found after generation: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm != 0600 {
-		t.Errorf("key file perms = %04o, want 0600", perm)
+	if runtime.GOOS != "windows" {
+		if perm := info.Mode().Perm(); perm != 0600 {
+			t.Errorf("key file perms = %04o, want 0600", perm)
+		}
 	}
 
 	// File contents must match the returned key.

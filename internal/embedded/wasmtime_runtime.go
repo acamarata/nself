@@ -154,6 +154,14 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
+	// pglite v0.2.17 also imports GOT.mem namespace globals used by
+	// Emscripten's dynamic-linking GOT relocation. These are mutable i32
+	// globals whose values are written by the dynamic linker at startup.
+	// Confirmed imports (via WebAssembly.Module.imports): GOT.mem::__heap_base.
+	if err := defineGOTNamespaces(linker, store); err != nil {
+		return fmt.Errorf("embedded/runtime: GOT namespaces: %w", err)
+	}
+
 	r.linker = linker
 
 	// Configure WASI: preopened filesystem, environment.
@@ -170,15 +178,23 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 	}
 	r.instance = instance
 
-	// Call the WASM start function in a goroutine; it blocks indefinitely.
-	startFn := instance.GetExport(store, "_start")
-	if startFn == nil {
-		return fmt.Errorf("embedded/runtime: pglite WASM missing _start export")
+	// pglite v0.2.17 is compiled as an Emscripten SIDE_MODULE and does NOT
+	// export _start (the WASI command-model entry point). Instead it has:
+	//   - A WASM start section (called automatically by wasmtime during Instantiate)
+	//     that runs the C runtime constructors (__wasm_call_ctors).
+	//   - __main_argc_argv — the actual C main() entry point that starts Postgres.
+	//
+	// We call __main_argc_argv in a goroutine; it blocks indefinitely while
+	// Postgres serves connections. argc=0, argv=0 is sufficient — pglite reads
+	// its config from the WASI filesystem preopens, not from command-line args.
+	mainFn := instance.GetExport(store, "__main_argc_argv")
+	if mainFn == nil {
+		return fmt.Errorf("embedded/runtime: pglite WASM missing __main_argc_argv export")
 	}
 	go func() {
-		if _, err := startFn.Func().Call(store); err != nil {
-			// pglite's _start never returns under normal operation; an error here
-			// means the process exited unexpectedly.
+		if _, err := mainFn.Func().Call(store, int32(0), int32(0)); err != nil {
+			// __main_argc_argv never returns under normal operation; an error here
+			// means the Postgres process exited unexpectedly.
 			r.mu.Lock()
 			if !r.stopped {
 				r.err = fmt.Errorf("embedded/runtime: pglite exited unexpectedly: %w", err)

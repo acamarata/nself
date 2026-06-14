@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -402,14 +403,16 @@ func TestEnvTargetMigrate_FromEnvVars(t *testing.T) {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	// The file must exist and be 0600.
+	// The file must exist and be 0600 (perm check is Unix only).
 	path := filepath.Join(root, ".nself", "control-plane.yaml")
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("control-plane.yaml not found: %v", err)
 	}
-	if info.Mode().Perm() != 0o600 {
-		t.Errorf("mode: got %o, want 0600", info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		if info.Mode().Perm() != 0o600 {
+			t.Errorf("mode: got %o, want 0600", info.Mode().Perm())
+		}
 	}
 
 	inv := readInventory(t, root)
