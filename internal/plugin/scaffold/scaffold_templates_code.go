@@ -77,7 +77,7 @@ func main() {
 	defer cancel()
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 		log.Error("graceful shutdown failed", "error", err)
-		os.Exit(1)
+		return
 	}
 	log.Info("{{.Name}} stopped cleanly")
 }
