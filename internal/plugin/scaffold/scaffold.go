@@ -7,13 +7,17 @@
 // they have nself installed or use the SDK devkit directly.
 //
 // Purpose: Core types and all logic functions for plugin scaffold generation.
-//          Template strings are in scaffold_templates_infra.go (infrastructure,
-//          devops, metadata templates) and scaffold_templates_code.go (Go code
-//          templates: main, config, server, server_test).
+//
+//	Template strings are in scaffold_templates_infra.go (infrastructure,
+//	devops, metadata templates) and scaffold_templates_code.go (Go code
+//	templates: main, config, server, server_test).
+//
 // Inputs:  Options struct — name, tier, language, tenancy mode, overrides.
 // Outputs: Result struct — output directory path and list of emitted files.
 // Constraints: Must remain import-compatible with plugin-sdk-go/devkit.
-//              Template strings must live in the _templates_*.go files, not here.
+//
+//	Template strings must live in the _templates_*.go files, not here.
+//
 // SPORT:   cli/internal/plugin/scaffold — decomposed from scaffold.go (T-E2-06).
 package scaffold
 
@@ -182,7 +186,10 @@ func Run(opts Options) (*Result, error) {
 		Tenancy:     opts.Tenancy,
 	}
 
-	fileList := buildFiles(params)
+	fileList, err := buildFiles(params)
+	if err != nil {
+		return nil, err
+	}
 
 	var emitted []string
 	for relPath, content := range fileList {
@@ -204,63 +211,130 @@ func Run(opts Options) (*Result, error) {
 }
 
 // buildFiles returns the map of relative-path -> rendered content for a scaffold.
-func buildFiles(p Params) map[string]string {
+func buildFiles(p Params) (map[string]string, error) {
 	files := map[string]string{}
 
 	// plugin.json — canonical manifest.
 	// multiApp section is always present; values depend on Tenancy choice.
-	files["plugin.json"] = renderPluginJSON(p)
+	pluginJSON, err := renderPluginJSON(p)
+	if err != nil {
+		return nil, err
+	}
+	files["plugin.json"] = pluginJSON
 
 	// Language-specific files.
 	switch p.Language {
 	case "go", "":
-		addGoFiles(files, p)
+		if err := addGoFiles(files, p); err != nil {
+			return nil, err
+		}
 	case "rust":
-		addRustFiles(files, p)
+		if err := addRustFiles(files, p); err != nil {
+			return nil, err
+		}
 	case "node":
-		addNodeFiles(files, p)
+		if err := addNodeFiles(files, p); err != nil {
+			return nil, err
+		}
 	case "static":
-		addStaticFiles(files, p)
+		if err := addStaticFiles(files, p); err != nil {
+			return nil, err
+		}
 	}
 
 	// Tenancy artifacts — migration stub + Hasura metadata stub.
-	addTenancyFiles(files, p)
+	if err := addTenancyFiles(files, p); err != nil {
+		return nil, err
+	}
 
 	// Common files present in every scaffold.
-	files["Dockerfile"] = buildDockerfile(p)
-	files["docker-compose.plugin.yml"] = render(tmplCompose, p)
+	dockerfile, err := buildDockerfile(p)
+	if err != nil {
+		return nil, err
+	}
+	files["Dockerfile"] = dockerfile
+	compose, err := render(tmplCompose, p)
+	if err != nil {
+		return nil, err
+	}
+	files["docker-compose.plugin.yml"] = compose
 	files[".dockerignore"] = tmplDockerignore
-	files[".air.toml"] = render(tmplAirToml, p)
-	files["README.md"] = render(tmplReadme, p)
-	files[".github/workflows/ci.yml"] = render(tmplCI, p)
+	airToml, err := render(tmplAirToml, p)
+	if err != nil {
+		return nil, err
+	}
+	files[".air.toml"] = airToml
+	readme, err := render(tmplReadme, p)
+	if err != nil {
+		return nil, err
+	}
+	files["README.md"] = readme
+	ci, err := render(tmplCI, p)
+	if err != nil {
+		return nil, err
+	}
+	files[".github/workflows/ci.yml"] = ci
 
-	return files
+	return files, nil
 }
 
 // addTenancyFiles emits migration.sql and hasura_metadata.json stubs whose
 // content depends on the tenancy mode selected by the developer.
 // TenancyNone produces an empty (comment-only) migration so there is always a
 // predictable file for tooling to consume.
-func addTenancyFiles(files map[string]string, p Params) {
+func addTenancyFiles(files map[string]string, p Params) error {
 	switch p.Tenancy {
 	case TenancyAppIsolation:
-		files["migrations/001_init.sql"] = render(tmplMigrationAppIsolation, p)
-		files["hasura/metadata.json"] = render(tmplHasuraNoFilter, p)
+		migration, err := render(tmplMigrationAppIsolation, p)
+		if err != nil {
+			return err
+		}
+		files["migrations/001_init.sql"] = migration
+		metadata, err := render(tmplHasuraNoFilter, p)
+		if err != nil {
+			return err
+		}
+		files["hasura/metadata.json"] = metadata
 	case TenancyCloudTenant:
-		files["migrations/001_init.sql"] = render(tmplMigrationCloudTenant, p)
-		files["hasura/metadata.json"] = render(tmplHasuraCloudFilter, p)
+		migration, err := render(tmplMigrationCloudTenant, p)
+		if err != nil {
+			return err
+		}
+		files["migrations/001_init.sql"] = migration
+		metadata, err := render(tmplHasuraCloudFilter, p)
+		if err != nil {
+			return err
+		}
+		files["hasura/metadata.json"] = metadata
 	case TenancyBoth:
-		files["migrations/001_init.sql"] = render(tmplMigrationBoth, p)
-		files["hasura/metadata.json"] = render(tmplHasuraCloudFilter, p)
+		migration, err := render(tmplMigrationBoth, p)
+		if err != nil {
+			return err
+		}
+		files["migrations/001_init.sql"] = migration
+		metadata, err := render(tmplHasuraCloudFilter, p)
+		if err != nil {
+			return err
+		}
+		files["hasura/metadata.json"] = metadata
 	default: // TenancyNone or empty
-		files["migrations/001_init.sql"] = render(tmplMigrationNone, p)
-		files["hasura/metadata.json"] = render(tmplHasuraNoFilter, p)
+		migration, err := render(tmplMigrationNone, p)
+		if err != nil {
+			return err
+		}
+		files["migrations/001_init.sql"] = migration
+		metadata, err := render(tmplHasuraNoFilter, p)
+		if err != nil {
+			return err
+		}
+		files["hasura/metadata.json"] = metadata
 	}
+	return nil
 }
 
 // renderPluginJSON renders plugin.json with multiApp fields that reflect the
 // chosen tenancy mode.
-func renderPluginJSON(p Params) string {
+func renderPluginJSON(p Params) (string, error) {
 	// Determine multiApp field values from tenancy choice.
 	multiAppSupported := p.Tenancy == TenancyAppIsolation || p.Tenancy == TenancyBoth
 	isolationColumn := ""
@@ -281,22 +355,43 @@ func renderPluginJSON(p Params) string {
 	return renderAny(tmplPluginJSON, jp)
 }
 
-func addGoFiles(files map[string]string, p Params) {
-	files["go.mod"] = render(`module github.com/nself-org/{{.RepoBucket}}/{{.Name}}
+func addGoFiles(files map[string]string, p Params) error {
+	gomod, err := render(`module github.com/nself-org/{{.RepoBucket}}/{{.Name}}
 
 go 1.23.0
 
 require github.com/nself-org/plugin-sdk-go v0.1.0
 `, p)
+	if err != nil {
+		return err
+	}
+	files["go.mod"] = gomod
 	files["go.sum"] = ""
-	files["cmd/main.go"] = render(tmplMain, p)
-	files["internal/config/config.go"] = render(tmplConfig, p)
-	files["internal/server/server.go"] = render(tmplServer, p)
-	files["internal/server/server_test.go"] = render(tmplServerTest, p)
+	main, err := render(tmplMain, p)
+	if err != nil {
+		return err
+	}
+	files["cmd/main.go"] = main
+	config, err := render(tmplConfig, p)
+	if err != nil {
+		return err
+	}
+	files["internal/config/config.go"] = config
+	server, err := render(tmplServer, p)
+	if err != nil {
+		return err
+	}
+	files["internal/server/server.go"] = server
+	serverTest, err := render(tmplServerTest, p)
+	if err != nil {
+		return err
+	}
+	files["internal/server/server_test.go"] = serverTest
+	return nil
 }
 
-func addRustFiles(files map[string]string, p Params) {
-	files["Cargo.toml"] = render(`[package]
+func addRustFiles(files map[string]string, p Params) error {
+	cargoToml, err := render(`[package]
 name = "{{.Name}}"
 version = "0.1.0"
 edition = "2021"
@@ -305,8 +400,12 @@ edition = "2021"
 actix-web = "4"
 tokio = { version = "1", features = ["full"] }
 `, p)
+	if err != nil {
+		return err
+	}
+	files["Cargo.toml"] = cargoToml
 	files["Cargo.lock"] = ""
-	files["src/main.rs"] = render(`use actix_web::{web, App, HttpServer, HttpResponse};
+	mainRs, err := render(`use actix_web::{web, App, HttpServer, HttpResponse};
 
 async fn healthz() -> HttpResponse {
     HttpResponse::Ok().body("ok")
@@ -323,10 +422,15 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 `, p)
+	if err != nil {
+		return err
+	}
+	files["src/main.rs"] = mainRs
+	return nil
 }
 
-func addNodeFiles(files map[string]string, p Params) {
-	files["package.json"] = render(`{
+func addNodeFiles(files map[string]string, p Params) error {
+	packageJSON, err := render(`{
   "name": "nself-{{.Name}}",
   "version": "0.1.0",
   "description": "{{.Description}}",
@@ -339,6 +443,10 @@ func addNodeFiles(files map[string]string, p Params) {
   "license": "{{.License}}"
 }
 `, p)
+	if err != nil {
+		return err
+	}
+	files["package.json"] = packageJSON
 	files["tsconfig.json"] = `{
   "compilerOptions": {
     "target": "ES2022",
@@ -353,7 +461,7 @@ func addNodeFiles(files map[string]string, p Params) {
   "include": ["src"]
 }
 `
-	files["src/index.ts"] = render(`import { createServer } from "http";
+	indexTs, err := render(`import { createServer } from "http";
 
 const server = createServer((req, res) => {
   if (req.url === "/healthz") {
@@ -369,18 +477,28 @@ server.listen({{.Port}}, () => {
   console.log("{{.Name}} plugin listening on :{{.Port}}");
 });
 `, p)
+	if err != nil {
+		return err
+	}
+	files["src/index.ts"] = indexTs
+	return nil
 }
 
-func addStaticFiles(files map[string]string, p Params) {
-	files["static/index.html"] = render(`<!DOCTYPE html>
+func addStaticFiles(files map[string]string, p Params) error {
+	indexHTML, err := render(`<!DOCTYPE html>
 <html>
 <head><title>{{.Name}}</title></head>
 <body><h1>{{.Name}} plugin</h1></body>
 </html>
 `, p)
+	if err != nil {
+		return err
+	}
+	files["static/index.html"] = indexHTML
+	return nil
 }
 
-func buildDockerfile(p Params) string {
+func buildDockerfile(p Params) (string, error) {
 	switch p.Language {
 	case "rust":
 		return render(`FROM rust:1.77-alpine AS builder
@@ -438,33 +556,32 @@ ENTRYPOINT ["/{{.Name}}"]
 }
 
 // render executes a Go template with the given params, returning the result.
-// Panics on parse failure (template strings are literals in this package).
-func render(tmpl string, p Params) string {
+// Returns an error if template parsing or execution fails.
+func render(tmpl string, p Params) (string, error) {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
-		// Template parse errors are programming errors, not runtime errors.
-		panic(fmt.Sprintf("scaffold: template parse error: %v", err))
+		return "", fmt.Errorf("scaffold: template parse error: %w", err)
 	}
 	var buf strings.Builder
 	if err := t.Execute(&buf, p); err != nil {
-		// Execution errors are also programming errors for literal templates.
-		panic(fmt.Sprintf("scaffold: template execute error: %v", err))
+		return "", fmt.Errorf("scaffold: template execute error: %w", err)
 	}
-	return buf.String()
+	return buf.String(), nil
 }
 
 // renderAny is like render but accepts any data value, not just Params.
 // Used when the template data is a struct that embeds Params with extra fields.
-func renderAny(tmpl string, data any) string {
+// Returns an error if template parsing or execution fails.
+func renderAny(tmpl string, data any) (string, error) {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
-		panic(fmt.Sprintf("scaffold: template parse error: %v", err))
+		return "", fmt.Errorf("scaffold: template parse error: %w", err)
 	}
 	var buf strings.Builder
 	if err := t.Execute(&buf, data); err != nil {
-		panic(fmt.Sprintf("scaffold: template execute error: %v", err))
+		return "", fmt.Errorf("scaffold: template execute error: %w", err)
 	}
-	return buf.String()
+	return buf.String(), nil
 }
 
 // --- helpers ---
