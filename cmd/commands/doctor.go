@@ -505,6 +505,19 @@ func checkPasswordStrength(projectDir string, verbose, fix bool) []doctorCheckRe
 		results = append(results, doctorCheckResult{Name: name, Status: "pass", Message: "strong"})
 	}
 
+	// Warn when POSTGRES_USER is the default 'postgres' value in prod/staging.
+	// The default is correct for dev; in production it is a predictable attack
+	// surface. We do NOT change the default — only surface a warning.
+	if cfg.Postgres.User == "postgres" {
+		env := cfg.Env
+		if env == "prod" || env == "staging" {
+			name := "Postgres default credentials"
+			msg := fmt.Sprintf("POSTGRES_USER is 'postgres' (the default) in %s — set a unique username to reduce predictable-credential risk", env)
+			printCheck("warn", name, msg, verbose)
+			results = append(results, doctorCheckResult{Name: name, Status: "warn", Message: msg})
+		}
+	}
+
 	return results
 }
 

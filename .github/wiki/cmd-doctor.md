@@ -66,7 +66,7 @@ CRITICAL findings include: world-readable secret files, sensitive ports bound on
 | Disk | At least 5 GB free space recommended |
 | Memory | At least 2 GB RAM recommended (with `--full`) |
 | Network | Internet connectivity, Docker Hub reachable (with `--full`) |
-| Configuration | `.env` exists, required vars set, password strength meets requirements |
+| Configuration | `.env` exists, required vars set, password strength meets requirements, default Postgres credentials warned in prod/staging |
 | Containers | Health status of running containers, error logs for unhealthy services |
 | Plugin schemas | Warns if `np_*` tables are in the `public` schema instead of plugin schemas |
 | License | License cache age and tier |
@@ -182,6 +182,30 @@ nself doctor --deep --only security
 ```
 
 **See also:** [multi-tenant conventions](https://docs.nself.org/multi-tenancy/conventions) for the canonical wall doc on `source_account_id` vs `tenant_id`.
+
+---
+
+### DEFAULT-CREDS-01: Postgres Default Username Warning
+
+Fires during `nself doctor` (standard and deep) in the Configuration section.
+
+**What it checks:** If `POSTGRES_USER` equals the default value `postgres` and `NSELF_ENV` is `prod` or `staging`, the check emits a `WARN`. The default is appropriate for dev; in production it is a predictable attack surface.
+
+This does not change the default or block deployment — it is an advisory warning only.
+
+| Status | Meaning |
+|--------|---------|
+| `pass` | `POSTGRES_USER` is not the default `postgres`, or environment is `dev` |
+| `warn` | `POSTGRES_USER=postgres` in `prod` or `staging` — set a unique username |
+
+**Fix:** Set `POSTGRES_USER=<unique-name>` in your `.env` before `nself build`:
+
+```bash
+# .env
+POSTGRES_USER=myprod_db_user
+```
+
+Then rebuild: `nself build && nself start`.
 
 ---
 

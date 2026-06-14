@@ -5,12 +5,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )
+
+// entrypointSafeRe matches entrypoint paths composed solely of safe characters.
+// Anchored at both ends to prevent partial matches.
+var entrypointSafeRe = regexp.MustCompile(`^[a-zA-Z0-9_./-]+$`)
 
 var pluginDevCmd = &cobra.Command{
 	Use:   "dev <name>",
@@ -73,10 +78,17 @@ func runPluginDev(cmd *cobra.Command, args []string) error {
 		return debugCmd.Run()
 	}
 
-	// Validate entrypoint is within the plugin directory (defense-in-depth).
-	// filepath.Clean collapses ../ sequences; the HasPrefix check then prevents
-	// path traversal (e.g. --entrypoint ../../../../etc/hook.sh).
+	// Validate entrypoint against safe-path policy (defense-in-depth).
+	// 1. Reject characters outside the safe set before any path resolution.
+	if !entrypointSafeRe.MatchString(entrypoint) {
+		return fmt.Errorf("plugin dev: entrypoint %q contains invalid characters (allowed: [a-zA-Z0-9_./-])", entrypoint)
+	}
+	// 2. filepath.Clean collapses ../ sequences; the HasPrefix check then
+	//    prevents path traversal (e.g. --entrypoint ../../../../etc/passwd).
 	cleanEntrypoint := filepath.Clean(entrypoint)
+	if strings.Contains(cleanEntrypoint, "..") {
+		return fmt.Errorf("plugin dev: entrypoint %q must not contain path traversal sequences", entrypoint)
+	}
 	resolvedEntrypoint := filepath.Join(pluginPath, cleanEntrypoint)
 	if !strings.HasPrefix(resolvedEntrypoint, pluginPath+string(filepath.Separator)) &&
 		resolvedEntrypoint != pluginPath {
