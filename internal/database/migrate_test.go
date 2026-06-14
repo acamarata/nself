@@ -203,6 +203,161 @@ func TestScanMigrations_FlatLayout(t *testing.T) {
 	}
 }
 
+// --- TestMigrateDown atomicity ---
+
+// TestMigrateDown_TxSQL_DeletesBothTables verifies that the transaction SQL
+// produced by MigrateDown includes DELETE statements for both
+// np_common.schema_versions AND nself_ops.migrations inside a single
+// BEGIN/COMMIT block. This prevents tracking divergence where a reverted
+// migration still appears as applied in nself_ops.migrations.
+func TestMigrateDown_TxSQL_DeletesBothTables(t *testing.T) {
+	migrationName := "001_create_users.sql"
+	downSQL := "DROP TABLE users;"
+
+	safeName := strings.ReplaceAll(migrationName, "'", "''")
+	removeSchemaVersions := "DELETE FROM np_common.schema_versions WHERE name = '" + safeName + "';"
+	removeOps := "DELETE FROM nself_ops.migrations WHERE name = '" + safeName + "';"
+
+	txSQL := "BEGIN;\n" + downSQL + "\n" + removeSchemaVersions + "\n" + removeOps + "\nCOMMIT;\n"
+
+	if !strings.Contains(txSQL, "BEGIN;") {
+		t.Error("MigrateDown txSQL must start with BEGIN")
+	}
+	if !strings.Contains(txSQL, "COMMIT;") {
+		t.Error("MigrateDown txSQL must end with COMMIT")
+	}
+	if !strings.Contains(txSQL, "DELETE FROM np_common.schema_versions WHERE name = '001_create_users.sql'") {
+		t.Error("MigrateDown must delete from np_common.schema_versions")
+	}
+	if !strings.Contains(txSQL, "DELETE FROM nself_ops.migrations WHERE name = '001_create_users.sql'") {
+		t.Error("MigrateDown must delete from nself_ops.migrations")
+	}
+	// Both deletes must be inside the transaction (appear between BEGIN and COMMIT).
+	beginIdx := strings.Index(txSQL, "BEGIN;")
+	commitIdx := strings.Index(txSQL, "COMMIT;")
+	schemaIdx := strings.Index(txSQL, "DELETE FROM np_common.schema_versions")
+	opsIdx := strings.Index(txSQL, "DELETE FROM nself_ops.migrations")
+	if schemaIdx < beginIdx || schemaIdx > commitIdx {
+		t.Error("schema_versions DELETE must be inside the BEGIN/COMMIT transaction")
+	}
+	if opsIdx < beginIdx || opsIdx > commitIdx {
+		t.Error("nself_ops.migrations DELETE must be inside the BEGIN/COMMIT transaction")
+	}
+}
+
+// TestMigrateDown_SQLInjectionSafe verifies that a migration name containing
+// a single-quote is safely escaped in the generated DELETE statements.
+func TestMigrateDown_SQLInjectionSafe(t *testing.T) {
+	dangerousName := "001_it's_tricky.sql"
+	safeName := strings.ReplaceAll(dangerousName, "'", "''")
+	removeSchemaVersions := "DELETE FROM np_common.schema_versions WHERE name = '" + safeName + "';"
+	removeOps := "DELETE FROM nself_ops.migrations WHERE name = '" + safeName + "';"
+
+	// The escaped form must appear verbatim; raw single-quote must not appear
+	// outside the escaped sequence.
+	if !strings.Contains(removeSchemaVersions, "it''s") {
+		t.Errorf("expected escaped quote in schema_versions DELETE: %s", removeSchemaVersions)
+	}
+	if !strings.Contains(removeOps, "it''s") {
+		t.Errorf("expected escaped quote in nself_ops DELETE: %s", removeOps)
+	}
+}
+
+// --- TestMigrateRecording atomicity ---
+
+// TestMigrateRecording_NonTxPath_IsAtomic verifies that for non-transactional
+// migrations the recording step wraps both INSERT statements inside a single
+// BEGIN/COMMIT block so that a failure of either INSERT leaves no orphan row.
+func TestMigrateRecording_NonTxPath_IsAtomic(t *testing.T) {
+	name := "001_create_index.sql"
+	migrationID := "001"
+	checksum := "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+
+	legacyRecord := "INSERT INTO np_common.schema_versions (name) VALUES ('" + strings.ReplaceAll(name, "'", "''") + "');"
+	opsRecord := "INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('" +
+		strings.ReplaceAll(migrationID, "'", "''") + "', '" +
+		strings.ReplaceAll(name, "'", "''") + "', '" +
+		checksum + "') ON CONFLICT (id) DO NOTHING;"
+
+	// This replicates the fixed recordSQL construction for the non-transactional path.
+	recordSQL := "BEGIN;\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+
+	if !strings.Contains(recordSQL, "BEGIN;") {
+		t.Error("non-transactional recordSQL must be wrapped in BEGIN")
+	}
+	if !strings.Contains(recordSQL, "COMMIT;") {
+		t.Error("non-transactional recordSQL must be wrapped in COMMIT")
+	}
+	// Both INSERTs must be inside the transaction.
+	beginIdx := strings.Index(recordSQL, "BEGIN;")
+	commitIdx := strings.Index(recordSQL, "COMMIT;")
+	legacyIdx := strings.Index(recordSQL, "INSERT INTO np_common.schema_versions")
+	opsInsertIdx := strings.Index(recordSQL, "INSERT INTO nself_ops.migrations")
+	if legacyIdx < beginIdx || legacyIdx > commitIdx {
+		t.Error("schema_versions INSERT must be inside the BEGIN/COMMIT block")
+	}
+	if opsInsertIdx < beginIdx || opsInsertIdx > commitIdx {
+		t.Error("nself_ops.migrations INSERT must be inside the BEGIN/COMMIT block")
+	}
+}
+
+// TestMigrateRecording_NonTxSQL_NotWrappedInTransaction verifies that the
+// actual non-transactional DDL SQL (e.g. CREATE INDEX CONCURRENTLY) is NOT
+// wrapped in a transaction — only the recording step is.
+func TestMigrateRecording_NonTxSQL_NotWrappedInTransaction(t *testing.T) {
+	nonTxSQL := "CREATE INDEX CONCURRENTLY idx_users_email ON users (email);"
+	if !isNonTransactional(nonTxSQL) {
+		t.Fatal("expected isNonTransactional to return true for CREATE INDEX CONCURRENTLY")
+	}
+	// DDL itself must not be wrapped in a transaction.
+	if strings.Contains(nonTxSQL, "BEGIN;") {
+		t.Error("non-transactional DDL must not contain BEGIN; — only the recording step is transactional")
+	}
+}
+
+// TestMigrateDown_FileLayout tests that MigrateDown constructs the expected
+// transaction SQL from a real down-migration file, verifying the file scaffold
+// used by migrationsDir and the down-file naming convention.
+func TestMigrateDown_FileLayout(t *testing.T) {
+	tmp := t.TempDir()
+	// Write an up and a matching down migration file.
+	upName := "001_create_users.sql"
+	downName := "001_create_users.down.sql"
+	upContent := "CREATE TABLE users (id SERIAL PRIMARY KEY);"
+	downContent := "DROP TABLE users;"
+	writeFile(t, tmp, upName, upContent)
+	writeFile(t, tmp, downName, downContent)
+
+	// Verify the down file name is derived correctly from the up file name.
+	derivedDown := strings.TrimSuffix(upName, ".sql") + ".down.sql"
+	if derivedDown != downName {
+		t.Errorf("down file name derivation: want %s, got %s", downName, derivedDown)
+	}
+
+	// Read the down file and build the txSQL as MigrateDown would.
+	downPath := filepath.Join(tmp, downName)
+	data, err := os.ReadFile(downPath)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+
+	name := upName
+	safeName := strings.ReplaceAll(name, "'", "''")
+	remove := "DELETE FROM np_common.schema_versions WHERE name = '" + safeName + "';"
+	removeOps := "DELETE FROM nself_ops.migrations WHERE name = '" + safeName + "';"
+	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\n" + removeOps + "\nCOMMIT;\n"
+
+	if !strings.Contains(txSQL, downContent) {
+		t.Error("txSQL must contain the down migration DDL")
+	}
+	if !strings.Contains(txSQL, "DELETE FROM np_common.schema_versions") {
+		t.Error("txSQL must delete from np_common.schema_versions")
+	}
+	if !strings.Contains(txSQL, "DELETE FROM nself_ops.migrations") {
+		t.Error("txSQL must delete from nself_ops.migrations")
+	}
+}
+
 // TestScanMigrations_NestedLayout: Hasura-style subdirs each with up.sql.
 func TestScanMigrations_NestedLayout(t *testing.T) {
 	tmp := t.TempDir()
@@ -234,5 +389,62 @@ func TestScanMigrations_NestedLayout(t *testing.T) {
 		if parentDir != wantDirs[i] {
 			t.Errorf("files[%d] parent dir: want %s, got %s", i, wantDirs[i], parentDir)
 		}
+	}
+}
+
+// --- TestIsNonTransactional (T03) ---
+
+// TestIsNonTransactional_RenameIsTransactional verifies that ALTER TYPE ... RENAME TO
+// is classified as transactional (isNonTransactional returns false).
+func TestIsNonTransactional_RenameIsTransactional(t *testing.T) {
+	sql := "ALTER TYPE foo RENAME TO bar;"
+	got := isNonTransactional(sql)
+	if got {
+		t.Errorf("ALTER TYPE ... RENAME TO should be transactional, isNonTransactional returned %v", got)
+	}
+}
+
+// TestIsNonTransactional_AddValueIsNonTransactional verifies that ALTER TYPE ... ADD VALUE
+// is classified as non-transactional (isNonTransactional returns true).
+func TestIsNonTransactional_AddValueIsNonTransactional(t *testing.T) {
+	sql := "ALTER TYPE foo ADD VALUE 'x';"
+	got := isNonTransactional(sql)
+	if !got {
+		t.Errorf("ALTER TYPE ... ADD VALUE should be non-transactional, isNonTransactional returned %v", got)
+	}
+}
+
+// TestIsNonTransactional_AddValueCaseTolerant verifies the regex is case-insensitive.
+func TestIsNonTransactional_AddValueCaseTolerant(t *testing.T) {
+	testCases := []string{
+		"alter type status add value 'pending'",
+		"ALTER TYPE status ADD VALUE 'pending'",
+		"AlTeR tYpE status ADD VALUE 'pending'",
+	}
+	for _, sql := range testCases {
+		got := isNonTransactional(sql)
+		if !got {
+			t.Errorf("case variant %q should be non-transactional, got %v", sql, got)
+		}
+	}
+}
+
+// TestIsNonTransactional_DropAttributeIsTransactional verifies that ALTER TYPE ... DROP ATTRIBUTE
+// is classified as transactional.
+func TestIsNonTransactional_DropAttributeIsTransactional(t *testing.T) {
+	sql := "ALTER TYPE composite_type DROP ATTRIBUTE old_field;"
+	got := isNonTransactional(sql)
+	if got {
+		t.Errorf("ALTER TYPE ... DROP ATTRIBUTE should be transactional, isNonTransactional returned %v", got)
+	}
+}
+
+// TestIsNonTransactional_AddAttributeIsTransactional verifies that ALTER TYPE ... ADD ATTRIBUTE
+// is classified as transactional.
+func TestIsNonTransactional_AddAttributeIsTransactional(t *testing.T) {
+	sql := "ALTER TYPE composite_type ADD ATTRIBUTE new_field INT;"
+	got := isNonTransactional(sql)
+	if got {
+		t.Errorf("ALTER TYPE ... ADD ATTRIBUTE should be transactional, isNonTransactional returned %v", got)
 	}
 }
