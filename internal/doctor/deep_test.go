@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFilterBySection(t *testing.T) {
@@ -120,10 +121,26 @@ func TestProbePluginHTTP_Fail(t *testing.T) {
 }
 
 // TestProbePluginHTTP_ConnectionRefused verifies a refused connection yields fail.
+// Uses a hijack-and-close server so the connection resets instantly on all
+// platforms — avoids relying on TCP ECONNREFUSED which DROPs (hangs) on
+// Windows Firewall instead of refusing immediately.
 func TestProbePluginHTTP_ConnectionRefused(t *testing.T) {
-	// Port 1 is not bound anywhere in a test environment.
-	client := &http.Client{}
-	result := probePluginHTTP(client, "deadplugin", 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+
+	// Parse the port the test server is actually listening on.
+	port := parsePort(t, srv.Listener.Addr().String())
+	// Use a short-timeout client so the test can't hang even if hijack fails.
+	client := &http.Client{Timeout: 2 * time.Second}
+	result := probePluginHTTP(client, "deadplugin", port)
 	if result.Status != "fail" {
 		t.Errorf("expected fail on connection refused, got %s", result.Status)
 	}

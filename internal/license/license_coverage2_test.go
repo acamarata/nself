@@ -198,8 +198,10 @@ func TestBundleEntitled_EmptyKeyC2(t *testing.T) {
 }
 
 func TestBundleEntitled_NetworkErrorNoFailOpen(t *testing.T) {
-	// Point to a server that refuses connections; NSELF_LICENSE_FAIL_OPEN not set.
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:1") // port 1 always refuses
+	// Use a hijack server for instant connection reset on all platforms.
+	// Port 1 DROPs on Windows Firewall and hangs until the client timeout fires.
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
 	ctx := context.Background()
 	ok, err := BundleEntitled(ctx, "nself_pro_"+strings.Repeat("a", 32), "claw")
@@ -215,7 +217,8 @@ func TestBundleEntitled_NetworkErrorWithFailOpenNoCacheHit(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1 but no cache file → should error (cache miss).
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:1")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 	ctx := context.Background()
 	key := "nself_pro_" + strings.Repeat("a", 32)
@@ -232,7 +235,8 @@ func TestBundleEntitled_NetworkErrorWithFailOpenWrongKey(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache exists but for a different key.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:1")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 
 	// Write a cache entry for a different key.
@@ -262,7 +266,8 @@ func TestBundleEntitled_NetworkErrorWithFailOpenTierPlus(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache with tier "plus" → should succeed.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:1")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 
 	key := "nself_pro_" + strings.Repeat("c", 32)
@@ -287,7 +292,8 @@ func TestBundleEntitled_NetworkErrorWithFailOpenBundleSentinel(t *testing.T) {
 	// NSELF_LICENSE_FAIL_OPEN=1, cache with bundle:<name> sentinel.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:1")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 
 	key := "nself_pro_" + strings.Repeat("d", 32)
