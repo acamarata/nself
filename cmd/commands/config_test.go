@@ -427,22 +427,35 @@ func makeNSelfProject(t *testing.T, envContent string) string {
 // captureStdout redirects os.Stdout to a pipe while fn runs, then returns the
 // captured bytes and the error returned by fn. Tests in this package are not
 // run in parallel, so the global os.Stdout redirect is safe.
+//
+// The read end is drained in a goroutine so that the write side never blocks
+// on a full pipe buffer — a deadlock that manifests on Windows where the
+// default anonymous-pipe capacity (~4 KB) is much smaller than on Linux.
 func captureStdout(t *testing.T, fn func() error) (string, error) {
 	t.Helper()
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("captureStdout: pipe: %v", err)
 	}
+
+	// Drain the read end concurrently so the writer never blocks.
+	var buf bytes.Buffer
+	done := make(chan error, 1)
+	go func() {
+		_, copyErr := io.Copy(&buf, r)
+		r.Close()
+		done <- copyErr
+	}()
+
 	old := os.Stdout
 	os.Stdout = w
 	fnErr := fn()
 	w.Close()
 	os.Stdout = old
-	var buf bytes.Buffer
-	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+
+	if copyErr := <-done; copyErr != nil {
 		t.Fatalf("captureStdout: copy: %v", copyErr)
 	}
-	r.Close()
 	return buf.String(), fnErr
 }
 
