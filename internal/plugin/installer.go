@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/audit"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/plugin/verify"
@@ -247,12 +248,22 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	// For stable plugins a missing signature is a hard error (V06-F2).
 	// Skip requires BOTH NSELF_LICENSE_SKIP_VERIFY=1 AND NSELF_LICENSE_SKIP_VERIFY_FORCE=1.
 	// Either var alone is insufficient — standalone skip is not permitted (matches license/validate.go).
-	if os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1" {
-		if os.Getenv("NSELF_LICENSE_SKIP_VERIFY_FORCE") != "1" {
-			os.Remove(archivePath)
-			return fmt.Errorf("NSELF_LICENSE_SKIP_VERIFY requires NSELF_LICENSE_SKIP_VERIFY_FORCE=1; standalone skip is not permitted")
-		}
+	// In prod/staging these bypass vars are fatal — dev-only escapes must never reach production.
+	bypassed, bypassErr := checkSigBypassAllowed(cfg.Env, name)
+	if bypassErr != nil {
+		os.Remove(archivePath)
+		return bypassErr
+	}
+	if bypassed {
 		fmt.Fprintf(os.Stderr, "WARNING: plugin signature verification skipped (NSELF_LICENSE_SKIP_VERIFY=1 + FORCE)\n")
+		if werr := audit.Write("plugin-install-bypass", map[string]string{
+			"plugin": name,
+			"reason": "NSELF_LICENSE_SKIP_VERIFY=1 + NSELF_LICENSE_SKIP_VERIFY_FORCE=1",
+			"uid":    os.Getenv("USER"),
+			"env":    cfg.Env,
+		}); werr != nil {
+			slog.Warn("audit log write failed — bypass event not recorded", "error", werr)
+		}
 	} else {
 		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature, manifest.PublishStatus); err != nil {
 			os.Remove(archivePath)
@@ -461,4 +472,43 @@ func Update(ctx context.Context, cfg *config.Config, name string, pluginDir stri
 	// Success: remove the backup.
 	_ = os.RemoveAll(backupDir)
 	return nil
+}
+
+// checkSigBypassAllowed evaluates whether the NSELF_LICENSE_SKIP_VERIFY /
+// NSELF_LICENSE_SKIP_VERIFY_FORCE bypass is allowed for the given env and
+// plugin name.
+//
+// Returns (true, nil) when both vars are set and env is not prod/staging.
+// Returns (false, err) with a SECURITY prefix when env is prod or staging.
+// Returns (false, err) when only one var is set (standalone bypass rejected).
+// Returns (false, nil) when neither var is set (normal verification path).
+//
+// Purpose: Extracted so unit tests can exercise the bypass-gate logic without
+//          spinning up a full HTTP registry server.
+// SPORT: security-audit; ticket P2-E2-W2-S3-T10
+func checkSigBypassAllowed(env, pluginName string) (bypassed bool, err error) {
+	skipVerify := os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1"
+	forceSkip := os.Getenv("NSELF_LICENSE_SKIP_VERIFY_FORCE") == "1"
+
+	if !skipVerify && !forceSkip {
+		// Normal path — no bypass requested.
+		return false, nil
+	}
+
+	// Any bypass var set in prod/staging is a fatal security violation.
+	if env == "prod" || env == "staging" {
+		return false, fmt.Errorf(
+			"SECURITY: NSELF_LICENSE_SKIP_VERIFY and NSELF_LICENSE_SKIP_VERIFY_FORCE are not permitted in %s — remove these env vars",
+			env,
+		)
+	}
+
+	// In dev, both vars must be set together.
+	if !skipVerify || !forceSkip {
+		return false, fmt.Errorf(
+			"NSELF_LICENSE_SKIP_VERIFY requires NSELF_LICENSE_SKIP_VERIFY_FORCE=1; standalone skip is not permitted",
+		)
+	}
+
+	return true, nil
 }
