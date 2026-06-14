@@ -238,7 +238,10 @@ func FindNSelfRoot(startDir string) (string, error) {
 	dir := startDir
 	for i := 0; i < 10; i++ {
 		// Stop at home or filesystem root.
-		if dir == home || dir == "/" {
+		// filepath.Dir(dir) == dir covers both Unix "/" and Windows drive roots
+		// like "C:\" where filepath.Dir("C:\\") == "C:\\" (unlike "/" which
+		// does not match Windows drive roots).
+		if dir == home || filepath.Dir(dir) == dir {
 			return "", fmt.Errorf("no nself project found")
 		}
 
