@@ -1,3 +1,7 @@
+## 1.1.7
+
+- Version bump to stay in lockstep with nSelf CLI v1.1.7.
+
 ## 1.1.5
 
 - Version bump to stay in lockstep with nSelf CLI v1.1.5.
