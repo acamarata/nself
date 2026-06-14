@@ -182,7 +182,10 @@ func Run(opts Options) (*Result, error) {
 		Tenancy:     opts.Tenancy,
 	}
 
-	fileList := buildFiles(params)
+	fileList, err := buildFiles(params)
+	if err != nil {
+		return nil, fmt.Errorf("scaffold: build files: %w", err)
+	}
 
 	var emitted []string
 	for relPath, content := range fileList {
@@ -204,12 +207,16 @@ func Run(opts Options) (*Result, error) {
 }
 
 // buildFiles returns the map of relative-path -> rendered content for a scaffold.
-func buildFiles(p Params) map[string]string {
+func buildFiles(p Params) (map[string]string, error) {
 	files := map[string]string{}
 
 	// plugin.json — canonical manifest.
 	// multiApp section is always present; values depend on Tenancy choice.
-	files["plugin.json"] = renderPluginJSON(p)
+	pluginJSON, err := renderPluginJSON(p)
+	if err != nil {
+		return nil, fmt.Errorf("scaffold: render plugin.json: %w", err)
+	}
+	files["plugin.json"] = pluginJSON
 
 	// Language-specific files.
 	switch p.Language {
@@ -234,7 +241,7 @@ func buildFiles(p Params) map[string]string {
 	files["README.md"] = render(tmplReadme, p)
 	files[".github/workflows/ci.yml"] = render(tmplCI, p)
 
-	return files
+	return files, nil
 }
 
 // addTenancyFiles emits migration.sql and hasura_metadata.json stubs whose
@@ -259,8 +266,8 @@ func addTenancyFiles(files map[string]string, p Params) {
 }
 
 // renderPluginJSON renders plugin.json with multiApp fields that reflect the
-// chosen tenancy mode.
-func renderPluginJSON(p Params) string {
+// chosen tenancy mode. Returns an error if template parsing or execution fails.
+func renderPluginJSON(p Params) (string, error) {
 	// Determine multiApp field values from tenancy choice.
 	multiAppSupported := p.Tenancy == TenancyAppIsolation || p.Tenancy == TenancyBoth
 	isolationColumn := ""
@@ -278,7 +285,7 @@ func renderPluginJSON(p Params) string {
 		MultiAppSupported: multiAppSupported,
 		IsolationColumn:   isolationColumn,
 	}
-	return renderAny(tmplPluginJSON, jp)
+	return renderAnyErr(tmplPluginJSON, jp)
 }
 
 func addGoFiles(files map[string]string, p Params) {
@@ -465,6 +472,20 @@ func renderAny(tmpl string, data any) string {
 		panic(fmt.Sprintf("scaffold: template execute error: %v", err))
 	}
 	return buf.String()
+}
+
+// renderAnyErr is like renderAny but returns an error instead of panicking.
+// Used in paths where the caller can propagate the error (e.g. buildFiles).
+func renderAnyErr(tmpl string, data any) (string, error) {
+	t, err := template.New("").Parse(tmpl)
+	if err != nil {
+		return "", fmt.Errorf("scaffold: template parse error: %w", err)
+	}
+	var buf strings.Builder
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("scaffold: template execute error: %w", err)
+	}
+	return buf.String(), nil
 }
 
 // --- helpers ---
