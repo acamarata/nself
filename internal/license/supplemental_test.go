@@ -186,9 +186,12 @@ func TestTryRemote_200_InvalidSignatureBytes(t *testing.T) {
 // TestTryRemote_TransportError confirms a TCP-level failure returns
 // remoteTransientFail (existing path — belt-and-suspenders coverage).
 func TestTryRemote_TransportError(t *testing.T) {
-	// No server at this port.
+	// Use a hijack server so the connection resets instantly on all platforms.
+	// Bare 127.0.0.1:19998 DROPs on Windows Firewall and hangs 30s until the
+	// http.Client timeout fires.
+	refuseSrv := newRefusingServer(t)
 	opts := &ValidatorOptions{
-		PingURL:             "http://127.0.0.1:19998",
+		PingURL:             refuseSrv.URL,
 		SkipSignatureVerify: true,
 		WarnOnce:            func(string) {},
 	}

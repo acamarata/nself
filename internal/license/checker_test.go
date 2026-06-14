@@ -13,6 +13,25 @@ import (
 
 // ---- helpers ----------------------------------------------------------------
 
+// newRefusingServer returns an httptest.Server that immediately closes every
+// connection via the Hijacker interface. This produces an instant EOF on all
+// platforms, avoiding the Windows Firewall DROP hang that occurs when
+// connecting to a bare non-listening port like 127.0.0.1:19999.
+func newRefusingServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
 // checkerCacheDir points LICENSE_CACHE_PATH at a temp file for the duration of t.
 func checkerCacheDir(t *testing.T) {
 	t.Helper()
@@ -138,8 +157,10 @@ func TestBundleEntitled_ServerUnexpectedStatus(t *testing.T) {
 
 func TestBundleEntitled_NetworkErrorFailClosed(t *testing.T) {
 	checkerCacheDir(t)
-	// Unreachable port — no server listening.
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:19999")
+	// Use a hijack server so the connection resets instantly on all platforms.
+	// Bare 127.0.0.1:19999 DROPs on Windows Firewall and hangs until timeout.
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
 
 	ok, err := BundleEntitled(context.Background(), "nself_pro_abcdefghijklmnopqrstuvwxyz123456", "nclaw")
@@ -156,7 +177,8 @@ func TestBundleEntitled_NetworkErrorFailOpen_PlusTier(t *testing.T) {
 	key := "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
 	checkerWriteCache(t, key, "plus", nil)
 
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:19999")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 	defer t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
 
@@ -171,7 +193,8 @@ func TestBundleEntitled_NetworkErrorFailOpen_PlusTier(t *testing.T) {
 
 func TestBundleEntitled_NetworkErrorFailOpen_NoCacheAvailable(t *testing.T) {
 	checkerCacheDir(t)
-	t.Setenv("LICENSE_PING_URL", "http://127.0.0.1:19999")
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
 	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "1")
 	defer t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
 
