@@ -152,7 +152,22 @@ func TestRunModelList_Empty(t *testing.T) {
 }
 
 func TestRunModelList_NotReachable(t *testing.T) {
-	setModelOllamaEnv(t, "http://127.0.0.1:19998")
+	// Use a hijacking server instead of a non-listening port. On Windows,
+	// connections to closed ports may be silently dropped by the firewall,
+	// making TCP-timeout-based "not reachable" tests hang for minutes. A server
+	// that accepts then immediately closes the connection causes an EOF/reset
+	// error instantly on every platform.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+	setModelOllamaEnv(t, srv.URL)
 	err := runModelList(nil, nil)
 	if err == nil {
 		t.Error("expected error when Ollama is not reachable")
@@ -177,7 +192,19 @@ func TestRunModelPull_MockServer(t *testing.T) {
 }
 
 func TestRunModelPull_NotReachable(t *testing.T) {
-	setModelOllamaEnv(t, "http://127.0.0.1:19997")
+	// Hijack-and-close server: platform-agnostic alternative to non-listening
+	// ports. Avoids Windows Firewall DROP + the 30-minute hardcoded pull timeout.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+	setModelOllamaEnv(t, srv.URL)
 	err := runModelPull(nil, []string{"tinyllama"})
 	if err == nil {
 		t.Error("expected error when Ollama is not reachable")
@@ -251,7 +278,18 @@ func TestModelBenchRun_MockServer(t *testing.T) {
 }
 
 func TestModelBenchRun_NotReachable(t *testing.T) {
-	setModelOllamaEnv(t, "http://127.0.0.1:19996")
+	// Hijack-and-close server: avoids Windows Firewall DROP hang on unreachable ports.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+	setModelOllamaEnv(t, srv.URL)
 	_, _, err := modelBenchRun("gemma-3-4b", "test")
 	if err == nil {
 		t.Error("expected error when Ollama not reachable")
@@ -277,7 +315,19 @@ func TestRunModelBenchmark_AllRuns(t *testing.T) {
 }
 
 func TestRunModelBenchmark_AllFail(t *testing.T) {
-	setModelOllamaEnv(t, "http://127.0.0.1:19995")
+	// Hijack-and-close server: avoids Windows Firewall DROP hang; 2 runs × 120s
+	// = 4 min hang without this fix. Hijack causes an immediate EOF per run.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+	setModelOllamaEnv(t, srv.URL)
 	modelBenchRuns = 2
 	defer func() { modelBenchRuns = 5 }()
 

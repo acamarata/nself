@@ -146,7 +146,16 @@ func runModelPull(_ *cobra.Command, args []string) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Minute}
+	// Default to 30 minutes for large model downloads; honour NSELF_OLLAMA_TIMEOUT_SECONDS
+	// when set so that tests can fail fast against unreachable endpoints.
+	pullTimeout := 30 * time.Minute
+	if t := os.Getenv("NSELF_OLLAMA_TIMEOUT_SECONDS"); t != "" {
+		var secs int
+		if _, scanErr := fmt.Sscanf(t, "%d", &secs); scanErr == nil && secs > 0 {
+			pullTimeout = time.Duration(secs) * time.Second
+		}
+	}
+	client := &http.Client{Timeout: pullTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("pull %s: %w", model, err)
