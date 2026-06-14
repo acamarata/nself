@@ -188,7 +188,7 @@ func Run(opts Options) (*Result, error) {
 
 	fileList, err := buildFiles(params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scaffold: build files: %w", err)
 	}
 
 	var emitted []string
@@ -218,7 +218,7 @@ func buildFiles(p Params) (map[string]string, error) {
 	// multiApp section is always present; values depend on Tenancy choice.
 	pluginJSON, err := renderPluginJSON(p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scaffold: render plugin.json: %w", err)
 	}
 	files["plugin.json"] = pluginJSON
 
@@ -333,7 +333,7 @@ func addTenancyFiles(files map[string]string, p Params) error {
 }
 
 // renderPluginJSON renders plugin.json with multiApp fields that reflect the
-// chosen tenancy mode.
+// chosen tenancy mode. Returns an error if template parsing or execution fails.
 func renderPluginJSON(p Params) (string, error) {
 	// Determine multiApp field values from tenancy choice.
 	multiAppSupported := p.Tenancy == TenancyAppIsolation || p.Tenancy == TenancyBoth
@@ -352,7 +352,7 @@ func renderPluginJSON(p Params) (string, error) {
 		MultiAppSupported: multiAppSupported,
 		IsolationColumn:   isolationColumn,
 	}
-	return renderAny(tmplPluginJSON, jp)
+	return renderAnyErr(tmplPluginJSON, jp)
 }
 
 func addGoFiles(files map[string]string, p Params) error {
@@ -573,6 +573,20 @@ func render(tmpl string, p Params) (string, error) {
 // Used when the template data is a struct that embeds Params with extra fields.
 // Returns an error if template parsing or execution fails.
 func renderAny(tmpl string, data any) (string, error) {
+	t, err := template.New("").Parse(tmpl)
+	if err != nil {
+		return "", fmt.Errorf("scaffold: template parse error: %w", err)
+	}
+	var buf strings.Builder
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("scaffold: template execute error: %w", err)
+	}
+	return buf.String(), nil
+}
+
+// renderAnyErr is like renderAny but returns an error instead of panicking.
+// Used in paths where the caller can propagate the error (e.g. buildFiles).
+func renderAnyErr(tmpl string, data any) (string, error) {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
 		return "", fmt.Errorf("scaffold: template parse error: %w", err)
