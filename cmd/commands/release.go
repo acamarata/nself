@@ -433,7 +433,9 @@ func checkArtifactAdmin(ctx context.Context, latest string) artifactStatus {
 	var tag struct {
 		Name string `json:"name"`
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&tag)
+	if err := json.NewDecoder(resp.Body).Decode(&tag); err != nil {
+		return makeArtifactStatus("admin", "unknown", latest)
+	}
 	running := tag.Name
 	if running == "latest" || running == "" {
 		running = "unknown"

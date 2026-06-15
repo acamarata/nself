@@ -89,8 +89,13 @@ jobs:
           skip-existing: true
       - name: Retry publish if action failed (bounded, exponential backoff)
         if: failure()
+        # This job only runs when PYPI_API_TOKEN is present (needs.check-secret
+        # gate), so the retry authenticates with that token. OIDC-only setups
+        # never reach this step. Without TWINE_PASSWORD the retry could not
+        # authenticate under either documented auth option.
         env:
           TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           # Bounded retry: up to 2 additional attempts (total 3), 30s/60s backoff.
           cd sdk/py

@@ -179,7 +179,13 @@ func runWizardStep2Pool(ctx context.Context, flags doctorAIFlags) wizardStepResu
 		var ps struct {
 			TotalKeys int `json:"total_keys"`
 		}
-		json.Unmarshal(body, &ps)
+		if err := json.Unmarshal(body, &ps); err != nil {
+			msg := fmt.Sprintf("unmarshal pool status: %v", err)
+			if !flags.jsonOut {
+				printWizardLine("fail", step, msg)
+			}
+			return wizardStepResult{Step: step, Status: "fail", Message: msg}
+		}
 		if ps.TotalKeys > 0 {
 			if !flags.jsonOut {
 				printWizardLine("ok", step, fmt.Sprintf("%d key(s) already in pool", ps.TotalKeys))
@@ -226,7 +232,13 @@ func runWizardStep2Pool(ctx context.Context, flags doctorAIFlags) wizardStepResu
 		AuthURL string `json:"auth_url"`
 		State   string `json:"state"`
 	}
-	json.Unmarshal(oauthBody, &oauthResp)
+	if err := json.Unmarshal(oauthBody, &oauthResp); err != nil {
+		msg := fmt.Sprintf("unmarshal oauth response: %v", err)
+		if !flags.jsonOut {
+			printWizardLine("fail", step, msg)
+		}
+		return wizardStepResult{Step: step, Status: "fail", Message: msg}
+	}
 
 	if flags.headless {
 		// T-05-02: headless mode - print URL, wait for callback.
@@ -436,7 +448,9 @@ func waitForOAuthCallback(ctx context.Context, state string, timeout time.Durati
 					Complete bool   `json:"complete"`
 					Error    string `json:"error"`
 				}
-				json.Unmarshal(body, &resp)
+				if err := json.Unmarshal(body, &resp); err != nil {
+					return fmt.Errorf("unmarshal response: %w", err)
+				}
 				if resp.Complete {
 					return nil
 				}

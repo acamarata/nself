@@ -67,6 +67,7 @@ jobs:
           # Strip leading 'v'
           VERSION="${VERSION#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
           # Tag as latest only for non-pre-release
           IS_PRERELEASE="${{ github.event.release.prerelease }}"
@@ -99,6 +100,11 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: nself/nself:${{ steps.version.outputs.version }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.version.outputs.date }}
+            NSELF_LICENSE_PUBKEY_HEX=${{ secrets.NSELF_LICENSE_PUBKEY_HEX }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -110,6 +116,11 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: nself/nself:latest
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.version.outputs.date }}
+            NSELF_LICENSE_PUBKEY_HEX=${{ secrets.NSELF_LICENSE_PUBKEY_HEX }}
           cache-from: type=gha
 
       - name: Summary
