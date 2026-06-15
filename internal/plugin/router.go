@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,8 +46,7 @@ func ProxyCommand(cmdName string, args []string) error {
 
 	path := candidate
 	if _, err := os.Stat(path); err != nil {
-		fmt.Printf("Command '%s' is not a built-in command and the plugin '%s' was not found.\n", cmdName, pluginBinary)
-		fmt.Printf("To install this plugin, run:\n  nself plugin install %s\n", cmdName)
+		slog.Warn("plugin binary not found", "command", cmdName, "plugin", pluginBinary, "install_hint", "nself plugin install "+cmdName)
 		return fmt.Errorf("plugin binary not found: %s", pluginBinary)
 	}
 

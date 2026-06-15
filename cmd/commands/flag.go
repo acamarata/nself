@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -400,7 +401,7 @@ func init() {
 		// Programming error: MarkFlagRequired only returns an error when the named
 		// flag does not exist. Since "reason" is registered on the line above,
 		// this fires only if this code is misedited. Bug-in-our-code guard.
-		panic(fmt.Sprintf("flag kill: mark required: %v", err))
+		log.Fatalf("flag kill: mark required: %v — this is a code bug, not a config error", err)
 	}
 
 	// history flags

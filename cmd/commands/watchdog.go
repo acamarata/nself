@@ -3,6 +3,8 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/user"
 	"time"
 
 	"github.com/nself-org/cli/internal/health"
@@ -55,11 +57,16 @@ var watchdogStatusCmd = &cobra.Command{
 			ui.Section("Circuit Breakers")
 			for _, c := range status.Circuits {
 				state := string(c.State)
-				if c.State == watchdog.CircuitOpen {
+				switch c.State {
+				case watchdog.CircuitPermanentOpen:
+					fmt.Fprintf(cmd.ErrOrStderr(), "  %s %s: %s (since %s, %d consecutive open windows) — run: nself watchdog reset %s\n",
+						ui.C(ui.Red, ui.IconFailure), c.Service, state,
+						c.PermanentOpenAt.Format(time.RFC3339), c.ConsecutiveOpenWindows, c.Service)
+				case watchdog.CircuitOpen:
 					fmt.Fprintf(cmd.ErrOrStderr(), "  %s %s: %s (tripped at %s, %d attempts)\n",
 						ui.C(ui.Red, ui.IconFailure), c.Service, state,
 						c.TrippedAt.Format(time.RFC3339), c.Attempts)
-				} else {
+				default:
 					fmt.Printf("  %s %s: %s (%d attempts)\n",
 						ui.C(ui.Green, ui.IconSuccess), c.Service, state, c.Attempts)
 				}
@@ -85,6 +92,52 @@ var watchdogResetCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+// watchdogResetServiceCmd resets a single service's circuit breaker, including PERMANENT_OPEN.
+// Requires --force in production to prevent accidental resets without operator review.
+var watchdogResetServiceCmd = &cobra.Command{
+	Use:   "reset <service>",
+	Short: "Reset a specific service circuit breaker (including PERMANENT_OPEN)",
+	Long: `Reset a named service's circuit breaker to CLOSED state.
+
+This is the only supported recovery path for a service stuck in PERMANENT_OPEN.
+In production (NSELF_ENV=prod) the --force flag is required to prevent accidental resets.
+
+After a reset, the watchdog will resume automated restart attempts on the next poll cycle.
+If the service continues to fail, it will open the circuit breaker again and eventually
+return to PERMANENT_OPEN after WATCHDOG_PERMANENT_OPEN_THRESHOLD consecutive open windows.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		service := args[0]
+		force, _ := cmd.Flags().GetBool("force")
+
+		nSelfEnv := os.Getenv("NSELF_ENV")
+		if nSelfEnv == "prod" && !force {
+			return fmt.Errorf("resetting circuit breaker in production requires --force flag; review the runbook first: .claude/docs/operations/watchdog-runbook.md")
+		}
+
+		op := operatorIdentity()
+		cfg := watchdog.DefaultConfig()
+		docker := health.NewShellDockerClient("nself")
+		wd := watchdog.New(cfg, docker)
+
+		ok := wd.ResetService(service, op)
+		if !ok {
+			return fmt.Errorf("service %q has no tracked circuit breaker", service)
+		}
+		ui.Success(fmt.Sprintf("Circuit breaker for %q reset to CLOSED by %s", service, op))
+		return nil
+	},
+}
+
+// operatorIdentity returns the current OS user for audit logging.
+func operatorIdentity() string {
+	u, err := user.Current()
+	if err != nil {
+		return "unknown"
+	}
+	return u.Username
 }
 
 var watchdogHistoryCmd = &cobra.Command{
@@ -162,7 +215,14 @@ func init() {
 	watchdogHistoryCmd.Flags().Bool("json", false, "JSON output")
 	watchdogTestAlertCmd.Flags().String("service", "test-service", "Service name for the test alert")
 	watchdogTestAlertCmd.Flags().String("severity", "critical", "Severity level (warning, critical)")
+	watchdogResetServiceCmd.Flags().Bool("force", false, "Required when NSELF_ENV=prod")
 
-	watchdogCmd.AddCommand(watchdogStatusCmd, watchdogResetCmd, watchdogHistoryCmd, watchdogTestAlertCmd)
+	watchdogCmd.AddCommand(
+		watchdogStatusCmd,
+		watchdogResetCmd,
+		watchdogResetServiceCmd,
+		watchdogHistoryCmd,
+		watchdogTestAlertCmd,
+	)
 	RootCmd.AddCommand(watchdogCmd)
 }

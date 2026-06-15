@@ -323,6 +323,34 @@ func init() {
 	register("redis-password", ValidateRedisPassword)
 	register("hasura-dev-mode", ValidateHasuraDevMode)
 	register("nginx-inputs", ValidateNginxInputs)
+	register("minio-credentials", ValidateMinioCredentials)
+}
+
+// ValidateMinioCredentials enforces strong MinIO credentials in staging and
+// production. In dev, minioadmin defaults are accepted without error.
+//
+// Rules (staging/prod only):
+//   - MINIO_ROOT_USER must not be empty or "minioadmin".
+//   - MINIO_ROOT_PASSWORD must not be "minioadmin" and must be >=16 chars.
+//
+// Returns nil for dev environments unconditionally.
+func ValidateMinioCredentials(cfg *Config) error {
+	if cfg.Env != "prod" && cfg.Env != "staging" {
+		return nil
+	}
+	if cfg.Minio.RootUser == "minioadmin" || cfg.Minio.RootUser == "" {
+		return fmt.Errorf(
+			"SECURITY: MINIO_ROOT_USER must not be 'minioadmin' in %s — set a strong unique value in .env",
+			cfg.Env,
+		)
+	}
+	if cfg.Minio.RootPassword == "minioadmin" || len(cfg.Minio.RootPassword) < 16 {
+		return fmt.Errorf(
+			"SECURITY: MINIO_ROOT_PASSWORD must be >=16 chars and not 'minioadmin' in %s",
+			cfg.Env,
+		)
+	}
+	return nil
 }
 
 // ── T08 ─────────────────────────────────────────────────────────────────────

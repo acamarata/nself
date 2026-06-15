@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deprecation"
 	"github.com/nself-org/cli/internal/license"
+	"github.com/nself-org/cli/internal/observability"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/version"
 
@@ -18,6 +20,12 @@ import (
 // deprecationRegistry is loaded once at startup from registry.yaml.
 // A nil registry (load failure) is silently skipped — never crashes.
 var deprecationRegistry *deprecation.Registry
+
+// tracerShutdown holds the OTel tracer shutdown function set by PersistentPreRunE
+// and called by PersistentPostRunE. It is nil when tracing is disabled (no
+// OTEL_EXPORTER_OTLP_ENDPOINT). The package-level var survives across the
+// PreRunE → RunE → PostRunE cobra lifecycle so spans are not flushed early.
+var tracerShutdown func(context.Context) error
 
 // contextKey is an unexported type for context keys in this package.
 type contextKey int
@@ -64,6 +72,25 @@ func init() {
 	// --no-deprecation-warnings suppresses deprecation output (for scripted use).
 	RootCmd.PersistentFlags().Bool("no-deprecation-warnings", false, "Suppress deprecation warnings (for scripted use)")
 	RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// ── OTel tracing ──────────────────────────────────────────────────────
+		// InitTracer is only called when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+		// Leaving it unset is the zero-config path: no tracer, no side-effects.
+		//
+		// IMPORTANT: do NOT defer shutdown here. PersistentPreRunE returns before
+		// RunE executes, so a defer inside this closure fires immediately after
+		// PreRunE returns — before the command runs — dropping every span.
+		// Instead store the shutdown func and call it in PersistentPostRunE, which
+		// runs after RunE, guaranteeing spans are exported after the command body.
+		if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+			tracerCfg := observability.TracerConfig{
+				ServiceName: "nself-cli",
+				Version:     version.GetVersion(),
+			}
+			if shutdown, err := observability.InitTracer(tracerCfg); err == nil {
+				tracerShutdown = shutdown
+			}
+		}
+
 		// ── Deprecation warning ───────────────────────────────────────────────
 		// Emit before any other output so the warning is the first thing seen.
 		// Written to stderr so piped stdout output is never polluted.
@@ -126,6 +153,21 @@ func init() {
 			_ = license.MigrateLicenseFromV1(home)
 		}
 
+		return nil
+	}
+
+	// PersistentPostRunE runs AFTER RunE on every command, which is the correct
+	// place to flush OTel spans. Cobra's defer-in-PreRunE anti-pattern fires the
+	// shutdown before RunE executes, dropping all spans. Placing it here ensures
+	// the tracer is shut down only after the command body has completed and had
+	// a chance to record and export its spans.
+	RootCmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
+		if tracerShutdown != nil {
+			// Use a background context so the flush is not cancelled if the
+			// command's context has already expired.
+			_ = tracerShutdown(context.Background())
+			tracerShutdown = nil
+		}
 		return nil
 	}
 }

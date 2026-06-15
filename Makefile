@@ -10,6 +10,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE) \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
+BUILDFLAGS := -trimpath
 
 .PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man
 
@@ -52,7 +53,7 @@ man: build
 	@echo "Man pages written to man/"
 
 build:
-	CGO_ENABLED=0 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/nself/
+	CGO_ENABLED=0 go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/nself/
 
 install: build
 	cp $(BINARY) /usr/local/bin/$(BINARY)
@@ -70,12 +71,12 @@ vet:
 cross: cross-linux cross-darwin
 
 cross-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-amd64 ./cmd/nself/
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-arm64 ./cmd/nself/
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-amd64 ./cmd/nself/
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-arm64 ./cmd/nself/
 
 cross-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-amd64 ./cmd/nself/
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-arm64 ./cmd/nself/
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-amd64 ./cmd/nself/
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-arm64 ./cmd/nself/
 
 dist:
 	@mkdir -p $(DIST_DIR)
@@ -85,7 +86,7 @@ dist:
 		name=$(BINARY)-$(VERSION)-$$os-$$arch; \
 		echo "Building $$os/$$arch..."; \
 		mkdir -p $(DIST_DIR)/$$name; \
-		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$$name/$(BINARY) ./cmd/nself/; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$$name/$(BINARY) ./cmd/nself/; \
 		cp README.md LICENSE $(DIST_DIR)/$$name/; \
 		tar -czf $(DIST_DIR)/$$name.tar.gz -C $(DIST_DIR) $$name; \
 		rm -rf $(DIST_DIR)/$$name; \
@@ -94,7 +95,7 @@ dist:
 		name=$(BINARY)-$(VERSION)-windows-$$arch; \
 		echo "Building windows/$$arch..."; \
 		mkdir -p $(DIST_DIR)/$$name; \
-		CGO_ENABLED=0 GOOS=windows GOARCH=$$arch go build -mod=vendor -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$$name/$(BINARY).exe ./cmd/nself/; \
+		CGO_ENABLED=0 GOOS=windows GOARCH=$$arch go build $(BUILDFLAGS) -mod=vendor -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$$name/$(BINARY).exe ./cmd/nself/; \
 		cp README.md LICENSE $(DIST_DIR)/$$name/; \
 		cd $(DIST_DIR) && zip -qr $$name.zip $$name && cd ..; \
 		rm -rf $(DIST_DIR)/$$name; \

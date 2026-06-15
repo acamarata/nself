@@ -89,3 +89,5 @@ bin/certs/
 *.so
 *.dylib
 endpoint-auth-checker
+# Explicitly block Vercel OIDC token lines (P2-E2-W2-S3-T13d)
+VERCEL_OIDC_TOKEN=*

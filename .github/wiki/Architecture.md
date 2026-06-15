@@ -99,5 +99,33 @@ CS_1=ping_api:rust-axum:8001:/ping
 
 Custom services follow the same isolation rules as built-in services: they bind to `127.0.0.1` and are only reachable externally through Nginx at the route you specify.
 
+## Plugin Installer Security Model
+
+The plugin installer (`internal/plugin/installer.go`) enforces a layered security model:
+
+**Signature verification.** Every stable plugin tarball is verified against an Ed25519 signature embedded in the plugin registry. The public key is pinned at install time; it is never fetched at verify time to prevent TOCTOU attacks.
+
+**Bypass controls.** Two environment variables can bypass signature verification in development only:
+
+- `NSELF_LICENSE_SKIP_VERIFY=1` — requests a skip.
+- `NSELF_LICENSE_SKIP_VERIFY_FORCE=1` — must accompany the first var; standalone skip is rejected.
+
+Both vars must be set together. Either var alone is a hard error.
+
+**Production and staging block.** When `NSELF_ENV` is `prod` or `staging`, the installer rejects any bypass attempt with a `SECURITY:` prefixed error and exits non-zero. The install is aborted before any file is written.
+
+**Dev bypass audit log.** When bypass is used in a `dev` environment, the installer writes a structured JSON entry to `~/.nself/audit.log` via `internal/audit.Write`. Each entry contains:
+
+| Field | Description |
+|---|---|
+| `event` | Always `plugin-install-bypass` |
+| `plugin` | Plugin name being installed |
+| `reason` | Both env var names that triggered the skip |
+| `uid` | `$USER` at install time |
+| `env` | Current `NSELF_ENV` value |
+| `timestamp` | RFC3339 UTC timestamp |
+
+The audit log is created with `0600` permissions and is append-only.
+
 ---
 ← [[Home]] | [[_Sidebar]]

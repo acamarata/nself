@@ -9,6 +9,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -37,7 +38,7 @@ func init() {
 	for _, cidr := range cidrs {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			panic(fmt.Sprintf("webhook ssrf: bad CIDR %q: %v", cidr, err))
+			log.Fatalf("webhook/ssrf: invalid built-in CIDR %q: %v — this is a code bug, not a config error", cidr, err)
 		}
 		blockedNets = append(blockedNets, ipNet)
 	}

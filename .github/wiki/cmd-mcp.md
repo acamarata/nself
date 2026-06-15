@@ -25,7 +25,7 @@ The server provides six tools:
 | `nself_list_plugins` | List the plugin catalog (installed and available plugins) |
 | `nself_get_schema` | Hasura GraphQL schema introspection |
 | `nself_get_permissions` | Hasura role permissions snapshot |
-| `nself_run_migration` | Apply a SQL migration (requires `confirm: true`) |
+| `nself_run_migration` | Apply a SQL migration (requires `confirm: true`; DDL allowlist enforced — see below) |
 | `nself_tail_logs` | Tail Docker logs for a named service or plugin container |
 | `nself_doctor` | Run `nself doctor --deep` and return the diagnostic report |
 
@@ -87,6 +87,43 @@ Add the following to your project's `.claude/settings.json`:
 ```
 
 Claude Code will start `nself mcp` automatically and connect over stdio.
+
+## nself_run_migration DDL Allowlist
+
+The `nself_run_migration` tool enforces a DDL allowlist before executing any SQL. This
+prevents AI Studio sessions or automated agents from running destructive statements via
+`confirm: true` set programmatically.
+
+Permitted statement types:
+
+- `CREATE TABLE IF NOT EXISTS`
+- `ALTER TABLE ADD COLUMN`
+- `CREATE INDEX`
+- `CREATE EXTENSION`
+- `CREATE POLICY`
+- `INSERT` with an explicit column list
+- `UPDATE` with a `WHERE` clause
+- `DROP POLICY`
+
+Blocked statement types (return an error without executing):
+
+| Blocked prefix | Why |
+|----------------|-----|
+| `DROP TABLE` | Irreversible data loss |
+| `DROP DATABASE` | Irreversible data loss |
+| `DROP SCHEMA` | Irreversible data loss |
+| `TRUNCATE` | Irreversible data removal |
+| `DELETE FROM` | Unbounded data removal |
+| `ALTER ROLE` | Privilege escalation |
+| `GRANT` | Privilege escalation |
+| `REVOKE` | Privilege removal |
+| `\copy` | psql meta-command, data exfil risk |
+| `\connect` | psql meta-command, connection switching |
+
+The check is case-insensitive and strips leading SQL comments (`-- ...`) so that
+comment-prefix bypasses are also blocked.
+
+For blocked statement types, run `nself db migrate` directly from the CLI.
 
 ## See Also
 

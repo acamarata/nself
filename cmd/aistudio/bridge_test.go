@@ -341,3 +341,69 @@ func parseHasuraURL(raw string) (interface{ String() string }, error) {
 	import_url, err := parseHasuraURLInternal(raw)
 	return import_url, err
 }
+
+// -----------------------------------------------------------------------------
+// Token masking
+// -----------------------------------------------------------------------------
+
+func TestMaskToken(t *testing.T) {
+	cases := []struct {
+		name     string
+		token    string
+		debug    bool
+		expected string
+	}{
+		{
+			name:     "normal token (64 chars)",
+			token:    "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567",
+			debug:    false,
+			expected: "a1b2c3d4****",
+		},
+		{
+			name:     "short token (4 chars)",
+			token:    "abcd",
+			debug:    false,
+			expected: "****",
+		},
+		{
+			name:     "exact 8 chars",
+			token:    "12345678",
+			debug:    false,
+			expected: "****",
+		},
+		{
+			name:     "9 chars",
+			token:    "123456789",
+			debug:    false,
+			expected: "12345678****",
+		},
+		{
+			name:     "empty token",
+			token:    "",
+			debug:    false,
+			expected: "****",
+		},
+		{
+			name:     "debug mode shows full token",
+			token:    "a1b2c3d4e5f6789012345678901234567890",
+			debug:    true,
+			expected: "a1b2c3d4e5f6789012345678901234567890",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Temporarily set NSELF_DEBUG for debug case.
+			if c.debug {
+				t.Setenv("NSELF_DEBUG", "1")
+			} else {
+				t.Setenv("NSELF_DEBUG", "")
+			}
+
+			result := maskToken(c.token)
+			if result != c.expected {
+				t.Errorf("maskToken(%q): want %q, got %q", c.token, c.expected, result)
+			}
+		})
+	}
+}

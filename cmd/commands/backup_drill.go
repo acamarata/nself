@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/nself-org/cli/internal/database"
+	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -71,13 +72,13 @@ func runBackupDrill(cmd *cobra.Command, _ []string) error {
 	if !result.RTOTargetMet {
 		verdict = "PASS (over RTO target)"
 	}
-	fmt.Printf("Backup drill: %s\n", verdict)
-	fmt.Printf("  Backup file:    %s\n", result.BackupFile)
-	fmt.Printf("  Duration:       %.1fs (restore=%.1fs verify=%.1fs smoke=%.1fs)\n",
-		result.TotalDuration.Seconds(), result.RestoreSeconds, result.VerifySeconds, result.SmokeSeconds)
-	fmt.Printf("  Tables checked: %d\n", result.TablesChecked)
-	fmt.Printf("  Rows observed:  %d\n", result.RowsObserved)
-	fmt.Printf("  RTO target met: %v\n", result.RTOTargetMet)
+	ui.Info(fmt.Sprintf("Backup drill: %s", verdict))
+	ui.Dimmed(fmt.Sprintf("  Backup file:    %s", result.BackupFile))
+	ui.Dimmed(fmt.Sprintf("  Duration:       %.1fs (restore=%.1fs verify=%.1fs smoke=%.1fs)",
+		result.TotalDuration.Seconds(), result.RestoreSeconds, result.VerifySeconds, result.SmokeSeconds))
+	ui.Dimmed(fmt.Sprintf("  Tables checked: %d", result.TablesChecked))
+	ui.Dimmed(fmt.Sprintf("  Rows observed:  %d", result.RowsObserved))
+	ui.Dimmed(fmt.Sprintf("  RTO target met: %v", result.RTOTargetMet))
 	return nil
 }
 

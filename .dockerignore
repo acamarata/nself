@@ -1,0 +1,12 @@
+# Keep the Docker build context lean. vendor/ and all Go source are required and
+# intentionally NOT excluded (the build is offline from vendored deps).
+.git
+.github
+.claude
+dist/
+logs/
+*.out
+nself
+nself.exe
+*.tar.gz
+*.zip

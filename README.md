@@ -164,7 +164,7 @@ The installer auto-detects existing installations, checks for Docker, downloads 
 
 ```bash
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ~/.nself:/root/.nself nself/nself-cli nself version
+  -v ~/.nself:/root/.nself nself/nself version
 ```
 
 ### Build from source

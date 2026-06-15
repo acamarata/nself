@@ -18,6 +18,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/httptimeout"
+	"github.com/nself-org/cli/internal/sqlallowlist"
 	"github.com/spf13/cobra"
 )
 
@@ -269,6 +270,14 @@ func mcpRunMigrationHandler() server.ToolHandlerFunc {
 			return mcp.NewToolResultText("Error: confirm must be true to execute the migration. This is a safety gate."), nil
 		}
 
+		// DDL allowlist: reject destructive or privilege-altering SQL before
+		// any execution path. This blocks AI Studio sessions from running
+		// DROP TABLE, TRUNCATE, DELETE FROM, ALTER ROLE, GRANT/REVOKE, or
+		// psql meta-commands even when confirm=true is set programmatically.
+		if err := sqlallowlist.ValidateMigrationSQL(sql); err != nil {
+			return mcp.NewToolResultText(fmt.Sprintf("Error: %v", err)), nil
+		}
+
 		// Use nself db migrate to apply the SQL.
 		out, err := mcpRunCommand(ctx, "nself", "db", "migrate", "--sql", sql)
 		if err != nil {
@@ -375,7 +384,15 @@ func mcpRunCommand(ctx context.Context, name string, args ...string) (string, er
 }
 
 // mcpApplyMigrationDirect applies SQL directly via the Postgres connection string.
+// It enforces the DDL allowlist as a defence-in-depth layer even on this fallback
+// path — the primary check in mcpRunMigrationHandler runs first, but a second
+// guard here ensures no direct caller can bypass it.
 func mcpApplyMigrationDirect(ctx context.Context, sql string) (string, error) {
+	// Defence-in-depth: re-validate even on the fallback path.
+	if err := sqlallowlist.ValidateMigrationSQL(sql); err != nil {
+		return "", err
+	}
+
 	pgURL := os.Getenv("POSTGRES_URL")
 	if pgURL == "" {
 		pgURL = os.Getenv("DATABASE_URL")

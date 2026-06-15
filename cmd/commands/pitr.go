@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -109,7 +110,7 @@ func init() {
 		// Programming error: MarkFlagRequired only returns an error when the named
 		// flag does not exist. Since "--to" is registered on the line above,
 		// this fires only if this code is misedited. Bug-in-our-code guard.
-		panic("pitr restore: mark --to required: " + err.Error())
+		log.Fatalf("pitr restore: mark --to required: %v — this is a code bug, not a config error", err)
 	}
 
 	// Register subcommands.

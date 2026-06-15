@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +16,14 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// releaseVerRe validates a semver string including optional pre-release suffix
+// (e.g. 1.2.3 or 1.2.3-rc.1). Anchored at both ends to prevent shell injection.
+// Note: semverRe (without pre-release) is declared in release_check.go.
+var releaseVerRe = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`)
+
+// badgePat matches version-X.Y.Z- badge strings in README files.
+var badgePat = regexp.MustCompile(`version-[0-9]+\.[0-9]+\.[0-9]+-`)
 
 // releaseStepResult holds outcome of one cascade step.
 type releaseStepResult struct {
@@ -423,7 +433,9 @@ func checkArtifactAdmin(ctx context.Context, latest string) artifactStatus {
 	var tag struct {
 		Name string `json:"name"`
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&tag)
+	if err := json.NewDecoder(resp.Body).Decode(&tag); err != nil {
+		return makeArtifactStatus("admin", "unknown", latest)
+	}
 	running := tag.Name
 	if running == "latest" || running == "" {
 		running = "unknown"
@@ -703,21 +715,30 @@ func execArtifactVerification(ctx context.Context, ver string) error {
 }
 
 func execWebVersionBumps(ctx context.Context, ver string) error {
-	// Update vercel.json X-Nself-Version header across all web subapps
-	script := fmt.Sprintf(`node -e "
+	// Semver validation gate — rejects non-semver strings before any exec call.
+	// This prevents shell injection via ver (e.g. "1.0.0;echo INJECTED").
+	if !releaseVerRe.MatchString(ver) {
+		return fmt.Errorf("invalid version %q: must match semver (e.g. 1.2.3 or 1.2.3-rc.1)", ver)
+	}
+
+	// Update package.json version across all web subapps.
+	// ver is passed via NSELF_VERSION env var — never interpolated into the script string itself.
+	const nodeScript = `
 const fs = require('fs');
 const path = require('path');
+const ver = process.env.NSELF_VERSION;
 const subapps = ['org','docs','nchat','nclaw','cloud','install','base','ntask','ntv','nfamily','clawde'];
 subapps.forEach(app => {
-  const pkg = path.join('%s/web', app, 'package.json');
+  const pkg = path.join('../web', app, 'package.json');
   if (!fs.existsSync(pkg)) return;
-  const j = JSON.parse(fs.readFileSync(pkg));
-  j.version = '%s';
+  const j = JSON.parse(fs.readFileSync(pkg, 'utf8'));
+  j.version = ver;
   fs.writeFileSync(pkg, JSON.stringify(j, null, 2)+'\n');
   console.log('bumped', app, 'to', j.version);
 });
-"`, "../", ver)
-	c := exec.CommandContext(ctx, "sh", "-c", script)
+`
+	c := exec.CommandContext(ctx, "node", "--eval", nodeScript)
+	c.Env = append(os.Environ(), "NSELF_VERSION="+ver)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
@@ -737,22 +758,42 @@ func execVercelDeploy(ctx context.Context, ver string) error {
 }
 
 func execReadmeBadges(ctx context.Context, ver string) error {
-	// Update version badge in README.md across repos — sed-based replacement
+	// Semver validation gate — rejects non-semver strings before any file operation.
+	if !releaseVerRe.MatchString(ver) {
+		return fmt.Errorf("invalid version %q: must match semver (e.g. 1.2.3 or 1.2.3-rc.1)", ver)
+	}
+	_ = ctx // no shell invoked; ctx used for future cancellation support
+
+	// Go-native badge replace — no shell, no fmt.Sprintf interpolation into a shell command.
+	replacement := "version-" + ver + "-"
 	repos := []string{"cli", "admin", "nchat", "nclaw", "ntask", "ntv", "nfamily", "clawde", "plugins", "web"}
 	for _, r := range repos {
 		readmePath := fmt.Sprintf("../%s/README.md", r)
 		if _, err := os.Stat(readmePath); err != nil {
 			continue
 		}
-		c := exec.CommandContext(ctx, "sed", "-i", "",
-			fmt.Sprintf("s/version-[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*-/version-%s-/g", ver),
-			readmePath,
-		)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		if err := c.Run(); err != nil {
-			return fmt.Errorf("badge update in %s/README.md: %w", r, err)
+		f, err := os.OpenFile(readmePath, os.O_RDWR, 0o644)
+		if err != nil {
+			return fmt.Errorf("badge update open %s/README.md: %w", r, err)
 		}
+		data, err := io.ReadAll(f)
+		if err != nil {
+			_ = f.Close()
+			return fmt.Errorf("badge update read %s/README.md: %w", r, err)
+		}
+		updated := badgePat.ReplaceAll(data, []byte(replacement))
+		if err := f.Truncate(0); err != nil {
+			_ = f.Close()
+			return fmt.Errorf("badge update truncate %s/README.md: %w", r, err)
+		}
+		if _, err := f.WriteAt(updated, 0); err != nil {
+			_ = f.Close()
+			return fmt.Errorf("badge update write %s/README.md: %w", r, err)
+		}
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("badge update close %s/README.md: %w", r, err)
+		}
+		fmt.Printf("badge updated %s/README.md → %s\n", r, ver)
 	}
 	return nil
 }

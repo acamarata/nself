@@ -13,6 +13,23 @@ Two files must be updated for a release:
 
 Both must match exactly before tagging.
 
+## Version String Validation
+
+The `nself release <ver>` command validates the version argument against an anchored semver regexp before any exec call:
+
+```
+^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$
+```
+
+Strings containing shell metacharacters (`;`, `&&`, `$()`, backticks) are rejected at entry. This prevents shell injection via the version argument.
+
+## Version Bump Implementation
+
+The release command updates web subapp `package.json` files and README version badges using injection-safe patterns:
+
+- **Web version bumps** (`nself release <ver>` step 7): invokes `node --eval <script>` with the version passed as the `NSELF_VERSION` environment variable. The version is never interpolated into the shell command string.
+- **README badge sync** (step 9): uses Go-native `regexp.ReplaceAll` on each `README.md` file directly. No shell or `sed` invocation.
+
 ## Tag Format
 
 Releases use semantic versioning with a `v` prefix:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func ensureCloudflared(ctx context.Context) (string, error) {
 	}
 
 	url := cloudflaredDownloadURL()
-	fmt.Printf("Downloading cloudflared from %s\n", url)
+	slog.Info("downloading cloudflared", "url", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -80,7 +81,7 @@ func ensureCloudflared(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("install cloudflared: %w", err)
 	}
 
-	fmt.Printf("cloudflared installed at %s\n", binPath)
+	slog.Info("cloudflared installed", "path", binPath)
 	return binPath, nil
 }
 

@@ -10,6 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -44,11 +45,17 @@ func InitTracer(cfg TracerConfig) (func(context.Context) error, error) {
 		}
 	}
 
-	exporter, err := otlptracegrpc.New(ctx,
+	// Build exporter options. TLS is enabled by default; opt into plaintext via
+	// OTEL_INSECURE=true (development/private-network deployments only).
+	exporterOpts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(endpoint),
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithTimeout(time.Duration(timeoutMS)*time.Millisecond),
-	)
+		otlptracegrpc.WithTimeout(time.Duration(timeoutMS) * time.Millisecond),
+	}
+	if os.Getenv("OTEL_INSECURE") == "true" {
+		exporterOpts = append(exporterOpts, otlptracegrpc.WithInsecure())
+	}
+
+	exporter, err := otlptracegrpc.New(ctx, exporterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("otlp exporter: %w", err)
 	}
@@ -74,7 +81,9 @@ func InitTracer(cfg TracerConfig) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("otel resource: %w", err)
 	}
 
-	// Sampling: parentbased_traceidratio. Ratio from env or default (0.1 prod, 1.0 dev).
+	// Sampling: parentbased with error-span floor. In prod the base ratio is 10%;
+	// error spans (StatusError / status code Error) always sample regardless of
+	// the ratio so failures are never silently dropped.
 	ratio := 1.0
 	if env == "prod" || env == "production" {
 		ratio = 0.1
@@ -84,7 +93,7 @@ func InitTracer(cfg TracerConfig) (func(context.Context) error, error) {
 			ratio = parsed
 		}
 	}
-	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio))
+	sampler := sdktrace.ParentBased(newErrorFloorSampler(ratio))
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
@@ -110,4 +119,53 @@ func InitTracer(cfg TracerConfig) (func(context.Context) error, error) {
 // Tracer returns a named tracer from the global provider.
 func Tracer(name string) trace.Tracer {
 	return otel.Tracer(name)
+}
+
+// errorFloorSampler wraps a ratio-based sampler and guarantees that spans
+// carrying an error status (StatusError / codes.Error) are always sampled,
+// regardless of the configured ratio. This prevents the 10% production floor
+// from silently dropping failure traces.
+type errorFloorSampler struct {
+	// ratio is the base sampling probability for non-error spans.
+	ratio   float64
+	wrapped sdktrace.Sampler
+}
+
+// newErrorFloorSampler returns an errorFloorSampler that samples error spans
+// with AlwaysSample and non-error spans with the given ratio.
+func newErrorFloorSampler(ratio float64) sdktrace.Sampler {
+	return &errorFloorSampler{
+		ratio:   ratio,
+		wrapped: sdktrace.TraceIDRatioBased(ratio),
+	}
+}
+
+// ShouldSample implements sdktrace.Sampler.
+// It checks for error-indicating attributes (set before Span.Start) to promote
+// sampling — specifically the otel-standard "error" bool attribute and any
+// attribute keyed "status" or "status_code" with value matching StatusError.
+// Once a span is created and SetStatus(codes.Error, …) is called, the span is
+// always exported regardless because RecordAndSample was decided at start.
+func (s *errorFloorSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	// Inspect caller-provided attributes for error signals. Callers that know
+	// a span represents an error can set attribute.Bool("error", true) before
+	// starting the span to guarantee it is sampled.
+	for _, attr := range p.Attributes {
+		switch {
+		case attr.Key == "error" && attr.Value.AsBool():
+			// Explicit error flag → AlwaysSample (mirrors codes.Error / StatusError).
+			return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample}
+		case (attr.Key == "status_code" || attr.Key == "status") &&
+			attr.Value.AsString() == codes.Error.String():
+			// StatusError string match → AlwaysSample.
+			return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample}
+		}
+	}
+	// No error signal found — delegate to the ratio-based sampler.
+	return s.wrapped.ShouldSample(p)
+}
+
+// Description returns a human-readable identifier for this sampler.
+func (s *errorFloorSampler) Description() string {
+	return fmt.Sprintf("ErrorFloor{StatusError=AlwaysSample,ratio=%.4f}", s.ratio)
 }

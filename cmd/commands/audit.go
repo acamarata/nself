@@ -78,16 +78,14 @@ func runAuditDocs(cmd *cobra.Command, _ []string) error {
 		Quarter:   quarter,
 	})
 	if err != nil {
-		ui.Error(fmt.Sprintf("audit failed: %v", err))
-		os.Exit(2)
+		return fmt.Errorf("audit: %w", err)
 	}
 
 	var modified []string
 	if fix {
 		modified, err = audit.ApplyAutoFix(absRoot, report)
 		if err != nil {
-			ui.Error(fmt.Sprintf("auto-fix failed: %v", err))
-			os.Exit(2)
+			return fmt.Errorf("audit: auto-fix: %w", err)
 		}
 	}
 
@@ -124,7 +122,7 @@ func runAuditDocs(cmd *cobra.Command, _ []string) error {
 
 	if report.Summary.Total > 0 {
 		// Non-fatal but signal findings with exit code 1.
-		os.Exit(1)
+		return fmt.Errorf("audit found %d issue(s)", report.Summary.Total)
 	}
 	return nil
 }

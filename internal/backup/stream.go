@@ -757,8 +757,8 @@ func ScheduleStream(cfg *config.Config, cron, to, recipient, unitDir string, dry
 	})
 
 	if dryRun {
-		fmt.Printf("# ── nself-backup-stream.service ──\n%s\n", service)
-		fmt.Printf("# ── nself-backup-stream.timer ──\n%s\n", timer)
+		slog.Info("dry run: systemd unit", "unit", "nself-backup-stream.service", "content", service)
+		slog.Info("dry run: systemd unit", "unit", "nself-backup-stream.timer", "content", timer)
 		return nil
 	}
 

@@ -25,6 +25,10 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	results = append(results, SSLChecks(ctx, verbose)...)
 	results = append(results, PingChecks(ctx, verbose)...)
 	results = append(results, PluginHealthChecks(ctx, projectDir, verbose)...)
+
+	// P2-E7-W2-S6-T21: PayPal multi-account CSV parity validation.
+	results = append(results, CheckPayPalCSVParity(ctx))
+
 	results = append(results, LicenseChecks(ctx, projectDir, verbose)...)
 	results = append(results, MonitoringChecks(ctx)...)
 	results = append(results, BackupChecks(ctx, projectDir)...)
@@ -106,7 +110,57 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 		results = append(results, DogfoodChecks(ctx, projectDir, verbose)...)
 	}
 
+	// MINIO-CRED-01: flag minioadmin default credentials in prod/staging.
+	results = append(results, CheckMinioCredentials())
+
 	return results
+}
+
+// CheckMinioCredentials reads NSELF_ENV, MINIO_ROOT_USER, and MINIO_ROOT_PASSWORD
+// from the environment and returns a CRITICAL finding when either credential
+// uses the insecure "minioadmin" default in a staging or production deployment.
+// Dev environments are always unblocked.
+//
+// Check ID: MINIO-CRED-01
+func CheckMinioCredentials() CheckResult {
+	env := os.Getenv("NSELF_ENV")
+	if env != "prod" && env != "staging" {
+		return CheckResult{
+			Section: "security",
+			Name:    "MinIO credentials (MINIO-CRED-01)",
+			Status:  "pass",
+			Message: fmt.Sprintf("dev environment (%q) — minioadmin defaults accepted", env),
+		}
+	}
+
+	rootUser := os.Getenv("MINIO_ROOT_USER")
+	rootPassword := os.Getenv("MINIO_ROOT_PASSWORD")
+
+	if rootUser == "minioadmin" || rootUser == "" {
+		return CheckResult{
+			Section: "security",
+			Name:    "MinIO credentials (MINIO-CRED-01)",
+			Status:  "fail",
+			Message: "CRITICAL: MINIO_ROOT_USER is 'minioadmin' or unset — set a strong unique value in .env",
+			FixCmd:  "Set MINIO_ROOT_USER=<strong-value> in .env and restart with: nself start",
+		}
+	}
+	if rootPassword == "minioadmin" || len(rootPassword) < 16 {
+		return CheckResult{
+			Section: "security",
+			Name:    "MinIO credentials (MINIO-CRED-01)",
+			Status:  "fail",
+			Message: "CRITICAL: MINIO_ROOT_PASSWORD is 'minioadmin' or too short (<16 chars) — set a strong value in .env",
+			FixCmd:  "Set MINIO_ROOT_PASSWORD=<strong-value-16+chars> in .env and restart with: nself start",
+		}
+	}
+
+	return CheckResult{
+		Section: "security",
+		Name:    "MinIO credentials (MINIO-CRED-01)",
+		Status:  "pass",
+		Message: "MINIO_ROOT_USER and MINIO_ROOT_PASSWORD are set to non-default values",
+	}
 }
 
 // HostChecks verifies disk, memory, CPU, time sync, kernel.

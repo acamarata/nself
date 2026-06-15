@@ -184,7 +184,13 @@ func rerunWithOsascript(ctx context.Context, workdir string) error {
 		return fmt.Errorf("permission denied writing /etc/hosts")
 	}
 	ui.Info("Requesting administrator access to update /etc/hosts...")
-	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, self, workdir)
+	// Escape the workdir and binary paths to prevent AppleScript injection.
+	// Any double-quote or backslash in the path is escaped before embedding.
+	escapedSelf := strings.ReplaceAll(filepath.Clean(self), `\`, `\\`)
+	escapedSelf = strings.ReplaceAll(escapedSelf, `"`, `\"`)
+	escapedWorkdir := strings.ReplaceAll(filepath.Clean(workdir), `\`, `\\`)
+	escapedWorkdir = strings.ReplaceAll(escapedWorkdir, `"`, `\"`)
+	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, escapedSelf, escapedWorkdir)
 	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
 	cmd.WaitDelay = 5 * time.Second
 	out, err := cmd.CombinedOutput()

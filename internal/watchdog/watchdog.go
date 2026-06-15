@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,15 +21,26 @@ type Config struct {
 	CircuitBreakerWindow   time.Duration // default 10m
 	EscalationWebhook      string
 	PollInterval           time.Duration // default 30s
+	// PermanentOpenThreshold is the number of consecutive OPEN windows after which
+	// the circuit transitions to PERMANENT_OPEN and stops all automated resets.
+	// Reads from WATCHDOG_PERMANENT_OPEN_THRESHOLD env var; default 3.
+	PermanentOpenThreshold int
 }
 
 // DefaultConfig returns watchdog configuration with defaults.
 func DefaultConfig() Config {
+	threshold := 3
+	if v := os.Getenv("WATCHDOG_PERMANENT_OPEN_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			threshold = n
+		}
+	}
 	return Config{
 		Enabled:                true,
 		CircuitBreakerAttempts: 3,
 		CircuitBreakerWindow:   10 * time.Minute,
 		PollInterval:           30 * time.Second,
+		PermanentOpenThreshold: threshold,
 	}
 }
 
@@ -36,18 +48,21 @@ func DefaultConfig() Config {
 type CircuitState string
 
 const (
-	CircuitClosed CircuitState = "closed" // healthy, restarts allowed
-	CircuitOpen   CircuitState = "open"   // tripped, restarts blocked
+	CircuitClosed        CircuitState = "closed"         // healthy, restarts allowed
+	CircuitOpen          CircuitState = "open"           // tripped, restarts blocked
+	CircuitPermanentOpen CircuitState = "PERMANENT_OPEN" // permanently open; requires manual reset
 )
 
 // ServiceCircuit tracks circuit breaker state for one service.
 type ServiceCircuit struct {
-	Service     string       `json:"service"`
-	State       CircuitState `json:"state"`
-	Attempts    int          `json:"attempts"`
-	LastRestart time.Time    `json:"last_restart"`
-	WindowStart time.Time    `json:"window_start"`
-	TrippedAt   time.Time    `json:"tripped_at,omitempty"`
+	Service                string       `json:"service"`
+	State                  CircuitState `json:"state"`
+	Attempts               int          `json:"attempts"`
+	ConsecutiveOpenWindows int          `json:"consecutive_open_windows"`
+	LastRestart            time.Time    `json:"last_restart"`
+	WindowStart            time.Time    `json:"window_start"`
+	TrippedAt              time.Time    `json:"tripped_at,omitempty"`
+	PermanentOpenAt        time.Time    `json:"permanent_open_at,omitempty"`
 }
 
 // Event records a watchdog action.
@@ -127,27 +142,54 @@ func (w *Watchdog) GetStatus() Status {
 	}
 }
 
-// ResetBreakers resets all circuit breakers to closed state.
+// ResetBreakers resets all circuit breakers (including PERMANENT_OPEN) to closed state.
 func (w *Watchdog) ResetBreakers() int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	count := 0
 	for _, c := range w.circuits {
-		if c.State == CircuitOpen {
+		if c.State == CircuitOpen || c.State == CircuitPermanentOpen {
 			c.State = CircuitClosed
 			c.Attempts = 0
+			c.ConsecutiveOpenWindows = 0
 			c.TrippedAt = time.Time{}
+			c.PermanentOpenAt = time.Time{}
 			count++
 			w.events = append(w.events, Event{
 				Timestamp: time.Now(),
 				Service:   c.Service,
 				Action:    "circuit_reset",
-				Detail:    "manually reset",
+				Detail:    "manually reset (all breakers)",
 			})
 		}
 	}
 	return count
+}
+
+// ResetService resets a single named service's circuit breaker to closed state.
+// It clears PERMANENT_OPEN state and the consecutive-window counter.
+// Returns false if the service has no tracked circuit.
+func (w *Watchdog) ResetService(service, operator string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	c, ok := w.circuits[service]
+	if !ok {
+		return false
+	}
+	c.State = CircuitClosed
+	c.Attempts = 0
+	c.ConsecutiveOpenWindows = 0
+	c.TrippedAt = time.Time{}
+	c.PermanentOpenAt = time.Time{}
+	w.events = append(w.events, Event{
+		Timestamp: time.Now(),
+		Service:   service,
+		Action:    "circuit_reset",
+		Detail:    fmt.Sprintf("manual reset by %s", operator),
+	})
+	return true
 }
 
 // GetHistory returns watchdog events, optionally filtered by duration.
@@ -184,10 +226,12 @@ func (w *Watchdog) poll(ctx context.Context) {
 		}
 
 		if info.Health != "unhealthy" {
-			// Service recovered, reset window if circuit was closed
+			// Service recovered: reset attempt counter and consecutive-open-window counter.
+			// PERMANENT_OPEN is NOT cleared automatically — it requires an explicit operator reset.
 			w.mu.Lock()
 			if circuit, ok := w.circuits[c.Service]; ok && circuit.State == CircuitClosed {
 				circuit.Attempts = 0
+				circuit.ConsecutiveOpenWindows = 0
 			}
 			w.mu.Unlock()
 			continue
@@ -209,11 +253,39 @@ func (w *Watchdog) handleUnhealthy(ctx context.Context, c health.RestartContaine
 		w.circuits[c.Service] = circuit
 	}
 
-	// Check if window has expired and reset
+	// PERMANENT_OPEN: block all automated restarts; no automatic resets.
+	if circuit.State == CircuitPermanentOpen {
+		w.mu.Unlock()
+		return
+	}
+
+	// Check if window has expired — roll the window.
 	if time.Since(circuit.WindowStart) > w.cfg.CircuitBreakerWindow {
 		circuit.Attempts = 0
 		circuit.WindowStart = time.Now()
-		circuit.State = CircuitClosed
+		// If the circuit was OPEN, count this as another consecutive open window.
+		// Do NOT automatically reset to CLOSED; check the permanent-open threshold.
+		if circuit.State == CircuitOpen {
+			circuit.ConsecutiveOpenWindows++
+			if circuit.ConsecutiveOpenWindows >= w.cfg.PermanentOpenThreshold {
+				circuit.State = CircuitPermanentOpen
+				circuit.PermanentOpenAt = time.Now()
+				w.events = append(w.events, Event{
+					Timestamp: time.Now(),
+					Service:   c.Service,
+					Action:    "circuit_permanent_open",
+					Detail: fmt.Sprintf("permanently open after %d consecutive open windows (threshold %d)",
+						circuit.ConsecutiveOpenWindows, w.cfg.PermanentOpenThreshold),
+				})
+				w.mu.Unlock()
+				return
+			}
+			// Below threshold: stay OPEN but roll the window counter.
+		} else {
+			// Was CLOSED (rare: window expired while healthy counter reset hadn't triggered).
+			circuit.ConsecutiveOpenWindows = 0
+			circuit.State = CircuitClosed
+		}
 	}
 
 	if circuit.State == CircuitOpen {

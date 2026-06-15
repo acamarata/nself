@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
@@ -18,6 +19,19 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// maskToken returns a masked token showing only the first 8 characters followed by ****.
+// If the token is 8 characters or shorter, returns ****.
+// If NSELF_DEBUG=1, returns the full token.
+func maskToken(t string) string {
+	if os.Getenv("NSELF_DEBUG") == "1" {
+		return t
+	}
+	if len(t) <= 8 {
+		return "****"
+	}
+	return t[:8] + "****"
+}
 
 // BridgeSession holds runtime state for one active tunnel session.
 type BridgeSession struct {
@@ -110,9 +124,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 
 	// Dry run: only describe what would happen.
 	if bridgeFlagValues.dryRun {
-		fmt.Printf("Dry run: would start Cloudflare Tunnel → %s\n", localAddr)
-		fmt.Printf("Idle timeout: %v | Schema context: %v\n", idleTimeout, !bridgeFlagValues.noContext)
-		fmt.Println("Tunnel URL would be: https://<random>.trycloudflare.com")
+		slog.Info("dry run: would start Cloudflare Tunnel", "local_addr", localAddr, "idle_timeout", idleTimeout, "schema_context", !bridgeFlagValues.noContext, "tunnel_url", "https://<random>.trycloudflare.com")
 		return nil
 	}
 
@@ -177,16 +189,11 @@ func runBridge(cmd *cobra.Command, args []string) error {
 		ProjectID: os.Getenv("PROJECT_NAME"),
 	}
 
-	fmt.Printf("\nAI Studio bridge ready: %s\n", tunnelURL)
-	fmt.Printf("Auth token:             %s\n", authToken)
-	fmt.Printf("Schema context:         %v\n", !bridgeFlagValues.noContext)
-	fmt.Printf("Idle timeout:           %v\n", idleTimeout)
+	slog.Info("AI Studio bridge ready", "tunnel_url", tunnelURL, "auth_token", maskToken(authToken), "schema_context", !bridgeFlagValues.noContext, "idle_timeout", idleTimeout)
 	if bridgeFlagValues.ipAllowlist != "" {
-		fmt.Printf("IP allowlist:           %s\n", bridgeFlagValues.ipAllowlist)
+		slog.Info("bridge ip allowlist", "allowlist", bridgeFlagValues.ipAllowlist)
 	}
-	fmt.Printf("\nIn AI Studio → Custom connector → URL: %s/v1/graphql\n", tunnelURL)
-	fmt.Printf("Authorization header:   Bearer %s\n", authToken)
-	fmt.Printf("\nPress Ctrl-C to stop.\n\n")
+	slog.Info("AI Studio connector", "graphql_url", tunnelURL+"/v1/graphql", "auth_header", "Bearer "+maskToken(authToken))
 
 	// Idle timeout watcher.
 	idleTicker := time.NewTicker(30 * time.Second)
@@ -200,14 +207,14 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	for {
 		select {
 		case <-sigCh:
-			fmt.Println("\nShutting down bridge...")
+			slog.Info("shutting down bridge")
 			shutdownAll(srv, cfCmd)
 			return nil
 
 		case <-idleTicker.C:
 			idle := time.Since(ps.lastActivity)
 			if idle >= idleTimeout {
-				fmt.Printf("\nBridge idle for %v (threshold: %v). Closing.\n", idle.Round(time.Second), idleTimeout)
+				slog.Info("bridge idle timeout reached", "idle", idle.Round(time.Second), "threshold", idleTimeout)
 				shutdownAll(srv, cfCmd)
 				return nil
 			}

@@ -227,22 +227,18 @@ func runClawKeysCreateBootstrap(cmd *cobra.Command) error {
 		missing = append(missing, "--machine-id")
 	}
 	if len(missing) > 0 {
-		fmt.Fprintf(os.Stderr, "error: --bootstrap requires %s\n", strings.Join(missing, ", "))
-		os.Exit(bootstrapExitCode)
+		return fmt.Errorf("claw_keys: --bootstrap requires %s", strings.Join(missing, ", "))
 	}
 	if !validBootstrapTiers[tier] {
-		fmt.Fprintf(os.Stderr, "error: invalid --tier %q (allowed: owner|plus|claw|chat|media|family|pro|enterprise)\n", tier)
-		os.Exit(bootstrapExitCode)
+		return fmt.Errorf("claw_keys: invalid --tier %q (allowed: owner|plus|claw|chat|media|family|pro|enterprise)", tier)
 	}
 	if !strings.Contains(owner, "@") {
-		fmt.Fprintf(os.Stderr, "error: --owner-email must be a valid email address\n")
-		os.Exit(bootstrapExitCode)
+		return fmt.Errorf("claw_keys: --owner-email must be a valid email address")
 	}
 
 	baseURL := clawServerURL()
 	if baseURL == "" {
-		fmt.Fprintf(os.Stderr, "error: no server URL configured. Set NSELF_CLAW_SERVER or run 'nself claw config set server <url>'\n")
-		os.Exit(bootstrapExitCode)
+		return fmt.Errorf("claw_keys: no server URL configured. Set NSELF_CLAW_SERVER or run 'nself claw config set server <url>'")
 	}
 
 	body, _ := json.Marshal(map[string]string{
