@@ -338,7 +338,10 @@ func TestPluginJSON_TenancyFields(t *testing.T) {
 				Year:       2026,
 				Tenancy:    tc.tenancy,
 			}
-			got := renderPluginJSON(p)
+			got, err := renderPluginJSON(p)
+			if err != nil {
+				t.Fatalf("renderPluginJSON: %v", err)
+			}
 			if !strings.Contains(got, tc.wantSupported) {
 				t.Errorf("tenancy %s: want %q in plugin.json, got:\n%s", tc.tenancy, tc.wantSupported, got)
 			}
