@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deprecation"
 	"github.com/nself-org/cli/internal/license"
+	"github.com/nself-org/cli/internal/observability"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/version"
 
@@ -64,6 +66,21 @@ func init() {
 	// --no-deprecation-warnings suppresses deprecation output (for scripted use).
 	RootCmd.PersistentFlags().Bool("no-deprecation-warnings", false, "Suppress deprecation warnings (for scripted use)")
 	RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// ── OTel tracing ──────────────────────────────────────────────────────
+		// InitTracer is only called when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+		// Leaving it unset is the zero-config path: no tracer, no side-effects.
+		if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+			tracerCfg := observability.TracerConfig{
+				ServiceName: "nself-cli",
+				Version:     version.GetVersion(),
+			}
+			if shutdown, err := observability.InitTracer(tracerCfg); err == nil {
+				// Flush remaining spans on exit. Use a background context so
+				// shutdown is not cancelled mid-flush when the cobra context ends.
+				defer func() { _ = shutdown(context.Background()) }()
+			}
+		}
+
 		// ── Deprecation warning ───────────────────────────────────────────────
 		// Emit before any other output so the warning is the first thing seen.
 		// Written to stderr so piped stdout output is never polluted.
