@@ -21,24 +21,26 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// embeddedPGExperimentalSkip marks the 5 embedded-PG integration tests as
+// embeddedPGExperimentalSkip marks the 4 embedded-PG integration tests as
 // unconditionally skipped with a documented tracking reference.
 //
-// Rationale: pglite v0.2.17 is compiled with Emscripten and requires ~113
-// env::* host imports (invoke_* trampolines, __syscall_* wrappers, memory
-// management, etc.) that the wasmtime shim does not yet provide.  The feature
-// is opt-in only (--embedded-pg / NSELF_EMBEDDED_PG=true); the default path
-// is standard Docker PostgreSQL.  Full Emscripten host-import implementation
-// is tracked in the P104 residue as a medium-priority carry-forward item.
+// Rationale: pglite v0.2.17 is an Emscripten module (not WASI). While the
+// GOT.mem:: / GOT.func:: dynamic-linking globals are now registered correctly
+// (defineGOTGlobals in emscripten_abi.go) and WASM instantiation succeeds,
+// the runtime driver still needs a rewrite:
+//  1. pglite does not export _start (WASI convention); its entry points are
+//     __wasm_call_ctors, pg_initdb_main, and interactive_one.
+//  2. pglite communicates via in-memory buffers, not Unix domain sockets.
+//     The socket-bridge approach requires a full protocol redesign.
+// These are tracked in P104 residue as medium-priority carry-forward items.
 //
-// An UNCONDITIONAL skip here is intentional and honest: it prevents a
-// regression in unrelated code from masquerading as "this skip triggered",
-// which would be a false-green.  The skip is not error-triggered.
+// Progress on wip/pglite-got branch: instantiation now succeeds after GOT.mem
+// and all env:: signature fixes. Remaining blocker is the runtime driver.
 func embeddedPGExperimentalSkip(t *testing.T) {
 	t.Helper()
-	t.Skip("embedded-PG via pglite/wasmtime is EXPERIMENTAL and not yet functional " +
-		"(~113 Emscripten host imports unimplemented in wasmtime shim) — " +
-		"tracked in P104 residue; see FEATURES.md for status")
+	t.Skip("embedded-PG EXPERIMENTAL: instantiation succeeds (GOT.mem fixed) but " +
+		"runtime driver needs rewrite for Emscripten entry points (not _start) " +
+		"and in-memory buffer protocol (not Unix socket) — P104 residue")
 }
 
 // shortTempDir creates a temp dir under /tmp to keep AF_UNIX paths short

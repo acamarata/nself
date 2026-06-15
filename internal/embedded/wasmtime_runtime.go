@@ -154,6 +154,15 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
+	// Emscripten dynamic-linking GOT relocation globals (GOT.mem:: and
+	// GOT.func:: namespaces). These are binary-specific: the exact set is
+	// determined by which symbols the pglite.wasm binary imports. Enumerate
+	// them from the compiled module and register each as a mutable i32 global
+	// so the dynamic linker can write the final relocated address at start time.
+	if err := defineGOTGlobals(linker, store, module); err != nil {
+		return fmt.Errorf("embedded/runtime: GOT globals: %w", err)
+	}
+
 	r.linker = linker
 
 	// Configure WASI: preopened filesystem, environment.
