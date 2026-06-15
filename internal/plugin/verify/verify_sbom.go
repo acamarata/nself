@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -20,7 +21,7 @@ type SBOMCheckOptions struct {
 // Returns error if SBOM is missing (non-404), malformed, or fails schema validation.
 func VerifySBOM(ctx context.Context, pluginName, version string, opts SBOMCheckOptions) error {
 	if opts.SkipCheck {
-		fmt.Printf("WARNING: SBOM check skipped for %s@%s (--skip-sbom-check). Air-gapped installs only.\n", pluginName, version)
+		slog.Warn("SBOM check skipped (air-gapped installs only)", "plugin", pluginName, "version", version, "flag", "--skip-sbom-check")
 		return nil
 	}
 
@@ -48,7 +49,7 @@ func VerifySBOM(ctx context.Context, pluginName, version string, opts SBOMCheckO
 
 	if resp.StatusCode == http.StatusNotFound {
 		// SBOM not present on release — warn but don't fail (older plugin releases pre-S2.T11).
-		fmt.Printf("warning: no SBOM found for %s@%s (pre-SBOM release)\n", pluginName, version)
+		slog.Warn("no SBOM found (pre-SBOM release)", "plugin", pluginName, "version", version)
 		return nil
 	}
 
@@ -66,7 +67,7 @@ func VerifySBOM(ctx context.Context, pluginName, version string, opts SBOMCheckO
 		return fmt.Errorf("sbom: invalid CycloneDX JSON for %s@%s: %w", pluginName, version, err)
 	}
 
-	fmt.Printf("sbom: verified for %s@%s\n", pluginName, version)
+	slog.Info("sbom verified", "plugin", pluginName, "version", version)
 	return nil
 }
 

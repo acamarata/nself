@@ -266,6 +266,7 @@ func writeScaffold(dir, name, lang string, port int) ([]string, error) {
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 )
@@ -278,10 +279,9 @@ func main() {
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
-	fmt.Println("%s listening on :" + port)
+	log.Printf("%s listening on :%s\n", "%s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 `, upperName, port, name), 0644},

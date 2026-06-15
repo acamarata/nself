@@ -78,6 +78,6 @@ func Suspend(ctx context.Context, cfg *config.Config, opts SuspendOptions) error
 		slog.Warn("failed to write audit log for tenant suspension", "error", err)
 	}
 
-	fmt.Printf("Tenant %q suspended (reason: %s)\n", opts.Slug, opts.Reason)
+	slog.Info("tenant suspended", "slug", opts.Slug, "reason", opts.Reason)
 	return nil
 }

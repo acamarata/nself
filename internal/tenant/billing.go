@@ -131,7 +131,6 @@ func RetryStripeEvent(ctx context.Context, cfg *config.Config, eventID string) e
 		return fmt.Errorf("retrying stripe event: %w", err)
 	}
 
-	slog.Info("stripe event re-enqueued", "id", eventID)
-	fmt.Printf("Stripe event %s re-enqueued for retry.\n", eventID)
+	slog.Info("stripe event re-enqueued for retry", "id", eventID)
 	return nil
 }

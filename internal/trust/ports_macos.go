@@ -5,6 +5,7 @@ package trust
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -114,7 +115,7 @@ func CheckPortsDarwin(cfg TrustConfig) bool {
 // determines configuration is genuinely absent.
 func SetupPortsDarwin(cfg TrustConfig) (alreadyDone bool, err error) {
 	if CheckPortsDarwin(cfg) {
-		fmt.Println("  ports already configured — skipping admin prompt")
+		slog.Info("ports already configured, skipping admin prompt")
 		return true, nil
 	}
 

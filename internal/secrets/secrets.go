@@ -103,9 +103,9 @@ func Init(projectRoot string) error {
 		if err := os.Chmod(keyPath, 0600); err != nil {
 			return fmt.Errorf("setting key permissions: %w", err)
 		}
-		fmt.Printf("Generated age key at %s\n", keyPath)
+		slog.Info("generated age key", "path", keyPath)
 	} else {
-		fmt.Printf("Age key already exists at %s\n", keyPath)
+		slog.Info("age key already exists", "path", keyPath)
 	}
 
 	// Create .secrets directory.
@@ -127,7 +127,7 @@ func Init(projectRoot string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Your public key (share with team): %s\n", pubKey)
+	slog.Info("age public key", "public_key", pubKey)
 
 	return nil
 }
@@ -289,7 +289,7 @@ func Rotate(projectRoot, env, key string) (string, error) {
 
 	newValue, hint := generateRotationValue(key)
 	if hint != "" {
-		fmt.Printf("Note: %s\n", hint)
+		slog.Info("rotation hint", "note", hint)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -483,13 +483,13 @@ func Rekey(projectRoot, removePubKey string) error {
 			return fmt.Errorf("re-encrypting %s: %w", env, err)
 		}
 		rekeyCount++
-		fmt.Printf("Rekeyed %s.age (removed recipient)\n", env)
+		slog.Info("rekeyed environment", "env", env+".age", "action", "removed recipient")
 	}
 
 	if rekeyCount == 0 {
-		fmt.Println("No files contained the specified recipient.")
+		slog.Info("rekey: no files contained the specified recipient")
 	} else {
-		fmt.Printf("Rekeyed %d environment(s).\n", rekeyCount)
+		slog.Info("rekey complete", "environments", rekeyCount)
 	}
 	return nil
 }

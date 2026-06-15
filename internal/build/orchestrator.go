@@ -268,8 +268,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	// Skipped when opts.NoAutoRedis is set (--no-auto-redis flag).
 	if !cfg.Redis.Enabled && !opts.NoAutoRedis && ShouldAutoEnableRedis(DefaultPluginDir()) {
 		cfg.Redis.Enabled = true
-		fmt.Println("Note: Redis auto-enabled — a BullMQ-backed plugin (ai, claw, mux, cron, notify, or push) is installed.")
-		fmt.Println("      To disable this behaviour, pass --no-auto-redis.")
+		slog.Info("Redis auto-enabled", "reason", "BullMQ-backed plugin detected (ai, claw, mux, cron, notify, or push)", "disable_flag", "--no-auto-redis")
 	}
 
 	// ── Step 8: Generate docker-compose.yml ─────────────────────────
@@ -288,7 +287,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	if ollamaInjected {
 		composeYAML = mergedYAML
 		if opts.Verbose {
-			fmt.Println("Ollama sidecar injected into docker-compose.yml (AI_OLLAMA_ENABLED=true)")
+			slog.Info("Ollama sidecar injected", "file", "docker-compose.yml", "trigger", "AI_OLLAMA_ENABLED=true")
 		}
 	}
 
@@ -317,15 +316,12 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	filesGenerated++
 
 	if opts.Verbose && len(pluginComposeFiles) > 0 {
-		fmt.Printf("Discovered %d plugin compose file(s):\n", len(pluginComposeFiles))
-		for _, pf := range pluginComposeFiles {
-			fmt.Printf("  - %s\n", pf)
-		}
+		slog.Info("discovered plugin compose files", "count", len(pluginComposeFiles), "files", pluginComposeFiles)
 	}
 
 	// ── Step 9.6: Verify Go plugin Dockerfiles have HEALTHCHECK ─────
 	for _, w := range CheckGoPluginDockerfiles(pluginDir) {
-		fmt.Printf("warning: %s\n", w)
+		slog.Warn(w)
 	}
 
 	// ── Step 9.7: Wire ɳSentry scrape targets + Loki configs ────────
@@ -356,9 +352,9 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		filesGenerated++
 		if opts.Verbose {
 			if nsentryAdded > 0 {
-				fmt.Printf("Generated monitoring/prometheus.yml (with %d ɳSentry target(s))\n", nsentryAdded)
+				slog.Info("generated monitoring/prometheus.yml", "nsentry_targets", nsentryAdded)
 			} else {
-				fmt.Println("Generated monitoring/prometheus.yml (no ɳSentry plugins installed)")
+				slog.Info("generated monitoring/prometheus.yml", "nsentry_targets", 0)
 			}
 		}
 
@@ -376,7 +372,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 		filesGenerated += nLoki
 		if opts.Verbose {
-			fmt.Printf("Generated monitoring/loki.yml + promtail.yml (%d file(s))\n", nLoki)
+			slog.Info("generated monitoring configs", "files", nLoki)
 		}
 	}
 
@@ -444,7 +440,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 
 	// Print warnings — they do not fail the build.
 	for _, w := range pvResult.Warnings {
-		fmt.Printf("warning: %s\n", w)
+		slog.Warn(w)
 	}
 
 	// Any errors from post-validation fail the build.

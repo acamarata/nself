@@ -34,7 +34,7 @@ func FormatPruneJSON(result *PruneResult, keepDaily int) error {
 	if err != nil {
 		return fmt.Errorf("marshal prune report: %w", err)
 	}
-	fmt.Println(string(data))
+	fmt.Fprintln(os.Stdout, string(data))
 	return nil
 }
 

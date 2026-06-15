@@ -77,6 +77,6 @@ func Create(ctx context.Context, cfg *config.Config, opts CreateOptions) error {
 		slog.Warn("failed to write audit log for tenant creation", "error", err)
 	}
 
-	fmt.Printf("Tenant %q created (plan: %s, id: %s)\n", opts.Slug, opts.Plan, tenantID)
+	slog.Info("tenant created", "slug", opts.Slug, "plan", opts.Plan, "tenant_id", tenantID)
 	return nil
 }

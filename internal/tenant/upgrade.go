@@ -74,6 +74,6 @@ func Upgrade(ctx context.Context, cfg *config.Config, opts UpgradeOptions) error
 		slog.Warn("failed to write audit log for tenant upgrade", "error", err)
 	}
 
-	fmt.Printf("Tenant %q upgraded to plan %s\n", opts.Slug, opts.Plan)
+	slog.Info("tenant upgraded", "slug", opts.Slug, "plan", opts.Plan)
 	return nil
 }

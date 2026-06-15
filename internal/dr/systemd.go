@@ -2,6 +2,7 @@ package dr
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -115,7 +116,7 @@ func InstallSystemdUnits(opts SystemdInstallOptions) error {
 
 	if opts.DryRun {
 		for name, content := range files {
-			fmt.Printf("# ── %s ──\n%s\n", filepath.Join(unitDir, name), content)
+			slog.Info("dry run: systemd unit", "path", filepath.Join(unitDir, name), "content", content)
 		}
 		return nil
 	}

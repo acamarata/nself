@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -145,11 +146,11 @@ func Run(_ context.Context, opts Options) (*Result, error) {
 
 	// 6. Write or print.
 	if opts.DryRun {
-		fmt.Printf("--- Schema SQL ---\n%s\n", string(schemaSQLBytes))
+		slog.Info("dry run: schema SQL", "sql", string(schemaSQLBytes))
 		if len(authImportBytes) > 0 {
-			fmt.Printf("--- Auth Import SQL ---\n%s\n", string(authImportBytes))
+			slog.Info("dry run: auth import SQL", "sql", string(authImportBytes))
 		}
-		fmt.Printf("--- Summary ---\n%s\n", string(summaryBytes))
+		slog.Info("dry run: summary", "summary", string(summaryBytes))
 		return &Result{Tables: tableNames}, nil
 	}
 

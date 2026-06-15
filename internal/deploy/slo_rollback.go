@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -277,7 +278,7 @@ func writeAuditEvent(cfg RollbackConfig, priorVersion, outcome, errMsg string) {
 		return
 	}
 
-	fmt.Printf("AUDIT_EVENT %s\n", string(data))
+	slog.Info("audit event", "event", string(data))
 }
 
 // findProjectRoot walks up the directory tree to find the nSelf project root
