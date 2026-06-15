@@ -25,6 +25,10 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 	results = append(results, SSLChecks(ctx, verbose)...)
 	results = append(results, PingChecks(ctx, verbose)...)
 	results = append(results, PluginHealthChecks(ctx, projectDir, verbose)...)
+
+	// P2-E7-W2-S6-T21: PayPal multi-account CSV parity validation.
+	results = append(results, CheckPayPalCSVParity(ctx))
+
 	results = append(results, LicenseChecks(ctx, projectDir, verbose)...)
 	results = append(results, MonitoringChecks(ctx)...)
 	results = append(results, BackupChecks(ctx, projectDir)...)
