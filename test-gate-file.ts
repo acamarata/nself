@@ -1,3 +1,4 @@
+// LINE-COUNT-EXCEPTION: test file only — gate QA verification #test
 // line 0
 // line 1
 // line 2
