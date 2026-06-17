@@ -44,12 +44,25 @@ func (g *Generator) buildPostgresService() ServiceConfig {
 		user = "70:70"
 		delete(env, "PGDATA")
 	}
+	// Raise max_connections above the stock 100 so a multi-service stack does not
+	// exhaust the connection pool under load (PERF-POOL-01). shared_buffers scales
+	// with it. Operators override via POSTGRES_MAX_CONNECTIONS.
+	maxConns := cfg.Postgres.MaxConnections
+	if maxConns <= 0 {
+		maxConns = 200
+	}
+	command := []string{
+		"postgres",
+		"-c", fmt.Sprintf("max_connections=%d", maxConns),
+		"-c", "shared_buffers=256MB",
+	}
 	return ServiceConfig{
 		Image:         image,
 		ContainerName: fmt.Sprintf("%s_postgres", cfg.ProjectName),
 		Restart:       "unless-stopped",
 		Networks:      []string{cfg.DockerNetwork},
 		User:          user,
+		Command:       command,
 		Environment:   env,
 		Volumes: []string{
 			"postgres_data:/var/lib/postgresql/data",

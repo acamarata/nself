@@ -193,22 +193,27 @@ func restorePgDump(ctx context.Context, container, user, db, backupFile string) 
 	return nil
 }
 
-func restoreBaseBackup(ctx context.Context, cfg *config.Config, container, user, backupFile string, _ RestoreOptions) error {
-	slog.Info("restoring from base backup", "file", backupFile)
-	// PITR (point-in-time recovery) is NOT supported in v1.0.9.
-	// pgbackrest integration and WAL replay are planned for v1.1.0.
-	// See: docs/operations/disaster-recovery-runbook.md#pitr
-
-	slog.Info("base backup restore initiated — restart postgres to complete recovery")
-	return nil
+func restoreBaseBackup(_ context.Context, _ *config.Config, _, _, backupFile string, _ RestoreOptions) error {
+	// nself backup create produces restorable pg_dump (.dump) files, handled by
+	// restorePgDump above. A pg_basebackup tar has no working restore path here
+	// (it requires stopping postgres and replacing PGDATA out-of-band), so we
+	// must NOT report success: doing so previously made backups effectively
+	// write-only. Fail loudly instead.
+	return fmt.Errorf("%w: %s is a base-backup tar with no automated restore path; "+
+		"restore it manually by replacing PGDATA, or recreate backups with the default "+
+		"pg_dump format (nself backup create)", errs.ErrBackupRestoreFailed, backupFile)
 }
 
-func restoreMinio(_ context.Context, cfg *config.Config, backupDir, backupID string) error {
-	slog.Info("minio restore not yet fully automated", "backup_id", backupID)
-	return nil
+func restoreMinio(_ context.Context, _ *config.Config, _, backupID string) error {
+	// Return an error (not nil) so the caller's slog.Warn reflects reality:
+	// object storage is NOT restored. A silent nil falsely implied success.
+	return fmt.Errorf("%w: minio object-storage restore is not automated; restore the bucket contents manually (backup_id=%s)",
+		errs.ErrBackupRestoreFailed, backupID)
 }
 
-func restoreMetadata(_ context.Context, cfg *config.Config, backupDir, backupID string) error {
-	slog.Info("metadata restore not yet fully automated", "backup_id", backupID)
-	return nil
+func restoreMetadata(_ context.Context, _ *config.Config, _, backupID string) error {
+	// Return an error (not nil) so the caller's slog.Warn reflects reality:
+	// Hasura metadata is NOT restored. A silent nil falsely implied success.
+	return fmt.Errorf("%w: hasura metadata restore is not automated; re-apply metadata manually (backup_id=%s)",
+		errs.ErrBackupRestoreFailed, backupID)
 }

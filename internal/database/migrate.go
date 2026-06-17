@@ -280,10 +280,35 @@ func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time
 // run inside a transaction (e.g., CREATE INDEX CONCURRENTLY).
 func isNonTransactional(sql string) bool {
 	upper := strings.ToUpper(sql)
-	return strings.Contains(upper, "CREATE INDEX CONCURRENTLY") ||
+	if strings.Contains(upper, "CREATE INDEX CONCURRENTLY") ||
 		strings.Contains(upper, "DROP INDEX CONCURRENTLY") ||
-		strings.Contains(upper, "REINDEX CONCURRENTLY") ||
-		strings.Contains(upper, "ALTER TYPE") // ADD VALUE in enums
+		strings.Contains(upper, "REINDEX CONCURRENTLY") {
+		return true
+	}
+	// Only `ALTER TYPE ... ADD VALUE` cannot run in a transaction. Other ALTER
+	// TYPE forms (RENAME, OWNER TO, SET SCHEMA) are transaction-safe and must
+	// keep their atomicity, so do not match those.
+	return alterTypeAddValueRegex.MatchString(upper)
+}
+
+// alterTypeAddValueRegex matches `ALTER TYPE ... ADD VALUE`, the only ALTER TYPE
+// form that PostgreSQL refuses to run inside a transaction block.
+var alterTypeAddValueRegex = regexp.MustCompile(`ALTER\s+TYPE\b[\s\S]*?\bADD\s+VALUE\b`)
+
+// statementTimeoutDirective lets a migration opt out of (or change) the default
+// 60s statement_timeout, e.g. for large data backfills:
+//
+//	-- nself:statement-timeout=0       (disable; no limit)
+//	-- nself:statement-timeout=600s    (raise to 10 minutes)
+var statementTimeoutDirective = regexp.MustCompile(`(?i)--\s*nself:statement-timeout\s*=\s*([0-9]+[a-z]*)`)
+
+// statementTimeoutFor returns the statement_timeout value a migration should
+// use. Defaults to "60s"; a migration may override it via the directive comment.
+func statementTimeoutFor(sql string) string {
+	if m := statementTimeoutDirective.FindStringSubmatch(sql); m != nil {
+		return m[1]
+	}
+	return "60s"
 }
 
 // MigrateUp applies all pending migrations from the migrations directory.
@@ -373,10 +398,12 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 			// DEP-02: Set lock_timeout and statement_timeout at session start to prevent
 			// long-blocking schema changes from stalling production deployments.
 			// lock_timeout=5s aborts if the migration cannot acquire the lock quickly.
-			// statement_timeout=60s aborts runaway DDL statements.
+			// statement_timeout defaults to 60s but a migration with a large data
+			// backfill can override it via `-- nself:statement-timeout=...`.
+			stmtTimeout := statementTimeoutFor(sqlContent)
 			txSQL := "BEGIN;\n" +
 				"SET LOCAL lock_timeout = '5s';\n" +
-				"SET LOCAL statement_timeout = '60s';\n" +
+				fmt.Sprintf("SET LOCAL statement_timeout = '%s';\n", stmtTimeout) +
 				sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 			if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
 				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)

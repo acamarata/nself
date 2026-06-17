@@ -169,15 +169,18 @@ func (g *Generator) generateDefaultServer() (string, error) {
 
 // ServiceRouteData holds template data for service.conf.tmpl.
 type ServiceRouteData struct {
-	Route       string
-	BaseDomain  string
-	Upstream    string
-	SSLDir      string
-	RateZone    string
-	Burst       int
-	ConnLimit   int
-	WebSocket   bool
-	LazyResolve bool
+	Route      string
+	BaseDomain string
+	Upstream   string
+	// UpstreamName is the sanitized name of the generated `upstream {}` block.
+	// Set automatically by the generator; callers do not populate it.
+	UpstreamName string
+	SSLDir       string
+	RateZone     string
+	Burst        int
+	ConnLimit    int
+	WebSocket    bool
+	LazyResolve  bool
 	// HasSSL controls whether ssl_certificate directives and the listen 443
 	// directives are emitted. Set to false for letsencrypt/custom/none modes.
 	HasSSL bool
@@ -194,7 +197,24 @@ func (g *Generator) RenderServiceRoute(data ServiceRouteData) (string, error) {
 		}
 	}
 	data.HasSSL = g.hasSSL
+	data.UpstreamName = upstreamName(data.Route)
 	return g.render("service.conf.tmpl", data)
+}
+
+// upstreamName derives a unique, nginx-safe upstream block name from a route.
+// nginx upstream names allow [A-Za-z0-9_], so non-conforming chars become '_'.
+func upstreamName(route string) string {
+	var b strings.Builder
+	b.WriteString("up_")
+	for _, r := range route {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	return b.String()
 }
 
 // render executes a named template with the given data and returns the result as a string.
