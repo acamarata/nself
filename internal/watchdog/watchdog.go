@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -98,6 +99,23 @@ func New(cfg Config, docker health.DockerClient) *Watchdog {
 		cfg:      cfg,
 		docker:   docker,
 		circuits: make(map[string]*ServiceCircuit),
+	}
+}
+
+// escalate pages a human operator when self-healing trips or is abandoned.
+// It is a no-op (logged) when no escalation channel is configured, so a stack
+// without Telegram/SMTP set up still records the breaker state without erroring.
+func (w *Watchdog) escalate(service, severity, detail string) {
+	cfg := LoadEscalationConfig()
+	configured := (cfg.TelegramBotToken != "" && cfg.TelegramChatID != "") ||
+		(cfg.SMTPHost != "" && cfg.SMTPFrom != "")
+	if !configured {
+		slog.Warn("watchdog: circuit breaker tripped but no escalation channel configured",
+			"service", service, "severity", severity, "detail", detail)
+		return
+	}
+	for _, err := range Escalate(service, severity, detail) {
+		slog.Warn("watchdog: escalation channel failed", "service", service, "err", err)
 	}
 }
 
@@ -270,14 +288,17 @@ func (w *Watchdog) handleUnhealthy(ctx context.Context, c health.RestartContaine
 			if circuit.ConsecutiveOpenWindows >= w.cfg.PermanentOpenThreshold {
 				circuit.State = CircuitPermanentOpen
 				circuit.PermanentOpenAt = time.Now()
+				permDetail := fmt.Sprintf("permanently open after %d consecutive open windows (threshold %d)",
+					circuit.ConsecutiveOpenWindows, w.cfg.PermanentOpenThreshold)
 				w.events = append(w.events, Event{
 					Timestamp: time.Now(),
 					Service:   c.Service,
 					Action:    "circuit_permanent_open",
-					Detail: fmt.Sprintf("permanently open after %d consecutive open windows (threshold %d)",
-						circuit.ConsecutiveOpenWindows, w.cfg.PermanentOpenThreshold),
+					Detail:    permDetail,
 				})
 				w.mu.Unlock()
+				// Self-healing is abandoned for this service; page a human.
+				w.escalate(c.Service, "critical", permDetail)
 				return
 			}
 			// Below threshold: stay OPEN but roll the window counter.
@@ -296,13 +317,16 @@ func (w *Watchdog) handleUnhealthy(ctx context.Context, c health.RestartContaine
 	if circuit.Attempts >= w.cfg.CircuitBreakerAttempts {
 		circuit.State = CircuitOpen
 		circuit.TrippedAt = time.Now()
+		openDetail := fmt.Sprintf("tripped after %d attempts in %s", w.cfg.CircuitBreakerAttempts, w.cfg.CircuitBreakerWindow)
 		w.events = append(w.events, Event{
 			Timestamp: time.Now(),
 			Service:   c.Service,
 			Action:    "circuit_open",
-			Detail:    fmt.Sprintf("tripped after %d attempts in %s", w.cfg.CircuitBreakerAttempts, w.cfg.CircuitBreakerWindow),
+			Detail:    openDetail,
 		})
 		w.mu.Unlock()
+		// Automated restarts exhausted; the breaker is open. Alert the operator.
+		w.escalate(c.Service, "warning", openDetail)
 		return
 	}
 

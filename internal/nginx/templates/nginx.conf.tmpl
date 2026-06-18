@@ -56,9 +56,11 @@ http {
     access_log /var/log/nginx/access.log main;
     error_log /var/log/nginx/error.log warn;
 
+    # Empty (not "close") for non-websocket requests so upstream keepalive
+    # connections are reused instead of torn down after every request.
     map $http_upgrade $connection_upgrade {
         default upgrade;
-        ''      close;
+        ''      "";
     }
 
     include includes/rate-limits.conf;

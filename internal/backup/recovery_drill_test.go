@@ -64,15 +64,12 @@ func TestResolveBackupFile_PrefixMatch(t *testing.T) {
 	}
 }
 
-// TestRestoreBaseBackup_PITRNotSupported verifies that restoreBaseBackup
-// returns without error (PITR is a no-op stub in v1.0.9, NOT a silent success
-// that might mislead callers). This is a regression guard: the stub must
-// complete and the function must not panic.
-//
-// When PITR ships in v1.1.0 via pgbackrest integration, this test should be
-// updated to assert that a PointInTime option on RestoreOptions returns a
-// meaningful "not-yet-supported" sentinel rather than silently passing.
-func TestRestoreBaseBackup_PITRNotSupported(t *testing.T) {
+// TestRestoreBaseBackup_TarHasNoRestorePath verifies that restoreBaseBackup
+// FAILS loudly for a base-backup tar. A pg_basebackup tar has no automated
+// restore path in this tool, and the previous behavior (returning nil) made
+// backups effectively write-only by falsely reporting success. The default
+// backup format is now pg_dump (.dump), which restores via restorePgDump.
+func TestRestoreBaseBackup_TarHasNoRestorePath(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &config.Config{}
@@ -84,11 +81,9 @@ func TestRestoreBaseBackup_PITRNotSupported(t *testing.T) {
 		BackupID: "test-backup-id",
 	}
 
-	// restoreBaseBackup is the PITR-deferred path. It must return nil (no
-	// error) in v1.0.9 because it logs and exits gracefully.
 	err := restoreBaseBackup(ctx, cfg, "test-container", "postgres", "/fake/path.tar.gz", opts)
-	if err != nil {
-		t.Errorf("restoreBaseBackup returned unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("restoreBaseBackup must return an error for a tar backup, not a false success")
 	}
 }
 

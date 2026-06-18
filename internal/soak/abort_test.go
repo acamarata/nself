@@ -3,6 +3,7 @@ package soak
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 	"testing"
 )
@@ -36,15 +37,23 @@ func TestSoakAbortConfirm(t *testing.T) {
 	// Provide "yes" as confirmation input.
 	stdin := strings.NewReader("yes\n")
 
+	called := false
 	err := Abort(context.Background(), AbortOptions{
 		Version: "v1.0.8",
 		Env:     "staging",
 		Stdout:  &stdout,
 		Stderr:  &stderr,
 		Stdin:   stdin,
+		RollbackFunc: func(_ context.Context, _, _ string, _, _ io.Writer) error {
+			called = true
+			return nil
+		},
 	})
 	if err != nil {
 		t.Fatalf("abort with 'yes' confirmation should succeed, got: %v", err)
+	}
+	if !called {
+		t.Error("expected rollback to be invoked")
 	}
 	if !strings.Contains(stdout.String(), "complete") {
 		t.Error("expected completion message in output")
@@ -114,6 +123,9 @@ func TestSoakAbortProdWithFlag(t *testing.T) {
 		Stdout:    &stdout,
 		Stderr:    &stderr,
 		Stdin:     stdin,
+		RollbackFunc: func(_ context.Context, _, _ string, _, _ io.Writer) error {
+			return nil
+		},
 	})
 	if err != nil {
 		t.Fatalf("prod with --prod-i-mean-it and yes confirmation should succeed, got: %v", err)

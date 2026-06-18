@@ -135,6 +135,9 @@ type PostgresConfig struct {
 	ExposePort string   `env:"POSTGRES_EXPOSE_PORT"` // auto, true, false
 	MemLimit   string   `env:"POSTGRES_MEM_LIMIT"`   // 2g
 	CPULimit   string   `env:"POSTGRES_CPU_LIMIT"`   // 2.0
+	// MaxConnections overrides Postgres max_connections. The stock default of
+	// 100 exhausts under a multi-service stack (PERF-POOL-01); nself raises it.
+	MaxConnections int `env:"POSTGRES_MAX_CONNECTIONS"` // default 200
 }
 
 // PgBouncerConfig holds connection pooler configuration.

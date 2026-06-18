@@ -116,7 +116,7 @@ func FormatDrillResult(result *DrillResult, format string) (string, error) {
 //
 //	Step 1 — Provision a fresh Hetzner VM.
 //	Step 2 — Pull the latest verified backup from BACKUP_DEST.
-//	Step 3 — Wipe staging volumes (with confirmation guard).
+//	Step 3 — Start clean on the isolated drill VM (no live-host wipe).
 //	Step 4 — Restore the backup and run the verify smoke-query catalog.
 //	Step 5 — Run smoke queries, record RTO, and write a dated report.
 //	Step 6 — Destroy the drill VM.
@@ -195,12 +195,18 @@ func drillColdStart(ctx context.Context, cfg *config.Config, result *DrillResult
 	result.Details["backup_file"] = backupFile
 	slog.Info("latest backup located", "file", backupFile)
 
-	// Step 3: Wipe staging volumes — guarded by explicit target check.
-	// Only proceeds when target is "staging"; never touches prod volumes.
-	slog.Info("step 3: wiping staging volumes (staging-isolated)")
-	result.Details["step_3"] = "wipe staging volumes"
-	// Volume wipe is deferred to the actual restore which creates a clean container.
-	// In a real drill against a live staging host this would call `nself stop --wipe`.
+	// Step 3: Start from a clean slate.
+	//
+	// This drill runs entirely on the throwaway VM provisioned in Step 1 (and
+	// destroyed in Step 6 via the deferred cleanup above). It NEVER touches the
+	// volumes of any live host, so no destructive wipe of staging or prod data
+	// occurs here. The restore in Step 4 creates a fresh test container.
+	//
+	// SAFETY INVARIANT for future edits: if you ever wire an actual
+	// `nself stop --wipe`, it MUST target only this drill VM (serverIP), never a
+	// live host. Do not assume a staging guard exists upstream — add one here.
+	slog.Info("step 3: clean-slate restore on isolated drill VM", "vm", serverIP)
+	result.Details["step_3"] = "clean-slate (isolated drill VM)"
 
 	// Step 4: Run restore + verify (calls backup.runRestoreTest via verify.Verify).
 	slog.Info("step 4: restore + verify on drill VM")

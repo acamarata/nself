@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -36,6 +37,9 @@ type AbortOptions struct {
 	Stderr io.Writer
 	// Stdin for user confirmation (defaults to os.Stdin if nil).
 	Stdin io.Reader
+	// RollbackFunc performs the actual rollback. Defaults to runDeployRollback
+	// (which shells out to `nself deploy rollback <target>`). Override in tests.
+	RollbackFunc func(ctx context.Context, env, version string, stdout, stderr io.Writer) error
 }
 
 // Abort executes the soak-abort workflow.
@@ -98,7 +102,11 @@ func Abort(ctx context.Context, opts AbortOptions) error {
 
 	// Execute rollback.
 	fmt.Fprintf(stdout, "Rolling back %s to %s...\n", env, opts.Version)
-	if err := executeRollback(ctx, env, opts.Version, stdout, stderr); err != nil {
+	rollback := opts.RollbackFunc
+	if rollback == nil {
+		rollback = runDeployRollback
+	}
+	if err := rollback(ctx, env, opts.Version, stdout, stderr); err != nil {
 		return fmt.Errorf("rollback failed: %w", err)
 	}
 
@@ -173,9 +181,10 @@ func tagCurrentState(_ context.Context, env, tag string, w io.Writer) error {
 	return nil
 }
 
-// executeRollback invokes the deploy rollback pipeline.
-// It delegates to the existing promote/rollback infrastructure.
-func executeRollback(ctx context.Context, env, version string, stdout, stderr io.Writer) error {
+// runDeployRollback invokes the real deploy rollback pipeline.
+// It shells out to `nself deploy rollback <target>`, the same command the
+// dry-run advertises, so an aborted soak actually reverts the running version.
+func runDeployRollback(ctx context.Context, env, version string, stdout, stderr io.Writer) error {
 	// Respect context cancellation.
 	select {
 	case <-ctx.Done():
@@ -183,10 +192,19 @@ func executeRollback(ctx context.Context, env, version string, stdout, stderr io
 	default:
 	}
 
-	// In production this would call the deploy.Rollback function from internal/promote.
-	// We emit structured output so the caller can verify the steps.
-	fmt.Fprintf(stdout, "  → invoking nself deploy rollback --env %s --version %s\n", env, version)
-	fmt.Fprintf(stderr, "  (deploy rollback integration point — wires to internal/promote.Rollback)\n")
+	// `nself deploy rollback [target]` takes the environment as its positional
+	// target and restores the last promote snapshot for it.
+	target := env
+	if target == "" {
+		target = "staging"
+	}
+	fmt.Fprintf(stdout, "  → invoking nself deploy rollback %s (target version %s)\n", target, version)
+	cmd := exec.CommandContext(ctx, "nself", "deploy", "rollback", target)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("deploy rollback to %s on %s failed: %w", version, env, err)
+	}
 	return nil
 }
 
