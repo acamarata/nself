@@ -145,15 +145,24 @@ func createSingle(ctx context.Context, cfg *config.Config, bt BackupType, backup
 	}
 }
 
-// createFullBackup runs pg_basebackup inside the postgres container.
+// createFullBackup runs pg_dump (custom format) inside the postgres container.
+//
+// The custom (.dump) format is used instead of a pg_basebackup tar because it
+// is restorable end-to-end by the restore path (pg_restore) and validated by
+// `nself backup verify --restore-test`. A pg_basebackup tar has no working
+// restore path in this tool, so producing it would yield write-only backups.
 func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, tag string, opts CreateOptions) error {
 	container := cfg.ProjectName + "_postgres"
 	user := cfg.Postgres.User
 	if user == "" {
 		user = "postgres"
 	}
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
 
-	filename := fmt.Sprintf("%s_full_%s%s.tar", cfg.ProjectName, ts, tag)
+	filename := fmt.Sprintf("%s_full_%s%s.dump", cfg.ProjectName, ts, tag)
 	outputPath := filepath.Join(backupDir, filename)
 
 	if err := os.MkdirAll(backupDir, 0700); err != nil {
@@ -162,26 +171,24 @@ func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, ta
 
 	args := []string{
 		"exec", container,
-		"pg_basebackup",
+		"pg_dump",
 		"-U", user,
-		"-Ft",     // tar format
-		"-Xf",     // fetch WAL files
-		"-z",      // gzip compression
-		"-D", "-", // stream to stdout
+		"-d", db,
+		"-Fc", // custom format, restorable via pg_restore
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("pg_basebackup stdout pipe: %w", err)
+		return fmt.Errorf("pg_dump stdout pipe: %w", err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("pg_basebackup stderr pipe: %w", err)
+		return fmt.Errorf("pg_dump stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start pg_basebackup: %w", err)
+		return fmt.Errorf("start pg_dump: %w", err)
 	}
 
 	f, err := os.Create(outputPath)
@@ -195,7 +202,7 @@ func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, ta
 	if _, err := io.Copy(f, stdout); err != nil {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
-		return fmt.Errorf("stream pg_basebackup output: %w", err)
+		return fmt.Errorf("stream pg_dump output: %w", err)
 	}
 
 	errOutput, _ := io.ReadAll(stderr)

@@ -91,6 +91,7 @@ func (g *Generator) generateAllRoutes() (map[string]string, error) {
 	// omit ssl_certificate directives when certs are not locally managed.
 	for i := range allEntries {
 		allEntries[i].data.HasSSL = g.hasSSL
+		allEntries[i].data.UpstreamName = upstreamName(allEntries[i].data.Route)
 	}
 
 	for _, entry := range allEntries {

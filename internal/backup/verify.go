@@ -203,11 +203,18 @@ func runRestoreTest(ctx context.Context, cfg *config.Config, backupFile string, 
 		return fmt.Errorf("%w: postgres container not ready after 30s", errs.ErrBackupVerifyFailed)
 	}
 
-	// Restore the backup into the test container.
+	// Restore the backup into the test container. Only the pg_dump (.dump)
+	// format produced by `nself backup create` has an automated restore path.
+	// A legacy base-backup tar cannot be restored here, so fail with a clear
+	// message instead of running smoke queries against an empty database (which
+	// would mis-report a "schema-only restore").
 	if strings.HasSuffix(backupFile, ".dump") {
 		if err := restorePgDump(ctx, testContainer, user, db, backupFile); err != nil {
 			return fmt.Errorf("restore test failed: %w", err)
 		}
+	} else {
+		return fmt.Errorf("%w: %s is not a restorable pg_dump (.dump) backup; recreate it with the default format before running --restore-test",
+			errs.ErrBackupVerifyFailed, backupFile)
 	}
 
 	// --- Run smoke-query catalog (5+ system tables) ---

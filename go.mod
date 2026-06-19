@@ -2,12 +2,14 @@ module github.com/nself-org/cli
 
 go 1.26
 
-// toolchain go1.26.3 — required to patch GO-2026-4971 (net NUL panic) and
-// GO-2026-4918 (HTTP/2 infinite loop). Upgrade the host Go toolchain when
+// toolchain go1.26.4 — required to patch GO-2026-5039 (net/textproto error
+// escaping) and GO-2026-5037 (crypto/x509 hostname parsing), plus the earlier
+// GO-2026-4971 / GO-2026-4918 stdlib fixes. Upgrade the host Go toolchain when
 // rebuilding release artifacts.
-toolchain go1.26.3
+toolchain go1.26.4
 
 require (
+	github.com/bytecodealliance/wasmtime-go/v25 v25.0.0
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/chzyer/readline v1.5.1
@@ -32,7 +34,6 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bytecodealliance/wasmtime-go/v25 v25.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
