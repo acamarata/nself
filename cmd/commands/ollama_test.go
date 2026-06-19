@@ -123,7 +123,22 @@ func TestOllamaStatus_MockServer(t *testing.T) {
 }
 
 func TestOllamaStatus_NotReachable(t *testing.T) {
-	setOllamaEnv(t, "http://127.0.0.1:19999") // nothing listening
+	// Use a server that immediately closes the connection. This is platform-
+	// agnostic: it avoids relying on TCP connection-refused behaviour, which
+	// differs between Linux (immediate ECONNREFUSED) and Windows (firewall DROP →
+	// long timeout). The EOF/reset that the hijacker produces causes the HTTP
+	// client to return an error instantly on every OS.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "no hijacker", http.StatusInternalServerError)
+			return
+		}
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+	setOllamaEnv(t, srv.URL)
 	err := runOllamaStatus(nil, nil)
 	if err == nil {
 		t.Error("expected error when Ollama is not reachable")

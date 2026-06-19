@@ -7,10 +7,29 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
+
+// skipUnixOnly skips the test on Windows because it exercises behaviour that
+// depends on Unix-specific semantics (e.g. chmod read-only dirs, XDG/HOME env
+// var resolution via os.UserHomeDir, or POSIX signal handling).
+func skipUnixOnly(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix-only semantics")
+	}
+}
+
+// setHomeAndProfile sets both HOME (Unix) and USERPROFILE (Windows) so that
+// os.UserHomeDir() picks up the temp dir on every platform.
+func setHomeAndProfile(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
+}
 
 // errTransport is an http.RoundTripper that always returns an error.
 // Used to cover the httpClient.Do(req) error branches in client.go.
@@ -82,7 +101,7 @@ func TestRotationLogPath_XDGFallbackNoStateHome(t *testing.T) {
 	t.Setenv("NSELF_JWT_ROTATION_LOG", "")
 	t.Setenv("XDG_STATE_HOME", "") // unset XDG so the home-based fallback fires
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	got := RotationLogPath()
 	expected := filepath.Join(home, ".local", "state", "nself", "jwt-rotation.log")
@@ -97,7 +116,7 @@ func TestRotationLogPath_PrimaryDirNotDir(t *testing.T) {
 	t.Setenv("NSELF_JWT_ROTATION_LOG", "")
 	t.Setenv("XDG_STATE_HOME", "")
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	// The primary dir used by RotationLogPath is filepath.Dir(DefaultRotationLogPath).
 	// We can't easily make /var/lib/nself a file. However the XDG fallback is
@@ -201,6 +220,7 @@ func TestWriteRotationLog_MkdirAllFail(t *testing.T) {
 // TestWriteRotationLog_OpenFileFail covers the OpenFile error branch by making
 // the log directory read-only so file creation fails.
 func TestWriteRotationLog_OpenFileFail(t *testing.T) {
+	skipUnixOnly(t) // chmod read-only dirs are not enforced on Windows
 	dir := t.TempDir()
 	logDir := filepath.Join(dir, "nself")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
@@ -252,7 +272,7 @@ func TestRotateJWTKey_WriteLogFail(t *testing.T) {
 // ReadAuthFile by writing a file with invalid JSON content.
 func TestReadAuthFile_InvalidJSON(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	nselfDir := filepath.Join(home, ".nself")
 	if err := os.MkdirAll(nselfDir, 0700); err != nil {
@@ -283,7 +303,7 @@ func TestReadAuthFile_InvalidJSON(t *testing.T) {
 // ReadAuthFile (file path is a directory → EISDIR on ReadFile).
 func TestReadAuthFile_NonNotExistError(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	// Create a directory at the auth file location.
 	authDir := filepath.Join(home, ".nself")
@@ -302,7 +322,7 @@ func TestReadAuthFile_NonNotExistError(t *testing.T) {
 // WriteAuthFile by blocking directory creation with a file.
 func TestWriteAuthFile_MkdirAllFail(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	// Create a file at ~/.nself to block MkdirAll.
 	nselfPath := filepath.Join(home, ".nself")
@@ -319,8 +339,9 @@ func TestWriteAuthFile_MkdirAllFail(t *testing.T) {
 // TestWriteAuthFile_WriteFileFail covers the WriteFile error branch by making
 // the directory read-only after creation.
 func TestWriteAuthFile_WriteFileFail(t *testing.T) {
+	skipUnixOnly(t) // chmod read-only dirs are not enforced on Windows
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	nselfDir := filepath.Join(home, ".nself")
 	if err := os.MkdirAll(nselfDir, 0755); err != nil {
@@ -343,8 +364,9 @@ func TestWriteAuthFile_WriteFileFail(t *testing.T) {
 // Note: json.MarshalIndent on AuthFile (all string/bool fields) is infallible —
 // that error branch is genuinely unreachable; see note below WriteAuthFile.
 func TestWriteAuthFile_ChmodFail(t *testing.T) {
+	skipUnixOnly(t) // chmod read-only dirs are not enforced on Windows
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	nselfDir := filepath.Join(home, ".nself")
 	if err := os.MkdirAll(nselfDir, 0755); err != nil {
@@ -383,7 +405,7 @@ func TestWriteAuthFile_ChmodFail(t *testing.T) {
 // branch in DeleteAuthFile (the file path points to a directory → EISDIR on Remove).
 func TestDeleteAuthFile_NonNotExistError(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHomeAndProfile(t, home)
 
 	// Create a directory at the auth file path and put a file inside it.
 	// os.Remove on a non-empty directory returns ENOTEMPTY (not NotExist),
@@ -412,6 +434,7 @@ func TestDeleteAuthFile_NonNotExistError(t *testing.T) {
 // DeleteAuthFile/GetAuthFilePath when UserHomeDir fails (HOME="").
 func TestReadAuthFile_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
 	_, err := ReadAuthFile()
 	if err == nil {
 		t.Error("ReadAuthFile should error when HOME is empty, got nil")
@@ -420,6 +443,7 @@ func TestReadAuthFile_StatePathError(t *testing.T) {
 
 func TestWriteAuthFile_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
 	err := WriteAuthFile(&AuthFile{AccessToken: "tok", SessionToken: "sess", Email: "x@x.com", Tier: "free"})
 	if err == nil {
 		t.Error("WriteAuthFile should error when HOME is empty, got nil")
@@ -428,6 +452,7 @@ func TestWriteAuthFile_StatePathError(t *testing.T) {
 
 func TestDeleteAuthFile_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
 	err := DeleteAuthFile()
 	if err == nil {
 		t.Error("DeleteAuthFile should error when HOME is empty, got nil")
@@ -436,6 +461,7 @@ func TestDeleteAuthFile_StatePathError(t *testing.T) {
 
 func TestGetAuthFilePath_StatePathError(t *testing.T) {
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
 	// GetAuthFilePath returns the fallback string when HOME is empty.
 	got := GetAuthFilePath()
 	if got != "~/.nself/auth.json" {

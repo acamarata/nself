@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -141,13 +142,15 @@ func TestStateRoundTrip(t *testing.T) {
 		t.Fatalf("SaveState: %v", err)
 	}
 
-	// File exists with 0600 perms.
-	st, err := os.Stat(StatePath(dir))
-	if err != nil {
-		t.Fatalf("Stat state: %v", err)
-	}
-	if perm := st.Mode().Perm(); perm != 0o600 {
-		t.Errorf("state file perm = %o, want 0600", perm)
+	// File exists with 0600 perms (Unix only — Windows always returns 0666).
+	if runtime.GOOS != "windows" {
+		st, err := os.Stat(StatePath(dir))
+		if err != nil {
+			t.Fatalf("Stat state: %v", err)
+		}
+		if perm := st.Mode().Perm(); perm != 0o600 {
+			t.Errorf("state file perm = %o, want 0600", perm)
+		}
 	}
 
 	// Reload yields the override.

@@ -4,12 +4,25 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+// skipOnWindows skips tests that rely on Unix shell-script fakery (PATH override
+// with a .sh fake binary) or SSH hostname resolution. Windows doesn't honour
+// shebang scripts, so the fake SSH doesn't intercept the call and the real SSH
+// tries to resolve the hostname, failing with "No such host is known."
+func skipOnWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: requires Unix shell-script PATH override")
+	}
+}
 
 // TestDrainHelperPresent verifies that Drain returns DrainOK when the nself-lb
 // helper is present and exits 0.
 func TestDrainHelperPresent(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")
@@ -45,6 +58,7 @@ func TestDrainHelperPresent(t *testing.T) {
 // TestEnableHelperPresent verifies that Enable returns DrainOK when the helper
 // exits 0.
 func TestEnableHelperPresent(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")
@@ -79,6 +93,7 @@ func TestEnableHelperPresent(t *testing.T) {
 // TestDrainHelperAbsent verifies that Drain returns DrainHelperAbsent (and nil
 // error) when SSH exits 127 (command not found on remote).
 func TestDrainHelperAbsent(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")
@@ -113,6 +128,7 @@ func TestDrainHelperAbsent(t *testing.T) {
 
 // TestEnableHelperAbsent verifies the same graceful-degrade for Enable.
 func TestEnableHelperAbsent(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")
@@ -205,6 +221,7 @@ func TestDrainMissingSSHKeyRef(t *testing.T) {
 // including the correct remote helper invocation and EIE hygiene (no sudo,
 // no osascript).
 func TestLBHelperArgVector(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")
@@ -268,6 +285,7 @@ exit 0
 // (space-joined args) so we can confirm the payload appears verbatim — not
 // interpreted — and that the helper binary path is separate from the payload.
 func TestLBHelperInjectionPayloadIsDistinctToken(t *testing.T) {
+	skipOnWindows(t)
 	dir := t.TempDir()
 
 	keyFile := filepath.Join(dir, "id_ed25519")

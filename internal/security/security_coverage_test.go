@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -120,6 +121,9 @@ func TestReadWAFAuditLogFromContainer_DockerNotFound(t *testing.T) {
 
 // TestEnforceFilePermissions_EnvDotDevFile covers Chmod on .env.dev specifically.
 func TestEnforceFilePermissions_EnvDotDevFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	f := filepath.Join(t.TempDir(), ".env.dev")
 	if err := os.WriteFile(f, []byte("KEY=val"), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -140,6 +144,9 @@ func TestEnforceFilePermissions_EnvDotDevFile(t *testing.T) {
 
 // TestAuditProjectPermissions_DotEnvDevFile covers .env.* pattern with a finding.
 func TestAuditProjectPermissions_DotEnvDevFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix file permission bits are not enforced")
+	}
 	dir := t.TempDir()
 
 	// Create .env.dev with 0644 — the *.env.* pattern requires 0600.
@@ -205,6 +212,9 @@ func TestAuditProjectPermissions_SkipsDir(t *testing.T) {
 
 // TestAuditProjectPermissions_BackupFile covers the backups/* pattern.
 func TestAuditProjectPermissions_BackupFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix file permission bits are not enforced")
+	}
 	dir := t.TempDir()
 
 	backupDir := filepath.Join(dir, "backups")
@@ -233,6 +243,9 @@ func TestAuditProjectPermissions_BackupFile(t *testing.T) {
 
 // TestAuditProjectPermissions_SSLCertsFile covers the ssl/certs/* pattern (0640 required).
 func TestAuditProjectPermissions_SSLCertsFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix file permission bits are not enforced")
+	}
 	dir := t.TempDir()
 
 	sslDir := filepath.Join(dir, "ssl", "certs")
@@ -318,6 +331,9 @@ func TestAuditProjectPermissions_DotEnvFile(t *testing.T) {
 
 // TestAuditProjectPermissions_CorrectMode covers the "no finding" path (mode ok).
 func TestAuditProjectPermissions_CorrectMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: Unix file permission bits are not enforced")
+	}
 	dir := t.TempDir()
 
 	// Create backup file with correct mode — should not appear as a finding.

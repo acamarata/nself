@@ -3,6 +3,7 @@ package controlplane
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -114,6 +115,9 @@ environments:
 // TestWriteCreatesFileWith0600Perms verifies that Write produces a file
 // readable only by the owner (mode 0600).
 func TestWriteCreatesFileWith0600Perms(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 	inv := &Inventory{
 		SchemaVersion: currentSchemaVersion,

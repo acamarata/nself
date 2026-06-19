@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -115,6 +116,9 @@ func TestDownloadAndVerify_HTTPError(t *testing.T) {
 // permissions. This enforces the TOCTOU mitigation: the directory is
 // owner-only so no same-uid sibling process can swap the file path.
 func TestDownloadAndVerify_TempDirPerms(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600/0700 is not enforced")
+	}
 	content := []byte("#!/bin/sh\necho 'perm check'\n")
 	expected := sha256Hex(content)
 

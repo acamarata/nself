@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -354,14 +355,16 @@ func TestWriteReadRevocationCache_Roundtrip(t *testing.T) {
 		t.Errorf("revoked round-trip mismatch: %+v", read.List.Revoked)
 	}
 
-	// File permissions — must be 0600 per the env-perms hard rule.
-	path, _ := RevocationCachePath()
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("Stat: %v", err)
-	}
-	if got := info.Mode().Perm(); got != 0600 {
-		t.Errorf("cache file perms = %o, want 0600", got)
+	// File permissions — must be 0600 per the env-perms hard rule (Unix only).
+	if runtime.GOOS != "windows" {
+		path, _ := RevocationCachePath()
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("Stat: %v", err)
+		}
+		if got := info.Mode().Perm(); got != 0600 {
+			t.Errorf("cache file perms = %o, want 0600", got)
+		}
 	}
 }
 

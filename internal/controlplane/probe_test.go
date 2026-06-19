@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -72,6 +73,9 @@ func TestKeyStateEnvVarUnset(t *testing.T) {
 // osascript, or any privileged command. We do this by constructing a fake SSH
 // binary that captures argv and checking the argument list.
 func TestSSHProbeArgHygiene(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: requires Unix shell-script PATH override")
+	}
 	dir := t.TempDir()
 
 	// Create a fake key file.
@@ -308,6 +312,9 @@ func TestCacheRefreshBypasses(t *testing.T) {
 // TestCacheFileIsCreatedWith0600 verifies the capability.json cache file is
 // created with mode 0600.
 func TestCacheFileIsCreatedWith0600(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 	keyFile := filepath.Join(dir, "id_ed25519")
 	if err := os.WriteFile(keyFile, []byte("key"), 0o600); err != nil {

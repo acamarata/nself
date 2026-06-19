@@ -325,15 +325,25 @@ func TestDetectServices_Mailpit(t *testing.T) {
 // By redirecting HOME we control which plugins appear to be installed.
 func setHomeForTest(t *testing.T, home string) {
 	t.Helper()
-	original, set := os.LookupEnv("HOME")
-	if err := os.Setenv("HOME", home); err != nil {
-		t.Fatalf("setHomeForTest: Setenv HOME: %v", err)
+	// Set both HOME (Unix) and USERPROFILE (Windows) so that os.UserHomeDir()
+	// picks up the temp directory on every platform.
+	origHome, homeSet := os.LookupEnv("HOME")
+	origProfile, profileSet := os.LookupEnv("USERPROFILE")
+	for _, kv := range []struct{ k, v string }{{"HOME", home}, {"USERPROFILE", home}} {
+		if err := os.Setenv(kv.k, kv.v); err != nil {
+			t.Fatalf("setHomeForTest: Setenv %s: %v", kv.k, err)
+		}
 	}
 	t.Cleanup(func() {
-		if set {
-			os.Setenv("HOME", original)
+		if homeSet {
+			os.Setenv("HOME", origHome)
 		} else {
 			os.Unsetenv("HOME")
+		}
+		if profileSet {
+			os.Setenv("USERPROFILE", origProfile)
+		} else {
+			os.Unsetenv("USERPROFILE")
 		}
 	})
 }

@@ -3,6 +3,7 @@ package telemetry
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -12,6 +13,7 @@ import (
 func TestLoadOrCreateInstallIDCreates(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	id := LoadOrCreateInstallID()
 	if id == "" {
@@ -26,12 +28,15 @@ func TestLoadOrCreateInstallIDCreates(t *testing.T) {
 
 	// File must exist with 0600 permissions.
 	path := filepath.Join(tmpHome, installIDFile)
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("install-ID file not created: %v", err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("install-ID file permissions = %o, want 0600", info.Mode().Perm())
+	// File perms check is Unix only — Windows always reports 0666.
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("install-ID file not created: %v", err)
+		}
+		if info.Mode().Perm() != 0600 {
+			t.Errorf("install-ID file permissions = %o, want 0600", info.Mode().Perm())
+		}
 	}
 }
 
@@ -39,6 +44,7 @@ func TestLoadOrCreateInstallIDCreates(t *testing.T) {
 func TestLoadOrCreateInstallIDIdempotent(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	id1 := LoadOrCreateInstallID()
 	id2 := LoadOrCreateInstallID()
@@ -51,6 +57,7 @@ func TestLoadOrCreateInstallIDIdempotent(t *testing.T) {
 func TestIsEnabledDefault(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	os.Unsetenv("NSELF_TELEMETRY")
 	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
@@ -63,6 +70,7 @@ func TestIsEnabledDefault(t *testing.T) {
 func TestIsEnabledEnvOverrideZero(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("NSELF_TELEMETRY", "0")
 
 	if IsEnabled() {
@@ -74,6 +82,7 @@ func TestIsEnabledEnvOverrideZero(t *testing.T) {
 func TestIsEnabledEnvOverrideFalse(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("NSELF_TELEMETRY", "false")
 
 	if IsEnabled() {
@@ -85,6 +94,7 @@ func TestIsEnabledEnvOverrideFalse(t *testing.T) {
 func TestIsEnabledLegacyOptOut(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	os.Unsetenv("NSELF_TELEMETRY")
 	t.Setenv("NSELF_TELEMETRY_OPT_OUT", "1")
 
@@ -97,6 +107,7 @@ func TestIsEnabledLegacyOptOut(t *testing.T) {
 func TestIsEnabledStatefile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	os.Unsetenv("NSELF_TELEMETRY")
 	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
@@ -126,6 +137,7 @@ func TestIsEnabledStatefile(t *testing.T) {
 func TestIsEnabledEnvBeatsStatefile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("NSELF_TELEMETRY", "0")
 
 	// Even with statefile=true, env=0 wins.
@@ -146,6 +158,7 @@ func TestIsEnabledEnvBeatsStatefile(t *testing.T) {
 func TestWriteStatefile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	os.Unsetenv("NSELF_TELEMETRY")
 	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
@@ -163,13 +176,15 @@ func TestWriteStatefile(t *testing.T) {
 		t.Error("expected IsEnabled=true after WriteStatefile(true)")
 	}
 
-	// Verify file permissions are 0600.
-	path := filepath.Join(tmpHome, telemetryStateFile)
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat statefile: %v", err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("statefile permissions = %o, want 0600", info.Mode().Perm())
+	// Verify file permissions are 0600 (Unix only — Windows always reports 0666).
+	if runtime.GOOS != "windows" {
+		path := filepath.Join(tmpHome, telemetryStateFile)
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat statefile: %v", err)
+		}
+		if info.Mode().Perm() != 0600 {
+			t.Errorf("statefile permissions = %o, want 0600", info.Mode().Perm())
+		}
 	}
 }

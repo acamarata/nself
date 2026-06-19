@@ -23,7 +23,7 @@ on:
 #
 # Security-critical packages (license, auth) must be at 100%.
 env:
-  COVERAGE_FLOOR: 25
+  COVERAGE_FLOOR: 70
   CGO_ENABLED: 0
 
 concurrency:
@@ -44,7 +44,7 @@ jobs:
       - name: Run tests with coverage
         run: go test -mod=vendor -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Enforce overall coverage floor (≥75%)
+      - name: Enforce overall coverage floor (≥70%)
         run: |
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
           echo "Total coverage: ${total}%"

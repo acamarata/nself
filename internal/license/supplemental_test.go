@@ -19,6 +19,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -186,9 +187,12 @@ func TestTryRemote_200_InvalidSignatureBytes(t *testing.T) {
 // TestTryRemote_TransportError confirms a TCP-level failure returns
 // remoteTransientFail (existing path — belt-and-suspenders coverage).
 func TestTryRemote_TransportError(t *testing.T) {
-	// No server at this port.
+	// Use a hijack server so the connection resets instantly on all platforms.
+	// Bare 127.0.0.1:19998 DROPs on Windows Firewall and hangs 30s until the
+	// http.Client timeout fires.
+	refuseSrv := newRefusingServer(t)
 	opts := &ValidatorOptions{
-		PingURL:             "http://127.0.0.1:19998",
+		PingURL:             refuseSrv.URL,
 		SkipSignatureVerify: true,
 		WarnOnce:            func(string) {},
 	}
@@ -263,6 +267,9 @@ func TestPrintEvent_UnknownResultNoColor(t *testing.T) {
 // when the cache file exists but os.Remove fails (e.g., the directory is
 // read-only). This covers the non-IsNotExist error branch.
 func TestDeleteCache_PermissionDenied(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod does not restrict file removal")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("test requires non-root: root can remove files in read-only dirs")
 	}

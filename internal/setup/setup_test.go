@@ -3,6 +3,7 @@ package setup
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -61,6 +62,9 @@ func TestWriteEnvFile_CreatesFile(t *testing.T) {
 // TestWriteEnvFile_RestrictedPermissions verifies the env file is written with
 // restricted permissions (0600).
 func TestWriteEnvFile_RestrictedPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".env.dev")
 
@@ -80,6 +84,9 @@ func TestWriteEnvFile_RestrictedPermissions(t *testing.T) {
 // TestEnsureEnvFilePermissions_FixesOverPermissive verifies permissions are
 // corrected when a file is too permissive.
 func TestEnsureEnvFilePermissions_FixesOverPermissive(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipped on Windows: chmod 0600 is not enforced")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".env")
 	if err := os.WriteFile(path, []byte("KEY=val"), 0o644); err != nil {

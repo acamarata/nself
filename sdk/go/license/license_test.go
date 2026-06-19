@@ -3,6 +3,7 @@ package license
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -44,12 +45,14 @@ func TestLoadSave(t *testing.T) {
 	if err := v.Save(c); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
-	info, err := os.Stat(v.CachePath)
-	if err != nil {
-		t.Fatalf("Stat: %v", err)
-	}
-	if info.Mode().Perm() != 0o600 {
-		t.Errorf("perms %o, want 0600", info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(v.CachePath)
+		if err != nil {
+			t.Fatalf("Stat: %v", err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Errorf("perms %o, want 0600", info.Mode().Perm())
+		}
 	}
 	loaded, err := v.Load()
 	if err != nil {

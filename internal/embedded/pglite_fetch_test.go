@@ -35,12 +35,14 @@ func withTestPin(t *testing.T) string {
 	return pin
 }
 
-// useTempHome sets $HOME to a temp dir so cache paths stay inside t.TempDir().
+// useTempHome sets $HOME and $USERPROFILE to a temp dir so cache paths stay
+// inside t.TempDir() on both Unix and Windows.
 // Returns the temp dir path.
 func useTempHome(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 	return dir
 }
 

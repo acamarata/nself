@@ -151,6 +151,7 @@ func TestSaveLoadDeleteResumeState(t *testing.T) {
 	// t.Setenv is incompatible with t.Parallel — do not parallelise.
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	state := ResumeState{
 		BackupID:    "myproject_stream_20260423_020000.sql.age",
@@ -196,6 +197,7 @@ func TestLoadResumeState_Missing(t *testing.T) {
 	// t.Setenv is incompatible with t.Parallel — do not parallelise.
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	_, err := loadResumeState("nonexistent-id")
 	if err == nil {
@@ -210,6 +212,7 @@ func TestListResumeStates(t *testing.T) {
 	// t.Setenv is incompatible with t.Parallel — do not parallelise.
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	// Empty dir — should return nil, nil.
 	states, err := listResumeStates()

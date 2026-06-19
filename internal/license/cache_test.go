@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -82,13 +83,15 @@ func TestWriteCache_AtomicTmpfileNoLeftover(t *testing.T) {
 		}
 	}
 
-	// Verify the final file is parseable + has 0600 perms.
-	info, err := os.Stat(cachePath)
-	if err != nil {
-		t.Fatalf("Stat: %v", err)
-	}
-	if perm := info.Mode().Perm(); perm != 0600 {
-		t.Errorf("cache file perms = %o, want 0600", perm)
+	// Verify the final file is parseable + has 0600 perms (Unix only).
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(cachePath)
+		if err != nil {
+			t.Fatalf("Stat: %v", err)
+		}
+		if perm := info.Mode().Perm(); perm != 0600 {
+			t.Errorf("cache file perms = %o, want 0600", perm)
+		}
 	}
 	data, _ := os.ReadFile(cachePath)
 	var got CacheEntry
