@@ -135,7 +135,7 @@ jobs:
           echo "| Security-critical (license, auth) | 100% required |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           file: coverage.out
           flags: cli
