@@ -31,6 +31,7 @@ By default, `nself build` is smart-cached: it compares `.env` modification time 
 | `--no-migration-check` | false | Skip v0.9 artifact detection (automation/CI) |
 | `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
+| `--no-auto-redis` | false | Disable automatic Redis inclusion when a BullMQ-backed plugin is detected |
 | `--help`, `-h` | — | Show help |
 
 ## Redis auto-enable

@@ -37,6 +37,11 @@ func makeStartFlags(t *testing.T, flags ...string) *cobra.Command {
 	cmd.Flags().Bool("quick", false, "")
 	cmd.Flags().Bool("skip-port-check", false, "")
 	cmd.Flags().Bool("skip-build", false, "")
+	cmd.Flags().Bool("skip-plugins", false, "")
+	cmd.Flags().Bool("watch", false, "")
+	cmd.Flags().Bool("quiet", false, "")
+	cmd.Flags().Bool("allow-legacy", false, "")
+	cmd.Flags().Bool("embedded-pg", false, "")
 	cmd.Flags().Bool("no-monorepo", false, "")
 	cmd.Flags().Bool("skip-db-init", false, "")
 	if err := cmd.ParseFlags(flags); err != nil {
@@ -134,6 +139,11 @@ func newStartCmd() *cobra.Command {
 	bc.Flags().Bool("quick", false, "Quick start")
 	bc.Flags().Bool("skip-port-check", false, "Skip port availability check")
 	bc.Flags().Bool("skip-build", false, "Skip automatic rebuild detection")
+	bc.Flags().Bool("skip-plugins", false, "Start base stack only, skip all plugin compose files")
+	bc.Flags().Bool("watch", false, "Enable health auto-restart")
+	bc.Flags().Bool("quiet", false, "Suppress progress output")
+	bc.Flags().Bool("allow-legacy", false, "Bypass v0.9 artifact check")
+	bc.Flags().Bool("embedded-pg", false, "Boot PostgreSQL via embedded pglite/wasmtime")
 	bc.Flags().Bool("no-monorepo", false, "Disable monorepo detection")
 	bc.Flags().Bool("skip-db-init", false, "Skip database migrations and seed (CI/E2E mode)")
 
@@ -576,5 +586,98 @@ func TestCIReadyServices(t *testing.T) {
 	}
 	if len(ciReadyServices) != 3 {
 		t.Errorf("ciReadyServices should have exactly 3 entries, got %d: %v", len(ciReadyServices), ciReadyServices)
+	}
+}
+
+// ── Flag coverage tests for flags added after initial test suite ──────────────
+
+// TestStartCmd_FlagSkipPlugins verifies that --skip-plugins is accepted.
+func TestStartCmd_FlagSkipPlugins(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+	root.SetArgs([]string{"start", "--skip-plugins", "--no-monorepo"})
+	err := root.Execute()
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--skip-plugins flag was not recognised: %v", err)
+	}
+}
+
+// TestStartCmd_FlagWatch verifies that --watch is accepted.
+func TestStartCmd_FlagWatch(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+	root.SetArgs([]string{"start", "--watch", "--no-monorepo"})
+	err := root.Execute()
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--watch flag was not recognised: %v", err)
+	}
+}
+
+// TestStartCmd_FlagQuiet verifies that --quiet is accepted.
+func TestStartCmd_FlagQuiet(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+	root.SetArgs([]string{"start", "--quiet", "--no-monorepo"})
+	err := root.Execute()
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--quiet flag was not recognised: %v", err)
+	}
+}
+
+// TestStartCmd_FlagAllowLegacy verifies that --allow-legacy is accepted.
+func TestStartCmd_FlagAllowLegacy(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+	root.SetArgs([]string{"start", "--allow-legacy", "--no-monorepo"})
+	err := root.Execute()
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--allow-legacy flag was not recognised: %v", err)
+	}
+}
+
+// TestStartCmd_FlagEmbeddedPG verifies that --embedded-pg is accepted.
+func TestStartCmd_FlagEmbeddedPG(t *testing.T) {
+	root := newStartCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+	root.SetArgs([]string{"start", "--embedded-pg", "--no-monorepo"})
+	err := root.Execute()
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
+		t.Fatalf("--embedded-pg flag was not recognised: %v", err)
+	}
+}
+
+// TestResolveStartOpts_SkipPluginsFlag verifies --skip-plugins is parsed correctly.
+func TestResolveStartOpts_SkipPluginsFlag(t *testing.T) {
+	cmd := makeStartFlags(t, "--skip-plugins")
+	opts, err := resolveStartOpts(cmd)
+	if err != nil {
+		t.Fatalf("resolveStartOpts: %v", err)
+	}
+	if !opts.skipPlugins {
+		t.Error("--skip-plugins should set skipPlugins=true")
+	}
+}
+
+// TestResolveStartOpts_EmbeddedPGEnvVar verifies NSELF_EMBEDDED_PG=true
+// activates embeddedPG even when the CLI flag is not passed.
+func TestResolveStartOpts_EmbeddedPGEnvVar(t *testing.T) {
+	t.Setenv("NSELF_EMBEDDED_PG", "true")
+	cmd := makeStartFlags(t) // no --embedded-pg flag
+	opts, err := resolveStartOpts(cmd)
+	if err != nil {
+		t.Fatalf("resolveStartOpts: %v", err)
+	}
+	if !opts.embeddedPG {
+		t.Error("NSELF_EMBEDDED_PG=true should activate embeddedPG")
 	}
 }

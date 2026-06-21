@@ -65,11 +65,29 @@ Without --apply, prints the planned actions and exits without making changes.`,
 	RunE: runSecuritySetup,
 }
 
+// securityScanCmd is the `nself security scan` subcommand.
+// Scan is always FREE — no license check on this path (Security-Always-Free Doctrine).
+// It re-uses runChecks() which is the same read-only probe set used by audit/status.
+// Exit codes: 0 — all checks pass; 1 — one or more checks fail.
+var securityScanCmd = &cobra.Command{
+	Use:   "scan",
+	Short: "Scan host security posture (free, no license required)",
+	Long: `Run a read-only security scan of the host + nSelf stack.
+
+All checks are free and require no license. The scan never modifies the system.
+
+Exit codes:
+  0 — all security checks pass
+  1 — one or more checks failed (run 'nself security setup --apply' to remediate)`,
+	RunE: runSecurityScan,
+}
+
 func init() {
 	securitySetupCmd.Flags().Bool("apply", false, "Actually apply changes (default: dry-run)")
 	securityCmd.AddCommand(securityAuditCmd)
 	securityCmd.AddCommand(securityStatusCmd)
 	securityCmd.AddCommand(securitySetupCmd)
+	securityCmd.AddCommand(securityScanCmd)
 	RootCmd.AddCommand(securityCmd)
 }
 
@@ -447,5 +465,28 @@ func runSecuritySetup(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println("\nHardening complete. Run 'nself security audit' to verify.")
+	return nil
+}
+
+// runSecurityScan performs the same read-only checks as audit but exits 1 when
+// any check fails. No license check — this path is always free per the
+// Security-Always-Free Doctrine.
+func runSecurityScan(cmd *cobra.Command, args []string) error {
+	ui.CommandHeader("nself security scan", "Security scan (free)")
+	findings := runChecks()
+	fail := 0
+	for _, f := range findings {
+		mark := "PASS"
+		if !f.OK {
+			mark = "FAIL"
+			fail++
+		}
+		fmt.Printf("  [%s] %-25s  %s\n", mark, f.Name, f.Detail)
+	}
+	fmt.Println()
+	if fail > 0 {
+		return fmt.Errorf("%d finding(s) require attention — run 'nself security setup --apply' to remediate", fail)
+	}
+	fmt.Println("All checks passed.")
 	return nil
 }

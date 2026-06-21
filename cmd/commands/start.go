@@ -68,6 +68,7 @@ func init() {
 	f.Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 	f.Bool("embedded-pg", false, "Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required; pgvector included")
 	f.Bool("skip-db-init", false, "Skip database migrations and seed; bring up Postgres+Hasura+hasura-auth only. Intended for CI/E2E environments.")
+	f.Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -235,6 +236,16 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 
 	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
+
+	// Monorepo detection: if running from a monorepo root, redirect into the
+	// backend sub-directory automatically (same pattern as stop/reset/build).
+	noMonorepo, _ := cmd.Flags().GetBool("no-monorepo")
+	if !noMonorepo {
+		if backendRoot := config.DetectMonorepoRoot(cwd); backendRoot != "" {
+			fmt.Printf("→ Detected monorepo layout. Using %s as project root.\n", filepath.Base(backendRoot))
+			cwd = backendRoot
+		}
+	}
 
 	projectDir, err := config.FindNSelfRoot(cwd)
 	if err != nil {

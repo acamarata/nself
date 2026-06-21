@@ -33,6 +33,10 @@ After `nself init` completes, run `nself build` to generate `docker-compose.yml`
 | `--name` | `""` | Project name (sets `PROJECT_NAME` in generated `.env`) |
 | `--domain` | `""` | Base domain (skips interactive domain prompt, e.g. `myapp.dev`) |
 | `--profile` | `""` | Resource profile: `tiny` for small VPS (starts Postgres and nginx only; Hasura and Auth are opt-in). Recommended for servers with less than 1 GB RAM. See [[install/tiny-vps]]. |
+| `--no-pgvector` | false | Skip pgvector extension and RAG scaffold tables (sets `PGVECTOR_ENABLED=false`) |
+| `--preset` | `""` | Use a project-type preset: `b2b-saas`, `mobile-backend`, `ai-assistant`, `community-forum`, `media-hosting`, `dev`, `nclaw-app` |
+| `--list-presets` | false | Print all available presets and exit |
+| `--cs-template` | `""` | Scaffold a custom service at init time: specify language (`go`, `node`, `python`, `rust`, `other`) |
 | `--skip-validation` | false | Skip configuration validation |
 | `--quiet` | false | Suppress output messages |
 | `--help`, `-h` | — | Show help |
@@ -66,6 +70,18 @@ nself init --name myapp --domain myapp.dev
 
 # Start from a Go project template
 nself init --template go --name myapi --domain myapi.local
+
+# Use a project-type preset (AI assistant configuration)
+nself init --preset ai-assistant --name myclaw --domain myclaw.local
+
+# List all available presets
+nself init --list-presets
+
+# Skip pgvector / RAG tables (saves RAM on small VPS)
+nself init --no-pgvector --name myapp --domain myapp.local
+
+# Scaffold a custom Go service at init time
+nself init --cs-template go --name myapp --domain myapp.local
 ```
 
 ## Clone Templates

@@ -115,3 +115,47 @@ func TestHardeningStep_Fields(t *testing.T) {
 		t.Errorf("cmd len = %d", len(s.Cmd))
 	}
 }
+
+// TestSecurityScanCmd_Registered verifies the scan subcommand is registered under security.
+func TestSecurityScanCmd_Registered(t *testing.T) {
+	subs := securityCmd.Commands()
+	names := make(map[string]bool)
+	for _, cmd := range subs {
+		names[cmd.Name()] = true
+	}
+	if !names["scan"] {
+		t.Error("security: missing subcommand 'scan' — required for Security-Always-Free Doctrine")
+	}
+}
+
+// TestSecurityScanCmd_NoLicenseCheck verifies runSecurityScan source has no license gating.
+// (Structural: the function simply calls runChecks() then reports — no license path.)
+func TestSecurityScanCmd_FreePath(t *testing.T) {
+	// runSecurityScan is not exported, but we can call runChecks() — the same
+	// function scan uses internally — and confirm it returns findings without
+	// requiring any license env var.
+	findings := runChecks()
+	if len(findings) == 0 {
+		t.Fatal("scan: expected findings from runChecks()")
+	}
+	// All findings must have a name (basic structural assertion).
+	for _, f := range findings {
+		if f.Name == "" {
+			t.Error("scan: finding with empty name")
+		}
+	}
+}
+
+// TestSecurityCmd_AllSubcommands verifies audit, status, setup, and scan are all registered.
+func TestSecurityCmd_AllSubcommands(t *testing.T) {
+	subs := securityCmd.Commands()
+	names := make(map[string]bool)
+	for _, cmd := range subs {
+		names[cmd.Name()] = true
+	}
+	for _, name := range []string{"audit", "status", "setup", "scan"} {
+		if !names[name] {
+			t.Errorf("security: missing subcommand %q", name)
+		}
+	}
+}

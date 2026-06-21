@@ -66,6 +66,10 @@ var healthServiceCmd = &cobra.Command{
 			return nil
 		}
 		printServiceResult(result)
+		// Exit code 2 when the service is unhealthy.
+		if result.Status != "healthy" {
+			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+		}
 		return nil
 	},
 }
@@ -97,6 +101,10 @@ var healthEndpointCmd = &cobra.Command{
 			return nil
 		}
 		printServiceResult(result)
+		// Exit code 2 when the endpoint is unhealthy.
+		if result.Status != "healthy" {
+			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+		}
 		return nil
 	},
 }
@@ -227,6 +235,11 @@ func healthCheckRunE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	printReport(report)
+
+	// Exit code 2 when any service is unhealthy (mirrors nself status semantics).
+	if report.Unhealthy > 0 {
+		cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+	}
 	return nil
 }
 

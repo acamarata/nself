@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -51,6 +52,7 @@ var watchdogStatusCmd = &cobra.Command{
 			ui.Warn("Watchdog is not running")
 		}
 
+		hasOpenCircuits := false
 		if len(status.Circuits) == 0 {
 			ui.Bullet("No circuit breakers tracked")
 		} else {
@@ -62,10 +64,12 @@ var watchdogStatusCmd = &cobra.Command{
 					fmt.Fprintf(cmd.ErrOrStderr(), "  %s %s: %s (since %s, %d consecutive open windows) — run: nself watchdog reset %s\n",
 						ui.C(ui.Red, ui.IconFailure), c.Service, state,
 						c.PermanentOpenAt.Format(time.RFC3339), c.ConsecutiveOpenWindows, c.Service)
+					hasOpenCircuits = true
 				case watchdog.CircuitOpen:
 					fmt.Fprintf(cmd.ErrOrStderr(), "  %s %s: %s (tripped at %s, %d attempts)\n",
 						ui.C(ui.Red, ui.IconFailure), c.Service, state,
 						c.TrippedAt.Format(time.RFC3339), c.Attempts)
+					hasOpenCircuits = true
 				default:
 					fmt.Printf("  %s %s: %s (%d attempts)\n",
 						ui.C(ui.Green, ui.IconSuccess), c.Service, state, c.Attempts)
@@ -73,6 +77,10 @@ var watchdogStatusCmd = &cobra.Command{
 			}
 		}
 
+		// Exit code 2 when any circuit is open or permanently-open (unhealthy state).
+		if hasOpenCircuits {
+			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+		}
 		return nil
 	},
 }

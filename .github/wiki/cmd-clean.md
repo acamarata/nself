@@ -1,6 +1,6 @@
 # nself clean
 
-> Remove Docker resources associated with the current ɳSelf project.
+> Remove generated build artifacts: `docker-compose.yml`, nginx configs, and build cache.
 
 ## Synopsis
 
@@ -10,37 +10,49 @@ nself clean [flags]
 
 ## Description
 
-`nself clean` removes Docker resources (stopped containers, unused images, dangling volumes, orphaned networks) scoped to the current ɳSelf project. By default it uses Docker label filters to only remove resources belonging to the current project, other Docker projects on your machine are not affected.
+`nself clean` removes the files that `nself build` generates: `docker-compose.yml`, `nginx/sites/` config files, `.nself/cache/`, and the Docker builder layer cache (`docker builder prune --filter type=exec.cachemount`). It is non-destructive: no `.env` files, Docker volumes, container data, or user files are touched.
 
-`nself clean` does **not** delete your `.env` files, data directories, or any user data. It only removes generated Docker artifacts. To remove generated configuration files (nginx configs, `docker-compose.yml`), use `nself reset` instead.
+Run `nself build` after `nself clean` to regenerate all artifacts.
 
-Use `--all` for a system-wide Docker cleanup (`docker system prune`). This requires confirmation and affects all Docker resources on the host, not just the ɳSelf project.
+To stop running containers and remove Docker volumes (which deletes your data), use `nself reset` instead.
 
 ## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--all` | false | System-wide Docker cleanup (requires confirmation) |
 | `--help`, `-h` | — | Show help |
 
 ## Examples
 
 ```bash
-# Project-scoped cleanup (safe, recommended)
+# Remove generated artifacts and build cache
 nself clean
 
-# System-wide Docker cleanup (affects all projects)
-nself clean --all
+# Rebuild after cleaning
+nself clean && nself build
 ```
 
-**What is preserved:**
-- `.env` and all `.env.*` variant files
-- `data/` and `volumes/` directories
-- Your application source code
-
 **What is removed:**
-- Stopped ɳSelf project containers
-- Unused images tagged to this project
-- Dangling volumes (with `--all`: all Docker system resources)
+
+| Item | Removed |
+|------|---------|
+| `docker-compose.yml` | Yes |
+| `nginx/sites/*.conf` | Yes |
+| `.nself/cache/` | Yes |
+| Docker builder layer cache | Yes (non-fatal if Docker not running) |
+
+**What is preserved:**
+
+| Item | Preserved |
+|------|-----------|
+| `.env` and all `.env.*` variants | Yes |
+| Docker volumes and container data | Yes |
+| User-managed files and source code | Yes |
+
+## See Also
+
+- [[cmd-build]], regenerate the artifacts that clean removes
+- [[cmd-reset]], stop containers and remove generated files
+- [[Commands]], full command index
 
 ← [[Commands]] | [[Home]] →
