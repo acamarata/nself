@@ -14,4 +14,5 @@ func registerRoutes(r interface{ Handle(string, ...interface{}) }) {
 
 func handleSafe(w http.ResponseWriter, r *http.Request) {}
 func handleLeak(w http.ResponseWriter, r *http.Request) {}
-func RequirePluginJWT(next http.Handler) http.Handler   { return next }
+// RequirePluginJWT is a stub middleware that satisfies the plugin JWT auth contract.
+func RequirePluginJWT(next http.Handler) http.Handler { return next }

@@ -19,7 +19,40 @@ import (
 // Environment-specific overrides (Console, DevMode, CORS, BindIP, SSL) are
 // applied after all static defaults.
 func ApplyDefaults(cfg *Config) (*Config, error) {
-	// ── Core ──────────────────────────────────────────────────────────
+	applyDefaultsCore(cfg)
+	if err := applyDefaultsPostgres(cfg); err != nil {
+		return nil, err
+	}
+	if err := applyDefaultsHasura(cfg); err != nil {
+		return nil, err
+	}
+	if err := applyDefaultsAuth(cfg); err != nil {
+		return nil, err
+	}
+	applyDefaultsNginx(cfg)
+	applyDefaultsSSL(cfg)
+	applyDefaultsRedis(cfg)
+	if err := applyDefaultsMinio(cfg); err != nil {
+		return nil, err
+	}
+	applyDefaultsMailpit(cfg)
+	applyDefaultsFunctions(cfg)
+	applyDefaultsMLflow(cfg)
+	applyDefaultsAdmin(cfg)
+	applyDefaultsSearch(cfg)
+	applyDefaultsMonitoring(cfg)
+	applyDefaultsDocker(cfg)
+	applyDefaultsStartStop(cfg)
+	if err := applyDefaultsPlugins(cfg); err != nil {
+		return nil, err
+	}
+	applyDefaultsBackup(cfg)
+	applyDefaultsEmail(cfg)
+	return cfg, nil
+}
+
+// applyDefaultsCore sets project-level defaults (name, domain, env).
+func applyDefaultsCore(cfg *Config) {
 	if cfg.ProjectName == "" {
 		cfg.ProjectName = "myproject"
 		slog.Debug("default", "key", "PROJECT_NAME", "value", cfg.ProjectName)
@@ -34,8 +67,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	}
 	// Normalize env aliases (development->dev, production->prod, stage->staging)
 	cfg.Env = normalizeEnv(cfg.Env)
+}
 
-	// ── PostgreSQL ────────────────────────────────────────────────────
+// applyDefaultsPostgres sets PostgreSQL connection and resource defaults.
+func applyDefaultsPostgres(cfg *Config) error {
 	if cfg.Postgres.Version == "" {
 		cfg.Postgres.Version = "16-alpine"
 		slog.Debug("default", "key", "POSTGRES_VERSION", "value", cfg.Postgres.Version)
@@ -59,7 +94,7 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if cfg.Postgres.Password == "" {
 		secret, err := generateSecureRandom(24)
 		if err != nil {
-			return nil, fmt.Errorf("generating POSTGRES_PASSWORD: %w", err)
+			return fmt.Errorf("generating POSTGRES_PASSWORD: %w", err)
 		}
 		cfg.Postgres.Password = secret
 		slog.Debug("default", "key", "POSTGRES_PASSWORD", "value", "[generated]")
@@ -80,8 +115,20 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Postgres.CPULimit = "2.0"
 		slog.Debug("default", "key", "POSTGRES_CPU_LIMIT", "value", cfg.Postgres.CPULimit)
 	}
+	return nil
+}
 
-	// ── Hasura ────────────────────────────────────────────────────────
+// applyDefaultsHasura sets Hasura engine defaults by delegating to credential and config helpers.
+func applyDefaultsHasura(cfg *Config) error {
+	if err := applyDefaultsHasuraCreds(cfg); err != nil {
+		return err
+	}
+	applyDefaultsHasuraConfig(cfg)
+	return nil
+}
+
+// applyDefaultsHasuraCreds generates Hasura admin secret and JWT key when missing.
+func applyDefaultsHasuraCreds(cfg *Config) error {
 	if cfg.Hasura.Version == "" {
 		cfg.Hasura.Version = "v2.44.0"
 		slog.Debug("default", "key", "HASURA_VERSION", "value", cfg.Hasura.Version)
@@ -89,7 +136,7 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if cfg.Hasura.AdminSecret == "" {
 		secret, err := generateSecureRandom(44)
 		if err != nil {
-			return nil, fmt.Errorf("generating HASURA_GRAPHQL_ADMIN_SECRET: %w", err)
+			return fmt.Errorf("generating HASURA_GRAPHQL_ADMIN_SECRET: %w", err)
 		}
 		cfg.Hasura.AdminSecret = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_ADMIN_SECRET", "value", "[generated]")
@@ -97,7 +144,7 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if cfg.Hasura.JWTKey == "" {
 		secret, err := generateSecureRandom(44)
 		if err != nil {
-			return nil, fmt.Errorf("generating HASURA_GRAPHQL_JWT_KEY: %w", err)
+			return fmt.Errorf("generating HASURA_GRAPHQL_JWT_KEY: %w", err)
 		}
 		cfg.Hasura.JWTKey = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_KEY", "value", "[generated]")
@@ -105,16 +152,18 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if cfg.Hasura.JWTType == "" {
 		// SEC-JWT-01: RS256 is the default for new installs (asymmetric — private key
 		// never leaves the auth service; public key shared with Hasura).
-		// HS256 is still supported for existing deployments but emits a deprecation
-		// warning at startup. Migrate guide: docs.nself.org/security/jwt-migration.
 		cfg.Hasura.JWTType = "RS256"
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_TYPE", "value", cfg.Hasura.JWTType)
 	} else if strings.EqualFold(cfg.Hasura.JWTType, "HS256") {
-		// SEC-JWT-01: HS256 uses a shared secret — if the secret leaks, all tokens
-		// are forgeable. Upgrade to RS256 for new deployments.
+		// SEC-JWT-01: HS256 uses a shared secret — forgeable if leaked. Upgrade to RS256.
 		slog.Warn("SEC-JWT-01: HASURA_JWT_TYPE=HS256 is deprecated and will be removed in v2.0. " +
 			"Migrate to RS256. See docs.nself.org/security/jwt-migration.")
 	}
+	return nil
+}
+
+// applyDefaultsHasuraConfig sets Hasura routing, resource limits, and env-specific toggles.
+func applyDefaultsHasuraConfig(cfg *Config) {
 	if cfg.Hasura.Route == "" {
 		cfg.Hasura.Route = "api"
 		slog.Debug("default", "key", "HASURA_ROUTE", "value", cfg.Hasura.Route)
@@ -135,14 +184,11 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Hasura.LogLevel = "warn"
 		slog.Debug("default", "key", "HASURA_GRAPHQL_LOG_LEVEL", "value", cfg.Hasura.LogLevel)
 	}
-
-	// Hasura env-specific: dev/staging get console+devmode, prod forces them off.
+	// Env-specific: dev/staging get console+devmode, prod forces them off.
 	if cfg.Env == "prod" {
 		cfg.Hasura.Console = false
 		cfg.Hasura.DevMode = false
 	} else {
-		// In dev/staging, enable by default (bool zero = unset = enable).
-		// If the user explicitly loaded true from .env, this is a no-op.
 		if !cfg.Hasura.Console {
 			cfg.Hasura.Console = true
 		}
@@ -150,8 +196,7 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 			cfg.Hasura.DevMode = true
 		}
 	}
-
-	// Hasura CORS: dev gets localhost wildcard, non-dev gets domain wildcard.
+	// CORS: dev gets localhost wildcard, non-dev gets domain wildcard.
 	if cfg.Hasura.CORSDomain == "" {
 		if cfg.Env == "dev" {
 			cfg.Hasura.CORSDomain = "http://localhost:*"
@@ -160,8 +205,17 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		}
 		slog.Debug("default", "key", "HASURA_GRAPHQL_CORS_DOMAIN", "value", cfg.Hasura.CORSDomain)
 	}
+}
 
-	// ── Auth ──────────────────────────────────────────────────────────
+// applyDefaultsAuth sets auth service connection, token, and SMTP defaults.
+func applyDefaultsAuth(cfg *Config) error {
+	applyDefaultsAuthConn(cfg)
+	applyDefaultsAuthSMTP(cfg)
+	return nil
+}
+
+// applyDefaultsAuthConn sets auth service version, port, token expiry, and resource limits.
+func applyDefaultsAuthConn(cfg *Config) {
 	if cfg.Auth.Version == "" {
 		cfg.Auth.Version = "0.36.0"
 		slog.Debug("default", "key", "AUTH_VERSION", "value", cfg.Auth.Version)
@@ -194,6 +248,14 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Auth.CPULimit = "0.25"
 		slog.Debug("default", "key", "AUTH_CPU_LIMIT", "value", cfg.Auth.CPULimit)
 	}
+	if cfg.Auth.LogLevel == "" {
+		cfg.Auth.LogLevel = "info"
+		slog.Debug("default", "key", "AUTH_LOG_LEVEL", "value", cfg.Auth.LogLevel)
+	}
+}
+
+// applyDefaultsAuthSMTP sets auth service outbound SMTP relay defaults.
+func applyDefaultsAuthSMTP(cfg *Config) {
 	if cfg.Auth.SMTPHost == "" {
 		cfg.Auth.SMTPHost = "mailpit"
 		slog.Debug("default", "key", "AUTH_SMTP_HOST", "value", cfg.Auth.SMTPHost)
@@ -206,12 +268,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Auth.SMTPSender = "noreply@" + cfg.BaseDomain
 		slog.Debug("default", "key", "AUTH_SMTP_SENDER", "value", cfg.Auth.SMTPSender)
 	}
-	if cfg.Auth.LogLevel == "" {
-		cfg.Auth.LogLevel = "info"
-		slog.Debug("default", "key", "AUTH_LOG_LEVEL", "value", cfg.Auth.LogLevel)
-	}
+}
 
-	// ── Nginx ─────────────────────────────────────────────────────────
+// applyDefaultsNginx sets nginx port, rate limit, and bind defaults.
+func applyDefaultsNginx(cfg *Config) {
 	if cfg.Nginx.Version == "" {
 		cfg.Nginx.Version = "alpine"
 		slog.Debug("default", "key", "NGINX_VERSION", "value", cfg.Nginx.Version)
@@ -232,8 +292,7 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Nginx.AuthRateLimit = "30r/m"
 		slog.Debug("default", "key", "AUTH_RATE_LIMIT", "value", cfg.Nginx.AuthRateLimit)
 	}
-
-	// Nginx BindIP: only default when unset. Preserves any user-set value (TRAP-03).
+	// BindIP: only default when unset. Preserves any user-set value (TRAP-03).
 	if cfg.Nginx.BindIP == "" {
 		if cfg.Env == "dev" {
 			cfg.Nginx.BindIP = "127.0.0.1"
@@ -242,8 +301,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		}
 		slog.Debug("default", "key", "NGINX_BIND_IP", "value", cfg.Nginx.BindIP)
 	}
+}
 
-	// ── SSL ───────────────────────────────────────────────────────────
+// applyDefaultsSSL sets SSL mode, provider, and WAF defaults.
+func applyDefaultsSSL(cfg *Config) {
 	if cfg.SSLMode == "" {
 		if cfg.Env == "dev" {
 			cfg.SSLMode = "local"
@@ -260,8 +321,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.WAFMode = "off"
 		slog.Debug("default", "key", "WAF_MODE", "value", cfg.WAFMode)
 	}
+}
 
-	// ── Redis ─────────────────────────────────────────────────────────
+// applyDefaultsRedis sets Redis connection, memory, and pool defaults.
+func applyDefaultsRedis(cfg *Config) {
 	if cfg.Redis.Version == "" {
 		cfg.Redis.Version = "7-alpine"
 		slog.Debug("default", "key", "REDIS_VERSION", "value", cfg.Redis.Version)
@@ -286,8 +349,21 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		}
 		slog.Debug("default", "key", "REDIS_POOL_SIZE", "value", fmt.Sprintf("%d", cfg.Redis.PoolSize))
 	}
+}
 
-	// ── MinIO / Storage ───────────────────────────────────────────────
+// applyDefaultsMinio sets MinIO object-storage defaults by delegating to credential and storage helpers.
+func applyDefaultsMinio(cfg *Config) error {
+	applyDefaultsMinioConn(cfg)
+	// Guard: reject minioadmin defaults in staging/prod before any container is started.
+	if err := ValidateMinioCredentials(cfg); err != nil {
+		return err
+	}
+	applyDefaultsMinioStorage(cfg)
+	return nil
+}
+
+// applyDefaultsMinioConn sets MinIO port, root credentials, and resource limits.
+func applyDefaultsMinioConn(cfg *Config) {
 	if cfg.Minio.Version == "" {
 		cfg.Minio.Version = "latest"
 		slog.Debug("default", "key", "MINIO_VERSION", "value", cfg.Minio.Version)
@@ -308,12 +384,18 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Minio.RootPassword = "minioadmin"
 		slog.Debug("default", "key", "MINIO_ROOT_PASSWORD", "value", "[default]")
 	}
-	// Guard: reject minioadmin defaults in staging/prod immediately after
-	// they are set so that nself start exits non-zero with a clear message
-	// before any container is started. Dev is intentionally unblocked.
-	if err := ValidateMinioCredentials(cfg); err != nil {
-		return nil, err
+	if cfg.Minio.MemLimit == "" {
+		cfg.Minio.MemLimit = "1G"
+		slog.Debug("default", "key", "MINIO_MEM_LIMIT", "value", cfg.Minio.MemLimit)
 	}
+	if cfg.Minio.CPULimit == "" {
+		cfg.Minio.CPULimit = "0.5"
+		slog.Debug("default", "key", "MINIO_CPU_LIMIT", "value", cfg.Minio.CPULimit)
+	}
+}
+
+// applyDefaultsMinioStorage sets MinIO bucket, region, and route defaults.
+func applyDefaultsMinioStorage(cfg *Config) {
 	if cfg.Minio.DefaultBuckets == "" {
 		cfg.Minio.DefaultBuckets = "uploads,public,private,temp"
 		slog.Debug("default", "key", "MINIO_DEFAULT_BUCKETS", "value", cfg.Minio.DefaultBuckets)
@@ -338,16 +420,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Minio.ConsoleRoute = "storage-console"
 		slog.Debug("default", "key", "MINIO_CONSOLE_ROUTE", "value", cfg.Minio.ConsoleRoute)
 	}
-	if cfg.Minio.MemLimit == "" {
-		cfg.Minio.MemLimit = "1G"
-		slog.Debug("default", "key", "MINIO_MEM_LIMIT", "value", cfg.Minio.MemLimit)
-	}
-	if cfg.Minio.CPULimit == "" {
-		cfg.Minio.CPULimit = "0.5"
-		slog.Debug("default", "key", "MINIO_CPU_LIMIT", "value", cfg.Minio.CPULimit)
-	}
+}
 
-	// ── Mailpit ───────────────────────────────────────────────────────
+// applyDefaultsMailpit sets Mailpit dev-email server port and UI defaults.
+func applyDefaultsMailpit(cfg *Config) {
 	if cfg.Mailpit.Version == "" {
 		cfg.Mailpit.Version = "latest"
 		slog.Debug("default", "key", "MAILPIT_VERSION", "value", cfg.Mailpit.Version)
@@ -368,8 +444,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Mailpit.Route = "mail"
 		slog.Debug("default", "key", "MAILPIT_ROUTE", "value", cfg.Mailpit.Route)
 	}
+}
 
-	// ── Functions ─────────────────────────────────────────────────────
+// applyDefaultsFunctions sets edge-functions service port and route defaults.
+func applyDefaultsFunctions(cfg *Config) {
 	if cfg.Functions.Version == "" {
 		cfg.Functions.Version = "latest"
 		slog.Debug("default", "key", "FUNCTIONS_VERSION", "value", cfg.Functions.Version)
@@ -382,8 +460,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Functions.Route = "functions"
 		slog.Debug("default", "key", "FUNCTIONS_ROUTE", "value", cfg.Functions.Route)
 	}
+}
 
-	// ── MLflow ────────────────────────────────────────────────────────
+// applyDefaultsMLflow sets MLflow ML-tracking service defaults.
+func applyDefaultsMLflow(cfg *Config) {
 	if cfg.MLflow.Version == "" {
 		cfg.MLflow.Version = "2.9.2"
 		slog.Debug("default", "key", "MLFLOW_VERSION", "value", cfg.MLflow.Version)
@@ -408,8 +488,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.MLflow.AuthUsername = "admin"
 		slog.Debug("default", "key", "MLFLOW_AUTH_USERNAME", "value", cfg.MLflow.AuthUsername)
 	}
+}
 
-	// ── Admin ─────────────────────────────────────────────────────────
+// applyDefaultsAdmin sets the admin UI port and route defaults.
+func applyDefaultsAdmin(cfg *Config) {
 	if cfg.Admin.Version == "" {
 		cfg.Admin.Version = "latest"
 		slog.Debug("default", "key", "ADMIN_VERSION", "value", cfg.Admin.Version)
@@ -422,8 +504,16 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Admin.Route = "admin"
 		slog.Debug("default", "key", "ADMIN_ROUTE", "value", cfg.Admin.Route)
 	}
+}
 
-	// ── Search ────────────────────────────────────────────────────────
+// applyDefaultsSearch sets search-engine defaults for MeiliSearch, Typesense, and Elasticsearch.
+func applyDefaultsSearch(cfg *Config) {
+	applyDefaultsSearchCore(cfg)
+	applyDefaultsSearchEngines(cfg)
+}
+
+// applyDefaultsSearchCore sets top-level search engine, port, and language defaults.
+func applyDefaultsSearchCore(cfg *Config) {
 	if cfg.Search.Engine == "" {
 		cfg.Search.Engine = "meilisearch"
 		slog.Debug("default", "key", "SEARCH_ENGINE", "value", cfg.Search.Engine)
@@ -440,7 +530,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Search.Language = "en"
 		slog.Debug("default", "key", "SEARCH_LANGUAGE", "value", cfg.Search.Language)
 	}
-	// MeiliSearch defaults
+}
+
+// applyDefaultsSearchEngines sets per-engine defaults (MeiliSearch, Typesense, Elasticsearch).
+func applyDefaultsSearchEngines(cfg *Config) {
 	if cfg.Search.MeiliSearch.Version == "" {
 		cfg.Search.MeiliSearch.Version = "v1.6"
 		slog.Debug("default", "key", "MEILISEARCH_VERSION", "value", cfg.Search.MeiliSearch.Version)
@@ -449,8 +542,6 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Search.MeiliSearch.Env = "development"
 		slog.Debug("default", "key", "MEILISEARCH_ENV", "value", cfg.Search.MeiliSearch.Env)
 	}
-
-	// Typesense defaults
 	if cfg.Search.Typesense.Version == "" {
 		cfg.Search.Typesense.Version = "27.1"
 		slog.Debug("default", "key", "TYPESENSE_VERSION", "value", cfg.Search.Typesense.Version)
@@ -470,8 +561,6 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 	if !cfg.Search.Typesense.EnableCORS {
 		cfg.Search.Typesense.EnableCORS = true
 	}
-
-	// Elasticsearch defaults
 	if cfg.Search.Elasticsearch.Version == "" {
 		cfg.Search.Elasticsearch.Version = "8.11.3"
 		slog.Debug("default", "key", "ELASTICSEARCH_VERSION", "value", cfg.Search.Elasticsearch.Version)
@@ -484,43 +573,54 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Search.Elasticsearch.Memory = "1Gi"
 		slog.Debug("default", "key", "ELASTICSEARCH_MEMORY", "value", cfg.Search.Elasticsearch.Memory)
 	}
+}
 
-	// ── Monitoring ────────────────────────────────────────────────────
-	// Auto-enable all 10 sub-booleans when monitoring master toggle is on.
-	if cfg.Monitoring.Enabled {
-		if !cfg.Monitoring.PrometheusEnabled {
-			cfg.Monitoring.PrometheusEnabled = true
-		}
-		if !cfg.Monitoring.GrafanaEnabled {
-			cfg.Monitoring.GrafanaEnabled = true
-		}
-		if !cfg.Monitoring.LokiEnabled {
-			cfg.Monitoring.LokiEnabled = true
-		}
-		if !cfg.Monitoring.PromtailEnabled {
-			cfg.Monitoring.PromtailEnabled = true
-		}
-		if !cfg.Monitoring.TempoEnabled {
-			cfg.Monitoring.TempoEnabled = true
-		}
-		if !cfg.Monitoring.AlertmanagerEnabled {
-			cfg.Monitoring.AlertmanagerEnabled = true
-		}
-		if !cfg.Monitoring.CadvisorEnabled {
-			cfg.Monitoring.CadvisorEnabled = true
-		}
-		if !cfg.Monitoring.NodeExporterEnabled {
-			cfg.Monitoring.NodeExporterEnabled = true
-		}
-		if !cfg.Monitoring.PGExporterEnabled {
-			cfg.Monitoring.PGExporterEnabled = true
-		}
-		if !cfg.Monitoring.RedisExporterEnabled {
-			cfg.Monitoring.RedisExporterEnabled = true
-		}
+// applyDefaultsMonitoring auto-enables monitoring sub-services and sets port defaults.
+func applyDefaultsMonitoring(cfg *Config) {
+	applyDefaultsMonitoringToggles(cfg)
+	applyDefaultsMonitoringPorts(cfg)
+}
+
+// applyDefaultsMonitoringToggles enables all sub-services when the master toggle is on.
+func applyDefaultsMonitoringToggles(cfg *Config) {
+	if !cfg.Monitoring.Enabled {
+		return
 	}
+	if !cfg.Monitoring.PrometheusEnabled {
+		cfg.Monitoring.PrometheusEnabled = true
+	}
+	if !cfg.Monitoring.GrafanaEnabled {
+		cfg.Monitoring.GrafanaEnabled = true
+	}
+	if !cfg.Monitoring.LokiEnabled {
+		cfg.Monitoring.LokiEnabled = true
+	}
+	if !cfg.Monitoring.PromtailEnabled {
+		cfg.Monitoring.PromtailEnabled = true
+	}
+	if !cfg.Monitoring.TempoEnabled {
+		cfg.Monitoring.TempoEnabled = true
+	}
+	if !cfg.Monitoring.AlertmanagerEnabled {
+		cfg.Monitoring.AlertmanagerEnabled = true
+	}
+	if !cfg.Monitoring.CadvisorEnabled {
+		cfg.Monitoring.CadvisorEnabled = true
+	}
+	if !cfg.Monitoring.NodeExporterEnabled {
+		cfg.Monitoring.NodeExporterEnabled = true
+	}
+	if !cfg.Monitoring.PGExporterEnabled {
+		cfg.Monitoring.PGExporterEnabled = true
+	}
+	if !cfg.Monitoring.RedisExporterEnabled {
+		cfg.Monitoring.RedisExporterEnabled = true
+	}
+}
 
-	// Monitoring ports (always fill regardless of enabled state)
+// applyDefaultsMonitoringPorts fills monitoring service port defaults (always, regardless of enabled state).
+func applyDefaultsMonitoringPorts(cfg *Config) {
+	// Ports (always fill regardless of enabled state)
 	if cfg.Monitoring.PrometheusPort == 0 {
 		cfg.Monitoring.PrometheusPort = 9090
 		slog.Debug("default", "key", "PROMETHEUS_PORT", "value", fmt.Sprintf("%d", cfg.Monitoring.PrometheusPort))
@@ -565,8 +665,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Monitoring.RedisExporterPort = 9121
 		slog.Debug("default", "key", "REDIS_EXPORTER_PORT", "value", fmt.Sprintf("%d", cfg.Monitoring.RedisExporterPort))
 	}
+}
 
-	// ── Docker ────────────────────────────────────────────────────────
+// applyDefaultsDocker sets Docker network name and logging defaults.
+func applyDefaultsDocker(cfg *Config) {
 	// DockerNetwork is always computed from ProjectName.
 	cfg.DockerNetwork = cfg.ProjectName + "_network"
 
@@ -586,8 +688,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.DockerBuildTimeout = 300
 		slog.Debug("default", "key", "DOCKER_BUILD_TIMEOUT", "value", fmt.Sprintf("%d", cfg.DockerBuildTimeout))
 	}
+}
 
-	// ── Start/Stop ────────────────────────────────────────────────────
+// applyDefaultsStartStop sets lifecycle control defaults (start mode, health checks, logging).
+func applyDefaultsStartStop(cfg *Config) {
 	if cfg.StartMode == "" {
 		cfg.StartMode = "smart"
 		slog.Debug("default", "key", "START_MODE", "value", cfg.StartMode)
@@ -620,8 +724,22 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.StopTimeout = 30
 		slog.Debug("default", "key", "STOP_TIMEOUT", "value", fmt.Sprintf("%d", cfg.StopTimeout))
 	}
+}
 
-	// ── Plugin System ─────────────────────────────────────────────────
+// applyDefaultsPlugins sets plugin system registry, cache, and pro-plugin secret defaults.
+func applyDefaultsPlugins(cfg *Config) error {
+	applyDefaultsPluginSystem(cfg)
+	return applyDefaultsPluginSecrets(cfg)
+}
+
+// applyDefaultsPluginSystem sets plugin directory, registry, URL, routing, and resource limit defaults.
+func applyDefaultsPluginSystem(cfg *Config) {
+	applyDefaultsPluginSystemRegistry(cfg)
+	applyDefaultsPluginSystemLimits(cfg)
+}
+
+// applyDefaultsPluginSystemRegistry sets plugin dir, cache, registry URLs, and routing.
+func applyDefaultsPluginSystemRegistry(cfg *Config) {
 	if cfg.PluginSystem.Dir == "" {
 		cfg.PluginSystem.Dir = "~/.nself/plugins"
 		slog.Debug("default", "key", "PLUGIN_DIR", "value", cfg.PluginSystem.Dir)
@@ -646,35 +764,9 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.PluginSystem.PricingURL = "https://nself.org/pricing"
 		slog.Debug("default", "key", "PLUGIN_PRICING_URL", "value", cfg.PluginSystem.PricingURL)
 	}
-
-	// ── Plugin Pro Config ─────────────────────────────────────────────
 	if cfg.PluginConfig.NotifyPort == 0 {
 		cfg.PluginConfig.NotifyPort = 3712
 		slog.Debug("default", "key", "PLUGIN_NOTIFY_PORT", "value", fmt.Sprintf("%d", cfg.PluginConfig.NotifyPort))
-	}
-	if cfg.PluginConfig.NotifySecret == "" {
-		secret, err := generateSecureRandom(32)
-		if err != nil {
-			return nil, fmt.Errorf("generating NOTIFY_INTERNAL_SECRET: %w", err)
-		}
-		cfg.PluginConfig.NotifySecret = secret
-		slog.Debug("default", "key", "NOTIFY_INTERNAL_SECRET", "value", "[generated]")
-	}
-	if cfg.PluginConfig.CronSecret == "" {
-		secret, err := generateSecureRandom(32)
-		if err != nil {
-			return nil, fmt.Errorf("generating CRON_INTERNAL_SECRET: %w", err)
-		}
-		cfg.PluginConfig.CronSecret = secret
-		slog.Debug("default", "key", "CRON_INTERNAL_SECRET", "value", "[generated]")
-	}
-	if cfg.PluginSystem.InternalSecret == "" {
-		secret, err := generateSecureRandom(32)
-		if err != nil {
-			return nil, fmt.Errorf("generating PLUGIN_INTERNAL_SECRET: %w", err)
-		}
-		cfg.PluginSystem.InternalSecret = secret
-		slog.Debug("default", "key", "PLUGIN_INTERNAL_SECRET", "value", "[generated]")
 	}
 	if cfg.PluginConfig.NotifyRoute == "" {
 		cfg.PluginConfig.NotifyRoute = "notify"
@@ -688,6 +780,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.PluginConfig.CronRetention = 90
 		slog.Debug("default", "key", "PLUGIN_CRON_RETENTION", "value", fmt.Sprintf("%d", cfg.PluginConfig.CronRetention))
 	}
+}
+
+// applyDefaultsPluginSystemLimits sets per-plugin memory and CPU resource limits.
+func applyDefaultsPluginSystemLimits(cfg *Config) {
 	if cfg.PluginConfig.AIMemLimit == "" {
 		cfg.PluginConfig.AIMemLimit = "1g"
 		slog.Debug("default", "key", "PLUGIN_AI_MEM_LIMIT", "value", cfg.PluginConfig.AIMemLimit)
@@ -720,8 +816,39 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.PluginConfig.DefaultCPULimit = "0.5"
 		slog.Debug("default", "key", "PLUGIN_DEFAULT_CPU_LIMIT", "value", cfg.PluginConfig.DefaultCPULimit)
 	}
+}
 
-	// ── Backup ────────────────────────────────────────────────────────
+// applyDefaultsPluginSecrets generates internal plugin communication secrets when missing.
+func applyDefaultsPluginSecrets(cfg *Config) error {
+	if cfg.PluginConfig.NotifySecret == "" {
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return fmt.Errorf("generating NOTIFY_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginConfig.NotifySecret = secret
+		slog.Debug("default", "key", "NOTIFY_INTERNAL_SECRET", "value", "[generated]")
+	}
+	if cfg.PluginConfig.CronSecret == "" {
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return fmt.Errorf("generating CRON_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginConfig.CronSecret = secret
+		slog.Debug("default", "key", "CRON_INTERNAL_SECRET", "value", "[generated]")
+	}
+	if cfg.PluginSystem.InternalSecret == "" {
+		secret, err := generateSecureRandom(32)
+		if err != nil {
+			return fmt.Errorf("generating PLUGIN_INTERNAL_SECRET: %w", err)
+		}
+		cfg.PluginSystem.InternalSecret = secret
+		slog.Debug("default", "key", "PLUGIN_INTERNAL_SECRET", "value", "[generated]")
+	}
+	return nil
+}
+
+// applyDefaultsBackup sets backup schedule, retention, and PITR defaults.
+func applyDefaultsBackup(cfg *Config) {
 	if cfg.Backup.Dir == "" {
 		cfg.Backup.Dir = "./backups"
 		slog.Debug("default", "key", "BACKUP_DIR", "value", cfg.Backup.Dir)
@@ -758,8 +885,10 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Backup.RestoreTestSchedule = "0 5 * * 0"
 		slog.Debug("default", "key", "BACKUP_RESTORE_TEST_SCHEDULE", "value", cfg.Backup.RestoreTestSchedule)
 	}
+}
 
-	// ── Email ─────────────────────────────────────────────────────────
+// applyDefaultsEmail sets email provider and SMTP defaults.
+func applyDefaultsEmail(cfg *Config) {
 	if cfg.Email.Provider == "" {
 		cfg.Email.Provider = "mailpit"
 		slog.Debug("default", "key", "EMAIL_PROVIDER", "value", cfg.Email.Provider)
@@ -776,8 +905,6 @@ func ApplyDefaults(cfg *Config) (*Config, error) {
 		cfg.Email.SMTPPort = 587
 		slog.Debug("default", "key", "SMTP_PORT", "value", "587")
 	}
-
-	return cfg, nil
 }
 
 // BuildJWTSecret constructs the HASURA_GRAPHQL_JWT_SECRET JSON string.

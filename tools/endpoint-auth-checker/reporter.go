@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// AnnotationFormat controls the output format for check results (github, text, or json).
 type AnnotationFormat string
 
 const (
