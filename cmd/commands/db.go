@@ -134,7 +134,30 @@ var dbRestoreCmd = &cobra.Command{
 var dbShellCmd = &cobra.Command{
 	Use:   "shell",
 	Short: "Open psql interactive shell",
-	RunE:  runDBShell,
+	Long: `Open an interactive psql shell connected to the project database.
+
+The shell is launched inside the running Postgres Docker container via
+'docker exec'. psql must be available inside the container (standard
+with the official postgres image).
+
+Windows note: on Windows the shell is proxied through 'docker exec'
+so psql itself does not need to be in the host PATH. However if you
+are connecting to an external Postgres instance (not managed by nself)
+you must ensure psql.exe is in your PATH before running this command.`,
+	RunE: runDBShell,
+}
+
+// ── list ────────────────────────────────────────────────────────────
+
+var dbListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List databases in the project Postgres instance",
+	Long: `List all databases in the project's Postgres container.
+
+Connects to the running Postgres container and prints all database names
+(equivalent to \l in psql). Useful for verifying that db create/drop/reset
+operated on the correct database.`,
+	RunE: runDBList,
 }
 
 // ── drop ────────────────────────────────────────────────────────────
@@ -529,6 +552,7 @@ func init() {
 	dbCmd.AddCommand(dbBackupCmd)
 	dbCmd.AddCommand(dbRestoreCmd)
 	dbCmd.AddCommand(dbShellCmd)
+	dbCmd.AddCommand(dbListCmd)
 	dbCmd.AddCommand(dbDropCmd)
 	dbCmd.AddCommand(dbResetCmd)
 	dbCmd.AddCommand(dbHasuraCmd)
@@ -796,6 +820,34 @@ func runDBShell(cmd *cobra.Command, _ []string) error {
 	}
 
 	return docker.Exec(cmd.Context(), container, psqlCmd, opts)
+}
+
+// runDBList implements 'nself db list'. It queries the Postgres container for
+// all database names and prints them one per line.
+func runDBList(cmd *cobra.Command, _ []string) error {
+	cfg, err := loadProjectConfig()
+	if err != nil {
+		return err
+	}
+	container := cfg.ProjectName + "_postgres"
+	user := cfg.Postgres.User
+	if user == "" {
+		user = "postgres"
+	}
+
+	// -t: tuples only, -A: unaligned, -c: inline SQL — produces one db name per line.
+	listSQL := "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname"
+	args := []string{
+		"exec", container,
+		"psql", "-U", user, "-d", "postgres", "-t", "-A", "-c", listSQL,
+	}
+	c := exec.CommandContext(cmd.Context(), "docker", args...)
+	c.Stdout = cmd.OutOrStdout()
+	c.Stderr = cmd.ErrOrStderr()
+	if err := c.Run(); err != nil {
+		return fmt.Errorf("db list failed: %w", err)
+	}
+	return nil
 }
 
 func runDBReset(cmd *cobra.Command, _ []string) error {
