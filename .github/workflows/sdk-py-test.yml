@@ -11,17 +11,44 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   sdk-py:
-    name: Python SDK Tests
+    name: "Python ${{ matrix.python-version }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    defaults:
+      run:
+        working-directory: sdk/py
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install dependencies and run tests
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
         run: |
-          cd sdk/py
+          python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pytest
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type-check (mypy)
+        if: ${{ matrix.python-version == '3.11' || matrix.python-version == '3.12' }}
+        run: mypy nself_plugin
+
+      - name: Test (pytest)
+        run: pytest --tb=short -q
