@@ -20,20 +20,29 @@ Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai 
 
 | Subcommand | Description |
 |------------|-------------|
+| `list` | List available and installed plugins (beta and planned plugins show status badges) |
 | `install <plugin> [plugin...]` | Install one or more plugins (license check enforced for pro plugins; planned plugins are rejected) |
-| `remove <name>` | Remove a plugin |
+| `remove <name>` | Remove a plugin and clean up its data, ports, and service entries |
 | `update [name]` | Update a specific plugin, or all installed plugins if no name given |
 | `updates` | Check for available updates across all installed plugins |
-| `list` | List available and installed plugins (beta and planned plugins show status badges) |
-| `init <name>` | Scaffold a new plugin project (see [[cmd-plugin-init]]) |
-| `scaffold <name>` | Alias for `init` |
-| `new <name>` | Deprecated alias for `init`; prints a deprecation warning |
-| `compat-check` | Check installed plugins for CLI version compatibility (exits 1 on any incompatible plugin) |
-| `inventory` | List installed plugins with version, tier, and status |
 | `refresh` | Force refresh the remote registry cache |
 | `start <name>` | Start a plugin service container |
 | `stop <name>` | Stop a plugin service container |
+| `disable <name>` | Disable a plugin (excluded from compose on next build) |
+| `enable <name>` | Re-enable a previously disabled plugin |
 | `status [name]` | Show plugin health (all or specific) |
+| `inventory` | List installed plugins with version, tier, and status |
+| `info <name>` | Show detailed information about a plugin |
+| `new <name>` | Scaffold a new plugin project (preferred; see [[cmd-plugin-init]]) |
+| `submit [path]` | Validate a plugin for submission (no actual upload in CI; use `--strict` for full checks) |
+| `marketplace` | Browse the plugin marketplace (subcommands: `list`, `search`, `info`) |
+| `compat-check` | Check installed plugins for CLI version compatibility (exits 1 on any incompatible plugin; see [[cmd-plugin-compat-check]]) |
+| `dev <name>` | Start a plugin in development mode with live reload (see [[cmd-plugin-dev]]) |
+| `link <local-path>` | Link a local plugin directory into the running stack (see [[cmd-plugin-link]]) |
+| `unlink <name>` | Remove a plugin from the development-linked set (see [[cmd-plugin-unlink]]) |
+| `test <name>` | Run unit and smoke tests for a plugin (see [[cmd-plugin-test]]) |
+| `debug <name>` | Attach a Delve debugger to a running plugin process (see [[cmd-plugin-debug]]) |
+| `logs <name>` | Tail logs from a plugin container (see [[cmd-plugin-logs]]) |
 
 ## Flags
 
@@ -152,8 +161,15 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 
 ## See also
 
-- [[cmd-plugin-compat-check]], compatibility check reference
-- [[Plugin-Status-Badges]], lifecycle status reference
-- [[Plugin-Licensing]], license tiers and key format
+- [[cmd-plugin-compat-check]] — compatibility check reference
+- [[cmd-plugin-dev]] — plugin author dev mode
+- [[cmd-plugin-link]] — link a local plugin directory into the stack
+- [[cmd-plugin-unlink]] — remove a plugin from the linked set
+- [[cmd-plugin-test]] — run unit and smoke tests
+- [[cmd-plugin-debug]] — attach a Delve debugger
+- [[cmd-plugin-logs]] — tail plugin container logs
+- [[cmd-plugin-marketplace]] — browse the marketplace
+- [[Plugin-Status-Badges]] — lifecycle status reference
+- [[Plugin-Licensing]] — license tiers and key format
 
 ← [[Commands]] | [[Home]] →
