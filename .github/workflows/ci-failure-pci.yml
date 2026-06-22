@@ -45,7 +45,7 @@ jobs:
       - name: Generate GitHub App token
         id: app-token
         if: ${{ steps.app-check.outputs.skip == 'false' }}
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.NSELF_DISPATCH_APP_ID }}
           private-key: ${{ secrets.NSELF_DISPATCH_APP_PRIVATE_KEY }}
