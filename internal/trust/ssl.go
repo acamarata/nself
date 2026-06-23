@@ -129,9 +129,11 @@ func installMkcert() error {
 func installMkcertCA(caPath string) error {
 	switch runtime.GOOS {
 	case "darwin":
+		// Escape caPath to prevent AppleScript injection.
+		escapedPath := escapeForOsascript(caPath)
 		script := fmt.Sprintf(
 			`do shell script "security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s" with administrator privileges`,
-			caPath,
+			escapedPath,
 		)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

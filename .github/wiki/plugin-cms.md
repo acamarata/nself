@@ -34,14 +34,24 @@ Adds a full headless CMS to your ɳSelf backend. Define custom content types (ar
 ## Database Tables
 
 8 tables added to your Postgres database:
-- `np_cms_content_types`, content type definitions
-- `np_cms_posts`, content items
-- `np_cms_post_versions`, version history
-- `np_cms_categories`, category tree
-- `np_cms_tags`, tag definitions
-- `np_cms_post_tags`, post-tag relationships
-- `np_cms_media`, media library records
-- `np_cms_locales`, locale configurations
+- `cms_content_types`, content type definitions
+- `cms_posts`, content items
+- `cms_post_versions`, version history
+- `cms_categories`, category tree
+- `cms_tags`, tag definitions
+- `cms_post_categories`, post-category relationships
+- `cms_post_tags`, post-tag relationships
+- `cms_webhook_events`, webhook event log
+
+## Security
+
+All CMS content is protected by **Hasura row-level security (RLS)** using the `source_account_id` column. This ensures that content created in one app cannot be read or modified by other apps in the same deployment.
+
+- Multi-app isolation: each app has its own content silo
+- User-level filtering: users can only access content for their app
+- Token-based access control: JWT tokens determine accessible data
+
+For detailed RLS configuration, see the [CMS plugin source documentation](https://github.com/nself-org/plugins-pro).
 
 ## Nginx Routes
 

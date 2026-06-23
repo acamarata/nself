@@ -329,6 +329,79 @@ func TestStreamResult_JSON(t *testing.T) {
 	}
 }
 
+// ── ValidateCronExpr ─────────────────────────────────────────────────
+
+// TestValidateCronExpr_Valid verifies that well-formed cron expressions pass.
+func TestValidateCronExpr_Valid(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		"0 2 * * *",   // daily at 02:00
+		"30 3 * * 0",  // weekly Sunday 03:30
+		"0 4 1 * *",   // monthly 1st at 04:00
+		"*/15 * * * *", // every 15 minutes
+		"0 0 * * 1-5",  // weekdays midnight
+		"0 12 * 1,6 *", // noon in Jan and Jun
+	}
+	for _, cron := range cases {
+		if err := ValidateCronExpr(cron); err != nil {
+			t.Errorf("ValidateCronExpr(%q) returned unexpected error: %v", cron, err)
+		}
+	}
+}
+
+// TestValidateCronExpr_InvalidFieldCount verifies that expressions with wrong
+// field counts return an error — acceptance criterion: exit code 1 with message.
+func TestValidateCronExpr_InvalidFieldCount(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		"",          // empty
+		"0 2 *",     // too few
+		"0 2 * * * 0", // too many
+		"every day", // prose
+	}
+	for _, cron := range cases {
+		if err := ValidateCronExpr(cron); err == nil {
+			t.Errorf("ValidateCronExpr(%q): expected error for bad field count, got nil", cron)
+		}
+	}
+}
+
+// TestValidateCronExpr_OutOfRangeValues verifies out-of-range numeric values
+// are rejected (minute > 59, hour > 23, etc.).
+func TestValidateCronExpr_OutOfRangeValues(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		"60 2 * * *",  // minute 60 invalid
+		"0 25 * * *",  // hour 25 invalid
+		"0 2 32 * *",  // dom 32 invalid
+		"0 2 * 13 *",  // month 13 invalid
+		"0 2 * * 8",   // dow 8 invalid
+	}
+	for _, cron := range cases {
+		if err := ValidateCronExpr(cron); err == nil {
+			t.Errorf("ValidateCronExpr(%q): expected error for out-of-range value, got nil", cron)
+		}
+	}
+}
+
+// TestValidateCronExpr_InvalidStepSyntax verifies malformed step syntax is rejected.
+func TestValidateCronExpr_InvalidStepSyntax(t *testing.T) {
+	t.Parallel()
+	// "*/abc" has a non-numeric step.
+	if err := ValidateCronExpr("*/abc * * * *"); err == nil {
+		t.Error("ValidateCronExpr(\"*/abc * * * *\"): expected error, got nil")
+	}
+}
+
+// TestValidateCronExpr_NonNumericField verifies non-numeric literal fields are rejected.
+func TestValidateCronExpr_NonNumericField(t *testing.T) {
+	t.Parallel()
+	// "monday" in the day-of-week position is not a supported literal.
+	if err := ValidateCronExpr("0 2 * * monday"); err == nil {
+		t.Error("ValidateCronExpr(\"0 2 * * monday\"): expected error for named weekday, got nil")
+	}
+}
+
 // ── zeroPad ───────────────────────────────────────────────────────────
 
 func TestZeroPad(t *testing.T) {

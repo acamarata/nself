@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,6 +79,69 @@ func TestMigrationTxSQL_HasTimeouts(t *testing.T) {
 	}
 	if stmtIdx > contentIdx {
 		t.Error("statement_timeout must be set before migration SQL content")
+	}
+}
+
+// TestMigrationTxSQL_SchemaVersionsInsideTransaction verifies that the
+// schema_versions INSERT (legacy record) and nself_ops INSERT are both
+// inside the same BEGIN/COMMIT block as the migration SQL. This ensures
+// that if the process is killed or errors between migration execution and
+// schema_versions recording, Postgres rolls back the entire unit atomically.
+// Without this guarantee a failed write to schema_versions would leave the
+// migration applied but untracked, causing re-run failures.
+func TestMigrationTxSQL_SchemaVersionsInsideTransaction(t *testing.T) {
+	sqlContent := "CREATE TABLE test_atomic (id SERIAL PRIMARY KEY);"
+	legacyRecord := "INSERT INTO np_common.schema_versions (name) VALUES ('001_test.sql');"
+	opsRecord := "INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('001_test', '001_test.sql', 'deadbeef') ON CONFLICT (id) DO NOTHING;"
+
+	// Replicate the exact txSQL construction from MigrateUp.
+	stmtTimeout := statementTimeoutFor(sqlContent) // "60s" (no directive)
+	txSQL := "BEGIN;\n" +
+		"SET LOCAL lock_timeout = '5s';\n" +
+		fmt.Sprintf("SET LOCAL statement_timeout = '%s';\n", stmtTimeout) +
+		sqlContent + "\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
+
+	// 1. Both BEGIN and COMMIT must be present.
+	if !strings.Contains(txSQL, "BEGIN;") {
+		t.Fatal("txSQL must contain BEGIN;")
+	}
+	if !strings.Contains(txSQL, "COMMIT;") {
+		t.Fatal("txSQL must contain COMMIT;")
+	}
+
+	// 2. schema_versions INSERT must appear AFTER BEGIN and BEFORE COMMIT.
+	beginIdx := strings.Index(txSQL, "BEGIN;")
+	commitIdx := strings.LastIndex(txSQL, "COMMIT;")
+	legacyIdx := strings.Index(txSQL, legacyRecord)
+	opsIdx := strings.Index(txSQL, opsRecord)
+	sqlIdx := strings.Index(txSQL, sqlContent)
+
+	if legacyIdx < beginIdx || legacyIdx > commitIdx {
+		t.Error("schema_versions INSERT must be inside the transaction (between BEGIN and COMMIT)")
+	}
+	if opsIdx < beginIdx || opsIdx > commitIdx {
+		t.Error("nself_ops.migrations INSERT must be inside the transaction (between BEGIN and COMMIT)")
+	}
+
+	// 3. Migration SQL must precede both recording inserts.
+	// This ordering matters: migration SQL runs first, then we record it atomically.
+	if sqlIdx > legacyIdx {
+		t.Error("migration SQL must appear before schema_versions INSERT in txSQL")
+	}
+	if sqlIdx > opsIdx {
+		t.Error("migration SQL must appear before nself_ops INSERT in txSQL")
+	}
+
+	// 4. Non-transactional path must NOT embed schema_versions inside a BEGIN block.
+	// The non-transactional path sends migration SQL and then a separate recordSQL call.
+	// If someone accidentally adds BEGIN to the migration SQL itself, this catches it.
+	nonTxMigration := "CREATE INDEX CONCURRENTLY idx_atomic ON test_atomic (id);"
+	if !isNonTransactional(nonTxMigration) {
+		t.Fatal("expected isNonTransactional=true for CREATE INDEX CONCURRENTLY")
+	}
+	// Non-transactional migration SQL is piped directly — no BEGIN/COMMIT wrapping.
+	if strings.Contains(nonTxMigration, "BEGIN;") || strings.Contains(nonTxMigration, "COMMIT;") {
+		t.Error("non-transactional migration SQL must not contain BEGIN/COMMIT wrappers")
 	}
 }
 

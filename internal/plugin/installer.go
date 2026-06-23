@@ -218,6 +218,25 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		fmt.Fprintf(os.Stderr, "  ✓ %s installed\n", dep)
 	}
 
+	// Step 3b: Binary (Rust) plugin install path.
+	// When manifest.Language == "rust" the plugin ships as a pre-compiled
+	// platform binary on GitHub Releases. Arch detection + download +
+	// checksum verification + extraction + chmod are handled by
+	// installBinaryPlugin (binary_install.go). The standard source tarball
+	// path (Steps 4-6) is skipped so we jump straight to schema creation.
+	if manifest.Language == "rust" {
+		if err := installBinaryPlugin(ctx, manifest, pluginDir); err != nil {
+			return err
+		}
+		// Skip to Step 7: schema creation (no source tarball steps).
+		if err := createPluginSchema(ctx, cfg, name); err != nil {
+			rollbackInstall(ctx, cfg, name, filepath.Join(pluginDir, name))
+			return fmt.Errorf("creating schema for binary plugin %q: %w", name, err)
+		}
+		fmt.Fprintf(os.Stderr, "✓ %s installed (binary)\n", name)
+		return nil
+	}
+
 	// Step 4: Download the plugin archive.
 	archivePath, err := downloadPlugin(ctx, name, manifest.Version, manifest.Repository)
 	if err != nil {

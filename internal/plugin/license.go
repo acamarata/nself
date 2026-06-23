@@ -238,6 +238,64 @@ func validateLicenseRemoteWithEntitlements(ctx context.Context, key string, ping
 // Entries older than 30 days are removed on the next CacheLicense call.
 const cacheMaxAge = 30 * 24 * time.Hour
 
+// cacheExpiryWarnThreshold is the age at which a cache entry triggers the
+// expiry warning: 23 days. This gives users a 7-day heads-up before the
+// 30-day prune removes the entry and forces a remote re-validation.
+// The warning must fire on every check after day 23 (not suppressed after first
+// trigger) — the caller is responsible for deduplicating display.
+const cacheExpiryWarnThreshold = 23 * 24 * time.Hour
+
+// LicenseCacheExpiryWarning returns true if the cache entry for key is between
+// cacheExpiryWarnThreshold (23 days) and cacheMaxAge (30 days) old. It returns
+// false for owner keys (they never expire), for cache misses, and for entries
+// younger than 23 days or older than 30 days (already pruned).
+//
+// This function is called during plugin operations to surface a "your license
+// cache will expire soon — please reconnect to re-validate" message to the user.
+// It uses wall-clock time (time.Now()) so it is never affected by process uptime.
+func LicenseCacheExpiryWarning(key string, cacheDir string) bool {
+	if isOwnerKey(key) {
+		return false
+	}
+	cachePath := filepath.Join(cacheDir, "cache")
+	raw, err := os.ReadFile(cachePath)
+	if err != nil {
+		return false
+	}
+
+	hmacKey := loadHMACKeyOrFallback()
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		if line == "" {
+			continue
+		}
+		lastPipe := strings.LastIndex(line, "|")
+		if lastPipe < 0 {
+			continue
+		}
+		data := line[:lastPipe]
+		sig := line[lastPipe+1:]
+		if !hmacVerify(data, sig, hmacKey) {
+			continue
+		}
+		parts := strings.SplitN(data, "|", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		if !strings.HasPrefix(parts[0], keyPrefix(key)) {
+			continue
+		}
+		var ts int64
+		if _, scanErr := fmt.Sscanf(parts[2], "%d", &ts); scanErr != nil {
+			continue
+		}
+		age := time.Since(time.Unix(ts, 0))
+		if age >= cacheExpiryWarnThreshold && age < cacheMaxAge {
+			return true
+		}
+	}
+	return false
+}
+
 // pruneExpiredCacheEntries reads the cache file line by line, drops any entry
 // whose timestamp is older than maxAge, and rewrites the file with the
 // remaining valid entries. If the file does not exist the function is a no-op.

@@ -476,3 +476,68 @@ func TestCheckLicenseCache_OwnerKeyNeverExpires(t *testing.T) {
 		t.Fatal("expected valid=true for owner key cache, got false")
 	}
 }
+
+// ---- 30-day expiry warning --------------------------------------------------
+
+// TestLicenseCacheExpiryWarning_FiresAtDay23 verifies that
+// LicenseCacheExpiryWarning returns true when the cache entry is 23 days old
+// (i.e., exactly at the cacheExpiryWarnThreshold). This gives users a 7-day
+// heads-up before the 30-day prune removes the entry and forces re-validation.
+// The warning must not be suppressed after first trigger — it fires on every
+// check in the [23d, 30d) window.
+func TestLicenseCacheExpiryWarning_FiresAtDay23(t *testing.T) {
+	cacheDir := t.TempDir()
+	key := "nself_pro_" + strings.Repeat("w", 22)
+
+	// Write a cache entry exactly 23 days old — at the warn threshold.
+	writeCacheEntryWithAge(t, cacheDir, key, "valid", 23*24*time.Hour)
+
+	if !LicenseCacheExpiryWarning(key, cacheDir) {
+		t.Fatal("expected LicenseCacheExpiryWarning=true for 23-day-old cache entry, got false")
+	}
+}
+
+// TestLicenseCacheExpiryWarning_NotFiredBeforeThreshold verifies that the
+// expiry warning is NOT triggered for a cache entry younger than 23 days.
+func TestLicenseCacheExpiryWarning_NotFiredBeforeThreshold(t *testing.T) {
+	cacheDir := t.TempDir()
+	key := "nself_pro_" + strings.Repeat("v", 22)
+
+	// 10 days old — well below the 23-day warn threshold.
+	writeCacheEntryWithAge(t, cacheDir, key, "valid", 10*24*time.Hour)
+
+	if LicenseCacheExpiryWarning(key, cacheDir) {
+		t.Fatal("expected LicenseCacheExpiryWarning=false for 10-day-old cache entry, got true")
+	}
+}
+
+// TestLicenseCacheExpiryWarning_OwnerKeyNeverWarns verifies that owner keys
+// never trigger the expiry warning, regardless of cache age.
+func TestLicenseCacheExpiryWarning_OwnerKeyNeverWarns(t *testing.T) {
+	cacheDir := t.TempDir()
+	key := "nself_owner_" + strings.Repeat("x", 20)
+
+	// 25 days old — would warn for a non-owner key.
+	writeCacheEntryWithAge(t, cacheDir, key, "valid", 25*24*time.Hour)
+
+	if LicenseCacheExpiryWarning(key, cacheDir) {
+		t.Fatal("expected LicenseCacheExpiryWarning=false for owner key (they never expire), got true")
+	}
+}
+
+// TestLicenseCacheExpiryWarning_FiresRepeatedly verifies that the warning fires
+// on every call in the [23d, 30d) window — it must not be suppressed after the
+// first trigger (suppression deduplication is the caller's responsibility).
+func TestLicenseCacheExpiryWarning_FiresRepeatedly(t *testing.T) {
+	cacheDir := t.TempDir()
+	key := "nself_pro_" + strings.Repeat("y", 22)
+
+	// 25 days old — in the warning window.
+	writeCacheEntryWithAge(t, cacheDir, key, "valid", 25*24*time.Hour)
+
+	for i := 0; i < 3; i++ {
+		if !LicenseCacheExpiryWarning(key, cacheDir) {
+			t.Fatalf("call %d: expected LicenseCacheExpiryWarning=true in warn window, got false", i+1)
+		}
+	}
+}

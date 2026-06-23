@@ -18,6 +18,7 @@ Plugin license keys are NOT removed by `nself logout`. To clear license keys, us
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--all`, `-a` | `false` | Clear all stored sessions and tokens, not just the current one |
 | `--help`, `-h` | — | Show help |
 
 ## Examples
@@ -25,6 +26,9 @@ Plugin license keys are NOT removed by `nself logout`. To clear license keys, us
 ```bash
 # Log out of your nSelf account
 nself logout
+
+# Clear all stored sessions and tokens
+nself logout --all
 ```
 
 ## See Also

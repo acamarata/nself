@@ -67,3 +67,46 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("status got %d", rec.Code)
 	}
 }
+
+func TestSetDefaultAndDefault(t *testing.T) {
+	// Reset to a known state by calling Default before any set.
+	r := NewRegistry("def-plugin", "1.0.0")
+	SetDefault(r)
+
+	got := Default()
+	if got == nil {
+		t.Fatal("Default() returned nil after SetDefault")
+	}
+	if got.Plugin != "def-plugin" {
+		t.Errorf("want Plugin=def-plugin, got %q", got.Plugin)
+	}
+}
+
+func TestStatusClassAllBranches(t *testing.T) {
+	cases := []struct {
+		code  int
+		class string
+	}{
+		{100, "1xx"},
+		{200, "2xx"},
+		{201, "2xx"},
+		{301, "3xx"},
+		{404, "4xx"},
+		{500, "5xx"},
+	}
+	for _, c := range cases {
+		r := NewRegistry("sc", "1.0.0")
+		r.ObserveRequest("/path", "GET", c.code, time.Millisecond)
+		ts := httptest.NewServer(r.Handler())
+		resp, err := http.Get(ts.URL)
+		ts.Close()
+		if err != nil {
+			t.Fatalf("code %d: GET /metrics: %v", c.code, err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if !strings.Contains(string(body), `status="`+c.class+`"`) {
+			t.Errorf("code %d: want status=%q in metrics output", c.code, c.class)
+		}
+	}
+}

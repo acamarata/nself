@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -713,11 +714,81 @@ func RestoreFromRemote(ctx context.Context, cfg *config.Config, from, keyPath st
 	return nil
 }
 
+// ValidateCronExpr validates a 5-field cron expression.
+// It checks field count and that each field is a valid cron token
+// (number, *, */N, or a comma-separated list of numbers).
+// Returns a non-nil error with a descriptive message on any violation.
+func ValidateCronExpr(cron string) error {
+	fields := strings.Fields(cron)
+	if len(fields) != 5 {
+		return fmt.Errorf("invalid cron expression %q: expected 5 fields (minute hour dom month dow), got %d", cron, len(fields))
+	}
+
+	ranges := []struct {
+		name string
+		min  int
+		max  int
+	}{
+		{"minute", 0, 59},
+		{"hour", 0, 23},
+		{"day-of-month", 1, 31},
+		{"month", 1, 12},
+		{"day-of-week", 0, 7},
+	}
+
+	for i, field := range fields {
+		r := ranges[i]
+		if err := validateCronField(field, r.name, r.min, r.max); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateCronField checks a single cron field token for validity.
+func validateCronField(field, name string, min, max int) error {
+	if field == "*" {
+		return nil
+	}
+	// Handle */N step syntax.
+	if strings.HasPrefix(field, "*/") {
+		rest := field[2:]
+		if _, err := strconv.Atoi(rest); err != nil {
+			return fmt.Errorf("invalid cron %s field %q: step must be a number", name, field)
+		}
+		return nil
+	}
+	// Handle comma-separated list.
+	for _, part := range strings.Split(field, ",") {
+		// Handle ranges like 1-5.
+		if strings.Contains(part, "-") {
+			bounds := strings.SplitN(part, "-", 2)
+			lo, err1 := strconv.Atoi(bounds[0])
+			hi, err2 := strconv.Atoi(bounds[1])
+			if err1 != nil || err2 != nil || lo < min || hi > max || lo > hi {
+				return fmt.Errorf("invalid cron %s field %q: range %s is out of bounds [%d-%d]", name, field, part, min, max)
+			}
+			continue
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			return fmt.Errorf("invalid cron %s field %q: %q is not a number", name, field, part)
+		}
+		if n < min || n > max {
+			return fmt.Errorf("invalid cron %s field %q: value %d out of range [%d-%d]", name, field, n, min, max)
+		}
+	}
+	return nil
+}
+
 // ScheduleStream adds a systemd timer for nself backup stream.
 // It delegates to the existing systemd infrastructure via a dedicated unit.
 func ScheduleStream(cfg *config.Config, cron, to, recipient, unitDir string, dryRun bool) error {
 	if cron == "" {
 		return fmt.Errorf("--cron expression required (e.g. '0 2 * * *')")
+	}
+	if err := ValidateCronExpr(cron); err != nil {
+		return err
 	}
 	if to == "" {
 		to = cfg.Backup.Remote

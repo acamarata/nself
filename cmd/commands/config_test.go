@@ -841,3 +841,32 @@ func TestConfigValidate_ValidProject(t *testing.T) {
 	}
 	t.Logf("config validate output: %s err: %v", output, err)
 }
+
+// TestConfigValidate_InvalidConfigExitsNonZero verifies that 'config validate'
+// returns a non-nil error (exit 1) when config contains values that fail
+// registered validators, and that the error message is actionable.
+//
+// The passwords validator requires Postgres password ≥16 chars and
+// Hasura admin secret ≥32 chars. Providing short values guarantees failure.
+func TestConfigValidate_InvalidConfigExitsNonZero(t *testing.T) {
+	makeNSelfProject(t,
+		"PROJECT_NAME=myapp\nBASE_DOMAIN=example.com\nPOSTGRES_PASSWORD=short\nHASURA_ADMIN_SECRET=tooshort\n")
+
+	root := newConfigCmd()
+	var errBuf bytes.Buffer
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"config", "validate"})
+
+	_, err := captureStdout(t, func() error { return root.Execute() })
+
+	if err == nil {
+		t.Fatal("expected config validate to return a non-nil error for invalid config, got nil")
+	}
+	// Error message must mention the failing validator or give an actionable hint.
+	// runConfigValidate prints per-validator failures to stderr and returns a
+	// summary error; either the returned error or stderr must contain useful text.
+	combined := err.Error() + errBuf.String()
+	if combined == "" {
+		t.Error("expected non-empty error output from config validate for invalid config")
+	}
+}

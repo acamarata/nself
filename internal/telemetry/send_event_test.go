@@ -14,7 +14,7 @@ import (
 )
 
 // TestSendEventNoOpWhenDisabled verifies SendEvent makes zero HTTP calls when
-// IsEnabled() returns false.
+// IsEnabled() returns false (opt-out default: telemetry disabled via NSELF_TELEMETRY=0).
 func TestSendEventNoOpWhenDisabled(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
@@ -34,6 +34,34 @@ func TestSendEventNoOpWhenDisabled(t *testing.T) {
 
 	if atomic.LoadInt32(&called) != 0 {
 		t.Errorf("expected zero HTTP calls when telemetry disabled, got %d", called)
+	}
+}
+
+// TestSendEventIsEnabledByDefault verifies IsEnabled() returns true when NSELF_TELEMETRY
+// is unset (opt-out model: telemetry enabled by default).
+func TestSendEventIsEnabledByDefault(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	// Explicitly unset all telemetry env vars to test opt-out default.
+	os.Unsetenv("NSELF_TELEMETRY")
+	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	os.Unsetenv("NSELF_TELEMETRY_OPT_IN")
+
+	// With all vars unset, IsEnabled() must return true (opt-out default).
+	if !IsEnabled() {
+		t.Error("expected IsEnabled=true when NSELF_TELEMETRY unset (opt-out default)")
+	}
+
+	// Verify it can be explicitly disabled.
+	t.Setenv("NSELF_TELEMETRY", "0")
+	if IsEnabled() {
+		t.Error("expected IsEnabled=false when NSELF_TELEMETRY=0")
+	}
+
+	// Verify it can be re-enabled with explicit value.
+	t.Setenv("NSELF_TELEMETRY", "1")
+	if !IsEnabled() {
+		t.Error("expected IsEnabled=true when NSELF_TELEMETRY=1")
 	}
 }
 

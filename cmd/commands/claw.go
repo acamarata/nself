@@ -48,6 +48,7 @@ Subcommands:
   proxy     Start a local OpenAI-compatible proxy
   mcp       Start an MCP server for AI tools
   export    Export all data (JSON or CSV)
+  ingest    Ingest a document or URL into the knowledge base
   migrate   Apply pending claw schema migrations`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
@@ -103,6 +104,7 @@ func init() {
 	clawCmd.AddCommand(clawProxyCmd)
 	clawCmd.AddCommand(clawMCPCmd)
 	clawCmd.AddCommand(clawExportCmd)
+	clawCmd.AddCommand(clawIngestCmd)
 	clawCmd.AddCommand(clawMigrateCmd)
 	RootCmd.AddCommand(clawCmd)
 }

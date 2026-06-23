@@ -14,19 +14,29 @@ import (
 )
 
 // ollamaCmd is the top-level `nself ollama` command.
+//
+// Deprecated: use `nself model` for day-to-day model management. `nself ollama`
+// is preserved for compatibility but the `model` command is the current surface.
 var ollamaCmd = &cobra.Command{
-	Use:   "ollama",
-	Short: "Manage local Ollama LLM stack",
-	Long: `Manage the local Ollama container and its model library.
+	Use:        "ollama",
+	Short:      "[Deprecated] Manage local Ollama LLM stack — use `nself model` instead",
+	Deprecated: "use `nself model` for model management (e.g. nself model list, nself model pull <model>). `nself ollama` is kept for compatibility only.",
+	Long: `[DEPRECATED] Manage the local Ollama container and its model library.
+
+Prefer ` + "`nself model`" + ` for all day-to-day model operations. This command is
+preserved for backwards compatibility only.
 
 After installing the ollama plugin (` + "`nself plugin install ollama`" + `), Ollama
 runs as a service alongside the nSelf stack. Use these commands to pull, list,
 and remove models, and to check Ollama status.
 
 Examples:
-  nself ollama models list
-  nself ollama models pull llama3.2:3b
-  nself ollama models remove gemma-3-4b
+  nself model list                        (preferred)
+  nself model pull llama3.2:3b            (preferred)
+  nself model remove gemma-3-4b           (preferred)
+  nself ollama models list                (compatibility)
+  nself ollama models pull llama3.2:3b    (compatibility)
+  nself ollama models remove gemma-3-4b   (compatibility)
   nself ollama status`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()

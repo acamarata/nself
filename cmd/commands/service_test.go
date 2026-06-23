@@ -451,3 +451,227 @@ func TestServiceList_NoEnvFile(t *testing.T) {
 		t.Fatalf("expected 'service list' to succeed without a .env file, got: %v", err)
 	}
 }
+
+// newServiceAddRoot returns a fresh command tree containing the service command
+// with the 'add' subcommand wired via the global serviceAddCmd so that tests
+// for 'nself service add' work without a live project root.
+func newServiceAddRoot() *cobra.Command {
+	root := &cobra.Command{Use: "nself", RunE: func(cmd *cobra.Command, args []string) error { return nil }}
+	sc := &cobra.Command{
+		Use:   "service",
+		Short: "Manage optional services",
+		RunE:  func(cmd *cobra.Command, args []string) error { return cmd.Help() },
+	}
+	sc.PersistentFlags().String("env", "", "Target environment (reads .env.{env})")
+
+	addCmd := &cobra.Command{
+		Use:   "add <name>",
+		Short: "Scaffold a custom service (CS_N slot) into the current project",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runServiceAdd,
+	}
+	addCmd.Flags().String("template", "go", "Service template: go, node, python, static, rust, other")
+	addCmd.Flags().String("lang", "", "Alias for --template (deprecated, use --template)")
+	addCmd.Flags().MarkHidden("lang") //nolint:errcheck
+	addCmd.Flags().Bool("force", false, "Overwrite existing service directory")
+	addCmd.Flags().Bool("dry-run", false, "Print what would be done without writing files")
+
+	sc.AddCommand(addCmd)
+	root.AddCommand(sc)
+	return root
+}
+
+// TestServiceAdd_DefaultTemplate verifies that 'service add myapi' (no --template flag)
+// scaffolds using the default "go" template and writes CS_1 to .env.dev.
+func TestServiceAdd_DefaultTemplate(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	root := newServiceAddRoot()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"service", "add", "myapi"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, err := os.ReadFile(".env.dev")
+	if err != nil {
+		t.Fatalf("expected .env.dev to be created: %v", err)
+	}
+	s := string(content)
+	if !strings.Contains(s, "myapi:go:") {
+		t.Errorf("expected CS_1=myapi:go:<port> in .env.dev, got: %s", s)
+	}
+}
+
+// TestServiceAdd_TemplateFlag verifies that all 6 --template variants are
+// accepted and produce the correct scaffold entry in .env.dev.
+func TestServiceAdd_TemplateFlag(t *testing.T) {
+	langs := []string{"go", "node", "python", "static", "rust", "other"}
+
+	for _, lang := range langs {
+		t.Run(lang, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Chdir(dir)
+
+			root := newServiceAddRoot()
+			var buf bytes.Buffer
+			root.SetOut(&buf)
+			root.SetErr(&buf)
+
+			root.SetArgs([]string{"service", "add", "svc" + lang, "--template", lang})
+			if err := root.Execute(); err != nil {
+				t.Fatalf("service add --template %s: %v", lang, err)
+			}
+
+			content, err := os.ReadFile(".env.dev")
+			if err != nil {
+				t.Fatalf("expected .env.dev after --template %s: %v", lang, err)
+			}
+			s := string(content)
+			want := "svc" + lang + ":" + lang + ":"
+			if !strings.Contains(s, want) {
+				t.Errorf("expected %q in .env.dev, got: %s", want, s)
+			}
+		})
+	}
+}
+
+// TestServiceAdd_LangAlias verifies that the hidden --lang flag is a functional
+// backward-compat alias for --template.
+func TestServiceAdd_LangAlias(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	root := newServiceAddRoot()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"service", "add", "mynode", "--lang", "node"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error with --lang alias: %v", err)
+	}
+
+	content, err := os.ReadFile(".env.dev")
+	if err != nil {
+		t.Fatalf("expected .env.dev to be created: %v", err)
+	}
+	s := string(content)
+	if !strings.Contains(s, "mynode:node:") {
+		t.Errorf("expected mynode:node:<port> when using --lang alias, got: %s", s)
+	}
+}
+
+// TestServiceAdd_InvalidTemplate verifies that an unsupported --template value
+// returns a non-zero exit code.
+func TestServiceAdd_InvalidTemplate(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	root := newServiceAddRoot()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"service", "add", "myapi", "--template", "ruby"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for unsupported template 'ruby', got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported language") {
+		t.Errorf("expected 'unsupported language' in error, got: %v", err)
+	}
+}
+
+// TestServiceAdd_DryRun verifies that --dry-run prints intent but does not
+// create any files.
+func TestServiceAdd_DryRun(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	root := newServiceAddRoot()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"service", "add", "myapi", "--template", "python", "--dry-run"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error in dry-run: %v", err)
+	}
+
+	// .env.dev must NOT be created in dry-run mode.
+	if _, statErr := os.Stat(".env.dev"); statErr == nil {
+		t.Errorf("expected .env.dev to be absent in dry-run, but it was created")
+	}
+
+	// services/ directory must NOT be created.
+	if _, statErr := os.Stat("services"); statErr == nil {
+		t.Errorf("expected services/ to be absent in dry-run, but it was created")
+	}
+}
+
+// TestServiceAdd_Registered verifies that 'service add' is wired as a
+// subcommand of 'service' on the global RootCmd.
+func TestServiceAdd_Registered(t *testing.T) {
+	var serviceParent *cobra.Command
+	for _, c := range RootCmd.Commands() {
+		if c.Name() == "service" {
+			serviceParent = c
+			break
+		}
+	}
+	if serviceParent == nil {
+		t.Fatal("service command not found on RootCmd")
+	}
+
+	found := false
+	for _, sub := range serviceParent.Commands() {
+		if sub.Name() == "add" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected 'service add' subcommand to be registered on service")
+	}
+}
+
+// TestServiceAdd_TemplateFlagRegistered verifies that the --template and hidden
+// --lang flags are both present on 'service add'.
+func TestServiceAdd_TemplateFlagRegistered(t *testing.T) {
+	var serviceParent *cobra.Command
+	for _, c := range RootCmd.Commands() {
+		if c.Name() == "service" {
+			serviceParent = c
+			break
+		}
+	}
+	if serviceParent == nil {
+		t.Fatal("service command not found on RootCmd")
+	}
+
+	var addCmd *cobra.Command
+	for _, sub := range serviceParent.Commands() {
+		if sub.Name() == "add" {
+			addCmd = sub
+			break
+		}
+	}
+	if addCmd == nil {
+		t.Fatal("'service add' not found")
+	}
+
+	if addCmd.Flags().Lookup("template") == nil {
+		t.Error("expected --template flag on 'service add'")
+	}
+	if addCmd.Flags().Lookup("lang") == nil {
+		t.Error("expected hidden --lang flag on 'service add'")
+	}
+	langFlag := addCmd.Flags().Lookup("lang")
+	if langFlag != nil && !langFlag.Hidden {
+		t.Error("expected --lang flag to be hidden on 'service add'")
+	}
+}

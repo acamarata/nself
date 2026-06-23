@@ -26,6 +26,12 @@ import (
 // remotePathRe allows safe remote path characters: alphanumeric, slash, hyphen, underscore, dot.
 var remotePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
 
+// svcNameRe allows safe service names: alphanumeric, hyphen, underscore only (no shell metacharacters).
+var svcNameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// sshKeyPathRe validates SSH key paths: no shell metacharacters, only alphanumeric and safe path chars.
+var sshKeyPathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
+
 // Deploy targets accepted by the CLI. Admin UI sends "production" instead of "prod".
 var deployTargets = map[string]string{
 	"local":      "local",
@@ -923,6 +929,11 @@ func sshKeyPath() string {
 func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut bool) error {
 	sshKey := sshKeyPath()
 
+	// Validate SSH key path to prevent shell injection via sshKey interpolation.
+	if !sshKeyPathRe.MatchString(sshKey) {
+		return fmt.Errorf("NSELF_DEPLOY_SSH_KEY contains unsafe characters (got %q): only [a-zA-Z0-9/_.-] allowed", sshKey)
+	}
+
 	// Split user@host:/path into ssh-target and remote-path.
 	colonIdx := strings.LastIndex(host, ":")
 	if colonIdx < 0 {
@@ -937,9 +948,10 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 		return fmt.Errorf("NSELF_DEPLOY_HOST_%s remote path contains unsafe characters (got %q): only [a-zA-Z0-9/_.-] allowed", strings.ToUpper(target), remotePath)
 	}
 
-	// rsync compose + env files to the remote.
+	// rsync compose + env files to the remote using exec.Command array form (no shell).
 	// Agent forwarding is disabled via ForwardAgent=no in the -e ssh command —
 	// it is an ssh option and must never appear in rsync argv (breaks rsync 3.x).
+	// Pass -e as a discrete argument followed by the full ssh command.
 	rsyncArgs := []string{
 		"-az",
 		"-e", fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=accept-new -o ForwardAgent=no", sshKey),
@@ -993,6 +1005,11 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 
 	// Rolling restart on the remote: sequence the services via SSH.
 	for _, svc := range deployServiceOrder {
+		// Validate service name to prevent SSH command injection.
+		if !svcNameRe.MatchString(svc) {
+			return fmt.Errorf("invalid service name %q: only [a-zA-Z0-9_-] allowed", svc)
+		}
+
 		if len(remoteServices) > 0 && !remoteServices[svc] {
 			if !jsonOut {
 				fmt.Printf("  [skip] %s not in remote compose — skipping\n", svc)
@@ -1125,6 +1142,14 @@ func runDeployStatus(cmd *cobra.Command, args []string) error {
 }
 
 func runDeployRollback(cmd *cobra.Command, args []string) error {
+	// PREVIEW: nself deploy rollback is not yet fully implemented.
+	// The promote-backup restore path is available when a prior 'nself promote'
+	// run has created a backup snapshot; all other rollback scenarios are
+	// planned for a future release. No state is changed when no backup exists.
+	ui.Warn("nself deploy rollback is a PREVIEW feature and is not yet fully implemented.")
+	ui.Info("This command will attempt to restore from the most recent promote backup.")
+	ui.Info("If no promote backup exists, no state will be changed.")
+
 	target := "local"
 	if len(args) == 1 {
 		t, err := resolveTarget(args[0])

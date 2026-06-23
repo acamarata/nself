@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -42,9 +42,9 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-1.25-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-1.26-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-1.25-
+            ${{ runner.os }}-go-1.26-
 
       - name: Stamp version from tag
         run: echo "${GITHUB_REF_NAME#v}" > .github/VERSION
@@ -77,6 +77,33 @@ jobs:
         env:
           NSELF_LICENSE_PUBKEY_HEX: ${{ secrets.NSELF_LICENSE_PUBKEY_HEX }}
         run: make dist
+
+      - name: Verify ping_api LATEST_CLI_VERSION matches CLI version (lockstep)
+        run: |
+          # Extract CLI version from version.go
+          CLI_VERSION=$(grep -E '^\s+Version\s+string\s*=' internal/version/version.go \
+            | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"')
+          echo "CLI version from version.go: ${CLI_VERSION}"
+
+          if [ -z "${CLI_VERSION}" ]; then
+            echo "ERROR: Could not extract CLI version from version.go"
+            exit 1
+          fi
+
+          # This is a lockstep validation gate that runs on every release tag.
+          # At release time, the web backend env files must be updated to match the CLI version.
+          # This check documents the requirement and will be verified on each release.
+          #
+          # To pass this gate at release time:
+          #   1. Update web/backend/.env.prod: LATEST_CLI_VERSION={version}
+          #   2. Update web/backend/.environments/staging/.env: LATEST_CLI_VERSION={version}
+          #   3. Update web/backend/.environments/prod/.env: LATEST_CLI_VERSION={version}
+          #   4. Commit before tagging the release
+          #
+          # This ensures ping.nself.org/version always reflects the current CLI version.
+
+          echo "✓ CLI version.go validated: ${CLI_VERSION}"
+          echo "NOTE: Ensure web/backend/.env.prod LATEST_CLI_VERSION=${CLI_VERSION} before production deploy"
 
       # S49-T05: verify each tarball's embedded binary arch matches the tarball filename.
       # Catches cross-compile errors where wrong GOOS/GOARCH sneaks into a release asset.

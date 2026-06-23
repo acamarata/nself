@@ -7,11 +7,13 @@ name = "nself-plugin-sdk"
 version = "1.1.9"
 description = "Python plugin authoring SDK for nSelf. Parity with the Go SDK at github.com/nself-org/cli/sdk/go."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 keywords = ["nself", "plugin", "sdk", "self-hosted"]
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "License :: OSI Approved :: MIT License",

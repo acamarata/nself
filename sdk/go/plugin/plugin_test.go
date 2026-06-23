@@ -1,6 +1,9 @@
 package plugin
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestInfoValidate(t *testing.T) {
 	cases := []struct {
@@ -31,5 +34,27 @@ func TestBaseDefaults(t *testing.T) {
 	}
 	if b.Uptime() != 0 {
 		t.Errorf("Uptime on zero StartedAt should be 0")
+	}
+}
+
+func TestBaseReady(t *testing.T) {
+	b := &Base{}
+	if err := b.Ready(nil); err != nil { //nolint:staticcheck
+		t.Errorf("Base.Ready should return nil, got %v", err)
+	}
+}
+
+func TestBaseShutdown(t *testing.T) {
+	b := &Base{}
+	if err := b.Shutdown(nil); err != nil { //nolint:staticcheck
+		t.Errorf("Base.Shutdown should return nil, got %v", err)
+	}
+}
+
+func TestBaseUptimeNonZero(t *testing.T) {
+	b := &Base{StartedAt: time.Now().Add(-10 * time.Second)}
+	up := b.Uptime()
+	if up < 9*time.Second {
+		t.Errorf("Uptime should be >=9s, got %v", up)
 	}
 }

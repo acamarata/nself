@@ -26,16 +26,18 @@ import (
 // securityCmd is the parent command for `nself security ...`.
 var securityCmd = &cobra.Command{
 	Use:   "security",
-	Short: "Server security: audit, setup, and status",
+	Short: "Server security: audit, setup, status, and scan",
 	Long: `Inspect and harden the host running your nself stack.
 
 Subcommands:
   nself security audit    Run a read-only security audit of the host + stack
   nself security setup    Apply baseline hardening (firewall, fail2ban, sshd)
   nself security status   Show the current security posture as a summary
+  nself security scan     Scan for exposed secrets and misconfigurations (free)
 
 All commands are safe by default — 'setup' will not change anything unless
-'--apply' is passed. Without '--apply' it prints the steps it would take.`,
+'--apply' is passed. Without '--apply' it prints the steps it would take.
+'scan' is always free — no license required (Security-Always-Free Doctrine).`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -65,12 +67,52 @@ Without --apply, prints the planned actions and exits without making changes.`,
 	RunE: runSecuritySetup,
 }
 
+// securityScanCmd is the `nself security scan` subcommand.
+// Security-Always-Free Doctrine: NO license check on this path.
+var securityScanCmd = &cobra.Command{
+	Use:   "scan",
+	Short: "Scan for exposed secrets and misconfigurations (free)",
+	Long: `Scan the project for exposed secrets, insecure file permissions, and common
+misconfigurations.
+
+This command is always free — it never checks a license. Findings are printed
+to stdout; non-zero exit on any FAIL finding.
+
+Exit codes:
+  0 — all checks passed
+  1 — one or more FAIL findings`,
+	RunE: runSecurityScan,
+}
+
 func init() {
 	securitySetupCmd.Flags().Bool("apply", false, "Actually apply changes (default: dry-run)")
 	securityCmd.AddCommand(securityAuditCmd)
 	securityCmd.AddCommand(securityStatusCmd)
 	securityCmd.AddCommand(securitySetupCmd)
+	securityCmd.AddCommand(securityScanCmd)
 	RootCmd.AddCommand(securityCmd)
+}
+
+// runSecurityScan runs the free scan — no license check (Security-Always-Free Doctrine).
+func runSecurityScan(_ *cobra.Command, _ []string) error {
+	ui.CommandHeader("nself security scan", "Scan for exposed secrets and misconfigurations")
+
+	findings := runChecks()
+	failed := 0
+	for _, f := range findings {
+		status := "OK  "
+		if !f.OK {
+			status = "FAIL"
+			failed++
+		}
+		fmt.Printf("[%s] %s: %s\n", status, f.Name, f.Detail)
+	}
+
+	fmt.Printf("\n%d check(s) run, %d failed.\n", len(findings), failed)
+	if failed > 0 {
+		return fmt.Errorf("%d security finding(s) require attention", failed)
+	}
+	return nil
 }
 
 // finding represents one security check result.

@@ -1,4 +1,5 @@
 // P88 Sprint 03: `nself ai pool` — 8 subcommands for Gemini pool management.
+// P4 T07: raised pool cap from 20 to 30 (F-PLUGIN:ai-pool-keys).
 package commands
 
 import (
@@ -11,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// maxPoolKeys is the maximum number of Gemini API keys allowed in the pool.
+// Raised from 20 to 30 per F-PLUGIN:ai-pool-keys (P4 T07).
+const maxPoolKeys = 30
+
 // -----------------------------------------------------------------------------
 // `nself ai pool` root
 // -----------------------------------------------------------------------------
@@ -18,13 +23,13 @@ import (
 var aiPoolCmd = &cobra.Command{
 	Use:   "pool",
 	Short: "Manage the Gemini API key pool (auto-provisioned + manual)",
-	Long: `Manage the zero-config Gemini API key pool.
+	Long: `Manage the zero-config Gemini API key pool (up to 30 keys).
 
 Subcommands:
   init         Interactive setup wizard (OAuth + auto-provision)
   status       Show pool status table
   provision    Non-interactive provision using stored refresh token
-  add          Add a Google account via OAuth flow
+  add          Add a Google account via OAuth flow (cap: 30 keys)
   remove       Remove a key from the pool
   rotate       Rotate a key (new GCP key, revoke old)
   test         Test one or all keys with a 1-token request
@@ -209,6 +214,23 @@ var aiPoolAddCmd = &cobra.Command{
 
 func runPoolAdd(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	// Enforce client-side pool cap before starting the OAuth flow.
+	statusBody, statusCode, err := aiPluginRequest(ctx, "GET", "/ai/pool/status", nil)
+	if err != nil {
+		return fmt.Errorf("pool status check: %w", err)
+	}
+	if statusCode < 400 {
+		var ps struct {
+			TotalKeys int `json:"total_keys"`
+		}
+		if jsonErr := json.Unmarshal(statusBody, &ps); jsonErr == nil {
+			if ps.TotalKeys >= maxPoolKeys {
+				return fmt.Errorf("pool is at capacity (%d/%d keys). Remove a key first with: nself ai pool remove", ps.TotalKeys, maxPoolKeys)
+			}
+		}
+	}
+
 	payload, _ := json.Marshal(map[string]any{
 		"account_hint": poolAddAccount,
 	})

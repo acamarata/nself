@@ -41,6 +41,7 @@ The migration process does not apply any changes to your nSelf project automatic
 | `--auth-export` | `""` | Path to Firebase Auth JSON export (optional) |
 | `--output-dir` | `<export-dir>/nself-migration` | Directory for generated artifacts |
 | `--project-name` | `firebase_import` | Project name used in generated SQL schema names and file prefixes |
+| `--dry-run` | `false` | Print generated SQL to stdout instead of writing files |
 
 ## Generated artifacts
 
@@ -56,6 +57,9 @@ The migration process does not apply any changes to your nSelf project automatic
 ```bash
 # Basic: export dir only
 nself migrate firebase --export-dir ./firebase-export
+
+# Preview generated SQL without writing any files
+nself migrate firebase --export-dir ./firebase-export --dry-run
 
 # With Auth users
 nself migrate firebase \

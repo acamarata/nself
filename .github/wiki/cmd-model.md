@@ -107,9 +107,16 @@ nself model benchmark llama3.2:3b --json
 | `llama3.2:7b` | ~4.7 GB | Higher quality, needs 8 GB RAM |
 | `mistral` | ~4.1 GB | Good instruct model |
 
+## Relationship to `nself ollama`
+
+`nself model` supersedes `nself ollama models *`. Both talk to the same Ollama HTTP API via the same env vars. The `nself ollama` command is kept for backwards compatibility but marked deprecated: cobra prints a deprecation notice when it is invoked.
+
+Prefer `nself model` for all new scripts and workflows. `nself ollama status` functionality is available via `nself ai local health`.
+
 ## See Also
 
-- [[cmd-ai]] — AI assistant commands (uses the default model)
+- [[cmd-ai]] — AI assistant commands, local Ollama stack, and Gemini pool
+- [[cmd-ollama]] — deprecated Ollama command (preserved for compatibility)
 - [[cmd-claw]] — ɳClaw plugin management
 - [[Plugin-Overview]] — list of AI plugins
 

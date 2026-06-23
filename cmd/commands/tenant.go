@@ -6,9 +6,41 @@ import (
 	"os"
 	"time"
 
+	"github.com/nself-org/cli/internal/flags"
 	"github.com/nself-org/cli/internal/tenant"
 	"github.com/spf13/cobra"
 )
+
+// cloudMultiTenantFlag is the feature flag key that gates tenant subcommands.
+// It is enabled only on nSelf Cloud SaaS installs (PREVIEW feature).
+const cloudMultiTenantFlag = "cloud-multi-tenant-strict"
+
+// requireCloudTenant enforces the PREVIEW gate: tenant subcommands are only
+// available when the cloud-multi-tenant-strict feature flag is enabled.
+//
+// Non-Cloud installs (the flag absent or disabled) receive a clear error
+// directing them to the nSelf Cloud documentation.
+//
+// The gate is bypassed when NSELF_CLOUD_TENANT=1 is set in the environment
+// (used by nSelf Cloud infrastructure on managed installs).
+func requireCloudTenant(cmd *cobra.Command) error {
+	// Fast path: Cloud infra sets this env var on managed installs.
+	if os.Getenv("NSELF_CLOUD_TENANT") == "1" {
+		return nil
+	}
+	client := flags.NewClient("")
+	flag, err := client.Get(cmd.Context(), cloudMultiTenantFlag)
+	if err != nil || flag == nil || !flag.Enabled {
+		return fmt.Errorf(
+			"[PREVIEW] tenant management requires nSelf Cloud Multi-Tenancy.\n\n"+
+				"This instance does not have Cloud Multi-Tenancy enabled.\n"+
+				"Enable with: nself flag set %s true\n"+
+				"Or see: https://nself.org/docs/cloud/multi-tenancy",
+			cloudMultiTenantFlag,
+		)
+	}
+	return nil
+}
 
 // ── Parent command ──────────────────────────────────────────────────
 
@@ -43,6 +75,9 @@ var tenantCreateCmd = &cobra.Command{
 }
 
 func runTenantCreate(cmd *cobra.Command, args []string) error {
+	if err := requireCloudTenant(cmd); err != nil {
+		return err
+	}
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -67,6 +102,9 @@ var tenantUpgradeCmd = &cobra.Command{
 }
 
 func runTenantUpgrade(cmd *cobra.Command, args []string) error {
+	if err := requireCloudTenant(cmd); err != nil {
+		return err
+	}
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -91,6 +129,9 @@ var tenantSuspendCmd = &cobra.Command{
 }
 
 func runTenantSuspend(cmd *cobra.Command, args []string) error {
+	if err := requireCloudTenant(cmd); err != nil {
+		return err
+	}
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -112,6 +153,9 @@ var tenantDestroyCmd = &cobra.Command{
 }
 
 func runTenantDestroy(cmd *cobra.Command, args []string) error {
+	if err := requireCloudTenant(cmd); err != nil {
+		return err
+	}
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -133,6 +177,9 @@ var tenantAuditCmd = &cobra.Command{
 }
 
 func runTenantAudit(cmd *cobra.Command, args []string) error {
+	if err := requireCloudTenant(cmd); err != nil {
+		return err
+	}
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err

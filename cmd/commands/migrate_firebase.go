@@ -45,6 +45,7 @@ func init() {
 	migrateFirebaseCmd.Flags().String("auth-export", "", "Path to Firebase Auth JSON export (optional)")
 	migrateFirebaseCmd.Flags().String("output-dir", "", "Directory for generated artifacts (default: <export-dir>/nself-migration)")
 	migrateFirebaseCmd.Flags().String("project-name", "firebase_import", "Project name used in generated SQL and file names")
+	migrateFirebaseCmd.Flags().Bool("dry-run", false, "Print generated SQL to stdout instead of writing files")
 	_ = migrateFirebaseCmd.MarkFlagRequired("export-dir")
 	migrateCmd.AddCommand(migrateFirebaseCmd)
 }
@@ -54,6 +55,7 @@ func runMigrateFirebase(cmd *cobra.Command, _ []string) error {
 	authExport, _ := cmd.Flags().GetString("auth-export")
 	outputDir, _ := cmd.Flags().GetString("output-dir")
 	projectName, _ := cmd.Flags().GetString("project-name")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	ui.CommandHeader("nself migrate firebase", "Firebase → nSelf migration scaffold")
 	fmt.Println()
@@ -63,6 +65,7 @@ func runMigrateFirebase(cmd *cobra.Command, _ []string) error {
 		AuthExportFile: authExport,
 		OutputDir:      outputDir,
 		ProjectName:    projectName,
+		DryRun:         dryRun,
 	}
 
 	result, err := firebase.Run(cmd.Context(), opts)

@@ -3,9 +3,28 @@ package dr
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 )
+
+// semverRe accepts optional leading "v" followed by MAJOR.MINOR.PATCH.
+// Rejects any string containing shell metacharacters or URL-encoded sequences
+// because the version is interpolated into a curl|sh runcmd string in the
+// cloud-init YAML.
+var semverRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
+
+// validateSemver returns an error when v does not match a strict semver pattern.
+// An empty string is allowed (means "latest") and passes validation.
+func validateSemver(v string) error {
+	if v == "" {
+		return nil
+	}
+	if !semverRe.MatchString(v) {
+		return fmt.Errorf("NselfVersion %q is not a valid semver (want v?MAJOR.MINOR.PATCH)", v)
+	}
+	return nil
+}
 
 // CloudInitParams feeds the drill VM user-data template. The resulting
 // cloud-init YAML installs Docker and the nSelf CLI, then runs the drill
@@ -79,6 +98,9 @@ func RenderCloudInit(p CloudInitParams) (string, error) {
 	}
 	if p.SSHPublicKey == "" {
 		return "", fmt.Errorf("ssh_public_key required")
+	}
+	if err := validateSemver(p.NselfVersion); err != nil {
+		return "", err
 	}
 	funcs := template.FuncMap{
 		"indent6": func(s string) string {

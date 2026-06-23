@@ -224,8 +224,16 @@ var encryptionKeyEventsCmd = &cobra.Command{
 // ──────────────────────────────────────────────────────────────────────────
 
 // resolveByokBaseURL returns the BYOK plugin base URL from env.
-// Falls back to the nSelf API base if BYOK_PLUGIN_URL is not set.
+// Enterprise gate: NSELF_BYOK must be "true" — BYOK is an Enterprise feature.
+// Security-Always-Free Doctrine exempts scan; BYOK is not a scan command.
 func resolveByokBaseURL() (string, error) {
+	// Enterprise gate — checked before any network call.
+	if os.Getenv("NSELF_BYOK") != "true" {
+		return "", fmt.Errorf(
+			"BYOK encryption requires an Enterprise license.\n" +
+				"Set NSELF_BYOK=true in your environment to enable this feature.\n" +
+				"Contact nself.org/pricing for Enterprise plan details.")
+	}
 	if u := os.Getenv("BYOK_PLUGIN_URL"); u != "" {
 		return u, nil
 	}

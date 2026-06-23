@@ -12,7 +12,7 @@ nself ai <subcommand> [flags] [args]
 
 `nself ai` manages the AI plugin (`plugin-ai`) and the optional local Ollama runtime that powers zero-config inference. It groups three areas: the local Ollama stack (install, models, health, swap, benchmark), a one-shot `chat` for quick verification, and the Gemini API key `pool` for cloud routing.
 
-The `ai local` subtree installs and inspects an Ollama daemon and the small set of models recommended for the host RAM tier. `ai pool` manages auto-provisioned Gemini keys (OAuth-onboarded Google accounts, GCP project creation, key rotation, daily quota tracking) so the AI plugin always has free or near-free capacity.
+The `ai local` subtree installs and inspects an Ollama daemon and the small set of models recommended for the host RAM tier. `ai pool` manages auto-provisioned Gemini keys (OAuth-onboarded Google accounts, GCP project creation, key rotation, daily quota tracking) so the AI plugin always has free or near-free capacity. The pool supports up to 30 keys; `nself ai pool add` enforces this cap client-side and returns an error if the pool is full.
 
 Most flags are non-destructive. Pulling models requires network access. Pool subcommands talk to the AI plugin over its internal HTTP API; if the plugin is not running, commands report a clear error.
 

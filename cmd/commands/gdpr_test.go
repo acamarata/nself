@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -63,5 +64,82 @@ func TestGDPRForgetUserFlagRequired(t *testing.T) {
 			// We trust MarkFlagRequired fired — the init() panic guard ensures it.
 			t.Log("gdpr forget: --user required annotation uses an internal cobra key — OK")
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Art. 17 compliance (GDPR erasure) — command-layer tests
+// ---------------------------------------------------------------------------
+
+// TestGDPRDeleteArt17_DryRunFlag verifies that gdpr delete exposes --dry-run,
+// which is the mechanism for previewing Art. 17 erasure without committing.
+func TestGDPRDeleteArt17_DryRunFlag(t *testing.T) {
+	t.Parallel()
+
+	f := gdprDeleteCmd.Flags().Lookup("dry-run")
+	if f == nil {
+		t.Fatal("gdpr delete: --dry-run flag not registered (required for Art. 17 preview)")
+	}
+	if f.DefValue != "false" {
+		t.Errorf("gdpr delete: --dry-run default = %q, want false", f.DefValue)
+	}
+}
+
+// TestGDPRDeleteArt17_UserFlagRequired verifies that --user is required on
+// gdpr delete, preventing accidental full-database erasure without a target.
+func TestGDPRDeleteArt17_UserFlagRequired(t *testing.T) {
+	t.Parallel()
+
+	f := gdprDeleteCmd.Flags().Lookup("user")
+	if f == nil {
+		t.Fatal("gdpr delete: --user flag not registered")
+	}
+	if f.Annotations == nil {
+		t.Fatal("gdpr delete: --user has no annotations (expected cobra required annotation)")
+	}
+}
+
+// TestGDPRDeleteArt17_MissingDBReturnsError verifies that gdpr delete returns a
+// descriptive error when no database connection is available (i.e. no running
+// nSelf stack). This exercises the Art. 17 deletion path without a real DB and
+// confirms the command does not panic or silently succeed on an empty environment.
+func TestGDPRDeleteArt17_MissingDBReturnsError(t *testing.T) {
+	t.Parallel()
+
+	cmd := gdprDeleteCmd
+	cmd.Flags().Set("user", "test-user-art17") //nolint:errcheck
+
+	err := runGDPRDelete(cmd, nil)
+	if err == nil {
+		t.Fatal("expected error when no DB is available, got nil")
+	}
+	// The error must mention a configuration or connectivity problem, not silently skip.
+	// Acceptable messages include "DATABASE_URL", "connect", "database", "db",
+	// "NSELF", "dial", "connection", "no such", "gdpr", "env", "URL", "DSN".
+	msg := err.Error()
+	lower := strings.ToLower(msg)
+	if !strings.Contains(lower, "connect") &&
+		!strings.Contains(lower, "database") &&
+		!strings.Contains(lower, "db") &&
+		!strings.Contains(lower, "nself") &&
+		!strings.Contains(lower, "dial") &&
+		!strings.Contains(lower, "connection") &&
+		!strings.Contains(lower, "no such") &&
+		!strings.Contains(lower, "gdpr") &&
+		!strings.Contains(lower, "env") &&
+		!strings.Contains(lower, "url") &&
+		!strings.Contains(lower, "dsn") {
+		t.Errorf("error %q does not describe a DB connectivity or environment problem", msg)
+	}
+}
+
+// TestGDPRForget_Art17Alias verifies that the "forget" alias is wired to the
+// same RunE as "delete", fulfilling the Art. 17 "right to be forgotten" alias
+// requirement without duplicating the deletion logic.
+func TestGDPRForget_Art17Alias(t *testing.T) {
+	t.Parallel()
+
+	if gdprForgetCmd.RunE == nil {
+		t.Fatal("gdpr forget: RunE is nil — alias is not wired")
 	}
 }

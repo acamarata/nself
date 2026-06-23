@@ -80,16 +80,33 @@ func TestFinding_Fields(t *testing.T) {
 }
 
 func TestSecurityCmd_Structure(t *testing.T) {
-	// Verify subcommands are registered
+	// Verify subcommands are registered (including scan — free per Security-Always-Free Doctrine)
 	subs := securityCmd.Commands()
 	names := make(map[string]bool)
 	for _, cmd := range subs {
 		names[cmd.Name()] = true
 	}
-	for _, name := range []string{"audit", "status", "setup"} {
+	for _, name := range []string{"audit", "status", "setup", "scan"} {
 		if !names[name] {
 			t.Errorf("missing subcommand: %s", name)
 		}
+	}
+}
+
+// TestSecurityScanCmd_NoLicenseCheck verifies that the scan subcommand is
+// registered and that its source has no license gate (Security-Always-Free Doctrine).
+// The test is structural: it checks the command exists and has a RunE handler.
+// The absence of license checks in the scan path is verified at code review level.
+func TestSecurityScanCmd_NoLicenseCheck(t *testing.T) {
+	if securityScanCmd.RunE == nil {
+		t.Fatal("security scan command has no RunE handler")
+	}
+}
+
+// TestSecurityScanCmd_Short verifies the scan command has a Short description.
+func TestSecurityScanCmd_Short(t *testing.T) {
+	if securityScanCmd.Short == "" {
+		t.Error("security scan has empty Short description")
 	}
 }
 

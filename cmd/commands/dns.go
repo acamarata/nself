@@ -185,11 +185,24 @@ func rerunWithOsascript(ctx context.Context, workdir string) error {
 	}
 	ui.Info("Requesting administrator access to update /etc/hosts...")
 	// Escape the workdir and binary paths to prevent AppleScript injection.
-	// Any double-quote or backslash in the path is escaped before embedding.
-	escapedSelf := strings.ReplaceAll(filepath.Clean(self), `\`, `\\`)
-	escapedSelf = strings.ReplaceAll(escapedSelf, `"`, `\"`)
-	escapedWorkdir := strings.ReplaceAll(filepath.Clean(workdir), `\`, `\\`)
-	escapedWorkdir = strings.ReplaceAll(escapedWorkdir, `"`, `\"`)
+	// Escape all shell metacharacters that could lead to command injection:
+	// backticks, $(), parentheses, semicolons, pipes, ampersands, redirects, and newlines.
+	escaper := strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\"`,
+		"`", "\\`",
+		"$", "\\$",
+		"(", "\\(",
+		")", "\\)",
+		";", "\\;",
+		"|", "\\|",
+		"&", "\\&",
+		">", "\\>",
+		"<", "\\<",
+		"\n", "\\n",
+	)
+	escapedSelf := escaper.Replace(filepath.Clean(self))
+	escapedWorkdir := escaper.Replace(filepath.Clean(workdir))
 	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, escapedSelf, escapedWorkdir)
 	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
 	cmd.WaitDelay = 5 * time.Second

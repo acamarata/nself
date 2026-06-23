@@ -208,3 +208,83 @@ func TestStepStatus(t *testing.T) {
 		t.Errorf("stepStatus(dryRun=false): got %q, want done", got)
 	}
 }
+
+// ── E5-W1-S01-T01 — SSH injection fix tests ──────────────────────────────────
+
+// TestSSHKeyPathValidation verifies that remoteDeployPush rejects SSH key paths
+// containing shell metacharacters that could enable injection via the -e flag.
+func TestSSHKeyPathValidation(t *testing.T) {
+	cases := []struct {
+		keyPath string
+		valid   bool
+		desc    string
+	}{
+		// Valid paths
+		{"/home/user/.ssh/id_ed25519", true, "standard key path"},
+		{"/root/.ssh/id_rsa", true, "root ssh dir"},
+		{"id_ed25519", true, "relative path (filename)"},
+		{"/usr/local/etc/ssh/key-2024", true, "key with hyphen"},
+		{"/opt/keys/id_ed25519_prod", true, "key with underscore"},
+
+		// Invalid paths with shell metacharacters
+		{"/home/user/.ssh/id`date`", false, "backtick injection"},
+		{"/home/user/.ssh/id;rm -rf /", false, "semicolon command separator"},
+		{"/home/user/.ssh/id && whoami", false, "shell and operator"},
+		{"/home/user/.ssh/id | cat /etc/passwd", false, "pipe operator"},
+		{"/home/user/.ssh/id$(whoami)", false, "command substitution"},
+		{"/home/user/.ssh/id${HOME}", false, "variable expansion"},
+		{"/home/user/.ssh/id'", false, "quote character"},
+		{"/home/user/.ssh/id\"", false, "double quote"},
+		{"/home/user/.ssh/id*", false, "glob character"},
+		{"/home/user/.ssh/id?", false, "glob question mark"},
+		{"/home/user/.ssh/id[a]", false, "glob bracket"},
+		{"/home/user/.ssh/id>out", false, "redirection"},
+		{"/home/user/.ssh/id<in", false, "redirection input"},
+	}
+
+	for _, c := range cases {
+		match := sshKeyPathRe.MatchString(c.keyPath)
+		if match != c.valid {
+			t.Errorf("sshKeyPathRe for %q (%s): got %v, want %v", c.keyPath, c.desc, match, c.valid)
+		}
+	}
+}
+
+// TestServiceNameValidation verifies that service names used in SSH commands are
+// validated to prevent injection via docker compose service arguments.
+func TestServiceNameValidation(t *testing.T) {
+	cases := []struct {
+		svcName string
+		valid   bool
+		desc    string
+	}{
+		// Valid service names
+		{"postgres", true, "standard service"},
+		{"hasura", true, "single word"},
+		{"auth-service", true, "with hyphen"},
+		{"auth_service", true, "with underscore"},
+		{"auth123", true, "with numbers"},
+		{"service-1_test", true, "mixed separators"},
+
+		// Invalid service names with shell metacharacters
+		{"postgres;rm", false, "semicolon command separator"},
+		{"auth && whoami", false, "shell and operator"},
+		{"service | cat", false, "pipe operator"},
+		{"auth$(whoami)", false, "command substitution"},
+		{"auth`date`", false, "backtick injection"},
+		{"auth${VAR}", false, "variable expansion"},
+		{"service/path", false, "path separator"},
+		{"auth.test", false, "dot character"},
+		{"service>file", false, "redirection"},
+		{"auth<input", false, "redirection input"},
+		{"auth`id`up", false, "backtick in middle"},
+		{"auth;id;", false, "multiple commands"},
+	}
+
+	for _, c := range cases {
+		match := svcNameRe.MatchString(c.svcName)
+		if match != c.valid {
+			t.Errorf("svcNameRe for %q (%s): got %v, want %v", c.svcName, c.desc, match, c.valid)
+		}
+	}
+}

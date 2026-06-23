@@ -55,6 +55,12 @@ func isLocalhostOrigin(origin string) bool {
 	return lo == "localhost" || lo == "127.0.0.1"
 }
 
+// clawAICCPort is the canonical port for the nself-ai-cc service (Claude
+// subscription bridge / AI gateway). claw proxy routes upstream requests
+// through this port when NSELF_CLAW_SERVER is not overridden.
+// Canonical reference: SPORT F10-PORT-REGISTRY / F08-SERVICE-INVENTORY.
+const clawAICCPort = 3760
+
 var clawProxyCmd = &cobra.Command{
 	Use:   "proxy [port]",
 	Short: "Start a local OpenAI-compatible proxy",
@@ -69,6 +75,7 @@ Supported endpoints:
   /v1/embeddings         Generate embeddings
 
 Default port: 8899. Pass a port number as argument to override.
+Upstream: the nself-ai-cc gateway (port 3760) via the configured server URL.
 
 Examples:
   nself claw proxy        # start on port 8899

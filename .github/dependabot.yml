@@ -1,5 +1,6 @@
-# Dependabot — GitHub Actions version pinning
+# Dependabot — GitHub Actions version pinning + Go modules
 # S44-T-SEC-01: keep Actions SHA-pinned via Dependabot PRs.
+# T-P4-E5-W3-S05-T17: detect Go module CVEs in transitive deps
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -12,6 +13,17 @@ updates:
     labels:
       - dependencies
       - github-actions
+    commit-message:
+      prefix: 'ci'
+      include: scope
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
     commit-message:
       prefix: 'ci'
       include: scope

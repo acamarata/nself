@@ -66,6 +66,10 @@ var healthServiceCmd = &cobra.Command{
 			return nil
 		}
 		printServiceResult(result)
+		// Exit 2 when service is unhealthy so scripts can react.
+		if result.Status != "healthy" {
+			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+		}
 		return nil
 	},
 }
@@ -97,6 +101,10 @@ var healthEndpointCmd = &cobra.Command{
 			return nil
 		}
 		printServiceResult(result)
+		// Exit 2 when endpoint is unhealthy so scripts can react.
+		if result.Status != "healthy" {
+			cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+		}
 		return nil
 	},
 }
@@ -227,6 +235,10 @@ func healthCheckRunE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	printReport(report)
+	// Exit 2 when any service is unhealthy so scripts can react.
+	if report.Unhealthy > 0 {
+		cmd.Root().SetContext(context.WithValue(cmd.Root().Context(), exitCodeKey, 2))
+	}
 	return nil
 }
 
