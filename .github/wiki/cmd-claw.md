@@ -34,7 +34,12 @@ The CLI talks to the `claw` plugin over its HTTP API. Authentication is by API k
 | `keys create` | Create a new API key |
 | `keys revoke <id>` | Revoke an API key |
 | `status` | Show ɳClaw server status and health |
-| `proxy [port]` | Start a local OpenAI-compatible proxy |
+| `proxy [port]` | Start a local OpenAI-compatible proxy (upstream: nself-ai-gateway :3761) |
+| `session` | Manage nself-ai-cc PTY sessions |
+| `session start <provider>` | Start a new PTY session for an AI provider (calls :3760 POST /sessions) |
+| `session attach <id>` | Attach to an active session via WebSocket (:3760 WS /sessions/:id/stream) |
+| `session stop <id>` | Stop (terminate) an active PTY session (calls :3760 DELETE /sessions/:id) |
+| `session list` | List all PTY sessions (calls :3760 GET /sessions) |
 | `mcp` | Start an MCP server for ɳClaw |
 | `export` | Export all ɳClaw data |
 | `migrate` | Apply pending claw schema migrations |

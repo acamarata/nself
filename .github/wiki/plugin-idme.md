@@ -1,8 +1,8 @@
 # ID.me Plugin
 
-> Government-grade identity verification via ID.me for age, military, student, and first responder checks. **Pro plugin.**
+> Government-grade identity verification via ID.me OAuth for military, veterans, first responders, government employees, teachers, students, and nurses. **Pro plugin.**
 
-> **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
+> **Requires:** Pro license tier or higher. `nself license set nself_pro_...`
 
 ## Install
 
@@ -13,35 +13,95 @@ nself plugin install idme
 
 ## What It Does
 
-Integrates with the ID.me identity verification platform to confirm user attributes such as age, military service, student enrollment, and first responder status. Verification results gate access controls or enable discounts within your application. All verification events are recorded to an audit log for compliance.
+The idme plugin integrates with the ID.me OAuth 2.0 platform to verify user identity for seven government-recognized groups. Users complete a verification flow on ID.me and the result is stored in your database. Your application can then gate access, unlock discounts, or surface badges based on verified status. All verification events are written to an audit table for compliance.
+
+## Verification Groups
+
+ID.me verification covers seven distinct groups:
+
+| Group | Who Qualifies |
+|-------|--------------|
+| Military | Active duty service members |
+| Veteran | Honorably discharged veterans |
+| First Responder | Police, fire, EMS personnel |
+| Government Employee | Federal, state, and local government workers |
+| Teacher | K-12 and university educators |
+| Student | Enrolled students at accredited institutions |
+| Nurse | Licensed nurses and nursing students |
+
+Each group has its own scope in the OAuth flow. Users can verify for multiple groups in a single session or return later to add more.
+
+## OAuth Flow
+
+1. Your app redirects the user to `GET /idme/verifications` with the desired scopes.
+2. The user completes ID.me verification in the browser.
+3. ID.me calls your registered redirect URI (`IDME_REDIRECT_URI`) with an authorization code.
+4. The plugin exchanges the code for tokens, fetches the user attributes, and stores results.
+5. Your app queries verification status via `GET /idme/users/{user_id}/verifications`.
+
+Use `IDME_SANDBOX=true` during development to avoid requiring real credentials.
 
 ## Configuration
 
-| Env Var | Default | Description |
-|---------|---------|-------------|
-| `IDME_PORT` | `3010` | ID.me plugin service port |
-| `IDME_CLIENT_ID` | — | ID.me OAuth application client ID |
-| `IDME_CLIENT_SECRET` | — | ID.me OAuth application client secret |
-| `IDME_REDIRECT_URI` | — | OAuth redirect URI registered with ID.me |
-| `IDME_SANDBOX` | `true` | Use ID.me sandbox environment for testing |
+| Env Var | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `IDME_CLIENT_ID` | yes | — | ID.me OAuth application client ID |
+| `IDME_CLIENT_SECRET` | yes | — | ID.me OAuth application client secret |
+| `IDME_REDIRECT_URI` | yes | — | OAuth redirect URI registered with ID.me |
+| `IDME_SCOPES` | no | `openid,email,profile` | OAuth scopes to request |
+| `IDME_SANDBOX` | no | `true` | Use ID.me sandbox (`idmelabs.com`) for testing |
+| `IDME_WEBHOOK_SECRET` | no | — | Secret to verify ID.me webhook signatures |
 
-## Ports
+Register your application at [developers.id.me](https://developers.id.me) to get `IDME_CLIENT_ID` and `IDME_CLIENT_SECRET`. Set the redirect URI in your ID.me app to match `IDME_REDIRECT_URI`.
+
+## Port
 
 | Port | Purpose |
 |------|---------|
-| 3010 | ID.me plugin REST API |
+| 3820 | ID.me plugin REST API |
 
 ## Database Tables
 
-5 tables added to your Postgres database:
-- `np_idme_verifications`, user verification records
-- `np_idme_tokens`, OAuth token storage
-- `np_idme_groups`, ID.me group/community memberships
-- `np_idme_affiliations`, verified user affiliations
-- `np_idme_audit_log`, verification event audit trail
+The plugin adds five tables to your Postgres database:
+
+| Table | Purpose |
+|-------|---------|
+| `np_idme_verifications` | Per-user verification records and status |
+| `np_idme_groups` | Verified group memberships |
+| `np_idme_badges` | Visual badge assignments per group |
+| `np_idme_attributes` | Verified user attributes (branch, rank, affiliation) |
+| `np_idme_webhook_events` | Incoming webhook event log |
+
+All tables use `source_account_id` for multi-app isolation.
 
 ## Nginx Routes
 
 | Route | Target |
 |-------|--------|
 | `/idme/` | ID.me verification API |
+
+## Webhooks
+
+ID.me sends real-time events to `/webhooks/idme`. Set `IDME_WEBHOOK_SECRET` and the plugin will verify the signature on each incoming request.
+
+| Event | Description |
+|-------|-------------|
+| `verification.created` | New verification started |
+| `verification.completed` | Verification completed successfully |
+| `verification.failed` | Verification failed |
+| `group.verified` | User verified for a specific group |
+| `group.revoked` | Group verification revoked |
+
+## Docker Image
+
+```bash
+docker pull nself/plugin-idme:latest
+```
+
+## Related
+
+- [[Plugin-Overview]] - Full plugin catalog
+- [[Plugin-Install]] - How to install plugins
+- [[Plugin-Licensing]] - License tiers and keys
+- [[Plugins-AI-OAuth]] - Other OAuth plugins
+- [[Home]]

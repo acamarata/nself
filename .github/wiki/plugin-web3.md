@@ -36,18 +36,18 @@ The web3 plugin integrates blockchain capabilities into your nself backend, prov
 
 12 tables added to your Postgres database:
 
-- `np_web3_wallets`
-- `np_web3_nfts`
-- `np_web3_tokens`
-- `np_web3_gates`
-- `np_web3_transactions`
-- `np_web3_daos`
-- `np_web3_proposals`
-- `np_web3_votes`
-- `np_web3_collections`
-- `np_web3_contracts`
-- `np_web3_events`
-- `np_web3_sync_log`
+- `np_web3_wallets` — verified wallet bindings per user
+- `np_web3_nfts` — NFT holdings indexed per wallet
+- `np_web3_collections` — NFT collection metadata
+- `np_web3_tokens` — ERC-20 token registry
+- `np_web3_token_balances` — wallet balances per token
+- `np_web3_token_gates` — token-gate rule definitions
+- `np_web3_gate_checks` — cached gate-check evaluations
+- `np_web3_daos` — DAO registry
+- `np_web3_proposals` — DAO proposals lifecycle
+- `np_web3_votes` — votes cast on proposals
+- `np_web3_transactions` — observed blockchain transactions
+- `np_web3_events` — outbound event log
 
 ## How It Works
 

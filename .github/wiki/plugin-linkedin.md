@@ -2,25 +2,15 @@
 
 > LinkedIn publishing integration with OAuth 2.0 and post history. **Pro plugin. Requires license.**
 
-## Tier required
-
-| Tier | Monthly | Annual | Includes this plugin? |
-|------|---------|--------|----------------------|
-| Free | $0 | $0 | No |
-| Basic | $0.99/mo | $9.99/yr | Yes |
-| Pro | $1.99/mo | $19.99/yr | Yes |
-| Elite | $4.99/mo | $49.99/yr | Yes |
-| Business | $9.99/mo | $99.99/yr | Yes |
-| Business+ | $49.99/mo | $499.99/yr | Yes |
-| Enterprise | $99.99/mo | $999.99/yr | Yes |
-
-**Minimum tier:** Basic (this is a `tier: pro` plugin per F07-PRICING-TIERS).
-
 ## Bundle membership
 
-Not currently bundled. Purchase a tier subscription (Basic and up) for access.
+This plugin is part of the **ɳClaw bundle** ($0.99/mo or $9.99/yr). It is also included in **ɳSelf+** ($3.99/mo or $39.99/yr), which covers all 6 bundles and all apps.
 
-Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
+| Option | Price | Includes |
+|--------|-------|---------|
+| ɳClaw bundle | $0.99/mo / $9.99/yr | All ɳClaw plugins including linkedin |
+| ɳSelf+ | $3.99/mo / $39.99/yr | All bundles + all apps |
+| Free | $0 | CLI + 29 free plugins (linkedin not included) |
 
 ## Install
 

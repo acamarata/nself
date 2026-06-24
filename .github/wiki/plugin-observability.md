@@ -19,9 +19,9 @@ Runs configurable health probes against all registered services and exposes a un
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `OBSERVABILITY_PORT` | `3215` | Port the Observability plugin service listens on |
+| `OBSERVABILITY_PLUGIN_PORT` | `3215` | Port the Observability plugin service listens on |
 | `OBSERVABILITY_CHECK_INTERVAL` | `30s` | Interval between health probe checks |
-| `OBSERVABILITY_WATCHDOG_ENABLED` | `true` | Enable automatic restart of unhealthy services |
+| `OBSERVABILITY_WATCHDOG_ENABLED` | `false` | Enable automatic restart of unhealthy services |
 
 ## Ports
 
@@ -33,12 +33,18 @@ Runs configurable health probes against all registered services and exposes a un
 
 3 tables added to your Postgres database.
 
-- `np_observability_probes`, Health probe definitions and latest results
-- `np_observability_events`, Watchdog and state-change event log
-- `np_observability_service_registry`, Registered services for discovery and probing
+- `np_observability_services`, Registered services for discovery and probing
+- `np_observability_health_history`, Health probe definitions and latest results
+- `np_observability_watchdog_events`, Watchdog and state-change event log
 
 ## Nginx Routes
 
 | Route | Description |
 |-------|-------------|
 | `/health/` | Aggregated health status endpoint, proxied to Observability plugin on port 3215 |
+
+## See Also
+
+- [[Home]] — nSelf CLI wiki homepage
+- [[Plugin-Overview]] — All nSelf plugins
+- [[Architecture]] — System architecture guide

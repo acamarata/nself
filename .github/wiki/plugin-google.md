@@ -19,7 +19,7 @@ Provides Google OAuth2 token management and proxy APIs for Gmail, Drive, Calenda
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `GOOGLE_PORT` | `3717` | Port the Google plugin service listens on |
+| `GOOGLE_PORT` | `3716` | Port the Google plugin service listens on |
 | `GOOGLE_CLIENT_ID` | — | Google OAuth2 client ID |
 | `GOOGLE_CLIENT_SECRET` | — | Google OAuth2 client secret |
 | `GOOGLE_REDIRECT_URI` | — | OAuth2 redirect URI registered in Google Cloud Console |
@@ -28,7 +28,7 @@ Provides Google OAuth2 token management and proxy APIs for Gmail, Drive, Calenda
 
 | Port | Purpose |
 |------|---------|
-| `3717` | Google plugin HTTP service |
+| `3716` | Google plugin HTTP service |
 
 ## Database Tables
 
@@ -41,4 +41,4 @@ Provides Google OAuth2 token management and proxy APIs for Gmail, Drive, Calenda
 
 | Route | Description |
 |-------|-------------|
-| `/google/` | Proxied to Google plugin service on port 3717 |
+| `/google/` | Proxied to Google plugin service on port 3716 |

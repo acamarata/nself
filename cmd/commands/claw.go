@@ -45,7 +45,8 @@ Subcommands:
   memories  List or search memories
   keys      Manage API keys
   status    Show server status and health
-  proxy     Start a local OpenAI-compatible proxy
+  proxy     Start a local OpenAI-compatible proxy (upstream: nself-ai-gateway :3761)
+  session   Manage nself-ai-cc PTY sessions (start, attach, stop, list)
   mcp       Start an MCP server for AI tools
   export    Export all data (JSON or CSV)
   migrate   Apply pending claw schema migrations`,
@@ -104,6 +105,7 @@ func init() {
 	clawCmd.AddCommand(clawMCPCmd)
 	clawCmd.AddCommand(clawExportCmd)
 	clawCmd.AddCommand(clawMigrateCmd)
+	clawCmd.AddCommand(clawSessionCmd)
 	RootCmd.AddCommand(clawCmd)
 }
 
