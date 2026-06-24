@@ -34,7 +34,7 @@ The license is validated against `ping.nself.org/license/validate`. Tier is chec
 
 ## Description
 
-Stripe Pro extends the standard `stripe` plugin (port 3070) with full webhook coverage, the Stripe customer portal, checkout session API, and 24 synced tables. Webhooks are signature-verified, persisted, and fanned out to downstream tables so your application has a complete local replica of billing activity without hitting the Stripe API.
+Stripe Pro extends the standard `stripe` plugin (port 3740) with full webhook coverage, the Stripe customer portal, checkout session API, and 24 synced tables. Webhooks are signature-verified, persisted, and fanned out to downstream tables so your application has a complete local replica of billing activity without hitting the Stripe API.
 
 The plugin tracks customers, subscriptions, invoices, payment intents, products, prices, refunds, disputes, coupons, trials, tax rates, and more. With 24 synced tables, you can query all billing data directly via Hasura GraphQL for custom dashboards, billing portals, and reconciliation reports.
 
@@ -42,8 +42,8 @@ The plugin tracks customers, subscriptions, invoices, payment intents, products,
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `STRIPE_PORT` | `3070` | Stripe pro service port |
-| `STRIPE_SECRET_KEY` | — | Stripe secret key (`sk_live_...` or `sk_test_...`) |
+| `STRIPE_PORT` | `3740` | Stripe pro service port |
+| `STRIPE_API_KEY` | — | Stripe secret key (`sk_live_...` or `sk_test_...`) |
 | `STRIPE_WEBHOOK_SECRET` | — | Webhook endpoint signing secret |
 | `STRIPE_PORTAL_RETURN_URL` | — | Customer portal return URL |
 
@@ -51,7 +51,7 @@ The plugin tracks customers, subscriptions, invoices, payment intents, products,
 
 | Port | Purpose |
 |------|---------|
-| 3070 | Stripe pro REST API and webhook receiver |
+| 3740 | Stripe pro REST API and webhook receiver |
 
 ## Database Schema
 
