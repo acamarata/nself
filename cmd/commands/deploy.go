@@ -26,6 +26,11 @@ import (
 // remotePathRe allows safe remote path characters: alphanumeric, slash, hyphen, underscore, dot.
 var remotePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
 
+// sshKeyRe allows safe filesystem path characters for the SSH key path.
+// The key path is interpolated into the rsync "-e ssh -i %s ..." string, which
+// rsync shell-interprets — so it must never contain shell metacharacters.
+var sshKeyRe = regexp.MustCompile(`^[a-zA-Z0-9/_.~-]+$`)
+
 // Deploy targets accepted by the CLI. Admin UI sends "production" instead of "prod".
 var deployTargets = map[string]string{
 	"local":      "local",
@@ -922,6 +927,13 @@ func sshKeyPath() string {
 // host format: "user@host:/remote/path"
 func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut bool) error {
 	sshKey := sshKeyPath()
+
+	// sshKey is interpolated into the rsync "-e" command, which rsync passes
+	// through a shell. Reject any key path containing shell metacharacters to
+	// prevent command injection via NSELF_DEPLOY_SSH_KEY.
+	if !sshKeyRe.MatchString(sshKey) {
+		return fmt.Errorf("NSELF_DEPLOY_SSH_KEY contains unsafe characters (got %q): only [a-zA-Z0-9/_.~-] allowed", sshKey)
+	}
 
 	// Split user@host:/path into ssh-target and remote-path.
 	colonIdx := strings.LastIndex(host, ":")
