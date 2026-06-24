@@ -94,4 +94,4 @@ See [[bundle-nclaw]] for the full bundle catalog.
 
 ---
 
-Related: [[plugin-claw-web]] | [[plugin-claw-budget]] | [[plugin-ai]] | [[plugin-mux]] | [[Home]]
+Related: [[plugin-claw-web]] | [[plugin-claw-budget]] | [[nself-ai-gateway]] | [[plugin-mux]] | [[Home]]

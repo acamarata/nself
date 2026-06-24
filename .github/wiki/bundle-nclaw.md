@@ -21,7 +21,8 @@
 
 | Plugin | Tier | Language | What It Does |
 |--------|------|----------|-------------|
-| [ai](plugin-ai) | max | Go | Multi-provider LLM gateway with prompt caching, streaming, tool calls |
+| [nself-ai-gateway](nself-ai-gateway) | max | Go | Provider key vault, request routing, quota enforcement (port 3761) |
+| [nself-ai-cc](nself-ai-cc) | max | Go | PTY session relay for AI CLI binaries: claude, codex (port 3760) |
 | [claw](plugin-claw) | max | Go | AI assistant runtime: conversations, memory, knowledge graph |
 | [claw-web](plugin-claw-web) | max | Go | Web client backend for the ɳClaw assistant |
 | [claw-budget](plugin-claw-budget) | max | Go | Budget tracking and financial analytics for the assistant |
@@ -92,7 +93,7 @@ Install all ɳClaw plugins with the command above.
 
 ### Step 2: Configure the AI provider
 
-Edit your `.env` to set `AI_PROVIDER`, `AI_API_KEY`, and `AI_MODEL`. See [plugin-ai](plugin-ai).
+Add provider keys via the gateway: `nself gateway keys add --provider anthropic --key "sk-ant-..."`. See [nself-ai-gateway](nself-ai-gateway) for full env var and key pool setup.
 
 ### Step 3: Configure integrations
 
@@ -113,4 +114,4 @@ Point the [claw](https://github.com/nself-org/nclaw) Flutter app at your ɳSelf 
 - [Plugin Overview](Plugin-Overview), all plugins and tiers
 - [Plugin Install](Plugin-Install), how to install plugins
 - [Plugin Licensing](Plugin-Licensing), license keys and tiers
-- Individual plugin pages: [ai](plugin-ai), [claw](plugin-claw), [claw-web](plugin-claw-web), [claw-budget](plugin-claw-budget), [claw-news](plugin-claw-news), [voice](plugin-voice), [browser](plugin-browser), [google](plugin-google), [mux](plugin-mux), [notify](plugin-notify), [cron](plugin-cron)
+- Individual plugin pages: [nself-ai-gateway](nself-ai-gateway), [nself-ai-cc](nself-ai-cc), [claw](plugin-claw), [claw-web](plugin-claw-web), [claw-budget](plugin-claw-budget), [claw-news](plugin-claw-news), [voice](plugin-voice), [browser](plugin-browser), [google](plugin-google), [mux](plugin-mux), [notify](plugin-notify), [cron](plugin-cron)

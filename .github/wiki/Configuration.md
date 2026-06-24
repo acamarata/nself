@@ -216,7 +216,7 @@ Pro plugins introduce additional environment variables. These are set in `.env.s
 | `PLUGIN_DEFAULT_MEMORY_LIMIT` | Default memory limit for all plugins | `512m` |
 | `PLUGIN_DEFAULT_CPU_LIMIT` | Default CPU limit for all plugins | `0.5` |
 
-The `plugin-ai` plugin defaults to `1g` memory and `1.0` CPU.
+The `nself-ai-gateway` plugin defaults to `1g` memory and `1.0` CPU.
 
 ### Plugin Shutdown Grace Period
 

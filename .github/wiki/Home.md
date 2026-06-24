@@ -160,7 +160,7 @@ Optional services (enable per project): **Redis** | **MinIO** (S3 storage) | **S
 <details>
 <summary><strong>Pro Plugins (62)</strong>, License key required, starting at $0.99/mo</summary>
 
-**AI and Automation:** [[plugin-ai]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-claw-budget]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
+**AI and Automation:** [[nself-ai-gateway]] · [[nself-ai-cc]] · [[nself-ai-mcp]] · [[plugin-claw]] · [[plugin-claw-web]] · [[plugin-claw-budget]] · [[plugin-mux]] · [[plugin-voice]] · [[plugin-browser]] · [[plugin-bots]] · [[plugin-workflows]]
 
 **Communication:** [[plugin-chat]] · [[plugin-livekit]] · [[plugin-streaming]] · [[plugin-realtime]] · [[plugin-podcast]] · [[plugin-meetings]] · [[plugin-recording]]
 
