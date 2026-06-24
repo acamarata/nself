@@ -184,13 +184,23 @@ func rerunWithOsascript(ctx context.Context, workdir string) error {
 		return fmt.Errorf("permission denied writing /etc/hosts")
 	}
 	ui.Info("Requesting administrator access to update /etc/hosts...")
-	// Escape the workdir and binary paths to prevent AppleScript injection.
-	// Any double-quote or backslash in the path is escaped before embedding.
+	// The workdir is embedded into a `do shell script` AppleScript string, which
+	// is shell-interpreted after AppleScript-string parsing. Escaping quotes and
+	// backslashes is not enough — backticks and $(...) would still execute as
+	// admin. Require a clean absolute path with no shell metacharacters.
+	cleanWorkdir := filepath.Clean(workdir)
+	if !filepath.IsAbs(cleanWorkdir) {
+		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
+		return fmt.Errorf("dns-setup: refusing to run with non-absolute project path %q", workdir)
+	}
+	if strings.ContainsAny(cleanWorkdir, "`$();&|\n\r\"\\") {
+		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
+		return fmt.Errorf("dns-setup: project path contains unsafe characters %q", workdir)
+	}
+	// Escape the binary path for the AppleScript string literal.
 	escapedSelf := strings.ReplaceAll(filepath.Clean(self), `\`, `\\`)
 	escapedSelf = strings.ReplaceAll(escapedSelf, `"`, `\"`)
-	escapedWorkdir := strings.ReplaceAll(filepath.Clean(workdir), `\`, `\\`)
-	escapedWorkdir = strings.ReplaceAll(escapedWorkdir, `"`, `\"`)
-	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, escapedSelf, escapedWorkdir)
+	script := fmt.Sprintf(`do shell script "%s dns-setup --project %s" with administrator privileges`, escapedSelf, cleanWorkdir)
 	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
 	cmd.WaitDelay = 5 * time.Second
 	out, err := cmd.CombinedOutput()
