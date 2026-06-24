@@ -19,7 +19,7 @@ Syncs your Shopify store data into Postgres in real time via webhooks and the Sh
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `SHOPIFY_PORT` | `3072` | Shopify plugin port |
+| `SHOPIFY_PORT` | `3742` | Shopify plugin port |
 | `SHOPIFY_SHOP_DOMAIN` | — | Your Shopify store domain |
 | `SHOPIFY_ACCESS_TOKEN` | — | Shopify Admin API access token |
 | `SHOPIFY_WEBHOOK_SECRET` | — | Shopify webhook HMAC secret |
@@ -29,7 +29,7 @@ Syncs your Shopify store data into Postgres in real time via webhooks and the Sh
 
 | Port | Purpose |
 |------|---------|
-| 3072 | Shopify integration REST API |
+| 3742 | Shopify integration REST API |
 
 ## Database Tables
 
@@ -43,6 +43,14 @@ Syncs your Shopify store data into Postgres in real time via webhooks and the Sh
 - `np_shopify_fulfillments`, fulfillment records
 - `np_shopify_inventory`, inventory levels
 - `np_shopify_webhook_events`, raw event log
+
+## Docker Image
+
+The plugin is published to Docker Hub as `nself/plugin-shopify`. The nSelf CLI pulls this image automatically during `nself plugin install shopify`.
+
+```bash
+docker pull nself/plugin-shopify:latest
+```
 
 ## Nginx Routes
 
