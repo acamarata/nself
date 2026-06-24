@@ -29,6 +29,8 @@ Provides admin-only REST endpoints for monitoring and managing a running ɳSelf 
 |------|---------|
 | 3212 | Admin API REST endpoints |
 
+> **Port conflict note:** Port 3212 is also registered by the `hipaa` plugin (F10 port registry). If you plan to run both plugins on the same host, one of them must be reassigned via its `*_PORT` env var before starting. A dedicated port conflict resolution task is tracked in F10-PORT-REGISTRY. Do not run both plugins on the same host without changing one of the ports first.
+
 ## Database Tables
 
 2 tables added to your Postgres database:

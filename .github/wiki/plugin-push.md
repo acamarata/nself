@@ -1,6 +1,6 @@
 # Push Plugin
 
-> APNs + FCM push notification relay for iOS and Android. **Free, MIT licensed.**
+> APNs + FCM push notification relay for iOS and Android. **Pro plugin, license required.**
 
 ## Install
 
@@ -8,7 +8,7 @@
 nself plugin install push
 ```
 
-Redis is auto-enabled when the push plugin is installed. If `REDIS_ENABLED` is unset in your env, `nself build` detects the installed plugin and adds the redis service automatically.
+The push plugin is a paid feature included in the **ɳChat bundle** ($0.99/mo or $9.99/yr) or **ɳSelf+ subscription** ($3.99/mo or $39.99/yr). To use it, activate your license key via `nself license activate <key>`.
 
 ## What It Does
 

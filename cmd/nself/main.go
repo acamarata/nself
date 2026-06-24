@@ -12,9 +12,17 @@ import (
 
 func main() {
 	if err := commands.Execute(); err != nil {
-		var exitErr *plugin.ExitCodeError
-		if errors.As(err, &exitErr) {
-			os.Exit(exitErr.Code)
+		// Check for plugin ExitCodeError (from plugin subprocess)
+		var pluginExitErr *plugin.ExitCodeError
+		if errors.As(err, &pluginExitErr) {
+			os.Exit(pluginExitErr.Code)
+		}
+
+		// Check for commands ExitError (from CLI gates and eval)
+		var cmdExitErr *commands.ExitError
+		if errors.As(err, &cmdExitErr) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", cmdExitErr)
+			os.Exit(cmdExitErr.Code)
 		}
 
 		// Route structured UXErrors through the rich renderer.

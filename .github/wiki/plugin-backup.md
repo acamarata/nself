@@ -10,7 +10,23 @@ nself plugin install backup
 
 ## What It Does
 
-Runs scheduled `pg_dump` backups of your Postgres database with configurable retention policies. Supports uploading backups to S3-compatible storage (MinIO or any S3 provider). Free tier handles standard scheduling. See [plugin-backup-pro](plugin-backup-pro) for encryption and point-in-time recovery.
+Runs scheduled `pg_dump` backups of your Postgres database with configurable retention policies. Supports uploading backups to S3-compatible storage (MinIO or any S3 provider). Free tier handles standard scheduling.
+
+For encryption, multi-target storage (S3/R2/GCS/B2/MinIO simultaneously), and restore tracking, see the pro variant: [[plugin-backup-pro]].
+
+## Free vs Pro
+
+| Feature | Free (this) | Pro ([[plugin-backup-pro]]) |
+|---------|-------------|------------------------------|
+| Scheduled pg_dump | Yes | Yes |
+| Local storage | Yes | Yes |
+| S3-compatible upload | One target | Multi-target |
+| AES-256 encryption at rest | No | Yes |
+| Restore job tracking | No | Yes (idempotent resume) |
+| Artifact checksums | No | Yes |
+| Webhook events | No | Yes |
+| Port | 3050 | 3210 |
+| License required | No | Yes |
 
 ## Configuration
 
@@ -31,12 +47,12 @@ Runs scheduled `pg_dump` backups of your Postgres database with configurable ret
 ## Database Tables
 
 2 tables added to your Postgres database:
-- `np_backup_jobs`, backup job history and status
-- `np_backup_schedules`, configured backup schedules
+- `np_backup_jobs` — backup job history and status
+- `np_backup_schedules` — configured backup schedules
 
 ## Nginx Routes
 
-None, backup service is internal only.
+None; backup service is internal only.
 
 ## API
 
@@ -46,3 +62,10 @@ GET  /backups          — List backup history
 POST /backups/trigger  — Trigger immediate backup
 POST /backups/restore  — Restore from backup
 ```
+
+## See Also
+
+- [[plugin-backup-pro]] — pro variant with encryption, multi-target, and restore tracking
+- [[Plugins]] — full plugin index
+
+← [[Plugins]] | [[Home]] →

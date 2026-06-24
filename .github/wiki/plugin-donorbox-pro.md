@@ -1,33 +1,56 @@
-> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
-> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
+# Donorbox Plugin
 
-# Donorbox Pro Plugin
+> Real-time Donorbox donation sync with multi-account support, webhook processing, and donor analytics. **Pro plugin — requires license.**
 
-> Advanced Donorbox donation sync with donor CRM, campaign analytics, and recurring donation management. **Pro plugin.**
+## Tier required
 
-> **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
+| Tier | Monthly | Annual | Includes this plugin? |
+|------|---------|--------|----------------------|
+| Free | $0 | $0 | No |
+| Any bundle | $0.99/mo | $9.99/yr | If in bundle |
+| ɳSelf+ | $3.99/mo | $39.99/yr | Yes |
+
+**Minimum tier:** Basic (this is a `tier: pro` plugin per F07-PRICING-TIERS).
+
+## Bundle membership
+
+This plugin is not currently in a named bundle. A Basic-tier subscription or higher unlocks it.
+
+Or get all bundles + all apps via **ɳSelf+** ($3.99/mo or $39.99/yr).
 
 ## Install
 
 ```bash
-nself license set nself_pro_xxxxx...
-nself plugin install donorbox-pro
+nself license set nself_pro_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+nself plugin install donorbox
+nself build
 ```
 
-## What It Does
+The license is validated against `ping.nself.org/license/validate`. Tier is checked server-side; insufficient tier returns an error.
 
-Extends the free `donorbox` plugin (port 3074) with full webhook processing, a donor CRM layer, campaign performance analytics, and recurring donation lifecycle management. Incoming Donorbox webhooks are verified, stored, and fanned out to downstream tables so your application has a complete local replica of donation activity.
+## Description
 
-> **Note:** The free `donorbox` plugin (port 3074) handles basic donation sync. This pro version adds CRM, analytics, and recurring donation management on top of that foundation.
+The donorbox pro plugin (port 3005) syncs campaigns, donors, one-time donations, recurring plans, and ticketing data from Donorbox into your Postgres database. Syncs run on a configurable schedule and a real-time webhook endpoint keeps records current with every incoming Donorbox event.
+
+Multi-account support lets a single nSelf project connect to multiple Donorbox accounts. Each account's data is isolated via `source_account_id` so queries and analytics stay scoped per account. Configure additional accounts with `DONORBOX_EMAILS` and `DONORBOX_API_KEYS` as comma-separated lists.
+
+**Distinct from the free donorbox plugin (port 3074):** The free plugin provides basic webhook receipt and sync. This pro plugin adds multi-account isolation, configurable sync intervals, donor analytics tables, event tracking, and ticketing data. Both plugins can coexist; they run on separate ports and write to separate table sets.
 
 ## Configuration
 
-| Env Var | Default | Description |
-|---------|---------|-------------|
-| `DONORBOX_PRO_PORT` | `3005` | Donorbox pro service port |
-| `DONORBOX_API_KEY` | — | Donorbox API key |
-| `DONORBOX_PLAN_ID` | — | Donorbox campaign/plan ID |
-| `DONORBOX_WEBHOOK_SECRET` | — | Secret for verifying incoming Donorbox webhooks |
+| Env Var | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | Postgres connection string (auto-provided by nSelf) |
+| `DONORBOX_API_KEY` | Yes | — | Donorbox API key for primary account |
+| `DONORBOX_EMAIL` | Yes | — | Donorbox account email for primary account |
+| `DONORBOX_WEBHOOK_SECRET` | No | — | Secret for verifying incoming Donorbox webhooks |
+| `DONORBOX_EMAILS` | No | — | Comma-separated emails for multi-account setup |
+| `DONORBOX_API_KEYS` | No | — | Comma-separated API keys for multi-account setup |
+| `DONORBOX_ACCOUNT_LABELS` | No | — | Human-readable labels for each account (comma-separated) |
+| `DONORBOX_WEBHOOK_SECRETS` | No | — | Per-account webhook secrets (comma-separated) |
+| `DONORBOX_SYNC_INTERVAL` | No | `3600` | Sync interval in seconds |
+
+Reference vault credentials. Never hardcode secrets.
 
 ## Ports
 
@@ -35,19 +58,79 @@ Extends the free `donorbox` plugin (port 3074) with full webhook processing, a d
 |------|---------|
 | 3005 | Donorbox pro REST API and webhook receiver |
 
-## Database Tables
+Bound to `127.0.0.1`; access via Nginx, never directly.
 
-7 tables added to your Postgres database:
-- `np_donorbox_campaigns`, campaign definitions and metadata
-- `np_donorbox_donors`, donor CRM records
-- `np_donorbox_donations`, individual donation records
-- `np_donorbox_recurring`, recurring donation plans and status
-- `np_donorbox_analytics`, campaign performance analytics
-- `np_donorbox_webhooks`, raw incoming webhook payloads
-- `np_donorbox_sync_log`, sync and processing log
+## Database Schema
+
+Tables created (prefix `np_`):
+
+| Table | Contents |
+|-------|----------|
+| `np_donorbox_campaigns` | Campaign definitions and metadata |
+| `np_donorbox_donors` | Donor profiles and contact records |
+| `np_donorbox_donations` | Individual donation records |
+| `np_donorbox_plans` | Recurring donation plans |
+| `np_donorbox_events` | Donor lifecycle events |
+| `np_donorbox_tickets` | Campaign ticketing records |
+| `np_donorbox_webhook_events` | Raw incoming webhook payload log |
+
+All tables include `source_account_id` for multi-account isolation.
+
+## REST API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Liveness probe |
+| GET | `/` | Plugin capability list |
+| POST | `/webhook` | Donorbox webhook receiver (HMAC-verified) |
+| POST | `/sync` | Trigger a manual sync |
+| GET | `/donors` | List donor records |
+| GET | `/campaigns` | List campaign records |
+| GET | `/donations` | List donation records |
+
+Full route reference: `plugins-pro/paid/donorbox/` OpenAPI spec.
 
 ## Nginx Routes
 
 | Route | Target |
 |-------|--------|
-| `/donorbox/` | Donorbox pro API and webhook receiver |
+| `/donorbox/` | Donorbox pro REST API |
+| `/donorbox/webhook` | Webhook receiver |
+
+## Examples
+
+Trigger a manual sync:
+
+```bash
+curl -X POST -H 'Authorization: Bearer $TOKEN' \
+  https://api.example.com/donorbox/sync
+```
+
+List donors:
+
+```bash
+curl -H 'Authorization: Bearer $TOKEN' \
+  'https://api.example.com/donorbox/donors?limit=50'
+```
+
+Configure the Donorbox webhook URL in your Donorbox dashboard:
+
+```
+https://api.example.com/donorbox/webhook
+```
+
+Set `DONORBOX_WEBHOOK_SECRET` to the same secret configured in your Donorbox dashboard to enable signature verification.
+
+## Source
+
+Source-available (license required to run): [`plugins-pro/paid/donorbox/`](https://github.com/nself-org/plugins-pro/tree/main/paid/donorbox)
+
+Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+ subscribers and Enterprise customers.
+
+## See Also
+
+- [[plugin-donorbox]] — free donorbox plugin (port 3074, basic sync)
+- [[Pricing]] — tier comparison
+- [[Plugins]] — full plugin index
+
+← [[Plugins]] | [[Home]] →
