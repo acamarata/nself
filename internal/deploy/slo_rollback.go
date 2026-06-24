@@ -14,7 +14,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -278,7 +277,9 @@ func writeAuditEvent(cfg RollbackConfig, priorVersion, outcome, errMsg string) {
 		return
 	}
 
-	slog.Info("audit event", "event", string(data))
+	// Emit a single-line, prefixed JSON event to stdout. The audit-log plugin
+	// tails stdout and ingests every line beginning with "AUDIT_EVENT ".
+	fmt.Printf("AUDIT_EVENT %s\n", data)
 }
 
 // findProjectRoot walks up the directory tree to find the nSelf project root
