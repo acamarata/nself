@@ -183,9 +183,20 @@ func rerunWithOsascript(ctx context.Context, workdir string) error {
 		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("permission denied writing /etc/hosts")
 	}
+	// Guard: reject shell metacharacters in workdir before embedding into the
+	// AppleScript do shell script string. Backticks and $() execute arbitrary
+	// shell commands with administrator privileges; ;|&<> allow chaining and
+	// redirection. A legitimate file-system path never needs these characters.
+	const shellMetachars = "`$();&|<>\n\r"
+	if strings.ContainsAny(filepath.Clean(workdir), shellMetachars) {
+		ui.Error("Permission denied — project path contains invalid characters. Run: sudo nself dns-setup --project <path>")
+		return fmt.Errorf("workdir contains shell metacharacters (injection guard)")
+	}
+
 	ui.Info("Requesting administrator access to update /etc/hosts...")
 	// Escape the workdir and binary paths to prevent AppleScript injection.
-	// Any double-quote or backslash in the path is escaped before embedding.
+	// Backslashes and double-quotes are escaped; shell metacharacters were
+	// already rejected by the guard above.
 	escapedSelf := strings.ReplaceAll(filepath.Clean(self), `\`, `\\`)
 	escapedSelf = strings.ReplaceAll(escapedSelf, `"`, `\"`)
 	escapedWorkdir := strings.ReplaceAll(filepath.Clean(workdir), `\`, `\\`)
