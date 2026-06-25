@@ -104,6 +104,7 @@ func init() {
 	clawCmd.AddCommand(clawMCPCmd)
 	clawCmd.AddCommand(clawExportCmd)
 	clawCmd.AddCommand(clawMigrateCmd)
+	clawCmd.AddCommand(clawSessionCmd)
 	RootCmd.AddCommand(clawCmd)
 }
 

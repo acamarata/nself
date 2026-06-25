@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	nscicmd "github.com/nself-org/cli/internal/cmd/ci"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +49,12 @@ func init() {
 	ciCmd.Flags().String("owner", "", "GitHub owner (default: from git remote)")
 	ciCmd.Flags().String("repo", "", "GitHub repo name (default: from git remote)")
 	ciCmd.Flags().BoolP("verbose", "v", false, "Print each gate command before running")
+
+	// Wire eval subcommand group: `nself ci eval` and `nself ci eval gate`.
+	evalCmd := nscicmd.NewEvalCmd()
+	evalCmd.AddCommand(nscicmd.NewEvalGateCmd())
+	ciCmd.AddCommand(evalCmd)
+
 	RootCmd.AddCommand(ciCmd)
 }
 

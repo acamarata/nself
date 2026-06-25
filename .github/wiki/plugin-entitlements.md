@@ -19,7 +19,7 @@ Manages what each user or tenant can access based on their subscription plan. De
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `ENTITLEMENTS_PORT` | `3715` | Entitlements service port |
+| `ENTITLEMENTS_PORT` | `3735` | Entitlements service port |
 | `ENTITLEMENTS_CACHE_TTL` | `300` | Entitlement check cache TTL |
 | `ENTITLEMENTS_METERED_ENABLED` | `false` | Enable metered usage billing |
 | `ENTITLEMENTS_OVERAGE_ACTION` | `block` | On quota exceeded: `block` or `allow` |
@@ -28,7 +28,7 @@ Manages what each user or tenant can access based on their subscription plan. De
 
 | Port | Purpose |
 |------|---------|
-| 3715 | Entitlements REST API |
+| 3735 | Entitlements REST API |
 
 ## Database Tables
 
@@ -48,3 +48,7 @@ Manages what each user or tenant can access based on their subscription plan. De
 |-------|--------|
 | `/entitlements/` | Entitlements management API |
 | `/entitlements/check` | Fast entitlement check endpoint |
+
+---
+
+See also: [[plugin-stripe]] · [[Plugin-Overview]] · [[Home]]

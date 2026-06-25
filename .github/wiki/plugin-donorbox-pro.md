@@ -1,6 +1,3 @@
-> **Planned Feature:** This plugin is not yet available. It is planned for a future release.
-> Current available plugins: [Plugins Overview](./Plugin-Overview.md)
-
 # Donorbox Pro Plugin
 
 > Advanced Donorbox donation sync with donor CRM, campaign analytics, and recurring donation management. **Pro plugin.**
@@ -51,3 +48,7 @@ Extends the free `donorbox` plugin (port 3074) with full webhook processing, a d
 | Route | Target |
 |-------|--------|
 | `/donorbox/` | Donorbox pro API and webhook receiver |
+
+---
+
+See also: [plugin-donorbox](plugin-donorbox) · [Plugin-Overview](Plugin-Overview) · [[Home]]

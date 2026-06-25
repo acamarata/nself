@@ -33,12 +33,12 @@ The home plugin acts as a REST client to your existing Home Assistant instance, 
 
 3 tables added to your Postgres database:
 
+- `np_home_connections`
 - `np_home_devices`
-- `np_home_commands`
-- `np_home_states`
+- `np_home_command_log`
 
 ## Nginx Routes
 
 | Route | Target |
 |-------|--------|
-| `/api/home/` | `localhost:3127` |
+| `/plugins/home/` | `localhost:3127` |

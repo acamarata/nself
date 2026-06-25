@@ -42,3 +42,7 @@ Syncs donation and donor data from Donorbox into your Postgres database in real 
 | Route | Target |
 |-------|--------|
 | `/donorbox/webhook` | Donorbox webhook receiver |
+
+---
+
+See also: [plugin-donorbox-pro](plugin-donorbox-pro) · [Plugin-Overview](Plugin-Overview) · [[Home]]

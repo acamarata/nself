@@ -45,6 +45,7 @@ func init() {
 	migrateFirebaseCmd.Flags().String("auth-export", "", "Path to Firebase Auth JSON export (optional)")
 	migrateFirebaseCmd.Flags().String("output-dir", "", "Directory for generated artifacts (default: <export-dir>/nself-migration)")
 	migrateFirebaseCmd.Flags().String("project-name", "firebase_import", "Project name used in generated SQL and file names")
+	migrateFirebaseCmd.Flags().Bool("dry-run", false, "Generate migration artifacts without applying them to a running nSelf instance")
 	_ = migrateFirebaseCmd.MarkFlagRequired("export-dir")
 	migrateCmd.AddCommand(migrateFirebaseCmd)
 }

@@ -7,20 +7,16 @@
 | Tier | Monthly | Annual | Includes this plugin? |
 |------|---------|--------|----------------------|
 | Free | $0 | $0 | No |
-| Basic | $0.99/mo | $9.99/yr | Yes |
-| Pro | $1.99/mo | $19.99/yr | Yes |
-| Elite | $4.99/mo | $49.99/yr | Yes |
-| Business | $9.99/mo | $99.99/yr | Yes |
-| Business+ | $49.99/mo | $499.99/yr | Yes |
-| Enterprise | $99.99/mo | $999.99/yr | Yes |
+| Any bundle | $0.99/mo | $9.99/yr | If stripe-pro is in that bundle |
+| ɳSelf+ | $3.99/mo | $39.99/yr | Yes — all bundles + all apps |
 
-**Minimum tier:** Basic (this is a `tier: pro` plugin per F07-PRICING-TIERS).
+**Minimum tier:** Any bundle subscription that includes stripe-pro, or ɳSelf+.
 
 ## Bundle membership
 
-Not currently in a named bundle. Purchase any tier subscription (Basic and up) for access.
+Not currently in a named bundle. Requires ɳSelf+ ($3.99/mo or $39.99/yr) for standalone access.
 
-Or get all bundles + all apps via **ɳSelf+** ($49.99/yr).
+Or get all bundles + all apps via **ɳSelf+** ($3.99/mo · $39.99/yr).
 
 ## Install
 
