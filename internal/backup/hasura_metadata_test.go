@@ -156,9 +156,18 @@ func TestBackupHasuraMetadata_DefaultURL(t *testing.T) {
 		BackupDir: dir,
 	}
 
-	_, err := BackupHasuraMetadata(context.Background(), opts)
-	// Expected: connection refused (no real Hasura running). The key assertion
-	// is that the code path does not panic and produces a meaningful error.
+	// Bound the request with a short deadline. The default fallback URL
+	// (http://localhost:8080) may be unreachable (connection refused) or, if a
+	// service happens to be listening on that port, could otherwise stall for the
+	// Backup client's 600s timeout and hang the test. The context deadline caps
+	// it either way; the code path supports cancellation via NewRequestWithContext.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_, err := BackupHasuraMetadata(ctx, opts)
+	// Expected: connection refused / deadline exceeded (no real Hasura running).
+	// The key assertion is that the code path does not panic and produces a
+	// meaningful error.
 	if err == nil {
 		// If somehow a local Hasura is running — that's fine too.
 		t.Logf("unexpected success (local Hasura might be running)")

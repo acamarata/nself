@@ -30,8 +30,8 @@ After `nself start`, the Ollama API is available at `http://127.0.0.1:11434`.
 | `NSELF_OLLAMA_CONTEXT_WINDOW` | No | `8192` | Context window size in tokens |
 | `NSELF_OLLAMA_TIMEOUT_SECONDS` | No | `120` | Request timeout for model inference |
 | `OLLAMA_ENABLED` | No | — | Set to `true` by the provider registration step |
-| `PLUGIN_AI_OLLAMA_URL` | No | — | Mapped from `NSELF_OLLAMA_HOST` for plugin-ai |
-| `PLUGIN_AI_OLLAMA_MODEL` | No | — | Mapped from `NSELF_OLLAMA_DEFAULT_MODEL` for plugin-ai |
+| `NSELF_GATEWAY_OLLAMA_URL` | No | — | Mapped from `NSELF_OLLAMA_HOST` for nself-ai-gateway |
+| `NSELF_GATEWAY_OLLAMA_MODEL` | No | — | Mapped from `NSELF_OLLAMA_DEFAULT_MODEL` for nself-ai-gateway |
 
 ## Compose mode
 
@@ -44,11 +44,11 @@ The plugin adds an `ollama` service to your Docker Compose stack. Key details:
 
 ## Provider registration
 
-When `NSELF_AI_PROVIDER=ollama` is set, the plugin registers itself with plugin-ai via environment variable mapping:
+When `NSELF_AI_PROVIDER=ollama` is set, the plugin registers itself with `nself-ai-gateway` via environment variable mapping:
 
 ```
-NSELF_OLLAMA_HOST      → PLUGIN_AI_OLLAMA_URL
-NSELF_OLLAMA_DEFAULT_MODEL → PLUGIN_AI_OLLAMA_MODEL
+NSELF_OLLAMA_HOST          → NSELF_GATEWAY_OLLAMA_URL
+NSELF_OLLAMA_DEFAULT_MODEL → NSELF_GATEWAY_OLLAMA_MODEL
 OLLAMA_ENABLED=true
 ```
 
@@ -120,5 +120,5 @@ Models are persisted in the `nself_ollama_models` Docker volume and survive cont
 
 ## See also
 
-- [plugin-ai](plugin-ai.md) — the AI plugin that consumes this provider
+- [nself-ai-gateway](nself-ai-gateway.md) — the AI gateway plugin that routes to this provider (port 3761)
 - [Ollama model library](https://ollama.com/library) — available models

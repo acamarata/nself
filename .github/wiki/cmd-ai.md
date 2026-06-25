@@ -10,11 +10,13 @@ nself ai <subcommand> [flags] [args]
 
 ## Description
 
-`nself ai` manages the AI plugin (`plugin-ai`) and the optional local Ollama runtime that powers zero-config inference. It groups three areas: the local Ollama stack (install, models, health, swap, benchmark), a one-shot `chat` for quick verification, and the Gemini API key `pool` for cloud routing.
+`nself ai` manages the local Ollama runtime that powers zero-config inference. It groups three areas: the local Ollama stack (install, models, health, swap, benchmark), a one-shot `chat` for quick verification, and the Gemini API key `pool` for cloud routing.
 
-The `ai local` subtree installs and inspects an Ollama daemon and the small set of models recommended for the host RAM tier. `ai pool` manages auto-provisioned Gemini keys (OAuth-onboarded Google accounts, GCP project creation, key rotation, daily quota tracking) so the AI plugin always has free or near-free capacity.
+For provider key management and AI request routing, use `nself gateway` (wired to `nself-ai-gateway` at port 3761). For PTY session relay commands, use `nself claw session` (wired to `nself-ai-cc` at port 3760).
 
-Most flags are non-destructive. Pulling models requires network access. Pool subcommands talk to the AI plugin over its internal HTTP API; if the plugin is not running, commands report a clear error.
+The `ai local` subtree installs and inspects an Ollama daemon and the small set of models recommended for the host RAM tier. `ai pool` manages auto-provisioned Gemini keys (OAuth-onboarded Google accounts, GCP project creation, key rotation, daily quota tracking) so the gateway always has free or near-free capacity.
+
+Most flags are non-destructive. Pulling models requires network access. Pool subcommands talk to the `nself-ai-gateway` plugin over its internal HTTP API; if the plugin is not running, commands report a clear error.
 
 ## Subcommands
 
@@ -22,10 +24,10 @@ Most flags are non-destructive. Pulling models requires network access. Pool sub
 |------|-------------|
 | `local install` | Install Ollama, systemd service, firewall, and recommended models |
 | `local models list` | List installed and registered local models with diff |
-| `local models add <model>` | Pull a model via Ollama and register with plugin-ai |
+| `local models add <model>` | Pull a model via Ollama and register with nself-ai-gateway |
 | `local models remove <model>` | Soft-delete a local model and uninstall from Ollama |
 | `local models recommend` | Print recommended models for this host |
-| `local health` | Show Ollama and plugin-ai health |
+| `local health` | Show Ollama and nself-ai-gateway health |
 | `local swap <model>` | Hot-swap the default model for a task |
 | `local benchmark [model]` | Run benchmark prompts against one or more models |
 | `chat <message>` | Send a quick chat message to the local AI |

@@ -139,6 +139,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	adminSecret := hasuraAdminSecretFromEnv()
 	authToken := os.Getenv("NSELF_AISTUDIO_AUTH_TOKEN")
 	if authToken == "" {
+		slog.Warn("NSELF_AISTUDIO_AUTH_TOKEN unset; AI Studio bridge auth will fail")
 		authToken, err = generateToken()
 		if err != nil {
 			return fmt.Errorf("generate session token: %w", err)

@@ -1,0 +1,97 @@
+name: Publish @nself/sdk to npm
+
+# Publishes the consumer-facing @nself/sdk TypeScript package to npm.
+# Triggers on:
+#   - cli release tag (v*)            -- publishes in lockstep with CLI
+#   - sdk-scoped tag (cli-sdk/v*)     -- publishes SDK only (out-of-band)
+#   - workflow_dispatch               -- manual publish with version input
+#
+# Requires NPM_TOKEN secret with write access to @nself scope.
+# Counterpart to sdk-ts-publish.yml which covers @nself/plugin-sdk.
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'cli-sdk/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish version (e.g. 1.0.13). Blank = use package.json.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @nself/sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Check preconditions
+        id: check
+        run: |
+          if [ ! -f sdk/ts-sdk/package.json ]; then
+            echo "sdk/ts-sdk/package.json absent — nothing to publish. No-op success."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "NPM_TOKEN not set — skipping publish steps."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        if: steps.check.outputs.proceed == 'true'
+        working-directory: sdk/ts-sdk
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Type-check
+        if: steps.check.outputs.proceed == 'true'
+        working-directory: sdk/ts-sdk
+        run: pnpm typecheck
+
+      - name: Build
+        if: steps.check.outputs.proceed == 'true'
+        working-directory: sdk/ts-sdk
+        run: pnpm build
+
+      - name: Publish to npm
+        if: steps.check.outputs.proceed == 'true'
+        working-directory: sdk/ts-sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --provenance --access public --no-git-checks
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.proceed == 'true' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION=$(node -p "require('./sdk/ts-sdk/package.json').version")
+          gh release create "$TAG" \
+            --title "@nself/sdk v${VERSION}" \
+            --notes "Published @nself/sdk v${VERSION} to npm." \
+            --draft=false \
+            --prerelease=false \
+            || true

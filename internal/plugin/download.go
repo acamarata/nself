@@ -21,14 +21,27 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/license"
 )
 
 // downloadPlugin fetches the plugin tarball to a temporary file.
+// For paid plugins, it sends the X-License-Key header required by ping.nself.org.
 // For free plugins, it tries the R2-backed worker URL first and falls back to
 // GitHub Releases on 5xx responses (S67-T03).
 func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) {
 	primaryURL := buildDownloadURL(name, version, repository)
-	tmp, err := downloadFromURL(ctx, primaryURL)
+
+	var extraHeaders map[string]string
+	if isPaidPlugin(name) {
+		// ping.nself.org/plugins/:name/download requires X-License-Key.
+		// Use the first available key from env vars or stored key file.
+		keys := license.CollectLicenseKeys()
+		if len(keys) > 0 {
+			extraHeaders = map[string]string{"X-License-Key": keys[0]}
+		}
+	}
+
+	tmp, err := downloadFromURL(ctx, primaryURL, extraHeaders)
 	if err == nil {
 		return tmp, nil
 	}
@@ -37,7 +50,7 @@ func downloadPlugin(ctx context.Context, name, version, repository string) (stri
 	if !isPaidPlugin(name) {
 		fallbackURL := buildFallbackDownloadURL(name, version, repository)
 		if fallbackURL != primaryURL {
-			tmp2, fallbackErr := downloadFromURL(ctx, fallbackURL)
+			tmp2, fallbackErr := downloadFromURL(ctx, fallbackURL, nil)
 			if fallbackErr == nil {
 				return tmp2, nil
 			}
@@ -49,12 +62,16 @@ func downloadPlugin(ctx context.Context, name, version, repository string) (stri
 }
 
 // downloadFromURL fetches a single URL to a temp file and returns the file path.
-func downloadFromURL(ctx context.Context, url string) (string, error) {
+// extraHeaders are added to the request (e.g. X-License-Key for paid plugins).
+func downloadFromURL(ctx context.Context, url string, extraHeaders map[string]string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating download request: %w", err)
 	}
 	req.Header.Set("User-Agent", "nself-cli")
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
+	}
 
 	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Do(req)

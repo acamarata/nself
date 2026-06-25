@@ -15,6 +15,11 @@ func registerRoutes(r interface{ Handle(string, ...interface{}) }) {
 func handleData(w http.ResponseWriter, r *http.Request)    {}
 func handleAdmin(w http.ResponseWriter, r *http.Request)   {}
 func handleLicense(w http.ResponseWriter, r *http.Request) {}
-func RequirePluginJWT(next http.Handler) http.Handler      { return next }
+// RequirePluginJWT is a stub middleware that satisfies the plugin JWT auth contract.
+func RequirePluginJWT(next http.Handler) http.Handler { return next }
+
+// RequireHasuraAdminKey is a stub middleware that satisfies the Hasura admin-key auth contract.
 func RequireHasuraAdminKey(next http.Handler) http.Handler { return next }
-func RequireLicenseKey(next http.Handler) http.Handler     { return next }
+
+// RequireLicenseKey is a stub middleware that satisfies the license-key auth contract.
+func RequireLicenseKey(next http.Handler) http.Handler { return next }
