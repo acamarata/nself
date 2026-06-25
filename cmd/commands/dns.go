@@ -193,7 +193,7 @@ func rerunWithOsascript(ctx context.Context, workdir string) error {
 		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("dns-setup: refusing to run with non-absolute project path %q", workdir)
 	}
-	if strings.ContainsAny(cleanWorkdir, "`$();&|\n\r\"\\") {
+	if strings.ContainsAny(cleanWorkdir, "`$();&|<>\n\r\"\\") {
 		ui.Error(fmt.Sprintf("Permission denied — /etc/hosts requires root. Run: sudo nself dns-setup --project %s", workdir))
 		return fmt.Errorf("dns-setup: project path contains unsafe characters %q", workdir)
 	}
