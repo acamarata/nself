@@ -2,11 +2,62 @@ package commands
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/nself-org/cli/internal/controlplane"
 )
+
+// ── T01 — SSH shell injection hardening ───────────────────────────────────────
+
+// TestSSHKeyRe_SafePath verifies that a clean, safe SSH key path passes the
+// allowlist regex.
+func TestSSHKeyRe_SafePath(t *testing.T) {
+	safePaths := []string{
+		"/home/user/.ssh/id_ed25519",
+		"~/.ssh/nself_deploy",
+		"/root/.ssh/id_rsa",
+		"/tmp/key.pem",
+	}
+	for _, p := range safePaths {
+		if !sshKeyRe.MatchString(p) {
+			t.Errorf("sshKeyRe rejected safe path %q — should be allowed", p)
+		}
+	}
+}
+
+// TestSSHKeyRe_InjectionBlocked verifies that shell metacharacters in the SSH
+// key path are rejected by the sshKeyRe allowlist, preventing shell injection
+// via the rsync -e flag string construction.
+func TestSSHKeyRe_InjectionBlocked(t *testing.T) {
+	injectionPayloads := []string{
+		"/tmp/key`id`",
+		"/tmp/key$(id)",
+		"/tmp/key;rm -rf /",
+		"/tmp/key|cat /etc/passwd",
+		"/tmp/key&background",
+	}
+	for _, p := range injectionPayloads {
+		if sshKeyRe.MatchString(p) {
+			t.Errorf("sshKeyRe accepted injection payload %q — should be blocked", p)
+		}
+	}
+}
+
+// TestDeployServiceOrder_AllSafeNames verifies the deploy service ordering
+// slice contains only safe service names with no shell metacharacters.
+func TestDeployServiceOrder_AllSafeNames(t *testing.T) {
+	safeRe := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	for _, svc := range deployServiceOrder {
+		if !safeRe.MatchString(svc) {
+			t.Errorf("deployServiceOrder contains unsafe service name %q", svc)
+		}
+	}
+	if len(deployServiceOrder) == 0 {
+		t.Error("deployServiceOrder must not be empty")
+	}
+}
 
 // ── T04 — deploy environments ─────────────────────────────────────────────────
 
