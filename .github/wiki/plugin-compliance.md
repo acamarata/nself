@@ -50,3 +50,13 @@ Adds a compliance management layer covering GDPR, CCPA, HIPAA, SOC 2, and PCI-DS
 | `/compliance/` | Compliance management API |
 | `/compliance/consent` | Consent collection endpoint |
 | `/compliance/dsar` | DSAR submission endpoint |
+
+## Distinct From the `hipaa` Plugin
+
+This plugin handles multi-regulation consent and DSAR workflows across GDPR, CCPA, HIPAA, SOC 2, and PCI. The separate `hipaa` plugin is narrower: it focuses on the PHI column registry and protected-health-information handling. Install `compliance` for cross-regulation consent, retention, and DSAR management; install `hipaa` when you specifically need PHI column-level tracking.
+
+## See Also
+
+- [[plugin-hipaa]], PHI column registry
+- [[Plugin-Overview]]
+- [[Home]]

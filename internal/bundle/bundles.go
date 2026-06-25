@@ -30,7 +30,9 @@ var canonicalBundles = map[string]Bundle{
 		Name:  "ɳClaw",
 		Price: "$0.99/mo or $9.99/yr",
 		Plugins: []string{
-			"ai", "claw", "claw-web", "mux", "voice", "browser",
+			// "ai" = legacy paid/ai (3709); canonical AI suite post-E6 = "ai-gateway" (3761)
+			"ai", "ai-gateway", "ai-cc", "ai-mcp",
+			"claw", "claw-web", "mux", "voice", "browser",
 			"google", "notify", "cron", "claw-budget", "claw-news",
 			"mcp", "knowledge-base",
 		},
@@ -67,7 +69,10 @@ var canonicalBundles = map[string]Bundle{
 		Name:  "ClawDE",
 		Price: "$0.99/mo or $9.99/yr",
 		Plugins: []string{
-			"claw", "ai", "realtime", "auth", "notify", "cms",
+			"claw",
+			// "ai" = legacy paid/ai (3709); canonical AI suite post-E6 = "ai-gateway" (3761)
+			"ai", "ai-gateway", "ai-cc", "ai-mcp",
+			"realtime", "auth", "notify", "cms",
 			"mcp", "knowledge-base",
 		},
 	},

@@ -1,8 +1,8 @@
 # Analytics Plugin
 
-> Product analytics, event tracking, funnels, retention, and quota management. **Pro plugin.**
+> Event tracking, counters, funnels, and quota management analytics engine. **Pro plugin.**
 
-> **Requires:** Basic license tier or higher. `nself license set nself_pro_...`
+> **Requires:** a pro license tier. Set a key with `nself license set` before installing.
 
 ## Install
 
@@ -13,16 +13,20 @@ nself plugin install analytics
 
 ## What It Does
 
-Tracks custom product events (page views, feature usage, conversions) and stores them in Postgres for querying via Hasura GraphQL. Provides funnel analysis, retention cohort reporting, and usage quota tracking per user or tenant. Designed for product analytics and internal dashboards, not marketing attribution.
+Tracks custom product events and increments named counters, then stores them in Postgres for querying via the plugin API or Hasura GraphQL. It computes funnel conversion across ordered steps, rolls counters up on a schedule, and enforces usage quotas per key with violation tracking. Designed for product analytics and internal usage metering, not marketing attribution.
 
 ## Configuration
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `ANALYTICS_PORT` | `3206` | Analytics service port |
-| `ANALYTICS_RETENTION_DAYS` | `365` | Days to retain event data |
+| `ANALYTICS_PLUGIN_PORT` | `3206` | Analytics service port |
 | `ANALYTICS_BATCH_SIZE` | `100` | Event ingestion batch size |
-| `ANALYTICS_QUOTA_ENABLED` | `false` | Enable usage quota enforcement |
+| `ANALYTICS_API_KEY` | (unset) | Bearer key required on API routes |
+| `ANALYTICS_EVENT_RETENTION_DAYS` | `90` | Days to retain raw events |
+| `ANALYTICS_COUNTER_RETENTION_DAYS` | `365` | Days to retain counter history |
+| `ANALYTICS_ROLLUP_INTERVAL_MS` | `3600000` | Counter rollup interval |
+| `ANALYTICS_RATE_LIMIT_MAX` | (unset) | Max requests per window |
+| `ANALYTICS_RATE_LIMIT_WINDOW_MS` | (unset) | Rate limit window in milliseconds |
 
 ## Ports
 
@@ -32,25 +36,39 @@ Tracks custom product events (page views, feature usage, conversions) and stores
 
 ## Database Tables
 
-6 tables added to your Postgres database:
-- `np_analytics_events`, raw event records
-- `np_analytics_sessions`, user sessions
-- `np_analytics_funnels`, funnel definitions
-- `np_analytics_cohorts`, retention cohort data
-- `np_analytics_quotas`, usage quota configurations
-- `np_analytics_quota_usage`, quota consumption records
+6 tables added to your Postgres database (no `np_` prefix; analytics plugin uses unprefixed names):
+- `analytics_events`, raw event records
+- `analytics_counters`, named counter values
+- `analytics_funnels`, funnel definitions
+- `analytics_quotas`, usage quota configurations
+- `analytics_quota_violations`, recorded quota breaches
+- `analytics_webhook_events`, inbound webhook event log
 
-## Nginx Routes
-
-| Route | Target |
-|-------|--------|
-| `/analytics/` | Analytics ingest and query API |
+All tables carry `source_account_id` for multi-app isolation.
 
 ## API
 
+All routes require a bearer token (`ANALYTICS_API_KEY`).
+
 ```
-POST /events          — Ingest events (single or batch)
-GET  /funnels/{id}    — Funnel conversion report
-GET  /retention       — Retention cohort report
-GET  /quotas/{user}   — Current quota usage
+POST /api/v1/events              Ingest a single event
+POST /api/v1/events/batch        Ingest a batch of events
+GET  /api/v1/events              Query events
+POST /api/v1/counters/increment  Increment a counter
+GET  /api/v1/counters            List all counters
+GET  /api/v1/counters/{key}      Read a counter value
+GET  /api/v1/funnels             List funnels
+POST /api/v1/funnels             Create a funnel
+GET  /api/v1/funnels/{id}/analyze  Funnel conversion report
+GET  /api/v1/quotas              List quotas
+POST /api/v1/quotas              Create a quota
+GET  /api/v1/violations          List quota violations
+GET  /api/v1/stats               Summary stats
+GET  /api/v1/stats/timeseries    Time-series stats
+GET  /health                     Liveness probe
+GET  /ready                      Readiness probe
 ```
+
+## Related
+
+[[plugin-overview|Plugin Overview]] · [[Home]]

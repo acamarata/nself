@@ -11,6 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// aiPoolMaxKeys is the maximum number of Gemini API keys the pool accepts.
+// Per F-PLUGIN:ai-pool-keys (ADR-006), this is 30 — raised from the original
+// 10-key cap in P88 and the 20-key interim cap.  Any nself ai pool add call
+// that would exceed this limit is rejected with a clear error before the OAuth
+// flow is started.
+const aiPoolMaxKeys = 30
+
 // -----------------------------------------------------------------------------
 // `nself ai pool` root
 // -----------------------------------------------------------------------------
@@ -209,6 +216,22 @@ var aiPoolAddCmd = &cobra.Command{
 
 func runPoolAdd(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	// Check current pool size before starting OAuth to surface cap violations
+	// before the user completes an OAuth flow that would be rejected anyway.
+	statusBody, statusCode, err := aiPluginRequest(ctx, "GET", "/ai/pool/status", nil)
+	if err == nil && statusCode < 400 {
+		var ps struct {
+			TotalKeys int `json:"total_keys"`
+		}
+		if jsonErr := json.Unmarshal(statusBody, &ps); jsonErr == nil {
+			if ps.TotalKeys >= aiPoolMaxKeys {
+				return fmt.Errorf("pool is at capacity (%d/%d keys); remove a key before adding another",
+					ps.TotalKeys, aiPoolMaxKeys)
+			}
+		}
+	}
+
 	payload, _ := json.Marshal(map[string]any{
 		"account_hint": poolAddAccount,
 	})

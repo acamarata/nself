@@ -1,6 +1,6 @@
 # Push Plugin
 
-> APNs + FCM push notification relay for iOS and Android. **Free, MIT licensed.**
+> APNs + FCM push notification relay for iOS and Android. **Pro license required.**
 
 ## Install
 

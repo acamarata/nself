@@ -356,5 +356,6 @@ func productDisplayName(product string) string {
 func init() {
 	licenseMigrateCmd.Flags().StringVar(&migrateAccountID, "account-id", "", "nSelf account UUID to link the legacy key to")
 	licenseMigrateCmd.Flags().StringVar(&migrateKeyFlag, "key", "", "specific license key to migrate (defaults to auto-detected legacy key)")
+	licenseMigrateCmd.Flags().Bool("dry-run", false, "Preview migration steps without applying changes")
 	licenseCmd.AddCommand(licenseMigrateCmd)
 }

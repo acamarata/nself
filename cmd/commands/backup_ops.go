@@ -459,6 +459,23 @@ Examples:
 	RunE: runBackupSchedule,
 }
 
+// validateCronExpression checks that a cron expression has exactly 5 whitespace-separated
+// fields, each field being a non-empty token.  This is a structural pre-check; the
+// systemd OnCalendar translation in internal/backup/stream.go handles semantic
+// validation.  An empty or malformed expression always returns a non-nil error so
+// callers can surface exit code 1 before spawning any systemd units.
+func validateCronExpression(expr string) error {
+	if expr == "" {
+		return fmt.Errorf("--cron expression is required (e.g. '0 2 * * *')")
+	}
+	// Count fields by splitting on whitespace.
+	fields := strings.Fields(expr)
+	if len(fields) != 5 {
+		return fmt.Errorf("invalid cron expression %q: expected 5 fields (minute hour dom month dow), got %d", expr, len(fields))
+	}
+	return nil
+}
+
 func runBackupSchedule(cmd *cobra.Command, _ []string) error {
 	cfg, err := loadProjectConfig()
 	if err != nil {
@@ -470,6 +487,10 @@ func runBackupSchedule(cmd *cobra.Command, _ []string) error {
 	recipient, _ := cmd.Flags().GetString("recipient")
 	unitDir, _ := cmd.Flags().GetString("unit-dir")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if err := validateCronExpression(cron); err != nil {
+		return err
+	}
 
 	if err := backup.ScheduleStream(cfg, cron, to, recipient, unitDir, dryRun); err != nil {
 		return fmt.Errorf("backup schedule: %w", err)

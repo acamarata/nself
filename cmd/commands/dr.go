@@ -113,6 +113,13 @@ func runDRPromote(cmd *cobra.Command, _ []string) error {
 
 	region, _ := cmd.Flags().GetString("region")
 	yes, _ := cmd.Flags().GetBool("yes")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if dryRun {
+		fmt.Printf("(dry-run) Would promote standby to primary (region: %q, project: %s)\n",
+			region, cfg.ProjectName)
+		return nil
+	}
 
 	if !yes {
 		if err := requireProductionConfirmation(cfg.ProjectName); err != nil {
@@ -148,6 +155,12 @@ func runDRReconfigureDNS(cmd *cobra.Command, _ []string) error {
 	if ip == "" {
 		return fmt.Errorf("--ip flag is required")
 	}
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	if dryRun {
+		fmt.Printf("(dry-run) Would update DNS for project %s to point to %s\n", cfg.ProjectName, ip)
+		return nil
+	}
 
 	if err := dr.ReconfigureDNS(cmd.Context(), cfg, ip); err != nil {
 		return fmt.Errorf("dr reconfigure-dns: %w", err)
@@ -170,6 +183,13 @@ func runDRRollback(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	if dryRun {
+		fmt.Printf("(dry-run) Would demote promoted standby and resync from original primary (project: %s)\n",
+			cfg.ProjectName)
+		return nil
+	}
+
 	if err := dr.Rollback(cmd.Context(), cfg); err != nil {
 		return fmt.Errorf("dr rollback: %w", err)
 	}
@@ -189,6 +209,13 @@ func runDRFence(cmd *cobra.Command, _ []string) error {
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
+	}
+
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	if dryRun {
+		fmt.Printf("(dry-run) Would set read-only split-brain fence in Redis (project: %s)\n",
+			cfg.ProjectName)
+		return nil
 	}
 
 	if err := dr.Fence(cmd.Context(), cfg); err != nil {
@@ -217,9 +244,17 @@ func init() {
 	// dr promote-standby flags
 	drPromoteCmd.Flags().String("region", "", "Target region for promotion")
 	drPromoteCmd.Flags().Bool("yes", false, "Skip confirmation")
+	drPromoteCmd.Flags().Bool("dry-run", false, "Preview promotion without executing")
 
 	// dr reconfigure-dns flags
 	drReconfigureDNSCmd.Flags().String("ip", "", "New primary IP address")
+	drReconfigureDNSCmd.Flags().Bool("dry-run", false, "Preview DNS update without executing")
+
+	// dr rollback flags
+	drRollbackCmd.Flags().Bool("dry-run", false, "Preview rollback without executing")
+
+	// dr fence flags
+	drFenceCmd.Flags().Bool("dry-run", false, "Preview fence operation without executing")
 
 	// Wire subcommands
 	drCmd.AddCommand(drDrillCmd)

@@ -15,7 +15,7 @@
 
 Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 138 plugins (29 free, 109 paid). MIT licensed core, forever.
 
-**v1.1.9 is out.** Security hardening, telemetry opt-in default, GraphQL codegen pipeline, Redis rate limiting, and admin audit improvements. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.9)
+**v1.1.9 is out.** `nself ci` built-in CI command, security hardening (shell-injection guards, CF Access JWT, mux allowlist), GraphQL codegen from live Hasura introspection, tenant isolation across all pro plugins, AI gateway trio canonicalized. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.9)
 
 ```bash
 brew install nself-org/nself/nself
@@ -125,7 +125,8 @@ See [Plugins](#plugins) for the full inventory.
 ## Key Features
 
 - Complete backend in under 5 minutes on any machine with Docker
-- 47 CLI commands — full control from the terminal over every service and operation
+- 84 CLI commands — full control from the terminal over every service and operation
+- Built-in CI gate (`nself ci`) — replaces external CI for merge enforcement
 - Core services always-on; optional services enable with one line in `.env`
 - 138 plugins extend the stack without touching core config
 - Multi-tenancy, row-level security, and org management built in

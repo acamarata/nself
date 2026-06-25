@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nself-org/cli/internal/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -86,10 +87,9 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 		port = p
 	}
 
-	_, baseURL, err := clawClient()
-	if err != nil {
-		return fmt.Errorf("auth error: %w", err)
-	}
+	// Post-E6 the proxy routes exclusively to nself-ai-gateway (port 3761).
+	// The gateway handles provider key lookup, routing, and quota enforcement.
+	gatewayURL := fmt.Sprintf("http://localhost:%d", ports.AIGatewayPort)
 
 	apiKey := clawAPIKey()
 
@@ -124,8 +124,8 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		// Build upstream URL
-		upstreamURL := baseURL + "/claw" + r.URL.Path
+		// Route to nself-ai-gateway (port 3761) — canonical AI provider gateway post-E6.
+		upstreamURL := gatewayURL + r.URL.Path
 		if r.URL.RawQuery != "" {
 			upstreamURL += "?" + r.URL.RawQuery
 		}
@@ -207,7 +207,7 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 	fmt.Println("nClaw OpenAI Proxy")
 	fmt.Println("------------------")
 	fmt.Printf("  Listening: http://%s\n", addr)
-	fmt.Printf("  Upstream:  %s\n", baseURL)
+	fmt.Printf("  Upstream:  %s (nself-ai-gateway)\n", gatewayURL)
 	fmt.Println()
 	fmt.Println("  Usage:")
 	fmt.Printf("    export OPENAI_BASE_URL=http://localhost:%d/v1\n", port)
@@ -231,8 +231,7 @@ func runClawProxy(cmd *cobra.Command, args []string) error {
 		server.Close()
 	}()
 
-	err = server.ListenAndServe()
-	if err != nil && !strings.Contains(err.Error(), "Server closed") {
+	if err := server.ListenAndServe(); err != nil && !strings.Contains(err.Error(), "Server closed") {
 		return fmt.Errorf("server error: %w", err)
 	}
 	return nil

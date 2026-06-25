@@ -46,3 +46,7 @@ GET  /backups          — List backup history
 POST /backups/trigger  — Trigger immediate backup
 POST /backups/restore  — Restore from backup
 ```
+
+---
+
+Related: [[plugin-backup-pro]] · [[Plugin-Overview]] · [[Home]]

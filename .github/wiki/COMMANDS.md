@@ -98,6 +98,8 @@
 | [[cmd-ai]] | Manage the ɳSelf AI plugin and local LLM stack |
 | [[cmd-ai-studio]] | Google AI Studio integration for local nSelf instances via a secure Cloudflare Tunnel |
 | [[cmd-claw]] | Manage ɳClaw AI assistant |
+| [[cmd-claw-session]] | Manage Claude Code PTY sessions via nself-ai-cc (port 3760) — start, list, attach, stop |
+| [[cmd-gateway]] | Manage the nSelf AI gateway (port 3761) — status, keys, quota, routes |
 | [[cmd-mcp]] | Start the nSelf MCP server and expose infrastructure tools to Claude Code and other MCP clients |
 | [[cmd-ollama]] | Deprecated alias — use `nself model --provider ollama` instead |
 
