@@ -1,5 +1,6 @@
-# Dependabot — GitHub Actions version pinning
+# Dependabot — GitHub Actions version pinning + Go module CVE tracking
 # S44-T-SEC-01: keep Actions SHA-pinned via Dependabot PRs.
+# P4-E5-W3-S05-T17: gomod ecosystem added for automated Go CVE detection.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -15,3 +16,20 @@ updates:
     commit-message:
       prefix: 'ci'
       include: scope
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+      time: '04:00'
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - go
+    commit-message:
+      prefix: 'chore(deps)'
+      include: scope
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major

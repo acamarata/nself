@@ -15,7 +15,7 @@
 
 Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 138 plugins (29 free, 109 paid). MIT licensed core, forever.
 
-**v1.1.2 is out.** Plugin signing canonical scheme, nself audit scan rule pack, license cache hardening, doctor --deep expansion. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.2)
+**v1.1.9 is out.** Security hardening, telemetry opt-in default, GraphQL codegen pipeline, Redis rate limiting, and admin audit improvements. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.9)
 
 ```bash
 brew install nself-org/nself/nself
@@ -186,10 +186,10 @@ For the most paranoid setups, pin the expected SHA-256 in your shell or CI confi
 
 ```bash
 # Obtain the expected checksum for a specific release:
-curl -fsSL https://github.com/nself-org/cli/releases/download/v1.1.2/checksums.txt
+curl -fsSL https://github.com/nself-org/cli/releases/download/v1.1.9/checksums.txt
 
 # Install with a pinned version and pinned SHA-256:
-NSELF_VERSION=v1.1.2 \
+NSELF_VERSION=v1.1.9 \
 NSELF_INSTALL_PIN_SHA256=<sha256-from-checksums.txt> \
 curl -fsSL https://install.nself.org | bash
 ```

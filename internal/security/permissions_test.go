@@ -106,7 +106,7 @@ func TestAuditProjectPermissions_DetectsOverPermissive(t *testing.T) {
 	}
 	// We expect at least one finding for the over-permissive .env file.
 	if len(findings) == 0 {
-		t.Skip("AuditProjectPermissions did not flag .env at 0644 — pattern may not be implemented yet")
+		t.Fatal("AuditProjectPermissions returned no findings for .env at 0644 — security pattern not implemented (expected at least one finding for over-permissive env file)")
 	}
 	// Verify the finding references the env file.
 	found := false

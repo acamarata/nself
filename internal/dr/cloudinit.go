@@ -3,9 +3,25 @@ package dr
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 )
+
+// semverRe matches strict semver strings with optional leading "v".
+// Accepted: "v1.2.3", "1.2.3". Rejected: anything else.
+// Used to guard NselfVersion before embedding into a curl|sh runcmd string,
+// preventing template injection via a crafted version string.
+var semverRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
+
+// validateSemver reports whether v is a well-formed semver string.
+// Empty string is valid (means "latest" — the version query param is omitted).
+func validateSemver(v string) bool {
+	if v == "" {
+		return true
+	}
+	return semverRe.MatchString(v)
+}
 
 // CloudInitParams feeds the drill VM user-data template. The resulting
 // cloud-init YAML installs Docker and the nSelf CLI, then runs the drill
@@ -79,6 +95,9 @@ func RenderCloudInit(p CloudInitParams) (string, error) {
 	}
 	if p.SSHPublicKey == "" {
 		return "", fmt.Errorf("ssh_public_key required")
+	}
+	if !validateSemver(p.NselfVersion) {
+		return "", fmt.Errorf("NselfVersion %q is not a valid semver string (expected v?d+.d+.d+); refusing to embed in runcmd", p.NselfVersion)
 	}
 	funcs := template.FuncMap{
 		"indent6": func(s string) string {
