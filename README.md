@@ -13,7 +13,7 @@
 
 **Self-hosted backend in 5 minutes**
 
-Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 138 plugins (29 free, 109 paid). MIT licensed core, forever.
+Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 155 plugins (31 free, 124 paid). MIT licensed core, forever.
 
 **v1.1.9 is out.** `nself ci` built-in CI command, security hardening (shell-injection guards, CF Access JWT, mux allowlist), GraphQL codegen from live Hasura introspection, tenant isolation across all pro plugins, AI gateway trio canonicalized. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.9)
 
@@ -31,7 +31,7 @@ brew install nself-org/nself/nself
 
 ɳSelf is a self-hosted backend platform that gives you the equivalent of a commercial Backend-as-a-Service on your own infrastructure. Run it locally, on a VPS, in Kubernetes, or on any cloud provider.
 
-You get Postgres, Hasura GraphQL, nHost Auth, and Nginx as the always-on core. Add optional services like Redis, MinIO, and Search when you need them. Extend everything with plugins — 29 free MIT plugins and 109 paid plugins covering AI, messaging, media processing, billing, and more.
+You get Postgres, Hasura GraphQL, nHost Auth, and Nginx as the always-on core. Add optional services like Redis, MinIO, and Search when you need them. Extend everything with plugins — 31 free MIT plugins and 124 paid plugins covering AI, messaging, media processing, billing, and more.
 
 The nself CLI is a single Go binary. No runtime dependencies beyond Docker.
 
@@ -104,8 +104,8 @@ nself build && nself restart
 
 Plugins are the extension layer — install what you need, remove what you don't.
 
-- **29 free MIT plugins** — no license key required
-- **109 paid plugins** — require a membership key (starting at $0.99/mo)
+- **31 free MIT plugins** — no license key required
+- **124 paid plugins** — require a membership key (starting at $0.99/mo)
 
 ```bash
 nself plugin install monitoring    # free: Prometheus + Grafana + Loki
@@ -128,7 +128,7 @@ See [Plugins](#plugins) for the full inventory.
 - 84 CLI commands — full control from the terminal over every service and operation
 - Built-in CI gate (`nself ci`) — replaces external CI for merge enforcement
 - Core services always-on; optional services enable with one line in `.env`
-- 138 plugins extend the stack without touching core config
+- 155 plugins extend the stack without touching core config
 - Multi-tenancy, row-level security, and org management built in
 - Stripe/Paddle billing integration included
 - White-label support — custom domains, branding, email templates
@@ -334,7 +334,7 @@ Run `nself help <command>` for subcommand details.
 | Built-in billing integration | Yes | No | No | No | No |
 | White-label support | Yes | No | No | No | No |
 | Setup time | ~5 min | 30+ min | 30+ min | 15+ min | N/A |
-| Plugin ecosystem | 138 total (29 free + 109 pro) | Limited | Limited | App templates | No |
+| Plugin ecosystem | 155 total (31 free + 124 pro) | Limited | Limited | App templates | No |
 | Deploy anywhere | Yes | Cloud-first | Cloud-first | Yes | No |
 | Data ownership | Full | Shared | Shared | Full | No |
 
@@ -342,11 +342,11 @@ Run `nself help <command>` for subcommand details.
 
 ## Pricing
 
-The nself CLI and 29 free MIT plugins are fully FOSS. Free forever, including commercial use. Pro plugins require a membership key.
+The nself CLI and 31 free MIT plugins are fully FOSS. Free forever, including commercial use. Pro plugins require a membership key.
 
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
-| Free | $0 | $0 | Core CLI + 29 free MIT plugins |
+| Free | $0 | $0 | Core CLI + 31 free MIT plugins |
 | Bundle | $0.99/mo | $9.99/yr | All 109 pro plugins (ɳChat, ɳClaw, ɳSentry, ɳTV, ɳFamily, or ClawDE) |
 | ɳSelf+ | $3.99/mo | $39.99/yr | All 6 bundles + all apps + priority support |
 | ɳCloud | custom | custom | Managed hosting + ɳSelf+ license + cloud-exclusive features |
