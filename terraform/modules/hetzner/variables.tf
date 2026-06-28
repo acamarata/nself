@@ -50,3 +50,9 @@ variable "cloudflare_zone_id" {
   type        = string
   default     = ""
 }
+
+variable "deploy_ssh_pubkey" {
+  description = "Public key for the nself deploy user's authorized_keys (~/.ssh/authorized_keys). Set from NSELF_DEPLOY_KEY_PATH.pub."
+  type        = string
+  default     = ""
+}
