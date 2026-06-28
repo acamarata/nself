@@ -35,6 +35,11 @@ type BuildOptions struct {
 	// plugin (ai, claw, mux, cron, notify, push) is detected. Pass
 	// --no-auto-redis from the CLI to opt out of this behaviour.
 	NoAutoRedis bool
+	// Profile selects a curated subset of services for the generated
+	// docker-compose.yml.  Empty string or "app" preserves today's full
+	// behaviour (no regression).  Use "ops" for an observability + CI server.
+	// Valid values: "app" (default), "ops".  See internal/compose/profiles.go.
+	Profile compose.ProfileName
 }
 
 // BuildResult summarizes what the build produced.
@@ -272,7 +277,13 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	}
 
 	// ── Step 8: Generate docker-compose.yml ─────────────────────────
-	composeGen := compose.NewGenerator(cfg)
+	// Profile selection: empty or "app" → full service set (no regression).
+	// "ops" → observability + CI + functions + registry, no app services.
+	profile := opts.Profile
+	if profile == "" {
+		profile = compose.ProfileApp
+	}
+	composeGen := compose.NewGeneratorWithProfile(cfg, profile)
 	composeYAML, err := composeGen.Generate()
 	if err != nil {
 		return nil, fmt.Errorf("generating docker-compose.yml: %w", err)
