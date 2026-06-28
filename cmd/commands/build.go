@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/compose"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/plugin"
@@ -44,6 +45,11 @@ func init() {
 	buildCmd.Flags().Bool("no-migration-check", false, "Skip v1 artifact detection (for automation/CI)")
 	buildCmd.Flags().Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 	buildCmd.Flags().Bool("no-auto-redis", false, "Disable automatic Redis enablement when a BullMQ-backed plugin is detected")
+	buildCmd.Flags().String("profile", "", `Service profile: curated subset of services to include in docker-compose.yml.
+  app (default) — full service set, identical to pre-profile behaviour.
+  ops           — observability + CI server: postgres, hasura, auth, nginx,
+                  monitoring stack; excludes minio, mailpit, admin, functions, search.
+Overrides NSELF_PROFILE env var. Valid values: app, ops.`)
 
 	RootCmd.AddCommand(buildCmd)
 }
@@ -61,6 +67,18 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	noMigrationCheck, _ := cmd.Flags().GetBool("no-migration-check")
 	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
 	noAutoRedis, _ := cmd.Flags().GetBool("no-auto-redis")
+
+	// ── Profile resolution ────────────────────────────────────────────
+	// Priority: --profile flag > NSELF_PROFILE env var > default ("app").
+	profileStr, _ := cmd.Flags().GetString("profile")
+	if profileStr == "" {
+		profileStr = os.Getenv("NSELF_PROFILE")
+	}
+	profile := compose.ProfileName(profileStr)
+	if _, knownProfile := compose.ProfileForName(profile); !knownProfile && profileStr != "" {
+		ui.Warn(fmt.Sprintf("Unknown profile %q — valid values: %s. Falling back to \"app\".", profileStr, strings.Join(compose.ValidProfiles(), ", ")))
+		profile = compose.ProfileApp
+	}
 
 	if !quiet {
 		ui.CommandHeader("nself build", "Generate project infrastructure")
@@ -159,6 +177,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		Check:          check,
 		SecurityReport: securityReport,
 		NoAutoRedis:    noAutoRedis,
+		Profile:        profile,
 	}
 
 	result, err := build.Build(workdir, opts)

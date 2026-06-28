@@ -18,12 +18,28 @@ const NginxSitesDir = "nginx/sites"
 
 // Generator builds a docker-compose.yml from project configuration.
 type Generator struct {
-	cfg *config.Config
+	cfg     *config.Config
+	profile ServiceSet
 }
 
-// NewGenerator creates a compose Generator from the given config.
+// NewGenerator creates a compose Generator from the given config using the
+// default "app" profile (full service set — no regression from pre-profile builds).
 func NewGenerator(cfg *config.Config) *Generator {
-	return &Generator{cfg: cfg}
+	set, _ := ProfileForName(ProfileApp)
+	return &Generator{cfg: cfg, profile: set}
+}
+
+// NewGeneratorWithProfile creates a compose Generator that emits only the
+// services permitted by the named profile.  Unknown profile names fall back to
+// ProfileApp and are not treated as hard errors here (the caller should warn).
+//
+// Purpose: enable curated deployments (e.g. ProfileOps for an observability
+// server) without touching the config layer.
+// Inputs:  cfg — project configuration; name — profile selected by the user.
+// Outputs: *Generator with profile gate set.
+func NewGeneratorWithProfile(cfg *config.Config, name ProfileName) *Generator {
+	set, _ := ProfileForName(name)
+	return &Generator{cfg: cfg, profile: set}
 }
 
 // Generate produces the complete docker-compose.yml as YAML bytes.
@@ -45,63 +61,72 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 		Services: make(map[string]ServiceConfig),
 	}
 
-	// Core services (always present) — postgres first, then dependents.
+	p := g.profile // service-set gate for the active profile
+
+	// Core services — profile-gated.
+	// postgres / hasura / auth / nginx are always required by ProfileApp and
+	// ProfileOps; other profiles may exclude them via the ServiceSet booleans.
+	//
 	// When NSELF_EMBEDDED_PG=true, the Docker postgres container is omitted;
 	// the embedded pglite/wasmtime runtime is booted by `nself start --embedded-pg`
 	// and Hasura connects via a Unix-domain socket bridge.
-	if !g.cfg.EmbeddedPG {
+	if p.CoreDB && !g.cfg.EmbeddedPG {
 		dc.AddService("postgres", g.buildPostgresService())
 	}
 
-	hasuraSvc, err := g.buildHasuraService()
-	if err != nil {
-		return nil, fmt.Errorf("building hasura service: %w", err)
+	if p.Hasura {
+		hasuraSvc, err := g.buildHasuraService()
+		if err != nil {
+			return nil, fmt.Errorf("building hasura service: %w", err)
+		}
+		// When embedded PG is active, add the UDS socket volume mount so Hasura
+		// can reach the pglite bridge at /var/run/postgres/pglite.sock.
+		if g.cfg.EmbeddedPG {
+			runtimeDirEnv := "${NSELF_RUNTIME_DIR:-.nself/embedded-pg}"
+			hasuraSvc.Volumes = append(hasuraSvc.Volumes,
+				runtimeDirEnv+"/pglite.sock.bridge:/var/run/postgres/pglite.sock",
+			)
+			// Remove the postgres health-check dependency — there is no postgres container.
+			delete(hasuraSvc.DependsOn, "postgres")
+		}
+		dc.AddService("hasura", hasuraSvc)
 	}
-	// When embedded PG is active, add the UDS socket volume mount so Hasura
-	// can reach the pglite bridge at /var/run/postgres/pglite.sock.
-	if g.cfg.EmbeddedPG {
-		runtimeDirEnv := "${NSELF_RUNTIME_DIR:-.nself/embedded-pg}"
-		hasuraSvc.Volumes = append(hasuraSvc.Volumes,
-			runtimeDirEnv+"/pglite.sock.bridge:/var/run/postgres/pglite.sock",
-		)
-		// Remove the postgres health-check dependency — there is no postgres container.
-		delete(hasuraSvc.DependsOn, "postgres")
-	}
-	dc.AddService("hasura", hasuraSvc)
 
-	authSvc, err := g.buildAuthService()
-	if err != nil {
-		return nil, fmt.Errorf("building auth service: %w", err)
+	if p.Auth {
+		authSvc, err := g.buildAuthService()
+		if err != nil {
+			return nil, fmt.Errorf("building auth service: %w", err)
+		}
+		// When embedded PG is active, remove the postgres health-check dependency
+		// from auth — there is no postgres container.
+		if g.cfg.EmbeddedPG {
+			delete(authSvc.DependsOn, "postgres")
+		}
+		dc.AddService("auth", authSvc)
 	}
-	// When embedded PG is active, remove the postgres health-check dependency
-	// from auth — there is no postgres container.
-	if g.cfg.EmbeddedPG {
-		delete(authSvc.DependsOn, "postgres")
-	}
-	dc.AddService("auth", authSvc)
 
-	// Optional services (conditional on config).
+	// Optional services — profile-gated AND config-gated.
 	// Init containers are inserted BEFORE the service that depends on them
 	// so Docker Compose v5 sees definitions before depends_on references.
-	if g.cfg.Redis.Enabled {
+	if p.Redis && g.cfg.Redis.Enabled {
 		dc.AddService("redis", g.buildRedisService())
 	}
-	if g.cfg.Minio.Enabled {
+	if p.Minio && g.cfg.Minio.Enabled {
 		dc.AddService("minio", g.buildMinioService())
 	}
-	if g.cfg.Mailpit.Enabled {
+	if p.Mailpit && g.cfg.Mailpit.Enabled {
 		dc.AddService("mailpit", g.buildMailpitService())
 	}
-	if g.cfg.Admin.Enabled {
+	if p.AdminUI && g.cfg.Admin.Enabled {
 		dc.AddService("nself-admin", g.buildAdminService())
 	}
-	if g.cfg.Functions.Enabled {
+	if p.Functions && g.cfg.Functions.Enabled {
 		dc.AddService("functions", g.buildFunctionsService())
 	}
 	// MLflow: handled by nself-mlflow free plugin (not in core)
 
-	// Search (provider-based)
-	if g.cfg.Search.Enabled {
+	// Search (provider-based) — profile-gated.
+	if p.Search && g.cfg.Search.Enabled {
 		switch g.cfg.Search.Engine {
 		case "meilisearch":
 			dc.AddService("meilisearch-init", g.buildMeiliInitService())
@@ -111,16 +136,20 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 		}
 	}
 
-	// Monitoring: handled by nself-monitoring free plugin (not in core)
-	// MLflow: handled by nself-mlflow free plugin (not in core)
+	// Monitoring: handled by nself-monitoring free plugin (not in core).
+	// MLflow: handled by nself-mlflow free plugin (not in core).
+	// OpsServices (forgejo, container-registry, functions-v8): contributed
+	// by dedicated plugins when ProfileOps is active; no core compose blocks here.
 
-	// Custom services
+	// Custom services (always pass-through — per-project overrides).
 	for _, cs := range g.cfg.CustomServices {
 		dc.AddService(cs.Name, g.buildCustomService(cs))
 	}
 
-	// Nginx (always last — depends on other services)
-	dc.AddService("nginx", g.buildNginxService(dc))
+	// Nginx — profile-gated (always last — depends on other services).
+	if p.Nginx {
+		dc.AddService("nginx", g.buildNginxService(dc))
+	}
 
 	// Post-process: add logging, security, graceful shutdown to ALL services
 	g.postProcess(dc)

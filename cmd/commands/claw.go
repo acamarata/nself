@@ -174,7 +174,7 @@ func registerPairCloud(ctx context.Context, code, serverURL string) error {
 func registerPairLocal(ctx context.Context, code, serverURL string) error {
 	clawURL := os.Getenv("PLUGIN_CLAW_INTERNAL_URL")
 	if clawURL == "" {
-		clawURL = "http://claw:3720"
+		clawURL = "http://claw:3710"
 	}
 
 	payload, err := json.Marshal(map[string]string{
@@ -209,7 +209,7 @@ func registerPairLocal(ctx context.Context, code, serverURL string) error {
 func pollPairStatus(ctx context.Context, code string) (bool, error) {
 	clawURL := os.Getenv("PLUGIN_CLAW_INTERNAL_URL")
 	if clawURL == "" {
-		clawURL = "http://claw:3720"
+		clawURL = "http://claw:3710"
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", clawURL+"/internal/pair/status/"+code, nil)
@@ -308,7 +308,7 @@ func runClawUnlock(cmd *cobra.Command, args []string) error {
 
 	clawURL := os.Getenv("PLUGIN_CLAW_INTERNAL_URL")
 	if clawURL == "" {
-		clawURL = "http://claw:3720"
+		clawURL = "http://claw:3710"
 	}
 
 	payload, err := json.Marshal(map[string]int{"duration_minutes": clawUnlockMinutes})

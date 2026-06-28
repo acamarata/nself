@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/build"
+	"github.com/nself-org/cli/internal/compose"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/docker"
@@ -68,6 +69,10 @@ func init() {
 	f.Bool("allow-legacy", false, "Bypass v0.9 artifact check and proceed with WARNING (not recommended)")
 	f.Bool("embedded-pg", false, "Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required; pgvector included")
 	f.Bool("skip-db-init", false, "Skip database migrations and seed; bring up Postgres+Hasura+hasura-auth only. Intended for CI/E2E environments.")
+	f.String("profile", "", `Service profile passed to an automatic rebuild when the compose file is stale.
+  app (default) — full service set.
+  ops           — observability + CI server (postgres, hasura, auth, nginx, monitoring).
+Overrides NSELF_PROFILE env var. Has no effect when --skip-build is set.`)
 
 	RootCmd.AddCommand(startCmd)
 }
@@ -88,6 +93,9 @@ type startOpts struct {
 	quiet            bool
 	embeddedPG       bool
 	skipDBInit       bool
+	// profile is forwarded to an automatic rebuild when the compose file is
+	// stale. It has no effect when --skip-build is set.
+	profile compose.ProfileName
 }
 
 func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
@@ -113,6 +121,18 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 	// NSELF_SKIP_DB_INIT env var allows CI pipelines to set this without modifying scripts.
 	if !skipDBInit && os.Getenv("NSELF_SKIP_DB_INIT") == "true" {
 		skipDBInit = true
+	}
+
+	// ── Profile resolution ────────────────────────────────────────────
+	// Priority: --profile flag > NSELF_PROFILE env var > default ("app").
+	profileStr, _ := cmd.Flags().GetString("profile")
+	if profileStr == "" {
+		profileStr = os.Getenv("NSELF_PROFILE")
+	}
+	profile := compose.ProfileName(profileStr)
+	if _, known := compose.ProfileForName(profile); !known && profileStr != "" {
+		ui.Warn(fmt.Sprintf("Unknown profile %q — valid values: %s. Falling back to \"app\".", profileStr, strings.Join(compose.ValidProfiles(), ", ")))
+		profile = compose.ProfileApp
 	}
 
 	// --force-recreate is an alias for --fresh.
@@ -148,6 +168,7 @@ func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
 		quiet:            quiet,
 		embeddedPG:       embeddedPG,
 		skipDBInit:       skipDBInit,
+		profile:          profile,
 	}, nil
 }
 
@@ -314,7 +335,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		}
 		if needsRebuild {
 			ui.Info("Configuration changed — rebuilding before start...")
-			if _, err := build.Build(projectDir, build.BuildOptions{}); err != nil {
+			if _, err := build.Build(projectDir, build.BuildOptions{Profile: opts.profile}); err != nil {
 				return fmt.Errorf("auto-build failed: %w", err)
 			}
 			ui.Success("Build completed")
