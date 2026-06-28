@@ -108,6 +108,8 @@ terraform against real infrastructure (requires UD-12 minor release approval).`,
 			os.Setenv("HCLOUD_TOKEN", tok)
 		}
 
+		deployPubkey, _ := cmd.Flags().GetString("deploy-pubkey")
+
 		// Build optional Terraform variable overrides from flag values.
 		vars := map[string]string{}
 		if location != "" {
@@ -115,6 +117,9 @@ terraform against real infrastructure (requires UD-12 minor release approval).`,
 		}
 		if serverType != "" {
 			vars["server_type"] = serverType
+		}
+		if deployPubkey != "" {
+			vars["deploy_ssh_pubkey"] = deployPubkey
 		}
 
 		opts := infra.ApplyOptions{
@@ -170,6 +175,7 @@ func init() {
 	infraApplyCmd.Flags().Bool("force", false, "Bypass the PLANNED gate and run terraform against real infrastructure")
 	infraApplyCmd.Flags().String("location", "", "Hetzner datacenter location (e.g. nbg1, fsn1, hel1) — passed as TF var")
 	infraApplyCmd.Flags().String("server-type", "", "Hetzner server type (e.g. cpx21, cx22) — passed as TF var")
+	infraApplyCmd.Flags().String("deploy-pubkey", "", "SSH public key content for the nself deploy user's authorized_keys — passed as TF var deploy_ssh_pubkey")
 
 	infraDestroyCmd.Flags().String("provider", "", "Cloud provider (aws, gcp, azure, hetzner, do, linode)")
 	infraDestroyCmd.Flags().String("domain", "", "Domain for the nSelf deployment")

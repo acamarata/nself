@@ -89,6 +89,13 @@ write_files:
       domain=${domain}
       nself_version=${nself_version}
       backup_destination=${backup_destination}
+%{ if deploy_ssh_pubkey != "" }
+  - path: /home/nself/.ssh/authorized_keys
+    owner: nself:nself
+    permissions: '0600'
+    content: |
+      ${deploy_ssh_pubkey}
+%{ endif }
 
 # ---------------------------------------------------------------------------
 # Sequential run commands

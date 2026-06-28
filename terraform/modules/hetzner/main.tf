@@ -33,9 +33,10 @@ resource "hcloud_server" "nself" {
   ssh_keys    = var.ssh_keys
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tpl", {
-    domain          = var.domain
-    nself_version   = var.nself_version
+    domain             = var.domain
+    nself_version      = var.nself_version
     backup_destination = var.backup_destination
+    deploy_ssh_pubkey  = var.deploy_ssh_pubkey
   })
 
   labels = {

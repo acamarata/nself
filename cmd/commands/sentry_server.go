@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/nself-org/cli/internal/deploy"
@@ -106,7 +107,7 @@ func runSentryServerProvision(cmd *cobra.Command, args []string) error {
 
 	// ── Step 1: Terraform (unless --host skips it) ─────────────────────────
 	if host == "" {
-		if err := runSentryTerraform(cmd.Context(), project, location, serverType, dryRun); err != nil {
+		if err := runSentryTerraform(cmd.Context(), project, location, serverType, keyPath, dryRun); err != nil {
 			return fmt.Errorf("sentry-server provision: terraform: %w", err)
 		}
 		if dryRun {
@@ -175,13 +176,20 @@ func runSentryServerProvision(cmd *cobra.Command, args []string) error {
 // runSentryTerraform runs terraform apply for the Hetzner ops module.
 //
 // Purpose:  Provision Hetzner infrastructure for the ops server.
-// Inputs:   project name, location, serverType, dryRun flag.
+// Inputs:   project name, location, serverType, keyPath (SSH private key path), dryRun flag.
 // Outputs:  Terraform apply executed against terraform/modules/hetzner.
 // Constraints: HETZNER_NSELF_TOKEN or HCLOUD_TOKEN must be set.
-func runSentryTerraform(ctx context.Context, project, location, serverType string, dryRun bool) error {
+func runSentryTerraform(ctx context.Context, project, location, serverType, keyPath string, dryRun bool) error {
 	// Passthrough: HETZNER_NSELF_TOKEN → HCLOUD_TOKEN.
 	if tok := os.Getenv("HETZNER_NSELF_TOKEN"); tok != "" && os.Getenv("HCLOUD_TOKEN") == "" {
 		os.Setenv("HCLOUD_TOKEN", tok)
+	}
+
+	// Read the public key for the deploy user's authorized_keys.
+	pubKeyPath := keyPath + ".pub"
+	deployPubKey := ""
+	if data, err := os.ReadFile(pubKeyPath); err == nil {
+		deployPubKey = strings.TrimSpace(string(data))
 	}
 
 	vars := map[string]string{}
@@ -193,6 +201,9 @@ func runSentryTerraform(ctx context.Context, project, location, serverType strin
 	}
 	if project != "" {
 		vars["project"] = project
+	}
+	if deployPubKey != "" {
+		vars["deploy_ssh_pubkey"] = deployPubKey
 	}
 
 	opts := infra.ApplyOptions{
