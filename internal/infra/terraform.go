@@ -49,6 +49,10 @@ type PlanOptions struct {
 type ApplyOptions struct {
 	PlanOptions
 	AutoApprove bool
+	// Vars is an optional map of additional Terraform variables passed as
+	// -var=key=value flags. These are appended after the domain var so they
+	// can override or extend module defaults (e.g. location, server_type).
+	Vars map[string]string
 }
 
 func terraformBinary() (string, error) {
@@ -122,6 +126,9 @@ func Apply(ctx context.Context, opts ApplyOptions) error {
 		args = append(args,
 			fmt.Sprintf("-backend-config=bucket=%s", opts.StateBucket),
 		)
+	}
+	for k, v := range opts.Vars {
+		args = append(args, fmt.Sprintf("-var=%s=%s", k, v))
 	}
 	cmd := exec.CommandContext(ctx, tf, args...)
 	cmd.Dir = dir

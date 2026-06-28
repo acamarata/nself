@@ -495,6 +495,18 @@ var errorHarnessCases = []errorHarnessCase{
 	{"release-status", []string{"release-status", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"release-status", []string{"release-status", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── ops ────────────────────────────────────────────────────────────────
+	// ops root returns cmd.Help() (nil) — soft case (no project required).
+	{"ops", []string{"ops"}, "(a) shows help (no project required)"},
+	{"ops", []string{"ops", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"ops", []string{"ops", "unknownsub_xyz"}, "(c) unknown sub"},
+
+	// ── sentry-server ──────────────────────────────────────────────────────
+	// sentry-server root returns cmd.Help() (nil) — soft case (no project required).
+	{"sentry-server", []string{"sentry-server"}, "(a) shows help (no project required)"},
+	{"sentry-server", []string{"sentry-server", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"sentry-server", []string{"sentry-server", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── uninstall ──────────────────────────────────────────────────────────
 	{"uninstall", []string{"uninstall"}, "(a) no project dir"},
 	{"uninstall", []string{"uninstall", "--no-such-flag-xyz"}, "(b) invalid flag"},
