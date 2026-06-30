@@ -1,6 +1,5 @@
 """Tests for EnvHelper."""
 
-import os
 import pytest
 
 from nself_plugin.context.env import EnvHelper

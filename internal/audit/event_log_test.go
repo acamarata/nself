@@ -1,3 +1,5 @@
+//go:build !windows
+
 package audit
 
 // Purpose: Tests for security event log writer (Write function).
