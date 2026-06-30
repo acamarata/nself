@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -311,6 +312,9 @@ func TestRotateJWTKey_Concurrent(t *testing.T) {
 // TestRotateJWTKey_LogUnwritable verifies that RotateJWTKey returns an error
 // (not a panic or silent success) when the log directory is read-only.
 func TestRotateJWTKey_LogUnwritable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod read-only semantics not supported on Windows")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("root can write to read-only dirs, skipping")
 	}

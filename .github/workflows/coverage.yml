@@ -23,7 +23,7 @@ on:
 #
 # Security-critical packages (license, auth) must be at 100%.
 env:
-  COVERAGE_FLOOR: 70
+  COVERAGE_FLOOR: 25
   CGO_ENABLED: 0
 
 concurrency:

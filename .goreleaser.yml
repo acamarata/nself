@@ -2,6 +2,18 @@ version: 2
 
 project_name: nself
 
+# Snapshot config: allows `goreleaser build --snapshot --clean` for local
+# dry-run validation without a real tag. The snapshot name encodes the commit.
+snapshot:
+  version_template: "{{ .Version }}-dev+{{ .ShortCommit }}"
+
+# Required env vars: goreleaser check validates these are present.
+# Set via GitHub Actions secret NSELF_LICENSE_PUBKEY_HEX.
+# For local snapshot builds, export a dummy value:
+#   export NSELF_LICENSE_PUBKEY_HEX=00 && goreleaser build --snapshot --clean
+required_envs:
+  - NSELF_LICENSE_PUBKEY_HEX
+
 builds:
   - id: nself
     main: ./cmd/nself/
@@ -33,9 +45,10 @@ builds:
 archives:
   - id: default
     # Windows releases ship as zip; linux and darwin as tar.gz.
+    # goreleaser v2 uses `formats` (list) not `format` (string).
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     files:
       - README.md

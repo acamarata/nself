@@ -282,7 +282,10 @@ if [ -z "${NSELF_PLUGIN_LICENSE_KEY_OWNER:-}" ]; then
 fi
 
 # ── Step 1: Install nSelf CLI ─────────────────────────────────────────────────
-if command -v brew >/dev/null 2>&1; then
+# On macOS, prefer Homebrew. On Linux, use the curl installer even if brew is
+# present — the Homebrew formula only ships macOS (darwin) binaries and will
+# error with "formula requires at least a URL" on Linux runners.
+if command -v brew >/dev/null 2>&1 && [ "$(uname)" = "Darwin" ]; then
   run_step 1 "brew install nself-org/nself/nself" \
     bash -c 'brew install nself-org/nself/nself 2>&1 || brew upgrade nself-org/nself/nself 2>&1'
 else
