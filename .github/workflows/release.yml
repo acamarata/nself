@@ -18,7 +18,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   build:
     name: Build release artifacts
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       hashes: ${{ steps.hashes.outputs.hashes }}
       source_sha256: ${{ steps.source_sha256.outputs.sha256 }}
@@ -129,7 +129,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   sbom:
     name: Generate SBOM
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: build
     steps:
       - name: Download binaries
@@ -205,7 +205,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   verify-homebrew-lockstep:
     name: Verify Homebrew formula lockstep
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: build
 
     steps:
@@ -262,7 +262,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   sign-and-publish:
     name: Sign and publish release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: [build, sbom, provenance, verify-homebrew-lockstep]
     permissions:
       contents: write
