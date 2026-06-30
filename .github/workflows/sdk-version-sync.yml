@@ -10,7 +10,7 @@ name: SDK Version Sync
 #   sdk/go/doc.go                        (const Version = "X.Y.Z")
 #   sdk/py/pyproject.toml                (version = "X.Y.Z")
 #   sdk/ts/package.json                  ("version": "X.Y.Z")
-#   sdk/flutter/pubspec.yaml             (version: X.Y.Z)
+# Flutter SDK removed 2026-06-30 — migrating to RN/Tauri per ASI Policy 2.
 
 on:
   push:
@@ -23,7 +23,6 @@ on:
       - '.github/VERSION'
       - 'sdk/**/pyproject.toml'
       - 'sdk/**/package.json'
-      - 'sdk/**/pubspec.yaml'
       - 'sdk/go/doc.go'
       - '.github/workflows/sdk-version-sync.yml'
 
@@ -81,16 +80,6 @@ jobs:
           echo "TS SDK declared: ${TS_V}"
           if [ "${TS_V}" != "${TARGET}" ]; then
             echo "MISMATCH: TS SDK is ${TS_V}, expected ${TARGET}"
-            exit 1
-          fi
-
-      - name: Verify Flutter SDK version (sdk/flutter/pubspec.yaml)
-        run: |
-          TARGET='${{ steps.target.outputs.target }}'
-          FL_V=$(grep -E '^version: ' sdk/flutter/pubspec.yaml | head -1 | sed -E 's/^version: *([^ ]+).*/\1/')
-          echo "Flutter SDK declared: ${FL_V}"
-          if [ "${FL_V}" != "${TARGET}" ]; then
-            echo "MISMATCH: Flutter SDK is ${FL_V}, expected ${TARGET}"
             exit 1
           fi
 

@@ -117,22 +117,4 @@ jobs:
           npm install --no-audit --no-fund
           node -e "const sdk = require('@nself/plugin-sdk'); console.log('TS SDK loaded keys:', Object.keys(sdk).slice(0,5))"
 
-  flutter:
-    name: Flutter SDK reverse-dep build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-      - name: Resolve and analyze SDK example
-        run: |
-          cd sdk/flutter
-          flutter pub get
-          flutter analyze --no-fatal-infos --no-fatal-warnings || true
-          if [ -d example ]; then
-            cd example
-            flutter pub get
-            flutter analyze --no-fatal-infos --no-fatal-warnings || true
-          fi
+  # Flutter SDK removed 2026-06-30 — migrating to RN/Tauri per ASI Policy 2.

@@ -1,20 +1,21 @@
 name: Version Lockstep
 
 # Comprehensive version lockstep gate.
-# Verifies all 12 version-carrying files across cli/, admin/, and homebrew-nself/
+# Verifies all 11 version-carrying files across cli/, admin/, and homebrew-nself/
 # match the canonical version in cli/.github/VERSION (or the pushed tag on a release).
 #
 # On a pull_request: checks the files changed in the PR against VERSION.
-# On a push to main:  checks all 12 files.
+# On a push to main:  checks all 11 files.
 # On a tag push:      treats the tag as the authoritative version.
 #
 # Complements:
-#   sdk-version-sync.yml          — SDK-only check (go/ts/py/flutter)
+#   sdk-version-sync.yml          — SDK-only check (go/ts/py)
 #   homebrew-version-lockstep.yml — homebrew-only check on tag push
 #   admin/.github/workflows/version-lockstep.yml — admin-internal check
 #
-# This workflow is the single comprehensive gate that covers ALL 12 files.
+# This workflow is the single comprehensive gate that covers ALL 11 files.
 # It runs the lockstep check script directly rather than reimplementing logic.
+# Flutter SDK removed 2026-06-30 — migrating to RN/Tauri per ASI Policy 2.
 #
 # Authority: P98 S98-02 T04; bump-version.md
 
@@ -31,7 +32,6 @@ on:
       - 'sdk/go/doc.go'
       - 'sdk/ts/package.json'
       - 'sdk/py/pyproject.toml'
-      - 'sdk/flutter/pubspec.yaml'
       - '.github/workflows/version-lockstep.yml'
       - 'scripts/check-version-lockstep.sh'
 
@@ -40,7 +40,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   lockstep:
-    name: Verify all 12 version files are in lockstep
+    name: Verify all 11 version files are in lockstep
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -120,7 +120,7 @@ jobs:
             fi
           }
 
-          printf 'Checking all 12 lockstep files against target version: %s\n\n' "${TARGET}"
+          printf 'Checking all 11 lockstep files against target version: %s\n\n' "${TARGET}"
 
           # 1. cli/internal/version/version.go
           V=$(grep -E '^\s+Version\s+string\s*=' "${NSELF_REPO_ROOT}/internal/version/version.go" \
@@ -145,36 +145,31 @@ jobs:
                 | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
           check "cli/sdk/py/pyproject.toml" "${V}" 1
 
-          # 6. cli/sdk/flutter/pubspec.yaml
-          V=$(grep -E '^version:' "${NSELF_REPO_ROOT}/sdk/flutter/pubspec.yaml" \
-                | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          check "cli/sdk/flutter/pubspec.yaml" "${V}" 1
-
-          # 7. admin/package.json
+          # 6. admin/package.json
           V=$(node -p "require('${NSELF_ADMIN_ROOT}/package.json').version")
           check "admin/package.json" "${V}" 1
 
-          # 8. admin/src/lib/cli-version.ts
+          # 7. admin/src/lib/cli-version.ts
           V=$(grep -E "CLI_VERSION\s*=\s*'" "${NSELF_ADMIN_ROOT}/src/lib/cli-version.ts" \
                 | grep -oE "'[0-9]+\.[0-9]+\.[0-9]+'" | tr -d "'" | head -1)
           check "admin/src/lib/cli-version.ts" "${V}" 1
 
-          # 9. admin/Dockerfile ARG NSELF_VERSION
+          # 8. admin/Dockerfile ARG NSELF_VERSION
           V=$(grep -E '^ARG NSELF_VERSION=' "${NSELF_ADMIN_ROOT}/Dockerfile" \
                 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
           check "admin/Dockerfile (ARG NSELF_VERSION)" "${V}" 1
 
-          # 10. admin/Dockerfile ENV ADMIN_VERSION
+          # 9. admin/Dockerfile ENV ADMIN_VERSION
           V=$(grep -E '^ENV ADMIN_VERSION=' "${NSELF_ADMIN_ROOT}/Dockerfile" \
                 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
           check "admin/Dockerfile (ENV ADMIN_VERSION)" "${V}" 1
 
-          # 11. admin/Dockerfile LABEL image.version
+          # 10. admin/Dockerfile LABEL image.version
           V=$(grep -E 'org.opencontainers.image.version=' "${NSELF_ADMIN_ROOT}/Dockerfile" \
                 | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
           check "admin/Dockerfile (LABEL image.version)" "${V}" 1
 
-          # 12. homebrew-nself/Formula/nself.rb (warn-only)
+          # 11. homebrew-nself/Formula/nself.rb (warn-only)
           if [ -f "${NSELF_HB_ROOT}/Formula/nself.rb" ]; then
             V=$(grep -E '^\s+version\s+"' "${NSELF_HB_ROOT}/Formula/nself.rb" \
                   | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)

@@ -2,10 +2,11 @@ package doctor
 
 // sdk_version.go — S03-T06 SDK-VERSION-01 deep doctor check.
 //
-// Queries each of the 4 SDK registries and compares the published version
+// Queries each of the 3 SDK registries and compares the published version
 // against the local CLI version. A drift of more than one patch segment is
 // a warn; a major or minor mismatch is a fail. Registry errors are warn-only
 // (network is best-effort in doctor --deep).
+// Flutter SDK removed 2026-06-30 — migrating to RN/Tauri per ASI Policy 2.
 
 import (
 	"context"
@@ -49,13 +50,6 @@ func CheckSDKVersions(ctx context.Context) []CheckResult {
 			pkg:  "nself-sdk (PyPI)",
 			fetchFn: func(ctx context.Context, c *http.Client) (string, error) {
 				return fetchPyPIVersion(ctx, c, "nself-sdk")
-			},
-		},
-		{
-			name: "SDK-VERSION-01/flutter",
-			pkg:  "nself_sdk (pub.dev)",
-			fetchFn: func(ctx context.Context, c *http.Client) (string, error) {
-				return fetchPubDevVersion(ctx, c, "nself_sdk")
 			},
 		},
 		{
@@ -198,27 +192,6 @@ func fetchPyPIVersion(ctx context.Context, client *http.Client, pkg string) (str
 		return "", fmt.Errorf("parse pypi response: %w", err)
 	}
 	return resp.Info.Version, nil
-}
-
-// fetchPubDevVersion queries pub.dev for the latest version of pkg.
-func fetchPubDevVersion(ctx context.Context, client *http.Client, pkg string) (string, error) {
-	url := fmt.Sprintf("https://pub.dev/api/packages/%s", pkg)
-	body, err := getJSON(ctx, client, url)
-	if err != nil {
-		return "", err
-	}
-	if body == nil {
-		return "", nil // not yet published
-	}
-	var resp struct {
-		Latest struct {
-			Version string `json:"version"`
-		} `json:"latest"`
-	}
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return "", fmt.Errorf("parse pub.dev response: %w", err)
-	}
-	return resp.Latest.Version, nil
 }
 
 // fetchGoProxyVersion queries the Go module proxy for the latest version of mod.

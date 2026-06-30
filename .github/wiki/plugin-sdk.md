@@ -13,7 +13,6 @@ All four SDKs are MIT-licensed and published to their respective registries.
 | **Go** | `github.com/nself-org/cli/sdk/go/v2` | pkg.go.dev | `"github.com/nself-org/cli/sdk/go/v2/plugin"` |
 | **TypeScript** | `@nself/plugin-sdk` | npm | `import { Plugin } from '@nself/plugin-sdk'` |
 | **Python** | `nself-plugin-sdk` | PyPI | `from nself_plugin import Plugin` |
-| **Flutter/Dart** | `nself_plugin_sdk` | pub.dev | `package:nself_plugin_sdk/nself_plugin_sdk.dart` |
 
 ### Go — v2
 
@@ -46,17 +45,6 @@ pip install nself-plugin-sdk[db]
 ```
 
 Source: `cli/sdk/py/` — published automatically when a `sdk-py/v*` tag is pushed.
-
-### Flutter/Dart — 2.0
-
-Targets Flutter 3.19+ and Dart 3.0+. Provides auth, GraphQL, storage, realtime, push, and functions helpers.
-
-```yaml
-dependencies:
-  nself_plugin_sdk: ^2.0.0
-```
-
-Source: `cli/sdk/flutter/` — published automatically when a `sdk-flutter/v*` tag is pushed.
 
 ---
 
@@ -96,14 +84,12 @@ Each SDK publishes via a dedicated GitHub Actions workflow triggered by a scoped
 | Go | `sdk-go/vX.Y.Z` | `cli/sdk/go/.github/workflows/sdk-go-publish.yml` |
 | TypeScript | `sdk-ts/vX.Y.Z` | `cli/sdk/ts/.github/workflows/sdk-ts-publish.yml` |
 | Python | `sdk-py/vX.Y.Z` | `cli/sdk/py/.github/workflows/sdk-py-publish.yml` |
-| Flutter | `sdk-flutter/vX.Y.Z` | `cli/sdk/flutter/.github/workflows/sdk-flutter-publish.yml` |
 
 Required repository secrets:
 
 | Secret | Used by |
 |---|---|
 | `NPM_TOKEN` | TypeScript SDK — npm publish |
-| `PUB_DEV_CREDENTIALS` | Flutter SDK — pub.dev publish |
 
 Go and Python publish via OIDC Trusted Publisher — no long-lived secret required.
 
