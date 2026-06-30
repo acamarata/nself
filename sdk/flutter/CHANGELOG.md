@@ -1,3 +1,7 @@
+## 1.2.0
+
+- nSelf v1.2.0 release: ɳSentry observability bundle (13 plugins) + status-page theming. Version bump to stay in lockstep with nSelf CLI v1.2.0.
+
 ## 1.1.7
 
 - Version bump to stay in lockstep with nSelf CLI v1.1.7.
