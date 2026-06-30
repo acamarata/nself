@@ -7,7 +7,7 @@ Mirrors server.New() in plugin-sdk-go: auto-mounts /healthz, /readyz,
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import httpx
 from fastapi import FastAPI
@@ -58,7 +58,7 @@ class HttpHelper:
                 result = await health_check()
                 if isinstance(result, HealthStatus):
                     return {"status": result.status, "message": result.message}
-                return result
+                return cast(dict[str, Any], result)
             return {"status": "ready"}
 
         @app.get("/version")
@@ -74,7 +74,7 @@ class HttpHelper:
 
     async def listen(self, port: int) -> None:
         """Start the uvicorn server on the given port. Blocks until shutdown."""
-        import uvicorn  # type: ignore[import-untyped]
+        import uvicorn
 
         app = self.create_app()
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
