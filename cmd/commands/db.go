@@ -56,7 +56,15 @@ var dbMigrateCmd = &cobra.Command{
 var dbMigrateUpCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Apply pending migrations",
-	RunE:  runDBMigrateUp,
+	Long: `Apply pending migrations to the project's Postgres database.
+
+Pass --env staging|prod (with NSELF_DEPLOY_HOST_<ENV> set, or an entry in
+.nself/control-plane.yaml) to run this against a deployed target instead of
+the local docker daemon: the command re-invokes 'nself db migrate up' on the
+remote host over SSH. Note: this requires the remote host's nself CLI
+version to support 'db migrate up' — an older remote CLI returns a clear
+error naming the version-drift cause rather than a raw SSH failure.`,
+	RunE: runDBMigrateUp,
 }
 
 var dbMigrateDownCmd = &cobra.Command{
@@ -68,7 +76,12 @@ var dbMigrateDownCmd = &cobra.Command{
 var dbMigrateStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show migration status",
-	RunE:  runDBMigrateStatus,
+	Long: `Show which migrations have been applied to the project's Postgres database.
+
+Pass --env staging|prod to check a deployed target instead of the local
+docker daemon (see 'nself db migrate up --help' for remote-targeting and
+version-drift details).`,
+	RunE: runDBMigrateStatus,
 }
 
 var dbMigrateCreateCmd = &cobra.Command{
@@ -256,7 +269,16 @@ var dbHasuraMetadataCmd = &cobra.Command{
 var dbHasuraMetadataApplyCmd = &cobra.Command{
 	Use:   "apply",
 	Short: "Apply Hasura metadata",
-	RunE:  runDBHasuraMetadataApply,
+	Long: `Apply Hasura metadata (tables, permissions, relationships, actions) to the
+project's Hasura instance.
+
+Pass --env staging|prod to apply against a deployed target's Hasura instead
+of the local one: the command re-invokes 'nself db hasura metadata apply' on
+the remote host over SSH, so the remote box always uses its own local
+project/Hasura resolution. Note: this requires the remote host's nself CLI
+version to support this subcommand — an older remote CLI returns a clear
+version-drift error rather than a raw SSH failure.`,
+	RunE: runDBHasuraMetadataApply,
 }
 
 var dbHasuraMetadataExportCmd = &cobra.Command{
@@ -497,6 +519,10 @@ func init() {
 	dbMigrateUpCmd.Flags().Bool("dry-run", false, "List pending migrations without applying them")
 	// --migration-dir flag on migrate up (G-008)
 	dbMigrateUpCmd.Flags().String("migration-dir", "", "Apply all .sql files in this directory in lexicographic order (skips already-applied)")
+	// --env/--server: remote targeting (gap #9) — default local, opt-in remote.
+	addDBRemoteFlags(dbMigrateUpCmd)
+	addDBRemoteFlags(dbMigrateStatusCmd)
+	addDBRemoteFlags(dbHasuraMetadataApplyCmd)
 
 	// --file flag on migrate apply (G-008)
 	dbMigrateApplyCmd.Flags().String("file", "", "Path to the SQL migration file to apply")
@@ -578,6 +604,10 @@ func loadProjectConfig() (*config.Config, error) {
 // ── run functions ───────────────────────────────────────────────────
 
 func runDBMigrateUp(cmd *cobra.Command, _ []string) error {
+	if handled, err := dispatchRemoteIfNeeded(cmd, "db", "migrate", "up"); handled {
+		return err
+	}
+
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -653,6 +683,10 @@ func runDBMigrateDown(cmd *cobra.Command, _ []string) error {
 }
 
 func runDBMigrateStatus(cmd *cobra.Command, _ []string) error {
+	if handled, err := dispatchRemoteIfNeeded(cmd, "db", "migrate", "status"); handled {
+		return err
+	}
+
 	cfg, err := loadProjectConfig()
 	if err != nil {
 		return err
@@ -937,6 +971,10 @@ func runDBHasuraConsole(cmd *cobra.Command, _ []string) error {
 }
 
 func runDBHasuraMetadataApply(cmd *cobra.Command, _ []string) error {
+	if handled, err := dispatchRemoteIfNeeded(cmd, "db", "hasura", "metadata", "apply"); handled {
+		return err
+	}
+
 	dir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
