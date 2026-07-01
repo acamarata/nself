@@ -25,6 +25,14 @@ packages:
   - gnupg
   - lsb-release
   - sudo
+  # build-essential (make + gcc) + zip/unzip: required by self-hosted GitHub Actions
+  # runners for `make dist` at release time (Go cross-build + Windows .zip packaging).
+  # Absent from the base Ubuntu image; a missing `make` then a missing `zip` broke
+  # nself-org/cli release.yml on nself-sentry (2026-07-01). Installing them here means
+  # every provisioned box (app + sentry/runner) has them from first boot.
+  - build-essential
+  - zip
+  - unzip
 
 package_update: true
 package_upgrade: true
