@@ -46,18 +46,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-1.25-
 
-      # Self-hosted runner base image lacks build-essential (2026-07-01: `make dist`
-      # failed with "make: command not found" on nself-sentry-runner{,2,3}). Install
-      # it idempotently so this step is a no-op once the image is patched at the OS level.
-      - name: Ensure build tools present (make)
+      # Self-hosted runner base image lacks the tools `make dist` needs: build-essential
+      # (make/gcc for the Go cross-build) and zip (Windows .zip packaging). 2026-07-01:
+      # a missing `make` then a missing `zip` broke nself-org/cli release.yml on
+      # nself-sentry-runner{,2,3}. Boxes are now patched at the OS level (build-essential
+      # + zip/unzip in the cloud-init base packages) so this step is normally a no-op.
+      # The install branch is a self-heal for any not-yet-patched runner: the runner
+      # user has a scoped NOPASSWD apt-get entry (/etc/sudoers.d/actions-runner-apt),
+      # so `sudo apt-get` works without a TTY.
+      - name: Ensure build tools present (make, zip)
         run: |
-          if ! command -v make >/dev/null 2>&1; then
-            echo "make not found - installing build-essential"
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq build-essential
-          else
-            echo "make already present: $(make --version | head -1)"
+          missing=""
+          command -v make >/dev/null 2>&1 || missing="$missing build-essential"
+          command -v zip  >/dev/null 2>&1 || missing="$missing zip"
+          if [ -z "$missing" ]; then
+            echo "build tools present: make=$(make --version | head -1), zip=$(zip --version 2>/dev/null | head -2 | tail -1)"
+            exit 0
           fi
+          echo "missing tools ->$missing ; attempting self-heal install"
+          if sudo -n apt-get update -qq && sudo -n apt-get install -y -qq $missing; then
+            echo "installed:$missing"
+            exit 0
+          fi
+          echo "::error::Required build tools ($missing) are missing and passwordless 'sudo apt-get' is unavailable."
+          echo "::error::Patch the box: 'apt-get install -y build-essential zip unzip' as root, and add"
+          echo "::error::/etc/sudoers.d/actions-runner-apt (NOPASSWD apt-get for the runner user)."
+          echo "::error::See ~/Sites/.claude/nsentry-server-standard.md and cloud-init base packages."
+          exit 1
 
       - name: Stamp version from tag
         run: echo "${GITHUB_REF_NAME#v}" > .github/VERSION
